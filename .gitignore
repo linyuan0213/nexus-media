@@ -1,0 +1,12 @@
+/.idea/**
+*.pyc
+*.c
+/test.py
+/setup.py
+/build/**
+/venv/**
+/cloudflarespeedtest/**
+.python-version
+.vscode/
+./config/site_manage/*.json
+./config/site_manage/*.dat
