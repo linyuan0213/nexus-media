@@ -358,7 +358,7 @@ class Downloader(metaclass=SingletonMeta):
                     url=url,
                     cookie=cookie,
                     ua=site_info.get("ua"),
-                    referer=page_url if site_info.get("referer") else None,
+                    referer=page_url if not site_info.get("referer") else site_info.get("referer"),
                     proxy=proxy if proxy is not None else site_info.get("proxy")
                 )
 
