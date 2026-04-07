@@ -36,6 +36,7 @@ dependencies = [
     "pycryptodome>=3.21.0",
     "pyjwt>=2.10.1",
     "pymysql>=1.1.1",
+    "psycopg2-binary>=2.9.10",
     "pypushdeer>=0.0.3",
     "pyquery>=2.0.1",
     "pyrsistent>=0.20.0",

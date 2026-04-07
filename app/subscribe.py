@@ -122,7 +122,7 @@ class Subscribe(metaclass=SingletonMeta):
         filter_rule = int(filter_rule) if str(filter_rule).isdigit() else None
         total_ep = int(total_ep) if str(total_ep).isdigit() else None
         current_ep = int(current_ep) if str(current_ep).isdigit() else None
-        download_setting = int(download_setting) if str(download_setting).replace("-", "").isdigit() else ""
+        download_setting = int(download_setting) if str(download_setting).replace("-", "").isdigit() else None
         fuzzy_match = True if fuzzy_match else False
         if channel == RssType.Auto:
             default_rss_setting = self.default_rss_setting_tv if mtype in [MediaType.TV, MediaType.ANIME] else self.default_rss_setting_mov
@@ -153,7 +153,7 @@ class Subscribe(metaclass=SingletonMeta):
                     over_edition = 1 if default_over_edition == "1" else 0
                 if not download_setting and default_download_setting:
                     download_setting = int(default_download_setting) \
-                        if str(default_download_setting).replace("-", "").isdigit() else ""
+                        if str(default_download_setting).replace("-", "").isdigit() else None
                 if not rss_sites and default_rss_sites:
                     rss_sites = default_rss_sites
                 if not search_sites and default_search_sites:

@@ -1,0 +1,59 @@
+# coding: utf-8
+"""
+插件历史和TMDB黑名单模型
+包含: 插件历史、TMDB黑名单、删种任务、自定义RSS任务历史
+"""
+from sqlalchemy import Column, Integer, Text, String, Sequence
+
+from app.db.models.base import Base
+
+
+class PLUGINHISTORY(Base):
+    __tablename__ = 'PLUGIN_HISTORY'
+
+    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    PLUGIN_ID = Column(String(255), index=True)
+    KEY = Column(String(255), index=True)
+    VALUE = Column(String(255))
+    DATE = Column(String(255))
+
+
+class TMDBBLACKLIST(Base):
+    __tablename__ = 'TMDB_BLACKLIST'
+
+    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    TMDB_ID = Column(String(50), index=True)
+    TITLE = Column(String(255))
+    YEAR = Column(String(255))
+    MEDIA_TYPE = Column(String(255))
+    POSTER_PATH = Column(String(255))
+    BACKDROP_PATH = Column(String(255))
+    NOTE = Column(Text)
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+class TORRENTREMOVETASK(Base):
+    __tablename__ = 'TORRENT_REMOVE_TASK'
+
+    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    NAME = Column(String(255))
+    ACTION = Column(Integer)
+    INTERVAL = Column(Integer)
+    ENABLED = Column(Integer)
+    SAMEDATA = Column(Integer)
+    ONLYNASTOOL = Column(Integer)
+    DOWNLOADER = Column(String(255))
+    CONFIG = Column(Text)
+    NOTE = Column(Text)
+
+
+class USERRSSTASKHISTORY(Base):
+    __tablename__ = 'USERRSS_TASK_HISTORY'
+
+    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    TASK_ID = Column(String(255), index=True)
+    TITLE = Column(String(255))
+    DOWNLOADER = Column(String(255))
+    DATE = Column(String(255))

@@ -213,10 +213,58 @@ class Config(object):
                 except Exception as e:
                     print("【Config】配置文件 config.yaml 格式出现严重错误！请检查：%s" % str(e))
                     self._config = {}
+            
+            # 从环境变量读取数据库配置并写入配置文件
+            self._apply_env_database_config()
 
         except Exception as err:
             print("【Config】加载 config.yaml 配置出错：%s" % str(err))
             return False
+    
+    def _apply_env_database_config(self):
+        """
+        从环境变量读取数据库配置并写入配置文件
+        环境变量优先级高于配置文件
+        """
+        env_db_config = {}
+        env_mappings = {
+            'DB_TYPE': 'type',
+            'DB_HOST': 'host',
+            'DB_PORT': 'port',
+            'DB_USERNAME': 'username',
+            'DB_PASSWORD': 'password',
+            'DB_NAME': 'database',
+        }
+        
+        has_env_config = False
+        for env_var, config_key in env_mappings.items():
+            value = os.environ.get(env_var)
+            if value is not None:
+                # 端口转换为整数
+                if config_key == 'port':
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        continue
+                env_db_config[config_key] = value
+                has_env_config = True
+        
+        if has_env_config:
+            # 获取当前数据库配置
+            current_db_config = self._config.get('database', {})
+            if current_db_config is None:
+                current_db_config = {}
+            
+            # 更新配置
+            current_db_config.update(env_db_config)
+            self._config['database'] = current_db_config
+            
+            # 保存到配置文件
+            try:
+                self.save_config(self._config)
+                print("【Config】已从环境变量更新数据库配置到配置文件")
+            except Exception as e:
+                print(f"【Config】保存数据库配置到文件失败：{str(e)}")
 
     def update_sites_data(self):
         # 启动时检查sites.dat更新
