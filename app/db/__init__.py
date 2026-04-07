@@ -4,6 +4,8 @@ from config import Config
 from .main_db import MainDb
 from .main_db import DbPersist
 from .media_db import MediaDb
+from .database_factory import DatabaseFactory
+from .sql_adapter import SQLAdapter, adapt_sql_for_engine
 from alembic.config import Config as AlembicConfig
 from alembic.command import upgrade as alembic_upgrade
 
@@ -31,14 +33,20 @@ def update_db():
     """
     更新数据库
     """
-    db_location = os.path.normpath(os.path.join(Config().get_config_path(), 'user.db'))
     script_location = os.path.normpath(os.path.join(Config().get_root_path(), 'scripts'))
     log.console('开始更新数据库...')
     try:
+        # 使用工厂获取数据库连接URL
+        db_url = DatabaseFactory.get_alembic_url()
+        
+        # 对 URL 中的 % 进行转义，避免 Alembic ConfigParser 插值错误
+        # 将 % 替换为 %%
+        db_url_escaped = db_url.replace('%', '%%')
+        
         alembic_cfg = AlembicConfig()
         alembic_cfg.set_main_option('script_location', script_location)
-        alembic_cfg.set_main_option('sqlalchemy.url', f"sqlite:///{db_location}")
+        alembic_cfg.set_main_option('sqlalchemy.url', db_url_escaped)
         alembic_upgrade(alembic_cfg, 'head')
         log.console('数据库更新完成')
     except Exception as e:
-        pass
+        log.error(f'数据库更新失败: {str(e)}')

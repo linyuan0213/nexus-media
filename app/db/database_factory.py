@@ -1,0 +1,415 @@
+# coding: utf-8
+"""
+数据库连接工厂模块
+支持 SQLite、MySQL、PostgreSQL 三种数据库
+支持从配置文件或环境变量读取配置
+
+环境变量优先级高于配置文件：
+- DB_TYPE: 数据库类型 (sqlite/mysql/postgresql)
+- DB_HOST: 数据库主机
+- DB_PORT: 数据库端口
+- DB_USERNAME: 用户名
+- DB_PASSWORD: 密码
+- DB_NAME: 数据库名
+- DB_SQLITE_PATH: SQLite 数据库文件路径
+"""
+import os
+from typing import Optional, Dict, Any
+from urllib.parse import quote_plus
+
+from sqlalchemy import create_engine, text, Engine
+from sqlalchemy.pool import QueuePool, NullPool
+
+from config import Config
+
+
+# 环境变量名称映射
+ENV_VAR_MAP = {
+    'type': 'DB_TYPE',
+    'host': 'DB_HOST',
+    'port': 'DB_PORT',
+    'username': 'DB_USERNAME',
+    'password': 'DB_PASSWORD',
+    'database': 'DB_NAME',
+    'sqlite_path': 'DB_SQLITE_PATH',
+}
+
+
+class DatabaseFactory:
+    """数据库连接工厂类"""
+    
+    # 支持的数据库类型
+    SQLITE = "sqlite"
+    MYSQL = "mysql"
+    POSTGRESQL = "postgresql"
+    
+    @staticmethod
+    def get_database_url(db_type: Optional[str] = None,
+                         host: Optional[str] = None,
+                         port: Optional[int] = None,
+                         username: Optional[str] = None,
+                         password: Optional[str] = None,
+                         database: Optional[str] = None,
+                         db_path: Optional[str] = None) -> str:
+        """
+        根据配置生成数据库连接URL
+        
+        :param db_type: 数据库类型 (sqlite/mysql/postgresql)
+        :param host: 数据库主机
+        :param port: 数据库端口
+        :param username: 用户名
+        :param password: 密码
+        :param database: 数据库名
+        :param db_path: SQLite数据库文件路径
+        :return: SQLAlchemy连接URL
+        """
+        if db_type is None:
+            db_type = DatabaseFactory._get_config_db_type()
+        
+        db_type = db_type.lower()
+        
+        if db_type == DatabaseFactory.SQLITE:
+            # SQLite 连接URL
+            if db_path is None:
+                raise ValueError("SQLite数据库需要提供db_path参数")
+            return f"sqlite:///{db_path}?check_same_thread=False"
+        
+        elif db_type == DatabaseFactory.MYSQL:
+            # MySQL 连接URL
+            host = host or DatabaseFactory._get_config_value('host', 'localhost')
+            port = port or DatabaseFactory._get_config_value('port', 3306)
+            username = username or DatabaseFactory._get_config_value('username', '')
+            password = password or DatabaseFactory._get_config_value('password', '')
+            database = database or DatabaseFactory._get_config_value('database', 'nas_tools')
+            
+            # 对密码进行URL编码
+            encoded_password = quote_plus(str(password)) if password else ''
+            return f"mysql+pymysql://{username}:{encoded_password}@{host}:{port}/{database}?charset=utf8mb4"
+        
+        elif db_type == DatabaseFactory.POSTGRESQL:
+            # PostgreSQL 连接URL
+            host = host or DatabaseFactory._get_config_value('host', 'localhost')
+            port = port or DatabaseFactory._get_config_value('port', 5432)
+            username = username or DatabaseFactory._get_config_value('username', 'postgres')
+            password = password or DatabaseFactory._get_config_value('password', '')
+            database = database or DatabaseFactory._get_config_value('database', 'nas_tools')
+            
+            # 对密码进行URL编码
+            encoded_password = quote_plus(str(password)) if password else ''
+            return f"postgresql+psycopg2://{username}:{encoded_password}@{host}:{port}/{database}"
+        
+        else:
+            raise ValueError(f"不支持的数据库类型: {db_type}")
+    
+    @staticmethod
+    def _ensure_database_exists(db_type: str, database: str):
+        """
+        确保数据库存在，如果不存在则自动创建
+        
+        :param db_type: 数据库类型
+        :param database: 数据库名
+        """
+        if db_type == DatabaseFactory.SQLITE:
+            # SQLite 数据库文件会在首次连接时自动创建
+            return
+        
+        try:
+            if db_type == DatabaseFactory.MYSQL:
+                # 获取连接参数（不指定数据库）
+                host = DatabaseFactory._get_config_value('host', 'localhost')
+                port = DatabaseFactory._get_config_value('port', 3306)
+                username = DatabaseFactory._get_config_value('username', '')
+                password = DatabaseFactory._get_config_value('password', '')
+                
+                # 连接到 MySQL 服务器（不指定数据库）
+                from sqlalchemy import create_engine as sa_create_engine
+                server_url = f"mysql+pymysql://{quote_plus(str(username))}:{quote_plus(str(password))}@{host}:{port}"
+                engine = sa_create_engine(server_url)
+                
+                with engine.connect() as conn:
+                    # 创建数据库（如果不存在）
+                    conn.execute(text(f"CREATE DATABASE IF NOT EXISTS {database} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"))
+                
+                engine.dispose()
+                
+            elif db_type == DatabaseFactory.POSTGRESQL:
+                # 获取连接参数（不指定数据库）
+                host = DatabaseFactory._get_config_value('host', 'localhost')
+                port = DatabaseFactory._get_config_value('port', 5432)
+                username = DatabaseFactory._get_config_value('username', 'postgres')
+                password = DatabaseFactory._get_config_value('password', '')
+                
+                # 连接到 PostgreSQL 服务器（使用 postgres 数据库）
+                from sqlalchemy import create_engine as sa_create_engine
+                server_url = f"postgresql+psycopg2://{quote_plus(str(username))}:{quote_plus(str(password))}@{host}:{port}/postgres"
+                engine = sa_create_engine(server_url, isolation_level="AUTOCOMMIT")
+                
+                with engine.connect() as conn:
+                    # 检查数据库是否存在
+                    result = conn.execute(text(f"SELECT 1 FROM pg_database WHERE datname = '{database}'"))
+                    if not result.fetchone():
+                        # 创建数据库
+                        conn.execute(text(f"CREATE DATABASE {database}"))
+                
+                engine.dispose()
+                
+        except Exception as e:
+            # 记录错误但不抛出，让后续连接尝试决定最终成败
+            print(f"【DatabaseFactory】自动创建数据库 {database} 失败: {str(e)}")
+    
+    @staticmethod
+    def create_engine(db_type: Optional[str] = None,
+                      db_path: Optional[str] = None,
+                      **kwargs) -> Engine:
+        """
+        创建数据库引擎
+        
+        :param db_type: 数据库类型，默认从配置文件获取
+        :param db_path: SQLite数据库文件路径，默认从配置路径获取
+        :param kwargs: 额外的引擎参数
+        :return: SQLAlchemy Engine对象
+        """
+        if db_type is None:
+            db_type = DatabaseFactory._get_config_db_type()
+        
+        db_type = db_type.lower()
+        
+        # 构建连接URL
+        if db_type == DatabaseFactory.SQLITE:
+            if db_path is None:
+                # 自动从配置路径获取数据库文件路径
+                db_path = os.path.join(Config().get_config_path(), 'user.db')
+            url = DatabaseFactory.get_database_url(db_type, db_path=db_path)
+        else:
+            # MySQL/PostgreSQL 使用配置中的数据库名
+            database = DatabaseFactory._get_config_value('database', 'nas_tools')
+            
+            # 自动创建数据库（如果不存在）
+            DatabaseFactory._ensure_database_exists(db_type, database)
+            
+            url = DatabaseFactory.get_database_url(db_type, database=database)
+        
+        # 构建引擎参数
+        engine_kwargs = {
+            'echo': kwargs.get('echo', False),
+        }
+        
+        if db_type == DatabaseFactory.SQLITE:
+            # SQLite 特定配置
+            engine_kwargs['poolclass'] = kwargs.get('poolclass', QueuePool)
+            engine_kwargs['pool_size'] = kwargs.get('pool_size', 20)
+            engine_kwargs['max_overflow'] = kwargs.get('max_overflow', 40)
+            engine_kwargs['pool_timeout'] = kwargs.get('pool_timeout', 60)
+            engine_kwargs['pool_recycle'] = kwargs.get('pool_recycle', 3600)
+            engine_kwargs['pool_pre_ping'] = kwargs.get('pool_pre_ping', True)
+            engine_kwargs['connect_args'] = {'timeout': 30}
+        else:
+            # MySQL/PostgreSQL 连接池配置
+            engine_kwargs['poolclass'] = QueuePool
+            engine_kwargs['pool_size'] = kwargs.get('pool_size', 20)
+            engine_kwargs['max_overflow'] = kwargs.get('max_overflow', 40)
+            engine_kwargs['pool_timeout'] = kwargs.get('pool_timeout', 60)
+            engine_kwargs['pool_recycle'] = kwargs.get('pool_recycle', 3600)
+            engine_kwargs['pool_pre_ping'] = True
+        
+        engine = create_engine(url, **engine_kwargs)
+        
+        # 执行数据库特定的初始化
+        DatabaseFactory._init_database(engine, db_type)
+        
+        return engine
+    
+    @staticmethod
+    def _init_database(engine: Engine, db_type: str):
+        """
+        执行数据库特定的初始化设置
+        
+        :param engine: SQLAlchemy Engine
+        :param db_type: 数据库类型
+        """
+        if db_type == DatabaseFactory.SQLITE:
+            # SQLite WAL 模式和性能优化
+            with engine.connect() as conn:
+                conn.execute(text("PRAGMA journal_mode=WAL;"))
+                conn.execute(text("PRAGMA synchronous=NORMAL;"))
+                conn.execute(text("PRAGMA cache_size=-64000;"))  # 64MB缓存
+                conn.execute(text("PRAGMA temp_store=MEMORY;"))
+                conn.execute(text("PRAGMA mmap_size=268435456;"))  # 256MB内存映射
+    
+    @staticmethod
+    def is_sqlite(engine: Engine) -> bool:
+        """检查是否是SQLite数据库"""
+        return "sqlite" in engine.url.drivername.lower()
+    
+    @staticmethod
+    def is_mysql(engine: Engine) -> bool:
+        """检查是否是MySQL数据库"""
+        return "mysql" in engine.url.drivername.lower()
+    
+    @staticmethod
+    def is_postgresql(engine: Engine) -> bool:
+        """检查是否是PostgreSQL数据库"""
+        return "postgresql" in engine.url.drivername.lower()
+    
+    @staticmethod
+    def _get_env_value(key: str, default: Any = None) -> Any:
+        """
+        从环境变量获取配置值
+        
+        :param key: 配置键名
+        :param default: 默认值
+        :return: 环境变量值或默认值
+        """
+        env_var = ENV_VAR_MAP.get(key)
+        if env_var:
+            value = os.environ.get(env_var)
+            if value is not None:
+                # 处理端口等数值类型
+                if key == 'port' and value:
+                    try:
+                        return int(value)
+                    except ValueError:
+                        return default
+                return value
+        return default
+    
+    @staticmethod
+    def _get_config_db_type() -> str:
+        """从环境变量或配置中获取数据库类型"""
+        # 优先从环境变量读取
+        env_type = DatabaseFactory._get_env_value('type')
+        if env_type:
+            return env_type.lower()
+        
+        # 从配置文件读取
+        try:
+            config = Config().get_config()
+            db_config = config.get('database', {})
+            db_type = db_config.get('type', 'sqlite')
+            return db_type.lower()
+        except Exception:
+            return DatabaseFactory.SQLITE
+    
+    @staticmethod
+    def _get_config_value(key: str, default: Any = None) -> Any:
+        """从环境变量或配置中获取数据库配置值（环境变量优先级更高）"""
+        # 优先从环境变量读取
+        env_value = DatabaseFactory._get_env_value(key, default)
+        if env_value is not None and env_value != default:
+            return env_value
+        
+        # 从配置文件读取
+        try:
+            config = Config().get_config()
+            db_config = config.get('database', {})
+            return db_config.get(key, default)
+        except Exception:
+            return default
+    
+    @staticmethod
+    def get_main_db_url() -> str:
+        """获取主数据库连接URL"""
+        db_type = DatabaseFactory._get_config_db_type()
+        
+        if db_type == DatabaseFactory.SQLITE:
+            db_path = os.path.join(Config().get_config_path(), 'user.db')
+            return DatabaseFactory.get_database_url(db_type, db_path=db_path)
+        else:
+            database = DatabaseFactory._get_config_value('database', 'nas_tools')
+            return DatabaseFactory.get_database_url(db_type, database=database)
+    
+    @staticmethod
+    def get_media_db_url() -> str:
+        """获取媒体数据库连接URL"""
+        db_type = DatabaseFactory._get_config_db_type()
+        
+        if db_type == DatabaseFactory.SQLITE:
+            db_path = os.path.join(Config().get_config_path(), 'media.db')
+            return DatabaseFactory.get_database_url(db_type, db_path=db_path)
+        else:
+            database = DatabaseFactory._get_config_value('database', 'nas_tools')
+            return DatabaseFactory.get_database_url(db_type, database=f"{database}_media")
+    
+    @staticmethod
+    def get_alembic_url() -> str:
+        """获取Alembic迁移使用的连接URL（用于主数据库）"""
+        return DatabaseFactory.get_main_db_url()
+
+
+class DatabaseDialect:
+    """数据库方言处理类，处理不同数据库的语法差异"""
+    
+    def __init__(self, engine: Engine):
+        self.engine = engine
+        self.is_sqlite = DatabaseFactory.is_sqlite(engine)
+        self.is_mysql = DatabaseFactory.is_mysql(engine)
+        self.is_postgresql = DatabaseFactory.is_postgresql(engine)
+    
+    def get_text_type(self) -> str:
+        """获取文本类型"""
+        if self.is_postgresql:
+            return "TEXT"
+        elif self.is_mysql:
+            return "LONGTEXT"
+        return "TEXT"
+    
+    def get_current_timestamp(self) -> str:
+        """获取当前时间戳函数"""
+        if self.is_postgresql:
+            return "CURRENT_TIMESTAMP"
+        elif self.is_mysql:
+            return "NOW()"
+        return "datetime('now')"
+    
+    def get_date_format(self, column: str, format_str: str) -> str:
+        """
+        获取日期格式化函数
+        
+        :param column: 列名
+        :param format_str: 格式字符串
+        :return: 数据库特定的日期格式化表达式
+        """
+        if self.is_postgresql:
+            # PostgreSQL 使用 TO_CHAR
+            pg_format = format_str.replace('%Y', 'YYYY').replace('%m', 'MM').replace('%d', 'DD')
+            return f"TO_CHAR({column}, '{pg_format}')"
+        elif self.is_mysql:
+            # MySQL 使用 DATE_FORMAT
+            return f"DATE_FORMAT({column}, '{format_str}')"
+        else:
+            # SQLite 使用 strftime
+            return f"strftime('{format_str}', {column})"
+    
+    def get_limit_clause(self, limit: int, offset: int = 0) -> str:
+        """
+        获取LIMIT子句
+        
+        :param limit: 限制数量
+        :param offset: 偏移量
+        :return: LIMIT子句
+        """
+        if offset > 0:
+            return f"LIMIT {limit} OFFSET {offset}"
+        return f"LIMIT {limit}"
+    
+    def get_random_function(self) -> str:
+        """获取随机函数"""
+        if self.is_postgresql:
+            return "RANDOM()"
+        elif self.is_mysql:
+            return "RAND()"
+        return "RANDOM()"
+    
+    def get_concat_function(self, *args) -> str:
+        """
+        获取字符串连接函数
+        
+        :param args: 要连接的字符串或列名
+        :return: 连接表达式
+        """
+        if self.is_postgresql:
+            return " || ".join(args)
+        elif self.is_mysql:
+            return f"CONCAT({', '.join(args)})"
+        else:
+            return " || ".join(args)

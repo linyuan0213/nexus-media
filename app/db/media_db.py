@@ -1,43 +1,29 @@
 import json
-import os
-import threading
 import time
 
 from cachetools import cached, TTLCache
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.pool import NullPool
 
-from app.db.models import BaseMedia, MEDIASYNCITEMS, MEDIASYNCSTATISTIC
+from app.db.main_db import MainDb, _Engine, _Session
+from app.db.models import MEDIASYNCITEMS, MEDIASYNCSTATISTIC
 from app.utils import ExceptionUtils
-from config import Config
-
-lock = threading.Lock()
-_Engine = create_engine(
-    f"sqlite:///{os.path.join(Config().get_config_path(), 'media.db')}?check_same_thread=False",
-    echo=False,
-    poolclass=NullPool,
-    connect_args={'timeout': 30}
-)
-
-# 启用 WAL 模式
-with _Engine.connect() as conn:
-    conn.execute(text("PRAGMA journal_mode=WAL;"))
-
-_Session = scoped_session(sessionmaker(bind=_Engine,
-                                       autoflush=True,
-                                       autocommit=False))
 
 
 class MediaDb:
+    """
+    媒体数据库类
+    现在使用与主数据库相同的连接
+    """
+    
     @property
     def session(self):
         return _Session()
 
     @staticmethod
     def init_db():
-        with lock:
-            BaseMedia.metadata.create_all(_Engine)
+        """初始化数据库（现在与主数据库共用）"""
+        # 媒体表现在与主表在同一个数据库中
+        # 由 MainDb.init_db() 统一创建所有表
+        pass
 
     def _close_session(self):
         """安全关闭 Session 并清理 scoped_session"""
@@ -79,7 +65,7 @@ class MediaDb:
             self.session.rollback()
             return False
         finally:
-            self._close_session()  # 确保关闭
+            self._close_session()
 
     def empty(self, server_type=None, library=None):
         try:
@@ -149,7 +135,7 @@ class MediaDb:
             
             return item if item else {}
         finally:
-            self._close_session()  # 查询后也需关闭
+            self._close_session()
 
     def get_statistics(self, server_type):
         try:

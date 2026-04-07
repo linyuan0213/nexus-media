@@ -1,36 +1,31 @@
 import os
 import threading
 from contextlib import contextmanager
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.pool import QueuePool
 
 from app.db.models import Base
+from app.db.database_factory import DatabaseFactory
+from app.db.sql_adapter import SQLAdapter
 from app.utils import ExceptionUtils, PathUtils
 from config import Config
 
+
+# SQL 适配器实例
+_sql_adapter = None
+
+def get_sql_adapter():
+    """获取 SQL 适配器实例"""
+    global _sql_adapter
+    if _sql_adapter is None:
+        _sql_adapter = SQLAdapter(_Engine)
+    return _sql_adapter
+
 lock = threading.Lock()
 
-# 使用QueuePool替代NullPool，支持连接池以提高性能
-_Engine = create_engine(
-    f"sqlite:///{os.path.join(Config().get_config_path(), 'user.db')}?check_same_thread=False",
-    echo=False,
-    poolclass=QueuePool,
-    pool_size=20,
-    max_overflow=40,
-    pool_timeout=60,
-    pool_recycle=3600,
-    pool_pre_ping=True,  # 启用连接健康检查，自动回收失效连接
-    connect_args={'timeout': 30}
-)
-
-# 启用WAL模式和性能优化设置
-with _Engine.connect() as conn:
-    conn.execute(text("PRAGMA journal_mode=WAL;"))
-    conn.execute(text("PRAGMA synchronous=NORMAL;"))
-    conn.execute(text("PRAGMA cache_size=-64000;"))  # 64MB缓存
-    conn.execute(text("PRAGMA temp_store=MEMORY;"))
-    conn.execute(text("PRAGMA mmap_size=268435456;"))  # 256MB内存映射
+# 使用工厂创建数据库引擎
+# 自动从配置文件获取数据库类型和连接信息
+_Engine = DatabaseFactory.create_engine()
 
 _Session = scoped_session(sessionmaker(bind=_Engine,
                                        autoflush=False,  # 禁用自动flush以提高性能
@@ -93,8 +88,11 @@ class MainDb:
                     sql_list = f.read().split(';\n')
                     for sql in sql_list:
                         try:
-                            self.excute(sql)
-                            self.commit()
+                            # 使用 SQL 适配器处理 SQL 语句
+                            adapted_sql = get_sql_adapter().adapt_sql(sql)
+                            if adapted_sql and adapted_sql.strip():
+                                self.excute(adapted_sql)
+                                self.commit()
                         except Exception as err:
                             print(str(err))
                 init_files.append(os.path.basename(sql_file))
@@ -146,13 +144,22 @@ class MainDb:
         """
         查询对象
         """
+        # 对于 MySQL，提交当前事务以获取最新数据
+        # 避免 REPEATABLE READ 隔离级别导致的缓存问题
+        try:
+            self.commit()
+        except:
+            pass
         return self.session.query(*obj)
 
     def excute(self, sql):
         """
         执行SQL语句
         """
-        self.session.execute(text(sql))
+        # 使用 SQL 适配器处理 SQL 语句
+        adapted_sql = get_sql_adapter().adapt_sql(sql)
+        if adapted_sql and adapted_sql.strip():
+            self.session.execute(text(adapted_sql))
 
     def flush(self):
         """

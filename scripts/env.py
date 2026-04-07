@@ -6,6 +6,8 @@ from sqlalchemy import pool
 from alembic import context
 
 from app.db.models import Base
+from app.db.database_factory import DatabaseFactory
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -27,6 +29,17 @@ target_metadata = Base.metadata
 # ... etc.
 
 
+def get_database_url():
+    """
+    获取数据库连接URL
+    优先使用配置文件中的URL，如果没有则使用工厂生成
+    """
+    url = config.get_main_option("sqlalchemy.url")
+    if url:
+        return url
+    return DatabaseFactory.get_alembic_url()
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -39,13 +52,19 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = get_database_url()
+    
+    # 根据数据库类型配置不同的迁移选项
+    dialect_opts = {"paramstyle": "named"}
+    
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
-        render_as_batch=True
+        dialect_opts=dialect_opts,
+        render_as_batch=True,  # 支持SQLite的批量操作
+        compare_type=True,  # 比较列类型
+        compare_server_default=True,  # 比较默认值
     )
 
     with context.begin_transaction():
@@ -59,15 +78,16 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    # 使用工厂创建引擎
+    connectable = DatabaseFactory.create_engine()
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=True,  # 支持SQLite的批量操作
+            compare_type=True,  # 比较列类型
+            compare_server_default=True,  # 比较默认值
         )
 
         with context.begin_transaction():
