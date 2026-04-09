@@ -11,34 +11,33 @@ from app.utils import ExceptionUtils, PathUtils
 from config import Config
 
 
-# SQL 适配器实例
+# SQL 适配器实例 - 使用双重检查锁模式
 _sql_adapter = None
+_sql_adapter_lock = threading.Lock()
 
 def get_sql_adapter():
-    """获取 SQL 适配器实例"""
+    """获取 SQL 适配器实例 - 线程安全"""
     global _sql_adapter
     if _sql_adapter is None:
-        _sql_adapter = SQLAdapter(_Engine)
+        with _sql_adapter_lock:
+            if _sql_adapter is None:
+                _sql_adapter = SQLAdapter(_Engine)
     return _sql_adapter
-
-lock = threading.Lock()
 
 # 使用工厂创建数据库引擎
 # 自动从配置文件获取数据库类型和连接信息
 _Engine = DatabaseFactory.create_engine()
 
+# session配置
 _Session = scoped_session(sessionmaker(bind=_Engine,
                                        autoflush=False,  # 禁用自动flush以提高性能
                                        autocommit=False,
                                        expire_on_commit=False))
 
-# 线程本地存储，用于会话管理
-_thread_local = threading.local()
-
 
 @contextmanager
 def session_scope():
-    """提供事务范围的session上下文管理器"""
+    """提供事务范围的session上下文管理器 - 优化异常处理"""
     session = _Session()
     try:
         yield session
@@ -58,9 +57,8 @@ class MainDb:
         return _Session()
 
     def init_db(self):
-        with lock:
-            Base.metadata.create_all(_Engine)
-            self.init_db_version()
+        Base.metadata.create_all(_Engine)
+        self.init_db_version()
 
     def init_db_version(self):
         """

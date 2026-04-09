@@ -15,7 +15,10 @@ from app.utils.commons import SingletonMeta
 from app.utils.types import SyncType
 from config import RMT_MEDIAEXT
 
-lock = threading.Lock()
+# 使用更细粒度的锁
+_synced_files_lock = threading.Lock()
+_need_sync_paths_lock = threading.Lock()
+_observers_lock = threading.Lock()
 
 
 class FileMonitorHandler(FileSystemEventHandler):
@@ -164,13 +167,10 @@ class Sync(metaclass=SingletonMeta):
                 log.debug("【Sync】文件%s：%s" % (text, event_path))
                 # 判断是否处理过了
                 need_handler_flag = False
-                try:
-                    lock.acquire()
+                with _synced_files_lock:
                     if event_path not in self._synced_files:
                         self._synced_files.append(event_path)
                         need_handler_flag = True
-                finally:
-                    lock.release()
                 if not need_handler_flag:
                     log.debug("【Sync】文件已处理过：%s" % event_path)
                     return
@@ -242,8 +242,7 @@ class Sync(metaclass=SingletonMeta):
                         if not ret:
                             log.warn("【Sync】%s 转移失败：%s" % (event_path, ret_msg))
                     else:
-                        try:
-                            lock.acquire()
+                        with _need_sync_paths_lock:
                             if self._need_sync_paths.get(from_dir):
                                 files = self._need_sync_paths[from_dir].get('files')
                                 if not files:
@@ -259,8 +258,6 @@ class Sync(metaclass=SingletonMeta):
                                                                    'unknown': unknown_path,
                                                                    'syncmod': sync_mode,
                                                                    'files': [event_path]}
-                        finally:
-                            lock.release()
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
                 log.error("【Sync】发生错误：%s - %s" % (str(e), traceback.format_exc()))
@@ -269,8 +266,7 @@ class Sync(metaclass=SingletonMeta):
         """
         批量转移文件，由定时服务定期调用执行
         """
-        try:
-            lock.acquire()
+        with _need_sync_paths_lock:
             finished_paths = []
             for path in list(self._need_sync_paths):
                 if not PathUtils.is_invalid_path(path) and os.path.exists(path):
@@ -305,8 +301,6 @@ class Sync(metaclass=SingletonMeta):
                     if not ret:
                         log.warn("【Sync】%s转移失败：%s" % (path, ret_msg))
                 self._need_sync_paths.pop(path)
-        finally:
-            lock.release()
 
     def run_service(self):
         """
@@ -325,7 +319,8 @@ class Sync(metaclass=SingletonMeta):
                 else:
                     # 内部处理系统操作类型选择最优解
                     observer = Observer(timeout=10)
-                self._observer.append(observer)
+                with _observers_lock:
+                    self._observer.append(observer)
                 observer.schedule(FileMonitorHandler(mon_path, self), path=mon_path, recursive=True)
                 observer.daemon = True
                 observer.start()
@@ -347,14 +342,15 @@ class Sync(metaclass=SingletonMeta):
         """
         关闭监控服务
         """
-        if self._observer:
-            for observer in self._observer:
-                try:
-                    observer.stop()
-                    observer.join()
-                except Exception as e:
-                    print(str(e))
-        self._observer = []
+        with _observers_lock:
+            if self._observer:
+                for observer in self._observer:
+                    try:
+                        observer.stop()
+                        observer.join()
+                    except Exception as e:
+                        print(str(e))
+                self._observer = []
 
     def transfer_sync(self, sid=None):
         """

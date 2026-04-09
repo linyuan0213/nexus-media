@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import contextmanager
 import os.path
 import re
 from time import sleep
@@ -22,6 +23,17 @@ from config import Config
 from web.backend.web_utils import WebUtils
 from app.utils.types import MediaType
 from app.media.meta import MetaInfo
+
+
+@contextmanager
+def web_search_executor(max_workers=4):
+    """Web搜索线程池上下文管理器 - 确保资源正确释放"""
+    executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="web_search")
+    try:
+        yield executor
+    finally:
+        # 不等待，立即关闭，加快响应
+        executor.shutdown(wait=False)
 
 SEARCH_MEDIA_CACHE = {}
 SEARCH_MEDIA_TYPE = {}
@@ -169,27 +181,24 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
     # 开始搜索
     log.info("【Web】开始通过 %s 搜索 ..." % search_name_list)
 
-    # 多线程 - 优化线程管理和减少延迟
+    # 多线程 - 使用上下文管理器优化线程池管理
     media_list = []
     if search_name_list:
-        executor = ThreadPoolExecutor(max_workers=max_workers)
-        all_task = []
-        for search_name in search_name_list:
-            task = executor.submit(_searcher.search_medias,
-                                    search_name,
-                                    filter_args,
-                                    media_info,
-                                    SearchType.WEB
-                                )
-            all_task.append(task)
-            # 减少线程间延迟，只在需要时添加微小延迟
-            if len(search_name_list) > 1:
-                sleep(0.1)  # 从0.5秒减少到0.1秒
-        
-        for future in as_completed(all_task):
-            result = future.result()
-            if result:
-                media_list.extend(result)
+        with web_search_executor(max_workers) as executor:
+            all_task = []
+            for search_name in search_name_list:
+                task = executor.submit(_searcher.search_medias,
+                                        search_name,
+                                        filter_args,
+                                        media_info,
+                                        SearchType.WEB
+                                    )
+                all_task.append(task)
+            
+            for future in as_completed(all_task):
+                result = future.result()
+                if result:
+                    media_list.extend(result)
 
     # 根据 org_string 去重列表
     unique_media_list = []
