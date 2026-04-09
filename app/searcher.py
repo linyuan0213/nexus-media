@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import contextmanager
 from time import sleep
 from app.utils.string_utils import StringUtils
 import log
@@ -12,6 +13,29 @@ from app.downloader import Downloader
 from app.media import Media
 from app.helper import ProgressHelper
 from app.utils.types import SearchType, EventType, ProgressKey
+
+
+# 全局线程池，避免重复创建和销毁
+_search_executor = None
+
+def get_search_executor(max_workers=4):
+    """获取全局搜索线程池"""
+    global _search_executor
+    if _search_executor is None or _search_executor._max_workers < max_workers:
+        if _search_executor:
+            _search_executor.shutdown(wait=False)
+        _search_executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="search")
+    return _search_executor
+
+
+@contextmanager
+def search_executor_context(max_workers=4):
+    """搜索线程池上下文管理器"""
+    executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="search")
+    try:
+        yield executor
+    finally:
+        executor.shutdown(wait=False)
 
 
 class Searcher(metaclass=SingletonMeta):
@@ -154,24 +178,23 @@ class Searcher(metaclass=SingletonMeta):
             # 多线程 - 限制最大并发数，避免资源争抢
             # 根据搜索名称数量动态调整，但不超过合理上限
             optimal_workers = min(len(search_name_list), max_workers, 4)
-            executor = ThreadPoolExecutor(max_workers=optimal_workers)
+            media_list = []
             all_task = []
-            for search_name in search_name_list:
-                task = executor.submit(self.search_medias,
-                                        search_name,
-                                        filter_args,
-                                        media_info,
-                                        in_from
-                                    )
-                all_task.append(task)
-                # 减少线程启动间隔，加快搜索启动速度
-                if len(search_name_list) > 1:
-                    sleep(0.1)
-        media_list = []
-        for future in as_completed(all_task):
-            result = future.result()
-            if result:
-                media_list = media_list + result
+            # 使用上下文管理器确保线程池正确关闭
+            with search_executor_context(optimal_workers) as executor:
+                for search_name in search_name_list:
+                    task = executor.submit(self.search_medias,
+                                            search_name,
+                                            filter_args,
+                                            media_info,
+                                            in_from
+                                        )
+                    all_task.append(task)
+                # 收集结果
+                for future in as_completed(all_task):
+                    result = future.result()
+                    if result:
+                        media_list.extend(result)
 
         # 根据 org_string 去重列表
         unique_media_list = []

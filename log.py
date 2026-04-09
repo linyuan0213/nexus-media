@@ -13,10 +13,16 @@ from config import Config
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 logging.getLogger('watchdog').setLevel(logging.INFO)
-lock = threading.Lock()
+
+# 使用RLock支持重入，减少死锁风险
+lock = threading.RLock()
+# 使用线程本地存储减少锁竞争
+_thread_local = threading.local()
 
 LOG_QUEUE = deque(maxlen=200)
 LOG_INDEX = 0
+# 使用原子操作减少锁持有时间
+_index_lock = threading.Lock()
 
 
 class InterceptHandler(logging.Handler):
@@ -93,27 +99,47 @@ class Logger:
     def get_instance(module):
         if not module:
             module = "run"
-        if Logger.__instance.get(module):
-            return Logger.__instance.get(module)
+        # 双重检查锁定，减少锁竞争
+        instance = Logger.__instance.get(module)
+        if instance:
+            return instance
         with lock:
+            instance = Logger.__instance.get(module)
+            if instance:
+                return instance
             Logger.__instance[module] = Logger(module)
         return Logger.__instance.get(module)
 
 
+# 预编译正则表达式，提升性能
+_LOG_SOURCE_PATTERN = re.compile(r"(?<=【).*?(?=】)")
+
 def __append_log_queue(level, text):
     global LOG_INDEX, LOG_QUEUE
-    with lock:
-        text = escape(text)
-        if text.startswith("【"):
-            source = re.findall(r"(?<=【).*?(?=】)", text)[0]
+    # 先处理文本，减少锁内操作
+    text = escape(text)
+    if text.startswith("【"):
+        match = _LOG_SOURCE_PATTERN.search(text)
+        if match:
+            source = match.group(0)
             text = text.replace(f"【{source}】", "")
         else:
             source = "System"
-        LOG_QUEUE.append({
-            "time": time.strftime('%H:%M:%S', time.localtime(time.time())),
-            "level": level,
-            "source": source,
-            "text": text})
+    else:
+        source = "System"
+    
+    log_entry = {
+        "time": time.strftime('%H:%M:%S', time.localtime(time.time())),
+        "level": level,
+        "source": source,
+        "text": text}
+    
+    # 减少锁持有时间
+    with lock:
+        LOG_QUEUE.append(log_entry)
+    
+    # 使用原子操作更新索引
+    with _index_lock:
         LOG_INDEX += 1
 
 
