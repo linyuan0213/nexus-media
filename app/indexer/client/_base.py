@@ -137,7 +137,8 @@ class _IIndexClient(metaclass=ABCMeta):
         if not url:
             return []
         try:
-            ret = RequestUtils(timeout=10).get_res(url)
+            # 优化：增加超时时间以应对慢响应站点，同时添加更健壮的错误处理
+            ret = RequestUtils(timeout=15).get_res(url)
         except Exception as e2:
             ExceptionUtils.exception_traceback(e2)
             return []

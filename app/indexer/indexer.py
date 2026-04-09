@@ -141,11 +141,13 @@ class Indexer(metaclass=SingletonMeta):
             self.progress.update(ptype=ProgressKey.Search,
                                  text="开始搜索 %s，站点：%s ..." % (key_word, filter_args.get("site")))
         else:
-            log.info(f"【{self._client_type.value}】开始并行搜索 %s，线程数：%s ..." % (key_word, len(indexers)))
+            # 限制最大并发线程数，避免过多连接导致性能下降
+            max_workers = min(len(indexers), 10)
+            log.info(f"【{self._client_type.value}】开始并行搜索 %s，站点数：%s，并发数：%s ..." % (key_word, len(indexers), max_workers))
             self.progress.update(ptype=ProgressKey.Search,
-                                 text="开始并行搜索 %s，线程数：%s ..." % (key_word, len(indexers)))
-        # 多线程
-        executor = ThreadPoolExecutor(max_workers=len(indexers))
+                                 text="开始并行搜索 %s，站点数：%s ..." % (key_word, len(indexers)))
+        # 多线程 - 使用合理的并发数
+        executor = ThreadPoolExecutor(max_workers=max_workers if not filter_args or not filter_args.get("site") else len(indexers))
         all_task = []
         for index in indexers:
             order_seq = 100 - int(index.pri)

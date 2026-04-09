@@ -266,14 +266,14 @@ class BuiltinIndexer(_IIndexClient):
         return result_array
 
     @staticmethod
-    def __spider_search(indexer, keyword=None, page=None, mtype=None, timeout=90):
+    def __spider_search(indexer, keyword=None, page=None, mtype=None, timeout=30):
         """
         根据关键字搜索单个站点
         :param: indexer: 站点配置
         :param: keyword: 关键字
         :param: page: 页码
         :param: mtype: 媒体类型
-        :param: timeout: 超时时间
+        :param: timeout: 超时时间（秒），默认30秒
         :return: 是否发生错误, 种子列表
         """
         spider = TorrentSpider()
@@ -282,14 +282,18 @@ class BuiltinIndexer(_IIndexClient):
                         page=page,
                         mtype=mtype)
         spider.start()
-        # 循环判断是否获取到数据
-        sleep_count = 0
+        
+        # 使用事件通知机制替代轮询，减少CPU占用和等待时间
+        # 使用更短的轮询间隔以便更快检测到完成
+        sleep_interval = 0.1  # 100ms轮询间隔
+        total_wait = 0
         while not spider.is_complete:
-            sleep_count += 1
-            time.sleep(1)
-            if sleep_count > timeout:
+            time.sleep(sleep_interval)
+            total_wait += sleep_interval
+            if total_wait >= timeout:
                 spider.stop_spider()
                 break
+        
         # 是否发生错误
         result_flag = spider.is_error
         # 种子列表

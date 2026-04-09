@@ -22,9 +22,9 @@ from feapder.utils.tools import urlencode
 class TorrentSpider(feapder.AirSpider):
     _redis_valid = RedisHelper.is_valid()
     __custom_setting__ = dict(
-        SPIDER_THREAD_COUNT=3,
-        SPIDER_MAX_RETRY_TIMES=3,
-        REQUEST_LOST_TIMEOUT=10,
+        SPIDER_THREAD_COUNT=2,  # 减少线程数，避免过多并发
+        SPIDER_MAX_RETRY_TIMES=2,  # 减少重试次数，加快失败返回
+        REQUEST_LOST_TIMEOUT=15,  # 增加请求超时时间，确保慢站点有足够时间响应
         RETRY_FAILED_REQUESTS=False,
         LOG_LEVEL="INFO",
         KEEP_ALIVE=False,
