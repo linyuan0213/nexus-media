@@ -148,21 +148,25 @@ class Searcher(metaclass=SingletonMeta):
                 max_workers = len(search_name_list)
             # 去除空元素
             search_name_list = list(filter(None, search_name_list))
-
-        # 开始搜索
-        log.info("【Searcher】开始搜索 %s ..." % search_name_list)
-        # 多线程
-        executor = ThreadPoolExecutor(max_workers=max_workers)
-        all_task = []
-        for search_name in search_name_list:
-            task = executor.submit(self.search_medias,
-                                    search_name,
-                                    filter_args,
-                                    media_info,
-                                    in_from
-                                )
-            all_task.append(task)
-            sleep(0.5)
+    
+            # 开始搜索
+            log.info("【Searcher】开始搜索 %s ..." % search_name_list)
+            # 多线程 - 限制最大并发数，避免资源争抢
+            # 根据搜索名称数量动态调整，但不超过合理上限
+            optimal_workers = min(len(search_name_list), max_workers, 4)
+            executor = ThreadPoolExecutor(max_workers=optimal_workers)
+            all_task = []
+            for search_name in search_name_list:
+                task = executor.submit(self.search_medias,
+                                        search_name,
+                                        filter_args,
+                                        media_info,
+                                        in_from
+                                    )
+                all_task.append(task)
+                # 减少线程启动间隔，加快搜索启动速度
+                if len(search_name_list) > 1:
+                    sleep(0.1)
         media_list = []
         for future in as_completed(all_task):
             result = future.result()
