@@ -449,3 +449,33 @@ def update_rss_state():
     except Exception as e:
         log.error(f"【Initialize】更新RSS状态失败：{str(e)}")
         ExceptionUtils.exception_traceback(e)
+
+
+def init_rbac_system():
+    """
+    初始化 RBAC 权限管理系统
+    - 初始化默认权限、菜单、角色
+    - 创建管理员用户
+    """
+    try:
+        from app.services.rbac_init import init_rbac_system as rbac_init, init_admin_user
+        from config import Config
+        
+        # 初始化 RBAC 基础数据
+        rbac_init()
+        
+        # 获取配置中的管理员账号
+        login_user = Config().get_config('app').get('login_user') or 'admin'
+        login_password = Config().get_config('app').get('login_password') or 'password'
+        
+        # 如果是哈希密码，使用原始密码
+        if login_password.startswith('[hash]'):
+            login_password = 'password'
+        
+        # 创建管理员用户
+        init_admin_user(login_user, login_password)
+        log.info(f"【Initialize】RBAC 系统初始化完成，管理员: {login_user}")
+        
+    except Exception as e:
+        log.error(f"【Initialize】RBAC 系统初始化失败: {str(e)}")
+        ExceptionUtils.exception_traceback(e)

@@ -1,0 +1,908 @@
+{% import 'macro/svg.html' as SVG %}
+{% import 'macro/oops.html' as OOPS %}
+
+{# Lucide 图标渲染宏 - 与侧边栏导航保持一致 #}
+{% macro render_menu_icon(icon_name) %}
+  {% if icon_name %}
+    <i data-lucide="{{ icon_name }}" width="20" height="20"></i>
+  {% else %}
+    <i data-lucide="file" width="20" height="20"></i>
+  {% endif %}
+{% endmacro %}
+
+{% macro render_menu_item(menu, level=0) %}
+<div class="menu-item-wrapper" data-id="{{ menu.id }}" data-parent-id="{{ menu.parent_id or '' }}">
+  <!-- 上方放置区域（用于同级排序） -->
+  <div class="drop-zone drop-before" data-position="before" data-target-id="{{ menu.id }}"></div>
+  
+  <div class="menu-item" style="padding-left: {{ level * 20 }}px;" draggable="true">
+    <div class="menu-item-content d-flex align-items-center py-2 px-3 rounded cursor-pointer hover-bg-light">
+      <span class="me-2 drag-handle cursor-move" title="拖动排序">{{ SVG.grip_vertical() }}</span>
+      <span class="me-2 {% if menu.children and menu.children|length > 0 %}toggle-icon{% else %}toggle-icon-placeholder{% endif %}" {% if menu.children and menu.children|length > 0 %}onclick="toggle_children({{ menu.id }}, event)"{% endif %}>
+        {% if menu.children and menu.children|length > 0 %}
+          {{ SVG.chevron_right() }}
+        {% endif %}
+      </span>
+      <span class="me-2" onclick="show_menu_detail({{ menu.id }})">{% if menu.icon %}{{ render_menu_icon(menu.icon) }}{% else %}{{ SVG.file_info() }}{% endif %}</span>
+      <span class="flex-fill" onclick="show_menu_detail({{ menu.id }})">{{ menu.menu_name }}</span>
+      {% if menu.children %}
+        <span class="badge bg-secondary">{{ menu.children|length }}</span>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- 拖入成为子菜单区域（始终可见） -->
+  <div class="drop-zone drop-into" data-position="into" data-target-id="{{ menu.id }}">
+    <span class="drop-hint">拖入成为 "{{ menu.menu_name }}" 的子菜单</span>
+  </div>
+  
+  <!-- 子菜单容器 -->
+  <div class="menu-children-container" id="children-{{ menu.id }}" data-parent-id="{{ menu.id }}">
+    {% if menu.children %}
+      {% for child in menu.children %}
+        {{ render_menu_item(child, level + 1) }}
+      {% endfor %}
+    {% endif %}
+  </div>
+  
+  <!-- 下方放置区域（用于同级排序） -->
+  <div class="drop-zone drop-after" data-position="after" data-target-id="{{ menu.id }}"></div>
+</div>
+{% endmacro %}
+
+<div class="container-xl">
+  <!-- Page title -->
+  <div class="page-header d-print-none">
+    <div class="row align-items-center">
+      <div class="col">
+        <h2 class="page-title">
+          <span class="me-2">{{ SVG.menu_2() }}</span>菜单管理
+        </h2>
+        <div class="text-muted mt-1">管理系统菜单结构及访问权限，拖动菜单项可调整排序</div>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        {% if current_user.is_superadmin or has_permission('menu:create') %}
+        <div class="btn-list">
+          <a href="javascript:show_menu_modal()" class="btn btn-primary d-none d-sm-inline-block">
+            {{ SVG.plus() }}
+            新增菜单
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 菜单列表 -->
+{% if Menus %}
+<div class="page-body">
+  <div class="container-xl">
+    <div class="row">
+      <div class="col-lg-4">
+        <!-- 菜单树 -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">菜单结构</h3>
+            <div class="card-actions">
+              <span class="text-muted small">拖动 <span class="drag-handle-inline">{{ SVG.grip_vertical() }}</span> 调整顺序</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="menu-tree" id="menu-tree">
+              <!-- 拖出成为顶级菜单的区域 -->
+              <div class="drop-zone drop-to-root" data-position="to-root" title="拖出成为顶级菜单">
+                <span class="drop-hint">拖至此处成为顶级菜单</span>
+              </div>
+              {% for menu in MenuTree %}
+                {{ render_menu_item(menu) }}
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-8">
+        <!-- 菜单详情 -->
+        <div class="card" id="menu-detail-card" style="display: none;">
+          <div class="card-header">
+            <h3 class="card-title" id="detail-title">菜单详情</h3>
+          </div>
+          <div class="card-body" id="menu-detail-content">
+            <!-- 动态填充 -->
+          </div>
+        </div>
+        <div class="empty" id="menu-empty-state">
+          <div class="empty-img">
+            {{ SVG.menu_2() }}
+          </div>
+          <p class="empty-title">选择一个菜单查看详情</p>
+          <p class="empty-subtitle text-muted">
+            点击左侧菜单树中的菜单项查看详细信息
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+  {{ OOPS.nodatafound('没有菜单', '没有添加任何菜单，请点击"新增菜单"按钮。') }}
+{% endif %}
+
+<!-- 新增/编辑菜单模态框 -->
+<div class="modal modal-blur fade" id="modal-menu" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-menu-title">新增菜单</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="menu_id" value="">
+        <div class="row">
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label required">菜单名称</label>
+              <input type="text" id="menu_name" class="form-control" placeholder="输入菜单名称">
+              <div class="invalid-feedback">菜单名称不能为空</div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label required">菜单代码</label>
+              <input type="text" id="menu_code" class="form-control" placeholder="输入菜单代码，如: user_management">
+              <div class="form-hint">用于系统识别的唯一代码</div>
+              <div class="invalid-feedback">菜单代码不能为空</div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label">父菜单</label>
+              <select class="form-select" id="menu_parent_id">
+                <option value="">无（顶级菜单）</option>
+                {% for menu in TopMenus %}
+                <option value="{{ menu.ID }}">{{ menu.MENU_NAME }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label">路由路径</label>
+              <input type="text" id="menu_path" class="form-control" placeholder="如: /users">
+              <div class="form-hint">页面的URL路径</div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label">图标</label>
+              <input type="text" id="menu_icon" class="form-control" placeholder="如: user, settings">
+              <div class="form-hint">Lucide图标名称</div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label">组件路径</label>
+              <input type="text" id="menu_component" class="form-control" placeholder="前端组件路径">
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label">排序号</label>
+              <input type="number" id="menu_sort_order" class="form-control" value="0" min="0">
+              <div class="form-hint">数字越小排序越靠前</div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label">关联权限</label>
+              <select class="form-select" id="menu_permission_code">
+                <option value="">无</option>
+                {% for perm in Permissions %}
+                <option value="{{ perm.PERMISSION_CODE }}">{{ perm.PERMISSION_NAME }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-lg-12">
+            <div class="mb-3">
+              <label class="form-label" data-bs-toggle="tooltip" data-bs-placement="top" title="控制菜单是否在侧边栏导航中显示">状态</label>
+              <div class="form-selectgroup">
+                <label class="form-selectgroup-item">
+                  <input type="radio" name="menu_status" value="1" class="form-selectgroup-input" checked>
+                  <span class="form-selectgroup-label">显示</span>
+                </label>
+                <label class="form-selectgroup-item">
+                  <input type="radio" name="menu_status" value="0" class="form-selectgroup-input">
+                  <span class="form-selectgroup-label">隐藏</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link me-auto" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-primary" id="save-menu-btn" onclick="save_menu()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+  window.window.editing_menu_id = null;
+
+  // 显示新增菜单模态框
+  function show_menu_modal() {
+    window.editing_menu_id = null;
+    $('#modal-menu-title').text('新增菜单');
+    $('#menu_id').val('');
+    $('#menu_name').val('');
+    $('#menu_code').val('').prop('disabled', false);
+    $('#menu_parent_id').val('');
+    $('#menu_path').val('');
+    $('#menu_icon').val('');
+    $('#menu_component').val('');
+    $('#menu_sort_order').val(0);
+    $('#menu_permission_code').val('');
+    $('input[name="menu_status"][value="1"]').prop('checked', true);
+    
+    // 清除验证状态
+    $('.is-invalid').removeClass('is-invalid');
+    
+    $('#modal-menu').modal('show');
+  }
+
+  // 显示菜单详情
+  function show_menu_detail(menu_id) {
+    // 获取菜单详情
+    ajax_post('get_menu', {id: menu_id}, function(ret) {
+      if (ret.code === 0) {
+        const menu = ret.data;
+        
+        // 构建详情HTML
+        let html = `
+          <div class="datagrid">
+            <div class="datagrid-item">
+              <div class="datagrid-title">菜单名称</div>
+              <div class="datagrid-content">${menu.menu_name}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">菜单代码</div>
+              <div class="datagrid-content"><code>${menu.menu_code}</code></div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">路径</div>
+              <div class="datagrid-content">${menu.path || '-'}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">图标</div>
+              <div class="datagrid-content">${menu.icon || '-'}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">排序</div>
+              <div class="datagrid-content">${menu.sort_order}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">状态</div>
+              <div class="datagrid-content">
+                ${menu.status === 1 ? '<span class="badge bg-success">显示</span>' : '<span class="badge bg-danger">隐藏</span>'}
+              </div>
+            </div>
+          </div>
+        `;
+        
+        if (menu.permission_code) {
+          html += `
+            <div class="mt-3">
+              <div class="datagrid-title">关联权限</div>
+              <div class="datagrid-content"><code>${menu.permission_code}</code></div>
+            </div>
+          `;
+        }
+        
+        if (menu.children && menu.children.length > 0) {
+          html += `
+            <div class="mt-3">
+              <div class="datagrid-title">子菜单 (${menu.children.length}个)</div>
+              <div class="list-group list-group-flushed mt-2">
+                ${menu.children.map(child => `
+                  <div class="list-group-item">${child.menu_name}</div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+        
+        html += `
+          <div class="mt-4">
+            {% if current_user.is_superadmin or has_permission('menu:update') %}
+            <button type="button" class="btn btn-primary me-2" onclick="edit_menu(${menu.id})">编辑</button>
+            {% endif %}
+            {% if current_user.is_superadmin or has_permission('menu:delete') %}
+            <button type="button" class="btn btn-danger" onclick="delete_menu(${menu.id}, '${menu.menu_name}')">删除</button>
+            {% endif %}
+          </div>
+        `;
+        
+        $('#menu-empty-state').hide();
+        $('#menu-detail-content').html(html);
+        $('#menu-detail-card').show();
+      }
+    });
+  }
+
+  // 编辑菜单
+  function edit_menu(menu_id) {
+    window.editing_menu_id = menu_id;
+    $('#modal-menu-title').text('编辑菜单');
+    
+    // 获取菜单数据
+    ajax_post('get_menu', {id: menu_id}, function(ret) {
+      if (ret.code === 0) {
+        const menu = ret.data;
+        $('#menu_id').val(menu.id);
+        $('#menu_name').val(menu.menu_name);
+        $('#menu_code').val(menu.menu_code).prop('disabled', true);
+        $('#menu_parent_id').val(menu.parent_id || '');
+        $('#menu_path').val(menu.path || '');
+        $('#menu_icon').val(menu.icon || '');
+        $('#menu_component').val(menu.component || '');
+        $('#menu_sort_order').val(menu.sort_order);
+        $('#menu_permission_code').val(menu.permission_code || '');
+        $(`input[name="menu_status"][value="${menu.status}"]`).prop('checked', true);
+        
+        $('#modal-menu').modal('show');
+      }
+    });
+  }
+
+  // 保存菜单
+  function save_menu() {
+    // 验证
+    let valid = true;
+    const menu_name = $('#menu_name').val().trim();
+    const menu_code = $('#menu_code').val().trim();
+    
+    if (!menu_name) {
+      $('#menu_name').addClass('is-invalid');
+      valid = false;
+    } else {
+      $('#menu_name').removeClass('is-invalid');
+    }
+    
+    if (!menu_code) {
+      $('#menu_code').addClass('is-invalid');
+      valid = false;
+    } else {
+      $('#menu_code').removeClass('is-invalid');
+    }
+    
+    if (!valid) return;
+    
+    const data = {
+      id: $('#menu_id').val(),
+      menu_name: menu_name,
+      menu_code: menu_code,
+      parent_id: $('#menu_parent_id').val() || null,
+      path: $('#menu_path').val(),
+      icon: $('#menu_icon').val(),
+      component: $('#menu_component').val(),
+      sort_order: parseInt($('#menu_sort_order').val()) || 0,
+      permission_code: $('#menu_permission_code').val(),
+      status: parseInt($('input[name="menu_status"]:checked').val())
+    };
+    
+    const action = data.id ? 'update_menu' : 'create_menu';
+    
+    ajax_post(action, data, function(ret) {
+      if (ret.code === 0) {
+        $('#modal-menu').modal('hide');
+        show_success_modal('保存成功', function() {
+          window.location.reload();
+        });
+      } else {
+        show_fail_modal('保存失败：' + ret.message);
+      }
+    });
+  }
+
+  // 删除菜单
+  function delete_menu(menu_id, menu_name) {
+    show_ask_modal('确认删除', `确定要删除菜单 "${menu_name}" 吗？此操作不可恢复。`, function() {
+      ajax_post('delete_menu', {id: menu_id}, function(ret) {
+        if (ret.code === 0) {
+          show_success_modal('删除成功', function() {
+            window.location.reload();
+          });
+        } else {
+          show_fail_modal('删除失败：' + ret.message);
+        }
+      });
+    });
+  }
+</script>
+
+<!-- 拖拽排序功能 -->
+<script>
+  // 拖拽排序相关变量
+  let draggedWrapper = null;
+  let draggedData = null;
+
+  // 初始化拖拽功能
+  function initDragAndDrop() {
+    const menuTree = document.getElementById('menu-tree');
+    if (!menuTree) return;
+
+    // 为所有菜单项添加拖拽事件
+    const menuItems = menuTree.querySelectorAll('.menu-item');
+    menuItems.forEach(item => {
+      item.addEventListener('dragstart', handleDragStart);
+      item.addEventListener('dragend', handleDragEnd);
+    });
+
+    // 为放置区域添加事件
+    const dropZones = menuTree.querySelectorAll('.drop-zone:not(.drop-to-root)');
+    dropZones.forEach(zone => {
+      zone.addEventListener('dragover', handleDragOver);
+      zone.addEventListener('drop', handleDrop);
+      zone.addEventListener('dragenter', handleDragEnter);
+      zone.addEventListener('dragleave', handleDragLeave);
+    });
+    
+    // 为根级拖出区域添加事件
+    const rootDropZone = menuTree.querySelector('.drop-to-root');
+    if (rootDropZone) {
+      rootDropZone.addEventListener('dragover', handleDragOver);
+      rootDropZone.addEventListener('drop', handleDropToRoot);
+      rootDropZone.addEventListener('dragenter', handleDragEnter);
+      rootDropZone.addEventListener('dragleave', handleDragLeave);
+    }
+  }
+
+  function handleDragStart(e) {
+    const menuItem = this;
+    draggedWrapper = menuItem.closest('.menu-item-wrapper');
+    if (!draggedWrapper) return;
+    
+    draggedData = {
+      id: draggedWrapper.getAttribute('data-id'),
+      parentId: draggedWrapper.getAttribute('data-parent-id') || null
+    };
+    
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', JSON.stringify(draggedData));
+    
+    // 添加拖拽样式
+    setTimeout(() => {
+      draggedWrapper.classList.add('dragging');
+      // 显示所有放置区域
+      document.querySelectorAll('.drop-zone').forEach(zone => {
+        zone.classList.add('active');
+      });
+    }, 0);
+  }
+
+  function handleDragEnd(e) {
+    if (draggedWrapper) {
+      draggedWrapper.classList.remove('dragging');
+    }
+    draggedWrapper = null;
+    draggedData = null;
+    
+    // 清除所有拖拽目标样式
+    document.querySelectorAll('.drop-zone').forEach(el => {
+      el.classList.remove('drag-over', 'active');
+    });
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }
+
+  function handleDragEnter(e) {
+    e.preventDefault();
+    if (this !== draggedWrapper) {
+      this.classList.add('drag-over');
+    }
+  }
+
+  function handleDragLeave(e) {
+    this.classList.remove('drag-over');
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    this.classList.remove('drag-over');
+    
+    if (!draggedWrapper) return;
+    
+    try {
+      const dropZone = this;
+      const position = dropZone.getAttribute('data-position');
+      const targetId = dropZone.getAttribute('data-target-id');
+      const targetWrapper = document.querySelector(`.menu-item-wrapper[data-id="${targetId}"]`);
+      
+      if (!targetWrapper) return;
+      
+      // 防止拖入自己的子菜单中
+      if (isDescendant(draggedWrapper, targetWrapper)) {
+        show_warning_modal('不能将菜单拖入自己的子菜单中');
+        return;
+      }
+      
+      let newParentId = null;
+      
+      switch(position) {
+        case 'before':
+          // 放在目标之前（同级）
+          newParentId = targetWrapper.getAttribute('data-parent-id') || null;
+          targetWrapper.parentNode.insertBefore(draggedWrapper, targetWrapper);
+          break;
+          
+        case 'after':
+          // 放在目标之后（同级）
+          newParentId = targetWrapper.getAttribute('data-parent-id') || null;
+          targetWrapper.parentNode.insertBefore(draggedWrapper, targetWrapper.nextSibling);
+          break;
+          
+        case 'into':
+          // 放入目标内部（成为子菜单）
+          newParentId = targetId;
+          const childrenContainer = targetWrapper.querySelector('.menu-children-container');
+          if (childrenContainer) {
+            // 展开子菜单容器
+            childrenContainer.classList.add('expanded');
+            // 找到拖入提示后的第一个子元素或添加到末尾
+            const firstChild = childrenContainer.querySelector('.menu-item-wrapper');
+            if (firstChild) {
+              childrenContainer.insertBefore(draggedWrapper, firstChild);
+            } else {
+              // 在拖入提示后添加
+              const dropInto = childrenContainer.querySelector('.drop-into');
+              if (dropInto) {
+                dropInto.after(draggedWrapper);
+              } else {
+                childrenContainer.appendChild(draggedWrapper);
+              }
+            }
+          }
+          break;
+      }
+      
+      // 更新拖拽项的父菜单ID
+      draggedWrapper.setAttribute('data-parent-id', newParentId || '');
+      
+      // 更新排序
+      updateMenuSort();
+      
+      // 重新初始化拖拽（因为DOM结构改变了）
+      setTimeout(() => {
+        initDragAndDrop();
+      }, 100);
+      
+    } catch (err) {
+      console.error('拖拽排序失败:', err);
+    }
+  }
+  
+  // 拖出成为顶级菜单
+  function handleDropToRoot(e) {
+    e.preventDefault();
+    this.classList.remove('drag-over');
+    
+    if (!draggedWrapper) return;
+    
+    try {
+      const menuTree = document.getElementById('menu-tree');
+      if (!menuTree) return;
+      
+      // 将拖拽项移动到根级拖出区域之后
+      this.after(draggedWrapper);
+      
+      // 更新父菜单ID为null（顶级菜单）
+      draggedWrapper.setAttribute('data-parent-id', '');
+      
+      // 更新排序
+      updateMenuSort();
+      
+      // 重新初始化拖拽
+      setTimeout(() => {
+        initDragAndDrop();
+      }, 100);
+      
+    } catch (err) {
+      console.error('拖出成为顶级菜单失败:', err);
+    }
+  }
+  
+  // 检查元素是否是另一个元素的后代
+  function isDescendant(parent, child) {
+    let node = child.parentNode;
+    while (node != null) {
+      if (node === parent) {
+        return true;
+      }
+      node = node.parentNode;
+    }
+    return false;
+  }
+
+  // 更新菜单排序
+  function updateMenuSort() {
+    const menuTree = document.getElementById('menu-tree');
+    if (!menuTree) return;
+    
+    const menuOrders = [];
+    
+    // 收集所有菜单项的排序信息
+    function collectMenuOrders(container, parentId) {
+      let order = 0;
+      const wrappers = container.querySelectorAll(':scope > .menu-item-wrapper');
+      wrappers.forEach(wrapper => {
+        const id = wrapper.getAttribute('data-id');
+        if (id) {
+          menuOrders.push({
+            id: parseInt(id),
+            sort_order: order++,
+            parent_id: parentId ? parseInt(parentId) : null
+          });
+          
+          // 递归处理子菜单
+          const childrenContainer = wrapper.querySelector(':scope > .menu-children-container');
+          if (childrenContainer) {
+            collectMenuOrders(childrenContainer, id);
+          }
+        }
+      });
+    }
+    
+    collectMenuOrders(menuTree, null);
+    
+    // 发送到后端保存
+    if (menuOrders.length > 0) {
+      ajax_post('update_menu_sort', {menu_orders: menuOrders}, function(ret) {
+        if (ret.code === 0) {
+          show_success_modal('菜单排序已保存', function() {
+            // 刷新页面以更新菜单结构
+            window.location.reload();
+          });
+        } else {
+          show_fail_modal('保存排序失败：' + ret.message);
+        }
+      });
+    }
+  }
+  
+  // 切换子菜单展开/收起
+  function toggle_children(menuId, event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    const container = document.getElementById('children-' + menuId);
+    if (container) {
+      container.classList.toggle('expanded');
+      // 更新图标
+      const wrapper = document.querySelector(`.menu-item-wrapper[data-id="${menuId}"]`);
+      if (wrapper) {
+        const icon = wrapper.querySelector('.toggle-icon svg');
+        if (icon) {
+          if (container.classList.contains('expanded')) {
+            icon.innerHTML = '<path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M6 9l6 6l6 -6"></path>';
+          } else {
+            icon.innerHTML = '<path stroke="none" d="M0 0h24v24H0z" fill="none"></path><polyline points="9 6 15 12 9 18"></polyline>';
+          }
+        }
+      }
+    }
+  }
+
+  // 页面加载完成后初始化拖拽功能
+  $(document).ready(function() {
+    initDragAndDrop();
+  });
+</script>
+
+<!-- Lucide 图标初始化 -->
+<script>
+  // 页面加载完成后初始化 Lucide 图标
+  $(document).ready(function() {
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  });
+</script>
+
+<style>
+  .menu-tree .menu-item-content {
+    transition: background-color 0.2s;
+  }
+  .menu-tree .menu-item-content:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+  .menu-tree .menu-item-content.active {
+    background-color: rgba(32, 107, 196, 0.1);
+    color: #206bc4;
+  }
+  .cursor-pointer {
+    cursor: pointer;
+  }
+  
+  /* 拖拽排序样式 */
+  .drag-handle {
+    opacity: 0.5;
+    cursor: grab;
+  }
+  .drag-handle:hover {
+    opacity: 1;
+  }
+  .menu-item-wrapper {
+    transition: all 0.2s ease;
+  }
+  .menu-item-wrapper.dragging {
+    opacity: 0.5;
+    transform: scale(0.98);
+  }
+  .menu-item {
+    transition: all 0.2s ease;
+  }
+  .cursor-move {
+    cursor: grab;
+  }
+  .cursor-move:active {
+    cursor: grabbing;
+  }
+  
+  /* 放置区域样式 */
+  .drop-zone {
+    height: 2px;
+    margin: 0;
+    border-radius: 1px;
+    transition: all 0.15s ease;
+    opacity: 0;
+  }
+  
+  .drop-zone.active {
+    opacity: 1;
+  }
+  
+  .drop-zone.drop-before,
+  .drop-zone.drop-after {
+    background-color: transparent;
+  }
+  
+  .drop-zone.drop-before.drag-over,
+  .drop-zone.drop-after.drag-over {
+    height: 12px;
+    background-color: rgba(32, 107, 196, 0.2);
+    border: 1px dashed #206bc4;
+    margin: 2px 0;
+  }
+  
+  /* 拖入成为子菜单的区域 */
+  .drop-zone.drop-into {
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding-left: 44px; /* 与菜单项内容对齐：20px(图标) + 24px(箭头) */
+    background-color: transparent;
+    border: 1px dashed transparent;
+    margin: 1px 0;
+    border-radius: 4px;
+    opacity: 0;
+    font-size: 11px;
+  }
+  
+  .drop-zone.drop-into.active {
+    opacity: 0.6;
+    background-color: rgba(32, 107, 196, 0.03);
+    border-color: rgba(32, 107, 196, 0.2);
+  }
+  
+  .drop-zone.drop-into.drag-over {
+    height: 20px;
+    background-color: rgba(32, 107, 196, 0.15);
+    border-color: #206bc4;
+    opacity: 1;
+  }
+  
+  .drop-zone.drop-into .drop-hint {
+    font-size: 12px;
+    color: #666;
+    pointer-events: none;
+  }
+  
+  .drop-zone.drop-into.drag-over .drop-hint {
+    color: #206bc4;
+    font-weight: bold;
+  }
+  
+  /* 子菜单容器 */
+  .menu-children-container {
+    display: none;
+    padding-left: 20px;
+  }
+  
+  .menu-children-container.expanded {
+    display: block;
+  }
+  
+  /* 展开/收起图标 */
+  .toggle-icon {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+  }
+  
+  .toggle-icon:hover {
+    opacity: 1;
+  }
+  
+  .toggle-icon-placeholder {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+  }
+  
+  /* 拖拽手柄内联样式 */
+  .drag-handle-inline {
+    display: inline-block;
+    vertical-align: middle;
+    opacity: 0.5;
+  }
+  .drag-handle-inline svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  /* 拖出成为顶级菜单的区域 */
+  .drop-zone.drop-to-root {
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.02);
+    border: 1px dashed transparent;
+    margin: 2px 0 4px 0;
+    border-radius: 4px;
+    opacity: 0;
+  }
+  
+  .drop-zone.drop-to-root.active {
+    opacity: 1;
+    background-color: rgba(32, 107, 196, 0.05);
+    border-color: rgba(32, 107, 196, 0.3);
+  }
+  
+  .drop-zone.drop-to-root.drag-over {
+    height: 24px;
+    background-color: rgba(32, 107, 196, 0.2);
+    border-color: #206bc4;
+    opacity: 1;
+  }
+  
+  .drop-zone.drop-to-root .drop-hint {
+    font-size: 11px;
+    color: #666;
+    pointer-events: none;
+  }
+  
+  .drop-zone.drop-to-root.drag-over .drop-hint {
+    color: #206bc4;
+    font-weight: bold;
+  }
+</style>

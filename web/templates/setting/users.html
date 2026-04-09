@@ -1,0 +1,373 @@
+{% import 'macro/svg.html' as SVG %}
+{% import 'macro/oops.html' as OOPS %}
+
+<div class="container-xl">
+  <!-- Page title -->
+  <div class="page-header d-print-none">
+    <div class="row align-items-center">
+      <div class="col">
+        <h2 class="page-title">
+          <span class="me-2">{{ SVG.user() }}</span>用户管理
+        </h2>
+        <div class="text-muted mt-1">管理系统用户及其角色权限</div>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        {% if current_user.is_superadmin or has_permission('user:create') %}
+        <div class="btn-list">
+          <button onclick="show_user_modal()" class="btn btn-primary">新增用户</button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 用户列表 -->
+{% if Users %}
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">用户列表</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead>
+            <tr>
+              <th>用户</th>
+              <th>邮箱</th>
+              <th>角色</th>
+              <th>状态</th>
+              <th>最后登录</th>
+              <th class="w-1">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for User in Users %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center">
+                  <span class="avatar avatar-sm me-2 rounded-circle">{{ User.nickname|first }}</span>
+                  <div>
+                    <div class="font-weight-medium">{{ User.nickname }}</div>
+                    <div class="text-muted small">{{ User.username }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="text-muted">{{ User.email or '-' }}</td>
+              <td>
+                {% for role in User.roles %}
+                  <span class="badge bg-blue-lt me-1">{{ role.role_name }}</span>
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endfor %}
+              </td>
+              <td>
+                {% if User.status == 1 %}
+                  <span class="badge bg-success">启用</span>
+                {% else %}
+                  <span class="badge bg-danger">禁用</span>
+                {% endif %}
+              </td>
+              <td class="text-muted">
+                {% if User.last_login_at %}
+                  {{ User.last_login_at }}
+                {% else %}
+                  从未登录
+                {% endif %}
+              </td>
+              <td>
+                <div class="btn-list flex-nowrap">
+                  {% if current_user.is_superadmin or has_permission('user:update') %}
+                  <a href="javascript:edit_user({{ User.id }})" class="btn btn-ghost-primary btn-sm" title="编辑">编辑</a>
+                  <a href="javascript:reset_password_modal({{ User.id }}, '{{ User.name }}')" class="btn btn-ghost-warning btn-sm" title="重置密码">重置密码</a>
+                  {% endif %}
+                  {% if (current_user.is_superadmin or has_permission('user:delete')) and User.id != current_user.id %}
+                  <a href="javascript:delete_user({{ User.id }}, '{{ User.name }}')" class="btn btn-ghost-danger btn-sm" title="删除">删除</a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+  {{ OOPS.nodatafound('没有用户', '没有添加任何用户，请点击"新增用户"按钮。') }}
+{% endif %}
+
+<!-- 新增/编辑用户模态框 -->
+<div class="modal modal-blur fade" id="modal-user" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-user-title">新增用户</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="user_id" value="">
+        <div class="row">
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label required">用户名</label>
+              <input type="text" id="user_username" class="form-control" placeholder="输入用户名">
+              <div class="invalid-feedback">用户名不能为空</div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label required">昵称</label>
+              <input type="text" id="user_nickname" class="form-control" placeholder="输入昵称">
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label" id="password-label">密码</label>
+              <input type="password" id="user_password" class="form-control" placeholder="输入密码">
+              <div class="form-hint" id="password-hint">初始登录密码</div>
+              <div class="invalid-feedback">密码不能为空</div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label">邮箱</label>
+              <input type="email" id="user_email" class="form-control" placeholder="输入邮箱">
+            </div>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">角色</label>
+          <div class="form-selectgroup form-selectgroup-boxes d-flex flex-wrap">
+            {% for role in Roles %}
+            <label class="form-selectgroup-item flex-fill">
+              <input type="checkbox" name="user_roles" value="{{ role.ID }}" class="form-selectgroup-input">
+              <div class="form-selectgroup-label d-flex align-items-center p-3">
+                <div class="me-3">
+                  <span class="form-selectgroup-check"></span>
+                </div>
+                <div class="form-selectgroup-label-content d-flex align-items-center">
+                  <span class="avatar avatar-sm bg-primary-lt me-2">{{ role.ROLE_NAME|first }}</span>
+                  <div>
+                    <div class="font-weight-medium">{{ role.ROLE_NAME }}</div>
+                    <div class="text-muted small">{{ role.DESCRIPTION or '' }}</div>
+                  </div>
+                </div>
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">状态</label>
+          <div class="form-selectgroup">
+            <label class="form-selectgroup-item">
+              <input type="radio" name="user_status" value="1" class="form-selectgroup-input" checked>
+              <span class="form-selectgroup-label">启用</span>
+            </label>
+            <label class="form-selectgroup-item">
+              <input type="radio" name="user_status" value="0" class="form-selectgroup-input">
+              <span class="form-selectgroup-label">禁用</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link me-auto" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-primary" id="save-user-btn" onclick="save_user()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 重置密码模态框 -->
+<div class="modal modal-blur fade" id="modal-reset-password" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">重置密码</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="reset_user_id" value="">
+        <p>正在为 <strong id="reset_username"></strong> 重置密码</p>
+        <div class="mb-3">
+          <label class="form-label required">新密码</label>
+          <input type="password" id="reset_new_password" class="form-control" placeholder="输入新密码">
+          <div class="invalid-feedback">密码不能为空</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link me-auto" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-warning" onclick="do_reset_password()">重置密码</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+  window.editing_user_id = null;
+
+  // 显示新增用户模态框
+  function show_user_modal() {
+    window.editing_user_id = null;
+    $('#modal-user-title').text('新增用户');
+    $('#user_id').val('');
+    $('#user_username').val('').prop('disabled', false);
+    $('#user_nickname').val('');
+    $('#user_password').val('');
+    $('#user_email').val('');
+    $('#password-label').addClass('required');
+    $('#password-hint').text('初始登录密码');
+    $('input[name="user_roles"]').prop('checked', false);
+    $('input[name="user_status"][value="1"]').prop('checked', true);
+    
+    // 清除验证状态
+    $('.is-invalid').removeClass('is-invalid');
+    
+    $('#modal-user').modal('show');
+  }
+
+  // 编辑用户
+  function edit_user(user_id) {
+    window.editing_user_id = user_id;
+    $('#modal-user-title').text('编辑用户');
+    
+    // 获取用户数据
+    ajax_post('get_user', {id: user_id}, function(ret) {
+      if (ret.code === 0) {
+        const user = ret.data;
+        $('#user_id').val(user.id);
+        $('#user_username').val(user.username).prop('disabled', true);
+        $('#user_nickname').val(user.nickname || user.username);
+        $('#user_email').val(user.email || '');
+        $('#password-label').removeClass('required');
+        $('#password-hint').text('留空则不修改密码');
+        $('#user_password').val('');
+        
+        // 设置角色
+        $('input[name="user_roles"]').prop('checked', false);
+        if (user.roles) {
+          user.roles.forEach(function(role) {
+            $(`input[name="user_roles"][value="${role.id}"]`).prop('checked', true);
+          });
+        }
+        
+        // 设置状态
+        $(`input[name="user_status"][value="${user.status}"]`).prop('checked', true);
+        
+        $('#modal-user').modal('show');
+      } else {
+        show_fail_modal('获取用户信息失败：' + ret.message);
+      }
+    });
+  }
+
+  // 保存用户
+  function save_user() {
+    // 验证
+    let valid = true;
+    const username = $('#user_username').val().trim();
+    const password = $('#user_password').val();
+    
+    if (!username) {
+      $('#user_username').addClass('is-invalid');
+      valid = false;
+    } else {
+      $('#user_username').removeClass('is-invalid');
+    }
+    
+    // 新增用户时密码必填
+    if (!window.editing_user_id && !password) {
+      $('#user_password').addClass('is-invalid');
+      valid = false;
+    } else {
+      $('#user_password').removeClass('is-invalid');
+    }
+    
+    if (!valid) return;
+    
+    // 收集角色
+    const role_ids = [];
+    $('input[name="user_roles"]:checked').each(function() {
+      role_ids.push(parseInt($(this).val()));
+    });
+    
+    const data = {
+      id: window.editing_user_id,
+      username: username,
+      nickname: $('#user_nickname').val().trim(),
+      email: $('#user_email').val().trim(),
+      status: parseInt($('input[name="user_status"]:checked').val()),
+      role_ids: role_ids
+    };
+    
+    if (password) {
+      data.password = password;
+    }
+    
+    const action = window.editing_user_id ? 'update_user' : 'create_user';
+    
+    ajax_post(action, data, function(ret) {
+      if (ret.code === 0) {
+        $('#modal-user').modal('hide');
+        show_success_modal(window.editing_user_id ? '用户更新成功' : '用户创建成功', function() {
+          window_history_refresh();
+        });
+      } else {
+        show_fail_modal('保存失败：' + ret.message);
+      }
+    });
+  }
+
+  // 删除用户
+  function delete_user(user_id, username) {
+    show_confirm_modal('确定要删除用户 ' + username + ' 吗？此操作不可恢复。', function() {
+      ajax_post('delete_user', {id: user_id}, function(ret) {
+        if (ret.code === 0) {
+          show_success_modal('用户已删除', function() {
+            window_history_refresh();
+          });
+        } else {
+          show_fail_modal('删除失败：' + ret.message);
+        }
+      });
+    });
+  }
+
+  // 显示重置密码模态框
+  function reset_password_modal(user_id, username) {
+    $('#reset_user_id').val(user_id);
+    $('#reset_username').text(username);
+    $('#reset_new_password').val('');
+    $('#modal-reset-password').modal('show');
+  }
+
+  // 执行重置密码
+  function do_reset_password() {
+    const user_id = $('#reset_user_id').val();
+    const new_password = $('#reset_new_password').val();
+    
+    if (!new_password) {
+      $('#reset_new_password').addClass('is-invalid');
+      return;
+    }
+    $('#reset_new_password').removeClass('is-invalid');
+    
+    ajax_post('reset_password', {
+      user_id: user_id,
+      new_password: new_password
+    }, function(ret) {
+      if (ret.code === 0) {
+        $('#modal-reset-password').modal('hide');
+        show_success_modal('密码重置成功');
+      } else {
+        show_fail_modal('密码重置失败：' + ret.message);
+      }
+    });
+  }
+</script>

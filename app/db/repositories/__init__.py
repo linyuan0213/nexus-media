@@ -13,6 +13,13 @@ from .sync_repository import SyncRepository
 from .word_repository import WordRepository
 from .config_repository import ConfigRepository
 from .plugin_repository import PluginRepository
+from .rbac_repository import (
+    RBACUserRepository,
+    RBACRoleRepository,
+    RBACPermissionRepository,
+    RBACMenuRepository,
+    RBACLogRepository,
+)
 
 __all__ = [
     'BaseRepository',
@@ -27,4 +34,10 @@ __all__ = [
     'WordRepository',
     'ConfigRepository',
     'PluginRepository',
+    # RBAC权限管理
+    'RBACUserRepository',
+    'RBACRoleRepository',
+    'RBACPermissionRepository',
+    'RBACMenuRepository',
+    'RBACLogRepository',
 ]
