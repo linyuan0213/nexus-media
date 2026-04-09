@@ -21,7 +21,11 @@
           <div class="row align-items-center">
             <div class="col-auto">
               <span class="bg-{{ Scheduler.color }} text-white avatar">
-                {{ Scheduler.svg|safe }}
+                {% if Scheduler.icon %}
+                  <i data-lucide="{{ Scheduler.icon }}" width="24" height="24"></i>
+                {% elif Scheduler.svg %}
+                  {{ Scheduler.svg|safe }}
+                {% endif %}
               </span>
             </div>
             <div class="col">
@@ -527,5 +531,10 @@
   // 初始化DropZone
   backup_dropzone = new Dropzone("#back_file");
   backup_dropzone.options.acceptedFiles = ".zip";
+
+  // 初始化Lucide图标
+  if (window.lucide) {
+    lucide.createIcons();
+  }
 
 </script>

@@ -9,7 +9,95 @@ from typing import List, Optional, Dict, Any
 from app.services.rbac_service import rbac_service
 from app.db.repositories import RBACUserRepository, RBACRoleRepository, RBACMenuRepository
 from app.db.models.rbac import RBACUser
+from app.conf import ModuleConf
 import log
+
+
+# 服务配置常量 - 使用Lucide图标
+SERVICE_CONF = {
+    'rssdownload': {
+        'name': '电影/电视剧订阅',
+        'icon': 'cloud-download',
+        'color': 'blue',
+        'level': 2
+    },
+    'subscribe_search_all': {
+        'name': '订阅搜索',
+        'icon': 'search',
+        'color': 'blue',
+        'level': 2
+    },
+    'pttransfer': {
+        'name': '下载文件转移',
+        'icon': 'replace',
+        'color': 'green',
+        'level': 2
+    },
+    'sync': {
+        'name': '目录同步',
+        'time': '实时监控',
+        'icon': 'refresh-cw',
+        'color': 'orange',
+        'level': 1
+    },
+    'blacklist': {
+        'name': '清理转移缓存',
+        'time': '手动',
+        'state': 'OFF',
+        'icon': 'eraser',
+        'color': 'red',
+        'level': 1
+    },
+    'rsshistory': {
+        'name': '清理RSS缓存',
+        'time': '手动',
+        'state': 'OFF',
+        'icon': 'eraser',
+        'color': 'purple',
+        'level': 2
+    },
+    'nametest': {
+        'name': '名称识别测试',
+        'time': '',
+        'state': 'OFF',
+        'icon': 'type',
+        'color': 'lime',
+        'level': 1
+    },
+    'ruletest': {
+        'name': '过滤规则测试',
+        'time': '',
+        'state': 'OFF',
+        'icon': 'sliders-horizontal',
+        'color': 'yellow',
+        'level': 2
+    },
+    'nettest': {
+        'name': '网络连通性测试',
+        'time': '',
+        'state': 'OFF',
+        'icon': 'network',
+        'color': 'cyan',
+        'targets': ModuleConf.NETTEST_TARGETS if hasattr(ModuleConf, 'NETTEST_TARGETS') else [],
+        'level': 1
+    },
+    'backup': {
+        'name': '备份&恢复',
+        'time': '',
+        'state': 'OFF',
+        'icon': 'database-backup',
+        'color': 'green',
+        'level': 1
+    },
+    'processes': {
+        'name': '系统进程',
+        'time': '',
+        'state': 'OFF',
+        'icon': 'terminal',
+        'color': 'muted',
+        'level': 1
+    }
+}
 
 
 class User(UserMixin):
@@ -546,3 +634,12 @@ class User(UserMixin):
             'roles': self.get_roles(),
             'permissions': self.get_permissions(),
         }
+
+    def get_services(self) -> Dict[str, Dict[str, Any]]:
+        """
+        获取服务配置（兼容旧接口）
+        
+        Returns:
+            服务配置字典
+        """
+        return SERVICE_CONF
