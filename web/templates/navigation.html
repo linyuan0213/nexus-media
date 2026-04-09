@@ -66,6 +66,8 @@
 <div class="page">
   <!-- jquery -->
   <script src="../static/js/jquery-3.3.1.min.js"></script>
+  <!-- Lucide 图标库 -->
+  <script src="https://unpkg.com/lucide@latest"></script>
   <script src="../static/js/tabler/demo-theme.min.js"></script>
   <!-- 第三方组件 -->
   <script src="../static/js/modules/echarts.min.js"></script>
@@ -85,16 +87,17 @@
   <span hidden><input type="text" aria-label=""><input type="password" aria-label=""></span>
   <layout-navbar id="navbar-menu" hidden
     layout-userlevel="{{ CurrentUser.level }}"
-    layout-useradmin="{{ CurrentUser.admin }}"
+    layout-useradmin="{{ 1 if CurrentUser.is_admin else 0 }}"
     layout-gopage="{{ GoPage }}"
     layout-appversion="{{ AppVersion }}"
     >
   </layout-navbar>
   <layout-searchbar hidden
-      layout-username="{{ CurrentUser.name }}"
+      layout-username="{{ CurrentUser.nickname or CurrentUser.username }}"
       layout-systemflag="{{ SystemFlag }}"
-      layout-useradmin="{{ CurrentUser.admin }}"
-      layout-search="{{ CurrentUser.search }}"
+      layout-useradmin="{{ 1 if CurrentUser.is_admin else 0 }}"
+      layout-search="{{ 1 if CurrentUser.has_permission('search:view') else 0 }}"
+      layout-search-source="{{ SearchSource }}"
       >
   </layout-searchbar>
   <div class="spinner-border" role="status" id="logo_animation"></div>
@@ -104,22 +107,22 @@
     </div>
   </div>
   <div id="main_bottom_menubar" class="position-fixed w-100 d-flex justify-content-between d-sm-none main-bottom-menubar d-none">
-    {% if "我的媒体库" in CurrentUser.pris %}
+    {% if CurrentUser.has_permission('library:view') %}
     <a class="card-btn border-0 px-0 text-center" href="javascript:navmenu('index')">
       {{ SVG.home() }}
     </a>
     {% endif %}
-    {% if "探索" in CurrentUser.pris %}
+    {% if CurrentUser.has_permission('search:view') %}
     <a class="card-btn border-0 px-0 text-center" href="javascript:navmenu('ranking')">
       {{ SVG.chart_bar() }}
     </a>
     {% endif %}
-    {% if "服务" in CurrentUser.pris %}
+    {% if CurrentUser.has_permission('service:view') %}
     <a class="card-btn border-0 px-0 text-center" href="javascript:navmenu('service')">
       {{ SVG.layout_2() }}
     </a>
     {% endif %}
-    {% if "订阅管理" in CurrentUser.pris %}
+    {% if CurrentUser.has_permission('rss:view') %}
     <a class="card-btn border-0 px-0 text-center" href="javascript:navmenu('movie_rss')">
       {{ SVG.movie() }}
     </a>
@@ -245,7 +248,7 @@
   <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-body">
-        <div class="modal-title">询问</div>
+        <div class="modal-title" id="system_ask_title">询问</div>
         <div id="system_ask_message" class="text-wrap">是否执行？</div>
       </div>
       <div class="modal-footer">

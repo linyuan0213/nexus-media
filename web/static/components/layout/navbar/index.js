@@ -31,6 +31,8 @@ export class LayoutNavbar extends CustomElement {
       (ret) => {
         if (ret.code === 0) {
           this.navbar_list = ret.menus;
+          // 菜单加载完成后渲染 Lucide 图标
+          this._renderLucideIcons();
         }
       },false
     );
@@ -39,6 +41,24 @@ export class LayoutNavbar extends CustomElement {
   firstUpdated() {
     // 初始化页面
     this._init_page();
+    // 初始渲染 Lucide 图标
+    this._renderLucideIcons();
+  }
+
+  updated(changedProperties) {
+    // 当 navbar_list 更新后，重新渲染图标
+    if (changedProperties.has('navbar_list')) {
+      this._renderLucideIcons();
+    }
+  }
+
+  _renderLucideIcons() {
+    // 等待 DOM 更新完成后渲染 Lucide 图标
+    setTimeout(() => {
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    }, 0);
   }
 
   _init_page() {
@@ -54,9 +74,11 @@ export class LayoutNavbar extends CustomElement {
         navmenu(page);
       } else {
         // 打开第一个页面
-        const page = this.navbar_list[0].page ?? this.navbar_list[0].list[0].page
-        this._add_page_to_url(page);
-        navmenu(page);
+        const page = this.navbar_list[0]?.page ?? this.navbar_list[0]?.list?.[0]?.page;
+        if (page) {
+          this._add_page_to_url(page);
+          navmenu(page);
+        }
       }
       // 默认展开探索
       if (!this._is_expand) {
@@ -66,11 +88,11 @@ export class LayoutNavbar extends CustomElement {
 
     // 删除logo动画 加点延迟切换体验好
     setTimeout(() => {
-      document.querySelector("#logo_animation").remove();
+      document.querySelector("#logo_animation")?.remove();
       this.removeAttribute("hidden");
-      document.querySelector("#page_content").removeAttribute("hidden");
-      document.querySelector("#main_bottom_menubar").classList.remove('d-none');
-      document.querySelector("layout-searchbar").removeAttribute("hidden");
+      document.querySelector("#page_content")?.removeAttribute("hidden");
+      document.querySelector("#main_bottom_menubar")?.classList.remove('d-none');
+      document.querySelector("layout-searchbar")?.removeAttribute("hidden");
     }, 200);
   }
 
@@ -100,7 +122,7 @@ export class LayoutNavbar extends CustomElement {
       for (const a of item.querySelectorAll("a")) {
         if (page === a.getAttribute("data-lit-page")) {
           item.classList.add("show");
-          this.querySelectorAll(`button[data-bs-target='#${item.id}']`)[0].classList.remove("collapsed");
+          this.querySelectorAll(`button[data-bs-target='#${item.id}']`)[0]?.classList.remove("collapsed");
           this._is_expand = true;
           return;
         }
@@ -121,8 +143,13 @@ export class LayoutNavbar extends CustomElement {
                 ${this.navbar_list.map((item, index) => ( html`
                   ${item.list?.length > 0
                   ? html`
-                    <button class="accordion-button lit-navbar-accordion-button collapsed ps-2 pe-1 py-2" style="font-size:1.1rem;" data-bs-toggle="collapse" data-bs-target="#lit-navbar-collapse-${index}" aria-expanded="false">
-                      ${item.also??item.name}
+                    <button class="accordion-button lit-navbar-accordion-button collapsed ps-2 pe-1 py-2 d-flex align-items-center" style="font-size:1.1rem;" data-bs-toggle="collapse" data-bs-target="#lit-navbar-collapse-${index}" aria-expanded="false">
+                      <span class="nav-link-icon me-2" style="color:var(--tblr-body-color);">
+                        ${item.icon
+                          ? html`<i data-lucide="${item.icon}" class="lucide-icon" width="20" height="20"></i>`
+                          : html`<i data-lucide="circle" class="lucide-icon" width="8" height="8"></i>`}
+                      </span>
+                      <span>${item.also??item.name}</span>
                     </button>
                     <div class="accordion-collapse collapse" id="lit-navbar-collapse-${index}">
                       ${item.list.map((drop) => (this._render_page_item(drop, true)))}
@@ -175,22 +202,27 @@ export class LayoutNavbar extends CustomElement {
   }
 
   _render_page_item(item, child) {
+    // 使用 Lucide 图标 - 所有菜单项都显示图标
+    const iconHtml = item.icon
+      ? html`<i data-lucide="${item.icon}" class="lucide-icon" width="18" height="18"></i>`
+      : html`<i data-lucide="circle" class="lucide-icon" width="8" height="8"></i>`;
+    
     return html`
-    <a class="nav-link lit-navbar-accordion-item${this._active_name === item.page ? "-active" : ""} my-1 p-2 ${child ? "ps-3" : "lit-navbar-accordion-button"}" 
+    <a class="nav-link lit-navbar-accordion-item${this._active_name === item.page ? "-active" : ""} my-1 p-2 ${child ? "ps-3" : "lit-navbar-accordion-button"}"
       href="#${item.page}" data-bs-dismiss="offcanvas" aria-label="Close"
       style="${child ? "font-size:1rem" : "font-size:1.1rem;"}"
       data-lit-page=${item.page}
-      @click=${ () => { 
+      @click=${ () => {
         this._add_page_to_url(item.page);
         navmenu(item.page);
       }}>
-      <span class="nav-link-icon" ?hidden=${!child} style="color:var(--tblr-body-color);">
-        ${item.icon ? unsafeHTML(item.icon) : nothing}
+      <span class="nav-link-icon" style="color:var(--tblr-body-color);min-width:20px;">
+        ${iconHtml}
       </span>
       <span class="nav-link-title">
         ${item.also ?? item.name}
       </span>
-    </a>`    
+    </a>`
   }
 
 }

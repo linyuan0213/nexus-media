@@ -101,6 +101,16 @@ from app.db.models.system import (
     SYSTEMDICT,
 )
 
+# RBAC权限管理模型
+from app.db.models.rbac import (
+    RBACUser,
+    RBACRole,
+    RBACPermission,
+    RBACMenu,
+    RBACUserLoginLog,
+    RBACOperationLog,
+)
+
 __all__ = [
     # 基础
     'Base',
@@ -156,4 +166,11 @@ __all__ = [
     'SYNCHISTORY',
     # 系统
     'SYSTEMDICT',
+    # RBAC权限管理
+    'RBACUser',
+    'RBACRole',
+    'RBACPermission',
+    'RBACMenu',
+    'RBACUserLoginLog',
+    'RBACOperationLog',
 ]

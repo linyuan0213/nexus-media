@@ -417,9 +417,25 @@ function hide_confirm_modal() {
 }
 
 // 显示询问提示框
-function show_ask_modal(title, func) {
-  $("#system_ask_message").text(title);
-  $("#system_ask_btn").unbind('click').click(func);
+// 支持两种调用方式：
+// 1. show_ask_modal(title, func)
+// 2. show_ask_modal(title, message, func)
+function show_ask_modal(title, message_or_func, func) {
+  var message, callback;
+  
+  if (typeof message_or_func === 'function') {
+    // 两个参数的情况：show_ask_modal(title, func)
+    message = title;
+    callback = message_or_func;
+  } else {
+    // 三个参数的情况：show_ask_modal(title, message, func)
+    message = message_or_func;
+    callback = func;
+  }
+  
+  $("#system_ask_title").text(title);
+  $("#system_ask_message").text(message);
+  $("#system_ask_btn").unbind('click').click(callback);
   $("#system-ask-modal").modal("show");
 }
 

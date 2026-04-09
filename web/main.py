@@ -55,7 +55,7 @@ from web.backend.web_utils import WebUtils
 from web.security import require_auth
 from web.cache import cache
 from app.db import init_db, update_db, init_data
-from initializer import check_redis, update_config, check_config, update_sites_data, update_rss_state
+from initializer import check_redis, update_config, check_config, update_sites_data, update_rss_state, init_rbac_system
 from version import APP_VERSION
 from app.utils.temp_manager import temp_manager
 
@@ -110,6 +110,8 @@ with App.app_context():
     init_db()
     # 数据库更新
     update_db()
+    # RBAC 权限系统初始化
+    init_rbac_system()
     # 数据初始化
     init_data()
     # 升级配置文件
@@ -126,6 +128,10 @@ with App.app_context():
     # 启动服务
     WebAction.start_service()
 
+
+# 注册RBAC模板上下文处理器
+from app.services.rbac_integration import rbac_context_processor
+App.context_processor(rbac_context_processor)
 
 @App.after_request
 def add_header(r):
@@ -232,6 +238,8 @@ def login():
             # 创建用户 Session
             login_user(user_info)
             session.permanent = True if remember else False
+            # 更新最后登录时间
+            user_info.update_last_login(request.remote_addr)
             # 登录成功
             return redirect_to_navigation()
         else:
@@ -1034,12 +1042,46 @@ def notification():
 @App.route('/users', methods=['POST', 'GET'])
 @login_required
 def users():
+    from app.services.rbac_service import rbac_service
     Users = WebAction().get_users().get("result")
     TopMenus = WebAction().get_top_menus().get("menus")
+    Roles = rbac_service.get_all_roles()
     return render_template("setting/users.html",
                            Users=Users,
                            UserCount=len(Users),
-                           TopMenus=TopMenus)
+                           TopMenus=TopMenus,
+                           Roles=Roles)
+
+
+# 角色管理页面
+@App.route('/roles', methods=['POST', 'GET'])
+@login_required
+def roles():
+    from app.services.rbac_service import rbac_service
+    Roles = rbac_service.get_all_roles()
+    Permissions = rbac_service.get_all_permissions()
+    Menus = rbac_service.menu_repo.get_all_menus(status=1)
+    return render_template("setting/roles.html",
+                           Roles=Roles,
+                           Permissions=Permissions,
+                           Menus=Menus)
+
+
+# 菜单管理页面
+@App.route('/menus', methods=['POST', 'GET'])
+@login_required
+def menus():
+    from app.services.rbac_service import rbac_service
+    # 菜单管理页面显示所有菜单（包括隐藏的），以便管理员管理
+    Menus = rbac_service.menu_repo.get_all_menus()
+    MenuTree = rbac_service.get_menu_tree(include_hidden=True)
+    TopMenus = rbac_service.menu_repo.get_top_menus(include_hidden=True)
+    Permissions = rbac_service.get_all_permissions()
+    return render_template("setting/menus.html",
+                           Menus=Menus,
+                           MenuTree=MenuTree,
+                           TopMenus=TopMenus,
+                           Permissions=Permissions)
 
 
 # 过滤规则设置页面
