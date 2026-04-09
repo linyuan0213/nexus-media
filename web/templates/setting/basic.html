@@ -115,7 +115,17 @@
               </div>
             </div>
             <div class="row">
-              <div class="col-lg">
+              <div class="col-lg-6">
+                <div class="mb-3">
+                  <label class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="app.enable_image_proxy" {% if
+                      Config.app.enable_image_proxy|default(true) %}checked{% endif %}>
+                    <span class="form-check-label">启用图片代理 <span class="form-help"
+                        title="开启后，TMDB、豆瓣、Bangumi等图片将通过本地代理加载，可大幅提升图片加载速度并减少外部依赖" data-bs-toggle="tooltip">?</span></span>
+                  </label>
+                </div>
+              </div>
+              <div class="col-lg-6">
                 <div class="mb-3">
                   <label class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="app.releases_update_only" {% if

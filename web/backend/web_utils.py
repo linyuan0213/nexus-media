@@ -84,6 +84,8 @@ class WebUtils:
             title = info.get("title")
             original_title = info.get("original_title")
             year = info.get("year")
+            # 保存豆瓣封面URL
+            douban_cover = info.get("cover_url", "")
             # 支持自动识别类型
             if not mtype:
                 mtype = MediaType.TV if info.get("episodes_count") else MediaType.MOVIE
@@ -96,6 +98,9 @@ class WebUtils:
                                                     mtype=mtype,
                                                     append_to_response="all")
             media_info.douban_id = doubanid
+            # 如果TMDB没有图片，使用豆瓣图片
+            if douban_cover and (not media_info.poster_path or not media_info.poster_path.strip()):
+                media_info.poster_path = douban_cover
         elif str(mediaid).startswith("BG:"):
             # BANGUMI
             bangumiid = str(mediaid)[3:]

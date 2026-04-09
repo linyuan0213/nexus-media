@@ -576,10 +576,15 @@ class MetaBase(object):
                 self.category = self.category_handler.get_tv_category(info)
             else:
                 self.category = self.category_handler.get_anime_category(info)
-        self.poster_path = Config().get_tmdbimage_url(info.get('poster_path')) \
-            if info.get('poster_path') else ""
-        self.backdrop_path = Config().get_tmdbimage_url(info.get('backdrop_path')) \
-            if info.get('backdrop_path') else ""
+            # 自动根据代理设置选择图片尺寸
+            self.poster_path = Config().get_tmdbimage_url(
+                info.get('poster_path'),
+                size='medium'  # 使用中等尺寸 w342
+            ) if info.get('poster_path') else ""
+            self.backdrop_path = Config().get_tmdbimage_url(
+                info.get('backdrop_path'),
+                size='large'  # 使用大尺寸 w500
+            ) if info.get('backdrop_path') else ""
 
     # 整合种了信息
     def set_torrent_info(self,

@@ -573,6 +573,7 @@ class Subscribe(metaclass=SingletonMeta):
     def refresh_rss_metainfo(self):
         """
         定时将豆瓣订阅转换为TMDB的订阅，并更新订阅的TMDB信息
+        优化：只对没有 tmdbid 的订阅进行查询，有 tmdbid 的订阅延长刷新间隔
         """
         # 更新电影
         log.info("【Subscribe】开始刷新订阅TMDB信息...")
@@ -585,12 +586,19 @@ class Subscribe(metaclass=SingletonMeta):
             name = rss_info.get("name")
             year = rss_info.get("year") or ""
             tmdbid = rss_info.get("tmdbid")
-            # 更新TMDB信息
+            
+            # 如果已经有 tmdbid，跳过刷新（减少 API 调用）
+            # 只有当没有 tmdbid 时才进行查询
+            if tmdbid:
+                log.debug(f"【Subscribe】电影 {name} 已有 TMDB ID {tmdbid}，跳过刷新")
+                continue
+                
+            # 更新TMDB信息（使用缓存）
             media_info = self.__get_media_info(tmdbid=tmdbid,
                                                name=name,
                                                year=year,
                                                mtype=MediaType.MOVIE,
-                                               cache=False)
+                                               cache=True)
             if media_info and media_info.tmdb_id and media_info.title != name:
                 log.info(f"【Subscribe】检测到TMDB信息变化，更新电影订阅 {name} 为 {media_info.title}")
                 # 更新订阅信息
@@ -616,12 +624,19 @@ class Subscribe(metaclass=SingletonMeta):
             total = rss_info.get("total")
             total_ep = rss_info.get("total_ep")
             lack = rss_info.get("lack")
-            # 更新TMDB信息
+            
+            # 如果已经有 tmdbid，跳过刷新（减少 API 调用）
+            # 只有当没有 tmdbid 时才进行查询
+            if tmdbid:
+                log.debug(f"【Subscribe】电视剧 {name} 已有 TMDB ID {tmdbid}，跳过刷新")
+                continue
+                
+            # 更新TMDB信息（使用缓存）
             media_info = self.__get_media_info(tmdbid=tmdbid,
                                                name=name,
                                                year=year,
                                                mtype=MediaType.TV,
-                                               cache=False)
+                                               cache=True)
             if media_info and media_info.tmdb_id:
                 # 获取总集数
                 total_episode = self.media.get_tmdb_season_episodes_num(tv_info=media_info.tmdb_info,
@@ -646,7 +661,7 @@ class Subscribe(metaclass=SingletonMeta):
                                                      note=self.gen_rss_note(media_info))
                     # 更新缺失季集
                     self.dbhelper.update_rss_tv_episodes(
-                        rid=rssid, 
+                        rid=rssid,
                         episodes=range(total_episode - lack_episode + 1, total_episode + 1)
                     )
         log.info("【Subscribe】订阅TMDB信息刷新完成")

@@ -57,6 +57,15 @@ DEFAULT_TMDB_IMAGE = 'https://s3.bmp.ovh/imgs/2022/07/10/77ef9500c851935b.webp'
 # TMDB域名地址
 TMDB_API_DOMAINS = ['api.themoviedb.org', 'api.tmdb.org', 'tmdb.nastool.cn', 'tmdb.nastool.workers.dev']
 TMDB_IMAGE_DOMAIN = 'image.tmdb.org'
+# TMDB图片尺寸配置
+TMDB_IMAGE_SIZE = {
+    'thumb': 'w92',      # 缩略图
+    'small': 'w185',     # 小图（推荐用于列表）
+    'medium': 'w342',    # 中图（推荐用于卡片）
+    'large': 'w500',     # 大图（当前默认）
+    'xlarge': 'w780',    # 超大图
+    'original': 'original'  # 原图
+}
 # 添加下载时增加的标签，开始只监控NAStool添加的下载时有效
 PT_TAG = "NASTOOL"
 # 电影默认命名格式
@@ -368,13 +377,55 @@ class Config(object):
     def get_tmdbapi_url(self):
         return f"https://{self.get_config('app').get('tmdb_domain') or TMDB_API_DOMAINS[0]}/3"
 
-    def get_tmdbimage_url(self, path, prefix="w500"):
+    def get_tmdbimage_url(self, path, prefix="w500", size=None, use_proxy=None):
+        """
+        获取 TMDB 图片 URL
+        :param path: 图片路径
+        :param prefix: 尺寸前缀（默认 w500，兼容旧代码）
+        :param size: 尺寸名称（thumb/small/medium/large/xlarge/original），优先级高于 prefix
+        :param use_proxy: 是否使用本地代理，None 表示自动检测
+        :return: 完整图片 URL
+        """
         if not path:
             return ""
+        
+        # 如果指定了 size，使用对应的尺寸
+        if size and size in TMDB_IMAGE_SIZE:
+            prefix = TMDB_IMAGE_SIZE[size]
+        
+        # 如果 use_proxy 未指定，自动检测
+        if use_proxy is None:
+            use_proxy = self.get_image_proxy_enabled()
+        
+        # 如果使用代理，返回本地代理 URL
+        if use_proxy:
+            path_clean = path.lstrip('/')
+            return f"/img/tmdb/{prefix}/{path_clean}"
+        
         tmdb_image_url = self.get_config("app").get("tmdb_image_url")
         if tmdb_image_url:
             return tmdb_image_url + f"/t/p/{prefix}{path}"
         return f"https://{TMDB_IMAGE_DOMAIN}/t/p/{prefix}{path}"
+    
+    def get_tmdbimage_thumb_url(self, path, use_proxy=None):
+        """获取缩略图 URL (w92)"""
+        return self.get_tmdbimage_url(path, size='thumb', use_proxy=use_proxy)
+    
+    def get_tmdbimage_small_url(self, path, use_proxy=None):
+        """获取小图 URL (w185) - 适合列表"""
+        return self.get_tmdbimage_url(path, size='small', use_proxy=use_proxy)
+    
+    def get_tmdbimage_medium_url(self, path, use_proxy=None):
+        """获取中图 URL (w342) - 适合卡片"""
+        return self.get_tmdbimage_url(path, size='medium', use_proxy=use_proxy)
+    
+    def get_tmdbimage_large_url(self, path, use_proxy=None):
+        """获取大图 URL (w500) - 适合详情页"""
+        return self.get_tmdbimage_url(path, size='large', use_proxy=use_proxy)
+    
+    def get_image_proxy_enabled(self):
+        """检查是否启用了图片代理 - 默认开启"""
+        return self.get_config("app").get("enable_image_proxy", True)
 
     @property
     def category_path(self):

@@ -16,6 +16,7 @@ from app.media.tmdbv3api import TMDb, Search, Movie, TV, Person, Find, TMDbExcep
 from app.utils import PathUtils, EpisodeFormat, RequestUtils, NumberUtils, StringUtils, cacheman
 from app.utils.types import MediaType, MatchMode
 from app.utils.tmdb_cache import TMDBCache
+from app.utils.request_deduper import get_deduper
 from config import Config, KEYWORD_BLACKLIST, KEYWORD_SEARCH_WEIGHT_3, KEYWORD_SEARCH_WEIGHT_2, KEYWORD_SEARCH_WEIGHT_1, \
     KEYWORD_STR_SIMILARITY_THRESHOLD, KEYWORD_DIFF_SCORE_THRESHOLD
 
@@ -1061,67 +1062,127 @@ class Media:
 
     def get_tmdb_hot_movies(self, page):
         """
-        获取热门电影
+        获取热门电影（带缓存）
         :param page: 第几页
         :return: TMDB信息列表
         """
+        # 检查缓存
+        cached = self.redis_cache.get_trending("movie", "popular", page)
+        if cached:
+            log.debug(f"【Meta】从缓存获取热门电影，第 {page} 页")
+            return cached
+        
         if not self.movie:
             return []
-        return self.__dict_tmdbinfos(self.movie.popular(page), MediaType.MOVIE)
+        result = self.__dict_tmdbinfos(self.movie.popular(page), MediaType.MOVIE)
+        # 缓存结果
+        if result:
+            self.redis_cache.set_trending("movie", "popular", page, result)
+        return result
 
     def get_tmdb_hot_tvs(self, page):
         """
-        获取热门电视剧
+        获取热门电视剧（带缓存）
         :param page: 第几页
         :return: TMDB信息列表
         """
+        # 检查缓存
+        cached = self.redis_cache.get_trending("tv", "popular", page)
+        if cached:
+            log.debug(f"【Meta】从缓存获取热门电视剧，第 {page} 页")
+            return cached
+        
         if not self.tv:
             return []
-        return self.__dict_tmdbinfos(self.tv.popular(page), MediaType.TV)
+        result = self.__dict_tmdbinfos(self.tv.popular(page), MediaType.TV)
+        # 缓存结果
+        if result:
+            self.redis_cache.set_trending("tv", "popular", page, result)
+        return result
 
     def get_tmdb_new_movies(self, page):
         """
-        获取最新电影
+        获取最新电影（带缓存）
         :param page: 第几页
         :return: TMDB信息列表
         """
+        # 检查缓存
+        cached = self.redis_cache.get_trending("movie", "now_playing", page)
+        if cached:
+            log.debug(f"【Meta】从缓存获取最新电影，第 {page} 页")
+            return cached
+        
         if not self.movie:
             return []
-        return self.__dict_tmdbinfos(self.movie.now_playing(page), MediaType.MOVIE)
+        result = self.__dict_tmdbinfos(self.movie.now_playing(page), MediaType.MOVIE)
+        # 缓存结果
+        if result:
+            self.redis_cache.set_trending("movie", "now_playing", page, result)
+        return result
 
     def get_tmdb_new_tvs(self, page):
         """
-        获取最新电视剧
+        获取最新电视剧（带缓存）
         :param page: 第几页
         :return: TMDB信息列表
         """
+        # 检查缓存
+        cached = self.redis_cache.get_trending("tv", "on_the_air", page)
+        if cached:
+            log.debug(f"【Meta】从缓存获取最新电视剧，第 {page} 页")
+            return cached
+        
         if not self.tv:
             return []
-        return self.__dict_tmdbinfos(self.tv.on_the_air(page), MediaType.TV)
+        result = self.__dict_tmdbinfos(self.tv.on_the_air(page), MediaType.TV)
+        # 缓存结果
+        if result:
+            self.redis_cache.set_trending("tv", "on_the_air", page, result)
+        return result
 
     def get_tmdb_upcoming_movies(self, page):
         """
-        获取即将上映电影
+        获取即将上映电影（带缓存）
         :param page: 第几页
         :return: TMDB信息列表
         """
+        # 检查缓存
+        cached = self.redis_cache.get_trending("movie", "upcoming", page)
+        if cached:
+            log.debug(f"【Meta】从缓存获取即将上映电影，第 {page} 页")
+            return cached
+        
         if not self.movie:
             return []
-        return self.__dict_tmdbinfos(self.movie.upcoming(page), MediaType.MOVIE)
+        result = self.__dict_tmdbinfos(self.movie.upcoming(page), MediaType.MOVIE)
+        # 缓存结果
+        if result:
+            self.redis_cache.set_trending("movie", "upcoming", page, result)
+        return result
 
     def get_tmdb_trending_all_week(self, page=1):
         """
-        获取即将上映电影
+        获取本周趋势（带缓存）
         :param page: 第几页
         :return: TMDB信息列表
         """
+        # 检查缓存
+        cached = self.redis_cache.get_trending("all", "week", page)
+        if cached:
+            log.debug(f"【Meta】从缓存获取本周趋势，第 {page} 页")
+            return cached
+        
         if not self.movie:
             return []
-        return self.__dict_tmdbinfos(self.trending.all_week(page=page))
+        result = self.__dict_tmdbinfos(self.trending.all_week(page=page))
+        # 缓存结果
+        if result:
+            self.redis_cache.set_trending("all", "week", page, result)
+        return result
 
     def __get_tmdb_movie_detail(self, tmdbid, append_to_response=None):
         """
-        获取电影的详情
+        获取电影的详情（带请求去重）
         :param tmdbid: TMDB ID
         :return: TMDB信息
         """
@@ -1227,7 +1288,7 @@ class Media:
 
     def __get_tmdb_tv_detail(self, tmdbid, append_to_response=None):
         """
-        获取电视剧的详情
+        获取电视剧的详情（带请求去重）
         :param tmdbid: TMDB ID
         :return: TMDB信息
         """
@@ -1404,74 +1465,27 @@ class Media:
 
     def get_tmdb_tv_season_detail(self, tmdbid, season: int):
         """
-        获取电视剧季的详情
+        获取电视剧季的详情（带缓存）
         :param tmdbid: TMDB ID
         :param season: 季，数字
         :return: TMDB信息
         """
-        """
-        {
-          "_id": "5e614cd3357c00001631a6ef",
-          "air_date": "2023-01-15",
-          "episodes": [
-            {
-              "air_date": "2023-01-15",
-              "episode_number": 1,
-              "id": 2181581,
-              "name": "当你迷失在黑暗中",
-              "overview": "在一场全球性的流行病摧毁了文明之后，一个顽强的幸存者负责照顾一个 14 岁的小女孩，她可能是人类最后的希望。",
-              "production_code": "",
-              "runtime": 81,
-              "season_number": 1,
-              "show_id": 100088,
-              "still_path": "/aRquEWm8wWF1dfa9uZ1TXLvVrKD.jpg",
-              "vote_average": 8,
-              "vote_count": 33,
-              "crew": [
-                {
-                  "job": "Writer",
-                  "department": "Writing",
-                  "credit_id": "619c370063536a00619a08ee",
-                  "adult": false,
-                  "gender": 2,
-                  "id": 35796,
-                  "known_for_department": "Writing",
-                  "name": "Craig Mazin",
-                  "original_name": "Craig Mazin",
-                  "popularity": 15.211,
-                  "profile_path": "/uEhna6qcMuyU5TP7irpTUZ2ZsZc.jpg"
-                },
-              ],
-              "guest_stars": [
-                {
-                  "character": "Marlene",
-                  "credit_id": "63c4ca5e5f2b8d00aed539fc",
-                  "order": 500,
-                  "adult": false,
-                  "gender": 1,
-                  "id": 1253388,
-                  "known_for_department": "Acting",
-                  "name": "Merle Dandridge",
-                  "original_name": "Merle Dandridge",
-                  "popularity": 21.679,
-                  "profile_path": "/lKwHdTtDf6NGw5dUrSXxbfkZLEk.jpg"
-                }
-              ]
-            },
-          ],
-          "name": "第 1 季",
-          "overview": "",
-          "id": 144593,
-          "poster_path": "/aUQKIpZZ31KWbpdHMCmaV76u78T.jpg",
-          "season_number": 1
-        }
-        """
+        # 先从缓存获取
+        cached_info = self.redis_cache.get_season_info(tmdbid, season)
+        if cached_info:
+            log.debug(f"【Meta】从缓存获取季详情: {tmdbid}, 季: {season}")
+            return cached_info
+        
         if not self.tv:
             return {}
         try:
             log.info("【Meta】正在查询TMDB电视剧：%s，季：%s ..." % (tmdbid, season))
             tmdbinfo = self.tv.season_details(tmdbid, season)
-            return tmdbinfo or {}
+            result = tmdbinfo or {}
+            # 缓存结果
+            if result:
+                self.redis_cache.set_season_info(tmdbid, season, result)
+            return result
         except Exception as e:
             print(str(e))
             return {}

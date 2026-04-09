@@ -4605,13 +4605,19 @@ class WebAction:
                         tmdbid=media_info.tmdb_id,
                         season=season.get("season_number")) else False
                 })
+        # 处理图片URL，转换为代理格式
+        poster_image = media_info.get_poster_image()
+        if poster_image and poster_image.startswith('http'):
+            from app.mediaserver.client._base import _IMediaClient
+            poster_image = _IMediaClient.get_nt_image_url(poster_image)
+        
         return {
             "code": 0,
             "data": {
                 "tmdbid": media_info.tmdb_id,
                 "douban_id": media_info.douban_id,
                 "background": MediaHandler.get_tmdb_backdrops(tmdbinfo=media_info.tmdb_info),
-                "image": media_info.get_poster_image(),
+                "image": poster_image,
                 "vote": media_info.vote_average,
                 "year": media_info.year,
                 "title": media_info.title,

@@ -48,6 +48,7 @@ from app.utils.types import SystemConfigKey, OsType, MediaServerType, EventType,
 from config import PT_TRANSFER_INTERVAL, REDIS_HOST, REDIS_PORT, Config, TMDB_API_DOMAINS
 from web.action import WebAction
 from web.apiv1 import apiv1_bp
+from web.backend.image_proxy import img_blueprint
 from web.backend.WXBizMsgCrypt3 import WXBizMsgCrypt
 from web.backend.user import User
 from web.backend.wallpaper import get_login_wallpaper
@@ -97,6 +98,7 @@ LoggingLock = Lock()
 
 # 路由注册
 App.register_blueprint(apiv1_bp, url_prefix="/api/v1")
+App.register_blueprint(img_blueprint, url_prefix="/img")
 
 # fix Windows registry stuff
 mimetypes.add_type('application/javascript', '.js')
@@ -1771,10 +1773,17 @@ def ical():
 def Img():
     """
     图片缓存服务
+    支持格式：
+    1. /img?url=https://example.com/image.jpg - 外部图片代理（旧格式）
+    2. /img?url=/img/tmdb/w500/xxx.jpg - 本地代理路径，重定向到新路由
     """
     url = request.args.get('url')
     if not url:
         return make_response("参数错误", 400)
+    
+    # 如果 url 是本地代理路径（以 /img/ 开头），重定向到新的路由
+    if url.startswith('/img/'):
+        return redirect(url, code=307)
     
     # 计算Etag
     etag = hashlib.sha256(url.encode('utf-8')).hexdigest()
