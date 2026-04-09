@@ -63,6 +63,10 @@ DEFAULT_PERMISSIONS = [
     {"name": "资源搜索", "code": "search:view", "type": "menu", "module": "search"},
     {"name": "执行搜索", "code": "search:execute", "type": "api", "module": "search"},
     
+    # 探索权限
+    {"name": "探索查看", "code": "discovery:view", "type": "menu", "module": "discovery"},
+    {"name": "探索管理", "code": "discovery:manage", "type": "api", "module": "discovery"},
+    
     # 服务权限
     {"name": "服务查看", "code": "service:view", "type": "menu", "module": "service"},
     {"name": "服务管理", "code": "service:manage", "type": "api", "module": "service"},
@@ -97,22 +101,38 @@ DEFAULT_MENUS = [
         "permission_code": "search:view"
     },
     {
+        "name": "探索",
+        "code": "discovery",
+        "icon": "compass",
+        "sort_order": 3,
+        "level": 1,
+        "children": [
+            {"name": "排行榜", "code": "ranking", "path": "/ranking", "icon": "trophy", "sort_order": 1, "level": 2, "permission_code": "discovery:view"},
+            {"name": "豆瓣电影", "code": "douban_movie", "path": "/douban_movie", "icon": "film", "sort_order": 2, "level": 2, "permission_code": "discovery:view"},
+            {"name": "豆瓣电视剧", "code": "douban_tv", "path": "/douban_tv", "icon": "tv", "sort_order": 3, "level": 2, "permission_code": "discovery:view"},
+            {"name": "TMDB电影", "code": "tmdb_movie", "path": "/tmdb_movie", "icon": "clapperboard", "sort_order": 4, "level": 2, "permission_code": "discovery:view"},
+            {"name": "TMDB电视剧", "code": "tmdb_tv", "path": "/tmdb_tv", "icon": "monitor-play", "sort_order": 5, "level": 2, "permission_code": "discovery:view"},
+            {"name": "Bangumi", "code": "bangumi", "path": "/bangumi", "icon": "calendar-days", "sort_order": 6, "level": 2, "permission_code": "discovery:view"},
+        ]
+    },
+    {
         "name": "站点管理",
         "code": "site",
         "icon": "server",
-        "sort_order": 3,
+        "sort_order": 4,
         "level": 1,
         "children": [
             {"name": "站点维护", "code": "site_maintenance", "path": "/site", "icon": "server", "sort_order": 1, "level": 2, "permission_code": "site:view"},
             {"name": "数据统计", "code": "site_statistics", "path": "/statistics", "icon": "pie-chart", "sort_order": 2, "level": 2, "permission_code": "site:view"},
             {"name": "刷流任务", "code": "brush_task", "path": "/brushtask", "icon": "list-check", "sort_order": 3, "level": 2, "permission_code": "site:manage"},
+            {"name": "站点资源", "code": "site_resources", "path": "/sitelist", "icon": "database", "sort_order": 4, "level": 2, "permission_code": "site:view"},
         ]
     },
     {
         "name": "订阅管理",
         "code": "rss",
         "icon": "rss",
-        "sort_order": 4,
+        "sort_order": 5,
         "level": 1,
         "children": [
             {"name": "电影订阅", "code": "movie_rss", "path": "/movie_rss", "icon": "film", "sort_order": 1, "level": 2, "permission_code": "rss:view"},
@@ -124,7 +144,7 @@ DEFAULT_MENUS = [
         "name": "下载管理",
         "code": "download",
         "icon": "download",
-        "sort_order": 5,
+        "sort_order": 6,
         "level": 1,
         "children": [
             {"name": "正在下载", "code": "downloading", "path": "/downloading", "icon": "loader-2", "sort_order": 1, "level": 2, "permission_code": "download:view"},
@@ -136,7 +156,7 @@ DEFAULT_MENUS = [
         "name": "媒体整理",
         "code": "media",
         "icon": "file-pen",
-        "sort_order": 6,
+        "sort_order": 7,
         "level": 1,
         "children": [
             {"name": "文件管理", "code": "file_manager", "path": "/mediafile", "icon": "folder-open", "sort_order": 1, "level": 2, "permission_code": "library:manage"},
@@ -149,7 +169,7 @@ DEFAULT_MENUS = [
         "code": "service",
         "path": "/service",
         "icon": "layout-dashboard",
-        "sort_order": 7,
+        "sort_order": 8,
         "level": 1,
         "permission_code": "service:view"
     },
@@ -157,7 +177,7 @@ DEFAULT_MENUS = [
         "name": "系统设置",
         "code": "setting",
         "icon": "settings",
-        "sort_order": 8,
+        "sort_order": 9,
         "level": 1,
         "children": [
             {"name": "基础设置", "code": "basic_setting", "path": "/basic", "icon": "sliders", "sort_order": 1, "level": 2, "permission_code": "setting:view"},
@@ -204,12 +224,14 @@ DEFAULT_ROLES = [
             "download:view", "download:manage",
             "rss:view", "rss:manage",
             "search:view", "search:execute",
+            "discovery:view", "discovery:manage",
             "service:view", "service:manage",
             "plugin:view", "plugin:manage",
             "log:view",
         ],
         "menus": [
-            "media_library", "search", "site", "site_maintenance", "site_statistics", "brush_task",
+            "media_library", "search", "discovery", "ranking", "douban_movie", "douban_tv", "tmdb_movie", "tmdb_tv", "bangumi",
+            "site", "site_maintenance", "site_statistics", "brush_task",
             "rss", "movie_rss", "tv_rss", "custom_rss",
             "download", "downloading", "downloaded", "torrent_remove",
             "media", "file_manager", "manual_identify", "history",
@@ -227,10 +249,11 @@ DEFAULT_ROLES = [
             "download:view",
             "rss:view",
             "search:view", "search:execute",
+            "discovery:view",
             "service:view",
         ],
         "menus": [
-            "media_library", "search",
+            "media_library", "search", "discovery", "ranking", "douban_movie", "douban_tv", "tmdb_movie", "tmdb_tv", "bangumi",
             "site", "site_maintenance", "site_statistics",
             "rss", "movie_rss", "tv_rss",
             "download", "downloading", "downloaded",
@@ -246,9 +269,10 @@ DEFAULT_ROLES = [
         "permissions": [
             "library:view",
             "search:view",
+            "discovery:view",
         ],
         "menus": [
-            "media_library", "search",
+            "media_library", "search", "discovery", "ranking", "douban_movie", "douban_tv", "tmdb_movie", "tmdb_tv", "bangumi",
         ]
     },
 ]
