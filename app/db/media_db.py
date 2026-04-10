@@ -1,11 +1,13 @@
 import json
 import time
 
-from cachetools import cached, TTLCache
-
 from app.db.main_db import MainDb, _Engine, _Session
 from app.db.models import MEDIASYNCITEMS, MEDIASYNCSTATISTIC
 from app.utils import ExceptionUtils
+from app.utils.cache_system import cached, MemoryCacheAdapter
+
+# 创建媒体DB查询缓存
+_media_db_cache = MemoryCacheAdapter(maxsize=128, name="media_db")
 
 
 class MediaDb:
@@ -110,7 +112,7 @@ class MediaDb:
         finally:
             self._close_session()
 
-    @cached(cache=TTLCache(maxsize=128, ttl=60))
+    @cached(cache_instance=_media_db_cache, ttl=60)
     def query(self, server_type, title, year, tmdbid):
         try:
             if not server_type or not title:

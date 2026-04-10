@@ -5,9 +5,8 @@ import random
 import time
 import re
 import json
-from functools import lru_cache
 
-from loguru import logger
+from app.utils.cache_system import lru_cache_with_ttl
 from lxml import etree
 from urllib.parse import urlsplit
 
@@ -170,7 +169,7 @@ class SiteConf(metaclass=SingletonMeta):
                                                       proxy=proxy,
                                                       param=param)
                 if not json_text:
-                    logger.debug(f'获取 M-Team 明细数据失败，种子id: {param}')
+                    log.debug(f'获取 M-Team 明细数据失败，种子id: {param}')
                     return ret_attr
                 json_data = json.loads(json_text)
                 if json_data.get('message') != "SUCCESS":
@@ -268,7 +267,7 @@ class SiteConf(metaclass=SingletonMeta):
         return ret_attr
 
     @staticmethod
-    @lru_cache(maxsize=128)
+    @lru_cache_with_ttl(maxsize=128, ttl=300)
     def __get_site_page_html(url, cookie, ua, headers=None, render=False, proxy=False, param=None):
         if JsonUtils.is_valid_json(headers):
             headers = json.loads(headers)

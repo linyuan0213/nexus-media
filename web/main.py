@@ -58,6 +58,7 @@ from web.cache import cache
 from app.db import init_db, update_db, init_data
 from initializer import check_redis, update_config, check_config, update_sites_data, update_rss_state, init_rbac_system
 from version import APP_VERSION
+from app.utils import warm_cache_on_startup
 from app.utils.temp_manager import temp_manager
 
 # 配置文件锁
@@ -126,6 +127,9 @@ with App.app_context():
     check_redis()
     # 更新RSS订阅状态为R
     update_rss_state()
+    # 缓存预热
+    log.console("开始缓存预热...")
+    warm_cache_on_startup(async_mode=False)
     log.console("开始启动服务...")
     # 启动服务
     WebAction.start_service()

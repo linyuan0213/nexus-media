@@ -6,17 +6,21 @@ import time
 from app.helper.db_helper import DbHelper
 from app.utils.commons import SingletonMeta
 from app.utils.exception_utils import ExceptionUtils
+from app.utils.cache_system import get_cache_manager
 
 
 class WordsHelper(metaclass=SingletonMeta):
     dbhelper = None
     # 识别词
     words_info = []
-    _cache = {}
     _cache_time = 0
     _cache_ttl = 60  # 缓存60秒
 
     def __init__(self):
+        # 初始化处理结果缓存
+        self._cache = get_cache_manager().get_or_create(
+            "words_process", "memory", maxsize=1000
+        )
         self.init_config()
 
     def init_config(self):
@@ -40,8 +44,9 @@ class WordsHelper(metaclass=SingletonMeta):
 
     def process(self, title):
         # 检查缓存
-        if title in self._cache:
-            return self._cache[title]
+        cached_result = self._cache.get(title)
+        if cached_result is not None:
+            return cached_result
         
         # 刷新配置（如果需要）
         self._load_words_with_cache()
@@ -115,9 +120,8 @@ class WordsHelper(metaclass=SingletonMeta):
                 case _:
                     pass
         result = (title, msg, {"ignored": used_ignored_words, "replaced": used_replaced_words, "offset": used_offset_words})
-        # 缓存结果（限制缓存大小）
-        if len(self._cache) < 1000:  # 最多缓存1000个结果
-            self._cache[title] = result
+        # 缓存结果（使用统一缓存系统，已配置maxsize=1000）
+        self._cache.set(title, result)
         return result
 
     @staticmethod
