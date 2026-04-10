@@ -184,7 +184,7 @@ export class CustomImg extends CustomElement {
              @load=${() => {
                this._placeholder = false;
                // 图像渐入
-               if (this.img_src_list.length > 0) {
+               if (this.img_src_list && this.img_src_list.length > 0) {
                  this._query_img.classList.add("lit-custom-img-carousel");
                  setTimeout(() => {
                    this._query_img.classList.add("lit-custom-img-carousel-show");
