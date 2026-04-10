@@ -35,7 +35,7 @@ class Plex(_IMediaClient):
         if config:
             self._client_config = config
         else:
-            self._client_config = Config().get_config('plex')
+            self._client_config = self.get_db_config('plex')
         self.init_config()
 
     def init_config(self):

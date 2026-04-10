@@ -88,6 +88,7 @@ class WebAction:
             "reset_db_version": self.__reset_db_version,
             "logout": self.__logout,
             "update_config": self.__update_config,
+            "save_mediaserver_config": self.__save_mediaserver_config,
             "update_directory": self.__update_directory,
             "add_or_edit_sync_path": self.__add_or_edit_sync_path,
             "get_sync_path": self.get_sync_path,
@@ -1290,8 +1291,6 @@ class WebAction:
             if key == "test" and value:
                 config_test = True
                 continue
-            if key == "media.media_server" and value:
-                cache.delete("index")
             # 生效配置
             cfg = self.set_config_value(cfg, key, value)
 
@@ -1300,6 +1299,58 @@ class WebAction:
             cfg.pop("test", None)
             Config().save_config(cfg)
 
+        return {"code": 0}
+
+    @staticmethod
+    def __save_mediaserver_config(data):
+        """
+        保存媒体服务器配置到数据库
+        """
+        from app.db.repositories import ConfigRepository
+        from app.mediaserver import MediaServer
+        repo = ConfigRepository()
+        name = data.get("type")
+        test = data.get("test") in [True, "true", "on", "1", 1]
+        config = {}
+        for key, value in data.items():
+            if key.startswith(name + "."):
+                config[key.split(".", 1)[1]] = value
+        if not config:
+            return {"code": 1, "msg": "配置为空"}
+        enabled = 1 if config.get("enabled") else 0
+        is_default = 1 if config.get("is_default") else 0
+        item = repo.get_media_server_by_name(name)
+        sid = item.ID if item else None
+        repo.update_media_server(
+            sid=sid,
+            name=name,
+            enabled=enabled,
+            config=json.dumps(config),
+            is_default=is_default
+        )
+        # 如果有设置默认，需要清理其他默认并同步 ENABLED
+        if is_default:
+            repo.set_default_media_server(name)
+        # 刷新 MediaServer 单例配置
+        MediaServer().init_config()
+        cache.delete("index")
+        # 测试连接
+        if test:
+            try:
+                from app.helper import SubmoduleHelper
+                schemas = SubmoduleHelper.import_submodules(
+                    'app.mediaserver.client',
+                    filter_func=lambda _, obj: hasattr(obj, 'client_id')
+                )
+                for schema in schemas:
+                    if schema.match(name):
+                        client = schema(config)
+                        status = client.get_status()
+                        return {"code": 0 if status else 1, "msg": "测试成功" if status else "测试失败"}
+                return {"code": 1, "msg": "未找到对应客户端"}
+            except Exception as e:
+                ExceptionUtils.exception_traceback(e)
+                return {"code": 1, "msg": str(e)}
         return {"code": 0}
 
     @staticmethod

@@ -28,7 +28,7 @@ class Jellyfin(_IMediaClient):
         if config:
             self._client_config = config
         else:
-            self._client_config = Config().get_config('jellyfin')
+            self._client_config = self.get_db_config('jellyfin')
         self.init_config()
 
     def init_config(self):

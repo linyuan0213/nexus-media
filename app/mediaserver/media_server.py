@@ -4,6 +4,7 @@ import threading
 import log
 from app.conf import SystemConfig
 from app.db import MediaDb
+from app.db.repositories import ConfigRepository
 from app.helper import ProgressHelper, SubmoduleHelper
 from app.media import Media
 from app.message import Message
@@ -26,6 +27,7 @@ class MediaServer(metaclass=SingletonMeta):
     message = None
     media = None
     systemconfig = None
+    config_repo = None
 
     def __init__(self):
         self._mediaserver_schemas = SubmoduleHelper.import_submodules(
@@ -41,8 +43,14 @@ class MediaServer(metaclass=SingletonMeta):
         self.progress = ProgressHelper()
         self.media = Media()
         self.systemconfig = SystemConfig()
+        self.config_repo = ConfigRepository()
         # 当前使用的媒体库服务器
-        self._server_type = Config().get_config('media').get('media_server') or 'emby'
+        default_server = self.config_repo.get_default_media_server()
+        if default_server:
+            self._server_type = default_server.NAME
+        else:
+            # 兼容旧配置：从配置文件读取
+            self._server_type = Config().get_config('media').get('media_server') or 'emby'
         self._server = None
 
     def __build_class(self, ctype, conf):

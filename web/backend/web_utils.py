@@ -220,7 +220,11 @@ class WebUtils:
         # FnOS图片 - 需要携带cookie
         elif '/v/api/v1/sys/img/' in url:
             # 获取FnOS配置
-            fnos_config = Config().get_config('fnos')
+            try:
+                from app.mediaserver.client.fnos import FnOS
+                fnos_config = FnOS.get_db_config('fnos')
+            except Exception:
+                fnos_config = Config().get_config('fnos')
             if fnos_config:
                 # 从FnOS客户端获取cookie
                 try:
