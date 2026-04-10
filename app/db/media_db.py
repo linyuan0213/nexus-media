@@ -27,10 +27,13 @@ class MediaDb:
         # 由 MainDb.init_db() 统一创建所有表
         pass
 
-    def _close_session(self):
+    def _close_session(self, session=None):
         """安全关闭 Session 并清理 scoped_session"""
         try:
-            self.session.close()
+            if session:
+                session.close()
+            else:
+                self.session.close()
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
         finally:
@@ -39,9 +42,10 @@ class MediaDb:
     def insert(self, server_type, iteminfo, seasoninfo):
         if not server_type or not iteminfo:
             return False
+        session = self.session
         try:
             # 删除旧记录
-            self.session.query(MEDIASYNCITEMS).filter(
+            session.query(MEDIASYNCITEMS).filter(
                 MEDIASYNCITEMS.SERVER == server_type,
                 MEDIASYNCITEMS.ITEM_ID == iteminfo.get("id")
             ).delete()
@@ -59,39 +63,41 @@ class MediaDb:
                 PATH=iteminfo.get("path"),
                 JSON=json.dumps(seasoninfo)
             )
-            self.session.add(new_item)
-            self.session.commit()
+            session.add(new_item)
+            session.commit()
             return True
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            self.session.rollback()
+            session.rollback()
             return False
         finally:
-            self._close_session()
+            self._close_session(session)
 
     def empty(self, server_type=None, library=None):
+        session = self.session
         try:
-            query = self.session.query(MEDIASYNCITEMS)
+            query = session.query(MEDIASYNCITEMS)
             if server_type and library:
                 query = query.filter(MEDIASYNCITEMS.SERVER == server_type, MEDIASYNCITEMS.LIBRARY == library)
             elif server_type:
                 query = query.filter(MEDIASYNCITEMS.SERVER == server_type)
             query.delete()
-            self.session.commit()
+            session.commit()
             return True
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            self.session.rollback()
+            session.rollback()
             return False
         finally:
-            self._close_session()
+            self._close_session(session)
 
     def statistics(self, server_type, total_count, movie_count, tv_count):
         if not server_type:
             return False
+        session = self.session
         try:
             # 删除旧统计
-            self.session.query(MEDIASYNCSTATISTIC).filter(
+            session.query(MEDIASYNCSTATISTIC).filter(
                 MEDIASYNCSTATISTIC.SERVER == server_type
             ).delete()
             # 插入新统计
@@ -102,23 +108,24 @@ class MediaDb:
                 TV_COUNT=tv_count,
                 UPDATE_TIME=time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
             )
-            self.session.add(new_stat)
-            self.session.commit()
+            session.add(new_stat)
+            session.commit()
             return True
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            self.session.rollback()
+            session.rollback()
             return False
         finally:
-            self._close_session()
+            self._close_session(session)
 
     @cached(cache_instance=_media_db_cache, ttl=60)
     def query(self, server_type, title, year, tmdbid):
+        session = self.session
         try:
             if not server_type or not title:
                 return {}
             
-            query = self.session.query(MEDIASYNCITEMS).filter(
+            query = session.query(MEDIASYNCITEMS).filter(
                 MEDIASYNCITEMS.SERVER == server_type
             )
             
@@ -137,14 +144,15 @@ class MediaDb:
             
             return item if item else {}
         finally:
-            self._close_session()
+            self._close_session(session)
 
     def get_statistics(self, server_type):
+        session = self.session
         try:
             if not server_type:
                 return None
-            return self.session.query(MEDIASYNCSTATISTIC).filter(
+            return session.query(MEDIASYNCSTATISTIC).filter(
                 MEDIASYNCSTATISTIC.SERVER == server_type
             ).first()
         finally:
-            self._close_session()
+            self._close_session(session)

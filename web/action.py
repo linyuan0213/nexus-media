@@ -4571,40 +4571,62 @@ class WebAction:
         """
         获取媒体详情
         """
+        import time
+        start_time = time.time()
+        
         # TMDBID 或 DB:豆瓣ID
         tmdbid = data.get("tmdbid")
         mtype = MediaType.MOVIE if data.get(
             "type") in MovieTypes else MediaType.TV
         if not tmdbid:
             return {"code": 1, "msg": "未指定媒体ID"}
+        
+        log.info(f"【media_detail】开始处理请求: tmdbid={tmdbid}, type={mtype}")
+        
         media_info = WebUtils.get_mediainfo_from_id(
             mtype=mtype, mediaid=tmdbid)
+        
+        log.info(f"【media_detail】获取媒体信息完成，耗时: {time.time() - start_time:.2f}s")
+        
         # 检查TMDB信息
         if not media_info or not media_info.tmdb_info:
             return {
                 "code": 1,
                 "msg": "无法查询到TMDB信息"
             }
+        
         # 查询存在及订阅状态
+        fav_start = time.time()
         fav, rssid, item_url = self.get_media_exists_info(mtype=mtype,
                                                           title=media_info.title,
                                                           year=media_info.year,
                                                           mediaid=media_info.tmdb_id)
+        log.info(f"【media_detail】获取订阅状态完成，耗时: {time.time() - fav_start:.2f}s")
+        
         MediaHandler = Media()
         MediaServerHandler = MediaServer()
+        
         # 查询季
+        seasons_start = time.time()
         seasons = MediaHandler.get_tmdb_tv_seasons(media_info.tmdb_info)
+        log.info(f"【media_detail】获取季信息完成，耗时: {time.time() - seasons_start:.2f}s")
+        
         # 查询季是否存在
         if seasons:
+            check_start = time.time()
             for season in seasons:
-                season.update({
-                    "state": True if MediaServerHandler.check_item_exists(
+                try:
+                    exists = MediaServerHandler.check_item_exists(
                         mtype=mtype,
                         title=media_info.title,
                         year=media_info.year,
                         tmdbid=media_info.tmdb_id,
-                        season=season.get("season_number")) else False
-                })
+                        season=season.get("season_number"))
+                    season.update({"state": True if exists else False})
+                except Exception as e:
+                    log.error(f"【media_detail】检查季存在状态失败: {str(e)}")
+                    season.update({"state": False})
+            log.info(f"【media_detail】检查季存在状态完成，共{len(seasons)}季，耗时: {time.time() - check_start:.2f}s")
         # 处理图片URL，转换为代理格式
         poster_image = media_info.get_poster_image()
         if poster_image and poster_image.startswith('http'):

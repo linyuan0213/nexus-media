@@ -89,6 +89,7 @@ class WebUtils:
             # 支持自动识别类型
             if not mtype:
                 mtype = MediaType.TV if info.get("episodes_count") else MediaType.MOVIE
+            media_info = None
             if original_title:
                 media_info = Media().get_media_info(title=f"{original_title} {year}",
                                                     mtype=mtype,
@@ -97,6 +98,9 @@ class WebUtils:
                 media_info = Media().get_media_info(title=f"{title} {year}",
                                                     mtype=mtype,
                                                     append_to_response="all")
+            # 检查是否成功匹配到TMDB信息
+            if not media_info or not media_info.tmdb_info:
+                return None
             media_info.douban_id = doubanid
             # 如果TMDB没有图片，使用豆瓣图片
             if douban_cover and (not media_info.poster_path or not media_info.poster_path.strip()):
@@ -117,6 +121,9 @@ class WebUtils:
                 media_info = Media().get_media_info(title=f"{title_cn} {year}",
                                                     mtype=MediaType.TV,
                                                     append_to_response="all")
+            # 检查是否成功匹配到TMDB信息
+            if not media_info or not media_info.tmdb_info:
+                return None
         else:
             # TMDB
             info = Media().get_tmdb_info(tmdbid=mediaid,
