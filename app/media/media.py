@@ -13,9 +13,9 @@ import log
 from app.helper.openai_helper import OpenAiHelper
 from app.media.meta.metainfo import MetaInfo
 from app.media.tmdbv3api import TMDb, Search, Movie, TV, Person, Find, TMDbException, Discover, Trending, Episode, Genre
-from app.utils import PathUtils, EpisodeFormat, RequestUtils, NumberUtils, StringUtils, cacheman
+from app.utils import PathUtils, EpisodeFormat, RequestUtils, NumberUtils, StringUtils, cacheman, get_cache_manager
 from app.utils.types import MediaType, MatchMode
-from app.utils.tmdb_cache import TMDBCache
+from app.utils.cache_system import TMDBCache
 from app.utils.request_deduper import get_deduper
 from config import Config, KEYWORD_BLACKLIST, KEYWORD_SEARCH_WEIGHT_3, KEYWORD_SEARCH_WEIGHT_2, KEYWORD_SEARCH_WEIGHT_1, \
     KEYWORD_STR_SIMILARITY_THRESHOLD, KEYWORD_DIFF_SCORE_THRESHOLD
@@ -96,7 +96,7 @@ class Media:
         else:
             self._rmt_match_mode = MatchMode.NORMAL
         
-        self.redis_cache = TMDBCache()
+        self.redis_cache = TMDBCache(get_cache_manager().get("tmdb"))
         self.blacklist = TmdbBlacklistHelper()
 
     def __set_language(self, language: str = ""):
@@ -591,34 +591,41 @@ class Media:
         if cached_info:
             log.debug(f"【Meta】从缓存获取TMDB信息: {mtype.value}/{tmdbid}")
             return cached_info
+        
+        # 使用请求去重器合并并发请求
+        deduper = get_deduper()
+        cache_key = f"tmdb_info:{mtype.value}:{tmdbid}:{language}:{append_to_response}:{chinese}"
+        
+        def _fetch_tmdb_info():
+            if not self.tmdb:
+                log.error("【Meta】TMDB API Key 未设置！")
+                return None
+            # 设置语言
+            self.__set_language(language)
+            if mtype == MediaType.MOVIE:
+                tmdb_info = self.__get_tmdb_movie_detail(tmdbid, append_to_response)
+                if tmdb_info:
+                    tmdb_info['media_type'] = MediaType.MOVIE
+            else:
+                tmdb_info = self.__get_tmdb_tv_detail(tmdbid, append_to_response)
+                if tmdb_info:
+                    tmdb_info['media_type'] = MediaType.TV
+            if tmdb_info:
+                # 转换genreid
+                tmdb_info['genre_ids'] = self.__get_genre_ids_from_detail(tmdb_info.get('genres'))
+                # 转换中文标题
+                if chinese:
+                    tmdb_info = self.__update_tmdbinfo_cn_title(tmdb_info)
             
-        if not self.tmdb:
-            log.error("【Meta】TMDB API Key 未设置！")
-            return None
-        # 设置语言
-        self.__set_language(language)
-        if mtype == MediaType.MOVIE:
-            tmdb_info = self.__get_tmdb_movie_detail(tmdbid, append_to_response)
-            if tmdb_info:
-                tmdb_info['media_type'] = MediaType.MOVIE
-        else:
-            tmdb_info = self.__get_tmdb_tv_detail(tmdbid, append_to_response)
-            if tmdb_info:
-                tmdb_info['media_type'] = MediaType.TV
-        if tmdb_info:
-            # 转换genreid
-            tmdb_info['genre_ids'] = self.__get_genre_ids_from_detail(tmdb_info.get('genres'))
-            # 转换中文标题
-            if chinese:
-                tmdb_info = self.__update_tmdbinfo_cn_title(tmdb_info)
-        
-        # 重置默认语言
-        self.__set_language()
+            # 重置默认语言
+            self.__set_language()
 
-        # 设置缓存
-        self.redis_cache.set_tmdb_info(mtype, tmdbid, tmdb_info, language)
+            # 设置缓存
+            self.redis_cache.set_tmdb_info(mtype, tmdbid, tmdb_info, language)
+            
+            return tmdb_info
         
-        return tmdb_info
+        return deduper.execute(cache_key, _fetch_tmdb_info)
 
     def __update_tmdbinfo_cn_title(self, tmdb_info):
         """
