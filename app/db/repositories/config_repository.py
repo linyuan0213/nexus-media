@@ -9,7 +9,7 @@ import time
 from sqlalchemy import cast, Integer
 from app.db import DbPersist
 from app.db.models import MESSAGECLIENT, TORRENTREMOVETASK, DOWNLOADER, CONFIGUSERRSS, CONFIGRSSPARSER, \
-    USERRSSTASKHISTORY, CONFIGFILTERGROUP, CONFIGFILTERRULES
+    USERRSSTASKHISTORY, CONFIGFILTERGROUP, CONFIGFILTERRULES, MEDIASERVER
 from app.db.repositories.base_repository import BaseRepository
 
 
@@ -651,6 +651,101 @@ class ConfigRepository(BaseRepository):
                 SIZE_LIMIT=item.get("size"),
                 NOTE=item.get("free")
             ))
+
+    # ==================== Media Server ====================
+
+    def get_media_servers(self, sid=None):
+        """
+        查询媒体服务器配置
+
+        Args:
+            sid: 服务器ID
+
+        Returns:
+            媒体服务器配置列表
+        """
+        if sid:
+            return self._db.query(MEDIASERVER).filter(MEDIASERVER.ID == int(sid)).all()
+        return self._db.query(MEDIASERVER).all()
+
+    def get_media_server_by_name(self, name):
+        """
+        根据名称查询媒体服务器配置
+
+        Args:
+            name: 服务器名称
+
+        Returns:
+            媒体服务器配置
+        """
+        if not name:
+            return None
+        return self._db.query(MEDIASERVER).filter(MEDIASERVER.NAME == name).first()
+
+    @DbPersist(BaseRepository._db)
+    def update_media_server(self, sid, name, enabled, config, is_default=0, note=None):
+        """
+        更新或插入媒体服务器配置
+
+        Args:
+            sid: 服务器ID
+            name: 名称
+            enabled: 是否启用
+            config: 配置(JSON字符串)
+            is_default: 是否默认
+            note: 备注
+        """
+        if sid:
+            item = self.get_media_servers(sid)
+            if item:
+                self._db.query(MEDIASERVER).filter(MEDIASERVER.ID == int(sid)).update({
+                    "NAME": name,
+                    "ENABLED": int(enabled),
+                    "CONFIG": config,
+                    "IS_DEFAULT": int(is_default),
+                    "NOTE": note
+                })
+                return
+        self._db.insert(MEDIASERVER(
+            NAME=name,
+            ENABLED=int(enabled),
+            CONFIG=config,
+            IS_DEFAULT=int(is_default),
+            NOTE=note
+        ))
+
+    @DbPersist(BaseRepository._db)
+    def delete_media_server(self, sid):
+        """
+        删除媒体服务器配置
+
+        Args:
+            sid: 服务器ID
+        """
+        if not sid:
+            return
+        self._db.query(MEDIASERVER).filter(MEDIASERVER.ID == int(sid)).delete()
+
+    @DbPersist(BaseRepository._db)
+    def set_default_media_server(self, name):
+        """
+        设置默认媒体服务器，仅更新 IS_DEFAULT 标记
+
+        Args:
+            name: 服务器名称
+        """
+        self._db.query(MEDIASERVER).update({"IS_DEFAULT": 0})
+        if name:
+            self._db.query(MEDIASERVER).filter(MEDIASERVER.NAME == name).update({"IS_DEFAULT": 1})
+
+    def get_default_media_server(self):
+        """
+        获取默认媒体服务器
+
+        Returns:
+            默认媒体服务器配置
+        """
+        return self._db.query(MEDIASERVER).filter(MEDIASERVER.IS_DEFAULT == 1).first()
 
     # ==================== SQL Operations ====================
 

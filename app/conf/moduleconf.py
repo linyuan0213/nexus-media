@@ -808,6 +808,20 @@ class ModuleConf(object):
             "background": "bg-green",
             "test_command": "app.mediaserver.client.emby|Emby",
             "config": {
+                "enabled": {
+                    "id": "emby.enabled",
+                    "required": False,
+                    "title": "启用",
+                    "tooltip": "启用该媒体服务器",
+                    "type": "switch"
+                },
+                "is_default": {
+                    "id": "emby.is_default",
+                    "required": False,
+                    "title": "默认",
+                    "tooltip": "设置为默认使用的媒体服务器，同一时间只能有一个默认",
+                    "type": "switch"
+                },
                 "host": {
                     "id": "emby.host",
                     "required": True,
@@ -840,6 +854,20 @@ class ModuleConf(object):
             "background": "bg-purple",
             "test_command": "app.mediaserver.client.jellyfin|Jellyfin",
             "config": {
+                "enabled": {
+                    "id": "jellyfin.enabled",
+                    "required": False,
+                    "title": "启用",
+                    "tooltip": "启用该媒体服务器",
+                    "type": "switch"
+                },
+                "is_default": {
+                    "id": "jellyfin.is_default",
+                    "required": False,
+                    "title": "默认",
+                    "tooltip": "设置为默认使用的媒体服务器，同一时间只能有一个默认",
+                    "type": "switch"
+                },
                 "host": {
                     "id": "jellyfin.host",
                     "required": True,
@@ -872,6 +900,20 @@ class ModuleConf(object):
             "background": "bg-yellow",
             "test_command": "app.mediaserver.client.plex|Plex",
             "config": {
+                "enabled": {
+                    "id": "plex.enabled",
+                    "required": False,
+                    "title": "启用",
+                    "tooltip": "启用该媒体服务器",
+                    "type": "switch"
+                },
+                "is_default": {
+                    "id": "plex.is_default",
+                    "required": False,
+                    "title": "默认",
+                    "tooltip": "设置为默认使用的媒体服务器，同一时间只能有一个默认",
+                    "type": "switch"
+                },
                 "host": {
                     "id": "plex.host",
                     "required": True,
@@ -926,6 +968,20 @@ class ModuleConf(object):
             "background": "bg-blue",
             "test_command": "app.mediaserver.client.fnos|FnOS",
             "config": {
+                "enabled": {
+                    "id": "fnos.enabled",
+                    "required": False,
+                    "title": "启用",
+                    "tooltip": "启用该媒体服务器",
+                    "type": "switch"
+                },
+                "is_default": {
+                    "id": "fnos.is_default",
+                    "required": False,
+                    "title": "默认",
+                    "tooltip": "设置为默认使用的媒体服务器，同一时间只能有一个默认",
+                    "type": "switch"
+                },
                 "host": {
                     "id": "fnos.host",
                     "required": True,

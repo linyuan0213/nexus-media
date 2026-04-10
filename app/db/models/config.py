@@ -104,3 +104,14 @@ class CONFIGUSERRSS(Base):
     FILTER_ARGS = Column(String(255))
     MEDIAINFOS = Column(String(255))
     NOTE = Column(Text)
+
+
+class MEDIASERVER(Base):
+    __tablename__ = 'MEDIASERVER'
+
+    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    NAME = Column(String(255), index=True)
+    ENABLED = Column(Integer)
+    CONFIG = Column(Text)
+    IS_DEFAULT = Column(Integer)
+    NOTE = Column(Text)

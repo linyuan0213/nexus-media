@@ -85,7 +85,7 @@ DEFAULT_MENUS = [
     {
         "name": "我的媒体库",
         "code": "media_library",
-        "path": "/",
+        "path": "/index",
         "icon": "home",
         "sort_order": 1,
         "level": 1,

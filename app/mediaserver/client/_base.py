@@ -1,3 +1,4 @@
+import json
 from abc import ABCMeta, abstractmethod
 from urllib.parse import quote
 
@@ -12,6 +13,19 @@ class _IMediaClient(metaclass=ABCMeta):
     client_type = ""
     # 媒体服务器名称
     client_name = ""
+
+    @classmethod
+    def get_db_config(cls, name):
+        """从数据库获取配置，兼容旧配置文件"""
+        from app.db.repositories import ConfigRepository
+        repo = ConfigRepository()
+        item = repo.get_media_server_by_name(name)
+        if item and item.CONFIG:
+            try:
+                return json.loads(item.CONFIG)
+            except Exception:
+                pass
+        return Config().get_config(name)
 
     @abstractmethod
     def match(self, ctype):

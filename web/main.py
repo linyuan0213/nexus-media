@@ -299,7 +299,9 @@ def web():
 @login_required
 def index():
     # 媒体服务器类型
-    MSType = Config().get_config('media').get('media_server')
+    from app.db.repositories import ConfigRepository
+    default_server = ConfigRepository().get_default_media_server()
+    MSType = default_server.NAME if default_server else Config().get_config('media').get('media_server') or 'emby'
     # 获取媒体数量
     MediaCounts = WebAction().get_library_mediacount()
     if MediaCounts.get("code") == 0:
@@ -1025,8 +1027,26 @@ def library():
 @App.route('/mediaserver', methods=['POST', 'GET'])
 @login_required
 def mediaserver():
+    from app.db.repositories import ConfigRepository
+    import json
+    repo = ConfigRepository()
+    media_servers = repo.get_media_servers()
+    # 构建配置字典，兼容模板中 Config.media.media_server 和 Config.emby.host 的访问方式
+    cfg = {}
+    default_server = repo.get_default_media_server()
+    cfg['media'] = {
+        'media_server': default_server.NAME if default_server else 'emby'
+    }
+    for item in media_servers:
+        if item.NAME:
+            cfg[item.NAME] = {}
+            if item.CONFIG:
+                try:
+                    cfg[item.NAME] = json.loads(item.CONFIG)
+                except Exception:
+                    pass
     return render_template("setting/mediaserver.html",
-                           Config=Config().get_config(),
+                           Config=cfg,
                            MediaServerConf=ModuleConf.MEDIASERVER_CONF)
 
 
