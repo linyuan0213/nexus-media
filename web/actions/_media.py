@@ -652,7 +652,7 @@ class WebActionMediaMixin:
             # 标识信息
             unique_info = {
                 "video_encode": video_encode,
-                "size": item.SIZE,
+                "size": StringUtils.str_filesize(item.SIZE),
                 "reseffect": reseffect,
                 "releasegroup": item.OTHERINFO
             }
@@ -678,7 +678,7 @@ class WebActionMediaMixin:
                 "pageurl": item.PAGEURL,
                 "uploadvalue": item.UPLOAD_VOLUME_FACTOR,
                 "downloadvalue": item.DOWNLOAD_VOLUME_FACTOR,
-                "size": item.SIZE,
+                "size": StringUtils.str_filesize(item.SIZE),
                 "respix": respix,
                 "restype": restype,
                 "reseffect": reseffect,

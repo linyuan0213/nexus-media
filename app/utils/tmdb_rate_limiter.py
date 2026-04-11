@@ -70,7 +70,7 @@ class TMDBRateLimiter:
                     elapsed_wait = now - start_time
                     if elapsed_wait + wait_time > timeout:
                         self._blocked_requests += 1
-                        log.warning(f"【TMDBRateLimiter】获取令牌超时，已等待 {elapsed_wait:.2f} 秒")
+                        log.warn(f"【TMDBRateLimiter】获取令牌超时，已等待 {elapsed_wait:.2f} 秒")
                         return False
                 
                 self._wait_count += 1
@@ -204,7 +204,7 @@ class TMDBRetryWithBackoff:
                     raise
                 
                 delay = self.get_delay(attempt)
-                log.warning(f"【TMDBRetry】请求失败，{delay:.1f}秒后进行第 {attempt + 1} 次重试: {str(e)}")
+                log.warn(f"【TMDBRetry】请求失败，{delay:.1f}秒后进行第 {attempt + 1} 次重试: {str(e)}")
                 time.sleep(delay)
         
         # 重试次数用尽
