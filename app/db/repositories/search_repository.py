@@ -65,7 +65,7 @@ class SearchRepository(BaseRepository):
                     "video_encode": media_item.video_encode
                 }),
                 'RES_ORDER': media_item.res_order,
-                'SIZE': StringUtils.str_filesize(int(media_item.size)),
+                'SIZE': int(media_item.size or 0),
                 'SEEDERS': media_item.seeders,
                 'PEERS': media_item.peers,
                 'SITE': media_item.site,
