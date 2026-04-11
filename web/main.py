@@ -295,7 +295,6 @@ def web():
 
 # 开始
 @App.route('/index', methods=['POST', 'GET'])
-@cache.cached(timeout=600, key_prefix='index')
 @login_required
 def index():
     # 媒体服务器类型
@@ -347,7 +346,6 @@ def index():
 
 # 资源搜索页面
 @App.route('/search', methods=['POST', 'GET'])
-@cache.cached(timeout=43200, key_prefix='search')
 @login_required
 def search():
     # 权限
@@ -657,7 +655,7 @@ def torrent_remove():
 
 # 数据统计页面
 @App.route('/statistics', methods=['POST', 'GET'])
-@cache.cached(timeout=43200, key_prefix='statistics')
+@cache.cached(timeout=300, query_string=True)
 @login_required
 def statistics():
     # 刷新单个site
