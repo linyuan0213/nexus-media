@@ -28,7 +28,9 @@ class Indexer(metaclass=SingletonMeta):
     def init_config(self):
         self.progress = ProgressHelper()
         self.dbhelper = DbHelper()
-        indexer = Config().get_config("pt").get('search_indexer') or 'builtin'
+        from app.conf import SystemConfig
+        from app.utils.types import SystemConfigKey
+        indexer = SystemConfig().get(SystemConfigKey.SearchIndexer) or 'builtin'
         self._client = self.__get_client(indexer)
         if self._client:
             self._client_type = self._client.get_type()

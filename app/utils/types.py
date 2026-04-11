@@ -190,6 +190,10 @@ class SystemConfigKey(Enum):
     UserScraperConf = "UserScraperConf"
     # 索引站点
     UserIndexerSites = "UserIndexerSites"
+    # 当前使用的搜索索引器
+    SearchIndexer = "SearchIndexer"
+    # 索引器配置（jackett/prowlarr）
+    IndexerConfig = "IndexerConfig"
 
 # 处理进度Key字典
 class ProgressKey(Enum):

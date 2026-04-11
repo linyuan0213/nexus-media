@@ -108,6 +108,59 @@ class WebActionSystemMixin:
         return self._success()
 
     @staticmethod
+    def _save_indexer_config(data):
+        """
+        保存索引器配置到数据库
+        """
+        from app.conf import SystemConfig
+        from app.utils.types import SystemConfigKey
+        name = data.get("type")
+        test = data.get("test") in [True, "true", "on", "1", 1]
+        # 兼容旧配置：首次保存时从配置文件迁移
+        existing = SystemConfig().get(SystemConfigKey.IndexerConfig) or {}
+        if name != "builtin" and (not existing or name not in existing):
+            old_cfg = Config().get_config(name)
+            if old_cfg:
+                existing[name] = dict(old_cfg)
+        # 提取并保存索引器详细配置
+        config = {}
+        for key, value in data.items():
+            if key.startswith(name + "."):
+                config[key.split(".", 1)[1]] = value
+        if config:
+            existing[name] = config
+        if existing:
+            SystemConfig().set(SystemConfigKey.IndexerConfig, existing)
+        # 保存当前使用的索引器
+        SystemConfig().set(SystemConfigKey.SearchIndexer, name)
+        # 保存builtin站点的选中状态
+        if name == "builtin":
+            sites = data.get("indexer_sites")
+            if sites is not None:
+                SystemConfig().set(SystemConfigKey.UserIndexerSites, sites)
+        # 刷新 Indexer 单例配置
+        from app.indexer import Indexer
+        Indexer().init_config()
+        # 测试连接
+        if test and name != "builtin":
+            try:
+                from app.helper import SubmoduleHelper
+                schemas = SubmoduleHelper.import_submodules(
+                    'app.indexer.client',
+                    filter_func=lambda _, obj: hasattr(obj, 'client_id')
+                )
+                for schema in schemas:
+                    if schema.match(name):
+                        client = schema(config)
+                        status = client.get_status()
+                        return WebActionBase._fail(code=0 if status else 1, msg="测试成功" if status else "测试失败")
+                return WebActionBase._fail(msg="未找到对应客户端")
+            except Exception as e:
+                ExceptionUtils.exception_traceback(e)
+                return WebActionBase._fail(msg=str(e))
+        return WebActionBase._success()
+
+    @staticmethod
     def _set_system_config(data):
         """
         设置系统设置（数据库）

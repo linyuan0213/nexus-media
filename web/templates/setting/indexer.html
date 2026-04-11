@@ -35,7 +35,7 @@
         </div>
         <div class="card-body text-center">
           <div class="card-title mb-1">内建索引器</div>
-          <div class="text-muted">{% if Config.pt.search_indexer == "builtin" %}<span class="badge bg-green"
+          <div class="text-muted">{% if SearchIndexer == "builtin" %}<span class="badge bg-green"
                                                                                       title="已开启"></span>
             正在使用{% endif %}</div>
         </div>
@@ -49,7 +49,7 @@
         </div>
         <div class="card-body text-center">
           <div class="card-title mb-1">{{ Indexer.name }}</div>
-          <div class="text-muted">{% if Config.pt.search_indexer == Type %}<span class="badge bg-green"
+          <div class="text-muted">{% if SearchIndexer == Type %}<span class="badge bg-green"
                                                                                       title="已开启"></span>
             正在使用{% endif %}</div>
         </div>
@@ -68,7 +68,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-      {{ FORM.gen_form_config_elements(Type, Config, Indexer.config) }}
+      {{ FORM.gen_form_config_elements(Type, IndexerConfig, Indexer.config) }}
       </div>
       <div class="modal-footer">
         <button onclick="test_indexer_config('{{ Type }}')" id="{{ Type }}_test_btn" class="btn me-auto">
@@ -207,26 +207,14 @@
   function save_config(type, func, test) {
     currType = type;
     let params = {};
-    let conf = {};
-    let db = {};
     if (type !== "builtin") {
       params = input_select_GetVal(`modal-${type}`);
-      params['test'] = test || false;
-      params['pt.search_indexer'] = type;
-      // ajax_post("update_config", params, func);
-      conf['conf'] = params
     } else {
-      let sites = select_GetSelectedVAL("^indexer_sites");
-      let db = {
-        key: "UserIndexerSites",
-        value: sites
-      }
-      params['pt.search_indexer'] = type;
-      conf['conf'] = params
-      conf['db'] = db
-      // ajax_post("set_system_config", params, func);
+      params['indexer_sites'] = select_GetSelectedVAL("^indexer_sites");
     }
-    ajax_post("update_all_config", conf, func);
+    params['test'] = test || false;
+    params['type'] = type;
+    ajax_post("save_indexer_config", params, func);
   }
 
   //保存配置、关闭和刷新页面

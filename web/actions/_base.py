@@ -62,6 +62,7 @@ class WebActionBase:
             "reset_db_version": self._reset_db_version,
             "logout": self._logout,
             "update_config": self._update_config,
+            "save_indexer_config": self._save_indexer_config,
             "save_mediaserver_config": self._save_mediaserver_config,
             "update_directory": self._update_directory,
             "add_or_edit_sync_path": self._add_or_edit_sync_path,
@@ -422,11 +423,6 @@ class WebActionBase:
                                                       cfg_value, "http": "%s" % cfg_value}
             else:
                 cfg['app']['proxies'] = {"https": None, "http": None}
-            return cfg
-        # 索引器
-        if cfg_key == "jackett.indexers":
-            vals = cfg_value.split("\n")
-            cfg['jackett']['indexers'] = vals
             return cfg
         # 最大支持三层赋值
         keys = cfg_key.split(".")

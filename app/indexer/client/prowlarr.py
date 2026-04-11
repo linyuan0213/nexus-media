@@ -1,6 +1,5 @@
 from app.utils import ExceptionUtils
 from app.utils.types import IndexerType
-from config import Config
 from app.indexer.client._base import _IIndexClient
 from app.utils import RequestUtils
 from app.helper import IndexerConf
@@ -18,7 +17,10 @@ class Prowlarr(_IIndexClient):
         if config:
             self._client_config = config
         else:
-            self._client_config = Config().get_config('prowlarr')
+            from app.conf import SystemConfig
+            from app.utils.types import SystemConfigKey
+            indexer_config = SystemConfig().get(SystemConfigKey.IndexerConfig) or {}
+            self._client_config = indexer_config.get('prowlarr') or {}
         self.init_config()
 
     def init_config(self):
