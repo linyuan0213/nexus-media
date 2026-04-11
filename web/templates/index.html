@@ -41,13 +41,7 @@
 {% with curdomainleft = request.host.split(':')[0] %}
 <div class="page-body">
   <div class="container-xl">
-    <div id="library-grid" class="d-grid gap-3 grid-normal-card" data-loading>
-      <div class="skeleton-card"></div>
-      <div class="skeleton-card"></div>
-      <div class="skeleton-card"></div>
-      <div class="skeleton-card"></div>
-    </div>
-    <div id="library-content" class="d-grid gap-3 grid-normal-card" style="display:none">
+    <div id="library-content" class="d-grid gap-3 grid-normal-card" style="display:grid">
       {% for Library in Librarys %}
         {% if LibrarySyncConf and Library.id|string in LibrarySyncConf %}
         {% set theLibLink = Library.link %}
@@ -398,27 +392,6 @@
     }
   }
 
-</script>
-
-<script type="text/javascript">
-  // 页面加载完成后隐藏骨架屏
-  $(document).ready(function() {
-    console.log('jQuery ready - 执行骨架屏隐藏脚本');
-    const grid = $('#library-grid');
-    const content = $('#library-content');
-    
-    if (grid.length && content.length) {
-      console.log('找到骨架屏元素');
-      setTimeout(() => {
-        grid.removeAttr("data-loading");
-        grid.addClass('d-none');
-        content.css('display', 'grid');
-        console.log('已隐藏骨架屏并显示内容');
-      }, 800);
-    } else {
-      console.error('未找到骨架屏元素');
-    }
-  });
 </script>
 
 <script type="text/javascript">
