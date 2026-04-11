@@ -3,7 +3,7 @@
 搜索结果模型
 包含: 搜索结果信息
 """
-from sqlalchemy import Column, Float, Integer, Text, String, Sequence
+from sqlalchemy import Column, Float, Integer, BigInteger, Text, String, Sequence
 
 from app.db.models.base import Base
 
@@ -13,7 +13,7 @@ class SEARCHRESULTINFO(Base):
 
     ID = Column(Integer, Sequence('ID'), primary_key=True)
     TORRENT_NAME = Column(String(255))
-    ENCLOSURE = Column(String(255))
+    ENCLOSURE = Column(String(2048))
     DESCRIPTION = Column(Text)
     TYPE = Column(String(255))
     TITLE = Column(String(255))
@@ -28,7 +28,7 @@ class SEARCHRESULTINFO(Base):
     OVERVIEW = Column(Text)
     RES_TYPE = Column(String(255))
     RES_ORDER = Column(String(255))
-    SIZE = Column(Integer)
+    SIZE = Column(BigInteger)
     SEEDERS = Column(Integer)
     PEERS = Column(Integer)
     SITE = Column(String(255))
