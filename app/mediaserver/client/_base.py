@@ -180,7 +180,8 @@ class _IMediaClient(metaclass=ABCMeta):
         """
         获取NT中转内网图片的地址
         优先使用本地文件缓存代理（/img/tmdb/, /img/douban/, /img/bgm/）
-        对于其他图片使用旧的 Redis 缓存代理（/img?url=）
+        对于其他图片统一使用本地文件缓存代理（/img/library/）
+        当新代理不可用时回退到旧的 Redis 缓存代理（/img?url=）
         :param: url: 图片的URL
         :param: remote: 是否需要返回完整的URL
         """
@@ -227,6 +228,16 @@ class _IMediaClient(metaclass=ABCMeta):
                         if domain:
                             return f"{domain}{proxy_url}"
                     return proxy_url
+                
+                # 处理媒体库等其他图片，统一走本地文件缓存代理
+                import urllib.parse
+                encoded_path = urllib.parse.quote(url, safe='')
+                proxy_url = f"/img/library/{encoded_path}"
+                if remote:
+                    domain = Config().get_domain()
+                    if domain:
+                        return f"{domain}{proxy_url}"
+                return proxy_url
         except Exception as e:
             import log
             log.error(f"【get_nt_image_url】处理图片代理失败: {str(e)}")
