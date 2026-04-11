@@ -1,10 +1,14 @@
 from app.helper.db_helper import DbHelper
 from app.utils.types import MediaType
+from app.utils.cache_system import get_cache_manager
 
 class TmdbBlacklistHelper:
     def __init__(self):
         self._db = DbHelper()
         self._media = None
+        self._cache = get_cache_manager().get_or_create(
+            "tmdb_blacklist", "memory", maxsize=1, ttl=300
+        )
 
     def is_blacklisted(self, tmdb_id, media_type=None):
         """
@@ -15,6 +19,15 @@ class TmdbBlacklistHelper:
         """
         return self._db.is_tmdb_blacklisted(tmdb_id, media_type)
 
+    def _get_cached_all_items(self):
+        """带缓存的获取全部黑名单记录"""
+        cached = self._cache.get("all")
+        if cached is not None:
+            return cached
+        all_items = self._db.get_tmdb_blacklist()
+        self._cache.set("all", all_items)
+        return all_items
+
     def get_blacklist(self, tmdb_id=None, page=1, count=30):
         """
         获取分页的黑名单记录
@@ -23,7 +36,7 @@ class TmdbBlacklistHelper:
         :param tmdb_id: 按TMDB ID过滤
         :return: (当前页记录, 总记录数)
         """
-        all_items = self._db.get_tmdb_blacklist()
+        all_items = self._get_cached_all_items()
         if tmdb_id:
             all_items = [item for item in all_items if str(item.TMDB_ID) == str(tmdb_id)]
 
@@ -74,6 +87,8 @@ class TmdbBlacklistHelper:
             backdrop_path=meta_info.backdrop_path,
             note=str(meta_info.note)
         )
+        # 添加后清除缓存，确保下次查询能获取最新数据
+        self._cache.clear()
 
     def remove_from_blacklist(self, tmdb_id, media_type=None):
         """
@@ -82,9 +97,11 @@ class TmdbBlacklistHelper:
         :param media_type: 媒体类型
         """
         self._db.delete_tmdb_blacklist(tmdb_id, media_type)
+        self._cache.clear()
 
     def clear_blacklist(self):
         """
         清空所有黑名单记录
         """
         self._db.clear_tmdb_blacklist()
+        self._cache.clear()

@@ -56,16 +56,27 @@ class RequestDeduper:
                 # 在锁外等待共享结果
                 return self._wait_for_result(key)
             else:
-                # 没有相同请求，直接在当前线程执行（避免后台线程上下文问题）
+                # 注册新的 pending 请求
+                event = threading.Event()
+                self._pending_requests[key] = (event, None, None)
                 self._stats["actual_requests"] += 1
-                log.debug(f"【RequestDeduper】直接执行请求: {key}")
-                
-                try:
-                    result = func(*args, **kwargs)
-                    return result
-                except Exception as e:
-                    log.error(f"【RequestDeduper】请求执行失败: {key}, 错误: {str(e)}")
-                    raise
+                log.debug(f"【RequestDeduper】开始执行请求: {key}")
+        
+        # 在锁外执行实际请求
+        try:
+            result = func(*args, **kwargs)
+            with self._lock:
+                self._pending_requests[key] = (event, result, None)
+            event.set()
+            return result
+        except Exception as e:
+            with self._lock:
+                self._pending_requests[key] = (event, None, e)
+            event.set()
+            raise
+        finally:
+            # 延迟清理，确保所有并发的等待者都能获取到结果
+            threading.Timer(5.0, self._cleanup, args=[key]).start()
     
     def _wait_for_result(self, key: str) -> Any:
         """等待请求完成并返回结果"""

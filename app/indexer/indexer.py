@@ -138,38 +138,41 @@ class Indexer(metaclass=SingletonMeta):
             return []
         # 计算耗时
         start_time = datetime.datetime.now()
+        # 统一限制最大并发线程数，避免过多连接导致性能下降
+        max_workers = min(len(indexers), 10)
         if filter_args and filter_args.get("site"):
-            log.info(f"【{self._client_type.value}】开始搜索 %s，站点：%s ..." % (key_word, filter_args.get("site")))
+            log.info(f"【{self._client_type.value}】开始搜索 %s，站点：%s，并发数：%s ..." % (key_word, filter_args.get("site"), max_workers))
             self.progress.update(ptype=ProgressKey.Search,
                                  text="开始搜索 %s，站点：%s ..." % (key_word, filter_args.get("site")))
         else:
-            # 限制最大并发线程数，避免过多连接导致性能下降
-            max_workers = min(len(indexers), 10)
             log.info(f"【{self._client_type.value}】开始并行搜索 %s，站点数：%s，并发数：%s ..." % (key_word, len(indexers), max_workers))
             self.progress.update(ptype=ProgressKey.Search,
                                  text="开始并行搜索 %s，站点数：%s ..." % (key_word, len(indexers)))
-        # 多线程 - 使用合理的并发数
-        executor = ThreadPoolExecutor(max_workers=max_workers if not filter_args or not filter_args.get("site") else len(indexers))
-        all_task = []
-        for index in indexers:
-            order_seq = 100 - int(index.pri)
-            task = executor.submit(self._client.search,
-                                   order_seq,
-                                   index,
-                                   key_word,
-                                   filter_args,
-                                   match_media,
-                                   in_from)
-            all_task.append(task)
-        ret_array = []
-        finish_count = 0
-        for future in as_completed(all_task):
-            result = future.result()
-            finish_count += 1
-            self.progress.update(ptype=ProgressKey.Search,
-                                 value=round(100 * (finish_count / len(all_task))))
-            if result:
-                ret_array = ret_array + result
+        # 多线程 - 使用合理的并发数，并确保线程池正确关闭
+        executor = ThreadPoolExecutor(max_workers=max_workers)
+        try:
+            all_task = []
+            for index in indexers:
+                order_seq = 100 - int(index.pri)
+                task = executor.submit(self._client.search,
+                                       order_seq,
+                                       index,
+                                       key_word,
+                                       filter_args,
+                                       match_media,
+                                       in_from)
+                all_task.append(task)
+            ret_array = []
+            finish_count = 0
+            for future in as_completed(all_task):
+                result = future.result()
+                finish_count += 1
+                self.progress.update(ptype=ProgressKey.Search,
+                                     value=round(100 * (finish_count / len(all_task))))
+                if result:
+                    ret_array = ret_array + result
+        finally:
+            executor.shutdown(wait=False)
         # 计算耗时
         end_time = datetime.datetime.now()
         log.info(f"【{self._client_type.value}】搜索关键词 {key_word} 所有站点搜索完成，有效资源数：%s，总耗时 %s 秒"

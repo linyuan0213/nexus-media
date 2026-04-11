@@ -124,9 +124,6 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
                     if en_title:
                         search_en_name = en_title
 
-            # 繁体中文
-            search_zhtw_name = _media.get_tmdb_zhtw_title(media_info)
-
             # 多语言搜索 - 优化逻辑，减少不必要的搜索
             # 首先添加中文名
             if search_cn_name:
@@ -138,13 +135,15 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
             
             # 开启多语言搜索时才添加其他语言
             if Config().get_config("laboratory").get("search_multi_language"):
+                # 繁体中文 - 懒加载，只在需要时获取
+                search_zhtw_name = _media.get_tmdb_zhtw_title(media_info)
                 # 繁体中文与简体中文不同时才添加
                 if search_zhtw_name and search_zhtw_name != search_cn_name and search_zhtw_name != search_en_name:
                     search_name_list.append(search_zhtw_name)
                 # 原始标题与现有名称都不同时才添加
-                if (media_info.original_language != 'cn' and 
-                    media_info.original_title and 
-                    media_info.original_title != search_cn_name and 
+                if (media_info.original_language != 'cn' and
+                    media_info.original_title and
+                    media_info.original_title != search_cn_name and
                     media_info.original_title != search_en_name):
                     search_name_list.append(media_info.original_title)
             

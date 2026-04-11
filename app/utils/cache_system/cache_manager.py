@@ -58,17 +58,17 @@ class CacheManager:
             log.debug(f"【CacheManager】注册缓存: {name}")
         return self
     
-    def create_memory_cache(self, name: str, maxsize: int = 1000) -> 'CacheManager':
+    def create_memory_cache(self, name: str, maxsize: int = 1000, ttl: Optional[int] = None) -> 'CacheManager':
         """创建内存缓存"""
-        return self.register(name, MemoryCacheAdapter(maxsize=maxsize, name=name))
+        return self.register(name, MemoryCacheAdapter(maxsize=maxsize, name=name, default_ttl=ttl))
     
-    def create_redis_cache(self, name: str) -> 'CacheManager':
+    def create_redis_cache(self, name: str, ttl: Optional[int] = None) -> 'CacheManager':
         """创建Redis缓存"""
-        return self.register(name, RedisCacheAdapter(name=name))
+        return self.register(name, RedisCacheAdapter(name=name, default_ttl=ttl))
     
-    def create_tiered_cache(self, name: str, memory_maxsize: int = 1000) -> 'CacheManager':
+    def create_tiered_cache(self, name: str, memory_maxsize: int = 1000, ttl: Optional[int] = None) -> 'CacheManager':
         """创建分层缓存（内存+Redis）"""
-        return self.register(name, TieredCacheAdapter(memory_maxsize=memory_maxsize, name=name))
+        return self.register(name, TieredCacheAdapter(memory_maxsize=memory_maxsize, name=name, default_ttl=ttl))
     
     def get(self, name: str) -> Optional[CacheAdapter]:
         """获取指定名称的缓存"""
