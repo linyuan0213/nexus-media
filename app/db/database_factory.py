@@ -197,8 +197,8 @@ class DatabaseFactory:
         if db_type == DatabaseFactory.SQLITE:
             # SQLite 特定配置
             engine_kwargs['poolclass'] = kwargs.get('poolclass', QueuePool)
-            engine_kwargs['pool_size'] = kwargs.get('pool_size', 20)
-            engine_kwargs['max_overflow'] = kwargs.get('max_overflow', 40)
+            engine_kwargs['pool_size'] = kwargs.get('pool_size', 50)
+            engine_kwargs['max_overflow'] = kwargs.get('max_overflow', 100)
             engine_kwargs['pool_timeout'] = kwargs.get('pool_timeout', 60)
             engine_kwargs['pool_recycle'] = kwargs.get('pool_recycle', 3600)
             engine_kwargs['pool_pre_ping'] = kwargs.get('pool_pre_ping', True)
@@ -206,8 +206,8 @@ class DatabaseFactory:
         else:
             # MySQL/PostgreSQL 连接池配置
             engine_kwargs['poolclass'] = QueuePool
-            engine_kwargs['pool_size'] = kwargs.get('pool_size', 20)
-            engine_kwargs['max_overflow'] = kwargs.get('max_overflow', 40)
+            engine_kwargs['pool_size'] = kwargs.get('pool_size', 50)
+            engine_kwargs['max_overflow'] = kwargs.get('max_overflow', 100)
             engine_kwargs['pool_timeout'] = kwargs.get('pool_timeout', 60)
             engine_kwargs['pool_recycle'] = kwargs.get('pool_recycle', 3600)
             engine_kwargs['pool_pre_ping'] = True

@@ -246,7 +246,7 @@ class Media:
             media_blacklist, _ = self.blacklist.get_blacklist(count=1000)
             blacklist = [tmdb["tmdb_id"] for tmdb in media_blacklist]
             if movies and media_blacklist:
-                movies = [movie for movie in movies 
+                movies = [movie for movie in movies
                          if not (movie.get('id') and str(movie.get('id')) in blacklist)]
                 log.debug(f"【Meta】过滤黑名单后剩余电影结果数: {len(movies)}")
         except (TMDbException, Exception) as err:
@@ -273,14 +273,34 @@ class Media:
                 self.__compare_tmdb_names(file_media_name, movie.get('original_title'))):
                 return movie
                 
-        # 模糊匹配前5个结果
+        # 模糊匹配前5个结果 - 并发获取详情，避免串行请求拖慢
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        candidates = []
         for movie in movies[:5]:
             if first_media_year and movie.get('release_date', '')[:4] != str(first_media_year):
                 continue
-                
-            info, names = self.__search_tmdb_allnames(MediaType.MOVIE, movie.get("id"))
-            if self.__compare_tmdb_names(file_media_name, names):
-                return info
+            candidates.append(movie)
+
+        def _fetch_allnames(movie):
+            return movie, self.__search_tmdb_allnames(MediaType.MOVIE, movie.get("id"))
+
+        max_workers = min(len(candidates), 3)
+        results = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_movie = {executor.submit(_fetch_allnames, m): m for m in candidates}
+            for future in as_completed(future_to_movie):
+                movie = future_to_movie[future]
+                try:
+                    results[movie.get("id")] = future.result()
+                except Exception as err:
+                    log.error(f"【Meta】获取电影详情出错: {err}")
+
+        for movie in candidates:
+            res = results.get(movie.get("id"))
+            if res:
+                _, (info, names) = res
+                if self.__compare_tmdb_names(file_media_name, names):
+                    return info
                 
         return {}
 
@@ -300,7 +320,7 @@ class Media:
             media_blacklist, _ = self.blacklist.get_blacklist(count=1000)
             blacklist = [tmdb["tmdb_id"] for tmdb in media_blacklist]
             if tvs and blacklist:
-                tvs = [tv for tv in tvs 
+                tvs = [tv for tv in tvs
                       if not (tv.get('id') and str(tv.get('id')) in blacklist)]
                 log.debug(f"【Meta】过滤黑名单后剩余电视剧结果数: {len(tvs)}")
         except (TMDbException, Exception) as err:
@@ -327,14 +347,34 @@ class Media:
                 self.__compare_tmdb_names(file_media_name, tv.get('original_name'))):
                 return tv
                 
-        # 模糊匹配前5个结果
+        # 模糊匹配前5个结果 - 并发获取详情
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        candidates = []
         for tv in tvs[:5]:
             if first_media_year and tv.get('first_air_date', '')[:4] != str(first_media_year):
                 continue
-                
-            info, names = self.__search_tmdb_allnames(MediaType.TV, tv.get("id"))
-            if self.__compare_tmdb_names(file_media_name, names):
-                return info
+            candidates.append(tv)
+
+        def _fetch_allnames(tv):
+            return tv, self.__search_tmdb_allnames(MediaType.TV, tv.get("id"))
+
+        max_workers = min(len(candidates), 3)
+        results = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_tv = {executor.submit(_fetch_allnames, t): t for t in candidates}
+            for future in as_completed(future_to_tv):
+                tv = future_to_tv[future]
+                try:
+                    results[tv.get("id")] = future.result()
+                except Exception as err:
+                    log.error(f"【Meta】获取剧集详情出错: {err}")
+
+        for tv in candidates:
+            res = results.get(tv.get("id"))
+            if res:
+                _, (info, names) = res
+                if self.__compare_tmdb_names(file_media_name, names):
+                    return info
                 
         return {}
 
@@ -353,7 +393,7 @@ class Media:
             try:
                 seasons = self.get_tmdb_tv_seasons(tv_info=tv_info)
                 return any(
-                    season.get("air_date", "")[:4] == str(season_year) 
+                    season.get("air_date", "")[:4] == str(season_year)
                     and season.get("season_number") == int(season_number)
                     for season in seasons
                 )
@@ -367,7 +407,7 @@ class Media:
             media_blacklist, _ = self.blacklist.get_blacklist(count=1000)
             blacklist = [tmdb["tmdb_id"] for tmdb in media_blacklist]
             if tvs and blacklist:
-                tvs = [tv for tv in tvs 
+                tvs = [tv for tv in tvs
                       if not (tv.get('id') and str(tv.get('id')) in blacklist)]
                 log.debug(f"【Meta】过滤黑名单后剩余电视剧结果数: {len(tvs)}")
         except (TMDbException, Exception) as err:
@@ -385,12 +425,30 @@ class Media:
                tv.get('first_air_date', '')[:4] == str(media_year):
                 return tv
 
-        # 模糊匹配前5个结果
-        for tv in tvs[:5]:
-            info, names = self.__search_tmdb_allnames(MediaType.TV, tv.get("id"))
-            if self.__compare_tmdb_names(file_media_name, names) and \
-               __season_match(info, media_year):
-                return info
+        # 模糊匹配前5个结果 - 并发获取详情
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        candidates = tvs[:5]
+
+        def _fetch_allnames(tv):
+            return tv, self.__search_tmdb_allnames(MediaType.TV, tv.get("id"))
+
+        max_workers = min(len(candidates), 3)
+        results = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_tv = {executor.submit(_fetch_allnames, t): t for t in candidates}
+            for future in as_completed(future_to_tv):
+                tv = future_to_tv[future]
+                try:
+                    results[tv.get("id")] = future.result()
+                except Exception as err:
+                    log.error(f"【Meta】获取剧集详情出错: {err}")
+
+        for tv in candidates:
+            res = results.get(tv.get("id"))
+            if res:
+                _, (info, names) = res
+                if self.__compare_tmdb_names(file_media_name, names) and __season_match(info, media_year):
+                    return info
 
         return {}
 

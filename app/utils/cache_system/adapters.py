@@ -33,10 +33,11 @@ def get_cache_value(cache_adapter, key: str) -> Any:
 class MemoryCacheAdapter(CacheAdapter):
     """内存缓存适配器 - 使用LRU策略"""
     
-    def __init__(self, maxsize: int = 1000, name: str = "memory"):
+    def __init__(self, maxsize: int = 1000, name: str = "memory", default_ttl: Optional[int] = None):
         self._cache: OrderedDict[str, CacheEntry] = OrderedDict()
         self._maxsize = maxsize
         self._name = name
+        self._default_ttl = default_ttl
         self._lock = threading.RLock()
         self._stats = {
             "hits": 0,
@@ -91,6 +92,8 @@ class MemoryCacheAdapter(CacheAdapter):
     
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
         """设置缓存值"""
+        if ttl is None:
+            ttl = self._default_ttl
         with self._lock:
             # 如果键已存在，先删除以便更新位置
             if key in self._cache:
@@ -232,8 +235,9 @@ class MemoryCacheAdapter(CacheAdapter):
 class RedisCacheAdapter(CacheAdapter):
     """Redis缓存适配器"""
     
-    def __init__(self, name: str = "redis"):
+    def __init__(self, name: str = "redis", default_ttl: Optional[int] = None):
         self._name = name
+        self._default_ttl = default_ttl
         self._redis = None
         self._stats = {
             "hits": 0,
@@ -312,6 +316,8 @@ class RedisCacheAdapter(CacheAdapter):
     
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
         """设置缓存值"""
+        if ttl is None:
+            ttl = self._default_ttl
         if not self._ensure_connection():
             return False
         
@@ -444,9 +450,9 @@ class RedisCacheAdapter(CacheAdapter):
 class TieredCacheAdapter(CacheAdapter):
     """分层缓存适配器 - L1(内存) + L2(Redis)"""
     
-    def __init__(self, memory_maxsize: int = 1000, name: str = "tiered"):
-        self._l1 = MemoryCacheAdapter(maxsize=memory_maxsize, name=f"{name}_l1")
-        self._l2 = RedisCacheAdapter(name=f"{name}_l2")
+    def __init__(self, memory_maxsize: int = 1000, name: str = "tiered", default_ttl: Optional[int] = None):
+        self._l1 = MemoryCacheAdapter(maxsize=memory_maxsize, name=f"{name}_l1", default_ttl=default_ttl)
+        self._l2 = RedisCacheAdapter(name=f"{name}_l2", default_ttl=default_ttl)
         self._name = name
         self._stats = {
             "l1_hits": 0,

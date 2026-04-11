@@ -155,21 +155,20 @@ class Searcher(metaclass=SingletonMeta):
                     en_title = self.media.get_tmdb_en_title(media_info)
                     if en_title:
                         search_en_name = en_title
-
-            # 繁体中文
-            search_zhtw_name = self.media.get_tmdb_zhtw_title(media_info)
-
-            # 多语言搜索
-            search_name_list.append(search_cn_name)
-            search_name_list.append(search_en_name)
-            # 开启多语言搜索
-            if Config().get_config("laboratory").get("search_multi_language"):
-                # 简体中文和繁体中文是否相同
-                if search_zhtw_name != search_cn_name:
-                    search_name_list.append(search_zhtw_name)
-                if media_info.original_language != 'cn' and search_en_name != media_info.original_title:
-                    search_name_list.append(media_info.original_title)
-                max_workers = len(search_name_list)
+        
+                # 多语言搜索
+                search_name_list.append(search_cn_name)
+                search_name_list.append(search_en_name)
+                # 开启多语言搜索
+                if Config().get_config("laboratory").get("search_multi_language"):
+                    # 繁体中文 - 懒加载获取
+                    search_zhtw_name = self.media.get_tmdb_zhtw_title(media_info)
+                    # 简体中文和繁体中文是否相同
+                    if search_zhtw_name and search_zhtw_name != search_cn_name:
+                        search_name_list.append(search_zhtw_name)
+                    if media_info.original_language != 'cn' and search_en_name != media_info.original_title:
+                        search_name_list.append(media_info.original_title)
+                    max_workers = len(search_name_list)
             # 去除空元素
             search_name_list = list(filter(None, search_name_list))
     
