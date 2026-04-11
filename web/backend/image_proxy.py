@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-图片代理服务 - 支持 TMDB、豆瓣、Bangumi
+图片代理服务 - 支持 TMDB、豆瓣、Bangumi、媒体库
 
 功能：
 1. 代理外部图片请求，解决跨域和访问慢问题
@@ -13,6 +13,7 @@
 /img/tmdb/<size>/<path>     - TMDB 图片
 /img/douban/<path>          - 豆瓣图片
 /img/bgm/<path>             - Bangumi 图片
+/img/library/<path>         - 媒体库（Emby/Jellyfin/Plex/fnos 等）内网图片
 
 尺寸：w92, w154, w185, w342, w500, w780, original
 """
@@ -30,6 +31,7 @@ from flask import Blueprint, Response, request, abort, send_file, jsonify
 from PIL import Image
 
 from config import Config, TMDB_IMAGE_DOMAIN, TMDB_IMAGE_SIZE
+from web.security import login_required
 import log
 
 # 下载任务锁，防止重复下载同一个图片
@@ -355,7 +357,26 @@ def proxy_bgm_image(img_path):
     return _serve_cached_or_download(cache_path, image_url)
 
 
+@img_blueprint.route('/library/<path:img_url>')
+def proxy_library_image(img_url):
+    """
+    代理媒体库内网图片（Emby / Jellyfin / Plex / fnos 等）
+
+    :param img_url: 原始图片 URL（URL 编码）
+    """
+    decoded_url = urllib.parse.unquote(img_url)
+
+    # 重新附加查询参数（如 Plex 的 X-Plex-Token）
+    if request.query_string:
+        separator = '&' if '?' in decoded_url else '?'
+        decoded_url += separator + request.query_string.decode('utf-8')
+
+    cache_path = _get_cache_path('library', decoded_url)
+    return _serve_cached_or_download(cache_path, decoded_url)
+
+
 @img_blueprint.route('/stats')
+@login_required
 def get_cache_stats():
     """获取缓存统计信息"""
     try:
@@ -366,7 +387,7 @@ def get_cache_stats():
         total_size = 0
         total_count = 0
         
-        for source in ['tmdb', 'douban', 'bgm']:
+        for source in ['tmdb', 'douban', 'bgm', 'library']:
             source_dir = os.path.join(CACHE_DIR, source)
             source_size = 0
             source_count = 0
@@ -401,11 +422,12 @@ def get_cache_stats():
 
 
 @img_blueprint.route('/clear', methods=['POST'])
+@login_required
 def clear_cache():
     """清空缓存"""
     try:
         cleared = {}
-        for source in ['tmdb', 'douban', 'bgm']:
+        for source in ['tmdb', 'douban', 'bgm', 'library']:
             source_dir = os.path.join(CACHE_DIR, source)
             count = 0
             if os.path.exists(source_dir):
@@ -425,10 +447,11 @@ def clear_cache():
 
 
 @img_blueprint.route('/preload', methods=['POST'])
+@login_required
 def preload_images():
     """
     批量预加载图片到缓存
-    请求体: {"urls": ["https://...", ...], "source": "tmdb|douban|bgm"}
+    请求体: {"urls": ["https://...", ...], "source": "tmdb|douban|bgm|library"}
     返回: {"success": true, "downloaded": 10, "failed": 2}
     """
     try:
@@ -441,7 +464,8 @@ def preload_images():
         referer_map = {
             'tmdb': None,
             'douban': 'https://movie.douban.com',
-            'bgm': None
+            'bgm': None,
+            'library': None
         }
         
         if not urls:
