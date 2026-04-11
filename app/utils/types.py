@@ -199,6 +199,8 @@ class SystemConfigKey(Enum):
 class ProgressKey(Enum):
     # 搜索
     Search = "search"
+    # RSS订阅搜索
+    RssSearch = "rsssearch"
     # 转移
     FileTransfer = "filetransfer"
     # 媒体库同步

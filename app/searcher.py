@@ -113,7 +113,7 @@ class Searcher(metaclass=SingletonMeta):
         if not media_info:
             return None, {}, 0, 0
         # 进度计数重置
-        self.progress.start(ProgressKey.Search)
+        self.progress.start(ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search)
         # 查找的季
         if media_info.begin_season is None:
             search_season = None
@@ -190,8 +190,12 @@ class Searcher(metaclass=SingletonMeta):
                                         )
                     all_task.append(task)
                 # 收集结果
+                finish_count = 0
                 for future in as_completed(all_task):
                     result = future.result()
+                    finish_count += 1
+                    self.progress.update(ptype=ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search,
+                                         value=round(100 * (finish_count / len(all_task))))
                     if result:
                         media_list.extend(result)
 

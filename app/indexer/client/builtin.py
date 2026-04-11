@@ -134,11 +134,12 @@ class BuiltinIndexer(_IIndexClient):
         """
         根据关键字多线程搜索
         """
+        progress_key = ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search
         if not indexer or not key_word:
             return None
         # 站点流控
         if self.sites.check_ratelimit(indexer.siteid):
-            self.progress.update(ptype=ProgressKey.Search, text=f"{indexer.name} 触发站点流控，跳过 ...")
+            self.progress.update(ptype=progress_key, text=f"{indexer.name} 触发站点流控，跳过 ...")
             return []
         # fix 共用同一个dict时会导致某个站点的更新全局全效
         if filter_args is None:
@@ -206,19 +207,20 @@ class BuiltinIndexer(_IIndexClient):
         if len(result_array) == 0:
             log.warn(f"【{self.client_name}】{indexer.name} 关键词 {key_word} 未搜索到数据")
             # 更新进度
-            self.progress.update(ptype=ProgressKey.Search, text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
+            self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
             return []
         else:
             log.warn(f"【{self.client_name}】{indexer.name} 关键词 {key_word} 返回数据：{len(result_array)}")
             # 更新进度
-            self.progress.update(ptype=ProgressKey.Search, text=f"{indexer.name} 关键词 {key_word} 返回 {len(result_array)} 条数据")
+            self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 返回 {len(result_array)} 条数据")
             # 过滤
             return self.filter_search_results(result_array=result_array,
                                               order_seq=order_seq,
                                               indexer=indexer,
                                               filter_args=_filter_args,
                                               match_media=match_media,
-                                              start_time=start_time)
+                                              start_time=start_time,
+                                              progress_key=progress_key)
 
     def list(self, index_id, page=0, keyword=None):
         """

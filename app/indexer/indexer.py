@@ -132,6 +132,8 @@ class Indexer(metaclass=SingletonMeta):
         if not key_word:
             return []
 
+        progress_key = ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search
+
         indexers = self.get_indexers(check=True)
         if not indexers:
             log.error("没有配置索引器，无法搜索！")
@@ -142,11 +144,11 @@ class Indexer(metaclass=SingletonMeta):
         max_workers = min(len(indexers), 10)
         if filter_args and filter_args.get("site"):
             log.info(f"【{self._client_type.value}】开始搜索 %s，站点：%s，并发数：%s ..." % (key_word, filter_args.get("site"), max_workers))
-            self.progress.update(ptype=ProgressKey.Search,
+            self.progress.update(ptype=progress_key,
                                  text="开始搜索 %s，站点：%s ..." % (key_word, filter_args.get("site")))
         else:
             log.info(f"【{self._client_type.value}】开始并行搜索 %s，站点数：%s，并发数：%s ..." % (key_word, len(indexers), max_workers))
-            self.progress.update(ptype=ProgressKey.Search,
+            self.progress.update(ptype=progress_key,
                                  text="开始并行搜索 %s，站点数：%s ..." % (key_word, len(indexers)))
         # 多线程 - 使用合理的并发数，并确保线程池正确关闭
         executor = ThreadPoolExecutor(max_workers=max_workers)
@@ -163,12 +165,8 @@ class Indexer(metaclass=SingletonMeta):
                                        in_from)
                 all_task.append(task)
             ret_array = []
-            finish_count = 0
             for future in as_completed(all_task):
                 result = future.result()
-                finish_count += 1
-                self.progress.update(ptype=ProgressKey.Search,
-                                     value=round(100 * (finish_count / len(all_task))))
                 if result:
                     ret_array = ret_array + result
         finally:
@@ -177,10 +175,9 @@ class Indexer(metaclass=SingletonMeta):
         end_time = datetime.datetime.now()
         log.info(f"【{self._client_type.value}】搜索关键词 {key_word} 所有站点搜索完成，有效资源数：%s，总耗时 %s 秒"
                  % (len(ret_array), (end_time - start_time).seconds))
-        self.progress.update(ptype=ProgressKey.Search,
+        self.progress.update(ptype=progress_key,
                              text="搜索关键词 %s 所有站点搜索完成，有效资源数：%s，总耗时 %s 秒"
-                                  % (key_word, len(ret_array), (end_time - start_time).seconds),
-                             value=100)
+                                  % (key_word, len(ret_array), (end_time - start_time).seconds))
         return ret_array
 
     def get_indexer_statistics(self):

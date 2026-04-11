@@ -139,6 +139,7 @@ class _IIndexClient(metaclass=ABCMeta):
         # 不在设定搜索范围的站点过滤掉
         if filter_args.get("site") and indexer.name not in filter_args.get("site"):
             return []
+        progress_key = ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search
         # 计算耗时
         start_time = datetime.datetime.now()
         log.info(f"【{self.index_type}】开始搜索Indexer：{indexer.name} ...")
@@ -154,7 +155,7 @@ class _IIndexClient(metaclass=ABCMeta):
         if len(result_array) == 0:
             with self.lock:
                 log.warn(f"【{self.index_type}】{indexer.name} 关键词 {key_word} 未搜索到数据")
-                self.progress.update(ptype=ProgressKey.Search, text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
+                self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
 
                 self.dbhelper.insert_indexer_statistics(indexer=indexer.name,
                                             itype=self.client_id,
@@ -166,7 +167,7 @@ class _IIndexClient(metaclass=ABCMeta):
             with self.lock:
                 log.warn(f"【{self.index_type}】{indexer.name} 关键词 {key_word} 返回数据：{len(result_array)}")
                 # 更新进度
-                self.progress.update(ptype=ProgressKey.Search, text=f"{indexer.name} 关键词 {key_word} 返回 {len(result_array)} 条数据")
+                self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 返回 {len(result_array)} 条数据")
                 # 索引统计
                 self.dbhelper.insert_indexer_statistics(indexer=indexer.name,
                                                         itype=self.client_id,
@@ -178,7 +179,8 @@ class _IIndexClient(metaclass=ABCMeta):
                                                 indexer=indexer,
                                                 filter_args=filter_args,
                                                 match_media=match_media,
-                                                start_time=start_time)
+                                                start_time=start_time,
+                                                progress_key=progress_key)
 
     @staticmethod
     def __parse_torznabxml(url):
@@ -289,7 +291,8 @@ class _IIndexClient(metaclass=ABCMeta):
                               indexer,
                               filter_args: dict,
                               match_media,
-                              start_time):
+                              start_time,
+                              progress_key=ProgressKey.Search):
         """
         从搜索结果中匹配符合资源条件的记录
         采用三阶段模式优化 TMDB 查询：
@@ -570,7 +573,7 @@ class _IIndexClient(metaclass=ABCMeta):
             f"错误 {index_error}，"
             f"有效 {index_sucess}，"
             f"耗时 {(end_time - start_time).seconds} 秒")
-        self.progress.update(ptype=ProgressKey.Search,
+        self.progress.update(ptype=progress_key,
                              text=f"{indexer.name} {len(result_array)} 条数据中，"
                                   f"过滤 {index_rule_fail}，"
                                   f"不匹配 {index_match_fail}，"
