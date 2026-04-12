@@ -1,12 +1,8 @@
 import logging
 import os
 import sys
-import re
 import threading
-import time
 import inspect
-from collections import deque
-from html import escape
 from loguru import logger
 
 from config import Config
@@ -16,13 +12,43 @@ logging.getLogger('watchdog').setLevel(logging.INFO)
 
 # 使用RLock支持重入，减少死锁风险
 lock = threading.RLock()
-# 使用线程本地存储减少锁竞争
-_thread_local = threading.local()
 
-LOG_QUEUE = deque(maxlen=200)
-LOG_INDEX = 0
-# 使用原子操作减少锁持有时间
-_index_lock = threading.Lock()
+_log_buffer = None
+
+
+def _get_log_buffer():
+    global _log_buffer
+    if _log_buffer is None:
+        # 延迟导入，避免循环导入
+        from app.utils.log_buffer import LogBuffer
+        _log_buffer = LogBuffer(maxlen=200)
+    return _log_buffer
+
+
+class _LogBufferProxy:
+    """延迟加载 LogBuffer 的代理对象，避免顶层导入导致循环引用。"""
+
+    def append(self, level, text):
+        return _get_log_buffer().append(level, text)
+
+    def get_logs(self, source=None, last_counter=0):
+        return _get_log_buffer().get_logs(source=source, last_counter=last_counter)
+
+    @property
+    def counter(self):
+        return _get_log_buffer().counter
+
+    def __len__(self):
+        return len(_get_log_buffer())
+
+    def __iter__(self):
+        return iter(_get_log_buffer())
+
+    def __getitem__(self, index):
+        return _get_log_buffer().__getitem__(index)
+
+
+LOG_BUFFER = _LogBufferProxy()
 
 
 class InterceptHandler(logging.Handler):
@@ -111,43 +137,12 @@ class Logger:
         return Logger.__instance.get(module)
 
 
-# 预编译正则表达式，提升性能
-_LOG_SOURCE_PATTERN = re.compile(r"(?<=【).*?(?=】)")
-
-def __append_log_queue(level, text):
-    global LOG_INDEX, LOG_QUEUE
-    # 先处理文本，减少锁内操作
-    text = escape(text)
-    if text.startswith("【"):
-        match = _LOG_SOURCE_PATTERN.search(text)
-        if match:
-            source = match.group(0)
-            text = text.replace(f"【{source}】", "")
-        else:
-            source = "System"
-    else:
-        source = "System"
-    
-    log_entry = {
-        "time": time.strftime('%H:%M:%S', time.localtime(time.time())),
-        "level": level,
-        "source": source,
-        "text": text}
-    
-    # 减少锁持有时间
-    with lock:
-        LOG_QUEUE.append(log_entry)
-    
-    # 使用原子操作更新索引
-    with _index_lock:
-        LOG_INDEX += 1
-
-
 def debug(text, module=None):
     frame, depth = inspect.currentframe(), 0
     while frame and (depth == 0 or frame.f_code.co_filename == __file__):
         frame = frame.f_back
         depth += 1
+    LOG_BUFFER.append("DEBUG", text)
     return Logger.get_instance(module).logger.opt(depth=depth).debug(text)
 
 
@@ -156,7 +151,7 @@ def info(text, module=None):
     while frame and (depth == 0 or frame.f_code.co_filename == __file__):
         frame = frame.f_back
         depth += 1
-    __append_log_queue("INFO", text)
+    LOG_BUFFER.append("INFO", text)
     return Logger.get_instance(module).logger.opt(depth=depth).info(text)
 
 
@@ -165,7 +160,7 @@ def error(text, module=None):
     while frame and (depth == 0 or frame.f_code.co_filename == __file__):
         frame = frame.f_back
         depth += 1
-    __append_log_queue("ERROR", text)
+    LOG_BUFFER.append("ERROR", text)
     return Logger.get_instance(module).logger.opt(depth=depth).error(text)
 
 
@@ -174,10 +169,15 @@ def warn(text, module=None):
     while frame and (depth == 0 or frame.f_code.co_filename == __file__):
         frame = frame.f_back
         depth += 1
-    __append_log_queue("WARN", text)
+    LOG_BUFFER.append("WARN", text)
     return Logger.get_instance(module).logger.opt(depth=depth).warning(text)
 
 
 def console(text):
-    __append_log_queue("INFO", text)
+    LOG_BUFFER.append("INFO", text)
     print(text)
+
+
+# 保持向后兼容的别名
+LOG_QUEUE = LOG_BUFFER
+LOG_INDEX = property(lambda self: len(LOG_BUFFER))

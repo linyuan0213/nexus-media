@@ -22,6 +22,11 @@ let GlobalModalAbort = true;
 let ProgressES;
 // 日志来源筛选时关掉之前的刷新日志计时器
 let LoggingSource = "";
+// 日志级别筛选
+let LoggingLevelFilter = "";
+// 日志全文缓存（用于客户端筛选和搜索）
+let LoggingCache = [];
+const LOG_CACHE_MAX = 2000;
 // 日志EventSource
 let LoggingES;
 // 是否存量消息刷新
@@ -144,63 +149,186 @@ function start_logging() {
   };
 }
 
+// 生成单条日志的 HTML 行
+function _build_log_row(log) {
+  let text = log.text;
+  const source = (log.source === undefined || log.source === null || log.source === "") ? "System" : log.source;
+  const time = log.time;
+  const level = log.level || "INFO";
+  let tcolor = '';
+  let lcolor = '';
+  let bgcolor = '';
+  let tstyle = '-webkit-line-clamp:4; display: -webkit-box; -webkit-box-orient:vertical; overflow:hidden; text-overflow: ellipsis;';
+  if (level === "ERROR") {
+    tcolor = "text-danger";
+    lcolor = "text-bg-danger";
+    bgcolor = "bg-danger";
+  } else if (level === "WARN") {
+    tcolor = "text-warning";
+    lcolor = "text-bg-warning";
+    bgcolor = "bg-warning";
+  } else if (level === "DEBUG") {
+    tcolor = "text-secondary";
+    lcolor = "text-bg-secondary";
+    bgcolor = "bg-secondary";
+  } else if (source === "System") {
+    tcolor = "text-info";
+    lcolor = "text-bg-info";
+    bgcolor = "bg-info";
+  } else {
+    tcolor = "text";
+    lcolor = "text-bg-light text-dark";
+  }
+  if (["Rmt", "Plugin"].includes(source) && text.includes(" 到 ")) {
+    tstyle = `${tstyle} white-space: pre;`
+    text = text.replace(/\s到\s/, "\n=> ")
+  }
+  if (text.includes("http") || text.includes("magnet")) {
+    tstyle = `${tstyle} word-break: break-all;`
+    text = text.replace(/：((?:http|magnet).+?)(?:\s|$)/g, "：<a href='$1' target='_blank'>$1</a>")
+  }
+  const sourceBadge = `<span class="${tcolor}">${source}</span>`;
+  const levelBadge = `<span class="${tcolor}">${level}</span>`;
+  const tdstyle = "padding-top: 0.5rem; padding-bottom: 0.5rem";
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td style="${tdstyle}"><span class="${tcolor}">${time}</span></td>
+                  <td style="${tdstyle}">${levelBadge}</td>
+                  <td style="${tdstyle}">${sourceBadge}</td>
+                  <td style="${tdstyle}"><span class="${tcolor}" style="${tstyle}" title="${text}">${text}</span></td>`;
+  return tr;
+}
+
 // 刷新日志
 function render_logging(log_list) {
-  if (log_list) {
-    let tdstyle = "padding-top: 0.5rem; padding-bottom: 0.5rem";
-    let tbody = "";
-    for (let log of log_list) {
-      let text = log.text;
-      const source = log.source;
-      const time = log.time;
-      const level = log.level;
-      let tcolor = '';
-      let bgcolor = '';
-      let tstyle = '-webkit-line-clamp:4; display: -webkit-box; -webkit-box-orient:vertical; overflow:hidden; text-overflow: ellipsis;';
-      if (level === "WARN") {
-        tcolor = "text-warning";
-        bgcolor = "bg-warning";
-      } else if (level === "ERROR") {
-        tcolor = "text-danger";
-        bgcolor = "bg-danger";
-      } else if (source === "System") {
-        tcolor = "text-info";
-        bgcolor = "bg-info";
-      } else {
-        tcolor = "text";
-      }
-      if (["Rmt", "Plugin"].includes(source) && text.includes(" 到 ")) {
-        tstyle = `${tstyle} white-space: pre;`
-        text = text.replace(/\s到\s/, "\n=> ")
-      }
-      if (text.includes("http") || text.includes("magnet")) {
-        tstyle = `${tstyle} word-break: break-all;`
-        text = text.replace(/：((?:http|magnet).+?)(?:\s|$)/g, "：<a href='$1' target='_blank'>$1</a>")
-      }
-      tbody = `${tbody}
-                  <tr>
-                  <td style="${tdstyle}"><span class="${tcolor}">${time}</span></td>
-                  <td style="${tdstyle}"><span class="badge ${bgcolor}">${source}</span></td>
-                  <td style="${tdstyle}"><span class="${tcolor}" style="${tstyle}" title="${text}">${text}</span></td>
-                  </tr>`;
-    }
-    if (tbody) {
-      let logging_table_obj = $("#logging_table");
-      let bool_ToScrolTop = (logging_table_obj.scrollTop() + logging_table_obj.prop("offsetHeight")) >= logging_table_obj.prop("scrollHeight");
-      let logging_content = $("#logging_content");
-      if (logging_content.text().indexOf("刷新中...") !== -1) {
-        logging_content.empty();
-      }
-      logging_content.append(tbody);
-      if (bool_ToScrolTop) {
-        setTimeout(function () {
-          logging_table_obj.scrollTop(logging_table_obj.prop("scrollHeight"));
-        }, 500);
-      }
-    }
-  }
-  if ($("#modal-logging").is(":hidden")) {
+  if ($("#page-logging").length === 0) {
     stop_logging();
+    return;
+  }
+  if (!log_list) {
+    log_list = [];
+  }
+  // 追加到缓存
+  for (let lg of log_list) {
+    LoggingCache.push(lg);
+  }
+  if (LoggingCache.length > LOG_CACHE_MAX) {
+    LoggingCache = LoggingCache.slice(-LOG_CACHE_MAX);
+  }
+  apply_logging_filters();
+}
+
+// 应用客户端筛选（来源 + 级别 + 搜索词）并渲染
+function apply_logging_filters(forceRebuild) {
+  const logging_content = $("#logging_content");
+  const logging_table_obj = $("#logging_table");
+  const searchVal = ($("#log-search-input").val() || "").toLowerCase();
+
+  // 如果当前是"刷新中..."占位符且缓存有数据，则清空占位符
+  if (logging_content.text().indexOf("刷新中...") !== -1 && LoggingCache.length > 0) {
+    logging_content.empty();
+  }
+
+  const filtered = LoggingCache.filter(function (log) {
+    const source = (log.source === undefined || log.source === null || log.source === "") ? "System" : log.source;
+    const level = log.level || "INFO";
+    if (LoggingSource && source !== LoggingSource) {
+      return false;
+    }
+    if (LoggingLevelFilter && level !== LoggingLevelFilter) {
+      return false;
+    }
+    if (searchVal) {
+      const text = (log.text || "").toLowerCase();
+      if (!text.includes(searchVal) && !source.toLowerCase().includes(searchVal)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  // 限制渲染数量
+  const toRender = filtered.slice(-1000);
+
+  // 记录滚动位置
+  const bool_ToScrolTop = (logging_table_obj.scrollTop() + logging_table_obj.prop("offsetHeight")) >= logging_table_obj.prop("scrollHeight");
+
+  const fragment = document.createDocumentFragment();
+  for (let log of toRender) {
+    fragment.appendChild(_build_log_row(log));
+  }
+  logging_content.empty();
+  logging_content[0].appendChild(fragment);
+
+  // 更新条数
+  $("#log-count-badge").text(`${filtered.length} 条`);
+
+  if (bool_ToScrolTop) {
+    setTimeout(function () {
+      logging_table_obj.scrollTop(logging_table_obj.prop("scrollHeight"));
+    }, 50);
+  }
+}
+
+// 级别筛选切换
+function set_log_level_filter(level) {
+  LoggingLevelFilter = level;
+  $("#log-filter-level-select").val(level || "");
+  apply_logging_filters();
+}
+
+// 清空日志
+function clear_logging() {
+  LoggingCache = [];
+  $("#logging_content").html('<tr><td colspan="4" class="text-center">已清空</td></tr>');
+  $("#log-count-badge").text("0 条");
+}
+
+// 导出日志
+function export_logging() {
+  const searchVal = ($("#log-search-input").val() || "").toLowerCase();
+  const filtered = LoggingCache.filter(function (log) {
+    const source = (log.source === undefined || log.source === null || log.source === "") ? "System" : log.source;
+    const level = log.level || "INFO";
+    if (LoggingSource && source !== LoggingSource) {
+      return false;
+    }
+    if (LoggingLevelFilter && level !== LoggingLevelFilter) {
+      return false;
+    }
+    if (searchVal) {
+      const text = (log.text || "").toLowerCase();
+      if (!text.includes(searchVal) && !source.toLowerCase().includes(searchVal)) {
+        return false;
+      }
+    }
+    return true;
+  });
+  if (filtered.length === 0) {
+    show_warning_modal("没有可导出的日志");
+    return;
+  }
+  const lines = filtered.map(function (log) {
+    const time = log.time || "";
+    const level = log.level || "INFO";
+    const source = (log.source === undefined || log.source === null || log.source === "") ? "System" : log.source;
+    const text = log.text || "";
+    return `[${time}] [${level}] [${source}] ${text}`;
+  });
+  const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const filename = `nas-log-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.log`;
+  if (typeof saveAs !== "undefined") {
+    saveAs(blob, filename);
+  } else {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 }
 
@@ -216,12 +344,9 @@ function pause_logging() {
   }
 }
 
-// 显示实时日志
-function show_logging_modal() {
-  // 显示窗口
+// 初始化日志页面
+function init_logging_page() {
   $("#logging_stop_btn").text("暂停");
-  $('#modal-logging').modal('show');
-  // 连接日志服务
   start_logging();
 }
 
@@ -235,7 +360,8 @@ function logger_select(source) {
   if (LoggingSource) {
     logtype = `【${LoggingSource}】刷新中...`;
   }
-  $("#logging_content").html(`<tr><td colspan="3" class="text-center">${logtype}</td></tr>`);
+  $("#logging_content").html(`<tr><td colspan="4" class="text-center">${logtype}</td></tr>`);
+  apply_logging_filters();
   // 拉取新日志
   start_logging();
 }

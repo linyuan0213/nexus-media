@@ -1,0 +1,72 @@
+{% import 'macro/svg.html' as SVG %}
+<div class="container-xl" id="page-logging">
+  <div class="page-header d-print-none">
+    <div class="row align-items-center">
+      <div class="col">
+        <h2 class="page-title">实时日志</h2>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-header">
+        <div class="select_logger me-auto">
+          <h3 class="card-title">日志输出</h3>
+          <div class="dropdown ms-2">
+            <button class="btn-action" data-bs-toggle="dropdown" aria-expanded="false" title="来源筛选">
+              {{ SVG.log_select() }}
+            </button>
+            <div class="dropdown-menu dropdown-menu-end" id="dropdown-menu-logger">
+            {% with Loggers = ['All', 'System', 'Rss', 'RssChecker', 'Rmt', 'Meta', 'Sync', 'Sites', 'Brush', 'Douban', 'Spider', 'Message', 'Indexer', 'Searcher', 'Subscribe', 'Downloader', 'TorrentRemover', 'Plugin'] %}
+              {% for Logger in Loggers %}
+              <a class="dropdown-item" href="javascript:void(0)" onclick="logger_select('{{ Logger }}')">{{ Logger }}</a>
+              {% endfor %}
+            {% endwith %}
+            </div>
+          </div>
+          <span class="text-muted text-sm ms-2" id="log-count-badge">0 条</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <select class="form-select form-select-sm" id="log-filter-level-select" onchange="set_log_level_filter(this.value)" style="width: 90px;">
+            <option value="" selected>全部级别</option>
+            <option value="DEBUG">DEBUG</option>
+            <option value="INFO">INFO</option>
+            <option value="WARN">WARN</option>
+            <option value="ERROR">ERROR</option>
+          </select>
+          <div class="input-icon input-icon-sm">
+            <input type="text" class="form-control form-control-sm" id="log-search-input" placeholder="搜索日志内容..." oninput="apply_logging_filters()" style="width: 160px;">
+            <span class="input-icon-addon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><circle cx="10" cy="10" r="7"></circle><line x1="21" y1="21" x2="15" y2="15"></line></svg>
+            </span>
+          </div>
+          <a href="javascript:pause_logging()" class="btn btn-sm btn-link" id="logging_stop_btn">暂停</a>
+          <button type="button" class="btn btn-sm btn-ghost-danger" onclick="clear_logging()" title="清空">清空</button>
+          <button type="button" class="btn btn-sm btn-ghost-secondary" onclick="export_logging()" title="导出">导出</button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div id="logging_table" class="table-responsive" style="max-height: calc(100vh - 260px);">
+          <table class="table table-vcenter card-table table-hover table-striped mb-0">
+            <thead>
+              <tr>
+                <th class="w-3">时间</th>
+                <th class="w-3">级别</th>
+                <th class="w-3">来源</th>
+                <th>内容</th>
+              </tr>
+            </thead>
+            <tbody id="logging_content" class="table-tbody">
+              <tr><td colspan="4" class="text-center">刷新中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  init_logging_page();
+</script>

@@ -385,50 +385,6 @@
     </div>
   </div>
 </div>
-<!-- 实时日志 -->
-<div class="modal modal-blur fade" id="modal-logging" tabindex="-1" role="dialog" aria-hidden="true"
-     data-bs-backdrop="static" data-bs-keyboard="false">
-  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <div class="select_logger">
-          <h5 class="modal-title">实时日志</h5>
-           <div class="dropdown">
-              <button class="btn-action" data-bs-toggle="dropdown" aria-expanded="false">
-                {{ SVG.log_select() }}
-              </button>
-              <div class="dropdown-menu dropdown-menu-end" id="dropdown-menu-logger">
-              {% with Loggers = ['All', 'System', 'Rss', 'RssChecker', 'Rmt', 'Meta', 'Sync', 'Sites', 'Brush', 'Douban', 'Spider', 'Message', 'Indexer', 'Searcher', 'Subscribe', 'Downloader', 'TorrentRemover', 'Plugin'] %}
-                {% for Logger in Loggers %}
-                <a class="dropdown-item" href="javascript:void(0)" onclick="logger_select('{{ Logger }}')">{{ Logger }}</a>
-                {% endfor %}
-              {% endwith %}
-              </div>
-           </div>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div id="logging_table" class="table-responsive table-modal-body">
-      <table class="table table-vcenter card-table table-hover table-striped">
-        <thead>
-          <tr>
-            <th class="w-3">时间</th>
-            <th class="w-3">来源</th>
-            <th>内容</th>
-          </tr>
-        </thead>
-        <tbody id="logging_content" class="table-tbody">
-          <tr><td colspan="3" class="text-center">刷新中...</td></tr>
-        </tbody>
-      </table>
-      </div>
-      <div class="modal-footer">
-        <a href="javascript:pause_logging()" class="btn btn-link me-auto" id="logging_stop_btn">暂停</a>
-        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">关闭</button>
-      </div>
-    </div>
-  </div>
-</div>
 <!-- 订阅季 -->
 <div class="modal modal-blur fade" id="system-rss-seasons" tabindex="-1" role="dialog" aria-hidden="true"
      data-bs-backdrop="static" data-bs-keyboard="false">

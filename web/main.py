@@ -60,6 +60,8 @@ from initializer import check_redis, update_config, check_config, update_sites_d
 from version import APP_VERSION
 from app.utils import warm_cache_on_startup
 from app.utils.temp_manager import temp_manager
+from app.services.log_streaming_service import LogStreamingService
+
 
 # 配置文件锁
 ConfigLock = Lock()
@@ -94,8 +96,7 @@ LoginManager.login_view = "login"
 LoginManager.init_app(App)
 
 # SSE
-LoggingSource = ""
-LoggingLock = Lock()
+log_streaming_service = LogStreamingService(sleep_interval=1.0)
 
 # 路由注册
 App.register_blueprint(apiv1_bp, url_prefix="/api/v1")
@@ -816,6 +817,13 @@ def service():
                            RuleGroups=RuleGroups,
                            SyncPaths=SyncPaths,
                            SchedulerTasks=Services)
+
+
+# 日志页面
+@App.route('/logging', methods=['POST', 'GET'])
+@login_required
+def logging_page():
+    return render_template("logging.html")
 
 
 # 历史记录页面
@@ -1856,30 +1864,8 @@ def stream_logging():
     """
     实时日志EventSources响应
     """
-    def __logging(_source=""):
-        """
-        实时日志
-        """
-        global LoggingSource
-
-        while True:
-            with LoggingLock:
-                if _source != LoggingSource:
-                    LoggingSource = _source
-                    log.LOG_INDEX = len(log.LOG_QUEUE)
-                if log.LOG_INDEX > 0:
-                    logs = list(log.LOG_QUEUE)[-log.LOG_INDEX:]
-                    log.LOG_INDEX = 0
-                    if _source:
-                        logs = [lg for lg in logs if lg.get(
-                            "source") == _source]
-                else:
-                    logs = []
-                time.sleep(1)
-                yield 'data: %s\n\n' % json.dumps(logs)
-
     return Response(
-        __logging(request.args.get("source") or ""),
+        log_streaming_service.stream(request.args.get("source") or ""),
         mimetype='text/event-stream'
     )
 

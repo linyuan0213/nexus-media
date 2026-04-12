@@ -174,10 +174,19 @@ DEFAULT_MENUS = [
         "permission_code": "service:view"
     },
     {
+        "name": "日志",
+        "code": "logging",
+        "path": "/logging",
+        "icon": "scroll-text",
+        "sort_order": 9,
+        "level": 1,
+        "permission_code": "log:view"
+    },
+    {
         "name": "系统设置",
         "code": "setting",
         "icon": "settings",
-        "sort_order": 9,
+        "sort_order": 10,
         "level": 1,
         "children": [
             {"name": "基础设置", "code": "basic_setting", "path": "/basic", "icon": "sliders", "sort_order": 1, "level": 2, "permission_code": "setting:view"},
@@ -235,7 +244,7 @@ DEFAULT_ROLES = [
             "rss", "movie_rss", "tv_rss", "custom_rss",
             "download", "downloading", "downloaded", "torrent_remove",
             "media", "file_manager", "manual_identify", "history",
-            "service", "setting", "basic_setting", "user_management", "library_setting", "plugin_management"
+            "service", "logging", "setting", "basic_setting", "user_management", "library_setting", "plugin_management"
         ]
     },
     {
