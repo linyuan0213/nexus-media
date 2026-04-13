@@ -63,6 +63,14 @@ class LogBuffer:
         with self._lock:
             return len(self._queue)
 
+    def __iter__(self):
+        with self._lock:
+            return iter(list(self._queue))
+
+    def __getitem__(self, index):
+        with self._lock:
+            return list(self._queue)[index]
+
     @property
     def counter(self) -> int:
         with self._lock:
