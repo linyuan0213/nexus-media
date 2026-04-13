@@ -10,17 +10,20 @@ class LogStreamingService:
     封装全局状态与迭代逻辑，避免污染路由文件。
     """
 
-    def __init__(self, sleep_interval: float = 1.0):
+    def __init__(self, buffer=None, sleep_interval: float = 1.0):
         self._sleep_interval = sleep_interval
         self._lock = threading.Lock()
         self._source_map: dict[str, int] = {}
-        # 触发 LogBuffer 的懒加载，确保 SSE 首次连接时缓冲区已就绪
-        self._get_buffer()
+        self._buffer = buffer
+        if buffer is None:
+            # 触发 LogBuffer 的懒加载，确保 SSE 首次连接时缓冲区已就绪
+            self._get_buffer()
 
-    @staticmethod
-    def _get_buffer():
-        import log
-        return log.LOG_BUFFER
+    def _get_buffer(self):
+        if self._buffer is None:
+            import log
+            self._buffer = log.LOG_BUFFER
+        return self._buffer
 
     def stream(self, source: str = "") -> Iterator[str]:
         """
