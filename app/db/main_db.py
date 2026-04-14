@@ -28,7 +28,7 @@ def get_sql_adapter():
 # 自动从配置文件获取数据库类型和连接信息
 _Engine = DatabaseFactory.create_engine()
 
-# session配置
+# session配置 - 使用 scoped_session 实现线程本地存储
 _Session = scoped_session(sessionmaker(bind=_Engine,
                                        autoflush=False,  # 禁用自动flush以提高性能
                                        autocommit=False,
@@ -50,10 +50,25 @@ def session_scope():
         _Session.remove()
 
 
+def remove_session():
+    """
+    移除当前线程的 session
+    在请求结束时调用，确保 session 被正确清理
+    """
+    try:
+        _Session.remove()
+    except Exception:
+        pass
+
+
 class MainDb:
 
     @property
     def session(self):
+        """
+        获取当前线程的 session
+        使用 scoped_session，同一线程内返回同一个 session 实例
+        """
         return _Session()
 
     def init_db(self):

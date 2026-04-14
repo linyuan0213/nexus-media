@@ -3,6 +3,7 @@ import log
 from config import Config
 from .main_db import MainDb
 from .main_db import DbPersist
+from .main_db import remove_session
 from .media_db import MediaDb
 from .database_factory import DatabaseFactory
 from .sql_adapter import SQLAdapter, adapt_sql_for_engine

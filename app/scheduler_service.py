@@ -17,6 +17,7 @@ from app.utils.commons import SingletonMeta
 from config import Config
 from app.utils import ExceptionUtils, RedisStore
 from app.queue import scheduler_queue
+from app.db import remove_session
 
 
 class SchedulerService(metaclass=SingletonMeta):
@@ -171,7 +172,14 @@ class SchedulerService(metaclass=SingletonMeta):
     def _job_event_listener(self, event):
         """
         任务事件监听器
+        任务执行结束后清理数据库 session，防止连接池泄漏
         """
+        # 清理当前线程的数据库 session
+        try:
+            remove_session()
+        except Exception:
+            pass
+        
         if event.code == EVENT_JOB_EXECUTED:
             log.info(f"任务执行成功: {event.job_id}")
         elif event.code == EVENT_JOB_ERROR:

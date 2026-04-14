@@ -151,6 +151,26 @@ def add_header(r):
     return r
 
 
+@App.teardown_request
+def teardown_request(exception=None):
+    """
+    请求结束时清理数据库 session
+    防止 scoped_session 持有连接导致连接池耗尽
+    """
+    from app.db import remove_session
+    remove_session()
+
+
+@App.teardown_appcontext
+def teardown_appcontext(exception=None):
+    """
+    应用上下文结束时清理数据库 session
+    作为 teardown_request 的备用
+    """
+    from app.db import remove_session
+    remove_session()
+
+
 # 定义获取登录用户的方法
 @LoginManager.user_loader
 def load_user(user_id):
