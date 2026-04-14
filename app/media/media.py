@@ -284,6 +284,8 @@ class Media:
         def _fetch_allnames(movie):
             return movie, self.__search_tmdb_allnames(MediaType.MOVIE, movie.get("id"))
 
+        if not candidates:
+            return {}
         max_workers = min(len(candidates), 3)
         results = {}
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -358,6 +360,8 @@ class Media:
         def _fetch_allnames(tv):
             return tv, self.__search_tmdb_allnames(MediaType.TV, tv.get("id"))
 
+        if not candidates:
+            return {}
         max_workers = min(len(candidates), 3)
         results = {}
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -432,6 +436,8 @@ class Media:
         def _fetch_allnames(tv):
             return tv, self.__search_tmdb_allnames(MediaType.TV, tv.get("id"))
 
+        if not candidates:
+            return {}
         max_workers = min(len(candidates), 3)
         results = {}
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
