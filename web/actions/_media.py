@@ -89,9 +89,8 @@ class WebActionMediaMixin:
                 f"【media_detail】检查季存在状态完成，共{len(seasons)}季，耗时: {time.time() - check_start:.2f}s")
         # 处理图片URL，转换为代理格式
         poster_image = media_info.get_poster_image()
-        if poster_image and poster_image.startswith('http'):
-            from app.mediaserver.client._base import _IMediaClient
-            poster_image = _IMediaClient.get_nt_image_url(poster_image)
+        if poster_image:
+            poster_image = Config().get_proxy_image_url(poster_image)
 
         return self._success(data={
                 "tmdbid": media_info.tmdb_id,
@@ -193,6 +192,10 @@ class WebActionMediaMixin:
                 rssid = _subcribe.get_subscribe_id(mtype=media_type,
                                                    title=title,
                                                    tmdbid=mediaid)
+
+        # 处理图片URL，转换为代理格式
+        if poster_path:
+            poster_path = Config().get_proxy_image_url(poster_path)
 
         return WebActionBase._success(type=mtype, type_str=media_type.value, page=page, title=title, vote_average=vote_average, poster_path=poster_path, release_date=release_date, year=year, overview=overview, link_url=link_url, tmdbid=mediaid, rssid=rssid, seasons=seasons)
 

@@ -427,6 +427,58 @@ class Config(object):
         """检查是否启用了图片代理 - 默认开启"""
         return self.get_config("app").get("enable_image_proxy", True)
 
+    def get_proxy_image_url(self, url):
+        """
+        将任意图片 URL 转换为本地代理 URL
+        支持 TMDB、豆瓣、Bangumi 等图片
+        :param url: 原始图片 URL
+        :return: 代理后的图片 URL
+        """
+        if not url:
+            return ""
+
+        # 如果未启用图片代理，直接返回原 URL
+        if not self.get_image_proxy_enabled():
+            return url
+
+        # 已经是本地代理路径，直接返回
+        if url.startswith('/img/'):
+            return url
+
+        try:
+            import urllib.parse
+
+            # 处理 TMDB 图片
+            if 'image.tmdb.org' in url:
+                import re
+                match = re.search(r'/t/p/(\w+)(/.+)', url)
+                if match:
+                    size = match.group(1)
+                    path = match.group(2).lstrip('/')
+                    return f"/img/tmdb/{size}/{path}"
+                return url
+
+            # 处理豆瓣图片
+            if 'doubanio.com' in url or 'douban.com' in url:
+                encoded_path = urllib.parse.quote(url, safe='')
+                return f"/img/douban/{encoded_path}"
+
+            # 处理 Bangumi 图片
+            if 'lain.bgm.tv' in url:
+                encoded_path = urllib.parse.quote(url, safe='')
+                return f"/img/bgm/{encoded_path}"
+
+            # 其他外部图片统一走 library 代理
+            if url.startswith('http'):
+                encoded_path = urllib.parse.quote(url, safe='')
+                return f"/img/library/{encoded_path}"
+
+        except Exception as e:
+            import log
+            log.error(f"【get_proxy_image_url】处理图片代理失败: {str(e)}")
+
+        return url
+
     @property
     def category_path(self):
         category = self.get_config('media').get("category")

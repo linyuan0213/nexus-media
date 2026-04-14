@@ -61,7 +61,8 @@ export class CustomImg extends CustomElement {
 
   willUpdate(changedProperties) {
     if (changedProperties.has("img_src")) {
-      this._placeholder = true;
+      // 懒加载时显示占位符，非懒加载时直接显示图片
+      this._placeholder = this.lazy === "1";
     }
     if (changedProperties.has("img_src_list")) {
       this._timeout_update_img = 0;
