@@ -21,8 +21,6 @@ from app.utils.redis_store import RedisStore
 from app.utils.types import EventType
 from config import Config
 
-from app.scheduler_service import SchedulerService
-from app.queue import scheduler_queue
 
 
 class WeworkIPChange(_IPluginModule):
@@ -213,7 +211,6 @@ class WeworkIPChange(_IPluginModule):
             self._notify = config.get("notify")
             self._onlyonce = config.get("onlyonce")
 
-        self._scheduler = SchedulerService()
         self._drissonpage_helper = DrissionPageHelper()
         self._redis_store = RedisStore()
         if self._enabled:
@@ -234,16 +231,11 @@ class WeworkIPChange(_IPluginModule):
             # 运行一次
             if self._onlyonce:
                 self.info("企业微信可信IP更新服务启动，立即运行一次")
-                scheduler_queue.put({
-                        "func_str": "WeworkIPChange.change_ip",
-                        "type": 'plugin',
-                        "args": [],
-                        "job_id": "WeworkIPChange.change_ip_once",
-                        "trigger": "date",
-                        "run_date": datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(
-                                                                seconds=3),
-                        "jobstore": self._jobstore
-                    })
+                self.register_date(
+                    job_id="WeworkIPChange.change_ip_once",
+                    func=self.change_ip,
+                    run_date=datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3),
+                )
                 # 关闭一次性开关
                 self._onlyonce = False
                 self.update_config({
@@ -261,14 +253,11 @@ class WeworkIPChange(_IPluginModule):
             # 周期运行
             if self._cron:
                 self.info(f"企业微信可信IP更新服务启动，周期：{self._cron}")
-                scheduler_queue.put({
-                        "func_str": "WeworkIPChange.change_ip",
-                        "type": 'plugin',
-                        "args": [],
-                        "job_id": "WeworkIPChange.change_ip_2",
-                        "trigger": CronTrigger.from_crontab(self._cron),
-                        "jobstore": self._jobstore
-                    })
+                self.register_cron(
+                    job_id="WeworkIPChange.change_ip_2",
+                    func=self.change_ip,
+                    cron=str(self._cron),
+                )
 
     @EventHandler.register(EventType.WeworkLogin)
     def login_by_code(self, event=None) -> bool:
@@ -371,13 +360,11 @@ class WeworkIPChange(_IPluginModule):
         self.info(final_msg)  # 或根据需求处理最终消息
         # 发送通知
         if self._notify:
-            if self._scheduler and self._scheduler.SCHEDULER:
-                for job in self._scheduler.get_jobs(self._jobstore):
-                    if 'change_ip' in job.name:
-                        next_run_time = job.next_run_time.strftime('%Y-%m-%d %H:%M:%S')
-                        self.send_message(title="【自动更新企业微信可信IP任务完成】",
-                                        text=final_msg + ""
-                                            f"下次更新时间: {next_run_time}")
+            for job in self.get_jobs():
+                next_run_time = job.next_run_time.strftime('%Y-%m-%d %H:%M:%S')
+                self.send_message(title="【自动更新企业微信可信IP任务完成】",
+                                text=final_msg + ""
+                                    f"下次更新时间: {next_run_time}")
 
     def process_single_app(self, app_id, cookie, dynamic_ip):
         """处理单个app_id的可信IP更新"""
@@ -497,14 +484,10 @@ class WeworkIPChange(_IPluginModule):
         return False
 
     def stop_service(self):
-        """
-        退出插件
-        """
         try:
-            if self._scheduler and self._scheduler.SCHEDULER:
-                for job in self._scheduler.get_jobs(self._jobstore):
-                    if 'change_ip' in job.name:
-                        self._scheduler.remove_job(job.id, self._jobstore)
+            for job_id in self._job_ids:
+                self.remove_job(job_id)
+            self._job_ids.clear()
         except Exception as e:
             print(str(e))
 

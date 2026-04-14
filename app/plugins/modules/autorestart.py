@@ -11,8 +11,6 @@ from apscheduler.triggers.cron import CronTrigger
 from app.plugins.modules._base import _IPluginModule
 from app.utils import SystemUtils
 from config import Config
-from app.scheduler_service import SchedulerService
-from app.queue import scheduler_queue
 
 
 class AutoRestart(_IPluginModule):
@@ -125,7 +123,6 @@ class AutoRestart(_IPluginModule):
             self._notify = config.get("notify")
             self._onlyonce = config.get("onlyonce")
 
-        self._scheduler = SchedulerService()
         self.stop_service()
         self.run_service()
 
@@ -135,16 +132,11 @@ class AutoRestart(_IPluginModule):
             # 运行一次
             if self._onlyonce:
                 self.info("重启服务启动，立即运行一次")
-                scheduler_queue.put({
-                        "func_str": "AutoRestart.restart",
-                        "type": 'plugin',
-                        "args": [],
-                        "job_id": "AutoRestart.restart_once",
-                        "trigger": "date",
-                        "run_date": datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(
-                                                                seconds=3),
-                        "jobstore": self._jobstore
-                    })
+                self.register_date(
+                    job_id="AutoRestart.restart_once",
+                    func=self.restart,
+                    run_date=datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3),
+                )
                 # 关闭一次性开关
                 self._onlyonce = False
                 self.update_config({
@@ -158,14 +150,11 @@ class AutoRestart(_IPluginModule):
             # 周期运行
             if self._cron:
                 self.info(f"定时重启服务启动，周期：{self._cron}")
-                scheduler_queue.put({
-                        "func_str": "AutoRestart.restart",
-                        "type": 'plugin',
-                        "args": [],
-                        "job_id": "AutoRestart.restart_2",
-                        "trigger": CronTrigger.from_crontab(self._cron),
-                        "jobstore": self._jobstore
-                    })
+                self.register_cron(
+                    job_id="AutoRestart.restart_2",
+                    func=self.restart,
+                    cron=str(self._cron),
+                )
 
     def restart(self):
         """
@@ -210,14 +199,10 @@ class AutoRestart(_IPluginModule):
         os.kill(pid, signal.SIGTERM)
 
     def stop_service(self):
-        """
-        退出插件
-        """
         try:
-            if self._scheduler and self._scheduler.SCHEDULER:
-                for job in self._scheduler.get_jobs(self._jobstore):
-                    if 'restart' in job.name:
-                        self._scheduler.remove_job(job.id, self._jobstore)
+            for job_id in self._job_ids:
+                self.remove_job(job_id)
+            self._job_ids.clear()
         except Exception as e:
             print(str(e))
 

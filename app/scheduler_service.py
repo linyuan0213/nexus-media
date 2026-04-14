@@ -1,5 +1,10 @@
 import os
 import datetime
+import time
+import threading
+from typing import Dict, Any, Optional, Callable, List, Union
+from dataclasses import dataclass, field
+from enum import Enum
 
 import log
 
@@ -10,21 +15,162 @@ from apscheduler.util import undefined
 from apscheduler.events import (
     EVENT_JOB_EXECUTED,
     EVENT_JOB_ERROR,
-    EVENT_JOB_MISSED
+    EVENT_JOB_MISSED,
+    JobExecutionEvent,
+    JobSubmissionEvent
 )
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.job import Job
 
 from app.utils.commons import SingletonMeta
 from config import Config
 from app.utils import ExceptionUtils, RedisStore
-from app.queue import scheduler_queue
 from app.db import remove_session
 
 
+class JobStatus(Enum):
+    """任务执行状态"""
+    PENDING = "pending"
+    RUNNING = "running"
+    SUCCESS = "success"
+    FAILED = "failed"
+    RETRYING = "retrying"
+
+
+@dataclass
+class JobStats:
+    """任务执行统计"""
+    job_id: str
+    total_runs: int = 0
+    success_count: int = 0
+    failure_count: int = 0
+    retry_count: int = 0
+    last_run_time: Optional[datetime.datetime] = None
+    last_duration: Optional[float] = None
+    avg_duration: float = 0.0
+    last_error: Optional[str] = None
+    consecutive_failures: int = 0
+
+    def record_success(self, duration: float) -> None:
+        """记录成功执行"""
+        self.total_runs += 1
+        self.success_count += 1
+        self.consecutive_failures = 0
+        self.last_run_time = datetime.datetime.now()
+        self.last_duration = duration
+        # 更新平均执行时间
+        self.avg_duration = (self.avg_duration * (self.total_runs - 1) + duration) / self.total_runs
+
+    def record_failure(self, error: str) -> None:
+        """记录执行失败"""
+        self.total_runs += 1
+        self.failure_count += 1
+        self.consecutive_failures += 1
+        self.last_run_time = datetime.datetime.now()
+        self.last_error = error
+
+    def record_retry(self) -> None:
+        """记录重试"""
+        self.retry_count += 1
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典"""
+        return {
+            'job_id': self.job_id,
+            'total_runs': self.total_runs,
+            'success_count': self.success_count,
+            'failure_count': self.failure_count,
+            'retry_count': self.retry_count,
+            'last_run_time': self.last_run_time.isoformat() if self.last_run_time else None,
+            'last_duration': self.last_duration,
+            'avg_duration': round(self.avg_duration, 3),
+            'last_error': self.last_error,
+            'consecutive_failures': self.consecutive_failures
+        }
+
+
+@dataclass
+class TaskConfig:
+    """任务配置数据类"""
+    job_id: str
+    func: Callable
+    trigger: str = 'interval'
+    args: tuple = field(default_factory=tuple)
+    kwargs: Dict[str, Any] = field(default_factory=dict)
+    jobstore: str = 'default'
+    hours: Optional[int] = None
+    minutes: Optional[int] = None
+    seconds: Optional[int] = None
+    cron: Optional[str] = None
+    run_date: Optional[datetime.datetime] = None
+    next_run_time: Optional[Any] = None
+    max_instances: int = 1
+    misfire_grace_time: int = 300
+    coalesce: bool = True
+
+    def validate(self) -> None:
+        """验证任务配置"""
+        if not self.job_id:
+            raise ValueError("job_id 不能为空")
+        if not callable(self.func):
+            raise ValueError("func 必须是可调用的")
+        if self.trigger not in ('interval', 'date', 'cron'):
+            raise ValueError(f"不支持的 trigger 类型: {self.trigger}")
+        if self.trigger == 'interval':
+            if not any([self.hours, self.minutes, self.seconds]):
+                raise ValueError("interval 类型任务需要设置 hours/minutes/seconds 至少一个")
+        if self.trigger == 'date' and not self.run_date:
+            raise ValueError("date 类型任务需要设置 run_date")
+        if self.trigger == 'cron' and not self.cron:
+            raise ValueError("cron 类型任务需要设置 cron 表达式")
+
+    def to_scheduler_args(self) -> Dict[str, Any]:
+        """转换为 APScheduler 参数"""
+        args = {
+            'func': self.func,
+            'args': self.args,
+            'kwargs': self.kwargs,
+            'id': self.job_id,
+            'jobstore': self.jobstore,
+            'replace_existing': True,
+            'max_instances': self.max_instances,
+            'misfire_grace_time': self.misfire_grace_time,
+            'coalesce': self.coalesce
+        }
+
+        if self.trigger == 'interval':
+            trigger_args = {}
+            if self.hours is not None:
+                trigger_args['hours'] = self.hours
+            if self.minutes is not None:
+                trigger_args['minutes'] = self.minutes
+            if self.seconds is not None:
+                trigger_args['seconds'] = self.seconds
+            args['trigger'] = 'interval'
+            args.update(trigger_args)
+        elif self.trigger == 'date':
+            args['trigger'] = 'date'
+            args['run_date'] = self.run_date
+        elif self.trigger == 'cron':
+            args['trigger'] = CronTrigger.from_crontab(self.cron)
+        else:
+            args['trigger'] = self.trigger
+
+        if self.next_run_time is not None:
+            args['next_run_time'] = self.next_run_time
+
+        return args
+
+
 class SchedulerService(metaclass=SingletonMeta):
-    SCHEDULER = None
-    INSTANCE = ""
-    redis_store = None
-    _jobstores = {
+    """调度器服务类
+
+    提供任务调度、执行监控、失败重试、统计收集等功能。
+    使用单例模式确保全局只有一个调度器实例。
+    """
+
+    # 默认 jobstore 配置
+    DEFAULT_JOBSTORES = {
         'default': MemoryJobStore(),
         'brushtask': MemoryJobStore(),
         'rsscheck': MemoryJobStore(),
@@ -33,208 +179,773 @@ class SchedulerService(metaclass=SingletonMeta):
         'plugin': MemoryJobStore()
     }
 
-    def __init__(self):
-        self.INSTANCE = os.environ.get('SERVER_INSTANCE')
-        self.redis_store = RedisStore()
-        self.SCHEDULER = None
+    # 默认执行器配置
+    DEFAULT_EXECUTORS = {
+        'default': ThreadPoolExecutor(50)
+    }
 
-    def start_job(self, task):
-        """
-        启动单个定时任务
-        task = {
-            'job_id':
-            'jobstore':
-            'func':
-            'args':
-            'trigger':
-            'run_date':
-            'seconds':
-        }
+    # 默认任务默认配置
+    DEFAULT_JOB_DEFAULTS = {
+        'coalesce': True,
+        'max_instances': 100,
+        'misfire_grace_time': 300
+    }
+
+    # 最大重试次数
+    MAX_RETRY_COUNT = 3
+
+    # 重试延迟（秒）
+    RETRY_DELAY = 60
+
+    def __init__(self):
+        self._instance_id: str = os.environ.get('SERVER_INSTANCE', '')
+        self._redis_store: Optional[RedisStore] = None
+        self._scheduler: Optional[BackgroundScheduler] = None
+        self._job_stats: Dict[str, JobStats] = {}
+        self._job_start_times: Dict[str, float] = {}
+        self._lock = threading.RLock()
+        self._running = False
+
+    @property
+    def SCHEDULER(self) -> Optional[BackgroundScheduler]:
+        """向后兼容：获取调度器实例"""
+        return self._scheduler
+
+    @SCHEDULER.setter
+    def SCHEDULER(self, value: Optional[BackgroundScheduler]) -> None:
+        """向后兼容：设置调度器实例"""
+        self._scheduler = value
+
+    @property
+    def INSTANCE(self) -> str:
+        """向后兼容：获取实例 ID"""
+        return self._instance_id
+
+    @INSTANCE.setter
+    def INSTANCE(self, value: str) -> None:
+        """向后兼容：设置实例 ID"""
+        self._instance_id = value
+
+    @property
+    def scheduler(self) -> Optional[BackgroundScheduler]:
+        """获取调度器实例"""
+        return self._scheduler
+
+    @property
+    def is_running(self) -> bool:
+        """检查调度器是否正在运行"""
+        return self._running and self._scheduler is not None
+
+    def _get_job_stats(self, job_id: str) -> JobStats:
+        """获取或创建任务统计对象"""
+        with self._lock:
+            if job_id not in self._job_stats:
+                self._job_stats[job_id] = JobStats(job_id=job_id)
+            return self._job_stats[job_id]
+
+    def start_job(self, task: Union[Dict[str, Any], TaskConfig]) -> Optional[Job]:
+        """启动单个定时任务
+
+        Args:
+            task: 任务配置，可以是字典或 TaskConfig 对象
+                如果是字典，支持以下字段：
+                - job_id: 任务唯一标识（必填）
+                - func: 执行函数（必填）
+                - trigger: 触发器类型，默认 'interval'
+                - args: 位置参数，默认 ()
+                - kwargs: 关键字参数，默认 {}
+                - jobstore: 存储位置，默认 'default'
+                - hours/minutes/seconds: 间隔时间参数
+                - run_date: date 触发器的执行时间
+                - next_run_time: 下次执行时间
+                - max_instances: 最大并发实例数
+
+        Returns:
+            Job 对象或 None（如果添加失败）
         """
         if not task:
-            return
+            log.warn("start_job: 任务配置为空")
+            return None
 
-        if task.get('trigger') == 'interval':
-            if task.get('hours'):
-                trigger_args = {
-                    'hours': task.get('hours')
-                }
-            if task.get('minutes'):
-                trigger_args = {
-                    'minutes': task.get('minutes')
-                }
-            if task.get('seconds'):
-                trigger_args = {
-                    'seconds': task.get('seconds')
-                }
+        if not self._scheduler:
+            log.error("start_job: 调度器未启动")
+            return None
 
-            next_run_time = task.get("next_run_time")
-            if not next_run_time:
-                next_run_time = undefined
-
-            return self.SCHEDULER.add_job(func=task.get("func"), args=task.get("args"),
-                                          trigger=task.get("trigger"),
-                                          **trigger_args,
-                                          id=task.get("job_id"),
-                                          next_run_time=next_run_time,
-                                          jobstore=task.get('jobstore'),
-                                          replace_existing=True)
-        elif task.get('trigger') == 'date':
-            return self.SCHEDULER.add_job(func=task.get("func"), args=task.get("args"),
-                                          trigger=task.get("trigger"),
-                                          id=task.get("job_id"),
-                                          run_date=task.get("run_date"),
-                                          jobstore=task.get('jobstore'),
-                                          replace_existing=True)
-        else:
-            return self.SCHEDULER.add_job(func=task.get("func"), args=task.get("args"),
-                                          trigger=task.get("trigger"),
-                                          id=task.get("job_id"),
-                                          jobstore=task.get('jobstore'),
-                                          replace_existing=True)
-
-    def print_jobs(self, jobstore=None):
-        """
-        根据不同的 jobstore 打印不同的任务
-        """
-        if not self.SCHEDULER:
-            return
-
-        if jobstore:
-            self.SCHEDULER.print_jobs(jobstore=jobstore)
-        else:
-            self.SCHEDULER.print_jobs()
-
-    def remove_all_jobs(self, jobstore=None):
-        """
-        根据不同的 jobstore 移除任务
-        """
-        if not self.SCHEDULER:
-            return
-
-        if jobstore:
-            self.SCHEDULER.remove_all_jobs(jobstore=jobstore)
-        else:
-            self.SCHEDULER.remove_all_jobs()
-
-    def get_jobs(self, jobstore=None):
-        """
-        根据不同的 jobstore 获取任务
-        """
-        if not self.SCHEDULER:
-            return
-
-        if jobstore:
-            return self.SCHEDULER.get_jobs(jobstore=jobstore)
-        else:
-            return self.SCHEDULER.get_jobs()
-
-    def get_job(self, job_id, jobstore=None):
-        """
-        根据 job_id 和jobstore 获取任务
-        """
-        if not self.SCHEDULER:
-            return
-
-        return self.SCHEDULER.get_job(job_id=job_id, jobstore=jobstore)
-
-    def remove_job(self, job_id, jobstore=None):
-        """
-        根据 job_id 和jobstore 删除任务
-        """
-        if not self.SCHEDULER:
-            return
-
-        return self.SCHEDULER.remove_job(job_id=job_id, jobstore=jobstore)
-
-    def start_service(self):
-        """
-        启动服务
-        """
         try:
-            scheduler_queue.clear()
-            self.SCHEDULER = BackgroundScheduler(timezone=Config().get_timezone(),
-                                                 jobstores=self._jobstores,
-                                                 executors={
-                                                     'default': ThreadPoolExecutor(50)},
-                                                 job_defaults={
-                                                     'coalesce': True,
-                                                     'max_instances': 100,
-                                                     'misfire_grace_time': 300  # Grace period for missed jobs
-                                                 })
-            # 添加事件监听器
-            self.SCHEDULER.add_listener(self._job_event_listener, 
-                                       EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED)
-            self.SCHEDULER.start()
-        except Exception as e:
-            ExceptionUtils.exception_traceback(e)
+            # 转换为 TaskConfig
+            if isinstance(task, dict):
+                task_config = TaskConfig(
+                    job_id=task.get('job_id', ''),
+                    func=task.get('func'),
+                    trigger=task.get('trigger', 'interval'),
+                    args=tuple(task.get('args', [])),
+                    kwargs=task.get('kwargs', {}),
+                    jobstore=task.get('jobstore', 'default'),
+                    hours=task.get('hours'),
+                    minutes=task.get('minutes'),
+                    seconds=task.get('seconds'),
+                    cron=task.get('cron'),
+                    run_date=task.get('run_date'),
+                    next_run_time=task.get('next_run_time'),
+                    max_instances=task.get('max_instances', 1),
+                    misfire_grace_time=task.get('misfire_grace_time', 300),
+                    coalesce=task.get('coalesce', True)
+                )
+            else:
+                task_config = task
 
-    def _job_event_listener(self, event):
+            # 验证配置
+            task_config.validate()
+
+            # 添加到调度器
+            job = self._scheduler.add_job(**task_config.to_scheduler_args())
+
+            # 初始化统计
+            self._get_job_stats(task_config.job_id)
+
+            log.info(f"任务已添加: {task_config.job_id} (jobstore={task_config.jobstore})")
+            return job
+
+        except Exception as e:
+            log.error(f"添加任务失败: {e}")
+            ExceptionUtils.exception_traceback(e)
+            return None
+
+    def start_job_batch(self, tasks: List[Union[Dict[str, Any], TaskConfig]]) -> List[Optional[Job]]:
+        """批量启动定时任务
+
+        Args:
+            tasks: 任务配置列表
+
+        Returns:
+            添加成功的 Job 对象列表
         """
-        任务事件监听器
-        任务执行结束后清理数据库 session，防止连接池泄漏
+        results = []
+        for task in tasks:
+            job = self.start_job(task)
+            results.append(job)
+        return results
+
+    def register_interval(
+        self,
+        job_id: str,
+        func: Callable,
+        seconds: Optional[int] = None,
+        minutes: Optional[int] = None,
+        hours: Optional[int] = None,
+        args: Optional[tuple] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
+        jobstore: str = 'default',
+        next_run_time: Optional[Any] = None,
+        max_instances: int = 1,
+        misfire_grace_time: int = 300,
+        coalesce: bool = True
+    ) -> Optional[Job]:
+        """注册 interval 类型定时任务（便捷方法）
+
+        Args:
+            job_id: 任务唯一标识
+            func: 执行函数
+            seconds: 间隔秒数
+            minutes: 间隔分钟数
+            hours: 间隔小时数
+            args: 位置参数
+            kwargs: 关键字参数
+            jobstore: 存储位置
+            next_run_time: 下次执行时间
+            max_instances: 最大并发实例数
+            misfire_grace_time: 错过执行的宽限时间
+            coalesce: 是否合并错过的执行
+
+        Returns:
+            Job 对象或 None
         """
+        if not any([seconds, minutes, hours]):
+            log.warn(f"register_interval: {job_id} 需要至少设置 seconds/minutes/hours 之一")
+            return None
+        return self.start_job({
+            'job_id': job_id,
+            'func': func,
+            'trigger': 'interval',
+            'args': args or (),
+            'kwargs': kwargs or {},
+            'jobstore': jobstore,
+            'seconds': seconds,
+            'minutes': minutes,
+            'hours': hours,
+            'next_run_time': next_run_time,
+            'max_instances': max_instances,
+            'misfire_grace_time': misfire_grace_time,
+            'coalesce': coalesce
+        })
+
+    def register_date(
+        self,
+        job_id: str,
+        func: Callable,
+        run_date: datetime.datetime,
+        args: Optional[tuple] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
+        jobstore: str = 'default',
+        max_instances: int = 1,
+        misfire_grace_time: int = 60,
+        coalesce: bool = True
+    ) -> Optional[Job]:
+        """注册 date 类型一次性定时任务（便捷方法）
+
+        Args:
+            job_id: 任务唯一标识
+            func: 执行函数
+            run_date: 执行时间
+            args: 位置参数
+            kwargs: 关键字参数
+            jobstore: 存储位置
+            max_instances: 最大并发实例数
+            misfire_grace_time: 错过执行的宽限时间
+            coalesce: 是否合并错过的执行
+
+        Returns:
+            Job 对象或 None
+        """
+        return self.start_job({
+            'job_id': job_id,
+            'func': func,
+            'trigger': 'date',
+            'args': args or (),
+            'kwargs': kwargs or {},
+            'jobstore': jobstore,
+            'run_date': run_date,
+            'max_instances': max_instances,
+            'misfire_grace_time': misfire_grace_time,
+            'coalesce': coalesce
+        })
+
+    def register_cron(
+        self,
+        job_id: str,
+        func: Callable,
+        cron: str,
+        args: Optional[tuple] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
+        jobstore: str = 'default',
+        next_run_time: Optional[Any] = None,
+        max_instances: int = 1,
+        misfire_grace_time: int = 300,
+        coalesce: bool = True
+    ) -> Optional[Job]:
+        """注册 cron 类型定时任务（便捷方法）
+
+        Args:
+            job_id: 任务唯一标识
+            func: 执行函数
+            cron: cron 表达式
+            args: 位置参数
+            kwargs: 关键字参数
+            jobstore: 存储位置
+            next_run_time: 下次执行时间
+            max_instances: 最大并发实例数
+            misfire_grace_time: 错过执行的宽限时间
+            coalesce: 是否合并错过的执行
+
+        Returns:
+            Job 对象或 None
+        """
+        return self.start_job({
+            'job_id': job_id,
+            'func': func,
+            'trigger': 'cron',
+            'args': args or (),
+            'kwargs': kwargs or {},
+            'jobstore': jobstore,
+            'cron': cron,
+            'next_run_time': next_run_time,
+            'max_instances': max_instances,
+            'misfire_grace_time': misfire_grace_time,
+            'coalesce': coalesce
+        })
+
+    def print_jobs(self, jobstore: Optional[str] = None) -> None:
+        """打印任务列表
+
+        Args:
+            jobstore: 指定 jobstore，None 表示全部
+        """
+        if not self._scheduler:
+            log.warn("print_jobs: 调度器未启动")
+            return
+
+        try:
+            if jobstore:
+                self._scheduler.print_jobs(jobstore=jobstore)
+            else:
+                self._scheduler.print_jobs()
+        except Exception as e:
+            log.error(f"打印任务列表失败: {e}")
+
+    def remove_all_jobs(self, jobstore: Optional[str] = None) -> bool:
+        """移除所有任务
+
+        Args:
+            jobstore: 指定 jobstore，None 表示全部
+
+        Returns:
+            是否成功
+        """
+        if not self._scheduler:
+            log.warn("remove_all_jobs: 调度器未启动")
+            return False
+
+        try:
+            if jobstore:
+                self._scheduler.remove_all_jobs(jobstore=jobstore)
+                log.info(f"已移除 jobstore '{jobstore}' 的所有任务")
+            else:
+                self._scheduler.remove_all_jobs()
+                log.info("已移除所有任务")
+            return True
+        except Exception as e:
+            log.error(f"移除任务失败: {e}")
+            return False
+
+    def get_jobs(self, jobstore: Optional[str] = None) -> List[Job]:
+        """获取任务列表
+
+        Args:
+            jobstore: 指定 jobstore，None 表示全部
+
+        Returns:
+            Job 对象列表
+        """
+        if not self._scheduler:
+            return []
+
+        try:
+            if jobstore:
+                return self._scheduler.get_jobs(jobstore=jobstore)
+            else:
+                return self._scheduler.get_jobs()
+        except Exception as e:
+            log.error(f"获取任务列表失败: {e}")
+            return []
+
+    def get_job(self, job_id: str, jobstore: Optional[str] = None) -> Optional[Job]:
+        """获取单个任务
+
+        Args:
+            job_id: 任务 ID
+            jobstore: 指定 jobstore
+
+        Returns:
+            Job 对象或 None
+        """
+        if not self._scheduler:
+            return None
+
+        try:
+            return self._scheduler.get_job(job_id=job_id, jobstore=jobstore)
+        except Exception as e:
+            log.error(f"获取任务 {job_id} 失败: {e}")
+            return None
+
+    def remove_job(self, job_id: str, jobstore: Optional[str] = None) -> bool:
+        """移除单个任务
+
+        Args:
+            job_id: 任务 ID
+            jobstore: 指定 jobstore
+
+        Returns:
+            是否成功
+        """
+        if not self._scheduler:
+            log.warn(f"remove_job: 调度器未启动，无法移除 {job_id}")
+            return False
+
+        try:
+            self._scheduler.remove_job(job_id=job_id, jobstore=jobstore)
+            log.info(f"任务已移除: {job_id}")
+            # 清理统计
+            with self._lock:
+                if job_id in self._job_stats:
+                    del self._job_stats[job_id]
+            return True
+        except Exception as e:
+            log.error(f"移除任务 {job_id} 失败: {e}")
+            return False
+
+    def pause_job(self, job_id: str, jobstore: Optional[str] = None) -> bool:
+        """暂停任务
+
+        Args:
+            job_id: 任务 ID
+            jobstore: 指定 jobstore
+
+        Returns:
+            是否成功
+        """
+        job = self.get_job(job_id, jobstore)
+        if not job:
+            log.warn(f"pause_job: 任务 {job_id} 不存在")
+            return False
+
+        try:
+            job.pause()
+            log.info(f"任务已暂停: {job_id}")
+            return True
+        except Exception as e:
+            log.error(f"暂停任务 {job_id} 失败: {e}")
+            return False
+
+    def resume_job(self, job_id: str, jobstore: Optional[str] = None) -> bool:
+        """恢复任务
+
+        Args:
+            job_id: 任务 ID
+            jobstore: 指定 jobstore
+
+        Returns:
+            是否成功
+        """
+        job = self.get_job(job_id, jobstore)
+        if not job:
+            log.warn(f"resume_job: 任务 {job_id} 不存在")
+            return False
+
+        try:
+            job.resume()
+            # 清除重试计数
+            self._clear_retry_count(job_id)
+            log.info(f"任务已恢复: {job_id}")
+            return True
+        except Exception as e:
+            log.error(f"恢复任务 {job_id} 失败: {e}")
+            return False
+
+    def modify_job(self, job_id: str, jobstore: Optional[str] = None,
+                   **changes: Any) -> bool:
+        """修改任务配置
+
+        Args:
+            job_id: 任务 ID
+            jobstore: 指定 jobstore
+            **changes: 要修改的参数
+
+        Returns:
+            是否成功
+        """
+        job = self.get_job(job_id, jobstore)
+        if not job:
+            log.warn(f"modify_job: 任务 {job_id} 不存在")
+            return False
+
+        try:
+            job.modify(**changes)
+            log.info(f"任务已修改: {job_id}, 变更: {changes}")
+            return True
+        except Exception as e:
+            log.error(f"修改任务 {job_id} 失败: {e}")
+            return False
+
+    def start_service(self) -> bool:
+        """启动调度器服务
+
+        Returns:
+            是否成功启动
+        """
+        if self._scheduler and self._running:
+            log.warn("调度器服务已经在运行中")
+            return True
+
+        try:
+
+            # 创建调度器（每次启动都使用新的 jobstore 实例，避免任务残留）
+            self._scheduler = BackgroundScheduler(
+                timezone=Config().get_timezone(),
+                jobstores={
+                    'default': MemoryJobStore(),
+                    'brushtask': MemoryJobStore(),
+                    'rsscheck': MemoryJobStore(),
+                    'torrent_remove': MemoryJobStore(),
+                    'download': MemoryJobStore(),
+                    'plugin': MemoryJobStore()
+                },
+                executors=self.DEFAULT_EXECUTORS.copy(),
+                job_defaults=self.DEFAULT_JOB_DEFAULTS.copy()
+            )
+
+            # 添加事件监听器
+            self._scheduler.add_listener(
+                self._job_event_listener,
+                EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED
+            )
+
+            # 启动调度器
+            self._scheduler.start()
+            self._running = True
+
+            log.info("调度器服务已启动")
+            return True
+
+        except Exception as e:
+            log.error(f"启动调度器服务失败: {e}")
+            ExceptionUtils.exception_traceback(e)
+            self._cleanup()
+            return False
+
+    def _cleanup(self) -> None:
+        """清理资源"""
+        self._scheduler = None
+        self._running = False
+        self._job_start_times.clear()
+
+    def stop_service(self) -> bool:
+        """停止调度器服务
+
+        Returns:
+            是否成功停止
+        """
+        if not self._scheduler:
+            log.warn("stop_service: 调度器未运行")
+            return True
+
+        try:
+            # 停止所有任务
+            self._scheduler.remove_all_jobs()
+
+            # 关闭调度器
+            self._scheduler.shutdown(wait=True)
+
+            # 清理资源
+            self._cleanup()
+
+            # 清理数据库 session
+            try:
+                remove_session()
+            except Exception:
+                pass
+
+            log.info("调度器服务已停止")
+            return True
+
+        except Exception as e:
+            log.error(f"停止调度器服务失败: {e}")
+            ExceptionUtils.exception_traceback(e)
+            return False
+
+    def _job_event_listener(self, event: JobExecutionEvent) -> None:
+        """任务事件监听器
+
+        处理任务执行完成、失败、错过等事件，
+        同时清理数据库 session 防止连接池泄漏。
+
+        Args:
+            event: APScheduler 事件对象
+        """
+        job_id = event.job_id
+
         # 清理当前线程的数据库 session
         try:
             remove_session()
         except Exception:
             pass
-        
-        if event.code == EVENT_JOB_EXECUTED:
-            log.info(f"任务执行成功: {event.job_id}")
-        elif event.code == EVENT_JOB_ERROR:
-            log.error(f"任务执行失败: {event.job_id}, 异常: {event.exception}")
-            # 失败重试逻辑
-            self._retry_failed_job(event.job_id)
-        elif event.code == EVENT_JOB_MISSED:
-            log.warn(f"任务错过执行: {event.job_id}")
 
-    def _retry_failed_job(self, job_id, max_retries=3):
-        """
-        失败任务重试
-        使用 Redis 存储重试次数，因为 APScheduler 的 Job 对象没有 retries 属性
+        if event.code == EVENT_JOB_EXECUTED:
+            self._handle_job_success(job_id, event)
+        elif event.code == EVENT_JOB_ERROR:
+            self._handle_job_failure(job_id, event)
+        elif event.code == EVENT_JOB_MISSED:
+            self._handle_job_missed(job_id, event)
+
+    def _handle_job_success(self, job_id: str, event: JobExecutionEvent) -> None:
+        """处理任务成功执行"""
+        # 计算执行时间
+        start_time = self._job_start_times.pop(job_id, None)
+        duration = time.time() - start_time if start_time else 0
+
+        # 更新统计
+        stats = self._get_job_stats(job_id)
+        stats.record_success(duration)
+
+        # 清除重试计数
+        self._clear_retry_count(job_id)
+
+        log.info(f"任务执行成功: {job_id}, 耗时: {duration:.3f}s")
+
+    def _handle_job_failure(self, job_id: str, event: JobExecutionEvent) -> None:
+        """处理任务执行失败"""
+        exception = event.exception if hasattr(event, 'exception') else 'Unknown error'
+        traceback = event.traceback if hasattr(event, 'traceback') else ''
+
+        # 更新统计
+        stats = self._get_job_stats(job_id)
+        stats.record_failure(str(exception))
+
+        log.error(f"任务执行失败: {job_id}, 异常: {exception}")
+        if traceback:
+            log.debug(f"任务 {job_id} 异常堆栈:\n{traceback}")
+
+        # 尝试重试
+        self._retry_failed_job(job_id)
+
+    def _handle_job_missed(self, job_id: str, event: JobExecutionEvent) -> None:
+        """处理任务错过执行"""
+        log.warn(f"任务错过执行: {job_id}")
+
+    def _get_retry_key(self, job_id: str) -> str:
+        """获取重试计数在 Redis 中的 key"""
+        return f"scheduler:retry:{self._instance_id}:{job_id}"
+
+    def _get_retry_count(self, job_id: str) -> int:
+        """获取任务重试次数"""
+        if not self._redis_store:
+            return 0
+        try:
+            retry_key = self._get_retry_key(job_id)
+            count = self._redis_store.get(retry_key)
+            return int(count) if count else 0
+        except Exception as e:
+            log.error(f"获取重试次数失败 {job_id}: {e}")
+            return 0
+
+    def _set_retry_count(self, job_id: str, count: int) -> bool:
+        """设置任务重试次数"""
+        if not self._redis_store:
+            return False
+        try:
+            retry_key = self._get_retry_key(job_id)
+            self._redis_store.set(retry_key, count, ex=3600)  # 1小时过期
+            return True
+        except Exception as e:
+            log.error(f"设置重试次数失败 {job_id}: {e}")
+            return False
+
+    def _clear_retry_count(self, job_id: str) -> bool:
+        """清除任务重试次数"""
+        if not self._redis_store:
+            return False
+        try:
+            retry_key = self._get_retry_key(job_id)
+            self._redis_store.delete(retry_key)
+            return True
+        except Exception as e:
+            log.error(f"清除重试次数失败 {job_id}: {e}")
+            return False
+
+    def _retry_failed_job(self, job_id: str) -> bool:
+        """重试失败的任务
+
+        使用延迟调度方式重新执行失败的任务，
+        最多重试 MAX_RETRY_COUNT 次。
+
+        Args:
+            job_id: 任务 ID
+
+        Returns:
+            是否成功安排重试
         """
         job = self.get_job(job_id)
         if not job:
-            return
-        
-        # 使用 Redis 存储重试次数
-        retry_key = f"scheduler:retry:{job_id}"
-        try:
-            retries = int(self.redis_store.get(retry_key) or 0)
-        except Exception:
-            retries = 0
-        
-        if retries < max_retries:
-            self.redis_store.set(retry_key, retries + 1, ex=3600)  # 1小时过期
-            log.info(f"准备重试任务 {job_id}, 重试次数: {retries + 1}")
-            self.reschedule_job(job_id, jobstore=job.jobstore)
-        else:
-            log.error(f"任务 {job_id} 已达到最大重试次数 {max_retries}, 不再重试")
-            # 清除重试计数
-            self.redis_store.delete(retry_key)
+            log.warn(f"_retry_failed_job: 任务 {job_id} 不存在，无法重试")
+            return False
 
-    def reschedule_job(self, job_id, jobstore=None):
-        """
-        重新调度任务
-        """
-        job = self.get_job(job_id, jobstore)
-        if not job:
-            return
-            
-        trigger = job.trigger
-        next_run_time = trigger.get_next_fire_time(None, datetime.datetime.now())
-        if next_run_time:
-            job.modify(next_run_time=next_run_time)
+        # 检查重试次数
+        retry_count = self._get_retry_count(job_id)
 
-    def stop_service(self):
-        """
-        停止定时服务
-        """
+        if retry_count >= self.MAX_RETRY_COUNT:
+            log.error(f"任务 {job_id} 已达到最大重试次数 {self.MAX_RETRY_COUNT}")
+            self._clear_retry_count(job_id)
+            return False
+
+        # 增加重试计数
+        self._set_retry_count(job_id, retry_count + 1)
+
+        # 更新统计
+        stats = self._get_job_stats(job_id)
+        stats.record_retry()
+
+        # 计算重试延迟（指数退避）
+        delay = self.RETRY_DELAY * (2 ** retry_count)
+        next_run_time = datetime.datetime.now() + datetime.timedelta(seconds=delay)
+
         try:
-            if self.SCHEDULER:
-                self.SCHEDULER.remove_all_jobs()
-                self.SCHEDULER.shutdown()
-                self.SCHEDULER = None
+            # 使用 add_job 创建一次性重试任务
+            retry_job_id = f"{job_id}_retry_{retry_count + 1}"
+            jobstore = getattr(job, '_jobstore_alias', 'default')
+            self._scheduler.add_job(
+                func=job.func,
+                args=job.args,
+                kwargs=job.kwargs,
+                trigger='date',
+                run_date=next_run_time,
+                id=retry_job_id,
+                jobstore=jobstore,
+                replace_existing=True,
+                misfire_grace_time=60
+            )
+
+            log.info(f"任务 {job_id} 已安排重试 #{retry_count + 1}, "
+                    f"将在 {delay} 秒后执行 ({next_run_time.strftime('%Y-%m-%d %H:%M:%S')})")
+            return True
+
         except Exception as e:
-            ExceptionUtils.exception_traceback(e)
+            log.error(f"安排任务 {job_id} 重试失败: {e}")
+            return False
+
+    def get_job_statistics(self, job_id: Optional[str] = None) -> Union[Dict[str, Any], Dict[str, Dict[str, Any]]]:
+        """获取任务执行统计
+
+        Args:
+            job_id: 指定任务 ID，None 返回所有统计
+
+        Returns:
+            任务统计字典
+        """
+        with self._lock:
+            if job_id:
+                stats = self._job_stats.get(job_id)
+                return stats.to_dict() if stats else {}
+            else:
+                return {jid: stats.to_dict() for jid, stats in self._job_stats.items()}
+
+    def reset_job_statistics(self, job_id: Optional[str] = None) -> bool:
+        """重置任务执行统计
+
+        Args:
+            job_id: 指定任务 ID，None 重置所有
+
+        Returns:
+            是否成功
+        """
+        with self._lock:
+            if job_id:
+                if job_id in self._job_stats:
+                    self._job_stats[job_id] = JobStats(job_id=job_id)
+                    log.info(f"任务 {job_id} 统计已重置")
+                    return True
+                return False
+            else:
+                self._job_stats.clear()
+                log.info("所有任务统计已重置")
+                return True
+
+    def get_service_status(self) -> Dict[str, Any]:
+        """获取调度器服务状态
+
+        Returns:
+            服务状态字典
+        """
+        status = {
+            'running': self._running,
+            'instance_id': self._instance_id,
+            'job_count': 0,
+            'jobstores': list(self.DEFAULT_JOBSTORES.keys()),
+            'statistics': self.get_job_statistics()
+        }
+
+        if self._scheduler:
+            try:
+                status['job_count'] = len(self._scheduler.get_jobs())
+            except Exception:
+                pass
+
+        return status
