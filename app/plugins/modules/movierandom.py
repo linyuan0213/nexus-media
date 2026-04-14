@@ -16,8 +16,6 @@ from app.subscribe import Subscribe
 from app.utils.types import SearchType, RssType, MediaType
 from config import Config
 
-from app.scheduler_service import SchedulerService
-from app.queue import scheduler_queue
 
 
 class MovieRandom(_IPluginModule):
@@ -273,7 +271,6 @@ class MovieRandom(_IPluginModule):
             self._vote = config.get("vote")
             self._date = config.get("date")
 
-        self._scheduler = SchedulerService()
         # 停止现有任务
         self.stop_service()
         self.run_service()
@@ -283,27 +280,19 @@ class MovieRandom(_IPluginModule):
         if self.get_state() or self._onlyonce:
             if self._cron:
                 self.info(f"电影随机服务启动，周期：{self._cron}")
-                scheduler_queue.put({
-                        "func_str": "MovieRandom.random_movie",
-                        "type": 'plugin',
-                        "args": [],
-                        "job_id": "MovieRandom.random_movie_1",
-                        "trigger": CronTrigger.from_crontab(self._cron),
-                        "jobstore": self._jobstore
-                    })
+                self.register_cron(
+                    job_id="MovieRandom.random_movie_1",
+                    func=self.random_movie,
+                    cron=str(self._cron),
+                )
 
             if self._onlyonce:
                 self.info("电影随机服务启动，立即运行一次")
-                scheduler_queue.put({
-                        "func_str": "MovieRandom.random_movie",
-                        "type": 'plugin',
-                        "args": [],
-                        "job_id": "MovieRandom.random_movie_once",
-                        "trigger": "date",
-                        "run_date": datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(
-                                                                seconds=3),
-                        "jobstore": self._jobstore
-                    })
+                self.register_date(
+                    job_id="MovieRandom.random_movie_once",
+                    func=self.random_movie,
+                    run_date=datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3),
+                )
 
                 # 关闭一次性开关
                 self._onlyonce = False
@@ -488,13 +477,9 @@ class MovieRandom(_IPluginModule):
                and self._cron
 
     def stop_service(self):
-        """
-        停止服务
-        """
         try:
-            if self._scheduler and self._scheduler.SCHEDULER:
-                for job in self._scheduler.get_jobs(self._jobstore):
-                    if 'random_movie' in job.name:
-                        self._scheduler.remove_job(job.id, self._jobstore)
+            for job_id in self._job_ids:
+                self.remove_job(job_id)
+            self._job_ids.clear()
         except Exception as e:
             print(str(e))

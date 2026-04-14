@@ -18,8 +18,6 @@ from app.utils.types import SearchType, RssType, EventType, MediaType
 from config import Config
 from web.backend.web_utils import WebUtils
 
-from app.scheduler_service import SchedulerService
-from app.queue import scheduler_queue
 
 lock = Lock()
 
@@ -108,7 +106,6 @@ class DoubanSync(_IPluginModule):
             if self._types:
                 if isinstance(self._types, str):
                     self._types = self._types.split(',')
-        self._scheduler = SchedulerService()
         # 停止现有任务
         self.stop_service()
         self.run_service()
@@ -118,40 +115,27 @@ class DoubanSync(_IPluginModule):
         if self.get_state() or self._onlyonce:
             if self._interval:
                 self.info(f"豆瓣全量同步服务启动，周期：{self._interval} 小时，类型：{self._types}，用户：{self._users}")
-                scheduler_queue.put({
-                        "func_str": "DoubanSync.sync",
-                        "type": 'plugin',
-                        "args": [],
-                        "job_id": "DoubanSync.sync_1",
-                        "trigger": "interval",
-                        "hours": self._interval,
-                        "jobstore": self._jobstore
-                    })
+                self.register_interval(
+                    job_id="DoubanSync.sync_1",
+                    func=self.sync,
+                    hours=self._interval,
+                )
 
             if self._rss_interval:
                 self.info(f"豆瓣近期动态同步服务启动，周期：{self._rss_interval} 秒，类型：{self._types}，用户：{self._users}")
-                scheduler_queue.put({
-                        "func_str": "DoubanSync.sync",
-                        "type": 'plugin',
-                        "args": [],
-                        "job_id": "DoubanSync.sync_2",
-                        "trigger": "interval",
-                        "seconds": self._rss_interval,
-                        "jobstore": self._jobstore
-                    })
+                self.register_interval(
+                    job_id="DoubanSync.sync_2",
+                    func=self.sync,
+                    seconds=self._rss_interval,
+                )
 
             if self._onlyonce:
                 self.info("豆瓣同步服务启动，立即运行一次")
-                scheduler_queue.put({
-                        "func_str": "DoubanSync.sync",
-                        "type": 'plugin',
-                        "args": [],
-                        "job_id": "DoubanSync.sync_once",
-                        "trigger": "date",
-                        "run_date": datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(
-                                                                seconds=3),
-                        "jobstore": self._jobstore
-                    })
+                self.register_date(
+                    job_id="DoubanSync.sync_once",
+                    func=self.sync,
+                    run_date=datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3),
+                )
 
                 # 关闭一次性开关
                 self._onlyonce = False
@@ -450,14 +434,10 @@ class DoubanSync(_IPluginModule):
         }
 
     def stop_service(self):
-        """
-        停止服务
-        """
         try:
-            if self._scheduler and self._scheduler.SCHEDULER:
-                for job in self._scheduler.get_jobs(self._jobstore):
-                    if 'DoubanSync.sync' in job.name:
-                        self._scheduler.remove_job(job.id, self._jobstore)
+            for job_id in self._job_ids:
+                self.remove_job(job_id)
+            self._job_ids.clear()
         except Exception as e:
             print(str(e))
 

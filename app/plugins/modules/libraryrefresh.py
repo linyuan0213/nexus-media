@@ -5,8 +5,6 @@ from app.utils.types import EventType
 from datetime import datetime, timedelta
 from app.utils import ExceptionUtils
 
-from app.scheduler_service import SchedulerService
-from app.queue import scheduler_queue
 
 
 class LibraryRefresh(_IPluginModule):
@@ -53,7 +51,6 @@ class LibraryRefresh(_IPluginModule):
                 ExceptionUtils.exception_traceback(e)
                 self._refresh_delay = 0
 
-        self._scheduler = SchedulerService()
         self.stop_service()
 
         if not self._enable:
@@ -104,16 +101,12 @@ class LibraryRefresh(_IPluginModule):
         ]
 
     def stop_service(self):
-        """
-        退出插件
-        """
         try:
-            if self._scheduler and self._scheduler.SCHEDULER:
-                for job in self._scheduler.get_jobs(self._jobstore):
-                    if 'refresh_library' in job.name:
-                        self._scheduler.remove_job(job.id, self._jobstore)
-                        self._event.set()
-                        self._event.clear()
+            for job_id in self._job_ids:
+                self.remove_job(job_id)
+            self._job_ids.clear()
+            self._event.set()
+            self._event.clear()
         except Exception as e:
             print(str(e))
 
@@ -157,15 +150,12 @@ class LibraryRefresh(_IPluginModule):
             # 使用 date 触发器添加任务到调度器
             formatted_run_date = run_date.strftime("%Y-%m-%d %H:%M:%S")
             self.info(f"新增延迟刷新任务，将在 {formatted_run_date} 刷新媒体库")
-            scheduler_queue.put({
-                        "func_str": "LibraryRefresh.refresh_library",
-                        "type": 'plugin',
-                        "args": [event.event_data],
-                        "job_id": "LibraryRefresh.refresh_library_once",
-                        "trigger": "date",
-                        "run_date": run_date,
-                        "jobstore": self._jobstore
-                    })
+            self.register_date(
+                job_id="LibraryRefresh.refresh_library_once",
+                func=self.refresh_library,
+                run_date=run_date,
+                args=(event.event_data,),
+            )
 
         else:
             # 不延迟刷新

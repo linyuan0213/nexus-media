@@ -9,7 +9,6 @@ from app.message import Message
 from app.utils import ExceptionUtils
 from app.utils.commons import SingletonMeta
 from app.scheduler_service import SchedulerService
-from app.queue import scheduler_queue
 
 lock = Lock()
 
@@ -21,6 +20,7 @@ class TorrentRemover(metaclass=SingletonMeta):
 
     _scheduler = None
     _jobstore = "torrent_remove"
+    _job_ids = []
     _remove_tasks = {}
 
     def __init__(self):
@@ -63,18 +63,21 @@ class TorrentRemover(metaclass=SingletonMeta):
             return
         # 启动删种任务
         self._scheduler = SchedulerService()
+        self._job_ids.clear()
         remove_flag = False
         for task in self._remove_tasks.values():
             if task.get("enabled") and task.get("interval") and task.get("config"):
                 remove_flag = True
-                scheduler_queue.put({
-                                    "func_str": "TorrentRemover.auto_remove_torrents",
-                                    "args": [task.get("id")],
-                                    "job_id": f"TorrentRemover.auto_remove_torrents_{task.get('id')}",
-                                    "trigger": "interval",
-                                    "seconds": int(task.get("interval")) * 60,
-                                    "jobstore": self._jobstore
-                                    })
+                job_id = f"TorrentRemover.auto_remove_torrents_{task.get('id')}"
+                self._scheduler.start_job({
+                    "func": self.auto_remove_torrents,
+                    "args": (task.get("id"),),
+                    "job_id": job_id,
+                    "trigger": "interval",
+                    "seconds": int(task.get("interval")) * 60,
+                    "jobstore": self._jobstore
+                })
+                self._job_ids.append(job_id)
 
         if remove_flag:
             log.info("自动删种服务启动")
@@ -318,7 +321,9 @@ class TorrentRemover(metaclass=SingletonMeta):
         停止服务
         """
         try:
-            if self._scheduler and self._scheduler.SCHEDULER:
-                self._scheduler.remove_all_jobs(self._jobstore)
+            if self._scheduler:
+                for job_id in self._job_ids:
+                    self._scheduler.remove_job(job_id)
+                self._job_ids.clear()
         except Exception as e:
             print(str(e))

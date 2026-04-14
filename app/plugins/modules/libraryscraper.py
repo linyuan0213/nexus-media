@@ -10,8 +10,6 @@ from app.plugins.modules._base import _IPluginModule
 from app.utils.types import EventType
 from config import Config
 
-from app.scheduler_service import SchedulerService
-from app.queue import scheduler_queue
 
 
 class LibraryScraper(_IPluginModule):
@@ -154,7 +152,6 @@ class LibraryScraper(_IPluginModule):
             self._scraper_path = config.get("scraper_path")
             self._exclude_path = config.get("exclude_path")
 
-        self._scheduler = SchedulerService()
         # 停止现有任务
         self.stop_service()
         self.run_service()
@@ -164,27 +161,19 @@ class LibraryScraper(_IPluginModule):
         if self.get_state() or self._onlyonce:
             if self._cron:
                 self.info(f"刮削服务启动，周期：{self._cron}")
-                scheduler_queue.put({
-                        "func_str": "LibraryScraper.libraryscraper",
-                        "type": 'plugin',
-                        "args": [],
-                        "job_id": "LibraryScraper.libraryscraper_1",
-                        "trigger": CronTrigger.from_crontab(self._cron),
-                        "jobstore": self._jobstore
-                    })
+                self.register_cron(
+                    job_id="LibraryScraper.libraryscraper_1",
+                    func=self.libraryscraper,
+                    cron=str(self._cron),
+                )
 
             if self._onlyonce:
                 self.info("刮削服务启动，立即运行一次")
-                scheduler_queue.put({
-                        "func_str": "LibraryScraper.libraryscraper",
-                        "type": 'plugin',
-                        "args": [],
-                        "job_id": "LibraryScraper.libraryscraper_once",
-                        "trigger": "date",
-                        "run_date": datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(
-                                                                seconds=3),
-                        "jobstore": self._jobstore
-                    })
+                self.register_date(
+                    job_id="LibraryScraper.libraryscraper_once",
+                    func=self.libraryscraper,
+                    run_date=datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3),
+                )
 
                 # 关闭一次性开关
                 self._onlyonce = False
@@ -236,15 +225,11 @@ class LibraryScraper(_IPluginModule):
         self.info("媒体库刮削完成")
 
     def stop_service(self):
-        """
-        退出插件
-        """
         try:
-            if self._scheduler and self._scheduler.SCHEDULER:
-                for job in self._scheduler.get_jobs(self._jobstore):
-                    if 'libraryscraper' in job.name:
-                        self._scheduler.remove_job(job.id, self._jobstore)
-                        self._event.set()
-                        self._event.clear()
+            for job_id in self._job_ids:
+                self.remove_job(job_id)
+            self._job_ids.clear()
+            self._event.set()
+            self._event.clear()
         except Exception as e:
             print(str(e))

@@ -27,7 +27,6 @@ from app.utils import StringUtils, ExceptionUtils, JsonUtils
 from app.utils.types import BrushDeleteType, BrushStopType, MediaType
 
 from app.scheduler_service import SchedulerService
-from app.queue import scheduler_queue
 from app.utils import RedisStore
 
 
@@ -42,6 +41,7 @@ class BrushTask(metaclass=SingletonMeta):
     redis_store = None
     _scheduler = None
     _jobstore = "brushtask"
+    _job_ids = []
     _brush_tasks = {}
     _torrents_cache = []
     _qb_client = "qbittorrent"
@@ -68,6 +68,7 @@ class BrushTask(metaclass=SingletonMeta):
         # 启动RSS任务
         if self._brush_tasks:
             self._scheduler = SchedulerService()
+            self._job_ids.clear()
             # running_task 计数
             running_task = 0
             for _, task in self._brush_tasks.items():
@@ -77,64 +78,79 @@ class BrushTask(metaclass=SingletonMeta):
                     cron = str(task.get("interval")).strip()
                     if cron.isdigit():
                         if task.get("state") == 'Y':
-                            scheduler_queue.put({
-                                                "func_str": "BrushTask.check_task_rss",
-                                                "args": [task.get("id")],
-                                                "job_id": f"BrushTask.check_task_rss_{task.get('id')}",
-                                                "trigger": "interval",
-                                                "seconds": int(cron) * 60,
-                                                "jobstore": self._jobstore
-                                                })
+                            job_id = f"BrushTask.check_task_rss_{task.get('id')}"
+                            self._scheduler.start_job({
+                                "func": self.check_task_rss,
+                                "args": (task.get("id"),),
+                                "job_id": job_id,
+                                "trigger": "interval",
+                                "seconds": int(cron) * 60,
+                                "jobstore": self._jobstore
+                            })
+                            self._job_ids.append(job_id)
                             running_task = running_task + 1
                         # 启动停种任务
-                        scheduler_queue.put({
-                                "func_str": "BrushTask.stop_task_torrents",
-                                "args": [task.get("id")],
-                                "job_id": f"BrushTask.stop_task_torrents_{task.get('id')}",
-                                "trigger": "interval",
-                                "seconds": int(cron) * 60,
-                                "jobstore": self._jobstore
-                                })
+                        job_id = f"BrushTask.stop_task_torrents_{task.get('id')}"
+                        self._scheduler.start_job({
+                            "func": self.stop_task_torrents,
+                            "args": (task.get("id"),),
+                            "job_id": job_id,
+                            "trigger": "interval",
+                            "seconds": int(cron) * 60,
+                            "jobstore": self._jobstore
+                        })
+                        self._job_ids.append(job_id)
                         # 启动删种任务
-                        scheduler_queue.put({
-                                "func_str": "BrushTask.remove_task_torrents",
-                                "args": [task.get("id")],
-                                "job_id": f"BrushTask.remove_task_torrents_{task.get('id')}",
-                                "trigger": "interval",
-                                "seconds": int(cron) * 60,
-                                "jobstore": self._jobstore
-                                })
+                        job_id = f"BrushTask.remove_task_torrents_{task.get('id')}"
+                        self._scheduler.start_job({
+                            "func": self.remove_task_torrents,
+                            "args": (task.get("id"),),
+                            "job_id": job_id,
+                            "trigger": "interval",
+                            "seconds": int(cron) * 60,
+                            "jobstore": self._jobstore
+                        })
+                        self._job_ids.append(job_id)
                     elif cron.count(" ") == 4:
                         if task.get("state") == 'Y':
                             try:
-                                scheduler_queue.put({
-                                    "func_str": "BrushTask.check_task_rss",
-                                                "args": [task.get("id")],
-                                                "job_id": f"BrushTask.check_task_rss_{task.get('id')}",
-                                                "trigger": CronTrigger.from_crontab(cron),
-                                                "jobstore": self._jobstore
+                                job_id = f"BrushTask.check_task_rss_{task.get('id')}"
+                                self._scheduler.start_job({
+                                    "func": self.check_task_rss,
+                                    "args": (task.get("id"),),
+                                    "job_id": job_id,
+                                    "trigger": "cron",
+                                    "cron": cron,
+                                    "jobstore": self._jobstore
                                 })
+                                self._job_ids.append(job_id)
                                 running_task = running_task + 1
                             except Exception as err:
                                 log.error(
                                     f"任务 {task.get('name')} 运行周期格式不正确：{str(err)}")
                         try:
                             # 启动停种任务
-                            scheduler_queue.put({
-                                    "func_str": "BrushTask.stop_task_torrents",
-                                    "args": [task.get("id")],
-                                    "job_id": f"BrushTask.stop_task_torrents_{task.get('id')}",
-                                    "trigger": CronTrigger.from_crontab(cron),
-                                    "jobstore": self._jobstore
-                                    })
+                            job_id = f"BrushTask.stop_task_torrents_{task.get('id')}"
+                            self._scheduler.start_job({
+                                "func": self.stop_task_torrents,
+                                "args": (task.get("id"),),
+                                "job_id": job_id,
+                                "trigger": "cron",
+                                "cron": cron,
+                                "jobstore": self._jobstore
+                            })
+                            self._job_ids.append(job_id)
                             # 启动删种任务
-                            scheduler_queue.put({
-                                    "func_str": "BrushTask.remove_task_torrents",
-                                    "args": [task.get("id")],
-                                    "job_id": f"BrushTask.remove_task_torrents_{task.get('id')}",
-                                    "trigger": CronTrigger.from_crontab(cron),
-                                    "jobstore": self._jobstore
-                                    })
+                            job_id = f"BrushTask.remove_task_torrents_{task.get('id')}"
+                            self._scheduler.start_job({
+                                "func": self.remove_task_torrents,
+                                "args": (task.get("id"),),
+                                "job_id": job_id,
+                                "trigger": "cron",
+                                "cron": cron,
+                                "jobstore": self._jobstore
+                            })
+                            self._job_ids.append(job_id)
                         except Exception as err:
                             log.error(
                                 f"任务 {task.get('name')} 运行周期格式不正确：{str(err)}")
@@ -993,8 +1009,10 @@ class BrushTask(metaclass=SingletonMeta):
         停止服务
         """
         try:
-            if self._scheduler and self._scheduler.SCHEDULER:
-                self._scheduler.remove_all_jobs(jobstore=self._jobstore)
+            if self._scheduler:
+                for job_id in self._job_ids:
+                    self._scheduler.remove_job(job_id)
+                self._job_ids.clear()
         except Exception as e:
             print(str(e))
 

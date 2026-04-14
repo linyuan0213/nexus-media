@@ -1,6 +1,8 @@
 import json
 import os
+import datetime
 from abc import ABCMeta, abstractmethod
+from typing import Optional, Callable, Any, Dict
 
 import log
 from app.conf import SystemConfig
@@ -32,6 +34,9 @@ class _IPluginModule(metaclass=ABCMeta):
     - update_history() 更新插件运行数据
     - delete_history() 删除插件运行数据
     - get_command() 获取插件命令，使用消息机制通过远程控制
+    - register_interval() / register_date() / register_cron() 注册定时任务
+    - remove_job() 移除定时任务
+    - start_job() 启动定时任务
 
     """
     # 插件名称
@@ -54,6 +59,10 @@ class _IPluginModule(metaclass=ABCMeta):
     module_order = 0
     # 可使用的用户级别
     auth_level = 1
+
+    _scheduler = None
+    _jobstore = 'plugin'
+    _job_ids = []
 
     @staticmethod
     @abstractmethod
@@ -222,3 +231,170 @@ class _IPluginModule(metaclass=ABCMeta):
         :param msg: 日志信息
         """
         log.debug(f"【Plugin】{self.module_name} - {msg}")
+
+    def _get_scheduler(self):
+        """
+        获取调度器服务实例（懒加载）
+        """
+        if self._scheduler is None:
+            from app.scheduler_service import SchedulerService
+            self._scheduler = SchedulerService()
+        return self._scheduler
+
+    def start_job(self, task: dict):
+        """
+        启动单个定时任务（兼容旧版字典方式）
+        :param task: 任务配置字典
+        """
+        scheduler = self._get_scheduler()
+        self._job_ids.append(task.get("job_id"))
+        return scheduler.start_job(task)
+
+    def start_schedule_job(self, job_id: str, func: Callable, func_desc: str, cron: str,
+                           next_run_time: Optional[Any] = None):
+        """
+        启动带 cron/时间范围/固定时间解析的定时任务（封装 SchedulerUtils.start_job）
+        :param job_id: 任务ID
+        :param func: 执行函数
+        :param func_desc: 功能描述
+        :param cron: cron表达式/时间范围/固定时间/间隔小时数
+        :param next_run_time: 下次运行时间
+        """
+        from app.utils import SchedulerUtils
+        scheduler = self._get_scheduler()
+        self._job_ids.append(job_id)
+        return SchedulerUtils.start_job(
+            scheduler=scheduler.SCHEDULER,
+            func=func,
+            job_id=job_id,
+            func_desc=func_desc,
+            cron=cron,
+            next_run_time=next_run_time
+        )
+
+    def register_interval(
+        self,
+        job_id: str,
+        func: Callable,
+        seconds: Optional[int] = None,
+        minutes: Optional[int] = None,
+        hours: Optional[int] = None,
+        args: Optional[tuple] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
+        next_run_time: Optional[Any] = None,
+        max_instances: int = 1,
+        misfire_grace_time: int = 300,
+        coalesce: bool = True
+    ):
+        """
+        注册 interval 类型定时任务
+        """
+        scheduler = self._get_scheduler()
+        self._job_ids.append(job_id)
+        return scheduler.register_interval(
+            job_id=job_id,
+            func=func,
+            seconds=seconds,
+            minutes=minutes,
+            hours=hours,
+            args=args,
+            kwargs=kwargs,
+            jobstore=self._jobstore,
+            next_run_time=next_run_time,
+            max_instances=max_instances,
+            misfire_grace_time=misfire_grace_time,
+            coalesce=coalesce
+        )
+
+    def register_date(
+        self,
+        job_id: str,
+        func: Callable,
+        run_date: datetime.datetime,
+        args: Optional[tuple] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
+        max_instances: int = 1,
+        misfire_grace_time: int = 60,
+        coalesce: bool = True
+    ):
+        """
+        注册 date 类型一次性定时任务
+        """
+        scheduler = self._get_scheduler()
+        self._job_ids.append(job_id)
+        return scheduler.register_date(
+            job_id=job_id,
+            func=func,
+            run_date=run_date,
+            args=args,
+            kwargs=kwargs,
+            jobstore=self._jobstore,
+            max_instances=max_instances,
+            misfire_grace_time=misfire_grace_time,
+            coalesce=coalesce
+        )
+
+    def register_cron(
+        self,
+        job_id: str,
+        func: Callable,
+        cron: str,
+        args: Optional[tuple] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
+        next_run_time: Optional[Any] = None,
+        max_instances: int = 1,
+        misfire_grace_time: int = 300,
+        coalesce: bool = True
+    ):
+        """
+        注册 cron 类型定时任务
+        """
+        scheduler = self._get_scheduler()
+        self._job_ids.append(job_id)
+        return scheduler.register_cron(
+            job_id=job_id,
+            func=func,
+            cron=cron,
+            args=args,
+            kwargs=kwargs,
+            jobstore=self._jobstore,
+            next_run_time=next_run_time,
+            max_instances=max_instances,
+            misfire_grace_time=misfire_grace_time,
+            coalesce=coalesce
+        )
+
+    def remove_job(self, job_id: str):
+        """
+        移除单个定时任务
+        :param job_id: 任务ID
+        """
+        scheduler = self._get_scheduler()
+        return scheduler.remove_job(job_id=job_id, jobstore=self._jobstore)
+
+    def remove_all_jobs(self):
+        """
+        移除本插件所有定时任务
+        """
+        for job_id in list(self._job_ids):
+            self.remove_job(job_id)
+        self._job_ids.clear()
+
+    def get_jobs(self):
+        """
+        获取本插件所有定时任务
+        """
+        jobs = []
+        for job_id in self._job_ids:
+            job = self.get_job(job_id)
+            if job:
+                jobs.append(job)
+        return jobs
+
+    def get_job(self, job_id: str):
+        """
+        获取单个定时任务
+        :param job_id: 任务ID
+        """
+        scheduler = self._get_scheduler()
+        return scheduler.get_job(job_id=job_id, jobstore=self._jobstore)

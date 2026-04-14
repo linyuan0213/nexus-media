@@ -18,8 +18,6 @@ from app.utils.types import MediaType, SearchType, RssType
 from config import Config
 from web.backend.web_utils import WebUtils
 
-from app.scheduler_service import SchedulerService
-from app.queue import scheduler_queue
 
 
 class DoubanRank(_IPluginModule):
@@ -89,7 +87,6 @@ class DoubanRank(_IPluginModule):
                 self._rss_addrs = []
             self._ranks = config.get("ranks") or []
 
-        self._scheduler = SchedulerService()
         # 停止现有任务
         self.stop_service()
         self.run_service()
@@ -99,26 +96,18 @@ class DoubanRank(_IPluginModule):
         if self.get_state() or self._onlyonce:
             if self._cron:
                 self.info(f"订阅服务启动，周期：{self._cron}")
-                scheduler_queue.put({
-                        "func_str": "DoubanRank.refresh_rss",
-                        "type": 'plugin',
-                        "args": [],
-                        "job_id": "DoubanRank.refresh_rss_1",
-                        "trigger": CronTrigger.from_crontab(self._cron),
-                        "jobstore": self._jobstore
-                    })
+                self.register_cron(
+                    job_id="DoubanRank.refresh_rss_1",
+                    func=self.refresh_rss,
+                    cron=str(self._cron),
+                )
             if self._onlyonce:
                 self.info("订阅服务启动，立即运行一次")
-                scheduler_queue.put({
-                        "func_str": "DoubanRank.refresh_rss",
-                        "type": 'plugin',
-                        "args": [],
-                        "job_id": "DoubanRank.refresh_rss_once",
-                        "trigger": "date",
-                        "run_date": datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(
-                                                                seconds=3),
-                        "jobstore": self._jobstore
-                    })
+                self.register_date(
+                    job_id="DoubanRank.refresh_rss_once",
+                    func=self.refresh_rss,
+                    run_date=datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3),
+                )
 
                 # 关闭一次性开关
                 self._onlyonce = False
@@ -379,14 +368,10 @@ class DoubanRank(_IPluginModule):
             self.history(key=media.tmdb_id, value=value)
 
     def stop_service(self):
-        """
-        停止服务
-        """
         try:
-            if self._scheduler and self._scheduler.SCHEDULER:
-                for job in self._scheduler.get_jobs(self._jobstore):
-                    if 'refresh_rss' in job.name:
-                        self._scheduler.remove_job(job.id, self._jobstore)
+            for job_id in self._job_ids:
+                self.remove_job(job_id)
+            self._job_ids.clear()
         except Exception as e:
             print(str(e))
 

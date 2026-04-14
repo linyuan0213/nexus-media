@@ -15,8 +15,6 @@ from app.utils.http_utils import RequestUtils
 from config import Config
 
 
-from app.scheduler_service import SchedulerService
-from app.queue import scheduler_queue
 
 
 class MTBigPack(_IPluginModule):
@@ -129,7 +127,6 @@ class MTBigPack(_IPluginModule):
                 self._site_info = site
                 break
         self._redis_store = RedisStore()
-        self._scheduler = SchedulerService()
         # 停止现有任务
         self.stop_service()
         self.run_service()
@@ -140,16 +137,11 @@ class MTBigPack(_IPluginModule):
             # 运行一次
             if self._onlyonce:
                 self.info("馒头大包推送服务启动，立即运行一次")
-                scheduler_queue.put({
-                    "func_str": "MTBigPack.auto_push",
-                    "type": 'plugin',
-                    "args": [],
-                    "job_id": "MTBigPack.auto_push_once",
-                    "trigger": "date",
-                    "run_date": datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(
-                            seconds=3),
-                    "jobstore": self._jobstore
-                })
+                self.register_date(
+                    job_id="MTBigPack.auto_push_once",
+                    func=self.auto_push,
+                    run_date=datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3),
+                )
                 # 关闭一次性开关
                 self._onlyonce = False
                 self.update_config({
@@ -165,14 +157,11 @@ class MTBigPack(_IPluginModule):
             # 周期运行
             if self._cron:
                 self.info(f"馒头大包推送定时服务启动，周期：{self._cron}")
-                scheduler_queue.put({
-                    "func_str": "MTBigPack.auto_push",
-                    "type": 'plugin',
-                    "args": [],
-                    "job_id": "MTBigPack.auto_push_2",
-                    "trigger": CronTrigger.from_crontab(self._cron),
-                    "jobstore": self._jobstore
-                })
+                self.register_cron(
+                    job_id="MTBigPack.auto_push_2",
+                    func=self.auto_push,
+                    cron=str(self._cron),
+                )
 
     def auto_push(self):
         """
@@ -260,16 +249,12 @@ class MTBigPack(_IPluginModule):
                               text="\n".join(message_list) + "\n" + f'RSS订阅链接：{rss_download_url}')
 
     def stop_service(self):
-        """
-        退出插件
-        """
         try:
             self._redis_store.hdel('bigpack:rss', 'rss')
 
-            if self._scheduler and self._scheduler.SCHEDULER:
-                for job in self._scheduler.get_jobs(self._jobstore):
-                    if 'auto_push' in job.name:
-                        self._scheduler.remove_job(job.id, self._jobstore)
+            for job_id in self._job_ids:
+                self.remove_job(job_id)
+            self._job_ids.clear()
         except Exception as e:
             print(str(e))
 

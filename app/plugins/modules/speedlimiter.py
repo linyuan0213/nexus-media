@@ -8,8 +8,6 @@ from app.plugins.modules._base import _IPluginModule
 from app.utils import ExceptionUtils
 from app.utils.types import MediaServerType, EventType
 
-from app.scheduler_service import SchedulerService
-from app.queue import scheduler_queue
 
 
 class SpeedLimiter(_IPluginModule):
@@ -273,7 +271,6 @@ class SpeedLimiter(_IPluginModule):
             # 限速关闭
             self._limit_enabled = False
 
-        self._scheduler = SchedulerService()
         # 移出现有任务
         self.stop_service()
         self.run_service()
@@ -281,15 +278,12 @@ class SpeedLimiter(_IPluginModule):
     def run_service(self):
         # 启动限速任务
         if self._limit_enabled:
-            scheduler_queue.put({
-                        "func_str": "SpeedLimiter.check_playing_sessions",
-                        "type": 'plugin',
-                        "args": [self._mediaserver.get_type(), True],
-                        "job_id": "SpeedLimiter.check_playing_sessions",
-                        "trigger": "interval",
-                        "seconds": self._interval,
-                        "jobstore": self._jobstore
-                    })
+            self.register_interval(
+                job_id="SpeedLimiter.check_playing_sessions",
+                func=self.check_playing_sessions,
+                seconds=self._interval,
+                args=(self._mediaserver.get_type(), True,),
+            )
             self.info("播放限速服务启动")
 
     def get_state(self):
@@ -484,15 +478,11 @@ class SpeedLimiter(_IPluginModule):
         return limited_downloader_confs, limited_allocation_ratio
 
     def stop_service(self):
-        """
-        退出插件
-        """
         try:
-            if self._scheduler and self._scheduler.SCHEDULER:
-                for job in self._scheduler.get_jobs(self._jobstore):
-                    if 'check_playing_sessions' in job.name:
-                        self._scheduler.remove_job(job.id, self._jobstore)
-                        self._event.set()
-                        self._event.clear()
+            for job_id in self._job_ids:
+                self.remove_job(job_id)
+            self._job_ids.clear()
+            self._event.set()
+            self._event.clear()
         except Exception as e:
             print(str(e))

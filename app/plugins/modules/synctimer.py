@@ -3,8 +3,6 @@ from apscheduler.triggers.cron import CronTrigger
 from app.plugins.modules._base import _IPluginModule
 from app.sync import Sync
 
-from app.scheduler_service import SchedulerService
-from app.queue import scheduler_queue
 
 
 class SyncTimer(_IPluginModule):
@@ -69,7 +67,6 @@ class SyncTimer(_IPluginModule):
         if config:
             self._cron = config.get("cron")
 
-        self._scheduler = SchedulerService()
         # 停止现有任务
         self.stop_service()
         self.run_service()
@@ -77,14 +74,11 @@ class SyncTimer(_IPluginModule):
     def run_service(self):
         # 启动定时任务
         if self._cron:
-            scheduler_queue.put({
-                        "func_str": "SyncTimer.timersync",
-                        "type": 'plugin',
-                        "args": [],
-                        "job_id": "SyncTimer.timersync",
-                        "trigger": CronTrigger.from_crontab(self._cron),
-                        "jobstore": self._jobstore
-                    })
+            self.register_cron(
+                job_id="SyncTimer.timersync",
+                func=self.timersync,
+                cron=str(self._cron),
+            )
             self.info(f"目录定时同步服务启动，周期：{self._cron}")
 
     def get_state(self):
@@ -99,13 +93,9 @@ class SyncTimer(_IPluginModule):
         self.info("定时同步完成")
 
     def stop_service(self):
-        """
-        退出插件
-        """
         try:
-            if self._scheduler and self._scheduler.SCHEDULER:
-                for job in self._scheduler.get_jobs(self._jobstore):
-                    if 'timersync' in job.name:
-                        self._scheduler.remove_job(job.id, self._jobstore)
+            for job_id in self._job_ids:
+                self.remove_job(job_id)
+            self._job_ids.clear()
         except Exception as e:
             print(str(e))

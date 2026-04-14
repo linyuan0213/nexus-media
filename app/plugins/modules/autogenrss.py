@@ -19,8 +19,6 @@ from app.sites.sites import Sites
 from app.utils import RequestUtils, ExceptionUtils, StringUtils, JsonUtils
 from config import Config
 
-from app.scheduler_service import SchedulerService
-from app.queue import scheduler_queue
 
 
 class AutoGenRss(_IPluginModule):
@@ -143,8 +141,6 @@ class AutoGenRss(_IPluginModule):
             self._notify = config.get("notify")
             self._onlyonce = config.get("onlyonce")
 
-        # 定时服务
-        self._scheduler = SchedulerService()
         
         # 数据库
         self._dbhelper = DbHelper()
@@ -164,16 +160,11 @@ class AutoGenRss(_IPluginModule):
             # 运行一次
             if self._onlyonce:
                 self.info("RSS自动生成服务启动，立即运行一次")
-                scheduler_queue.put({
-                    "func_str": "AutoGenRss.auto_gen_rss",
-                    "type": 'plugin',
-                    "args": [],
-                    "job_id": "AutoGenRss.auto_gen_rss_once",
-                    "trigger": "date",
-                    "run_date": datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(
-                            seconds=3),
-                    "jobstore": self._jobstore
-                })
+                self.register_date(
+                    job_id="AutoGenRss.auto_gen_rss_once",
+                    func=self.auto_gen_rss,
+                    run_date=datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3),
+                )
 
             if self._onlyonce:
                 # 关闭一次性开关
@@ -189,14 +180,11 @@ class AutoGenRss(_IPluginModule):
             # 周期运行
             if self._cron:
                 self.info(f"同步服务启动，周期：{self._cron}")
-                scheduler_queue.put({
-                    "func_str": "AutoGenRss.auto_gen_rss",
-                    "type": 'plugin',
-                    "args": [],
-                    "job_id": "AutoGenRss.auto_gen_rss_2",
-                    "trigger": CronTrigger.from_crontab(self._cron),
-                    "jobstore": self._jobstore
-                })
+                self.register_cron(
+                    job_id="AutoGenRss.auto_gen_rss_2",
+                    func=self.auto_gen_rss,
+                    cron=str(self._cron),
+                )
 
 
     def auto_gen_rss(self):
@@ -239,16 +227,14 @@ class AutoGenRss(_IPluginModule):
                 # rss生成详细信息
                 rss_message = "\n".join(gen_success_msg + failed_msg)
 
-                if self._scheduler and self._scheduler.SCHEDULER:
-                    for job in self._scheduler.get_jobs():
-                        if 'gen_rss' in job.name:
-                            next_run_time = job.next_run_time.strftime(
-                                '%Y-%m-%d %H:%M:%S')
-   
-                            self.send_message(title="【自动生成RSS任务完成】",
-                                              text=f"生成RSS站点数: {len(rss_sites)} \n"
-                                              f"{rss_message} \n"
-                                              f"下次生成时间: {next_run_time} \n")
+                for job in self.get_jobs():
+                    next_run_time = job.next_run_time.strftime(
+                        '%Y-%m-%d %H:%M:%S')
+
+                    self.send_message(title="【自动生成RSS任务完成】",
+                                      text=f"生成RSS站点数: {len(rss_sites)} \n"
+                                      f"{rss_message} \n"
+                                      f"下次生成时间: {next_run_time} \n")
         else:
             self.error("站点生成RSS任务失败！")
 
@@ -367,16 +353,12 @@ class AutoGenRss(_IPluginModule):
         return next((href for href in html.xpath('//a[contains(@href, "linktype=dl")]/@href')), '')
 
     def stop_service(self):
-        """
-        退出插件
-        """
         try:
-            if self._scheduler and self._scheduler.SCHEDULER:
-                for job in self._scheduler.get_jobs():
-                    if 'gen_rss' in job.name:
-                        self._scheduler.remove_job(job.id)
+            for job_id in self._job_ids:
+                self.remove_job(job_id)
+            self._job_ids.clear()
         except Exception as e:
-            self.error(str(e))
+            print(str(e))
 
     def get_state(self):
         return self._enabled and self._cron

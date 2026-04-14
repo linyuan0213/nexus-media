@@ -24,7 +24,6 @@ from app.utils.types import MediaType, DownloaderType, SearchType, RmtMode, Even
 from config import MT_URL, Config, PT_TAG, RMT_MEDIAEXT, PT_TRANSFER_INTERVAL
 
 from app.scheduler_service import SchedulerService
-from app.queue import scheduler_queue
 
 lock = Lock()
 client_lock = Lock()
@@ -43,6 +42,7 @@ class Downloader(metaclass=SingletonMeta):
     _DownloaderEnum = None
     _scheduler = None
     _jobstore = 'download'
+    _job_ids = []
 
     message = None
     mediaserver = None
@@ -232,15 +232,16 @@ class Downloader(metaclass=SingletonMeta):
         if not self._monitor_downloader_ids:
             return
         self._scheduler = SchedulerService()
-        for downloader_id in self._monitor_downloader_ids:
-            scheduler_queue.put({
-                                "func_str": "Downloader.transfer",
-                                "args": [downloader_id],
-                                "job_id": "Downloader.transfer",
-                                "trigger": "interval",
-                                "seconds": PT_TRANSFER_INTERVAL,
-                                "jobstore": self._jobstore
-                                })
+        self._job_ids.clear()
+        job_id = "Downloader.transfer"
+        self._scheduler.start_job({
+            "func": self.transfer,
+            "job_id": job_id,
+            "trigger": "interval",
+            "seconds": PT_TRANSFER_INTERVAL,
+            "jobstore": self._jobstore
+        })
+        self._job_ids.append(job_id)
 
         # self._scheduler.print_jobs(jobstore=self._jobstore)
         log.info("下载文件转移服务启动，目的目录：媒体库")
@@ -1485,8 +1486,10 @@ class Downloader(metaclass=SingletonMeta):
         停止服务
         """
         try:
-            if self._scheduler and self._scheduler.SCHEDULER:
-                self._scheduler.remove_all_jobs(jobstore=self._jobstore)
+            if self._scheduler:
+                for job_id in self._job_ids:
+                    self._scheduler.remove_job(job_id)
+                self._job_ids.clear()
         except Exception as e:
             print(str(e))
 
