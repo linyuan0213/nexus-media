@@ -141,7 +141,7 @@ class Indexer(metaclass=SingletonMeta):
         # 计算耗时
         start_time = datetime.datetime.now()
         # 统一限制最大并发线程数，避免过多连接导致性能下降
-        max_workers = min(len(indexers), 10)
+        max_workers = min(len(indexers), 15)
         if filter_args and filter_args.get("site"):
             log.info(f"【{self._client_type.value}】开始搜索 %s，站点：%s，并发数：%s ..." % (key_word, filter_args.get("site"), max_workers))
             self.progress.update(ptype=progress_key,

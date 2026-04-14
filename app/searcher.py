@@ -18,7 +18,7 @@ from app.utils.types import SearchType, EventType, ProgressKey
 # 全局线程池，避免重复创建和销毁
 _search_executor = None
 
-def get_search_executor(max_workers=4):
+def get_search_executor(max_workers=8):
     """获取全局搜索线程池"""
     global _search_executor
     if _search_executor is None or _search_executor._max_workers < max_workers:
@@ -29,7 +29,7 @@ def get_search_executor(max_workers=4):
 
 
 @contextmanager
-def search_executor_context(max_workers=4):
+def search_executor_context(max_workers=8):
     """搜索线程池上下文管理器"""
     executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="search")
     try:
@@ -176,7 +176,7 @@ class Searcher(metaclass=SingletonMeta):
             log.info("【Searcher】开始搜索 %s ..." % search_name_list)
             # 多线程 - 限制最大并发数，避免资源争抢
             # 根据搜索名称数量动态调整，但不超过合理上限
-            optimal_workers = min(len(search_name_list), max_workers, 4)
+            optimal_workers = min(len(search_name_list), max_workers, 8)
             media_list = []
             all_task = []
             # 使用上下文管理器确保线程池正确关闭

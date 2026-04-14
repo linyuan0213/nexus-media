@@ -203,7 +203,7 @@ class AutoGenRss(_IPluginModule):
 
         # 执行签到
         self.info("开始生成RSS任务")
-        with ThreadPoolExecutor(min(len(rss_sites), 5)) as p:
+        with ThreadPoolExecutor(min(len(rss_sites), 10)) as p:
             status = p.map(self.gen_rss, rss_sites)
 
         if status:

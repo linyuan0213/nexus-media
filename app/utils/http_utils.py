@@ -20,7 +20,8 @@ class RequestUtils:
     
     # 类级别的session缓存
     _session_pool = {}
-    _pool_lock = threading.Lock()
+    _pool_locks = {}
+    _locks_lock = threading.Lock()
 
     def __init__(self,
                  headers=None,
@@ -77,7 +78,12 @@ class RequestUtils:
         """获取共享的session实例，带连接池"""
         proxy_key = str(proxies) if proxies else "no_proxy"
         
-        with cls._pool_lock:
+        with cls._locks_lock:
+            if proxy_key not in cls._pool_locks:
+                cls._pool_locks[proxy_key] = threading.Lock()
+            lock = cls._pool_locks[proxy_key]
+        
+        with lock:
             if proxy_key not in cls._session_pool:
                 session = requests.Session()
                 

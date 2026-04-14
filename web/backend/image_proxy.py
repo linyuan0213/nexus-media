@@ -204,7 +204,7 @@ def _download_image(url, timeout=10, referer=None):
                     del _download_locks[cache_key]
 
 
-def download_images_concurrently(urls, referer=None, max_workers=5):
+def download_images_concurrently(urls, referer=None, max_workers=10):
     """
     并发下载多张图片
     
@@ -511,7 +511,7 @@ def preload_images():
         
         downloaded = 0
         failed = 0
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=10) as executor:
             futures = {executor.submit(download_and_save, item): item for item in urls_to_download}
             for future in as_completed(futures):
                 if future.result():

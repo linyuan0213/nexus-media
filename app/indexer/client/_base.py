@@ -448,7 +448,7 @@ class _IIndexClient(metaclass=ABCMeta):
 
                 # 限制并发数，避免对 TMDB 造成过大压力导致限流或超时，
                 # 同时防止过多线程并发占用数据库连接池（get_media_info 内部亦有线程池）
-                max_workers = min(len(to_identify), 2)
+                max_workers = min(len(to_identify), 4)
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
                     for name, media_info in executor.map(_do_identify, to_identify):
                         if media_info:

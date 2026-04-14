@@ -26,7 +26,7 @@ from app.media.meta import MetaInfo
 
 
 @contextmanager
-def web_search_executor(max_workers=4):
+def web_search_executor(max_workers=8):
     """Web搜索线程池上下文管理器 - 确保资源正确释放"""
     executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="web_search")
     try:
@@ -149,7 +149,7 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
             
             # 去除空元素和重复元素
             search_name_list = list(set(filter(None, search_name_list)))
-            max_workers = min(len(search_name_list), 4)  # 限制最大并发数
+            max_workers = min(len(search_name_list), 8)  # 限制最大并发数
 
             filter_args = {"season": search_season,
                            "episode": search_episode,

@@ -286,7 +286,7 @@ class Media:
 
         if not candidates:
             return {}
-        max_workers = min(len(candidates), 3)
+        max_workers = min(len(candidates), 5)
         results = {}
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_movie = {executor.submit(_fetch_allnames, m): m for m in candidates}
@@ -362,7 +362,7 @@ class Media:
 
         if not candidates:
             return {}
-        max_workers = min(len(candidates), 3)
+        max_workers = min(len(candidates), 5)
         results = {}
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_tv = {executor.submit(_fetch_allnames, t): t for t in candidates}
@@ -438,7 +438,7 @@ class Media:
 
         if not candidates:
             return {}
-        max_workers = min(len(candidates), 3)
+        max_workers = min(len(candidates), 5)
         results = {}
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_tv = {executor.submit(_fetch_allnames, t): t for t in candidates}
