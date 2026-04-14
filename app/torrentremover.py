@@ -71,6 +71,7 @@ class TorrentRemover(metaclass=SingletonMeta):
                 job_id = f"TorrentRemover.auto_remove_torrents_{task.get('id')}"
                 self._scheduler.start_job({
                     "func": self.auto_remove_torrents,
+                    "name": f"自动删种任务 {task.get('name')}",
                     "args": (task.get("id"),),
                     "job_id": job_id,
                     "trigger": "interval",

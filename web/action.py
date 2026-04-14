@@ -11,9 +11,11 @@ from web.actions._brush import WebActionBrushMixin
 from web.actions._sync import WebActionSyncMixin
 from web.actions._plugin import WebActionPluginMixin
 from web.actions._rbac import WebActionRbacMixin
+from web.actions._scheduler import WebActionSchedulerMixin
 
 
 class WebAction(
+    WebActionSchedulerMixin,
     WebActionPluginMixin,
     WebActionRbacMixin,
     WebActionSyncMixin,

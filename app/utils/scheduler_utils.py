@@ -11,7 +11,7 @@ import log
 class SchedulerUtils:
 
     @staticmethod
-    def start_job(scheduler, func, func_desc, cron, job_id=None, next_run_time=undefined):
+    def start_job(scheduler, func, func_desc, cron, job_id=None, next_run_time=undefined, name=None):
         """
         解析任务的定时规则,启动定时服务
         :param func: 可调用的一个函数,在指定时间运行
@@ -32,6 +32,7 @@ class SchedulerUtils:
                 try:
                     job = scheduler.add_job(func=func,
                                             id=job_id,
+                                            name=name,
                                             trigger=CronTrigger.from_crontab(
                                                 cron),
                                             next_run_time=next_run_time,
@@ -66,6 +67,7 @@ class SchedulerUtils:
                     job = scheduler.add_job(start_random_job,
                                             "cron",
                                             id=job_id,
+                                            name=name,
                                             hour=start_hour,
                                             minute=start_minute,
                                             next_run_time=next_run_time,
@@ -85,6 +87,7 @@ class SchedulerUtils:
                 job = scheduler.add_job(func,
                                         "cron",
                                         id=job_id,
+                                        name=name,
                                         hour=hour,
                                         minute=minute,
                                         next_run_time=next_run_time,
@@ -99,6 +102,8 @@ class SchedulerUtils:
                 if hours:
                     job = scheduler.add_job(func,
                                             "interval",
+                                            id=job_id,
+                                            name=name,
                                             hours=hours,
                                             next_run_time=next_run_time,
                                             replace_existing=True)

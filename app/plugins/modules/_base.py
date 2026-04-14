@@ -267,6 +267,7 @@ class _IPluginModule(metaclass=ABCMeta):
             scheduler=scheduler.SCHEDULER,
             func=func,
             job_id=job_id,
+            name=self.module_name or None,
             func_desc=func_desc,
             cron=cron,
             next_run_time=next_run_time
@@ -294,6 +295,7 @@ class _IPluginModule(metaclass=ABCMeta):
         return scheduler.register_interval(
             job_id=job_id,
             func=func,
+            name=self.module_name or None,
             seconds=seconds,
             minutes=minutes,
             hours=hours,
@@ -325,6 +327,7 @@ class _IPluginModule(metaclass=ABCMeta):
         return scheduler.register_date(
             job_id=job_id,
             func=func,
+            name=self.module_name or None,
             run_date=run_date,
             args=args,
             kwargs=kwargs,
@@ -354,6 +357,7 @@ class _IPluginModule(metaclass=ABCMeta):
         return scheduler.register_cron(
             job_id=job_id,
             func=func,
+            name=self.module_name or None,
             cron=cron,
             args=args,
             kwargs=kwargs,

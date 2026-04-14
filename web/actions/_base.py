@@ -232,7 +232,14 @@ class WebActionBase:
             "update_menu": self._update_menu,
             "delete_menu": self._delete_menu,
             "get_menu": self._get_menu,
-            "update_menu_sort": self._update_menu_sort
+            "update_menu_sort": self._update_menu_sort,
+            # 调度任务管理
+            "get_scheduler_jobs": self._get_scheduler_jobs,
+            "update_scheduler_job": self._update_scheduler_job,
+            "delete_scheduler_job": self._delete_scheduler_job,
+            "pause_scheduler_job": self._pause_scheduler_job,
+            "resume_scheduler_job": self._resume_scheduler_job,
+            "run_scheduler_job": self._run_scheduler_job,
         }
         # 远程命令响应
         self._commands = {
