@@ -145,6 +145,7 @@ class RssChecker(metaclass=SingletonMeta):
                     rss_flag = True
                     self._scheduler.start_job({
                         "func": self.check_task_rss,
+                        "name": f"自定义订阅任务 {task.get('name')}",
                         "args": (task.get("id"),),
                         "job_id": job_id,
                         "trigger": "interval",
@@ -157,6 +158,7 @@ class RssChecker(metaclass=SingletonMeta):
                     try:
                         self._scheduler.start_job({
                             "func": self.check_task_rss,
+                            "name": f"自定义订阅任务 {task.get('name')}",
                             "args": (task.get("id"),),
                             "job_id": job_id,
                             "trigger": "cron",

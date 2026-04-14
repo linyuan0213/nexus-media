@@ -16,6 +16,7 @@ from apscheduler.events import (
     EVENT_JOB_EXECUTED,
     EVENT_JOB_ERROR,
     EVENT_JOB_MISSED,
+    EVENT_JOB_SUBMITTED,
     JobExecutionEvent,
     JobSubmissionEvent
 )
@@ -94,6 +95,7 @@ class TaskConfig:
     """任务配置数据类"""
     job_id: str
     func: Callable
+    name: Optional[str] = None
     trigger: str = 'interval'
     args: tuple = field(default_factory=tuple)
     kwargs: Dict[str, Any] = field(default_factory=dict)
@@ -131,6 +133,7 @@ class TaskConfig:
             'args': self.args,
             'kwargs': self.kwargs,
             'id': self.job_id,
+            'name': self.name,
             'jobstore': self.jobstore,
             'replace_existing': True,
             'max_instances': self.max_instances,
@@ -277,6 +280,7 @@ class SchedulerService(metaclass=SingletonMeta):
                 task_config = TaskConfig(
                     job_id=task.get('job_id', ''),
                     func=task.get('func'),
+                    name=task.get('name'),
                     trigger=task.get('trigger', 'interval'),
                     args=tuple(task.get('args', [])),
                     kwargs=task.get('kwargs', {}),
@@ -339,7 +343,8 @@ class SchedulerService(metaclass=SingletonMeta):
         next_run_time: Optional[Any] = None,
         max_instances: int = 1,
         misfire_grace_time: int = 300,
-        coalesce: bool = True
+        coalesce: bool = True,
+        name: Optional[str] = None
     ) -> Optional[Job]:
         """注册 interval 类型定时任务（便捷方法）
 
@@ -356,6 +361,7 @@ class SchedulerService(metaclass=SingletonMeta):
             max_instances: 最大并发实例数
             misfire_grace_time: 错过执行的宽限时间
             coalesce: 是否合并错过的执行
+            name: 任务名称
 
         Returns:
             Job 对象或 None
@@ -366,6 +372,7 @@ class SchedulerService(metaclass=SingletonMeta):
         return self.start_job({
             'job_id': job_id,
             'func': func,
+            'name': name,
             'trigger': 'interval',
             'args': args or (),
             'kwargs': kwargs or {},
@@ -389,7 +396,8 @@ class SchedulerService(metaclass=SingletonMeta):
         jobstore: str = 'default',
         max_instances: int = 1,
         misfire_grace_time: int = 60,
-        coalesce: bool = True
+        coalesce: bool = True,
+        name: Optional[str] = None
     ) -> Optional[Job]:
         """注册 date 类型一次性定时任务（便捷方法）
 
@@ -403,6 +411,7 @@ class SchedulerService(metaclass=SingletonMeta):
             max_instances: 最大并发实例数
             misfire_grace_time: 错过执行的宽限时间
             coalesce: 是否合并错过的执行
+            name: 任务名称
 
         Returns:
             Job 对象或 None
@@ -410,6 +419,7 @@ class SchedulerService(metaclass=SingletonMeta):
         return self.start_job({
             'job_id': job_id,
             'func': func,
+            'name': name,
             'trigger': 'date',
             'args': args or (),
             'kwargs': kwargs or {},
@@ -431,7 +441,8 @@ class SchedulerService(metaclass=SingletonMeta):
         next_run_time: Optional[Any] = None,
         max_instances: int = 1,
         misfire_grace_time: int = 300,
-        coalesce: bool = True
+        coalesce: bool = True,
+        name: Optional[str] = None
     ) -> Optional[Job]:
         """注册 cron 类型定时任务（便捷方法）
 
@@ -446,6 +457,7 @@ class SchedulerService(metaclass=SingletonMeta):
             max_instances: 最大并发实例数
             misfire_grace_time: 错过执行的宽限时间
             coalesce: 是否合并错过的执行
+            name: 任务名称
 
         Returns:
             Job 对象或 None
@@ -453,6 +465,7 @@ class SchedulerService(metaclass=SingletonMeta):
         return self.start_job({
             'job_id': job_id,
             'func': func,
+            'name': name,
             'trigger': 'cron',
             'args': args or (),
             'kwargs': kwargs or {},
@@ -676,7 +689,7 @@ class SchedulerService(metaclass=SingletonMeta):
             # 添加事件监听器
             self._scheduler.add_listener(
                 self._job_event_listener,
-                EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED
+                EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED | EVENT_JOB_SUBMITTED
             )
 
             # 启动调度器
@@ -749,7 +762,9 @@ class SchedulerService(metaclass=SingletonMeta):
         except Exception:
             pass
 
-        if event.code == EVENT_JOB_EXECUTED:
+        if event.code == EVENT_JOB_SUBMITTED:
+            self._job_start_times[job_id] = time.time()
+        elif event.code == EVENT_JOB_EXECUTED:
             self._handle_job_success(job_id, event)
         elif event.code == EVENT_JOB_ERROR:
             self._handle_job_failure(job_id, event)

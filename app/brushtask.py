@@ -81,6 +81,7 @@ class BrushTask(metaclass=SingletonMeta):
                             job_id = f"BrushTask.check_task_rss_{task.get('id')}"
                             self._scheduler.start_job({
                                 "func": self.check_task_rss,
+                                "name": f"刷流任务 {task.get('name')} ",
                                 "args": (task.get("id"),),
                                 "job_id": job_id,
                                 "trigger": "interval",
@@ -93,6 +94,7 @@ class BrushTask(metaclass=SingletonMeta):
                         job_id = f"BrushTask.stop_task_torrents_{task.get('id')}"
                         self._scheduler.start_job({
                             "func": self.stop_task_torrents,
+                            "name": f"停种任务 {task.get('name')} ",
                             "args": (task.get("id"),),
                             "job_id": job_id,
                             "trigger": "interval",
@@ -104,6 +106,7 @@ class BrushTask(metaclass=SingletonMeta):
                         job_id = f"BrushTask.remove_task_torrents_{task.get('id')}"
                         self._scheduler.start_job({
                             "func": self.remove_task_torrents,
+                            "name": f"删种任务 {task.get('name')} ",
                             "args": (task.get("id"),),
                             "job_id": job_id,
                             "trigger": "interval",
@@ -117,6 +120,7 @@ class BrushTask(metaclass=SingletonMeta):
                                 job_id = f"BrushTask.check_task_rss_{task.get('id')}"
                                 self._scheduler.start_job({
                                     "func": self.check_task_rss,
+                                    "name": f"刷流任务 {task.get('name')} ",
                                     "args": (task.get("id"),),
                                     "job_id": job_id,
                                     "trigger": "cron",
@@ -133,6 +137,7 @@ class BrushTask(metaclass=SingletonMeta):
                             job_id = f"BrushTask.stop_task_torrents_{task.get('id')}"
                             self._scheduler.start_job({
                                 "func": self.stop_task_torrents,
+                                "name": f"停种任务 {task.get('name')} ",
                                 "args": (task.get("id"),),
                                 "job_id": job_id,
                                 "trigger": "cron",
@@ -144,6 +149,7 @@ class BrushTask(metaclass=SingletonMeta):
                             job_id = f"BrushTask.remove_task_torrents_{task.get('id')}"
                             self._scheduler.start_job({
                                 "func": self.remove_task_torrents,
+                                "name": f"删种任务 {task.get('name')} ",
                                 "args": (task.get("id"),),
                                 "job_id": job_id,
                                 "trigger": "cron",

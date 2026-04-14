@@ -51,7 +51,8 @@ class Scheduler(metaclass=SingletonMeta):
                     scheduler=self.scheduler.SCHEDULER,
                     func=SiteUserInfo().refresh_site_data_now,
                     job_id="SiteUserInfo.refresh_site_data_now",
-                    func_desc="数据统计",
+                    name="站点数据统计",
+                    func_desc="站点数据统计",
                     cron=str(ptrefresh_date_cron),
                     next_run_time=datetime.datetime.now(tz) + datetime.timedelta(minutes=1)
                 )
@@ -73,6 +74,7 @@ class Scheduler(metaclass=SingletonMeta):
 
                     self.scheduler.register_interval(
                         job_id="Rss.rssdownload",
+                        name="RSS订阅下载",
                         func=Rss().rssdownload,
                         seconds=pt_check_interval,
                         jobstore=self._jobstore
@@ -96,6 +98,7 @@ class Scheduler(metaclass=SingletonMeta):
 
                     self.scheduler.register_interval(
                         job_id="Subscribe.subscribe_search_all",
+                        name="订阅搜索",
                         func=Subscribe().subscribe_search_all,
                         hours=search_rss_interval,
                         jobstore=self._jobstore
@@ -119,6 +122,7 @@ class Scheduler(metaclass=SingletonMeta):
                 if mediasync_interval:
                     self.scheduler.register_interval(
                         job_id="MediaServer.sync_mediaserver",
+                        name="媒体库同步",
                         func=MediaServer().sync_mediaserver,
                         hours=mediasync_interval,
                         jobstore=self._jobstore
@@ -128,6 +132,7 @@ class Scheduler(metaclass=SingletonMeta):
         # 定时把队列中的监控文件转移走
         self.scheduler.register_interval(
             job_id="Sync.transfer_mon_files",
+            name="目录同步监控",
             func=Sync().transfer_mon_files,
             seconds=SYNC_TRANSFER_INTERVAL,
             jobstore=self._jobstore
@@ -136,6 +141,7 @@ class Scheduler(metaclass=SingletonMeta):
         # RSS队列中搜索
         self.scheduler.register_interval(
             job_id="Subscribe.subscribe_search",
+            name="订阅队列状态搜索",
             func=Subscribe().subscribe_search,
             seconds=RSS_CHECK_INTERVAL,
             jobstore=self._jobstore
@@ -144,6 +150,7 @@ class Scheduler(metaclass=SingletonMeta):
         # 豆瓣RSS转TMDB，定时更新TMDB数据
         self.scheduler.register_interval(
             job_id="Subscribe.refresh_rss_metainfo",
+            name="豆瓣RSS转TMDB",
             func=Subscribe().refresh_rss_metainfo,
             hours=RSS_REFRESH_TMDB_INTERVAL,
             jobstore=self._jobstore
@@ -152,6 +159,7 @@ class Scheduler(metaclass=SingletonMeta):
         # 定时刷新壁纸
         self.scheduler.register_interval(
             job_id="get_login_wallpaper",
+            name="定时刷新壁纸",
             func=get_login_wallpaper,
             hours=REFRESH_WALLPAPER_INTERVAL,
             next_run_time=datetime.datetime.now(),
@@ -161,6 +169,7 @@ class Scheduler(metaclass=SingletonMeta):
         # 定时清理临时文件（每6小时执行一次）
         self.scheduler.register_interval(
             job_id="TempCleanupHelper.do_cleanup",
+            name="定时清理临时文件",
             func=TempCleanupHelper.do_cleanup,
             seconds=6 * 3600,  # 6小时
             next_run_time=datetime.datetime.now(),

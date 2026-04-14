@@ -236,6 +236,7 @@ class Downloader(metaclass=SingletonMeta):
         job_id = "Downloader.transfer"
         self._scheduler.start_job({
             "func": self.transfer,
+            "name": "下载文件转移",
             "job_id": job_id,
             "trigger": "interval",
             "seconds": PT_TRANSFER_INTERVAL,

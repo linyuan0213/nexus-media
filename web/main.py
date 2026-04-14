@@ -839,6 +839,13 @@ def service():
                            SchedulerTasks=Services)
 
 
+# 调度任务页面
+@App.route('/scheduler', methods=['POST', 'GET'])
+@login_required
+def scheduler_page():
+    return render_template("scheduler.html")
+
+
 # 日志页面
 @App.route('/logging', methods=['POST', 'GET'])
 @login_required

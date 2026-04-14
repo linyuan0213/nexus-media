@@ -50,10 +50,12 @@ def webaction():
 
 class TestWebActionEntryPoints:
     def test_actions_populated(self, webaction):
-        assert len(webaction._actions) == 191
+        assert len(webaction._actions) == 198
         # spot-check some domain actions
         for key in ["sch", "search", "download", "pt_start", "update_site",
-                    "get_site", "add_rss_media", "get_users", "get_plugin_apps"]:
+                    "get_site", "add_rss_media", "get_users", "get_plugin_apps",
+                    "get_scheduler_jobs", "update_scheduler_job", "delete_scheduler_job",
+                    "pause_scheduler_job", "resume_scheduler_job", "run_scheduler_job"]:
             assert key in webaction._actions, f"missing action {key}"
 
     def test_commands_populated(self, webaction):
@@ -85,7 +87,7 @@ class TestWebActionEntryPoints:
             "_base.py", "_system.py", "_media.py", "_site.py",
             "_download.py", "_rss.py", "_userrss.py", "_filter.py",
             "_words.py", "_brush.py", "_sync.py", "_plugin.py", "_rbac.py",
-            "__init__.py",
+            "_scheduler.py", "__init__.py",
         }
         assert set(p.name for p in base.glob("*.py")) == expected
 

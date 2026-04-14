@@ -167,11 +167,14 @@ DEFAULT_MENUS = [
     {
         "name": "服务",
         "code": "service",
-        "path": "/service",
         "icon": "layout-dashboard",
         "sort_order": 8,
         "level": 1,
-        "permission_code": "service:view"
+        "permission_code": "service:view",
+        "children": [
+            {"name": "服务面板", "code": "service_panel", "path": "/service", "icon": "layout-dashboard", "sort_order": 1, "level": 2, "permission_code": "service:view"},
+            {"name": "调度任务", "code": "scheduler", "path": "/scheduler", "icon": "clock", "sort_order": 2, "level": 2, "permission_code": "service:view"},
+        ]
     },
     {
         "name": "日志",
