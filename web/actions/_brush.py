@@ -83,6 +83,11 @@ class WebActionBrushMixin:
             "stopfree": brushtask_stopfree
         }
         # 添加记录
+        # SEED_SIZE 统一存储为字节（BigInteger）
+        try:
+            seed_size_bytes = int(float(brushtask_totalsize) * 1024 ** 3) if brushtask_totalsize else 0
+        except (ValueError, TypeError):
+            seed_size_bytes = 0
         item = {
             "name": brushtask_name,
             "site": brushtask_site,
@@ -90,7 +95,7 @@ class WebActionBrushMixin:
             "rssurl": brushtask_rssurl,
             "interval": brushtask_interval,
             "downloader": brushtask_downloader,
-            "seed_size": brushtask_totalsize,
+            "seed_size": seed_size_bytes,
             "time_range": brushtask_time_range,
             "label": brushtask_label,
             "savepath": brushtask_savepath,

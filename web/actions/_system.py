@@ -26,6 +26,9 @@ from web.backend.web_utils import WebUtils
 from web.cache import cache
 from app.utils.temp_manager import temp_manager
 from web.actions._base import WebActionBase
+from app.db.database_factory import DatabaseFactory
+from app.db.migrate import import_from_file, export_database, import_database
+from sqlalchemy import create_engine
 
 
 class WebActionSystemMixin:
@@ -241,21 +244,58 @@ class WebActionSystemMixin:
     @staticmethod
     def _restory_backup(data):
         """
-        解压恢复备份文件
+        解压恢复备份文件，并支持跨数据库类型恢复
         """
         filename = data.get("file_name")
-        if filename:
-            config_path = Config().get_config_path()
-            file_path = temp_manager.get_temp_path(filename)
-            try:
-                shutil.unpack_archive(file_path, config_path, format='zip')
-                return WebActionBase._success(msg="")
-            except Exception as e:
-                ExceptionUtils.exception_traceback(e)
-                return WebActionBase._fail(msg=str(e))
-            finally:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
+        if not filename:
+            return WebActionBase._fail(msg="文件不存在")
+
+        config_path = Config().get_config_path()
+        file_path = temp_manager.get_temp_path(filename)
+        try:
+            # 1. 解压到临时目录
+            import tempfile
+            temp_dir = tempfile.mkdtemp(prefix="restore_")
+            shutil.unpack_archive(file_path, temp_dir, format='zip')
+
+            # 2. 恢复配置文件
+            for cfg_name in ['config.yaml', 'default-category.yaml']:
+                src = os.path.join(temp_dir, cfg_name)
+                if os.path.exists(src):
+                    shutil.copy(src, config_path)
+
+            # 3. 判断备份中的数据库格式与当前数据库类型
+            current_db_type = DatabaseFactory._get_config_db_type()
+            json_backup = os.path.join(temp_dir, 'user_db_export.json')
+            sqlite_backup = os.path.join(temp_dir, 'user.db')
+
+            target_engine = DatabaseFactory.create_engine()
+
+            if os.path.exists(json_backup):
+                # 备份为 JSON 格式，直接导入当前数据库（支持 sqlite/mysql/postgresql 互导）
+                import_from_file(target_engine, json_backup)
+            elif os.path.exists(sqlite_backup):
+                # 备份为 SQLite 文件，需要读取后导入当前数据库
+                source_engine = create_engine(
+                    f"sqlite:///{sqlite_backup}?check_same_thread=False"
+                )
+                migrate_data = export_database(source_engine)
+                import_database(target_engine, migrate_data)
+                source_engine.dispose()
+            else:
+                return WebActionBase._fail(msg="备份文件中未找到数据库文件")
+
+            target_engine.dispose()
+            return WebActionBase._success(msg="恢复成功")
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
+            return WebActionBase._fail(msg=str(e))
+        finally:
+            # 清理临时文件
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            if 'temp_dir' in dir() and os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
 
         return WebActionBase._fail(msg="文件不存在")
 

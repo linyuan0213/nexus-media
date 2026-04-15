@@ -32,6 +32,8 @@ from app.utils.types import SearchType, MediaType, MovieTypes, EventType
 from config import RMT_MEDIAEXT, Config
 from web.backend.search_torrents import search_media_by_message
 from web.cache import cache
+from app.db.database_factory import DatabaseFactory
+from app.db.migrate import export_to_file, import_from_file
 
 
 class WebActionBase:
@@ -655,7 +657,7 @@ class WebActionBase:
     @staticmethod
     def backup(full_backup=False, bk_path=None):
         """
-        @param full_backup  是否完整备份
+        @param full_backup  是否完整备份（保留参数兼容性，当前始终完整备份）
         @param bk_path     自定义备份路径
         """
         try:
@@ -670,29 +672,18 @@ class WebActionBase:
             # 把现有的相关文件进行copy备份
             shutil.copy(f'{config_path}/config.yaml', backup_path)
             shutil.copy(f'{config_path}/default-category.yaml', backup_path)
-            shutil.copy(f'{config_path}/user.db', backup_path)
 
-            # 完整备份不删除表
-            if not full_backup:
-                conn = sqlite3.connect(f'{backup_path}/user.db')
-                cursor = conn.cursor()
-                # 执行操作删除不需要备份的表
-                table_list = [
-                    'SEARCH_RESULT_INFO',
-                    'RSS_TORRENTS',
-                    'DOUBAN_MEDIAS',
-                    'TRANSFER_HISTORY',
-                    'TRANSFER_UNKNOWN',
-                    'TRANSFER_BLACKLIST',
-                    'SYNC_HISTORY',
-                    'DOWNLOAD_HISTORY',
-                    'alembic_version'
-                ]
-                for table in table_list:
-                    cursor.execute(f"""DROP TABLE IF EXISTS {table};""")
-                conn.commit()
-                cursor.close()
-                conn.close()
+            # 判断当前数据库类型
+            db_type = DatabaseFactory._get_config_db_type()
+            engine = DatabaseFactory.create_engine()
+            if db_type == DatabaseFactory.SQLITE:
+                # SQLite 直接复制数据库文件（兼容旧恢复逻辑）
+                shutil.copy(f'{config_path}/user.db', backup_path)
+            # 无论当前是 SQLite 还是 MySQL/PostgreSQL，统一导出 JSON 文件
+            # 用于支持跨库恢复（如 sqlite → mysql）
+            export_to_file(engine, str(backup_path / 'user_db_export.json'))
+            engine.dispose()
+
             zip_file = str(backup_path) + '.zip'
             if os.path.exists(zip_file):
                 zip_file = str(backup_path) + '.zip'

@@ -185,6 +185,8 @@ class BrushTask(metaclass=SingletonMeta):
                 task.DOWNLOADER)
             total_size = round(
                 int(self.dbhelper.get_brushtask_totalsize(task.ID)) / (1024 ** 3), 1)
+            # SEED_SIZE 在数据库中统一为 BigInteger（字节），传给前端时转为 GB
+            seed_size_gb = round(int(task.SEED_SIZE) / (1024 ** 3), 1) if task.SEED_SIZE else 0
             self._brush_tasks[str(task.ID)] = {
                 "id": task.ID,
                 "name": task.NAME,
@@ -202,7 +204,7 @@ class BrushTask(metaclass=SingletonMeta):
                 "rss_rule": eval(task.RSS_RULE),
                 "remove_rule": eval(task.REMOVE_RULE),
                 "stop_rule": eval(task.STOP_RULE if task.STOP_RULE else "{'stopfree': 'Y'}"),
-                "seed_size": task.SEED_SIZE,
+                "seed_size": seed_size_gb,
                 "time_range": task.TIME_RANGE,
                 "total_size": total_size,
                 "rss_url": task.RSSURL if task.RSSURL else site_info.get("rssurl"),
