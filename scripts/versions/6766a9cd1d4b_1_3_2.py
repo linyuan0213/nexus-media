@@ -8,6 +8,7 @@ Create Date: 2026-04-10 11:50:00.000000
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import Column, Integer, Text, String, Sequence
+import ast
 import json
 
 
@@ -23,6 +24,25 @@ def has_table(table_name):
     conn = op.get_bind()
     inspector = sa.inspect(conn)
     return table_name in inspector.get_table_names()
+
+
+def _fix_rule(val):
+    """将旧的 Python 字面量规则字符串清洗为合法 JSON"""
+    if not val:
+        return '{}'
+    val = val.strip()
+    if not val:
+        return '{}'
+    try:
+        json.loads(val)
+        return val
+    except Exception:
+        pass
+    try:
+        d = ast.literal_eval(val)
+        return json.dumps(d, ensure_ascii=False)
+    except Exception:
+        return '{}'
 
 
 def upgrade() -> None:
@@ -181,6 +201,28 @@ def upgrade() -> None:
                 'ENCLOSURE',
                 type_=sa.String(2048),
                 existing_type=sa.String(512)
+            )
+    except Exception:
+        pass
+
+    # 将 SITE_BRUSH_TASK 表中的规则字段从 Python 字面量清洗为合法 JSON
+    try:
+        conn = op.get_bind()
+        rows = conn.execute(
+            sa.text("SELECT ID, RSS_RULE, REMOVE_RULE, STOP_RULE FROM SITE_BRUSH_TASK")
+        ).fetchall()
+        for row in rows:
+            rid, rss_rule, remove_rule, stop_rule = row
+            conn.execute(
+                sa.text(
+                    "UPDATE SITE_BRUSH_TASK SET RSS_RULE=:rss, REMOVE_RULE=:remove, STOP_RULE=:stop WHERE ID=:rid"
+                ),
+                {
+                    "rss": _fix_rule(rss_rule),
+                    "remove": _fix_rule(remove_rule),
+                    "stop": _fix_rule(stop_rule),
+                    "rid": rid,
+                },
             )
     except Exception:
         pass

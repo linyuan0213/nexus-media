@@ -18,14 +18,14 @@
           <a href="javascript:show_brushtask_modal()" class="btn btn-primary d-sm-none btn-icon">
             {{ SVG.plus() }}
           </a>
-          <a href="javascript:update_brushtask_state('Y')" class="btn btn-success ms-auto d-none d-sm-inline-block">
+          <a href="javascript:update_brushtask_state('Y')" class="btn btn-success d-none d-sm-inline-block">
             {{ SVG.player_play() }}
             启动
           </a>
           <a href="javascript:update_brushtask_state('Y')" class="btn btn-success d-sm-none btn-icon">
             {{ SVG.player_play() }}
           </a>
-          <a href="javascript:update_brushtask_state('N')" class="btn btn-secondary ms-auto d-none d-sm-inline-block">
+          <a href="javascript:update_brushtask_state('N')" class="btn btn-secondary d-none d-sm-inline-block">
             {{ SVG.player_stop() }}
             停止
           </a>
@@ -44,66 +44,61 @@
         {% for Task in Tasks %}
           <div class="card">
             <div class="card-header">
-              <div>
-                <input class="form-check-input m-0 align-middle" name="burshtask" value="{{ Task.id }}" type="checkbox">
-              </div>
-              <div>
+              <!-- 左侧：复选框 + 状态 -->
+              <div class="d-flex align-items-center gap-2">
+                <input class="form-check-input m-0" name="burshtask" value="{{ Task.id }}" type="checkbox" title="选择任务">
                 {% if Task.state == 'Y' %}
-                <span class="badge bg-green ms-3"></span>
+                <span class="badge bg-green"></span>
                 {% elif Task.state == 'S' %}
-                <span class="badge bg-orange ms-3"></span>
+                <span class="badge bg-orange"></span>
                 {% else %}
-                <span class="badge bg-red ms-3"></span>
+                <span class="badge bg-red"></span>
                 {% endif %}
               </div>
-              <a href="javascript:void(0)" onclick="show_brushtask_detail('{{ Task.id }}')" style="text-decoration-line: none; color: unset"
-                 title="展开/折叠" data-bs-toggle="tooltip">
-                <div class="ms-3">
-                  <h3 class="card-title">{{ Task.name }}</h3>
-                </div>
-              </a>
-              <div class="ms-2 d-none d-sm-block">
-                <a href="javascript:run_brushtask_now('{{ Task.id }}')" class="btn-icon" title="立即运行任务"
-                   data-bs-toggle="tooltip">
+              <!-- 中间：任务名称、立即运行、流量统计 -->
+              <div class="d-flex align-items-center ms-3 flex-grow-1" style="min-width: 0;">
+                <a href="javascript:void(0)" onclick="show_brushtask_detail('{{ Task.id }}')" class="text-decoration-none text-reset d-flex align-items-center" style="min-width: 0;" title="展开/折叠" data-bs-toggle="tooltip">
+                  <h3 class="card-title text-truncate mb-0" style="max-width: 260px;">{{ Task.name }}</h3>
+                </a>
+                <a href="javascript:run_brushtask_now('{{ Task.id }}')" class="btn-icon ms-2 d-none d-sm-inline-flex" title="立即运行任务" data-bs-toggle="tooltip">
                   {{ SVG.bolt('icon-filled') }}
                 </a>
+                <div class="text-muted ms-3 d-none d-md-block" id="detail_size_{{ Task.id }}"
+                     style="display: {% if Count > 2 %}block{% else %}none{% endif %};">↑{{ Task.upload_size }}  ↓{{ Task.download_size }}</div>
               </div>
-              <div class="text-muted ms-3" id="detail_size_{{ Task.id }}"
-                style="display: {% if Count > 2 %}block{% else %}none{% endif %};">↑{{ Task.upload_size }}  ↓{{ Task.download_size }}</div>
-              <a href="#" class="link-secondary ms-auto d-sm-none" data-bs-toggle="dropdown" aria-expanded="false">
-                {{ SVG.dots() }}
-              </a>
-              <div class="dropdown-menu dropdown-menu-end">
-                <button class="dropdown-item text-info" onclick="run_brushtask_now('{{ Task.id }}')">
-                  立即运行
-                </button>
-                <button class="dropdown-item" onclick="show_brushtask_torrents_modal('{{ Task.id }}')">
-                  预览
-                </button>
-                <button class="dropdown-item" onclick="edit_brushtask_modal('{{ Task.id }}')">
-                  编辑
-                </button>
-                <button class="dropdown-item text-danger" onclick="del_brushtask_modal('{{ Task.id }}', '{{ Task.name }}')">
-                  删除
-                </button>
-              </div>
-              <div class="card-actions btn-actions d-none d-sm-block">
-                <a href="javascript:void(0)" onclick="show_brushtask_detail('{{ Task.id }}')" class="btn-action"
-                   title="展开/折叠">
-                  {{ SVG.menu_2() }}
+              <!-- 右侧：操作按钮 -->
+              <div class="ms-auto d-flex align-items-center">
+                <a href="#" class="link-secondary d-sm-none" data-bs-toggle="dropdown" aria-expanded="false">
+                  {{ SVG.dots() }}
                 </a>
-                <a href="javascript:show_brushtask_torrents_modal('{{ Task.id }}')" class="btn-action"
-                   title="查看种子明细">
-                  {{ SVG.eye() }}
-                </a>
-                <a href="javascript:edit_brushtask_modal('{{ Task.id }}')" class="btn-action"
-                  title="编辑任务">
-                  {{ SVG.edit() }}
-                </a>
-                <a href="javascript:del_brushtask_modal('{{ Task.id }}', '{{ Task.name }}')" class="btn-action"
-                   title="删除任务">
-                  {{ SVG.x() }}
-                </a>
+                <div class="dropdown-menu dropdown-menu-end">
+                  <button class="dropdown-item text-info" onclick="run_brushtask_now('{{ Task.id }}')">
+                    立即运行
+                  </button>
+                  <button class="dropdown-item" onclick="show_brushtask_torrents_modal('{{ Task.id }}')">
+                    预览
+                  </button>
+                  <button class="dropdown-item" onclick="edit_brushtask_modal('{{ Task.id }}')">
+                    编辑
+                  </button>
+                  <button class="dropdown-item text-danger" onclick="del_brushtask_modal('{{ Task.id }}', '{{ Task.name }}')">
+                    删除
+                  </button>
+                </div>
+                <div class="card-actions btn-actions d-none d-sm-flex">
+                  <a href="javascript:void(0)" onclick="show_brushtask_detail('{{ Task.id }}')" class="btn-action" title="展开/折叠">
+                    {{ SVG.menu_2() }}
+                  </a>
+                  <a href="javascript:show_brushtask_torrents_modal('{{ Task.id }}')" class="btn-action" title="查看种子明细">
+                    {{ SVG.eye() }}
+                  </a>
+                  <a href="javascript:edit_brushtask_modal('{{ Task.id }}')" class="btn-action" title="编辑任务">
+                    {{ SVG.edit() }}
+                  </a>
+                  <a href="javascript:del_brushtask_modal('{{ Task.id }}', '{{ Task.name }}')" class="btn-action" title="删除任务">
+                    {{ SVG.x() }}
+                  </a>
+                </div>
               </div>
             </div>
             <div class="card-body" id="detail_{{ Task.id }}"
@@ -314,8 +309,8 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">保种体积(GB) <span class="form-help"
-                                                           title="该任务所有下载任务的保种体积超过设定值时不再新增下载，冗余量5GB，即实际最多超过设定保种体积5GB"
-                                                           data-bs-toggle="tooltip">?</span></label>
+                                                            title="该任务所有下载任务的保种体积超过设定值时不再新增下载，冗余量5GB，即实际最多超过设定保种体积5GB"
+                                                            data-bs-toggle="tooltip">?</span></label>
               <input type="text" id="brushtask_totalsize" class="form-control" placeholder="">
             </div>
           </div>
@@ -334,24 +329,24 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">标签 <span class="form-help"
-                                                           title="用户在下载器中标记该任务的种子，多个标签使用,分隔"
-                                                           data-bs-toggle="tooltip">?</span></label>
+                                                            title="用户在下载器中标记该任务的种子，多个标签使用,分隔"
+                                                            data-bs-toggle="tooltip">?</span></label>
               <input type="text" id="brushtask_label" class="form-control" placeholder="多个标签使用,分隔">
             </div>
           </div>
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">保存目录 <span class="form-help"
-                                                           title="为该刷新任务设置独立的保存目录，将会覆盖下载器中的目录设置，如果下载器为Qbittorrent还需要在NAStool下载器设置中关闭种子自动管理功能"
-                                                           data-bs-toggle="tooltip">?</span></label>
+                                                            title="为该刷新任务设置独立的保存目录，将会覆盖下载器中的目录设置，如果下载器为Qbittorrent还需要在NAStool下载器设置中关闭种子自动管理功能"
+                                                            data-bs-toggle="tooltip">?</span></label>
               <input type="text" id="brushtask_savepath" class="form-control" placeholder="留空使用下载器设置">
             </div>
           </div>
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">开启时间段 <span class="form-help"
-                                                           title="为该刷新任务设置独立的刷流时间段格式为HH:MM-HH:MM，支持多个时间段按逗号分隔，为空不开启"
-                                                           data-bs-toggle="tooltip">?</span></label>
+                                                            title="为该刷新任务设置独立的刷流时间段格式为HH:MM-HH:MM，支持多个时间段按逗号分隔，为空不开启"
+                                                            data-bs-toggle="tooltip">?</span></label>
               <input type="text" id="brushtask_time_range" class="form-control" placeholder="">
             </div>
           </div>
@@ -360,8 +355,8 @@
           <div class="col-lg">
             <div class="mb-3">
               <label class="form-label">RSS地址 <span class="form-help"
-                                                           title="刷流优先使用此处填入的站点RSS，若为空则使用站点配置RSS地址"
-                                                           data-bs-toggle="tooltip">?</span></label>
+                                                            title="刷流优先使用此处填入的站点RSS，若为空则使用站点配置RSS地址"
+                                                            data-bs-toggle="tooltip">?</span></label>
               <input type="text" id="brushtask_rssurl" class="form-control" placeholder="站点RSS订阅URL，若为空则使用站点配置RSS地址">
             </div>
           </div>
@@ -401,8 +396,8 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">促销 <span class="form-help"
-                                                   title="选全部即不过滤会下载到非促销的种子，免费包括2X免费，选择普通则只下载非促销种子"
-                                                   data-bs-toggle="tooltip">?</span></label>
+                                                    title="选全部即不过滤会下载到非促销的种子，免费包括2X免费，选择普通则只下载非促销种子"
+                                                    data-bs-toggle="tooltip">?</span></label>
               <select class="form-select" id="brushtask_free">
                 <option value="" selected>全部</option>
                 <option value="NORMAL">普通</option>
@@ -423,46 +418,46 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">同时下载任务数 <span class="form-help"
-                                                             title="下载器中正在下载的任务数超过此值时不再添加下载"
-                                                             data-bs-toggle="tooltip">?</span></label>
+                                                              title="下载器中正在下载的任务数超过此值时不再添加下载"
+                                                              data-bs-toggle="tooltip">?</span></label>
               <input type="text" id="brushtask_dlcount" class="form-control" placeholder="10">
             </div>
           </div>
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">包含 <span class="form-help"
-                                                   title="种子名称或副标题中包括对应关键字或者匹配正则式时才会下载"
-                                                   data-bs-toggle="tooltip">?</span></label>
+                                                    title="种子名称或副标题中包括对应关键字或者匹配正则式时才会下载"
+                                                    data-bs-toggle="tooltip">?</span></label>
               <input type="text" id="brushtask_include" class="form-control" placeholder="关键字或正则表达式">
             </div>
           </div>
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">排除 <span class="form-help"
-                                                   title="种子名称或副标题中包括对应关键字或者匹配正则式时不会下载"
-                                                   data-bs-toggle="tooltip">?</span></label>
+                                                    title="种子名称或副标题中包括对应关键字或者匹配正则式时不会下载"
+                                                    data-bs-toggle="tooltip">?</span></label>
               <input type="text" id="brushtask_exclude" class="form-control" placeholder="关键字或正则表达式">
             </div>
           </div>
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">上传限速（KB/S） <span class="form-help" title="限制添加下载后的上传速度"
-                                                             data-bs-toggle="tooltip">?</span></label>
+                                                              data-bs-toggle="tooltip">?</span></label>
               <input type="text" id="brushtask_upspeed" class="form-control" placeholder="">
             </div>
           </div>
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">下载限速（KB/S） <span class="form-help" title="限制添加下载后的下载速度"
-                                                             data-bs-toggle="tooltip">?</span></label>
+                                                              data-bs-toggle="tooltip">?</span></label>
               <input type="text" id="brushtask_downspeed" class="form-control" placeholder="">
             </div>
           </div>
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">种子大小(GB) <span class="form-help"
-                                                           title="设置大小范围的种子才会下载，介于时使用英文逗号,分隔两个值"
-                                                           data-bs-toggle="tooltip">?</span></label>
+                                                            title="设置大小范围的种子才会下载，介于时使用英文逗号,分隔两个值"
+                                                            data-bs-toggle="tooltip">?</span></label>
               <div class="input-group">
                 <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true"
                         aria-expanded="false" id="brushtask_torrent_size_btn">
@@ -494,8 +489,8 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">做种人数限制 <span class="form-help"
-                                                           title="种子当前做种人数限制，介于时使用英文逗号,分隔两个值，比较值时均包括边界值本身"
-                                                           data-bs-toggle="tooltip">?</span></label>
+                                                            title="种子当前做种人数限制，介于时使用英文逗号,分隔两个值，比较值时均包括边界值本身"
+                                                            data-bs-toggle="tooltip">?</span></label>
               <div class="input-group">
                 <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true"
                         aria-expanded="false" id="brushtask_peercount_btn">
@@ -527,8 +522,8 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">发布时间（小时） <span class="form-help"
-                                                             title="种子的发布时间在选定范围内时才会下载，介于时使用英文逗号,分隔两个值，比较值时均包括边界值本身"
-                                                             data-bs-toggle="tooltip">?</span></label>
+                                                              title="种子的发布时间在选定范围内时才会下载，介于时使用英文逗号,分隔两个值，比较值时均包括边界值本身"
+                                                              data-bs-toggle="tooltip">?</span></label>
               <div class="input-group">
                 <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true"
                         aria-expanded="false" id="brushtask_pubdate_btn">
@@ -563,8 +558,8 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">删种模式 <span class="form-help"
-                                                   title="或模式 满足其中一个删除 与模式全部满足删除"
-                                                   data-bs-toggle="tooltip">?</span></label>
+                                                    title="或模式 满足其中一个删除 与模式全部满足删除"
+                                                    data-bs-toggle="tooltip">?</span></label>
               <select class="form-select" id="brushtask_mode">
                 <option value="or" selected>或</option>
                 <option value="and">与</option>
@@ -576,7 +571,7 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">做种时间(小时) <span class="form-help" title="做种超过设定时间时会删除下载任务"
-                                                             data-bs-toggle="tooltip">?</span></label>
+                                                              data-bs-toggle="tooltip">?</span></label>
               <div class="input-group">
                 <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true"
                         aria-expanded="false" id="brushtask_seedtime_btn">
@@ -600,7 +595,7 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">H&R 做种时间(小时) <span class="form-help" title="H&R 做种超过设定时间时会删除下载任务"
-                                                             data-bs-toggle="tooltip">?</span></label>
+                                                              data-bs-toggle="tooltip">?</span></label>
               <div class="input-group">
                 <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true"
                         aria-expanded="false" id="brushtask_hr_seedtime_btn">
@@ -624,7 +619,7 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">分享率 <span class="form-help" title="分享率超过设定值时会删除下载任务（分享率为上传量与种子大小的比值）"
-                                                     data-bs-toggle="tooltip">?</span></label>
+                                                      data-bs-toggle="tooltip">?</span></label>
               <div class="input-group">
                 <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true"
                         aria-expanded="false" id="brushtask_seedratio_btn">
@@ -648,7 +643,7 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">上传量(GB) <span class="form-help" title="上传量超过设定值时会删除下载任务"
-                                                         data-bs-toggle="tooltip">?</span></label>
+                                                          data-bs-toggle="tooltip">?</span></label>
               <div class="input-group">
                 <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true"
                         aria-expanded="false" id="brushtask_seedsize_btn">
@@ -672,8 +667,8 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">下载耗时(小时) <span class="form-help"
-                                                             title="下载耗时超过设定值仍然未下载完成时会删除下载任务"
-                                                             data-bs-toggle="tooltip">?</span></label>
+                                                              title="下载耗时超过设定值仍然未下载完成时会删除下载任务"
+                                                              data-bs-toggle="tooltip">?</span></label>
               <div class="input-group">
                 <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true"
                         aria-expanded="false" id="brushtask_dltime_btn">
@@ -697,8 +692,8 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">平均上传速度(KB/S) <span class="form-help"
-                                                                 title="检查周期内平均上传速度低于设定值时删除下载任务，检查周期为10分钟"
-                                                                 data-bs-toggle="tooltip">?</span></label>
+                                                                  title="检查周期内平均上传速度低于设定值时删除下载任务，检查周期为10分钟"
+                                                                  data-bs-toggle="tooltip">?</span></label>
               <div class="input-group">
                 <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true"
                         aria-expanded="false" id="brushtask_avg_upspeed_btn">
@@ -722,7 +717,7 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">未活动时间(小时) <span class="form-help" title="超过设定时间未活动时会删除下载任务"
-                                                             data-bs-toggle="tooltip">?</span></label>
+                                                              data-bs-toggle="tooltip">?</span></label>
               <div class="input-group">
                 <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true"
                         aria-expanded="false" id="brushtask_iatime_btn">
@@ -746,7 +741,7 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">下载等待时间(小时) <span class="form-help" title="超过设定时间未下载时会删除下载任务"
-                                                             data-bs-toggle="tooltip">?</span></label>
+                                                              data-bs-toggle="tooltip">?</span></label>
               <div class="input-group">
                 <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true"
                         aria-expanded="false" id="brushtask_pending_time_btn">
@@ -770,8 +765,8 @@
           <div class="col-lg-4">
             <div class="mb-3">
               <label class="form-label">磁盘剩余空间(GB)<span class="form-help"
-                                                                 title="检查周期内磁盘剩余空间低于设定值时删除下载任务"
-                                                                 data-bs-toggle="tooltip">?</span></label>
+                                                                  title="检查周期内磁盘剩余空间低于设定值时删除下载任务"
+                                                                  data-bs-toggle="tooltip">?</span></label>
               <div class="input-group">
                 <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true"
                         aria-expanded="false" id="brushtask_freespace_btn">
@@ -837,6 +832,22 @@
   </div>
 </div>
 <script type="text/javascript">
+  // 需要处理范围条件的字段列表 (id前缀, 是否支持bw)
+  const BRUSH_RANGE_FIELDS = [
+    {id: 'brushtask_torrent_size', bw: true},
+    {id: 'brushtask_peercount', bw: true},
+    {id: 'brushtask_pubdate', bw: true},
+    {id: 'brushtask_seedtime', bw: false},
+    {id: 'brushtask_hr_seedtime', bw: false},
+    {id: 'brushtask_seedratio', bw: false},
+    {id: 'brushtask_seedsize', bw: false},
+    {id: 'brushtask_dltime', bw: false},
+    {id: 'brushtask_avg_upspeed', bw: false},
+    {id: 'brushtask_iatime', bw: false},
+    {id: 'brushtask_pending_time', bw: false},
+    {id: 'brushtask_freespace', bw: false},
+  ];
+
   // 显示新增刷流任务
   function show_brushtask_modal() {
     if (!{{ Sites|length }}) {
@@ -860,134 +871,48 @@
   function edit_brushtask_modal(brushid) {
     $("#brushtask_id").val(brushid);
     ajax_post("brushtask_detail", {"id": brushid}, function (ret) {
-      if (ret.code == 0) {
-        //赋值
-        $("#brushtask_modal_title").text("编辑任务");
-        $("#brushtask_name").val(ret.task.name);
-        $("#brushtask_site").val(ret.task.site_id);
-        brushtask_site_change(ret.task.site_id, ret.task.free, ret.task.rss_rule.hr);
-        $("#brushtask_interval").val(ret.task.interval);
-        $("#brushtask_rssurl").val(ret.task.rss_url_show);
-        $("#brushtask_downloader").val(ret.task.downloader);
-        $("#brushtask_totalsize").val(ret.task.seed_size);
-        $("#brushtask_state").val(ret.task.state);
-        if (ret.task.transfer) {
-          $("#brushtask_transfer").prop("checked", true);
-        } else {
-          $("#brushtask_transfer").prop("checked", false);
-        }
-        if (ret.task.sendmessage) {
-          $("#brushtask_sendmessage").prop("checked", true);
-        } else {
-          $("#brushtask_sendmessage").prop("checked", false);
-        }
-        $("#brushtask_dlcount").val(ret.task.rss_rule.dlcount)
-        $("#brushtask_peercount").val(ret.task.rss_rule.peercount)
-        $("#brushtask_include").val(ret.task.rss_rule.include);
-        $("#brushtask_exclude").val(ret.task.rss_rule.exclude);
-        $("#brushtask_label").val(ret.task.label);
-        $("#brushtask_savepath").val(ret.task.savepath);
-        $("#brushtask_time_range").val(ret.task.time_range);
-        //种子大小
-        if (ret.task.rss_rule.size) {
-          let size_str = ret.task.rss_rule.size.split('#');
-          filter_item_change(size_str[0], 'brushtask_torrent_size', $('#brushtask_torrent_size_do_' + size_str[0]), size_str[1])
-        }
-        //种子大小
-        if (ret.task.rss_rule.peercount) {
-          let peercount_str = ret.task.rss_rule.peercount;
-          if (peercount_str === '') {
-            peercount_str = '#';
-          } else if (peercount_str.indexOf('#') === -1) {
-            peercount_str = 'lt#' + peercount_str;
-          }
-          let peercount_strs = peercount_str.split('#');
-          filter_item_change(peercount_strs[0], 'brushtask_peercount', $('#brushtask_peercount_do_' + peercount_strs[0]), peercount_strs[1])
-        }
+      if (ret.code != 0) return;
+      const t = ret.task;
+      $("#brushtask_modal_title").text("编辑任务");
+      $("#brushtask_name").val(t.name);
+      $("#brushtask_site").val(t.site_id);
+      brushtask_site_change(t.site_id, t.free, t.rss_rule.hr);
+      $("#brushtask_interval").val(t.interval);
+      $("#brushtask_rssurl").val(t.rss_url_show);
+      $("#brushtask_downloader").val(t.downloader);
+      $("#brushtask_totalsize").val(t.seed_size);
+      $("#brushtask_state").val(t.state);
+      $("#brushtask_transfer").prop("checked", !!t.transfer);
+      $("#brushtask_sendmessage").prop("checked", !!t.sendmessage);
+      $("#brushtask_dlcount").val(t.rss_rule.dlcount);
+      $("#brushtask_peercount").val(t.rss_rule.peercount);
+      $("#brushtask_include").val(t.rss_rule.include);
+      $("#brushtask_exclude").val(t.rss_rule.exclude);
+      $("#brushtask_label").val(t.label);
+      $("#brushtask_savepath").val(t.savepath);
+      $("#brushtask_time_range").val(t.time_range);
+      $("#brushtask_upspeed").val(t.rss_rule.upspeed);
+      $("#brushtask_downspeed").val(t.rss_rule.downspeed);
+      $("#brushtask_mode").val(t.remove_rule.mode || 'or');
+      $("#brushtask_exclude_subscribe").prop("checked", t.rss_rule.exclude_subscribe === "Y");
+      $("#brushtask_stopfree").prop("checked", t.stop_rule.stopfree === "Y");
+      $("#brushtask_freestatus").prop("checked", t.remove_rule.freestatus === "Y");
 
-        // 排除订阅
-        if (ret.task.rss_rule.exclude_subscribe === "Y") {
-          $("#brushtask_exclude_subscribe").prop("checked", true);
-        } else {
-          $("#brushtask_exclude_subscribe").prop("checked", false);
-        }
-        //做种时间
-        if (ret.task.remove_rule.time) {
-          let seedtime_str = ret.task.remove_rule.time.split('#');
-          filter_item_change(seedtime_str[0], 'brushtask_seedtime', $('#brushtask_seedtime_do_' + seedtime_str[0]), seedtime_str[1])
-        }
-        //hr做种时间
-        if (ret.task.remove_rule.hr_time) {
-          let hr_seedtime_str = ret.task.remove_rule.hr_time.split('#');
-          filter_item_change(hr_seedtime_str[0], 'brushtask_hr_seedtime', $('#brushtask_hr_seedtime_do_' + hr_seedtime_str[0]), hr_seedtime_str[1])
-        }
-        //做种大小
-        if (ret.task.remove_rule.uploadsize) {
-          let seedsize_str = ret.task.remove_rule.uploadsize.split('#');
-          filter_item_change(seedsize_str[0], 'brushtask_seedsize', $('#brushtask_seedsize_do_' + seedsize_str[0]), seedsize_str[1])
-        }
-        //分享率
-        if (ret.task.remove_rule.ratio) {
-          let seedratio_str = ret.task.remove_rule.ratio.split('#');
-          filter_item_change(seedratio_str[0], 'brushtask_seedratio', $('#brushtask_seedratio_do_' + seedratio_str[0]), seedratio_str[1])
-        }
-        //下载耗时
-        if (ret.task.remove_rule.dltime) {
-          let dltime_str = ret.task.remove_rule.dltime.split('#');
-          filter_item_change(dltime_str[0], 'brushtask_dltime', $('#brushtask_dltime_do_' + dltime_str[0]), dltime_str[1])
-        }
-        //平均上传速度
-        if (ret.task.remove_rule.avg_upspeed) {
-          let avg_upspeed_str = ret.task.remove_rule.avg_upspeed.split('#');
-          filter_item_change(avg_upspeed_str[0], 'brushtask_avg_upspeed', $('#brushtask_avg_upspeed_do_' + avg_upspeed_str[0]), avg_upspeed_str[1])
-        }
-        //未活动时间
-        if (ret.task.remove_rule.iatime) {
-          let iatime_str = ret.task.remove_rule.iatime.split('#');
-          filter_item_change(iatime_str[0], 'brushtask_iatime', $('#brushtask_iatime_do_' + iatime_str[0]), iatime_str[1])
-        }
-        //发布日期
-        if (ret.task.rss_rule.pubdate) {
-          let pubdate_str = ret.task.rss_rule.pubdate.split('#');
-          filter_item_change(pubdate_str[0], 'brushtask_pubdate', $('#brushtask_pubdate_do_' + pubdate_str[0]), pubdate_str[1])
-        }
-        //等待未活动时间
-        if (ret.task.remove_rule.pending_time) {
-          let pending_time_str = ret.task.remove_rule.pending_time.split('#');
-          filter_item_change(pending_time_str[0], 'brushtask_pending_time', $('#brushtask_pending_time_do_' + pending_time_str[0]), pending_time_str[1])
-        }
-        //上传限速
-        $("#brushtask_upspeed").val(ret.task.rss_rule.upspeed);
-        //下载限速
-        $("#brushtask_downspeed").val(ret.task.rss_rule.downspeed);
-        
-        // 暂停种子
-        if (ret.task.stop_rule.stopfree === "Y") {
-          $("#brushtask_stopfree").prop("checked", true);
-        } else {
-          $("#brushtask_stopfree").prop("checked", false);
-        }
+      // 范围条件批量回显
+      set_range_field('brushtask_torrent_size', t.rss_rule.size);
+      set_range_field('brushtask_peercount', t.rss_rule.peercount, true); // 兼容旧数据
+      set_range_field('brushtask_pubdate', t.rss_rule.pubdate);
+      set_range_field('brushtask_seedtime', t.remove_rule.time);
+      set_range_field('brushtask_hr_seedtime', t.remove_rule.hr_time);
+      set_range_field('brushtask_seedsize', t.remove_rule.uploadsize);
+      set_range_field('brushtask_seedratio', t.remove_rule.ratio);
+      set_range_field('brushtask_dltime', t.remove_rule.dltime);
+      set_range_field('brushtask_avg_upspeed', t.remove_rule.avg_upspeed);
+      set_range_field('brushtask_iatime', t.remove_rule.iatime);
+      set_range_field('brushtask_pending_time', t.remove_rule.pending_time);
+      set_range_field('brushtask_freespace', t.remove_rule.freespace);
 
-        //磁盘剩余空间
-        if (ret.task.remove_rule.freespace) {
-          let freespace_str = ret.task.remove_rule.freespace.split('#');
-          filter_item_change(freespace_str[0], 'brushtask_freespace', $('#brushtask_freespace_do_' + freespace_str[0]), freespace_str[1])
-        }
-        
-        // 删种模式
-        if (ret.task.remove_rule.mode) {
-          $("#brushtask_mode").val(ret.task.remove_rule.mode);
-        }
-
-        // 暂停种子
-        if (ret.task.remove_rule.freestatus === "Y") {
-          $("#brushtask_freestatus").prop("checked", true);
-        } else {
-          $("#brushtask_freestatus").prop("checked", false);
-        }
-        //弹窗
-        $("#modal-brushtask").modal('show');
-      }
+      $("#modal-brushtask").modal('show');
     });
   }
 
@@ -1056,43 +981,76 @@
     }
   }
 
+  // 回显范围字段
+  function set_range_field(prefix, rawValue, compatNoHash=false) {
+    if (!rawValue) return;
+    let val = rawValue;
+    if (compatNoHash && val === '') {
+      val = '#';
+    } else if (compatNoHash && val.indexOf('#') === -1) {
+      val = 'lt#' + val;
+    }
+    let parts = val.split('#');
+    if (parts.length < 2) return;
+    let btn = $(`#${prefix}_do_${parts[0]}`);
+    if (btn.length) {
+      filter_item_change(parts[0], prefix, btn, parts[1]);
+    }
+  }
+
+  // 校验必填/数值/范围字段
+  function validate_required(id, condition) {
+    if (condition) {
+      $("#" + id).addClass("is-invalid");
+      return false;
+    }
+    $("#" + id).removeClass("is-invalid");
+    return true;
+  }
+
+  function validate_numeric(id, allowBw=false) {
+    let do_val = $(`#${id}_do`).val();
+    let val = $(`#${id}`).val();
+    if (do_val && !val) {
+      return validate_required(id, true);
+    }
+    if (val) {
+      if (allowBw && do_val === 'bw') {
+        if (!/^\d+,\d+$/.test(val)) {
+          return validate_required(id, true);
+        }
+      } else if (isNaN(val)) {
+        return validate_required(id, true);
+      }
+    }
+    return validate_required(id, false);
+  }
+
   // 新增任务保存
   function add_brushtask_job() {
-    // 检查输入项
     let brushtask_id = $("#brushtask_id").val();
     let brushtask_name = $("#brushtask_name").val();
-    if (!brushtask_name) {
-      $("#brushtask_name").addClass("is-invalid");
-      return;
-    } else {
-      $("#brushtask_name").removeClass("is-invalid");
-    }
+    if (!validate_required('brushtask_name', !brushtask_name)) return;
     let brushtask_site = $("#brushtask_site").val();
-    if (!brushtask_site) {
-      $("#brushtask_site").addClass("is-invalid");
-      return;
-    } else {
-      $("#brushtask_site").removeClass("is-invalid");
-    }
+    if (!validate_required('brushtask_site', !brushtask_site)) return;
     let brushtask_interval = $("#brushtask_interval").val();
-    if (!brushtask_interval) {
-      $("#brushtask_interval").addClass("is-invalid");
-      return;
-    } else {
-      $("#brushtask_interval").removeClass("is-invalid");
-    }
+    if (!validate_required('brushtask_interval', !brushtask_interval)) return;
     let brushtask_downloader = $("#brushtask_downloader").val();
-    if (!brushtask_downloader) {
-      $("#brushtask_downloader").addClass("is-invalid");
-      return;
-    } else {
-      $("#brushtask_downloader").removeClass("is-invalid");
-    }
+    if (!validate_required('brushtask_downloader', !brushtask_downloader)) return;
+
     let brushtask_totalsize = $("#brushtask_totalsize").val();
     if (brushtask_totalsize && isNaN(brushtask_totalsize)) {
       $("#brushtask_totalsize").addClass("is-invalid");
       return;
+    } else {
+      $("#brushtask_totalsize").removeClass("is-invalid");
     }
+
+    // 数值/范围字段统一校验
+    for (let f of BRUSH_RANGE_FIELDS) {
+      if (!validate_numeric(f.id, f.bw)) return;
+    }
+
     let brushtask_rssurl = $("#brushtask_rssurl").val();
     let brushtask_label = $("#brushtask_label").val();
     let brushtask_savepath = $("#brushtask_savepath").val();
@@ -1103,211 +1061,15 @@
     let brushtask_free = $("#brushtask_free").val();
     let brushtask_mode = $("#brushtask_mode").val();
     let brushtask_hr = $("#brushtask_hr").val();
-    //种子大小
-    let brushtask_torrent_size_do = $("#brushtask_torrent_size_do").val();
-    let brushtask_torrent_size = $("#brushtask_torrent_size").val();
-    if (brushtask_torrent_size_do && !brushtask_torrent_size) {
-      $("#brushtask_torrent_size").addClass("is-invalid");
-      return;
-    } else {
-      if (brushtask_torrent_size && brushtask_torrent_size_do != 'bw' && isNaN(brushtask_torrent_size)) {
-        $("#brushtask_torrent_size").addClass("is-invalid");
-        return;
-      } else if (brushtask_torrent_size && brushtask_torrent_size_do == 'bw' && !/\d+,\d+/.test(brushtask_torrent_size)) {
-        $("#brushtask_torrent_size").addClass("is-invalid");
-        return;
-      }
-      $("#brushtask_torrent_size").removeClass("is-invalid");
-    }
-    //包含
     let brushtask_include = $("#brushtask_include").val();
-    //排除
     let brushtask_exclude = $("#brushtask_exclude").val();
-    //同时下载数
     let brushtask_dlcount = $("#brushtask_dlcount").val();
-    if (brushtask_dlcount && isNaN(brushtask_dlcount)) {
-      $("#brushtask_dlcount").addClass("is-invalid");
-      return;
-    } else {
-      $("#brushtask_dlcount").removeClass("is-invalid");
-    }
-    //上传限速
     let brushtask_upspeed = $("#brushtask_upspeed").val();
-    if (brushtask_upspeed && isNaN(brushtask_upspeed)) {
-      $("#brushtask_upspeed").addClass("is-invalid");
-      return;
-    } else {
-      $("#brushtask_upspeed").removeClass("is-invalid");
-    }
-    //下载限速
     let brushtask_downspeed = $("#brushtask_downspeed").val();
-    if (brushtask_downspeed && isNaN(brushtask_downspeed)) {
-      $("#brushtask_downspeed").addClass("is-invalid");
-      return;
-    } else {
-      $("#brushtask_downspeed").removeClass("is-invalid");
-    }
-    //发布时间
-    let brushtask_pubdate_do = $("#brushtask_pubdate_do").val();
-    let brushtask_pubdate = $("#brushtask_pubdate").val();
-    if (brushtask_pubdate_do && !brushtask_pubdate) {
-      $("#brushtask_pubdate").addClass("is-invalid");
-      return;
-    } else {
-      if (brushtask_pubdate && brushtask_pubdate_do != 'bw' && isNaN(brushtask_pubdate)) {
-        $("#brushtask_pubdate").addClass("is-invalid");
-        return;
-      } else if (brushtask_pubdate && brushtask_pubdate_do == 'bw' && !/\d+,\d+/.test(brushtask_pubdate)) {
-        $("#brushtask_pubdate").addClass("is-invalid");
-        return;
-      }
-      $("#brushtask_pubdate").removeClass("is-invalid");
-    }
-    //做种人数
-    let brushtask_peercount_do = $("#brushtask_peercount_do").val();
-    let brushtask_peercount = $("#brushtask_peercount").val();
-    if (brushtask_peercount_do && !brushtask_peercount) {
-      $("#brushtask_peercount").addClass("is-invalid");
-      return;
-    } else {
-      if (brushtask_peercount && brushtask_peercount_do != 'bw' && isNaN(brushtask_peercount)) {
-        $("#brushtask_peercount").addClass("is-invalid");
-        return;
-      } else if (brushtask_peercount && brushtask_peercount_do == 'bw' && !/\d+,\d+/.test(brushtask_peercount)) {
-        $("#brushtask_peercount").addClass("is-invalid");
-        return;
-      }
-      $("#brushtask_peercount").removeClass("is-invalid");
-    }
-    //做种时间
-    let brushtask_seedtime_do = $("#brushtask_seedtime_do").val();
-    let brushtask_seedtime = $("#brushtask_seedtime").val();
-    if (brushtask_seedtime_do && !brushtask_seedtime) {
-      $("#brushtask_seedtime").addClass("is-invalid");
-      return;
-    } else {
-      if (brushtask_seedtime && isNaN(brushtask_seedtime)) {
-        $("#brushtask_seedtime").addClass("is-invalid");
-        return;
-      }
-      $("#brushtask_seedtime").removeClass("is-invalid");
-    }
-    //hr 做种时间
-    let brushtask_hr_seedtime_do = $("#brushtask_hr_seedtime_do").val();
-    let brushtask_hr_seedtime = $("#brushtask_hr_seedtime").val();
-    if (brushtask_hr_seedtime_do && !brushtask_hr_seedtime) {
-      $("#brushtask_hr_seedtime").addClass("is-invalid");
-      return;
-    } else {
-      if (brushtask_hr_seedtime && isNaN(brushtask_hr_seedtime)) {
-        $("#brushtask_hr_seedtime").addClass("is-invalid");
-        return;
-      }
-      $("#brushtask_hr_seedtime").removeClass("is-invalid");
-    }
-    //分享率
-    let brushtask_seedratio_do = $("#brushtask_seedratio_do").val();
-    let brushtask_seedratio = $("#brushtask_seedratio").val();
-    if (brushtask_seedratio_do && !brushtask_seedratio) {
-      $("#brushtask_seedratio").addClass("is-invalid");
-      return;
-    } else {
-      if (brushtask_seedratio && isNaN(brushtask_seedratio)) {
-        $("#brushtask_seedratio").addClass("is-invalid");
-        return;
-      }
-      $("#brushtask_seedratio").removeClass("is-invalid");
-    }
-    //上传量
-    let brushtask_seedsize_do = $("#brushtask_seedsize_do").val();
-    let brushtask_seedsize = $("#brushtask_seedsize").val();
-    if (brushtask_seedsize_do && !brushtask_seedsize) {
-      $("#brushtask_seedsize").addClass("is-invalid");
-      return;
-    } else {
-      if (brushtask_seedsize && isNaN(brushtask_seedsize)) {
-        $("#brushtask_seedsize").addClass("is-invalid");
-        return;
-      }
-      $("#brushtask_seedsize").removeClass("is-invalid");
-    }
-    //下载耗时
-    let brushtask_dltime_do = $("#brushtask_dltime_do").val();
-    let brushtask_dltime = $("#brushtask_dltime").val();
-    if (brushtask_dltime_do && !brushtask_dltime) {
-      $("#brushtask_dltime").addClass("is-invalid");
-      return;
-    } else {
-      if (brushtask_dltime && isNaN(brushtask_dltime)) {
-        $("#brushtask_dltime").addClass("is-invalid");
-        return;
-      }
-      $("#brushtask_dltime").removeClass("is-invalid");
-    }
-    //平均上传速度
-    let brushtask_avg_upspeed_do = $("#brushtask_avg_upspeed_do").val();
-    let brushtask_avg_upspeed = $("#brushtask_avg_upspeed").val();
-    if (brushtask_avg_upspeed_do && !brushtask_avg_upspeed) {
-      $("#brushtask_avg_upspeed").addClass("is-invalid");
-      return;
-    } else {
-      if (brushtask_avg_upspeed && isNaN(brushtask_avg_upspeed)) {
-        $("#brushtask_avg_upspeed").addClass("is-invalid");
-        return;
-      }
-      $("#brushtask_avg_upspeed").removeClass("is-invalid");
-    }
-    //未活动时间
-    let brushtask_iatime_do = $("#brushtask_iatime_do").val();
-    let brushtask_iatime = $("#brushtask_iatime").val();
-    if (brushtask_iatime_do && !brushtask_iatime) {
-      $("#brushtask_iatime").addClass("is-invalid");
-      return;
-    } else {
-      if (brushtask_iatime && isNaN(brushtask_iatime)) {
-        $("#brushtask_iatime").addClass("is-invalid");
-        return;
-      }
-      $("#brushtask_iatime").removeClass("is-invalid");
-    }
-
-    //等待未活动时间
-    let brushtask_pending_time_do = $("#brushtask_pending_time_do").val();
-    let brushtask_pending_time = $("#brushtask_pending_time").val();
-    if (brushtask_pending_time_do && !brushtask_pending_time) {
-      $("#brushtask_pending_time").addClass("is-invalid");
-      return;
-    } else {
-      if (brushtask_pending_time && isNaN(brushtask_pending_time)) {
-        $("#brushtask_pending_time").addClass("is-invalid");
-        return;
-      }
-      $("#brushtask_pending_time").removeClass("is-invalid");
-    }
-
-    // 暂停种子
     let brushtask_stopfree = $("#brushtask_stopfree").prop('checked');
-
-    //磁盘剩余空间
-    let brushtask_freespace_do = $("#brushtask_freespace_do").val();
-    let brushtask_freespace = $("#brushtask_freespace").val();
-    if (brushtask_freespace_do && !brushtask_freespace) {
-      $("#brushtask_freespace").addClass("is-invalid");
-      return;
-    } else {
-      if (brushtask_freespace && isNaN(brushtask_freespace)) {
-        $("#brushtask_freespace").addClass("is-invalid");
-        return;
-      }
-      $("#brushtask_freespace").removeClass("is-invalid");
-    }
-
-    // 排除订阅
     let brushtask_exclude_subscribe = $("#brushtask_exclude_subscribe").prop('checked');
-
-    // Free到期删种
     let brushtask_freestatus = $("#brushtask_freestatus").prop('checked');
-    // 参数
+
     const params = {
       brushtask_id: brushtask_id,
       brushtask_name: brushtask_name,
@@ -1325,24 +1087,24 @@
       brushtask_free: brushtask_free,
       brushtask_mode: brushtask_mode,
       brushtask_hr: brushtask_hr,
-      brushtask_torrent_size: brushtask_torrent_size_do + "#" + brushtask_torrent_size,
+      brushtask_torrent_size: $("#brushtask_torrent_size_do").val() + "#" + $("#brushtask_torrent_size").val(),
       brushtask_include: brushtask_include,
       brushtask_exclude: brushtask_exclude,
       brushtask_dlcount: brushtask_dlcount,
-      brushtask_peercount: brushtask_peercount_do + "#" + brushtask_peercount,
-      brushtask_seedtime: brushtask_seedtime_do + "#" + brushtask_seedtime,
-      brushtask_hr_seedtime: brushtask_hr_seedtime_do + "#" + brushtask_hr_seedtime,
-      brushtask_seedratio: brushtask_seedratio_do + "#" + brushtask_seedratio,
-      brushtask_seedsize: brushtask_seedsize_do + "#" + brushtask_seedsize,
-      brushtask_dltime: brushtask_dltime_do + "#" + brushtask_dltime,
-      brushtask_avg_upspeed: brushtask_avg_upspeed_do + "#" + brushtask_avg_upspeed,
-      brushtask_iatime: brushtask_iatime_do + "#" + brushtask_iatime,
+      brushtask_peercount: $("#brushtask_peercount_do").val() + "#" + $("#brushtask_peercount").val(),
+      brushtask_seedtime: $("#brushtask_seedtime_do").val() + "#" + $("#brushtask_seedtime").val(),
+      brushtask_hr_seedtime: $("#brushtask_hr_seedtime_do").val() + "#" + $("#brushtask_hr_seedtime").val(),
+      brushtask_seedratio: $("#brushtask_seedratio_do").val() + "#" + $("#brushtask_seedratio").val(),
+      brushtask_seedsize: $("#brushtask_seedsize_do").val() + "#" + $("#brushtask_seedsize").val(),
+      brushtask_dltime: $("#brushtask_dltime_do").val() + "#" + $("#brushtask_dltime").val(),
+      brushtask_avg_upspeed: $("#brushtask_avg_upspeed_do").val() + "#" + $("#brushtask_avg_upspeed").val(),
+      brushtask_iatime: $("#brushtask_iatime_do").val() + "#" + $("#brushtask_iatime").val(),
       brushtask_upspeed: brushtask_upspeed,
       brushtask_downspeed: brushtask_downspeed,
-      brushtask_pubdate: brushtask_pubdate_do + "#" + brushtask_pubdate,
-      brushtask_pending_time: brushtask_pending_time_do + "#" + brushtask_pending_time,
+      brushtask_pubdate: $("#brushtask_pubdate_do").val() + "#" + $("#brushtask_pubdate").val(),
+      brushtask_pending_time: $("#brushtask_pending_time_do").val() + "#" + $("#brushtask_pending_time").val(),
       brushtask_stopfree: brushtask_stopfree,
-      brushtask_freespace: brushtask_freespace_do + "#" + brushtask_freespace,
+      brushtask_freespace: $("#brushtask_freespace_do").val() + "#" + $("#brushtask_freespace").val(),
       brushtask_exclude_subscribe: brushtask_exclude_subscribe,
       brushtask_freestatus: brushtask_freestatus,
     };
@@ -1409,5 +1171,4 @@
       $("#modal-brushtask-torrents").modal('show');
     });
   }
-
 </script>

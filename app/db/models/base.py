@@ -4,7 +4,7 @@
 包含 Base 和 BaseMedia 声明式基类
 """
 from sqlalchemy import Column, Float, Index, Integer, Text, String, text, Sequence, BigInteger
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 
 # 使用单一的 Base 来合并两个数据库
 Base = declarative_base()
