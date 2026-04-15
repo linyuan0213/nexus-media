@@ -11,6 +11,7 @@ import log
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.memory import MemoryJobStore
+from apscheduler.jobstores.base import JobLookupError
 from apscheduler.util import undefined
 from apscheduler.events import (
     EVENT_JOB_EXECUTED,
@@ -581,6 +582,9 @@ class SchedulerService(metaclass=SingletonMeta):
             with self._lock:
                 if job_id in self._job_stats:
                     del self._job_stats[job_id]
+            return True
+        except JobLookupError:
+            log.debug(f"任务 {job_id} 不存在，无需移除")
             return True
         except Exception as e:
             log.error(f"移除任务 {job_id} 失败: {e}")
