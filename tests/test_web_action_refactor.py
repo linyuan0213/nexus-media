@@ -21,7 +21,7 @@ _HEAVY_PATCHES = [
     "app.rss.Rss",
     "app.subscribe.Subscribe",
     "app.brushtask.BrushTask",
-    "app.rsschecker.RssChecker",
+    "app.services.rss_service.RssTaskService",
     "app.message.Message",
     "app.media.Media",
     "app.media.category.Category",

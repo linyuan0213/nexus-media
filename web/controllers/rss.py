@@ -5,7 +5,7 @@ from app.helper import ThreadHelper
 from app.helper import RssHelper
 from app.media.meta import MetaInfo
 from app.rss import Rss
-from app.rsschecker import RssChecker
+from app.services.rss_service import RssTaskService as RssChecker
 from app.subscribe import Subscribe
 from app.utils.types import MediaType, MovieTypes, RssType
 
