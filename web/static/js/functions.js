@@ -107,7 +107,7 @@ function navmenu(page, newflag = false) {
 function media_search(tmdbid, title, type) {
   const param = {"tmdbid": tmdbid, "search_word": title, "media_type": type};
   show_refresh_progress("正在搜索 " + title + " ...", "search");
-  ajax_post("search", param, function (ret) {
+  ajax_post("/api/web/system/search", param, function (ret) {
     hide_refresh_process();
     if (ret.code === 0) {
       navmenu('search?s=' + title)
@@ -430,7 +430,7 @@ function get_message(lst_time) {
 
 //检查系统是否在线
 function check_system_online() {
-  ajax_post("refresh_process", {type: "restart"}, function (ret) {
+  ajax_post("/api/web/system/refresh_process", {type: "restart"}, function (ret) {
     if (ret.code === -1) {
       logout();
     } else {
@@ -441,7 +441,7 @@ function check_system_online() {
 
 //注销
 function logout() {
-  ajax_post("logout", {}, function (ret) {
+  ajax_post("/api/web/system/logout", {}, function (ret) {
     window.location.href = "/";
   });
 }
@@ -450,7 +450,7 @@ function logout() {
 function restart() {
   show_confirm_modal("立即重启系统？", function () {
     hide_confirm_modal();
-    ajax_post("restart", {}, function (ret) {
+    ajax_post("/api/web/system/restart", {}, function (ret) {
     }, true, false);
     show_wait_modal(true);
     setTimeout("check_system_online()", 5000);
@@ -467,7 +467,7 @@ function update(version) {
   }
   show_confirm_modal(title, function () {
     hide_confirm_modal();
-    ajax_post("update_system", {}, function (ret) {
+    ajax_post("/api/web/system/update_system", {}, function (ret) {
     }, true, false)
     show_wait_modal(true);
     setTimeout("check_system_online()", 5000);
@@ -611,7 +611,7 @@ function show_mediainfo_modal(rtype, name, year, mediaid, page, rssid) {
   if (!rssid) {
     rssid = "";
   }
-  ajax_post("media_info", {
+  ajax_post("/api/web/media/media_info", {
     "id": mediaid,
     "title": name,
     "year": year,
@@ -730,7 +730,7 @@ function add_rss_media(name, year, type, mediaid, page, season, func) {
     "page": page,
     "season": season
   };
-  ajax_post("add_rss_media", data, function (ret) {
+  ajax_post("/api/web/rss/add_rss_media", data, function (ret) {
     if (ret.code === 0) {
       if (ret.page) {
         navmenu(ret.page);
@@ -750,7 +750,7 @@ function add_rss_media(name, year, type, mediaid, page, season, func) {
 function remove_rss_media(name, year, type, rssid, page, tmdbid, func) {
   hide_mediainfo_modal();
   let data = {"name": name, "type": type, "year": year, "rssid": rssid, "page": page, "tmdbid": tmdbid};
-  ajax_post("remove_rss_media", data, function (ret) {
+  ajax_post("/api/web/rss/remove_rss_media", data, function (ret) {
     if (func) {
       func();
     } else if (ret.page) {
@@ -764,7 +764,7 @@ function remove_rss_media(name, year, type, rssid, page, tmdbid, func) {
 // 刷新订阅
 function refresh_rss_media(type, rssid, page) {
   hide_mediainfo_modal();
-  ajax_post("refresh_rss", {"type": type, "rssid": rssid, "page": page}, function (ret) {
+  ajax_post("/api/web/rss/refresh_rss", {"type": type, "rssid": rssid, "page": page}, function (ret) {
     if (ret.page) {
       window_history_refresh();
     } else {
@@ -798,7 +798,7 @@ function search_mediainfo_media(tmdbid, title, typestr) {
   hide_mediainfo_modal();
   const param = {"tmdbid": tmdbid, "search_word": title, "media_type": typestr};
   show_refresh_progress("正在搜索 " + title + " ...", "search");
-  ajax_post("search", param, function (ret) {
+  ajax_post("/api/web/system/search", param, function (ret) {
     hide_refresh_process();
     if (ret.code === 0) {
       navmenu('search?s=' + title);
@@ -907,7 +907,7 @@ function add_rss_manual(flag) {
     }, ...rss_setting
   };
   $("#modal-manual-rss").modal("hide");
-  ajax_post("add_rss_media", data, function (ret) {
+  ajax_post("/api/web/rss/add_rss_media", data, function (ret) {
     if (ret.code === 0) {
       if (CurrentPageUri.startsWith("tv_rss") || CurrentPageUri.startsWith("movie_rss")) {
         window_history_refresh();
@@ -1035,7 +1035,7 @@ function show_default_rss_setting_modal(mtype) {
   refresh_downloadsetting_select("default_rss_setting_download_setting", false)
 
   // 查询已保存配置
-  ajax_post("get_default_rss_setting", {mtype: mtype}, function (ret) {
+  ajax_post("/api/web/rss/get_default_rss_setting", {mtype: mtype}, function (ret) {
     if (ret.code === 0 && ret.data) {
       $("#default_rss_setting_restype").val(ret.data.restype);
       $("#default_rss_setting_pix").val(ret.data.pix);
@@ -1084,7 +1084,7 @@ function save_default_rss_setting() {
   const key = common.mtype === "MOV" ? "DefaultRssSettingMOV" : "DefaultRssSettingTV";
   const value = {...common, ...sites};
   $("#modal-default-rss-setting").modal("hide");
-  ajax_post("set_system_config", {key: key, value: value}, function (ret) {
+  ajax_post("/api/web/system/set_system_config", {key: key, value: value}, function (ret) {
     if (ret.code === 0) {
       show_success_modal("设置订阅默认配置成功！");
     } else {
@@ -1104,7 +1104,7 @@ function show_edit_rss_media_modal(rssid, type) {
   refresh_rss_download_setting_dirs();
 
   // 获取订阅信息
-  ajax_post("rss_detail", {"rssid": rssid, "rsstype": type}, function (ret) {
+  ajax_post("/api/web/rss/rss_detail", {"rssid": rssid, "rsstype": type}, function (ret) {
     if (ret.code === 0) {
       $("#rss_tmdbid").val(ret.detail.tmdbid);
       $("#rss_name").val(ret.detail.name).attr("readonly", true);
@@ -1193,7 +1193,7 @@ function show_rss_success_modal(rssid, type, text) {
 
 // 刷新规则下拉框
 function refresh_filter_select(obj_id, aync = true) {
-  ajax_post("get_filterrules", {}, function (ret) {
+  ajax_post("/api/web/filter/get_filterrules", {}, function (ret) {
     if (ret.code === 0) {
       let rule_select = $(`#${obj_id}`);
       let rule_select_content = `<option value="">站点规则</option>`;
@@ -1207,7 +1207,7 @@ function refresh_filter_select(obj_id, aync = true) {
 
 // 刷新RSS站点下拉框
 function refresh_rsssites_select(obj_id, item_name, aync = true) {
-  ajax_post("get_sites", {rss: true, basic: true}, function (ret) {
+  ajax_post("/api/web/site/get_sites", {rss: true, basic: true}, function (ret) {
     if (ret.code === 0) {
       let rsssites_select = $(`#${obj_id}`);
       let rsssites_select_content = "";
@@ -1231,7 +1231,7 @@ function refresh_rsssites_select(obj_id, item_name, aync = true) {
 
 // 刷新搜索站点列表
 function refresh_searchsites_select(obj_id, item_name, aync = true) {
-  ajax_post("get_indexers", {check: true, basic: true}, function (ret) {
+  ajax_post("/api/web/download/get_indexers", {check: true, basic: true}, function (ret) {
     if (ret.code === 0) {
       let searchsites_select = $(`#${obj_id}`);
       let searchsites_select_content = "";
@@ -1255,7 +1255,7 @@ function refresh_searchsites_select(obj_id, item_name, aync = true) {
 
 // 刷新搜索站点下拉框
 function refresh_site_options(obj_id, show_all = false) {
-  ajax_post("get_indexers", {check: true, basic: true}, function (ret) {
+  ajax_post("/api/web/download/get_indexers", {check: true, basic: true}, function (ret) {
     if (ret.code === 0) {
       let site_options = '';
       if (show_all) {
@@ -1280,7 +1280,7 @@ function refresh_savepath_select(obj_id, aync = true, sid = "", is_default = fal
     savepath_input_manual.hide();
     savepath_select.show();
   } else {
-    ajax_post("get_download_dirs", {sid: sid, site: site}, function (ret) {
+    ajax_post("/api/web/download/get_download_dirs", {sid: sid, site: site}, function (ret) {
       if (ret.code === 0) {
         for (let path of ret.paths) {
           savepath_select_content += `<option value="${path}">${path}</option>`;
@@ -1328,7 +1328,7 @@ function get_savepath(select_id, input_id) {
 // 刷新下载设置
 function refresh_downloadsetting_select(obj_id, aync = true, is_default = false) {
   let default_content = (!is_default) ? "站点设置" : "默认";
-  ajax_post("get_download_setting", {}, function (ret) {
+  ajax_post("/api/web/download/get_download_setting", {}, function (ret) {
     if (ret.code === 0) {
       let downloadsetting_select = $(`#${obj_id}`);
       let downloadsetting_select_content = `<option value="" selected>${default_content}</option>`;
@@ -1404,7 +1404,7 @@ function download_link() {
   const dir = get_savepath("search_download_dir", "search_download_dir_manual");
   const setting = $("#search_download_setting").val();
   $("#modal-search-download").modal('hide');
-  ajax_post("download", {"id": id, "dir": dir, "setting": setting}, function (ret) {
+  ajax_post("/api/web/download/download", {"id": id, "dir": dir, "setting": setting}, function (ret) {
     if (ret.retcode === 0) {
       show_success_modal(`${name} 添加下载成功！`);
     } else {
@@ -1461,7 +1461,7 @@ function search_media_advanced() {
   const param = {"search_word": keyword, "filters": filters, "unident": true};
   $("#modal-search-advanced").modal("hide");
   show_refresh_progress(`正在搜索 ${keyword} ...`, "search");
-  ajax_post("search", param, function (ret) {
+  ajax_post("/api/web/system/search", param, function (ret) {
     hide_refresh_process();
     if (ret.code === 0) {
       navmenu(`search?s=${keyword}`);
@@ -1563,7 +1563,7 @@ function media_name_test(name, result_div, func, subtitle) {
   if (!name) {
     return;
   }
-  ajax_post("name_test", {"name": name, "subtitle": subtitle || ""}, function (ret) {
+  ajax_post("/api/web/media/name_test", {"name": name, "subtitle": subtitle || ""}, function (ret) {
     if (func) {
       func();
     }
@@ -1662,7 +1662,7 @@ function show_manual_transfer_modal(manual_type, inpath, syncmod, media_type, un
 
 // 重新识别
 function re_identification(flag, ids) {
-  ajax_post("re_identification", {"flag": flag, "ids": ids}, function (ret) {
+  ajax_post("/api/web/sync/re_identification", {"flag": flag, "ids": ids}, function (ret) {
     if (ret.retcode == 0) {
       navmenu(flag);
     } else {
@@ -1788,8 +1788,8 @@ function manual_media_transfer() {
   };
   $('#modal-media-identification').modal('hide');
   show_refresh_progress("手动转移 " + inpath, "filetransfer");
-  let cmd = (manual_type === '3') ? "rename_udf" : "rename"
-  ajax_post(cmd, data, function (ret) {
+  let url = (manual_type === '3') ? "/api/web/sync/rename_udf" : "/api/web/sync/rename"
+  ajax_post(url, data, function (ret) {
     hide_refresh_process();
     if (ret.retcode === 0) {
       show_success_modal(inpath + "处理成功！", function () {
@@ -1826,7 +1826,7 @@ function search_tmdbid_by_name(keyid, resultid) {
     $("#" + keyid).removeClass("is-invalid");
   }
   $("#" + keyid).prop("disabled", true);
-  ajax_post("search_media_infos", {"keyword": name, "searchtype": "tmdb"}, function (ret) {
+  ajax_post("/api/web/media/search_media_infos", {"keyword": name, "searchtype": "tmdb"}, function (ret) {
     $("#" + keyid).prop("disabled", false);
     if (ret.code == 0) {
       let data = ret.result;

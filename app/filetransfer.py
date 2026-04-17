@@ -1332,6 +1332,165 @@ class FileTransfer(metaclass=SingletonMeta):
         """
         return self.dbhelper.delete_transfer_log_by_id(logid=logid)
 
+    def delete_history(self, logids, flag=None):
+        """
+        删除识别记录及文件
+        """
+        from app.media.meta import MetaInfo
+        from app.utils import PathUtils
+        from app.utils.types import MediaType, EventType
+        from config import RMT_MEDIAEXT
+        for logid in logids:
+            # 读取历史记录
+            transinfo = self.get_transfer_info_by_id(logid)
+            if transinfo:
+                # 删除记录
+                self.delete_transfer_log_by_id(logid)
+                # 根据flag删除文件
+                source_path = transinfo.SOURCE_PATH
+                source_filename = transinfo.SOURCE_FILENAME
+                media_info = {
+                    "type": transinfo.TYPE,
+                    "category": transinfo.CATEGORY,
+                    "title": transinfo.TITLE,
+                    "year": transinfo.YEAR,
+                    "tmdbid": transinfo.TMDBID,
+                    "season_episode": transinfo.SEASON_EPISODE
+                }
+                # 删除该识别记录对应的转移记录
+                self.delete_transfer_blacklist(
+                    "%s/%s" % (source_path, source_filename))
+                dest = transinfo.DEST
+                dest_path = transinfo.DEST_PATH
+                dest_filename = transinfo.DEST_FILENAME
+                if flag in ["del_source", "del_all"]:
+                    # 删除源文件
+                    del_flag, del_msg = self.delete_media_file(
+                        source_path, source_filename)
+                    if not del_flag:
+                        log.error(del_msg)
+                    else:
+                        log.info(del_msg)
+                        # 触发源文件删除事件
+                        from app.plugins import EventManager
+                        EventManager().send_event(EventType.SourceFileDeleted, {
+                            "media_info": media_info,
+                            "path": source_path,
+                            "filename": source_filename
+                        })
+                if flag in ["del_dest", "del_all"]:
+                    # 删除媒体库文件
+                    if dest_path and dest_filename:
+                        del_flag, del_msg = self.delete_media_file(
+                            dest_path, dest_filename)
+                        if not del_flag:
+                            log.error(del_msg)
+                        else:
+                            log.info(del_msg)
+                            # 触发媒体库文件删除事件
+                            from app.plugins import EventManager
+                            EventManager().send_event(EventType.LibraryFileDeleted, {
+                                "media_info": media_info,
+                                "path": dest_path,
+                                "filename": dest_filename
+                            })
+                    else:
+                        meta_info = MetaInfo(title=source_filename)
+                        meta_info.title = transinfo.TITLE
+                        meta_info.category = transinfo.CATEGORY
+                        meta_info.year = transinfo.YEAR
+                        if transinfo.SEASON_EPISODE:
+                            meta_info.begin_season = int(
+                                str(transinfo.SEASON_EPISODE).replace("S", ""))
+                        if transinfo.TYPE == MediaType.MOVIE.value:
+                            meta_info.type = MediaType.MOVIE
+                        else:
+                            meta_info.type = MediaType.TV
+                        # 删除文件
+                        dest_path = self.get_dest_path_by_info(
+                            dest=dest, meta_info=meta_info)
+                        if dest_path and dest_path.find(meta_info.title) != -1:
+                            rm_parent_dir = False
+                            if not meta_info.get_season_list():
+                                # 电影，删除整个目录
+                                try:
+                                    import shutil
+                                    shutil.rmtree(dest_path)
+                                    # 触发媒体库文件删除事件
+                                    from app.plugins import EventManager
+                                    EventManager().send_event(EventType.LibraryFileDeleted, {
+                                        "media_info": media_info,
+                                        "path": dest_path
+                                    })
+                                except Exception as e:
+                                    from app.utils import ExceptionUtils
+                                    ExceptionUtils.exception_traceback(e)
+                            elif not meta_info.get_episode_string():
+                                # 电视剧但没有集数，删除季目录
+                                try:
+                                    import shutil
+                                    shutil.rmtree(dest_path)
+                                    # 触发媒体库文件删除事件
+                                    from app.plugins import EventManager
+                                    EventManager().send_event(EventType.LibraryFileDeleted, {
+                                        "media_info": media_info,
+                                        "path": dest_path
+                                    })
+                                except Exception as e:
+                                    from app.utils import ExceptionUtils
+                                    ExceptionUtils.exception_traceback(e)
+                                rm_parent_dir = True
+                            else:
+                                # 有集数的电视剧，删除对应的集数文件
+                                for dest_file in PathUtils.get_dir_files(dest_path):
+                                    file_meta_info = MetaInfo(
+                                        os.path.basename(dest_file))
+                                    if file_meta_info.get_episode_list() and set(
+                                            file_meta_info.get_episode_list()
+                                    ).issubset(set(meta_info.get_episode_list())):
+                                        try:
+                                            os.remove(dest_file)
+                                            # 触发媒体库文件删除事件
+                                            from app.plugins import EventManager
+                                            EventManager().send_event(EventType.LibraryFileDeleted, {
+                                                "media_info": media_info,
+                                                "path": os.path.dirname(dest_file),
+                                                "filename": os.path.basename(dest_file)
+                                            })
+                                        except Exception as e:
+                                            from app.utils import ExceptionUtils
+                                            ExceptionUtils.exception_traceback(
+                                                e)
+                                rm_parent_dir = True
+                            if rm_parent_dir \
+                                    and not PathUtils.get_dir_files(os.path.dirname(dest_path), exts=RMT_MEDIAEXT):
+                                # 没有媒体文件时，删除整个目录
+                                try:
+                                    import shutil
+                                    shutil.rmtree(os.path.dirname(dest_path))
+                                except Exception as e:
+                                    from app.utils import ExceptionUtils
+                                    ExceptionUtils.exception_traceback(e)
+
+    @staticmethod
+    def delete_media_file(filedir, filename):
+        """
+        删除媒体文件
+        """
+        try:
+            file = os.path.join(filedir, filename)
+            if os.path.exists(file):
+                os.remove(file)
+                # 判断当前文件夹下是否有媒体文件，没有则删除空文件夹
+                if not os.listdir(filedir):
+                    shutil.rmtree(filedir)
+                return True, "删除成功"
+            else:
+                return False, "文件不存在"
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
+            return False, str(e)
+
     def delete_transfer(self):
         """
         删除转移历史记录

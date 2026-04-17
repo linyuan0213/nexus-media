@@ -486,7 +486,7 @@
     $("#site_id").val(tid);
     $("#site_close_btn").text("删除");
     //根据ID查询详细信息
-    ajax_post("get_site", { "id": tid }, function (ret) {
+    ajax_post("/api/web/site/get_site", { "id": tid }, function (ret) {
       if (ret.site) {
         $("#site_id").val(ret.site.id);
         $("#site_name").val(ret.site.name);
@@ -547,7 +547,7 @@
 
   //删除站点
   function del_site(tid) {
-    ajax_post("del_site", { "id": tid }, function (ret) {
+    ajax_post("/api/web/site/del_site", { "id": tid }, function (ret) {
       window_history_refresh();
     });
   }
@@ -661,7 +661,7 @@
 
     $("#add_or_edit_site_btn").text("处理中...").attr("disabled", true);
     // 发送请求
-    ajax_post("update_site", data, function (ret) {
+    ajax_post("/api/web/site/update_site", data, function (ret) {
       $("#add_or_edit_site_btn").attr("disabled", false).text("新增");
       $("#modal-site").modal("hide");
       //刷新页面
@@ -704,7 +704,7 @@
     if (!siteid) {
       return;
     }
-    ajax_post("test_site", { id: siteid }, function (ret) {
+    ajax_post("/api/web/site/test_site", { id: siteid }, function (ret) {
       if (ret.code === 0) {
         $(`#sitetest_item${siteid}`).html('<span class="badge bg-green me-1 mb-1">是</span>');
         $(`#sitetest_item${siteid}_time`).html(`<span class="text-green">${ret.time} 秒</span>`);
@@ -787,7 +787,7 @@
     if (!siteid) {
       return;
     }
-    ajax_post("test_site", { id: siteid }, function (ret) {
+    ajax_post("/api/web/site/test_site", { id: siteid }, function (ret) {
       if (ret.code === 0) {
         $(`#single_sitetest_item`).html('<span class="badge bg-green me-1 mb-1">是</span>');
         $(`#single_sitetest_item_time`).html(`<span class="text-green">${ret.time} 秒</span>`);

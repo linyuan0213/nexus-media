@@ -2,6 +2,7 @@
 Brush Repository
 Handles brush task and torrent related database operations.
 """
+import json
 import time
 
 from sqlalchemy import cast, Integer, func
@@ -27,9 +28,9 @@ class BrushRepository(BaseRepository):
                 NAME=item.get('name'),
                 SITE=item.get('site'),
                 FREELEECH=item.get('free'),
-                RSS_RULE=str(item.get('rss_rule')),
-                REMOVE_RULE=str(item.get('remove_rule')),
-                STOP_RULE=str(item.get('stop_rule')),
+                RSS_RULE=json.dumps(item.get('rss_rule'), ensure_ascii=False),
+                REMOVE_RULE=json.dumps(item.get('remove_rule'), ensure_ascii=False),
+                STOP_RULE=json.dumps(item.get('stop_rule'), ensure_ascii=False),
                 SEED_SIZE=item.get('seed_size'),
                 TIME_RANGE=item.get('time_range'),
                 RSSURL=item.get('rssurl'),
@@ -51,9 +52,9 @@ class BrushRepository(BaseRepository):
                 "NAME": item.get('name'),
                 "SITE": item.get('site'),
                 "FREELEECH": item.get('free'),
-                "RSS_RULE": str(item.get('rss_rule')),
-                "REMOVE_RULE": str(item.get('remove_rule')),
-                "STOP_RULE": str(item.get('stop_rule')),
+                "RSS_RULE": json.dumps(item.get('rss_rule'), ensure_ascii=False),
+                "REMOVE_RULE": json.dumps(item.get('remove_rule'), ensure_ascii=False),
+                "STOP_RULE": json.dumps(item.get('stop_rule'), ensure_ascii=False),
                 "SEED_SIZE": item.get('seed_size'),
                 "TIME_RANGE": item.get('time_range'),
                 "RSSURL": item.get('rssurl'),

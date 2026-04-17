@@ -30,6 +30,9 @@ class MockIndexClient(_IIndexClient):
     def get_indexers(self):
         return []
 
+    def search(self, order_seq, indexer, keyword, filter_args):
+        return []
+
 
 class TestFilterSearchResults(unittest.TestCase):
 

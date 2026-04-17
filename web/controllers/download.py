@@ -1,9 +1,9 @@
+from flask import Blueprint
+from web.core.decorators import action_login_check, parse_json_data
+from web.core.response import success, fail
 import json
 import os.path
-
-
 from flask_login import current_user
-
 import log
 from app.downloader import Downloader
 from app.filetransfer import FileTransfer
@@ -16,12 +16,85 @@ from app.torrentremover import TorrentRemover
 from app.utils import SystemUtils, ExceptionUtils, Torrent
 from app.utils.types import SearchType
 from app.utils.temp_manager import temp_manager
-from web.actions._base import WebActionBase
 
+download_bp = Blueprint("download", __name__, url_prefix="/api/web/download")
 
-class WebActionDownloadMixin:
-    @staticmethod
-    def _download(data):
+@download_bp.route('/auto_remove_torrents', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _auto_remove_torrents(data):
+        """
+        执行自动删种任务
+        """
+        tid = data.get("tid")
+        TorrentRemover().auto_remove_torrents(taskids=tid)
+        return success()
+
+@download_bp.route('/check_downloader', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _check_downloader(data):
+        """
+        检查下载器
+        """
+        did = data.get("did")
+        if not did:
+            return fail()
+        checked = data.get("checked")
+        flag = data.get("flag")
+        enabled, transfer, only_nastool, match_path = None, None, None, None
+        if flag == "enabled":
+            enabled = 1 if checked else 0
+        elif flag == "transfer":
+            transfer = 1 if checked else 0
+        elif flag == "only_nastool":
+            only_nastool = 1 if checked else 0
+        elif flag == "match_path":
+            match_path = 1 if checked else 0
+        Downloader().check_downloader(did=did,
+                                      enabled=enabled,
+                                      transfer=transfer,
+                                      only_nastool=only_nastool,
+                                      match_path=match_path)
+        return success()
+
+@download_bp.route('/del_downloader', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _del_downloader(data):
+        """
+        删除下载器
+        """
+        did = data.get("did")
+        Downloader().delete_downloader(did=did)
+        return success()
+
+@download_bp.route('/delete_download_setting', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _delete_download_setting(data):
+        sid = data.get("sid")
+        Downloader().delete_download_setting(sid=sid)
+        return success()
+
+@download_bp.route('/delete_torrent_remove_task', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _delete_torrent_remove_task(data):
+        """
+        删除自动删种任务
+        """
+        tid = data.get("tid")
+        flag = TorrentRemover().delete_torrent_remove_task(taskid=tid)
+        if flag:
+            return success()
+        else:
+            return fail()
+
+@download_bp.route('/download', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _download(data):
         """
         从WEB添加下载
         """
@@ -53,11 +126,13 @@ class WebActionDownloadMixin:
                                                     in_from=SearchType.WEB,
                                                     user_name=current_user.username)
             if not ret:
-                return WebActionBase._fail(code=-1, msg=ret_msg)
-        return WebActionBase._success(msg="")
+                return fail(code=-1, msg=ret_msg)
+        return success(msg="")
 
-    @staticmethod
-    def _download_link(data):
+@download_bp.route('/download_link', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _download_link(data):
         """
         从WEB添加下载链接
         """
@@ -76,7 +151,7 @@ class WebActionDownloadMixin:
         dl_dir = data.get("dl_dir")
         dl_setting = data.get("dl_setting")
         if not title or not enclosure:
-            return WebActionBase._fail(code=-1, msg="种子信息有误")
+            return fail(code=-1, msg="种子信息有误")
         media = Media().get_media_info(title=title, subtitle=description)
         media.site = site
         media.enclosure = enclosure
@@ -92,11 +167,13 @@ class WebActionDownloadMixin:
                                                 in_from=SearchType.WEB,
                                                 user_name=current_user.username)
         if not ret:
-            return WebActionBase._fail(msg=ret_msg or "如连接正常，请检查下载任务是否存在")
-        return WebActionBase._success(msg="下载成功")
+            return fail(msg=ret_msg or "如连接正常，请检查下载任务是否存在")
+        return success(msg="下载成功")
 
-    @staticmethod
-    def _download_torrent(data):
+@download_bp.route('/download_torrent', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _download_torrent(data):
         """
         从种子文件或者URL链接添加下载
         files：文件地址的列表，urls：种子链接地址列表或者单个链接地址
@@ -106,7 +183,7 @@ class WebActionDownloadMixin:
         files = data.get("files") or []
         urls = data.get("urls") or []
         if not files and not urls:
-            return WebActionBase._fail(code=-1, msg="没有种子文件或者种子链接")
+            return fail(code=-1, msg="没有种子文件或者种子链接")
         # 下载种子
         uploaded_files = []
         for file_item in files:
@@ -151,7 +228,7 @@ class WebActionDownloadMixin:
                 )
 
                 if not file_path:
-                    return WebActionBase._fail(code=-1, msg=f"下载种子文件失败： {retmsg}")
+                    return fail(code=-1, msg=f"下载种子文件失败： {retmsg}")
 
                 media_info = Media().get_media_info(title=os.path.basename(file_path))
                 if media_info:
@@ -170,59 +247,189 @@ class WebActionDownloadMixin:
                                   in_from=SearchType.WEB,
                                   user_name=current_user.username)
 
-        return WebActionBase._success(msg="添加下载完成！")
+        return success(msg="添加下载完成！")
 
-    @staticmethod
-    def _pt_start(data):
-        """
-        开始下载
-        """
-        tid = data.get("id")
-        if id:
-            Downloader().start_torrents(ids=tid)
-        return WebActionBase._success(id=tid)
+@download_bp.route('/find_hardlinks', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _find_hardlinks(data):
+        files = data.get("files")
+        file_dir = data.get("dir")
+        if not files:
+            return []
+        if not file_dir and os.name != "nt":
+            # 取根目录下一级为查找目录
+            file_dir = os.path.commonpath(files).replace("\\", "/")
+            if file_dir != "/":
+                file_dir = "/" + str(file_dir).split("/")[1]
+            else:
+                return []
+        hardlinks = {}
+        if files:
+            try:
+                for file in files:
+                    hardlinks[os.path.basename(file)] = SystemUtils(
+                    ).find_hardlinks(file=file, fdir=file_dir)
+            except Exception as e:
+                ExceptionUtils.exception_traceback(e)
+                return fail()
+        return success(data=hardlinks)
 
-    @staticmethod
-    def _pt_stop(data):
+@download_bp.route('/get_download_dirs', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _get_download_dirs(data):
         """
-        停止下载
+        获取下载目录
         """
-        tid = data.get("id")
-        if id:
-            Downloader().stop_torrents(ids=tid)
-        return WebActionBase._success(id=tid)
+        sid = data.get("sid")
+        site = data.get("site")
+        if not sid and site:
+            sid = Sites().get_site_download_setting(site_name=site)
+        dirs = Downloader().get_download_dirs(setting=sid)
+        return success(paths=dirs)
 
-    @staticmethod
-    def _pt_remove(data):
-        """
-        删除下载
-        """
-        tid = data.get("id")
-        if id:
-            Downloader().delete_torrents(ids=tid, delete_file=True)
-        return WebActionBase._success(id=tid)
-
-    @staticmethod
-    def _pt_info(data):
-        """
-        查询具体种子的信息
-        """
-        ids = data.get("ids")
-        torrents = Downloader().get_downloading_progress(ids=ids)
-        return WebActionBase._success(torrents=torrents)
-
-    @staticmethod
-    def _get_download_setting(data):
+@download_bp.route('/get_download_setting', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _get_download_setting(data):
         sid = data.get("sid")
         if sid:
             download_setting = Downloader().get_download_setting(sid=sid)
         else:
             download_setting = list(
                 Downloader().get_download_setting().values())
-        return WebActionBase._success(data=download_setting)
+        return success(data=download_setting)
 
-    @staticmethod
-    def _update_download_setting(data):
+@download_bp.route('/get_downloaders', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _get_downloaders(data):
+        """
+        获取下载器
+        """
+        did = data.get("did")
+        return success(detail=Downloader().get_downloader_conf(did=did))
+
+@download_bp.route('/get_indexer_statistics', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _get_indexer_statistics(data):
+        """
+        获取索引器统计数据
+        """
+        dataset = [["indexer", "avg"]]
+        result = Indexer().get_indexer_statistics() or []
+        dataset.extend([[ret[0], round(ret[4], 1)] for ret in result])
+        return success(data=[{
+                "name": ret[0],
+                "total": ret[1],
+                "fail": ret[2],
+                "success": ret[3],
+                "avg": round(ret[4], 1),
+            } for ret in result], dataset=dataset)
+
+@download_bp.route('/get_indexers', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _get_indexers(data):
+        """
+        获取索引器
+        """
+        return success(indexers=Indexer().get_user_indexer_dict())
+
+@download_bp.route('/get_remove_torrents', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _get_remove_torrents(data):
+        """
+        获取满足自动删种任务的种子
+        """
+        tid = data.get("tid")
+        flag, torrents = TorrentRemover().get_remove_torrents(taskid=tid)
+        if not flag or not torrents:
+            return fail(msg="未获取到符合处理条件种子")
+        return success(data=torrents)
+
+@download_bp.route('/get_torrent_remove_task', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _get_torrent_remove_task(data):
+        """
+        获取自动删种任务
+        """
+        if data:
+            tid = data.get("tid")
+        else:
+            tid = None
+        return success(detail=TorrentRemover().get_torrent_remove_tasks(taskid=tid))
+
+@download_bp.route('/pt_info', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _pt_info(data):
+        """
+        查询具体种子的信息
+        """
+        ids = data.get("ids")
+        torrents = Downloader().get_downloading_progress(ids=ids)
+        return success(torrents=torrents)
+
+@download_bp.route('/pt_remove', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _pt_remove(data):
+        """
+        删除下载
+        """
+        tid = data.get("id")
+        if id:
+            Downloader().delete_torrents(ids=tid, delete_file=True)
+        return success(id=tid)
+
+@download_bp.route('/pt_start', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _pt_start(data):
+        """
+        开始下载
+        """
+        tid = data.get("id")
+        if id:
+            Downloader().start_torrents(ids=tid)
+        return success(id=tid)
+
+@download_bp.route('/pt_stop', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _pt_stop(data):
+        """
+        停止下载
+        """
+        tid = data.get("id")
+        if id:
+            Downloader().stop_torrents(ids=tid)
+        return success(id=tid)
+
+@download_bp.route('/test_downloader', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _test_downloader(data):
+        """
+        测试下载器
+        """
+        dtype = data.get("type")
+        config = json.loads(data.get("config"))
+        res = Downloader().get_status(dtype=dtype, config=config)
+        if res:
+            return success()
+        else:
+            return fail()
+
+@download_bp.route('/update_download_setting', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _update_download_setting(data):
         sid = data.get("sid")
         name = data.get("name")
         category = data.get("category")
@@ -243,27 +450,12 @@ class WebActionDownloadMixin:
                                              ratio_limit=ratio_limit or 0,
                                              seeding_time_limit=seeding_time_limit or 0,
                                              downloader=downloader)
-        return WebActionBase._success()
+        return success()
 
-    @staticmethod
-    def _delete_download_setting(data):
-        sid = data.get("sid")
-        Downloader().delete_download_setting(sid=sid)
-        return WebActionBase._success()
-
-    @staticmethod
-    def _get_download_dirs(data):
-        """
-        获取下载目录
-        """
-        sid = data.get("sid")
-        site = data.get("site")
-        if not sid and site:
-            sid = Sites().get_site_download_setting(site_name=site)
-        dirs = Downloader().get_download_dirs(setting=sid)
-        return WebActionBase._success(paths=dirs)
-
-    def _update_downloader(self, data):
+@download_bp.route('/update_downloader', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _update_downloader(data):
         """
         更新下载器
         """
@@ -291,113 +483,25 @@ class WebActionDownloadMixin:
                                        rmt_mode=rmt_mode,
                                        config=config,
                                        download_dir=download_dir)
-        return self._success()
+        return success()
 
-    @staticmethod
-    def _del_downloader(data):
+@download_bp.route('/update_torrent_remove_task', methods=['POST'])
+@action_login_check
+@parse_json_data
+def _update_torrent_remove_task(data):
         """
-        删除下载器
+        更新自动删种任务
         """
-        did = data.get("did")
-        Downloader().delete_downloader(did=did)
-        return WebActionBase._success()
-
-    @staticmethod
-    def _check_downloader(data):
-        """
-        检查下载器
-        """
-        did = data.get("did")
-        if not did:
-            return WebActionBase._fail()
-        checked = data.get("checked")
-        flag = data.get("flag")
-        enabled, transfer, only_nastool, match_path = None, None, None, None
-        if flag == "enabled":
-            enabled = 1 if checked else 0
-        elif flag == "transfer":
-            transfer = 1 if checked else 0
-        elif flag == "only_nastool":
-            only_nastool = 1 if checked else 0
-        elif flag == "match_path":
-            match_path = 1 if checked else 0
-        Downloader().check_downloader(did=did,
-                                      enabled=enabled,
-                                      transfer=transfer,
-                                      only_nastool=only_nastool,
-                                      match_path=match_path)
-        return WebActionBase._success()
-
-    @staticmethod
-    def _get_downloaders(data):
-        """
-        获取下载器
-        """
-        did = data.get("did")
-        return WebActionBase._success(detail=Downloader().get_downloader_conf(did=did))
-
-    @staticmethod
-    def _test_downloader(data):
-        """
-        测试下载器
-        """
-        dtype = data.get("type")
-        config = json.loads(data.get("config"))
-        res = Downloader().get_status(dtype=dtype, config=config)
-        if res:
-            return WebActionBase._success()
+        flag, msg = TorrentRemover().update_torrent_remove_task(data=data)
+        if not flag:
+            return fail(msg=msg)
         else:
-            return WebActionBase._fail()
+            return success()
 
-    @staticmethod
-    def _find_hardlinks(data):
-        files = data.get("files")
-        file_dir = data.get("dir")
-        if not files:
-            return []
-        if not file_dir and os.name != "nt":
-            # 取根目录下一级为查找目录
-            file_dir = os.path.commonpath(files).replace("\\", "/")
-            if file_dir != "/":
-                file_dir = "/" + str(file_dir).split("/")[1]
-            else:
-                return []
-        hardlinks = {}
-        if files:
-            try:
-                for file in files:
-                    hardlinks[os.path.basename(file)] = SystemUtils(
-                    ).find_hardlinks(file=file, fdir=file_dir)
-            except Exception as e:
-                ExceptionUtils.exception_traceback(e)
-                return WebActionBase._fail()
-        return WebActionBase._success(data=hardlinks)
-
-    @staticmethod
-    def _get_indexers():
-        """
-        获取索引器
-        """
-        return WebActionBase._success(indexers=Indexer().get_user_indexer_dict())
-
-    @staticmethod
-    def _get_indexer_statistics():
-        """
-        获取索引器统计数据
-        """
-        dataset = [["indexer", "avg"]]
-        result = Indexer().get_indexer_statistics() or []
-        dataset.extend([[ret[0], round(ret[4], 1)] for ret in result])
-        return WebActionBase._success(data=[{
-                "name": ret[0],
-                "total": ret[1],
-                "fail": ret[2],
-                "success": ret[3],
-                "avg": round(ret[4], 1),
-            } for ret in result], dataset=dataset)
-
-    @staticmethod
-    def get_downloading():
+@download_bp.route('/get_downloading', methods=['POST'])
+@action_login_check
+@parse_json_data
+def get_downloading(data):
         """
         查询正在下载的任务
         """
@@ -441,66 +545,15 @@ class WebActionDownloadMixin:
                 "image": poster_path or ""
             })
 
-        return WebActionBase._success(result=torrents)
+        return success(result=torrents)
 
-    @staticmethod
-    def _update_torrent_remove_task(data):
-        """
-        更新自动删种任务
-        """
-        flag, msg = TorrentRemover().update_torrent_remove_task(data=data)
-        if not flag:
-            return WebActionBase._fail(msg=msg)
-        else:
-            return WebActionBase._success()
-
-    @staticmethod
-    def _get_torrent_remove_task(data=None):
-        """
-        获取自动删种任务
-        """
-        if data:
-            tid = data.get("tid")
-        else:
-            tid = None
-        return WebActionBase._success(detail=TorrentRemover().get_torrent_remove_tasks(taskid=tid))
-
-    @staticmethod
-    def _delete_torrent_remove_task(data):
-        """
-        删除自动删种任务
-        """
-        tid = data.get("tid")
-        flag = TorrentRemover().delete_torrent_remove_task(taskid=tid)
-        if flag:
-            return WebActionBase._success()
-        else:
-            return WebActionBase._fail()
-
-    @staticmethod
-    def _get_remove_torrents(data):
-        """
-        获取满足自动删种任务的种子
-        """
-        tid = data.get("tid")
-        flag, torrents = TorrentRemover().get_remove_torrents(taskid=tid)
-        if not flag or not torrents:
-            return WebActionBase._fail(msg="未获取到符合处理条件种子")
-        return WebActionBase._success(data=torrents)
-
-    @staticmethod
-    def _auto_remove_torrents(data):
-        """
-        执行自动删种任务
-        """
-        tid = data.get("tid")
-        TorrentRemover().auto_remove_torrents(taskids=tid)
-        return WebActionBase._success()
-
-    @staticmethod
-    def truncate_blacklist():
+@download_bp.route('/truncate_blacklist', methods=['POST'])
+@action_login_check
+@parse_json_data
+def truncate_blacklist(data):
         """
         清空文件转移黑名单记录
         """
         FileTransfer().truncate_transfer_blacklist()
-        return WebActionBase._success()
+        return success()
+

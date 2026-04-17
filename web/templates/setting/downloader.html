@@ -256,7 +256,7 @@
   function show_edit_downloader_modal(did){
     $("#downloader_id").val(did);
     $("#downloader_modal_title").text("编辑下载器");
-    ajax_post("get_downloaders", {did: did}, function (ret) {
+    ajax_post("/api/web/download/get_downloaders", {did: did}, function (ret) {
       if (ret.code === 0) {
         let detail = ret.detail;
         $("#downloader_name").val(detail.name);
@@ -303,7 +303,7 @@
 
   // 检查下载器
   function check_downloader(flag, did, checked){
-    ajax_post("check_downloader", {flag: flag, did: did, checked: checked}, function (ret) {
+    ajax_post("/api/web/download/check_downloader", {flag: flag, did: did, checked: checked}, function (ret) {
       if (ret.code === 0) {
         window_history_refresh();
       }
@@ -317,7 +317,7 @@
     $("#modal-downloader").modal('hide');
     show_confirm_modal("删除下载器 " + name + " ？", function () {
       hide_confirm_modal();
-      ajax_post("del_downloader", { "did": did }, function (ret) {
+      ajax_post("/api/web/download/del_downloader", { "did": did }, function (ret) {
         window_history_refresh();
       });
     });
@@ -405,7 +405,7 @@
       case "save":
         let save_btn = $("#add_or_edit_downloader_btn");
         save_btn.text("保存中").attr("disabled", true);
-        ajax_post("update_downloader", params, function (ret) {
+        ajax_post("/api/web/download/update_downloader", params, function (ret) {
           $("#modal-downloader").modal('hide');
           save_btn.attr("disabled", false);
           window_history_refresh();
@@ -414,7 +414,7 @@
       case "test":
         let test_btn = $("#test_downloader_btn");
         test_btn.text("测试中").attr("disabled", true);
-        ajax_post("test_downloader", params, function (ret) {
+        ajax_post("/api/web/download/test_downloader", params, function (ret) {
           if (ret.code === 0) {
             test_btn.text("测试成功").attr("disabled", false);
           } else {
@@ -520,7 +520,7 @@
       'key': "DefaultDownloader",
       'value': did
     };
-    ajax_post("set_system_config", params, function (ret) {
+    ajax_post("/api/web/system/set_system_config", params, function (ret) {
       window_history_refresh();
     });
   }

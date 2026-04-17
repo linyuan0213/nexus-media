@@ -46,8 +46,18 @@ from app.torrentremover import TorrentRemover
 from app.utils import DomUtils, SystemUtils, ExceptionUtils, StringUtils
 from app.utils.types import SystemConfigKey, OsType, MediaServerType, EventType, SearchType, RssType, MediaType
 from config import PT_TRANSFER_INTERVAL, REDIS_HOST, REDIS_PORT, Config, TMDB_API_DOMAINS
-from web.action import WebAction
 from web.apiv1 import apiv1_bp
+from web.controllers import register_blueprints
+from web.controllers.media import get_library_mediacount, get_library_playhistory, get_library_spacesize, get_search_result, get_transfer_history, get_unknown_list_by_page
+from web.controllers.rss import get_movie_rss_list, get_tv_rss_list, get_rss_history, get_movie_rss_items, get_tv_rss_items, get_ical_events
+from web.controllers.site import list_site_resources, get_site_user_statistics
+from web.controllers.download import get_downloading
+from web.controllers.words import get_customwords, get_categories
+from web.controllers.rbac import get_users, get_top_menus, get_user_menus
+from web.controllers.filter import get_filterrules
+from web.controllers.plugin import get_plugins_conf
+from web.controllers.system import refresh_process
+from app.system_service import start_service, get_rmt_modes, get_commands, get_system_message, backup as do_backup, parse_brush_rule_string, MessageCommandHandler
 from web.backend.image_proxy import img_blueprint
 from web.backend.WXBizMsgCrypt3 import WXBizMsgCrypt
 from web.backend.user import User
@@ -101,6 +111,7 @@ log_streaming_service = LogStreamingService(sleep_interval=1.0)
 # 路由注册
 App.register_blueprint(apiv1_bp, url_prefix="/api/v1")
 App.register_blueprint(img_blueprint, url_prefix="/img")
+register_blueprints(App)
 
 # fix Windows registry stuff
 mimetypes.add_type('application/javascript', '.js')
@@ -133,7 +144,7 @@ with App.app_context():
     warm_cache_on_startup(async_mode=False)
     log.console("开始启动服务...")
     # 启动服务
-    WebAction.start_service()
+    start_service()
 
 
 # 注册RBAC模板上下文处理器
@@ -285,7 +296,7 @@ def web():
     DefaultPath = Config().get_config('media').get('media_default_path')
     if not SyncMod:
         SyncMod = "link"
-    RmtModeDict = WebAction().get_rmt_modes()
+    RmtModeDict = get_rmt_modes()
     RestypeDict = ModuleConf.TORRENT_SEARCH_PARAMS.get("restype")
     PixDict = ModuleConf.TORRENT_SEARCH_PARAMS.get("pix")
     SiteFavicons = Sites().get_site_favicon()
@@ -293,8 +304,8 @@ def web():
     SearchSource = "douban" if Config().get_config(
         "laboratory").get("use_douban_titles") else "tmdb"
     CustomScriptCfg = SystemConfig().get(SystemConfigKey.CustomScript)
-    Menus = WebAction().get_user_menus().get("menus") or []
-    Commands = WebAction().get_commands()
+    Menus = get_user_menus({}).get("menus") or []
+    Commands = get_commands()
     return render_template('navigation.html',
                            GoPage=GoPage,
                            CurrentUser=current_user,
@@ -323,17 +334,17 @@ def index():
     default_server = ConfigRepository().get_default_media_server()
     MSType = default_server.NAME if default_server else Config().get_config('media').get('media_server') or 'emby'
     # 获取媒体数量
-    MediaCounts = WebAction().get_library_mediacount()
+    MediaCounts = get_library_mediacount({})
     if MediaCounts.get("code") == 0:
         ServerSucess = True
     else:
         ServerSucess = False
 
     # 获得活动日志
-    Activity = WebAction().get_library_playhistory().get("result")
+    Activity = get_library_playhistory({}).get("result")
 
     # 磁盘空间
-    LibrarySpaces = WebAction().get_library_spacesize()
+    LibrarySpaces = get_library_spacesize({})
 
     # 媒体库
     Librarys = MediaServer().get_libraries()
@@ -376,7 +387,7 @@ def search():
     else:
         pris = ""
     # 结果
-    res = WebAction().get_search_result()
+    res = get_search_result({})
     SearchResults = res.get("result")
     Count = res.get("total")
     return render_template("search.html",
@@ -391,7 +402,7 @@ def search():
 @App.route('/movie_rss', methods=['POST', 'GET'])
 @login_required
 def movie_rss():
-    RssItems = WebAction().get_movie_rss_list().get("result")
+    RssItems = get_movie_rss_list({}).get("result")
     RuleGroups = {str(group["id"]): group["name"]
                   for group in Filter().get_rule_groups()}
     DownloadSettings = Downloader().get_download_setting()
@@ -407,7 +418,7 @@ def movie_rss():
 @App.route('/tv_rss', methods=['POST', 'GET'])
 @login_required
 def tv_rss():
-    RssItems = WebAction().get_tv_rss_list().get("result")
+    RssItems = get_tv_rss_list({}).get("result")
     RuleGroups = {str(group["id"]): group["name"]
                   for group in Filter().get_rule_groups()}
     DownloadSettings = Downloader().get_download_setting()
@@ -424,7 +435,7 @@ def tv_rss():
 @login_required
 def rss_history():
     mtype = request.args.get("t")
-    RssHistory = WebAction().get_rss_history({"type": mtype}).get("result")
+    RssHistory = get_rss_history({"type": mtype}).get("result")
     return render_template("rss/rss_history.html",
                            Count=len(RssHistory),
                            Items=RssHistory,
@@ -439,9 +450,9 @@ def rss_history():
 def rss_calendar():
     Today = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d')
     # 电影订阅
-    RssMovieItems = WebAction().get_movie_rss_items().get("result")
+    RssMovieItems = get_movie_rss_items({}).get("result")
     # 电视剧订阅
-    RssTvItems = WebAction().get_tv_rss_items().get("result")
+    RssTvItems = get_tv_rss_items({}).get("result")
     return render_template("rss/rss_calendar.html",
                            Today=Today,
                            RssMovieItems=RssMovieItems,
@@ -495,7 +506,7 @@ def resources():
     site_name = request.args.get("title")
     page = request.args.get("page") or 0
     keyword = request.args.get("keyword")
-    Results = WebAction().list_site_resources({
+    Results = list_site_resources({
         "id": site_id,
         "page": page,
         "keyword": keyword
@@ -645,7 +656,7 @@ def discovery_person():
 @App.route('/downloading', methods=['POST', 'GET'])
 @login_required
 def downloading():
-    DispTorrents = WebAction().get_downloading().get("result")
+    DispTorrents = get_downloading({}).get("result")
     return render_template("download/downloading.html",
                            DownloadCount=len(DispTorrents),
                            Torrents=DispTorrents)
@@ -729,7 +740,7 @@ def statistics():
     #    days=2)
 
     # 站点用户数据
-    SiteUserStatistics = WebAction().get_site_user_statistics(
+    SiteUserStatistics = get_site_user_statistics(
         {"encoding": "DICT"}).get("data")
 
     return render_template("site/statistics.html",
@@ -860,7 +871,7 @@ def history():
     pagenum = request.args.get("pagenum")
     keyword = request.args.get("s") or ""
     current_page = request.args.get("page")
-    Result = WebAction().get_transfer_history(
+    Result = get_transfer_history(
         {"keyword": keyword, "page": current_page, "pagenum": pagenum})
     PageRange = WebUtils.get_page_range(current_page=Result.get("currentPage"),
                                         total_page=Result.get("totalPage"))
@@ -914,7 +925,7 @@ def unidentification():
     pagenum = request.args.get("pagenum")
     keyword = request.args.get("s") or ""
     current_page = request.args.get("page")
-    Result = WebAction().get_unknown_list_by_page(
+    Result = get_unknown_list_by_page(
         {"keyword": keyword, "page": current_page, "pagenum": pagenum})
     PageRange = WebUtils.get_page_range(current_page=Result.get("currentPage"),
                                         total_page=Result.get("totalPage"))
@@ -958,7 +969,7 @@ def basic():
     proxy = Config().get_config('app').get("proxies", {}).get("http")
     if proxy:
         proxy = proxy.replace("http://", "")
-    RmtModeDict = WebAction().get_rmt_modes()
+    RmtModeDict = get_rmt_modes()
     CustomScriptCfg = SystemConfig().get(SystemConfigKey.CustomScript)
     ScraperConf = SystemConfig().get(SystemConfigKey.UserScraperConf) or {}
     return render_template("setting/basic.html",
@@ -976,7 +987,7 @@ def basic():
 @App.route('/customwords', methods=['POST', 'GET'])
 @login_required
 def customwords():
-    groups = WebAction().get_customwords().get("result")
+    groups = get_customwords({}).get("result")
     return render_template("setting/customwords.html",
                            Groups=groups,
                            GroupsCount=len(groups))
@@ -986,7 +997,7 @@ def customwords():
 @App.route('/directorysync', methods=['POST', 'GET'])
 @login_required
 def directorysync():
-    RmtModeDict = WebAction().get_rmt_modes()
+    RmtModeDict = get_rmt_modes()
     SyncPaths = Sync().get_sync_path_conf()
     return render_template("setting/directorysync.html",
                            SyncPaths=SyncPaths,
@@ -1002,11 +1013,11 @@ def downloader():
     Downloaders = Downloader().get_downloader_conf()
     DownloadersCount = len(Downloaders)
     Categories = {
-        x: WebAction().get_categories({
+        x: get_categories({
             "type": x
         }).get("category") for x in ["电影", "电视剧", "动漫"]
     }
-    RmtModeDict = WebAction().get_rmt_modes()
+    RmtModeDict = get_rmt_modes()
     return render_template("setting/downloader.html",
                            Downloaders=Downloaders,
                            DefaultDownloader=DefaultDownloader,
@@ -1106,8 +1117,8 @@ def notification():
 @login_required
 def users():
     from app.services.rbac_service import rbac_service
-    Users = WebAction().get_users().get("result")
-    TopMenus = WebAction().get_top_menus().get("menus")
+    Users = get_users({}).get("result")
+    TopMenus = get_top_menus({}).get("menus")
     Roles = rbac_service.get_all_roles()
     return render_template("setting/users.html",
                            Users=Users,
@@ -1151,7 +1162,7 @@ def menus():
 @App.route('/filterrule', methods=['POST', 'GET'])
 @login_required
 def filterrule():
-    result = WebAction().get_filterrules()
+    result = get_filterrules({})
     return render_template("setting/filterrule.html",
                            Count=len(result.get("ruleGroups")),
                            RuleGroups=result.get("ruleGroups"),
@@ -1194,24 +1205,10 @@ def rss_parser():
 @App.route('/plugin', methods=['POST', 'GET'])
 @login_required
 def plugin():
-    Plugins = WebAction().get_plugins_conf().get("result")
+    Plugins = get_plugins_conf({}).get("result")
     return render_template("setting/plugin.html",
                            Plugins=Plugins,
                            Count=len(Plugins))
-
-
-# 事件响应
-@App.route('/do', methods=['POST'])
-@action_login_check
-def do():
-    try:
-        content = request.get_json()
-        cmd = content.get("cmd")
-        data = content.get("data") or {}
-        return WebAction().action(cmd, data)
-    except Exception as e:
-        ExceptionUtils.exception_traceback(e)
-        return {"code": -1, "msg": str(e)}
 
 
 # 目录事件响应
@@ -1357,7 +1354,7 @@ def wechat():
             if content:
                 log.info(f"收到微信消息：userid={user_id}, text={content}")
                 # 处理消息内容
-                WebAction().handle_message_job(msg=content,
+                MessageCommandHandler().handle_message_job(msg=content,
                                                in_from=SearchType.WX,
                                                user_id=user_id,
                                                user_name=user_id)
@@ -1493,7 +1490,7 @@ def telegram():
                                                user_id=user_id)
                     return '你不在用户白名单中，无法使用此机器人'
             # 处理消息
-            WebAction().handle_message_job(msg=text,
+            MessageCommandHandler().handle_message_job(msg=text,
                                            in_from=SearchType.TG,
                                            user_id=user_id,
                                            user_name=user_name)
@@ -1534,7 +1531,7 @@ def synology():
         if text:
             log.info(
                 f"收到Synology Chat消息：userid={user_id}, username={user_name}, text={text}")
-            WebAction().handle_message_job(msg=text,
+            MessageCommandHandler().handle_message_job(msg=text,
                                            in_from=SearchType.SYNOLOGY,
                                            user_id=user_id,
                                            user_name=user_name)
@@ -1670,7 +1667,7 @@ def slack():
             return "Error"
         log.info(
             f"收到Slack消息：userid={userid}, username={username}, text={text}")
-        WebAction().handle_message_job(msg=text,
+        MessageCommandHandler().handle_message_job(msg=text,
                                        in_from=SearchType.SLACK,
                                        user_id=userid,
                                        user_name=username)
@@ -1773,7 +1770,7 @@ def backup():
     备份用户设置文件
     :return: 备份文件.zip_file
     """
-    zip_file = WebAction().backup()
+    zip_file = do_backup()
     if not zip_file:
         return make_response("创建备份失败", 400)
     return send_file(zip_file)
@@ -1799,7 +1796,7 @@ def ical():
     # 是否设置提醒开关
     remind = request.args.get("remind")
     cal = Calendar()
-    RssItems = WebAction().get_ical_events().get("result")
+    RssItems = get_ical_events({}).get("result")
     for item in RssItems:
         event = Event()
         event.add('summary', f'{item.get("type")}：{item.get("title")}')
@@ -1907,10 +1904,14 @@ def stream_progress():
         """
         实时日志
         """
-        WA = WebAction()
         while True:
             time.sleep(0.2)
-            detail = WA.refresh_process({"type": _type})
+            from app.helper import ProgressHelper
+            detail = ProgressHelper().get_process(_type)
+            if detail:
+                detail = {"code": 0, "value": detail.get("value"), "text": detail.get("text")}
+            else:
+                detail = {"code": -1, "value": 0, "text": "正在处理..."}
             yield 'data: %s\n\n' % json.dumps(detail)
 
     return Response(
@@ -1936,14 +1937,14 @@ def message_handler(ws):
             continue
         if msgbody.get("text"):
             # 发送的消息
-            WebAction().handle_message_job(msg=msgbody.get("text"),
+            MessageCommandHandler().handle_message_job(msg=msgbody.get("text"),
                                            in_from=SearchType.WEB,
                                            user_id=current_user.username,
                                            user_name=current_user.username)
             ws.send((json.dumps({})))
         else:
             # 拉取消息
-            system_msg = WebAction().get_system_message(lst_time=msgbody.get("lst_time"))
+            system_msg = get_system_message(lst_time=msgbody.get("lst_time"))
             messages = system_msg.get("message")
             lst_time = system_msg.get("lst_time")
             ret_messages = []
@@ -1978,7 +1979,7 @@ def split(string, char, pos):
 # 刷流规则过滤器
 @App.template_filter('brush_rule_string')
 def brush_rule_string(rules):
-    return WebAction.parse_brush_rule_string(rules)
+    return parse_brush_rule_string(rules)
 
 
 # 大小格式化过滤器

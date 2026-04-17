@@ -313,14 +313,14 @@
   //显示媒体库同步框
   function show_mediasync_modal() {
     //获取同步状态
-    ajax_post("refresh_process", {type: "mediasync"}, function (ret) {
+    ajax_post("/api/web/system/refresh_process", {type: "mediasync"}, function (ret) {
       if (ret.code === 0 && ret.value < 100) {
         //同步中
         $("#index-mediasync-modal").modal('show');
         start_media_sync(false);
       } else {
         //没有在同步，获取目前同步的数据情况
-        ajax_post("mediasync_state", {}, function (ret) {
+        ajax_post("/api/web/media/mediasync_state", {}, function (ret) {
           if (ret.code === 0) {
             $("#mediasync_status").text(ret.text);
           }
@@ -344,7 +344,7 @@
         .attr("href", "javascript:close_mediasync_modal()");
     $("#save_mediasync_btn").hide();
     if (flag) {
-      ajax_post("start_mediasync", {
+      ajax_post("/api/web/media/start_mediasync", {
         "librarys": select_GetSelectedVAL("sync_library")
       }, function (ret) {
         setTimeout("start_mediasync_progress()", 1000);
@@ -360,7 +360,7 @@
       "key": "SyncLibrary",
       "value": select_GetSelectedVAL("sync_library")
     };
-    ajax_post("set_system_config", params, function (ret) {
+    ajax_post("/api/web/system/set_system_config", params, function (ret) {
       $("#index-mediasync-modal").modal('hide');
       window_history_refresh();
     });
@@ -401,7 +401,7 @@
   // 加载图表
   $('#modal-index-statistics').off('shown.bs.modal').on('shown.bs.modal', function (e) {
     // 请求数据
-    ajax_post("get_transfer_statistics", {}, function(ret){
+    ajax_post("/api/web/media/get_transfer_statistics", {}, function(ret){
 
       // 电影变化图
       if (typeof (chart_statistics) != 'undefined')

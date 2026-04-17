@@ -10,7 +10,7 @@ from threading import Event
 from app.plugins.modules._base import _IPluginModule
 from app.utils import SystemUtils
 from config import Config
-from web.action import WebAction
+from app.system_service import backup
 
 from app.plugins.modules._autobackup.filestorage_client import FileClientFactory
 
@@ -300,7 +300,7 @@ class AutoBackup(_IPluginModule):
             os.makedirs(bk_path, exist_ok=True)
 
         # 生成备份文件
-        zip_file = WebAction().backup(bk_path=bk_path, full_backup=self._full)
+        zip_file = backup(bk_path=bk_path, full_backup=bool(self._full))
 
         if not zip_file:
             self.error("创建备份失败")

@@ -239,7 +239,7 @@
     $('#modal-role-title').text('编辑角色');
     
     // 获取角色数据
-    ajax_post('get_role', {id: role_id}, function(ret) {
+    ajax_post('/api/web/rbac/get_role', {id: role_id}, function(ret) {
       if (ret.code === 0) {
         const role = ret.data;
         $('#role_id').val(role.id);
@@ -318,7 +318,7 @@
       menu_ids: menu_ids
     };
     
-    const action = editing_role_id ? 'update_role' : 'create_role';
+    const action = editing_role_id ? '/api/web/rbac/update_role' : '/api/web/rbac/create_role';
     
     ajax_post(action, data, function(ret) {
       if (ret.code === 0) {
@@ -335,7 +335,7 @@
   // 删除角色
   function delete_role(role_id, role_name) {
     show_confirm_modal('确定要删除角色 ' + role_name + ' 吗？此操作不可恢复。', function() {
-      ajax_post('delete_role', {id: role_id}, function(ret) {
+      ajax_post('/api/web/rbac/delete_role', {id: role_id}, function(ret) {
         if (ret.code === 0) {
           show_success_modal('角色已删除', function() {
             window_history_refresh();

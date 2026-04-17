@@ -263,7 +263,7 @@
   // 显示菜单详情
   function show_menu_detail(menu_id) {
     // 获取菜单详情
-    ajax_post('get_menu', {id: menu_id}, function(ret) {
+    ajax_post('/api/web/rbac/get_menu', {id: menu_id}, function(ret) {
       if (ret.code === 0) {
         const menu = ret.data;
         
@@ -345,7 +345,7 @@
     $('#modal-menu-title').text('编辑菜单');
     
     // 获取菜单数据
-    ajax_post('get_menu', {id: menu_id}, function(ret) {
+    ajax_post('/api/web/rbac/get_menu', {id: menu_id}, function(ret) {
       if (ret.code === 0) {
         const menu = ret.data;
         $('#menu_id').val(menu.id);
@@ -400,7 +400,7 @@
       status: parseInt($('input[name="menu_status"]:checked').val())
     };
     
-    const action = data.id ? 'update_menu' : 'create_menu';
+    const action = data.id ? '/api/web/rbac/update_menu' : '/api/web/rbac/create_menu';
     
     ajax_post(action, data, function(ret) {
       if (ret.code === 0) {
@@ -417,7 +417,7 @@
   // 删除菜单
   function delete_menu(menu_id, menu_name) {
     show_ask_modal('确认删除', `确定要删除菜单 "${menu_name}" 吗？此操作不可恢复。`, function() {
-      ajax_post('delete_menu', {id: menu_id}, function(ret) {
+      ajax_post('/api/web/rbac/delete_menu', {id: menu_id}, function(ret) {
         if (ret.code === 0) {
           show_success_modal('删除成功', function() {
             window.location.reload();
@@ -669,7 +669,7 @@
     
     // 发送到后端保存
     if (menuOrders.length > 0) {
-      ajax_post('update_menu_sort', {menu_orders: menuOrders}, function(ret) {
+      ajax_post('/api/web/rbac/update_menu_sort', {menu_orders: menuOrders}, function(ret) {
         if (ret.code === 0) {
           show_success_modal('菜单排序已保存', function() {
             // 刷新页面以更新菜单结构
