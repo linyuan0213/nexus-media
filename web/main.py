@@ -38,7 +38,7 @@ from app.media.meta import MetaInfo
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.plugins import EventManager
-from app.rsschecker import RssChecker
+from app.services.rss_service import RssTaskService as RssChecker
 from app.sites import Sites, SiteUserInfo
 from app.subscribe import Subscribe
 from app.sync import Sync

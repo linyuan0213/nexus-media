@@ -26,7 +26,7 @@ def start_service():
     """启动服务"""
     from app.brushtask import BrushTask
     from app.helper import IndexerHelper
-    from app.rsschecker import RssChecker
+    from app.services.rss_service import RssTaskService as RssChecker
     from app.services.scheduler_core import SchedulerCore
     from app.sites import SiteConf
     IndexerHelper()
@@ -42,7 +42,7 @@ def start_service():
 def stop_service():
     """关闭服务"""
     from app.brushtask import BrushTask
-    from app.rsschecker import RssChecker
+    from app.services.rss_service import RssTaskService as RssChecker
     from app.services.scheduler_core import SchedulerCore
     SchedulerCore().stop_service()
     Sync().stop_service()

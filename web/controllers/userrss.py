@@ -2,7 +2,7 @@ from flask import Blueprint
 from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 from web.core.action_utils import mediainfo_dict
-from app.rsschecker import RssChecker
+from app.services.rss_service import RssTaskService as RssChecker
 from app.utils import ExceptionUtils
 
 userrss_bp = Blueprint("userrss", __name__, url_prefix="/api/web/userrss")

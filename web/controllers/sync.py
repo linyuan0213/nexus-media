@@ -175,7 +175,7 @@ def _exec_test_command(data):
             "Sites": ("app.sites", "Sites"),
             "Sync": ("app.sync", "Sync"),
             "BrushTask": ("app.brushtask", "BrushTask"),
-            "RssChecker": ("app.rsschecker", "RssChecker"),
+            "RssChecker": ("app.services.rss_service", "RssTaskService"),
             "TorrentRemover": ("app.torrentremover", "TorrentRemover"),
             "Rss": ("app.rss", "Rss"),
             "Subscribe": ("app.subscribe", "Subscribe"),
