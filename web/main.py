@@ -31,7 +31,7 @@ import log
 from app.brushtask import BrushTask
 from app.conf import ModuleConf, SystemConfig
 from app.downloader import Downloader
-from app.filter import Filter
+from app.services.filter_service import FilterService as Filter
 from app.helper import SecurityHelper, ThreadHelper
 from app.indexer import Indexer
 from app.media.meta import MetaInfo

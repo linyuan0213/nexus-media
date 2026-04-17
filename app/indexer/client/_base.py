@@ -4,7 +4,7 @@ import xml.dom.minidom
 from abc import ABCMeta, abstractmethod
 
 import log
-from app.filter import Filter
+from app.services.filter_service import FilterService as Filter
 from app.helper import ProgressHelper, DbHelper
 from app.media import Media
 from app.media.meta import MetaInfo
