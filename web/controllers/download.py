@@ -1,5 +1,5 @@
 from flask import Blueprint
-from web.core.decorators import action_login_check, parse_json_data
+from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 import json
 import os.path
@@ -20,7 +20,7 @@ from app.utils.temp_manager import temp_manager
 download_bp = Blueprint("download", __name__, url_prefix="/api/web/download")
 
 @download_bp.route('/auto_remove_torrents', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _auto_remove_torrents(data):
         """
@@ -31,7 +31,7 @@ def _auto_remove_torrents(data):
         return success()
 
 @download_bp.route('/check_downloader', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _check_downloader(data):
         """
@@ -59,7 +59,7 @@ def _check_downloader(data):
         return success()
 
 @download_bp.route('/del_downloader', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _del_downloader(data):
         """
@@ -70,7 +70,7 @@ def _del_downloader(data):
         return success()
 
 @download_bp.route('/delete_download_setting', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_download_setting(data):
         sid = data.get("sid")
@@ -78,7 +78,7 @@ def _delete_download_setting(data):
         return success()
 
 @download_bp.route('/delete_torrent_remove_task', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_torrent_remove_task(data):
         """
@@ -92,7 +92,7 @@ def _delete_torrent_remove_task(data):
             return fail()
 
 @download_bp.route('/download', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _download(data):
         """
@@ -130,7 +130,7 @@ def _download(data):
         return success(msg="")
 
 @download_bp.route('/download_link', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _download_link(data):
         """
@@ -171,7 +171,7 @@ def _download_link(data):
         return success(msg="下载成功")
 
 @download_bp.route('/download_torrent', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _download_torrent(data):
         """
@@ -250,7 +250,7 @@ def _download_torrent(data):
         return success(msg="添加下载完成！")
 
 @download_bp.route('/find_hardlinks', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _find_hardlinks(data):
         files = data.get("files")
@@ -276,7 +276,7 @@ def _find_hardlinks(data):
         return success(data=hardlinks)
 
 @download_bp.route('/get_download_dirs', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_download_dirs(data):
         """
@@ -290,7 +290,7 @@ def _get_download_dirs(data):
         return success(paths=dirs)
 
 @download_bp.route('/get_download_setting', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_download_setting(data):
         sid = data.get("sid")
@@ -302,7 +302,7 @@ def _get_download_setting(data):
         return success(data=download_setting)
 
 @download_bp.route('/get_downloaders', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_downloaders(data):
         """
@@ -312,7 +312,7 @@ def _get_downloaders(data):
         return success(detail=Downloader().get_downloader_conf(did=did))
 
 @download_bp.route('/get_indexer_statistics', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_indexer_statistics(data):
         """
@@ -330,7 +330,7 @@ def _get_indexer_statistics(data):
             } for ret in result], dataset=dataset)
 
 @download_bp.route('/get_indexers', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_indexers(data):
         """
@@ -339,7 +339,7 @@ def _get_indexers(data):
         return success(indexers=Indexer().get_user_indexer_dict())
 
 @download_bp.route('/get_remove_torrents', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_remove_torrents(data):
         """
@@ -352,7 +352,7 @@ def _get_remove_torrents(data):
         return success(data=torrents)
 
 @download_bp.route('/get_torrent_remove_task', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_torrent_remove_task(data):
         """
@@ -365,7 +365,7 @@ def _get_torrent_remove_task(data):
         return success(detail=TorrentRemover().get_torrent_remove_tasks(taskid=tid))
 
 @download_bp.route('/pt_info', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _pt_info(data):
         """
@@ -376,7 +376,7 @@ def _pt_info(data):
         return success(torrents=torrents)
 
 @download_bp.route('/pt_remove', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _pt_remove(data):
         """
@@ -388,7 +388,7 @@ def _pt_remove(data):
         return success(id=tid)
 
 @download_bp.route('/pt_start', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _pt_start(data):
         """
@@ -400,7 +400,7 @@ def _pt_start(data):
         return success(id=tid)
 
 @download_bp.route('/pt_stop', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _pt_stop(data):
         """
@@ -412,7 +412,7 @@ def _pt_stop(data):
         return success(id=tid)
 
 @download_bp.route('/test_downloader', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _test_downloader(data):
         """
@@ -427,7 +427,7 @@ def _test_downloader(data):
             return fail()
 
 @download_bp.route('/update_download_setting', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_download_setting(data):
         sid = data.get("sid")
@@ -453,7 +453,7 @@ def _update_download_setting(data):
         return success()
 
 @download_bp.route('/update_downloader', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_downloader(data):
         """
@@ -486,7 +486,7 @@ def _update_downloader(data):
         return success()
 
 @download_bp.route('/update_torrent_remove_task', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_torrent_remove_task(data):
         """
@@ -499,7 +499,7 @@ def _update_torrent_remove_task(data):
             return success()
 
 @download_bp.route('/get_downloading', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_downloading(data):
         """
@@ -548,7 +548,7 @@ def get_downloading(data):
         return success(result=torrents)
 
 @download_bp.route('/truncate_blacklist', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def truncate_blacklist(data):
         """

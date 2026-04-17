@@ -1,5 +1,5 @@
 from flask import Blueprint
-from web.core.decorators import action_login_check, parse_json_data
+from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 from app.brushtask import BrushTask
 from app.brushtask_rule import BrushRuleEngine
@@ -38,7 +38,7 @@ _STOP_RULE_FIELDS = {
 brush_bp = Blueprint("brush", __name__, url_prefix="/api/web/brush")
 
 @brush_bp.route('/add_brushtask', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _add_brushtask(data):
         """
@@ -76,7 +76,7 @@ def _add_brushtask(data):
         return success()
 
 @brush_bp.route('/brushtask_detail', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _brushtask_detail(data):
         """
@@ -89,8 +89,18 @@ def _brushtask_detail(data):
 
         return success(task=brushtask)
 
+
+@brush_bp.route('/list_brushtasks', methods=['POST'])
+@any_auth
+@parse_json_data
+def _list_brushtasks(data):
+        """
+        查询所有刷流任务
+        """
+        return success(tasks=BrushTask().get_brushtask_info())
+
 @brush_bp.route('/del_brushtask', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _del_brushtask(data):
         """
@@ -103,7 +113,7 @@ def _del_brushtask(data):
         return fail()
 
 @brush_bp.route('/list_brushtask_torrents', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _list_brushtask_torrents(data):
         """
@@ -116,14 +126,14 @@ def _list_brushtask_torrents(data):
         return success(data=[item.as_dict() for item in results])
 
 @brush_bp.route('/run_brushtask', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _run_brushtask(data):
         BrushTask().check_task_rss(data.get("id"))
         return success()
 
 @brush_bp.route('/update_brushtask_state', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_brushtask_state(data):
         """

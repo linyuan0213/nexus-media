@@ -1,5 +1,5 @@
 from flask import Blueprint
-from web.core.decorators import action_login_check, parse_json_data
+from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 from web.core.action_utils import set_config_directory, delete_media_file
 import importlib
@@ -22,7 +22,7 @@ from config import RMT_MEDIAEXT, RMT_SUBEXT, RMT_AUDIO_TRACK_EXT, Config
 sync_bp = Blueprint("sync", __name__, url_prefix="/api/web/sync")
 
 @sync_bp.route('/add_or_edit_sync_path', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _add_or_edit_sync_path(data):
         """
@@ -77,7 +77,7 @@ def _add_or_edit_sync_path(data):
         return success(msg="")
 
 @sync_bp.route('/check_sync_path', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _check_sync_path(data):
         """
@@ -105,7 +105,7 @@ def _check_sync_path(data):
             return fail()
 
 @sync_bp.route('/del_unknown_path', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _del_unknown_path(data):
         """
@@ -123,7 +123,7 @@ def _del_unknown_path(data):
             return fail(code=retcode)
 
 @sync_bp.route('/delete_files', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_files(data):
         """
@@ -142,7 +142,7 @@ def _delete_files(data):
         return success()
 
 @sync_bp.route('/delete_sync_path', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_sync_path(data):
         """
@@ -153,7 +153,7 @@ def _delete_sync_path(data):
         return success()
 
 @sync_bp.route('/exec_test_command', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _exec_test_command(data):
         """
@@ -196,7 +196,7 @@ def _exec_test_command(data):
         return None
 
 @sync_bp.route('/get_sub_path', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_sub_path(data):
         """
@@ -318,7 +318,7 @@ def _manual_transfer(inpath,
         return succ_flag, ret_msg
 
 @sync_bp.route('/rename', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _rename(data):
         """
@@ -389,7 +389,7 @@ def _rename(data):
             return fail(code=2, msg=ret_msg)
 
 @sync_bp.route('/rename_file', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _rename_file(data):
         """
@@ -406,7 +406,7 @@ def _rename_file(data):
         return success()
 
 @sync_bp.route('/rename_udf', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _rename_udf(data):
         """
@@ -449,7 +449,7 @@ def _rename_udf(data):
             return fail(code=2, msg=ret_msg)
 
 @sync_bp.route('/run_directory_sync', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _run_directory_sync(data):
         """
@@ -459,7 +459,7 @@ def _run_directory_sync(data):
         return success(msg="执行成功")
 
 @sync_bp.route('/test_connection', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _test_connection(data):
         """
@@ -499,7 +499,7 @@ def _test_connection(data):
         return success()
 
 @sync_bp.route('/update_directory', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_directory(data):
         """
@@ -515,7 +515,7 @@ def _update_directory(data):
         return success()
 
 @sync_bp.route('/delete_history', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def delete_history(data):
         """
@@ -527,7 +527,7 @@ def delete_history(data):
         return success()
 
 @sync_bp.route('/get_sync_path', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_sync_path(data):
         """
@@ -540,7 +540,7 @@ def get_sync_path(data):
         return success(result=sync_path)
 
 @sync_bp.route('/re_identification', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def re_identification(data):
         """

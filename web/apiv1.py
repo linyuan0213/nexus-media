@@ -1,5 +1,5 @@
 from flask import Blueprint, request
-from web.controllers.system import _user_manager as user_manager, _net_test as net_test, _sch as sch, _search as search, _version as version, _restart as restart, update_system as update_system, refresh_process as refresh_process, _update_config as update_config, _restory_backup as restory_backup, _set_system_config as set_system_config, _update_message_client as update_message_client, _delete_message_client as delete_message_client, _check_message_client as check_message_client, _get_message_client as get_message_client, _test_message_client as test_message_client
+from web.controllers.system import _user_manager as user_manager, _net_test as net_test, _sch as sch, _search as search_func, _version as version, _restart as restart, update_system as update_system, refresh_process as refresh_process, _update_config as update_config, _restory_backup as restory_backup, _set_system_config as set_system_config, _update_message_client as update_message_client, _delete_message_client as delete_message_client, _check_message_client as check_message_client, _get_message_client as get_message_client, _test_message_client as test_message_client
 from web.controllers.rbac import get_users as get_users
 from web.controllers.media import _name_test as name_test, get_search_result as get_search_result, get_downloaded as get_downloaded, clear_history as clear_history, get_unknown_list as get_unknown_list, get_transfer_history as get_transfer_history, get_transfer_statistics as get_transfer_statistics, _start_mediasync as start_mediasync, _mediasync_state as mediasync_state, get_library_playhistory as get_library_playhistory, get_library_mediacount as get_library_mediacount, get_library_spacesize as get_library_spacesize, _movie_calendar_data as movie_calendar_data, _tv_calendar_data as tv_calendar_data, get_recommend as get_recommend, search_media_infos as search_media_infos, _get_tvseason_list as get_tvseason_list, _media_info as media_info, media_detail as media_detail, _media_similar as media_similar, _media_recommendations as media_recommendations, _person_medias as person_medias, _download_subtitle as download_subtitle
 from web.controllers.filter import _rule_test as rule_test, get_filterrules as get_filterrules, _add_filtergroup as add_filtergroup, _restore_filtergroup as restore_filtergroup, _set_default_filtergroup as set_default_filtergroup, _del_filtergroup as del_filtergroup, _add_filterrule as add_filterrule, _del_filterrule as del_filterrule, _filterrule_detail as filterrule_detail, _share_filtergroup as share_filtergroup, _import_filtergroup as import_filtergroup
@@ -7,20 +7,17 @@ from web.controllers.site import _update_site as update_site, _get_site as get_s
 from web.controllers.download import _get_indexers as get_indexers, _download as download_download, _download_link as download_link, _pt_start as pt_start, _pt_stop as pt_stop, _pt_info as pt_info, _pt_remove as pt_remove, get_downloading as get_downloading, _get_download_setting as get_download_setting, _update_download_setting as update_download_setting, _delete_download_setting as delete_download_setting, _get_download_dirs as get_download_dirs, _update_downloader as update_downloader, _del_downloader as del_downloader, _get_downloaders as get_downloaders, _check_downloader as check_downloader, _test_downloader as test_downloader, truncate_blacklist as truncate_blacklist, _get_torrent_remove_task as get_torrent_remove_task, _delete_torrent_remove_task as delete_torrent_remove_task, _update_torrent_remove_task as update_torrent_remove_task
 from web.controllers.sync import _del_unknown_path as del_unknown_path, _rename as rename, _rename_udf as rename_udf, re_identification as re_identification, delete_history as delete_history, _get_sub_path as get_sub_path, _test_connection as test_connection, _update_directory as update_directory, _add_or_edit_sync_path as add_or_edit_sync_path, get_sync_path as get_sync_path, _delete_sync_path as delete_sync_path, _check_sync_path as check_sync_path, _run_directory_sync as run_directory_sync
 from web.controllers.rss import _remove_rss_media as remove_rss_media, _add_rss_media as add_rss_media, _refresh_rss as refresh_rss, _rss_detail as rss_detail, _re_rss_history as re_rss_history, _delete_rss_history as delete_rss_history, get_rss_history as get_rss_history, truncate_rsshistory as truncate_rsshistory, get_movie_rss_list as get_movie_rss_list, get_tv_rss_list as get_tv_rss_list
-from web.controllers.userrss import _get_userrss_task as get_userrss_task, _delete_userrss_task as delete_userrss_task, _update_userrss_task as update_userrss_task, _get_rssparser as get_rssparser, _delete_rssparser as delete_rssparser, _update_rssparser as update_rssparser, _list_rss_articles as list_rss_articles, _rss_article_test as rss_article_test, _list_rss_history as list_rss_history, _rss_articles_check as rss_articles_check, _rss_articles_download as rss_articles_download
+from web.controllers.userrss import _get_userrss_task as get_userrss_task, _delete_userrss_task as delete_userrss_task, _update_userrss_task as update_userrss_task, _get_rssparser as get_rssparser, _delete_rssparser as delete_rssparser, _update_rssparser as update_rssparser, _list_rss_articles as list_rss_articles, _rss_article_test as rss_article_test, _list_rss_history as list_rss_history, _rss_articles_check as rss_articles_check, _rss_articles_download as rss_articles_download, _list_rss_parsers as list_rss_parsers, _list_rss_tasks as list_rss_tasks
 from web.controllers.words import get_categories as get_categories, _add_custom_word_group as add_custom_word_group, _delete_custom_word_group as delete_custom_word_group, _add_or_edit_custom_word as add_or_edit_custom_word, _get_custom_word as get_custom_word, _delete_custom_words as delete_custom_words, _check_custom_words as check_custom_words, _export_custom_words as export_custom_words, _analyse_import_custom_words_code as analyse_import_custom_words_code, _import_custom_words as import_custom_words, get_customwords as get_customwords
-from web.controllers.brush import _add_brushtask as add_brushtask, _del_brushtask as del_brushtask, _brushtask_detail as brushtask_detail, _list_brushtask_torrents as list_brushtask_torrents, _run_brushtask as run_brushtask
+from web.controllers.brush import _add_brushtask as add_brushtask, _del_brushtask as del_brushtask, _brushtask_detail as brushtask_detail, _list_brushtask_torrents as list_brushtask_torrents, _run_brushtask as run_brushtask, _list_brushtasks as list_brushtasks
 from web.controllers.plugin import install_plugin as install_plugin, uninstall_plugin as uninstall_plugin, get_plugin_apps as get_plugin_apps, get_plugins_conf as get_plugins_conf, get_plugin_state as get_plugin_state
 from flask_restx import Api, reqparse, Resource
 
-from app.brushtask import BrushTask
-from app.rsschecker import RssChecker
-from app.sites import Sites
 from app.utils import TokenCache
 from config import Config
 from web.backend.user import User
 from web.controllers.site import get_site_user_statistics
-from web.security import require_auth, login_required, generate_access_token
+from web.security import generate_access_token
 
 apiv1_bp = Blueprint("apiv1",
                      __name__,
@@ -60,16 +57,16 @@ plugin = Apiv1.namespace('plugin', description='插件')
 
 class ApiResource(Resource):
     """
-    API 认证
+    API 入口（认证已下沉到 Controller 的 @any_auth）
     """
-    method_decorators = [require_auth]
+    method_decorators = []
 
 
 class ClientResource(Resource):
     """
-    登录认证
+    客户端入口（认证已下沉到 Controller 的 @any_auth）
     """
-    method_decorators = [login_required]
+    method_decorators = []
 
 
 def Failed():
@@ -269,11 +266,12 @@ class SiteSites(ApiResource):
         """
         获取所有站点配置（密钥认证）
         """
+        result = get_sites({})
         return {
             "code": 0,
             "success": True,
             "data": {
-                "user_sites": Sites().get_sites()
+                "user_sites": result.get("sites")
             }
         }
 
@@ -457,7 +455,7 @@ class SearchKeyword(ClientResource):
         """
         根据关键字/TMDBID搜索
         """
-        return search(self.parser.parse_args())
+        return search_func(self.parser.parse_args())
 
 
 @search.route('/result')
@@ -979,7 +977,7 @@ class SystemUpdate(ClientResource):
 
 
 @system.route('/logout')
-class SystemUpdate(ClientResource):
+class SystemLogout(ClientResource):
 
     @staticmethod
     def post():
@@ -1379,11 +1377,12 @@ class RssParserList(ClientResource):
         """
         查询所有解析器
         """
+        result = list_rss_parsers({})
         return {
             "code": 0,
             "success": True,
             "data": {
-                "parsers": RssChecker().get_userrss_parser()
+                "parsers": result.get("parsers")
             }
         }
 
@@ -1395,12 +1394,13 @@ class RssList(ClientResource):
         """
         查询所有自定义订阅任务
         """
+        result = list_rss_tasks({})
         return {
             "code": 0,
             "success": False,
             "data": {
-                "tasks": RssChecker().get_rsstask_info(),
-                "parsers": RssChecker().get_userrss_parser()
+                "tasks": result.get("tasks"),
+                "parsers": result.get("parsers")
             }
         }
 
@@ -1738,11 +1738,12 @@ class BrushTaskList(ClientResource):
         """
         查询所有刷流任务
         """
+        result = list_brushtasks({})
         return {
             "code": 0,
             "success": True,
             "data": {
-                "tasks": BrushTask().get_brushtask_info()
+                "tasks": result.get("tasks")
             }
         }
 

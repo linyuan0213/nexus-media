@@ -1,5 +1,5 @@
 from flask import Blueprint
-from web.core.decorators import action_login_check, parse_json_data
+from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 import base64
 import json
@@ -14,7 +14,7 @@ from config import Config
 filter_bp = Blueprint("filter", __name__, url_prefix="/api/web/filter")
 
 @filter_bp.route('/add_filtergroup', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _add_filtergroup(data):
         """
@@ -28,7 +28,7 @@ def _add_filtergroup(data):
         return success()
 
 @filter_bp.route('/add_filterrule', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _add_filterrule(data):
         rule_id = data.get("rule_id")
@@ -45,7 +45,7 @@ def _add_filterrule(data):
         return success()
 
 @filter_bp.route('/del_filtergroup', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _del_filtergroup(data):
         groupid = data.get("id")
@@ -53,7 +53,7 @@ def _del_filtergroup(data):
         return success()
 
 @filter_bp.route('/del_filterrule', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _del_filterrule(data):
         ruleid = data.get("id")
@@ -61,7 +61,7 @@ def _del_filterrule(data):
         return success()
 
 @filter_bp.route('/filterrule_detail', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _filterrule_detail(data):
         rid = data.get("ruleid")
@@ -73,7 +73,7 @@ def _filterrule_detail(data):
         return success(info=ruleinfo)
 
 @filter_bp.route('/import_filtergroup', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _import_filtergroup(data):
         content = data.get("content")
@@ -108,7 +108,7 @@ def _import_filtergroup(data):
             return fail(msg="数据格式不正确，%s" % str(err))
 
 @filter_bp.route('/restore_filtergroup', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _restore_filtergroup(data):
         """
@@ -129,7 +129,7 @@ def _restore_filtergroup(data):
         return success()
 
 @filter_bp.route('/rule_test', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _rule_test(data):
         title = data.get("title")
@@ -146,7 +146,7 @@ def _rule_test(data):
         return success(flag=match_flag, text="匹配" if match_flag else "未匹配", order=100 - res_order if res_order else 0)
 
 @filter_bp.route('/set_default_filtergroup', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _set_default_filtergroup(data):
         groupid = data.get("id")
@@ -156,7 +156,7 @@ def _set_default_filtergroup(data):
         return success()
 
 @filter_bp.route('/share_filtergroup', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _share_filtergroup(data):
         gid = data.get("id")
@@ -186,7 +186,7 @@ def _share_filtergroup(data):
         return success(string=json_string)
 
 @filter_bp.route('/get_filterrules', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_filterrules(data):
         """

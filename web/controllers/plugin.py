@@ -1,5 +1,5 @@
 from flask import Blueprint
-from web.core.decorators import action_login_check, parse_json_data
+from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 from flask_login import current_user
 from app.conf import SystemConfig
@@ -10,7 +10,7 @@ from app.utils.types import SystemConfigKey
 plugin_bp = Blueprint("plugin", __name__, url_prefix="/api/web/plugin")
 
 @plugin_bp.route('/update_plugin_config', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_plugin_config(data):
         """
@@ -25,7 +25,7 @@ def _update_plugin_config(data):
         return success(msg="保存成功")
 
 @plugin_bp.route('/get_plugin_apps', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_plugin_apps(data):
         """
@@ -36,7 +36,7 @@ def get_plugin_apps(data):
         return success(result=plugins, statistic=statistic)
 
 @plugin_bp.route('/get_plugin_page', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_plugin_page(data):
         """
@@ -49,7 +49,7 @@ def get_plugin_page(data):
         return success(title=title, content=content, func=func)
 
 @plugin_bp.route('/get_plugin_state', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_plugin_state(data):
         """
@@ -62,14 +62,14 @@ def get_plugin_state(data):
         return success(state=state)
 
 @plugin_bp.route('/get_plugins_conf', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_plugins_conf(data):
         Plugins = PluginManager().get_plugins_conf(current_user.level)
         return success(result=Plugins)
 
 @plugin_bp.route('/install_plugin', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def install_plugin(data, reload=True):
         """
@@ -91,7 +91,7 @@ def install_plugin(data, reload=True):
         return success(msg="插件安装成功")
 
 @plugin_bp.route('/run_plugin_method', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def run_plugin_method(data):
         """
@@ -108,7 +108,7 @@ def run_plugin_method(data):
         return success(result=result)
 
 @plugin_bp.route('/uninstall_plugin', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def uninstall_plugin(data):
         """

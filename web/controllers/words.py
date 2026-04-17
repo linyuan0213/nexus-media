@@ -1,5 +1,5 @@
 from flask import Blueprint
-from web.core.decorators import action_login_check, parse_json_data
+from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 import base64
 import json
@@ -12,7 +12,7 @@ from app.utils.types import MediaType
 words_bp = Blueprint("words", __name__, url_prefix="/api/web/words")
 
 @words_bp.route('/add_custom_word_group', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _add_custom_word_group(data):
         try:
@@ -57,7 +57,7 @@ def _add_custom_word_group(data):
             return fail(msg=str(e))
 
 @words_bp.route('/add_or_edit_custom_word', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _add_or_edit_custom_word(data):
         try:
@@ -163,7 +163,7 @@ def _add_or_edit_custom_word(data):
             return fail(msg=str(e))
 
 @words_bp.route('/analyse_import_custom_words_code', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _analyse_import_custom_words_code(data):
         try:
@@ -198,7 +198,7 @@ def _analyse_import_custom_words_code(data):
             return fail(msg=str(e))
 
 @words_bp.route('/check_custom_words', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _check_custom_words(data):
         try:
@@ -218,7 +218,7 @@ def _check_custom_words(data):
             return fail(msg="识别词状态设置失败")
 
 @words_bp.route('/delete_custom_word_group', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_custom_word_group(data):
         try:
@@ -230,7 +230,7 @@ def _delete_custom_word_group(data):
             return fail(msg=str(e))
 
 @words_bp.route('/delete_custom_words', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_custom_words(data):
         try:
@@ -248,7 +248,7 @@ def _delete_custom_words(data):
             return fail(msg=str(e))
 
 @words_bp.route('/export_custom_words', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _export_custom_words(data):
         try:
@@ -314,7 +314,7 @@ def _export_custom_words(data):
             return fail(msg=str(e))
 
 @words_bp.route('/get_custom_word', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_custom_word(data):
         try:
@@ -342,7 +342,7 @@ def _get_custom_word(data):
             return fail(msg="查询识别词失败")
 
 @words_bp.route('/import_custom_words', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _import_custom_words(data):
         try:
@@ -415,7 +415,7 @@ def _import_custom_words(data):
             return fail(msg=str(e))
 
 @words_bp.route('/get_categories', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_categories(data):
         if data.get("type") == "电影":
@@ -427,7 +427,7 @@ def get_categories(data):
         return success(category=list(categories), id=data.get("id"), value=data.get("value"))
 
 @words_bp.route('/get_customwords', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_customwords(data):
         _wordshelper = WordsHelper()

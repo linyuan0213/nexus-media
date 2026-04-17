@@ -1,5 +1,5 @@
 from flask import Blueprint
-from web.core.decorators import action_login_check, parse_json_data
+from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 from web.core.action_utils import restart_server
 import datetime
@@ -33,7 +33,7 @@ from sqlalchemy import create_engine
 system_bp = Blueprint("system", __name__, url_prefix="/api/web/system")
 
 @system_bp.route('/add_tmdb_blacklist', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _add_tmdb_blacklist(data):
         """
@@ -48,7 +48,7 @@ def _add_tmdb_blacklist(data):
         return success()
 
 @system_bp.route('/check_message_client', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _check_message_client(data):
         """
@@ -74,7 +74,7 @@ def _check_message_client(data):
             return fail()
 
 @system_bp.route('/clear_tmdb_blacklist', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _clear_tmdb_blacklist(data):
         tmdb_blacklist_helper = TmdbBlacklistHelper()
@@ -83,7 +83,7 @@ def _clear_tmdb_blacklist(data):
         return success()
 
 @system_bp.route('/delete_message_client', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_message_client(data):
         """
@@ -95,7 +95,7 @@ def _delete_message_client(data):
             return fail()
 
 @system_bp.route('/delete_tmdb_blacklist', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_tmdb_blacklist(data):
         tmdb_blacklist_helper = TmdbBlacklistHelper()
@@ -107,7 +107,7 @@ def _delete_tmdb_blacklist(data):
         return success()
 
 @system_bp.route('/get_message_client', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_message_client(data):
         """
@@ -117,7 +117,7 @@ def _get_message_client(data):
         return success(detail=Message().get_message_client_info(cid=cid))
 
 @system_bp.route('/logout', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _logout(data):
         """
@@ -127,7 +127,7 @@ def _logout(data):
         return success()
 
 @system_bp.route('/net_test', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _net_test(data):
         target = data
@@ -155,7 +155,7 @@ def _net_test(data):
             return {"res": False, "time": "%s 毫秒" % seconds}
 
 @system_bp.route('/reset_db_version', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _reset_db_version(data):
         """
@@ -169,7 +169,7 @@ def _reset_db_version(data):
             return fail(msg=str(e))
 
 @system_bp.route('/restart', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _restart(data):
         """
@@ -180,7 +180,7 @@ def _restart(data):
         return success()
 
 @system_bp.route('/restory_backup', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _restory_backup(data):
         """
@@ -240,7 +240,7 @@ def _restory_backup(data):
         return fail(msg="文件不存在")
 
 @system_bp.route('/save_indexer_config', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _save_indexer_config(data):
         """
@@ -295,7 +295,7 @@ def _save_indexer_config(data):
         return success()
 
 @system_bp.route('/save_mediaserver_config', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _save_mediaserver_config(data):
         """
@@ -349,7 +349,7 @@ def _save_mediaserver_config(data):
         return success()
 
 @system_bp.route('/sch', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _sch(data):
         """
@@ -367,7 +367,7 @@ def _sch(data):
         return success(msg="服务已启动", item=sch_item)
 
 @system_bp.route('/search', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _search(data):
         """
@@ -395,7 +395,7 @@ def _search(data):
         return success()
 
 @system_bp.route('/set_system_config', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _set_system_config(data):
         """
@@ -413,7 +413,7 @@ def _set_system_config(data):
             return fail()
 
 @system_bp.route('/test_message_client', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _test_message_client(data):
         """
@@ -428,7 +428,7 @@ def _test_message_client(data):
             return fail()
 
 @system_bp.route('/update_all_config', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_all_config(data):
         """
@@ -450,7 +450,7 @@ def _update_all_config(data):
         return success()
 
 @system_bp.route('/update_config', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_config(data):
         """
@@ -477,7 +477,7 @@ def _update_config(data):
         return success()
 
 @system_bp.route('/update_message_client', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_message_client(data):
         """
@@ -506,7 +506,7 @@ def _update_message_client(data):
         return success()
 
 @system_bp.route('/user_manager', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _user_manager(data):
         """
@@ -528,7 +528,7 @@ def _user_manager(data):
         return fail(code=-1, success=False, message='操作失败')
 
 @system_bp.route('/version', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _version(data):
         """
@@ -540,7 +540,7 @@ def _version(data):
         return fail(code=-1, version="", url="")
 
 @system_bp.route('/refresh_process', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def refresh_process(data):
         """
@@ -553,7 +553,7 @@ def refresh_process(data):
             return fail(value=0, text="正在处理...")
 
 @system_bp.route('/send_custom_message', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def send_custom_message(data):
         """
@@ -570,7 +570,7 @@ def send_custom_message(data):
         return success()
 
 @system_bp.route('/send_plugin_message', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def send_plugin_message(data):
         """
@@ -583,7 +583,7 @@ def send_plugin_message(data):
         return success()
 
 @system_bp.route('/update_system', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def update_system(data):
         """
@@ -595,7 +595,7 @@ def update_system(data):
 
 
 @system_bp.route('/processes', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _processes(data):
         """

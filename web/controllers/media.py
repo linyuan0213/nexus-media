@@ -1,5 +1,5 @@
 from flask import Blueprint
-from web.core.decorators import action_login_check, parse_json_data
+from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 from web.core.action_utils import mediainfo_dict, get_media_exists_info
 import json
@@ -29,7 +29,7 @@ from web.controllers.sync import re_identification
 media_bp = Blueprint("media", __name__, url_prefix="/api/web/media")
 
 @media_bp.route('/download_subtitle', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _download_subtitle(data):
         """
@@ -53,7 +53,7 @@ def _download_subtitle(data):
         return success(msg="字幕下载任务已提交，正在后台运行。")
 
 @media_bp.route('/get_season_episodes', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_season_episodes(data):
         """
@@ -81,7 +81,7 @@ def _get_season_episodes(data):
         return success(episodes=episodes)
 
 @media_bp.route('/get_tvseason_list', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_tvseason_list(data):
         """
@@ -117,7 +117,7 @@ def _get_tvseason_list(data):
         return success(seasons=seasons)
 
 @media_bp.route('/media_info', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _media_info(data):
         """
@@ -204,7 +204,7 @@ def _media_info(data):
         return success(type=mtype, type_str=media_type.value, page=page, title=title, vote_average=vote_average, poster_path=poster_path, release_date=release_date, year=year, overview=overview, link_url=link_url, tmdbid=mediaid, rssid=rssid, seasons=seasons)
 
 @media_bp.route('/media_path_scrap', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _media_path_scrap(data):
         """
@@ -217,7 +217,7 @@ def _media_path_scrap(data):
         return success(msg="刮削任务已提交，正在后台运行。")
 
 @media_bp.route('/media_person', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _media_person(data):
         """
@@ -236,7 +236,7 @@ def _media_person(data):
         return success(data=result)
 
 @media_bp.route('/media_recommendations', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _media_recommendations(data):
         """
@@ -255,7 +255,7 @@ def _media_recommendations(data):
         return success(data=result)
 
 @media_bp.route('/media_similar', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _media_similar(data):
         """
@@ -274,7 +274,7 @@ def _media_similar(data):
         return success(data=result)
 
 @media_bp.route('/mediasync_state', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _mediasync_state(data):
         """
@@ -290,7 +290,7 @@ def _mediasync_state(data):
                                         status.get("time")))
 
 @media_bp.route('/movie_calendar_data', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _movie_calendar_data(data):
         """
@@ -334,7 +334,7 @@ def _movie_calendar_data(data):
                 return success(type="电影", title=title, start=release_date, id=tid, year=release_date[0:4] if release_date else "", poster=poster_path, vote_average=vote_average, rssid=rssid)
 
 @media_bp.route('/name_test', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _name_test(data):
         """
@@ -350,7 +350,7 @@ def _name_test(data):
         return success(data=mediainfo_dict(media_info))
 
 @media_bp.route('/person_medias', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _person_medias(data):
         """
@@ -370,7 +370,7 @@ def _person_medias(data):
                                                              page=page))
 
 @media_bp.route('/save_user_script', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _save_user_script(data):
         """
@@ -386,7 +386,7 @@ def _save_user_script(data):
         return success(msg="保存成功")
 
 @media_bp.route('/start_mediasync', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _start_mediasync(data):
         """
@@ -399,7 +399,7 @@ def _start_mediasync(data):
         return success()
 
 @media_bp.route('/tv_calendar_data', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _tv_calendar_data(data):
         """
@@ -471,7 +471,7 @@ def _tv_calendar_data(data):
             return success(events=episode_events)
 
 @media_bp.route('/clear_history', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def clear_history(data):
         """
@@ -485,7 +485,7 @@ def clear_history(data):
         return success()
 
 @media_bp.route('/get_category_config', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_category_config(data):
         """
@@ -506,7 +506,7 @@ def get_category_config(data):
         return success(text=category_text)
 
 @media_bp.route('/get_downloaded', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_downloaded(data):
         page = data.get("page")
@@ -530,7 +530,7 @@ def get_downloaded(data):
             return success(Items=[])
 
 @media_bp.route('/get_library_mediacount', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_library_mediacount(data):
         """
@@ -546,7 +546,7 @@ def get_library_mediacount(data):
             return fail(code=-1, msg="媒体库服务器连接失败")
 
 @media_bp.route('/get_library_playhistory', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_library_playhistory(data):
         """
@@ -555,7 +555,7 @@ def get_library_playhistory(data):
         return success(result=MediaServer().get_activity_log(30))
 
 @media_bp.route('/get_library_spacesize', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_library_spacesize(data):
         """
@@ -604,7 +604,7 @@ def get_library_spacesize(data):
         return success(UsedPercent=UsedPercent, FreeSpace=FreeSpace, UsedSapce=UsedSapce, TotalSpace=TotalSpace)
 
 @media_bp.route('/get_recommend', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_recommend(data):
         Type = data.get("type")
@@ -736,7 +736,7 @@ def get_recommend(data):
         return success(Items=res_list)
 
 @media_bp.route('/get_search_result', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_search_result(data):
         """
@@ -946,7 +946,7 @@ def get_search_result(data):
         return success(total=total, result=SearchResults)
 
 @media_bp.route('/get_transfer_history', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_transfer_history(data):
         """
@@ -979,7 +979,7 @@ def get_transfer_history(data):
         return success(total=totalCount, result=historys_list, totalPage=TotalPage, pageNum=PageNum, currentPage=CurrentPage)
 
 @media_bp.route('/get_transfer_statistics', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_transfer_statistics(data):
         """
@@ -1009,7 +1009,7 @@ def get_transfer_statistics(data):
         return success(Labels=Labels, MovieNums=MovieNums, TvNums=TvNums, AnimeNums=AnimeNums)
 
 @media_bp.route('/get_unknown_list', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_unknown_list(data):
         """
@@ -1037,7 +1037,7 @@ def get_unknown_list(data):
         return success(items=Items)
 
 @media_bp.route('/get_unknown_list_by_page', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_unknown_list_by_page(data):
         """
@@ -1076,7 +1076,7 @@ def get_unknown_list_by_page(data):
         return success(total=totalCount, items=Items, totalPage=TotalPage, pageNum=PageNum, currentPage=CurrentPage)
 
 @media_bp.route('/media_detail', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def media_detail(data):
         """
@@ -1165,7 +1165,7 @@ def media_detail(data):
             })
 
 @media_bp.route('/search_media_infos', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def search_media_infos(data):
         """
@@ -1181,7 +1181,7 @@ def search_media_infos(data):
         return success(result=[media.to_dict() for media in medias])
 
 @media_bp.route('/unidentification', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def unidentification(data):
         """
@@ -1200,7 +1200,7 @@ def unidentification(data):
         return success()
 
 @media_bp.route('/update_category_config', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def update_category_config(data):
         """

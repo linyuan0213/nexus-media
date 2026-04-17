@@ -1,5 +1,5 @@
 from flask import Blueprint
-from web.core.decorators import action_login_check, parse_json_data
+from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 import datetime
 import time
@@ -12,7 +12,7 @@ from app.helper import ThreadHelper
 scheduler_bp = Blueprint("scheduler", __name__, url_prefix="/api/web/scheduler")
 
 @scheduler_bp.route('/delete_scheduler_job', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_scheduler_job(data):
         job_id = data.get("id")
@@ -27,7 +27,7 @@ def _delete_scheduler_job(data):
         return fail(msg="删除失败")
 
 @scheduler_bp.route('/get_scheduler_jobs', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_scheduler_jobs(data):
         """
@@ -91,7 +91,7 @@ def _get_scheduler_jobs(data):
         return success(data=job_list)
 
 @scheduler_bp.route('/pause_scheduler_job', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _pause_scheduler_job(data):
         job_id = data.get("id")
@@ -106,7 +106,7 @@ def _pause_scheduler_job(data):
         return fail(msg="暂停失败")
 
 @scheduler_bp.route('/resume_scheduler_job', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _resume_scheduler_job(data):
         job_id = data.get("id")
@@ -121,7 +121,7 @@ def _resume_scheduler_job(data):
         return fail(msg="恢复失败")
 
 @scheduler_bp.route('/run_scheduler_job', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _run_scheduler_job(data):
         """
@@ -163,7 +163,7 @@ def _run_scheduler_job(data):
             return fail(msg=str(e))
 
 @scheduler_bp.route('/update_scheduler_job', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_scheduler_job(data):
         """

@@ -1,5 +1,5 @@
 from flask import Blueprint
-from web.core.decorators import action_login_check, parse_json_data
+from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 import json
 from app.indexer import Indexer
@@ -10,7 +10,7 @@ from web.cache import cache
 site_bp = Blueprint("site", __name__, url_prefix="/api/web/site")
 
 @site_bp.route('/check_site_attr', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _check_site_attr(data):
         """
@@ -27,7 +27,7 @@ def _check_site_attr(data):
         return success(site_free=site_free, site_2xfree=site_2xfree, site_hr=site_hr)
 
 @site_bp.route('/del_site', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _del_site(data):
         """
@@ -41,7 +41,7 @@ def _del_site(data):
             return success()
 
 @site_bp.route('/get_site', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_site(data):
         """
@@ -66,7 +66,7 @@ def _get_site(data):
         return success(site=ret, site_free=site_free, site_2xfree=site_2xfree, site_hr=site_hr)
 
 @site_bp.route('/get_site_activity', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_site_activity(data):
         """
@@ -84,7 +84,7 @@ def _get_site_activity(data):
         return resp
 
 @site_bp.route('/get_site_favicon', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_site_favicon(data):
         """
@@ -94,7 +94,7 @@ def _get_site_favicon(data):
         return success(icon=Sites().get_site_favicon(site_name=sitename))
 
 @site_bp.route('/get_site_history', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_site_history(data):
         """
@@ -119,7 +119,7 @@ def _get_site_history(data):
         return resp
 
 @site_bp.route('/get_site_seeding_info', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_site_seeding_info(data):
         """
@@ -142,7 +142,7 @@ def _get_site_seeding_info(data):
         return resp
 
 @site_bp.route('/get_sites', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_sites(data):
         """
@@ -163,7 +163,7 @@ def _get_sites(data):
         return success(sites=sites)
 
 @site_bp.route('/set_site_captcha_code', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _set_site_captcha_code(data):
         """
@@ -175,7 +175,7 @@ def _set_site_captcha_code(data):
         return success()
 
 @site_bp.route('/test_site', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _test_site(data):
         """
@@ -186,7 +186,7 @@ def _test_site(data):
         return fail(code=code, msg=msg, time=times)
 
 @site_bp.route('/update_site', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_site(data):
         """
@@ -246,7 +246,7 @@ def _update_site(data):
         return fail(code=ret)
 
 @site_bp.route('/update_site_cookie_ua', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_site_cookie_ua(data):
         """
@@ -259,7 +259,7 @@ def _update_site_cookie_ua(data):
         return success(messages="请求发送成功")
 
 @site_bp.route('/get_site_user_statistics', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_site_user_statistics(data):
         """
@@ -288,7 +288,7 @@ def get_site_user_statistics(data):
         return success(data=statistics)
 
 @site_bp.route('/list_site_resources', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def list_site_resources(data):
         resources = Indexer().list_resources(index_id=data.get("id"),

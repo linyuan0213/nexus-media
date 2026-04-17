@@ -1,5 +1,5 @@
 from flask import Blueprint
-from web.core.decorators import action_login_check, parse_json_data
+from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 from flask_login import current_user
 from web.backend.user import User
@@ -7,7 +7,7 @@ from web.backend.user import User
 rbac_bp = Blueprint("rbac", __name__, url_prefix="/api/web/rbac")
 
 @rbac_bp.route('/create_menu', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _create_menu(data):
         """
@@ -38,7 +38,7 @@ def _create_menu(data):
         return fail(success=False, message=result)
 
 @rbac_bp.route('/create_role', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _create_role(data):
         """
@@ -66,7 +66,7 @@ def _create_role(data):
         return fail(success=False, message=result)
 
 @rbac_bp.route('/create_user', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _create_user(data):
         """
@@ -96,7 +96,7 @@ def _create_user(data):
         return fail(success=False, message=result)
 
 @rbac_bp.route('/delete_menu', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_menu(data):
         """
@@ -115,7 +115,7 @@ def _delete_menu(data):
         return fail(success=False, message=message)
 
 @rbac_bp.route('/delete_role', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_role(data):
         """
@@ -134,7 +134,7 @@ def _delete_role(data):
         return fail(success=False, message=message)
 
 @rbac_bp.route('/delete_user', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_user(data):
         """
@@ -153,7 +153,7 @@ def _delete_user(data):
         return fail(success=False, message="删除失败")
 
 @rbac_bp.route('/get_menu', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_menu(data):
         """
@@ -171,7 +171,7 @@ def _get_menu(data):
         return fail(success=False, message="菜单不存在")
 
 @rbac_bp.route('/get_role', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_role(data):
         """
@@ -189,7 +189,7 @@ def _get_role(data):
         return fail(success=False, message="角色不存在")
 
 @rbac_bp.route('/get_user', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_user(data):
         """
@@ -207,7 +207,7 @@ def _get_user(data):
         return fail(success=False, message="用户不存在")
 
 @rbac_bp.route('/reset_password', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _reset_password(data):
         """
@@ -228,7 +228,7 @@ def _reset_password(data):
         return fail(success=False, message=message)
 
 @rbac_bp.route('/update_menu', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_menu(data):
         """
@@ -253,7 +253,7 @@ def _update_menu(data):
         return fail(success=False, message=message)
 
 @rbac_bp.route('/update_menu_sort', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_menu_sort(data):
         """
@@ -295,7 +295,7 @@ def _update_menu_sort(data):
             return fail(success=False, message=f"更新排序失败: {str(e)}")
 
 @rbac_bp.route('/update_role', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_role(data):
         """
@@ -328,7 +328,7 @@ def _update_role(data):
         return fail(success=False, message=message)
 
 @rbac_bp.route('/update_user', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_user(data):
         """
@@ -362,7 +362,7 @@ def get_top_menus(data=None):
         return success(menus=current_user.get_topmenus())
 
 @rbac_bp.route('/get_top_menus', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_top_menus(data):
         return get_top_menus(data)
@@ -379,13 +379,13 @@ def get_user_menus(data=None):
         return success(menus=menus, level=current_user.level)
 
 @rbac_bp.route('/get_user_menus', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_user_menus(data):
         return get_user_menus(data)
 
 @rbac_bp.route('/get_users', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_users(data):
         """

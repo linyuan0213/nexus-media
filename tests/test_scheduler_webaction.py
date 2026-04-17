@@ -35,6 +35,7 @@ def scheduler_mod(app_ctx):
     sys.modules.pop("web.controllers.scheduler", None)
     sys.modules.pop("web.core.decorators", None)
     import web.core.decorators as dec
+    dec.any_auth = lambda f: f
     dec.action_login_check = lambda f: f
     dec.parse_json_data = lambda f: lambda *a, **k: f(a[0] if a else {}, *a[1:], **k)
     import web.controllers.scheduler as mod

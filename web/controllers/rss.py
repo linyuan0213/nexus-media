@@ -1,5 +1,5 @@
 from flask import Blueprint
-from web.core.decorators import action_login_check, parse_json_data
+from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 from app.helper import ThreadHelper
 from app.helper import RssHelper
@@ -12,7 +12,7 @@ from app.utils.types import MediaType, MovieTypes, RssType
 rss_bp = Blueprint("rss", __name__, url_prefix="/api/web/rss")
 
 @rss_bp.route('/add_rss_media', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _add_rss_media(data):
         """
@@ -102,7 +102,7 @@ def _add_rss_media(data):
         return fail(code=code, msg=msg, page=page, name=name, rssid=rssid)
 
 @rss_bp.route('/delete_rss_history', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_rss_history(data):
         rssid = data.get("rssid")
@@ -110,7 +110,7 @@ def _delete_rss_history(data):
         return success()
 
 @rss_bp.route('/re_rss_history', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _re_rss_history(data):
         rssid = data.get("rssid")
@@ -138,7 +138,7 @@ def _re_rss_history(data):
             return fail(msg="订阅历史记录不存在")
 
 @rss_bp.route('/refresh_rss', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _refresh_rss(data):
         """
@@ -154,7 +154,7 @@ def _refresh_rss(data):
         return success(page=page)
 
 @rss_bp.route('/remove_rss_media', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _remove_rss_media(data):
         """
@@ -187,7 +187,7 @@ def _remove_rss_media(data):
         return success(page=page, name=name)
 
 @rss_bp.route('/rss_detail', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _rss_detail(data):
         rid = data.get("rssid")
@@ -207,7 +207,7 @@ def _rss_detail(data):
         return success(detail=rssdetail)
 
 @rss_bp.route('/get_default_rss_setting', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_default_rss_setting(data):
         """
@@ -225,7 +225,7 @@ def get_default_rss_setting(data):
         return fail()
 
 @rss_bp.route('/get_ical_events', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_ical_events(data):
         """
@@ -251,7 +251,7 @@ def get_ical_events(data):
         return success(result=Events)
 
 @rss_bp.route('/get_movie_rss_items', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_movie_rss_items(data):
         """
@@ -266,7 +266,7 @@ def get_movie_rss_items(data):
         return success(result=RssMovieItems)
 
 @rss_bp.route('/get_movie_rss_list', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_movie_rss_list(data):
         """
@@ -275,7 +275,7 @@ def get_movie_rss_list(data):
         return success(result=Subscribe().get_subscribe_movies())
 
 @rss_bp.route('/get_rss_history', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_rss_history(data):
         """
@@ -285,7 +285,7 @@ def get_rss_history(data):
         return success(result=[rec.as_dict() for rec in Rss().get_rss_history(rtype=mtype)])
 
 @rss_bp.route('/get_tv_rss_items', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_tv_rss_items(data):
         """
@@ -313,7 +313,7 @@ def get_tv_rss_items(data):
         return success(result=UniqueTvItems)
 
 @rss_bp.route('/get_tv_rss_list', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def get_tv_rss_list(data):
         """
@@ -322,7 +322,7 @@ def get_tv_rss_list(data):
         return success(result=Subscribe().get_subscribe_tvs())
 
 @rss_bp.route('/truncate_rsshistory', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def truncate_rsshistory(data):
         """

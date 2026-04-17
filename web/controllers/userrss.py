@@ -1,5 +1,5 @@
 from flask import Blueprint
-from web.core.decorators import action_login_check, parse_json_data
+from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 from web.core.action_utils import mediainfo_dict
 from app.rsschecker import RssChecker
@@ -8,7 +8,7 @@ from app.utils import ExceptionUtils
 userrss_bp = Blueprint("userrss", __name__, url_prefix="/api/web/userrss")
 
 @userrss_bp.route('/check_userrss_task', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _check_userrss_task(data):
         """
@@ -31,7 +31,7 @@ def _check_userrss_task(data):
             return fail(msg="自定义订阅状态设置失败")
 
 @userrss_bp.route('/delete_rssparser', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_rssparser(data):
         """
@@ -43,7 +43,7 @@ def _delete_rssparser(data):
             return fail()
 
 @userrss_bp.route('/delete_userrss_task', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _delete_userrss_task(data):
         """
@@ -54,8 +54,19 @@ def _delete_userrss_task(data):
         else:
             return fail()
 
+
+@userrss_bp.route('/list_rss_parsers', methods=['POST'])
+@any_auth
+@parse_json_data
+def _list_rss_parsers(data):
+        """
+        查询所有解析器
+        """
+        return success(parsers=RssChecker().get_userrss_parser())
+
+
 @userrss_bp.route('/get_rssparser', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_rssparser(data):
         """
@@ -65,7 +76,7 @@ def _get_rssparser(data):
         return success(detail=RssChecker().get_userrss_parser(pid=pid))
 
 @userrss_bp.route('/get_userrss_task', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _get_userrss_task(data):
         """
@@ -74,8 +85,21 @@ def _get_userrss_task(data):
         taskid = data.get("id")
         return success(detail=RssChecker().get_rsstask_info(taskid=taskid))
 
+
+@userrss_bp.route('/list_rss_tasks', methods=['POST'])
+@any_auth
+@parse_json_data
+def _list_rss_tasks(data):
+        """
+        查询所有自定义订阅任务
+        """
+        return success(
+            tasks=RssChecker().get_rsstask_info(),
+            parsers=RssChecker().get_userrss_parser()
+        )
+
 @userrss_bp.route('/list_rss_articles', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _list_rss_articles(data):
         task_info = RssChecker().get_rsstask_info(taskid=data.get("id"))
@@ -89,7 +113,7 @@ def _list_rss_articles(data):
             return fail(msg="未获取到报文")
 
 @userrss_bp.route('/list_rss_history', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _list_rss_history(data):
         downloads = []
@@ -108,7 +132,7 @@ def _list_rss_history(data):
             return fail(msg="无下载记录")
 
 @userrss_bp.route('/rss_article_test', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _rss_article_test(data):
         taskid = data.get("taskid")
@@ -126,7 +150,7 @@ def _rss_article_test(data):
         return success(data=media_dict)
 
 @userrss_bp.route('/rss_articles_check', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _rss_articles_check(data):
         if not data.get("articles"):
@@ -142,7 +166,7 @@ def _rss_articles_check(data):
             return fail()
 
 @userrss_bp.route('/rss_articles_download', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _rss_articles_download(data):
         if not data.get("articles"):
@@ -155,14 +179,14 @@ def _rss_articles_download(data):
             return fail()
 
 @userrss_bp.route('/run_userrss', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _run_userrss(data):
         RssChecker().check_task_rss(data.get("id"))
         return success()
 
 @userrss_bp.route('/update_rssparser', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_rssparser(data):
         """
@@ -181,7 +205,7 @@ def _update_rssparser(data):
             return fail()
 
 @userrss_bp.route('/update_userrss_task', methods=['POST'])
-@action_login_check
+@any_auth
 @parse_json_data
 def _update_userrss_task(data):
         """
