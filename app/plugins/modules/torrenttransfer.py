@@ -41,8 +41,6 @@ class TorrentTransfer(_IPluginModule):
     user_level = 2
 
     # 私有属性
-    _scheduler = None
-    _jobstore = "plugin"
     downloader = None
     sites = None
     # 限速开关
@@ -632,8 +630,6 @@ class TorrentTransfer(_IPluginModule):
 
     def stop_service(self):
         try:
-            for job_id in self._job_ids:
-                self.remove_job(job_id)
-            self._job_ids.clear()
+            self.remove_all_jobs()
         except Exception as e:
             print(str(e))

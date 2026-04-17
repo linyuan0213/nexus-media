@@ -19,7 +19,7 @@ from app.utils import RequestUtils, StringUtils, ExceptionUtils
 from app.utils.commons import SingletonMeta
 from app.utils.types import MediaType, SearchType, RssType
 from config import Config
-from app.scheduler_service import SchedulerService
+from app.services.scheduler_core import SchedulerCore
 
 
 class RssChecker(metaclass=SingletonMeta):
@@ -33,9 +33,7 @@ class RssChecker(metaclass=SingletonMeta):
     dbhelper = None
     rsshelper = None
 
-    _scheduler = None
     _jobstore = "rsscheck"
-    _job_ids = []
     _rss_tasks = []
     _rss_parsers = []
     _site_users = {
@@ -133,8 +131,6 @@ class RssChecker(metaclass=SingletonMeta):
         if not self._rss_tasks:
             return
         # 启动RSS任务
-        self._scheduler = SchedulerService()
-        self._job_ids.clear()
         rss_flag = False
         for task in self._rss_tasks:
             if task.get("state") and task.get("interval"):
@@ -143,7 +139,7 @@ class RssChecker(metaclass=SingletonMeta):
                 if cron.isdigit():
                     # 分钟
                     rss_flag = True
-                    self._scheduler.start_job({
+                    SchedulerCore().start_job({
                         "func": self.check_task_rss,
                         "name": f"自定义订阅任务 {task.get('name')}",
                         "args": (task.get("id"),),
@@ -152,11 +148,10 @@ class RssChecker(metaclass=SingletonMeta):
                         "seconds": int(cron) * 60,
                         "jobstore": self._jobstore
                     })
-                    self._job_ids.append(job_id)
                 elif cron.count(" ") == 4:
                     # cron表达式
                     try:
-                        self._scheduler.start_job({
+                        SchedulerCore().start_job({
                             "func": self.check_task_rss,
                             "name": f"自定义订阅任务 {task.get('name')}",
                             "args": (task.get("id"),),
@@ -165,12 +160,11 @@ class RssChecker(metaclass=SingletonMeta):
                             "cron": cron,
                             "jobstore": self._jobstore
                         })
-                        self._job_ids.append(job_id)
                         rss_flag = True
                     except Exception as e:
                         log.info("%s 自定义订阅cron表达式 配置格式错误：%s %s" % (task.get("name"), cron, str(e)))
         if rss_flag:
-            self._scheduler.print_jobs(jobstore=self._jobstore)
+            SchedulerCore().print_jobs(jobstore=self._jobstore)
             log.info("自定义订阅服务启动")
 
     def get_rsstask_info(self, taskid=None):
@@ -716,10 +710,7 @@ class RssChecker(metaclass=SingletonMeta):
         停止服务
         """
         try:
-            if self._scheduler:
-                for job_id in self._job_ids:
-                    self._scheduler.remove_job(job_id)
-                self._job_ids.clear()
+            SchedulerCore().remove_all_jobs(jobstore=self._jobstore)
         except Exception as e:
             print(str(e))
 

@@ -3,6 +3,7 @@ Tests to verify that the WebAction refactor preserves all public actions/command
 """
 import ast
 import os
+import sys
 from contextlib import ExitStack
 from pathlib import Path
 
@@ -28,6 +29,11 @@ _HEAVY_PATCHES = [
 
 
 def _make_test_app():
+    # 清除 Controller 相关模块缓存，避免被其他测试的 monkey-patch 污染
+    for mod in list(sys.modules.keys()):
+        if mod.startswith("web.controllers.") or mod in ("web.controllers", "web.core.decorators"):
+            sys.modules.pop(mod, None)
+
     app = Flask(__name__)
     app.secret_key = "test"
     patches = [patch(target, new=MagicMock()) for target in _HEAVY_PATCHES]

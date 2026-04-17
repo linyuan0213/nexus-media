@@ -64,8 +64,6 @@ class DoubanRank(_IPluginModule):
     _rss_addrs = []
     _ranks = []
     _vote = 0
-    _scheduler = None
-    _jobstore = 'plugin'
 
     def init_config(self, config: dict = None):
         self.mediaserver = MediaServer()
@@ -369,9 +367,7 @@ class DoubanRank(_IPluginModule):
 
     def stop_service(self):
         try:
-            for job_id in self._job_ids:
-                self.remove_job(job_id)
-            self._job_ids.clear()
+            self.remove_all_jobs()
         except Exception as e:
             print(str(e))
 

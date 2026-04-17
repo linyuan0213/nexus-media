@@ -31,8 +31,6 @@ class LibraryRefresh(_IPluginModule):
 
     # 私有属性
     _enable = False
-    _scheduler = None
-    _jobstore = "plugin"
     _refresh_delay = 0
 
     mediaserver = None
@@ -102,9 +100,7 @@ class LibraryRefresh(_IPluginModule):
 
     def stop_service(self):
         try:
-            for job_id in self._job_ids:
-                self.remove_job(job_id)
-            self._job_ids.clear()
+            self.remove_all_jobs()
             self._event.set()
             self._event.clear()
         except Exception as e:

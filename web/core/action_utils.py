@@ -4,24 +4,13 @@ import shutil
 import subprocess
 
 import log
-from app.brushtask import BrushTask
 from app.conf import ModuleConf
-from app.downloader import Downloader
-from app.helper import ThreadHelper, IndexerHelper
 from app.helper.drissionpage_helper import DrissionPageHelper
 from app.media.meta import MetaInfo
 from app.mediaserver import MediaServer
-from app.message import Message, MessageCenter
-from app.plugins import PluginManager, EventManager
-from app.rss import Rss
-from app.rsschecker import RssChecker
-from app.scheduler import Scheduler
-from app.sites import SiteUserInfo, SiteConf
 from app.subscribe import Subscribe
-from app.sync import Sync
-from app.torrentremover import TorrentRemover
-from app.utils import PathUtils, SystemUtils, ExceptionUtils
-from app.utils.types import SearchType, MediaType, MovieTypes, EventType
+from app.utils import PathUtils, ExceptionUtils
+from app.utils.types import SearchType, MediaType, MovieTypes
 from config import RMT_MEDIAEXT, Config
 from web.backend.search_torrents import search_media_by_message
 from web.cache import cache
@@ -29,27 +18,16 @@ from werkzeug.security import generate_password_hash
 
 
 def stop_service():
-    """停止服务"""
-    Scheduler().stop_service()
-    Sync().stop_service()
-    BrushTask().stop_service()
-    RssChecker().stop_service()
-    TorrentRemover().stop_service()
-    Downloader().stop_service()
-    PluginManager().stop_service()
+    """停止服务（统一收口到 system_service）"""
+    from app.system_service import stop_service as _sys_stop
+    _sys_stop()
     DrissionPageHelper().close_all_tabs()
 
 
 def start_service():
-    """启动服务"""
-    IndexerHelper()
-    SiteConf()
-    Scheduler()
-    Sync()
-    BrushTask()
-    RssChecker()
-    TorrentRemover()
-    PluginManager()
+    """启动服务（统一收口到 system_service）"""
+    from app.system_service import start_service as _sys_start
+    _sys_start()
 
 
 def restart_service():

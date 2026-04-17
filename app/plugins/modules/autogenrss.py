@@ -45,8 +45,6 @@ class AutoGenRss(_IPluginModule):
 
     # 私有属性
     siteconf = None
-    _scheduler = None
-    _jobstore = "plugin"
     _job_id = None
     # 设置开关
     _enabled = False
@@ -354,9 +352,7 @@ class AutoGenRss(_IPluginModule):
 
     def stop_service(self):
         try:
-            for job_id in self._job_ids:
-                self.remove_job(job_id)
-            self._job_ids.clear()
+            self.remove_all_jobs()
         except Exception as e:
             print(str(e))
 

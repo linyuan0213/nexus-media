@@ -9,6 +9,7 @@ from app.conf import SystemConfig
 from app.helper import DbHelper
 from app.message import Message
 from config import Config
+from app.services.scheduler_core import SchedulerCore
 
 
 class _IPluginModule(metaclass=ABCMeta):
@@ -60,7 +61,6 @@ class _IPluginModule(metaclass=ABCMeta):
     # 可使用的用户级别
     auth_level = 1
 
-    _scheduler = None
     _jobstore = 'plugin'
     _job_ids = []
 
@@ -234,43 +234,37 @@ class _IPluginModule(metaclass=ABCMeta):
 
     def _get_scheduler(self):
         """
-        获取调度器服务实例（懒加载）
+        获取调度器服务实例
         """
-        if self._scheduler is None:
-            from app.scheduler_service import SchedulerService
-            self._scheduler = SchedulerService()
-        return self._scheduler
+        return SchedulerCore()
 
     def start_job(self, task: dict):
         """
         启动单个定时任务（兼容旧版字典方式）
         :param task: 任务配置字典
         """
-        scheduler = self._get_scheduler()
         self._job_ids.append(task.get("job_id"))
-        return scheduler.start_job(task)
+        return SchedulerCore().start_job(task)
 
     def start_schedule_job(self, job_id: str, func: Callable, func_desc: str, cron: str,
                            next_run_time: Optional[Any] = None):
         """
-        启动带 cron/时间范围/固定时间解析的定时任务（封装 SchedulerUtils.start_job）
+        启动带 cron/时间范围/固定时间解析的定时任务（封装 SchedulerCore.register_smart_cron）
         :param job_id: 任务ID
         :param func: 执行函数
         :param func_desc: 功能描述
         :param cron: cron表达式/时间范围/固定时间/间隔小时数
         :param next_run_time: 下次运行时间
         """
-        from app.utils import SchedulerUtils
-        scheduler = self._get_scheduler()
         self._job_ids.append(job_id)
-        return SchedulerUtils.start_job(
-            scheduler=scheduler.SCHEDULER,
-            func=func,
+        return SchedulerCore().register_smart_cron(
             job_id=job_id,
+            func=func,
             name=self.module_name or None,
             func_desc=func_desc,
             cron=cron,
-            next_run_time=next_run_time
+            next_run_time=next_run_time,
+            jobstore=self._jobstore
         )
 
     def register_interval(
@@ -290,9 +284,8 @@ class _IPluginModule(metaclass=ABCMeta):
         """
         注册 interval 类型定时任务
         """
-        scheduler = self._get_scheduler()
         self._job_ids.append(job_id)
-        return scheduler.register_interval(
+        return SchedulerCore().register_interval(
             job_id=job_id,
             func=func,
             name=self.module_name or None,
@@ -322,9 +315,8 @@ class _IPluginModule(metaclass=ABCMeta):
         """
         注册 date 类型一次性定时任务
         """
-        scheduler = self._get_scheduler()
         self._job_ids.append(job_id)
-        return scheduler.register_date(
+        return SchedulerCore().register_date(
             job_id=job_id,
             func=func,
             name=self.module_name or None,
@@ -352,9 +344,8 @@ class _IPluginModule(metaclass=ABCMeta):
         """
         注册 cron 类型定时任务
         """
-        scheduler = self._get_scheduler()
         self._job_ids.append(job_id)
-        return scheduler.register_cron(
+        return SchedulerCore().register_cron(
             job_id=job_id,
             func=func,
             name=self.module_name or None,
@@ -373,8 +364,7 @@ class _IPluginModule(metaclass=ABCMeta):
         移除单个定时任务
         :param job_id: 任务ID
         """
-        scheduler = self._get_scheduler()
-        return scheduler.remove_job(job_id=job_id, jobstore=self._jobstore)
+        return SchedulerCore().remove_job(job_id=job_id, jobstore=self._jobstore)
 
     def remove_all_jobs(self):
         """
@@ -400,5 +390,4 @@ class _IPluginModule(metaclass=ABCMeta):
         获取单个定时任务
         :param job_id: 任务ID
         """
-        scheduler = self._get_scheduler()
-        return scheduler.get_job(job_id=job_id, jobstore=self._jobstore)
+        return SchedulerCore().get_job(job_id=job_id, jobstore=self._jobstore)

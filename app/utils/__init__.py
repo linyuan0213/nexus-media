@@ -13,7 +13,6 @@ from .rsstitle_utils import RssTitleUtils
 from .nfo_reader import NfoReader
 from .ip_utils import IpUtils
 from .image_utils import ImageUtils
-from .scheduler_utils import SchedulerUtils
 from .redis_store import RedisStore
 from .temp_manager import TempManager, temp_manager, temp_file_context, temp_dir_context
 
@@ -86,7 +85,6 @@ __all__ = [
     'NfoReader',
     'IpUtils',
     'ImageUtils',
-    'SchedulerUtils',
     'RedisStore',
     'TempManager',
     'temp_manager',

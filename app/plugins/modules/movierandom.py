@@ -46,8 +46,6 @@ class MovieRandom(_IPluginModule):
     mediaserver = None
     rsshelper = None
     subscribe = None
-    _scheduler = None
-    _jobstore = "plugin"
     _enable = False
     _onlyonce = False
     _cron = None
@@ -478,8 +476,6 @@ class MovieRandom(_IPluginModule):
 
     def stop_service(self):
         try:
-            for job_id in self._job_ids:
-                self.remove_job(job_id)
-            self._job_ids.clear()
+            self.remove_all_jobs()
         except Exception as e:
             print(str(e))

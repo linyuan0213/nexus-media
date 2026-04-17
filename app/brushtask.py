@@ -12,7 +12,7 @@ from app.sites import Sites, SiteConf
 from app.downloader import Downloader
 from app.filter import Filter
 from app.helper import DbHelper, RssHelper
-from app.scheduler_service import SchedulerService
+from app.services.scheduler_core import SchedulerCore
 from app.utils import StringUtils, ExceptionUtils, JsonUtils, RedisStore
 from app.utils.commons import SingletonMeta
 from app.utils.types import BrushDeleteType, MediaType
@@ -29,9 +29,7 @@ class BrushTask(metaclass=SingletonMeta):
     rsshelper = None
     downloader = None
     redis_store = None
-    _scheduler = None
     _jobstore = "brushtask"
-    _job_ids = []
     _brush_tasks = {}
     _torrents_cache = set()
     _qb_client = "qbittorrent"
@@ -57,8 +55,6 @@ class BrushTask(metaclass=SingletonMeta):
         self._torrents_cache.clear()
         # 启动RSS任务
         if self._brush_tasks:
-            self._scheduler = SchedulerService()
-            self._job_ids.clear()
             running_task = 0
             for _, task in self._brush_tasks.items():
                 if task.get("state") in ['Y', 'S'] and task.get("interval"):
@@ -83,7 +79,7 @@ class BrushTask(metaclass=SingletonMeta):
         if is_running:
             try:
                 job_id = f"BrushTask.check_task_rss_{task_id}"
-                self._scheduler.start_job({
+                SchedulerCore().start_job({
                     "func": self.check_task_rss,
                     "name": f"刷流任务 {task_name} ",
                     "args": (task_id,),
@@ -92,7 +88,6 @@ class BrushTask(metaclass=SingletonMeta):
                     "jobstore": self._jobstore,
                     **trigger_args
                 })
-                self._job_ids.append(job_id)
                 running = 1
             except Exception as err:
                 log.error(f"任务 {task_name} 运行周期格式不正确：{str(err)}")
@@ -100,7 +95,7 @@ class BrushTask(metaclass=SingletonMeta):
         for func, name in [(self.stop_task_torrents, "停种任务"), (self.remove_task_torrents, "删种任务")]:
             try:
                 job_id = f"BrushTask.{func.__name__}_{task_id}"
-                self._scheduler.start_job({
+                SchedulerCore().start_job({
                     "func": func,
                     "name": f"{name} {task_name} ",
                     "args": (task_id,),
@@ -109,7 +104,6 @@ class BrushTask(metaclass=SingletonMeta):
                     "jobstore": self._jobstore,
                     **trigger_args
                 })
-                self._job_ids.append(job_id)
             except Exception as err:
                 log.error(f"任务 {task_name} {name} 运行周期格式不正确：{str(err)}")
 
@@ -117,20 +111,16 @@ class BrushTask(metaclass=SingletonMeta):
 
     def _stop_task_jobs(self, task_id):
         """停止单个任务的所有调度任务"""
-        if not self._scheduler:
-            return
         job_ids = [
             f"BrushTask.check_task_rss_{task_id}",
             f"BrushTask.stop_task_torrents_{task_id}",
             f"BrushTask.remove_task_torrents_{task_id}",
         ]
         for job_id in job_ids:
-            if job_id in self._job_ids:
-                try:
-                    self._scheduler.remove_job(job_id)
-                except Exception:
-                    pass
-                self._job_ids.remove(job_id)
+            try:
+                SchedulerCore().remove_job(job_id, jobstore=self._jobstore)
+            except Exception:
+                pass
 
     def _reload_single_task(self, task_id):
         """从数据库重载单个任务并更新内存缓存和调度"""
@@ -182,8 +172,6 @@ class BrushTask(metaclass=SingletonMeta):
         self._stop_task_jobs(task.ID)
         cron = str(task.INTEVAL).strip()
         if task.STATE in ['Y', 'S'] and cron and (cron.isdigit() or cron.count(" ") == 4):
-            if not self._scheduler:
-                self._scheduler = SchedulerService()
             self._start_task_jobs(self._brush_tasks[str(task.ID)], cron)
 
     def load_brushtasks(self):
@@ -639,10 +627,7 @@ class BrushTask(metaclass=SingletonMeta):
         停止服务
         """
         try:
-            if self._scheduler:
-                for job_id in self._job_ids:
-                    self._scheduler.remove_job(job_id)
-                self._job_ids.clear()
+            SchedulerCore().remove_all_jobs(jobstore=self._jobstore)
         except Exception as e:
             print(str(e))
 
@@ -684,8 +669,6 @@ class BrushTask(metaclass=SingletonMeta):
             self.load_brushtasks()
             self.stop_service()
             if self._brush_tasks:
-                if not self._scheduler:
-                    self._scheduler = SchedulerService()
                 for _, task in self._brush_tasks.items():
                     if task.get("state") in ['Y', 'S'] and task.get("interval"):
                         cron = str(task.get("interval")).strip()

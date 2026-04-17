@@ -23,7 +23,7 @@ from app.utils.commons import SingletonMeta
 from app.utils.types import MediaType, DownloaderType, SearchType, RmtMode, EventType, SystemConfigKey
 from config import MT_URL, Config, PT_TAG, RMT_MEDIAEXT, PT_TRANSFER_INTERVAL
 
-from app.scheduler_service import SchedulerService
+from app.services.scheduler_core import SchedulerCore
 
 lock = Lock()
 client_lock = Lock()
@@ -40,9 +40,7 @@ class Downloader(metaclass=SingletonMeta):
     _monitor_downloader_ids = []
     # 下载器ID-名称枚举类
     _DownloaderEnum = None
-    _scheduler = None
     _jobstore = 'download'
-    _job_ids = []
 
     message = None
     mediaserver = None
@@ -231,10 +229,8 @@ class Downloader(metaclass=SingletonMeta):
         # 启动转移任务
         if not self._monitor_downloader_ids:
             return
-        self._scheduler = SchedulerService()
-        self._job_ids.clear()
         job_id = "Downloader.transfer"
-        self._scheduler.start_job({
+        SchedulerCore().start_job({
             "func": self.transfer,
             "name": "下载文件转移",
             "job_id": job_id,
@@ -242,9 +238,6 @@ class Downloader(metaclass=SingletonMeta):
             "seconds": PT_TRANSFER_INTERVAL,
             "jobstore": self._jobstore
         })
-        self._job_ids.append(job_id)
-
-        # self._scheduler.print_jobs(jobstore=self._jobstore)
         log.info("下载文件转移服务启动，目的目录：媒体库")
 
     def __get_client(self, did=None) -> _IDownloadClient:
@@ -1487,10 +1480,7 @@ class Downloader(metaclass=SingletonMeta):
         停止服务
         """
         try:
-            if self._scheduler:
-                for job_id in self._job_ids:
-                    self._scheduler.remove_job(job_id)
-                self._job_ids.clear()
+            SchedulerCore().remove_all_jobs(jobstore=self._jobstore)
         except Exception as e:
             print(str(e))
 

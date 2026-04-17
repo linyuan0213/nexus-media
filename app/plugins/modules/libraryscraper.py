@@ -35,8 +35,6 @@ class LibraryScraper(_IPluginModule):
     user_level = 1
 
     # 私有属性
-    _scheduler = None
-    _jobstore = 'plugin'
     _scraper = None
     # 限速开关
     _cron = None
@@ -226,9 +224,7 @@ class LibraryScraper(_IPluginModule):
 
     def stop_service(self):
         try:
-            for job_id in self._job_ids:
-                self.remove_job(job_id)
-            self._job_ids.clear()
+            self.remove_all_jobs()
             self._event.set()
             self._event.clear()
         except Exception as e:

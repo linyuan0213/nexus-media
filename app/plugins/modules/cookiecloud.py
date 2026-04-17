@@ -43,8 +43,6 @@ class CookieCloud(_IPluginModule):
 
     # 私有属性
     sites = None
-    _scheduler = None
-    _jobstore = "plugin"
     _index_helper = None
     # 设置开关
     _req = None
@@ -522,8 +520,6 @@ class CookieCloud(_IPluginModule):
 
     def stop_service(self):
         try:
-            for job_id in self._job_ids:
-                self.remove_job(job_id)
-            self._job_ids.clear()
+            self.remove_all_jobs()
         except Exception as e:
             print(str(e))

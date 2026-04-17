@@ -179,7 +179,7 @@ def _exec_test_command(data):
             "TorrentRemover": ("app.torrentremover", "TorrentRemover"),
             "Rss": ("app.rss", "Rss"),
             "Subscribe": ("app.subscribe", "Subscribe"),
-            "Scheduler": ("app.scheduler", "Scheduler"),
+            "SchedulerCore": ("app.services.scheduler_core", "SchedulerCore"),
             "PluginManager": ("app.plugins", "PluginManager"),
             "Scraper": ("app.media", "Scraper"),
         }
