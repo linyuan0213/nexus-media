@@ -5,7 +5,7 @@ import traceback
 import log
 from app.conf import SystemConfig
 from app.downloader import Downloader
-from app.filter import Filter
+from app.services.filter_service import FilterService as Filter
 from app.helper import DbHelper
 from app.indexer import Indexer
 from app.media import Media, DouBan

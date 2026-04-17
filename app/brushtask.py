@@ -10,7 +10,7 @@ from app.media.meta import MetaInfo
 from app.message import Message
 from app.sites import Sites, SiteConf
 from app.downloader import Downloader
-from app.filter import Filter
+from app.services.filter_service import FilterService as Filter
 from app.helper import DbHelper, RssHelper
 from app.services.scheduler_core import SchedulerCore
 from app.utils import StringUtils, ExceptionUtils, JsonUtils, RedisStore

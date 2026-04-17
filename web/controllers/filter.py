@@ -5,7 +5,7 @@ import base64
 import json
 import os.path
 import re
-from app.filter import Filter
+from app.services.filter_service import FilterService as Filter
 from app.helper import DbHelper
 from app.media.meta import MetaInfo
 from app.utils import ExceptionUtils

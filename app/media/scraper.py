@@ -617,7 +617,8 @@ class Scraper:
                                                                           season=int(media.get_season_seq()))
                         if seasoninfo:
                             self.__save_image(Config().get_tmdbimage_url(seasoninfo.get("poster_path"),
-                                                                         prefix="original"),
+                                                                         prefix="original",
+                                                                         use_proxy=False),
                                               os.path.dirname(dir_path),
                                               season_poster,
                                               force_pic)

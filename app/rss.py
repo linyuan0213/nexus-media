@@ -4,7 +4,7 @@ from threading import Lock
 import log
 import json
 from app.downloader import Downloader
-from app.filter import Filter
+from app.services.filter_service import FilterService as Filter
 from app.helper import DbHelper, RssHelper
 from app.media import Media
 from app.media.meta import MetaInfo
