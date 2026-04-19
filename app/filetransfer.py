@@ -10,7 +10,8 @@ from time import sleep
 
 import log
 from app.conf import ModuleConf
-from app.helper import DbHelper, ProgressHelper
+from app.db.repositories import DownloadRepository, TransferRepository
+from app.helper import ProgressHelper
 from app.helper import ThreadHelper
 from app.media import Media, Category, Scraper
 from app.media.meta import MetaInfo
@@ -32,7 +33,8 @@ class FileTransfer(metaclass=SingletonMeta):
     mediaserver = None
     scraper = None
     threadhelper = None
-    dbhelper = None
+    transfer_repo = None
+    download_repo = None
     progress = None
     eventmanager = None
 
@@ -63,7 +65,8 @@ class FileTransfer(metaclass=SingletonMeta):
         self.category = Category()
         self.scraper = Scraper()
         self.threadhelper = ThreadHelper()
-        self.dbhelper = DbHelper()
+        self.transfer_repo = TransferRepository()
+        self.download_repo = DownloadRepository()
         self.progress = ProgressHelper()
         self.eventmanager = EventManager()
 
@@ -400,9 +403,9 @@ class FileTransfer(metaclass=SingletonMeta):
                 break
             else:
                 if not bludir:
-                    self.dbhelper.insert_transfer_blacklist(file)
+                    self.transfer_repo.insert_transfer_blacklist(file)
         if retcode == 0 and bludir:
-            self.dbhelper.insert_transfer_blacklist(src_dir)
+            self.transfer_repo.insert_transfer_blacklist(src_dir)
         return retcode
 
     def __transfer_origin_file(self, file_item, target_dir, rmt_mode):
@@ -439,7 +442,7 @@ class FileTransfer(metaclass=SingletonMeta):
                                               target_file=target_file,
                                               rmt_mode=rmt_mode)
             if retcode == 0:
-                self.dbhelper.insert_transfer_blacklist(file_item)
+                self.transfer_repo.insert_transfer_blacklist(file_item)
         if retcode == 0:
             log.info("【Rmt】%s %s到unknown完成" % (file_item, rmt_mode.value))
         else:
@@ -467,7 +470,7 @@ class FileTransfer(metaclass=SingletonMeta):
                                           rmt_mode=rmt_mode)
         if retcode == 0:
             log.info("【Rmt】文件 %s %s完成" % (file_name, rmt_mode.value))
-            self.dbhelper.insert_transfer_blacklist(file_item)
+            self.transfer_repo.insert_transfer_blacklist(file_item)
         else:
             log.error("【Rmt】文件 %s %s失败，错误码 %s" % (file_name, rmt_mode.value, str(retcode)))
             return retcode
@@ -542,9 +545,9 @@ class FileTransfer(metaclass=SingletonMeta):
 
         # 检查下载记录，是否有已识别的信息
         if not tmdb_info:
-            download_info = self.dbhelper.get_download_history_by_path(in_path)
+            download_info = self.download_repo.get_download_history_by_path(in_path)
             if not download_info and os.path.isfile(in_path):
-                download_info = self.dbhelper.get_download_history_by_path(os.path.dirname(in_path))
+                download_info = self.download_repo.get_download_history_by_path(os.path.dirname(in_path))
             if download_info and download_info.TMDBID:
                 log.info(f"【Rmt】{in_path} 找到下载记录，"
                          f"TMDBID：{download_info.TMDBID}，"
@@ -615,7 +618,7 @@ class FileTransfer(metaclass=SingletonMeta):
 
         # 目录同步模式下，过滤掉文件列表中已处理过的
         if in_from == SyncType.MON:
-            file_list = list(filter(self.dbhelper.is_transfer_notin_blacklist, file_list))
+            file_list = list(filter(self.transfer_repo.is_transfer_notin_blacklist, file_list))
             if not file_list:
                 log.info("【Rmt】所有文件均已成功转移过，没有需要处理的文件！如需重新处理，请清理缓存（服务->清理转移缓存）")
                 return __finish_transfer(True, "没有新文件需要处理")
@@ -670,9 +673,9 @@ class FileTransfer(metaclass=SingletonMeta):
                     if udf_flag:
                         return __finish_transfer(success_flag, error_message)
                     # 记录未识别
-                    is_need_insert_unknown = self.dbhelper.is_need_insert_transfer_unknown(reg_path)
+                    is_need_insert_unknown = self.transfer_repo.is_need_insert_transfer_unknown(reg_path)
                     if is_need_insert_unknown:
-                        self.dbhelper.insert_transfer_unknown(reg_path, target_dir, rmt_mode)
+                        self.transfer_repo.insert_transfer_unknown(reg_path, target_dir, rmt_mode)
                         alert_count += 1
                     failed_count += 1
                     if error_message not in alert_messages and is_need_insert_unknown:
@@ -776,9 +779,9 @@ class FileTransfer(metaclass=SingletonMeta):
                         if udf_flag:
                             return __finish_transfer(success_flag, error_message)
                         # 记录未识别
-                        is_need_insert_unknown = self.dbhelper.is_need_insert_transfer_unknown(reg_path)
+                        is_need_insert_unknown = self.transfer_repo.is_need_insert_transfer_unknown(reg_path)
                         if is_need_insert_unknown:
-                            self.dbhelper.insert_transfer_unknown(reg_path, target_dir, rmt_mode)
+                            self.transfer_repo.insert_transfer_unknown(reg_path, target_dir, rmt_mode)
                             alert_count += 1
                         failed_count += 1
                         if error_message not in alert_messages and is_need_insert_unknown:
@@ -813,9 +816,9 @@ class FileTransfer(metaclass=SingletonMeta):
                             if udf_flag:
                                 return __finish_transfer(success_flag, error_message)
                             # 记录未识别
-                            is_need_insert_unknown = self.dbhelper.is_need_insert_transfer_unknown(reg_path)
+                            is_need_insert_unknown = self.transfer_repo.is_need_insert_transfer_unknown(reg_path)
                             if is_need_insert_unknown:
-                                self.dbhelper.insert_transfer_unknown(reg_path, target_dir, rmt_mode)
+                                self.transfer_repo.insert_transfer_unknown(reg_path, target_dir, rmt_mode)
                                 alert_count += 1
                             failed_count += 1
                             if error_message not in alert_messages and is_need_insert_unknown:
@@ -844,7 +847,7 @@ class FileTransfer(metaclass=SingletonMeta):
                 # 输出路径
                 out_path = new_file if not bluray_disk_dir else ret_dir_path
                 # 转移历史记录
-                self.dbhelper.insert_transfer_history(
+                self.transfer_repo.insert_transfer_history(
                     in_from=in_from,
                     rmt_mode=rmt_mode,
                     in_path=reg_path,
@@ -1310,7 +1313,7 @@ class FileTransfer(metaclass=SingletonMeta):
         """
         查询转移历史记录
         """
-        return self.dbhelper.get_transfer_info_by(tmdbid=tmdbid,
+        return self.transfer_repo.get_transfer_info_by(tmdbid=tmdbid,
                                                   season=season,
                                                   season_episode=season_episode)
 
@@ -1318,19 +1321,19 @@ class FileTransfer(metaclass=SingletonMeta):
         """
         根据LogID查询转移历史记录
         """
-        return self.dbhelper.get_transfer_info_by_id(logid=logid)
+        return self.transfer_repo.get_transfer_info_by_id(logid=logid)
 
     def get_transfer_history(self, search, page, rownum):
         """
         查询转移历史记录
         """
-        return self.dbhelper.get_transfer_history(search=search, page=page, rownum=rownum)
+        return self.transfer_repo.get_transfer_history(search=search, page=page, rownum=rownum)
 
     def delete_transfer_log_by_id(self, logid):
         """
         删除转移历史记录
         """
-        return self.dbhelper.delete_transfer_log_by_id(logid=logid)
+        return self.transfer_repo.delete_transfer_log_by_id(logid=logid)
 
     def delete_history(self, logids, flag=None):
         """
@@ -1495,55 +1498,55 @@ class FileTransfer(metaclass=SingletonMeta):
         """
         删除转移历史记录
         """
-        return self.dbhelper.delete_transfer()
+        return self.transfer_repo.delete_transfer()
 
     def delete_transfer_unknown(self, tid):
         """
         删除未知转移记录
         """
-        return self.dbhelper.delete_transfer_unknown(tid=tid)
+        return self.transfer_repo.delete_transfer_unknown(tid=tid)
 
     def get_unknown_info_by_id(self, tid):
         """
         根据ID查询未知转移记录
         """
-        return self.dbhelper.get_unknown_info_by_id(tid=tid)
+        return self.transfer_repo.get_unknown_info_by_id(tid=tid)
 
     def update_transfer_unknown_state(self, path):
         """
         更新未知转移记录状态
         """
-        return self.dbhelper.update_transfer_unknown_state(path=path)
+        return self.transfer_repo.update_transfer_unknown_state(path=path)
 
     def delete_transfer_blacklist(self, path):
         """
         删除黑名单记录
         """
-        return self.dbhelper.delete_transfer_blacklist(path=path)
+        return self.transfer_repo.delete_transfer_blacklist(path=path)
 
     def truncate_transfer_blacklist(self):
         """
         清空黑名单记录
         """
-        return self.dbhelper.truncate_transfer_blacklist()
+        return self.transfer_repo.truncate_transfer_blacklist()
 
     def get_transfer_statistics(self, days=30):
         """
         查询转移统计
         """
-        return self.dbhelper.get_transfer_statistics(days=days)
+        return self.transfer_repo.get_transfer_statistics(days=days)
 
     def get_transfer_unknown_paths(self):
         """
         查询未知转移记录
         """
-        return self.dbhelper.get_transfer_unknown_paths()
+        return self.transfer_repo.get_transfer_unknown_paths()
 
     def get_transfer_unknown_paths_by_page(self, search, page, rownum):
         """
         查询未知转移记录
         """
-        return self.dbhelper.get_transfer_unknown_paths_by_page(search=search, page=page, rownum=rownum)
+        return self.transfer_repo.get_transfer_unknown_paths_by_page(search=search, page=page, rownum=rownum)
 
 
 if __name__ == "__main__":
