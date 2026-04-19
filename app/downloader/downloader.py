@@ -11,7 +11,8 @@ import log
 from app.conf import ModuleConf
 from app.conf import SystemConfig
 from app.filetransfer import FileTransfer
-from app.helper import DbHelper, ThreadHelper, SubmoduleHelper
+from app.db.repositories import ConfigRepository, DownloadRepository
+from app.helper import ThreadHelper, SubmoduleHelper
 from app.media import Media
 from app.media.meta import MetaInfo
 from app.mediaserver import MediaServer
@@ -49,7 +50,8 @@ class Downloader(metaclass=SingletonMeta):
     sites = None
     siteconf = None
     sitesubtitle = None
-    dbhelper = None
+    config_repo = None
+    download_repo = None
     systemconfig = None
     eventmanager = None
 
@@ -62,7 +64,8 @@ class Downloader(metaclass=SingletonMeta):
         self.init_config()
 
     def init_config(self):
-        self.dbhelper = DbHelper()
+        self.config_repo = ConfigRepository()
+        self.download_repo = DownloadRepository()
         self.message = Message()
         self.mediaserver = MediaServer()
         self.filetransfer = FileTransfer()
@@ -77,7 +80,7 @@ class Downloader(metaclass=SingletonMeta):
         # 下载器配置，生成实例
         self._downloader_confs = {}
         self._monitor_downloader_ids = []
-        for downloader_conf in self.dbhelper.get_downloaders():
+        for downloader_conf in self.config_repo.get_downloaders():
             if not downloader_conf:
                 continue
             did = downloader_conf.ID
@@ -140,7 +143,7 @@ class Downloader(metaclass=SingletonMeta):
                 "downloader_type": ""
             }
         }
-        download_settings = self.dbhelper.get_download_setting()
+        download_settings = self.download_repo.get_download_setting()
         for download_setting in download_settings:
             downloader_id = download_setting.DOWNLOADER
             download_conf = self._downloader_confs.get(str(downloader_id))
@@ -550,7 +553,7 @@ class Downloader(metaclass=SingletonMeta):
                         __download_fail("请检查下载任务保存目录是否正确")
                         return downloader_id, None, f"下载器 {downloader_name} 添加下载任务失败，请检查下载任务保存目录是否正确"
                 # 登记下载历史，记录下载目录
-                self.dbhelper.insert_download_history(media_info=media_info,
+                self.download_repo.insert_download_history(media_info=media_info,
                                                       downloader=downloader_id,
                                                       download_id=download_id,
                                                       save_dir=save_dir)
@@ -1488,21 +1491,21 @@ class Downloader(metaclass=SingletonMeta):
         """
         获取下载历史记录
         """
-        return self.dbhelper.get_download_history(date=date, hid=hid, num=num, page=page)
+        return self.download_repo.get_download_history(date=date, hid=hid, num=num, page=page)
 
     def get_download_history_by_title(self, title):
         """
         根据标题查询下载历史记录
         :return:
         """
-        return self.dbhelper.get_download_history_by_title(title=title) or []
+        return self.download_repo.get_download_history_by_title(title=title) or []
 
     def get_download_history_by_downloader(self, downloader, download_id):
         """
         根据下载器和下载ID查询下载历史记录
         :return:
         """
-        return self.dbhelper.get_download_history_by_downloader(downloader=downloader,
+        return self.download_repo.get_download_history_by_downloader(downloader=downloader,
                                                                 download_id=download_id)
 
     def update_downloader(self,
@@ -1519,7 +1522,7 @@ class Downloader(metaclass=SingletonMeta):
         """
         更新下载器
         """
-        ret = self.dbhelper.update_downloader(
+        ret = self.config_repo.update_downloader(
             did=did,
             name=name,
             enabled=enabled,
@@ -1538,7 +1541,7 @@ class Downloader(metaclass=SingletonMeta):
         """
         删除下载器
         """
-        ret = self.dbhelper.delete_downloader(did=did)
+        ret = self.config_repo.delete_downloader(did=did)
         self.init_config()
         return ret
 
@@ -1546,7 +1549,7 @@ class Downloader(metaclass=SingletonMeta):
         """
         检查下载器
         """
-        ret = self.dbhelper.check_downloader(did=did,
+        ret = self.config_repo.check_downloader(did=did,
                                              transfer=transfer,
                                              only_nastool=only_nastool,
                                              enabled=enabled,
@@ -1558,7 +1561,7 @@ class Downloader(metaclass=SingletonMeta):
         """
         删除下载设置
         """
-        ret = self.dbhelper.delete_download_setting(sid=sid)
+        ret = self.download_repo.delete_download_setting(sid=sid)
         self.init_config()
         return ret
 
@@ -1576,7 +1579,7 @@ class Downloader(metaclass=SingletonMeta):
         """
         更新下载设置
         """
-        ret = self.dbhelper.update_download_setting(
+        ret = self.download_repo.update_download_setting(
             sid=sid,
             name=name,
             category=category,
