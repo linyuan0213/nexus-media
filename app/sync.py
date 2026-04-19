@@ -9,7 +9,7 @@ from watchdog.observers.polling import PollingObserver
 import log
 from app.conf import ModuleConf
 from app.filetransfer import FileTransfer
-from app.helper import DbHelper
+from app.db.repositories import SyncRepository, TransferRepository
 from app.utils import PathUtils, ExceptionUtils
 from app.utils.commons import SingletonMeta
 from app.utils.types import SyncType
@@ -45,7 +45,8 @@ class FileMonitorHandler(FileSystemEventHandler):
 
 class Sync(metaclass=SingletonMeta):
     filetransfer = None
-    dbhelper = None
+    sync_repo = None
+    transfer_repo = None
 
     _sync_path_confs = {}
     _monitor_sync_path_ids = []
@@ -58,11 +59,12 @@ class Sync(metaclass=SingletonMeta):
         self.init_config()
 
     def init_config(self):
-        self.dbhelper = DbHelper()
+        self.sync_repo = SyncRepository()
+        self.transfer_repo = TransferRepository()
         self.filetransfer = FileTransfer()
         self._sync_path_confs = {}
         self._monitor_sync_path_ids = []
-        for sync_conf in self.dbhelper.get_config_sync_paths():
+        for sync_conf in self.sync_repo.get_config_sync_paths():
             if not sync_conf:
                 continue
             # ID
@@ -150,7 +152,7 @@ class Sync(metaclass=SingletonMeta):
             if PathUtils.is_path_in_path(monpath, check_monpath) \
                     or PathUtils.is_path_in_path(check_monpath, monpath) \
                     and config.get("enabled"):
-                self.dbhelper.check_config_sync_paths(sid=sid, enabled=0)
+                self.sync_repo.check_config_sync_paths(sid=sid, enabled=0)
 
     def file_change_handler(self, event, text, event_path):
         """
@@ -389,7 +391,7 @@ class Sync(metaclass=SingletonMeta):
         """
         只转移不识别
         """
-        if self.dbhelper.is_sync_in_history(event_path, target_path):
+        if self.transfer_repo.is_sync_in_history(event_path, target_path):
             return
         log.info("【Sync】开始同步 %s" % event_path)
         try:
@@ -400,7 +402,7 @@ class Sync(metaclass=SingletonMeta):
             if ret != 0:
                 log.warn("【Sync】%s 同步失败，错误码：%s" % (event_path, ret))
             elif not msg:
-                self.dbhelper.insert_sync_history(event_path, mon_path, target_path)
+                self.transfer_repo.insert_sync_history(event_path, mon_path, target_path)
                 log.info("【Sync】%s 同步完成" % event_path)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -410,7 +412,7 @@ class Sync(metaclass=SingletonMeta):
         """
         删除配置的同步目录
         """
-        ret = self.dbhelper.delete_config_sync_path(sid=sid)
+        ret = self.sync_repo.delete_config_sync_path(sid=sid)
         self.init_config()
         return ret
 
@@ -418,7 +420,7 @@ class Sync(metaclass=SingletonMeta):
         """
         添加同步目录配置
         """
-        ret = self.dbhelper.insert_config_sync_path(source=source,
+        ret = self.sync_repo.insert_config_sync_path(source=source,
                                                     dest=dest,
                                                     unknown=unknown,
                                                     mode=mode,
@@ -433,7 +435,7 @@ class Sync(metaclass=SingletonMeta):
         """
         检查配置的同步目录
         """
-        ret = self.dbhelper.check_config_sync_paths(
+        ret = self.sync_repo.check_config_sync_paths(
             sid=sid,
             compatibility=compatibility,
             rename=rename,
