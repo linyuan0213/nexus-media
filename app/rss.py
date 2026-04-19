@@ -5,7 +5,8 @@ import log
 import json
 from app.downloader import Downloader
 from app.services.filter_service import FilterService as Filter
-from app.helper import DbHelper, RssHelper
+from app.helper import RssHelper
+from app.db.repositories import DownloadRepository, RssRepository
 from app.media import Media
 from app.media.meta import MetaInfo
 from app.sites import Sites, SiteConf
@@ -24,7 +25,8 @@ class Rss(metaclass=SingletonMeta):
     siteconf = None
     downloader = None
     searcher = None
-    dbhelper = None
+    download_repo = None
+    rss_repo = None
     rsshelper = None
     subscribe = None
 
@@ -37,7 +39,8 @@ class Rss(metaclass=SingletonMeta):
         self.sites = Sites()
         self.siteconf = SiteConf()
         self.filter = Filter()
-        self.dbhelper = DbHelper()
+        self.download_repo = DownloadRepository()
+        self.rss_repo = RssRepository()
         self.rsshelper = RssHelper()
         self.subscribe = Subscribe()
 
@@ -180,7 +183,7 @@ class Rss(metaclass=SingletonMeta):
                         # 检查是否已在下载历史中存在（防止与searcher模块重复下载）
                         if media_info.tmdb_id:
                             season_episode = media_info.get_season_episode_string()
-                            if self.dbhelper.is_exists_download_history_by_tmdb(media_info.tmdb_id, season_episode):
+                            if self.download_repo.is_exists_download_history_by_tmdb(media_info.tmdb_id, season_episode):
                                 log.info(f"【Rss】{title} 已在下载历史中存在，跳过下载")
                                 continue
                         # 检查种子是否匹配订阅，返回匹配到的订阅ID、是否洗版、总集数、上传因子、下载因子
@@ -584,10 +587,10 @@ class Rss(metaclass=SingletonMeta):
         """
         删除订阅历史
         """
-        self.dbhelper.delete_rss_history(rssid=rssid)
+        self.rss_repo.delete_rss_history(rssid=rssid)
 
     def get_rss_history(self, rtype=None, rid=None):
         """
         获取订阅历史
         """
-        return self.dbhelper.get_rss_history(rtype=rtype, rid=rid)
+        return self.rss_repo.get_rss_history(rtype=rtype, rid=rid)
