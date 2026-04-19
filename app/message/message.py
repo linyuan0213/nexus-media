@@ -7,7 +7,8 @@ from enum import Enum
 import log
 from jinja2 import Environment, BaseLoader
 from app.conf import ModuleConf
-from app.helper import DbHelper, SubmoduleHelper
+from app.helper import SubmoduleHelper
+from app.db.repositories import ConfigRepository
 from app.message.message_center import MessageCenter
 from app.utils import StringUtils, ExceptionUtils
 from app.utils.commons import SingletonMeta
@@ -73,7 +74,7 @@ def _striptags_filter(value):
 
 
 class Message(metaclass=SingletonMeta):
-    dbhelper = None
+    config_repo = None
     messagecenter = None
     _message_schemas = []
     _active_clients = []
@@ -90,7 +91,7 @@ class Message(metaclass=SingletonMeta):
         self.init_config()
 
     def init_config(self):
-        self.dbhelper = DbHelper()
+        self.config_repo = ConfigRepository()
         self.messagecenter = MessageCenter()
         self._domain = Config().get_domain()
         # 停止旧服务
@@ -106,7 +107,7 @@ class Message(metaclass=SingletonMeta):
         self._active_interactive_clients = {}
         # 全量客户端配置
         self._client_configs = {}
-        for client_config in self.dbhelper.get_message_client() or []:
+        for client_config in self.config_repo.get_message_client() or []:
             config = json.loads(client_config.CONFIG) if client_config.CONFIG else {}
             config.update({
                 "interactive": client_config.INTERACTIVE
@@ -874,7 +875,7 @@ class Message(metaclass=SingletonMeta):
         """
         删除消息端
         """
-        ret = self.dbhelper.delete_message_client(cid=cid)
+        ret = self.config_repo.delete_message_client(cid=cid)
         self.init_config()
         return ret
 
@@ -882,7 +883,7 @@ class Message(metaclass=SingletonMeta):
         """
         设置消息端
         """
-        ret = self.dbhelper.check_message_client(
+        ret = self.config_repo.check_message_client(
             cid=cid,
             interactive=interactive,
             enabled=enabled,
@@ -903,7 +904,7 @@ class Message(metaclass=SingletonMeta):
         """
         插入消息端
         """
-        ret = self.dbhelper.insert_message_client(
+        ret = self.config_repo.insert_message_client(
             name=name,
             ctype=ctype,
             config=config,
