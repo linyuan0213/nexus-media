@@ -4,7 +4,7 @@ from threading import Lock
 import log
 from app.conf import ModuleConf
 from app.downloader import Downloader
-from app.helper import DbHelper
+from app.db.repositories import ConfigRepository
 from app.message import Message
 from app.utils import ExceptionUtils
 from app.utils.commons import SingletonMeta
@@ -16,7 +16,7 @@ lock = Lock()
 class TorrentRemover(metaclass=SingletonMeta):
     message = None
     downloader = None
-    dbhelper = None
+    config_repo = None
 
     _jobstore = "torrent_remove"
     _remove_tasks = {}
@@ -27,11 +27,11 @@ class TorrentRemover(metaclass=SingletonMeta):
     def init_config(self):
         self.message = Message()
         self.downloader = Downloader()
-        self.dbhelper = DbHelper()
+        self.config_repo = ConfigRepository()
         # 移出现有任务
         self.stop_service()
         # 读取任务任务列表
-        removetasks = self.dbhelper.get_torrent_remove_tasks()
+        removetasks = self.config_repo.get_torrent_remove_tasks()
         self._remove_tasks = {}
         for task in removetasks:
             config = task.CONFIG
@@ -271,8 +271,8 @@ class TorrentRemover(metaclass=SingletonMeta):
             "tr_error_key": tr_error_key,
         }
         if tid:
-            self.dbhelper.delete_torrent_remove_task(tid=tid)
-        self.dbhelper.insert_torrent_remove_task(
+            self.config_repo.delete_torrent_remove_task(tid=tid)
+        self.config_repo.insert_torrent_remove_task(
             name=name,
             action=action,
             interval=interval,
@@ -292,7 +292,7 @@ class TorrentRemover(metaclass=SingletonMeta):
         if not taskid:
             return False
         else:
-            self.dbhelper.delete_torrent_remove_task(tid=taskid)
+            self.config_repo.delete_torrent_remove_task(tid=taskid)
             self.init_config()
             return True
 

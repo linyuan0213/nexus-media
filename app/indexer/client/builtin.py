@@ -35,7 +35,7 @@ class BuiltinIndexer(_IIndexClient):
     _show_more_sites = False
     progress = None
     sites = None
-    dbhelper = None
+    download_repo = None
     lock = Lock()
 
     def __init__(self, config=None):
@@ -46,7 +46,7 @@ class BuiltinIndexer(_IIndexClient):
     def init_config(self):
         self.sites = Sites()
         self.progress = ProgressHelper()
-        self.dbhelper = DbHelper()
+        self.download_repo = DownloadRepository()
         self._show_more_sites = Config().get_config("laboratory").get('show_more_sites')
 
     @classmethod
@@ -199,7 +199,7 @@ class BuiltinIndexer(_IIndexClient):
         seconds = round((datetime.datetime.now() - start_time).seconds, 1)
         # 索引统计
         with self.lock:
-            self.dbhelper.insert_indexer_statistics(indexer=indexer.name,
+            self.download_repo.insert_indexer_statistics(indexer=indexer.name,
                                                     itype=self.client_id,
                                                     seconds=seconds,
                                                     result='N' if error_flag else 'Y')
@@ -261,7 +261,7 @@ class BuiltinIndexer(_IIndexClient):
 
         # 索引统计
         with self.lock:
-            self.dbhelper.insert_indexer_statistics(indexer=indexer.name,
+            self.download_repo.insert_indexer_statistics(indexer=indexer.name,
                                                     itype=self.client_id,
                                                     seconds=seconds,
                                                     result='N' if error_flag else 'Y')
