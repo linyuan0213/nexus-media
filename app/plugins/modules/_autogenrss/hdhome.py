@@ -1,7 +1,7 @@
 import json
 from lxml import etree
 
-from app.helper.db_helper import DbHelper
+from app.db.repositories import SiteRepository
 from app.plugins.modules._autogenrss._base import _ISiteRssGenHandler
 from app.utils.http_utils import RequestUtils
 from app.utils.json_utils import JsonUtils
@@ -80,7 +80,7 @@ class HDHome(_ISiteRssGenHandler):
         self.debug(f"生成的rss: {gen_rss_url}")
         if gen_rss_url:
             #插入到数据库
-            DbHelper().update_site_rssurl(site_info.get("id"), gen_rss_url)
+            SiteRepository().update_site_rssurl(site_info.get("id"), gen_rss_url)
         
             self.info(f"生成RSS成功")
             return True, f'【{site}】生成RSS成功'

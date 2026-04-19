@@ -3,7 +3,7 @@ import cn2an
 import functools
 import time
 
-from app.helper.db_helper import DbHelper
+from app.db.repositories import WordRepository
 from app.utils.commons import SingletonMeta
 from app.utils.exception_utils import ExceptionUtils
 from app.utils.cache_system import get_cache_manager
@@ -24,14 +24,14 @@ class WordsHelper(metaclass=SingletonMeta):
         self.init_config()
 
     def init_config(self):
-        self.dbhelper = DbHelper()
+        self.word_repo = WordRepository()
         self._load_words_with_cache()
     
     def _load_words_with_cache(self):
         """带缓存的加载识别词"""
         current_time = time.time()
         if current_time - self._cache_time > self._cache_ttl or not self.words_info:
-            self.words_info = self.dbhelper.get_custom_words(enabled=1)
+            self.words_info = self.word_repo.get_custom_words(enabled=1)
             self._cache_time = current_time
             # 清空处理缓存
             self._cache.clear()
@@ -199,7 +199,7 @@ class WordsHelper(metaclass=SingletonMeta):
         """
         判断自定义词是否存在
         """
-        return self.dbhelper.is_custom_words_existed(replaced=replaced,
+        return self.word_repo.is_custom_words_existed(replaced=replaced,
                                                      front=front,
                                                      back=back)
 
@@ -208,7 +208,7 @@ class WordsHelper(metaclass=SingletonMeta):
         """
         插入自定义词
         """
-        ret = self.dbhelper.insert_custom_word(replaced=replaced,
+        ret = self.word_repo.insert_custom_word(replaced=replaced,
                                                replace=replace,
                                                front=front,
                                                back=back,
@@ -227,7 +227,7 @@ class WordsHelper(metaclass=SingletonMeta):
         """
         删除自定义词
         """
-        ret = self.dbhelper.delete_custom_word(wid=wid)
+        ret = self.word_repo.delete_custom_word(wid=wid)
         self.init_config()
         return ret
 
@@ -235,25 +235,25 @@ class WordsHelper(metaclass=SingletonMeta):
         """
         获取自定义词
         """
-        return self.dbhelper.get_custom_words(wid=wid, gid=gid, enabled=enabled)
+        return self.word_repo.get_custom_words(wid=wid, gid=gid, enabled=enabled)
 
     def get_custom_word_groups(self, gid=None, tmdbid=None, gtype=None):
         """
         获取自定义词组
         """
-        return self.dbhelper.get_custom_word_groups(gid=gid, tmdbid=tmdbid, gtype=gtype)
+        return self.word_repo.get_custom_word_groups(gid=gid, tmdbid=tmdbid, gtype=gtype)
 
     def is_custom_word_group_existed(self, tmdbid=None, gtype=None):
         """
         判断自定义词组是否存在
         """
-        return self.dbhelper.is_custom_word_group_existed(tmdbid=tmdbid, gtype=gtype)
+        return self.word_repo.is_custom_word_group_existed(tmdbid=tmdbid, gtype=gtype)
 
     def insert_custom_word_groups(self, title, year, gtype, tmdbid, season_count, note=None):
         """
         插入自定义词组
         """
-        ret = self.dbhelper.insert_custom_word_groups(title=title,
+        ret = self.word_repo.insert_custom_word_groups(title=title,
                                                       year=year,
                                                       gtype=gtype,
                                                       tmdbid=tmdbid,
@@ -266,7 +266,7 @@ class WordsHelper(metaclass=SingletonMeta):
         """
         删除自定义词组
         """
-        ret = self.dbhelper.delete_custom_word_group(gid=gid)
+        ret = self.word_repo.delete_custom_word_group(gid=gid)
         self.init_config()
         return ret
 
@@ -274,6 +274,6 @@ class WordsHelper(metaclass=SingletonMeta):
         """
         检查自定义词
         """
-        ret = self.dbhelper.check_custom_word(wid=wid, enabled=enabled)
+        ret = self.word_repo.check_custom_word(wid=wid, enabled=enabled)
         self.init_config()
         return ret

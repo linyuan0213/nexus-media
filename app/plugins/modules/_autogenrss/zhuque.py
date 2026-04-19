@@ -1,7 +1,7 @@
 import json
 from lxml import etree
 
-from app.helper.db_helper import DbHelper
+from app.db.repositories import SiteRepository
 from app.plugins.modules._autogenrss._base import _ISiteRssGenHandler
 from app.utils.http_utils import RequestUtils
 from app.utils.string_utils import StringUtils
@@ -76,7 +76,7 @@ class ZhuQue(_ISiteRssGenHandler):
             rss_link = f"https://zhuque.in/api/torrent/rss/{rss_key}/{torrent_key}"
             self.debug(f"生成的rss: {rss_link}")
     
-            DbHelper().update_site_rssurl(site_info.get('id'), rss_link)
+            SiteRepository().update_site_rssurl(site_info.get('id'), rss_link)
             self.info(f"生成RSS成功")
             return True, f'【{site}】生成RSS成功'
         else:
