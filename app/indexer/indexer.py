@@ -15,7 +15,7 @@ class Indexer(metaclass=SingletonMeta):
     _client = None
     _client_type = None
     progress = None
-    dbhelper = None
+    download_repo = None
 
     def __init__(self):
         self._indexer_schemas = SubmoduleHelper.import_submodules(
@@ -27,7 +27,7 @@ class Indexer(metaclass=SingletonMeta):
 
     def init_config(self):
         self.progress = ProgressHelper()
-        self.dbhelper = DbHelper()
+        self.download_repo = DownloadRepository()
         from app.conf import SystemConfig
         from app.utils.types import SystemConfigKey
         indexer = SystemConfig().get(SystemConfigKey.SearchIndexer) or 'builtin'
@@ -184,4 +184,4 @@ class Indexer(metaclass=SingletonMeta):
         """
         获取索引器统计信息
         """
-        return self.dbhelper.get_indexer_statistics(self._client.get_client_id())
+        return self.download_repo.get_indexer_statistics(self._client.get_client_id())

@@ -5,7 +5,8 @@ from abc import ABCMeta, abstractmethod
 
 import log
 from app.services.filter_service import FilterService as Filter
-from app.helper import ProgressHelper, DbHelper
+from app.db.repositories import DownloadRepository
+from app.helper import ProgressHelper
 from app.media import Media
 from app.media.meta import MetaInfo
 from app.utils import DomUtils, RequestUtils, StringUtils, ExceptionUtils
@@ -23,14 +24,14 @@ class _IIndexClient(metaclass=ABCMeta):
     media = None
     progress = None
     filter = None
-    dbhelper = None
+    download_repo = None
     lock = Lock()
 
     def __init__(self):
         self.media = Media()
         self.filter = Filter()
         self.progress = ProgressHelper()
-        self.dbhelper = DbHelper()
+        self.download_repo = DownloadRepository()
         from app.utils.cache_system import get_cache_manager
         # 统一使用缓存系统的媒体识别缓存，支持 TTL 自动过期
         self.media_ident_cache = get_cache_manager().get_or_create(
@@ -157,7 +158,7 @@ class _IIndexClient(metaclass=ABCMeta):
                 log.warn(f"【{self.index_type}】{indexer.name} 关键词 {key_word} 未搜索到数据")
                 self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
 
-                self.dbhelper.insert_indexer_statistics(indexer=indexer.name,
+                self.download_repo.insert_indexer_statistics(indexer=indexer.name,
                                             itype=self.client_id,
                                             seconds=seconds,
                                             result='N'
@@ -169,7 +170,7 @@ class _IIndexClient(metaclass=ABCMeta):
                 # 更新进度
                 self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 返回 {len(result_array)} 条数据")
                 # 索引统计
-                self.dbhelper.insert_indexer_statistics(indexer=indexer.name,
+                self.download_repo.insert_indexer_statistics(indexer=indexer.name,
                                                         itype=self.client_id,
                                                         seconds=seconds,
                                                         result='Y'
