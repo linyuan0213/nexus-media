@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from time import sleep
 from app.utils.string_utils import StringUtils
 import log
-from app.helper import DbHelper
+from app.db.repositories import DownloadRepository, SearchRepository
 from app.indexer import Indexer
 from app.plugins import EventManager
 from app.utils.commons import SingletonMeta
@@ -44,7 +44,8 @@ class Searcher(metaclass=SingletonMeta):
     message = None
     indexer = None
     progress = None
-    dbhelper = None
+    download_repo = None
+    search_repo = None
     eventmanager = None
 
     _search_auto = True
@@ -57,7 +58,8 @@ class Searcher(metaclass=SingletonMeta):
         self.media = Media()
         self.message = Message()
         self.progress = ProgressHelper()
-        self.dbhelper = DbHelper()
+        self.download_repo = DownloadRepository()
+        self.search_repo = SearchRepository()
         self.indexer = Indexer()
         self.eventmanager = EventManager()
         self._search_auto = Config().get_config("pt").get('search_auto', True)
@@ -232,7 +234,7 @@ class Searcher(metaclass=SingletonMeta):
         for media_item in media_list:
             if media_item.tmdb_id:
                 season_episode = media_item.get_season_episode_string()
-                if self.dbhelper.is_exists_download_history_by_tmdb(media_item.tmdb_id, season_episode):
+                if self.download_repo.is_exists_download_history_by_tmdb(media_item.tmdb_id, season_episode):
                     log.info(f"【Searcher】{media_item.title} {season_episode} 已在下载历史中存在，跳过下载")
                     continue
             filtered_media_list.append(media_item)
@@ -265,20 +267,20 @@ class Searcher(metaclass=SingletonMeta):
         :param dl_id: 下载ID
         :return: 搜索结果
         """
-        return self.dbhelper.get_search_result_by_id(dl_id)
+        return self.search_repo.get_search_result_by_id(dl_id)
 
     def get_search_results(self):
         """
         获取搜索结果
         :return: 搜索结果
         """
-        return self.dbhelper.get_search_results()
+        return self.search_repo.get_search_results()
 
     def delete_all_search_torrents(self):
         """
         删除所有搜索结果
         """
-        self.dbhelper.delete_all_search_torrents()
+        self.search_repo.delete_all_search_torrents()
 
     def insert_search_results(self, media_items: list, title=None, ident_flag=True):
         """
@@ -287,4 +289,4 @@ class Searcher(metaclass=SingletonMeta):
         :param title: 搜索标题
         :param ident_flag: 是否标识
         """
-        self.dbhelper.insert_search_results(media_items, title, ident_flag)
+        self.search_repo.insert_search_results(media_items, title, ident_flag)
