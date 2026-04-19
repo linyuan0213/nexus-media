@@ -10,7 +10,7 @@ from werkzeug.security import generate_password_hash
 from app.utils.redis_store import RedisStore
 import log
 from app.conf import SystemConfig
-from app.db.repositories import DownloadRepository
+from app.db.repositories import ConfigRepository, DownloadRepository
 from app.helper import PluginHelper
 from app.plugins import PluginManager
 from app.media import Category

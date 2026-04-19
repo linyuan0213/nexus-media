@@ -6,6 +6,7 @@ from threading import Lock
 import requests
 
 import log
+from app.db.repositories import SiteRepository
 from app.helper import SubmoduleHelper, DrissionPageHelper
 from app.message import Message
 from app.sites.sites import Sites

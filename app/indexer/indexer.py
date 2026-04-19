@@ -2,6 +2,7 @@ import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import log
+from app.db.repositories import DownloadRepository
 from app.helper import ProgressHelper, SubmoduleHelper
 from app.indexer.client import BuiltinIndexer
 from app.utils import ExceptionUtils, StringUtils
