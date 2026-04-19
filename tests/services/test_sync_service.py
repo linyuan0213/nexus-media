@@ -6,7 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.services.sync_service import SyncService, ManualTransferResultDTO, ReIdentifyResultDTO
+from app.schemas.sync import ManualTransferResultDTO, ReIdentifyResultDTO
+from app.services.sync_service import SyncService
 from app.utils.types import MediaType
 
 

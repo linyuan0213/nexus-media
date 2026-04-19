@@ -6,11 +6,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.services.download_service import (
-    DownloadService,
+from app.schemas.download import (
     DownloadResultDTO,
     IndexerStatisticsDTO,
 )
+from app.services.download_service import DownloadService
 
 
 class FakeSearchResult:

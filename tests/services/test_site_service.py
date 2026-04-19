@@ -1,8 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from app.services.site_service import (
-    SiteService,
+from app.schemas.site import (
     SiteAttrDTO,
     SiteDetailDTO,
     SiteTestResultDTO,
@@ -12,6 +11,7 @@ from app.services.site_service import (
     SiteResourcesResultDTO,
     SiteUpdateResultDTO,
 )
+from app.services.site_service import SiteService
 
 
 @pytest.fixture

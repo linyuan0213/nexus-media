@@ -4,7 +4,6 @@ DownloadService - 下载编排业务层
 将 web/controllers/download.py 中的下载业务逻辑下沉到可独立测试的 Service。
 """
 import os
-from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
 import log
@@ -12,39 +11,17 @@ from app.downloader import Downloader
 from app.indexer import Indexer
 from app.media import Media
 from app.media.meta import MetaInfo
+from app.schemas.download import (
+    DownloadResultDTO,
+    DownloadingTorrentDTO,
+    IndexerStatisticsDTO,
+)
 from app.searcher import Searcher
 from app.sites import Sites
 from app.torrentremover import TorrentRemover
 from app.utils import ExceptionUtils, Torrent
 from app.utils.temp_manager import temp_manager
 from app.utils.types import SearchType
-
-
-@dataclass
-class DownloadResultDTO:
-    """下载结果 DTO"""
-    success: bool = False
-    message: str = ""
-
-
-@dataclass
-class DownloadingTorrentDTO:
-    """正在下载任务 DTO（含媒体信息组装后）"""
-    id: str = ""
-    name: str = ""
-    title: str = ""
-    image: str = ""
-    raw: dict = field(default_factory=dict)
-
-
-@dataclass
-class IndexerStatisticsDTO:
-    """索引器统计 DTO"""
-    name: str = ""
-    total: int = 0
-    fail: int = 0
-    success: int = 0
-    avg: float = 0.0
 
 
 class DownloadService:

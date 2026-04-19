@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import MagicMock
 
-from app.services.brush_service import BrushService, BrushTaskDTO, BrushTorrentListDTO
+from app.schemas.brush import BrushTaskDTO, BrushTorrentListDTO
+from app.services.brush_service import BrushService
 
 
 @pytest.fixture

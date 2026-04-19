@@ -3,13 +3,15 @@ import os
 import pytest
 from unittest.mock import MagicMock, patch, mock_open, call
 
-from app.services.system_service import (
+from app.schemas.system import (
     BackupRestoreResultDTO,
     NetTestResultDTO,
     IndexerConfigResultDTO,
     MediaServerConfigResultDTO,
-    SearchResultDTO,
+    WebSearchResultDTO,
     VersionInfoDTO,
+)
+from app.services.system_service import (
     MessageClientService,
     BackupRestoreService,
     IndexerConfigService,
@@ -367,7 +369,7 @@ class TestDTOs:
         assert dto.code == 0
 
     def test_search_result_defaults(self):
-        dto = SearchResultDTO()
+        dto = WebSearchResultDTO()
         assert dto.code == 0
         assert dto.msg == ""
 

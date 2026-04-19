@@ -1,0 +1,16 @@
+# -*- coding: utf-8 -*-
+from dataclasses import dataclass
+
+
+@dataclass
+class ManualTransferResultDTO:
+    """手工转移结果"""
+    success: bool = False
+    message: str = ""
+
+
+@dataclass
+class ReIdentifyResultDTO:
+    """重新识别结果"""
+    success: bool = False
+    message: str = ""

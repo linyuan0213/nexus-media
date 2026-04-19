@@ -8,11 +8,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.services.words_service import (
-    WordsService,
+from app.schemas.words import (
     WordDTO,
     WordGroupExportDTO,
 )
+from app.services.words_service import WordsService
 
 
 class FakeWordRow:

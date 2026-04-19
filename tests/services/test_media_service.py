@@ -8,13 +8,15 @@ from unittest.mock import MagicMock, patch, mock_open
 
 import pytest
 
-from app.services.media_service import (
+from app.schemas.media import (
     MediaInfoResultDTO,
     SeasonEpisodesResultDTO,
-    SearchResultDTO,
+    MediaSearchResultDTO,
     TransferHistoryPageDTO,
     UnknownListPageDTO,
     LibrarySpaceDTO,
+)
+from app.services.media_service import (
     MediaInfoService,
     MediaRecommendationService,
     SearchResultService,
@@ -51,7 +53,7 @@ class TestSeasonEpisodesResultDTO:
 
 class TestSearchResultDTO:
     def test_default(self):
-        dto = SearchResultDTO()
+        dto = MediaSearchResultDTO()
         assert dto.total == 0
         assert dto.result is None
 

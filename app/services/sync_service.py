@@ -4,7 +4,6 @@ SyncService - 同步/转移业务层
 将 web/controllers/sync.py 中的业务逻辑下沉到可独立测试的 Service。
 """
 import os
-from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 import log
@@ -12,23 +11,13 @@ from app.conf import ModuleConf
 from app.filetransfer import FileTransfer
 from app.media import Media
 from app.media.meta import MetaInfo
+from app.schemas.sync import (
+    ManualTransferResultDTO,
+    ReIdentifyResultDTO,
+)
 from app.sync import Sync
 from app.utils import EpisodeFormat, PathUtils, ExceptionUtils
 from app.utils.types import MediaType, MovieTypes, TvTypes, RmtMode, SyncType
-
-
-@dataclass
-class ManualTransferResultDTO:
-    """手工转移结果"""
-    success: bool = False
-    message: str = ""
-
-
-@dataclass
-class ReIdentifyResultDTO:
-    """重新识别结果"""
-    success: bool = False
-    message: str = ""
 
 
 class SyncService:

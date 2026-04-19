@@ -6,7 +6,6 @@ MediaService - 媒体管理业务层
 import json
 import os
 import re
-from dataclasses import dataclass
 from math import floor
 from typing import Optional, List, Tuple, Dict, Any
 
@@ -22,71 +21,19 @@ from app.mediaserver import MediaServer
 from app.plugins import EventManager
 from app.searcher import Searcher
 from app.subscribe import Subscribe
+from app.schemas.media import (
+    MediaInfoResultDTO,
+    SeasonEpisodesResultDTO,
+    MediaSearchResultDTO,
+    TransferHistoryPageDTO,
+    UnknownListPageDTO,
+    LibrarySpaceDTO,
+)
 from app.utils import StringUtils, SystemUtils, ExceptionUtils
 from app.utils.types import MediaType, MovieTypes, EventType, SystemConfigKey
 from config import Config
 from web.backend.web_utils import WebUtils
 from web.cache import cache
-
-
-@dataclass
-class MediaInfoResultDTO:
-    """媒体信息查询结果"""
-    type: str = ""
-    type_str: str = ""
-    page: Any = None
-    title: str = ""
-    vote_average: float = 0.0
-    poster_path: str = ""
-    release_date: str = ""
-    year: str = ""
-    overview: str = ""
-    link_url: str = ""
-    tmdbid: Any = None
-    rssid: Any = None
-    seasons: Optional[List[dict]] = None
-
-
-@dataclass
-class SeasonEpisodesResultDTO:
-    """剧集查询结果"""
-    episodes: Optional[List[dict]] = None
-
-
-@dataclass
-class SearchResultDTO:
-    """搜索结果分组结果"""
-    total: int = 0
-    result: Optional[dict] = None
-
-
-@dataclass
-class TransferHistoryPageDTO:
-    """转移历史分页结果"""
-    total: int = 0
-    result: Optional[List[dict]] = None
-    total_page: int = 0
-    page_num: int = 30
-    current_page: int = 1
-
-
-@dataclass
-class UnknownListPageDTO:
-    """未识别记录分页结果"""
-    total: int = 0
-    items: Optional[List[dict]] = None
-    total_page: int = 0
-    page_num: int = 30
-    current_page: int = 1
-
-
-@dataclass
-class LibrarySpaceDTO:
-    """媒体库存储空间"""
-    used_percent: Any = 0
-    free_space: str = ""
-    used_space: str = ""
-    total_space: str = ""
 
 
 class MediaInfoService:
@@ -516,7 +463,7 @@ class SearchResultService:
     搜索结果分组业务服务
     """
 
-    def group_search_results(self, search_results: list) -> SearchResultDTO:
+    def group_search_results(self, search_results: list) -> MediaSearchResultDTO:
         """
         对搜索结果按标题、季集、分辨率等维度分组
         """
@@ -610,7 +557,7 @@ class SearchResultService:
                 item["filter"]["releasegroup"], key=lambda x: (x == "未知", x))
             item["torrent_dict"] = sorted(item["torrent_dict"].items(),
                                           key=self._se_sort, reverse=True)
-        return SearchResultDTO(total=total, result=SearchResults)
+        return MediaSearchResultDTO(total=total, result=SearchResults)
 
     @staticmethod
     def _parse_res_type(res_type_str):

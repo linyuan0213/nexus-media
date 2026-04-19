@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import MagicMock
 
-from app.services.plugin_service import PluginService, PluginAppsDTO, PluginPageDTO, PluginInstallResultDTO
+from app.schemas.plugin import PluginAppsDTO, PluginPageDTO, PluginInstallResultDTO
+from app.services.plugin_service import PluginService
 from app.utils.types import SystemConfigKey
 
 

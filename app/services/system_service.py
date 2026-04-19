@@ -9,7 +9,6 @@ import json
 import os
 import shutil
 import tempfile
-from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import log
@@ -24,6 +23,14 @@ from app.indexer import Indexer
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.rss import Rss
+from app.schemas.system import (
+    BackupRestoreResultDTO,
+    NetTestResultDTO,
+    IndexerConfigResultDTO,
+    MediaServerConfigResultDTO,
+    WebSearchResultDTO,
+    VersionInfoDTO,
+)
 from app.subscribe import Subscribe
 from app.sync import Sync
 from app.utils import ExceptionUtils, RequestUtils
@@ -35,51 +42,6 @@ from web.backend.search_torrents import search_medias_for_web
 from web.backend.user import User
 from web.backend.web_utils import WebUtils
 from web.cache import cache
-
-
-@dataclass
-class BackupRestoreResultDTO:
-    """备份恢复结果"""
-    success: bool = False
-    message: str = ""
-
-
-@dataclass
-class NetTestResultDTO:
-    """网络测试结果"""
-    success: bool = False
-    time_ms: int = 0
-
-
-@dataclass
-class IndexerConfigResultDTO:
-    """索引器配置保存结果"""
-    success: bool = True
-    code: int = 0
-    msg: str = ""
-
-
-@dataclass
-class MediaServerConfigResultDTO:
-    """媒体服务器配置保存结果"""
-    success: bool = True
-    code: int = 0
-    msg: str = ""
-
-
-@dataclass
-class SearchResultDTO:
-    """WEB搜索结果"""
-    code: int = 0
-    msg: str = ""
-
-
-@dataclass
-class VersionInfoDTO:
-    """版本信息"""
-    version: str = ""
-    url: str = ""
-    has_update: bool = False
 
 
 class MessageClientService:
@@ -374,10 +336,10 @@ class WebSearchService:
     """
 
     def search(self, search_word: str, ident_flag: bool = True,
-               filters=None, tmdbid=None, media_type=None) -> SearchResultDTO:
+               filters=None, tmdbid=None, media_type=None) -> WebSearchResultDTO:
         """执行WEB搜索"""
         if not search_word:
-            return SearchResultDTO(code=0, msg="")
+            return WebSearchResultDTO(code=0, msg="")
         if media_type:
             if media_type in MovieTypes:
                 media_type = MediaType.MOVIE
@@ -387,7 +349,7 @@ class WebSearchService:
             content=search_word, ident_flag=ident_flag,
             filters=filters, tmdbid=tmdbid, media_type=media_type
         )
-        return SearchResultDTO(code=ret, msg=ret_msg or "")
+        return WebSearchResultDTO(code=ret, msg=ret_msg or "")
 
 
 class SystemConfigService:

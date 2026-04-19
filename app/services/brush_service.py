@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from app.brushtask import BrushTask
-
+from app.schemas.brush import (
+    BrushTaskDTO,
+    BrushTorrentListDTO,
+)
 
 _RSS_RULE_FIELDS = {
     "free": "brushtask_free",
@@ -34,16 +36,6 @@ _REMOVE_RULE_FIELDS = {
 _STOP_RULE_FIELDS = {
     "stopfree": "brushtask_stopfree",
 }
-
-
-@dataclass
-class BrushTaskDTO:
-    task: Any = None
-
-
-@dataclass
-class BrushTorrentListDTO:
-    torrents: Optional[List[dict]] = None
 
 
 class BrushService:
