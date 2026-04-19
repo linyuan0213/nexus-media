@@ -1,10 +1,13 @@
+import base64
+import json
+import os
 import re
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import log
 from app.conf import ModuleConf
 from app.db.repositories import ConfigRepository
-from app.media.meta import ReleaseGroupsMatcher
+from app.media.meta import MetaInfo, ReleaseGroupsMatcher
 from app.utils import StringUtils
 from app.utils.types import MediaType
 
@@ -409,3 +412,121 @@ class FilterService:
     def get_filter_groupid_by_name(self, name):
         """根据名称获取过滤规则组ID"""
         return self._config_repo.get_filter_groupid_by_name(name)
+
+    def import_filter_group(self, content: str) -> Tuple[bool, str]:
+        """导入规则组（Base64编码的JSON字符串）"""
+        try:
+            json_str = base64.b64decode(str(content).encode("utf-8")).decode('utf-8')
+            json_obj = json.loads(json_str)
+            if not json_obj or not json_obj.get("name"):
+                return False, "数据格式不正确"
+            self.add_group(name=json_obj.get("name"))
+            group_id = self.get_filter_groupid_by_name(json_obj.get("name"))
+            if not group_id:
+                return False, "数据内容不正确"
+            if json_obj.get("rules"):
+                for rule in json_obj.get("rules"):
+                    self.add_filter_rule(item={
+                        "group": group_id,
+                        "name": rule.get("name"),
+                        "pri": rule.get("pri"),
+                        "include": rule.get("include"),
+                        "exclude": rule.get("exclude"),
+                        "size": rule.get("size"),
+                        "free": rule.get("free")
+                    })
+            return True, ""
+        except Exception as err:
+            import traceback
+            traceback.print_exc()
+            return False, "数据格式不正确，%s" % str(err)
+
+    def restore_filter_group(self, groupids: list, init_rulegroups: list) -> None:
+        """恢复初始规则组"""
+        for groupid in groupids:
+            try:
+                self.delete_filtergroup(groupid)
+            except Exception:
+                pass
+            for init_rulegroup in init_rulegroups:
+                if str(init_rulegroup.get("id")) == groupid:
+                    for sql in init_rulegroup.get("sql", []):
+                        self._config_repo.excute(sql)
+
+    def get_filterrules(self, script_path: str):
+        """获取所有过滤规则及初始规则"""
+        RuleGroups = self.get_rule_infos()
+        sql_file = os.path.join(script_path, "init_filter.sql")
+        Init_RuleGroups = []
+        if os.path.exists(sql_file):
+            with open(sql_file, "r", encoding="utf-8") as f:
+                sql_list = f.read().split(';\n')
+                i = 0
+                while i < len(sql_list):
+                    rulegroup = {}
+                    rulegroup_info = re.findall(
+                        r"[0-9]+,'[^\"]+NULL", sql_list[i], re.I)[0].split(",")
+                    rulegroup['id'] = int(rulegroup_info[0])
+                    rulegroup['name'] = rulegroup_info[1][1:-1]
+                    rulegroup['rules'] = []
+                    rulegroup['sql'] = [sql_list[i]]
+                    if i + 1 < len(sql_list):
+                        rules = re.findall(
+                            r"[0-9]+,'[^\"]+NULL", sql_list[i + 1], re.I)[0].split("),\n (")
+                        for rule in rules:
+                            rule_info = {}
+                            rule = rule.split(",")
+                            rule_info['name'] = rule[2][1:-1]
+                            rule_info['include'] = rule[4][1:-1]
+                            rule_info['exclude'] = rule[5][1:-1]
+                            rulegroup['rules'].append(rule_info)
+                        rulegroup["sql"].append(sql_list[i + 1])
+                    Init_RuleGroups.append(rulegroup)
+                    i = i + 2
+        return RuleGroups, Init_RuleGroups
+
+    def share_filter_group(self, gid) -> Tuple[bool, str, str]:
+        """分享规则组（返回Base64编码的JSON字符串）"""
+        group_info = self.get_filter_group(gid=gid)
+        if not group_info:
+            return False, "规则组不存在", ""
+        group_rules = self.get_filter_rule(groupid=gid)
+        if not group_rules:
+            return False, "规则组没有对应规则", ""
+        rules = []
+        for rule in group_rules:
+            rules.append({
+                "name": rule.ROLE_NAME,
+                "pri": rule.PRIORITY,
+                "include": rule.INCLUDE,
+                "exclude": rule.EXCLUDE,
+                "size": rule.SIZE_LIMIT,
+                "free": rule.NOTE
+            })
+        rule_json = {
+            "name": group_info[0].GROUP_NAME,
+            "rules": rules
+        }
+        json_string = base64.b64encode(json.dumps(
+            rule_json).encode("utf-8")).decode('utf-8')
+        return True, "", json_string
+
+    def test_rule(self, title: str, subtitle: Optional[str], size: Optional[str],
+                  rulegroup: Optional[str]) -> Tuple[bool, str, int]:
+        """测试规则是否匹配给定标题"""
+        meta_info = MetaInfo(title=title, subtitle=subtitle)
+        meta_info.size = float(size) * 1024 ** 3 if size else 0
+        match_flag, res_order, match_msg = \
+            self.check_torrent_filter(meta_info=meta_info,
+                                      filter_args={"rule": rulegroup})
+        text = "匹配" if match_flag else "未匹配"
+        order = 100 - res_order if res_order else 0
+        return match_flag, text, order
+
+    def get_rule_detail(self, groupid, ruleid) -> dict:
+        """获取规则详情（include/exclude 转为换行字符串）"""
+        ruleinfo = self.get_rules(groupid=groupid, ruleid=ruleid)
+        if ruleinfo and isinstance(ruleinfo, dict):
+            ruleinfo['include'] = "\n".join(ruleinfo.get("include", []))
+            ruleinfo['exclude'] = "\n".join(ruleinfo.get("exclude", []))
+        return ruleinfo
