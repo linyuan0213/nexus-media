@@ -11,7 +11,8 @@ from app.message import Message
 from app.sites import Sites, SiteConf
 from app.downloader import Downloader
 from app.services.filter_service import FilterService as Filter
-from app.helper import DbHelper, RssHelper
+from app.helper import RssHelper
+from app.db.repositories import BrushRepository
 from app.services.scheduler_core import SchedulerCore
 from app.utils import StringUtils, ExceptionUtils, JsonUtils, RedisStore
 from app.utils.commons import SingletonMeta
@@ -25,7 +26,7 @@ class BrushTask(metaclass=SingletonMeta):
     sites = None
     siteconf = None
     filter = None
-    dbhelper = None
+    brush_repo = None
     rsshelper = None
     downloader = None
     redis_store = None
@@ -39,7 +40,7 @@ class BrushTask(metaclass=SingletonMeta):
         self.init_config()
 
     def init_config(self):
-        self.dbhelper = DbHelper()
+        self.brush_repo = BrushRepository()
         self.rsshelper = RssHelper()
         self.message = Message()
         self.sites = Sites()
@@ -124,7 +125,7 @@ class BrushTask(metaclass=SingletonMeta):
 
     def _reload_single_task(self, task_id):
         """从数据库重载单个任务并更新内存缓存和调度"""
-        task_rows = self.dbhelper.get_brushtasks(brush_id=task_id)
+        task_rows = self.brush_repo.get_brushtasks(brush_id=task_id)
         if not task_rows:
             self._brush_tasks.pop(str(task_id), None)
             self._stop_task_jobs(task_id)
@@ -134,7 +135,7 @@ class BrushTask(metaclass=SingletonMeta):
         site_info = self.sites.get_sites(siteid=task.SITE)
         site_url = StringUtils.get_base_url(site_info.get("signurl") or site_info.get("rssurl")) if site_info else ""
         downloader_info = self.downloader.get_downloader_conf(task.DOWNLOADER)
-        total_size = round(int(self.dbhelper.get_brushtask_totalsize(task.ID)) / (1024 ** 3), 1)
+        total_size = round(int(self.brush_repo.get_brushtask_totalsize(task.ID)) / (1024 ** 3), 1)
         seed_size_gb = round(int(task.SEED_SIZE) / (1024 ** 3), 1) if task.SEED_SIZE else 0
         self._brush_tasks[str(task.ID)] = {
             "id": task.ID,
@@ -179,14 +180,14 @@ class BrushTask(metaclass=SingletonMeta):
         从数据库加载刷流任务
         """
         self._brush_tasks = {}
-        brushtasks = self.dbhelper.get_brushtasks()
+        brushtasks = self.brush_repo.get_brushtasks()
         if not brushtasks:
             return
         for task in brushtasks:
             site_info = self.sites.get_sites(siteid=task.SITE)
             site_url = StringUtils.get_base_url(site_info.get("signurl") or site_info.get("rssurl")) if site_info else ""
             downloader_info = self.downloader.get_downloader_conf(task.DOWNLOADER)
-            total_size = round(int(self.dbhelper.get_brushtask_totalsize(task.ID)) / (1024 ** 3), 1)
+            total_size = round(int(self.brush_repo.get_brushtask_totalsize(task.ID)) / (1024 ** 3), 1)
             seed_size_gb = round(int(task.SEED_SIZE) / (1024 ** 3), 1) if task.SEED_SIZE else 0
             self._brush_tasks[str(task.ID)] = {
                 "id": task.ID,
@@ -417,7 +418,7 @@ class BrushTask(metaclass=SingletonMeta):
             if remove_torrent_ids:
                 log.info(f"【Brush】任务 {task_name} 删除不存在的下载任务：{remove_torrent_ids}")
                 for remove_torrent_id in remove_torrent_ids:
-                    self.dbhelper.delete_brushtask_torrent(taskid, remove_torrent_id)
+                    self.brush_repo.delete_brushtask_torrent(taskid, remove_torrent_id)
 
             # 删除符合条件的种子
             if delete_ids:
@@ -433,13 +434,13 @@ class BrushTask(metaclass=SingletonMeta):
                             delete_ids.remove(torrent.id)
 
                 if delete_ids:
-                    self.dbhelper.update_brushtask_torrent_state(update_torrents)
+                    self.brush_repo.update_brushtask_torrent_state(update_torrents)
                     log.info(f"【Brush】任务 {task_name} 共删除 {len(delete_ids)} 个刷流下载任务")
                 else:
                     log.info(f"【Brush】任务 {task_name} 本次检查未删除下载任务")
 
             # 更新任务统计数据
-            self.dbhelper.add_brushtask_upload_count(taskid, total_uploaded, total_downloaded,
+            self.brush_repo.add_brushtask_upload_count(taskid, total_uploaded, total_downloaded,
                                                      len(delete_ids) + len(remove_torrent_ids))
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -525,7 +526,7 @@ class BrushTask(metaclass=SingletonMeta):
         task_name = taskinfo.get("name")
         downloader_id = taskinfo.get("downloader")
         downloader_name = taskinfo.get("downloader_name")
-        total_size = self.dbhelper.get_brushtask_totalsize(taskinfo.get("id"))
+        total_size = self.brush_repo.get_brushtask_totalsize(taskinfo.get("id"))
 
         if torrent_size and seed_size:
             if float(torrent_size) + int(total_size) >= (float(seed_size) + 5) * 1024 ** 3:
@@ -614,9 +615,9 @@ class BrushTask(metaclass=SingletonMeta):
                            f"添加时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}"
                 self.message.send_brushtask_added_message(title=msg_title, text=msg_text)
 
-        if self.dbhelper.insert_brushtask_torrent(brush_id=taskid, title=title, enclosure=enclosure,
+        if self.brush_repo.insert_brushtask_torrent(brush_id=taskid, title=title, enclosure=enclosure,
                                                   downloader=downloader_id, download_id=download_id, size=size):
-            self.dbhelper.add_brushtask_download_count(brush_id=taskid)
+            self.brush_repo.add_brushtask_download_count(brush_id=taskid)
         else:
             log.info("【Brush】%s 已下载过" % title)
 
@@ -635,7 +636,7 @@ class BrushTask(metaclass=SingletonMeta):
         """
         新增/更新刷种任务
         """
-        ret = self.dbhelper.update_brushtask(brushtask_id, item)
+        ret = self.brush_repo.update_brushtask(brushtask_id, item)
         if brushtask_id:
             self._reload_single_task(brushtask_id)
         else:
@@ -648,7 +649,7 @@ class BrushTask(metaclass=SingletonMeta):
         删除刷种任务
         """
         self._stop_task_jobs(brushtask_id)
-        ret = self.dbhelper.delete_brushtask(brushtask_id)
+        ret = self.brush_repo.delete_brushtask(brushtask_id)
         self._brush_tasks.pop(str(brushtask_id), None)
         return ret
 
@@ -656,7 +657,7 @@ class BrushTask(metaclass=SingletonMeta):
         """
         更新刷种任务状态
         """
-        ret = self.dbhelper.update_brushtask_state(tid=brushtask_id, state=state)
+        ret = self.brush_repo.update_brushtask_state(tid=brushtask_id, state=state)
         if brushtask_id:
             task = self._brush_tasks.get(str(brushtask_id))
             if task:
@@ -680,13 +681,13 @@ class BrushTask(metaclass=SingletonMeta):
         """
         获取刷种任务的种子列表
         """
-        return self.dbhelper.get_brushtask_torrents(brush_id, active)
+        return self.brush_repo.get_brushtask_torrents(brush_id, active)
 
     def is_torrent_handled(self, enclosure):
         """
         判断种子是否已经处理过
         """
-        return self.dbhelper.get_brushtask_torrent_by_enclosure(enclosure)
+        return self.brush_repo.get_brushtask_torrent_by_enclosure(enclosure)
 
     def stop_task_torrents(self, taskid):
         """
