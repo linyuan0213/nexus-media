@@ -10,7 +10,8 @@ from werkzeug.security import generate_password_hash
 from app.utils.redis_store import RedisStore
 import log
 from app.conf import SystemConfig
-from app.helper import DbHelper, PluginHelper
+from app.db.repositories import DownloadRepository
+from app.helper import PluginHelper
 from app.plugins import PluginManager
 from app.media import Category
 from app.utils import ConfigLoadCache, CategoryLoadCache, ExceptionUtils, StringUtils
@@ -82,7 +83,7 @@ def update_config():
     升级配置文件
     """
     _config = Config().get_config()
-    _dbhelper = DbHelper()
+    _dbhelper = DownloadRepository()
     overwrite_cofig = False
 
     # 密码初始化
@@ -256,7 +257,7 @@ def update_rss_state():
     初始化时更新所有RSS订阅状态为R
     """
     try:
-        dbhelper = DbHelper()
+        dbhelper = ConfigRepository()
         # 执行SQL脚本更新RSS状态
         sql_file = os.path.join(os.path.dirname(__file__), "scripts", "sqls", "update_rss_state.sql")
         if os.path.exists(sql_file):

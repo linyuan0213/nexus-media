@@ -6,7 +6,7 @@ import time
 from app.helper.drissionpage_helper import DrissionPageHelper
 import log
 from app.conf import SystemConfig
-from app.helper import IndexerHelper, IndexerConf, ProgressHelper, DbHelper
+from app.helper import IndexerHelper, IndexerConf, ProgressHelper
 from app.indexer.client._base import _IIndexClient
 from app.indexer.client._rarbg import Rarbg
 from app.indexer.client._spider import TorrentSpider

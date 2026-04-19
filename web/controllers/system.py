@@ -12,7 +12,8 @@ from app.helper import tmdb_blacklist_helper
 from app.helper.tmdb_blacklist_helper import TmdbBlacklistHelper
 from app.conf import SystemConfig
 from app.downloader import Downloader
-from app.helper import DbHelper, ProgressHelper, ThreadHelper
+from app.db.repositories import ConfigRepository
+from app.helper import ProgressHelper, ThreadHelper
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.rss import Rss
@@ -162,7 +163,7 @@ def _reset_db_version(data):
         重置数据库版本
         """
         try:
-            DbHelper().drop_table("alembic_version")
+            ConfigRepository().drop_table("alembic_version")
             return success()
         except Exception as e:
             ExceptionUtils.exception_traceback(e)

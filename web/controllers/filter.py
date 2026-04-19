@@ -6,7 +6,7 @@ import json
 import os.path
 import re
 from app.services.filter_service import FilterService as Filter
-from app.helper import DbHelper
+from app.db.repositories import ConfigRepository
 from app.media.meta import MetaInfo
 from app.utils import ExceptionUtils
 from config import Config
@@ -125,7 +125,7 @@ def _restore_filtergroup(data):
             for init_rulegroup in init_rulegroups:
                 if str(init_rulegroup.get("id")) == groupid:
                     for sql in init_rulegroup.get("sql"):
-                        DbHelper().excute(sql)
+                        ConfigRepository().excute(sql)
         return success()
 
 @filter_bp.route('/rule_test', methods=['POST'])
