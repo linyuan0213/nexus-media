@@ -85,7 +85,8 @@ class TestRssTaskService:
             service._rss_tasks = []
             service._rss_parsers = []
             service.rsshelper = MagicMock()
-            service.dbhelper = MagicMock()
+            service.config_repo = MagicMock()
+            service.rss_repo = MagicMock()
             service.downloader = MagicMock()
             service.media = MagicMock()
             service.filter = MagicMock()
@@ -154,7 +155,7 @@ class TestRssTaskService:
         media_mock.set_torrent_info.assert_called_once_with(enclosure="magnet:1")
         svc.downloader.download.assert_called_once()
         svc.rsshelper.insert_rss_torrents.assert_called_once_with(media_mock)
-        svc.dbhelper.insert_userrss_task_history.assert_called_once_with(1, media_mock.org_string, "qb")
+        svc.config_repo.insert_userrss_task_history.assert_called_once_with(1, media_mock.org_string, "qb")
 
     def test_download_rss_articles_failure(self, svc):
         svc._rss_tasks = [{"id": 1, "save_path": "/tmp", "download_setting": "", "proxy": False}]
@@ -174,45 +175,45 @@ class TestRssTaskService:
         task1.MEDIAINFOS = '[{"tmdb_id": 1}]'
         task2 = MagicMock()
         task2.MEDIAINFOS = None
-        svc.dbhelper.get_userrss_tasks.return_value = [task1, task2]
+        svc.config_repo.get_userrss_tasks.return_value = [task1, task2]
         result = svc.get_userrss_mediainfos()
         assert result == [{"tmdb_id": 1}]
 
     def test_delete_userrss_task(self, svc):
-        svc.dbhelper.delete_userrss_task.return_value = True
+        svc.config_repo.delete_userrss_task.return_value = True
         svc.init_config = MagicMock()
         assert svc.delete_userrss_task(1) is True
-        svc.dbhelper.delete_userrss_task.assert_called_once_with(1)
+        svc.config_repo.delete_userrss_task.assert_called_once_with(1)
         svc.init_config.assert_called_once()
 
     def test_update_userrss_task(self, svc):
-        svc.dbhelper.update_userrss_task.return_value = True
+        svc.config_repo.update_userrss_task.return_value = True
         svc.init_config = MagicMock()
         item = {"name": "test"}
         assert svc.update_userrss_task(item) is True
-        svc.dbhelper.update_userrss_task.assert_called_once_with(item)
+        svc.config_repo.update_userrss_task.assert_called_once_with(item)
 
     def test_check_userrss_task(self, svc):
-        svc.dbhelper.check_userrss_task.return_value = True
+        svc.config_repo.check_userrss_task.return_value = True
         svc.init_config = MagicMock()
         assert svc.check_userrss_task(tid=1, state=True) is True
-        svc.dbhelper.check_userrss_task.assert_called_once_with(1, True)
+        svc.config_repo.check_userrss_task.assert_called_once_with(1, True)
 
     def test_delete_userrss_parser(self, svc):
-        svc.dbhelper.delete_userrss_parser.return_value = True
+        svc.config_repo.delete_userrss_parser.return_value = True
         svc.init_config = MagicMock()
         assert svc.delete_userrss_parser(1) is True
-        svc.dbhelper.delete_userrss_parser.assert_called_once_with(1)
+        svc.config_repo.delete_userrss_parser.assert_called_once_with(1)
 
     def test_update_userrss_parser(self, svc):
-        svc.dbhelper.update_userrss_parser.return_value = True
+        svc.config_repo.update_userrss_parser.return_value = True
         svc.init_config = MagicMock()
         item = {"name": "parser"}
         assert svc.update_userrss_parser(item) is True
-        svc.dbhelper.update_userrss_parser.assert_called_once_with(item)
+        svc.config_repo.update_userrss_parser.assert_called_once_with(item)
 
     def test_get_userrss_task_history(self, svc):
-        svc.dbhelper.get_userrss_task_history.return_value = [{"TITLE": "A"}]
+        svc.config_repo.get_userrss_task_history.return_value = [{"TITLE": "A"}]
         assert svc.get_userrss_task_history(1) == [{"TITLE": "A"}]
 
     def test_get_userrss_parser_by_id(self, svc):

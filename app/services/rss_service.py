@@ -9,7 +9,8 @@ from lxml import etree
 import log
 from app.downloader import Downloader
 from app.services.filter_service import FilterService as Filter
-from app.helper import DbHelper, RssHelper
+from app.helper import RssHelper
+from app.db.repositories import ConfigRepository, RssRepository
 from app.media import Media
 from app.media.meta import MetaInfo
 from app.message import Message
@@ -102,7 +103,8 @@ class RssTaskService(metaclass=SingletonMeta):
     filterrule = None
     downloader = None
     subscribe = None
-    dbhelper = None
+    config_repo = None
+    rss_repo = None
     rsshelper = None
 
     _jobstore = "rsscheck"
@@ -118,7 +120,8 @@ class RssTaskService(metaclass=SingletonMeta):
         self.init_config()
 
     def init_config(self):
-        self.dbhelper = DbHelper()
+        self.config_repo = ConfigRepository()
+        self.rss_repo = RssRepository()
         self.rsshelper = RssHelper()
         self.message = Message()
         self.searcher = Searcher()
@@ -129,7 +132,7 @@ class RssTaskService(metaclass=SingletonMeta):
         # 移除现有任务
         self.stop_service()
         # 读取解析器列表
-        rss_parsers = self.dbhelper.get_userrss_parser()
+        rss_parsers = self.config_repo.get_userrss_parser()
         self._rss_parsers = []
         for rss_parser in rss_parsers:
             self._rss_parsers.append(
@@ -143,7 +146,7 @@ class RssTaskService(metaclass=SingletonMeta):
                 }
             )
         # 读取任务任务列表
-        rsstasks = self.dbhelper.get_userrss_tasks()
+        rsstasks = self.config_repo.get_userrss_tasks()
         self._rss_tasks = []
         for task in rsstasks:
             if task.FILTER:
@@ -373,7 +376,7 @@ class RssTaskService(metaclass=SingletonMeta):
                                                                                   tmdbid=media_info.tmdb_id))
                             # TMDB信息插入订阅任务
                             if media_info.type != MediaType.MOVIE:
-                                self.dbhelper.insert_userrss_mediainfos(taskid, media_info)
+                                self.config_repo.insert_userrss_mediainfos(taskid, media_info)
                         else:
                             log.info(f"【RssTaskService】{title}  匹配成功")
                     # 添加下载列表
@@ -399,7 +402,7 @@ class RssTaskService(metaclass=SingletonMeta):
                         log.info(f"【RssTaskService】{match_msg}")
                         continue
                     # 检查是否已订阅过
-                    if self.dbhelper.check_rss_history(type_str="MOV" if media_info.type == MediaType.MOVIE else "TV",
+                    if self.rss_repo.check_rss_history(type_str="MOV" if media_info.type == MediaType.MOVIE else "TV",
                                                        name=media_info.title,
                                                        year=media_info.year,
                                                        season=media_info.get_season_string()):
@@ -434,7 +437,7 @@ class RssTaskService(metaclass=SingletonMeta):
                     self.rsshelper.insert_rss_torrents(media)
                     # 登记自定义RSS任务下载记录
                     downloader_name = self.downloader.get_downloader_conf(downloader_id).get("name")
-                    self.dbhelper.insert_userrss_task_history(taskid, media.org_string, downloader_name)
+                    self.config_repo.insert_userrss_task_history(taskid, media.org_string, downloader_name)
                 else:
                     log.error("【RssTaskService】添加下载任务 %s 失败：%s" % (
                         media.get_title_string(), ret_msg or "请检查下载任务是否已存在"))
@@ -464,7 +467,7 @@ class RssTaskService(metaclass=SingletonMeta):
         # 更新状态
         counter = len(rss_download_torrents) + len(rss_subscribe_torrents) + len(rss_search_torrents)
         if counter:
-            self.dbhelper.update_userrss_task_info(taskid, counter)
+            self.config_repo.update_userrss_task_info(taskid, counter)
             taskinfo["counter"] = int(taskinfo.get("counter")) + counter \
                 if str(taskinfo.get("counter")).isdigit() else counter
             taskinfo["update_time"] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
@@ -717,7 +720,7 @@ class RssTaskService(metaclass=SingletonMeta):
                 # 插入数据库
                 self.rsshelper.insert_rss_torrents(media)
                 # 登记自定义RSS任务下载记录
-                self.dbhelper.insert_userrss_task_history(taskid, media.org_string, downloader_name)
+                self.config_repo.insert_userrss_task_history(taskid, media.org_string, downloader_name)
             else:
                 log.error("【RssTaskService】添加下载任务 %s 失败：%s" % (
                     media.get_title_string(), ret_msg or "请检查下载任务是否已存在"))
@@ -725,7 +728,7 @@ class RssTaskService(metaclass=SingletonMeta):
         return True
 
     def get_userrss_mediainfos(self):
-        taskinfos = self.dbhelper.get_userrss_tasks()
+        taskinfos = self.config_repo.get_userrss_tasks()
         mediainfos_all = []
         for taskinfo in taskinfos:
             mediainfos = json.loads(taskinfo.MEDIAINFOS) if taskinfo.MEDIAINFOS else []
@@ -765,7 +768,7 @@ class RssTaskService(metaclass=SingletonMeta):
         删除自定义RSS任务
         :param tid: 任务ID
         """
-        ret = self.dbhelper.delete_userrss_task(tid)
+        ret = self.config_repo.delete_userrss_task(tid)
         self.init_config()
         return ret
 
@@ -774,7 +777,7 @@ class RssTaskService(metaclass=SingletonMeta):
         更新自定义RSS任务
         :param item: 任务信息
         """
-        ret = self.dbhelper.update_userrss_task(item)
+        ret = self.config_repo.update_userrss_task(item)
         self.init_config()
         return ret
 
@@ -784,7 +787,7 @@ class RssTaskService(metaclass=SingletonMeta):
         :param tid: 任务ID
         :param state: 任务状态
         """
-        ret = self.dbhelper.check_userrss_task(tid, state)
+        ret = self.config_repo.check_userrss_task(tid, state)
         self.init_config()
         return ret
 
@@ -793,7 +796,7 @@ class RssTaskService(metaclass=SingletonMeta):
         删除自定义RSS解析器
         :param pid: 解析器ID
         """
-        ret = self.dbhelper.delete_userrss_parser(pid)
+        ret = self.config_repo.delete_userrss_parser(pid)
         self.init_config()
         return ret
 
@@ -802,7 +805,7 @@ class RssTaskService(metaclass=SingletonMeta):
         更新自定义RSS解析器
         :param item: 解析器信息
         """
-        ret = self.dbhelper.update_userrss_parser(item)
+        ret = self.config_repo.update_userrss_parser(item)
         self.init_config()
         return ret
 
@@ -811,4 +814,4 @@ class RssTaskService(metaclass=SingletonMeta):
         获取自定义RSS任务下载记录
         :param task_id: 任务ID
         """
-        return self.dbhelper.get_userrss_task_history(task_id)
+        return self.config_repo.get_userrss_task_history(task_id)
