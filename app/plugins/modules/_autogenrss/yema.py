@@ -3,15 +3,16 @@ import json
 from app.db.repositories import SiteRepository
 from app.plugins.modules._autogenrss._base import _ISiteRssGenHandler
 from app.utils.http_utils import RequestUtils
+from app.utils.string_utils import StringUtils
 from config import MT_URL, Config
 
 
-class Mteam(_ISiteRssGenHandler):
+class YemaPT(_ISiteRssGenHandler):
     """
-    m-team
+    YemaPT
     """
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
-    site_url = "m-team"
+    site_url = "yemapt.org"
     
     
     @classmethod
@@ -21,7 +22,7 @@ class Mteam(_ISiteRssGenHandler):
         :param url: 站点Url
         :return: 是否匹配，如匹配则会调用该类的gen_rss方法
         """
-        return True if cls.site_url in url else False
+        return True if StringUtils.url_equal(url, cls.site_url) else False
     
     def gen_rss(self, site_info: dict):
         """
@@ -30,29 +31,26 @@ class Mteam(_ISiteRssGenHandler):
         :return: 签到结果信息
         """
         site = site_info.get("name")
+        site_cookie = site_info.get("cookie")
         ua = site_info.get("ua")
-        headers = json.loads(site_info.get("headers"))
-        headers.update({
-            "contentType": 'application/json;charset=UTF-8',
-            "User-Agent": ua
-        })
-        
         proxy = Config().get_proxies() if site_info.get("proxy") else None
+        headers = {
+            "accept": "application/json, text/plain, */*",
+            "content-type": "application/json",
+            "user-agent": ua
+        }
         
-        rss_url = f"{MT_URL}/api/rss/genlink"
+        rss_url = f"https://www.yemapt.org/api/rss/generateRssUrl"
         data = {
-            "labels": 0,
-            "tkeys": [
-                "ttitle",
-                "tcat",
-                "tsmalldescr",
-                "tsize"
-            ],
+            "categoryIdList": [],
+            "withShortDesc": True,
+            "withSize": True,
+            "showPromotion": False,
             "pageSize": 50
         }
         data = json.dumps(data, separators=(',', ':'))
 
-        res = RequestUtils(
+        res = RequestUtils(cookies=site_cookie,
             headers=headers,
             proxies=proxy
         ).post_res(url=rss_url, data=data)
@@ -61,8 +59,9 @@ class Mteam(_ISiteRssGenHandler):
 
         rss_link = ""
         json_data = res.json()
-        if json_data.get("message") == "SUCCESS":
-            rss_link = json_data.get("data").get("dlUrl")
+
+        if json_data.get("success"):
+            rss_link = json_data.get("data")
             self.debug(f"生成的rss: {rss_link}")
         
         if rss_link:

@@ -1,10 +1,10 @@
-from app.helper.db_helper import DbHelper
+from app.db.repositories import PluginRepository
 from app.utils.types import MediaType
 from app.utils.cache_system import get_cache_manager
 
 class TmdbBlacklistHelper:
     def __init__(self):
-        self._db = DbHelper()
+        self._db = PluginRepository()
         self._media = None
         self._cache = get_cache_manager().get_or_create(
             "tmdb_blacklist", "memory", maxsize=1, ttl=300

@@ -6,7 +6,7 @@ from threading import Lock
 import requests
 
 import log
-from app.helper import SubmoduleHelper, DbHelper, DrissionPageHelper
+from app.helper import SubmoduleHelper, DrissionPageHelper
 from app.message import Message
 from app.sites.sites import Sites
 from app.utils import RequestUtils, ExceptionUtils, StringUtils, JsonUtils
@@ -36,7 +36,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
 
     def init_config(self):
         self.sites = Sites()
-        self.dbhelper = DbHelper()
+        self.site_repo = SiteRepository()
         self.message = Message()
         # 站点上一次更新时间
         self._last_update_time = None
@@ -334,13 +334,13 @@ class SiteUserInfo(metaclass=SingletonMeta):
                 site_user_infos = [info for info in site_user_infos if info]
 
             # 登记历史数据
-            self.dbhelper.insert_site_statistics_history(site_user_infos)
+            self.site_repo.insert_site_statistics_history(site_user_infos)
             # 实时用户数据
-            self.dbhelper.update_site_user_statistics(site_user_infos)
+            self.site_repo.update_site_user_statistics(site_user_infos)
             # 更新站点图标
-            self.dbhelper.update_site_favicon(site_user_infos)
+            self.site_repo.update_site_favicon(site_user_infos)
             # 实时做种信息
-            self.dbhelper.update_site_seed_info(site_user_infos)
+            self.site_repo.update_site_seed_info(site_user_infos)
             # 站点图标重新加载
             self.sites.init_favicons()
 
@@ -357,7 +357,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
             if site_url:
                 site_urls.append(site_url)
 
-        return self.dbhelper.get_site_statistics_recent_sites(days=days, end_day=end_day, strict_urls=site_urls)
+        return self.site_repo.get_site_statistics_recent_sites(days=days, end_day=end_day, strict_urls=site_urls)
 
     def get_site_user_statistics(self, sites=None, encoding="RAW"):
         """
@@ -373,7 +373,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
             site_urls = [site.get("strict_url") for site in statistic_sites
                          if site.get("name") in sites]
 
-        raw_statistics = self.dbhelper.get_site_user_statistics(
+        raw_statistics = self.site_repo.get_site_user_statistics(
             strict_urls=site_urls)
         if encoding == "RAW":
             return raw_statistics
@@ -389,7 +389,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
         """
         site_activities = [["time", "upload", "download",
                             "bonus", "seeding", "seeding_size"]]
-        sql_site_activities = self.dbhelper.get_site_statistics_history(
+        sql_site_activities = self.site_repo.get_site_statistics_history(
             site=site, days=days)
         for sql_site_activity in sql_site_activities:
             timestamp = datetime.strptime(
@@ -411,7 +411,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
         :return: seeding_info:[uploader_num, seeding_size]
         """
         site_seeding_info = {"seeding_info": []}
-        seeding_info = self.dbhelper.get_site_seeding_info(site=site)
+        seeding_info = self.site_repo.get_site_seeding_info(site=site)
         if not seeding_info:
             return site_seeding_info
 
@@ -464,7 +464,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
         """
         更新站点数据中的站点名称
         """
-        self.dbhelper.update_site_user_statistics_site_name(name, old_name)
-        self.dbhelper.update_site_seed_info_site_name(name, old_name)
-        self.dbhelper.update_site_statistics_site_name(name, old_name)
+        self.site_repo.update_site_user_statistics_site_name(name, old_name)
+        self.site_repo.update_site_seed_info_site_name(name, old_name)
+        self.site_repo.update_site_statistics_site_name(name, old_name)
         return True

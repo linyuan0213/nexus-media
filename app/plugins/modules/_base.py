@@ -6,7 +6,7 @@ from typing import Optional, Callable, Any, Dict
 
 import log
 from app.conf import SystemConfig
-from app.helper import DbHelper
+from app.db.repositories import PluginRepository
 from app.message import Message
 from config import Config
 from app.services.scheduler_core import SchedulerCore
@@ -139,7 +139,7 @@ class _IPluginModule(metaclass=ABCMeta):
             return
         if self.__is_obj(value):
             value = json.dumps(value)
-        DbHelper().insert_plugin_history(plugin_id=self.__class__.__name__,
+        PluginRepository().insert_plugin_history(plugin_id=self.__class__.__name__,
                                          key=key,
                                          value=value)
 
@@ -150,7 +150,7 @@ class _IPluginModule(metaclass=ABCMeta):
         if not plugin_id:
             plugin_id = self.__class__.__name__
 
-        historys = DbHelper().get_plugin_history(plugin_id=plugin_id, key=key)
+        historys = PluginRepository().get_plugin_history(plugin_id=plugin_id, key=key)
         if not isinstance(historys, list):
             historys = [historys]
         result = []
@@ -182,7 +182,7 @@ class _IPluginModule(metaclass=ABCMeta):
             plugin_id = self.__class__.__name__
         if self.__is_obj(value):
             value = json.dumps(value)
-        return DbHelper().update_plugin_history(plugin_id=plugin_id, key=key, value=value)
+        return PluginRepository().update_plugin_history(plugin_id=plugin_id, key=key, value=value)
 
     def delete_history(self, key, plugin_id=None):
         """
@@ -192,7 +192,7 @@ class _IPluginModule(metaclass=ABCMeta):
             return False
         if not plugin_id:
             plugin_id = self.__class__.__name__
-        return DbHelper().delete_plugin_history(plugin_id=plugin_id, key=key)
+        return PluginRepository().delete_plugin_history(plugin_id=plugin_id, key=key)
 
     @staticmethod
     def send_message(title, text=None, image=None, url=""):

@@ -93,8 +93,8 @@ class SiteCacheWarmer(CacheWarmer):
         start_time = time.time()
         try:
             log.info("【CacheWarmer】开始预热站点数据...")
-            from app.helper.db_helper import DbHelper
-            db = DbHelper()
+            from app.db.repositories import SiteRepository
+            db = SiteRepository()
             
             sites = db.get_config_site()
             if sites:

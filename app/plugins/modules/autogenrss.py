@@ -11,7 +11,7 @@ from lxml import etree
 
 from app.helper import SubmoduleHelper, SiteHelper
 from app.helper.cloudflare_helper import under_challenge
-from app.helper.db_helper import DbHelper
+from app.db.repositories import SiteRepository
 from app.helper.drissionpage_helper import DrissionPageHelper
 from app.plugins.modules._base import _IPluginModule
 from app.sites.siteconf import SiteConf
@@ -141,7 +141,7 @@ class AutoGenRss(_IPluginModule):
 
         
         # 数据库
-        self._dbhelper = DbHelper()
+        self._site_repo = SiteRepository()
 
         # 停止现有任务
         self.stop_service()
@@ -327,7 +327,7 @@ class AutoGenRss(_IPluginModule):
                         self.debug(f"生成的rss: {gen_rss_url}")
                         if gen_rss_url:
                             #插入到数据库
-                            self._dbhelper.update_site_rssurl(site_info.get("id"), gen_rss_url)
+                            self._site_repo.update_site_rssurl(site_info.get("id"), gen_rss_url)
                         
                             self.info(f"{site} 生成RSS成功")
                             return f"【{site}】生成RSS成功"
