@@ -3,7 +3,8 @@ from datetime import datetime
 from time import sleep
 
 import log
-from app.helper import SiteHelper, DbHelper, DrissionPageHelper
+from app.helper import SiteHelper, DrissionPageHelper
+from app.db.repositories import SiteRepository
 from app.message import Message
 from app.sites.site_limiter import SiteRateLimiter
 from app.utils import RequestUtils, StringUtils, JsonUtils
@@ -13,7 +14,7 @@ from config import MT_URL, Config
 
 class Sites:
     message = None
-    dbhelper = None
+    site_repo = None
 
     _sites = []
     _siteByIds = {}
@@ -31,7 +32,7 @@ class Sites:
         self.init_config()
 
     def init_config(self):
-        self.dbhelper = DbHelper()
+        self.site_repo = SiteRepository()
         self.message = Message()
         # 原始站点列表
         self._sites = []
@@ -52,7 +53,7 @@ class Sites:
         # 站点图标
         self.init_favicons()
         # 站点数据
-        self._sites = self.dbhelper.get_config_site()
+        self._sites = self.site_repo.get_config_site()
         for site in self._sites:
             # 站点属性
             site_note = self.__get_site_note_items(site.NOTE)
@@ -146,7 +147,7 @@ class Sites:
         加载图标到内存
         """
         self._site_favicons = {
-            site.SITE: site.FAVICON for site in self.dbhelper.get_site_favicons()}
+            site.SITE: site.FAVICON for site in self.site_repo.get_site_favicons()}
 
     def get_sites(self,
                   siteid=None,
@@ -402,7 +403,7 @@ class Sites:
         """
         添加站点
         """
-        ret = self.dbhelper.insert_config_site(name=name,
+        ret = self.site_repo.insert_config_site(name=name,
                                                site_pri=site_pri,
                                                rssurl=rssurl,
                                                signurl=signurl,
@@ -417,7 +418,7 @@ class Sites:
         """
         更新站点
         """
-        ret = self.dbhelper.update_config_site(tid=tid,
+        ret = self.site_repo.update_config_site(tid=tid,
                                                name=name,
                                                site_pri=site_pri,
                                                rssurl=rssurl,
@@ -432,7 +433,7 @@ class Sites:
         """
         删除站点
         """
-        ret = self.dbhelper.delete_config_site(siteid)
+        ret = self.site_repo.delete_config_site(siteid)
         self.init_config()
         return ret
 
@@ -440,7 +441,7 @@ class Sites:
         """
         更新站点Cookie和UA
         """
-        ret = self.dbhelper.update_site_cookie_ua(tid=siteid,
+        ret = self.site_repo.update_site_cookie_ua(tid=siteid,
                                                   cookie=cookie,
                                                   ua=ua)
         self.init_config()
@@ -450,7 +451,7 @@ class Sites:
         """
         更新站点 note
         """
-        ret = self.dbhelper.update_config_site_note(tid=siteid, note=note)
+        ret = self.site_repo.update_config_site_note(tid=siteid, note=note)
         self.init_config()
         return ret
 
@@ -458,7 +459,7 @@ class Sites:
         """
         根据站点id获取站点配置
         """
-        sites = self.dbhelper.get_site_by_id(tid=siteid)
+        sites = self.site_repo.get_site_by_id(tid=siteid)
         if sites:
             site_note = self.__get_site_note_items(sites[0].NOTE)
             return site_note
