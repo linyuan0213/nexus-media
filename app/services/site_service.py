@@ -1,0 +1,254 @@
+# -*- coding: utf-8 -*-
+import json
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple
+
+from app.indexer import Indexer
+from app.sites import Sites, SiteUserInfo, SiteCookie, SiteConf
+from app.utils import StringUtils
+
+
+@dataclass
+class SiteAttrDTO:
+    site_free: bool = False
+    site_2xfree: bool = False
+    site_hr: bool = False
+
+
+@dataclass
+class SiteDetailDTO:
+    site: Any = None
+    site_free: bool = False
+    site_2xfree: bool = False
+    site_hr: bool = False
+
+
+@dataclass
+class SiteTestResultDTO:
+    flag: bool = False
+    msg: str = ""
+    times: float = 0.0
+    code: int = 0
+
+
+@dataclass
+class SiteHistoryDTO:
+    dataset: List[list] = field(default_factory=list)
+
+
+@dataclass
+class SiteSeedingDTO:
+    dataset: List[list] = field(default_factory=list)
+
+
+@dataclass
+class SiteActivityDTO:
+    dataset: List[list] = field(default_factory=list)
+
+
+@dataclass
+class SiteResourcesResultDTO:
+    success: bool = False
+    data: Any = None
+    msg: str = ""
+
+
+@dataclass
+class SiteUpdateResultDTO:
+    code: Optional[int] = None
+    msg: Optional[str] = None
+
+
+class SiteService:
+    """站点业务服务：站点 CRUD、统计、连通性测试、资源列表"""
+
+    def __init__(self,
+                 sites: Optional[Sites] = None,
+                 site_user_info: Optional[SiteUserInfo] = None,
+                 site_conf: Optional[SiteConf] = None,
+                 site_cookie: Optional[SiteCookie] = None,
+                 indexer: Optional[Indexer] = None,
+                 string_utils=None):
+        self._sites = sites or Sites()
+        self._site_user_info = site_user_info or SiteUserInfo()
+        self._site_conf = site_conf or SiteConf()
+        self._site_cookie = site_cookie or SiteCookie()
+        self._indexer = indexer or Indexer()
+        self._string_utils = string_utils or StringUtils
+
+    # ------------------------------------------------------------------
+    # 站点属性
+    # ------------------------------------------------------------------
+    def check_site_attr(self, url: Optional[str]) -> SiteAttrDTO:
+        """检查站点标识（FREE / 2XFREE / HR）"""
+        site_attr = self._site_conf.get_grap_conf(url)
+        return SiteAttrDTO(
+            site_free=bool(site_attr.get("FREE")),
+            site_2xfree=bool(site_attr.get("2XFREE")),
+            site_hr=bool(site_attr.get("HR"))
+        )
+
+    # ------------------------------------------------------------------
+    # CRUD
+    # ------------------------------------------------------------------
+    def delete_site(self, tid: Optional[str]) -> Optional[int]:
+        if not tid:
+            return 0
+        return self._sites.delete_site(tid)
+
+    def get_site(self, tid: Optional[str]) -> SiteDetailDTO:
+        if not tid:
+            return SiteDetailDTO(site=[])
+        ret: Any = self._sites.get_sites(siteid=tid)
+        site_free = site_2xfree = site_hr = False
+        if ret and isinstance(ret, dict) and ret.get("signurl"):
+            attr = self._site_conf.get_grap_conf(ret.get("signurl"))
+            site_free = bool(attr.get("FREE"))
+            site_2xfree = bool(attr.get("2XFREE"))
+            site_hr = bool(attr.get("HR"))
+        return SiteDetailDTO(
+            site=ret, site_free=site_free,
+            site_2xfree=site_2xfree, site_hr=site_hr
+        )
+
+    def get_sites(self,
+                  rss: bool = False,
+                  brush: bool = False,
+                  statistic: bool = False,
+                  basic: bool = False) -> Any:
+        if basic:
+            return self._sites.get_site_dict(
+                rss=rss, brush=brush, statistic=statistic)
+        return self._sites.get_sites(
+            rss=rss, brush=brush, statistic=statistic)
+
+    def _is_site_duplicate(self, name: Optional[str], tid: Optional[str]) -> bool:
+        if not name:
+            return False
+        for site in self._sites.get_sites_by_name(name=name):
+            if str(site.get("id")) != str(tid or ""):
+                return True
+        return False
+
+    def update_site(self, data: dict) -> SiteUpdateResultDTO:
+        """新增或更新站点信息"""
+        tid = data.get('site_id')
+        name = data.get('site_name')
+        site_pri = data.get('site_pri')
+        rssurl = data.get('site_rssurl')
+        signurl = data.get('site_signurl')
+        cookie = data.get('site_cookie')
+        note = data.get('site_note')
+        if isinstance(note, dict):
+            note = json.dumps(note)
+        rss_uses = data.get('site_include')
+
+        if self._is_site_duplicate(name, tid):
+            return SiteUpdateResultDTO(code=400, msg="站点名称重复")
+
+        if tid:
+            sites: Any = self._sites.get_sites(siteid=tid)
+            if not sites:
+                return SiteUpdateResultDTO(code=400, msg="站点不存在")
+            old_name = sites.get('name') if isinstance(sites, dict) else None
+            ret = self._sites.update_site(
+                tid=tid, name=name, site_pri=site_pri,
+                rssurl=rssurl, signurl=signurl,
+                cookie=cookie, note=note, rss_uses=rss_uses)
+            if ret and name != old_name and old_name:
+                self._site_user_info.update_site_name(name, old_name)
+            return SiteUpdateResultDTO(code=ret)
+        else:
+            ret = self._sites.add_site(
+                name=name, site_pri=site_pri,
+                rssurl=rssurl, signurl=signurl,
+                cookie=cookie, note=note, rss_uses=rss_uses)
+            return SiteUpdateResultDTO(code=ret)
+
+    def update_site_cookie_ua(self, siteid, cookie, ua) -> None:
+        self._sites.update_site_cookie(siteid=siteid, cookie=cookie, ua=ua)
+
+    # ------------------------------------------------------------------
+    # 统计
+    # ------------------------------------------------------------------
+    def get_site_activity(self, name: str) -> SiteActivityDTO:
+        dataset = self._site_user_info.get_pt_site_activity_history(name)
+        return SiteActivityDTO(dataset=dataset)
+
+    def get_site_history(self,
+                         days: int,
+                         end_day: Optional[str] = None) -> SiteHistoryDTO:
+        _, _, site, upload, download = \
+            self._site_user_info.get_pt_site_statistics_history(
+                days + 1, end_day)
+        dataset = [["site", "upload", "download"]]
+        dataset.extend([
+            [s, u, d]
+            for s, u, d in zip(site, upload, download)
+        ])
+        return SiteHistoryDTO(dataset=dataset)
+
+    def get_site_seeding_info(self, name: str) -> SiteSeedingDTO:
+        seeding_info = self._site_user_info.get_pt_site_seeding_info(
+            name).get("seeding_info", [])
+        dataset = [["seeders", "size"]]
+        dataset.extend(seeding_info)
+        return SiteSeedingDTO(dataset=dataset)
+
+    def get_site_user_statistics(self,
+                                 sites: Optional[list] = None,
+                                 encoding: str = "RAW",
+                                 sort_by: Optional[str] = None,
+                                 sort_on: Optional[str] = None,
+                                 site_hash: Optional[str] = None) -> List[dict]:
+        statistics = self._site_user_info.get_site_user_statistics(
+            sites=sites, encoding=encoding)
+        # 修复馒头站点显示
+        for item in statistics:
+            if 'm-team' in item.get('url', ''):
+                site_info: Any = self._sites.get_sites(
+                    siteurl=item.get('url')) or {}
+                item['url'] = site_info.get('signurl') if isinstance(site_info, dict) else None
+        if sort_by and sort_on in ["asc", "desc"]:
+            reverse = sort_on != "asc"
+            statistics.sort(
+                key=lambda x: x.get(sort_by), reverse=reverse)
+        if site_hash == "Y":
+            for item in statistics:
+                item["site_hash"] = self._string_utils.md5_hash(
+                    item.get("site"))
+        return statistics
+
+    # ------------------------------------------------------------------
+    # Favicon
+    # ------------------------------------------------------------------
+    def get_site_favicon(self, name: Optional[str] = None):
+        return self._sites.get_site_favicon(site_name=name)
+
+    # ------------------------------------------------------------------
+    # 连通性测试
+    # ------------------------------------------------------------------
+    def test_site(self, site_id) -> SiteTestResultDTO:
+        flag, msg, times = self._sites.test_connection(site_id)
+        return SiteTestResultDTO(
+            flag=flag, msg=msg, times=times,
+            code=0 if flag else -1)
+
+    # ------------------------------------------------------------------
+    # 验证码
+    # ------------------------------------------------------------------
+    def set_captcha_code(self, code, value) -> None:
+        self._site_cookie.set_code(code=code, value=value)
+
+    # ------------------------------------------------------------------
+    # 资源列表
+    # ------------------------------------------------------------------
+    def list_site_resources(self, index_id, page,
+                            keyword) -> SiteResourcesResultDTO:
+        resources = self._indexer.list_resources(
+            index_id=index_id, page=page, keyword=keyword)
+        if not resources:
+            return SiteResourcesResultDTO(
+                success=False,
+                msg="获取站点资源出现错误，无法连接到站点！")
+        return SiteResourcesResultDTO(success=True, data=resources)
