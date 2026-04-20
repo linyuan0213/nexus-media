@@ -1,6 +1,6 @@
 import time
 
-from app.downloader import Downloader
+from app.services.downloader_core import DownloaderCore as Downloader
 from app.helper.security_helper import SecurityHelper
 from app.mediaserver import MediaServer
 from app.plugins import EventHandler

@@ -1405,10 +1405,10 @@ function download_link() {
   const setting = $("#search_download_setting").val();
   $("#modal-search-download").modal('hide');
   ajax_post("/api/web/download/download", {"id": id, "dir": dir, "setting": setting}, function (ret) {
-    if (ret.retcode === 0) {
+    if (ret.code === 0) {
       show_success_modal(`${name} 添加下载成功！`);
     } else {
-      show_fail_modal(`${name} 添加下载失败 ${ret.retmsg}！`);
+      show_fail_modal(`${name} 添加下载失败 ${ret.msg}！`);
     }
   });
 }
@@ -1663,10 +1663,10 @@ function show_manual_transfer_modal(manual_type, inpath, syncmod, media_type, un
 // 重新识别
 function re_identification(flag, ids) {
   ajax_post("/api/web/sync/re_identification", {"flag": flag, "ids": ids}, function (ret) {
-    if (ret.retcode == 0) {
+    if (ret.code == 0) {
       navmenu(flag);
     } else {
-      show_fail_modal(`重新识别失败：${ret.retmsg}！`);
+      show_fail_modal(`重新识别失败：${ret.msg}！`);
     }
   });
 }
@@ -1791,13 +1791,13 @@ function manual_media_transfer() {
   let url = (manual_type === '3') ? "/api/web/sync/rename_udf" : "/api/web/sync/rename"
   ajax_post(url, data, function (ret) {
     hide_refresh_process();
-    if (ret.retcode === 0) {
+    if (ret.code === 0) {
       show_success_modal(inpath + "处理成功！", function () {
         navmenu(source);
       });
     } else {
       //处理失败
-      show_fail_modal(ret.retmsg, function () {
+      show_fail_modal(ret.msg, function () {
         $('#modal-media-identification').modal('show');
       });
     }

@@ -7,7 +7,7 @@ import pytz
 from apscheduler.triggers.cron import CronTrigger
 
 from threading import Event
-from app.downloader.downloader import Downloader
+from app.services.downloader_core import DownloaderCore as Downloader
 from app.plugins.modules._base import _IPluginModule
 from app.utils import StringUtils, RedisStore
 from app.sites import Sites

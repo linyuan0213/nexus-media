@@ -30,7 +30,7 @@ if is_executable:
 
 from config import Config
 import log
-from app.system_service import stop_service
+from app.services.system_service import SystemLifecycleService
 from web.main import App
 
 
@@ -44,7 +44,7 @@ def sigal_handler(num, stack):
     stop_config_monitor()
     # 关闭服务
     log.info('关闭服务...')
-    stop_service()
+    SystemLifecycleService().stop_service()
     # 退出主进程
     log.info('退出主进程...')
     # sys.exit(0) -> os._exit(0)
