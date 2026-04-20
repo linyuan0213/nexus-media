@@ -1,0 +1,750 @@
+# -*- coding: utf-8 -*-
+"""
+FileTransferService - 文件转移业务 Facade
+将 app/filetransfer.py 重构为依赖注入模式，
+底层实现拆分到 TransferActionEngine 与 TransferCoordinator。
+保留与原 FileTransfer 兼容的公共 API。
+"""
+import argparse
+import os
+import re
+import shutil
+from typing import Optional
+
+import log
+from app.conf import ModuleConf
+from app.db.repositories import DownloadRepository, TransferRepository
+from app.helper import ProgressHelper, ThreadHelper
+from app.media import Media, Category, Scraper
+from app.media.meta import MetaInfo
+from app.message import Message
+from app.plugins import EventManager
+from app.services.transfer_action_engine import TransferActionEngine
+from app.services.transfer_coordinator import TransferCoordinator
+from app.utils import PathUtils, StringUtils, SystemUtils, ExceptionUtils, NumberUtils
+from app.utils.types import MediaType, RmtMode, EventType, MovieTypes
+from config import RMT_MEDIAEXT, RMT_FAVTYPE, RMT_MIN_FILESIZE, DEFAULT_MOVIE_FORMAT, \
+    DEFAULT_TV_FORMAT, Config
+
+
+class FileTransferService:
+    """
+    文件转移业务 Facade
+    保留与原 FileTransfer 兼容的公共 API，移除 SingletonMeta，改为依赖注入。
+    """
+
+    def __init__(self,
+                 media: Optional[Media] = None,
+                 message: Optional[Message] = None,
+                 category: Optional[Category] = None,
+                 scraper: Optional[Scraper] = None,
+                 threadhelper: Optional[ThreadHelper] = None,
+                 transfer_repo: Optional[TransferRepository] = None,
+                 download_repo: Optional[DownloadRepository] = None,
+                 progress: Optional[ProgressHelper] = None,
+                 eventmanager: Optional[EventManager] = None,
+                 engine: Optional[TransferActionEngine] = None,
+                 coordinator: Optional[TransferCoordinator] = None):
+        self.media = media or Media()
+        self.message = message or Message()
+        self.category = category or Category()
+        self.scraper = scraper or Scraper()
+        self.threadhelper = threadhelper or ThreadHelper()
+        self.transfer_repo = transfer_repo or TransferRepository()
+        self.download_repo = download_repo or DownloadRepository()
+        self.progress = progress or ProgressHelper()
+        self.eventmanager = eventmanager or EventManager()
+        self._default_rmt_mode = None
+        self._movie_path = None
+        self._tv_path = None
+        self._anime_path = None
+        self._movie_category_flag = None
+        self._tv_category_flag = None
+        self._anime_category_flag = None
+        self._unknown_path = None
+        self._min_filesize = RMT_MIN_FILESIZE
+        self._filesize_cover = False
+        self._movie_dir_rmt_format = ""
+        self._movie_file_rmt_format = ""
+        self._tv_dir_rmt_format = ""
+        self._tv_season_rmt_format = ""
+        self._tv_file_rmt_format = ""
+        self._ignored_paths = []
+        self._ignored_files = ''
+        self._engine = engine or TransferActionEngine(transfer_repo=self.transfer_repo)
+        self._coordinator = coordinator or TransferCoordinator(self, self._engine)
+        self.init_config()
+
+    def init_config(self):
+        self.media = Media()
+        self.message = Message()
+        self.category = Category()
+        self.scraper = Scraper()
+        self.threadhelper = ThreadHelper()
+        self.transfer_repo = TransferRepository()
+        self.download_repo = DownloadRepository()
+        self.progress = ProgressHelper()
+        self.eventmanager = EventManager()
+
+        media = Config().get_config('media')
+        if media:
+            self._movie_path = media.get('movie_path')
+            if not isinstance(self._movie_path, list):
+                if self._movie_path:
+                    self._movie_path = [self._movie_path]
+                else:
+                    self._movie_path = []
+            self._movie_category_flag = self.category.movie_category_flag
+            self._tv_path = media.get('tv_path')
+            if not isinstance(self._tv_path, list):
+                if self._tv_path:
+                    self._tv_path = [self._tv_path]
+                else:
+                    self._tv_path = []
+            self._tv_category_flag = self.category.tv_category_flag
+            self._anime_path = media.get('anime_path')
+            if not isinstance(self._anime_path, list):
+                if self._anime_path:
+                    self._anime_path = [self._anime_path]
+                else:
+                    self._anime_path = []
+            self._anime_category_flag = self.category.anime_category_flag
+            if not self._anime_path:
+                self._anime_path = self._tv_path
+                self._anime_category_flag = self._tv_category_flag
+            self._unknown_path = media.get('unknown_path')
+            if not isinstance(self._unknown_path, list):
+                if self._unknown_path:
+                    self._unknown_path = [self._unknown_path]
+                else:
+                    self._unknown_path = []
+            min_filesize = media.get('min_filesize')
+            if isinstance(min_filesize, int):
+                self._min_filesize = min_filesize * 1024 * 1024
+            elif isinstance(min_filesize, str) and min_filesize.isdigit():
+                self._min_filesize = int(min_filesize) * 1024 * 1024
+            ignored_paths = media.get('ignored_paths')
+            if ignored_paths:
+                if ignored_paths.endswith(";"):
+                    ignored_paths = ignored_paths[:-1]
+                self._ignored_paths = re.compile(r'%s' % re.sub(r';', r'|', ignored_paths))
+            ignored_files = media.get('ignored_files')
+            if ignored_files:
+                if ignored_files.endswith(";"):
+                    ignored_files = ignored_files[:-1]
+                self._ignored_files = re.compile(r'%s' % re.sub(r';', r'|', ignored_files))
+            self._filesize_cover = media.get('filesize_cover')
+            movie_name_format = media.get('movie_name_format') or DEFAULT_MOVIE_FORMAT
+            movie_formats = movie_name_format.rsplit('/', 1)
+            if movie_formats:
+                self._movie_dir_rmt_format = movie_formats[0]
+                if len(movie_formats) > 1:
+                    self._movie_file_rmt_format = movie_formats[-1]
+            tv_name_format = media.get('tv_name_format') or DEFAULT_TV_FORMAT
+            tv_formats = tv_name_format.rsplit('/', 2)
+            if tv_formats:
+                self._tv_dir_rmt_format = tv_formats[0]
+                if len(tv_formats) > 2:
+                    self._tv_season_rmt_format = tv_formats[-2]
+                    self._tv_file_rmt_format = tv_formats[-1]
+        self._default_rmt_mode = ModuleConf.RMT_MODES.get(Config().get_config('pt').get('rmt_mode', 'copy'),
+                                                           RmtMode.COPY)
+
+    def is_target_dir_path(self, path):
+        """
+        判断是否为目的路径下的路径
+        :param path: 路径
+        :return: True/False
+        """
+        if not path:
+            return False
+        for tv_path in self._tv_path:
+            if PathUtils.is_path_in_path(tv_path, path):
+                return True
+        for movie_path in self._movie_path:
+            if PathUtils.is_path_in_path(movie_path, path):
+                return True
+        for anime_path in self._anime_path:
+            if PathUtils.is_path_in_path(anime_path, path):
+                return True
+        for unknown_path in self._unknown_path:
+            if PathUtils.is_path_in_path(unknown_path, path):
+                return True
+        return False
+
+    def _is_media_exists(self, media_dest, media):
+        """
+        判断媒体文件是否已存在
+        :param media_dest: 媒体文件所在目录
+        :param media: 已识别的媒体信息
+        :return: 目录是否存在，目录路径，文件是否存在，文件路径
+        """
+        dir_exist_flag = False
+        file_exist_flag = False
+        ret_dir_path = None
+        ret_file_path = None
+        if media.type == MediaType.MOVIE:
+            dir_name, file_name = self.get_moive_dest_path(media)
+            file_path = os.path.join(media_dest, dir_name)
+            if self._movie_category_flag:
+                file_path = os.path.join(media_dest, media.category, dir_name)
+                for m_type in [RMT_FAVTYPE, media.category]:
+                    type_path = os.path.join(media_dest, m_type, dir_name)
+                    if os.path.exists(type_path):
+                        file_path = type_path
+                        break
+            ret_dir_path = file_path
+            if os.path.exists(file_path):
+                dir_exist_flag = True
+            file_dest = os.path.join(file_path, file_name)
+            ret_file_path = file_dest
+            for ext in RMT_MEDIAEXT:
+                ext_dest = "%s%s" % (file_dest, ext)
+                if os.path.exists(ext_dest):
+                    file_exist_flag = True
+                    ret_file_path = ext_dest
+                    break
+        else:
+            dir_name, season_name, file_name = self.get_tv_dest_path(media)
+            if (media.type == MediaType.TV and self._tv_category_flag) or (
+                    media.type == MediaType.ANIME and self._anime_category_flag):
+                media_path = os.path.join(media_dest, media.category, dir_name)
+            else:
+                media_path = os.path.join(media_dest, dir_name)
+            if media.get_season_list():
+                season_dir = os.path.join(media_path, season_name)
+                ret_dir_path = season_dir
+                if os.path.exists(season_dir):
+                    dir_exist_flag = True
+                episodes = media.get_episode_list()
+                if episodes:
+                    file_path = os.path.join(season_dir, file_name)
+                    ret_file_path = file_path
+                    for ext in RMT_MEDIAEXT:
+                        ext_dest = "%s%s" % (file_path, ext)
+                        if os.path.exists(ext_dest):
+                            file_exist_flag = True
+                            ret_file_path = ext_dest
+                            break
+        return dir_exist_flag, ret_dir_path, file_exist_flag, ret_file_path
+
+    def get_dest_path_by_info(self, dest, meta_info):
+        """
+        拼装转移重命名后的新文件地址
+        :param dest: 目的目录
+        :param meta_info: 媒体信息
+        """
+        if not dest or not meta_info:
+            return None
+        if meta_info.type == MediaType.MOVIE:
+            dir_name, _ = self.get_moive_dest_path(meta_info)
+            if self._movie_category_flag:
+                return os.path.join(dest, meta_info.category, dir_name)
+            else:
+                return os.path.join(dest, dir_name)
+        else:
+            dir_name, season_name, _ = self.get_tv_dest_path(meta_info)
+            if self._tv_category_flag:
+                return os.path.join(dest, meta_info.category, dir_name, season_name)
+            else:
+                return os.path.join(dest, dir_name, season_name)
+
+    def get_no_exists_medias(self, meta_info, season=None, total_num=None):
+        """
+        根据媒体库目录结构，判断媒体是否存在
+        :param meta_info: 已识别的媒体信息
+        :param season: 季号，数字，剧集时需要
+        :param total_num: 该季总集数，剧集时需要
+        :return: 如果是电影返回已存在的电影清单：title、year，如果是剧集，则返回不存在的集的清单
+        """
+        if meta_info.type == MediaType.MOVIE:
+            dir_name, _ = self.get_moive_dest_path(meta_info)
+            for dest_path in self._movie_path:
+                fav_path = os.path.join(dest_path, RMT_FAVTYPE, dir_name)
+                fav_files = PathUtils.get_dir_files(fav_path, RMT_MEDIAEXT)
+                if self._movie_category_flag:
+                    dest_path = os.path.join(dest_path, meta_info.category, dir_name)
+                else:
+                    dest_path = os.path.join(dest_path, dir_name)
+                files = PathUtils.get_dir_files(dest_path, RMT_MEDIAEXT)
+                if len(files) > 0 or len(fav_files) > 0:
+                    return [{'title': meta_info.title, 'year': meta_info.year}]
+            return []
+        else:
+            dir_name, season_name, _ = self.get_tv_dest_path(meta_info)
+            if not season or not total_num:
+                return []
+            if meta_info.type == MediaType.ANIME:
+                dest_paths = self._anime_path
+                category_flag = self._anime_category_flag
+            else:
+                dest_paths = self._tv_path
+                category_flag = self._tv_category_flag
+            total_episodes = [episode for episode in range(1, total_num + 1)]
+            exists_episodes = []
+            for dest_path in dest_paths:
+                if category_flag:
+                    dest_path = os.path.join(dest_path, meta_info.category, dir_name, season_name)
+                else:
+                    dest_path = os.path.join(dest_path, dir_name, season_name)
+                if not os.path.exists(dest_path):
+                    continue
+                files = PathUtils.get_dir_files(dest_path, RMT_MEDIAEXT)
+                for file in files:
+                    file_meta_info = MetaInfo(title=os.path.basename(file))
+                    if not file_meta_info.get_season_list() or not file_meta_info.get_episode_list():
+                        continue
+                    if file_meta_info.get_name() != meta_info.title:
+                        continue
+                    if not file_meta_info.is_in_season(season):
+                        continue
+                    exists_episodes = list(set(exists_episodes).union(set(file_meta_info.get_episode_list())))
+            return list(set(total_episodes).difference(set(exists_episodes)))
+
+    def get_best_target_path(self, mtype, in_path=None, size=0):
+        """
+        查询一个最好的目录返回，有in_path时找与in_path同路径的，没有in_path时，顺序查找1个符合大小要求的，没有in_path和size时，返回第1个
+        :param mtype: 媒体类型：电影、电视剧、动漫
+        :param in_path: 源目录
+        :param size: 文件大小
+        """
+        if not mtype:
+            return None
+        if mtype == MediaType.MOVIE:
+            dest_paths = self._movie_path
+        elif mtype == MediaType.TV:
+            dest_paths = self._tv_path
+        else:
+            dest_paths = self._anime_path
+        if not dest_paths:
+            return None
+        if not isinstance(dest_paths, list):
+            return dest_paths
+        if isinstance(dest_paths, list) and len(dest_paths) == 1:
+            return dest_paths[0]
+        if in_path:
+            max_return_path = None
+            max_path_len = 0
+            for dest_path in dest_paths:
+                try:
+                    path_len = len(os.path.commonpath([in_path, dest_path]))
+                    if path_len > max_path_len:
+                        max_path_len = path_len
+                        max_return_path = dest_path
+                except Exception as err:
+                    ExceptionUtils.exception_traceback(err)
+                    continue
+            if max_return_path:
+                return max_return_path
+        if size:
+            for path in dest_paths:
+                if SystemUtils.get_free_space(path) > NumberUtils.get_size_gb(size):
+                    return path
+        return dest_paths[0]
+
+    def _get_best_unknown_path(self, in_path):
+        """
+        查找最合适的unknown目录
+        :param in_path: 源目录
+        """
+        if not self._unknown_path:
+            return None
+        for unknown_path in self._unknown_path:
+            if os.path.commonpath([in_path, unknown_path]) not in ["/", "\\"]:
+                return unknown_path
+        return self._unknown_path[0]
+
+    def link_sync_file(self, src_path, in_file, target_dir, sync_transfer_mode):
+        """
+        对文件做纯链接处理，不做识别重命名，则监控模块调用
+        :param : 来源渠道
+        :param src_path: 源目录
+        :param in_file: 源文件
+        :param target_dir: 目的目录
+        :param sync_transfer_mode: 明确的转移方式
+        """
+        new_file = in_file.replace(src_path, target_dir)
+        new_file_list, msg = self.check_ignore(file_list=[new_file])
+        if not new_file_list:
+            return 0, msg
+        else:
+            new_file = new_file_list[0]
+        new_dir = os.path.dirname(new_file)
+        if not os.path.exists(new_dir) and sync_transfer_mode not in ModuleConf.REMOTE_RMT_MODES:
+            os.makedirs(new_dir)
+        return self._engine.transfer_command(file_item=in_file,
+                                               target_file=new_file,
+                                               rmt_mode=sync_transfer_mode), ""
+
+    def get_format_dict(self, media):
+        """
+        根据媒体信息，返回Format字典
+        """
+        if not media:
+            return {}
+        episode_title = self.media.get_episode_title(media)
+        en_title = self.media.get_tmdb_en_title(media)
+        media_format_dict = {
+            "title": StringUtils.clear_file_name(media.title),
+            "en_title": StringUtils.clear_file_name(en_title),
+            "original_name": StringUtils.clear_file_name(os.path.splitext(media.org_string or "")[0]),
+            "rev_name": StringUtils.clear_file_name(os.path.splitext(media.rev_string or "")[0]),
+            "original_title": StringUtils.clear_file_name(media.original_title),
+            "name": StringUtils.clear_file_name(media.get_name()),
+            "year": media.year,
+            "edition": media.get_edtion_string() or None,
+            "videoFormat": media.resource_pix,
+            "releaseGroup": media.resource_team,
+            "customization": media.customization,
+            "effect": media.resource_effect,
+            "videoCodec": media.video_encode,
+            "audioCodec": media.audio_encode,
+            "tmdbid": media.tmdb_id,
+            "imdbid": media.imdb_id,
+            "season": media.get_season_seq(),
+            "episode": media.get_episode_seqs(),
+            "episode_title": StringUtils.clear_file_name(episode_title),
+            "season_episode": "%s%s" % (media.get_season_item(), media.get_episode_items()),
+            "part": media.part
+        }
+        for i in media_format_dict.keys():
+            if not media_format_dict[i]:
+                media_format_dict[i] = '\t'
+        return media_format_dict
+
+    def get_moive_dest_path(self, media_info):
+        """
+        计算电影文件路径
+        :return: 电影目录、电影名称
+        """
+        format_dict = self.get_format_dict(media_info)
+        dir_name = re.sub(r"[-_\s.]*\t", "", self._movie_dir_rmt_format.format(**format_dict))
+        file_name = re.sub(r"[-_\s.]*\t", "", self._movie_file_rmt_format.format(**format_dict))
+        return dir_name, file_name
+
+    def get_tv_dest_path(self, media_info):
+        """
+        计算电视剧文件路径
+        :return: 电视剧目录、季目录、集名称
+        """
+        format_dict = self.get_format_dict(media_info)
+        dir_name = re.sub(r"[-_\s.]*\t", "", self._tv_dir_rmt_format.format(**format_dict))
+        season_name = re.sub(r"[-_\s.]*\t", "", self._tv_season_rmt_format.format(**format_dict))
+        file_name = re.sub(r"[-_\s.]*\t", "", self._tv_file_rmt_format.format(**format_dict))
+        return dir_name, season_name, file_name
+
+    def check_ignore(self, file_list):
+        """
+        检查过滤文件列表中忽略项目
+        :param file_list: 文件路径列表
+        """
+        if not file_list:
+            return [], ""
+        if self._ignored_paths:
+            try:
+                for file in file_list[:]:
+                    if re.findall(self._ignored_paths, os.path.dirname(file)):
+                        log.info(f"【Rmt】{file} 文件路径含转移忽略词，已忽略转移")
+                        file_list.remove(file)
+                if not file_list:
+                    return [], "排除文件路径转移忽略词后，没有新文件需要处理"
+            except Exception as err:
+                ExceptionUtils.exception_traceback(err)
+                log.error("【Rmt】文件路径转移忽略词设置有误：%s" % str(err))
+
+        if self._ignored_files:
+            try:
+                for file in file_list[:]:
+                    if re.findall(self._ignored_files, os.path.basename(file)):
+                        log.info(f"【Rmt】{file} 文件名包含转移忽略词，已忽略转移")
+                        file_list.remove(file)
+                if not file_list:
+                    return [], "排除文件名转移忽略词后，没有新文件需要处理"
+            except Exception as err:
+                ExceptionUtils.exception_traceback(err)
+                log.error("【Rmt】文件名转移忽略词设置有误：%s" % str(err))
+
+        return file_list, ""
+
+    def transfer_media(self,
+                       in_from,
+                       in_path,
+                       rmt_mode=None,
+                       files=None,
+                       target_dir=None,
+                       unknown_dir=None,
+                       tmdb_info=None,
+                       media_type=None,
+                       season=None,
+                       episode=None,
+                       min_filesize=None,
+                       udf_flag=False,
+                       root_path=False):
+        """
+        识别并转移一个文件、多个文件或者目录
+        委托给 TransferCoordinator 处理
+        """
+        return self._coordinator.transfer_media(
+            in_from=in_from,
+            in_path=in_path,
+            rmt_mode=rmt_mode,
+            files=files,
+            target_dir=target_dir,
+            unknown_dir=unknown_dir,
+            tmdb_info=tmdb_info,
+            media_type=media_type,
+            season=season,
+            episode=episode,
+            min_filesize=min_filesize,
+            udf_flag=udf_flag,
+            root_path=root_path
+        )
+
+    def transfer_manually(self, s_path, t_path, mode):
+        """
+        全量转移，用于使用命令调用
+        委托给 TransferCoordinator 处理
+        """
+        return self._coordinator.transfer_manually(s_path, t_path, mode)
+
+    def get_transfer_info_by(self, tmdbid, season=None, season_episode=None):
+        """
+        查询转移历史记录
+        """
+        return self.transfer_repo.get_transfer_info_by(tmdbid=tmdbid,
+                                                       season=season,
+                                                       season_episode=season_episode)
+
+    def get_transfer_info_by_id(self, logid):
+        """
+        根据LogID查询转移历史记录
+        """
+        return self.transfer_repo.get_transfer_info_by_id(logid=logid)
+
+    def get_transfer_history(self, search, page, rownum):
+        """
+        查询转移历史记录
+        """
+        return self.transfer_repo.get_transfer_history(search=search, page=page, rownum=rownum)
+
+    def delete_transfer_log_by_id(self, logid):
+        """
+        删除转移历史记录
+        """
+        return self.transfer_repo.delete_transfer_log_by_id(logid=logid)
+
+    def delete_history(self, logids, flag=None):
+        """
+        删除识别记录及文件
+        """
+        for logid in logids:
+            transinfo = self.get_transfer_info_by_id(logid)
+            if transinfo:
+                self.delete_transfer_log_by_id(logid)
+                source_path = transinfo.SOURCE_PATH
+                source_filename = transinfo.SOURCE_FILENAME
+                media_info = {
+                    "type": transinfo.TYPE,
+                    "category": transinfo.CATEGORY,
+                    "title": transinfo.TITLE,
+                    "year": transinfo.YEAR,
+                    "tmdbid": transinfo.TMDBID,
+                    "season_episode": transinfo.SEASON_EPISODE
+                }
+                self.delete_transfer_blacklist(
+                    "%s/%s" % (source_path, source_filename))
+                dest = transinfo.DEST
+                dest_path = transinfo.DEST_PATH
+                dest_filename = transinfo.DEST_FILENAME
+                if flag in ["del_source", "del_all"]:
+                    del_flag, del_msg = self.delete_media_file(
+                        source_path, source_filename)
+                    if not del_flag:
+                        log.error(del_msg)
+                    else:
+                        log.info(del_msg)
+                        from app.plugins import EventManager
+                        EventManager().send_event(EventType.SourceFileDeleted, {
+                            "media_info": media_info,
+                            "path": source_path,
+                            "filename": source_filename
+                        })
+                if flag in ["del_dest", "del_all"]:
+                    if dest_path and dest_filename:
+                        del_flag, del_msg = self.delete_media_file(
+                            dest_path, dest_filename)
+                        if not del_flag:
+                            log.error(del_msg)
+                        else:
+                            log.info(del_msg)
+                            from app.plugins import EventManager
+                            EventManager().send_event(EventType.LibraryFileDeleted, {
+                                "media_info": media_info,
+                                "path": dest_path,
+                                "filename": dest_filename
+                            })
+                    else:
+                        meta_info = MetaInfo(title=source_filename)
+                        meta_info.title = transinfo.TITLE
+                        meta_info.category = transinfo.CATEGORY
+                        meta_info.year = transinfo.YEAR
+                        if transinfo.SEASON_EPISODE:
+                            meta_info.begin_season = int(
+                                str(transinfo.SEASON_EPISODE).replace("S", ""))
+                        if transinfo.TYPE == MediaType.MOVIE.value:
+                            meta_info.type = MediaType.MOVIE
+                        else:
+                            meta_info.type = MediaType.TV
+                        dest_path = self.get_dest_path_by_info(
+                            dest=dest, meta_info=meta_info)
+                        if dest_path and dest_path.find(meta_info.title) != -1:
+                            rm_parent_dir = False
+                            if not meta_info.get_season_list():
+                                try:
+                                    import shutil
+                                    shutil.rmtree(dest_path)
+                                    from app.plugins import EventManager
+                                    EventManager().send_event(EventType.LibraryFileDeleted, {
+                                        "media_info": media_info,
+                                        "path": dest_path
+                                    })
+                                except Exception as e:
+                                    from app.utils import ExceptionUtils
+                                    ExceptionUtils.exception_traceback(e)
+                            elif not meta_info.get_episode_string():
+                                try:
+                                    import shutil
+                                    shutil.rmtree(dest_path)
+                                    from app.plugins import EventManager
+                                    EventManager().send_event(EventType.LibraryFileDeleted, {
+                                        "media_info": media_info,
+                                        "path": dest_path
+                                    })
+                                except Exception as e:
+                                    from app.utils import ExceptionUtils
+                                    ExceptionUtils.exception_traceback(e)
+                                rm_parent_dir = True
+                            else:
+                                for dest_file in PathUtils.get_dir_files(dest_path):
+                                    file_meta_info = MetaInfo(
+                                        os.path.basename(dest_file))
+                                    if file_meta_info.get_episode_list() and set(
+                                            file_meta_info.get_episode_list()
+                                    ).issubset(set(meta_info.get_episode_list())):
+                                        try:
+                                            os.remove(dest_file)
+                                            from app.plugins import EventManager
+                                            EventManager().send_event(EventType.LibraryFileDeleted, {
+                                                "media_info": media_info,
+                                                "path": os.path.dirname(dest_file),
+                                                "filename": os.path.basename(dest_file)
+                                            })
+                                        except Exception as e:
+                                            from app.utils import ExceptionUtils
+                                            ExceptionUtils.exception_traceback(
+                                                e)
+                                rm_parent_dir = True
+                            if rm_parent_dir \
+                                    and not PathUtils.get_dir_files(os.path.dirname(dest_path), exts=RMT_MEDIAEXT):
+                                try:
+                                    import shutil
+                                    shutil.rmtree(os.path.dirname(dest_path))
+                                except Exception as e:
+                                    from app.utils import ExceptionUtils
+                                    ExceptionUtils.exception_traceback(e)
+
+    @staticmethod
+    def delete_media_file(filedir, filename):
+        """
+        删除媒体文件
+        """
+        try:
+            file = os.path.join(filedir, filename)
+            if os.path.exists(file):
+                os.remove(file)
+                if not os.listdir(filedir):
+                    shutil.rmtree(filedir)
+                return True, "删除成功"
+            else:
+                return False, "文件不存在"
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
+            return False, str(e)
+
+    def delete_transfer(self):
+        """
+        删除转移历史记录
+        """
+        return self.transfer_repo.delete_transfer()
+
+    def delete_transfer_unknown(self, tid):
+        """
+        删除未知转移记录
+        """
+        return self.transfer_repo.delete_transfer_unknown(tid=tid)
+
+    def get_unknown_info_by_id(self, tid):
+        """
+        根据ID查询未知转移记录
+        """
+        return self.transfer_repo.get_unknown_info_by_id(tid=tid)
+
+    def update_transfer_unknown_state(self, path):
+        """
+        更新未知转移记录状态
+        """
+        return self.transfer_repo.update_transfer_unknown_state(path=path)
+
+    def delete_transfer_blacklist(self, path):
+        """
+        删除黑名单记录
+        """
+        return self.transfer_repo.delete_transfer_blacklist(path=path)
+
+    def truncate_transfer_blacklist(self):
+        """
+        清空黑名单记录
+        """
+        return self.transfer_repo.truncate_transfer_blacklist()
+
+    def get_transfer_statistics(self, days=30):
+        """
+        查询转移统计
+        """
+        return self.transfer_repo.get_transfer_statistics(days=days)
+
+    def get_transfer_unknown_paths(self):
+        """
+        查询未知转移记录
+        """
+        return self.transfer_repo.get_transfer_unknown_paths()
+
+    def get_transfer_unknown_paths_by_page(self, search, page, rownum):
+        """
+        查询未知转移记录
+        """
+        return self.transfer_repo.get_transfer_unknown_paths_by_page(search=search, page=page, rownum=rownum)
+
+
+if __name__ == "__main__":
+    """
+    手工转移时，使用命名行调用
+    """
+    Config().init_syspath()
+
+    parser = argparse.ArgumentParser(description='文件转移工具')
+    parser.add_argument('-m', '--mode', dest='mode', required=True,
+                        help='转移模式：link copy softlink move rclone rclonecopy minio miniocopy')
+    parser.add_argument('-s', '--source', dest='s_path', required=True, help='硬链接源目录路径')
+    parser.add_argument('-d', '--target', dest='t_path', required=False, help='硬链接目的目录路径')
+    args = parser.parse_args()
+    if os.environ.get('NASTOOL_CONFIG'):
+        print("【Rmt】配置文件地址：%s" % os.environ.get('NASTOOL_CONFIG'))
+        print("【Rmt】源目录路径：%s" % args.s_path)
+        if args.t_path:
+            print("【Rmt】目的目录路径：%s" % args.t_path)
+        else:
+            print("【Rmt】目的目录为配置文件中的电影、电视剧媒体库目录")
+        FileTransferService().transfer_manually(args.s_path, args.t_path, args.mode)
+    else:
+        print("【Rmt】未设置环境变量，请先设置 NASTOOL_CONFIG 环境变量为配置文件地址")
