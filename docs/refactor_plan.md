@@ -184,7 +184,7 @@
 
 ## 4. P2 低优先级：配置、搜索与生命周期管理
 
-### 4.1 配置管理模块 (`config.py`)
+### 4.1 配置管理模块 (`config.py`) ✅ 已完成
 
 #### 4.1.1 现状问题
 
@@ -196,6 +196,13 @@
 1. 统一配置中心接口，移除 `@singleconfig` 或统一改用 `SingletonMeta`。
 2. 将 `sites.dat` 自动更新逻辑拆分到 `SiteDataUpdater`。
 3. 将图片 URL 代理逻辑拆分到 `ImageProxyHelper`。
+
+**完成状态**：
+- `@singleconfig` 已移除，`Config` 改用 `SingletonMeta` 实现单例，`Config()` 调用方式完全不变
+- `app/helper/site_data_updater.py`：`SiteDataUpdater` 封装 `sites.dat` 下载、版本比较、更新检查
+- `app/helper/image_proxy_helper.py`：`ImageProxyHelper` 封装 TMDB/豆瓣/Bangumi 图片代理 URL 生成
+- 调用方 `initializer.py`、`app/services/media_service.py`、`app/media/*.py` 等已迁移至直接调用新 Helper
+- 新增 `tests/services/test_config_refactor.py`（23 个用例全部通过）
 
 #### 4.1.3 关键代码位置
 
@@ -260,7 +267,7 @@
 | **P1** | `app/helper/db_helper.py` | 巨型 Facade、阻碍 Repository 模式落地 | 数据层现代化、提升可测试性 | ⏳ 待处理 |
 | **P1** | `app/rsschecker.py` | 与 BrushTask 类似的结构问题 | 统一任务模式、提升可扩展性 | ✅ 已完成 |
 | **P1** | `app/filter.py` | 数据与逻辑耦合、分支冗长 | 规则引擎化、单测友好 | ⏳ 待处理 |
-| **P2** | `config.py` | 单例不统一、职责混杂 | 配置中心清晰化 | ⏳ 待处理 |
+| **P2** | `config.py` | 单例不统一、职责混杂 | 配置中心清晰化 | ✅ 已完成 |
 | **P2** | `app/searcher.py` | 搜索流程过长、线程池混乱 | 搜索逻辑模块化 | ✅ 已完成 |
 | **P2** | 生命周期管理（跨模块） | 启停逻辑散落、不一致 | 统一优雅启停 | ✅ 已完成 |
 
