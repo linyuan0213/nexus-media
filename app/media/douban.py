@@ -275,7 +275,7 @@ class DouBan(metaclass=SingletonMeta):
                 # 转换为代理URL格式
                 try:
                     from config import Config
-                    if Config().get_image_proxy_enabled():
+                    if Config().get_config("app").get("enable_image_proxy", True):
                         cover_url = f"/img/douban/{urllib.parse.quote(cover_url, safe='')}"
                 except Exception:
                     pass
@@ -457,7 +457,7 @@ class DouBan(metaclass=SingletonMeta):
                 # 转换为代理URL格式
                 try:
                     from config import Config
-                    if Config().get_image_proxy_enabled():
+                    if Config().get_config("app").get("enable_image_proxy", True):
                         poster_path = f"/img/douban/{urllib.parse.quote(poster_path, safe='')}"
                 except Exception:
                     pass

@@ -2,6 +2,7 @@ import regex as re
 import cn2an
 from app.media.fanart import Fanart
 from config import ANIME_GENREIDS, DEFAULT_TMDB_IMAGE, Config
+from app.helper.image_proxy_helper import ImageProxyHelper
 from app.media.category import Category
 from app.utils import StringUtils, ExceptionUtils
 from app.utils.types import MediaType
@@ -577,11 +578,11 @@ class MetaBase(object):
             else:
                 self.category = self.category_handler.get_anime_category(info)
             # 自动根据代理设置选择图片尺寸
-            self.poster_path = Config().get_tmdbimage_url(
+            self.poster_path = ImageProxyHelper.get_tmdbimage_url(
                 info.get('poster_path'),
                 size='medium'  # 使用中等尺寸 w342
             ) if info.get('poster_path') else ""
-            self.backdrop_path = Config().get_tmdbimage_url(
+            self.backdrop_path = ImageProxyHelper.get_tmdbimage_url(
                 info.get('backdrop_path'),
                 size='large'  # 使用大尺寸 w500
             ) if info.get('backdrop_path') else ""

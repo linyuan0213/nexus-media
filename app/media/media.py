@@ -1,4 +1,5 @@
 import difflib
+from app.helper.image_proxy_helper import ImageProxyHelper
 import os
 import random
 import re
@@ -1072,7 +1073,7 @@ class Media:
             else:
                 name = info.get("name")
             tmdbid = info.get("id")
-            image = Config().get_tmdbimage_url(info.get("profile_path"), prefix="h632") \
+            image = ImageProxyHelper.get_tmdbimage_url(info.get("profile_path"), prefix="h632") \
                 if info.get("profile_path") else ""
             ret_infos.append({
                 "id": tmdbid,
@@ -1093,7 +1094,7 @@ class Media:
         for info in infos:
             tmdbid = info.get("id")
             vote = round(float(info.get("vote_average")), 1) if info.get("vote_average") else 0,
-            image = Config().get_tmdbimage_url(info.get("poster_path"))
+            image = ImageProxyHelper.get_tmdbimage_url(info.get("poster_path"))
             if poster_filter and not image:
                 continue
             overview = info.get("overview")
@@ -1614,7 +1615,7 @@ class Media:
                 "id": info.get("id"),
                 "name": info.get("name"),
                 "overview": info.get("overview"),
-                "poster_path": Config().get_tmdbimage_url(info.get("poster_path")) if info.get("poster_path") else "",
+                "poster_path": ImageProxyHelper.get_tmdbimage_url(info.get("poster_path")) if info.get("poster_path") else "",
                 "season_number": info.get("season_number")
             })
         ret_info.reverse()
@@ -1663,7 +1664,7 @@ class Media:
                 "runtime": info.get("runtime"),
                 "season_number": info.get("season_number"),
                 "show_id": info.get("show_id"),
-                "still_path": Config().get_tmdbimage_url(info.get("still_path")) if info.get("still_path") else "",
+                "still_path": ImageProxyHelper.get_tmdbimage_url(info.get("still_path")) if info.get("still_path") else "",
                 "vote_average": info.get("vote_average")
             })
         ret_info.reverse()
@@ -1733,8 +1734,8 @@ class Media:
         """
         if not tmdbinfo:
             return []
-        prefix_url = Config().get_tmdbimage_url(r"%s", prefix="original") \
-            if original else Config().get_tmdbimage_url(r"%s")
+        prefix_url = ImageProxyHelper.get_tmdbimage_url(r"%s", prefix="original") \
+            if original else ImageProxyHelper.get_tmdbimage_url(r"%s")
         backdrops = tmdbinfo.get("images", {}).get("backdrops") or []
         result = [prefix_url % backdrop.get("file_path") for backdrop in backdrops]
         result.append(prefix_url % tmdbinfo.get("backdrop_path"))
@@ -1770,7 +1771,7 @@ class Media:
             "name": crew.get("name"),
             "original_name": crew.get("original_name"),
             "popularity": crew.get("popularity"),
-            "image": Config().get_tmdbimage_url(crew.get("profile_path"), prefix="h632"),
+            "image": ImageProxyHelper.get_tmdbimage_url(crew.get("profile_path"), prefix="h632"),
             "credit_id": crew.get("credit_id"),
             "department": crew.get("department"),
             "job": crew.get("job"),
@@ -1789,7 +1790,7 @@ class Media:
             "name": cast.get("name"),
             "original_name": cast.get("original_name"),
             "popularity": cast.get("popularity"),
-            "image": Config().get_tmdbimage_url(cast.get("profile_path"), prefix="h632"),
+            "image": ImageProxyHelper.get_tmdbimage_url(cast.get("profile_path"), prefix="h632"),
             "cast_id": cast.get("cast_id"),
             "role": cast.get("character"),
             "credit_id": cast.get("credit_id"),
@@ -2339,7 +2340,7 @@ class Media:
             if medias:
                 # 随机一个电影
                 media = random.choice(medias)
-                img_url = Config().get_tmdbimage_url(media.get("backdrop_path"), prefix="original") \
+                img_url = ImageProxyHelper.get_tmdbimage_url(media.get("backdrop_path"), prefix="original") \
                     if media.get("backdrop_path") else ''
                 img_title = media.get('title', '')
                 img_link = f"https://www.themoviedb.org/movie/{media.get('id')}" if media.get('id') else ''
@@ -2401,9 +2402,9 @@ class Media:
         res = self.episode.images(tv_id, season_id, episode_id)
         if res:
             if orginal:
-                return Config().get_tmdbimage_url(res[-1].get("file_path"), prefix="original")
+                return ImageProxyHelper.get_tmdbimage_url(res[-1].get("file_path"), prefix="original")
             else:
-                return Config().get_tmdbimage_url(res[-1].get("file_path"))
+                return ImageProxyHelper.get_tmdbimage_url(res[-1].get("file_path"))
         else:
             return ""
 

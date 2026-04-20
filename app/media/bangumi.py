@@ -70,7 +70,7 @@ class Bangumi(object):
         if image:
             try:
                 from config import Config
-                if Config().get_image_proxy_enabled():
+                if Config().get_config("app").get("enable_image_proxy", True):
                     image = f"/img/bgm/{urllib.parse.quote(image, safe='')}"
             except Exception:
                 pass

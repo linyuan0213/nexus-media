@@ -12,6 +12,7 @@ import log
 from app.conf import SystemConfig
 from app.db.repositories import ConfigRepository, DownloadRepository
 from app.helper import PluginHelper
+from app.helper.site_data_updater import SiteDataUpdater
 from app.plugins import PluginManager
 from app.media import Category
 from app.utils import ConfigLoadCache, CategoryLoadCache, ExceptionUtils, StringUtils
@@ -237,18 +238,22 @@ def stop_config_monitor():
 
 def update_sites_data():
     try:
-        Config().update_sites_data()
+        cfg = Config()
+        SiteDataUpdater.update_sites_data(
+            cfg._config_path, cfg.get_temp_path(), cfg.get_inner_config_path(),
+            proxies=cfg.get_proxies()
+        )
         log.info("站点资源数据已更新...")
-    except redis.exceptions.ConnectionError:
-        log.error("站点资源更新失败 ..")
+    except Exception as e:
+        log.error(f"站点资源更新失败 .. {str(e)}")
 
 def check_redis():
     try:
         redis_store = RedisStore()
         redis_store.ping()
         log.info("Redis 正在运行...")
-    except redis.exceptions.ConnectionError:
-        log.error("Redis 无法连接，请启动 Redis...")
+    except Exception as e:
+        log.error(f"Redis 无法连接，请启动 Redis... {str(e)}")
         exit(1)
 
 

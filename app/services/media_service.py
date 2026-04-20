@@ -31,6 +31,7 @@ from app.schemas.media import (
 )
 from app.utils import StringUtils, SystemUtils, ExceptionUtils
 from app.utils.types import MediaType, MovieTypes, EventType, SystemConfigKey
+from app.helper.image_proxy_helper import ImageProxyHelper
 from config import Config
 from web.backend.web_utils import WebUtils
 from web.cache import cache
@@ -148,7 +149,9 @@ class MediaInfoService:
                                                          tmdbid=mediaid)
 
         if poster_path:
-            poster_path = Config().get_proxy_image_url(poster_path)
+            poster_path = ImageProxyHelper.get_proxy_image_url(
+                poster_path, use_proxy=Config().get_config("app").get("enable_image_proxy", True)
+            )
 
         return MediaInfoResultDTO(
             type=mtype, type_str=media_type.value, page=page,
@@ -228,7 +231,7 @@ class MediaInfoService:
                 return None
             if not tmdb_info:
                 return None
-            poster_path = Config().get_tmdbimage_url(tmdb_info.get('poster_path')) \
+            poster_path = ImageProxyHelper.get_tmdbimage_url(tmdb_info.get('poster_path')) \
                 if tmdb_info.get('poster_path') else ""
             title = tmdb_info.get('title')
             vote_average = tmdb_info.get("vote_average")
@@ -269,11 +272,11 @@ class MediaInfoService:
             if not tmdb_info.get("poster_path"):
                 tv_tmdb_info = self._media.get_tmdb_info(mtype=MediaType.TV, tmdbid=tid)
                 if tv_tmdb_info:
-                    poster_path = Config().get_tmdbimage_url(tv_tmdb_info.get('poster_path'))
+                    poster_path = ImageProxyHelper.get_tmdbimage_url(tv_tmdb_info.get('poster_path'))
                 else:
                     poster_path = ""
             else:
-                poster_path = Config().get_tmdbimage_url(tmdb_info.get('poster_path'))
+                poster_path = ImageProxyHelper.get_tmdbimage_url(tmdb_info.get('poster_path'))
             year = air_date[0:4] if air_date else ""
             events = []
             episodes = tmdb_info.get("episodes") or []
@@ -315,7 +318,9 @@ class MediaInfoService:
                     season.update({"state": False})
         poster_image = media_info.get_poster_image()
         if poster_image:
-            poster_image = Config().get_proxy_image_url(poster_image)
+            poster_image = ImageProxyHelper.get_proxy_image_url(
+                poster_image, use_proxy=Config().get_config("app").get("enable_image_proxy", True)
+            )
         return {
             "tmdbid": media_info.tmdb_id,
             "douban_id": media_info.douban_id,
