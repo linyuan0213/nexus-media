@@ -6,13 +6,13 @@ from time import sleep
 import pytz
 from jinja2 import Template
 
-from app.downloader import Downloader
+from app.services.downloader_core import DownloaderCore as Downloader
 from app.media import DouBan
 from app.media.meta import MetaInfo
 from app.plugins import EventHandler
 from app.plugins.modules._base import _IPluginModule
-from app.searcher import Searcher
-from app.subscribe import Subscribe
+from app.services.search_service import Searcher
+from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import ExceptionUtils
 from app.utils.types import SearchType, RssType, EventType, MediaType
 from config import Config

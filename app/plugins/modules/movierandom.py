@@ -12,7 +12,7 @@ from app.helper import RssHelper
 from app.media import Media
 from app.mediaserver import MediaServer
 from app.plugins.modules._base import _IPluginModule
-from app.subscribe import Subscribe
+from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils.types import SearchType, RssType, MediaType
 from config import Config
 

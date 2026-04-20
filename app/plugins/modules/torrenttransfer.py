@@ -7,7 +7,7 @@ import pytz
 from apscheduler.triggers.cron import CronTrigger
 from bencode import bdecode, bencode
 
-from app.downloader import Downloader
+from app.services.downloader_core import DownloaderCore as Downloader
 from app.entities import torrent
 from app.entities.torrentstatus import TorrentStatus
 from app.media.meta import MetaInfo

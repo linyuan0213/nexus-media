@@ -7,7 +7,7 @@ import os
 from typing import List, Optional, Tuple
 
 import log
-from app.downloader import Downloader
+from app.services.downloader_core import DownloaderCore as Downloader
 from app.indexer import Indexer
 from app.media import Media
 from app.media.meta import MetaInfo
@@ -16,9 +16,9 @@ from app.schemas.download import (
     DownloadingTorrentDTO,
     IndexerStatisticsDTO,
 )
-from app.searcher import Searcher
+from app.services.search_service import Searcher
 from app.sites import Sites
-from app.torrentremover import TorrentRemover
+from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
 from app.utils import ExceptionUtils, Torrent
 from app.utils.temp_manager import temp_manager
 from app.utils.types import SearchType

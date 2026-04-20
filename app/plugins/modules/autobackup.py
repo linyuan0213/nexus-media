@@ -10,7 +10,7 @@ from threading import Event
 from app.plugins.modules._base import _IPluginModule
 from app.utils import SystemUtils
 from config import Config
-from app.system_service import backup
+from app.services.system_service import backup
 
 from app.plugins.modules._autobackup.filestorage_client import FileClientFactory
 

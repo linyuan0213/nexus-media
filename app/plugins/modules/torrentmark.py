@@ -4,7 +4,7 @@ from threading import Event
 import pytz
 from apscheduler.triggers.cron import CronTrigger
 
-from app.downloader import Downloader
+from app.services.downloader_core import DownloaderCore as Downloader
 from app.entities.torrent import Torrent
 from app.message import Message
 from app.plugins.modules._base import _IPluginModule

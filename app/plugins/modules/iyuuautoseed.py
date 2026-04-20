@@ -9,7 +9,7 @@ from apscheduler.triggers.cron import CronTrigger
 from jinja2 import Template
 from lxml import etree
 
-from app.downloader import Downloader
+from app.services.downloader_core import DownloaderCore as Downloader
 from app.entities.torrent import Torrent
 from app.entities.torrentstatus import TorrentStatus
 from app.media.meta import MetaInfo

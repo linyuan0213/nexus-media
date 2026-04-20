@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 """
 SystemService - 系统管理业务层
-将 web/controllers/system.py 中的备份恢复、消息客户端、索引器配置、
-媒体服务器配置、网络测试、调度、搜索等业务逻辑下沉到可独立测试的 Service。
+将 web/controllers/system.py 与 app/system_service.py 中的系统逻辑下沉到可独立测试的 Service。
 """
 import datetime
 import json
 import os
 import shutil
+import subprocess
 import tempfile
+import time
+from pathlib import Path
 from typing import Optional, Tuple
 
 import log
@@ -16,13 +18,16 @@ from app.conf import SystemConfig
 from app.db.database_factory import DatabaseFactory
 from app.db.migrate import import_from_file, export_database, import_database
 from app.db.repositories import ConfigRepository
-from app.downloader import Downloader
+from app.domain.engine.brush_rule_engine import BrushRuleEngine
+from app.services.downloader_core import DownloaderCore as Downloader
+from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.helper import SubmoduleHelper
 from app.helper.thread_helper import ThreadHelper
 from app.indexer import Indexer
 from app.mediaserver import MediaServer
-from app.message import Message
-from app.rss import Rss
+from app.message import Message, MessageCenter
+from app.plugins import PluginManager, EventManager
+from app.services.rss_core import Rss
 from app.schemas.system import (
     BackupRestoreResultDTO,
     NetTestResultDTO,
@@ -31,15 +36,16 @@ from app.schemas.system import (
     WebSearchResultDTO,
     VersionInfoDTO,
 )
-from app.subscribe import Subscribe
-from app.sync import Sync
+from app.sites import SiteUserInfo
+from app.services.subscribe_service import SubscribeService as Subscribe
+from app.services.sync_core import SyncCore as Sync
+from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
 from app.utils import ExceptionUtils, RequestUtils
-from app.utils.types import MediaType, MovieTypes
+from app.utils.types import MediaType, MovieTypes, SearchType, EventType
 from app.utils.temp_manager import temp_manager
 from config import Config
 from sqlalchemy import create_engine
-from web.backend.search_torrents import search_medias_for_web
-from web.backend.user import User
+from web.backend.search_torrents import search_medias_for_web, search_media_by_message
 from web.backend.web_utils import WebUtils
 from web.cache import cache
 
@@ -382,3 +388,260 @@ class VersionService:
                 version=version or "", url=url or "", has_update=True
             )
         return VersionInfoDTO(version="", url="", has_update=False)
+
+
+# ---------- 以下从原 app/system_service.py 迁移 ----------
+
+class SystemLifecycleService:
+    """
+    系统生命周期管理服务（原 app/system_service.py 顶层函数提取）
+    职责：统一管理系统各服务的启动、停止、重启。
+    """
+
+    def __init__(self,
+                 scheduler_core=None,
+                 sync=None,
+                 brush_task_service=None,
+                 rss_checker=None,
+                 torrent_remover=None,
+                 downloader=None,
+                 plugin_manager=None):
+        from app.services.scheduler_core import SchedulerCore
+        from app.services.brush_core import BrushTaskService
+        from app.services.rss_service import RssTaskService
+        self._scheduler = scheduler_core or SchedulerCore()
+        # 保存外部注入的依赖（测试时传入 mock），不在 __init__ 中实例化
+        self._sync = sync
+        self._brush = brush_task_service
+        self._rss_checker = rss_checker
+        self._torrent_remover = torrent_remover
+        self._downloader = downloader
+        self._plugin_manager = plugin_manager
+
+    def start_service(self) -> None:
+        """启动所有后台服务（调度器优先启动，确保后续模块注册任务时调度器已就绪）"""
+        from app.helper import IndexerHelper
+        from app.sites import SiteConf
+        from app.services.brush_core import BrushTaskService
+        from app.services.rss_service import RssTaskService
+        # 1. 先启动调度器，确保所有后台服务的定时任务可以正常注册
+        self._scheduler.start_service(load_defaults=True)
+        # 2. 加载基础组件
+        IndexerHelper()
+        SiteConf()
+        # 3. 启动各业务服务（此时调度器已运行，init_config 里的 stop/start_job 可正常执行）
+        if self._sync is None:
+            self._sync = Sync()
+        if self._brush is None:
+            self._brush = BrushTaskService()
+        if self._rss_checker is None:
+            self._rss_checker = RssTaskService()
+        if self._torrent_remover is None:
+            self._torrent_remover = TorrentRemover()
+        if self._downloader is None:
+            self._downloader = Downloader()
+        if self._plugin_manager is None:
+            self._plugin_manager = PluginManager()
+        self._sync.init_config()
+        self._brush.init_config()
+        self._rss_checker.init_config()
+        self._torrent_remover.init_config()
+
+    def stop_service(self) -> None:
+        """停止所有后台服务"""
+        self._scheduler.stop_service()
+        if self._sync:
+            self._sync.stop_service()
+        if self._brush:
+            self._brush.stop_service()
+        if self._rss_checker:
+            self._rss_checker.stop_service()
+        if self._torrent_remover:
+            self._torrent_remover.stop_service()
+        if self._downloader:
+            self._downloader.stop_service()
+        if self._plugin_manager:
+            self._plugin_manager.stop_service()
+
+    def restart_service(self) -> None:
+        """重启所有后台服务"""
+        self.stop_service()
+        self.start_service()
+
+    @staticmethod
+    def restart_server() -> None:
+        """停止进程并重启服务器"""
+        SystemLifecycleService().stop_service()
+        script_path = os.path.join(os.getcwd(), 'restart-server.sh')
+        os.chmod(script_path, 0o755)
+        res = subprocess.run(['bash', script_path], cwd=os.getcwd())
+        if res.returncode == 0:
+            log.info("Nastool 重启成功...")
+        else:
+            log.info(f"Nastool 重启失败: {res.stderr.decode()}")
+
+
+class MessageCommandHandler:
+    """
+    消息命令处理器（原 app/system_service.py 中的类）
+    """
+
+    def __init__(self):
+        self._commands = {
+            "/ptr": {"func": TorrentRemover().auto_remove_torrents, "desc": "自动删种"},
+            "/ptt": {"func": Downloader().transfer, "desc": "下载文件转移"},
+            "/rst": {"func": Sync().transfer_sync, "desc": "目录同步"},
+            "/rss": {"func": Rss().rssdownload, "desc": "电影/电视剧订阅"},
+            "/ssa": {"func": Subscribe().subscribe_search_all, "desc": "订阅搜索"},
+            "/tbl": {"func": FileTransfer().truncate_transfer_blacklist, "desc": "清理转移缓存"},
+            "/trh": {"func": self._truncate_rsshistory, "desc": "清理RSS缓存"},
+            "/utf": {"func": self._unidentification, "desc": "重新识别"},
+            "/udt": {"func": SystemLifecycleService.restart_server, "desc": "系统更新"},
+            "/sta": {"func": self._user_statistics, "desc": "站点数据统计"},
+        }
+
+    def handle_message_job(self, msg, in_from=SearchType.OT, user_id=None, user_name=None):
+        """处理消息事件"""
+        if not msg:
+            return
+
+        EventManager().send_event(EventType.MessageIncoming, {
+            "channel": in_from.value,
+            "user_id": user_id,
+            "user_name": user_name,
+            "message": msg
+        })
+
+        command = self._commands.get(msg)
+        if command:
+            ThreadHelper().start_thread(command.get("func"), ())
+            Message().send_channel_msg(
+                channel=in_from, title="正在运行 %s ..." % command.get("desc"), user_id=user_id)
+            return
+
+        plugin_commands = PluginManager().get_plugin_commands()
+        msg_list = msg.split(" ")
+        for command in plugin_commands:
+            if command.get("cmd") == msg_list[0]:
+                event_data = command.get("data") or {
+                    "msg": msg_list[0] if len(msg_list) == 1 else msg_list[1]}
+                EventManager().send_event(command.get("event"), event_data)
+                Message().send_channel_msg(
+                    channel=in_from, title="正在运行 %s ..." % command.get("desc"), user_id=user_id)
+                return
+
+        cache.delete("search")
+        ThreadHelper().start_thread(search_media_by_message,
+                                    (msg, in_from, user_id, user_name))
+
+    @staticmethod
+    def _truncate_rsshistory():
+        from app.helper import RssHelper
+        RssHelper().truncate_rss_history()
+        Subscribe().truncate_rss_episodes()
+
+    @staticmethod
+    def _user_statistics():
+        cache.delete("statistics")
+        SiteUserInfo().refresh_site_data_now()
+
+    @staticmethod
+    def _unidentification():
+        from web.controllers.sync import re_identification
+        ItemIds = []
+        Records = FileTransfer().get_transfer_unknown_paths()
+        for rec in Records:
+            if not rec.PATH:
+                continue
+            ItemIds.append(rec.ID)
+        if len(ItemIds) > 0:
+            re_identification({"flag": "unidentification", "ids": ItemIds})
+
+
+def get_commands():
+    """获取命令列表"""
+    handler = MessageCommandHandler()
+    return [{
+        "id": cid,
+        "name": cmd.get("desc")
+    } for cid, cmd in handler._commands.items()] + [{
+        "id": item.get("cmd"),
+        "name": item.get("desc")
+    } for item in PluginManager().get_plugin_commands()]
+
+
+def get_rmt_modes():
+    from app.conf import ModuleConf
+    from app.utils import SystemUtils
+    RmtModes = ModuleConf.RMT_MODES_LITE if SystemUtils.is_lite_version(
+    ) else ModuleConf.RMT_MODES
+    return [{
+        "value": value,
+        "name": name.value
+    } for value, name in RmtModes.items()]
+
+
+def get_system_message(lst_time):
+    messages = MessageCenter().get_system_messages(lst_time=lst_time)
+    if messages:
+        lst_time = messages[0].get("time")
+    return {"code": 0, "message": messages, "lst_time": lst_time}
+
+
+def parse_brush_rule_string(rules):
+    return BrushRuleEngine.format_rule_html(rules)
+
+
+def backup(full_backup=False, bk_path=None):
+    """
+    @param full_backup  是否完整备份（保留参数兼容性，当前始终完整备份）
+    @param bk_path     自定义备份路径
+    """
+    try:
+        config_path = Path(Config().get_config_path())
+        backup_file = f"bk_{time.strftime('%Y%m%d%H%M%S')}"
+        if bk_path:
+            backup_path = Path(bk_path) / backup_file
+        else:
+            backup_path = config_path / "backup_file" / backup_file
+        backup_path.mkdir(parents=True)
+        shutil.copy(f'{config_path}/config.yaml', backup_path)
+        shutil.copy(f'{config_path}/default-category.yaml', backup_path)
+
+        db_type = DatabaseFactory._get_config_db_type()
+        engine = DatabaseFactory.create_engine()
+        if db_type == DatabaseFactory.SQLITE:
+            shutil.copy(f'{config_path}/user.db', backup_path)
+        from app.db.migrate import export_to_file
+        export_to_file(engine, str(backup_path / 'user_db_export.json'))
+        engine.dispose()
+
+        zip_file = str(backup_path) + '.zip'
+        if os.path.exists(zip_file):
+            zip_file = str(backup_path) + '.zip'
+        shutil.make_archive(str(backup_path), 'zip', str(backup_path))
+        shutil.rmtree(str(backup_path))
+        return zip_file
+    except Exception as e:
+        ExceptionUtils.exception_traceback(e)
+        return None
+
+
+def start_service():
+    """启动所有后台服务（顶层兼容函数）"""
+    SystemLifecycleService().start_service()
+
+
+def stop_service():
+    """停止所有后台服务（顶层兼容函数）"""
+    SystemLifecycleService().stop_service()
+
+
+def restart_service():
+    """重启所有后台服务（顶层兼容函数）"""
+    SystemLifecycleService().restart_service()
+
+
+def restart_server():
+    """重启服务器（顶层兼容函数）"""
+    SystemLifecycleService.restart_server()

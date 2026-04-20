@@ -28,9 +28,9 @@ from flask_session import Session
 from app.helper.drissionpage_helper import DrissionPageHelper
 from app.helper.tmdb_blacklist_helper import TmdbBlacklistHelper
 import log
-from app.brushtask import BrushTask
+from app.services.brush_core import BrushTaskService as BrushTask
 from app.conf import ModuleConf, SystemConfig
-from app.downloader import Downloader
+from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.helper import SecurityHelper, ThreadHelper
 from app.indexer import Indexer
@@ -40,9 +40,9 @@ from app.message import Message
 from app.plugins import EventManager
 from app.services.rss_service import RssTaskService as RssChecker
 from app.sites import Sites, SiteUserInfo
-from app.subscribe import Subscribe
-from app.sync import Sync
-from app.torrentremover import TorrentRemover
+from app.services.subscribe_service import SubscribeService as Subscribe
+from app.services.sync_core import SyncCore as Sync
+from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
 from app.utils import DomUtils, SystemUtils, ExceptionUtils, StringUtils
 from app.utils.types import SystemConfigKey, OsType, MediaServerType, EventType, SearchType, RssType, MediaType
 from config import PT_TRANSFER_INTERVAL, REDIS_HOST, REDIS_PORT, Config, TMDB_API_DOMAINS
@@ -57,7 +57,11 @@ from web.controllers.rbac import get_users, get_top_menus, get_user_menus
 from web.controllers.filter import get_filterrules
 from web.controllers.plugin import get_plugins_conf
 from web.controllers.system import refresh_process
-from app.system_service import start_service, get_rmt_modes, get_commands, get_system_message, backup as do_backup, parse_brush_rule_string, MessageCommandHandler
+from app.services.system_service import (
+    SystemLifecycleService, get_rmt_modes, get_commands,
+    get_system_message, backup as do_backup,
+    parse_brush_rule_string, MessageCommandHandler
+)
 from web.backend.image_proxy import img_blueprint
 from web.backend.WXBizMsgCrypt3 import WXBizMsgCrypt
 from web.backend.user import User
@@ -144,7 +148,7 @@ with App.app_context():
     warm_cache_on_startup(async_mode=False)
     log.console("开始启动服务...")
     # 启动服务
-    start_service()
+    SystemLifecycleService().start_service()
 
 
 # 注册RBAC模板上下文处理器

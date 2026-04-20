@@ -5,8 +5,10 @@ WebAction 入口类新形态
 2. 消息命令处理（handle_message_job）—— 被 webhook / websocket 调用
 3. 少量被模板过滤器直接引用的静态工具方法
 """
-from app.system_service import start_service, stop_service, restart_service, restart_server
-from app.system_service import MessageCommandHandler, get_commands, get_rmt_modes, parse_brush_rule_string
+from app.services.system_service import (
+    start_service, stop_service, restart_service, restart_server,
+    MessageCommandHandler, get_commands, get_rmt_modes, parse_brush_rule_string
+)
 from web.core.action_utils import mediainfo_dict, delete_media_file, get_media_exists_info, set_config_value, set_config_directory
 
 

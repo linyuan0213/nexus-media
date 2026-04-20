@@ -1,7 +1,7 @@
 from apscheduler.triggers.cron import CronTrigger
 
 from app.plugins.modules._base import _IPluginModule
-from app.sync import Sync
+from app.services.sync_core import SyncCore as Sync
 
 
 

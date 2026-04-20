@@ -1,7 +1,7 @@
 import os
 import time
 
-from app.filetransfer import FileTransfer
+from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.media import Media
 from app.plugins import EventHandler
 from app.plugins.modules._base import _IPluginModule

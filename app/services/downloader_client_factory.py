@@ -1,0 +1,377 @@
+# -*- coding: utf-8 -*-
+"""
+DownloadClientFactory - 下载器客户端工厂
+
+职责：
+- 下载器客户端类型注册与实例创建
+- 下载器配置加载与管理
+- 下载设置加载与管理
+- 客户端实例缓存（线程安全）
+
+移除 SingletonMeta，改为普通类 + 依赖注入。
+"""
+import json
+from enum import Enum
+from threading import Lock
+from typing import Optional
+
+import log
+from app.conf import ModuleConf, SystemConfig
+from app.conf.systemconfig import SystemConfig as SystemConfigClass
+from app.db.repositories import ConfigRepository, DownloadRepository
+from app.downloader.client._base import _IDownloadClient
+from app.helper import SubmoduleHelper
+from app.utils.types import DownloaderType, SystemConfigKey
+from config import Config, PT_TAG
+
+client_lock = Lock()
+
+
+class DownloadClientFactory:
+    """
+    下载器客户端工厂
+
+    管理下载器 schema、配置、客户端实例缓存。
+    """
+
+    def __init__(self,
+                 config_repo: Optional[ConfigRepository] = None,
+                 download_repo: Optional[DownloadRepository] = None,
+                 systemconfig: Optional[SystemConfigClass] = None):
+        self._config_repo = config_repo or ConfigRepository()
+        self._download_repo = download_repo or DownloadRepository()
+        self._systemconfig = systemconfig or SystemConfig()
+
+        # 下载器类型 schema（从子模块动态加载）
+        self._downloader_schema = SubmoduleHelper.import_submodules(
+            'app.downloader.client',
+            filter_func=lambda _, obj: hasattr(obj, 'client_id')
+        )
+        log.debug(f"【Downloader】加载下载器类型：{self._downloader_schema}")
+
+        # 客户端实例缓存 {downloader_id: client_instance}
+        self._clients = {}
+
+        # 下载器配置 {downloader_id: conf_dict}
+        self._downloader_confs = {}
+
+        # 监控下载器ID列表
+        self._monitor_downloader_ids = []
+
+        # 下载器ID-名称枚举类
+        self._downloader_enum = None
+
+        # 下载设置 {setting_id: setting_dict}
+        self._download_settings = {}
+
+        # 全局下载顺序
+        self._download_order = None
+
+        # jobstore 标识
+        self._jobstore = 'download'
+
+        self.init_config()
+
+    # ---------- 配置加载 ----------
+
+    def init_config(self):
+        """重新加载所有下载器配置和下载设置"""
+        self._clients.clear()
+        self._downloader_confs = {}
+        self._monitor_downloader_ids = []
+
+        for downloader_conf in self._config_repo.get_downloaders():
+            if not downloader_conf:
+                continue
+            did = downloader_conf.ID
+            name = downloader_conf.NAME
+            enabled = downloader_conf.ENABLED
+            transfer = downloader_conf.TRANSFER
+            only_nastool = downloader_conf.ONLY_NASTOOL
+            match_path = downloader_conf.MATCH_PATH
+            rmt_mode = downloader_conf.RMT_MODE
+            rmt_mode_name = ModuleConf.RMT_MODES.get(rmt_mode).value if rmt_mode else ""
+
+            if transfer:
+                log_content = ""
+                if only_nastool:
+                    log_content += "启用标签隔离，"
+                if match_path:
+                    log_content += "启用目录隔离，"
+                log.info(f"【Downloader】读取到监控下载器：{name}{log_content}转移方式：{rmt_mode_name}")
+                if enabled:
+                    self._monitor_downloader_ids.append(did)
+                else:
+                    log.info(f"【Downloader】下载器：{name} 不进行监控：下载器未启用")
+
+            config = json.loads(downloader_conf.CONFIG)
+            dtype = downloader_conf.TYPE
+            self._downloader_confs[str(did)] = {
+                "id": did,
+                "name": name,
+                "type": dtype,
+                "enabled": enabled,
+                "transfer": transfer,
+                "only_nastool": only_nastool,
+                "match_path": match_path,
+                "rmt_mode": rmt_mode,
+                "rmt_mode_name": rmt_mode_name,
+                "config": config,
+                "download_dir": json.loads(downloader_conf.DOWNLOAD_DIR)
+            }
+
+        # 生成枚举
+        self._downloader_enum = Enum(
+            'DownloaderIdName',
+            {did: conf.get("name") for did, conf in self._downloader_confs.items()}
+        )
+
+        # 下载顺序
+        pt = Config().get_config('pt')
+        if pt:
+            self._download_order = pt.get("download_order")
+
+        # 下载设置
+        self._download_settings = {
+            "-1": {
+                "id": -1,
+                "name": "预设",
+                "category": '',
+                "tags": PT_TAG,
+                "is_paused": 0,
+                "upload_limit": 0,
+                "download_limit": 0,
+                "ratio_limit": 0,
+                "seeding_time_limit": 0,
+                "downloader": "",
+                "downloader_name": "",
+                "downloader_type": ""
+            }
+        }
+        download_settings = self._download_repo.get_download_setting()
+        for download_setting in download_settings:
+            downloader_id = download_setting.DOWNLOADER
+            download_conf = self._downloader_confs.get(str(downloader_id))
+            if download_conf:
+                downloader_name = download_conf.get("name")
+                downloader_type = download_conf.get("type")
+            else:
+                downloader_name = ""
+                downloader_type = ""
+                downloader_id = ""
+            self._download_settings[str(download_setting.ID)] = {
+                "id": download_setting.ID,
+                "name": download_setting.NAME,
+                "category": download_setting.CATEGORY,
+                "tags": download_setting.TAGS,
+                "is_paused": download_setting.IS_PAUSED,
+                "upload_limit": download_setting.UPLOAD_LIMIT,
+                "download_limit": download_setting.DOWNLOAD_LIMIT,
+                "ratio_limit": download_setting.RATIO_LIMIT / 100,
+                "seeding_time_limit": download_setting.SEEDING_TIME_LIMIT,
+                "downloader": downloader_id,
+                "downloader_name": downloader_name,
+                "downloader_type": downloader_type
+            }
+
+    # ---------- 客户端构建 ----------
+
+    def _build_class(self, ctype, conf=None):
+        """根据类型名构建客户端类实例"""
+        for downloader_schema in self._downloader_schema:
+            try:
+                if downloader_schema.match(ctype):
+                    return downloader_schema(conf)
+            except Exception as e:
+                from app.utils import ExceptionUtils
+                ExceptionUtils.exception_traceback(e)
+        return None
+
+    def get_client(self, did=None) -> Optional[_IDownloadClient]:
+        """获取（或创建）下载器客户端实例"""
+        if not did:
+            return None
+        downloader_conf = self.get_downloader_conf(did)
+        if not downloader_conf:
+            log.info("【Downloader】下载器配置不存在")
+            return None
+        if not downloader_conf.get("enabled"):
+            log.info(f"【Downloader】下载器 {downloader_conf.get('name')} 未启用")
+            return None
+        ctype = downloader_conf.get("type")
+        config = downloader_conf.get("config")
+        config["download_dir"] = downloader_conf.get("download_dir")
+        config["name"] = downloader_conf.get("name")
+        with client_lock:
+            if not self._clients.get(str(did)):
+                self._clients[str(did)] = self._build_class(ctype, config)
+            return self._clients.get(str(did))
+
+    def get_client_type(self, downloader_id=None):
+        """获取下载器的类型枚举"""
+        if not downloader_id:
+            return self.default_client.get_type()
+        client = self.get_client(downloader_id)
+        return client.get_type() if client else None
+
+    @property
+    def default_downloader_id(self):
+        """获取默认下载器id"""
+        default_downloader_id = self._systemconfig.get(SystemConfigKey.DefaultDownloader)
+        if not default_downloader_id or not self.get_downloader_conf(default_downloader_id):
+            default_downloader_id = ""
+        return default_downloader_id
+
+    @property
+    def default_download_setting_id(self):
+        """获取默认下载设置id"""
+        default_download_setting_id = self._systemconfig.get(SystemConfigKey.DefaultDownloadSetting) or "-1"
+        if not self._download_settings.get(default_download_setting_id):
+            default_download_setting_id = "-1"
+        return default_download_setting_id
+
+    @property
+    def default_client(self):
+        """获取默认下载器实例"""
+        return self.get_client(self.default_downloader_id)
+
+    @property
+    def monitor_downloader_ids(self):
+        """获取监控下载器ID列表"""
+        return self._monitor_downloader_ids
+
+    @property
+    def downloader_enum(self):
+        """获取下载器ID-名称枚举"""
+        return self._downloader_enum
+
+    @property
+    def jobstore(self):
+        return self._jobstore
+
+    @property
+    def download_order(self):
+        return self._download_order
+
+    # ---------- 配置查询 ----------
+
+    def get_downloader_conf(self, did=None):
+        """获取下载器配置"""
+        if not did:
+            return self._downloader_confs
+        return self._downloader_confs.get(str(did))
+
+    def get_downloader_conf_simple(self):
+        """获取简化下载器配置"""
+        ret_dict = {}
+        for downloader_conf in self.get_downloader_conf().values():
+            ret_dict[str(downloader_conf.get("id"))] = {
+                "id": downloader_conf.get("id"),
+                "name": downloader_conf.get("name"),
+                "type": downloader_conf.get("type"),
+                "enabled": downloader_conf.get("enabled"),
+            }
+        return ret_dict
+
+    def get_download_setting(self, sid=None):
+        """获取下载设置"""
+        preset_downloader_conf = self.get_downloader_conf(self.default_downloader_id)
+        if preset_downloader_conf:
+            self._download_settings["-1"]["downloader"] = self.default_downloader_id
+            self._download_settings["-1"]["downloader_name"] = preset_downloader_conf.get("name")
+            self._download_settings["-1"]["downloader_type"] = preset_downloader_conf.get("type")
+        if not sid:
+            return self._download_settings
+        return self._download_settings.get(str(sid)) or {}
+
+    def get_download_dirs(self, setting=None):
+        """返回下载器中设置的保存目录"""
+        if not setting:
+            setting = self.default_download_setting_id
+        download_setting = self.get_download_setting(sid=setting)
+        downloader_conf = self.get_downloader_conf(download_setting.get("downloader"))
+        if not downloader_conf:
+            return []
+        downloaddir = downloader_conf.get("download_dir")
+        save_path_list = [attr.get("save_path") for attr in downloaddir if attr.get("save_path")]
+        save_path_list.sort()
+        return list(set(save_path_list))
+
+    def get_download_visit_dirs(self):
+        """返回所有下载器中设置的访问目录"""
+        download_dirs = []
+        for downloader_conf in self.get_downloader_conf().values():
+            download_dirs += downloader_conf.get("download_dir")
+        visit_path_list = [attr.get("container_path") or attr.get("save_path") for attr in download_dirs if
+                           attr.get("save_path")]
+        visit_path_list.sort()
+        return list(set(visit_path_list))
+
+    def get_download_visit_dir(self, download_dir, downloader_id=None):
+        """返回下载器中设置的访问目录"""
+        if not downloader_id:
+            downloader_id = self.default_downloader_id
+        downloader_conf = self.get_downloader_conf(downloader_id)
+        client = self.get_client(downloader_id)
+        if not client:
+            return ""
+        true_path, _ = client.get_replace_path(download_dir, downloader_conf.get("download_dir"))
+        return true_path
+
+    def get_status(self, dtype=None, config=None):
+        """测试下载器状态"""
+        if not config or not dtype:
+            return False
+        state = self._build_class(ctype=dtype, conf=config).get_status()
+        if not state:
+            log.error(f"【Downloader】下载器连接测试失败")
+        return state
+
+    def get_free_space(self, downloader_id, path: str):
+        """获取磁盘剩余空间"""
+        if not downloader_id:
+            downloader_id = self.default_downloader_id
+        client = self.get_client(downloader_id)
+        if not client:
+            return None
+        return client.get_free_space(path)
+
+    @staticmethod
+    def get_download_dir_info(media, downloaddir):
+        """根据媒体信息读取一个下载目录的信息"""
+        import os
+        from app.utils import NumberUtils, StringUtils, SystemUtils
+        if media.type:
+            for attr in downloaddir or []:
+                if not attr:
+                    continue
+                if attr.get("type") and attr.get("type") != media.type.value:
+                    continue
+                if attr.get("category") and attr.get("category") != media.category:
+                    continue
+                if not attr.get("save_path") and not attr.get("label"):
+                    continue
+                if (attr.get("container_path") or attr.get("save_path")) \
+                        and os.path.exists(attr.get("container_path") or attr.get("save_path")) \
+                        and media.size \
+                        and SystemUtils.get_free_space(
+                    attr.get("container_path") or attr.get("save_path")
+                ) < NumberUtils.get_size_gb(
+                    StringUtils.num_filesize(media.size)
+                ):
+                    continue
+                return {
+                    "path": attr.get("save_path"),
+                    "category": attr.get("label")
+                }
+        return {"path": None, "category": None}
+
+    @staticmethod
+    def get_client_type_by_name(type_name):
+        """根据名称返回下载器类型枚举"""
+        if not type_name:
+            return None
+        for dict_type in DownloaderType:
+            if dict_type.name == type_name or dict_type.value == type_name:
+                return dict_type
+        return None
