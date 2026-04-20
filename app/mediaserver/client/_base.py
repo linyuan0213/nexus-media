@@ -190,8 +190,7 @@ class _IMediaClient(metaclass=ABCMeta):
         
         # 检查是否启用了新的图片代理
         try:
-            from config import Config
-            if Config().get_image_proxy_enabled():
+            if Config().get_config("app").get("enable_image_proxy", True):
                 # 处理 TMDB 图片
                 if 'image.tmdb.org' in url:
                     # 提取路径部分

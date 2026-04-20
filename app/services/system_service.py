@@ -572,9 +572,7 @@ def get_commands():
 
 def get_rmt_modes():
     from app.conf import ModuleConf
-    from app.utils import SystemUtils
-    RmtModes = ModuleConf.RMT_MODES_LITE if SystemUtils.is_lite_version(
-    ) else ModuleConf.RMT_MODES
+    RmtModes = ModuleConf.RMT_MODES
     return [{
         "value": value,
         "name": name.value

@@ -2,15 +2,32 @@ import io
 import os
 import shutil
 import sys
-import requests
-import pickle
+import threading
 from threading import Lock
 from filelock import FileLock
 import ruamel.yaml
 import tempfile
 
+
+class SingletonMeta(type):
+    """
+    定义一个元类，用来实现单例模式
+    """
+    _instances = {}
+    _lock = threading.RLock()
+
+    def __call__(cls, *args, **kwargs):
+        # 实现单例，检查是否已经有实例存在
+        if cls not in cls._instances:
+            with cls._lock:
+                if cls not in cls._instances:
+                    # 使用父类的 __call__ 创建类的实例
+                    cls._instances[cls] = super().__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
 # 种子名/文件名要素分隔字符
-SPLIT_CHARS = r"\.|\s+|\(|\)|\[|]|-|\+|【|】|/|～|;|&|\||#|_|「|」|~"
+SPLIT_CHARS = r"\.\s+|\(|\)|\[|]|-|\+|【|】|/|～|;|&|\||#|_|「|」|~"
 # 默认User-Agent
 DEFAULT_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"
 # 收藏了的媒体的目录名，名字可以改，在Emby中点击红星则会自动将电影转移到此分类下，需要在Emby Webhook中配置用户行为通知
@@ -82,23 +99,6 @@ KEYWORD_BLACKLIST = ['中字', '韩语', '双字', '中英', '日语', '双语',
                      '法语', '西班牙语', 'HRHDTVAC3264', '未删减版', '未删减', '国语', '字幕组', '人人影视', 'www66ystv',
                      '人人影视制作', '英语', 'www6vhaotv', '无删减版', '完成版', '德意']
 
-# WebDriver路径
-WEBDRIVER_PATH = {
-    "Docker": "/usr/lib/chromium/chromedriver",
-    "Synology": "/var/packages/NASTool/target/bin/chromedriver"
-}
-
-# Xvfb虚拟显示路程
-XVFB_PATH = [
-    "/usr/bin/Xvfb",
-    "/usr/local/bin/Xvfb"
-]
-
-# Chrome 路径
-if os.environ.get('FLASK_DEBUG') == "1":
-    CHROME_PATH = "/snap/bin/chromium"
-else:
-    CHROME_PATH = "/usr/lib/chromium/chromium"
 
 # redis 配置
 REDIS_HOST = "127.0.0.1"
@@ -113,23 +113,8 @@ SITES_DATA_URL = "https://api.github.com/repos/linyuan0213/nas-tools-sites/relea
 # 线程锁
 lock = Lock()
 
-# 全局实例
-_CONFIG = None
 
-
-def singleconfig(cls):
-    def _singleconfig(*args, **kwargs):
-        global _CONFIG
-        if not _CONFIG:
-            with lock:
-                _CONFIG = cls(*args, **kwargs)
-        return _CONFIG
-
-    return _singleconfig
-
-
-@singleconfig
-class Config(object):
+class Config(object, metaclass=SingletonMeta):
     _config = {}
     _config_path = None
     _user = None
@@ -140,68 +125,6 @@ class Config(object):
             os.environ['TZ'] = 'Asia/Shanghai'
         self.init_syspath()
         self.init_config()
-
-    def _download_file(self, url, dest_path):
-        """下载文件并校验"""
-        try:
-            # 获取GitHub Release信息
-            api_response = requests.get(url, timeout=10, proxies=self.get_proxies())
-            api_response.raise_for_status()
-            release_info = api_response.json()
-            
-            # 获取实际文件下载URL
-            download_url = release_info.get("assets")[0].get("browser_download_url")
-            if not download_url:
-                raise Exception("未找到下载URL")
-            
-            # 下载实际文件内容
-            file_response = requests.get(download_url, timeout=30)
-            file_response.raise_for_status()
-            
-            # 保存文件
-            with open(dest_path, 'wb') as f:
-                f.write(file_response.content)
-                
-            return True
-        except Exception as e:
-            print(f"【Config】下载文件失败: {str(e)}")
-            return False
-
-    def _get_sites_version(self, filepath):
-        """获取sites.dat版本号"""
-        try:
-            with open(filepath, 'rb') as f:
-                data = pickle.load(f)
-                return data.get("version", "0")
-        except:
-            return "0"
-
-    def _check_sites_update(self):
-        """检查并更新sites.dat"""
-        try:
-            # 假GitHub Release URL
-            release_url = SITES_DATA_URL
-            local_path = os.path.join(os.path.dirname(self._config_path), "sites.dat")
-            
-            # 下载最新文件到临时位置
-            temp_path = os.path.join(self.get_temp_path(), "sites.dat.tmp")
-            if not self._download_file(release_url, temp_path):
-                return False
-                    
-            new_version = self._get_sites_version(temp_path)
-            current_version = self._get_sites_version(local_path) if os.path.exists(local_path) else "0"
-            
-            if new_version > current_version:
-                shutil.move(temp_path, local_path)
-                print(f"【Config】sites.dat 已更新到版本 {new_version}")
-            else:
-                os.remove(temp_path)
-                print(f"【Config】当前版本 {current_version} 已是最新")
-                
-            return True
-        except Exception as e:
-            print(f"【Config】更新sites.dat失败: {str(e)}")
-            return False
 
     def init_config(self):
         try:
@@ -222,14 +145,14 @@ class Config(object):
                 except Exception as e:
                     print("【Config】配置文件 config.yaml 格式出现严重错误！请检查：%s" % str(e))
                     self._config = {}
-            
+
             # 从环境变量读取数据库配置并写入配置文件
             self._apply_env_database_config()
 
         except Exception as err:
             print("【Config】加载 config.yaml 配置出错：%s" % str(err))
             return False
-    
+
     def _apply_env_database_config(self):
         """
         从环境变量读取数据库配置并写入配置文件
@@ -244,7 +167,7 @@ class Config(object):
             'DB_PASSWORD': 'password',
             'DB_NAME': 'database',
         }
-        
+
         has_env_config = False
         for env_var, config_key in env_mappings.items():
             value = os.environ.get(env_var)
@@ -257,35 +180,23 @@ class Config(object):
                         continue
                 env_db_config[config_key] = value
                 has_env_config = True
-        
+
         if has_env_config:
             # 获取当前数据库配置
             current_db_config = self._config.get('database', {})
             if current_db_config is None:
                 current_db_config = {}
-            
+
             # 更新配置
             current_db_config.update(env_db_config)
             self._config['database'] = current_db_config
-            
+
             # 保存到配置文件
             try:
                 self.save_config(self._config)
                 print("【Config】已从环境变量更新数据库配置到配置文件")
             except Exception as e:
                 print(f"【Config】保存数据库配置到文件失败：{str(e)}")
-
-    def update_sites_data(self):
-        # 启动时检查sites.dat更新
-        self._check_sites_update()
-        # 复制sites.dat文件(使用版本号比较)
-        src_sites = os.path.join(self.get_inner_config_path(), "sites.dat")
-        dst_sites = os.path.join(os.path.dirname(self._config_path), "sites.dat")
-        src_version = self._get_sites_version(src_sites)
-        dst_version = self._get_sites_version(dst_sites) if os.path.exists(dst_sites) else "0"
-        if not os.path.exists(dst_sites) or src_version > dst_version:
-            shutil.copy2(src_sites, dst_sites)
-            print(f"【Config】sites.dat 已更新到版本 {src_version}")
 
     def init_syspath(self):
         with open(os.path.join(self.get_root_path(),
@@ -333,7 +244,7 @@ class Config(object):
             with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', delete=False) as temp_file:
                 yaml.dump(new_cfg, temp_file)
                 temp_file_path = temp_file.name
-            
+
             # 写入成功后用临时文件替换目标文件
             shutil.move(temp_file_path, self._config_path)
 
@@ -376,108 +287,6 @@ class Config(object):
 
     def get_tmdbapi_url(self):
         return f"https://{self.get_config('app').get('tmdb_domain') or TMDB_API_DOMAINS[0]}/3"
-
-    def get_tmdbimage_url(self, path, prefix="w500", size=None, use_proxy=None):
-        """
-        获取 TMDB 图片 URL
-        :param path: 图片路径
-        :param prefix: 尺寸前缀（默认 w500，兼容旧代码）
-        :param size: 尺寸名称（thumb/small/medium/large/xlarge/original），优先级高于 prefix
-        :param use_proxy: 是否使用本地代理，None 表示自动检测
-        :return: 完整图片 URL
-        """
-        if not path:
-            return ""
-        
-        # 如果指定了 size，使用对应的尺寸
-        if size and size in TMDB_IMAGE_SIZE:
-            prefix = TMDB_IMAGE_SIZE[size]
-        
-        # 如果 use_proxy 未指定，自动检测
-        if use_proxy is None:
-            use_proxy = self.get_image_proxy_enabled()
-        
-        # 如果使用代理，返回本地代理 URL
-        if use_proxy:
-            path_clean = path.lstrip('/')
-            return f"/img/tmdb/{prefix}/{path_clean}"
-        
-        tmdb_image_url = self.get_config("app").get("tmdb_image_url")
-        if tmdb_image_url:
-            return tmdb_image_url + f"/t/p/{prefix}{path}"
-        return f"https://{TMDB_IMAGE_DOMAIN}/t/p/{prefix}{path}"
-    
-    def get_tmdbimage_thumb_url(self, path, use_proxy=None):
-        """获取缩略图 URL (w92)"""
-        return self.get_tmdbimage_url(path, size='thumb', use_proxy=use_proxy)
-    
-    def get_tmdbimage_small_url(self, path, use_proxy=None):
-        """获取小图 URL (w185) - 适合列表"""
-        return self.get_tmdbimage_url(path, size='small', use_proxy=use_proxy)
-    
-    def get_tmdbimage_medium_url(self, path, use_proxy=None):
-        """获取中图 URL (w342) - 适合卡片"""
-        return self.get_tmdbimage_url(path, size='medium', use_proxy=use_proxy)
-    
-    def get_tmdbimage_large_url(self, path, use_proxy=None):
-        """获取大图 URL (w500) - 适合详情页"""
-        return self.get_tmdbimage_url(path, size='large', use_proxy=use_proxy)
-    
-    def get_image_proxy_enabled(self):
-        """检查是否启用了图片代理 - 默认开启"""
-        return self.get_config("app").get("enable_image_proxy", True)
-
-    def get_proxy_image_url(self, url):
-        """
-        将任意图片 URL 转换为本地代理 URL
-        支持 TMDB、豆瓣、Bangumi 等图片
-        :param url: 原始图片 URL
-        :return: 代理后的图片 URL
-        """
-        if not url:
-            return ""
-
-        # 如果未启用图片代理，直接返回原 URL
-        if not self.get_image_proxy_enabled():
-            return url
-
-        # 已经是本地代理路径，直接返回
-        if url.startswith('/img/'):
-            return url
-
-        try:
-            import urllib.parse
-
-            # 处理 TMDB 图片
-            if 'image.tmdb.org' in url:
-                import re
-                match = re.search(r'/t/p/(\w+)(/.+)', url)
-                if match:
-                    size = match.group(1)
-                    path = match.group(2).lstrip('/')
-                    return f"/img/tmdb/{size}/{path}"
-                return url
-
-            # 处理豆瓣图片
-            if 'doubanio.com' in url or 'douban.com' in url:
-                encoded_path = urllib.parse.quote(url, safe='')
-                return f"/img/douban/{encoded_path}"
-
-            # 处理 Bangumi 图片
-            if 'lain.bgm.tv' in url:
-                encoded_path = urllib.parse.quote(url, safe='')
-                return f"/img/bgm/{encoded_path}"
-
-            # 其他外部图片统一走 library 代理
-            if url.startswith('http'):
-                encoded_path = urllib.parse.quote(url, safe='')
-                return f"/img/library/{encoded_path}"
-
-        except Exception as e:
-            import log
-            log.error(f"【get_proxy_image_url】处理图片代理失败: {str(e)}")
-
-        return url
 
     @property
     def category_path(self):

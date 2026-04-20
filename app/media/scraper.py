@@ -10,6 +10,7 @@ from app.helper import FfmpegHelper
 from app.media.douban import DouBan
 from app.media.meta import MetaInfo
 from app.utils.commons import retry
+from app.helper.image_proxy_helper import ImageProxyHelper
 from config import Config, RMT_MEDIAEXT
 from app.utils import DomUtils, RequestUtils, ExceptionUtils, NfoReader, SystemUtils
 from app.utils.types import MediaType, SystemConfigKey, RmtMode
@@ -616,7 +617,7 @@ class Scraper:
                         seasoninfo = self.media.get_tmdb_tv_season_detail(tmdbid=media.tmdb_id,
                                                                           season=int(media.get_season_seq()))
                         if seasoninfo:
-                            self.__save_image(Config().get_tmdbimage_url(seasoninfo.get("poster_path"),
+                            self.__save_image(ImageProxyHelper.get_tmdbimage_url(seasoninfo.get("poster_path"),
                                                                          prefix="original",
                                                                          use_proxy=False),
                                               os.path.dirname(dir_path),
