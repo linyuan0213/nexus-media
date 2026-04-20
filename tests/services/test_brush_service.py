@@ -137,3 +137,51 @@ class TestUpdateTaskState:
     def test_none(self, svc):
         svc.update_task_state(None, [1])
         svc._brush.update_brushtask_state.assert_not_called()
+
+
+class TestRuleEngineDelegates:
+    def test_check_rss_rule(self):
+        assert BrushService.check_rss_rule(
+            {"size": "gt#1,10"}, "Title", 2 * 1024 ** 3, None, {"free": True}
+        ) is True
+
+    def test_check_rss_rule_fail_size(self):
+        assert BrushService.check_rss_rule(
+            {"size": "gt#10,20"}, "Title", 2 * 1024 ** 3, None, {"free": True}
+        ) is False
+
+    def test_check_remove_rule(self):
+        need_delete, delete_type = BrushService.check_remove_rule(
+            {"mode": "or", "ratio": "gt#1"},
+            {"ratio": 1.5, "torrent_attr": {"hr": False}}
+        )
+        assert need_delete is True
+
+    def test_check_remove_rule_none(self):
+        need_delete, delete_type = BrushService.check_remove_rule(None, {})
+        assert need_delete is False
+
+    def test_check_stop_rule(self):
+        need_stop, stop_type = BrushService.check_stop_rule(
+            {"stopfree": "Y"}, {"free": False}
+        )
+        assert need_stop is True
+
+    def test_format_rule_html(self):
+        html = BrushService.format_rule_html({"size": "gt#1,10", "hr": "Y"})
+        assert "种子大小" in html
+        assert "排除: HR" in html
+
+    def test_check_range_rule(self):
+        # gt: value >= min_value
+        assert BrushService.check_range_rule(5, "gt#1,10") is True
+        assert BrushService.check_range_rule(0.5, "gt#1,10") is False
+        # lt: value <= min_value
+        assert BrushService.check_range_rule(0.5, "lt#1,10") is True
+        assert BrushService.check_range_rule(5, "lt#1,10") is False
+        # bw: min <= value < max
+        assert BrushService.check_range_rule(5, "bw#1,10") is True
+        assert BrushService.check_range_rule(0.5, "bw#1,10") is False
+        assert BrushService.check_range_rule(15, "bw#1,10") is False
+        # None value passes
+        assert BrushService.check_range_rule(None, "gt#1,10") is True
