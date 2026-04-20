@@ -39,7 +39,7 @@
 
 ---
 
-### 2.2 刷流任务模块 (`app/brushtask.py`)
+### 2.2 刷流任务模块 (`app/brushtask.py`) ✅ 已完成
 
 #### 2.2.1 现状问题
 
@@ -53,6 +53,8 @@
 2. 移除 `SingletonMeta`，通过构造函数注入 `SchedulerService`、`Message`、`Downloader` 等依赖。
 3. 将调度任务的增删改查委托给统一的 `SchedulerService`，不再在各业务类中手动维护 `_job_ids`。
 
+**完成状态**：`app/brushtask.py` + `app/brushtask_rule.py` 已迁移至 `app/services/brush_core.py` + `app/services/brush_service.py`，旧文件已删除。
+
 #### 2.2.3 关键代码位置
 
 - `app/brushtask.py:23` — `BrushTask`
@@ -62,7 +64,7 @@
 
 ---
 
-### 2.3 下载器模块 (`app/downloader/downloader.py`)
+### 2.3 下载器模块 (`app/downloader/downloader.py`) ✅ 已完成
 
 #### 2.3.1 现状问题
 
@@ -79,6 +81,8 @@
    - `EpisodeStrategy`
 3. 下载器监控调度（`Downloader.transfer`）应与下载核心逻辑分离。
 
+**完成状态**：已拆分为 `app/services/downloader_core.py`（Facade）、`app/services/download_core.py`、`app/services/transfer_coordinator.py`、`app/services/download_strategies.py`，旧文件已删除。
+
 #### 2.3.3 关键代码位置
 
 - `app/downloader/downloader.py:32` — `Downloader`
@@ -90,7 +94,7 @@
 
 ## 3. P1 中优先级：调度、数据访问与业务支撑层
 
-### 3.1 调度器管理层 (`app/scheduler.py` + `app/scheduler_service.py`)
+### 3.1 调度器管理层 (`app/scheduler.py` + `app/scheduler_service.py`) ✅ 已完成
 
 #### 3.1.1 现状问题
 
@@ -102,6 +106,8 @@
 1. 强制统一使用 `SchedulerService` 作为唯一调度入口。
 2. 各业务模块取消内部 `_scheduler` 和 `_job_ids` 字段，改为向 `SchedulerService` 注册命名空间任务，由服务统一启停。
 3. 将 `app/scheduler.py` 中剩余的 `SchedulerUtils` 调用全部迁移到 `SchedulerService` API。
+
+**完成状态**：`app/services/scheduler_core.py`（`SchedulerCore` 单例）与 `app/services/scheduler_service.py`（业务封装）已完成，各业务模块通过 `SchedulerCore` 统一注册任务。
 
 #### 3.1.3 关键代码位置
 
@@ -129,7 +135,7 @@
 
 ---
 
-### 3.3 自定义 RSS 模块 (`app/rsschecker.py`)
+### 3.3 自定义 RSS 模块 (`app/rsschecker.py` / `app/rss.py`) ✅ 已完成
 
 #### 3.3.1 现状问题
 
@@ -143,6 +149,8 @@
 1. 抽取 `RssTaskService`、`RssParserService`、`RssTaskScheduler`。
 2. 将 XML/JSON 解析器抽象为统一接口（`RssParser`），支持插件式扩展。
 3. 调度任务统一托管给 `SchedulerService`。
+
+**完成状态**：`app/rss.py` 已重构为 `app/services/rss_service.py`（`RssTaskService` + `RssSubscriptionService` + `RssParserEngine`），旧文件已删除。
 
 #### 3.3.3 关键代码位置
 
@@ -197,7 +205,7 @@
 
 ---
 
-### 4.2 搜索模块 (`app/searcher.py`)
+### 4.2 搜索模块 (`app/searcher.py`) ✅ 已完成
 
 #### 4.2.1 现状问题
 
@@ -209,6 +217,8 @@
 1. 拆分 `SearchQueryBuilder`（构建搜索词）、`SearchExecutor`（执行并发搜索）、`SearchResultDeduplicator` / `SearchResultProcessor`（去重与过滤）。
 2. 统一线程池生命周期管理，避免全局变量与上下文管理器混用。
 
+**完成状态**：`app/searcher.py` 已重构为 `app/services/search_service.py`（Searcher Facade 保留 SingletonMeta，内部使用 `SearchQueryBuilder`、`SearchExecutor`、`SearchResultDeduplicator`、`SearchResultProcessor`），旧文件已删除。
+
 #### 4.2.3 关键代码位置
 
 - `app/searcher.py:19` — `_search_executor`
@@ -217,7 +227,7 @@
 
 ---
 
-### 4.3 服务生命周期管理（跨模块）
+### 4.3 服务生命周期管理（跨模块） ✅ 已完成
 
 #### 4.3.1 现状问题
 
@@ -230,6 +240,8 @@
 2. 所有后台服务实现统一的 `start()` / `stop()` 接口并注册到管理器中。
 3. 由管理器统一负责启动顺序和优雅停机，避免硬编码罗列。
 
+**完成状态**：`SystemLifecycleService`（`app/services/system_service.py`）已实现统一编排，`start_service()` 按顺序启动 `SchedulerCore` → 各业务服务 → `init_config()`；`stop_service()` 统一优雅停机。各服务 `__init__` 中已移除自动 `init_config()`。
+
 #### 4.3.3 关键代码位置
 
 - `web/actions/_base.py:303` — `WebActionBase.stop_service`
@@ -239,18 +251,18 @@
 
 ## 5. 重构优先级矩阵
 
-| 优先级 | 模块 | 核心痛点 | 预期收益 |
-| :--- | :--- | :--- | :--- |
-| **P0** | `web/actions/` | God Class、Mixin 组合失控 | 降低复杂度、便于分域维护 |
-| **P0** | `app/brushtask.py` | God Class、单例滥用、构造时副作用 | 提升可测试性、减少调度耦合 |
-| **P0** | `app/downloader/downloader.py` | 方法过长、职责过多、策略混杂 | 代码清晰、便于新增下载器 |
-| **P1** | `app/scheduler.py` + `scheduler_service.py` | 新旧调度 API 并存、重复代码 | 统一调度入口、降低维护成本 |
-| **P1** | `app/helper/db_helper.py` | 巨型 Facade、阻碍 Repository 模式落地 | 数据层现代化、提升可测试性 |
-| **P1** | `app/rsschecker.py` | 与 BrushTask 类似的结构问题 | 统一任务模式、提升可扩展性 |
-| **P1** | `app/filter.py` | 数据与逻辑耦合、分支冗长 | 规则引擎化、单测友好 |
-| **P2** | `config.py` | 单例不统一、职责混杂 | 配置中心清晰化 |
-| **P2** | `app/searcher.py` | 搜索流程过长、线程池混乱 | 搜索逻辑模块化 |
-| **P2** | 生命周期管理（跨模块） | 启停逻辑散落、不一致 | 统一优雅启停 |
+| 优先级 | 模块 | 核心痛点 | 预期收益 | 状态 |
+| :--- | :--- | :--- | :--- | :--- |
+| **P0** | `web/actions/` | God Class、Mixin 组合失控 | 降低复杂度、便于分域维护 | ⏳ 待处理 |
+| **P0** | `app/brushtask.py` | God Class、单例滥用、构造时副作用 | 提升可测试性、减少调度耦合 | ✅ 已完成 |
+| **P0** | `app/downloader/downloader.py` | 方法过长、职责过多、策略混杂 | 代码清晰、便于新增下载器 | ✅ 已完成 |
+| **P1** | `app/scheduler.py` + `scheduler_service.py` | 新旧调度 API 并存、重复代码 | 统一调度入口、降低维护成本 | ✅ 已完成 |
+| **P1** | `app/helper/db_helper.py` | 巨型 Facade、阻碍 Repository 模式落地 | 数据层现代化、提升可测试性 | ⏳ 待处理 |
+| **P1** | `app/rsschecker.py` | 与 BrushTask 类似的结构问题 | 统一任务模式、提升可扩展性 | ✅ 已完成 |
+| **P1** | `app/filter.py` | 数据与逻辑耦合、分支冗长 | 规则引擎化、单测友好 | ⏳ 待处理 |
+| **P2** | `config.py` | 单例不统一、职责混杂 | 配置中心清晰化 | ⏳ 待处理 |
+| **P2** | `app/searcher.py` | 搜索流程过长、线程池混乱 | 搜索逻辑模块化 | ✅ 已完成 |
+| **P2** | 生命周期管理（跨模块） | 启停逻辑散落、不一致 | 统一优雅启停 | ✅ 已完成 |
 
 ---
 
@@ -261,6 +273,20 @@
 3. **保留兼容层但限制其增长**：`DbHelper` 等兼容层在重构过渡期可以保留，但**严禁新增方法**。
 4. **测试驱动**：对拆分出的 `BrushRuleEngine`、`SchedulerService`、`*Repository` 等模块优先补齐 `pytest` 用例（已有 `tests/` 目录，按项目规范在此创建）。
 5. **文档同步**：每次重构完一个模块，同步更新本文档的状态列，记录已完成的拆分项和遗留项。
+
+## 7. 已完成的额外重构
+
+以下模块虽不在原始优先级矩阵中，但已随本轮重构同步完成：
+
+| 原文件 | 新位置 | 说明 |
+| :--- | :--- | :--- |
+| `app/filetransfer.py` | `app/services/filetransfer_service.py` | 文件转移业务服务化 |
+| `app/subscribe.py` | `app/services/subscribe_service.py` | 订阅管理服务化 |
+| `app/sync.py` | `app/services/sync_core.py` + `app/services/sync_service.py` | 目录同步核心 + 业务服务分离 |
+| `app/torrentremover.py` | `app/services/torrentremover_core.py` | 删种任务服务化（Repository + ActionEngine） |
+| `app/system_service.py` | `app/services/system_service.py` | 顶层函数迁移至 `SystemLifecycleService` 等类 |
+
+> 所有旧文件均已删除，调用方导入路径已统一更新为 `app.services.*`。
 
 ---
 
