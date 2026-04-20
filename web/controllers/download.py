@@ -6,7 +6,7 @@ import os.path
 from flask_login import current_user
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filetransfer_service import FileTransferService as FileTransfer
-from app.indexer import Indexer
+from app.services.indexer_service import IndexerService
 from app.media import Media
 from app.services.search_service import Searcher
 from app.services.download_service import DownloadService
@@ -212,7 +212,8 @@ def _get_indexer_statistics(data):
 @any_auth
 @parse_json_data
 def _get_indexers(data):
-    return success(indexers=Indexer().get_user_indexer_dict())
+    indexers = IndexerService().get_user_indexers()
+    return success(indexers=[{"id": i.id, "name": i.name} for i in indexers])
 
 
 @download_bp.route('/get_remove_torrents', methods=['POST'])

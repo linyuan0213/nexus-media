@@ -8,7 +8,7 @@ from typing import List, Optional, Tuple
 
 import log
 from app.services.downloader_core import DownloaderCore as Downloader
-from app.indexer import Indexer
+from app.services.indexer_service import IndexerService
 from app.media import Media
 from app.media.meta import MetaInfo
 from app.schemas.download import (
@@ -39,13 +39,13 @@ class DownloadService:
                  searcher: Optional[Searcher] = None,
                  media: Optional[Media] = None,
                  sites: Optional[Sites] = None,
-                 indexer: Optional[Indexer] = None,
+                 indexer_service: Optional[IndexerService] = None,
                  torrent_remover: Optional[TorrentRemover] = None):
         self._downloader = downloader or Downloader()
         self._searcher = searcher or Searcher()
         self._media = media or Media()
         self._sites = sites or Sites()
-        self._indexer = indexer or Indexer()
+        self._indexer_service = indexer_service or IndexerService()
         self._torrent_remover = torrent_remover or TorrentRemover()
 
     # ---------- 下载编排 ----------
@@ -240,19 +240,7 @@ class DownloadService:
         获取索引器统计数据及 dataset
         :return: (统计数据列表, 图表数据集)
         """
-        result = self._indexer.get_indexer_statistics() or []
-        dataset = [["indexer", "avg"]]
-        stats = []
-        for ret in result:
-            stats.append(IndexerStatisticsDTO(
-                name=ret[0],
-                total=ret[1],
-                fail=ret[2],
-                success=ret[3],
-                avg=round(ret[4], 1)
-            ))
-            dataset.append([ret[0], round(ret[4], 1)])
-        return stats, dataset
+        return self._indexer_service.get_indexer_statistics()
 
     # ---------- 删种任务 ----------
 

@@ -23,7 +23,7 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.helper import SubmoduleHelper
 from app.helper.thread_helper import ThreadHelper
-from app.indexer import Indexer
+from app.services.indexer_service import IndexerService
 from app.mediaserver import MediaServer
 from app.message import Message, MessageCenter
 from app.plugins import PluginManager, EventManager
@@ -168,9 +168,9 @@ class IndexerConfigService:
 
     def __init__(self,
                  system_config: Optional[SystemConfig] = None,
-                 indexer: Optional[Indexer] = None):
+                 indexer_service: Optional[IndexerService] = None):
         self._system_config = system_config or SystemConfig()
-        self._indexer = indexer or Indexer()
+        self._indexer_service = indexer_service or IndexerService()
 
     def save_config(self, data: dict) -> IndexerConfigResultDTO:
         """保存索引器配置"""
@@ -200,7 +200,7 @@ class IndexerConfigService:
             if sites is not None:
                 self._system_config.set(SystemConfigKey.UserIndexerSites, sites)
         # 刷新 Indexer 单例配置
-        self._indexer.init_config()
+        self._indexer_service.init_config()
         # 测试连接
         if test and name != "builtin":
             try:

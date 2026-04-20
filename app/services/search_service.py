@@ -16,7 +16,7 @@ from typing import Any, List, Optional, Tuple
 import log
 from app.db.repositories import DownloadRepository, SearchRepository
 from app.services.downloader_core import DownloaderCore as Downloader
-from app.indexer import Indexer
+from app.services.indexer_service import IndexerService
 from app.media import Media
 from app.message import Message
 from app.plugins import EventManager
@@ -237,7 +237,7 @@ class Searcher(metaclass=SingletonMeta):
         self.progress = ProgressHelper()
         self.download_repo = DownloadRepository()
         self.search_repo = SearchRepository()
-        self.indexer = Indexer()
+        self.indexer_service = IndexerService()
         self.eventmanager = EventManager()
         self._search_auto = Config().get_config("pt").get('search_auto', True)
 
@@ -251,7 +251,7 @@ class Searcher(metaclass=SingletonMeta):
         """
         if not key_word:
             return []
-        if not self.indexer:
+        if not self.indexer_service:
             return []
         self.eventmanager.send_event(EventType.SearchStart, {
             "key_word": key_word,
@@ -259,10 +259,10 @@ class Searcher(metaclass=SingletonMeta):
             "filter_args": filter_args,
             "search_type": in_from.value if in_from else None
         })
-        return self.indexer.search_by_keyword(key_word=key_word,
-                                              filter_args=filter_args,
-                                              match_media=match_media,
-                                              in_from=in_from)
+        return self.indexer_service.search_by_keyword(key_word=key_word,
+                                                      filter_args=filter_args,
+                                                      match_media=match_media,
+                                                      in_from=in_from)
 
     def search_one_media(self, media_info,
                          in_from: SearchType,

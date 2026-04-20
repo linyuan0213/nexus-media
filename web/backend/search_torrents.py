@@ -11,7 +11,7 @@ import log
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.helper import ProgressHelper
 from app.helper.openai_helper import OpenAiHelper
-from app.indexer import Indexer
+from app.services.indexer_service import IndexerService
 from app.media import Media, DouBan
 from app.message import Message
 from app.services.search_service import Searcher
@@ -516,8 +516,9 @@ def search_media_by_message(input_str, in_from: SearchType, user_id, user_name=N
                                                                     } for site in Sites().get_sites(rss=True)])
 
             # 索引器类型
-            indexer_type = Indexer().get_client_type()
-            indexers = Indexer().get_indexers()
+            _indexer_svc = IndexerService()
+            indexer_type = _indexer_svc.get_client_type()
+            indexers = _indexer_svc.get_indexers()
 
             # 获取字符串中可能的搜索站点列表
             if indexer_type == IndexerType.BUILTIN:

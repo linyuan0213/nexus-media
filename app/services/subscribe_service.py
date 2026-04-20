@@ -15,7 +15,7 @@ from app.conf import SystemConfig
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.db.repositories import RssRepository
-from app.indexer import Indexer
+from app.services.indexer_service import IndexerService
 from app.media import Media, DouBan
 from app.media.meta import MetaInfo
 from app.message import Message
@@ -40,7 +40,7 @@ class SubscribeService:
                  downloader: Optional[Downloader] = None,
                  sites: Optional[Sites] = None,
                  douban: Optional[DouBan] = None,
-                 indexer: Optional[Indexer] = None,
+                 indexer_service: Optional[IndexerService] = None,
                  filter_service: Optional[Filter] = None,
                  eventmanager: Optional[EventManager] = None,
                  system_config: Optional[SystemConfig] = None):
@@ -51,7 +51,7 @@ class SubscribeService:
         self._downloader = downloader or Downloader()
         self._sites = sites or Sites()
         self._douban = douban or DouBan()
-        self._indexer = indexer or Indexer()
+        self._indexer_service = indexer_service or IndexerService()
         self._filter = filter_service or Filter()
         self._eventmanager = eventmanager or EventManager()
         self._system_config = system_config or SystemConfig()
@@ -408,7 +408,7 @@ class SubscribeService:
         ret_dict = {}
         rss_movies = self._rss_repo.get_rss_movies(rssid=rid, state=state)
         rss_sites_valid = self._sites.get_site_names(rss=True)
-        search_sites_valid = self._indexer.get_user_indexer_names()
+        search_sites_valid = self._indexer_service.get_user_indexer_names()
         for rss_movie in rss_movies:
             desc = rss_movie.DESC
             note = rss_movie.NOTE
@@ -477,7 +477,7 @@ class SubscribeService:
         ret_dict = {}
         rss_tvs = self._rss_repo.get_rss_tvs(rssid=rid, state=state)
         rss_sites_valid = self._sites.get_site_names(rss=True)
-        search_sites_valid = self._indexer.get_user_indexer_names()
+        search_sites_valid = self._indexer_service.get_user_indexer_names()
         for rss_tv in rss_tvs:
             desc = rss_tv.DESC
             note = rss_tv.NOTE

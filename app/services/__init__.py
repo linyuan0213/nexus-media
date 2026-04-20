@@ -42,3 +42,4 @@ from .words_service import WordsService
 from .search_service import SearchService, Searcher
 from .sync_core import SyncCore
 from .torrentremover_core import TorrentRemoverService
+from .indexer_service import IndexerService

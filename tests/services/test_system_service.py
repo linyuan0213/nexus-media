@@ -160,7 +160,7 @@ class TestIndexerConfigService:
     def _svc(self):
         mock_sys = MagicMock()
         mock_idx = MagicMock()
-        return IndexerConfigService(system_config=mock_sys, indexer=mock_idx), mock_sys, mock_idx
+        return IndexerConfigService(system_config=mock_sys, indexer_service=mock_idx), mock_sys, mock_idx
 
     def test_save_config_builtin(self):
         svc, mock_sys, mock_idx = self._svc()

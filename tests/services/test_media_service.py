@@ -7,6 +7,7 @@ import os
 from unittest.mock import MagicMock, patch, mock_open
 
 import pytest
+import web  # ensure web module is loaded
 
 from app.schemas.media import (
     MediaInfoResultDTO,
@@ -705,17 +706,31 @@ class TestTransferHistoryService:
         mock_rec.ID = 1
         mock_rec.PATH = "/test/file.mkv"
         service._filetransfer.get_transfer_unknown_paths.return_value = [mock_rec]
-        with patch('web.controllers.sync.re_identification') as mock_re:
+
+        mock_sync_mod = MagicMock()
+        mock_sync_mod.re_identification = MagicMock()
+        import sys
+        sys.modules['web.controllers.sync'] = mock_sync_mod
+        try:
             count = service.re_identify_unknown()
             assert count == 1
-            mock_re.assert_called_once()
+            mock_sync_mod.re_identification.assert_called_once()
+        finally:
+            sys.modules.pop('web.controllers.sync', None)
 
     def test_re_identify_unknown_empty(self, service):
         service._filetransfer.get_transfer_unknown_paths.return_value = []
-        with patch('web.controllers.sync.re_identification') as mock_re:
+
+        mock_sync_mod = MagicMock()
+        mock_sync_mod.re_identification = MagicMock()
+        import sys
+        sys.modules['web.controllers.sync'] = mock_sync_mod
+        try:
             count = service.re_identify_unknown()
             assert count == 0
-            mock_re.assert_not_called()
+            mock_sync_mod.re_identification.assert_not_called()
+        finally:
+            sys.modules.pop('web.controllers.sync', None)
 
     def test_clear_history(self, service):
         service.clear_history()

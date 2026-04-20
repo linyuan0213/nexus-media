@@ -46,7 +46,7 @@ def mock_sites():
 
 
 @pytest.fixture
-def mock_indexer():
+def mock_indexer_service():
     return MagicMock()
 
 
@@ -56,13 +56,13 @@ def mock_remover():
 
 
 @pytest.fixture
-def svc(mock_downloader, mock_searcher, mock_media, mock_sites, mock_indexer, mock_remover):
+def svc(mock_downloader, mock_searcher, mock_media, mock_sites, mock_indexer_service, mock_remover):
     return DownloadService(
         downloader=mock_downloader,
         searcher=mock_searcher,
         media=mock_media,
         sites=mock_sites,
-        indexer=mock_indexer,
+        indexer_service=mock_indexer_service,
         torrent_remover=mock_remover
     )
 
@@ -258,16 +258,18 @@ class TestGetDownloadingWithMediaInfo:
 
 
 class TestGetIndexerStatistics:
-    def test_empty(self, svc, mock_indexer):
-        mock_indexer.get_indexer_statistics.return_value = []
+    def test_empty(self, svc, mock_indexer_service):
+        mock_indexer_service.get_indexer_statistics.return_value = ([], [["indexer", "avg"]])
         stats, dataset = svc.get_indexer_statistics()
         assert stats == []
         assert dataset == [["indexer", "avg"]]
 
-    def test_with_data(self, svc, mock_indexer):
-        mock_indexer.get_indexer_statistics.return_value = [
-            ["Indexer1", 100, 10, 90, 88.5]
-        ]
+    def test_with_data(self, svc, mock_indexer_service):
+        from app.schemas.download import IndexerStatisticsDTO
+        mock_indexer_service.get_indexer_statistics.return_value = (
+            [IndexerStatisticsDTO(name="Indexer1", total=100, fail=10, success=90, avg=88.5)],
+            [["indexer", "avg"], ["Indexer1", 88.5]]
+        )
         stats, dataset = svc.get_indexer_statistics()
         assert len(stats) == 1
         assert stats[0].name == "Indexer1"

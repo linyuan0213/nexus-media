@@ -92,3 +92,12 @@ from .words import (
     WordDTO,
     WordGroupExportDTO,
 )
+
+# Indexer
+from .indexer import (
+    UserIndexerDTO,
+    IndexerHashDTO,
+    IndexerClientInfoDTO,
+    IndexerResourcesResultDTO,
+    IndexerSearchResultDTO,
+)

@@ -74,7 +74,7 @@ class SearchRepository(BaseRepository):
                 'OTHERINFO': media_item.resource_team,
                 'UPLOAD_VOLUME_FACTOR': media_item.upload_volume_factor,
                 'DOWNLOAD_VOLUME_FACTOR': media_item.download_volume_factor,
-                'NOTE': media_item.labels
+                'NOTE': '|'.join(media_item.labels) if isinstance(media_item.labels, list) else (media_item.labels or '')
             })
 
         self._db.bulk_insert_mappings(SEARCHRESULTINFO, mappings, batch_size=500)

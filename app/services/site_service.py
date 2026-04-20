@@ -2,7 +2,7 @@
 import json
 from typing import Any, Dict, List, Optional, Tuple
 
-from app.indexer import Indexer
+from app.services.indexer_service import IndexerService
 from app.schemas.site import (
     SiteAttrDTO,
     SiteDetailDTO,
@@ -25,13 +25,13 @@ class SiteService:
                  site_user_info: Optional[SiteUserInfo] = None,
                  site_conf: Optional[SiteConf] = None,
                  site_cookie: Optional[SiteCookie] = None,
-                 indexer: Optional[Indexer] = None,
+                 indexer_service: Optional[IndexerService] = None,
                  string_utils=None):
         self._sites = sites or Sites()
         self._site_user_info = site_user_info or SiteUserInfo()
         self._site_conf = site_conf or SiteConf()
         self._site_cookie = site_cookie or SiteCookie()
-        self._indexer = indexer or Indexer()
+        self._indexer_service = indexer_service or IndexerService()
         self._string_utils = string_utils or StringUtils
 
     # ------------------------------------------------------------------
@@ -203,10 +203,10 @@ class SiteService:
     # ------------------------------------------------------------------
     def list_site_resources(self, index_id, page,
                             keyword) -> SiteResourcesResultDTO:
-        resources = self._indexer.list_resources(
+        result = self._indexer_service.list_resources(
             index_id=index_id, page=page, keyword=keyword)
-        if not resources:
-            return SiteResourcesResultDTO(
-                success=False,
-                msg="获取站点资源出现错误，无法连接到站点！")
-        return SiteResourcesResultDTO(success=True, data=resources)
+        return SiteResourcesResultDTO(
+            success=result.success,
+            data=result.data,
+            msg=result.msg
+        )

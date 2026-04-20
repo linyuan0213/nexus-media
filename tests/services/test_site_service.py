@@ -27,7 +27,7 @@ def svc():
         site_user_info=mock_user_info,
         site_conf=mock_conf,
         site_cookie=mock_cookie,
-        indexer=mock_indexer,
+        indexer_service=mock_indexer,
         string_utils=mock_str,
     )
 
@@ -253,13 +253,19 @@ class TestSetCaptchaCode:
 
 class TestListSiteResources:
     def test_success(self, svc):
-        svc._indexer.list_resources.return_value = [{"id": 1}]
+        from app.schemas.indexer import IndexerResourcesResultDTO
+        svc._indexer_service.list_resources.return_value = IndexerResourcesResultDTO(
+            success=True, data=[{"id": 1}], msg=""
+        )
         dto = svc.list_site_resources("idx1", 0, "kw")
         assert dto.success is True
         assert dto.data == [{"id": 1}]
 
     def test_failure(self, svc):
-        svc._indexer.list_resources.return_value = None
+        from app.schemas.indexer import IndexerResourcesResultDTO
+        svc._indexer_service.list_resources.return_value = IndexerResourcesResultDTO(
+            success=False, data=None, msg="无法连接到站点"
+        )
         dto = svc.list_site_resources("idx1", 0, "kw")
         assert dto.success is False
         assert "无法连接到站点" in dto.msg
