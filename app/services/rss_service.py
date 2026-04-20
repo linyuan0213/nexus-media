@@ -7,14 +7,14 @@ import jsonpath
 from lxml import etree
 
 import log
-from app.downloader import Downloader
+from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.helper import RssHelper
 from app.db.repositories import ConfigRepository, RssRepository
 from app.media import Media
 from app.media.meta import MetaInfo
 from app.message import Message
-from app.searcher import Searcher
+from app.services.search_service import Searcher
 from app.schemas.rss import (
     RssAddResultDTO,
     RssDetailResultDTO,
@@ -22,7 +22,7 @@ from app.schemas.rss import (
     RssListResultDTO,
     RssIcalResultDTO,
 )
-from app.subscribe import Subscribe
+from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import RequestUtils, StringUtils, ExceptionUtils
 from app.utils.commons import SingletonMeta
 from app.utils.types import MediaType, SearchType, RssType, MovieTypes
@@ -33,7 +33,7 @@ from app.services.scheduler_core import SchedulerCore
 class RssSubscriptionService:
     """
     RSS 订阅业务服务
-    负责订阅添加/删除、历史管理、列表查询、日历事件
+    负责订阅添加/删除、历史管理、列表查询、日历事件、RSS下载
     """
 
     def __init__(self,
@@ -43,6 +43,33 @@ class RssSubscriptionService:
         self._subscribe = subscribe or Subscribe()
         self._rss = rss
         self._rss_checker = rss_checker
+
+    def download_rss(self) -> None:
+        """触发RSS订阅下载"""
+        if not self._rss:
+            from app.services.rss_core import Rss
+            self._rss = Rss()
+        self._rss.rssdownload()
+
+    def check_torrent_rss(self, media_info, rss_movies, rss_tvs, site_id,
+                          site_filter_rule, site_cookie, site_parse,
+                          site_ua, site_headers, site_proxy):
+        """判断种子是否命中订阅（委托给 Rss 模块）"""
+        if not self._rss:
+            from app.services.rss_core import Rss
+            self._rss = Rss()
+        return self._rss.check_torrent_rss(
+            media_info=media_info,
+            rss_movies=rss_movies,
+            rss_tvs=rss_tvs,
+            site_id=site_id,
+            site_filter_rule=site_filter_rule,
+            site_cookie=site_cookie,
+            site_parse=site_parse,
+            site_ua=site_ua,
+            site_headers=site_headers,
+            site_proxy=site_proxy
+        )
 
     def add_rss_media(self, data: dict) -> RssAddResultDTO:
         """添加RSS订阅（支持批量多季）"""
@@ -100,7 +127,7 @@ class RssSubscriptionService:
     def re_rss_history(self, rssid: str, rtype: str) -> Tuple[int, str]:
         """从历史记录重新订阅"""
         if not self._rss:
-            from app.rss import Rss
+            from app.services.rss_core import Rss
             self._rss = Rss()
         rssinfo = self._rss.get_rss_history(rtype=rtype, rid=rssid)
         if not rssinfo:
@@ -201,13 +228,13 @@ class RssSubscriptionService:
 
     def get_rss_history(self, mtype: str) -> List[dict]:
         if not self._rss:
-            from app.rss import Rss
+            from app.services.rss_core import Rss
             self._rss = Rss()
         return [rec.as_dict() for rec in self._rss.get_rss_history(rtype=mtype)]
 
     def delete_rss_history(self, rssid: str):
         if not self._rss:
-            from app.rss import Rss
+            from app.services.rss_core import Rss
             self._rss = Rss()
         self._rss.delete_rss_history(rssid=rssid)
 
@@ -341,9 +368,6 @@ class RssTaskService(metaclass=SingletonMeta):
     }
 
     def __init__(self):
-        self.init_config()
-
-    def init_config(self):
         self.config_repo = ConfigRepository()
         self.rss_repo = RssRepository()
         self.rsshelper = RssHelper()
@@ -353,6 +377,8 @@ class RssTaskService(metaclass=SingletonMeta):
         self.media = Media()
         self.downloader = Downloader()
         self.subscribe = Subscribe()
+
+    def init_config(self):
         # 移除现有任务
         self.stop_service()
         # 读取解析器列表

@@ -9,13 +9,13 @@ import shutil
 from urllib.parse import unquote
 import log
 from app.conf import ModuleConf
-from app.filetransfer import FileTransfer
+from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.helper import ThreadHelper
 from app.media import Media
 from app.media.meta import MetaInfo
 from app.plugins import EventManager
 from app.services.sync_service import SyncService
-from app.sync import Sync
+from app.services.sync_core import SyncCore as Sync
 from app.utils import StringUtils, EpisodeFormat, PathUtils, SystemUtils, ExceptionUtils
 from app.utils.types import RmtMode, OsType, SyncType, MediaType, MovieTypes, TvTypes
 from config import RMT_MEDIAEXT, RMT_SUBEXT, RMT_AUDIO_TRACK_EXT, Config
@@ -112,7 +112,7 @@ def _exec_test_command(data):
         "Config": ("config", "Config"),
         "Message": ("app.message", "Message"),
         "MessageCenter": ("app.message", "MessageCenter"),
-        "Downloader": ("app.downloader", "Downloader"),
+        "Downloader": ("app.services.downloader_core", "DownloaderCore"),
         "MediaServer": ("app.mediaserver", "MediaServer"),
         "Indexer": ("app.indexer", "Indexer"),
         "Sites": ("app.sites", "Sites"),

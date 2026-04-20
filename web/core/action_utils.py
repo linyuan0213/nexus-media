@@ -8,7 +8,7 @@ from app.conf import ModuleConf
 from app.helper.drissionpage_helper import DrissionPageHelper
 from app.media.meta import MetaInfo
 from app.mediaserver import MediaServer
-from app.subscribe import Subscribe
+from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import PathUtils, ExceptionUtils
 from app.utils.types import SearchType, MediaType, MovieTypes
 from config import RMT_MEDIAEXT, Config
@@ -19,15 +19,15 @@ from werkzeug.security import generate_password_hash
 
 def stop_service():
     """停止服务（统一收口到 system_service）"""
-    from app.system_service import stop_service as _sys_stop
-    _sys_stop()
+    from app.services.system_service import SystemLifecycleService
+    SystemLifecycleService().stop_service()
     DrissionPageHelper().close_all_tabs()
 
 
 def start_service():
     """启动服务（统一收口到 system_service）"""
-    from app.system_service import start_service as _sys_start
-    _sys_start()
+    from app.services.system_service import SystemLifecycleService
+    SystemLifecycleService().start_service()
 
 
 def restart_service():

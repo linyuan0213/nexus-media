@@ -78,6 +78,12 @@ from .sync import (
     ReIdentifyResultDTO,
 )
 
+# Search
+from .search import (
+    SearchOneMediaResultDTO,
+    SearchMediasResultDTO,
+)
+
 # Words
 from .words import (
     WordGroupDTO,

@@ -3,10 +3,10 @@ import pytz
 
 import log
 from app.mediaserver import MediaServer
-from app.rss import Rss
+from app.services.rss_core import Rss
 from app.sites import SiteUserInfo
-from app.subscribe import Subscribe
-from app.sync import Sync
+from app.services.subscribe_service import SubscribeService as Subscribe
+from app.services.sync_core import SyncCore as Sync
 from config import (
     SYNC_TRANSFER_INTERVAL,
     RSS_CHECK_INTERVAL,

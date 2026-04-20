@@ -4,11 +4,11 @@ from web.core.response import success, fail
 import json
 import os.path
 from flask_login import current_user
-from app.downloader import Downloader
-from app.filetransfer import FileTransfer
+from app.services.downloader_core import DownloaderCore as Downloader
+from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.indexer import Indexer
 from app.media import Media
-from app.searcher import Searcher
+from app.services.search_service import Searcher
 from app.services.download_service import DownloadService
 from app.sites import Sites
 from app.utils import SystemUtils, ExceptionUtils

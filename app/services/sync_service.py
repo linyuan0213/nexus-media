@@ -8,14 +8,14 @@ from typing import List, Optional, Tuple
 
 import log
 from app.conf import ModuleConf
-from app.filetransfer import FileTransfer
+from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.media import Media
 from app.media.meta import MetaInfo
 from app.schemas.sync import (
     ManualTransferResultDTO,
     ReIdentifyResultDTO,
 )
-from app.sync import Sync
+from app.services.sync_core import SyncCore as Sync
 from app.utils import EpisodeFormat, PathUtils, ExceptionUtils
 from app.utils.types import MediaType, MovieTypes, TvTypes, RmtMode, SyncType
 

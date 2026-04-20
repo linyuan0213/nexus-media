@@ -9,14 +9,14 @@ from werkzeug.security import generate_password_hash
 from app.helper import tmdb_blacklist_helper
 from app.helper.tmdb_blacklist_helper import TmdbBlacklistHelper
 from app.conf import SystemConfig
-from app.downloader import Downloader
+from app.services.downloader_core import DownloaderCore as Downloader
 from app.db.repositories import ConfigRepository
 from app.helper import ProgressHelper
 from app.mediaserver import MediaServer
 from app.message import Message
-from app.rss import Rss
-from app.subscribe import Subscribe
-from app.sync import Sync
+from app.services.rss_core import Rss
+from app.services.subscribe_service import SubscribeService as Subscribe
+from app.services.sync_core import SyncCore as Sync
 from app.utils import ExceptionUtils
 from app.utils.types import MediaType, MovieTypes
 from config import Config

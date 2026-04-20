@@ -2,10 +2,10 @@ from flask import Blueprint
 from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 from app.media.meta import MetaInfo
-from app.rss import Rss
+from app.services.rss_core import Rss
 from app.services.rss_service import RssTaskService as RssChecker
 from app.services.rss_service import RssSubscriptionService
-from app.subscribe import Subscribe
+from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils.types import MediaType, MovieTypes, RssType
 
 rss_bp = Blueprint("rss", __name__, url_prefix="/api/web/rss")

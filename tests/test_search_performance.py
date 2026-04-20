@@ -14,7 +14,7 @@ import sys
 sys.path.insert(0, '.')
 
 from app.indexer.client.builtin import BuiltinIndexer
-from app.searcher import Searcher
+from app.services.search_service import Searcher
 from app.indexer import Indexer
 
 

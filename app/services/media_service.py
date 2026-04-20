@@ -12,15 +12,15 @@ from typing import Optional, List, Tuple, Dict, Any
 import cn2an
 import log
 from app.conf import SystemConfig, ModuleConf
-from app.downloader import Downloader
-from app.filetransfer import FileTransfer
+from app.services.downloader_core import DownloaderCore as Downloader
+from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.helper import ThreadHelper
 from app.media import Media, Bangumi, DouBan, Scraper
 from app.media.meta import MetaInfo, MetaBase
 from app.mediaserver import MediaServer
 from app.plugins import EventManager
-from app.searcher import Searcher
-from app.subscribe import Subscribe
+from app.services.search_service import Searcher
+from app.services.subscribe_service import SubscribeService as Subscribe
 from app.schemas.media import (
     MediaInfoResultDTO,
     SeasonEpisodesResultDTO,

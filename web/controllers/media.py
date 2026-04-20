@@ -1,8 +1,8 @@
 from flask import Blueprint
 from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
-from app.downloader import Downloader
-from app.searcher import Searcher
+from app.services.downloader_core import DownloaderCore as Downloader
+from app.services.search_service import Searcher
 from app.utils.types import MediaType, MovieTypes
 from app.services.media_service import (
     MediaInfoService,
