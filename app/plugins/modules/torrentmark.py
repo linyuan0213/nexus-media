@@ -5,7 +5,7 @@ import pytz
 from apscheduler.triggers.cron import CronTrigger
 
 from app.services.downloader_core import DownloaderCore as Downloader
-from app.entities.torrent import Torrent
+from app.schemas.download import Torrent
 from app.message import Message
 from app.plugins.modules._base import _IPluginModule
 from config import Config

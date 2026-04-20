@@ -2,8 +2,7 @@ import os
 import re
 from typing import List, Optional, Dict, Any
 
-from app.entities.torrent import Torrent
-from app.entities.torrentstatus import TorrentStatus
+from app.schemas.download import Torrent, TorrentStatus
 import log
 from app.utils import ExceptionUtils, StringUtils
 from app.utils.types import DownloaderType

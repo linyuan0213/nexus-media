@@ -6,8 +6,7 @@ from typing import Tuple
 
 import transmission_rpc
 
-from app.entities.torrentstatus import TorrentStatus
-from app.entities.torrent import Torrent
+from app.schemas.download import Torrent, TorrentStatus
 import log
 from app.utils import ExceptionUtils, StringUtils
 from app.utils.types import DownloaderType

@@ -7,8 +7,7 @@ from datetime import datetime
 
 from bencode import bdecode
 
-from app.entities.torrent import Torrent
-from app.entities.torrentstatus import TorrentStatus
+from app.schemas.download import Torrent, TorrentStatus
 import log
 import qbittorrentapi
 from app.downloader.client._base import _IDownloadClient

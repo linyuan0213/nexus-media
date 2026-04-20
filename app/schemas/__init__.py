@@ -57,6 +57,8 @@ from .plugin import (
 
 # Download
 from .download import (
+    Torrent,
+    TorrentStatus,
     DownloadResultDTO,
     DownloadingTorrentDTO,
     IndexerStatisticsDTO,

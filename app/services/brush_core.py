@@ -14,8 +14,7 @@ from typing import Optional
 from urllib.parse import urlsplit
 
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
-from app.entities.torrent import Torrent
-from app.entities.torrentstatus import TorrentStatus
+from app.schemas.download import Torrent, TorrentStatus
 from app.media.meta import MetaInfo
 from app.message import Message
 from app.sites import Sites, SiteConf

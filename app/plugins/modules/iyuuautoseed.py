@@ -10,8 +10,7 @@ from jinja2 import Template
 from lxml import etree
 
 from app.services.downloader_core import DownloaderCore as Downloader
-from app.entities.torrent import Torrent
-from app.entities.torrentstatus import TorrentStatus
+from app.schemas.download import Torrent, TorrentStatus
 from app.media.meta import MetaInfo
 from app.plugins.modules._base import _IPluginModule
 from app.plugins.modules.iyuu.iyuu_helper import IyuuHelper

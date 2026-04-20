@@ -19,7 +19,7 @@ import log
 from app.conf import SystemConfig
 from app.db.repositories import DownloadRepository
 from app.downloader.client._base import _IDownloadClient
-from app.entities import torrent
+from app.schemas.download import Torrent
 from app.helper import ThreadHelper
 from app.media import Media
 from app.media.meta import MetaInfo
@@ -597,7 +597,7 @@ class DownloadCore:
 
     # ---------- 种子操作代理 ----------
 
-    def get_torrents(self, downloader_id=None, ids=None, tag=None) -> list[torrent.Torrent]:
+    def get_torrents(self, downloader_id=None, ids=None, tag=None) -> list[Torrent]:
         if not downloader_id:
             downloader_id = self._client_factory.default_downloader_id
         _client = self._client_factory.get_client(downloader_id)
@@ -628,7 +628,7 @@ class DownloadCore:
         torrents.sort(key=lambda x: x.get("name"))
         return torrents
 
-    def get_downloading_torrents(self, downloader_id=None, ids=None, tag=None) -> list[torrent.Torrent]:
+    def get_downloading_torrents(self, downloader_id=None, ids=None, tag=None) -> list[Torrent]:
         if not downloader_id:
             downloader_id = self._client_factory.default_downloader_id
         _client = self._client_factory.get_client(downloader_id)
@@ -652,7 +652,7 @@ class DownloadCore:
         tag = [PT_TAG] if only_nastool else None
         return _client.get_downloading_progress(tag=tag, ids=ids)
 
-    def get_completed_torrents(self, downloader_id=None, ids=None, tag=None) -> list[torrent.Torrent]:
+    def get_completed_torrents(self, downloader_id=None, ids=None, tag=None) -> list[Torrent]:
         if not downloader_id:
             downloader_id = self._client_factory.default_downloader_id
         _client = self._client_factory.get_client(downloader_id)

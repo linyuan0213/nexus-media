@@ -8,8 +8,7 @@ from apscheduler.triggers.cron import CronTrigger
 from bencode import bdecode, bencode
 
 from app.services.downloader_core import DownloaderCore as Downloader
-from app.entities import torrent
-from app.entities.torrentstatus import TorrentStatus
+from app.schemas.download import Torrent, TorrentStatus
 from app.media.meta import MetaInfo
 from app.plugins.modules._base import _IPluginModule
 from app.utils import Torrent
@@ -599,7 +598,7 @@ class TorrentTransfer(_IPluginModule):
         self._is_recheck_running = False
 
     @staticmethod
-    def __can_seeding(torrent: torrent.Torrent):
+    def __can_seeding(torrent: Torrent):
         """
         判断种子是否可以做种并处于暂停状态
         """

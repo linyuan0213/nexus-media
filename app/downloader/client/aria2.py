@@ -1,8 +1,7 @@
 import os
 import re
 
-from app.entities.torrent import Torrent
-from app.entities.torrentstatus import TorrentStatus
+from app.schemas.download import Torrent, TorrentStatus
 import log
 from app.utils import RequestUtils, ExceptionUtils, StringUtils
 from app.utils.types import DownloaderType
