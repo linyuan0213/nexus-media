@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from typing import Any, Dict, List, Optional
 
-from app.brushtask import BrushTask
+from datetime import datetime
+
+from app.services.brush_core import BrushTaskService as BrushTask
+from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.schemas.brush import (
     BrushTaskDTO,
     BrushTorrentListDTO,
@@ -110,3 +113,47 @@ class BrushService:
                         state=state, brushtask_id=tid)
             else:
                 self._brush.update_brushtask_state(state=state)
+
+    # ---------- 规则引擎委托 ----------
+
+    @staticmethod
+    def check_rss_rule(rss_rule: dict, title: str, torrent_size: float,
+                       pubdate: Optional[datetime], torrent_attr: dict) -> bool:
+        """委托给领域规则引擎：检查种子是否符合刷流RSS选种规则"""
+        return BrushRuleEngine.check_rss_rule(
+            rss_rule=rss_rule,
+            title=title,
+            torrent_size=torrent_size,
+            pubdate=pubdate,
+            torrent_attr=torrent_attr
+        )
+
+    @staticmethod
+    def check_remove_rule(remove_rule: Optional[dict], params: dict):
+        """委托给领域规则引擎：检查是否符合删种规则"""
+        return BrushRuleEngine.check_remove_rule(
+            remove_rule=remove_rule,
+            params=params
+        )
+
+    @staticmethod
+    def check_stop_rule(stop_rule: Optional[dict], torrent_attr: dict):
+        """委托给领域规则引擎：检查是否符合停种规则"""
+        return BrushRuleEngine.check_stop_rule(
+            stop_rule=stop_rule,
+            torrent_attr=torrent_attr
+        )
+
+    @staticmethod
+    def format_rule_html(rules: Optional[dict]) -> str:
+        """委托给领域规则引擎：将规则字典渲染为 HTML badge 字符串"""
+        return BrushRuleEngine.format_rule_html(rules)
+
+    @staticmethod
+    def check_range_rule(value, rule_value: str, multiplier: float = 1.0) -> bool:
+        """委托给领域规则引擎：通用范围规则检查"""
+        return BrushRuleEngine.check_range_rule(
+            value=value,
+            rule_value=rule_value,
+            multiplier=multiplier
+        )
