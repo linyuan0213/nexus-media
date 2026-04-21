@@ -183,7 +183,10 @@ def _download_image(url, timeout=10, referer=None):
             domain = parsed.netloc
             session = _get_session(domain)
             
-            proxies = Config().get_proxies()
+            try:
+                proxies = Config().get_proxies() or None
+            except Exception:
+                proxies = None
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
@@ -191,7 +194,14 @@ def _download_image(url, timeout=10, referer=None):
                 headers['Referer'] = referer
             
             # 使用 Session 发送请求（连接池复用）
-            response = session.get(url, proxies=proxies, headers=headers, timeout=timeout)
+            response = session.get(
+                url,
+                proxies=proxies,
+                headers=headers,
+                timeout=timeout,
+                verify=False,
+                allow_redirects=True
+            )
             response.raise_for_status()
             return response.content
         except Exception as e:
