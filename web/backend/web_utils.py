@@ -98,13 +98,23 @@ class WebUtils:
                 media_info = Media().get_media_info(title=f"{title} {year}",
                                                     mtype=mtype,
                                                     append_to_response="all")
-            # 检查是否成功匹配到TMDB信息
+            # TMDB匹配失败时，使用豆瓣信息构造基础媒体信息，避免退化为不识别模式
             if not media_info or not media_info.tmdb_info:
-                return None
-            media_info.douban_id = doubanid
-            # 如果TMDB没有图片，使用豆瓣图片
-            if douban_cover and (not media_info.poster_path or not media_info.poster_path.strip()):
-                media_info.poster_path = douban_cover
+                media_info = MetaInfo(title=title)
+                media_info.title = title
+                media_info.cn_name = title
+                media_info.original_title = original_title or title
+                media_info.year = year
+                media_info.type = mtype
+                media_info.douban_id = doubanid
+                if douban_cover:
+                    media_info.poster_path = douban_cover
+                    media_info.backdrop_path = douban_cover
+            if media_info:
+                media_info.douban_id = doubanid
+                # 如果TMDB没有图片，使用豆瓣图片
+                if douban_cover and (not media_info.poster_path or not media_info.poster_path.strip()):
+                    media_info.poster_path = douban_cover
         elif str(mediaid).startswith("BG:"):
             # BANGUMI
             bangumiid = str(mediaid)[3:]

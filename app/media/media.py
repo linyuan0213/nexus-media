@@ -129,6 +129,12 @@ class Media:
             tmdb_name = StringUtils.handler_special_chars(tmdb_name).strip().upper()
             if file_name == tmdb_name:
                 return True
+            # 编辑距离相似度匹配：处理如"相反的你和我"与"正相反的你和我"只差前缀的情况
+            # 阈值0.75可确保仅高相似度名称匹配，避免短词误匹配
+            if len(file_name) >= 3 and len(tmdb_name) >= 3:
+                ratio = difflib.SequenceMatcher(None, file_name, tmdb_name).ratio()
+                if ratio >= 0.75:
+                    return True
         return False
 
     def __search_tmdb_allnames(self, mtype: MediaType, tmdb_id):
@@ -831,6 +837,21 @@ class Media:
             return None
         if mtype:
             meta_info.type = mtype
+
+        # 后处理：当 MetaInfo 未解析出年份，但名称末尾包含4位数字时
+        # 提取该数字作为年份并清理名称，避免带年份的标题直接传给 TMDB 搜索失败
+        if not meta_info.year:
+            name = meta_info.get_name()
+            year_match = re.search(r'\s+(\d{4})$', name)
+            if year_match:
+                extracted_year = year_match.group(1)
+                if 1900 < int(extracted_year) < 2050:
+                    meta_info.year = extracted_year
+                    cleaned_name = re.sub(r'\s+\d{4}$', '', name)
+                    if meta_info.cn_name and meta_info.cn_name == name:
+                        meta_info.cn_name = cleaned_name
+                    elif meta_info.en_name and meta_info.en_name == name:
+                        meta_info.en_name = cleaned_name
 
         # 尝试从缓存获取
         if cache:
