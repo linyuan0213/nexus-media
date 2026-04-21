@@ -2,7 +2,7 @@
 """
 刷流领域实体
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Optional, Dict, Any
 
 
@@ -31,6 +31,13 @@ class BrushTaskEntity:
     send_message: str
     state: str
     lst_mod_date: str
+
+    def __getattr__(self, name: str):
+        """兼容旧代码的大写属性访问（如 task.ID -> task.id）"""
+        lower_name = name.lower()
+        if lower_name in {f.name for f in fields(self)}:
+            return getattr(self, lower_name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["BrushTaskEntity"]:

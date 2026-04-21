@@ -3,7 +3,7 @@
 RSS领域实体
 定义RSS历史、电影订阅、种子、剧集订阅、剧集分集的领域模型
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Optional, Dict, Any
 
 
@@ -43,6 +43,22 @@ class RssHistoryEntity:
             finish_time=orm_model.FINISH_TIME or "",
             note=orm_model.NOTE or ""
         )
+    # 从 ORM 列名到 dataclass 字段名的映射
+    _ORM_FIELD_MAP = {
+        'desc': 'description',
+        'description': 'description',
+        'tmdbid': 'tmdb_id',
+    }
+
+    def __getattr__(self, name: str):
+        """兼容旧代码的大写属性访问（如 entity.ID -> entity.id）"""
+        lower_name = name.lower()
+        # 检查是否是 ORM 列名映射
+        field_name = self._ORM_FIELD_MAP.get(lower_name, lower_name)
+        if field_name in {f.name for f in fields(self)}:
+            return getattr(self, field_name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -117,6 +133,22 @@ class RssMovieEntity:
             note=orm_model.NOTE or ""
         )
 
+    # 从 ORM 列名到 dataclass 字段名的映射
+    _ORM_FIELD_MAP = {
+        'desc': 'description',
+        'tmdbid': 'tmdb_id',
+    }
+
+    def __getattr__(self, name: str):
+        """兼容旧代码的大写属性访问（如 entity.ID -> entity.id）"""
+        lower_name = name.lower()
+        # 检查是否是 ORM 列名映射
+        field_name = self._ORM_FIELD_MAP.get(lower_name, lower_name)
+        if field_name in {f.name for f in fields(self)}:
+            return getattr(self, field_name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -170,6 +202,20 @@ class RssTorrentEntity:
             season=orm_model.SEASON or "",
             episode=orm_model.EPISODE or ""
         )
+    # 从 ORM 列名到 dataclass 字段名的映射
+    _ORM_FIELD_MAP = {
+        'desc': 'description',
+    }
+
+    def __getattr__(self, name: str):
+        """兼容旧代码的大写属性访问（如 entity.ID -> entity.id）"""
+        lower_name = name.lower()
+        # 检查是否是 ORM 列名映射
+        field_name = self._ORM_FIELD_MAP.get(lower_name, lower_name)
+        if field_name in {f.name for f in fields(self)}:
+            return getattr(self, field_name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -248,6 +294,21 @@ class RssTvEntity:
             description=orm_model.DESC or "",
             note=orm_model.NOTE or ""
         )
+    # 从 ORM 列名到 dataclass 字段名的映射
+    _ORM_FIELD_MAP = {
+        'desc': 'description',
+        'tmdbid': 'tmdb_id',
+    }
+
+    def __getattr__(self, name: str):
+        """兼容旧代码的大写属性访问（如 entity.ID -> entity.id）"""
+        lower_name = name.lower()
+        # 检查是否是 ORM 列名映射
+        field_name = self._ORM_FIELD_MAP.get(lower_name, lower_name)
+        if field_name in {f.name for f in fields(self)}:
+            return getattr(self, field_name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -297,6 +358,20 @@ class RssTvEpisodeEntity:
             rss_id=orm_model.RSSID or "",
             episodes=orm_model.EPISODES or ""
         )
+    # 从 ORM 列名到 dataclass 字段名的映射
+    _ORM_FIELD_MAP = {
+        'desc': 'description',
+    }
+
+    def __getattr__(self, name: str):
+        """兼容旧代码的大写属性访问（如 entity.ID -> entity.id）"""
+        lower_name = name.lower()
+        # 检查是否是 ORM 列名映射
+        field_name = self._ORM_FIELD_MAP.get(lower_name, lower_name)
+        if field_name in {f.name for f in fields(self)}:
+            return getattr(self, field_name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+
 
     def to_dict(self) -> Dict[str, Any]:
         return {

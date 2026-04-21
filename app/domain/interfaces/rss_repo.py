@@ -49,6 +49,13 @@ class IRssMovieRepository(Protocol):
         """获取过滤优先级"""
         ...
 
+    def insert(self, media_info, state="D", rss_sites=None, search_sites=None, over_edition=0,
+               filter_restype=None, filter_pix=None, filter_team=None, filter_rule=None,
+               filter_include=None, filter_exclude=None, save_path=None, download_setting: Optional[int] = -1,
+               fuzzy_match=0, desc=None, note=None, keyword=None) -> int:
+        """插入RSS电影"""
+        ...
+
     def delete(self, title: Optional[str] = None, year: Optional[str] = None, rssid: Optional[int] = None, tmdbid: Optional[str] = None) -> None:
         """删除RSS电影"""
         ...
@@ -77,12 +84,27 @@ class IRssTvRepository(Protocol):
         """更新描述"""
         ...
 
+    def update_filter_order(self, rssid: int, res_order: int) -> None:
+        """更新过滤优先级"""
+        ...
+
+    def get_filter_order(self, rssid: int) -> int:
+        """获取过滤优先级"""
+        ...
+
     def update_state(self, title: Optional[str], year: Optional[str], season: Optional[str], rssid: Optional[int], state: str) -> None:
         """更新状态"""
         ...
 
     def update_lack(self, title: Optional[str], year: Optional[str], season: Optional[str], rssid: Optional[int], lack_episodes: Optional[List[int]]) -> None:
         """更新缺失集数"""
+        ...
+
+    def insert(self, media_info, total, lack=0, state="D", rss_sites=None, search_sites=None, over_edition=0,
+               filter_restype=None, filter_pix=None, filter_team=None, filter_rule=None,
+               filter_include=None, filter_exclude=None, save_path=None, download_setting: Optional[int] = -1,
+               total_ep=None, current_ep=None, fuzzy_match=0, desc=None, note=None, keyword=None) -> int:
+        """插入RSS剧集"""
         ...
 
     def delete(self, title: Optional[str] = None, season: Optional[str] = None, rssid: Optional[int] = None, tmdbid: Optional[str] = None) -> None:
