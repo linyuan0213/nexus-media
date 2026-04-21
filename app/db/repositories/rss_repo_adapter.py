@@ -3,7 +3,7 @@
 RSS领域 Repository 适配器
 将旧版 RssRepository 适配为新领域接口
 """
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from app.domain.entities.rss import (
     RssHistoryEntity,
@@ -60,6 +60,30 @@ class RssMovieRepositoryAdapter:
     def delete(self, title: Optional[str] = None, year: Optional[str] = None, rssid: Optional[int] = None, tmdbid: Optional[str] = None) -> None:
         self._repo.delete_rss_movie(title, year, rssid, tmdbid)
 
+    def insert(self, media_info, state="D", rss_sites=None, search_sites=None, over_edition=0,
+               filter_restype=None, filter_pix=None, filter_team=None, filter_rule=None,
+               filter_include=None, filter_exclude=None, save_path=None, download_setting: Optional[int] = -1,
+               fuzzy_match=0, desc=None, note=None, keyword=None) -> int:
+        return self._repo.insert_rss_movie(
+            media_info=media_info,
+            state=state,
+            rss_sites=rss_sites,
+            search_sites=search_sites,
+            over_edition=over_edition,
+            filter_restype=filter_restype,
+            filter_pix=filter_pix,
+            filter_team=filter_team,
+            filter_rule=filter_rule,
+            filter_include=filter_include,
+            filter_exclude=filter_exclude,
+            save_path=save_path,
+            download_setting=download_setting,
+            fuzzy_match=fuzzy_match,
+            desc=desc,
+            note=note,
+            keyword=keyword
+        )
+
 
 class RssTvRepositoryAdapter:
     """RSS剧集订阅仓储适配器"""
@@ -95,8 +119,44 @@ class RssTvRepositoryAdapter:
     def update_lack(self, title: Optional[str], year: Optional[str], season: Optional[str], rssid: Optional[int], lack_episodes: Optional[List[int]]) -> None:
         self._repo.update_rss_tv_lack(title, year, season, rssid, lack_episodes)
 
+    def update_filter_order(self, rssid: int, res_order: int) -> None:
+        from app.utils.types import MediaType
+        self._repo.update_rss_filter_order(MediaType.TV, rssid, res_order)
+
+    def get_filter_order(self, rssid: int) -> int:
+        from app.utils.types import MediaType
+        return self._repo.get_rss_overedition_order(MediaType.TV, rssid)
+
     def delete(self, title: Optional[str] = None, season: Optional[str] = None, rssid: Optional[int] = None, tmdbid: Optional[str] = None) -> None:
         self._repo.delete_rss_tv(title, season, rssid, tmdbid)
+
+    def insert(self, media_info, total, lack=0, state="D", rss_sites=None, search_sites=None, over_edition=0,
+               filter_restype=None, filter_pix=None, filter_team=None, filter_rule=None,
+               filter_include=None, filter_exclude=None, save_path=None, download_setting: Optional[int] = -1,
+               total_ep=None, current_ep=None, fuzzy_match=0, desc=None, note=None, keyword=None) -> int:
+        return self._repo.insert_rss_tv(
+            media_info=media_info,
+            total=total,
+            lack=lack,
+            state=state,
+            rss_sites=rss_sites,
+            search_sites=search_sites,
+            over_edition=over_edition,
+            filter_restype=filter_restype,
+            filter_pix=filter_pix,
+            filter_team=filter_team,
+            filter_rule=filter_rule,
+            filter_include=filter_include,
+            filter_exclude=filter_exclude,
+            save_path=save_path,
+            download_setting=download_setting,
+            total_ep=total_ep,
+            current_ep=current_ep,
+            fuzzy_match=fuzzy_match,
+            desc=desc,
+            note=note,
+            keyword=keyword
+        )
 
 
 class RssTvEpisodeRepositoryAdapter:
