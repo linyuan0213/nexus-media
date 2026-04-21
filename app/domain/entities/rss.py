@@ -1,0 +1,306 @@
+# -*- coding: utf-8 -*-
+"""
+RSS领域实体
+定义RSS历史、电影订阅、种子、剧集订阅、剧集分集的领域模型
+"""
+from dataclasses import dataclass
+from typing import Optional, Dict, Any
+
+
+@dataclass
+class RssHistoryEntity:
+    """RSS历史记录实体"""
+    id: int
+    rss_type: str
+    rss_id: str
+    name: str
+    year: str
+    tmdb_id: str
+    season: str
+    image: str
+    description: str
+    total: int
+    start: int
+    finish_time: str
+    note: str
+
+    @classmethod
+    def from_orm(cls, orm_model) -> Optional["RssHistoryEntity"]:
+        if orm_model is None:
+            return None
+        return cls(
+            id=orm_model.ID,
+            rss_type=orm_model.TYPE or "",
+            rss_id=orm_model.RSSID or "",
+            name=orm_model.NAME or "",
+            year=orm_model.YEAR or "",
+            tmdb_id=orm_model.TMDBID or "",
+            season=orm_model.SEASON or "",
+            image=orm_model.IMAGE or "",
+            description=orm_model.DESC or "",
+            total=orm_model.TOTAL or 0,
+            start=orm_model.START or 0,
+            finish_time=orm_model.FINISH_TIME or "",
+            note=orm_model.NOTE or ""
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "type": self.rss_type,
+            "rssid": self.rss_id,
+            "name": self.name,
+            "year": self.year,
+            "tmdbid": self.tmdb_id,
+            "season": self.season,
+            "image": self.image,
+            "desc": self.description,
+            "total": self.total,
+            "start": self.start,
+            "finish_time": self.finish_time,
+            "note": self.note,
+        }
+
+
+@dataclass
+class RssMovieEntity:
+    """RSS电影订阅实体"""
+    id: int
+    name: str
+    year: str
+    keyword: str
+    tmdb_id: str
+    image: str
+    rss_sites: str
+    search_sites: str
+    over_edition: bool
+    filter_order: int
+    filter_restype: str
+    filter_pix: str
+    filter_rule: int
+    filter_team: str
+    filter_include: str
+    filter_exclude: str
+    save_path: str
+    download_setting: Optional[int]
+    fuzzy_match: bool
+    state: str
+    description: str
+    note: str
+
+    @classmethod
+    def from_orm(cls, orm_model) -> Optional["RssMovieEntity"]:
+        if orm_model is None:
+            return None
+        return cls(
+            id=orm_model.ID,
+            name=orm_model.NAME or "",
+            year=orm_model.YEAR or "",
+            keyword=orm_model.KEYWORD or "",
+            tmdb_id=orm_model.TMDBID or "",
+            image=orm_model.IMAGE or "",
+            rss_sites=orm_model.RSS_SITES or "",
+            search_sites=orm_model.SEARCH_SITES or "",
+            over_edition=bool(orm_model.OVER_EDITION),
+            filter_order=orm_model.FILTER_ORDER or 0,
+            filter_restype=orm_model.FILTER_RESTYPE or "",
+            filter_pix=orm_model.FILTER_PIX or "",
+            filter_rule=orm_model.FILTER_RULE or 0,
+            filter_team=orm_model.FILTER_TEAM or "",
+            filter_include=orm_model.FILTER_INCLUDE or "",
+            filter_exclude=orm_model.FILTER_EXCLUDE or "",
+            save_path=orm_model.SAVE_PATH or "",
+            download_setting=orm_model.DOWNLOAD_SETTING,
+            fuzzy_match=bool(orm_model.FUZZY_MATCH),
+            state=orm_model.STATE or "",
+            description=orm_model.DESC or "",
+            note=orm_model.NOTE or ""
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "year": self.year,
+            "keyword": self.keyword,
+            "tmdbid": self.tmdb_id,
+            "image": self.image,
+            "rss_sites": self.rss_sites,
+            "search_sites": self.search_sites,
+            "over_edition": self.over_edition,
+            "filter_order": self.filter_order,
+            "filter_restype": self.filter_restype,
+            "filter_pix": self.filter_pix,
+            "filter_rule": self.filter_rule,
+            "filter_team": self.filter_team,
+            "filter_include": self.filter_include,
+            "filter_exclude": self.filter_exclude,
+            "save_path": self.save_path,
+            "download_setting": self.download_setting,
+            "fuzzy_match": self.fuzzy_match,
+            "state": self.state,
+            "desc": self.description,
+            "note": self.note,
+        }
+
+
+@dataclass
+class RssTorrentEntity:
+    """RSS种子记录实体"""
+    id: int
+    torrent_name: str
+    enclosure: str
+    rss_type: str
+    title: str
+    year: str
+    season: str
+    episode: str
+
+    @classmethod
+    def from_orm(cls, orm_model) -> Optional["RssTorrentEntity"]:
+        if orm_model is None:
+            return None
+        return cls(
+            id=orm_model.ID,
+            torrent_name=orm_model.TORRENT_NAME or "",
+            enclosure=orm_model.ENCLOSURE or "",
+            rss_type=orm_model.TYPE or "",
+            title=orm_model.TITLE or "",
+            year=orm_model.YEAR or "",
+            season=orm_model.SEASON or "",
+            episode=orm_model.EPISODE or ""
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "torrent_name": self.torrent_name,
+            "enclosure": self.enclosure,
+            "type": self.rss_type,
+            "title": self.title,
+            "year": self.year,
+            "season": self.season,
+            "episode": self.episode,
+        }
+
+
+@dataclass
+class RssTvEntity:
+    """RSS剧集订阅实体"""
+    id: int
+    name: str
+    year: str
+    keyword: str
+    season: str
+    tmdb_id: str
+    image: str
+    rss_sites: str
+    search_sites: str
+    over_edition: bool
+    filter_order: int
+    filter_restype: str
+    filter_pix: str
+    filter_rule: int
+    filter_team: str
+    filter_include: str
+    filter_exclude: str
+    save_path: str
+    download_setting: Optional[int]
+    fuzzy_match: bool
+    total_ep: int
+    current_ep: int
+    total: int
+    lack: int
+    state: str
+    description: str
+    note: str
+
+    @classmethod
+    def from_orm(cls, orm_model) -> Optional["RssTvEntity"]:
+        if orm_model is None:
+            return None
+        return cls(
+            id=orm_model.ID,
+            name=orm_model.NAME or "",
+            year=orm_model.YEAR or "",
+            keyword=orm_model.KEYWORD or "",
+            season=orm_model.SEASON or "",
+            tmdb_id=orm_model.TMDBID or "",
+            image=orm_model.IMAGE or "",
+            rss_sites=orm_model.RSS_SITES or "",
+            search_sites=orm_model.SEARCH_SITES or "",
+            over_edition=bool(orm_model.OVER_EDITION),
+            filter_order=orm_model.FILTER_ORDER or 0,
+            filter_restype=orm_model.FILTER_RESTYPE or "",
+            filter_pix=orm_model.FILTER_PIX or "",
+            filter_rule=orm_model.FILTER_RULE or 0,
+            filter_team=orm_model.FILTER_TEAM or "",
+            filter_include=orm_model.FILTER_INCLUDE or "",
+            filter_exclude=orm_model.FILTER_EXCLUDE or "",
+            save_path=orm_model.SAVE_PATH or "",
+            download_setting=orm_model.DOWNLOAD_SETTING,
+            fuzzy_match=bool(orm_model.FUZZY_MATCH),
+            total_ep=orm_model.TOTAL_EP or 0,
+            current_ep=orm_model.CURRENT_EP or 0,
+            total=orm_model.TOTAL or 0,
+            lack=orm_model.LACK or 0,
+            state=orm_model.STATE or "",
+            description=orm_model.DESC or "",
+            note=orm_model.NOTE or ""
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "year": self.year,
+            "keyword": self.keyword,
+            "season": self.season,
+            "tmdbid": self.tmdb_id,
+            "image": self.image,
+            "rss_sites": self.rss_sites,
+            "search_sites": self.search_sites,
+            "over_edition": self.over_edition,
+            "filter_order": self.filter_order,
+            "filter_restype": self.filter_restype,
+            "filter_pix": self.filter_pix,
+            "filter_rule": self.filter_rule,
+            "filter_team": self.filter_team,
+            "filter_include": self.filter_include,
+            "filter_exclude": self.filter_exclude,
+            "save_path": self.save_path,
+            "download_setting": self.download_setting,
+            "fuzzy_match": self.fuzzy_match,
+            "total_ep": self.total_ep,
+            "current_ep": self.current_ep,
+            "total": self.total,
+            "lack": self.lack,
+            "state": self.state,
+            "desc": self.description,
+            "note": self.note,
+        }
+
+
+@dataclass
+class RssTvEpisodeEntity:
+    """RSS剧集分集实体"""
+    id: int
+    rss_id: str
+    episodes: str
+
+    @classmethod
+    def from_orm(cls, orm_model) -> Optional["RssTvEpisodeEntity"]:
+        if orm_model is None:
+            return None
+        return cls(
+            id=orm_model.ID,
+            rss_id=orm_model.RSSID or "",
+            episodes=orm_model.EPISODES or ""
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "rssid": self.rss_id,
+            "episodes": self.episodes,
+        }

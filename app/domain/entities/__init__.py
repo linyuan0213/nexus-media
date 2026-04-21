@@ -9,6 +9,18 @@ from app.domain.entities.download import (
     DownloadSettingEntity,
     IndexerStatisticsEntity,
 )
+from app.domain.entities.rss import (
+    RssHistoryEntity,
+    RssMovieEntity,
+    RssTorrentEntity,
+    RssTvEntity,
+    RssTvEpisodeEntity,
+)
+from app.domain.entities.transfer import (
+    TransferBlacklistEntity,
+    TransferHistoryEntity,
+    TransferUnknownEntity,
+)
 
 __all__ = [
     "SiteEntity",
@@ -18,4 +30,12 @@ __all__ = [
     "DownloadHistoryEntity",
     "DownloadSettingEntity",
     "IndexerStatisticsEntity",
+    "RssHistoryEntity",
+    "RssMovieEntity",
+    "RssTorrentEntity",
+    "RssTvEntity",
+    "RssTvEpisodeEntity",
+    "TransferBlacklistEntity",
+    "TransferHistoryEntity",
+    "TransferUnknownEntity",
 ]
