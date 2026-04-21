@@ -8,13 +8,18 @@ SubscribeService - 订阅业务 Facade
 """
 import json
 import traceback
-from typing import Optional
+from typing import Any, Optional
 
 import log
 from app.conf import SystemConfig
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
-from app.db.repositories import RssRepository
+from app.db.repositories.rss_repo_adapter import (
+    RssMovieRepositoryAdapter,
+    RssTvRepositoryAdapter,
+    RssTvEpisodeRepositoryAdapter,
+    RssHistoryRepositoryAdapter,
+)
 from app.services.indexer_service import IndexerService
 from app.media import Media, DouBan
 from app.media.meta import MetaInfo
@@ -33,7 +38,10 @@ class SubscribeService:
     """
 
     def __init__(self,
-                 rss_repo: Optional[RssRepository] = None,
+                 movie_repo: Optional[Any] = None,
+                 tv_repo: Optional[Any] = None,
+                 tv_episode_repo: Optional[Any] = None,
+                 history_repo: Optional[Any] = None,
                  search_engine: Optional[SubscribeSearchEngine] = None,
                  message: Optional[Message] = None,
                  media: Optional[Media] = None,
@@ -44,8 +52,15 @@ class SubscribeService:
                  filter_service: Optional[Filter] = None,
                  eventmanager: Optional[EventManager] = None,
                  system_config: Optional[SystemConfig] = None):
-        self._rss_repo = rss_repo or RssRepository()
-        self._search_engine = search_engine or SubscribeSearchEngine(service=self, rss_repo=self._rss_repo)
+        self._movie_repo = movie_repo or RssMovieRepositoryAdapter()
+        self._tv_repo = tv_repo or RssTvRepositoryAdapter()
+        self._tv_episode_repo = tv_episode_repo or RssTvEpisodeRepositoryAdapter()
+        self._history_repo = history_repo or RssHistoryRepositoryAdapter()
+        self._search_engine = search_engine or SubscribeSearchEngine(
+            service=self,
+            movie_repo=self._movie_repo,
+            tv_repo=self._tv_repo,
+            tv_episode_repo=self._tv_episode_repo)
         self._message = message or Message()
         self._media = media or Media()
         self._downloader = downloader or Downloader()
@@ -221,7 +236,7 @@ class SubscribeService:
                     lack = total
                 if rssid:
                     self.delete_subscribe(mtype=MediaType.TV, rssid=rssid)
-                code = self._rss_repo.insert_rss_tv(media_info=media_info,
+                code = self._tv_repo.insert(media_info=media_info,
                                                    total=total,
                                                    lack=lack,
                                                    state=state,
@@ -246,7 +261,7 @@ class SubscribeService:
                 # 电影
                 if rssid:
                     self.delete_subscribe(mtype=MediaType.MOVIE, rssid=rssid)
-                code = self._rss_repo.insert_rss_movie(media_info=media_info,
+                code = self._movie_repo.insert(media_info=media_info,
                                                       state=state,
                                                       rss_sites=rss_sites,
                                                       search_sites=search_sites,
@@ -273,7 +288,7 @@ class SubscribeService:
             if mtype == MediaType.MOVIE:
                 if rssid:
                     self.delete_subscribe(mtype=MediaType.MOVIE, rssid=rssid)
-                code = self._rss_repo.insert_rss_movie(media_info=media_info,
+                code = self._movie_repo.insert(media_info=media_info,
                                                       state="R",
                                                       rss_sites=rss_sites,
                                                       search_sites=search_sites,
@@ -291,7 +306,7 @@ class SubscribeService:
             else:
                 if rssid:
                     self.delete_subscribe(mtype=MediaType.TV, rssid=rssid)
-                code = self._rss_repo.insert_rss_tv(media_info=media_info,
+                code = self._tv_repo.insert(media_info=media_info,
                                                    total=0,
                                                    lack=0,
                                                    state="R",
@@ -351,11 +366,11 @@ class SubscribeService:
         rtype = "MOV" if media.type == MediaType.MOVIE else "TV"
         if media.type == MediaType.MOVIE:
             # 查询电影RSS数据
-            rss = self._rss_repo.get_rss_movies(rssid=rssid)
+            rss = self._movie_repo.get_all(rssid=rssid)
             if not rss:
                 return
             # 登记订阅历史
-            self._rss_repo.insert_rss_history(rssid=rssid,
+            self._history_repo.insert(rssid=rssid,
                                              rtype=rtype,
                                              name=rss[0].NAME,
                                              year=rss[0].YEAR,
@@ -369,12 +384,12 @@ class SubscribeService:
         # 电视剧订阅
         else:
             # 查询电视剧RSS数据
-            rss = self._rss_repo.get_rss_tvs(rssid=rssid)
+            rss = self._tv_repo.get_all(rssid=rssid)
             if not rss:
                 return
             total = rss[0].TOTAL_EP
             # 登记订阅历史
-            self._rss_repo.insert_rss_history(rssid=rssid,
+            self._history_repo.insert(rssid=rssid,
                                              rtype=rtype,
                                              name=rss[0].NAME,
                                              year=rss[0].YEAR,
@@ -406,7 +421,7 @@ class SubscribeService:
         获取电影订阅
         """
         ret_dict = {}
-        rss_movies = self._rss_repo.get_rss_movies(rssid=rid, state=state)
+        rss_movies = self._movie_repo.get_all(rssid=rid, state=state)
         rss_sites_valid = self._sites.get_site_names(rss=True)
         search_sites_valid = self._indexer_service.get_user_indexer_names()
         for rss_movie in rss_movies:
@@ -475,7 +490,7 @@ class SubscribeService:
 
     def get_subscribe_tvs(self, rid=None, state=None):
         ret_dict = {}
-        rss_tvs = self._rss_repo.get_rss_tvs(rssid=rid, state=state)
+        rss_tvs = self._tv_repo.get_all(rssid=rid, state=state)
         rss_sites_valid = self._sites.get_site_names(rss=True)
         search_sites_valid = self._indexer_service.get_user_indexer_names()
         for rss_tv in rss_tvs:
@@ -609,7 +624,7 @@ class SubscribeService:
             if media_info and media_info.tmdb_id and media_info.title != name:
                 log.info(f"【Subscribe】检测到TMDB信息变化，更新电影订阅 {name} 为 {media_info.title}")
                 # 更新订阅信息
-                self._rss_repo.update_rss_movie_tmdb(rid=rssid,
+                self._movie_repo.update_tmdb(rid=rssid,
                                                     tmdbid=media_info.tmdb_id,
                                                     title=media_info.title,
                                                     year=media_info.year,
@@ -657,7 +672,7 @@ class SubscribeService:
                     log.info(
                         f"【Subscribe】检测到TMDB信息变化，更新电视剧订阅 {name} 为 {media_info.title}，总集数为：{total_episode}")
                     # 更新订阅信息
-                    self._rss_repo.update_rss_tv_tmdb(rid=rssid,
+                    self._tv_repo.update_tmdb(rid=rssid,
                                                      tmdbid=media_info.tmdb_id,
                                                      title=media_info.title,
                                                      year=media_info.year,
@@ -667,7 +682,7 @@ class SubscribeService:
                                                      desc=media_info.overview,
                                                      note=self.gen_rss_note(media_info))
                     # 更新缺失季集
-                    self._rss_repo.update_rss_tv_episodes(
+                    self._tv_episode_repo.update(
                         rid=rssid,
                         episodes=range(total_episode - lack_episode + 1, total_episode + 1)
                     )
@@ -717,9 +732,9 @@ class SubscribeService:
         :param state: 状态 R/D/S
         """
         if rtype == MediaType.MOVIE:
-            self._rss_repo.update_rss_movie_state(rssid=rssid, state=state)
+            self._movie_repo.update_state(rssid=rssid, state=state)
         else:
-            self._rss_repo.update_rss_tv_state(rssid=rssid, state=state)
+            self._tv_repo.update_state(rssid=rssid, state=state)
 
     def update_subscribe_over_edition(self, rtype, rssid, media):
         """
@@ -735,7 +750,7 @@ class SubscribeService:
                 or not media.res_order:
             return False
         # 更新订阅命中的优先级
-        self._rss_repo.update_rss_filter_order(rtype=media.type,
+        self._movie_repo.update_filter_order(rtype=media.type,
                                               rssid=rssid,
                                               res_order=media.res_order)
         # 检查是否匹配最高优先级规则
@@ -756,7 +771,7 @@ class SubscribeService:
         :param res_order: 优先级
         :return 资源更优先返回True，否则返回False
         """
-        pre_res_order = self._rss_repo.get_rss_overedition_order(rtype=rtype, rssid=rssid)
+        pre_res_order = self._movie_repo.get_filter_order(rtype=rtype, rssid=rssid)
         if not pre_res_order:
             return True
         return True if int(pre_res_order) < int(res_order) else False
@@ -765,7 +780,7 @@ class SubscribeService:
         """
         更新电视剧订阅缺失集数
         """
-        self._rss_repo.update_rss_tv_state(rssid=rssid, state='R')
+        self._tv_repo.update_state(rssid=rssid, state='R')
         if not seasoninfo:
             return
         for info in seasoninfo:
@@ -775,20 +790,20 @@ class SubscribeService:
                         media_info.get_title_string(),
                         media_info.get_season_string(),
                         len(info.get("episodes"))))
-                    self._rss_repo.update_rss_tv_lack(rssid=rssid, lack_episodes=info.get("episodes"))
+                    self._tv_repo.update_lack(rssid=rssid, lack_episodes=info.get("episodes"))
                 break
 
     def get_subscribe_tv_episodes(self, rssid):
         """
         查询数据库中订阅的电视剧缺失集数
         """
-        return self._rss_repo.get_rss_tv_episodes(rssid)
+        return self._tv_episode_repo.get(rssid)
 
     def check_history(self, type_str, name, year, season):
         """
         检查订阅历史是否存在
         """
-        return self._rss_repo.check_rss_history(type_str=type_str,
+        return self._history_repo.check_exists(type_str=type_str,
                                                name=name,
                                                year=year,
                                                season=season)
@@ -799,9 +814,9 @@ class SubscribeService:
         删除电影订阅
         """
         if mtype == MediaType.MOVIE:
-            return self._rss_repo.delete_rss_movie(title=title, year=year, rssid=rssid, tmdbid=tmdbid)
+            return self._movie_repo.delete(title=title, year=year, rssid=rssid, tmdbid=tmdbid)
         else:
-            return self._rss_repo.delete_rss_tv(title=title, season=season, rssid=rssid, tmdbid=tmdbid)
+            return self._tv_repo.delete(title=title, season=season, rssid=rssid, tmdbid=tmdbid)
 
     def get_subscribe_id(self, mtype,
                          title, year=None, season=None, tmdbid=None):
@@ -809,11 +824,11 @@ class SubscribeService:
         获取订阅ID
         """
         if mtype == MediaType.MOVIE:
-            return self._rss_repo.get_rss_movie_id(title=title,
+            return self._movie_repo.get_id(title=title,
                                                   year=year,
                                                   tmdbid=tmdbid)
         else:
-            return self._rss_repo.get_rss_tv_id(title=title,
+            return self._tv_repo.get_id(title=title,
                                                year=year,
                                                season=season,
                                                tmdbid=tmdbid)
@@ -822,4 +837,4 @@ class SubscribeService:
         """
         清空订阅缺失集数
         """
-        self._rss_repo.truncate_rss_episodes()
+        self._tv_episode_repo.delete_all()
