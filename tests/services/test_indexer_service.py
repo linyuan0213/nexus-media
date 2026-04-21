@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock
 
+from app.domain.entities.download import IndexerStatisticsEntity
 from app.schemas.download import IndexerStatisticsDTO
 from app.schemas.indexer import (
     IndexerClientInfoDTO,
@@ -15,7 +16,13 @@ from app.services.indexer_service import IndexerService
 def svc():
     mock_indexer = MagicMock()
     mock_str = MagicMock()
-    return IndexerService(indexer=mock_indexer, string_utils=mock_str)
+    mock_stats_repo = MagicMock()
+    service = IndexerService(
+        indexer=mock_indexer,
+        string_utils=mock_str,
+        indexer_statistics_repo=mock_stats_repo
+    )
+    return service
 
 
 class TestGetUserIndexers:
@@ -143,24 +150,33 @@ class TestGetClientType:
 
 class TestGetIndexerStatistics:
     def test_empty(self, svc):
-        svc._indexer.get_indexer_statistics.return_value = []
+        svc._indexer.get_client.return_value = MagicMock(client_id="builtin")
+        svc._indexer_statistics_repo.get_by_client.return_value = []
         stats, dataset = svc.get_indexer_statistics()
         assert stats == []
         assert dataset == [["indexer", "avg"]]
 
     def test_with_data(self, svc):
-        svc._indexer.get_indexer_statistics.return_value = [
-            ["SiteA", 10, 2, 8, 1.23],
+        svc._indexer.get_client.return_value = MagicMock(client_id="builtin")
+        svc._indexer_statistics_repo.get_by_client.return_value = [
+            IndexerStatisticsEntity(indexer="SiteA", total=10, fail=2, success=8, avg_seconds=1.23),
         ]
         stats, dataset = svc.get_indexer_statistics()
         assert len(stats) == 1
         assert stats[0] == IndexerStatisticsDTO(
             name="SiteA", total=10, fail=2, success=8, avg=1.2
         )
-        assert dataset == [["indexer", "avg"], ["SiteA", 1.2]]
+        assert dataset == [["indexer", "avg"], ["SiteA", "1.2"]]
 
     def test_none_result(self, svc):
-        svc._indexer.get_indexer_statistics.return_value = None
+        svc._indexer.get_client.return_value = MagicMock(client_id="builtin")
+        svc._indexer_statistics_repo.get_by_client.return_value = []
+        stats, dataset = svc.get_indexer_statistics()
+        assert stats == []
+        assert dataset == [["indexer", "avg"]]
+
+    def test_no_client(self, svc):
+        svc._indexer.get_client.return_value = None
         stats, dataset = svc.get_indexer_statistics()
         assert stats == []
         assert dataset == [["indexer", "avg"]]

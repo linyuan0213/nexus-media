@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from app.indexer import Indexer
 from app.indexer.client import BuiltinIndexer
+from app.db.repositories.download_repo_adapter import IndexerStatisticsRepositoryAdapter
+from app.domain.interfaces.download_repo import IIndexerStatisticsRepository
 from app.schemas.download import IndexerStatisticsDTO
 from app.schemas.indexer import (
     IndexerClientInfoDTO,
@@ -28,10 +30,17 @@ class IndexerService:
     不直接操作 HTTP 请求，接收/返回显式 DTO，依赖通过构造函数注入。
     """
 
-    def __init__(self, indexer: Optional[Indexer] = None,
-                 string_utils=None):
+    def __init__(self,
+                 indexer: Optional[Indexer] = None,
+                 string_utils=None,
+                 indexer_statistics_repo: Optional[IIndexerStatisticsRepository] = None):
         self._indexer = indexer or Indexer()
         self._string_utils = string_utils or StringUtils
+        # 如果没有注入Repository，使用适配器创建默认实例
+        if indexer_statistics_repo is None:
+            self._indexer_statistics_repo = IndexerStatisticsRepositoryAdapter()
+        else:
+            self._indexer_statistics_repo = indexer_statistics_repo
 
     # ------------------------------------------------------------------
     # 站点管理
@@ -162,16 +171,20 @@ class IndexerService:
         获取索引器统计数据及图表 dataset
         :return: (统计数据列表, 图表数据集)
         """
-        result = self._indexer.get_indexer_statistics() or []
+        client = self._indexer.get_client()
+        client_id = getattr(client, 'client_id', '') if client else ''
+        if not client_id:
+            return [], [["indexer", "avg"]]
+        result = self._indexer_statistics_repo.get_by_client(client_id)
         dataset = [["indexer", "avg"]]
         stats: List[IndexerStatisticsDTO] = []
-        for ret in result:
+        for entity in result:
             stats.append(IndexerStatisticsDTO(
-                name=ret[0],
-                total=ret[1],
-                fail=ret[2],
-                success=ret[3],
-                avg=round(ret[4], 1)
+                name=entity.indexer,
+                total=entity.total,
+                fail=entity.fail,
+                success=entity.success,
+                avg=round(entity.avg_seconds, 1)
             ))
-            dataset.append([ret[0], round(ret[4], 1)])
+            dataset.append([entity.indexer, str(round(entity.avg_seconds, 1))])
         return stats, dataset
