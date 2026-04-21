@@ -2,22 +2,16 @@ from flask import Blueprint
 from web.core.decorators import any_auth, parse_json_data
 from web.core.response import success, fail
 from web.core.action_utils import set_config_directory, delete_media_file
-import importlib
 import os.path
-import re
 import shutil
-from urllib.parse import unquote
 import log
 from app.conf import ModuleConf
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.helper import ThreadHelper
-from app.media import Media
-from app.media.meta import MetaInfo
-from app.plugins import EventManager
 from app.services.sync_service import SyncService
 from app.services.sync_core import SyncCore as Sync
-from app.utils import StringUtils, EpisodeFormat, PathUtils, SystemUtils, ExceptionUtils
-from app.utils.types import RmtMode, OsType, SyncType, MediaType, MovieTypes, TvTypes
+from app.utils import ExceptionUtils
+from app.utils.types import RmtMode, SyncType
 from config import RMT_MEDIAEXT, RMT_SUBEXT, RMT_AUDIO_TRACK_EXT, Config
 
 sync_bp = Blueprint("sync", __name__, url_prefix="/api/web/sync")
@@ -99,100 +93,16 @@ def _delete_sync_path(data):
     return success()
 
 
-@sync_bp.route('/exec_test_command', methods=['POST'])
-@any_auth
-@parse_json_data
-def _exec_test_command(data):
-    cmd = data.get("command", "") if isinstance(data, dict) else str(data)
-    m = re.match(r"^(\w+)\(\)\.(\w+)\(\)$", cmd.strip())
-    if not m:
-        return None
-    obj_name, method_name = m.groups()
-    safe_mapping = {
-        "Config": ("config", "Config"),
-        "Message": ("app.message", "Message"),
-        "MessageCenter": ("app.message", "MessageCenter"),
-        "Downloader": ("app.services.downloader_core", "DownloaderCore"),
-        "MediaServer": ("app.mediaserver", "MediaServer"),
-        "Indexer": ("app.indexer", "Indexer"),
-        "Sites": ("app.sites", "Sites"),
-        "Sync": ("app.sync", "Sync"),
-        "BrushTask": ("app.brushtask", "BrushTask"),
-        "RssChecker": ("app.services.rss_service", "RssTaskService"),
-        "TorrentRemover": ("app.torrentremover", "TorrentRemover"),
-        "Rss": ("app.rss", "Rss"),
-        "Subscribe": ("app.subscribe", "Subscribe"),
-        "SchedulerCore": ("app.services.scheduler_core", "SchedulerCore"),
-        "PluginManager": ("app.plugins", "PluginManager"),
-        "Scraper": ("app.media", "Scraper"),
-    }
-    module_path, class_name = safe_mapping.get(obj_name, (None, None))
-    if not module_path:
-        return None
-    try:
-        cls = getattr(importlib.import_module(module_path), class_name)
-        obj = cls()
-        if hasattr(obj, method_name):
-            return getattr(obj, method_name)()
-    except Exception:
-        pass
-    return None
 
 
 @sync_bp.route('/get_sub_path', methods=['POST'])
 @any_auth
 @parse_json_data
 def _get_sub_path(data):
-    r = []
     try:
         ft = data.get("filter") or "ALL"
         d = data.get("dir")
-        if not d or d == "/":
-            if SystemUtils.get_system() == OsType.WINDOWS:
-                partitions = SystemUtils.get_windows_drives()
-                if partitions:
-                    dirs = [os.path.join(partition, "/")
-                            for partition in partitions]
-                else:
-                    dirs = [os.path.join("C:/", f)
-                            for f in os.listdir("C:/")]
-            else:
-                dirs = [os.path.join("/", f) for f in os.listdir("/")]
-        else:
-            d = os.path.normpath(unquote(d))
-            if not os.path.isdir(d):
-                d = os.path.dirname(d)
-            dirs = [os.path.join(d, f) for f in os.listdir(d)]
-        dirs.sort()
-        for ff in dirs:
-            if os.path.isdir(ff):
-                if 'ONLYDIR' in ft or 'ALL' in ft:
-                    r.append({
-                        "path": ff.replace("\\", "/"),
-                        "name": os.path.basename(ff),
-                        "type": "dir",
-                        "rel": os.path.dirname(ff).replace("\\", "/")
-                    })
-            else:
-                ext = os.path.splitext(ff)[-1][1:]
-                flag = False
-                if 'ONLYFILE' in ft or 'ALL' in ft:
-                    flag = True
-                elif "MEDIAFILE" in ft and f".{str(ext).lower()}" in RMT_MEDIAEXT:
-                    flag = True
-                elif "SUBFILE" in ft and f".{str(ext).lower()}" in RMT_SUBEXT:
-                    flag = True
-                elif "AUDIOTRACKFILE" in ft and f".{str(ext).lower()}" in RMT_AUDIO_TRACK_EXT:
-                    flag = True
-                if flag:
-                    r.append({
-                        "path": ff.replace("\\", "/"),
-                        "name": os.path.basename(ff),
-                        "type": "file",
-                        "rel": os.path.dirname(ff).replace("\\", "/"),
-                        "ext": ext,
-                        "size": StringUtils.str_filesize(os.path.getsize(ff))
-                    })
+        r = SyncService().get_sub_path(directory=d, ft=ft)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
         return fail(code=-1, message='加载路径失败: %s' % str(e))
@@ -260,15 +170,11 @@ def _rename(data):
 @any_auth
 @parse_json_data
 def _rename_file(data):
-    path = data.get("path")
-    name = data.get("name")
-    if path and name:
-        try:
-            shutil.move(path, os.path.join(os.path.dirname(path), name))
-        except Exception as e:
-            ExceptionUtils.exception_traceback(e)
-            return fail(code=-1, msg=str(e))
-    return success()
+    result = SyncService().rename_file(
+        path=data.get("path"), name=data.get("name"))
+    if result.success:
+        return success()
+    return fail(code=-1, msg=result.message)
 
 
 @sync_bp.route('/rename_udf', methods=['POST'])
@@ -314,49 +220,25 @@ def _run_directory_sync(data):
 @any_auth
 @parse_json_data
 def _test_connection(data):
-    command = data.get("command")
-    ret = None
-    module_obj = None
-    if command:
-        try:
-            if isinstance(command, list):
-                for cmd_str in command:
-                    ret = _exec_test_command(cmd_str)
-                    if not ret:
-                        break
-            else:
-                if command.find("|") != -1:
-                    module = command.split("|")[0]
-                    class_name = command.split("|")[1]
-                    module_obj = getattr(
-                        importlib.import_module(module), class_name)()
-                    if hasattr(module_obj, "init_config"):
-                        module_obj.init_config()
-                    ret = module_obj.get_status()
-                else:
-                    ret = _exec_test_command(command)
-            Config().init_config()
-            if module_obj:
-                if hasattr(module_obj, "init_config"):
-                    module_obj.init_config()
-        except Exception as e:
-            ret = None
-            ExceptionUtils.exception_traceback(e)
-        return fail(code=0 if ret else 1)
-    return success()
+    result = SyncService().test_connection(command=data.get("command"))
+    if result.success:
+        return success()
+    return fail(code=1)
 
 
 @sync_bp.route('/update_directory', methods=['POST'])
 @any_auth
 @parse_json_data
 def _update_directory(data):
-    cfg = set_config_directory(Config().get_config(),
-                               data.get("oper"),
-                               data.get("key"),
-                               data.get("value"),
-                               data.get("replace_value"))
-    Config().save_config(cfg)
-    return success()
+    result = SyncService().update_directory(
+        oper=data.get("oper"),
+        key=data.get("key"),
+        value=data.get("value"),
+        replace_value=data.get("replace_value")
+    )
+    if result.success:
+        return success()
+    return fail()
 
 
 @sync_bp.route('/delete_history', methods=['POST'])

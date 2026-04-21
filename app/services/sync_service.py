@@ -14,6 +14,7 @@ from app.media.meta import MetaInfo
 from app.schemas.sync import (
     ManualTransferResultDTO,
     ReIdentifyResultDTO,
+    SimpleResultDTO,
 )
 from app.services.sync_core import SyncCore as Sync
 from app.utils import EpisodeFormat, PathUtils, ExceptionUtils
@@ -290,3 +291,110 @@ class SyncService:
                         "size": StringUtils.str_filesize(os.path.getsize(ff))
                     })
         return r
+
+    # ---------- 文件重命名 ----------
+
+    @staticmethod
+    def rename_file(path: str, name: str) -> SimpleResultDTO:
+        """重命名文件/目录"""
+        if not path or not name:
+            return SimpleResultDTO(success=True)
+        try:
+            import shutil
+            shutil.move(path, os.path.join(os.path.dirname(path), name))
+            return SimpleResultDTO(success=True)
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
+            return SimpleResultDTO(success=False, message=str(e))
+
+    # ---------- 测试命令执行 ----------
+
+    @staticmethod
+    def exec_test_command(cmd: str):
+        """
+        执行安全映射内的测试命令，返回调用结果或 None
+        """
+        import importlib
+        import re
+        m = re.match(r"^(\w+)\(\)\.(\w+)\(\)$", cmd.strip())
+        if not m:
+            return None
+        obj_name, method_name = m.groups()
+        safe_mapping = {
+            "Config": ("config", "Config"),
+            "Message": ("app.message", "Message"),
+            "MessageCenter": ("app.message", "MessageCenter"),
+            "Downloader": ("app.services.downloader_core", "DownloaderCore"),
+            "MediaServer": ("app.mediaserver", "MediaServer"),
+            "Indexer": ("app.indexer", "Indexer"),
+            "Sites": ("app.sites", "Sites"),
+            "Sync": ("app.sync", "Sync"),
+            "BrushTask": ("app.brushtask", "BrushTask"),
+            "RssChecker": ("app.services.rss_service", "RssTaskService"),
+            "TorrentRemover": ("app.torrentremover", "TorrentRemover"),
+            "Rss": ("app.rss", "Rss"),
+            "Subscribe": ("app.subscribe", "Subscribe"),
+            "SchedulerCore": ("app.services.scheduler_core", "SchedulerCore"),
+            "PluginManager": ("app.plugins", "PluginManager"),
+            "Scraper": ("app.media", "Scraper"),
+        }
+        module_path, class_name = safe_mapping.get(obj_name, (None, None))
+        if not module_path:
+            return None
+        try:
+            cls = getattr(importlib.import_module(module_path), class_name)
+            obj = cls()
+            if hasattr(obj, method_name):
+                return getattr(obj, method_name)()
+        except Exception:
+            pass
+        return None
+
+    @classmethod
+    def test_connection(cls, command) -> SimpleResultDTO:
+        """
+        测试模块连接状态
+        """
+        import importlib
+        ret = None
+        module_obj = None
+        if not command:
+            return SimpleResultDTO(success=True)
+        try:
+            if isinstance(command, list):
+                for cmd_str in command:
+                    ret = cls.exec_test_command(cmd_str)
+                    if not ret:
+                        break
+            else:
+                if command.find("|") != -1:
+                    module = command.split("|")[0]
+                    class_name = command.split("|")[1]
+                    module_obj = getattr(
+                        importlib.import_module(module), class_name)()
+                    if hasattr(module_obj, "init_config"):
+                        module_obj.init_config()
+                    ret = module_obj.get_status()
+                else:
+                    ret = cls.exec_test_command(command)
+            from config import Config
+            Config().init_config()
+            if module_obj:
+                if hasattr(module_obj, "init_config"):
+                    module_obj.init_config()
+        except Exception as e:
+            ret = None
+            ExceptionUtils.exception_traceback(e)
+        return SimpleResultDTO(success=bool(ret))
+
+    # ---------- 目录配置更新 ----------
+
+    @staticmethod
+    def update_directory(oper: str, key: str, value: str,
+                         replace_value: Optional[str] = None) -> SimpleResultDTO:
+        """更新配置中的目录路径"""
+        from web.core.action_utils import set_config_directory
+        from config import Config
+        cfg = set_config_directory(Config().get_config(), oper, key, value, replace_value)
+        Config().save_config(cfg)
+        return SimpleResultDTO(success=True)

@@ -209,3 +209,78 @@ class TestGetSyncPaths:
         mock_sync.get_sync_path_conf.return_value = {"from": "/src"}
         result = svc.get_sync_paths(sid=1)
         assert result == {"from": "/src"}
+
+
+class TestRenameFile:
+    def test_rename_file_success(self, svc, tmp_path):
+        from app.schemas.sync import SimpleResultDTO
+        src_file = tmp_path / "test.txt"
+        src_file.write_text("content")
+        result = svc.rename_file(str(src_file), "renamed.txt")
+        assert isinstance(result, SimpleResultDTO)
+        assert result.success is True
+        assert not src_file.exists()
+        assert (tmp_path / "renamed.txt").exists()
+
+    def test_rename_file_empty_path(self, svc):
+        from app.schemas.sync import SimpleResultDTO
+        result = svc.rename_file("", "name")
+        assert isinstance(result, SimpleResultDTO)
+        assert result.success is True
+
+    def test_rename_file_failure(self, svc, monkeypatch):
+        from app.schemas.sync import SimpleResultDTO
+        import shutil
+        monkeypatch.setattr(shutil, "move", lambda *args, **kwargs: (_ for _ in ()).throw(Exception("mock error")))
+        result = svc.rename_file("/nonexistent/file.txt", "new.txt")
+        assert isinstance(result, SimpleResultDTO)
+        assert result.success is False
+        assert "mock error" in result.message
+
+
+class TestExecTestCommand:
+    def test_exec_test_command_invalid_format(self, svc):
+        result = svc.exec_test_command("invalid_cmd")
+        assert result is None
+
+    def test_exec_test_command_unknown_object(self, svc):
+        result = svc.exec_test_command("UnknownClass().method()")
+        assert result is None
+
+
+class TestTestConnection:
+    def test_test_connection_empty(self, svc):
+        from app.schemas.sync import SimpleResultDTO
+        result = svc.test_connection("")
+        assert isinstance(result, SimpleResultDTO)
+        assert result.success is True
+
+    def test_test_connection_with_command(self, svc):
+        from app.schemas.sync import SimpleResultDTO
+        from unittest.mock import patch
+        # Patch the class method to return True for any command, and Config to avoid singleton issues
+        with patch.object(SyncService, 'exec_test_command', return_value=True):
+            with patch('config.Config') as mock_config:
+                mock_config.return_value.init_config.return_value = None
+                result = svc.test_connection("Config().get_config()")
+                assert isinstance(result, SimpleResultDTO)
+                assert result.success is True
+
+
+class TestUpdateDirectory:
+    def test_update_directory_success(self, svc):
+        from app.schemas.sync import SimpleResultDTO
+        from unittest.mock import patch, MagicMock
+
+        mock_cfg = {"key": "value"}
+        mock_set_config = MagicMock(return_value=mock_cfg)
+
+        with patch('config.Config') as mock_config:
+            with patch('web.core.action_utils.set_config_directory', mock_set_config):
+                mock_config.return_value.get_config.return_value = mock_cfg
+
+                result = svc.update_directory("add", "dir", "/new/path")
+
+                assert isinstance(result, SimpleResultDTO)
+                assert result.success is True
+                mock_set_config.assert_called_once_with(mock_cfg, "add", "dir", "/new/path", None)
