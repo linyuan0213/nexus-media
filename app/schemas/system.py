@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -45,3 +46,32 @@ class VersionInfoDTO:
     version: str = ""
     url: str = ""
     has_update: bool = False
+
+
+@dataclass
+class SendMessageResultDTO:
+    """发送消息结果"""
+    success: bool = False
+    message: str = ""
+
+
+@dataclass
+class ProgressResultDTO:
+    """进度查询结果"""
+    value: int = 0
+    text: str = ""
+    exists: bool = False
+
+
+@dataclass
+class UserManageResultDTO:
+    """用户管理结果"""
+    success: bool = False
+    message: str = ""
+
+
+@dataclass
+class ConfigUpdateResultDTO:
+    """配置更新结果"""
+    success: bool = False
+    test_mode: bool = False

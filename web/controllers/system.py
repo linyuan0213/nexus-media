@@ -4,25 +4,10 @@ from web.core.response import success, fail
 from web.core.action_utils import restart_server
 import json
 from flask_login import logout_user
-from werkzeug.security import generate_password_hash
 
-from app.helper import tmdb_blacklist_helper
 from app.helper.tmdb_blacklist_helper import TmdbBlacklistHelper
-from app.conf import SystemConfig
-from app.services.downloader_core import DownloaderCore as Downloader
 from app.db.repositories import ConfigRepository
-from app.helper import ProgressHelper
-from app.mediaserver import MediaServer
-from app.message import Message
-from app.services.rss_core import Rss
-from app.services.subscribe_service import SubscribeService as Subscribe
-from app.services.sync_core import SyncCore as Sync
 from app.utils import ExceptionUtils
-from app.utils.types import MediaType, MovieTypes
-from config import Config
-from web.backend.search_torrents import search_medias_for_web
-from web.backend.user import User
-from web.backend.web_utils import WebUtils
 from web.cache import cache
 from app.services.system_service import (
     MessageClientService,
@@ -34,6 +19,10 @@ from app.services.system_service import (
     WebSearchService,
     SystemConfigService,
     VersionService,
+    MessageSenderService,
+    ProgressService,
+    UserManageService,
+    ConfigUpdateService,
 )
 
 system_bp = Blueprint("system", __name__, url_prefix="/api/web/system")
@@ -235,19 +224,12 @@ def _search(data):
     filters = data.get("filters")
     tmdbid = data.get("tmdbid")
     media_type = data.get("media_type")
-    if media_type:
-        if media_type in MovieTypes:
-            media_type = MediaType.MOVIE
-        else:
-            media_type = MediaType.TV
-    if search_word:
-        ret, ret_msg = search_medias_for_web(content=search_word,
-                                             ident_flag=ident_flag,
-                                             filters=filters,
-                                             tmdbid=tmdbid,
-                                             media_type=media_type)
-        if ret != 0:
-            return fail(code=ret, msg=ret_msg)
+    result = WebSearchService().search(
+        search_word=search_word, ident_flag=ident_flag,
+        filters=filters, tmdbid=tmdbid, media_type=media_type
+    )
+    if result.code != 0:
+        return fail(code=result.code, msg=result.msg)
     return success()
 
 
@@ -292,14 +274,14 @@ def _update_all_config(data):
     if data.get('test'):
         conf = data
     if conf:
-        ret = _update_config(conf)
-        if ret.get('code') == 1:
-            return ret
+        ret = ConfigUpdateService.update_config(conf)
+        if not ret.success:
+            return fail()
     if db:
-        ret = _set_system_config(db)
-        if ret.get('code') == 1:
-            return ret
-
+        ret = SystemConfigService().set_config(
+            key=db.get("key"), value=db.get("value"))
+        if not ret:
+            return fail()
     return success()
 
 
@@ -310,21 +292,10 @@ def _update_config(data):
     """
     更新配置信息
     """
-    cfg = Config().get_config()
-    cfgs = dict(data).items()
-    config_test = False
-    for key, value in cfgs:
-        if key == "test" and value:
-            config_test = True
-            continue
-        from web.core.action_utils import set_config_value
-        cfg = set_config_value(cfg, key, value)
-
-    if not config_test:
-        cfg.pop("test", None)
-        Config().save_config(cfg)
-
-    return success()
+    result = ConfigUpdateService.update_config(data)
+    if result.success:
+        return success()
+    return fail()
 
 
 @system_bp.route('/update_message_client', methods=['POST'])
@@ -354,27 +325,19 @@ def _user_manager(data):
     """
     用户管理
     """
-    from app.services.rbac_service import rbac_service
+    from werkzeug.security import generate_password_hash
     oper = data.get("oper")
     name = data.get("name")
+    svc = UserManageService()
     if oper == "add":
         password = generate_password_hash(str(data.get("password")))
-        pris = data.get("pris")
-        if isinstance(pris, list):
-            pris = ",".join(pris)
-        ok, _ = rbac_service.create_user(username=name, password=password)
-        ret = ok
+        result = svc.add_user(name=name, password=password)
     else:
-        user = rbac_service.get_user_by_username(name)
-        if user:
-            ok, _ = rbac_service.delete_user(user.ID)  # type: ignore[arg-type]
-            ret = ok
-        else:
-            ret = False
+        result = svc.delete_user(name=name)
 
-    if ret == 1 or ret:
+    if result.success:
         return success(success=False)
-    return fail(code=-1, success=False, message='操作失败')
+    return fail(code=-1, success=False, message=result.message or '操作失败')
 
 
 @system_bp.route('/version', methods=['POST'])
@@ -397,11 +360,11 @@ def refresh_process(data):
     """
     刷新进度条
     """
-    detail = ProgressHelper().get_process(data.get("type"))
-    if detail:
-        return success(value=detail.get("value"), text=detail.get("text"))
+    result = ProgressService().get_progress(ptype=data.get("type"))
+    if result.exists:
+        return success(value=result.value, text=result.text)
     else:
-        return fail(value=0, text="正在处理...")
+        return fail(value=0, text=result.text)
 
 
 @system_bp.route('/send_custom_message', methods=['POST'])
@@ -411,15 +374,15 @@ def send_custom_message(data):
     """
     发送自定义消息
     """
-    title = data.get("title")
-    text = data.get("text") or ""
-    image = data.get("image") or ""
-    message_clients = data.get("message_clients")
-    if not message_clients:
-        return fail(msg="未选择消息服务")
-    Message().send_custom_message(clients=message_clients,
-                                  title=title, text=text, image=image)
-    return success()
+    result = MessageSenderService().send_custom_message(
+        clients=data.get("message_clients"),
+        title=data.get("title"),
+        text=data.get("text") or "",
+        image=data.get("image") or "",
+    )
+    if result.success:
+        return success()
+    return fail(msg=result.message)
 
 
 @system_bp.route('/send_plugin_message', methods=['POST'])
@@ -429,10 +392,11 @@ def send_plugin_message(data):
     """
     发送插件消息
     """
-    title = data.get("title")
-    text = data.get("text") or ""
-    image = data.get("image") or ""
-    Message().send_plugin_message(title=title, text=text, image=image)
+    MessageSenderService().send_plugin_message(
+        title=data.get("title"),
+        text=data.get("text") or "",
+        image=data.get("image") or "",
+    )
     return success()
 
 

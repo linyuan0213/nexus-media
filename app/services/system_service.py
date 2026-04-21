@@ -35,6 +35,10 @@ from app.schemas.system import (
     MediaServerConfigResultDTO,
     WebSearchResultDTO,
     VersionInfoDTO,
+    SendMessageResultDTO,
+    ProgressResultDTO,
+    UserManageResultDTO,
+    ConfigUpdateResultDTO,
 )
 from app.sites import SiteUserInfo
 from app.services.subscribe_service import SubscribeService as Subscribe
@@ -643,3 +647,95 @@ def restart_service():
 def restart_server():
     """重启服务器（顶层兼容函数）"""
     SystemLifecycleService.restart_server()
+
+
+class MessageSenderService:
+    """
+    消息发送业务服务
+    """
+
+    def __init__(self, message: Optional[Message] = None):
+        self._message = message or Message()
+
+    def send_custom_message(self, clients: list, title: str, text: str,
+                            image: str = "") -> SendMessageResultDTO:
+        if not clients:
+            return SendMessageResultDTO(success=False, message="未选择消息服务")
+        self._message.send_custom_message(
+            clients=clients, title=title, text=text, image=image)
+        return SendMessageResultDTO(success=True)
+
+    def send_plugin_message(self, title: str, text: str,
+                            image: str = "") -> SendMessageResultDTO:
+        self._message.send_plugin_message(title=title, text=text, image=image)
+        return SendMessageResultDTO(success=True)
+
+
+class ProgressService:
+    """
+    进度查询业务服务
+    """
+
+    def __init__(self, progress_helper=None):
+        from app.helper import ProgressHelper
+        self._progress = progress_helper or ProgressHelper()
+
+    def get_progress(self, ptype: str) -> ProgressResultDTO:
+        detail = self._progress.get_process(ptype)
+        if detail:
+            return ProgressResultDTO(
+                value=detail.get("value", 0),
+                text=detail.get("text", ""),
+                exists=True
+            )
+        return ProgressResultDTO(exists=False, text="正在处理...")
+
+
+class UserManageService:
+    """
+    用户管理业务服务
+    """
+
+    def __init__(self, rbac_svc=None):
+        self._rbac = rbac_svc
+
+    def _get_rbac(self):
+        if self._rbac is None:
+            from app.services.rbac_service import rbac_service
+            self._rbac = rbac_service
+        return self._rbac
+
+    def add_user(self, name: str, password: str,
+                 pris=None) -> UserManageResultDTO:
+        rbac = self._get_rbac()
+        ok, _ = rbac.create_user(username=name, password=password)
+        return UserManageResultDTO(success=bool(ok))
+
+    def delete_user(self, name: str) -> UserManageResultDTO:
+        rbac = self._get_rbac()
+        user = rbac.get_user_by_username(name)
+        if user:
+            ok, _ = rbac.delete_user(user.ID)  # type: ignore[arg-type]
+            return UserManageResultDTO(success=bool(ok))
+        return UserManageResultDTO(success=False, message="用户不存在")
+
+
+class ConfigUpdateService:
+    """
+    配置更新业务服务（文件配置 + 数据库配置合并更新）
+    """
+
+    @staticmethod
+    def update_config(data: dict) -> ConfigUpdateResultDTO:
+        from web.core.action_utils import set_config_value
+        cfg = Config().get_config()
+        config_test = False
+        for key, value in dict(data).items():
+            if key == "test" and value:
+                config_test = True
+                continue
+            cfg = set_config_value(cfg, key, value)
+        if not config_test:
+            cfg.pop("test", None)
+            Config().save_config(cfg)
+        return ConfigUpdateResultDTO(success=True, test_mode=config_test)
