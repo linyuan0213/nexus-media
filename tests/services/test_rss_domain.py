@@ -134,6 +134,30 @@ class TestRssMovieRepositoryAdapter:
         adapter.delete(rssid=1)
         mock_repo.delete_rss_movie.assert_called_once_with(None, None, 1, None)
 
+    def test_insert(self):
+        mock_repo = self._create_mock_repo()
+        mock_repo.insert_rss_movie.return_value = 0
+        adapter = RssMovieRepositoryAdapter(mock_repo)
+        media_info = MagicMock()
+        media_info.title = "Test Movie"
+        media_info.year = "2023"
+        result = adapter.insert(media_info=media_info, state="D")
+        assert result == 0
+        mock_repo.insert_rss_movie.assert_called_once()
+
+    def test_update_filter_order(self):
+        mock_repo = self._create_mock_repo()
+        adapter = RssMovieRepositoryAdapter(mock_repo)
+        adapter.update_filter_order(1, 100)
+        mock_repo.update_rss_filter_order.assert_called_once()
+
+    def test_get_filter_order(self):
+        mock_repo = self._create_mock_repo()
+        mock_repo.get_rss_overedition_order.return_value = 100
+        adapter = RssMovieRepositoryAdapter(mock_repo)
+        result = adapter.get_filter_order(1)
+        assert result == 100
+
 
 class TestRssTvRepositoryAdapter:
     def _create_mock_repo(self):
@@ -150,6 +174,30 @@ class TestRssTvRepositoryAdapter:
         adapter = RssTvRepositoryAdapter(mock_repo)
         adapter.update_lack(title=None, year=None, season=None, rssid=1, lack_episodes=[1, 2, 3])
         mock_repo.update_rss_tv_lack.assert_called_once()
+
+    def test_insert(self):
+        mock_repo = self._create_mock_repo()
+        mock_repo.insert_rss_tv.return_value = 0
+        adapter = RssTvRepositoryAdapter(mock_repo)
+        media_info = MagicMock()
+        media_info.title = "Test TV"
+        media_info.year = "2023"
+        result = adapter.insert(media_info=media_info, total=10, lack=0, state="D")
+        assert result == 0
+        mock_repo.insert_rss_tv.assert_called_once()
+
+    def test_update_filter_order(self):
+        mock_repo = self._create_mock_repo()
+        adapter = RssTvRepositoryAdapter(mock_repo)
+        adapter.update_filter_order(1, 100)
+        mock_repo.update_rss_filter_order.assert_called_once()
+
+    def test_get_filter_order(self):
+        mock_repo = self._create_mock_repo()
+        mock_repo.get_rss_overedition_order.return_value = 100
+        adapter = RssTvRepositoryAdapter(mock_repo)
+        result = adapter.get_filter_order(1)
+        assert result == 100
 
 
 class TestRssTvEpisodeRepositoryAdapter:
