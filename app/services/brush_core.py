@@ -10,7 +10,7 @@ BrushTask 核心模块（原 app/brushtask.py）
 import json
 import time
 from datetime import datetime, time as dtime
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import urlsplit
 
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
@@ -21,6 +21,7 @@ from app.sites import Sites, SiteConf
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.helper import RssHelper
+from app.db.repositories.brush_repo_adapter import BrushTaskRepositoryAdapter, BrushTorrentRepositoryAdapter
 from app.db.repositories import BrushRepository
 from app.services.scheduler_core import SchedulerCore
 from app.utils import StringUtils, ExceptionUtils, JsonUtils, RedisStore
@@ -125,7 +126,7 @@ class BrushTaskService:
     """
 
     def __init__(self,
-                 repository: Optional[BrushTaskRepository] = None,
+                 repository: Optional[Any] = None,
                  scheduler: Optional[BrushTaskScheduler] = None,
                  downloader: Optional[Downloader] = None,
                  message: Optional[Message] = None,
@@ -133,7 +134,7 @@ class BrushTaskService:
                  siteconf: Optional[SiteConf] = None,
                  rsshelper: Optional[RssHelper] = None,
                  redis_store: Optional[RedisStore] = None):
-        self._repo = repository or BrushTaskRepository()
+        self._repo = repository or BrushTaskRepositoryAdapter()
         self._scheduler = scheduler or BrushTaskScheduler()
         self._downloader = downloader or Downloader()
         self._message = message or Message()
