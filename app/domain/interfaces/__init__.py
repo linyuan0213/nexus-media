@@ -23,6 +23,7 @@ from app.domain.interfaces.transfer_repo import (
     ITransferUnknownRepository,
     ITransferBlacklistRepository,
 )
+from app.domain.interfaces.brush_repo import IBrushTaskRepository, IBrushTorrentRepository
 
 __all__ = [
     "ISiteRepository",
@@ -38,4 +39,6 @@ __all__ = [
     "ITransferHistoryRepository",
     "ITransferUnknownRepository",
     "ITransferBlacklistRepository",
+    "IBrushTaskRepository",
+    "IBrushTorrentRepository",
 ]

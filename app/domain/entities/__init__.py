@@ -21,6 +21,7 @@ from app.domain.entities.transfer import (
     TransferHistoryEntity,
     TransferUnknownEntity,
 )
+from app.domain.entities.brush import BrushTaskEntity, BrushTorrentEntity
 
 __all__ = [
     "SiteEntity",
@@ -38,4 +39,6 @@ __all__ = [
     "TransferBlacklistEntity",
     "TransferHistoryEntity",
     "TransferUnknownEntity",
+    "BrushTaskEntity",
+    "BrushTorrentEntity",
 ]

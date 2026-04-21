@@ -1,0 +1,45 @@
+# -*- coding: utf-8 -*-
+"""
+刷流领域 Repository 接口（Python Protocol）
+"""
+from typing import List, Optional, Protocol
+
+from app.domain.entities.brush import BrushTaskEntity, BrushTorrentEntity
+
+
+class IBrushTaskRepository(Protocol):
+    def upsert(self, brush_id: Optional[int], item: dict) -> None:
+        ...
+
+    def delete(self, brush_id: int) -> None:
+        ...
+
+    def get_all(self) -> List[BrushTaskEntity]:
+        ...
+
+    def get_by_id(self, brush_id: int) -> Optional[BrushTaskEntity]:
+        ...
+
+    def update_state(self, state: str, tid: Optional[int] = None) -> None:
+        ...
+
+    def add_download_count(self, brush_id: int) -> None:
+        ...
+
+    def get_total_size(self, brush_id: int) -> int:
+        ...
+
+
+class IBrushTorrentRepository(Protocol):
+    def insert(self, task_id: str, torrent_name: str, enclosure: str, torrent_size: str,
+               downloader: str, download_id: str) -> None:
+        ...
+
+    def get_by_task(self, task_id: str) -> List[BrushTorrentEntity]:
+        ...
+
+    def delete_by_task(self, task_id: str) -> None:
+        ...
+
+    def delete_by_download_id(self, task_id: str, download_id: str) -> None:
+        ...
