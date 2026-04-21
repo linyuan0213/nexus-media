@@ -71,7 +71,7 @@ class FileTransferService:
         self._tv_file_rmt_format = ""
         self._ignored_paths = []
         self._ignored_files = ''
-        self._engine = engine or TransferActionEngine(transfer_repo=self.transfer_repo)
+        self._engine = engine or TransferActionEngine()
         self._coordinator = coordinator or TransferCoordinator(self, self._engine)
         self.init_config()
 

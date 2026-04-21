@@ -11,7 +11,8 @@ from typing import Optional
 
 import log
 from app.conf import ModuleConf
-from app.db.repositories import TransferRepository
+from app.db.repositories.transfer_repo_adapter import TransferBlacklistRepositoryAdapter
+from app.domain.interfaces.transfer_repo import ITransferBlacklistRepository
 from app.media.meta import MetaInfo
 from app.utils import PathUtils, ExceptionUtils, SystemUtils
 from app.utils.types import RmtMode
@@ -26,8 +27,8 @@ class TransferActionEngine:
     负责执行具体的文件系统操作（复制、移动、链接、字幕/音轨转移等）
     """
 
-    def __init__(self, transfer_repo: Optional[TransferRepository] = None):
-        self._transfer_repo = transfer_repo or TransferRepository()
+    def __init__(self, blacklist_repo: Optional[ITransferBlacklistRepository] = None):
+        self._blacklist_repo = blacklist_repo or TransferBlacklistRepositoryAdapter()
 
     @staticmethod
     def transfer_command(file_item, target_file, rmt_mode):
@@ -238,9 +239,9 @@ class TransferActionEngine:
                 break
             else:
                 if not bludir:
-                    self._transfer_repo.insert_transfer_blacklist(file)
+                    self._blacklist_repo.insert(file)
         if retcode == 0 and bludir:
-            self._transfer_repo.insert_transfer_blacklist(src_dir)
+            self._blacklist_repo.insert(src_dir)
         return retcode
 
     def transfer_origin_file(self, file_item, target_dir, rmt_mode):
@@ -274,7 +275,7 @@ class TransferActionEngine:
                                               target_file=target_file,
                                               rmt_mode=rmt_mode)
             if retcode == 0:
-                self._transfer_repo.insert_transfer_blacklist(file_item)
+                self._blacklist_repo.insert(file_item)
         if retcode == 0:
             log.info("【Rmt】%s %s到unknown完成" % (file_item, rmt_mode.value))
         else:
@@ -302,7 +303,7 @@ class TransferActionEngine:
                                           rmt_mode=rmt_mode)
         if retcode == 0:
             log.info("【Rmt】文件 %s %s完成" % (file_name, rmt_mode.value))
-            self._transfer_repo.insert_transfer_blacklist(file_item)
+            self._blacklist_repo.insert(file_item)
         else:
             log.error("【Rmt】文件 %s %s失败，错误码 %s" % (file_name, rmt_mode.value, str(retcode)))
             return retcode
