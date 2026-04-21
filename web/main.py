@@ -46,6 +46,7 @@ from app.services.torrentremover_core import TorrentRemoverService as TorrentRem
 from app.utils import DomUtils, SystemUtils, ExceptionUtils, StringUtils
 from app.utils.types import SystemConfigKey, OsType, MediaServerType, EventType, SearchType, RssType, MediaType
 from config import PT_TRANSFER_INTERVAL, REDIS_HOST, REDIS_PORT, Config, TMDB_API_DOMAINS
+from app.helper.image_proxy_helper import ImageProxyHelper
 from web.apiv1 import apiv1_bp
 from web.controllers import register_blueprints
 from web.controllers.media import get_library_mediacount, get_library_playhistory, get_library_spacesize, get_search_result, get_transfer_history, get_unknown_list_by_page
@@ -1847,7 +1848,18 @@ def Img():
     if url.startswith('/img/'):
         return redirect(url, code=307)
     
-    # 计算Etag
+    # 外部图片 URL：转换为代理路径后重定向
+    # 复用 ImageProxyHelper 生成一致的代理路径
+    try:
+        proxy_url = ImageProxyHelper.get_proxy_image_url(
+            url, use_proxy=True
+        )
+    except Exception:
+        proxy_url = None
+    if proxy_url and proxy_url.startswith('/img/'):
+        return redirect(proxy_url, code=307)
+    
+    # 兜底：无法生成代理路径时，回退到直接代理
     etag = hashlib.sha256(url.encode('utf-8')).hexdigest()
     
     # 检查协商缓存
