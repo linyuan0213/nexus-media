@@ -14,7 +14,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, List, Optional, Tuple
 
 import log
-from app.db.repositories import DownloadRepository, SearchRepository
+from app.db.repositories import SearchRepository
+from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
+from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
 from app.media import Media
@@ -164,11 +166,15 @@ class SearchResultProcessor:
 
     def __init__(self,
                  downloader: Optional[Downloader] = None,
-                 download_repo: Optional[DownloadRepository] = None,
+                 download_repo: Optional[IDownloadHistoryRepository] = None,
                  search_repo: Optional[SearchRepository] = None,
                  message: Optional[Message] = None):
         self._downloader = downloader or Downloader()
-        self._download_repo = download_repo or DownloadRepository()
+        # 如果没有注入Repository，使用适配器创建默认实例
+        if download_repo is None:
+            self._download_repo = DownloadHistoryRepositoryAdapter()
+        else:
+            self._download_repo = download_repo
         self._search_repo = search_repo or SearchRepository()
         self._message = message or Message()
 
@@ -188,7 +194,7 @@ class SearchResultProcessor:
         for media_item in media_list:
             if media_item.tmdb_id:
                 season_episode = media_item.get_season_episode_string()
-                if self._download_repo.is_exists_download_history_by_tmdb(
+                if self._download_repo.is_exists_by_tmdb(
                         media_item.tmdb_id, season_episode):
                     log.info(f"【Searcher】{media_item.title} {season_episode} 已在下载历史中存在，跳过下载")
                     continue
@@ -221,13 +227,14 @@ class Searcher(metaclass=SingletonMeta):
     message = None
     indexer = None
     progress = None
-    download_repo = None
     search_repo = None
     eventmanager = None
 
     _search_auto = True
 
-    def __init__(self):
+    def __init__(self,
+                 download_repo: Optional[IDownloadHistoryRepository] = None):
+        self._download_repo = download_repo
         self.init_config()
 
     def init_config(self):
@@ -235,11 +242,18 @@ class Searcher(metaclass=SingletonMeta):
         self.media = Media()
         self.message = Message()
         self.progress = ProgressHelper()
-        self.download_repo = DownloadRepository()
+        # 如果没有注入Repository，使用适配器创建默认实例
+        if self._download_repo is None:
+            self._download_repo = DownloadHistoryRepositoryAdapter()
         self.search_repo = SearchRepository()
         self.indexer_service = IndexerService()
         self.eventmanager = EventManager()
         self._search_auto = Config().get_config("pt").get('search_auto', True)
+
+    @property
+    def download_repo(self):
+        """兼容旧代码访问 download_repo 属性"""
+        return self._download_repo
 
     def search_medias(self,
                       key_word,
@@ -333,7 +347,7 @@ class Searcher(metaclass=SingletonMeta):
 
         processor = SearchResultProcessor(
             downloader=self.downloader,
-            download_repo=self.download_repo,
+            download_repo=self._download_repo,
             search_repo=self.search_repo,
             message=self.message
         )
