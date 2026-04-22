@@ -164,16 +164,19 @@ class TestFilterRuleEngineIsTorrentMatchSey:
 
 @pytest.fixture
 def svc():
-    mock_repo = MagicMock()
-    mock_repo.get_config_filter_group.return_value = []
-    mock_repo.get_config_filter_rule.return_value = []
+    mock_group_repo = MagicMock()
+    mock_group_repo.get_config_filter_group.return_value = []
+    mock_rule_repo = MagicMock()
+    mock_rule_repo.get_config_filter_rule.return_value = []
     mock_rg = MagicMock()
-    return FilterService(config_repo=mock_repo, rg_matcher=mock_rg)
+    return FilterService(filter_group_repo=mock_group_repo,
+                         filter_rule_repo=mock_rule_repo,
+                         rg_matcher=mock_rg)
 
 
 class TestFilterService:
     def test_reload_calls_repo(self, svc):
-        assert svc._config_repo.get_config_filter_group.call_count >= 1
+        assert svc._filter_group_repo.get_config_filter_group.call_count >= 1
 
     def test_get_rule_groups_with_default(self, svc):
         svc._groups = [MagicMock(ID=1, GROUP_NAME="G1", IS_DEFAULT="Y", NOTE="")]
@@ -197,11 +200,11 @@ class TestFilterService:
         assert svc.is_rule_free() is True
 
     def test_add_group_reload(self, svc):
-        svc._config_repo.add_filter_group.return_value = True
+        svc._filter_group_repo.add_filter_group.return_value = True
         svc.add_group("NewGroup")
-        svc._config_repo.add_filter_group.assert_called_once_with("NewGroup", "N")
+        svc._filter_group_repo.add_filter_group.assert_called_once_with("NewGroup", "N")
         # reload 被调用：构造时已调用 2 次，add 后再调用 1 次
-        assert svc._config_repo.get_config_filter_group.call_count == 2
+        assert svc._filter_group_repo.get_config_filter_group.call_count == 2
 
     def test_check_torrent_filter_delegates(self, svc):
         meta = FakeMeta(rev_string="Test")
@@ -233,13 +236,14 @@ class TestImportFilterGroup:
 class TestRestoreFilterGroup:
     def test_ok(self, svc):
         svc.delete_filtergroup = MagicMock()
-        svc._config_repo.excute = MagicMock()
+        svc._filter_group_repo._repo = MagicMock()
+        svc._filter_group_repo._repo.excute = MagicMock()
         svc.restore_filter_group(
             ["1"],
             [{"id": 1, "sql": ["SQL1"]}]
         )
         svc.delete_filtergroup.assert_called_once_with("1")
-        svc._config_repo.excute.assert_called_once_with("SQL1")
+        svc._filter_group_repo._repo.excute.assert_called_once_with("SQL1")
 
 
 class TestShareFilterGroup:

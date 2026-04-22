@@ -52,6 +52,25 @@ class DownloadHistoryRepositoryAdapter:
             return None
         return DownloadHistoryEntity.from_orm(row)
 
+    # 兼容旧Repository方法名
+    def insert_download_history(self, media_info, downloader: str, download_id: str, save_dir: str) -> None:
+        self._repo.insert_download_history(media_info, downloader, download_id, save_dir)
+
+    # 兼容旧Repository方法名
+    def get_download_history(self, date=None, hid=None, num=30, page=1):
+        return self._repo.get_download_history(date=date, hid=hid, num=num, page=page)
+
+    # 兼容旧Repository方法名
+    def get_download_history_by_title(self, title: str):
+        return self._repo.get_download_history_by_title(title)
+
+    # 兼容旧Repository方法名
+    def get_download_history_by_downloader(self, downloader: str, download_id: str):
+        return self._repo.get_download_history_by_downloader(downloader, download_id)
+
+    def is_exists_download_history_by_tmdb(self, tmdb_id, season_episode):
+        return self._repo.is_exists_download_history_by_tmdb(tmdb_id, season_episode)
+
 
 class DownloadSettingRepositoryAdapter:
     """下载设置仓储适配器"""
@@ -90,6 +109,23 @@ class DownloadSettingRepositoryAdapter:
             ratio_limit=ratio_limit,
             seeding_time_limit=seeding_time_limit,
             downloader=downloader
+        )
+
+    # 兼容旧Repository方法名
+    def get_download_setting(self, sid=None):
+        return self._repo.get_download_setting(sid=sid)
+
+    def delete_download_setting(self, sid):
+        self._repo.delete_download_setting(sid)
+
+    def update_download_setting(self, sid, name, category, tags, is_paused,
+                                upload_limit, download_limit, ratio_limit,
+                                seeding_time_limit, downloader):
+        self._repo.update_download_setting(
+            sid=sid, name=name, category=category, tags=tags,
+            is_paused=is_paused, upload_limit=upload_limit,
+            download_limit=download_limit, ratio_limit=ratio_limit,
+            seeding_time_limit=seeding_time_limit, downloader=downloader
         )
 
 

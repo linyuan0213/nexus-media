@@ -18,7 +18,8 @@ from typing import Optional
 import log
 from app.conf import ModuleConf, SystemConfig
 from app.conf.systemconfig import SystemConfig as SystemConfigClass
-from app.db.repositories import ConfigRepository, DownloadRepository
+from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
+from app.db.repositories.download_repo_adapter import DownloadSettingRepositoryAdapter
 from app.downloader.client._base import _IDownloadClient
 from app.helper import SubmoduleHelper
 from app.utils.types import DownloaderType, SystemConfigKey
@@ -35,11 +36,12 @@ class DownloadClientFactory:
     """
 
     def __init__(self,
-                 config_repo: Optional[ConfigRepository] = None,
-                 download_repo: Optional[DownloadRepository] = None,
+                 config_repo=None,
+                 download_repo=None,
                  systemconfig: Optional[SystemConfigClass] = None):
-        self._config_repo = config_repo or ConfigRepository()
-        self._download_repo = download_repo or DownloadRepository()
+        # 注入领域仓库适配器，不允许注入旧的 ConfigRepository/DownloadRepository
+        self._config_repo = config_repo or DownloaderRepositoryAdapter()
+        self._download_repo = download_repo or DownloadSettingRepositoryAdapter()
         self._systemconfig = systemconfig or SystemConfig()
 
         # 下载器类型 schema（从子模块动态加载）

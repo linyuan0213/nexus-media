@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Tuple
 
 import log
 from app.conf import ModuleConf
-from app.db.repositories import ConfigRepository
+from app.db.repositories.config_repo_adapter import TorrentRemoveTaskRepositoryAdapter
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.message import Message
 from app.services.scheduler_core import SchedulerCore
@@ -21,8 +21,8 @@ lock = Lock()
 class TorrentRemoverRepository:
     """删种任务数据仓库"""
 
-    def __init__(self, config_repo: Optional[ConfigRepository] = None):
-        self._config_repo = config_repo or ConfigRepository()
+    def __init__(self, config_repo=None):
+        self._config_repo = config_repo or TorrentRemoveTaskRepositoryAdapter()
 
     def get_tasks(self):
         return self._config_repo.get_torrent_remove_tasks()

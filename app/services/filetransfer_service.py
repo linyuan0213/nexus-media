@@ -13,7 +13,18 @@ from typing import Optional
 
 import log
 from app.conf import ModuleConf
-from app.db.repositories import DownloadRepository, TransferRepository
+from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
+from app.db.repositories.transfer_repo_adapter import (
+    TransferBlacklistRepositoryAdapter,
+    TransferHistoryRepositoryAdapter,
+    TransferUnknownRepositoryAdapter,
+)
+from app.domain.interfaces.download_repo import IDownloadHistoryRepository
+from app.domain.interfaces.transfer_repo import (
+    ITransferBlacklistRepository,
+    ITransferHistoryRepository,
+    ITransferUnknownRepository,
+)
 from app.helper import ProgressHelper, ThreadHelper
 from app.media import Media, Category, Scraper
 from app.media.meta import MetaInfo
@@ -39,8 +50,10 @@ class FileTransferService:
                  category: Optional[Category] = None,
                  scraper: Optional[Scraper] = None,
                  threadhelper: Optional[ThreadHelper] = None,
-                 transfer_repo: Optional[TransferRepository] = None,
-                 download_repo: Optional[DownloadRepository] = None,
+                 transfer_repo: Optional[ITransferHistoryRepository] = None,
+                 transfer_blacklist_repo: Optional[ITransferBlacklistRepository] = None,
+                 transfer_unknown_repo: Optional[ITransferUnknownRepository] = None,
+                 download_repo: Optional[IDownloadHistoryRepository] = None,
                  progress: Optional[ProgressHelper] = None,
                  eventmanager: Optional[EventManager] = None,
                  engine: Optional[TransferActionEngine] = None,
@@ -50,8 +63,10 @@ class FileTransferService:
         self.category = category or Category()
         self.scraper = scraper or Scraper()
         self.threadhelper = threadhelper or ThreadHelper()
-        self.transfer_repo = transfer_repo or TransferRepository()
-        self.download_repo = download_repo or DownloadRepository()
+        self.transfer_repo = transfer_repo or TransferHistoryRepositoryAdapter()
+        self.transfer_blacklist_repo = transfer_blacklist_repo or TransferBlacklistRepositoryAdapter()
+        self.transfer_unknown_repo = transfer_unknown_repo or TransferUnknownRepositoryAdapter()
+        self.download_repo = download_repo or DownloadHistoryRepositoryAdapter()
         self.progress = progress or ProgressHelper()
         self.eventmanager = eventmanager or EventManager()
         self._default_rmt_mode = None
@@ -81,8 +96,10 @@ class FileTransferService:
         self.category = Category()
         self.scraper = Scraper()
         self.threadhelper = ThreadHelper()
-        self.transfer_repo = TransferRepository()
-        self.download_repo = DownloadRepository()
+        self.transfer_repo = TransferHistoryRepositoryAdapter()
+        self.transfer_blacklist_repo = TransferBlacklistRepositoryAdapter()
+        self.transfer_unknown_repo = TransferUnknownRepositoryAdapter()
+        self.download_repo = DownloadHistoryRepositoryAdapter()
         self.progress = ProgressHelper()
         self.eventmanager = EventManager()
 

@@ -17,7 +17,8 @@ from typing import Optional
 
 import log
 from app.conf import SystemConfig
-from app.db.repositories import DownloadRepository
+from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
+from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.downloader.client._base import _IDownloadClient
 from app.schemas.download import Torrent
 from app.helper import ThreadHelper
@@ -50,7 +51,7 @@ class DownloadCore:
                  siteconf: Optional[SiteConf] = None,
                  sitesubtitle: Optional[SiteSubtitle] = None,
                  eventmanager: Optional[EventManager] = None,
-                 download_repo: Optional[DownloadRepository] = None,
+                 download_repo: Optional[IDownloadHistoryRepository] = None,
                  systemconfig: Optional[SystemConfig] = None):
         self._client_factory = client_factory or DownloadClientFactory()
         self._message = message or Message()
@@ -61,7 +62,7 @@ class DownloadCore:
         self._siteconf = siteconf or SiteConf()
         self._sitesubtitle = sitesubtitle or SiteSubtitle()
         self._eventmanager = eventmanager or EventManager()
-        self._download_repo = download_repo or DownloadRepository()
+        self._download_repo = download_repo or DownloadHistoryRepositoryAdapter()
         self._systemconfig = systemconfig or SystemConfig()
 
     # ---------- 核心下载方法 ----------

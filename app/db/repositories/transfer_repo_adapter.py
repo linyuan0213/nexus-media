@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 转移领域 Repository 适配器
+将旧版 TransferRepository 适配为新领域接口
 """
 from typing import List, Optional, Tuple
 
@@ -13,6 +14,8 @@ from app.db.repositories.transfer_repository import TransferRepository
 
 
 class TransferHistoryRepositoryAdapter:
+    """转移历史仓储适配器"""
+
     def __init__(self, repo: Optional[TransferRepository] = None):
         self._repo = repo or TransferRepository()
 
@@ -39,7 +42,7 @@ class TransferHistoryRepositoryAdapter:
         return [e for e in [TransferHistoryEntity.from_orm(r) for r in rows] if e is not None]
 
     def delete(self, logid: int) -> None:
-        self._repo.delete_transfer_history(logid)
+        self._repo.delete_transfer_log_by_id(logid)
 
     def delete_by_source(self, source_path: str, source_filename: str) -> None:
         self._repo.delete_transfer_history_by_source(source_path, source_filename)
@@ -52,8 +55,62 @@ class TransferHistoryRepositoryAdapter:
     def insert_sync_history(self, path: str, src: str, dest: str) -> None:
         self._repo.insert_sync_history(path, src, dest)
 
+    # 兼容旧Repository方法名
+    def get_transfer_info_by(self, tmdbid, season=None, season_episode=None):
+        return self._repo.get_transfer_info_by(tmdbid, season, season_episode)
+
+    # 兼容旧Repository方法名
+    def get_transfer_info_by_id(self, logid):
+        return self._repo.get_transfer_info_by_id(logid)
+
+    # 兼容旧Repository方法名
+    def get_transfer_history(self, search, page, rownum):
+        return self._repo.get_transfer_history(search, page, rownum)
+
+    # 兼容旧Repository方法名
+    def delete_transfer_log_by_id(self, logid):
+        self._repo.delete_transfer_log_by_id(logid)
+
+    # 兼容旧Repository方法名
+    def delete_transfer(self):
+        self._repo.delete_transfer()
+
+    # 兼容旧Repository方法名
+    def get_transfer_statistics(self, days=30):
+        return self._repo.get_transfer_statistics(days)
+
+    # 兼容旧Repository方法名 - 委托给Unknown子适配器
+    def delete_transfer_unknown(self, tid):
+        self._repo.delete_transfer_unknown(tid)
+
+    # 兼容旧Repository方法名 - 委托给Unknown子适配器
+    def get_unknown_info_by_id(self, tid):
+        return self._repo.get_unknown_info_by_id(tid)
+
+    # 兼容旧Repository方法名 - 委托给Unknown子适配器
+    def update_transfer_unknown_state(self, path):
+        self._repo.update_transfer_unknown_state(path)
+
+    # 兼容旧Repository方法名 - 委托给Unknown子适配器
+    def get_transfer_unknown_paths(self):
+        return self._repo.get_transfer_unknown_paths()
+
+    # 兼容旧Repository方法名 - 委托给Unknown子适配器
+    def get_transfer_unknown_paths_by_page(self, search, page, rownum):
+        return self._repo.get_transfer_unknown_paths_by_page(search, page, rownum)
+
+    # 兼容旧Repository方法名 - 委托给Blacklist子适配器
+    def delete_transfer_blacklist(self, path):
+        self._repo.delete_transfer_blacklist(path)
+
+    # 兼容旧Repository方法名 - 委托给Blacklist子适配器
+    def truncate_transfer_blacklist(self):
+        self._repo.truncate_transfer_blacklist()
+
 
 class TransferUnknownRepositoryAdapter:
+    """转移未知文件仓储适配器"""
+
     def __init__(self, repo: Optional[TransferRepository] = None):
         self._repo = repo or TransferRepository()
 
@@ -81,6 +138,8 @@ class TransferUnknownRepositoryAdapter:
 
 
 class TransferBlacklistRepositoryAdapter:
+    """转移黑名单仓储适配器"""
+
     def __init__(self, repo: Optional[TransferRepository] = None):
         self._repo = repo or TransferRepository()
 
@@ -92,3 +151,6 @@ class TransferBlacklistRepositoryAdapter:
 
     def delete(self, path: str) -> None:
         self._repo.delete_transfer_blacklist(path)
+
+    def truncate(self) -> None:
+        self._repo.truncate_transfer_blacklist()

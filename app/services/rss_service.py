@@ -10,7 +10,8 @@ import log
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.helper import RssHelper
-from app.db.repositories import ConfigRepository, RssRepository
+from app.db.repositories.config_repo_adapter import UserRssConfigRepositoryAdapter
+from app.db.repositories.rss_repo_adapter import RssHistoryRepositoryAdapter
 from app.media import Media
 from app.media.meta import MetaInfo
 from app.message import Message
@@ -367,16 +368,25 @@ class RssTaskService(metaclass=SingletonMeta):
         "S": "搜索"
     }
 
-    def __init__(self):
-        self.config_repo = ConfigRepository()
-        self.rss_repo = RssRepository()
-        self.rsshelper = RssHelper()
-        self.message = Message()
-        self.searcher = Searcher()
-        self.filter = Filter()
-        self.media = Media()
-        self.downloader = Downloader()
-        self.subscribe = Subscribe()
+    def __init__(self,
+                 config_repo=None,
+                 rss_repo=None,
+                 rsshelper=None,
+                 message=None,
+                 searcher=None,
+                 filter_=None,
+                 media=None,
+                 downloader=None,
+                 subscribe=None):
+        self.config_repo = config_repo or UserRssConfigRepositoryAdapter()
+        self.rss_repo = rss_repo or RssHistoryRepositoryAdapter()
+        self.rsshelper = rsshelper or RssHelper()
+        self.message = message or Message()
+        self.searcher = searcher or Searcher()
+        self.filter = filter_ or Filter()
+        self.media = media or Media()
+        self.downloader = downloader or Downloader()
+        self.subscribe = subscribe or Subscribe()
 
     def init_config(self):
         # 移除现有任务

@@ -14,9 +14,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, List, Optional, Tuple
 
 import log
-from app.db.repositories import SearchRepository
+from app.db.repositories.search_repo_adapter import SearchRepositoryAdapter
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
+from app.domain.interfaces.search_repo import ISearchRepository
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
 from app.media import Media
@@ -167,7 +168,7 @@ class SearchResultProcessor:
     def __init__(self,
                  downloader: Optional[Downloader] = None,
                  download_repo: Optional[IDownloadHistoryRepository] = None,
-                 search_repo: Optional[SearchRepository] = None,
+                 search_repo: Optional[ISearchRepository] = None,
                  message: Optional[Message] = None):
         self._downloader = downloader or Downloader()
         # 如果没有注入Repository，使用适配器创建默认实例
@@ -175,7 +176,7 @@ class SearchResultProcessor:
             self._download_repo = DownloadHistoryRepositoryAdapter()
         else:
             self._download_repo = download_repo
-        self._search_repo = search_repo or SearchRepository()
+        self._search_repo = search_repo or SearchRepositoryAdapter()
         self._message = message or Message()
 
     @staticmethod
@@ -233,8 +234,10 @@ class Searcher(metaclass=SingletonMeta):
     _search_auto = True
 
     def __init__(self,
-                 download_repo: Optional[IDownloadHistoryRepository] = None):
+                 download_repo: Optional[IDownloadHistoryRepository] = None,
+                 search_repo: Optional[ISearchRepository] = None):
         self._download_repo = download_repo
+        self._search_repo = search_repo
         self.init_config()
 
     def init_config(self):
@@ -245,7 +248,9 @@ class Searcher(metaclass=SingletonMeta):
         # 如果没有注入Repository，使用适配器创建默认实例
         if self._download_repo is None:
             self._download_repo = DownloadHistoryRepositoryAdapter()
-        self.search_repo = SearchRepository()
+        if self._search_repo is None:
+            self._search_repo = SearchRepositoryAdapter()
+        self.search_repo = self._search_repo
         self.indexer_service = IndexerService()
         self.eventmanager = EventManager()
         self._search_auto = Config().get_config("pt").get('search_auto', True)

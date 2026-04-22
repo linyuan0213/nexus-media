@@ -25,6 +25,7 @@ from app.domain.interfaces.transfer_repo import (
 )
 from app.domain.interfaces.brush_repo import IBrushTaskRepository, IBrushTorrentRepository
 from app.domain.interfaces.sync_repo import ISyncPathRepository
+from app.domain.interfaces.search_repo import ISearchRepository
 from app.domain.interfaces.config_repo import (
     IMessageClientRepository,
     IDownloaderRepository,
@@ -57,4 +58,5 @@ __all__ = [
     "IFilterRuleRepository",
     "IMediaServerRepository",
     "ITorrentRemoveTaskRepository",
+    "ISearchRepository",
 ]

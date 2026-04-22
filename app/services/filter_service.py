@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple
 
 import log
 from app.conf import ModuleConf
-from app.db.repositories import ConfigRepository
+from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
 from app.media.meta import MetaInfo, ReleaseGroupsMatcher
 from app.utils import StringUtils
 from app.utils.types import MediaType
@@ -221,9 +221,11 @@ class FilterService:
     """
 
     def __init__(self,
-                 config_repo: Optional[ConfigRepository] = None,
+                 filter_group_repo=None,
+                 filter_rule_repo=None,
                  rg_matcher: Optional[ReleaseGroupsMatcher] = None):
-        self._config_repo = config_repo or ConfigRepository()
+        self._filter_group_repo = filter_group_repo or FilterGroupRepositoryAdapter()
+        self._filter_rule_repo = filter_rule_repo or FilterRuleRepositoryAdapter()
         self._rg_matcher = rg_matcher or ReleaseGroupsMatcher()
         self._groups = []
         self._rules = []
@@ -231,8 +233,8 @@ class FilterService:
 
     def reload(self):
         """重新加载过滤规则数据"""
-        self._groups = self._config_repo.get_config_filter_group() or []
-        self._rules = self._config_repo.get_config_filter_rule() or []
+        self._groups = self._filter_group_repo.get_config_filter_group() or []
+        self._rules = self._filter_rule_repo.get_config_filter_rule() or []
 
     # ------------------- 规则组查询 -------------------
 
@@ -373,45 +375,45 @@ class FilterService:
 
     def add_group(self, name, default='N'):
         """添加过滤规则组"""
-        ret = self._config_repo.add_filter_group(name, default)
+        ret = self._filter_group_repo.add_filter_group(name, default)
         self.reload()
         return ret
 
     def delete_filtergroup(self, groupid):
         """删除过滤规则组"""
-        ret = self._config_repo.delete_filtergroup(groupid)
+        ret = self._filter_group_repo.delete_filtergroup(groupid)
         self.reload()
         return ret
 
     def set_default_filtergroup(self, groupid):
         """设置默认过滤规则组"""
-        ret = self._config_repo.set_default_filtergroup(groupid)
+        ret = self._filter_group_repo.set_default_filtergroup(groupid)
         self.reload()
         return ret
 
     def add_filter_rule(self, item, ruleid=None):
         """添加过滤规则"""
-        ret = self._config_repo.insert_filter_rule(item, ruleid)
+        ret = self._filter_rule_repo.insert_filter_rule(item, ruleid)
         self.reload()
         return ret
 
     def delete_filterrule(self, ruleid):
         """删除过滤规则"""
-        ret = self._config_repo.delete_filterrule(ruleid)
+        ret = self._filter_rule_repo.delete_filterrule(ruleid)
         self.reload()
         return ret
 
     def get_filter_group(self, gid=None):
         """获取过滤规则组"""
-        return self._config_repo.get_config_filter_group(gid)
+        return self._filter_group_repo.get_config_filter_group(gid)
 
     def get_filter_rule(self, groupid=None):
         """获取过滤规则"""
-        return self._config_repo.get_config_filter_rule(groupid)
+        return self._filter_rule_repo.get_config_filter_rule(groupid)
 
     def get_filter_groupid_by_name(self, name):
         """根据名称获取过滤规则组ID"""
-        return self._config_repo.get_filter_groupid_by_name(name)
+        return self._filter_group_repo.get_filter_groupid_by_name(name)
 
     def import_filter_group(self, content: str) -> Tuple[bool, str]:
         """导入规则组（Base64编码的JSON字符串）"""
@@ -451,7 +453,7 @@ class FilterService:
             for init_rulegroup in init_rulegroups:
                 if str(init_rulegroup.get("id")) == groupid:
                     for sql in init_rulegroup.get("sql", []):
-                        self._config_repo.excute(sql)
+                        self._filter_group_repo._repo.excute(sql)
 
     def get_filterrules(self, script_path: str):
         """获取所有过滤规则及初始规则"""

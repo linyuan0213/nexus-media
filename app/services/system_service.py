@@ -17,7 +17,7 @@ import log
 from app.conf import SystemConfig
 from app.db.database_factory import DatabaseFactory
 from app.db.migrate import import_from_file, export_database, import_database
-from app.db.repositories import ConfigRepository
+from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter, MessageClientRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filetransfer_service import FileTransferService as FileTransfer
@@ -234,9 +234,9 @@ class MediaServerConfigService:
     """
 
     def __init__(self,
-                 config_repo: Optional[ConfigRepository] = None,
+                 config_repo=None,
                  media_server: Optional[MediaServer] = None):
-        self._config_repo = config_repo or ConfigRepository()
+        self._config_repo = config_repo or MediaServerRepositoryAdapter()
         self._media_server = media_server or MediaServer()
 
     def save_config(self, data: dict) -> MediaServerConfigResultDTO:
