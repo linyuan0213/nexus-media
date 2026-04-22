@@ -44,6 +44,14 @@ class TransferHistoryRepositoryAdapter:
     def delete_by_source(self, source_path: str, source_filename: str) -> None:
         self._repo.delete_transfer_history_by_source(source_path, source_filename)
 
+    # 兼容旧Repository方法名
+    def is_sync_in_history(self, path: str, dest: str) -> bool:
+        return self._repo.is_sync_in_history(path, dest)
+
+    # 兼容旧Repository方法名
+    def insert_sync_history(self, path: str, src: str, dest: str) -> None:
+        self._repo.insert_sync_history(path, src, dest)
+
 
 class TransferUnknownRepositoryAdapter:
     def __init__(self, repo: Optional[TransferRepository] = None):
