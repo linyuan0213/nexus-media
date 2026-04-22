@@ -44,6 +44,10 @@ from app.domain.entities.word import (
     CustomWordEntity,
     CustomWordGroupEntity,
 )
+from app.domain.entities.plugin import (
+    PluginHistoryEntity,
+    TmdbBlacklistEntity,
+)
 
 __all__ = [
     "SiteEntity",
@@ -78,4 +82,6 @@ __all__ = [
     "RBACOperationLogEntity",
     "CustomWordEntity",
     "CustomWordGroupEntity",
+    "PluginHistoryEntity",
+    "TmdbBlacklistEntity",
 ]

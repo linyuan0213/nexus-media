@@ -35,7 +35,10 @@ from app.db.repositories import (
     SyncRepository,
     WordRepository,
     ConfigRepository,
-    PluginRepository,
+)
+from app.db.repositories.plugin_repo_adapter import (
+    PluginHistoryRepositoryAdapter,
+    TmdbBlacklistRepositoryAdapter,
 )
 
 
@@ -70,7 +73,8 @@ class DbHelper:
         self._sync_repo = SyncRepository()
         self._word_repo = WordRepository()
         self._config_repo = ConfigRepository()
-        self._plugin_repo = PluginRepository()
+        self._plugin_history_repo = PluginHistoryRepositoryAdapter()
+        self._tmdb_blacklist_repo = TmdbBlacklistRepositoryAdapter()
 
     # ==================== Search Results ====================
 
@@ -764,41 +768,41 @@ class DbHelper:
 
     def insert_plugin_history(self, plugin_id, key, value):
         """新增插件运行记录"""
-        return self._plugin_repo.insert_plugin_history(plugin_id, key, value)
+        return self._plugin_history_repo.insert_plugin_history(plugin_id, key, value)
 
     def get_plugin_history(self, plugin_id, key):
         """查询插件运行记录"""
-        return self._plugin_repo.get_plugin_history(plugin_id, key)
+        return self._plugin_history_repo.get_plugin_history(plugin_id, key)
 
     def update_plugin_history(self, plugin_id, key, value):
         """更新插件运行记录"""
-        return self._plugin_repo.update_plugin_history(plugin_id, key, value)
+        return self._plugin_history_repo.update_plugin_history(plugin_id, key, value)
 
     def delete_plugin_history(self, plugin_id, key):
         """删除插件运行记录"""
-        return self._plugin_repo.delete_plugin_history(plugin_id, key)
+        return self._plugin_history_repo.delete_plugin_history(plugin_id, key)
 
     # ==================== TMDB Blacklist ====================
 
     def is_tmdb_blacklisted(self, tmdb_id, media_type=None):
         """检查TMDB ID是否在黑名单中"""
-        return self._plugin_repo.is_tmdb_blacklisted(tmdb_id, media_type)
+        return self._tmdb_blacklist_repo.is_tmdb_blacklisted(tmdb_id, media_type)
 
     def get_tmdb_blacklist(self):
         """获取所有TMDB黑名单记录"""
-        return self._plugin_repo.get_tmdb_blacklist()
+        return self._tmdb_blacklist_repo.get_tmdb_blacklist()
 
     def insert_tmdb_blacklist(self, tmdb_id, title=None, year=None, media_type=None, poster_path=None, backdrop_path=None, note=None):
         """添加到TMDB黑名单"""
-        return self._plugin_repo.insert_tmdb_blacklist(tmdb_id, title, year, media_type, poster_path, backdrop_path, note)
+        return self._tmdb_blacklist_repo.insert_tmdb_blacklist(tmdb_id, title, year, media_type, poster_path, backdrop_path, note)
 
     def delete_tmdb_blacklist(self, tmdb_id, media_type=None):
         """从TMDB黑名单删除"""
-        return self._plugin_repo.delete_tmdb_blacklist(tmdb_id, media_type)
+        return self._tmdb_blacklist_repo.delete_tmdb_blacklist(tmdb_id, media_type)
 
     def clear_tmdb_blacklist(self):
         """清空所有TMDB黑名单记录"""
-        return self._plugin_repo.clear_tmdb_blacklist()
+        return self._tmdb_blacklist_repo.clear_tmdb_blacklist()
 
     # ==================== SQL Operations ====================
 
