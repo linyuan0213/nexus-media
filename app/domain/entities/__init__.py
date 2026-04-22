@@ -9,6 +9,7 @@ from app.domain.entities.download import (
     DownloadSettingEntity,
     IndexerStatisticsEntity,
 )
+# 注意：config 中的 DownloaderEntity 与 download 中的不同，重命名避免冲突
 from app.domain.entities.rss import (
     RssHistoryEntity,
     RssMovieEntity,
@@ -22,6 +23,15 @@ from app.domain.entities.transfer import (
     TransferUnknownEntity,
 )
 from app.domain.entities.brush import BrushTaskEntity, BrushTorrentEntity
+from app.domain.entities.sync import SyncPathEntity
+from app.domain.entities.config import (
+    MessageClientEntity,
+    DownloaderEntity as ConfigDownloaderEntity,
+    FilterGroupEntity,
+    FilterRuleEntity,
+    MediaServerEntity,
+    TorrentRemoveTaskEntity,
+)
 
 __all__ = [
     "SiteEntity",
@@ -41,4 +51,11 @@ __all__ = [
     "TransferUnknownEntity",
     "BrushTaskEntity",
     "BrushTorrentEntity",
+    "SyncPathEntity",
+    "MessageClientEntity",
+    "ConfigDownloaderEntity",
+    "FilterGroupEntity",
+    "FilterRuleEntity",
+    "MediaServerEntity",
+    "TorrentRemoveTaskEntity",
 ]

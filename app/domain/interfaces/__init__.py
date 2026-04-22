@@ -24,6 +24,15 @@ from app.domain.interfaces.transfer_repo import (
     ITransferBlacklistRepository,
 )
 from app.domain.interfaces.brush_repo import IBrushTaskRepository, IBrushTorrentRepository
+from app.domain.interfaces.sync_repo import ISyncPathRepository
+from app.domain.interfaces.config_repo import (
+    IMessageClientRepository,
+    IDownloaderRepository,
+    IFilterGroupRepository,
+    IFilterRuleRepository,
+    IMediaServerRepository,
+    ITorrentRemoveTaskRepository,
+)
 
 __all__ = [
     "ISiteRepository",
@@ -41,4 +50,11 @@ __all__ = [
     "ITransferBlacklistRepository",
     "IBrushTaskRepository",
     "IBrushTorrentRepository",
+    "ISyncPathRepository",
+    "IMessageClientRepository",
+    "IDownloaderRepository",
+    "IFilterGroupRepository",
+    "IFilterRuleRepository",
+    "IMediaServerRepository",
+    "ITorrentRemoveTaskRepository",
 ]

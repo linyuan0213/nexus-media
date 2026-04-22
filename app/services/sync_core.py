@@ -16,7 +16,10 @@ from watchdog.observers.polling import PollingObserver
 
 import log
 from app.conf import ModuleConf
-from app.db.repositories import SyncRepository, TransferRepository
+from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
+from app.db.repositories.transfer_repo_adapter import TransferHistoryRepositoryAdapter
+from app.domain.interfaces.sync_repo import ISyncPathRepository
+from app.domain.interfaces.transfer_repo import ITransferHistoryRepository
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.utils import PathUtils, ExceptionUtils
 from app.utils.types import SyncType
@@ -47,11 +50,11 @@ class SyncCore:
 
     def __init__(self,
                  filetransfer: Optional[FileTransfer] = None,
-                 sync_repo: Optional[SyncRepository] = None,
-                 transfer_repo: Optional[TransferRepository] = None):
+                 sync_repo: Optional[ISyncPathRepository] = None,
+                 transfer_repo: Optional[ITransferHistoryRepository] = None):
         self._filetransfer = filetransfer or FileTransfer()
-        self._sync_repo = sync_repo or SyncRepository()
-        self._transfer_repo = transfer_repo or TransferRepository()
+        self._sync_repo = sync_repo or SyncPathRepositoryAdapter()
+        self._transfer_repo = transfer_repo or TransferHistoryRepositoryAdapter()
         self._sync_path_confs: Dict[str, dict] = {}
         self._monitor_sync_path_ids: List[int] = []
         self._observer: List[Observer] = []
