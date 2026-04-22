@@ -315,7 +315,7 @@ class RBACService:
         user = self.user_repo.get_user_by_id(user_id)
         if not user:
             return []
-        return user.roles or []
+        return self.user_repo.get_user_roles(user_id)
     
     # ==================== 角色管理 ====================
     
@@ -625,16 +625,18 @@ class RBACService:
             return set()
         
         # 超级管理员拥有所有权限
-        if user.IS_SUPERADMIN == 1:
+        if user.is_superadmin == 1:
             all_permissions = self.permission_repo.get_all_permissions()
-            return {p.PERMISSION_CODE for p in all_permissions}
+            return {p.permission_code for p in all_permissions}
         
         permissions = set()
-        for role in user.roles:
-            if role.STATUS == 1:
-                for perm in role.permissions:
-                    if perm.STATUS == 1:
-                        permissions.add(perm.PERMISSION_CODE)
+        roles = self.user_repo.get_user_roles(user_id)
+        for role in roles:
+            if role.status == 1:
+                role_permissions = self.role_repo.get_role_permissions(role.id)
+                for perm in role_permissions:
+                    if perm.status == 1:
+                        permissions.add(perm.permission_code)
         
         return permissions
     

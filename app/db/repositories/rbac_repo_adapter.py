@@ -63,6 +63,8 @@ class RBACUserRepositoryAdapter(IRBACUserRepository):
 
     def create_user(self, username: str, password_hash: str, email: Optional[str] = None, nickname: Optional[str] = None, is_superadmin: int = 0) -> RBACUserEntity:
         row = self._repo.create_user(username, password_hash, email, nickname, is_superadmin)
+        if isinstance(row, bool):
+            row = self._repo.get_user_by_username(username)
         return RBACUserEntity.from_orm(row)
 
     def update_user(self, user_id: int, **kwargs) -> bool:
@@ -118,6 +120,8 @@ class RBACRoleRepositoryAdapter(IRBACRoleRepository):
 
     def create_role(self, role_name: str, role_code: str, description: Optional[str] = None, role_level: int = 100) -> RBACRoleEntity:
         row = self._repo.create_role(role_name, role_code, description, role_level)
+        if isinstance(row, bool):
+            row = self._repo.get_role_by_code(role_code)
         return RBACRoleEntity.from_orm(row)
 
     def update_role(self, role_id: int, **kwargs) -> bool:
@@ -165,6 +169,8 @@ class RBACPermissionRepositoryAdapter(IRBACPermissionRepository):
 
     def create_permission(self, permission_name: str, permission_code: str, permission_type: str = 'api', module: Optional[str] = None, description: Optional[str] = None) -> RBACPermissionEntity:
         row = self._repo.create_permission(permission_name, permission_code, permission_type, module, description)
+        if isinstance(row, bool):
+            row = self._repo.get_permission_by_code(permission_code)
         return RBACPermissionEntity.from_orm(row)
 
     def update_permission(self, permission_id: int, **kwargs) -> bool:
@@ -209,6 +215,8 @@ class RBACMenuRepositoryAdapter(IRBACMenuRepository):
 
     def create_menu(self, menu_name: str, menu_code: str, parent_id: Optional[int] = None, path: Optional[str] = None, icon: Optional[str] = None, component: Optional[str] = None, sort_order: int = 0, menu_level: int = 1, permission_code: Optional[str] = None) -> RBACMenuEntity:
         row = self._repo.create_menu(menu_name, menu_code, parent_id, path, icon, component, sort_order, menu_level, permission_code)
+        if isinstance(row, bool):
+            row = self._repo.get_menu_by_code(menu_code)
         return RBACMenuEntity.from_orm(row)
 
     def update_menu(self, menu_id: int, **kwargs) -> bool:
@@ -226,6 +234,8 @@ class RBACLogRepositoryAdapter(IRBACLogRepository):
 
     def add_login_log(self, user_id: int, username: str, login_ip: Optional[str] = None, login_location: Optional[str] = None, user_agent: Optional[str] = None, login_type: str = 'password', login_status: int = 1, fail_reason: Optional[str] = None) -> RBACUserLoginLogEntity:
         row = self._repo.add_login_log(user_id, username, login_ip, login_location, user_agent, login_type, login_status, fail_reason)
+        if isinstance(row, bool):
+            row = None
         return RBACUserLoginLogEntity.from_orm(row)
 
     def get_login_logs(self, user_id: Optional[int] = None, page: int = 1, page_size: int = 20) -> Tuple[List[RBACUserLoginLogEntity], int]:
@@ -234,6 +244,8 @@ class RBACLogRepositoryAdapter(IRBACLogRepository):
 
     def add_operation_log(self, user_id: Optional[int] = None, username: Optional[str] = None, module: Optional[str] = None, operation_type: str = 'QUERY', description: Optional[str] = None, request_method: Optional[str] = None, request_url: Optional[str] = None, request_params: Optional[str] = None, response_data: Optional[str] = None, operation_ip: Optional[str] = None, execution_time: Optional[int] = None, operation_status: int = 1, error_msg: Optional[str] = None) -> RBACOperationLogEntity:
         row = self._repo.add_operation_log(user_id, username, module, operation_type, description, request_method, request_url, request_params, response_data, operation_ip, execution_time, operation_status, error_msg)
+        if isinstance(row, bool):
+            row = None
         return RBACOperationLogEntity.from_orm(row)
 
     def get_operation_logs(self, user_id: Optional[int] = None, module: Optional[str] = None, page: int = 1, page_size: int = 20) -> Tuple[List[RBACOperationLogEntity], int]:

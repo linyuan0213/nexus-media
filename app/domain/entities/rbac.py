@@ -45,9 +45,8 @@ class RBACUserEntity:
 
     def __getattr__(self, name: str):
         lower_name = name.lower()
-        field_name = lower_name
-        if field_name in {f.name for f in fields(self)}:
-            return getattr(self, field_name)
+        if lower_name in {f.name for f in fields(self)}:
+            return getattr(self, lower_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
     def to_dict(self) -> Dict[str, Any]:
@@ -92,6 +91,12 @@ class RBACRoleEntity:
             updated_at=getattr(orm_model, 'UPDATED_AT', None),
         )
 
+    def __getattr__(self, name: str):
+        lower_name = name.lower()
+        if lower_name in {f.name for f in fields(self)}:
+            return getattr(self, lower_name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -131,6 +136,12 @@ class RBACPermissionEntity:
             created_at=getattr(orm_model, 'CREATED_AT', None),
             updated_at=getattr(orm_model, 'UPDATED_AT', None),
         )
+
+    def __getattr__(self, name: str):
+        lower_name = name.lower()
+        if lower_name in {f.name for f in fields(self)}:
+            return getattr(self, lower_name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -187,6 +198,12 @@ class RBACMenuEntity:
             updated_at=getattr(orm_model, 'UPDATED_AT', None),
         )
 
+    def __getattr__(self, name: str):
+        lower_name = name.lower()
+        if lower_name in {f.name for f in fields(self)}:
+            return getattr(self, lower_name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -236,6 +253,12 @@ class RBACUserLoginLogEntity:
             fail_reason=getattr(orm_model, 'FAIL_REASON', None),
             login_at=getattr(orm_model, 'LOGIN_AT', None),
         )
+
+    def __getattr__(self, name: str):
+        lower_name = name.lower()
+        if lower_name in {f.name for f in fields(self)}:
+            return getattr(self, lower_name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -291,6 +314,12 @@ class RBACOperationLogEntity:
             error_msg=getattr(orm_model, 'ERROR_MSG', None),
             operated_at=getattr(orm_model, 'OPERATED_AT', None),
         )
+
+    def __getattr__(self, name: str):
+        lower_name = name.lower()
+        if lower_name in {f.name for f in fields(self)}:
+            return getattr(self, lower_name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
