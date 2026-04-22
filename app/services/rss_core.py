@@ -11,7 +11,8 @@ import json
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.helper import RssHelper
-from app.db.repositories import DownloadRepository, RssRepository
+from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
+from app.db.repositories.rss_repo_adapter import RssHistoryRepositoryAdapter
 from app.media import Media
 from app.media.meta import MetaInfo
 from app.sites import Sites, SiteConf
@@ -44,8 +45,8 @@ class Rss(metaclass=SingletonMeta):
         self.sites = Sites()
         self.siteconf = SiteConf()
         self.filter = Filter()
-        self.download_repo = DownloadRepository()
-        self.rss_repo = RssRepository()
+        self.download_repo = DownloadHistoryRepositoryAdapter()
+        self.rss_repo = RssHistoryRepositoryAdapter()
         self.rsshelper = RssHelper()
         self.subscribe = Subscribe()
 

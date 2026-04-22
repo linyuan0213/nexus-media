@@ -3,7 +3,7 @@
 配置领域 Repository 适配器
 将旧版 ConfigRepository 适配为新领域接口
 """
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from app.domain.entities.config import (
     MessageClientEntity,
@@ -49,6 +49,13 @@ class MessageClientRepositoryAdapter(IMessageClientRepository):
     def delete(self, cid: int) -> None:
         self._repo.delete_message_client(cid)
 
+    # 兼容旧 ConfigRepository 方法
+    def get_message_client(self, cid=None):
+        return self._repo.get_message_client(cid)
+
+    def check_message_client(self, cid=None, interactive=None, enabled=None, ctype=None):
+        self._repo.check_message_client(cid, interactive, enabled, ctype)
+
 
 class DownloaderRepositoryAdapter(IDownloaderRepository):
     """下载器仓储适配器"""
@@ -57,27 +64,46 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
         self._repo = repo or ConfigRepository()
 
     def get_all(self) -> List[DownloaderEntity]:
-        rows = self._repo.get_downloader()
+        rows = self._repo.get_downloaders()
         if not rows:
             return []
         return [entity for entity in [DownloaderEntity.from_orm(r) for r in rows] if entity is not None]
 
     def get_by_id(self, did: int) -> Optional[DownloaderEntity]:
-        rows = self._repo.get_downloader(did)
+        rows = self._repo.get_downloaders()
         if not rows:
             return None
-        return DownloaderEntity.from_orm(rows[0])
+        for row in rows:
+            if row.ID == int(did):
+                return DownloaderEntity.from_orm(row)
+        return None
 
     def insert(self, name: str, dtype: str, config: str, transfer: str,
                only_nastool: int, match_path: int, enabled: int) -> None:
-        self._repo.insert_downloader(name, dtype, config, transfer, only_nastool, match_path, enabled)
+        # ConfigRepository 使用 update_downloader 同时处理 insert/update
+        self._repo.update_downloader(
+            did=None, name=name, enabled=enabled, dtype=dtype,
+            transfer=transfer, only_nastool=only_nastool, match_path=match_path,
+            rmt_mode=None, config=config, download_dir=None
+        )
 
     def update(self, did: int, name: str, dtype: str, config: str, transfer: str,
                only_nastool: int, match_path: int, enabled: int) -> None:
-        self._repo.update_downloader(did, name, dtype, config, transfer, only_nastool, match_path, enabled)
+        self._repo.update_downloader(
+            did=did, name=name, enabled=enabled, dtype=dtype,
+            transfer=transfer, only_nastool=only_nastool, match_path=match_path,
+            rmt_mode=None, config=config, download_dir=None
+        )
 
     def delete(self, did: int) -> None:
         self._repo.delete_downloader(did)
+
+    # 兼容旧 ConfigRepository 方法
+    def get_downloaders(self):
+        return self._repo.get_downloaders()
+
+    def check_downloader(self, did=None, transfer=None, only_nastool=None, enabled=None, match_path=None):
+        self._repo.check_downloader(did, transfer, only_nastool, enabled, match_path)
 
 
 class FilterGroupRepositoryAdapter(IFilterGroupRepository):
@@ -87,22 +113,40 @@ class FilterGroupRepositoryAdapter(IFilterGroupRepository):
         self._repo = repo or ConfigRepository()
 
     def get_all(self) -> List[FilterGroupEntity]:
-        rows = self._repo.get_filter_group()
+        rows = self._repo.get_config_filter_group()
         if not rows:
             return []
         return [entity for entity in [FilterGroupEntity.from_orm(r) for r in rows] if entity is not None]
 
     def get_by_id(self, gid: int) -> Optional[FilterGroupEntity]:
-        rows = self._repo.get_filter_group(gid)
+        rows = self._repo.get_config_filter_group(gid)
         if not rows:
             return None
         return FilterGroupEntity.from_orm(rows[0])
 
     def insert(self, name: str, default: int = 0) -> int:
-        return self._repo.insert_filter_group(name, default)
+        self._repo.add_filter_group(name, default='Y' if default else 'N')
+        gid = self._repo.get_filter_groupid_by_name(name)
+        return int(gid) if gid else 0
 
     def delete(self, gid: int) -> None:
-        self._repo.delete_filter_group(gid)
+        self._repo.delete_filtergroup(gid)
+
+    # 兼容旧 ConfigRepository 方法
+    def get_config_filter_group(self, gid=None):
+        return self._repo.get_config_filter_group(gid)
+
+    def add_filter_group(self, name, default='N'):
+        self._repo.add_filter_group(name, default)
+
+    def get_filter_groupid_by_name(self, name):
+        return self._repo.get_filter_groupid_by_name(name)
+
+    def set_default_filtergroup(self, groupid):
+        self._repo.set_default_filtergroup(groupid)
+
+    def delete_filtergroup(self, groupid):
+        self._repo.delete_filtergroup(groupid)
 
 
 class FilterRuleRepositoryAdapter(IFilterRuleRepository):
@@ -112,17 +156,36 @@ class FilterRuleRepositoryAdapter(IFilterRuleRepository):
         self._repo = repo or ConfigRepository()
 
     def get_by_group(self, group_id: int) -> List[FilterRuleEntity]:
-        rows = self._repo.get_filter_rule(group_id)
+        rows = self._repo.get_config_filter_rule(group_id)
         if not rows:
             return []
         return [entity for entity in [FilterRuleEntity.from_orm(r) for r in rows] if entity is not None]
 
     def insert(self, group_id: int, name: str, include: str, exclude: str,
                note: str, priority: int = 0) -> None:
-        self._repo.insert_filter_rule(group_id, name, include, exclude, note, priority)
+        item = {
+            "group": group_id,
+            "name": name,
+            "pri": priority,
+            "include": include,
+            "exclude": exclude,
+            "size": None,
+            "free": note,
+        }
+        self._repo.insert_filter_rule(item)
 
     def delete_by_group(self, group_id: int) -> None:
-        self._repo.delete_filter_rule(group_id)
+        self._repo.delete_filtergroup(group_id)
+
+    # 兼容旧 ConfigRepository 方法
+    def get_config_filter_rule(self, groupid=None):
+        return self._repo.get_config_filter_rule(groupid)
+
+    def insert_filter_rule(self, item, ruleid=None):
+        self._repo.insert_filter_rule(item, ruleid)
+
+    def delete_filterrule(self, ruleid):
+        self._repo.delete_filterrule(ruleid)
 
 
 class MediaServerRepositoryAdapter(IMediaServerRepository):
@@ -132,22 +195,41 @@ class MediaServerRepositoryAdapter(IMediaServerRepository):
         self._repo = repo or ConfigRepository()
 
     def get_all(self) -> List[MediaServerEntity]:
-        rows = self._repo.get_mediaserver()
+        rows = self._repo.get_media_servers()
         if not rows:
             return []
         return [entity for entity in [MediaServerEntity.from_orm(r) for r in rows] if entity is not None]
 
     def get_by_id(self, sid: int) -> Optional[MediaServerEntity]:
-        rows = self._repo.get_mediaserver(sid)
+        rows = self._repo.get_media_servers(sid)
         if not rows:
             return None
         return MediaServerEntity.from_orm(rows[0])
 
     def insert(self, name: str, ctype: str, config: str, enabled: int) -> None:
-        self._repo.insert_mediaserver(name, ctype, config, enabled)
+        # ConfigRepository 使用 update_media_server 同时处理 insert/update
+        self._repo.update_media_server(
+            sid=None, name=name, enabled=enabled, config=config, is_default=0, note=None
+        )
 
     def delete(self, sid: int) -> None:
-        self._repo.delete_mediaserver(sid)
+        self._repo.delete_media_server(sid)
+
+    # 兼容旧 ConfigRepository 方法
+    def get_media_servers(self, sid=None):
+        return self._repo.get_media_servers(sid)
+
+    def get_media_server_by_name(self, name):
+        return self._repo.get_media_server_by_name(name)
+
+    def update_media_server(self, sid, name, enabled, config, is_default=0, note=None):
+        self._repo.update_media_server(sid, name, enabled, config, is_default, note)
+
+    def set_default_media_server(self, name):
+        self._repo.set_default_media_server(name)
+
+    def get_default_media_server(self):
+        return self._repo.get_default_media_server()
 
 
 class TorrentRemoveTaskRepositoryAdapter(ITorrentRemoveTaskRepository):
@@ -157,19 +239,75 @@ class TorrentRemoveTaskRepositoryAdapter(ITorrentRemoveTaskRepository):
         self._repo = repo or ConfigRepository()
 
     def get_all(self) -> List[TorrentRemoveTaskEntity]:
-        rows = self._repo.get_torrent_remove_task()
+        rows = self._repo.get_torrent_remove_tasks()
         if not rows:
             return []
         return [entity for entity in [TorrentRemoveTaskEntity.from_orm(r) for r in rows] if entity is not None]
 
     def get_by_id(self, tid: int) -> Optional[TorrentRemoveTaskEntity]:
-        rows = self._repo.get_torrent_remove_task(tid)
+        rows = self._repo.get_torrent_remove_tasks(tid)
         if not rows:
             return None
         return TorrentRemoveTaskEntity.from_orm(rows[0])
 
     def insert(self, name: str, downloader: str, config: str, enabled: int = 1) -> None:
-        self._repo.insert_torrent_remove_task(name, downloader, config, enabled)
+        import json
+        cfg = json.loads(config) if isinstance(config, str) else config
+        self._repo.insert_torrent_remove_task(
+            name=name, action=0, interval=0, enabled=enabled,
+            samedata=0, onlynastool=0, downloader=downloader, config=cfg
+        )
 
     def delete(self, tid: int) -> None:
         self._repo.delete_torrent_remove_task(tid)
+
+    # 兼容旧 ConfigRepository 方法
+    def get_torrent_remove_tasks(self, tid=None):
+        return self._repo.get_torrent_remove_tasks(tid)
+
+    def delete_torrent_remove_task(self, tid):
+        self._repo.delete_torrent_remove_task(tid)
+
+    def insert_torrent_remove_task(self, **kwargs):
+        self._repo.insert_torrent_remove_task(**kwargs)
+
+
+class UserRssConfigRepositoryAdapter:
+    """自定义RSS配置仓储适配器——逐个代理所有旧方法"""
+
+    def __init__(self, repo=None):
+        from app.db.repositories.config_repository import ConfigRepository
+        self._repo = repo or ConfigRepository()
+
+    def get_userrss_parser(self, pid=None):
+        return self._repo.get_userrss_parser(pid)
+
+    def get_userrss_tasks(self, tid=None):
+        return self._repo.get_userrss_tasks(tid)
+
+    def insert_userrss_mediainfos(self, tid=None, mediainfo=None):
+        self._repo.insert_userrss_mediainfos(tid, mediainfo)
+
+    def insert_userrss_task_history(self, task_id, title, downloader):
+        self._repo.insert_userrss_task_history(task_id, title, downloader)
+
+    def update_userrss_task_info(self, tid, count):
+        self._repo.update_userrss_task_info(tid, count)
+
+    def delete_userrss_task(self, tid):
+        self._repo.delete_userrss_task(tid)
+
+    def update_userrss_task(self, item):
+        self._repo.update_userrss_task(item)
+
+    def check_userrss_task(self, tid=None, state=None):
+        self._repo.check_userrss_task(tid, state)
+
+    def delete_userrss_parser(self, pid):
+        self._repo.delete_userrss_parser(pid)
+
+    def update_userrss_parser(self, item):
+        self._repo.update_userrss_parser(item)
+
+    def get_userrss_task_history(self, task_id):
+        return self._repo.get_userrss_task_history(task_id)

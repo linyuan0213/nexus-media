@@ -211,6 +211,12 @@ class RssHistoryRepositoryAdapter:
     def check_rss_history(self, type_str, name, year, season) -> bool:
         return self.check_exists(type_str, name, year, season)
 
+    def get_rss_history(self, rtype=None, rid=None):
+        return self.get_all(rtype, rid)
+
+    def delete_rss_history(self, rssid):
+        self.delete(rssid)
+
     def get_all(self, rtype: Optional[str] = None, rid: Optional[int] = None) -> List[RssHistoryEntity]:
         rows = self._repo.get_rss_history(rtype=rtype, rid=rid)
         if not rows:
