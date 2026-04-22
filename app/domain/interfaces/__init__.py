@@ -46,6 +46,10 @@ from app.domain.interfaces.word_repo import (
     ICustomWordRepository,
     ICustomWordGroupRepository,
 )
+from app.domain.interfaces.plugin_repo import (
+    IPluginHistoryRepository,
+    ITmdbBlacklistRepository,
+)
 
 __all__ = [
     "ISiteRepository",
