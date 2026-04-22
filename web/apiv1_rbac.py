@@ -508,8 +508,7 @@ def get_menus():
     if tree:
         menus = rbac_service.get_menu_tree()
     else:
-        from app.db.repositories import RBACMenuRepository
-        menus = [m.to_dict() for m in RBACMenuRepository().get_all_menus(status=1)]
+        menus = [m.to_dict() for m in rbac_service.menu_repo.get_all_menus(status=1)]
     
     return jsonify({
         "code": 0,

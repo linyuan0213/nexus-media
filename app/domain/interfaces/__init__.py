@@ -35,6 +35,14 @@ from app.domain.interfaces.config_repo import (
     ITorrentRemoveTaskRepository,
 )
 
+from app.domain.interfaces.rbac_repo import (
+    IRBACUserRepository,
+    IRBACRoleRepository,
+    IRBACPermissionRepository,
+    IRBACMenuRepository,
+    IRBACLogRepository,
+)
+
 __all__ = [
     "ISiteRepository",
     "ISiteStatisticsRepository",
@@ -59,4 +67,9 @@ __all__ = [
     "IMediaServerRepository",
     "ITorrentRemoveTaskRepository",
     "ISearchRepository",
+    "IRBACUserRepository",
+    "IRBACRoleRepository",
+    "IRBACPermissionRepository",
+    "IRBACMenuRepository",
+    "IRBACLogRepository",
 ]
