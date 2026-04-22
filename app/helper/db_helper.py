@@ -1,21 +1,23 @@
 """
-DbHelper - 兼容层
+DbHelper - 废弃兼容层 ⚠️
 
-此模块保留用于向后兼容。
-所有方法都委托给 app.db.repositories 中的新 Repository 类。
+[DEPRECATED] 此模块已废弃，仅保留用于向后兼容。
+所有方法都委托给 app.db.repositories 中的新 Repository 类或领域适配器。
 
-新代码建议直接使用 Repository 类：
-- SearchRepository - 搜索结果
-- TransferRepository - 转移历史
-- SiteRepository - 站点配置和统计
-- RssRepository - RSS订阅
-- BrushRepository - 刷流任务
-- DownloadRepository - 下载历史和设置
-- UserRepository - 用户管理
-- SyncRepository - 目录同步
-- WordRepository - 自定义识别词
-- ConfigRepository - 配置相关
-- PluginRepository - 插件历史和黑名单
+新代码严禁继续使用 DbHelper，请直接使用 Repository 类或领域适配器：
+- SearchRepository / SearchRepositoryAdapter - 搜索结果
+- TransferRepository / TransferHistoryRepositoryAdapter - 转移历史
+- SiteRepository / SiteRepositoryAdapter - 站点配置和统计
+- RssRepository / RssHistoryRepositoryAdapter - RSS订阅
+- BrushRepository / BrushTaskRepositoryAdapter - 刷流任务
+- DownloadRepository / DownloadHistoryRepositoryAdapter - 下载历史和设置
+- SyncRepository / SyncPathRepositoryAdapter - 目录同步
+- WordRepository / CustomWordRepositoryAdapter - 自定义识别词
+- ConfigRepository / ConfigRepositoryAdapter - 配置相关
+- PluginRepository / PluginHistoryRepositoryAdapter / TmdbBlacklistRepositoryAdapter - 插件历史和黑名单
+- RBACUserRepositoryAdapter / RBACRoleRepositoryAdapter 等 - RBAC权限管理
+
+维护状态: 仅维护，不新增功能，计划在未来版本中移除
 """
 from enum import Enum
 from functools import wraps
@@ -52,12 +54,13 @@ def _deprecated(func):
 
 class DbHelper:
     """
-    数据库帮助类 - 兼容层
+    数据库帮助类 - 废弃兼容层 ⚠️
     
-    此类保留用于向后兼容，所有方法都委托给新的 Repository 类。
-    新代码建议直接使用 Repository 类。
+    [DEPRECATED] 此类已废弃，仅保留用于向后兼容。
+    所有方法都委托给新的 Repository 类或领域适配器。
+    新代码严禁继续使用 DbHelper，请直接使用 Repository 类或领域适配器。
     
-    维护状态: 仅维护，不新增功能
+    维护状态: 仅维护，不新增功能，计划在未来版本中移除
     """
     _db = MainDb()
 
