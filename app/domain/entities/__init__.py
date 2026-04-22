@@ -40,6 +40,10 @@ from app.domain.entities.rbac import (
     RBACUserLoginLogEntity,
     RBACOperationLogEntity,
 )
+from app.domain.entities.word import (
+    CustomWordEntity,
+    CustomWordGroupEntity,
+)
 
 __all__ = [
     "SiteEntity",
@@ -72,4 +76,6 @@ __all__ = [
     "RBACMenuEntity",
     "RBACUserLoginLogEntity",
     "RBACOperationLogEntity",
+    "CustomWordEntity",
+    "CustomWordGroupEntity",
 ]

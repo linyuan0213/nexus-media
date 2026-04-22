@@ -8,7 +8,6 @@ from .site_repository import SiteRepository
 from .rss_repository import RssRepository
 from .brush_repository import BrushRepository
 from .download_repository import DownloadRepository
-from .user_repository import UserRepository
 from .sync_repository import SyncRepository
 from .word_repository import WordRepository
 from .config_repository import ConfigRepository
@@ -29,7 +28,6 @@ __all__ = [
     'RssRepository',
     'BrushRepository',
     'DownloadRepository',
-    'UserRepository',
     'SyncRepository',
     'WordRepository',
     'ConfigRepository',

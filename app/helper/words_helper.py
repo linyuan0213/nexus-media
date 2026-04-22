@@ -3,7 +3,10 @@ import cn2an
 import functools
 import time
 
-from app.db.repositories import WordRepository
+from app.db.repositories.word_repo_adapter import (
+    CustomWordRepositoryAdapter,
+    CustomWordGroupRepositoryAdapter,
+)
 from app.utils.commons import SingletonMeta
 from app.utils.exception_utils import ExceptionUtils
 from app.utils.cache_system import get_cache_manager
@@ -24,7 +27,8 @@ class WordsHelper(metaclass=SingletonMeta):
         self.init_config()
 
     def init_config(self):
-        self.word_repo = WordRepository()
+        self.word_repo = CustomWordRepositoryAdapter()
+        self.group_repo = CustomWordGroupRepositoryAdapter()
         self._load_words_with_cache()
     
     def _load_words_with_cache(self):
@@ -241,19 +245,19 @@ class WordsHelper(metaclass=SingletonMeta):
         """
         获取自定义词组
         """
-        return self.word_repo.get_custom_word_groups(gid=gid, tmdbid=tmdbid, gtype=gtype)
+        return self.group_repo.get_custom_word_groups(gid=gid, tmdbid=tmdbid, gtype=gtype)
 
     def is_custom_word_group_existed(self, tmdbid=None, gtype=None):
         """
         判断自定义词组是否存在
         """
-        return self.word_repo.is_custom_word_group_existed(tmdbid=tmdbid, gtype=gtype)
+        return self.group_repo.is_custom_word_group_existed(tmdbid=tmdbid, gtype=gtype)
 
     def insert_custom_word_groups(self, title, year, gtype, tmdbid, season_count, note=None):
         """
         插入自定义词组
         """
-        ret = self.word_repo.insert_custom_word_groups(title=title,
+        ret = self.group_repo.insert_custom_word_groups(title=title,
                                                       year=year,
                                                       gtype=gtype,
                                                       tmdbid=tmdbid,
@@ -266,7 +270,7 @@ class WordsHelper(metaclass=SingletonMeta):
         """
         删除自定义词组
         """
-        ret = self.word_repo.delete_custom_word_group(gid=gid)
+        ret = self.group_repo.delete_custom_word_group(gid=gid)
         self.init_config()
         return ret
 

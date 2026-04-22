@@ -32,7 +32,6 @@ from app.db.repositories import (
     RssRepository,
     BrushRepository,
     DownloadRepository,
-    UserRepository,
     SyncRepository,
     WordRepository,
     ConfigRepository,
@@ -68,7 +67,6 @@ class DbHelper:
         self._rss_repo = RssRepository()
         self._brush_repo = BrushRepository()
         self._download_repo = DownloadRepository()
-        self._user_repo = UserRepository()
         self._sync_repo = SyncRepository()
         self._word_repo = WordRepository()
         self._config_repo = ConfigRepository()
@@ -469,24 +467,6 @@ class DbHelper:
     def truncate_rss_episodes(self):
         """清空RSS历史记录"""
         return self._rss_repo.truncate_rss_episodes()
-
-    # ==================== User Management ====================
-
-    def get_users(self, uid=None, name=None):
-        """查询用户列表"""
-        return self._user_repo.get_users(uid, name)
-
-    def is_user_exists(self, name):
-        """判断用户是否存在"""
-        return self._user_repo.is_user_exists(name)
-
-    def insert_user(self, name, password, pris):
-        """新增用户"""
-        return self._user_repo.insert_user(name, password, pris)
-
-    def delete_user(self, name):
-        """删除用户"""
-        return self._user_repo.delete_user(name)
 
     # ==================== Download History ====================
 

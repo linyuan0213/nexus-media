@@ -42,6 +42,10 @@ from app.domain.interfaces.rbac_repo import (
     IRBACMenuRepository,
     IRBACLogRepository,
 )
+from app.domain.interfaces.word_repo import (
+    ICustomWordRepository,
+    ICustomWordGroupRepository,
+)
 
 __all__ = [
     "ISiteRepository",

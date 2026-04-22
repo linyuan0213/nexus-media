@@ -26,7 +26,6 @@ from app.db.repositories import (
     RssRepository,
     BrushRepository,
     DownloadRepository,
-    UserRepository,
     SyncRepository,
     WordRepository,
     ConfigRepository,
