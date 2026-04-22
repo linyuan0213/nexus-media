@@ -9,7 +9,7 @@ from flask import g, session, request, abort
 from flask_login import current_user
 
 from app.services.rbac_service import rbac_service
-from app.db.repositories import RBACMenuRepository, RBACUserRepository
+from app.db.repositories.rbac_repo_adapter import RBACMenuRepositoryAdapter, RBACUserRepositoryAdapter
 import log
 
 

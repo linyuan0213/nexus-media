@@ -32,6 +32,14 @@ from app.domain.entities.config import (
     MediaServerEntity,
     TorrentRemoveTaskEntity,
 )
+from app.domain.entities.rbac import (
+    RBACUserEntity,
+    RBACRoleEntity,
+    RBACPermissionEntity,
+    RBACMenuEntity,
+    RBACUserLoginLogEntity,
+    RBACOperationLogEntity,
+)
 
 __all__ = [
     "SiteEntity",
@@ -58,4 +66,10 @@ __all__ = [
     "FilterRuleEntity",
     "MediaServerEntity",
     "TorrentRemoveTaskEntity",
+    "RBACUserEntity",
+    "RBACRoleEntity",
+    "RBACPermissionEntity",
+    "RBACMenuEntity",
+    "RBACUserLoginLogEntity",
+    "RBACOperationLogEntity",
 ]

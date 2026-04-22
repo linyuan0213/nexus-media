@@ -9,12 +9,12 @@ from functools import wraps
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from app.db.repositories import (
-    RBACUserRepository,
-    RBACRoleRepository,
-    RBACPermissionRepository,
-    RBACMenuRepository,
-    RBACLogRepository
+from app.db.repositories.rbac_repo_adapter import (
+    RBACUserRepositoryAdapter,
+    RBACRoleRepositoryAdapter,
+    RBACPermissionRepositoryAdapter,
+    RBACMenuRepositoryAdapter,
+    RBACLogRepositoryAdapter,
 )
 from app.db.models.rbac import RBACUser, RBACRole, RBACPermission, RBACMenu
 import log
@@ -26,12 +26,17 @@ class RBACService:
     提供用户管理、角色管理、权限管理、菜单管理等业务功能
     """
     
-    def __init__(self):
-        self.user_repo = RBACUserRepository()
-        self.role_repo = RBACRoleRepository()
-        self.permission_repo = RBACPermissionRepository()
-        self.menu_repo = RBACMenuRepository()
-        self.log_repo = RBACLogRepository()
+    def __init__(self,
+                 user_repo=None,
+                 role_repo=None,
+                 permission_repo=None,
+                 menu_repo=None,
+                 log_repo=None):
+        self.user_repo = user_repo or RBACUserRepositoryAdapter()
+        self.role_repo = role_repo or RBACRoleRepositoryAdapter()
+        self.permission_repo = permission_repo or RBACPermissionRepositoryAdapter()
+        self.menu_repo = menu_repo or RBACMenuRepositoryAdapter()
+        self.log_repo = log_repo or RBACLogRepositoryAdapter()
     
     # ==================== 用户认证 ====================
     

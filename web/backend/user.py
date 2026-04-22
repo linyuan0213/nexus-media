@@ -247,14 +247,9 @@ class User(UserMixin):
             权限代码列表
         """
         if self._permissions_cache is None:
-            if self.is_superadmin:
-                # 超级管理员拥有所有权限
-                from app.db.repositories import RBACPermissionRepository
-                perms = RBACPermissionRepository().get_all_permissions()
-                self._permissions_cache = [p.PERMISSION_CODE for p in perms]
-            else:
-                perms = rbac_service.get_user_permissions(self.id)
-                self._permissions_cache = list(perms)
+            # 通过 Service 层获取权限，超级管理员会自动返回所有权限
+            perms = rbac_service.get_user_permissions(self.id)
+            self._permissions_cache = list(perms)
         return self._permissions_cache
     
     def has_permission(self, permission_code: str) -> bool:
