@@ -808,7 +808,7 @@ class RBACLogRepository(BaseRepository):
     # ========== 登录日志 ==========
 
     @DbPersist(BaseRepository._db)
-    def add_login_log(self, user_id: int, username: str,
+    def add_login_log(self, user_id: Optional[int], username: str,
                       login_ip: Optional[str] = None,
                       login_location: Optional[str] = None,
                       user_agent: Optional[str] = None,

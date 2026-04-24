@@ -12,3 +12,4 @@
 ./config/site_manage/*.dat
 .roo/
 web/static/img_cache/*
+web/frontend

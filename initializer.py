@@ -5,7 +5,7 @@ import time
 import redis
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
-from werkzeug.security import generate_password_hash
+from app.utils.security import generate_password_hash
 
 from app.utils.redis_store import RedisStore
 import log
@@ -86,13 +86,6 @@ def update_config():
     _config = Config().get_config()
     _dbhelper = DownloadRepository()
     overwrite_cofig = False
-
-    # 密码初始化
-    login_password = _config.get("app", {}).get("login_password") or "password"
-    if login_password and not login_password.startswith("[hash]"):
-        _config['app']['login_password'] = "[hash]%s" % generate_password_hash(
-            login_password)
-        overwrite_cofig = True
 
     # API密钥初始化
     if not _config.get("security", {}).get("api_key"):

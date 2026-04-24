@@ -1,0 +1,405 @@
+"""
+Sync Router — FastAPI 迁移
+对应原 web/controllers/sync.py，复用 app/services/sync_service.py
+"""
+import os.path
+from typing import List, Optional, Union
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+
+from api.deps import get_current_user, get_sync_service, get_filetransfer_service, get_thread_helper
+from app.utils.response import success, fail
+from app.services.filetransfer_service import FileTransferService as FileTransfer
+from app.services.sync_service import SyncService
+from app.services.sync_core import SyncCore as Sync
+from app.utils import ExceptionUtils
+from config import RMT_MEDIAEXT
+
+router = APIRouter()
+
+
+# ---------------------------------------------------------------------------
+# Request Models
+# ---------------------------------------------------------------------------
+
+class EmptyRequest(BaseModel):
+    data: Optional[dict] = None
+
+
+class AddOrEditSyncPathRequest(BaseModel):
+    sid: Optional[int] = None
+    source: Optional[str] = None
+    dest: Optional[str] = None
+    unknown: Optional[str] = None
+    mode: Optional[str] = None
+    compatibility: Optional[int] = None
+    rename: Optional[int] = None
+    enabled: Optional[int] = None
+
+
+class CheckSyncPathRequest(BaseModel):
+    sid: Optional[int] = None
+    flag: Optional[str] = None
+    checked: Optional[bool] = None
+
+
+class DelUnknownPathRequest(BaseModel):
+    id: Optional[Union[int, List[int]]] = None
+
+
+class DeleteFilesRequest(BaseModel):
+    files: Optional[List[str]] = None
+
+
+class DeleteSyncPathRequest(BaseModel):
+    sid: Optional[int] = None
+
+
+class GetSubPathRequest(BaseModel):
+    directory: Optional[str] = None
+    filter: Optional[str] = "ALL"
+
+
+class RenameRequest(BaseModel):
+    logid: Optional[int] = None
+    unknown_id: Optional[int] = None
+    syncmod: Optional[str] = None
+    tmdb: Optional[int] = None
+    type: Optional[str] = None
+    season: Optional[int] = None
+    episode_format: Optional[str] = None
+    episode_details: Optional[str] = None
+    episode_part: Optional[str] = None
+    episode_offset: Optional[str] = None
+    min_filesize: Optional[int] = None
+
+
+class RenameFileRequest(BaseModel):
+    path: Optional[str] = None
+    name: Optional[str] = None
+
+
+class RenameUdfRequest(BaseModel):
+    inpath: Optional[str] = None
+    outpath: Optional[str] = None
+    syncmod: Optional[str] = None
+    tmdb: Optional[int] = None
+    type: Optional[str] = None
+    season: Optional[int] = None
+    episode_format: Optional[str] = None
+    episode_details: Optional[str] = None
+    episode_part: Optional[str] = None
+    episode_offset: Optional[str] = None
+    min_filesize: Optional[int] = None
+
+
+class RunDirectorySyncRequest(BaseModel):
+    sid: Optional[int] = None
+
+
+class TestConnectionRequest(BaseModel):
+    command: Optional[str] = None
+
+
+class UpdateDirectoryRequest(BaseModel):
+    oper: Optional[str] = None
+    key: Optional[str] = None
+    value: Optional[str] = None
+    replace_value: Optional[str] = None
+
+
+class DeleteHistoryRequest(BaseModel):
+    logids: Optional[List[int]] = None
+    flag: Optional[str] = None
+
+
+class GetSyncPathRequest(BaseModel):
+    sid: Optional[int] = None
+
+
+class ReIdentificationRequest(BaseModel):
+    flag: Optional[str] = None
+    ids: Optional[List[int]] = None
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
+
+@router.post("/add_or_edit_sync_path")
+def add_or_edit_sync_path(
+    req: AddOrEditSyncPathRequest,
+    user: str = Depends(get_current_user),
+    svc: SyncService = Depends(get_sync_service),
+):
+    ok, msg = svc.add_or_edit_sync_path(
+        sid=req.sid,
+        source=req.source,
+        dest=req.dest,
+        unknown=req.unknown,
+        mode=req.mode,
+        compatibility=req.compatibility,
+        rename=req.rename,
+        enabled=req.enabled,
+    )
+    if ok:
+        return success(msg=msg)
+    return fail(msg=msg)
+
+
+@router.post("/check_sync_path")
+def check_sync_path(
+    req: CheckSyncPathRequest,
+    user: str = Depends(get_current_user),
+    svc: SyncService = Depends(get_sync_service),
+):
+    ok, msg = svc.check_sync_path(
+        sid=req.sid, flag=req.flag, checked=req.checked
+    )
+    if ok:
+        return success()
+    return fail()
+
+
+@router.post("/del_unknown_path")
+def del_unknown_path(
+    req: DelUnknownPathRequest,
+    user: str = Depends(get_current_user),
+    ft: FileTransfer = Depends(get_filetransfer_service),
+):
+    tid = req.id
+    if isinstance(tid, list):
+        for t in tid:
+            if not t:
+                continue
+            ft.delete_transfer_unknown(t)
+        return success()
+    else:
+        retcode = ft.delete_transfer_unknown(tid)
+        return fail(code=retcode)
+
+
+@router.post("/delete_files")
+def delete_files(
+    req: DeleteFilesRequest,
+    user: str = Depends(get_current_user),
+    ft: FileTransfer = Depends(get_filetransfer_service),
+):
+    files = req.files
+    if files:
+        for file in files:
+            del_flag, del_msg = ft.delete_media_file(
+                filedir=os.path.dirname(file),
+                filename=os.path.basename(file)
+            )
+            if not del_flag:
+                import log
+                log.error(del_msg)
+            else:
+                import log
+                log.info(del_msg)
+    return success()
+
+
+@router.post("/delete_sync_path")
+def delete_sync_path(
+    req: DeleteSyncPathRequest,
+    user: str = Depends(get_current_user),
+    svc: SyncService = Depends(get_sync_service),
+):
+    svc.delete_sync_path(req.sid)
+    return success()
+
+
+@router.post("/get_sub_path")
+def get_sub_path(
+    req: GetSubPathRequest,
+    user: str = Depends(get_current_user),
+    svc: SyncService = Depends(get_sync_service),
+):
+    try:
+        ft = req.filter or "ALL"
+        r = svc.get_sub_path(directory=req.directory, ft=ft)
+    except Exception as e:
+        ExceptionUtils.exception_traceback(e)
+        return fail(code=-1, message="加载路径失败: %s" % str(e))
+    return success(count=len(r), data=r)
+
+
+@router.post("/rename")
+def rename(
+    req: RenameRequest,
+    user: str = Depends(get_current_user),
+    svc: SyncService = Depends(get_sync_service),
+    ft: FileTransfer = Depends(get_filetransfer_service),
+):
+    path = dest_dir = None
+    syncmod = svc.resolve_rmt_mode(req.syncmod)
+    logid = req.logid
+    if logid:
+        transinfo = svc.get_transfer_info_by_id(logid)
+        if transinfo:
+            path = os.path.join(transinfo.SOURCE_PATH, transinfo.SOURCE_FILENAME)
+            dest_dir = transinfo.DEST
+        else:
+            return fail(code=-1, msg="未查询到转移日志记录")
+    else:
+        unknown_id = req.unknown_id
+        if unknown_id:
+            unknowninfo = svc.get_unknown_info_by_id(unknown_id)
+            if unknowninfo:
+                path = unknowninfo.PATH
+                dest_dir = unknowninfo.DEST
+            else:
+                return fail(code=-1, msg="未查询到未识别记录")
+    if not dest_dir:
+        dest_dir = ""
+    if not path:
+        return fail(code=-1, msg="输入路径有误")
+
+    tmdbid = req.tmdb
+    mtype = req.type
+    season = req.season
+    episode_format = req.episode_format
+    episode_details = req.episode_details
+    episode_part = req.episode_part
+    episode_offset = req.episode_offset
+    min_filesize = req.min_filesize
+    media_type = svc.build_media_type(mtype)
+    need_fix_all = False
+    if os.path.splitext(path)[-1].lower() in RMT_MEDIAEXT and episode_format:
+        path = os.path.dirname(path)
+        need_fix_all = True
+
+    result = svc.manual_transfer(
+        inpath=path, syncmod=syncmod, outpath=dest_dir,
+        media_type=media_type, episode_format=episode_format,
+        episode_details=episode_details, episode_part=episode_part,
+        episode_offset=episode_offset, min_filesize=min_filesize,
+        tmdbid=tmdbid, season=season, need_fix_all=need_fix_all
+    )
+    if result.success:
+        if not need_fix_all and not logid:
+            ft.update_transfer_unknown_state(path)
+        return success(msg="转移成功")
+    return fail(code=2, msg=result.message)
+
+
+@router.post("/rename_file")
+def rename_file(
+    req: RenameFileRequest,
+    user: str = Depends(get_current_user),
+    svc: SyncService = Depends(get_sync_service),
+):
+    result = svc.rename_file(path=req.path, name=req.name)
+    if result.success:
+        return success()
+    return fail(code=-1, msg=result.message)
+
+
+@router.post("/rename_udf")
+def rename_udf(
+    req: RenameUdfRequest,
+    user: str = Depends(get_current_user),
+    svc: SyncService = Depends(get_sync_service),
+):
+    inpath = req.inpath
+    if not os.path.exists(inpath):
+        return fail(code=-1, msg="输入路径不存在")
+    outpath = req.outpath
+    syncmod = svc.resolve_rmt_mode(req.syncmod)
+    tmdbid = req.tmdb
+    mtype = req.type
+    season = req.season
+    episode_format = req.episode_format
+    episode_details = req.episode_details
+    episode_part = req.episode_part
+    episode_offset = req.episode_offset
+    min_filesize = req.min_filesize
+    media_type = svc.build_media_type(mtype)
+
+    result = svc.manual_transfer(
+        inpath=inpath, syncmod=syncmod, outpath=outpath,
+        media_type=media_type, episode_format=episode_format,
+        episode_details=episode_details, episode_part=episode_part,
+        episode_offset=episode_offset, min_filesize=min_filesize,
+        tmdbid=tmdbid, season=season
+    )
+    if result.success:
+        return success(msg="转移成功")
+    return fail(code=2, msg=result.message)
+
+
+@router.post("/run_directory_sync")
+def run_directory_sync(
+    req: RunDirectorySyncRequest,
+    user: str = Depends(get_current_user),
+    svc: SyncService = Depends(get_sync_service),
+    thread_helper = Depends(get_thread_helper),
+):
+    thread_helper.start_thread(svc.transfer_sync, (req.sid,))
+    return success(msg="执行成功")
+
+
+@router.post("/test_connection")
+def test_connection(
+    req: TestConnectionRequest,
+    user: str = Depends(get_current_user),
+    svc: SyncService = Depends(get_sync_service),
+):
+    result = svc.test_connection(command=req.command)
+    if result.success:
+        return success()
+    return fail(code=1)
+
+
+@router.post("/update_directory")
+def update_directory(
+    req: UpdateDirectoryRequest,
+    user: str = Depends(get_current_user),
+    svc: SyncService = Depends(get_sync_service),
+):
+    result = svc.update_directory(
+        oper=req.oper,
+        key=req.key,
+        value=req.value,
+        replace_value=req.replace_value,
+    )
+    if result.success:
+        return success()
+    return fail()
+
+
+@router.post("/delete_history")
+def delete_history(
+    req: DeleteHistoryRequest,
+    user: str = Depends(get_current_user),
+    svc: FileTransfer = Depends(get_filetransfer_service),
+):
+    logids = req.logids or []
+    flag = req.flag
+    svc.delete_history(logids=logids, flag=flag)
+    return success()
+
+
+@router.post("/get_sync_path")
+def get_sync_path(
+    req: GetSyncPathRequest,
+    user: str = Depends(get_current_user),
+    svc: SyncService = Depends(get_sync_service),
+):
+    sync_path = svc.get_sync_paths(sid=req.sid)
+    return success(result=sync_path)
+
+
+@router.post("/re_identification")
+def re_identification(
+    req: ReIdentificationRequest,
+    user: str = Depends(get_current_user),
+    svc: SyncService = Depends(get_sync_service),
+):
+    result = svc.re_identify_items(flag=req.flag, ids=req.ids)
+    if result.success:
+        return success(msg=result.message)
+    return fail(code=2, msg=result.message)

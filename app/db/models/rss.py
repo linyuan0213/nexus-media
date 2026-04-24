@@ -67,7 +67,7 @@ class RSSTORRENTS(Base):
 
     ID = Column(Integer, Sequence('ID'), primary_key=True)
     TORRENT_NAME = Column(String(255))
-    ENCLOSURE = Column(String(2048), index=True)
+    ENCLOSURE = Column(String(8192), index=True)
     TYPE = Column(String(255))
     # 使用 String 替代 Text 以支持 MySQL 索引
     TITLE = Column(String(255))

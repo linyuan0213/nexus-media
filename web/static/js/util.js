@@ -38,7 +38,7 @@ function ajax_post(cmd, params, handler, aync = true, show_progress = true) {
     url: url + "?random=" + Math.random(),
     contentType: 'application/json; charset=utf-8',
     dataType: "json",
-    data: JSON.stringify({data: params}),
+    data: JSON.stringify(params),
     cache: false,
     async: aync,
     timeout: 0,

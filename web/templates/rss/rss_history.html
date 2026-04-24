@@ -109,7 +109,7 @@
 <script type="text/javascript">
   //重新订阅
   function re_rss_history(rssid) {
-    ajax_post("/api/web/rss/re_rss_history", {"rssid": rssid, "type": "{{ Type }}"}, function (ret) {
+    ajax_post("/api/rss/re_rss_history", {"rssid": rssid, "type": "{{ Type }}"}, function (ret) {
       if (ret.code == 0) {
         show_success_modal("重新订阅成功！");
       } else {
@@ -120,7 +120,7 @@
 
   //删除订阅历史
   function delete_rss_history(rssid) {
-    ajax_post("/api/web/rss/delete_rss_history", {"rssid": rssid}, function (ret) {
+    ajax_post("/api/rss/delete_rss_history", {"rssid": rssid}, function (ret) {
       window_history_refresh();
     });
   }

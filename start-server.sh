@@ -1,3 +1,5 @@
 #!/bin/sh
-# 启动后创建gunicorn.pid文件
-.venv/bin/gunicorn run:App -c gunicorn.conf.py
+# NAS-Tools FastAPI 启动脚本
+# 使用 gunicorn + uvicorn worker 启动
+
+.venv/bin/gunicorn run:app -c gunicorn.conf.py

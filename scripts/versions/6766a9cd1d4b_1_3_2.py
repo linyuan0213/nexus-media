@@ -33,16 +33,37 @@ def _fix_rule(val):
     val = val.strip()
     if not val:
         return '{}'
+    # 处理被单引号或双引号包围的空字符串
+    if val in ("''", '""', "'", '"'):
+        return '{}'
+    # 已经是 JSON 格式，直接返回
     try:
         json.loads(val)
         return val
     except Exception:
         pass
+    # 处理被外层引号包裹的情况（如 "'{...}'" 或 '"{...}"'）
+    if (val.startswith("'") and val.endswith("'")) or (val.startswith('"') and val.endswith('"')):
+        inner = val[1:-1]
+        try:
+            # 尝试解析内部内容
+            json.loads(inner)
+            return inner
+        except Exception:
+            pass
+        try:
+            d = ast.literal_eval(inner)
+            return json.dumps(d, ensure_ascii=False)
+        except Exception:
+            pass
+    # 处理 Python 单引号字典格式
     try:
         d = ast.literal_eval(val)
         return json.dumps(d, ensure_ascii=False)
     except Exception:
-        return '{}'
+        pass
+    # 其他情况返回空对象
+    return '{}'
 
 
 def upgrade() -> None:
@@ -106,7 +127,7 @@ def upgrade() -> None:
         with op.batch_alter_table('SEARCH_RESULT_INFO') as batch_op:
             batch_op.alter_column(
                 'ENCLOSURE',
-                type_=sa.String(2048),
+                type_=sa.String(8192),
                 existing_type=sa.String(255)
             )
     except Exception:
@@ -177,7 +198,7 @@ def upgrade() -> None:
         with op.batch_alter_table('DOWNLOAD_HISTORY') as batch_op:
             batch_op.alter_column(
                 'ENCLOSURE',
-                type_=sa.String(2048),
+                type_=sa.String(8192),
                 existing_type=sa.String(512)
             )
     except Exception:
@@ -188,7 +209,7 @@ def upgrade() -> None:
         with op.batch_alter_table('RSS_TORRENTS') as batch_op:
             batch_op.alter_column(
                 'ENCLOSURE',
-                type_=sa.String(2048),
+                type_=sa.String(8192),
                 existing_type=sa.String(512)
             )
     except Exception:
@@ -199,7 +220,7 @@ def upgrade() -> None:
         with op.batch_alter_table('SITE_BRUSH_TORRENTS') as batch_op:
             batch_op.alter_column(
                 'ENCLOSURE',
-                type_=sa.String(2048),
+                type_=sa.String(8192),
                 existing_type=sa.String(512)
             )
     except Exception:
@@ -226,6 +247,17 @@ def upgrade() -> None:
             )
     except Exception:
         pass
+
+    # 修改 SYSTEM_DICT 表的 VALUE 字段类型为 Text，避免配置被截断
+    try:
+        with op.batch_alter_table('SYSTEM_DICT') as batch_op:
+            batch_op.alter_column(
+                'VALUE',
+                type_=sa.Text(),
+                existing_type=sa.String(255)
+            )
+    except Exception:
+        pass
     # ### end Alembic commands ###
 
 
@@ -236,7 +268,7 @@ def downgrade() -> None:
             batch_op.alter_column(
                 'ENCLOSURE',
                 type_=sa.String(512),
-                existing_type=sa.String(2048)
+                existing_type=sa.String(8192)
             )
     except Exception:
         pass
@@ -245,7 +277,7 @@ def downgrade() -> None:
             batch_op.alter_column(
                 'ENCLOSURE',
                 type_=sa.String(512),
-                existing_type=sa.String(2048)
+                existing_type=sa.String(8192)
             )
     except Exception:
         pass
@@ -254,7 +286,7 @@ def downgrade() -> None:
             batch_op.alter_column(
                 'ENCLOSURE',
                 type_=sa.String(512),
-                existing_type=sa.String(2048)
+                existing_type=sa.String(8192)
             )
     except Exception:
         pass
@@ -263,7 +295,7 @@ def downgrade() -> None:
             batch_op.alter_column(
                 'ENCLOSURE',
                 type_=sa.String(255),
-                existing_type=sa.String(2048)
+                existing_type=sa.String(8192)
             )
     except Exception:
         pass
@@ -273,6 +305,15 @@ def downgrade() -> None:
                 'SIZE',
                 type_=sa.Integer(),
                 existing_type=sa.BigInteger()
+            )
+    except Exception:
+        pass
+    try:
+        with op.batch_alter_table('SYSTEM_DICT') as batch_op:
+            batch_op.alter_column(
+                'VALUE',
+                type_=sa.String(255),
+                existing_type=sa.Text()
             )
     except Exception:
         pass

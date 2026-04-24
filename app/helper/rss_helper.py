@@ -118,10 +118,14 @@ class RssHelper:
         """
         将RSS的记录插入数据库
         """
+        # 截断超长 ENCLOSURE 防止数据库错误（8192 字节上限）
+        enclosure = media_info.enclosure
+        if enclosure and len(enclosure) > 8192:
+            enclosure = enclosure[:8192]
         self._db.insert(
             RSSTORRENTS(
                 TORRENT_NAME=media_info.org_string,
-                ENCLOSURE=media_info.enclosure,
+                ENCLOSURE=enclosure,
                 TYPE=media_info.type.value,
                 TITLE=media_info.title,
                 YEAR=media_info.year,

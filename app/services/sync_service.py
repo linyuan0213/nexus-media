@@ -232,6 +232,14 @@ class SyncService:
     def get_sync_paths(self, sid: Optional[int] = None):
         return self._sync.get_sync_path_conf(sid=sid)
 
+    def transfer_sync(self, sid: Optional[int] = None):
+        """触发指定同步目录的同步转移"""
+        return self._sync.transfer_sync(sid=sid)
+
+    def get_sync_path_conf(self, sid=None):
+        """获取同步目录配置列表"""
+        return self._sync.get_sync_path_conf(sid=sid)
+
     def get_transfer_info_by_id(self, logid: int):
         return self._filetransfer.get_transfer_info_by_id(logid)
 
@@ -393,7 +401,7 @@ class SyncService:
     def update_directory(oper: str, key: str, value: str,
                          replace_value: Optional[str] = None) -> SimpleResultDTO:
         """更新配置中的目录路径"""
-        from web.core.action_utils import set_config_directory
+        from app.utils.web_utils import set_config_directory
         from config import Config
         cfg = set_config_directory(Config().get_config(), oper, key, value, replace_value)
         Config().save_config(cfg)

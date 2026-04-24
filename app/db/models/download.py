@@ -36,7 +36,7 @@ class DOWNLOADHISTORY(Base):
     POSTER = Column(String(255))
     OVERVIEW = Column(Text)
     TORRENT = Column(String(255))
-    ENCLOSURE = Column(String(2048), index=True)
+    ENCLOSURE = Column(String(8192), index=True)
     SITE = Column(String(255))
     DESC = Column(String(255))
     DOWNLOADER = Column(String(255))

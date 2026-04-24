@@ -493,7 +493,7 @@
   // 显示编辑任务
   function show_edit_torrent_remove_task_modal(tid){
     $("#torrent_remove_task_id").val(tid);
-    ajax_post("/api/web/download/get_torrent_remove_task", { tid: tid }, function (ret) {
+    ajax_post("/api/download/get_torrent_remove_task", { tid: tid }, function (ret) {
       if (ret.code == 0) {
         $("#modal-download-setting-title").val('编辑下载设置');
         reset_torrent_remove_config();
@@ -576,7 +576,7 @@
     }
     let params = {...{tid: $("#torrent_remove_task_id").val()}, ...config};
     $("#add_or_edit_torrent_remove_task_btn").text("保存中").attr("disabled", true);
-    ajax_post("/api/web/download/update_torrent_remove_task", params, function (ret) {
+    ajax_post("/api/download/update_torrent_remove_task", params, function (ret) {
       $("#modal-torrent-remove-task").modal('hide');
       if (ret.code == 0) {
         $("#add_or_edit_torrent_remove_task_btn").text("保存").attr("disabled", false);
@@ -594,7 +594,7 @@
   function delete_torrent_remove_task(tid, name){
     show_confirm_modal(`删除下载设置 ${name} ？`, function () {
       hide_confirm_modal();
-      ajax_post("/api/web/download/delete_torrent_remove_task", { "tid": tid }, function (ret) {
+      ajax_post("/api/download/delete_torrent_remove_task", { "tid": tid }, function (ret) {
         window_history_refresh();
       });
     });
@@ -602,7 +602,7 @@
 
   // 显示满足条件种子
   function show_remove_torrents_modal(tid){
-    ajax_post("/api/web/download/get_remove_torrents", { "tid": tid }, function (ret) {
+    ajax_post("/api/download/get_remove_torrents", { "tid": tid }, function (ret) {
       if (ret.code == 0) {
         let torrents = ret.data;
         let thead = `<thead><tr><th>共${torrents.length}个种子</th></tr></thead>`;
@@ -632,7 +632,7 @@
 
   // 立即运行任务
   function run_torrent_remove_now(tid) {
-    ajax_post("/api/web/download/auto_remove_torrents", { "tid": tid }, function (ret) {
+    ajax_post("/api/download/auto_remove_torrents", { "tid": tid }, function (ret) {
       show_success_modal("任务运行完成！", function () {
         window_history_refresh();
       });

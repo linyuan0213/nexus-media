@@ -14,7 +14,7 @@ from config import (
     REFRESH_WALLPAPER_INTERVAL,
     Config,
 )
-from web.backend.wallpaper import get_login_wallpaper
+from app.utils.wallpaper import get_login_wallpaper
 from app.helper.temp_cleanup_helper import TempCleanupHelper
 
 

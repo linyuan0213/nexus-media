@@ -214,7 +214,7 @@
     }
     params['test'] = test || false;
     params['type'] = type;
-    ajax_post("/api/web/system/save_indexer_config", params, func);
+    ajax_post("/api/system/save_indexer_config", params, func);
   }
 
   //保存配置、关闭和刷新页面
@@ -235,7 +235,7 @@
         command = "{{ Indexer.test_command }}";
       }
       {% endfor %}
-      ajax_post("/api/web/sync/test_connection", {"command": command}, function (ret) {
+      ajax_post("/api/sync/test_connection", {"command": command}, function (ret) {
         if (ret.code === 0) {
           $(`#${currType}_test_btn`).text("测试成功").attr("disabled", false);
         } else {
@@ -259,7 +259,7 @@
   function init_indexer_chart() {
 
     // 请求数据
-    ajax_post("/api/web/download/get_indexer_statistics", {}, function(ret){
+    ajax_post("/api/download/get_indexer_statistics", {}, function(ret){
 
       // 饼图
       if (typeof (indexer_chat) != 'undefined')

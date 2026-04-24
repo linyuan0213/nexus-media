@@ -401,7 +401,7 @@
       });
       chart_site_activity.showLoading();
 
-      ajax_post("/api/web/site/get_site_activity", {"name": site_name}, function (ret) {
+      ajax_post("/api/site/get_site_activity", {"name": site_name}, function (ret) {
             chart_site_activity.hideLoading();
             if (ret.code == 0) {
               const colors = ['#206bc4', '#d63939', '#2fb344', '#d6b344'];
@@ -630,7 +630,7 @@
       });
       chart_seeding_info.showLoading();
 
-      ajax_post("/api/web/site/get_site_seeding_info", {"name": site_name}, function (ret) {
+      ajax_post("/api/site/get_site_seeding_info", {"name": site_name}, function (ret) {
             chart_seeding_info.hideLoading();
             if (ret.code == 0) {
               let options_seeding_info = {
@@ -725,7 +725,7 @@
     // 获取某一日的数据
     function show_site_history_day(end_day, days) {
       current_date = end_day;
-      ajax_post("/api/web/site/get_site_history", {"days": days,"end_day": end_day}, function (ret) {
+      ajax_post("/api/site/get_site_history", {"days": days,"end_day": end_day}, function (ret) {
             pie_dl.hideLoading();
             pie_ul.hideLoading();
             if (ret.code == 0) {
@@ -820,7 +820,7 @@
       $(obj).addClass('active');
       chart_history.showLoading();
 
-      ajax_post("/api/web/site/get_site_history", {"days": days}, function (ret) {
+      ajax_post("/api/site/get_site_history", {"days": days}, function (ret) {
             chart_history.hideLoading();
             if (ret.code == 0) {
               let rotate = ret.dataset.length > 15 ? 40 : 0;
@@ -961,7 +961,7 @@
         "encoding": "DICT",
         "site_hash": "Y"
       };
-      ajax_post("/api/web/site/get_site_user_statistics", params, function(ret){
+      ajax_post("/api/site/get_site_user_statistics", params, function(ret){
         let statistics = ret.data;
         let table_content = '';
         let site_blur_text = (site_blur) ? 'filter:blur(3px)' : '';

@@ -238,7 +238,7 @@
     $('#modal-user-title').text('编辑用户');
     
     // 获取用户数据
-    ajax_post('/api/web/rbac/get_user', {id: user_id}, function(ret) {
+    ajax_post('/api/rbac/get_user', {id: user_id}, function(ret) {
       if (ret.code === 0) {
         const user = ret.data;
         $('#user_id').val(user.id);
@@ -310,7 +310,7 @@
       data.password = password;
     }
     
-    const action = window.editing_user_id ? '/api/web/rbac/update_user' : '/api/web/rbac/create_user';
+    const action = window.editing_user_id ? '/api/rbac/update_user' : '/api/rbac/create_user';
     
     ajax_post(action, data, function(ret) {
       if (ret.code === 0) {
@@ -327,7 +327,7 @@
   // 删除用户
   function delete_user(user_id, username) {
     show_confirm_modal('确定要删除用户 ' + username + ' 吗？此操作不可恢复。', function() {
-      ajax_post('/api/web/rbac/delete_user', {id: user_id}, function(ret) {
+      ajax_post('/api/rbac/delete_user', {id: user_id}, function(ret) {
         if (ret.code === 0) {
           show_success_modal('用户已删除', function() {
             window_history_refresh();
@@ -358,7 +358,7 @@
     }
     $('#reset_new_password').removeClass('is-invalid');
     
-    ajax_post('/api/web/rbac/reset_password', {
+    ajax_post('/api/rbac/reset_password', {
       user_id: user_id,
       new_password: new_password
     }, function(ret) {

@@ -10,6 +10,7 @@ import logging
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 logging.getLogger('watchdog').setLevel(logging.INFO)
+logging.getLogger('charset_normalizer').setLevel(logging.WARNING)
 
 from ._buffer_proxy import LOG_BUFFER, LogBufferProxy, get_log_buffer
 from ._intercept import InterceptHandler

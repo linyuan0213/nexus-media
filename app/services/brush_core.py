@@ -7,6 +7,7 @@ BrushTask 核心模块（原 app/brushtask.py）
 - BrushTaskScheduler：调度编排（委托给 SchedulerCore）
 - BrushTaskService：纯业务逻辑（RSS 检查、下载、删种、停种）
 """
+import ast
 import json
 import time
 from datetime import datetime, time as dtime
@@ -146,6 +147,39 @@ class BrushTaskService:
         self._brush_tasks: dict = {}
         self._torrents_cache: set = set()
 
+    @staticmethod
+    def _parse_json_rule(val, default=None):
+        """安全解析规则字段，兼容 Python 单引号字典格式"""
+        if default is None:
+            default = {}
+        if not val:
+            return default
+        val = str(val).strip()
+        if not val or val in ("''", '""', "'", '"'):
+            return default
+        # 已经是合法 JSON
+        try:
+            return json.loads(val)
+        except Exception:
+            pass
+        # 被外层引号包裹的情况
+        if (val.startswith("'") and val.endswith("'")) or (val.startswith('"') and val.endswith('"')):
+            inner = val[1:-1]
+            try:
+                return json.loads(inner)
+            except Exception:
+                pass
+            try:
+                return json.loads(ast.literal_eval(inner))
+            except Exception:
+                pass
+        # Python 单引号字典格式
+        try:
+            return json.loads(ast.literal_eval(val))
+        except Exception:
+            pass
+        return default
+
     # ---------- 生命周期 ----------
 
     def init_config(self):
@@ -256,9 +290,9 @@ class BrushTaskService:
             "transfer": True if task.TRANSFER == "Y" else False,
             "sendmessage": True if task.SENDMESSAGE == "Y" else False,
             "free": task.FREELEECH,
-            "rss_rule": json.loads(task.RSS_RULE or '{}'),
-            "remove_rule": json.loads(task.REMOVE_RULE or '{}'),
-            "stop_rule": json.loads(task.STOP_RULE or '{"stopfree": "Y"}'),
+            "rss_rule": self._parse_json_rule(task.RSS_RULE, {}),
+            "remove_rule": self._parse_json_rule(task.REMOVE_RULE, {}),
+            "stop_rule": self._parse_json_rule(task.STOP_RULE, {"stopfree": "Y"}),
             "seed_size": seed_size_gb,
             "time_range": task.TIME_RANGE,
             "total_size": total_size,

@@ -16,7 +16,7 @@ from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import RequestUtils, DomUtils
 from app.utils.types import MediaType, SearchType, RssType
 from config import Config
-from web.backend.web_utils import WebUtils
+from app.utils.web_utils import WebUtils
 
 
 

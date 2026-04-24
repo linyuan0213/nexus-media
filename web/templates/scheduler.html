@@ -110,7 +110,7 @@
 
 <script type="text/javascript">
   function load_scheduler_jobs() {
-    ajax_post("/api/web/scheduler/get_scheduler_jobs", {}, function (ret) {
+    ajax_post("/api/scheduler/get_scheduler_jobs", {}, function (ret) {
       if (ret.code === 0) {
         render_scheduler_jobs(ret.data);
       } else {
@@ -312,7 +312,7 @@
       }
     }
 
-    ajax_post("/api/web/scheduler/update_scheduler_job", payload, function (ret) {
+    ajax_post("/api/scheduler/update_scheduler_job", payload, function (ret) {
       $("#modal-scheduler-edit").modal('hide');
       if (ret.code === 0) {
         show_success_modal("保存成功");
@@ -324,21 +324,21 @@
   }
 
   function pause_job(id) {
-    ajax_post("/api/web/scheduler/pause_scheduler_job", { id: id }, function (ret) {
+    ajax_post("/api/scheduler/pause_scheduler_job", { id: id }, function (ret) {
       if (ret.code === 0) load_scheduler_jobs();
       else show_fail_modal(ret.msg || "暂停失败");
     });
   }
 
   function resume_job(id) {
-    ajax_post("/api/web/scheduler/resume_scheduler_job", { id: id }, function (ret) {
+    ajax_post("/api/scheduler/resume_scheduler_job", { id: id }, function (ret) {
       if (ret.code === 0) load_scheduler_jobs();
       else show_fail_modal(ret.msg || "恢复失败");
     });
   }
 
   function run_job(id) {
-    ajax_post("/api/web/scheduler/run_scheduler_job", { id: id }, function (ret) {
+    ajax_post("/api/scheduler/run_scheduler_job", { id: id }, function (ret) {
       if (ret.code === 0) show_success_modal("任务已触发");
       else show_fail_modal(ret.msg || "触发失败");
     });
@@ -347,7 +347,7 @@
   function delete_job(id) {
     show_confirm_modal("确定要删除任务 " + id + " 吗？", function () {
       hide_confirm_modal();
-      ajax_post("/api/web/scheduler/delete_scheduler_job", { id: id }, function (ret) {
+      ajax_post("/api/scheduler/delete_scheduler_job", { id: id }, function (ret) {
         if (ret.code === 0) load_scheduler_jobs();
         else show_fail_modal(ret.msg || "删除失败");
       });

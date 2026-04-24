@@ -17,11 +17,16 @@ class SystemConfig(metaclass=SingletonMeta):
         """
         缓存系统设置
         """
+        import log
         for item in self.dicthelper.list("SystemConfig"):
             if not item:
                 continue
             if self.__is_obj(item.VALUE):
-                self.systemconfig[item.KEY] = json.loads(item.VALUE)
+                try:
+                    self.systemconfig[item.KEY] = json.loads(item.VALUE)
+                except json.JSONDecodeError:
+                    log.warn(f"配置项 {item.KEY} 的 JSON 格式损坏，跳过")
+                    continue
             else:
                 self.systemconfig[item.KEY] = item.VALUE
 

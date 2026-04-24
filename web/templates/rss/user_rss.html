@@ -649,7 +649,7 @@
   function edit_userrss_modal(id) {
     $("#userrss_id").val(id);
     $("#userrss_modal_title").text("编辑订阅");
-    ajax_post("/api/web/userrss/get_userrss_task", { id: id }, function (ret) {
+    ajax_post("/api/userrss/get_userrss_task", { id: id }, function (ret) {
     if (ret.code === 0) {
       let detail = ret.detail;
       recover_userrss_setting(detail.uses);
@@ -679,7 +679,7 @@
   function del_userrss_modal(taskid, name) {
     show_confirm_modal("删除订阅任务 " + name + " ？", function () {
       hide_confirm_modal();
-      ajax_post("/api/web/userrss/delete_userrss_task", { "id": taskid }, function (ret) {
+      ajax_post("/api/userrss/delete_userrss_task", { "id": taskid }, function (ret) {
         window_history_refresh();
       });
     });
@@ -749,7 +749,7 @@
       address_parser: address_parser
     };
     $("#add_or_edit_userrss_btn").text("保存中").attr("disabled", true);
-    ajax_post("/api/web/userrss/update_userrss_task", params, function (ret) {
+    ajax_post("/api/userrss/update_userrss_task", params, function (ret) {
       $("#modal-userrss").modal('hide');
       $("#add_or_edit_userrss_btn").attr("disabled", false);
       window_history_refresh();
@@ -758,7 +758,7 @@
 
   // 立即运行任务
   function run_userrss_now(id) {
-    ajax_post("/api/web/userrss/run_userrss", { "id": id }, function (ret) {
+    ajax_post("/api/userrss/run_userrss", { "id": id }, function (ret) {
       show_success_modal("任务运行完成！", function () {
         window_history_refresh();
       });
@@ -767,7 +767,7 @@
 
   // 报文预览
   function show_rss_articles_modal(id) {
-    ajax_post("/api/web/userrss/list_rss_articles", { "id": id }, function (ret) {
+    ajax_post("/api/userrss/list_rss_articles", { "id": id }, function (ret) {
       let content;
       if (ret.code === 0) {
         const articles = ret.data;
@@ -881,7 +881,7 @@
   // 报文处理设置
   function articles_check(id, flag, articles) {
     $("#modal-rss-articles").modal('hide');
-    ajax_post("/api/web/userrss/rss_articles_check", { "taskid": id, "articles": articles, "flag": flag }, function (ret) {
+    ajax_post("/api/userrss/rss_articles_check", { "taskid": id, "articles": articles, "flag": flag }, function (ret) {
       show_rss_articles_modal(id);
     });
   }
@@ -889,7 +889,7 @@
   // 报文下载
   function articles_download(id, articles) {
     $("#modal-rss-articles").modal('hide');
-    ajax_post("/api/web/userrss/rss_articles_download", { "articles": articles, "taskid": id }, function (ret) {
+    ajax_post("/api/userrss/rss_articles_download", { "articles": articles, "taskid": id }, function (ret) {
       if (ret.code == 0) {
         show_success_modal("添加下载成功！", function() {
           show_rss_articles_modal(id);//
@@ -913,7 +913,7 @@
     const info_id = `info_${id}`;
     const flag_a = $(`#flag_${id}`);
     make_cursor_busy();
-    ajax_post("/api/web/userrss/rss_article_test", { "taskid": taskid, "title": title }, function (ret) {
+    ajax_post("/api/userrss/rss_article_test", { "taskid": taskid, "title": title }, function (ret) {
       cancel_cursor_busy();
       if (ret.code === 0) {
         flag_a.empty();
@@ -934,7 +934,7 @@
 
   // 订阅下载记录
   function show_rss_history_modal(id) {
-    ajax_post("/api/web/userrss/list_rss_history", { "id": id }, function (ret) {
+    ajax_post("/api/userrss/list_rss_history", { "id": id }, function (ret) {
       let content;
       if (ret.code == 0) {
         const downloads = ret.data;
@@ -973,7 +973,7 @@
 
   // 应用订阅模板
   function apply_templated(id) {
-    ajax_post("/api/web/userrss/get_userrss_task", { id: id }, function (ret) {
+    ajax_post("/api/userrss/get_userrss_task", { id: id }, function (ret) {
       if (ret.code === 0) {
         let detail = ret.detail;
         recover_userrss_setting(detail.uses);
@@ -1014,7 +1014,7 @@
   // 批量启用停用
   function batch_check_action(flag) {
     let ids = select_GetSelectedVAL("userrss_task");
-    ajax_post("/api/web/userrss/check_userrss_task", { flag: flag, ids: ids }, function (ret) {
+    ajax_post("/api/userrss/check_userrss_task", { flag: flag, ids: ids }, function (ret) {
       if (ret.code == 0) {
         window_history_refresh();
       } else {

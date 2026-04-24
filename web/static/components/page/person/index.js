@@ -19,7 +19,7 @@ export class PagePerson extends CustomElement {
 
   // 仅执行一次  界面首次刷新后
   firstUpdated() {
-    Golbal.get_cache_or_ajax("/api/web/media/media_person", this.media_type, { tmdbid: this.tmdbid, type: this.media_type, keyword: this.keyword },
+    Golbal.get_cache_or_ajax("/api/media/media_person", this.media_type, { tmdbid: this.tmdbid, type: this.media_type, keyword: this.keyword },
       (ret) => {
         if (ret.code === 0) {
           this.person_list = ret.data;

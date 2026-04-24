@@ -220,7 +220,7 @@ class TestMediaInfoService:
         mock_media = MagicMock()
         mock_media.title = "Test"
         service._media.get_media_info.return_value = mock_media
-        with patch('web.core.action_utils.mediainfo_dict') as mock_dict:
+        with patch('app.utils.web_utils.mediainfo_dict') as mock_dict:
             mock_dict.return_value = {"name": "Test"}
             result = service.name_test(name="Test", subtitle=None)
             assert result["name"] == "Test"
@@ -299,7 +299,7 @@ class TestMediaInfoService:
 
     def test_get_media_detail(self, service):
         with patch('app.services.media_service.WebUtils') as MockWeb, \
-             patch('web.core.action_utils.get_media_exists_info') as mock_exists, \
+             patch.object(service, '_get_media_exists_info') as mock_exists, \
              patch('app.services.media_service.Config') as MockCfg:
             mock_media = MagicMock()
             mock_media.tmdb_info = {"id": 123}
@@ -341,13 +341,16 @@ class TestMediaRecommendationService:
         mock_media = MagicMock()
         mock_douban = MagicMock()
         mock_bangumi = MagicMock()
+        mock_media_server = MagicMock()
+        mock_subscribe = MagicMock()
         return MediaRecommendationService(
-            media=mock_media, douban=mock_douban, bangumi=mock_bangumi)
+            media=mock_media, douban=mock_douban, bangumi=mock_bangumi,
+            media_server=mock_media_server, subscribe=mock_subscribe)
 
     def test_get_recommend_items_hot_movies(self, service):
         service._media.get_tmdb_hot_movies.return_value = [
             {"type": "MOV", "title": "A", "year": "2024", "id": "1"}]
-        with patch('web.core.action_utils.get_media_exists_info') as mock_exists:
+        with patch.object(service, '_get_media_exists_info') as mock_exists:
             mock_exists.return_value = (0, None, "")
             result = service.get_recommend_items(
                 {"type": "MOV", "subtype": "hm", "page": 1})
@@ -359,7 +362,7 @@ class TestMediaRecommendationService:
             mock_item.to_dict.return_value = {
                 "type": "MOV", "title": "B", "year": "2024", "id": "2"}
             MockWeb.search_media_infos.return_value = [mock_item]
-            with patch('web.core.action_utils.get_media_exists_info') as mock_exists:
+            with patch.object(service, '_get_media_exists_info') as mock_exists:
                 mock_exists.return_value = (0, None, "")
                 result = service.get_recommend_items(
                     {"type": "SEARCH", "keyword": "test",
@@ -379,7 +382,7 @@ class TestMediaRecommendationService:
             mock_item.DATE = "2024-01-01"
             mock_item.SITE = "site"
             MockDL().get_download_history.return_value = [mock_item]
-            with patch('web.core.action_utils.get_media_exists_info') as mock_exists:
+            with patch.object(service, '_get_media_exists_info') as mock_exists:
                 mock_exists.return_value = (0, None, "")
                 result = service.get_recommend_items(
                     {"type": "DOWNLOADED", "page": 1})
@@ -389,7 +392,7 @@ class TestMediaRecommendationService:
     def test_get_recommend_items_trending(self, service):
         service._media.get_tmdb_trending_all_week.return_value = [
             {"type": "MOV", "title": "D", "year": "2024", "id": "3"}]
-        with patch('web.core.action_utils.get_media_exists_info') as mock_exists:
+        with patch.object(service, '_get_media_exists_info') as mock_exists:
             mock_exists.return_value = (0, None, "")
             result = service.get_recommend_items(
                 {"type": "TRENDING", "page": 1})
@@ -398,7 +401,7 @@ class TestMediaRecommendationService:
     def test_get_recommend_items_discover(self, service):
         service._media.get_tmdb_discover.return_value = [
             {"type": "MOV", "title": "E", "year": "2024", "id": "4"}]
-        with patch('web.core.action_utils.get_media_exists_info') as mock_exists:
+        with patch.object(service, '_get_media_exists_info') as mock_exists:
             mock_exists.return_value = (0, None, "")
             result = service.get_recommend_items(
                 {"type": "DISCOVER", "subtype": "MOV",
@@ -408,7 +411,7 @@ class TestMediaRecommendationService:
     def test_get_recommend_items_doubantag(self, service):
         service._douban.get_douban_disover.return_value = [
             {"type": "MOV", "title": "F", "year": "2024", "id": "5"}]
-        with patch('web.core.action_utils.get_media_exists_info') as mock_exists:
+        with patch.object(service, '_get_media_exists_info') as mock_exists:
             mock_exists.return_value = (0, None, "")
             result = service.get_recommend_items(
                 {"type": "DOUBANTAG", "subtype": "MOV",
@@ -418,7 +421,7 @@ class TestMediaRecommendationService:
     def test_get_recommend_items_bangumi(self, service):
         service._bangumi.get_bangumi_calendar.return_value = [
             {"type": "TV", "title": "G", "year": "2024", "id": "6"}]
-        with patch('web.core.action_utils.get_media_exists_info') as mock_exists:
+        with patch.object(service, '_get_media_exists_info') as mock_exists:
             mock_exists.return_value = (0, None, "")
             result = service.get_recommend_items(
                 {"type": "MOV", "subtype": "bangumi",
@@ -429,7 +432,7 @@ class TestMediaRecommendationService:
         with patch('app.services.media_service.MediaInfoService') as MockInfo:
             MockInfo().get_media_similar.return_value = [
                 {"type": "MOV", "title": "H", "year": "2024", "id": "7"}]
-            with patch('web.core.action_utils.get_media_exists_info') as mock_exists:
+            with patch.object(service, '_get_media_exists_info') as mock_exists:
                 mock_exists.return_value = (0, None, "")
                 result = service.get_recommend_items(
                     {"type": "MOV", "subtype": "sim",
@@ -458,7 +461,10 @@ class TestMediaRecommendationService:
 class TestSearchResultService:
     @pytest.fixture
     def service(self):
-        return SearchResultService()
+        mock_media_server = MagicMock()
+        mock_subscribe = MagicMock()
+        return SearchResultService(
+            media_server=mock_media_server, subscribe=mock_subscribe)
 
     def test_parse_res_type_valid(self):
         result = SearchResultService._parse_res_type(
@@ -480,7 +486,7 @@ class TestSearchResultService:
         assert result.result == {}
 
     def test_group_search_results_single(self, service):
-        with patch('web.core.action_utils.get_media_exists_info') as mock_exists:
+        with patch.object(service, '_get_media_exists_info') as mock_exists:
             mock_exists.return_value = (1, "2", "url")
             mock_item = MagicMock()
             mock_item.ID = "1"
@@ -574,11 +580,11 @@ class TestMediaLibraryService:
         assert "电影：100" in result
 
     def test_start_sync(self, service):
-        with patch('app.services.media_service.cache') as mock_cache, \
+        with patch('app.services.media_service.TokenCache') as MockCache, \
              patch('app.services.media_service.SystemConfig') as MockSys, \
              patch('app.services.media_service.ThreadHelper') as MockTh:
             service.start_sync(librarys=["movies"])
-            mock_cache.delete.assert_called_once_with("index")
+            MockCache.delete.assert_called_once_with("index")
 
     def test_get_media_count(self, service):
         service._media_server.get_medias_count.return_value = {

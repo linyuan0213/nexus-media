@@ -16,13 +16,6 @@ dependencies = [
     "dateparser>=1.2.0",
     "feapder>=1.9.1",
     "filelock>=3.16.1",
-    "flask-caching>=2.3.0",
-    "flask-compress>=1.17",
-    "flask-login>=0.6.3",
-    "flask-restx>=1.3.0",
-    "flask-session>=0.8.0",
-    "flask-sock>=0.7.0",
-    "flask>=3.1.0",
     "httpx[socks]>=0.28.1",
     "icalendar>=6.1.0",
     "jinja2>=3.1.5",
@@ -71,6 +64,12 @@ dependencies = [
     "pysmb>=1.2.10",
     "serverchan-sdk>=1.0.6",
     "bencodepy>=0.9.5",
+    "fastapi>=0.136.0",
+    "uvicorn[standard]>=0.45.0",
+    "python-multipart>=0.0.26",
+    "jose>=1.0.0",
+    "itsdangerous>=2.2.0",
+    "pwdlib[argon2]>=0.3.0",
 ]
 
 [dependency-groups]

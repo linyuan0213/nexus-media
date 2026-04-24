@@ -29,12 +29,11 @@ from app.schemas.media import (
     UnknownListPageDTO,
     LibrarySpaceDTO,
 )
-from app.utils import StringUtils, SystemUtils, ExceptionUtils
+from app.utils import StringUtils, SystemUtils, ExceptionUtils, TokenCache
 from app.utils.types import MediaType, MovieTypes, EventType, SystemConfigKey
 from app.helper.image_proxy_helper import ImageProxyHelper
 from config import Config
-from web.backend.web_utils import WebUtils
-from web.cache import cache
+from app.utils.web_utils import WebUtils
 
 
 class MediaInfoService:
@@ -50,6 +49,24 @@ class MediaInfoService:
         self._media = media or Media()
         self._subscribe = subscribe or Subscribe()
         self._media_server = media_server or MediaServer()
+
+    def _get_media_exists_info(self, mtype, title, year, mediaid=None):
+        """判断媒体是否存在并返回相关信息（使用服务层依赖）"""
+        if not mtype or not title:
+            return False, None, ""
+        if not str(mtype).upper() == "MOV":
+            title = "%s (%s)" % (title, year) if year else title
+        favor = self._media_server.check_item_exists(
+            mtype=mtype, title=title, year=year, tmdbid=mediaid)
+        rssid = self._subscribe.get_subscribe_id(
+            mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
+            title=title, year=year, tmdbid=mediaid)
+        if rssid:
+            if str(rssid).find('\n') != -1:
+                _, rssid = str(rssid).split("\n")
+        else:
+            rssid = ""
+        return True if favor else False, rssid, ""
 
     def get_season_episodes(self, tmdbid, title, year, season) -> SeasonEpisodesResultDTO:
         """查询 TMDB 剧集情况并检查媒体服务器存在状态"""
@@ -194,7 +211,7 @@ class MediaInfoService:
 
     def name_test(self, name, subtitle) -> dict:
         """名称识别测试"""
-        from web.core.action_utils import mediainfo_dict
+        from app.utils.web_utils import mediainfo_dict
         media_info = self._media.get_media_info(title=name, subtitle=subtitle)
         if not media_info:
             return {"name": "无法识别"}
@@ -301,8 +318,7 @@ class MediaInfoService:
         media_info = WebUtils.get_mediainfo_from_id(mtype=mtype, mediaid=tmdbid)
         if not media_info or not media_info.tmdb_info:
             return None
-        from web.core.action_utils import get_media_exists_info
-        fav, rssid, item_url = get_media_exists_info(
+        fav, rssid, item_url = self._get_media_exists_info(
             mtype=mtype, title=media_info.title, year=media_info.year,
             mediaid=media_info.tmdb_id)
         seasons = self._media.get_tmdb_tv_seasons(media_info.tmdb_info)
@@ -352,10 +368,32 @@ class MediaRecommendationService:
     def __init__(self,
                  media: Optional[Media] = None,
                  douban: Optional[DouBan] = None,
-                 bangumi: Optional[Bangumi] = None):
+                 bangumi: Optional[Bangumi] = None,
+                 media_server: Optional[MediaServer] = None,
+                 subscribe: Optional[Subscribe] = None):
         self._media = media or Media()
         self._douban = douban or DouBan()
         self._bangumi = bangumi or Bangumi()
+        self._media_server = media_server or MediaServer()
+        self._subscribe = subscribe or Subscribe()
+
+    def _get_media_exists_info(self, mtype, title, year, mediaid=None):
+        """判断媒体是否存在并返回相关信息"""
+        if not mtype or not title:
+            return False, None, ""
+        if not str(mtype).upper() == "MOV":
+            title = "%s (%s)" % (title, year) if year else title
+        favor = self._media_server.check_item_exists(
+            mtype=mtype, title=title, year=year, tmdbid=mediaid)
+        rssid = self._subscribe.get_subscribe_id(
+            mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
+            title=title, year=year, tmdbid=mediaid)
+        if rssid:
+            if str(rssid).find('\n') != -1:
+                _, rssid = str(rssid).split("\n")
+        else:
+            rssid = ""
+        return True if favor else False, rssid, ""
 
     def get_recommend_items(self, data: dict) -> List[dict]:
         """
@@ -435,9 +473,8 @@ class MediaRecommendationService:
                                                        tags=tags, page=CurrentPage)
 
         # 补充存在与订阅状态
-        from web.core.action_utils import get_media_exists_info
         for res in res_list:
-            fav, rssid, _ = get_media_exists_info(
+            fav, rssid, _ = self._get_media_exists_info(
                 mtype=res.get("type"), title=res.get("title"),
                 year=res.get("year"), mediaid=res.get("id"))
             res.update({'fav': fav, 'rssid': rssid})
@@ -467,6 +504,30 @@ class SearchResultService:
     """
     搜索结果分组业务服务
     """
+
+    def __init__(self,
+                 media_server: Optional[MediaServer] = None,
+                 subscribe: Optional[Subscribe] = None):
+        self._media_server = media_server or MediaServer()
+        self._subscribe = subscribe or Subscribe()
+
+    def _get_media_exists_info(self, mtype, title, year, mediaid=None):
+        """判断媒体是否存在并返回相关信息"""
+        if not mtype or not title:
+            return False, None, ""
+        if not str(mtype).upper() == "MOV":
+            title = "%s (%s)" % (title, year) if year else title
+        favor = self._media_server.check_item_exists(
+            mtype=mtype, title=title, year=year, tmdbid=mediaid)
+        rssid = self._subscribe.get_subscribe_id(
+            mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
+            title=title, year=year, tmdbid=mediaid)
+        if rssid:
+            if str(rssid).find('\n') != -1:
+                _, rssid = str(rssid).split("\n")
+        else:
+            rssid = ""
+        return True if favor else False, rssid, ""
 
     def group_search_results(self, search_results: list) -> MediaSearchResultDTO:
         """
@@ -523,8 +584,7 @@ class SearchResultService:
             else:
                 fav, rssid = 0, None
                 if item.TMDBID:
-                    from web.core.action_utils import get_media_exists_info
-                    fav, rssid, _ = get_media_exists_info(
+                    fav, rssid, _ = self._get_media_exists_info(
                         mtype=mtype, title=item.TITLE, year=item.YEAR, mediaid=item.TMDBID)
                 SearchResults[title_string] = {
                     "key": item.ID, "title": item.TITLE, "year": item.YEAR,
@@ -665,7 +725,7 @@ class MediaLibraryService:
 
     def start_sync(self, librarys: list):
         """开始媒体库同步"""
-        cache.delete("index")
+        TokenCache.delete("index")
         SystemConfig().set(key=SystemConfigKey.SyncLibrary, value=librarys)
         ThreadHelper().start_thread(self._media_server.sync_mediaserver, ())
 
@@ -686,6 +746,22 @@ class MediaLibraryService:
     def get_play_history(self) -> list:
         """获取播放记录"""
         return self._media_server.get_activity_log(30)
+
+    def init_config(self):
+        """初始化媒体服务器配置（代理）"""
+        self._media_server.init_config()
+
+    def get_libraries(self):
+        """获取媒体库列表（代理）"""
+        return self._media_server.get_libraries()
+
+    def get_resume(self, num=12):
+        """获取继续观看（代理）"""
+        return self._media_server.get_resume(num=num)
+
+    def get_latest(self, num=20):
+        """获取最新入库（代理）"""
+        return self._media_server.get_latest(num=num)
 
     def get_space_info(self) -> LibrarySpaceDTO:
         """获取媒体库存储空间"""
@@ -830,7 +906,7 @@ class TransferHistoryService:
 
     def re_identify_unknown(self) -> int:
         """重新识别所有未识别记录"""
-        from web.controllers.sync import re_identification
+        from app.services.sync_service import SyncService
         ItemIds = []
         Records = self._filetransfer.get_transfer_unknown_paths()
         for rec in Records:
@@ -838,7 +914,7 @@ class TransferHistoryService:
                 continue
             ItemIds.append(rec.ID)
         if ItemIds:
-            re_identification({"flag": "unidentification", "ids": ItemIds})
+            SyncService().re_identify_items(flag="unidentification", ids=ItemIds)
         return len(ItemIds)
 
     def clear_history(self):

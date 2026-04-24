@@ -69,7 +69,7 @@
 
   function init_rss_movies_event() {
     for (let i = 0; i < RssMovieItems.length; i++) {
-      ajax_post("/api/web/media/movie_calendar_data",
+      ajax_post("/api/media/movie_calendar_data",
           {
             "id": RssMovieItems[i].id,
             "rssid": RssMovieItems[i].rssid
@@ -95,7 +95,7 @@
 
   function init_rss_tvs_event() {
     for (let i = 0; i < RssTvItems.length; i++) {
-      ajax_post("/api/web/media/tv_calendar_data", {
+      ajax_post("/api/media/tv_calendar_data", {
         "id": RssTvItems[i].id,
         "season": RssTvItems[i].season,
         "name": RssTvItems[i].name,

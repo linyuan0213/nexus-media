@@ -191,7 +191,7 @@
                                 <div class="list-group-item p-1 search_results_torrent"
                                   data-site="{{ torrent.site }}"
                                   data-releasegroup="{{ torrent.releasegroup or '未知' }}"
-                                  data-free="{{ torrent.uploadvalue|string + ' ' + torrent.downloadvalue|string }}"
+                                  data-free="{{ (torrent.uploadvalue|string if torrent.uploadvalue is not none else '1.0') + ' ' + (torrent.downloadvalue|string if torrent.downloadvalue is not none else '1.0') }}"
                                   data-video="{{ torrent.video_encode }}"
                                   data-group="{{ group_key }}"
                                   data-season="{{ SE_key.replace(' ', '') }}">
@@ -201,7 +201,7 @@
                                   <div class="row g-2 align-items-center">
                                     <div class="col-auto">
                                       <a  href="{{ torrent.pageurl }}" target="_blank">
-                                        <span class="avatar avatar-sm rounded siteicon-{{ torrent.site|hash }} siteicon-{{ SiteDict[torrent.site|hash].id }}"
+                                        <span class="avatar avatar-sm rounded siteicon-{{ torrent.site|hash }} siteicon-{{ (SiteDict.get(torrent.site|hash) or {'id': ''}).id }}"
                                               style="overflow: hidden;">
                                         </span>
                                       </a>
@@ -235,10 +235,10 @@
                                         {% if torrent.releasegroup %}
                                           <span class="badge text-white bg-cyan mb-1">{{ torrent.releasegroup }}</span>
                                         {% endif %}
-                                        {% if torrent.uploadvalue != 1.0 %}
+                                        {% if torrent.uploadvalue is not none and torrent.uploadvalue != 1.0 %}
                                         <span class="badge text-white bg-azure mb-1">{{ (torrent.uploadvalue * 100) | int }}%UL</span>
                                         {% endif %}
-                                        {% if torrent.downloadvalue != 1.0 %}
+                                        {% if torrent.downloadvalue is not none and torrent.downloadvalue != 1.0 %}
                                           {% if torrent.downloadvalue == 0.0 %}
                                             <span class="badge text-white bg-lime mb-1">FREE</span>
                                           {% else %}
@@ -544,5 +544,33 @@
     let subtitle = $(`#description_${id}`).val();
     media_name_test(title, `testresults_${id}`, function () {}, subtitle);
   }
+
+  // 页面加载时如果带搜索词，自动触发搜索
+  {% if SearchWord %}
+  (function() {
+    if (window.__searchRequestSent) return;
+    window.__searchRequestSent = true;
+    const search_word = {{ SearchWord | tojson }};
+    const param = {"search_word": search_word};
+    show_refresh_progress("正在搜索 " + search_word + " ...", "search");
+    ajax_post("/api/system/search", param, function (ret) {
+      if (ret.code !== 0) {
+        stop_progress();
+        hide_refresh_process();
+        show_fail_modal(ret.msg || "搜索失败");
+        return;
+      }
+      let checkCount = 0;
+      const checkProgress = setInterval(function() {
+        checkCount++;
+        if (!$('#modal-process').hasClass('show') || checkCount >= 600) {
+          clearInterval(checkProgress);
+          stop_progress();
+          navmenu('search');
+        }
+      }, 200);
+    });
+  })();
+  {% endif %}
 
 </script>

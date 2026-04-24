@@ -441,11 +441,19 @@ def init_admin_user(admin_username: str, admin_password: str):
         # 检查是否已存在该用户
         existing = user_repo.get_user_by_username(admin_username)
         if existing:
-            log.info(f"【RBAC初始化】管理员用户 {admin_username} 已存在")
+            # 检测旧版 werkzeug 哈希并自动迁移
+            old_hash = existing.PASSWORD_HASH or ""
+            if old_hash.startswith(("pbkdf2:", "scrypt:")) or not old_hash:
+                from app.utils.security import generate_password_hash
+                new_hash = generate_password_hash(admin_password)
+                user_repo.update_user(existing.ID, password_hash=new_hash)
+                log.info(f"【RBAC初始化】管理员用户 {admin_username} 密码已从旧格式迁移到 Argon2")
+            else:
+                log.info(f"【RBAC初始化】管理员用户 {admin_username} 已存在")
             return True
         
         # 创建管理员用户
-        from werkzeug.security import generate_password_hash
+        from app.utils.security import generate_password_hash
         password_hash = generate_password_hash(admin_password)
         
         user = user_repo.create_user(

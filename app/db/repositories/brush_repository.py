@@ -172,6 +172,9 @@ class BrushRepository(BaseRepository):
         """
         if not brush_id:
             return
+        # 截断超长 ENCLOSURE 防止数据库错误（8192 字节上限）
+        if enclosure and len(enclosure) > 8192:
+            enclosure = enclosure[:8192]
         if self.is_brushtask_torrent_exists(brush_id, title, enclosure):
             return
 
