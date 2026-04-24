@@ -477,7 +477,7 @@
     function batch_check_action(flag) {
       let ids_info = select_GetSelectedVAL("^custom_words");
       if (flag === "disable" || flag === "enable") {
-        ajax_post("/api/web/words/check_custom_words", { flag: flag, ids_info: ids_info }, function (ret) {
+        ajax_post("/api/words/check_custom_words", { flag: flag, ids_info: ids_info }, function (ret) {
           if (ret.code === 0) {
             window_history_refresh();
           } else {
@@ -492,7 +492,7 @@
         show_export_custom_words_modal();
       } else if (flag === "delete") {
         show_confirm_modal(`确定要删除${ids_info.length ? "选中": "所有"}的自定义识别词吗？`, function () {
-          ajax_post("/api/web/words/delete_custom_words", { ids_info: ids_info }, function (ret) {
+          ajax_post("/api/words/delete_custom_words", { ids_info: ids_info }, function (ret) {
             if (ret.code === 0) {
               window_history_refresh();
             } else {
@@ -520,7 +520,7 @@
         $("#export_note").removeClass("is-invalid");
       }
       $("#modal-export-custom-words-note").modal('hide');
-      ajax_post("/api/web/words/export_custom_words", { note: export_note, ids_info: export_ids_info }, function (ret) {
+      ajax_post("/api/words/export_custom_words", { note: export_note, ids_info: export_ids_info }, function (ret) {
         if (ret.code == 0) {
           $("#export_code").text(ret.string);
           $("#modal-export-custom-words-code").modal('show');
@@ -539,7 +539,7 @@
       const import_code = $("#import_code").val();
       $("#import_groups_div").empty();
       $("#modal-import-custom-words-code").modal('hide');
-      ajax_post("/api/web/words/analyse_import_custom_words_code", { import_code: import_code }, function (ret) {
+      ajax_post("/api/words/analyse_import_custom_words_code", { import_code: import_code }, function (ret) {
         if (ret.code == 0) {
           $("#import_note").text(ret.note_string);
           const Groups = ret.groups;
@@ -615,7 +615,7 @@
       const import_code = $("#import_code").val();
       let ids_info = select_GetSelectedVAL("^import_custom_words");
       $("#modal-import-custom-words-table").modal('hide');
-      ajax_post("/api/web/words/import_custom_words", { ids_info: ids_info, import_code: import_code }, function (ret) {
+      ajax_post("/api/words/import_custom_words", { ids_info: ids_info, import_code: import_code }, function (ret) {
         if (ret.code == 0) {
           $("#import_groups_div").empty();
           window_history_refresh();
@@ -644,7 +644,7 @@
       }
       let tmdb_type = $("#tmdb_type").val();
       $("#modal-add-custom-word-group").modal('hide');
-      ajax_post("/api/web/words/add_custom_word_group", { tmdb_id: tmdb_id, tmdb_type: tmdb_type }, function (ret) {
+      ajax_post("/api/words/add_custom_word_group", { tmdb_id: tmdb_id, tmdb_type: tmdb_type }, function (ret) {
         if (ret.code == 0) {
           window_history_refresh();
         } else {
@@ -659,7 +659,7 @@
     function delete_custom_word_group(gid) {
       show_confirm_modal("组内识别词将被同步删除，是否确认？", function () {
         hide_confirm_modal();
-        ajax_post("/api/web/words/delete_custom_word_group", { gid: gid }, function (ret) {
+        ajax_post("/api/words/delete_custom_word_group", { gid: gid }, function (ret) {
           if (ret.code == 0) {
             window_history_refresh();
           } else {
@@ -692,7 +692,7 @@
 
     // 显示编辑识别词框
     function show_edit_custom_word_modal(wid, gid, group_type, seasons) {
-      ajax_post("/api/web/words/get_custom_word", { wid: wid }, function (ret) {
+      ajax_post("/api/words/get_custom_word", { wid: wid }, function (ret) {
         if (ret.code == 0) {
           let word = ret.data;
           $("#customd_word_modal_title").text("编辑识别词");
@@ -833,7 +833,7 @@
         regex: regex
       };
       $("#modal-set-custom-word").modal('hide');
-      ajax_post("/api/web/words/add_or_edit_custom_word", custom_word, function (ret) {
+      ajax_post("/api/words/add_or_edit_custom_word", custom_word, function (ret) {
         if (ret.code == 0) {
           window_history_refresh();
         } else {

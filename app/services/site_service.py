@@ -210,3 +210,7 @@ class SiteService:
             data=result.data,
             msg=result.msg
         )
+
+    def get_site_download_setting(self, site_name=None):
+        """获取站点下载设置（代理到 Sites）"""
+        return self._sites.get_site_download_setting(site_name=site_name)

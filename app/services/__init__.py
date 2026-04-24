@@ -43,3 +43,4 @@ from .search_service import SearchService, Searcher
 from .sync_core import SyncCore
 from .torrentremover_core import TorrentRemoverService
 from .indexer_service import IndexerService
+from .config_service import ConfigService

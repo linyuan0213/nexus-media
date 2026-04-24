@@ -61,7 +61,7 @@ export class Golbal {
         if (media_type == "MOV" || media_type == "电影") {
           add_rss_media(title, year, media_type, mediaid, "", "", add_func);
         } else {
-          ajax_post("/api/web/media/get_tvseason_list", {tmdbid: mediaid, title: title}, function (ret) {
+          ajax_post("/api/media/get_tvseason_list", {tmdbid: mediaid, title: title}, function (ret) {
             if (ret.seasons.length === 1) {
               add_rss_media(title, year, "TV", mediaid, "", ret.seasons[0].num, add_func);
             } else if (ret.seasons.length > 1) {

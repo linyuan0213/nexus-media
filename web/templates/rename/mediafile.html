@@ -150,7 +150,7 @@
     } else {
       folder = $("#mediafile_current_dir").val();
     }
-    ajax_post("/api/web/sync/get_sub_path", {"dir": folder, "filter": "MEDIAFILE|SUBFILE|AUDIOTRACKFILE"}, function (ret) {
+    ajax_post("/api/sync/get_sub_path", {"dir": folder, "filter": "MEDIAFILE|SUBFILE|AUDIOTRACKFILE"}, function (ret) {
       $("#mediafile_file_container").empty();
       $("#mediafile_current_files").val('')
       if (ret.data) {
@@ -236,7 +236,7 @@
   function modify_media_file() {
     let path = $("#mediafile_modify_path").val();
     let name = $("#mediafile_modify_name").val();
-    ajax_post("/api/web/sync/rename_file", {path: path, name: name}, function (ret) {
+    ajax_post("/api/sync/rename_file", {path: path, name: name}, function (ret) {
       $("#modal-mediafile-modify").modal('hide');
       refresh_files();
     });
@@ -245,7 +245,7 @@
   // 文件删除
   function delete_files(files) {
     hide_confirm_modal();
-    ajax_post("/api/web/sync/delete_files", {files: files}, function (ret) {
+    ajax_post("/api/sync/delete_files", {files: files}, function (ret) {
       refresh_files();
     });
   }
@@ -274,7 +274,7 @@
   // 刮削
   function mediafile_scraper(name, id) {
     let path = $(`#mediafilepath_${id}`).val();
-    ajax_post("/api/web/media/media_path_scrap", {path: path, name: name}, function (ret) {
+    ajax_post("/api/media/media_path_scrap", {path: path, name: name}, function (ret) {
       if (ret.code == 0) {
         show_success_modal(ret.msg, function () {
           refresh_files();
@@ -289,7 +289,7 @@
   // 下载字幕
   function mediafile_subtitle(name, id) {
     let path = $(`#mediafilepath_${id}`).val();
-    ajax_post("/api/web/media/download_subtitle", {path: path, name: name}, function (ret) {
+    ajax_post("/api/media/download_subtitle", {path: path, name: name}, function (ret) {
       if (ret.code == 0) {
         show_success_modal(ret.msg, function () {
           refresh_files();
@@ -302,7 +302,7 @@
 
   // 查询硬链接
   function find_hardlinks(files, dir) {
-    ajax_post("/api/web/download/find_hardlinks", {files: files, dir: dir}, function (ret) {
+    ajax_post("/api/download/find_hardlinks", {files: files, dir: dir}, function (ret) {
       if (ret.code === 0) {
         if (ret.data) {
           let table_content = '';
@@ -356,7 +356,7 @@
     }
     show_ask_modal("刮削将会覆盖已存在的nfo及图片文件，是否确认刮削当前目录下的所有文件？", function () {
       hide_ask_modal();
-      ajax_post("/api/web/media/media_path_scrap", {path: path}, function (ret) {
+      ajax_post("/api/media/media_path_scrap", {path: path}, function (ret) {
         if (ret.code === 0) {
           show_success_modal(ret.msg, function () {
             refresh_files();

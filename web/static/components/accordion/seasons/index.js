@@ -19,7 +19,7 @@ export class AccordionSeasons extends CustomElement {
   _get_episodes_list(seasons) {
     // 获取季集信息
     //console.log(seasons, "get_season_episodes", "season" + seasons.season_number);
-    Golbal.get_cache_or_ajax("/api/web/media/get_season_episodes", "season" + seasons.season_number,
+    Golbal.get_cache_or_ajax("/api/media/get_season_episodes", "season" + seasons.season_number,
         {tmdbid: this.tmdbid, season: seasons.season_number, title: this.title, year: this.year}, (ret) => {
       //console.log(ret);
       if (ret.code === 0 && ret.episodes?.length !== 0) {

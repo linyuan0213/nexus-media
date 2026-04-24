@@ -8,7 +8,7 @@ from app.schemas.userrss import (
     UserRssTaskUpdateDTO,
 )
 from app.services.rss_service import RssTaskService as RssChecker
-from web.core.action_utils import mediainfo_dict
+from app.utils.web_utils import mediainfo_dict
 
 
 class UserRssService:

@@ -60,7 +60,13 @@ class DownloadRepository(BaseRepository):
         if not media_info.title or not media_info.tmdb_id:
             return
 
-        if self.is_exists_download_history(enclosure=media_info.enclosure,
+        # 截断超长 ENCLOSURE 防止数据库错误（8192 字节上限）
+        enclosure = media_info.enclosure
+        if enclosure and len(enclosure) > 8192:
+            enclosure = enclosure[:8192]
+        media_info.enclosure = enclosure
+
+        if self.is_exists_download_history(enclosure=enclosure,
                                            downloader=downloader,
                                            download_id=download_id):
             self._db.query(DOWNLOADHISTORY).filter(

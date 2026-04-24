@@ -221,7 +221,7 @@
     }
 
     $("#modal-add-blacklist").modal('hide');
-    ajax_post("/api/web/system/add_tmdb_blacklist", {
+    ajax_post("/api/system/add_tmdb_blacklist", {
       "tmdb_id": tmdb_id,
       "media_type": media_type
     }, function(ret) {
@@ -234,7 +234,7 @@
   function delete_from_blacklist(tmdb_id, media_type) {
     show_confirm_modal(tmdb_id + " 对应的TMDB黑名单条目将被删除，是否确认？", function () {
       hide_confirm_modal();
-      ajax_post("/api/web/system/delete_tmdb_blacklist", {
+      ajax_post("/api/system/delete_tmdb_blacklist", {
         "tmdb_id": tmdb_id,
         "media_type": media_type
       }, function () {
@@ -255,7 +255,7 @@
   function clear_blacklist() {
     show_confirm_modal("确定要清空所有TMDB黑名单记录吗？此操作不可恢复！", function () {
       hide_confirm_modal();
-      ajax_post("/api/web/system/clear_tmdb_blacklist", {}, function () {
+      ajax_post("/api/system/clear_tmdb_blacklist", {}, function () {
         window_history_refresh();
       });
     });

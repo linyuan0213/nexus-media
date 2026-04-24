@@ -68,7 +68,7 @@
     const params = input_select_GetVal(`modal-${type}`);
     params['test'] = test || false;
     params['type'] = type;
-    ajax_post("/api/web/system/save_mediaserver_config", params, func);
+    ajax_post("/api/system/save_mediaserver_config", params, func);
   }
 
   //保存配置、关闭和刷新页面

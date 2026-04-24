@@ -180,7 +180,7 @@
         format: json_editor.getValue(),
         params: $("#rssparser_params").val()
       };
-      ajax_post("/api/web/userrss/update_rssparser", params, function (ret) {
+      ajax_post("/api/userrss/update_rssparser", params, function (ret) {
         $("#modal-userrss-parser").modal('hide');
         window_history_refresh();
       });
@@ -194,7 +194,7 @@
     show_ask_modal("是否确认删除该解析器？ ", function () {
       hide_ask_modal();
       const params = {"id": id};
-      ajax_post("/api/web/userrss/delete_rssparser", params, function (ret) {
+      ajax_post("/api/userrss/delete_rssparser", params, function (ret) {
         window_history_refresh();
       });
     });
@@ -203,7 +203,7 @@
   // 编辑解析器
   function show_edit_rssparser_modal(id) {
     $("#rssparser_id").val(id);
-    ajax_post("/api/web/userrss/get_rssparser", {id: id}, function (ret) {
+    ajax_post("/api/userrss/get_rssparser", {id: id}, function (ret) {
       if (ret.code == 0) {
         $("#rssparser_name").val(ret.detail.name);
         $("#rssparser_type").val(ret.detail.type);

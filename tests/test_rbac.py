@@ -3,7 +3,7 @@ RBAC (Role-Based Access Control) 模块测试
 测试用户管理、角色管理、权限管理、菜单管理功能
 """
 import pytest
-from werkzeug.security import generate_password_hash
+from app.utils.security import generate_password_hash
 
 # 测试数据库配置
 from app.db import init_db, MainDb

@@ -223,7 +223,7 @@
     const value = $("#path_str").val();
     const params = {"oper": "add", "key": "media." + type + "_path", "value": value};
     $("#modal-dirctory").modal('hide');
-    ajax_post("/api/web/sync/update_directory", params, function (ret) {
+    ajax_post("/api/sync/update_directory", params, function (ret) {
       window_history_refresh();
     });
   }
@@ -231,7 +231,7 @@
   // 删除目录
   function sub_directory_config(type, value) {
     const params = {"oper": "sub", "key": "media." + type + "_path", "value": value};
-    ajax_post("/api/web/sync/update_directory", params, function (ret) {
+    ajax_post("/api/sync/update_directory", params, function (ret) {
       window_history_refresh();
     });
   }

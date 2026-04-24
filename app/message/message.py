@@ -14,7 +14,7 @@ from app.utils import StringUtils, ExceptionUtils
 from app.utils.commons import SingletonMeta
 from app.utils.types import SearchType, MediaType
 from config import Config
-from web.backend.web_utils import WebUtils
+from app.utils.web_utils import WebUtils
 
 
 def _filesize_filter(value):

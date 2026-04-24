@@ -238,7 +238,7 @@
       uploadvolumefactor: uploadvolumefactor,
       downloadvolumefactor: downloadvolumefactor
     };
-    ajax_post("/api/web/download/download_link", params, function (ret) {
+    ajax_post("/api/download/download_link", params, function (ret) {
       if (!batch) {
         if (ret.code === 0) {
           show_success_modal(`${title} 添加下载成功！`);

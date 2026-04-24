@@ -113,7 +113,7 @@ export class PageDiscovery extends CustomElement {
 
   firstUpdated() {
     for (const item of this._media_type_list[this.discovery_type]) {
-      Golbal.get_cache_or_ajax("/api/web/media/get_recommend",
+      Golbal.get_cache_or_ajax("/api/media/get_recommend",
           self.discovery_type + item.title,
           { "type": item.type, "subtype": item.subtype, "page": 1, "week": item.week},
           (ret) => {

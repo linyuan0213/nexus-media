@@ -139,7 +139,7 @@
     })
     params = {...params, ...selectgroup_config}
     console.log(params)
-    ajax_post("/api/web/plugin/update_plugin_config", {plugin: id, config: params}, func);
+    ajax_post("/api/plugin/update_plugin_config", {plugin: id, config: params}, func);
   }
 
   //保存配置、关闭和刷新页面
@@ -153,7 +153,7 @@
   // 显示插件市场页面
   function show_plugin_apps_modal() {
       // 获取插件列表
-      ajax_post("/api/web/plugin/get_plugin_apps", {}, function(ret) {
+      ajax_post("/api/plugin/get_plugin_apps", {}, function(ret) {
           if (ret.result) {
               $("#plugin_apps_content").empty();
               // 准备排序的插件数组
@@ -223,7 +223,7 @@
 
   // 显示插件页面
   function show_plugin_extra_page(id) {
-    ajax_post("/api/web/plugin/get_plugin_page", {id: id}, function(ret){
+    ajax_post("/api/plugin/get_plugin_page", {id: id}, function(ret){
       if (ret.code === 0) {
         $("#modal-plugin-" + id).modal('hide');
         $("#plugin_page_title").text(ret.title);
@@ -244,7 +244,7 @@
 
   // 安装插件
   function install_plugin(id, name) {
-    ajax_post("/api/web/plugin/install_plugin", {id: id}, function(ret){
+    ajax_post("/api/plugin/install_plugin", {id: id}, function(ret){
       $("#modal-plugin-apps").modal('hide');
       if (ret.code === 0) {
         show_success_modal(name + " 插件安装成功！", function (){
@@ -260,7 +260,7 @@
 
   // 卸载插件
   function uninstall_plugin(id, name) {
-    ajax_post("/api/web/plugin/uninstall_plugin", {id: id}, function(ret){
+    ajax_post("/api/plugin/uninstall_plugin", {id: id}, function(ret){
       $("#modal-plugin-apps").modal('hide');
       if (ret.code === 0) {
         show_warning_modal(name + " 插件已卸载！", function (){

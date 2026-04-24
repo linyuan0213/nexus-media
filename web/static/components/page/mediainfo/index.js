@@ -31,7 +31,7 @@ export class PageMediainfo extends CustomElement {
 
   firstUpdated() {
     // 媒体信息、演员阵容
-    Golbal.get_cache_or_ajax("/api/web/media/media_detail", "info", { "type": this.media_type, "tmdbid": this.tmdbid},
+    Golbal.get_cache_or_ajax("/api/media/media_detail", "info", { "type": this.media_type, "tmdbid": this.tmdbid},
       (ret) => {
         if (ret.code === 0) {
           this.media_info = ret.data;
@@ -40,7 +40,7 @@ export class PageMediainfo extends CustomElement {
           this.item_url = ret.data.item_url
           this.seasons_data = ret.data.seasons;
           // 类似
-          Golbal.get_cache_or_ajax("/api/web/media/get_recommend", "sim", { "type": this.media_type, "subtype": "sim", "tmdbid": ret.data.tmdbid, "page": 1},
+          Golbal.get_cache_or_ajax("/api/media/get_recommend", "sim", { "type": this.media_type, "subtype": "sim", "tmdbid": ret.data.tmdbid, "page": 1},
             (ret) => {
               if (ret.code === 0) {
                 this.similar_media = ret.Items;
@@ -48,7 +48,7 @@ export class PageMediainfo extends CustomElement {
             }
           );
           // 推荐
-          Golbal.get_cache_or_ajax("/api/web/media/get_recommend", "more", { "type": this.media_type, "subtype": "more", "tmdbid": ret.data.tmdbid, "page": 1},
+          Golbal.get_cache_or_ajax("/api/media/get_recommend", "more", { "type": this.media_type, "subtype": "more", "tmdbid": ret.data.tmdbid, "page": 1},
             (ret) => {
               if (ret.code === 0) {
                 this.recommend_media = ret.Items;

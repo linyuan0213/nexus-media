@@ -49,9 +49,9 @@ from app.utils.types import MediaType, MovieTypes, SearchType, EventType
 from app.utils.temp_manager import temp_manager
 from config import Config
 from sqlalchemy import create_engine
-from web.backend.search_torrents import search_medias_for_web, search_media_by_message
-from web.backend.web_utils import WebUtils
-from web.cache import cache
+from app.utils.search_torrents import search_medias_for_web, search_media_by_message
+from app.utils.web_utils import WebUtils
+from app.utils import TokenCache
 
 
 class MessageClientService:
@@ -262,7 +262,7 @@ class MediaServerConfigService:
             self._config_repo.set_default_media_server(name)
         # 刷新 MediaServer 单例配置
         self._media_server.init_config()
-        cache.delete("index")
+        TokenCache.delete("index")
         # 测试连接
         if test:
             try:
@@ -428,6 +428,17 @@ class SystemLifecycleService:
         from app.sites import SiteConf
         from app.services.brush_core import BrushTaskService
         from app.services.rss_service import RssTaskService
+        from initializer import (
+            check_config, update_config, update_sites_data,
+            check_redis, update_rss_state, init_rbac_system
+        )
+        # 0. 执行初始化（配置检查、RBAC、站点数据等）
+        check_config()
+        update_config()
+        update_sites_data()
+        check_redis()
+        update_rss_state()
+        init_rbac_system()
         # 1. 先启动调度器，确保所有后台服务的定时任务可以正常注册
         self._scheduler.start_service(load_defaults=True)
         # 2. 加载基础组件
@@ -534,7 +545,7 @@ class MessageCommandHandler:
                     channel=in_from, title="正在运行 %s ..." % command.get("desc"), user_id=user_id)
                 return
 
-        cache.delete("search")
+        TokenCache.delete("search")
         ThreadHelper().start_thread(search_media_by_message,
                                     (msg, in_from, user_id, user_name))
 
@@ -546,12 +557,12 @@ class MessageCommandHandler:
 
     @staticmethod
     def _user_statistics():
-        cache.delete("statistics")
+        TokenCache.delete("statistics")
         SiteUserInfo().refresh_site_data_now()
 
     @staticmethod
     def _unidentification():
-        from web.controllers.sync import re_identification
+        from app.services.sync_service import SyncService
         ItemIds = []
         Records = FileTransfer().get_transfer_unknown_paths()
         for rec in Records:
@@ -559,7 +570,7 @@ class MessageCommandHandler:
                 continue
             ItemIds.append(rec.ID)
         if len(ItemIds) > 0:
-            re_identification({"flag": "unidentification", "ids": ItemIds})
+            SyncService().re_identify_items(flag="unidentification", ids=ItemIds)
 
 
 def get_commands():
@@ -727,7 +738,7 @@ class ConfigUpdateService:
 
     @staticmethod
     def update_config(data: dict) -> ConfigUpdateResultDTO:
-        from web.core.action_utils import set_config_value
+        from app.utils.web_utils import set_config_value
         cfg = Config().get_config()
         config_test = False
         for key, value in dict(data).items():

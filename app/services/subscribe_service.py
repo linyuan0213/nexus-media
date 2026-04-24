@@ -28,7 +28,7 @@ from app.plugins import EventManager
 from app.services.subscribe_search_engine import SubscribeSearchEngine
 from app.sites import Sites
 from app.utils.types import MediaType, EventType, SystemConfigKey, RssType
-from web.backend.web_utils import WebUtils
+from app.utils.web_utils import WebUtils
 
 
 class SubscribeService:

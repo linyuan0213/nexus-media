@@ -43,9 +43,14 @@ class SearchRepository(BaseRepository):
             else:
                 mtype = "ANI"
 
+            # 截断超长 ENCLOSURE 防止数据库错误（8192 字节上限）
+            enclosure = media_item.enclosure
+            if enclosure and len(enclosure) > 8192:
+                enclosure = enclosure[:8192]
+
             mappings.append({
                 'TORRENT_NAME': media_item.org_string,
-                'ENCLOSURE': media_item.enclosure,
+                'ENCLOSURE': enclosure,
                 'DESCRIPTION': media_item.description,
                 'TYPE': mtype if ident_flag else '',
                 'TITLE': media_item.title if ident_flag else title,

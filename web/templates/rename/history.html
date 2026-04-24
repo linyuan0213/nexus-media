@@ -254,7 +254,7 @@
     }
     show_confirm_modal(`${name} 对应${msg}文件将被同步删除，是否确认？`, function () {
       hide_confirm_modal();
-      ajax_post("/api/web/sync/delete_history", {"flag": flag, "logids": logids}, function (ret) {
+      ajax_post("/api/sync/delete_history", {"flag": flag, "logids": logids}, function (ret) {
         window_history_refresh();
       });
     });
@@ -284,7 +284,7 @@
   function clear_history() {
     show_confirm_modal("所有历史记录将被删除，是否确认？", function () {
       hide_confirm_modal();
-      ajax_post("/api/web/media/clear_history", {}, function (ret) {
+      ajax_post("/api/media/clear_history", {}, function (ret) {
         window_history_refresh();
       });
     });

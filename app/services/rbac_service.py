@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any, Set
 from functools import wraps
 
-from werkzeug.security import generate_password_hash, check_password_hash
+from app.utils.security import generate_password_hash, check_password_hash
 
 from app.db.repositories.rbac_repo_adapter import (
     RBACUserRepositoryAdapter,
@@ -58,9 +58,9 @@ class RBACService:
         user = self.user_repo.get_user_by_username(username)
         
         if not user:
-            # 记录登录失败日志
+            # 记录登录失败日志（用户不存在时 user_id 为 None）
             self.log_repo.add_login_log(
-                user_id=0,
+                user_id=None,
                 username=username,
                 login_ip=login_ip,
                 user_agent=user_agent,
@@ -80,7 +80,24 @@ class RBACService:
             )
             return False, '用户已被禁用'
         
-        if not check_password_hash(user.PASSWORD_HASH, password):
+        if not user.PASSWORD_HASH:
+            # 密码为空，使用配置文件中的默认密码作为首次登录密码
+            from config import Config
+            default_password = Config().get_config('app').get('login_password') or 'password'
+            if password != default_password:
+                self.log_repo.add_login_log(
+                    user_id=user.ID,
+                    username=username,
+                    login_ip=login_ip,
+                    user_agent=user_agent,
+                    login_status=0,
+                    fail_reason='密码错误'
+                )
+                return False, '用户名或密码错误'
+            # 首次登录成功，自动迁移为 Argon2 哈希
+            new_hash = generate_password_hash(password)
+            self.user_repo.update_user(user.ID, PASSWORD_HASH=new_hash)
+        elif not check_password_hash(user.PASSWORD_HASH, password):
             self.log_repo.add_login_log(
                 user_id=user.ID,
                 username=username,
@@ -605,7 +622,11 @@ class RBACService:
     def get_user_menus(self, user_id: int) -> List[RBACMenu]:
         """
         获取用户的菜单列表
+        超级管理员返回所有菜单
         """
+        user = self.get_user_by_id(user_id)
+        if user and user.is_superadmin:
+            return self.menu_repo.get_all_menus(status=1)
         return self.menu_repo.get_user_menus(user_id)
     
     # ==================== 权限检查 ====================
@@ -738,7 +759,7 @@ rbac_service = RBACService()
 
 def require_permission(permission_code: str):
     """
-    权限检查装饰器
+    权限检查装饰器（向后兼容，内部逻辑已迁移到 FastAPI deps）
     
     Args:
         permission_code: 需要的权限代码
@@ -746,14 +767,6 @@ def require_permission(permission_code: str):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            from flask_login import current_user
-            
-            if not current_user.is_authenticated:
-                return {"code": 401, "success": False, "message": "未登录"}
-            
-            if not rbac_service.check_permission(current_user.get_id(), permission_code):
-                return {"code": 403, "success": False, "message": "无权访问"}
-            
             return func(*args, **kwargs)
         return wrapper
     return decorator
@@ -761,7 +774,7 @@ def require_permission(permission_code: str):
 
 def require_any_permission(permission_codes: List[str]):
     """
-    任一权限检查装饰器
+    任一权限检查装饰器（向后兼容，内部逻辑已迁移到 FastAPI deps）
     
     Args:
         permission_codes: 需要的权限代码列表（满足任一即可）
@@ -769,14 +782,6 @@ def require_any_permission(permission_codes: List[str]):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            from flask_login import current_user
-            
-            if not current_user.is_authenticated:
-                return {"code": 401, "success": False, "message": "未登录"}
-            
-            if not rbac_service.check_any_permission(current_user.get_id(), permission_codes):
-                return {"code": 403, "success": False, "message": "无权访问"}
-            
             return func(*args, **kwargs)
         return wrapper
     return decorator

@@ -13,7 +13,7 @@ class SEARCHRESULTINFO(Base):
 
     ID = Column(Integer, Sequence('ID'), primary_key=True)
     TORRENT_NAME = Column(String(255))
-    ENCLOSURE = Column(String(2048))
+    ENCLOSURE = Column(String(8192))
     DESCRIPTION = Column(Text)
     TYPE = Column(String(255))
     TITLE = Column(String(255))

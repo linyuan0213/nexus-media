@@ -16,7 +16,7 @@ from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import ExceptionUtils
 from app.utils.types import SearchType, RssType, EventType, MediaType
 from config import Config
-from web.backend.web_utils import WebUtils
+from app.utils.web_utils import WebUtils
 
 
 lock = Lock()
