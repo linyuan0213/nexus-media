@@ -33,7 +33,7 @@ class TestBrushRouter:
     def test_add_brushtask(self):
         mock_svc = self._mock_brush()
         try:
-            resp = client.post("/api/brush/add_brushtask", json={
+            resp = client.post("/api/brush/tasks/add", json={
                 "brushtask_name": "Task1",
                 "brushtask_site": "site1",
                 "brushtask_interval": 10
@@ -51,7 +51,7 @@ class TestBrushRouter:
         mock_svc = self._mock_brush()
         mock_svc.get_task.return_value = MagicMock(task={"id": 1, "name": "T1"})
         try:
-            resp = client.post("/api/brush/brushtask_detail", json={"id": 1})
+            resp = client.post("/api/brush/tasks/detail", json={"id": 1})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["task"]["name"] == "T1"
@@ -62,7 +62,7 @@ class TestBrushRouter:
         mock_svc = self._mock_brush()
         mock_svc.get_task.return_value = MagicMock(task=None)
         try:
-            resp = client.post("/api/brush/brushtask_detail", json={"id": 99})
+            resp = client.post("/api/brush/tasks/detail", json={"id": 99})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
             assert resp.json()["task"] == {}
@@ -76,7 +76,7 @@ class TestBrushRouter:
         mock_svc = self._mock_brush()
         mock_svc.get_tasks.return_value = [{"id": 1}]
         try:
-            resp = client.post("/api/brush/list_brushtasks", json={})
+            resp = client.post("/api/brush/tasks", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["tasks"][0]["id"] == 1
@@ -89,7 +89,7 @@ class TestBrushRouter:
     def test_del_brushtask(self):
         mock_svc = self._mock_brush()
         try:
-            resp = client.post("/api/brush/del_brushtask", json={"id": 1})
+            resp = client.post("/api/brush/tasks/delete", json={"id": 1})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             mock_svc.delete_task.assert_called_once_with(1)
@@ -99,7 +99,7 @@ class TestBrushRouter:
     def test_del_brushtask_no_id(self):
         mock_svc = self._mock_brush()
         try:
-            resp = client.post("/api/brush/del_brushtask", json={})
+            resp = client.post("/api/brush/tasks/delete", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
         finally:
@@ -113,7 +113,7 @@ class TestBrushRouter:
         mock_svc.get_torrents.return_value = MagicMock(
             torrents=[{"name": "t1"}])
         try:
-            resp = client.post("/api/brush/list_brushtask_torrents", json={"id": 1})
+            resp = client.post("/api/brush/tasks/torrents", json={"id": 1})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["data"][0]["name"] == "t1"
@@ -124,7 +124,7 @@ class TestBrushRouter:
         mock_svc = self._mock_brush()
         mock_svc.get_torrents.return_value = MagicMock(torrents=None)
         try:
-            resp = client.post("/api/brush/list_brushtask_torrents", json={"id": 1})
+            resp = client.post("/api/brush/tasks/torrents", json={"id": 1})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
             assert resp.json()["msg"] == "未下载种子或未获取到种子明细"
@@ -137,7 +137,7 @@ class TestBrushRouter:
     def test_run_brushtask(self):
         mock_svc = self._mock_brush()
         try:
-            resp = client.post("/api/brush/run_brushtask", json={"id": 1})
+            resp = client.post("/api/brush/tasks/run", json={"id": 1})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             mock_svc.run_task.assert_called_once_with(1)
@@ -150,7 +150,7 @@ class TestBrushRouter:
     def test_update_brushtask_state(self):
         mock_svc = self._mock_brush()
         try:
-            resp = client.post("/api/brush/update_brushtask_state", json={
+            resp = client.post("/api/brush/tasks/state", json={
                 "state": "Y", "ids": [1, 2]
             })
             assert resp.status_code == 200
@@ -164,7 +164,7 @@ class TestBrushRouter:
         mock_svc = self._mock_brush()
         mock_svc.update_task_state.side_effect = Exception("boom")
         try:
-            resp = client.post("/api/brush/update_brushtask_state", json={
+            resp = client.post("/api/brush/tasks/state", json={
                 "state": "Y", "ids": [1]
             })
             assert resp.status_code == 200

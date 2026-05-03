@@ -310,6 +310,8 @@ class BrushTaskService:
         }
 
     def get_brushtask_info(self, taskid=None):
+        if not self._brush_tasks:
+            self.load_brushtasks()
         if taskid:
             return self._brush_tasks.get(str(taskid)) or {}
         return list(self._brush_tasks.values())
@@ -483,6 +485,7 @@ class BrushTaskService:
             sendmessage = taskinfo.get("sendmessage")
             download_dir = taskinfo.get("savepath")
             downloader_cfg = self._downloader.get_downloader_conf(downloader_id)
+            site_info = self._sites.get_sites(siteid=site_id)
 
             if not downloader_cfg:
                 log.warn(f"【Brush】任务 {task_name} 下载器不存在")
