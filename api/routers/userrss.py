@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_user_rss_service
+from api.deps import get_current_user, get_user_rss_service, require_any_permission, require_permission
 from app.utils.response import success, fail
 from app.services.userrss_service import UserRssService
 
@@ -58,10 +58,10 @@ class UpdateUserRssTaskRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.post("/check_userrss_task")
+@router.post("/tasks/check")
 def check_userrss_task(
     req: CheckUserRssTaskRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
     try:
@@ -76,10 +76,10 @@ def check_userrss_task(
         return fail(msg="自定义订阅状态设置失败")
 
 
-@router.post("/delete_rssparser")
+@router.post("/parsers/delete")
 def delete_rssparser(
     req: TaskIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
     if svc.delete_parser(req.id):
@@ -87,10 +87,10 @@ def delete_rssparser(
     return fail()
 
 
-@router.post("/delete_userrss_task")
+@router.post("/tasks/delete")
 def delete_userrss_task(
     req: TaskIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
     if svc.delete_task(req.id):
@@ -98,75 +98,75 @@ def delete_userrss_task(
     return fail()
 
 
-@router.post("/list_rss_parsers")
+@router.post("/parsers")
 def list_rss_parsers(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
-    return success(parsers=svc.get_parsers())
+    return success(data=svc.get_parsers())
 
 
-@router.post("/get_rssparser")
+@router.post("/parsers/detail")
 def get_rssparser(
     req: TaskIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
-    return success(detail=svc.get_parser(req.id))
+    return success(data={"detail": svc.get_parser(req.id)})
 
 
-@router.post("/get_userrss_task")
+@router.post("/tasks/detail")
 def get_userrss_task(
     req: TaskIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
-    return success(detail=svc.get_task(req.id))
+    return success(data={"detail": svc.get_task(req.id)})
 
 
-@router.post("/list_rss_tasks")
+@router.post("/tasks")
 def list_rss_tasks(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
-    return success(tasks=svc.get_tasks(), parsers=svc.get_parsers())
+    return success(data=svc.get_tasks())
 
 
-@router.post("/list_rss_articles")
+@router.post("/articles")
 def list_rss_articles(
     req: TaskIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
     dto = svc.get_articles(req.id)
     if dto.articles:
-        return success(
-            data=dto.articles,
-            count=dto.count,
-            uses=dto.uses,
-            address_count=dto.address_count
-        )
+        return success(data={
+            "articles": dto.articles,
+            "count": dto.count,
+            "uses": dto.uses,
+            "address_count": dto.address_count
+        })
     return fail(msg="未获取到报文")
 
 
-@router.post("/list_rss_history")
+@router.post("/articles/history")
 def list_rss_history(
     req: TaskIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
     dto = svc.get_history(req.id)
     if dto.downloads:
-        return success(data=dto.downloads, count=dto.count)
+        return success(data={"downloads": dto.downloads, "count": dto.count})
     return fail(msg="无下载记录")
 
 
-@router.post("/rss_article_test")
+@router.post("/articles/test")
 def rss_article_test(
     req: RssArticleTestRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
     taskid = req.taskid
@@ -179,10 +179,10 @@ def rss_article_test(
     return success(data=dto.media_dict)
 
 
-@router.post("/rss_articles_check")
+@router.post("/articles/check")
 def rss_articles_check(
     req: RssArticlesActionRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
     if not req.articles:
@@ -195,10 +195,10 @@ def rss_articles_check(
     return success() if res else fail()
 
 
-@router.post("/rss_articles_download")
+@router.post("/articles/download")
 def rss_articles_download(
     req: RssArticlesActionRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
     if not req.articles:
@@ -210,20 +210,20 @@ def rss_articles_download(
     return success() if res else fail()
 
 
-@router.post("/run_userrss")
+@router.post("/tasks/run")
 def run_userrss(
     req: TaskIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
     svc.run_task(req.id)
     return success()
 
 
-@router.post("/update_rssparser")
+@router.post("/parsers/update")
 def update_rssparser(
     req: UpdateRssParserRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
     params = {
@@ -238,10 +238,10 @@ def update_rssparser(
     return fail()
 
 
-@router.post("/update_userrss_task")
+@router.post("/tasks/update")
 def update_userrss_task(
     req: UpdateUserRssTaskRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
     dto = svc.update_task(req.data or {})

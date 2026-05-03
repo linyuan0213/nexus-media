@@ -79,8 +79,6 @@ class RssSubscriptionService:
         year = data.get("year")
         season = data.get("season")
         mtype = MediaType.MOVIE if data.get("type") in MovieTypes else MediaType.TV
-        page = data.get("page")
-        rssid = data.get("rssid")
         media_info = None
         code = 0
         msg = ""
@@ -102,7 +100,6 @@ class RssSubscriptionService:
             "filter_exclude": data.get("filter_exclude"),
             "save_path": data.get("save_path"),
             "download_setting": data.get("download_setting"),
-            "rssid": rssid,
         }
 
         if isinstance(season, list):
@@ -119,9 +116,59 @@ class RssSubscriptionService:
             kwargs["current_ep"] = data.get("current_ep")
             code, msg, media_info = self._subscribe.add_rss_subscribe(**kwargs)
 
-        if not rssid and media_info:
+        rssid = None
+        if media_info:
             rssid = self._subscribe.get_subscribe_id(
                 mtype=mtype, title=name, tmdbid=media_info.tmdb_id)
+
+        return RssAddResultDTO(code=code, msg=msg, rssid=rssid, media_info=media_info)
+
+    def update_rss_media(self, data: dict) -> RssAddResultDTO:
+        """更新RSS订阅（支持批量多季）"""
+        name = data.get("name")
+        year = data.get("year")
+        season = data.get("season")
+        mtype = MediaType.MOVIE if data.get("type") in MovieTypes else MediaType.TV
+        rssid = data.get("rssid")
+        media_info = None
+        code = 0
+        msg = ""
+
+        if not rssid:
+            return RssAddResultDTO(code=-1, msg="缺少订阅ID", rssid=None, media_info=None)
+
+        kwargs = {
+            "mtype": mtype, "rssid": rssid, "name": name, "year": year,
+            "keyword": data.get("keyword"),
+            "fuzzy_match": data.get("fuzzy_match"),
+            "mediaid": data.get("mediaid"),
+            "rss_sites": data.get("rss_sites"),
+            "search_sites": data.get("search_sites"),
+            "over_edition": data.get("over_edition"),
+            "filter_restype": data.get("filter_restype"),
+            "filter_pix": data.get("filter_pix"),
+            "filter_team": data.get("filter_team"),
+            "filter_rule": data.get("filter_rule"),
+            "filter_include": data.get("filter_include"),
+            "filter_exclude": data.get("filter_exclude"),
+            "save_path": data.get("save_path"),
+            "download_setting": data.get("download_setting"),
+            "image": data.get("image"),
+        }
+
+        if isinstance(season, list):
+            for sea in season:
+                kwargs["season"] = sea
+                kwargs.pop("total_ep", None)
+                kwargs.pop("current_ep", None)
+                code, msg, media_info = self._subscribe.update_rss_subscribe(**kwargs)
+                if code != 0:
+                    break
+        else:
+            kwargs["season"] = season
+            kwargs["total_ep"] = data.get("total_ep")
+            kwargs["current_ep"] = data.get("current_ep")
+            code, msg, media_info = self._subscribe.update_rss_subscribe(**kwargs)
 
         return RssAddResultDTO(code=code, msg=msg, rssid=rssid, media_info=media_info)
 

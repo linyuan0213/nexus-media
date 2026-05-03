@@ -186,6 +186,47 @@ class RssRepository(BaseRepository):
         return 0
 
     @DbPersist(BaseRepository._db)
+    def update_rss_movie(self, rssid, **kwargs):
+        """
+        更新RSS电影订阅信息（根据rssid）
+        """
+        if not rssid:
+            return -1
+        update_fields = {}
+        field_map = {
+            "name": "NAME",
+            "year": "YEAR",
+            "tmdbid": "TMDBID",
+            "image": "IMAGE",
+            "rss_sites": "RSS_SITES",
+            "search_sites": "SEARCH_SITES",
+            "over_edition": "OVER_EDITION",
+            "filter_restype": "FILTER_RESTYPE",
+            "filter_pix": "FILTER_PIX",
+            "filter_rule": "FILTER_RULE",
+            "filter_team": "FILTER_TEAM",
+            "filter_include": "FILTER_INCLUDE",
+            "filter_exclude": "FILTER_EXCLUDE",
+            "save_path": "SAVE_PATH",
+            "download_setting": "DOWNLOAD_SETTING",
+            "fuzzy_match": "FUZZY_MATCH",
+            "state": "STATE",
+            "desc": "DESC",
+            "note": "NOTE",
+            "keyword": "KEYWORD",
+        }
+        for k, v in kwargs.items():
+            col = field_map.get(k)
+            if col is not None:
+                if k in ("rss_sites", "search_sites") and isinstance(v, list):
+                    update_fields[col] = json.dumps(v)
+                else:
+                    update_fields[col] = v
+        if update_fields:
+            self._db.query(RSSMOVIES).filter(RSSMOVIES.ID == int(rssid)).update(update_fields)
+        return 0
+
+    @DbPersist(BaseRepository._db)
     def delete_rss_movie(self, title=None, year=None, rssid=None, tmdbid=None):
         """
         删除RSS电影
@@ -336,9 +377,10 @@ class RssRepository(BaseRepository):
                       fuzzy_match=0,
                       desc=None,
                       note=None,
-                      keyword=None):
+                      keyword=None,
+                      rssid=None):
         """
-        新增RSS电视剧
+        新增RSS电视剧（rssid 不为空时跳过 is_exists 检查，用于编辑替换场景）
         """
         if search_sites is None:
             search_sites = []
@@ -352,7 +394,7 @@ class RssRepository(BaseRepository):
             season_str = ""
         else:
             season_str = media_info.get_season_string()
-        if self.is_exists_rss_tv(media_info.title, media_info.year, season_str):
+        if not rssid and self.is_exists_rss_tv(media_info.title, media_info.year, season_str):
             return 9
 
         self._db.insert(RSSTVS(
@@ -382,6 +424,52 @@ class RssRepository(BaseRepository):
             NOTE=note,
             KEYWORD=keyword
         ))
+        return 0
+
+    @DbPersist(BaseRepository._db)
+    def update_rss_tv(self, rssid, **kwargs):
+        """
+        更新RSS电视剧订阅信息（根据rssid）
+        """
+        if not rssid:
+            return -1
+        update_fields = {}
+        field_map = {
+            "name": "NAME",
+            "year": "YEAR",
+            "season": "SEASON",
+            "tmdbid": "TMDBID",
+            "image": "IMAGE",
+            "rss_sites": "RSS_SITES",
+            "search_sites": "SEARCH_SITES",
+            "over_edition": "OVER_EDITION",
+            "filter_restype": "FILTER_RESTYPE",
+            "filter_pix": "FILTER_PIX",
+            "filter_rule": "FILTER_RULE",
+            "filter_team": "FILTER_TEAM",
+            "filter_include": "FILTER_INCLUDE",
+            "filter_exclude": "FILTER_EXCLUDE",
+            "save_path": "SAVE_PATH",
+            "download_setting": "DOWNLOAD_SETTING",
+            "fuzzy_match": "FUZZY_MATCH",
+            "total_ep": "TOTAL_EP",
+            "current_ep": "CURRENT_EP",
+            "total": "TOTAL",
+            "lack": "LACK",
+            "state": "STATE",
+            "desc": "DESC",
+            "note": "NOTE",
+            "keyword": "KEYWORD",
+        }
+        for k, v in kwargs.items():
+            col = field_map.get(k)
+            if col is not None:
+                if k in ("rss_sites", "search_sites") and isinstance(v, list):
+                    update_fields[col] = json.dumps(v)
+                else:
+                    update_fields[col] = v
+        if update_fields:
+            self._db.query(RSSTVS).filter(RSSTVS.ID == int(rssid)).update(update_fields)
         return 0
 
     @DbPersist(BaseRepository._db)

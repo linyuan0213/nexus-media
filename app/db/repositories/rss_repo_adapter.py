@@ -45,6 +45,9 @@ class RssMovieRepositoryAdapter:
     def update_rss_movie_state(self, title=None, year=None, rssid=None, state='R') -> None:
         self.update_state(title, year, rssid, state)
 
+    def update(self, rssid: int, **kwargs) -> int:
+        return self._repo.update_rss_movie(rssid, **kwargs)
+
     def update_filter_order(self, rssid: int, res_order: int) -> None:
         from app.utils.types import MediaType
         self._repo.update_rss_filter_order(MediaType.MOVIE, rssid, res_order)
@@ -129,6 +132,9 @@ class RssTvRepositoryAdapter:
 
     def delete(self, title: Optional[str] = None, season: Optional[str] = None, rssid: Optional[int] = None, tmdbid: Optional[str] = None) -> None:
         self._repo.delete_rss_tv(title, season, rssid, tmdbid)
+
+    def update(self, rssid: int, **kwargs) -> int:
+        return self._repo.update_rss_tv(rssid, **kwargs)
 
     def insert(self, media_info, total, lack=0, state="D", rss_sites=None, search_sites=None, over_edition=0,
                filter_restype=None, filter_pix=None, filter_team=None, filter_rule=None,

@@ -2,14 +2,16 @@
 RSS Router — FastAPI 迁移
 对应原 web/controllers/rss.py，复用 app/services/rss_service.py
 """
-from typing import Optional
+from typing import Optional, Union
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_rss_subscription_service
+from api.deps import get_current_user, get_rss_subscription_service, require_any_permission, require_permission
 from app.utils.response import success, fail
 from app.services.rss_service import RssSubscriptionService
+from app.conf.systemconfig import SystemConfig
+from app.utils.types import SystemConfigKey
 
 router = APIRouter()
 
@@ -32,7 +34,7 @@ class AddRssMediaRequest(BaseModel):
     in_form: Optional[str] = None
     keyword: Optional[str] = None
     fuzzy_match: Optional[bool] = None
-    mediaid: Optional[str] = None
+    mediaid: Optional[Union[str, int]] = None
     rss_sites: Optional[list] = None
     search_sites: Optional[list] = None
     over_edition: Optional[bool] = None
@@ -46,6 +48,8 @@ class AddRssMediaRequest(BaseModel):
     download_setting: Optional[str] = None
     total_ep: Optional[int] = None
     current_ep: Optional[int] = None
+    image: Optional[str] = None
+    tmdbid: Optional[Union[str, int]] = None
 
 
 class RssidRequest(BaseModel):
@@ -82,6 +86,20 @@ class GetDefaultRssSettingRequest(BaseModel):
     mtype: Optional[str] = None
 
 
+class DefaultRssSettingSaveRequest(BaseModel):
+    mtype: Optional[str] = None
+    over_edition: Optional[str] = None
+    restype: Optional[str] = None
+    pix: Optional[str] = None
+    team: Optional[str] = None
+    rule: Optional[str] = None
+    include: Optional[str] = None
+    exclude: Optional[str] = None
+    download_setting: Optional[str] = None
+    rss_sites: Optional[list] = None
+    search_sites: Optional[list] = None
+
+
 class GetRssHistoryRequest(BaseModel):
     type: Optional[str] = None
 
@@ -90,10 +108,10 @@ class GetRssHistoryRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.post("/add_rss_media")
+@router.post("/add")
 def add_rss_media(
     req: AddRssMediaRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     result = svc.add_rss_media(req.model_dump())
@@ -101,20 +119,31 @@ def add_rss_media(
                 page=req.page, name=req.name, rssid=result.rssid)
 
 
-@router.post("/delete_rss_history")
+@router.post("/update")
+def update_rss_media(
+    req: AddRssMediaRequest,
+    user: str = Depends(require_permission("rss:manage")),
+    svc: RssSubscriptionService = Depends(get_rss_subscription_service),
+):
+    result = svc.update_rss_media(req.model_dump())
+    return fail(code=result.code, msg=result.msg,
+                page=req.page, name=req.name, rssid=result.rssid)
+
+
+@router.post("/history/delete")
 def delete_rss_history(
     req: RssidRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     svc.delete_rss_history(rssid=req.rssid)
     return success()
 
 
-@router.post("/re_rss_history")
+@router.post("/history/redo")
 def re_rss_history(
     req: ReRssHistoryRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     code, msg = svc.re_rss_history(
@@ -122,21 +151,21 @@ def re_rss_history(
     return fail(code=code, msg=msg)
 
 
-@router.post("/refresh_rss")
+@router.post("/refresh")
 def refresh_rss(
     req: RefreshRssRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     svc.refresh_rss(
         mtype=req.type, rssid=req.rssid)
-    return success(page=req.page)
+    return success(data=req.page)
 
 
-@router.post("/remove_rss_media")
+@router.post("/remove")
 def remove_rss_media(
     req: RemoveRssMediaRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     svc.remove_rss_media(
@@ -146,26 +175,26 @@ def remove_rss_media(
         season=req.season,
         rssid=req.rssid,
         tmdbid=req.tmdbid)
-    return success(page=req.page, name=req.name)
+    return success(data=req.page)
 
 
-@router.post("/rss_detail")
+@router.post("/detail")
 def rss_detail(
     req: RssDetailRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     result = svc.get_rss_detail(
         rid=req.rssid, rsstype=req.rsstype)
     if not result:
         return fail()
-    return success(detail=result.detail)
+    return success(data=result.detail)
 
 
-@router.post("/get_default_rss_setting")
+@router.post("/default_setting")
 def get_default_rss_setting(
     req: GetDefaultRssSettingRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     setting = svc.get_default_rss_setting(
@@ -175,66 +204,82 @@ def get_default_rss_setting(
     return fail()
 
 
-@router.post("/get_ical_events")
+@router.post("/default_setting/save")
+def save_default_rss_setting(
+    req: DefaultRssSettingSaveRequest,
+    user: str = Depends(require_permission("rss:manage")),
+):
+    mtype = req.mtype
+    data = req.model_dump()
+    data.pop("mtype", None)
+    if mtype == "TV":
+        SystemConfig().set(key=SystemConfigKey.DefaultRssSettingTV, value=data)
+    elif mtype == "MOV":
+        SystemConfig().set(key=SystemConfigKey.DefaultRssSettingMOV, value=data)
+    return success()
+
+
+@router.post("/calendar/ical")
 def get_ical_events(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     events = svc.get_ical_events()
-    return success(result=events)
+    return success(data=events)
 
 
-@router.post("/get_movie_rss_items")
+@router.post("/movie/items")
 def get_movie_rss_items(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    return success(result=svc.get_movie_rss_items())
+    return success(data=svc.get_movie_rss_items())
 
 
-@router.post("/get_movie_rss_list")
+@router.post("/movie/list")
 def get_movie_rss_list(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    return success(result=svc.get_movie_rss_list())
+    result = svc.get_movie_rss_list()
+    return success(data=list(result.values()) if isinstance(result, dict) else result)
 
 
-@router.post("/get_rss_history")
+@router.post("/history")
 def get_rss_history(
     req: GetRssHistoryRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    return success(result=svc.get_rss_history(
-        mtype=req.type))
+    return success(data=svc.get_rss_history( mtype=req.type))
 
 
-@router.post("/get_tv_rss_items")
+@router.post("/tv/items")
 def get_tv_rss_items(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    return success(result=svc.get_tv_rss_items())
+    return success(data=svc.get_tv_rss_items())
 
 
-@router.post("/get_tv_rss_list")
+@router.post("/tv/list")
 def get_tv_rss_list(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    return success(result=svc.get_tv_rss_list())
+    result = svc.get_tv_rss_list()
+    return success(data=list(result.values()) if isinstance(result, dict) else result)
 
 
-@router.post("/truncate_rsshistory")
+@router.post("/history/clear")
 def truncate_rsshistory(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     svc.truncate_rss_history()
