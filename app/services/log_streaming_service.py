@@ -10,7 +10,7 @@ class LogStreamingService:
     封装全局状态与迭代逻辑，避免污染路由文件。
     """
 
-    def __init__(self, buffer=None, sleep_interval: float = 1.0):
+    def __init__(self, buffer=None, sleep_interval: float = 0.3):
         self._sleep_interval = sleep_interval
         self._lock = threading.Lock()
         self._source_map: dict[str, int] = {}
@@ -54,5 +54,6 @@ class LogStreamingService:
                 )
                 self._source_map[key] = next_counter
 
+            if logs:
+                yield f"data: {json.dumps(logs)}\n\n"
             time.sleep(self._sleep_interval)
-            yield f"data: {json.dumps(logs)}\n\n"

@@ -19,7 +19,6 @@ from api.deps import (
     get_progress_service,
     get_scheduler_service,
     get_system_config_service,
-    get_tmdb_blacklist_helper,
     get_user_manage_service,
     get_version_service,
     get_web_search_service,
@@ -31,14 +30,6 @@ client = TestClient(app)
 
 
 class TestSystemRouter:
-    def _mock_tmdb_helper(self):
-        mock_svc = MagicMock()
-        app.dependency_overrides[get_tmdb_blacklist_helper] = lambda: mock_svc
-        return mock_svc
-
-    def _teardown_tmdb(self):
-        app.dependency_overrides.pop(get_tmdb_blacklist_helper, None)
-
     def _mock_message(self):
         mock_svc = MagicMock()
         app.dependency_overrides[get_message_service] = lambda: mock_svc
@@ -142,33 +133,6 @@ class TestSystemRouter:
 
     def _teardown_web_search(self):
         app.dependency_overrides.pop(get_web_search_service, None)
-
-    # ------------------------------------------------------------------
-    # TmdbBlacklist
-    # ------------------------------------------------------------------
-    def test_add_tmdb_blacklist(self):
-        mock_svc = self._mock_tmdb_helper()
-        mock_svc.is_blacklisted.return_value = False
-        try:
-            resp = client.post("/api/system/add_tmdb_blacklist", json={
-                "tmdb_id": "123", "media_type": "movie"
-            })
-            assert resp.status_code == 200
-            assert resp.json()["code"] == 0
-            mock_svc.add_to_blacklist.assert_called_once()
-        finally:
-            self._teardown_tmdb()
-
-    def test_clear_tmdb_blacklist(self):
-        mock_svc = self._mock_tmdb_helper()
-        mock_svc.get_blacklist.return_value = [1]
-        try:
-            resp = client.post("/api/system/clear_tmdb_blacklist", json={})
-            assert resp.status_code == 200
-            assert resp.json()["code"] == 0
-            mock_svc.clear_blacklist.assert_called_once()
-        finally:
-            self._teardown_tmdb()
 
     # ------------------------------------------------------------------
     # MessageClient

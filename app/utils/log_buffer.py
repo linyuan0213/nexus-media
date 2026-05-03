@@ -20,8 +20,9 @@ class LogBuffer:
         self._counter = 0
 
     def append(self, level: str, text: str) -> int:
-        """添加一条日志记录，返回当前计数器值。"""
-        text = escape(text)
+        """添加一条日志记录，返回当前计数器值。
+        不再做 html.escape，Vue 前端会自动处理 XSS 防护。
+        """
         if text.startswith("【"):
             match = self._SOURCE_PATTERN.search(text)
             if match:

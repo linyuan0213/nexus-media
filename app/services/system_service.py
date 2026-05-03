@@ -6,6 +6,7 @@ SystemService - 系统管理业务层
 import datetime
 import json
 import os
+import platform
 import shutil
 import subprocess
 import tempfile
@@ -39,6 +40,7 @@ from app.schemas.system import (
     ProgressResultDTO,
     UserManageResultDTO,
     ConfigUpdateResultDTO,
+    SystemInfoDTO,
 )
 from app.sites import SiteUserInfo
 from app.services.subscribe_service import SubscribeService as Subscribe
@@ -68,8 +70,12 @@ class MessageClientService:
         return bool(self._message.delete_message_client(cid=cid))
 
     def get_client(self, cid: Optional[int] = None):
-        """获取消息客户端信息"""
-        return self._message.get_message_client_info(cid=cid)
+        """获取消息客户端信息，若缓存为空则重新加载"""
+        result = self._message.get_message_client_info(cid=cid)
+        if result is None or (cid is None and not result):
+            self._message.init_config()
+            result = self._message.get_message_client_info(cid=cid)
+        return result
 
     def toggle_interactive(self, cid: int, ctype: str, checked: bool) -> bool:
         """切换交互状态"""
@@ -92,13 +98,24 @@ class MessageClientService:
                       switchs, interactive: int, enabled: int,
                       templates: str) -> None:
         """添加或更新消息客户端"""
+        # 统一 switchs 为 list
+        parsed_switchs = switchs
+        if isinstance(switchs, str):
+            try:
+                parsed_switchs = json.loads(switchs)
+                if not isinstance(parsed_switchs, list):
+                    parsed_switchs = []
+            except json.JSONDecodeError:
+                parsed_switchs = [s.strip() for s in switchs.split(",") if s.strip()]
+        if not isinstance(parsed_switchs, list):
+            parsed_switchs = []
         if cid:
             self._message.delete_message_client(cid=cid)
         if int(interactive) == 1:
             self._message.check_message_client(interactive=0, ctype=ctype)
         self._message.insert_message_client(
             name=name, ctype=ctype, config=config,
-            switchs=switchs, interactive=interactive,
+            switchs=parsed_switchs, interactive=interactive,
             enabled=enabled, templates=templates
         )
 
@@ -328,6 +345,12 @@ class SchedulerService:
             "sync": (sync or Sync()).transfer_sync,
             "rssdownload": (rss or Rss()).rssdownload,
             "subscribe_search_all": (subscribe or Subscribe()).subscribe_search_all,
+            # 消息命令兼容映射
+            "/ptt": (downloader or Downloader()).transfer,
+            "/ptr": (TorrentRemover()).auto_remove_torrents,
+            "/rst": (sync or Sync()).transfer_sync,
+            "/rss": (rss or Rss()).rssdownload,
+            "/ssa": (subscribe or Subscribe()).subscribe_search_all,
         }
         self._thread_helper = thread_helper or ThreadHelper()
 
@@ -396,6 +419,60 @@ class VersionService:
 
 # ---------- 以下从原 app/system_service.py 迁移 ----------
 
+class SystemInfoService:
+    """
+    系统信息服务
+    获取系统版本、运行时长、Python版本等基本信息
+    """
+
+    @staticmethod
+    def _format_uptime(seconds: float) -> str:
+        """格式化运行时长"""
+        days = int(seconds // 86400)
+        hours = int((seconds % 86400) // 3600)
+        minutes = int((seconds % 3600) // 60)
+        parts = []
+        if days > 0:
+            parts.append(f"{days}天")
+        if hours > 0:
+            parts.append(f"{hours}小时")
+        if minutes > 0 or not parts:
+            parts.append(f"{minutes}分钟")
+        return "".join(parts)
+
+    @staticmethod
+    def get_system_info() -> SystemInfoDTO:
+        """获取系统基本信息"""
+        from version import APP_VERSION
+        import psutil
+
+        try:
+            process = psutil.Process()
+            start_time = datetime.datetime.fromtimestamp(process.create_time())
+            uptime_seconds = (datetime.datetime.now() - start_time).total_seconds()
+            uptime = SystemInfoService._format_uptime(uptime_seconds)
+        except Exception:
+            start_time = None
+            uptime = "-"
+            uptime_seconds = 0
+
+        try:
+            mem = process.memory_info()
+            memory_mb = round(mem.rss / 1024 / 1024, 1)
+        except Exception:
+            memory_mb = 0
+
+        return SystemInfoDTO(
+            version=APP_VERSION,
+            python_version=platform.python_version(),
+            platform=platform.platform(),
+            uptime=uptime,
+            uptime_seconds=int(uptime_seconds),
+            start_time=start_time.isoformat() if start_time else None,
+            memory_mb=memory_mb,
+        )
+
+
 class SystemLifecycleService:
     """
     系统生命周期管理服务（原 app/system_service.py 顶层函数提取）
@@ -409,7 +486,8 @@ class SystemLifecycleService:
                  rss_checker=None,
                  torrent_remover=None,
                  downloader=None,
-                 plugin_manager=None):
+                 plugin_manager=None,
+                 file_index_service=None):
         from app.services.scheduler_core import SchedulerCore
         from app.services.brush_core import BrushTaskService
         from app.services.rss_service import RssTaskService
@@ -421,6 +499,7 @@ class SystemLifecycleService:
         self._torrent_remover = torrent_remover
         self._downloader = downloader
         self._plugin_manager = plugin_manager
+        self._file_index = file_index_service
 
     def start_service(self) -> None:
         """启动所有后台服务（调度器优先启动，确保后续模块注册任务时调度器已就绪）"""
@@ -457,6 +536,10 @@ class SystemLifecycleService:
             self._downloader = Downloader()
         if self._plugin_manager is None:
             self._plugin_manager = PluginManager()
+        if self._file_index is None:
+            from app.services.file_index_service import FileIndexService
+            self._file_index = FileIndexService()
+        self._file_index.start()
         self._sync.init_config()
         self._brush.init_config()
         self._rss_checker.init_config()
@@ -477,6 +560,8 @@ class SystemLifecycleService:
             self._downloader.stop_service()
         if self._plugin_manager:
             self._plugin_manager.stop_service()
+        if self._file_index:
+            self._file_index.stop()
 
     def restart_service(self) -> None:
         """重启所有后台服务"""

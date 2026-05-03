@@ -9,7 +9,7 @@
 #   rclone需要自行映射rclone配置目录到容器中，或在容器内完成rclone配置
 app:
   # 【WEB管理界面监听地址】：如需支持ipv6需设置为::，如::无法访问可改为0.0.0.0
-  web_host: "::"
+  web_host: '::'
   # 【WEB管理界面端口】：默认3000
   web_port: 3000
   # 【WEB管理页面登录用户】，默认admin
@@ -36,9 +36,10 @@ app:
   rmt_match_mode: normal
   # 【本系统的WEB的外网地址】：需要是外网IP或者域名，需要包含端口，用于微信/Telegram信息点击跳转，如不需要可配空
   # 示例：http://IP:3000
-  domain: ""
+  domain: ''
   # 【UserAgent】：可适当修改，用于站点签到、豆瓣数据抓取等
-  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"
+  user_agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 
+    (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36
   # 【登录界面壁纸】：themoviedb、bing，设置为themoviedb时需要配置TMDB API Key时才生效
   wallpaper: bing
   # Debug mode
@@ -95,7 +96,7 @@ media:
   # 此处配置分类的策略名，配置文件目录中需要有与策略名同名的.yaml配置文件
   # 默认策略default-category分类设置可参考"default-category.yaml"，分类参见README.MD说明
   # 如不需要启动分类，则该项配置为空
-  category: "default-category"
+  category: default-category
   # 【媒体库管理软件】：emby、jellyfin、plex，需要在emby或jellyfin或plex区配置详细信息，用于下载检查控重、媒体库展示等，建议配置
   media_server: emby
   # 【媒体库数据同步周期】：定时同步媒体服务器数据到本地，单位小时
@@ -110,10 +111,11 @@ media:
   filesize_cover: true
   # 【电影命名定义】：程序会按定义的命名格式对电影进行重命名；/代表上下级目录，{}内为占位符；占位符会使用文件识别出来的实际值替换；占位符外的字符会当成普通字符，直接体现在名称上
   # 电影占位符有：{title}：标题，{en_title}：英文标题，{original_title}：原语种标题，{original_name}：原文件名，{year}：年份，{edition}：版本(Bluray/WEB-DL等)，{videoFormat}：分辨率(1080p/4k等)，{videoCodec}：视频编码，{audioCodec}：音频编码及声道，{effect}: 视频特效(DV,HDR等), {tmdbid}：TMDB的ID, {imdbid}：IMDB的ID，{part}：part1/disc1/dvd1，{releaseGroup}：制作组/字幕组等
-  movie_name_format: "{title} ({year})/{title}-{part} ({year}) - {videoFormat}"
+  movie_name_format: '{title} ({year})/{title}-{part} ({year}) - {videoFormat}'
   # 【电视剧命名定义】：程序会按定义的命名格式对电视剧进行重命名；/代表上下级目录，{}内为占位符；占位符会使用文件识别出来的实际值替换，占位符外的字符会当成普通字符，直接体现在名称上
   # 电视剧占位符有：{title}：标题，{en_title}：英文标题，{original_title}：原语种标题，{original_name}：原文件名，{year}：年份，{edition}：版本(Bluray/WEB-DL等)，{videoFormat}：分辨率(1080p/4k等)，{videoCodec}：视频编码，{audioCodec}：音频编码及声道，{effect}: 视频特效(DV,HDR等), {tmdbid}：TMDB的ID，{imdbid}：IMDB的ID，{season}：季数，{episode}：集数，{season_episode}：剧集SxxExx，{part}：part1/disc1/dvd1，{releaseGroup}：制作组/字幕组等
-  tv_name_format: "{title} ({year})/Season {season}/{title}-{part} - {season_episode} - 第{episode}集"
+  tv_name_format: '{title} ({year})/Season {season}/{title}-{part} - {season_episode}
+    - 第{episode}集'
   # 【刮削元数据及图片】：开启后文件转移完成时会自动生成nfo描述文件及poster海报，协助媒体服务器识别和搜刮
   nfo_poster: false
   # 文件管理、自定义识别等默认路径
@@ -201,6 +203,7 @@ security:
   check_apikey: false
 
 # 【实验室】
+  jwt_secret: CU72Fq6Qfz0zBUz1iZigbhCa8JYFugVgd5gKXZhedfg
 laboratory:
   # 【识别增强】关键字猜想
   search_keyword: false

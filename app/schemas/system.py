@@ -75,3 +75,15 @@ class ConfigUpdateResultDTO:
     """配置更新结果"""
     success: bool = False
     test_mode: bool = False
+
+
+@dataclass
+class SystemInfoDTO:
+    """系统基本信息"""
+    version: str = ""
+    python_version: str = ""
+    platform: str = ""
+    uptime: str = ""
+    uptime_seconds: int = 0
+    start_time: Optional[str] = None
+    memory_mb: float = 0.0
