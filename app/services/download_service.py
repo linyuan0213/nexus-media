@@ -56,6 +56,10 @@ class DownloadService:
             return self._downloader.get_download_url(page_url) or ""
         return enclosure or ""
 
+    def resolve_download_url(self, page_url: str, enclosure: Optional[str]) -> str:
+        """公开方法：处理 m-team/yemapt 特殊下载链接"""
+        return self._resolve_download_url(page_url, enclosure)
+
     def download_from_search_results(self, dl_id: int, dl_dir: str, dl_setting: str,
                                       user_name: str) -> DownloadResultDTO:
         """从搜索结果批量下载"""
@@ -123,7 +127,10 @@ class DownloadService:
 
     def download_from_torrent_files_or_urls(self, files: list, urls: list,
                                             dl_dir: str, dl_setting: str,
-                                            user_name: str) -> DownloadResultDTO:
+                                            user_name: str,
+                                            page_url: Optional[str] = None,
+                                            upload_volume_factor: Optional[float] = None,
+                                            download_volume_factor: Optional[float] = None) -> DownloadResultDTO:
         """从种子文件或 URL 链接添加下载"""
         if not files and not urls:
             return DownloadResultDTO(success=False, message="没有种子文件或者种子链接")
@@ -140,6 +147,12 @@ class DownloadService:
                 media_info = self._media.get_media_info(title=file_name)
                 if media_info:
                     media_info.site = "WEB"
+                    if page_url:
+                        media_info.page_url = page_url
+                    if upload_volume_factor is not None:
+                        media_info.upload_volume_factor = upload_volume_factor
+                    if download_volume_factor is not None:
+                        media_info.download_volume_factor = download_volume_factor
                 self._downloader.download(
                     media_info=media_info,
                     download_dir=dl_dir,
@@ -173,6 +186,14 @@ class DownloadService:
                     media_info = MetaInfo('')
                     media_info.enclosure = url
                     file_path = None
+
+                if media_info:
+                    if page_url:
+                        media_info.page_url = page_url
+                    if upload_volume_factor is not None:
+                        media_info.upload_volume_factor = upload_volume_factor
+                    if download_volume_factor is not None:
+                        media_info.download_volume_factor = download_volume_factor
 
                 self._downloader.download(
                     media_info=media_info,

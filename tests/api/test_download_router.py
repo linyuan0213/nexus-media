@@ -221,7 +221,7 @@ class TestDownloadRouter:
             resp = client.post("/api/download/get_download_dirs", json={"sid": "1"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["paths"] == ["/downloads"]
+            assert resp.json()["data"] == ["/downloads"]
         finally:
             self._teardown_site()
             self._teardown_downloader()
@@ -250,7 +250,7 @@ class TestDownloadRouter:
             resp = client.post("/api/download/get_downloaders", json={"did": "1"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["detail"] == {"id": "1"}
+            assert resp.json()["data"] == {"id": "1"}
         finally:
             self._teardown_downloader()
 
@@ -287,7 +287,7 @@ class TestDownloadRouter:
             resp = client.post("/api/download/get_indexers", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["indexers"][0]["name"] == "BuiltIn"
+            assert resp.json()["data"][0]["name"] == "BuiltIn"
         finally:
             self._teardown_indexer()
 
@@ -338,7 +338,7 @@ class TestDownloadRouter:
             resp = client.post("/api/download/pt_info", json={"ids": "1"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["torrents"][0]["id"] == "1"
+            assert resp.json()["data"][0]["id"] == "1"
         finally:
             self._teardown_downloader()
 

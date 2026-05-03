@@ -178,14 +178,18 @@ class TransferRepository(BaseRepository):
         """
         查询历史记录统计
         使用 func.substring 替代 func.substr 以支持多种数据库
+        days <= 0 表示查询全部
         """
-        begin_date = (datetime.datetime.now() - datetime.timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
         date_str = func.substr(TRANSFERHISTORY.DATE, 1, 10).label('date_str')
-        return self._db.query(
+        query = self._db.query(
             TRANSFERHISTORY.TYPE,
             date_str,
             func.count('*')
-        ).filter(TRANSFERHISTORY.DATE > begin_date).group_by(
+        )
+        if days > 0:
+            begin_date = (datetime.datetime.now() - datetime.timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+            query = query.filter(TRANSFERHISTORY.DATE > begin_date)
+        return query.group_by(
             TRANSFERHISTORY.TYPE, date_str
         ).order_by(date_str).all()
 

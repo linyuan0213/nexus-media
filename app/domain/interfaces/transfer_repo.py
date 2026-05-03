@@ -2,7 +2,7 @@
 """
 转移领域 Repository 接口（Python Protocol）
 """
-from typing import List, Optional, Protocol, Tuple
+from typing import Any, List, Optional, Protocol, Tuple
 
 from app.domain.entities.transfer import (
     TransferBlacklistEntity,
@@ -14,6 +14,7 @@ from app.domain.entities.transfer import (
 class ITransferHistoryRepository(Protocol):
     """转移历史仓储接口"""
 
+    # 新接口方法
     def is_exists(self, source_path: str, source_filename: str, dest_path: str, dest_filename: str) -> bool:
         ...
 
@@ -33,6 +34,67 @@ class ITransferHistoryRepository(Protocol):
         ...
 
     def delete_by_source(self, source_path: str, source_filename: str) -> None:
+        ...
+
+    # 兼容旧Repository方法名
+    def is_sync_in_history(self, path: str, dest: str) -> bool:
+        ...
+
+    def insert_sync_history(self, path: str, src: str, dest: str) -> None:
+        ...
+
+    def get_transfer_info_by(self, tmdbid, season=None, season_episode=None):
+        ...
+
+    def get_transfer_info_by_id(self, logid):
+        ...
+
+    def get_transfer_history(self, search, page, rownum):
+        ...
+
+    def delete_transfer_log_by_id(self, logid):
+        ...
+
+    def delete_transfer(self):
+        ...
+
+    def get_transfer_statistics(self, days: int = 30):
+        ...
+
+    # 兼容旧Repository方法名 - 委托给Unknown子适配器
+    def delete_transfer_unknown(self, tid) -> None:
+        ...
+
+    def get_unknown_info_by_id(self, tid):
+        ...
+
+    def update_transfer_unknown_state(self, path):
+        ...
+
+    def get_transfer_unknown_paths(self):
+        ...
+
+    def get_transfer_unknown_paths_by_page(self, search, page, rownum):
+        ...
+
+    # 兼容旧Repository方法名 - 委托给Blacklist子适配器
+    def delete_transfer_blacklist(self, path):
+        ...
+
+    def truncate_transfer_blacklist(self):
+        ...
+
+    # 兼容旧Repository方法名
+    def is_transfer_notin_blacklist(self, path: str) -> bool:
+        ...
+
+    def is_need_insert_transfer_unknown(self, path: str) -> bool:
+        ...
+
+    def insert_transfer_unknown(self, path: str, dest: Any, rmt_mode: Any) -> None:
+        ...
+
+    def insert_transfer_history(self, in_from: Any, rmt_mode: Any, in_path: str, out_path: str, dest: str, media_info: Any) -> None:
         ...
 
 
@@ -68,4 +130,7 @@ class ITransferBlacklistRepository(Protocol):
         ...
 
     def delete(self, path: str) -> None:
+        ...
+
+    def truncate(self) -> None:
         ...

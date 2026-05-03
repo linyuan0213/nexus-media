@@ -224,6 +224,13 @@ class DownloadClientFactory:
             default_downloader_id = ""
         return default_downloader_id
 
+    def set_default_downloader(self, did: str) -> bool:
+        """设置默认下载器id"""
+        if not did or not self.get_downloader_conf(did):
+            return False
+        self._systemconfig.set(SystemConfigKey.DefaultDownloader, did)
+        return True
+
     @property
     def default_download_setting_id(self):
         """获取默认下载设置id"""
@@ -231,6 +238,13 @@ class DownloadClientFactory:
         if not self._download_settings.get(default_download_setting_id):
             default_download_setting_id = "-1"
         return default_download_setting_id
+
+    def set_default_download_setting(self, sid: str) -> bool:
+        """设置默认下载设置id"""
+        if sid != "-1" and not self._download_settings.get(sid):
+            return False
+        self._systemconfig.set(SystemConfigKey.DefaultDownloadSetting, sid)
+        return True
 
     @property
     def default_client(self):
@@ -258,10 +272,20 @@ class DownloadClientFactory:
     # ---------- 配置查询 ----------
 
     def get_downloader_conf(self, did=None):
-        """获取下载器配置"""
+        """获取下载器配置，返回数据中包含 is_default 标记"""
+        default_id = self._systemconfig.get(SystemConfigKey.DefaultDownloader)
         if not did:
-            return self._downloader_confs
-        return self._downloader_confs.get(str(did))
+            result = {}
+            for k, v in self._downloader_confs.items():
+                item = dict(v)
+                item["is_default"] = (str(item.get("id")) == str(default_id))
+                result[k] = item
+            return result
+        conf = self._downloader_confs.get(str(did))
+        if conf:
+            conf = dict(conf)
+            conf["is_default"] = (str(conf.get("id")) == str(default_id))
+        return conf
 
     def get_downloader_conf_simple(self):
         """获取简化下载器配置"""
@@ -276,15 +300,25 @@ class DownloadClientFactory:
         return ret_dict
 
     def get_download_setting(self, sid=None):
-        """获取下载设置"""
+        """获取下载设置，返回数据中包含 is_default 标记"""
         preset_downloader_conf = self.get_downloader_conf(self.default_downloader_id)
         if preset_downloader_conf:
             self._download_settings["-1"]["downloader"] = self.default_downloader_id
             self._download_settings["-1"]["downloader_name"] = preset_downloader_conf.get("name")
             self._download_settings["-1"]["downloader_type"] = preset_downloader_conf.get("type")
+        default_sid = self.default_download_setting_id
         if not sid:
-            return self._download_settings
-        return self._download_settings.get(str(sid)) or {}
+            result = {}
+            for k, v in self._download_settings.items():
+                item = dict(v)
+                item["is_default"] = (str(k) == str(default_sid))
+                result[k] = item
+            return result
+        conf = self._download_settings.get(str(sid)) or {}
+        if conf:
+            conf = dict(conf)
+            conf["is_default"] = (str(sid) == str(default_sid))
+        return conf
 
     def get_download_dirs(self, setting=None):
         """返回下载器中设置的保存目录"""
@@ -294,7 +328,7 @@ class DownloadClientFactory:
         downloader_conf = self.get_downloader_conf(download_setting.get("downloader"))
         if not downloader_conf:
             return []
-        downloaddir = downloader_conf.get("download_dir")
+        downloaddir = downloader_conf.get("download_dir") or []
         save_path_list = [attr.get("save_path") for attr in downloaddir if attr.get("save_path")]
         save_path_list.sort()
         return list(set(save_path_list))

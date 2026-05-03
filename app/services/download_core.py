@@ -17,7 +17,10 @@ from typing import Optional
 
 import log
 from app.conf import SystemConfig
-from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
+from app.db.repositories.download_repo_adapter import (
+    DownloadHistoryRepositoryAdapter,
+    DownloadSettingRepositoryAdapter,
+)
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.downloader.client._base import _IDownloadClient
 from app.schemas.download import Torrent
@@ -52,6 +55,7 @@ class DownloadCore:
                  sitesubtitle: Optional[SiteSubtitle] = None,
                  eventmanager: Optional[EventManager] = None,
                  download_repo: Optional[IDownloadHistoryRepository] = None,
+                 download_setting_repo=None,
                  systemconfig: Optional[SystemConfig] = None):
         self._client_factory = client_factory or DownloadClientFactory()
         self._message = message or Message()
@@ -63,6 +67,7 @@ class DownloadCore:
         self._sitesubtitle = sitesubtitle or SiteSubtitle()
         self._eventmanager = eventmanager or EventManager()
         self._download_repo = download_repo or DownloadHistoryRepositoryAdapter()
+        self._download_setting_repo = download_setting_repo or DownloadSettingRepositoryAdapter()
         self._systemconfig = systemconfig or SystemConfig()
 
     # ---------- 核心下载方法 ----------
@@ -634,12 +639,12 @@ class DownloadCore:
             downloader_id = self._client_factory.default_downloader_id
         _client = self._client_factory.get_client(downloader_id)
         if not _client:
-            return None
+            return []
         try:
-            return _client.get_downloading_torrents(tag=tag, ids=ids)
+            return _client.get_downloading_torrents(tag=tag, ids=ids) or []
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
-            return None
+            return []
 
     def get_downloading_progress(self, downloader_id=None, ids=None):
         if not downloader_id:
@@ -651,15 +656,23 @@ class DownloadCore:
             return []
         from config import PT_TAG
         tag = [PT_TAG] if only_nastool else None
-        return _client.get_downloading_progress(tag=tag, ids=ids)
+        try:
+            return _client.get_downloading_progress(tag=tag, ids=ids) or []
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+            return []
 
     def get_completed_torrents(self, downloader_id=None, ids=None, tag=None) -> list[Torrent]:
         if not downloader_id:
             downloader_id = self._client_factory.default_downloader_id
         _client = self._client_factory.get_client(downloader_id)
         if not _client:
-            return None
-        return _client.get_completed_torrents(ids=ids, tag=tag)
+            return []
+        try:
+            return _client.get_completed_torrents(ids=ids, tag=tag) or []
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+            return []
 
     def set_torrents_tag(self, downloader_id=None, ids=None, tags=None):
         if not downloader_id:
@@ -848,14 +861,14 @@ class DownloadCore:
         return ret
 
     def delete_download_setting(self, sid):
-        ret = self._download_repo.delete_download_setting(sid=sid)
+        ret = self._download_setting_repo.delete_download_setting(sid=sid)
         self._client_factory.init_config()
         return ret
 
     def update_download_setting(self, sid, name, category, tags, is_paused,
                                 upload_limit, download_limit, ratio_limit,
                                 seeding_time_limit, downloader):
-        ret = self._download_repo.update_download_setting(
+        ret = self._download_setting_repo.update_download_setting(
             sid=sid, name=name, category=category, tags=tags,
             is_paused=is_paused, upload_limit=upload_limit,
             download_limit=download_limit, ratio_limit=ratio_limit,

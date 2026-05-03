@@ -874,7 +874,7 @@ class Qbittorrent(_IDownloadClient):
             status = TorrentStatus.Uploading
         elif state == 'checkingUP' or state == 'checkingDL':
             status = TorrentStatus.Checking
-        elif state == 'pausedUP' or state == 'pausedDL':
+        elif state in ('pausedUP', 'pausedDL', 'stoppedUP', 'stoppedDL'):
             status = TorrentStatus.Paused
         elif state == 'error':
             status = TorrentStatus.Error

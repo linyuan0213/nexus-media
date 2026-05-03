@@ -71,6 +71,10 @@ class DownloadHistoryRepositoryAdapter:
     def is_exists_download_history_by_tmdb(self, tmdb_id, season_episode):
         return self._repo.is_exists_download_history_by_tmdb(tmdb_id, season_episode)
 
+    # 兼容旧Repository方法名
+    def get_download_history_by_path(self, path: str):
+        return self._repo.get_download_history_by_path(path)
+
 
 class DownloadSettingRepositoryAdapter:
     """下载设置仓储适配器"""

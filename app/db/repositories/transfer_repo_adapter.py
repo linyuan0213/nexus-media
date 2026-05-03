@@ -107,6 +107,22 @@ class TransferHistoryRepositoryAdapter:
     def truncate_transfer_blacklist(self):
         self._repo.truncate_transfer_blacklist()
 
+    # 兼容旧Repository方法名
+    def is_transfer_notin_blacklist(self, path):
+        return self._repo.is_transfer_notin_blacklist(path)
+
+    # 兼容旧Repository方法名
+    def is_need_insert_transfer_unknown(self, path):
+        return self._repo.is_need_insert_transfer_unknown(path)
+
+    # 兼容旧Repository方法名
+    def insert_transfer_unknown(self, path, dest, rmt_mode):
+        self._repo.insert_transfer_unknown(path, dest, rmt_mode)
+
+    # 兼容旧Repository方法名
+    def insert_transfer_history(self, in_from, rmt_mode, in_path, out_path, dest, media_info):
+        self._repo.insert_transfer_history(in_from, rmt_mode, in_path, out_path, dest, media_info)
+
 
 class TransferUnknownRepositoryAdapter:
     """转移未知文件仓储适配器"""

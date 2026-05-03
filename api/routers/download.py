@@ -4,7 +4,7 @@ Download Router — FastAPI 迁移
 """
 import json
 import os
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -15,8 +15,11 @@ from api.deps import (
     get_site_service,
     get_indexer_service,
     get_downloader_service,
-    get_filetransfer_service
+    get_filetransfer_service,
+    require_any_permission,
+    require_permission
 )
+from app.schemas.auth import UserContext
 from app.utils.response import success, fail
 from app.services.download_service import DownloadService
 
@@ -24,6 +27,7 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.indexer_service import IndexerService
 from app.services.site_service import SiteService
+from app.conf import ModuleConf
 from app.utils import SystemUtils, ExceptionUtils
 
 router = APIRouter()
@@ -84,11 +88,19 @@ class DownloadTorrentRequest(BaseModel):
     urls: Optional[list] = None
     dl_dir: Optional[str] = None
     dl_setting: Optional[str] = None
+    page_url: Optional[str] = None
+    upload_volume_factor: Optional[float] = None
+    download_volume_factor: Optional[float] = None
 
 
 class FindHardlinksRequest(BaseModel):
     files: Optional[list] = None
     dir: Optional[str] = None
+
+
+class ResolveDownloadUrlRequest(BaseModel):
+    page_url: Optional[str] = None
+    enclosure: Optional[str] = None
 
 
 class GetDownloadDirsRequest(BaseModel):
@@ -102,6 +114,14 @@ class GetDownloadSettingRequest(BaseModel):
 
 class GetDownloadersRequest(BaseModel):
     did: Optional[str] = None
+
+
+class SetDefaultDownloaderRequest(BaseModel):
+    did: Optional[str] = None
+
+
+class SetDefaultDownloadSettingRequest(BaseModel):
+    sid: Optional[str] = None
 
 
 class GetRemoveTorrentsRequest(BaseModel):
@@ -126,15 +146,15 @@ class TestDownloaderRequest(BaseModel):
 
 
 class UpdateDownloadSettingRequest(BaseModel):
-    sid: Optional[str] = None
+    sid: Optional[Union[str, int]] = None
     name: Optional[str] = None
     category: Optional[str] = None
     tags: Optional[str] = None
-    is_paused: Optional[bool] = None
-    upload_limit: Optional[int] = 0
-    download_limit: Optional[int] = 0
-    ratio_limit: Optional[int] = 0
-    seeding_time_limit: Optional[int] = 0
+    is_paused: Optional[Union[int, bool]] = None
+    upload_limit: Optional[Union[int, str]] = 0
+    download_limit: Optional[Union[int, str]] = 0
+    ratio_limit: Optional[Union[int, str]] = 0
+    seeding_time_limit: Optional[Union[int, str]] = 0
     downloader: Optional[str] = None
 
 
@@ -159,20 +179,20 @@ class UpdateTorrentRemoveTaskRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.post("/auto_remove_torrents")
+@router.post("/torrent-remove-tasks/run")
 def auto_remove_torrents(
     req: AutoRemoveTorrentsRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
     svc.auto_remove_torrents(taskids=req.tid)
     return success()
 
 
-@router.post("/check_downloader")
+@router.post("/downloaders/check")
 def check_downloader(
     req: CheckDownloaderRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("download:manage")),
     svc: Downloader = Depends(get_downloader_service),
 ):
     did = req.did
@@ -197,30 +217,30 @@ def check_downloader(
     return success()
 
 
-@router.post("/del_downloader")
+@router.post("/downloaders/delete")
 def del_downloader(
     req: DelDownloaderRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("download:manage")),
     svc: Downloader = Depends(get_downloader_service),
 ):
     svc.delete_downloader(did=req.did)
     return success()
 
 
-@router.post("/delete_download_setting")
+@router.post("/settings/delete")
 def delete_download_setting(
     req: DeleteDownloadSettingRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("download:manage")),
     svc: Downloader = Depends(get_downloader_service),
 ):
     svc.delete_download_setting(sid=req.sid)
     return success()
 
 
-@router.post("/delete_torrent_remove_task")
+@router.post("/torrent-remove-tasks/delete")
 def delete_torrent_remove_task(
     req: DeleteTorrentRemoveTaskRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
     flag = svc.delete_torrent_remove_task(taskid=req.tid)
@@ -229,27 +249,27 @@ def delete_torrent_remove_task(
     return fail()
 
 
-@router.post("/download")
+@router.post("/tasks/add")
 def download(
     req: DownloadRequest,
-    user: str = Depends(get_current_user),
+    user: UserContext = Depends(require_permission("download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
     result = svc.download_from_search_results(
         dl_id=req.id,
         dl_dir=req.dir,
         dl_setting=req.setting,
-        user_name=user
+        user_name=user.nickname or user.username
     )
     if not result.success:
         return fail(code=-1, msg=result.message)
     return success(msg=result.message)
 
 
-@router.post("/download_link")
+@router.post("/tasks/add_link")
 def download_link(
     req: DownloadLinkRequest,
-    user: str = Depends(get_current_user),
+    user: UserContext = Depends(require_permission("download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
     result = svc.download_from_link(
@@ -264,17 +284,32 @@ def download_link(
         downloadvolumefactor=req.downloadvolumefactor,
         dl_dir=req.dl_dir,
         dl_setting=req.dl_setting,
-        user_name=user
+        user_name=user.nickname or user.username
     )
     if not result.success:
         return fail(msg=result.message)
     return success(msg=result.message)
 
 
-@router.post("/download_torrent")
+@router.post("/tasks/resolve_url")
+def resolve_download_url(
+    req: ResolveDownloadUrlRequest,
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
+    svc: DownloadService = Depends(get_download_service),
+):
+    url = svc.resolve_download_url(
+        page_url=req.page_url or "",
+        enclosure=req.enclosure
+    )
+    if not url:
+        return fail(msg="无法获取下载链接")
+    return success(data={"url": url})
+
+
+@router.post("/tasks/add_torrent")
 def download_torrent(
     req: DownloadTorrentRequest,
-    user: str = Depends(get_current_user),
+    user: UserContext = Depends(require_permission("download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
     result = svc.download_from_torrent_files_or_urls(
@@ -282,17 +317,20 @@ def download_torrent(
         urls=req.urls or [],
         dl_dir=req.dl_dir,
         dl_setting=req.dl_setting,
-        user_name=user
+        user_name=user.nickname or user.username,
+        page_url=req.page_url,
+        upload_volume_factor=req.upload_volume_factor,
+        download_volume_factor=req.download_volume_factor,
     )
     if not result.success:
         return fail(code=-1, msg=result.message)
     return success(msg=result.message)
 
 
-@router.post("/find_hardlinks")
+@router.post("/tools/hardlinks")
 def find_hardlinks(
     req: FindHardlinksRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
 ):
     files = req.files
     file_dir = req.dir
@@ -316,10 +354,10 @@ def find_hardlinks(
     return success(data=hardlinks)
 
 
-@router.post("/get_download_dirs")
+@router.post("/downloaders/dirs")
 def get_download_dirs(
     req: GetDownloadDirsRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
     site_svc: SiteService = Depends(get_site_service),
     downloader_svc: Downloader = Depends(get_downloader_service)
 ):
@@ -328,13 +366,13 @@ def get_download_dirs(
     if not sid and site:
         sid = site_svc.get_site_download_setting(site_name=site)
     dirs = downloader_svc.get_download_dirs(setting=sid)
-    return success(paths=dirs)
+    return success(data=dirs)
 
 
-@router.post("/get_download_setting")
+@router.post("/settings")
 def get_download_setting(
     req: GetDownloadSettingRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
     svc: Downloader = Depends(get_downloader_service),
 ):
     sid = req.sid
@@ -346,43 +384,65 @@ def get_download_setting(
     return success(data=download_setting)
 
 
-@router.post("/get_downloaders")
+@router.post("/downloaders")
 def get_downloaders(
     req: GetDownloadersRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
     svc: Downloader = Depends(get_downloader_service),
 ):
-    return success(detail=svc.get_downloader_conf(did=req.did))
+    return success(data=svc.get_downloader_conf(did=req.did))
 
 
-@router.post("/get_indexer_statistics")
+@router.post("/downloaders/default")
+def set_default_downloader(
+    req: SetDefaultDownloaderRequest,
+    user: str = Depends(require_permission("download:manage")),
+    svc: Downloader = Depends(get_downloader_service),
+):
+    """设置默认下载器"""
+    if not req.did:
+        return fail(msg="下载器ID不能为空")
+    if svc.set_default_downloader_id(req.did):
+        return success()
+    return fail(msg="设置失败，下载器不存在")
+
+
+@router.post("/downloaders/types")
+def get_downloader_types(
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
+):
+    """获取支持的下载器类型配置"""
+    return success(data=ModuleConf.DOWNLOADER_CONF)
+
+
+@router.post("/indexers/statistics")
 def get_indexer_statistics(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
     stats, dataset = svc.get_indexer_statistics()
-    return success(
-        data=[{"name": s.name, "total": s.total, "fail": s.fail,
-               "success": s.success, "avg": s.avg} for s in stats],
-        dataset=dataset
-    )
+    return success(data={
+        "stats": [{"name": s.name, "total": s.total, "fail": s.fail,
+                   "success": s.success, "avg": s.avg} for s in stats],
+        "dataset": dataset
+    })
 
 
-@router.post("/get_indexers")
+@router.post("/indexers")
 def get_indexers(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
     svc: IndexerService = Depends(get_indexer_service),
 ):
     indexers = svc.get_user_indexers()
-    return success(indexers=[{"id": i.id, "name": i.name} for i in indexers])
+    return success(data=[{"id": i.id, "name": i.name} for i in indexers])
 
 
-@router.post("/get_remove_torrents")
+@router.post("/torrent-remove-tasks/candidates")
 def get_remove_torrents(
     req: GetRemoveTorrentsRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
     flag, torrents = svc.get_remove_torrents(taskid=req.tid)
@@ -391,78 +451,81 @@ def get_remove_torrents(
     return success(data=torrents)
 
 
-@router.post("/get_torrent_remove_task")
+@router.post("/torrent-remove-tasks")
 def get_torrent_remove_task(
     req: GetTorrentRemoveTaskRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
-    return success(detail=svc.get_torrent_remove_tasks(taskid=req.tid))
+    return success(data=svc.get_torrent_remove_tasks(taskid=req.tid))
 
 
-@router.post("/pt_info")
+@router.post("/tasks/info")
 def pt_info(
     req: PtInfoRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
     svc: Downloader = Depends(get_downloader_service),
 ):
     torrents = svc.get_downloading_progress(ids=req.ids)
-    return success(torrents=torrents)
+    return success(data=torrents)
 
 
-@router.post("/pt_remove")
+@router.post("/tasks/remove")
 def pt_remove(
     req: PtIdRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
     svc: Downloader = Depends(get_downloader_service),
 ):
     tid = req.id
     if tid:
         svc.delete_torrents(ids=tid, delete_file=True)
-    return success(id=tid)
+    return success(data=tid)
 
 
-@router.post("/pt_start")
+@router.post("/tasks/start")
 def pt_start(
     req: PtIdRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("download:manage")),
     svc: Downloader = Depends(get_downloader_service),
 ):
     tid = req.id
     if tid:
         svc.start_torrents(ids=tid)
-    return success(id=tid)
+    return success(data=tid)
 
 
-@router.post("/pt_stop")
+@router.post("/tasks/stop")
 def pt_stop(
     req: PtIdRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("download:manage")),
     svc: Downloader = Depends(get_downloader_service),
 ):
     tid = req.id
     if tid:
         svc.stop_torrents(ids=tid)
-    return success(id=tid)
+    return success(data=tid)
 
 
-@router.post("/test_downloader")
+@router.post("/downloaders/test")
 def test_downloader(
     req: TestDownloaderRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("download:manage")),
     svc: Downloader = Depends(get_downloader_service),
 ):
     config = json.loads(req.config) if req.config else {}
-    res = svc.get_status(dtype=req.type, config=config)
-    if res:
-        return success()
-    return fail()
+    try:
+        res = svc.get_status(dtype=req.type, config=config)
+        if res:
+            return success(data={"success": True, "message": "连接成功"})
+        return success(data={"success": False, "message": "连接失败，请检查地址、端口及认证信息"})
+    except Exception as e:
+        return success(data={"success": False, "message": f"连接异常：{str(e)}"})
 
 
-@router.post("/update_download_setting")
+@router.post("/settings/update")
 def update_download_setting(
     req: UpdateDownloadSettingRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("download:manage")),
     svc: Downloader = Depends(get_downloader_service),
 ):
     svc.update_download_setting(
@@ -480,10 +543,24 @@ def update_download_setting(
     return success()
 
 
-@router.post("/update_downloader")
+@router.post("/settings/default")
+def set_default_download_setting(
+    req: SetDefaultDownloadSettingRequest,
+    user: str = Depends(require_permission("download:manage")),
+    svc: Downloader = Depends(get_downloader_service),
+):
+    """设置默认下载设置"""
+    if not req.sid:
+        return fail(msg="下载设置ID不能为空")
+    if svc.set_default_download_setting_id(req.sid):
+        return success()
+    return fail(msg="设置失败")
+
+
+@router.post("/downloaders/update")
 def update_downloader(
     req: UpdateDownloaderRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("download:manage")),
     svc: Downloader = Depends(get_downloader_service)
 ):
     did = req.did
@@ -513,10 +590,10 @@ def update_downloader(
     return success()
 
 
-@router.post("/update_torrent_remove_task")
+@router.post("/torrent-remove-tasks/save")
 def update_torrent_remove_task(
     req: UpdateTorrentRemoveTaskRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
     flag, msg = svc.update_torrent_remove_task(data=req.data)
@@ -525,20 +602,20 @@ def update_torrent_remove_task(
     return success()
 
 
-@router.post("/get_downloading")
+@router.post("/tasks")
 def get_downloading(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
     torrents = svc.get_downloading_with_media_info()
-    return success(result=torrents)
+    return success(data=torrents)
 
 
-@router.post("/truncate_blacklist")
+@router.post("/tools/blacklist/clear")
 def truncate_blacklist(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("download:manage")),
     svc: FileTransfer = Depends(get_filetransfer_service),
 ):
     svc.truncate_transfer_blacklist()

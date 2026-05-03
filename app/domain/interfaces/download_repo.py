@@ -39,6 +39,10 @@ class IDownloadHistoryRepository(Protocol):
         """根据路径查找下载历史"""
         ...
 
+    def get_download_history_by_path(self, path: str):
+        """根据路径查找下载历史（兼容旧方法名）"""
+        ...
+
     def get_by_downloader(self, downloader: str, download_id: str) -> Optional[DownloadHistoryEntity]:
         """根据下载器查找下载历史"""
         ...
