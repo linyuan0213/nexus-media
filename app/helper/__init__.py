@@ -14,7 +14,7 @@ from .rss_helper import RssHelper
 from .plugin_helper import PluginHelper
 from .drissionpage_helper import DrissionPageHelper
 from .cookiecloud_helper import CookiecloudHelper
-from .tmdb_blacklist_helper import TmdbBlacklistHelper
+
 
 # 新 Repository 层（新代码推荐使用）
 # 为向后兼容，DbHelper 仍然可用，但会委托给这些 Repository

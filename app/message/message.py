@@ -108,10 +108,17 @@ class Message(metaclass=SingletonMeta):
         # 全量客户端配置
         self._client_configs = {}
         for client_config in self.config_repo.get_message_client() or []:
-            config = json.loads(client_config.CONFIG) if client_config.CONFIG else {}
+            # 安全解析 CONFIG
+            config = {}
+            if client_config.CONFIG:
+                try:
+                    config = json.loads(client_config.CONFIG)
+                except json.JSONDecodeError:
+                    log.error(f"【Message】客户端 {client_config.NAME} 的CONFIG不是有效JSON: {client_config.CONFIG}")
             config.update({
                 "interactive": client_config.INTERACTIVE
             })
+            # 安全解析 TEMPLATES
             templates = {}
             if client_config.TEMPLATES:
                 try:
@@ -119,12 +126,28 @@ class Message(metaclass=SingletonMeta):
                 except json.JSONDecodeError:
                     log.error(f"【Message】客户端 {client_config.NAME} 的模板配置不是有效的JSON: {client_config.TEMPLATES}")
                     templates = {}
+            # 安全解析 SWITCHS（支持JSON数组或逗号分隔字符串）
+            switchs = []
+            if client_config.SWITCHS:
+                try:
+                    parsed = json.loads(client_config.SWITCHS)
+                    if isinstance(parsed, list):
+                        switchs = parsed
+                    elif isinstance(parsed, str):
+                        # JSON解析得到字符串（如旧版逗号分隔）
+                        all_keys = set(ModuleConf.MESSAGE_CONF.get('switch', {}).keys())
+                        switchs = [s.strip() for s in parsed.split(",") if s.strip() and s.strip() in all_keys]
+                except json.JSONDecodeError:
+                    # 兼容旧数据：尝试按逗号分割
+                    raw = str(client_config.SWITCHS)
+                    all_keys = set(ModuleConf.MESSAGE_CONF.get('switch', {}).keys())
+                    switchs = [s.strip() for s in raw.split(",") if s.strip() and s.strip() in all_keys]
             client_conf = {
                 "id": client_config.ID,
                 "name": client_config.NAME,
                 "type": client_config.TYPE,
                 "config": config,
-                "switchs": json.loads(client_config.SWITCHS) if client_config.SWITCHS else [],
+                "switchs": switchs,
                 "interactive": client_config.INTERACTIVE,
                 "enabled": client_config.ENABLED,
                 "templates": templates

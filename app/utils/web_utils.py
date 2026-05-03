@@ -151,32 +151,21 @@ class WebUtils:
         """
         搜索TMDB或豆瓣词条
         :param: keyword 关键字
-        :param: source 渠道 tmdb/douban
+        :param: source 渠道 tmdb/douban，为空时同时搜索两者
         :param: season 季号
         :param: episode 集号
         """
         if not keyword:
             return []
         mtype, key_word, season_num, episode_num, _, content = StringUtils.get_keyword_from_string(keyword)
-        if source == "tmdb":
-            use_douban_titles = False
-        elif source == "douban":
-            use_douban_titles = True
-        else:
-            use_douban_titles = Config().get_config("laboratory").get("use_douban_titles")
-        if use_douban_titles:
-            medias = DouBan().search_douban_medias(keyword=key_word,
-                                                   mtype=mtype,
-                                                   season=season_num,
-                                                   episode=episode_num,
-                                                   page=page)
-        else:
+
+        def _search_tmdb():
             meta_info = MetaInfo(title=content)
             tmdbinfos = Media().get_tmdb_infos(title=meta_info.get_name(),
                                                year=meta_info.year,
                                                mtype=mtype,
                                                page=page)
-            medias = []
+            results = []
             for tmdbinfo in tmdbinfos:
                 tmp_info = MetaInfo(title=keyword)
                 tmp_info.set_tmdb_info(tmdbinfo)
@@ -186,7 +175,32 @@ class WebUtils:
                     tmp_info.title = "%s 第%s季" % (tmp_info.title, cn2an.an2cn(meta_info.begin_season, mode='low'))
                 if tmp_info.begin_episode:
                     tmp_info.title = "%s 第%s集" % (tmp_info.title, meta_info.begin_episode)
-                medias.append(tmp_info)
+                results.append(tmp_info)
+            return results
+
+        def _search_douban():
+            return DouBan().search_douban_medias(keyword=key_word,
+                                                 mtype=mtype,
+                                                 season=season_num,
+                                                 episode=episode_num,
+                                                 page=page)
+
+        if source == "tmdb":
+            medias = _search_tmdb()
+        elif source == "douban":
+            medias = _search_douban()
+        else:
+            tmdb_medias = _search_tmdb()
+            douban_medias = _search_douban()
+            seen = set()
+            medias = []
+            for media in tmdb_medias + douban_medias:
+                key = (str(media.title or '').lower().strip(),
+                       str(media.year or ''),
+                       str(media.type.value if media.type else ''))
+                if key not in seen:
+                    seen.add(key)
+                    medias.append(media)
         return medias
 
 
@@ -277,6 +291,20 @@ def mediainfo_dict(media_info):
         "cn_name": media_info.cn_name,
         "en_name": media_info.en_name,
         "douban_id": media_info.douban_id,
+        "org_string": media_info.org_string,
+        "rev_string": media_info.rev_string,
+        "ignored_words": media_info.ignored_words or [],
+        "replaced_words": media_info.replaced_words or [],
+        "offset_words": media_info.offset_words or [],
+        "resource_type": media_info.resource_type,
+        "resource_effect": media_info.resource_effect,
+        "resource_pix": media_info.resource_pix,
+        "resource_team": media_info.resource_team,
+        "video_encode": media_info.video_encode,
+        "audio_encode": media_info.audio_encode,
+        "category": media_info.category,
+        "customization": media_info.customization,
+        "part": media_info.part,
     }
 
 

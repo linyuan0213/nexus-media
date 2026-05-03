@@ -2,7 +2,8 @@ from app.db.repositories.plugin_repo_adapter import TmdbBlacklistRepositoryAdapt
 from app.utils.types import MediaType
 from app.utils.cache_system import get_cache_manager
 
-class TmdbBlacklistHelper:
+
+class TmdbBlacklistService:
     def __init__(self):
         self._db = TmdbBlacklistRepositoryAdapter()
         self._media = None
@@ -69,7 +70,7 @@ class TmdbBlacklistHelper:
             mtype = MediaType.MOVIE
         else:
             mtype = MediaType.UNKNOWN
-        
+
         from app.media.media import Media
         from app.media.meta.metainfo import MetaInfo
         if not self._media:
