@@ -64,6 +64,7 @@ class AuthService:
         return UserContext(
             user_id=user.ID,
             username=user.USERNAME,
+            nickname=getattr(user, 'NICKNAME', None) or None,
             level=level,
             permissions=permissions,
             is_superadmin=is_superadmin
@@ -81,6 +82,7 @@ class AuthService:
             "sub": str(user_ctx.user_id),
             "user_id": user_ctx.user_id,
             "username": user_ctx.username,
+            "nickname": user_ctx.nickname,
             "level": user_ctx.level,
             "permissions": user_ctx.permissions,
             "is_superadmin": user_ctx.is_superadmin,
@@ -139,6 +141,7 @@ class AuthService:
             ctx = UserContext(
                 user_id=user_id,
                 username=getattr(user, 'USERNAME', ''),
+                nickname=getattr(user, 'NICKNAME', None) or None,
                 level=level,
                 permissions=permissions,
                 is_superadmin=is_superadmin
@@ -161,6 +164,7 @@ class AuthService:
             return UserContext(
                 user_id=payload.get("user_id", 0),
                 username=payload.get("username", ""),
+                nickname=payload.get("nickname", None),
                 level=payload.get("level", 0),
                 permissions=payload.get("permissions", []),
                 is_superadmin=payload.get("is_superadmin", False)

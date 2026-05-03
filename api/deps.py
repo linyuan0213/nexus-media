@@ -118,6 +118,7 @@ def _extract_user_ctx_from_session(request: Request) -> Optional[UserContext]:
         return UserContext(
             user_id=user_id,
             username=getattr(user, 'USERNAME', ''),
+            nickname=getattr(user, 'NICKNAME', None) or None,
             level=level,
             permissions=permissions,
             is_superadmin=is_superadmin
@@ -202,6 +203,44 @@ def require_permission(permission: str):
             )
         return user
     return checker
+
+
+def require_any_permission(*permissions: str):
+    """
+    权限检查装饰器工厂（满足任一权限即可）
+    用法: user = Depends(require_any_permission("download:view", "download:manage"))
+    """
+    def checker(user: UserContext = Depends(get_current_user)) -> UserContext:
+        if user.is_superadmin:
+            return user
+        if any(p in user.permissions for p in permissions):
+            return user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"权限不足，需要以下任一权限: {', '.join(permissions)}"
+        )
+    return checker
+
+
+def require_all_permissions(*permissions: str):
+    """
+    权限检查装饰器工厂（需满足所有权限）
+    用法: user = Depends(require_all_permissions("user:view", "user:update"))
+    """
+    def checker(user: UserContext = Depends(get_current_user)) -> UserContext:
+        if user.is_superadmin:
+            return user
+        missing = [p for p in permissions if p not in user.permissions]
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"权限不足，缺少: {', '.join(missing)}"
+            )
+        return user
+    return checker
+
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -330,6 +369,12 @@ def get_scheduler_service():
     return SchedulerService()
 
 
+def get_system_scheduler_service():
+    """获取系统调度器服务实例（用于启动后台服务）"""
+    from app.services.system_service import SchedulerService
+    return SchedulerService()
+
+
 def get_filter_service():
     """获取过滤服务实例"""
     from app.services.filter_service import FilterService
@@ -376,6 +421,12 @@ def get_message_sender_service():
     """获取消息发送服务实例"""
     from app.services.system_service import MessageSenderService
     return MessageSenderService()
+
+
+def get_system_info_service():
+    """获取系统信息服务实例"""
+    from app.services.system_service import SystemInfoService
+    return SystemInfoService()
 
 
 def get_backup_restore_service():
@@ -432,10 +483,10 @@ def get_searcher_service():
     return Searcher()
 
 
-def get_tmdb_blacklist_helper():
-    """获取 TMDB 黑名单助手实例"""
-    from app.helper.tmdb_blacklist_helper import TmdbBlacklistHelper
-    return TmdbBlacklistHelper()
+def get_tmdb_blacklist_service():
+    """获取 TMDB 黑名单服务实例"""
+    from app.services.tmdb_blacklist_service import TmdbBlacklistService
+    return TmdbBlacklistService()
 
 
 def get_progress_helper():

@@ -8,6 +8,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.schemas.auth import TokenPair, UserContext, LoginResponse
 from app.services.auth_service import AuthService
+from app.services.rbac_service import rbac_service
 from api.deps import get_current_user, get_current_user_optional
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
@@ -93,7 +94,7 @@ async def logout(response: Response, user: UserContext = Depends(get_current_use
     登出，清除 Refresh Token Cookie。
     """
     response.delete_cookie("refresh_token")
-    return {"code": 0, "success": True, "message": "已登出"}
+    return {"code": 0, "data": True, "message": "已登出"}
 
 
 @router.get("/me")
@@ -101,8 +102,23 @@ async def get_current_user_info(user: UserContext = Depends(get_current_user)):
     """
     获取当前登录用户信息。
     兼容测试中的字符串 override（绞杀期过渡）。
+    返回统一格式 { code: 0, data: {...} } 以适配前端拦截器。
     """
     if isinstance(user, str):
-        return {"username": user, "user_id": 0, "level": 0,
-                "permissions": [], "is_superadmin": False}
-    return user
+        return {"code": 0, "data": {"username": user, "user_id": 0, "level": 0,
+                "permissions": [], "is_superadmin": False, "roles": []}}
+    roles = rbac_service.get_user_roles(user.user_id)
+    user_detail = rbac_service.get_user_by_id(user.user_id)
+    avatar = user_detail.AVATAR if user_detail else None
+    email = user_detail.EMAIL if user_detail else None
+    return {"code": 0, "data": {
+        "user_id": user.user_id,
+        "username": user.username,
+        "nickname": user.nickname,
+        "email": email,
+        "avatar": avatar,
+        "level": user.level,
+        "permissions": user.permissions,
+        "is_superadmin": user.is_superadmin,
+        "roles": [role.role_name for role in roles] if roles else [],
+    }}

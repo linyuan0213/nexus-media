@@ -85,8 +85,8 @@ class TestAuthRouter:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["username"] == "testuser"
-        assert data["user_id"] == 1
+        assert data["data"]["username"] == "testuser"
+        assert data["data"]["user_id"] == 1
 
     @patch("api.routers.auth.AuthService.authenticate")
     @patch("api.routers.auth.AuthService.refresh_access_token")
@@ -142,7 +142,7 @@ class TestAuthRouter:
             headers={"Authorization": f"Bearer {token}"}
         )
         assert resp.status_code == 200
-        assert resp.json()["success"] is True
+        assert resp.json()["data"] is True
 
     @patch("api.deps.AuthService.verify_token")
     def test_jwt_auth_flow(self, mock_verify):
@@ -159,4 +159,4 @@ class TestAuthRouter:
             headers={"Authorization": "Bearer fake_jwt_token"}
         )
         assert resp.status_code == 200
-        assert resp.json()["username"] == "jwtuser"
+        assert resp.json()["data"]["username"] == "jwtuser"
