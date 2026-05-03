@@ -56,17 +56,32 @@ class MediaInfoService:
             return False, None, ""
         if not str(mtype).upper() == "MOV":
             title = "%s (%s)" % (title, year) if year else title
+        # 豆瓣/BGM ID 格式无法直接匹配订阅表的 tmdbid，传 None 让 subscribe 用 title+year 匹配
+        subscribe_mediaid = mediaid
+        if mediaid and (str(mediaid).startswith("DB:") or str(mediaid).startswith("BGM:")):
+            subscribe_mediaid = None
         favor = self._media_server.check_item_exists(
             mtype=mtype, title=title, year=year, tmdbid=mediaid)
         rssid = self._subscribe.get_subscribe_id(
             mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
-            title=title, year=year, tmdbid=mediaid)
+            title=title, year=year, tmdbid=subscribe_mediaid)
+        if not rssid:
+            rssid = self._subscribe.get_subscribe_id(
+                mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
+                title=title, year=year, tmdbid=None)
+        if not rssid:
+            # 年份可能不一致（如豆瓣 2025 vs 订阅 2026），尝试忽略年份仅按标题匹配
+            rssid = self._subscribe.get_subscribe_id(
+                mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
+                title=title, year=None, tmdbid=None)
         if rssid:
             if str(rssid).find('\n') != -1:
                 _, rssid = str(rssid).split("\n")
         else:
             rssid = ""
-        return True if favor else False, rssid, ""
+        # fav 语义："2"=已入库, "1"=已订阅, ""=无
+        fav = "2" if favor else ("1" if rssid else "")
+        return fav, rssid, ""
 
     def get_season_episodes(self, tmdbid, title, year, season) -> SeasonEpisodesResultDTO:
         """查询 TMDB 剧集情况并检查媒体服务器存在状态"""
@@ -220,7 +235,17 @@ class MediaInfoService:
     def search_media_infos(self, keyword, source, page) -> List[dict]:
         """搜索媒体词条"""
         medias = WebUtils.search_media_infos(keyword=keyword, source=source, page=page)
-        return [media.to_dict() for media in medias]
+        results = []
+        for media in medias:
+            d = media.to_dict()
+            # 图片 URL 统一走本地代理
+            for img_key in ['image', 'poster', 'backdrop']:
+                if d.get(img_key):
+                    d[img_key] = ImageProxyHelper.get_proxy_image_url(
+                        d[img_key], use_proxy=True
+                    )
+            results.append(d)
+        return results
 
     def get_movie_calendar(self, tid, rssid) -> Optional[dict]:
         """查询电影上映日期"""
@@ -383,17 +408,33 @@ class MediaRecommendationService:
             return False, None, ""
         if not str(mtype).upper() == "MOV":
             title = "%s (%s)" % (title, year) if year else title
+        # 豆瓣/BGM ID 格式无法直接匹配订阅表的 tmdbid，传 None 让 subscribe 用 title+year 匹配
+        subscribe_mediaid = mediaid
+        if mediaid and (str(mediaid).startswith("DB:") or str(mediaid).startswith("BGM:")):
+            subscribe_mediaid = None
         favor = self._media_server.check_item_exists(
             mtype=mtype, title=title, year=year, tmdbid=mediaid)
+        # 订阅查询：先尝试 mediaid（TMDB ID）+ year，再尝试 title+year，最后 title only（处理年份差异）
         rssid = self._subscribe.get_subscribe_id(
             mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
-            title=title, year=year, tmdbid=mediaid)
+            title=title, year=year, tmdbid=subscribe_mediaid)
+        if not rssid:
+            rssid = self._subscribe.get_subscribe_id(
+                mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
+                title=title, year=year, tmdbid=None)
+        if not rssid:
+            # 年份可能不一致（如豆瓣 2025 vs 订阅 2026），尝试忽略年份仅按标题匹配
+            rssid = self._subscribe.get_subscribe_id(
+                mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
+                title=title, year=None, tmdbid=None)
         if rssid:
             if str(rssid).find('\n') != -1:
                 _, rssid = str(rssid).split("\n")
         else:
             rssid = ""
-        return True if favor else False, rssid, ""
+        # fav 语义："2"=已入库, "1"=已订阅, ""=无
+        fav = "2" if favor else ("1" if rssid else "")
+        return fav, rssid, ""
 
     def get_recommend_items(self, data: dict) -> List[dict]:
         """
@@ -478,6 +519,16 @@ class MediaRecommendationService:
                 mtype=res.get("type"), title=res.get("title"),
                 year=res.get("year"), mediaid=res.get("id"))
             res.update({'fav': fav, 'rssid': rssid})
+
+        # 统一转换图片URL为本地代理路径
+        try:
+            from app.helper.image_proxy_helper import ImageProxyHelper
+            for res in res_list:
+                if res.get('image'):
+                    res['image'] = ImageProxyHelper.get_proxy_image_url(res['image'], use_proxy=True)
+        except Exception:
+            pass
+
         return res_list
 
     @staticmethod
@@ -517,17 +568,31 @@ class SearchResultService:
             return False, None, ""
         if not str(mtype).upper() == "MOV":
             title = "%s (%s)" % (title, year) if year else title
+        subscribe_mediaid = mediaid
+        if mediaid and (str(mediaid).startswith("DB:") or str(mediaid).startswith("BGM:")):
+            subscribe_mediaid = None
         favor = self._media_server.check_item_exists(
             mtype=mtype, title=title, year=year, tmdbid=mediaid)
         rssid = self._subscribe.get_subscribe_id(
             mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
-            title=title, year=year, tmdbid=mediaid)
+            title=title, year=year, tmdbid=subscribe_mediaid)
+        if not rssid:
+            rssid = self._subscribe.get_subscribe_id(
+                mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
+                title=title, year=year, tmdbid=None)
+        if not rssid:
+            # 年份可能不一致（如豆瓣 2025 vs 订阅 2026），尝试忽略年份仅按标题匹配
+            rssid = self._subscribe.get_subscribe_id(
+                mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
+                title=title, year=None, tmdbid=None)
         if rssid:
             if str(rssid).find('\n') != -1:
                 _, rssid = str(rssid).split("\n")
         else:
             rssid = ""
-        return True if favor else False, rssid, ""
+        # fav 语义："2"=已入库, "1"=已订阅, ""=无
+        fav = "2" if favor else ("1" if rssid else "")
+        return fav, rssid, ""
 
     def group_search_results(self, search_results: list) -> MediaSearchResultDTO:
         """
@@ -586,11 +651,17 @@ class SearchResultService:
                 if item.TMDBID:
                     fav, rssid, _ = self._get_media_exists_info(
                         mtype=mtype, title=item.TITLE, year=item.YEAR, mediaid=item.TMDBID)
+                poster_url = item.POSTER
+                try:
+                    from app.helper.image_proxy_helper import ImageProxyHelper
+                    poster_url = ImageProxyHelper.get_proxy_image_url(item.POSTER, use_proxy=True)
+                except Exception:
+                    pass
                 SearchResults[title_string] = {
                     "key": item.ID, "title": item.TITLE, "year": item.YEAR,
-                    "type_key": mtype, "image": item.IMAGE, "type": media_type,
-                    "vote": item.VOTE, "tmdbid": item.TMDBID, "backdrop": item.IMAGE,
-                    "poster": item.POSTER, "overview": item.OVERVIEW,
+                    "type_key": mtype, "image": poster_url, "type": media_type,
+                    "vote": item.VOTE, "tmdbid": item.TMDBID, "backdrop": poster_url,
+                    "poster": poster_url, "overview": item.OVERVIEW,
                     "fav": fav, "rssid": rssid,
                     "torrent_dict": {
                         SE_key: {
@@ -930,6 +1001,122 @@ class MediaFileService:
 
     def __init__(self):
         pass
+
+    def get_dir_list(self, in_dir: str) -> Tuple[bool, list, str]:
+        """获取目录列表"""
+        import os
+        from app.utils import SystemUtils
+        from app.utils.types import OsType
+
+        result = []
+        try:
+            if not in_dir or in_dir == "/":
+                if SystemUtils.get_system() == OsType.WINDOWS:
+                    partitions = SystemUtils.get_windows_drives()
+                    if partitions:
+                        for p in partitions:
+                            result.append({"name": p, "path": p, "is_dir": True})
+                    else:
+                        for f in os.listdir("C:/"):
+                            ff = os.path.join("C:/", f)
+                            result.append({"name": f, "path": ff.replace("\\", "/"), "is_dir": os.path.isdir(ff)})
+                else:
+                    for f in os.listdir("/"):
+                        ff = os.path.join("/", f)
+                        result.append({"name": f, "path": ff.replace("\\", "/"), "is_dir": os.path.isdir(ff)})
+            else:
+                d = os.path.normpath(in_dir)
+                if not os.path.isdir(d):
+                    d = os.path.dirname(d)
+                for f in os.listdir(d):
+                    ff = os.path.join(d, f)
+                    is_dir = os.path.isdir(ff)
+                    item = {"name": f, "path": ff.replace("\\", "/"), "is_dir": is_dir}
+                    try:
+                        st = os.stat(ff)
+                        item["mtime"] = st.st_mtime
+                        item["ctime"] = st.st_ctime
+                    except (OSError, IOError):
+                        item["mtime"] = None
+                        item["ctime"] = None
+                    if not is_dir:
+                        item["ext"] = os.path.splitext(f)[1][1:]
+                        try:
+                            item["size"] = os.path.getsize(ff)
+                        except (OSError, IOError):
+                            item["size"] = None
+                    result.append(item)
+        except Exception as e:
+            return False, [], str(e)
+        return True, result, ""
+
+    def get_library_paths(self, media: dict, sync_svc, downloader_svc=None) -> dict:
+        """获取媒体库目录 + 同步源目录"""
+        import os
+        from app.db.models import CONFIGSYNCPATHS
+
+        seen = set()
+
+        def add_path(path: str, label: str, ptype: str):
+            if not path:
+                return None
+            norm = path.replace("\\", "/").rstrip("/")
+            if norm in seen:
+                return None
+            seen.add(norm)
+            name = os.path.basename(norm) or label
+            return {"name": name, "path": norm, "type": ptype}
+
+        library_paths = []
+        movie_paths = media.get('movie_path') or []
+        if not isinstance(movie_paths, list):
+            movie_paths = [movie_paths] if movie_paths else []
+        tv_paths = media.get('tv_path') or []
+        if not isinstance(tv_paths, list):
+            tv_paths = [tv_paths] if tv_paths else []
+        anime_paths = media.get('anime_path') or []
+        if not isinstance(anime_paths, list):
+            anime_paths = [anime_paths] if anime_paths else []
+
+        for p in movie_paths:
+            item = add_path(p, "电影", "movie")
+            if item:
+                library_paths.append(item)
+        for p in tv_paths:
+            item = add_path(p, "电视剧", "tv")
+            if item:
+                library_paths.append(item)
+        for p in anime_paths:
+            item = add_path(p, "动漫", "anime")
+            if item:
+                library_paths.append(item)
+
+        sync_source_paths = []
+        try:
+            sync_confs = sync_svc.get_sync_paths()
+            if isinstance(sync_confs, dict):
+                for sp in sync_confs.values():
+                    src = sp.get("from") if isinstance(sp, dict) else None
+                    item = add_path(src, "同步源目录", "sync")
+                    if item:
+                        sync_source_paths.append(item)
+        except Exception:
+            pass
+
+        default_path = media.get('media_default_path')
+        if not default_path:
+            if library_paths:
+                default_path = library_paths[0]["path"]
+            elif sync_source_paths:
+                default_path = sync_source_paths[0]["path"]
+            else:
+                default_path = os.path.expanduser("~").replace("\\", "/")
+
+        return {
+            "library_paths": library_paths,
+            "sync_source_paths": sync_source_paths,
+            "default_path": default_path,
+        }
 
     def download_subtitle(self, path: str, name: str) -> Tuple[bool, str]:
         """下载字幕"""

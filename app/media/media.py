@@ -5,11 +5,12 @@ import random
 import re
 import traceback
 from functools import lru_cache
+from typing import Optional
 
 import zhconv
 from lxml import etree
 
-from app.helper.tmdb_blacklist_helper import TmdbBlacklistHelper
+from app.services.tmdb_blacklist_service import TmdbBlacklistService
 import log
 from app.helper.openai_helper import OpenAiHelper
 from app.media.meta.metainfo import MetaInfo
@@ -98,7 +99,7 @@ class Media:
             self._rmt_match_mode = MatchMode.NORMAL
         
         self.redis_cache = TMDBCache(get_cache_manager().get("tmdb"))
-        self.blacklist = TmdbBlacklistHelper()
+        self.blacklist = TmdbBlacklistService()
 
     def __set_language(self, language: str = ""):
         """
@@ -943,7 +944,7 @@ class Media:
                                 tmdb_info=None,
                                 media_type=None,
                                 season=None,
-                                episode_format: EpisodeFormat = None,
+                                episode_format: Optional[EpisodeFormat] = None,
                                 language=None,
                                 chinese=True,
                                 append_to_response=None):

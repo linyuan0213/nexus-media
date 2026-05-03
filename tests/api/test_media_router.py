@@ -13,6 +13,7 @@ from api.deps import (
     get_media_recommendation_service,
     get_searcher_service,
     get_search_result_service,
+    get_tmdb_blacklist_service,
     get_transfer_history_service,
 )
 from api.main import app
@@ -37,7 +38,7 @@ class TestMediaRouter:
         mock_svc = self._mock_media_file()
         mock_svc.download_subtitle.return_value = (True, "下载成功")
         try:
-            resp = client.post("/api/media/download_subtitle", json={
+            resp = client.post("/api/media/subtitle/download", json={
                 "path": "/movie", "name": "test.mkv"
             })
             assert resp.status_code == 200
@@ -50,7 +51,7 @@ class TestMediaRouter:
         mock_svc = self._mock_media_file()
         mock_svc.download_subtitle.return_value = (False, "失败")
         try:
-            resp = client.post("/api/media/download_subtitle", json={
+            resp = client.post("/api/media/subtitle/download", json={
                 "path": "/movie", "name": "test.mkv"
             })
             assert resp.status_code == 200
@@ -62,7 +63,7 @@ class TestMediaRouter:
         mock_svc = self._mock_media_file()
         mock_svc.scrap_media_path.return_value = "刮削完成"
         try:
-            resp = client.post("/api/media/media_path_scrap", json={"path": "/movie"})
+            resp = client.post("/api/media/scrap", json={"path": "/movie"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -72,7 +73,7 @@ class TestMediaRouter:
         mock_svc = self._mock_media_file()
         mock_svc.scrap_media_path.return_value = "请配置媒体库"
         try:
-            resp = client.post("/api/media/media_path_scrap", json={"path": "/movie"})
+            resp = client.post("/api/media/scrap", json={"path": "/movie"})
             assert resp.status_code == 200
             assert resp.json()["code"] == -1
         finally:
@@ -81,7 +82,7 @@ class TestMediaRouter:
     def test_save_user_script(self):
         mock_svc = self._mock_media_file()
         try:
-            resp = client.post("/api/media/save_user_script", json={
+            resp = client.post("/api/media/script/save", json={
                 "javascript": "alert(1)", "css": "body{}"
             })
             assert resp.status_code == 200
@@ -94,12 +95,12 @@ class TestMediaRouter:
         mock_svc = self._mock_media_file()
         mock_svc.get_category_config.return_value = (True, "config text")
         try:
-            resp = client.post("/api/media/get_category_config", json={
+            resp = client.post("/api/media/category/config", json={
                 "category_name": "movie"
             })
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["text"] == "config text"
+            assert resp.json()["data"] == "config text"
         finally:
             self._teardown_media_file()
 
@@ -107,7 +108,7 @@ class TestMediaRouter:
         mock_svc = self._mock_media_file()
         mock_svc.update_category_config.return_value = "保存成功"
         try:
-            resp = client.post("/api/media/update_category_config", json={
+            resp = client.post("/api/media/category/config/update", json={
                 "config": "new config"
             })
             assert resp.status_code == 200
@@ -131,12 +132,12 @@ class TestMediaRouter:
         result.episodes = [{"episode": 1}]
         mock_svc.get_season_episodes.return_value = result
         try:
-            resp = client.post("/api/media/get_season_episodes", json={
+            resp = client.post("/api/media/season/episodes", json={
                 "tmdbid": 123, "title": "t", "year": "2023", "season": 1
             })
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["episodes"][0]["episode"] == 1
+            assert resp.json()["data"][0]["episode"] == 1
         finally:
             self._teardown_media_info()
 
@@ -144,12 +145,12 @@ class TestMediaRouter:
         mock_svc = self._mock_media_info()
         mock_svc.get_tvseason_list.return_value = [{"season": 1}]
         try:
-            resp = client.post("/api/media/get_tvseason_list", json={
+            resp = client.post("/api/media/season/list", json={
                 "tmdbid": 123, "title": "t"
             })
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["seasons"][0]["season"] == 1
+            assert resp.json()["data"][0]["season"] == 1
         finally:
             self._teardown_media_info()
 
@@ -171,12 +172,12 @@ class TestMediaRouter:
         result.seasons = None
         mock_svc.get_media_info_detail.return_value = result
         try:
-            resp = client.post("/api/media/media_info", json={
+            resp = client.post("/api/media/info", json={
                 "id": "123", "type": "MOV", "title": "Test"
             })
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["title"] == "Test"
+            assert resp.json()["data"]["title"] == "Test"
         finally:
             self._teardown_media_info()
 
@@ -184,8 +185,8 @@ class TestMediaRouter:
         mock_svc = self._mock_media_info()
         mock_svc.get_media_person.return_value = {"name": "actor"}
         try:
-            resp = client.post("/api/media/media_person", json={
-                "tmdbid": 123, "type": "MOV", "keyword": None
+            resp = client.post("/api/media/person", json={
+                "tmdbid": "123", "type": "MOV", "keyword": ""
             })
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
@@ -196,7 +197,7 @@ class TestMediaRouter:
     def test_media_person_no_params(self):
         mock_svc = self._mock_media_info()
         try:
-            resp = client.post("/api/media/media_person", json={})
+            resp = client.post("/api/media/person", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
         finally:
@@ -206,8 +207,8 @@ class TestMediaRouter:
         mock_svc = self._mock_media_info()
         mock_svc.get_media_recommendations.return_value = [{"id": 1}]
         try:
-            resp = client.post("/api/media/media_recommendations", json={
-                "tmdbid": 123, "type": "MOV", "page": 1
+            resp = client.post("/api/media/recommendations", json={
+                "tmdbid": "123", "type": "MOV", "page": 1
             })
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
@@ -218,8 +219,8 @@ class TestMediaRouter:
         mock_svc = self._mock_media_info()
         mock_svc.get_media_similar.return_value = [{"id": 1}]
         try:
-            resp = client.post("/api/media/media_similar", json={
-                "tmdbid": 123, "type": "MOV", "page": 1
+            resp = client.post("/api/media/similar", json={
+                "tmdbid": "123", "type": "MOV", "page": 1
             })
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
@@ -230,12 +231,12 @@ class TestMediaRouter:
         mock_svc = self._mock_media_info()
         mock_svc.get_movie_calendar.return_value = {"date": "2023-01-01"}
         try:
-            resp = client.post("/api/media/movie_calendar_data", json={
+            resp = client.post("/api/media/calendar/movie", json={
                 "id": "123", "rssid": "r1"
             })
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["date"] == "2023-01-01"
+            assert resp.json()["data"]["date"] == "2023-01-01"
         finally:
             self._teardown_media_info()
 
@@ -256,7 +257,7 @@ class TestMediaRouter:
         mock_svc = self._mock_media_info()
         mock_svc.get_person_medias.return_value = [{"id": 1}]
         try:
-            resp = client.post("/api/media/person_medias", json={
+            resp = client.post("/api/media/person/medias", json={
                 "personid": 123, "type": "MOV", "page": 1
             })
             assert resp.status_code == 200
@@ -268,12 +269,12 @@ class TestMediaRouter:
         mock_svc = self._mock_media_info()
         mock_svc.get_tv_calendar.return_value = [{"date": "2023-01-01"}]
         try:
-            resp = client.post("/api/media/tv_calendar_data", json={
+            resp = client.post("/api/media/calendar/tv", json={
                 "id": "123", "season": 1, "name": "Test", "rssid": "r1"
             })
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["events"][0]["date"] == "2023-01-01"
+            assert resp.json()["data"][0]["date"] == "2023-01-01"
         finally:
             self._teardown_media_info()
 
@@ -281,8 +282,8 @@ class TestMediaRouter:
         mock_svc = self._mock_media_info()
         mock_svc.get_media_detail.return_value = {"title": "Test"}
         try:
-            resp = client.post("/api/media/media_detail", json={
-                "tmdbid": 123, "type": "MOV"
+            resp = client.post("/api/media/detail", json={
+                "tmdbid": "123", "type": "MOV"
             })
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
@@ -294,12 +295,12 @@ class TestMediaRouter:
         mock_svc = self._mock_media_info()
         mock_svc.search_media_infos.return_value = [{"id": 1}]
         try:
-            resp = client.post("/api/media/search_media_infos", json={
+            resp = client.post("/api/media/search", json={
                 "keyword": "test", "searchtype": "tmdb"
             })
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["result"][0]["id"] == 1
+            assert resp.json()["data"][0]["id"] == 1
         finally:
             self._teardown_media_info()
 
@@ -317,17 +318,17 @@ class TestMediaRouter:
         mock_svc = self._mock_media_library()
         mock_svc.get_sync_state.return_value = "同步中"
         try:
-            resp = client.post("/api/media/mediasync_state", json={})
+            resp = client.post("/api/media/sync/state", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["text"] == "同步中"
+            assert resp.json()["data"] == "同步中"
         finally:
             self._teardown_media_library()
 
     def test_start_mediasync(self):
         mock_svc = self._mock_media_library()
         try:
-            resp = client.post("/api/media/start_mediasync", json={
+            resp = client.post("/api/media/sync/start", json={
                 "librarys": ["lib1"]
             })
             assert resp.status_code == 200
@@ -340,10 +341,10 @@ class TestMediaRouter:
         mock_svc = self._mock_media_library()
         mock_svc.get_media_count.return_value = {"movie": 10}
         try:
-            resp = client.post("/api/media/get_library_mediacount", json={})
+            resp = client.post("/api/media/library/count", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["movie"] == 10
+            assert resp.json()["data"]["movie"] == 10
         finally:
             self._teardown_media_library()
 
@@ -351,10 +352,10 @@ class TestMediaRouter:
         mock_svc = self._mock_media_library()
         mock_svc.get_play_history.return_value = [{"title": "t"}]
         try:
-            resp = client.post("/api/media/get_library_playhistory", json={})
+            resp = client.post("/api/media/library/history", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["result"][0]["title"] == "t"
+            assert resp.json()["data"][0]["title"] == "t"
         finally:
             self._teardown_media_library()
 
@@ -367,10 +368,10 @@ class TestMediaRouter:
         result.total_space = "200G"
         mock_svc.get_space_info.return_value = result
         try:
-            resp = client.post("/api/media/get_library_spacesize", json={})
+            resp = client.post("/api/media/library/space", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["UsedPercent"] == 50
+            assert resp.json()["data"]["UsedPercent"] == 50
         finally:
             self._teardown_media_library()
 
@@ -387,7 +388,7 @@ class TestMediaRouter:
     def test_clear_history(self):
         mock_svc = self._mock_transfer_history()
         try:
-            resp = client.post("/api/media/clear_history", json={})
+            resp = client.post("/api/media/history/clear", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             mock_svc.clear_history.assert_called_once()
@@ -404,12 +405,12 @@ class TestMediaRouter:
         result.current_page = 1
         mock_svc.get_transfer_history_page.return_value = result
         try:
-            resp = client.post("/api/media/get_transfer_history", json={
+            resp = client.post("/api/media/transfer/history", json={
                 "keyword": "", "page": 1, "pagenum": 30
             })
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["total"] == 10
+            assert resp.json()["data"]["total"] == 10
         finally:
             self._teardown_transfer_history()
 
@@ -417,10 +418,10 @@ class TestMediaRouter:
         mock_svc = self._mock_transfer_history()
         mock_svc.get_transfer_statistics.return_value = {"count": 5}
         try:
-            resp = client.post("/api/media/get_transfer_statistics", json={})
+            resp = client.post("/api/media/transfer/statistics", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["count"] == 5
+            assert resp.json()["data"]["count"] == 5
         finally:
             self._teardown_transfer_history()
 
@@ -428,10 +429,10 @@ class TestMediaRouter:
         mock_svc = self._mock_transfer_history()
         mock_svc.get_unknown_list.return_value = [{"id": 1}]
         try:
-            resp = client.post("/api/media/get_unknown_list", json={})
+            resp = client.post("/api/media/unknown", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["items"][0]["id"] == 1
+            assert resp.json()["data"][0]["id"] == 1
         finally:
             self._teardown_transfer_history()
 
@@ -445,12 +446,12 @@ class TestMediaRouter:
         result.current_page = 1
         mock_svc.get_unknown_list_by_page.return_value = result
         try:
-            resp = client.post("/api/media/get_unknown_list_by_page", json={
+            resp = client.post("/api/media/unknown/paged", json={
                 "keyword": "", "page": 1, "pagenum": 30
             })
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["total"] == 5
+            assert resp.json()["data"]["total"] == 5
         finally:
             self._teardown_transfer_history()
 
@@ -458,7 +459,7 @@ class TestMediaRouter:
         mock_svc = self._mock_transfer_history()
         mock_svc.re_identify_unknown.return_value = 3
         try:
-            resp = client.post("/api/media/unidentification", json={})
+            resp = client.post("/api/media/unknown/list", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -488,10 +489,10 @@ class TestMediaRouter:
         item.SITE = "site"
         mock_svc.get_download_history.return_value = [item]
         try:
-            resp = client.post("/api/media/get_downloaded", json={"page": 1})
+            resp = client.post("/api/media/library/downloaded", json={"page": 1})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["Items"][0]["title"] == "Test"
+            assert resp.json()["data"][0]["title"] == "Test"
         finally:
             self._teardown_downloader()
 
@@ -522,10 +523,10 @@ class TestMediaRouter:
         result.result = {}
         result_svc.group_search_results.return_value = result
         try:
-            resp = client.post("/api/media/get_search_result", json={})
+            resp = client.post("/api/media/search/results", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["total"] == 10
+            assert resp.json()["data"]["total"] == 10
         finally:
             self._teardown_searcher()
             self._teardown_search_result()
@@ -544,10 +545,10 @@ class TestMediaRouter:
         mock_svc = self._mock_media_recommendation()
         mock_svc.get_recommend_items.return_value = [{"id": 1}]
         try:
-            resp = client.post("/api/media/get_recommend", json={"type": "movie"})
+            resp = client.post("/api/media/recommend", json={"type": "movie"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["Items"][0]["id"] == 1
+            assert resp.json()["data"][0]["id"] == 1
         finally:
             self._teardown_media_recommendation()
 
@@ -555,13 +556,158 @@ class TestMediaRouter:
         mock_svc = self._mock_media_recommendation()
         mock_svc.get_recommend_items.return_value = [{"id": 2}]
         try:
-            resp = client.post("/api/media/get_recommend", json={
+            resp = client.post("/api/media/recommend", json={
                 "data": {"type": "MOV", "subtype": "hm", "page": 1}
             })
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            assert resp.json()["Items"][0]["id"] == 2
+            assert resp.json()["data"][0]["id"] == 2
             mock_svc.get_recommend_items.assert_called_once_with(
                 {"type": "MOV", "subtype": "hm", "page": 1})
         finally:
             self._teardown_media_recommendation()
+
+    # ----- Dir List (file management) -----
+
+    def test_dir_list_root(self):
+        resp = client.post("/api/media/dir/list", json={"path": ""})
+        assert resp.status_code == 200
+        assert resp.json()["code"] == 0
+        assert isinstance(resp.json()["data"], list)
+
+    def test_dir_list_specific_path(self):
+        resp = client.post("/api/media/dir/list", json={"path": "/tmp"})
+        assert resp.status_code == 200
+        assert resp.json()["code"] == 0
+        assert isinstance(resp.json()["data"], list)
+
+    def test_dir_list_invalid_path(self):
+        resp = client.post("/api/media/dir/list", json={"path": "/nonexistent_path_12345"})
+        assert resp.status_code == 200
+        assert resp.json()["code"] == 0
+
+    # ----- Transfer History / Rename Module -----
+
+    def test_transfer_history(self):
+        mock_svc = self._mock_transfer_history()
+        result = MagicMock()
+        result.total = 10
+        result.result = [{"id": 1, "title": "Test"}]
+        result.total_page = 1
+        result.page_num = 30
+        result.current_page = 1
+        mock_svc.get_transfer_history_page.return_value = result
+        try:
+            resp = client.post("/api/media/transfer/history", json={
+                "keyword": "", "page": 1, "pagenum": 30
+            })
+            assert resp.status_code == 200
+            assert resp.json()["code"] == 0
+            assert resp.json()["data"]["total"] == 10
+            assert resp.json()["data"]["result"][0]["title"] == "Test"
+        finally:
+            self._teardown_transfer_history()
+
+    def test_transfer_statistics(self):
+        mock_svc = self._mock_transfer_history()
+        mock_svc.get_transfer_statistics.return_value = {
+            "Labels": ["2024-01"], "MovieNums": [5], "TvNums": [3], "AnimeNums": [2]
+        }
+        try:
+            resp = client.post("/api/media/transfer/statistics", json={})
+            assert resp.status_code == 200
+            assert resp.json()["code"] == 0
+            assert resp.json()["data"]["MovieNums"][0] == 5
+        finally:
+            self._teardown_transfer_history()
+
+    def test_unknown_paged(self):
+        mock_svc = self._mock_transfer_history()
+        result = MagicMock()
+        result.total = 5
+        result.items = [{"id": 1, "path": "/test"}]
+        result.total_page = 1
+        result.page_num = 30
+        result.current_page = 1
+        mock_svc.get_unknown_list_by_page.return_value = result
+        try:
+            resp = client.post("/api/media/unknown/paged", json={
+                "keyword": "", "page": 1, "pagenum": 30
+            })
+            assert resp.status_code == 200
+            assert resp.json()["code"] == 0
+            assert resp.json()["data"]["total"] == 5
+            assert resp.json()["data"]["items"][0]["path"] == "/test"
+        finally:
+            self._teardown_transfer_history()
+
+    def test_re_identify_unknown(self):
+        mock_svc = self._mock_transfer_history()
+        mock_svc.re_identify_unknown.return_value = 3
+        try:
+            resp = client.post("/api/media/unknown/list", json={})
+            assert resp.status_code == 200
+            assert resp.json()["code"] == 0
+            mock_svc.re_identify_unknown.assert_called_once()
+        finally:
+            self._teardown_transfer_history()
+
+    # ----- TmdbBlacklistService -----
+
+    def _mock_tmdb_blacklist(self):
+        mock_svc = MagicMock()
+        app.dependency_overrides[get_tmdb_blacklist_service] = lambda: mock_svc
+        return mock_svc
+
+    def _teardown_tmdb_blacklist(self):
+        app.dependency_overrides.pop(get_tmdb_blacklist_service, None)
+
+    def test_tmdb_blacklist_list(self):
+        mock_svc = self._mock_tmdb_blacklist()
+        mock_svc.get_blacklist.return_value = (
+            [{"id": 1, "title": "Test", "tmdb_id": "123"}], 1
+        )
+        try:
+            resp = client.get("/api/media/tmdb_blacklist/list?page=1&count=30")
+            assert resp.status_code == 200
+            assert resp.json()["code"] == 0
+            assert resp.json()["data"]["total"] == 1
+        finally:
+            self._teardown_tmdb_blacklist()
+
+    def test_tmdb_blacklist_add(self):
+        mock_svc = self._mock_tmdb_blacklist()
+        mock_svc.is_blacklisted.return_value = False
+        try:
+            resp = client.post("/api/media/tmdb_blacklist/add", json={
+                "tmdb_id": "123", "media_type": "movie"
+            })
+            assert resp.status_code == 200
+            assert resp.json()["code"] == 0
+            mock_svc.add_to_blacklist.assert_called_once()
+        finally:
+            self._teardown_tmdb_blacklist()
+
+    def test_tmdb_blacklist_delete(self):
+        mock_svc = self._mock_tmdb_blacklist()
+        mock_svc.is_blacklisted.return_value = True
+        try:
+            resp = client.post("/api/media/tmdb_blacklist/delete", json={
+                "tmdb_id": "123", "media_type": "movie"
+            })
+            assert resp.status_code == 200
+            assert resp.json()["code"] == 0
+            mock_svc.remove_from_blacklist.assert_called_once()
+        finally:
+            self._teardown_tmdb_blacklist()
+
+    def test_tmdb_blacklist_clear(self):
+        mock_svc = self._mock_tmdb_blacklist()
+        mock_svc.get_blacklist.return_value = ([1], 1)
+        try:
+            resp = client.post("/api/media/tmdb_blacklist/clear", json={})
+            assert resp.status_code == 200
+            assert resp.json()["code"] == 0
+            mock_svc.clear_blacklist.assert_called_once()
+        finally:
+            self._teardown_tmdb_blacklist()

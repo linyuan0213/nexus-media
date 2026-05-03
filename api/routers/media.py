@@ -1,19 +1,24 @@
 # -*- coding: utf-8 -*-
-from typing import List, Optional
+from typing import List, Optional, Union
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from api.deps import (
     get_current_user,
+    require_any_permission,
+    require_permission,
+    get_config_service,
     get_downloader_service,
     get_media_info_service,
     get_media_library_service,
     get_media_file_service,
     get_media_recommendation_service,
     get_searcher_service,
+    get_sync_service,
     get_transfer_history_service,
     get_search_result_service,
+    get_tmdb_blacklist_service,
 )
 from app.utils.types import MediaType, MovieTypes
 from app.services.downloader_core import DownloaderCore as Downloader
@@ -46,7 +51,7 @@ class GetSeasonEpisodesRequest(BaseModel):
 
 
 class GetTvSeasonListRequest(BaseModel):
-    tmdbid: int
+    tmdbid: Union[str, int]
     title: Optional[str] = None
 
 
@@ -64,19 +69,19 @@ class MediaPathScrapRequest(BaseModel):
 
 
 class MediaPersonRequest(BaseModel):
-    tmdbid: Optional[int] = None
+    tmdbid: Optional[str] = None
     type: Optional[str] = None
     keyword: Optional[str] = None
 
 
 class MediaRecommendationsRequest(BaseModel):
-    tmdbid: int
+    tmdbid: str
     type: Optional[str] = None
     page: Optional[int] = 1
 
 
 class MediaSimilarRequest(BaseModel):
-    tmdbid: int
+    tmdbid: str
     type: Optional[str] = None
     page: Optional[int] = 1
 
@@ -127,6 +132,10 @@ class GetTransferHistoryRequest(BaseModel):
     pagenum: Optional[int] = None
 
 
+class GetTransferStatisticsRequest(BaseModel):
+    days: Optional[int] = None
+
+
 class GetUnknownListByPageRequest(BaseModel):
     keyword: Optional[str] = None
     page: Optional[int] = None
@@ -134,7 +143,7 @@ class GetUnknownListByPageRequest(BaseModel):
 
 
 class MediaDetailRequest(BaseModel):
-    tmdbid: int
+    tmdbid: str
     type: Optional[str] = None
 
 
@@ -147,12 +156,22 @@ class UpdateCategoryConfigRequest(BaseModel):
     config: Optional[str] = None
 
 
+class DirListRequest(BaseModel):
+    path: Optional[str] = None
+    filter: Optional[str] = None
+
+
+class TmdbBlacklistRequest(BaseModel):
+    tmdb_id: Optional[str] = None
+    media_type: Optional[str] = None
+
+
 # ---------- Endpoints ----------
 
-@router.post("/download_subtitle")
+@router.post("/subtitle/download")
 def download_subtitle(
     req: DownloadSubtitleRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_permission("library:manage")),
     svc: MediaFileService = Depends(get_media_file_service),
 ):
     ok, msg = svc.download_subtitle(path=req.path, name=req.name)
@@ -161,10 +180,10 @@ def download_subtitle(
     return success(msg=msg)
 
 
-@router.post("/get_season_episodes")
+@router.post("/season/episodes")
 def get_season_episodes(
     req: GetSeasonEpisodesRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaInfoService = Depends(get_media_info_service),
 ):
     if not req.tmdbid:
@@ -173,50 +192,36 @@ def get_season_episodes(
     result = svc.get_season_episodes(
         tmdbid=req.tmdbid, title=req.title, year=req.year, season=season
     )
-    return success(episodes=result.episodes)
+    return success(data=result.episodes)
 
 
-@router.post("/get_tvseason_list")
+@router.post("/season/list")
 def get_tvseason_list(
     req: GetTvSeasonListRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaInfoService = Depends(get_media_info_service),
 ):
     seasons = svc.get_tvseason_list(tmdbid=req.tmdbid, title=req.title)
-    return success(seasons=seasons)
+    return success(data=seasons)
 
 
-@router.post("/media_info")
+@router.post("/info")
 def media_info(
     req: MediaInfoRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaInfoService = Depends(get_media_info_service),
 ):
     result = svc.get_media_info_detail(
         mediaid=req.id, mtype=req.type, title=req.title,
         year=req.year, page=req.page, rssid=req.rssid,
     )
-    return success(
-        type=result.type,
-        type_str=result.type_str,
-        page=result.page,
-        title=result.title,
-        vote_average=result.vote_average,
-        poster_path=result.poster_path,
-        release_date=result.release_date,
-        year=result.year,
-        overview=result.overview,
-        link_url=result.link_url,
-        tmdbid=result.tmdbid,
-        rssid=result.rssid,
-        seasons=result.seasons,
-    )
+    return success(data={"type":result.type, "type_str":result.type_str, "page":result.page, "title":result.title, "vote_average":result.vote_average, "poster_path":result.poster_path, "release_date":result.release_date, "year":result.year, "overview":result.overview, "link_url":result.link_url, "tmdbid":result.tmdbid, "rssid":result.rssid, "seasons":result.seasons,})
 
 
-@router.post("/media_path_scrap")
+@router.post("/scrap")
 def media_path_scrap(
     req: MediaPathScrapRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_permission("library:manage")),
     svc: MediaFileService = Depends(get_media_file_service),
 ):
     msg = svc.scrap_media_path(path=req.path)
@@ -225,10 +230,10 @@ def media_path_scrap(
     return success(msg=msg)
 
 
-@router.post("/media_person")
+@router.post("/person")
 def media_person(
     req: MediaPersonRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaInfoService = Depends(get_media_info_service),
 ):
     if not req.tmdbid and not req.keyword:
@@ -239,10 +244,10 @@ def media_person(
     return success(data=result)
 
 
-@router.post("/media_recommendations")
+@router.post("/recommendations")
 def media_recommendations(
     req: MediaRecommendationsRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaInfoService = Depends(get_media_info_service),
 ):
     if not req.tmdbid:
@@ -253,10 +258,10 @@ def media_recommendations(
     return success(data=result)
 
 
-@router.post("/media_similar")
+@router.post("/similar")
 def media_similar(
     req: MediaSimilarRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaInfoService = Depends(get_media_info_service),
 ):
     if not req.tmdbid:
@@ -267,31 +272,31 @@ def media_similar(
     return success(data=result)
 
 
-@router.post("/mediasync_state")
+@router.post("/sync/state")
 def mediasync_state(
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_permission("library:manage")),
     svc: MediaLibraryService = Depends(get_media_library_service),
 ):
     text = svc.get_sync_state()
-    return success(text=text)
+    return success(data=text)
 
 
-@router.post("/movie_calendar_data")
+@router.post("/calendar/movie")
 def movie_calendar_data(
     req: MovieCalendarRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaInfoService = Depends(get_media_info_service),
 ):
     result = svc.get_movie_calendar(tid=req.id, rssid=req.rssid)
     if not result:
         return fail(msg="无法查询到信息或上映日期不正确")
-    return success(**result)
+    return success(data=result)
 
 
 @router.post("/name_test")
 def name_test(
     req: NameTestRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaInfoService = Depends(get_media_info_service),
 ):
     if not req.name:
@@ -300,10 +305,10 @@ def name_test(
     return success(data=result)
 
 
-@router.post("/person_medias")
+@router.post("/person/medias")
 def person_medias(
     req: PersonMediasRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaInfoService = Depends(get_media_info_service),
 ):
     if not req.personid:
@@ -314,10 +319,10 @@ def person_medias(
     return success(data=result)
 
 
-@router.post("/save_user_script")
+@router.post("/script/save")
 def save_user_script(
     req: SaveUserScriptRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_permission("library:manage")),
     svc: MediaFileService = Depends(get_media_file_service),
 ):
     svc.save_user_script(
@@ -326,20 +331,20 @@ def save_user_script(
     return success(msg="保存成功")
 
 
-@router.post("/start_mediasync")
+@router.post("/sync/start")
 def start_mediasync(
     req: StartMediasyncRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_permission("library:manage")),
     svc: MediaLibraryService = Depends(get_media_library_service),
 ):
     svc.start_sync(librarys=req.librarys or [])
     return success()
 
 
-@router.post("/tv_calendar_data")
+@router.post("/calendar/tv")
 def tv_calendar_data(
     req: TvCalendarRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaInfoService = Depends(get_media_info_service),
 ):
     result = svc.get_tv_calendar(
@@ -347,169 +352,208 @@ def tv_calendar_data(
     )
     if not result:
         return fail(msg="无法查询到信息或上映日期不正确")
-    return success(events=result)
+    return success(data=result)
 
 
-@router.post("/clear_history")
+@router.post("/history/clear")
 def clear_history(
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_permission("library:manage")),
     svc: TransferHistoryService = Depends(get_transfer_history_service),
 ):
     svc.clear_history()
     return success()
 
 
-@router.post("/get_category_config")
+@router.post("/category/config")
 def get_category_config(
     req: GetCategoryConfigRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_permission("library:manage")),
     svc: MediaFileService = Depends(get_media_file_service),
 ):
     ok, result = svc.get_category_config(category_name=req.category_name)
     if not ok:
         return fail(msg=result)
-    return success(text=result)
+    return success(data=result)
 
 
-@router.post("/get_downloaded")
+@router.post("/library/downloaded")
 def get_downloaded(
     req: GetDownloadedRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: Downloader = Depends(get_downloader_service),
 ):
-    Items = svc.get_download_history(page=req.page)
+    Items = svc.get_download_history(page=req.page or 1)
     if Items:
-        return success(Items=[{
-            'id': item.TMDBID,
-            'orgid': item.TMDBID,
-            'tmdbid': item.TMDBID,
-            'title': item.TITLE,
-            'type': 'MOV' if item.TYPE == "电影" else "TV",
-            'media_type': item.TYPE,
-            'year': item.YEAR,
-            'vote': item.VOTE,
-            'image': item.POSTER,
-            'overview': item.TORRENT,
-            "date": item.DATE,
-            "site": item.SITE
-        } for item in Items])
-    return success(Items=[])
+        return success(data=[{ 'id': item.TMDBID, 'orgid': item.TMDBID, 'tmdbid': item.TMDBID, 'title': item.TITLE, 'type': 'MOV' if item.TYPE == "电影" else "TV", 'media_type': item.TYPE, 'year': item.YEAR, 'vote': item.VOTE, 'image': item.POSTER, 'overview': item.TORRENT, 'enclosure': item.ENCLOSURE, "date": item.DATE, "site": item.SITE } for item in Items])
+    return success(data=[])
 
 
-@router.post("/get_library_mediacount")
+@router.post("/library/count")
 def get_library_mediacount(
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaLibraryService = Depends(get_media_library_service),
 ):
     result = svc.get_media_count()
     if result:
-        return success(**result)
+        return success(data=result)
     return fail(code=-1, msg="媒体库服务器连接失败")
 
 
-@router.post("/get_library_playhistory")
+@router.post("/library/history")
 def get_library_playhistory(
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaLibraryService = Depends(get_media_library_service),
 ):
-    return success(result=svc.get_play_history())
+    return success(data=svc.get_play_history())
 
 
-@router.post("/get_library_spacesize")
+@router.post("/library/space")
 def get_library_spacesize(
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaLibraryService = Depends(get_media_library_service),
 ):
     result = svc.get_space_info()
-    return success(
-        UsedPercent=result.used_percent,
-        FreeSpace=result.free_space,
-        UsedSapce=result.used_space,
-        TotalSpace=result.total_space,
-    )
+    return success(data={"UsedPercent":result.used_percent, "FreeSpace":result.free_space, "UsedSapce":result.used_space, "TotalSpace":result.total_space,})
 
 
-@router.post("/get_recommend")
+@router.post("/library/home")
+def get_library_home(
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
+    svc: MediaLibraryService = Depends(get_media_library_service),
+):
+    server_success = False
+    media_counts = {}
+    try:
+        result = svc.get_media_count()
+        if result:
+            media_counts = result
+            server_success = True
+    except Exception:
+        pass
+
+    activity = []
+    try:
+        activity = svc.get_play_history() or []
+    except Exception:
+        pass
+
+    library_spaces = {}
+    try:
+        space_info = svc.get_space_info()
+        library_spaces = {
+            "UsedPercent": space_info.used_percent,
+            "FreeSpace": space_info.free_space,
+            "UsedSpace": space_info.used_space,
+            "TotalSpace": space_info.total_space,
+        }
+    except Exception:
+        pass
+
+    libraries = []
+    try:
+        libraries = svc.get_libraries() or []
+    except Exception:
+        pass
+
+    resumes = []
+    try:
+        resumes = svc.get_resume() or []
+    except Exception:
+        pass
+
+    latests = []
+    try:
+        latests = svc.get_latest() or []
+    except Exception:
+        pass
+
+    return success(data={
+        "ServerSucess": server_success,
+        "MediaCount": {
+            "MovieCount": media_counts.get("Movie", 0),
+            "SeriesCount": media_counts.get("Series", 0),
+            "SongCount": media_counts.get("Music", 0),
+            "EpisodeCount": media_counts.get("Episodes", 0),
+        },
+        "UserCount": media_counts.get("User", 0),
+        "Activitys": activity,
+        "LibrarySpaces": library_spaces,
+        "Librarys": libraries,
+        "Resumes": resumes,
+        "Latests": latests,
+    })
+
+
+@router.post("/recommend")
 def get_recommend(
     req: dict,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaRecommendationService = Depends(get_media_recommendation_service),
 ):
     # 兼容前端 ajax_post 格式 {data: params}
     data = req.get("data", req)
     res_list = svc.get_recommend_items(data)
-    return success(Items=res_list)
+    return success(data=res_list)
 
 
-@router.post("/get_search_result")
+@router.post("/search/results")
 def get_search_result(
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: Searcher = Depends(get_searcher_service),
     result_svc: SearchResultService = Depends(get_search_result_service),
 ):
     search_results = svc.get_search_results()
     result = result_svc.group_search_results(search_results)
-    return success(total=result.total, result=result.result)
+    return success(data={"total":result.total, "result":result.result})
 
 
-@router.post("/get_transfer_history")
+@router.post("/transfer/history")
 def get_transfer_history(
     req: GetTransferHistoryRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: TransferHistoryService = Depends(get_transfer_history_service),
 ):
     result = svc.get_transfer_history_page(
         search_str=req.keyword, page=req.page, page_num=req.pagenum
     )
-    return success(
-        total=result.total,
-        result=result.result,
-        totalPage=result.total_page,
-        pageNum=result.page_num,
-        currentPage=result.current_page,
-    )
+    return success(data={"total":result.total, "result":result.result, "totalPage":result.total_page, "pageNum":result.page_num, "currentPage":result.current_page,})
 
 
-@router.post("/get_transfer_statistics")
+@router.post("/transfer/statistics")
 def get_transfer_statistics(
-    current_user: str = Depends(get_current_user),
+    req: GetTransferStatisticsRequest,
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: TransferHistoryService = Depends(get_transfer_history_service),
 ):
-    result = svc.get_transfer_statistics(days=90)
-    return success(**result)
+    result = svc.get_transfer_statistics(days=req.days if req.days is not None else 90)
+    return success(data=result)
 
 
-@router.post("/get_unknown_list")
+@router.post("/unknown")
 def get_unknown_list(
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: TransferHistoryService = Depends(get_transfer_history_service),
 ):
     items = svc.get_unknown_list()
-    return success(items=items)
+    return success(data=items)
 
 
-@router.post("/get_unknown_list_by_page")
+@router.post("/unknown/paged")
 def get_unknown_list_by_page(
     req: GetUnknownListByPageRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: TransferHistoryService = Depends(get_transfer_history_service),
 ):
     result = svc.get_unknown_list_by_page(
         search_str=req.keyword, page=req.page, page_num=req.pagenum
     )
-    return success(
-        total=result.total,
-        items=result.items,
-        totalPage=result.total_page,
-        pageNum=result.page_num,
-        currentPage=result.current_page,
-    )
+    return success(data={"total":result.total, "items":result.items, "totalPage":result.total_page, "pageNum":result.page_num, "currentPage":result.current_page,})
 
 
-@router.post("/media_detail")
+@router.post("/detail")
 def media_detail(
     req: MediaDetailRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaInfoService = Depends(get_media_info_service),
 ):
     mtype = MediaType.MOVIE if req.type in MovieTypes else MediaType.TV
@@ -523,34 +567,134 @@ def media_detail(
     return success(data=result)
 
 
-@router.post("/search_media_infos")
+@router.post("/search")
 def search_media_infos(
     req: SearchMediaInfosRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaInfoService = Depends(get_media_info_service),
 ):
     if not req.keyword:
-        return success(result=[])
+        return success(data=[])
     result = svc.search_media_infos(
         keyword=req.keyword, source=req.searchtype, page=1
     )
-    return success(result=result)
+    return success(data=result)
 
 
-@router.post("/unidentification")
+@router.post("/unknown/list")
 def unidentification(
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
     svc: TransferHistoryService = Depends(get_transfer_history_service),
 ):
     svc.re_identify_unknown()
     return success()
 
 
-@router.post("/update_category_config")
+@router.post("/category/config/update")
 def update_category_config(
     req: UpdateCategoryConfigRequest,
-    current_user: str = Depends(get_current_user),
+    current_user = Depends(require_permission("library:manage")),
     svc: MediaFileService = Depends(get_media_file_service),
 ):
     msg = svc.update_category_config(text=req.config or '')
     return success(msg=msg)
+
+
+@router.post("/dir/list")
+def dir_list(
+    req: DirListRequest,
+    current_user = Depends(require_permission("library:manage")),
+    svc: MediaFileService = Depends(get_media_file_service),
+):
+    """目录列表（JSON格式，供前端文件管理器使用）"""
+    ok, result, msg = svc.get_dir_list(req.path or "")
+    if not ok:
+        return fail(msg=msg)
+    return success(data=result)
+
+
+@router.post("/library/paths")
+def get_library_paths(
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
+    svc=Depends(get_config_service),
+    sync_svc=Depends(get_sync_service),
+    media_file_svc: MediaFileService = Depends(get_media_file_service),
+):
+    """获取媒体库目录 + 同步源目录"""
+    media = svc.get_media_config()
+    result = media_file_svc.get_library_paths(
+        media=media,
+        sync_svc=sync_svc,
+    )
+    return success(data=result)
+
+
+@router.get("/tmdb_blacklist/list")
+def get_tmdb_blacklist(
+    page: int = Query(1, ge=1),
+    count: int = Query(30, ge=1, le=100),
+    s: Optional[str] = Query(""),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
+    tmdb_svc = Depends(get_tmdb_blacklist_service),
+):
+    items, total = tmdb_svc.get_blacklist(
+        tmdb_id=s if s else None, page=page, count=count
+    )
+    return success(data={
+        "items": items,
+        "total": total,
+        "page": page,
+        "count": count,
+    })
+
+
+@router.post("/tmdb_blacklist/add")
+def add_tmdb_blacklist(
+    req: TmdbBlacklistRequest,
+    current_user = Depends(require_permission("library:manage")),
+    tmdb_svc = Depends(get_tmdb_blacklist_service),
+):
+    if not tmdb_svc.is_blacklisted(req.tmdb_id, req.media_type):
+        tmdb_svc.add_to_blacklist(
+            tmdb_id=req.tmdb_id, media_type=req.media_type)
+    return success()
+
+
+@router.post("/tmdb_blacklist/delete")
+def delete_tmdb_blacklist(
+    req: TmdbBlacklistRequest,
+    current_user = Depends(require_permission("library:manage")),
+    tmdb_svc = Depends(get_tmdb_blacklist_service),
+):
+    if tmdb_svc.is_blacklisted(req.tmdb_id, req.media_type):
+        tmdb_svc.remove_from_blacklist(
+            tmdb_id=req.tmdb_id, media_type=req.media_type)
+    return success()
+
+
+@router.post("/tmdb_blacklist/clear")
+def clear_tmdb_blacklist(
+    current_user = Depends(require_permission("library:manage")),
+    tmdb_svc = Depends(get_tmdb_blacklist_service),
+):
+    if tmdb_svc.get_blacklist():
+        tmdb_svc.clear_blacklist()
+    return success()
+
+
+@router.get("/search/files")
+def search_files(
+    keyword: str = Query(..., min_length=1),
+    limit: int = Query(100, ge=1, le=500),
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
+):
+    """全局搜索媒体库 + 同步源目录中的文件（基于后台索引，O(1) 响应）"""
+    from app.services.file_index_service import FileIndexService
+    svc = FileIndexService()
+    results = svc.search(keyword, limit=limit)
+    return success(data={
+        "items": results,
+        "total": len(results),
+        "ready": svc.is_ready,
+        "indexed": svc.indexed_count,
+    })
