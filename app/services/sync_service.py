@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple
 
 import log
 from app.conf import ModuleConf
+from app.helper.thread_helper import ThreadHelper
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.media import Media
 from app.media.meta import MetaInfo
@@ -32,10 +33,12 @@ class SyncService:
     def __init__(self,
                  sync: Optional[Sync] = None,
                  filetransfer: Optional[FileTransfer] = None,
-                 media: Optional[Media] = None):
+                 media: Optional[Media] = None,
+                 threadhelper: Optional[ThreadHelper] = None):
         self._sync = sync or Sync()
         self._filetransfer = filetransfer or FileTransfer()
         self._media = media or Media()
+        self._threadhelper = threadhelper or ThreadHelper()
 
     # ---------- 同步目录校验 ----------
 
@@ -112,6 +115,11 @@ class SyncService:
 
     # ---------- 手工转移 ----------
 
+    def delete_sync_path(self, sid: int) -> SimpleResultDTO:
+        """删除同步目录"""
+        self._sync.delete_sync_path(sid)
+        return SimpleResultDTO(success=True)
+
     @staticmethod
     def resolve_rmt_mode(syncmod_raw):
         """解析同步模式为 RmtMode 枚举"""
@@ -141,6 +149,7 @@ class SyncService:
                         need_fix_all: bool = False) -> ManualTransferResultDTO:
         """
         手工转移文件
+        验证参数后提交后台线程执行，避免 API 超时
         """
         inpath = os.path.normpath(inpath)
         if outpath:
@@ -157,23 +166,20 @@ class SyncService:
                 episode_offset or ""
             ), need_fix_all)
 
+        tmdb_info = None
         if tmdbid:
             tmdb_info = self._media.get_tmdb_info(mtype=media_type, tmdbid=tmdbid)
             if not tmdb_info:
                 return ManualTransferResultDTO(success=False, message="识别失败，无法查询到TMDB信息")
-            succ_flag, ret_msg = self._filetransfer.transfer_media(
-                in_from=SyncType.MAN, in_path=inpath, rmt_mode=syncmod,
-                target_dir=outpath, tmdb_info=tmdb_info, media_type=media_type,
-                season=season, episode=episode, min_filesize=min_filesize, udf_flag=True
-            )
-        else:
-            succ_flag, ret_msg = self._filetransfer.transfer_media(
-                in_from=SyncType.MAN, in_path=inpath, rmt_mode=syncmod,
-                target_dir=outpath, media_type=media_type,
-                episode=episode, min_filesize=min_filesize, udf_flag=True
-            )
 
-        return ManualTransferResultDTO(success=succ_flag, message=ret_msg)
+        # 提交后台线程执行转移，避免 API 超时
+        self._threadhelper.start_thread(
+            self._filetransfer.transfer_media,
+            (SyncType.MAN, inpath, syncmod, None, outpath, None,
+             tmdb_info, media_type, season, episode, min_filesize, True)
+        )
+
+        return ManualTransferResultDTO(success=True, message="转移任务已提交，正在后台执行")
 
     # ---------- 重新识别 ----------
 
@@ -182,50 +188,46 @@ class SyncService:
         批量重新识别（unidentification / history）
         :param flag: "unidentification" 或 "history"
         :param ids: ID 列表
+        提交后台线程执行，避免 API 超时
         """
-        ret_flag = True
-        ret_msg = []
+        def _do_re_identify():
+            for wid in ids:
+                try:
+                    if flag == "unidentification":
+                        unknowninfo = self._filetransfer.get_unknown_info_by_id(wid)
+                        if not unknowninfo:
+                            continue
+                        path = unknowninfo.PATH
+                        dest_dir = unknowninfo.DEST
+                        rmt_mode = ModuleConf.get_enum_item(
+                            RmtMode, unknowninfo.MODE) if unknowninfo.MODE else None
+                    elif flag == "history":
+                        transinfo = self._filetransfer.get_transfer_info_by_id(wid)
+                        if not transinfo:
+                            continue
+                        path = os.path.join(transinfo.SOURCE_PATH, transinfo.SOURCE_FILENAME)
+                        dest_dir = transinfo.DEST
+                        rmt_mode = ModuleConf.get_enum_item(
+                            RmtMode, transinfo.MODE) if transinfo.MODE else None
+                    else:
+                        continue
 
-        for wid in ids:
-            if flag == "unidentification":
-                unknowninfo = self._filetransfer.get_unknown_info_by_id(wid)
-                if not unknowninfo:
-                    return ReIdentifyResultDTO(success=False, message="未查询到未识别记录")
-                path = unknowninfo.PATH
-                dest_dir = unknowninfo.DEST
-                rmt_mode = ModuleConf.get_enum_item(
-                    RmtMode, unknowninfo.MODE) if unknowninfo.MODE else None
-            elif flag == "history":
-                transinfo = self._filetransfer.get_transfer_info_by_id(wid)
-                if not transinfo:
-                    return ReIdentifyResultDTO(success=False, message="未查询到转移日志记录")
-                path = os.path.join(transinfo.SOURCE_PATH, transinfo.SOURCE_FILENAME)
-                dest_dir = transinfo.DEST
-                rmt_mode = ModuleConf.get_enum_item(
-                    RmtMode, transinfo.MODE) if transinfo.MODE else None
-            else:
-                return ReIdentifyResultDTO(success=False, message="不支持的识别类型")
+                    if not dest_dir:
+                        dest_dir = ""
+                    if not path:
+                        continue
 
-            if not dest_dir:
-                dest_dir = ""
-            if not path:
-                return ReIdentifyResultDTO(success=False, message="未识别路径有误")
+                    succ_flag, msg = self._filetransfer.transfer_media(
+                        in_from=SyncType.MAN, rmt_mode=rmt_mode,
+                        in_path=path, target_dir=dest_dir
+                    )
+                    if succ_flag and flag == "unidentification":
+                        self._filetransfer.update_transfer_unknown_state(path)
+                except Exception as err:
+                    ExceptionUtils.exception_traceback(err)
 
-            succ_flag, msg = self._filetransfer.transfer_media(
-                in_from=SyncType.MAN, rmt_mode=rmt_mode,
-                in_path=path, target_dir=dest_dir
-            )
-            if succ_flag:
-                if flag == "unidentification":
-                    self._filetransfer.update_transfer_unknown_state(path)
-            else:
-                ret_flag = False
-                if msg not in ret_msg:
-                    ret_msg.append(msg)
-
-        if ret_flag:
-            return ReIdentifyResultDTO(success=True, message="转移成功")
-        return ReIdentifyResultDTO(success=False, message="、".join(ret_msg))
+        self._threadhelper.start_thread(_do_re_identify, ())
+        return ReIdentifyResultDTO(success=True, message="重新识别任务已提交，正在后台执行")
 
     # ---------- 查询 ----------
 

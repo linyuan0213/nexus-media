@@ -15,7 +15,7 @@ from api.deps import (
     get_sync_service,
     get_transfer_history_service,
     get_downloader_service,
-    get_tmdb_blacklist_helper,
+    get_tmdb_blacklist_service,
 )
 from app.conf import ModuleConf
 from app.schemas.auth import UserContext
@@ -166,14 +166,14 @@ def tmdbblacklist_page(
     s: Optional[str] = Query(""),
     page: Optional[str] = Query("1"),
     current_user: UserContext = Depends(get_current_user),
-    tmdb_blacklist_helper = Depends(get_tmdb_blacklist_helper),
+    tmdb_blacklist_svc = Depends(get_tmdb_blacklist_service),
 ):
     """TMDB缓存页面"""
     page_num = int(pagenum) if pagenum else 30
     search_str = s if s else ""
     current_page = int(page) if page else 1
 
-    tmdb_blacklist, total_count = tmdb_blacklist_helper.get_blacklist(
+    tmdb_blacklist, total_count = tmdb_blacklist_svc.get_blacklist(
         search_str, current_page, page_num)
     total_page = floor(total_count / page_num) + 1
     page_range = get_page_range(

@@ -8,7 +8,7 @@ from typing import List, Optional, Union
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_sync_service, get_filetransfer_service, get_thread_helper
+from api.deps import get_current_user, get_sync_service, get_filetransfer_service, get_thread_helper, require_any_permission, require_permission
 from app.utils.response import success, fail
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.sync_service import SyncService
@@ -53,7 +53,7 @@ class DeleteFilesRequest(BaseModel):
 
 
 class DeleteSyncPathRequest(BaseModel):
-    sid: Optional[int] = None
+    id: Optional[int] = None
 
 
 class GetSubPathRequest(BaseModel):
@@ -127,10 +127,10 @@ class ReIdentificationRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.post("/add_or_edit_sync_path")
+@router.post("/paths/save")
 def add_or_edit_sync_path(
     req: AddOrEditSyncPathRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
     ok, msg = svc.add_or_edit_sync_path(
@@ -148,10 +148,10 @@ def add_or_edit_sync_path(
     return fail(msg=msg)
 
 
-@router.post("/check_sync_path")
+@router.post("/paths/check")
 def check_sync_path(
     req: CheckSyncPathRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
     ok, msg = svc.check_sync_path(
@@ -162,10 +162,10 @@ def check_sync_path(
     return fail()
 
 
-@router.post("/del_unknown_path")
+@router.post("/unknown/delete")
 def del_unknown_path(
     req: DelUnknownPathRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("setting:update")),
     ft: FileTransfer = Depends(get_filetransfer_service),
 ):
     tid = req.id
@@ -180,10 +180,10 @@ def del_unknown_path(
         return fail(code=retcode)
 
 
-@router.post("/delete_files")
+@router.post("/files/delete")
 def delete_files(
     req: DeleteFilesRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("setting:update")),
     ft: FileTransfer = Depends(get_filetransfer_service),
 ):
     files = req.files
@@ -202,20 +202,20 @@ def delete_files(
     return success()
 
 
-@router.post("/delete_sync_path")
+@router.post("/paths/delete")
 def delete_sync_path(
     req: DeleteSyncPathRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
-    svc.delete_sync_path(req.sid)
+    svc.delete_sync_path(req.id)
     return success()
 
 
-@router.post("/get_sub_path")
+@router.post("/paths/sub")
 def get_sub_path(
     req: GetSubPathRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
     try:
@@ -224,13 +224,13 @@ def get_sub_path(
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
         return fail(code=-1, message="加载路径失败: %s" % str(e))
-    return success(count=len(r), data=r)
+    return success(data={"count": len(r), "items": r})
 
 
 @router.post("/rename")
 def rename(
     req: RenameRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
     ft: FileTransfer = Depends(get_filetransfer_service),
 ):
@@ -286,10 +286,10 @@ def rename(
     return fail(code=2, msg=result.message)
 
 
-@router.post("/rename_file")
+@router.post("/rename/file")
 def rename_file(
     req: RenameFileRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
     result = svc.rename_file(path=req.path, name=req.name)
@@ -298,10 +298,10 @@ def rename_file(
     return fail(code=-1, msg=result.message)
 
 
-@router.post("/rename_udf")
+@router.post("/rename/udf")
 def rename_udf(
     req: RenameUdfRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
     inpath = req.inpath
@@ -331,10 +331,10 @@ def rename_udf(
     return fail(code=2, msg=result.message)
 
 
-@router.post("/run_directory_sync")
+@router.post("/run")
 def run_directory_sync(
     req: RunDirectorySyncRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
     thread_helper = Depends(get_thread_helper),
 ):
@@ -342,10 +342,10 @@ def run_directory_sync(
     return success(msg="执行成功")
 
 
-@router.post("/test_connection")
+@router.post("/paths/test_connection")
 def test_connection(
     req: TestConnectionRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
     result = svc.test_connection(command=req.command)
@@ -354,10 +354,10 @@ def test_connection(
     return fail(code=1)
 
 
-@router.post("/update_directory")
+@router.post("/directories/update")
 def update_directory(
     req: UpdateDirectoryRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
     result = svc.update_directory(
@@ -371,10 +371,10 @@ def update_directory(
     return fail()
 
 
-@router.post("/delete_history")
+@router.post("/history/delete")
 def delete_history(
     req: DeleteHistoryRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("setting:update")),
     svc: FileTransfer = Depends(get_filetransfer_service),
 ):
     logids = req.logids or []
@@ -383,20 +383,20 @@ def delete_history(
     return success()
 
 
-@router.post("/get_sync_path")
+@router.post("/paths")
 def get_sync_path(
     req: GetSyncPathRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
     sync_path = svc.get_sync_paths(sid=req.sid)
-    return success(result=sync_path)
+    return success(data=sync_path)
 
 
-@router.post("/re_identification")
+@router.post("/reidentify")
 def re_identification(
     req: ReIdentificationRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
     result = svc.re_identify_items(flag=req.flag, ids=req.ids)

@@ -60,6 +60,8 @@ class SyncCore:
         self._observer: List[Observer] = []
         self._synced_files: List[str] = []
         self._need_sync_paths: Dict[str, dict] = {}
+        # 自动加载配置（不启动监控，避免 API 请求时重复创建 Observer）
+        self._reload_config()
 
     def init_config(self):
         """兼容接口：重新加载配置并启动监控"""
