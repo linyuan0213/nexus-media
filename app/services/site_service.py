@@ -115,13 +115,13 @@ class SiteService:
                 cookie=cookie, note=note, rss_uses=rss_uses)
             if ret and name != old_name and old_name:
                 self._site_user_info.update_site_name(name, old_name)
-            return SiteUpdateResultDTO(code=ret)
+            return SiteUpdateResultDTO(code=0 if ret else 500)
         else:
             ret = self._sites.add_site(
                 name=name, site_pri=site_pri,
                 rssurl=rssurl, signurl=signurl,
                 cookie=cookie, note=note, rss_uses=rss_uses)
-            return SiteUpdateResultDTO(code=ret)
+            return SiteUpdateResultDTO(code=0 if ret else 500)
 
     def update_site_cookie_ua(self, siteid, cookie, ua) -> None:
         self._sites.update_site_cookie(siteid=siteid, cookie=cookie, ua=ua)
@@ -155,7 +155,7 @@ class SiteService:
 
     def get_site_user_statistics(self,
                                  sites: Optional[list] = None,
-                                 encoding: str = "RAW",
+                                 encoding: str = "DICT",
                                  sort_by: Optional[str] = None,
                                  sort_on: Optional[str] = None,
                                  site_hash: Optional[str] = None) -> List[dict]:
@@ -167,14 +167,15 @@ class SiteService:
                 site_info: Any = self._sites.get_sites(
                     siteurl=item.get('url')) or {}
                 item['url'] = site_info.get('signurl') if isinstance(site_info, dict) else None
-        if sort_by and sort_on in ["asc", "desc"]:
+        # 排序：sort_by 存在时默认降序，sort_on 显式指定时按指定方向
+        if sort_by:
             reverse = sort_on != "asc"
             statistics.sort(
-                key=lambda x: x.get(sort_by), reverse=reverse)
+                key=lambda x: x.get(sort_by) or 0, reverse=reverse)
         if site_hash == "Y":
             for item in statistics:
                 item["site_hash"] = self._string_utils.md5_hash(
-                    item.get("site"))
+                    item.get("site_name"))
         return statistics
 
     # ------------------------------------------------------------------
