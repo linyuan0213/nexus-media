@@ -103,9 +103,11 @@ class IndexerService:
         :param page: 页码
         :param keyword: 搜索关键字
         """
+        if not index_id:
+            return IndexerResourcesResultDTO(success=True, data=[])
         resources = self._indexer.list_resources(
             index_id=index_id, page=page, keyword=keyword)
-        if not resources:
+        if resources is None:
             return IndexerResourcesResultDTO(
                 success=False,
                 msg="获取站点资源出现错误，无法连接到站点！")

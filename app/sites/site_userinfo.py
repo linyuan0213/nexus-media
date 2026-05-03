@@ -441,24 +441,42 @@ class SiteUserInfo(metaclass=SingletonMeta):
         return ""
 
     @staticmethod
+    def __format_filesize(size_bytes):
+        """将字节转换为人类可读字符串，与前端 parseSize 兼容"""
+        if size_bytes is None or size_bytes <= 0:
+            return "0 B"
+        units = ["B", "KB", "MB", "GB", "TB"]
+        idx = 0
+        val = float(size_bytes)
+        while val >= 1024 and idx < len(units) - 1:
+            val /= 1024
+            idx += 1
+        return f"{val:.2f} {units[idx]}"
+
+    @staticmethod
     def __todict(raw_statistics):
         statistics = []
         for site in raw_statistics:
-            statistics.append({"site": site.SITE,
-                               "username": site.USERNAME,
-                               "user_level": site.USER_LEVEL,
-                               "join_at": site.JOIN_AT,
-                               "update_at": site.UPDATE_AT,
-                               "upload": site.UPLOAD,
-                               "download": site.DOWNLOAD,
-                               "ratio": site.RATIO,
-                               "seeding": site.SEEDING,
-                               "leeching": site.LEECHING,
-                               "seeding_size": site.SEEDING_SIZE,
-                               "bonus": site.BONUS,
-                               "url": site.URL,
-                               "msg_unread": site.MSG_UNREAD
-                               })
+            ratio_val = site.RATIO
+            ratio_str = f"{ratio_val:.2f}" if ratio_val is not None else "0.00"
+            bonus_val = site.BONUS
+            bonus_str = f"{bonus_val:.2f}" if bonus_val is not None else "0.00"
+            statistics.append({
+                "site_name": site.SITE or "",
+                "username": site.USERNAME or "",
+                "user_level": site.USER_LEVEL or "",
+                "join_at": site.JOIN_AT or "",
+                "update_at": site.UPDATE_AT or "",
+                "upload": SiteUserInfo.__format_filesize(site.UPLOAD),
+                "download": SiteUserInfo.__format_filesize(site.DOWNLOAD),
+                "ratio": ratio_str,
+                "seeding_count": site.SEEDING or 0,
+                "leeching_count": site.LEECHING or 0,
+                "seeding_size": SiteUserInfo.__format_filesize(site.SEEDING_SIZE),
+                "bonus": bonus_str,
+                "url": site.URL or "",
+                "message_count": site.MSG_UNREAD or 0,
+            })
         return statistics
 
     def update_site_name(self, old_name, name):
