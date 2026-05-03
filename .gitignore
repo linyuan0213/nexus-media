@@ -11,5 +11,7 @@
 ./config/site_manage/*.json
 ./config/site_manage/*.dat
 .roo/
+.kilo/
 web/static/img_cache/*
 web/frontend
+web/static/avatars/*
