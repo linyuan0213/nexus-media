@@ -2,12 +2,12 @@
 Brush Router — FastAPI 迁移
 对应原 web/controllers/brush.py，复用 app/services/brush_service.py
 """
-from typing import Optional
+from typing import Optional, Union
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_brush_service
+from api.deps import get_current_user, get_brush_service, require_any_permission, require_permission
 from app.utils.response import success, fail
 from app.services.brush_service import BrushService
 from app.utils import ExceptionUtils
@@ -47,7 +47,7 @@ class AddBrushTaskRequest(BaseModel):
     brushtask_pubdate: Optional[str] = None
     brushtask_upspeed: Optional[str] = None
     brushtask_downspeed: Optional[str] = None
-    brushtask_exclude_subscribe: Optional[str] = None
+    brushtask_exclude_subscribe: Optional[Union[str, bool]] = None
     brushtask_mode: Optional[str] = None
     brushtask_seedtime: Optional[str] = None
     brushtask_hr_seedtime: Optional[str] = None
@@ -58,7 +58,7 @@ class AddBrushTaskRequest(BaseModel):
     brushtask_iatime: Optional[str] = None
     brushtask_pending_time: Optional[str] = None
     brushtask_freespace: Optional[str] = None
-    brushtask_freestatus: Optional[str] = None
+    brushtask_freestatus: Optional[Union[str, bool]] = None
     brushtask_stopfree: Optional[int] = None
 
 
@@ -75,41 +75,51 @@ class UpdateBrushTaskStateRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.post("/add_brushtask")
+@router.post("/tasks/add")
 def add_brushtask(
     req: AddBrushTaskRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("site:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
     svc.add_or_update_task(req.model_dump())
     return success()
 
 
-@router.post("/brushtask_detail")
+@router.post("/tasks/update")
+def update_brushtask(
+    req: AddBrushTaskRequest,
+    _: None = Depends(require_permission("site:manage")),
+    svc: BrushService = Depends(get_brush_service),
+):
+    svc.add_or_update_task(req.model_dump())
+    return success()
+
+
+@router.post("/tasks/detail")
 def brushtask_detail(
     req: BrushTaskIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_any_permission("site:view", "site:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
     dto = svc.get_task(req.id)
     if not dto.task:
-        return fail(task={})
-    return success(task=dto.task)
+        return fail(data={"task": {}})
+    return success(data={"task": dto.task})
 
 
-@router.post("/list_brushtasks")
+@router.post("/tasks")
 def list_brushtasks(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_any_permission("site:view", "site:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
-    return success(tasks=svc.get_tasks())
+    return success(data=svc.get_tasks())
 
 
-@router.post("/del_brushtask")
+@router.post("/tasks/delete")
 def del_brushtask(
     req: BrushTaskIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("site:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
     brush_id = req.id
@@ -119,32 +129,32 @@ def del_brushtask(
     return fail()
 
 
-@router.post("/list_brushtask_torrents")
+@router.post("/tasks/torrents")
 def list_brushtask_torrents(
     req: BrushTaskIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_any_permission("site:view", "site:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
     dto = svc.get_torrents(req.id)
     if not dto.torrents:
-        return fail(msg="未下载种子或未获取到种子明细")
-    return success(data=dto.torrents)
+        return success(data={"list": []})
+    return success(data={"list": dto.torrents})
 
 
-@router.post("/run_brushtask")
+@router.post("/tasks/run")
 def run_brushtask(
     req: BrushTaskIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("site:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
     svc.run_task(req.id)
     return success()
 
 
-@router.post("/update_brushtask_state")
+@router.post("/tasks/state")
 def update_brushtask_state(
     req: UpdateBrushTaskStateRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("site:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
     try:

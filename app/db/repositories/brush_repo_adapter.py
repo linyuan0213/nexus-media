@@ -44,6 +44,9 @@ class BrushTaskRepositoryAdapter:
     def get_brushtask_totalsize(self, task_id):
         return self._repo.get_brushtask_totalsize(task_id)
 
+    def get_brushtask_torrents(self, brush_id, active=True):
+        return self._repo.get_brushtask_torrents(brush_id, active)
+
     def update_brushtask(self, brushtask_id, item):
         return self._repo.update_brushtask(brushtask_id, item)
 
@@ -52,6 +55,21 @@ class BrushTaskRepositoryAdapter:
 
     def update_brushtask_state(self, tid, state):
         return self._repo.update_brushtask_state(tid=tid, state=state)
+
+    def get_brushtask_torrent_by_enclosure(self, enclosure):
+        return self._repo.get_brushtask_torrent_by_enclosure(enclosure)
+
+    def insert_brushtask_torrent(self, brush_id, title, enclosure, downloader, download_id, size):
+        return self._repo.insert_brushtask_torrent(
+            brush_id=brush_id, title=title, enclosure=enclosure,
+            downloader=downloader, download_id=download_id, size=size
+        )
+
+    def delete_brushtask_torrent(self, taskid, download_id):
+        return self._repo.delete_brushtask_torrent(taskid, download_id)
+
+    def add_brushtask_upload_count(self, taskid, uploaded, downloaded, count):
+        return self._repo.add_brushtask_upload_count(taskid, uploaded, downloaded, count)
 
 
 class BrushTorrentRepositoryAdapter:
@@ -77,9 +95,6 @@ class BrushTorrentRepositoryAdapter:
     # 兼容 BrushTaskRepository 方法名
     def get_brushtask_torrents(self, brush_id, active=True):
         return self._repo.get_brushtask_torrents(brush_id, active)
-
-    def get_brushtask_torrent_by_enclosure(self, enclosure):
-        return self._repo.get_brushtask_torrent_by_enclosure(enclosure)
 
     def insert_brushtask_torrent(self, brush_id, title, enclosure, downloader, download_id, size):
         return self._repo.insert_brushtask_torrent(
