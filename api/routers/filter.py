@@ -7,7 +7,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_config_service
+from api.deps import get_current_user, get_config_service, require_any_permission, require_permission
 from app.utils.response import success, fail
 from app.services.filter_service import FilterService as Filter
 
@@ -80,10 +80,10 @@ class ShareFilterGroupRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.post("/add_filtergroup")
+@router.post("/groups/add")
 def add_filtergroup(
     req: AddFilterGroupRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
     name = req.name
     if not name:
@@ -92,10 +92,10 @@ def add_filtergroup(
     return success()
 
 
-@router.post("/add_filterrule")
+@router.post("/rules/add")
 def add_filterrule(
     req: AddFilterRuleRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
     item = {
         "group": req.group_id,
@@ -110,38 +110,38 @@ def add_filterrule(
     return success()
 
 
-@router.post("/del_filtergroup")
+@router.post("/groups/delete")
 def del_filtergroup(
     req: IdRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
     Filter().delete_filtergroup(req.id)
     return success()
 
 
-@router.post("/del_filterrule")
+@router.post("/rules/delete")
 def del_filterrule(
     req: IdRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
     Filter().delete_filterrule(req.id)
     return success()
 
 
-@router.post("/filterrule_detail")
+@router.post("/rules/detail")
 def filterrule_detail(
     req: FilterRuleDetailRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
     ruleinfo = Filter().get_rule_detail(
         groupid=req.groupid, ruleid=req.ruleid)
-    return success(info=ruleinfo)
+    return success(data=ruleinfo)
 
 
-@router.post("/import_filtergroup")
+@router.post("/groups/import")
 def import_filtergroup(
     req: ImportFilterGroupRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
     ok, msg = Filter().import_filter_group(req.content)
     if not ok:
@@ -149,10 +149,10 @@ def import_filtergroup(
     return success(msg=msg)
 
 
-@router.post("/restore_filtergroup")
+@router.post("/groups/restore")
 def restore_filtergroup(
     req: RestoreFilterGroupRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
     Filter().restore_filter_group(
         groupids=req.groupids or [],
@@ -161,10 +161,10 @@ def restore_filtergroup(
     return success()
 
 
-@router.post("/rule_test")
+@router.post("/rules/test")
 def rule_test(
     req: RuleTestRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
     title = req.title
     if not title:
@@ -175,13 +175,13 @@ def rule_test(
         size=req.size,
         rulegroup=req.rulegroup
     )
-    return success(flag=match_flag, text=text, order=order)
+    return success(data={"flag":match_flag, "text":text, "order":order})
 
 
-@router.post("/set_default_filtergroup")
+@router.post("/groups/default")
 def set_default_filtergroup(
     req: SetDefaultFilterGroupRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
     groupid = req.id
     if not groupid:
@@ -190,22 +190,22 @@ def set_default_filtergroup(
     return success()
 
 
-@router.post("/share_filtergroup")
+@router.post("/groups/share")
 def share_filtergroup(
     req: ShareFilterGroupRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
     ok, msg, json_string = Filter().share_filter_group(req.id)
     if not ok:
         return fail(msg=msg)
-    return success(string=json_string)
+    return success(data=json_string)
 
 
-@router.post("/get_filterrules")
+@router.post("/rules")
 def get_filterrules(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
     RuleGroups, Init_RuleGroups = Filter().get_filterrules(
         _get_script_path())
-    return success(ruleGroups=RuleGroups, initRules=Init_RuleGroups)
+    return success(data=RuleGroups)
