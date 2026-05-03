@@ -30,7 +30,7 @@ class TestUserRssRouter:
         mock_svc = self._mock_userrss()
         mock_svc.check_tasks.return_value = True
         try:
-            resp = client.post("/api/userrss/check_userrss_task", json={
+            resp = client.post("/api/userrss/tasks/check", json={
                 "ids": [1, 2], "flag": "enable"
             })
             assert resp.status_code == 200
@@ -44,7 +44,7 @@ class TestUserRssRouter:
         mock_svc = self._mock_userrss()
         mock_svc.check_tasks.side_effect = Exception("boom")
         try:
-            resp = client.post("/api/userrss/check_userrss_task", json={
+            resp = client.post("/api/userrss/tasks/check", json={
                 "ids": [1], "flag": "enable"
             })
             assert resp.status_code == 200
@@ -60,7 +60,7 @@ class TestUserRssRouter:
         mock_svc = self._mock_userrss()
         mock_svc.delete_parser.return_value = True
         try:
-            resp = client.post("/api/userrss/delete_rssparser", json={"id": "1"})
+            resp = client.post("/api/userrss/parsers/delete", json={"id": "1"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -70,7 +70,7 @@ class TestUserRssRouter:
         mock_svc = self._mock_userrss()
         mock_svc.delete_parser.return_value = False
         try:
-            resp = client.post("/api/userrss/delete_rssparser", json={"id": "1"})
+            resp = client.post("/api/userrss/parsers/delete", json={"id": "1"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
         finally:
@@ -83,7 +83,7 @@ class TestUserRssRouter:
         mock_svc = self._mock_userrss()
         mock_svc.delete_task.return_value = True
         try:
-            resp = client.post("/api/userrss/delete_userrss_task", json={"id": "1"})
+            resp = client.post("/api/userrss/tasks/delete", json={"id": "1"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -96,7 +96,7 @@ class TestUserRssRouter:
         mock_svc = self._mock_userrss()
         mock_svc.get_parsers.return_value = [{"id": 1}]
         try:
-            resp = client.post("/api/userrss/list_rss_parsers", json={})
+            resp = client.post("/api/userrss/parsers", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["parsers"][0]["id"] == 1
@@ -110,7 +110,7 @@ class TestUserRssRouter:
         mock_svc = self._mock_userrss()
         mock_svc.get_parser.return_value = {"name": "P1"}
         try:
-            resp = client.post("/api/userrss/get_rssparser", json={"id": "1"})
+            resp = client.post("/api/userrss/parsers/detail", json={"id": "1"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["detail"]["name"] == "P1"
@@ -124,7 +124,7 @@ class TestUserRssRouter:
         mock_svc = self._mock_userrss()
         mock_svc.get_task.return_value = {"name": "T1"}
         try:
-            resp = client.post("/api/userrss/get_userrss_task", json={"id": "1"})
+            resp = client.post("/api/userrss/tasks/detail", json={"id": "1"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["detail"]["name"] == "T1"
@@ -139,7 +139,7 @@ class TestUserRssRouter:
         mock_svc.get_tasks.return_value = [{"id": 1}]
         mock_svc.get_parsers.return_value = [{"id": 2}]
         try:
-            resp = client.post("/api/userrss/list_rss_tasks", json={})
+            resp = client.post("/api/userrss/tasks", json={})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["tasks"][0]["id"] == 1
@@ -155,7 +155,7 @@ class TestUserRssRouter:
         mock_svc.get_articles.return_value = MagicMock(
             articles=[{"title": "A1"}], count=1, uses=1, address_count=2)
         try:
-            resp = client.post("/api/userrss/list_rss_articles", json={"id": "1"})
+            resp = client.post("/api/userrss/articles", json={"id": "1"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["data"][0]["title"] == "A1"
@@ -167,7 +167,7 @@ class TestUserRssRouter:
         mock_svc.get_articles.return_value = MagicMock(
             articles=None, count=0, uses=0, address_count=0)
         try:
-            resp = client.post("/api/userrss/list_rss_articles", json={"id": "1"})
+            resp = client.post("/api/userrss/articles", json={"id": "1"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
             assert resp.json()["msg"] == "未获取到报文"
@@ -182,7 +182,7 @@ class TestUserRssRouter:
         mock_svc.get_history.return_value = MagicMock(
             downloads=[{"title": "H1"}], count=1)
         try:
-            resp = client.post("/api/userrss/list_rss_history", json={"id": "1"})
+            resp = client.post("/api/userrss/articles/history", json={"id": "1"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["data"][0]["title"] == "H1"
@@ -194,7 +194,7 @@ class TestUserRssRouter:
         mock_svc.get_history.return_value = MagicMock(
             downloads=[], count=0)
         try:
-            resp = client.post("/api/userrss/list_rss_history", json={"id": "1"})
+            resp = client.post("/api/userrss/articles/history", json={"id": "1"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
             assert resp.json()["msg"] == "无下载记录"
@@ -209,7 +209,7 @@ class TestUserRssRouter:
         mock_svc.test_article.return_value = MagicMock(
             name="Test", media_dict={"title": "T1"})
         try:
-            resp = client.post("/api/userrss/rss_article_test", json={
+            resp = client.post("/api/userrss/articles/test", json={
                 "taskid": "1", "title": "Article"
             })
             assert resp.status_code == 200
@@ -225,7 +225,7 @@ class TestUserRssRouter:
         dto.media_dict = {}
         mock_svc.test_article.return_value = dto
         try:
-            resp = client.post("/api/userrss/rss_article_test", json={
+            resp = client.post("/api/userrss/articles/test", json={
                 "taskid": "1", "title": "Article"
             })
             assert resp.status_code == 200
@@ -237,7 +237,7 @@ class TestUserRssRouter:
     def test_rss_article_test_missing_params(self):
         mock_svc = self._mock_userrss()
         try:
-            resp = client.post("/api/userrss/rss_article_test", json={
+            resp = client.post("/api/userrss/articles/test", json={
                 "taskid": "1"
             })
             assert resp.status_code == 200
@@ -252,7 +252,7 @@ class TestUserRssRouter:
         mock_svc = self._mock_userrss()
         mock_svc.check_articles.return_value = True
         try:
-            resp = client.post("/api/userrss/rss_articles_check", json={
+            resp = client.post("/api/userrss/articles/check", json={
                 "taskid": "1", "flag": "Y", "articles": ["a1"]
             })
             assert resp.status_code == 200
@@ -263,7 +263,7 @@ class TestUserRssRouter:
     def test_rss_articles_check_no_articles(self):
         mock_svc = self._mock_userrss()
         try:
-            resp = client.post("/api/userrss/rss_articles_check", json={
+            resp = client.post("/api/userrss/articles/check", json={
                 "taskid": "1", "flag": "Y"
             })
             assert resp.status_code == 200
@@ -278,7 +278,7 @@ class TestUserRssRouter:
         mock_svc = self._mock_userrss()
         mock_svc.download_articles.return_value = True
         try:
-            resp = client.post("/api/userrss/rss_articles_download", json={
+            resp = client.post("/api/userrss/articles/download", json={
                 "taskid": "1", "articles": ["a1"]
             })
             assert resp.status_code == 200
@@ -292,7 +292,7 @@ class TestUserRssRouter:
     def test_run_userrss(self):
         mock_svc = self._mock_userrss()
         try:
-            resp = client.post("/api/userrss/run_userrss", json={"id": "1"})
+            resp = client.post("/api/userrss/tasks/run", json={"id": "1"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             mock_svc.run_task.assert_called_once_with("1")
@@ -306,7 +306,7 @@ class TestUserRssRouter:
         mock_svc = self._mock_userrss()
         mock_svc.update_parser.return_value = True
         try:
-            resp = client.post("/api/userrss/update_rssparser", json={
+            resp = client.post("/api/userrss/parsers/update", json={
                 "id": "1", "name": "Parser1", "type": "json",
                 "format": "{}", "params": ""
             })
@@ -319,7 +319,7 @@ class TestUserRssRouter:
         mock_svc = self._mock_userrss()
         mock_svc.update_parser.return_value = False
         try:
-            resp = client.post("/api/userrss/update_rssparser", json={
+            resp = client.post("/api/userrss/parsers/update", json={
                 "id": "1", "name": "P1"
             })
             assert resp.status_code == 200
@@ -334,7 +334,7 @@ class TestUserRssRouter:
         mock_svc = self._mock_userrss()
         mock_svc.update_task.return_value = MagicMock(success=True)
         try:
-            resp = client.post("/api/userrss/update_userrss_task", json={
+            resp = client.post("/api/userrss/tasks/update", json={
                 "data": {"name": "Task1"}
             })
             assert resp.status_code == 200
@@ -346,7 +346,7 @@ class TestUserRssRouter:
         mock_svc = self._mock_userrss()
         mock_svc.update_task.return_value = MagicMock(success=False)
         try:
-            resp = client.post("/api/userrss/update_userrss_task", json={
+            resp = client.post("/api/userrss/tasks/update", json={
                 "data": {"name": "Task1"}
             })
             assert resp.status_code == 200
