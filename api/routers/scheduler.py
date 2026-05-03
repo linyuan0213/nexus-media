@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_scheduler_service
+from api.deps import get_scheduler_service, require_any_permission, require_permission
 from app.utils.response import success, fail
 from app.schemas.scheduler import (
     DeleteSchedulerJobRequest,
@@ -47,10 +47,10 @@ class UpdateJobRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.post("/delete_scheduler_job")
+@router.post("/jobs/delete")
 def delete_scheduler_job(
     req: JobIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("service:manage")),
     svc: SchedulerService = Depends(get_scheduler_service),
 ):
     job_id = req.id or ""
@@ -62,10 +62,10 @@ def delete_scheduler_job(
     return fail(msg=resp.msg)
 
 
-@router.post("/get_scheduler_jobs")
+@router.post("/jobs")
 def get_scheduler_jobs(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_any_permission("service:view", "service:manage")),
     svc: SchedulerService = Depends(get_scheduler_service),
 ):
     resp = svc.get_jobs()
@@ -74,10 +74,10 @@ def get_scheduler_jobs(
     return success(data=[job.model_dump() for job in resp.data])
 
 
-@router.post("/pause_scheduler_job")
+@router.post("/jobs/pause")
 def pause_scheduler_job(
     req: JobIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("service:manage")),
     svc: SchedulerService = Depends(get_scheduler_service),
 ):
     job_id = req.id or ""
@@ -89,10 +89,10 @@ def pause_scheduler_job(
     return fail(msg=resp.msg)
 
 
-@router.post("/resume_scheduler_job")
+@router.post("/jobs/resume")
 def resume_scheduler_job(
     req: JobIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("service:manage")),
     svc: SchedulerService = Depends(get_scheduler_service),
 ):
     job_id = req.id or ""
@@ -104,10 +104,10 @@ def resume_scheduler_job(
     return fail(msg=resp.msg)
 
 
-@router.post("/run_scheduler_job")
+@router.post("/jobs/run")
 def run_scheduler_job(
     req: JobIdRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("service:manage")),
     svc: SchedulerService = Depends(get_scheduler_service),
 ):
     job_id = req.id or ""
@@ -119,10 +119,10 @@ def run_scheduler_job(
     return fail(msg=resp.msg)
 
 
-@router.post("/update_scheduler_job")
+@router.post("/jobs/update")
 def update_scheduler_job(
     req: UpdateJobRequest,
-    user: str = Depends(get_current_user),
+    _: None = Depends(require_permission("service:manage")),
     svc: SchedulerService = Depends(get_scheduler_service),
 ):
     job_id = req.id or ""
