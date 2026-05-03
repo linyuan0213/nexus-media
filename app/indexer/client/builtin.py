@@ -228,10 +228,10 @@ class BuiltinIndexer(_IIndexClient):
         根据站点ID搜索站点首页资源
         """
         if not index_id:
-            return []
+            return None
         indexer: IndexerConf = self.get_indexers(indexer_id=index_id)
         if not indexer:
-            return []
+            return None
 
         # 计算耗时
         start_time = datetime.datetime.now()

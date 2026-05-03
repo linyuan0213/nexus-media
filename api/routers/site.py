@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_site_service
+from api.deps import get_current_user, require_any_permission, require_permission, get_site_service
 from app.utils.response import success, fail
 from app.services.site_service import SiteService
 
@@ -82,24 +82,20 @@ class SiteResourcesRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.post("/check_site_attr")
+@router.post("/sites/check_attr")
 def check_site_attr(
     req: SiteUrlRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
     dto = svc.check_site_attr(req.url)
-    return success(
-        site_free=dto.site_free,
-        site_2xfree=dto.site_2xfree,
-        site_hr=dto.site_hr
-    )
+    return success(data={"site_free":dto.site_free, "site_2xfree":dto.site_2xfree, "site_hr":dto.site_hr})
 
 
-@router.post("/del_site")
+@router.post("/sites/delete")
 def del_site(
     req: SiteIdRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
     tid = req.id
@@ -109,46 +105,41 @@ def del_site(
     return success()
 
 
-@router.post("/get_site")
+@router.post("/sites/detail")
 def get_site(
     req: SiteIdRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
     dto = svc.get_site(req.id)
-    return success(
-        site=dto.site,
-        site_free=dto.site_free,
-        site_2xfree=dto.site_2xfree,
-        site_hr=dto.site_hr
-    )
+    return success(data={"site":dto.site, "site_free":dto.site_free, "site_2xfree":dto.site_2xfree, "site_hr":dto.site_hr})
 
 
-@router.post("/get_site_activity")
+@router.post("/sites/activity")
 def get_site_activity(
     req: SiteNameRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
     if not req.name:
         return fail(msg="查询参数错误")
     dto = svc.get_site_activity(req.name)
-    return {"code": 0, "dataset": dto.dataset}
+    return success(data={"dataset": dto.dataset})
 
 
-@router.post("/get_site_favicon")
+@router.post("/sites/favicon")
 def get_site_favicon(
     req: SiteNameRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
-    return success(icon=svc.get_site_favicon(req.name))
+    return success(data=svc.get_site_favicon(req.name))
 
 
-@router.post("/get_site_history")
+@router.post("/sites/history")
 def get_site_history(
     req: SiteDaysRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
     if req.days is None or not isinstance(req.days, int):
@@ -160,10 +151,10 @@ def get_site_history(
     return {"code": 0, "dataset": dto.dataset}
 
 
-@router.post("/get_site_seeding_info")
+@router.post("/sites/seeding")
 def get_site_seeding_info(
     req: SiteNameRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
     if not req.name:
@@ -172,10 +163,10 @@ def get_site_seeding_info(
     return {"code": 0, "dataset": dto.dataset}
 
 
-@router.post("/get_sites")
+@router.post("/sites")
 def get_sites(
     req: SiteFilterRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
     sites = svc.get_sites(
@@ -184,13 +175,13 @@ def get_sites(
         statistic=bool(req.statistic),
         basic=bool(req.basic)
     )
-    return success(sites=sites)
+    return success(data=sites)
 
 
-@router.post("/set_site_captcha_code")
+@router.post("/sites/captcha")
 def set_site_captcha_code(
     req: SiteCaptchaRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
     svc.set_captcha_code(
@@ -198,30 +189,30 @@ def set_site_captcha_code(
     return success()
 
 
-@router.post("/test_site")
+@router.post("/sites/test")
 def test_site(
     req: SiteIdRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
     dto = svc.test_site(req.id)
     return fail(code=dto.code, msg=dto.msg, time=dto.times)
 
 
-@router.post("/update_site")
+@router.post("/sites/update")
 def update_site(
     req: SiteUpdateRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
     dto = svc.update_site(req.model_dump())
     return fail(code=dto.code or 0, msg=dto.msg or "")
 
 
-@router.post("/update_site_cookie_ua")
+@router.post("/sites/cookie_ua")
 def update_site_cookie_ua(
     req: SiteCookieUaRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_permission("site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
     svc.update_site_cookie_ua(
@@ -229,18 +220,19 @@ def update_site_cookie_ua(
         cookie=req.site_cookie,
         ua=req.site_ua
     )
-    return success(messages="请求发送成功")
+    return success(data={"messages":"请求发送成功"})
 
 
-@router.post("/get_site_user_statistics")
+@router.post("/sites/statistics")
 def get_site_user_statistics(
     req: SiteUserStatisticsRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
+    # 强制使用 DICT 编码，确保返回可序列化的字典格式
     statistics = svc.get_site_user_statistics(
         sites=req.sites,
-        encoding=req.encoding or "RAW",
+        encoding="DICT",
         sort_by=req.sort_by,
         sort_on=req.sort_on,
         site_hash=req.site_hash
@@ -248,10 +240,10 @@ def get_site_user_statistics(
     return success(data=statistics)
 
 
-@router.post("/list_site_resources")
+@router.post("/sites/resources")
 def list_site_resources(
     req: SiteResourcesRequest,
-    user: str = Depends(get_current_user),
+    user: str = Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
     resources = svc.list_site_resources(
