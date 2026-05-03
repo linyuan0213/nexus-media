@@ -1,0 +1,47 @@
+# NAS-Tools 项目指南
+
+## 项目概述
+NAS 自动化工具，用于媒体管理、种子索引和下载编排。
+- **后端**: Python 3.x, FastAPI, SQLAlchemy, Alembic
+- **前端**: Vue 3 + TypeScript + Vite + Naive UI + Tailwind CSS
+- **数据库**: SQLite (默认) 或 PostgreSQL，通过 `database_factory.py` 配置
+- **配置**: `config.py` (旧版单例) + `app/conf/` (新配置模块) + `config/config.yaml`
+
+## 架构
+- **入口**: `run.py` 或 `start-server.sh` → `api/main.py` (FastAPI 应用)
+- **启动**: `initializer.py` 初始化数据库、调度器和服务
+- **单例模式**: 几乎所有组件都使用 `app/utils/commons.py` 中的 `SingletonMeta`
+- **缓存**: 自定义框架在 `app/utils/cache_system/` (Redis + 内存适配器、装饰器、事件总线)
+- **插件**: `app/plugins/` — 内置 + 可安装
+- **权限**: `app/db/models/rbac.py` 中的自定义 RBAC 系统
+- **分层**: `app/domain/`, `app/schemas/`, `app/db/models/`, `app/db/repositories/`
+
+## 重要约定
+- 除非要求，否则不要添加注释。
+- 优先编辑现有文件，而不是创建新文件。
+- 遵循现有代码风格；项目混合了新旧模式，新代码尽量使用新模式。
+- `third_party/`、`app/media/doubanapi/`、`app/media/tmdbv3api/` 中的第三方代码 — 不要重构。
+
+## 数据库
+- 工厂: `app/db/database_factory.py`
+- 迁移: `app/db/migrate.py` (Alembic 包装器)
+- 添加模型时，需要添加 Alembic 迁移并更新仓库。
+
+## 前端 (web/frontend/apps/nas-tools/)
+- 技术: Vue 3 + Vite + Naive UI + Tailwind CSS + `@vben/plugins/echarts`
+- 开发代理: `http://127.0.0.1:3000` → `http://127.0.0.1:3001`
+- **颜色规范**: 必须使用 Vben Admin 主题 CSS 变量，如 `hsl(var(--card))`，**禁止**硬编码十六进制/RGB/Tailwind 颜色。
+- **图标规范**: 使用 `@vben/icons` 的 `IconifyIcon` 组件，前缀统一为 `lucide:`。
+- **移动端**: 新页面必须考虑移动端适配，使用响应式 Tailwind 类。
+
+## 测试
+- 测试文件在 `tests/`，但没有正式配置 (`pytest.ini`, `tox.ini`)。
+- 文件: `tests/run.py`, `tests/test_rbac.py`, `tests/test_metainfo.py` 等。
+- 测试配置在 ../config/config.yaml
+
+## Docker
+- 提供 `Dockerfile` 和 `docker-compose.yml`。
+- CI 通过 `.github/workflows/build.yml` 构建并推送到 GHCR。
+
+## 版本
+- `app/version.py` 导出 `APP_VERSION`。
