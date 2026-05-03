@@ -23,11 +23,19 @@ class RBACUserEntity:
     last_login_ip: Optional[str]
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
+    roles: List[Dict[str, Any]] = None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["RBACUserEntity"]:
         if orm_model is None:
             return None
+
+        roles = []
+        try:
+            roles = [r.to_dict() for r in orm_model.roles]
+        except Exception:
+            pass
+
         return cls(
             id=orm_model.ID,
             username=orm_model.USERNAME or "",
@@ -41,6 +49,7 @@ class RBACUserEntity:
             last_login_ip=getattr(orm_model, 'LAST_LOGIN_IP', None),
             created_at=getattr(orm_model, 'CREATED_AT', None),
             updated_at=getattr(orm_model, 'UPDATED_AT', None),
+            roles=roles if roles else None,
         )
 
     def __getattr__(self, name: str):
@@ -50,7 +59,7 @@ class RBACUserEntity:
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             "id": self.id,
             "username": self.username,
             "email": self.email,
@@ -62,6 +71,9 @@ class RBACUserEntity:
             "last_login_ip": self.last_login_ip,
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None,
         }
+        if self.roles is not None:
+            result["roles"] = self.roles
+        return result
 
 
 @dataclass
@@ -75,11 +87,35 @@ class RBACRoleEntity:
     status: int
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
+    permissions: List[Dict[str, Any]] = None
+    menus: List[Dict[str, Any]] = None
+    users_count: int = 0
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["RBACRoleEntity"]:
         if orm_model is None:
             return None
+
+        # 提取关联数据（捕获 DetachedInstanceError 避免 session 已关闭时报错）
+        perms = []
+        menus = []
+        users_count = 0
+
+        try:
+            perms = [p.to_dict() for p in orm_model.permissions]
+        except Exception:
+            pass
+
+        try:
+            menus = [m.to_dict() for m in orm_model.menus]
+        except Exception:
+            pass
+
+        try:
+            users_count = len(list(orm_model.users))
+        except Exception:
+            pass
+
         return cls(
             id=orm_model.ID,
             role_name=orm_model.ROLE_NAME or "",
@@ -89,6 +125,9 @@ class RBACRoleEntity:
             status=getattr(orm_model, 'STATUS', 1),
             created_at=getattr(orm_model, 'CREATED_AT', None),
             updated_at=getattr(orm_model, 'UPDATED_AT', None),
+            permissions=perms if perms else None,
+            menus=menus if menus else None,
+            users_count=users_count,
         )
 
     def __getattr__(self, name: str):
@@ -98,7 +137,7 @@ class RBACRoleEntity:
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             "id": self.id,
             "role_name": self.role_name,
             "role_code": self.role_code,
@@ -106,6 +145,12 @@ class RBACRoleEntity:
             "role_level": self.role_level,
             "status": self.status,
         }
+        if self.permissions is not None:
+            result["permissions"] = self.permissions
+        if self.menus is not None:
+            result["menus"] = self.menus
+        result["users_count"] = self.users_count
+        return result
 
 
 @dataclass
@@ -172,6 +217,15 @@ class RBACMenuEntity:
     external_link: Optional[str]
     status: int
     permission_code: Optional[str]
+    redirect: Optional[str]
+    keep_alive: int
+    affix_tab: int
+    hide_in_menu: int
+    hide_in_tab: int
+    hide_in_breadcrumb: int
+    active_icon: Optional[str]
+    badge: Optional[str]
+    badge_type: Optional[str]
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 
@@ -194,6 +248,15 @@ class RBACMenuEntity:
             external_link=getattr(orm_model, 'EXTERNAL_LINK', None),
             status=getattr(orm_model, 'STATUS', 1),
             permission_code=getattr(orm_model, 'PERMISSION_CODE', None),
+            redirect=getattr(orm_model, 'REDIRECT', None),
+            keep_alive=getattr(orm_model, 'KEEP_ALIVE', 0),
+            affix_tab=getattr(orm_model, 'AFFIX_TAB', 0),
+            hide_in_menu=getattr(orm_model, 'HIDE_IN_MENU', 0),
+            hide_in_tab=getattr(orm_model, 'HIDE_IN_TAB', 0),
+            hide_in_breadcrumb=getattr(orm_model, 'HIDE_IN_BREADCRUMB', 0),
+            active_icon=getattr(orm_model, 'ACTIVE_ICON', None),
+            badge=getattr(orm_model, 'BADGE', None),
+            badge_type=getattr(orm_model, 'BADGE_TYPE', None),
             created_at=getattr(orm_model, 'CREATED_AT', None),
             updated_at=getattr(orm_model, 'UPDATED_AT', None),
         )
@@ -220,6 +283,15 @@ class RBACMenuEntity:
             "external_link": self.external_link,
             "status": self.status,
             "permission_code": self.permission_code,
+            "redirect": self.redirect,
+            "keep_alive": self.keep_alive,
+            "affix_tab": self.affix_tab,
+            "hide_in_menu": self.hide_in_menu,
+            "hide_in_tab": self.hide_in_tab,
+            "hide_in_breadcrumb": self.hide_in_breadcrumb,
+            "active_icon": self.active_icon,
+            "badge": self.badge,
+            "badge_type": self.badge_type,
         }
 
 

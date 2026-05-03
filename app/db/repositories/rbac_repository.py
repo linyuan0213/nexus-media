@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 
 from sqlalchemy import and_, or_, desc
+from sqlalchemy.orm import selectinload
 
 from app.db import DbPersist
 from app.db.models.rbac import (
@@ -23,28 +24,30 @@ class RBACUserRepository(BaseRepository):
 
     def get_user_by_id(self, user_id: int) -> Optional[RBACUser]:
         """
-        根据ID获取用户
-        
+        根据ID获取用户（预加载角色）
+
         Args:
             user_id: 用户ID
-            
+
         Returns:
             用户对象或None
         """
-        return self._db.query(RBACUser).filter(RBACUser.ID == user_id).first()
+        return self._db.query(RBACUser).options(
+            selectinload(RBACUser.roles),
+        ).filter(RBACUser.ID == user_id).first()
 
     def get_user_by_username(self, username: str) -> Optional[RBACUser]:
         """
-        根据用户名获取用户
-        
+        根据用户名获取用户（不过滤状态，让上层判断）
+
         Args:
             username: 用户名
-            
+
         Returns:
             用户对象或None
         """
         return self._db.query(RBACUser).filter(
-            and_(RBACUser.USERNAME == username, RBACUser.STATUS == 1)
+            RBACUser.USERNAME == username
         ).first()
 
     def get_user_by_email(self, email: str) -> Optional[RBACUser]:
@@ -61,37 +64,41 @@ class RBACUserRepository(BaseRepository):
             and_(RBACUser.EMAIL == email, RBACUser.STATUS == 1)
         ).first()
 
-    def get_users(self, page: int = 1, page_size: int = 20, 
+    def get_users(self, page: int = 1, page_size: int = 20,
                   status: Optional[int] = None) -> tuple:
         """
-        获取用户列表（支持分页）
-        
+        获取用户列表（支持分页，预加载角色）
+
         Args:
             page: 页码
             page_size: 每页数量
             status: 状态筛选
-            
+
         Returns:
             (用户列表, 总数)
         """
-        query = self._db.query(RBACUser)
-        
+        query = self._db.query(RBACUser).options(
+            selectinload(RBACUser.roles),
+        )
+
         if status is not None:
             query = query.filter(RBACUser.STATUS == status)
-        
+
         total = query.count()
         users = query.offset((page - 1) * page_size).limit(page_size).all()
-        
+
         return users, total
 
     def get_all_users(self) -> List[RBACUser]:
         """
-        获取所有用户
-        
+        获取所有用户（预加载角色）
+
         Returns:
             用户列表
         """
-        return self._db.query(RBACUser).filter(RBACUser.STATUS == 1).all()
+        return self._db.query(RBACUser).options(
+            selectinload(RBACUser.roles),
+        ).filter(RBACUser.STATUS == 1).all()
 
     def is_user_exists(self, username: str) -> bool:
         """
@@ -196,21 +203,16 @@ class RBACUserRepository(BaseRepository):
     @DbPersist(BaseRepository._db)
     def delete_user(self, user_id: int) -> bool:
         """
-        删除用户（软删除，将状态设为0）
-        
+        删除用户（硬删除）
+
         Args:
             user_id: 用户ID
-            
+
         Returns:
             是否成功
         """
-        user = self.get_user_by_id(user_id)
-        if not user:
-            return False
-        
-        user.STATUS = 0
-        user.UPDATED_AT = datetime.now()
-        return True
+        result = self._db.query(RBACUser).filter(RBACUser.ID == user_id).delete()
+        return result > 0
 
     @DbPersist(BaseRepository._db)
     def hard_delete_user(self, user_id: int) -> bool:
@@ -345,7 +347,7 @@ class RBACRoleRepository(BaseRepository):
 
     def get_all_roles(self, status: Optional[int] = None) -> List[RBACRole]:
         """
-        获取所有角色
+        获取所有角色（预加载权限、菜单、用户关联）
         
         Args:
             status: 状态筛选
@@ -353,7 +355,11 @@ class RBACRoleRepository(BaseRepository):
         Returns:
             角色列表
         """
-        query = self._db.query(RBACRole)
+        query = self._db.query(RBACRole).options(
+            selectinload(RBACRole.permissions),
+            selectinload(RBACRole.menus),
+            selectinload(RBACRole.users),
+        )
         if status is not None:
             query = query.filter(RBACRole.STATUS == status)
         return query.order_by(RBACRole.ROLE_LEVEL).all()
@@ -379,14 +385,27 @@ class RBACRoleRepository(BaseRepository):
     def is_role_exists(self, role_code: str) -> bool:
         """
         检查角色代码是否已存在
-        
+
         Args:
             role_code: 角色代码
-            
+
         Returns:
             是否存在
         """
         count = self._db.query(RBACRole).filter(RBACRole.ROLE_CODE == role_code).count()
+        return count > 0
+
+    def is_role_name_exists(self, role_name: str) -> bool:
+        """
+        检查角色名称是否已存在
+
+        Args:
+            role_name: 角色名称
+
+        Returns:
+            是否存在
+        """
+        count = self._db.query(RBACRole).filter(RBACRole.ROLE_NAME == role_name).count()
         return count > 0
 
     @DbPersist(BaseRepository._db)
@@ -728,8 +747,7 @@ class RBACMenuRepository(BaseRepository):
         ).join(
             user_roles, role_menus.c.role_id == user_roles.c.role_id
         ).filter(
-            and_(user_roles.c.user_id == user_id,
-                 RBACMenu.STATUS == 1)
+            user_roles.c.user_id == user_id
         ).distinct().order_by(RBACMenu.SORT_ORDER).all()
         
         return menus
@@ -742,7 +760,8 @@ class RBACMenuRepository(BaseRepository):
                     component: Optional[str] = None,
                     sort_order: int = 0,
                     menu_level: int = 1,
-                    permission_code: Optional[str] = None) -> RBACMenu:
+                    permission_code: Optional[str] = None,
+                    **kwargs) -> RBACMenu:
         """
         创建菜单
         """
@@ -758,6 +777,13 @@ class RBACMenuRepository(BaseRepository):
             PERMISSION_CODE=permission_code,
             STATUS=1
         )
+        # 支持 Vben 扩展字段
+        vben_fields = ['REDIRECT', 'KEEP_ALIVE', 'AFFIX_TAB', 'HIDE_IN_MENU',
+                       'HIDE_IN_TAB', 'HIDE_IN_BREADCRUMB', 'ACTIVE_ICON',
+                       'BADGE', 'BADGE_TYPE']
+        for key, value in kwargs.items():
+            if key.upper() in vben_fields:
+                setattr(menu, key.upper(), value)
         self._db.insert(menu)
         return menu
 
@@ -770,8 +796,11 @@ class RBACMenuRepository(BaseRepository):
         if not menu:
             return False
         
-        allowed_fields = ['MENU_NAME', 'PATH', 'ICON', 'COMPONENT', 'PARENT_ID',
-                         'SORT_ORDER', 'IS_HIDDEN', 'STATUS', 'PERMISSION_CODE']
+        allowed_fields = ['MENU_NAME', 'MENU_CODE', 'PATH', 'ICON', 'COMPONENT', 'PARENT_ID',
+                         'SORT_ORDER', 'IS_HIDDEN', 'STATUS', 'PERMISSION_CODE',
+                         'REDIRECT', 'KEEP_ALIVE', 'AFFIX_TAB', 'HIDE_IN_MENU',
+                         'HIDE_IN_TAB', 'HIDE_IN_BREADCRUMB', 'ACTIVE_ICON',
+                         'BADGE', 'BADGE_TYPE']
         for key, value in kwargs.items():
             if key.upper() in allowed_fields:
                 setattr(menu, key.upper(), value)

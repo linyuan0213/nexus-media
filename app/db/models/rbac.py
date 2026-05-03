@@ -120,6 +120,24 @@ class RBACRole(Base):
     
     def to_dict(self):
         """转换为字典"""
+        is_superadmin = self.ROLE_CODE == 'superadmin'
+
+        if is_superadmin and self.permissions:
+            # 超级管理员返回全部权限
+            perms = [p.to_dict() for p in self.permissions]
+        elif self.permissions:
+            perms = [p.to_dict() for p in self.permissions]
+        else:
+            perms = []
+
+        if is_superadmin and self.menus:
+            # 超级管理员返回全部菜单
+            menus = [m.to_dict() for m in self.menus]
+        elif self.menus:
+            menus = [m.to_dict() for m in self.menus]
+        else:
+            menus = []
+
         return {
             'id': self.ID,
             'role_name': self.ROLE_NAME,
@@ -128,8 +146,9 @@ class RBACRole(Base):
             'role_level': self.ROLE_LEVEL,
             'status': self.STATUS,
             'created_at': self.CREATED_AT.strftime('%Y-%m-%d %H:%M:%S') if self.CREATED_AT else None,
-            'permissions': [p.to_dict() for p in self.permissions] if self.permissions else [],
-            'menus': [m.to_dict() for m in self.menus] if self.menus else []
+            'permissions': perms,
+            'menus': menus,
+            'users_count': len(self.users) if self.users else 0,
         }
 
 
@@ -221,7 +240,18 @@ class RBACMenu(Base):
     
     # 权限标识（关联的权限code）
     PERMISSION_CODE = Column(String(255), nullable=True)
-    
+
+    # Vben Admin 路由元数据扩展字段
+    REDIRECT = Column(String(512), nullable=True)
+    KEEP_ALIVE = Column(Integer, default=0, nullable=False)
+    AFFIX_TAB = Column(Integer, default=0, nullable=False)
+    HIDE_IN_MENU = Column(Integer, default=0, nullable=False)
+    HIDE_IN_TAB = Column(Integer, default=0, nullable=False)
+    HIDE_IN_BREADCRUMB = Column(Integer, default=0, nullable=False)
+    ACTIVE_ICON = Column(String(512), nullable=True)
+    BADGE = Column(String(64), nullable=True)
+    BADGE_TYPE = Column(String(32), nullable=True)
+
     # 时间戳
     CREATED_AT = Column(DateTime, default=datetime.now, nullable=False)
     UPDATED_AT = Column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
@@ -265,6 +295,15 @@ class RBACMenu(Base):
             'external_link': self.EXTERNAL_LINK,
             'status': self.STATUS,
             'permission_code': self.PERMISSION_CODE,
+            'redirect': self.REDIRECT,
+            'keep_alive': self.KEEP_ALIVE,
+            'affix_tab': self.AFFIX_TAB,
+            'hide_in_menu': self.HIDE_IN_MENU,
+            'hide_in_tab': self.HIDE_IN_TAB,
+            'hide_in_breadcrumb': self.HIDE_IN_BREADCRUMB,
+            'active_icon': self.ACTIVE_ICON,
+            'badge': self.BADGE,
+            'badge_type': self.BADGE_TYPE,
             'created_at': self.CREATED_AT.strftime('%Y-%m-%d %H:%M:%S') if self.CREATED_AT else None,
             'children': children_list
         }

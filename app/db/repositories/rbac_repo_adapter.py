@@ -118,6 +118,9 @@ class RBACRoleRepositoryAdapter(IRBACRoleRepository):
     def is_role_exists(self, role_code: str) -> bool:
         return self._repo.is_role_exists(role_code)
 
+    def is_role_name_exists(self, role_name: str) -> bool:
+        return self._repo.is_role_name_exists(role_name)
+
     def create_role(self, role_name: str, role_code: str, description: Optional[str] = None, role_level: int = 100) -> RBACRoleEntity:
         row = self._repo.create_role(role_name, role_code, description, role_level)
         if isinstance(row, bool):
@@ -213,8 +216,8 @@ class RBACMenuRepositoryAdapter(IRBACMenuRepository):
         rows = self._repo.get_user_menus(user_id)
         return [e for e in [RBACMenuEntity.from_orm(r) for r in rows] if e is not None]
 
-    def create_menu(self, menu_name: str, menu_code: str, parent_id: Optional[int] = None, path: Optional[str] = None, icon: Optional[str] = None, component: Optional[str] = None, sort_order: int = 0, menu_level: int = 1, permission_code: Optional[str] = None) -> RBACMenuEntity:
-        row = self._repo.create_menu(menu_name, menu_code, parent_id, path, icon, component, sort_order, menu_level, permission_code)
+    def create_menu(self, menu_name: str, menu_code: str, parent_id: Optional[int] = None, path: Optional[str] = None, icon: Optional[str] = None, component: Optional[str] = None, sort_order: int = 0, menu_level: int = 1, permission_code: Optional[str] = None, **kwargs) -> RBACMenuEntity:
+        row = self._repo.create_menu(menu_name, menu_code, parent_id, path, icon, component, sort_order, menu_level, permission_code, **kwargs)
         if isinstance(row, bool):
             row = self._repo.get_menu_by_code(menu_code)
         return RBACMenuEntity.from_orm(row)
