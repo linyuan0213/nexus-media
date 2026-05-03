@@ -27,18 +27,21 @@ router = APIRouter()
 
 def _serve_image(cache_path: str, image_url: str, size: Optional[str] = None, referer: Optional[str] = None):
     """FastAPI 版本的缓存检查/下载/返回图片"""
-    # 检查缓存（30 天过期）
+    # 检查缓存（30 天过期），空缓存直接删除重下
     if os.path.exists(cache_path):
         try:
             stat = os.stat(cache_path)
-            if time.time() - stat.st_mtime < MAX_CACHE_DAYS * 24 * 3600:
+            if stat.st_size > 0 and time.time() - stat.st_mtime < MAX_CACHE_DAYS * 24 * 3600:
                 return FileResponse(cache_path, media_type="image/jpeg")
+            else:
+                os.remove(cache_path)
         except Exception as e:
             log.error(f"【ImageProxy】读取缓存失败: {str(e)}")
 
     # 下载图片
     image_data = download_image(image_url, referer=referer)
-    if not image_data:
+    if not image_data or len(image_data) < 100:
+        log.error(f"【ImageProxy】下载内容为空或过小: {image_url}")
         raise HTTPException(status_code=404, detail="获取图片失败")
 
     # 调整尺寸
