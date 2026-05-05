@@ -345,7 +345,6 @@ class SyncService:
             "Rss": ("app.rss", "Rss"),
             "Subscribe": ("app.subscribe", "Subscribe"),
             "SchedulerCore": ("app.services.scheduler_core", "SchedulerCore"),
-            "PluginManager": ("app.plugins", "PluginManager"),
             "Scraper": ("app.media", "Scraper"),
         }
         module_path, class_name = safe_mapping.get(obj_name, (None, None))

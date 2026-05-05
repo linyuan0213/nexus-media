@@ -27,7 +27,7 @@ from app.helper.thread_helper import ThreadHelper
 from app.services.indexer_service import IndexerService
 from app.mediaserver import MediaServer
 from app.message import Message, MessageCenter
-from app.plugins import PluginManager, EventManager
+from app.plugin_framework.event_compat import EventManager
 from app.services.rss_core import Rss
 from app.schemas.system import (
     BackupRestoreResultDTO,
@@ -498,7 +498,6 @@ class SystemLifecycleService:
         self._rss_checker = rss_checker
         self._torrent_remover = torrent_remover
         self._downloader = downloader
-        self._plugin_manager = plugin_manager
         self._file_index = file_index_service
 
     def start_service(self) -> None:
@@ -534,8 +533,6 @@ class SystemLifecycleService:
             self._torrent_remover = TorrentRemover()
         if self._downloader is None:
             self._downloader = Downloader()
-        if self._plugin_manager is None:
-            self._plugin_manager = PluginManager()
         if self._file_index is None:
             from app.services.file_index_service import FileIndexService
             self._file_index = FileIndexService()
@@ -558,8 +555,6 @@ class SystemLifecycleService:
             self._torrent_remover.stop_service()
         if self._downloader:
             self._downloader.stop_service()
-        if self._plugin_manager:
-            self._plugin_manager.stop_service()
         if self._file_index:
             self._file_index.stop()
 
@@ -619,7 +614,7 @@ class MessageCommandHandler:
                 channel=in_from, title="正在运行 %s ..." % command.get("desc"), user_id=user_id)
             return
 
-        plugin_commands = PluginManager().get_plugin_commands()
+        plugin_commands = []
         msg_list = msg.split(" ")
         for command in plugin_commands:
             if command.get("cmd") == msg_list[0]:
@@ -667,7 +662,7 @@ def get_commands():
     } for cid, cmd in handler._commands.items()] + [{
         "id": item.get("cmd"),
         "name": item.get("desc")
-    } for item in PluginManager().get_plugin_commands()]
+    } for item in []]
 
 
 def get_rmt_modes():

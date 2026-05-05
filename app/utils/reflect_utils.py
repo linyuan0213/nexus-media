@@ -2,7 +2,6 @@ import importlib
 import pkgutil
 
 from app.conf import SystemConfig
-from app.plugins import PluginManager
 
 
 class ReflectUtils:
@@ -30,33 +29,6 @@ class ReflectUtils:
                     submodules.append(obj)
 
         return submodules
-
-    @staticmethod
-    def get_plugin_method(func_str):
-        if len(func_str.split(".")) < 2:
-            return
-        class_name = func_str.split(".")[0]
-        func_name = func_str.split(".")[1]
-        plugins = ReflectUtils.import_submodules(
-            "app.plugins.modules",
-            filter_func=lambda _, obj: hasattr(obj, 'module_name')
-        )
-        plugin_manager = PluginManager()
-        for plugin in plugins:
-            if plugin.__name__ == class_name:
-                pid = plugin.__name__
-                return plugin_manager.get_plugin_method(pid, func_name)
-        return None
-
-    @staticmethod
-    def get_plugin_config(pid):
-        if not pid:
-            return
-
-        systemconfig = SystemConfig()
-        return systemconfig.get(f"plugin.{pid}") or {}
-
-
 
     @staticmethod
     def get_class_by_name(lib_path, class_name):

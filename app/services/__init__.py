@@ -14,7 +14,6 @@ from .media_service import (
     TransferHistoryService,
     MediaFileService,
 )
-from .plugin_service import PluginService
 from .rss_service import RssSubscriptionService, RssTaskService, RssParserEngine
 from .rss_core import Rss
 from .site_service import SiteService
