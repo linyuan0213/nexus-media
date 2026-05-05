@@ -13,7 +13,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.utils.security import get_secret_key
-from api.routers import system, site, download, rss, sync, brush, filter, scheduler, plugin, userrss, words, media, rbac, pages, auth, image
+from api.routers import system, site, download, rss, sync, brush, filter, scheduler, userrss, words, media, rbac, auth, image, plugin_framework
+import version
 
 # 读取安全密钥（与 Flask 共用 secret_key）
 _secret_key = get_secret_key()
@@ -23,7 +24,10 @@ _secret_key = get_secret_key()
 async def lifespan(app: FastAPI):
     """应用生命周期管理：启动后台服务"""
     import log
+    from app.db import init_db
     from app.services.system_service import SystemLifecycleService
+    log.info("【FastAPI】初始化数据库...")
+    init_db()
     log.info("【FastAPI】启动后台服务...")
     SystemLifecycleService().start_service()
     log.info("【FastAPI】后台服务启动完成")
@@ -36,7 +40,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="NAS-Tools API",
     description="NAS-Tools 现代化 FastAPI 路由（P3 绞杀式迁移）",
-    version="3.8.0",
+    version=version.APP_VERSION,
     lifespan=lifespan,
 )
 
@@ -66,18 +70,13 @@ app.include_router(sync.router, prefix="/api/sync", tags=["sync"])
 app.include_router(brush.router, prefix="/api/brush", tags=["brush"])
 app.include_router(filter.router, prefix="/api/filter", tags=["filter"])
 app.include_router(scheduler.router, prefix="/api/scheduler", tags=["scheduler"])
-app.include_router(plugin.router, prefix="/api/plugin", tags=["plugin"])
+app.include_router(plugin_framework.router, prefix="/api/plugin-framework", tags=["plugin-framework"])
 app.include_router(userrss.router, prefix="/api/userrss", tags=["userrss"])
 app.include_router(words.router, prefix="/api/words", tags=["words"])
 app.include_router(media.router, prefix="/api/media", tags=["media"])
 app.include_router(rbac.router, prefix="/api/rbac", tags=["rbac"])
 app.include_router(auth.router, tags=["authentication"])
-app.include_router(pages.router, tags=["pages"])
 app.include_router(image.router, prefix="/img", tags=["image"])
-
-# 注册模板过滤器（兼容 Jinja2 hash/b64encode 等）
-from api.routers.pages import register_template_filters
-register_template_filters(app)
 
 # 挂载静态文件（与 Flask 共用 web/static）
 _static_dir = os.path.join(os.path.dirname(__file__), "..", "web", "static")
@@ -87,7 +86,7 @@ app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 @app.get("/health")
 def health_check():
     """健康检查"""
-    return {"status": "ok", "version": "3.8.0"}
+    return {"status": "ok", "version": version.APP_VERSION}
 
 
 from starlette.responses import JSONResponse

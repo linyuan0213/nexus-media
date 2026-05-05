@@ -13,12 +13,10 @@ from app.conf import SystemConfig
 from app.db.repositories import ConfigRepository, DownloadRepository
 from app.helper import PluginHelper
 from app.helper.site_data_updater import SiteDataUpdater
-from app.plugins import PluginManager
 from app.media import Category
 from app.utils import ConfigLoadCache, CategoryLoadCache, ExceptionUtils, StringUtils
 from app.utils.types import SystemConfigKey
 from config import Config
-from app.plugins import PluginManager
 
 _observer = Observer(timeout=10)
 
@@ -119,20 +117,6 @@ def update_config():
         
         if migrated:
             overwrite_cofig = True
-    except Exception as e:
-        ExceptionUtils.exception_traceback(e)
-
-    # 自定义制作组/字幕组兼容旧配置
-    try:
-        custom_release_groups = (Config().get_config('laboratory') or {}).get('release_groups')
-        if custom_release_groups:
-            PluginManager().save_plugin_config(pid="CustomReleaseGroups", conf={
-                "release_groups": custom_release_groups
-            })
-            # 删除旧配置
-            _config["laboratory"].pop("release_groups")
-            overwrite_cofig = True
-
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
 

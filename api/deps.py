@@ -345,10 +345,10 @@ def get_brush_task_service():
     return BrushTaskService()
 
 
-def get_plugin_service():
-    """获取插件服务实例"""
-    from app.services.plugin_service import PluginService
-    return PluginService()
+def get_plugin_framework_service():
+    """获取插件框架 v2 服务实例"""
+    from app.services.plugin_framework_service import PluginFrameworkService
+    return PluginFrameworkService()
 
 
 def get_words_service():
