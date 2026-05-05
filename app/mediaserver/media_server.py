@@ -10,6 +10,7 @@ from app.media import Media
 from app.message import Message
 from app.utils import ExceptionUtils
 from app.utils.commons import SingletonMeta
+from app.utils.task_queue import TaskQueue
 from app.utils.types import MediaServerType, MovieTypes, SystemConfigKey, ProgressKey
 from config import Config
 
@@ -352,9 +353,34 @@ class MediaServer(metaclass=SingletonMeta):
             return None
         return self.server.get_playing_sessions()
 
+    def _process_webhook(self, event_info: dict, channel: MediaServerType):
+        """异步处理 webhook（图片获取 + 消息发送）"""
+        try:
+            if event_info.get("item_type") == "TV":
+                image_url = self.get_episode_image_by_id(
+                    item_id=event_info.get('item_id'),
+                    season_id=event_info.get('season_id'),
+                    episode_id=event_info.get('episode_id'))
+            elif event_info.get("item_type") in ["MOV", "SHOW"]:
+                image_url = self.get_remote_image_by_id(
+                    item_id=event_info.get('item_id'),
+                    image_type="Backdrop")
+            elif event_info.get("item_type") == "AUD":
+                image_url = self.get_local_image_by_id(
+                    item_id=event_info.get('item_id'))
+            else:
+                image_url = None
+            self.message.send_mediaserver_message(
+                event_info=event_info,
+                channel=channel.value,
+                image_url=image_url)
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
+            log.error(f"【MediaServer】webhook 异步处理异常")
+
     def webhook_message_handler(self, message: str, channel: MediaServerType):
         """
-        处理Webhook消息
+        处理Webhook消息（快速响应，异步处理）
         """
         if not self.server:
             return
@@ -366,24 +392,11 @@ class MediaServer(metaclass=SingletonMeta):
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             log.error(f"【MediaServer】webhook 消息解析异常")
+            return
         if event_info:
-            # 获取消息图片
-            if event_info.get("item_type") == "TV":
-                # 根据返回的item_id、season_id、episode_id去调用媒体服务器获取
-                image_url = self.get_episode_image_by_id(item_id=event_info.get('item_id'),
-                                                         season_id=event_info.get('season_id'),
-                                                         episode_id=event_info.get('episode_id'))
-            elif event_info.get("item_type") in ["MOV", "SHOW"]:
-                # 根据返回的item_id去调用媒体服务器获取
-                image_url = self.get_remote_image_by_id(item_id=event_info.get('item_id'),
-                                                        image_type="Backdrop")
-            elif event_info.get("item_type") == "AUD":
-                image_url = self.get_local_image_by_id(item_id=event_info.get('item_id'))
-            else:
-                image_url = None
-            self.message.send_mediaserver_message(event_info=event_info,
-                                                  channel=channel.value,
-                                                  image_url=image_url)
+            TaskQueue().submit(
+                self._process_webhook, event_info, channel,
+                name="mediaserver_webhook")
 
     def get_resume(self, num=12):
         """
