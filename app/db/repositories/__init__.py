@@ -25,6 +25,14 @@ from .rbac_repository import (
     RBACMenuRepository,
     RBACLogRepository,
 )
+from .apikey_repository import (
+    APIKeyRepository,
+    APIKeyLogRepository,
+)
+from .apikey_repo_adapter import (
+    APIKeyRepositoryAdapter,
+    APIKeyLogRepositoryAdapter,
+)
 
 __all__ = [
     'BaseRepository',
@@ -48,4 +56,9 @@ __all__ = [
     'RBACPermissionRepository',
     'RBACMenuRepository',
     'RBACLogRepository',
+    # API Key
+    'APIKeyRepository',
+    'APIKeyLogRepository',
+    'APIKeyRepositoryAdapter',
+    'APIKeyLogRepositoryAdapter',
 ]

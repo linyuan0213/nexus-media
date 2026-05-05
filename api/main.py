@@ -13,7 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.utils.security import get_secret_key
-from api.routers import system, site, download, rss, sync, brush, filter, scheduler, userrss, words, media, rbac, auth, image, plugin_framework
+from api.routers import system, site, download, rss, sync, brush, filter, scheduler, userrss, words, media, rbac, auth, image, plugin_framework, apikey
 import version
 
 # 读取安全密钥（与 Flask 共用 secret_key）
@@ -77,6 +77,7 @@ app.include_router(media.router, prefix="/api/media", tags=["media"])
 app.include_router(rbac.router, prefix="/api/rbac", tags=["rbac"])
 app.include_router(auth.router, tags=["authentication"])
 app.include_router(image.router, prefix="/img", tags=["image"])
+app.include_router(apikey.router, prefix="/api/apikey", tags=["apikey"])
 
 # 挂载静态文件（与 Flask 共用 web/static）
 _static_dir = os.path.join(os.path.dirname(__file__), "..", "web", "static")

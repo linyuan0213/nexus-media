@@ -116,6 +116,12 @@ from app.db.models.rbac import (
     RBACOperationLog,
 )
 
+# API Key 模型
+from app.db.models.apikey import (
+    APIKEY,
+    APIKEYLOG,
+)
+
 __all__ = [
     # 基础
     'Base',
@@ -183,4 +189,7 @@ __all__ = [
     'RBACMenu',
     'RBACUserLoginLog',
     'RBACOperationLog',
+    # API Key
+    'APIKEY',
+    'APIKEYLOG',
 ]

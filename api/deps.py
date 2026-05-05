@@ -60,20 +60,71 @@ def _extract_user_from_token(auth_header: Optional[str]) -> Optional[str]:
 
 def _extract_user_from_api_key(
     auth_header: Optional[str], query_key: Optional[str]
-) -> Optional[str]:
+) -> Optional[UserContext]:
     """
-    API Key 认证（APIv1 ApiResource / 外部调用）
+    API Key 认证（支持 Header 和 Query 参数）
+    使用 APIKeyService 验证 Key 并返回 UserContext
     """
-    api_key = Config().get_config("security").get("api_key")
+    from app.services.apikey_service import APIKeyService
+
+    raw_key = None
+    if auth_header:
+        raw_key = str(auth_header).split()[-1]
+    elif query_key:
+        raw_key = query_key
+
+    if not raw_key:
+        return None
+
+    service = APIKeyService()
+    api_key = service.validate_key(raw_key)
     if not api_key:
         return None
-    if auth_header:
-        auth_val = str(auth_header).split()[-1]
-        if auth_val == api_key:
-            return "api"
-    if query_key and query_key == api_key:
-        return "api"
-    return None
+
+    # 记录使用日志（异步记录，不阻塞认证流程）
+    try:
+        import uuid
+        service.record_usage(
+            api_key_id=api_key.id,
+            request_id=str(uuid.uuid4()),
+            request_name="API 认证",
+            status=1,
+        )
+    except Exception:
+        pass
+
+    # 查询创建用户的权限，API Key 继承创建者权限
+    permissions = []
+    is_superadmin = False
+    level = 0
+    username = "api_key"
+    nickname = api_key.name
+    created_by = api_key.created_by or 0
+
+    if created_by:
+        try:
+            user = rbac_service.get_user_by_id(created_by)
+            if user:
+                username = user.USERNAME or username
+                nickname = api_key.name
+                level = getattr(user, 'LEVEL', 0) or 0
+                is_superadmin = getattr(user, 'IS_SUPERADMIN', 0) == 1
+                try:
+                    perms = rbac_service.get_user_permissions(created_by)
+                    permissions = list(perms) if perms else []
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    return UserContext(
+        user_id=created_by,
+        username=username,
+        nickname=nickname,
+        level=level,
+        permissions=permissions,
+        is_superadmin=is_superadmin,
+    )
 
 
 def _extract_user_from_jwt(
@@ -160,15 +211,9 @@ def get_current_user(
 
     # 4) API Key 认证
     query_key = request.query_params.get("apikey")
-    username = _extract_user_from_api_key(auth_header, query_key)
-    if username:
-        return UserContext(
-            user_id=0,
-            username=username,
-            level=0,
-            permissions=[],
-            is_superadmin=False
-        )
+    user_ctx = _extract_user_from_api_key(auth_header, query_key)
+    if user_ctx:
+        return user_ctx
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
