@@ -1,62 +1,53 @@
 import json
 
-from app.helper import DictHelper
+from app.db.repositories.system_dict_repo_adapter import SystemDictRepositoryAdapter
 from app.utils.commons import SingletonMeta
 from app.utils.types import SystemConfigKey
 
 
 class SystemConfig(metaclass=SingletonMeta):
-    # 系统设置
-    systemconfig = {}
+    """系统配置单例"""
+
+    _type = "SystemConfig"
 
     def __init__(self):
-        self.dicthelper = DictHelper()
+        self._repo = SystemDictRepositoryAdapter()
+        self.systemconfig = {}
         self.init_config()
 
     def init_config(self):
-        """
-        缓存系统设置
-        """
+        """缓存系统设置"""
         import log
-        for item in self.dicthelper.list("SystemConfig"):
-            if not item:
+        rows = self._repo.list_by_type(self._type)
+        for row in rows:
+            if not row or not row.value:
                 continue
-            if self.__is_obj(item.VALUE):
+            if self._is_obj(row.value):
                 try:
-                    self.systemconfig[item.KEY] = json.loads(item.VALUE)
+                    self.systemconfig[row.key] = json.loads(row.value)
                 except json.JSONDecodeError:
-                    log.warn(f"配置项 {item.KEY} 的 JSON 格式损坏，跳过")
+                    log.warn(f"配置项 {row.key} 的 JSON 格式损坏，跳过")
                     continue
             else:
-                self.systemconfig[item.KEY] = item.VALUE
+                self.systemconfig[row.key] = row.value
 
     @staticmethod
-    def __is_obj(obj):
-        if isinstance(obj, list) or isinstance(obj, dict):
+    def _is_obj(value):
+        if isinstance(value, list) or isinstance(value, dict):
             return True
-        else:
-            return str(obj).startswith("{") or str(obj).startswith("[")
+        return str(value).startswith("{") or str(value).startswith("[")
 
-    def set(self, key: [SystemConfigKey, str], value):
-        """
-        设置系统设置
-        """
+    def set(self, key, value):
+        """设置系统设置"""
         if isinstance(key, SystemConfigKey):
             key = key.value
-        # 更新内存
         self.systemconfig[key] = value
-        # 写入数据库
-        if self.__is_obj(value):
-            if value is not None:
-                value = json.dumps(value)
-            else:
-                value = ''
-        self.dicthelper.set("SystemConfig", key, value)
 
-    def get(self, key: [SystemConfigKey, str] = None):
-        """
-        获取系统设置
-        """
+        db_value = json.dumps(value) if self._is_obj(value) and value is not None else str(value) if value is not None else ''
+        self._repo.set(self._type, key, db_value)
+
+    def get(self, key=None):
+        """获取系统设置"""
         if not key:
             return self.systemconfig
         if isinstance(key, SystemConfigKey):

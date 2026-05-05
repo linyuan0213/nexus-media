@@ -33,6 +33,8 @@ from .apikey_repo_adapter import (
     APIKeyRepositoryAdapter,
     APIKeyLogRepositoryAdapter,
 )
+from .system_dict_repository import SystemDictRepository
+from .system_dict_repo_adapter import SystemDictRepositoryAdapter
 
 __all__ = [
     'BaseRepository',
@@ -61,4 +63,7 @@ __all__ = [
     'APIKeyLogRepository',
     'APIKeyRepositoryAdapter',
     'APIKeyLogRepositoryAdapter',
+    # SystemDict
+    'SystemDictRepository',
+    'SystemDictRepositoryAdapter',
 ]
