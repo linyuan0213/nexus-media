@@ -2,13 +2,11 @@ import json
 import os
 import time
 
-import redis
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from app.utils.security import generate_password_hash
 
-from app.utils.redis_store import RedisStore
-from app.utils.path_utils import get_temp_path, get_inner_config_path, get_category_path
+from app.utils.path_utils import  get_category_path
 import log
 from app.core.system_config import SystemConfig
 from app.db.repositories import ConfigRepository, DownloadRepository
@@ -228,13 +226,16 @@ def update_sites_data():
         log.error(f"站点资源更新失败 .. {str(e)}")
 
 def check_redis():
+    """检查 Redis 状态，仅记录日志，不阻塞启动"""
+    from app.utils.redis_store import RedisStore
     try:
         redis_store = RedisStore()
-        redis_store.ping()
-        log.info("Redis 正在运行...")
+        if redis_store.is_available():
+            log.info("Redis 正在运行...")
+        else:
+            log.info("Redis 未启用，使用内存缓存...")
     except Exception as e:
-        log.error(f"Redis 无法连接，请启动 Redis... {str(e)}")
-        exit(1)
+        log.info(f"Redis 未启用，使用内存缓存: {e}")
 
 
 def update_rss_state():

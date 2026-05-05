@@ -233,102 +233,122 @@ class MemoryCacheAdapter(CacheAdapter):
 
 
 class RedisCacheAdapter(CacheAdapter):
-    """Redis缓存适配器"""
-    
-    def __init__(self, name: str = "redis", default_ttl: Optional[int] = None):
+    """Redis缓存适配器 - Redis不可用时自动回退到内存缓存"""
+
+    def __init__(self, name: str = "redis", default_ttl: Optional[int] = None,
+                 fallback_maxsize: int = 2000):
         self._name = name
         self._default_ttl = default_ttl
         self._redis = None
+        self._fallback = MemoryCacheAdapter(
+            maxsize=fallback_maxsize,
+            name=f"{name}_fallback",
+            default_ttl=default_ttl
+        )
         self._stats = {
             "hits": 0,
             "misses": 0,
             "sets": 0,
             "deletes": 0,
-            "errors": 0
+            "errors": 0,
+            "fallback_hits": 0,
+            "fallback_sets": 0,
         }
         self._lock = threading.Lock()
         self._init_redis()
-    
+
     def _init_redis(self):
         """初始化Redis连接"""
         try:
             from app.utils.redis_store import RedisStore
-            self._redis = RedisStore()
-            # 测试连接
-            self._redis.ping()
-            log.debug(f"【Cache】Redis适配器初始化成功")
+            store = RedisStore()
+            if store.is_available():
+                self._redis = store
+                log.debug(f"【Cache】Redis适配器初始化成功: {self._name}")
+            else:
+                log.info(f"【Cache】Redis不可用，使用内存回退: {self._name}")
+                self._redis = None
         except Exception as e:
-            log.warn(f"【Cache】Redis适配器初始化失败: {e}")
+            log.info(f"【Cache】Redis适配器初始化失败，使用内存回退: {e}")
             self._redis = None
-    
+
     def _ensure_connection(self) -> bool:
         """确保Redis连接可用"""
-        if self._redis is None:
-            return False
-        try:
-            self._redis.ping()
-            return True
-        except:
-            # 尝试重连
-            self._init_redis()
-            return self._redis is not None
-    
-    def get(self, key: str) -> Optional[Any]:
-        """获取缓存值"""
-        if not self._ensure_connection():
-            return None
-        
-        try:
-            data = self._redis.get(key)
-            if data is None:
-                with self._lock:
-                    self._stats["misses"] += 1
-                # 触发MISS事件
-                _event_manager.emit(CacheEvent(
-                    event_type=CacheEventType.MISS,
-                    cache_name=self._name,
-                    key=key
-                ))
-                return None
-            
-            # 尝试反序列化
+        if self._redis is not None:
             try:
-                value = pickle.loads(data)
-            except:
-                value = data
-            
+                if self._redis.is_available():
+                    return True
+            except Exception:
+                pass
+            self._redis = None
+        # 尝试重连
+        self._init_redis()
+        return self._redis is not None
+
+    def get(self, key: str) -> Optional[Any]:
+        """获取缓存值 - 先查Redis，失败回退到内存"""
+        if self._ensure_connection():
+            try:
+                data = self._redis.get(key)
+                if data is not None:
+                    try:
+                        value = pickle.loads(data)
+                    except Exception:
+                        value = data
+                    with self._lock:
+                        self._stats["hits"] += 1
+                    _event_manager.emit(CacheEvent(
+                        event_type=CacheEventType.HIT,
+                        cache_name=self._name,
+                        key=key,
+                        value=value
+                    ))
+                    return value
+            except Exception as e:
+                log.debug(f"【Cache】Redis get 失败，回退内存 {key}: {e}")
+                with self._lock:
+                    self._stats["errors"] += 1
+
+        # 回退到内存缓存
+        value = self._fallback.get(key)
+        if value is not None:
             with self._lock:
-                self._stats["hits"] += 1
-            
-            # 触发HIT事件
+                self._stats["fallback_hits"] += 1
+        else:
+            with self._lock:
+                self._stats["misses"] += 1
             _event_manager.emit(CacheEvent(
-                event_type=CacheEventType.HIT,
+                event_type=CacheEventType.MISS,
                 cache_name=self._name,
-                key=key,
-                value=value
+                key=key
             ))
-            return value
-        except Exception as e:
-            log.error(f"【Cache】Redis获取缓存失败 {key}: {e}")
-            with self._lock:
-                self._stats["errors"] += 1
-            return None
-    
+        return value
+
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
-        """设置缓存值"""
+        """设置缓存值 - 同时写入Redis和内存回退"""
         if ttl is None:
             ttl = self._default_ttl
-        if not self._ensure_connection():
-            return False
-        
-        try:
-            # 序列化值
-            data = pickle.dumps(value)
-            self._redis.set(key, data, ex=ttl)
+
+        redis_ok = False
+        if self._ensure_connection():
+            try:
+                data = pickle.dumps(value)
+                self._redis.set(key, data, ex=ttl)
+                with self._lock:
+                    self._stats["sets"] += 1
+                redis_ok = True
+            except Exception as e:
+                log.debug(f"【Cache】Redis set 失败 {key}: {e}")
+                with self._lock:
+                    self._stats["errors"] += 1
+
+        # 无论Redis是否成功，都写入内存回退
+        fallback_ok = self._fallback.set(key, value, ttl)
+        if fallback_ok:
             with self._lock:
-                self._stats["sets"] += 1
-            
-            # 触发SET事件
+                self._stats["fallback_sets"] += 1
+
+        if redis_ok or fallback_ok:
             _event_manager.emit(CacheEvent(
                 event_type=CacheEventType.SET,
                 cache_name=self._name,
@@ -337,98 +357,93 @@ class RedisCacheAdapter(CacheAdapter):
                 ttl=ttl
             ))
             return True
-        except Exception as e:
-            log.error(f"【Cache】Redis设置缓存失败 {key}: {e}")
-            with self._lock:
-                self._stats["errors"] += 1
-            return False
-    
+        return False
+
     def delete(self, key: str) -> bool:
-        """删除缓存"""
-        if not self._ensure_connection():
-            return False
-        
-        try:
-            self._redis.delete(key)
-            with self._lock:
-                self._stats["deletes"] += 1
-            
-            # 触发DELETE事件
+        """删除缓存 - 同时删除Redis和内存回退"""
+        redis_ok = False
+        if self._ensure_connection():
+            try:
+                self._redis.delete(key)
+                with self._lock:
+                    self._stats["deletes"] += 1
+                redis_ok = True
+            except Exception as e:
+                log.debug(f"【Cache】Redis delete 失败 {key}: {e}")
+
+        fallback_ok = self._fallback.delete(key)
+
+        if redis_ok or fallback_ok:
             _event_manager.emit(CacheEvent(
                 event_type=CacheEventType.DELETE,
                 cache_name=self._name,
                 key=key
             ))
             return True
-        except Exception as e:
-            log.error(f"【Cache】Redis删除缓存失败 {key}: {e}")
-            return False
-    
+        return False
+
     def exists(self, key: str) -> bool:
-        """检查键是否存在"""
-        if not self._ensure_connection():
-            return False
-        
-        try:
-            return self._redis.exists(key)
-        except Exception as e:
-            log.error(f"【Cache】Redis检查键存在失败 {key}: {e}")
-            return False
-    
+        """检查键是否存在 - 先查Redis，再查内存回退"""
+        if self._ensure_connection():
+            try:
+                return self._redis.exists(key)
+            except Exception:
+                pass
+        return self._fallback.exists(key)
+
     def clear(self) -> bool:
-        """清空所有缓存（仅清除以 'cache:' 开头的键）"""
-        if not self._ensure_connection():
-            return False
-        
-        try:
-            keys = self._redis.keys("cache:*")
-            if keys:
-                self._redis.delete(*keys)
-            
-            # 触发CLEAR事件
-            _event_manager.emit(CacheEvent(
-                event_type=CacheEventType.CLEAR,
-                cache_name=self._name
-            ))
-            return True
-        except Exception as e:
-            log.error(f"【Cache】Redis清空缓存失败: {e}")
-            return False
-    
+        """清空所有缓存"""
+        if self._ensure_connection():
+            try:
+                keys = self._redis.keys("cache:*")
+                if keys:
+                    self._redis.delete(*keys)
+            except Exception as e:
+                log.debug(f"【Cache】Redis clear 失败: {e}")
+
+        self._fallback.clear()
+
+        _event_manager.emit(CacheEvent(
+            event_type=CacheEventType.CLEAR,
+            cache_name=self._name
+        ))
+        return True
+
     def keys(self, pattern: str = "*") -> List[str]:
         """获取匹配模式的键列表"""
-        if not self._ensure_connection():
-            return []
-        
-        try:
-            return self._redis.keys(pattern)
-        except Exception as e:
-            log.error(f"【Cache】Redis获取键列表失败: {e}")
-            return []
-    
+        redis_keys = []
+        if self._ensure_connection():
+            try:
+                redis_keys = self._redis.keys(pattern)
+            except Exception as e:
+                log.debug(f"【Cache】Redis keys 失败: {e}")
+
+        fallback_keys = self._fallback.keys(pattern)
+        # 合并去重
+        return list(set(redis_keys + fallback_keys))
+
     def ttl(self, key: str) -> int:
         """获取键的剩余生存时间"""
-        if not self._ensure_connection():
-            return -2
-        
-        try:
-            return self._redis.ttl(key)
-        except Exception as e:
-            log.error(f"【Cache】Redis获取TTL失败 {key}: {e}")
-            return -2
-    
+        if self._ensure_connection():
+            try:
+                return self._redis.ttl(key)
+            except Exception:
+                pass
+        return self._fallback.ttl(key)
+
     def expire(self, key: str, seconds: int) -> bool:
         """设置键的过期时间"""
-        if not self._ensure_connection():
-            return False
-        
-        try:
-            self._redis.expire(key, seconds)
-            return True
-        except Exception as e:
-            log.error(f"【Cache】Redis设置过期时间失败 {key}: {e}")
-            return False
-    
+        redis_ok = False
+        if self._ensure_connection():
+            try:
+                self._redis.expire(key, seconds)
+                redis_ok = True
+            except Exception as e:
+                log.debug(f"【Cache】Redis expire 失败 {key}: {e}")
+
+        fallback_ok = self._fallback.expire(key, seconds)
+        return redis_ok or fallback_ok
+
     def get_stats(self) -> Dict[str, Any]:
         """获取缓存统计信息"""
         with self._lock:
@@ -443,7 +458,10 @@ class RedisCacheAdapter(CacheAdapter):
                 "hit_rate": f"{hit_rate:.2%}",
                 "sets": self._stats["sets"],
                 "deletes": self._stats["deletes"],
-                "errors": self._stats["errors"]
+                "errors": self._stats["errors"],
+                "fallback": self._fallback.get_stats(),
+                "fallback_hits": self._stats["fallback_hits"],
+                "fallback_sets": self._stats["fallback_sets"],
             }
 
 

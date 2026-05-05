@@ -19,7 +19,7 @@ from app.helper.drissionpage_helper import DrissionPageHelper
 from app.plugin_framework.context import PluginContext
 from app.plugin_framework.event_compat import EventHandler
 from app.utils.http_utils import RequestUtils
-from app.utils.redis_store import RedisStore
+from app.utils.cache_system import get_cache_manager
 from app.utils.types import EventType
 from config import Config
 from app.utils.config_tools import get_ua
@@ -31,7 +31,7 @@ class WeworkIPChangePlugin:
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
         self._drissonpage_helper = None
-        self._redis_store = None
+        self._cache = None
         self._tab_id = ""
         self._ip_url = "https://4.ipw.cn"
 
@@ -41,7 +41,9 @@ class WeworkIPChangePlugin:
     def on_enable(self):
         self.ctx.info("企业微信可信IP更新插件已启用")
         self._drissonpage_helper = DrissionPageHelper()
-        self._redis_store = RedisStore()
+        self._cache = get_cache_manager().get_or_create(
+            "wework_ipchange", cache_type="redis", fallback_maxsize=10
+        )
         self._init_chrome_tab()
         self._start_service()
 
@@ -63,10 +65,12 @@ class WeworkIPChangePlugin:
 
     def _init_chrome_tab(self):
         try:
-            tab_id = (self._redis_store.get("tab_id") or b'').decode('utf-8')
-            if not self._drissonpage_helper.get_page_html_without_closetab(tab_id=tab_id):
+            tab_id = self._cache.get("tab_id")
+            if isinstance(tab_id, bytes):
+                tab_id = tab_id.decode('utf-8')
+            if not tab_id or not self._drissonpage_helper.get_page_html_without_closetab(tab_id=tab_id):
                 self._tab_id = self._drissonpage_helper.create_tab('https://work.weixin.qq.com/wework_admin/frame', self._get_config().get("cookie", ""))
-                self._redis_store.set("tab_id", self._tab_id)
+                self._cache.set("tab_id", self._tab_id)
             else:
                 self._tab_id = tab_id
         except Exception as e:

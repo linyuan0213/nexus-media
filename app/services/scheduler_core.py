@@ -25,8 +25,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.job import Job
 
 from app.utils.commons import SingletonMeta
-from config import Config
-from app.utils import ExceptionUtils, RedisStore
+from app.utils import ExceptionUtils
 from app.db import remove_session
 
 
@@ -203,7 +202,7 @@ class SchedulerCore(metaclass=SingletonMeta):
 
     def __init__(self):
         self._instance_id: str = os.environ.get('SERVER_INSTANCE', '')
-        self._redis_store: Optional[RedisStore] = None
+        self._retry_cache = None
         self._scheduler: Optional[BackgroundScheduler] = None
         self._job_stats: Dict[str, JobStats] = {}
         self._job_start_times: Dict[str, float] = {}
@@ -1020,29 +1019,36 @@ class SchedulerCore(metaclass=SingletonMeta):
         """处理任务错过执行"""
         log.warn(f"任务错过执行: {job_id}")
 
+    def _get_retry_cache(self):
+        """获取重试计数缓存（内存/Redis自动降级）"""
+        if self._retry_cache is None:
+            from app.utils.cache_system import get_cache_manager
+            self._retry_cache = get_cache_manager().get_or_create(
+                "scheduler_retry", cache_type="tiered", maxsize=1000
+            )
+        return self._retry_cache
+
     def _get_retry_key(self, job_id: str) -> str:
-        """获取重试计数在 Redis 中的 key"""
+        """获取重试计数的缓存 key"""
         return f"scheduler:retry:{self._instance_id}:{job_id}"
 
     def _get_retry_count(self, job_id: str) -> int:
         """获取任务重试次数"""
-        if not self._redis_store:
-            return 0
         try:
+            cache = self._get_retry_cache()
             retry_key = self._get_retry_key(job_id)
-            count = self._redis_store.get(retry_key)
-            return int(count) if count else 0
+            count = cache.get(retry_key)
+            return int(count) if count is not None else 0
         except Exception as e:
             log.error(f"获取重试次数失败 {job_id}: {e}")
             return 0
 
     def _set_retry_count(self, job_id: str, count: int) -> bool:
         """设置任务重试次数"""
-        if not self._redis_store:
-            return False
         try:
+            cache = self._get_retry_cache()
             retry_key = self._get_retry_key(job_id)
-            self._redis_store.set(retry_key, count, ex=3600)  # 1小时过期
+            cache.set(retry_key, count, ttl=3600)  # 1小时过期
             return True
         except Exception as e:
             log.error(f"设置重试次数失败 {job_id}: {e}")
@@ -1050,11 +1056,10 @@ class SchedulerCore(metaclass=SingletonMeta):
 
     def _clear_retry_count(self, job_id: str) -> bool:
         """清除任务重试次数"""
-        if not self._redis_store:
-            return False
         try:
+            cache = self._get_retry_cache()
             retry_key = self._get_retry_key(job_id)
-            self._redis_store.delete(retry_key)
+            cache.delete(retry_key)
             return True
         except Exception as e:
             log.error(f"清除重试次数失败 {job_id}: {e}")

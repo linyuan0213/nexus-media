@@ -78,7 +78,7 @@ class CacheManager:
     def get_or_create(self, name: str, cache_type: str = "memory", **kwargs) -> CacheAdapter:
         """
         获取或创建缓存
-        
+
         :param name: 缓存名称
         :param cache_type: 缓存类型（memory/redis/tiered）
         :param kwargs: 创建参数
@@ -91,6 +91,9 @@ class CacheManager:
                 elif cache_type == "redis":
                     self.create_redis_cache(name, **kwargs)
                 elif cache_type == "tiered":
+                    # 参数映射兼容
+                    if "maxsize" in kwargs:
+                        kwargs["memory_maxsize"] = kwargs.pop("maxsize")
                     self.create_tiered_cache(name, **kwargs)
                 else:
                     raise ValueError(f"不支持的缓存类型: {cache_type}")
