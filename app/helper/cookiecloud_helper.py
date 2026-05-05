@@ -1,24 +1,30 @@
 
 import json
 from app.utils.commons import SingletonMeta
-from app.utils.redis_store import RedisStore
+from app.utils.cache_system import get_cache_manager
 
 class CookiecloudHelper(metaclass=SingletonMeta):
     def __init__(self):
-      self.redis_store = RedisStore()
-    
+        self._cache = get_cache_manager().get_or_create(
+            "plugin_cookiecloud", cache_type="redis"
+        )
+
     def get_cookie(self, domain_url: str) -> str:
-       cookie = self.redis_store.hget('cookie', domain_url)
-       if cookie:
-          return cookie.decode("utf-8")
-    
+        cookie = self._cache.get(f'cookie:{domain_url}')
+        if cookie:
+            if isinstance(cookie, bytes):
+                return cookie.decode("utf-8")
+            return cookie
+
     def get_local_storage(self, domain_url: str) -> dict:
-       storage = self.redis_store.hget('local_storage', domain_url)
-       if storage:
-          data = json.loads(storage.decode("utf-8"))
-          # 修复反斜杠转义问题，保留单个反斜杠，修复双反斜杠
-          return self._fix_backslash_escapes(data)
-       return {}
+        storage = self._cache.get(f'local_storage:{domain_url}')
+        if storage:
+            if isinstance(storage, bytes):
+                storage = storage.decode("utf-8")
+            data = json.loads(storage)
+            # 修复反斜杠转义问题，保留单个反斜杠，修复双反斜杠
+            return self._fix_backslash_escapes(data)
+        return {}
 
     def _fix_backslash_escapes(self, data):
         """

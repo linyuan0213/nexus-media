@@ -29,7 +29,7 @@ from app.media import Media
 from app.media.meta import MetaInfo
 from app.mediaserver import MediaServer
 from app.message import Message
-from app.plugins import EventManager
+from app.plugin_framework.event_compat import EventManager
 from app.services.downloader_client_factory import DownloadClientFactory
 from app.services.download_strategies import MovieDownloadStrategy, SeasonPackStrategy, EpisodeStrategy
 from app.services.filetransfer_service import FileTransferService as FileTransfer

@@ -32,7 +32,7 @@ from app.helper import ProgressHelper, ThreadHelper
 from app.media import Media, Category, Scraper
 from app.media.meta import MetaInfo
 from app.message import Message
-from app.plugins import EventManager
+from app.plugin_framework.event_compat import EventManager
 from app.services.transfer_action_engine import TransferActionEngine
 from app.utils import PathUtils, StringUtils, SystemUtils, ExceptionUtils, NumberUtils
 from app.utils.types import EventType, MediaType, MovieTypes, ProgressKey, RmtMode, SyncType
@@ -1048,7 +1048,7 @@ class FileTransferService:
                         log.error(del_msg)
                     else:
                         log.info(del_msg)
-                        from app.plugins import EventManager
+                        from app.plugin_framework.event_compat import EventManager
                         EventManager().send_event(EventType.SourceFileDeleted, {
                             "media_info": media_info,
                             "path": source_path,
@@ -1062,7 +1062,7 @@ class FileTransferService:
                             log.error(del_msg)
                         else:
                             log.info(del_msg)
-                            from app.plugins import EventManager
+                            from app.plugin_framework.event_compat import EventManager
                             EventManager().send_event(EventType.LibraryFileDeleted, {
                                 "media_info": media_info,
                                 "path": dest_path,
@@ -1088,7 +1088,7 @@ class FileTransferService:
                                 try:
                                     import shutil
                                     shutil.rmtree(dest_path)
-                                    from app.plugins import EventManager
+                                    from app.plugin_framework.event_compat import EventManager
                                     EventManager().send_event(EventType.LibraryFileDeleted, {
                                         "media_info": media_info,
                                         "path": dest_path
@@ -1100,7 +1100,7 @@ class FileTransferService:
                                 try:
                                     import shutil
                                     shutil.rmtree(dest_path)
-                                    from app.plugins import EventManager
+                                    from app.plugin_framework.event_compat import EventManager
                                     EventManager().send_event(EventType.LibraryFileDeleted, {
                                         "media_info": media_info,
                                         "path": dest_path
@@ -1118,7 +1118,7 @@ class FileTransferService:
                                     ).issubset(set(meta_info.get_episode_list())):
                                         try:
                                             os.remove(dest_file)
-                                            from app.plugins import EventManager
+                                            from app.plugin_framework.event_compat import EventManager
                                             EventManager().send_event(EventType.LibraryFileDeleted, {
                                                 "media_info": media_info,
                                                 "path": os.path.dirname(dest_file),

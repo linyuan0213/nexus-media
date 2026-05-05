@@ -550,6 +550,8 @@ def get_unknown_list_by_page(
     return success(data={"total":result.total, "items":result.items, "totalPage":result.total_page, "pageNum":result.page_num, "currentPage":result.current_page,})
 
 
+import urllib.parse
+
 @router.post("/detail")
 def media_detail(
     req: MediaDetailRequest,
@@ -557,10 +559,11 @@ def media_detail(
     svc: MediaInfoService = Depends(get_media_info_service),
 ):
     mtype = MediaType.MOVIE if req.type in MovieTypes else MediaType.TV
-    if not req.tmdbid:
+    tmdbid = urllib.parse.unquote(req.tmdbid) if req.tmdbid else req.tmdbid
+    if not tmdbid:
         return fail(msg="未指定媒体ID")
     result = svc.get_media_detail(
-        tmdbid=req.tmdbid, mtype_str=req.type
+        tmdbid=tmdbid, mtype_str=req.type
     )
     if not result:
         return fail(msg="无法查询到TMDB信息")

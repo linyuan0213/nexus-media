@@ -12,6 +12,12 @@ from .sync_repository import SyncRepository
 from .word_repository import WordRepository
 from .config_repository import ConfigRepository
 from .plugin_repository import PluginRepository
+from .plugin_framework_repository import PluginFrameworkRepository
+from .plugin_framework_repo_adapter import (
+    PluginManifestRepositoryAdapter,
+    PluginConfigRepositoryAdapter,
+    PluginLogRepositoryAdapter,
+)
 from .rbac_repository import (
     RBACUserRepository,
     RBACRoleRepository,
@@ -32,6 +38,10 @@ __all__ = [
     'WordRepository',
     'ConfigRepository',
     'PluginRepository',
+    'PluginFrameworkRepository',
+    'PluginManifestRepositoryAdapter',
+    'PluginConfigRepositoryAdapter',
+    'PluginLogRepositoryAdapter',
     # RBAC权限管理
     'RBACUserRepository',
     'RBACRoleRepository',

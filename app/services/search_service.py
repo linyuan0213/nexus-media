@@ -22,7 +22,7 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
 from app.media import Media
 from app.message import Message
-from app.plugins import EventManager
+from app.plugin_framework.event_compat import EventManager
 from app.helper import ProgressHelper
 from app.schemas.search import SearchOneMediaResultDTO, SearchMediasResultDTO
 from app.utils.commons import SingletonMeta
