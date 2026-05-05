@@ -1,0 +1,66 @@
+{
+  "manifest_version": "1.0",
+  "id": "hello_world",
+  "name": "Hello World",
+  "version": "1.0.0",
+  "author": "NAS-Tools Team",
+  "author_url": "https://github.com/linyuan0213/nas-tools",
+  "description": "插件框架 v2 的示例插件，展示前后端一体化能力",
+  "category": "tool",
+  "tags": ["示例", "演示"],
+  "icon": "lucide:hand",
+  "color": "#8b5cf6",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:HelloWorldPlugin",
+    "api_prefix": "/api/plugin/hello_world",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ]
+  },
+  "frontend": {
+    "routes": [
+      {
+        "path": "page",
+        "component": "HelloPage",
+        "title": "Hello World 页面",
+        "icon": "lucide:hand",
+        "menu": true
+      }
+    ],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "greeting",
+          "type": "input",
+          "label": "问候语",
+          "default": "Hello from plugin!",
+          "placeholder": "输入自定义问候语",
+          "required": true
+        },
+        {
+          "key": "show_timestamp",
+          "type": "switch",
+          "label": "显示时间戳",
+          "default": true
+        },
+        {
+          "key": "refresh_interval",
+          "type": "number",
+          "label": "刷新间隔（秒）",
+          "default": 60,
+          "placeholder": "60"
+        }
+      ]
+    },
+    "slots": [
+      {
+        "target": "dashboard.home",
+        "position": "after_stats",
+        "component": "DashboardWidget"
+      }
+    ]
+  }
+}
