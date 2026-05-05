@@ -2,7 +2,6 @@ from .indexer_helper import IndexerHelper, IndexerConf
 from .progress_helper import ProgressHelper
 from .security_helper import SecurityHelper
 from .thread_helper import ThreadHelper
-from .db_helper import DbHelper
 from .site_helper import SiteHelper
 from .ocr_helper import OcrHelper
 from .words_helper import WordsHelper
