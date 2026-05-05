@@ -78,6 +78,12 @@ DEFAULT_PERMISSIONS = [
     
     # 日志权限
     {"name": "日志查看", "code": "log:view", "type": "menu", "module": "log"},
+
+    # API Key 权限
+    {"name": "API Key 查看", "code": "apikey:view", "type": "menu", "module": "apikey"},
+    {"name": "API Key 创建", "code": "apikey:create", "type": "api", "module": "apikey"},
+    {"name": "API Key 编辑", "code": "apikey:update", "type": "api", "module": "apikey"},
+    {"name": "API Key 删除", "code": "apikey:delete", "type": "api", "module": "apikey"},
 ]
 
 
@@ -234,6 +240,7 @@ DEFAULT_MENUS = [
             {"name": "用户管理", "code": "SystemUsers", "path": "/system/users", "icon": "lucide:users", "component": "/system/users/index", "sort_order": 10, "level": 2, "permission_code": "user:view"},
             {"name": "角色管理", "code": "SystemRoles", "path": "/system/roles", "icon": "lucide:shield", "component": "/system/roles/index", "sort_order": 11, "level": 2, "permission_code": "role:view"},
             {"name": "菜单管理", "code": "SystemMenus", "path": "/system/menus", "icon": "lucide:menu", "component": "/system/menus/index", "sort_order": 12, "level": 2, "permission_code": "menu:view"},
+            {"name": "API Key 管理", "code": "SystemAPIKey", "path": "/system/apikey", "icon": "lucide:key", "component": "/system/apikey/index", "sort_order": 13, "level": 2, "permission_code": "apikey:view"},
         ]
     },
     {
