@@ -11,7 +11,6 @@ import feapder
 from app.helper.drissionpage_helper import DrissionPageHelper
 from app.sites import Sites
 import log
-from app.helper import RedisHelper
 from app.utils import StringUtils, SystemUtils, RequestUtils
 from app.utils.exception_utils import ExceptionUtils
 from app.utils.types import MediaType
@@ -22,7 +21,6 @@ from app.utils.config_tools import get_ua
 
 
 class TorrentSpider(feapder.AirSpider):
-    _redis_valid = RedisHelper.is_valid()
     __custom_setting__ = dict(
         SPIDER_THREAD_COUNT=2,  # 减少线程数，避免过多并发
         SPIDER_MAX_RETRY_TIMES=2,  # 减少重试次数，加快失败返回
@@ -31,12 +29,9 @@ class TorrentSpider(feapder.AirSpider):
         LOG_LEVEL="INFO",
         KEEP_ALIVE=False,
         RANDOM_HEADERS=False,
-        REDISDB_IP_PORTS="127.0.0.1:6379",
-        REDISDB_USER_PASS="",
-        REDISDB_DB=0,
-        RESPONSE_CACHED_ENABLE=_redis_valid,
+        RESPONSE_CACHED_ENABLE=False,
         RESPONSE_CACHED_EXPIRE_TIME=300,
-        RESPONSE_CACHED_USED=_redis_valid
+        RESPONSE_CACHED_USED=False
     )
     # 是否搜索完成标志
     is_complete = False

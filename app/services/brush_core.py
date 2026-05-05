@@ -25,7 +25,7 @@ from app.helper import RssHelper
 from app.db.repositories.brush_repo_adapter import BrushTaskRepositoryAdapter, BrushTorrentRepositoryAdapter
 from app.db.repositories import BrushRepository
 from app.services.scheduler_core import SchedulerCore
-from app.utils import StringUtils, ExceptionUtils, JsonUtils, RedisStore
+from app.utils import StringUtils, ExceptionUtils, JsonUtils
 from app.utils.types import BrushDeleteType, MediaType
 import log
 from config import Config
@@ -133,8 +133,7 @@ class BrushTaskService:
                  message: Optional[Message] = None,
                  sites: Optional[Sites] = None,
                  siteconf: Optional[SiteConf] = None,
-                 rsshelper: Optional[RssHelper] = None,
-                 redis_store: Optional[RedisStore] = None):
+                 rsshelper: Optional[RssHelper] = None):
         self._repo = repository or BrushTaskRepositoryAdapter()
         self._scheduler = scheduler or BrushTaskScheduler()
         self._downloader = downloader or Downloader()
@@ -142,7 +141,6 @@ class BrushTaskService:
         self._sites = sites or Sites()
         self._siteconf = siteconf or SiteConf()
         self._rsshelper = rsshelper or RssHelper()
-        self._redis = redis_store or RedisStore()
         self._filter = Filter()
         self._brush_tasks: dict = {}
         self._torrents_cache: set = set()
