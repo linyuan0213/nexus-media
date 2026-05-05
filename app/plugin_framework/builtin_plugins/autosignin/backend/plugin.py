@@ -21,7 +21,9 @@ from app.plugin_framework.context import PluginContext
 from app.sites.siteconf import SiteConf
 from app.sites.sites import Sites
 from app.utils import RequestUtils, ExceptionUtils, StringUtils, JsonUtils
-from config import MT_URL, Config
+from config import Config
+from app.core.constants import MT_URL
+from app.utils.config_tools import get_proxies
 
 
 class AutoSignInPlugin:
@@ -363,14 +365,14 @@ class AutoSignInPlugin:
                         return f"【{site}】请填写请求头 authorization 参数！"
                     res = RequestUtils(
                         headers=headers,
-                        proxies=Config().get_proxies() if site_info.get("proxy") else None
+                        proxies=get_proxies() if site_info.get("proxy") else None
                     ).post_res(url=url)
                 else:
                     headers.update({'User-Agent': ua})
                     res = RequestUtils(
                         cookies=site_cookie,
                         headers=headers,
-                        proxies=Config().get_proxies() if site_info.get("proxy") else None
+                        proxies=get_proxies() if site_info.get("proxy") else None
                     ).get_res(url=site_url)
 
                 if res and res.status_code in [200, 500, 403]:

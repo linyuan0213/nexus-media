@@ -1,3 +1,4 @@
+import os
 # -*- coding: utf-8 -*-
 """
 TorrentMark Plugin v2
@@ -60,7 +61,7 @@ class TorrentMarkPlugin:
 
         if onlyonce:
             self.ctx.info("标记服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(Config().get_timezone()))
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ')))
             self.ctx.schedule_date("mark_once", self._do_mark, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 

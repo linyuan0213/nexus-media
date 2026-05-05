@@ -11,7 +11,8 @@ from app.sites.siteconf import SiteConf
 from app.helper import SiteHelper
 from app.utils import RequestUtils, StringUtils, PathUtils, ExceptionUtils
 from app.utils.temp_manager import temp_manager
-from config import Config, RMT_SUBEXT, MT_URL
+from config import Config
+from app.core.constants import RMT_SUBEXT, MT_URL
 
 
 class SiteSubtitle:

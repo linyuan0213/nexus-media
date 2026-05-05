@@ -56,8 +56,8 @@ from app.schemas.auth import UserContext
 from app.utils import ExceptionUtils
 from app.services.system_service import restart_server
 from app.services.indexer_service import IndexerService
-from app.conf import ModuleConf
-from app.conf.systemconfig import SystemConfig
+from app.core.module_config import ModuleConf
+from app.core.system_config import SystemConfig
 from app.utils.types import SystemConfigKey
 
 router = APIRouter()

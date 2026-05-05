@@ -20,6 +20,7 @@ from app.domain.entities.plugin import PluginConfigEntity
 from app.plugin_framework.context import PluginContext
 from app.utils import SystemUtils, RequestUtils, IpUtils
 from config import Config
+from app.utils.config_tools import get_proxies
 
 
 class CloudflareSpeedTestPlugin:
@@ -63,7 +64,7 @@ class CloudflareSpeedTestPlugin:
 
         if onlyonce:
             self.ctx.info("Cloudflare CDN优选服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ'))) + timedelta(seconds=3)
             self.ctx.schedule_date("speedtest_once", self._do_speedtest, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -302,7 +303,7 @@ class CloudflareSpeedTestPlugin:
 
     def _os_install(self, cf_path, download_url, cf_file_name, release_version, archive_type):
         if not Path(f'{cf_path}/{cf_file_name}').exists():
-            proxies = Config().get_proxies()
+            proxies = get_proxies()
             proxy_dict = proxies if proxies and proxies.get("https") else None
             try:
                 response = requests.get(download_url, proxies=proxy_dict, verify=False)
@@ -347,7 +348,7 @@ class CloudflareSpeedTestPlugin:
         version_res = RequestUtils().get_res(
             "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
         if not version_res:
-            version_res = RequestUtils(proxies=Config().get_proxies()).get_res(
+            version_res = RequestUtils(proxies=get_proxies()).get_res(
                 "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
         if version_res:
             ver_json = version_res.json()

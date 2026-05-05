@@ -4,7 +4,9 @@ import json
 from app.utils.types import MediaType
 import log
 from app.utils import RequestUtils, JsonUtils
-from config import MT_URL, Config
+from config import Config
+from app.core.constants import MT_URL
+from app.utils.config_tools import get_proxies
 
 
 class MteamSpider(object):
@@ -37,7 +39,7 @@ class MteamSpider(object):
             self._downloadurl = self._downloadurl % self._domain
             self._name = indexer.name
             if indexer.proxy:
-                self._proxy = Config().get_proxies()
+                self._proxy = get_proxies()
             self._cookie = indexer.cookie
             self._ua = indexer.ua
             if JsonUtils.is_valid_json(indexer.headers):

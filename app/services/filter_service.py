@@ -5,7 +5,7 @@ import re
 from typing import List, Optional, Tuple
 
 import log
-from app.core import ModuleConf
+from app.core.module_config import ModuleConf
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
 from app.media.meta import MetaInfo, ReleaseGroupsMatcher
 from app.utils import StringUtils

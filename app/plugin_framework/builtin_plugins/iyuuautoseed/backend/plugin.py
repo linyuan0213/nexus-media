@@ -1,3 +1,4 @@
+import os
 # -*- coding: utf-8 -*-
 """
 IYUUAutoSeed Plugin v2
@@ -17,7 +18,9 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.sites import Sites
 from app.utils import RequestUtils, JsonUtils
 from app.utils.types import DownloaderType
-from config import MT_URL, Config
+from config import Config
+from app.core.constants import MT_URL
+from app.utils.config_tools import get_proxies
 
 
 class IYUUAutoSeedPlugin:
@@ -90,7 +93,7 @@ class IYUUAutoSeedPlugin:
 
         if onlyonce:
             self.ctx.info("辅种服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ'))) + timedelta(seconds=3)
             self.ctx.schedule_date("seed_once", self._do_seed, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -297,7 +300,7 @@ class IYUUAutoSeedPlugin:
 
         # 下载种子
         torrent_url = download_page.replace("{}", seed.get("torrent_id"))
-        proxies = Config().get_proxies() if site_info.get("proxy") else None
+        proxies = get_proxies() if site_info.get("proxy") else None
         res = RequestUtils(cookies=site_info.get("cookie"), headers={"User-Agent": site_info.get("ua")}, proxies=proxies).get_res(torrent_url)
         if not res or not res.content:
             self.fail += 1

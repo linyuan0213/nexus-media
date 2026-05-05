@@ -7,6 +7,7 @@ from app.utils.http_utils import RequestUtils
 from app.utils.json_utils import JsonUtils
 from app.utils.string_utils import StringUtils
 from config import Config
+from app.utils.config_tools import get_proxies
 
 
 class HDHome(_ISiteRssGenHandler):
@@ -65,7 +66,7 @@ class HDHome(_ISiteRssGenHandler):
         headers.update({'User-Agent': ua})
         html_res = RequestUtils(cookies=site_cookie,
                             headers=headers,
-                            proxies=Config().get_proxies() if site_info.get("proxy") else None
+                            proxies=get_proxies() if site_info.get("proxy") else None
                             ).post_res(url=rss_url, data=data)
         if not html_res or html_res.status_code != 200:
             self.error(f"生成RSS失败，请检查站点连通性")

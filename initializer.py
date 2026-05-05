@@ -8,8 +8,9 @@ from watchdog.observers import Observer
 from app.utils.security import generate_password_hash
 
 from app.utils.redis_store import RedisStore
+from app.utils.path_utils import get_temp_path, get_inner_config_path, get_category_path
 import log
-from app.conf import SystemConfig
+from app.core.system_config import SystemConfig
 from app.db.repositories import ConfigRepository, DownloadRepository
 from app.helper import PluginHelper
 from app.helper.site_data_updater import SiteDataUpdater
@@ -180,7 +181,7 @@ class ConfigMonitor(FileSystemEventHandler):
             # 重新加载配置
             Config().init_config()
         # 正在使用的二级分类策略文件3秒内只能加载一次，配置文件加载时，二级分类策略文件不加载
-        elif file_name == os.path.basename(Config().category_path) \
+        elif file_name == os.path.basename(get_category_path()) \
                 and not CategoryLoadCache.get(src_path) \
                 and not CategoryLoadCache.get("ConfigLoadBlock"):
             CategoryLoadCache.set(src_path, True)
@@ -196,7 +197,7 @@ def start_config_monitor():
     """
     global _observer
     # 配置文件监听
-    _observer.schedule(ConfigMonitor(), path=Config().get_config_path(), recursive=False)
+    _observer.schedule(ConfigMonitor(), path=Config().config_path, recursive=False)
     _observer.daemon = True
     _observer.start()
 
@@ -216,9 +217,11 @@ def stop_config_monitor():
 def update_sites_data():
     try:
         cfg = Config()
+        from app.utils.path_utils import get_temp_path, get_inner_config_path
+        from app.utils.config_tools import get_proxies
         SiteDataUpdater.update_sites_data(
-            cfg._config_path, cfg.get_temp_path(), cfg.get_inner_config_path(),
-            proxies=cfg.get_proxies()
+            cfg._config_path, get_temp_path(), get_inner_config_path(),
+            proxies=get_proxies()
         )
         log.info("站点资源数据已更新...")
     except Exception as e:

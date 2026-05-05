@@ -9,6 +9,7 @@ import time
 from app.services.system_service import backup as do_backup
 from app.utils import SystemUtils
 from config import Config
+from app.utils.path_utils import get_temp_path
 
 from backend._autobackup.filestorage_client import FileClientFactory
 from app.plugin_framework.context import PluginContext
@@ -95,11 +96,11 @@ class AutoBackupPlugin:
         # 确定本地备份路径
         if storage_type == "local":
             if SystemUtils.is_docker():
-                bk_path = os.path.join(Config().get_config_path(), "backup_file")
+                bk_path = os.path.join(Config().config_path, "backup_file")
             else:
-                bk_path = bk_path_cfg or os.path.join(Config().get_config_path(), "backup_file")
+                bk_path = bk_path_cfg or os.path.join(Config().config_path, "backup_file")
         else:
-            bk_path = os.path.join(Config().get_temp_path(), "backup_temp")
+            bk_path = os.path.join(get_temp_path(), "backup_temp")
             os.makedirs(bk_path, exist_ok=True)
 
         # 生成备份文件

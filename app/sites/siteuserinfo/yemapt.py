@@ -1,3 +1,4 @@
+import os
 # -*- coding: utf-8 -*-
 from datetime import datetime, timezone
 import json
@@ -11,6 +12,7 @@ from app.sites.siteuserinfo._base import _ISiteUserInfo, SITE_BASE_ORDER
 from app.utils import RequestUtils, JsonUtils
 from app.utils.types import SiteSchema
 from config import Config
+from app.utils.config_tools import get_proxies
 
 
 class YemaPTUserInfo(_ISiteUserInfo):
@@ -104,7 +106,7 @@ class YemaPTUserInfo(_ISiteUserInfo):
             org_date = json_data.get('data').get('registerTime')
             dt_utc = datetime.fromisoformat(org_date.replace('Z', '+00:00'))
 
-            local_tz = pytz.timezone(Config().get_timezone())
+            local_tz = pytz.timezone(os.environ.get('TZ'))
             local_date = dt_utc.astimezone(local_tz).strftime('%Y-%m-%d %H:%M:%S')
             self.join_at = local_date
 
@@ -164,7 +166,7 @@ class YemaPTUserInfo(_ISiteUserInfo):
         :return:
         """
         req_headers = None
-        proxies = Config().get_proxies() if self._proxy else None
+        proxies = get_proxies() if self._proxy else None
         if self._ua or headers or self._addition_headers:
             req_headers = {}
             if headers:

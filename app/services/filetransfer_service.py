@@ -15,7 +15,7 @@ from time import sleep
 from typing import Optional
 
 import log
-from app.core import ModuleConf
+from app.core.module_config import ModuleConf
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import (
     TransferBlacklistRepositoryAdapter,
@@ -36,8 +36,9 @@ from app.plugin_framework.event_compat import EventManager
 from app.services.transfer_action_engine import TransferActionEngine
 from app.utils import PathUtils, StringUtils, SystemUtils, ExceptionUtils, NumberUtils
 from app.utils.types import EventType, MediaType, MovieTypes, ProgressKey, RmtMode, SyncType
-from config import RMT_MEDIAEXT, RMT_FAVTYPE, RMT_MIN_FILESIZE, DEFAULT_MOVIE_FORMAT, \
-    DEFAULT_TV_FORMAT, Config
+from app.core.constants import RMT_MEDIAEXT, RMT_FAVTYPE, RMT_MIN_FILESIZE, DEFAULT_MOVIE_FORMAT, \
+    DEFAULT_TV_FORMAT
+from config import Config
 
 
 class FileTransferService:

@@ -51,7 +51,7 @@ class SiteDataUpdater:
     @staticmethod
     def check_sites_update(config_path, temp_path, inner_config_path, proxies=None):
         """检查并更新sites.dat"""
-        from config import SITES_DATA_URL  # 延迟导入避免循环依赖
+        from app.core.constants import SITES_DATA_URL  # 延迟导入避免循环依赖
         try:
             release_url = SITES_DATA_URL
             local_path = os.path.join(os.path.dirname(config_path), "sites.dat")

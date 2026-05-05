@@ -8,6 +8,7 @@ from app.utils import StringUtils, ExceptionUtils, SystemUtils, RequestUtils, Ip
 from app.utils.types import MediaType
 from config import Config
 from version import APP_VERSION
+from app.utils.config_tools import get_proxies
 
 
 class WebUtils:
@@ -50,9 +51,9 @@ class WebUtils:
         """
         try:
             releases_update_only = Config().get_config("app").get("releases_update_only")
-            version_res = RequestUtils(proxies=Config().get_proxies()).get_res(
+            version_res = RequestUtils(proxies=get_proxies()).get_res(
                 "https://api.github.com/repos/linyuan0213/nas-tools/releases/latest")
-            commit_res = RequestUtils(proxies=Config().get_proxies()).get_res(
+            commit_res = RequestUtils(proxies=get_proxies()).get_res(
                 "https://api.github.com/repos/linyuan0213/nas-tools/commits/master")
             if version_res and commit_res:
                 ver_json = version_res.json()
@@ -218,7 +219,7 @@ class WebUtils:
             ret = RequestUtils(referer="https://movie.douban.com").get_res(url)
         # TMDB图片
         elif 'tmdb' in parsed_url:
-            ret = RequestUtils(proxies=Config().get_proxies()).get_res(url)
+            ret = RequestUtils(proxies=get_proxies()).get_res(url)
         # FnOS图片 - 需要携带cookie
         elif '/v/api/v1/sys/img/' in url:
             # 获取FnOS配置

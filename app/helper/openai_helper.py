@@ -4,6 +4,7 @@ from openai import Client
 from app.utils import OpenAISessionCache
 from app.utils.commons import SingletonMeta
 from config import Config
+from app.utils.config_tools import get_proxies
 
 class OpenAiHelper(metaclass=SingletonMeta):
     def __init__(self):
@@ -18,7 +19,7 @@ class OpenAiHelper(metaclass=SingletonMeta):
         api_key = config.get("api_key")
         api_url = config.get("api_url")
         api_base = f"{api_url}" if api_url else None
-        proxy_conf = Config().get_proxies()
+        proxy_conf = get_proxies()
         proxy = proxy_conf.get("https")
         if api_key:
             self.client = Client(api_key=api_key,

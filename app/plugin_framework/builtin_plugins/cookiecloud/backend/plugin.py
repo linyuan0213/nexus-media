@@ -12,7 +12,7 @@ from app.helper import IndexerHelper
 from app.sites import Sites
 from app.utils import RequestUtils
 from app.utils.cache_system import get_cache_manager
-from config import MT_URL
+from app.core.constants import MT_URL
 
 from app.plugin_framework.context import PluginContext
 

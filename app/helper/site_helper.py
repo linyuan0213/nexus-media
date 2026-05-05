@@ -7,7 +7,7 @@ import json
 from lxml import etree
 
 from app.utils import SystemUtils, JsonUtils
-from config import RMT_SUBEXT
+from app.core.constants import RMT_SUBEXT
 
 
 class SiteHelper:

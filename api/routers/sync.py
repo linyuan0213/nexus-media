@@ -14,7 +14,7 @@ from app.services.filetransfer_service import FileTransferService as FileTransfe
 from app.services.sync_service import SyncService
 from app.services.sync_core import SyncCore as Sync
 from app.utils import ExceptionUtils
-from config import RMT_MEDIAEXT
+from app.core.constants import RMT_MEDIAEXT
 
 router = APIRouter()
 

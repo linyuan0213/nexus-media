@@ -1,3 +1,4 @@
+import os
 # -*- coding: utf-8 -*-
 """
 DoubanRank Plugin v2
@@ -79,7 +80,7 @@ class DoubanRankPlugin:
 
         if onlyonce:
             self.ctx.info("订阅服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ'))) + timedelta(seconds=3)
             self.ctx.schedule_date("refresh_once", self._refresh_rss, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 

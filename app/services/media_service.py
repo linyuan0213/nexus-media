@@ -11,7 +11,8 @@ from typing import Optional, List, Tuple, Dict, Any
 
 import cn2an
 import log
-from app.core import SystemConfig, ModuleConf
+from app.core.system_config import SystemConfig
+from app.core.module_config import ModuleConf
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.helper import ThreadHelper
@@ -33,6 +34,7 @@ from app.utils import StringUtils, SystemUtils, ExceptionUtils, TokenCache
 from app.utils.types import MediaType, MovieTypes, EventType, SystemConfigKey
 from app.helper.image_proxy_helper import ImageProxyHelper
 from config import Config
+from app.utils.path_utils import get_category_path
 from app.utils.web_utils import WebUtils
 
 
@@ -1146,7 +1148,7 @@ class MediaFileService:
             return False, "请输入二级分类策略名称"
         if category_name == "config":
             return False, "非法二级分类策略名称"
-        category_path = os.path.join(Config().get_config_path(), f"{category_name}.yaml")
+        category_path = os.path.join(Config().config_path, f"{category_name}.yaml")
         if not os.path.exists(category_path):
             return False, "请保存生成配置文件"
         with open(category_path, "r", encoding="utf-8") as f:
@@ -1154,7 +1156,7 @@ class MediaFileService:
 
     def update_category_config(self, text: str) -> str:
         """保存二级分类配置"""
-        category_path = Config().category_path
+        category_path = get_category_path()
         if category_path:
             with open(category_path, "w", encoding="utf-8") as f:
                 f.write(text)

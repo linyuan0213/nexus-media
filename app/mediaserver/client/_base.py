@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractmethod
 from urllib.parse import quote
 
 from config import Config
+from app.utils.config_tools import get_domain
 
 
 class _IMediaClient(metaclass=ABCMeta):
@@ -201,7 +202,7 @@ class _IMediaClient(metaclass=ABCMeta):
                         path = match.group(2).lstrip('/')
                         proxy_url = f"/img/tmdb/{size}/{path}"
                         if remote:
-                            domain = Config().get_domain()
+                            domain = get_domain()
                             if domain:
                                 return f"{domain}{proxy_url}"
                         return proxy_url
@@ -212,7 +213,7 @@ class _IMediaClient(metaclass=ABCMeta):
                     encoded_path = urllib.parse.quote(url, safe='')
                     proxy_url = f"/img/douban/{encoded_path}"
                     if remote:
-                        domain = Config().get_domain()
+                        domain = get_domain()
                         if domain:
                             return f"{domain}{proxy_url}"
                     return proxy_url
@@ -223,7 +224,7 @@ class _IMediaClient(metaclass=ABCMeta):
                     encoded_path = urllib.parse.quote(url, safe='')
                     proxy_url = f"/img/bgm/{encoded_path}"
                     if remote:
-                        domain = Config().get_domain()
+                        domain = get_domain()
                         if domain:
                             return f"{domain}{proxy_url}"
                     return proxy_url
@@ -233,7 +234,7 @@ class _IMediaClient(metaclass=ABCMeta):
                 encoded_path = urllib.parse.quote(url, safe='')
                 proxy_url = f"/img/library/{encoded_path}"
                 if remote:
-                    domain = Config().get_domain()
+                    domain = get_domain()
                     if domain:
                         return f"{domain}{proxy_url}"
                 return proxy_url
@@ -243,7 +244,7 @@ class _IMediaClient(metaclass=ABCMeta):
         
         # 默认使用旧的 Redis 缓存代理
         if remote:
-            domain = Config().get_domain()
+            domain = get_domain()
             if domain:
                 return f"{domain}/img?url={quote(url)}"
             else:

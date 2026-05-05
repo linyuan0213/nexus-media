@@ -19,7 +19,7 @@ class ImageProxyHelper:
         :param tmdb_image_url: 自定义 TMDB 图片域名
         :return: 完整图片 URL
         """
-        from config import TMDB_IMAGE_DOMAIN, TMDB_IMAGE_SIZE  # 延迟导入避免循环依赖
+        from app.core.constants import TMDB_IMAGE_DOMAIN, TMDB_IMAGE_SIZE  # 延迟导入避免循环依赖
 
         if not path:
             return ""

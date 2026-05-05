@@ -10,13 +10,13 @@ from threading import Lock
 from typing import Optional
 
 import log
-from app.core import ModuleConf
+from app.core.module_config import ModuleConf
 from app.db.repositories.transfer_repo_adapter import TransferBlacklistRepositoryAdapter
 from app.domain.interfaces.transfer_repo import ITransferBlacklistRepository
 from app.media.meta import MetaInfo
 from app.utils import PathUtils, ExceptionUtils, SystemUtils
 from app.utils.types import RmtMode
-from config import RMT_AUDIO_TRACK_EXT, RMT_SUBEXT
+from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_SUBEXT
 
 lock = Lock()
 

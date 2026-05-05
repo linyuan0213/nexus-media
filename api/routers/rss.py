@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from api.deps import get_current_user, get_rss_subscription_service, require_any_permission, require_permission
 from app.utils.response import success, fail
 from app.services.rss_service import RssSubscriptionService
-from app.conf.systemconfig import SystemConfig
+from app.core.system_config import SystemConfig
 from app.utils.types import SystemConfigKey
 
 router = APIRouter()

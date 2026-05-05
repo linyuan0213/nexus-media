@@ -16,7 +16,8 @@ from typing import Dict, List, Optional, Set
 
 import log
 from app.utils.cache_system import get_cache_manager
-from config import Config, RMT_MEDIAEXT
+from config import Config
+from app.core.constants import RMT_MEDIAEXT
 
 _CACHE_NAME = "file_index"
 _KEY_INDEX = "index"

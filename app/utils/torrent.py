@@ -13,6 +13,7 @@ from app.utils.http_utils import RequestUtils
 from app.utils.types import MediaType
 from app.utils.temp_manager import temp_manager
 from config import Config
+from app.utils.config_tools import get_proxies
 
 
 class Torrent:
@@ -69,7 +70,7 @@ class Torrent:
             headers=ua,
             cookies=cookie,
             referer=referer,
-            proxies=Config().get_proxies() if proxy else None
+            proxies=get_proxies() if proxy else None
         ).get_res(url=url, allow_redirects=False)
         while req and req.status_code in [301, 302]:
             url = req.headers['Location']
@@ -79,7 +80,7 @@ class Torrent:
                 headers=ua,
                 cookies=cookie,
                 referer=referer,
-                proxies=Config().get_proxies() if proxy else None
+                proxies=get_proxies() if proxy else None
             ).get_res(url=url, allow_redirects=False)
         if req and req.status_code == 200:
             if not req.content:
@@ -109,7 +110,7 @@ class Torrent:
                                 headers=ua,
                                 cookies=cookie,
                                 referer=referer,
-                                proxies=Config().get_proxies() if proxy else None
+                                proxies=get_proxies() if proxy else None
                             ).post_res(url=action, data=data)
                             if req and req.status_code == 200:
                                 # 检查是不是种子文件，如果不是抛出异常

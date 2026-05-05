@@ -44,40 +44,48 @@ class ConfigService:
 
     def get_script_path(self) -> str:
         """获取 SQL 脚本路径"""
-        return self._config.get_script_path()
+        from app.utils.path_utils import get_script_path
+        return get_script_path()
 
     def get_proxies(self) -> Optional[dict]:
         """获取代理配置"""
-        return self._config.get_proxies()
+        from app.utils.config_tools import get_proxies
+        return get_proxies()
 
     def get_ua(self) -> str:
         """获取 User-Agent"""
-        return self._config.get_ua()
+        from app.utils.config_tools import get_ua
+        return get_ua()
 
     def get_domain(self) -> Optional[str]:
         """获取站点域名"""
-        return self._config.get_domain()
+        from app.utils.config_tools import get_domain
+        return get_domain()
 
     def get_config_path(self) -> str:
         """获取配置目录路径"""
-        return self._config.get_config_path()
+        return self._config.config_path
 
     def get_temp_path(self) -> str:
         """获取临时目录路径"""
-        return self._config.get_temp_path()
+        from app.utils.path_utils import get_temp_path
+        return get_temp_path()
 
     def get_user_plugin_path(self) -> str:
         """获取用户插件目录路径"""
-        return self._config.get_user_plugin_path()
+        from app.utils.path_utils import get_user_plugin_path
+        return get_user_plugin_path()
 
     def get_tmdbapi_url(self) -> str:
         """获取 TMDB API URL"""
-        return self._config.get_tmdbapi_url()
+        from app.utils.config_tools import get_tmdbapi_url
+        return get_tmdbapi_url()
 
     @property
     def category_path(self) -> Optional[str]:
         """获取分类配置文件路径"""
-        return self._config.category_path
+        from app.utils.path_utils import get_category_path
+        return get_category_path()
 
     # ------------------------------------------------------------------
     # 写入接口

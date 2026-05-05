@@ -12,7 +12,7 @@ DownloaderCore - 下载器 Facade（兼容旧 Downloader 接口）
 from typing import Optional
 
 import log
-from app.core import ModuleConf
+from app.core.module_config import ModuleConf
 from app.services.downloader_client_factory import DownloadClientFactory
 from app.services.download_core import DownloadCore
 from app.services.filetransfer_service import FileTransferService
@@ -20,7 +20,7 @@ from threading import Lock
 
 from app.services.transfer_coordinator import TransferCoordinator
 from app.utils.types import RmtMode
-from config import PT_TAG
+from app.core.constants import PT_TAG
 
 
 lock = Lock()

@@ -27,7 +27,7 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.indexer_service import IndexerService
 from app.services.site_service import SiteService
-from app.conf import ModuleConf
+from app.core.module_config import ModuleConf
 from app.utils import SystemUtils, ExceptionUtils
 
 router = APIRouter()

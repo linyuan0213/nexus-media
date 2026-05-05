@@ -13,6 +13,7 @@ from app.helper.drissionpage_helper import DrissionPageHelper
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
 from app.utils import StringUtils, RequestUtils
 from config import Config
+from app.utils.config_tools import get_proxies
 
 
 class Tjupt(_ISiteSigninHandler):
@@ -34,7 +35,7 @@ class Tjupt(_ISiteSigninHandler):
                       '重新签到成功，本次签到获得\\d+个魔力值'],
 
     # 存储正确的答案，后续可直接查
-    _answer_path = Config().get_config_path() + "/temp/signin"
+    _answer_path = Config().config_path + "/temp/signin"
     _answer_file = _answer_path + "/tjupt.json"
 
     @classmethod
@@ -55,7 +56,7 @@ class Tjupt(_ISiteSigninHandler):
         site = site_info.get("name")
         site_cookie = site_info.get("cookie")
         ua = site_info.get("ua")
-        proxy = Config().get_proxies() if site_info.get("proxy") else None
+        proxy = get_proxies() if site_info.get("proxy") else None
 
         # 创建正确答案存储目录
         if not os.path.exists(os.path.dirname(self._answer_file)):

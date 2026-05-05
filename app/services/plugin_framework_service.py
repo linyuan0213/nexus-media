@@ -31,7 +31,7 @@ class PluginFrameworkService:
         self._repo = repo or PluginFrameworkRepository()
         self._menu_repo = RBACMenuRepositoryAdapter()
         self._role_repo = RBACRoleRepositoryAdapter()
-        self._plugins_dir = os.path.join(Config().get_config_path(), 'plugins')
+        self._plugins_dir = os.path.join(Config().config_path, 'plugins')
         if not os.path.exists(self._plugins_dir):
             os.makedirs(self._plugins_dir)
 

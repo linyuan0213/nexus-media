@@ -6,7 +6,7 @@ from enum import Enum
 
 import log
 from jinja2 import Environment, BaseLoader
-from app.core import ModuleConf
+from app.core.module_config import ModuleConf
 from app.helper import SubmoduleHelper
 from app.db.repositories import ConfigRepository
 from app.message.message_center import MessageCenter
@@ -15,6 +15,7 @@ from app.utils.commons import SingletonMeta
 from app.utils.types import SearchType, MediaType
 from config import Config
 from app.utils.web_utils import WebUtils
+from app.utils.config_tools import get_domain
 
 
 def _filesize_filter(value):
@@ -93,7 +94,7 @@ class Message(metaclass=SingletonMeta):
     def init_config(self):
         self.config_repo = ConfigRepository()
         self.messagecenter = MessageCenter()
-        self._domain = Config().get_domain()
+        self._domain = get_domain()
         # 停止旧服务
         if self._active_clients:
             for active_client in self._active_clients:

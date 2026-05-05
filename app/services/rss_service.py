@@ -29,6 +29,7 @@ from app.utils.commons import SingletonMeta
 from app.utils.types import MediaType, SearchType, RssType, MovieTypes
 from config import Config
 from app.services.scheduler_core import SchedulerCore
+from app.utils.config_tools import get_proxies
 
 
 class RssSubscriptionService:
@@ -822,7 +823,7 @@ class RssTaskService(metaclass=SingletonMeta):
                 rss_url = "%s?%s" % (rss_url, param_url) if rss_url.find("?") == -1 else "%s&%s" % (rss_url, param_url)
             # 请求数据
             try:
-                ret = RequestUtils(proxies=Config().get_proxies() if taskinfo.get("proxy") else None
+                ret = RequestUtils(proxies=get_proxies() if taskinfo.get("proxy") else None
                                    ).get_res(rss_url)
                 if not ret:
                     continue

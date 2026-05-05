@@ -5,13 +5,15 @@ from xml.dom import minidom
 from requests.exceptions import RequestException
 
 import log
-from app.core import SystemConfig, ModuleConf
+from app.core.system_config import SystemConfig
+from app.core.module_config import ModuleConf
 from app.helper import FfmpegHelper
 from app.media.douban import DouBan
 from app.media.meta import MetaInfo
 from app.utils.commons import retry
 from app.helper.image_proxy_helper import ImageProxyHelper
-from config import Config, RMT_MEDIAEXT
+from config import Config
+from app.core.constants import RMT_MEDIAEXT
 from app.utils import DomUtils, RequestUtils, ExceptionUtils, NfoReader, SystemUtils
 from app.utils.types import MediaType, SystemConfigKey, RmtMode
 from app.utils.temp_manager import temp_manager

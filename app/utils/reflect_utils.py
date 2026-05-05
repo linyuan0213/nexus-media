@@ -1,7 +1,7 @@
 import importlib
 import pkgutil
 
-from app.core import SystemConfig
+from app.core.system_config import SystemConfig
 
 
 class ReflectUtils:

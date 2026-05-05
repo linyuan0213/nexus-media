@@ -13,10 +13,12 @@ DownloadCore - 下载核心业务逻辑
 """
 import json
 import os
+import re
 from typing import Optional
+from urllib.parse import urlsplit
 
 import log
-from app.core import SystemConfig
+from app.core.system_config import SystemConfig
 from app.db.repositories.download_repo_adapter import (
     DownloadHistoryRepositoryAdapter,
     DownloadSettingRepositoryAdapter,
@@ -36,7 +38,11 @@ from app.services.filetransfer_service import FileTransferService as FileTransfe
 from app.sites import Sites, SiteSubtitle, SiteConf
 from app.utils import Torrent, StringUtils, ExceptionUtils
 from app.utils.types import MediaType, DownloaderType, SearchType, EventType
-from config import RMT_MEDIAEXT
+from app.core.constants import RMT_MEDIAEXT
+from app.utils.config_tools import get_proxies
+from app.utils.config_tools import get_ua
+from app.core.constants import PT_TAG
+from app.core.constants import MT_URL
 
 
 class DownloadCore:
@@ -134,7 +140,7 @@ class DownloadCore:
                 if 'm-team' in url:
                     cookie = None
                 headers = site_info.get("headers")
-                headers = json.loads(headers) if headers else {'User-Agent': __import__('config').Config().get_ua()}
+                headers = json.loads(headers) if headers else {'User-Agent': __import__('config').get_ua()}
                 if page_url:
                     torrent_attr = self._siteconf.check_torrent_attr(
                         torrent_url=page_url,
@@ -625,7 +631,6 @@ class DownloadCore:
         if not _client:
             return []
         config["filter_tags"] = []
-        from config import PT_TAG
         if config.get("onlynastool"):
             config["filter_tags"] = config["tags"] + [PT_TAG]
         else:
@@ -654,7 +659,6 @@ class DownloadCore:
         _client = self._client_factory.get_client(downloader_id)
         if not _client:
             return []
-        from config import PT_TAG
         tag = [PT_TAG] if only_nastool else None
         try:
             return _client.get_downloading_progress(tag=tag, ids=ids) or []
@@ -881,10 +885,6 @@ class DownloadCore:
 
     @staticmethod
     def get_download_url(page_url):
-        from urllib.parse import urlsplit
-        import re
-        from app.utils import JsonUtils, RequestUtils
-        from config import MT_URL, Config
         if 'm-team' in page_url:
             base_url = MT_URL
         else:
@@ -905,14 +905,14 @@ class DownloadCore:
         })
         if 'm-team' in page_url:
             res = RequestUtils(headers=headers,
-                               proxies=Config().get_proxies() if proxy else None,
+                               proxies=get_proxies() if proxy else None,
                                timeout=15).post_res(url=f'{base_url}/api/torrent/genDlToken', data={'id': media_id})
             if res and res.status_code == 200:
                 return res.json().get('data', '')
         if 'yemapt' in page_url:
             res = RequestUtils(headers=headers,
                                cookies=cookie,
-                               proxies=Config().get_proxies() if proxy else None,
+                               proxies=get_proxies() if proxy else None,
                                timeout=15).get_res(
                 url=f'{base_url}/api/torrent/generateDownloadKey?id={media_id}')
             if res and res.status_code == 200:

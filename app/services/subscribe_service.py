@@ -10,7 +10,7 @@ import json
 from typing import Any, Optional
 
 import log
-from app.core import SystemConfig
+from app.core.system_config import SystemConfig
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.db.repositories.rss_repo_adapter import (

@@ -15,7 +15,7 @@ from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
 import log
-from app.core import ModuleConf
+from app.core.module_config import ModuleConf
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import TransferHistoryRepositoryAdapter
 from app.domain.interfaces.sync_repo import ISyncPathRepository
@@ -23,7 +23,7 @@ from app.domain.interfaces.transfer_repo import ITransferHistoryRepository
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.utils import PathUtils, ExceptionUtils
 from app.utils.types import SyncType
-from config import RMT_MEDIAEXT
+from app.core.constants import RMT_MEDIAEXT
 
 _synced_files_lock = threading.Lock()
 _need_sync_paths_lock = threading.Lock()

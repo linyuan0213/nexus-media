@@ -3,7 +3,9 @@ import json
 from app.db.repositories import SiteRepository
 from app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss._base import _ISiteRssGenHandler
 from app.utils.http_utils import RequestUtils
-from config import MT_URL, Config
+from config import Config
+from app.core.constants import MT_URL
+from app.utils.config_tools import get_proxies
 
 
 class Mteam(_ISiteRssGenHandler):
@@ -37,7 +39,7 @@ class Mteam(_ISiteRssGenHandler):
             "User-Agent": ua
         })
         
-        proxy = Config().get_proxies() if site_info.get("proxy") else None
+        proxy = get_proxies() if site_info.get("proxy") else None
         
         rss_url = f"{MT_URL}/api/rss/genlink"
         data = {

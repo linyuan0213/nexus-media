@@ -4,7 +4,9 @@ from app.db.repositories import SiteRepository
 from app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss._base import _ISiteRssGenHandler
 from app.utils.http_utils import RequestUtils
 from app.utils.string_utils import StringUtils
-from config import MT_URL, Config
+from config import Config
+from app.core.constants import MT_URL
+from app.utils.config_tools import get_proxies
 
 
 class YemaPT(_ISiteRssGenHandler):
@@ -33,7 +35,7 @@ class YemaPT(_ISiteRssGenHandler):
         site = site_info.get("name")
         site_cookie = site_info.get("cookie")
         ua = site_info.get("ua")
-        proxy = Config().get_proxies() if site_info.get("proxy") else None
+        proxy = get_proxies() if site_info.get("proxy") else None
         headers = {
             "accept": "application/json, text/plain, */*",
             "content-type": "application/json",

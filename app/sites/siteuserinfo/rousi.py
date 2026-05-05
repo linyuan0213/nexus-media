@@ -7,6 +7,7 @@ from app.sites.siteuserinfo._base import _ISiteUserInfo, SITE_BASE_ORDER
 from app.utils import RequestUtils, StringUtils, JsonUtils
 from app.utils.types import SiteSchema
 from config import Config
+from app.utils.config_tools import get_proxies
 
 
 class RousiSiteUserInfo(_ISiteUserInfo):
@@ -243,7 +244,7 @@ class RousiSiteUserInfo(_ISiteUserInfo):
             res = RequestUtils(
                 headers=headers,
                 timeout=60,
-                proxies=Config().get_proxies() if self._proxy else None
+                proxies=get_proxies() if self._proxy else None
             ).get_res(
                 url=urljoin(self._base_url, "api/messages"),
                 params=params
@@ -291,7 +292,7 @@ class RousiSiteUserInfo(_ISiteUserInfo):
             RequestUtils(
                 headers=headers,
                 timeout=60,
-                proxies=Config().get_proxies() if self._proxy else None
+                proxies=get_proxies() if self._proxy else None
             ).post_res(
                 url=urljoin(self._base_url, "api/messages/read-all")
             )

@@ -4,7 +4,9 @@ from app.db.repositories import SiteRepository
 from app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss._base import _ISiteRssGenHandler
 from app.utils.http_utils import RequestUtils
 from app.utils.string_utils import StringUtils
-from config import MT_URL, Config
+from config import Config
+from app.core.constants import MT_URL
+from app.utils.config_tools import get_proxies
 
 
 class FSM(_ISiteRssGenHandler):
@@ -37,7 +39,7 @@ class FSM(_ISiteRssGenHandler):
             "contentType": 'application/json;charset=UTF-8',
             "User-Agent": ua
         })
-        proxy = Config().get_proxies() if site_info.get("proxy") else None
+        proxy = get_proxies() if site_info.get("proxy") else None
         
         rss_url = "https://fsm.name/api/Users/infos"
         res = RequestUtils(headers=headers,

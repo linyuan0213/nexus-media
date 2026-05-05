@@ -7,7 +7,7 @@ import os
 from typing import List, Optional, Tuple
 
 import log
-from app.core import ModuleConf
+from app.core.module_config import ModuleConf
 from app.helper.thread_helper import ThreadHelper
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.media import Media
@@ -252,7 +252,7 @@ class SyncService:
         """
         查询下级子目录/文件
         """
-        from config import RMT_MEDIAEXT, RMT_SUBEXT, RMT_AUDIO_TRACK_EXT
+        from app.core.constants import RMT_MEDIAEXT, RMT_SUBEXT, RMT_AUDIO_TRACK_EXT
         from app.utils import StringUtils
         from app.utils.types import OsType
         import os

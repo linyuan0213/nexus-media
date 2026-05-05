@@ -1,4 +1,5 @@
 import datetime
+import os
 import pytz
 
 import log
@@ -34,7 +35,7 @@ def load_default_jobs(scheduler):
         # 数据统计
         ptrefresh_date_cron = _pt.get('ptrefresh_date_cron')
         if ptrefresh_date_cron:
-            tz = pytz.timezone(Config().get_timezone())
+            tz = pytz.timezone(os.environ.get('TZ'))
             scheduler.register_smart_cron(
                 job_id="SiteUserInfo.refresh_site_data_now",
                 func=SiteUserInfo().refresh_site_data_now,

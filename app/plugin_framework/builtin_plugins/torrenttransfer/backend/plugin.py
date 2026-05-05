@@ -18,6 +18,7 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.utils import Torrent
 from app.utils.types import DownloaderType
 from config import Config
+from app.utils.path_utils import get_temp_path
 
 
 class TorrentTransferPlugin:
@@ -69,7 +70,7 @@ class TorrentTransferPlugin:
 
         if onlyonce:
             self.ctx.info("转移做种服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ'))) + timedelta(seconds=3)
             self.ctx.schedule_date("transfer_once", self._do_transfer, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -231,7 +232,7 @@ class TorrentTransferPlugin:
                         fastresume_trackers = torrent_fastresume.get('trackers')
                         if isinstance(fastresume_trackers, list) and len(fastresume_trackers) > 0 and fastresume_trackers[0]:
                             torrent_main['announce'] = fastresume_trackers[0][0]
-                            torrent_file = os.path.join(Config().get_temp_path(), f"{hash_item.get('hash')}.torrent")
+                            torrent_file = os.path.join(get_temp_path(), f"{hash_item.get('hash')}.torrent")
                             with open(torrent_file, 'wb') as f:
                                 f.write(bencode(torrent_main))
                     except Exception as err:

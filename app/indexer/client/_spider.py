@@ -17,6 +17,8 @@ from app.utils.exception_utils import ExceptionUtils
 from app.utils.types import MediaType
 from config import Config
 from feapder.utils.tools import urlencode
+from app.utils.config_tools import get_proxies
+from app.utils.config_tools import get_ua
 
 
 class TorrentSpider(feapder.AirSpider):
@@ -120,9 +122,9 @@ class TorrentSpider(feapder.AirSpider):
         if indexer.ua:
             self.ua = indexer.ua
         else:
-            self.ua = Config().get_ua()
+            self.ua = get_ua()
         if indexer.proxy:
-            self.proxies = Config().get_proxies()
+            self.proxies = get_proxies()
         if indexer.cookie:
             self.cookie = indexer.cookie
         if referer:

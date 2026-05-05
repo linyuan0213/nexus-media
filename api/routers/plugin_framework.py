@@ -257,7 +257,7 @@ def get_plugin_data(
         import json
         import os
         from config import Config
-        data_dir = os.path.join(Config().get_config_path(), 'plugins_data', plugin_id)
+        data_dir = os.path.join(Config().config_path, 'plugins_data', plugin_id)
         target = os.path.join(data_dir, filename)
         real_dir = os.path.realpath(data_dir)
         real_target = os.path.realpath(target)
@@ -288,7 +288,7 @@ def delete_plugin_data(
         import json
         import os
         from config import Config
-        data_dir = os.path.join(Config().get_config_path(), 'plugins_data', plugin_id)
+        data_dir = os.path.join(Config().config_path, 'plugins_data', plugin_id)
         target = os.path.join(data_dir, filename)
         real_dir = os.path.realpath(data_dir)
         real_target = os.path.realpath(target)

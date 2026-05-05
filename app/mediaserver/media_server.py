@@ -2,7 +2,7 @@ import json
 import threading
 
 import log
-from app.core import SystemConfig
+from app.core.system_config import SystemConfig
 from app.db import MediaDb
 from app.db.repositories import ConfigRepository
 from app.helper import ProgressHelper, SubmoduleHelper

@@ -12,7 +12,7 @@ from typing import Callable, Optional
 import log
 from app.services.downloader_client_factory import DownloadClientFactory
 from app.services.scheduler_core import SchedulerCore
-from config import PT_TAG, PT_TRANSFER_INTERVAL
+from app.core.constants import PT_TAG, PT_TRANSFER_INTERVAL
 
 
 class TransferCoordinator:

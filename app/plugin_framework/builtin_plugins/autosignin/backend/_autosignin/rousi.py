@@ -8,6 +8,7 @@ from app.helper.cookiecloud_helper import CookiecloudHelper
 from app.utils import StringUtils, RequestUtils
 from app.utils.types import EventType
 from config import Config
+from app.utils.config_tools import get_proxies
 
 
 class Rousi(_ISiteSigninHandler):
@@ -84,7 +85,7 @@ class Rousi(_ISiteSigninHandler):
         """
         site = site_info.get("name")
         ua = site_info.get("ua")
-        proxy = Config().get_proxies() if site_info.get("proxy") else None
+        proxy = get_proxies() if site_info.get("proxy") else None
         
         EventHandler.send_event(EventType.LocalStorageSync)
         time.sleep(10)

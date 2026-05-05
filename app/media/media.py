@@ -19,8 +19,10 @@ from app.utils import PathUtils, EpisodeFormat, RequestUtils, NumberUtils, Strin
 from app.utils.types import MediaType, MatchMode
 from app.utils.cache_system import TMDBCache
 from app.utils.request_deduper import get_deduper
-from config import Config, KEYWORD_BLACKLIST, KEYWORD_SEARCH_WEIGHT_3, KEYWORD_SEARCH_WEIGHT_2, KEYWORD_SEARCH_WEIGHT_1, \
+from config import Config
+from app.core.constants import KEYWORD_BLACKLIST, KEYWORD_SEARCH_WEIGHT_3, KEYWORD_SEARCH_WEIGHT_2, KEYWORD_SEARCH_WEIGHT_1, \
     KEYWORD_STR_SIMILARITY_THRESHOLD, KEYWORD_DIFF_SCORE_THRESHOLD
+from app.utils.config_tools import get_tmdbapi_url, get_proxies
 
 
 class Media:
@@ -64,7 +66,7 @@ class Media:
             # TMDB主体
             self.tmdb = TMDb()
             # 域名
-            self.tmdb.domain = Config().get_tmdbapi_url()
+            self.tmdb.domain = get_tmdbapi_url()
             # 开启缓存
             self.tmdb.cache = True
             # APIKEY
@@ -72,7 +74,7 @@ class Media:
             # 语种
             self.tmdb.language = self._default_language
             # 代理
-            self.tmdb.proxies = Config().get_proxies()
+            self.tmdb.proxies = get_proxies()
             # 调试模式
             self.tmdb.debug = False
             # 查询对象

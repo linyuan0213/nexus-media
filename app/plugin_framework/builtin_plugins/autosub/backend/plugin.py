@@ -21,7 +21,7 @@ from app.helper import FfmpegHelper
 from app.helper.openai_helper import OpenAiHelper
 from app.plugin_framework.context import PluginContext
 from app.utils import SystemUtils
-from config import RMT_MEDIAEXT
+from app.core.constants import RMT_MEDIAEXT
 
 
 class AutoSubPlugin:

@@ -5,8 +5,8 @@ import threading
 from urllib3.exceptions import InsecureRequestWarning
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from config import Config
 import log
+from app.utils.config_tools import get_ua
 
 urllib3.disable_warnings(InsecureRequestWarning)
 
@@ -46,7 +46,7 @@ class RequestUtils:
         else:
             self._headers = {
                 "Content-Type": content_type,
-                "User-Agent": Config().get_ua(),
+                "User-Agent": get_ua(),
                 "Accept": accept_type
             }
         if referer:

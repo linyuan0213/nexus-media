@@ -14,8 +14,10 @@ from app.helper.drissionpage_helper import DrissionPageHelper
 from app.sites import Sites
 from app.utils import ExceptionUtils, StringUtils, RequestUtils, JsonUtils
 from app.utils.commons import SingletonMeta
-from config import MT_URL, Config
+from config import Config
+from app.core.constants import MT_URL
 import log
+from app.utils.config_tools import get_proxies
 
 
 class SiteConf(metaclass=SingletonMeta):
@@ -95,7 +97,7 @@ class SiteConf(metaclass=SingletonMeta):
 
     def init_config(self):
         try:
-            with open(os.path.join(Config().get_config_path(),
+            with open(os.path.join(Config().config_path,
                                    "sites.dat"),
                       "rb") as f:
                 self._RSS_SITE_GRAP_CONF = pickle.load(f).get("conf")
@@ -287,7 +289,7 @@ class SiteConf(metaclass=SingletonMeta):
             })
             res = RequestUtils(
                 headers=headers,
-                proxies=Config().get_proxies() if proxy else None
+                proxies=get_proxies() if proxy else None
             ).post_res(url=url, data=param)
             if res and res.status_code == 200:
                 res.encoding = res.apparent_encoding
@@ -296,7 +298,7 @@ class SiteConf(metaclass=SingletonMeta):
             res = RequestUtils(
                 cookies=cookie,
                 headers=headers,
-                proxies=Config().get_proxies() if proxy else None
+                proxies=get_proxies() if proxy else None
             ).get_res(url=url)
             if res and res.status_code == 200:
                 res.encoding = res.apparent_encoding

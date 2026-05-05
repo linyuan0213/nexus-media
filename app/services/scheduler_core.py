@@ -883,7 +883,7 @@ class SchedulerCore(metaclass=SingletonMeta):
 
             # 创建调度器（每次启动都使用新的 jobstore 实例，避免任务残留）
             self._scheduler = BackgroundScheduler(
-                timezone=Config().get_timezone(),
+                timezone=os.environ.get('TZ'),
                 jobstores={
                     'default': MemoryJobStore(),
                     'brushtask': MemoryJobStore(),

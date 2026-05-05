@@ -7,7 +7,7 @@ from typing import Optional, List, Callable
 from contextlib import contextmanager
 
 import log
-from config import Config
+from app.utils.path_utils import get_temp_path
 from .exception_utils import ExceptionUtils
 
 
@@ -37,7 +37,7 @@ class TempManager:
         if self._initialized:
             return
         self._initialized = True
-        self._temp_path = Config().get_temp_path()
+        self._temp_path = get_temp_path()
         self._cleanup_callbacks: List[Callable] = []
         self._ensure_temp_dir()
     

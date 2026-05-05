@@ -1,7 +1,8 @@
 import regex as re
 import cn2an
 from app.media.fanart import Fanart
-from config import ANIME_GENREIDS, DEFAULT_TMDB_IMAGE, Config
+from config import Config
+from app.core.constants import ANIME_GENREIDS, DEFAULT_TMDB_IMAGE
 from app.helper.image_proxy_helper import ImageProxyHelper
 from app.media.category import Category
 from app.utils import StringUtils, ExceptionUtils

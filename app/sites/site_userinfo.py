@@ -13,6 +13,7 @@ from app.sites.sites import Sites
 from app.utils import RequestUtils, ExceptionUtils, StringUtils, JsonUtils
 from app.utils.commons import SingletonMeta
 from config import Config
+from app.utils.config_tools import get_proxies
 
 lock = Lock()
 
@@ -76,7 +77,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
                 log.error("【Sites】%s 跳转站点失败" % site_name)
                 return None
         else:
-            proxies = Config().get_proxies() if proxy else None
+            proxies = get_proxies() if proxy else None
             if 'fsm' in url:
                 req_url = url + '/api/Users/infos'
             elif 'yemapt' in url:

@@ -1,11 +1,13 @@
 from app.utils.cache_system import lru_cache_with_ttl
 from app.utils import RequestUtils, ExceptionUtils
 from app.utils.types import MediaType
-from config import Config, FANART_MOVIE_API_URL, FANART_TV_API_URL
+from config import Config
+from app.core.constants import FANART_MOVIE_API_URL, FANART_TV_API_URL
+from app.utils.config_tools import get_proxies
 
 
 class Fanart:
-    _proxies = Config().get_proxies()
+    _proxies = get_proxies()
     _movie_image_types = ['movieposter',
                           'hdmovielogo',
                           'moviebackground',

@@ -1,6 +1,7 @@
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
 from app.utils import StringUtils, RequestUtils
 from config import Config
+from app.utils.config_tools import get_proxies
 
 
 class HDCity(_ISiteSigninHandler):
@@ -33,7 +34,7 @@ class HDCity(_ISiteSigninHandler):
         site = site_info.get("name")
         site_cookie = site_info.get("cookie")
         ua = site_info.get("ua")
-        proxy = Config().get_proxies() if site_info.get("proxy") else None
+        proxy = get_proxies() if site_info.get("proxy") else None
 
         # 获取页面html
         html_res = RequestUtils(cookies=site_cookie,

@@ -1,3 +1,4 @@
+import os
 # -*- coding: utf-8 -*-
 """
 AutoGenRss Plugin v2
@@ -21,6 +22,7 @@ from app.sites.siteconf import SiteConf
 from app.sites.sites import Sites
 from app.utils import RequestUtils, ExceptionUtils, StringUtils, JsonUtils
 from config import Config
+from app.utils.config_tools import get_proxies
 
 
 class AutoGenRssPlugin:
@@ -73,7 +75,7 @@ class AutoGenRssPlugin:
 
         if onlyonce:
             self.ctx.info("RSS自动生成服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ'))) + timedelta(seconds=3)
             self.ctx.schedule_date("gen_rss_once", self._do_gen_rss, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -186,7 +188,7 @@ class AutoGenRssPlugin:
                     cookies=site_cookie,
                     headers=headers,
                     referer=site_url,
-                    proxies=Config().get_proxies() if site_info.get("proxy") else None
+                    proxies=get_proxies() if site_info.get("proxy") else None
                 ).post_res(url=rss_url, data=data)
 
                 if res and res.status_code in [200, 500, 403]:

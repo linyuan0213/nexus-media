@@ -14,8 +14,10 @@ from io import BytesIO
 
 from PIL import Image
 
-from config import Config, TMDB_IMAGE_DOMAIN
+from config import Config
+from app.core.constants import TMDB_IMAGE_DOMAIN
 import log
+from app.utils.config_tools import get_proxies
 
 # 下载任务锁，防止重复下载同一个图片
 _download_locks = {}
@@ -145,7 +147,7 @@ def _download_image(url, timeout=10, referer=None):
             session = _get_session(domain)
 
             try:
-                proxies = Config().get_proxies() or None
+                proxies = get_proxies() or None
             except Exception:
                 proxies = None
 

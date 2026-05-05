@@ -6,6 +6,7 @@ from app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss._base i
 from app.utils.http_utils import RequestUtils
 from app.utils.string_utils import StringUtils
 from config import Config
+from app.utils.config_tools import get_proxies
 
 
 class Ourbits(_ISiteRssGenHandler):
@@ -34,7 +35,7 @@ class Ourbits(_ISiteRssGenHandler):
         site = site_info.get("name")
         site_cookie = site_info.get("cookie")
         ua = site_info.get("ua")
-        proxy = Config().get_proxies() if site_info.get("proxy") else None
+        proxy = get_proxies() if site_info.get("proxy") else None
 
         # 获取页面html
         html_res = RequestUtils(cookies=site_cookie,

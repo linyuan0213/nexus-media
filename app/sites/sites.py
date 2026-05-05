@@ -9,7 +9,10 @@ from app.message import Message
 from app.sites.site_limiter import SiteRateLimiter
 from app.utils import RequestUtils, StringUtils, JsonUtils
 from app.utils.commons import SingletonMeta
-from config import MT_URL, Config
+from config import Config
+from app.core.constants import MT_URL
+from app.utils.config_tools import get_proxies
+from app.utils.config_tools import get_ua
 
 
 class Sites:
@@ -106,7 +109,7 @@ class Sites:
                 "brush_enable": brush_enable,
                 "statistic_enable": statistic_enable,
                 "uses": uses,
-                "ua": site_note.get("ua") or Config().get_ua(),
+                "ua": site_note.get("ua") or get_ua(),
                 "headers": site_note.get("headers"),
                 "parse": True if site_note.get("parse") == "Y" else False,
                 "unread_msg_notify": True if site_note.get("message") == "Y" else False,
@@ -302,7 +305,7 @@ class Sites:
             # 计时
             start_time = datetime.now()
             res = RequestUtils(
-                proxies=Config().get_proxies() if site_info.get("proxy") else None
+                proxies=get_proxies() if site_info.get("proxy") else None
             ).get_res(url=site_url)
             seconds = round((datetime.now() - start_time).total_seconds(), 3)
             
@@ -323,7 +326,7 @@ class Sites:
             headers = json.loads(headers)
         else:
             headers = {}
-        ua = site_info.get("ua") or Config().get_ua()
+        ua = site_info.get("ua") or get_ua()
         headers.update({'User-Agent': ua})
         site_url = StringUtils.get_base_url(
             site_info.get("signurl") or site_info.get("rssurl"))
@@ -370,12 +373,12 @@ class Sites:
             if 'm-team' in site_url:
                 url = site_url + '/api/member/profile'
                 res = RequestUtils(headers=headers,
-                                   proxies=Config().get_proxies() if site_info.get("proxy") else None
+                                   proxies=get_proxies() if site_info.get("proxy") else None
                                    ).post_res(url=url, data={})
             else:
                 res = RequestUtils(cookies=site_cookie,
                                    headers=headers,
-                                   proxies=Config().get_proxies() if site_info.get("proxy") else None
+                                   proxies=get_proxies() if site_info.get("proxy") else None
                                    ).get_res(url=site_url)
             seconds = round((datetime.now() - start_time).total_seconds(), 3)
             if res and res.status_code == 200:

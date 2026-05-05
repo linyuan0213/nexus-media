@@ -16,14 +16,16 @@ from threading import Lock
 from typing import Optional
 
 import log
-from app.core import ModuleConf, SystemConfig
+from app.core.module_config import ModuleConf
+from app.core.system_config import SystemConfig
 from app.core.system_config import SystemConfig as SystemConfigClass
 from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
 from app.db.repositories.download_repo_adapter import DownloadSettingRepositoryAdapter
 from app.downloader.client._base import _IDownloadClient
 from app.helper import SubmoduleHelper
 from app.utils.types import DownloaderType, SystemConfigKey
-from config import Config, PT_TAG
+from config import Config
+from app.core.constants import PT_TAG
 
 client_lock = Lock()
 

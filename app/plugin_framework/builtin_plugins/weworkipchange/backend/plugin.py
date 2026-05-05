@@ -1,3 +1,4 @@
+import os
 # -*- coding: utf-8 -*-
 """
 WeworkIPChange Plugin v2
@@ -21,6 +22,7 @@ from app.utils.http_utils import RequestUtils
 from app.utils.redis_store import RedisStore
 from app.utils.types import EventType
 from config import Config
+from app.utils.config_tools import get_ua
 
 
 class WeworkIPChangePlugin:
@@ -81,7 +83,7 @@ class WeworkIPChangePlugin:
 
         if onlyonce:
             self.ctx.info("企业微信可信IP更新服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ'))) + timedelta(seconds=3)
             self.ctx.schedule_date("change_ip_once", self._change_ip, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -256,7 +258,7 @@ class WeworkIPChangePlugin:
             "content-type": "application/x-www-form-urlencoded",
             "referer": "https://work.weixin.qq.com/wework_admin/frame",
             "cookie": cookie,
-            "user-agent": Config().get_ua(),
+            "user-agent": get_ua(),
             "x-requested-with": "XMLHttpRequest"
         }
         url = "https://work.weixin.qq.com/wework_admin/apps/getOpenApiApp"
@@ -292,7 +294,7 @@ class WeworkIPChangePlugin:
             'cookie': cookie,
             'origin': 'https://work.weixin.qq.com',
             'referer': 'https://work.weixin.qq.com/wework_admin/frame',
-            'user-agent': Config().get_ua(),
+            'user-agent': get_ua(),
             'x-requested-with': 'XMLHttpRequest',
         }
         params = {

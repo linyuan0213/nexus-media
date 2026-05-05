@@ -15,7 +15,8 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import log
-from app.core import SystemConfig
+from app.core.system_config import SystemConfig
+from app.utils.path_utils import get_temp_path
 from app.db.database_factory import DatabaseFactory
 from app.db.migrate import import_from_file, export_database, import_database
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter, MessageClientRepositoryAdapter
@@ -54,6 +55,7 @@ from sqlalchemy import create_engine
 from app.utils.search_torrents import search_medias_for_web, search_media_by_message
 from app.utils.web_utils import WebUtils
 from app.utils import TokenCache
+from app.utils.config_tools import get_proxies
 
 
 class MessageClientService:
@@ -134,7 +136,7 @@ class BackupRestoreService:
         if not filename:
             return BackupRestoreResultDTO(success=False, message="文件不存在")
 
-        config_path = Config().get_config_path()
+        config_path = Config().config_path
         file_path = temp_manager.get_temp_path(filename)
         temp_dir = None
 
@@ -319,7 +321,7 @@ class NetTestService:
                 or target.find("telegram") != -1 \
                 or target.find("fanart") != -1 \
                 or target.find("tmdb") != -1:
-            res = RequestUtils(proxies=Config().get_proxies(), timeout=5).get_res(target)
+            res = RequestUtils(proxies=get_proxies(), timeout=5).get_res(target)
         else:
             res = RequestUtils(timeout=5).get_res(target)
         seconds = int((datetime.datetime.now() - start_time).microseconds / 1000)
@@ -691,7 +693,7 @@ def backup(full_backup=False, bk_path=None):
     @param bk_path     自定义备份路径
     """
     try:
-        config_path = Path(Config().get_config_path())
+        config_path = Path(Config().config_path)
         backup_file = f"bk_{time.strftime('%Y%m%d%H%M%S')}"
         if bk_path:
             backup_path = Path(bk_path) / backup_file

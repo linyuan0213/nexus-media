@@ -9,6 +9,7 @@ from app.db.database_factory import DatabaseFactory
 from app.db.sql_adapter import SQLAdapter
 from app.utils import ExceptionUtils, PathUtils
 from config import Config
+from app.utils.path_utils import get_script_path
 
 
 # SQL 适配器实例 - 使用双重检查锁模式
@@ -91,7 +92,7 @@ class MainDb:
         """
         config = Config().get_config()
         init_files = Config().get_config("app").get("init_files") or []
-        config_dir = Config().get_script_path()
+        config_dir = get_script_path()
         sql_files = PathUtils.get_dir_level1_files(in_path=config_dir, exts=".sql")
         config_flag = False
         for sql_file in sql_files:

@@ -23,7 +23,7 @@ class PluginContext:
         self._plugin_id = plugin_id
         self._plugin_name = plugin_name or plugin_id
         self._data_dir = os.path.join(
-            Config().get_config_path(), 'plugins_data', plugin_id
+            Config().config_path, 'plugins_data', plugin_id
         )
         if not os.path.exists(self._data_dir):
             os.makedirs(self._data_dir)

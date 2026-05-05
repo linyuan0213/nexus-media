@@ -12,6 +12,7 @@ from app.services.filetransfer_service import FileTransferService as FileTransfe
 from app.utils import SystemUtils
 from app.utils.types import MediaServerType, MediaType
 from config import Config
+from app.utils.config_tools import update_favtype
 
 
 class MovieLikePlugin:
@@ -43,7 +44,7 @@ class MovieLikePlugin:
 
         dir_name = config.get("dir_name", "精选")
         if dir_name:
-            Config().update_favtype(dir_name)
+            update_favtype(dir_name)
 
         if self._mediaserver.get_type() != MediaServerType.EMBY:
             return

@@ -65,7 +65,7 @@ def proxy_tmdb_image(size: str, img_path: str):
     if size not in SIZE_DIMENSIONS:
         size = "w500"
     cache_path = get_cache_path("tmdb", img_path, size)
-    from config import TMDB_IMAGE_DOMAIN
+    from app.core.constants import TMDB_IMAGE_DOMAIN
     original_url = f"https://{TMDB_IMAGE_DOMAIN}/t/p/original/{img_path}"
     return _serve_image(cache_path, original_url, size)
 

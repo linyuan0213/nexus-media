@@ -7,6 +7,8 @@ from app.db import MainDb, DbPersist
 from app.db.models import RSSTORRENTS
 from app.utils import RssTitleUtils, StringUtils, RequestUtils, ExceptionUtils, DomUtils
 from config import Config
+from app.utils.config_tools import get_proxies
+from app.utils.config_tools import get_ua
 
 
 class RssHelper:
@@ -37,9 +39,9 @@ class RssHelper:
         try:
             headers = {
                 "Accept": "application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                "User-Agent": Config().get_ua()
+                "User-Agent": get_ua()
             }
-            ret = RequestUtils(headers=headers, proxies=Config().get_proxies() if proxy else None).get_res(url)
+            ret = RequestUtils(headers=headers, proxies=get_proxies() if proxy else None).get_res(url)
             if not ret:
                 return []
             ret.encoding = ret.apparent_encoding

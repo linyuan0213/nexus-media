@@ -1,6 +1,7 @@
 import os
 import log
 from config import Config
+from app.utils.path_utils import get_root_path
 from .main_db import MainDb
 from .main_db import DbPersist
 from .main_db import remove_session
@@ -35,7 +36,7 @@ def update_db():
     """
     更新数据库
     """
-    script_location = os.path.normpath(os.path.join(Config().get_root_path(), 'scripts'))
+    script_location = os.path.normpath(os.path.join(get_root_path(), 'scripts'))
     log.console('开始更新数据库...')
     try:
         # 使用工厂获取数据库连接URL

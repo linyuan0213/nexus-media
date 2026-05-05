@@ -9,6 +9,8 @@ from app.helper.openai_helper import OpenAiHelper
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
 from app.utils import StringUtils, RequestUtils
 from config import Config
+from app.utils.config_tools import get_proxies
+from app.utils.path_utils import get_temp_path
 
 
 class FWpt(_ISiteSigninHandler):
@@ -27,7 +29,7 @@ class FWpt(_ISiteSigninHandler):
     _success_regex = ['\\d+点魔力值']
 
     # 存储正确的答案，后续可直接查
-    _answer_path = os.path.join(Config().get_temp_path(), "signin")
+    _answer_path = os.path.join(get_temp_path(), "signin")
     _answer_file = _answer_path + "/52pt.json"
 
     @classmethod
@@ -48,7 +50,7 @@ class FWpt(_ISiteSigninHandler):
         site = site_info.get("name")
         site_cookie = site_info.get("cookie")
         ua = site_info.get("ua")
-        proxy = Config().get_proxies() if site_info.get("proxy") else None
+        proxy = get_proxies() if site_info.get("proxy") else None
 
         # 创建正确答案存储目录
         if not os.path.exists(os.path.dirname(self._answer_file)):
