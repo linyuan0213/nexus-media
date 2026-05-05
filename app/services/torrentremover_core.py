@@ -8,7 +8,7 @@ from threading import Lock
 from typing import Dict, List, Optional, Tuple
 
 import log
-from app.conf import ModuleConf
+from app.core import ModuleConf
 from app.db.repositories.config_repo_adapter import TorrentRemoveTaskRepositoryAdapter
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.message import Message

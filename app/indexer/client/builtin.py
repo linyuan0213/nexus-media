@@ -5,7 +5,7 @@ import time
 
 from app.helper.drissionpage_helper import DrissionPageHelper
 import log
-from app.conf import SystemConfig
+from app.core import SystemConfig
 from app.db.repositories import DownloadRepository
 from app.helper import IndexerHelper, IndexerConf, ProgressHelper
 from app.indexer.client._base import _IIndexClient

@@ -15,7 +15,7 @@ from time import sleep
 from typing import Optional
 
 import log
-from app.conf import ModuleConf
+from app.core import ModuleConf
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import (
     TransferBlacklistRepositoryAdapter,

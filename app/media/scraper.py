@@ -5,7 +5,7 @@ from xml.dom import minidom
 from requests.exceptions import RequestException
 
 import log
-from app.conf import SystemConfig, ModuleConf
+from app.core import SystemConfig, ModuleConf
 from app.helper import FfmpegHelper
 from app.media.douban import DouBan
 from app.media.meta import MetaInfo

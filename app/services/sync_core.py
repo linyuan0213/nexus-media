@@ -15,7 +15,7 @@ from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
 import log
-from app.conf import ModuleConf
+from app.core import ModuleConf
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import TransferHistoryRepositoryAdapter
 from app.domain.interfaces.sync_repo import ISyncPathRepository

@@ -7,7 +7,7 @@ import os
 from typing import List, Optional, Tuple
 
 import log
-from app.conf import ModuleConf
+from app.core import ModuleConf
 from app.helper.thread_helper import ThreadHelper
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.media import Media

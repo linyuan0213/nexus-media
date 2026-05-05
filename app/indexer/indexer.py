@@ -29,7 +29,7 @@ class Indexer(metaclass=SingletonMeta):
     def init_config(self):
         self.progress = ProgressHelper()
         self.download_repo = DownloadRepository()
-        from app.conf import SystemConfig
+        from app.core import SystemConfig
         from app.utils.types import SystemConfigKey
         indexer = SystemConfig().get(SystemConfigKey.SearchIndexer) or 'builtin'
         self._client = self.__get_client(indexer)

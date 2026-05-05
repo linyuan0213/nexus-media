@@ -11,7 +11,7 @@ from typing import Optional, List, Tuple, Dict, Any
 
 import cn2an
 import log
-from app.conf import SystemConfig, ModuleConf
+from app.core import SystemConfig, ModuleConf
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.helper import ThreadHelper

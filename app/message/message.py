@@ -6,7 +6,7 @@ from enum import Enum
 
 import log
 from jinja2 import Environment, BaseLoader
-from app.conf import ModuleConf
+from app.core import ModuleConf
 from app.helper import SubmoduleHelper
 from app.db.repositories import ConfigRepository
 from app.message.message_center import MessageCenter

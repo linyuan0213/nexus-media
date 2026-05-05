@@ -16,8 +16,8 @@ from threading import Lock
 from typing import Optional
 
 import log
-from app.conf import ModuleConf, SystemConfig
-from app.conf.systemconfig import SystemConfig as SystemConfigClass
+from app.core import ModuleConf, SystemConfig
+from app.core.system_config import SystemConfig as SystemConfigClass
 from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
 from app.db.repositories.download_repo_adapter import DownloadSettingRepositoryAdapter
 from app.downloader.client._base import _IDownloadClient

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import log
-from app.conf import SystemConfig
+from app.core import SystemConfig
 from app.db.database_factory import DatabaseFactory
 from app.db.migrate import import_from_file, export_database, import_database
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter, MessageClientRepositoryAdapter
@@ -666,7 +666,7 @@ def get_commands():
 
 
 def get_rmt_modes():
-    from app.conf import ModuleConf
+    from app.core import ModuleConf
     RmtModes = ModuleConf.RMT_MODES
     return [{
         "value": value,

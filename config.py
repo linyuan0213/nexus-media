@@ -8,6 +8,8 @@ from filelock import FileLock
 import ruamel.yaml
 import tempfile
 
+from app.core.settings import AppSettings
+
 
 class SingletonMeta(type):
     """
@@ -120,9 +122,11 @@ class Config(object, metaclass=SingletonMeta):
     _user = None
 
     def __init__(self):
-        self._config_path = os.environ.get('NASTOOL_CONFIG')
+        self._settings = AppSettings()
+        self._config_path = self._settings.nastool_config or os.environ.get('NASTOOL_CONFIG')
+        tz = self._settings.tz or os.environ.get('TZ')
         if not os.environ.get('TZ'):
-            os.environ['TZ'] = 'Asia/Shanghai'
+            os.environ['TZ'] = tz or 'Asia/Shanghai'
         self.init_syspath()
         self.init_config()
 
@@ -155,33 +159,12 @@ class Config(object, metaclass=SingletonMeta):
 
     def _apply_env_database_config(self):
         """
-        从环境变量读取数据库配置并写入配置文件
+        从 pydantic-settings / .env 读取数据库配置并写入配置文件
         环境变量优先级高于配置文件
         """
-        env_db_config = {}
-        env_mappings = {
-            'DB_TYPE': 'type',
-            'DB_HOST': 'host',
-            'DB_PORT': 'port',
-            'DB_USERNAME': 'username',
-            'DB_PASSWORD': 'password',
-            'DB_NAME': 'database',
-        }
+        env_db_config = self._settings.get_database_config()
 
-        has_env_config = False
-        for env_var, config_key in env_mappings.items():
-            value = os.environ.get(env_var)
-            if value is not None:
-                # 端口转换为整数
-                if config_key == 'port':
-                    try:
-                        value = int(value)
-                    except ValueError:
-                        continue
-                env_db_config[config_key] = value
-                has_env_config = True
-
-        if has_env_config:
+        if env_db_config:
             # 获取当前数据库配置
             current_db_config = self._config.get('database', {})
             if current_db_config is None:

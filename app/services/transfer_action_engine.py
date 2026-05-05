@@ -10,7 +10,7 @@ from threading import Lock
 from typing import Optional
 
 import log
-from app.conf import ModuleConf
+from app.core import ModuleConf
 from app.db.repositories.transfer_repo_adapter import TransferBlacklistRepositoryAdapter
 from app.domain.interfaces.transfer_repo import ITransferBlacklistRepository
 from app.media.meta import MetaInfo

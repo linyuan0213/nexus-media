@@ -17,7 +17,7 @@ class Prowlarr(_IIndexClient):
         if config:
             self._client_config = config
         else:
-            from app.conf import SystemConfig
+            from app.core import SystemConfig
             from app.utils.types import SystemConfigKey
             indexer_config = SystemConfig().get(SystemConfigKey.IndexerConfig) or {}
             self._client_config = indexer_config.get('prowlarr') or {}

@@ -12,7 +12,7 @@ DownloaderCore - 下载器 Facade（兼容旧 Downloader 接口）
 from typing import Optional
 
 import log
-from app.conf import ModuleConf
+from app.core import ModuleConf
 from app.services.downloader_client_factory import DownloadClientFactory
 from app.services.download_core import DownloadCore
 from app.services.filetransfer_service import FileTransferService

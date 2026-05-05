@@ -16,7 +16,7 @@ import os
 from typing import Optional
 
 import log
-from app.conf import SystemConfig
+from app.core import SystemConfig
 from app.db.repositories.download_repo_adapter import (
     DownloadHistoryRepositoryAdapter,
     DownloadSettingRepositoryAdapter,
