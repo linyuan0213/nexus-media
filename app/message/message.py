@@ -12,6 +12,7 @@ from app.db.repositories import ConfigRepository
 from app.message.message_center import MessageCenter
 from app.utils import StringUtils, ExceptionUtils
 from app.utils.commons import SingletonMeta
+from app.utils.task_queue import TaskQueue
 from app.utils.types import SearchType, MediaType
 from config import Config
 from app.utils.web_utils import WebUtils
@@ -82,6 +83,7 @@ class Message(metaclass=SingletonMeta):
     _active_interactive_clients = {}
     _client_configs = {}
     _domain = None
+    _queue = None
 
     def __init__(self):
         self._message_schemas = SubmoduleHelper.import_submodules(
@@ -89,6 +91,8 @@ class Message(metaclass=SingletonMeta):
             filter_func=lambda _, obj: hasattr(obj, 'schema')
         )
         log.debug(f"【Message】加载消息服务：{self._message_schemas}")
+        self._queue = TaskQueue()
+        self._queue.start()
         self.init_config()
 
     def init_config(self):
@@ -264,54 +268,52 @@ class Message(metaclass=SingletonMeta):
             log.error(f"【Message】{ctype} 发送测试消息失败：%s" % ret_msg)
         return state
 
-    def __sendmsg(self, client, title, text="", image="", url="", user_id=""):
-        """
-        通用消息发送
-        :param client: 消息端
-        :param title: 消息标题
-        :param text: 消息内容
-        :param image: 图片URL
-        :param url: 消息跳转地址
-        :param user_id: 用户ID，如有则只发给这个用户
-        :return: 发送状态、错误信息
-        """
+    def _do_sendmsg(self, client, title, text, image, url, user_id):
+        """实际执行消息发送（由队列调用）"""
         if not client or not client.get('client'):
-            return None
+            return
         cname = client.get('name')
-        log.info(f"【Message】发送消息 {cname}：title={title}, text={text}")
         if self._domain:
             if url:
-                # 唤起App
                 if '/open?url=' in url:
                     url = "%s%s" % (self._domain, url)
-                # 跳转页面
                 elif not url.startswith("http"):
                     url = "%s?next=%s" % (self._domain, url)
             else:
                 url = ""
         else:
             url = ""
-        # 消息内容分段
         max_length = client.get("max_length")
-        if max_length:
-            texts = StringUtils.split_text(text, max_length)
-        else:
-            texts = [text]
-        # 循环发送
+        texts = StringUtils.split_text(text, max_length) if max_length else [text]
         for txt in texts:
-            if not title:
-                title = txt
-                txt = ""
-            state, ret_msg = client.get('client').send_msg(title=title,
-                                                           text=txt,
-                                                           image=image,
-                                                           url=url,
-                                                           user_id=user_id)
-            title = None
+            cur_title = title if title else txt
+            cur_text = "" if not title else txt
+            state, ret_msg = client.get('client').send_msg(
+                title=cur_title, text=cur_text, image=image, url=url, user_id=user_id
+            )
             if not state:
                 log.error(f"【Message】{cname} 消息发送失败：%s" % ret_msg)
-                return state
-        return True
+                raise RuntimeError(ret_msg)
+
+    def __sendmsg(self, client, title, text="", image="", url="", user_id=""):
+        """
+        通用消息发送（异步入队）
+        :param client: 消息端
+        :param title: 消息标题
+        :param text: 消息内容
+        :param image: 图片URL
+        :param url: 消息跳转地址
+        :param user_id: 用户ID，如有则只发给这个用户
+        :return: 是否成功入队
+        """
+        if not client or not client.get('client'):
+            return False
+        cname = client.get('name')
+        log.info(f"【Message】消息入队 {cname}：title={title}")
+        return self._queue.submit(
+            self._do_sendmsg, client, title, text, image, url, user_id,
+            name=f"sendmsg:{cname}"
+        )
 
     def send_channel_msg(self, channel, title, text="", image="", url="", user_id=""):
         """
@@ -340,21 +342,30 @@ class Message(metaclass=SingletonMeta):
             return state
         return False
 
+    def _do_send_list_msg(self, client, medias, user_id, title):
+        """实际执行列表消息发送（由队列调用）"""
+        if not client or not client.get('client'):
+            return
+        cname = client.get('name')
+        state, ret_msg = client.get('client').send_list_msg(
+            medias=medias, user_id=user_id, title=title, url=self._domain
+        )
+        if not state:
+            log.error(f"【Message】{cname} 发送列表消息失败：%s" % ret_msg)
+            raise RuntimeError(ret_msg)
+
     def __send_list_msg(self, client, medias, user_id, title):
         """
-        发送选择类消息
+        发送选择类消息（异步入队）
         """
         if not client or not client.get('client'):
-            return None
+            return False
         cname = client.get('name')
-        log.info(f"【Message】发送消息 {cname}：title={title}")
-        state, ret_msg = client.get('client').send_list_msg(medias=medias,
-                                                            user_id=user_id,
-                                                            title=title,
-                                                            url=self._domain)
-        if not state:
-            log.error(f"【Message】{cname} 发送消息失败：%s" % ret_msg)
-        return state
+        log.info(f"【Message】列表消息入队 {cname}：title={title}")
+        return self._queue.submit(
+            self._do_send_list_msg, client, medias, user_id, title,
+            name=f"send_list_msg:{cname}"
+        )
 
     def send_channel_list_msg(self, channel, title, medias: list, user_id=""):
         """
