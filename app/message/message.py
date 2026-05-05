@@ -271,8 +271,10 @@ class Message(metaclass=SingletonMeta):
     def _do_sendmsg(self, client, title, text, image, url, user_id):
         """实际执行消息发送（由队列调用）"""
         if not client or not client.get('client'):
+            log.warning("【Message】客户端对象为空，跳过发送")
             return
         cname = client.get('name')
+        log.info(f"【Message】开始发送消息 {cname}：title={title}")
         if self._domain:
             if url:
                 if '/open?url=' in url:
@@ -294,6 +296,7 @@ class Message(metaclass=SingletonMeta):
             if not state:
                 log.error(f"【Message】{cname} 消息发送失败：%s" % ret_msg)
                 raise RuntimeError(ret_msg)
+        log.info(f"【Message】消息发送成功 {cname}：title={title}")
 
     def __sendmsg(self, client, title, text="", image="", url="", user_id=""):
         """
@@ -345,14 +348,17 @@ class Message(metaclass=SingletonMeta):
     def _do_send_list_msg(self, client, medias, user_id, title):
         """实际执行列表消息发送（由队列调用）"""
         if not client or not client.get('client'):
+            log.warning("【Message】客户端对象为空，跳过列表发送")
             return
         cname = client.get('name')
+        log.info(f"【Message】开始发送列表消息 {cname}：title={title}")
         state, ret_msg = client.get('client').send_list_msg(
             medias=medias, user_id=user_id, title=title, url=self._domain
         )
         if not state:
             log.error(f"【Message】{cname} 发送列表消息失败：%s" % ret_msg)
             raise RuntimeError(ret_msg)
+        log.info(f"【Message】列表消息发送成功 {cname}：title={title}")
 
     def __send_list_msg(self, client, medias, user_id, title):
         """

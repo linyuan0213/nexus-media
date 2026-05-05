@@ -107,14 +107,17 @@ class TaskQueue(metaclass=SingletonMeta):
 
     def _run_task(self, task: Task):
         """执行任务，带重试"""
+        log.info(f"【TaskQueue】任务开始执行: {task.name}")
         for attempt in range(task.retries):
             try:
                 task.func(*task.args, **task.kwargs)
+                log.info(f"【TaskQueue】任务执行成功: {task.name}")
                 return
             except Exception as e:
                 log.error(f"【TaskQueue】任务 {task.name} 失败 ({attempt + 1}/{task.retries}): {e}")
                 if attempt < task.retries - 1:
                     time.sleep(task.retry_delay * (attempt + 1))
+        log.error(f"【TaskQueue】任务 {task.name} 最终失败，已丢弃")
 
     @property
     def pending(self) -> int:
