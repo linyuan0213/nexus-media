@@ -3,16 +3,16 @@ import xml.dom.minidom
 import re
 from urllib.parse import urlsplit
 
-from app.db import MainDb, DbPersist
-from app.db.models import RSSTORRENTS
+from app.db.repositories.rss_torrent_repo_adapter import RssTorrentRepositoryAdapter
 from app.utils import RssTitleUtils, StringUtils, RequestUtils, ExceptionUtils, DomUtils
-from config import Config
-from app.utils.config_tools import get_proxies
-from app.utils.config_tools import get_ua
+from app.utils.config_tools import get_proxies, get_ua
 
 
 class RssHelper:
-    _db = MainDb()
+    """RSS 解析助手"""
+
+    def __init__(self):
+        self._repo = RssTorrentRepositoryAdapter()
 
     @staticmethod
     def parse_rssxml(url, proxy=False):
@@ -77,7 +77,7 @@ class RssHelper:
                         if not enclosure and link:
                             enclosure = link
                             link = None
-                        
+
                         # monika rss兼容
                         if enclosure and 'monikadesign' in enclosure:
                             tids = re.findall(r'(\d+)\.', enclosure)
@@ -115,73 +115,53 @@ class RssHelper:
                 ExceptionUtils.exception_traceback(e2)
         return ret_array
 
-    @DbPersist(_db)
     def insert_rss_torrents(self, media_info):
         """
         将RSS的记录插入数据库
         """
-        # 截断超长 ENCLOSURE 防止数据库错误（8192 字节上限）
         enclosure = media_info.enclosure
         if enclosure and len(enclosure) > 8192:
             enclosure = enclosure[:8192]
-        self._db.insert(
-            RSSTORRENTS(
-                TORRENT_NAME=media_info.org_string,
-                ENCLOSURE=enclosure,
-                TYPE=media_info.type.value,
-                TITLE=media_info.title,
-                YEAR=media_info.year,
-                SEASON=media_info.get_season_string(),
-                EPISODE=media_info.get_episode_string()
-            ))
+        self._repo.insert(
+            torrent_name=media_info.org_string,
+            enclosure=enclosure,
+            type_=media_info.type.value,
+            title=media_info.title,
+            year=media_info.year,
+            season=media_info.get_season_string(),
+            episode=media_info.get_episode_string(),
+        )
 
     def is_rssd_by_enclosure(self, enclosure):
         """
         查询RSS是否处理过，根据下载链接
-        使用first()代替count()以提高性能
         """
         if not enclosure:
             return True
-        # 使用first()代替count()，查询到第一条记录就返回，不需要计算总数
-        return self._db.query(RSSTORRENTS).filter(RSSTORRENTS.ENCLOSURE == enclosure).first() is not None
+        return self._repo.is_exists_by_enclosure(enclosure)
 
     def is_rssd_by_simple(self, torrent_name, enclosure):
         """
-        查询RSS是否处理过，根据名称
-        使用first()代替count()以提高性能
+        查询RSS是否处理过，根据名称或下载链接
         """
         if not torrent_name and not enclosure:
             return True
-        if enclosure:
-            return self._db.query(RSSTORRENTS).filter(RSSTORRENTS.ENCLOSURE == enclosure).first() is not None
-        else:
-            return self._db.query(RSSTORRENTS).filter(RSSTORRENTS.TORRENT_NAME == torrent_name).first() is not None
+        return self._repo.is_exists_by_name(torrent_name, enclosure)
 
-    @DbPersist(_db)
     def simple_insert_rss_torrents(self, title, enclosure):
         """
-        将RSS的记录插入数据库
+        将RSS的记录插入数据库（简式）
         """
-        self._db.insert(
-            RSSTORRENTS(
-                TORRENT_NAME=title,
-                ENCLOSURE=enclosure
-            ))
+        self._repo.simple_insert(title, enclosure)
 
-    @DbPersist(_db)
     def simple_delete_rss_torrents(self, title, enclosure=None):
         """
         删除RSS的记录
         """
-        if enclosure:
-            self._db.query(RSSTORRENTS).filter(RSSTORRENTS.TORRENT_NAME == title,
-                                               RSSTORRENTS.ENCLOSURE == enclosure).delete()
-        else:
-            self._db.query(RSSTORRENTS).filter(RSSTORRENTS.TORRENT_NAME == title).delete()
+        self._repo.simple_delete(title, enclosure)
 
-    @DbPersist(_db)
     def truncate_rss_history(self):
         """
         清空RSS历史记录
         """
-        self._db.query(RSSTORRENTS).delete()
+        self._repo.truncate()

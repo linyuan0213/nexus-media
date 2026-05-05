@@ -8,7 +8,7 @@ import time
 from sqlalchemy import cast, Integer
 
 from app.db import DbPersist
-from app.db.models import RSSMOVIES, RSSTVS, RSSTVEPISODES, RSSHISTORY
+from app.db.models import RSSMOVIES, RSSTVS, RSSTVEPISODES, RSSHISTORY, RSSTORRENTS
 from app.db.repositories.base_repository import BaseRepository
 from app.utils.types import MediaType
 
@@ -641,3 +641,62 @@ class RssRepository(BaseRepository):
         if not rssid:
             return
         self._db.query(RSSHISTORY).filter(RSSHISTORY.ID == int(rssid)).delete()
+
+    # ==================== RSS Torrents ====================
+
+    def get_rss_torrent_by_enclosure(self, enclosure: str):
+        """根据 enclosure 获取 RSS 种子记录"""
+        if not enclosure:
+            return None
+        return self._db.query(RSSTORRENTS).filter(
+            RSSTORRENTS.ENCLOSURE == enclosure
+        ).first()
+
+    def get_rss_torrent_by_name(self, torrent_name: str):
+        """根据 torrent_name 获取 RSS 种子记录"""
+        if not torrent_name:
+            return None
+        return self._db.query(RSSTORRENTS).filter(
+            RSSTORRENTS.TORRENT_NAME == torrent_name
+        ).first()
+
+    @DbPersist(BaseRepository._db)
+    def insert_rss_torrent(self, torrent_name, enclosure, type_, title, year, season, episode):
+        """插入 RSS 种子记录"""
+        if enclosure and len(enclosure) > 8192:
+            enclosure = enclosure[:8192]
+        self._db.insert(RSSTORRENTS(
+            TORRENT_NAME=torrent_name,
+            ENCLOSURE=enclosure,
+            TYPE=type_,
+            TITLE=title,
+            YEAR=year,
+            SEASON=season,
+            EPISODE=episode,
+        ))
+
+    @DbPersist(BaseRepository._db)
+    def simple_insert_rss_torrent(self, title, enclosure):
+        """简式插入 RSS 种子记录"""
+        self._db.insert(RSSTORRENTS(
+            TORRENT_NAME=title,
+            ENCLOSURE=enclosure,
+        ))
+
+    @DbPersist(BaseRepository._db)
+    def simple_delete_rss_torrent(self, title, enclosure=None):
+        """删除 RSS 种子记录"""
+        if enclosure:
+            self._db.query(RSSTORRENTS).filter(
+                RSSTORRENTS.TORRENT_NAME == title,
+                RSSTORRENTS.ENCLOSURE == enclosure,
+            ).delete()
+        else:
+            self._db.query(RSSTORRENTS).filter(
+                RSSTORRENTS.TORRENT_NAME == title
+            ).delete()
+
+    @DbPersist(BaseRepository._db)
+    def truncate_rss_torrents(self):
+        """清空 RSS 种子记录"""
+        self._db.query(RSSTORRENTS).delete()
