@@ -809,9 +809,9 @@ class DbHelper:
 
     # ==================== SQL Operations ====================
 
-    def excute(self, sql):
+    def execute(self, sql):
         """执行SQL语句"""
-        return self._config_repo.excute(sql)
+        return self._config_repo.execute(sql)
 
     def drop_table(self, table_name):
         """删除表"""

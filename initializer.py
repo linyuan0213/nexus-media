@@ -253,7 +253,7 @@ def update_rss_state():
                 sql_statements = [stmt.strip() for stmt in sql_content.split(';') if stmt.strip()]
                 for sql in sql_statements:
                     if sql:
-                        dbhelper.excute(sql)
+                        dbhelper.execute(sql)
                 log.info("【Initialize】RSS订阅状态已更新为正在订阅")
         else:
             log.warn("【Initialize】RSS状态更新SQL文件不存在")

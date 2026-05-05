@@ -1,7 +1,7 @@
 import json
 import time
 
-from app.db.main_db import MainDb, _Engine, _Session
+from app.db.main_db import SessionManager, get_engine
 from app.db.models import MEDIASYNCITEMS, MEDIASYNCSTATISTIC
 from app.utils import ExceptionUtils
 from app.utils.cache_system import cached, MemoryCacheAdapter
@@ -13,18 +13,19 @@ _media_db_cache = MemoryCacheAdapter(maxsize=128, name="media_db")
 class MediaDb:
     """
     媒体数据库类
-    现在使用与主数据库相同的连接
+    使用 SessionManager 管理 session 生命周期
     """
-    
+
+    def __init__(self):
+        self._sm = SessionManager()
+
     @property
     def session(self):
-        return _Session()
+        return self._sm.session
 
     @staticmethod
     def init_db():
-        """初始化数据库（现在与主数据库共用）"""
-        # 媒体表现在与主表在同一个数据库中
-        # 由 MainDb.init_db() 统一创建所有表
+        """初始化数据库（由 MainDb.init_db() 统一创建所有表）"""
         pass
 
     def _close_session(self, session=None):
@@ -32,20 +33,18 @@ class MediaDb:
         try:
             if session:
                 session.close()
-            else:
-                self.session.close()
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
         finally:
-            _Session.remove()
+            self._sm.remove()
 
     def insert(self, server_type, iteminfo, seasoninfo):
         if not server_type or not iteminfo:
             return False
-        session = self.session
+        sess = self.session
         try:
             # 删除旧记录
-            session.query(MEDIASYNCITEMS).filter(
+            sess.query(MEDIASYNCITEMS).filter(
                 MEDIASYNCITEMS.SERVER == server_type,
                 MEDIASYNCITEMS.ITEM_ID == iteminfo.get("id")
             ).delete()
@@ -63,41 +62,41 @@ class MediaDb:
                 PATH=iteminfo.get("path"),
                 JSON=json.dumps(seasoninfo)
             )
-            session.add(new_item)
-            session.commit()
+            sess.add(new_item)
+            sess.commit()
             return True
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            session.rollback()
+            sess.rollback()
             return False
         finally:
-            self._close_session(session)
+            self._close_session(sess)
 
     def empty(self, server_type=None, library=None):
-        session = self.session
+        sess = self.session
         try:
-            query = session.query(MEDIASYNCITEMS)
+            query = sess.query(MEDIASYNCITEMS)
             if server_type and library:
                 query = query.filter(MEDIASYNCITEMS.SERVER == server_type, MEDIASYNCITEMS.LIBRARY == library)
             elif server_type:
                 query = query.filter(MEDIASYNCITEMS.SERVER == server_type)
             query.delete()
-            session.commit()
+            sess.commit()
             return True
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            session.rollback()
+            sess.rollback()
             return False
         finally:
-            self._close_session(session)
+            self._close_session(sess)
 
     def statistics(self, server_type, total_count, movie_count, tv_count):
         if not server_type:
             return False
-        session = self.session
+        sess = self.session
         try:
             # 删除旧统计
-            session.query(MEDIASYNCSTATISTIC).filter(
+            sess.query(MEDIASYNCSTATISTIC).filter(
                 MEDIASYNCSTATISTIC.SERVER == server_type
             ).delete()
             # 插入新统计
@@ -108,32 +107,32 @@ class MediaDb:
                 TV_COUNT=tv_count,
                 UPDATE_TIME=time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
             )
-            session.add(new_stat)
-            session.commit()
+            sess.add(new_stat)
+            sess.commit()
             return True
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            session.rollback()
+            sess.rollback()
             return False
         finally:
-            self._close_session(session)
+            self._close_session(sess)
 
     @cached(cache_instance=_media_db_cache, ttl=60)
     def query(self, server_type, title, year, tmdbid):
-        session = self.session
+        sess = self.session
         try:
             if not server_type or not title:
                 return {}
-            
-            query = session.query(MEDIASYNCITEMS).filter(
+
+            query = sess.query(MEDIASYNCITEMS).filter(
                 MEDIASYNCITEMS.SERVER == server_type
             )
-            
+
             if tmdbid:
                 item = query.filter(MEDIASYNCITEMS.TMDBID == tmdbid).first()
                 if item:
                     return item
-            
+
             if year:
                 item = query.filter(
                     MEDIASYNCITEMS.TITLE == title,
@@ -141,18 +140,18 @@ class MediaDb:
                 ).first()
             else:
                 item = query.filter(MEDIASYNCITEMS.TITLE == title).first()
-            
+
             return item if item else {}
         finally:
-            self._close_session(session)
+            self._close_session(sess)
 
     def get_statistics(self, server_type):
-        session = self.session
+        sess = self.session
         try:
             if not server_type:
                 return None
-            return session.query(MEDIASYNCSTATISTIC).filter(
+            return sess.query(MEDIASYNCSTATISTIC).filter(
                 MEDIASYNCSTATISTIC.SERVER == server_type
             ).first()
         finally:
-            self._close_session(session)
+            self._close_session(sess)

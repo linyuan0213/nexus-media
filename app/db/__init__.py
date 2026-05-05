@@ -2,9 +2,15 @@ import os
 import log
 from config import Config
 from app.utils.path_utils import get_root_path
-from .main_db import MainDb
-from .main_db import DbPersist
-from .main_db import remove_session
+from .main_db import (
+    SessionManager,
+    Database,
+    DbPersist,
+    MainDb,
+    remove_session,
+    get_session_manager,
+    get_engine,
+)
 from .media_db import MediaDb
 from .database_factory import DatabaseFactory
 from .sql_adapter import SQLAdapter, adapt_sql_for_engine
@@ -18,7 +24,7 @@ def init_db():
     """
     log.console('开始初始化数据库...')
     MediaDb().init_db()
-    MainDb().init_db()
+    SessionManager().create_all()
     log.console('数据库初始化完成')
     update_db()
 
@@ -28,7 +34,7 @@ def init_data():
     初始化数据
     """
     log.console('开始初始化数据...')
-    MainDb().init_data()
+    SessionManager().init_data()
     log.console('数据初始化完成')
 
 
@@ -41,11 +47,10 @@ def update_db():
     try:
         # 使用工厂获取数据库连接URL
         db_url = DatabaseFactory.get_alembic_url()
-        
+
         # 对 URL 中的 % 进行转义，避免 Alembic ConfigParser 插值错误
-        # 将 % 替换为 %%
         db_url_escaped = db_url.replace('%', '%%')
-        
+
         alembic_cfg = AlembicConfig()
         alembic_cfg.set_main_option('script_location', script_location)
         alembic_cfg.set_main_option('sqlalchemy.url', db_url_escaped)

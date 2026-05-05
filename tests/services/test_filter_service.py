@@ -237,13 +237,13 @@ class TestRestoreFilterGroup:
     def test_ok(self, svc):
         svc.delete_filtergroup = MagicMock()
         svc._filter_group_repo._repo = MagicMock()
-        svc._filter_group_repo._repo.excute = MagicMock()
+        svc._filter_group_repo._repo.execute = MagicMock()
         svc.restore_filter_group(
             ["1"],
             [{"id": 1, "sql": ["SQL1"]}]
         )
         svc.delete_filtergroup.assert_called_once_with("1")
-        svc._filter_group_repo._repo.excute.assert_called_once_with("SQL1")
+        svc._filter_group_repo._repo.execute.assert_called_once_with("SQL1")
 
 
 class TestShareFilterGroup:

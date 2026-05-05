@@ -750,7 +750,7 @@ class ConfigRepository(BaseRepository):
     # ==================== SQL Operations ====================
 
     @DbPersist(BaseRepository._db)
-    def excute(self, sql):
+    def execute(self, sql):
         """
         执行SQL语句
         
@@ -760,7 +760,7 @@ class ConfigRepository(BaseRepository):
         Returns:
             执行结果
         """
-        return self._db.excute(sql)
+        return self._db.execute(sql)
 
     @DbPersist(BaseRepository._db)
     def drop_table(self, table_name):
@@ -773,4 +773,4 @@ class ConfigRepository(BaseRepository):
         Returns:
             执行结果
         """
-        return self._db.excute(f"""DROP TABLE IF EXISTS {table_name}""")
+        return self._db.execute(f"""DROP TABLE IF EXISTS {table_name}""")

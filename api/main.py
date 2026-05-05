@@ -61,6 +61,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Session 清理中间件：每个请求结束后清理 scoped_session
+@app.middleware("http")
+async def db_session_cleanup(request: Request, call_next):
+    """请求结束后清理数据库 session，防止 scoped_session 泄漏"""
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        from app.db import remove_session
+        remove_session()
+
 # 注册 Router（按领域逐步增加）
 app.include_router(system.router, prefix="/api/system", tags=["system"])
 app.include_router(site.router, prefix="/api/site", tags=["site"])

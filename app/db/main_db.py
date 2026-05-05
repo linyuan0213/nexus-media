@@ -1,6 +1,8 @@
 import os
 import threading
 from contextlib import contextmanager
+from typing import Optional, Any
+
 from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -12,9 +14,13 @@ from config import Config
 from app.utils.path_utils import get_script_path
 
 
-# SQL 适配器实例 - 使用双重检查锁模式
+# =============================================================================
+# SQL 适配器（延迟初始化避免循环导入）
+# =============================================================================
+
 _sql_adapter = None
 _sql_adapter_lock = threading.Lock()
+
 
 def get_sql_adapter():
     """获取 SQL 适配器实例 - 线程安全"""
@@ -22,74 +28,174 @@ def get_sql_adapter():
     if _sql_adapter is None:
         with _sql_adapter_lock:
             if _sql_adapter is None:
-                _sql_adapter = SQLAdapter(_Engine)
+                _sql_adapter = SQLAdapter(get_engine())
     return _sql_adapter
 
-# 使用工厂创建数据库引擎
-# 自动从配置文件获取数据库类型和连接信息
-_Engine = DatabaseFactory.create_engine()
 
-# session配置 - 使用 scoped_session 实现线程本地存储
-_Session = scoped_session(sessionmaker(bind=_Engine,
-                                       autoflush=False,  # 禁用自动flush以提高性能
-                                       autocommit=False,
-                                       expire_on_commit=False))
+# =============================================================================
+# 引擎与 Session 工厂（延迟初始化）
+# =============================================================================
 
-
-@contextmanager
-def session_scope():
-    """提供事务范围的session上下文管理器 - 优化异常处理"""
-    session = _Session()
-    try:
-        yield session
-        session.commit()
-    except Exception as e:
-        session.rollback()
-        raise
-    finally:
-        session.close()
-        _Session.remove()
+_Engine: Optional[Any] = None
+_SessionFactory: Optional[Any] = None
+_ScopedSession: Optional[Any] = None
 
 
-def remove_session():
+def _init_engine():
+    """延迟初始化引擎和 session 工厂"""
+    global _Engine, _SessionFactory, _ScopedSession
+    if _Engine is None:
+        _Engine = DatabaseFactory.create_engine()
+        _SessionFactory = sessionmaker(
+            bind=_Engine,
+            autoflush=False,
+            autocommit=False,
+            expire_on_commit=False,
+        )
+        _ScopedSession = scoped_session(_SessionFactory)
+
+
+def get_engine():
+    """获取数据库引擎"""
+    _init_engine()
+    return _Engine
+
+
+# =============================================================================
+# SessionManager - Session 生命周期管理
+# =============================================================================
+
+class SessionManager:
     """
-    移除当前线程的 session
-    在请求结束时调用，确保 session 被正确清理
+    Session 管理器
+
+    职责：
+    1. 管理 scoped_session 生命周期（线程本地存储）
+    2. 提供 session_scope() 上下文管理器确保自动提交/回滚/关闭
+    3. 兼容旧 MainDb API（query/insert/commit/delete/flush/execute）
+    4. 提供 bulk_insert / bulk_insert_mappings 批量操作
+
+    线程安全：scoped_session 保证同一线程内返回同一个 session 实例
+    Session 清理：请求结束后必须调用 remove() 清理线程本地存储
     """
-    try:
-        _Session.remove()
-    except Exception:
-        pass
 
+    def __init__(self):
+        _init_engine()
+        self._engine = _Engine
+        self._scoped = _ScopedSession
 
-class MainDb:
+    @property
+    def engine(self):
+        return self._engine
 
     @property
     def session(self):
-        """
-        获取当前线程的 session
-        使用 scoped_session，同一线程内返回同一个 session 实例
-        """
-        return _Session()
+        """获取当前线程的 session（scoped_session）"""
+        return self._scoped()
 
-    def init_db(self):
-        Base.metadata.create_all(_Engine)
-        self.init_db_version()
+    @contextmanager
+    def session_scope(self):
+        """
+        事务范围的 session 上下文管理器
+
+        使用模式：
+            with session_scope() as session:
+                session.add(obj)
+                # 自动 commit
+            # 异常时自动 rollback，最终自动 close + remove
+        """
+        sess = self._scoped()
+        try:
+            yield sess
+            sess.commit()
+        except Exception:
+            sess.rollback()
+            raise
+        finally:
+            sess.close()
+            self._scoped.remove()
+
+    def remove(self):
+        """移除当前线程的 session（应在请求结束时调用）"""
+        self._scoped.remove()
+
+    # -------------------------------------------------------------------------
+    # 兼容旧 MainDb API
+    # -------------------------------------------------------------------------
+
+    def query(self, *entities):
+        """创建查询（返回 Query 对象，不自动 commit）"""
+        return self._scoped().query(*entities)
+
+    def insert(self, data):
+        """插入对象（单条或列表，不自动 commit）"""
+        if isinstance(data, list):
+            self._scoped().add_all(data)
+        else:
+            self._scoped().add(data)
+
+    def delete(self, obj):
+        """删除对象（不自动 commit）"""
+        self._scoped().delete(obj)
+
+    def commit(self):
+        """提交当前线程事务"""
+        self._scoped().commit()
+
+    def rollback(self):
+        """回滚当前线程事务"""
+        self._scoped().rollback()
+
+    def flush(self):
+        """刷写当前线程 session"""
+        self._scoped().flush()
+
+    def execute(self, sql):
+        """执行 SQL（保持旧拼写兼容，内部使用 SQL 适配器）"""
+        adapted = get_sql_adapter().adapt_sql(sql)
+        if adapted and adapted.strip():
+            self._scoped().execute(text(adapted))
+
+    def bulk_insert(self, objects, batch_size=1000):
+        """批量插入 ORM 对象"""
+        if not objects:
+            return
+        sess = self._scoped()
+        for i in range(0, len(objects), batch_size):
+            batch = objects[i:i + batch_size]
+            sess.bulk_save_objects(batch)
+            sess.flush()
+        sess.commit()
+
+    def bulk_insert_mappings(self, model, mappings, batch_size=1000):
+        """批量插入字典映射（比 ORM 对象插入更快）"""
+        if not mappings:
+            return
+        sess = self._scoped()
+        for i in range(0, len(mappings), batch_size):
+            batch = mappings[i:i + batch_size]
+            sess.bulk_insert_mappings(model, batch)
+            sess.flush()
+        sess.commit()
+
+    # -------------------------------------------------------------------------
+    # 数据库初始化
+    # -------------------------------------------------------------------------
+
+    def create_all(self):
+        """创建所有表"""
+        Base.metadata.create_all(self._engine)
 
     def init_db_version(self):
-        """
-        初始化数据库版本
-        """
+        """初始化数据库版本（清理 alembic_version）"""
         try:
-            self.excute("delete from alembic_version where 1")
+            self.execute("delete from alembic_version where 1")
             self.commit()
         except Exception as err:
             print(str(err))
 
     def init_data(self):
-        """
-        读取config目录下的sql文件，并初始化到数据库，只处理一次
-        """
+        """读取 SQL 脚本初始化数据"""
         config = Config().get_config()
         init_files = Config().get_config("app").get("init_files") or []
         config_dir = get_script_path()
@@ -102,10 +208,9 @@ class MainDb:
                     sql_list = f.read().split(';\n')
                     for sql in sql_list:
                         try:
-                            # 使用 SQL 适配器处理 SQL 语句
-                            adapted_sql = get_sql_adapter().adapt_sql(sql)
-                            if adapted_sql and adapted_sql.strip():
-                                self.excute(adapted_sql)
+                            adapted = get_sql_adapter().adapt_sql(sql)
+                            if adapted and adapted.strip():
+                                self.execute(adapted)
                                 self.commit()
                         except Exception as err:
                             print(str(err))
@@ -114,88 +219,72 @@ class MainDb:
             config['app']['init_files'] = init_files
             Config().save_config(config)
 
-    def insert(self, data):
-        """
-        插入数据
-        """
-        if isinstance(data, list):
-            self.session.add_all(data)
-        else:
-            self.session.add(data)
 
-    def bulk_insert(self, objects, batch_size=1000):
-        """
-        批量插入对象，分批处理以避免内存问题
-        :param objects: 对象列表
-        :param batch_size: 每批处理数量
-        """
-        if not objects:
+# =============================================================================
+# Database - 数据库单例（引擎管理）
+# =============================================================================
+
+class Database:
+    """
+    数据库单例
+
+    职责：管理数据库引擎，提供 SessionManager 访问
+    """
+
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        if hasattr(self, '_initialized'):
             return
-        
-        for i in range(0, len(objects), batch_size):
-            batch = objects[i:i + batch_size]
-            self.session.bulk_save_objects(batch)
-            self.session.flush()
-        self.commit()
+        self._session_mgr = SessionManager()
+        self._initialized = True
 
-    def bulk_insert_mappings(self, model, mappings, batch_size=1000):
-        """
-        批量插入字典映射数据，比ORM对象插入更快
-        :param model: 模型类
-        :param mappings: 字典列表
-        :param batch_size: 每批处理数量
-        """
-        if not mappings:
-            return
-        
-        for i in range(0, len(mappings), batch_size):
-            batch = mappings[i:i + batch_size]
-            self.session.bulk_insert_mappings(model, batch)
-            self.session.flush()
-        self.commit()
+    @property
+    def engine(self):
+        return self._session_mgr.engine
 
-    def query(self, *obj):
-        """
-        查询对象
-        """
-        # 对于 MySQL，提交当前事务以获取最新数据
-        # 避免 REPEATABLE READ 隔离级别导致的缓存问题
-        try:
-            self.commit()
-        except:
-            pass
-        return self.session.query(*obj)
+    @property
+    def session_manager(self):
+        return self._session_mgr
 
-    def excute(self, sql):
-        """
-        执行SQL语句
-        """
-        # 使用 SQL 适配器处理 SQL 语句
-        adapted_sql = get_sql_adapter().adapt_sql(sql)
-        if adapted_sql and adapted_sql.strip():
-            self.session.execute(text(adapted_sql))
+    def create_all(self):
+        self._session_mgr.create_all()
 
-    def flush(self):
-        """
-        刷写
-        """
-        self.session.flush()
+    def init_db_version(self):
+        self._session_mgr.init_db_version()
 
-    def commit(self):
-        """
-        提交事务
-        """
-        self.session.commit()
-
-    def rollback(self):
-        """
-        回滚事务
-        """
-        self.session.rollback()
+    def init_data(self):
+        self._session_mgr.init_data()
 
 
-class DbPersist(object):
-    def __init__(self, db, max_retries=3, retry_delay=0.1):
+# =============================================================================
+# 向后兼容别名
+# =============================================================================
+
+MainDb = SessionManager
+
+
+# =============================================================================
+# DbPersist - 自动重试持久化装饰器
+# =============================================================================
+
+class DbPersist:
+    """
+    持久化装饰器 - 自动重试的 commit/rollback
+
+    重要变更：不再关闭 session（scoped_session 同线程共享，
+    由请求级别 remove_session() 统一清理）
+    """
+
+    def __init__(self, db=None, max_retries=3, retry_delay=0.1):
         self.db = db
         self.max_retries = max_retries
         self.retry_delay = retry_delay
@@ -206,20 +295,39 @@ class DbPersist(object):
             for attempt in range(self.max_retries):
                 try:
                     ret = f(*args, **kwargs)
-                    self.db.commit()
+                    if self.db:
+                        self.db.commit()
                     return ret if ret is not None else True
                 except Exception as e:
                     last_error = e
-                    self.db.rollback()
+                    if self.db:
+                        self.db.rollback()
                     if attempt < self.max_retries - 1:
                         import time
-                        time.sleep(self.retry_delay * (attempt + 1))  # 指数退避
+                        time.sleep(self.retry_delay * (attempt + 1))
                     else:
                         ExceptionUtils.exception_traceback(e)
                         return False
-                finally:
-                    # 确保 Session 关闭并重置
-                    self.db.session.close()
-                    _Session.remove()  # 清理 scoped_session
             return False
         return persist
+
+
+# =============================================================================
+# 模块级快捷函数
+# =============================================================================
+
+def remove_session():
+    """移除当前线程的 session（应在请求/任务结束时调用）"""
+    _init_engine()
+    _ScopedSession.remove()
+
+
+def get_session_manager():
+    """获取 SessionManager 实例"""
+    return SessionManager()
+
+
+def get_db_session():
+    """获取当前线程的数据库 session"""
+    _init_engine()
+    return _ScopedSession()
