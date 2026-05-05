@@ -1,9 +1,11 @@
 # coding: utf-8
 """
 插件历史和TMDB黑名单模型
-包含: 插件历史、TMDB黑名单、删种任务、自定义RSS任务历史
+包含: 插件历史、TMDB黑名单、删种任务、自定义RSS任务历史、插件框架v2模型
 """
-from sqlalchemy import Column, Integer, Text, String, Sequence
+from datetime import datetime
+
+from sqlalchemy import Column, Integer, Text, String, Sequence, Boolean, DateTime
 
 from app.db.models.base import Base
 
@@ -57,3 +59,66 @@ class USERRSSTASKHISTORY(Base):
     TITLE = Column(String(255))
     DOWNLOADER = Column(String(255))
     DATE = Column(String(255))
+
+
+class PLUGINMANIFEST(Base):
+    """插件框架v2 - 插件清单表"""
+    __tablename__ = 'PLUGIN_MANIFEST'
+
+    ID = Column(String(255), primary_key=True)
+    NAME = Column(String(255), nullable=False)
+    VERSION = Column(String(255), nullable=False)
+    AUTHOR = Column(String(255))
+    DESCRIPTION = Column(Text)
+    CATEGORY = Column(String(255), default='tool')
+    TAGS = Column(Text, default='[]')
+    ICON = Column(String(255))
+    COLOR = Column(String(255))
+    MANIFEST_JSON = Column(Text, nullable=False)
+    INSTALLED_AT = Column(DateTime, default=datetime.now)
+    UPDATED_AT = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    ENABLED = Column(Boolean, default=False)
+    INSTALLED = Column(Boolean, default=True)
+    PATH = Column(String(512), nullable=False)
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+class PLUGINCONFIG(Base):
+    """插件框架v2 - 插件配置表"""
+    __tablename__ = 'PLUGIN_CONFIG'
+
+    PLUGIN_ID = Column(String(255), primary_key=True)
+    CONFIG = Column(Text, nullable=False, default='{}')
+    UPDATED_AT = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+class PLUGINLOGS(Base):
+    """插件框架v2 - 插件日志表"""
+    __tablename__ = 'PLUGIN_LOGS'
+
+    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    PLUGIN_ID = Column(String(255), nullable=False, index=True)
+    LEVEL = Column(String(50), nullable=False)
+    MESSAGE = Column(Text, nullable=False)
+    CREATED_AT = Column(DateTime, default=datetime.now)
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+class PLUGINHOOKS(Base):
+    """插件框架v2 - 插件Hook订阅表"""
+    __tablename__ = 'PLUGIN_HOOKS'
+
+    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    PLUGIN_ID = Column(String(255), nullable=False, index=True)
+    EVENT = Column(String(255), nullable=False)
+    ENABLED = Column(Boolean, default=True)
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}

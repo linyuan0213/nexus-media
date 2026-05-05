@@ -19,6 +19,7 @@ def init_db():
     MediaDb().init_db()
     MainDb().init_db()
     log.console('数据库初始化完成')
+    update_db()
 
 
 def init_data():
