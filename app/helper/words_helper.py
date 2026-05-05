@@ -13,7 +13,6 @@ from app.utils.cache_system import get_cache_manager
 
 
 class WordsHelper(metaclass=SingletonMeta):
-    dbhelper = None
     # 识别词
     words_info = []
     _cache_time = 0

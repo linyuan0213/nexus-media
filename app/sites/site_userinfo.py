@@ -20,7 +20,6 @@ lock = Lock()
 
 class SiteUserInfo(metaclass=SingletonMeta):
     sites = None
-    dbhelper = None
     message = None
 
     _MAX_CONCURRENCY = 10
