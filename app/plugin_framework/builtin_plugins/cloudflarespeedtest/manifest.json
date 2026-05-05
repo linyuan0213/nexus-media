@@ -1,0 +1,98 @@
+{
+  "manifest_version": "1.0",
+  "id": "cloudflarespeedtest",
+  "name": "Cloudflare IP优选",
+  "version": "1.1",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "测试 Cloudflare CDN 延迟和速度，自动优选IP。",
+  "category": "tool",
+  "tags": ["Cloudflare", "CDN", "优选"],
+  "icon": "lucide:zap",
+  "color": "#f97316",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:CloudflareSpeedTestPlugin",
+    "api_prefix": "/api/plugin/cloudflarespeedtest",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ],
+    "supports_run": true
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "cf_ip",
+          "type": "input",
+          "label": "优选IP",
+          "default": "",
+          "placeholder": "121.121.121.121",
+          "help": "第一次使用需先在自定义Hosts插件中配置"
+        },
+        {
+          "key": "cron",
+          "type": "cron",
+          "label": "优选周期",
+          "default": "0 0 * * *",
+          "placeholder": "0 0 * * *",
+          "help": "Cloudflare CDN优选周期"
+        },
+        {
+          "key": "ipv4",
+          "type": "switch",
+          "label": "IPv4",
+          "default": true,
+          "help": "优选测速ipv4"
+        },
+        {
+          "key": "ipv6",
+          "type": "switch",
+          "label": "IPv6",
+          "default": false,
+          "help": "优选测速ipv6"
+        },
+        {
+          "key": "check",
+          "type": "switch",
+          "label": "自动校准",
+          "default": false,
+          "help": "自动查询自定义hosts插件中出现次数最多的ip替换到优选IP"
+        },
+        {
+          "key": "onlyonce",
+          "type": "switch",
+          "label": "立即运行一次",
+          "default": false,
+          "help": "打开后立即运行一次"
+        },
+        {
+          "key": "re_install",
+          "type": "switch",
+          "label": "重装后运行",
+          "default": false,
+          "help": "每次重新下载CloudflareSpeedTest"
+        },
+        {
+          "key": "additional_args",
+          "type": "input",
+          "label": "高级参数",
+          "default": "",
+          "placeholder": "-dd",
+          "help": "CloudflareSpeedTest的高级参数，请勿随意修改（请勿新增-f -o参数）"
+        },
+        {
+          "key": "notify",
+          "type": "switch",
+          "label": "运行时通知",
+          "default": false,
+          "help": "运行任务后发送通知"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

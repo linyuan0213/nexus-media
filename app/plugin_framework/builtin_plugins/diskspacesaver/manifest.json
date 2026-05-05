@@ -1,0 +1,70 @@
+{
+  "manifest_version": "1.0",
+  "id": "diskspacesaver",
+  "name": "磁盘空间释放",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "计算文件SHA1，同磁盘下相同SHA1的文件只保留一个，其他的用硬链接替换。",
+  "category": "tool",
+  "tags": ["磁盘", "去重", "硬链接"],
+  "icon": "lucide:hard-drive",
+  "color": "#f59e0b",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:DiskSpaceSaverPlugin",
+    "api_prefix": "/api/plugin/diskspacesaver",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ],
+    "supports_run": true
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "path_list",
+          "type": "textarea",
+          "label": "磁盘目录",
+          "default": "",
+          "placeholder": "每行一个路径",
+          "help": "要进行SHA1计算的文件路径，每行一个路径，请确保路径正确且属于同一个磁盘分区"
+        },
+        {
+          "key": "ext_list",
+          "type": "input",
+          "label": "文件后缀",
+          "default": ".mkv,.mp4",
+          "placeholder": ".mkv,.mp4",
+          "help": "只识别这些后缀的文件，多个后缀用英文逗号隔开"
+        },
+        {
+          "key": "file_size",
+          "type": "number",
+          "label": "文件大小（MB）",
+          "default": 100,
+          "placeholder": "100",
+          "help": "单位MB，大于该大小的文件才会进行SHA1计算"
+        },
+        {
+          "key": "dry_run",
+          "type": "switch",
+          "label": "仅查重",
+          "default": false,
+          "help": "仅查重，不进行删除和硬链接替换"
+        },
+        {
+          "key": "fast",
+          "type": "switch",
+          "label": "快速模式",
+          "default": false,
+          "help": "快速模式，不计算文件整体SHA1，只计算文件头部/中间/尾部的SHA1，速度快但有可能误判"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

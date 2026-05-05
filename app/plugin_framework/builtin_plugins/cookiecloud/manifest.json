@@ -1,0 +1,98 @@
+{
+  "manifest_version": "1.0",
+  "id": "cookiecloud",
+  "name": "CookieCloud同步",
+  "version": "2.0.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "从 CookieCloud 云端同步数据，自动新增站点或更新已有站点 Cookie。",
+  "category": "system",
+  "tags": ["Cookie", "同步"],
+  "icon": "lucide:cloud",
+  "color": "#77B3D4",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:CookieCloudPlugin",
+    "api_prefix": "/api/plugin/cookiecloud",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed",
+      "site.cookie_sync",
+      "site.local_storage_sync"
+    ],
+    "supports_run": true
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "enabled",
+          "type": "switch",
+          "label": "开启定时同步",
+          "default": false,
+          "help": "开启后会根据周期定时同步 CookieCloud"
+        },
+        {
+          "key": "server",
+          "type": "input",
+          "label": "服务器地址",
+          "default": "",
+          "placeholder": "http://192.168.1.100:8080",
+          "required": true,
+          "help": "参考 https://github.com/easychen/CookieCloud 搭建私有服务器；也可使用默认公共服务器，注意不要泄露加密信息"
+        },
+        {
+          "key": "key",
+          "type": "input",
+          "label": "用户KEY",
+          "default": "",
+          "placeholder": "",
+          "required": true,
+          "help": "浏览器 CookieCloud 插件中获取"
+        },
+        {
+          "key": "password",
+          "type": "password",
+          "label": "端对端加密密码",
+          "default": "",
+          "placeholder": "",
+          "help": "浏览器 CookieCloud 插件中获取"
+        },
+        {
+          "key": "cron",
+          "type": "cron",
+          "label": "执行周期",
+          "default": "0 0 * * *",
+          "placeholder": "0 0 * * *",
+          "help": "设置自动同步时间周期，支持 5 位 cron 表达式"
+        },
+        {
+          "key": "notify",
+          "type": "switch",
+          "label": "运行时通知",
+          "default": false,
+          "help": "运行任务后会发送通知（需要打开插件消息通知）"
+        },
+        {
+          "key": "whitelist",
+          "type": "textarea",
+          "label": "白名单",
+          "default": "",
+          "placeholder": "每行一个关键词，支持正则",
+          "help": "白名单为空时默认放行所有域名"
+        },
+        {
+          "key": "blacklist",
+          "type": "textarea",
+          "label": "黑名单",
+          "default": "",
+          "placeholder": "每行一个关键词，支持正则",
+          "help": "黑名单中的域名将被排除"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

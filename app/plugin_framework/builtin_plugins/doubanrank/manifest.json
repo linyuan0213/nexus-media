@@ -1,0 +1,95 @@
+{
+  "manifest_version": "1.0",
+  "id": "doubanrank",
+  "name": "豆瓣榜单订阅",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "监控豆瓣热门榜单，自动添加订阅。",
+  "category": "media",
+  "tags": ["豆瓣", "榜单", "订阅"],
+  "icon": "lucide:film",
+  "color": "#06b6d4",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:DoubanRankPlugin",
+    "api_prefix": "/api/plugin/doubanrank",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ],
+    "supports_run": true
+  },
+  "frontend": {
+    "routes": [
+      {
+        "path": "history",
+        "component": "HistoryPage",
+        "title": "订阅历史",
+        "icon": "lucide:history",
+        "menu": true
+      }
+    ],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "enable",
+          "type": "switch",
+          "label": "开启豆瓣榜单订阅",
+          "default": false,
+          "help": "开启后自动监控豆瓣榜单变化"
+        },
+        {
+          "key": "cron",
+          "type": "cron",
+          "label": "刷新周期",
+          "default": "0 0 * * *",
+          "placeholder": "0 0 * * *",
+          "help": "榜单数据刷新的时间周期"
+        },
+        {
+          "key": "onlyonce",
+          "type": "switch",
+          "label": "立即运行一次",
+          "default": false,
+          "help": "打开后立即运行一次"
+        },
+        {
+          "key": "vote",
+          "type": "number",
+          "label": "评分",
+          "default": 0,
+          "placeholder": "0",
+          "help": "大于该评分的才会被订阅（以TMDB评分为准）"
+        },
+        {
+          "key": "rss_addrs",
+          "type": "textarea",
+          "label": "RssHub订阅地址",
+          "default": "",
+          "placeholder": "https://rsshub.app/douban/movie/classification/:sort?/:score?/:tags?",
+          "help": "每一行一个RSS地址"
+        },
+        {
+          "key": "ranks",
+          "type": "select",
+          "label": "热门榜单",
+          "default": [],
+          "multiple": true,
+          "options": [
+            {"label": "北美电影票房榜", "value": "movie-ustop"},
+            {"label": "一周电影口碑榜", "value": "movie-weekly"},
+            {"label": "实时热门榜", "value": "movie-real-time"},
+            {"label": "热门电影", "value": "movie-hot-gaia"},
+            {"label": "电影TOP10", "value": "movie-top250"},
+            {"label": "热门剧集", "value": "tv-hot"},
+            {"label": "热门综艺", "value": "show-domestic"}
+          ],
+          "help": "内建支持的豆瓣榜单"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

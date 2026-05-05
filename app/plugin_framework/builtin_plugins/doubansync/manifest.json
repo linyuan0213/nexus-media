@@ -1,0 +1,121 @@
+{
+  "manifest_version": "1.0",
+  "id": "doubansync",
+  "name": "豆瓣同步",
+  "version": "2.0.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "同步豆瓣在看、想看、看过记录，自动添加订阅或搜索下载。",
+  "category": "media",
+  "tags": ["豆瓣", "同步", "订阅"],
+  "icon": "lucide:film",
+  "color": "#05B711",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:DoubanSyncPlugin",
+    "api_prefix": "/api/plugin/doubansync",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed",
+      "media.douban_sync"
+    ],
+    "supports_run": true
+  },
+  "frontend": {
+    "routes": [
+      {
+        "path": "history",
+        "component": "HistoryPage",
+        "title": "同步历史",
+        "icon": "lucide:history",
+        "menu": true
+      }
+    ],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "enable",
+          "type": "switch",
+          "label": "开启豆瓣同步",
+          "default": false,
+          "help": "开启后定时同步豆瓣在看、想看、看过记录"
+        },
+        {
+          "key": "users",
+          "type": "input",
+          "label": "豆瓣用户ID",
+          "default": "",
+          "placeholder": "用户1,用户2,用户3",
+          "help": "豆瓣个人主页地址栏 /people/ 后面的数字，多个用英文逗号分隔"
+        },
+        {
+          "key": "types",
+          "type": "input",
+          "label": "同步内容",
+          "default": "",
+          "placeholder": "do,wish,collect",
+          "help": "do 在看，wish 想看，collect 看过，用英文逗号分隔"
+        },
+        {
+          "key": "sync_type",
+          "type": "select",
+          "label": "同步方式",
+          "default": "0",
+          "options": [
+            {"label": "全量同步", "value": "0"},
+            {"label": "近期动态", "value": "1"}
+          ],
+          "help": "全量同步（同步所有数据）、近期动态（同步近期10条动态）"
+        },
+        {
+          "key": "days",
+          "type": "number",
+          "label": "全量同步范围（天）",
+          "default": 30,
+          "placeholder": "30",
+          "help": "同步多少天内的记录，0 表示同步全部"
+        },
+        {
+          "key": "interval",
+          "type": "number",
+          "label": "全量同步间隔（小时）",
+          "default": 6,
+          "placeholder": "6",
+          "help": "间隔多久同步一次，为避免被豆瓣封禁IP，应尽可能拉长间隔"
+        },
+        {
+          "key": "rss_interval",
+          "type": "number",
+          "label": "近期动态同步间隔（秒）",
+          "default": 300,
+          "placeholder": "300",
+          "help": "最小300秒，可设置较小间隔同步近期动态"
+        },
+        {
+          "key": "cookie",
+          "type": "textarea",
+          "label": "豆瓣Cookie",
+          "default": "",
+          "placeholder": "",
+          "help": "受豆瓣限制，部分电影需要配置Cookie才能同步"
+        },
+        {
+          "key": "auto_search",
+          "type": "switch",
+          "label": "自动搜索下载",
+          "default": false,
+          "help": "开启后豆瓣同步的数据会自动进行站点聚合搜索下载"
+        },
+        {
+          "key": "auto_rss",
+          "type": "switch",
+          "label": "自动添加订阅",
+          "default": false,
+          "help": "开启后未下载完整的将加入订阅"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

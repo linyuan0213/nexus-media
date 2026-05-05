@@ -1,0 +1,69 @@
+{
+  "manifest_version": "1.0",
+  "id": "autorestart",
+  "name": "自动重启",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "定时自动重启NAStool服务，保持系统稳定运行。",
+  "category": "system",
+  "tags": ["重启", "系统"],
+  "icon": "lucide:refresh-cw",
+  "color": "#f97316",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:AutoRestartPlugin",
+    "api_prefix": "/api/plugin/autorestart",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ],
+    "supports_run": true
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "enabled",
+          "type": "switch",
+          "label": "开启定时重启",
+          "default": false,
+          "help": "开启后会根据周期定时重启NAStool服务"
+        },
+        {
+          "key": "cron",
+          "type": "cron",
+          "label": "重启周期",
+          "default": "0 0 3 * *",
+          "placeholder": "0 0 3 * *",
+          "help": "设置自动重启时间周期，支持5位cron表达式"
+        },
+        {
+          "key": "delay",
+          "type": "number",
+          "label": "重启前延迟（秒）",
+          "default": 0,
+          "placeholder": "0",
+          "help": "重启前的倒计时延迟，0表示立即重启"
+        },
+        {
+          "key": "notify",
+          "type": "switch",
+          "label": "运行时通知",
+          "default": false,
+          "help": "运行任务后会发送通知（需要打开插件消息通知）"
+        },
+        {
+          "key": "onlyonce",
+          "type": "switch",
+          "label": "立即运行一次",
+          "default": false,
+          "help": "打开后立即运行一次"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

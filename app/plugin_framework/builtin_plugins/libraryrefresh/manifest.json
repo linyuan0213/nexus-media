@@ -1,0 +1,49 @@
+{
+  "manifest_version": "1.0",
+  "id": "libraryrefresh",
+  "name": "刷新媒体库",
+  "version": "2.0.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "入库完成后刷新媒体库服务器海报墙。",
+  "category": "media",
+  "tags": ["媒体库", "刷新"],
+  "icon": "lucide:refresh-cw",
+  "color": "#32BEA6",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:LibraryRefreshPlugin",
+    "api_prefix": "/api/plugin/libraryrefresh",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed",
+      "media.transfered",
+      "media.library_synced"
+    ],
+    "supports_run": false
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "enable",
+          "type": "switch",
+          "label": "开启媒体库刷新",
+          "default": false,
+          "help": "Emby 已有电视剧新增剧集时只会刷新对应电视剧，其它场景下如开启了二级分类则只刷新二级分类对应媒体库，否则刷新整库；Jellyfin/Plex 只支持刷新整库"
+        },
+        {
+          "key": "delay",
+          "type": "number",
+          "label": "延迟刷新时间",
+          "default": 0,
+          "placeholder": "0",
+          "help": "延迟刷新时间，单位秒，0 则不延迟"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

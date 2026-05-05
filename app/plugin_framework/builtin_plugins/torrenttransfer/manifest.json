@@ -1,0 +1,131 @@
+{
+  "manifest_version": "1.0",
+  "id": "torrenttransfer",
+  "name": "自动转移做种",
+  "version": "1.1",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "定期转移下载器中的做种任务到另一个下载器。",
+  "category": "download",
+  "tags": ["转移", "做种"],
+  "icon": "lucide:arrow-right-left",
+  "color": "#18181b",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:TorrentTransferPlugin",
+    "api_prefix": "/api/plugin/torrenttransfer",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ],
+    "supports_run": true
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "enable",
+          "type": "switch",
+          "label": "开启自动转移做种",
+          "default": false,
+          "help": "开启后定期将源下载器中已完成的种子任务迁移至目的下载器"
+        },
+        {
+          "key": "cron",
+          "type": "cron",
+          "label": "执行周期",
+          "default": "0 0 * * *",
+          "placeholder": "0 0 * * *",
+          "help": "设置移转做种任务执行的时间周期"
+        },
+        {
+          "key": "onlyonce",
+          "type": "switch",
+          "label": "立即运行一次",
+          "default": false,
+          "help": "打开后立即运行一次"
+        },
+        {
+          "key": "fromdownloader",
+          "type": "input",
+          "label": "源下载器",
+          "default": "",
+          "placeholder": "下载器ID",
+          "help": "源下载器ID"
+        },
+        {
+          "key": "todownloader",
+          "type": "input",
+          "label": "目的下载器",
+          "default": "",
+          "placeholder": "下载器ID",
+          "help": "目的下载器ID"
+        },
+        {
+          "key": "fromtorrentpath",
+          "type": "input",
+          "label": "种子文件路径",
+          "default": "",
+          "placeholder": "/config/qBittorrent/BT_backup",
+          "help": "源下载器保存种子文件的路径，QB一般为BT_backup，TR一般为torrents"
+        },
+        {
+          "key": "frompath",
+          "type": "input",
+          "label": "数据文件根路径（源）",
+          "default": "",
+          "placeholder": "根路径，留空不进行路径转换",
+          "help": "源下载器中的种子数据文件保存根目录路径"
+        },
+        {
+          "key": "topath",
+          "type": "input",
+          "label": "数据文件根路径（目的）",
+          "default": "",
+          "placeholder": "根路径，留空不进行路径转换",
+          "help": "目的下载器的种子数据文件保存目录根路径"
+        },
+        {
+          "key": "nolabels",
+          "type": "input",
+          "label": "不转移种子标签",
+          "default": "",
+          "placeholder": "使用,分隔多个标签",
+          "help": "下载器中的种子有以下标签时不进行转移"
+        },
+        {
+          "key": "nopaths",
+          "type": "textarea",
+          "label": "不转移数据文件目录",
+          "default": "",
+          "placeholder": "每一行一个目录",
+          "help": "以下数据文件目录的任务不进行转移"
+        },
+        {
+          "key": "autostart",
+          "type": "switch",
+          "label": "校验完成后自动开始",
+          "default": true,
+          "help": "自动开始目的下载器中校验完成且100%完整的种子"
+        },
+        {
+          "key": "deletesource",
+          "type": "switch",
+          "label": "删除源种子",
+          "default": false,
+          "help": "转移成功后删除源下载器中的种子，首次运行请不要打开"
+        },
+        {
+          "key": "notify",
+          "type": "switch",
+          "label": "运行时通知",
+          "default": false,
+          "help": "运行任务后发送通知"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

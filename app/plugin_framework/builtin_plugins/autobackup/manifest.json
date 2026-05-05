@@ -1,0 +1,129 @@
+{
+  "manifest_version": "1.0",
+  "id": "autobackup",
+  "name": "自动备份",
+  "version": "2.1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "自动备份 NAStool 数据和配置文件，支持本地、WebDAV 和 Samba 存储。",
+  "category": "system",
+  "tags": ["备份", "系统"],
+  "icon": "lucide:archive",
+  "color": "#22c55e",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:AutoBackupPlugin",
+    "api_prefix": "/api/plugin/autobackup",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ],
+    "supports_run": true
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "enabled",
+          "type": "switch",
+          "label": "开启定时备份",
+          "default": false,
+          "help": "开启后会根据周期定时备份 NAStool"
+        },
+        {
+          "key": "storage_type",
+          "type": "select",
+          "label": "存储类型",
+          "default": "local",
+          "options": [
+            {"label": "本地", "value": "local"},
+            {"label": "WebDAV", "value": "webdav"},
+            {"label": "Samba", "value": "samba"}
+          ],
+          "help": "支持本地、WebDAV 和 Samba"
+        },
+        {
+          "key": "full",
+          "type": "switch",
+          "label": "是否完整版备份",
+          "default": false,
+          "help": "开启后会备份完整数据库，保留有历史记录"
+        },
+        {
+          "key": "notify",
+          "type": "switch",
+          "label": "运行时通知",
+          "default": false,
+          "help": "运行任务后会发送通知（需要打开插件消息通知）"
+        },
+        {
+          "key": "cron",
+          "type": "cron",
+          "label": "备份周期",
+          "default": "0 0 * * *",
+          "placeholder": "0 0 * * *",
+          "help": "设置自动备份时间周期，支持 5 位 cron 表达式"
+        },
+        {
+          "key": "cnt",
+          "type": "number",
+          "label": "最大保留备份数",
+          "default": 10,
+          "placeholder": "10",
+          "help": "最大保留备份数量，优先删除较早备份"
+        },
+        {
+          "key": "bk_path",
+          "type": "input",
+          "label": "本地备份路径",
+          "default": "/config/backup_file",
+          "placeholder": "/config/backup_file",
+          "help": "本地备份路径（仅当存储类型为本地时有效）"
+        },
+        {
+          "key": "base_url",
+          "type": "input",
+          "label": "服务器地址",
+          "default": "",
+          "placeholder": "http://192.168.1.100:8080",
+          "help": "WebDAV 或 Samba 服务器地址"
+        },
+        {
+          "key": "username",
+          "type": "input",
+          "label": "用户名",
+          "default": "",
+          "placeholder": "",
+          "help": "WebDAV 或 Samba 用户名"
+        },
+        {
+          "key": "password",
+          "type": "password",
+          "label": "密码",
+          "default": "",
+          "placeholder": "",
+          "help": "WebDAV 或 Samba 密码"
+        },
+        {
+          "key": "share_name",
+          "type": "input",
+          "label": "共享名称",
+          "default": "",
+          "placeholder": "public",
+          "help": "共享文件夹名称"
+        },
+        {
+          "key": "remote_path",
+          "type": "input",
+          "label": "远程路径",
+          "default": "/backups",
+          "placeholder": "/backups",
+          "help": "备份文件在远程存储中的存放路径"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

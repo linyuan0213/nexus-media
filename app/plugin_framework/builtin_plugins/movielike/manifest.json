@@ -1,0 +1,96 @@
+{
+  "manifest_version": "1.0",
+  "id": "movielike",
+  "name": "电影精选",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "媒体服务器中用户将电影设为最爱时，自动转移到精选文件夹。",
+  "category": "media",
+  "tags": ["Emby", "精选"],
+  "icon": "lucide:heart",
+  "color": "#e11d48",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:MovieLikePlugin",
+    "api_prefix": "/api/plugin/movielike",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed",
+      "webhook.emby"
+    ],
+    "supports_run": false
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "enable",
+          "type": "switch",
+          "label": "开启电影精选",
+          "default": false,
+          "help": "目前仅支持Emby，NAStool挂载目录如与Emby媒体库目录不一致则需要配置路径映射"
+        },
+        {
+          "key": "dir_name",
+          "type": "input",
+          "label": "分类目录名称",
+          "default": "精选",
+          "placeholder": "精选",
+          "help": "添加到喜爱的电影将移动到该目录下"
+        },
+        {
+          "key": "local_path",
+          "type": "input",
+          "label": "本地路径1",
+          "default": "",
+          "placeholder": "本地路径",
+          "help": "NAStool本地路径"
+        },
+        {
+          "key": "remote_path",
+          "type": "input",
+          "label": "远程路径1",
+          "default": "",
+          "placeholder": "远程路径",
+          "help": "Emby媒体库路径"
+        },
+        {
+          "key": "local_path2",
+          "type": "input",
+          "label": "本地路径2",
+          "default": "",
+          "placeholder": "本地路径",
+          "help": "第二组路径映射"
+        },
+        {
+          "key": "remote_path2",
+          "type": "input",
+          "label": "远程路径2",
+          "default": "",
+          "placeholder": "远程路径",
+          "help": "第二组路径映射"
+        },
+        {
+          "key": "local_path3",
+          "type": "input",
+          "label": "本地路径3",
+          "default": "",
+          "placeholder": "本地路径",
+          "help": "第三组路径映射"
+        },
+        {
+          "key": "remote_path3",
+          "type": "input",
+          "label": "远程路径3",
+          "default": "",
+          "placeholder": "远程路径",
+          "help": "第三组路径映射"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

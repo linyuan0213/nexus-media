@@ -1,0 +1,47 @@
+{
+  "manifest_version": "1.0",
+  "id": "customhosts",
+  "name": "自定义Hosts",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "修改系统hosts文件，加速网络访问。",
+  "category": "system",
+  "tags": ["hosts", "网络"],
+  "icon": "lucide:globe",
+  "color": "#06b6d4",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:CustomHostsPlugin",
+    "api_prefix": "/api/plugin/customhosts",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ],
+    "supports_run": false
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "enable",
+          "type": "switch",
+          "label": "开启hosts同步",
+          "default": false,
+          "help": "将自定义hosts更新到系统中生效，如因权限问题等无法更新到系统时此开关将自动关闭"
+        },
+        {
+          "key": "hosts",
+          "type": "textarea",
+          "label": "hosts配置",
+          "default": "",
+          "placeholder": "每行一个配置，格式为：ip host1 host2 ...",
+          "help": "hosts配置，会追加到系统hosts文件中生效"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

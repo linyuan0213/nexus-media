@@ -1,0 +1,101 @@
+# -*- coding: utf-8 -*-
+"""
+AutoRestart Plugin v2
+定时自动重启 NAStool 服务
+"""
+import os
+import signal
+import time
+from datetime import datetime, timedelta
+
+import pytz
+
+from app.plugin_framework.context import PluginContext
+from config import Config
+
+
+class AutoRestartPlugin:
+    """自动重启插件"""
+
+    def __init__(self, ctx: PluginContext):
+        self.ctx = ctx
+
+    def _get_config(self):
+        return self.ctx.get_config() or {}
+
+    def on_enable(self):
+        self.ctx.info("自动重启插件已启用")
+        self._start_service()
+
+    def on_disable(self):
+        self.ctx.info("自动重启插件已禁用")
+        self._stop_service()
+
+    def on_hook(self, event, data):
+        if event == "plugin.config_changed":
+            if data.get("plugin_id") == self.ctx.plugin_id:
+                self.ctx.info("配置已变更，重载服务")
+                self._stop_service()
+                self._start_service()
+
+    def run(self):
+        """立即运行重启"""
+        self.ctx.info("手动触发重启")
+        self._do_restart()
+
+    def _start_service(self):
+        config = self._get_config()
+        enabled = config.get("enabled", False)
+        cron = config.get("cron")
+        onlyonce = config.get("onlyonce", False)
+
+        if not enabled and not onlyonce:
+            return
+
+        if onlyonce:
+            self.ctx.info("重启服务启动，立即运行一次")
+            run_date = datetime.now(tz=pytz.timezone(Config().get_timezone())) + timedelta(seconds=3)
+            self.ctx.schedule_date("restart_once", self._do_restart, run_date=run_date)
+            # 关闭一次性开关并保存
+            self.ctx.set_config("onlyonce", False)
+
+        if enabled and cron:
+            self.ctx.info(f"定时重启服务启动，周期：{cron}")
+            self.ctx.schedule_cron("restart", self._do_restart, cron=str(cron))
+
+    def _stop_service(self):
+        try:
+            self.ctx.remove_schedule("restart")
+            self.ctx.remove_schedule("restart_once")
+        except Exception:
+            pass
+
+    def _do_restart(self):
+        config = self._get_config()
+        delay = int(config.get("delay", 0))
+        notify = config.get("notify", False)
+
+        self.ctx.info(f"当前时间 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))} 开始重启流程")
+
+        if notify:
+            self.ctx.notify(
+                title="【系统重启通知】",
+                text=f"NAStool将在 {delay} 秒后重启\n时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}"
+            )
+
+        if delay > 0:
+            self.ctx.info(f"等待 {delay} 秒后重启...")
+            time.sleep(delay)
+
+        try:
+            self.ctx.info("执行重启...")
+            pid = os.getpid()
+            self.ctx.info(f"当前进程ID: {pid}")
+            os.kill(pid, signal.SIGTERM)
+        except Exception as e:
+            self.ctx.error(f"重启失败：{str(e)}")
+            if notify:
+                self.ctx.notify(
+                    title="【系统重启失败】",
+                    text=f"NAStool重启失败：{str(e)}\n时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}"
+                )

@@ -1,0 +1,62 @@
+{
+  "manifest_version": "1.0",
+  "id": "mediasyncdel",
+  "name": "Emby同步删除",
+  "version": "1.1",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "Emby删除媒体后同步删除历史记录或源文件。",
+  "category": "media",
+  "tags": ["Emby", "同步删除"],
+  "icon": "lucide:trash-2",
+  "color": "#dc2626",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:MediaSyncDelPlugin",
+    "api_prefix": "/api/plugin/mediasyncdel",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed",
+      "webhook.emby"
+    ],
+    "supports_run": false
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "enable",
+          "type": "switch",
+          "label": "开启Emby同步删除",
+          "default": false,
+          "help": "Emby删除媒体后同步删除历史记录，需要配置Webhook并勾选媒体删除"
+        },
+        {
+          "key": "del_source",
+          "type": "switch",
+          "label": "删除源文件",
+          "default": false,
+          "help": "开启后，删除历史记录的同时会同步删除源文件"
+        },
+        {
+          "key": "send_notify",
+          "type": "switch",
+          "label": "运行时通知",
+          "default": false,
+          "help": "Emby触发同步删除后发送通知"
+        },
+        {
+          "key": "exclude_path",
+          "type": "input",
+          "label": "排除路径",
+          "default": "",
+          "placeholder": "多个路径用,分割",
+          "help": "需要排除的Emby媒体库路径"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

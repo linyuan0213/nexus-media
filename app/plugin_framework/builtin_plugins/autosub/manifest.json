@@ -1,0 +1,136 @@
+{
+  "manifest_version": "1.0",
+  "id": "autosub",
+  "name": "AI字幕自动生成",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "使用whisper自动生成视频文件字幕。",
+  "category": "media",
+  "tags": ["字幕", "AI", "whisper"],
+  "icon": "lucide:subtitles",
+  "color": "#2C4F7E",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:AutoSubPlugin",
+    "api_prefix": "/api/plugin/autosub",
+    "permissions": [],
+    "hooks": [],
+    "supports_run": true
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "path_list",
+          "type": "textarea",
+          "label": "媒体路径",
+          "default": "",
+          "placeholder": "文件路径",
+          "help": "要进行字幕生成的路径，每行一个路径"
+        },
+        {
+          "key": "file_size",
+          "type": "number",
+          "label": "文件大小（MB）",
+          "default": 0,
+          "placeholder": "500",
+          "help": "单位MB，大于该大小的文件才会进行字幕生成"
+        },
+        {
+          "key": "asr_engine",
+          "type": "select",
+          "label": "ASR引擎",
+          "default": "whisper.cpp",
+          "options": [
+            {"label": "whisper.cpp", "value": "whisper.cpp"},
+            {"label": "faster-whisper", "value": "faster-whisper"}
+          ],
+          "help": "自动语音识别引擎选择"
+        },
+        {
+          "key": "whisper_main",
+          "type": "input",
+          "label": "whisper.cpp路径",
+          "default": "",
+          "placeholder": "/config/plugin/autosub/main",
+          "help": "whisper.cpp主程序路径"
+        },
+        {
+          "key": "whisper_model",
+          "type": "input",
+          "label": "whisper.cpp模型路径",
+          "default": "",
+          "placeholder": "/config/plugin/autosub/models/ggml-base.en.bin",
+          "help": "whisper.cpp模型路径"
+        },
+        {
+          "key": "additional_args",
+          "type": "input",
+          "label": "高级参数",
+          "default": "-t 4 -p 1",
+          "placeholder": "-t 4 -p 1",
+          "help": "whisper.cpp的高级参数"
+        },
+        {
+          "key": "faster_whisper_model",
+          "type": "select",
+          "label": "faster-whisper模型",
+          "default": "base",
+          "options": [
+            {"label": "tiny", "value": "tiny"},
+            {"label": "tiny.en", "value": "tiny.en"},
+            {"label": "base", "value": "base"},
+            {"label": "base.en", "value": "base.en"},
+            {"label": "small", "value": "small"},
+            {"label": "small.en", "value": "small.en"},
+            {"label": "medium", "value": "medium"},
+            {"label": "medium.en", "value": "medium.en"},
+            {"label": "large-v1", "value": "large-v1"},
+            {"label": "large-v2", "value": "large-v2"}
+          ],
+          "help": "faster-whisper模型选择"
+        },
+        {
+          "key": "faster_whisper_model_path",
+          "type": "input",
+          "label": "模型保存路径",
+          "default": "",
+          "placeholder": "/config/plugin/autosub/faster-whisper/models",
+          "help": "faster-whisper模型保存路径"
+        },
+        {
+          "key": "run_now",
+          "type": "switch",
+          "label": "立即运行一次",
+          "default": false,
+          "help": "保存配置后立即运行一次"
+        },
+        {
+          "key": "translate_zh",
+          "type": "switch",
+          "label": "翻译为中文",
+          "default": false,
+          "help": "自动翻译非中文字幕，生成双语字幕，需要配置OpenAI API Key"
+        },
+        {
+          "key": "translate_only",
+          "type": "switch",
+          "label": "仅已有字幕翻译",
+          "default": false,
+          "help": "仅翻译已有字幕，不做语音识别"
+        },
+        {
+          "key": "send_notify",
+          "type": "switch",
+          "label": "运行时通知",
+          "default": false,
+          "help": "单个字幕生成开始和完成后发送通知"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

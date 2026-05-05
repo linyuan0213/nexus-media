@@ -1,0 +1,76 @@
+{
+  "manifest_version": "1.0",
+  "id": "webhook",
+  "name": "Webhook",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "事件发生时向第三方地址发送请求。",
+  "category": "system",
+  "tags": ["Webhook", "通知"],
+  "icon": "lucide:webhook",
+  "color": "#be185d",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:WebhookPlugin",
+    "api_prefix": "/api/plugin/webhook",
+    "permissions": [],
+    "hooks": [
+      "plugin.install",
+      "plugin.enable",
+      "plugin.disable",
+      "plugin.uninstall",
+      "plugin.config_changed",
+      "media.scraped",
+      "media.transfered",
+      "media.library_synced",
+      "media.source_deleted",
+      "download.started",
+      "download.completed",
+      "download.failed",
+      "download.removed",
+      "site.signed_in",
+      "site.statistics_updated",
+      "site.cookie_sync",
+      "site.local_storage_sync",
+      "rss.subscribed",
+      "rss.found",
+      "rss.downloaded",
+      "scheduler.tick",
+      "system.startup",
+      "system.shutdown",
+      "webhook.emby",
+      "webhook.jellyfin",
+      "webhook.plex"
+    ],
+    "supports_run": false
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "method",
+          "type": "select",
+          "label": "请求方式",
+          "default": "post",
+          "options": [
+            {"label": "GET", "value": "get"},
+            {"label": "POST", "value": "post"}
+          ],
+          "help": "GET方式通过URL传递数据，POST方式通过JSON报文传递数据"
+        },
+        {
+          "key": "webhook_url",
+          "type": "input",
+          "label": "Webhook地址",
+          "default": "",
+          "placeholder": "http://127.0.0.1/webhook",
+          "help": "第三方Webhook接收地址"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

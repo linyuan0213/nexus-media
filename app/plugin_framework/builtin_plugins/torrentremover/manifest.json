@@ -1,0 +1,40 @@
+{
+  "manifest_version": "1.0",
+  "id": "torrentremover",
+  "name": "下载任务联动删除",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "历史记录中源文件被删除时，同步删除下载器中的下载任务。",
+  "category": "download",
+  "tags": ["下载器", "删除"],
+  "icon": "lucide:trash",
+  "color": "#ef4444",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:TorrentRemoverPlugin",
+    "api_prefix": "/api/plugin/torrentremover",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed",
+      "media.source_deleted"
+    ],
+    "supports_run": false
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "enable",
+          "type": "switch",
+          "label": "下载任务联动删除",
+          "default": false,
+          "help": "在历史记录中选择删除源文件时联动删除下载器中的下载任务"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

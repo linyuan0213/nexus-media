@@ -1,0 +1,109 @@
+{
+  "manifest_version": "1.0",
+  "id": "autosignin",
+  "name": "站点自动签到",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "站点自动签到保号，支持重试。",
+  "category": "site",
+  "tags": ["签到", "站点"],
+  "icon": "lucide:check-circle",
+  "color": "#3b82f6",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:AutoSignInPlugin",
+    "api_prefix": "/api/plugin/autosignin",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ],
+    "supports_run": true
+  },
+  "frontend": {
+    "routes": [
+      {
+        "path": "history",
+        "component": "HistoryPage",
+        "title": "签到历史",
+        "icon": "lucide:history",
+        "menu": true
+      }
+    ],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "enabled",
+          "type": "switch",
+          "label": "开启定时签到",
+          "default": false,
+          "help": "开启后会根据周期定时签到指定站点"
+        },
+        {
+          "key": "notify",
+          "type": "switch",
+          "label": "运行时通知",
+          "default": false,
+          "help": "运行签到任务后会发送通知"
+        },
+        {
+          "key": "clean",
+          "type": "switch",
+          "label": "清理缓存",
+          "default": false,
+          "help": "清理本日已签到记录"
+        },
+        {
+          "key": "cron",
+          "type": "cron",
+          "label": "签到周期",
+          "default": "0 0 * * *",
+          "placeholder": "0 0 * * *",
+          "help": "支持5位cron表达式或固定时间/时间范围"
+        },
+        {
+          "key": "queue_cnt",
+          "type": "number",
+          "label": "签到队列",
+          "default": 10,
+          "placeholder": "10",
+          "help": "同时并行签到的站点数量"
+        },
+        {
+          "key": "retry_keyword",
+          "type": "input",
+          "label": "重试关键词",
+          "default": "",
+          "placeholder": "失败|错误",
+          "help": "重新签到关键词，支持正则表达式"
+        },
+        {
+          "key": "sign_sites",
+          "type": "multi_select",
+          "label": "签到站点",
+          "source": "sites",
+          "default": [],
+          "help": "选择需要签到的站点"
+        },
+        {
+          "key": "special_sites",
+          "type": "multi_select",
+          "label": "特殊站点",
+          "source": "sites",
+          "default": [],
+          "help": "需要强制签到的站点，不受已签到状态影响"
+        },
+        {
+          "key": "emulate_sites",
+          "type": "multi_select",
+          "label": "仿真站点",
+          "source": "sites",
+          "default": [],
+          "help": "需要使用浏览器仿真签到的站点"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

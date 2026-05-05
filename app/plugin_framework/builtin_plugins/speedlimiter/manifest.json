@@ -1,0 +1,114 @@
+{
+  "manifest_version": "1.0",
+  "id": "speedlimiter",
+  "name": "下载器限速",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "媒体服务器播放状态改变时，根据设置对下载器进行限速。",
+  "category": "system",
+  "tags": ["限速", "下载器"],
+  "icon": "lucide:gauge",
+  "color": "#1e3a8a",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:SpeedLimiterPlugin",
+    "api_prefix": "/api/plugin/speedlimiter",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed",
+      "webhook.emby",
+      "webhook.jellyfin",
+      "webhook.plex"
+    ],
+    "supports_run": false
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "upload_limit",
+          "type": "number",
+          "label": "播放限速-上传",
+          "default": 0,
+          "placeholder": "上传限速，KB/s",
+          "help": "媒体服务器有媒体播放时对下载器进行上传限速，0或留空不启用"
+        },
+        {
+          "key": "download_limit",
+          "type": "number",
+          "label": "播放限速-下载",
+          "default": 0,
+          "placeholder": "下载限速，KB/s",
+          "help": "媒体服务器有媒体播放时对下载器进行下载限速，0或留空不启用"
+        },
+        {
+          "key": "upload_unlimit",
+          "type": "number",
+          "label": "未播放限速-上传",
+          "default": 0,
+          "placeholder": "上传限速，KB/s",
+          "help": "媒体服务器无媒体播放时对下载器进行上传限速，0或留空不启用"
+        },
+        {
+          "key": "download_unlimit",
+          "type": "number",
+          "label": "未播放限速-下载",
+          "default": 0,
+          "placeholder": "下载限速，KB/s",
+          "help": "媒体服务器无媒体播放时对下载器进行下载限速，0或留空不启用"
+        },
+        {
+          "key": "bandwidth",
+          "type": "number",
+          "label": "上行带宽（Mbps）",
+          "default": 0,
+          "placeholder": "上行带宽，Mbps",
+          "help": "设置上行带宽后，媒体服务器有媒体播放时根据上行带宽和媒体播放占用带宽计算上传限速数值"
+        },
+        {
+          "key": "allocation_ratio",
+          "type": "input",
+          "label": "分配比例",
+          "default": "",
+          "placeholder": "1:1:1",
+          "help": "多个下载器设置分配比例，如两个下载器设置1:2，留空均分"
+        },
+        {
+          "key": "ipv4",
+          "type": "input",
+          "label": "不限速IPv4范围",
+          "default": "0.0.0.0/0",
+          "placeholder": "192.168.1.0/24",
+          "help": "以下地址范围不进行限速处理，多个地址段用,号分隔"
+        },
+        {
+          "key": "ipv6",
+          "type": "input",
+          "label": "不限速IPv6范围",
+          "default": "::/0",
+          "placeholder": "FE80::/10",
+          "help": "以下地址范围不进行限速处理"
+        },
+        {
+          "key": "notify",
+          "type": "switch",
+          "label": "消息通知",
+          "default": false,
+          "help": "开启后，下载器限速状态改变时发送通知"
+        },
+        {
+          "key": "interval",
+          "type": "number",
+          "label": "任务间隔（秒）",
+          "default": 300,
+          "placeholder": "300",
+          "help": "设置任务执行间隔，单位为秒，默认300秒"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "manifest_version": "1.0",
+  "id": "synctimer",
+  "name": "定时目录同步",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "定时对同步目录进行整理。",
+  "category": "system",
+  "tags": ["同步", "定时"],
+  "icon": "lucide:folder-sync",
+  "color": "#22c55e",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:SyncTimerPlugin",
+    "api_prefix": "/api/plugin/synctimer",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ],
+    "supports_run": true
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "cron",
+          "type": "cron",
+          "label": "同步周期",
+          "default": "0 0 */2 * *",
+          "placeholder": "0 0 */2 * *",
+          "help": "支持5位cron表达式；仅适用于挂载网盘或网络共享等目录同步监控无法正常工作的场景"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

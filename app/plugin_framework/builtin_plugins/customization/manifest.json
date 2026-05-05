@@ -1,0 +1,48 @@
+{
+  "manifest_version": "1.0",
+  "id": "customization",
+  "name": "自定义占位符",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "添加自定义占位符识别正则，重命名格式中添加{customization}使用，自定义多个结果间分隔符",
+  "category": "system",
+  "tags": ["正则", "重命名"],
+  "icon": "lucide:regex",
+  "color": "#ea580c",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:CustomizationPlugin",
+    "api_prefix": "/api/plugin/customization",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ],
+    "supports_run": false
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "customization",
+          "type": "textarea",
+          "label": "自定义占位符",
+          "default": "",
+          "placeholder": "多个匹配对象请用;或换行分隔，支持正则表达式",
+          "help": "添加自定义占位符识别正则，重命名格式中添加{customization}使用"
+        },
+        {
+          "key": "separator",
+          "type": "input",
+          "label": "自定义分隔符",
+          "default": "",
+          "placeholder": "请不要使用文件名中禁止使用的符号！",
+          "help": "当匹配到多个结果时，使用此分隔符按顺序进行合成"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

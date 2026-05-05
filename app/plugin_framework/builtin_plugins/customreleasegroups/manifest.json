@@ -1,0 +1,48 @@
+{
+  "manifest_version": "1.0",
+  "id": "customreleasegroups",
+  "name": "自定义制作组/字幕组",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "添加无法识别的制作组/字幕组，自定义多个组间分隔符",
+  "category": "system",
+  "tags": ["制作组", "字幕组"],
+  "icon": "lucide:users",
+  "color": "#0ea5e9",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:CustomReleaseGroupsPlugin",
+    "api_prefix": "/api/plugin/customreleasegroups",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ],
+    "supports_run": false
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "release_groups",
+          "type": "textarea",
+          "label": "自定义制作组/字幕组",
+          "default": "",
+          "placeholder": "多个制作组/字幕组请用;或换行分隔，支持正则表达式",
+          "help": "添加无法识别的制作组/字幕组"
+        },
+        {
+          "key": "separator",
+          "type": "input",
+          "label": "自定义分隔符",
+          "default": "",
+          "placeholder": "请不要使用文件名中禁止使用的符号！",
+          "help": "当匹配到多个制作组/字幕组时，使用此分隔符进行分隔，留空使用@"
+        }
+      ]
+    },
+    "slots": []
+  }
+}
