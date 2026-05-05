@@ -470,3 +470,97 @@ class SiteRepository(BaseRepository):
             return total_upload, total_download, ret_sites, ret_site_uploads, ret_site_downloads
         else:
             return 0, 0, [], [], []
+
+    def get_site_daily_history(self, days=30, end_day=None, strict_urls=None):
+        """
+        查询各站点每日上传量（按站点、按天分组，返回增量）
+        """
+        import datetime
+
+        if strict_urls is None:
+            strict_urls = []
+        end = datetime.datetime.now()
+        if end_day:
+            try:
+                end = datetime.datetime.strptime(end_day, "%Y-%m-%d")
+            except Exception:
+                pass
+
+        b_date = (end - datetime.timedelta(days=days)).strftime("%Y-%m-%d")
+        e_date = end.strftime("%Y-%m-%d")
+
+        # 按站点、日期分组，取每天的上传/下载总量
+        query = self._db.query(
+            SITESTATISTICSHISTORY.SITE,
+            SITESTATISTICSHISTORY.DATE,
+            func.sum(SITESTATISTICSHISTORY.UPLOAD).label("UPLOAD"),
+            func.sum(SITESTATISTICSHISTORY.DOWNLOAD).label("DOWNLOAD")
+        ).filter(
+            SITESTATISTICSHISTORY.DATE > b_date,
+            SITESTATISTICSHISTORY.DATE <= e_date
+        )
+
+        if strict_urls:
+            query = query.filter(SITESTATISTICSHISTORY.URL.in_(tuple(strict_urls + ["__DUMMY__"])))
+
+        results = query.group_by(
+            SITESTATISTICSHISTORY.SITE,
+            SITESTATISTICSHISTORY.DATE
+        ).order_by(
+            SITESTATISTICSHISTORY.DATE.asc()
+        ).all()
+
+        if not results:
+            return {"dates": [], "series": []}
+
+        # 按站点组织数据
+        site_data: dict = {}
+        all_dates = set()
+        for row in results:
+            site_name, date_str, upload, download = row
+            all_dates.add(date_str)
+            if site_name not in site_data:
+                site_data[site_name] = {}
+            site_data[site_name][date_str] = {
+                "upload": int(upload or 0),
+                "download": int(download or 0),
+            }
+
+        sorted_dates = sorted(all_dates)
+
+        # 计算每日增量
+        series = []
+        for site_name in sorted(site_data.keys()):
+            uploads = []
+            downloads = []
+            prev_up = None
+            prev_down = None
+            for d in sorted_dates:
+                val = site_data[site_name].get(d)
+                if val is None:
+                    # 当天无数据：增量为0，prev保持不变（避免下一天被0拉偏）
+                    uploads.append(0)
+                    downloads.append(0)
+                    continue
+                up = val["upload"]
+                down = val["download"]
+                # 前值必须 > 0 才计算增量，避免首次数据/默认值 0 导致跳变
+                if prev_up is not None and prev_up > 0 and up >= prev_up:
+                    inc_up = up - prev_up
+                else:
+                    inc_up = 0
+                if prev_down is not None and prev_down > 0 and down >= prev_down:
+                    inc_down = down - prev_down
+                else:
+                    inc_down = 0
+                uploads.append(inc_up)
+                downloads.append(inc_down)
+                prev_up = up
+                prev_down = down
+            series.append({
+                "name": site_name,
+                "upload": uploads,
+                "download": downloads,
+            })
+
+        return {"dates": sorted_dates, "series": series}

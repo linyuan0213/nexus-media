@@ -70,6 +70,7 @@ dependencies = [
     "jose>=1.0.0",
     "itsdangerous>=2.2.0",
     "pwdlib[argon2]>=0.3.0",
+    "pydantic-settings>=2.14.0",
 ]
 
 [dependency-groups]

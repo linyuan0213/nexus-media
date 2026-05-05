@@ -22,7 +22,7 @@ from app.domain.interfaces.rss_repo import (
 )
 from app.media import Media
 from app.message import Message
-from app.plugins import EventManager
+from app.plugin_framework.event_compat import EventManager
 from app.services.search_service import Searcher
 from app.utils import Torrent
 from app.utils.types import MediaType, SearchType

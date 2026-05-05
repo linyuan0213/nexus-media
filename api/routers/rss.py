@@ -111,12 +111,16 @@ class GetRssHistoryRequest(BaseModel):
 @router.post("/add")
 def add_rss_media(
     req: AddRssMediaRequest,
-    user: str = Depends(require_permission("rss:manage")),
+    user: str = Depends(require_any_permission("rss:manage", "rss:view")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     result = svc.add_rss_media(req.model_dump())
-    return fail(code=result.code, msg=result.msg,
-                page=req.page, name=req.name, rssid=result.rssid)
+    return success(data={
+        "msg": result.msg,
+        "page": req.page,
+        "name": req.name,
+        "rssid": result.rssid,
+    })
 
 
 @router.post("/update")
@@ -165,7 +169,7 @@ def refresh_rss(
 @router.post("/remove")
 def remove_rss_media(
     req: RemoveRssMediaRequest,
-    user: str = Depends(require_permission("rss:manage")),
+    user: str = Depends(require_any_permission("rss:manage", "rss:view")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     svc.remove_rss_media(

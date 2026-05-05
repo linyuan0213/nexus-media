@@ -122,3 +122,22 @@ async def get_current_user_info(user: UserContext = Depends(get_current_user)):
         "is_superadmin": user.is_superadmin,
         "roles": [role.role_name for role in roles] if roles else [],
     }}
+
+
+@router.get("/wallpaper")
+async def login_wallpaper():
+    """
+    获取登录页背景壁纸（无需认证）。
+    返回 Base64 编码图片及标题、链接。
+    """
+    from app.utils.wallpaper import get_login_wallpaper
+    image_code, img_title, img_link = get_login_wallpaper()
+    return {
+        "code": 0,
+        "data": {
+            "image_code": image_code,
+            "img_title": img_title,
+            "img_link": img_link,
+        },
+        "message": "",
+    }

@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from api.deps import get_current_user, require_any_permission, require_permission, get_site_service
 from app.utils.response import success, fail
 from app.services.site_service import SiteService
+from app.helper.thread_helper import ThreadHelper
 
 router = APIRouter()
 
@@ -148,7 +149,22 @@ def get_site_history(
         days=req.days,
         end_day=req.end_day
     )
-    return {"code": 0, "dataset": dto.dataset}
+    return success(data={"dataset": dto.dataset})
+
+
+@router.post("/sites/statistics/daily")
+def get_site_daily_history(
+    req: SiteDaysRequest,
+    user: str = Depends(require_any_permission("site:view", "site:manage")),
+    svc: SiteService = Depends(get_site_service),
+):
+    if req.days is None or not isinstance(req.days, int):
+        return fail(msg="查询参数错误")
+    result = svc.get_site_daily_history(
+        days=req.days,
+        end_day=req.end_day
+    )
+    return success(data=result)
 
 
 @router.post("/sites/seeding")
@@ -160,7 +176,22 @@ def get_site_seeding_info(
     if not req.name:
         return fail(msg="查询参数错误")
     dto = svc.get_site_seeding_info(req.name)
-    return {"code": 0, "dataset": dto.dataset}
+    return success(data={"dataset": dto.dataset})
+
+
+class SiteRefreshRequest(BaseModel):
+    sites: Optional[list] = None
+
+
+@router.post("/sites/statistics/refresh")
+def refresh_site_statistics(
+    req: SiteRefreshRequest,
+    user: str = Depends(require_any_permission("site:view", "site:manage")),
+    svc: SiteService = Depends(get_site_service),
+):
+    from app.helper import ThreadHelper
+    ThreadHelper().start_thread(svc.refresh_site_data_now, (req.sites,))
+    return success(data={"message": "站点数据刷新已启动，请稍候"})
 
 
 @router.post("/sites")

@@ -18,7 +18,7 @@ from app.helper import ThreadHelper
 from app.media import Media, Bangumi, DouBan, Scraper
 from app.media.meta import MetaInfo, MetaBase
 from app.mediaserver import MediaServer
-from app.plugins import EventManager
+from app.plugin_framework.event_compat import EventManager
 from app.services.search_service import Searcher
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.schemas.media import (

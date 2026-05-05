@@ -84,12 +84,22 @@ DEFAULT_PERMISSIONS = [
 # 默认菜单定义（code = 前端路由 name，component = Vben 格式路径）
 DEFAULT_MENUS = [
     {
-        "name": "我的媒体库",
-        "code": "Dashboard",
-        "path": "/index",
-        "icon": "lucide:home",
-        "component": "/media/library/index",
+        "name": "首页",
+        "code": "Home",
+        "path": "/dashboard/home",
+        "icon": "lucide:layout-dashboard",
+        "component": "/dashboard/home/index",
         "sort_order": 0,
+        "level": 1,
+        "permission_code": ""
+    },
+    {
+        "name": "我的媒体库",
+        "code": "Library",
+        "path": "/library",
+        "icon": "lucide:tv",
+        "component": "/media/library/index",
+        "sort_order": 1,
         "level": 1,
         "permission_code": "library:view"
     },
@@ -99,7 +109,7 @@ DEFAULT_MENUS = [
         "path": "/media/search",
         "icon": "lucide:search",
         "component": "/media/search/index",
-        "sort_order": 1,
+        "sort_order": 2,
         "level": 1,
         "permission_code": "search:view"
     },
@@ -108,7 +118,7 @@ DEFAULT_MENUS = [
         "code": "Discovery",
         "path": "",
         "icon": "lucide:compass",
-        "sort_order": 2,
+        "sort_order": 3,
         "level": 1,
         "permission_code": "discovery:view",
         "children": [
@@ -118,14 +128,26 @@ DEFAULT_MENUS = [
             {"name": "TMDB电影", "code": "TmdbMovie", "path": "/discovery/tmdb-movie", "icon": "lucide:clapperboard", "component": "/media/discovery/index", "sort_order": 4, "level": 2, "permission_code": "discovery:view"},
             {"name": "TMDB电视剧", "code": "TmdbTv", "path": "/discovery/tmdb-tv", "icon": "lucide:monitor-play", "component": "/media/discovery/index", "sort_order": 5, "level": 2, "permission_code": "discovery:view"},
             {"name": "Bangumi", "code": "Bangumi", "path": "/discovery/bangumi", "icon": "lucide:calendar-days", "component": "/media/discovery/index", "sort_order": 6, "level": 2, "permission_code": "discovery:view"},
+            {"name": "更多推荐", "code": "DiscoveryRecommend", "path": "/discovery/recommend", "icon": "lucide:more-horizontal", "component": "/media/discovery/recommend", "sort_order": 7, "level": 2, "permission_code": "discovery:view", "hide_in_menu": 1},
         ]
+    },
+    {
+        "name": "媒体详情",
+        "code": "MediaDetail",
+        "path": "/media/detail",
+        "icon": "lucide:info",
+        "component": "/media/detail/index",
+        "sort_order": 999,
+        "level": 1,
+        "permission_code": "library:view",
+        "hide_in_menu": 1
     },
     {
         "name": "站点管理",
         "code": "Site",
         "path": "",
         "icon": "lucide:server",
-        "sort_order": 3,
+        "sort_order": 4,
         "level": 1,
         "permission_code": "site:view",
         "children": [
@@ -140,7 +162,7 @@ DEFAULT_MENUS = [
         "code": "Rss",
         "path": "",
         "icon": "lucide:rss",
-        "sort_order": 4,
+        "sort_order": 5,
         "level": 1,
         "permission_code": "rss:view",
         "children": [
@@ -156,7 +178,7 @@ DEFAULT_MENUS = [
         "code": "Download",
         "path": "",
         "icon": "lucide:download",
-        "sort_order": 5,
+        "sort_order": 6,
         "level": 1,
         "permission_code": "download:view",
         "children": [
@@ -170,7 +192,7 @@ DEFAULT_MENUS = [
         "name": "媒体整理",
         "code": "Rename",
         "icon": "lucide:file-text",
-        "sort_order": 6,
+        "sort_order": 7,
         "level": 1,
         "permission_code": "library:manage",
         "children": [
@@ -184,7 +206,7 @@ DEFAULT_MENUS = [
         "name": "服务",
         "code": "Service",
         "icon": "lucide:layout-grid",
-        "sort_order": 7,
+        "sort_order": 8,
         "level": 1,
         "permission_code": "service:view",
         "children": [
@@ -196,7 +218,7 @@ DEFAULT_MENUS = [
         "name": "系统设置",
         "code": "System",
         "icon": "lucide:settings",
-        "sort_order": 8,
+        "sort_order": 9,
         "level": 1,
         "permission_code": "setting:view",
         "children": [
@@ -281,8 +303,8 @@ DEFAULT_ROLES = [
             "log:view",
         ],
         "menus": [
-            "Dashboard", "MediaSearch",
-            "Discovery", "Ranking", "DoubanMovie", "DoubanTv", "TmdbMovie", "TmdbTv", "Bangumi",
+            "Home", "Dashboard", "MediaSearch",
+            "Discovery", "Ranking", "DoubanMovie", "DoubanTv", "TmdbMovie", "TmdbTv", "Bangumi", "DiscoveryRecommend",
             "Site", "SiteMaintenance", "SiteStatistics", "BrushTask", "SiteResources",
             "Rss", "MovieRss", "TvRss", "RssHistory", "RssCalendar", "UserRss",
             "Download", "Downloading", "DownloadHistory", "TorrentRemove", "DownloadSettings",
@@ -311,8 +333,8 @@ DEFAULT_ROLES = [
             "service:view",
         ],
         "menus": [
-            "Dashboard", "MediaSearch",
-            "Discovery", "Ranking", "DoubanMovie", "DoubanTv", "TmdbMovie", "TmdbTv", "Bangumi",
+            "Home", "Dashboard", "MediaSearch",
+            "Discovery", "Ranking", "DoubanMovie", "DoubanTv", "TmdbMovie", "TmdbTv", "Bangumi", "DiscoveryRecommend",
             "Site", "SiteMaintenance", "SiteStatistics", "SiteResources",
             "Rss", "MovieRss", "TvRss", "RssHistory", "RssCalendar",
             "Download", "Downloading", "DownloadHistory",
@@ -332,8 +354,8 @@ DEFAULT_ROLES = [
             "discovery:view",
         ],
         "menus": [
-            "Dashboard", "MediaSearch",
-            "Discovery", "Ranking", "DoubanMovie", "DoubanTv", "TmdbMovie", "TmdbTv", "Bangumi",
+            "Home", "Dashboard", "MediaSearch",
+            "Discovery", "Ranking", "DoubanMovie", "DoubanTv", "TmdbMovie", "TmdbTv", "Bangumi", "DiscoveryRecommend",
         ]
     },
 ]
@@ -380,6 +402,7 @@ def init_rbac_menus():
                 sort_order=menu_data.get("sort_order", 0),
                 menu_level=menu_data.get("level", 1),
                 permission_code=menu_data.get("permission_code"),
+                hide_in_menu=menu_data.get("hide_in_menu", 0),
             )
             if isinstance(result, bool):
                 menu = menu_repo.get_menu_by_code(menu_data["code"])

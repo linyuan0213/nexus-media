@@ -614,15 +614,17 @@ def system_commands(
 
 
 @router.post("/status")
-def version(
+def system_status(
     req: EmptyRequest = EmptyRequest(),
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
-    svc = Depends(get_version_service),
+    info_svc = Depends(get_system_info_service),
 ):
-    info = svc.get_latest_version()
-    if info.has_update:
-        return success(data=info.version)
-    return fail(code=-1, version="", url="")
+    info = info_svc.get_system_info()
+    return success(data={
+        "version": info.version,
+        "uptime": info.uptime_seconds,
+        "python_version": info.python_version,
+    })
 
 
 @router.post("/refresh")

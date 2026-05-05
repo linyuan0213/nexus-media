@@ -13,6 +13,7 @@ from app.schemas.site import (
     SiteResourcesResultDTO,
     SiteUpdateResultDTO,
 )
+from app.db.repositories import SiteRepository
 from app.sites import Sites, SiteUserInfo, SiteCookie, SiteConf
 from app.utils import StringUtils
 
@@ -26,13 +27,15 @@ class SiteService:
                  site_conf: Optional[SiteConf] = None,
                  site_cookie: Optional[SiteCookie] = None,
                  indexer_service: Optional[IndexerService] = None,
-                 string_utils=None):
+                 string_utils=None,
+                 site_repo: Optional[SiteRepository] = None):
         self._sites = sites or Sites()
         self._site_user_info = site_user_info or SiteUserInfo()
         self._site_conf = site_conf or SiteConf()
         self._site_cookie = site_cookie or SiteCookie()
         self._indexer_service = indexer_service or IndexerService()
         self._string_utils = string_utils or StringUtils
+        self._site_repo = site_repo or SiteRepository()
 
     # ------------------------------------------------------------------
     # 站点属性
@@ -152,6 +155,21 @@ class SiteService:
         dataset = [["seeders", "size"]]
         dataset.extend(seeding_info)
         return SiteSeedingDTO(dataset=dataset)
+
+    def get_site_daily_history(self,
+                               days: int = 30,
+                               end_day: Optional[str] = None) -> dict:
+        site_urls = []
+        for site in self._sites.get_sites(statistic=True):
+            site_url = site.get("strict_url")
+            if site_url:
+                site_urls.append(site_url)
+        return self._site_repo.get_site_daily_history(
+            days=days, end_day=end_day, strict_urls=site_urls)
+
+    def refresh_site_data_now(self, specify_sites: Optional[list] = None) -> None:
+        """强制刷新站点数据"""
+        self._site_user_info.refresh_site_data_now(specify_sites=specify_sites)
 
     def get_site_user_statistics(self,
                                  sites: Optional[list] = None,

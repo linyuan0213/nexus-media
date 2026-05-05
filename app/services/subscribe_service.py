@@ -23,7 +23,7 @@ from app.services.indexer_service import IndexerService
 from app.media import Media, DouBan
 from app.media.meta import MetaInfo
 from app.message import Message
-from app.plugins import EventManager
+from app.plugin_framework.event_compat import EventManager
 from app.services.subscribe_search_engine import SubscribeSearchEngine
 from app.sites import Sites
 from app.utils.types import MediaType, EventType, SystemConfigKey, RssType

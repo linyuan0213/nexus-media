@@ -678,9 +678,10 @@ class RBACService:
                 meta["menuVisibleWithForbidden"] = True
             # path 必须唯一，否则 Vben menu 组件会用 path 作为 key 导致多个菜单联动
             # 注意：空字符串/None 都会 fallback 到 MENU_CODE，确保菜单 key 唯一
+            # 保留前导 "/" 作为绝对路径，避免 Vben 导航时拼接成 /plugin/plugin/xxx
             path_val = menu.PATH or menu.MENU_CODE
             node = {
-                "path": path_val.lstrip("/").lower(),
+                "path": path_val.lower(),
                 "name": menu.MENU_CODE,
                 "meta": meta,
             }
