@@ -12,8 +12,7 @@ from app.services.filter_service import FilterService as Filter
 from app.helper import RssHelper
 from app.db.repositories.config_repo_adapter import UserRssConfigRepositoryAdapter
 from app.db.repositories.rss_repo_adapter import RssHistoryRepositoryAdapter
-from app.media import Media
-from app.media.meta import MetaInfo
+from app.media import Media, MetaInfo
 from app.message import Message
 from app.services.search_service import Searcher
 from app.schemas.rss import (
@@ -196,7 +195,7 @@ class RssSubscriptionService:
     def remove_rss_media(self, name: str, mtype: str, year: str,
                          season, rssid, tmdbid) -> None:
         """移除RSS订阅"""
-        from app.media.meta import MetaInfo
+        from app.media import MetaInfo
         if not str(tmdbid).isdigit():
             tmdbid = None
         if name:

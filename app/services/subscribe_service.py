@@ -20,8 +20,7 @@ from app.db.repositories.rss_repo_adapter import (
     RssHistoryRepositoryAdapter,
 )
 from app.services.indexer_service import IndexerService
-from app.media import Media, DouBan
-from app.media.meta import MetaInfo
+from app.media import Media, DouBan, MetaInfo
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
 from app.services.subscribe_search_engine import SubscribeSearchEngine

@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple
 import log
 from app.core.module_config import ModuleConf
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
-from app.media.meta import MetaInfo, ReleaseGroupsMatcher
+from app.media import MetaInfo, ReleaseGroupsMatcher
 from app.utils import StringUtils
 from app.utils.types import MediaType
 

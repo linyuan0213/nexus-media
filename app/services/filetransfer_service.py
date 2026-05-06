@@ -29,8 +29,7 @@ from app.domain.interfaces.transfer_repo import (
     ITransferUnknownRepository,
 )
 from app.helper import ProgressHelper, ThreadHelper
-from app.media import Media, Category, Scraper
-from app.media.meta import MetaInfo
+from app.media import Media, Category, Scraper, MetaInfo
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
 from app.services.transfer_action_engine import TransferActionEngine

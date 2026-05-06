@@ -3,7 +3,7 @@
 Customization Plugin v2
 添加自定义占位符识别正则
 """
-from app.media.meta.customization import CustomizationMatcher
+from app.media import CustomizationMatcher
 from app.plugin_framework.context import PluginContext
 
 

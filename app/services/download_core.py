@@ -27,8 +27,7 @@ from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.downloader.client._base import _IDownloadClient
 from app.schemas.download import Torrent
 from app.helper import ThreadHelper
-from app.media import Media
-from app.media.meta import MetaInfo
+from app.media import Media, MetaInfo
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager

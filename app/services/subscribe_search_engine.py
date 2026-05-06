@@ -320,7 +320,7 @@ class SubscribeSearchEngine:
         """
         综合返回媒体信息
         """
-        from app.media.meta import MetaInfo
+        from app.media import MetaInfo
         if tmdbid and not str(tmdbid).startswith("DB:"):
             media_info = MetaInfo(title="%s %s".strip() % (name, year))
             tmdb_info = self._media.get_tmdb_info(mtype=mtype, tmdbid=tmdbid)

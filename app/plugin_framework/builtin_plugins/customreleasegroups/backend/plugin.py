@@ -3,7 +3,7 @@
 CustomReleaseGroups Plugin v2
 添加无法识别的制作组/字幕组
 """
-from app.media.meta.release_groups import ReleaseGroupsMatcher
+from app.media import ReleaseGroupsMatcher
 from app.plugin_framework.context import PluginContext
 
 

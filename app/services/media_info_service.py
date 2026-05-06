@@ -5,8 +5,7 @@ from typing import Optional, List, Dict, Any
 import cn2an
 import log
 from app.helper.image_proxy_helper import ImageProxyHelper
-from app.media import Media, DouBan
-from app.media.meta import MetaInfo
+from app.media import Media, DouBan, MetaInfo
 from app.mediaserver import MediaServer
 from app.schemas.media import MediaInfoResultDTO, SeasonEpisodesResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe

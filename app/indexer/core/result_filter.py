@@ -14,8 +14,7 @@ from typing import Tuple, List
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
 from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.indexer.core.models import FilterStats, SearchCandidate
-from app.media import Media
-from app.media.meta import MetaInfo
+from app.media import Media, MetaInfo
 from app.utils import StringUtils
 from app.utils.types import MediaType
 

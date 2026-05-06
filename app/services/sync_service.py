@@ -10,8 +10,7 @@ import log
 from app.core.module_config import ModuleConf
 from app.helper.thread_helper import ThreadHelper
 from app.services.filetransfer_service import FileTransferService as FileTransfer
-from app.media import Media
-from app.media.meta import MetaInfo
+from app.media import Media, MetaInfo
 from app.schemas.sync import (
     ManualTransferResultDTO,
     ReIdentifyResultDTO,

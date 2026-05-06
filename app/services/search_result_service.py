@@ -3,7 +3,7 @@ import json
 import re
 from typing import Optional
 
-from app.media.meta import MetaBase
+from app.media import MetaBase
 from app.mediaserver import MediaServer
 from app.schemas.media import MediaSearchResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe

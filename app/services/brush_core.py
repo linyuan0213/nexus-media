@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.schemas.download import Torrent, TorrentStatus
-from app.media.meta import MetaInfo
+from app.media import MetaInfo
 from app.message import Message
 from app.sites import Sites, SiteConf
 from app.services.downloader_core import DownloaderCore as Downloader

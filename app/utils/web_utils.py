@@ -2,8 +2,7 @@ from functools import lru_cache
 
 import cn2an
 
-from app.media import Media, Bangumi, DouBan
-from app.media.meta import MetaInfo
+from app.media import Media, Bangumi, DouBan, MetaInfo
 from app.utils import StringUtils, ExceptionUtils, SystemUtils, RequestUtils, IpUtils
 from app.utils.types import MediaType
 from config import Config

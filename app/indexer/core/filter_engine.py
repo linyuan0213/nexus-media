@@ -9,7 +9,7 @@ import re
 from typing import Tuple, Optional
 
 from app.core.module_config import ModuleConf
-from app.media.meta import ReleaseGroupsMatcher
+from app.media import ReleaseGroupsMatcher
 from app.utils import StringUtils
 from app.utils.types import MediaType
 

@@ -20,8 +20,7 @@ import log
 from app.core.constants import RMT_MEDIAEXT, PT_TAG, MT_URL
 from app.downloader.client._base import _IDownloadClient
 from app.helper import ThreadHelper
-from app.media import Media
-from app.media.meta import MetaInfo
+from app.media import Media, MetaInfo
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager

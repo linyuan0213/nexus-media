@@ -19,8 +19,7 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.helper import RssHelper
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.rss_repo_adapter import RssHistoryRepositoryAdapter
-from app.media import Media
-from app.media.meta import MetaInfo
+from app.media import Media, MetaInfo
 from app.sites import Sites, SiteConf
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.services.rss_matcher import RssMatcher

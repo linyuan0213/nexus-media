@@ -9,8 +9,7 @@ from typing import List, Optional, Tuple
 import log
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
-from app.media import Media
-from app.media.meta import MetaInfo
+from app.media import Media, MetaInfo
 from app.schemas.download import (
     DownloadResultDTO,
     DownloadingTorrentDTO,

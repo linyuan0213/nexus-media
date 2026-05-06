@@ -10,8 +10,7 @@ from datetime import datetime, timedelta
 from threading import Lock
 from time import sleep
 
-from app.media import DouBan
-from app.media.meta import MetaInfo
+from app.media import DouBan, MetaInfo
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.search_service import Searcher
 from app.services.subscribe_service import SubscribeService as Subscribe

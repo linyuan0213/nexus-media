@@ -72,7 +72,7 @@ class TmdbBlacklistService:
             mtype = MediaType.UNKNOWN
 
         from app.media.media import Media
-        from app.media.meta.metainfo import MetaInfo
+        from app.media import MetaInfo
         if not self._media:
             self._media = Media()
 

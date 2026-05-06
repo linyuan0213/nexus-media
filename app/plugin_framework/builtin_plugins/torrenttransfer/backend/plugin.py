@@ -11,7 +11,7 @@ from threading import Event
 import pytz
 from bencode import bdecode, bencode
 
-from app.media.meta import MetaInfo
+from app.media import MetaInfo
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import TorrentStatus
 from app.services.downloader_core import DownloaderCore as Downloader
