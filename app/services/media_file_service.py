@@ -1,0 +1,183 @@
+# -*- coding: utf-8 -*-
+import os
+from typing import Tuple
+
+from app.core.system_config import SystemConfig
+from app.helper import ThreadHelper
+from app.media import Media, Scraper
+from app.plugin_framework.event_compat import EventManager
+from app.utils.path_utils import get_category_path
+from app.utils.types import EventType, SystemConfigKey
+from config import Config
+
+
+class MediaFileService:
+    """
+    媒体文件操作业务服务
+    """
+
+    def __init__(self):
+        pass
+
+    def get_dir_list(self, in_dir: str) -> Tuple[bool, list, str]:
+        """获取目录列表"""
+        import os
+        from app.utils import SystemUtils
+        from app.utils.types import OsType
+
+        result = []
+        try:
+            if not in_dir or in_dir == "/":
+                if SystemUtils.get_system() == OsType.WINDOWS:
+                    partitions = SystemUtils.get_windows_drives()
+                    if partitions:
+                        for p in partitions:
+                            result.append({"name": p, "path": p, "is_dir": True})
+                    else:
+                        for f in os.listdir("C:/"):
+                            ff = os.path.join("C:/", f)
+                            result.append({"name": f, "path": ff.replace("\\", "/"), "is_dir": os.path.isdir(ff)})
+                else:
+                    for f in os.listdir("/"):
+                        ff = os.path.join("/", f)
+                        result.append({"name": f, "path": ff.replace("\\", "/"), "is_dir": os.path.isdir(ff)})
+            else:
+                d = os.path.normpath(in_dir)
+                if not os.path.isdir(d):
+                    d = os.path.dirname(d)
+                for f in os.listdir(d):
+                    ff = os.path.join(d, f)
+                    is_dir = os.path.isdir(ff)
+                    item = {"name": f, "path": ff.replace("\\", "/"), "is_dir": is_dir}
+                    try:
+                        st = os.stat(ff)
+                        item["mtime"] = st.st_mtime
+                        item["ctime"] = st.st_ctime
+                    except (OSError, IOError):
+                        item["mtime"] = None
+                        item["ctime"] = None
+                    if not is_dir:
+                        item["ext"] = os.path.splitext(f)[1][1:]
+                        try:
+                            item["size"] = os.path.getsize(ff)
+                        except (OSError, IOError):
+                            item["size"] = None
+                    result.append(item)
+        except Exception as e:
+            return False, [], str(e)
+        return True, result, ""
+
+    def get_library_paths(self, media: dict, sync_svc, downloader_svc=None) -> dict:
+        """获取媒体库目录 + 同步源目录"""
+        import os
+        from app.db.models import CONFIGSYNCPATHS
+
+        seen = set()
+
+        def add_path(path: str, label: str, ptype: str):
+            if not path:
+                return None
+            norm = path.replace("\\", "/").rstrip("/")
+            if norm in seen:
+                return None
+            seen.add(norm)
+            name = os.path.basename(norm) or label
+            return {"name": name, "path": norm, "type": ptype}
+
+        library_paths = []
+        movie_paths = media.get('movie_path') or []
+        if not isinstance(movie_paths, list):
+            movie_paths = [movie_paths] if movie_paths else []
+        tv_paths = media.get('tv_path') or []
+        if not isinstance(tv_paths, list):
+            tv_paths = [tv_paths] if tv_paths else []
+        anime_paths = media.get('anime_path') or []
+        if not isinstance(anime_paths, list):
+            anime_paths = [anime_paths] if anime_paths else []
+
+        for p in movie_paths:
+            item = add_path(p, "电影", "movie")
+            if item:
+                library_paths.append(item)
+        for p in tv_paths:
+            item = add_path(p, "电视剧", "tv")
+            if item:
+                library_paths.append(item)
+        for p in anime_paths:
+            item = add_path(p, "动漫", "anime")
+            if item:
+                library_paths.append(item)
+
+        sync_source_paths = []
+        try:
+            sync_confs = sync_svc.get_sync_paths()
+            if isinstance(sync_confs, dict):
+                for sp in sync_confs.values():
+                    src = sp.get("from") if isinstance(sp, dict) else None
+                    item = add_path(src, "同步源目录", "sync")
+                    if item:
+                        sync_source_paths.append(item)
+        except Exception:
+            pass
+
+        default_path = media.get('media_default_path')
+        if not default_path:
+            if library_paths:
+                default_path = library_paths[0]["path"]
+            elif sync_source_paths:
+                default_path = sync_source_paths[0]["path"]
+            else:
+                default_path = os.path.expanduser("~").replace("\\", "/")
+
+        return {
+            "library_paths": library_paths,
+            "sync_source_paths": sync_source_paths,
+            "default_path": default_path,
+        }
+
+    def download_subtitle(self, path: str, name: str) -> Tuple[bool, str]:
+        """下载字幕"""
+        media = Media().get_media_info(title=name)
+        if not media or not media.tmdb_info:
+            return False, f"{name} 无法从TMDB查询到媒体信息"
+        if not media.imdb_id:
+            media.set_tmdb_info(Media().get_tmdb_info(mtype=media.type, tmdbid=media.tmdb_id))
+        EventManager().send_event(EventType.SubtitleDownload, {
+            "media_info": media.to_dict(),
+            "file": os.path.splitext(path)[0],
+            "file_ext": os.path.splitext(name)[-1],
+            "bluray": False
+        })
+        return True, "字幕下载任务已提交，正在后台运行。"
+
+    def scrap_media_path(self, path: str) -> str:
+        """刮削媒体路径"""
+        if not path:
+            return "请指定刮削路径"
+        ThreadHelper().start_thread(Scraper().folder_scraper, (path, None, 'force_all'))
+        return "刮削任务已提交，正在后台运行。"
+
+    def get_category_config(self, category_name: str) -> Tuple[bool, str]:
+        """获取二级分类配置"""
+        if not category_name:
+            return False, "请输入二级分类策略名称"
+        if category_name == "config":
+            return False, "非法二级分类策略名称"
+        category_path = os.path.join(Config().config_path, f"{category_name}.yaml")
+        if not os.path.exists(category_path):
+            return False, "请保存生成配置文件"
+        with open(category_path, "r", encoding="utf-8") as f:
+            return True, f.read()
+
+    def update_category_config(self, text: str) -> str:
+        """保存二级分类配置"""
+        category_path = get_category_path()
+        if category_path:
+            with open(category_path, "w", encoding="utf-8") as f:
+                f.write(text)
+        return "保存成功"
+
+    def save_user_script(self, script: str, css: str):
+        """保存用户自定义脚本"""
+        SystemConfig().set(key=SystemConfigKey.CustomScript,
+                           value={"css": css, "javascript": script})
