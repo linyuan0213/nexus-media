@@ -1,9 +1,15 @@
+# -*- coding: utf-8 -*-
+"""
+内置索引器客户端
+
+职责：管理用户配置的站点，调用各站点爬虫执行搜索，返回原始结果。
+所有过滤和识别逻辑已迁移到 app.indexer.core.SearchPipeline。
+"""
 import copy
 import datetime
-from threading import Lock
 import time
+from threading import Lock
 
-from app.helper.drissionpage_helper import DrissionPageHelper
 import log
 from app.core.system_config import SystemConfig
 from app.db.repositories import DownloadRepository
@@ -24,23 +30,19 @@ from config import Config
 
 
 class BuiltinIndexer(_IIndexClient):
-    # 索引器ID
+    """
+    内置索引器
+
+    聚合所有用户配置的 PT/BT 站点，通过对应爬虫执行搜索。
+    """
     client_id = "builtin"
-    # 索引器类型
     client_type = IndexerType.BUILTIN
-    # 索引器名称
     client_name = IndexerType.BUILTIN.value
 
-    # 私有属性
     _client_config = {}
     _show_more_sites = False
-    progress = None
-    sites = None
-    download_repo = None
-    lock = Lock()
 
     def __init__(self, config=None):
-        super().__init__()
         self._client_config = config or {}
         self.init_config()
 
@@ -61,48 +63,43 @@ class BuiltinIndexer(_IIndexClient):
         return self.client_id
 
     def get_status(self):
-        """
-        检查连通性
-        :return: True、False
-        """
         return True
 
     def get_indexers(self, check=True, indexer_id=None, public=True):
+        """获取当前索引器的索引站点"""
         ret_indexers = []
-        # 选中站点配置
         indexer_sites = SystemConfig().get(SystemConfigKey.UserIndexerSites) or []
         _indexer_domains = []
-        # 检查浏览器状态
-        chrome_ok = DrissionPageHelper().get_status()
-        # 处理所有用户添加的站点
+        chrome_ok = DrissionPageHelper().get_status() if 'DrissionPageHelper' in globals() else False
+        if not chrome_ok:
+            from app.helper.drissionpage_helper import DrissionPageHelper
+            chrome_ok = DrissionPageHelper().get_status()
+
         for site in Sites().get_sites():
             url = site.get("signurl") or site.get("rssurl")
             cookie = site.get("cookie")
             headers = site.get("headers")
-            
-            # 判断是否为公开站点（BT站点）
             is_public = site.get("public", False)
-            
-            # 对于所有站点都需要URL
+
             if not url:
                 continue
-                
-            # 公开站点（BT站点）可以没有Cookie，私有站点（PT站点）需要Cookie或headers
             if not is_public and not cookie and not headers:
                 continue
-                
+
             render = False if not chrome_ok else site.get("chrome")
-            indexer = IndexerHelper().get_indexer(url=url,
-                                                  siteid=site.get("id"),
-                                                  cookie=cookie,
-                                                  ua=site.get("ua"),
-                                                  headers=site.get("headers"),
-                                                  name=site.get("name"),
-                                                  rule=site.get("rule"),
-                                                  pri=site.get('pri'),
-                                                  public=is_public,  # 传递正确的public值
-                                                  proxy=site.get("proxy"),
-                                                  render=render)
+            indexer = IndexerHelper().get_indexer(
+                url=url,
+                siteid=site.get("id"),
+                cookie=cookie,
+                ua=site.get("ua"),
+                headers=site.get("headers"),
+                name=site.get("name"),
+                rule=site.get("rule"),
+                pri=site.get('pri'),
+                public=is_public,
+                proxy=site.get("proxy"),
+                render=render
+            )
             if indexer:
                 if indexer_id and indexer.id == indexer_id:
                     return indexer
@@ -112,7 +109,7 @@ class BuiltinIndexer(_IIndexClient):
                     _indexer_domains.append(indexer.domain)
                     indexer.name = site.get("name")
                     ret_indexers.append(indexer)
-        # 公开站点（从sites.dat加载的预定义公开站点）
+
         if public and self._show_more_sites:
             for indexer in IndexerHelper().get_all_indexers():
                 if not indexer.get("public"):
@@ -124,6 +121,7 @@ class BuiltinIndexer(_IIndexClient):
                 if indexer.get("domain") not in _indexer_domains:
                     _indexer_domains.append(indexer.get("domain"))
                     ret_indexers.append(IndexerConf(datas=indexer))
+
         return None if indexer_id else ret_indexers
 
     def search(self, order_seq,
@@ -133,40 +131,45 @@ class BuiltinIndexer(_IIndexClient):
                match_media,
                in_from: SearchType):
         """
-        根据关键字多线程搜索
+        根据关键字搜索单个站点，返回原始结果（dict 列表）
+
+        原始结果会自动注入站点元信息字段：
+        - _indexer_name
+        - _indexer_order
+        - _indexer_public
         """
         progress_key = ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search
         if not indexer or not key_word:
-            return None
+            return []
+
         # 站点流控
         if self.sites.check_ratelimit(indexer.siteid):
             self.progress.update(ptype=progress_key, text=f"{indexer.name} 触发站点流控，跳过 ...")
             return []
-        # fix 共用同一个dict时会导致某个站点的更新全局全效
+
         if filter_args is None:
             _filter_args = {}
         else:
             _filter_args = copy.deepcopy(filter_args)
-        # 不在设定搜索范围的站点过滤掉
+
         if _filter_args.get("site") and indexer.name not in _filter_args.get("site"):
             return []
-        # 搜索条件没有过滤规则时，使用站点的过滤规则
+
         if not _filter_args.get("rule") and indexer.rule:
             _filter_args.update({"rule": indexer.rule})
-        # 计算耗时
-        start_time = datetime.datetime.now()
 
+        start_time = datetime.datetime.now()
         log.info(f"【{self.client_name}】开始搜索Indexer：{indexer.name} ...")
-        # 特殊符号处理
+
         search_word = StringUtils.handler_special_chars(text=key_word,
                                                         replace_word=" ",
                                                         allow_space=True)
-        # 避免对英文站搜索中文
         if indexer.language == "en" and StringUtils.is_chinese(search_word):
             log.warn(f"【{self.client_name}】{indexer.name} 无法使用中文名搜索")
             return []
-        # 开始索引
+
         result_array = []
+        error_flag = False
         try:
             if indexer.parser == "TNodeSpider":
                 error_flag, result_array = TNodeSpider(indexer).search(keyword=search_word)
@@ -177,16 +180,19 @@ class BuiltinIndexer(_IIndexClient):
             elif indexer.parser == "TorrentLeech":
                 error_flag, result_array = TorrentLeech(indexer).search(keyword=search_word)
             elif indexer.parser == "MteamSpider":
-                error_flag, result_array = MteamSpider(indexer).search(keyword=search_word,
-                                                                       mtype=match_media.type if match_media and match_media.tmdb_info else None)
+                error_flag, result_array = MteamSpider(indexer).search(
+                    keyword=search_word,
+                    mtype=match_media.type if match_media and match_media.tmdb_info else None)
             elif indexer.parser == "RousiSpider":
                 error_flag, result_array = RousiSpider(indexer).search(keyword=search_word)
             elif indexer.parser == "YemaPTSpider":
-                error_flag, result_array = YemaPTSpider(indexer).search(keyword=search_word,
-                                                                        mtype=match_media.type if match_media and match_media.tmdb_info else None)
+                error_flag, result_array = YemaPTSpider(indexer).search(
+                    keyword=search_word,
+                    mtype=match_media.type if match_media and match_media.tmdb_info else None)
             elif indexer.parser == "FireFlySpider":
-                error_flag, result_array = FireFlySpider(indexer).search(keyword=search_word,
-                                                                        mtype=match_media.type if match_media and match_media.tmdb_info else None)
+                error_flag, result_array = FireFlySpider(indexer).search(
+                    keyword=search_word,
+                    mtype=match_media.type if match_media and match_media.tmdb_info else None)
             else:
                 error_flag, result_array = self.__spider_search(
                     keyword=search_word,
@@ -196,32 +202,35 @@ class BuiltinIndexer(_IIndexClient):
             error_flag = True
             print(str(err))
 
-        # 索引花费的时间
         seconds = round((datetime.datetime.now() - start_time).seconds, 1)
+
         # 索引统计
-        with self.lock:
-            self.download_repo.insert_indexer_statistics(indexer=indexer.name,
-                                                    itype=self.client_id,
-                                                    seconds=seconds,
-                                                    result='N' if error_flag else 'Y')
-            # 返回结果
+        lock = Lock()
+        with lock:
+            self.download_repo.insert_indexer_statistics(
+                indexer=indexer.name,
+                itype=self.client_id,
+                seconds=seconds,
+                result='N' if error_flag else 'Y'
+            )
+
         if len(result_array) == 0:
             log.warn(f"【{self.client_name}】{indexer.name} 关键词 {key_word} 未搜索到数据")
-            # 更新进度
-            self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
+            self.progress.update(ptype=progress_key,
+                                 text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
             return []
         else:
             log.warn(f"【{self.client_name}】{indexer.name} 关键词 {key_word} 返回数据：{len(result_array)}")
-            # 更新进度
-            self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 返回 {len(result_array)} 条数据")
-            # 过滤
-            return self.filter_search_results(result_array=result_array,
-                                              order_seq=order_seq,
-                                              indexer=indexer,
-                                              filter_args=_filter_args,
-                                              match_media=match_media,
-                                              start_time=start_time,
-                                              progress_key=progress_key)
+            self.progress.update(ptype=progress_key,
+                                 text=f"{indexer.name} 关键词 {key_word} 返回 {len(result_array)} 条数据")
+
+        # 注入站点元信息
+        for item in result_array:
+            item['_indexer_name'] = indexer.name
+            item['_indexer_order'] = order_seq
+            item['_indexer_public'] = getattr(indexer, 'public', False)
+
+        return result_array
 
     def list(self, index_id, page=0, keyword=None):
         """
@@ -229,22 +238,18 @@ class BuiltinIndexer(_IIndexClient):
         """
         if not index_id:
             return None
-        indexer: IndexerConf = self.get_indexers(indexer_id=index_id)
+        indexer = self.get_indexers(indexer_id=index_id)
         if not indexer:
             return None
 
-        # 计算耗时
         start_time = datetime.datetime.now()
 
         if indexer.parser == "RarBg":
-            error_flag, result_array = Rarbg(indexer).search(keyword=keyword,
-                                                             page=page)
+            error_flag, result_array = Rarbg(indexer).search(keyword=keyword, page=page)
         elif indexer.parser == "TNodeSpider":
-            error_flag, result_array = TNodeSpider(indexer).search(keyword=keyword,
-                                                                   page=page)
+            error_flag, result_array = TNodeSpider(indexer).search(keyword=keyword, page=page)
         elif indexer.parser == "TorrentLeech":
-            error_flag, result_array = TorrentLeech(indexer).search(keyword=keyword,
-                                                                    page=page)
+            error_flag, result_array = TorrentLeech(indexer).search(keyword=keyword, page=page)
         elif indexer.parser == "MteamSpider":
             error_flag, result_array = MteamSpider(indexer).search(keyword=keyword, page=page)
         elif indexer.parser == "RousiSpider":
@@ -254,41 +259,29 @@ class BuiltinIndexer(_IIndexClient):
         elif indexer.parser == "FireFlySpider":
             error_flag, result_array = FireFlySpider(indexer).search(keyword=keyword, page=page)
         else:
-            error_flag, result_array = self.__spider_search(indexer=indexer,
-                                                            page=page,
-                                                            keyword=keyword)
-        # 索引花费的时间
-        seconds = round((datetime.datetime.now() - start_time).seconds, 1)
+            error_flag, result_array = self.__spider_search(indexer=indexer, page=page, keyword=keyword)
 
-        # 索引统计
-        with self.lock:
-            self.download_repo.insert_indexer_statistics(indexer=indexer.name,
-                                                    itype=self.client_id,
-                                                    seconds=seconds,
-                                                    result='N' if error_flag else 'Y')
+        seconds = round((datetime.datetime.now() - start_time).seconds, 1)
+        lock = Lock()
+        with lock:
+            self.download_repo.insert_indexer_statistics(
+                indexer=indexer.name,
+                itype=self.client_id,
+                seconds=seconds,
+                result='N' if error_flag else 'Y'
+            )
         return result_array
 
     @staticmethod
     def __spider_search(indexer, keyword=None, page=None, mtype=None, timeout=30):
         """
-        根据关键字搜索单个站点
-        :param: indexer: 站点配置
-        :param: keyword: 关键字
-        :param: page: 页码
-        :param: mtype: 媒体类型
-        :param: timeout: 超时时间（秒），默认30秒
-        :return: 是否发生错误, 种子列表
+        通用爬虫搜索
         """
         spider = TorrentSpider()
-        spider.setparam(indexer=indexer,
-                        keyword=keyword,
-                        page=page,
-                        mtype=mtype)
+        spider.setparam(indexer=indexer, keyword=keyword, page=page, mtype=mtype)
         spider.start()
-        
-        # 使用事件通知机制替代轮询，减少CPU占用和等待时间
-        # 使用更短的轮询间隔以便更快检测到完成
-        sleep_interval = 0.1  # 100ms轮询间隔
+
+        sleep_interval = 0.1
         total_wait = 0
         while not spider.is_complete:
             time.sleep(sleep_interval)
@@ -296,12 +289,9 @@ class BuiltinIndexer(_IIndexClient):
             if total_wait >= timeout:
                 spider.stop_spider()
                 break
-        
-        # 是否发生错误
+
         result_flag = spider.is_error
-        # 种子列表
         result_array = spider.torrents_info_array.copy()
-        # 重置状态
         spider.torrents_info_array.clear()
 
         return result_flag, result_array

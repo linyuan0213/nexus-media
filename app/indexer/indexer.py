@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+"""
+索引器管理模块
+
+职责：
+1. 管理所有索引器客户端（Builtin、Prowlarr、Jackett）
+2. 并发调度多站点搜索
+3. 收集所有原始结果后，统一调用 SearchPipeline 进行批量识别和过滤
+"""
 import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -5,6 +14,7 @@ import log
 from app.db.repositories import DownloadRepository
 from app.helper import ProgressHelper, SubmoduleHelper
 from app.indexer.client import BuiltinIndexer
+from app.indexer.core import SearchPipeline
 from app.utils import ExceptionUtils, StringUtils
 from app.utils.commons import SingletonMeta
 from app.utils.types import SearchType, IndexerType, ProgressKey
@@ -12,11 +22,15 @@ from config import Config
 
 
 class Indexer(metaclass=SingletonMeta):
-    _indexer_schemas = []
-    _client = None
-    _client_type = None
-    progress = None
-    download_repo = None
+    """
+    索引器管理单例
+
+    搜索流程：
+    1. 获取所有可用站点
+    2. 并发搜索每个站点，收集原始结果（dict 列表）
+    3. 将所有原始结果传入 SearchPipeline，统一批量识别和过滤
+    4. 返回最终结果（MetaInfo 列表）
+    """
 
     def __init__(self):
         self._indexer_schemas = SubmoduleHelper.import_submodules(
@@ -35,6 +49,9 @@ class Indexer(metaclass=SingletonMeta):
         self._client = self.__get_client(indexer)
         if self._client:
             self._client_type = self._client.get_type()
+        else:
+            self._client_type = None
+        self._pipeline = SearchPipeline()
 
     def __build_class(self, ctype, conf):
         for indexer_schema in self._indexer_schemas:
@@ -45,29 +62,27 @@ class Indexer(metaclass=SingletonMeta):
                 ExceptionUtils.exception_traceback(e)
         return None
 
+    def __get_client(self, ctype, conf=None):
+        return self.__build_class(ctype=ctype, conf=conf)
+
+    def get_client(self):
+        return self._client
+
+    def get_client_type(self):
+        return self._client_type
+
     def get_indexers(self, check=False):
-        """
-        获取当前索引器的索引站点
-        """
         if not self._client:
             return []
         return self._client.get_indexers(check=check)
 
     def get_user_indexer_dict(self):
-        """
-        获取用户已经选择的索引器字典
-        """
         return [
-            {
-                "id": index.id,
-                "name": index.name
-            } for index in self.get_indexers(check=True)
+            {"id": index.id, "name": index.name}
+            for index in self.get_indexers(check=True)
         ]
 
     def get_indexer_hash_dict(self):
-        """
-        获取全部的索引器Hash字典
-        """
         IndexerDict = {}
         for item in self.get_indexers() or []:
             IndexerDict[StringUtils.md5_hash(item.name)] = {
@@ -79,53 +94,25 @@ class Indexer(metaclass=SingletonMeta):
         return IndexerDict
 
     def get_user_indexer_names(self):
-        """
-        获取当前用户选中的索引器的索引站点名称
-        """
         return [indexer.name for indexer in self.get_indexers(check=True)]
 
     @staticmethod
     def get_builtin_indexers(check=True, indexer_id=None):
-        """
-        获取内置索引器的索引站点
-        """
         return BuiltinIndexer().get_indexers(check=check, indexer_id=indexer_id)
 
     def list_resources(self, index_id, page=0, keyword=None):
-        """
-        获取内置索引器的资源列表
-        :param index_id: 内置站点ID
-        :param page: 页码
-        :param keyword: 搜索关键字
-        """
         return BuiltinIndexer().list(index_id=index_id, page=page, keyword=keyword)
 
-    def __get_client(self, ctype: [IndexerType, str], conf=None):
-        return self.__build_class(ctype=ctype, conf=conf)
-
-    def get_client(self):
-        """
-        获取当前索引器
-        """
-        return self._client
-
-    def get_client_type(self):
-        """
-        获取当前索引器类型
-        """
-        return self._client_type
-
     def search_by_keyword(self,
-                          key_word: [str, list],
+                          key_word,
                           filter_args: dict,
                           match_media=None,
                           in_from: SearchType = None):
         """
-        根据关键字调用 Index API 搜索
-        :param key_word: 搜索的关键字，不能为空
-        :param filter_args: 过滤条件，对应属性为空则不过滤，{"season":季, "episode":集, "year":年, "type":类型, "site":站点,
-                            "":, "restype":质量, "pix":分辨率, "sp_state":促销状态, "key":其它关键字}
-                            sp_state: 为UL DL，* 代表不关心，
+        根据关键字调用索引器搜索
+
+        :param key_word: 搜索关键词
+        :param filter_args: 过滤条件
         :param match_media: 需要匹配的媒体信息
         :param in_from: 搜索渠道
         :return: 命中的资源媒体信息列表
@@ -134,24 +121,27 @@ class Indexer(metaclass=SingletonMeta):
             return []
 
         progress_key = ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search
-
         indexers = self.get_indexers(check=True)
         if not indexers:
             log.error("没有配置索引器，无法搜索！")
             return []
-        # 计算耗时
+
         start_time = datetime.datetime.now()
-        # 统一限制最大并发线程数，避免过多连接导致性能下降
         max_workers = min(len(indexers), 15)
+
         if filter_args and filter_args.get("site"):
-            log.info(f"【{self._client_type.value}】开始搜索 %s，站点：%s，并发数：%s ..." % (key_word, filter_args.get("site"), max_workers))
+            log.info(f"【{self._client_type.value}】开始搜索 %s，站点：%s，并发数：%s ..."
+                     % (key_word, filter_args.get("site"), max_workers))
             self.progress.update(ptype=progress_key,
                                  text="开始搜索 %s，站点：%s ..." % (key_word, filter_args.get("site")))
         else:
-            log.info(f"【{self._client_type.value}】开始并行搜索 %s，站点数：%s，并发数：%s ..." % (key_word, len(indexers), max_workers))
+            log.info(f"【{self._client_type.value}】开始并行搜索 %s，站点数：%s，并发数：%s ..."
+                     % (key_word, len(indexers), max_workers))
             self.progress.update(ptype=progress_key,
                                  text="开始并行搜索 %s，站点数：%s ..." % (key_word, len(indexers)))
-        # 多线程 - 使用合理的并发数，并确保线程池正确关闭
+
+        # ---------- 阶段1：并发搜索所有站点，收集原始结果 ----------
+        all_raw_results = []
         executor = ThreadPoolExecutor(max_workers=max_workers)
         try:
             all_task = []
@@ -165,24 +155,37 @@ class Indexer(metaclass=SingletonMeta):
                                        match_media,
                                        in_from)
                 all_task.append(task)
-            ret_array = []
+
             for future in as_completed(all_task):
                 result = future.result()
                 if result:
-                    ret_array = ret_array + result
+                    all_raw_results.extend(result)
         finally:
             executor.shutdown(wait=False)
-        # 计算耗时
+
+        # ---------- 阶段2：统一批量识别和过滤 ----------
+        pipeline_result = self._pipeline.process(
+            all_results=all_raw_results,
+            filter_args=filter_args,
+            match_media=match_media,
+            in_from=in_from,
+            progress_key=progress_key,
+        )
+
         end_time = datetime.datetime.now()
-        log.info(f"【{self._client_type.value}】搜索关键词 {key_word} 所有站点搜索完成，有效资源数：%s，总耗时 %s 秒"
-                 % (len(ret_array), (end_time - start_time).seconds))
-        self.progress.update(ptype=progress_key,
-                             text="搜索关键词 %s 所有站点搜索完成，有效资源数：%s，总耗时 %s 秒"
-                                  % (key_word, len(ret_array), (end_time - start_time).seconds))
-        return ret_array
+        log.info(
+            f"【{self._client_type.value}】搜索关键词 {key_word} 所有站点完成，"
+            f"原始结果 {len(all_raw_results)} 条，有效资源数：{len(pipeline_result.results)}，"
+            f"总耗时 {(end_time - start_time).seconds} 秒"
+        )
+        self.progress.update(
+            ptype=progress_key,
+            text="搜索关键词 %s 所有站点完成，有效资源数：%s，总耗时 %s 秒"
+                 % (key_word, len(pipeline_result.results), (end_time - start_time).seconds)
+        )
+
+        return pipeline_result.results
 
     def get_indexer_statistics(self):
-        """
-        获取索引器统计信息
-        """
+        """获取索引器统计信息"""
         return self.download_repo.get_indexer_statistics(self._client.get_client_id())
