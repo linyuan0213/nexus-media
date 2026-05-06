@@ -33,8 +33,8 @@ class SearchResultService:
             restype, respix, reseffect, video_encode = self._parse_res_type(item.RES_TYPE)
             group_key = re.sub(r"[-.\s@|]", "", f"{respix}_{restype}").lower()
             group_info = {"respix": respix, "restype": restype}
-            unique_key = re.sub(r"[-.\s@|]",
-                                 f"{respix}_{restype}_{video_encode}_{reseffect}_{item.SIZE}_{item.OTHERINFO}").lower()
+            unique_key = re.sub(r"[-.\s@|]", "", 
+                                f"{respix}_{restype}_{video_encode}_{reseffect}_{item.SIZE}_{item.OTHERINFO}").lower()
             unique_info = {
                 "video_encode": video_encode,
                 "size": StringUtils.str_filesize(item.SIZE),
