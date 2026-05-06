@@ -125,10 +125,10 @@ class FilterGroupEntity:
             return None
         return cls(
             id=orm_model.ID,
-            name=orm_model.NAME or "",
+            name=orm_model.GROUP_NAME or "",
             default=bool(orm_model.IS_DEFAULT),
-            create_time=orm_model.CREATE_TIME,
-            update_time=orm_model.UPDATE_TIME
+            create_time=None,
+            update_time=None
         )
 
     _ORM_FIELD_MAP = {
@@ -173,13 +173,13 @@ class FilterRuleEntity:
         return cls(
             id=orm_model.ID,
             group_id=orm_model.GROUP_ID or 0,
-            name=orm_model.NAME or "",
+            name=orm_model.ROLE_NAME or "",
             include=orm_model.INCLUDE or "",
             exclude=orm_model.EXCLUDE or "",
             note=orm_model.NOTE,
-            priority=orm_model.PRIORITY or 0,
-            create_time=orm_model.CREATE_TIME,
-            update_time=orm_model.UPDATE_TIME
+            priority=int(orm_model.PRIORITY or 0),
+            create_time=None,
+            update_time=None
         )
 
     _ORM_FIELD_MAP = {}
