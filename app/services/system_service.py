@@ -52,7 +52,7 @@ from app.utils.types import MediaType, MovieTypes, SearchType, EventType
 from app.utils.temp_manager import temp_manager
 from config import Config
 from sqlalchemy import create_engine
-from app.utils.search_torrents import search_medias_for_web, search_media_by_message
+from app.services.search_torrents import search_medias_for_web, search_media_by_message
 from app.utils.web_utils import WebUtils
 from app.utils import TokenCache
 from app.utils.config_tools import get_proxies
