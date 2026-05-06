@@ -13,7 +13,7 @@ from typing import Optional
 
 import log
 from app.core.module_config import ModuleConf
-from app.services.downloader_client_factory import DownloadClientFactory
+from app.downloader.client_factory import DownloadClientFactory
 from app.services.download_core import DownloadCore
 from app.services.filetransfer_service import FileTransferService
 from threading import Lock

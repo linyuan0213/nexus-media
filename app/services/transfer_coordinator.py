@@ -10,7 +10,7 @@ TransferCoordinator - 文件转移协调器
 from typing import Callable, Optional
 
 import log
-from app.services.downloader_client_factory import DownloadClientFactory
+from app.downloader.client_factory import DownloadClientFactory
 from app.services.scheduler_core import SchedulerCore
 from app.core.constants import PT_TAG, PT_TRANSFER_INTERVAL
 

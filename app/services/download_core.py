@@ -32,14 +32,14 @@ from app.media.meta import MetaInfo
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
-from app.services.downloader_client_factory import DownloadClientFactory
+from app.downloader.client_factory import DownloadClientFactory
 from app.services.download_strategies import MovieDownloadStrategy, SeasonPackStrategy, EpisodeStrategy
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.downloader.pipeline import DownloadPipeline
 from app.sites import Sites, SiteSubtitle, SiteConf
 from app.utils import Torrent, StringUtils, ExceptionUtils
 from app.utils.types import MediaType, DownloaderType, SearchType
-from app.core.constants import RMT_MEDIAEXT
+from app.core.constants import RMT_MEDIAEXT, PT_TAG
 
 
 class DownloadCore:
