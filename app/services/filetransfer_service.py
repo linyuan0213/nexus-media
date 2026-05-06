@@ -1085,26 +1085,3 @@ class FileTransferService:
         """
         return self.transfer_repo.get_transfer_unknown_paths_by_page(search=search, page=page, rownum=rownum)
 
-
-if __name__ == "__main__":
-    """
-    手工转移时，使用命名行调用
-    """
-    Config().init_syspath()
-
-    parser = argparse.ArgumentParser(description='文件转移工具')
-    parser.add_argument('-m', '--mode', dest='mode', required=True,
-                        help='转移模式：link copy softlink move rclone rclonecopy minio miniocopy')
-    parser.add_argument('-s', '--source', dest='s_path', required=True, help='硬链接源目录路径')
-    parser.add_argument('-d', '--target', dest='t_path', required=False, help='硬链接目的目录路径')
-    args = parser.parse_args()
-    if os.environ.get('NASTOOL_CONFIG'):
-        print("【Rmt】配置文件地址：%s" % os.environ.get('NASTOOL_CONFIG'))
-        print("【Rmt】源目录路径：%s" % args.s_path)
-        if args.t_path:
-            print("【Rmt】目的目录路径：%s" % args.t_path)
-        else:
-            print("【Rmt】目的目录为配置文件中的电影、电视剧媒体库目录")
-        FileTransferService().transfer_manually(args.s_path, args.t_path, args.mode)
-    else:
-        print("【Rmt】未设置环境变量，请先设置 NASTOOL_CONFIG 环境变量为配置文件地址")
