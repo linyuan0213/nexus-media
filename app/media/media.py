@@ -10,7 +10,7 @@ from typing import Optional
 import zhconv
 from lxml import etree
 
-from app.services.tmdb_blacklist_service import TmdbBlacklistService
+from app.db.repositories.plugin_repo_adapter import TmdbBlacklistRepositoryAdapter
 import log
 from app.helper.openai_helper import OpenAiHelper
 from app.media.meta.metainfo import MetaInfo
@@ -101,7 +101,21 @@ class Media:
             self._rmt_match_mode = MatchMode.NORMAL
         
         self.redis_cache = TMDBCache(get_cache_manager().get("tmdb"))
-        self.blacklist = TmdbBlacklistService()
+        self.blacklist = TmdbBlacklistRepositoryAdapter()
+        self._blacklist_cache = get_cache_manager().get_or_create(
+            "tmdb_blacklist", "memory", maxsize=1, ttl=300
+        )
+
+    def __get_blacklist(self):
+        """
+        获取TMDB黑名单，带本地缓存避免频繁查库
+        """
+        cached = self._blacklist_cache.get("all")
+        if cached is not None:
+            return cached
+        all_items = self.blacklist.get_tmdb_blacklist()
+        self._blacklist_cache.set("all", all_items)
+        return all_items
 
     def __set_language(self, language: str = ""):
         """
@@ -253,9 +267,9 @@ class Media:
                 params["year"] = first_media_year
             movies = self.search.movies(params)
             # 过滤黑名单
-            media_blacklist, _ = self.blacklist.get_blacklist(count=1000)
-            blacklist = [tmdb["tmdb_id"] for tmdb in media_blacklist]
-            if movies and media_blacklist:
+            media_blacklist = self.__get_blacklist()
+            blacklist = [str(item.TMDB_ID) for item in media_blacklist]
+            if movies and blacklist:
                 movies = [movie for movie in movies
                          if not (movie.get('id') and str(movie.get('id')) in blacklist)]
                 log.debug(f"【Meta】过滤黑名单后剩余电影结果数: {len(movies)}")
@@ -329,8 +343,8 @@ class Media:
                 params["first_air_date_year"] = first_media_year
             tvs = self.search.tv_shows(params)
             # 过滤黑名单
-            media_blacklist, _ = self.blacklist.get_blacklist(count=1000)
-            blacklist = [tmdb["tmdb_id"] for tmdb in media_blacklist]
+            media_blacklist = self.__get_blacklist()
+            blacklist = [str(item.TMDB_ID) for item in media_blacklist]
             if tvs and blacklist:
                 tvs = [tv for tv in tvs
                       if not (tv.get('id') and str(tv.get('id')) in blacklist)]
@@ -418,8 +432,8 @@ class Media:
         try:
             tvs = self.search.tv_shows({"query": file_media_name})
             # 过滤黑名单
-            media_blacklist, _ = self.blacklist.get_blacklist(count=1000)
-            blacklist = [tmdb["tmdb_id"] for tmdb in media_blacklist]
+            media_blacklist = self.__get_blacklist()
+            blacklist = [str(item.TMDB_ID) for item in media_blacklist]
             if tvs and blacklist:
                 tvs = [tv for tv in tvs
                       if not (tv.get('id') and str(tv.get('id')) in blacklist)]
