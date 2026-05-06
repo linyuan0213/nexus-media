@@ -5,153 +5,27 @@ from config import Config
 from app.core.constants import ANIME_GENREIDS, DEFAULT_TMDB_IMAGE
 from app.helper.image_proxy_helper import ImageProxyHelper
 from app.media.category import Category
+from app.media.meta._model import MediaInfoModel
 from app.utils import StringUtils, ExceptionUtils
 from app.utils.types import MediaType
 
 
-class MetaBase(object):
+class MetaBase(MediaInfoModel):
     """
-    媒体信息基类
-    """
-    proxies = None
-    category_handler = None
-    # 是否处理的文件
-    fileflag = False
-    # 原字符串
-    org_string = None
-    # 识别词处理后字符串
-    rev_string = None
-    # 副标题
-    subtitle = None
-    # 类型 电影、电视剧
-    type = None
-    # 识别的中文名
-    cn_name = None
-    # 识别的英文名
-    en_name = None
-    # 总季数
-    total_seasons = 0
-    # 识别的开始季 数字
-    begin_season = None
-    # 识别的结束季 数字
-    end_season = None
-    # 总集数
-    total_episodes = 0
-    # 识别的开始集
-    begin_episode = None
-    # 识别的结束集
-    end_episode = None
-    # Partx Cd Dvd Disk Disc
-    part = None
-    # 识别的资源类型
-    resource_type = None
-    # 识别的效果
-    resource_effect = None
-    # 识别的分辨率
-    resource_pix = None
-    # 识别的制作组/字幕组
-    resource_team = None
-    # 自定义占位符
-    customization = None
-    # 视频编码
-    video_encode = None
-    # 音频编码
-    audio_encode = None
-    # 二级分类
-    category = ""
-    # TMDB ID
-    tmdb_id = 0
-    # IMDB ID
-    imdb_id = ""
-    # TVDB ID
-    tvdb_id = 0
-    # 豆瓣 ID
-    douban_id = 0
-    # 自定义搜索词
-    keyword = None
-    # 媒体标题
-    title = None
-    # 媒体原语种
-    original_language = None
-    # 媒体原发行标题
-    original_title = None
-    # 媒体发行日期
-    release_date = None
-    # 媒体发行流媒体
-    networks = None
-    # 播放时长
-    runtime = 0
-    # 媒体年份
-    year = None
-    # 封面图片
-    backdrop_path = None
-    poster_path = None
-    fanart_backdrop = None
-    fanart_poster = None
-    # 评分
-    vote_average = 0
-    # 描述
-    overview = None
-    # TMDB 的其它信息
-    tmdb_info = {}
-    # 本地状态 1-已订阅 2-已存在
-    fav = "0"
-    # 站点列表
-    rss_sites = []
-    search_sites = []
-    # 种子附加信息
-    # 站点名称
-    site = None
-    # 站点优先级
-    site_order = 0
-    # 操作用户
-    user_name = None
-    # 种子链接
-    enclosure = None
-    # 资源优先级
-    res_order = 0
-    # 使用的过滤规则
-    filter_rule = None
-    # 是否洗版
-    over_edition = None
-    # 种子大小
-    size = 0
-    # 做种者
-    seeders = 0
-    # 下载者
-    peers = 0
-    # 种子描述
-    description = None
-    # 详情页面
-    page_url = None
-    # 上传因子
-    upload_volume_factor = None
-    # 下载因子
-    download_volume_factor = None
-    # HR
-    hit_and_run = None
-    # 种子标签
-    labels = None
-    # 订阅ID
-    rssid = None
-    # 保存目录
-    save_path = None
-    # 下载设置
-    download_setting = None
-    # 识别辅助
-    ignored_words = None
-    replaced_words = None
-    offset_words = None
-    # 备注字典
-    note = {}
-    # 副标题解析
-    _subtitle_flag = False
-    _subtitle_season_re = r"(?<!全\s*|共\s*)[第\s]+([0-9一二三四五六七八九十S\-]+)\s*季(?!\s*全|\s*共)"
-    _subtitle_season_all_re = r"[全共]\s*([0-9一二三四五六七八九十]+)\s*季|([0-9一二三四五六七八九十]+)\s*季\s*[全共]"
-    _subtitle_episode_re = r"(?<!全\s*|共\s*)[第\s]+([0-9一二三四五六七八九十百零EP\-]+)\s*[集话話期](?!\s*全|\s*共)"
-    _subtitle_episode_all_re = r"([0-9一二三四五六七八九十百零]+)\s*集\s*[全共]|[共全]\s*([0-9一二三四五六七八九十百零]+)\s*[集话話期]"
+    媒体信息基类（Pydantic 数据模型）
 
-    def __init__(self, title, subtitle=None, fileflag=False):
+    继承 MediaInfoModel 获得类型安全和验证，
+    model_config extra=allow 保持向后兼容。
+    """
+    # 副标题解析的类级别正则
+    _subtitle_flag: bool = False
+    _subtitle_season_re: str = r"(?<!全\s*|共\s*)[第\s]+([0-9一二三四五六七八九十S\-]+)\s*季(?!\s*全|\s*共)"
+    _subtitle_season_all_re: str = r"[全共]\s*([0-9一二三四五六七八九十]+)\s*季|([0-9一二三四五六七八九十]+)\s*季\s*[全共]"
+    _subtitle_episode_re: str = r"(?<!全\s*|共\s*)[第\s]+([0-9一二三四五六七八九十百零EP\-]+)\s*[集话話期](?!\s*全|\s*共)"
+    _subtitle_episode_all_re: str = r"([0-9一二三四五六七八九十百零]+)\s*集\s*[全共]|[共全]\s*([0-9一二三四五六七八九十百零]+)\s*[集话話期]"
+
+    def __init__(self, title=None, subtitle=None, fileflag=False):
+        super().__init__()
         self.category_handler = Category()
         self.fanart = Fanart()
         if not title:
