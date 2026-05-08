@@ -67,7 +67,7 @@ class Rss(metaclass=SingletonMeta):
         3. 批量订阅匹配和过滤
         4. 择优下载
         """
-        rss_sites_info = self.sites.get_sites(rss=True)
+        rss_sites_info = self.sites.get_sites(rss=True, public=True)
         if not rss_sites_info:
             return
 

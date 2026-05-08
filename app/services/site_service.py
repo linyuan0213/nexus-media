@@ -81,7 +81,7 @@ class SiteService:
             return self._sites.get_site_dict(
                 rss=rss, brush=brush, statistic=statistic)
         return self._sites.get_sites(
-            rss=rss, brush=brush, statistic=statistic)
+            rss=rss, brush=brush, statistic=statistic, public=True)
 
     def _is_site_duplicate(self, name: Optional[str], tid: Optional[str]) -> bool:
         if not name:

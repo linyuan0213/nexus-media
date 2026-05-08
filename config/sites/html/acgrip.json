@@ -75,5 +75,6 @@
       "path": "page/{page}",
       "start": 1
     }
-  }
+  },
+  "favicon": "https://acg.rip/favicon.ico"
 }
