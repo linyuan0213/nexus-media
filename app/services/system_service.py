@@ -16,6 +16,7 @@ from typing import Optional, Tuple
 
 import log
 from app.core.system_config import SystemConfig
+from app.message.commands import COMMANDS
 from app.utils.path_utils import get_temp_path
 from app.db.database_factory import DatabaseFactory
 from app.db.migrate import import_from_file, export_database, import_database
@@ -72,17 +73,12 @@ class MessageClientService:
         return bool(self._message.delete_message_client(cid=cid))
 
     def get_client(self, cid: Optional[int] = None):
-        """获取消息客户端信息，若缓存为空则重新加载"""
-        result = self._message.get_message_client_info(cid=cid)
-        if result is None or (cid is None and not result):
-            self._message.init_config()
-            result = self._message.get_message_client_info(cid=cid)
-        return result
+        """获取消息客户端信息"""
+        return self._message.get_message_client_info(cid=cid)
 
     def toggle_interactive(self, cid: int, ctype: str, checked: bool) -> bool:
         """切换交互状态"""
         if checked:
-            # TG/WX只能开启一个交互
             self._message.check_message_client(interactive=0, ctype=ctype)
         self._message.check_message_client(cid=cid, interactive=1 if checked else 0)
         return True
@@ -585,16 +581,16 @@ class MessageCommandHandler:
 
     def __init__(self):
         self._commands = {
-            "/ptr": {"func": TorrentRemover().auto_remove_torrents, "desc": "自动删种"},
-            "/ptt": {"func": Downloader().transfer, "desc": "下载文件转移"},
-            "/rst": {"func": Sync().transfer_sync, "desc": "目录同步"},
-            "/rss": {"func": Rss().rssdownload, "desc": "电影/电视剧订阅"},
-            "/ssa": {"func": Subscribe().subscribe_search_all, "desc": "订阅搜索"},
-            "/tbl": {"func": FileTransfer().truncate_transfer_blacklist, "desc": "清理转移缓存"},
-            "/trh": {"func": self._truncate_rsshistory, "desc": "清理RSS缓存"},
-            "/utf": {"func": self._unidentification, "desc": "重新识别"},
-            "/udt": {"func": SystemLifecycleService.restart_server, "desc": "系统更新"},
-            "/sta": {"func": self._user_statistics, "desc": "站点数据统计"},
+            "/ptr": {"func": TorrentRemover().auto_remove_torrents, "desc": COMMANDS["/ptr"]},
+            "/ptt": {"func": Downloader().transfer, "desc": COMMANDS["/ptt"]},
+            "/rst": {"func": Sync().transfer_sync, "desc": COMMANDS["/rst"]},
+            "/rss": {"func": Rss().rssdownload, "desc": COMMANDS["/rss"]},
+            "/ssa": {"func": Subscribe().subscribe_search_all, "desc": COMMANDS["/ssa"]},
+            "/tbl": {"func": FileTransfer().truncate_transfer_blacklist, "desc": COMMANDS["/tbl"]},
+            "/trh": {"func": self._truncate_rsshistory, "desc": COMMANDS["/trh"]},
+            "/utf": {"func": self._unidentification, "desc": COMMANDS["/utf"]},
+            "/udt": {"func": SystemLifecycleService.restart_server, "desc": COMMANDS["/udt"]},
+            "/sta": {"func": self._user_statistics, "desc": COMMANDS["/sta"]},
         }
 
     def handle_message_job(self, msg, in_from=SearchType.OT, user_id=None, user_name=None):
@@ -656,15 +652,7 @@ class MessageCommandHandler:
 
 
 def get_commands():
-    """获取命令列表"""
-    handler = MessageCommandHandler()
-    return [{
-        "id": cid,
-        "name": cmd.get("desc")
-    } for cid, cmd in handler._commands.items()] + [{
-        "id": item.get("cmd"),
-        "name": item.get("desc")
-    } for item in []]
+    return [{"id": cid, "name": name} for cid, name in COMMANDS.items()]
 
 
 def get_rmt_modes():

@@ -3,41 +3,20 @@ from urllib.parse import urlencode
 
 from app.message.client._base import _IMessageClient
 from app.utils import RequestUtils, ExceptionUtils
+from app.message.client_registry import ClientRegistry
 
 
 class PushPlus(_IMessageClient):
     schema = "pushplus"
 
-    _token = None
-    _topic = None
-    _channel = None
-    _webhook = None
-    _client_config = {}
-
-    def __init__(self, config):
-        self._client_config = config
-        self.init_config()
-
-    def init_config(self):
-        if self._client_config:
-            self._token = self._client_config.get('token')
-            self._topic = self._client_config.get('topic')
-            self._channel = self._client_config.get('channel')
-            self._webhook = self._client_config.get('webhook')
-
-    @classmethod
-    def match(cls, ctype):
-        return True if ctype == cls.schema else False
+    def read_config(self):
+        cfg = self._config or {}
+        self._token = cfg.get('token')
+        self._topic = cfg.get('topic')
+        self._channel = cfg.get('channel')
+        self._webhook = cfg.get('webhook')
 
     def send_msg(self, title, text="", image="", url="", user_id=""):
-        """
-        发送ServerChan消息
-        :param title: 消息标题
-        :param text: 消息内容
-        :param image: 未使用
-        :param url: 未使用
-        :param user_id: 未使用
-        """
         if not title and not text:
             return False, "标题和内容不能同时为空"
         if not text:
@@ -72,5 +51,7 @@ class PushPlus(_IMessageClient):
             ExceptionUtils.exception_traceback(msg_e)
             return False, str(msg_e)
 
-    def send_list_msg(self, **kwargs):
+    def send_list_msg(self, medias: list = None, user_id="", title="", **kwargs):
         pass
+
+ClientRegistry.register(PushPlus)
