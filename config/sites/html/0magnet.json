@@ -7,7 +7,10 @@
   "html": {
     "search": {
       "paths": [
-        {"path": "/search", "method": "get"}
+        {
+          "path": "/search",
+          "method": "get"
+        }
       ],
       "params": {
         "q": "{keyword}"
@@ -32,13 +35,23 @@
         "size": {
           "selector": "td:nth-child(2)"
         },
-        "seeders": {"type": "constant", "value": 0},
-        "leechers": {"type": "constant", "value": 0},
+        "seeders": {
+          "type": "constant",
+          "value": 0
+        },
+        "leechers": {
+          "type": "constant",
+          "value": 0
+        },
         "downloadvolumefactor": {
-          "case": {"*": 0}
+          "case": {
+            "*": 0
+          }
         },
         "uploadvolumefactor": {
-          "case": {"*": 1}
+          "case": {
+            "*": 1
+          }
         }
       }
     }
@@ -46,7 +59,10 @@
   "download": {
     "type": "html",
     "selectors": {
-      "download": {"xpath": "//a[contains(@href,\"magnet:\")]/@href"}
+      "download": {
+        "xpath": "//a[contains(@href,\"magnet:\")]/@href"
+      }
     }
-  }
+  },
+  "favicon": "https://0magnet.com/favicon.ico"
 }

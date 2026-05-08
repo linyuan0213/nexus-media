@@ -1,3 +1,4 @@
+import base64
 import json
 from datetime import datetime
 from multiprocessing.dummy import Pool as ThreadPool
@@ -18,6 +19,7 @@ from app.utils import RequestUtils, ExceptionUtils, StringUtils, JsonUtils
 from app.utils.commons import SingletonMeta
 from config import Config
 from app.utils.config_tools import get_proxies
+from app.db.models import SITEUSERINFOSTATS as _S
 
 lock = Lock()
 
@@ -132,6 +134,11 @@ class SiteUserInfo(metaclass=SingletonMeta):
                 # 开始解析
                 site_user_info.parse()
                 log.debug(f"【Sites】站点 {site_name} 解析完成")
+
+                if not site_user_info.site_favicon:
+                    site_def = SiteEngine.get_instance().get_by_url(site_url)
+                    if site_def and site_def.favicon:
+                        self._fetch_favicon_from_url(site_user_info, site_def.favicon)
 
                 # 获取不到数据时，仅返回错误信息，不做历史数据更新
                 if site_user_info.err_msg:
@@ -309,7 +316,6 @@ class SiteUserInfo(metaclass=SingletonMeta):
             strict_urls=site_urls))
         existing_urls = {s.URL for s in raw_statistics if s.URL}
         url_to_pri = {s.get("strict_url"): s.get("pri", 0) for s in statistic_sites}
-        from app.db.models import SITEUSERINFOSTATS as _S
         for site in statistic_sites:
             url = site.get("strict_url")
             if url and url not in existing_urls:
@@ -382,6 +388,15 @@ class SiteUserInfo(metaclass=SingletonMeta):
         if dates:
             return min(dates).strftime("%Y-%m-%d")
         return ""
+
+    @staticmethod
+    def _fetch_favicon_from_url(site_user_info, url):
+        try:
+            res = RequestUtils(timeout=10).get_res(url=url)
+            if res:
+                site_user_info.site_favicon = base64.b64encode(res.content).decode()
+        except Exception:
+            pass
 
     @staticmethod
     def __format_filesize(size_bytes):

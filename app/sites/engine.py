@@ -78,6 +78,7 @@ class SiteDefinition:
     tid_pattern: str = r"\d+"
     encoding: str = "UTF-8"
     public: bool = False
+    favicon: str = ""
     language: Optional[str] = None
     api: Optional[SiteApiConfig] = None
     html: Optional[SiteHtmlConfig] = None
@@ -108,6 +109,7 @@ class SiteDefinition:
         d.tid_pattern = data.get("tid_pattern", r"\d+")
         d.encoding = data.get("encoding", "UTF-8")
         d.public = data.get("public", False)
+        d.favicon = data.get("favicon", "")
         d.language = data.get("language")
         d.detail_page_url = data.get("detail_page_url", "")
         if data.get("api"):

@@ -512,7 +512,7 @@ def search_media_by_message(input_str, in_from: SearchType, user_id, user_name=N
                                                                     [{
                                                                         "id": site.get("name"),
                                                                         "name": site.get("name")
-                                                                    } for site in Sites().get_sites(rss=True)])
+                                                                    } for site in Sites().get_sites(rss=True, public=True)])
 
             # 索引器类型
             _indexer_svc = IndexerService()

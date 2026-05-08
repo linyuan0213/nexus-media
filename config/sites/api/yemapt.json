@@ -2,7 +2,9 @@
   "id": "yemapt",
   "name": "YemaPT",
   "domain": "www.yemapt.org",
-  "domain_aliases": ["yemapt.org"],
+  "domain_aliases": [
+    "yemapt.org"
+  ],
   "tid_pattern": "\\d+",
   "detail_page_url": "/api/torrent/fetchTorrentDetail?id={tid}&firstView=false",
   "encoding": "UTF-8",
@@ -22,26 +24,63 @@
           "pageParam": {
             "current": "{page_1}",
             "pageSize": 40,
-            "pageSizeOptions": ["10", "20", "40"],
+            "pageSizeOptions": [
+              "10",
+              "20",
+              "40"
+            ],
             "size": "small"
           },
           "sorter": null
         },
         "mode_mapping": {
-          "MOVIE": [{"categoryId": 4}],
-          "TV": [{"categoryId": 5}, {"categoryId": 13}, {"categoryId": 15}],
-          "ANIME": [{"categoryId": 14}]
+          "MOVIE": [
+            {
+              "categoryId": 4
+            }
+          ],
+          "TV": [
+            {
+              "categoryId": 5
+            },
+            {
+              "categoryId": 13
+            },
+            {
+              "categoryId": 15
+            }
+          ],
+          "ANIME": [
+            {
+              "categoryId": 14
+            }
+          ]
         },
         "response": {
           "items_key": "data",
           "item_mapping": {
-            "title": {"source": "showName"},
-            "description": {"source": "shortDesc"},
-            "size": {"source": "fileSize"},
-            "seeders": {"source": "seedNum"},
-            "leechers": {"source": "leechNum"},
-            "grabs": {"source": "completedNum"},
-            "pubdate": {"source": "listingTime", "transform": "utc_to_local"},
+            "title": {
+              "source": "showName"
+            },
+            "description": {
+              "source": "shortDesc"
+            },
+            "size": {
+              "source": "fileSize"
+            },
+            "seeders": {
+              "source": "seedNum"
+            },
+            "leechers": {
+              "source": "leechNum"
+            },
+            "grabs": {
+              "source": "completedNum"
+            },
+            "pubdate": {
+              "source": "listingTime",
+              "transform": "utc_to_local"
+            },
             "downloadvolumefactor": {
               "type": "mapping",
               "source": "downloadPromotion",
@@ -50,12 +89,20 @@
                 "NORMAL": 1.0
               }
             },
-            "uploadvolumefactor": {"type": "constant", "value": 1.0},
-            "labels": {"source": "tagList", "transform": "yemapt_labels"},
+            "uploadvolumefactor": {
+              "type": "constant",
+              "value": 1.0
+            },
+            "labels": {
+              "source": "tagList",
+              "transform": "yemapt_labels"
+            },
             "page_url": {
               "type": "template",
               "value": "{domain}/api/torrent/fetchTorrentDetail?id={tid}&firstView=false",
-              "fields": {"tid": "id"}
+              "fields": {
+                "tid": "id"
+              }
             }
           }
         }
@@ -63,7 +110,10 @@
       "detail": {
         "method": "GET",
         "path": "/api/torrent/fetchTorrentDetail",
-        "params": {"id": "{tid}", "firstView": "false"}
+        "params": {
+          "id": "{tid}",
+          "firstView": "false"
+        }
       },
       "test_connection": {
         "method": "POST",
@@ -71,7 +121,14 @@
         "body": {
           "keyword": "",
           "categoryId": 4,
-          "pageParam": {"current": 1, "pageSize": 1, "pageSizeOptions": ["10"], "size": "small"},
+          "pageParam": {
+            "current": 1,
+            "pageSize": 1,
+            "pageSizeOptions": [
+              "10"
+            ],
+            "size": "small"
+          },
           "sorter": null
         }
       },
@@ -88,12 +145,39 @@
       "path": "/api/user/profile",
       "response": {
         "field_mapping": {
-          "username": {"source": "data.name"},
-          "upload": {"source": "data.promotionUploadSize", "type": "int"},
-          "download": {"source": "data.promotionDownloadSize", "type": "int"},
-          "bonus": {"source": "data.bonus", "type": "float"},
-          "user_level": {"source": "data.level", "transform": "map_value", "map": {"1": "Lv.1", "2": "Lv.2", "3": "Lv.3", "4": "Lv.4", "5": "Lv.5", "6": "Lv.6", "7": "Lv.7", "8": "Lv.8"}},
-          "join_at": {"source": "data.registerTime", "transform": "utc_to_local"}
+          "username": {
+            "source": "data.name"
+          },
+          "upload": {
+            "source": "data.promotionUploadSize",
+            "type": "int"
+          },
+          "download": {
+            "source": "data.promotionDownloadSize",
+            "type": "int"
+          },
+          "bonus": {
+            "source": "data.bonus",
+            "type": "float"
+          },
+          "user_level": {
+            "source": "data.level",
+            "transform": "map_value",
+            "map": {
+              "1": "Lv.1",
+              "2": "Lv.2",
+              "3": "Lv.3",
+              "4": "Lv.4",
+              "5": "Lv.5",
+              "6": "Lv.6",
+              "7": "Lv.7",
+              "8": "Lv.8"
+            }
+          },
+          "join_at": {
+            "source": "data.registerTime",
+            "transform": "utc_to_local"
+          }
         }
       }
     },
@@ -124,5 +208,6 @@
     "path": "/api/torrent/generateDownloadKey?id={tid}",
     "response_key": "data",
     "download_url": "{base}/api/torrent/download1?token={token}"
-  }
+  },
+  "favicon": "https://static-ui.yemapt.org/dac13f14/icons/icons8-mustang-32.png"
 }

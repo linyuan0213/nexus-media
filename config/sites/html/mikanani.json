@@ -92,5 +92,6 @@
       "path": "Home/Classic/{page}",
       "start": 1
     }
-  }
+  },
+  "favicon": "https://mikanani.me/images/favicon.ico?v=2"
 }

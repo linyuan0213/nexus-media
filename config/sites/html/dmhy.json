@@ -84,5 +84,6 @@
       "path": "topics/list/page/{page}",
       "start": 1
     }
-  }
+  },
+  "favicon": "https://dmhy.org/favicon.ico"
 }

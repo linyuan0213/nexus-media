@@ -151,12 +151,13 @@ class Sites:
             site.SITE: site.FAVICON for site in self.site_repo.get_site_favicons()}
 
     def get_sites(self,
-                  siteid=None,
-                  siteurl=None,
-                  siteids=None,
-                  rss=False,
-                  brush=False,
-                  statistic=False):
+                   siteid=None,
+                   siteurl=None,
+                   siteids=None,
+                   rss=False,
+                   brush=False,
+                   statistic=False,
+                   public=False):
         """
         获取站点配置
         """
@@ -175,6 +176,8 @@ class Sites:
             if brush and not site.get('brush_enable'):
                 continue
             if statistic and not site.get('statistic_enable'):
+                continue
+            if not public and site.get('public'):
                 continue
             if siteids and str(site.get('id')) not in siteids:
                 continue
@@ -243,7 +246,8 @@ class Sites:
             } for site in self.get_sites(
                 rss=rss,
                 brush=brush,
-                statistic=statistic
+                statistic=statistic,
+                public=True
             ) if not (signin and site.get("public"))
         ]
 
@@ -258,18 +262,47 @@ class Sites:
             site.get("name") for site in self.get_sites(
                 rss=rss,
                 brush=brush,
-                statistic=statistic
+                statistic=statistic,
+                public=True
             )
         ]
 
     def get_site_favicon(self, site_name=None):
-        """
-        获取站点图标
-        """
         if site_name:
-            return self._site_favicons.get(site_name)
-        else:
-            return self._site_favicons
+            return self._resolve_favicon(site_name)
+        result = dict(self._site_favicons)
+        for site in self._siteByIds.values():
+            name = site.get("name")
+            if name and name not in result:
+                url = self._favicon_fallback_url(site)
+                if url:
+                    result[name] = url
+        for site_def in SiteEngine.get_instance().all_sites():
+            if site_def.favicon and site_def.name not in result:
+                result[site_def.name] = site_def.favicon
+        return result
+
+    def _resolve_favicon(self, site_name):
+        data = self._site_favicons.get(site_name)
+        if data:
+            return data
+        for site in self._siteByIds.values():
+            if site.get("name") == site_name:
+                return self._favicon_fallback_url(site)
+        for site_def in SiteEngine.get_instance().all_sites():
+            if site_def.name == site_name and site_def.favicon:
+                return site_def.favicon
+        return None
+
+    def _favicon_fallback_url(self, site):
+        url = site.get("strict_url") or site.get("signurl") or site.get("rssurl") or ""
+        site_def = SiteEngine.get_instance().get_by_url(url)
+        if site_def and site_def.favicon:
+            return site_def.favicon
+        domain = url.replace("https://", "").replace("http://", "").split("/")[0]
+        if domain:
+            return f"https://www.google.com/s2/favicons?domain={domain}&sz=64"
+        return None
 
     def get_site_download_setting(self, site_name=None):
         """

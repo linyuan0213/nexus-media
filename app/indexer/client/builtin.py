@@ -82,7 +82,7 @@ class BuiltinIndexer(_IIndexClient):
                 })
         IndexerHelper().set_indexers(engine_sites)
 
-        for site in Sites().get_sites():
+        for site in Sites().get_sites(public=True):
             url = site.get("signurl") or site.get("rssurl")
             cookie = site.get("cookie")
             headers = site.get("headers")
