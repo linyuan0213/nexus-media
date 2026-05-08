@@ -7,15 +7,24 @@ import requests
 
 import log
 from app.db.repositories import SiteRepository
-from app.helper import SubmoduleHelper, DrissionPageHelper
+from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
+from app.helper import DrissionPageHelper
 from app.message import Message
+from app.sites.engine import SiteEngine
 from app.sites.sites import Sites
+from app.sites.siteuserinfo.config_api import ConfigApiUserInfo
+import app.sites.siteuserinfo.config_html
 from app.utils import RequestUtils, ExceptionUtils, StringUtils, JsonUtils
 from app.utils.commons import SingletonMeta
 from config import Config
 from app.utils.config_tools import get_proxies
 
 lock = Lock()
+
+
+def _log_error(site_name):
+    log.error("【Sites】站点 %s 无法识别站点类型" % site_name)
+    return None
 
 
 class SiteUserInfo(metaclass=SingletonMeta):
@@ -27,144 +36,65 @@ class SiteUserInfo(metaclass=SingletonMeta):
     _sites_data = {}
 
     def __init__(self):
-
-        # 加载模块
-        self._site_schema = SubmoduleHelper.import_submodules('app.sites.siteuserinfo',
-                                                              filter_func=lambda _, obj: hasattr(obj, 'schema'))
-        self._site_schema.sort(key=lambda x: x.order)
-        log.debug(f"【Sites】加载站点解析：{self._site_schema}")
         self.init_config()
 
     def init_config(self):
         self.sites = Sites()
-        self.site_repo = SiteRepository()
+        self.site_repo = SiteRepositoryAdapter(SiteRepository())
         self.message = Message()
         # 站点上一次更新时间
         self._last_update_time = None
         # 站点数据
         self._sites_data = {}
 
-    def __build_class(self, html_text):
-        for site_schema in self._site_schema:
-            try:
-                if site_schema.match(html_text):
-                    return site_schema
-            except Exception as e:
-                ExceptionUtils.exception_traceback(e)
-        return None
-
     def build(self, url, site_id, site_name,
               site_cookie=None, site_headers=None, ua=None, emulate=None, proxy=False):
         if not site_cookie and not site_headers:
             return None
         session = requests.Session()
-        log.debug(
-            f"【Sites】站点 {site_name} url={url} site_cookie={site_cookie} site_headers={site_headers} ua={ua}")
+        log.debug(f"【Sites】站点 {site_name} url={url}")
 
-        # 站点流控
         if self.sites.check_ratelimit(site_id):
             return
 
         site_headers.update({'User-Agent': ua, 'referer': url})
-        # 检测环境，有浏览器内核的优先使用仿真签到
-        chrome = DrissionPageHelper()
+
+        engine = SiteEngine.get_instance()
+        site_def = engine.get_by_url(url)
+
+        if site_def and site_def.user_info and site_def.user_info.get("profile"):
+            return engine.get_user_info(url, site_name, site_cookie,
+                                        html_text=None, site_headers=site_headers,
+                                        ua=ua, emulate=emulate, proxy=proxy,
+                                        session=session) or _log_error(site_name)
+
+        html_text = None
         if emulate:
-
+            chrome = DrissionPageHelper()
             html_text = chrome.get_page_html(url=url, cookies=site_cookie)
-
             if not html_text:
-                log.error("【Sites】%s 跳转站点失败" % site_name)
+                log.error(f"【Sites】{site_name} 跳转站点失败")
                 return None
         else:
             proxies = get_proxies() if proxy else None
-            if 'fsm' in url:
-                req_url = url + '/api/Users/infos'
-            elif 'yemapt' in url:
-                req_url = url + '/api/user/profile'
-            elif 'star-space' in url:
-                req_url = url + '/p_index/index.php'
-            elif 'rousi' in url:
-                req_url = url + '/api/v1/profile?include_fields[user]=seeding_leeching_data'
-            else:
-                req_url = url
-            if 'm-team' in url:
-                req_url = url + '/api/member/profile'
-                res = RequestUtils(session=session,
-                                   headers=site_headers,
-                                   proxies=proxies
-                                   ).post_res(url=req_url, data={})
-            else:
-                res = RequestUtils(cookies=site_cookie,
-                                   session=session,
-                                   headers=site_headers,
-                                   proxies=proxies
-                                   ).get_res(url=req_url)
+            res = RequestUtils(cookies=site_cookie, session=session,
+                               headers=site_headers, proxies=proxies).get_res(url=url)
             if res and res.status_code == 200:
                 if "charset=utf-8" in res.text or "charset=UTF-8" in res.text:
                     res.encoding = "UTF-8"
                 else:
                     res.encoding = res.apparent_encoding
                 html_text = res.text
-                # 单独处理json 格式
-                if JsonUtils.is_valid_json(html_text):
-                    json_data = json.loads(html_text)
-                    message = json_data.get('message')
-                    if (message and message.upper() != "SUCCESS") and not json_data.get('success'):
-                        return None
-
-                else:
-                    # 第一次登录反爬
-                    if html_text.find("title") == -1:
-                        i = html_text.find("window.location")
-                        if i == -1:
-                            return None
-                        tmp_url = req_url + html_text[i:html_text.find(";")] \
-                            .replace("\"", "").replace("+", "").replace(" ", "").replace("window.location=", "")
-                        res = RequestUtils(cookies=site_cookie,
-                                           session=session,
-                                           headers=site_headers,
-                                           proxies=proxies
-                                           ).get_res(url=tmp_url)
-                        if res and res.status_code == 200:
-                            if "charset=utf-8" in res.text or "charset=UTF-8" in res.text:
-                                res.encoding = "UTF-8"
-                            else:
-                                res.encoding = res.apparent_encoding
-                            html_text = res.text
-                            if not html_text:
-                                return None
-                        else:
-                            log.error("【Sites】站点 %s 被反爬限制：%s, 状态码：%s" %
-                                      (site_name, req_url, res.status_code))
-                            return None
-
-                    # 兼容假首页情况，假首页通常没有 <link rel="search" 属性
-                    if '"search"' not in html_text and '"csrf-token"' not in html_text:
-                        res = RequestUtils(cookies=site_cookie,
-                                           session=session,
-                                           headers=site_headers,
-                                           proxies=proxies
-                                           ).get_res(url=req_url + "/index.php")
-                        if res and res.status_code == 200:
-                            if "charset=utf-8" in res.text or "charset=UTF-8" in res.text:
-                                res.encoding = "UTF-8"
-                            else:
-                                res.encoding = res.apparent_encoding
-                            html_text = res.text
-                            if not html_text:
-                                return None
             elif res is not None:
-                log.error(f"【Sites】站点 {site_name} 连接失败，状态码：{res.status_code}")
-                return None
+                html_text = None
             else:
-                log.error(f"【Sites】站点 {site_name} 无法访问：{req_url}")
+                log.error(f"【Sites】站点 {site_name} 无法访问：{url}")
                 return None
-        # 解析站点类型
-        site_schema = self.__build_class(html_text)
-        if not site_schema:
-            log.error("【Sites】站点 %s 无法识别站点类型" % site_name)
-            return None
-        return site_schema(site_name, url, site_cookie, html_text, session=session, ua=ua, site_headers=site_headers, emulate=emulate, proxy=proxy)
+
+        return engine.get_user_info(url, site_name, site_cookie,
+                                    html_text=html_text, site_headers=site_headers,
+                                    ua=ua, emulate=emulate, proxy=proxy,
+                                    session=session) or _log_error(site_name)
 
     def __refresh_site_data(self, site_info):
         """
@@ -368,15 +298,27 @@ class SiteUserInfo(metaclass=SingletonMeta):
         :param encoding: RAW/DICT
         :return:
         """
-        statistic_sites = self.sites.get_sites(statistic=True)
+        statistic_sites = self.sites.get_sites()
         if not sites:
             site_urls = [site.get("strict_url") for site in statistic_sites]
         else:
             site_urls = [site.get("strict_url") for site in statistic_sites
                          if site.get("name") in sites]
 
-        raw_statistics = self.site_repo.get_site_user_statistics(
-            strict_urls=site_urls)
+        raw_statistics = list(self.site_repo.get_site_user_statistics(
+            strict_urls=site_urls))
+        existing_urls = {s.URL for s in raw_statistics if s.URL}
+        url_to_pri = {s.get("strict_url"): s.get("pri", 0) for s in statistic_sites}
+        from app.db.models import SITEUSERINFOSTATS as _S
+        for site in statistic_sites:
+            url = site.get("strict_url")
+            if url and url not in existing_urls:
+                raw_statistics.append(_S(
+                    SITE=site.get("name") or "", URL=url, USERNAME="", USER_LEVEL="",
+                    JOIN_AT="", UPDATE_AT="", UPLOAD=0, DOWNLOAD=0, RATIO=0,
+                    SEEDING=0, LEECHING=0, SEEDING_SIZE=0, BONUS=0,
+                ))
+        raw_statistics.sort(key=lambda s: url_to_pri.get(s.URL, 0))
         if encoding == "RAW":
             return raw_statistics
 

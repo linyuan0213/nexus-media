@@ -1,27 +1,16 @@
-from datetime import timedelta, timezone
-import os
-import pickle
-import random
-import time
-import re
+# -*- coding: utf-8 -*-
+"""站点配置 — 委托 engine 的 JSON 定义，不再依赖 sites.dat"""
 import json
-
-from app.utils.cache_system import lru_cache_with_ttl
-from lxml import etree
+import re
 from urllib.parse import urlsplit
 
-from app.helper.drissionpage_helper import DrissionPageHelper
-from app.sites import Sites
-from app.utils import ExceptionUtils, StringUtils, RequestUtils, JsonUtils
+from app.utils import StringUtils, JsonUtils
 from app.utils.commons import SingletonMeta
-from config import Config
-from app.core.constants import MT_URL
+from app.sites.engine import SiteEngine
 import log
-from app.utils.config_tools import get_proxies
 
 
 class SiteConf(metaclass=SingletonMeta):
-    # 站点签到支持的识别XPATH
     _SITE_CHECKIN_XPATH = [
         '//a[@id="signed"]',
         '//a[contains(@href, "attendance")]',
@@ -35,13 +24,9 @@ class SiteConf(metaclass=SingletonMeta):
         '//a[@id="do-attendance"]',
         '//shark-icon-button[@href="attendance.php"]'
     ]
-
-    # 站点详情页字幕下载链接识别XPATH
     _SITE_SUBTITLE_XPATH = [
         '//td[@class="rowhead"][text()="字幕"]/following-sibling::td//a/@href',
     ]
-
-    # 站点登录界面元素XPATH
     _SITE_LOGIN_XPATH = {
         "username": [
             '//input[@name="username"]',
@@ -80,29 +65,11 @@ class SiteConf(metaclass=SingletonMeta):
         ]
     }
 
-    # 促销/HR的匹配XPATH
-    _RSS_SITE_GRAP_CONF = {}
-
-    # 种子详情
-    URL_DETAIL_TEMPLATES = {
-        'm-team': '/detail/{tid}',
-        'fsm': "/api/Torrents/details?tid={tid}&page=1",
-        'yemapt': "/api/torrent/fetchTorrentDetail?id={tid}&firstView=false",
-        'star-space': "/p_torrent/video_detail.php?tid={tid}",
-        'rousi': "/api/v1/torrents/{tid}",
-        'default': '/details.php?id={tid}'
-    }
     def __init__(self):
         self.init_config()
 
     def init_config(self):
-        try:
-            with open(os.path.join(Config().config_path,
-                                   "sites.dat"),
-                      "rb") as f:
-                self._RSS_SITE_GRAP_CONF = pickle.load(f).get("conf")
-        except Exception as err:
-            ExceptionUtils.exception_traceback(err)
+        pass
 
     def get_checkin_conf(self):
         return self._SITE_CHECKIN_XPATH
@@ -114,193 +81,23 @@ class SiteConf(metaclass=SingletonMeta):
         return self._SITE_LOGIN_XPATH
 
     def get_grap_conf(self, url=None):
-        if not url:
-            return self._RSS_SITE_GRAP_CONF
-        for k, v in self._RSS_SITE_GRAP_CONF.items():
-            if StringUtils.url_equal(k, url):
-                return v
+        site_def = SiteEngine.get_instance().get_by_url(url) if url else None
+        if site_def and site_def.html and site_def.html.conf:
+            return site_def.html.conf
+        if site_def and site_def.torrent_attr:
+            resp = (site_def.torrent_attr or {}).get("response", {})
+            conf = {}
+            if resp.get("free_key"):
+                conf["FREE"] = True
+            if resp.get("2xfree_key"):
+                conf["2XFREE"] = True
+            if resp.get("hr_key"):
+                conf["HR"] = True
+            if conf:
+                return conf
         return {}
 
-    def get_tid_and_url(self, torrent_url):
-        for key in self.URL_DETAIL_TEMPLATES:
-            if key in torrent_url:
-                if key == 'star-space':
-                    tid = re.findall(r'tid=(\d+)', torrent_url)[0] or ""
-                elif key == 'rousi':
-                    # rousi 使用 UUID 格式，如: https://rousi.pro/torrents/dffb27c6-cb11-4431-a955-2f2a864d64df
-                    tid = re.findall(r'/torrents/([a-f0-9-]+)', torrent_url)[0] or ""
-                else:
-                    tid = re.findall(r'\d+', torrent_url)[0] or ""
-                    
-                split_url = urlsplit(torrent_url)
-                base_url = f"{split_url.scheme}://{split_url.netloc}"
-                return f"{base_url}{self.URL_DETAIL_TEMPLATES[key].format(tid=tid)}"
-        
-        return torrent_url  # 如果不匹配任何 key，返回原始 URL
-
     def check_torrent_attr(self, torrent_url, cookie, ua=None, headers=None, proxy=False):
-        """
-        检验种子是否免费，当前做种人数
-        :param torrent_url: 种子的详情页面
-        :param cookie: 站点的Cookie
-        :param ua: 站点的ua
-        :param ua: 站点的请求头
-        :param proxy: 是否使用代理
-        :return: 种子属性，包含FREE 2XFREE HR PEER_COUNT等属性
-        """
-        ret_attr = {
-            "free": False,
-            "2xfree": False,
-            "hr": False,
-            "peer_count": 0,
-            "pubdate": None
-        }
-        try:
-            # 这里headers必须是string类型
-            headers = json.dumps(headers)
-            if 'm-team' in torrent_url:
-                base_url = MT_URL
-                detail_url = f"{base_url}/api/torrent/detail"
-                res = re.findall(r'\d+', torrent_url)
-                param = res[0]
-
-                json_text = self.__get_site_page_html(url=detail_url,
-                                                      cookie="",
-                                                      ua=ua,
-                                                      headers=headers,
-                                                      proxy=proxy,
-                                                      param=param)
-                if not json_text:
-                    log.debug(f'获取 M-Team 明细数据失败，种子id: {param}')
-                    return ret_attr
-                json_data = json.loads(json_text)
-                if json_data.get('message') != "SUCCESS":
-                    return ret_attr
-                discount = json_data.get('data').get('status').get('discount')
-                seeders = json_data.get('data').get('status').get('seeders')
-                if discount == 'FREE':
-                    ret_attr["free"] = True
-                ret_attr['peer_count'] = int(seeders)
-            else:
-                if not torrent_url:
-                    return ret_attr
-                xpath_strs = self.get_grap_conf(torrent_url)
-                if not xpath_strs:
-                    return ret_attr
-                # 获取真实的种子详情url
-                torrent_url = self.get_tid_and_url(torrent_url)
-
-                site_info = Sites().get_sites(siteurl=torrent_url)
-                html_text = self.__get_site_page_html(url=torrent_url,
-                                                      cookie=cookie,
-                                                      ua=ua,
-                                                      headers=headers,
-                                                      render=site_info.get('chrome'),
-                                                      proxy=proxy)
-                if not html_text:
-                    return ret_attr
-                if JsonUtils.is_valid_json(html_text):
-                    # 检测2XFREE
-                    for xpath_str in xpath_strs.get("2XFREE"):
-                        name = JsonUtils.get_json_object(
-                            html_text, xpath_str.split('=')[0])
-                        if str(name) == xpath_str.split('=')[1]:
-                            ret_attr["free"] = True
-                            ret_attr["2xfree"] = True
-
-                    # 检测FREE
-                    for xpath_str in xpath_strs.get("FREE"):
-                        name = JsonUtils.get_json_object(
-                            html_text, xpath_str.split('=')[0])
-                        if str(name) == xpath_str.split('=')[1]:
-                            ret_attr["free"] = True
-
-                    # 检测HR
-                    for xpath_str in xpath_strs.get("HR"):
-                        if JsonUtils.get_json_object(html_text, xpath_str):
-                            ret_attr["hr"] = True
-
-                    # 检测PEER_COUNT当前做种人数
-                    for xpath_str in xpath_strs.get("PEER_COUNT"):
-                        peer_count = JsonUtils.get_json_object(
-                            html_text, xpath_str)
-                        ret_attr["peer_count"] = int(
-                            peer_count) if len(str(peer_count)) > 0 else 0
-                else:
-                    html = etree.HTML(html_text)
-                    # 检测2XFREE
-                    for xpath_str in xpath_strs.get("2XFREE"):
-                        if html.xpath(xpath_str):
-                            ret_attr["free"] = True
-                            ret_attr["2xfree"] = True
-                    # 检测FREE
-                    for xpath_str in xpath_strs.get("FREE"):
-                        if html.xpath(xpath_str):
-                            ret_attr["free"] = True
-                    # 检测HR
-                    for xpath_str in xpath_strs.get("HR"):
-                        if html.xpath(xpath_str):
-                            ret_attr["hr"] = True
-                    # 检测PEER_COUNT当前做种人数
-                    for xpath_str in xpath_strs.get("PEER_COUNT"):
-                        peer_count_dom = html.xpath(xpath_str)
-                        if peer_count_dom:
-                            peer_count_str = ''.join(
-                                peer_count_dom[0].itertext())
-                            peer_count_digit_str = ""
-                            for m in peer_count_str.strip():
-                                if m.isdigit():
-                                    peer_count_digit_str = peer_count_digit_str + m
-                                if m == " ":
-                                    break
-                            ret_attr["peer_count"] = int(peer_count_digit_str) if len(
-                                peer_count_digit_str) > 0 else 0
-
-                    # 检测发布时间
-                    pubdate_xpath = xpath_strs.get("PUBDATE") or []
-                    for xpath_str in pubdate_xpath:
-                        if html.xpath(xpath_str):
-                            ret_attr["pubdate"] = html.xpath(xpath_str)[0]
-
-        except Exception as err:
-            ExceptionUtils.exception_traceback(err)
-        # 随机休眼后再返回
-        time.sleep(round(random.uniform(2, 8), 1))
-        return ret_attr
-
-    @staticmethod
-    @lru_cache_with_ttl(maxsize=128, ttl=300)
-    def __get_site_page_html(url, cookie, ua, headers=None, render=False, proxy=False, param=None):
-        if JsonUtils.is_valid_json(headers):
-            headers = json.loads(headers)
-        else:
-            headers = {}
-        chrome = DrissionPageHelper()
-        if render and chrome.get_status():
-            # 开渲染
-            html_text = chrome.get_page_html(url=url, cookies=cookie)
-            if html_text:
-                return html_text
-
-        elif 'm-team' in url:
-            param = {'id': param}
-            headers.update({
-                "contentType": 'application/json;charset=UTF-8'
-            })
-            res = RequestUtils(
-                headers=headers,
-                proxies=get_proxies() if proxy else None
-            ).post_res(url=url, data=param)
-            if res and res.status_code == 200:
-                res.encoding = res.apparent_encoding
-                return res.text
-        else:
-            res = RequestUtils(
-                cookies=cookie,
-                headers=headers,
-                proxies=get_proxies() if proxy else None
-            ).get_res(url=url)
-            if res and res.status_code == 200:
-                res.encoding = res.apparent_encoding
-                return res.text
-        return ""
+        return SiteEngine.get_instance().resolve_torrent_attr(
+            torrent_url=torrent_url, cookie=cookie, ua=ua, headers=headers, proxy=proxy
+        )

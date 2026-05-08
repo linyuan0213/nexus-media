@@ -7,6 +7,7 @@
 """
 import copy
 import datetime
+import json as _json
 import time
 from threading import Lock
 
@@ -15,18 +16,15 @@ from app.core.system_config import SystemConfig
 from app.db.repositories import DownloadRepository
 from app.helper import IndexerHelper, IndexerConf, ProgressHelper
 from app.indexer.client._base import _IIndexClient
-from app.indexer.client._rarbg import Rarbg
 from app.indexer.client._spider import TorrentSpider
-from app.indexer.client._tnode import TNodeSpider
-from app.indexer.client._torrentleech import TorrentLeech
-from app.indexer.client._mteam import MteamSpider
-from app.indexer.client._rousi import RousiSpider
-from app.indexer.client._yemapt import YemaPTSpider
-from app.indexer.client._firefly import FireFlySpider
 from app.sites import Sites
+from app.sites.engine import SiteEngine
+from app.sites.searcher_factory import create_searcher
 from app.utils import StringUtils
+from app.utils.config_tools import get_ua
 from app.utils.types import SearchType, IndexerType, ProgressKey, SystemConfigKey
 from config import Config
+from app.helper.drissionpage_helper import DrissionPageHelper
 
 
 class BuiltinIndexer(_IIndexClient):
@@ -70,10 +68,19 @@ class BuiltinIndexer(_IIndexClient):
         ret_indexers = []
         indexer_sites = SystemConfig().get(SystemConfigKey.UserIndexerSites) or []
         _indexer_domains = []
-        chrome_ok = DrissionPageHelper().get_status() if 'DrissionPageHelper' in globals() else False
-        if not chrome_ok:
-            from app.helper.drissionpage_helper import DrissionPageHelper
-            chrome_ok = DrissionPageHelper().get_status()
+
+        chrome_ok = DrissionPageHelper().get_status()
+
+        engine_sites = []
+        for s in SiteEngine.get_instance().all_sites():
+            if s.html:
+                engine_sites.append({
+                    "id": s.id, "name": s.name, "domain": s.domain,
+                    "public": s.public, "search": s.html.search,
+                    "torrents": s.html.torrents, "category": s.html.category,
+                    "browse": s.html.browse, "language": s.language,
+                })
+        IndexerHelper().set_indexers(engine_sites)
 
         for site in Sites().get_sites():
             url = site.get("signurl") or site.get("rssurl")
@@ -101,7 +108,7 @@ class BuiltinIndexer(_IIndexClient):
                 render=render
             )
             if indexer:
-                if indexer_id and indexer.id == indexer_id:
+                if indexer_id and str(indexer.id) == str(indexer_id):
                     return indexer
                 if check and (not indexer_sites or indexer.id not in indexer_sites):
                     continue
@@ -170,34 +177,10 @@ class BuiltinIndexer(_IIndexClient):
 
         result_array = []
         error_flag = False
+        mtype = match_media.type if (match_media and match_media.tmdb_info) else None
         try:
-            if indexer.parser == "TNodeSpider":
-                error_flag, result_array = TNodeSpider(indexer).search(keyword=search_word)
-            elif indexer.parser == "RarBg":
-                error_flag, result_array = Rarbg(indexer).search(
-                    keyword=search_word,
-                    imdb_id=match_media.imdb_id if match_media else None)
-            elif indexer.parser == "TorrentLeech":
-                error_flag, result_array = TorrentLeech(indexer).search(keyword=search_word)
-            elif indexer.parser == "MteamSpider":
-                error_flag, result_array = MteamSpider(indexer).search(
-                    keyword=search_word,
-                    mtype=match_media.type if match_media and match_media.tmdb_info else None)
-            elif indexer.parser == "RousiSpider":
-                error_flag, result_array = RousiSpider(indexer).search(keyword=search_word)
-            elif indexer.parser == "YemaPTSpider":
-                error_flag, result_array = YemaPTSpider(indexer).search(
-                    keyword=search_word,
-                    mtype=match_media.type if match_media and match_media.tmdb_info else None)
-            elif indexer.parser == "FireFlySpider":
-                error_flag, result_array = FireFlySpider(indexer).search(
-                    keyword=search_word,
-                    mtype=match_media.type if match_media and match_media.tmdb_info else None)
-            else:
-                error_flag, result_array = self.__spider_search(
-                    keyword=search_word,
-                    indexer=indexer,
-                    mtype=match_media.type if match_media and match_media.tmdb_info else None)
+            error_flag, result_array = self.__search_via_engine(
+                search_word=search_word, indexer=indexer, mtype=mtype)
         except Exception as err:
             error_flag = True
             print(str(err))
@@ -240,26 +223,14 @@ class BuiltinIndexer(_IIndexClient):
             return None
         indexer = self.get_indexers(indexer_id=index_id)
         if not indexer:
+            log.warn(f"【BuiltinIndexer】list 未找到站点: {index_id}")
             return None
 
+        log.warn(f"【BuiltinIndexer】list 找到站点: {indexer.name} (id={indexer.id}, domain={indexer.domain})")
         start_time = datetime.datetime.now()
 
-        if indexer.parser == "RarBg":
-            error_flag, result_array = Rarbg(indexer).search(keyword=keyword, page=page)
-        elif indexer.parser == "TNodeSpider":
-            error_flag, result_array = TNodeSpider(indexer).search(keyword=keyword, page=page)
-        elif indexer.parser == "TorrentLeech":
-            error_flag, result_array = TorrentLeech(indexer).search(keyword=keyword, page=page)
-        elif indexer.parser == "MteamSpider":
-            error_flag, result_array = MteamSpider(indexer).search(keyword=keyword, page=page)
-        elif indexer.parser == "RousiSpider":
-            error_flag, result_array = RousiSpider(indexer).search(keyword=keyword, page=page)
-        elif indexer.parser == "YemaPTSpider":
-            error_flag, result_array = YemaPTSpider(indexer).search(keyword=keyword, page=page)
-        elif indexer.parser == "FireFlySpider":
-            error_flag, result_array = FireFlySpider(indexer).search(keyword=keyword, page=page)
-        else:
-            error_flag, result_array = self.__spider_search(indexer=indexer, page=page, keyword=keyword)
+        error_flag, result_array = self.__search_via_engine(
+            search_word=keyword, indexer=indexer, page=page)
 
         seconds = round((datetime.datetime.now() - start_time).seconds, 1)
         lock = Lock()
@@ -272,15 +243,45 @@ class BuiltinIndexer(_IIndexClient):
             )
         return result_array
 
+    def __search_via_engine(self, search_word, indexer, mtype=None, page=0):
+        engine = SiteEngine.get_instance()
+        site_def = engine.get_by_id(str(indexer.id)) or engine.get_by_url(indexer.domain or "")
+        if site_def and (site_def.api or site_def.html):
+            user_config = self._build_user_config(indexer)
+            searcher = create_searcher(indexer.domain, user_config)
+            if not searcher:
+                return self.__spider_search(indexer=indexer, keyword=search_word, page=page, mtype=mtype)
+            result_array = searcher.search(keyword=search_word, page=page, mtype=mtype)
+            for item in result_array:
+                if 'indexer' not in item:
+                    item['indexer'] = indexer.id or indexer.siteid
+            return False, result_array
+        return self.__spider_search(indexer=indexer, keyword=search_word, page=page, mtype=mtype)
+
+    @staticmethod
+    def _build_user_config(indexer):
+        user_config = {
+            "cookie": getattr(indexer, 'cookie', '') or '',
+            "ua": getattr(indexer, 'ua', '') or get_ua(),
+            "proxy": getattr(indexer, 'proxy', False),
+            "headers": getattr(indexer, 'headers', {}) or {},
+            "domain": getattr(indexer, 'domain', '') or '',
+        }
+        if indexer.headers:
+            try:
+                h = _json.loads(indexer.headers) if isinstance(indexer.headers, str) else indexer.headers
+                auth_val = ((h or {}).get("Authorization") or (h or {}).get("authorization") or "")
+                if auth_val.startswith("Bearer "):
+                    user_config["api_key"] = auth_val[len("Bearer "):]
+            except Exception:
+                pass
+        return user_config
+
     @staticmethod
     def __spider_search(indexer, keyword=None, page=None, mtype=None, timeout=30):
-        """
-        通用爬虫搜索
-        """
         spider = TorrentSpider()
         spider.setparam(indexer=indexer, keyword=keyword, page=page, mtype=mtype)
         spider.start()
-
         sleep_interval = 0.1
         total_wait = 0
         while not spider.is_complete:
@@ -289,9 +290,7 @@ class BuiltinIndexer(_IIndexClient):
             if total_wait >= timeout:
                 spider.stop_spider()
                 break
-
         result_flag = spider.is_error
         result_array = spider.torrents_info_array.copy()
         spider.torrents_info_array.clear()
-
         return result_flag, result_array

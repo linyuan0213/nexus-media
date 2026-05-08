@@ -1,419 +1,267 @@
 # -*- coding: utf-8 -*-
+"""NexusPhp 架构用户信息解析 — 从 config_html.py 提取"""
 import re
+import json
 from urllib.parse import urljoin
-
 from lxml import etree
-
-import log
-from app.sites.siteuserinfo._base import _ISiteUserInfo, SITE_BASE_ORDER
 from app.utils import StringUtils
-from app.utils.exception_utils import ExceptionUtils
-from app.utils.types import SiteSchema
+import log
 
 
-class NexusPhpSiteUserInfo(_ISiteUserInfo):
-    schema = SiteSchema.NexusPhp
-    order = SITE_BASE_ORDER * 2
-
-    @classmethod
-    def match(cls, html_text):
-        """
-        默认使用NexusPhp解析
-        :param html_text:
-        :return:
-        """
+def is_nexusphp(ins):
+    if "torrents.php" in ins._index_html or "browse.php" in ins._index_html:
         return True
+    if "userdetails.php" in ins._index_html or "messages.php" in ins._index_html:
+        return True
+    search_cfg = ins._def.html.search if ins._def.html else {}
+    paths = search_cfg.get("paths", [{}]) if isinstance(search_cfg, dict) else []
+    path = paths[0].get("path", "") if paths else ""
+    return "torrents.php" in path or "browse.php" in path
 
-    def _parse_site_page(self, html_text):
-        html_text = self._prepare_html_text(html_text)
 
-        user_detail = re.search(r"userdetails.php\?id=(\d+)", html_text)
-        if user_detail and user_detail.group().strip():
-            self._user_detail_page = user_detail.group().strip().lstrip('/')
-            self.userid = user_detail.group(1)
-            self._torrent_seeding_page = f"getusertorrentlistajax.php?userid={self.userid}&type=seeding"
-        else:
-            user_detail = re.search(r"(userdetails)", html_text)
-            if user_detail and user_detail.group().strip():
-                self._user_detail_page = user_detail.group().strip().lstrip('/')
-                self.userid = None
-                self._torrent_seeding_page = None
+def parse(ins):
+    _parse_userid(ins)
+    _parse_base_info(ins)
+    _parse_traffic(ins)
+    _parse_seeding(ins)
+    _parse_detail(ins)
 
-    def _parse_message_unread(self, html_text):
-        """
-        解析未读短消息数量
-        :param html_text:
-        :return:
-        """
-        html = etree.HTML(html_text)
-        if not html:
-            return
 
-        message_labels = html.xpath('//a[@href="messages.php"]/..')
-        message_labels.extend(html.xpath('//a[contains(@href, "messages.php")]/..'))
-        if message_labels:
-            message_text = message_labels[0].xpath("string(.)")
+def _parse_userid(ins):
+    html = re.sub(r"#\d+", "", re.sub(r"\d+px", "", ins._index_html))
+    m = re.search(r"userdetails.php\?id=(\d+)", html)
+    if m and m.group(1):
+        ins.userid = m.group(1)
+    elif re.search(r"userdetails", html):
+        ins.userid = None
 
-            log.debug(f"【Sites】{self.site_name} 消息原始信息 {message_text}")
-            message_unread_match = re.findall(r"[^Date](信息箱\s*|\(|你有\xa0)(\d+)", message_text)
 
-            if message_unread_match and len(message_unread_match[-1]) == 2:
-                self.message_unread = StringUtils.str_int(message_unread_match[-1][1])
-            elif message_text.isdigit():
-                self.message_unread = StringUtils.str_int(message_text)
-
-    def _parse_user_base_info(self, html_text):
-        # 合并解析，减少额外请求调用
-        self.__parse_user_traffic_info(html_text)
-        self._user_traffic_page = None
-
-        self._parse_message_unread(html_text)
-
-        html = etree.HTML(html_text)
-        if not html:
-            return
-
-        ret = html.xpath(f'//a[contains(@href, "userdetails") and contains(@href, "{self.userid}")]//b//text()')
+def _parse_base_info(ins):
+    html = re.sub(r"#\d+", "", re.sub(r"\d+px", "", ins._index_html))
+    doc = etree.HTML(ins._index_html)
+    if doc is None:
+        return
+    ret = doc.xpath('//a[contains(@href,"userdetails")]//b//text()')
+    if ret:
+        ins.username = str(ret[0])
+    elif not ins.username:
+        ret = doc.xpath('//a[contains(@href,"userdetails")]//text()')
         if ret:
-            self.username = str(ret[0])
-            return
-        ret = html.xpath(f'//a[contains(@href, "userdetails") and contains(@href, "{self.userid}")]//text()')
+            ins.username = str(ret[0])
+    if not ins.username:
+        ret = doc.xpath('//a[contains(@href,"userdetails")]//strong//text()')
         if ret:
-            self.username = str(ret[0])
+            ins.username = str(ret[0])
+    message_labels = doc.xpath('//a[@href="messages.php"]/..')
+    message_labels.extend(doc.xpath('//a[contains(@href,"messages.php")]/..'))
+    if message_labels:
+        text = message_labels[0].xpath("string(.)")
+        mm = re.findall(r"[^Date](信息箱\s*|\(|你有\xa0)(\d+)", text)
+        if mm and len(mm[-1]) == 2:
+            ins.message_unread = StringUtils.str_int(mm[-1][1])
+        elif text.isdigit():
+            ins.message_unread = StringUtils.str_int(text)
 
-        ret = html.xpath('//a[contains(@href, "userdetails")]//strong//text()')
-        if ret:
-            self.username = str(ret[0])
-            return
 
-    def __parse_user_traffic_info(self, html_text):
-        html_text = self._prepare_html_text(html_text)
-        upload_match = re.search(r"[^总]上[传傳]量?[:：_<>/a-zA-Z-=\"'\s#;]+([\d,.\s]+[KMGTPI]*B)", html_text,
-                                 re.IGNORECASE)
-        self.upload = StringUtils.num_filesize(upload_match.group(1).strip()) if upload_match else 0
-        download_match = re.search(r"[^总子影力]下[载載]量?[:：_<>/a-zA-Z-=\"'\s#;]+([\d,.\s]+[KMGTPI]*B)", html_text,
-                                   re.IGNORECASE)
-        self.download = StringUtils.num_filesize(download_match.group(1).strip()) if download_match else 0
-        ratio_match = re.search(r"分享率[:：_<>/a-zA-Z-=\"'\s#;]+([\d,.\s]+)", html_text)
-        # 计算分享率
-        calc_ratio = 0.0 if self.download <= 0.0 else round(self.upload / self.download, 3)
-        # 优先使用页面上的分享率
-        self.ratio = StringUtils.str_float(ratio_match.group(1)) if (
-                ratio_match and ratio_match.group(1).strip()) else calc_ratio
-        leeching_match = re.search(r"(Torrents leeching|下载中)[\u4E00-\u9FA5\D\s]+(\d+)[\s\S]+<", html_text)
-        self.leeching = StringUtils.str_int(leeching_match.group(2)) if leeching_match and leeching_match.group(
-            2).strip() else 0
-        html = etree.HTML(html_text)
-        has_ucoin, self.bonus = self.__parse_ucoin(html)
-        if has_ucoin:
+def _parse_traffic(ins):
+    if not ins.userid:
+        return
+    page_url = urljoin(ins._base_url_str + "/", f"userdetails.php?id={ins.userid}")
+    html_text = ins._fetch_html(page_url)
+    if not html_text:
+        return
+    html = re.sub(r"#\d+", "", re.sub(r"\d+px", "", html_text))
+    m = re.search(r"[^总]上[传傳]量?[:：_<>/a-zA-Z-=\"'\s#;]+([\d,.\s]+[KMGTPI]*B)", html, re.I)
+    ins.upload = StringUtils.num_filesize(m.group(1).strip()) if m else 0
+    m = re.search(r"[^总子影力]下[载載]量?[:：_<>/a-zA-Z-=\"'\s#;]+([\d,.\s]+[KMGTPI]*B)", html, re.I)
+    ins.download = StringUtils.num_filesize(m.group(1).strip()) if m else 0
+    m = re.search(r"分享率[:：_<>/a-zA-Z-=\"'\s#;]+([\d,.\s]+)", html)
+    calc = 0.0 if ins.download <= 0.0 else round(ins.upload / ins.download, 3)
+    ins.ratio = StringUtils.str_float(m.group(1)) if (m and m.group(1).strip()) else calc
+    m = re.search(r"(Torrents leeching|下载中)[\u4E00-\u9FA5\D\s]+(\d+)[\s\S]+<", html)
+    ins.leeching = StringUtils.str_int(m.group(2)) if m and m.group(2).strip() else 0
+    doc = etree.HTML(html_text)
+    if doc is not None:
+        golds = doc.xpath('//span[@class="ucoin-symbol ucoin-gold"]//text()')
+        silvers = doc.xpath('//span[@class="ucoin-symbol ucoin-silver"]//text()')
+        coppers = doc.xpath('//span[@class="ucoin-symbol ucoin-copper"]//text()')
+        if golds or silvers or coppers:
+            g = StringUtils.str_float(str(golds[-1])) if golds else 0
+            s = StringUtils.str_float(str(silvers[-1])) if silvers else 0
+            c = StringUtils.str_float(str(coppers[-1])) if coppers else 0
+            ins.bonus = g * 100 * 100 + s * 100 + c
             return
-        tmps = html.xpath('//a[contains(@href,"mybonus")]/text()') if html else None
+        tmps = doc.xpath('//a[contains(@href,"mybonus")]/@title')
+        if not tmps:
+            tmps = doc.xpath('//a[contains(@href,"mybonus")]/text()')
         if tmps:
-            bonus_text = str(tmps[0]).strip()
-            bonus_match = re.search(r"([\d,.]+)", bonus_text)
-            if bonus_match and bonus_match.group(1).strip():
-                self.bonus = StringUtils.str_float(bonus_match.group(1))
+            bm = re.search(r"([\d,.]+)", str(tmps[0]).strip())
+            if bm and bm.group(1):
+                ins.bonus = StringUtils.str_float(bm.group(1))
                 return
-        bonus_match = re.search(r"mybonus.[\[\]:：<>/a-zA-Z_\-=\"'\s#;.(使用魔力值豆]+\s*([\d,.]+)[<()&\s]", html_text)
-        try:
-            if bonus_match and bonus_match.group(1).strip():
-                self.bonus = StringUtils.str_float(bonus_match.group(1))
-                return
-            bonus_match = re.search(r"[魔力值|\]][\[\]:：<>/a-zA-Z_\-=\"'\s#;]+\s*(\d+[\d.,]+|\"[\d,.]+\")[<>()&\s]",
-                                    html_text,
-                                    flags=re.S)
-            if bonus_match and bonus_match.group(1).strip():
-                self.bonus = StringUtils.str_float(bonus_match.group(1).strip('"'))
-        except Exception as err:
-            ExceptionUtils.exception_traceback(err)
+    m = re.search(r"mybonus.[\[\]:：<>/a-zA-Z_\-=\"'\s#;.(使用魔力值豆]+\s*([\d,.]+)[<()&\s]", html)
+    if m and m.group(1).strip():
+        ins.bonus = StringUtils.str_float(m.group(1))
 
-    @staticmethod
-    def __parse_ucoin(html):
-        """
-        解析ucoin, 统一转换为铜币
-        :param html:
-        :return:
-        """
-        if html:
-            gold, silver, copper = None, None, None
 
-            golds = html.xpath('//span[@class = "ucoin-symbol ucoin-gold"]//text()')
-            if golds:
-                gold = StringUtils.str_float(str(golds[-1]))
-            silvers = html.xpath('//span[@class = "ucoin-symbol ucoin-silver"]//text()')
-            if silvers:
-                silver = StringUtils.str_float(str(silvers[-1]))
-            coppers = html.xpath('//span[@class = "ucoin-symbol ucoin-copper"]//text()')
-            if coppers:
-                copper = StringUtils.str_float(str(coppers[-1]))
-            if gold or silver or copper:
-                gold = gold if gold else 0
-                silver = silver if silver else 0
-                copper = copper if copper else 0
-                return True, gold * 100 * 100 + silver * 100 + copper
-        return False, 0.0
+def _parse_seeding(ins):
+    if not ins.userid:
+        return
+    ui = ins._def.user_info if isinstance(ins._def.user_info, dict) else {}
+    sc = ui.get("seeding", {})
+    page_paths = [f"getusertorrentlistajax.php?userid={ins.userid}&type=seeding"]
+    if sc.get("page"):
+        page_paths = [sc["page"].format(userid=ins.userid)]
+    detail_page_text = ins._fetch_html(urljoin(ins._base_url_str + "/", f"userdetails.php?id={ins.userid}"))
+    referer = f"{ins._base_url_str}/userdetails.php?id={ins.userid}"
+    if detail_page_text:
+        detail_doc = etree.HTML(detail_page_text)
+        if detail_doc is not None:
+            for tag, base in [("a", "@href"), ("form", "@action")]:
+                for pattern in ['getusertorrentlist.php', 'getusertorrentlistajax.php']:
+                    links = detail_doc.xpath(f'//{tag}[contains({base},"{pattern}")]/{base}')
+                    if links:
+                        href = links[0].strip()
+                        if 'userid' not in href:
+                            href = f'{href}{"&" if "?" in href else "?"}userid={ins.userid}&type=seeding'
+                        if href not in page_paths:
+                            page_paths.append(href)
+                        break
+    page_paths.append(f"getusertorrentlist.php?do_ajax=1&userid={ins.userid}&type=seeding")
+    for page_path in page_paths:
+        page_url = urljoin(ins._base_url_str + "/", page_path)
+        is_ajax = "ajax" in page_path.lower() or "torrentlist" in page_path.lower()
+        html_text = ins._fetch_html(page_url, referer=referer, use_ajax_headers=is_ajax)
+        if not html_text:
+            continue
+        doc = etree.HTML(html_text.replace(r'\/', '/'))
+        if doc is None:
+            continue
+        _parse_seeding_html(ins, doc, html_text)
+        if ins.seeding > 0:
+            break
+        next_url = _next_page_url(ins, doc)
+        while next_url:
+            html_text = ins._fetch_html(next_url, referer=referer)
+            if not html_text:
+                break
+            doc = etree.HTML(html_text.replace(r'\/', '/'))
+            if doc is None:
+                break
+            _parse_seeding_html(ins, doc, html_text)
+            next_url = _next_page_url(ins, doc)
 
-    def _parse_user_traffic_info(self, html_text):
-        """
-        上传/下载/分享率 [做种数/魔力值]
-        :param html_text:
-        :return:
-        """
-        pass
 
-    def _parse_user_torrent_seeding_info(self, html_text, multi_page=False):
-        """
-        做种相关信息
-        :param html_text:
-        :param multi_page: 是否多页数据
-        :return: 下页地址
-        """
-        html = etree.HTML(str(html_text).replace(r'\/', '/'))
-        if not html:
-            return None
-
-        # 直接能解析出总数
-        record_match = re.search(r'<b>(\d+)</b>条记录 Total: ([\d.]+ TB)', html_text)
-        if record_match:
-            self.seeding = StringUtils.str_int(record_match.group(1).strip()) if record_match else 0
-            self.seeding_size = StringUtils.num_filesize(record_match.group(2).strip()) if record_match else 0
-            return None
-
-        # 首页存在扩展链接，使用扩展链接
-        seeding_url_text = html.xpath('//a[contains(@href,"torrents.php") '
-                                      'and contains(@href,"seeding")]/@href')
-        if multi_page is False and seeding_url_text and seeding_url_text[0].strip():
-            self._torrent_seeding_page = seeding_url_text[0].strip()
-            return self._torrent_seeding_page
-
-        size_col = 3
-        seeders_col = 4
-        # 搜索size列
-        size_col_xpath = '//tr[position()=1]/' \
-                         'td[(img[@class="size"] and img[@alt="size"])' \
-                         ' or (text() = "大小")' \
-                         ' or (a/img[@class="size" and @alt="size"])]'
-        if html.xpath(size_col_xpath):
-            size_col = len(html.xpath(f'{size_col_xpath}/preceding-sibling::td')) + 1
-        # 搜索seeders列
-        seeders_col_xpath = '//tr[position()=1]/' \
-                            'td[(img[@class="seeders"] and img[@alt="seeders"])' \
-                            ' or (text() = "在做种")' \
-                            ' or (a/img[@class="seeders" and @alt="seeders"])]'
-        if html.xpath(seeders_col_xpath):
-            seeders_col = len(html.xpath(f'{seeders_col_xpath}/preceding-sibling::td')) + 1
-
-        page_seeding = 0
-        page_seeding_size = 0
-        page_seeding_info = []
-        # 如果 table class="torrents"，则增加table[@class="torrents"]
-        table_class = '//table[@class="torrents"]' if html.xpath('//table[@class="torrents"]') else ''
-        seeding_sizes = html.xpath(f'{table_class}//tr[position()>1]/td[{size_col}]')
-        seeding_seeders = html.xpath(f'{table_class}//tr[position()>1]/td[{seeders_col}]/b/a/text()')
-        if not seeding_seeders:
-            seeding_seeders = html.xpath(f'{table_class}//tr[position()>1]/td[{seeders_col}]//text()')
-        if seeding_sizes and seeding_seeders:
-            page_seeding = len(seeding_sizes)
-
-            for i in range(0, len(seeding_sizes)):
-                size = StringUtils.num_filesize(seeding_sizes[i].xpath("string(.)").strip())
-                seeders = StringUtils.str_int(seeding_seeders[i])
-
-                page_seeding_size += size
-                page_seeding_info.append([seeders, size])
-
-        self.seeding += page_seeding
-        self.seeding_size += page_seeding_size
-        self.seeding_info.extend(page_seeding_info)
-
-        # 是否存在下页数据
-        next_page = None
-        next_page_text = html.xpath('//a[contains(.//text(), "下一页") or contains(.//text(), "下一頁")]/@href')
-        if next_page_text:
-            next_page = next_page_text[-1].strip()
-            # fix up page url
-            if self.userid not in next_page:
-                next_page = f'{next_page}&userid={self.userid}&type=seeding'
-
-        return next_page
-
-    def _parse_user_detail_info(self, html_text):
-        """
-        解析用户额外信息，加入时间，等级
-        :param html_text:
-        :return:
-        """
-        html = etree.HTML(html_text)
-        if not html:
+def _parse_seeding_html(ins, doc, html_text):
+    ui = ins._def.user_info if isinstance(ins._def.user_info, dict) else {}
+    sc = ui.get("seeding", {})
+    total_regex = sc.get("total_regex")
+    if total_regex:
+        m = re.search(total_regex, html_text, re.I)
+        if m and m.group(1):
+            ins.seeding = max(ins.seeding or 0, StringUtils.str_int(m.group(1)))
+            if m.lastindex and m.lastindex >= 2 and m.group(2):
+                ins.seeding_size = max(ins.seeding_size or 0, StringUtils.num_filesize(m.group(2)))
             return
+    total_match = re.search(r"<b>(\d+)</b>条记录 Total: ([\d.]+ TB)", html_text)
+    if total_match:
+        ins.seeding = max(ins.seeding or 0, StringUtils.str_int(total_match.group(1)))
+        ins.seeding_size = max(ins.seeding_size or 0, StringUtils.num_filesize(total_match.group(2)))
+        return
+    total_match = re.search(r"合计<b>(\d+)</b>", html_text)
+    if total_match:
+        ins.seeding = max(ins.seeding or 0, StringUtils.str_int(total_match.group(1)))
+    list_sel = sc.get("list_selector", "")
+    if list_sel:
+        rows = doc.cssselect(list_sel)
+        if not rows:
+            rows = doc.xpath(list_sel)
+        info = json.loads(ins.seeding_info) if ins.seeding_info and ins.seeding_info != "[]" else []
+        size_sel = sc.get("size_selector", "td:nth-child(4)")
+        seeders_sel = sc.get("seeders_selector", "td:nth-child(5)")
+        for row in rows:
+            if row.xpath(".//td[contains(@class,'colhead')]") or row.xpath(".//th"):
+                continue
+            try:
+                se = row.cssselect(size_sel)
+                if not se:
+                    se = row.xpath(size_sel)
+                sd_els = row.cssselect(seeders_sel)
+                if not sd_els:
+                    sd_els = row.xpath(seeders_sel)
+                if not se:
+                    continue
+                size = StringUtils.num_filesize(se[0].xpath("string(.)").strip())
+                seeders = StringUtils.str_int(sd_els[0].xpath("string(.)").strip()) if sd_els else 0
+                ins.seeding_size += size
+                ins.seeding += 1
+                info.append([seeders, size])
+            except Exception:
+                pass
+        ins.seeding_info = json.dumps(info)
+        return
+    table_prefix = '//table[@class="torrents"]' if doc.xpath('//table[@class="torrents"]') else ''
+    size_texts = doc.xpath(f'{table_prefix}//tr[position()>1]/td[4]')
+    seeders_texts = doc.xpath(f'{table_prefix}//tr[position()>1]/td[5]/b/a/text()')
+    if not seeders_texts:
+        seeders_texts = doc.xpath(f'{table_prefix}//tr[position()>1]/td[5]//text()')
+    if not size_texts:
+        return
+    info = json.loads(ins.seeding_info) if ins.seeding_info and ins.seeding_info != "[]" else []
+    for i, sz in enumerate(size_texts):
+        size = StringUtils.num_filesize(sz.xpath("string(.)").strip())
+        sd = StringUtils.str_int(seeders_texts[i]) if i < len(seeders_texts) else 0
+        ins.seeding_size += size
+        ins.seeding += 1
+        info.append([sd, size])
+    ins.seeding_info = json.dumps(info)
 
-        self.__get_user_level(html)
 
-        self.__fixup_traffic_info(html)
+def _next_page_url(ins, doc):
+    links = doc.xpath('//a[contains(.,"下一页") or contains(.,"下一頁")]/@href')
+    if not links:
+        return None
+    next_url = links[-1].strip()
+    if ins.userid and 'userid' not in next_url:
+        next_url = f'{next_url}&userid={ins.userid}&type=seeding'
+    return urljoin(ins._base_url_str + "/", next_url)
 
-        # 加入日期
-        join_at_text = html.xpath(
-            '//tr/td[text()="加入日期" or text()="注册日期" or *[text()="加入日期"]]/following-sibling::td[1]//text()'
-            '|//div/b[text()="加入日期"]/../text()')
-        if join_at_text:
-            self.join_at = StringUtils.unify_datetime_str(join_at_text[0].split(' (')[0].strip())
 
-        # 做种体积 & 做种数
-        # seeding 页面获取不到的话，此处再获取一次
-        seeding_sizes = html.xpath('//tr/td[text()="当前上传"]/following-sibling::td[1]//'
-                                   'table[tr[1][td[4 and text()="尺寸"]]]//tr[position()>1]/td[4]')
-        seeding_seeders = html.xpath('//tr/td[text()="当前上传"]/following-sibling::td[1]//'
-                                     'table[tr[1][td[5 and text()="做种者"]]]//tr[position()>1]/td[5]//text()')
-        tmp_seeding = len(seeding_sizes)
-        tmp_seeding_size = 0
-        tmp_seeding_info = []
-        for i in range(0, len(seeding_sizes)):
-            size = StringUtils.num_filesize(seeding_sizes[i].xpath("string(.)").strip())
-            seeders = StringUtils.str_int(seeding_seeders[i])
-
-            tmp_seeding_size += size
-            tmp_seeding_info.append([seeders, size])
-
-        if not self.seeding_size:
-            self.seeding_size = tmp_seeding_size
-        if not self.seeding:
-            self.seeding = tmp_seeding
-        if not self.seeding_info:
-            self.seeding_info = tmp_seeding_info
-
-        seeding_sizes = html.xpath('//tr/td[text()="做种统计"]/following-sibling::td[1]//text()')
-        if seeding_sizes:
-            seeding_match = re.search(r"总做种数:\s+(\d+)", seeding_sizes[0], re.IGNORECASE)
-            seeding_size_match = re.search(r"总做种体积:\s+([\d,.\s]+[KMGTPI]*B)", seeding_sizes[0], re.IGNORECASE)
-            tmp_seeding = StringUtils.str_int(seeding_match.group(1)) if (
-                    seeding_match and seeding_match.group(1)) else 0
-            tmp_seeding_size = StringUtils.num_filesize(
-                seeding_size_match.group(1).strip()) if seeding_size_match else 0
-        if not self.seeding_size:
-            self.seeding_size = tmp_seeding_size
-        if not self.seeding:
-            self.seeding = tmp_seeding
-
-        self.__fixup_torrent_seeding_page(html)
-
-    def __fixup_torrent_seeding_page(self, html):
-        """
-        修正种子页面链接
-        :param html:
-        :return:
-        """
-        # 单独的种子页面
-        seeding_url_text = html.xpath('//a[contains(@href,"getusertorrentlist.php") '
-                                      'and contains(@href,"seeding")]/@href')
-        if seeding_url_text:
-            self._torrent_seeding_page = seeding_url_text[0].strip()
-        # 从JS调用种获取用户ID
-        seeding_url_text = html.xpath('//a[contains(@href, "javascript: getusertorrentlistajax") '
-                                      'and contains(@href,"seeding")]/@href')
-        csrf_text = html.xpath('//meta[@name="x-csrf"]/@content')
-        if not self._torrent_seeding_page and seeding_url_text:
-            user_js = re.search(r"javascript: getusertorrentlistajax\(\s*'(\d+)", seeding_url_text[0])
-            if user_js and user_js.group(1).strip():
-                self.userid = user_js.group(1).strip()
-                self._torrent_seeding_page = f"getusertorrentlistajax.php?userid={self.userid}&type=seeding"
-        elif seeding_url_text and csrf_text:
-            if csrf_text[0].strip():
-                self._torrent_seeding_page \
-                    = f"ajax_getusertorrentlist.php"
-                self._torrent_seeding_params = {'userid': self.userid, 'type': 'seeding', 'csrf': csrf_text[0].strip()}
-
-        # 判断是否有其他做种页面
-        # html_text = self._get_page_content(urljoin(self._base_url, self._torrent_seeding_page),
-        #                             self._torrent_seeding_params,
-        #                             self._torrent_seeding_headers)
-        # html = etree.HTML(str(html_text).replace(r'\/', '/'))
-        # if html:
-        #     seeding_url_text = html.xpath('//a[contains(@href,"usertorrentlist.php") '
-        #                                 'and contains(@href,"seeding")]/@href')
-        #     if seeding_url_text:
-        #         self._torrent_seeding_page = seeding_url_text[0].strip()
-        # 分类做种模式
-        # 临时屏蔽
-        # seeding_url_text = html.xpath('//tr/td[text()="当前做种"]/following-sibling::td[1]'
-        #                              '/table//td/a[contains(@href,"seeding")]/@href')
-        # if seeding_url_text:
-        #    self._torrent_seeding_page = seeding_url_text
-
-    def __get_user_level(self, html):
-        # 等级 获取同一行等级数据，图片格式等级，取title信息，否则取文本信息
-        user_levels_text = html.xpath('//tr/td[text()="等級" or text()="等级" or *[text()="等级"]]/'
-                                      'following-sibling::td[1]/img[1]/@title')
-        if user_levels_text:
-            self.user_level = user_levels_text[0].strip()
-            return
-
-        user_levels_text = html.xpath('//tr/td[text()="等級" or text()="等级"]/'
-                                      'following-sibling::td[1 and not(img)]'
-                                      '|//tr/td[text()="等級" or text()="等级"]/'
-                                      'following-sibling::td[1 and img[not(@title)]]')
-        if user_levels_text:
-            self.user_level = user_levels_text[0].xpath("string(.)").strip()
-            return
-
-        user_levels_text = html.xpath('//tr/td[text()="等級" or text()="等级"]/'
-                                      'following-sibling::td[1]')
-        if user_levels_text:
-            self.user_level = user_levels_text[0].xpath("string(.)").strip()
-            return
-
-        user_levels_text = html.xpath('//a[contains(@href, "userdetails")]/text()')
-        if not self.user_level and user_levels_text:
-            for user_level_text in user_levels_text:
-                user_level_match = re.search(r"\[(.*)]", user_level_text)
-                if user_level_match and user_level_match.group(1).strip():
-                    self.user_level = user_level_match.group(1).strip()
-                    break
-
-    def _parse_message_unread_links(self, html_text, msg_links):
-        html = etree.HTML(html_text)
-        if not html:
-            return None
-
-        message_links = html.xpath('//tr[not(./td/img[@alt="Read"])]/td/a[contains(@href, "viewmessage")]/@href')
-        msg_links.extend(message_links)
-        # 是否存在下页数据
-        next_page = None
-        next_page_text = html.xpath('//a[contains(.//text(), "下一页") or contains(.//text(), "下一頁")]/@href')
-        if next_page_text:
-            next_page = next_page_text[-1].strip()
-
-        return next_page
-
-    def _parse_message_content(self, html_text):
-        html = etree.HTML(html_text)
-        if not html:
-            return None, None, None
-        # 标题
-        message_head_text = None
-        message_head = html.xpath('//h1/text()'
-                                  '|//div[@class="layui-card-header"]/span[1]/text()')
-        if message_head:
-            message_head_text = message_head[-1].strip()
-
-        # 消息时间
-        message_date_text = None
-        message_date = html.xpath('//h1/following-sibling::table[.//tr/td[@class="colhead"]]//tr[2]/td[2]'
-                                  '|//div[@class="layui-card-header"]/span[2]/span[2]')
-        if message_date:
-            message_date_text = message_date[0].xpath("string(.)").strip()
-
-        # 消息内容
-        message_content_text = None
-        message_content = html.xpath('//h1/following-sibling::table[.//tr/td[@class="colhead"]]//tr[3]/td'
-                                     '|//div[contains(@class,"layui-card-body")]')
-        if message_content:
-            message_content_text = message_content[0].xpath("string(.)").strip()
-
-        return message_head_text, message_date_text, message_content_text
-
-    def __fixup_traffic_info(self, html):
-        # fixup bonus
-        if not self.bonus:
-            bonus_text = html.xpath('//tr/td[text()="魔力值" or text()="猫粮"]/following-sibling::td[1]/text()')
-            if bonus_text:
-                self.bonus = StringUtils.str_float(bonus_text[0].strip())
+def _parse_detail(ins):
+    if not ins.userid:
+        return
+    page_url = urljoin(ins._base_url_str + "/", f"userdetails.php?id={ins.userid}")
+    html_text = ins._fetch_html(page_url)
+    if not html_text:
+        return
+    doc = etree.HTML(html_text)
+    if doc is None:
+        return
+    level = doc.xpath('//tr/td[text()="等級" or text()="等级" or *[text()="等级"]]/following-sibling::td[1]/img[1]/@title')
+    if level:
+        ins.user_level = level[0].strip()
+    else:
+        level = doc.xpath('//tr/td[text()="等級" or text()="等级"]/following-sibling::td[1 and not(img)]'
+                         '|//tr/td[text()="等級" or text()="等级"]/following-sibling::td[1 and img[not(@title)]]')
+        if level:
+            ins.user_level = level[0].xpath("string(.)").strip()
+    if not ins.user_level:
+        level = doc.xpath('//a[contains(@href,"userdetails")]/text()')
+        for l in (level or []):
+            m = re.search(r"\[(.*)]", l)
+            if m and m.group(1):
+                ins.user_level = m.group(1).strip()
+                break
+    join = doc.xpath('//tr/td[text()="加入日期" or text()="注册日期" or *[text()="加入日期"]]/following-sibling::td[1]//text()'
+                    '|//div/b[text()="加入日期"]/../text()')
+    if join:
+        ins.join_at = StringUtils.unify_datetime_str(join[0].split(' (')[0].strip())
+    if not ins.bonus:
+        ui = ins._def.user_info if isinstance(ins._def.user_info, dict) else {}
+        labels = ui.get("bonus_labels", ["魔力值", "猫粮"])
+        if not isinstance(labels, list):
+            labels = [labels]
+        cond = " or ".join(f'text()="{l}"' for l in labels)
+        bonus = doc.xpath(f'//tr/td[{cond}]/following-sibling::td[1]/text()')
+        if bonus:
+            ins.bonus = StringUtils.str_float(bonus[0].strip())

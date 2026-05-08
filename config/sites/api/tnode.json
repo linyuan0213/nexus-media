@@ -1,0 +1,105 @@
+{
+  "id": "tnode",
+  "name": "Zhuque",
+  "domain": "zhuque.in",
+  "domain_aliases": ["zhuque.in"],
+  "tid_pattern": "\\d+",
+  "detail_page_url": "/torrent/info/{tid}",
+  "encoding": "UTF-8",
+  "public": false,
+  "api": {
+    "base_url": "https://zhuque.in",
+    "auth": {
+      "type": "csrf",
+      "header_name": "X-CSRF-TOKEN",
+      "token_source": "cookie",
+      "csrf_url": "{domain}",
+      "csrf_selector": "<meta name=\"x-csrf-token\" content=\"(.+?)\">",
+      "csrf_selector_type": "regex"
+    },
+    "endpoints": {
+      "search": {
+        "method": "POST",
+        "path": "/api/torrent/advancedSearch",
+        "body": {
+          "page": "{page_1}",
+          "size": 100,
+          "type": "title",
+          "keyword": "{keyword}",
+          "sorter": "id",
+          "order": "desc",
+          "tags": [],
+          "category": [501, 502, 503, 504],
+          "medium": [],
+          "videoCoding": [],
+          "audioCoding": [],
+          "resolution": [],
+          "group": []
+        },
+        "response": {
+          "items_key": "data.torrents",
+          "item_mapping": {
+            "title": {"source": "title"},
+            "description": {"source": "subtitle"},
+            "size": {"source": "size"},
+            "seeders": {"source": "seeding"},
+            "leechers": {"source": "leeching"},
+            "grabs": {"source": "complete"},
+            "pubdate": {"source": "upload_time", "transform": "timestamp_to_date"},
+            "downloadvolumefactor": {"source": "downloadRate"},
+            "uploadvolumefactor": {"source": "uploadRate"},
+            "imdbid": {"source": "imdb"},
+            "enclosure": {
+              "type": "template",
+              "value": "{domain}/api/torrent/download/{tid}",
+              "fields": {"domain": "domain", "tid": "id"}
+            },
+            "page_url": {
+              "type": "template",
+              "value": "/torrent/info/{tid}",
+              "fields": {"tid": "id"}
+            }
+          }
+        }
+      },
+      "test_connection": {
+        "method": "GET",
+        "path": "/"
+      },
+      "user_info": {
+        "method": "GET",
+        "path": "/api/user/info"
+      }
+    }
+  },
+  "user_info": {
+    "type": "api",
+    "profile": {
+      "method": "GET",
+      "path": "/api/user/getMainInfo",
+      "response": {
+        "field_mapping": {
+          "username": {"source": "data.username"},
+          "userid": {"source": "data.id"},
+          "upload": {"source": "data.upload", "type": "int"},
+          "download": {"source": "data.download", "type": "int"},
+          "seeding": {"source": "data.seeding", "type": "int"},
+          "seeding_size": {"source": "data.seedSize", "type": "int"},
+          "leeching": {"source": "data.leeching", "type": "int"},
+          "bonus": {"source": "data.bonus", "type": "float"},
+          "user_level": {"source": "data.class.name"},
+          "join_at": {"source": "data.regTime", "transform": "timestamp_to_date"},
+          "message_unread": {"source": "data.unreadAdmin", "type": "int"}
+        }
+      }
+    }
+  },
+  "torrent_attr": {
+    "method": "GET",
+    "path": "/api/torrent/info/{tid}",
+    "response": {
+      "free_key": "data.discount",
+      "free_value": "FREE"
+    }
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nas-tools/schema/site-api.schema.json",
+  "title": "API 站点定义 Schema",
+  "description": "通过 HTTP API 进行搜索的站点定义格式",
+  "type": "object",
+  "required": ["id", "name", "domain", "api"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "站点唯一标识符，如 mteam、yemapt"
+    },
+    "name": {
+      "type": "string",
+      "description": "站点显示名称，如 M-Team、好多油"
+    },
+    "domain": {
+      "type": "string",
+      "description": "主域名，用于 URL 匹配"
+    },
+    "domain_aliases": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "域名别名列表，用于子域名归一化"
+    },
+    "encoding": {
+      "type": "string",
+      "default": "UTF-8"
+    },
+    "public": {
+      "type": "boolean",
+      "default": false,
+      "description": "是否公开站点（BT 站）"
+    },
+    "language": {
+      "type": "string",
+      "description": "站点语言过滤，如 en、zh"
+    },
+    "tid_pattern": {
+      "type": "string",
+      "default": "\\d+",
+      "description": "从 URL 提取种子 ID 的正则表达式"
+    },
+    "detail_page_url": {
+      "type": "string",
+      "description": "种子详情页 URL 模板，如 /detail/{tid}"
+    },
+    "api": {
+      "type": "object",
+      "required": ["base_url", "auth", "endpoints"],
+      "properties": {
+        "base_url": {"type": "string", "description": "API 基础地址"},
+        "auth": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": {"enum": ["api_key", "bearer", "cookie", "csrf", "passkey", "token"]},
+            "header_name": {"type": "string"},
+            "token_source": {"type": "string"},
+            "csrf_url": {"type": "string"},
+            "csrf_selector": {"type": "string"}
+          }
+        },
+        "endpoints": {
+          "type": "object",
+          "required": ["search"],
+          "properties": {
+            "search": {"$ref": "#/definitions/endpoint"},
+            "detail": {"$ref": "#/definitions/endpoint"},
+            "test_connection": {"$ref": "#/definitions/endpoint"},
+            "user_info": {"$ref": "#/definitions/endpoint"}
+          }
+        }
+      }
+    },
+    "download": {"$ref": "#/definitions/download_config"},
+    "subtitle": {"$ref": "#/definitions/subtitle_config"}
+  },
+
+  "definitions": {
+    "endpoint": {
+      "type": "object",
+      "required": ["method", "path"],
+      "properties": {
+        "method": {"enum": ["GET", "POST"]},
+        "path": {"type": "string"},
+        "params": {"type": "object"},
+        "body": {"type": "object"},
+        "mode_mapping": {
+          "type": "object",
+          "description": "媒体类型到请求参数的映射（MOVIE/TV/ANIME → body/params 覆盖）"
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "total_key": {"type": "string", "description": "响应中总数的 JSON 路径"},
+            "items_key": {"type": "string", "description": "响应中列表的 JSON 路径"},
+            "item_mapping": {
+              "type": "object",
+              "properties": {
+                "title": {"$ref": "#/definitions/field_mapping"},
+                "description": {"$ref": "#/definitions/field_mapping"},
+                "details": {"$ref": "#/definitions/field_mapping"},
+                "download": {"$ref": "#/definitions/field_mapping"},
+                "size": {"$ref": "#/definitions/field_mapping"},
+                "seeders": {"$ref": "#/definitions/field_mapping"},
+                "leechers": {"$ref": "#/definitions/field_mapping"},
+                "grabs": {"$ref": "#/definitions/field_mapping"},
+                "imdbid": {"$ref": "#/definitions/field_mapping"},
+                "uploadvolumefactor": {"$ref": "#/definitions/field_mapping"},
+                "downloadvolumefactor": {"$ref": "#/definitions/field_mapping"},
+                "labels": {"$ref": "#/definitions/field_mapping"},
+                "date_elapsed": {"$ref": "#/definitions/field_mapping"},
+                "category": {"$ref": "#/definitions/field_mapping"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "field_mapping": {
+      "type": "object",
+      "properties": {
+        "source": {"type": "string", "description": "JSON 路径，点号分隔"},
+        "type": {"enum": ["mapping", "api", "constant", "template", "html"]},
+        "method": {"enum": ["GET", "POST"]},
+        "path": {"type": "string"},
+        "body": {"type": "object"},
+        "response_key": {"type": "string"},
+        "map": {"type": "object"},
+        "transform": {"type": "string"},
+        "filters": {"type": "array"},
+        "selector": {"type": "string"},
+        "attribute": {"type": "string"}
+      }
+    },
+    "download_config": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {"enum": ["api", "api_chained", "template", "html"]},
+        "method": {"enum": ["GET", "POST"]},
+        "path": {"type": "string"},
+        "body": {"type": "object"},
+        "response_key": {"type": "string"},
+        "params": {"type": "object"}
+      }
+    },
+    "subtitle_config": {
+      "type": "object",
+      "properties": {
+        "type": {"enum": ["api", "html"]},
+        "list": {"$ref": "#/definitions/endpoint"},
+        "genlink": {"$ref": "#/definitions/endpoint"},
+        "download": {"$ref": "#/definitions/endpoint"}
+      }
+    }
+  }
+}

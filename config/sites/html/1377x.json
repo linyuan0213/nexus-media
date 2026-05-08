@@ -1,0 +1,54 @@
+{
+  "id": "1377x",
+  "name": "1377x",
+  "domain": "https://www.1377x.to",
+  "encoding": "UTF-8",
+  "public": true,
+  "html": {
+    "search": {
+      "paths": [
+        {"path": "/search/{keyword}/{page_1}/", "method": "get"}
+      ]
+    },
+    "browse": {
+      "path": "/trending",
+      "start": 1
+    },
+    "parser_type": "flat",
+    "torrents": {
+      "list": {
+        "selector": "table.table-list tbody tr"
+      },
+      "fields": {
+        "title": {
+          "selector": "td.coll-1.name a:last-child"
+        },
+        "details": {
+          "selector": "td.coll-1.name a:last-child",
+          "attribute": "href"
+        },
+        "size": {
+          "selector": "td.coll-4"
+        },
+        "seeders": {
+          "selector": "td.coll-2"
+        },
+        "leechers": {
+          "selector": "td.coll-3"
+        },
+        "downloadvolumefactor": {
+          "case": {"*": 0}
+        },
+        "uploadvolumefactor": {
+          "case": {"*": 1}
+        }
+      }
+    }
+  },
+  "download": {
+    "type": "html",
+    "selectors": {
+      "download": {"xpath": "//a[starts-with(@href,\"magnet:\")]/@href"}
+    }
+  }
+}

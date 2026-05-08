@@ -1,0 +1,52 @@
+{
+  "id": "0magnet",
+  "name": "0Magnet",
+  "domain": "https://0magnet.com",
+  "encoding": "UTF-8",
+  "public": true,
+  "html": {
+    "search": {
+      "paths": [
+        {"path": "/search", "method": "get"}
+      ],
+      "params": {
+        "q": "{keyword}"
+      }
+    },
+    "browse": {
+      "path": "/listing?page={page}",
+      "start": 1
+    },
+    "torrents": {
+      "list": {
+        "selector": "table.table-hover.file-list tr"
+      },
+      "fields": {
+        "title": {
+          "selector": "td:nth-child(1) a"
+        },
+        "details": {
+          "selector": "td:nth-child(1) a",
+          "attribute": "href"
+        },
+        "size": {
+          "selector": "td:nth-child(2)"
+        },
+        "seeders": {"type": "constant", "value": 0},
+        "leechers": {"type": "constant", "value": 0},
+        "downloadvolumefactor": {
+          "case": {"*": 0}
+        },
+        "uploadvolumefactor": {
+          "case": {"*": 1}
+        }
+      }
+    }
+  },
+  "download": {
+    "type": "html",
+    "selectors": {
+      "download": {"xpath": "//a[contains(@href,\"magnet:\")]/@href"}
+    }
+  }
+}

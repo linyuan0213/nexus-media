@@ -1,0 +1,112 @@
+{
+  "id": "rousi",
+  "name": "Rousi",
+  "domain": "rousi.pro",
+  "domain_aliases": [],
+  "tid_pattern": "[a-f0-9-]{36}",
+  "detail_page_url": "/torrent/{uuid}",
+  "encoding": "UTF-8",
+  "public": false,
+  "api": {
+    "base_url": "https://rousi.pro",
+    "auth": {
+      "type": "bearer",
+      "header_name": "Authorization"
+    },
+    "endpoints": {
+      "search": {
+        "method": "GET",
+        "path": "/api/v1/torrents",
+        "params": {
+          "page": "{page_1}",
+          "page_size": 100,
+          "keyword": "{keyword}"
+        },
+        "mode_mapping": {
+          "MOVIE": {"category": "movie"},
+          "TV": {"category": "tv"}
+        },
+        "response": {
+          "items_key": "data.torrents",
+          "item_mapping": {
+            "title": {"source": "title"},
+            "description": {"source": "subtitle"},
+            "size": {"source": "size"},
+            "seeders": {"source": "seeders"},
+            "leechers": {"source": "leechers"},
+            "grabs": {"source": "downloads"},
+            "pubdate": {"source": "created_at", "transform": "utc_to_local"},
+            "downloadvolumefactor": {
+              "type": "mapping",
+              "source": "promotion.down_multiplier",
+              "map": {"0.0": 0.0}
+            },
+            "uploadvolumefactor": {
+              "type": "mapping",
+              "source": "promotion.up_multiplier",
+              "map": {"2.0": 2.0}
+            },
+            "enclosure": {
+              "type": "template",
+              "value": "{base}/api/torrent/{uuid}/download/{apikey}",
+              "fields": {
+                "base": "base_url",
+                "uuid": "uuid",
+                "apikey": "apikey"
+              }
+            },
+            "page_url": {
+              "type": "template",
+              "value": "/torrent/{uuid}",
+              "fields": {"uuid": "uuid"}
+            }
+          }
+        }
+      },
+      "detail": {
+        "method": "GET",
+        "path": "/api/v1/torrents/{tid}"
+      },
+      "test_connection": {
+        "method": "GET",
+        "path": "/api/v1/torrents",
+        "params": {"page": 1, "page_size": 1}
+      },
+      "user_info": {
+        "method": "GET",
+        "path": "/api/v1/user"
+      }
+    }
+  },
+  "user_info": {
+    "type": "api",
+    "profile": {
+      "method": "GET",
+      "path": "/api/v1/profile?include_fields[user]=seeding_leeching_data",
+      "response": {
+        "field_mapping": {
+          "username": {"source": "data.username"},
+          "userid": {"source": "data.id"},
+          "upload": {"source": "data.uploaded", "type": "int"},
+          "download": {"source": "data.downloaded", "type": "int"},
+          "bonus": {"source": "data.karma", "type": "float"},
+          "user_level": {"source": "data.level_text"},
+          "join_at": {"source": "data.registered_at"},
+          "seeding": {"source": "data.seeding_leeching_data.seeding_count", "type": "int"},
+          "leeching": {"source": "data.seeding_leeching_data.leeching_count", "type": "int"},
+          "seeding_size": {"source": "data.seeding_leeching_data.seeding_size", "type": "int"},
+          "leeching_size": {"source": "data.seeding_leeching_data.leeching_size", "type": "int"}
+        }
+      }
+    }
+  },
+  "torrent_attr": {
+    "method": "GET",
+    "path": "/api/v1/torrents/{tid}",
+    "response": {
+      "free_key": "data.promotion.down_multiplier",
+      "free_value": "0.0",
+      "peer_count_key": "data.seeders"
+    }
+  }
+}

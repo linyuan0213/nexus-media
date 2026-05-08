@@ -1,0 +1,44 @@
+{
+  "id": "firefly",
+  "name": "FireFly",
+  "domain": "firefly.im",
+  "domain_aliases": [],
+  "tid_pattern": "\\d+",
+  "detail_page_url": "/p_torrent/video_detail.php?tid={tid}",
+  "encoding": "UTF-8",
+  "public": false,
+  "html": {
+    "parser_type": "nested",
+    "search": {
+      "paths": [{"path": "/p_torrent/video_list_g.php", "method": "get"}],
+      "params": {
+        "cat": "{cat}",
+        "search": "{keyword}",
+        "area": "name",
+        "column": "g_last_upload_date",
+        "sort": "desc",
+        "btn_search": "搜索"
+      }
+    },
+    "torrents": {
+      "container_xpath": "//table[contains(@class, 'gm_table')]",
+      "row_xpath": ".//tr[@id='gm_tr_item']",
+      "container_fields": {
+        "imdbid": {"xpath": ".//*[@id='gm_td_title']/a[contains(@href, 'imdb')]/@href", "filters": [{"name": "regex", "args": ["tt\\d+", 0]}]},
+        "description": {"xpath": ".//*[@id='gm_td_title']/div[@id='gm_div_title']/text()"}
+      },
+      "fields": {
+        "tid": {"xpath": ".//div[@id='gm_div_name']/a/@href", "filters": [{"name": "regex", "args": ["tid=(\\d+)", 1]}]},
+        "title": {"xpath": ".//div[@id='gm_div_name']/a/text()"},
+        "labels": {"xpath": ".//span[@class='tag']/text()", "join": "|"},
+        "enclosure": {"xpath": ".//td[@id='gm_td_icon']/div/a[contains(@href, 'download')]/@href", "replace": {"../": "{domain}/"}},
+        "pubdate": {"xpath": ".//td[@id='gm_td_user']/text()"},
+        "size": {"xpath": ".//td[@id='gm_td_size']/text()", "transform": "num_filesize_B"},
+        "seeders": {"xpath": ".//span[@id='user_info' and a/img[contains(@title, '做种数')]]/a/text()", "filters": [{"name": "strip"}]},
+        "leechers": {"xpath": ".//span[@id='user_info' and a/img[contains(@title, '下载数')]]/a/text()", "filters": [{"name": "strip"}]},
+        "downloadvolumefactor": {"xpath": ".//span[@id='free']", "if_present": 0.0},
+        "page_url": {"template": "/p_torrent/video_detail.php?tid={tid}"}
+      }
+    }
+  }
+}

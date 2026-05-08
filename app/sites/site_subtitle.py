@@ -8,6 +8,7 @@ from lxml import etree
 import log
 from app.sites.sites import Sites
 from app.sites.siteconf import SiteConf
+from app.sites.engine import SiteEngine
 from app.helper import SiteHelper
 from app.utils import RequestUtils, StringUtils, PathUtils, ExceptionUtils
 from app.utils.temp_manager import temp_manager
@@ -43,9 +44,10 @@ class SiteSubtitle:
         if self.sites.check_ratelimit(site_id):
             return
 
-        # 检查是否为 m-team 站点
-        if 'm-team' in media_info.page_url:
-            self._download_mteam_subtitle(media_info, site_id, cookie, ua, download_dir)
+        engine = SiteEngine.get_instance()
+        site_def = engine.get_by_url(media_info.page_url)
+        if site_def and site_def.subtitle:
+            engine.resolve_subtitle(media_info.page_url, None, download_dir)
             return
 
         # 读取网站代码

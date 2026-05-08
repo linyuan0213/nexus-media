@@ -76,6 +76,68 @@ class SiteRepositoryAdapter(ISiteRepository):
         """更新站点Cookie和UA"""
         self._repo.update_site_cookie_ua(site_id, cookie, ua)
 
+    def get_site_user_statistics(self, strict_urls=None, num=100):
+        return self._repo.get_site_user_statistics(strict_urls=strict_urls, num=num)
+
+    def update_site_user_statistics(self, site_user_infos):
+        self._repo.update_site_user_statistics(site_user_infos)
+
+    def update_site_favicon(self, site_user_infos):
+        self._repo.update_site_favicon(site_user_infos)
+
+    def update_site_seed_info(self, site_user_infos):
+        self._repo.update_site_seed_info(site_user_infos)
+
+    def get_site_user_seeding_info(self, site):
+        return self._repo.get_site_seeding_info(site=site)
+
+    def get_config_site(self):
+        return self._repo.get_config_site()
+
+    def get_site_favicons(self):
+        return self._repo.get_site_favicons()
+
+    def insert_config_site(self, name, site_pri, rssurl=None, signurl=None, cookie=None,
+                           note=None, rss_uses=None):
+        return self._repo.insert_config_site(name=name, site_pri=site_pri,
+                                             rssurl=rssurl, signurl=signurl,
+                                             cookie=cookie, note=note, rss_uses=rss_uses)
+
+    def update_config_site(self, tid, name, site_pri, rssurl, signurl, cookie, note, rss_uses):
+        return self._repo.update_config_site(tid=tid, name=name, site_pri=site_pri,
+                                             rssurl=rssurl, signurl=signurl,
+                                             cookie=cookie, note=note, rss_uses=rss_uses)
+
+    def delete_config_site(self, siteid):
+        return self._repo.delete_config_site(siteid)
+
+    def update_config_site_note(self, tid, note):
+        return self._repo.update_config_site_note(tid=tid, note=note)
+
+    def get_site_by_id(self, tid):
+        return self._repo.get_site_by_id(tid=tid)
+
+    def insert_site_statistics_history(self, site_user_infos):
+        self._repo.insert_site_statistics_history(site_user_infos)
+
+    def get_site_statistics_recent_sites(self, days, end_day=None, strict_urls=None):
+        return self._repo.get_site_statistics_recent_sites(days=days, end_day=end_day, strict_urls=strict_urls)
+
+    def get_site_statistics_history(self, site, days=730):
+        return self._repo.get_site_statistics_history(site=site, days=days)
+
+    def get_site_seeding_info(self, site):
+        return self._repo.get_site_seeding_info(site=site)
+
+    def update_site_user_statistics_site_name(self, new_name, old_name):
+        self._repo.update_site_user_statistics_site_name(new_name, old_name)
+
+    def update_site_seed_info_site_name(self, new_name, old_name):
+        self._repo.update_site_seed_info_site_name(new_name, old_name)
+
+    def update_site_statistics_site_name(self, new_name, old_name):
+        self._repo.update_site_statistics_site_name(new_name, old_name)
+
 
 class SiteRepositoryImpl(BaseRepository):
     """

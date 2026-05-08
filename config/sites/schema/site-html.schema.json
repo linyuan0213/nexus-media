@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nas-tools/schema/site-html.schema.json",
+  "title": "HTML 站点定义 Schema",
+  "description": "通过 HTML 抓取进行搜索的站点定义格式（从 sites.dat indexer 迁移）",
+  "type": "object",
+  "required": ["id", "name", "domain", "html"],
+  "properties": {
+    "id": {"type": "string"},
+    "name": {"type": "string"},
+    "domain": {"type": "string"},
+    "domain_aliases": {"type": "array", "items": {"type": "string"}},
+    "encoding": {"type": "string", "default": "UTF-8"},
+    "public": {"type": "boolean", "default": false},
+    "language": {"type": "string"},
+    "tid_pattern": {"type": "string", "default": "\\d+"},
+    "detail_page_url": {"type": "string"},
+    "download": {"$ref": "site-api.schema.json#/definitions/download_config"},
+
+    "html": {
+      "type": "object",
+      "required": ["search", "torrents", "category"],
+      "properties": {
+        "search": {
+          "type": "object",
+          "required": ["paths"],
+          "properties": {
+            "paths": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": {"type": "string"},
+                  "method": {"enum": ["get", "post"]}
+                }
+              }
+            },
+            "params": {"type": "object"},
+            "batch": {
+              "type": "object",
+              "properties": {
+                "delimiter": {"type": "string"},
+                "space_replace": {"type": "string"}
+              }
+            }
+          }
+        },
+        "category": {
+          "type": "object",
+          "properties": {
+            "movie": {"type": "array", "items": {"$ref": "#/definitions/category_item"}},
+            "tv": {"type": "array", "items": {"$ref": "#/definitions/category_item"}},
+            "anime": {"type": "array", "items": {"$ref": "#/definitions/category_item"}}
+          }
+        },
+        "torrents": {
+          "type": "object",
+          "required": ["list", "fields"],
+          "properties": {
+            "list": {
+              "type": "object",
+              "properties": {
+                "selector": {"type": "string", "description": "列表行的 CSS/XPath 选择器"}
+              }
+            },
+            "fields": {
+              "type": "object",
+              "properties": {
+                "id": {"$ref": "#/definitions/html_field"},
+                "title": {"$ref": "#/definitions/html_field"},
+                "details": {"$ref": "#/definitions/html_field"},
+                "download": {"$ref": "#/definitions/html_field"},
+                "poster": {"$ref": "#/definitions/html_field"},
+                "size": {"$ref": "#/definitions/html_field"},
+                "seeders": {"$ref": "#/definitions/html_field"},
+                "leechers": {"$ref": "#/definitions/html_field"},
+                "grabs": {"$ref": "#/definitions/html_field"},
+                "date_elapsed": {"$ref": "#/definitions/html_field"},
+                "date_added": {"$ref": "#/definitions/html_field"},
+                "downloadvolumefactor": {"$ref": "#/definitions/html_field"},
+                "uploadvolumefactor": {"$ref": "#/definitions/html_field"},
+                "free_deadline": {"$ref": "#/definitions/html_field"},
+                "imdbid": {"$ref": "#/definitions/html_field"},
+                "description": {"$ref": "#/definitions/html_field"},
+                "labels": {"$ref": "#/definitions/html_field"},
+                "category": {"$ref": "#/definitions/html_field"},
+                "title_default": {"$ref": "#/definitions/html_field"},
+                "title_optional": {"$ref": "#/definitions/html_field"},
+                "subject": {"$ref": "#/definitions/html_field"},
+                "tags": {"$ref": "#/definitions/html_field"}
+              }
+            }
+          }
+        },
+        "conf": {
+          "type": "object",
+          "description": "种子属性抓取规则（FREE/2XFREE/HR/PEER_COUNT）",
+          "properties": {
+            "FREE": {"type": "array", "items": {"type": "string"}},
+            "2XFREE": {"type": "array", "items": {"type": "string"}},
+            "HR": {"type": "array", "items": {"type": "string"}},
+            "PEER_COUNT": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      }
+    }
+  },
+
+  "definitions": {
+    "category_item": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "integer"},
+        "cat": {"type": "string"},
+        "desc": {"type": "string"},
+        "default": {"type": "boolean"}
+      }
+    },
+    "html_field": {
+      "type": "object",
+      "properties": {
+        "selector": {"type": "string", "description": "CSS/XPath 选择器"},
+        "attribute": {"type": "string", "description": "提取的属性名，如 href、src"},
+        "text": {"type": "string", "description": "Jinja2 模板文本"},
+        "case": {"type": "object", "description": "条件映射表"},
+        "contents": {"type": "string", "description": "内容提取方式"},
+        "remove": {"type": "string"},
+        "optional": {"type": "boolean"},
+        "filters": {"type": "array"},
+        "default_value": {"type": "string"},
+        "default_value_format": {"type": "string"}
+      }
+    }
+  }
+}

@@ -114,7 +114,6 @@ class SiteRepository(BaseRepository):
 
     # ==================== Site User Statistics ====================
 
-    @DbPersist(BaseRepository._db)
     def update_site_user_statistics_site_name(self, new_name, old_name):
         """
         更新站点用户数据中站点名称

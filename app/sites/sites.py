@@ -1,18 +1,17 @@
 import json
 from datetime import datetime
 from time import sleep
+from typing import Optional
 
 import log
 from app.helper import SiteHelper, DrissionPageHelper
-from app.db.repositories import SiteRepository
 from app.message import Message
+from app.sites.engine import SiteEngine
 from app.sites.site_limiter import SiteRateLimiter
 from app.utils import RequestUtils, StringUtils, JsonUtils
-from app.utils.commons import SingletonMeta
-from config import Config
-from app.core.constants import MT_URL
 from app.utils.config_tools import get_proxies
 from app.utils.config_tools import get_ua
+from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 
 
 class Sites:
@@ -35,7 +34,7 @@ class Sites:
         self.init_config()
 
     def init_config(self):
-        self.site_repo = SiteRepository()
+        self.site_repo = SiteRepositoryAdapter()
         self.message = Message()
         # 原始站点列表
         self._sites = []
@@ -59,7 +58,7 @@ class Sites:
         self._sites = self.site_repo.get_config_site()
         for site in self._sites:
             # 站点属性
-            site_note = self.__get_site_note_items(site.NOTE)
+            site_note: dict = self.__get_site_note_items(site.NOTE)  # type: ignore[attr-defined]
             # 站点用途：Q签到、D订阅、S刷流
             site_rssurl = site.RSSURL
             site_signurl = site.SIGNURL
@@ -81,8 +80,9 @@ class Sites:
                 brush_enable = False
                 statistic_enable = False
             strict_url = ''
-            if 'm-team' in site_signurl or (site_rssurl and 'm-team' in site_rssurl):
-                strict_url = MT_URL
+            site_def = SiteEngine.get_instance().get_by_url(site_signurl or site_rssurl or "")
+            if site_def and site_def.api:
+                strict_url = site_def.api.base_url
             else:
                 strict_url = StringUtils.get_base_url(site_signurl or site_rssurl)
 
@@ -126,8 +126,9 @@ class Sites:
             # 以ID存储
             self._siteByIds[site.ID] = site_info
             # 以域名存储
-            if 'm-team' in site_signurl or (site_rssurl and 'm-team' in site_rssurl):
-                site_strict_url = StringUtils.get_url_domain(MT_URL)
+            site_def = SiteEngine.get_instance().get_by_url(site.SIGNURL or site.RSSURL or "")
+            if site_def and site_def.api:
+                site_strict_url = StringUtils.get_url_domain(site_def.api.base_url)
             else:
                 site_strict_url = StringUtils.get_url_domain(
                     site.SIGNURL or site.RSSURL)
@@ -135,14 +136,11 @@ class Sites:
                 self._siteByUrls[site_strict_url] = site_info
             # 初始化站点限速器
             self._limiters[site.ID] = SiteRateLimiter(
-                limit_interval=int(site_note.get("limit_interval")) * 60 if site_note.get("limit_interval") and str(
-                    site_note.get("limit_interval")).isdigit() and site_note.get("limit_count") and str(
-                    site_note.get("limit_count")).isdigit() else None,
-                limit_count=int(site_note.get("limit_count")) if site_note.get("limit_interval") and str(
-                    site_note.get("limit_interval")).isdigit() and site_note.get("limit_count") and str(
-                    site_note.get("limit_count")).isdigit() else None,
-                limit_seconds=int(site_note.get("limit_seconds")) if site_note.get("limit_seconds") and str(
-                    site_note.get("limit_seconds")).isdigit() else None
+                limit_interval=Sites._rate_limit_val(site_note, "limit_interval", multiplier=60,
+                                               require_fields=["limit_count"]),
+                limit_count=Sites._rate_limit_val(site_note, "limit_count",
+                                            require_fields=["limit_interval"]),
+                limit_seconds=Sites._rate_limit_val(site_note, "limit_seconds"),
             )
 
     def init_favicons(self):
@@ -165,8 +163,9 @@ class Sites:
         if siteid:
             return self._siteByIds.get(int(siteid)) or {}
         if siteurl:
-            if 'm-team' in siteurl:
-                siteurl = MT_URL
+            site_def = SiteEngine.get_instance().get_by_url(siteurl)
+            if site_def and site_def.api:
+                siteurl = site_def.api.base_url
             return self._siteByUrls.get(StringUtils.get_url_domain(siteurl)) or {}
 
         ret_sites = []
@@ -291,34 +290,31 @@ class Sites:
         site_info = self.get_sites(siteid=site_id)
         if not site_info:
             return False, "站点不存在", 0
-        
-        # 判断是否为公开站点（BT站点）
+
         is_public = site_info.get("public", False)
-        
-        # 对于公开站点（BT站点），只需要测试RSS地址是否可访问
+        site_cookie = site_info.get("cookie")
+        headers = site_info.get("headers")
+        ua = site_info.get("ua") or get_ua()
+        proxy = site_info.get("proxy")
+        chrome = site_info.get("chrome")
+
+        site_url = StringUtils.get_base_url(
+            site_info.get("signurl") or site_info.get("rssurl"))
+        if not site_url:
+            return False, "未配置站点地址", 0
+
         if is_public:
-            site_url = StringUtils.get_base_url(
-                site_info.get("rssurl") or site_info.get("signurl"))
-            if not site_url:
-                return False, "未配置站点地址", 0
-            
-            # 计时
             start_time = datetime.now()
             res = RequestUtils(
-                proxies=get_proxies() if site_info.get("proxy") else None
+                proxies=get_proxies() if proxy else None
             ).get_res(url=site_url)
             seconds = round((datetime.now() - start_time).total_seconds(), 3)
-            
             if res and res.status_code == 200:
                 return True, "连接成功", seconds
             elif res is not None:
                 return False, f"连接失败，状态码：{res.status_code}", seconds
-            else:
-                return False, "无法打开网站", seconds
-        
-        # 对于私有站点（PT站点），需要Cookie或headers
-        site_cookie = site_info.get("cookie")
-        headers = site_info.get("headers")
+            return False, "无法打开网站", seconds
+
         if not site_cookie and not headers:
             return False, "未配置站点Cookie或headers", 0
 
@@ -326,70 +322,42 @@ class Sites:
             headers = json.loads(headers)
         else:
             headers = {}
-        ua = site_info.get("ua") or get_ua()
-        headers.update({'User-Agent': ua})
-        site_url = StringUtils.get_base_url(
-            site_info.get("signurl") or site_info.get("rssurl"))
-        if not site_url:
-            return False, "未配置站点地址", 0
-        # 站点特殊处理...
-        if 'm-team' in site_url:
-            site_url = MT_URL
+        headers.update({"User-Agent": ua})
 
-        if '1ptba' in site_url:
-            site_url = site_url + '/index.php'
+        # 优先使用引擎统一测试（JSON 定义站点）
+        site_def = SiteEngine.get_instance().get_by_url(site_url)
+        if site_def:
+            user_config = {
+                "cookie": site_cookie, "ua": ua,
+                "headers": headers, "proxy": proxy,
+            }
+            return SiteEngine.get_instance().test_connection(site_url, user_config)
 
-        if 'fsm' in site_url:
-            site_url = site_url + '/api/Users/infos'
-
-        if 'yemapt' in site_url:
-            site_url = site_url + '/api/user/profile'
-
-        if 'star-space' in site_url:
-            site_url = site_url + '/p_index/index.php'
-        
-        if 'rousi' in site_url:
-            site_url = site_url + '/api/v1/profile?include_fields[user]=seeding_leeching_data'
-
-        if site_info.get("chrome"):
-            # 计时
-            chrome = DrissionPageHelper()
+        # 兜底：旧逻辑（无 JSON 定义的 HTML 站点）
+        if chrome:
+            chrome_inst = DrissionPageHelper()
             start_time = datetime.now()
-
-            html_text = chrome.get_page_html(url=site_url, cookies=site_cookie)
-
+            html_text = chrome_inst.get_page_html(url=site_url, cookies=site_cookie)
             seconds = round((datetime.now() - start_time).total_seconds(), 3)
-            # 判断是否已签到
             if not html_text:
                 return False, "获取站点源码失败", 0
             if SiteHelper.is_logged_in(html_text):
                 return True, "连接成功", seconds
-            else:
+            return False, "Cookie失效", seconds
+
+        start_time = datetime.now()
+        res = RequestUtils(
+            cookies=site_cookie, headers=headers,
+            proxies=get_proxies() if proxy else None
+        ).get_res(url=site_url)
+        seconds = round((datetime.now() - start_time).total_seconds(), 3)
+        if res and res.status_code == 200:
+            if not SiteHelper.is_logged_in(res.text):
                 return False, "Cookie失效", seconds
-        else:
-            # 计时
-            start_time = datetime.now()
-            # m-team处理
-            if 'm-team' in site_url:
-                url = site_url + '/api/member/profile'
-                res = RequestUtils(headers=headers,
-                                   proxies=get_proxies() if site_info.get("proxy") else None
-                                   ).post_res(url=url, data={})
-            else:
-                res = RequestUtils(cookies=site_cookie,
-                                   headers=headers,
-                                   proxies=get_proxies() if site_info.get("proxy") else None
-                                   ).get_res(url=site_url)
-            seconds = round((datetime.now() - start_time).total_seconds(), 3)
-            if res and res.status_code == 200:
-                if not SiteHelper.is_logged_in(res.text):
-                    return False, "Cookie失效", seconds
-                else:
-                    return True, "连接成功", seconds
-            elif res is not None:
-                return False, f"连接失败，状态码：{res.status_code}", seconds
-            else:
-                return False, "无法打开网站", seconds
+            return True, "连接成功", seconds
+        elif res is not None:
+            return False, f"连接失败，状态码：{res.status_code}", seconds
+        return False, "无法打开网站", seconds
 
     @staticmethod
     def __get_site_note_items(note):
@@ -401,18 +369,30 @@ class Sites:
             infos = json.loads(note)
         return infos
 
+    @staticmethod
+    def _rate_limit_val(note: dict, key: str, multiplier: int = 1, require_fields: Optional[list] = None):
+        val = note.get(key)
+        if not val or not str(val).isdigit():
+            return None
+        if require_fields:
+            for f in require_fields:
+                tv = note.get(f)
+                if not tv or not str(tv).isdigit():
+                    return None
+        return int(val) * multiplier
+
     def add_site(self, name, site_pri,
                  rssurl=None, signurl=None, cookie=None, note=None, rss_uses=None):
         """
         添加站点
         """
         ret = self.site_repo.insert_config_site(name=name,
-                                               site_pri=site_pri,
-                                               rssurl=rssurl,
-                                               signurl=signurl,
-                                               cookie=cookie,
-                                               note=note,
-                                               rss_uses=rss_uses)
+                                                site_pri=site_pri,
+                                                rssurl=rssurl,
+                                                signurl=signurl,
+                                                cookie=cookie,
+                                                note=note,
+                                                rss_uses=rss_uses)
         self.init_config()
         return ret
 
