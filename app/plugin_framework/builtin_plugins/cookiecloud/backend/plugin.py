@@ -10,9 +10,8 @@ from typing import Union
 
 from app.helper import IndexerHelper
 from app.sites import Sites
+from app.sites.engine import SiteEngine
 from app.utils import RequestUtils
-from app.utils.cache_system import get_cache_manager
-from app.core.constants import MT_URL
 
 from app.plugin_framework.context import PluginContext
 
@@ -182,8 +181,7 @@ class CookieCloudPlugin:
                 continue
 
             domain_url = ".".join(domain)
-            if 'm-team' in domain_url:
-                domain_url = '.'.join(MT_URL.split('.')[-2:])
+            domain_url = SiteEngine.get_instance().normalize_domain(domain_url) or domain_url
 
             cloudflare_cookie = True
             for content in content_list:
@@ -243,8 +241,7 @@ class CookieCloudPlugin:
             domain_parts = site.split(".")[-2:]
             domain_key = tuple(domain_parts)
             domain_url = ".".join(domain_key)
-            if 'm-team' in domain_url:
-                domain_url = '.'.join(MT_URL.split('.')[-2:])
+            domain_url = SiteEngine.get_instance().normalize_domain(domain_url) or domain_url
 
             self._cache.set(f'local_storage:{domain_url}', json.dumps(storage))
 

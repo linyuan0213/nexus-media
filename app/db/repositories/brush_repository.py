@@ -209,23 +209,19 @@ class BrushRepository(BaseRepository):
         根据URL查询刷流任务种子
         """
         from app.utils import StringUtils
+        from app.sites.engine import SiteEngine
 
         if not enclosure:
             return None
 
-        if 'm-team' in enclosure:
+        engine = SiteEngine.get_instance()
+        if engine.is_tid_based_dedup(enclosure):
             tid = StringUtils.get_tid_by_url(enclosure)
-            mt_torrents = self._db.query(SITEBRUSHTORRENTS).filter(
-                SITEBRUSHTORRENTS.ENCLOSURE.like("%m-team%")
+            domain = engine.normalize_domain(enclosure)
+            all_torrents = self._db.query(SITEBRUSHTORRENTS).filter(
+                SITEBRUSHTORRENTS.ENCLOSURE.like(f"%{domain}%")
             ).all()
-            return list(filter(lambda torrent: StringUtils.get_tid_by_url(torrent.ENCLOSURE) == tid, mt_torrents))
-
-        if 'yemapt' in enclosure:
-            tid = StringUtils.get_tid_by_url(enclosure)
-            mt_torrents = self._db.query(SITEBRUSHTORRENTS).filter(
-                SITEBRUSHTORRENTS.ENCLOSURE.like("%yemapt%")
-            ).all()
-            return list(filter(lambda torrent: StringUtils.get_tid_by_url(torrent.ENCLOSURE) == tid, mt_torrents))
+            return list(filter(lambda t: StringUtils.get_tid_by_url(t.ENCLOSURE) == tid, all_torrents))
 
         return self._db.query(SITEBRUSHTORRENTS).filter(SITEBRUSHTORRENTS.ENCLOSURE == enclosure).first()
 

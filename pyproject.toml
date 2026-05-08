@@ -76,6 +76,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "lxml-stubs>=0.5.1",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
 ]

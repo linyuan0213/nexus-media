@@ -50,13 +50,13 @@ class DownloadService:
     # ---------- 下载编排 ----------
 
     def _resolve_download_url(self, page_url: str, enclosure: Optional[str]) -> str:
-        """处理 m-team/yemapt 特殊下载链接"""
-        if ('m-team' in page_url or 'yemapt' in page_url) and not enclosure:
+        """通过站点引擎解析 API 站点下载链接"""
+        if not enclosure:
             return self._downloader.get_download_url(page_url) or ""
         return enclosure or ""
 
     def resolve_download_url(self, page_url: str, enclosure: Optional[str]) -> str:
-        """公开方法：处理 m-team/yemapt 特殊下载链接"""
+        """公开方法：解析站点下载链接"""
         return self._resolve_download_url(page_url, enclosure)
 
     def download_from_search_results(self, dl_id: int, dl_dir: str, dl_setting: str,

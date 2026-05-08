@@ -779,8 +779,8 @@ class BrushTaskService:
         site_base_url = f"{split_url.scheme}://{split_url.netloc}"
 
         tid = StringUtils.get_tid_by_url(enclosure)
-        site_key = next((key for key in ['m-team', 'yemapt', 'star-space'] if key in enclosure), 'default')
-        torrent_url = f"{site_base_url}{SiteConf().URL_DETAIL_TEMPLATES[site_key].format(tid=tid)}"
+        from app.sites.engine import SiteEngine
+        torrent_url = f"{site_base_url}{SiteEngine.get_instance().resolve_detail_url(enclosure, tid)}"
 
         torrent_attr = self._siteconf.check_torrent_attr(
             torrent_url=torrent_url, cookie=site_cookie, ua=ua,

@@ -37,7 +37,7 @@ class MovieDownloadStrategy:
         return_items = []
         for item in download_list:
             if item.type == MediaType.MOVIE:
-                if 'm-team' in item.page_url or 'yemapt' in item.page_url:
+                if not item.enclosure:
                     item.enclosure = get_download_url_callback(item.page_url)
                 _downloader_id, did, msg = download_callback(item)
                 if did:
@@ -80,7 +80,7 @@ class SeasonPackStrategy:
                     continue
                 if need_tmdbid != item.tmdb_id:
                     continue
-                if 'm-team' in item.page_url or 'yemapt' in item.page_url:
+                if not item.enclosure:
                     item.enclosure = get_download_url_callback(item.page_url)
                 if set(item_season).issubset(set(need_season)):
                     if len(item_season) == 1:
@@ -200,7 +200,7 @@ class EpisodeStrategy:
                         continue
                     item_episodes = item.get_episode_list()
                     if not item_episodes:
-                        if 'm-team' in item.page_url or 'yemapt' in item.page_url:
+                        if not item.enclosure:
                             item.enclosure = get_download_url_callback(item.page_url)
                         if item.enclosure.startswith('magnet'):
                             continue
@@ -268,7 +268,7 @@ class EpisodeStrategy:
                     if len(item_season) != 1 or item_season[0] != need_season:
                         continue
 
-                    if 'm-team' in item.page_url or 'yemapt' in item.page_url:
+                    if not item.enclosure:
                         item.enclosure = get_download_url_callback(item.page_url)
                     # 检查种子看是否有需要的集
                     torrent_episodes, torrent_path = get_torrent_episodes_callback(

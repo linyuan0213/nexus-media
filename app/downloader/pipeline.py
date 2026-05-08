@@ -17,7 +17,7 @@ from typing import Optional, Tuple
 from urllib.parse import urlsplit
 
 import log
-from app.core.constants import RMT_MEDIAEXT, PT_TAG, MT_URL
+from app.core.constants import RMT_MEDIAEXT, PT_TAG
 from app.downloader.client._base import _IDownloadClient
 from app.helper import ThreadHelper
 from app.media import Media, MetaInfo
@@ -25,6 +25,7 @@ from app.mediaserver import MediaServer
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
 from app.sites import Sites, SiteSubtitle, SiteConf
+from app.sites.engine import SiteEngine
 from app.utils import Torrent, StringUtils, ExceptionUtils, RequestUtils, JsonUtils
 from app.utils.types import MediaType, DownloaderType, SearchType, EventType
 from app.utils.config_tools import get_proxies
@@ -181,7 +182,15 @@ class DownloadPipeline:
         else:
             url = media_info.enclosure
             if media_info.page_url and not media_info.enclosure:
-                url = self._get_download_url(media_info.page_url)
+                site_info = self._sites.get_sites(siteurl=media_info.page_url)
+                url = SiteEngine.get_instance().resolve_download_url(
+                    page_url=media_info.page_url,
+                    user_config={
+                        "cookie": site_info.get("cookie", ""),
+                        "ua": site_info.get("ua", ""),
+                        "headers": site_info.get("headers", {}),
+                        "proxy": site_info.get("proxy"),
+                    })
             if not url:
                 return None
             if url.startswith("magnet:"):
@@ -189,7 +198,8 @@ class DownloadPipeline:
             else:
                 site_info = self._sites.get_sites(siteurl=url)
                 cookie = site_info.get("cookie")
-                if 'm-team' in url:
+                site_def = SiteEngine.get_instance().get_by_url(url)
+                if site_def and site_def.api and site_def.api.auth.get("type") == "api_key":
                     cookie = None
                 headers = site_info.get("headers")
                 headers = json.loads(headers) if headers else {}
@@ -353,36 +363,3 @@ class DownloadPipeline:
             "media_info": media_info.to_dict(), "reason": reason})
         if in_from:
             self._message.send_download_fail_message(media_info, f"添加下载任务失败：{reason}")
-
-    @staticmethod
-    def _get_download_url(page_url):
-        if 'm-team' in page_url:
-            base_url = MT_URL
-        else:
-            split_url = urlsplit(page_url)
-            base_url = f"{split_url.scheme}://{split_url.netloc}"
-        site_info = Sites().get_sites(siteurl=base_url)
-        headers = site_info.get("headers")
-        proxy = site_info.get("proxy")
-        cookie = site_info.get("cookie")
-        media_id = (re.findall(r'\d+', page_url) or [''])[0]
-        headers = (json.loads(headers) if JsonUtils.is_valid_json(headers) else {}) if headers else {}
-        headers.update({"contentType": "application/json; charset=utf-8",
-                        "User-Agent": f"{site_info.get('ua')}"})
-        if 'm-team' in page_url:
-            res = RequestUtils(headers=headers, proxies=get_proxies() if proxy else None,
-                               timeout=15).post_res(
-                url=f'{base_url}/api/torrent/genDlToken', data={'id': media_id})
-            if res and res.status_code == 200:
-                return res.json().get('data', '')
-        if 'yemapt' in page_url:
-            res = RequestUtils(headers=headers, cookies=cookie,
-                               proxies=get_proxies() if proxy else None,
-                               timeout=15).get_res(
-                url=f'{base_url}/api/torrent/generateDownloadKey?id={media_id}')
-            if res and res.status_code == 200:
-                token = res.json().get('data', '')
-                if token:
-                    return f'{base_url}/api/torrent/download1?token={token}'
-                return ''
-        return None

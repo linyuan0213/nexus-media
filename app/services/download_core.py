@@ -396,4 +396,13 @@ class DownloadCore:
 
     @staticmethod
     def get_download_url(page_url):
-        return DownloadPipeline._get_download_url(page_url)
+        from app.sites.engine import SiteEngine
+        site_info = Sites().get_sites(siteurl=page_url)
+        return SiteEngine.get_instance().resolve_download_url(
+            page_url=page_url,
+            user_config={
+                "cookie": site_info.get("cookie", ""),
+                "ua": site_info.get("ua", ""),
+                "headers": site_info.get("headers", {}),
+                "proxy": site_info.get("proxy"),
+            })

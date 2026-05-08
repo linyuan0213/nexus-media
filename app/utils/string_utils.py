@@ -559,18 +559,11 @@ class StringUtils:
 
         # 解析查询参数
         params = parse.parse_qs(parsed_url.query)
-        if 'm-team' in url:
-            if not params.get('tid'):
-                return None
-
-            return params.get('tid')[0]
-        if 'yemapt' in url:
-            if not params.get('token'):
-                return None
-            token = params.get('token')[0]
-            decode_str = base64.b64decode(token).decode(encoding='utf-8')
-            tid = decode_str.split('\t')[-1]
-            return tid
+        from app.sites.engine import SiteEngine
+        site_def = SiteEngine.get_instance().get_by_url(url)
+        if site_def and site_def.download and site_def.download.type in ("api", "api_chained"):
+            tid = re.findall(r'\d+', url)
+            return tid[-1] if tid else None
         
         tid = re.findall(r'id=(\d+)', url)
         if isinstance(tid, list):

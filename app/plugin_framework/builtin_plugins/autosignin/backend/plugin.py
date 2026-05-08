@@ -351,7 +351,8 @@ class AutoSignInPlugin:
                 self.ctx.info(f"开始站点{checkin_text}：{site}")
 
                 if 'm-team' in site_url:
-                    url = f"{MT_URL}/api/member/updateLastBrowse"
+                    site_def = SiteEngine.get_instance().get_by_url(site_url)
+                    url = f"{site_def.api.base_url}/api/member/updateLastBrowse" if site_def and site_def.api else f"{MT_URL}/api/member/updateLastBrowse"
                     headers.update({
                         "accept": "application/json, text/plain, */*",
                         "content-type": "application/json",
