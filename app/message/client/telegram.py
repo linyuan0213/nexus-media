@@ -4,318 +4,240 @@ from urllib.parse import urlencode
 import requests
 
 import log
-from app.helper import ThreadHelper
+from app.helper.thread_helper import ThreadHelper
 from app.message.client._base import _IMessageClient
+from app.message.commands import COMMANDS
 from app.utils import RequestUtils, ExceptionUtils
 from config import Config
-from app.utils.config_tools import get_domain
-from app.utils.config_tools import get_proxies
+from app.utils.config_tools import get_domain, get_proxies
+from app.message.client_registry import ClientRegistry
 
-lock = Lock()
-WEBHOOK_STATUS = False
+
+_webhook_lock = Lock()
+_webhook_set = False
 
 
 class Telegram(_IMessageClient):
     schema = "telegram"
 
-    _telegram_token = None
-    _telegram_chat_id = None
-    _webhook = None
-    _webhook_url = None
-    _telegram_user_ids = []
-    _telegram_admin_ids = []
-    _domain = None
-    _message_proxy_event = None
-    _client_config = {}
-    _interactive = False
-    _enabled = True
-    _api_key = None
-
     def __init__(self, config):
-        self._client_config = config
-        self._interactive = config.get("interactive")
+        self.token = None
+        self.chat_id = None
+        self.webhook = False
+        self.interactive = False
+        self._webhook_url = None
+        self._admin_ids = []
+        self._user_ids = []
+        self._domain = None
+        self._api_key = None
+        self._enabled = True
+        self._proxy_event = None
+        super().__init__(config)
+
+    def read_config(self):
+        cfg = self._config or {}
+        self.token = cfg.get("token")
+        self.chat_id = cfg.get("chat_id")
+        self.webhook = cfg.get("webhook", False)
+        self.interactive = cfg.get("interactive", False)
         self._domain = get_domain()
         self._api_key = Config().get_config("security").get("api_key")
-        self.init_config()
+        admin_ids = cfg.get("admin_ids")
+        self._admin_ids = [x.strip() for x in admin_ids.split(",")] if admin_ids else []
+        self._user_ids = list(self._admin_ids)
+        user_ids = cfg.get("user_ids")
+        if user_ids:
+            self._user_ids.extend(x.strip() for x in user_ids.split(",") if x.strip())
 
-    def init_config(self):
-        if self._client_config:
-            self._telegram_token = self._client_config.get('token')
-            self._telegram_chat_id = self._client_config.get('chat_id')
-            self._webhook = self._client_config.get('webhook')
-            telegram_admin_ids = self._client_config.get('admin_ids')
-            if telegram_admin_ids:
-                self._telegram_admin_ids = telegram_admin_ids.split(",")
-            self._telegram_user_ids = self._telegram_admin_ids
-            telegram_user_ids = self._client_config.get('user_ids')
-            if telegram_user_ids:
-                self._telegram_user_ids.extend(telegram_user_ids.split(","))
-            if self._telegram_token and self._telegram_chat_id:
-                if self._webhook:
-                    if self._domain:
-                        self._webhook_url = "%s/telegram?apikey=%s" % (self._domain, self._api_key)
-                        self.__set_bot_webhook()
-                    if self._message_proxy_event:
-                        self._message_proxy_event.set()
-                        self._message_proxy_event = None
-                elif self._interactive:
-                    self.__del_bot_webhook()
-                    if not self._message_proxy_event:
-                        event = Event()
-                        self._message_proxy_event = event
-                        ThreadHelper().start_thread(self.__start_telegram_message_proxy, [event])
+    def setup(self):
+        ThreadHelper().start_thread(self._do_setup, ())
+
+    def _do_setup(self):
+        try:
+            if self.webhook:
+                if self._domain:
+                    self._webhook_url = f"{self._domain}/telegram?apikey={self._api_key}"
+                    self._set_webhook()
+                if self._proxy_event:
+                    self._proxy_event.set()
+                    self._proxy_event = None
+            elif self.interactive:
+                self._del_webhook()
+                if not self._proxy_event:
+                    event = Event()
+                    self._proxy_event = event
+                    ThreadHelper().start_thread(self._start_polling, [event])
+            self._set_commands()
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
+
+    def stop(self):
+        self._enabled = False
 
     @classmethod
     def match(cls, ctype):
-        return True if ctype == cls.schema else False
+        return ctype == cls.schema
 
     def get_admin(self):
-        """
-        获取允许使用远程命令的user_id列表
-        """
-        return self._telegram_admin_ids
+        return self._admin_ids
 
     def get_users(self):
-        """
-        获取允许使用telegram机器人的user_id列表
-        """
-        return self._telegram_user_ids
+        return self._user_ids
 
     def send_msg(self, title, text="", image="", url="", user_id=""):
-        """
-        发送Telegram消息
-        :param title: 消息标题
-        :param text: 消息内容
-        :param image: 消息图片地址
-        :param url: 点击消息转转的URL
-        :param user_id: 用户ID，如有则只发消息给该用户
-        :user_id: 发送消息的目标用户ID，为空则发给管理员
-        """
         if not title and not text:
             return False, "标题和内容不能同时为空"
         try:
-            if not self._telegram_token or not self._telegram_chat_id:
+            if not self.token or not self.chat_id:
                 return False, "参数未配置"
-
-            # text中的Markdown特殊字符转义
             text = text.replace("[", r"\[").replace("_", r"\_").replace("*", r"\*").replace("`", r"\`")
-            # 拼装消息内容
-            titles = str(title).split('\n')
+            titles = str(title).split("\n")
             if len(titles) > 1:
                 title = titles[0]
-                if not text:
-                    text = "\n".join(titles[1:])
-                else:
-                    text = "%s\n%s" % ("\n".join(titles[1:]), text)
-            if text:
-                caption = "*%s*\n%s" % (title, text.replace("\n\n", "\n"))
-            else:
-                caption = title
+                extra = "\n".join(titles[1:])
+                text = f"{extra}\n{text}" if text else extra
+            caption = f"*{title}*\n{text.replace(chr(10) + chr(10), chr(10))}" if text else title
             if image and url:
-                caption = "%s\n\n[查看详情](%s)" % (caption, url)
-            if user_id:
-                chat_id = user_id
-            else:
-                chat_id = self._telegram_chat_id
-
-            return self.__send_request(chat_id=chat_id, image=image, caption=caption)
-
-        except Exception as msg_e:
-            ExceptionUtils.exception_traceback(msg_e)
-            return False, str(msg_e)
+                caption = f"{caption}\n\n[查看详情]({url})"
+            chat_id = user_id or self.chat_id
+            return self._send(chat_id, image, caption)
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
+            return False, str(e)
 
     def send_list_msg(self, medias: list, user_id="", title="", **kwargs):
-        """
-        发送列表类消息
-        """
-        try:
-            if not self._telegram_token or not self._telegram_chat_id:
-                return False, "参数未配置"
-            if not title or not isinstance(medias, list):
-                return False, "数据错误"
-            index, image, caption = 1, "", "*%s*" % title
-            for media in medias:
-                if not image:
-                    image = media.get_message_image()
-                if media.get_vote_string():
-                    caption = "%s\n%s. [%s](%s)\n%s，%s" % (caption,
-                                                           index,
-                                                           media.get_title_string(),
-                                                           media.get_detail_url(),
-                                                           media.get_type_string(),
-                                                           media.get_vote_string())
-                else:
-                    caption = "%s\n%s. [%s](%s)\n%s" % (caption,
-                                                        index,
-                                                        media.get_title_string(),
-                                                        media.get_detail_url(),
-                                                        media.get_type_string())
-                index += 1
-
-            if user_id:
-                chat_id = user_id
+        if not self.token or not self.chat_id:
+            return False, "参数未配置"
+        if not title or not isinstance(medias, list):
+            return False, "数据错误"
+        image = ""
+        caption = f"*{title}*"
+        for i, m in enumerate(medias):
+            if not image:
+                image = m.get_message_image()
+            vote = m.get_vote_string()
+            if vote:
+                caption += f"\n{i + 1}. [{m.get_title_string()}]({m.get_detail_url()})\n{m.get_type_string()}，{vote}"
             else:
-                chat_id = self._telegram_chat_id
+                caption += f"\n{i + 1}. [{m.get_title_string()}]({m.get_detail_url()})\n{m.get_type_string()}"
+        chat_id = user_id or self.chat_id
+        return self._send(chat_id, image, caption)
 
-            return self.__send_request(chat_id=chat_id, image=image, caption=caption)
-
-        except Exception as msg_e:
-            ExceptionUtils.exception_traceback(msg_e)
-            return False, str(msg_e)
-
-    def __send_request(self, chat_id="", image="", caption=""):
-        """
-        向Telegram发送报文
-        """
-        def _res_parse(result):
-            if result and result.status_code == 200:
-                ret_json = result.json()
-                status = ret_json.get("ok")
-                if status:
-                    return True, ""
-                else:
-                    return False, ret_json.get("description")
-            elif result is not None:
-                return False, f"错误码：{result.status_code}，错误原因：{result.reason}"
-            else:
-                return False, "未获取到返回信息"
+    def _send(self, chat_id, image, caption):
+        def parse(res):
+            if res and res.status_code == 200:
+                j = res.json()
+                return (True, "") if j.get("ok") else (False, j.get("description"))
+            if res is not None:
+                return False, f"错误码：{res.status_code}"
+            return False, "未获取到返回信息"
 
         proxies = get_proxies()
         if image:
-            # 发送图文消息
             values = {"chat_id": chat_id, "photo": image, "caption": caption, "parse_mode": "Markdown"}
-            sc_url = "https://api.telegram.org/bot%s/sendPhoto?" % self._telegram_token
-            res = RequestUtils(proxies=proxies).get_res(sc_url + urlencode(values))
-            flag, msg = _res_parse(res)
-            if flag:
-                return flag, msg
-            else:
-                photo_req = RequestUtils(proxies=proxies).get_res(image)
-                if photo_req and photo_req.content:
-                    sc_url = "https://api.telegram.org/bot%s/sendPhoto" % self._telegram_token
-                    data = {"chat_id": chat_id, "caption": caption, "parse_mode": "Markdown"}
-                    files = {"photo": photo_req.content}
-                    res = requests.post(sc_url, proxies=proxies, data=data, files=files)
-                    flag, msg = _res_parse(res)
-                    if flag:
-                        return flag, msg
-        # 发送文本消息
+            url = f"https://api.telegram.org/bot{self.token}/sendPhoto?" + urlencode(values)
+            res = RequestUtils(proxies=proxies).get_res(url)
+            ok, msg = parse(res)
+            if ok:
+                return ok, msg
+            photo_res = RequestUtils(proxies=proxies).get_res(image)
+            if photo_res and photo_res.content:
+                url = f"https://api.telegram.org/bot{self.token}/sendPhoto"
+                data = {"chat_id": chat_id, "caption": caption, "parse_mode": "Markdown"}
+                res = requests.post(url, proxies=proxies, data=data, files={"photo": photo_res.content})
+                ok, msg = parse(res)
+                if ok:
+                    return ok, msg
         values = {"chat_id": chat_id, "text": caption, "parse_mode": "Markdown"}
-        sc_url = "https://api.telegram.org/bot%s/sendMessage?" % self._telegram_token
-        res = RequestUtils(proxies=proxies).get_res(sc_url + urlencode(values))
-        flag, msg = _res_parse(res)
-        return flag, msg
+        url = f"https://api.telegram.org/bot{self.token}/sendMessage?" + urlencode(values)
+        res = RequestUtils(proxies=proxies).get_res(url)
+        return parse(res)
 
-    def __set_bot_webhook(self):
-        """
-        设置Telegram Webhook
-        """
+    def _set_commands(self):
+        if not self.token:
+            return
+        try:
+            cmds = [{"command": k[1:], "description": v} for k, v in COMMANDS.items()]
+            data = {"commands": cmds, "scope": {"type": "default"}}
+            headers = {"content-type": "application/json"}
+            res = requests.post(
+                f"https://api.telegram.org/bot{self.token}/setMyCommands",
+                json=data, headers=headers, proxies=get_proxies(), timeout=10)
+            if res and res.json().get("ok"):
+                log.info(f"【Telegram】命令菜单已设置，共 {len(cmds)} 个")
+            else:
+                log.error("【Telegram】命令菜单设置失败：%s" % (res.json().get("description") if res else "网络错误"))
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
+
+    def _set_webhook(self):
         if not self._webhook_url:
             return
-
-        try:
-            lock.acquire()
-            global WEBHOOK_STATUS
-            if not WEBHOOK_STATUS:
-                WEBHOOK_STATUS = True
-            else:
+        with _webhook_lock:
+            global _webhook_set
+            if _webhook_set:
                 return
-        finally:
-            lock.release()
-
-        status = self.__get_bot_webhook()
-        if status and status != 1:
+            status = self._get_webhook_status()
+            if not status or status == 1:
+                _webhook_set = True
+                return
             if status == 2:
-                self.__del_bot_webhook()
+                self._del_webhook()
             values = {"url": self._webhook_url, "allowed_updates": ["message"]}
-            sc_url = "https://api.telegram.org/bot%s/setWebhook?" % self._telegram_token
-            res = RequestUtils(proxies=get_proxies()).get_res(sc_url + urlencode(values))
-            if res is not None:
-                json = res.json()
-                if json.get("ok"):
-                    log.info("【Telegram】Webhook 设置成功，地址为：%s" % self._webhook_url)
-                else:
-                    log.error("【Telegram】Webhook 设置失败：" % json.get("description"))
-            else:
-                log.error("【Telegram】Webhook 设置失败：网络连接故障！")
+            url = f"https://api.telegram.org/bot{self.token}/setWebhook?" + urlencode(values)
+            res = RequestUtils(proxies=get_proxies()).get_res(url)
+            if res and res.json().get("ok"):
+                _webhook_set = True
+                log.info(f"【Telegram】Webhook 设置成功：{self._webhook_url}")
 
-    def __get_bot_webhook(self):
-        """
-        获取Telegram已设置的Webhook
-        :return: 状态：1-存在且相等，2-存在不相等，3-不存在，0-网络出错
-        """
-        sc_url = "https://api.telegram.org/bot%s/getWebhookInfo" % self._telegram_token
-        res = RequestUtils(proxies=get_proxies()).get_res(sc_url)
-        if res is not None and res.json():
-            if res.json().get("ok"):
-                result = res.json().get("result") or {}
-                webhook_url = result.get("url") or ""
-                if webhook_url:
-                    log.info("【Telegram】Webhook 地址为：%s" % webhook_url)
-                pending_update_count = result.get("pending_update_count")
-                last_error_message = result.get("last_error_message")
-                if pending_update_count and last_error_message:
-                    log.warn("【Telegram】Webhook 有 %s 条消息挂起，最后一次失败原因为：%s" % (
-                        pending_update_count, last_error_message))
-                if webhook_url == self._webhook_url:
-                    return 1
-                else:
-                    return 2
-            else:
-                return 3
-        else:
-            return 0
-
-    def __del_bot_webhook(self):
-        """
-        删除Telegram Webhook
-        :return: 是否成功
-        """
-        sc_url = "https://api.telegram.org/bot%s/deleteWebhook" % self._telegram_token
-        res = RequestUtils(proxies=get_proxies()).get_res(sc_url)
+    def _get_webhook_status(self):
+        url = f"https://api.telegram.org/bot{self.token}/getWebhookInfo"
+        res = RequestUtils(proxies=get_proxies()).get_res(url)
         if res and res.json() and res.json().get("ok"):
-            return True
-        else:
-            return False
+            result = res.json().get("result") or {}
+            wh = result.get("url") or ""
+            if wh == self._webhook_url:
+                return 1
+            if wh:
+                return 2
+            return 3
+        return 0
 
-    def __start_telegram_message_proxy(self, event: Event):
+    def _del_webhook(self):
+        url = f"https://api.telegram.org/bot{self.token}/deleteWebhook"
+        res = RequestUtils(proxies=get_proxies()).get_res(url)
+        return bool(res and res.json() and res.json().get("ok"))
+
+    def _start_polling(self, event):
         log.info("Telegram消息接收服务启动")
+        timeout = 5
+        offset = 0
 
-        long_poll_timeout = 5
-
-        def consume_messages(_config, _offset, _sc_url, _ds_url):
+        def consume(config, off, sc_url, ds_url):
             try:
-                values = {"timeout": long_poll_timeout, "offset": _offset}
-                res = RequestUtils(proxies=_config.get_proxies()).get_res(_sc_url + urlencode(values))
+                res = RequestUtils(proxies=config.get_proxies()).get_res(
+                    f"{sc_url}{urlencode({'timeout': timeout, 'offset': off})}")
                 if res and res.json():
                     for msg in res.json().get("result", []):
-                        # 无论本地是否成功，先更新offset，即消息最多成功消费一次
-                        _offset = msg["update_id"] + 1
-                        log.debug("【Telegram】接收到消息: %s" % msg)
-                        local_res = requests.post(_ds_url, json=msg, timeout=10)
-                        log.debug("【Telegram】message: %s processed, response is: %s" % (msg, local_res.text))
+                        off = msg["update_id"] + 1
+                        local = requests.post(ds_url, json=msg, timeout=10)
+                        log.debug(f"【Telegram】msg processed: {local.text}")
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
-                log.error("【Telegram】消息接收出现错误: %s" % e)
-            return _offset
+                log.error(f"【Telegram】接收错误: {e}")
+            return off
 
-        offset = 0
         while True:
-            _config = Config()
-            web_port = _config.get_config("app").get("web_port")
-            sc_url = "https://api.telegram.org/bot%s/getUpdates?" % self._telegram_token
-            ds_url = "http://127.0.0.1:%s/telegram?apikey=%s" % (web_port, self._api_key)
+            cfg = Config()
+            web_port = cfg.get_config("app").get("web_port")
+            sc_url = f"https://api.telegram.org/bot{self.token}/getUpdates?"
+            ds_url = f"http://127.0.0.1:{web_port}/telegram?apikey={self._api_key}"
             if not self._enabled:
                 log.info("Telegram消息接收服务已停止")
                 break
+            for _ in range(20):
+                if event.is_set():
+                    break
+                offset = consume(cfg, offset, sc_url, ds_url)
 
-            i = 0
-            while i < 20 and not event.is_set():
-                offset = consume_messages(_config, offset, sc_url, ds_url)
-                i = i + 1
-
-    def stop_service(self):
-        """
-        停止服务
-        """
-        self._enabled = False
+ClientRegistry.register(Telegram)

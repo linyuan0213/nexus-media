@@ -49,28 +49,15 @@ class ConfigRepository(BaseRepository):
 
     @DbPersist(BaseRepository._db)
     def insert_message_client(self,
-                              name,
-                              ctype,
-                              config,
-                              switchs: list,
-                              interactive,
-                              enabled,
-                              note='',
-                              templates=None):
-        """
-        设置消息服务器
-        
-        Args:
-            name: 名称
-            ctype: 类型
-            config: 配置
-            switchs: 开关列表
-            interactive: 是否交互
-            enabled: 是否启用
-            note: 备注
-            templates: 模板
-        """
-        self._db.insert(MESSAGECLIENT(
+                               name,
+                               ctype,
+                               config,
+                               switchs: list,
+                               interactive,
+                               enabled,
+                               note='',
+                               templates=None):
+        client = MESSAGECLIENT(
             NAME=name,
             TYPE=ctype,
             CONFIG=config,
@@ -79,7 +66,10 @@ class ConfigRepository(BaseRepository):
             ENABLED=int(enabled),
             NOTE=note,
             TEMPLATES=json.dumps(templates) if templates else None
-        ))
+        )
+        self._db.insert(client)
+        self._db.flush()
+        return client.ID
 
     @DbPersist(BaseRepository._db)
     def check_message_client(self, cid=None, interactive=None, enabled=None, ctype=None):

@@ -7,8 +7,9 @@ from enum import Enum
 import log
 from jinja2 import Environment, BaseLoader
 from app.core.module_config import ModuleConf
-from app.helper import SubmoduleHelper
 from app.db.repositories import ConfigRepository
+from app.helper.thread_helper import ThreadHelper
+from app.message.client_registry import ClientRegistry
 from app.message.message_center import MessageCenter
 from app.utils import StringUtils, ExceptionUtils
 from app.utils.commons import SingletonMeta
@@ -75,108 +76,120 @@ def _striptags_filter(value):
     return re.sub(r'<[^>]+>', '', str(value))
 
 
+def _parse_client_config(client_config) -> dict:
+    config = {}
+    if client_config.CONFIG:
+        try:
+            config = json.loads(client_config.CONFIG)
+        except json.JSONDecodeError:
+            log.error(f"【Message】客户端 {client_config.NAME} 的CONFIG不是有效JSON: {client_config.CONFIG}")
+    config.update({"interactive": client_config.INTERACTIVE})
+    templates = {}
+    if client_config.TEMPLATES:
+        try:
+            templates = json.loads(client_config.TEMPLATES)
+        except json.JSONDecodeError:
+            log.error(f"【Message】客户端 {client_config.NAME} 的模板配置不是有效的JSON: {client_config.TEMPLATES}")
+    switchs = []
+    if client_config.SWITCHS:
+        try:
+            parsed = json.loads(client_config.SWITCHS)
+            if isinstance(parsed, list):
+                switchs = parsed
+            elif isinstance(parsed, str):
+                all_keys = set(ModuleConf.MESSAGE_CONF.get('switch', {}).keys())
+                switchs = [s.strip() for s in parsed.split(",") if s.strip() and s.strip() in all_keys]
+        except json.JSONDecodeError:
+            raw = str(client_config.SWITCHS)
+            all_keys = set(ModuleConf.MESSAGE_CONF.get('switch', {}).keys())
+            switchs = [s.strip() for s in raw.split(",") if s.strip() and s.strip() in all_keys]
+    return {
+        "id": client_config.ID,
+        "name": client_config.NAME,
+        "type": client_config.TYPE,
+        "config": config,
+        "switchs": switchs,
+        "interactive": client_config.INTERACTIVE,
+        "enabled": client_config.ENABLED,
+        "templates": templates
+    }
+
+
 class Message(metaclass=SingletonMeta):
     config_repo = None
     messagecenter = None
-    _message_schemas = []
     _active_clients = []
     _active_interactive_clients = {}
     _client_configs = {}
     _domain = None
     _queue = None
+    _loaded = False
 
     def __init__(self):
-        self._message_schemas = SubmoduleHelper.import_submodules(
-            'app.message.client',
-            filter_func=lambda _, obj: hasattr(obj, 'schema')
-        )
-        log.debug(f"【Message】加载消息服务：{self._message_schemas}")
         self._queue = TaskQueue()
         self._queue.start()
-        self.init_config()
-
-    def init_config(self):
         self.config_repo = ConfigRepository()
         self.messagecenter = MessageCenter()
         self._domain = get_domain()
-        # 停止旧服务
-        if self._active_clients:
-            for active_client in self._active_clients:
-                if active_client.get("search_type") in self.get_search_types():
-                    client = active_client.get("client")
-                    if client and hasattr(client, "stop_service"):
-                        client.stop_service()
-        # 活跃的客户端
-        self._active_clients = []
-        # 活跃的交互客户端
-        self._active_interactive_clients = {}
-        # 全量客户端配置
-        self._client_configs = {}
-        for client_config in self.config_repo.get_message_client() or []:
-            # 安全解析 CONFIG
-            config = {}
-            if client_config.CONFIG:
-                try:
-                    config = json.loads(client_config.CONFIG)
-                except json.JSONDecodeError:
-                    log.error(f"【Message】客户端 {client_config.NAME} 的CONFIG不是有效JSON: {client_config.CONFIG}")
-            config.update({
-                "interactive": client_config.INTERACTIVE
-            })
-            # 安全解析 TEMPLATES
-            templates = {}
-            if client_config.TEMPLATES:
-                try:
-                    templates = json.loads(client_config.TEMPLATES)
-                except json.JSONDecodeError:
-                    log.error(f"【Message】客户端 {client_config.NAME} 的模板配置不是有效的JSON: {client_config.TEMPLATES}")
-                    templates = {}
-            # 安全解析 SWITCHS（支持JSON数组或逗号分隔字符串）
-            switchs = []
-            if client_config.SWITCHS:
-                try:
-                    parsed = json.loads(client_config.SWITCHS)
-                    if isinstance(parsed, list):
-                        switchs = parsed
-                    elif isinstance(parsed, str):
-                        # JSON解析得到字符串（如旧版逗号分隔）
-                        all_keys = set(ModuleConf.MESSAGE_CONF.get('switch', {}).keys())
-                        switchs = [s.strip() for s in parsed.split(",") if s.strip() and s.strip() in all_keys]
-                except json.JSONDecodeError:
-                    # 兼容旧数据：尝试按逗号分割
-                    raw = str(client_config.SWITCHS)
-                    all_keys = set(ModuleConf.MESSAGE_CONF.get('switch', {}).keys())
-                    switchs = [s.strip() for s in raw.split(",") if s.strip() and s.strip() in all_keys]
-            client_conf = {
-                "id": client_config.ID,
-                "name": client_config.NAME,
-                "type": client_config.TYPE,
-                "config": config,
-                "switchs": switchs,
-                "interactive": client_config.INTERACTIVE,
-                "enabled": client_config.ENABLED,
-                "templates": templates
-            }
-            self._client_configs[str(client_config.ID)] = client_conf
-            if not client_config.ENABLED or not config:
-                continue
-            client = {
-                "search_type": ModuleConf.MESSAGE_CONF.get('client').get(client_config.TYPE, {}).get('search_type'),
-                "max_length": ModuleConf.MESSAGE_CONF.get('client').get(client_config.TYPE, {}).get('max_length'),
-                "client": self.__build_class(ctype=client_config.TYPE, conf=config)
-            }
-            client.update(client_conf)
-            self._active_clients.append(client)
-            if client.get("interactive"):
-                self._active_interactive_clients[client.get("search_type")] = client
 
-    def __build_class(self, ctype, conf):
-        for message_schema in self._message_schemas:
-            try:
-                if message_schema.match(ctype):
-                    return message_schema(conf)
-            except Exception as e:
-                ExceptionUtils.exception_traceback(e)
+    def _ensure_loaded(self):
+        if self._loaded:
+            return
+        for client_config in self.config_repo.get_message_client() or []:
+            if client_config.ENABLED and client_config.CONFIG:
+                self._add_client_from_config(client_config)
+        self._loaded = True
+
+    def _add_client_from_config(self, client_config):
+        cid = str(client_config.ID)
+        self._remove_client(cid)
+        config = _parse_client_config(client_config)
+        self._client_configs[cid] = config
+        client_entry = {
+            "id": client_config.ID,
+            "name": client_config.NAME,
+            "type": client_config.TYPE,
+            "config": config["config"],
+            "switchs": config["switchs"],
+            "interactive": client_config.INTERACTIVE,
+            "enabled": client_config.ENABLED,
+            "templates": config["templates"],
+            "search_type": ModuleConf.MESSAGE_CONF.get('client').get(client_config.TYPE, {}).get('search_type'),
+            "max_length": ModuleConf.MESSAGE_CONF.get('client').get(client_config.TYPE, {}).get('max_length'),
+            "client": ClientRegistry.build(ctype=client_config.TYPE, conf=config["config"])
+        }
+        client_instance = client_entry["client"]
+        if hasattr(client_instance, 'setup'):
+            ThreadHelper().start_thread(client_instance.setup, ())
+        self._active_clients.append(client_entry)
+        if client_config.INTERACTIVE:
+            self._active_interactive_clients[client_entry["search_type"]] = client_entry
+
+    def _remove_client(self, cid):
+        cid = str(cid)
+        self._active_clients = [c for c in self._active_clients if str(c.get("id")) != cid]
+        keys_to_remove = [k for k, v in self._active_interactive_clients.items() if str(v.get("id")) == cid]
+        for k in keys_to_remove:
+            del self._active_interactive_clients[k]
+        if cid in self._client_configs:
+            del self._client_configs[cid]
+
+    def _refresh_client(self, cid):
+        self._ensure_loaded()
+        client_config = self._get_client_config_by_id(cid)
+        if not client_config:
+            self._remove_client(cid)
+            return
+        if client_config.ENABLED and client_config.CONFIG:
+            self._add_client_from_config(client_config)
+        else:
+            self._remove_client(str(cid))
+            self._client_configs[str(cid)] = _parse_client_config(client_config)
+
+    def _get_client_config_by_id(self, cid):
+        for config in self.config_repo.get_message_client() or []:
+            if str(config.ID) == str(cid):
+                return config
         return None
 
     def __render_template(self, template_str, variables):
@@ -260,10 +273,9 @@ class Message(metaclass=SingletonMeta):
         if not config or not ctype:
             return False
         # 测试状态不启动监听服务
-        state, ret_msg = self.__build_class(ctype=ctype,
-                                            conf=config).send_msg(title="测试",
-                                                                  text="这是一条测试消息",
-                                                                  url="https://github.com/linyuan0213/nas-tools")
+        state, ret_msg = ClientRegistry.build(ctype=ctype, conf=config).send_msg(
+            title="测试", text="这是一条测试消息",
+            url="https://github.com/linyuan0213/nas-tools")
         if not state:
             log.error(f"【Message】{ctype} 发送测试消息失败：%s" % ret_msg)
         return state
@@ -871,6 +883,7 @@ class Message(metaclass=SingletonMeta):
         """
         获取消息端信息
         """
+        self._ensure_loaded()
         if cid:
             return self._client_configs.get(str(cid))
         return self._client_configs
@@ -879,58 +892,38 @@ class Message(metaclass=SingletonMeta):
         """
         查询当前可以交互的渠道
         """
+        self._ensure_loaded()
         if client_type:
             return self._active_interactive_clients.get(client_type)
         else:
             return [client for client in self._active_interactive_clients.values()]
 
-    @staticmethod
-    def get_search_types():
-        """
-        查询可交互的渠道
-        """
-        return [info.get("search_type")
-                for info in ModuleConf.MESSAGE_CONF.get('client').values()
-                if info.get('search_type')]
-
-    def send_user_statistics_message(self, msgs: list):
-        """
-        发送数据统计消息
-        """
-        if not msgs:
-            return
-        title = "站点数据统计"
-        text = "\n".join(msgs)
-        # 插入消息中心
-        self.messagecenter.insert_system_message(title=title, content=text)
-        # 发送消息
-        for client in self._active_clients:
-            if "ptrefresh_date_message" in client.get("switchs"):
-                self.__sendmsg(
-                    client=client,
-                    title=title,
-                    text=text
-                )
-
     def delete_message_client(self, cid):
         """
         删除消息端
         """
+        self._ensure_loaded()
         ret = self.config_repo.delete_message_client(cid=cid)
-        self.init_config()
+        self._remove_client(cid)
         return ret
 
     def check_message_client(self, cid=None, interactive=None, enabled=None, ctype=None):
         """
-        设置消息端
+        设置消息端（更新DB后刷新受影响的客户端）
         """
+        self._ensure_loaded()
         ret = self.config_repo.check_message_client(
             cid=cid,
             interactive=interactive,
             enabled=enabled,
             ctype=ctype
         )
-        self.init_config()
+        if cid:
+            self._refresh_client(cid)
+        if ctype:
+            for c in list(self._active_clients):
+                if c.get("type") == ctype:
+                    self._refresh_client(c.get("id"))
         return ret
 
     def insert_message_client(self,
@@ -945,7 +938,8 @@ class Message(metaclass=SingletonMeta):
         """
         插入消息端
         """
-        ret = self.config_repo.insert_message_client(
+        self._ensure_loaded()
+        new_id = self.config_repo.insert_message_client(
             name=name,
             ctype=ctype,
             config=config,
@@ -955,8 +949,18 @@ class Message(metaclass=SingletonMeta):
             note=note,
             templates=templates
         )
-        self.init_config()
-        return ret
+        self._refresh_client(new_id)
+        return True
+
+    def send_user_statistics_message(self, msgs: list):
+        if not msgs:
+            return
+        title = "站点数据统计"
+        text = "\n".join(msgs)
+        self.messagecenter.insert_system_message(title=title, content=text)
+        for client in self._active_clients:
+            if "ptrefresh_date_message" in client.get("switchs"):
+                self.__sendmsg(client=client, title=title, text=text)
 
     def send_brushtask_pause_message(self, title, text):
         """

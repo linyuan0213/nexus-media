@@ -1,0 +1,46 @@
+from urllib.parse import quote_plus
+
+from app.message.client._base import _IMessageClient
+from app.utils import RequestUtils, StringUtils, ExceptionUtils
+from app.message.client_registry import ClientRegistry
+
+
+class Bark(_IMessageClient):
+    schema = "bark"
+
+    def read_config(self):
+        cfg = self._config or {}
+        self._server = StringUtils.get_base_url(cfg.get('server'))
+        self._apikey = cfg.get('apikey')
+        self._params = cfg.get('params')
+
+    def send_msg(self, title, text="", image="", url="", user_id=""):
+        if not title and not text:
+            return False, "标题和内容不能同时为空"
+        try:
+            if not self._server or not self._apikey:
+                return False, "参数未配置"
+            sc_url = "%s/%s/%s/%s" % (self._server, self._apikey, quote_plus(title), quote_plus(text))
+            if self._params:
+                sc_url = "%s?%s" % (sc_url, self._params)
+            res = RequestUtils().post_res(sc_url)
+            if res and res.status_code == 200:
+                ret_json = res.json()
+                code = ret_json['code']
+                message = ret_json['message']
+                if code == 200:
+                    return True, message
+                else:
+                    return False, message
+            elif res is not None:
+                return False, f"错误码：{res.status_code}，错误原因：{res.reason}"
+            else:
+                return False, "未获取到返回信息"
+        except Exception as msg_e:
+            ExceptionUtils.exception_traceback(msg_e)
+            return False, str(msg_e)
+
+    def send_list_msg(self, medias: list = None, user_id="", title="", **kwargs):
+        pass
+
+ClientRegistry.register(Bark)

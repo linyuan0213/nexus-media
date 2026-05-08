@@ -6,7 +6,7 @@ from jinja2 import Environment, BaseLoader, Template
 
 from app.message.client._base import _IMessageClient
 from app.utils import ExceptionUtils
-from config import Config
+from app.message.client_registry import ClientRegistry
 
 lock = Lock()
 
@@ -28,20 +28,25 @@ class JsonTemplateEnvironment(Environment):
 class Webhook(_IMessageClient):
     schema = "webhook"
 
-    _client_config = {}
-    _domain = None
-    _url = None
-    _method = None
-    _query_params = None
-    _json_tpl = None
-    _json_list_tpl = None
-    _token = None
-
     def __init__(self, config):
-        self._config = Config()
-        self._client_config = config
-        self.init_config()
-    
+        self._domain = None
+        self._url = None
+        self._method = None
+        self._query_params = None
+        self._json_tpl = None
+        self._json_list_tpl = None
+        self._token = None
+        super().__init__(config)
+
+    def read_config(self):
+        if self._config:
+            self._url = self._config.get("url")
+            self._method = self._config.get("method")
+            self._query_params = self.__parse_json(self._config.get("query_params"), 'query_params')
+            self._json_tpl = self._config.get("json_tpl", "")
+            self._json_list_tpl = self._config.get("json_list_tpl", "")
+            self._token = self._config.get("token")
+
     @classmethod
     def __parse_json(cls, json_str, attr_name):
         json_str = json_str.strip()
@@ -70,19 +75,6 @@ class Webhook(_IMessageClient):
             return template.render(**variables)
         except Exception as e:
             raise ValueError(f"模板渲染失败：{str(e)}\n原始模板：{template_str}\n变量：{variables}") from e
-
-    def init_config(self):
-        if self._client_config:
-            self._url = self._client_config.get("url")
-            self._method = self._client_config.get("method")
-            self._query_params = self.__parse_json(self._client_config.get("query_params"), 'query_params')
-            self._json_tpl = self._client_config.get("json_tpl", "")
-            self._json_list_tpl = self._client_config.get("json_list_tpl", "")
-            self._token = self._client_config.get("token")
-
-    @classmethod
-    def match(cls, ctype):
-        return True if ctype == cls.schema else False
 
     def send_msg(self, title, text="", image="", url="", user_id=""):
         """
@@ -204,3 +196,5 @@ class Webhook(_IMessageClient):
         if self._token:
             r['Authorization'] = self._token
         return r
+
+ClientRegistry.register(Webhook)
