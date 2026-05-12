@@ -1,12 +1,14 @@
 from app.db.repositories.plugin_repo_adapter import TmdbBlacklistRepositoryAdapter
+from app.media import MediaService
+from app.media.parser._metainfo import MetaInfo
 from app.utils.types import MediaType
-from app.utils.cache_system import get_cache_manager
+from app.infrastructure.cache_system import get_cache_manager
 
 
 class TmdbBlacklistService:
     def __init__(self):
         self._db = TmdbBlacklistRepositoryAdapter()
-        self._media = None
+        self._media = MediaService()
         self._cache = get_cache_manager().get_or_create(
             "tmdb_blacklist", "memory", maxsize=1, ttl=300
         )
@@ -71,12 +73,9 @@ class TmdbBlacklistService:
         else:
             mtype = MediaType.UNKNOWN
 
-        from app.media.media import Media
-        from app.media import MetaInfo
-        if not self._media:
-            self._media = Media()
-
         tmdb_info = self._media.get_tmdb_info(mtype=mtype, tmdbid=tmdb_id)
+        if not tmdb_info:
+            raise ValueError(f"TMDB 信息获取失败：tmdb_id={tmdb_id}, type={media_type}")
         meta_info = MetaInfo(tmdb_info.get("name") or tmdb_info.get("title"))
         meta_info.set_tmdb_info(tmdb_info)
         self._db.insert_tmdb_blacklist(
