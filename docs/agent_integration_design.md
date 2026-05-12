@@ -1,667 +1,233 @@
 # LLM Agent 集成设计文档
 
-## 1. 概述
+## 1. 设计目标
 
-### 1.1 目标
+将 LLM（大语言模型）作为可选增强层集成到 NAS-Tools 媒体识别管道中，遵循以下设计原则：
 
-将 LLM（大语言模型）作为智能 Agent 集成到 NAS-Tools 中，替代/增强现有的正则表达式硬编码解析器，实现：
+- **Parser 优先**：LLM 只参与文件名解析阶段（`Parser` 层），不参与 Lookup/TMDB 查询阶段。
+- **透明降级**：LLM 不可用时，整个识别管道自动回退到正则解析，业务模块无感知。
+- **单点收敛**：所有 LLM 调用通过 `AgentService` 门面收敛，业务模块不直接引用 Provider SDK。
+- **配置热感知**：Provider 切换、功能开关变更无需重启进程。
 
-- 复杂媒体文件名的高精度识别（动漫、多语言混合、不规则格式）
-- 非标准季/集编号与 TMDB 标准季/集的自动映射
-- 批量并行识别以满足搜索/订阅的速度要求
-- 可扩展的消息模板 Agent 和自定义业务 Agent
-
-### 1.2 当前局限
-
-| 问题 | 现状 | LLM 解决方案 |
-|------|------|-------------|
-| 文件名解析 | Token + 正则硬编码，对不规则格式脆弱 | LLM 语义理解，处理任意格式 |
-| 季集映射 | 无映射能力，S04E03 和 S1E57 无法对应 | LLM + TMDB API 查询自动映射 |
-| 动漫检测 | 依赖 `【】` 模式判断 | LLM 直接从内容语义判断 |
-| 批量识别 | RSS 阶段 2 用 ThreadPool（最多4w） | LLM batch API 一次处理多条 |
-| AI 集成 | 仅作为 TMDB 搜索的最后一个回退 | 作为首要识别 + 多 Agent 协作 |
-
-### 1.3 文件示例
-
-**输入：**
-```
-[ANi] Pardon the Intrusion Im Home / 我回来了，他又来打扰了！第四季 - 03 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]
-```
-
-**期望输出：**
-```json
-{
-  "title_en": "Pardon the Intrusion I'm Home",
-  "title_cn": "我回来了，他又来打扰了！",
-  "season": 4,
-  "episode": 3,
-  "resolution": "1080p",
-  "source": "WEB-DL",
-  "video_codec": "AVC",
-  "audio_codec": "AAC",
-  "language": ["CHT"],
-  "platform": "Baha",
-  "release_group": "ANi",
-  "format": "MP4",
-  "type": "anime",
-  "tmdb_id": null,
-  "tmdb_season": null,
-  "tmdb_episode": null
-}
-```
-
----
-
-## 2. Agent 架构
-
-### 2.1 整体架构
+## 2. 架构分层
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                      Agent Registry                       │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐ │
-│  │  Media   │ │  Season  │ │ Template │ │   Custom     │ │
-│  │Recognizer│ │  Mapper  │ │  Agent   │ │   Agents     │ │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └──────┬───────┘ │
-│       │             │            │               │        │
-│  ┌────┴─────────────┴────────────┴───────────────┴────┐   │
-│  │                   LLM Provider                      │   │
-│  │  ┌─────────┐ ┌─────────┐ ┌──────────┐             │   │
-│  │  │ OpenAI  │ │ DeepSeek│ │  Custom  │             │   │
-│  │  │ (GPT-4) │ │  (V3)   │ │ (Ollama) │             │   │
-│  │  └─────────┘ └─────────┘ └──────────┘             │   │
-│  └────────────────────────────────────────────────────┘   │
-│                           │                                │
-│  ┌────────────────────────┴────────────────────────────┐  │
-│  │                  Tool System                         │  │
-│  │  TMDB API  │  Media Cache  │  Search Service  │ ... │  │
-│  └─────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────┘
+业务层 (app/services/, app/plugin_framework/)
+    │
+    ├─ MetaInfo() ──→ 纯本地正则解析（轻量级，高频调用）
+    ├─ MediaService.identify() ──→ Parser(LLM可选) → Lookup → Mapper
+    ├─ MediaService.identify_batch() ──→ Parser.parse_batch() 批量识别
+    ├─ search_torrents ──→ SearchIntentAgent 解析自然语言
+    ├─ autosignin plugins ──→ QuestionAnswerAgent
+    └─ autosub plugin ──→ ChatAgent.translate_to_zh()
+    │
+    ▼
+门面层  AgentService（单例，配置/缓存/可用性管理）
+    │
+    ▼
+Agent 层  MediaRecognizer / ChatAgent / SearchIntentAgent / QuestionAnswerAgent
+    │
+    ▼
+Provider 层  OpenAIProvider / OllamaProvider / GeminiProvider
 ```
 
-### 2.2 核心类设计
+## 3. 媒体识别管道中的 Agent 角色
+
+### 3.1 MetaInfo() 保持纯正则解析
+
+`MetaInfo()` 是项目中调用频率最高的解析入口（60+ 处调用），被 `ResultFilter.local_filter()` 等高频场景逐条调用。**不集成 Agent**，保持纯本地正则解析，避免每个搜索结果都单独发 LLM 请求。
+
+```
+MetaInfo(title)
+    │
+    ├── WordsHelper().process(title) ──→ rev_title
+    │
+    └── 正则解析
+           _is_anime(rev_title) ? parse_anime_title() : parse_video_title()
+```
+
+### 3.2 Agent 识别入口：MediaService.identify() / identify_batch()
+
+Agent 识别只在这两个入口中使用，由 `MediaService._build_parser()` 选择 Parser：
+
+```
+identify(title)                    identify_batch(items)
+    │                                  │
+    ├── _build_parser()              ├── _build_parser()
+    │      LLMParser (若配置启用)     │      LLMParser (若配置启用)
+    │      或 RegexParser (默认)      │      或 RegexParser (默认)
+    │                                  │
+    ├── parser.parse(title)          ├── parser.parse_batch(titles)
+    │      MediaRecognizer.          │      MediaRecognizer.
+    │      recognize()               │      recognize_batch()
+    │                                  │
+    ├── TmdbLookup.lookup()          ├── TmdbLookup.lookup_batch()
+    │                                  │
+    └── EpisodeMapper.map()          └── EpisodeMapper.map_batch()
+```
+
+**关键设计**：
+- `MetaInfo()` 只做轻量级本地解析，用于 `local_filter` 阶段的名称提取和规则过滤
+- `identify()`/`identify_batch()` 做完整的 TMDB 查询 + 可选的 LLM 解析
+- `identify_batch()` 使用 `recognize_batch()` 一次处理多条，减少 API 调用次数
+
+### 3.3 为什么删除 _search_ai
+
+原设计中 `identify()` 在 Lookup 失败后有一个 `_search_ai()` fallback，直接调用 `MediaRecognizer` 重新解析文件名并查 TMDB。该设计被删除，原因：
+
+1. **重复解析**：Parser 阶段已经完成文件名解析，`_search_ai` 再调用 LLM 是冗余的。
+2. **职责错位**：Lookup 阶段的 fallback 应该是"换个策略查 TMDB"，而不是"重新解析文件名"。
+3. **成本翻倍**：同一条文件名在单次 `identify()` 中可能被 LLM 解析两次。
+
+当前设计：Parser 层已包含 LLM 解析（`LLMParser`），Lookup 层只负责用 Parser 产出的结构化数据查询 TMDB，不再单独调用 LLM。
+
+## 4. 非识别场景中的 Agent
+
+| 场景 | 调用点 | Agent | 功能 |
+|------|--------|-------|------|
+| 搜索意图 | `search_torrents.py:search_medias_for_web()` | `SearchIntentAgent` | 将自然语言查询（"我想看最新的一拳超人第三季"）解析为结构化参数 |
+| 消息机器人 | `search_torrents.py` | `ChatAgent.chat_with_session()` | 非搜索/下载/订阅开头的用户输入进入对话模式 |
+| 站点签到 | `autosignin/chdbits.py` 等 | `QuestionAnswerAgent.answer()` | 验证码选择题答题 |
+| 字幕翻译 | `autosub/plugin.py` | `ChatAgent.translate_to_zh()` | 字幕文本翻译 |
+
+### 4.1 SearchIntentAgent 集成
 
 ```python
-# app/agent/base.py
-class BaseAgent:
-    """Agent 基类"""
-    agent_name: str
-    provider: str = "openai"   # openai | deepseek | custom
-    model: str = "gpt-4o-mini"
-    system_prompt: str
-    tools: List[Callable]
-    max_tokens: int = 4096
-    temperature: float = 0.1
-
-    async def run(self, input_data) -> dict
-    async def run_batch(self, inputs: List) -> List[dict]
-
-
-# app/agent/media_recognizer.py
-class MediaRecognizerAgent(BaseAgent):
-    """媒体识别 Agent — 解析文件名/种子名"""
-    agent_name = "media_recognizer"
-    # 支持 Function Calling，可调用 TMDB API 验证
-
-
-# app/agent/season_mapper.py
-class SeasonMapperAgent(BaseAgent):
-    """季集映射 Agent — 非标准季集 → TMDB 标准季集"""
-    agent_name = "season_mapper"
-    # 需要 TMDB API tool 获取剧集分组信息
-
-
-# app/agent/template_agent.py
-class TemplateAgent(BaseAgent):
-    """消息模板 Agent — 自定义通知格式"""
-    agent_name = "template"
-
-
-# app/agent/registry.py
-class AgentRegistry:
-    """Agent 注册中心 — 统一管理所有 Agent"""
-    _agents: Dict[str, BaseAgent] = {}
-    
-    @classmethod
-    def register(cls, agent: BaseAgent)
-    @classmethod
-    def get(cls, name: str) -> BaseAgent
-    @classmethod
-    def run_pipeline(cls, pipeline: List[str], input_data) -> dict
+# search_medias_for_web() 中的集成点
+intent_agent = SearchIntentAgent()
+if intent_agent.ready:
+    intent = intent_agent.parse(content)
+    if intent and intent.is_specific:
+        key_word = intent.keywords or key_word
+        mtype = _map_media_type(intent.media_type) or mtype
+        season_num = intent.season or season_num
+        episode_num = intent.episode or episode_num
+        year = str(intent.year) or year
 ```
 
-### 2.3 Agent 执行流水线
+Agent 解析结果**覆盖**而非替换 `StringUtils.get_keyword_from_string()` 的结果，只有当 Agent 提取的信息更具体时才生效。
+
+## 5. 接口契约
+
+### 5.1 AgentService 门面
 
 ```python
-# 媒体识别流水线
-pipeline = [
-    "media_recognizer",   # 阶段1: 解析文件名
-    "season_mapper",      # 阶段2: 映射季集
-    "tmdb_enricher",      # 阶段3: 补充 TMDB 信息 (非 Agent，直接 API)
-]
-
-result = AgentRegistry.run_pipeline(pipeline, input_data="[ANi] Pardon...")
+class AgentService:
+    @property
+    def ready: bool
+    def chat(messages, system_prompt, temperature, response_format, use_cache) -> str
+    def structured_chat(messages, system_prompt, response_model, temperature) -> BaseModel | None
 ```
 
----
+**错误语义**：
 
-## 3. 媒体识别 Agent (MediaRecognizerAgent)
+| 场景 | `chat()` | `structured_chat()` |
+|------|---------|---------------------|
+| 未配置 / Provider 不可用 | `""` | `None` |
+| API 超时 | `""` | `None` |
+| JSON 解析失败 | 原始文本 | `None` |
 
-### 3.1 System Prompt 设计
+### 5.2 领域 Agent 契约
 
-```
-你是一个专业的媒体文件名解析助手，专门识别动漫和影视资源的文件名。
+所有领域 Agent **必须**：
+- 实现 `ready` 属性（代理 `AgentService.ready`）
+- 同步方法，异常内部捕获
+- 不直接访问 `Config()`
 
-## 输入格式
-你会收到一个文件名或种子名，可能包含：
-- [ANi] — 发布组/字幕组
-- Pardon the Intrusion I'm Home — 英文标题
-- 我回来了，他又来打扰了！第四季 - 03 — 中文标题、季集
-- [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4] — 分辨率、平台、来源、编码、语言、格式
-
-## 输出要求
-返回 JSON，包含以下字段（未知字段填 null）：
-{
-  "title_en": "英文/罗马音标题",
-  "title_cn": "中文标题",
-  "alternate_titles": ["其他可能的标题变体"],
-  "year": 年份数字或null,
-  "season": 季号数字或null,
-  "season_raw": "原始季文本（如第四季）或null",
-  "episode": 集号数字或null,
-  "resolution": "分辨率（1080p/2160p/720p等）",
-  "source": "来源（BDRip/WEB-DL/HDTV等）",
-  "video_codec": "视频编码（AVC/HEVC/XviD等）",
-  "audio_codec": "音频编码（AAC/FLAC/DTS等）",
-  "language": ["语言标签列表（CHT/CHS/JPN等）"],
-  "platform": "平台（Baha/CR/NF等）",
-  "release_group": "发布组",
-  "format": "文件格式（MP4/MKV等）",
-  "edition": "版本/导演剪辑版等",
-  "type": "movie/tv/anime",
-  "is_anime": true/false
-}
-
-## 规则
-- 季集信息优先从中文字段提取（第四季→4）
-- 分辨率统一为小写（1080P→1080p）
-- 双语文件名保留两个标题
-- 如果是剧集包（全X集/Complete），episode 填 null
-```
-
-### 3.2 批量识别设计
+### 5.3 LLMParser 契约
 
 ```python
-class MediaRecognizerAgent(BaseAgent):
-    
-    async def run_batch(self, filenames: List[str]) -> List[dict]:
-        """批量识别 — 一次 API 调用处理多条"""
-        batch_prompt = """
-请识别以下文件名列表，返回 JSON 数组：
-["文件名1", "文件名2", ...]
-        
-返回格式：[{识别结果1}, {识别结果2}, ...]
-"""
-        response = await self._call_llm(
-            messages=[{"role": "user", "content": batch_prompt + "\n".join(filenames)}],
-            response_format={"type": "json_object"}
-        )
-        return response["results"]
-    
-    def recognize_batch(self, filenames: List[str], batch_size: int = 20) -> List[dict]:
-        """同步批量识别 — 将大批量分片处理"""
-        results = []
-        for i in range(0, len(filenames), batch_size):
-            batch = filenames[i:i+batch_size]
-            results.extend(self.run_batch_sync(batch))
-        return results
+class LLMParser(BaseParser):
+    @property
+    def ready: bool
+    def parse(title, subtitle) -> ParserResult | None
+    def parse_batch(titles) -> list[ParserResult | None]
 ```
 
-### 3.3 集成点
+- `ready=False`（Agent 未配置）时，`parse()` 和 `parse_batch()` 返回 `None`
+- `parse_batch()` 内部调用 `MediaRecognizer.recognize_batch()`，使用 `BatchResult` 一次处理多条
+- `_convert()` 将 `MediaResult` 映射为 `ParserResult`，包含 `end_season`/`end_episode`
 
-```python
-# 修改 app/media/meta/metainfo.py
-def MetaInfo(title, subtitle=None, isfile=True):
-    # 优先级: LLM Agent > 传统 Token 解析
-    cfg = Config().get_config("agent")
-    if cfg.get("media_recognizer_enabled"):
-        try:
-            agent = AgentRegistry.get("media_recognizer")
-            result = agent.run_sync(title)
-            return _build_meta_from_agent_result(result)
-        except Exception:
-            pass  # 回退到传统解析
-    
-    # 传统解析（现有逻辑保持不变）
-    return _legacy_parse(title, subtitle, isfile)
-```
+## 6. 缓存策略
 
----
+### 6.1 AgentService 对话缓存
 
-## 4. 季集映射 Agent (SeasonMapperAgent)
+- `lru_cache_with_ttl(ttl=300, maxsize=256)`
+- 仅 `chat()` 启用，`structured_chat()` 不缓存（避免复杂 JSON 命中错误缓存）
+- 键：`tuple(messages), system_prompt, temperature`
 
-### 4.1 问题描述
+### 6.2 EpisodeMapper 映射缓存
 
-不同数据源的季集编号不一致：
+- 实例级内存字典 `_blocks`
+- 键：`tmdb_id`（合并季）/ `f"abs:{tmdb_id}"`（绝对集号）
+- 进程存活期间有效
 
-| 数据源 | 格式 | 说明 |
-|--------|------|------|
-| 文件名 | S0403 / S04E03 | 第4季第3集 |
-| 文件名 | S1E57 | 累计集号 |
-| TMDB | Season 4, Episode 3 | 标准分季 |
-| TMDB | Season 1, Episode 57 | 累计分季（单季长番） |
+### 6.3 MediaService 识别缓存
 
-**核心矛盾**：文件名 `S04E03` 对应 TMDB `S01E57`（某长番动漫按 TMDB 定义为单季），反过来文件名 `S1E57` 对应 TMDB `S04E03`（TMDB 按标准季分）。
+- Redis / 内存缓存（`cacheman["media_info"]`）
+- **防碰撞**：返回缓存前验证 `season/episode` 与当前解析结果匹配
 
-### 4.2 映射策略
-
-```python
-class SeasonMapperAgent(BaseAgent):
-    agent_name = "season_mapper"
-    
-    tools = [
-        "tmdb_get_tv_seasons",      # 获取 TMDB 该剧的所有季
-        "tmdb_get_season_episodes",  # 获取某季的所有集
-        "tmdb_search_tv",            # 搜索电视剧
-    ]
-    
-    system_prompt = """
-你是一个电视剧/动漫季集映射助手。当文件名中的季集编号与 TMDB 标准不一致时，
-你需要查询 TMDB API 获取正确的季集映射。
-
-## 映射场景
-1. **文件名S1E57 → TMDB应在哪季？**
-   - 查询 TMDB 所有季的剧集列表
-   - 如果 S1-S3 各有 12 集 (36集)，S4 从第37集开始
-   - 则 S1E57 = S4E21
-
-2. **文件名S4E03 → TMDB S1E57?**
-   - 判断该剧在 TMDB 是分季还是单季
-   - 如果是单季长番（如某些动漫），S4E03 映射到累计集号
-
-3. **文件名包含「全08集」→ 对应哪季？**
-   - 查询 TMDB 找到包含 8 集的季
-
-## 步骤
-1. 根据标题搜索 TMDB 获取 TV ID
-2. 获取所有季列表和各季集数
-3. 建立分季→累计集号的映射表
-4. 返回标准 TMDB 季集号
-    """
-```
-
-### 4.3 映射数据结构
-
-```python
-@dataclass
-class SeasonMapping:
-    """季集映射结果"""
-    tmdb_id: int                      # TMDB 剧集 ID
-    source_season: int                # 文件名中的季号
-    source_episode: int               # 文件名中的集号
-    source_total: Optional[int]       # 文件名中的总集数
-    target_season: int                # TMDB 标准季号
-    target_episode: int               # TMDB 标准集号
-    mapping_type: str                 # absolute | season_based | single_season
-    confidence: float                 # 置信度 0-1
-    season_breakdown: Dict[int, int]  # 季号→该季最后一集累计号
-    # 例如 {1: 12, 2: 24, 3: 36, 4: 48}
-```
-
-### 4.4 批量缓存
-
-季集映射应该缓存到 Redis，避免重复查询 TMDB API：
-
-```python
-# 缓存 key: tmdb_id:absolute:{episode_number}
-# 缓存值: {"season": 4, "episode": 3}
-CACHE_KEY = f"season_map:{tmdb_id}:abs:{absolute_episode}"
-```
-
----
-
-## 5. 批量识别系统
-
-### 5.1 RSS 集成
-
-```python
-# 修改 app/services/rss_core.py 阶段2
-async def _batch_recognize_media(self, items: List[dict]) -> List[dict]:
-    """批量识别 RSS 标题"""
-    titles = [item["title"] for item in items]
-    
-    # 优先使用 LLM Agent 批量识别
-    cfg = Config().get_config("agent")
-    if cfg.get("batch_recognize_enabled"):
-        try:
-            agent = AgentRegistry.get("media_recognizer")
-            results = await agent.run_batch(titles)
-            for item, result in zip(items, results):
-                item["meta"] = result
-            return items
-        except Exception:
-            pass
-    
-    # 回退到传统逐个识别
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {executor.submit(Media().get_media_info, t): t for t in titles}
-        ...
-```
-
-### 5.2 搜索集成
-
-```python
-# 修改 app/services/search_torrents.py — 搜索关键词提取
-def get_keyword_from_string(content):
-    # 优先用 LLM 提取搜索参数
-    cfg = Config().get_config("agent")
-    if cfg.get("search_intent_enabled"):
-        try:
-            agent = AgentRegistry.get("search_parser")
-            result = agent.run_sync(content)
-            return result  # {"keyword": "...", "type": "tv", "season": 4, ...}
-        except Exception:
-            pass
-    
-    # 回退到 StringUtils.get_keyword_from_string()
-    return StringUtils.get_keyword_from_string(content)
-```
-
-### 5.3 批量处理性能设计
-
-| 方式 | 单次处理量 | 延迟 | 适用场景 |
-|------|----------|------|---------|
-| 单条 API 调用 | 1 条 | ~200ms | 交互式搜索 |
-| Batch API 调用 | 20-50 条 | ~1s | RSS 定时任务 |
-| 流式处理 | 持续 | 实时 | 聊天机器人消息 |
-
-```
-RSS 批量识别流程:
-  RSS items (100条)
-    ↓ 去重
-  unique items (70条)
-    ↓ 分片 (batch_size=20)
-  ┌─ batch 1 (20条) ─→ LLM API ─→ results
-  ├─ batch 2 (20条) ─→ LLM API ─→ results
-  ├─ batch 3 (20条) ─→ LLM API ─→ results
-  └─ batch 4 (10条) ─→ LLM API ─→ results
-    ↓ 合并
-  identified items (70条)
-    ↓
-  匹配订阅规则 → 下载
-```
-
----
-
-## 6. 消息模板 Agent (TemplateAgent)
-
-### 6.1 设计目标
-
-允许用户自定义通知消息格式，LLM 负责：
-- 根据媒体类型选择合适的模板风格
-- 自动生成 Emoji 和格式化文本
-- 支持多语言（中文/英文）
-
-### 6.2 配置示例
-
-```json
-{
-  "agent": {
-    "template_agent": {
-      "enabled": true,
-      "templates": {
-        "download_start": {
-          "system": "你是下载通知格式化助手，用简洁风格",
-          "format": "emoji_first_line"
-        },
-        "transfer_finished": {
-          "system": "你是入库通知格式化助手，用庆祝风格",
-          "format": "emoji_first_line"
-        },
-        "weekly_report": {
-          "system": "你是周报生成助手，用数据风格",
-          "format": "markdown"
-        }
-      }
-    }
-  }
-}
-```
-
-### 6.3 Agent 实现
-
-```python
-class TemplateAgent(BaseAgent):
-    agent_name = "template"
-    
-    system_prompt = """
-你是一个消息通知格式化助手。根据输入的事件类型和媒体信息，生成格式化的通知消息。
-
-## 输入格式
-{"event": "download_start", "media": {媒体信息}, "style": "emoji_first_line"}
-
-## 输出格式
-{
-  "title": "🎬 我回来了，他又来打扰了！S04E03 开始下载",
-  "text": "站点: ANi · 分辨率: 1080p · 来源: WEB-DL · 大小: 1.2GB",
-  "emoji": "🎬"
-}
-
-## 风格
-- emoji_first_line: 标题含一个 Emoji，正文简洁
-- markdown: 用 Markdown 格式化（**粗体**，`代码`）
-- minimal: 最简风格，无 Emoji
-- celebration: 庆祝风格，多个 Emoji
-    """
-```
-
----
-
-## 7. 自定义 Agent 扩展
-
-### 7.1 扩展接口
-
-```python
-# app/agent/base.py
-class BaseAgent:
-    agent_name: str                          # 唯一标识
-    agent_type: str = "custom"               # media | mapper | template | custom
-    enabled: bool = True
-    
-    def validate_input(self, input_data) -> bool
-    def pre_process(self, input_data) -> dict
-    def post_process(self, output_data) -> dict
-    
-    @abstractmethod
-    async def run(self, input_data) -> dict: ...
-    @abstractmethod
-    async def run_batch(self, inputs: List) -> List[dict]: ...
-```
-
-### 7.2 已规划 Agent 列表
-
-| Agent | 类型 | 功能 | 优先级 |
-|-------|------|------|--------|
-| `media_recognizer` | media | 文件名/种子名解析 | P0 |
-| `season_mapper` | mapper | 非标准季集→TMDB 映射 | P0 |
-| `search_parser` | media | 搜索意图解析（关键词提取） | P1 |
-| `template` | template | 消息通知格式化 | P1 |
-| `subtitle_sync` | custom | 字幕时间轴调整 | P2 |
-| `quality_judge` | custom | 资源质量评估（多版本选择） | P2 |
-| `plugin_agent` | custom | 用户自定义插件 Agent | P2 |
-| `weekly_report` | custom | 周报生成（统计+推荐） | P2 |
-
-### 7.3 插件化 Agent 配置
-
-```json
-{
-  "agent": {
-    "custom_agents": [
-      {
-        "name": "my_translator",
-        "description": "自动翻译日文标题为中文",
-        "provider": "deepseek",
-        "model": "deepseek-chat",
-        "system_prompt": "你是日文→中文翻译助手...",
-        "trigger": "on_download_start",
-        "input_fields": ["title_cn", "title_en"],
-        "output_fields": ["translated_title"]
-      }
-    ]
-  }
-}
-```
-
----
-
-## 8. 技术选型
-
-### 8.1 LLM Provider 配置
-
-```json
-{
-  "agent": {
-    "default_provider": "openai",
-    "providers": {
-      "openai": {
-        "api_key": "sk-xxx",
-        "api_url": "https://api.openai.com",
-        "models": {
-          "default": "gpt-4o-mini",
-          "batch": "gpt-4o",
-          "reasoning": "o1-mini"
-        }
-      },
-      "deepseek": {
-        "api_key": "sk-xxx",
-        "api_url": "https://api.deepseek.com",
-        "models": {
-          "default": "deepseek-chat",
-          "batch": "deepseek-chat",
-          "reasoning": "deepseek-reasoner"
-        }
-      },
-      "custom": {
-        "api_key": "",
-        "api_url": "http://localhost:11434",
-        "models": {
-          "default": "qwen2.5:7b"
-        }
-      }
-    }
-  }
-}
-```
-
-### 8.2 模型选择策略
-
-| 场景 | 推荐模型 | 原因 |
-|------|---------|------|
-| 文件名解析 | gpt-4o-mini / deepseek-chat | 低延迟、低成本、简单推理 |
-| 季集映射 | gpt-4o / deepseek-reasoner | 多步推理、需要 Function Calling |
-| 批量识别 | deepseek-chat / gpt-4o | 高吞吐、Batch API 支持 |
-| 消息模板 | gpt-4o-mini / qwen2.5:7b | 简单任务，本地模型足够 |
-
-### 8.3 成本估算
-
-| 模型 | 输入价格 | 输出价格 | 单次识别成本 | 日批量(1000次) |
-|------|---------|---------|------------|--------------|
-| gpt-4o-mini | $0.15/M | $0.60/M | ~$0.0003 | ~$0.30 |
-| deepseek-chat | ¥1/M | ¥2/M | ~¥0.002 | ~¥2.00 |
-| qwen2.5:7b (本地) | 免费 | 免费 | 免费 | 免费 |
-
----
-
-## 9. 实施计划
-
-### 9.1 阶段一：基础设施 (P0)
-
-1. `app/agent/` 目录结构搭建
-2. `BaseAgent` / `AgentRegistry` 实现
-3. LLM Provider 抽象层 (OpenAI / DeepSeek / Custom)
-4. 配置界面集成（前端 `setting/agent` 页面）
-5. 现有 `OpenAiHelper` 迁移到 Agent 框架
-
-### 9.2 阶段二：媒体识别 (P0)
-
-1. `MediaRecognizerAgent` 实现
-2. `SeasonMapperAgent` 实现（带 TMDB Function Calling）
-3. 批量识别 API 支持（RSS 集成）
-4. 集成到 `MetaInfo()` 工厂函数（优先 LLM，回退传统）
-5. 缓存层（Redis 缓存识别结果）
-
-### 9.3 阶段三：搜索与通知 (P1)
-
-1. `SearchParserAgent` — 搜索意图解析
-2. `TemplateAgent` — 消息模板
-3. 集成到搜索/订阅/下载流程
-
-### 9.4 阶段四：生态扩展 (P2)
-
-1. 插件化 Agent 配置
-2. `QualityJudge` / `SubtitleSync` / `WeeklyReport` Agent
-3. 前端 Agent 管理页面
-
----
-
-## 10. 配置示例
-
-### 10.1 完整配置
+## 7. 配置格式
 
 ```json
 {
   "agent": {
     "enabled": true,
     "default_provider": "deepseek",
+    "media_recognizer_enabled": true,
     "providers": {
       "deepseek": {
         "api_key": "sk-xxx",
         "api_url": "https://api.deepseek.com",
-        "models": {
-          "default": "deepseek-chat",
-          "batch": "deepseek-chat"
-        }
-      }
-    },
-    "agents": {
-      "media_recognizer": {
-        "enabled": true,
-        "provider": "deepseek",
-        "model": "deepseek-chat",
-        "batch_size": 20,
-        "cache_ttl": 86400,
-        "fallback_to_legacy": true
-      },
-      "season_mapper": {
-        "enabled": true,
-        "provider": "deepseek",
-        "model": "deepseek-chat",
-        "cache_ttl": 604800
-      },
-      "template": {
-        "enabled": true,
-        "provider": "deepseek",
         "model": "deepseek-chat"
+      },
+      "ollama": {
+        "api_key": "",
+        "api_url": "http://localhost:11434/v1",
+        "model": "llama3.2"
       }
     }
   }
 }
 ```
 
-### 10.2 环境变量
+- `agent.enabled`：总开关，控制 AgentService 是否初始化 Provider
+- `agent.media_recognizer_enabled`：控制 `MediaService._build_parser()` 是否选择 `LLMParser`
+- 两者同时为 `true` 时，Parser 层才会使用 LLM
 
-```bash
-# LLM Provider
-AGENT_OPENAI_API_KEY=sk-xxx
-AGENT_OPENAI_API_URL=https://api.openai.com
-AGENT_DEEPSEEK_API_KEY=sk-xxx
-AGENT_DEEPSEEK_API_URL=https://api.deepseek.com
-AGENT_CUSTOM_API_KEY=
-AGENT_CUSTOM_API_URL=http://localhost:11434
+## 8. 扩展规范
 
-# Agent 开关
-AGENT_MEDIA_RECOGNIZER_ENABLED=true
-AGENT_SEASON_MAPPER_ENABLED=true
-AGENT_BATCH_RECOGNIZE_ENABLED=true
-AGENT_TEMPLATE_ENABLED=true
-```
+### 8.1 新增 Provider
+
+1. 继承 `BaseProvider`，实现 `chat()` 和 `is_available()`
+2. 文件放入 `app/agent/providers/`
+3. 在 `app/agent/config.py:get_provider()` 中添加构造逻辑
+4. 无需修改 `AgentService`
+
+### 8.2 新增领域 Agent
+
+1. 文件放入 `app/agent/agents/`，从 `AgentService` 获取 Provider
+2. 提示词放入 `app/agent/prompts/`
+3. 实现 `ready` 属性
+4. 在 `app/agent/agents/__init__.py` 和 `app/agent/__init__.py` 导出
+
+### 8.3 新增 Parser
+
+1. 继承 `BaseParser`，实现 `parse()` 和 `parse_batch()`
+2. 文件放入 `app/media/parser/`
+3. 在 `MediaService._build_parser()` 中添加选择逻辑
+
+## 9. 已知限制
+
+1. **identify() 的单条调用成本**：`MediaService.identify()` 在单条模式下使用 `LLMParser.parse()`，每次调用产生一次 LLM 请求。虽然 `AgentService.chat()` 有缓存（ttl=300），但首次识别的长尾延迟（通常 3-15 秒）仍需关注。
+2. **identify_batch() 的 batch 收益**：`recognize_batch()` 使用 `BatchResult` 一次处理最多 20 条，相比单条调用大幅减少 API 请求次数。但 LLM 的 batch 响应时间随条目数增加而延长。
+3. **索引器搜索的两阶段模型**：`ResultFilter.local_filter()` 调用 `MetaInfo()`（纯正则，无 LLM），`BatchIdentifier.identify()` 调用 `identify_batch()`（可选 LLM）。Agent 只介入阶段2，不影响阶段1的性能。
+4. **无异步接口**：所有 Agent 方法为同步。若未来 RSS/搜索批次量极大，需考虑引入异步改造。
+
+## 10. 测试覆盖
+
+| 测试文件 | 覆盖内容 |
+|---------|---------|
+| `tests/test_llm_parser.py` | `LLMParser` 接口契约、`ready` 降级、`_convert` 映射、`_map_type` |
+| `tests/test_irregular_titles.py` | 正则解析器各种格式 |
+| `tests/test_media_service_identify.py` | `identify()`/`identify_batch()`/`identify_files()` 流水线 |

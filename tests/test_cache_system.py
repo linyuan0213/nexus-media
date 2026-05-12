@@ -12,11 +12,11 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 独立导入缓存模块
-from app.utils.cache_system.base import CacheEntry
-from app.utils.cache_system.adapters import MemoryCacheAdapter
-from app.utils.cache_system.cache_manager import CacheManager
-from app.utils.cache_system.decorators import cached, cached_with_lock, lru_cache_with_ttl
-from app.utils.cache_system.utils import CacheKeyBuilder
+from app.infrastructure.cache_system.base import CacheEntry
+from app.infrastructure.cache_system.adapters import MemoryCacheAdapter
+from app.infrastructure.cache_system.cache_manager import CacheManager
+from app.infrastructure.cache_system.decorators import cached, cached_with_lock, lru_cache_with_ttl
+from app.infrastructure.cache_system.utils import CacheKeyBuilder
 
 
 class TestCacheEntry:

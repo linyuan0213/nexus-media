@@ -58,12 +58,12 @@ class TestSearchResultImageStorage:
 
     def test_poster_and_image_fields(self):
         """验证数据库中 POSTER 和 IMAGE 字段的存储逻辑"""
-        from app.media.meta._base import MetaBase
+        from app.media.models import MediaInfo
         from app.utils.types import MediaType
         from app.helper.image_proxy_helper import ImageProxyHelper
 
         # 模拟 TMDB 信息
-        media = MetaBase(title="Test Movie")
+        media = MediaInfo(title="Test Movie")
         media.type = MediaType.MOVIE
         media.tmdb_id = 12345
         media.poster_path = ImageProxyHelper.get_tmdbimage_url(
