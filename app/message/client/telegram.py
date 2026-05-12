@@ -8,6 +8,7 @@ from app.helper.thread_helper import ThreadHelper
 from app.message.client._base import _IMessageClient
 from app.message.commands import COMMANDS
 from app.utils import RequestUtils, ExceptionUtils
+from app.utils.config_tools import get_proxies
 from config import Config
 from app.utils.config_tools import get_domain, get_proxies
 from app.message.client_registry import ClientRegistry
@@ -19,6 +20,7 @@ _webhook_set = False
 
 class Telegram(_IMessageClient):
     schema = "telegram"
+    _setup_done = set()
 
     def __init__(self, config):
         self.token = None
@@ -50,6 +52,9 @@ class Telegram(_IMessageClient):
             self._user_ids.extend(x.strip() for x in user_ids.split(",") if x.strip())
 
     def setup(self):
+        if self.token and self.token in Telegram._setup_done:
+            return
+        Telegram._setup_done.add(self.token)
         ThreadHelper().start_thread(self._do_setup, ())
 
     def _do_setup(self):
@@ -215,7 +220,7 @@ class Telegram(_IMessageClient):
 
         def consume(config, off, sc_url, ds_url):
             try:
-                res = RequestUtils(proxies=config.get_proxies()).get_res(
+                res = RequestUtils(proxies=get_proxies()).get_res(
                     f"{sc_url}{urlencode({'timeout': timeout, 'offset': off})}")
                 if res and res.json():
                     for msg in res.json().get("result", []):

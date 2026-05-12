@@ -14,6 +14,7 @@ lock = Lock()
 
 class SynologyChat(_IMessageClient):
     schema = "synologychat"
+    _setup_done = set()
 
     def __init__(self, config):
         self._config = Config()
@@ -34,6 +35,9 @@ class SynologyChat(_IMessageClient):
 
     def setup(self):
         if self._interactive:
+            if self._token and self._token in SynologyChat._setup_done:
+                return
+            SynologyChat._setup_done.add(self._token)
             _web_port = self._config.get_config("app").get("web_port")
             _api_key = self._config.get_config("security").get("api_key")
             ds_url = f"http://127.0.0.1:{_web_port}/synologychat?apikey={_api_key}"

@@ -20,6 +20,70 @@ from app.utils.web_utils import WebUtils
 from app.utils.config_tools import get_domain
 
 
+DEFAULT_MESSAGE_TEMPLATES = {
+    "download_start": {
+        "title": "🎬 {{ title_ep_string|default(item.get_title_ep_string()) }} 开始下载 ⬇️",
+        "text": "🌐 站点：{{ site|default(item.site)|default('未知') }} ｜ 💾 大小：{{ size_str|default(item.size|filesize) }}\n📦 质量：{{ resource_type|default(item.get_resource_type_string())|default('未知') }}\n\n🧲 种子：{{ org_string|default(item.org_string)|truncatestr(50) }}\n🌱 做种：{{ seeders|default(item.seeders)|default(0) }} ｜ ⚡️ 促销：{{ volume_factor|default(item.get_volume_factor_string())|default('未知') }} ｜ 🚨 H&R：{{ hit_and_run|default(item.hit_and_run)|yesno('是','否') }}"
+    },
+    "transfer_finished": {
+        "title": "✅ {{ media_info.get_title_string() }} 已入库",
+        "text": "{% if media_info.vote_average %}⭐ {{ media_info.get_vote_string() }}\n{% endif %}📺 类型：{{ media_info.type.value }}\n{% if media_info.category and category_flag %}📁 类别：{{ media_info.category }}\n{% endif %}{% if media_info.get_resource_type_string() %}📦 质量：{{ media_info.get_resource_type_string() }}\n{% endif %}💾 大小：{{ media_info.size|filesize }}\n📥 来自：{{ in_from.value }}\n{% if exist_filenum != 0 %}⚠️ {{ exist_filenum }}个文件已存在{% endif %}"
+    },
+    "download_fail": {
+        "title": "❌ 下载失败：{{ item.get_title_string() }}",
+        "text": "🌐 站点：{{ item.site }}\n🧲 种子：{{ item.org_string|truncatestr(50) }}\n❗ 错误：{{ error_msg }}"
+    },
+    "rss_added": {
+        "title": "📌 {% if media_info.type.value == '电影' %}{{ media_info.get_title_string() }}{% else %}{{ media_info.get_title_string() }} {{ media_info.get_season_string() }}{% endif %} 已添加订阅",
+        "text": "{% if media_info.vote_average %}⭐ {{ media_info.get_vote_string() }}\n{% endif %}📺 类型：{{ media_info.type.value }}\n📥 来自：{{ in_from.value }}\n{% if media_info.user_name %}👤 用户：{{ media_info.user_name }}{% endif %}"
+    },
+    "rss_finished": {
+        "title": "🎉 {{ media_info.get_title_string() }} {{ media_info.get_season_string() }} {% if media_info.over_edition %}已完成洗版{% else %}已完成订阅{% endif %}",
+        "text": "{% if media_info.vote_average %}⭐ {{ media_info.get_vote_string() }}\n{% endif %}📺 类型：{{ media_info.type.value }}"
+    },
+    "site_signin": {
+        "title": "📊 站点签到",
+        "text": "{{ msgs|join('\\n') }}"
+    },
+    "site_message": {
+        "title": "📬 {{ title }}",
+        "text": "{{ text }}"
+    },
+    "transfer_fail": {
+        "title": "❌ 入库失败：{{ count }} 个文件",
+        "text": "📁 源路径：{{ path }}\n❗ 原因：{{ text }}"
+    },
+    "auto_remove_torrents": {
+        "title": "🗑️ 自动删种：{{ title }}",
+        "text": "{{ text }}"
+    },
+    "brushtask_added": {
+        "title": "🌊 刷流下种：{{ title }}",
+        "text": "{{ text }}"
+    },
+    "brushtask_remove": {
+        "title": "🗑️ 刷流删种：{{ title }}",
+        "text": "{{ text }}"
+    },
+    "brushtask_pause": {
+        "title": "⏸️ 刷流暂停：{{ title }}",
+        "text": "{{ text }}"
+    },
+    "mediaserver_message": {
+        "title": "🎬 {{ message_title }}",
+        "text": "{{ message_content }}"
+    },
+    "custom_message": {
+        "title": "🔌 {{ title }}",
+        "text": "{{ text }}"
+    },
+    "ptrefresh_date_message": {
+        "title": "📊 站点数据统计",
+        "text": "{{ msgs|join('\\n') }}"
+    }
+}
+
+
 def _filesize_filter(value):
     """Jinja2 filter: 格式化文件大小"""
     if value is None:
@@ -124,6 +188,16 @@ class Message(metaclass=SingletonMeta):
     _domain = None
     _queue = None
     _loaded = False
+
+    @property
+    def active_clients(self):
+        self._ensure_loaded()
+        return self._active_clients
+
+    @property
+    def active_interactive_clients(self):
+        self._ensure_loaded()
+        return self._active_interactive_clients
 
     def __init__(self):
         self._queue = TaskQueue()
@@ -250,8 +324,11 @@ class Message(metaclass=SingletonMeta):
         log.debug(f"【Message】客户端 {client_name} 消息类型 {msg_type} 的模板: {template_config}")
         
         if not template_config or not isinstance(template_config, dict):
-            log.debug(f"【Message】客户端 {client_name} 没有 {msg_type} 类型的模板配置")
-            return None, None
+            log.debug(f"【Message】客户端 {client_name} 没有 {msg_type} 类型的自定义模板，尝试使用默认模板")
+            template_config = DEFAULT_MESSAGE_TEMPLATES.get(msg_type)
+            if not template_config:
+                log.debug(f"【Message】消息类型 {msg_type} 没有默认模板")
+                return None, None
         
         title_template = template_config.get("title")
         text_template = template_config.get("text")
@@ -310,7 +387,7 @@ class Message(metaclass=SingletonMeta):
                 raise RuntimeError(ret_msg)
         log.info(f"【Message】消息发送成功 {cname}：title={title}")
 
-    def __sendmsg(self, client, title, text="", image="", url="", user_id=""):
+    def __sendmsg(self, client, title, text="", image="", url="", user_id="", msg_type=None, variables=None):
         """
         通用消息发送（异步入队）
         :param client: 消息端
@@ -319,10 +396,16 @@ class Message(metaclass=SingletonMeta):
         :param image: 图片URL
         :param url: 消息跳转地址
         :param user_id: 用户ID，如有则只发给这个用户
+        :param msg_type: 消息类型，用于模板匹配
+        :param variables: 模板变量字典
         :return: 是否成功入队
         """
         if not client or not client.get('client'):
             return False
+        if msg_type and variables:
+            template_title, template_text = self.__apply_client_template(client, msg_type, variables)
+            title = template_title if template_title is not None else title
+            text = template_text if template_text is not None else text
         cname = client.get('name')
         log.info(f"【Message】消息入队 {cname}：title={title}")
         return self._queue.submit(
@@ -346,7 +429,7 @@ class Message(metaclass=SingletonMeta):
             self.messagecenter.insert_system_message(title=title, content=text)
             return True
         # 发送消息
-        client = self._active_interactive_clients.get(channel)
+        client = self.active_interactive_clients.get(channel)
         if client:
             state = self.__sendmsg(client=client,
                                    title=title,
@@ -402,7 +485,7 @@ class Message(metaclass=SingletonMeta):
                 index += 1
             self.messagecenter.insert_system_message(title=title, content="\n".join(texts))
             return True
-        client = self._active_interactive_clients.get(channel)
+        client = self.active_interactive_clients.get(channel)
         if client:
             state = self.__send_list_msg(client=client,
                                          title=title,
@@ -458,7 +541,7 @@ class Message(metaclass=SingletonMeta):
         # 插入消息中心
         self.messagecenter.insert_system_message(title=msg_title, content=msg_text)
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "download_start" in client.get("switchs"):
                 # 准备模板变量 - 提供更丰富的字段
                 # 计算文件大小字符串
@@ -536,14 +619,22 @@ class Message(metaclass=SingletonMeta):
         # 插入消息中心
         self.messagecenter.insert_system_message(title=msg_title, content=msg_str)
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "transfer_finished" in client.get("switchs"):
+                variables = {
+                    "media_info": media_info,
+                    "in_from": in_from,
+                    "exist_filenum": exist_filenum,
+                    "category_flag": category_flag,
+                }
                 self.__sendmsg(
                     client=client,
                     title=msg_title,
                     text=msg_str,
                     image=media_info.get_message_image(),
-                    url='history'
+                    url='history',
+                    msg_type='transfer_finished',
+                    variables=variables
                 )
 
     def send_transfer_tv_message(self, message_medias: dict, in_from: Enum):
@@ -568,14 +659,23 @@ class Message(metaclass=SingletonMeta):
             # 插入消息中心
             self.messagecenter.insert_system_message(title=msg_title, content=msg_str)
             # 发送消息
-            for client in self._active_clients:
-                if "transfer_finished" in client.get("switchs"):
-                    self.__sendmsg(
-                        client=client,
-                        title=msg_title,
-                        text=msg_str,
-                        image=item_info.get_message_image(),
-                        url='history')
+        for client in self.active_clients:
+            if "transfer_finished" in client.get("switchs"):
+                variables = {
+                    "media_info": item_info,
+                    "in_from": in_from,
+                    "total_episodes": item_info.total_episodes if hasattr(item_info, 'total_episodes') else 1,
+                    "season_episode": item_info.get_season_episode_string() if hasattr(item_info, 'get_season_episode_string') else '',
+                }
+                self.__sendmsg(
+                    client=client,
+                    title=msg_title,
+                    text=msg_str,
+                    image=item_info.get_message_image(),
+                    url='history',
+                    msg_type='transfer_finished',
+                    variables=variables
+                )
 
     def send_download_fail_message(self, item, error_msg):
         """
@@ -586,13 +686,19 @@ class Message(metaclass=SingletonMeta):
         # 插入消息中心
         self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "download_fail" in client.get("switchs"):
+                variables = {
+                    "item": item,
+                    "error_msg": error_msg,
+                }
                 self.__sendmsg(
                     client=client,
                     title=title,
                     text=text,
-                    image=item.get_message_image()
+                    image=item.get_message_image(),
+                    msg_type='download_fail',
+                    variables=variables
                 )
 
     def send_rss_success_message(self, in_from: Enum, media_info):
@@ -612,14 +718,20 @@ class Message(metaclass=SingletonMeta):
         # 插入消息中心
         self.messagecenter.insert_system_message(title=msg_title, content=msg_str)
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "rss_added" in client.get("switchs"):
+                variables = {
+                    "media_info": media_info,
+                    "in_from": in_from,
+                }
                 self.__sendmsg(
                     client=client,
                     title=msg_title,
                     text=msg_str,
                     image=media_info.get_message_image(),
-                    url='movie_rss' if media_info.type == MediaType.MOVIE else 'tv_rss'
+                    url='movie_rss' if media_info.type == MediaType.MOVIE else 'tv_rss',
+                    msg_type='rss_added',
+                    variables=variables
                 )
 
     def send_rss_finished_message(self, media_info):
@@ -639,14 +751,20 @@ class Message(metaclass=SingletonMeta):
         # 插入消息中心
         self.messagecenter.insert_system_message(title=msg_title, content=msg_str)
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "rss_finished" in client.get("switchs"):
+                variables = {
+                    "media_info": media_info,
+                    "over_edition": media_info.over_edition if hasattr(media_info, 'over_edition') else False,
+                }
                 self.__sendmsg(
                     client=client,
                     title=msg_title,
                     text=msg_str,
                     image=media_info.get_message_image(),
-                    url='downloaded'
+                    url='downloaded',
+                    msg_type='rss_finished',
+                    variables=variables
                 )
 
     def send_site_signin_message(self, msgs: list):
@@ -660,12 +778,17 @@ class Message(metaclass=SingletonMeta):
         # 插入消息中心
         self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "site_signin" in client.get("switchs"):
+                variables = {
+                    "msgs": msgs,
+                }
                 self.__sendmsg(
                     client=client,
                     title=title,
-                    text=text
+                    text=text,
+                    msg_type='site_signin',
+                    variables=variables
                 )
 
     def send_site_message(self, title=None, text=None):
@@ -679,12 +802,18 @@ class Message(metaclass=SingletonMeta):
         # 插入消息中心
         self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "site_message" in client.get("switchs"):
+                variables = {
+                    "title": title,
+                    "text": text,
+                }
                 self.__sendmsg(
                     client=client,
                     title=title,
-                    text=text
+                    text=text,
+                    msg_type='site_message',
+                    variables=variables
                 )
 
     def send_transfer_fail_message(self, path, count, text):
@@ -698,13 +827,20 @@ class Message(metaclass=SingletonMeta):
         # 插入消息中心
         self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "transfer_fail" in client.get("switchs"):
+                variables = {
+                    "path": path,
+                    "count": count,
+                    "text": text,
+                }
                 self.__sendmsg(
                     client=client,
                     title=title,
                     text=text,
-                    url="unidentification"
+                    url="unidentification",
+                    msg_type='transfer_fail',
+                    variables=variables
                 )
 
     def send_auto_remove_torrents_message(self, title, text):
@@ -716,13 +852,19 @@ class Message(metaclass=SingletonMeta):
         # 插入消息中心
         self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "auto_remove_torrents" in client.get("switchs"):
+                variables = {
+                    "title": title,
+                    "text": text,
+                }
                 self.__sendmsg(
                     client=client,
                     title=title,
                     text=text,
-                    url="torrent_remove"
+                    url="torrent_remove",
+                    msg_type='auto_remove_torrents',
+                    variables=variables
                 )
 
     def send_brushtask_remove_message(self, title, text):
@@ -734,13 +876,19 @@ class Message(metaclass=SingletonMeta):
         # 插入消息中心
         self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "brushtask_remove" in client.get("switchs"):
+                variables = {
+                    "title": title,
+                    "text": text,
+                }
                 self.__sendmsg(
                     client=client,
                     title=title,
                     text=text,
-                    url="brushtask"
+                    url="brushtask",
+                    msg_type='brushtask_remove',
+                    variables=variables
                 )
 
     def send_brushtask_added_message(self, title, text):
@@ -752,13 +900,19 @@ class Message(metaclass=SingletonMeta):
         # 插入消息中心
         self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "brushtask_added" in client.get("switchs"):
+                variables = {
+                    "title": title,
+                    "text": text,
+                }
                 self.__sendmsg(
                     client=client,
                     title=title,
                     text=text,
-                    url="brushtask"
+                    url="brushtask",
+                    msg_type='brushtask_added',
+                    variables=variables
                 )
 
     def send_mediaserver_message(self, event_info: dict, channel, image_url):
@@ -830,14 +984,24 @@ class Message(metaclass=SingletonMeta):
         url = event_info.get('play_url') or ""
 
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "mediaserver_message" in client.get("switchs"):
+                variables = {
+                    "event_info": event_info,
+                    "channel": channel,
+                    "message_title": message_title,
+                    "message_content": message_content,
+                    "image_url": image_url,
+                    "url": url,
+                }
                 self.__sendmsg(
                     client=client,
                     title=message_title,
                     text=message_content,
                     image=image_url,
-                    url=url
+                    url=url,
+                    msg_type='mediaserver_message',
+                    variables=variables
                 )
 
     def send_plugin_message(self, title, text="", image="", url=""):
@@ -849,14 +1013,22 @@ class Message(metaclass=SingletonMeta):
         # 插入消息中心
         self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "custom_message" in client.get("switchs"):
+                variables = {
+                    "title": title,
+                    "text": text,
+                    "url": url,
+                    "image": image,
+                }
                 self.__sendmsg(
                     client=client,
                     title=title,
                     text=text,
                     url=url,
-                    image=image
+                    image=image,
+                    msg_type='custom_message',
+                    variables=variables
                 )
 
     def send_custom_message(self, clients, title, text="", image=""):
@@ -870,13 +1042,20 @@ class Message(metaclass=SingletonMeta):
         # 插入消息中心
         self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if str(client.get("id")) in clients:
+                variables = {
+                    "title": title,
+                    "text": text,
+                    "image": image,
+                }
                 self.__sendmsg(
                     client=client,
                     title=title,
                     text=text,
-                    image=image
+                    image=image,
+                    msg_type='custom_message',
+                    variables=variables
                 )
 
     def get_message_client_info(self, cid=None):
@@ -894,9 +1073,9 @@ class Message(metaclass=SingletonMeta):
         """
         self._ensure_loaded()
         if client_type:
-            return self._active_interactive_clients.get(client_type)
+            return self.active_interactive_clients.get(client_type)
         else:
-            return [client for client in self._active_interactive_clients.values()]
+            return [client for client in self.active_interactive_clients.values()]
 
     def delete_message_client(self, cid):
         """
@@ -921,7 +1100,7 @@ class Message(metaclass=SingletonMeta):
         if cid:
             self._refresh_client(cid)
         if ctype:
-            for c in list(self._active_clients):
+            for c in list(self.active_clients):
                 if c.get("type") == ctype:
                     self._refresh_client(c.get("id"))
         return ret
@@ -958,9 +1137,14 @@ class Message(metaclass=SingletonMeta):
         title = "站点数据统计"
         text = "\n".join(msgs)
         self.messagecenter.insert_system_message(title=title, content=text)
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "ptrefresh_date_message" in client.get("switchs"):
-                self.__sendmsg(client=client, title=title, text=text)
+                variables = {
+                    "msgs": msgs,
+                    "title": title,
+                    "text": text,
+                }
+                self.__sendmsg(client=client, title=title, text=text, msg_type='ptrefresh_date_message', variables=variables)
 
     def send_brushtask_pause_message(self, title, text):
         """
@@ -971,11 +1155,17 @@ class Message(metaclass=SingletonMeta):
         # 插入消息中心
         self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
-        for client in self._active_clients:
+        for client in self.active_clients:
             if "brushtask_pause" in client.get("switchs"):
+                variables = {
+                    "title": title,
+                    "text": text,
+                }
                 self.__sendmsg(
                     client=client,
                     title=title,
                     text=text,
-                    url="brushtask"
+                    url="brushtask",
+                    msg_type='brushtask_pause',
+                    variables=variables
                 )

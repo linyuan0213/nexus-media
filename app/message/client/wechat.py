@@ -48,6 +48,8 @@ class WeChat(_IMessageClient):
 
     def setup(self):
         if self.interactive:
+            if self.agent_id and str(self.agent_id) in WeChat._menu_done:
+                return
             ThreadHelper().start_thread(self._create_menu, ())
 
     def stop(self):

@@ -57,6 +57,7 @@ from app.utils import ExceptionUtils
 from app.services.system_service import restart_server
 from app.services.indexer_service import IndexerService
 from app.core.module_config import ModuleConf
+from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
 from app.core.system_config import SystemConfig
 from app.utils.types import SystemConfigKey
 
@@ -155,6 +156,12 @@ class SendPluginMessageRequest(BaseModel):
     title: Optional[str] = None
     text: Optional[str] = None
     image: Optional[str] = None
+
+
+class AgentModelsRequest(BaseModel):
+    provider_name: str
+    api_url: Optional[str] = None
+    api_key: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -271,6 +278,13 @@ def get_message_client_config(
         "switchs": switchs,
     })
 
+
+@router.get("/message_clients/templates/defaults")
+def get_message_client_default_templates(
+    current_user: UserContext = Depends(require_permission("setting:update")),
+):
+    """获取消息通知默认模板"""
+    return success(data=DEFAULT_MESSAGE_TEMPLATES)
 
 
 @router.post("/net_test")
@@ -483,7 +497,7 @@ def search(
     WEB资源搜索（同步执行，前端并行轮询进度）
     """
     try:
-        from app.utils import TokenCache
+        from app.infrastructure.cache_system import TokenCache
         TokenCache.delete("search")
     except Exception:
         pass
@@ -562,6 +576,41 @@ def update_config(
     if result.success:
         return success()
     return fail()
+
+
+@router.post("/agent/models")
+def list_agent_models(
+    req: AgentModelsRequest,
+    current_user: UserContext = Depends(require_permission("setting:view")),
+):
+    """查询 LLM Provider 支持的模型列表"""
+    from app.agent.providers.base import ProviderConfig
+    from app.agent.providers.openai import OpenAIProvider
+    from app.agent.providers.ollama import OllamaProvider
+    from app.agent.providers.gemini import GeminiProvider
+
+    if not req.api_url or not req.api_key:
+        return success(data=[])
+
+    config = ProviderConfig(
+        name=req.provider_name,
+        api_url=req.api_url,
+        api_key=req.api_key,
+        model="",
+    )
+
+    try:
+        if req.provider_name == "ollama":
+            provider = OllamaProvider(config)
+        elif req.provider_name == "gemini":
+            provider = GeminiProvider(config)
+        else:
+            provider = OpenAIProvider(config)
+        models = provider.list_models()
+        return success(data=models)
+    except Exception as e:
+        log.warn(f"【Agent】查询模型列表失败: {e}")
+        return fail(msg=str(e))
 
 
 @router.post("/message_clients/update")
