@@ -19,7 +19,7 @@ from cryptography.fernet import Fernet
 from base64 import b64encode
 
 import log
-from app.utils import TokenCache
+from app.infrastructure.cache_system import TokenCache
 from config import Config
 
 from pwdlib import PasswordHash

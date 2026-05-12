@@ -124,10 +124,10 @@ class BrushRuleEngine:
             return False
 
         # 避免循环导入，采用函数内部导入（legacy 兼容）
-        from app.media.media import Media
+        from app.media import MediaService
         from app.services.subscribe_service import SubscribeService as Subscribe
 
-        media = Media()
+        media = MediaService()
         subscribe = Subscribe()
         log.info("【Brush】开始排除已订阅媒体...")
 

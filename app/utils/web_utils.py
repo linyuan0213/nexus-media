@@ -2,7 +2,7 @@ from functools import lru_cache
 
 import cn2an
 
-from app.media import Media, Bangumi, DouBan, MetaInfo
+from app.media import MediaService, Bangumi, DouBan, MetaInfo
 from app.utils import StringUtils, ExceptionUtils, SystemUtils, RequestUtils, IpUtils
 from app.utils.types import MediaType
 from config import Config
@@ -91,11 +91,11 @@ class WebUtils:
                 mtype = MediaType.TV if info.get("episodes_count") else MediaType.MOVIE
             media_info = None
             if original_title:
-                media_info = Media().get_media_info(title=f"{original_title} {year}",
+                media_info = MediaService().get_media_info(title=f"{original_title} {year}",
                                                     mtype=mtype,
                                                     append_to_response="all")
             if not media_info or not media_info.tmdb_info:
-                media_info = Media().get_media_info(title=f"{title} {year}",
+                media_info = MediaService().get_media_info(title=f"{title} {year}",
                                                     mtype=mtype,
                                                     append_to_response="all")
             # TMDB匹配失败时，使用豆瓣信息构造基础媒体信息，避免退化为不识别模式
@@ -124,11 +124,11 @@ class WebUtils:
             title = info.get("name")
             title_cn = info.get("name_cn")
             year = info.get("date")[:4] if info.get("date") else ""
-            media_info = Media().get_media_info(title=f"{title} {year}",
+            media_info = MediaService().get_media_info(title=f"{title} {year}",
                                                 mtype=MediaType.TV,
                                                 append_to_response="all")
             if not media_info or not media_info.tmdb_info:
-                media_info = Media().get_media_info(title=f"{title_cn} {year}",
+                media_info = MediaService().get_media_info(title=f"{title_cn} {year}",
                                                     mtype=MediaType.TV,
                                                     append_to_response="all")
             # 检查是否成功匹配到TMDB信息
@@ -136,7 +136,7 @@ class WebUtils:
                 return None
         else:
             # TMDB
-            info = Media().get_tmdb_info(tmdbid=mediaid,
+            info = MediaService().get_tmdb_info(tmdbid=mediaid,
                                          mtype=mtype,
                                          append_to_response="all")
             if not info:
@@ -161,7 +161,7 @@ class WebUtils:
 
         def _search_tmdb():
             meta_info = MetaInfo(title=content)
-            tmdbinfos = Media().get_tmdb_infos(title=meta_info.get_name(),
+            tmdbinfos = MediaService().get_tmdb_infos(title=meta_info.get_name(),
                                                year=meta_info.year,
                                                mtype=mtype,
                                                page=page)
@@ -343,6 +343,14 @@ def set_config_value(cfg, cfg_key, cfg_value):
                 cfg[keys[0]] = {}
                 cfg[keys[0]][keys[1]] = {}
                 cfg[keys[0]][keys[1]][keys[2]] = cfg_value
+        else:
+            # 4+ 层嵌套键（如 agent.providers.deepseek.model）
+            d = cfg
+            for key in keys[:-1]:
+                if key not in d or not isinstance(d[key], dict):
+                    d[key] = {}
+                d = d[key]
+            d[keys[-1]] = cfg_value
     return cfg
 
 

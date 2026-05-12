@@ -5,7 +5,7 @@
 """
 
 # 种子名/文件名要素分隔字符
-SPLIT_CHARS = r"\.|\s+|\(|\)|\[|]|-|\+|【|】|/|～|;|&|\||#|_|「|」|~"
+SPLIT_CHARS = r"\.|\s+|\(|\)|\[|]|-|\+|【|】|/|～|;|&|\||#|_|「|」|~|{|}"
 
 # 默认User-Agent
 DEFAULT_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"
@@ -111,3 +111,9 @@ MT_URL = 'https://api.m-team.io'
 
 # sites.dat github
 SITES_DATA_URL = "https://api.github.com/repos/linyuan0213/nas-tools-sites/releases/latest"
+
+# EpisodeMapper 阈值配置
+EPISODE_MAPPER_SEASON_GAP_DAYS = 90
+EPISODE_MAPPER_SEASON_GAP_FORCE_DAYS = 180
+EPISODE_MAPPER_MIN_BLOCK_LENGTH = 20
+EPISODE_MAPPER_MIN_TOTAL_EPISODES = 30

@@ -1,7 +1,7 @@
 import json
 import httpx
 from openai import Client
-from app.utils import OpenAISessionCache
+from app.infrastructure.cache_system import OpenAISessionCache
 from app.utils.commons import SingletonMeta
 from config import Config
 from app.utils.config_tools import get_proxies

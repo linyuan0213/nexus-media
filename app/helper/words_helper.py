@@ -9,7 +9,7 @@ from app.db.repositories.word_repo_adapter import (
 )
 from app.utils.commons import SingletonMeta
 from app.utils.exception_utils import ExceptionUtils
-from app.utils.cache_system import get_cache_manager
+from app.infrastructure.cache_system import get_cache_manager
 
 
 class WordsHelper(metaclass=SingletonMeta):
