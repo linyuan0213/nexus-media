@@ -1,0 +1,217 @@
+# -*- coding: utf-8 -*-
+"""
+专用缓存类
+提供针对特定业务场景的缓存封装
+"""
+import pickle
+from typing import Any, Optional, Dict
+import log
+
+from .base import CacheAdapter
+from .adapters import MemoryCacheAdapter, RedisCacheAdapter
+
+
+class TypedCache:
+    """类型化缓存基类"""
+    
+    def __init__(self, adapter: CacheAdapter):
+        self._adapter = adapter
+    
+    def get(self, key: str) -> Optional[Any]:
+        return self._adapter.get(key)
+    
+    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+        return self._adapter.set(key, value, ttl)
+    
+    def delete(self, key: str) -> bool:
+        return self._adapter.delete(key)
+    
+    def exists(self, key: str) -> bool:
+        return self._adapter.exists(key)
+    
+    def clear(self) -> bool:
+        return self._adapter.clear()
+    
+    def get_stats(self) -> Dict[str, Any]:
+        return self._adapter.get_stats()
+
+
+class TMDBCache(TypedCache):
+    """TMDB专用缓存"""
+    
+    # 不同数据类型的 TTL（秒）
+    TTL_TMDB_INFO = 7 * 24 * 3600      # 7 天
+    TTL_MEDIA_INFO = 24 * 3600          # 24 小时
+    TTL_SEASON_INFO = 12 * 3600         # 12 小时
+    TTL_PERSON_INFO = 30 * 24 * 3600    # 30 天
+    TTL_TRENDING = 2 * 3600             # 2 小时
+    TTL_DEFAULT = 3600                  # 1 小时（默认）
+    
+    def __init__(self, adapter: Optional[CacheAdapter] = None):
+        if adapter is None:
+            # 默认使用Redis适配器
+            adapter = RedisCacheAdapter(name="tmdb")
+        super().__init__(adapter)
+    
+    def _make_key(self, prefix: str, *parts) -> str:
+        """构建缓存键"""
+        return f"{prefix}:{':'.join(str(p) for p in parts)}"
+    
+    def get_tmdb_info(self, mtype: Any, tmdbid: str, language: str = None) -> Optional[Any]:
+        """获取TMDB信息缓存"""
+        from app.utils.types import MediaType
+        if mtype == MediaType.ANIME:
+            mtype = MediaType.TV
+        key = self._make_key("tmdb", mtype.value, tmdbid, language or 'default')
+        return self.get(key)
+    
+    def set_tmdb_info(self, mtype: Any, tmdbid: str, info: Any,
+                      language: str = None, ttl: int = None) -> bool:
+        """设置TMDB信息缓存"""
+        from app.utils.types import MediaType
+        if mtype == MediaType.ANIME:
+            mtype = MediaType.TV
+        key = self._make_key("tmdb", mtype.value, tmdbid, language or 'default')
+        ttl = ttl or self.TTL_TMDB_INFO
+        log.debug(f"【TMDBCache】缓存信息: {key}, TTL={ttl}秒")
+        return self.set(key, info, ttl)
+    
+    def get_media_info(self, title: str, year: str = None, mtype: Any = None) -> Optional[Any]:
+        """获取媒体信息缓存"""
+        from app.utils.types import MediaType
+        if mtype == MediaType.ANIME:
+            mtype = MediaType.TV
+        key = self._make_key("media", title, year or '', mtype.value if mtype else '')
+        return self.get(key)
+    
+    def set_media_info(self, title: str, info: Any, year: str = None,
+                       mtype: Any = None, ttl: int = None) -> bool:
+        """设置媒体信息缓存"""
+        from app.utils.types import MediaType
+        if mtype == MediaType.ANIME:
+            mtype = MediaType.TV
+        key = self._make_key("media", title, year or '', mtype.value if mtype else '')
+        ttl = ttl or self.TTL_MEDIA_INFO
+        return self.set(key, info, ttl)
+    
+    def get_season_info(self, tmdbid: str, season: int) -> Optional[Any]:
+        """获取季详情缓存"""
+        key = self._make_key("tmdb:season", tmdbid, season)
+        return self.get(key)
+    
+    def set_season_info(self, tmdbid: str, season: int, info: Any, ttl: int = None) -> bool:
+        """设置季详情缓存"""
+        key = self._make_key("tmdb:season", tmdbid, season)
+        ttl = ttl or self.TTL_SEASON_INFO
+        return self.set(key, info, ttl)
+    
+    def get_person_info(self, person_id: str) -> Optional[Any]:
+        """获取演员信息缓存"""
+        key = self._make_key("tmdb:person", person_id)
+        return self.get(key)
+    
+    def set_person_info(self, person_id: str, info: Any, ttl: int = None) -> bool:
+        """设置演员信息缓存"""
+        key = self._make_key("tmdb:person", person_id)
+        ttl = ttl or self.TTL_PERSON_INFO
+        return self.set(key, info, ttl)
+    
+    def get_trending(self, media_type: str, time_window: str, page: int = 1) -> Optional[Any]:
+        """获取热门趋势缓存"""
+        key = self._make_key("tmdb:trending", media_type, time_window, page)
+        return self.get(key)
+    
+    def set_trending(self, media_type: str, time_window: str, page: int,
+                     info: Any, ttl: int = None) -> bool:
+        """设置热门趋势缓存"""
+        key = self._make_key("tmdb:trending", media_type, time_window, page)
+        ttl = ttl or self.TTL_TRENDING
+        return self.set(key, info, ttl)
+    
+    def clear_tmdb_cache(self, tmdbid: str) -> None:
+        """清除指定TMDB ID的所有缓存"""
+        pattern = f"tmdb:*:{tmdbid}:*"
+        keys = self._adapter.keys(pattern)
+        for key in keys:
+            self._adapter.delete(key)
+        log.debug(f"【TMDBCache】清除TMDB ID {tmdbid} 的所有缓存")
+    
+    def clear_media_cache(self, title: str) -> None:
+        """清除指定标题的所有媒体缓存"""
+        pattern = f"media:{title}:*"
+        keys = self._adapter.keys(pattern)
+        for key in keys:
+            self._adapter.delete(key)
+        log.debug(f"【TMDBCache】清除标题 {title} 的所有媒体缓存")
+
+
+class MediaInfoCache(TypedCache):
+    """媒体信息缓存"""
+    
+    def __init__(self, adapter: Optional[CacheAdapter] = None):
+        if adapter is None:
+            adapter = MemoryCacheAdapter(maxsize=1000, name="media_info")
+        super().__init__(adapter)
+
+
+class SearchResultCache(TypedCache):
+    """搜索结果缓存"""
+    
+    def __init__(self, adapter: Optional[CacheAdapter] = None):
+        if adapter is None:
+            adapter = MemoryCacheAdapter(maxsize=500, name="search_result")
+        super().__init__(adapter)
+
+
+class TokenCache(TypedCache):
+    """Token缓存"""
+    
+    def __init__(self, adapter: Optional[CacheAdapter] = None):
+        if adapter is None:
+            adapter = MemoryCacheAdapter(maxsize=512, name="token")
+        super().__init__(adapter)
+
+
+class ConfigLoadCache(TypedCache):
+    """配置加载缓存"""
+    
+    def __init__(self, adapter: Optional[CacheAdapter] = None):
+        if adapter is None:
+            adapter = MemoryCacheAdapter(maxsize=1, name="config_load")
+        super().__init__(adapter)
+
+
+class CategoryLoadCache(TypedCache):
+    """分类加载缓存"""
+    
+    def __init__(self, adapter: Optional[CacheAdapter] = None):
+        if adapter is None:
+            adapter = MemoryCacheAdapter(maxsize=2, name="category_load")
+        super().__init__(adapter)
+
+
+class OpenAISessionCache(TypedCache):
+    """OpenAI会话缓存"""
+    
+    def __init__(self, adapter: Optional[CacheAdapter] = None):
+        if adapter is None:
+            adapter = MemoryCacheAdapter(maxsize=200, name="openai_session")
+        super().__init__(adapter)
+
+
+class SiteInfoCache(TypedCache):
+    """站点信息缓存"""
+    
+    def __init__(self, adapter: Optional[CacheAdapter] = None):
+        if adapter is None:
+            adapter = MemoryCacheAdapter(maxsize=100, name="site_info")
+        super().__init__(adapter)
+
+
+class WordsProcessCache(TypedCache):
+    """识别词处理缓存"""
+    
+    def __init__(self, adapter: Optional[CacheAdapter] = None):
+        if adapter is None:
+            adapter = MemoryCacheAdapter(maxsize=1000, name="words_process")
+        super().__init__(adapter)
