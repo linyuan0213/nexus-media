@@ -220,8 +220,154 @@ class PyThunder:
             'raw_response': result if len(file_list) == 0 else None  # 如果没有文件，保留原始响应
         }
     
+    def get_folders(self, folder_id: str = None):
+        """
+        获取迅雷文件夹列表
+        
+        Args:
+            folder_id: 父文件夹ID，None表示根目录
+            
+        Returns:
+            文件夹列表，每项包含 id, name, real_path, alias_path 等字段
+        """
+        try:
+            device_id = self.get_device_id()
+        except Exception as e:
+            log.warn(f"获取 device_id 失败，使用默认值: {e}")
+            device_id = "7abd3182d399f7bdda199550d8babede"
+        
+        pan_token = self.get_pan_token()
+        
+        url = f"{self.base_url}/webman/3rdparty/pan-xunlei-com/index.cgi/drive/v1/files"
+        
+        self.headers.update({
+            "Accept": "application/json, text/plain, */*",
+            "content-type": "application/json",
+            "device-space": "",
+            "pan-auth": pan_token
+        })
+        
+        # 使用 kind 过滤器只返回文件夹，且 phase 为 COMPLETE
+        filters = {
+            "kind": {"eq": "drive#folder"},
+            "trashed": {"eq": False},
+            "phase": {"eq": "PHASE_TYPE_COMPLETE"}
+        }
+        
+        params = {
+            "space": f"device_id#{device_id}",
+            "pan_auth": pan_token,
+            "device_space": "",
+            "limit": "200",
+            "parent_id": folder_id or "",
+            "filters": json.dumps(filters, separators=(',', ':'))
+        }
+        
+        response = self.session.get(url, headers=self.headers, params=params, verify=False)
+        
+        if response.status_code == 200:
+            result = response.json()
+            files = result.get('files', [])
+            folders = []
+            for f in files:
+                if f.get('kind') == 'drive#folder':
+                    params_info = f.get('params', {})
+                    folders.append({
+                        'id': f.get('id'),
+                        'name': f.get('name'),
+                        'parent_id': f.get('parent_id'),
+                        'real_path': params_info.get('RealPath', ''),
+                        'alias_path': params_info.get('AliasPath', '')
+                    })
+            return folders
+        else:
+            log.error(f"获取文件夹列表失败: {response.status_code}, {response.text}")
+            return []
+    
+    def _resolve_folder_id(self, path: str) -> str:
+        """将路径解析为文件夹ID，按层级名称逐级匹配，不存在的子目录自动创建"""
+        if not path:
+            return ""
+
+        path = path.rstrip("/")
+        if path == "" or path == "/":
+            return ""
+
+        parts = [p for p in path.strip("/").split("/") if p]
+        current_id = ""
+
+        for part in parts:
+            folders = self.get_folders(current_id)
+            found = None
+            for f in folders:
+                if f['name'] == part:
+                    found = f
+                    break
+            if found:
+                current_id = found['id']
+            else:
+                new_folder = self.create_folder(current_id, part)
+                if new_folder:
+                    current_id = new_folder['id']
+                    log.info(f"【迅雷】创建文件夹: {part} (id={current_id})")
+                else:
+                    log.warn(f"【迅雷】创建文件夹失败: {part} (在 {path} 中)")
+                    break
+
+        return current_id
+
+    def create_folder(self, parent_id: str, name: str) -> Optional[dict]:
+        """在迅雷中创建文件夹
+
+        Args:
+            parent_id: 父文件夹ID，空字符串表示根目录
+            name: 文件夹名称
+
+        Returns:
+            创建的文件夹信息，包含 id 等字段；失败返回 None
+        """
+        try:
+            device_id = self.get_device_id()
+        except Exception as e:
+            log.warn(f"获取 device_id 失败，使用默认值: {e}")
+            device_id = "7abd3182d399f7bdda199550d8babede"
+
+        pan_token = self.get_pan_token()
+        url = f"{self.base_url}/webman/3rdparty/pan-xunlei-com/index.cgi/drive/v1/files"
+
+        self.headers.update({
+            "Accept": "application/json, text/plain, */*",
+            "content-type": "application/json",
+            "device-space": "",
+            "pan-auth": pan_token,
+        })
+
+        data = {
+            "parent_id": parent_id,
+            "name": name,
+            "space": f"device_id#{device_id}",
+            "kind": "drive#folder",
+        }
+        data_json = json.dumps(data, separators=(',', ':'))
+
+        response = self.session.post(url, headers=self.headers, data=data_json, verify=False)
+
+        if response.status_code == 200:
+            result = response.json()
+            file_info = result.get('file', {})
+            return {
+                'id': file_info.get('id'),
+                'name': file_info.get('name'),
+                'parent_id': file_info.get('parent_id'),
+                'real_path': file_info.get('params', {}).get('RealPath', ''),
+                'alias_path': file_info.get('params', {}).get('AliasPath', ''),
+            }
+        else:
+            log.error(f"创建文件夹失败: {response.status_code}, {response.text}")
+            return None
+
     def download(self, download_urls: str, destination_path: str = "/downloads/xunlei/",
-                 file_indices: str = None, file_names: list = None):
+                 parent_folder_id: str = "", file_indices: str = None, file_names: list = None):
         """
         开始下载任务（使用真正的下载API）
         
@@ -370,7 +516,8 @@ class PyThunder:
                 "target": f"device_id#{device_id}",
                 "url": download_urls,
                 "total_file_count": str(download_count),
-                "parent_folder_path": destination_path,
+                "parent_folder_id": parent_folder_id or "",
+                "parent_folder_path": destination_path or "/downloads/xunlei/",
                 "sub_file_index": sub_file_index,  # 下载文件索引
                 "mime_type": first_file.get('mime_type', ''),
                 "file_id": first_file.get('id', '')

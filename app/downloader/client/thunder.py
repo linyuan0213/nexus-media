@@ -182,10 +182,14 @@ class Thunder(_IDownloadClient):
                 log.error(f"【{self.client_name}】不支持二进制种子内容")
                 return None
             
+            # 解析下载目录为文件夹ID
+            folder_id = self._client._resolve_folder_id(download_dir or "/downloads/xunlei/")
+            
             # 调用迅雷下载
             task_info = self._client.download(
                 download_urls=download_url,
-                destination_path=download_dir or "/downloads/xunlei/"
+                destination_path=download_dir or "/downloads/xunlei/",
+                parent_folder_id=folder_id
             )
             
             return task_info.get('id') if task_info else None
