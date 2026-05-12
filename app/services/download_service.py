@@ -9,7 +9,7 @@ from typing import List, Optional, Tuple
 import log
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
-from app.media import Media, MetaInfo
+from app.media import MediaService, MetaInfo
 from app.schemas.download import (
     DownloadResultDTO,
     DownloadingTorrentDTO,
@@ -21,6 +21,8 @@ from app.services.torrentremover_core import TorrentRemoverService as TorrentRem
 from app.utils import ExceptionUtils, Torrent
 from app.utils.temp_manager import temp_manager
 from app.utils.types import SearchType
+from app.infrastructure.cache_system import get_cache_manager
+from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 
 
 class DownloadService:
@@ -36,13 +38,13 @@ class DownloadService:
     def __init__(self,
                  downloader: Optional[Downloader] = None,
                  searcher: Optional[Searcher] = None,
-                 media: Optional[Media] = None,
+                 media_service: Optional[MediaService] = None,
                  sites: Optional[Sites] = None,
                  indexer_service: Optional[IndexerService] = None,
                  torrent_remover: Optional[TorrentRemover] = None):
         self._downloader = downloader or Downloader()
         self._searcher = searcher or Searcher()
-        self._media = media or Media()
+        self._media = media_service or MediaService()
         self._sites = sites or Sites()
         self._indexer_service = indexer_service or IndexerService()
         self._torrent_remover = torrent_remover or TorrentRemover()
@@ -223,35 +225,72 @@ class DownloadService:
         torrents = self._downloader.get_downloading_progress()
         default_downloader_id = self._downloader.default_downloader_id
 
-        for torrent in torrents:
+        # 第一步：分两类，有 history 的直接用，没有的批量识别
+        need_identify = []  # [(index, torrent, name)]
+        for idx, torrent in enumerate(torrents):
             name = torrent.get("name")
+            download_id = torrent.get("id")
             download_info = self._downloader.get_download_history_by_downloader(
                 downloader=default_downloader_id,
-                download_id=torrent.get("id")
+                download_id=download_id
             )
             if download_info:
-                name = download_info.TITLE
                 year = download_info.YEAR
-                poster_path = download_info.POSTER
                 se = download_info.SE
+                display_name = download_info.TITLE
+                poster = download_info.POSTER
+                if year:
+                    title = "%s (%s) %s" % (display_name, year, se)
+                else:
+                    title = "%s %s" % (display_name, se)
+                torrent.update({"title": title, "image": poster or ""})
             else:
-                media_info = self._media.get_media_info(title=name)
-                if not media_info:
+                # 先查缓存
+                cache_key = f"dl_task:{name}"
+                _cache = get_cache_manager().get("media_info")
+                cached = _cache.get(cache_key) if _cache else None
+                if cached:
+                    self._fill_torrent_info(torrent, cached)
+                else:
+                    need_identify.append((idx, torrent, name))
+
+        # 第二步：批量识别（减少 API 调用）
+        if need_identify:
+            items = [{"title": name} for _, _, name in need_identify]
+            results = self._media.identify_batch(items)
+            for (idx, torrent, name), media_info in zip(need_identify, results):
+                if not media_info or not media_info.title:
                     torrent.update({"title": name, "image": ""})
                     continue
-                year = media_info.year
-                name = media_info.title or media_info.get_name()
-                se = media_info.get_season_episode_string()
-                poster_path = media_info.get_poster_image()
-
-            if year:
-                title = "%s (%s) %s" % (name, year, se)
-            else:
-                title = "%s %s" % (name, se)
-
-            torrent.update({"title": title, "image": poster_path or ""})
+                self._fill_torrent_info(torrent, media_info)
+                # 写入缓存
+                _cache = get_cache_manager().get("media_info")
+                if _cache:
+                    _cache.set(f"dl_task:{name}", media_info, ttl=300)
+                # 写入下载历史，下次直接从 DB 查
+                try:
+                    DownloadHistoryRepositoryAdapter().insert_download_history(
+                        media_info=media_info,
+                        downloader=default_downloader_id,
+                        download_id=torrent.get("id"),
+                        save_dir=torrent.get("save_path") or "",
+                    )
+                except Exception as e:
+                    log.debug(f"【DownloadService】写入下载历史失败：{e}")
 
         return torrents
+
+    def _fill_torrent_info(self, torrent, media_info):
+        """将 MediaInfo 回填到 torrent 字典"""
+        year = media_info.year
+        name = media_info.title or media_info.get_name()
+        se = media_info.get_season_episode_string()
+        poster = media_info.get_poster_image()
+        if year:
+            title = "%s (%s) %s" % (name, year, se)
+        else:
+            title = "%s %s" % (name, se)
+        torrent.update({"title": title, "image": poster or ""})
 
     # ---------- 索引器统计 ----------
 

@@ -20,7 +20,7 @@ import log
 from app.core.constants import RMT_MEDIAEXT, PT_TAG
 from app.downloader.client._base import _IDownloadClient
 from app.helper import ThreadHelper
-from app.media import Media, MetaInfo
+from app.media import MetaInfo
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
@@ -47,7 +47,6 @@ class DownloadPipeline:
                  message: Optional[Message] = None,
                  mediaserver: Optional[MediaServer] = None,
                  filetransfer=None,
-                 media: Optional[Media] = None,
                  sites: Optional[Sites] = None,
                  siteconf: Optional[SiteConf] = None,
                  sitesubtitle: Optional[SiteSubtitle] = None,
@@ -56,7 +55,6 @@ class DownloadPipeline:
         self._message = message or Message()
         self._mediaserver = mediaserver or MediaServer()
         self._filetransfer = filetransfer
-        self._media = media or Media()
         self._sites = sites or Sites()
         self._siteconf = siteconf or SiteConf()
         self._sitesubtitle = sitesubtitle or SiteSubtitle()
@@ -80,8 +78,7 @@ class DownloadPipeline:
 
         :return: (downloader_id, download_id, error_msg)
         """
-        title = media_info.org_string
-        page_url = media_info.page_url
+        title = media_info.org_string or media_info.get_title_string() or media_info.title or "未知"
 
         self._eventmanager.send_event(EventType.DownloadAdd, {
             "media_info": media_info.to_dict(),
@@ -152,7 +149,7 @@ class DownloadPipeline:
         # ---------- 阶段4：后续处理 ----------
         self._stage_post(
             media_info=media_info, downloader_id=downloader_id,
-            download_id=download_id, page_url=page_url,
+            download_id=download_id, page_url=media_info.page_url,
             dl_files_folder=dl_files_folder, dl_files=dl_files,
             download_dir=download_dir, downloader_name=downloader_name,
             download_setting_name=download_setting_name,
