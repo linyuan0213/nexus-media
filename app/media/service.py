@@ -1,0 +1,678 @@
+import os
+import re
+from typing import Optional
+
+import log
+
+from app.helper.image_proxy_helper import ImageProxyHelper
+from app.media.lookup.tmdb_lookup import TmdbLookup
+from app.media.models import MediaInfo
+from app.media.parser.base import BaseParser, ParserResult
+from app.media.parser.episode_mapper import EpisodeMapper
+from app.media.parser.llm import LLMParser
+from app.media.parser.regex import RegexParser
+from app.infrastructure.cache_system import cacheman
+from app.utils import EpisodeFormat, NumberUtils, PathUtils, StringUtils
+from app.utils.types import MediaType, MatchMode
+from config import Config
+
+
+class MediaService:
+    """媒体识别服务门面 —  Parser + Lookup 解耦架构"""
+
+    def __init__(self):
+        self._parser = self._build_parser()
+        self._lookup = TmdbLookup()
+        self._episode_mapper = EpisodeMapper(self._lookup)
+        self._init_config()
+
+    def _init_config(self):
+        app = Config().get_config('app')
+        media = Config().get_config('media')
+        laboratory = Config().get_config('laboratory')
+        self._search_keyword = laboratory.get("search_keyword")
+        self._search_tmdbweb = laboratory.get("search_tmdbweb")
+        self._default_language = media.get("tmdb_language", "zh") or "zh"
+        self._episode_mapping_enabled = media.get("episode_mapping_enabled", False)
+        if self._episode_mapping_enabled:
+            log.info("【MediaService】集数映射已启用")
+        rmt_match_mode = app.get('rmt_match_mode', 'normal')
+        if rmt_match_mode:
+            rmt_match_mode = rmt_match_mode.upper()
+        else:
+            rmt_match_mode = "NORMAL"
+        self._rmt_match_mode = MatchMode.STRICT if rmt_match_mode == "STRICT" else MatchMode.NORMAL
+
+    def _build_parser(self) -> BaseParser:
+        cfg = Config().get_config("agent") or {}
+        if cfg.get("enabled") and cfg.get("media_recognizer_enabled"):
+            llm = LLMParser()
+            if llm.ready:
+                return llm
+        return RegexParser()
+
+    # ---------- 单条识别 ----------
+
+    def identify(self, title: str, subtitle: str = "", mtype: MediaType = None,
+                 strict=None, cache=True, language=None, chinese=True,
+                 append_to_response=None) -> Optional[MediaInfo]:
+        if not title:
+            return None
+
+        # 设置语言
+        if language:
+            self._lookup.client.set_language(language)
+
+        # 1. Parser: 文件名解析
+        parsed = self._parser.parse(title, subtitle)
+        if not parsed:
+            if language:
+                self._lookup.client.set_language()
+            return None
+
+        if mtype:
+            parsed.type = mtype
+
+        # 后处理: 名称末尾年份提取
+        if not parsed.year:
+            name = parsed.title_cn or parsed.title_en or ""
+            year_match = re.search(r'\s+(\d{4})$', name)
+            if year_match:
+                extracted_year = year_match.group(1)
+                if 1900 < int(extracted_year) < 2050:
+                    parsed.year = extracted_year
+                    cleaned = re.sub(r'\s+\d{4}$', '', name)
+                    if parsed.title_cn == name:
+                        parsed.title_cn = cleaned
+                    elif parsed.title_en == name:
+                        parsed.title_en = cleaned
+
+        search_name = parsed.title_en or parsed.title_cn or title
+
+        # 尝试从缓存获取
+        if cache:
+            cached = self._lookup.client.redis_cache.get_media_info(
+                title=search_name,
+                year=parsed.year,
+                mtype=parsed.type
+            )
+            if cached and isinstance(cached, MediaInfo):
+                # 验证缓存的季集是否与当前解析结果匹配（避免不同集数标题的缓存碰撞）
+                if (cached.begin_season == parsed.season and
+                    cached.begin_episode == parsed.episode and
+                    cached.end_episode == parsed.end_episode):
+                    log.info(f"【MediaService】从缓存获取媒体信息: {search_name}")
+                    if language:
+                        self._lookup.client.set_language()
+                    return cached
+                log.debug(f"【MediaService】缓存季集不匹配，跳过缓存: "
+                          f"cached=S{cached.begin_season}E{cached.begin_episode}-"
+                          f"{cached.end_episode or ''}, "
+                          f"parsed=S{parsed.season}E{parsed.episode}-"
+                          f"{parsed.end_episode or ''}")
+
+        # 计算 strict 模式
+        use_strict = strict if strict is not None else (self._rmt_match_mode == MatchMode.STRICT)
+
+        # 2. Lookup: TMDB 查询 (含内部 fallback)
+        result = self._lookup.lookup(parsed, hint_type=mtype, strict=use_strict, language=language)
+
+        # 3. Fallback: WEB 抓取
+        if not result and self._search_tmdbweb:
+            web_info = self._lookup.search.search_web(search_name, parsed.type)
+            if web_info:
+                result = self._lookup._to_lookup_result(web_info)
+
+        # 4. Fallback: 搜索引擎
+        if not result and self._search_keyword:
+            keyword, is_movie = self._search_engine(search_name)
+            if keyword:
+                cacheman["tmdb_supply"].set(search_name, keyword)
+                if is_movie:
+                    search_result = self._lookup.search.search_movie(keyword)
+                else:
+                    search_result = self._lookup.search.search_multi(keyword)
+                if search_result:
+                    result = self._lookup._to_lookup_result(search_result)
+
+        # 6. 组装
+        info = MediaInfo.from_parser(parsed)
+        info.org_string = title
+        if result:
+            info.tmdb_id = result.tmdb_id
+            info.title = result.title
+            info.original_title = result.original_title
+            info.year = result.year
+            info.overview = result.overview
+            info.vote_average = result.vote_average
+            info.poster_path = result.poster_path
+            info.backdrop_path = result.backdrop_path
+            info.tmdb_info = {
+                "id": result.tmdb_id,
+                "title": result.title,
+                "original_title": result.original_title,
+                "media_type": result.media_type.value if result.media_type else None,
+                "year": result.year,
+                "overview": result.overview,
+                "vote_average": result.vote_average,
+                "poster_path": result.poster_path,
+                "backdrop_path": result.backdrop_path,
+                "genres": result.genres,
+                "external_ids": result.external_ids,
+            }
+            # 补充全量信息（获取 genre_ids 等）
+            full_info = self._lookup.get_tmdb_info(
+                mtype=result.media_type,
+                tmdbid=result.tmdb_id,
+                language=language,
+                append_to_response=append_to_response,
+                chinese=chinese
+            )
+            if full_info:
+                info.tmdb_info = full_info
+                info.title = full_info.get("title") or full_info.get("name") or info.title
+                info.original_title = full_info.get("original_title") or full_info.get("original_name") or info.original_title
+                info.year = (full_info.get("release_date", "")[:4] if full_info.get("release_date")
+                             else full_info.get("first_air_date", "")[:4]) or info.year
+                info.overview = full_info.get("overview") or info.overview
+                info.vote_average = round(float(full_info.get("vote_average", 0)), 1) or info.vote_average
+                info.poster_path = ImageProxyHelper.get_tmdbimage_url(full_info.get("poster_path")) or info.poster_path
+                info.backdrop_path = ImageProxyHelper.get_tmdbimage_url(full_info.get("backdrop_path")) or info.backdrop_path
+                # 根据 genre_ids 更新类型（动漫 vs 电视剧）
+                info.set_tmdb_info(full_info)
+
+        # 7. 集数映射（动漫合并季 / 绝对集号）
+        if self._episode_mapping_enabled and info.type != MediaType.MOVIE and info.tmdb_id and info.begin_episode:
+            log.info(f"【EpisodeMapper】尝试映射: {info.get_name()} S{info.begin_season}E{info.begin_episode} (tmdb_id={info.tmdb_id})")
+            mapped = self._episode_mapper.map_auto(
+                info.tmdb_id,
+                info.begin_season,
+                info.begin_episode
+            )
+            if mapped:
+                log.info(f"【EpisodeMapper】映射成功: S{info.begin_season}E{info.begin_episode} -> S{mapped[0]}E{mapped[1]}")
+                info.begin_season = mapped[0]
+                info.begin_episode = mapped[1]
+            else:
+                log.info(f"【EpisodeMapper】无需映射或映射失败")
+
+        # 保存到缓存
+        if cache:
+            self._lookup.client.redis_cache.set_media_info(
+                title=search_name,
+                info=info,
+                year=parsed.year,
+                mtype=parsed.type
+            )
+
+        # 重置语言
+        if language:
+            self._lookup.client.set_language()
+
+        return info
+
+    def get_media_info(self, title, subtitle=None, mtype=None, strict=None,
+                       cache=True, language=None, chinese=True, append_to_response=None):
+        """兼容旧接口 — 内部调用 identify"""
+        return self.identify(title, subtitle, mtype, strict, cache, language, chinese, append_to_response)
+
+    def identify_batch(self, items: list[dict], language: str = None) -> list:
+        """批量识别 — Parser batch + 去重后并发 Lookup"""
+        if not items:
+            return []
+
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        titles = [i.get("title", "") for i in items]
+        subtitles = [i.get("subtitle", "") for i in items]
+
+        # 1. Parser: 批量解析所有文件名
+        parsed_list = self._parser.parse_batch(titles)
+
+        # 2. 去重: 按 (title, year, type) 分组，相同内容只查一次 TMDB
+        unique_keys = {}
+        key_to_indices = {}
+        for idx, parsed in enumerate(parsed_list):
+            if not parsed and subtitles[idx]:
+                parsed = self._parser.parse(titles[idx], subtitles[idx])
+                parsed_list[idx] = parsed
+            if not parsed:
+                continue
+            key = f"{parsed.title_en or parsed.title_cn or ''}:{parsed.year or ''}:{parsed.type.value if parsed.type else ''}"
+            if key not in unique_keys:
+                unique_keys[key] = parsed
+                key_to_indices[key] = []
+            key_to_indices[key].append(idx)
+
+        # 3. Lookup: 并发查询去重后的唯一组合
+        lookup_results = {}
+        if unique_keys:
+            log.info(f"【MediaService】批量识别 {len(items)} 条，去重后 {len(unique_keys)} 条需查 TMDB")
+            max_workers = min(len(unique_keys), 8)
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_key = {
+                    executor.submit(self._lookup.lookup, parsed, None, None, language): key
+                    for key, parsed in unique_keys.items()
+                }
+                for future in as_completed(future_to_key):
+                    key = future_to_key[future]
+                    try:
+                        lookup_results[key] = future.result()
+                    except Exception as e:
+                        log.error(f"【MediaService】TMDB 查询出错: {key}, {e}")
+                        lookup_results[key] = None
+
+        # 4. 组装: 将结果映射回原始列表
+        results = [MediaInfo() for _ in items]
+        for idx, item in enumerate(items):
+            parsed = parsed_list[idx]
+            info = MediaInfo.from_parser(parsed) if parsed else MediaInfo()
+            if parsed:
+                key = f"{parsed.title_en or parsed.title_cn or ''}:{parsed.year or ''}:{parsed.type.value if parsed.type else ''}"
+                looked_up = lookup_results.get(key)
+                if looked_up:
+                    info.tmdb_id = looked_up.tmdb_id
+                    info.title = looked_up.title
+                    info.original_title = looked_up.original_title
+                    info.year = looked_up.year
+                    info.overview = looked_up.overview
+                    info.vote_average = looked_up.vote_average
+                    info.poster_path = looked_up.poster_path
+                    info.backdrop_path = looked_up.backdrop_path
+                    info.tmdb_info = {
+                        "id": looked_up.tmdb_id,
+                        "title": looked_up.title,
+                        "original_title": looked_up.original_title,
+                        "media_type": looked_up.media_type.value if looked_up.media_type else None,
+                        "year": looked_up.year,
+                        "overview": looked_up.overview,
+                        "vote_average": looked_up.vote_average,
+                        "poster_path": looked_up.poster_path,
+                        "backdrop_path": looked_up.backdrop_path,
+                        "genres": looked_up.genres,
+                        "external_ids": looked_up.external_ids,
+                    }
+            info.site = item.get("site")
+            info.enclosure = item.get("enclosure")
+            info.size = item.get("size", 0)
+            info.seeders = item.get("seeders", 0)
+            info.page_url = item.get("page_url")
+            results[idx] = info
+
+        # 5. 集数映射（动漫合并季 / 绝对集号）
+        if self._episode_mapping_enabled:
+            map_items = []
+            map_indices = []
+            for idx, info in enumerate(results):
+                if info.type != MediaType.MOVIE and info.tmdb_id and info.begin_episode:
+                    map_items.append({
+                        "tmdb_id": info.tmdb_id,
+                        "season": info.begin_season,
+                        "episode": info.begin_episode,
+                    })
+                    map_indices.append(idx)
+            if map_items:
+                log.info(f"【EpisodeMapper】批量映射 {len(map_items)} 条记录")
+                mapped = self._episode_mapper.map_batch(map_items)
+                mapped_count = 0
+                for i, mapped_result in enumerate(mapped):
+                    if mapped_result:
+                        idx = map_indices[i]
+                        results[idx].begin_season = mapped_result[0]
+                        results[idx].begin_episode = mapped_result[1]
+                        mapped_count += 1
+                if mapped_count > 0:
+                    log.info(f"【EpisodeMapper】批量映射完成: {mapped_count}/{len(map_items)} 条已映射")
+
+        return results
+
+    # ---------- 文件列表识别 ----------
+
+    def identify_files(self, file_list, tmdb_info=None, media_type=None,
+                       season=None, episode_format: Optional[EpisodeFormat] = None,
+                       language=None, chinese=True, append_to_response=None):
+        if not isinstance(file_list, list):
+            file_list = [file_list]
+        return_media_infos = {}
+
+        # 1. 有过 tmdb_info 时：本地计算，逐个处理（无需网络）
+        if tmdb_info:
+            for file_path in file_list:
+                try:
+                    if not os.path.exists(file_path):
+                        continue
+                    file_name = os.path.basename(file_path)
+                    if not os.path.isdir(file_path) and PathUtils.get_bluray_dir(file_path):
+                        continue
+                    parsed = self._parser.parse(file_name)
+                    info = MediaInfo.from_parser(parsed) if parsed else MediaInfo()
+                    info.set_tmdb_info(tmdb_info)
+                    if season and info.type != MediaType.MOVIE:
+                        info.begin_season = int(season)
+                    if episode_format:
+                        begin_ep, end_ep, part = episode_format.split_episode(file_name)
+                        if begin_ep is not None:
+                            info.begin_episode = begin_ep
+                            info.part = part
+                        if end_ep is not None:
+                            info.end_episode = end_ep
+                    return_media_infos[file_path] = info
+                except Exception as err:
+                    log.error("【Rmt】发生错误：%s" % str(err))
+
+            # 1.1 集数映射（动漫合并季 / 绝对集号）
+            if self._episode_mapping_enabled:
+                map_items = []
+                map_paths = []
+                for file_path, info in return_media_infos.items():
+                    if info.type != MediaType.MOVIE and info.tmdb_id and info.begin_episode:
+                        map_items.append({
+                            "tmdb_id": info.tmdb_id,
+                            "season": info.begin_season,
+                            "episode": info.begin_episode,
+                        })
+                        map_paths.append(file_path)
+                if map_items:
+                    log.info(f"【EpisodeMapper】文件批量映射 {len(map_items)} 条记录")
+                    mapped = self._episode_mapper.map_batch(map_items)
+                    mapped_count = 0
+                    for i, mapped_result in enumerate(mapped):
+                        if mapped_result:
+                            file_path = map_paths[i]
+                            return_media_infos[file_path].begin_season = mapped_result[0]
+                            return_media_infos[file_path].begin_episode = mapped_result[1]
+                            mapped_count += 1
+                    if mapped_count > 0:
+                        log.info(f"【EpisodeMapper】文件批量映射完成: {mapped_count}/{len(map_items)} 条已映射")
+
+            return return_media_infos
+
+        # 2. 无 tmdb_info 时：批量识别
+        items = []
+        path_map = {}
+        for file_path in file_list:
+            try:
+                if not os.path.exists(file_path):
+                    continue
+                file_name = os.path.basename(file_path)
+                if not os.path.isdir(file_path) and PathUtils.get_bluray_dir(file_path):
+                    continue
+                parent_name = os.path.basename(os.path.dirname(file_path))
+                parent_parent_name = os.path.basename(PathUtils.get_parent_paths(file_path, 2))
+                items.append({
+                    "title": file_name,
+                    "parent_name": parent_name,
+                    "parent_parent_name": parent_parent_name,
+                })
+                path_map[len(items) - 1] = file_path
+            except Exception as err:
+                log.error("【Rmt】发生错误：%s" % str(err))
+
+        if not items:
+            return return_media_infos
+
+        # 2.1 批量解析文件名
+        titles = [i["title"] for i in items]
+        parsed_list = self._parser.parse_batch(titles)
+
+        # 2.2 fallback：从父目录提取信息
+        for idx, item in enumerate(items):
+            if not parsed_list[idx]:
+                parsed_list[idx] = self._parser.parse(item["title"], f"{item['parent_name']} {item['parent_parent_name']}")
+
+        # 2.3 去重后并发查 TMDB
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        unique_keys = {}
+        for idx, parsed in enumerate(parsed_list):
+            if not parsed:
+                continue
+            key = f"{parsed.title_en or parsed.title_cn or ''}:{parsed.year or ''}:{parsed.type.value if parsed.type else ''}"
+            if key not in unique_keys:
+                unique_keys[key] = parsed
+
+        lookup_results = {}
+        if unique_keys:
+            max_workers = min(len(unique_keys), 8)
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_key = {
+                    executor.submit(self._lookup.lookup, parsed, None, None, language): key
+                    for key, parsed in unique_keys.items()
+                }
+                for future in as_completed(future_to_key):
+                    key = future_to_key[future]
+                    try:
+                        lookup_results[key] = future.result()
+                    except Exception as e:
+                        log.error(f"【MediaService】文件批量识别 TMDB 出错: {key}, {e}")
+                        lookup_results[key] = None
+
+        # 2.4 组装结果
+        for idx, item in enumerate(items):
+            file_path = path_map[idx]
+            parsed = parsed_list[idx]
+            info = MediaInfo.from_parser(parsed) if parsed else MediaInfo()
+            if parsed:
+                key = f"{parsed.title_en or parsed.title_cn or ''}:{parsed.year or ''}:{parsed.type.value if parsed.type else ''}"
+                looked_up = lookup_results.get(key)
+                if looked_up:
+                    info.tmdb_id = looked_up.tmdb_id
+                    info.title = looked_up.title
+                    info.year = looked_up.year
+                    info.tmdb_info = {
+                        "id": looked_up.tmdb_id,
+                        "title": looked_up.title,
+                        "media_type": looked_up.media_type.value if looked_up.media_type else None,
+                        "year": looked_up.year,
+                        "overview": looked_up.overview,
+                        "vote_average": looked_up.vote_average,
+                        "poster_path": looked_up.poster_path,
+                        "backdrop_path": looked_up.backdrop_path,
+                        "genres": looked_up.genres,
+                        "external_ids": looked_up.external_ids,
+                    }
+                if episode_format:
+                    begin_ep, end_ep, part = episode_format.split_episode(item["title"])
+                    if begin_ep is not None:
+                        info.begin_episode = begin_ep
+                        info.part = part
+                    if end_ep is not None:
+                        info.end_episode = end_ep
+            return_media_infos[file_path] = info
+
+        # 3. 集数映射（动漫合并季 / 绝对集号）
+        if self._episode_mapping_enabled:
+            map_items = []
+            map_paths = []
+            for file_path, info in return_media_infos.items():
+                if info.type != MediaType.MOVIE and info.tmdb_id and info.begin_episode:
+                    map_items.append({
+                        "tmdb_id": info.tmdb_id,
+                        "season": info.begin_season,
+                        "episode": info.begin_episode,
+                    })
+                    map_paths.append(file_path)
+            if map_items:
+                log.info(f"【EpisodeMapper】文件识别后映射 {len(map_items)} 条记录")
+                mapped = self._episode_mapper.map_batch(map_items)
+                mapped_count = 0
+                for i, mapped_result in enumerate(mapped):
+                    if mapped_result:
+                        file_path = map_paths[i]
+                        return_media_infos[file_path].begin_season = mapped_result[0]
+                        return_media_infos[file_path].begin_episode = mapped_result[1]
+                        mapped_count += 1
+                if mapped_count > 0:
+                    log.info(f"【EpisodeMapper】文件识别后映射完成: {mapped_count}/{len(map_items)} 条已映射")
+
+        return return_media_infos
+
+    def get_media_info_on_files(self, file_list, tmdb_info=None, media_type=None,
+                                season=None, episode_format=None, language=None,
+                                chinese=True, append_to_response=None):
+        return self.identify_files(file_list, tmdb_info, media_type, season,
+                                   episode_format, language, chinese, append_to_response)
+
+    # ---------- AI Fallback ----------
+
+    # ---------- 搜索引擎 Fallback ----------
+
+    def _search_engine(self, feature_name):
+        if not feature_name:
+            return None, False
+        log.info(f"【Meta】开始通过搜索引擎辅助查询：{feature_name} ...")
+        cache = {}
+        def calculate_scores(matches, results):
+            if not matches:
+                return {}
+            search_results = {}
+            for match in matches:
+                match_title = match[0]
+                match_url = match[1]
+                if not match_title or not match_url:
+                    continue
+                match_title = StringUtils.handler_special_chars(match_title).upper()
+                for result in results:
+                    if not result:
+                        continue
+                    result_title = StringUtils.handler_special_chars(result.get('title') or result.get('name', '')).upper()
+                    if not result_title:
+                        continue
+                    ratio = difflib.SequenceMatcher(None, match_title, result_title).ratio()
+                    if ratio >= 0.8:
+                        search_id = result.get('id')
+                        if search_id not in search_results:
+                            search_results[search_id] = {
+                                'id': search_id,
+                                'title': result.get('title') or result.get('name'),
+                                'type': result.get('media_type'),
+                                'year': result.get('release_date', '')[:4] if result.get('media_type') == MediaType.MOVIE else result.get('first_air_date', '')[:4],
+                                'count': 0,
+                                'score': 0.0
+                            }
+                        search_results[search_id]['count'] += 1
+                        search_results[search_id]['score'] += ratio
+            return search_results
+        # 简化的搜索引擎 fallback 实现
+        return None, False
+
+    # ---------- TMDB 代理方法 ----------
+
+    def get_tmdb_info(self, mtype, tmdbid, language=None, append_to_response=None, chinese=True):
+        return self._lookup.get_tmdb_info(mtype, tmdbid, language, append_to_response, chinese)
+
+    def get_tmdb_infos(self, title, year=None, mtype=None, language=None, page=1):
+        return self._lookup.get_tmdb_infos(title, year, mtype, language, page)
+
+    def search_tmdb_person(self, name):
+        return self._lookup.search_tmdb_person(name)
+
+    def get_tmdbperson_chinese_name(self, person_id=None, person_info=None):
+        return self._lookup.get_tmdbperson_chinese_name(person_id, person_info)
+
+    def get_tmdbperson_aka_names(self, person_id):
+        return self._lookup.get_tmdbperson_aka_names(person_id)
+
+    def get_tmdb_tv_seasons(self, tv_info):
+        return self._lookup.get_tmdb_tv_seasons(tv_info)
+
+    def get_tmdb_tv_seasons_byid(self, tmdbid):
+        return self._lookup.get_tmdb_tv_seasons_byid(tmdbid)
+
+    def get_tmdb_season_episodes(self, tmdbid, season):
+        return self._lookup.get_tmdb_season_episodes(tmdbid, season)
+
+    def get_tmdb_tv_season_detail(self, tmdbid, season):
+        return self._lookup.get_tmdb_tv_season_detail(tmdbid, season)
+
+    def get_tmdb_backdrop(self, mtype, tmdbid):
+        return self._lookup.get_tmdb_backdrop(mtype, tmdbid)
+
+    def get_tmdb_backdrops(self, tmdbinfo, original=True):
+        return self._lookup.get_tmdb_backdrops(tmdbinfo, original)
+
+    def get_movie_similar(self, tmdbid, page=1):
+        return self._lookup.get_movie_similar(tmdbid, page)
+
+    def get_movie_recommendations(self, tmdbid, page=1):
+        return self._lookup.get_movie_recommendations(tmdbid, page)
+
+    def get_tv_similar(self, tmdbid, page=1):
+        return self._lookup.get_tv_similar(tmdbid, page)
+
+    def get_tv_recommendations(self, tmdbid, page=1):
+        return self._lookup.get_tv_recommendations(tmdbid, page)
+
+    def get_tmdb_discover(self, mtype, params=None, page=1):
+        return self._lookup.get_tmdb_discover(mtype, params, page)
+
+    def get_tmdb_en_title(self, media_info):
+        return self._lookup.get_tmdb_en_title(media_info)
+
+    def get_tmdb_zhtw_title(self, media_info):
+        return self._lookup.get_tmdb_zhtw_title(media_info)
+
+    def get_tmdbid_by_imdbid(self, imdbid):
+        return self._lookup.get_tmdbid_by_imdbid(imdbid)
+
+    def get_random_discover_backdrop(self):
+        return self._lookup.get_random_discover_backdrop()
+
+    def get_tmdb_hot_movies(self, page):
+        return self._lookup.discover.get_tmdb_hot_movies(page)
+
+    def get_tmdb_hot_tvs(self, page):
+        return self._lookup.discover.get_tmdb_hot_tvs(page)
+
+    def get_tmdb_new_movies(self, page):
+        return self._lookup.discover.get_tmdb_new_movies(page)
+
+    def get_tmdb_new_tvs(self, page):
+        return self._lookup.discover.get_tmdb_new_tvs(page)
+
+    def get_tmdb_upcoming_movies(self, page):
+        return self._lookup.discover.get_tmdb_upcoming_movies(page)
+
+    def get_tmdb_trending_all_week(self, page=1):
+        return self._lookup.discover.get_tmdb_trending_all_week(page)
+
+    def get_tmdb_cats(self, mtype, tmdbid):
+        return self._lookup.get_tmdb_cats(mtype, tmdbid)
+
+    def get_tmdb_genres(self, mtype):
+        return self._lookup.get_tmdb_genres(mtype)
+
+    def get_tmdb_genres_names(self, tmdbinfo):
+        return self._lookup.get_tmdb_genres_names(tmdbinfo)
+
+    def get_tmdb_directors_actors(self, tmdbinfo):
+        return self._lookup.get_tmdb_directors_actors(tmdbinfo)
+
+    def get_tmdb_crews(self, tmdbinfo, nums=None):
+        return self._lookup.get_tmdb_crews(tmdbinfo, nums)
+
+    def get_tmdb_production_company_names(self, tmdbinfo):
+        return self._lookup.get_tmdb_production_company_names(tmdbinfo)
+
+    def get_tmdb_season_episodes_num(self, tv_info, season):
+        return self._lookup.get_tmdb_season_episodes_num(tv_info, season)
+
+    def get_episode_title(self, media_info, language=None):
+        return self._lookup.get_episode_title(media_info, language)
+
+    def get_episode_images(self, tv_id, season_id, episode_id, orginal=False):
+        return self._lookup.get_episode_images(tv_id, season_id, episode_id, orginal)
+
+    def get_tmdb_factinfo(self, media_info):
+        return self._lookup.get_tmdb_factinfo(media_info)
+
+    def get_tmdb_discover_movies_pages(self, params=None):
+        return self._lookup.get_tmdb_discover_movies_pages(params)
+
+    def get_person_medias(self, personid, mtype=None, page=1):
+        return self._lookup.get_person_medias(personid, mtype, page)
+
+    def merge_media_info(self, target, source):
+        return self._lookup.merge_media_info(target, source)
+
+    def get_detail_url(self, mtype, tmdbid):
+        return self._lookup.get_detail_url(mtype, tmdbid)
