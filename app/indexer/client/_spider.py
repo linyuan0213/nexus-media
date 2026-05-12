@@ -398,6 +398,7 @@ class TorrentSpider(feapder.AirSpider):
         item = self.__index(items, selector)
         download_link = self.__filter_text(item, selector.get('filters'))
         if download_link:
+            download_link = download_link.strip()
             if not download_link.startswith("http") and not download_link.startswith("magnet"):
                 self.torrents_info['enclosure'] = self.domain + download_link[1:] if download_link.startswith(
                     "/") else self.domain + download_link

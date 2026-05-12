@@ -14,7 +14,7 @@ from typing import Tuple, List
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
 from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.indexer.core.models import FilterStats, SearchCandidate
-from app.media import Media, MetaInfo
+from app.media import MediaService, MetaInfo
 from app.utils import StringUtils
 from app.utils.types import MediaType
 
@@ -29,7 +29,7 @@ class ResultFilter:
 
     def __init__(self, media=None):
         self._engine = IndexerFilterEngine()
-        self._media = media or Media()
+        self._media = media or MediaService()
         self._group_repo = FilterGroupRepositoryAdapter()
         self._rule_repo = FilterRuleRepositoryAdapter()
         self._rule_cache = {}
@@ -283,7 +283,7 @@ class ResultFilter:
 
         :return: (matched_results, stats)
         """
-        from app.utils.cache_system import get_cache_manager
+        from app.infrastructure.cache_system import get_cache_manager
 
         ret_array = []
         stats = FilterStats()
@@ -330,10 +330,12 @@ class ResultFilter:
                     continue
 
                 if str(media_info.tmdb_id) != str(match_media.tmdb_id):
+                    media_type_str = media_info.type.value if media_info.type else "Unknown"
+                    match_type_str = match_media.type.value if match_media.type else "Unknown"
                     log.info(
                         f"【ResultFilter】{cache_key} 识别为 "
-                        f"{media_info.type.value}/{media_info.get_title_string()}/{media_info.tmdb_id} "
-                        f"与 {match_media.type.value}/{match_media.get_title_string()}/{match_media.tmdb_id} 不匹配")
+                        f"{media_type_str}/{media_info.get_title_string()}/{media_info.tmdb_id} "
+                        f"与 {match_type_str}/{match_media.get_title_string()}/{match_media.tmdb_id} 不匹配")
                     stats.index_match_fail += 1
                     continue
 
@@ -370,8 +372,9 @@ class ResultFilter:
                                                     filter_args.get("season"),
                                                     filter_args.get("episode"),
                                                     filter_args.get("year")):
+                media_type_str = media_info.type.value if media_info.type else "Unknown"
                 log.info(
-                    f"【ResultFilter】{display_name} 识别为 {media_info.type.value}/"
+                    f"【ResultFilter】{display_name} 识别为 {media_type_str}/"
                     f"{media_info.get_title_string()}/{media_info.get_season_episode_string()} 不匹配季/集/年份")
                 stats.index_match_fail += 1
                 continue
