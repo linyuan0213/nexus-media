@@ -5,7 +5,7 @@ import re
 
 from lxml import etree
 
-from app.helper.openai_helper import OpenAiHelper
+from app.agent import QuestionAnswerAgent
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
 from app.utils import StringUtils, RequestUtils
 from config import Config
@@ -135,7 +135,7 @@ class FWpt(_ISiteSigninHandler):
         self.debug(f"组装AI问题 {ai_question}")
 
         # AI获取答案
-        answer = OpenAiHelper().get_question_answer(question=ai_question)
+        answer = QuestionAnswerAgent().answer(ai_question)
         self.debug(f"chatpgt返回结果 {answer}")
 
         # 处理AI返回的答案信息

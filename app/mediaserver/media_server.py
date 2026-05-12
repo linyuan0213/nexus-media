@@ -6,7 +6,7 @@ from app.core.system_config import SystemConfig
 from app.db import MediaDb
 from app.db.repositories import ConfigRepository
 from app.helper import ProgressHelper, SubmoduleHelper
-from app.media import Media
+from app.media import MediaService
 from app.message import Message
 from app.utils import ExceptionUtils
 from app.utils.commons import SingletonMeta
@@ -42,7 +42,7 @@ class MediaServer(metaclass=SingletonMeta):
         self.mediadb = MediaDb()
         self.message = Message()
         self.progress = ProgressHelper()
-        self.media = Media()
+        self.media = MediaService()
         self.systemconfig = SystemConfig()
         self.config_repo = ConfigRepository()
         # 当前使用的媒体库服务器

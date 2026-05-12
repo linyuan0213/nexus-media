@@ -18,7 +18,7 @@ import srt
 from lxml import etree
 
 from app.helper import FfmpegHelper
-from app.helper.openai_helper import OpenAiHelper
+from app.agent import ChatAgent
 from app.plugin_framework.context import PluginContext
 from app.utils import SystemUtils
 from app.core.constants import RMT_MEDIAEXT
@@ -456,18 +456,14 @@ class AutoSubPlugin:
         return merged_subtitle
 
     def _do_translate_with_retry(self, text, retry=3):
-        ret, result = OpenAiHelper().translate_to_zh(text)
+        result = ChatAgent().translate_to_zh(text)
         for i in range(retry):
-            if ret and result:
+            if result and result != text:
                 break
-            if result and "Rate limit reached" in result:
-                self.ctx.info("OpenAI Api Rate limit reached, sleep 60s ...")
-                time.sleep(60)
-            else:
-                self.ctx.warn(f"翻译失败，重试第{i + 1}次")
-            ret, result = OpenAiHelper().translate_to_zh(text)
+            self.ctx.warn(f"翻译失败，重试第{i + 1}次")
+            result = ChatAgent().translate_to_zh(text)
 
-        if not ret or not result:
+        if not result or result == text:
             return None
         return result
 

@@ -12,7 +12,7 @@ from threading import Event
 import pytz
 
 from app.helper import RssHelper
-from app.media import Media
+from app.media import MediaService
 from app.mediaserver import MediaServer
 from app.plugin_framework.context import PluginContext
 from app.services.subscribe_service import SubscribeService as Subscribe
@@ -30,7 +30,7 @@ class DoubanRankPlugin:
         self._mediaserver = MediaServer()
         self._subscribe = Subscribe()
         self._rsshelper = RssHelper()
-        self._media = Media()
+        self._media = MediaService()
         self._event = Event()
         self._douban_address = {
             'movie-ustop': 'https://rsshub.app/douban/movie/ustop',

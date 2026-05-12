@@ -6,7 +6,7 @@ Emby删除媒体后同步删除历史记录或源文件
 import os
 import time
 
-from app.media import Media
+from app.media import MediaService
 from app.plugin_framework.context import PluginContext
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.utils.types import MediaType
@@ -125,9 +125,9 @@ class MediaSyncDelPlugin:
 
         if config.get("send_notify"):
             if media_type == "Episode":
-                image_url = Media().get_episode_images(tv_id=tmdb_id, season_id=season_num, episode_id=episode_num, orginal=True)
+                image_url = MediaService().get_episode_images(tv_id=tmdb_id, season_id=season_num, episode_id=episode_num, orginal=True)
             else:
-                image_url = Media().get_tmdb_backdrop(
+                image_url = MediaService().get_tmdb_backdrop(
                     mtype=MediaType.MOVIE if media_type == "Movie" else MediaType.TV,
                     tmdbid=tmdb_id
                 )
