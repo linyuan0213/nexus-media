@@ -12,8 +12,8 @@ from app.schemas.auth import UserContext
 from app.services.auth_service import AuthService
 from app.services.rbac_service import rbac_service
 from app.services.config_service import ConfigService
+from app.infrastructure.cache_system import TokenCache
 from app.utils.security import identify, generate_access_token
-from app.utils import TokenCache
 from config import Config
 
 # OAuth2 / Bearer 方案
@@ -550,3 +550,9 @@ def get_thread_helper():
     """获取线程助手实例"""
     from app.helper import ThreadHelper
     return ThreadHelper()
+
+
+def get_media_config_service():
+    """获取媒体库路径配置服务"""
+    from app.services.media_config_service import MediaConfigService
+    return MediaConfigService()

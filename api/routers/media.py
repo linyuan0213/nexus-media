@@ -19,6 +19,7 @@ from api.deps import (
     get_transfer_history_service,
     get_search_result_service,
     get_tmdb_blacklist_service,
+    get_media_config_service,
 )
 from app.utils.types import MediaType, MovieTypes
 from app.services.downloader_core import DownloaderCore as Downloader
@@ -31,6 +32,7 @@ from app.services.media_service import (
     TransferHistoryService,
     MediaFileService,
 )
+from app.services.media_config_service import MediaConfigService
 from app.utils.response import success, fail
 
 router = APIRouter()
@@ -701,3 +703,61 @@ def search_files(
         "ready": svc.is_ready,
         "indexed": svc.indexed_count,
     })
+
+
+class MediaPathAddRequest(BaseModel):
+    path_type: str
+    path: str
+
+
+class MediaPathRemoveRequest(BaseModel):
+    path_type: str
+    path: str
+
+
+class MediaPathUpdateRequest(BaseModel):
+    path_type: str
+    old_path: str
+    new_path: str
+
+
+@router.post("/library/path")
+def get_media_library_config(
+    current_user = Depends(require_any_permission("library:view", "library:manage")),
+    svc: MediaConfigService = Depends(get_media_config_service),
+):
+    """获取媒体库路径配置（DB 优先，YAML 回退）"""
+    return success(data=svc.get_config())
+
+
+@router.post("/library/path/add")
+def add_media_library_path(
+    req: MediaPathAddRequest,
+    current_user = Depends(require_permission("library:manage")),
+    svc: MediaConfigService = Depends(get_media_config_service),
+):
+    """添加媒体库路径"""
+    svc.add_path(req.path_type, req.path)
+    return success()
+
+
+@router.post("/library/path/remove")
+def remove_media_library_path(
+    req: MediaPathRemoveRequest,
+    current_user = Depends(require_permission("library:manage")),
+    svc: MediaConfigService = Depends(get_media_config_service),
+):
+    """移除媒体库路径"""
+    svc.remove_path(req.path_type, req.path)
+    return success()
+
+
+@router.post("/library/path/update")
+def update_media_library_path(
+    req: MediaPathUpdateRequest,
+    current_user = Depends(require_permission("library:manage")),
+    svc: MediaConfigService = Depends(get_media_config_service),
+):
+    """更新媒体库路径"""
+    svc.update_path(req.path_type, req.old_path, req.new_path)
+    return success()
