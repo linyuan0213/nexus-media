@@ -278,7 +278,7 @@ class BuiltinIndexer(_IIndexClient):
         return user_config
 
     @staticmethod
-    def __spider_search(indexer, keyword=None, page=None, mtype=None, timeout=30):
+    def __spider_search(indexer, keyword=None, page=None, mtype=None, timeout=60):
         spider = TorrentSpider()
         spider.setparam(indexer=indexer, keyword=keyword, page=page, mtype=mtype)
         spider.start()
