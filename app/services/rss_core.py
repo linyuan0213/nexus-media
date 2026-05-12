@@ -11,7 +11,7 @@ RSS 核心模块
 4. 择优下载
 """
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from threading import Lock
 
 import log
@@ -19,7 +19,7 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.helper import RssHelper
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.rss_repo_adapter import RssHistoryRepositoryAdapter
-from app.media import Media, MetaInfo
+from app.media import MediaService, MetaInfo
 from app.sites import Sites, SiteConf
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.services.rss_matcher import RssMatcher
@@ -47,7 +47,7 @@ class Rss(metaclass=SingletonMeta):
         self.init_config()
 
     def init_config(self):
-        self.media = Media()
+        self.media = MediaService()
         self.downloader = Downloader()
         self.sites = Sites()
         self.siteconf = SiteConf()
@@ -184,27 +184,18 @@ class Rss(metaclass=SingletonMeta):
                         continue
                 seen_enclosures.add(enclosure or "")
 
-                to_identify.append((idx, title))
+                to_identify.append({"idx": idx, "title": title})
 
             if to_identify:
                 log.info(f"【Rss】批量识别 {len(to_identify)} 条不重复结果 ...")
                 identify_results = {}  # {idx: media_info}
 
-                def _do_identify(args):
-                    idx, title = args
-                    try:
-                        return idx, self.media.get_media_info(title=title)
-                    except Exception as e:
-                        log.error(f"【Rss】识别出错: {title}, {e}")
-                        return idx, None
-
-                max_workers = min(len(to_identify), 4)
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    futures = {executor.submit(_do_identify, (idx, title)): idx
-                              for idx, title in to_identify}
-                    for future in as_completed(futures):
-                        idx, media_info = future.result()
-                        identify_results[idx] = media_info
+                try:
+                    batch_results = self.media.identify_batch(to_identify)
+                    for item, info in zip(to_identify, batch_results):
+                        identify_results[item["idx"]] = info
+                except Exception as e:
+                    log.error(f"【Rss】批量识别出错: {e}")
 
             # ---------- 阶段3：批量订阅匹配和过滤 ----------
             rss_download_torrents = []

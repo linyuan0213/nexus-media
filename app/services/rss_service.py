@@ -12,7 +12,7 @@ from app.services.filter_service import FilterService as Filter
 from app.helper import RssHelper
 from app.db.repositories.config_repo_adapter import UserRssConfigRepositoryAdapter
 from app.db.repositories.rss_repo_adapter import RssHistoryRepositoryAdapter
-from app.media import Media, MetaInfo
+from app.media import MediaService, MetaInfo
 from app.message import Message
 from app.services.search_service import Searcher
 from app.schemas.rss import (
@@ -431,7 +431,7 @@ class RssTaskService(metaclass=SingletonMeta):
         self.message = message or Message()
         self.searcher = searcher or Searcher()
         self.filter = filter_ or Filter()
-        self.media = media or Media()
+        self.media = media or MediaService()
         self.downloader = downloader or Downloader()
         self.subscribe = subscribe or Subscribe()
 

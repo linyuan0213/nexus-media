@@ -3,7 +3,7 @@ import json
 import re
 from typing import Optional
 
-from app.media import MetaBase
+from app.media.models import MediaInfo
 from app.mediaserver import MediaServer
 from app.schemas.media import MediaSearchResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe
@@ -64,7 +64,7 @@ class SearchResultService:
             }
             free_item = {
                 "value": f"{item.UPLOAD_VOLUME_FACTOR} {item.DOWNLOAD_VOLUME_FACTOR}",
-                "name": MetaBase.get_free_string(item.UPLOAD_VOLUME_FACTOR, item.DOWNLOAD_VOLUME_FACTOR)
+                "name": MediaInfo.get_free_string(item.UPLOAD_VOLUME_FACTOR, item.DOWNLOAD_VOLUME_FACTOR)
             }
             releasegroup = item.OTHERINFO if item.OTHERINFO is not None else "未知"
             filter_season = SE_key.split()[0] if SE_key and SE_key not in ["MOV", "TV"] else None

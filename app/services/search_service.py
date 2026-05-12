@@ -20,7 +20,7 @@ from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.domain.interfaces.search_repo import ISearchRepository
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
-from app.media import Media
+from app.media import MediaService
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
 from app.helper import ProgressHelper
@@ -38,7 +38,7 @@ class SearchQueryBuilder:
     """
 
     @staticmethod
-    def build_search_names(media_info, media_helper: Optional[Media] = None) -> Tuple[List[str], int]:
+    def build_search_names(media_info, media_helper: Optional[MediaService] = None) -> Tuple[List[str], int]:
         """
         根据媒体信息构建多语言搜索词列表
         :return: (搜索词列表, 建议最大并发数)
@@ -62,7 +62,7 @@ class SearchQueryBuilder:
             if media_info.original_language == "en":
                 search_en_name = media_info.original_title
             else:
-                _media = media_helper or Media()
+                _media = media_helper or MediaService()
                 en_title = _media.get_tmdb_en_title(media_info)
                 if en_title:
                     search_en_name = en_title
@@ -77,7 +77,7 @@ class SearchQueryBuilder:
         except Exception:
             multi_lang = False
         if multi_lang:
-            _media = media_helper or Media()
+            _media = media_helper or MediaService()
             search_zhtw_name = _media.get_tmdb_zhtw_title(media_info)
             if search_zhtw_name and search_zhtw_name != search_cn_name:
                 search_name_list.append(search_zhtw_name)
@@ -242,7 +242,7 @@ class Searcher(metaclass=SingletonMeta):
 
     def init_config(self):
         self.downloader = Downloader()
-        self.media = Media()
+        self.media = MediaService()
         self.message = Message()
         self.progress = ProgressHelper()
         # 如果没有注入Repository，使用适配器创建默认实例
@@ -404,10 +404,10 @@ class SearchService:
     def __init__(self,
                  searcher: Optional[Searcher] = None,
                  downloader: Optional[Downloader] = None,
-                 media: Optional[Media] = None):
+                 media_service: Optional[MediaService] = None):
         self._searcher = searcher or Searcher()
         self._downloader = downloader or Downloader()
-        self._media = media or Media()
+        self._media = media_service or MediaService()
 
     def search_medias(self,
                       key_word: Any,

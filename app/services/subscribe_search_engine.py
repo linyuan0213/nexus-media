@@ -20,7 +20,7 @@ from app.domain.interfaces.rss_repo import (
     IRssTvRepository,
     IRssTvEpisodeRepository,
 )
-from app.media import Media
+from app.media import MediaCache, MediaService
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
 from app.services.search_service import Searcher
@@ -40,7 +40,8 @@ class SubscribeSearchEngine:
                  tv_repo: Optional[IRssTvRepository] = None,
                  tv_episode_repo: Optional[IRssTvEpisodeRepository] = None,
                  searcher: Optional[Searcher] = None,
-                 media: Optional[Media] = None,
+                 media_service: Optional[MediaService] = None,
+                 media_cache: Optional[MediaCache] = None,
                  downloader: Optional[Downloader] = None,
                  filter_service: Optional[Filter] = None,
                  message: Optional[Message] = None,
@@ -58,7 +59,8 @@ class SubscribeSearchEngine:
         self._tv_repo = tv_repo
         self._tv_episode_repo = tv_episode_repo
         self._searcher = searcher or Searcher()
-        self._media = media or Media()
+        self._media_service = media_service or MediaService()
+        self._media_cache = media_cache or MediaCache()
         self._downloader = downloader or Downloader()
         self._filter = filter_service or Filter()
         self._message = message or Message()
@@ -323,8 +325,8 @@ class SubscribeSearchEngine:
         from app.media import MetaInfo
         if tmdbid and not str(tmdbid).startswith("DB:"):
             media_info = MetaInfo(title="%s %s".strip() % (name, year))
-            tmdb_info = self._media.get_tmdb_info(mtype=mtype, tmdbid=tmdbid)
+            tmdb_info = self._media_cache.get_tmdb_info(mtype=mtype, tmdbid=tmdbid)
             media_info.set_tmdb_info(tmdb_info)
         else:
-            media_info = self._media.get_media_info(title="%s %s" % (name, year), mtype=mtype, strict=True, cache=cache)
+            media_info = self._media_service.identify(title="%s %s" % (name, year), mtype=mtype)
         return media_info
