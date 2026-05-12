@@ -18,6 +18,7 @@ from app.db.models.config import (
     CONFIGUSERS,
     CONFIGUSERRSS,
     MEDIASERVER,
+    CONFIGMEDIA,
 )
 
 # 自定义识别词模型
@@ -135,6 +136,7 @@ __all__ = [
     'CONFIGUSERS',
     'CONFIGUSERRSS',
     'MEDIASERVER',
+    'CONFIGMEDIA',
     # 识别词
     'CUSTOMWORDS',
     'CUSTOMWORDGROUPS',

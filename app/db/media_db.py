@@ -4,7 +4,7 @@ import time
 from app.db.main_db import SessionManager, get_engine
 from app.db.models import MEDIASYNCITEMS, MEDIASYNCSTATISTIC
 from app.utils import ExceptionUtils
-from app.utils.cache_system import cached, MemoryCacheAdapter
+from app.infrastructure.cache_system import cached, MemoryCacheAdapter
 
 # 创建媒体DB查询缓存
 _media_db_cache = MemoryCacheAdapter(maxsize=128, name="media_db")

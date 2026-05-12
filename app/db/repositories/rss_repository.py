@@ -663,8 +663,10 @@ class RssRepository(BaseRepository):
     @DbPersist(BaseRepository._db)
     def insert_rss_torrent(self, torrent_name, enclosure, type_, title, year, season, episode):
         """插入 RSS 种子记录"""
-        if enclosure and len(enclosure) > 8192:
-            enclosure = enclosure[:8192]
+        if enclosure and enclosure.startswith("magnet:"):
+            enclosure = enclosure.split("&")[0]
+        elif enclosure and len(enclosure) > 4000:
+            enclosure = enclosure[:4000]
         self._db.insert(RSSTORRENTS(
             TORRENT_NAME=torrent_name,
             ENCLOSURE=enclosure,
@@ -678,6 +680,10 @@ class RssRepository(BaseRepository):
     @DbPersist(BaseRepository._db)
     def simple_insert_rss_torrent(self, title, enclosure):
         """简式插入 RSS 种子记录"""
+        if enclosure and enclosure.startswith("magnet:"):
+            enclosure = enclosure.split("&")[0]
+        elif enclosure and len(enclosure) > 4000:
+            enclosure = enclosure[:4000]
         self._db.insert(RSSTORRENTS(
             TORRENT_NAME=title,
             ENCLOSURE=enclosure,

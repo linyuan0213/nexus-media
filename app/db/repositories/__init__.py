@@ -36,6 +36,8 @@ from .apikey_repo_adapter import (
 from .system_dict_repository import SystemDictRepository
 from .system_dict_repo_adapter import SystemDictRepositoryAdapter
 from .rss_torrent_repo_adapter import RssTorrentRepositoryAdapter
+from .media_repository import MediaInfoRepository, MediaRecord
+from .media_repo_adapter import MediaInfoRepositoryAdapter
 
 __all__ = [
     'BaseRepository',
@@ -69,4 +71,8 @@ __all__ = [
     'SystemDictRepositoryAdapter',
     # RSS Torrent
     'RssTorrentRepositoryAdapter',
+    # Media
+    'MediaInfoRepository',
+    'MediaRecord',
+    'MediaInfoRepositoryAdapter',
 ]

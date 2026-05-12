@@ -9,7 +9,7 @@ import time
 from sqlalchemy import cast, Integer
 from app.db import DbPersist
 from app.db.models import MESSAGECLIENT, TORRENTREMOVETASK, DOWNLOADER, CONFIGUSERRSS, CONFIGRSSPARSER, \
-    USERRSSTASKHISTORY, CONFIGFILTERGROUP, CONFIGFILTERRULES, MEDIASERVER
+    USERRSSTASKHISTORY, CONFIGFILTERGROUP, CONFIGFILTERRULES, MEDIASERVER, CONFIGMEDIA
 from app.db.repositories.base_repository import BaseRepository
 
 
@@ -764,3 +764,41 @@ class ConfigRepository(BaseRepository):
             执行结果
         """
         return self._db.execute(f"""DROP TABLE IF EXISTS {table_name}""")
+
+    # ==================== Media Config ====================
+
+    def get_media_config(self):
+        """获取媒体库路径配置"""
+        return self._db.query(CONFIGMEDIA).first()
+
+    def _update_media_config_col(self, col_name: str, value: str) -> None:
+        """更新 CONFIG_MEDIA 表的单个列（由 MediaConfigRepositoryAdapter 调用）"""
+        existing = self._db.query(CONFIGMEDIA).first()
+        if existing:
+            setattr(existing, col_name, value)
+            self._db.commit()
+        else:
+            config = CONFIGMEDIA(**{col_name: value})
+            self._db.insert(config)
+            self._db.commit()
+
+    @DbPersist(BaseRepository._db)
+    def set_media_config(self, movie_path, tv_path, anime_path, unknown_path):
+        """设置媒体库路径配置（单条记录）"""
+        existing = self._db.query(CONFIGMEDIA).first()
+        if existing:
+            existing.MOVIE_PATH = movie_path
+            existing.TV_PATH = tv_path
+            existing.ANIME_PATH = anime_path
+            existing.UNKNOWN_PATH = unknown_path
+        else:
+            config = CONFIGMEDIA(
+                MOVIE_PATH=movie_path,
+                TV_PATH=tv_path,
+                ANIME_PATH=anime_path,
+                UNKNOWN_PATH=unknown_path,
+            )
+            self._db.insert(config)
+
+
+

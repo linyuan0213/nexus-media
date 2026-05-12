@@ -309,5 +309,82 @@ class UserRssConfigRepositoryAdapter:
     def update_userrss_parser(self, item):
         self._repo.update_userrss_parser(item)
 
-    def get_userrss_task_history(self, task_id):
-        return self._repo.get_userrss_task_history(task_id)
+
+class MediaConfigRepositoryAdapter:
+    """媒体库路径配置仓储适配器"""
+
+    def __init__(self, repo: Optional[ConfigRepository] = None):
+        self._repo = repo or ConfigRepository()
+
+    def get_media_config(self):
+        return self._repo.get_media_config()
+
+    def add_path(self, path_type: str, path: str) -> None:
+        """添加路径到指定类型"""
+        cfg = self._repo.get_media_config()
+        col_map = {
+            'movie': 'MOVIE_PATH',
+            'tv': 'TV_PATH',
+            'anime': 'ANIME_PATH',
+            'unknown': 'UNKNOWN_PATH',
+        }
+        if path_type not in col_map:
+            raise ValueError(f"Unknown path type: {path_type}")
+
+        import json
+        col = col_map[path_type]
+        current = getattr(cfg, col, '') if cfg else ''
+        paths = json.loads(current) if current else []
+        if not isinstance(paths, list):
+            paths = [paths]
+        if path not in paths:
+            paths.append(path)
+            self._repo._update_media_config_col(col, json.dumps(paths))
+
+    def remove_path(self, path_type: str, path: str) -> None:
+        """从指定类型移除路径"""
+        cfg = self._repo.get_media_config()
+        col_map = {
+            'movie': 'MOVIE_PATH',
+            'tv': 'TV_PATH',
+            'anime': 'ANIME_PATH',
+            'unknown': 'UNKNOWN_PATH',
+        }
+        if path_type not in col_map:
+            raise ValueError(f"Unknown path type: {path_type}")
+
+        import json
+        col = col_map[path_type]
+        current = getattr(cfg, col, '') if cfg else ''
+        paths = json.loads(current) if current else []
+        if not isinstance(paths, list):
+            paths = [paths]
+        if path in paths:
+            paths.remove(path)
+            self._repo._update_media_config_col(col, json.dumps(paths))
+
+    def update_path(self, path_type: str, old_path: str, new_path: str) -> None:
+        """更新指定类型的路径"""
+        cfg = self._repo.get_media_config()
+        col_map = {
+            'movie': 'MOVIE_PATH',
+            'tv': 'TV_PATH',
+            'anime': 'ANIME_PATH',
+            'unknown': 'UNKNOWN_PATH',
+        }
+        if path_type not in col_map:
+            raise ValueError(f"Unknown path type: {path_type}")
+
+        import json
+        col = col_map[path_type]
+        current = getattr(cfg, col, '') if cfg else ''
+        paths = json.loads(current) if current else []
+        if not isinstance(paths, list):
+            paths = [paths]
+        if old_path in paths:
+            idx = paths.index(old_path)
+            paths[idx] = new_path
+            self._repo._update_media_config_col(col, json.dumps(paths))
+
+    def set_media_config(self, movie_path, tv_path, anime_path, unknown_path):
+        self._repo.set_media_config(movie_path, tv_path, anime_path, unknown_path)

@@ -60,10 +60,14 @@ class DownloadRepository(BaseRepository):
         if not media_info.title or not media_info.tmdb_id:
             return
 
-        # 截断超长 ENCLOSURE 防止数据库错误（8192 字节上限）
+        # 截断超长 ENCLOSURE：去掉磁力链接中多余的 tracker，只保留核心 btih
         enclosure = media_info.enclosure
-        if enclosure and len(enclosure) > 8192:
-            enclosure = enclosure[:8192]
+        if enclosure and enclosure.startswith("magnet:"):
+            # 只保留 magnet:?xt=urn:btih:HASH 部分，去掉 &tr= tracker 列表
+            core = enclosure.split("&")[0]
+            enclosure = core
+        elif enclosure and len(enclosure) > 4000:
+            enclosure = enclosure[:4000]
         media_info.enclosure = enclosure
 
         if self.is_exists_download_history(enclosure=enclosure,

@@ -115,3 +115,15 @@ class MEDIASERVER(Base):
     CONFIG = Column(Text)
     IS_DEFAULT = Column(Integer)
     NOTE = Column(Text)
+
+
+class CONFIGMEDIA(Base):
+    """媒体库路径配置表（替代 YAML media 节点中的路径配置）"""
+    __tablename__ = 'CONFIG_MEDIA'
+
+    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    MOVIE_PATH = Column(Text)
+    TV_PATH = Column(Text)
+    ANIME_PATH = Column(Text)
+    UNKNOWN_PATH = Column(Text)
+    NOTE = Column(Text)

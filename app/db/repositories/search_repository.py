@@ -43,10 +43,12 @@ class SearchRepository(BaseRepository):
             else:
                 mtype = "ANI"
 
-            # 截断超长 ENCLOSURE 防止数据库错误（8192 字节上限）
+            # 截断超长 ENCLOSURE：去掉磁力链接中多余的 tracker，只保留核心 btih
             enclosure = media_item.enclosure
-            if enclosure and len(enclosure) > 8192:
-                enclosure = enclosure[:8192]
+            if enclosure and enclosure.startswith("magnet:"):
+                enclosure = enclosure.split("&")[0]
+            elif enclosure and len(enclosure) > 4000:
+                enclosure = enclosure[:4000]
 
             mappings.append({
                 'TORRENT_NAME': media_item.org_string,
