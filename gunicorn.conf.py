@@ -37,7 +37,8 @@ if not os.path.exists(LOG_PATH):
 port = os.environ.get('NT_PORT') if os.environ.get('NT_PORT') else 3000
 
 bind = f'[::]:{port}'
-timeout = 60
+# 超时时间增加以支持 LLM 识别等长耗时操作
+timeout = 300
 daemon = False
 
 # 使用 uvicorn worker（FastAPI）
@@ -51,6 +52,6 @@ pidfile = os.path.join(ROOT_PATH, "gunicorn.pid")
 access_log_format = '%(t)s %(p)s %(h)s "%(r)s" %(s)s %(L)s %(b)s %(f)s" "%(a)s"'
 accesslog = os.path.join(LOG_PATH, "gunicorn_access.log")
 errorlog = '-'
-graceful_timeout = 10
+graceful_timeout = 30
 keyfile = ssl_key
 certfile = ssl_cert

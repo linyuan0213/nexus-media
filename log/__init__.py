@@ -11,6 +11,11 @@ import logging
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 logging.getLogger('watchdog').setLevel(logging.INFO)
 logging.getLogger('charset_normalizer').setLevel(logging.WARNING)
+# 抑制 Agent SDK 的 HTTP 请求 DEBUG 日志
+logging.getLogger('httpx').setLevel(logging.WARNING)
+logging.getLogger('httpcore').setLevel(logging.WARNING)
+logging.getLogger('openai').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 from ._buffer_proxy import LOG_BUFFER, LogBufferProxy, get_log_buffer
 from ._intercept import InterceptHandler

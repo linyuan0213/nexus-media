@@ -97,8 +97,6 @@ media:
   # 默认策略default-category分类设置可参考"default-category.yaml"，分类参见README.MD说明
   # 如不需要启动分类，则该项配置为空
   category: default-category
-  # 【媒体库管理软件】：emby、jellyfin、plex，需要在emby或jellyfin或plex区配置详细信息，用于下载检查控重、媒体库展示等，建议配置
-  media_server: emby
   # 【媒体库数据同步周期】：定时同步媒体服务器数据到本地，单位小时
   mediasync_interval: 12
   # 【转移到媒体库的最小文件大小】：避免预告片/MV等影响识别，单位M
@@ -124,37 +122,6 @@ media:
   default_rmt_mode: copy
   # 默认TMDB信息语种
   tmdb_language: zh
-
-# 配置Emby服务器信息
-emby:
-  # 【Emby服务器IP地址和端口】：注意区分http和https，http时可以不加http://，https时必须加https://
-  host: http://127.0.0.1:8096
-  # 【Emby ApiKey】：在Emby设置->高级->API密钥处生成，注意不要复制到了应用名称
-  api_key:
-  # 【Emby媒体播放地址和端口】：播放设备的访问地址，注意区分http和https，http时可以不加http://，https时必须加https://
-  play_host: http://127.0.0.1:8096
-
-# 配置Jellyfin服务器信息
-jellyfin:
-  # 【Jellyfin服务器IP地址和端口】：注意区分http和https，http时可以不加http://，https时必须加https://
-  host: http://127.0.0.1:8096
-  # 【Jellyfin ApiKey】：在Jellyfin设置->高级->API密钥处生成
-  api_key:
-  # 【Jellyfin媒体播放地址和端口】：播放设备的访问地址，注意区分http和https，http时可以不加http://，https时必须加https://
-  play_host: http://127.0.0.1:8096
-
-# 配置Plex服务器信息
-plex:
-  # 【Plex服务器IP地址和端口】：注意区分http和https，http时可以不加http://，https时必须加https://
-  host: http://127.0.0.1:32400
-  # 【X-Plex-Token】：Plex页面Cookie中的X-Plex-Token，如填写token则无需填写servername、username、password
-  token:
-  # 【Plex服务器的名称】
-  servername:
-  # 【Plex用户名】
-  username:
-  # 【Plex用户密码】
-  password:
 
 # 【配置站点搜索信息】
 pt:
@@ -209,8 +176,6 @@ laboratory:
   search_keyword: false
   # 【WEB识别增强】通过TMDB WEB检索
   search_tmdbweb: false
-  # 【AI识别增强】通过AI识别文件名
-  ai_enable: false
   # 【TMDB缓存过期策略】：是否开启TMDB缓存过期策略，默认7天过期，过期缓存将被删除,  7天内访问过期时间可以被刷新
   tmdb_cache_expire: true
   # 【默认搜索豆瓣资源】：开启将使用豆瓣进行电影电视剧的名称搜索，否则使用TMDB的数据

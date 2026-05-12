@@ -13,7 +13,8 @@ from app.db.repositories import ConfigRepository, DownloadRepository
 from app.helper import PluginHelper
 from app.helper.site_data_updater import SiteDataUpdater
 from app.media import Category
-from app.utils import ConfigLoadCache, CategoryLoadCache, ExceptionUtils, StringUtils
+from app.infrastructure.cache_system import ConfigLoadCache, CategoryLoadCache
+from app.utils import ExceptionUtils, StringUtils
 from app.utils.types import SystemConfigKey
 from config import Config
 
