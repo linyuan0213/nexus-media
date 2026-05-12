@@ -10,7 +10,7 @@ import log
 from app.core.module_config import ModuleConf
 from app.helper.thread_helper import ThreadHelper
 from app.services.filetransfer_service import FileTransferService as FileTransfer
-from app.media import Media, MetaInfo
+from app.media import MediaCache, MetaInfo
 from app.schemas.sync import (
     ManualTransferResultDTO,
     ReIdentifyResultDTO,
@@ -32,11 +32,11 @@ class SyncService:
     def __init__(self,
                  sync: Optional[Sync] = None,
                  filetransfer: Optional[FileTransfer] = None,
-                 media: Optional[Media] = None,
+                 media_cache: Optional[MediaCache] = None,
                  threadhelper: Optional[ThreadHelper] = None):
         self._sync = sync or Sync()
         self._filetransfer = filetransfer or FileTransfer()
-        self._media = media or Media()
+        self._media_cache = media_cache or MediaCache()
         self._threadhelper = threadhelper or ThreadHelper()
 
     # ---------- 同步目录校验 ----------
@@ -167,7 +167,7 @@ class SyncService:
 
         tmdb_info = None
         if tmdbid:
-            tmdb_info = self._media.get_tmdb_info(mtype=media_type, tmdbid=tmdbid)
+            tmdb_info = self._media_cache.get_tmdb_info(mtype=media_type, tmdbid=tmdbid)
             if not tmdb_info:
                 return ManualTransferResultDTO(success=False, message="识别失败，无法查询到TMDB信息")
 

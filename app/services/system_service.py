@@ -55,7 +55,7 @@ from config import Config
 from sqlalchemy import create_engine
 from app.services.search_torrents import search_medias_for_web, search_media_by_message
 from app.utils.web_utils import WebUtils
-from app.utils import TokenCache
+from app.infrastructure.cache_system import TokenCache
 from app.utils.config_tools import get_proxies
 
 

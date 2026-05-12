@@ -9,7 +9,7 @@ import re
 from typing import List, Optional, Tuple
 
 from app.helper import WordsHelper
-from app.media import Media
+from app.media import MediaCache
 from app.schemas.words import (
     WordGroupDTO,
     WordDTO,
@@ -28,9 +28,9 @@ class WordsService:
     - 集数偏移格式校验
     """
 
-    def __init__(self, words_helper: Optional[WordsHelper] = None, media: Optional[Media] = None):
+    def __init__(self, words_helper: Optional[WordsHelper] = None, media_cache: Optional[MediaCache] = None):
         self._words = words_helper or WordsHelper()
-        self._media = media or Media()
+        self._media_cache = media_cache or MediaCache()
 
     # ---------- 词组操作 ----------
 
@@ -42,7 +42,7 @@ class WordsService:
         if tmdb_type == "tv":
             if self._words.is_custom_word_group_existed(tmdbid=tmdb_id, gtype=2):
                 return False, "识别词组（TMDB ID）已存在"
-            tmdb_info = self._media.get_tmdb_info(mtype=MediaType.TV, tmdbid=tmdb_id)
+            tmdb_info = self._media_cache.get_tmdb_info(mtype=MediaType.TV, tmdbid=tmdb_id)
             if not tmdb_info:
                 return False, "添加失败，无法查询到TMDB信息"
             self._words.insert_custom_word_groups(
@@ -56,7 +56,7 @@ class WordsService:
         elif tmdb_type == "movie":
             if self._words.is_custom_word_group_existed(tmdbid=tmdb_id, gtype=1):
                 return False, "识别词组（TMDB ID）已存在"
-            tmdb_info = self._media.get_tmdb_info(mtype=MediaType.MOVIE, tmdbid=tmdb_id)
+            tmdb_info = self._media_cache.get_tmdb_info(mtype=MediaType.MOVIE, tmdbid=tmdb_id)
             if not tmdb_info:
                 return False, "添加失败，无法查询到TMDB信息"
             self._words.insert_custom_word_groups(

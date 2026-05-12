@@ -15,7 +15,7 @@ import time
 from typing import Dict, List, Optional, Set
 
 import log
-from app.utils.cache_system import get_cache_manager
+from app.infrastructure.cache_system import get_cache_manager
 from config import Config
 from app.core.constants import RMT_MEDIAEXT
 
