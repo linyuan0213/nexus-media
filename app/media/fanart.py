@@ -1,4 +1,4 @@
-from app.utils.cache_system import lru_cache_with_ttl
+from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.utils import RequestUtils, ExceptionUtils
 from app.utils.types import MediaType
 from config import Config
