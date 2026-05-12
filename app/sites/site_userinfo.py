@@ -241,50 +241,44 @@ class SiteUserInfo(metaclass=SingletonMeta):
     def __refresh_all_site_data(self, force=False, specify_sites=None):
         """
         多线程刷新站点下载上传量，默认间隔6小时
+
+        锁只保护竞争条件检查和 _last_update_time 写入，ThreadPool 和
+        HTTP 请求在锁外执行，避免阻塞索引器搜索等其他线程。
         """
         if not self.sites.get_sites():
             return
 
+        if specify_sites and not isinstance(specify_sites, list):
+            specify_sites = [specify_sites]
+
+        # 没有指定站点，默认使用全部站点
+        if not specify_sites:
+            refresh_sites = self.sites.get_sites(statistic=True)
+        else:
+            refresh_sites = [site for site in self.sites.get_sites(statistic=True) if
+                             site.get("name") in specify_sites]
+
+        if not refresh_sites:
+            return
+
+        # 锁只保护竞争条件检查和状态写入，不包含 IO 密集型操作
         with lock:
-
-            if not force \
-                    and not specify_sites \
-                    and self._last_update_time:
+            if not force and not specify_sites and self._last_update_time:
                 return
-
-            if specify_sites \
-                    and not isinstance(specify_sites, list):
-                specify_sites = [specify_sites]
-
-            # 没有指定站点，默认使用全部站点
-            if not specify_sites:
-                refresh_sites = self.sites.get_sites(statistic=True)
-            else:
-                refresh_sites = [site for site in self.sites.get_sites(statistic=True) if
-                                 site.get("name") in specify_sites]
-
-            if not refresh_sites:
-                return
-
-            # 并发刷新
-            with ThreadPool(min(len(refresh_sites), self._MAX_CONCURRENCY)) as p:
-                site_user_infos = p.map(
-                    self.__refresh_site_data, refresh_sites)
-                site_user_infos = [info for info in site_user_infos if info]
-
-            # 登记历史数据
-            self.site_repo.insert_site_statistics_history(site_user_infos)
-            # 实时用户数据
-            self.site_repo.update_site_user_statistics(site_user_infos)
-            # 更新站点图标
-            self.site_repo.update_site_favicon(site_user_infos)
-            # 实时做种信息
-            self.site_repo.update_site_seed_info(site_user_infos)
-            # 站点图标重新加载
-            self.sites.init_favicons()
-
-            # 更新时间
             self._last_update_time = datetime.now()
+
+        # ThreadPool 移出锁外 —— 不阻塞其他线程
+        with ThreadPool(min(len(refresh_sites), self._MAX_CONCURRENCY)) as p:
+            site_user_infos = p.map(
+                self.__refresh_site_data, refresh_sites)
+            site_user_infos = [info for info in site_user_infos if info]
+
+        # 结果处理也在锁外
+        self.site_repo.insert_site_statistics_history(site_user_infos)
+        self.site_repo.update_site_user_statistics(site_user_infos)
+        self.site_repo.update_site_favicon(site_user_infos)
+        self.site_repo.update_site_seed_info(site_user_infos)
+        self.sites.init_favicons()
 
     def get_pt_site_statistics_history(self, days=7, end_day=None):
         """
