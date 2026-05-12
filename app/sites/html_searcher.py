@@ -192,7 +192,7 @@ class HtmlSiteSearcher:
                 item[new_key] = item.pop(old_key)
         for url_field in ("enclosure", "page_url"):
             val = item.get(url_field, "")
-            if val and isinstance(val, str) and not val.startswith("http"):
+            if val and isinstance(val, str) and not val.startswith("http") and not val.startswith("magnet"):
                 if val.startswith("/"):
                     val = f"{domain}{val}"
                 else:
