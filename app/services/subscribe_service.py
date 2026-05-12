@@ -20,7 +20,7 @@ from app.db.repositories.rss_repo_adapter import (
     RssHistoryRepositoryAdapter,
 )
 from app.services.indexer_service import IndexerService
-from app.media import Media, DouBan, MetaInfo
+from app.media import MediaService, DouBan, MetaInfo
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
 from app.services.subscribe_search_engine import SubscribeSearchEngine
@@ -42,7 +42,7 @@ class SubscribeService:
                  history_repo: Optional[Any] = None,
                  search_engine: Optional[SubscribeSearchEngine] = None,
                  message: Optional[Message] = None,
-                 media: Optional[Media] = None,
+                 media_service: Optional[MediaService] = None,
                  downloader: Optional[Downloader] = None,
                  sites: Optional[Sites] = None,
                  douban: Optional[DouBan] = None,
@@ -60,7 +60,7 @@ class SubscribeService:
             tv_repo=self._tv_repo,
             tv_episode_repo=self._tv_episode_repo)
         self._message = message or Message()
-        self._media = media or Media()
+        self._media = media_service or MediaService()
         self._downloader = downloader or Downloader()
         self._sites = sites or Sites()
         self._douban = douban or DouBan()

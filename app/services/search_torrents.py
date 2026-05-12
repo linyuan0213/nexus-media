@@ -10,8 +10,8 @@ from app import media
 import log
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.helper import ProgressHelper
-from app.helper.openai_helper import OpenAiHelper
-from app.media import Media, DouBan, MetaInfo
+from app.agent import ChatAgent, SearchIntentAgent
+from app.media import MediaService, DouBan, MetaInfo
 from app.message import Message
 from app.sites import Sites
 from app.utils import StringUtils, Torrent
@@ -53,6 +53,30 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
     :return: 错误码，错误原因，成功时直接插入数据库
     """
     mtype, key_word, season_num, episode_num, year, content = StringUtils.get_keyword_from_string(content)
+
+    # Agent 意图解析（自然语言查询）
+    intent_agent = SearchIntentAgent()
+    if intent_agent.ready and key_word:
+        try:
+            intent = intent_agent.parse(content)
+            if intent and intent.is_specific:
+                if intent.keywords and len(intent.keywords) > len(key_word):
+                    key_word = intent.keywords
+                if intent.media_type:
+                    if intent.media_type == "movie":
+                        mtype = MediaType.MOVIE
+                    elif intent.media_type in ("tv", "anime"):
+                        mtype = MediaType.TV
+                if intent.season is not None:
+                    season_num = intent.season
+                if intent.episode is not None:
+                    episode_num = intent.episode
+                if intent.year is not None:
+                    year = str(intent.year)
+                log.info(f"【Web】Agent 解析搜索意图: {content} -> {key_word}, type={mtype}, season={season_num}, episode={episode_num}, year={year}")
+        except Exception as e:
+            log.warn(f"【Web】Agent 意图解析失败: {e}")
+
     if not key_word:
         log.info("【Web】%s 搜索关键字有误！" % content)
         return -1, "%s 未识别到搜索关键字！" % content
@@ -62,7 +86,7 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
     # 开始进度
     _searcher = Searcher()
     _process = ProgressHelper()
-    _media = Media()
+    _media = MediaService()
     _process.start(ProgressKey.Search)
     # 识别媒体
     media_info = None
@@ -367,7 +391,7 @@ def search_media_by_message(input_str, in_from: SearchType, user_id, user_name=N
                 mtype = MediaType.UNKNOWN
             
             # 创建媒体信息对象
-            tmdb_info = Media().get_tmdb_info(mtype=mtype, tmdbid=selected_item.TMDBID) if selected_item.TMDBID else Media().get_media_info(title=title, year=year, mtype=mtype)
+            tmdb_info = MediaService().get_tmdb_info(mtype=mtype, tmdbid=selected_item.TMDBID) if selected_item.TMDBID else MediaService().get_media_info(title=title, year=year, mtype=mtype)
             media_info = MetaInfo(title=f"{title} {year}".strip(), mtype=mtype)
             media_info.set_tmdb_info(tmdb_info)
             
@@ -415,14 +439,14 @@ def search_media_by_message(input_str, in_from: SearchType, user_id, user_name=N
                 # 先从网页抓取（含TMDBID）
                 doubaninfo = DouBan().get_media_detail_from_web(media_info.douban_id)
                 if doubaninfo and doubaninfo.get("imdbid"):
-                    tmdbid = Media().get_tmdbid_by_imdbid(doubaninfo.get("imdbid"))
+                    tmdbid = MediaService().get_tmdbid_by_imdbid(doubaninfo.get("imdbid"))
                     if tmdbid:
                         # 按IMDBID查询TMDB
-                        media_info.set_tmdb_info(Media().get_tmdb_info(mtype=media_info.type, tmdbid=tmdbid))
+                        media_info.set_tmdb_info(MediaService().get_tmdb_info(mtype=media_info.type, tmdbid=tmdbid))
                         media_info.imdb_id = doubaninfo.get("imdbid")
                 else:
                     search_episode = media_info.begin_episode
-                    media_info = Media().get_media_info(title="%s %s" % (media_info.title, media_info.year),
+                    media_info = MediaService().get_media_info(title="%s %s" % (media_info.title, media_info.year),
                                                         mtype=media_info.type,
                                                         strict=True)
                     media_info.begin_episode = search_episode
@@ -451,7 +475,7 @@ def search_media_by_message(input_str, in_from: SearchType, user_id, user_name=N
         elif input_str.startswith("http"):
             # 下载链接
             SEARCH_MEDIA_TYPE[user_id] = "DOWNLOAD"
-        elif OpenAiHelper().get_state() \
+        elif ChatAgent().ready \
                 and not input_str.startswith("搜索") \
                 and not input_str.startswith("下载"):
             # 开启AI时，不以订阅、搜索、下载开头的均为聊天模式
@@ -481,7 +505,7 @@ def search_media_by_message(input_str, in_from: SearchType, user_id, user_name=N
             # 识别文件名
             filename = os.path.basename(filepath)
             # 识别
-            meta_info = Media().get_media_info(title=filename)
+            meta_info = MediaService().get_media_info(title=filename)
             if not meta_info:
                 Message().send_channel_msg(channel=in_from,
                                            title="无法识别种子文件名！",
@@ -496,8 +520,8 @@ def search_media_by_message(input_str, in_from: SearchType, user_id, user_name=N
         # 聊天
         elif SEARCH_MEDIA_TYPE[user_id] == "ASK":
             # 调用AI Api
-            answer = OpenAiHelper().get_answer(text=input_str,
-                                               userid=user_id)
+            answer = ChatAgent().chat_with_session(question=input_str,
+                                                   session_id=str(user_id))
             if not answer:
                 answer = "ChatGTP出错了，请检查OpenAI API Key是否正确，如需搜索电影/电视剧，请发送 搜索或下载 + 名称"
             # 发送消息
@@ -576,7 +600,7 @@ def search_media_by_message(input_str, in_from: SearchType, user_id, user_name=N
                     # 如果是豆瓣数据，需要重新查询TMDB的数据
                     if media_info.douban_id:
                         _title = media_info.get_title_string()
-                        media_info = Media().get_media_info(title="%s %s" % (media_info.title, media_info.year),
+                        media_info = MediaService().get_media_info(title="%s %s" % (media_info.title, media_info.year),
                                                             mtype=media_info.type, strict=True)
                         if not media_info or not media_info.tmdb_info:
                             Message().send_channel_msg(channel=in_from,
