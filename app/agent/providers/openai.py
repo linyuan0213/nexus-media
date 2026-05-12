@@ -1,0 +1,79 @@
+# -*- coding: utf-8 -*-
+"""OpenAI / OpenAI 兼容提供商"""
+from typing import Any, Optional
+
+import log
+from openai import OpenAI
+
+from app.agent.providers.base import BaseProvider, ProviderConfig
+
+
+class OpenAIProvider(BaseProvider):
+    """OpenAI 兼容提供商 — 支持 OpenAI、Moonshot、DeepSeek 等"""
+
+    def __init__(self, config: ProviderConfig):
+        super().__init__(config)
+        self._client = OpenAI(
+            base_url=config.api_url,
+            api_key=config.api_key,
+            timeout=config.timeout,
+        )
+
+    def chat(self, messages: list[dict], system_prompt: str = "", temperature: float = 0.7,
+             response_format: Optional[type] = None) -> Any:
+        msgs = []
+        if system_prompt:
+            msgs.append({"role": "system", "content": system_prompt})
+        msgs.extend(messages)
+
+        kwargs = {
+            "model": self._config.model,
+            "messages": msgs,
+            "temperature": temperature,
+        }
+        if response_format:
+            kwargs["response_format"] = {"type": "json_object"}
+
+        try:
+            resp = self._client.chat.completions.create(**kwargs)
+            return resp.choices[0].message.content
+        except Exception as e:
+            err_msg = self._format_error(e)
+            log.warn(f"【OpenAIProvider】请求失败: {err_msg}")
+            return ""
+
+    @staticmethod
+    def _format_error(e: Exception) -> str:
+        """将异常转换为用户可读的提示"""
+        from openai import APIStatusError
+        if isinstance(e, APIStatusError):
+            code = e.status_code
+            body = e.body or {}
+            msg = body.get("error", {}).get("message", str(e))
+            if code == 401:
+                return f"API Key 无效或已过期 ({msg})"
+            if code == 402:
+                return f"账户余额不足，请充值 ({msg})"
+            if code == 429:
+                return f"请求过于频繁，请稍后再试 ({msg})"
+            if code >= 500:
+                return f"Provider 服务端错误 ({code}: {msg})"
+            return f"Provider 错误 ({code}: {msg})"
+        return str(e)
+
+    def is_available(self) -> bool:
+        try:
+            self._client.models.list()
+            return True
+        except Exception:
+            return False
+
+    def list_models(self) -> list[str]:
+        try:
+            models = self._client.models.list()
+            return [m.id for m in models.data]
+        except Exception as e:
+            log.warn(f"【OpenAIProvider】查询模型列表失败: {e}")
+            return []
+
+
