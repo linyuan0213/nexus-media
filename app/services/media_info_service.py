@@ -5,7 +5,7 @@ from typing import Optional, List, Dict, Any
 import cn2an
 import log
 from app.helper.image_proxy_helper import ImageProxyHelper
-from app.media import Media, DouBan, MetaInfo
+from app.media import MediaService, DouBan, MetaInfo
 from app.mediaserver import MediaServer
 from app.schemas.media import MediaInfoResultDTO, SeasonEpisodesResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe
@@ -23,10 +23,10 @@ class MediaInfoService:
     """
 
     def __init__(self,
-                 media: Optional[Media] = None,
+                 media_service: Optional[MediaService] = None,
                  subscribe: Optional[Subscribe] = None,
                  media_server: Optional[MediaServer] = None):
-        self._media = media or Media()
+        self._media = media_service or MediaService()
         self._subscribe = subscribe or Subscribe()
         self._media_server = media_server or MediaServer()
 

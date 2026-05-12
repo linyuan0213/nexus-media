@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Optional, List
 
-from app.media import Media, Bangumi, DouBan
+from app.media import MediaService, Bangumi, DouBan
 from app.mediaserver import MediaServer
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.subscribe_service import SubscribeService as Subscribe
@@ -16,12 +16,12 @@ class MediaRecommendationService:
     """
 
     def __init__(self,
-                 media: Optional[Media] = None,
+                 media_service: Optional[MediaService] = None,
                  douban: Optional[DouBan] = None,
                  bangumi: Optional[Bangumi] = None,
                  media_server: Optional[MediaServer] = None,
                  subscribe: Optional[Subscribe] = None):
-        self._media = media or Media()
+        self._media = media_service or MediaService()
         self._douban = douban or DouBan()
         self._bangumi = bangumi or Bangumi()
         self._media_server = media_server or MediaServer()

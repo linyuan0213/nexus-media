@@ -6,7 +6,9 @@ from app.helper import ThreadHelper
 from app.mediaserver import MediaServer
 from app.schemas.media import LibrarySpaceDTO
 from app.services.filetransfer_service import FileTransferService as FileTransfer
-from app.utils import SystemUtils, TokenCache
+from app.services.media_config_service import MediaConfigService
+from app.utils import SystemUtils
+from app.infrastructure.cache_system import TokenCache
 from app.utils.types import SystemConfigKey
 from config import Config
 
@@ -72,16 +74,10 @@ class MediaLibraryService:
 
     def get_space_info(self) -> LibrarySpaceDTO:
         """获取媒体库存储空间"""
-        media = Config().get_config('media')
-        movie_paths = media.get('movie_path') or []
-        if not isinstance(movie_paths, list):
-            movie_paths = [movie_paths]
-        tv_paths = media.get('tv_path') or []
-        if not isinstance(tv_paths, list):
-            tv_paths = [tv_paths]
-        anime_paths = media.get('anime_path') or []
-        if not isinstance(anime_paths, list):
-            anime_paths = [anime_paths]
+        media_cfg = MediaConfigService().get_config()
+        movie_paths = media_cfg.get('movie_path') or []
+        tv_paths = media_cfg.get('tv_path') or []
+        anime_paths = media_cfg.get('anime_path') or []
 
         all_paths = movie_paths + tv_paths + anime_paths
         if not all_paths:

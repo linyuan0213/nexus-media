@@ -29,7 +29,7 @@ from app.domain.interfaces.transfer_repo import (
     ITransferUnknownRepository,
 )
 from app.helper import ProgressHelper, ThreadHelper
-from app.media import Media, Category, Scraper, MetaInfo
+from app.media import MediaService, Category, Scraper, MetaInfo
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
 from app.services.transfer_action_engine import TransferActionEngine
@@ -37,6 +37,7 @@ from app.utils import PathUtils, StringUtils, SystemUtils, ExceptionUtils, Numbe
 from app.utils.types import EventType, MediaType, MovieTypes, ProgressKey, RmtMode, SyncType
 from app.core.constants import RMT_MEDIAEXT, RMT_FAVTYPE, RMT_MIN_FILESIZE, DEFAULT_MOVIE_FORMAT, \
     DEFAULT_TV_FORMAT
+from app.services.media_config_service import MediaConfigService
 from config import Config
 
 
@@ -47,7 +48,7 @@ class FileTransferService:
     """
 
     def __init__(self,
-                 media: Optional[Media] = None,
+                 media_service: Optional[MediaService] = None,
                  message: Optional[Message] = None,
                  category: Optional[Category] = None,
                  scraper: Optional[Scraper] = None,
@@ -59,7 +60,7 @@ class FileTransferService:
                  progress: Optional[ProgressHelper] = None,
                  eventmanager: Optional[EventManager] = None,
                  engine: Optional[TransferActionEngine] = None):
-        self.media = media or Media()
+        self.media = media_service or MediaService()
         self.message = message or Message()
         self.category = category or Category()
         self.scraper = scraper or Scraper()
@@ -91,7 +92,7 @@ class FileTransferService:
         self.init_config()
 
     def init_config(self):
-        self.media = Media()
+        self.media = MediaService()
         self.message = Message()
         self.category = Category()
         self.scraper = Scraper()
@@ -103,42 +104,21 @@ class FileTransferService:
         self.progress = ProgressHelper()
         self.eventmanager = EventManager()
 
+        media_cfg = MediaConfigService().get_config()
         media = Config().get_config('media')
+
+        self._movie_path = media_cfg.get('movie_path') or []
+        self._movie_category_flag = self.category.movie_category_flag
+        self._tv_path = media_cfg.get('tv_path') or []
+        self._tv_category_flag = self.category.tv_category_flag
+        self._anime_path = media_cfg.get('anime_path') or []
+        self._anime_category_flag = self.category.anime_category_flag
+        if not self._anime_path:
+            self._anime_path = self._tv_path
+            self._anime_category_flag = self._tv_category_flag
+        self._unknown_path = media_cfg.get('unknown_path') or []
+
         if media:
-            movie_path = media.get('movie_path')
-            if not isinstance(movie_path, list):
-                if movie_path:
-                    movie_path = [movie_path]
-                else:
-                    movie_path = []
-            self._movie_path = movie_path
-            self._movie_category_flag = self.category.movie_category_flag
-            tv_path = media.get('tv_path')
-            if not isinstance(tv_path, list):
-                if tv_path:
-                    tv_path = [tv_path]
-                else:
-                    tv_path = []
-            self._tv_path = tv_path
-            self._tv_category_flag = self.category.tv_category_flag
-            anime_path = media.get('anime_path')
-            if not isinstance(anime_path, list):
-                if anime_path:
-                    anime_path = [anime_path]
-                else:
-                    anime_path = []
-            self._anime_path = anime_path
-            self._anime_category_flag = self.category.anime_category_flag
-            if not self._anime_path:
-                self._anime_path = self._tv_path
-                self._anime_category_flag = self._tv_category_flag
-            unknown_path = media.get('unknown_path')
-            if not isinstance(unknown_path, list):
-                if unknown_path:
-                    unknown_path = [unknown_path]
-                else:
-                    unknown_path = []
-            self._unknown_path = unknown_path
             min_filesize = media.get('min_filesize')
             if isinstance(min_filesize, int):
                 self._min_filesize = min_filesize * 1024 * 1024

@@ -27,7 +27,7 @@ from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.downloader.client._base import _IDownloadClient
 from app.schemas.download import Torrent
 from app.helper import ThreadHelper
-from app.media import Media, MetaInfo
+from app.media import MetaInfo
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
@@ -51,7 +51,6 @@ class DownloadCore:
                  message: Optional[Message] = None,
                  mediaserver: Optional[MediaServer] = None,
                  filetransfer: Optional[FileTransfer] = None,
-                 media: Optional[Media] = None,
                  sites: Optional[Sites] = None,
                  siteconf: Optional[SiteConf] = None,
                  sitesubtitle: Optional[SiteSubtitle] = None,
@@ -63,7 +62,6 @@ class DownloadCore:
         self._message = message or Message()
         self._mediaserver = mediaserver or MediaServer()
         self._filetransfer = filetransfer or FileTransfer()
-        self._media = media or Media()
         self._sites = sites or Sites()
         self._siteconf = siteconf or SiteConf()
         self._sitesubtitle = sitesubtitle or SiteSubtitle()
@@ -76,7 +74,6 @@ class DownloadCore:
             message=self._message,
             mediaserver=self._mediaserver,
             filetransfer=self._filetransfer,
-            media=self._media,
             sites=self._sites,
             siteconf=self._siteconf,
             sitesubtitle=self._sitesubtitle,

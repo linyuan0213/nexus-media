@@ -4,7 +4,7 @@ from typing import Tuple
 
 from app.core.system_config import SystemConfig
 from app.helper import ThreadHelper
-from app.media import Media, Scraper
+from app.media import MediaService, Scraper
 from app.plugin_framework.event_compat import EventManager
 from app.utils.path_utils import get_category_path
 from app.utils.types import EventType, SystemConfigKey
@@ -137,11 +137,11 @@ class MediaFileService:
 
     def download_subtitle(self, path: str, name: str) -> Tuple[bool, str]:
         """下载字幕"""
-        media = Media().get_media_info(title=name)
+        media = MediaService().get_media_info(title=name)
         if not media or not media.tmdb_info:
             return False, f"{name} 无法从TMDB查询到媒体信息"
         if not media.imdb_id:
-            media.set_tmdb_info(Media().get_tmdb_info(mtype=media.type, tmdbid=media.tmdb_id))
+            media.set_tmdb_info(MediaService().get_tmdb_info(mtype=media.type, tmdbid=media.tmdb_id))
         EventManager().send_event(EventType.SubtitleDownload, {
             "media_info": media.to_dict(),
             "file": os.path.splitext(path)[0],
