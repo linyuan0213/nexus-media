@@ -74,23 +74,23 @@ class Rss(metaclass=SingletonMeta):
         with lock:
             log.info("【Rss】开始RSS订阅...")
 
-            # 读取订阅清单
-            rss_movies = self.subscribe.get_subscribe_movies(state='R')
-            if not rss_movies:
-                log.warn("【Rss】没有正在订阅的电影")
-            else:
-                log.info("【Rss】电影订阅清单：%s"
-                         % " ".join('%s' % info.get("name") for _, info in rss_movies.items()))
+        # 读取订阅清单
+        rss_movies = self.subscribe.get_subscribe_movies(state='R')
+        if not rss_movies:
+            log.warn("【Rss】没有正在订阅的电影")
+        else:
+            log.info("【Rss】电影订阅清单：%s"
+                     % " ".join('%s' % info.get("name") for _, info in rss_movies.items()))
 
-            rss_tvs = self.subscribe.get_subscribe_tvs(state='R')
-            if not rss_tvs:
-                log.warn("【Rss】没有正在订阅的电视剧")
-            else:
-                log.info("【Rss】电视剧订阅清单：%s"
-                         % " ".join('%s' % info.get("name") for _, info in rss_tvs.items()))
+        rss_tvs = self.subscribe.get_subscribe_tvs(state='R')
+        if not rss_tvs:
+            log.warn("【Rss】没有正在订阅的电视剧")
+        else:
+            log.info("【Rss】电视剧订阅清单：%s"
+                     % " ".join('%s' % info.get("name") for _, info in rss_tvs.items()))
 
-            if not rss_movies and not rss_tvs:
-                return
+        if not rss_movies and not rss_tvs:
+            return
 
             # 获取有订阅的站点范围
             check_sites = []

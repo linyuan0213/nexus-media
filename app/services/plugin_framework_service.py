@@ -394,7 +394,7 @@ class PluginFrameworkService:
             else:
                 log.error(f"[PluginFrameworkService] 插件加载返回失败: {plugin_id}")
         except Exception as e:
-            log.error(f"[PluginFrameworkService] 插件后台加载异常 {plugin_id}: {e}", exc_info=True)
+            log.error(f"[PluginFrameworkService] 插件后台加载异常 {plugin_id}: {e}")
 
     def enable(self, plugin_id: str) -> None:
         """启用插件（更新数据库和注册表缓存）"""

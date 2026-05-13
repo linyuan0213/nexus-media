@@ -39,6 +39,8 @@ class APIKEY(Base):
     LAST_USED_AT = Column(DateTime, nullable=True)
     # 描述/备注
     DESCRIPTION = Column(Text, nullable=True)
+    # 系统级 API Key 的原始值（仅系统 key 使用，用于构造 webhook URL 等）
+    RAW_KEY = Column(Text, nullable=True)
 
     __table_args__ = (
         Index('ix_API_KEYS_STATUS', 'STATUS'),
@@ -60,6 +62,7 @@ class APIKEY(Base):
             'use_count': self.USE_COUNT,
             'last_used_at': self.LAST_USED_AT.isoformat() if self.LAST_USED_AT else None,
             'description': self.DESCRIPTION,
+            'raw_key': self.RAW_KEY,
         }
 
     def is_expired(self):

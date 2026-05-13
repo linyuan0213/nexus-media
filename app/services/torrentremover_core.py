@@ -4,7 +4,6 @@ TorrentRemover 重构核心
 拆分为 Repository + ActionEngine + Service，移除 SingletonMeta。
 """
 import json
-from threading import Lock
 from typing import Dict, List, Optional, Tuple
 
 import log
@@ -14,8 +13,6 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.message import Message
 from app.services.scheduler_core import SchedulerCore
 from app.utils import ExceptionUtils
-
-lock = Lock()
 
 
 class TorrentRemoverRepository:
@@ -188,7 +185,6 @@ class TorrentRemoverService:
             return
         for task in tasks:
             try:
-                lock.acquire()
                 count, text = TorrentRemoverActionEngine.execute(task, self._downloader)
                 if count and text:
                     self._message.send_auto_remove_torrents_message(
@@ -196,8 +192,6 @@ class TorrentRemoverService:
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
                 log.error(f"【TorrentRemover】自动删种任务：{task.get('name')}异常：{str(e)}")
-            finally:
-                lock.release()
 
     def _validate_task_params(self, data: dict) -> Tuple[bool, str]:
         name = data.get("name")

@@ -40,10 +40,28 @@ class AutoSignInPlugin:
     def on_enable(self):
         self.ctx.info("站点自动签到插件已启用")
         self._start_service()
+        # 注册消息命令：/signin 立即执行签到
+        self.ctx.register_message_command(
+            cmd="/signin",
+            desc="站点签到",
+            func=self._handle_signin_command
+        )
 
     def on_disable(self):
         self.ctx.info("站点自动签到插件已禁用")
         self._stop_service()
+        self.ctx.unregister_message_command("/signin")
+
+    def _handle_signin_command(self, msg, in_from, user_id, user_name):
+        """处理 /signin 消息命令"""
+        self.ctx.info(f"收到签到命令: user={user_name}, msg={msg}")
+        self.run()
+        Message().send_channel_msg(
+            channel=in_from,
+            title="站点签到",
+            text="签到任务已触发，请稍后查看签到结果",
+            user_id=user_id
+        )
 
     def on_hook(self, event, data):
         if event == "plugin.config_changed":

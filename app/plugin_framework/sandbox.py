@@ -9,6 +9,7 @@ import os
 import sys
 from typing import Any, Dict, Optional
 
+from app.message import Message
 from app.plugin_framework.context import PluginContext
 from app.plugin_framework.registry import PluginRegistry
 from app.schemas.plugin import PluginManifest
@@ -129,7 +130,7 @@ class PluginSandbox(metaclass=SingletonMeta):
             return True
 
         except Exception as e:
-            log.error(f"[Sandbox] 插件加载失败 {plugin_id}: {e}", exc_info=True)
+            log.error(f"[Sandbox] 插件加载失败 {plugin_id}: {e}")
             return False
 
     def unload(self, plugin_id: str) -> None:
@@ -144,6 +145,10 @@ class PluginSandbox(metaclass=SingletonMeta):
 
             self._instances.pop(plugin_id, None)
             self._cleanup_modules(plugin_id)
+
+            # 自动注销该插件的所有消息命令
+            Message().clear_plugin_commands(plugin_id)
+
             log.info(f"[Sandbox] 插件卸载: {plugin_id}")
 
     def reload(self, plugin_id: str) -> bool:

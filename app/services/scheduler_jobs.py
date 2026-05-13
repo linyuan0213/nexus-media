@@ -17,6 +17,12 @@ from config import (
 )
 from app.utils.wallpaper import get_login_wallpaper
 from app.helper.temp_cleanup_helper import TempCleanupHelper
+from app.helper.thread_helper import ThreadHelper
+
+
+def _refresh_site_data_now_threaded():
+    """站点数据刷新 — 在独立线程中执行，避免阻塞调度器"""
+    ThreadHelper().start_thread(SiteUserInfo().refresh_site_data_now, ())
 
 
 def load_default_jobs(scheduler):
@@ -38,7 +44,7 @@ def load_default_jobs(scheduler):
             tz = pytz.timezone(os.environ.get('TZ'))
             scheduler.register_smart_cron(
                 job_id="SiteUserInfo.refresh_site_data_now",
-                func=SiteUserInfo().refresh_site_data_now,
+                func=_refresh_site_data_now_threaded,
                 name="站点数据统计",
                 func_desc="站点数据统计",
                 cron=str(ptrefresh_date_cron),

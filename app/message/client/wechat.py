@@ -5,9 +5,10 @@ import log
 from threading import Lock
 
 from app.helper.thread_helper import ThreadHelper
+from app.message import Message
 from app.message.client._base import _IMessageClient
 from app.message.client_registry import ClientRegistry
-from app.message.commands import COMMANDS, WECHAT_MENU
+from app.message.commands import WECHAT_MENU, WECHAT_PLUGIN_GROUP
 from app.utils import RequestUtils, ExceptionUtils
 
 _menu_lock = Lock()
@@ -47,10 +48,9 @@ class WeChat(_IMessageClient):
             self._menu_url = f"{base}/cgi-bin/menu/create?access_token=%s&agentid=%s"
 
     def setup(self):
-        if self.interactive:
-            if self.agent_id and str(self.agent_id) in WeChat._menu_done:
-                return
-            ThreadHelper().start_thread(self._create_menu, ())
+        # 菜单不再在 setup() 中设置，避免后台线程延迟执行覆盖插件命令
+        # 统一由 Message.refresh_menus() 在系统启动完成后刷新
+        pass
 
     def stop(self):
         pass
@@ -169,14 +169,22 @@ class WeChat(_IMessageClient):
                 log.error("【WeChat】无法获取access_token，菜单创建跳过")
                 return
             try:
+                commands = Message().get_commands()
+                plugin_cmds = Message().get_plugin_commands()
                 buttons = []
                 for group in WECHAT_MENU:
                     subs = []
                     for cmd in group["commands"]:
-                        name = COMMANDS.get(cmd, cmd)
+                        name = commands.get(cmd, cmd)
                         if not name:
                             continue
                         subs.append({"type": "click", "name": name, "key": cmd.replace("/", "_")})
+                    # 将插件命令追加到"管理"分组
+                    if group["name"] == WECHAT_PLUGIN_GROUP and plugin_cmds:
+                        for cmd, info in plugin_cmds.items():
+                            if len(subs) >= 5:
+                                break
+                            subs.append({"type": "click", "name": info.get("desc", cmd), "key": cmd.replace("/", "_")})
                     if subs:
                         buttons.append({"name": group["name"], "sub_button": subs})
                 if not buttons:
@@ -200,6 +208,11 @@ class WeChat(_IMessageClient):
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
                 log.error("【WeChat】菜单创建异常：%s" % e)
+
+    def refresh_menu(self):
+        """刷新命令菜单（插件命令变更时调用）"""
+        WeChat._menu_done.discard(str(self.agent_id))
+        self._create_menu()
 
     def _post_request(self, url, req_json):
         headers = {"content-type": "application/json"}

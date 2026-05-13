@@ -29,6 +29,7 @@ from app.services.indexer_service import IndexerService
 from app.services.site_service import SiteService
 from app.core.module_config import ModuleConf
 from app.utils import SystemUtils, ExceptionUtils
+from app.helper.thread_helper import ThreadHelper
 
 router = APIRouter()
 
@@ -91,6 +92,10 @@ class DownloadTorrentRequest(BaseModel):
     page_url: Optional[str] = None
     upload_volume_factor: Optional[float] = None
     download_volume_factor: Optional[float] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    site: Optional[str] = None
+    size: Optional[int] = None
 
 
 class FindHardlinksRequest(BaseModel):
@@ -255,15 +260,19 @@ def download(
     user: UserContext = Depends(require_permission("download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
-    result = svc.download_from_search_results(
-        dl_id=req.id,
-        dl_dir=req.dir,
-        dl_setting=req.setting,
-        user_name=user.nickname or user.username
-    )
-    if not result.success:
-        return fail(code=-1, msg=result.message)
-    return success(msg=result.message)
+    def _do_download():
+        try:
+            svc.download_from_search_results(
+                dl_id=req.id,
+                dl_dir=req.dir,
+                dl_setting=req.setting,
+                user_name=user.nickname or user.username
+            )
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
+
+    ThreadHelper().start_thread(_do_download, ())
+    return success(msg="下载任务已提交")
 
 
 @router.post("/tasks/add_link")
@@ -272,23 +281,27 @@ def download_link(
     user: UserContext = Depends(require_permission("download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
-    result = svc.download_from_link(
-        site=req.site,
-        enclosure=req.enclosure,
-        title=req.title,
-        description=req.description,
-        page_url=req.page_url,
-        size=req.size,
-        seeders=req.seeders,
-        uploadvolumefactor=req.uploadvolumefactor,
-        downloadvolumefactor=req.downloadvolumefactor,
-        dl_dir=req.dl_dir,
-        dl_setting=req.dl_setting,
-        user_name=user.nickname or user.username
-    )
-    if not result.success:
-        return fail(msg=result.message)
-    return success(msg=result.message)
+    def _do_download():
+        try:
+            svc.download_from_link(
+                site=req.site,
+                enclosure=req.enclosure,
+                title=req.title,
+                description=req.description,
+                page_url=req.page_url,
+                size=req.size,
+                seeders=req.seeders,
+                uploadvolumefactor=req.uploadvolumefactor,
+                downloadvolumefactor=req.downloadvolumefactor,
+                dl_dir=req.dl_dir,
+                dl_setting=req.dl_setting,
+                user_name=user.nickname or user.username
+            )
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
+
+    ThreadHelper().start_thread(_do_download, ())
+    return success(msg="下载任务已提交")
 
 
 @router.post("/tasks/resolve_url")
@@ -312,19 +325,32 @@ def download_torrent(
     user: UserContext = Depends(require_permission("download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
-    result = svc.download_from_torrent_files_or_urls(
-        files=req.files or [],
-        urls=req.urls or [],
-        dl_dir=req.dl_dir,
-        dl_setting=req.dl_setting,
-        user_name=user.nickname or user.username,
-        page_url=req.page_url,
-        upload_volume_factor=req.upload_volume_factor,
-        download_volume_factor=req.download_volume_factor,
-    )
-    if not result.success:
-        return fail(code=-1, msg=result.message)
-    return success(msg=result.message)
+    # 快速校验
+    if not req.urls and not req.files:
+        return fail(msg="没有种子文件或者种子链接")
+
+    # 后台线程执行下载（避免网络 IO 阻塞 API 响应）
+    def _do_download():
+        try:
+            svc.download_from_torrent_files_or_urls(
+                files=req.files or [],
+                urls=req.urls or [],
+                dl_dir=req.dl_dir,
+                dl_setting=req.dl_setting,
+                user_name=user.nickname or user.username,
+                page_url=req.page_url,
+                upload_volume_factor=req.upload_volume_factor,
+                download_volume_factor=req.download_volume_factor,
+                title=req.title,
+                description=req.description,
+                site=req.site,
+                size=req.size,
+            )
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
+
+    ThreadHelper().start_thread(_do_download, ())
+    return success(msg="下载任务已提交")
 
 
 @router.post("/tools/hardlinks")

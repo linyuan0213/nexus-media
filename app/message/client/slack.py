@@ -11,6 +11,7 @@ from config import Config
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from app.message.client_registry import ClientRegistry
+from app.services.apikey_service import APIKeyService
 
 lock = Lock()
 
@@ -38,7 +39,7 @@ class Slack(_IMessageClient):
 
     def setup(self):
         _web_port = self._config.get_config("app").get("web_port")
-        _api_key = self._config.get_config("security").get("api_key")
+        _api_key = APIKeyService().get_or_create_system_key("MessageWebhook")
         self._ds_url = f"http://127.0.0.1:{_web_port}/slack?apikey={_api_key}"
         if not self._bot_token:
             return

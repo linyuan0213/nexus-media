@@ -225,62 +225,63 @@ class MediaServer(metaclass=SingletonMeta):
     def sync_mediaserver(self):
         """
         同步媒体库所有数据到本地数据库
+        锁只保护同步状态检查，IO 密集型操作在锁外执行
         """
         if not self.server:
             return
         with lock:
-            # 开始进度条
             log.info("【MediaServer】开始同步媒体库数据...")
             self.progress.start(ProgressKey.MediaSync)
             self.progress.update(ptype=ProgressKey.MediaSync, text="请稍候...")
             # 获取需同步的媒体库
             librarys = self.systemconfig.get(SystemConfigKey.SyncLibrary) or []
-            # 汇总统计
-            medias_count = self.get_medias_count()
-            total_media_count = medias_count.get("MovieCount") + medias_count.get("SeriesCount")
-            total_count = 0
-            movie_count = 0
-            tv_count = 0
             # 清空登记薄
             self.mediadb.empty(server_type=self._server_type)
-            for library in self.get_libraries():
-                if str(library.get("id")) not in librarys:
-                    continue
-                # 获取媒体库所有项目
-                self.progress.update(ptype=ProgressKey.MediaSync,
-                                     text="正在获取 %s 数据..." % (library.get("name")))
-                for item in self.get_items(library.get("id")):
-                    if not item:
-                        continue
-                    # 更新进度
-                    seasoninfo = []
-                    total_count += 1
-                    if item.get("type") in ['Movie', 'movie']:
-                        movie_count += 1
-                    elif item.get("type") in ['Series', 'show']:
-                        tv_count += 1
-                        # 查询剧集信息
-                        seasoninfo = self.get_tv_episodes(item.get("id"))
-                    self.progress.update(ptype=ProgressKey.MediaSync,
-                                         text="正在同步 %s，已完成：%s / %s ..." % (
-                                             library.get("name"), total_count, total_media_count),
-                                         value=round(100 * total_count / total_media_count, 1))
-                    # 插入数据
-                    self.mediadb.insert(server_type=self._server_type,
-                                        iteminfo=item,
-                                        seasoninfo=seasoninfo)
 
-            # 更新总体同步情况
-            self.mediadb.statistics(server_type=self._server_type,
-                                    total_count=total_count,
-                                    movie_count=movie_count,
-                                    tv_count=tv_count)
-            # 结束进度条
+        # 汇总统计
+        medias_count = self.get_medias_count()
+        total_media_count = medias_count.get("MovieCount") + medias_count.get("SeriesCount")
+        total_count = 0
+        movie_count = 0
+        tv_count = 0
+        for library in self.get_libraries():
+            if str(library.get("id")) not in librarys:
+                continue
+            # 获取媒体库所有项目
             self.progress.update(ptype=ProgressKey.MediaSync,
-                                 value=100,
-                                 text="媒体库数据同步完成，同步数量：%s" % total_count)
-            self.progress.end(ProgressKey.MediaSync)
-            log.info("【MediaServer】媒体库数据同步完成，同步数量：%s" % total_count)
+                                 text="正在获取 %s 数据..." % (library.get("name")))
+            for item in self.get_items(library.get("id")):
+                if not item:
+                    continue
+                # 更新进度
+                seasoninfo = []
+                total_count += 1
+                if item.get("type") in ['Movie', 'movie']:
+                    movie_count += 1
+                elif item.get("type") in ['Series', 'show']:
+                    tv_count += 1
+                    # 查询剧集信息
+                    seasoninfo = self.get_tv_episodes(item.get("id"))
+                self.progress.update(ptype=ProgressKey.MediaSync,
+                                     text="正在同步 %s，已完成：%s / %s ..." % (
+                                         library.get("name"), total_count, total_media_count),
+                                     value=round(100 * total_count / total_media_count, 1))
+                # 插入数据
+                self.mediadb.insert(server_type=self._server_type,
+                                    iteminfo=item,
+                                    seasoninfo=seasoninfo)
+
+        # 更新总体同步情况
+        self.mediadb.statistics(server_type=self._server_type,
+                                total_count=total_count,
+                                movie_count=movie_count,
+                                tv_count=tv_count)
+        # 结束进度条
+        self.progress.update(ptype=ProgressKey.MediaSync,
+                             value=100,
+                             text="媒体库数据同步完成，同步数量：%s" % total_count)
+        self.progress.end(ProgressKey.MediaSync)
+        log.info("【MediaServer】媒体库数据同步完成，同步数量：%s" % total_count)
 
     def check_item_exists(self,
                           mtype,

@@ -16,3 +16,6 @@ WECHAT_MENU = [
     {"name": "同步", "commands": ["/rst", "/utf"]},
     {"name": "管理", "commands": ["/tbl", "/trh", "/udt", "/sta"]},
 ]
+
+# 插件命令将自动追加到"管理"分组（微信菜单最多5个子按钮）
+WECHAT_PLUGIN_GROUP = "管理"

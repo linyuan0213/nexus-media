@@ -11,6 +11,8 @@ import json as _json
 import time
 from threading import Lock
 
+_STATS_LOCK = Lock()
+
 import log
 from app.core.system_config import SystemConfig
 from app.db.repositories import DownloadRepository
@@ -188,8 +190,7 @@ class BuiltinIndexer(_IIndexClient):
         seconds = round((datetime.datetime.now() - start_time).seconds, 1)
 
         # 索引统计
-        lock = Lock()
-        with lock:
+        with _STATS_LOCK:
             self.download_repo.insert_indexer_statistics(
                 indexer=indexer.name,
                 itype=self.client_id,
@@ -233,8 +234,7 @@ class BuiltinIndexer(_IIndexClient):
             search_word=keyword, indexer=indexer, page=page)
 
         seconds = round((datetime.datetime.now() - start_time).seconds, 1)
-        lock = Lock()
-        with lock:
+        with _STATS_LOCK:
             self.download_repo.insert_indexer_statistics(
                 indexer=indexer.name,
                 itype=self.client_id,

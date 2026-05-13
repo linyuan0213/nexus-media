@@ -6,7 +6,7 @@
 """
 
 from .cache_manager import CacheManager
-from .adapters import MemoryCacheAdapter, RedisCacheAdapter
+from .adapters import MemoryCacheAdapter, RedisCacheAdapter, TieredCacheAdapter
 from .decorators import cached, cached_with_lock, lru_cache_with_ttl
 from .caches import (
     TMDBCache,
@@ -109,9 +109,14 @@ _cache_manager.create_memory_cache("search_result", maxsize=500)
 _cache_manager.create_memory_cache("token", maxsize=512)
 _cache_manager.create_memory_cache("config_load", maxsize=1)
 _cache_manager.create_memory_cache("category_load", maxsize=2)
-_cache_manager.create_memory_cache("openai_session", maxsize=200)
 _cache_manager.create_memory_cache("site_info", maxsize=100)
 _cache_manager.create_redis_cache("tmdb")
+
+# OpenAI 会话缓存使用分层缓存：L1 内存 + L2 Redis
+# 重启后对话历史不会丢失
+_openai_session_adapter = TieredCacheAdapter(
+    memory_maxsize=200, name="openai_session", default_ttl=None
+)
 
 # 创建专用缓存实例
 MediaInfoCache = MediaInfoCache(_cache_manager.get("media_info"))
@@ -120,4 +125,4 @@ SiteInfoCache = SiteInfoCache(_cache_manager.get("site_info"))
 TokenCache = TokenCache(_cache_manager.get("token"))
 ConfigLoadCache = ConfigLoadCache(_cache_manager.get("config_load"))
 CategoryLoadCache = CategoryLoadCache(_cache_manager.get("category_load"))
-OpenAISessionCache = OpenAISessionCache(_cache_manager.get("openai_session"))
+OpenAISessionCache = OpenAISessionCache(_openai_session_adapter)
