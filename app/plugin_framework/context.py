@@ -182,3 +182,17 @@ class PluginContext:
         """触发全局事件"""
         from app.plugin_framework.hook_system import HookSystem
         HookSystem().emit(event, data or {})
+
+    # ---------- 消息命令注册（委托给 Message） ----------
+
+    def register_message_command(self, cmd: str, desc: str, func) -> None:
+        """注册消息命令，用户发送该命令时触发 func"""
+        Message().register_command(cmd=cmd, desc=desc, func=func, plugin_id=self._plugin_id)
+
+    def unregister_message_command(self, cmd: str) -> None:
+        """注销消息命令"""
+        Message().unregister_command(cmd)
+
+    def unregister_all_message_commands(self) -> None:
+        """注销该插件的所有消息命令"""
+        Message().clear_plugin_commands(self._plugin_id)

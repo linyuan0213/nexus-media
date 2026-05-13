@@ -43,14 +43,15 @@ class APIKeyService:
         return hashlib.sha256(key.encode()).hexdigest()
 
     def create_key(self, name: str, expires_days: Optional[int] = None,
-                   description: str = "", created_by: Optional[int] = None) -> Dict[str, Any]:
+                   description: str = "", created_by: Optional[int] = None,
+                   raw_key: Optional[str] = None) -> Dict[str, Any]:
         """
         创建新的 API Key
         """
         try:
-            raw_key = self._generate_raw_key()
-            key_hash = self._hash_key(raw_key)
-            key_prefix = raw_key[:12] + "..."
+            _raw_key = raw_key or self._generate_raw_key()
+            key_hash = self._hash_key(_raw_key)
+            key_prefix = _raw_key[:12] + "..."
 
             expires_at = None
             if expires_days is not None and expires_days > 0:
@@ -63,6 +64,7 @@ class APIKeyService:
                 expires_at=expires_at,
                 created_by=created_by,
                 description=description,
+                raw_key=_raw_key,
             )
 
             log.info(f"【APIKey】创建成功: {name} (ID={api_key.id})")
@@ -70,7 +72,7 @@ class APIKeyService:
             return {
                 "id": api_key.id,
                 "name": api_key.name,
-                "key": raw_key,
+                "key": _raw_key,
                 "prefix": key_prefix,
                 "expires_at": api_key.expires_at.isoformat() if api_key.expires_at else None,
                 "created_at": api_key.created_at.isoformat() if api_key.created_at else None,
@@ -176,6 +178,37 @@ class APIKeyService:
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             return {"total": 0, "page": page, "page_size": page_size, "items": []}
+
+    def get_or_create_system_key(self, name: str) -> str:
+        """
+        获取或创建系统级 API Key
+        系统 key 的原始值保存在 RAW_KEY 列中，用于构造 webhook URL 等场景
+        :param name: 系统 key 名称（如 "MessageWebhook"）
+        :return: 原始 API Key 值
+        """
+        try:
+            # 查找已有系统 key
+            existing = self._key_repo.get_by_name(name, status=1)
+            if existing and existing.raw_key:
+                return existing.raw_key
+
+            # 不存在或无效，创建新的
+            raw_key = self._generate_raw_key()
+            key_hash = self._hash_key(raw_key)
+            key_prefix = raw_key[:12] + "..."
+
+            api_key = self._key_repo.create_key(
+                name=name,
+                key_value=key_hash,
+                key_prefix=key_prefix,
+                description=f"系统自动创建: {name}",
+                raw_key=raw_key,
+            )
+            log.info(f"【APIKey】系统 key 创建成功: {name} (ID={api_key.id})")
+            return raw_key
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
+            raise
 
     def get_stats(self) -> Dict[str, Any]:
         """获取 API Key 统计信息"""

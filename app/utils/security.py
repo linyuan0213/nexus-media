@@ -83,8 +83,8 @@ def generate_access_token(username: str, algorithm: str = 'HS256', exp: float = 
         'iat': now,
         'username': username
     }
-    api_key = Config().get_config("security").get("api_key")
-    access_token = jwt.encode(access_payload, api_key, algorithm=algorithm)
+    secret = get_secret_key()
+    access_token = jwt.encode(access_payload, secret, algorithm=algorithm)
     return access_token
 
 
@@ -94,7 +94,7 @@ def decode_auth_token(token: str, algorithms: str = 'HS256') -> Tuple[bool, dict
     :param token:token字符串
     :return: 是否有效，payload
     """
-    key = Config().get_config("security").get("api_key")
+    key = get_secret_key()
     try:
         payload = jwt.decode(token, key=key, algorithms=algorithms)
     except jwt.ExpiredSignatureError:

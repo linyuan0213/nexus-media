@@ -12,18 +12,18 @@ import log
 class TMDBRateLimiter:
     """
     TMDB API 速率限制器
-    
+
     TMDB 免费 API 限制：
     - 每秒钟最多 3 个请求
     - 无明确每日上限，但建议合理使用
-    
+
     使用令牌桶算法实现平滑限流
     """
-    
+
     def __init__(self, max_requests_per_second: float = 2.5, burst_size: int = 5):
         """
         初始化速率限制器
-        
+
         :param max_requests_per_second: 每秒最大请求数（默认2.5，略低于限制）
         :param burst_size: 桶容量（突发请求数）
         """
@@ -32,21 +32,22 @@ class TMDBRateLimiter:
         self._tokens = burst_size  # 当前令牌数
         self._last_update = time.time()
         self._lock = threading.Lock()
+        self._condition = threading.Condition(self._lock)
         self._wait_count = 0  # 统计等待次数
         self._total_requests = 0  # 总请求数
         self._blocked_requests = 0  # 被限流的请求数
-        
+
     def acquire(self, timeout: Optional[float] = None) -> bool:
         """
         获取一个请求令牌
-        
+
         :param timeout: 最大等待时间（秒），None表示无限等待
         :return: 是否成功获取令牌
         """
-        with self._lock:
+        with self._condition:
             self._total_requests += 1
             start_time = time.time()
-            
+
             while True:
                 # 更新令牌数
                 now = time.time()
@@ -56,15 +57,15 @@ class TMDBRateLimiter:
                     self._tokens + elapsed * self._max_rate
                 )
                 self._last_update = now
-                
+
                 # 检查是否有可用令牌
                 if self._tokens >= 1:
                     self._tokens -= 1
                     return True
-                
+
                 # 计算需要等待的时间
                 wait_time = (1 - self._tokens) / self._max_rate
-                
+
                 # 检查是否超时
                 if timeout is not None:
                     elapsed_wait = now - start_time
@@ -72,13 +73,9 @@ class TMDBRateLimiter:
                         self._blocked_requests += 1
                         log.warn(f"【TMDBRateLimiter】获取令牌超时，已等待 {elapsed_wait:.2f} 秒")
                         return False
-                
+
                 self._wait_count += 1
-                self._lock.release()
-                try:
-                    time.sleep(wait_time)
-                finally:
-                    self._lock.acquire()
+                self._condition.wait(timeout=wait_time)
     
     def try_acquire(self) -> bool:
         """

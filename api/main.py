@@ -13,7 +13,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.utils.security import get_secret_key
-from api.routers import system, site, download, rss, sync, brush, filter, scheduler, userrss, words, media, rbac, auth, image, plugin_framework, apikey
+from api.routers import system, site, download, rss, sync, brush, filter, scheduler, userrss, words, media, rbac, auth, image, plugin_framework, apikey, message_webhook
+from app.message import Message
+from app.plugin_framework.sandbox import PluginSandbox
 import version
 
 # 读取安全密钥（与 Flask 共用 secret_key）
@@ -31,6 +33,15 @@ async def lifespan(app: FastAPI):
     log.info("【FastAPI】启动后台服务...")
     SystemLifecycleService().start_service()
     log.info("【FastAPI】后台服务启动完成")
+    # 加载插件（在消息菜单刷新之前，确保插件命令能显示）
+    PluginSandbox().load_all()
+    log.info("【FastAPI】插件加载完成")
+    # 预初始化消息客户端（避免 webhook 首次调用时客户端尚未就绪）
+    Message().active_clients
+    log.info("【FastAPI】消息客户端初始化完成")
+    # 系统启动完成后统一刷新菜单（确保包含插件命令）
+    Message().refresh_menus()
+    log.info("【FastAPI】消息菜单刷新完成")
     yield
     log.info("【FastAPI】关闭后台服务...")
     SystemLifecycleService().stop_service()
@@ -89,6 +100,8 @@ app.include_router(rbac.router, prefix="/api/rbac", tags=["rbac"])
 app.include_router(auth.router, tags=["authentication"])
 app.include_router(image.router, prefix="/img", tags=["image"])
 app.include_router(apikey.router, prefix="/api/apikey", tags=["apikey"])
+# 消息客户端 webhook（不需要 /api 前缀）
+app.include_router(message_webhook.router, tags=["message-webhook"])
 
 # 挂载静态文件（与 Flask 共用 web/static）
 _static_dir = os.path.join(os.path.dirname(__file__), "..", "web", "static")

@@ -32,6 +32,13 @@ class APIKeyRepository(BaseRepository):
             APIKEY.STATUS == status
         ).first()
 
+    def get_by_name(self, name: str, status: Optional[int] = None) -> Optional[APIKEY]:
+        """根据名称获取 API Key"""
+        query = self._db.query(APIKEY).filter(APIKEY.NAME == name)
+        if status is not None:
+            query = query.filter(APIKEY.STATUS == status)
+        return query.order_by(desc(APIKEY.CREATED_AT)).first()
+
     def list_keys(self, page: int = 1, page_size: int = 50) -> Tuple[List[APIKEY], int]:
         """获取 API Key 列表（支持分页）"""
         query = self._db.query(APIKEY).order_by(desc(APIKEY.CREATED_AT))
@@ -42,7 +49,8 @@ class APIKeyRepository(BaseRepository):
     def create_key(self, name: str, key_value: str, key_prefix: str,
                    status: int = 1, expires_at: Optional[datetime] = None,
                    created_by: Optional[int] = None,
-                   description: str = "") -> APIKEY:
+                   description: str = "",
+                   raw_key: Optional[str] = None) -> APIKEY:
         """创建 API Key"""
         api_key = APIKEY(
             NAME=name,
@@ -52,6 +60,7 @@ class APIKeyRepository(BaseRepository):
             EXPIRES_AT=expires_at,
             CREATED_BY=created_by,
             DESCRIPTION=description,
+            RAW_KEY=raw_key,
         )
         self._db.insert(api_key)
         self._db.commit()

@@ -8,6 +8,7 @@ import log
 import hashlib
 import base64
 import bencodepy
+from typing import Optional
 
 
 class PyThunder:

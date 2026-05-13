@@ -9,7 +9,8 @@ from typing import List, Optional, Tuple
 import log
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
-from app.media import MediaService, MetaInfo
+from app.media import MediaService
+from app.media.models import MediaInfo
 from app.schemas.download import (
     DownloadResultDTO,
     DownloadingTorrentDTO,
@@ -72,7 +73,11 @@ class DownloadService:
             enclosure = self._resolve_download_url(res.PAGEURL, res.ENCLOSURE)
             media = self._media.get_media_info(title=res.TORRENT_NAME, subtitle=res.DESCRIPTION)
             if not media:
-                continue
+                # 识别失败时，用原始种子名创建最小 MediaInfo
+                media = MediaInfo()
+                media.title = res.TORRENT_NAME
+            # 保存站点原始种子名，用于下载历史记录和后续识别
+            media.org_string = res.TORRENT_NAME
             media.set_torrent_info(
                 enclosure=enclosure,
                 size=res.SIZE,
@@ -104,8 +109,14 @@ class DownloadService:
 
         media = self._media.get_media_info(title=title, subtitle=description)
         if not media:
-            return DownloadResultDTO(success=False, message="媒体信息识别失败")
+            # 识别完全失败时，用原始资源名创建最小 MediaInfo
+            media = MediaInfo()
+        # 如果识别成功但 TMDB 查询失败导致 title 为空，用传入的 title 回退
+        if not media.title:
+            media.title = title
 
+        # 保存站点原始资源名称，用于下载历史记录和后续识别
+        media.org_string = title
         media.site = site
         media.enclosure = enclosure
         media.page_url = page_url
@@ -131,7 +142,11 @@ class DownloadService:
                                             user_name: str,
                                             page_url: Optional[str] = None,
                                             upload_volume_factor: Optional[float] = None,
-                                            download_volume_factor: Optional[float] = None) -> DownloadResultDTO:
+                                            download_volume_factor: Optional[float] = None,
+                                            title: Optional[str] = None,
+                                            description: Optional[str] = None,
+                                            site: Optional[str] = None,
+                                            size: Optional[int] = None) -> DownloadResultDTO:
         """从种子文件或 URL 链接添加下载"""
         if not files and not urls:
             return DownloadResultDTO(success=False, message="没有种子文件或者种子链接")
@@ -146,14 +161,17 @@ class DownloadService:
                 file_path = temp_manager.get_temp_path(file_name)
                 uploaded_files.append(file_path)
                 media_info = self._media.get_media_info(title=file_name)
-                if media_info:
-                    media_info.site = "WEB"
-                    if page_url:
-                        media_info.page_url = page_url
-                    if upload_volume_factor is not None:
-                        media_info.upload_volume_factor = upload_volume_factor
-                    if download_volume_factor is not None:
-                        media_info.download_volume_factor = download_volume_factor
+                if not media_info:
+                    media_info = MediaInfo()
+                    media_info.title = file_name
+                media_info.org_string = file_name
+                media_info.site = "WEB"
+                if page_url:
+                    media_info.page_url = page_url
+                if upload_volume_factor is not None:
+                    media_info.upload_volume_factor = upload_volume_factor
+                if download_volume_factor is not None:
+                    media_info.download_volume_factor = download_volume_factor
                 self._downloader.download(
                     media_info=media_info,
                     download_dir=dl_dir,
@@ -180,21 +198,33 @@ class DownloadService:
                     if not file_path:
                         return DownloadResultDTO(success=False,
                                                   message=f"下载种子文件失败： {retmsg}")
-                    media_info = self._media.get_media_info(title=os.path.basename(file_path))
-                    if media_info:
-                        media_info.site = "WEB"
+                    identify_title = title or os.path.basename(file_path)
+                    media_info = self._media.get_media_info(title=identify_title, subtitle=description)
+                    if not media_info:
+                        media_info = MediaInfo()
+                        media_info.title = identify_title
+                    media_info.org_string = title or os.path.basename(file_path)
+                    media_info.site = "WEB"
                 else:
-                    media_info = MetaInfo('')
+                    # magnet 链接：用前端传入的 title/description 识别
+                    identify_title = title or url
+                    media_info = self._media.get_media_info(title=identify_title, subtitle=description)
+                    if not media_info:
+                        media_info = MediaInfo()
+                        media_info.title = identify_title
+                    media_info.org_string = title or url
                     media_info.enclosure = url
+                    media_info.site = site or "WEB"
+                    if size is not None:
+                        media_info.size = size
                     file_path = None
 
-                if media_info:
-                    if page_url:
-                        media_info.page_url = page_url
-                    if upload_volume_factor is not None:
-                        media_info.upload_volume_factor = upload_volume_factor
-                    if download_volume_factor is not None:
-                        media_info.download_volume_factor = download_volume_factor
+                if page_url:
+                    media_info.page_url = page_url
+                if upload_volume_factor is not None:
+                    media_info.upload_volume_factor = upload_volume_factor
+                if download_volume_factor is not None:
+                    media_info.download_volume_factor = download_volume_factor
 
                 self._downloader.download(
                     media_info=media_info,

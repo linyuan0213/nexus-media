@@ -208,12 +208,7 @@ class RedisStore:
             return False
 
     def ttl(self, key: str) -> int:
-        """获取键的剩余生存时间(秒)
-        返回:
-            -2: 键不存在
-            -1: 键存在但没有设置过期时间
-            >=0: 剩余生存时间(秒)
-        """
+        """获取键的剩余生存时间(秒)"""
         if not self._ensure_connection():
             return -2
         try:
@@ -221,3 +216,86 @@ class RedisStore:
         except Exception as e:
             log.debug(f"RedisStore ttl 失败 {key}: {e}")
             return -2
+
+    # ---------- Redis Stream (可靠消息队列) ----------
+
+    def xadd(self, stream: str, fields: dict, max_len: int = 10000) -> Optional[str]:
+        """向 Stream 添加消息，返回消息 ID"""
+        if not self._ensure_connection():
+            return None
+        try:
+            return self._client.xadd(stream, fields, maxlen=max_len, approximate=True)
+        except Exception as e:
+            log.debug(f"RedisStore xadd 失败 {stream}: {e}")
+            return None
+
+    def xgroup_create(self, stream: str, group: str, mkstream: bool = True) -> bool:
+        """创建消费者组"""
+        if not self._ensure_connection():
+            return False
+        try:
+            self._client.xgroup_create(stream, group, id="0", mkstream=mkstream)
+            return True
+        except Exception as e:
+            if "already exists" in str(e):
+                return True
+            log.debug(f"RedisStore xgroup_create 失败 {stream}/{group}: {e}")
+            return False
+
+    def xreadgroup(self, group: str, consumer: str, streams: dict, count: int = 1,
+                   block: int = 5000) -> list:
+        """消费者组读取消息
+        :param streams: {stream_name: ">"} 表示只读新消息
+        :return: [(stream_name, [(msg_id, {field: value})])]
+        """
+        if not self._ensure_connection():
+            return []
+        try:
+            result = self._client.xreadgroup(group, consumer, streams, count=count,
+                                             block=block)
+            return result or []
+        except Exception as e:
+            log.debug(f"RedisStore xreadgroup 失败: {e}")
+            return []
+
+    def xack(self, stream: str, group: str, *ids: str) -> int:
+        """确认消息已处理，返回确认的条数"""
+        if not self._ensure_connection():
+            return 0
+        try:
+            return self._client.xack(stream, group, *ids)
+        except Exception as e:
+            log.debug(f"RedisStore xack 失败 {stream}: {e}")
+            return 0
+
+    def xpending(self, stream: str, group: str) -> int:
+        """获取 Pending 列表中的消息数"""
+        if not self._ensure_connection():
+            return 0
+        try:
+            info = self._client.xpending(stream, group)
+            return info.get("pending", 0) if isinstance(info, dict) else 0
+        except Exception as e:
+            log.debug(f"RedisStore xpending 失败 {stream}: {e}")
+            return 0
+
+    def xclaim(self, stream: str, group: str, consumer: str, min_idle_time: int,
+               *ids: str) -> list:
+        """认领超时未确认的消息（用于重试）"""
+        if not self._ensure_connection():
+            return []
+        try:
+            return self._client.xclaim(stream, group, consumer, min_idle_time, ids)
+        except Exception as e:
+            log.debug(f"RedisStore xclaim 失败 {stream}: {e}")
+            return []
+
+    def xdel(self, stream: str, *ids: str) -> int:
+        """删除 Stream 中的消息"""
+        if not self._ensure_connection():
+            return 0
+        try:
+            return self._client.xdel(stream, *ids)
+        except Exception as e:
+            log.debug(f"RedisStore xdel 失败 {stream}: {e}")
+            return 0

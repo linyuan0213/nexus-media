@@ -57,8 +57,12 @@ class DownloadRepository(BaseRepository):
         """
         if not media_info:
             return
-        if not media_info.title or not media_info.tmdb_id:
+        # title 为空时，用 org_string 或 get_name() 回退，确保能写入历史
+        title = media_info.title or media_info.get_name() or media_info.org_string
+        if not title or not media_info.tmdb_id:
             return
+        # 回填到 media_info，确保后续使用一致
+        media_info.title = title
 
         # 截断超长 ENCLOSURE：去掉磁力链接中多余的 tracker，只保留核心 btih
         enclosure = media_info.enclosure

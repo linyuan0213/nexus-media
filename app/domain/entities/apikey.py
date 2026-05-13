@@ -22,6 +22,7 @@ class APIKeyEntity:
     use_count: int
     last_used_at: Optional[datetime]
     description: Optional[str]
+    raw_key: Optional[str]
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["APIKeyEntity"]:
@@ -40,6 +41,7 @@ class APIKeyEntity:
             use_count=getattr(orm_model, 'USE_COUNT', 0),
             last_used_at=getattr(orm_model, 'LAST_USED_AT', None),
             description=getattr(orm_model, 'DESCRIPTION', None),
+            raw_key=getattr(orm_model, 'RAW_KEY', None),
         )
 
     def is_expired(self) -> bool:

@@ -254,11 +254,9 @@ def _default_key_builder(func: Callable, *args, **kwargs) -> str:
             # 检查是否是实例方法 (self)
             if hasattr(first_arg, '__class__') and first_arg.__class__.__name__ == class_name:
                 bind_args = args[1:]
-                log.debug(f"[_default_key_builder] Skipped self, bind_args={bind_args}")
             # 检查是否是类方法 (cls)
             elif isinstance(first_arg, type) and first_arg.__name__ == class_name:
                 bind_args = args[1:]
-                log.debug(f"[_default_key_builder] Skipped cls, bind_args={bind_args}")
     
     # 获取实际函数的签名（通过 __wrapped__ 链）
     # func 可能是 wrapper，需要获取原始函数
@@ -277,14 +275,11 @@ def _default_key_builder(func: Callable, *args, **kwargs) -> str:
             new_params = params[1:]
             sig = sig.replace(parameters=new_params)
         
-        log.debug(f"[_default_key_builder] sig={sig}, bind_args={bind_args}")
         bound = sig.bind(*bind_args, **bind_kwargs)
         bound.apply_defaults()
         arguments = dict(bound.arguments)
-        log.debug(f"[_default_key_builder] Bound successfully: {arguments}")
         
     except (TypeError, ValueError) as e:
-        log.debug(f"[_default_key_builder] Bind failed: {e}, using fallback")
         # 绑定失败，使用位置参数索引
         arguments = {}
         for i, arg in enumerate(bind_args):

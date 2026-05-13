@@ -8,6 +8,7 @@ from app.message.client._base import _IMessageClient
 from app.utils import ExceptionUtils, RequestUtils, StringUtils
 from config import Config
 from app.message.client_registry import ClientRegistry
+from app.services.apikey_service import APIKeyService
 
 lock = Lock()
 
@@ -39,7 +40,7 @@ class SynologyChat(_IMessageClient):
                 return
             SynologyChat._setup_done.add(self._token)
             _web_port = self._config.get_config("app").get("web_port")
-            _api_key = self._config.get_config("security").get("api_key")
+            _api_key = APIKeyService().get_or_create_system_key("MessageWebhook")
             ds_url = f"http://127.0.0.1:{_web_port}/synologychat?apikey={_api_key}"
             ThreadHelper().start_thread(self._start_polling, (ds_url,))
 

@@ -63,8 +63,15 @@ class MediaService:
         if language:
             self._lookup.client.set_language(language)
 
-        # 1. Parser: 文件名解析
+        # 1. Parser: 文件名解析（Regex 失败时 fallback 到 LLM）
         parsed = self._parser.parse(title, subtitle)
+        if not parsed and not isinstance(self._parser, LLMParser):
+            # Fallback: 默认是 RegexParser 时，用 LLM Parser 兜底
+            llm_parser = LLMParser()
+            if llm_parser.ready:
+                parsed = llm_parser.parse(title, subtitle)
+                if parsed:
+                    log.info(f"【MediaService】LLM Parser fallback 成功: {parsed.title_cn or parsed.title_en}")
         if not parsed:
             if language:
                 self._lookup.client.set_language()
@@ -135,7 +142,7 @@ class MediaService:
                 if search_result:
                     result = self._lookup._to_lookup_result(search_result)
 
-        # 6. 组装
+        # 5. 组装
         info = MediaInfo.from_parser(parsed)
         info.org_string = title
         if result:
@@ -228,6 +235,20 @@ class MediaService:
 
         # 1. Parser: 批量解析所有文件名
         parsed_list = self._parser.parse_batch(titles)
+
+        # Fallback: 默认是 RegexParser 时，对解析失败的条目用 LLM Parser 重新解析
+        if not isinstance(self._parser, LLMParser):
+            failed_indices = [i for i, p in enumerate(parsed_list) if not p]
+            if failed_indices:
+                llm_parser = LLMParser()
+                if llm_parser.ready:
+                    failed_titles = [titles[i] for i in failed_indices]
+                    log.info(f"【MediaService】批量识别: {len(failed_indices)} 条 Regex 解析失败，尝试 LLM Parser fallback")
+                    llm_results = llm_parser.parse_batch(failed_titles)
+                    for j, idx in enumerate(failed_indices):
+                        if llm_results[j]:
+                            parsed_list[idx] = llm_results[j]
+                            log.info(f"【MediaService】LLM Parser fallback [{idx}]: {failed_titles[j][:60]}...")
 
         # 2. 去重: 按 (title, year, type) 分组，相同内容只查一次 TMDB
         unique_keys = {}

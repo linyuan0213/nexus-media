@@ -11,77 +11,13 @@ from app.db.repositories import ConfigRepository
 from app.helper.thread_helper import ThreadHelper
 from app.message.client_registry import ClientRegistry
 from app.message.message_center import MessageCenter
+from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
 from app.utils import StringUtils, ExceptionUtils
 from app.utils.commons import SingletonMeta
-from app.utils.task_queue import TaskQueue
+from app.infrastructure.queue import MessageQueueFactory
 from app.utils.types import SearchType, MediaType
-from config import Config
 from app.utils.web_utils import WebUtils
 from app.utils.config_tools import get_domain
-
-
-DEFAULT_MESSAGE_TEMPLATES = {
-    "download_start": {
-        "title": "🎬 {{ title_ep_string|default(item.get_title_ep_string()) }} 开始下载 ⬇️",
-        "text": "🌐 站点：{{ site|default(item.site)|default('未知') }} ｜ 💾 大小：{{ size_str|default(item.size|filesize) }}\n📦 质量：{{ resource_type|default(item.get_resource_type_string())|default('未知') }}\n\n🧲 种子：{{ org_string|default(item.org_string)|truncatestr(50) }}\n🌱 做种：{{ seeders|default(item.seeders)|default(0) }} ｜ ⚡️ 促销：{{ volume_factor|default(item.get_volume_factor_string())|default('未知') }} ｜ 🚨 H&R：{{ hit_and_run|default(item.hit_and_run)|yesno('是','否') }}"
-    },
-    "transfer_finished": {
-        "title": "✅ {{ media_info.get_title_string() }} 已入库",
-        "text": "{% if media_info.vote_average %}⭐ {{ media_info.get_vote_string() }}\n{% endif %}📺 类型：{{ media_info.type.value }}\n{% if media_info.category and category_flag %}📁 类别：{{ media_info.category }}\n{% endif %}{% if media_info.get_resource_type_string() %}📦 质量：{{ media_info.get_resource_type_string() }}\n{% endif %}💾 大小：{{ media_info.size|filesize }}\n📥 来自：{{ in_from.value }}\n{% if exist_filenum != 0 %}⚠️ {{ exist_filenum }}个文件已存在{% endif %}"
-    },
-    "download_fail": {
-        "title": "❌ 下载失败：{{ item.get_title_string() }}",
-        "text": "🌐 站点：{{ item.site }}\n🧲 种子：{{ item.org_string|truncatestr(50) }}\n❗ 错误：{{ error_msg }}"
-    },
-    "rss_added": {
-        "title": "📌 {% if media_info.type.value == '电影' %}{{ media_info.get_title_string() }}{% else %}{{ media_info.get_title_string() }} {{ media_info.get_season_string() }}{% endif %} 已添加订阅",
-        "text": "{% if media_info.vote_average %}⭐ {{ media_info.get_vote_string() }}\n{% endif %}📺 类型：{{ media_info.type.value }}\n📥 来自：{{ in_from.value }}\n{% if media_info.user_name %}👤 用户：{{ media_info.user_name }}{% endif %}"
-    },
-    "rss_finished": {
-        "title": "🎉 {{ media_info.get_title_string() }} {{ media_info.get_season_string() }} {% if media_info.over_edition %}已完成洗版{% else %}已完成订阅{% endif %}",
-        "text": "{% if media_info.vote_average %}⭐ {{ media_info.get_vote_string() }}\n{% endif %}📺 类型：{{ media_info.type.value }}"
-    },
-    "site_signin": {
-        "title": "📊 站点签到",
-        "text": "{{ msgs|join('\\n') }}"
-    },
-    "site_message": {
-        "title": "📬 {{ title }}",
-        "text": "{{ text }}"
-    },
-    "transfer_fail": {
-        "title": "❌ 入库失败：{{ count }} 个文件",
-        "text": "📁 源路径：{{ path }}\n❗ 原因：{{ text }}"
-    },
-    "auto_remove_torrents": {
-        "title": "🗑️ 自动删种：{{ title }}",
-        "text": "{{ text }}"
-    },
-    "brushtask_added": {
-        "title": "🌊 刷流下种：{{ title }}",
-        "text": "{{ text }}"
-    },
-    "brushtask_remove": {
-        "title": "🗑️ 刷流删种：{{ title }}",
-        "text": "{{ text }}"
-    },
-    "brushtask_pause": {
-        "title": "⏸️ 刷流暂停：{{ title }}",
-        "text": "{{ text }}"
-    },
-    "mediaserver_message": {
-        "title": "🎬 {{ message_title }}",
-        "text": "{{ message_content }}"
-    },
-    "custom_message": {
-        "title": "🔌 {{ title }}",
-        "text": "{{ text }}"
-    },
-    "ptrefresh_date_message": {
-        "title": "📊 站点数据统计",
-        "text": "{{ msgs|join('\\n') }}"
-    }
-}
 
 
 def _filesize_filter(value):
@@ -188,6 +124,8 @@ class Message(metaclass=SingletonMeta):
     _domain = None
     _queue = None
     _loaded = False
+    # 插件注册的消息命令：{cmd: {"plugin_id": str, "desc": str, "func": callable}}
+    _plugin_commands: dict = {}
 
     @property
     def active_clients(self):
@@ -200,11 +138,23 @@ class Message(metaclass=SingletonMeta):
         return self._active_interactive_clients
 
     def __init__(self):
-        self._queue = TaskQueue()
-        self._queue.start()
+        self._queue = MessageQueueFactory.create()
+        self._queue.register_handler(self._handle_queued_message)
         self.config_repo = ConfigRepository()
         self.messagecenter = MessageCenter()
         self._domain = get_domain()
+
+    def _handle_queued_message(self, title, text, image, url, user_id, client_id, client_type):
+        """队列消息处理器：通过 client_id 找到 client 并发送"""
+        client = None
+        for c in self.active_clients:
+            if str(c.get("id")) == client_id:
+                client = c
+                break
+        if client:
+            self._do_sendmsg(client, title, text, image, url, user_id)
+        else:
+            log.warn(f"【Message】队列中找不到客户端: id={client_id}, type={client_type}")
 
     def _ensure_loaded(self):
         if self._loaded:
@@ -238,6 +188,12 @@ class Message(metaclass=SingletonMeta):
         self._active_clients.append(client_entry)
         if client_config.INTERACTIVE:
             self._active_interactive_clients[client_entry["search_type"]] = client_entry
+        # 保险机制：如果已有插件命令，立即刷新菜单
+        if self._plugin_commands and hasattr(client_instance, 'refresh_menu'):
+            try:
+                client_instance.refresh_menu()
+            except Exception as e:
+                log.warn(f"【Message】客户端 {client_config.TYPE} 初始菜单刷新失败: {e}")
 
     def _remove_client(self, cid):
         cid = str(cid)
@@ -265,6 +221,66 @@ class Message(metaclass=SingletonMeta):
             if str(config.ID) == str(cid):
                 return config
         return None
+
+    # ---------- 消息命令管理 ----------
+
+    def register_command(self, cmd: str, desc: str, func, plugin_id: str = "") -> None:
+        """注册消息命令（系统或插件均可调用）"""
+        if not cmd.startswith("/"):
+            cmd = "/" + cmd
+        self._plugin_commands[cmd] = {"plugin_id": plugin_id, "desc": desc, "func": func}
+        log.info(f"【Message】命令注册: {cmd} ({desc})")
+        self._refresh_client_menus()
+
+    def unregister_command(self, cmd: str) -> None:
+        """注销消息命令"""
+        if not cmd.startswith("/"):
+            cmd = "/" + cmd
+        if cmd in self._plugin_commands:
+            del self._plugin_commands[cmd]
+            log.info(f"【Message】命令注销: {cmd}")
+            self._refresh_client_menus()
+
+    def clear_plugin_commands(self, plugin_id: str) -> None:
+        """清空指定插件的所有命令"""
+        to_remove = [cmd for cmd, info in self._plugin_commands.items() if info.get("plugin_id") == plugin_id]
+        for cmd in to_remove:
+            del self._plugin_commands[cmd]
+        if to_remove:
+            log.info(f"【Message】插件 {plugin_id} 命令已清除: {to_remove}")
+            self._refresh_client_menus()
+
+    def get_commands(self) -> dict:
+        """获取所有消息命令（系统命令 + 插件命令）"""
+        from app.message.commands import COMMANDS
+        all_cmds = dict(COMMANDS)
+        for cmd, info in self._plugin_commands.items():
+            all_cmds[cmd] = info.get("desc", "")
+        return all_cmds
+
+    def get_plugin_commands(self) -> dict:
+        """获取插件命令"""
+        return self._plugin_commands.copy()
+
+    def refresh_menus(self) -> None:
+        """公开方法：通知所有交互式客户端刷新菜单"""
+        self._refresh_client_menus()
+
+    def _refresh_client_menus(self) -> None:
+        """通知所有交互式客户端刷新菜单"""
+        self._ensure_loaded()
+        found = 0
+        for client_entry in self._active_clients:
+            client = client_entry.get("client")
+            ctype = client_entry.get("type", "unknown")
+            if client and hasattr(client, "refresh_menu"):
+                found += 1
+                try:
+                    client.refresh_menu()
+                except Exception as e:
+                    log.warn(f"【Message】刷新 {ctype} 菜单失败: {e}")
+        if found:
+            log.info(f"【Message】菜单刷新完成，{found} 个客户端已更新")
 
     def __render_template(self, template_str, variables):
         """
@@ -1057,6 +1073,12 @@ class Message(metaclass=SingletonMeta):
                     msg_type='custom_message',
                     variables=variables
                 )
+
+    def get_search_types(self):
+        """
+        获取支持搜索交互的渠道类型（所有消息类渠道）
+        """
+        return [SearchType.WX, SearchType.TG, SearchType.SLACK, SearchType.SYNOLOGY, SearchType.API, SearchType.PLUGIN]
 
     def get_message_client_info(self, cid=None):
         """

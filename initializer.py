@@ -11,11 +11,11 @@ import log
 from app.core.system_config import SystemConfig
 from app.db.repositories import ConfigRepository, DownloadRepository
 from app.helper import PluginHelper
-from app.helper.site_data_updater import SiteDataUpdater
 from app.media import Category
 from app.infrastructure.cache_system import ConfigLoadCache, CategoryLoadCache
 from app.utils import ExceptionUtils, StringUtils
 from app.utils.types import SystemConfigKey
+from app.services.apikey_service import APIKeyService
 from config import Config
 
 _observer = Observer(timeout=10)
@@ -85,9 +85,12 @@ def update_config():
     _dbhelper = DownloadRepository()
     overwrite_cofig = False
 
-    # API密钥初始化
-    if not _config.get("security", {}).get("api_key"):
-        _config['security']['api_key'] = StringUtils.generate_random_str(32)
+    # security.api_key 已废弃：
+    # - JWT 签名改用 get_secret_key()（从 security.jwt_secret 或 app.web_secret_key 获取）
+    # - Webhook 验证改用数据库管理的 API Key（APIKeyService）
+    # 保留此段代码用于清理旧配置项（可选）
+    if _config.get("security", {}).get("api_key"):
+        _config["security"].pop("api_key", None)
         overwrite_cofig = True
 
     # 日志配置迁移：从 app.xxx 迁移到 log.xxx
@@ -213,19 +216,6 @@ def stop_config_monitor():
     except Exception as err:
         print(str(err))
 
-def update_sites_data():
-    try:
-        cfg = Config()
-        from app.utils.path_utils import get_temp_path, get_inner_config_path
-        from app.utils.config_tools import get_proxies
-        SiteDataUpdater.update_sites_data(
-            cfg._config_path, get_temp_path(), get_inner_config_path(),
-            proxies=get_proxies()
-        )
-        log.info("站点资源数据已更新...")
-    except Exception as e:
-        log.error(f"站点资源更新失败 .. {str(e)}")
-
 def check_redis():
     """检查 Redis 状态，仅记录日志，不阻塞启动"""
     from app.utils.redis_store import RedisStore
@@ -237,6 +227,20 @@ def check_redis():
             log.info("Redis 未启用，使用内存缓存...")
     except Exception as e:
         log.info(f"Redis 未启用，使用内存缓存: {e}")
+
+
+def init_message_webhook_apikey():
+    """
+    初始化消息通知 Webhook 的系统级 API Key
+    在 API_KEYS 表中创建/获取名为 MessageWebhook 的系统 key
+    """
+    try:
+        service = APIKeyService()
+        service.get_or_create_system_key("MessageWebhook")
+        log.info("【Initialize】消息 Webhook API Key 已就绪")
+    except Exception as e:
+        log.error(f"【Initialize】消息 Webhook API Key 初始化失败：{str(e)}")
+        ExceptionUtils.exception_traceback(e)
 
 
 def update_rss_state():

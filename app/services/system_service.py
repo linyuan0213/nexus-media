@@ -53,7 +53,7 @@ from app.utils.types import MediaType, MovieTypes, SearchType, EventType
 from app.utils.temp_manager import temp_manager
 from config import Config
 from sqlalchemy import create_engine
-from app.services.search_torrents import search_medias_for_web, search_media_by_message
+from app.services.search_web_service import search_medias_for_web
 from app.utils.web_utils import WebUtils
 from app.infrastructure.cache_system import TokenCache
 from app.utils.config_tools import get_proxies
@@ -366,6 +366,10 @@ class WebSearchService:
     WEB资源搜索业务服务
     """
 
+    def __init__(self, search_fn=None):
+        from app.services.search_web_service import search_medias_for_web
+        self._search_fn = search_fn or search_medias_for_web
+
     def search(self, search_word: str, ident_flag: bool = True,
                filters=None, tmdbid=None, media_type=None) -> WebSearchResultDTO:
         """执行WEB搜索"""
@@ -376,7 +380,7 @@ class WebSearchService:
                 media_type = MediaType.MOVIE
             else:
                 media_type = MediaType.TV
-        ret, ret_msg = search_medias_for_web(
+        ret, ret_msg = self._search_fn(
             content=search_word, ident_flag=ident_flag,
             filters=filters, tmdbid=tmdbid, media_type=media_type
         )
@@ -505,16 +509,17 @@ class SystemLifecycleService:
         from app.services.brush_core import BrushTaskService
         from app.services.rss_service import RssTaskService
         from initializer import (
-            check_config, update_config, update_sites_data,
-            check_redis, update_rss_state, init_rbac_system
+            check_config, update_config,
+            check_redis, update_rss_state, init_rbac_system,
+            init_message_webhook_apikey
         )
-        # 0. 执行初始化（配置检查、RBAC、站点数据等）
+        # 0. 执行初始化（配置检查、RBAC、消息 webhook key 等）
         check_config()
         update_config()
-        update_sites_data()
         check_redis()
         update_rss_state()
         init_rbac_system()
+        init_message_webhook_apikey()
         # 1. 先启动调度器，确保所有后台服务的定时任务可以正常注册
         self._scheduler.start_service(load_defaults=True)
         # 2. 加载基础组件
@@ -579,7 +584,7 @@ class MessageCommandHandler:
     消息命令处理器（原 app/system_service.py 中的类）
     """
 
-    def __init__(self):
+    def __init__(self, search_handler=None):
         self._commands = {
             "/ptr": {"func": TorrentRemover().auto_remove_torrents, "desc": COMMANDS["/ptr"]},
             "/ptt": {"func": Downloader().transfer, "desc": COMMANDS["/ptt"]},
@@ -592,6 +597,7 @@ class MessageCommandHandler:
             "/udt": {"func": SystemLifecycleService.restart_server, "desc": COMMANDS["/udt"]},
             "/sta": {"func": self._user_statistics, "desc": COMMANDS["/sta"]},
         }
+        self._search_handler = search_handler
 
     def handle_message_job(self, msg, in_from=SearchType.OT, user_id=None, user_name=None):
         """处理消息事件"""
@@ -612,20 +618,23 @@ class MessageCommandHandler:
                 channel=in_from, title="正在运行 %s ..." % command.get("desc"), user_id=user_id)
             return
 
-        plugin_commands = []
+        # 插件命令
+        plugin_commands = Message().get_plugin_commands()
         msg_list = msg.split(" ")
-        for command in plugin_commands:
-            if command.get("cmd") == msg_list[0]:
-                event_data = command.get("data") or {
-                    "msg": msg_list[0] if len(msg_list) == 1 else msg_list[1]}
-                EventManager().send_event(command.get("event"), event_data)
-                Message().send_channel_msg(
-                    channel=in_from, title="正在运行 %s ..." % command.get("desc"), user_id=user_id)
-                return
+        cmd_key = msg_list[0]
+        plugin_cmd = plugin_commands.get(cmd_key)
+        if plugin_cmd:
+            func = plugin_cmd.get("func")
+            if func:
+                ThreadHelper().start_thread(func, (msg, in_from, user_id, user_name))
+            Message().send_channel_msg(
+                channel=in_from, title="正在运行 %s ..." % plugin_cmd.get("desc"), user_id=user_id)
+            return
 
         TokenCache.delete("search")
-        ThreadHelper().start_thread(search_media_by_message,
-                                    (msg, in_from, user_id, user_name))
+        if self._search_handler:
+            ThreadHelper().start_thread(self._search_handler.handle,
+                                        (msg, in_from, user_id, user_name))
 
     @staticmethod
     def _truncate_rsshistory():

@@ -9,6 +9,7 @@ from collections import defaultdict
 from typing import Union
 
 from app.helper import IndexerHelper
+from app.infrastructure.cache_system import get_cache_manager
 from app.sites import Sites
 from app.sites.engine import SiteEngine
 from app.utils import RequestUtils
@@ -35,10 +36,17 @@ class CookieCloudPlugin:
     def on_enable(self):
         self.ctx.info("CookieCloud 插件已启用")
         self._start_service()
+        self.ctx.register_message_command("cookiecloud", "立即同步 CookieCloud", self._on_cookiecloud_cmd)
 
     def on_disable(self):
         self.ctx.info("CookieCloud 插件已禁用")
         self._stop_service()
+        self.ctx.unregister_message_command("cookiecloud")
+
+    def _on_cookiecloud_cmd(self, client_type, user_id, text):
+        """消息命令 /cookiecloud 回调"""
+        self.ctx.info(f"用户 {user_id} 通过 {client_type} 触发 CookieCloud 同步")
+        self._cookie_sync()
 
     def on_hook(self, event, data):
         if event == "plugin.config_changed":
@@ -162,7 +170,21 @@ class CookieCloudPlugin:
         if config.get("notify"):
             self._send_message(msg)
 
-    def _process_cookies(self, contents: dict):
+    def _cookie_save(self):
+        """同步站点 Cookie 到 Redis（事件触发，只存 Redis 不更新站点）"""
+        self.ctx.info("开始同步 Cookie 到 Redis ...")
+        contents, msg, flag = self._download_data()
+        if not flag:
+            self.ctx.error(msg)
+            return
+        if not contents:
+            self.ctx.info("未从 CookieCloud 获取到数据")
+            return
+        self._store_cookies_to_cache(contents)
+        self.ctx.info("Cookie 同步 Redis 成功")
+
+    def _store_cookies_to_cache(self, contents: dict):
+        """公共逻辑：按域名分组、过滤、去重后存入 Redis，返回 domain->cookie_str 映射"""
         domain_cookie_groups = defaultdict(list)
         cookie_content = contents.get("cookie_data")
         for site, cookies in cookie_content.items():
@@ -173,9 +195,7 @@ class CookieCloudPlugin:
                 domain_key = tuple(domain_parts)
                 domain_cookie_groups[domain_key].append(cookie)
 
-        update_count = 0
-        add_count = 0
-
+        result = {}
         for domain, content_list in domain_cookie_groups.items():
             if not content_list:
                 continue
@@ -197,7 +217,17 @@ class CookieCloudPlugin:
                  if content.get("name") and content.get("name") not in self._ignore_cookies]
             )
             self._cache.set(f'cookie:{domain_url}', cookie_str)
+            result[domain_url] = cookie_str
 
+        return result
+
+    def _process_cookies(self, contents: dict):
+        domain_cookies = self._store_cookies_to_cache(contents)
+
+        update_count = 0
+        add_count = 0
+
+        for domain_url, cookie_str in domain_cookies.items():
             site_info = self.sites.get_sites_by_suffix(domain_url)
             if site_info:
                 success, _, _ = self.sites.test_connection(site_id=site_info.get("id"))
