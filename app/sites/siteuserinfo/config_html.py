@@ -116,7 +116,7 @@ class ConfigHtmlUserInfo:
             html_text = self._fetch_html(url)
         if not html_text:
             return
-        doc = etree.HTML(html_text)
+        doc: Any = etree.HTML(html_text)
         if doc is None:
             return
         for fname, fcfg in fields.items():
@@ -126,7 +126,7 @@ class ConfigHtmlUserInfo:
         if self.upload and self.download and not self.ratio:
             self.ratio = round(self.upload / self.download, 2) if self.download else 0
 
-    def _extract_field(self, doc: etree._Element, html_text: str, cfg: dict) -> Any:
+    def _extract_field(self, doc: Any, html_text: str, cfg: dict) -> Any:
         selector = cfg.get("selector", "")
         extract = cfg.get("extract", "text")
         attr = cfg.get("attribute", "")
@@ -209,7 +209,7 @@ class ConfigHtmlUserInfo:
                 self.seeding = StringUtils.str_int(total_match.group(1))
                 self.seeding_size = StringUtils.num_filesize(total_match.group(2))
                 return
-            doc = etree.HTML(html_text.replace(r"\/", "/"))
+            doc: Any = etree.HTML(html_text.replace(r"\/", "/"))
             if doc is None:
                 break
             rows = doc.cssselect(ls)

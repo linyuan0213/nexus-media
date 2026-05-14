@@ -1,5 +1,6 @@
 """引擎下载链接解析 — 从 engine.py 拆分"""
 
+from app.sites.engine_tools import _call_html_endpoint
 from app.utils import RequestUtils
 from app.utils.config_tools import get_proxies
 
@@ -38,8 +39,6 @@ def resolve_download_chained(engine, url, site, user_config, tid):
 
 
 def resolve_html_download(engine, page_url, site, user_config):
-    from app.sites.engine_tools import _call_html_endpoint
-
     dl = site.download
     cfg = {"method": "GET", "path": "", "selectors": {}}
     if hasattr(dl, "selectors") and dl.selectors:

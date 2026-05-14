@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from lxml import etree
 
@@ -19,18 +19,18 @@ def is_small_horse(ins: ConfigHtmlUserInfo) -> bool:
 
 def parse(ins: ConfigHtmlUserInfo) -> None:
     html_text = re.sub(r"#\d+", "", re.sub(r"\d+px", "", ins._index_html))
-    html = etree.HTML(html_text)
+    html: Any = etree.HTML(html_text)
     if html is None:
         return
 
-    ret = html.xpath('//a[contains(@href, "user.php")]//text()')
+    ret: Any = html.xpath('//a[contains(@href, "user.php")]//text()')
     if ret:
         ins.username = str(ret[0])
     user_detail = re.search(r"user.php\?id=(\d+)", html_text)
     if user_detail and user_detail.group(1):
         ins.userid = user_detail.group(1)
 
-    tmps = html.xpath('//ul[@class="stats nobullet"]')
+    tmps: Any = html.xpath('//ul[@class="stats nobullet"]')
     if tmps:
         try:
             li = tmps[1].xpath("li")

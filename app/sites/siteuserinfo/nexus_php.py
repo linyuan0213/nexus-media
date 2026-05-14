@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
 from lxml import etree
@@ -45,7 +45,7 @@ def _parse_userid(ins: ConfigHtmlUserInfo) -> None:
 
 def _parse_base_info(ins: ConfigHtmlUserInfo) -> None:
     re.sub(r"#\d+", "", re.sub(r"\d+px", "", ins._index_html))
-    doc = etree.HTML(ins._index_html)
+    doc: Any = etree.HTML(ins._index_html)
     if doc is None:
         return
     ret = doc.xpath('//a[contains(@href,"userdetails")]//b//text()')
@@ -89,7 +89,7 @@ def _parse_traffic(ins: ConfigHtmlUserInfo) -> None:
     ins.ratio = StringUtils.str_float(m.group(1)) if (m and m.group(1).strip()) else calc
     m = re.search(r"(Torrents leeching|下载中)[\u4E00-\u9FA5\D\s]+(\d+)[\s\S]+<", html)
     ins.leeching = StringUtils.str_int(m.group(2)) if m and m.group(2).strip() else 0
-    doc = etree.HTML(html_text)
+    doc: Any = etree.HTML(html_text)
     if doc is not None:
         golds = doc.xpath('//span[@class="ucoin-symbol ucoin-gold"]//text()')
         silvers = doc.xpath('//span[@class="ucoin-symbol ucoin-silver"]//text()')
@@ -124,7 +124,7 @@ def _parse_seeding(ins: ConfigHtmlUserInfo) -> None:
     detail_page_text = ins._fetch_html(urljoin(ins._base_url_str + "/", f"userdetails.php?id={ins.userid}"))
     referer = f"{ins._base_url_str}/userdetails.php?id={ins.userid}"
     if detail_page_text:
-        detail_doc = etree.HTML(detail_page_text)
+        detail_doc: Any = etree.HTML(detail_page_text)
         if detail_doc is not None:
             for tag, base in [("a", "@href"), ("form", "@action")]:
                 for pattern in ["getusertorrentlist.php", "getusertorrentlistajax.php"]:
@@ -143,7 +143,7 @@ def _parse_seeding(ins: ConfigHtmlUserInfo) -> None:
         html_text = ins._fetch_html(page_url, referer=referer, use_ajax_headers=is_ajax)
         if not html_text:
             continue
-        doc = etree.HTML(html_text.replace(r"\/", "/"))
+        doc: Any = etree.HTML(html_text.replace(r"\/", "/"))
         if doc is None:
             continue
         _parse_seeding_html(ins, doc, html_text)
@@ -154,14 +154,14 @@ def _parse_seeding(ins: ConfigHtmlUserInfo) -> None:
             html_text = ins._fetch_html(next_url, referer=referer)
             if not html_text:
                 break
-            doc = etree.HTML(html_text.replace(r"\/", "/"))
+            doc: Any = etree.HTML(html_text.replace(r"\/", "/"))
             if doc is None:
                 break
             _parse_seeding_html(ins, doc, html_text)
             next_url = _next_page_url(ins, doc)
 
 
-def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: etree._Element, html_text: str) -> None:
+def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: Any, html_text: str) -> None:
     ui = ins._def.user_info if isinstance(ins._def.user_info, dict) else {}
     sc = ui.get("seeding", {})
     total_regex = sc.get("total_regex")
@@ -216,6 +216,7 @@ def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: etree._Element, html_text:
         seeders_texts = doc.xpath(f"{table_prefix}//tr[position()>1]/td[5]//text()")
     if not isinstance(size_texts, list):
         return
+    info = json.loads(ins.seeding_info) if ins.seeding_info and ins.seeding_info != "[]" else []
     for i, sz in enumerate(size_texts):
         size = StringUtils.num_filesize(str(sz.xpath("string(.)")).strip())
         sd = StringUtils.str_int(seeders_texts[i]) if isinstance(seeders_texts, list) and i < len(seeders_texts) else 0
@@ -225,7 +226,7 @@ def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: etree._Element, html_text:
     ins.seeding_info = json.dumps(info)
 
 
-def _next_page_url(ins: ConfigHtmlUserInfo, doc: etree._Element) -> str | None:
+def _next_page_url(ins: ConfigHtmlUserInfo, doc: Any) -> str | None:
     links = doc.xpath('//a[contains(.,"下一页") or contains(.,"下一頁")]/@href')
     if not links:
         return None
@@ -242,7 +243,7 @@ def _parse_detail(ins: ConfigHtmlUserInfo) -> None:
     html_text = ins._fetch_html(page_url)
     if not html_text:
         return
-    doc = etree.HTML(html_text)
+    doc: Any = etree.HTML(html_text)
     if doc is None:
         return
     level = doc.xpath(

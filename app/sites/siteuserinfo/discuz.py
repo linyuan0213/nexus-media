@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from lxml import etree
 
@@ -19,7 +19,7 @@ def is_discuz(ins: ConfigHtmlUserInfo) -> bool:
 
 def parse(ins: ConfigHtmlUserInfo) -> None:
     html_text = re.sub(r"#\d+", "", re.sub(r"\d+px", "", ins._index_html))
-    html = etree.HTML(html_text)
+    html: Any = etree.HTML(html_text)
     if html is None:
         return
 

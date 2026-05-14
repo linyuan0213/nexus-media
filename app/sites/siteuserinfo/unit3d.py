@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
 from lxml import etree
@@ -20,7 +20,7 @@ def is_unit3d(ins: ConfigHtmlUserInfo) -> bool:
 
 def parse(ins: ConfigHtmlUserInfo) -> None:
     html_text = re.sub(r"#\d+", "", re.sub(r"\d+px", "", ins._index_html))
-    html = etree.HTML(html_text)
+    html: Any = etree.HTML(html_text)
     if html is None:
         return
 
@@ -56,7 +56,7 @@ def parse(ins: ConfigHtmlUserInfo) -> None:
     profile_text = ins._fetch_html(profile_url)
     if not profile_text:
         return
-    profile_doc = etree.HTML(profile_text)
+    profile_doc: Any = etree.HTML(profile_text)
     if profile_doc is None:
         return
 
@@ -64,7 +64,7 @@ def parse(ins: ConfigHtmlUserInfo) -> None:
     _extract_seeding(ins, profile_doc)
 
 
-def _extract_traffic(ins: ConfigHtmlUserInfo, doc: etree._Element) -> None:
+def _extract_traffic(ins: ConfigHtmlUserInfo, doc: Any) -> None:
     for label, attr, is_size in [("Upload", "upload", True), ("Download", "download", True)]:
         vals = doc.xpath(
             f'//h4[contains(text(),"{label}")]/following-sibling::span[1]/text()'
@@ -133,7 +133,7 @@ def _extract_traffic(ins: ConfigHtmlUserInfo, doc: etree._Element) -> None:
                 break
 
 
-def _extract_seeding(ins: ConfigHtmlUserInfo, doc: etree._Element) -> None:
+def _extract_seeding(ins: ConfigHtmlUserInfo, doc: Any) -> None:
     for label, attr in [("Seeding", "seeding"), ("Leeching", "leeching")]:
         vals = doc.xpath(
             f'//h4[contains(text(),"{label}")]/following-sibling::span[1]/text()'
