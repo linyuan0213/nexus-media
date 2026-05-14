@@ -22,20 +22,20 @@ class SiteRepository(BaseRepository):
 
     # ==================== Site Configuration ====================
 
-    def get_config_site(self):
+    def get_config_site(self) -> list[CONFIGSITE]:
         """
         查询所有站点信息
         """
         return self._db.query(CONFIGSITE).order_by(cast(CONFIGSITE.PRI, Integer).asc()).all()
 
-    def get_site_by_id(self, tid):
+    def get_site_by_id(self, tid: int) -> list[CONFIGSITE]:
         """
         查询1个站点信息
         """
         return self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).all()
 
     @DbPersist(BaseRepository._db)
-    def insert_config_site(self, name, site_pri, rssurl=None, signurl=None, cookie=None, note=None, rss_uses=None):
+    def insert_config_site(self, name: str, site_pri: str, rssurl: str | None = None, signurl: str | None = None, cookie: str | None = None, note: str | None = None, rss_uses: str | None = None) -> None:
         """
         插入站点信息
         """
@@ -48,7 +48,7 @@ class SiteRepository(BaseRepository):
         )
 
     @DbPersist(BaseRepository._db)
-    def delete_config_site(self, tid):
+    def delete_config_site(self, tid: int | None) -> None:
         """
         删除站点信息
         """
@@ -57,7 +57,7 @@ class SiteRepository(BaseRepository):
         self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).delete()
 
     @DbPersist(BaseRepository._db)
-    def update_config_site(self, tid, name, site_pri, rssurl, signurl, cookie, note, rss_uses):
+    def update_config_site(self, tid: int | None, name: str, site_pri: str, rssurl: str, signurl: str, cookie: str, note: str, rss_uses: str) -> None:
         """
         更新站点信息
         """
@@ -76,7 +76,7 @@ class SiteRepository(BaseRepository):
         )
 
     @DbPersist(BaseRepository._db)
-    def update_config_site_note(self, tid, note):
+    def update_config_site_note(self, tid: int | None, note: str) -> None:
         """
         更新站点属性
         """
@@ -85,7 +85,7 @@ class SiteRepository(BaseRepository):
         self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).update({"NOTE": note})
 
     @DbPersist(BaseRepository._db)
-    def update_site_cookie_ua(self, tid, cookie, ua=None):
+    def update_site_cookie_ua(self, tid: int | None, cookie: str, ua: str | None = None) -> None:
         """
         更新站点Cookie和ua
         """
@@ -103,7 +103,7 @@ class SiteRepository(BaseRepository):
         )
 
     @DbPersist(BaseRepository._db)
-    def update_site_rssurl(self, tid, rssurl):
+    def update_site_rssurl(self, tid: int | None, rssurl: str) -> None:
         """
         更新站点rssurl
         """
@@ -113,14 +113,14 @@ class SiteRepository(BaseRepository):
 
     # ==================== Site User Statistics ====================
 
-    def update_site_user_statistics_site_name(self, new_name, old_name):
+    def update_site_user_statistics_site_name(self, new_name: str, old_name: str) -> None:
         """
         更新站点用户数据中站点名称
         """
         self._db.query(SITEUSERINFOSTATS).filter(old_name == SITEUSERINFOSTATS.SITE).update({"SITE": new_name})
 
     @DbPersist(BaseRepository._db)
-    def update_site_user_statistics(self, site_user_infos: list):
+    def update_site_user_statistics(self, site_user_infos: list) -> None:
         """
         更新站点用户粒度数据
         """
@@ -181,7 +181,7 @@ class SiteRepository(BaseRepository):
                     }
                 )
 
-    def is_exists_site_user_statistics(self, url):
+    def is_exists_site_user_statistics(self, url: str) -> bool:
         """
         判断站点数据是否存在
         使用first()代替count()提高性能
@@ -190,7 +190,7 @@ class SiteRepository(BaseRepository):
             return False
         return self._db.query(SITEUSERINFOSTATS).filter(url == SITEUSERINFOSTATS.URL).first() is not None
 
-    def is_site_user_statistics_exists(self, url):
+    def is_site_user_statistics_exists(self, url: str) -> bool:
         """
         判断站点用户数据是否存在
         """
@@ -198,7 +198,7 @@ class SiteRepository(BaseRepository):
             return False
         return self._db.query(SITEUSERINFOSTATS).filter(url == SITEUSERINFOSTATS.URL).first() is not None
 
-    def get_site_user_statistics(self, num=100, strict_urls=None):
+    def get_site_user_statistics(self, num: int = 100, strict_urls: list | None = None) -> list[SITEUSERINFOSTATS]:
         """
         查询站点数据历史
         """
@@ -217,7 +217,7 @@ class SiteRepository(BaseRepository):
     # ==================== Site Favicon ====================
 
     @DbPersist(BaseRepository._db)
-    def update_site_favicon(self, site_user_infos: list):
+    def update_site_favicon(self, site_user_infos: list) -> None:
         """
         更新站点图标数据
         """
@@ -240,14 +240,14 @@ class SiteRepository(BaseRepository):
                     {"URL": site_user_info.site_url, "FAVICON": site_icon}
                 )
 
-    def is_exists_site_favicon(self, site):
+    def is_exists_site_favicon(self, site: str) -> bool:
         """
         判断站点图标是否存在
         """
         count = self._db.query(SITEFAVICON).filter(site == SITEFAVICON.SITE).count()
         return count > 0
 
-    def get_site_favicons(self, site=None):
+    def get_site_favicons(self, site: str | None = None) -> list[SITEFAVICON]:
         """
         查询站点图标数据
         """
@@ -259,14 +259,14 @@ class SiteRepository(BaseRepository):
     # ==================== Site Seeding Info ====================
 
     @DbPersist(BaseRepository._db)
-    def update_site_seed_info_site_name(self, new_name, old_name):
+    def update_site_seed_info_site_name(self, new_name: str, old_name: str) -> None:
         """
         更新站点做种数据中站点名称
         """
         self._db.query(SITEUSERSEEDINGINFO).filter(old_name == SITEUSERSEEDINGINFO.SITE).update({"SITE": new_name})
 
     @DbPersist(BaseRepository._db)
-    def update_site_seed_info(self, site_user_infos: list):
+    def update_site_seed_info(self, site_user_infos: list) -> None:
         """
         更新站点做种数据
         """
@@ -293,13 +293,13 @@ class SiteRepository(BaseRepository):
                     }
                 )
 
-    def is_site_seeding_info_exist(self, url):
+    def is_site_seeding_info_exist(self, url: str) -> bool:
         """
         判断做种数据是否已存在
         """
         return self._db.query(SITEUSERSEEDINGINFO).filter(url == SITEUSERSEEDINGINFO.URL).first() is not None
 
-    def get_site_seeding_info(self, site):
+    def get_site_seeding_info(self, site: str) -> tuple | None:
         """
         查询站点做种信息
         """
@@ -307,7 +307,7 @@ class SiteRepository(BaseRepository):
 
     # ==================== Site Statistics History ====================
 
-    def is_site_statistics_history_exists(self, url, date):
+    def is_site_statistics_history_exists(self, url: str, date: str) -> bool:
         """
         判断站点历史数据是否存在
         """
@@ -321,14 +321,14 @@ class SiteRepository(BaseRepository):
         )
 
     @DbPersist(BaseRepository._db)
-    def update_site_statistics_site_name(self, new_name, old_name):
+    def update_site_statistics_site_name(self, new_name: str, old_name: str) -> None:
         """
         更新站点统计数据中站点名称
         """
         self._db.query(SITESTATISTICSHISTORY).filter(old_name == SITESTATISTICSHISTORY.SITE).update({"SITE": new_name})
 
     @DbPersist(BaseRepository._db)
-    def insert_site_statistics_history(self, site_user_infos: list):
+    def insert_site_statistics_history(self, site_user_infos: list) -> None:
         """
         插入站点数据
         使用批量插入/更新提高性能
@@ -379,7 +379,7 @@ class SiteRepository(BaseRepository):
                 date_now == SITESTATISTICSHISTORY.DATE, url == SITESTATISTICSHISTORY.URL
             ).update(data)
 
-    def get_site_statistics_history(self, site, days=30):
+    def get_site_statistics_history(self, site: str, days: int = 30) -> list[SITESTATISTICSHISTORY]:
         """
         查询站点数据历史
         """
@@ -390,7 +390,7 @@ class SiteRepository(BaseRepository):
             .limit(days)
         )
 
-    def get_site_statistics_recent_sites(self, days=7, end_day=None, strict_urls=None):
+    def get_site_statistics_recent_sites(self, days: int = 7, end_day: str | None = None, strict_urls: list | None = None) -> tuple[int, int, list, list, list]:
         """
         查询近期上传下载量
         """
@@ -483,7 +483,7 @@ class SiteRepository(BaseRepository):
         else:
             return 0, 0, [], [], []
 
-    def get_site_daily_history(self, days=30, end_day=None, strict_urls=None):
+    def get_site_daily_history(self, days: int = 30, end_day: str | None = None, strict_urls: list | None = None) -> dict:
         """
         查询各站点每日上传量（按站点、按天分组，返回增量）
         """

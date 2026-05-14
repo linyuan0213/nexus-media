@@ -21,7 +21,7 @@ class DownloadRepository(BaseRepository):
 
     # ==================== Download History ====================
 
-    def is_exists_download_history(self, enclosure, downloader, download_id):
+    def is_exists_download_history(self, enclosure: str | None, downloader: str, download_id: str) -> bool:
         """
         查询下载历史是否存在
         """
@@ -35,7 +35,7 @@ class DownloadRepository(BaseRepository):
             )
         return count > 0
 
-    def is_exists_download_history_by_tmdb(self, tmdb_id, season_episode):
+    def is_exists_download_history_by_tmdb(self, tmdb_id: int | None, season_episode: str | None) -> bool:
         """
         查询下载历史是否存在，根据TMDB ID和季集信息
         """
@@ -50,7 +50,7 @@ class DownloadRepository(BaseRepository):
         return query.count() > 0
 
     @DbPersist(BaseRepository._db)
-    def insert_download_history(self, media_info, downloader, download_id, save_dir):
+    def insert_download_history(self, media_info: object, downloader: str, download_id: str, save_dir: str) -> None:
         """
         新增下载历史
         """
@@ -113,7 +113,7 @@ class DownloadRepository(BaseRepository):
                 )
             )
 
-    def get_download_history(self, date=None, hid=None, num=30, page=1):
+    def get_download_history(self, date: str | None = None, hid: int | None = None, num: int = 30, page: int = 1) -> list[DOWNLOADHISTORY]:
         """
         查询下载历史
         修复：使用标准 GROUP BY 语法兼容 MySQL/PostgreSQL
@@ -153,24 +153,9 @@ class DownloadRepository(BaseRepository):
                 .all()
             )
 
-    def get_download_history_by_title(self, title):
-        """
-        根据标题查找下载历史
-        """
-        return self._db.query(DOWNLOADHISTORY).filter(title == DOWNLOADHISTORY.TITLE).all()
-
-    def get_download_history_by_path(self, path):
-        """
-        根据路径查找下载历史
-        """
-        return (
-            self._db.query(DOWNLOADHISTORY)
-            .filter(os.path.normpath(path) == DOWNLOADHISTORY.SAVE_PATH)
-            .order_by(DOWNLOADHISTORY.DATE.desc())
-            .first()
-        )
-
-    def get_download_history_by_downloader(self, downloader, download_id):
+    def get_download_history_by_title(self, title: str) -> list[DOWNLOADHISTORY]:
+    def get_download_history_by_path(self, path: str) -> DOWNLOADHISTORY | None:
+    def get_download_history_by_downloader(self, downloader: str, download_id: str) -> DOWNLOADHISTORY | None:
         """
         根据下载器查找下载历史
         """
@@ -184,7 +169,7 @@ class DownloadRepository(BaseRepository):
     # ==================== Download Settings ====================
 
     @DbPersist(BaseRepository._db)
-    def delete_download_setting(self, sid):
+    def delete_download_setting(self, sid: int | None) -> None:
         """
         删除下载设置
         """
@@ -192,7 +177,7 @@ class DownloadRepository(BaseRepository):
             return
         self._db.query(DOWNLOADSETTING).filter(int(sid) == DOWNLOADSETTING.ID).delete()
 
-    def get_download_setting(self, sid=None):
+    def get_download_setting(self, sid: int | None = None) -> list[DOWNLOADSETTING]:
         """
         查询下载设置
         """
@@ -203,17 +188,17 @@ class DownloadRepository(BaseRepository):
     @DbPersist(BaseRepository._db)
     def update_download_setting(
         self,
-        sid,
-        name,
-        category,
-        tags,
-        is_paused,
-        upload_limit,
-        download_limit,
-        ratio_limit,
-        seeding_time_limit,
-        downloader,
-    ):
+        sid: int | None,
+        name: str,
+        category: str,
+        tags: str,
+        is_paused: int,
+        upload_limit: float,
+        download_limit: float,
+        ratio_limit: float,
+        seeding_time_limit: float,
+        downloader: str,
+    ) -> None:
         """
         设置下载设置
         """
@@ -249,7 +234,7 @@ class DownloadRepository(BaseRepository):
     # ==================== Indexer Statistics ====================
 
     @DbPersist(BaseRepository._db)
-    def insert_indexer_statistics(self, indexer, itype, seconds, result):
+    def insert_indexer_statistics(self, indexer: str, itype: str, seconds: int, result: str) -> None:
         """
         插入索引器统计
         """
@@ -264,13 +249,13 @@ class DownloadRepository(BaseRepository):
         )
 
     @DbPersist(BaseRepository._db)
-    def delete_all_indexer_statistics(self):
+    def delete_all_indexer_statistics(self) -> None:
         """
         删除所有搜索的记录
         """
         self._db.query(INDEXERSTATISTICS).delete()
 
-    def get_indexer_statistics(self, client_id):
+    def get_indexer_statistics(self, client_id: str) -> list[tuple]:
         """
         查询索引器统计
         """

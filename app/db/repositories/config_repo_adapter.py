@@ -3,6 +3,19 @@
 将旧版 ConfigRepository 适配为新领域接口
 """
 
+from typing import Any
+
+from app.db.models import (
+    CONFIGFILTERGROUP,
+    CONFIGFILTERRULES,
+    CONFIGMEDIA,
+    CONFIGRSSPARSER,
+    CONFIGUSERRSS,
+    DOWNLOADER,
+    MEDIASERVER,
+    MESSAGECLIENT,
+    TORRENTREMOVETASK,
+)
 from app.db.repositories.config_repository import ConfigRepository
 from app.domain.entities.config import (
     DownloaderEntity,
@@ -49,7 +62,7 @@ class MessageClientRepositoryAdapter(IMessageClientRepository):
         interactive: int,
         enabled: int,
         note: str = "",
-        templates=None,
+        templates: str | None = None,
     ) -> None:
         self._repo.insert_message_client(name, ctype, config, switchs, interactive, enabled, note, templates)
 
@@ -57,10 +70,10 @@ class MessageClientRepositoryAdapter(IMessageClientRepository):
         self._repo.delete_message_client(cid)
 
     # 兼容旧 ConfigRepository 方法
-    def get_message_client(self, cid=None):
+    def get_message_client(self, cid: int | None = None) -> list[MESSAGECLIENT]:
         return self._repo.get_message_client(cid)
 
-    def check_message_client(self, cid=None, interactive=None, enabled=None, ctype=None):
+    def check_message_client(self, cid: int | None = None, interactive: int | None = None, enabled: int | None = None, ctype: str | None = None) -> None:
         self._repo.check_message_client(cid, interactive, enabled, ctype)
 
 
@@ -130,10 +143,10 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
         self._repo.delete_downloader(did)
 
     # 兼容旧 ConfigRepository 方法
-    def get_downloaders(self):
+    def get_downloaders(self) -> list[DOWNLOADER]:
         return self._repo.get_downloaders()
 
-    def check_downloader(self, did=None, transfer=None, only_nastool=None, enabled=None, match_path=None):
+    def check_downloader(self, did: int | None = None, transfer: int | None = None, only_nastool: int | None = None, enabled: int | None = None, match_path: int | None = None) -> None:
         self._repo.check_downloader(did, transfer, only_nastool, enabled, match_path)
 
 
@@ -164,19 +177,19 @@ class FilterGroupRepositoryAdapter(IFilterGroupRepository):
         self._repo.delete_filtergroup(gid)
 
     # 兼容旧 ConfigRepository 方法
-    def get_config_filter_group(self, gid=None):
+    def get_config_filter_group(self, gid: int | None = None) -> list[CONFIGFILTERGROUP]:
         return self._repo.get_config_filter_group(gid)
 
-    def add_filter_group(self, name, default="N"):
+    def add_filter_group(self, name: str, default: str = "N") -> None:
         self._repo.add_filter_group(name, default)
 
-    def get_filter_groupid_by_name(self, name):
+    def get_filter_groupid_by_name(self, name: str) -> int | str:
         return self._repo.get_filter_groupid_by_name(name)
 
-    def set_default_filtergroup(self, groupid):
+    def set_default_filtergroup(self, groupid: int) -> None:
         self._repo.set_default_filtergroup(groupid)
 
-    def delete_filtergroup(self, groupid):
+    def delete_filtergroup(self, groupid: int) -> None:
         self._repo.delete_filtergroup(groupid)
 
 
@@ -208,13 +221,13 @@ class FilterRuleRepositoryAdapter(IFilterRuleRepository):
         self._repo.delete_filtergroup(group_id)
 
     # 兼容旧 ConfigRepository 方法
-    def get_config_filter_rule(self, groupid=None):
+    def get_config_filter_rule(self, groupid: int | None = None) -> list[CONFIGFILTERRULES]:
         return self._repo.get_config_filter_rule(groupid)
 
-    def insert_filter_rule(self, item, ruleid=None):
+    def insert_filter_rule(self, item: dict, ruleid: int | None = None) -> None:
         self._repo.insert_filter_rule(item, ruleid)
 
-    def delete_filterrule(self, ruleid):
+    def delete_filterrule(self, ruleid: int) -> None:
         self._repo.delete_filterrule(ruleid)
 
 
@@ -244,19 +257,19 @@ class MediaServerRepositoryAdapter(IMediaServerRepository):
         self._repo.delete_media_server(sid)
 
     # 兼容旧 ConfigRepository 方法
-    def get_media_servers(self, sid=None):
+    def get_media_servers(self, sid: int | None = None) -> list[MEDIASERVER]:
         return self._repo.get_media_servers(sid)
 
-    def get_media_server_by_name(self, name):
+    def get_media_server_by_name(self, name: str) -> MEDIASERVER | None:
         return self._repo.get_media_server_by_name(name)
 
-    def update_media_server(self, sid, name, enabled, config, is_default=0, note=None):
+    def update_media_server(self, sid: int | None, name: str, enabled: int, config: str, is_default: int = 0, note: str | None = None) -> None:
         self._repo.update_media_server(sid, name, enabled, config, is_default, note)
 
-    def set_default_media_server(self, name):
+    def set_default_media_server(self, name: str) -> None:
         self._repo.set_default_media_server(name)
 
-    def get_default_media_server(self):
+    def get_default_media_server(self) -> MEDIASERVER | None:
         return self._repo.get_default_media_server()
 
 
@@ -297,13 +310,13 @@ class TorrentRemoveTaskRepositoryAdapter(ITorrentRemoveTaskRepository):
         self._repo.delete_torrent_remove_task(tid)
 
     # 兼容旧 ConfigRepository 方法
-    def get_torrent_remove_tasks(self, tid=None):
+    def get_torrent_remove_tasks(self, tid: int | None = None) -> list[TORRENTREMOVETASK]:
         return self._repo.get_torrent_remove_tasks(tid)
 
-    def delete_torrent_remove_task(self, tid):
+    def delete_torrent_remove_task(self, tid: int | None) -> None:
         self._repo.delete_torrent_remove_task(tid)
 
-    def insert_torrent_remove_task(self, **kwargs):
+    def insert_torrent_remove_task(self, **kwargs: Any) -> None:
         self._repo.insert_torrent_remove_task(**kwargs)
 
 
@@ -311,38 +324,30 @@ class UserRssConfigRepositoryAdapter:
     """自定义RSS配置仓储适配器——逐个代理所有旧方法"""
 
     def __init__(self, repo=None):
-        from app.db.repositories.config_repository import ConfigRepository
-
         self._repo = repo or ConfigRepository()
 
-    def get_userrss_parser(self, pid=None):
+    def get_userrss_parser(self, pid: int | None = None) -> CONFIGRSSPARSER | None | list[CONFIGRSSPARSER]:
         return self._repo.get_userrss_parser(pid)
 
-    def get_userrss_tasks(self, tid=None):
+    def get_userrss_tasks(self, tid: int | None = None) -> list[CONFIGUSERRSS]:
         return self._repo.get_userrss_tasks(tid)
 
-    def insert_userrss_mediainfos(self, tid=None, mediainfo=None):
+    def insert_userrss_mediainfos(self, tid: int | None = None, mediainfo: object | None = None) -> None:
         self._repo.insert_userrss_mediainfos(tid, mediainfo)
 
-    def insert_userrss_task_history(self, task_id, title, downloader):
-        self._repo.insert_userrss_task_history(task_id, title, downloader)
+    def insert_userrss_task_history(self, task_id: int, title: str, downloader: str) -> None:
 
-    def update_userrss_task_info(self, tid, count):
-        self._repo.update_userrss_task_info(tid, count)
+    def update_userrss_task_info(self, tid: int | None, count: int) -> None:
 
-    def delete_userrss_task(self, tid):
-        self._repo.delete_userrss_task(tid)
+    def delete_userrss_task(self, tid: int | None) -> None:
 
-    def update_userrss_task(self, item):
-        self._repo.update_userrss_task(item)
+    def update_userrss_task(self, item: dict) -> None:
 
-    def check_userrss_task(self, tid=None, state=None):
-        self._repo.check_userrss_task(tid, state)
+    def check_userrss_task(self, tid: int | None = None, state: str | None = None) -> None:
 
-    def delete_userrss_parser(self, pid):
-        self._repo.delete_userrss_parser(pid)
+    def delete_userrss_parser(self, pid: int | None) -> None:
 
-    def update_userrss_parser(self, item):
+    def update_userrss_parser(self, item: dict) -> None:
         self._repo.update_userrss_parser(item)
 
 
@@ -352,7 +357,7 @@ class MediaConfigRepositoryAdapter:
     def __init__(self, repo: ConfigRepository | None = None):
         self._repo = repo or ConfigRepository()
 
-    def get_media_config(self):
+    def get_media_config(self) -> CONFIGMEDIA | None:
         return self._repo.get_media_config()
 
     def add_path(self, path_type: str, path: str) -> None:
@@ -425,5 +430,5 @@ class MediaConfigRepositoryAdapter:
             paths[idx] = new_path
             self._repo._update_media_config_col(col, json.dumps(paths))
 
-    def set_media_config(self, movie_path, tv_path, anime_path, unknown_path):
+    def set_media_config(self, movie_path: str, tv_path: str, anime_path: str, unknown_path: str) -> None:
         self._repo.set_media_config(movie_path, tv_path, anime_path, unknown_path)

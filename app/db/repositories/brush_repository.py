@@ -22,7 +22,7 @@ class BrushRepository(BaseRepository):
     """
 
     @DbPersist(BaseRepository._db)
-    def update_brushtask(self, brush_id, item):
+    def update_brushtask(self, brush_id: int | None, item: dict) -> None:
         """
         新增或更新刷流任务
         """
@@ -76,14 +76,14 @@ class BrushRepository(BaseRepository):
             )
 
     @DbPersist(BaseRepository._db)
-    def delete_brushtask(self, brush_id):
+    def delete_brushtask(self, brush_id: int) -> None:
         """
         删除刷流任务
         """
         self._db.query(SITEBRUSHTASK).filter(int(brush_id) == SITEBRUSHTASK.ID).delete()
         self._db.query(SITEBRUSHTORRENTS).filter(brush_id == SITEBRUSHTORRENTS.TASK_ID).delete()
 
-    def get_brushtasks(self, brush_id=None):
+    def get_brushtasks(self, brush_id: int | None = None) -> SITEBRUSHTASK | None | list[SITEBRUSHTASK]:
         """
         查询刷流任务
         """
@@ -97,7 +97,7 @@ class BrushRepository(BaseRepository):
                 .all()
             )
 
-    def get_brushtask_totalsize(self, brush_id):
+    def get_brushtask_totalsize(self, brush_id: int | None) -> int:
         """
         查询刷流任务总体积
         """
@@ -116,7 +116,7 @@ class BrushRepository(BaseRepository):
         return ret[0] or 0 if ret else 0
 
     @DbPersist(BaseRepository._db)
-    def update_brushtask_state(self, state, tid=None):
+    def update_brushtask_state(self, state: str, tid: int | None = None) -> None:
         """
         改变刷流任务的状态
         """
@@ -128,7 +128,7 @@ class BrushRepository(BaseRepository):
             self._db.query(SITEBRUSHTASK).update({"STATE": "Y" if state == "Y" else "N"})
 
     @DbPersist(BaseRepository._db)
-    def add_brushtask_download_count(self, brush_id):
+    def add_brushtask_download_count(self, brush_id: int | None) -> None:
         """
         增加刷流下载数
         """
@@ -141,7 +141,7 @@ class BrushRepository(BaseRepository):
             }
         )
 
-    def get_brushtask_remove_size(self, brush_id):
+    def get_brushtask_remove_size(self, brush_id: int | None) -> int | list[tuple]:
         """
         获取已删除种子的上传量
         """
@@ -154,7 +154,7 @@ class BrushRepository(BaseRepository):
         )
 
     @DbPersist(BaseRepository._db)
-    def add_brushtask_upload_count(self, brush_id, upload_size, download_size, remove_count):
+    def add_brushtask_upload_count(self, brush_id: int | None, upload_size: int, download_size: int, remove_count: int) -> None:
         """
         更新上传下载量和删除种子数
         """
@@ -183,7 +183,7 @@ class BrushRepository(BaseRepository):
         )
 
     @DbPersist(BaseRepository._db)
-    def insert_brushtask_torrent(self, brush_id, title, enclosure, downloader, download_id, size):
+    def insert_brushtask_torrent(self, brush_id: int | None, title: str, enclosure: str, downloader: str, download_id: str, size: str) -> None:
         """
         增加刷流下载的种子信息
         """
@@ -209,7 +209,7 @@ class BrushRepository(BaseRepository):
             )
         )
 
-    def get_brushtask_torrents(self, brush_id, active=True):
+    def get_brushtask_torrents(self, brush_id: int | None, active: bool = True) -> list[SITEBRUSHTORRENTS]:
         """
         查询刷流任务所有种子
         """
@@ -229,7 +229,7 @@ class BrushRepository(BaseRepository):
                 .all()
             )
 
-    def get_brushtask_torrent_by_enclosure(self, enclosure):
+    def get_brushtask_torrent_by_enclosure(self, enclosure: str) -> SITEBRUSHTORRENTS | None | list[SITEBRUSHTORRENTS]:
         """
         根据URL查询刷流任务种子
         """
@@ -248,7 +248,7 @@ class BrushRepository(BaseRepository):
 
         return self._db.query(SITEBRUSHTORRENTS).filter(enclosure == SITEBRUSHTORRENTS.ENCLOSURE).first()
 
-    def is_brushtask_torrent_exists(self, brush_id, title, enclosure):
+    def is_brushtask_torrent_exists(self, brush_id: int | None, title: str, enclosure: str) -> bool:
         """
         查询刷流任务种子是否已存在
         """
@@ -266,7 +266,7 @@ class BrushRepository(BaseRepository):
         return count > 0
 
     @DbPersist(BaseRepository._db)
-    def update_brushtask_torrent_state(self, ids: list):
+    def update_brushtask_torrent_state(self, ids: list) -> None:
         """
         更新刷流种子的状态
         """
@@ -278,7 +278,7 @@ class BrushRepository(BaseRepository):
             ).update({"TORRENT_SIZE": _id[0], "DOWNLOAD_ID": "0"})
 
     @DbPersist(BaseRepository._db)
-    def delete_brushtask_torrent(self, brush_id, download_id):
+    def delete_brushtask_torrent(self, brush_id: int | None, download_id: str | None) -> None:
         """
         删除刷流种子记录
         """
