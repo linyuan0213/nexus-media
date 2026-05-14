@@ -41,6 +41,8 @@ class DouBan(metaclass=SingletonMeta):
         """
         根据豆瓣ID返回豆瓣详情，带休眠
         """
+        if not self.doubanapi:
+            return None
         log.info(f"【Douban】正在通过API查询豆瓣详情：{doubanid}")
         # 随机休眠
         if wait:
@@ -73,6 +75,8 @@ class DouBan(metaclass=SingletonMeta):
         给定名称和年份，查询一条豆瓣信息返回对应ID
         :param metainfo: 已进行识别过的媒体信息
         """
+        if not self.doubanapi:
+            return None
         if metainfo.year:
             year_range = [int(metainfo.year), int(metainfo.year) + 1, int(metainfo.year) - 1]
         else:
@@ -110,6 +114,8 @@ class DouBan(metaclass=SingletonMeta):
         查询附带演职人员的豆瓣信息
         :param metainfo: 已进行识别过的媒体信息
         """
+        if not self.doubanapi:
+            return None
         doubanid = self.__search_douban_id(metainfo)
         if not doubanid:
             return None
@@ -132,6 +138,8 @@ class DouBan(metaclass=SingletonMeta):
         """
         获取最新动态中的想看/在看/看过数据
         """
+        if not self.doubanweb:
+            return []
         if wait:
             time = round(random.uniform(1, 5), 1)
             log.info(f"【Douban】随机休眠：{time} 秒")
@@ -154,6 +162,8 @@ class DouBan(metaclass=SingletonMeta):
         """
         获取豆瓣想看列表数据
         """
+        if not self.doubanweb:
+            return []
         if wait:
             time = round(random.uniform(1, 5), 1)
             log.info(f"【Douban】随机休眠：{time} 秒")
@@ -172,6 +182,8 @@ class DouBan(metaclass=SingletonMeta):
         return web_infos
 
     def get_user_info(self, userid, wait=False):
+        if not self.doubanweb:
+            return None
         if wait:
             time = round(random.uniform(1, 5), 1)
             log.info(f"【Douban】随机休眠：{time} 秒")
@@ -182,6 +194,8 @@ class DouBan(metaclass=SingletonMeta):
         """
         根据关键字搜索豆瓣，返回可能的标题和年份信息
         """
+        if not self.doubanapi:
+            return []
         if not keyword:
             return []
         result = self.doubanapi.search(keyword)
@@ -228,6 +242,8 @@ class DouBan(metaclass=SingletonMeta):
         :param doubanid: 豆瓣ID
         :return: {title, year, intro, cover_url, rating{value}, episodes_count}
         """
+        if not self.doubanweb:
+            return {}
         log.info(f"【Douban】正在通过网页查询豆瓣详情：{doubanid}")
         web_info = self.doubanweb.detail(cookie=self.cookie, doubanid=doubanid)
         if not web_info:
