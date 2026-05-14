@@ -179,8 +179,8 @@ class DoubanWeb(metaclass=SingletonMeta):
             title = item.xpath("./title/text()")[0][2:]
             dtype = item.xpath("./title/text()")[0][:2]
             link = item.xpath("./link/text()")[0]
-            pubDate = item.xpath(".//pubDate/text()")[0]
-            date = datetime.datetime.strptime(pubDate, "%a, %d %b %Y %H:%M:%S %Z")
+            pub_date = item.xpath(".//pubDate/text()")[0]
+            date = datetime.datetime.strptime(pub_date, "%a, %d %b %Y %H:%M:%S %Z")
             new_date = date.strftime("%Y-%m-%d")
 
             dtype_map = {"想看": "wish", "看过": "collect", "在看": "do"}

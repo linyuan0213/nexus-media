@@ -20,13 +20,13 @@ class TestRequestUtilsHeaders:
         """测试 get_res 方法在使用 session 时传递 headers"""
         headers = {"authorization": "Bearer test_token_123"}
 
-        with patch("app.utils.http_utils.requests.Session") as MockSession:
+        with patch("app.utils.http_utils.requests.Session") as mock_session_cls:
             mock_session = MagicMock()
             mock_response = MagicMock()
             mock_response.text = '{"code": 200}'
             mock_response.status_code = 200
             mock_session.get.return_value = mock_response
-            MockSession.return_value = mock_session
+            mock_session_cls.return_value = mock_session
 
             # 创建 RequestUtils 实例（会使用共享 session）
             utils = RequestUtils(headers=headers)
@@ -42,13 +42,13 @@ class TestRequestUtilsHeaders:
         """测试 post_res 方法在使用 session 时传递 headers"""
         headers = {"authorization": "Bearer test_token_456"}
 
-        with patch("app.utils.http_utils.requests.Session") as MockSession:
+        with patch("app.utils.http_utils.requests.Session") as mock_session_cls:
             mock_session = MagicMock()
             mock_response = MagicMock()
             mock_response.text = '{"code": 200}'
             mock_response.status_code = 200
             mock_session.post.return_value = mock_response
-            MockSession.return_value = mock_session
+            mock_session_cls.return_value = mock_session
 
             # 创建 RequestUtils 实例（会使用共享 session）
             utils = RequestUtils(headers=headers)
@@ -64,13 +64,13 @@ class TestRequestUtilsHeaders:
         """测试 get 方法在使用 session 时传递 headers"""
         headers = {"authorization": "Bearer test_token_789"}
 
-        with patch("app.utils.http_utils.requests.Session") as MockSession:
+        with patch("app.utils.http_utils.requests.Session") as mock_session_cls:
             mock_session = MagicMock()
             mock_response = MagicMock()
             mock_response.text = '{"code": 200}'
             mock_response.status_code = 200
             mock_session.get.return_value = mock_response
-            MockSession.return_value = mock_session
+            mock_session_cls.return_value = mock_session
 
             # 创建 RequestUtils 实例（会使用共享 session）
             utils = RequestUtils(headers=headers)
@@ -86,13 +86,13 @@ class TestRequestUtilsHeaders:
         """测试 post 方法在使用 session 时传递 headers"""
         headers = {"authorization": "Bearer test_token_abc"}
 
-        with patch("app.utils.http_utils.requests.Session") as MockSession:
+        with patch("app.utils.http_utils.requests.Session") as mock_session_cls:
             mock_session = MagicMock()
             mock_response = MagicMock()
             mock_response.text = '{"code": 200}'
             mock_response.status_code = 200
             mock_session.post.return_value = mock_response
-            MockSession.return_value = mock_session
+            mock_session_cls.return_value = mock_session
 
             # 创建 RequestUtils 实例（会使用共享 session）
             utils = RequestUtils(headers=headers)

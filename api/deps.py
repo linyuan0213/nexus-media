@@ -5,7 +5,7 @@ FastAPI 依赖注入
 """
 
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -21,6 +21,7 @@ _F = TypeVar("_F", bound=Callable[..., Any])
 
 # OAuth2 / Bearer 方案
 bearer_scheme = HTTPBearer(auto_error=False)
+bearer_scheme_dependency = Depends(bearer_scheme)
 
 
 def _extract_user_from_session(request: Request) -> str | None:
@@ -36,8 +37,8 @@ def _extract_user_from_session(request: Request) -> str | None:
     # 通过 RBAC Service 查询用户名
     try:
         user = rbac_service.get_user_by_id(user_id)
-        if user and user.STATUS == 1:
-            return user.USERNAME
+        if user is not None and getattr(user, "STATUS", 0) == 1:
+            return cast(str, user.USERNAME)
     except Exception:
         pass
     return None
@@ -99,16 +100,16 @@ def _extract_user_from_api_key(auth_header: str | None, query_key: str | None) -
     permissions = []
     is_superadmin = False
     level = 0
-    username = "api_key"
-    nickname = api_key.name
+    username: str = "api_key"
+    nickname = cast(str, api_key.name)
     created_by = api_key.created_by or 0
 
     if created_by:
         try:
             user = rbac_service.get_user_by_id(created_by)
-            if user:
-                username = user.USERNAME or username
-                nickname = api_key.name
+            if user is not None:
+                username = cast(str, getattr(user, "USERNAME", username) or username)
+                nickname = cast(str, api_key.name)
                 level = getattr(user, "LEVEL", 0) or 0
                 is_superadmin = getattr(user, "IS_SUPERADMIN", 0) == 1
                 try:
@@ -153,7 +154,7 @@ def _extract_user_ctx_from_session(request: Request) -> UserContext | None:
         return None
     try:
         user = rbac_service.get_user_by_id(user_id)
-        if not user or user.STATUS != 1:
+        if user is None or getattr(user, "STATUS", 0) != 1:
             return None
 
         # 获取权限
@@ -180,7 +181,7 @@ def _extract_user_ctx_from_session(request: Request) -> UserContext | None:
 
 def get_current_user(
     request: Request,
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    credentials: HTTPAuthorizationCredentials | None = bearer_scheme_dependency,
 ) -> UserContext:
     """
     统一认证依赖：优先 JWT，兼容 Session、旧 Token(Bearer)、API Key。
@@ -218,7 +219,7 @@ def get_current_user(
 
 def get_current_user_optional(
     request: Request,
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    credentials: HTTPAuthorizationCredentials | None = bearer_scheme_dependency,
 ) -> UserContext | None:
     """
     可选认证：未登录返回 None，不抛异常。
@@ -229,13 +230,16 @@ def get_current_user_optional(
         return None
 
 
+current_user_dependency = Depends(get_current_user)
+
+
 def require_permission(permission: str):
     """
     权限检查装饰器工厂
     用法: user = Depends(require_permission("download:read"))
     """
 
-    def checker(user: UserContext = Depends(get_current_user)) -> UserContext:
+    def checker(user: UserContext = current_user_dependency) -> UserContext:
         if permission not in user.permissions and not user.is_superadmin:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"权限不足: {permission}")
         return user
@@ -249,7 +253,7 @@ def require_any_permission(*permissions: str):
     用法: user = Depends(require_any_permission("download:view", "download:manage"))
     """
 
-    def checker(user: UserContext = Depends(get_current_user)) -> UserContext:
+    def checker(user: UserContext = current_user_dependency) -> UserContext:
         if user.is_superadmin:
             return user
         if any(p in user.permissions for p in permissions):
@@ -267,7 +271,7 @@ def require_all_permissions(*permissions: str):
     用法: user = Depends(require_all_permissions("user:view", "user:update"))
     """
 
-    def checker(user: UserContext = Depends(get_current_user)) -> UserContext:
+    def checker(user: UserContext = current_user_dependency) -> UserContext:
         if user.is_superadmin:
             return user
         missing = [p for p in permissions if p not in user.permissions]

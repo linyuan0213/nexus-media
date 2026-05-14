@@ -79,15 +79,15 @@ class Indexer(metaclass=SingletonMeta):
         return [{"id": index.id, "name": index.name} for index in self.get_indexers(check=True)]
 
     def get_indexer_hash_dict(self):
-        IndexerDict = {}
+        indexer_dict = {}
         for item in self.get_indexers() or []:
-            IndexerDict[StringUtils.md5_hash(item.name)] = {
+            indexer_dict[StringUtils.md5_hash(item.name)] = {
                 "id": item.id,
                 "name": item.name,
                 "public": item.public,
                 "builtin": item.builtin,
             }
-        return IndexerDict
+        return indexer_dict
 
     def get_user_indexer_names(self):
         return [indexer.name for indexer in self.get_indexers(check=True)]

@@ -1,3 +1,4 @@
+from app.helper.image_proxy_helper import ImageProxyHelper
 from app.media import Bangumi, DouBan, MediaService
 from app.mediaserver import MediaServer
 from app.services.downloader_core import DownloaderCore as Downloader
@@ -30,83 +31,83 @@ class MediaRecommendationService:
         """
         根据 type/subtype 获取推荐列表
         """
-        Type = data.get("type")
-        SubType = data.get("subtype")
-        CurrentPage = int(data.get("page", 1))
+        type_ = data.get("type")
+        subtype = data.get("subtype")
+        current_page = int(data.get("page", 1))
         res_list = []
 
-        if Type in ["MOV", "TV", "ALL"]:
-            if SubType == "hm":
-                res_list = self._media.get_tmdb_hot_movies(CurrentPage)
-            elif SubType == "ht":
-                res_list = self._media.get_tmdb_hot_tvs(CurrentPage)
-            elif SubType == "nm":
-                res_list = self._media.get_tmdb_new_movies(CurrentPage)
-            elif SubType == "nt":
-                res_list = self._media.get_tmdb_new_tvs(CurrentPage)
-            elif SubType == "dbom":
-                res_list = self._douban.get_douban_online_movie(CurrentPage)
-            elif SubType == "dbhm":
-                res_list = self._douban.get_douban_hot_movie(CurrentPage)
-            elif SubType == "dbht":
-                res_list = self._douban.get_douban_hot_tv(CurrentPage)
-            elif SubType == "dbdh":
-                res_list = self._douban.get_douban_hot_anime(CurrentPage)
-            elif SubType == "dbnm":
-                res_list = self._douban.get_douban_new_movie(CurrentPage)
-            elif SubType == "dbtop":
-                res_list = self._douban.get_douban_top250_movie(CurrentPage)
-            elif SubType == "dbzy":
-                res_list = self._douban.get_douban_hot_show(CurrentPage)
-            elif SubType == "dbct":
-                res_list = self._douban.get_douban_chinese_weekly_tv(CurrentPage)
-            elif SubType == "dbgt":
-                res_list = self._douban.get_douban_weekly_tv_global(CurrentPage)
-            elif SubType == "bangumi":
-                Week = data.get("week")
-                res_list = self._bangumi.get_bangumi_calendar(page=CurrentPage, week=Week)
-            elif SubType == "sim":
-                TmdbId = data.get("tmdbid")
+        if type_ in ["MOV", "TV", "ALL"]:
+            if subtype == "hm":
+                res_list = self._media.get_tmdb_hot_movies(current_page)
+            elif subtype == "ht":
+                res_list = self._media.get_tmdb_hot_tvs(current_page)
+            elif subtype == "nm":
+                res_list = self._media.get_tmdb_new_movies(current_page)
+            elif subtype == "nt":
+                res_list = self._media.get_tmdb_new_tvs(current_page)
+            elif subtype == "dbom":
+                res_list = self._douban.get_douban_online_movie(current_page)
+            elif subtype == "dbhm":
+                res_list = self._douban.get_douban_hot_movie(current_page)
+            elif subtype == "dbht":
+                res_list = self._douban.get_douban_hot_tv(current_page)
+            elif subtype == "dbdh":
+                res_list = self._douban.get_douban_hot_anime(current_page)
+            elif subtype == "dbnm":
+                res_list = self._douban.get_douban_new_movie(current_page)
+            elif subtype == "dbtop":
+                res_list = self._douban.get_douban_top250_movie(current_page)
+            elif subtype == "dbzy":
+                res_list = self._douban.get_douban_hot_show(current_page)
+            elif subtype == "dbct":
+                res_list = self._douban.get_douban_chinese_weekly_tv(current_page)
+            elif subtype == "dbgt":
+                res_list = self._douban.get_douban_weekly_tv_global(current_page)
+            elif subtype == "bangumi":
+                week = data.get("week")
+                res_list = self._bangumi.get_bangumi_calendar(page=current_page, week=week)
+            elif subtype == "sim":
+                tmdb_id = data.get("tmdbid")
                 from app.services.media_service import MediaInfoService
 
-                res_list = MediaInfoService().get_media_similar(tmdbid=TmdbId, mtype_str=Type, page=CurrentPage) or []
-            elif SubType == "more":
-                TmdbId = data.get("tmdbid")
+                res_list = MediaInfoService().get_media_similar(tmdbid=tmdb_id, mtype_str=type_, page=current_page) or []
+            elif subtype == "more":
+                tmdb_id = data.get("tmdbid")
                 from app.services.media_service import MediaInfoService
 
                 res_list = (
-                    MediaInfoService().get_media_recommendations(tmdbid=TmdbId, mtype_str=Type, page=CurrentPage) or []
+                    MediaInfoService().get_media_recommendations(tmdbid=tmdb_id, mtype_str=type_, page=current_page) or []
                 )
-            elif SubType == "person":
-                PersonId = data.get("personid")
+            elif subtype == "person":
+                person_id = data.get("personid")
                 from app.services.media_service import MediaInfoService
 
                 res_list = (
                     MediaInfoService().get_person_medias(
-                        personid=PersonId, mtype_str=None if Type == "ALL" else Type, page=CurrentPage
+                        personid=person_id, mtype_str=None if type_ == "ALL" else type_, page=current_page
                     )
                     or []
                 )
-        elif Type == "SEARCH":
-            Keyword = data.get("keyword")
-            Source = data.get("source")
-            medias = WebUtils.search_media_infos(keyword=Keyword, source=Source, page=CurrentPage)
+        elif type_ == "SEARCH":
+            keyword = data.get("keyword")
+            source = data.get("source")
+            medias = WebUtils.search_media_infos(keyword=keyword, source=source, page=current_page)
             res_list = [media.to_dict() for media in medias]
-        elif Type == "DOWNLOADED":
-            Items = Downloader().get_download_history(page=CurrentPage)
-            res_list = self._convert_downloaded(Items)
-        elif Type == "TRENDING":
-            res_list = self._media.get_tmdb_trending_all_week(page=CurrentPage)
-        elif Type == "DISCOVER":
-            mtype = MediaType.MOVIE if SubType in MovieTypes else MediaType.TV
+        elif type_ == "DOWNLOADED":
+            items = Downloader().get_download_history(page=current_page)
+            res_list = self._convert_downloaded(items)
+        elif type_ == "TRENDING":
+            res_list = self._media.get_tmdb_trending_all_week(page=current_page)
+        elif type_ == "DISCOVER":
+            mtype = MediaType.MOVIE if subtype in MovieTypes else MediaType.TV
             params = data.get("params") or {}
-            res_list = self._media.get_tmdb_discover(mtype=mtype, page=CurrentPage, params=params)
-        elif Type == "DOUBANTAG":
-            mtype = MediaType.MOVIE if SubType in MovieTypes else MediaType.TV
+            res_list = self._media.get_tmdb_discover(mtype=mtype, page=current_page, params=params)
+        elif type_ == "DOUBANTAG":
+            mtype = MediaType.MOVIE if subtype in MovieTypes else MediaType.TV
             params = data.get("params") or {}
             sort = params.get("sort") or "R"
             tags = params.get("tags") or ""
-            res_list = self._douban.get_douban_disover(mtype=mtype, sort=sort, tags=tags, page=CurrentPage)
+            res_list = self._douban.get_douban_disover(mtype=mtype, sort=sort, tags=tags, page=current_page)
 
         for res in res_list:
             fav, rssid, _ = check_media_exists(
@@ -120,8 +121,6 @@ class MediaRecommendationService:
             res.update({"fav": fav, "rssid": rssid})
 
         try:
-            from app.helper.image_proxy_helper import ImageProxyHelper
-
             for res in res_list:
                 if res.get("image"):
                     res["image"] = ImageProxyHelper.get_proxy_image_url(res["image"], use_proxy=True)

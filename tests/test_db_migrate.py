@@ -64,8 +64,8 @@ class TestExportImport:
 
     def test_export_import_roundtrip(self, sqlite_engine):
         # 插入测试数据
-        Session = sessionmaker(bind=sqlite_engine)
-        session = Session()
+        session_factory = sessionmaker(bind=sqlite_engine)
+        session = session_factory()
         group = CONFIGFILTERGROUP(ID=1, GROUP_NAME="测试组", IS_DEFAULT="N", NOTE="测试备注")
         session.add(group)
         session.commit()
@@ -86,8 +86,8 @@ class TestExportImport:
         import_database(target_engine, data)
 
         # 验证
-        Session2 = sessionmaker(bind=target_engine)
-        session2 = Session2()
+        session_factory2 = sessionmaker(bind=target_engine)
+        session2 = session_factory2()
         result = session2.query(CONFIGFILTERGROUP).filter_by(ID=1).first()
         assert result is not None
         assert result.GROUP_NAME == "测试组"
@@ -95,8 +95,8 @@ class TestExportImport:
         session2.close()
 
     def test_export_import_with_exclude(self, sqlite_engine):
-        Session = sessionmaker(bind=sqlite_engine)
-        session = Session()
+        session_factory = sessionmaker(bind=sqlite_engine)
+        session = session_factory()
         session.add(CONFIGFILTERGROUP(ID=1, GROUP_NAME="G1", IS_DEFAULT="N"))
         session.add(CUSTOMWORDS(ID=1, GROUP_ID=1, REPLACED="a", REPLACE="b"))
         session.commit()
@@ -107,8 +107,8 @@ class TestExportImport:
         assert "CUSTOM_WORDS" not in data["tables"]
 
     def test_export_import_file_roundtrip(self, sqlite_engine):
-        Session = sessionmaker(bind=sqlite_engine)
-        session = Session()
+        session_factory = sessionmaker(bind=sqlite_engine)
+        session = session_factory()
         session.add(CONFIGFILTERGROUP(ID=2, GROUP_NAME="文件测试", IS_DEFAULT="Y"))
         session.commit()
         session.close()
@@ -126,8 +126,8 @@ class TestExportImport:
             Base.metadata.create_all(target_engine)
             import_from_file(target_engine, filepath)
 
-            Session2 = sessionmaker(bind=target_engine)
-            session2 = Session2()
+            session_factory2 = sessionmaker(bind=target_engine)
+            session2 = session_factory2()
             result = session2.query(CONFIGFILTERGROUP).filter_by(ID=2).first()
             assert result.GROUP_NAME == "文件测试"
             session2.close()
@@ -135,8 +135,8 @@ class TestExportImport:
             os.unlink(filepath)
 
     def test_migrate_database(self, sqlite_engine):
-        Session = sessionmaker(bind=sqlite_engine)
-        session = Session()
+        session_factory = sessionmaker(bind=sqlite_engine)
+        session = session_factory()
         session.add(CONFIGFILTERGROUP(ID=3, GROUP_NAME="迁移测试", IS_DEFAULT="N"))
         session.commit()
         session.close()
@@ -146,8 +146,8 @@ class TestExportImport:
 
         migrate_database(sqlite_engine, target_engine)
 
-        Session2 = sessionmaker(bind=target_engine)
-        session2 = Session2()
+        session_factory2 = sessionmaker(bind=target_engine)
+        session2 = session_factory2()
         result = session2.query(CONFIGFILTERGROUP).filter_by(ID=3).first()
         assert result.GROUP_NAME == "迁移测试"
         session2.close()
@@ -159,8 +159,8 @@ class TestExportImport:
         from app.db.models import DOWNLOADHISTORY
 
         # 源库写入一条 ENCLOSURE 超长的记录
-        Session = sessionmaker(bind=sqlite_engine)
-        session = Session()
+        session_factory = sessionmaker(bind=sqlite_engine)
+        session = session_factory()
         long_enclosure = "magnet:?xt=urn:btih:" + "x" * 1000
         session.add(
             DOWNLOADHISTORY(
@@ -216,8 +216,8 @@ class TestExportImport:
 
         import_database(target_engine, data, clear_before_import=False)
 
-        Session2 = sessionmaker(bind=target_engine)
-        session2 = Session2()
+        session_factory2 = sessionmaker(bind=target_engine)
+        session2 = session_factory2()
         result = session2.execute(text("SELECT ENCLOSURE FROM DOWNLOAD_HISTORY WHERE ID = 1")).fetchone()
         assert result is not None
         assert len(result[0]) <= 50

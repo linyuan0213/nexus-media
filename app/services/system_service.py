@@ -651,14 +651,14 @@ class MessageCommandHandler:
     def _unidentification():
         from app.services.sync_service import SyncService
 
-        ItemIds = []
-        Records = FileTransfer().get_transfer_unknown_paths()
-        for rec in Records:
+        item_ids = []
+        records = FileTransfer().get_transfer_unknown_paths()
+        for rec in records:
             if not rec.PATH:
                 continue
-            ItemIds.append(rec.ID)
-        if len(ItemIds) > 0:
-            SyncService().re_identify_items(flag="unidentification", ids=ItemIds)
+            item_ids.append(rec.ID)
+        if len(item_ids) > 0:
+            SyncService().re_identify_items(flag="unidentification", ids=item_ids)
 
 
 def get_commands():
@@ -668,8 +668,8 @@ def get_commands():
 def get_rmt_modes():
     from app.core import ModuleConf
 
-    RmtModes = ModuleConf.RMT_MODES
-    return [{"value": value, "name": name.value} for value, name in RmtModes.items()]
+    rmt_modes = ModuleConf.RMT_MODES
+    return [{"value": value, "name": name.value} for value, name in rmt_modes.items()]
 
 
 def get_system_message(lst_time):

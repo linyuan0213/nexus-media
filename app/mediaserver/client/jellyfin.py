@@ -619,13 +619,13 @@ class Jellyfin(_IMediaClient):
         """
         解析Jellyfin报文
         """
-        eventItem = {
+        event_item = {
             "event": message.get("NotificationType", ""),
             "item_name": message.get("Name"),
             "user_name": message.get("NotificationUsername"),
             "play_url": f"/open?url={quote(self.get_play_url(message.get('Id')))}&type=jellyfin",
         }
-        return eventItem
+        return event_item
 
     def get_resume(self, num=12):
         """

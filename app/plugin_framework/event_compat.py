@@ -17,20 +17,20 @@ class EventManager(metaclass=SingletonMeta):
 
     def add_event_listener(self, etype: EventType, handler):
         try:
-            handlerList = self._handlers[etype.value]
+            handler_list = self._handlers[etype.value]
         except KeyError:
-            handlerList = []
-            self._handlers[etype.value] = handlerList
-        if handler not in handlerList:
-            handlerList.append(handler)
+            handler_list = []
+            self._handlers[etype.value] = handler_list
+        if handler not in handler_list:
+            handler_list.append(handler)
             log.debug(f"已注册事件：{etype.value} {handler}")
 
     def remove_event_listener(self, etype: EventType, handler):
         try:
-            handlerList = self._handlers[etype.value]
-            if handler in handlerList[:]:
-                handlerList.remove(handler)
-            if not handlerList:
+            handler_list = self._handlers[etype.value]
+            if handler in handler_list[:]:
+                handler_list.remove(handler)
+            if not handler_list:
                 del self._handlers[etype.value]
         except KeyError:
             pass
@@ -43,8 +43,8 @@ class EventManager(metaclass=SingletonMeta):
         log.debug(f"发送事件：{etype.value} - {event.event_data}")
 
         # 同步调用本地注册的 handlers
-        handlerList = self._handlers.get(etype.value, [])
-        for handler in handlerList:
+        handler_list = self._handlers.get(etype.value, [])
+        for handler in handler_list:
             try:
                 handler(event)
             except Exception as e:

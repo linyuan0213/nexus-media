@@ -256,10 +256,15 @@ def download(
     user: UserContext = Depends(require_permission("download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
+    if req.id is None:
+        return fail(msg="缺少下载ID")
+
+    dl_id = req.id
+
     def _do_download():
         try:
             svc.download_from_search_results(
-                dl_id=req.id, dl_dir=req.dir, dl_setting=req.setting, user_name=user.nickname or user.username
+                dl_id=dl_id, dl_dir=req.dir, dl_setting=req.setting, user_name=user.nickname or user.username
             )
         except Exception as e:
             ExceptionUtils.exception_traceback(e)

@@ -36,41 +36,41 @@ class TransferHistoryService:
 
     def get_transfer_statistics(self, days=90) -> dict:
         """获取转移统计"""
-        Labels = []
-        MovieNums = []
-        TvNums = []
-        AnimeNums = []
+        labels = []
+        movie_nums = []
+        tv_nums = []
+        anime_nums = []
         for statistic in self._filetransfer.get_transfer_statistics(days):
             if not statistic[2]:
                 continue
-            if statistic[1] not in Labels:
-                Labels.append(statistic[1])
+            if statistic[1] not in labels:
+                labels.append(statistic[1])
             if statistic[0] == "电影":
-                MovieNums.append(statistic[2])
-                TvNums.append(0)
-                AnimeNums.append(0)
+                movie_nums.append(statistic[2])
+                tv_nums.append(0)
+                anime_nums.append(0)
             elif statistic[0] == "电视剧":
-                TvNums.append(statistic[2])
-                MovieNums.append(0)
-                AnimeNums.append(0)
+                tv_nums.append(statistic[2])
+                movie_nums.append(0)
+                anime_nums.append(0)
             else:
-                AnimeNums.append(statistic[2])
-                MovieNums.append(0)
-                TvNums.append(0)
-        return {"Labels": Labels, "MovieNums": MovieNums, "TvNums": TvNums, "AnimeNums": AnimeNums}
+                anime_nums.append(statistic[2])
+                movie_nums.append(0)
+                tv_nums.append(0)
+        return {"Labels": labels, "MovieNums": movie_nums, "TvNums": tv_nums, "AnimeNums": anime_nums}
 
     def get_unknown_list(self) -> list[dict]:
         """获取未识别记录列表"""
-        Items = []
-        Records = self._filetransfer.get_transfer_unknown_paths()
-        for rec in Records:
+        items = []
+        records = self._filetransfer.get_transfer_unknown_paths()
+        for rec in records:
             if not rec.PATH:
                 continue
             path = rec.PATH.replace("\\", "/") if rec.PATH else ""
             path_to = rec.DEST.replace("\\", "/") if rec.DEST else ""
             sync_mode = rec.MODE or ""
             rmt_mode = ModuleConf.get_dictenum_key(ModuleConf.RMT_MODES, sync_mode) if sync_mode else ""
-            Items.append(
+            items.append(
                 {
                     "id": rec.ID,
                     "path": path,
@@ -80,7 +80,7 @@ class TransferHistoryService:
                     "rmt_mode": rmt_mode,
                 }
             )
-        return Items
+        return items
 
     def get_unknown_list_by_page(self, search_str, page, page_num) -> UnknownListPageDTO:
         """分页查询未识别记录"""
@@ -90,16 +90,16 @@ class TransferHistoryService:
             page = 1
         else:
             page = int(page)
-        total_count, Records = self._filetransfer.get_transfer_unknown_paths_by_page(search_str, page, page_num)
-        Items = []
-        for rec in Records:
+        total_count, records = self._filetransfer.get_transfer_unknown_paths_by_page(search_str, page, page_num)
+        items = []
+        for rec in records:
             if not rec.PATH:
                 continue
             path = rec.PATH.replace("\\", "/") if rec.PATH else ""
             path_to = rec.DEST.replace("\\", "/") if rec.DEST else ""
             sync_mode = rec.MODE or ""
             rmt_mode = ModuleConf.get_dictenum_key(ModuleConf.RMT_MODES, sync_mode) if sync_mode else ""
-            Items.append(
+            items.append(
                 {
                     "id": rec.ID,
                     "path": path,
@@ -111,22 +111,22 @@ class TransferHistoryService:
             )
         total_page = floor(total_count / page_num) + 1
         return UnknownListPageDTO(
-            total=total_count, items=Items, total_page=total_page, page_num=page_num, current_page=page
+            total=total_count, items=items, total_page=total_page, page_num=page_num, current_page=page
         )
 
     def re_identify_unknown(self) -> int:
         """重新识别所有未识别记录"""
         from app.services.sync_service import SyncService
 
-        ItemIds = []
-        Records = self._filetransfer.get_transfer_unknown_paths()
-        for rec in Records:
+        item_ids = []
+        records = self._filetransfer.get_transfer_unknown_paths()
+        for rec in records:
             if not rec.PATH:
                 continue
-            ItemIds.append(rec.ID)
-        if ItemIds:
-            SyncService().re_identify_items(flag="unidentification", ids=ItemIds)
-        return len(ItemIds)
+            item_ids.append(rec.ID)
+        if item_ids:
+            SyncService().re_identify_items(flag="unidentification", ids=item_ids)
+        return len(item_ids)
 
     def clear_history(self):
         """清空识别记录"""

@@ -346,8 +346,8 @@ class TestRssSubscriptionService:
         )
 
     def test_remove_rss_media_tv(self, svc):
-        with patch("app.services.rss_service.meta_info") as MockMeta:
-            MockMeta.return_value.get_name.return_value = "Test Tv"
+        with patch("app.services.rss_service.meta_info") as mock_meta:
+            mock_meta.return_value.get_name.return_value = "Test Tv"
             svc.remove_rss_media("Test TV", "TV", "2024", 1, "1", "123")
             svc._subscribe.delete_subscribe.assert_called_once_with(
                 mtype=MediaType.TV, title="Test Tv", season=1, rssid="1", tmdbid="123"
@@ -435,19 +435,19 @@ class TestRssSubscriptionService:
         svc._rss.delete_rss_history.assert_called_once_with(rssid="1")
 
     def test_refresh_rss_movie(self, svc):
-        with patch("app.helper.ThreadHelper") as MockTh:
+        with patch("app.helper.ThreadHelper") as mock_th:
             svc.refresh_rss("MOV", "1")
-            MockTh().start_thread.assert_called_once()
+            mock_th().start_thread.assert_called_once()
 
     def test_refresh_rss_tv(self, svc):
-        with patch("app.helper.ThreadHelper") as MockTh:
+        with patch("app.helper.ThreadHelper") as mock_th:
             svc.refresh_rss("TV", "1")
-            MockTh().start_thread.assert_called_once()
+            mock_th().start_thread.assert_called_once()
 
     def test_truncate_rss_history(self, svc):
-        with patch("app.helper.RssHelper") as MockHelper:
+        with patch("app.helper.RssHelper") as mock_helper:
             mock_inst = MagicMock()
-            MockHelper.return_value = mock_inst
+            mock_helper.return_value = mock_inst
             svc.truncate_rss_history()
             mock_inst.truncate_rss_history.assert_called_once()
             svc._subscribe.truncate_rss_episodes.assert_called_once()
@@ -458,10 +458,10 @@ class TestRssSubscriptionService:
             "1": {"tmdbid": "456", "id": "1", "season": "S01", "name": "Test"}
         }
         svc._rss_checker.get_userrss_mediainfos.return_value = []
-        with patch("app.services.media_service.MediaInfoService") as MockMedia:
+        with patch("app.services.media_service.MediaInfoService") as mock_media:
             mock_media_svc = MagicMock()
             mock_media_svc.get_movie_calendar.return_value = {"id": "123", "title": "Movie"}
             mock_media_svc.get_tv_calendar.return_value = [{"id": "456", "title": "TV"}]
-            MockMedia.return_value = mock_media_svc
+            mock_media.return_value = mock_media_svc
             result = svc.get_ical_events()
             assert len(result) == 2

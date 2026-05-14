@@ -67,9 +67,9 @@ class TestSingletonMeta:
         sys.path.insert(0, base_dir)
         spec.loader.exec_module(config_mod)
         sys.path.pop(0)
-        SingletonMeta = config_mod.SingletonMeta
+        singleton_meta = config_mod.SingletonMeta
 
-        class A(metaclass=SingletonMeta):
+        class A(metaclass=singleton_meta):
             pass
 
         a1 = A()

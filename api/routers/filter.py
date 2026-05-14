@@ -200,5 +200,5 @@ def get_filterrules(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
-    RuleGroups, Init_RuleGroups = Filter().get_filterrules(_get_script_path())
-    return success(data=RuleGroups)
+    rule_groups, init_rule_groups = Filter().get_filterrules(_get_script_path())
+    return success(data=rule_groups)

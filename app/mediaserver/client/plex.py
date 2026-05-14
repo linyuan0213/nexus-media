@@ -143,20 +143,20 @@ class Plex(_IMediaClient):
         if not self._plex:
             return {}
         sections = self._plex.library.sections()
-        MovieCount = SeriesCount = SongCount = EpisodeCount = 0
+        movie_count = series_count = song_count = episode_count = 0
         for sec in sections:
             if sec.type == "movie":
-                MovieCount += sec.totalSize
+                movie_count += sec.totalSize
             if sec.type == "show":
-                SeriesCount += sec.totalSize
-                EpisodeCount += sec.totalViewSize(libtype="episode")
+                series_count += sec.totalSize
+                episode_count += sec.totalViewSize(libtype="episode")
             if sec.type == "artist":
-                SongCount += sec.totalSize
+                song_count += sec.totalSize
         return {
-            "MovieCount": MovieCount,
-            "SeriesCount": SeriesCount,
-            "SongCount": SongCount,
-            "EpisodeCount": EpisodeCount,
+            "MovieCount": movie_count,
+            "SeriesCount": series_count,
+            "SongCount": song_count,
+            "EpisodeCount": episode_count,
         }
 
     def get_movies(self, title, year=None):
@@ -506,48 +506,47 @@ class Plex(_IMediaClient):
                    MOV:猪猪侠大冒险(2001)
         overview   剧情描述
         """
-        eventItem = {"event": message.get("event", "")}
+        event_item = {"event": message.get("event", "")}
         if message.get("Metadata"):
             if message.get("Metadata", {}).get("type") == "episode":
-                eventItem["item_type"] = "TV"
-                eventItem["item_name"] = "{} {}{} {}".format(
+                event_item["item_type"] = "TV"
+                event_item["item_name"] = "{} {}{} {}".format(
                     message.get("Metadata", {}).get("grandparentTitle"),
                     "S" + str(message.get("Metadata", {}).get("parentIndex")),
                     "E" + str(message.get("Metadata", {}).get("index")),
                     message.get("Metadata", {}).get("title"),
                 )
-                eventItem["item_id"] = message.get("Metadata", {}).get("ratingKey")
-                eventItem["season_id"] = message.get("Metadata", {}).get("parentIndex")
-                eventItem["episode_id"] = message.get("Metadata", {}).get("index")
+                event_item["item_id"] = message.get("Metadata", {}).get("ratingKey")
+                event_item["season_id"] = message.get("Metadata", {}).get("parentIndex")
+                event_item["episode_id"] = message.get("Metadata", {}).get("index")
 
                 if message.get("Metadata", {}).get("summary") and len(message.get("Metadata", {}).get("summary")) > 100:
-                    eventItem["overview"] = str(message.get("Metadata", {}).get("summary"))[:100] + "..."
+                    event_item["overview"] = str(message.get("Metadata", {}).get("summary"))[:100] + "..."
                 else:
-                    eventItem["overview"] = message.get("Metadata", {}).get("summary")
+                    event_item["overview"] = message.get("Metadata", {}).get("summary")
             else:
-                eventItem["item_type"] = "MOV" if message.get("Metadata", {}).get("type") == "movie" else "SHOW"
-                eventItem["item_name"] = "{} {}".format(
+                event_item["item_type"] = "MOV" if message.get("Metadata", {}).get("type") == "movie" else "SHOW"
+                event_item["item_name"] = "{} {}".format(
                     message.get("Metadata", {}).get("title"),
                     "(" + str(message.get("Metadata", {}).get("year")) + ")",
                 )
-                eventItem["item_id"] = message.get("Metadata", {}).get("ratingKey")
+                event_item["item_id"] = message.get("Metadata", {}).get("ratingKey")
                 if len(message.get("Metadata", {}).get("summary")) > 100:
-                    eventItem["overview"] = str(message.get("Metadata", {}).get("summary"))[:100] + "..."
+                    event_item["overview"] = str(message.get("Metadata", {}).get("summary"))[:100] + "..."
                 else:
-                    eventItem["overview"] = message.get("Metadata", {}).get("summary")
-        if eventItem.get("event") == "library.new":
-            eventItem["play_url"] = (
+                    event_item["overview"] = message.get("Metadata", {}).get("summary")
+        if event_item.get("event") == "library.new":
+            event_item["play_url"] = (
                 f"/open?url={quote(self.get_play_url(message.get('Metadata', {}).get('key')))}&type=plex"
             )
         if message.get("Player"):
-            eventItem["ip"] = message.get("Player").get("publicAddress")
-            eventItem["client"] = message.get("Player").get("title")
-            # 这里给个空,防止拼消息的时候出现None
-            eventItem["device_name"] = " "
+            event_item["ip"] = message.get("Player").get("publicAddress")
+            event_item["client"] = message.get("Player").get("title")
+            event_item["device_name"] = " "
         if message.get("Account"):
-            eventItem["user_name"] = message.get("Account").get("title")
+            event_item["user_name"] = message.get("Account").get("title")
 
-        return eventItem
+        return event_item
 
     def get_resume(self, num=12):
         """

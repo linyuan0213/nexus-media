@@ -203,7 +203,7 @@ def get_users(
     current_user: UserContext = Depends(require_any_permission("user:view", "user:update")),
 ):
     users_raw, _ = rbac_service.get_users(page=1, page_size=1000)
-    Users = []
+    users = []
     for user in users_raw:
         d = user.to_dict()
         last_login = None
@@ -211,7 +211,7 @@ def get_users(
             last_login = user.last_login_at.strftime("%Y-%m-%d %H:%M")
 
         roles = d.get("roles", [])
-        Users.append(
+        users.append(
             {
                 "id": d["id"],
                 "name": d["username"],
@@ -225,7 +225,7 @@ def get_users(
                 "pris": [role.get("role_name") for role in roles] if roles else ["普通用户"],
             }
         )
-    return success(data=Users)
+    return success(data=users)
 
 
 def _is_admin(user: UserContext) -> bool:

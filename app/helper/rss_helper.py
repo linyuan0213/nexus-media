@@ -47,8 +47,8 @@ class RssHelper:
             try:
                 # 解析XML
                 dom_tree = xml.dom.minidom.parseString(ret_xml)
-                rootNode = dom_tree.documentElement
-                items = rootNode.getElementsByTagName("item")
+                root_node = dom_tree.documentElement
+                items = root_node.getElementsByTagName("item")
                 for item in items:
                     try:
                         # 标题

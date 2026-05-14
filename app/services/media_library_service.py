@@ -83,12 +83,12 @@ class MediaLibraryService:
         space_result = SystemUtils.calculate_space_usage(all_paths)
         if not isinstance(space_result, tuple):
             return LibrarySpaceDTO()
-        TotalSpace, FreeSpace = space_result
-        if not TotalSpace:
+        total_space, free_space = space_result
+        if not total_space:
             return LibrarySpaceDTO()
 
-        UsedSpace = TotalSpace - FreeSpace
-        UsedPercent = "%0.1f" % ((UsedSpace / TotalSpace) * 100)
+        used_space = total_space - free_space
+        used_percent = "%0.1f" % ((used_space / total_space) * 100)
 
         def fmt_space(val):
             if val > 1024:
@@ -96,8 +96,8 @@ class MediaLibraryService:
             return f"{round(val, 2):,} GB"
 
         return LibrarySpaceDTO(
-            used_percent=UsedPercent,
-            free_space=fmt_space(FreeSpace),
-            used_space=fmt_space(UsedSpace),
-            total_space=fmt_space(TotalSpace),
+            used_percent=used_percent,
+            free_space=fmt_space(free_space),
+            used_space=fmt_space(used_space),
+            total_space=fmt_space(total_space),
         )

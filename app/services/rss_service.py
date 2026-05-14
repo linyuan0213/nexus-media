@@ -258,7 +258,7 @@ class RssSubscriptionService:
 
     def get_tv_rss_items(self) -> list[dict]:
         """获取电视剧订阅项目列表（含去重）"""
-        RssTvItems = [
+        rss_tv_items = [
             {
                 "id": tv.get("tmdbid"),
                 "rssid": tv.get("id"),
@@ -268,19 +268,17 @@ class RssSubscriptionService:
             for tv in self._subscribe.get_subscribe_tvs().values()
             if tv.get("season") and tv.get("tmdbid")
         ]
-        # 自定义订阅
         if not self._rss_checker:
             self._rss_checker = RssTaskService()
-        RssTvItems += self._rss_checker.get_userrss_mediainfos()
-        # 去重
-        Uniques = set()
-        UniqueTvItems = []
-        for item in RssTvItems:
+        rss_tv_items += self._rss_checker.get_userrss_mediainfos()
+        uniques = set()
+        unique_tv_items = []
+        for item in rss_tv_items:
             unique = f"{item.get('id')}_{item.get('season')}"
-            if unique not in Uniques:
-                Uniques.add(unique)
-                UniqueTvItems.append(item)
-        return UniqueTvItems
+            if unique not in uniques:
+                uniques.add(unique)
+                unique_tv_items.append(item)
+        return unique_tv_items
 
     def get_movie_rss_list(self) -> dict:
         return self._subscribe.get_subscribe_movies()
@@ -322,11 +320,11 @@ class RssSubscriptionService:
         from app.services.media_service import MediaInfoService
 
         media_service = MediaInfoService()
-        Events = []
+        events = []
         for movie in self.get_movie_rss_items():
             info = media_service.get_movie_calendar(tid=movie.get("id"), rssid=movie.get("rssid"))
             if info and info.get("id"):
-                Events.append(info)
+                events.append(info)
         for tv in self.get_tv_rss_items():
             infos = media_service.get_tv_calendar(
                 tid=tv.get("id"), season=tv.get("season"), name=tv.get("name"), rssid=tv.get("rssid")
@@ -334,8 +332,8 @@ class RssSubscriptionService:
             if infos and isinstance(infos, list):
                 for info in infos:
                     if info.get("id"):
-                        Events.append(info)
-        return Events
+                        events.append(info)
+        return events
 
 
 class RssParserEngine:

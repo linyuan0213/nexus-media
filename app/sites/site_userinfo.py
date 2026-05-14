@@ -215,8 +215,8 @@ class SiteUserInfo(metaclass=SingletonMeta):
         string_list = []
 
         # 增量数据
-        incUploads = 0
-        incDownloads = 0
+        inc_uploads = 0
+        inc_downloads = 0
         _, _, site, upload, download = SiteUserInfo().get_pt_site_statistics_history(2)
 
         # 按照上传降序排序
@@ -228,8 +228,8 @@ class SiteUserInfo(metaclass=SingletonMeta):
             upload = int(data[1])
             download = int(data[2])
             if upload > 0 or download > 0:
-                incUploads += int(upload)
-                incDownloads += int(download)
+                inc_uploads += int(upload)
+                inc_downloads += int(download)
                 string_list.append(
                     f"【{site}】\n"
                     f"上传量：{StringUtils.str_filesize(upload)}\n"

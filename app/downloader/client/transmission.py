@@ -276,41 +276,41 @@ class Transmission(_IDownloadClient):
         else:
             labels = []
         if upload_limit:
-            uploadLimited = True
-            uploadLimit = int(upload_limit)
+            upload_limited = True
+            upload_limit_val = int(upload_limit)
         else:
-            uploadLimited = False
-            uploadLimit = 0
+            upload_limited = False
+            upload_limit_val = 0
         if download_limit:
-            downloadLimited = True
-            downloadLimit = int(download_limit)
+            download_limited = True
+            download_limit_val = int(download_limit)
         else:
-            downloadLimited = False
-            downloadLimit = 0
+            download_limited = False
+            download_limit_val = 0
         if ratio_limit:
-            seedRatioMode = 1
-            seedRatioLimit = round(float(ratio_limit), 2)
+            seed_ratio_mode = 1
+            seed_ratio_limit = round(float(ratio_limit), 2)
         else:
-            seedRatioMode = 2
-            seedRatioLimit = 0
+            seed_ratio_mode = 2
+            seed_ratio_limit = 0
         if seeding_time_limit:
-            seedIdleMode = 1
-            seedIdleLimit = int(seeding_time_limit)
+            seed_idle_mode = 1
+            seed_idle_limit = int(seeding_time_limit)
         else:
-            seedIdleMode = 2
-            seedIdleLimit = 0
+            seed_idle_mode = 2
+            seed_idle_limit = 0
         try:
             self.trc.change_torrent(
                 ids=ids,
                 labels=labels,
-                uploadLimited=uploadLimited,
-                uploadLimit=uploadLimit,
-                downloadLimited=downloadLimited,
-                downloadLimit=downloadLimit,
-                seedRatioMode=seedRatioMode,
-                seedRatioLimit=seedRatioLimit,
-                seedIdleMode=seedIdleMode,
-                seedIdleLimit=seedIdleLimit,
+                uploadLimited=upload_limited,
+                uploadLimit=upload_limit_val,
+                downloadLimited=download_limited,
+                downloadLimit=download_limit_val,
+                seedRatioMode=seed_ratio_mode,
+                seedRatioLimit=seed_ratio_limit,
+                seedIdleMode=seed_idle_mode,
+                seedIdleLimit=seed_idle_limit,
             )
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -545,9 +545,9 @@ class Transmission(_IDownloadClient):
         """
         获取正在下载的种子进度
         """
-        Torrents = self.get_downloading_torrents(tag=tag, ids=ids) or []
-        DispTorrents = []
-        for torrent in Torrents:
+        torrents = self.get_downloading_torrents(tag=tag, ids=ids) or []
+        disp_torrents = []
+        for torrent in torrents:
             if torrent.status in [TorrentStatus.Stopped]:
                 state = "Stopped"
                 speed = "已暂停"
@@ -559,10 +559,10 @@ class Transmission(_IDownloadClient):
                 speed = f"{chr(8595)}{_dlspeed}B/s {chr(8593)}{_upspeed}B/s"
             # 进度
             progress = round(torrent.progress * 100, 2)
-            DispTorrents.append(
+            disp_torrents.append(
                 {"id": torrent.id, "name": torrent.name, "speed": speed, "state": state, "progress": progress}
             )
-        return DispTorrents
+        return disp_torrents
 
     def set_speed_limit(self, download_limit=None, upload_limit=None):
         """

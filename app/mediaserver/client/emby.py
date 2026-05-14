@@ -717,57 +717,57 @@ class Emby(_IMediaClient):
         """
         解析Emby报文
         """
-        eventItem = {"event": message.get("Event", "")}
+        event_item = {"event": message.get("Event", "")}
         if message.get("Item"):
             if message.get("Item", {}).get("Type") == "Episode":
-                eventItem["item_type"] = "TV"
-                eventItem["item_name"] = "{} {}{} {}".format(
+                event_item["item_type"] = "TV"
+                event_item["item_name"] = "{} {}{} {}".format(
                     message.get("Item", {}).get("SeriesName"),
                     "S" + str(message.get("Item", {}).get("ParentIndexNumber")),
                     "E" + str(message.get("Item", {}).get("IndexNumber")),
                     message.get("Item", {}).get("Name"),
                 )
-                eventItem["item_id"] = message.get("Item", {}).get("SeriesId")
-                eventItem["season_id"] = message.get("Item", {}).get("ParentIndexNumber")
-                eventItem["episode_id"] = message.get("Item", {}).get("IndexNumber")
+                event_item["item_id"] = message.get("Item", {}).get("SeriesId")
+                event_item["season_id"] = message.get("Item", {}).get("ParentIndexNumber")
+                event_item["episode_id"] = message.get("Item", {}).get("IndexNumber")
             elif message.get("Item", {}).get("Type") == "Audio":
-                eventItem["item_type"] = "AUD"
+                event_item["item_type"] = "AUD"
                 album = message.get("Item", {}).get("Album")
                 file_name = message.get("Item", {}).get("FileName")
-                eventItem["item_name"] = album
-                eventItem["overview"] = file_name
-                eventItem["item_id"] = message.get("Item", {}).get("AlbumId")
+                event_item["item_name"] = album
+                event_item["overview"] = file_name
+                event_item["item_id"] = message.get("Item", {}).get("AlbumId")
             else:
-                eventItem["item_type"] = "MOV"
-                eventItem["item_name"] = "{} {}".format(
+                event_item["item_type"] = "MOV"
+                event_item["item_name"] = "{} {}".format(
                     message.get("Item", {}).get("Name"),
                     "(" + str(message.get("Item", {}).get("ProductionYear")) + ")",
                 )
-                eventItem["item_path"] = message.get("Item", {}).get("Path")
-                eventItem["item_id"] = message.get("Item", {}).get("Id")
+                event_item["item_path"] = message.get("Item", {}).get("Path")
+                event_item["item_id"] = message.get("Item", {}).get("Id")
 
-            eventItem["tmdb_id"] = message.get("Item", {}).get("ProviderIds", {}).get("Tmdb")
+            event_item["tmdb_id"] = message.get("Item", {}).get("ProviderIds", {}).get("Tmdb")
             if message.get("Item", {}).get("Overview") and len(message.get("Item", {}).get("Overview")) > 100:
-                eventItem["overview"] = str(message.get("Item", {}).get("Overview"))[:100] + "..."
+                event_item["overview"] = str(message.get("Item", {}).get("Overview"))[:100] + "..."
             else:
-                eventItem["overview"] = message.get("Item", {}).get("Overview")
-            eventItem["percentage"] = message.get("TranscodingInfo", {}).get("CompletionPercentage")
-            if not eventItem["percentage"]:
+                event_item["overview"] = message.get("Item", {}).get("Overview")
+            event_item["percentage"] = message.get("TranscodingInfo", {}).get("CompletionPercentage")
+            if not event_item["percentage"]:
                 if message.get("PlaybackInfo", {}).get("PositionTicks"):
-                    eventItem["percentage"] = (
+                    event_item["percentage"] = (
                         message.get("PlaybackInfo", {}).get("PositionTicks")
                         / message.get("Item", {}).get("RunTimeTicks")
                         * 100
                     )
-            eventItem["play_url"] = f"/open?url={quote(self.get_play_url(eventItem.get('item_id')))}&type=emby"
+            event_item["play_url"] = f"/open?url={quote(self.get_play_url(event_item.get('item_id')))}&type=emby"
         if message.get("Session"):
-            eventItem["ip"] = message.get("Session").get("RemoteEndPoint")
-            eventItem["device_name"] = message.get("Session").get("DeviceName")
-            eventItem["client"] = message.get("Session").get("Client")
+            event_item["ip"] = message.get("Session").get("RemoteEndPoint")
+            event_item["device_name"] = message.get("Session").get("DeviceName")
+            event_item["client"] = message.get("Session").get("Client")
         if message.get("User"):
-            eventItem["user_name"] = message.get("User").get("Name")
+            event_item["user_name"] = message.get("User").get("Name")
 
-        return eventItem
+        return event_item
 
     def get_resume(self, num=12):
         """

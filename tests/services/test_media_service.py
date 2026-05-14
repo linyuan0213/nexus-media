@@ -100,10 +100,10 @@ class TestMediaInfoService:
         assert result[0]["num"] == 1
 
     def test_get_tvseason_list_non_digit(self, service):
-        with patch("app.services.media_service.WebUtils") as MockWeb:
+        with patch("app.services.media_service.WebUtils") as mock_web:
             mock_media_info = MagicMock()
             mock_media_info.tmdb_info = {"id": 1}
-            MockWeb.get_mediainfo_from_id.return_value = mock_media_info
+            mock_web.get_mediainfo_from_id.return_value = mock_media_info
             service._media.get_tmdb_tv_seasons.return_value = [{"season_number": 1}]
             result = service.get_tvseason_list(tmdbid="tv-123", title=None)
             assert len(result) == 1
@@ -131,7 +131,7 @@ class TestMediaInfoService:
         assert result.overview == "desc"
 
     def test_get_media_info_detail_fallback_to_tmdb(self, service):
-        with patch("app.services.media_service.WebUtils") as MockWeb:
+        with patch("app.services.media_service.WebUtils") as mock_web:
             mock_media = MagicMock()
             mock_media.tmdb_info = {"id": 123}
             mock_media.tmdb_id = "123"
@@ -141,7 +141,7 @@ class TestMediaInfoService:
             mock_media.title = "Fallback"
             mock_media.vote_average = 7.5
             mock_media.year = "2024"
-            MockWeb.get_mediainfo_from_id.return_value = mock_media
+            mock_web.get_mediainfo_from_id.return_value = mock_media
             service._media.get_media_info.return_value = mock_media
             service._subscribe.get_subscribe_id.return_value = None
             result = service.get_media_info_detail(mediaid="123", mtype="MOV", title="", year="", page=1, rssid=None)
@@ -150,8 +150,8 @@ class TestMediaInfoService:
 
     def test_get_media_info_detail_no_tmdb_info(self, service):
         service._subscribe.get_subscribe_movies.return_value = {}
-        with patch("app.services.media_service.WebUtils") as MockWeb:
-            MockWeb.get_mediainfo_from_id.return_value = None
+        with patch("app.services.media_service.WebUtils") as mock_web:
+            mock_web.get_mediainfo_from_id.return_value = None
             service._media.get_media_info.return_value = None
             result = service.get_media_info_detail(
                 mediaid=None, mtype="MOV", title="X", year="2024", page=1, rssid=None
@@ -208,16 +208,16 @@ class TestMediaInfoService:
             assert result["name"] == "Test"
 
     def test_search_media_infos(self, service):
-        with patch("app.services.media_service.WebUtils") as MockWeb:
+        with patch("app.services.media_service.WebUtils") as mock_web:
             mock_item = MagicMock()
             mock_item.to_dict.return_value = {"id": 1}
-            MockWeb.search_media_infos.return_value = [mock_item]
+            mock_web.search_media_infos.return_value = [mock_item]
             result = service.search_media_infos(keyword="test", source="tmdb", page=1)
             assert result == [{"id": 1}]
 
     def test_get_movie_calendar_douban(self, service):
-        with patch("app.services.media_service.DouBan") as MockDouban:
-            MockDouban().get_douban_detail.return_value = {
+        with patch("app.services.media_service.DouBan") as mock_douban:
+            mock_douban().get_douban_detail.return_value = {
                 "cover_url": "img",
                 "title": "Test",
                 "rating": {"value": 8.0},
@@ -228,8 +228,8 @@ class TestMediaInfoService:
             assert result["year"] == "2024"
 
     def test_get_movie_calendar_douban_no_date(self, service):
-        with patch("app.services.media_service.DouBan") as MockDouban:
-            MockDouban().get_douban_detail.return_value = {
+        with patch("app.services.media_service.DouBan") as mock_douban:
+            mock_douban().get_douban_detail.return_value = {
                 "cover_url": "",
                 "title": "Test",
                 "rating": {},
@@ -245,8 +245,8 @@ class TestMediaInfoService:
             "vote_average": 8.0,
             "release_date": "2024-01-01",
         }
-        with patch("app.services.media_service.Config") as MockCfg:
-            MockCfg().get_tmdbimage_url.return_value = "http://img"
+        with patch("app.services.media_service.Config") as mock_cfg:
+            mock_cfg().get_tmdbimage_url.return_value = "http://img"
             result = service.get_movie_calendar(tid="123", rssid="1")
             assert result["title"] == "Test"
             assert result["year"] == "2024"
@@ -256,8 +256,8 @@ class TestMediaInfoService:
         assert result is None
 
     def test_get_tv_calendar_douban(self, service):
-        with patch("app.services.media_service.DouBan") as MockDouban:
-            MockDouban().get_douban_detail.return_value = {
+        with patch("app.services.media_service.DouBan") as mock_douban:
+            mock_douban().get_douban_detail.return_value = {
                 "cover_url": "img",
                 "title": "Test",
                 "rating": {"value": 8.0},
@@ -273,17 +273,17 @@ class TestMediaInfoService:
             "poster_path": "/poster.jpg",
             "episodes": [{"episode_number": 1, "air_date": "2024-01-01", "vote_average": 8.0}],
         }
-        with patch("app.services.media_service.Config") as MockCfg:
-            MockCfg().get_tmdbimage_url.return_value = "http://img"
+        with patch("app.services.media_service.Config") as mock_cfg:
+            mock_cfg().get_tmdbimage_url.return_value = "http://img"
             result = service.get_tv_calendar(tid="123", season=1, name="Test", rssid="1")
             assert len(result) == 1
             assert result[0]["type"] == "剧集"
 
     def test_get_media_detail(self, service):
         with (
-            patch("app.services.media_service.WebUtils") as MockWeb,
+            patch("app.services.media_service.WebUtils") as mock_web,
             patch.object(service, "_get_media_exists_info") as mock_exists,
-            patch("app.services.media_service.Config") as MockCfg,
+            patch("app.services.media_service.Config") as mock_cfg,
         ):
             mock_media = MagicMock()
             mock_media.tmdb_info = {"id": 123}
@@ -297,7 +297,7 @@ class TestMediaInfoService:
             mock_media.get_poster_image.return_value = "img"
             mock_media.get_detail_url.return_value = "http://tmdb"
             mock_media.get_douban_detail_url.return_value = "http://douban"
-            MockWeb.get_mediainfo_from_id.return_value = mock_media
+            mock_web.get_mediainfo_from_id.return_value = mock_media
             mock_exists.return_value = (1, "2", "url")
             service._media.get_tmdb_tv_seasons.return_value = [{"season_number": 1}]
             service._media_server.check_item_exists.return_value = True
@@ -306,14 +306,14 @@ class TestMediaInfoService:
             service._media.get_tmdb_factinfo.return_value = {}
             service._media.get_tmdb_crews.return_value = []
             service._media.get_tmdb_cats.return_value = []
-            MockCfg().get_proxy_image_url.return_value = "http://proxy"
+            mock_cfg().get_proxy_image_url.return_value = "http://proxy"
             result = service.get_media_detail(tmdbid="123", mtype_str="MOV")
             assert result["title"] == "Test"
             assert result["fav"] == 1
 
     def test_get_media_detail_no_info(self, service):
-        with patch("app.services.media_service.WebUtils") as MockWeb:
-            MockWeb.get_mediainfo_from_id.return_value = None
+        with patch("app.services.media_service.WebUtils") as mock_web:
+            mock_web.get_mediainfo_from_id.return_value = None
             result = service.get_media_detail(tmdbid="123", mtype_str="MOV")
             assert result is None
 
@@ -342,17 +342,17 @@ class TestMediaRecommendationService:
             assert len(result) == 1
 
     def test_get_recommend_items_search(self, service):
-        with patch("app.services.media_service.WebUtils") as MockWeb:
+        with patch("app.services.media_service.WebUtils") as mock_web:
             mock_item = MagicMock()
             mock_item.to_dict.return_value = {"type": "MOV", "title": "B", "year": "2024", "id": "2"}
-            MockWeb.search_media_infos.return_value = [mock_item]
+            mock_web.search_media_infos.return_value = [mock_item]
             with patch.object(service, "_get_media_exists_info") as mock_exists:
                 mock_exists.return_value = (0, None, "")
                 result = service.get_recommend_items({"type": "SEARCH", "keyword": "test", "source": "tmdb", "page": 1})
                 assert len(result) == 1
 
     def test_get_recommend_items_downloaded(self, service):
-        with patch("app.services.media_service.Downloader") as MockDL:
+        with patch("app.services.media_service.Downloader") as mock_dl:
             mock_item = MagicMock()
             mock_item.TMDBID = "1"
             mock_item.TITLE = "C"
@@ -363,7 +363,7 @@ class TestMediaRecommendationService:
             mock_item.TORRENT = "t"
             mock_item.DATE = "2024-01-01"
             mock_item.SITE = "site"
-            MockDL().get_download_history.return_value = [mock_item]
+            mock_dl().get_download_history.return_value = [mock_item]
             with patch.object(service, "_get_media_exists_info") as mock_exists:
                 mock_exists.return_value = (0, None, "")
                 result = service.get_recommend_items({"type": "DOWNLOADED", "page": 1})
@@ -403,8 +403,8 @@ class TestMediaRecommendationService:
             assert len(result) == 1
 
     def test_get_recommend_items_similar(self, service):
-        with patch("app.services.media_service.MediaInfoService") as MockInfo:
-            MockInfo().get_media_similar.return_value = [{"type": "MOV", "title": "H", "year": "2024", "id": "7"}]
+        with patch("app.services.media_service.MediaInfoService") as mock_info:
+            mock_info().get_media_similar.return_value = [{"type": "MOV", "title": "H", "year": "2024", "id": "7"}]
             with patch.object(service, "_get_media_exists_info") as mock_exists:
                 mock_exists.return_value = (0, None, "")
                 result = service.get_recommend_items({"type": "MOV", "subtype": "sim", "page": 1, "tmdbid": "123"})
@@ -487,7 +487,7 @@ class TestSearchResultService:
             assert "Test (2024)" in result.result
 
     def test_merge_into_existing(self, service):
-        SearchResults = {
+        search_results = {
             "Test (2024)": {
                 "torrent_dict": {
                     "MOV": {
@@ -513,7 +513,7 @@ class TestSearchResultService:
         mock_item.DOWNLOAD_VOLUME_FACTOR = 1.0
         mock_item.OTHERINFO = "Group2"
         SearchResultService._merge_into_existing(
-            SearchResults,
+            search_results,
             "Test (2024)",
             "MOV",
             "1080p_webdl",
@@ -527,7 +527,7 @@ class TestSearchResultService:
             "H265",
             None,
         )
-        assert SearchResults["Test (2024)"]["torrent_dict"]["MOV"]["1080p_webdl"]["group_total"] == 2
+        assert search_results["Test (2024)"]["torrent_dict"]["MOV"]["1080p_webdl"]["group_total"] == 2
 
     def test_se_sort(self, service):
         assert SearchResultService._se_sort(("S01E01",)) == ("S01", "E01")
@@ -556,12 +556,12 @@ class TestMediaLibraryService:
 
     def test_start_sync(self, service):
         with (
-            patch("app.services.media_service.TokenCache") as MockCache,
+            patch("app.services.media_service.TokenCache") as mock_cache,
             patch("app.services.media_service.SystemConfig"),
             patch("app.services.media_service.ThreadHelper"),
         ):
             service.start_sync(librarys=["movies"])
-            MockCache.delete.assert_called_once_with("index")
+            mock_cache.delete.assert_called_once_with("index")
 
     def test_get_media_count(self, service):
         service._media_server.get_medias_count.return_value = {
@@ -585,28 +585,28 @@ class TestMediaLibraryService:
 
     def test_get_space_info(self, service):
         with (
-            patch("app.services.media_service.Config") as MockCfg,
-            patch("app.services.media_service.SystemUtils") as MockSys,
+            patch("app.services.media_service.Config") as mock_cfg,
+            patch("app.services.media_service.SystemUtils") as mock_sys,
         ):
-            MockCfg().get_config.return_value = {"movie_path": ["/movies"], "tv_path": ["/tv"], "anime_path": []}
-            MockSys.calculate_space_usage.return_value = (1024, 512)
+            mock_cfg().get_config.return_value = {"movie_path": ["/movies"], "tv_path": ["/tv"], "anime_path": []}
+            mock_sys.calculate_space_usage.return_value = (1024, 512)
             result = service.get_space_info()
             assert result.used_percent is not None
             assert "GB" in result.free_space or "TB" in result.free_space
 
     def test_get_space_info_no_paths(self, service):
-        with patch("app.services.media_service.Config") as MockCfg:
-            MockCfg().get_config.return_value = {}
+        with patch("app.services.media_service.Config") as mock_cfg:
+            mock_cfg().get_config.return_value = {}
             result = service.get_space_info()
             assert result.used_percent == 0
 
     def test_get_space_info_zero_total(self, service):
         with (
-            patch("app.services.media_service.Config") as MockCfg,
-            patch("app.services.media_service.SystemUtils") as MockSys,
+            patch("app.services.media_service.Config") as mock_cfg,
+            patch("app.services.media_service.SystemUtils") as mock_sys,
         ):
-            MockCfg().get_config.return_value = {"movie_path": ["/movies"]}
-            MockSys.calculate_space_usage.return_value = (0, 0)
+            mock_cfg().get_config.return_value = {"movie_path": ["/movies"]}
+            mock_sys.calculate_space_usage.return_value = (0, 0)
             result = service.get_space_info()
             assert result.used_percent == 0
 
@@ -727,52 +727,52 @@ class TestMediaFileService:
         return MediaFileService()
 
     def test_download_subtitle_no_media(self, service):
-        with patch("app.services.media_service.Media") as MockMedia:
-            MockMedia().get_media_info.return_value = None
+        with patch("app.services.media_service.Media") as mock_media_cls:
+            mock_media_cls().get_media_info.return_value = None
             ok, msg = service.download_subtitle("/path", "Test.mkv")
             assert not ok
             assert "无法从TMDB" in msg
 
     def test_download_subtitle_no_imdb(self, service):
         with (
-            patch("app.services.media_service.Media") as MockMedia,
-            patch("app.services.media_service.EventManager") as MockEvt,
+            patch("app.services.media_service.Media") as mock_media_cls,
+            patch("app.services.media_service.EventManager") as mock_evt,
         ):
             mock_media = MagicMock()
             mock_media.tmdb_info = {"id": 1}
             mock_media.imdb_id = None
             mock_media.tmdb_id = "123"
             mock_media.to_dict.return_value = {"title": "Test"}
-            MockMedia().get_media_info.return_value = mock_media
-            MockMedia().get_tmdb_info.return_value = {"imdb_id": "tt123"}
+            mock_media_cls().get_media_info.return_value = mock_media
+            mock_media_cls().get_tmdb_info.return_value = {"imdb_id": "tt123"}
             ok, msg = service.download_subtitle("/path/Test.mkv", "Test.mkv")
             assert ok
             assert "字幕下载任务已提交" in msg
-            MockEvt().send_event.assert_called_once()
+            mock_evt().send_event.assert_called_once()
 
     def test_download_subtitle_with_imdb(self, service):
         with (
-            patch("app.services.media_service.Media") as MockMedia,
-            patch("app.services.media_service.EventManager") as MockEvt,
+            patch("app.services.media_service.Media") as mock_media_cls,
+            patch("app.services.media_service.EventManager") as mock_evt,
         ):
             mock_media = MagicMock()
             mock_media.tmdb_info = {"id": 1}
             mock_media.imdb_id = "tt123"
             mock_media.to_dict.return_value = {"title": "Test"}
-            MockMedia().get_media_info.return_value = mock_media
+            mock_media_cls().get_media_info.return_value = mock_media
             ok, msg = service.download_subtitle("/path/Test.mkv", "Test.mkv")
             assert ok
-            MockEvt().send_event.assert_called_once()
+            mock_evt().send_event.assert_called_once()
 
     def test_scrap_media_path_empty(self, service):
         msg = service.scrap_media_path("")
         assert msg == "请指定刮削路径"
 
     def test_scrap_media_path(self, service):
-        with patch("app.services.media_service.ThreadHelper") as MockTh:
+        with patch("app.services.media_service.ThreadHelper") as mock_th:
             msg = service.scrap_media_path("/media")
             assert "刮削任务已提交" in msg
-            MockTh().start_thread.assert_called_once()
+            mock_th().start_thread.assert_called_once()
 
     def test_get_category_config_no_name(self, service):
         ok, msg = service.get_category_config("")
@@ -794,23 +794,23 @@ class TestMediaFileService:
         with (
             patch("os.path.exists", return_value=True),
             patch("builtins.open", mock_open(read_data="movies:\n  - action")),
-            patch("app.services.media_service.Config") as MockCfg,
+            patch("app.services.media_service.Config") as mock_cfg,
         ):
-            MockCfg().get_config_path.return_value = "/config"
+            mock_cfg().get_config_path.return_value = "/config"
             ok, text = service.get_category_config("custom")
             assert ok
             assert text == "movies:\n  - action"
 
     def test_update_category_config(self, service):
-        with patch("builtins.open", mock_open()) as mock_file, patch("app.services.media_service.Config") as MockCfg:
-            MockCfg().category_path = "/config/category.yaml"
+        with patch("builtins.open", mock_open()) as mock_file, patch("app.services.media_service.Config") as mock_cfg:
+            mock_cfg().category_path = "/config/category.yaml"
             msg = service.update_category_config("content")
             assert msg == "保存成功"
             mock_file.assert_called_once()
 
     def test_save_user_script(self, service):
-        with patch("app.services.media_service.SystemConfig") as MockSys:
+        with patch("app.services.media_service.SystemConfig") as mock_sys:
             service.save_user_script("alert(1);", "body{color:red}")
-            MockSys().set.assert_called_once_with(
+            mock_sys().set.assert_called_once_with(
                 key=SystemConfigKey.CustomScript, value={"css": "body{color:red}", "javascript": "alert(1);"}
             )

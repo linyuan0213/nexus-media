@@ -151,14 +151,14 @@ class StringUtils:
         忽略特殊字符
         """
         # 需要忽略的特殊字符
-        CONVERT_EMPTY_CHARS = r"[、.。,，·:：;；!！'’\"“”()（）\[\]【】「」\-——\+\|\\_/&#～~]"
+        convert_empty_chars = r"[、.。,，·:：;；!！'’\"“”()（）\[\]【】「」\-——\+\|\\_/&#～~]"
         if not text:
             return text
         if not isinstance(text, list):
             text = re.sub(
                 r"[\u200B-\u200D\uFEFF]",
                 "",
-                re.sub(rf"{CONVERT_EMPTY_CHARS}", replace_word, text),
+                re.sub(rf"{convert_empty_chars}", replace_word, text),
                 flags=re.IGNORECASE,
             )
             if not allow_space:
@@ -322,12 +322,12 @@ class StringUtils:
 
     @staticmethod
     def get_time_stamp(date):
-        tempsTime = None
+        temps_time = None
         try:
-            tempsTime = dateutil.parser.parse(date)
+            temps_time = dateutil.parser.parse(date)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
-        return tempsTime
+        return temps_time
 
     @staticmethod
     def unify_datetime_str(datetime_str):
