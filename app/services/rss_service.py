@@ -1,7 +1,7 @@
 import json
 import time
 import traceback
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import jsonpath
 from lxml import etree
@@ -27,6 +27,10 @@ from app.utils.config_tools import get_proxies
 from app.utils.types import MediaType, MovieTypes, RssType, SearchType
 from config import Config
 
+if TYPE_CHECKING:
+    from app.services.rss_checker_service import RssCheckerService
+    from app.services.rss_core import Rss
+
 
 class RssSubscriptionService:
     """
@@ -34,10 +38,10 @@ class RssSubscriptionService:
     负责订阅添加/删除、历史管理、列表查询、日历事件、RSS下载
     """
 
-    def __init__(self, subscribe: Subscribe | None = None, rss: Any | None = None, rss_checker: Any | None = None):
-        self._subscribe = subscribe or Subscribe()
-        self._rss = rss
-        self._rss_checker = rss_checker
+    def __init__(self, subscribe: Subscribe | None = None, rss: "Rss | None" = None, rss_checker: "RssCheckerService | None" = None):
+        self._subscribe: Subscribe = subscribe or Subscribe()
+        self._rss: Rss | None = rss
+        self._rss_checker: RssCheckerService | None = rss_checker
 
     def download_rss(self) -> None:
         """触发RSS订阅下载"""
