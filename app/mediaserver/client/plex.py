@@ -192,11 +192,14 @@ class Plex(_IMediaClient):
             return []
         if not item_id:
             videos = self._plex.library.search(title=title, year=year, libtype="show")
-            if not videos:
+            if not videos or not videos[0]:
                 return []
             episodes = videos[0].episodes()
         else:
-            episodes = self._plex.fetchItem(item_id).episodes()
+            item = self._plex.fetchItem(item_id)
+            if item is None:
+                return []
+            episodes = item.episodes()
         ret_tvs = []
         for episode in episodes:
             if season and episode.seasonNumber != int(season):
@@ -235,7 +238,7 @@ class Plex(_IMediaClient):
         try:
             images = self._plex.fetchItems(f"/library/metadata/{item_id}/posters", cls=media.Poster)
             for image in images:
-                if hasattr(image, "key") and image.key.startswith("http"):
+                if image is not None and hasattr(image, "key") and image.key.startswith("http"):
                     return image.key
             return None
         except Exception as e:
@@ -258,7 +261,7 @@ class Plex(_IMediaClient):
             else:
                 images = self._plex.fetchItems(f"/library/metadata/{item_id}/arts", cls=media.Art)
             for image in images:
-                if hasattr(image, "key") and image.key.startswith("http"):
+                if image is not None and hasattr(image, "key") and image.key.startswith("http"):
                     return image.key
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -388,6 +391,8 @@ class Plex(_IMediaClient):
                 container_start=container_start,
             )
             for item in items:
+                if item is None:
+                    continue
                 if item.type == "episode":
                     # 如果是剧集的单集,则去找上级的图片
                     if item.parentThumb is not None:
@@ -401,6 +406,8 @@ class Plex(_IMediaClient):
             if len(items) < total_size:
                 break
             container_start += total_size
+        if self._host is None:
+            return ""
         image_list_str = ", ".join(
             [
                 f"{self.get_nt_image_url(self._host.rstrip('/') + url)}?X-Plex-Token={self._token}"
@@ -417,6 +424,8 @@ class Plex(_IMediaClient):
             return {}
         try:
             item = self._plex.fetchItem(itemid)
+            if item is None:
+                return {}
             ids = self.__get_ids(item.guids)
             return {"ProviderIds": {"Tmdb": ids["tmdb_id"], "Imdb": ids["imdb_id"]}}
         except Exception as err:
@@ -428,6 +437,8 @@ class Plex(_IMediaClient):
         拼装媒体播放链接
         :param item_id: 媒体的的ID
         """
+        if self._plex is None:
+            return ""
         return f"{self._play_host or self._host}#!/server/{self._plex.machineIdentifier}/details?key={item_id}"
 
     def get_items(self, parent: Any) -> Any:
@@ -436,8 +447,10 @@ class Plex(_IMediaClient):
         """
         if not parent:
             yield {}
+            return
         if not self._plex:
             yield {}
+            return
         try:
             section = self._plex.library.sectionByID(parent)
             if section:
@@ -493,6 +506,8 @@ class Plex(_IMediaClient):
         sessions = self._plex.sessions()
         ret_sessions = []
         for session in sessions:
+            if session is None:
+                continue
             bitrate = sum([m.bitrate or 0 for m in session.media])
             ret_sessions.append({"type": session.TAG, "bitrate": bitrate, "address": session.player.address})
         return ret_sessions
@@ -540,12 +555,14 @@ class Plex(_IMediaClient):
             event_item["play_url"] = (
                 f"/open?url={quote(self.get_play_url(message.get('Metadata', {}).get('key')))}&type=plex"
             )
-        if message.get("Player"):
-            event_item["ip"] = message.get("Player").get("publicAddress")
-            event_item["client"] = message.get("Player").get("title")
+        player = message.get("Player")
+        if player:
+            event_item["ip"] = player.get("publicAddress")
+            event_item["client"] = player.get("title")
             event_item["device_name"] = " "
-        if message.get("Account"):
-            event_item["user_name"] = message.get("Account").get("title")
+        account = message.get("Account")
+        if account:
+            event_item["user_name"] = account.get("title")
 
         return event_item
 
@@ -558,6 +575,8 @@ class Plex(_IMediaClient):
         items = self._plex.fetchItems("/hubs/continueWatching/items", container_start=0, container_size=num)
         ret_resume = []
         for item in items:
+            if item is None:
+                continue
             item_type = MediaType.MOVIE.value if item.TYPE == "movie" else MediaType.TV.value
             if item_type == MediaType.MOVIE.value:
                 name = item.title
@@ -589,6 +608,8 @@ class Plex(_IMediaClient):
         items = self._plex.fetchItems("/library/recentlyAdded", container_start=0, container_size=num)
         ret_resume = []
         for item in items:
+            if item is None:
+                continue
             item_type = MediaType.MOVIE.value if item.TYPE == "movie" else MediaType.TV.value
             link = self.get_play_url(item.key)
             title = item.title if item_type == MediaType.MOVIE.value else f"{item.parentTitle} 第{item.index}季"

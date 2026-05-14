@@ -160,6 +160,8 @@ class Message(metaclass=SingletonMeta):
     def _ensure_loaded(self):
         if self._loaded:
             return
+        if not self.config_repo:
+            return
         for client_config in self.config_repo.get_message_client() or []:
             if client_config.ENABLED and client_config.CONFIG:
                 self._add_client_from_config(client_config)
@@ -179,8 +181,8 @@ class Message(metaclass=SingletonMeta):
             "interactive": client_config.INTERACTIVE,
             "enabled": client_config.ENABLED,
             "templates": config["templates"],
-            "search_type": ModuleConf.MESSAGE_CONF.get("client").get(client_config.TYPE, {}).get("search_type"),
-            "max_length": ModuleConf.MESSAGE_CONF.get("client").get(client_config.TYPE, {}).get("max_length"),
+            "search_type": (ModuleConf.MESSAGE_CONF.get("client") or {}).get(client_config.TYPE, {}).get("search_type"),
+            "max_length": (ModuleConf.MESSAGE_CONF.get("client") or {}).get(client_config.TYPE, {}).get("max_length"),
             "client": ClientRegistry.build(ctype=client_config.TYPE, conf=config["config"]),
         }
         client_instance = client_entry["client"]
@@ -218,6 +220,8 @@ class Message(metaclass=SingletonMeta):
             self._client_configs[str(cid)] = _parse_client_config(client_config)
 
     def _get_client_config_by_id(self, cid):
+        if not self.config_repo:
+            return None
         for config in self.config_repo.get_message_client() or []:
             if str(config.ID) == str(cid):
                 return config
@@ -369,8 +373,10 @@ class Message(metaclass=SingletonMeta):
         """
         if not config or not ctype:
             return False
-        # 测试状态不启动监听服务
-        state, ret_msg = ClientRegistry.build(ctype=ctype, conf=config).send_msg(
+        built_client = ClientRegistry.build(ctype=ctype, conf=config)
+        if not built_client:
+            return False
+        state, ret_msg = built_client.send_msg(
             title="测试", text="这是一条测试消息", url="https://github.com/linyuan0213/nas-tools"
         )
         if not state:
@@ -428,6 +434,8 @@ class Message(metaclass=SingletonMeta):
             text = template_text if template_text is not None else text
         cname = client.get("name")
         log.info(f"【Message】消息入队 {cname}：title={title}")
+        if not self._queue:
+            return False
         return self._queue.submit(self._do_sendmsg, client, title, text, image, url, user_id, name=f"sendmsg:{cname}")
 
     def send_channel_msg(self, channel: Any, title: str, text: str = "", image: str = "", url: str = "", user_id: str = "") -> bool:
@@ -443,7 +451,8 @@ class Message(metaclass=SingletonMeta):
         """
         # 插入消息中心
         if channel == SearchType.WEB:
-            self.messagecenter.insert_system_message(title=title, content=text)
+            if self.messagecenter:
+                self.messagecenter.insert_system_message(title=title, content=text)
             return True
         # 发送消息
         client = self.active_interactive_clients.get(channel)
@@ -475,6 +484,8 @@ class Message(metaclass=SingletonMeta):
             return False
         cname = client.get("name")
         log.info(f"【Message】列表消息入队 {cname}：title={title}")
+        if not self._queue:
+            return False
         return self._queue.submit(self._do_send_list_msg, client, medias, user_id, title, name=f"send_list_msg:{cname}")
 
     def send_channel_list_msg(self, channel: Any, title: str, medias: list, user_id: str = "") -> bool:
@@ -492,7 +503,8 @@ class Message(metaclass=SingletonMeta):
             for media in medias:
                 texts.append(f"{index}. {media.get_title_string()}，{media.get_vote_string()}")
                 index += 1
-            self.messagecenter.insert_system_message(title=title, content="\n".join(texts))
+            if self.messagecenter:
+                self.messagecenter.insert_system_message(title=title, content="\n".join(texts))
             return True
         client = self.active_interactive_clients.get(channel)
         if client:
@@ -545,7 +557,8 @@ class Message(metaclass=SingletonMeta):
             can_item.description = re.sub(r"<[^>]+>", "", description)
             msg_text = f"{msg_text}\n描述：{can_item.description}"
         # 插入消息中心
-        self.messagecenter.insert_system_message(title=msg_title, content=msg_text)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=msg_title, content=msg_text)
         # 发送消息
         for client in self.active_clients:
             if "download_start" in client.get("switchs"):
@@ -627,7 +640,8 @@ class Message(metaclass=SingletonMeta):
         if exist_filenum != 0:
             msg_str = f"{msg_str}，{exist_filenum}个文件已存在"
         # 插入消息中心
-        self.messagecenter.insert_system_message(title=msg_title, content=msg_str)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=msg_title, content=msg_str)
         # 发送消息
         for client in self.active_clients:
             if "transfer_finished" in client.get("switchs"):
@@ -667,7 +681,8 @@ class Message(metaclass=SingletonMeta):
             else:
                 msg_str = f"{msg_str}，总大小：{StringUtils.str_filesize(item_info.size)}，来自：{in_from.value}"
             # 插入消息中心
-            self.messagecenter.insert_system_message(title=msg_title, content=msg_str)
+            if self.messagecenter:
+                self.messagecenter.insert_system_message(title=msg_title, content=msg_str)
             # 发送消息
         for client in self.active_clients:
             if "transfer_finished" in client.get("switchs"):
@@ -696,7 +711,8 @@ class Message(metaclass=SingletonMeta):
         title = f"添加下载任务失败：{item.get_title_string()} {item.get_season_episode_string()}"
         text = f"站点：{item.site}\n种子名称：{item.org_string}\n种子链接：{item.enclosure}\n错误信息：{error_msg}"
         # 插入消息中心
-        self.messagecenter.insert_system_message(title=title, content=text)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
         for client in self.active_clients:
             if "download_fail" in client.get("switchs"):
@@ -728,7 +744,8 @@ class Message(metaclass=SingletonMeta):
         if media_info.user_name:
             msg_str = f"{msg_str}，用户：{media_info.user_name}"
         # 插入消息中心
-        self.messagecenter.insert_system_message(title=msg_title, content=msg_str)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=msg_title, content=msg_str)
         # 发送消息
         for client in self.active_clients:
             if "rss_added" in client.get("switchs"):
@@ -761,7 +778,8 @@ class Message(metaclass=SingletonMeta):
         if media_info.vote_average:
             msg_str = f"{msg_str}，{media_info.get_vote_string()}"
         # 插入消息中心
-        self.messagecenter.insert_system_message(title=msg_title, content=msg_str)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=msg_title, content=msg_str)
         # 发送消息
         for client in self.active_clients:
             if "rss_finished" in client.get("switchs"):
@@ -787,8 +805,8 @@ class Message(metaclass=SingletonMeta):
             return
         title = "站点签到"
         text = "\n".join(msgs)
-        # 插入消息中心
-        self.messagecenter.insert_system_message(title=title, content=text)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
         for client in self.active_clients:
             if "site_signin" in client.get("switchs"):
@@ -805,8 +823,8 @@ class Message(metaclass=SingletonMeta):
             return
         if not text:
             text = ""
-        # 插入消息中心
-        self.messagecenter.insert_system_message(title=title, content=text)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
         for client in self.active_clients:
             if "site_message" in client.get("switchs"):
@@ -824,8 +842,8 @@ class Message(metaclass=SingletonMeta):
             return
         title = f"【{count} 个文件入库失败】"
         text = f"源路径：{path}\n原因：{text}"
-        # 插入消息中心
-        self.messagecenter.insert_system_message(title=title, content=text)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
         for client in self.active_clients:
             if "transfer_fail" in client.get("switchs"):
@@ -849,8 +867,8 @@ class Message(metaclass=SingletonMeta):
         """
         if not title or not text:
             return
-        # 插入消息中心
-        self.messagecenter.insert_system_message(title=title, content=text)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
         for client in self.active_clients:
             if "auto_remove_torrents" in client.get("switchs"):
@@ -873,8 +891,8 @@ class Message(metaclass=SingletonMeta):
         """
         if not title or not text:
             return
-        # 插入消息中心
-        self.messagecenter.insert_system_message(title=title, content=text)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
         for client in self.active_clients:
             if "brushtask_remove" in client.get("switchs"):
@@ -897,8 +915,8 @@ class Message(metaclass=SingletonMeta):
         """
         if not title or not text:
             return
-        # 插入消息中心
-        self.messagecenter.insert_system_message(title=title, content=text)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
         for client in self.active_clients:
             if "brushtask_added" in client.get("switchs"):
@@ -978,7 +996,8 @@ class Message(metaclass=SingletonMeta):
 
         # 插入消息中心
         message_content = "\n".join(message_texts)
-        self.messagecenter.insert_system_message(title=message_title, content=message_content)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=message_title, content=message_content)
 
         # 跳转链接
         url = event_info.get("play_url") or ""
@@ -1010,8 +1029,8 @@ class Message(metaclass=SingletonMeta):
         """
         if not title:
             return
-        # 插入消息中心
-        self.messagecenter.insert_system_message(title=title, content=text)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
         for client in self.active_clients:
             if "custom_message" in client.get("switchs"):
@@ -1039,8 +1058,8 @@ class Message(metaclass=SingletonMeta):
             return
         if not clients:
             return
-        # 插入消息中心
-        self.messagecenter.insert_system_message(title=title, content=text)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
         for client in self.active_clients:
             if str(client.get("id")) in clients:
@@ -1083,6 +1102,8 @@ class Message(metaclass=SingletonMeta):
         删除消息端
         """
         self._ensure_loaded()
+        if not self.config_repo:
+            return None
         ret = self.config_repo.delete_message_client(cid=cid)
         self._remove_client(cid)
         return ret
@@ -1092,6 +1113,8 @@ class Message(metaclass=SingletonMeta):
         设置消息端（更新DB后刷新受影响的客户端）
         """
         self._ensure_loaded()
+        if not self.config_repo:
+            return None
         ret = self.config_repo.check_message_client(cid=cid, interactive=interactive, enabled=enabled, ctype=ctype)
         if cid:
             self._refresh_client(cid)
@@ -1106,6 +1129,8 @@ class Message(metaclass=SingletonMeta):
         插入消息端
         """
         self._ensure_loaded()
+        if not self.config_repo:
+            return False
         new_id = self.config_repo.insert_message_client(
             name=name,
             ctype=ctype,
@@ -1124,7 +1149,8 @@ class Message(metaclass=SingletonMeta):
             return
         title = "站点数据统计"
         text = "\n".join(msgs)
-        self.messagecenter.insert_system_message(title=title, content=text)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=title, content=text)
         for client in self.active_clients:
             if "ptrefresh_date_message" in client.get("switchs"):
                 variables = {
@@ -1142,8 +1168,8 @@ class Message(metaclass=SingletonMeta):
         """
         if not title or not text:
             return
-        # 插入消息中心
-        self.messagecenter.insert_system_message(title=title, content=text)
+        if self.messagecenter:
+            self.messagecenter.insert_system_message(title=title, content=text)
         # 发送消息
         for client in self.active_clients:
             if "brushtask_pause" in client.get("switchs"):

@@ -38,10 +38,10 @@ class RssSubscriptionService:
     负责订阅添加/删除、历史管理、列表查询、日历事件、RSS下载
     """
 
-    def __init__(self, subscribe: Subscribe | None = None, rss: "Rss | None" = None, rss_checker: "RssCheckerService | None" = None):
+    def __init__(self, subscribe: Subscribe | None = None, rss: "Rss | None" = None, rss_checker: "RssTaskService | None" = None):
         self._subscribe: Subscribe = subscribe or Subscribe()
         self._rss: Rss | None = rss
-        self._rss_checker: RssCheckerService | None = rss_checker
+        self._rss_checker: "RssTaskService | None" = rss_checker
 
     def download_rss(self) -> None:
         """触发RSS订阅下载"""
@@ -412,16 +412,16 @@ class RssParserEngine:
 class RssTaskService(metaclass=SingletonMeta):
     """RSS 任务服务：负责任务加载、调度管理、报文处理"""
 
-    message = None
-    searcher = None
-    filter = None
-    media = None
-    filterrule = None
-    downloader = None
-    subscribe = None
-    config_repo = None
-    rss_repo = None
-    rsshelper = None
+    message: Message
+    searcher: Searcher
+    filter: Filter
+    media: MediaService
+    filterrule: Any
+    downloader: Downloader
+    subscribe: Subscribe
+    config_repo: UserRssConfigRepositoryAdapter
+    rss_repo: RssHistoryRepositoryAdapter
+    rsshelper: RssHelper
 
     _jobstore = "rsscheck"
     _rss_tasks: list[dict[str, Any]] = []
@@ -767,7 +767,8 @@ class RssTaskService(metaclass=SingletonMeta):
                     # 下载类型的 这里下载成功了 插入数据库
                     self.rsshelper.insert_rss_torrents(media)
                     # 登记自定义RSS任务下载记录
-                    downloader_name = self.downloader.get_downloader_conf(downloader_id).get("name")
+                    conf = self.downloader.get_downloader_conf(downloader_id)
+                    downloader_name = conf.get("name") if conf else ""
                     self.config_repo.insert_userrss_task_history(taskid, media.org_string, downloader_name)
                 else:
                     log.error(
@@ -944,6 +945,7 @@ class RssTaskService(metaclass=SingletonMeta):
         media_info = self.media.get_media_info(title=title)
         if not media_info:
             log.warn(f"【RssTaskService】{title} 识别媒体信息出错！")
+            return None
         # 检查是否匹配
         filter_args = {
             "include": taskinfo.get("include"),
@@ -1041,6 +1043,9 @@ class RssTaskService(metaclass=SingletonMeta):
             return
         for article in articles:
             media = self.media.get_media_info(title=article.get("title"))
+            if not media:
+                log.warn(f"【RssTaskService】{article.get('title')} 识别媒体信息出错！")
+                continue
             media.set_torrent_info(enclosure=article.get("enclosure"))
             downloader_id, ret, ret_msg = self.downloader.download(
                 media_info=media,
@@ -1049,7 +1054,8 @@ class RssTaskService(metaclass=SingletonMeta):
                 in_from=SearchType.USERRSS,
                 proxy=taskinfo.get("proxy"),
             )
-            downloader_name = self.downloader.get_downloader_conf(downloader_id).get("name")
+            conf = self.downloader.get_downloader_conf(downloader_id)
+            downloader_name = conf.get("name") if conf else ""
             if ret:
                 # 插入数据库
                 self.rsshelper.insert_rss_torrents(media)
