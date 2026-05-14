@@ -127,7 +127,7 @@ class SiteService:
             )
             return SiteUpdateResultDTO(code=0 if ret else 500)
 
-    def update_site_cookie_ua(self, siteid, cookie, ua) -> None:
+    def update_site_cookie_ua(self, siteid: int | str, cookie: str, ua: str) -> None:
         self._sites.update_site_cookie(siteid=siteid, cookie=cookie, ua=ua)
 
     # ------------------------------------------------------------------
@@ -187,29 +187,29 @@ class SiteService:
     # ------------------------------------------------------------------
     # Favicon
     # ------------------------------------------------------------------
-    def get_site_favicon(self, name: str | None = None):
+    def get_site_favicon(self, name: str | None = None) -> Any:
         return self._sites.get_site_favicon(site_name=name)
 
     # ------------------------------------------------------------------
     # 连通性测试
     # ------------------------------------------------------------------
-    def test_site(self, site_id) -> SiteTestResultDTO:
+    def test_site(self, site_id: int | str) -> SiteTestResultDTO:
         flag, msg, times = self._sites.test_connection(site_id)
         return SiteTestResultDTO(flag=flag, msg=msg, times=times, code=0 if flag else -1)
 
     # ------------------------------------------------------------------
     # 验证码
     # ------------------------------------------------------------------
-    def set_captcha_code(self, code, value) -> None:
+    def set_captcha_code(self, code: str, value: str) -> None:
         self._site_cookie.set_code(code=code, value=value)
 
     # ------------------------------------------------------------------
     # 资源列表
     # ------------------------------------------------------------------
-    def list_site_resources(self, index_id, page, keyword) -> SiteResourcesResultDTO:
+    def list_site_resources(self, index_id: int, page: int, keyword: str) -> SiteResourcesResultDTO:
         result = self._indexer_service.list_resources(index_id=index_id, page=page, keyword=keyword)
         return SiteResourcesResultDTO(success=result.success, data=result.data, msg=result.msg)
 
-    def get_site_download_setting(self, site_name=None):
+    def get_site_download_setting(self, site_name: str | None = None) -> Any:
         """获取站点下载设置（代理到 Sites）"""
         return self._sites.get_site_download_setting(site_name=site_name)

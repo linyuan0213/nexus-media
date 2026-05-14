@@ -8,6 +8,7 @@ FileMonitorHandler 保留在此模块。
 import os
 import threading
 import traceback
+from typing import Any
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -64,7 +65,7 @@ class SyncCore:
         # 自动加载配置（不启动监控，避免 API 请求时重复创建 Observer）
         self._reload_config()
 
-    def init_config(self):
+    def init_config(self) -> None:
         """兼容接口：重新加载配置并启动监控"""
         self._reload_config()
         self._start_monitoring()
@@ -129,7 +130,7 @@ class SyncCore:
     def monitor_sync_path_ids(self):
         return self._monitor_sync_path_ids
 
-    def get_sync_path_conf(self, sid=None):
+    def get_sync_path_conf(self, sid: int | None = None) -> dict:
         if sid:
             return self._sync_path_confs.get(str(sid)) or {}
         return self._sync_path_confs
@@ -162,7 +163,7 @@ class SyncCore:
                 else:
                     log.error(f"{mon_path} 启动目录监控失败：{err_msg}")
 
-    def stop_service(self):
+    def stop_service(self) -> None:
         with _observers_lock:
             if self._observer:
                 for observer in self._observer:
@@ -175,7 +176,7 @@ class SyncCore:
 
     # ---------- 文件变化处理 ----------
 
-    def file_change_handler(self, event, text, event_path):
+    def file_change_handler(self, event: Any, text: str, event_path: str) -> None:
         if event.is_directory:
             return
         try:
@@ -264,7 +265,7 @@ class SyncCore:
             ExceptionUtils.exception_traceback(e)
             log.error(f"【Sync】发生错误：{str(e)} - {traceback.format_exc()}")
 
-    def transfer_mon_files(self):
+    def transfer_mon_files(self) -> None:
         with _need_sync_paths_lock:
             finished_paths = []
             for path in list(self._need_sync_paths):
@@ -301,7 +302,7 @@ class SyncCore:
                         log.warn(f"【Sync】{path}转移失败：{ret_msg}")
                 self._need_sync_paths.pop(path)
 
-    def transfer_sync(self, sid=None):
+    def transfer_sync(self, sid: int | list[int] | None = None) -> None:
         if not sid:
             sids = self._monitor_sync_path_ids
         elif isinstance(sid, list):
@@ -349,7 +350,7 @@ class SyncCore:
             ExceptionUtils.exception_traceback(err)
             log.error(f"【Sync】{event_path} 同步失败：{str(err)}")
 
-    def check_source(self, source=None, sid=None):
+    def check_source(self, source: str | None = None, sid: int | None = None) -> None:
         if source:
             check_monpath = source
         elif sid:
@@ -366,13 +367,13 @@ class SyncCore:
 
     # ---------- 数据操作 ----------
 
-    def delete_sync_path(self, sid):
+    def delete_sync_path(self, sid: int) -> Any:
         ret = self._sync_repo.delete_config_sync_path(sid=sid)
         self._reload_config()
         self._start_monitoring()
         return ret
 
-    def insert_sync_path(self, source, dest, unknown, mode, compatibility, rename, enabled, note=None):
+    def insert_sync_path(self, source: str, dest: str, unknown: str, mode: str, compatibility: bool, rename: bool, enabled: bool, note: str | None = None) -> Any:
         ret = self._sync_repo.insert_config_sync_path(
             source=source,
             dest=dest,
@@ -387,7 +388,7 @@ class SyncCore:
         self._start_monitoring()
         return ret
 
-    def check_sync_paths(self, sid=None, compatibility=None, rename=None, enabled=None):
+    def check_sync_paths(self, sid: int | None = None, compatibility: bool | None = None, rename: bool | None = None, enabled: bool | None = None) -> Any:
         ret = self._sync_repo.check_config_sync_paths(
             sid=sid, compatibility=compatibility, rename=rename, enabled=enabled
         )
