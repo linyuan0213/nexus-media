@@ -147,7 +147,7 @@ class AutoSubPlugin:
                 self.ctx.warn("faster-whisper模型文件夹不存在，不进行处理")
                 return False
             try:
-                from faster_whisper import WhisperModel, download_model
+                import faster_whisper  # noqa: F401
             except ImportError:
                 self.ctx.warn("faster-whisper 未安装，不进行处理")
                 return False

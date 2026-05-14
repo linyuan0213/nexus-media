@@ -14,7 +14,7 @@ class Sites:
     site_repo = None
 
     _sites = []
-    _siteByIds = {}
+    _site_by_ids = {}
     _siteByUrls = {}
     _site_favicons = {}
     _rss_sites = []
@@ -33,7 +33,7 @@ class Sites:
         # 原始站点列表
         self._sites = []
         # ID存储站点
-        self._siteByIds = {}
+        self._site_by_ids = {}
         # URL存储站点
         self._siteByUrls = {}
         # 开启订阅功能站点
@@ -118,7 +118,7 @@ class Sites:
                 "public": is_public,
             }
             # 以ID存储
-            self._siteByIds[site.ID] = site_info
+            self._site_by_ids[site.ID] = site_info
             # 以域名存储
             site_def = SiteEngine.get_instance().get_by_url(site.SIGNURL or site.RSSURL or "")
             if site_def and site_def.api:
@@ -147,7 +147,7 @@ class Sites:
         获取站点配置
         """
         if siteid:
-            return self._siteByIds.get(int(siteid)) or {}
+            return self._site_by_ids.get(int(siteid)) or {}
         if siteurl:
             site_def = SiteEngine.get_instance().get_by_url(siteurl)
             if site_def and site_def.api:
@@ -155,7 +155,7 @@ class Sites:
             return self._siteByUrls.get(StringUtils.get_url_domain(siteurl)) or {}
 
         ret_sites = []
-        for site in self._siteByIds.values():
+        for site in self._site_by_ids.values():
             if rss and not site.get("rss_enable"):
                 continue
             if brush and not site.get("brush_enable"):
@@ -181,7 +181,7 @@ class Sites:
             return False
         state, msg = self._limiters[site_id].check_rate_limit()
         if msg:
-            log.warn(f"【Sites】站点 {self._siteByIds[site_id].get('name')} {msg}")
+            log.warn(f"【Sites】站点 {self._site_by_ids[site_id].get('name')} {msg}")
         return state
 
     def get_sites_by_suffix(self, suffix):
@@ -202,7 +202,7 @@ class Sites:
         根据站点名称获取站点配置
         """
         ret_sites = []
-        for site in self._siteByIds.values():
+        for site in self._site_by_ids.values():
             if site.get("name") == name:
                 ret_sites.append(site)
         return ret_sites
@@ -211,9 +211,9 @@ class Sites:
         """
         获取最大站点优先级
         """
-        if not self._siteByIds:
+        if not self._site_by_ids:
             return 0
-        return max([int(site.get("pri")) for site in self._siteByIds.values()])
+        return max([int(site.get("pri")) for site in self._site_by_ids.values()])
 
     def get_site_dict(self, rss=False, brush=False, statistic=False, signin=False):
         """
@@ -236,7 +236,7 @@ class Sites:
         if site_name:
             return self._resolve_favicon(site_name)
         result = dict(self._site_favicons)
-        for site in self._siteByIds.values():
+        for site in self._site_by_ids.values():
             name = site.get("name")
             if name and name not in result:
                 url = self._favicon_fallback_url(site)
@@ -251,7 +251,7 @@ class Sites:
         data = self._site_favicons.get(site_name)
         if data:
             return data
-        for site in self._siteByIds.values():
+        for site in self._site_by_ids.values():
             if site.get("name") == site_name:
                 return self._favicon_fallback_url(site)
         for site_def in SiteEngine.get_instance().all_sites():
@@ -274,7 +274,7 @@ class Sites:
         获取站点下载设置
         """
         if site_name:
-            for site in self._siteByIds.values():
+            for site in self._site_by_ids.values():
                 if site.get("name") == site_name:
                     return site.get("download_setting")
         return None

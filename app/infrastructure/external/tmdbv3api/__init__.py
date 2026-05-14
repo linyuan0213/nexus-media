@@ -1,4 +1,4 @@
-from .exceptions import TMDbException
+from .exceptions import TMDbError
 from .objs.discover import Discover
 from .objs.episode import Episode
 from .objs.find import Find

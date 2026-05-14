@@ -9,7 +9,7 @@ import requests.exceptions
 from app.utils.tmdb_rate_limiter import get_rate_limiter, get_retry_handler
 
 from .as_obj import AsObj
-from .exceptions import TMDbException
+from .exceptions import TMDbError
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +114,7 @@ class TMDb:
     @staticmethod
     def _get_obj(result, key="results", all_details=False):
         if "success" in result and result["success"] is False:
-            raise TMDbException(result["status_message"])
+            raise TMDbError(result["status_message"])
         if all_details is True or key is None:
             return AsObj(**result)
         else:
@@ -130,7 +130,7 @@ class TMDb:
 
     def _call(self, action, append_to_response, call_cached=True, method="GET", data=None):
         if self.api_key is None or self.api_key == "":
-            raise TMDbException("No API key found.")
+            raise TMDbError("No API key found.")
 
         url = f"{self.domain}{action}?api_key={self.api_key}&include_adult=false&{append_to_response}&language={self.language}"
 
@@ -138,7 +138,7 @@ class TMDb:
             # 使用速率限制器控制请求频率
             rate_limiter = get_rate_limiter()
             if not rate_limiter.acquire(timeout=30):  # 最多等待30秒
-                raise TMDbException("获取速率限制令牌超时")
+                raise TMDbError("获取速率限制令牌超时")
 
             if self.cache and self.obj_cached and call_cached and method != "POST":
                 req = self.cached_request(method, url, data, self.proxies)
@@ -187,6 +187,6 @@ class TMDb:
             logger.info(self.cached_request.cache_info())
 
         if "errors" in json:
-            raise TMDbException(json["errors"])
+            raise TMDbError(json["errors"])
 
         return json

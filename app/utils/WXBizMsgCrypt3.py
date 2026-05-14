@@ -40,11 +40,11 @@ WXBizMsgCrypt_GenReturnXml_Error = -40011
 """
 
 
-class FormatException(Exception):
+class FormatError(Exception):
     pass
 
 
-def throw_exception(message, exception_class=FormatException):
+def throw_exception(message, exception_class=FormatError):
     """my define raise exception function"""
     raise exception_class(message)
 
@@ -231,7 +231,7 @@ class WXBizMsgCrypt:
             assert len(self.key) == 32
         except Exception as err:
             print(str(err))
-            throw_exception("[error]: EncodingAESKey unvalid !", FormatException)
+            throw_exception("[error]: EncodingAESKey unvalid !", FormatError)
             # return WXBizMsgCrypt_IllegalAesKey,None
         self.m_sToken = sToken
         self.m_sReceiveId = sReceiveId

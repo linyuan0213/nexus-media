@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from lxml import etree
 
 import log
-from app.infrastructure.external.tmdbv3api import TMDbException
+from app.infrastructure.external.tmdbv3api import TMDbError
 from app.media.lookup.tmdb_client import TmdbClient, compare_tmdb_names
 from app.media.lookup.tmdb_detail import TmdbDetail
 from app.utils import RequestUtils, StringUtils
@@ -25,7 +25,7 @@ class TmdbSearch:
             blacklist = [str(item.TMDB_ID) for item in self.client.get_blacklist()]
             if movies and blacklist:
                 movies = [m for m in movies if not (m.get("id") and str(m.get("id")) in blacklist)]
-        except (TMDbException, Exception) as err:
+        except (TMDbError, Exception) as err:
             log.error(f"【Meta】连接TMDB出错：{str(err)}")
             return None
         if not movies:
@@ -88,7 +88,7 @@ class TmdbSearch:
             blacklist = [str(item.TMDB_ID) for item in self.client.get_blacklist()]
             if tvs and blacklist:
                 tvs = [t for t in tvs if not (t.get("id") and str(t.get("id")) in blacklist)]
-        except (TMDbException, Exception) as err:
+        except (TMDbError, Exception) as err:
             log.error(f"【Meta】连接TMDB出错：{str(err)}")
             return None
         if not tvs:
@@ -209,7 +209,7 @@ class TmdbSearch:
             blacklist = [str(item.TMDB_ID) for item in self.client.get_blacklist()]
             if tvs and blacklist:
                 tvs = [t for t in tvs if not (t.get("id") and str(t.get("id")) in blacklist)]
-        except (TMDbException, Exception) as err:
+        except (TMDbError, Exception) as err:
             log.error(f"【Meta】连接TMDB出错：{str(err)}")
             return None
         if not tvs:
@@ -247,7 +247,7 @@ class TmdbSearch:
     def search_multi(self, name):
         try:
             multis = self.client.search.multi({"query": name}) or []
-        except (TMDbException, Exception) as err:
+        except (TMDbError, Exception) as err:
             log.error(f"【Meta】连接TMDB出错：{str(err)}")
             return None
         if not multis:
@@ -289,7 +289,7 @@ class TmdbSearch:
             return []
         try:
             multis = self.client.search.multi({"query": name}) or []
-        except (TMDbException, Exception) as err:
+        except (TMDbError, Exception) as err:
             log.error(f"【Meta】连接TMDB出错：{str(err)}")
             return []
         ret_infos = []
@@ -308,7 +308,7 @@ class TmdbSearch:
             if year:
                 params["year"] = year
             movies = self.client.search.movies(params) or []
-        except (TMDbException, Exception) as err:
+        except (TMDbError, Exception) as err:
             log.error(f"【Meta】连接TMDB出错：{str(err)}")
             return []
         ret_infos = []
@@ -326,7 +326,7 @@ class TmdbSearch:
             if year:
                 params["first_air_date_year"] = year
             tvs = self.client.search.tv_shows(params) or []
-        except (TMDbException, Exception) as err:
+        except (TMDbError, Exception) as err:
             log.error(f"【Meta】连接TMDB出错：{str(err)}")
             return []
         ret_infos = []
