@@ -1,21 +1,24 @@
 import os
+
+from alembic.command import upgrade as alembic_upgrade
+from alembic.config import Config as AlembicConfig
+
 import log
-from config import Config
 from app.utils.path_utils import get_root_path
+from config import Config
+
+from .database_factory import DatabaseFactory
 from .main_db import (
-    SessionManager,
     Database,
     DbPersist,
     MainDb,
-    remove_session,
-    get_session_manager,
+    SessionManager,
     get_engine,
+    get_session_manager,
+    remove_session,
 )
 from .media_db import MediaDb
-from .database_factory import DatabaseFactory
 from .sql_adapter import SQLAdapter, adapt_sql_for_engine
-from alembic.config import Config as AlembicConfig
-from alembic.command import upgrade as alembic_upgrade
 
 
 def init_db():

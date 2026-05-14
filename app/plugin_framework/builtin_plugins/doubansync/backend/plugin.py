@@ -1,24 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 DoubanSync Plugin v2
 同步豆瓣在看、想看、看过记录，自动添加订阅或搜索下载
 """
 import json
-import os
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 from threading import Lock
 from time import sleep
 
 from app.media import DouBan, MetaInfo
+from app.plugin_framework.context import PluginContext
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.search_service import Searcher
 from app.services.subscribe_service import SubscribeService as Subscribe
-from app.utils.types import SearchType, RssType, MediaType
+from app.utils.types import MediaType, RssType, SearchType
 from app.utils.web_utils import WebUtils
-
-from app.plugin_framework.context import PluginContext
-
 
 _lock = Lock()
 
@@ -332,9 +328,9 @@ class DoubanSyncPlugin:
             code, msg, _ = result
             self.ctx.info(f"订阅返回 code={code}, msg={msg}")
             if code == 0 or code == 9:
-                self.ctx.info(f"code 匹配，准备调用 _update_history")
+                self.ctx.info("code 匹配，准备调用 _update_history")
                 self._update_history(media=media_info, state="RSS")
-                self.ctx.info(f"_update_history 调用完成")
+                self.ctx.info("_update_history 调用完成")
             else:
                 self.ctx.error(f"{media_info.get_name()} 添加订阅失败：{msg}")
         except Exception as e:

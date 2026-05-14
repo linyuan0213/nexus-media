@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 同步领域实体
 包含目录同步配置实体
 """
 from dataclasses import dataclass, fields
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 @dataclass
@@ -18,7 +17,7 @@ class SyncPathEntity:
     compatibility: bool
     rename: bool
     enabled: bool
-    note: Optional[str]
+    note: str | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["SyncPathEntity"]:
@@ -46,7 +45,7 @@ class SyncPathEntity:
             return getattr(self, field_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "source": self.source,

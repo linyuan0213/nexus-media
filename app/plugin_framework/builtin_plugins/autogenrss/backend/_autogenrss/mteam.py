@@ -1,11 +1,10 @@
 import json
 
+from app.core.constants import MT_URL
 from app.db.repositories import SiteRepository
 from app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss._base import _ISiteRssGenHandler
-from app.utils.http_utils import RequestUtils
-from config import Config
-from app.core.constants import MT_URL
 from app.utils.config_tools import get_proxies
+from app.utils.http_utils import RequestUtils
 
 
 class Mteam(_ISiteRssGenHandler):
@@ -14,8 +13,8 @@ class Mteam(_ISiteRssGenHandler):
     """
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "m-team"
-    
-    
+
+
     @classmethod
     def match(cls, url):
         """
@@ -24,7 +23,7 @@ class Mteam(_ISiteRssGenHandler):
         :return: 是否匹配，如匹配则会调用该类的gen_rss方法
         """
         return True if cls.site_url in url else False
-    
+
     def gen_rss(self, site_info: dict):
         """
         执行RSS生成
@@ -38,9 +37,9 @@ class Mteam(_ISiteRssGenHandler):
             "contentType": 'application/json;charset=UTF-8',
             "User-Agent": ua
         })
-        
+
         proxy = get_proxies() if site_info.get("proxy") else None
-        
+
         rss_url = f"{MT_URL}/api/rss/genlink"
         data = {
             "labels": 0,
@@ -59,18 +58,18 @@ class Mteam(_ISiteRssGenHandler):
             proxies=proxy
         ).post_res(url=rss_url, data=data)
         if not res or res.status_code != 200:
-            self.error(f"生成RSS失败，请检查站点连通性")
+            self.error("生成RSS失败，请检查站点连通性")
 
         rss_link = ""
         json_data = res.json()
         if json_data.get("message") == "SUCCESS":
             rss_link = json_data.get("data").get("dlUrl")
             self.debug(f"生成的rss: {rss_link}")
-        
+
         if rss_link:
             SiteRepository().update_site_rssurl(site_info.get('id'), rss_link)
-            self.info(f"生成RSS成功")
+            self.info("生成RSS成功")
             return True, f'【{site}】生成RSS成功'
         else:
-            self.info(f"生成RSS失败")
+            self.info("生成RSS失败")
             return True, f'【{site}生成RSS失败'

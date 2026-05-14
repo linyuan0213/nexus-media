@@ -9,7 +9,7 @@ Base Repository Class
 """
 from contextlib import contextmanager
 
-from app.db.main_db import SessionManager, DbPersist
+from app.db.main_db import SessionManager
 
 
 class BaseRepository:

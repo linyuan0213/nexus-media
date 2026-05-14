@@ -1,18 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 完整真实场景测试：Re:Zero 第四季集数映射（修复 Parser 后）
 """
 import sys
 from unittest.mock import MagicMock
+
 sys.modules['log'] = MagicMock()
 
 import os
+
 os.environ['NASTOOL_CONFIG'] = '/home/linyuan/python/config/config.yaml'
 
-from app.media.parser.regex import RegexParser
-from app.media.parser.episode_mapper import EpisodeMapper
 from app.media.lookup.tmdb_lookup import TmdbLookup
 from app.media.models import MediaInfo
+from app.media.parser.episode_mapper import EpisodeMapper
+from app.media.parser.regex import RegexParser
 
 
 def test_rezero_full_scenario():
@@ -69,7 +70,7 @@ def test_rezero_full_scenario():
 
     print(f"  标题: {info.title}")
     print(f"  TMDB ID: {info.tmdb_id}")
-    print(f"  原始: S04E04 (总第70集)")
+    print("  原始: S04E04 (总第70集)")
     print(f"  映射后: S{info.begin_season:02d}E{info.begin_episode:02d}")
 
     # 验证：S04E04 应该映射到 S01E70

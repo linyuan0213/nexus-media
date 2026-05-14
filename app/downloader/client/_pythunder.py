@@ -1,19 +1,18 @@
-# -*- coding: utf-8 -*-
 
-import requests
-import json
-import re
-import os
-import log
 import hashlib
-import base64
+import json
+import os
+import re
+
 import bencodepy
-from typing import Optional
+import requests
+
+import log
 
 
 class PyThunder:
     """迅雷客户端封装类"""
-    
+
     def __init__(self, token=None, host='localhost', port=2345):
         """
         PyThunder constructor.
@@ -31,16 +30,16 @@ class PyThunder:
             "Authorization": self.token,
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
         }
-    
+
     def get_pan_token(self):
         """获取PAN token"""
         url = f"{self.base_url}/webman/3rdparty/pan-xunlei-com/index.cgi/"
         response = self.session.get(url, headers=self.headers, verify=False)
-        
+
         # 从响应文本中提取 token
         pattern = r'function uiauth\(value\)\{ return "([^"]+)" \}'
         match = re.search(pattern, response.text)
-        
+
         if match:
             token = match.group(1)
             return token
@@ -52,7 +51,7 @@ class PyThunder:
                 return match_jwt.group()
             else:
                 raise ValueError("未在响应中找到 token")
-    
+
     def get_device_id(self):
         """获取设备ID"""
         self.headers["Accept"] = "application/json, text/plain, */*"
@@ -75,22 +74,22 @@ class PyThunder:
                 raise ValueError(f"无法从响应中提取 device_id，target 字段格式不正确: {target}")
         else:
             raise ValueError(f"请求失败，状态码: {response.status_code}")
-    
+
     def _format_file_size(self, size_bytes: int) -> str:
         """格式化文件大小为可读格式"""
         if size_bytes == 0:
             return "0 B"
-        
+
         units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
         unit_index = 0
         size = float(size_bytes)
-        
+
         while size >= 1024 and unit_index < len(units) - 1:
             size /= 1024
             unit_index += 1
-            
+
         return f"{size:.2f} {units[unit_index]}"
-    
+
     def get_torrent_info(self, download_urls: str, extract_info: bool = True):
         """
         获取种子/资源信息（文件列表、大小等）
@@ -105,7 +104,7 @@ class PyThunder:
         """
         url = f"{self.base_url}/webman/3rdparty/pan-xunlei-com/index.cgi/drive/v1/resource/list"
         pan_token = self.get_pan_token()
-    
+
         self.headers["Accept"] = "application/json, text/plain, */*"
         self.headers["content-type"] = "application/json"
 
@@ -120,19 +119,19 @@ class PyThunder:
         }
         data = json.dumps(data, separators=(',', ':'))
         response = self.session.post(url, headers=self.headers, params=params, data=data, verify=False)
-        
+
         if not extract_info:
             return response.json()
-        
+
         # 提取文件信息
         result = response.json()
-        
+
         # 检查响应结构
         if 'list' not in result or 'resources' not in result['list']:
             return result
-        
+
         resources = result['list']['resources']
-        
+
         # 递归提取所有文件信息
         def extract_files_from_resources(resources_list, parent_path="", file_index_counter=0):
             """
@@ -149,16 +148,16 @@ class PyThunder:
             file_list = []
             total_size = 0
             total_files = 0
-            
+
             for resource in resources_list:
                 resource_id = resource.get('id', '')
                 resource_name = resource.get('name', '')
                 resource_size = resource.get('file_size', 0)
                 is_dir = resource.get('is_dir', False)
-                
+
                 # 构建完整路径
                 current_path = f"{parent_path}/{resource_name}" if parent_path else resource_name
-                
+
                 if is_dir and 'dir' in resource and 'resources' in resource['dir']:
                     # 递归处理目录
                     dir_resources = resource['dir']['resources']
@@ -171,7 +170,7 @@ class PyThunder:
                 else:
                     # 处理文件
                     file_index_counter += 1
-                    
+
                     # 从id中提取文件索引（最后一个点后面的数字）
                     file_index = 0
                     if resource_id:
@@ -184,7 +183,7 @@ class PyThunder:
                             except (ValueError, IndexError):
                                 # 如果不能转换为数字，使用计数器
                                 file_index = file_index_counter
-                    
+
                     file_info = {
                         'id': resource_id,
                         'name': resource_name,
@@ -199,18 +198,18 @@ class PyThunder:
                         'parent_id': resource.get('parent_id', '')
                     }
                     file_list.append(file_info)
-                    
+
                     total_size += resource_size
                     total_files += 1
-            
+
             return file_list, total_size, total_files, file_index_counter
-        
+
         # 提取所有文件
         file_list, total_size_bytes, total_files, _ = extract_files_from_resources(resources)
-        
+
         # 按文件索引排序
         file_list.sort(key=lambda x: x.get('file_index', 0))
-        
+
         # 返回结构化的信息
         return {
             'list_id': result.get('list_id', ''),
@@ -220,7 +219,7 @@ class PyThunder:
             'files': file_list,
             'raw_response': result if len(file_list) == 0 else None  # 如果没有文件，保留原始响应
         }
-    
+
     def get_folders(self, folder_id: str = None):
         """
         获取迅雷文件夹列表
@@ -236,25 +235,25 @@ class PyThunder:
         except Exception as e:
             log.warn(f"获取 device_id 失败，使用默认值: {e}")
             device_id = "7abd3182d399f7bdda199550d8babede"
-        
+
         pan_token = self.get_pan_token()
-        
+
         url = f"{self.base_url}/webman/3rdparty/pan-xunlei-com/index.cgi/drive/v1/files"
-        
+
         self.headers.update({
             "Accept": "application/json, text/plain, */*",
             "content-type": "application/json",
             "device-space": "",
             "pan-auth": pan_token
         })
-        
+
         # 使用 kind 过滤器只返回文件夹，且 phase 为 COMPLETE
         filters = {
             "kind": {"eq": "drive#folder"},
             "trashed": {"eq": False},
             "phase": {"eq": "PHASE_TYPE_COMPLETE"}
         }
-        
+
         params = {
             "space": f"device_id#{device_id}",
             "pan_auth": pan_token,
@@ -263,9 +262,9 @@ class PyThunder:
             "parent_id": folder_id or "",
             "filters": json.dumps(filters, separators=(',', ':'))
         }
-        
+
         response = self.session.get(url, headers=self.headers, params=params, verify=False)
-        
+
         if response.status_code == 200:
             result = response.json()
             files = result.get('files', [])
@@ -284,7 +283,7 @@ class PyThunder:
         else:
             log.error(f"获取文件夹列表失败: {response.status_code}, {response.text}")
             return []
-    
+
     def _resolve_folder_id(self, path: str) -> str:
         """将路径解析为文件夹ID，按层级名称逐级匹配，不存在的子目录自动创建"""
         if not path:
@@ -317,7 +316,7 @@ class PyThunder:
 
         return current_id
 
-    def create_folder(self, parent_id: str, name: str) -> Optional[dict]:
+    def create_folder(self, parent_id: str, name: str) -> dict | None:
         """在迅雷中创建文件夹
 
         Args:
@@ -384,7 +383,7 @@ class PyThunder:
         """
         # 判断输入类型：磁力链接还是种子文件
         actual_download_url = download_urls
-        
+
         if download_urls.startswith('magnet:?'):
             log.info(f"检测到磁力链接: {download_urls[:80]}...")
         elif download_urls.endswith('.torrent') or os.path.exists(download_urls):
@@ -397,42 +396,42 @@ class PyThunder:
             log.info(f"已转换为磁力链接: {magnet_url[:80]}...")
         else:
             log.info(f"输入类型未知，按磁力链接处理: {download_urls[:80]}...")
-        
+
         # 首先获取种子信息，用于获取文件详情
         torrent_info = self.get_torrent_info(actual_download_url, extract_info=True)
-        
+
         if not torrent_info or 'files' not in torrent_info or len(torrent_info['files']) == 0:
             raise ValueError("无法获取种子信息或没有找到可下载的文件")
-        
+
         files = torrent_info['files']
         total_files = torrent_info['total_files']
         total_size_bytes = torrent_info['total_size_bytes']
-        
+
         # 确定要下载的文件
         if file_names:
             # 根据文件名筛选文件
             selected_files = [f for f in files if f['name'] in file_names]
             if not selected_files:
                 raise ValueError(f"未找到指定的文件: {file_names}")
-            
+
             # 计算选中的文件大小总和
             selected_size = sum(f['size_bytes'] for f in selected_files)
             selected_count = len(selected_files)
-            
+
             # 生成文件索引（使用从id提取的file_index）
             indices = [str(f['file_index']) for f in selected_files]
             sub_file_index = ",".join(indices)
-            
+
             # 使用第一个选中文件的名称作为任务名称
             task_name = selected_files[0]['name'] if selected_files else files[0]['name']
             download_size = selected_size
             download_count = selected_count
-            
+
         elif file_indices:
             # 使用指定的文件索引
             sub_file_index = file_indices
             task_name = files[0]['name']  # 使用第一个文件作为任务名称
-            
+
             # 如果指定了索引，需要计算选中文件的大小
             if file_indices == "--1":
                 # 下载全部
@@ -463,7 +462,7 @@ class PyThunder:
                         selected_indices = {int(file_indices.strip())}
                     except ValueError:
                         raise ValueError(f"无效的索引格式: {file_indices}")
-                
+
                 # 筛选文件并计算大小
                 selected_files = [f for f in files if f.get('file_index', 0) in selected_indices]
                 if not selected_files:
@@ -481,7 +480,7 @@ class PyThunder:
             task_name = files[0]['name']
             download_size = total_size_bytes
             download_count = total_files
-        
+
         # 获取 device_id
         try:
             device_id = self.get_device_id()
@@ -489,13 +488,13 @@ class PyThunder:
             log.warn(f"获取 device_id 失败，使用默认值: {e}")
             # 使用示例中的 device_id 作为后备
             device_id = "7abd3182d399f7bdda199550d8babede"
-        
+
         # 获取 pan_token
         pan_token = self.get_pan_token()
-        
+
         # 准备下载请求
         url = f"{self.base_url}/webman/3rdparty/pan-xunlei-com/index.cgi/drive/v1/task"
-        
+
         # 更新 headers
         self.headers.update({
             "Accept": "*/*",
@@ -503,10 +502,10 @@ class PyThunder:
             "device-space": "",
             "pan-auth": pan_token
         })
-        
+
         # 使用第一个文件的信息
         first_file = files[0]
-        
+
         data = {
             "type": "user#download-url",
             "name": task_name,
@@ -524,39 +523,39 @@ class PyThunder:
                 "file_id": first_file.get('id', '')
             }
         }
-        
+
         data_json = json.dumps(data, separators=(',', ':'))
-        
+
         log.info(f"开始下载任务: {task_name}")
         log.info(f"下载文件数: {download_count}")
         log.info(f"下载大小: {self._format_file_size(download_size)}")
         log.info(f"文件索引: {sub_file_index}")
         log.info(f"保存路径: {destination_path}")
-        
+
         response = self.session.post(url, headers=self.headers, data=data_json, verify=False)
-        
+
         if response.status_code == 200:
             result = response.json()
-            
+
             # 根据实际响应结构提取任务信息
             task_info = result
             if 'task' in result:
                 task_info = result['task']
-            
-            log.info(f"✓ 下载任务创建成功")
+
+            log.info("✓ 下载任务创建成功")
             log.info(f"  任务ID: {task_info.get('id', 'N/A')}")
             log.info(f"  任务名称: {task_info.get('name', 'N/A')}")
             log.info(f"  阶段: {task_info.get('phase', 'N/A')}")
             log.info(f"  消息: {task_info.get('message', 'N/A')}")
             log.info(f"  创建时间: {task_info.get('created_time', 'N/A')}")
-            
+
             return task_info
         else:
             error_msg = f"下载任务创建失败，状态码: {response.status_code}"
             log.error(error_msg)
             log.error(f"响应: {response.text}")
             raise Exception(error_msg)
-    
+
     def _get_tasks(self, phase_filter: str, limit: int = 100):
         """
         内部方法：获取指定阶段的任务
@@ -574,13 +573,13 @@ class PyThunder:
         except Exception as e:
             log.warn(f"获取 device_id 失败，使用默认值: {e}")
             device_id = "7abd3182d399f7bdda199550d8babede"
-        
+
         # 获取 pan_token
         pan_token = self.get_pan_token()
-        
+
         # 准备请求
         url = f"{self.base_url}/webman/3rdparty/pan-xunlei-com/index.cgi/drive/v1/tasks"
-        
+
         # 更新 headers
         self.headers.update({
             "Accept": "*/*",
@@ -589,14 +588,14 @@ class PyThunder:
             "pan-auth": pan_token,
             "Referer": f"{self.base_url}/webman/3rdparty/pan-xunlei-com/index.cgi/"
         })
-        
+
         # 构建 filters 参数
         filters = {
             "phase": {"in": phase_filter},
             "type": {"in": "user#download-url,user#download"}
         }
         filters_json = json.dumps(filters, separators=(',', ':'))
-        
+
         params = {
             "space": f"device_id#{device_id}",
             "page_token": "",
@@ -605,9 +604,9 @@ class PyThunder:
             "pan_auth": pan_token,
             "device_space": ""
         }
-        
+
         response = self.session.get(url, headers=self.headers, params=params, verify=False)
-        
+
         if response.status_code == 200:
             result = response.json()
             # 返回任务列表
@@ -619,7 +618,7 @@ class PyThunder:
             log.error(error_msg)
             log.error(f"响应: {response.text}")
             raise Exception(error_msg)
-    
+
     def get_downloading_tasks(self, limit: int = 100):
         """
         获取正在下载的任务（等待中、运行中、暂停、错误）
@@ -632,7 +631,7 @@ class PyThunder:
         """
         phase_filter = "PHASE_TYPE_PENDING,PHASE_TYPE_RUNNING,PHASE_TYPE_PAUSED,PHASE_TYPE_ERROR"
         return self._get_tasks(phase_filter, limit)
-    
+
     def get_complete_tasks(self, limit: int = 100):
         """
         获取已完成的任务
@@ -645,7 +644,7 @@ class PyThunder:
         """
         phase_filter = "PHASE_TYPE_COMPLETE"
         return self._get_tasks(phase_filter, limit)
-    
+
     def _update_task_phase(self, task_id: str, phase: str):
         """
         内部方法：更新任务阶段（暂停/启动/删除）
@@ -663,13 +662,13 @@ class PyThunder:
         except Exception as e:
             log.warn(f"获取 device_id 失败，使用默认值: {e}")
             device_id = "7abd3182d399f7bdda199550d8babede"
-        
+
         # 获取 pan_token
         pan_token = self.get_pan_token()
-        
+
         # 准备请求
         url = f"{self.base_url}/webman/3rdparty/pan-xunlei-com/index.cgi/method/patch/drive/v1/task"
-        
+
         # 更新 headers
         self.headers.update({
             "Accept": "*/*",
@@ -677,7 +676,7 @@ class PyThunder:
             "device-space": "",
             "pan-auth": pan_token
         })
-        
+
         # 构建请求数据
         data = {
             "space": f"device_id#{device_id}",
@@ -687,16 +686,16 @@ class PyThunder:
                 "spec": json.dumps({"phase": phase})
             }
         }
-        
+
         data_json = json.dumps(data, separators=(',', ':'))
-        
+
         params = {
             "pan_auth": pan_token,
             "device_space": ""
         }
-        
+
         response = self.session.patch(url, headers=self.headers, params=params, data=data_json, verify=False)
-        
+
         if response.status_code == 200:
             result = response.json()
             if result.get('HttpStatus') == 0:
@@ -710,7 +709,7 @@ class PyThunder:
             log.error(error_msg)
             log.error(f"响应: {response.text}")
             return False
-    
+
     def pause_task(self, task_id: str):
         """
         暂停任务
@@ -722,7 +721,7 @@ class PyThunder:
             操作是否成功 (True/False)
         """
         return self._update_task_phase(task_id, "pause")
-    
+
     def resume_task(self, task_id: str):
         """
         恢复任务
@@ -734,7 +733,7 @@ class PyThunder:
             操作是否成功 (True/False)
         """
         return self._update_task_phase(task_id, "running")
-    
+
     def delete_task(self, task_id: str, delete_files: bool = False):
         """
         删除下载任务
@@ -747,7 +746,7 @@ class PyThunder:
             操作是否成功 (True/False)
         """
         log.info(f"删除任务: {task_id}, 删除文件: {delete_files}")
-        
+
         if delete_files:
             # 删除任务包括文件 - 使用 PATCH 方法，设置 phase 为 "delete"
             return self._update_task_phase(task_id, "delete")
@@ -759,13 +758,13 @@ class PyThunder:
             except Exception as e:
                 log.warn(f"获取 device_id 失败，使用默认值: {e}")
                 device_id = "7abd3182d399f7bdda199550d8babede"
-            
+
             # 获取 pan_token
             pan_token = self.get_pan_token()
-            
+
             # 准备请求
             url = f"{self.base_url}/webman/3rdparty/pan-xunlei-com/index.cgi/method/delete/drive/v1/tasks"
-            
+
             # 更新 headers
             self.headers.update({
                 "Accept": "*/*",
@@ -773,7 +772,7 @@ class PyThunder:
                 "device-space": "",
                 "pan-auth": pan_token
             })
-            
+
             # 构建查询参数
             params = {
                 "space": f"device_id#{device_id}",
@@ -781,10 +780,10 @@ class PyThunder:
                 "pan_auth": pan_token,
                 "device_space": ""
             }
-            
+
             # DELETE 请求，空数据体
             response = self.session.delete(url, headers=self.headers, params=params, verify=False)
-            
+
             if response.status_code == 200:
                 result = response.json()
                 # 根据用户提供的示例，只删除任务不删除文件的响应是空对象 {}
@@ -799,7 +798,7 @@ class PyThunder:
                 log.error(error_msg)
                 log.error(f"响应: {response.text}")
                 return False
-    
+
     def torrent_to_magnet(self, torrent_file_path: str):
         """
         将种子文件转换为磁力链接
@@ -815,34 +814,34 @@ class PyThunder:
             # 读取种子文件
             with open(torrent_file_path, 'rb') as f:
                 torrent_data = f.read()
-            
+
             # 解码种子文件
             torrent_dict = bencodepy.decode(torrent_data)
-            
+
             # 计算 info_hash
             info = torrent_dict[b'info']
             info_encoded = bencodepy.encode(info)
             info_hash = hashlib.sha1(info_encoded).digest()
-            
+
             # 转换为十六进制字符串
             info_hash_hex = info_hash.hex()
-            
+
             # 构建磁力链接
             magnet_link = f"magnet:?xt=urn:btih:{info_hash_hex}"
-            
+
             # 添加 tracker（如果有）
             if b'announce' in torrent_dict:
                 announce = torrent_dict[b'announce'].decode('utf-8', errors='ignore')
                 magnet_link += f"&tr={announce}"
-            
+
             # 添加名称（如果有）
             if b'name' in info:
                 name = info[b'name'].decode('utf-8', errors='ignore')
                 magnet_link += f"&dn={name}"
-            
+
             log.debug(f"种子文件 {torrent_file_path} 转换为磁力链接: {magnet_link[:80]}...")
             return magnet_link
-            
+
         except Exception as e:
             log.error(f"种子文件转换失败: {e}")
             return None

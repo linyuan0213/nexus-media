@@ -1,7 +1,9 @@
 
 import json
-from app.utils.commons import SingletonMeta
+
 from app.infrastructure.cache_system import get_cache_manager
+from app.utils.commons import SingletonMeta
+
 
 class CookiecloudHelper(metaclass=SingletonMeta):
     def __init__(self):

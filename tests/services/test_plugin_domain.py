@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Plugin / TMDB黑名单领域层测试
 测试 Plugin 实体 from_orm/to_dict 以及适配器代理行为
@@ -7,11 +6,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.domain.entities.plugin import PluginHistoryEntity, TmdbBlacklistEntity
 from app.db.repositories.plugin_repo_adapter import (
     PluginHistoryRepositoryAdapter,
     TmdbBlacklistRepositoryAdapter,
 )
+from app.domain.entities.plugin import PluginHistoryEntity, TmdbBlacklistEntity
 
 
 def _make_orm(**kwargs):

@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 下载领域实体
 定义Downloader、DownloadHistory、DownloadSetting的领域模型
 """
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Optional, Dict, Any
+from dataclasses import dataclass
+from typing import Any, Optional
 
 
 @dataclass
@@ -21,7 +19,7 @@ class DownloaderEntity:
     rmt_mode: str
     config: str  # JSON配置字符串
     download_dir: str
-    
+
     @classmethod
     def from_orm(cls, orm_model) -> Optional["DownloaderEntity"]:
         """从ORM模型创建领域实体"""
@@ -39,8 +37,8 @@ class DownloaderEntity:
             config=orm_model.CONFIG or "{}",
             download_dir=orm_model.DOWNLOAD_DIR or ""
         )
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "id": self.id,
@@ -76,7 +74,7 @@ class DownloadHistoryEntity:
     download_id: str
     save_path: str
     date: str
-    
+
     @classmethod
     def from_orm(cls, orm_model) -> Optional["DownloadHistoryEntity"]:
         """从ORM模型创建领域实体"""
@@ -101,8 +99,8 @@ class DownloadHistoryEntity:
             save_path=orm_model.SAVE_PATH or "",
             date=orm_model.DATE or ""
         )
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "id": self.id,
@@ -139,7 +137,7 @@ class DownloadSettingEntity:
     seeding_time_limit: int  # 分钟
     downloader: str
     note: str
-    
+
     @classmethod
     def from_orm(cls, orm_model) -> Optional["DownloadSettingEntity"]:
         """从ORM模型创建领域实体"""
@@ -158,8 +156,8 @@ class DownloadSettingEntity:
             downloader=orm_model.DOWNLOADER or "",
             note=orm_model.NOTE or ""
         )
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "id": self.id,
@@ -184,8 +182,8 @@ class IndexerStatisticsEntity:
     fail: int
     success: int
     avg_seconds: float
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "indexer": self.indexer,

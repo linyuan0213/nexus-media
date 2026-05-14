@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 WordsService - 自定义识别词业务层
 将 web/controllers/words.py 中的业务逻辑下沉到可独立测试的 Service。
@@ -6,12 +5,10 @@ WordsService - 自定义识别词业务层
 import base64
 import json
 import re
-from typing import List, Optional, Tuple
 
 from app.helper import WordsHelper
 from app.media import MediaCache
 from app.schemas.words import (
-    WordGroupDTO,
     WordDTO,
     WordGroupExportDTO,
 )
@@ -28,13 +25,13 @@ class WordsService:
     - 集数偏移格式校验
     """
 
-    def __init__(self, words_helper: Optional[WordsHelper] = None, media_cache: Optional[MediaCache] = None):
+    def __init__(self, words_helper: WordsHelper | None = None, media_cache: MediaCache | None = None):
         self._words = words_helper or WordsHelper()
         self._media_cache = media_cache or MediaCache()
 
     # ---------- 词组操作 ----------
 
-    def add_word_group(self, tmdb_id: int, tmdb_type: str) -> Tuple[bool, str]:
+    def add_word_group(self, tmdb_id: int, tmdb_type: str) -> tuple[bool, str]:
         """
         根据 TMDB 信息添加自定义词组
         :return: (是否成功, 消息)
@@ -76,7 +73,7 @@ class WordsService:
 
     # ---------- 词汇操作 ----------
 
-    def _validate_offset(self, wtype: str, offset: str) -> Optional[str]:
+    def _validate_offset(self, wtype: str, offset: str) -> str | None:
         """
         校验集数偏移格式
         :return: 错误信息，None 表示通过
@@ -102,7 +99,7 @@ class WordsService:
                          wtype: str,
                          season: int,
                          enabled: int,
-                         regex: int) -> Tuple[bool, str]:
+                         regex: int) -> tuple[bool, str]:
         """
         添加或编辑自定义词
         :return: (是否成功, 消息)
@@ -161,12 +158,12 @@ class WordsService:
 
         return False, ""
 
-    def delete_word(self, wid: Optional[int] = None) -> bool:
+    def delete_word(self, wid: int | None = None) -> bool:
         """删除自定义词，wid=None 时删除全部"""
         self._words.delete_custom_word(wid=wid)
         return True
 
-    def delete_words_by_ids(self, ids_info: List[str]) -> bool:
+    def delete_words_by_ids(self, ids_info: list[str]) -> bool:
         """根据 id 列表批量删除"""
         if not ids_info:
             self._words.delete_custom_word()
@@ -176,7 +173,7 @@ class WordsService:
             self._words.delete_custom_word(wid=wid)
         return True
 
-    def toggle_words(self, ids_info: List[str], flag: str) -> bool:
+    def toggle_words(self, ids_info: list[str], flag: str) -> bool:
         """切换词启用状态"""
         flag_map = {"enable": 1, "disable": 0}
         enabled = flag_map.get(flag)
@@ -190,7 +187,7 @@ class WordsService:
                 self._words.check_custom_word(wid=wid, enabled=enabled)
         return True
 
-    def get_word_by_id(self, wid: int) -> Optional[WordDTO]:
+    def get_word_by_id(self, wid: int) -> WordDTO | None:
         """根据 ID 获取单个词"""
         rows = self._words.get_custom_words(wid=wid)
         if not rows:
@@ -205,7 +202,7 @@ class WordsService:
 
     # ---------- 导入导出 ----------
 
-    def analyse_import_code(self, import_code: str) -> Tuple[List[WordGroupExportDTO], str]:
+    def analyse_import_code(self, import_code: str) -> tuple[list[WordGroupExportDTO], str]:
         """
         解析导入码
         :return: (词组列表, 备注)
@@ -232,7 +229,7 @@ class WordsService:
             ))
         return groups, note
 
-    def export_words(self, ids_info: Optional[str] = None, note: str = "") -> Tuple[str, str]:
+    def export_words(self, ids_info: str | None = None, note: str = "") -> tuple[str, str]:
         """
         导出词为 base64 编码字符串
         :return: (编码字符串, 备注)
@@ -297,7 +294,7 @@ class WordsService:
         encoded = base64.b64encode(export_string.encode("utf-8")).decode('utf-8')
         return encoded, note
 
-    def import_words(self, import_code: str, ids_info: str) -> Tuple[bool, str]:
+    def import_words(self, import_code: str, ids_info: str) -> tuple[bool, str]:
         """
         导入自定义词
         :return: (是否成功, 消息)
@@ -376,7 +373,7 @@ class WordsService:
 
     # ---------- 列表查询 ----------
 
-    def get_all_word_groups(self) -> List[dict]:
+    def get_all_word_groups(self) -> list[dict]:
         """
         获取所有词组（含词汇列表），直接返回前端需要的 dict 结构
         """

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 日志模块
 
@@ -17,11 +16,11 @@ logging.getLogger('httpcore').setLevel(logging.WARNING)
 logging.getLogger('openai').setLevel(logging.WARNING)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 
+from ._api import console, debug, error, info, warn
 from ._buffer_proxy import LOG_BUFFER, LogBufferProxy, get_log_buffer
+from ._compat import LOG_INDEX, LOG_QUEUE
 from ._intercept import InterceptHandler
 from ._logger_manager import Logger, get_logger_instance
-from ._api import debug, info, error, warn, console
-from ._compat import LOG_QUEUE, LOG_INDEX
 
 __all__ = [
     # API

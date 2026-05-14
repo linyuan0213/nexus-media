@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 FastAPI 启动集成测试
 验证 FastAPI 应用可正确启动并响应基础请求
 """
 from unittest.mock import patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app

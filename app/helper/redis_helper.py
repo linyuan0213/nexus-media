@@ -1,4 +1,3 @@
-from app.utils import SystemUtils
 
 
 class RedisHelper:

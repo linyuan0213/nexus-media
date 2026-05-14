@@ -1,28 +1,27 @@
-# -*- coding: utf-8 -*-
 """
 SubscribeSearchEngine - 订阅搜索/下载逻辑
 """
-from threading import Lock
 import traceback
-from typing import Any, Optional
+from threading import Lock
+from typing import Any
 
 import log
-from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.filter_service import FilterService as Filter
 from app.db.repositories import RssRepository
 from app.db.repositories.rss_repo_adapter import (
     RssMovieRepositoryAdapter,
-    RssTvRepositoryAdapter,
     RssTvEpisodeRepositoryAdapter,
+    RssTvRepositoryAdapter,
 )
 from app.domain.interfaces.rss_repo import (
     IRssMovieRepository,
-    IRssTvRepository,
     IRssTvEpisodeRepository,
+    IRssTvRepository,
 )
 from app.media import MediaCache, MediaService
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
+from app.services.downloader_core import DownloaderCore as Downloader
+from app.services.filter_service import FilterService as Filter
 from app.services.search_service import Searcher
 from app.utils import Torrent
 from app.utils.types import MediaType, SearchType
@@ -34,18 +33,18 @@ class SubscribeSearchEngine:
     """
 
     def __init__(self,
-                 service: Optional[Any] = None,
-                 rss_repo: Optional[RssRepository] = None,
-                 movie_repo: Optional[IRssMovieRepository] = None,
-                 tv_repo: Optional[IRssTvRepository] = None,
-                 tv_episode_repo: Optional[IRssTvEpisodeRepository] = None,
-                 searcher: Optional[Searcher] = None,
-                 media_service: Optional[MediaService] = None,
-                 media_cache: Optional[MediaCache] = None,
-                 downloader: Optional[Downloader] = None,
-                 filter_service: Optional[Filter] = None,
-                 message: Optional[Message] = None,
-                 eventmanager: Optional[EventManager] = None):
+                 service: Any | None = None,
+                 rss_repo: RssRepository | None = None,
+                 movie_repo: IRssMovieRepository | None = None,
+                 tv_repo: IRssTvRepository | None = None,
+                 tv_episode_repo: IRssTvEpisodeRepository | None = None,
+                 searcher: Searcher | None = None,
+                 media_service: MediaService | None = None,
+                 media_cache: MediaCache | None = None,
+                 downloader: Downloader | None = None,
+                 filter_service: Filter | None = None,
+                 message: Message | None = None,
+                 eventmanager: EventManager | None = None):
         self._service = service
         self._rss_repo = rss_repo or RssRepository()
         # 如果没有注入领域仓库，使用适配器包装旧仓库

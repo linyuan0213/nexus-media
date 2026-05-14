@@ -48,10 +48,10 @@ class PluginRepository(BaseRepository):
         if not plugin_id:
             return None
         if key:
-            return self._db.query(PLUGINHISTORY).filter(PLUGINHISTORY.PLUGIN_ID == plugin_id,
-                                                        PLUGINHISTORY.KEY == key).first()
+            return self._db.query(PLUGINHISTORY).filter(plugin_id == PLUGINHISTORY.PLUGIN_ID,
+                                                        key == PLUGINHISTORY.KEY).first()
         else:
-            return self._db.query(PLUGINHISTORY).filter(PLUGINHISTORY.PLUGIN_ID == plugin_id).all()
+            return self._db.query(PLUGINHISTORY).filter(plugin_id == PLUGINHISTORY.PLUGIN_ID).all()
 
     @DbPersist(BaseRepository._db)
     def update_plugin_history(self, plugin_id, key, value):
@@ -63,8 +63,8 @@ class PluginRepository(BaseRepository):
             key: 键
             value: 值
         """
-        self._db.query(PLUGINHISTORY).filter(PLUGINHISTORY.PLUGIN_ID == plugin_id,
-                                              PLUGINHISTORY.KEY == key).update({
+        self._db.query(PLUGINHISTORY).filter(plugin_id == PLUGINHISTORY.PLUGIN_ID,
+                                              key == PLUGINHISTORY.KEY).update({
             "VALUE": value
         })
 
@@ -77,8 +77,8 @@ class PluginRepository(BaseRepository):
             plugin_id: 插件ID
             key: 键
         """
-        self._db.query(PLUGINHISTORY).filter(PLUGINHISTORY.PLUGIN_ID == plugin_id,
-                                              PLUGINHISTORY.KEY == key).delete()
+        self._db.query(PLUGINHISTORY).filter(plugin_id == PLUGINHISTORY.PLUGIN_ID,
+                                              key == PLUGINHISTORY.KEY).delete()
 
     # ==================== TMDB Blacklist ====================
 
@@ -97,12 +97,12 @@ class PluginRepository(BaseRepository):
             return False
         if media_type:
             count = self._db.query(TMDBBLACKLIST).filter(
-                TMDBBLACKLIST.TMDB_ID == str(tmdb_id),
-                TMDBBLACKLIST.MEDIA_TYPE == media_type
+                str(tmdb_id) == TMDBBLACKLIST.TMDB_ID,
+                media_type == TMDBBLACKLIST.MEDIA_TYPE
             ).count()
         else:
             count = self._db.query(TMDBBLACKLIST).filter(
-                TMDBBLACKLIST.TMDB_ID == str(tmdb_id)
+                str(tmdb_id) == TMDBBLACKLIST.TMDB_ID
             ).count()
         return count > 0
 
@@ -156,12 +156,12 @@ class PluginRepository(BaseRepository):
             return
         if media_type:
             self._db.query(TMDBBLACKLIST).filter(
-                TMDBBLACKLIST.TMDB_ID == str(tmdb_id),
-                TMDBBLACKLIST.MEDIA_TYPE == media_type
+                str(tmdb_id) == TMDBBLACKLIST.TMDB_ID,
+                media_type == TMDBBLACKLIST.MEDIA_TYPE
             ).delete()
         else:
             self._db.query(TMDBBLACKLIST).filter(
-                TMDBBLACKLIST.TMDB_ID == str(tmdb_id)
+                str(tmdb_id) == TMDBBLACKLIST.TMDB_ID
             ).delete()
 
     @DbPersist(BaseRepository._db)

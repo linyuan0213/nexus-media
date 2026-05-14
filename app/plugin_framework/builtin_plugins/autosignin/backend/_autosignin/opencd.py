@@ -5,8 +5,7 @@ from lxml import etree
 
 from app.helper import OcrHelper
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.utils import StringUtils, RequestUtils
-from config import Config
+from app.utils import RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
 
 
@@ -46,15 +45,15 @@ class Opencd(_ISiteSigninHandler):
                                  proxies=proxy
                                  ).get_res(url='https://www.open.cd')
         if not index_res or index_res.status_code != 200:
-            self.error(f"签到失败，请检查站点连通性")
+            self.error("签到失败，请检查站点连通性")
             return False, f'【{site}】签到失败，请检查站点连通性'
 
         if "login.php" in index_res.text:
-            self.error(f"签到失败，cookie失效")
+            self.error("签到失败，cookie失效")
             return False, f'【{site}】签到失败，cookie失效'
 
         if self._repeat_text in index_res.text:
-            self.info(f"今日已签到")
+            self.info("今日已签到")
             return True, f'【{site}】今日已签到'
 
         # 获取签到参数
@@ -63,7 +62,7 @@ class Opencd(_ISiteSigninHandler):
                                       proxies=proxy
                                       ).get_res(url='https://www.open.cd/plugin_sign-in.php')
         if not sign_param_res or sign_param_res.status_code != 200:
-            self.error(f"签到失败，请检查站点连通性")
+            self.error("签到失败，请检查站点连通性")
             return False, f'【{site}】签到失败，请检查站点连通性'
 
         # 没有签到则解析html
@@ -75,7 +74,7 @@ class Opencd(_ISiteSigninHandler):
         img_url = html.xpath('//form[@id="frmSignin"]//img/@src')[0]
         img_hash = html.xpath('//form[@id="frmSignin"]//input[@name="imagehash"]/@value')[0]
         if not img_url or not img_hash:
-            self.error(f"签到失败，获取签到参数失败")
+            self.error("签到失败，获取签到参数失败")
             return False, f'【{site}】签到失败，获取签到参数失败'
 
         # 完整验证码url
@@ -116,11 +115,11 @@ class Opencd(_ISiteSigninHandler):
                 # sign_res.text = '{"state":"success","signindays":"0","integral":"10"}'
                 sign_dict = json.loads(sign_res.text)
                 if sign_dict['state']:
-                    self.info(f"签到成功")
+                    self.info("签到成功")
                     return True, f'【{site}】签到成功'
                 else:
                     self.error(f"签到失败，签到接口返回 {sign_dict}")
                     return False, f'【{site}】签到失败'
 
-        self.error(f'签到失败：未获取到验证码')
+        self.error('签到失败：未获取到验证码')
         return False, f'【{site}】签到失败：未获取到验证码'

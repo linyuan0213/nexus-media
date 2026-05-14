@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AutoBackup Plugin v2
 自动备份 NAStool 数据和配置文件
@@ -6,13 +5,13 @@ AutoBackup Plugin v2
 import glob
 import os
 import time
+
+from app.plugin_framework.context import PluginContext
 from app.services.system_service import backup as do_backup
 from app.utils import SystemUtils
-from config import Config
 from app.utils.path_utils import get_temp_path
-
 from backend._autobackup.filestorage_client import FileClientFactory
-from app.plugin_framework.context import PluginContext
+from config import Config
 
 
 class AutoBackupPlugin:

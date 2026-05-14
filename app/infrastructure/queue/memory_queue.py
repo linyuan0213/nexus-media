@@ -1,14 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 内存消息队列 — 基于线程池的异步任务队列
 """
+from __future__ import annotations
+
 import queue
 import threading
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Callable, Optional
 
 import log
-
 from app.infrastructure.queue.base import MessageQueue
 
 
@@ -19,7 +19,7 @@ class MemoryMessageQueue(MessageQueue):
         self._queue: queue.Queue = queue.Queue(maxsize=maxsize)
         self._executor = ThreadPoolExecutor(max_workers=max_workers,
                                             thread_name_prefix="MemMQ")
-        self._dispatcher: Optional[threading.Thread] = None
+        self._dispatcher: threading.Thread | None = None
         self._shutdown = False
         self._started = False
         self._max_workers = max_workers

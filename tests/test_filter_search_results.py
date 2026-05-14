@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 测试搜索结果过滤的三阶段并发 TMDB 查询重构
 """
-import unittest
 import time
+import unittest
 from unittest.mock import Mock, patch
+
 from app.indexer.client._base import _IIndexClient
 from app.utils.types import MediaType
 

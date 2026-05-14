@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_words_service, require_any_permission, require_permission
+from api.deps import get_words_service, require_any_permission, require_permission
 from app.media import Category
 from app.services.words_service import WordsService
 from app.utils import ExceptionUtils
-from app.utils.response import success, fail
+from app.utils.response import fail, success
 
 router = APIRouter()
 
@@ -21,7 +19,7 @@ class AddCustomWordGroupRequest(BaseModel):
 
 
 class AddOrEditCustomWordRequest(BaseModel):
-    id: Optional[int] = None
+    id: int | None = None
     gid: int
     group_type: str
     new_replaced: str
@@ -31,7 +29,7 @@ class AddOrEditCustomWordRequest(BaseModel):
     new_offset: str
     new_help: str
     type: str
-    season: Optional[int] = None
+    season: int | None = None
     enabled: int
     regex: int
 
@@ -41,8 +39,8 @@ class AnalyseImportCodeRequest(BaseModel):
 
 
 class CheckCustomWordsRequest(BaseModel):
-    ids_info: Optional[List[str]] = None
-    flag: Optional[str] = None
+    ids_info: list[str] | None = None
+    flag: str | None = None
 
 
 class DeleteCustomWordGroupRequest(BaseModel):
@@ -50,12 +48,12 @@ class DeleteCustomWordGroupRequest(BaseModel):
 
 
 class DeleteCustomWordsRequest(BaseModel):
-    ids_info: Optional[List[str]] = None
+    ids_info: list[str] | None = None
 
 
 class ExportCustomWordsRequest(BaseModel):
-    ids_info: Optional[str] = None
-    note: Optional[str] = None
+    ids_info: str | None = None
+    note: str | None = None
 
 
 class GetCustomWordRequest(BaseModel):
@@ -69,8 +67,8 @@ class ImportCustomWordsRequest(BaseModel):
 
 class GetCategoriesRequest(BaseModel):
     type: str
-    id: Optional[str] = None
-    value: Optional[str] = None
+    id: str | None = None
+    value: str | None = None
 
 
 # ---------- Endpoints ----------

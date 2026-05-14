@@ -6,12 +6,10 @@
 """
 import json
 import time
-from typing import Optional
 
-from lxml import etree
 import log
 from app.sites.engine import SiteDefinition, SiteEngine
-from app.utils import RequestUtils, StringUtils
+from app.utils import RequestUtils
 from app.utils.config_tools import get_proxies
 
 

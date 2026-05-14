@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TransferActionEngine - 底层文件操作引擎
 负责执行具体的文件系统操作（复制、移动、链接、字幕/音轨转移等）
@@ -7,16 +6,15 @@ import os
 import re
 import shutil
 from threading import Lock
-from typing import Optional
 
 import log
+from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_SUBEXT
 from app.core.module_config import ModuleConf
 from app.db.repositories.transfer_repo_adapter import TransferBlacklistRepositoryAdapter
 from app.domain.interfaces.transfer_repo import ITransferBlacklistRepository
 from app.media import MetaInfo
-from app.utils import PathUtils, ExceptionUtils, SystemUtils
+from app.utils import ExceptionUtils, PathUtils, SystemUtils
 from app.utils.types import RmtMode
-from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_SUBEXT
 
 lock = Lock()
 
@@ -27,7 +25,7 @@ class TransferActionEngine:
     负责执行具体的文件系统操作（复制、移动、链接、字幕/音轨转移等）
     """
 
-    def __init__(self, blacklist_repo: Optional[ITransferBlacklistRepository] = None):
+    def __init__(self, blacklist_repo: ITransferBlacklistRepository | None = None):
         self._blacklist_repo = blacklist_repo or TransferBlacklistRepositoryAdapter()
 
     @staticmethod

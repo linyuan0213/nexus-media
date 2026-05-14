@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import re
 from abc import ABCMeta, abstractmethod
 
@@ -30,7 +29,6 @@ class _ISiteSigninHandler(metaclass=ABCMeta):
         :param site_info: 站点信息，含有站点Url、站点Cookie、UA等信息
         :return: True|False,签到结果信息
         """
-        pass
 
     @staticmethod
     def sign_in_result(html_res, regexs):

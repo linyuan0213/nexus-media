@@ -1,22 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 图片代理核心逻辑（与 Web 框架无关）
 供 Flask 蓝图和 FastAPI 路由共用。
 """
-import os
 import hashlib
-import time
+import os
 import threading
-import requests
+import time
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
 
+import requests
 from PIL import Image
 
-from config import Config
-from app.core.constants import TMDB_IMAGE_DOMAIN
 import log
+from app.core.constants import TMDB_IMAGE_DOMAIN
 from app.utils.config_tools import get_proxies
 
 # 下载任务锁，防止重复下载同一个图片

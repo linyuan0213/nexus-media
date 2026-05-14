@@ -1,8 +1,7 @@
-# coding: utf-8
 from app.utils.types import *
 
 
-class ModuleConf(object):
+class ModuleConf:
     # 全量转移模式
     RMT_MODES = {
         "copy": RmtMode.COPY,

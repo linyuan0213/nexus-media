@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 import logging
 import os
@@ -8,14 +7,15 @@ from functools import lru_cache
 import requests
 import requests.exceptions
 
+from app.utils.tmdb_rate_limiter import get_rate_limiter, get_retry_handler
+
 from .as_obj import AsObj
 from .exceptions import TMDbException
-from app.utils.tmdb_rate_limiter import get_rate_limiter, get_retry_handler
 
 logger = logging.getLogger(__name__)
 
 
-class TMDb(object):
+class TMDb:
     TMDB_API_KEY = "TMDB_API_KEY"
     TMDB_LANGUAGE = "TMDB_LANGUAGE"
     TMDB_WAIT_ON_RATE_LIMIT = "TMDB_WAIT_ON_RATE_LIMIT"
@@ -157,7 +157,7 @@ class TMDb(object):
             rate_limiter = get_rate_limiter()
             if not rate_limiter.acquire(timeout=30):  # 最多等待30秒
                 raise TMDbException("获取速率限制令牌超时")
-            
+
             if self.cache and self.obj_cached and call_cached and method != "POST":
                 req = self.cached_request(method, url, data, self.proxies)
             else:

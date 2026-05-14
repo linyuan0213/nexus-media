@@ -1,7 +1,5 @@
-from typing import Optional
 
 import log
-
 from app.helper.image_proxy_helper import ImageProxyHelper
 from app.media.lookup.base import BaseLookup, LookupResult
 from app.media.lookup.tmdb_client import TmdbClient
@@ -26,7 +24,7 @@ class TmdbLookup(BaseLookup):
         self.discover = TmdbDiscover(self.client)
 
     def lookup(self, parsed, hint_type: MediaType = None,
-               strict: bool = None, language: str = None) -> Optional[LookupResult]:
+               strict: bool = None, language: str = None) -> LookupResult | None:
         if not parsed.title_en and not parsed.title_cn:
             return None
         if language:
@@ -134,7 +132,7 @@ class TmdbLookup(BaseLookup):
                 name, StringUtils.xstr(first_year), search_type.value if search_type else ""))
         return info or {}
 
-    def _to_lookup_result(self, info: dict) -> Optional[LookupResult]:
+    def _to_lookup_result(self, info: dict) -> LookupResult | None:
         if not info:
             return None
         external_ids = info.get("external_ids", {})

@@ -1,9 +1,8 @@
-# coding: utf-8
 """
 系统字典模型
 包含: 系统字典
 """
-from sqlalchemy import Column, Index, Integer, Text, String, Sequence
+from sqlalchemy import Column, Index, Integer, Sequence, String, Text
 
 from app.db.models.base import Base
 

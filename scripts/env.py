@@ -1,12 +1,9 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
 from alembic import context
 
-from app.db.models import Base
 from app.db.database_factory import DatabaseFactory
+from app.db.models import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -53,10 +50,10 @@ def run_migrations_offline() -> None:
 
     """
     url = get_database_url()
-    
+
     # 根据数据库类型配置不同的迁移选项
     dialect_opts = {"paramstyle": "named"}
-    
+
     context.configure(
         url=url,
         target_metadata=target_metadata,

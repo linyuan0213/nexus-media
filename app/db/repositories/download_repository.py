@@ -4,9 +4,8 @@ Handles download history, settings and indexer statistics related database opera
 """
 import os.path
 import time
-from enum import Enum
 
-from sqlalchemy import func, and_, case
+from sqlalchemy import and_, case, func
 
 from app.db import DbPersist
 from app.db.models import DOWNLOADHISTORY, DOWNLOADSETTING, INDEXERSTATISTICS
@@ -27,12 +26,12 @@ class DownloadRepository(BaseRepository):
         """
         if enclosure:
             count = self._db.query(DOWNLOADHISTORY).filter(
-                DOWNLOADHISTORY.ENCLOSURE == enclosure
+                enclosure == DOWNLOADHISTORY.ENCLOSURE
             ).count()
         else:
             count = self._db.query(DOWNLOADHISTORY).filter(
-                DOWNLOADHISTORY.DOWNLOADER == downloader,
-                DOWNLOADHISTORY.DOWNLOAD_ID == download_id
+                downloader == DOWNLOADHISTORY.DOWNLOADER,
+                download_id == DOWNLOADHISTORY.DOWNLOAD_ID
             ).count()
         return count > 0
 
@@ -43,10 +42,10 @@ class DownloadRepository(BaseRepository):
         if not tmdb_id:
             return False
 
-        query = self._db.query(DOWNLOADHISTORY).filter(DOWNLOADHISTORY.TMDBID == tmdb_id)
+        query = self._db.query(DOWNLOADHISTORY).filter(tmdb_id == DOWNLOADHISTORY.TMDBID)
 
         if season_episode:
-            query = query.filter(DOWNLOADHISTORY.SE == season_episode)
+            query = query.filter(season_episode == DOWNLOADHISTORY.SE)
 
         return query.count() > 0
 
@@ -78,9 +77,9 @@ class DownloadRepository(BaseRepository):
                                            downloader=downloader,
                                            download_id=download_id):
             self._db.query(DOWNLOADHISTORY).filter(
-                DOWNLOADHISTORY.ENCLOSURE == media_info.enclosure,
-                DOWNLOADHISTORY.DOWNLOADER == downloader,
-                DOWNLOADHISTORY.DOWNLOAD_ID == download_id
+                media_info.enclosure == DOWNLOADHISTORY.ENCLOSURE,
+                downloader == DOWNLOADHISTORY.DOWNLOADER,
+                download_id == DOWNLOADHISTORY.DOWNLOAD_ID
             ).update({
                 "TORRENT": media_info.org_string,
                 "ENCLOSURE": media_info.enclosure,
@@ -118,7 +117,7 @@ class DownloadRepository(BaseRepository):
         修复：使用标准 GROUP BY 语法兼容 MySQL/PostgreSQL
         """
         if hid:
-            return self._db.query(DOWNLOADHISTORY).filter(DOWNLOADHISTORY.ID == int(hid)).all()
+            return self._db.query(DOWNLOADHISTORY).filter(int(hid) == DOWNLOADHISTORY.ID).all()
 
         # 使用子查询获取每个 TITLE 的最大日期
         sub_query = self._db.query(
@@ -128,7 +127,7 @@ class DownloadRepository(BaseRepository):
 
         if date:
             return self._db.query(DOWNLOADHISTORY).filter(
-                DOWNLOADHISTORY.DATE > date
+                date < DOWNLOADHISTORY.DATE
             ).join(
                 sub_query,
                 and_(
@@ -150,14 +149,14 @@ class DownloadRepository(BaseRepository):
         """
         根据标题查找下载历史
         """
-        return self._db.query(DOWNLOADHISTORY).filter(DOWNLOADHISTORY.TITLE == title).all()
+        return self._db.query(DOWNLOADHISTORY).filter(title == DOWNLOADHISTORY.TITLE).all()
 
     def get_download_history_by_path(self, path):
         """
         根据路径查找下载历史
         """
         return self._db.query(DOWNLOADHISTORY).filter(
-            DOWNLOADHISTORY.SAVE_PATH == os.path.normpath(path)
+            os.path.normpath(path) == DOWNLOADHISTORY.SAVE_PATH
         ).order_by(DOWNLOADHISTORY.DATE.desc()).first()
 
     def get_download_history_by_downloader(self, downloader, download_id):
@@ -165,8 +164,8 @@ class DownloadRepository(BaseRepository):
         根据下载器查找下载历史
         """
         return self._db.query(DOWNLOADHISTORY).filter(
-            DOWNLOADHISTORY.DOWNLOADER == downloader,
-            DOWNLOADHISTORY.DOWNLOAD_ID == download_id
+            downloader == DOWNLOADHISTORY.DOWNLOADER,
+            download_id == DOWNLOADHISTORY.DOWNLOAD_ID
         ).order_by(DOWNLOADHISTORY.DATE.desc()).first()
 
     # ==================== Download Settings ====================
@@ -178,14 +177,14 @@ class DownloadRepository(BaseRepository):
         """
         if not sid:
             return
-        self._db.query(DOWNLOADSETTING).filter(DOWNLOADSETTING.ID == int(sid)).delete()
+        self._db.query(DOWNLOADSETTING).filter(int(sid) == DOWNLOADSETTING.ID).delete()
 
     def get_download_setting(self, sid=None):
         """
         查询下载设置
         """
         if sid:
-            return self._db.query(DOWNLOADSETTING).filter(DOWNLOADSETTING.ID == int(sid)).all()
+            return self._db.query(DOWNLOADSETTING).filter(int(sid) == DOWNLOADSETTING.ID).all()
         return self._db.query(DOWNLOADSETTING).all()
 
     @DbPersist(BaseRepository._db)
@@ -204,7 +203,7 @@ class DownloadRepository(BaseRepository):
         设置下载设置
         """
         if sid:
-            self._db.query(DOWNLOADSETTING).filter(DOWNLOADSETTING.ID == int(sid)).update({
+            self._db.query(DOWNLOADSETTING).filter(int(sid) == DOWNLOADSETTING.ID).update({
                 "NAME": name,
                 "CATEGORY": category,
                 "TAGS": tags,
@@ -260,4 +259,4 @@ class DownloadRepository(BaseRepository):
             func.sum(case((INDEXERSTATISTICS.RESULT == 'N', 1), else_=0)).label("FAIL"),
             func.sum(case((INDEXERSTATISTICS.RESULT == 'Y', 1), else_=0)).label("SUCCESS"),
             func.avg(INDEXERSTATISTICS.SECONDS).label("AVG"),
-        ).filter(INDEXERSTATISTICS.TYPE == client_id).group_by(INDEXERSTATISTICS.INDEXER).all()
+        ).filter(client_id == INDEXERSTATISTICS.TYPE).group_by(INDEXERSTATISTICS.INDEXER).all()

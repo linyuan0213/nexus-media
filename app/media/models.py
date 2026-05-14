@@ -1,7 +1,7 @@
-import regex as re
-from typing import Optional, List, Dict, Any, Union
+from typing import Any
 
 import cn2an
+import regex as re
 from pydantic import BaseModel, Field
 
 from app.core.constants import ANIME_GENREIDS, DEFAULT_TMDB_IMAGE
@@ -19,95 +19,95 @@ class MediaInfo(BaseModel):
 
     # ---- 识别相关 ----
     fileflag: bool = False
-    org_string: Optional[str] = None
-    rev_string: Optional[str] = None
-    subtitle: Optional[str] = None
-    type: Optional[MediaType] = None
+    org_string: str | None = None
+    rev_string: str | None = None
+    subtitle: str | None = None
+    type: MediaType | None = None
 
     # ---- 名称 ----
-    cn_name: Optional[str] = None
-    en_name: Optional[str] = None
-    _name: Optional[str] = None
+    cn_name: str | None = None
+    en_name: str | None = None
+    _name: str | None = None
 
     # ---- 季/集 ----
     total_seasons: int = 0
-    begin_season: Optional[int] = None
-    end_season: Optional[int] = None
+    begin_season: int | None = None
+    end_season: int | None = None
     total_episodes: int = 0
-    begin_episode: Optional[int] = None
-    end_episode: Optional[int] = None
-    part: Optional[str] = None
+    begin_episode: int | None = None
+    end_episode: int | None = None
+    part: str | None = None
 
     # ---- 资源信息 ----
-    resource_type: Optional[str] = None
-    resource_effect: Optional[str] = None
-    resource_pix: Optional[str] = None
-    resource_team: Optional[str] = None
-    customization: Optional[str] = None
-    video_encode: Optional[str] = None
-    audio_encode: Optional[str] = None
+    resource_type: str | None = None
+    resource_effect: str | None = None
+    resource_pix: str | None = None
+    resource_team: str | None = None
+    customization: str | None = None
+    video_encode: str | None = None
+    audio_encode: str | None = None
 
     # ---- 分类 ----
     category: str = ""
 
     # ---- TMDB/IMDB/豆瓣 ID ----
-    tmdb_id: Union[int, str] = 0
+    tmdb_id: int | str = 0
     imdb_id: str = ""
     tvdb_id: int = 0
-    douban_id: Union[int, str] = 0
+    douban_id: int | str = 0
 
     # ---- 媒体信息 ----
-    keyword: Optional[str] = None
-    title: Optional[str] = None
-    original_language: Optional[str] = None
-    original_title: Optional[str] = None
-    release_date: Optional[str] = None
-    networks: Optional[List[str]] = None
+    keyword: str | None = None
+    title: str | None = None
+    original_language: str | None = None
+    original_title: str | None = None
+    release_date: str | None = None
+    networks: list[str] | None = None
     runtime: int = 0
-    year: Optional[str] = None
+    year: str | None = None
 
     # ---- 图片 ----
-    backdrop_path: Optional[str] = None
-    poster_path: Optional[str] = None
-    fanart_backdrop: Optional[str] = None
-    fanart_poster: Optional[str] = None
+    backdrop_path: str | None = None
+    poster_path: str | None = None
+    fanart_backdrop: str | None = None
+    fanart_poster: str | None = None
 
     # ---- 评分/概述 ----
     vote_average: float = 0.0
-    overview: Optional[str] = None
+    overview: str | None = None
 
     # ---- TMDB 完整信息 ----
-    tmdb_info: Dict[str, Any] = Field(default_factory=dict)
+    tmdb_info: dict[str, Any] = Field(default_factory=dict)
 
     # ---- 本地状态 ----
     fav: str = "0"
-    rss_sites: List[str] = Field(default_factory=list)
-    search_sites: List[str] = Field(default_factory=list)
+    rss_sites: list[str] = Field(default_factory=list)
+    search_sites: list[str] = Field(default_factory=list)
 
     # ---- 种子附加信息 ----
-    site: Optional[str] = None
+    site: str | None = None
     site_order: int = 0
-    user_name: Optional[str] = None
-    enclosure: Optional[str] = None
+    user_name: str | None = None
+    enclosure: str | None = None
     res_order: int = 0
-    filter_rule: Optional[str] = None
-    over_edition: Optional[bool] = None
+    filter_rule: str | None = None
+    over_edition: bool | None = None
     size: int = 0
     seeders: int = 0
     peers: int = 0
-    page_url: Optional[str] = None
-    upload_volume_factor: Optional[float] = None
-    download_volume_factor: Optional[float] = None
-    hit_and_run: Optional[bool] = None
-    rssid: Optional[int] = None
-    save_path: Optional[str] = None
-    download_setting: Optional[Any] = None
-    ignored_words: Optional[List[str]] = None
-    replaced_words: Optional[List[str]] = None
-    offset_words: Optional[List[str]] = None
-    labels: Optional[Any] = None
-    description: Optional[str] = None
-    note: Dict[str, Any] = Field(default_factory=dict)
+    page_url: str | None = None
+    upload_volume_factor: float | None = None
+    download_volume_factor: float | None = None
+    hit_and_run: bool | None = None
+    rssid: int | None = None
+    save_path: str | None = None
+    download_setting: Any | None = None
+    ignored_words: list[str] | None = None
+    replaced_words: list[str] | None = None
+    offset_words: list[str] | None = None
+    labels: Any | None = None
+    description: str | None = None
+    note: dict[str, Any] = Field(default_factory=dict)
 
     # ---- 便捷方法 ----
     def get_name(self) -> str:

@@ -1,17 +1,17 @@
-# -*- coding: utf-8 -*-
 import re
-from typing import Optional, List, Dict, Any
+from typing import Any
 
 import cn2an
+
 import log
 from app.helper.image_proxy_helper import ImageProxyHelper
-from app.media import MediaService, DouBan, MetaInfo
+from app.media import DouBan, MediaService, MetaInfo
 from app.mediaserver import MediaServer
 from app.schemas.media import MediaInfoResultDTO, SeasonEpisodesResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import StringUtils
-from app.utils.types import MediaType, MovieTypes
 from app.utils.media_utils import check_media_exists
+from app.utils.types import MediaType, MovieTypes
 from app.utils.web_utils import WebUtils
 from config import Config
 
@@ -23,9 +23,9 @@ class MediaInfoService:
     """
 
     def __init__(self,
-                 media_service: Optional[MediaService] = None,
-                 subscribe: Optional[Subscribe] = None,
-                 media_server: Optional[MediaServer] = None):
+                 media_service: MediaService | None = None,
+                 subscribe: Subscribe | None = None,
+                 media_server: MediaServer | None = None):
         self._media = media_service or MediaService()
         self._subscribe = subscribe or Subscribe()
         self._media_server = media_server or MediaServer()
@@ -42,7 +42,7 @@ class MediaInfoService:
             })
         return SeasonEpisodesResultDTO(episodes=episodes)
 
-    def get_tvseason_list(self, tmdbid, title) -> List[dict]:
+    def get_tvseason_list(self, tmdbid, title) -> list[dict]:
         """获取剧集季列表"""
         if title:
             title_season = MetaInfo(title=title).begin_season
@@ -73,7 +73,7 @@ class MediaInfoService:
             media_type = MediaType.TV
 
         rssid_ok = False
-        seasons: List[dict] = []
+        seasons: list[dict] = []
         link_url = ""
         vote_average = 0.0
         poster_path = ""
@@ -179,7 +179,7 @@ class MediaInfoService:
             return {"name": "无法识别"}
         return mediainfo_dict(media_info)
 
-    def search_media_infos(self, keyword, source, page) -> List[dict]:
+    def search_media_infos(self, keyword, source, page) -> list[dict]:
         """搜索媒体词条"""
         medias = WebUtils.search_media_infos(keyword=keyword, source=source, page=page)
         results = []
@@ -193,7 +193,7 @@ class MediaInfoService:
             results.append(d)
         return results
 
-    def get_movie_calendar(self, tid, rssid) -> Optional[dict]:
+    def get_movie_calendar(self, tid, rssid) -> dict | None:
         """查询电影上映日期"""
         if tid and tid.startswith("DB:"):
             doubanid = tid.replace("DB:", "")
@@ -230,7 +230,7 @@ class MediaInfoService:
                         id=tid, year=release_date[0:4] if release_date else "",
                         poster=poster_path, vote_average=vote_average, rssid=rssid)
 
-    def get_tv_calendar(self, tid, season, name, rssid) -> Optional[list]:
+    def get_tv_calendar(self, tid, season, name, rssid) -> list | None:
         """查询电视剧上映日期"""
         if tid and tid.startswith("DB:"):
             doubanid = tid.replace("DB:", "")
@@ -283,7 +283,7 @@ class MediaInfoService:
                 })
             return events
 
-    def get_media_detail(self, tmdbid, mtype_str) -> Optional[Dict[str, Any]]:
+    def get_media_detail(self, tmdbid, mtype_str) -> dict[str, Any] | None:
         """获取媒体详情"""
         mtype = MediaType.MOVIE if mtype_str in MovieTypes else MediaType.TV
         media_info = WebUtils.get_mediainfo_from_id(mtype=mtype, mediaid=tmdbid)

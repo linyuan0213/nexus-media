@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -10,4 +9,4 @@ class BrushTaskDTO:
 
 @dataclass
 class BrushTorrentListDTO:
-    torrents: Optional[List[dict]] = None
+    torrents: list[dict] | None = None

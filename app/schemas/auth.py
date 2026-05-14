@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 JWT 认证相关 Schema
 """
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -14,7 +12,7 @@ class TokenPayload(BaseModel):
     user_id: int                # 用户 ID
     username: str               # 用户名
     level: int                  # 用户等级
-    permissions: List[str]      # 权限列表
+    permissions: list[str]      # 权限列表
     iat: datetime               # 签发时间
     exp: datetime               # 过期时间
     jti: str                    # Token 唯一标识
@@ -32,9 +30,9 @@ class UserContext(BaseModel):
     """从 Token 解析的用户上下文"""
     user_id: int
     username: str
-    nickname: Optional[str] = None
+    nickname: str | None = None
     level: int
-    permissions: List[str]
+    permissions: list[str]
     is_superadmin: bool
 
     @property
@@ -57,9 +55,9 @@ class LoginResponse(BaseModel):
     code: int
     success: bool
     message: str
-    data: Optional[TokenPair] = None
+    data: TokenPair | None = None
 
 
 class RefreshTokenRequest(BaseModel):
     """刷新 Token 请求（也可通过 Cookie 传递）"""
-    refresh_token: Optional[str] = None
+    refresh_token: str | None = None

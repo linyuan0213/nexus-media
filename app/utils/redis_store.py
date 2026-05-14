@@ -1,5 +1,5 @@
 import json
-from typing import Any, Optional, List
+from typing import Any
 
 import log
 from app.core.constants import REDIS_HOST, REDIS_PORT
@@ -52,7 +52,7 @@ class RedisStore:
         """检查 Redis 是否可用"""
         return self._ensure_connection()
 
-    def set(self, key: str, value: Any, ex: Optional[int] = None) -> None:
+    def set(self, key: str, value: Any, ex: int | None = None) -> None:
         """设置键值对，可设置过期时间(秒)"""
         if not self._ensure_connection():
             return
@@ -61,7 +61,7 @@ class RedisStore:
         except Exception as e:
             log.debug(f"RedisStore set 失败 {key}: {e}")
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """获取键值"""
         if not self._ensure_connection():
             return None
@@ -82,7 +82,7 @@ class RedisStore:
         except Exception as e:
             log.debug(f"RedisStore hset 失败 {name}/{key}: {e}")
 
-    def hget(self, name: str, key: str) -> Optional[Any]:
+    def hget(self, name: str, key: str) -> Any | None:
         """获取哈希字段值"""
         if not self._ensure_connection():
             return None
@@ -123,7 +123,7 @@ class RedisStore:
         except Exception as e:
             log.debug(f"RedisStore lpush 失败 {name}: {e}")
 
-    def rpop(self, name: str) -> Optional[Any]:
+    def rpop(self, name: str) -> Any | None:
         """列表右弹出"""
         if not self._ensure_connection():
             return None
@@ -145,7 +145,7 @@ class RedisStore:
         except Exception as e:
             log.debug(f"RedisStore rpush 失败 {name}: {e}")
 
-    def lpop(self, name: str) -> Optional[Any]:
+    def lpop(self, name: str) -> Any | None:
         """列表左弹出"""
         if not self._ensure_connection():
             return None
@@ -178,7 +178,7 @@ class RedisStore:
         """测试连接"""
         return self._ensure_connection()
 
-    def keys(self, pattern: str) -> List[str]:
+    def keys(self, pattern: str) -> list[str]:
         """查找匹配模式的键"""
         if not self._ensure_connection():
             return []
@@ -219,7 +219,7 @@ class RedisStore:
 
     # ---------- Redis Stream (可靠消息队列) ----------
 
-    def xadd(self, stream: str, fields: dict, max_len: int = 10000) -> Optional[str]:
+    def xadd(self, stream: str, fields: dict, max_len: int = 10000) -> str | None:
         """向 Stream 添加消息，返回消息 ID"""
         if not self._ensure_connection():
             return None

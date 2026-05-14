@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 SpeedLimiter Plugin v2
 媒体服务器播放状态改变时，根据设置对下载器进行限速
 """
 import time
 
-from app.plugin_framework.context import PluginContext
-from app.services.downloader_core import DownloaderCore as Downloader
 from app.helper.security_helper import SecurityHelper
 from app.mediaserver import MediaServer
+from app.plugin_framework.context import PluginContext
+from app.services.downloader_core import DownloaderCore as Downloader
 from app.utils.types import MediaServerType
 
 

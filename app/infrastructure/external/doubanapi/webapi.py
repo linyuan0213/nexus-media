@@ -1,10 +1,10 @@
-from app.infrastructure.cache_system import lru_cache_with_ttl
+import datetime
 
 import requests
 from lxml import etree
-import datetime
 
-from app.utils import RequestUtils, ExceptionUtils
+from app.infrastructure.cache_system import lru_cache_with_ttl
+from app.utils import ExceptionUtils, RequestUtils
 from app.utils.commons import SingletonMeta
 
 
@@ -197,9 +197,9 @@ class DoubanWeb(metaclass=SingletonMeta):
                     return 'do'
                 else:
                     return 'collect'
-            
+
             dtype = map_type()
-            
+
             if 'movie' in link:
                 obj = {
                     "title": title,
@@ -311,7 +311,7 @@ class DoubanWeb(metaclass=SingletonMeta):
         在看
         """
         return list(filter(lambda x: x.get("type") == "do", self.interests(userid)))
-    
+
     def collect_in_interests(self, userid):
         """
         看过

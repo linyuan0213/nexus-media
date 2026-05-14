@@ -3,7 +3,6 @@ import datetime
 import hashlib
 import random
 import re
-import base64
 from urllib import parse
 
 import cn2an
@@ -564,7 +563,7 @@ class StringUtils:
         if site_def and site_def.download and site_def.download.type in ("api", "api_chained"):
             tid = re.findall(r'\d+', url)
             return tid[-1] if tid else None
-        
+
         tid = re.findall(r'id=(\d+)', url)
         if isinstance(tid, list):
             return tid[0] if tid else None
@@ -577,7 +576,7 @@ class StringUtils:
         for old, new in replacements.items():
             text = text.replace(old, new)
         return text
-    
+
     @staticmethod
     def is_numeric(s):
         return bool(re.match(r'^[-+]?[0-9]+(\.[0-9]+)?$', s))

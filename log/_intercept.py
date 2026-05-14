@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 拦截标准库 logging 到 loguru 的 Handler。
 """

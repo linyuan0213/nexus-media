@@ -4,10 +4,8 @@
 """
 from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
-from api.main import app
 from api.deps import (
     get_config_update_service,
     get_current_user,
@@ -16,6 +14,7 @@ from api.deps import (
     get_message_service,
     get_system_config_service,
 )
+from api.main import app
 
 app.dependency_overrides[get_current_user] = lambda: "testuser"
 client = TestClient(app)

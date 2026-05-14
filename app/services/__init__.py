@@ -2,44 +2,44 @@
 Service 层：业务用例编排，脱离 Web 框架可独立运行
 """
 
+from .brush_core import BrushTaskRepository, BrushTaskScheduler, BrushTaskService
 from .brush_service import BrushService
-from .brush_core import BrushTaskService, BrushTaskRepository, BrushTaskScheduler
+from .config_service import ConfigService
 from .download_service import DownloadService
 from .filter_service import FilterService
+from .indexer_service import IndexerService
 from .media_service import (
+    MediaFileService,
     MediaInfoService,
+    MediaLibraryService,
     MediaRecommendationService,
     SearchResultService,
-    MediaLibraryService,
     TransferHistoryService,
-    MediaFileService,
 )
-from .rss_service import RssSubscriptionService, RssTaskService, RssParserEngine
 from .rss_core import Rss
+from .rss_service import RssParserEngine, RssSubscriptionService, RssTaskService
+from .search_service import Searcher, SearchService
 from .site_service import SiteService
+from .sync_core import SyncCore
 from .sync_service import SyncService
 from .system_service import (
-    MessageClientService,
     BackupRestoreService,
     IndexerConfigService,
     MediaServerConfigService,
+    MessageClientService,
+    MessageCommandHandler,
     NetTestService,
     SchedulerService,
-    WebSearchService,
     SystemConfigService,
-    VersionService,
     SystemLifecycleService,
-    MessageCommandHandler,
+    VersionService,
+    WebSearchService,
+    backup,
     get_commands,
     get_rmt_modes,
     get_system_message,
     parse_brush_rule_string,
-    backup,
 )
+from .torrentremover_core import TorrentRemoverService
 from .userrss_service import UserRssService
 from .words_service import WordsService
-from .search_service import SearchService, Searcher
-from .sync_core import SyncCore
-from .torrentremover_core import TorrentRemoverService
-from .indexer_service import IndexerService
-from .config_service import ConfigService

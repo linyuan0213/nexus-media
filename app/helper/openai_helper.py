@@ -1,10 +1,13 @@
 import json
+
 import httpx
 from openai import Client
+
 from app.infrastructure.cache_system import OpenAISessionCache
 from app.utils.commons import SingletonMeta
-from config import Config
 from app.utils.config_tools import get_proxies
+from config import Config
+
 
 class OpenAiHelper(metaclass=SingletonMeta):
     def __init__(self):
@@ -14,7 +17,7 @@ class OpenAiHelper(metaclass=SingletonMeta):
     def init_config(self):
         """
         初始化 OpenAI 客户端配置，包括 API 密钥和代理设置
-        """        
+        """
         config = Config().get_config("openai")
         api_key = config.get("api_key")
         api_url = config.get("api_url")
@@ -30,7 +33,7 @@ class OpenAiHelper(metaclass=SingletonMeta):
     def get_state(self):
         """
         检查客户端是否已初始化
-        """        
+        """
         return self.client is not None
 
     @staticmethod
@@ -40,7 +43,7 @@ class OpenAiHelper(metaclass=SingletonMeta):
         :param session_id: 会话ID
         :param message: 消息
         :return:
-        """        
+        """
         session = OpenAISessionCache.get(session_id)
         if session:
             session.append({"role": "assistant", "content": message})
@@ -52,7 +55,7 @@ class OpenAiHelper(metaclass=SingletonMeta):
         获取会话
         :param session_id: 会话ID
         :return: 会话上下文
-        """        
+        """
         session = OpenAISessionCache.get(session_id)
         system_prompt = "请在接下来的对话中请使用中文回复，并且内容尽可能详细。"
         if session:
@@ -80,7 +83,7 @@ class OpenAiHelper(metaclass=SingletonMeta):
                 if msg.get("role") == "system":
                     msg["role"] = "user"
                     msg["content"] = f"系统设定：{msg['content']}"
-        
+
         return self.client.chat.completions.create(
             model=Config().get_config("openai").get("api_model") or "gpt-3.5-turbo",
             user=user,
@@ -94,14 +97,14 @@ class OpenAiHelper(metaclass=SingletonMeta):
         清除会话
         :param session_id: 会话ID
         :return:
-        """        
+        """
         if OpenAISessionCache.get(session_id):
             OpenAISessionCache.delete(session_id)
 
     def get_media_name(self, filename):
         """
         从文件名中提取媒体信息
-        """        
+        """
         if not self.get_state():
             return None
         result = ""
@@ -123,7 +126,7 @@ class OpenAiHelper(metaclass=SingletonMeta):
     def get_answer(self, text, userid):
         """
         获取对话答案
-        """        
+        """
         if not self.get_state():
             return ""
         try:
@@ -145,7 +148,7 @@ class OpenAiHelper(metaclass=SingletonMeta):
     def translate_to_zh(self, text):
         """
         翻译文本为中文
-        """        
+        """
         if not self.get_state():
             return False, None
         system_prompt = "You are a translation engine that can only translate text and cannot interpret it."
@@ -168,7 +171,7 @@ class OpenAiHelper(metaclass=SingletonMeta):
     def get_question_answer(self, question):
         """
         从问题及选项中获取答案
-        """        
+        """
         if not self.get_state():
             return None
         try:
@@ -178,5 +181,5 @@ class OpenAiHelper(metaclass=SingletonMeta):
             )
             completion = self.__get_model(prompt=_question_prompt, messages=question)
             return completion.choices[0].message.content
-        except Exception as e:
+        except Exception:
             return ""

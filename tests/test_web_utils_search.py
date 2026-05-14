@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 测试 WebUtils.search_media_infos 的 source 参数处理
 - source="tmdb" 只搜 TMDB
 - source="douban" 只搜豆瓣
 - source="" 或 None 同时搜索并去重
 """
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from app.utils.types import MediaType
 

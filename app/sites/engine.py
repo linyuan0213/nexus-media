@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 站点引擎 — 统一站点定义加载与功能入口
 
@@ -9,21 +8,17 @@ import json
 import os
 import re
 import time
+import traceback
 from dataclasses import dataclass, field
-from typing import Optional, Dict, List, Any
+from typing import Optional
 from urllib.parse import urlparse
+
 from lxml import etree
 
 import log
-import traceback
-
-from app.sites import engine_tools
-from app.sites import engine_download
-from app.sites import engine_connection
-from app.sites import engine_user_info
-from app.utils import RequestUtils, JsonUtils
+from app.sites import engine_connection, engine_download, engine_tools, engine_user_info
+from app.utils import JsonUtils, RequestUtils
 from app.utils.config_tools import get_proxies
-
 
 # ---- 数据模型 ----
 
@@ -33,38 +28,38 @@ class DownloadConfig:
     type: str = "api"
     method: str = "GET"
     path: str = ""
-    body: Optional[Dict[str, str]] = None
+    body: dict[str, str] | None = None
     response_key: str = "data"
-    params: Optional[Dict[str, str]] = None
-    download_url: Optional[str] = None
-    selectors: Optional[dict] = None
+    params: dict[str, str] | None = None
+    download_url: str | None = None
+    selectors: dict | None = None
 
 
 @dataclass
 class SubtitleConfig:
     """字幕下载配置"""
     type: str = "api"
-    list_endpoint: Optional[Dict] = None
-    genlink_endpoint: Optional[Dict] = None
-    download_endpoint: Optional[Dict] = None
+    list_endpoint: dict | None = None
+    genlink_endpoint: dict | None = None
+    download_endpoint: dict | None = None
 
 
 @dataclass
 class SiteApiConfig:
     """站点 API 配置"""
     base_url: str = ""
-    auth: Dict = field(default_factory=dict)
-    endpoints: Dict = field(default_factory=dict)
+    auth: dict = field(default_factory=dict)
+    endpoints: dict = field(default_factory=dict)
 
 
 @dataclass
 class SiteHtmlConfig:
     """HTML 站点配置"""
-    search: Dict = field(default_factory=dict)
-    torrents: Dict = field(default_factory=dict)
-    category: Dict = field(default_factory=dict)
-    conf: Dict = field(default_factory=dict)
-    browse: Optional[Dict] = None
+    search: dict = field(default_factory=dict)
+    torrents: dict = field(default_factory=dict)
+    category: dict = field(default_factory=dict)
+    conf: dict = field(default_factory=dict)
+    browse: dict | None = None
     parser_type: str = "flat"
 
 
@@ -74,19 +69,19 @@ class SiteDefinition:
     id: str = ""
     name: str = ""
     domain: str = ""
-    domain_aliases: List[str] = field(default_factory=list)
+    domain_aliases: list[str] = field(default_factory=list)
     tid_pattern: str = r"\d+"
     encoding: str = "UTF-8"
     public: bool = False
     favicon: str = ""
-    language: Optional[str] = None
-    api: Optional[SiteApiConfig] = None
-    html: Optional[SiteHtmlConfig] = None
-    download: Optional[DownloadConfig] = None
-    torrent_attr: Optional[dict] = None
-    subtitle: Optional[SubtitleConfig] = None
+    language: str | None = None
+    api: SiteApiConfig | None = None
+    html: SiteHtmlConfig | None = None
+    download: DownloadConfig | None = None
+    torrent_attr: dict | None = None
+    subtitle: SubtitleConfig | None = None
     detail_page_url: str = ""
-    user_info: Optional[dict] = None
+    user_info: dict | None = None
 
     def match_url(self, url: str) -> bool:
         if not url or not self.domain:
@@ -167,9 +162,9 @@ class SiteEngine:
         "config", "sites"
     )
 
-    def __init__(self, definitions_dir: Optional[str] = None):
-        self._sites: Dict[str, SiteDefinition] = {}
-        self._auth_cache: Dict[str, str] = {}
+    def __init__(self, definitions_dir: str | None = None):
+        self._sites: dict[str, SiteDefinition] = {}
+        self._auth_cache: dict[str, str] = {}
         self._user_info_factories = []
         if definitions_dir is None:
             definitions_dir = self._DEFAULT_DEFINITIONS_DIR
@@ -185,7 +180,7 @@ class SiteEngine:
                 continue
             fpath = os.path.join(directory, fname)
             try:
-                with open(fpath, "r", encoding="utf-8") as f:
+                with open(fpath, encoding="utf-8") as f:
                     data = json.load(f)
                 site_def = SiteDefinition.from_dict(data)
                 self._sites[site_def.id] = site_def
@@ -196,16 +191,16 @@ class SiteEngine:
     def register(self, site_def: SiteDefinition):
         self._sites[site_def.id] = site_def
 
-    def get_by_id(self, site_id: str) -> Optional[SiteDefinition]:
+    def get_by_id(self, site_id: str) -> SiteDefinition | None:
         return self._sites.get(site_id)
 
-    def get_by_url(self, url: str) -> Optional[SiteDefinition]:
+    def get_by_url(self, url: str) -> SiteDefinition | None:
         for site in self._sites.values():
             if site.match_url(url):
                 return site
         return None
 
-    def all_sites(self) -> List[SiteDefinition]:
+    def all_sites(self) -> list[SiteDefinition]:
         return list(self._sites.values())
 
     def normalize_domain(self, url: str) -> str:
@@ -226,7 +221,7 @@ class SiteEngine:
 
     # ---- 下载链接 ----
 
-    def resolve_download_url(self, page_url: str, user_config: Optional[dict] = None) -> Optional[str]:
+    def resolve_download_url(self, page_url: str, user_config: dict | None = None) -> str | None:
         site = self.get_by_url(page_url)
         if not site:
             return None
@@ -346,7 +341,7 @@ class SiteEngine:
 
     # ---- 连接测试 ----
 
-    def test_connection(self, url: str, user_config: Optional[dict] = None) -> tuple:
+    def test_connection(self, url: str, user_config: dict | None = None) -> tuple:
         site = self.get_by_url(url)
         if not site:
             return False, "未找到站点定义", 0
@@ -387,7 +382,7 @@ class SiteEngine:
     # ---- 字幕 ----
 
     def resolve_subtitle(self, page_url: str, torrent_id: str, subtitle_dir: str,
-                         user_config: Optional[dict] = None) -> int:
+                         user_config: dict | None = None) -> int:
         site = self.get_by_url(page_url)
         if not site or not site.subtitle:
             return 0
@@ -441,7 +436,7 @@ class SiteEngine:
         return engine_tools._fetch_passkey(self, site, user_config)
 
     @staticmethod
-    def _extract_tid(page_url: str, site: Optional[SiteDefinition] = None) -> Optional[str]:
+    def _extract_tid(page_url: str, site: SiteDefinition | None = None) -> str | None:
         if not page_url:
             return None
         pattern = site.tid_pattern if site else r"\d+"

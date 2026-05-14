@@ -3,8 +3,7 @@ import json
 from lxml import etree
 
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.utils import StringUtils, RequestUtils
-from config import Config
+from app.utils import RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
 
 
@@ -49,7 +48,7 @@ class HDChina(_ISiteSigninHandler):
                 cookie += sub_str + ";"
 
         if "hdchina=" not in cookie:
-            self.error(f"签到失败，cookie失效")
+            self.error("签到失败，cookie失效")
             return False, f'【{site}】签到失败，cookie失效'
 
         site_cookie = cookie
@@ -59,22 +58,22 @@ class HDChina(_ISiteSigninHandler):
                                 proxies=proxy
                                 ).get_res(url="https://hdchina.org/index.php")
         if not html_res or html_res.status_code != 200:
-            self.error(f"签到失败，请检查站点连通性")
+            self.error("签到失败，请检查站点连通性")
             return False, f'【{site}】签到失败，请检查站点连通性'
 
         if "login.php" in html_res.text or "阻断页面" in html_res.text:
-            self.error(f"签到失败，cookie失效")
+            self.error("签到失败，cookie失效")
             return False, f'【{site}】签到失败，cookie失效'
 
         # 获取新返回的cookie进行签到
-        site_cookie = ';'.join(['{}={}'.format(k, v) for k, v in html_res.cookies.get_dict().items()])
+        site_cookie = ';'.join([f'{k}={v}' for k, v in html_res.cookies.get_dict().items()])
 
         # 判断是否已签到
         html_res.encoding = "utf-8"
         sign_status = self.sign_in_result(html_res=html_res.text,
                                           regexs=self._sign_regex)
         if sign_status:
-            self.info(f"今日已签到")
+            self.info("今日已签到")
             return True, f'【{site}】今日已签到'
 
         # 没有签到则解析html
@@ -99,16 +98,16 @@ class HDChina(_ISiteSigninHandler):
                                 proxies=proxy
                                 ).post_res(url="https://hdchina.org/plugin_sign-in.php?cmd=signin", data=data)
         if not sign_res or sign_res.status_code != 200:
-            self.error(f"签到失败，签到接口请求失败")
+            self.error("签到失败，签到接口请求失败")
             return False, f'【{site}】签到失败，签到接口请求失败'
 
         sign_dict = json.loads(sign_res.text)
         self.debug(f"签到返回结果 {sign_dict}")
         if sign_dict['state']:
             # {'state': 'success', 'signindays': 10, 'integral': 20}
-            self.info(f"签到成功")
+            self.info("签到成功")
             return True, f'【{site}】签到成功'
         else:
             # {'state': False, 'msg': '不正确的CSRF / Incorrect CSRF token'}
-            self.error(f"签到失败，不正确的CSRF / Incorrect CSRF token")
+            self.error("签到失败，不正确的CSRF / Incorrect CSRF token")
             return False, f'【{site}】签到失败'

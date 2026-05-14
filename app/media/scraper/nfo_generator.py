@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """刮削器 — NFO XML 文件生成器"""
 import os
 import time

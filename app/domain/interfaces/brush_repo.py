@@ -1,26 +1,25 @@
-# -*- coding: utf-8 -*-
 """
 刷流领域 Repository 接口（Python Protocol）
 """
-from typing import List, Optional, Protocol
+from typing import Protocol
 
 from app.domain.entities.brush import BrushTaskEntity, BrushTorrentEntity
 
 
 class IBrushTaskRepository(Protocol):
-    def upsert(self, brush_id: Optional[int], item: dict) -> None:
+    def upsert(self, brush_id: int | None, item: dict) -> None:
         ...
 
     def delete(self, brush_id: int) -> None:
         ...
 
-    def get_all(self) -> List[BrushTaskEntity]:
+    def get_all(self) -> list[BrushTaskEntity]:
         ...
 
-    def get_by_id(self, brush_id: int) -> Optional[BrushTaskEntity]:
+    def get_by_id(self, brush_id: int) -> BrushTaskEntity | None:
         ...
 
-    def update_state(self, state: str, tid: Optional[int] = None) -> None:
+    def update_state(self, state: str, tid: int | None = None) -> None:
         ...
 
     def add_download_count(self, brush_id: int) -> None:
@@ -35,7 +34,7 @@ class IBrushTorrentRepository(Protocol):
                downloader: str, download_id: str) -> None:
         ...
 
-    def get_by_task(self, task_id: str) -> List[BrushTorrentEntity]:
+    def get_by_task(self, task_id: str) -> list[BrushTorrentEntity]:
         ...
 
     def delete_by_task(self, task_id: str) -> None:

@@ -1,9 +1,8 @@
-# coding: utf-8
 """
 转移相关模型
 包含: 转移黑名单、转移历史、未知转移记录
 """
-from sqlalchemy import Column, Integer, Text, String, Sequence
+from sqlalchemy import Column, Integer, Sequence, String
 
 from app.db.models.base import Base
 

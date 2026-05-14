@@ -1,25 +1,22 @@
 import os
+
 # -*- coding: utf-8 -*-
 """
 IYUUAutoSeed Plugin v2
 基于IYUU官方Api实现自动辅种
 """
-import re
-from copy import deepcopy
 from datetime import datetime, timedelta
 from threading import Event
 
 import pytz
 
-from app.plugin_framework.context import PluginContext
+from app.core.constants import MT_URL
 from app.plugin_framework.builtin_plugins.iyuuautoseed.backend.iyuu.iyuu_helper import IyuuHelper
+from app.plugin_framework.context import PluginContext
 from app.schemas.download import Torrent
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.sites import Sites
-from app.utils import RequestUtils, JsonUtils
-from app.utils.types import DownloaderType
-from config import Config
-from app.core.constants import MT_URL
+from app.utils import RequestUtils
 from app.utils.config_tools import get_proxies
 
 
@@ -184,7 +181,7 @@ class IYUUAutoSeedPlugin:
                     self._seed_torrents(chunk, downloader_id, sites_cfg, error_caches, success_caches)
                 self._check_recheck()
             else:
-                self.ctx.info(f"没有需要辅种的种子")
+                self.ctx.info("没有需要辅种的种子")
 
         self._save_cache({
             "error_caches": error_caches,

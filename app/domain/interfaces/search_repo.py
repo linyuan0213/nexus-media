@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 搜索领域 Repository 接口（Python Protocol）
 定义搜索结果仓储契约
 """
-from typing import Any, List, Optional, Protocol
+from typing import Any, Protocol
 
 
 class ISearchRepository(Protocol):
@@ -17,7 +16,7 @@ class ISearchRepository(Protocol):
         """根据ID获取搜索结果"""
         ...
 
-    def get_search_results(self) -> List[Any]:
+    def get_search_results(self) -> list[Any]:
         """获取所有搜索结果"""
         ...
 

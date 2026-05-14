@@ -1,7 +1,7 @@
 import json
-import time
 import threading
-from typing import Iterator
+import time
+from collections.abc import Iterator
 
 
 class LogStreamingService:

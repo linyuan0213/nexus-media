@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Plugin Framework v2 Repository
 处理插件框架v2的数据库操作：清单、配置、日志
@@ -6,10 +5,11 @@ Plugin Framework v2 Repository
 import json
 
 from app.db import DbPersist
-from app.db.models import PLUGINMANIFEST, PLUGINCONFIG, PLUGINLOGS, PLUGINHOOKS
+from app.db.models import PLUGINCONFIG, PLUGINHOOKS, PLUGINLOGS, PLUGINMANIFEST
 from app.db.repositories.base_repository import BaseRepository
 from app.domain.entities.plugin import (
-    PluginManifestEntity, PluginConfigEntity, PluginLogEntity,
+    PluginConfigEntity,
+    PluginManifestEntity,
 )
 
 
@@ -31,7 +31,7 @@ class PluginFrameworkRepository(BaseRepository):
 
     def get_manifest_by_id(self, plugin_id: str) -> PLUGINMANIFEST:
         """根据ID获取插件清单"""
-        return self._db.query(PLUGINMANIFEST).filter(PLUGINMANIFEST.ID == plugin_id).first()
+        return self._db.query(PLUGINMANIFEST).filter(plugin_id == PLUGINMANIFEST.ID).first()
 
     @DbPersist(BaseRepository._db)
     def insert_manifest(self, entity: PluginManifestEntity) -> bool:
@@ -71,19 +71,19 @@ class PluginFrameworkRepository(BaseRepository):
         }
         if hasattr(entity, 'installed'):
             update_data["INSTALLED"] = entity.installed
-        self._db.query(PLUGINMANIFEST).filter(PLUGINMANIFEST.ID == entity.id).update(update_data)
+        self._db.query(PLUGINMANIFEST).filter(entity.id == PLUGINMANIFEST.ID).update(update_data)
         return True
 
     @DbPersist(BaseRepository._db)
     def delete_manifest(self, plugin_id: str) -> bool:
         """删除插件清单"""
-        self._db.query(PLUGINMANIFEST).filter(PLUGINMANIFEST.ID == plugin_id).delete()
+        self._db.query(PLUGINMANIFEST).filter(plugin_id == PLUGINMANIFEST.ID).delete()
         return True
 
     @DbPersist(BaseRepository._db)
     def set_manifest_enabled(self, plugin_id: str, enabled: bool) -> bool:
         """设置插件启用状态"""
-        self._db.query(PLUGINMANIFEST).filter(PLUGINMANIFEST.ID == plugin_id).update({
+        self._db.query(PLUGINMANIFEST).filter(plugin_id == PLUGINMANIFEST.ID).update({
             "ENABLED": enabled
         })
         return True
@@ -91,7 +91,7 @@ class PluginFrameworkRepository(BaseRepository):
     @DbPersist(BaseRepository._db)
     def set_manifest_installed(self, plugin_id: str, installed: bool) -> bool:
         """设置插件安装状态"""
-        self._db.query(PLUGINMANIFEST).filter(PLUGINMANIFEST.ID == plugin_id).update({
+        self._db.query(PLUGINMANIFEST).filter(plugin_id == PLUGINMANIFEST.ID).update({
             "INSTALLED": installed
         })
         return True
@@ -100,13 +100,13 @@ class PluginFrameworkRepository(BaseRepository):
 
     def get_config(self, plugin_id: str) -> PLUGINCONFIG:
         """获取插件配置"""
-        return self._db.query(PLUGINCONFIG).filter(PLUGINCONFIG.PLUGIN_ID == plugin_id).first()
+        return self._db.query(PLUGINCONFIG).filter(plugin_id == PLUGINCONFIG.PLUGIN_ID).first()
 
     @DbPersist(BaseRepository._db)
     def save_config(self, entity: PluginConfigEntity) -> bool:
         """保存插件配置"""
         existing = self._db.query(PLUGINCONFIG).filter(
-            PLUGINCONFIG.PLUGIN_ID == entity.plugin_id
+            entity.plugin_id == PLUGINCONFIG.PLUGIN_ID
         ).first()
         if existing:
             existing.CONFIG = json.dumps(entity.config, ensure_ascii=False)
@@ -120,7 +120,7 @@ class PluginFrameworkRepository(BaseRepository):
     @DbPersist(BaseRepository._db)
     def delete_config(self, plugin_id: str) -> bool:
         """删除插件配置"""
-        self._db.query(PLUGINCONFIG).filter(PLUGINCONFIG.PLUGIN_ID == plugin_id).delete()
+        self._db.query(PLUGINCONFIG).filter(plugin_id == PLUGINCONFIG.PLUGIN_ID).delete()
         return True
 
     # ==================== Plugin Logs ====================
@@ -139,17 +139,17 @@ class PluginFrameworkRepository(BaseRepository):
         """分页获取插件日志"""
         begin_pos = 0 if page == 1 else (page - 1) * page_size
         return self._db.query(PLUGINLOGS).filter(
-            PLUGINLOGS.PLUGIN_ID == plugin_id
+            plugin_id == PLUGINLOGS.PLUGIN_ID
         ).order_by(PLUGINLOGS.CREATED_AT.desc()).limit(page_size).offset(begin_pos).all()
 
     def count_logs_by_plugin(self, plugin_id: str) -> int:
         """统计插件日志数量"""
-        return self._db.query(PLUGINLOGS).filter(PLUGINLOGS.PLUGIN_ID == plugin_id).count()
+        return self._db.query(PLUGINLOGS).filter(plugin_id == PLUGINLOGS.PLUGIN_ID).count()
 
     @DbPersist(BaseRepository._db)
     def clear_logs_by_plugin(self, plugin_id: str) -> bool:
         """清空插件日志"""
-        self._db.query(PLUGINLOGS).filter(PLUGINLOGS.PLUGIN_ID == plugin_id).delete()
+        self._db.query(PLUGINLOGS).filter(plugin_id == PLUGINLOGS.PLUGIN_ID).delete()
         return True
 
     # ==================== Plugin Hooks ====================
@@ -168,13 +168,13 @@ class PluginFrameworkRepository(BaseRepository):
     def delete_hook(self, plugin_id: str, event: str) -> bool:
         """删除指定钩子订阅"""
         self._db.query(PLUGINHOOKS).filter(
-            PLUGINHOOKS.PLUGIN_ID == plugin_id,
-            PLUGINHOOKS.EVENT == event
+            plugin_id == PLUGINHOOKS.PLUGIN_ID,
+            event == PLUGINHOOKS.EVENT
         ).delete()
         return True
 
     @DbPersist(BaseRepository._db)
     def delete_hooks_by_plugin(self, plugin_id: str) -> bool:
         """删除插件的所有钩子订阅"""
-        self._db.query(PLUGINHOOKS).filter(PLUGINHOOKS.PLUGIN_ID == plugin_id).delete()
+        self._db.query(PLUGINHOOKS).filter(plugin_id == PLUGINHOOKS.PLUGIN_ID).delete()
         return True

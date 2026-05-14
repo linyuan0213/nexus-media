@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 RBAC初始化模块
 用于初始化RBAC系统的默认数据：角色、权限、菜单
 """
-from app.services.rbac_service import rbac_service
+import log
 from app.db.repositories.rbac_repo_adapter import (
-    RBACRoleRepositoryAdapter,
-    RBACPermissionRepositoryAdapter,
     RBACMenuRepositoryAdapter,
+    RBACPermissionRepositoryAdapter,
+    RBACRoleRepositoryAdapter,
     RBACUserRepositoryAdapter,
 )
-from app.db.models.rbac import RBACUser
-import log
-
 
 # 默认权限定义
 DEFAULT_PERMISSIONS = [
@@ -21,61 +17,61 @@ DEFAULT_PERMISSIONS = [
     {"name": "用户创建", "code": "user:create", "type": "api", "module": "user"},
     {"name": "用户编辑", "code": "user:update", "type": "api", "module": "user"},
     {"name": "用户删除", "code": "user:delete", "type": "api", "module": "user"},
-    
+
     # 角色管理权限
     {"name": "角色查看", "code": "role:view", "type": "api", "module": "role"},
     {"name": "角色创建", "code": "role:create", "type": "api", "module": "role"},
     {"name": "角色编辑", "code": "role:update", "type": "api", "module": "role"},
     {"name": "角色删除", "code": "role:delete", "type": "api", "module": "role"},
-    
+
     # 权限管理权限
     {"name": "权限查看", "code": "permission:view", "type": "api", "module": "permission"},
     {"name": "权限创建", "code": "permission:create", "type": "api", "module": "permission"},
     {"name": "权限编辑", "code": "permission:update", "type": "api", "module": "permission"},
     {"name": "权限删除", "code": "permission:delete", "type": "api", "module": "permission"},
-    
+
     # 菜单管理权限
     {"name": "菜单查看", "code": "menu:view", "type": "api", "module": "menu"},
     {"name": "菜单创建", "code": "menu:create", "type": "api", "module": "menu"},
     {"name": "菜单编辑", "code": "menu:update", "type": "api", "module": "menu"},
     {"name": "菜单删除", "code": "menu:delete", "type": "api", "module": "menu"},
-    
+
     # 系统设置权限
     {"name": "系统设置查看", "code": "setting:view", "type": "api", "module": "setting"},
     {"name": "系统设置编辑", "code": "setting:update", "type": "api", "module": "setting"},
-    
+
     # 媒体库权限
     {"name": "媒体库查看", "code": "library:view", "type": "menu", "module": "library"},
     {"name": "媒体库管理", "code": "library:manage", "type": "api", "module": "library"},
-    
+
     # 站点管理权限
     {"name": "站点查看", "code": "site:view", "type": "menu", "module": "site"},
     {"name": "站点管理", "code": "site:manage", "type": "api", "module": "site"},
-    
+
     # 下载管理权限
     {"name": "下载查看", "code": "download:view", "type": "menu", "module": "download"},
     {"name": "下载管理", "code": "download:manage", "type": "api", "module": "download"},
-    
+
     # 订阅管理权限
     {"name": "订阅查看", "code": "rss:view", "type": "menu", "module": "rss"},
     {"name": "订阅管理", "code": "rss:manage", "type": "api", "module": "rss"},
-    
+
     # 搜索权限
     {"name": "资源搜索", "code": "search:view", "type": "menu", "module": "search"},
     {"name": "执行搜索", "code": "search:execute", "type": "api", "module": "search"},
-    
+
     # 探索权限
     {"name": "探索查看", "code": "discovery:view", "type": "menu", "module": "discovery"},
     {"name": "探索管理", "code": "discovery:manage", "type": "api", "module": "discovery"},
-    
+
     # 服务权限
     {"name": "服务查看", "code": "service:view", "type": "menu", "module": "service"},
     {"name": "服务管理", "code": "service:manage", "type": "api", "module": "service"},
-    
+
     # 插件权限
     {"name": "插件查看", "code": "plugin:view", "type": "menu", "module": "plugin"},
     {"name": "插件管理", "code": "plugin:manage", "type": "api", "module": "plugin"},
-    
+
     # 日志权限
     {"name": "日志查看", "code": "log:view", "type": "menu", "module": "log"},
 

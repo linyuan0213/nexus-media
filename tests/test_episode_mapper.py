@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 EpisodeMapper 单元测试
 """

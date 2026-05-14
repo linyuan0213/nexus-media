@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 搜索进度条修复测试
 验证：
@@ -38,7 +37,7 @@ class TestSearchProgress(unittest.TestCase):
         验证 app/indexer/indexer.py 的 search_by_keyword 不再更新 progress value。
         value 更新应由外层调用方统一控制，否则多关键词并发时会出现进度乱跳/回退。
         """
-        with open("app/indexer/indexer.py", "r", encoding="utf-8") as f:
+        with open("app/indexer/indexer.py", encoding="utf-8") as f:
             source = f.read()
         self._source_lines = source.splitlines(keepends=True)
         tree = ast.parse(source)
@@ -64,7 +63,7 @@ class TestSearchProgress(unittest.TestCase):
         """
         验证 web/backend/search_torrents.py 在外层统一更新进度 value。
         """
-        with open("web/backend/search_torrents.py", "r", encoding="utf-8") as f:
+        with open("web/backend/search_torrents.py", encoding="utf-8") as f:
             source = f.read()
         self._source_lines = source.splitlines(keepends=True)
         tree = ast.parse(source)
@@ -90,7 +89,7 @@ class TestSearchProgress(unittest.TestCase):
         """
         验证 app/searcher.py 的 search_one_media 在外层统一更新进度 value。
         """
-        with open("app/searcher.py", "r", encoding="utf-8") as f:
+        with open("app/searcher.py", encoding="utf-8") as f:
             source = f.read()
         self._source_lines = source.splitlines(keepends=True)
         tree = ast.parse(source)

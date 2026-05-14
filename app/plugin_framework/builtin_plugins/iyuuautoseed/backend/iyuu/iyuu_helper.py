@@ -45,7 +45,7 @@ class IyuuHelper(metaclass=SingletonMeta):
         elif ret is not None:
             return None, f"请求IYUU失败，状态码：{ret.status_code}，错误原因：{ret.reason}"
         else:
-            return None, f"请求IYUU失败，未获取到返回信息"
+            return None, "请求IYUU失败，未获取到返回信息"
 
     def get_torrent_url(self, sid):
         if not sid:
@@ -121,7 +121,7 @@ class IyuuHelper(metaclass=SingletonMeta):
         if not result:
             return result, msg
         sid_sha1 = result.get('sid_sha1')
-        
+
         info_hashs.sort()
         json_data = json.dumps(info_hashs, separators=(',', ':'), ensure_ascii=False)
         sha1 = self.get_sha1(json_data)

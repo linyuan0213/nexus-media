@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 ConfigService 测试
 """
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 # 直接从子模块导入，避免触发 app.services.__init__ 中的重型初始化
 from app.services.config_service import ConfigService

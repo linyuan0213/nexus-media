@@ -1,9 +1,8 @@
-# coding: utf-8
 """
 下载相关模型
 包含: 下载器配置、下载历史、下载设置
 """
-from sqlalchemy import Column, Integer, Text, String, Sequence
+from sqlalchemy import Column, Integer, Sequence, String, Text
 
 from app.db.models.base import Base
 

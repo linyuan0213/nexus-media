@@ -1,8 +1,8 @@
 from app.db.repositories.plugin_repo_adapter import TmdbBlacklistRepositoryAdapter
+from app.infrastructure.cache_system import get_cache_manager
 from app.media import MediaService
 from app.media.parser._metainfo import MetaInfo
 from app.utils.types import MediaType
-from app.infrastructure.cache_system import get_cache_manager
 
 
 class TmdbBlacklistService:
@@ -51,7 +51,7 @@ class TmdbBlacklistService:
             formatted_items.append({
                 'backdrop_path': item.BACKDROP_PATH,
                 'id': item.ID,
-                'media_type': '电影' if item.MEDIA_TYPE == MediaType.MOVIE.value else '电视剧',
+                'media_type': '电影' if MediaType.MOVIE.value == item.MEDIA_TYPE else '电视剧',
                 'note': item.NOTE,
                 'poster_path': item.POSTER_PATH,
                 'title': item.TITLE,

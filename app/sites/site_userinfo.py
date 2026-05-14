@@ -7,19 +7,16 @@ from threading import Lock
 import requests
 
 import log
+from app.db.models import SITEUSERINFOSTATS as _S
 from app.db.repositories import SiteRepository
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.helper import DrissionPageHelper
 from app.message import Message
 from app.sites.engine import SiteEngine
 from app.sites.sites import Sites
-from app.sites.siteuserinfo.config_api import ConfigApiUserInfo
-import app.sites.siteuserinfo.config_html
-from app.utils import RequestUtils, ExceptionUtils, StringUtils, JsonUtils
+from app.utils import ExceptionUtils, JsonUtils, RequestUtils, StringUtils
 from app.utils.commons import SingletonMeta
-from config import Config
 from app.utils.config_tools import get_proxies
-from app.db.models import SITEUSERINFOSTATS as _S
 
 lock = Lock()
 
@@ -378,7 +375,6 @@ class SiteUserInfo(metaclass=SingletonMeta):
                         s.get("join_at"), '%Y-%m-%d %H:%M:%S'))
                 except Exception as err:
                     print(str(err))
-                    pass
         if dates:
             return min(dates).strftime("%Y-%m-%d")
         return ""

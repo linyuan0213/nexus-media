@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 DiskSpaceSaver Plugin v2
 计算文件SHA1，同磁盘下相同SHA1的文件只保留一个，其他的用硬链接替换
@@ -9,7 +8,6 @@ import json
 import os
 
 from app.plugin_framework.context import PluginContext
-from app.utils import SystemUtils
 
 
 class DiskSpaceSaverPlugin:
@@ -158,7 +156,7 @@ class DiskSpaceSaverPlugin:
                                 os.link(files[0], file_path)
                                 os.remove(file_path + '.bak')
                                 self.ctx.info(f'文件 {files[0]} 和 {file_path} 是重复文件，已用硬链接替换')
-                            except Exception as err:
+                            except Exception:
                                 os.rename(file_path + '.bak', file_path)
                                 self.ctx.info(f'文件 {files[0]} 和 {file_path} 硬链接替换失败，已恢复原文件')
                     else:
@@ -167,7 +165,7 @@ class DiskSpaceSaverPlugin:
     @staticmethod
     def _load_last_result(last_result_path):
         if os.path.exists(last_result_path):
-            with open(last_result_path, 'r') as f:
+            with open(last_result_path) as f:
                 return json.load(f)
         return {'file_info': [], 'inode_info': []}
 

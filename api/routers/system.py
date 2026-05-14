@@ -2,64 +2,59 @@
 System Router — FastAPI 迁移
 对应原 web/controllers/system.py，复用 app/services/system_service.py
 """
-import datetime
 import json
-import platform
+import os
 
-import log
-from typing import Optional
-
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, UploadFile, File
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
+from fastapi.responses import FileResponse, StreamingResponse
+from pathlib import Path
 from pydantic import BaseModel
 
+import log
 from api.deps import (
-    get_current_user,
-    require_any_permission,
-    require_permission,
+    _extract_user_ctx_from_session,
+    get_backup_restore_service,
     get_config_service,
+    get_config_update_service,
+    get_indexer_config_service,
+    get_indexer_service,
+    get_media_server_config_service,
+    get_message_sender_service,
     get_message_service,
     get_net_test_service,
-    get_backup_restore_service,
-    get_indexer_config_service,
-    get_media_server_config_service,
-    get_system_scheduler_service,
-    get_web_search_service,
-    get_system_config_service,
-    get_config_update_service,
-    get_user_manage_service,
-    get_version_service,
     get_progress_service,
-    get_message_sender_service,
-    get_indexer_service,
+    get_system_config_service,
     get_system_info_service,
+    get_system_scheduler_service,
+    get_user_manage_service,
+    get_web_search_service,
+    require_any_permission,
+    require_permission,
 )
-from app.utils.response import success, fail
+from app.agent.providers.base import ProviderConfig
+from app.agent.providers.gemini import GeminiProvider
+from app.agent.providers.ollama import OllamaProvider
+from app.agent.providers.openai import OpenAIProvider
+from app.core.module_config import ModuleConf
+from app.core.system_config import SystemConfig
+from app.db.repositories import ConfigRepository
+from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
+from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
+from app.schemas.auth import UserContext
+from app.services.auth_service import AuthService
+from app.services.indexer_service import IndexerService
+from app.services.log_streaming_service import LogStreamingService
 from app.services.system_service import (
     MessageClientService,
-    BackupRestoreService,
-    IndexerConfigService,
-    MediaServerConfigService,
-    NetTestService,
-    SchedulerService,
-    WebSearchService,
-    SystemConfigService,
-    VersionService,
     MessageSenderService,
-    ProgressService,
-    UserManageService,
-    ConfigUpdateService,
     SystemInfoService,
+    backup as do_backup,
+    restart_server,
 )
-from app.db.repositories import ConfigRepository
-from app.schemas.auth import UserContext
 from app.utils import ExceptionUtils
-from app.services.system_service import restart_server
-from app.services.indexer_service import IndexerService
-from app.core.module_config import ModuleConf
-from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
-from app.core.system_config import SystemConfig
+from app.utils.response import fail, success
 from app.utils.types import SystemConfigKey
+from app.utils.temp_manager import temp_manager
 
 router = APIRouter()
 
@@ -70,24 +65,24 @@ router = APIRouter()
 
 class EmptyRequest(BaseModel):
     """兼容前端 payload 中无 data 字段或 data 为空的情况"""
-    data: Optional[dict] = None
+    data: dict | None = None
 
 
 class MessageClientRequest(BaseModel):
-    flag: Optional[str] = None
-    cid: Optional[int] = None
-    type: Optional[str] = None
-    checked: Optional[bool] = None
-    name: Optional[str] = None
-    config: Optional[str] = None
-    switchs: Optional[str] = None
-    interactive: Optional[int] = None
-    enabled: Optional[int] = None
-    templates: Optional[str] = None
+    flag: str | None = None
+    cid: int | None = None
+    type: str | None = None
+    checked: bool | None = None
+    name: str | None = None
+    config: str | None = None
+    switchs: str | None = None
+    interactive: int | None = None
+    enabled: int | None = None
+    templates: str | None = None
 
 
 class NetTestRequest(BaseModel):
-    target: Optional[str] = None
+    target: str | None = None
 
 
 class IndexerConfigRequest(BaseModel):
@@ -99,31 +94,31 @@ class MediaServerConfigRequest(BaseModel):
 
 
 class SchedulerRequest(BaseModel):
-    item: Optional[str] = None
+    item: str | None = None
 
 
 class SearchRequest(BaseModel):
-    search_word: Optional[str] = None
-    unident: Optional[bool] = None
-    filters: Optional[dict] = None
-    tmdbid: Optional[str] = None
-    media_type: Optional[str] = None
+    search_word: str | None = None
+    unident: bool | None = None
+    filters: dict | None = None
+    tmdbid: str | None = None
+    media_type: str | None = None
 
 
 class SystemConfigRequest(BaseModel):
-    key: Optional[str] = None
-    value: Optional[str] = None
+    key: str | None = None
+    value: str | None = None
 
 
 class TestMessageClientRequest(BaseModel):
-    type: Optional[str] = None
-    config: Optional[str] = None
+    type: str | None = None
+    config: str | None = None
 
 
 class UpdateAllConfigRequest(BaseModel):
-    conf: Optional[dict] = None
-    db: Optional[dict] = None
-    test: Optional[bool] = None
+    conf: dict | None = None
+    db: dict | None = None
+    test: bool | None = None
 
 
 class UpdateConfigRequest(BaseModel):
@@ -131,37 +126,37 @@ class UpdateConfigRequest(BaseModel):
 
 
 class BackupRequest(BaseModel):
-    file_name: Optional[str] = None
+    file_name: str | None = None
 
 
 class UserManagerRequest(BaseModel):
-    oper: Optional[str] = None
-    name: Optional[str] = None
-    password: Optional[str] = None
-    pris: Optional[str] = None
+    oper: str | None = None
+    name: str | None = None
+    password: str | None = None
+    pris: str | None = None
 
 
 class ProgressRequest(BaseModel):
-    type: Optional[str] = None
+    type: str | None = None
 
 
 class SendCustomMessageRequest(BaseModel):
-    message_clients: Optional[list] = None
-    title: Optional[str] = None
-    text: Optional[str] = None
-    image: Optional[str] = None
+    message_clients: list | None = None
+    title: str | None = None
+    text: str | None = None
+    image: str | None = None
 
 
 class SendPluginMessageRequest(BaseModel):
-    title: Optional[str] = None
-    text: Optional[str] = None
-    image: Optional[str] = None
+    title: str | None = None
+    text: str | None = None
+    image: str | None = None
 
 
 class AgentModelsRequest(BaseModel):
     provider_name: str
-    api_url: Optional[str] = None
-    api_key: Optional[str] = None
+    api_url: str | None = None
+    api_key: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -324,9 +319,7 @@ def backup(
     current_user: UserContext = Depends(require_permission("setting:update")),
 ):
     """备份配置文件"""
-    from app.services.system_service import backup as do_backup
-    import os
-    from fastapi.responses import FileResponse
+
     zip_file = do_backup()
     if not zip_file:
         return fail(msg="创建备份失败")
@@ -339,8 +332,6 @@ async def backup_upload(
     current_user: UserContext = Depends(require_permission("setting:update")),
 ):
     """上传备份文件"""
-    from pathlib import Path
-    from app.utils.temp_manager import temp_manager
     try:
         file_path = Path(temp_manager.get_temp_path()) / file.filename
         contents = await file.read()
@@ -370,7 +361,6 @@ def get_indexers(
     idx_svc: IndexerService = Depends(get_indexer_service),
 ):
     """获取索引器配置信息（外部索引器配置、内置站点列表、当前配置）"""
-    from app.utils.types import SystemConfigKey
     indexers = idx_svc.get_builtin_indexers(check=False)
     private_count = len([item.id for item in indexers if not item.public])
     public_count = len([item.id for item in indexers if item.public])
@@ -422,7 +412,6 @@ def get_mediaservers(
     current_user: UserContext = Depends(require_permission("setting:update")),
 ):
     """获取媒体服务器配置信息"""
-    from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
     repo = MediaServerRepositoryAdapter()
     servers = repo.get_media_servers()
     default_server = repo.get_default_media_server()
@@ -557,7 +546,6 @@ def test_message_client(
     current_user: UserContext = Depends(require_permission("setting:update")),
     svc: MessageClientService = Depends(get_message_service),
 ):
-    import json
     config = json.loads(req.config) if req.config else {}
     if svc.test_connection(ctype=req.type, config=config):
         return success()
@@ -584,10 +572,6 @@ def list_agent_models(
     current_user: UserContext = Depends(require_permission("setting:view")),
 ):
     """查询 LLM Provider 支持的模型列表"""
-    from app.agent.providers.base import ProviderConfig
-    from app.agent.providers.openai import OpenAIProvider
-    from app.agent.providers.ollama import OllamaProvider
-    from app.agent.providers.gemini import GeminiProvider
 
     if not req.api_url or not req.api_key:
         return success(data=[])
@@ -719,9 +703,9 @@ def send_plugin_message(
 
 
 class LogsRequest(BaseModel):
-    source: Optional[str] = None
-    level: Optional[str] = None
-    limit: Optional[int] = 200
+    source: str | None = None
+    level: str | None = None
+    limit: int | None = 200
 
 
 @router.post("/logs")
@@ -754,16 +738,12 @@ def processes(
 @router.get("/stream-logging")
 def stream_logging(
     request: Request,
-    source: Optional[str] = Query(""),
-    token: Optional[str] = Query(""),
+    source: str | None = Query(""),
+    token: str | None = Query(""),
 ):
     """实时日志 EventSource 响应
     兼容 EventSource 无法携带自定义 Header 的限制，支持从 query param 传入 token。
     """
-    from app.services.auth_service import AuthService
-    from api.deps import _extract_user_ctx_from_session
-    from app.services.log_streaming_service import LogStreamingService
-
     # 认证：优先 query param token，其次 session
     user_ctx = None
     if token:

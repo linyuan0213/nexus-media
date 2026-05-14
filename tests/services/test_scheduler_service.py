@@ -2,10 +2,8 @@
 SchedulerService 纯单元测试（无需 Flask app 上下文）
 """
 import datetime
-import pytest
 from unittest.mock import MagicMock, patch
 
-from app.services.scheduler_service import SchedulerService
 from app.schemas.scheduler import (
     DeleteSchedulerJobRequest,
     PauseSchedulerJobRequest,
@@ -13,6 +11,7 @@ from app.schemas.scheduler import (
     RunSchedulerJobRequest,
     UpdateSchedulerJobRequest,
 )
+from app.services.scheduler_service import SchedulerService
 
 
 def _make_job(job_id, name=None, next_run_time=None, trigger_type="interval", trigger_attrs=None):

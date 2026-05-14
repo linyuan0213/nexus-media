@@ -8,10 +8,8 @@
 
 本层允许依赖 Service / Message / Media 等模块，因为位于 Agent 之上。
 """
-from typing import Optional
 
 import log
-
 from app.agent.tools.base import ToolResult
 from app.media.models import MediaInfo
 
@@ -81,10 +79,8 @@ class ToolExecutor:
         return ToolResult(success=False, error=f"未知命令: {action}")
 
     def _handle_scheduler(self, action: str, target: str) -> ToolResult:
+        from app.schemas.scheduler import PauseSchedulerJobRequest, ResumeSchedulerJobRequest, RunSchedulerJobRequest
         from app.services.scheduler_service import SchedulerService
-        from app.schemas.scheduler import (
-            RunSchedulerJobRequest, PauseSchedulerJobRequest, ResumeSchedulerJobRequest
-        )
 
         svc = SchedulerService()
         if action == "scheduler_list":
@@ -159,9 +155,10 @@ class ToolExecutor:
 
     def _message_template(self, action: str, msg_type: str = "", title: str = "",
                           text: str = "", client_id: int = 0, **_) -> ToolResult:
-        from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
-        from app.message.message import Message
         import json as _json
+
+        from app.message.message import Message
+        from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
 
         if action == "list":
             types = list(DEFAULT_MESSAGE_TEMPLATES.keys())
@@ -212,7 +209,6 @@ class ToolExecutor:
         from app.agent.agents.search_intent import SearchIntentAgent
         from app.media import MediaService
         from app.services.indexer_service import IndexerService
-        from app.utils.types import SearchType
 
         intent_agent = SearchIntentAgent()
         intent = intent_agent.parse(query) if intent_agent.ready else None
@@ -310,7 +306,7 @@ class ToolExecutor:
     def _media_download(self, title: str = "", media_type: str = "", year: int = 0,
                         enclosure: str = "", site: str = "", size: str = "",
                         season: int = 0, episode: int = 0, **_) -> ToolResult:
-        from app.media import MediaService, MetaInfo
+        from app.media import MediaService
         from app.services.downloader_core import DownloaderCore as Downloader
         from app.utils.types import MediaType
 
@@ -397,7 +393,7 @@ class ToolExecutor:
 
 
 # 全局执行器实例
-_default_executor: Optional[ToolExecutor] = None
+_default_executor: ToolExecutor | None = None
 
 
 def get_tool_executor() -> ToolExecutor:

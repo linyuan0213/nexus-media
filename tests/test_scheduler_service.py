@@ -2,7 +2,6 @@
 SchedulerCore 单元测试
 验证 remove_job 对 JobLookupError 的处理
 """
-import pytest
 from unittest.mock import MagicMock, patch
 
 from apscheduler.jobstores.base import JobLookupError

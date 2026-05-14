@@ -1,17 +1,10 @@
-from itertools import count
-import os
-from urllib.parse import quote
 from functools import lru_cache
-from urllib.parse import quote_plus
-from app.mediaserver.client.fnos_api import FnOSClient
+
 import log
 from app.mediaserver.client._base import _IMediaClient
+from app.mediaserver.client.fnos_api import FnOSClient
 from app.utils import ExceptionUtils
 from app.utils.types import MediaServerType, MediaType
-from config import Config
-from plexapi import media
-from plexapi.myplex import MyPlexAccount
-from plexapi.server import PlexServer
 
 
 class FnOS(_IMediaClient):
@@ -187,7 +180,7 @@ class FnOS(_IMediaClient):
             item_id = items[0].get("guid")
 
         season_list = self._fnos.get_session_list(item_id)
-        
+
         ret_tvs = []
         for season_dict in season_list:
             if season and season_dict.get("season_number") != int(season):
@@ -423,7 +416,6 @@ class FnOS(_IMediaClient):
                    MOV:猪猪侠大冒险(2001)
         overview   剧情描述
         """
-        pass
 
     def get_resume(self, num=12):
         """

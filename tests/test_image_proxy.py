@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 图片代理服务测试 - 重点验证媒体库图片本地缓存代理
 """
-import sys
-import os
-import urllib.parse
 import importlib.util
-from unittest.mock import patch, MagicMock, mock_open
+import os
+import sys
+import urllib.parse
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
@@ -37,9 +36,10 @@ sys.modules['web.security'] = mock_security
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import Flask
+
 from web.backend.image_proxy import (
-    img_blueprint,
     _get_cache_path,
+    img_blueprint,
 )
 
 

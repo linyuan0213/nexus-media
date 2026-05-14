@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 LogBuffer 延迟加载代理，避免顶层导入导致循环引用。
 """
 
-from typing import Any, Iterator, List, Optional, Tuple
+from collections.abc import Iterator
+from typing import Any
 
 __all__ = ["LogBufferProxy", "get_log_buffer", "LOG_BUFFER"]
 
@@ -25,8 +25,8 @@ class LogBufferProxy:
         return get_log_buffer().append(level, text)
 
     def get_logs(
-        self, source: Optional[str] = None, last_counter: int = 0
-    ) -> Tuple[List[Any], int]:
+        self, source: str | None = None, last_counter: int = 0
+    ) -> tuple[list[Any], int]:
         return get_log_buffer().get_logs(source=source, last_counter=last_counter)
 
     @property

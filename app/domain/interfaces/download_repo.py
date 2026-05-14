@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 下载领域 Repository 接口（Python Protocol）
 定义 DownloadHistory、DownloadSetting、IndexerStatistics 的仓储契约
 """
-from typing import List, Optional, Protocol
+from typing import Protocol
 
 from app.domain.entities.download import (
     DownloadHistoryEntity,
@@ -27,15 +26,15 @@ class IDownloadHistoryRepository(Protocol):
         """新增下载历史"""
         ...
 
-    def get_all(self, date: Optional[str] = None, hid: Optional[int] = None, num: int = 30, page: int = 1) -> List[DownloadHistoryEntity]:
+    def get_all(self, date: str | None = None, hid: int | None = None, num: int = 30, page: int = 1) -> list[DownloadHistoryEntity]:
         """查询下载历史列表"""
         ...
 
-    def get_by_title(self, title: str) -> List[DownloadHistoryEntity]:
+    def get_by_title(self, title: str) -> list[DownloadHistoryEntity]:
         """根据标题查找下载历史"""
         ...
 
-    def get_by_path(self, path: str) -> Optional[DownloadHistoryEntity]:
+    def get_by_path(self, path: str) -> DownloadHistoryEntity | None:
         """根据路径查找下载历史"""
         ...
 
@@ -43,7 +42,7 @@ class IDownloadHistoryRepository(Protocol):
         """根据路径查找下载历史（兼容旧方法名）"""
         ...
 
-    def get_by_downloader(self, downloader: str, download_id: str) -> Optional[DownloadHistoryEntity]:
+    def get_by_downloader(self, downloader: str, download_id: str) -> DownloadHistoryEntity | None:
         """根据下载器查找下载历史"""
         ...
 
@@ -55,7 +54,7 @@ class IDownloadSettingRepository(Protocol):
         """删除下载设置"""
         ...
 
-    def get_all(self, sid: Optional[int] = None) -> List[DownloadSettingEntity]:
+    def get_all(self, sid: int | None = None) -> list[DownloadSettingEntity]:
         """查询下载设置列表"""
         ...
 
@@ -85,6 +84,6 @@ class IIndexerStatisticsRepository(Protocol):
         """删除所有统计"""
         ...
 
-    def get_by_client(self, client_id: str) -> List[IndexerStatisticsEntity]:
+    def get_by_client(self, client_id: str) -> list[IndexerStatisticsEntity]:
         """查询索引器统计"""
         ...

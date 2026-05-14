@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """OpenAI / OpenAI 兼容提供商"""
-from typing import Any, Optional
+from typing import Any
 
-import log
 from openai import OpenAI
 
+import log
 from app.agent.providers.base import BaseProvider, ProviderConfig
 
 
@@ -20,7 +19,7 @@ class OpenAIProvider(BaseProvider):
         )
 
     def chat(self, messages: list[dict], system_prompt: str = "", temperature: float = 0.7,
-             response_format: Optional[type] = None) -> Any:
+             response_format: type | None = None) -> Any:
         msgs = []
         if system_prompt:
             msgs.append({"role": "system", "content": system_prompt})

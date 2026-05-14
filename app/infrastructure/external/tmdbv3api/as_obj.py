@@ -1,4 +1,3 @@
-# encoding: utf-8
 import sys
 
 from app.infrastructure.external.tmdbv3api.exceptions import TMDbException

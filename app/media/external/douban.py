@@ -8,8 +8,7 @@ import zhconv
 import log
 from app.infrastructure.external.doubanapi import DoubanApi, DoubanWeb
 from app.media.parser._metainfo import MetaInfo
-from app.utils import ExceptionUtils, StringUtils
-from app.utils import RequestUtils
+from app.utils import ExceptionUtils, RequestUtils, StringUtils
 from app.utils.commons import SingletonMeta
 from app.utils.types import MediaType
 

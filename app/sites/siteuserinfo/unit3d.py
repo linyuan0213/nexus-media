@@ -1,7 +1,9 @@
 """Unit3d 架构用户信息解析"""
 import re
 from urllib.parse import urljoin
+
 from lxml import etree
+
 from app.utils import StringUtils
 
 

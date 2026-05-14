@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 from unittest.mock import MagicMock
 
-import pytest
 from fastapi.testclient import TestClient
 
 from api.deps import (
@@ -11,8 +9,8 @@ from api.deps import (
     get_media_info_service,
     get_media_library_service,
     get_media_recommendation_service,
-    get_searcher_service,
     get_search_result_service,
+    get_searcher_service,
     get_tmdb_blacklist_service,
     get_transfer_history_service,
 )

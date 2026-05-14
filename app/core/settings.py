@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AppSettings - 基于 pydantic-settings 的应用配置
 支持 .env 文件和环境变量，优先级高于 config.yaml

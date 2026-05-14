@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Config - YAML 配置管理器（核心）
 只负责 config.yaml 的读写，不含任何业务辅助方法
@@ -11,11 +10,10 @@ import tempfile
 import threading
 from threading import Lock
 
-from filelock import FileLock
 import ruamel.yaml
+from filelock import FileLock
 
 from app.core.settings import AppSettings
-
 
 _ROOT_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
@@ -35,7 +33,7 @@ class _SingletonMeta(type):
 lock = Lock()
 
 
-class Config(object, metaclass=_SingletonMeta):
+class Config(metaclass=_SingletonMeta):
     """YAML 配置管理器：仅负责 config.yaml 的读写"""
 
     def __init__(self):
@@ -62,7 +60,7 @@ class Config(object, metaclass=_SingletonMeta):
                 shutil.copy(template, self._config_path)
                 print("【Config】config.yaml 配置文件不存在，已将配置文件模板复制到配置目录...")
 
-            with open(self._config_path, mode='r', encoding='utf-8') as cf:
+            with open(self._config_path, encoding='utf-8') as cf:
                 try:
                     print("正在加载配置：%s" % self._config_path)
                     self._config = ruamel.yaml.YAML().load(cf)
@@ -93,7 +91,7 @@ class Config(object, metaclass=_SingletonMeta):
         txt = os.path.join(_ROOT_PATH, "third_party.txt")
         if not os.path.exists(txt):
             return
-        with open(txt, "r") as f:
+        with open(txt) as f:
             for line in f.readlines():
                 p = os.path.join(_ROOT_PATH, "third_party", line.strip()).replace("\\", "/")
                 if p not in sys.path:

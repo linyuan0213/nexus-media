@@ -1,13 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 对外暴露的便捷日志 API（debug / info / error / warn / console）。
 """
 
 import inspect
-from typing import Optional
 
-from ._logger_manager import get_logger_instance
 from ._buffer_proxy import LOG_BUFFER
+from ._logger_manager import get_logger_instance
 
 __all__ = ["debug", "info", "error", "warn", "console"]
 
@@ -21,22 +19,22 @@ def _caller_depth() -> int:
     return depth
 
 
-def debug(text: str, module: Optional[str] = None) -> None:
+def debug(text: str, module: str | None = None) -> None:
     LOG_BUFFER.append("DEBUG", text)
     get_logger_instance(module).log.opt(depth=_caller_depth()).debug(text)
 
 
-def info(text: str, module: Optional[str] = None) -> None:
+def info(text: str, module: str | None = None) -> None:
     LOG_BUFFER.append("INFO", text)
     get_logger_instance(module).log.opt(depth=_caller_depth()).info(text)
 
 
-def error(text: str, module: Optional[str] = None) -> None:
+def error(text: str, module: str | None = None) -> None:
     LOG_BUFFER.append("ERROR", text)
     get_logger_instance(module).log.opt(depth=_caller_depth()).error(text)
 
 
-def warn(text: str, module: Optional[str] = None) -> None:
+def warn(text: str, module: str | None = None) -> None:
     LOG_BUFFER.append("WARN", text)
     get_logger_instance(module).log.opt(depth=_caller_depth()).warning(text)
 

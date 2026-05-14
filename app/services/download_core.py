@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 DownloadCore - 下载核心业务逻辑
 
@@ -11,34 +10,27 @@ DownloadCore - 下载核心业务逻辑
 
 依赖注入：所有外部依赖通过构造函数传入。
 """
-import json
 import os
-import re
-from typing import Optional
-from urllib.parse import urlsplit
 
 import log
+from app.core.constants import PT_TAG, RMT_MEDIAEXT
 from app.core.system_config import SystemConfig
 from app.db.repositories.download_repo_adapter import (
     DownloadHistoryRepositoryAdapter,
     DownloadSettingRepositoryAdapter,
 )
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
-from app.downloader.client._base import _IDownloadClient
-from app.schemas.download import Torrent
-from app.helper import ThreadHelper
+from app.downloader.client_factory import DownloadClientFactory
+from app.downloader.pipeline import DownloadPipeline
 from app.media import MetaInfo
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
-from app.downloader.client_factory import DownloadClientFactory
-from app.services.download_strategies import MovieDownloadStrategy, SeasonPackStrategy, EpisodeStrategy
+from app.schemas.download import Torrent
 from app.services.filetransfer_service import FileTransferService as FileTransfer
-from app.downloader.pipeline import DownloadPipeline
-from app.sites import Sites, SiteSubtitle, SiteConf
-from app.utils import Torrent, StringUtils, ExceptionUtils
-from app.utils.types import MediaType, DownloaderType, SearchType
-from app.core.constants import RMT_MEDIAEXT, PT_TAG
+from app.sites import SiteConf, Sites, SiteSubtitle
+from app.utils import ExceptionUtils, Torrent
+from app.utils.types import DownloaderType
 
 
 class DownloadCore:
@@ -47,17 +39,17 @@ class DownloadCore:
     """
 
     def __init__(self,
-                 client_factory: Optional[DownloadClientFactory] = None,
-                 message: Optional[Message] = None,
-                 mediaserver: Optional[MediaServer] = None,
-                 filetransfer: Optional[FileTransfer] = None,
-                 sites: Optional[Sites] = None,
-                 siteconf: Optional[SiteConf] = None,
-                 sitesubtitle: Optional[SiteSubtitle] = None,
-                 eventmanager: Optional[EventManager] = None,
-                 download_repo: Optional[IDownloadHistoryRepository] = None,
+                 client_factory: DownloadClientFactory | None = None,
+                 message: Message | None = None,
+                 mediaserver: MediaServer | None = None,
+                 filetransfer: FileTransfer | None = None,
+                 sites: Sites | None = None,
+                 siteconf: SiteConf | None = None,
+                 sitesubtitle: SiteSubtitle | None = None,
+                 eventmanager: EventManager | None = None,
+                 download_repo: IDownloadHistoryRepository | None = None,
                  download_setting_repo=None,
-                 systemconfig: Optional[SystemConfig] = None):
+                 systemconfig: SystemConfig | None = None):
         self._client_factory = client_factory or DownloadClientFactory()
         self._message = message or Message()
         self._mediaserver = mediaserver or MediaServer()

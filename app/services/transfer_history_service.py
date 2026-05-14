@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
 from math import floor
-from typing import Optional, List
 
 from app.core.module_config import ModuleConf
 from app.schemas.media import TransferHistoryPageDTO, UnknownListPageDTO
@@ -12,7 +10,7 @@ class TransferHistoryService:
     转移历史业务服务
     """
 
-    def __init__(self, filetransfer: Optional[FileTransfer] = None):
+    def __init__(self, filetransfer: FileTransfer | None = None):
         self._filetransfer = filetransfer or FileTransfer()
 
     def get_transfer_history_page(self, search_str, page, page_num) -> TransferHistoryPageDTO:
@@ -63,7 +61,7 @@ class TransferHistoryService:
         return {"Labels": Labels, "MovieNums": MovieNums,
                 "TvNums": TvNums, "AnimeNums": AnimeNums}
 
-    def get_unknown_list(self) -> List[dict]:
+    def get_unknown_list(self) -> list[dict]:
         """获取未识别记录列表"""
         Items = []
         Records = self._filetransfer.get_transfer_unknown_paths()

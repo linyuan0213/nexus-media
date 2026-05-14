@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 LibraryRefresh Plugin v2
 入库完成后刷新媒体库服务器海报墙
@@ -6,7 +5,6 @@ LibraryRefresh Plugin v2
 from datetime import datetime, timedelta
 
 from app.mediaserver import MediaServer
-
 from app.plugin_framework.context import PluginContext
 
 

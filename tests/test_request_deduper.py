@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 测试请求去重器修复
 """
-import unittest
 import threading
 import time
+import unittest
+
 from app.utils.request_deduper import RequestDeduper
 
 

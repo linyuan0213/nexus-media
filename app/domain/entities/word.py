@@ -1,28 +1,27 @@
-# -*- coding: utf-8 -*-
 """
 自定义识别词领域实体
 对应 CUSTOM_WORDS / CUSTOM_WORD_GROUPS 表
 """
 from dataclasses import dataclass, fields
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 @dataclass
 class CustomWordEntity:
     """自定义识别词实体"""
     id: int
-    replaced: Optional[str]
-    replace: Optional[str]
-    front: Optional[str]
-    back: Optional[str]
-    offset: Optional[str]
+    replaced: str | None
+    replace: str | None
+    front: str | None
+    back: str | None
+    offset: str | None
     type: int
     group_id: int
     season: int
     enabled: int
     regex: int
-    help: Optional[str]
-    note: Optional[str]
+    help: str | None
+    note: str | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["CustomWordEntity"]:
@@ -50,7 +49,7 @@ class CustomWordEntity:
             return getattr(self, lower_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "replaced": self.replaced,
@@ -72,12 +71,12 @@ class CustomWordEntity:
 class CustomWordGroupEntity:
     """自定义识别词组实体"""
     id: int
-    title: Optional[str]
-    year: Optional[str]
+    title: str | None
+    year: str | None
     type: int
     tmdbid: int
     season_count: int
-    note: Optional[str]
+    note: str | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["CustomWordGroupEntity"]:
@@ -99,7 +98,7 @@ class CustomWordGroupEntity:
             return getattr(self, lower_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "title": self.title,

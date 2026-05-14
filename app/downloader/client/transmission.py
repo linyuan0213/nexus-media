@@ -1,16 +1,14 @@
 import os.path
 import re
 import time
-from datetime import datetime
-from typing import Tuple
 
 import transmission_rpc
 
-from app.schemas.download import Torrent, TorrentStatus
 import log
+from app.downloader.client._base import _IDownloadClient
+from app.schemas.download import Torrent, TorrentStatus
 from app.utils import ExceptionUtils, StringUtils
 from app.utils.types import DownloaderType
-from app.downloader.client._base import _IDownloadClient
 
 
 class Transmission(_IDownloadClient):
@@ -97,7 +95,7 @@ class Transmission(_IDownloadClient):
             ids = int(ids)
         return ids
 
-    def get_torrents(self, ids=None, status=None, tag=None) -> Tuple[list[Torrent], bool]:
+    def get_torrents(self, ids=None, status=None, tag=None) -> tuple[list[Torrent], bool]:
         """
         获取种子列表
         返回结果 种子列表, 是否有错误
@@ -622,13 +620,13 @@ class Transmission(_IDownloadClient):
 
         # 分享率
         torrent_obj.ratio = torrent.ratio or 0
-        
+
         # 上传量
         torrent_obj.uploaded = int(torrent_obj.downloaded * torrent.ratio)
 
         # 平均上传速度
         torrent_obj.avg_upload_speed = torrent.uploaded_ever / torrent.seconds_seeding if torrent.seconds_seeding != 0 else 0
-        
+
         # 未活动时间
         if not torrent.activity_date or torrent.activity_date.timestamp() < 1:
             torrent_obj.iatime = 0
@@ -654,7 +652,7 @@ class Transmission(_IDownloadClient):
         torrent_obj.progress = torrent.percent_done
         # 保存路径
         torrent_obj.save_path = torrent.download_dir
-        
+
         return torrent_obj
 
     @staticmethod

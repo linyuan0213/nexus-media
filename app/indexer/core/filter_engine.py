@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 索引器过滤引擎
 
@@ -6,7 +5,6 @@
 所有方法均为无状态静态方法，仅基于输入参数进行判断。
 """
 import re
-from typing import Tuple, Optional
 
 from app.core.module_config import ModuleConf
 from app.media import ReleaseGroupsMatcher
@@ -29,7 +27,7 @@ class IndexerFilterEngine:
     def check_torrent_filter(meta_info,
                              filter_args: dict,
                              uploadvolumefactor=None,
-                             downloadvolumefactor=None) -> Tuple[bool, int, str]:
+                             downloadvolumefactor=None) -> tuple[bool, int, str]:
         """
         对种子进行过滤（基于 filter_args 中的基础条件）
 
@@ -98,7 +96,7 @@ class IndexerFilterEngine:
         return True, 0, ""
 
     @staticmethod
-    def check_rules(meta_info, rulegroup_info: dict, filters: list) -> Tuple[bool, int, str]:
+    def check_rules(meta_info, rulegroup_info: dict, filters: list) -> tuple[bool, int, str]:
         """
         检查种子是否匹配站点过滤规则：排除规则、包含规则、优先规则
 

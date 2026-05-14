@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 SystemService - 系统管理业务层
 将 web/controllers/system.py 与 app/system_service.py 中的系统逻辑下沉到可独立测试的 Service。
@@ -12,51 +11,50 @@ import subprocess
 import tempfile
 import time
 from pathlib import Path
-from typing import Optional, Tuple
+
+from sqlalchemy import create_engine
 
 import log
 from app.core.system_config import SystemConfig
-from app.message.commands import COMMANDS
-from app.utils.path_utils import get_temp_path
 from app.db.database_factory import DatabaseFactory
-from app.db.migrate import import_from_file, export_database, import_database
-from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter, MessageClientRepositoryAdapter
+from app.db.migrate import export_database, import_database, import_from_file
+from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
-from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.helper import SubmoduleHelper
 from app.helper.thread_helper import ThreadHelper
-from app.services.indexer_service import IndexerService
+from app.infrastructure.cache_system import TokenCache
 from app.mediaserver import MediaServer
 from app.message import Message, MessageCenter
+from app.message.commands import COMMANDS
 from app.plugin_framework.event_compat import EventManager
-from app.services.rss_core import Rss
 from app.schemas.system import (
     BackupRestoreResultDTO,
-    NetTestResultDTO,
+    ConfigUpdateResultDTO,
     IndexerConfigResultDTO,
     MediaServerConfigResultDTO,
-    WebSearchResultDTO,
-    VersionInfoDTO,
-    SendMessageResultDTO,
+    NetTestResultDTO,
     ProgressResultDTO,
-    UserManageResultDTO,
-    ConfigUpdateResultDTO,
+    SendMessageResultDTO,
     SystemInfoDTO,
+    UserManageResultDTO,
+    VersionInfoDTO,
+    WebSearchResultDTO,
 )
-from app.sites import SiteUserInfo
+from app.services.downloader_core import DownloaderCore as Downloader
+from app.services.filetransfer_service import FileTransferService as FileTransfer
+from app.services.indexer_service import IndexerService
+from app.services.rss_core import Rss
+from app.services.search_web_service import search_medias_for_web
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.services.sync_core import SyncCore as Sync
 from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
+from app.sites.site_userinfo import SiteUserInfo
 from app.utils import ExceptionUtils, RequestUtils
-from app.utils.types import MediaType, MovieTypes, SearchType, EventType
-from app.utils.temp_manager import temp_manager
-from config import Config
-from sqlalchemy import create_engine
-from app.services.search_web_service import search_medias_for_web
-from app.utils.web_utils import WebUtils
-from app.infrastructure.cache_system import TokenCache
 from app.utils.config_tools import get_proxies
+from app.utils.temp_manager import temp_manager
+from app.utils.types import EventType, MediaType, MovieTypes, SearchType
+from app.utils.web_utils import WebUtils
+from config import Config
 
 
 class MessageClientService:
@@ -65,14 +63,14 @@ class MessageClientService:
     负责消息客户端的增删改查、交互状态管理、连接测试
     """
 
-    def __init__(self, message: Optional[Message] = None):
+    def __init__(self, message: Message | None = None):
         self._message = message or Message()
 
     def delete_client(self, cid: int) -> bool:
         """删除消息客户端"""
         return bool(self._message.delete_message_client(cid=cid))
 
-    def get_client(self, cid: Optional[int] = None):
+    def get_client(self, cid: int | None = None):
         """获取消息客户端信息"""
         return self._message.get_message_client_info(cid=cid)
 
@@ -186,8 +184,8 @@ class IndexerConfigService:
     """
 
     def __init__(self,
-                 system_config: Optional[SystemConfig] = None,
-                 indexer_service: Optional[IndexerService] = None):
+                 system_config: SystemConfig | None = None,
+                 indexer_service: IndexerService | None = None):
         self._system_config = system_config or SystemConfig()
         self._indexer_service = indexer_service or IndexerService()
 
@@ -250,7 +248,7 @@ class MediaServerConfigService:
 
     def __init__(self,
                  config_repo=None,
-                 media_server: Optional[MediaServer] = None):
+                 media_server: MediaServer | None = None):
         self._config_repo = config_repo or MediaServerRepositoryAdapter()
         self._media_server = media_server or MediaServer()
 
@@ -333,11 +331,11 @@ class SchedulerService:
     """
 
     def __init__(self,
-                 downloader: Optional[Downloader] = None,
-                 sync: Optional[Sync] = None,
-                 rss: Optional[Rss] = None,
-                 subscribe: Optional[Subscribe] = None,
-                 thread_helper: Optional[ThreadHelper] = None):
+                 downloader: Downloader | None = None,
+                 sync: Sync | None = None,
+                 rss: Rss | None = None,
+                 subscribe: Subscribe | None = None,
+                 thread_helper: ThreadHelper | None = None):
         self._commands = {
             "pttransfer": (downloader or Downloader()).transfer,
             "sync": (sync or Sync()).transfer_sync,
@@ -352,7 +350,7 @@ class SchedulerService:
         }
         self._thread_helper = thread_helper or ThreadHelper()
 
-    def start_service(self, item: str) -> Tuple[bool, str]:
+    def start_service(self, item: str) -> tuple[bool, str]:
         """启动指定服务"""
         command = self._commands.get(item)
         if command:
@@ -367,7 +365,6 @@ class WebSearchService:
     """
 
     def __init__(self, search_fn=None):
-        from app.services.search_web_service import search_medias_for_web
         self._search_fn = search_fn or search_medias_for_web
 
     def search(self, search_word: str, ident_flag: bool = True,
@@ -392,7 +389,7 @@ class SystemConfigService:
     系统配置业务服务
     """
 
-    def __init__(self, system_config: Optional[SystemConfig] = None):
+    def __init__(self, system_config: SystemConfig | None = None):
         self._system_config = system_config or SystemConfig()
 
     def set_config(self, key: str, value) -> bool:
@@ -445,8 +442,9 @@ class SystemInfoService:
     @staticmethod
     def get_system_info() -> SystemInfoDTO:
         """获取系统基本信息"""
-        from version import APP_VERSION
         import psutil
+
+        from version import APP_VERSION
 
         try:
             process = psutil.Process()
@@ -491,8 +489,6 @@ class SystemLifecycleService:
                  plugin_manager=None,
                  file_index_service=None):
         from app.services.scheduler_core import SchedulerCore
-        from app.services.brush_core import BrushTaskService
-        from app.services.rss_service import RssTaskService
         self._scheduler = scheduler_core or SchedulerCore()
         # 保存外部注入的依赖（测试时传入 mock），不在 __init__ 中实例化
         self._sync = sync
@@ -505,13 +501,16 @@ class SystemLifecycleService:
     def start_service(self) -> None:
         """启动所有后台服务（调度器优先启动，确保后续模块注册任务时调度器已就绪）"""
         from app.helper import IndexerHelper
-        from app.sites import SiteConf
         from app.services.brush_core import BrushTaskService
         from app.services.rss_service import RssTaskService
+        from app.sites import SiteConf
         from initializer import (
-            check_config, update_config,
-            check_redis, update_rss_state, init_rbac_system,
-            init_message_webhook_apikey
+            check_config,
+            check_redis,
+            init_message_webhook_apikey,
+            init_rbac_system,
+            update_config,
+            update_rss_state,
         )
         # 0. 执行初始化（配置检查、RBAC、消息 webhook key 等）
         check_config()
@@ -744,7 +743,7 @@ class MessageSenderService:
     消息发送业务服务
     """
 
-    def __init__(self, message: Optional[Message] = None):
+    def __init__(self, message: Message | None = None):
         self._message = message or Message()
 
     def send_custom_message(self, clients: list, title: str, text: str,

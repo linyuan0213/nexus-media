@@ -1,13 +1,12 @@
 import json
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from app.schemas.rss import (
-    RssAddResultDTO,
-    RssDetailResultDTO,
-)
+import pytest
+
 from app.services.rss_service import (
-    RssParserEngine, RssTaskService, RssSubscriptionService,
+    RssParserEngine,
+    RssSubscriptionService,
+    RssTaskService,
 )
 from app.utils.types import MediaType
 

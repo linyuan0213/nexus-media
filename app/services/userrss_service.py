@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from app.schemas.userrss import (
     UserRssArticleListDTO,
-    UserRssHistoryDTO,
     UserRssArticleTestDTO,
+    UserRssHistoryDTO,
     UserRssTaskUpdateDTO,
 )
 from app.services.rss_service import RssTaskService as RssChecker
@@ -14,10 +13,10 @@ from app.utils.web_utils import mediainfo_dict
 class UserRssService:
     """自定义RSS任务服务：封装参数转换与数据格式化"""
 
-    def __init__(self, rss_checker: Optional[RssChecker] = None):
+    def __init__(self, rss_checker: RssChecker | None = None):
         self._checker = rss_checker or RssChecker()
 
-    def check_tasks(self, taskids: Optional[list], flag: str) -> None:
+    def check_tasks(self, taskids: list | None, flag: str) -> None:
         flag_dict = {"enable": True, "disable": False}
         state = flag_dict.get(flag)
         if state is not None:
@@ -27,10 +26,10 @@ class UserRssService:
             else:
                 self._checker.check_userrss_task(state=state)
 
-    def delete_parser(self, pid) -> Optional[bool]:
+    def delete_parser(self, pid) -> bool | None:
         return self._checker.delete_userrss_parser(pid)
 
-    def delete_task(self, tid) -> Optional[bool]:
+    def delete_task(self, tid) -> bool | None:
         return self._checker.delete_userrss_task(tid)
 
     def get_parsers(self):
@@ -88,18 +87,18 @@ class UserRssService:
             media_dict=media_dict
         )
 
-    def check_articles(self, taskid, flag, articles) -> Optional[bool]:
+    def check_articles(self, taskid, flag, articles) -> bool | None:
         return self._checker.check_rss_articles(
             taskid=taskid, flag=flag, articles=articles)
 
-    def download_articles(self, taskid, articles) -> Optional[bool]:
+    def download_articles(self, taskid, articles) -> bool | None:
         return self._checker.download_rss_articles(
             taskid=taskid, articles=articles)
 
     def run_task(self, taskid) -> None:
         self._checker.check_task_rss(taskid)
 
-    def update_parser(self, params: dict) -> Optional[bool]:
+    def update_parser(self, params: dict) -> bool | None:
         return self._checker.update_userrss_parser(params)
 
     def update_task(self, data: dict) -> UserRssTaskUpdateDTO:

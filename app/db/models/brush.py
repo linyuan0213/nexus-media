@@ -1,9 +1,8 @@
-# coding: utf-8
 """
 刷流相关模型
 包含: 站点刷流任务、站点刷流种子
 """
-from sqlalchemy import Column, BigInteger, Integer, Text, String, Sequence
+from sqlalchemy import BigInteger, Column, Integer, Sequence, String, Text
 
 from app.db.models.base import Base
 

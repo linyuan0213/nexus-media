@@ -1,31 +1,28 @@
-# -*- coding: utf-8 -*-
 """
 MediaService 单元测试
 """
 import json
-import os
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
-import web  # ensure web module is loaded
 
 from app.schemas.media import (
+    LibrarySpaceDTO,
     MediaInfoResultDTO,
-    SeasonEpisodesResultDTO,
     MediaSearchResultDTO,
+    SeasonEpisodesResultDTO,
     TransferHistoryPageDTO,
     UnknownListPageDTO,
-    LibrarySpaceDTO,
 )
 from app.services.media_service import (
+    MediaFileService,
     MediaInfoService,
+    MediaLibraryService,
     MediaRecommendationService,
     SearchResultService,
-    MediaLibraryService,
     TransferHistoryService,
-    MediaFileService,
 )
-from app.utils.types import MediaType, MovieTypes, SystemConfigKey
+from app.utils.types import SystemConfigKey
 
 
 class TestMediaInfoResultDTO:

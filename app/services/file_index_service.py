@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 FileIndexService - 媒体库文件索引服务
 后台维护媒体库 + 同步源目录的文件索引，支持 O(1) 搜索响应。
@@ -9,15 +8,15 @@ FileIndexService - 媒体库文件索引服务
 - 索引数据存储在 app.utils.cache_system 的内存缓存中
 - 提供内存中字符串匹配搜索（遍历，万级文件毫秒级）
 """
+from __future__ import annotations
+
 import os
 import threading
-import time
-from typing import Dict, List, Optional, Set
 
 import log
+from app.core.constants import RMT_MEDIAEXT
 from app.infrastructure.cache_system import get_cache_manager
 from config import Config
-from app.core.constants import RMT_MEDIAEXT
 
 _CACHE_NAME = "file_index"
 _KEY_INDEX = "index"
@@ -29,7 +28,7 @@ class FileIndexService:
     """文件索引服务"""
 
     def __init__(self):
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._cache = get_cache_manager().get_or_create(
             _CACHE_NAME, "memory", maxsize=10, ttl=None
@@ -85,8 +84,8 @@ class FileIndexService:
             self._cache.set(_KEY_COUNT, 0)
             return
 
-        new_index: Dict[str, dict] = {}
-        seen: Set[str] = set()
+        new_index: dict[str, dict] = {}
+        seen: set[str] = set()
 
         for root in roots:
             if not root or not os.path.isdir(root):
@@ -101,10 +100,10 @@ class FileIndexService:
         self._cache.set(_KEY_COUNT, len(new_index))
         log.info(f"【FileIndex】索引重建完成，共 {len(new_index)} 个文件，根目录: {roots}")
 
-    def _get_root_paths(self) -> List[str]:
+    def _get_root_paths(self) -> list[str]:
         """获取所有需要索引的根目录"""
         cfg = Config()
-        roots: List[str] = []
+        roots: list[str] = []
 
         # 媒体库目录
         media = cfg.get_config('media') or {}
@@ -129,7 +128,7 @@ class FileIndexService:
             pass
 
         # 去重
-        seen: Set[str] = set()
+        seen: set[str] = set()
         result = []
         for r in roots:
             if r and r not in seen:
@@ -137,7 +136,7 @@ class FileIndexService:
                 result.append(r)
         return result
 
-    def _scan_dir(self, directory: str, index: Dict[str, dict], seen: Set[str]) -> None:
+    def _scan_dir(self, directory: str, index: dict[str, dict], seen: set[str]) -> None:
         """递归扫描目录，只索引媒体文件 + 目录（供浏览用）"""
         try:
             entries = os.scandir(directory)
@@ -181,7 +180,7 @@ class FileIndexService:
                         item["size"] = st.st_size
                         item["mtime"] = st.st_mtime
                         item["ctime"] = st.st_ctime
-                    except (OSError, IOError):
+                    except OSError:
                         item["size"] = None
                         item["mtime"] = None
                         item["ctime"] = None
@@ -189,11 +188,11 @@ class FileIndexService:
 
     # ---------- 搜索 ----------
 
-    def _get_index(self) -> Dict[str, dict]:
+    def _get_index(self) -> dict[str, dict]:
         """获取当前索引字典"""
         return self._cache.get(_KEY_INDEX) or {}
 
-    def search(self, keyword: str, limit: int = 100) -> List[dict]:
+    def search(self, keyword: str, limit: int = 100) -> list[dict]:
         """关键词搜索，返回匹配的文件列表"""
         if not keyword:
             return []
@@ -212,7 +211,7 @@ class FileIndexService:
 
         return results
 
-    def search_dirs(self, keyword: str, limit: int = 50) -> List[dict]:
+    def search_dirs(self, keyword: str, limit: int = 50) -> list[dict]:
         """搜索目录"""
         if not keyword:
             return []
@@ -231,7 +230,7 @@ class FileIndexService:
 
         return results
 
-    def get_dir_contents(self, path: str) -> List[dict]:
+    def get_dir_contents(self, path: str) -> list[dict]:
         """获取指定目录下的内容（用于浏览时的快速目录跳转）"""
         norm = (path or "").replace("\\", "/").rstrip("/")
         prefix = norm + "/"
@@ -250,7 +249,7 @@ class FileIndexService:
         results.sort(key=lambda x: (not x.get("is_dir", False), x["name"].lower()))
         return results
 
-    def find_path(self, keyword: str) -> Optional[str]:
+    def find_path(self, keyword: str) -> str | None:
         """搜索并返回第一个匹配文件的所在目录"""
         results = self.search(keyword, limit=1)
         if results:

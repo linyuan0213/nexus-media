@@ -3,8 +3,9 @@
 """
 import pytest
 from fastapi.testclient import TestClient
-from api.main import app
+
 from api.deps import get_current_user
+from api.main import app
 from api.routers.pages import utils_routes
 from app.schemas.auth import UserContext
 
@@ -33,6 +34,5 @@ class TestMessageWebSocket:
     def test_websocket_unauthorized_without_session(self, monkeypatch):
         """无认证时应被拒绝"""
         monkeypatch.setattr(utils_routes, "_get_ws_user", lambda _w: None)
-        with pytest.raises(Exception):
-            with client.websocket_connect("/message") as ws:
-                pass
+        with pytest.raises(Exception), client.websocket_connect("/message") as ws:
+            pass

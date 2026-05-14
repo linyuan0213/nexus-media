@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Plugin Sandbox - 插件沙箱运行环境
 动态加载插件后端模块，提供隔离的运行上下文
@@ -7,31 +6,30 @@ import importlib
 import importlib.util
 import os
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 
+import log
 from app.message import Message
 from app.plugin_framework.context import PluginContext
 from app.plugin_framework.registry import PluginRegistry
-from app.schemas.plugin import PluginManifest
 from app.utils.commons import SingletonMeta
-import log
 
 
 class PluginSandbox(metaclass=SingletonMeta):
     """插件沙箱，管理插件后端模块的加载和运行"""
 
     def __init__(self):
-        self._instances: Dict[str, Any] = {}
+        self._instances: dict[str, Any] = {}
         self._registry = PluginRegistry()
 
-    def _get_module_path(self, plugin_id: str) -> Optional[str]:
+    def _get_module_path(self, plugin_id: str) -> str | None:
         """根据插件 entry 计算 module_path"""
         manifest = self._registry.get(plugin_id)
         if not manifest or not manifest.backend.entry:
             return None
         return manifest.backend.entry.split(':')[0]
 
-    def _get_plugin_path(self, plugin_id: str) -> Optional[str]:
+    def _get_plugin_path(self, plugin_id: str) -> str | None:
         """获取插件根目录"""
         return self._registry.get_plugin_path(plugin_id)
 
@@ -198,7 +196,7 @@ class PluginSandbox(metaclass=SingletonMeta):
             except Exception as e:
                 log.error(f"[Sandbox] 插件 {plugin_id} 处理 hook {event} 失败: {e}")
 
-    def get_instance(self, plugin_id: str) -> Optional[Any]:
+    def get_instance(self, plugin_id: str) -> Any | None:
         """获取插件实例"""
         return self._instances.get(plugin_id)
 

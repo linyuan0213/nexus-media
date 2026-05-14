@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 CustomHosts Plugin v2
 修改系统hosts文件，加速网络访问
@@ -10,7 +9,7 @@ import time
 from python_hosts import Hosts, HostsEntry
 
 from app.plugin_framework.context import PluginContext
-from app.utils import SystemUtils, IpUtils
+from app.utils import IpUtils, SystemUtils
 
 
 class CustomHostsPlugin:

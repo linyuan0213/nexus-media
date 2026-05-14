@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 配置驱动的 HTML 站点用户信息解析器
 
@@ -13,11 +12,11 @@
 import json
 import re
 from urllib.parse import urljoin
+
 from lxml import etree
 
-import log
 from app.sites.engine import SiteEngine
-from app.sites.siteuserinfo import nexus_php, gazelle, unit3d, discuz, small_horse
+from app.sites.siteuserinfo import discuz, gazelle, nexus_php, small_horse, unit3d
 from app.utils import RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
 

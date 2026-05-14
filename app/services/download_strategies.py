@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 DownloadStrategies - 批量下载策略
 
@@ -10,11 +9,8 @@ DownloadStrategies - 批量下载策略
 所有策略均不持有状态，作为纯逻辑类提供静态/类方法，
 便于单元测试和独立演进。
 """
-import os
-from typing import List, Tuple, Dict, Optional
 
 import log
-from app.utils import Torrent
 from app.utils.types import MediaType
 
 
@@ -59,7 +55,7 @@ class SeasonPackStrategy:
                           need_tvs: dict,
                           get_download_url_callback,
                           download_callback,
-                          get_torrent_episodes_callback) -> Tuple[list, dict, dict]:
+                          get_torrent_episodes_callback) -> tuple[list, dict, dict]:
         """
         查找并下载整季包含的种子
         :param download_list: 候选资源列表
@@ -158,7 +154,7 @@ class EpisodeStrategy:
                           get_torrent_episodes_callback,
                           set_files_status_callback,
                           start_torrents_callback,
-                          return_items: list) -> Tuple[list, dict]:
+                          return_items: list) -> tuple[list, dict]:
         """
         按单集匹配下载
         :param download_list: 候选资源列表
@@ -228,7 +224,7 @@ class EpisodeStrategy:
                                   get_torrent_episodes_callback,
                                   set_files_status_callback,
                                   start_torrents_callback,
-                                  return_items: list) -> Tuple[list, dict]:
+                                  return_items: list) -> tuple[list, dict]:
         """
         从整季包中选取需要的集数下载（仅支持QB/TR）
         :return: (更新后的 return_items, 更新后的 need_tvs)

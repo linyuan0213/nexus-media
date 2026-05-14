@@ -1,22 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 同步领域 Repository 适配器
 将旧版 SyncRepository 适配为新领域接口
 """
-from typing import List, Optional
 
+from app.db.repositories.sync_repository import SyncRepository
 from app.domain.entities.sync import SyncPathEntity
 from app.domain.interfaces.sync_repo import ISyncPathRepository
-from app.db.repositories.sync_repository import SyncRepository
 
 
 class SyncPathRepositoryAdapter(ISyncPathRepository):
     """目录同步路径仓储适配器"""
 
-    def __init__(self, repo: Optional[SyncRepository] = None):
+    def __init__(self, repo: SyncRepository | None = None):
         self._repo = repo or SyncRepository()
 
-    def get_all(self, sid: Optional[int] = None) -> List[SyncPathEntity]:
+    def get_all(self, sid: int | None = None) -> list[SyncPathEntity]:
         rows = self._repo.get_config_sync_paths(sid)
         if not rows:
             return []
@@ -27,7 +25,7 @@ class SyncPathRepositoryAdapter(ISyncPathRepository):
         return self._repo.get_config_sync_paths(sid)
 
     def insert(self, source: str, dest: str, unknown: str, mode: str,
-               compatibility: int, rename: int, enabled: int, note: Optional[str] = None) -> None:
+               compatibility: int, rename: int, enabled: int, note: str | None = None) -> None:
         self._repo.insert_config_sync_path(source, dest, unknown, mode, compatibility, rename, enabled, note)
 
     # 兼容旧Repository方法名
@@ -41,8 +39,8 @@ class SyncPathRepositoryAdapter(ISyncPathRepository):
     def delete_config_sync_path(self, sid):
         self._repo.delete_config_sync_path(sid)
 
-    def update_state(self, sid: Optional[int] = None, compatibility: Optional[int] = None,
-                     rename: Optional[int] = None, enabled: Optional[int] = None) -> None:
+    def update_state(self, sid: int | None = None, compatibility: int | None = None,
+                     rename: int | None = None, enabled: int | None = None) -> None:
         self._repo.check_config_sync_paths(sid, compatibility, rename, enabled)
 
     # 兼容旧Repository方法名

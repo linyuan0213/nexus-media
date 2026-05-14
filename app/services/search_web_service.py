@@ -2,21 +2,19 @@
 WEB 资源搜索服务
 对应原 search_medias_for_web 功能
 """
+import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
-import hashlib
 
 import log
-
 from app.agent import SearchIntentAgent
+from app.helper import ProgressHelper
 from app.media import MediaService
 from app.services.search_service import Searcher
 from app.utils import StringUtils
-from app.helper import ProgressHelper
-from app.utils.types import SearchType, ProgressKey, MediaType
+from app.utils.types import MediaType, ProgressKey, SearchType
 from app.utils.web_utils import WebUtils
 from config import Config
-
 
 # 媒体识别结果缓存，避免重复识别
 _MEDIA_IDENT_CACHE: dict = {}

@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Logger 单例管理与 loguru 配置。
 """
 
 import logging
 import threading
-from typing import Dict
 
 from loguru import logger
 
@@ -18,7 +16,7 @@ __all__ = ["Logger", "get_logger_instance"]
 _lock = threading.RLock()
 
 # 模块级实例缓存
-_instances: Dict[str, "Logger"] = {}
+_instances: dict[str, "Logger"] = {}
 
 
 class Logger:

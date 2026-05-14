@@ -1,8 +1,6 @@
 import log
-
 from app.helper.image_proxy_helper import ImageProxyHelper
 from app.media.lookup.tmdb_client import TmdbClient, get_genre_ids_from_detail, update_tmdbinfo_cn_title
-from app.infrastructure.external.tmdbv3api import TMDbException
 from app.utils.request_deduper import get_deduper
 from app.utils.types import MediaType
 

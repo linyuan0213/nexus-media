@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """刮削器 — 图片与 NFO 文件下载/保存"""
 import os
 
@@ -6,7 +5,7 @@ from requests.exceptions import RequestException
 
 import log
 from app.core.module_config import ModuleConf
-from app.utils import RequestUtils, ExceptionUtils
+from app.utils import ExceptionUtils, RequestUtils
 from app.utils.commons import retry
 from app.utils.types import RmtMode
 

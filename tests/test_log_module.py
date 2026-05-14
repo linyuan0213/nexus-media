@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 测试重构后的日志模块 (log / log.py)
 
@@ -11,11 +10,11 @@
 5. InterceptHandler 存在性
 """
 
-import sys
-import os
-import unittest
-import threading
 import logging
+import os
+import sys
+import threading
+import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -24,18 +23,16 @@ import log
 
 # 同时测试新包导入
 from log import (
+    LOG_BUFFER,
+    InterceptHandler,
+    Logger,
+    console,
     debug,
+    error,
+    get_log_buffer,
+    get_logger_instance,
     info,
     warn,
-    error,
-    console,
-    Logger,
-    get_logger_instance,
-    LOG_BUFFER,
-    LOG_QUEUE,
-    LogBufferProxy,
-    get_log_buffer,
-    InterceptHandler,
 )
 
 

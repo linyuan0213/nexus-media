@@ -1,16 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 通用对话 Agent — 支持多轮会话与工具调用
 """
 import json
 
 import log
-
 from app.agent.service import AgentService
-from app.agent.tools import ToolRegistry
 from app.agent.tool_executor import get_tool_executor
+from app.agent.tools import ToolRegistry
 from app.infrastructure.cache_system import OpenAISessionCache
-
 
 _TOOL_PROMPT = """你是一个智能助手，可以帮助用户管理 NAS 媒体库系统。
 
@@ -55,7 +52,7 @@ class ChatAgent:
                 messages=[{"role": "user", "content": question}],
                 system_prompt=system_prompt,
             )
-            log.info(f"【ChatAgent】ask 成功")
+            log.info("【ChatAgent】ask 成功")
             return answer
         except Exception as e:
             log.error(f"【ChatAgent】ask 出错: {e}")

@@ -1,26 +1,23 @@
-import json
-import os
-import pytest
-from unittest.mock import MagicMock, patch, mock_open, call
+from unittest.mock import MagicMock, patch
 
 from app.schemas.system import (
     BackupRestoreResultDTO,
-    NetTestResultDTO,
     IndexerConfigResultDTO,
     MediaServerConfigResultDTO,
-    WebSearchResultDTO,
+    NetTestResultDTO,
     VersionInfoDTO,
+    WebSearchResultDTO,
 )
 from app.services.system_service import (
-    MessageClientService,
     BackupRestoreService,
     IndexerConfigService,
     MediaServerConfigService,
+    MessageClientService,
     NetTestService,
     SchedulerService,
-    WebSearchService,
     SystemConfigService,
     VersionService,
+    WebSearchService,
 )
 
 

@@ -1,21 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 下载领域层单元测试
 测试DownloadHistory/Setting/IndexerStatistics实体和适配器
 """
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
+from app.db.repositories.download_repo_adapter import (
+    DownloadHistoryRepositoryAdapter,
+    DownloadSettingRepositoryAdapter,
+    IndexerStatisticsRepositoryAdapter,
+)
 from app.domain.entities.download import (
     DownloaderEntity,
     DownloadHistoryEntity,
     DownloadSettingEntity,
     IndexerStatisticsEntity,
-)
-from app.db.repositories.download_repo_adapter import (
-    DownloadHistoryRepositoryAdapter,
-    DownloadSettingRepositoryAdapter,
-    IndexerStatisticsRepositoryAdapter,
 )
 
 

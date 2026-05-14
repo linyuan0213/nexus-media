@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AutoSub Plugin v2
 使用whisper自动生成视频文件字幕
@@ -17,11 +16,11 @@ import psutil
 import srt
 from lxml import etree
 
-from app.helper import FfmpegHelper
 from app.agent import ChatAgent
+from app.core.constants import RMT_MEDIAEXT
+from app.helper import FfmpegHelper
 from app.plugin_framework.context import PluginContext
 from app.utils import SystemUtils
-from app.core.constants import RMT_MEDIAEXT
 
 
 class AutoSubPlugin:
@@ -90,13 +89,13 @@ class AutoSubPlugin:
             for path in path_list:
                 self.ctx.info(f"开始处理目录：{path} ...")
                 if not os.path.exists(path):
-                    self.ctx.warn(f"目录不存在，不进行处理")
+                    self.ctx.warn("目录不存在，不进行处理")
                     continue
                 if not os.path.isdir(path):
-                    self.ctx.warn(f"目录不是文件夹，不进行处理")
+                    self.ctx.warn("目录不是文件夹，不进行处理")
                     continue
                 if not os.path.isabs(path):
-                    self.ctx.warn(f"目录不是绝对路径，不进行处理")
+                    self.ctx.warn("目录不是绝对路径，不进行处理")
                     continue
                 s, sk, f, p = self._process_folder(path, file_size, whisper_main, whisper_model, translate_zh, translate_only, additional_args, send_notify, asr_engine, faster_whisper_model, faster_whisper_model_path)
                 success_count += s
@@ -156,7 +155,7 @@ class AutoSubPlugin:
             try:
                 self.ctx.info(f"开始处理文件：{video_file} ...")
                 if self._target_subtitle_exists(video_file, translate_zh):
-                    self.ctx.warn(f"字幕文件已经存在，不进行处理")
+                    self.ctx.warn("字幕文件已经存在，不进行处理")
                     skip_count += 1
                     continue
 
@@ -177,7 +176,7 @@ class AutoSubPlugin:
                     continue
 
                 if translate_zh:
-                    self.ctx.info(f"开始翻译字幕为中文 ...")
+                    self.ctx.info("开始翻译字幕为中文 ...")
                     if send_notify:
                         self.ctx.notify(title="自动字幕生成", text=f" 媒体: {file_name}\n 开始翻译字幕为中文 ... ")
                     self._translate_zh_subtitle(lang, f"{file_path}.{lang}.srt", f"{file_path}.zh.srt")
@@ -186,7 +185,7 @@ class AutoSubPlugin:
                 end_time = time.time()
                 message = f" 媒体: {file_name}\n 处理完成\n 字幕原始语言: {lang}\n "
                 if translate_zh:
-                    message += f"字幕翻译语言: zh\n "
+                    message += "字幕翻译语言: zh\n "
                 message += f"耗时：{round(end_time - start_time, 2)}秒"
                 self.ctx.info(f"自动字幕生成 处理完成：{message}")
                 if send_notify:
@@ -343,7 +342,7 @@ class AutoSubPlugin:
 
     @staticmethod
     def _load_srt(file_path):
-        with open(file_path, 'r', encoding="utf8") as f:
+        with open(file_path, encoding="utf8") as f:
             srt_text = f.read()
         return list(srt.parse(srt_text))
 
@@ -446,9 +445,7 @@ class AutoSubPlugin:
                 merged_subtitle[-1].content = f"{merged_subtitle[-1].content} {content}"
                 merged_subtitle[-1].end = item.end
 
-            if content.endswith(tuple(self._end_token)):
-                sentence_end = True
-            elif len(merged_subtitle[-1].content) > 350:
+            if content.endswith(tuple(self._end_token)) or len(merged_subtitle[-1].content) > 350:
                 sentence_end = True
             else:
                 sentence_end = False

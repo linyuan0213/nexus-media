@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 """媒体路径配置服务 — 从数据库读取，兼容 YAML 回退"""
 import json
-from typing import List, Optional
 
 from app.db.repositories.config_repo_adapter import MediaConfigRepositoryAdapter
 from config import Config
@@ -10,12 +8,12 @@ from config import Config
 class MediaConfigService:
     """媒体库路径配置服务"""
 
-    def __init__(self, repo: Optional[MediaConfigRepositoryAdapter] = None):
+    def __init__(self, repo: MediaConfigRepositoryAdapter | None = None):
         self._repo = repo or MediaConfigRepositoryAdapter()
         self._yaml_fallback = Config().get_config("media") or {}
 
     @staticmethod
-    def _parse_paths(val) -> List[str]:
+    def _parse_paths(val) -> list[str]:
         if not val:
             return []
         if isinstance(val, list):
@@ -52,8 +50,8 @@ class MediaConfigService:
         self._repo.update_path(path_type, old_path, new_path)
         return True
 
-    def set_config(self, movie_path: List[str], tv_path: List[str],
-                   anime_path: List[str], unknown_path: List[str]) -> bool:
+    def set_config(self, movie_path: list[str], tv_path: list[str],
+                   anime_path: list[str], unknown_path: list[str]) -> bool:
         """一次性保存整个配置"""
         self._repo.set_media_config(
             movie_path=json.dumps(movie_path) if movie_path else '',

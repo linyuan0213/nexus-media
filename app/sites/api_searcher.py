@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 API 站点搜索器
 
@@ -13,7 +12,7 @@ API 站点搜索器
 """
 import json
 import re
-from typing import Optional, List, Dict, Any
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import log
@@ -29,19 +28,19 @@ class ApiSiteSearcher:
     API 站点搜索器
     """
 
-    def __init__(self, site_def: SiteDefinition, user_config: Optional[dict] = None):
+    def __init__(self, site_def: SiteDefinition, user_config: dict | None = None):
         self._site = site_def
         self._user_config = user_config or {}
         self._engine = SiteEngine.get_instance()
-        self._auth_tokens: Dict[str, str] = {}
+        self._auth_tokens: dict[str, str] = {}
         self._resolve_auth_tokens()
 
     def search(
         self,
         keyword: str = "",
         page: int = 0,
-        mtype: Optional[MediaType] = None,
-    ) -> List[Dict[str, Any]]:
+        mtype: MediaType | None = None,
+    ) -> list[dict[str, Any]]:
         if not self._site.api:
             return []
         keyword = keyword or ""

@@ -2,15 +2,13 @@
 Site Router — FastAPI 迁移
 对应原 web/controllers/site.py，复用 app/services/site_service.py
 """
-from typing import Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_current_user, require_any_permission, require_permission, get_site_service
-from app.utils.response import success, fail
+from api.deps import get_site_service, require_any_permission, require_permission
 from app.services.site_service import SiteService
-from app.helper.thread_helper import ThreadHelper
+from app.utils.response import fail, success
 
 router = APIRouter()
 
@@ -20,63 +18,63 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 class SiteIdRequest(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
 
 
 class SiteUrlRequest(BaseModel):
-    url: Optional[str] = None
+    url: str | None = None
 
 
 class SiteNameRequest(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class SiteDaysRequest(BaseModel):
-    days: Optional[int] = None
-    end_day: Optional[str] = None
+    days: int | None = None
+    end_day: str | None = None
 
 
 class SiteUpdateRequest(BaseModel):
-    site_id: Optional[str] = None
-    site_name: Optional[str] = None
-    site_pri: Optional[str] = None
-    site_rssurl: Optional[str] = None
-    site_signurl: Optional[str] = None
-    site_cookie: Optional[str] = None
-    site_note: Optional[str] = None
-    site_include: Optional[str] = None
+    site_id: str | None = None
+    site_name: str | None = None
+    site_pri: str | None = None
+    site_rssurl: str | None = None
+    site_signurl: str | None = None
+    site_cookie: str | None = None
+    site_note: str | None = None
+    site_include: str | None = None
 
 
 class SiteCookieUaRequest(BaseModel):
-    site_id: Optional[str] = None
-    site_cookie: Optional[str] = None
-    site_ua: Optional[str] = None
+    site_id: str | None = None
+    site_cookie: str | None = None
+    site_ua: str | None = None
 
 
 class SiteFilterRequest(BaseModel):
-    rss: Optional[bool] = False
-    brush: Optional[bool] = False
-    statistic: Optional[bool] = False
-    basic: Optional[bool] = False
+    rss: bool | None = False
+    brush: bool | None = False
+    statistic: bool | None = False
+    basic: bool | None = False
 
 
 class SiteCaptchaRequest(BaseModel):
-    code: Optional[str] = None
-    value: Optional[str] = None
+    code: str | None = None
+    value: str | None = None
 
 
 class SiteUserStatisticsRequest(BaseModel):
-    sites: Optional[list] = None
-    encoding: Optional[str] = "RAW"
-    sort_by: Optional[str] = None
-    sort_on: Optional[str] = None
-    site_hash: Optional[str] = None
+    sites: list | None = None
+    encoding: str | None = "RAW"
+    sort_by: str | None = None
+    sort_on: str | None = None
+    site_hash: str | None = None
 
 
 class SiteResourcesRequest(BaseModel):
-    id: Optional[str] = None
-    page: Optional[int] = None
-    keyword: Optional[str] = None
+    id: str | None = None
+    page: int | None = None
+    keyword: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +178,7 @@ def get_site_seeding_info(
 
 
 class SiteRefreshRequest(BaseModel):
-    sites: Optional[list] = None
+    sites: list | None = None
 
 
 @router.post("/sites/statistics/refresh")

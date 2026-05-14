@@ -2,9 +2,7 @@
 搜索分页管理模块
 管理消息中心搜索结果的缓存和分页导航
 """
-from typing import Any, Optional
-
-import log
+from typing import Any
 
 from app.message import Message
 from app.utils import StringUtils
@@ -25,7 +23,7 @@ class SearchPaginationManager:
         self._media_cache[user_id] = media_list
         self._media_type[user_id] = media_type
 
-    def get_media_cache(self, user_id: str) -> Optional[list]:
+    def get_media_cache(self, user_id: str) -> list | None:
         return self._media_cache.get(user_id)
 
     def get_media_type(self, user_id: str) -> str:
@@ -46,13 +44,13 @@ class SearchPaginationManager:
             "media_title": title,
         }
 
-    def get_page(self, user_id: str) -> Optional[dict]:
+    def get_page(self, user_id: str) -> dict | None:
         return self._cache.get(user_id)
 
     def has_page(self, user_id: str) -> bool:
         return user_id in self._cache
 
-    def navigate(self, user_id: str, direction: str) -> Optional[dict]:
+    def navigate(self, user_id: str, direction: str) -> dict | None:
         """分页导航：n=下一页, p=上一页"""
         page_info = self._cache.get(user_id)
         if not page_info:
@@ -76,7 +74,7 @@ class SearchPaginationManager:
 
         return self._get_current_page(user_id)
 
-    def select_item(self, user_id: str, index: int) -> Optional[Any]:
+    def select_item(self, user_id: str, index: int) -> Any | None:
         """选择指定序号的条目（1-based）"""
         page_info = self._cache.get(user_id)
         if not page_info:
@@ -89,10 +87,10 @@ class SearchPaginationManager:
             return items[item_idx]
         return None
 
-    def get_current_page_items(self, user_id: str) -> Optional[dict]:
+    def get_current_page_items(self, user_id: str) -> dict | None:
         return self._get_current_page(user_id)
 
-    def _get_current_page(self, user_id: str) -> Optional[dict]:
+    def _get_current_page(self, user_id: str) -> dict | None:
         page_info = self._cache.get(user_id)
         if not page_info:
             return None

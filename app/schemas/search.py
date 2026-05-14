@@ -1,12 +1,12 @@
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
 class SearchOneMediaResultDTO:
     """单媒体搜索结果"""
     media_info: Any = None
-    no_exists: Dict = None
+    no_exists: dict = None
     total_count: int = 0
     download_count: int = 0
 
@@ -14,4 +14,4 @@ class SearchOneMediaResultDTO:
 @dataclass
 class SearchMediasResultDTO:
     """搜索返回结果列表"""
-    results: Optional[List[Any]] = None
+    results: list[Any] | None = None

@@ -1,13 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Hook System - 全局事件钩子系统
 插件通过注册钩子来响应系统事件
 """
-from typing import Dict, List
 
+import log
 from app.db.repositories import PluginFrameworkRepository
 from app.utils.commons import SingletonMeta
-import log
 
 
 class HookSystem(metaclass=SingletonMeta):
@@ -56,7 +54,7 @@ class HookSystem(metaclass=SingletonMeta):
 
     def __init__(self):
         self._repo = PluginFrameworkRepository()
-        self._handlers: Dict[str, List[dict]] = {}
+        self._handlers: dict[str, list[dict]] = {}
         self._load_from_db()
 
     def _load_from_db(self):
@@ -130,7 +128,7 @@ class HookSystem(metaclass=SingletonMeta):
             except Exception as e:
                 log.error(f"[HookSystem] 插件 {plugin_id} 处理事件 {event} 失败: {e}")
 
-    def list_subscriptions(self, plugin_id: str = None) -> List[dict]:
+    def list_subscriptions(self, plugin_id: str = None) -> list[dict]:
         """列出钩子订阅"""
         result = []
         for event, handlers in self._handlers.items():

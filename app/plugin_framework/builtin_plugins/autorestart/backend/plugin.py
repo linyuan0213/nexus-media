@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AutoRestart Plugin v2
 定时自动重启 NAStool 服务
@@ -11,7 +10,6 @@ from datetime import datetime, timedelta
 import pytz
 
 from app.plugin_framework.context import PluginContext
-from config import Config
 
 
 class AutoRestartPlugin:

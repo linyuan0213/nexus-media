@@ -3,21 +3,19 @@ RBAC Service Layer
 基于角色的访问控制(RBAC)业务逻辑层
 处理用户认证、授权、权限检查等业务逻辑
 """
-from datetime import datetime
-from typing import List, Optional, Dict, Any, Set
 from functools import wraps
+from typing import Any
 
-from app.utils.security import generate_password_hash, check_password_hash
-
-from app.db.repositories.rbac_repo_adapter import (
-    RBACUserRepositoryAdapter,
-    RBACRoleRepositoryAdapter,
-    RBACPermissionRepositoryAdapter,
-    RBACMenuRepositoryAdapter,
-    RBACLogRepositoryAdapter,
-)
-from app.db.models.rbac import RBACUser, RBACRole, RBACPermission, RBACMenu
 import log
+from app.db.models.rbac import RBACPermission, RBACRole, RBACUser
+from app.db.repositories.rbac_repo_adapter import (
+    RBACLogRepositoryAdapter,
+    RBACMenuRepositoryAdapter,
+    RBACPermissionRepositoryAdapter,
+    RBACRoleRepositoryAdapter,
+    RBACUserRepositoryAdapter,
+)
+from app.utils.security import check_password_hash, generate_password_hash
 
 
 class RBACService:
@@ -25,7 +23,7 @@ class RBACService:
     RBAC服务类
     提供用户管理、角色管理、权限管理、菜单管理等业务功能
     """
-    
+
     def __init__(self,
                  user_repo=None,
                  role_repo=None,
@@ -37,12 +35,12 @@ class RBACService:
         self.permission_repo = permission_repo or RBACPermissionRepositoryAdapter()
         self.menu_repo = menu_repo or RBACMenuRepositoryAdapter()
         self.log_repo = log_repo or RBACLogRepositoryAdapter()
-    
+
     # ==================== 用户认证 ====================
-    
-    def authenticate_user(self, username: str, password: str, 
-                          login_ip: Optional[str] = None,
-                          user_agent: Optional[str] = None) -> tuple:
+
+    def authenticate_user(self, username: str, password: str,
+                          login_ip: str | None = None,
+                          user_agent: str | None = None) -> tuple:
         """
         用户认证
         
@@ -56,7 +54,7 @@ class RBACService:
             (是否成功, 用户对象或错误信息)
         """
         user = self.user_repo.get_user_by_username(username)
-        
+
         if not user:
             # 记录登录失败日志（用户不存在时 user_id 为 None）
             self.log_repo.add_login_log(
@@ -68,7 +66,7 @@ class RBACService:
                 fail_reason='用户不存在'
             )
             return False, '用户名或密码错误'
-        
+
         if user.STATUS != 1:
             self.log_repo.add_login_log(
                 user_id=user.ID,
@@ -79,7 +77,7 @@ class RBACService:
                 fail_reason='用户已被禁用'
             )
             return False, '用户已被禁用'
-        
+
         if not user.PASSWORD_HASH:
             # 密码为空，使用配置文件中的默认密码作为首次登录密码
             from config import Config
@@ -107,10 +105,10 @@ class RBACService:
                 fail_reason='密码错误'
             )
             return False, '用户名或密码错误'
-        
+
         # 更新最后登录时间
         self.user_repo.update_last_login(user.ID, login_ip)
-        
+
         # 记录登录成功日志
         self.log_repo.add_login_log(
             user_id=user.ID,
@@ -119,10 +117,10 @@ class RBACService:
             user_agent=user_agent,
             login_status=1
         )
-        
+
         return True, user
-    
-    def change_password(self, user_id: int, old_password: str, 
+
+    def change_password(self, user_id: int, old_password: str,
                         new_password: str) -> tuple:
         """
         修改密码
@@ -138,18 +136,18 @@ class RBACService:
         user = self.user_repo.get_user_by_id(user_id)
         if not user:
             return False, '用户不存在'
-        
+
         if not check_password_hash(user.PASSWORD_HASH, old_password):
             return False, '原密码错误'
-        
+
         new_password_hash = generate_password_hash(new_password)
         success = self.user_repo.update_user(user_id, PASSWORD_HASH=new_password_hash)
-        
+
         if success:
             return True, '密码修改成功'
         return False, '密码修改失败'
-    
-    def reset_password(self, user_id: int, new_password: str, old_password: Optional[str] = None) -> tuple:
+
+    def reset_password(self, user_id: int, new_password: str, old_password: str | None = None) -> tuple:
         """
         重置密码
 
@@ -182,13 +180,13 @@ class RBACService:
         if success:
             return True, '密码修改成功'
         return False, '密码修改失败'
-    
+
     # ==================== 用户管理 ====================
-    
+
     def create_user(self, username: str, password: str,
-                    email: Optional[str] = None,
-                    nickname: Optional[str] = None,
-                    role_ids: Optional[List[int]] = None,
+                    email: str | None = None,
+                    nickname: str | None = None,
+                    role_ids: list[int] | None = None,
                     is_superadmin: int = 0) -> tuple:
         """
         创建用户
@@ -207,18 +205,18 @@ class RBACService:
         # 检查用户名是否已存在
         if self.user_repo.is_user_exists(username):
             return False, '用户名已存在'
-        
+
         # 检查邮箱是否已存在（空字符串视为 None）
         if email and email.strip() and self.user_repo.is_email_exists(email):
             return False, '邮箱已被使用'
-        
+
         # 如果邮箱为空，设为 None
         if not email or not email.strip():
             email = None
-        
+
         # 加密密码
         password_hash = generate_password_hash(password)
-        
+
         # 创建用户
         user = self.user_repo.create_user(
             username=username,
@@ -227,21 +225,21 @@ class RBACService:
             nickname=nickname,
             is_superadmin=is_superadmin
         )
-        
+
         # 检查用户是否成功创建（处理装饰器返回值）
         if not user or isinstance(user, bool):
             # 重新查询用户
             user = self.user_repo.get_user_by_username(username)
             if not user:
                 return False, '用户创建失败'
-        
+
         # 分配角色
         if role_ids:
             self.user_repo.assign_roles_to_user(user.ID, role_ids)
-        
+
         log.info(f"【RBAC】创建用户成功: {username}")
         return True, user
-    
+
     def update_user(self, user_id: int, **kwargs) -> tuple:
         """
         更新用户信息
@@ -256,18 +254,18 @@ class RBACService:
         user = self.user_repo.get_user_by_id(user_id)
         if not user:
             return False, '用户不存在'
-        
+
         # 如果更新邮箱，检查是否已被使用
         if 'email' in kwargs and kwargs['email'] != user.EMAIL:
             if self.user_repo.is_email_exists(kwargs['email']):
                 return False, '邮箱已被使用'
-        
+
         success = self.user_repo.update_user(user_id, **kwargs)
-        
+
         if success:
             return True, '更新成功'
         return False, '更新失败'
-    
+
     def delete_user(self, user_id: int) -> tuple:
         """
         删除用户
@@ -281,27 +279,27 @@ class RBACService:
         user = self.user_repo.get_user_by_id(user_id)
         if not user:
             return False, '用户不存在'
-        
+
         # 软删除
         success = self.user_repo.delete_user(user_id)
-        
+
         if success:
             log.info(f"【RBAC】删除用户: {user.USERNAME}")
             return True, '删除成功'
         return False, '删除失败'
-    
-    def get_user_by_id(self, user_id: int) -> Optional[RBACUser]:
+
+    def get_user_by_id(self, user_id: int) -> RBACUser | None:
         """
         根据ID获取用户
         """
         return self.user_repo.get_user_by_id(user_id)
-    
-    def get_user_by_username(self, username: str) -> Optional[RBACUser]:
+
+    def get_user_by_username(self, username: str) -> RBACUser | None:
         """
         根据用户名获取用户
         """
         return self.user_repo.get_user_by_username(username)
-    
+
     def get_users(self, page: int = 1, page_size: int = 20) -> tuple:
         """
         获取用户列表
@@ -310,8 +308,8 @@ class RBACService:
             (用户列表, 总数)
         """
         return self.user_repo.get_users(page=page, page_size=page_size)
-    
-    def assign_roles_to_user(self, user_id: int, role_ids: List[int]) -> tuple:
+
+    def assign_roles_to_user(self, user_id: int, role_ids: list[int]) -> tuple:
         """
         为用户分配角色
         
@@ -325,12 +323,12 @@ class RBACService:
         user = self.user_repo.get_user_by_id(user_id)
         if not user:
             return False, '用户不存在'
-        
+
         success = self.user_repo.assign_roles_to_user(user_id, role_ids)
         if success:
             return True, '角色分配成功'
         return False, '角色分配失败'
-    
+
     def get_user_roles(self, user_id: int):
         """
         获取用户的角色列表
@@ -345,14 +343,14 @@ class RBACService:
         if not user:
             return []
         return self.user_repo.get_user_roles(user_id)
-    
+
     # ==================== 角色管理 ====================
-    
+
     def create_role(self, role_name: str, role_code: str,
-                    description: Optional[str] = None,
+                    description: str | None = None,
                     role_level: int = 100,
-                    permission_ids: Optional[List[int]] = None,
-                    menu_ids: Optional[List[int]] = None) -> tuple:
+                    permission_ids: list[int] | None = None,
+                    menu_ids: list[int] | None = None) -> tuple:
         """
         创建角色
         
@@ -392,7 +390,7 @@ class RBACService:
 
         log.info(f"【RBAC】创建角色成功: {role_name}")
         return True, role
-    
+
     def update_role(self, role_id: int, **kwargs) -> tuple:
         """
         更新角色信息
@@ -407,13 +405,13 @@ class RBACService:
         role = self.role_repo.get_role_by_id(role_id)
         if not role:
             return False, '角色不存在'
-        
+
         success = self.role_repo.update_role(role_id, **kwargs)
-        
+
         if success:
             return True, '更新成功'
         return False, '更新失败'
-    
+
     def delete_role(self, role_id: int) -> tuple:
         """
         删除角色
@@ -427,27 +425,27 @@ class RBACService:
         role = self.role_repo.get_role_by_id(role_id)
         if not role:
             return False, '角色不存在'
-        
+
         success = self.role_repo.delete_role(role_id)
-        
+
         if success:
             log.info(f"【RBAC】删除角色: {role.ROLE_NAME}")
             return True, '删除成功'
         return False, '删除失败'
-    
-    def get_role_by_id(self, role_id: int) -> Optional[RBACRole]:
+
+    def get_role_by_id(self, role_id: int) -> RBACRole | None:
         """
         根据ID获取角色
         """
         return self.role_repo.get_role_by_id(role_id)
-    
-    def get_all_roles(self) -> List[RBACRole]:
+
+    def get_all_roles(self) -> list[RBACRole]:
         """
         获取所有角色
         """
         return self.role_repo.get_all_roles(status=1)
-    
-    def assign_permissions_to_role(self, role_id: int, permission_ids: List[int]) -> tuple:
+
+    def assign_permissions_to_role(self, role_id: int, permission_ids: list[int]) -> tuple:
         """
         为角色分配权限
         
@@ -461,13 +459,13 @@ class RBACService:
         role = self.role_repo.get_role_by_id(role_id)
         if not role:
             return False, '角色不存在'
-        
+
         success = self.role_repo.assign_permissions_to_role(role_id, permission_ids)
         if success:
             return True, '权限分配成功'
         return False, '权限分配失败'
-    
-    def assign_menus_to_role(self, role_id: int, menu_ids: List[int]) -> tuple:
+
+    def assign_menus_to_role(self, role_id: int, menu_ids: list[int]) -> tuple:
         """
         为角色分配菜单
         
@@ -481,18 +479,18 @@ class RBACService:
         role = self.role_repo.get_role_by_id(role_id)
         if not role:
             return False, '角色不存在'
-        
+
         success = self.role_repo.assign_menus_to_role(role_id, menu_ids)
         if success:
             return True, '菜单分配成功'
         return False, '菜单分配失败'
-    
+
     # ==================== 权限管理 ====================
-    
+
     def create_permission(self, permission_name: str, permission_code: str,
                           permission_type: str = 'api',
-                          module: Optional[str] = None,
-                          description: Optional[str] = None) -> tuple:
+                          module: str | None = None,
+                          description: str | None = None) -> tuple:
         """
         创建权限
         
@@ -509,7 +507,7 @@ class RBACService:
         existing = self.permission_repo.get_permission_by_code(permission_code)
         if existing:
             return False, '权限代码已存在'
-        
+
         permission = self.permission_repo.create_permission(
             permission_name=permission_name,
             permission_code=permission_code,
@@ -517,10 +515,10 @@ class RBACService:
             module=module,
             description=description
         )
-        
+
         log.info(f"【RBAC】创建权限成功: {permission_name}")
         return True, permission
-    
+
     def update_permission(self, permission_id: int, **kwargs) -> tuple:
         """
         更新权限
@@ -528,12 +526,12 @@ class RBACService:
         permission = self.permission_repo.get_permission_by_id(permission_id)
         if not permission:
             return False, '权限不存在'
-        
+
         success = self.permission_repo.update_permission(permission_id, **kwargs)
         if success:
             return True, '更新成功'
         return False, '更新失败'
-    
+
     def delete_permission(self, permission_id: int) -> tuple:
         """
         删除权限
@@ -541,29 +539,29 @@ class RBACService:
         permission = self.permission_repo.get_permission_by_id(permission_id)
         if not permission:
             return False, '权限不存在'
-        
+
         success = self.permission_repo.delete_permission(permission_id)
         if success:
             log.info(f"【RBAC】删除权限: {permission.PERMISSION_NAME}")
             return True, '删除成功'
         return False, '删除失败'
-    
-    def get_all_permissions(self, module: Optional[str] = None) -> List[RBACPermission]:
+
+    def get_all_permissions(self, module: str | None = None) -> list[RBACPermission]:
         """
         获取所有权限
         """
         return self.permission_repo.get_all_permissions(module=module)
-    
+
     # ==================== 菜单管理 ====================
-    
+
     def create_menu(self, menu_name: str, menu_code: str,
-                    parent_id: Optional[int] = None,
-                    path: Optional[str] = None,
-                    icon: Optional[str] = None,
-                    component: Optional[str] = None,
+                    parent_id: int | None = None,
+                    path: str | None = None,
+                    icon: str | None = None,
+                    component: str | None = None,
                     sort_order: int = 0,
                     menu_level: int = 1,
-                    permission_code: Optional[str] = None,
+                    permission_code: str | None = None,
                     **kwargs) -> tuple:
         """
         创建菜单
@@ -586,7 +584,7 @@ class RBACService:
         existing = self.menu_repo.get_menu_by_code(menu_code)
         if existing:
             return False, '菜单代码已存在'
-        
+
         menu = self.menu_repo.create_menu(
             menu_name=menu_name,
             menu_code=menu_code,
@@ -599,10 +597,10 @@ class RBACService:
             permission_code=permission_code,
             **kwargs
         )
-        
+
         log.info(f"【RBAC】创建菜单成功: {menu_name}")
         return True, menu
-    
+
     def update_menu(self, menu_id: int, **kwargs) -> tuple:
         """
         更新菜单
@@ -610,12 +608,12 @@ class RBACService:
         menu = self.menu_repo.get_menu_by_id(menu_id)
         if not menu:
             return False, '菜单不存在'
-        
+
         success = self.menu_repo.update_menu(menu_id, **kwargs)
         if success:
             return True, '更新成功'
         return False, '更新失败'
-    
+
     def delete_menu(self, menu_id: int) -> tuple:
         """
         删除菜单
@@ -623,14 +621,14 @@ class RBACService:
         menu = self.menu_repo.get_menu_by_id(menu_id)
         if not menu:
             return False, '菜单不存在'
-        
+
         success = self.menu_repo.delete_menu(menu_id)
         if success:
             log.info(f"【RBAC】删除菜单: {menu.MENU_NAME}")
             return True, '删除成功'
         return False, '删除失败'
-    
-    def get_menu_tree(self, include_hidden: bool = False) -> List[Dict[str, Any]]:
+
+    def get_menu_tree(self, include_hidden: bool = False) -> list[dict[str, Any]]:
         """
         获取菜单树形结构
         
@@ -638,8 +636,8 @@ class RBACService:
             include_hidden: 是否包含隐藏的菜单
         """
         return self.menu_repo.get_menu_tree(include_hidden=include_hidden)
-    
-    def get_user_menus(self, user_id: int) -> List[dict]:
+
+    def get_user_menus(self, user_id: int) -> list[dict]:
         """
         获取用户的菜单树（Vben 格式）
         超级管理员返回所有菜单
@@ -714,10 +712,10 @@ class RBACService:
             return result
 
         return _build_tree()
-    
+
     # ==================== 权限检查 ====================
-    
-    def get_user_permissions(self, user_id: int) -> Set[str]:
+
+    def get_user_permissions(self, user_id: int) -> set[str]:
         """
         获取用户的所有权限代码
         
@@ -730,12 +728,12 @@ class RBACService:
         user = self.user_repo.get_user_by_id(user_id)
         if not user:
             return set()
-        
+
         # 超级管理员拥有所有权限
         if user.is_superadmin == 1:
             all_permissions = self.permission_repo.get_all_permissions()
             return {p.permission_code for p in all_permissions}
-        
+
         permissions = set()
         roles = self.user_repo.get_user_roles(user_id)
         for role in roles:
@@ -744,9 +742,9 @@ class RBACService:
                 for perm in role_permissions:
                     if perm.status == 1:
                         permissions.add(perm.permission_code)
-        
+
         return permissions
-    
+
     def check_permission(self, user_id: int, permission_code: str) -> bool:
         """
         检查用户是否拥有指定权限
@@ -761,15 +759,15 @@ class RBACService:
         user = self.user_repo.get_user_by_id(user_id)
         if not user:
             return False
-        
+
         # 超级管理员拥有所有权限
         if user.IS_SUPERADMIN == 1:
             return True
-        
+
         permissions = self.get_user_permissions(user_id)
         return permission_code in permissions
-    
-    def check_any_permission(self, user_id: int, permission_codes: List[str]) -> bool:
+
+    def check_any_permission(self, user_id: int, permission_codes: list[str]) -> bool:
         """
         检查用户是否拥有任一指定权限
         
@@ -783,15 +781,15 @@ class RBACService:
         user = self.user_repo.get_user_by_id(user_id)
         if not user:
             return False
-        
+
         # 超级管理员拥有所有权限
         if user.IS_SUPERADMIN == 1:
             return True
-        
+
         permissions = self.get_user_permissions(user_id)
         return any(code in permissions for code in permission_codes)
-    
-    def check_all_permissions(self, user_id: int, permission_codes: List[str]) -> bool:
+
+    def check_all_permissions(self, user_id: int, permission_codes: list[str]) -> bool:
         """
         检查用户是否拥有所有指定权限
         
@@ -805,14 +803,14 @@ class RBACService:
         user = self.user_repo.get_user_by_id(user_id)
         if not user:
             return False
-        
+
         # 超级管理员拥有所有权限
         if user.IS_SUPERADMIN == 1:
             return True
-        
+
         permissions = self.get_user_permissions(user_id)
         return all(code in permissions for code in permission_codes)
-    
+
     def check_menu_access(self, user_id: int, menu_code: str) -> bool:
         """
         检查用户是否有权访问指定菜单
@@ -827,15 +825,15 @@ class RBACService:
         user = self.user_repo.get_user_by_id(user_id)
         if not user:
             return False
-        
+
         # 超级管理员可以访问所有菜单
         if user.IS_SUPERADMIN == 1:
             return True
-        
+
         # 获取用户的所有菜单
         user_menus = self.menu_repo.get_user_menus(user_id)
         menu_codes = {m.MENU_CODE for m in user_menus}
-        
+
         return menu_code in menu_codes
 
 
@@ -858,7 +856,7 @@ def require_permission(permission_code: str):
     return decorator
 
 
-def require_any_permission(permission_codes: List[str]):
+def require_any_permission(permission_codes: list[str]):
     """
     任一权限检查装饰器（向后兼容，内部逻辑已迁移到 FastAPI deps）
     

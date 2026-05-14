@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AutoSignIn Plugin v2
 站点自动签到保号，支持重试
@@ -10,19 +9,17 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from time import time
 
-import pytz
 from lxml import etree
 
-from app.helper import SubmoduleHelper, SiteHelper
+from app.core.constants import MT_URL
+from app.helper import SiteHelper, SubmoduleHelper
 from app.helper.cloudflare_helper import under_challenge
 from app.helper.drissionpage_helper import DrissionPageHelper
 from app.message import Message
 from app.plugin_framework.context import PluginContext
 from app.sites.siteconf import SiteConf
 from app.sites.sites import Sites
-from app.utils import RequestUtils, ExceptionUtils, StringUtils, JsonUtils
-from config import Config
-from app.core.constants import MT_URL
+from app.utils import ExceptionUtils, JsonUtils, RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
 
 

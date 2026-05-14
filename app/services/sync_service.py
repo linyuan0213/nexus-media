@@ -1,24 +1,21 @@
-# -*- coding: utf-8 -*-
 """
 SyncService - 同步/转移业务层
 将 web/controllers/sync.py 中的业务逻辑下沉到可独立测试的 Service。
 """
 import os
-from typing import List, Optional, Tuple
 
-import log
 from app.core.module_config import ModuleConf
 from app.helper.thread_helper import ThreadHelper
-from app.services.filetransfer_service import FileTransferService as FileTransfer
-from app.media import MediaCache, MetaInfo
+from app.media import MediaCache
 from app.schemas.sync import (
     ManualTransferResultDTO,
     ReIdentifyResultDTO,
     SimpleResultDTO,
 )
+from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.sync_core import SyncCore as Sync
-from app.utils import EpisodeFormat, PathUtils, ExceptionUtils
-from app.utils.types import MediaType, MovieTypes, TvTypes, RmtMode, SyncType
+from app.utils import EpisodeFormat, ExceptionUtils, PathUtils
+from app.utils.types import MediaType, MovieTypes, RmtMode, SyncType, TvTypes
 
 
 class SyncService:
@@ -30,10 +27,10 @@ class SyncService:
     """
 
     def __init__(self,
-                 sync: Optional[Sync] = None,
-                 filetransfer: Optional[FileTransfer] = None,
-                 media_cache: Optional[MediaCache] = None,
-                 threadhelper: Optional[ThreadHelper] = None):
+                 sync: Sync | None = None,
+                 filetransfer: FileTransfer | None = None,
+                 media_cache: MediaCache | None = None,
+                 threadhelper: ThreadHelper | None = None):
         self._sync = sync or Sync()
         self._filetransfer = filetransfer or FileTransfer()
         self._media_cache = media_cache or MediaCache()
@@ -41,7 +38,7 @@ class SyncService:
 
     # ---------- 同步目录校验 ----------
 
-    def validate_sync_path(self, source: str, dest: str, mode: str) -> Tuple[bool, str]:
+    def validate_sync_path(self, source: str, dest: str, mode: str) -> tuple[bool, str]:
         """
         校验同步目录参数
         :return: (是否通过, 错误信息)
@@ -63,7 +60,7 @@ class SyncService:
 
     def add_or_edit_sync_path(self, sid: int, source: str, dest: str,
                               unknown: str, mode: str, compatibility: int,
-                              rename: int, enabled: int) -> Tuple[bool, str]:
+                              rename: int, enabled: int) -> tuple[bool, str]:
         """
         添加或编辑同步目录
         :return: (是否成功, 消息)
@@ -93,7 +90,7 @@ class SyncService:
         )
         return True, ""
 
-    def check_sync_path(self, sid: int, flag: str, checked: bool) -> Tuple[bool, str]:
+    def check_sync_path(self, sid: int, flag: str, checked: bool) -> tuple[bool, str]:
         """
         切换同步目录配置项
         :param flag: compatibility / rename / enable
@@ -136,15 +133,15 @@ class SyncService:
     def manual_transfer(self,
                         inpath: str,
                         syncmod,
-                        outpath: Optional[str] = None,
-                        media_type: Optional[MediaType] = None,
-                        episode_format: Optional[str] = None,
-                        episode_details: Optional[str] = None,
-                        episode_part: Optional[str] = None,
-                        episode_offset: Optional[str] = None,
-                        min_filesize: Optional[int] = None,
-                        tmdbid: Optional[int] = None,
-                        season: Optional[int] = None,
+                        outpath: str | None = None,
+                        media_type: MediaType | None = None,
+                        episode_format: str | None = None,
+                        episode_details: str | None = None,
+                        episode_part: str | None = None,
+                        episode_offset: str | None = None,
+                        min_filesize: int | None = None,
+                        tmdbid: int | None = None,
+                        season: int | None = None,
                         need_fix_all: bool = False) -> ManualTransferResultDTO:
         """
         手工转移文件
@@ -230,10 +227,10 @@ class SyncService:
 
     # ---------- 查询 ----------
 
-    def get_sync_paths(self, sid: Optional[int] = None):
+    def get_sync_paths(self, sid: int | None = None):
         return self._sync.get_sync_path_conf(sid=sid)
 
-    def transfer_sync(self, sid: Optional[int] = None):
+    def transfer_sync(self, sid: int | None = None):
         """触发指定同步目录的同步转移"""
         return self._sync.transfer_sync(sid=sid)
 
@@ -247,15 +244,16 @@ class SyncService:
     def get_unknown_info_by_id(self, tid: int):
         return self._filetransfer.get_unknown_info_by_id(tid)
 
-    def get_sub_path(self, directory: str, ft: str = "ALL") -> List[dict]:
+    def get_sub_path(self, directory: str, ft: str = "ALL") -> list[dict]:
         """
         查询下级子目录/文件
         """
-        from app.core.constants import RMT_MEDIAEXT, RMT_SUBEXT, RMT_AUDIO_TRACK_EXT
-        from app.utils import StringUtils
-        from app.utils.types import OsType
         import os
         from urllib.parse import unquote
+
+        from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_MEDIAEXT, RMT_SUBEXT
+        from app.utils import StringUtils
+        from app.utils.types import OsType
 
         r = []
         if not directory or directory == "/":
@@ -282,13 +280,7 @@ class SyncService:
             else:
                 ext = os.path.splitext(ff)[-1][1:]
                 flag = False
-                if 'ONLYFILE' in ft or 'ALL' in ft:
-                    flag = True
-                elif "MEDIAFILE" in ft and f".{str(ext).lower()}" in RMT_MEDIAEXT:
-                    flag = True
-                elif "SUBFILE" in ft and f".{str(ext).lower()}" in RMT_SUBEXT:
-                    flag = True
-                elif "AUDIOTRACKFILE" in ft and f".{str(ext).lower()}" in RMT_AUDIO_TRACK_EXT:
+                if 'ONLYFILE' in ft or 'ALL' in ft or "MEDIAFILE" in ft and f".{str(ext).lower()}" in RMT_MEDIAEXT or "SUBFILE" in ft and f".{str(ext).lower()}" in RMT_SUBEXT or "AUDIOTRACKFILE" in ft and f".{str(ext).lower()}" in RMT_AUDIO_TRACK_EXT:
                     flag = True
                 if flag:
                     r.append({
@@ -399,7 +391,7 @@ class SyncService:
 
     @staticmethod
     def update_directory(oper: str, key: str, value: str,
-                         replace_value: Optional[str] = None) -> SimpleResultDTO:
+                         replace_value: str | None = None) -> SimpleResultDTO:
         """更新配置中的目录路径"""
         from app.utils.web_utils import set_config_directory
         from config import Config

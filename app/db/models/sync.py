@@ -1,9 +1,8 @@
-# coding: utf-8
 """
 同步历史模型
 包含: 同步历史
 """
-from sqlalchemy import Column, Integer, String, Sequence
+from sqlalchemy import Column, Integer, Sequence, String
 
 from app.db.models.base import Base
 

@@ -1,14 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 通用异步任务队列
 使用线程池并发消费任务，避免单个慢任务阻塞队列
 """
-import threading
+from __future__ import annotations
+
 import queue
+import threading
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
 
 import log
 from app.utils.commons import SingletonMeta
@@ -33,8 +34,8 @@ class TaskQueue(metaclass=SingletonMeta):
     """
 
     def __init__(self, max_workers: int = 5, maxsize: int = 1000):
-        self._queue: queue.Queue[Optional[Task]] = queue.Queue(maxsize=maxsize)
-        self._dispatcher: Optional[threading.Thread] = None
+        self._queue: queue.Queue[Task | None] = queue.Queue(maxsize=maxsize)
+        self._dispatcher: threading.Thread | None = None
         self._executor = ThreadPoolExecutor(
             max_workers=max_workers,
             thread_name_prefix="TaskQueueWorker",

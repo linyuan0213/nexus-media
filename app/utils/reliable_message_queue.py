@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 可靠消息队列 — 基于 Redis Stream
 特性：
@@ -7,16 +6,17 @@
 3. 幂等去重：每条消息有唯一 ID，24h 内重复消息自动丢弃
 4. 自动重试：Pending 消息超时后自动重新投递
 """
+from __future__ import annotations
+
 import json
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Callable, Optional
 
 import log
 from app.utils.redis_store import RedisStore
-
 
 STREAM_KEY = "nastools:message_queue"
 CONSUMER_GROUP = "message_consumers"
@@ -38,7 +38,7 @@ class ReliableMessageQueue:
             thread_name_prefix="ReliableMQ",
         )
         self._shutdown = False
-        self._dispatcher: Optional[threading.Thread] = None
+        self._dispatcher: threading.Thread | None = None
         self._handlers: dict[str, Callable] = {}
 
         if self._available:

@@ -1,15 +1,9 @@
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 from app.schemas.site import (
     SiteAttrDTO,
-    SiteDetailDTO,
-    SiteTestResultDTO,
-    SiteHistoryDTO,
-    SiteSeedingDTO,
-    SiteActivityDTO,
-    SiteResourcesResultDTO,
-    SiteUpdateResultDTO,
 )
 from app.services.site_service import SiteService
 

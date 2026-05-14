@@ -1,15 +1,13 @@
 import json
 from datetime import datetime
-
-import log
 from threading import Lock
 
-from app.helper.thread_helper import ThreadHelper
+import log
 from app.message import Message
 from app.message.client._base import _IMessageClient
 from app.message.client_registry import ClientRegistry
 from app.message.commands import WECHAT_MENU, WECHAT_PLUGIN_GROUP
-from app.utils import RequestUtils, ExceptionUtils
+from app.utils import ExceptionUtils, RequestUtils
 
 _menu_lock = Lock()
 
@@ -61,9 +59,7 @@ class WeChat(_IMessageClient):
 
     def _get_access_token(self, force=False):
         need = False
-        if not self._access_token:
-            need = True
-        elif (datetime.now() - self._token_time).seconds >= (self._expires_in or 7200):
+        if not self._access_token or (datetime.now() - self._token_time).seconds >= (self._expires_in or 7200):
             need = True
         if not need and not force:
             return self._access_token

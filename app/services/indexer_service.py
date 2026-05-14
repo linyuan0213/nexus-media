@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 IndexerService - 索引器业务服务层
 将 app/indexer/ 中散落的业务逻辑收口为可独立测试的 Service。
@@ -8,12 +7,12 @@ IndexerService - 索引器业务服务层
 - 资源列表获取
 - 索引器统计
 """
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from app.indexer import Indexer
-from app.indexer.client import BuiltinIndexer
 from app.db.repositories.download_repo_adapter import IndexerStatisticsRepositoryAdapter
 from app.domain.interfaces.download_repo import IIndexerStatisticsRepository
+from app.indexer import Indexer
+from app.indexer.client import BuiltinIndexer
 from app.schemas.download import IndexerStatisticsDTO
 from app.schemas.indexer import (
     IndexerClientInfoDTO,
@@ -31,9 +30,9 @@ class IndexerService:
     """
 
     def __init__(self,
-                 indexer: Optional[Indexer] = None,
+                 indexer: Indexer | None = None,
                  string_utils=None,
-                 indexer_statistics_repo: Optional[IIndexerStatisticsRepository] = None):
+                 indexer_statistics_repo: IIndexerStatisticsRepository | None = None):
         self._indexer = indexer or Indexer()
         self._string_utils = string_utils or StringUtils
         # 如果没有注入Repository，使用适配器创建默认实例
@@ -46,7 +45,7 @@ class IndexerService:
     # 站点管理
     # ------------------------------------------------------------------
 
-    def get_user_indexers(self) -> List[UserIndexerDTO]:
+    def get_user_indexers(self) -> list[UserIndexerDTO]:
         """
         获取用户已经选择的索引器列表
         """
@@ -55,11 +54,11 @@ class IndexerService:
             for index in self._indexer.get_indexers(check=True)
         ]
 
-    def get_indexer_hash_dict(self) -> Dict[str, IndexerHashDTO]:
+    def get_indexer_hash_dict(self) -> dict[str, IndexerHashDTO]:
         """
         获取全部索引器的 Hash 字典（用于前端快速查找）
         """
-        result: Dict[str, IndexerHashDTO] = {}
+        result: dict[str, IndexerHashDTO] = {}
         for item in self._indexer.get_indexers() or []:
             key = self._string_utils.md5_hash(item.name)
             result[key] = IndexerHashDTO(
@@ -70,7 +69,7 @@ class IndexerService:
             )
         return result
 
-    def get_user_indexer_names(self) -> List[str]:
+    def get_user_indexer_names(self) -> list[str]:
         """
         获取当前用户选中的索引器站点名称列表
         """
@@ -82,7 +81,7 @@ class IndexerService:
 
     @staticmethod
     def get_builtin_indexers(check: bool = True,
-                             indexer_id: Optional[str] = None) -> Any:
+                             indexer_id: str | None = None) -> Any:
         """
         获取内置索引器的索引站点
         :param check: 是否过滤用户选中
@@ -96,7 +95,7 @@ class IndexerService:
 
     def list_resources(self, index_id: str,
                        page: int = 0,
-                       keyword: Optional[str] = None) -> IndexerResourcesResultDTO:
+                       keyword: str | None = None) -> IndexerResourcesResultDTO:
         """
         获取内置索引器的资源列表
         :param index_id: 内置站点ID
@@ -168,7 +167,7 @@ class IndexerService:
     # 统计
     # ------------------------------------------------------------------
 
-    def get_indexer_statistics(self) -> Tuple[List[IndexerStatisticsDTO], List[list]]:
+    def get_indexer_statistics(self) -> tuple[list[IndexerStatisticsDTO], list[list]]:
         """
         获取索引器统计数据及图表 dataset
         :return: (统计数据列表, 图表数据集)
@@ -179,7 +178,7 @@ class IndexerService:
             return [], [["indexer", "avg"]]
         result = self._indexer_statistics_repo.get_by_client(client_id)
         dataset = [["indexer", "avg"]]
-        stats: List[IndexerStatisticsDTO] = []
+        stats: list[IndexerStatisticsDTO] = []
         for entity in result:
             stats.append(IndexerStatisticsDTO(
                 name=entity.indexer,

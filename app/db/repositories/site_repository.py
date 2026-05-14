@@ -5,10 +5,10 @@ Handles site configuration and statistics related database operations.
 import json
 import time
 
-from sqlalchemy import cast, Integer, func
+from sqlalchemy import Integer, cast, func
 
 from app.db import DbPersist
-from app.db.models import CONFIGSITE, SITEUSERINFOSTATS, SITEFAVICON, SITEUSERSEEDINGINFO, SITESTATISTICSHISTORY
+from app.db.models import CONFIGSITE, SITEFAVICON, SITESTATISTICSHISTORY, SITEUSERINFOSTATS, SITEUSERSEEDINGINFO
 from app.db.repositories.base_repository import BaseRepository
 
 
@@ -30,7 +30,7 @@ class SiteRepository(BaseRepository):
         """
         查询1个站点信息
         """
-        return self._db.query(CONFIGSITE).filter(CONFIGSITE.ID == int(tid)).all()
+        return self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).all()
 
     @DbPersist(BaseRepository._db)
     def insert_config_site(self, name, site_pri, rssurl=None, signurl=None, cookie=None, note=None, rss_uses=None):
@@ -56,7 +56,7 @@ class SiteRepository(BaseRepository):
         """
         if not tid:
             return
-        self._db.query(CONFIGSITE).filter(CONFIGSITE.ID == int(tid)).delete()
+        self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).delete()
 
     @DbPersist(BaseRepository._db)
     def update_config_site(self, tid, name, site_pri, rssurl, signurl, cookie, note, rss_uses):
@@ -65,7 +65,7 @@ class SiteRepository(BaseRepository):
         """
         if not tid:
             return
-        self._db.query(CONFIGSITE).filter(CONFIGSITE.ID == int(tid)).update({
+        self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).update({
             "NAME": name,
             "PRI": site_pri,
             "RSSURL": rssurl,
@@ -82,7 +82,7 @@ class SiteRepository(BaseRepository):
         """
         if not tid:
             return
-        self._db.query(CONFIGSITE).filter(CONFIGSITE.ID == int(tid)).update({"NOTE": note})
+        self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).update({"NOTE": note})
 
     @DbPersist(BaseRepository._db)
     def update_site_cookie_ua(self, tid, cookie, ua=None):
@@ -91,14 +91,14 @@ class SiteRepository(BaseRepository):
         """
         if not tid:
             return
-        rec = self._db.query(CONFIGSITE).filter(CONFIGSITE.ID == int(tid)).first()
+        rec = self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).first()
         if rec.NOTE:
             note = json.loads(rec.NOTE)
             if ua:
                 note['ua'] = ua
         else:
             note = {}
-        self._db.query(CONFIGSITE).filter(CONFIGSITE.ID == int(tid)).update({
+        self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).update({
             "COOKIE": cookie,
             "NOTE": json.dumps(note)
         })
@@ -110,7 +110,7 @@ class SiteRepository(BaseRepository):
         """
         if not tid:
             return
-        self._db.query(CONFIGSITE).filter(CONFIGSITE.ID == int(tid)).update({"RSSURL": rssurl})
+        self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).update({"RSSURL": rssurl})
 
     # ==================== Site User Statistics ====================
 
@@ -118,7 +118,7 @@ class SiteRepository(BaseRepository):
         """
         更新站点用户数据中站点名称
         """
-        self._db.query(SITEUSERINFOSTATS).filter(SITEUSERINFOSTATS.SITE == old_name).update({
+        self._db.query(SITEUSERINFOSTATS).filter(old_name == SITEUSERINFOSTATS.SITE).update({
             "SITE": new_name
         })
 
@@ -164,7 +164,7 @@ class SiteRepository(BaseRepository):
                     MSG_UNREAD=msg_unread
                 ))
             else:
-                self._db.query(SITEUSERINFOSTATS).filter(SITEUSERINFOSTATS.URL == url).update({
+                self._db.query(SITEUSERINFOSTATS).filter(url == SITEUSERINFOSTATS.URL).update({
                     "SITE": site,
                     "USERNAME": username,
                     "USER_LEVEL": user_level,
@@ -187,7 +187,7 @@ class SiteRepository(BaseRepository):
         """
         if not url:
             return False
-        return self._db.query(SITEUSERINFOSTATS).filter(SITEUSERINFOSTATS.URL == url).first() is not None
+        return self._db.query(SITEUSERINFOSTATS).filter(url == SITEUSERINFOSTATS.URL).first() is not None
 
     def is_site_user_statistics_exists(self, url):
         """
@@ -195,7 +195,7 @@ class SiteRepository(BaseRepository):
         """
         if not url:
             return False
-        return self._db.query(SITEUSERINFOSTATS).filter(SITEUSERINFOSTATS.URL == url).first() is not None
+        return self._db.query(SITEUSERINFOSTATS).filter(url == SITEUSERINFOSTATS.URL).first() is not None
 
     def get_site_user_statistics(self, num=100, strict_urls=None):
         """
@@ -230,7 +230,7 @@ class SiteRepository(BaseRepository):
                     FAVICON=site_icon
                 ))
             elif site_user_info.site_favicon:
-                self._db.query(SITEFAVICON).filter(SITEFAVICON.SITE == site_user_info.site_name).update({
+                self._db.query(SITEFAVICON).filter(site_user_info.site_name == SITEFAVICON.SITE).update({
                     "URL": site_user_info.site_url,
                     "FAVICON": site_icon
                 })
@@ -239,7 +239,7 @@ class SiteRepository(BaseRepository):
         """
         判断站点图标是否存在
         """
-        count = self._db.query(SITEFAVICON).filter(SITEFAVICON.SITE == site).count()
+        count = self._db.query(SITEFAVICON).filter(site == SITEFAVICON.SITE).count()
         return count > 0
 
     def get_site_favicons(self, site=None):
@@ -247,7 +247,7 @@ class SiteRepository(BaseRepository):
         查询站点图标数据
         """
         if site:
-            return self._db.query(SITEFAVICON).filter(SITEFAVICON.SITE == site).all()
+            return self._db.query(SITEFAVICON).filter(site == SITEFAVICON.SITE).all()
         else:
             return self._db.query(SITEFAVICON).all()
 
@@ -258,7 +258,7 @@ class SiteRepository(BaseRepository):
         """
         更新站点做种数据中站点名称
         """
-        self._db.query(SITEUSERSEEDINGINFO).filter(SITEUSERSEEDINGINFO.SITE == old_name).update({
+        self._db.query(SITEUSERSEEDINGINFO).filter(old_name == SITEUSERSEEDINGINFO.SITE).update({
             "SITE": new_name
         })
 
@@ -280,7 +280,7 @@ class SiteRepository(BaseRepository):
                     URL=site_user_info.site_url
                 ))
             else:
-                self._db.query(SITEUSERSEEDINGINFO).filter(SITEUSERSEEDINGINFO.URL == site_user_info.site_url).update({
+                self._db.query(SITEUSERSEEDINGINFO).filter(site_user_info.site_url == SITEUSERSEEDINGINFO.URL).update({
                     "SITE": site_user_info.site_name,
                     "UPDATE_AT": update_at,
                     "SEEDING_INFO": site_user_info.seeding_info
@@ -291,7 +291,7 @@ class SiteRepository(BaseRepository):
         判断做种数据是否已存在
         """
         return self._db.query(SITEUSERSEEDINGINFO).filter(
-            SITEUSERSEEDINGINFO.URL == url
+            url == SITEUSERSEEDINGINFO.URL
         ).first() is not None
 
     def get_site_seeding_info(self, site):
@@ -299,7 +299,7 @@ class SiteRepository(BaseRepository):
         查询站点做种信息
         """
         return self._db.query(SITEUSERSEEDINGINFO.SEEDING_INFO).filter(
-            SITEUSERSEEDINGINFO.SITE == site
+            site == SITEUSERSEEDINGINFO.SITE
         ).first()
 
     # ==================== Site Statistics History ====================
@@ -311,8 +311,8 @@ class SiteRepository(BaseRepository):
         if not url or not date:
             return False
         return self._db.query(SITESTATISTICSHISTORY).filter(
-            SITESTATISTICSHISTORY.URL == url,
-            SITESTATISTICSHISTORY.DATE == date
+            url == SITESTATISTICSHISTORY.URL,
+            date == SITESTATISTICSHISTORY.DATE
         ).first() is not None
 
     @DbPersist(BaseRepository._db)
@@ -320,7 +320,7 @@ class SiteRepository(BaseRepository):
         """
         更新站点统计数据中站点名称
         """
-        self._db.query(SITESTATISTICSHISTORY).filter(SITESTATISTICSHISTORY.SITE == old_name).update({
+        self._db.query(SITESTATISTICSHISTORY).filter(old_name == SITESTATISTICSHISTORY.SITE).update({
             "SITE": new_name
         })
 
@@ -339,7 +339,7 @@ class SiteRepository(BaseRepository):
         existing_records = {}
         if urls:
             records = self._db.query(SITESTATISTICSHISTORY.URL).filter(
-                SITESTATISTICSHISTORY.DATE == date_now,
+                date_now == SITESTATISTICSHISTORY.DATE,
                 SITESTATISTICSHISTORY.URL.in_(urls)
             ).all()
             existing_records = {r[0] for r in records}
@@ -372,8 +372,8 @@ class SiteRepository(BaseRepository):
 
         for url, data in update_mappings:
             self._db.query(SITESTATISTICSHISTORY).filter(
-                SITESTATISTICSHISTORY.DATE == date_now,
-                SITESTATISTICSHISTORY.URL == url
+                date_now == SITESTATISTICSHISTORY.DATE,
+                url == SITESTATISTICSHISTORY.URL
             ).update(data)
 
     def get_site_statistics_history(self, site, days=30):
@@ -381,7 +381,7 @@ class SiteRepository(BaseRepository):
         查询站点数据历史
         """
         return self._db.query(SITESTATISTICSHISTORY).filter(
-            SITESTATISTICSHISTORY.SITE == site
+            site == SITESTATISTICSHISTORY.SITE
         ).order_by(SITESTATISTICSHISTORY.DATE.asc()).limit(days)
 
     def get_site_statistics_recent_sites(self, days=7, end_day=None, strict_urls=None):
@@ -406,8 +406,8 @@ class SiteRepository(BaseRepository):
             func.max(SITESTATISTICSHISTORY.DATE),
             func.min(SITESTATISTICSHISTORY.DATE)
         ).filter(
-            SITESTATISTICSHISTORY.DATE > b_date,
-            SITESTATISTICSHISTORY.DATE <= e_date
+            b_date < SITESTATISTICSHISTORY.DATE,
+            e_date >= SITESTATISTICSHISTORY.DATE
         ).all()
 
         if date_ret and date_ret[0][0]:
@@ -425,8 +425,8 @@ class SiteRepository(BaseRepository):
                     func.sum(SITESTATISTICSHISTORY.UPLOAD).label("UPLOAD"),
                     func.sum(SITESTATISTICSHISTORY.DOWNLOAD).label("DOWNLOAD")
                 ).filter(
-                    SITESTATISTICSHISTORY.DATE >= min_date,
-                    SITESTATISTICSHISTORY.DATE <= max_date,
+                    min_date <= SITESTATISTICSHISTORY.DATE,
+                    max_date >= SITESTATISTICSHISTORY.DATE,
                     SITESTATISTICSHISTORY.URL.in_(tuple(strict_urls + ["__DUMMY__"]))
                 ).group_by(SITESTATISTICSHISTORY.SITE, SITESTATISTICSHISTORY.DATE).subquery()
             else:
@@ -436,8 +436,8 @@ class SiteRepository(BaseRepository):
                     func.sum(SITESTATISTICSHISTORY.UPLOAD).label("UPLOAD"),
                     func.sum(SITESTATISTICSHISTORY.DOWNLOAD).label("DOWNLOAD")
                 ).filter(
-                    SITESTATISTICSHISTORY.DATE >= min_date,
-                    SITESTATISTICSHISTORY.DATE <= max_date
+                    min_date <= SITESTATISTICSHISTORY.DATE,
+                    max_date >= SITESTATISTICSHISTORY.DATE
                 ).group_by(SITESTATISTICSHISTORY.SITE, SITESTATISTICSHISTORY.DATE).subquery()
 
             rets = self._db.query(
@@ -495,8 +495,8 @@ class SiteRepository(BaseRepository):
             func.sum(SITESTATISTICSHISTORY.UPLOAD).label("UPLOAD"),
             func.sum(SITESTATISTICSHISTORY.DOWNLOAD).label("DOWNLOAD")
         ).filter(
-            SITESTATISTICSHISTORY.DATE > b_date,
-            SITESTATISTICSHISTORY.DATE <= e_date
+            b_date < SITESTATISTICSHISTORY.DATE,
+            e_date >= SITESTATISTICSHISTORY.DATE
         )
 
         if strict_urls:

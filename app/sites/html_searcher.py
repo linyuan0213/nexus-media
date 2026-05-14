@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 HTML 站点搜索器
 
@@ -11,13 +10,14 @@ HTML 站点搜索器
 """
 import re
 from copy import deepcopy
-from typing import Optional, List, Dict, Any
+from typing import Any
 
 from lxml import etree
+
 import log
+from app.sites.api_searcher import ApiSiteSearcher
 from app.sites.engine import SiteDefinition
 from app.sites.searchers import _TRANSFORMS, _css_to_xpath, _resolve_jinja
-from app.sites.api_searcher import ApiSiteSearcher
 from app.utils import RequestUtils
 from app.utils.config_tools import get_proxies
 from app.utils.types import MediaType
@@ -28,7 +28,7 @@ class HtmlSiteSearcher:
     HTML 站点搜索器
     """
 
-    def __init__(self, site_def: SiteDefinition, user_config: Optional[dict] = None):
+    def __init__(self, site_def: SiteDefinition, user_config: dict | None = None):
         self._site = site_def
         self._user_config = user_config or {}
 
@@ -36,8 +36,8 @@ class HtmlSiteSearcher:
         self,
         keyword: str = "",
         page: int = 0,
-        mtype: Optional[MediaType] = None,
-    ) -> List[Dict[str, Any]]:
+        mtype: MediaType | None = None,
+    ) -> list[dict[str, Any]]:
         if not self._site.html:
             return []
         is_browse = not keyword

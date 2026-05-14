@@ -1,21 +1,16 @@
 import json
 from datetime import datetime
-from time import sleep
-from typing import Optional
 
 import log
-from app.helper import SiteHelper, DrissionPageHelper
-from app.message import Message
+from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
+from app.helper import DrissionPageHelper, SiteHelper
 from app.sites.engine import SiteEngine
 from app.sites.site_limiter import SiteRateLimiter
-from app.utils import RequestUtils, StringUtils, JsonUtils
-from app.utils.config_tools import get_proxies
-from app.utils.config_tools import get_ua
-from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
+from app.utils import JsonUtils, RequestUtils, StringUtils
+from app.utils.config_tools import get_proxies, get_ua
 
 
 class Sites:
-    message = None
     site_repo = None
 
     _sites = []
@@ -35,7 +30,6 @@ class Sites:
 
     def init_config(self):
         self.site_repo = SiteRepositoryAdapter()
-        self.message = Message()
         # 原始站点列表
         self._sites = []
         # ID存储站点
@@ -95,7 +89,7 @@ class Sites:
                 is_public = True
             if site_note.get("public") == "N":
                 is_public = False
-                
+
             site_info = {
                 "id": site.ID,
                 "name": site.NAME,
@@ -403,7 +397,7 @@ class Sites:
         return infos
 
     @staticmethod
-    def _rate_limit_val(note: dict, key: str, multiplier: int = 1, require_fields: Optional[list] = None):
+    def _rate_limit_val(note: dict, key: str, multiplier: int = 1, require_fields: list | None = None):
         val = note.get(key)
         if not val or not str(val).isdigit():
             return None

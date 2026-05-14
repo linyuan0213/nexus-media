@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 自定义识别词领域层测试
 测试 Word 实体 from_orm/to_dict 以及适配器代理行为
@@ -7,11 +6,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.domain.entities.word import CustomWordEntity, CustomWordGroupEntity
 from app.db.repositories.word_repo_adapter import (
-    CustomWordRepositoryAdapter,
     CustomWordGroupRepositoryAdapter,
+    CustomWordRepositoryAdapter,
 )
+from app.domain.entities.word import CustomWordEntity, CustomWordGroupEntity
 
 
 def _make_orm(**kwargs):

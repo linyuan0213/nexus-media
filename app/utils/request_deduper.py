@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 请求去重器 - 合并对相同资源的并发请求
 
@@ -6,9 +5,10 @@
 只发送一个实际请求，其他请求等待结果共享
 """
 import threading
-import time
-from typing import Any, Optional, Callable, Dict
+from collections.abc import Callable
 from functools import wraps
+from typing import Any
+
 import log
 
 
@@ -22,7 +22,7 @@ class RequestDeduper:
 
     def __init__(self, default_timeout: float = 30.0):
         self._default_timeout = default_timeout
-        self._pending_requests: Dict[str, tuple] = {}
+        self._pending_requests: dict[str, tuple] = {}
         self._lock = threading.Lock()
         self._stats = {
             "deduped_requests": 0,
@@ -99,7 +99,7 @@ class RequestDeduper:
             if key in self._pending_requests:
                 del self._pending_requests[key]
 
-    def get_stats(self) -> Dict[str, int]:
+    def get_stats(self) -> dict[str, int]:
         """获取统计信息"""
         with self._lock:
             return self._stats.copy()

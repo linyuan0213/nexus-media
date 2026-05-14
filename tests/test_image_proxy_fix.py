@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 测试图片代理修复
 
@@ -58,9 +57,9 @@ class TestSearchResultImageStorage:
 
     def test_poster_and_image_fields(self):
         """验证数据库中 POSTER 和 IMAGE 字段的存储逻辑"""
+        from app.helper.image_proxy_helper import ImageProxyHelper
         from app.media.models import MediaInfo
         from app.utils.types import MediaType
-        from app.helper.image_proxy_helper import ImageProxyHelper
 
         # 模拟 TMDB 信息
         media = MediaInfo(title="Test Movie")
@@ -90,7 +89,6 @@ class TestWebMainImgRoute:
 
     def test_proxy_url_redirect(self):
         """本地代理路径应识别为重定向目标"""
-        from app.helper.image_proxy_helper import ImageProxyHelper
 
         # 模拟 /img?url=/img/tmdb/w500/abc.jpg 的场景
         url = "/img/tmdb/w500/abc.jpg"

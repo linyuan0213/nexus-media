@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 JWT 认证服务
 提供 Access Token + Refresh Token 双令牌机制
 """
 import uuid
 from datetime import datetime, timedelta
-from typing import Optional
 
 import jwt
 from pwdlib import PasswordHash
@@ -41,7 +39,7 @@ class AuthService:
         return pwd_context.hash(password)
 
     @staticmethod
-    def authenticate(username: str, password: str) -> Optional[UserContext]:
+    def authenticate(username: str, password: str) -> UserContext | None:
         """
         验证用户名密码，返回用户上下文
         """
@@ -110,7 +108,7 @@ class AuthService:
         )
 
     @staticmethod
-    def refresh_access_token(refresh_token: str) -> Optional[TokenPair]:
+    def refresh_access_token(refresh_token: str) -> TokenPair | None:
         """
         使用 Refresh Token 换取新的 Token 对
         """
@@ -152,7 +150,7 @@ class AuthService:
             return None
 
     @staticmethod
-    def verify_token(token: str) -> Optional[UserContext]:
+    def verify_token(token: str) -> UserContext | None:
         """
         验证 Access Token，返回用户上下文
         """
@@ -178,4 +176,3 @@ class AuthService:
         撤销 Token（将 jti 加入黑名单）
         当前为基础实现，P4 可配合 Redis 实现分布式黑名单
         """
-        pass

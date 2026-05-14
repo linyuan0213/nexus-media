@@ -1,13 +1,12 @@
 import os
 import re
 
-from app.schemas.download import Torrent, TorrentStatus
 import log
-from app.utils import RequestUtils, ExceptionUtils, StringUtils
-from app.utils.types import DownloaderType
-from config import Config
 from app.downloader.client._base import _IDownloadClient
 from app.downloader.client._pyaria2 import PyAria2
+from app.schemas.download import Torrent, TorrentStatus
+from app.utils import ExceptionUtils, RequestUtils, StringUtils
+from app.utils.types import DownloaderType
 
 
 class Aria2(_IDownloadClient):
@@ -174,7 +173,7 @@ class Aria2(_IDownloadClient):
                 'state': state,
                 'progress': progress
             })
-            
+
         return DispTorrents
 
     def set_speed_limit(self, download_limit=None, upload_limit=None):
@@ -236,7 +235,7 @@ class Aria2(_IDownloadClient):
         torrent_obj.progress = round(int(torrent.get('completedLength')) / int(torrent.get("totalLength")), 1)
         # 保存路径
         torrent_obj.save_path = torrent.get("dir")
-        
+
         return torrent_obj
 
     @staticmethod

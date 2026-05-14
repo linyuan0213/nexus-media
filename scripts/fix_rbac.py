@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-import re
 
 path = "api/routers/rbac.py"
-with open(path, 'r', encoding='utf-8') as f:
+with open(path, encoding='utf-8') as f:
     content = f.read()
 
 # Fix to_dict())) -> to_dict())

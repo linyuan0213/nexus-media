@@ -3,14 +3,10 @@ Search Repository
 Handles search result related database operations.
 """
 import json
-from typing import List, Optional
-
-from sqlalchemy import func
 
 from app.db import DbPersist
 from app.db.models import SEARCHRESULTINFO
 from app.db.repositories.base_repository import BaseRepository
-from app.utils import StringUtils
 from app.utils.types import MediaType
 
 
@@ -96,7 +92,7 @@ class SearchRepository(BaseRepository):
         Returns:
             搜索结果记录列表
         """
-        return self._db.query(SEARCHRESULTINFO).filter(SEARCHRESULTINFO.ID == dl_id).all()
+        return self._db.query(SEARCHRESULTINFO).filter(dl_id == SEARCHRESULTINFO.ID).all()
 
     def get_search_results(self):
         """

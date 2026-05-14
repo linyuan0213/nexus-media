@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Pages Router 测试
 验证 FastAPI 页面路由结构正确（不触发重型初始化）
 """
-import pytest
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 
 # 在测试执行时动态导入，避免测试收集阶段触发重型初始化
@@ -36,7 +34,7 @@ class TestPagesRouter:
         """验证登录 POST 路由存在"""
         router = _import_router()
         routes = [(r.path, r.methods) for r in router.routes if hasattr(r, 'path') and hasattr(r, 'methods')]
-        post_routes = [p for p, m in routes if "/" == p and "POST" in m]
+        post_routes = [p for p, m in routes if p == "/" and "POST" in m]
         assert len(post_routes) > 0
 
     def test_web_page_route_exists(self):
@@ -177,14 +175,14 @@ class TestPagesRouter:
         """验证文件上传路由存在"""
         router = _import_router()
         routes = [(r.path, r.methods) for r in router.routes if hasattr(r, 'path') and hasattr(r, 'methods')]
-        post_routes = [p for p, m in routes if "/upload" == p and "POST" in m]
+        post_routes = [p for p, m in routes if p == "/upload" and "POST" in m]
         assert len(post_routes) > 0
 
     def test_dirlist_route_exists(self):
         """验证目录列表路由存在"""
         router = _import_router()
         routes = [(r.path, r.methods) for r in router.routes if hasattr(r, 'path') and hasattr(r, 'methods')]
-        post_routes = [p for p, m in routes if "/dirlist" == p and "POST" in m]
+        post_routes = [p for p, m in routes if p == "/dirlist" and "POST" in m]
         assert len(post_routes) > 0
 
     def test_stream_logging_route_exists(self):
@@ -203,7 +201,7 @@ class TestPagesRouter:
         """验证备份路由存在"""
         router = _import_router()
         routes = [(r.path, r.methods) for r in router.routes if hasattr(r, 'path') and hasattr(r, 'methods')]
-        post_routes = [p for p, m in routes if "/backup" == p and "POST" in m]
+        post_routes = [p for p, m in routes if p == "/backup" and "POST" in m]
         assert len(post_routes) > 0
 
     def test_healthcheck_route_exists(self):
@@ -226,9 +224,10 @@ class TestPagesRouter:
 
     def test_no_old_controller_imports_in_pages(self):
         """验证 pages 路由包不再导入旧的 web.controllers 模块"""
-        import api.routers.pages as pages_pkg
         import ast
         import inspect
+
+        import api.routers.pages as pages_pkg
 
         pkg_dir = os.path.dirname(inspect.getfile(pages_pkg))
         controller_imports = []
@@ -237,7 +236,7 @@ class TestPagesRouter:
             if not fname.endswith(".py"):
                 continue
             fpath = os.path.join(pkg_dir, fname)
-            with open(fpath, "r", encoding="utf-8") as f:
+            with open(fpath, encoding="utf-8") as f:
                 source = f.read()
             try:
                 tree = ast.parse(source)

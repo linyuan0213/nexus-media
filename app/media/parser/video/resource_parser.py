@@ -1,15 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 影视标题解析 — 分辨率、资源类型、Part解析
 """
 import re
 
 from app.media.parser.video.constants import (
+    _effect_re,
     _part_re,
     _resources_pix_re,
     _resources_pix_re2,
     _source_re,
-    _effect_re,
 )
 
 

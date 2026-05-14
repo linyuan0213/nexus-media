@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 BrushTask 核心模块（原 app/brushtask.py）
 
@@ -11,24 +10,22 @@ import ast
 import json
 import time
 from datetime import datetime, time as dtime
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlsplit
 
+import log
+from app.db.repositories import BrushRepository
+from app.db.repositories.brush_repo_adapter import BrushTaskRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
-from app.schemas.download import Torrent, TorrentStatus
+from app.helper import RssHelper
 from app.media import MetaInfo
 from app.message import Message
-from app.sites import Sites, SiteConf
+from app.schemas.download import TorrentStatus
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
-from app.helper import RssHelper
-from app.db.repositories.brush_repo_adapter import BrushTaskRepositoryAdapter, BrushTorrentRepositoryAdapter
-from app.db.repositories import BrushRepository
 from app.services.scheduler_core import SchedulerCore
-from app.utils import StringUtils, ExceptionUtils, JsonUtils
-from app.utils.types import BrushDeleteType, MediaType
-import log
-from config import Config
+from app.sites import SiteConf, Sites
+from app.utils import ExceptionUtils, JsonUtils, StringUtils
 
 
 class BrushTaskRepository:
@@ -37,7 +34,7 @@ class BrushTaskRepository:
     职责：所有与刷流任务/种子相关的数据库操作。
     """
 
-    def __init__(self, repo: Optional[BrushRepository] = None):
+    def __init__(self, repo: BrushRepository | None = None):
         self._repo = repo or BrushRepository()
 
     def get_brushtasks(self, brush_id=None):
@@ -87,7 +84,7 @@ class BrushTaskScheduler:
     """
     _jobstore = "brushtask"
 
-    def __init__(self, scheduler: Optional[SchedulerCore] = None):
+    def __init__(self, scheduler: SchedulerCore | None = None):
         self._scheduler = scheduler or SchedulerCore()
 
     def start_job(self, func, name, args, job_id, trigger_type, trigger_args):
@@ -127,13 +124,13 @@ class BrushTaskService:
     """
 
     def __init__(self,
-                 repository: Optional[Any] = None,
-                 scheduler: Optional[BrushTaskScheduler] = None,
-                 downloader: Optional[Downloader] = None,
-                 message: Optional[Message] = None,
-                 sites: Optional[Sites] = None,
-                 siteconf: Optional[SiteConf] = None,
-                 rsshelper: Optional[RssHelper] = None):
+                 repository: Any | None = None,
+                 scheduler: BrushTaskScheduler | None = None,
+                 downloader: Downloader | None = None,
+                 message: Message | None = None,
+                 sites: Sites | None = None,
+                 siteconf: SiteConf | None = None,
+                 rsshelper: RssHelper | None = None):
         self._repo = repository or BrushTaskRepositoryAdapter()
         self._scheduler = scheduler or BrushTaskScheduler()
         self._downloader = downloader or Downloader()

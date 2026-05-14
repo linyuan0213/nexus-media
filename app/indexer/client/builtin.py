@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 内置索引器客户端
 
@@ -16,7 +15,8 @@ _STATS_LOCK = Lock()
 import log
 from app.core.system_config import SystemConfig
 from app.db.repositories import DownloadRepository
-from app.helper import IndexerHelper, IndexerConf, ProgressHelper
+from app.helper import IndexerConf, IndexerHelper, ProgressHelper
+from app.helper.drissionpage_helper import DrissionPageHelper
 from app.indexer.client._base import _IIndexClient
 from app.indexer.client._spider import TorrentSpider
 from app.sites import Sites
@@ -24,9 +24,8 @@ from app.sites.engine import SiteEngine
 from app.sites.searcher_factory import create_searcher
 from app.utils import StringUtils
 from app.utils.config_tools import get_ua
-from app.utils.types import SearchType, IndexerType, ProgressKey, SystemConfigKey
+from app.utils.types import IndexerType, ProgressKey, SearchType, SystemConfigKey
 from config import Config
-from app.helper.drissionpage_helper import DrissionPageHelper
 
 
 class BuiltinIndexer(_IIndexClient):

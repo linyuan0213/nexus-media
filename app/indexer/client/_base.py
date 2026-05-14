@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 索引器客户端抽象基类
 
@@ -6,14 +5,14 @@
 并提供基于 Torznab XML 的通用搜索默认实现。
 所有业务逻辑（过滤、识别）已迁移到 app.indexer.core。
 """
-from abc import ABCMeta, abstractmethod
 import datetime
 import xml.dom.minidom
+from abc import ABCMeta, abstractmethod
 
 import log
 from app.helper import ProgressHelper
-from app.utils import DomUtils, RequestUtils, StringUtils, ExceptionUtils
-from app.utils.types import SearchType, ProgressKey
+from app.utils import DomUtils, ExceptionUtils, RequestUtils, StringUtils
+from app.utils.types import ProgressKey, SearchType
 
 
 class _IIndexClient(metaclass=ABCMeta):
@@ -45,27 +44,22 @@ class _IIndexClient(metaclass=ABCMeta):
     @abstractmethod
     def match(cls, ctype):
         """匹配实例"""
-        pass
 
     @abstractmethod
     def get_status(self):
         """检查连通性"""
-        pass
 
     @abstractmethod
     def get_type(self):
         """获取类型"""
-        pass
 
     @abstractmethod
     def get_client_id(self):
         """获取索引器id"""
-        pass
 
     @abstractmethod
     def get_indexers(self, check=True, indexer_id=None, public=True):
         """获取索引站点列表"""
-        pass
 
     def search(self, order_seq,
                indexer,

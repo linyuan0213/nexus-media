@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from dataclasses import dataclass
 
 
 @dataclass
@@ -85,5 +83,5 @@ class SystemInfoDTO:
     platform: str = ""
     uptime: str = ""
     uptime_seconds: int = 0
-    start_time: Optional[str] = None
+    start_time: str | None = None
     memory_mb: float = 0.0

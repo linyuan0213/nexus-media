@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 SubscribeService - 订阅业务 Facade
 将 app/subscribe.py 中的复杂业务逻辑下沉到可独立测试的 Service。
@@ -7,25 +6,25 @@ SubscribeService - 订阅业务 Facade
 - SubscribeService：对外保留的入口类（兼容旧调用 Subscribe）
 """
 import json
-from typing import Any, Optional
+from typing import Any
 
 import log
 from app.core.system_config import SystemConfig
-from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.filter_service import FilterService as Filter
 from app.db.repositories.rss_repo_adapter import (
-    RssMovieRepositoryAdapter,
-    RssTvRepositoryAdapter,
-    RssTvEpisodeRepositoryAdapter,
     RssHistoryRepositoryAdapter,
+    RssMovieRepositoryAdapter,
+    RssTvEpisodeRepositoryAdapter,
+    RssTvRepositoryAdapter,
 )
-from app.services.indexer_service import IndexerService
-from app.media import MediaService, DouBan, MetaInfo
+from app.media import DouBan, MediaService, MetaInfo
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
+from app.services.downloader_core import DownloaderCore as Downloader
+from app.services.filter_service import FilterService as Filter
+from app.services.indexer_service import IndexerService
 from app.services.subscribe_search_engine import SubscribeSearchEngine
 from app.sites import Sites
-from app.utils.types import MediaType, EventType, SystemConfigKey, RssType
+from app.utils.types import EventType, MediaType, RssType, SystemConfigKey
 from app.utils.web_utils import WebUtils
 
 
@@ -36,20 +35,20 @@ class SubscribeService:
     """
 
     def __init__(self,
-                 movie_repo: Optional[Any] = None,
-                 tv_repo: Optional[Any] = None,
-                 tv_episode_repo: Optional[Any] = None,
-                 history_repo: Optional[Any] = None,
-                 search_engine: Optional[SubscribeSearchEngine] = None,
-                 message: Optional[Message] = None,
-                 media_service: Optional[MediaService] = None,
-                 downloader: Optional[Downloader] = None,
-                 sites: Optional[Sites] = None,
-                 douban: Optional[DouBan] = None,
-                 indexer_service: Optional[IndexerService] = None,
-                 filter_service: Optional[Filter] = None,
-                 eventmanager: Optional[EventManager] = None,
-                 system_config: Optional[SystemConfig] = None):
+                 movie_repo: Any | None = None,
+                 tv_repo: Any | None = None,
+                 tv_episode_repo: Any | None = None,
+                 history_repo: Any | None = None,
+                 search_engine: SubscribeSearchEngine | None = None,
+                 message: Message | None = None,
+                 media_service: MediaService | None = None,
+                 downloader: Downloader | None = None,
+                 sites: Sites | None = None,
+                 douban: DouBan | None = None,
+                 indexer_service: IndexerService | None = None,
+                 filter_service: Filter | None = None,
+                 eventmanager: EventManager | None = None,
+                 system_config: SystemConfig | None = None):
         self._movie_repo = movie_repo or RssMovieRepositoryAdapter()
         self._tv_repo = tv_repo or RssTvRepositoryAdapter()
         self._tv_episode_repo = tv_episode_repo or RssTvEpisodeRepositoryAdapter()
@@ -844,13 +843,13 @@ class SubscribeService:
             name = rss_info.get("name")
             year = rss_info.get("year") or ""
             tmdbid = rss_info.get("tmdbid")
-            
+
             # 如果已经有 tmdbid，跳过刷新（减少 API 调用）
             # 只有当没有 tmdbid 时才进行查询
             if tmdbid:
                 log.debug(f"【Subscribe】电影 {name} 已有 TMDB ID {tmdbid}，跳过刷新")
                 continue
-                
+
             # 更新TMDB信息（使用缓存）
             media_info = self.__get_media_info(tmdbid=tmdbid,
                                                name=name,
@@ -882,13 +881,13 @@ class SubscribeService:
             total = rss_info.get("total")
             total_ep = rss_info.get("total_ep")
             lack = rss_info.get("lack")
-            
+
             # 如果已经有 tmdbid，跳过刷新（减少 API 调用）
             # 只有当没有 tmdbid 时才进行查询
             if tmdbid:
                 log.debug(f"【Subscribe】电视剧 {name} 已有 TMDB ID {tmdbid}，跳过刷新")
                 continue
-                
+
             # 更新TMDB信息（使用缓存）
             media_info = self.__get_media_info(tmdbid=tmdbid,
                                                name=name,

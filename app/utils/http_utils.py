@@ -1,10 +1,12 @@
+import threading
+import time
+
 import requests
 import urllib3
-import time
-import threading
-from urllib3.exceptions import InsecureRequestWarning
 from requests.adapters import HTTPAdapter
+from urllib3.exceptions import InsecureRequestWarning
 from urllib3.util.retry import Retry
+
 import log
 from app.utils.config_tools import get_ua
 
@@ -17,7 +19,7 @@ class RequestUtils:
     _proxies = None
     _timeout = 20
     _session = None
-    
+
     # 类级别的session缓存
     _session_pool = {}
     _pool_locks = {}
@@ -72,21 +74,21 @@ class RequestUtils:
             self._session = self._get_shared_session(proxies)
         if timeout:
             self._timeout = timeout
-    
+
     @classmethod
     def _get_shared_session(cls, proxies=None):
         """获取共享的session实例，带连接池"""
         proxy_key = str(proxies) if proxies else "no_proxy"
-        
+
         with cls._locks_lock:
             if proxy_key not in cls._pool_locks:
                 cls._pool_locks[proxy_key] = threading.Lock()
             lock = cls._pool_locks[proxy_key]
-        
+
         with lock:
             if proxy_key not in cls._session_pool:
                 session = requests.Session()
-                
+
                 # 配置重试策略
                 retry_strategy = Retry(
                     total=3,
@@ -94,7 +96,7 @@ class RequestUtils:
                     status_forcelist=[429, 500, 502, 503, 504],
                     allowed_methods=["HEAD", "GET", "OPTIONS", "POST"]
                 )
-                
+
                 # 配置连接池
                 adapter = HTTPAdapter(
                     pool_connections=10,
@@ -102,11 +104,11 @@ class RequestUtils:
                     max_retries=retry_strategy,
                     pool_block=False
                 )
-                
+
                 session.mount("http://", adapter)
                 session.mount("https://", adapter)
                 cls._session_pool[proxy_key] = session
-            
+
             return cls._session_pool[proxy_key]
 
     def post(self, url, data=None, json=None, retries=3):
@@ -213,7 +215,7 @@ class RequestUtils:
                                         cookies=self._cookies,
                                         timeout=self._timeout,
                                         allow_redirects=allow_redirects)
-                
+
                 # 检查返回的内容是否为空字符串
                 if response.text.strip() == "" and response.status_code not in [301, 302]:
                     log.debug(f"Attempt {attempt + 1} returned an empty string.")

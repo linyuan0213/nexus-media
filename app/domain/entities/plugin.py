@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 插件历史 / TMDB黑名单领域实体 / 插件框架v2实体
 对应 PLUGIN_HISTORY / TMDB_BLACKLIST / PLUGIN_MANIFEST / PLUGIN_CONFIG / PLUGIN_LOGS 表
 """
 from dataclasses import dataclass, field, fields
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 @dataclass
@@ -34,7 +33,7 @@ class PluginHistoryEntity:
             return getattr(self, lower_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "plugin_id": self.plugin_id,
@@ -49,12 +48,12 @@ class TmdbBlacklistEntity:
     """TMDB黑名单实体"""
     id: int
     tmdb_id: str
-    title: Optional[str]
-    year: Optional[str]
-    media_type: Optional[str]
-    poster_path: Optional[str]
-    backdrop_path: Optional[str]
-    note: Optional[str]
+    title: str | None
+    year: str | None
+    media_type: str | None
+    poster_path: str | None
+    backdrop_path: str | None
+    note: str | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["TmdbBlacklistEntity"]:
@@ -77,7 +76,7 @@ class TmdbBlacklistEntity:
             return getattr(self, lower_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "tmdb_id": self.tmdb_id,
@@ -99,12 +98,12 @@ class PluginManifestEntity:
     author: str = ""
     description: str = ""
     category: str = "tool"
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
     icon: str = ""
     color: str = ""
     manifest_json: str = ""
-    installed_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    installed_at: str | None = None
+    updated_at: str | None = None
     enabled: bool = False
     installed: bool = True
     path: str = ""
@@ -137,7 +136,7 @@ class PluginManifestEntity:
             path=orm_model.PATH or "",
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -157,8 +156,8 @@ class PluginManifestEntity:
 class PluginConfigEntity:
     """插件框架v2 - 插件配置实体"""
     plugin_id: str
-    config: Dict[str, Any] = field(default_factory=dict)
-    updated_at: Optional[str] = None
+    config: dict[str, Any] = field(default_factory=dict)
+    updated_at: str | None = None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["PluginConfigEntity"]:
@@ -184,7 +183,7 @@ class PluginLogEntity:
     plugin_id: str
     level: str
     message: str
-    created_at: Optional[str] = None
+    created_at: str | None = None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["PluginLogEntity"]:

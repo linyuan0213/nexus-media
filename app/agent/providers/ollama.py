@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """Ollama 本地模型提供商"""
-import log
-from typing import Any, Optional
+from typing import Any
 
 from ollama import Client
 
+import log
 from app.agent.providers.base import BaseProvider, ProviderConfig
 
 
@@ -16,7 +15,7 @@ class OllamaProvider(BaseProvider):
         self._client = Client(host=config.api_url)
 
     def chat(self, messages: list[dict], system_prompt: str = "", temperature: float = 0.7,
-             response_format: Optional[type] = None) -> Any:
+             response_format: type | None = None) -> Any:
         msgs = []
         if system_prompt:
             msgs.append({"role": "system", "content": system_prompt})

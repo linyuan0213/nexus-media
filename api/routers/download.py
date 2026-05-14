@@ -4,32 +4,29 @@ Download Router — FastAPI 迁移
 """
 import json
 import os
-from typing import List, Optional, Union
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from api.deps import (
-    get_current_user,
     get_download_service,
-    get_site_service,
-    get_indexer_service,
     get_downloader_service,
     get_filetransfer_service,
+    get_indexer_service,
+    get_site_service,
     require_any_permission,
-    require_permission
+    require_permission,
 )
+from app.core.module_config import ModuleConf
+from app.helper.thread_helper import ThreadHelper
 from app.schemas.auth import UserContext
-from app.utils.response import success, fail
 from app.services.download_service import DownloadService
-
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.indexer_service import IndexerService
 from app.services.site_service import SiteService
-from app.core.module_config import ModuleConf
-from app.utils import SystemUtils, ExceptionUtils
-from app.helper.thread_helper import ThreadHelper
+from app.utils import ExceptionUtils, SystemUtils
+from app.utils.response import fail, success
 
 router = APIRouter()
 
@@ -39,141 +36,141 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 class EmptyRequest(BaseModel):
-    data: Optional[dict] = None
+    data: dict | None = None
 
 
 class AutoRemoveTorrentsRequest(BaseModel):
-    tid: Optional[str] = None
+    tid: str | None = None
 
 
 class CheckDownloaderRequest(BaseModel):
-    did: Optional[str] = None
-    checked: Optional[bool] = None
-    flag: Optional[str] = None
+    did: str | None = None
+    checked: bool | None = None
+    flag: str | None = None
 
 
 class DelDownloaderRequest(BaseModel):
-    did: Optional[str] = None
+    did: str | None = None
 
 
 class DeleteDownloadSettingRequest(BaseModel):
-    sid: Optional[str] = None
+    sid: str | None = None
 
 
 class DeleteTorrentRemoveTaskRequest(BaseModel):
-    tid: Optional[str] = None
+    tid: str | None = None
 
 
 class DownloadRequest(BaseModel):
-    id: Optional[int] = None
-    dir: Optional[str] = None
-    setting: Optional[str] = None
+    id: int | None = None
+    dir: str | None = None
+    setting: str | None = None
 
 
 class DownloadLinkRequest(BaseModel):
-    site: Optional[str] = None
-    enclosure: Optional[str] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    page_url: Optional[str] = None
-    size: Optional[str] = None
-    seeders: Optional[str] = None
-    uploadvolumefactor: Optional[str] = None
-    downloadvolumefactor: Optional[str] = None
-    dl_dir: Optional[str] = None
-    dl_setting: Optional[str] = None
+    site: str | None = None
+    enclosure: str | None = None
+    title: str | None = None
+    description: str | None = None
+    page_url: str | None = None
+    size: str | None = None
+    seeders: str | None = None
+    uploadvolumefactor: str | None = None
+    downloadvolumefactor: str | None = None
+    dl_dir: str | None = None
+    dl_setting: str | None = None
 
 
 class DownloadTorrentRequest(BaseModel):
-    files: Optional[list] = None
-    urls: Optional[list] = None
-    dl_dir: Optional[str] = None
-    dl_setting: Optional[str] = None
-    page_url: Optional[str] = None
-    upload_volume_factor: Optional[float] = None
-    download_volume_factor: Optional[float] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    site: Optional[str] = None
-    size: Optional[int] = None
+    files: list | None = None
+    urls: list | None = None
+    dl_dir: str | None = None
+    dl_setting: str | None = None
+    page_url: str | None = None
+    upload_volume_factor: float | None = None
+    download_volume_factor: float | None = None
+    title: str | None = None
+    description: str | None = None
+    site: str | None = None
+    size: int | None = None
 
 
 class FindHardlinksRequest(BaseModel):
-    files: Optional[list] = None
-    dir: Optional[str] = None
+    files: list | None = None
+    dir: str | None = None
 
 
 class ResolveDownloadUrlRequest(BaseModel):
-    page_url: Optional[str] = None
-    enclosure: Optional[str] = None
+    page_url: str | None = None
+    enclosure: str | None = None
 
 
 class GetDownloadDirsRequest(BaseModel):
-    sid: Optional[str] = None
-    site: Optional[str] = None
+    sid: str | None = None
+    site: str | None = None
 
 
 class GetDownloadSettingRequest(BaseModel):
-    sid: Optional[str] = None
+    sid: str | None = None
 
 
 class GetDownloadersRequest(BaseModel):
-    did: Optional[str] = None
+    did: str | None = None
 
 
 class SetDefaultDownloaderRequest(BaseModel):
-    did: Optional[str] = None
+    did: str | None = None
 
 
 class SetDefaultDownloadSettingRequest(BaseModel):
-    sid: Optional[str] = None
+    sid: str | None = None
 
 
 class GetRemoveTorrentsRequest(BaseModel):
-    tid: Optional[str] = None
+    tid: str | None = None
 
 
 class GetTorrentRemoveTaskRequest(BaseModel):
-    tid: Optional[str] = None
+    tid: str | None = None
 
 
 class PtInfoRequest(BaseModel):
-    ids: Optional[str] = None
+    ids: str | None = None
 
 
 class PtIdRequest(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
 
 
 class TestDownloaderRequest(BaseModel):
-    type: Optional[str] = None
-    config: Optional[str] = None
+    type: str | None = None
+    config: str | None = None
 
 
 class UpdateDownloadSettingRequest(BaseModel):
-    sid: Optional[Union[str, int]] = None
-    name: Optional[str] = None
-    category: Optional[str] = None
-    tags: Optional[str] = None
-    is_paused: Optional[Union[int, bool]] = None
-    upload_limit: Optional[Union[int, str]] = 0
-    download_limit: Optional[Union[int, str]] = 0
-    ratio_limit: Optional[Union[int, str]] = 0
-    seeding_time_limit: Optional[Union[int, str]] = 0
-    downloader: Optional[str] = None
+    sid: str | int | None = None
+    name: str | None = None
+    category: str | None = None
+    tags: str | None = None
+    is_paused: int | bool | None = None
+    upload_limit: int | str | None = 0
+    download_limit: int | str | None = 0
+    ratio_limit: int | str | None = 0
+    seeding_time_limit: int | str | None = 0
+    downloader: str | None = None
 
 
 class UpdateDownloaderRequest(BaseModel):
-    did: Optional[str] = None
-    name: Optional[str] = None
-    type: Optional[str] = None
-    enabled: Optional[int] = None
-    transfer: Optional[int] = None
-    only_nastool: Optional[int] = None
-    match_path: Optional[int] = None
-    rmt_mode: Optional[str] = None
-    config: Optional[str] = None
-    download_dir: Optional[str] = None
+    did: str | None = None
+    name: str | None = None
+    type: str | None = None
+    enabled: int | None = None
+    transfer: int | None = None
+    only_nastool: int | None = None
+    match_path: int | None = None
+    rmt_mode: str | None = None
+    config: str | None = None
+    download_dir: str | None = None
 
 
 class UpdateTorrentRemoveTaskRequest(BaseModel):

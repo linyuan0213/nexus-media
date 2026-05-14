@@ -1,4 +1,3 @@
-from typing import Optional
 
 from app.infrastructure.external.doubanapi import DoubanApi
 from app.media.lookup.base import BaseLookup, LookupResult
@@ -11,7 +10,7 @@ class DoubanLookup(BaseLookup):
     def __init__(self):
         self._api = DoubanApi()
 
-    def lookup(self, parsed, hint_type: MediaType = None) -> Optional[LookupResult]:
+    def lookup(self, parsed, hint_type: MediaType = None) -> LookupResult | None:
         name = parsed.title_en or parsed.title_cn
         if not name:
             return None
@@ -46,7 +45,7 @@ class DoubanLookup(BaseLookup):
             return item
         return items[0].get("target") if items else None
 
-    def _to_lookup_result(self, item, mtype) -> Optional[LookupResult]:
+    def _to_lookup_result(self, item, mtype) -> LookupResult | None:
         if not item:
             return None
         did = item.get("id")

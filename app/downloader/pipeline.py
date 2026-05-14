@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 下载流水线
 
@@ -12,23 +11,17 @@
 """
 import json
 import os
-import re
-from typing import Optional, Tuple
-from urllib.parse import urlsplit
 
 import log
-from app.core.constants import RMT_MEDIAEXT, PT_TAG
-from app.downloader.client._base import _IDownloadClient
+from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.helper import ThreadHelper
-from app.media import MetaInfo
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
-from app.sites import Sites, SiteSubtitle, SiteConf
+from app.sites import SiteConf, Sites, SiteSubtitle
 from app.sites.engine import SiteEngine
-from app.utils import Torrent, StringUtils, ExceptionUtils, RequestUtils, JsonUtils
-from app.utils.types import MediaType, DownloaderType, SearchType, EventType
-from app.utils.config_tools import get_proxies
+from app.utils import StringUtils, Torrent
+from app.utils.types import DownloaderType, EventType
 
 
 class DownloadPipeline:
@@ -44,13 +37,13 @@ class DownloadPipeline:
 
     def __init__(self,
                  client_factory=None,
-                 message: Optional[Message] = None,
-                 mediaserver: Optional[MediaServer] = None,
+                 message: Message | None = None,
+                 mediaserver: MediaServer | None = None,
                  filetransfer=None,
-                 sites: Optional[Sites] = None,
-                 siteconf: Optional[SiteConf] = None,
-                 sitesubtitle: Optional[SiteSubtitle] = None,
-                 eventmanager: Optional[EventManager] = None):
+                 sites: Sites | None = None,
+                 siteconf: SiteConf | None = None,
+                 sitesubtitle: SiteSubtitle | None = None,
+                 eventmanager: EventManager | None = None):
         self._client_factory = client_factory
         self._message = message or Message()
         self._mediaserver = mediaserver or MediaServer()
@@ -72,7 +65,7 @@ class DownloadPipeline:
                 torrent_file=None,
                 in_from=None,
                 user_name=None,
-                proxy=None) -> Tuple[Optional[str], Optional[str], str]:
+                proxy=None) -> tuple[str | None, str | None, str]:
         """
         执行完整下载流水线
 
@@ -335,7 +328,6 @@ class DownloadPipeline:
                 self._fail(media_info, in_from, "请检查下载任务保存目录是否正确")
                 return
 
-        from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
         DownloadHistoryRepositoryAdapter().insert_download_history(
             media_info=media_info, downloader=downloader_id,
             download_id=download_id, save_dir=save_dir)

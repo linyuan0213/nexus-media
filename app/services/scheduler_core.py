@@ -1,32 +1,32 @@
-import os
 import datetime
-import time
-import threading
-import random
 import math
-from typing import Dict, Any, Optional, Callable, List, Union
+import os
+import random
+import threading
+import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
-import log
-
-from apscheduler.executors.pool import ThreadPoolExecutor
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.jobstores.memory import MemoryJobStore
-from apscheduler.jobstores.base import JobLookupError
 from apscheduler.events import (
-    EVENT_JOB_EXECUTED,
     EVENT_JOB_ERROR,
+    EVENT_JOB_EXECUTED,
     EVENT_JOB_MISSED,
     EVENT_JOB_SUBMITTED,
     JobExecutionEvent,
 )
-from apscheduler.triggers.cron import CronTrigger
+from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.job import Job
+from apscheduler.jobstores.base import JobLookupError
+from apscheduler.jobstores.memory import MemoryJobStore
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
-from app.utils.commons import SingletonMeta
-from app.utils import ExceptionUtils
+import log
 from app.db import remove_session
+from app.utils import ExceptionUtils
+from app.utils.commons import SingletonMeta
 
 
 class JobStatus(Enum):
@@ -46,10 +46,10 @@ class JobStats:
     success_count: int = 0
     failure_count: int = 0
     retry_count: int = 0
-    last_run_time: Optional[datetime.datetime] = None
-    last_duration: Optional[float] = None
+    last_run_time: datetime.datetime | None = None
+    last_duration: float | None = None
     avg_duration: float = 0.0
-    last_error: Optional[str] = None
+    last_error: str | None = None
     consecutive_failures: int = 0
 
     def record_success(self, duration: float) -> None:
@@ -74,7 +74,7 @@ class JobStats:
         """记录重试"""
         self.retry_count += 1
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             'job_id': self.job_id,
@@ -95,17 +95,17 @@ class TaskConfig:
     """任务配置数据类"""
     job_id: str
     func: Callable
-    name: Optional[str] = None
+    name: str | None = None
     trigger: str = 'interval'
     args: tuple = field(default_factory=tuple)
-    kwargs: Dict[str, Any] = field(default_factory=dict)
+    kwargs: dict[str, Any] = field(default_factory=dict)
     jobstore: str = 'default'
-    hours: Optional[int] = None
-    minutes: Optional[int] = None
-    seconds: Optional[int] = None
-    cron: Optional[str] = None
-    run_date: Optional[datetime.datetime] = None
-    next_run_time: Optional[Any] = None
+    hours: int | None = None
+    minutes: int | None = None
+    seconds: int | None = None
+    cron: str | None = None
+    run_date: datetime.datetime | None = None
+    next_run_time: Any | None = None
     max_instances: int = 1
     misfire_grace_time: int = 300
     coalesce: bool = True
@@ -126,7 +126,7 @@ class TaskConfig:
         if self.trigger == 'cron' and not self.cron:
             raise ValueError("cron 类型任务需要设置 cron 表达式")
 
-    def to_scheduler_args(self) -> Dict[str, Any]:
+    def to_scheduler_args(self) -> dict[str, Any]:
         """转换为 APScheduler 参数"""
         args = {
             'func': self.func,
@@ -203,19 +203,19 @@ class SchedulerCore(metaclass=SingletonMeta):
     def __init__(self):
         self._instance_id: str = os.environ.get('SERVER_INSTANCE', '')
         self._retry_cache = None
-        self._scheduler: Optional[BackgroundScheduler] = None
-        self._job_stats: Dict[str, JobStats] = {}
-        self._job_start_times: Dict[str, float] = {}
+        self._scheduler: BackgroundScheduler | None = None
+        self._job_stats: dict[str, JobStats] = {}
+        self._job_start_times: dict[str, float] = {}
         self._lock = threading.RLock()
         self._running = False
 
     @property
-    def SCHEDULER(self) -> Optional[BackgroundScheduler]:
+    def SCHEDULER(self) -> BackgroundScheduler | None:
         """向后兼容：获取调度器实例"""
         return self._scheduler
 
     @SCHEDULER.setter
-    def SCHEDULER(self, value: Optional[BackgroundScheduler]) -> None:
+    def SCHEDULER(self, value: BackgroundScheduler | None) -> None:
         """向后兼容：设置调度器实例"""
         self._scheduler = value
 
@@ -230,7 +230,7 @@ class SchedulerCore(metaclass=SingletonMeta):
         self._instance_id = value
 
     @property
-    def scheduler(self) -> Optional[BackgroundScheduler]:
+    def scheduler(self) -> BackgroundScheduler | None:
         """获取调度器实例"""
         return self._scheduler
 
@@ -246,7 +246,7 @@ class SchedulerCore(metaclass=SingletonMeta):
                 self._job_stats[job_id] = JobStats(job_id=job_id)
             return self._job_stats[job_id]
 
-    def start_job(self, task: Union[Dict[str, Any], TaskConfig]) -> Optional[Job]:
+    def start_job(self, task: dict[str, Any] | TaskConfig) -> Job | None:
         """启动单个定时任务
 
         Args:
@@ -315,7 +315,7 @@ class SchedulerCore(metaclass=SingletonMeta):
             ExceptionUtils.exception_traceback(e)
             return None
 
-    def start_job_batch(self, tasks: List[Union[Dict[str, Any], TaskConfig]]) -> List[Optional[Job]]:
+    def start_job_batch(self, tasks: list[dict[str, Any] | TaskConfig]) -> list[Job | None]:
         """批量启动定时任务
 
         Args:
@@ -334,18 +334,18 @@ class SchedulerCore(metaclass=SingletonMeta):
         self,
         job_id: str,
         func: Callable,
-        seconds: Optional[int] = None,
-        minutes: Optional[int] = None,
-        hours: Optional[int] = None,
-        args: Optional[tuple] = None,
-        kwargs: Optional[Dict[str, Any]] = None,
+        seconds: int | None = None,
+        minutes: int | None = None,
+        hours: int | None = None,
+        args: tuple | None = None,
+        kwargs: dict[str, Any] | None = None,
         jobstore: str = 'default',
-        next_run_time: Optional[Any] = None,
+        next_run_time: Any | None = None,
         max_instances: int = 1,
         misfire_grace_time: int = 300,
         coalesce: bool = True,
-        name: Optional[str] = None
-    ) -> Optional[Job]:
+        name: str | None = None
+    ) -> Job | None:
         """注册 interval 类型定时任务（便捷方法）
 
         Args:
@@ -391,14 +391,14 @@ class SchedulerCore(metaclass=SingletonMeta):
         job_id: str,
         func: Callable,
         run_date: datetime.datetime,
-        args: Optional[tuple] = None,
-        kwargs: Optional[Dict[str, Any]] = None,
+        args: tuple | None = None,
+        kwargs: dict[str, Any] | None = None,
         jobstore: str = 'default',
         max_instances: int = 1,
         misfire_grace_time: int = 60,
         coalesce: bool = True,
-        name: Optional[str] = None
-    ) -> Optional[Job]:
+        name: str | None = None
+    ) -> Job | None:
         """注册 date 类型一次性定时任务（便捷方法）
 
         Args:
@@ -435,15 +435,15 @@ class SchedulerCore(metaclass=SingletonMeta):
         job_id: str,
         func: Callable,
         cron: str,
-        args: Optional[tuple] = None,
-        kwargs: Optional[Dict[str, Any]] = None,
+        args: tuple | None = None,
+        kwargs: dict[str, Any] | None = None,
         jobstore: str = 'default',
-        next_run_time: Optional[Any] = None,
+        next_run_time: Any | None = None,
         max_instances: int = 1,
         misfire_grace_time: int = 300,
         coalesce: bool = True,
-        name: Optional[str] = None
-    ) -> Optional[Job]:
+        name: str | None = None
+    ) -> Job | None:
         """注册 cron 类型定时任务（便捷方法）
 
         Args:
@@ -483,15 +483,15 @@ class SchedulerCore(metaclass=SingletonMeta):
         func: Callable,
         cron: str,
         func_desc: str = "",
-        args: Optional[tuple] = None,
-        kwargs: Optional[Dict[str, Any]] = None,
+        args: tuple | None = None,
+        kwargs: dict[str, Any] | None = None,
         jobstore: str = 'default',
-        next_run_time: Optional[Any] = None,
+        next_run_time: Any | None = None,
         max_instances: int = 1,
         misfire_grace_time: int = 300,
         coalesce: bool = True,
-        name: Optional[str] = None
-    ) -> Optional[Job]:
+        name: str | None = None
+    ) -> Job | None:
         """
         智能注册定时任务，兼容多种 cron 写法：
           1、5位 cron 表达式
@@ -658,7 +658,7 @@ class SchedulerCore(metaclass=SingletonMeta):
             coalesce=coalesce
         )
 
-    def print_jobs(self, jobstore: Optional[str] = None) -> None:
+    def print_jobs(self, jobstore: str | None = None) -> None:
         """打印任务列表
 
         Args:
@@ -676,7 +676,7 @@ class SchedulerCore(metaclass=SingletonMeta):
         except Exception as e:
             log.error(f"打印任务列表失败: {e}")
 
-    def remove_all_jobs(self, jobstore: Optional[str] = None) -> bool:
+    def remove_all_jobs(self, jobstore: str | None = None) -> bool:
         """移除所有任务
 
         Args:
@@ -701,7 +701,7 @@ class SchedulerCore(metaclass=SingletonMeta):
             log.error(f"移除任务失败: {e}")
             return False
 
-    def get_jobs(self, jobstore: Optional[str] = None) -> List[Job]:
+    def get_jobs(self, jobstore: str | None = None) -> list[Job]:
         """获取任务列表
 
         Args:
@@ -722,7 +722,7 @@ class SchedulerCore(metaclass=SingletonMeta):
             log.error(f"获取任务列表失败: {e}")
             return []
 
-    def get_job(self, job_id: str, jobstore: Optional[str] = None) -> Optional[Job]:
+    def get_job(self, job_id: str, jobstore: str | None = None) -> Job | None:
         """获取单个任务
 
         Args:
@@ -741,7 +741,7 @@ class SchedulerCore(metaclass=SingletonMeta):
             log.error(f"获取任务 {job_id} 失败: {e}")
             return None
 
-    def remove_job(self, job_id: str, jobstore: Optional[str] = None) -> bool:
+    def remove_job(self, job_id: str, jobstore: str | None = None) -> bool:
         """移除单个任务
 
         Args:
@@ -770,7 +770,7 @@ class SchedulerCore(metaclass=SingletonMeta):
             log.error(f"移除任务 {job_id} 失败: {e}")
             return False
 
-    def pause_job(self, job_id: str, jobstore: Optional[str] = None) -> bool:
+    def pause_job(self, job_id: str, jobstore: str | None = None) -> bool:
         """暂停任务
 
         Args:
@@ -793,7 +793,7 @@ class SchedulerCore(metaclass=SingletonMeta):
             log.error(f"暂停任务 {job_id} 失败: {e}")
             return False
 
-    def resume_job(self, job_id: str, jobstore: Optional[str] = None) -> bool:
+    def resume_job(self, job_id: str, jobstore: str | None = None) -> bool:
         """恢复任务
 
         Args:
@@ -818,7 +818,7 @@ class SchedulerCore(metaclass=SingletonMeta):
             log.error(f"恢复任务 {job_id} 失败: {e}")
             return False
 
-    def modify_job(self, job_id: str, jobstore: Optional[str] = None,
+    def modify_job(self, job_id: str, jobstore: str | None = None,
                    **changes: Any) -> bool:
         """修改任务配置
 
@@ -843,7 +843,7 @@ class SchedulerCore(metaclass=SingletonMeta):
             log.error(f"修改任务 {job_id} 失败: {e}")
             return False
 
-    def reschedule_job(self, job_id: str, jobstore: Optional[str] = None, trigger=None, **trigger_args) -> Optional[Job]:
+    def reschedule_job(self, job_id: str, jobstore: str | None = None, trigger=None, **trigger_args) -> Job | None:
         """重新调度任务
 
         Args:
@@ -1125,7 +1125,7 @@ class SchedulerCore(metaclass=SingletonMeta):
             log.error(f"安排任务 {job_id} 重试失败: {e}")
             return False
 
-    def get_job_statistics(self, job_id: Optional[str] = None) -> Union[Dict[str, Any], Dict[str, Dict[str, Any]]]:
+    def get_job_statistics(self, job_id: str | None = None) -> dict[str, Any] | dict[str, dict[str, Any]]:
         """获取任务执行统计
 
         Args:
@@ -1141,7 +1141,7 @@ class SchedulerCore(metaclass=SingletonMeta):
             else:
                 return {jid: stats.to_dict() for jid, stats in self._job_stats.items()}
 
-    def reset_job_statistics(self, job_id: Optional[str] = None) -> bool:
+    def reset_job_statistics(self, job_id: str | None = None) -> bool:
         """重置任务执行统计
 
         Args:
@@ -1162,7 +1162,7 @@ class SchedulerCore(metaclass=SingletonMeta):
                 log.info("所有任务统计已重置")
                 return True
 
-    def get_service_status(self) -> Dict[str, Any]:
+    def get_service_status(self) -> dict[str, Any]:
         """获取调度器服务状态
 
         Returns:

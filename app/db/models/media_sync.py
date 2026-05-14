@@ -1,9 +1,8 @@
-# coding: utf-8
 """
 媒体同步模型
 包含: 媒体同步项目、媒体同步统计
 """
-from sqlalchemy import Column, Index, Integer, Text, String, Sequence
+from sqlalchemy import Column, Index, Integer, Sequence, String, Text
 
 from app.db.models.base import BaseMedia
 

@@ -5,9 +5,8 @@ import ruamel.yaml
 
 import log
 from app.utils import ExceptionUtils
-from config import Config
-from app.utils.path_utils import get_inner_config_path, get_category_path
 from app.utils.commons import SingletonMeta
+from app.utils.path_utils import get_category_path, get_inner_config_path
 
 
 class Category(metaclass=SingletonMeta):
@@ -33,7 +32,7 @@ class Category(metaclass=SingletonMeta):
                 shutil.copy(os.path.join(get_inner_config_path(), "default-category.yaml"),
                             self._category_path)
                 log.warn(f"【Config】二级分类策略 {category_name} 配置文件不存在，已按模板生成...")
-            with open(self._category_path, mode='r', encoding='utf-8') as f:
+            with open(self._category_path, encoding='utf-8') as f:
                 try:
                     yaml = ruamel.yaml.YAML()
                     self._categorys = yaml.load(f)

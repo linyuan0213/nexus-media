@@ -3,10 +3,11 @@
 测试调度任务的查询、修改、删除、暂停、恢复、立即执行功能
 """
 import datetime
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 from flask import Flask
-from flask_login import LoginManager, AnonymousUserMixin
+from flask_login import AnonymousUserMixin, LoginManager
 
 
 class _MockUser(AnonymousUserMixin):

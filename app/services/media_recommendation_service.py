@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
-from typing import Optional, List
 
-from app.media import MediaService, Bangumi, DouBan
+from app.media import Bangumi, DouBan, MediaService
 from app.mediaserver import MediaServer
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.subscribe_service import SubscribeService as Subscribe
-from app.utils.types import MediaType, MovieTypes
 from app.utils.media_utils import check_media_exists
+from app.utils.types import MediaType, MovieTypes
 from app.utils.web_utils import WebUtils
 
 
@@ -16,18 +14,18 @@ class MediaRecommendationService:
     """
 
     def __init__(self,
-                 media_service: Optional[MediaService] = None,
-                 douban: Optional[DouBan] = None,
-                 bangumi: Optional[Bangumi] = None,
-                 media_server: Optional[MediaServer] = None,
-                 subscribe: Optional[Subscribe] = None):
+                 media_service: MediaService | None = None,
+                 douban: DouBan | None = None,
+                 bangumi: Bangumi | None = None,
+                 media_server: MediaServer | None = None,
+                 subscribe: Subscribe | None = None):
         self._media = media_service or MediaService()
         self._douban = douban or DouBan()
         self._bangumi = bangumi or Bangumi()
         self._media_server = media_server or MediaServer()
         self._subscribe = subscribe or Subscribe()
 
-    def get_recommend_items(self, data: dict) -> List[dict]:
+    def get_recommend_items(self, data: dict) -> list[dict]:
         """
         根据 type/subtype 获取推荐列表
         """
@@ -122,7 +120,7 @@ class MediaRecommendationService:
         return res_list
 
     @staticmethod
-    def _convert_downloaded(Items) -> List[dict]:
+    def _convert_downloaded(Items) -> list[dict]:
         if not Items:
             return []
         return [{

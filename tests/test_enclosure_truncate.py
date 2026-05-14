@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Enclosure 截断单元测试 — 验证磁力链接 tracker 截断
 """

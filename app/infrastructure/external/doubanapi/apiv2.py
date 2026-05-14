@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import base64
 import hashlib
 import hmac
@@ -8,9 +7,9 @@ from urllib import parse
 
 import requests
 
+from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.utils import RequestUtils
 from app.utils.commons import SingletonMeta
-from app.infrastructure.cache_system import lru_cache_with_ttl
 
 
 class DoubanApi(metaclass=SingletonMeta):
@@ -252,14 +251,14 @@ class DoubanApi(metaclass=SingletonMeta):
             "is_follow": false,
             "screenshot_title": "分享海报",
             "playable_count": 1226,
-            "screenshot_url": "douban:\/\/partial.douban.com\/screenshot\/doulist\/13712178\/_content",
+            "screenshot_url": "douban:\\/\\/partial.douban.com\\/screenshot\\/doulist\\/13712178\\/_content",
             "create_time": "2014-10-05 10:41:22",
             "owner": {
                 "kind": "user",
                 "name": "依然饭特稀",
-                "url": "https:\/\/www.douban.com\/people\/56698183\/",
-                "uri": "douban:\/\/douban.com\/user\/56698183",
-                "avatar": "https://img2.doubanio.com\/icon\/up56698183-12.jpg",
+                "url": "https:\\/\\/www.douban.com\\/people\\/56698183\\/",
+                "uri": "douban:\\/\\/douban.com\\/user\\/56698183",
+                "avatar": "https://img2.doubanio.com\\/icon\\/up56698183-12.jpg",
                 "is_club": false,
                 "type": "user",
                 "id": "56698183",
@@ -279,23 +278,23 @@ class DoubanApi(metaclass=SingletonMeta):
             "list_type": "ugc_doulist",
             "tags": [],
             "syncing_note": null,
-            "cover_url": "https://img9.doubanio.com\/view\/elanor_image\/raw\/public\/91314905.jpg",
+            "cover_url": "https://img9.doubanio.com\\/view\\/elanor_image\\/raw\\/public\\/91314905.jpg",
             "header_bg_image": "",
             "doulist_type": "",
             "done_count": 0,
-            "desc": "谢谢大家的关注和点赞，不过我更希望大家能在留言板上补充遗漏。\r\n看腻了豆瓣的评分排序，不如试试评价人数排序。评价人数并不代表作品的优劣，但是它起码说明了作品的存在感。这不一定是选电影最好的方法，却一定是选电影风险最小的方法。\r\n欢迎关注我关于读书的两个豆列： \r\n豆瓣评价人数超过一万的外文书籍 \r\nhttp:\/\/www.douban.com\/doulist\/37912871\/ \r\n豆瓣评价人数超过一万的中文书籍\r\nhttp:\/\/www.douban.com\/doulist\/36708212\/",
+            "desc": "谢谢大家的关注和点赞，不过我更希望大家能在留言板上补充遗漏。\r\n看腻了豆瓣的评分排序，不如试试评价人数排序。评价人数并不代表作品的优劣，但是它起码说明了作品的存在感。这不一定是选电影最好的方法，却一定是选电影风险最小的方法。\r\n欢迎关注我关于读书的两个豆列： \r\n豆瓣评价人数超过一万的外文书籍 \r\nhttp:\\/\\/www.douban.com\\/doulist\\/37912871\\/ \r\n豆瓣评价人数超过一万的中文书籍\r\nhttp:\\/\\/www.douban.com\\/doulist\\/36708212\\/",
             "items_count": 1453,
             "wechat_timeline_share": "url",
-            "url": "https:\/\/www.douban.com\/doulist\/13712178\/",
+            "url": "https:\\/\\/www.douban.com\\/doulist\\/13712178\\/",
             "is_sys_private": false,
-            "uri": "douban:\/\/douban.com\/doulist\/13712178",
-            "sharing_url": "https:\/\/www.douban.com\/doulist\/13712178\/"
+            "uri": "douban:\\/\\/douban.com\\/doulist\\/13712178",
+            "sharing_url": "https:\\/\\/www.douban.com\\/doulist\\/13712178\\/"
         }
         """
         return self.__invoke(self._urls["doulist"] + subject_id)
 
     def doulist_items(self, subject_id, start=0, count=20, ts=datetime.strftime(datetime.now(), '%Y%m%d')):
-        """
+        r"""
         豆列列表
         :param subject_id: 豆列id
         :param start: 开始

@@ -2,14 +2,14 @@
 UserRss Router — FastAPI 迁移
 对应原 web/controllers/userrss.py，复用 app/services/userrss_service.py
 """
-from typing import Optional
 
+import traceback
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_user_rss_service, require_any_permission, require_permission
-from app.utils.response import success, fail
+from api.deps import get_user_rss_service, require_any_permission, require_permission
 from app.services.userrss_service import UserRssService
+from app.utils.response import fail, success
 
 router = APIRouter()
 
@@ -19,39 +19,39 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 class EmptyRequest(BaseModel):
-    data: Optional[dict] = None
+    data: dict | None = None
 
 
 class CheckUserRssTaskRequest(BaseModel):
-    ids: Optional[list] = None
-    flag: Optional[str] = None
+    ids: list | None = None
+    flag: str | None = None
 
 
 class TaskIdRequest(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
 
 
 class RssArticleTestRequest(BaseModel):
-    taskid: Optional[str] = None
-    title: Optional[str] = None
+    taskid: str | None = None
+    title: str | None = None
 
 
 class RssArticlesActionRequest(BaseModel):
-    taskid: Optional[str] = None
-    flag: Optional[str] = None
-    articles: Optional[list] = None
+    taskid: str | None = None
+    flag: str | None = None
+    articles: list | None = None
 
 
 class UpdateRssParserRequest(BaseModel):
-    id: Optional[str] = None
-    name: Optional[str] = None
-    type: Optional[str] = None
-    format: Optional[str] = None
-    params: Optional[str] = None
+    id: str | None = None
+    name: str | None = None
+    type: str | None = None
+    format: str | None = None
+    params: str | None = None
 
 
 class UpdateUserRssTaskRequest(BaseModel):
-    data: Optional[dict] = None
+    data: dict | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -70,8 +70,7 @@ def check_userrss_task(
             flag=req.flag or ""
         )
         return success(msg="")
-    except Exception as e:
-        import traceback
+    except Exception:
         traceback.print_exc()
         return fail(msg="自定义订阅状态设置失败")
 

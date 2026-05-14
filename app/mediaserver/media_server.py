@@ -11,7 +11,7 @@ from app.message import Message
 from app.utils import ExceptionUtils
 from app.utils.commons import SingletonMeta
 from app.utils.task_queue import TaskQueue
-from app.utils.types import MediaServerType, MovieTypes, SystemConfigKey, ProgressKey
+from app.utils.types import MediaServerType, MovieTypes, ProgressKey, SystemConfigKey
 from config import Config
 
 lock = threading.Lock()
@@ -316,9 +316,7 @@ class MediaServer(metaclass=SingletonMeta):
             seasoninfos = json.loads(media.JSON or "[]")
             for seasoninfo in seasoninfos:
                 if seasoninfo.get("season_num") == int(season):
-                    if not episode:
-                        return media.ITEM_ID
-                    elif seasoninfo.get("episode_num") == int(episode):
+                    if not episode or seasoninfo.get("episode_num") == int(episode):
                         return media.ITEM_ID
             return None
         else:
@@ -377,7 +375,7 @@ class MediaServer(metaclass=SingletonMeta):
                 image_url=image_url)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【MediaServer】webhook 异步处理异常")
+            log.error("【MediaServer】webhook 异步处理异常")
 
     def webhook_message_handler(self, message: str, channel: MediaServerType):
         """
@@ -392,7 +390,7 @@ class MediaServer(metaclass=SingletonMeta):
             event_info = self.server.get_webhook_message(message)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【MediaServer】webhook 消息解析异常")
+            log.error("【MediaServer】webhook 消息解析异常")
             return
         if event_info:
             TaskQueue().submit(

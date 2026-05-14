@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Plugin Framework Service
 插件框架 v2 业务服务层
@@ -9,25 +8,24 @@ import shutil
 import sys
 import threading
 import zipfile
-from typing import List, Optional
 
+import log
 from app.db.repositories import PluginFrameworkRepository
 from app.db.repositories.rbac_repo_adapter import (
     RBACMenuRepositoryAdapter,
     RBACRoleRepositoryAdapter,
 )
-from app.domain.entities.plugin import PluginManifestEntity, PluginConfigEntity
-from app.schemas.plugin import PluginManifest
+from app.domain.entities.plugin import PluginConfigEntity, PluginManifestEntity
 from app.plugin_framework.hook_system import HookSystem
 from app.plugin_framework.sandbox import PluginSandbox
+from app.schemas.plugin import PluginManifest
 from config import Config
-import log
 
 
 class PluginFrameworkService:
     """插件框架业务服务"""
 
-    def __init__(self, repo: Optional[PluginFrameworkRepository] = None):
+    def __init__(self, repo: PluginFrameworkRepository | None = None):
         self._repo = repo or PluginFrameworkRepository()
         self._menu_repo = RBACMenuRepositoryAdapter()
         self._role_repo = RBACRoleRepositoryAdapter()
@@ -49,7 +47,7 @@ class PluginFrameworkService:
 
         parent_menu = self._get_plugin_parent_menu()
         if not parent_menu:
-            log.warning(f"[PluginFrameworkService] Plugin 父菜单不存在，跳过菜单同步")
+            log.warning("[PluginFrameworkService] Plugin 父菜单不存在，跳过菜单同步")
             return
 
         new_menu_ids = []
@@ -115,7 +113,7 @@ class PluginFrameworkService:
         if removed:
             log.info(f"[PluginFrameworkService] 共删除 {removed} 个插件菜单")
 
-    def _assign_menus_to_authorized_roles(self, menu_ids: List[int]) -> None:
+    def _assign_menus_to_authorized_roles(self, menu_ids: list[int]) -> None:
         """
         将菜单分配给拥有 Plugin 父菜单权限的角色。
         """
@@ -144,7 +142,7 @@ class PluginFrameworkService:
             self._role_repo.assign_menus_to_role(role.id, list(current_ids))
             log.info(f"[PluginFrameworkService] 为角色 '{role.role_name}' 分配 {len(menu_ids)} 个插件菜单")
 
-    def list_plugins(self) -> List[dict]:
+    def list_plugins(self) -> list[dict]:
         """列出所有已安装插件"""
         # 先扫描内置插件（热新增）
         from app.plugin_framework.registry import PluginRegistry
@@ -189,7 +187,7 @@ class PluginFrameworkService:
                 log.error(f"[PluginFrameworkService] 解析插件清单失败: {e}")
         return plugins
 
-    def get_manifest(self, plugin_id: str) -> Optional[PluginManifest]:
+    def get_manifest(self, plugin_id: str) -> PluginManifest | None:
         """获取插件完整 manifest"""
         orm_model = self._repo.get_manifest_by_id(plugin_id)
         if not orm_model:
@@ -206,7 +204,7 @@ class PluginFrameworkService:
                 pass
         return {}
 
-    def get_config_fields(self, plugin_id: str) -> List[dict]:
+    def get_config_fields(self, plugin_id: str) -> list[dict]:
         """获取插件配置字段定义"""
         manifest = self.get_manifest(plugin_id)
         fields = []
@@ -260,7 +258,7 @@ class PluginFrameworkService:
             shutil.rmtree(extract_dir)
             raise ValueError("插件包缺少 manifest.json")
 
-        with open(manifest_path, 'r', encoding='utf-8') as f:
+        with open(manifest_path, encoding='utf-8') as f:
             manifest_data = json.load(f)
 
         manifest = PluginManifest.from_dict(manifest_data)
@@ -470,10 +468,10 @@ class PluginFrameworkService:
         if not os.path.exists(readme_path):
             return ""
 
-        with open(readme_path, 'r', encoding='utf-8') as f:
+        with open(readme_path, encoding='utf-8') as f:
             return f.read()
 
-    def get_plugin_path(self, plugin_id: str) -> Optional[str]:
+    def get_plugin_path(self, plugin_id: str) -> str | None:
         """获取插件目录路径"""
         orm_model = self._repo.get_manifest_by_id(plugin_id)
         if not orm_model:
@@ -483,6 +481,7 @@ class PluginFrameworkService:
     def run_plugin(self, plugin_id: str) -> None:
         """立即运行插件（临时加载并调用 run 方法）"""
         import importlib.util
+
         from app.plugin_framework.context import PluginContext
 
         orm_model = self._repo.get_manifest_by_id(plugin_id)

@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 搜索领域层测试
 测试 SearchRepositoryAdapter 与 ISearchRepository 接口
 """
 from unittest.mock import MagicMock
-
-import pytest
 
 from app.db.repositories.search_repo_adapter import SearchRepositoryAdapter
 

@@ -1,9 +1,8 @@
-from app.infrastructure.cache_system import lru_cache_with_ttl
-from app.utils import RequestUtils, ExceptionUtils
-from app.utils.types import MediaType
-from config import Config
 from app.core.constants import FANART_MOVIE_API_URL, FANART_TV_API_URL
+from app.infrastructure.cache_system import lru_cache_with_ttl
+from app.utils import ExceptionUtils, RequestUtils
 from app.utils.config_tools import get_proxies
+from app.utils.types import MediaType
 
 
 class Fanart:

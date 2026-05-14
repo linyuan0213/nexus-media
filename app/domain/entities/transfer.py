@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 转移领域实体
 定义TransferHistory/TransferUnknown/TransferBlacklist的领域模型
 """
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Any, Optional
 
 
 @dataclass
@@ -48,7 +47,7 @@ class TransferHistoryEntity:
             date=orm_model.DATE or ""
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "mode": self.mode,
@@ -89,7 +88,7 @@ class TransferUnknownEntity:
             state=orm_model.STATE or ""
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "path": self.path,
@@ -114,7 +113,7 @@ class TransferBlacklistEntity:
             path=orm_model.PATH or ""
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "path": self.path,

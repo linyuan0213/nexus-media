@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 """NexusPhp 架构用户信息解析 — 从 config_html.py 提取"""
-import re
 import json
+import re
 from urllib.parse import urljoin
+
 from lxml import etree
+
 from app.utils import StringUtils
-import log
 
 
 def is_nexusphp(ins):

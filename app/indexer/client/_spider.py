@@ -1,23 +1,21 @@
 import copy
 import datetime
 import re
-from time import sleep
 from urllib.parse import quote
 
+import feapder
+from feapder.utils.tools import urlencode
 from jinja2 import Template
 from pyquery import PyQuery
 
-import feapder
+import log
 from app.helper.drissionpage_helper import DrissionPageHelper
 from app.sites import Sites
-import log
-from app.utils import StringUtils, SystemUtils, RequestUtils
+from app.utils import RequestUtils, StringUtils
+from app.utils.config_tools import get_proxies, get_ua
 from app.utils.exception_utils import ExceptionUtils
 from app.utils.types import MediaType
 from config import Config
-from feapder.utils.tools import urlencode
-from app.utils.config_tools import get_proxies
-from app.utils.config_tools import get_ua
 
 
 class TorrentSpider(feapder.AirSpider):
@@ -145,16 +143,7 @@ class TorrentSpider(feapder.AirSpider):
             torrentspath = paths[0].get('path', '')
         else:
             for path in paths:
-                if path.get("type") == "all" and not self.mtype:
-                    torrentspath = path.get('path')
-                    break
-                elif path.get("type") == "movie" and self.mtype == MediaType.MOVIE:
-                    torrentspath = path.get('path')
-                    break
-                elif path.get("type") == "tv" and self.mtype == MediaType.TV:
-                    torrentspath = path.get('path')
-                    break
-                elif path.get("type") == "anime" and self.mtype == MediaType.ANIME:
+                if path.get("type") == "all" and not self.mtype or path.get("type") == "movie" and self.mtype == MediaType.MOVIE or path.get("type") == "tv" and self.mtype == MediaType.TV or path.get("type") == "anime" and self.mtype == MediaType.ANIME:
                     torrentspath = path.get('path')
                     break
 

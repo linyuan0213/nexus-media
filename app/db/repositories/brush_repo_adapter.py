@@ -1,34 +1,32 @@
-# -*- coding: utf-8 -*-
 """
 刷流领域 Repository 适配器
 """
-from typing import List, Optional
 
-from app.domain.entities.brush import BrushTaskEntity, BrushTorrentEntity
 from app.db.repositories.brush_repository import BrushRepository
+from app.domain.entities.brush import BrushTaskEntity, BrushTorrentEntity
 
 
 class BrushTaskRepositoryAdapter:
-    def __init__(self, repo: Optional[BrushRepository] = None):
+    def __init__(self, repo: BrushRepository | None = None):
         self._repo = repo or BrushRepository()
 
-    def upsert(self, brush_id: Optional[int], item: dict) -> None:
+    def upsert(self, brush_id: int | None, item: dict) -> None:
         self._repo.update_brushtask(brush_id, item)
 
     def delete(self, brush_id: int) -> None:
         self._repo.delete_brushtask(brush_id)
 
-    def get_all(self) -> List[BrushTaskEntity]:
+    def get_all(self) -> list[BrushTaskEntity]:
         rows = self._repo.get_brushtasks()
         if not rows:
             return []
         return [e for e in [BrushTaskEntity.from_orm(r) for r in rows] if e is not None]
 
-    def get_by_id(self, brush_id: int) -> Optional[BrushTaskEntity]:
+    def get_by_id(self, brush_id: int) -> BrushTaskEntity | None:
         row = self._repo.get_brushtasks(brush_id=brush_id)
         return BrushTaskEntity.from_orm(row)
 
-    def update_state(self, state: str, tid: Optional[int] = None) -> None:
+    def update_state(self, state: str, tid: int | None = None) -> None:
         self._repo.update_brushtask_state(state, tid)
 
     def add_download_count(self, brush_id: int) -> None:
@@ -73,14 +71,14 @@ class BrushTaskRepositoryAdapter:
 
 
 class BrushTorrentRepositoryAdapter:
-    def __init__(self, repo: Optional[BrushRepository] = None):
+    def __init__(self, repo: BrushRepository | None = None):
         self._repo = repo or BrushRepository()
 
     def insert(self, task_id: str, torrent_name: str, enclosure: str, torrent_size: str,
                downloader: str, download_id: str) -> None:
         self._repo.insert_brushtask_torrent(task_id, torrent_name, enclosure, downloader, download_id, torrent_size)
 
-    def get_by_task(self, task_id: str) -> List[BrushTorrentEntity]:
+    def get_by_task(self, task_id: str) -> list[BrushTorrentEntity]:
         rows = self._repo.get_brushtask_torrents(task_id)
         if not rows:
             return []

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 DownloadClientFactory - 下载器客户端工厂
 
@@ -11,21 +10,21 @@ DownloadClientFactory - 下载器客户端工厂
 移除 SingletonMeta，改为普通类 + 依赖注入。
 """
 import json
+import os
 from enum import Enum
 from threading import Lock
-from typing import Optional
 
 import log
+from app.core.constants import PT_TAG
 from app.core.module_config import ModuleConf
-from app.core.system_config import SystemConfig
-from app.core.system_config import SystemConfig as SystemConfigClass
+from app.core.system_config import SystemConfig, SystemConfig as SystemConfigClass
 from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
 from app.db.repositories.download_repo_adapter import DownloadSettingRepositoryAdapter
 from app.downloader.client._base import _IDownloadClient
 from app.helper import SubmoduleHelper
+from app.utils import NumberUtils, StringUtils, SystemUtils
 from app.utils.types import DownloaderType, SystemConfigKey
 from config import Config
-from app.core.constants import PT_TAG
 
 client_lock = Lock()
 
@@ -40,7 +39,7 @@ class DownloadClientFactory:
     def __init__(self,
                  config_repo=None,
                  download_repo=None,
-                 systemconfig: Optional[SystemConfigClass] = None):
+                 systemconfig: SystemConfigClass | None = None):
         # 注入领域仓库适配器，不允许注入旧的 ConfigRepository/DownloadRepository
         self._config_repo = config_repo or DownloaderRepositoryAdapter()
         self._download_repo = download_repo or DownloadSettingRepositoryAdapter()
@@ -191,7 +190,7 @@ class DownloadClientFactory:
                 ExceptionUtils.exception_traceback(e)
         return None
 
-    def get_client(self, did=None) -> Optional[_IDownloadClient]:
+    def get_client(self, did=None) -> _IDownloadClient | None:
         """获取（或创建）下载器客户端实例"""
         if not did:
             return None
@@ -362,7 +361,7 @@ class DownloadClientFactory:
             return False
         state = self._build_class(ctype=dtype, conf=config).get_status()
         if not state:
-            log.error(f"【Downloader】下载器连接测试失败")
+            log.error("【Downloader】下载器连接测试失败")
         return state
 
     def get_free_space(self, downloader_id, path: str):
@@ -377,8 +376,6 @@ class DownloadClientFactory:
     @staticmethod
     def get_download_dir_info(media, downloaddir):
         """根据媒体信息读取一个下载目录的信息"""
-        import os
-        from app.utils import NumberUtils, StringUtils, SystemUtils
         if media.type:
             for attr in downloaddir or []:
                 if not attr:

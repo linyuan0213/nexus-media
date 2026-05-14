@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """媒体识别提示词模板"""
 
 MEDIA_RECOGNITION_PROMPT = """你是一个媒体文件名识别助手。请从文件名中提取以下信息并以 JSON 格式返回：

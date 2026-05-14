@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 系统字典领域实体
 """
@@ -13,7 +12,7 @@ class SystemDictEntity:
     type: str
     key: str
     value: str
-    note: Optional[str]
+    note: str | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["SystemDictEntity"]:

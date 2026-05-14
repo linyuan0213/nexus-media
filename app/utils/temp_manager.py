@@ -1,13 +1,14 @@
 import os
-import time
 import shutil
 import threading
-from datetime import datetime, timedelta
-from typing import Optional, List, Callable
+import time
+from collections.abc import Callable
 from contextlib import contextmanager
+from datetime import datetime
 
 import log
 from app.utils.path_utils import get_temp_path
+
 from .exception_utils import ExceptionUtils
 
 
@@ -16,37 +17,37 @@ class TempManager:
     临时文件管理器
     用于统一管理临时文件，支持自动清理、定期清理和上下文管理
     """
-    
+
     _instance = None
     _lock = threading.Lock()
-    
+
     # 默认临时文件保留时间（24小时）
     DEFAULT_MAX_AGE_HOURS = 24
     # 默认清理间隔（6小时）
     DEFAULT_CLEANUP_INTERVAL_HOURS = 6
-    
+
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
-                    cls._instance = super(TempManager, cls).__new__(cls)
+                    cls._instance = super().__new__(cls)
                     cls._instance._initialized = False
         return cls._instance
-    
+
     def __init__(self):
         if self._initialized:
             return
         self._initialized = True
         self._temp_path = get_temp_path()
-        self._cleanup_callbacks: List[Callable] = []
+        self._cleanup_callbacks: list[Callable] = []
         self._ensure_temp_dir()
-    
+
     def _ensure_temp_dir(self):
         """确保临时目录存在"""
         if not os.path.exists(self._temp_path):
             os.makedirs(self._temp_path)
-    
-    def get_temp_path(self, filename: Optional[str] = None) -> str:
+
+    def get_temp_path(self, filename: str | None = None) -> str:
         """
         获取临时文件路径
         :param filename: 文件名，如果为None则返回临时目录路径
@@ -56,7 +57,7 @@ class TempManager:
         if filename:
             return os.path.join(self._temp_path, filename)
         return self._temp_path
-    
+
     def create_temp_file(self, prefix: str = "tmp_", suffix: str = "") -> str:
         """
         创建一个临时文件路径（不实际创建文件）
@@ -67,7 +68,7 @@ class TempManager:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         filename = f"{prefix}{timestamp}{suffix}"
         return self.get_temp_path(filename)
-    
+
     def create_subdir(self, subdir_name: str) -> str:
         """
         创建临时目录下的子目录
@@ -78,7 +79,7 @@ class TempManager:
         if not os.path.exists(subdir_path):
             os.makedirs(subdir_path)
         return subdir_path
-    
+
     def delete_file(self, file_path: str, ignore_errors: bool = True) -> bool:
         """
         删除单个文件
@@ -100,9 +101,9 @@ class TempManager:
                 raise
             log.warn(f"【TempManager】删除失败 {file_path}: {str(e)}")
         return False
-    
-    def cleanup_old_files(self, max_age_hours: Optional[int] = None, 
-                         exclude_patterns: Optional[List[str]] = None) -> int:
+
+    def cleanup_old_files(self, max_age_hours: int | None = None,
+                         exclude_patterns: list[str] | None = None) -> int:
         """
         清理指定时间之前的临时文件
         :param max_age_hours: 最大保留时间（小时），默认24小时
@@ -111,22 +112,22 @@ class TempManager:
         """
         if max_age_hours is None:
             max_age_hours = self.DEFAULT_MAX_AGE_HOURS
-        
+
         if exclude_patterns is None:
             exclude_patterns = []
-        
+
         cutoff_time = time.time() - (max_age_hours * 3600)
         deleted_count = 0
-        
+
         try:
             if not os.path.exists(self._temp_path):
                 return 0
-            
+
             for item in os.listdir(self._temp_path):
                 # 检查排除模式
                 if any(pattern in item for pattern in exclude_patterns):
                     continue
-                
+
                 item_path = os.path.join(self._temp_path, item)
                 try:
                     # 获取文件/目录的修改时间
@@ -136,29 +137,29 @@ class TempManager:
                         deleted_count += 1
                 except Exception as e:
                     log.warn(f"【TempManager】检查 {item} 时出错: {str(e)}")
-            
+
             if deleted_count > 0:
                 log.info(f"【TempManager】已清理 {deleted_count} 个过期临时文件")
-            
+
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-        
+
         # 执行注册的回调函数
         for callback in self._cleanup_callbacks:
             try:
                 callback(max_age_hours, exclude_patterns)
             except Exception as e:
                 log.warn(f"【TempManager】清理回调执行失败: {str(e)}")
-        
+
         return deleted_count
-    
+
     def register_cleanup_callback(self, callback: Callable):
         """
         注册额外的清理回调函数
         :param callback: 回调函数，接收 max_age_hours 和 exclude_patterns 参数
         """
         self._cleanup_callbacks.append(callback)
-    
+
     def get_temp_size(self) -> int:
         """
         获取临时目录总大小（字节）
@@ -167,7 +168,7 @@ class TempManager:
         total_size = 0
         if not os.path.exists(self._temp_path):
             return 0
-        
+
         for dirpath, dirnames, filenames in os.walk(self._temp_path):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
@@ -176,7 +177,7 @@ class TempManager:
                 except:
                     pass
         return total_size
-    
+
     def get_temp_size_human(self) -> str:
         """
         获取临时目录大小（人类可读格式）
@@ -188,8 +189,8 @@ class TempManager:
                 return f"{size_bytes:.2f} {unit}"
             size_bytes /= 1024.0
         return f"{size_bytes:.2f} PB"
-    
-    def clear_all(self, exclude_patterns: Optional[List[str]] = None) -> int:
+
+    def clear_all(self, exclude_patterns: list[str] | None = None) -> int:
         """
         清空所有临时文件（谨慎使用）
         :param exclude_patterns: 排除的文件名模式列表
@@ -197,25 +198,25 @@ class TempManager:
         """
         if exclude_patterns is None:
             exclude_patterns = []
-        
+
         deleted_count = 0
         try:
             if not os.path.exists(self._temp_path):
                 return 0
-            
+
             for item in os.listdir(self._temp_path):
                 if any(pattern in item for pattern in exclude_patterns):
                     continue
-                
+
                 item_path = os.path.join(self._temp_path, item)
                 if self.delete_file(item_path):
                     deleted_count += 1
-            
+
             log.info(f"【TempManager】已清空 {deleted_count} 个临时文件")
-            
+
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-        
+
         return deleted_count
 
 
@@ -224,8 +225,8 @@ temp_manager = TempManager()
 
 
 @contextmanager
-def temp_file_context(filename: Optional[str] = None, 
-                     prefix: str = "tmp_", 
+def temp_file_context(filename: str | None = None,
+                     prefix: str = "tmp_",
                      suffix: str = "",
                      auto_delete: bool = True):
     """
@@ -246,7 +247,7 @@ def temp_file_context(filename: Optional[str] = None,
         file_path = temp_manager.get_temp_path(filename)
     else:
         file_path = temp_manager.create_temp_file(prefix=prefix, suffix=suffix)
-    
+
     try:
         yield file_path
     finally:
@@ -255,7 +256,7 @@ def temp_file_context(filename: Optional[str] = None,
 
 
 @contextmanager
-def temp_dir_context(dir_name: Optional[str] = None,
+def temp_dir_context(dir_name: str | None = None,
                      prefix: str = "tmpdir_",
                      auto_delete: bool = True):
     """
@@ -276,7 +277,7 @@ def temp_dir_context(dir_name: Optional[str] = None,
     else:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         dir_path = temp_manager.create_subdir(f"{prefix}{timestamp}")
-    
+
     try:
         yield dir_path
     finally:

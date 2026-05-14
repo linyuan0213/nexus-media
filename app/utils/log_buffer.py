@@ -1,9 +1,8 @@
 import re
-import time
 import threading
+import time
 from collections import deque
-from html import escape
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any
 
 
 class LogBuffer:
@@ -15,7 +14,7 @@ class LogBuffer:
     _SOURCE_PATTERN = re.compile(r"(?<=【).*?(?=】)")
 
     def __init__(self, maxlen: int = 200):
-        self._queue: deque[Dict[str, Any]] = deque(maxlen=maxlen)
+        self._queue: deque[dict[str, Any]] = deque(maxlen=maxlen)
         self._lock = threading.Lock()
         self._counter = 0
 
@@ -44,7 +43,7 @@ class LogBuffer:
             self._counter += 1
             return self._counter
 
-    def get_logs(self, source: Optional[str] = None, last_counter: int = 0) -> Tuple[List[Dict[str, Any]], int]:
+    def get_logs(self, source: str | None = None, last_counter: int = 0) -> tuple[list[dict[str, Any]], int]:
         """
         获取自 last_counter 以来新增的所有日志。
         返回 (logs, current_counter)。

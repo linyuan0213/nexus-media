@@ -5,10 +5,9 @@ Revises: 8b7846a02c03
 Create Date: 2026-05-05
 
 """
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy import Column, Boolean
-
+from alembic import op
+from sqlalchemy import Boolean, Column
 
 revision = 'add_installed_col'
 down_revision = '8b7846a02c03'

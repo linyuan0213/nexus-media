@@ -7,23 +7,17 @@ import copy
 import datetime
 import hashlib
 import hmac
-import json
-import os
 import secrets
-from typing import Optional, Tuple
+from base64 import b64encode
 
 import jwt
 from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad
 from cryptography.fernet import Fernet
-from base64 import b64encode
-
-import log
-from app.infrastructure.cache_system import TokenCache
-from config import Config
-
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
+
+from app.infrastructure.cache_system import TokenCache
+from config import Config
 
 _pwd_hash = PasswordHash([Argon2Hasher()])
 
@@ -88,7 +82,7 @@ def generate_access_token(username: str, algorithm: str = 'HS256', exp: float = 
     return access_token
 
 
-def decode_auth_token(token: str, algorithms: str = 'HS256') -> Tuple[bool, dict]:
+def decode_auth_token(token: str, algorithms: str = 'HS256') -> tuple[bool, dict]:
     """
     解密token
     :param token:token字符串
@@ -105,7 +99,7 @@ def decode_auth_token(token: str, algorithms: str = 'HS256') -> Tuple[bool, dict
         return True, payload
 
 
-def identify(auth_header: str) -> Tuple[bool, str]:
+def identify(auth_header: str) -> tuple[bool, str]:
     """
     用户鉴权，返回是否有效、用户名
     """
@@ -187,7 +181,7 @@ class TokenManager:
     """
 
     @staticmethod
-    def get(token_key: str) -> Optional[str]:
+    def get(token_key: str) -> str | None:
         """从缓存获取token"""
         return TokenCache.get(token_key)
 

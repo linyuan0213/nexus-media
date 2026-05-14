@@ -1,9 +1,8 @@
-from typing import Optional
 
+from app.media.cache.media_cache import MediaCache
 from app.media.lookup.base import BaseLookup
 from app.media.models import MediaInfo
 from app.media.parser.base import BaseParser
-from app.media.cache.media_cache import MediaCache
 
 
 class BatchProcessor:
@@ -14,7 +13,7 @@ class BatchProcessor:
         self.lookup = lookup
         self.cache = cache
 
-    def process(self, items: list[dict]) -> list[Optional[MediaInfo]]:
+    def process(self, items: list[dict]) -> list[MediaInfo | None]:
         if not items:
             return []
         titles = [i.get("title", "") for i in items]

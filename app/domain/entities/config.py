@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 配置领域实体
 包含消息客户端、下载器、过滤规则、媒体服务器等配置实体
 """
 from dataclasses import dataclass, fields
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 @dataclass
@@ -17,8 +16,8 @@ class MessageClientEntity:
     switchs: str
     interactive: bool
     enabled: bool
-    note: Optional[str]
-    templates: Optional[str]
+    note: str | None
+    templates: str | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["MessageClientEntity"]:
@@ -46,7 +45,7 @@ class MessageClientEntity:
             return getattr(self, field_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -97,7 +96,7 @@ class DownloaderEntity:
             return getattr(self, field_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -116,8 +115,8 @@ class FilterGroupEntity:
     id: int
     name: str
     default: bool
-    create_time: Optional[str]
-    update_time: Optional[str]
+    create_time: str | None
+    update_time: str | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["FilterGroupEntity"]:
@@ -143,7 +142,7 @@ class FilterGroupEntity:
             return getattr(self, field_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -161,10 +160,10 @@ class FilterRuleEntity:
     name: str
     include: str
     exclude: str
-    note: Optional[str]
+    note: str | None
     priority: int
-    create_time: Optional[str]
-    update_time: Optional[str]
+    create_time: str | None
+    update_time: str | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["FilterRuleEntity"]:
@@ -192,7 +191,7 @@ class FilterRuleEntity:
             return getattr(self, field_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "group_id": self.group_id,
@@ -237,7 +236,7 @@ class MediaServerEntity:
             return getattr(self, field_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -278,7 +277,7 @@ class TorrentRemoveTaskEntity:
             return getattr(self, field_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,

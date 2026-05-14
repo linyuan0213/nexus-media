@@ -1,6 +1,8 @@
 """SmallHorse 架构用户信息解析"""
 import re
+
 from lxml import etree
+
 from app.utils import StringUtils
 
 

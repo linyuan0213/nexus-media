@@ -7,8 +7,7 @@ from lxml import etree
 
 from app.agent import QuestionAnswerAgent
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.utils import StringUtils, RequestUtils
-from config import Config
+from app.utils import RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
 from app.utils.path_utils import get_temp_path
 
@@ -62,17 +61,17 @@ class FWpt(_ISiteSigninHandler):
                                  proxies=proxy
                                  ).get_res(url='https://52pt.site/bakatest.php')
         if not index_res or index_res.status_code != 200:
-            self.error(f"签到失败，请检查站点连通性")
+            self.error("签到失败，请检查站点连通性")
             return False, f'【{site}】签到失败，请检查站点连通性'
 
         if "login.php" in index_res.text:
-            self.error(f"签到失败，cookie失效")
+            self.error("签到失败，cookie失效")
             return False, f'【{site}】签到失败，cookie失效'
 
         sign_status = self.sign_in_result(html_res=index_res.text,
                                           regexs=self._sign_regex)
         if sign_status:
-            self.info(f"今日已签到")
+            self.info("今日已签到")
             return True, f'【{site}】今日已签到'
 
         # 没有签到则解析html
@@ -94,13 +93,13 @@ class FWpt(_ISiteSigninHandler):
             question_str = match.group(1)
             self.debug(f"获取到签到问题 {question_str}")
         else:
-            self.error(f"未获取到签到问题")
+            self.error("未获取到签到问题")
             return False, f"【{site}】签到失败，未获取到签到问题"
 
         # 查询已有答案
         exits_answers = {}
         try:
-            with open(self._answer_file, 'r') as f:
+            with open(self._answer_file) as f:
                 json_str = f.read()
             exits_answers = json.loads(json_str)
             # 查询本地本次验证码hash答案
@@ -122,7 +121,7 @@ class FWpt(_ISiteSigninHandler):
                                      ua=ua,
                                      proxy=proxy,
                                      site=site)
-        except (FileNotFoundError, IOError, OSError) as e:
+        except (FileNotFoundError, OSError):
             self.debug("查询本地已知答案失败，继续请求豆瓣查询")
 
         # 正确答案，默认随机，如果AI返回则用AI返回的答案提交
@@ -140,11 +139,11 @@ class FWpt(_ISiteSigninHandler):
 
         # 处理AI返回的答案信息
         if answer is None:
-            self.warn(f"AI未启用, 开始随机签到")
+            self.warn("AI未启用, 开始随机签到")
             # return f"【{site}】签到失败，AI未启用"
         elif answer:
             # 正则获取字符串中的数字
-            answer_nums = list(map(int, re.findall("\d+", answer)))
+            answer_nums = list(map(int, re.findall(r"\d+", answer)))
             if not answer_nums:
                 self.warn(f"无法从AI回复 {answer} 中获取答案, 将采用随机签到")
             else:
@@ -187,7 +186,7 @@ class FWpt(_ISiteSigninHandler):
                                 proxies=proxy
                                 ).post_res(url='https://52pt.site/bakatest.php', data=data)
         if not sign_res or sign_res.status_code != 200:
-            self.error(f"签到失败，签到接口请求失败")
+            self.error("签到失败，签到接口请求失败")
             return False, f'【{site}】签到失败，签到接口请求失败'
 
         # 判断是否签到成功
@@ -205,10 +204,10 @@ class FWpt(_ISiteSigninHandler):
             sign_status = self.sign_in_result(html_res=sign_res.text,
                                               regexs=self._sign_regex)
             if sign_status:
-                self.info(f"今日已签到")
+                self.info("今日已签到")
                 return True, f'【{site}】今日已签到'
 
-            self.error(f"签到失败，请到页面查看")
+            self.error("签到失败，请到页面查看")
             return False, f'【{site}】签到失败，请到页面查看'
 
     def __write_local_answer(self, exits_answers, question, answer):
@@ -221,5 +220,5 @@ class FWpt(_ISiteSigninHandler):
             formatted_data = json.dumps(exits_answers, indent=4)
             with open(self._answer_file, 'w') as f:
                 f.write(formatted_data)
-        except (FileNotFoundError, IOError, OSError) as e:
+        except (FileNotFoundError, OSError):
             self.debug("签到成功写入本地文件失败")

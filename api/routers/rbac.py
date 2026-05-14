@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
-import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -11,7 +8,7 @@ from pydantic import BaseModel
 from api.deps import get_current_user, require_any_permission, require_permission
 from app.schemas.auth import UserContext
 from app.services.rbac_service import rbac_service
-from app.utils.response import success, fail
+from app.utils.response import fail, success
 
 router = APIRouter()
 
@@ -25,96 +22,96 @@ class IdRequest(BaseModel):
 class CreateMenuRequest(BaseModel):
     menu_name: str
     menu_code: str
-    parent_id: Optional[int] = None
-    path: Optional[str] = None
-    icon: Optional[str] = None
-    component: Optional[str] = None
+    parent_id: int | None = None
+    path: str | None = None
+    icon: str | None = None
+    component: str | None = None
     sort_order: int = 0
     menu_level: int = 1
-    permission_code: Optional[str] = None
-    redirect: Optional[str] = None
-    keep_alive: Optional[int] = 0
-    affix_tab: Optional[int] = 0
-    hide_in_menu: Optional[int] = 0
-    hide_in_tab: Optional[int] = 0
-    hide_in_breadcrumb: Optional[int] = 0
-    active_icon: Optional[str] = None
-    badge: Optional[str] = None
-    badge_type: Optional[str] = None
+    permission_code: str | None = None
+    redirect: str | None = None
+    keep_alive: int | None = 0
+    affix_tab: int | None = 0
+    hide_in_menu: int | None = 0
+    hide_in_tab: int | None = 0
+    hide_in_breadcrumb: int | None = 0
+    active_icon: str | None = None
+    badge: str | None = None
+    badge_type: str | None = None
 
 
 class UpdateMenuRequest(BaseModel):
     id: int
-    menu_name: Optional[str] = None
-    menu_code: Optional[str] = None
-    path: Optional[str] = None
-    icon: Optional[str] = None
-    component: Optional[str] = None
-    sort_order: Optional[int] = None
-    parent_id: Optional[int] = None
-    is_hidden: Optional[int] = None
-    status: Optional[int] = None
-    permission_code: Optional[str] = None
-    redirect: Optional[str] = None
-    keep_alive: Optional[int] = None
-    affix_tab: Optional[int] = None
-    hide_in_menu: Optional[int] = None
-    hide_in_tab: Optional[int] = None
-    hide_in_breadcrumb: Optional[int] = None
-    active_icon: Optional[str] = None
-    badge: Optional[str] = None
-    badge_type: Optional[str] = None
+    menu_name: str | None = None
+    menu_code: str | None = None
+    path: str | None = None
+    icon: str | None = None
+    component: str | None = None
+    sort_order: int | None = None
+    parent_id: int | None = None
+    is_hidden: int | None = None
+    status: int | None = None
+    permission_code: str | None = None
+    redirect: str | None = None
+    keep_alive: int | None = None
+    affix_tab: int | None = None
+    hide_in_menu: int | None = None
+    hide_in_tab: int | None = None
+    hide_in_breadcrumb: int | None = None
+    active_icon: str | None = None
+    badge: str | None = None
+    badge_type: str | None = None
 
 
 class MenuOrderItem(BaseModel):
     id: int
     sort_order: int
-    parent_id: Optional[int] = None
+    parent_id: int | None = None
 
 
 class UpdateMenuSortRequest(BaseModel):
-    menu_orders: List[MenuOrderItem] = []
+    menu_orders: list[MenuOrderItem] = []
 
 
 class CreateRoleRequest(BaseModel):
     role_name: str
     role_code: str
-    description: Optional[str] = None
+    description: str | None = None
     role_level: int = 100
-    permission_ids: List[int] = []
-    menu_ids: List[int] = []
+    permission_ids: list[int] = []
+    menu_ids: list[int] = []
 
 
 class UpdateRoleRequest(BaseModel):
     id: int
-    role_name: Optional[str] = None
-    description: Optional[str] = None
-    role_level: Optional[int] = None
-    status: Optional[int] = None
-    permission_ids: Optional[List[int]] = None
-    menu_ids: Optional[List[int]] = None
+    role_name: str | None = None
+    description: str | None = None
+    role_level: int | None = None
+    status: int | None = None
+    permission_ids: list[int] | None = None
+    menu_ids: list[int] | None = None
 
 
 class CreateUserRequest(BaseModel):
     username: str
     password: str
-    email: Optional[str] = None
-    nickname: Optional[str] = None
-    role_ids: List[int] = []
+    email: str | None = None
+    nickname: str | None = None
+    role_ids: list[int] = []
 
 
 class UpdateUserRequest(BaseModel):
     id: int
-    email: Optional[str] = None
-    nickname: Optional[str] = None
-    status: Optional[int] = None
-    avatar: Optional[str] = None
-    role_ids: Optional[List[int]] = None
+    email: str | None = None
+    nickname: str | None = None
+    status: int | None = None
+    avatar: str | None = None
+    role_ids: list[int] | None = None
 
 
 class ResetPasswordRequest(BaseModel):
     new_password: str
-    old_password: Optional[str] = None
+    old_password: str | None = None
 
 
 # ---------- Helpers ----------

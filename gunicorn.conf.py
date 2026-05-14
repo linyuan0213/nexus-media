@@ -2,10 +2,9 @@
 # 使用方式：gunicorn -c gunicorn.conf.py run:app
 
 import os
-import hashlib
-import random
-import ruamel.yaml
 import shutil
+
+import ruamel.yaml
 
 config = os.environ.get('NASTOOL_CONFIG')
 if not config:
@@ -20,13 +19,13 @@ if not os.path.exists(config):
 
 ssl_cert = ''
 ssl_key = ''
-with open(config, 'r') as f:
+with open(config) as f:
     try:
         yaml = ruamel.yaml.YAML()
         cf = yaml.load(f)
         ssl_cert = cf.get('app').get('ssl_cert') if cf.get('app') else None
         ssl_key = cf.get('app').get('ssl_key') if cf.get('app') else None
-    except Exception as e:
+    except Exception:
         print("【Config】config.yaml 异常请删除重新配置...")
 
 ROOT_PATH = os.path.dirname(os.path.abspath(config))

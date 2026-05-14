@@ -1,10 +1,9 @@
-# coding: utf-8
 """
 站点领域实体
 映射 ORM 模型为纯数据结构，与 SQLAlchemy 解耦。
 """
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
+from typing import Any
 
 
 @dataclass
@@ -13,11 +12,11 @@ class SiteEntity:
     id: int = 0
     name: str = ""
     pri: int = 0
-    rss_url: Optional[str] = None
-    sign_url: Optional[str] = None
-    cookie: Optional[str] = None
-    note: Dict[str, Any] = field(default_factory=dict)
-    rss_uses: Optional[str] = None
+    rss_url: str | None = None
+    sign_url: str | None = None
+    cookie: str | None = None
+    note: dict[str, Any] = field(default_factory=dict)
+    rss_uses: str | None = None
 
     @classmethod
     def from_orm(cls, orm_obj) -> "SiteEntity":
@@ -43,7 +42,7 @@ class SiteEntity:
             rss_uses=getattr(orm_obj, "INCLUDE", None),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为兼容现有 Sites() 返回格式的 dict"""
         return {
             "id": self.id,

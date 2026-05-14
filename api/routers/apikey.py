@@ -1,17 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 API Key 管理路由
 提供 API Key 的生成、列表、更新、删除和使用记录查询
 """
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from api.deps import get_current_user, require_permission
+from api.deps import get_current_user
 from app.schemas.auth import UserContext
 from app.services.apikey_service import APIKeyService
-from app.utils.response import success, fail
+from app.utils.response import success
 
 router = APIRouter()
 
@@ -22,14 +20,14 @@ router = APIRouter()
 
 class CreateAPIKeyRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, description="API Key 名称")
-    expires_days: Optional[int] = Field(None, ge=1, le=3650, description="过期天数，null 表示永不过期")
+    expires_days: int | None = Field(None, ge=1, le=3650, description="过期天数，null 表示永不过期")
     description: str = Field("", max_length=1000, description="描述")
 
 
 class UpdateAPIKeyRequest(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    status: Optional[int] = Field(None, ge=0, le=1)
-    description: Optional[str] = Field(None, max_length=1000)
+    name: str | None = Field(None, min_length=1, max_length=255)
+    status: int | None = Field(None, ge=0, le=1)
+    description: str | None = Field(None, max_length=1000)
 
 
 class APIKeyResponse(BaseModel):
@@ -37,13 +35,13 @@ class APIKeyResponse(BaseModel):
     name: str
     key_prefix: str
     status: int
-    expires_at: Optional[str]
-    created_at: Optional[str]
-    updated_at: Optional[str]
-    created_by: Optional[int]
+    expires_at: str | None
+    created_at: str | None
+    updated_at: str | None
+    created_by: int | None
     use_count: int
-    last_used_at: Optional[str]
-    description: Optional[str]
+    last_used_at: str | None
+    description: str | None
     is_expired: bool
     is_active: bool
 
@@ -52,15 +50,15 @@ class APIKeyLogResponse(BaseModel):
     id: int
     api_key_id: int
     request_id: str
-    request_name: Optional[str]
-    source_ip: Optional[str]
-    request_path: Optional[str]
-    request_method: Optional[str]
+    request_name: str | None
+    source_ip: str | None
+    request_path: str | None
+    request_method: str | None
     status: int
-    response_code: Optional[int]
-    error_message: Optional[str]
-    request_at: Optional[str]
-    response_time_ms: Optional[int]
+    response_code: int | None
+    error_message: str | None
+    request_at: str | None
+    response_time_ms: int | None
 
 
 class CreateAPIKeyResponse(BaseModel):
@@ -68,8 +66,8 @@ class CreateAPIKeyResponse(BaseModel):
     name: str
     key: str
     prefix: str
-    expires_at: Optional[str]
-    created_at: Optional[str]
+    expires_at: str | None
+    created_at: str | None
     status: int
 
 

@@ -4,12 +4,11 @@ from datetime import datetime
 import requests
 
 from app.infrastructure.cache_system import lru_cache_with_ttl
-
 from app.utils import RequestUtils
 from app.utils.types import MediaType
 
 
-class Bangumi(object):
+class Bangumi:
     """
     https://bangumi.github.io/api/
     """

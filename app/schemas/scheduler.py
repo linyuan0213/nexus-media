@@ -1,15 +1,16 @@
 """
 调度器相关 DTO
 """
-from typing import Optional, Any, Dict, List
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
 class JobTrigger(BaseModel):
     type: str = "unknown"
-    seconds: Optional[int] = None
-    expression: Optional[str] = None
-    run_date: Optional[str] = None
+    seconds: int | None = None
+    expression: str | None = None
+    run_date: str | None = None
 
 
 class JobStatistics(BaseModel):
@@ -21,14 +22,14 @@ class JobStatistics(BaseModel):
 class SchedulerJob(BaseModel):
     id: str
     name: str
-    next_run_time: Optional[str] = None
+    next_run_time: str | None = None
     trigger: JobTrigger
     trigger_type: str = "unknown"
-    args: List[str] = Field(default_factory=list)
-    kwargs: Dict[str, Any] = Field(default_factory=dict)
+    args: list[str] = Field(default_factory=list)
+    kwargs: dict[str, Any] = Field(default_factory=dict)
     jobstore: str = "default"
     paused: bool = False
-    statistics: Dict[str, Any] = Field(default_factory=dict)
+    statistics: dict[str, Any] = Field(default_factory=dict)
 
 
 class DeleteSchedulerJobRequest(BaseModel):
@@ -42,7 +43,7 @@ class DeleteSchedulerJobResponse(BaseModel):
 
 class GetSchedulerJobsResponse(BaseModel):
     code: int = 0
-    data: List[SchedulerJob] = Field(default_factory=list)
+    data: list[SchedulerJob] = Field(default_factory=list)
 
 
 class PauseSchedulerJobRequest(BaseModel):
@@ -75,11 +76,11 @@ class RunSchedulerJobResponse(BaseModel):
 class UpdateSchedulerJobRequest(BaseModel):
     id: str
     trigger: str = Field(..., pattern="^(interval|cron|date)$")
-    seconds: Optional[int] = None
-    minutes: Optional[int] = None
-    hours: Optional[int] = None
-    cron: Optional[str] = None
-    run_date: Optional[str] = None
+    seconds: int | None = None
+    minutes: int | None = None
+    hours: int | None = None
+    cron: str | None = None
+    run_date: str | None = None
 
 
 class UpdateSchedulerJobResponse(BaseModel):

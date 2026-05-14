@@ -1,9 +1,8 @@
-# coding: utf-8
 """
 自定义识别词模型
 包含: 自定义识别词、自定义识别词分组
 """
-from sqlalchemy import Column, Integer, Text, String, Sequence
+from sqlalchemy import Column, Integer, Sequence, String, Text
 
 from app.db.models.base import Base
 

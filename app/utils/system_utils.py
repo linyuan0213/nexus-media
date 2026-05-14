@@ -86,7 +86,7 @@ class SystemUtils:
         if SystemUtils.is_windows():
             return False
         return True if "synology" in SystemUtils.execute('uname -a') else False
-        
+
     @staticmethod
     def is_windows():
         return True if os.name == "nt" else False

@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 测试图片代理路由
 """
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
 

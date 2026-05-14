@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 HtmlSiteSearcher 单元测试 — 验证 enclosure URL 规范化
 """

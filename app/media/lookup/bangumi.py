@@ -1,4 +1,3 @@
-from typing import Optional
 
 from app.media.external import Bangumi
 from app.media.lookup.base import BaseLookup, LookupResult
@@ -11,7 +10,7 @@ class BangumiLookup(BaseLookup):
     def __init__(self):
         self._bgm = Bangumi()
 
-    def lookup(self, parsed, hint_type: MediaType = None) -> Optional[LookupResult]:
+    def lookup(self, parsed, hint_type: MediaType = None) -> LookupResult | None:
         name = parsed.title_en or parsed.title_cn
         if not name:
             return None
@@ -34,7 +33,7 @@ class BangumiLookup(BaseLookup):
                     return item
         return None
 
-    def _to_lookup_result(self, item) -> Optional[LookupResult]:
+    def _to_lookup_result(self, item) -> LookupResult | None:
         if not item:
             return None
         bid = item.get("id")

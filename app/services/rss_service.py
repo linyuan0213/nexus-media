@@ -1,34 +1,31 @@
 import json
 import time
 import traceback
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any
 
 import jsonpath
 from lxml import etree
 
 import log
-from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.filter_service import FilterService as Filter
-from app.helper import RssHelper
 from app.db.repositories.config_repo_adapter import UserRssConfigRepositoryAdapter
 from app.db.repositories.rss_repo_adapter import RssHistoryRepositoryAdapter
+from app.helper import RssHelper
 from app.media import MediaService, MetaInfo
 from app.message import Message
-from app.services.search_service import Searcher
 from app.schemas.rss import (
     RssAddResultDTO,
     RssDetailResultDTO,
-    RssHistoryResultDTO,
-    RssListResultDTO,
-    RssIcalResultDTO,
 )
-from app.services.subscribe_service import SubscribeService as Subscribe
-from app.utils import RequestUtils, StringUtils, ExceptionUtils
-from app.utils.commons import SingletonMeta
-from app.utils.types import MediaType, SearchType, RssType, MovieTypes
-from config import Config
+from app.services.downloader_core import DownloaderCore as Downloader
+from app.services.filter_service import FilterService as Filter
 from app.services.scheduler_core import SchedulerCore
+from app.services.search_service import Searcher
+from app.services.subscribe_service import SubscribeService as Subscribe
+from app.utils import ExceptionUtils, RequestUtils, StringUtils
+from app.utils.commons import SingletonMeta
 from app.utils.config_tools import get_proxies
+from app.utils.types import MediaType, MovieTypes, RssType, SearchType
+from config import Config
 
 
 class RssSubscriptionService:
@@ -38,9 +35,9 @@ class RssSubscriptionService:
     """
 
     def __init__(self,
-                 subscribe: Optional[Subscribe] = None,
-                 rss: Optional[Any] = None,
-                 rss_checker: Optional[Any] = None):
+                 subscribe: Subscribe | None = None,
+                 rss: Any | None = None,
+                 rss_checker: Any | None = None):
         self._subscribe = subscribe or Subscribe()
         self._rss = rss
         self._rss_checker = rss_checker
@@ -172,7 +169,7 @@ class RssSubscriptionService:
 
         return RssAddResultDTO(code=code, msg=msg, rssid=rssid, media_info=media_info)
 
-    def re_rss_history(self, rssid: str, rtype: str) -> Tuple[int, str]:
+    def re_rss_history(self, rssid: str, rtype: str) -> tuple[int, str]:
         """从历史记录重新订阅"""
         if not self._rss:
             from app.services.rss_core import Rss
@@ -210,7 +207,7 @@ class RssSubscriptionService:
                     mtype=MediaType.TV, title=name, season=season,
                     rssid=rssid, tmdbid=tmdbid)
 
-    def get_rss_detail(self, rid: str, rsstype: str) -> Optional[RssDetailResultDTO]:
+    def get_rss_detail(self, rid: str, rsstype: str) -> RssDetailResultDTO | None:
         """获取订阅详情"""
         if rsstype in MovieTypes:
             rssdetail = self._subscribe.get_subscribe_movies(rid=rid)
@@ -226,7 +223,7 @@ class RssSubscriptionService:
             detail["type"] = "TV"
         return RssDetailResultDTO(detail=detail)
 
-    def get_default_rss_setting(self, mtype: str) -> Optional[dict]:
+    def get_default_rss_setting(self, mtype: str) -> dict | None:
         """获取默认订阅设置"""
         if mtype == "TV":
             return self._subscribe.default_rss_setting_tv
@@ -234,7 +231,7 @@ class RssSubscriptionService:
             return self._subscribe.default_rss_setting_mov
         return {}
 
-    def get_movie_rss_items(self) -> List[dict]:
+    def get_movie_rss_items(self) -> list[dict]:
         """获取电影订阅项目列表"""
         return [
             {"id": movie.get("tmdbid"), "rssid": movie.get("id")}
@@ -242,7 +239,7 @@ class RssSubscriptionService:
             if movie.get("tmdbid")
         ]
 
-    def get_tv_rss_items(self) -> List[dict]:
+    def get_tv_rss_items(self) -> list[dict]:
         """获取电视剧订阅项目列表（含去重）"""
         RssTvItems = [
             {
@@ -274,7 +271,7 @@ class RssSubscriptionService:
     def get_tv_rss_list(self) -> dict:
         return self._subscribe.get_subscribe_tvs()
 
-    def get_rss_history(self, mtype: str) -> List[dict]:
+    def get_rss_history(self, mtype: str) -> list[dict]:
         if not self._rss:
             from app.services.rss_core import Rss
             self._rss = Rss()
@@ -301,7 +298,7 @@ class RssSubscriptionService:
         RssHelper().truncate_rss_history()
         self._subscribe.truncate_rss_episodes()
 
-    def get_ical_events(self) -> List[dict]:
+    def get_ical_events(self) -> list[dict]:
         """获取RSS日历事件"""
         from app.services.media_service import MediaInfoService
         media_service = MediaInfoService()
@@ -326,7 +323,7 @@ class RssParserEngine:
     """RSS 解析引擎：纯逻辑，无状态，负责 XML/JSON 报文解析"""
 
     @staticmethod
-    def parse_items(rss_parser: dict, rss_text: str, address_index: int) -> List[Dict[str, Any]]:
+    def parse_items(rss_parser: dict, rss_text: str, address_index: int) -> list[dict[str, Any]]:
         """
         根据解析器配置解析 RSS 原始文本
         :param rss_parser: 解析器配置字典
@@ -336,7 +333,7 @@ class RssParserEngine:
         """
         parser_type = rss_parser.get("type")
         parser_format = json.loads(rss_parser.get("format") or "{}")
-        rss_result: List[Dict[str, Any]] = []
+        rss_result: list[dict[str, Any]] = []
 
         if parser_type == "XML":
             try:
@@ -407,8 +404,8 @@ class RssTaskService(metaclass=SingletonMeta):
     rsshelper = None
 
     _jobstore = "rsscheck"
-    _rss_tasks: List[Dict[str, Any]] = []
-    _rss_parsers: List[Dict[str, Any]] = []
+    _rss_tasks: list[dict[str, Any]] = []
+    _rss_parsers: list[dict[str, Any]] = []
     _site_users = {
         "D": "下载",
         "R": "订阅",

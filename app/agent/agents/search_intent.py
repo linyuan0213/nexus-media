@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """搜索意图理解 Agent"""
-from typing import Optional
 
-import log
 from pydantic import BaseModel
 
+import log
 from app.agent.prompts.search import SEARCH_INTENT_PROMPT
 from app.agent.service import AgentService
 
@@ -12,13 +10,13 @@ from app.agent.service import AgentService
 class SearchIntent(BaseModel):
     """搜索意图解析结果"""
     keywords: str = ""                  # 核心搜索关键词
-    media_type: Optional[str] = None    # movie / tv / anime
-    year: Optional[int] = None          # 指定年份
-    season: Optional[int] = None        # 指定季
-    episode: Optional[int] = None       # 指定集
-    quality: Optional[str] = None       # 质量要求
-    language: Optional[str] = None      # 语言偏好
-    source: Optional[str] = None        # 来源偏好
+    media_type: str | None = None    # movie / tv / anime
+    year: int | None = None          # 指定年份
+    season: int | None = None        # 指定季
+    episode: int | None = None       # 指定集
+    quality: str | None = None       # 质量要求
+    language: str | None = None      # 语言偏好
+    source: str | None = None        # 来源偏好
     is_specific: bool = False           # 是否明确指定了具体作品
 
 
@@ -32,7 +30,7 @@ class SearchIntentAgent:
     def ready(self) -> bool:
         return self._svc.ready
 
-    def parse(self, query: str) -> Optional[SearchIntent]:
+    def parse(self, query: str) -> SearchIntent | None:
         """解析用户搜索意图"""
         if not self.ready:
             return None

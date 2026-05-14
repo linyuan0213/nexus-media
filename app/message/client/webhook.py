@@ -2,11 +2,11 @@ import json
 from threading import Lock
 
 import requests
-from jinja2 import Environment, BaseLoader, Template
+from jinja2 import BaseLoader, Environment
 
 from app.message.client._base import _IMessageClient
-from app.utils import ExceptionUtils
 from app.message.client_registry import ClientRegistry
+from app.utils import ExceptionUtils
 
 lock = Lock()
 

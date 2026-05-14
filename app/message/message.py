@@ -1,23 +1,23 @@
 import json
 import re
 import time
-from datetime import datetime
 from enum import Enum
 
+from jinja2 import BaseLoader, Environment
+
 import log
-from jinja2 import Environment, BaseLoader
 from app.core.module_config import ModuleConf
 from app.db.repositories import ConfigRepository
 from app.helper.thread_helper import ThreadHelper
+from app.infrastructure.queue import MessageQueueFactory
 from app.message.client_registry import ClientRegistry
 from app.message.message_center import MessageCenter
 from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
-from app.utils import StringUtils, ExceptionUtils
+from app.utils import ExceptionUtils, StringUtils
 from app.utils.commons import SingletonMeta
-from app.infrastructure.queue import MessageQueueFactory
-from app.utils.types import SearchType, MediaType
-from app.utils.web_utils import WebUtils
 from app.utils.config_tools import get_domain
+from app.utils.types import MediaType, SearchType
+from app.utils.web_utils import WebUtils
 
 
 def _filesize_filter(value):
@@ -320,9 +320,9 @@ class Message(metaclass=SingletonMeta):
         """
         client_name = client.get('name', '未知')
         templates = client.get("templates")
-        
+
         log.debug(f"【Message】客户端 {client_name} 模板配置: {templates}")
-        
+
         # 如果 templates 是字符串，尝试解析为 JSON
         if isinstance(templates, str):
             try:
@@ -331,32 +331,32 @@ class Message(metaclass=SingletonMeta):
             except json.JSONDecodeError as e:
                 log.error(f"【Message】客户端 {client_name} 模板配置 JSON 解析失败: {e}")
                 return None, None
-        
+
         if not templates or not isinstance(templates, dict):
             log.debug(f"【Message】客户端 {client_name} 没有模板配置或格式不正确, 类型: {type(templates)}")
             return None, None
-        
+
         template_config = templates.get(msg_type)
         log.debug(f"【Message】客户端 {client_name} 消息类型 {msg_type} 的模板: {template_config}")
-        
+
         if not template_config or not isinstance(template_config, dict):
             log.debug(f"【Message】客户端 {client_name} 没有 {msg_type} 类型的自定义模板，尝试使用默认模板")
             template_config = DEFAULT_MESSAGE_TEMPLATES.get(msg_type)
             if not template_config:
                 log.debug(f"【Message】消息类型 {msg_type} 没有默认模板")
                 return None, None
-        
+
         title_template = template_config.get("title")
         text_template = template_config.get("text")
-        
+
         log.debug(f"【Message】客户端 {client_name} 标题模板: {title_template}")
         log.debug(f"【Message】客户端 {client_name} 内容模板: {text_template}")
-        
+
         rendered_title = self.__render_template(title_template, variables) if title_template else None
         rendered_text = self.__render_template(text_template, variables) if text_template else None
-        
+
         log.info(f"【Message】客户端 {client_name} 模板渲染结果 - 标题: {rendered_title is not None}, 内容: {rendered_text is not None}")
-        
+
         return rendered_title, rendered_text
 
     def get_status(self, ctype=None, config=None):
@@ -566,7 +566,7 @@ class Message(metaclass=SingletonMeta):
                 description_clean = ''
                 if can_item.description:
                     description_clean = re.sub(r'<[^>]+>', '', can_item.description)
-                
+
                 variables = {
                     "item": can_item,
                     "in_from": in_from,

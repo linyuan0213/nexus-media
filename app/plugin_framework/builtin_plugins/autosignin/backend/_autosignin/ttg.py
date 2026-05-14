@@ -1,8 +1,7 @@
 import re
 
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.utils import StringUtils, RequestUtils
-from config import Config
+from app.utils import RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
 
 
@@ -46,11 +45,11 @@ class TTG(_ISiteSigninHandler):
                                 proxies=proxy
                                 ).get_res(url="https://totheglory.im")
         if not html_res or html_res.status_code != 200:
-            self.error(f"签到失败，请检查站点连通性")
+            self.error("签到失败，请检查站点连通性")
             return False, f'【{site}】签到失败，请检查站点连通性'
 
         if "login.php" in html_res.text:
-            self.error(f"签到失败，cookie失效")
+            self.error("签到失败，cookie失效")
             return False, f'【{site}】签到失败，cookie失效'
 
         # 判断是否已签到
@@ -58,7 +57,7 @@ class TTG(_ISiteSigninHandler):
         sign_status = self.sign_in_result(html_res=html_res.text,
                                           regexs=self._sign_regex)
         if sign_status:
-            self.info(f"今日已签到")
+            self.info("今日已签到")
             return True, f'【{site}】今日已签到'
 
         # 获取签到参数
@@ -77,16 +76,16 @@ class TTG(_ISiteSigninHandler):
                                 ).post_res(url="https://totheglory.im/signed.php",
                                            data=data)
         if not sign_res or sign_res.status_code != 200:
-            self.error(f"签到失败，签到接口请求失败")
+            self.error("签到失败，签到接口请求失败")
             return False, f'【{site}】签到失败，签到接口请求失败'
 
         sign_res.encoding = "utf-8"
         if self._success_text in sign_res.text:
-            self.info(f"签到成功")
+            self.info("签到成功")
             return True, f'【{site}】签到成功'
         if self._sign_text in sign_res.text:
-            self.info(f"今日已签到")
+            self.info("今日已签到")
             return True, f'【{site}】今日已签到'
 
-        self.error(f"签到失败，未知原因")
+        self.error("签到失败，未知原因")
         return False, f'【{site}】签到失败，未知原因'

@@ -1,28 +1,26 @@
-# -*- coding: utf-8 -*-
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
 
 
 @dataclass
 class UserRssArticleListDTO:
-    articles: List[dict] = field(default_factory=list)
+    articles: list[dict] = field(default_factory=list)
     count: int = 0
-    uses: Optional[str] = None
+    uses: str | None = None
     address_count: int = 0
 
 
 @dataclass
 class UserRssHistoryDTO:
-    downloads: List[dict] = field(default_factory=list)
+    downloads: list[dict] = field(default_factory=list)
     count: int = 0
 
 
 @dataclass
 class UserRssArticleTestDTO:
-    name: Optional[str] = None
-    match_flag: Optional[bool] = None
-    exist_flag: Optional[bool] = None
-    media_dict: Optional[dict] = None
+    name: str | None = None
+    match_flag: bool | None = None
+    exist_flag: bool | None = None
+    media_dict: dict | None = None
 
 
 @dataclass

@@ -1,10 +1,10 @@
 import json
 import time
 
-from app.db.main_db import SessionManager, get_engine
+from app.db.main_db import SessionManager
 from app.db.models import MEDIASYNCITEMS, MEDIASYNCSTATISTIC
+from app.infrastructure.cache_system import MemoryCacheAdapter, cached
 from app.utils import ExceptionUtils
-from app.infrastructure.cache_system import cached, MemoryCacheAdapter
 
 # 创建媒体DB查询缓存
 _media_db_cache = MemoryCacheAdapter(maxsize=128, name="media_db")
@@ -26,7 +26,6 @@ class MediaDb:
     @staticmethod
     def init_db():
         """初始化数据库（由 MainDb.init_db() 统一创建所有表）"""
-        pass
 
     def _close_session(self, session=None):
         """安全关闭 Session 并清理 scoped_session"""
@@ -45,8 +44,8 @@ class MediaDb:
         try:
             # 删除旧记录
             sess.query(MEDIASYNCITEMS).filter(
-                MEDIASYNCITEMS.SERVER == server_type,
-                MEDIASYNCITEMS.ITEM_ID == iteminfo.get("id")
+                server_type == MEDIASYNCITEMS.SERVER,
+                iteminfo.get("id") == MEDIASYNCITEMS.ITEM_ID
             ).delete()
             # 插入新记录
             new_item = MEDIASYNCITEMS(
@@ -77,9 +76,9 @@ class MediaDb:
         try:
             query = sess.query(MEDIASYNCITEMS)
             if server_type and library:
-                query = query.filter(MEDIASYNCITEMS.SERVER == server_type, MEDIASYNCITEMS.LIBRARY == library)
+                query = query.filter(server_type == MEDIASYNCITEMS.SERVER, library == MEDIASYNCITEMS.LIBRARY)
             elif server_type:
-                query = query.filter(MEDIASYNCITEMS.SERVER == server_type)
+                query = query.filter(server_type == MEDIASYNCITEMS.SERVER)
             query.delete()
             sess.commit()
             return True
@@ -97,7 +96,7 @@ class MediaDb:
         try:
             # 删除旧统计
             sess.query(MEDIASYNCSTATISTIC).filter(
-                MEDIASYNCSTATISTIC.SERVER == server_type
+                server_type == MEDIASYNCSTATISTIC.SERVER
             ).delete()
             # 插入新统计
             new_stat = MEDIASYNCSTATISTIC(
@@ -125,21 +124,21 @@ class MediaDb:
                 return {}
 
             query = sess.query(MEDIASYNCITEMS).filter(
-                MEDIASYNCITEMS.SERVER == server_type
+                server_type == MEDIASYNCITEMS.SERVER
             )
 
             if tmdbid:
-                item = query.filter(MEDIASYNCITEMS.TMDBID == tmdbid).first()
+                item = query.filter(tmdbid == MEDIASYNCITEMS.TMDBID).first()
                 if item:
                     return item
 
             if year:
                 item = query.filter(
-                    MEDIASYNCITEMS.TITLE == title,
-                    MEDIASYNCITEMS.YEAR == year
+                    title == MEDIASYNCITEMS.TITLE,
+                    year == MEDIASYNCITEMS.YEAR
                 ).first()
             else:
-                item = query.filter(MEDIASYNCITEMS.TITLE == title).first()
+                item = query.filter(title == MEDIASYNCITEMS.TITLE).first()
 
             return item if item else {}
         finally:
@@ -151,7 +150,7 @@ class MediaDb:
             if not server_type:
                 return None
             return sess.query(MEDIASYNCSTATISTIC).filter(
-                MEDIASYNCSTATISTIC.SERVER == server_type
+                server_type == MEDIASYNCSTATISTIC.SERVER
             ).first()
         finally:
             self._close_session(sess)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 SyncTimer Plugin v2
 定时对同步目录进行整理

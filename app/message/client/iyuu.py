@@ -1,8 +1,8 @@
 from urllib.parse import urlencode
 
 from app.message.client._base import _IMessageClient
-from app.utils import RequestUtils, ExceptionUtils
 from app.message.client_registry import ClientRegistry
+from app.utils import ExceptionUtils, RequestUtils
 
 
 class IyuuMsg(_IMessageClient):

@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 ConfigService - 配置业务服务层
 
 封装对全局单例 config.Config 的访问，使路由层不再直接引用 Config 单例。
 支持构造函数注入，便于单元测试时替换为 mock。
 """
-from typing import Any, Optional
+from typing import Any
 
 from config import Config
 
@@ -19,14 +18,14 @@ class ConfigService:
     - 测试时可直接传入 mock 实例，无需 monkey-patch 全局单例。
     """
 
-    def __init__(self, config: Optional[Config] = None):
+    def __init__(self, config: Config | None = None):
         self._config = config or Config()
 
     # ------------------------------------------------------------------
     # 读取接口
     # ------------------------------------------------------------------
 
-    def get_config(self, node: Optional[str] = None) -> Any:
+    def get_config(self, node: str | None = None) -> Any:
         """获取完整配置或指定节点配置"""
         return self._config.get_config(node)
 
@@ -47,7 +46,7 @@ class ConfigService:
         from app.utils.path_utils import get_script_path
         return get_script_path()
 
-    def get_proxies(self) -> Optional[dict]:
+    def get_proxies(self) -> dict | None:
         """获取代理配置"""
         from app.utils.config_tools import get_proxies
         return get_proxies()
@@ -57,7 +56,7 @@ class ConfigService:
         from app.utils.config_tools import get_ua
         return get_ua()
 
-    def get_domain(self) -> Optional[str]:
+    def get_domain(self) -> str | None:
         """获取站点域名"""
         from app.utils.config_tools import get_domain
         return get_domain()
@@ -82,7 +81,7 @@ class ConfigService:
         return get_tmdbapi_url()
 
     @property
-    def category_path(self) -> Optional[str]:
+    def category_path(self) -> str | None:
         """获取分类配置文件路径"""
         from app.utils.path_utils import get_category_path
         return get_category_path()
@@ -106,13 +105,13 @@ class ConfigService:
     # ------------------------------------------------------------------
 
     @property
-    def current_user(self) -> Optional[str]:
+    def current_user(self) -> str | None:
         return self._config.current_user
 
     @current_user.setter
     def current_user(self, user: str) -> None:
         self._config.current_user = user
 
-    def init_config(self) -> Optional[bool]:
+    def init_config(self) -> bool | None:
         """重新加载配置（谨慎使用）"""
         return self._config.init_config()

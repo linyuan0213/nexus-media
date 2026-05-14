@@ -2,16 +2,16 @@ import re
 from threading import Lock
 
 import requests
+from slack_bolt import App
+from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.errors import SlackApiError
 
 import log
 from app.message.client._base import _IMessageClient
-from app.utils import ExceptionUtils
-from config import Config
-from slack_bolt import App
-from slack_bolt.adapter.socket_mode import SocketModeHandler
 from app.message.client_registry import ClientRegistry
 from app.services.apikey_service import APIKeyService
+from app.utils import ExceptionUtils
+from config import Config
 
 lock = Lock()
 

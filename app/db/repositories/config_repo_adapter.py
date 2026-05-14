@@ -1,42 +1,40 @@
-# -*- coding: utf-8 -*-
 """
 配置领域 Repository 适配器
 将旧版 ConfigRepository 适配为新领域接口
 """
-from typing import Any, List, Optional
 
+from app.db.repositories.config_repository import ConfigRepository
 from app.domain.entities.config import (
-    MessageClientEntity,
     DownloaderEntity,
     FilterGroupEntity,
     FilterRuleEntity,
     MediaServerEntity,
+    MessageClientEntity,
     TorrentRemoveTaskEntity,
 )
 from app.domain.interfaces.config_repo import (
-    IMessageClientRepository,
     IDownloaderRepository,
     IFilterGroupRepository,
     IFilterRuleRepository,
     IMediaServerRepository,
+    IMessageClientRepository,
     ITorrentRemoveTaskRepository,
 )
-from app.db.repositories.config_repository import ConfigRepository
 
 
 class MessageClientRepositoryAdapter(IMessageClientRepository):
     """消息客户端仓储适配器"""
 
-    def __init__(self, repo: Optional[ConfigRepository] = None):
+    def __init__(self, repo: ConfigRepository | None = None):
         self._repo = repo or ConfigRepository()
 
-    def get_all(self) -> List[MessageClientEntity]:
+    def get_all(self) -> list[MessageClientEntity]:
         rows = self._repo.get_message_client()
         if not rows:
             return []
         return [entity for entity in [MessageClientEntity.from_orm(r) for r in rows] if entity is not None]
 
-    def get_by_id(self, cid: int) -> Optional[MessageClientEntity]:
+    def get_by_id(self, cid: int) -> MessageClientEntity | None:
         rows = self._repo.get_message_client(cid)
         if not rows:
             return None
@@ -60,21 +58,21 @@ class MessageClientRepositoryAdapter(IMessageClientRepository):
 class DownloaderRepositoryAdapter(IDownloaderRepository):
     """下载器仓储适配器"""
 
-    def __init__(self, repo: Optional[ConfigRepository] = None):
+    def __init__(self, repo: ConfigRepository | None = None):
         self._repo = repo or ConfigRepository()
 
-    def get_all(self) -> List[DownloaderEntity]:
+    def get_all(self) -> list[DownloaderEntity]:
         rows = self._repo.get_downloaders()
         if not rows:
             return []
         return [entity for entity in [DownloaderEntity.from_orm(r) for r in rows] if entity is not None]
 
-    def get_by_id(self, did: int) -> Optional[DownloaderEntity]:
+    def get_by_id(self, did: int) -> DownloaderEntity | None:
         rows = self._repo.get_downloaders()
         if not rows:
             return None
         for row in rows:
-            if row.ID == int(did):
+            if int(did) == row.ID:
                 return DownloaderEntity.from_orm(row)
         return None
 
@@ -109,16 +107,16 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
 class FilterGroupRepositoryAdapter(IFilterGroupRepository):
     """过滤规则组仓储适配器"""
 
-    def __init__(self, repo: Optional[ConfigRepository] = None):
+    def __init__(self, repo: ConfigRepository | None = None):
         self._repo = repo or ConfigRepository()
 
-    def get_all(self) -> List[FilterGroupEntity]:
+    def get_all(self) -> list[FilterGroupEntity]:
         rows = self._repo.get_config_filter_group()
         if not rows:
             return []
         return [entity for entity in [FilterGroupEntity.from_orm(r) for r in rows] if entity is not None]
 
-    def get_by_id(self, gid: int) -> Optional[FilterGroupEntity]:
+    def get_by_id(self, gid: int) -> FilterGroupEntity | None:
         rows = self._repo.get_config_filter_group(gid)
         if not rows:
             return None
@@ -152,10 +150,10 @@ class FilterGroupRepositoryAdapter(IFilterGroupRepository):
 class FilterRuleRepositoryAdapter(IFilterRuleRepository):
     """过滤规则仓储适配器"""
 
-    def __init__(self, repo: Optional[ConfigRepository] = None):
+    def __init__(self, repo: ConfigRepository | None = None):
         self._repo = repo or ConfigRepository()
 
-    def get_by_group(self, group_id: int) -> List[FilterRuleEntity]:
+    def get_by_group(self, group_id: int) -> list[FilterRuleEntity]:
         rows = self._repo.get_config_filter_rule(group_id)
         if not rows:
             return []
@@ -191,16 +189,16 @@ class FilterRuleRepositoryAdapter(IFilterRuleRepository):
 class MediaServerRepositoryAdapter(IMediaServerRepository):
     """媒体服务器仓储适配器"""
 
-    def __init__(self, repo: Optional[ConfigRepository] = None):
+    def __init__(self, repo: ConfigRepository | None = None):
         self._repo = repo or ConfigRepository()
 
-    def get_all(self) -> List[MediaServerEntity]:
+    def get_all(self) -> list[MediaServerEntity]:
         rows = self._repo.get_media_servers()
         if not rows:
             return []
         return [entity for entity in [MediaServerEntity.from_orm(r) for r in rows] if entity is not None]
 
-    def get_by_id(self, sid: int) -> Optional[MediaServerEntity]:
+    def get_by_id(self, sid: int) -> MediaServerEntity | None:
         rows = self._repo.get_media_servers(sid)
         if not rows:
             return None
@@ -235,16 +233,16 @@ class MediaServerRepositoryAdapter(IMediaServerRepository):
 class TorrentRemoveTaskRepositoryAdapter(ITorrentRemoveTaskRepository):
     """自动删种任务仓储适配器"""
 
-    def __init__(self, repo: Optional[ConfigRepository] = None):
+    def __init__(self, repo: ConfigRepository | None = None):
         self._repo = repo or ConfigRepository()
 
-    def get_all(self) -> List[TorrentRemoveTaskEntity]:
+    def get_all(self) -> list[TorrentRemoveTaskEntity]:
         rows = self._repo.get_torrent_remove_tasks()
         if not rows:
             return []
         return [entity for entity in [TorrentRemoveTaskEntity.from_orm(r) for r in rows] if entity is not None]
 
-    def get_by_id(self, tid: int) -> Optional[TorrentRemoveTaskEntity]:
+    def get_by_id(self, tid: int) -> TorrentRemoveTaskEntity | None:
         rows = self._repo.get_torrent_remove_tasks(tid)
         if not rows:
             return None
@@ -313,7 +311,7 @@ class UserRssConfigRepositoryAdapter:
 class MediaConfigRepositoryAdapter:
     """媒体库路径配置仓储适配器"""
 
-    def __init__(self, repo: Optional[ConfigRepository] = None):
+    def __init__(self, repo: ConfigRepository | None = None):
         self._repo = repo or ConfigRepository()
 
     def get_media_config(self):

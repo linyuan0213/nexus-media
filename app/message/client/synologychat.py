@@ -1,14 +1,14 @@
 import json
-from urllib.parse import quote
 from threading import Lock
+from urllib.parse import quote
 
 import log
 from app.helper.thread_helper import ThreadHelper
 from app.message.client._base import _IMessageClient
-from app.utils import ExceptionUtils, RequestUtils, StringUtils
-from config import Config
 from app.message.client_registry import ClientRegistry
 from app.services.apikey_service import APIKeyService
+from app.utils import ExceptionUtils, RequestUtils, StringUtils
+from config import Config
 
 lock = Lock()
 
@@ -84,7 +84,7 @@ class SynologyChat(_IMessageClient):
                 if not text:
                     text = "\n".join(titles[1:])
                 else:
-                    text = f"%s\n%s" % ("\n".join(titles[1:]), text)
+                    text = "%s\n%s" % ("\n".join(titles[1:]), text)
             if text:
                 caption = "*%s*\n%s" % (title, text.replace("\n\n", "\n"))
             else:

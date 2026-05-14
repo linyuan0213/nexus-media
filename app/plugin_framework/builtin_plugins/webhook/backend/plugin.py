@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Webhook Plugin v2
 事件发生时向第三方地址发送请求
@@ -46,6 +45,6 @@ class WebhookPlugin:
             elif ret is not None:
                 self.ctx.error(f"Webhook发送失败，状态码：{ret.status_code}，返回信息：{ret.text} {ret.reason}")
             else:
-                self.ctx.error(f"Webhook发送失败，未获取到返回信息")
+                self.ctx.error("Webhook发送失败，未获取到返回信息")
         except Exception as e:
             self.ctx.error(f"Webhook发送异常：{e}")

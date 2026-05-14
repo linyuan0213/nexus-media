@@ -1,10 +1,9 @@
-from email import header
-import xml.dom.minidom
 import re
+import xml.dom.minidom
 from urllib.parse import urlsplit
 
 from app.db.repositories.rss_torrent_repo_adapter import RssTorrentRepositoryAdapter
-from app.utils import RssTitleUtils, StringUtils, RequestUtils, ExceptionUtils, DomUtils
+from app.utils import DomUtils, ExceptionUtils, RequestUtils, RssTitleUtils, StringUtils
 from app.utils.config_tools import get_proxies, get_ua
 
 

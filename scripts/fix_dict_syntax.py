@@ -2,8 +2,8 @@
 """
 修复 data={key=value} 语法错误，改为 data={"key": value}
 """
-import re
 import os
+import re
 
 ROUTERS_DIR = "api/routers"
 
@@ -61,7 +61,7 @@ def main():
         if not fname.endswith('.py'):
             continue
         path = os.path.join(ROUTERS_DIR, fname)
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, encoding='utf-8') as f:
             content = f.read()
         new_content = fix_data_dict(content)
         if new_content != content:

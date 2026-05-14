@@ -1,8 +1,8 @@
 from urllib import parse
 
 from app.message.client._base import _IMessageClient
-from app.utils import RequestUtils, StringUtils, ExceptionUtils
 from app.message.client_registry import ClientRegistry
+from app.utils import ExceptionUtils, RequestUtils, StringUtils
 
 
 class Chanify(_IMessageClient):

@@ -1,13 +1,12 @@
-# -*- coding: utf-8 -*-
-from datetime import datetime
+import json
 import os
 import re
-import json
+from datetime import datetime
 
 from lxml import etree
 
-from app.utils import SystemUtils, JsonUtils
 from app.core.constants import RMT_SUBEXT
+from app.utils import JsonUtils, SystemUtils
 
 
 class SiteHelper:

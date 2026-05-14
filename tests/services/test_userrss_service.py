@@ -1,12 +1,7 @@
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from app.schemas.userrss import (
-    UserRssArticleListDTO,
-    UserRssHistoryDTO,
-    UserRssArticleTestDTO,
-    UserRssTaskUpdateDTO,
-)
+import pytest
+
 from app.services.userrss_service import UserRssService
 
 

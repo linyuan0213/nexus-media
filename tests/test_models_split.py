@@ -1,8 +1,6 @@
-# coding: utf-8
 """
 测试模型拆分后的导入是否正确
 """
-import pytest
 
 
 def test_import_base():
@@ -16,13 +14,8 @@ def test_import_base():
 def test_import_config_models():
     """测试配置相关模型导入"""
     from app.db.models.config import (
-        CONFIGFILTERGROUP,
-        CONFIGFILTERRULES,
-        CONFIGRSSPARSER,
         CONFIGSITE,
-        CONFIGSYNCPATHS,
         CONFIGUSERS,
-        CONFIGUSERRSS,
     )
     assert CONFIGSITE.__tablename__ == 'CONFIG_SITE'
     assert CONFIGUSERS.__tablename__ == 'CONFIG_USERS'
@@ -30,14 +23,14 @@ def test_import_config_models():
 
 def test_import_word_models():
     """测试自定义识别词模型导入"""
-    from app.db.models.word import CUSTOMWORDS, CUSTOMWORDGROUPS
+    from app.db.models.word import CUSTOMWORDGROUPS, CUSTOMWORDS
     assert CUSTOMWORDS.__tablename__ == 'CUSTOM_WORDS'
     assert CUSTOMWORDGROUPS.__tablename__ == 'CUSTOM_WORD_GROUPS'
 
 
 def test_import_download_models():
     """测试下载相关模型导入"""
-    from app.db.models.download import DOWNLOADER, DOWNLOADHISTORY, DOWNLOADSETTING
+    from app.db.models.download import DOWNLOADER, DOWNLOADHISTORY
     assert DOWNLOADER.__tablename__ == 'DOWNLOADER'
     assert DOWNLOADHISTORY.__tablename__ == 'DOWNLOAD_HISTORY'
 
@@ -50,7 +43,7 @@ def test_import_message_models():
 
 def test_import_rss_models():
     """测试RSS相关模型导入"""
-    from app.db.models.rss import RSSHISTORY, RSSMOVIES, RSSTORRENTS, RSSTVS, RSSTVEPISODES
+    from app.db.models.rss import RSSHISTORY, RSSMOVIES, RSSTORRENTS
     assert RSSHISTORY.__tablename__ == 'RSS_HISTORY'
     assert RSSMOVIES.__tablename__ == 'RSS_MOVIES'
     assert RSSTORRENTS.__tablename__ == 'RSS_TORRENTS'
@@ -58,7 +51,7 @@ def test_import_rss_models():
 
 def test_import_brush_models():
     """测试刷流相关模型导入"""
-    from app.db.models.brush import SITEBRUSHTASK, SITEBRUSHTORRENTS
+    from app.db.models.brush import SITEBRUSHTASK
     assert SITEBRUSHTASK.__tablename__ == 'SITE_BRUSH_TASK'
 
 
@@ -66,16 +59,13 @@ def test_import_site_models():
     """测试站点统计模型导入"""
     from app.db.models.site import (
         SITESTATISTICSHISTORY,
-        SITEUSERINFOSTATS,
-        SITEFAVICON,
-        SITEUSERSEEDINGINFO,
     )
     assert SITESTATISTICSHISTORY.__tablename__ == 'SITE_STATISTICS_HISTORY'
 
 
 def test_import_transfer_models():
     """测试转移相关模型导入"""
-    from app.db.models.transfer import TRANSFERBLACKLIST, TRANSFERHISTORY, TRANSFERUNKNOWN
+    from app.db.models.transfer import TRANSFERHISTORY
     assert TRANSFERHISTORY.__tablename__ == 'TRANSFER_HISTORY'
 
 
@@ -87,7 +77,7 @@ def test_import_indexer_models():
 
 def test_import_plugin_models():
     """测试插件历史模型导入"""
-    from app.db.models.plugin import PLUGINHISTORY, TMDBBLACKLIST, TORRENTREMOVETASK, USERRSSTASKHISTORY
+    from app.db.models.plugin import PLUGINHISTORY, TMDBBLACKLIST, TORRENTREMOVETASK
     assert PLUGINHISTORY.__tablename__ == 'PLUGIN_HISTORY'
     assert TMDBBLACKLIST.__tablename__ == 'TMDB_BLACKLIST'
     assert TORRENTREMOVETASK.__tablename__ == 'TORRENT_REMOVE_TASK'
@@ -95,8 +85,8 @@ def test_import_plugin_models():
 
 def test_import_media_sync_models():
     """测试媒体同步模型导入"""
-    from app.db.models.media_sync import MEDIASYNCITEMS, MEDIASYNCSTATISTIC
     from app.db.models.base import BaseMedia
+    from app.db.models.media_sync import MEDIASYNCITEMS
     assert MEDIASYNCITEMS.__tablename__ == 'MEDIASYNC_ITEMS'
     # 验证使用 BaseMedia 基类
     assert MEDIASYNCITEMS.__bases__[0] is BaseMedia
@@ -123,21 +113,9 @@ def test_import_system_models():
 def test_import_from_models_package():
     """测试从 models 包导入所有模型"""
     from app.db.models import (
-        Base, BaseMedia,
-        CONFIGFILTERGROUP, CONFIGSITE,
-        CUSTOMWORDS,
-        DOWNLOADER, DOWNLOADHISTORY,
-        MESSAGECLIENT,
-        RSSHISTORY, RSSMOVIES,
-        SITEBRUSHTASK,
-        SITESTATISTICSHISTORY,
-        TRANSFERHISTORY,
-        INDEXERSTATISTICS,
-        PLUGINHISTORY, TMDBBLACKLIST, TORRENTREMOVETASK,
+        CONFIGSITE,
+        DOWNLOADHISTORY,
         MEDIASYNCITEMS,
-        SEARCHRESULTINFO,
-        SYNCHISTORY,
-        SYSTEMDICT,
     )
     # 验证所有导入的模型都有正确的表名
     assert CONFIGSITE.__tablename__ == 'CONFIG_SITE'
@@ -149,7 +127,6 @@ def test_import_from_compat_layer():
     """测试从兼容层 app/db/models.py 导入"""
     # 这是向后兼容测试，模拟现有的导入方式
     import sys
-    import importlib
 
     # 先移除已缓存的模块，确保重新导入
     modules_to_remove = [k for k in sys.modules.keys() if 'app.db.models' in k]
@@ -158,10 +135,8 @@ def test_import_from_compat_layer():
 
     # 重新从兼容层导入
     from app.db.models import (
-        Base, BaseMedia,
         CONFIGSITE,
         DOWNLOADHISTORY,
-        MEDIASYNCITEMS,
         TMDBBLACKLIST,
         TORRENTREMOVETASK,
     )
@@ -174,12 +149,12 @@ def test_import_from_compat_layer():
 
 def test_as_dict_methods():
     """测试模型的 as_dict 方法存在性"""
-    from app.db.models.download import DOWNLOADHISTORY
-    from app.db.models.rss import RSSHISTORY, RSSMOVIES, RSSTVS
     from app.db.models.brush import SITEBRUSHTORRENTS
-    from app.db.models.transfer import TRANSFERHISTORY
+    from app.db.models.download import DOWNLOADHISTORY
     from app.db.models.indexer import INDEXERSTATISTICS
     from app.db.models.plugin import TMDBBLACKLIST
+    from app.db.models.rss import RSSHISTORY, RSSMOVIES, RSSTVS
+    from app.db.models.transfer import TRANSFERHISTORY
 
     # 验证有 as_dict 方法的模型
     assert hasattr(DOWNLOADHISTORY, 'as_dict')
@@ -214,8 +189,8 @@ def test_model_columns():
 
 def test_model_indexes():
     """测试模型索引定义"""
-    from app.db.models.site import SITESTATISTICSHISTORY
     from app.db.models.rss import RSSTORRENTS
+    from app.db.models.site import SITESTATISTICSHISTORY
     from app.db.models.system import SYSTEMDICT
 
     # 验证复合索引

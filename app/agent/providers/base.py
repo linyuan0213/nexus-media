@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """LLM 提供商抽象基类"""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -12,7 +11,7 @@ class ProviderConfig:
     api_key: str
     api_url: str
     model: str
-    proxy: Optional[str] = None
+    proxy: str | None = None
     timeout: int = 60
 
 
@@ -28,14 +27,12 @@ class BaseProvider(ABC):
 
     @abstractmethod
     def chat(self, messages: list[dict], system_prompt: str = "", temperature: float = 0.7,
-             response_format: Optional[type] = None) -> Any:
+             response_format: type | None = None) -> Any:
         """执行对话请求"""
-        pass
 
     @abstractmethod
     def is_available(self) -> bool:
         """检查提供商是否可用"""
-        pass
 
     def list_models(self) -> list[str]:
         """查询可用模型列表（可选实现）"""

@@ -1,17 +1,16 @@
 import os.path
-from typing import Optional
 
+from app.core.constants import RMT_MEDIAEXT
 from app.media.parser._anime import parse_anime_title
 from app.media.parser._metainfo import _is_anime
 from app.media.parser._video import parse_video_title
 from app.media.parser.base import BaseParser, ParserResult
-from app.core.constants import RMT_MEDIAEXT
 
 
 class RegexParser(BaseParser):
     """基于正则的本地解析器 — 调用纯函数 parse_video_title / parse_anime_title"""
 
-    def parse(self, title: str, subtitle: str = "") -> Optional[ParserResult]:
+    def parse(self, title: str, subtitle: str = "") -> ParserResult | None:
         fileflag = bool(title and os.path.splitext(title)[-1] in RMT_MEDIAEXT)
         if _is_anime(title):
             meta = parse_anime_title(title, subtitle, fileflag)

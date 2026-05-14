@@ -1,20 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 FileTransferService - 文件转移业务 Facade
 将 app/filetransfer.py 重构为依赖注入模式，
 底层实现拆分到 TransferActionEngine 与 TransferCoordinator。
 保留与原 FileTransfer 兼容的公共 API。
 """
-import argparse
 import os
 import random
 import re
 import shutil
-import traceback
 from time import sleep
-from typing import Optional
 
 import log
+from app.core.constants import DEFAULT_MOVIE_FORMAT, DEFAULT_TV_FORMAT, RMT_FAVTYPE, RMT_MEDIAEXT, RMT_MIN_FILESIZE
 from app.core.module_config import ModuleConf
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import (
@@ -29,15 +26,13 @@ from app.domain.interfaces.transfer_repo import (
     ITransferUnknownRepository,
 )
 from app.helper import ProgressHelper, ThreadHelper
-from app.media import MediaService, Category, Scraper, MetaInfo
+from app.media import Category, MediaService, MetaInfo, Scraper
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
-from app.services.transfer_action_engine import TransferActionEngine
-from app.utils import PathUtils, StringUtils, SystemUtils, ExceptionUtils, NumberUtils
-from app.utils.types import EventType, MediaType, MovieTypes, ProgressKey, RmtMode, SyncType
-from app.core.constants import RMT_MEDIAEXT, RMT_FAVTYPE, RMT_MIN_FILESIZE, DEFAULT_MOVIE_FORMAT, \
-    DEFAULT_TV_FORMAT
 from app.services.media_config_service import MediaConfigService
+from app.services.transfer_action_engine import TransferActionEngine
+from app.utils import ExceptionUtils, NumberUtils, PathUtils, StringUtils, SystemUtils
+from app.utils.types import EventType, MediaType, MovieTypes, ProgressKey, RmtMode, SyncType
 from config import Config
 
 
@@ -48,18 +43,18 @@ class FileTransferService:
     """
 
     def __init__(self,
-                 media_service: Optional[MediaService] = None,
-                 message: Optional[Message] = None,
-                 category: Optional[Category] = None,
-                 scraper: Optional[Scraper] = None,
-                 threadhelper: Optional[ThreadHelper] = None,
-                 transfer_repo: Optional[ITransferHistoryRepository] = None,
-                 transfer_blacklist_repo: Optional[ITransferBlacklistRepository] = None,
-                 transfer_unknown_repo: Optional[ITransferUnknownRepository] = None,
-                 download_repo: Optional[IDownloadHistoryRepository] = None,
-                 progress: Optional[ProgressHelper] = None,
-                 eventmanager: Optional[EventManager] = None,
-                 engine: Optional[TransferActionEngine] = None):
+                 media_service: MediaService | None = None,
+                 message: Message | None = None,
+                 category: Category | None = None,
+                 scraper: Scraper | None = None,
+                 threadhelper: ThreadHelper | None = None,
+                 transfer_repo: ITransferHistoryRepository | None = None,
+                 transfer_blacklist_repo: ITransferBlacklistRepository | None = None,
+                 transfer_unknown_repo: ITransferUnknownRepository | None = None,
+                 download_repo: IDownloadHistoryRepository | None = None,
+                 progress: ProgressHelper | None = None,
+                 eventmanager: EventManager | None = None,
+                 engine: TransferActionEngine | None = None):
         self.media = media_service or MediaService()
         self.message = message or Message()
         self.category = category or Category()
@@ -86,8 +81,8 @@ class FileTransferService:
         self._tv_dir_rmt_format = ""
         self._tv_season_rmt_format = ""
         self._tv_file_rmt_format = ""
-        self._ignored_paths: Optional[re.Pattern[str]] = None
-        self._ignored_files: Optional[re.Pattern[str]] = None
+        self._ignored_paths: re.Pattern[str] | None = None
+        self._ignored_files: re.Pattern[str] | None = None
         self._engine = engine or TransferActionEngine()
         self.init_config()
 
@@ -408,7 +403,7 @@ class FileTransferService:
             "season_episode": "%s%s" % (media.get_season_item(), media.get_episode_items()),
             "part": media.part
         }
-        for i in media_format_dict.keys():
+        for i in media_format_dict:
             if not media_format_dict[i]:
                 media_format_dict[i] = '\t'
         return media_format_dict
@@ -930,7 +925,7 @@ class FileTransferService:
                         if transinfo.SEASON_EPISODE:
                             meta_info.begin_season = int(
                                 str(transinfo.SEASON_EPISODE).replace("S", ""))
-                        if transinfo.TYPE == MediaType.MOVIE.value:
+                        if MediaType.MOVIE.value == transinfo.TYPE:
                             meta_info.type = MediaType.MOVIE
                         else:
                             meta_info.type = MediaType.TV

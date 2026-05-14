@@ -3,24 +3,22 @@ FastAPI 依赖注入
 提供当前用户、认证、配置等通用依赖。
 支持 JWT + Session 双轨认证（绞杀期）。
 """
-from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.infrastructure.cache_system import TokenCache
 from app.schemas.auth import UserContext
 from app.services.auth_service import AuthService
-from app.services.rbac_service import rbac_service
 from app.services.config_service import ConfigService
-from app.infrastructure.cache_system import TokenCache
-from app.utils.security import identify, generate_access_token
-from config import Config
+from app.services.rbac_service import rbac_service
+from app.utils.security import generate_access_token, identify
 
 # OAuth2 / Bearer 方案
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-def _extract_user_from_session(request: Request) -> Optional[str]:
+def _extract_user_from_session(request: Request) -> str | None:
     """
     从 Session 中提取当前登录用户。
     """
@@ -40,7 +38,7 @@ def _extract_user_from_session(request: Request) -> Optional[str]:
     return None
 
 
-def _extract_user_from_token(auth_header: Optional[str]) -> Optional[str]:
+def _extract_user_from_token(auth_header: str | None) -> str | None:
     """
     Token 认证（APIv1 ClientResource / Bearer）
     """
@@ -59,8 +57,8 @@ def _extract_user_from_token(auth_header: Optional[str]) -> Optional[str]:
 
 
 def _extract_user_from_api_key(
-    auth_header: Optional[str], query_key: Optional[str]
-) -> Optional[UserContext]:
+    auth_header: str | None, query_key: str | None
+) -> UserContext | None:
     """
     API Key 认证（支持 Header 和 Query 参数）
     使用 APIKeyService 验证 Key 并返回 UserContext
@@ -128,8 +126,8 @@ def _extract_user_from_api_key(
 
 
 def _extract_user_from_jwt(
-    auth_header: Optional[str]
-) -> Optional[UserContext]:
+    auth_header: str | None
+) -> UserContext | None:
     """
     JWT 认证：从 Authorization header 提取并验证 JWT Token
     """
@@ -140,7 +138,7 @@ def _extract_user_from_jwt(
     return AuthService.verify_token(token)
 
 
-def _extract_user_ctx_from_session(request: Request) -> Optional[UserContext]:
+def _extract_user_ctx_from_session(request: Request) -> UserContext | None:
     """
     从 Session 中提取用户上下文（绞杀期兼容）
     """
@@ -180,13 +178,13 @@ def _extract_user_ctx_from_session(request: Request) -> Optional[UserContext]:
 
 def get_current_user(
     request: Request,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> UserContext:
     """
     统一认证依赖：优先 JWT，兼容 Session、旧 Token(Bearer)、API Key。
     返回 UserContext；认证失败时抛出 401。
     """
-    auth_header: Optional[str] = credentials.credentials if credentials else None
+    auth_header: str | None = credentials.credentials if credentials else None
 
     # 1) JWT 认证（新标准）
     user_ctx = _extract_user_from_jwt(auth_header)
@@ -224,8 +222,8 @@ def get_current_user(
 
 def get_current_user_optional(
     request: Request,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
-) -> Optional[UserContext]:
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> UserContext | None:
     """
     可选认证：未登录返回 None，不抛异常。
     """
@@ -293,7 +291,8 @@ def require_all_permissions(*permissions: str):
 # 路由层统一通过 Depends 注入，不再直接引用全局单例。
 # ---------------------------------------------------------------------------
 
-from typing import TypeVar, Callable, Any
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 

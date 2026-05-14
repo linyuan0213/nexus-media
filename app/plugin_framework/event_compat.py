@@ -1,7 +1,7 @@
+import log
 from app.plugin_framework.hook_system import HookSystem
 from app.utils.commons import SingletonMeta
 from app.utils.types import EventType
-import log
 
 
 class EventManager(metaclass=SingletonMeta):
@@ -92,7 +92,7 @@ class EventManager(metaclass=SingletonMeta):
         return decorator
 
 
-class Event(object):
+class Event:
     def __init__(self, event_type=None):
         self.event_type = event_type
         self.event_data = {}

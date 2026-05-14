@@ -1,4 +1,3 @@
-from typing import Optional
 
 try:
     from anitopy import anitopy as _anitopy_parse
@@ -12,7 +11,7 @@ from app.utils.types import MediaType
 class AnitopyAdapter(BaseParser):
     """anitopy 动漫解析适配器"""
 
-    def parse(self, title: str, subtitle: str = "") -> Optional[ParserResult]:
+    def parse(self, title: str, subtitle: str = "") -> ParserResult | None:
         if _anitopy_parse is None:
             return None
         result = _anitopy_parse(title)

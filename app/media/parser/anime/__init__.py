@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 动漫标题解析 — 主入口
 将 MetaAnime 类拆分为纯函数模块
@@ -11,10 +10,16 @@ from app.media.models import MediaInfo
 from app.media.parser.anime.name_parser import clean_name, extract_name, parse_name
 from app.media.parser.anime.prepare import prepare_title
 from app.media.parser.anime.resource_parser import (
-    parse_customization, parse_encode, parse_resource_pix, parse_team,
+    parse_customization,
+    parse_encode,
+    parse_resource_pix,
+    parse_team,
 )
 from app.media.parser.anime.season_episode_parser import (
-    parse_episode, parse_season, parse_type, parse_year,
+    parse_episode,
+    parse_season,
+    parse_type,
+    parse_year,
 )
 from app.utils import ExceptionUtils
 from app.utils.types import MediaType

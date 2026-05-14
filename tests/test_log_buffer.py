@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 测试 LogBuffer 与 LogStreamingService
 """
-import sys
-import os
-import unittest
-import threading
 import json
+import os
+import sys
+import threading
+import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

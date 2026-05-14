@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TorrentRemover Plugin v2
 历史记录中源文件被删除时，同步删除下载器中的下载任务

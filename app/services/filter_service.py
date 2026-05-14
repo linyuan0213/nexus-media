@@ -2,7 +2,6 @@ import base64
 import json
 import os
 import re
-from typing import List, Optional, Tuple
 
 import log
 from app.core.module_config import ModuleConf
@@ -19,7 +18,7 @@ class FilterRuleEngine:
     """
 
     @staticmethod
-    def check_rules(meta_info, rulegroup_info: dict, filters: list) -> Tuple[bool, int, str]:
+    def check_rules(meta_info, rulegroup_info: dict, filters: list) -> tuple[bool, int, str]:
         """
         检查种子是否匹配站点过滤规则：排除规则、包含规则、优先规则
         :param meta_info: 识别的信息
@@ -114,7 +113,7 @@ class FilterRuleEngine:
                              filter_args: dict,
                              rg_matcher: ReleaseGroupsMatcher,
                              uploadvolumefactor=None,
-                             downloadvolumefactor=None) -> Tuple[bool, int, str]:
+                             downloadvolumefactor=None) -> tuple[bool, int, str]:
         """
         对种子进行过滤
         :param meta_info: 名称识别后的MetaBase对象
@@ -223,7 +222,7 @@ class FilterService:
     def __init__(self,
                  filter_group_repo=None,
                  filter_rule_repo=None,
-                 rg_matcher: Optional[ReleaseGroupsMatcher] = None):
+                 rg_matcher: ReleaseGroupsMatcher | None = None):
         self._filter_group_repo = filter_group_repo or FilterGroupRepositoryAdapter()
         self._filter_rule_repo = filter_rule_repo or FilterRuleRepositoryAdapter()
         self._rg_matcher = rg_matcher or ReleaseGroupsMatcher()
@@ -415,7 +414,7 @@ class FilterService:
         """根据名称获取过滤规则组ID"""
         return self._filter_group_repo.get_filter_groupid_by_name(name)
 
-    def import_filter_group(self, content: str) -> Tuple[bool, str]:
+    def import_filter_group(self, content: str) -> tuple[bool, str]:
         """导入规则组（Base64编码的JSON字符串）"""
         try:
             json_str = base64.b64decode(str(content).encode("utf-8")).decode('utf-8')
@@ -461,7 +460,7 @@ class FilterService:
         sql_file = os.path.join(script_path, "init_filter.sql")
         Init_RuleGroups = []
         if os.path.exists(sql_file):
-            with open(sql_file, "r", encoding="utf-8") as f:
+            with open(sql_file, encoding="utf-8") as f:
                 sql_list = f.read().split(';\n')
                 i = 0
                 while i < len(sql_list):
@@ -487,7 +486,7 @@ class FilterService:
                     i = i + 2
         return RuleGroups, Init_RuleGroups
 
-    def share_filter_group(self, gid) -> Tuple[bool, str, str]:
+    def share_filter_group(self, gid) -> tuple[bool, str, str]:
         """分享规则组（返回Base64编码的JSON字符串）"""
         group_info = self.get_filter_group(gid=gid)
         if not group_info:
@@ -513,8 +512,8 @@ class FilterService:
             rule_json).encode("utf-8")).decode('utf-8')
         return True, "", json_string
 
-    def test_rule(self, title: str, subtitle: Optional[str], size: Optional[str],
-                  rulegroup: Optional[str]) -> Tuple[bool, str, int]:
+    def test_rule(self, title: str, subtitle: str | None, size: str | None,
+                  rulegroup: str | None) -> tuple[bool, str, int]:
         """测试规则是否匹配给定标题"""
         meta_info = MetaInfo(title=title, subtitle=subtitle)
         meta_info.size = float(size) * 1024 ** 3 if size else 0

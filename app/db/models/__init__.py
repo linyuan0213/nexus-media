@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 数据库模型模块
 
@@ -6,25 +5,30 @@
 """
 
 # 基础定义
+# API Key 模型
+from app.db.models.apikey import (
+    APIKEY,
+    APIKEYLOG,
+)
 from app.db.models.base import Base, BaseMedia
+
+# 刷流相关模型
+from app.db.models.brush import (
+    SITEBRUSHTASK,
+    SITEBRUSHTORRENTS,
+)
 
 # 配置相关模型
 from app.db.models.config import (
     CONFIGFILTERGROUP,
     CONFIGFILTERRULES,
+    CONFIGMEDIA,
     CONFIGRSSPARSER,
     CONFIGSITE,
     CONFIGSYNCPATHS,
-    CONFIGUSERS,
     CONFIGUSERRSS,
+    CONFIGUSERS,
     MEDIASERVER,
-    CONFIGMEDIA,
-)
-
-# 自定义识别词模型
-from app.db.models.word import (
-    CUSTOMWORDS,
-    CUSTOMWORDGROUPS,
 )
 
 # 下载相关模型
@@ -34,56 +38,9 @@ from app.db.models.download import (
     DOWNLOADSETTING,
 )
 
-# 消息相关模型
-from app.db.models.message import (
-    MESSAGECLIENT,
-)
-
-# RSS相关模型
-from app.db.models.rss import (
-    RSSHISTORY,
-    RSSMOVIES,
-    RSSTORRENTS,
-    RSSTVS,
-    RSSTVEPISODES,
-)
-
-# 刷流相关模型
-from app.db.models.brush import (
-    SITEBRUSHTASK,
-    SITEBRUSHTORRENTS,
-)
-
-# 站点统计模型
-from app.db.models.site import (
-    SITESTATISTICSHISTORY,
-    SITEUSERINFOSTATS,
-    SITEFAVICON,
-    SITEUSERSEEDINGINFO,
-)
-
-# 转移相关模型
-from app.db.models.transfer import (
-    TRANSFERBLACKLIST,
-    TRANSFERHISTORY,
-    TRANSFERUNKNOWN,
-)
-
 # 索引器统计模型
 from app.db.models.indexer import (
     INDEXERSTATISTICS,
-)
-
-# 插件历史和TMDB黑名单模型
-from app.db.models.plugin import (
-    PLUGINHISTORY,
-    TMDBBLACKLIST,
-    TORRENTREMOVETASK,
-    USERRSSTASKHISTORY,
-    PLUGINMANIFEST,
-    PLUGINCONFIG,
-    PLUGINLOGS,
-    PLUGINHOOKS,
 )
 
 # 媒体同步模型
@@ -92,9 +49,53 @@ from app.db.models.media_sync import (
     MEDIASYNCSTATISTIC,
 )
 
+# 消息相关模型
+from app.db.models.message import (
+    MESSAGECLIENT,
+)
+
+# 插件历史和TMDB黑名单模型
+from app.db.models.plugin import (
+    PLUGINCONFIG,
+    PLUGINHISTORY,
+    PLUGINHOOKS,
+    PLUGINLOGS,
+    PLUGINMANIFEST,
+    TMDBBLACKLIST,
+    TORRENTREMOVETASK,
+    USERRSSTASKHISTORY,
+)
+
+# RBAC权限管理模型
+from app.db.models.rbac import (
+    RBACMenu,
+    RBACOperationLog,
+    RBACPermission,
+    RBACRole,
+    RBACUser,
+    RBACUserLoginLog,
+)
+
+# RSS相关模型
+from app.db.models.rss import (
+    RSSHISTORY,
+    RSSMOVIES,
+    RSSTORRENTS,
+    RSSTVEPISODES,
+    RSSTVS,
+)
+
 # 搜索结果模型
 from app.db.models.search import (
     SEARCHRESULTINFO,
+)
+
+# 站点统计模型
+from app.db.models.site import (
+    SITEFAVICON,
+    SITESTATISTICSHISTORY,
+    SITEUSERINFOSTATS,
+    SITEUSERSEEDINGINFO,
 )
 
 # 同步历史模型
@@ -107,20 +108,17 @@ from app.db.models.system import (
     SYSTEMDICT,
 )
 
-# RBAC权限管理模型
-from app.db.models.rbac import (
-    RBACUser,
-    RBACRole,
-    RBACPermission,
-    RBACMenu,
-    RBACUserLoginLog,
-    RBACOperationLog,
+# 转移相关模型
+from app.db.models.transfer import (
+    TRANSFERBLACKLIST,
+    TRANSFERHISTORY,
+    TRANSFERUNKNOWN,
 )
 
-# API Key 模型
-from app.db.models.apikey import (
-    APIKEY,
-    APIKEYLOG,
+# 自定义识别词模型
+from app.db.models.word import (
+    CUSTOMWORDGROUPS,
+    CUSTOMWORDS,
 )
 
 __all__ = [

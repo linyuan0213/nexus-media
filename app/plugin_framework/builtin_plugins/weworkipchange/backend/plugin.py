@@ -1,4 +1,5 @@
 import os
+
 # -*- coding: utf-8 -*-
 """
 WeworkIPChange Plugin v2
@@ -16,13 +17,12 @@ from requests import Response
 
 from app.helper.cookiecloud_helper import CookiecloudHelper
 from app.helper.drissionpage_helper import DrissionPageHelper
+from app.infrastructure.cache_system import get_cache_manager
 from app.plugin_framework.context import PluginContext
 from app.plugin_framework.event_compat import EventHandler
-from app.utils.http_utils import RequestUtils
-from app.infrastructure.cache_system import get_cache_manager
-from app.utils.types import EventType
-from config import Config
 from app.utils.config_tools import get_ua
+from app.utils.http_utils import RequestUtils
+from app.utils.types import EventType
 
 
 class WeworkIPChangePlugin:

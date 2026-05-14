@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 DownloaderCore - 下载器 Facade（兼容旧 Downloader 接口）
 
@@ -9,19 +8,16 @@ DownloaderCore - 下载器 Facade（兼容旧 Downloader 接口）
 
 参考：app/services/search_service.py 中 Searcher 的做法
 """
-from typing import Optional
+from threading import Lock
 
 import log
+from app.core.constants import PT_TAG
 from app.core.module_config import ModuleConf
 from app.downloader.client_factory import DownloadClientFactory
 from app.services.download_core import DownloadCore
 from app.services.filetransfer_service import FileTransferService
-from threading import Lock
-
 from app.services.transfer_coordinator import TransferCoordinator
 from app.utils.types import RmtMode
-from app.core.constants import PT_TAG
-
 
 lock = Lock()
 
@@ -35,10 +31,10 @@ class DownloaderCore:
     """
 
     def __init__(self,
-                 client_factory: Optional[DownloadClientFactory] = None,
-                 download_core: Optional[DownloadCore] = None,
-                 transfer_coordinator: Optional[TransferCoordinator] = None,
-                 filetransfer: Optional[FileTransferService] = None):
+                 client_factory: DownloadClientFactory | None = None,
+                 download_core: DownloadCore | None = None,
+                 transfer_coordinator: TransferCoordinator | None = None,
+                 filetransfer: FileTransferService | None = None):
         self._client_factory = client_factory or DownloadClientFactory()
         self._download_core = download_core or DownloadCore(client_factory=self._client_factory)
         self._filetransfer = filetransfer or FileTransferService()
@@ -114,7 +110,7 @@ class DownloaderCore:
 
     # ---------- 转移 ----------
 
-    def transfer(self, downloader_id: Optional[str] = None):
+    def transfer(self, downloader_id: str | None = None):
         """
         转移下载完成的文件，进行文件识别重命名到媒体库目录
         """

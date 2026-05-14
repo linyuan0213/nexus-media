@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -18,27 +17,27 @@ class MediaInfoResultDTO:
     link_url: str = ""
     tmdbid: Any = None
     rssid: Any = None
-    seasons: Optional[List[dict]] = None
+    seasons: list[dict] | None = None
 
 
 @dataclass
 class SeasonEpisodesResultDTO:
     """剧集查询结果"""
-    episodes: Optional[List[dict]] = None
+    episodes: list[dict] | None = None
 
 
 @dataclass
 class MediaSearchResultDTO:
     """搜索结果分组结果"""
     total: int = 0
-    result: Optional[dict] = None
+    result: dict | None = None
 
 
 @dataclass
 class TransferHistoryPageDTO:
     """转移历史分页结果"""
     total: int = 0
-    result: Optional[List[dict]] = None
+    result: list[dict] | None = None
     total_page: int = 0
     page_num: int = 30
     current_page: int = 1
@@ -48,7 +47,7 @@ class TransferHistoryPageDTO:
 class UnknownListPageDTO:
     """未识别记录分页结果"""
     total: int = 0
-    items: Optional[List[dict]] = None
+    items: list[dict] | None = None
     total_page: int = 0
     page_num: int = 30
     current_page: int = 1

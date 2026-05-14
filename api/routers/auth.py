@@ -1,15 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 JWT 认证路由
 提供登录、刷新 Token、登出、获取当前用户信息
 """
-from fastapi import APIRouter, Response, Request, HTTPException, status, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.schemas.auth import TokenPair, UserContext, LoginResponse
+from api.deps import get_current_user
+from app.schemas.auth import LoginResponse, UserContext
 from app.services.auth_service import AuthService
 from app.services.rbac_service import rbac_service
-from api.deps import get_current_user, get_current_user_optional
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 

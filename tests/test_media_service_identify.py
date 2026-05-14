@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 MediaService.identify 单元测试 — 验证缓存、strict、language 参数
 """
 import sys
-import types
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -16,7 +14,7 @@ from app.media.lookup.tmdb_lookup import TmdbLookup
 from app.media.models import MediaInfo
 from app.media.parser.base import ParserResult
 from app.media.service import MediaService
-from app.utils.types import MediaType, MatchMode
+from app.utils.types import MatchMode, MediaType
 
 
 class TestMediaServiceIdentify:

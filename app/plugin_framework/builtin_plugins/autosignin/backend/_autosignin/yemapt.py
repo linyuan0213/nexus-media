@@ -1,8 +1,6 @@
-from time import sleep
 from app.helper.drissionpage_helper import DrissionPageHelper
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.utils import StringUtils, RequestUtils
-from config import Config
+from app.utils import RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
 
 
@@ -56,7 +54,7 @@ class YemaPT(_ISiteSigninHandler):
                 if html_text and "已签到" in html_text:
                     self.info("今日已签到")
                     return True, f'【{site}】今日已签到'
-            
+
                 html_text = chrome.get_page_html(url="https://www.yemapt.org/#/consumer/checkIn",
                                     cookies=site_cookie,
                                     click_xpath='xpath://span[@class="ant-statistic-content-suffix"]',

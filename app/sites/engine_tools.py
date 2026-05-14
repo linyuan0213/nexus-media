@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 """引擎内部工具 — 从 engine.py 拆分"""
 import json
 import re
 
 from lxml import etree
+
 from app.utils import RequestUtils
 from app.utils.config_tools import get_proxies
 
@@ -86,7 +86,10 @@ def _call_endpoint(engine, cfg, site, user_config, template_vars,
         res = RequestUtils(headers=headers, proxies=proxy, timeout=15).get_res(url=url, params=params)
 
     if res and res.status_code == 200:
-        return res.json()
+        try:
+            return res.json()
+        except Exception:
+            return None
     return None
 
 
@@ -152,7 +155,10 @@ def _fetch_passkey(engine, site, user_config):
         res = RequestUtils(headers=headers, cookies=cookie if cookie else None,
                            proxies=proxy, timeout=15).post_res(url=url)
     if res and res.status_code == 200:
-        data = res.json()
+        try:
+            data = res.json()
+        except Exception:
+            return None
         keys = response_key.split(".")
         val = data
         for k in keys:

@@ -1,4 +1,3 @@
-from typing import Optional
 
 from app.agent.agents.media_recognizer import MediaRecognizer
 from app.media.parser.base import BaseParser, ParserResult
@@ -15,17 +14,17 @@ class LLMParser(BaseParser):
     def ready(self) -> bool:
         return self._recognizer.ready
 
-    def parse(self, title: str, subtitle: str = "") -> Optional[ParserResult]:
+    def parse(self, title: str, subtitle: str = "") -> ParserResult | None:
         result = self._recognizer.recognize(title)
         if not result:
             return None
         return self._convert(result)
 
-    def parse_batch(self, titles: list[str]) -> list[Optional[ParserResult]]:
+    def parse_batch(self, titles: list[str]) -> list[ParserResult | None]:
         results = self._recognizer.recognize_batch(titles)
         return [self._convert(r) for r in results]
 
-    def _convert(self, result) -> Optional[ParserResult]:
+    def _convert(self, result) -> ParserResult | None:
         if not result:
             return None
         return ParserResult(
@@ -45,7 +44,7 @@ class LLMParser(BaseParser):
         )
 
     @staticmethod
-    def _map_type(type_str: Optional[str]) -> Optional[MediaType]:
+    def _map_type(type_str: str | None) -> MediaType | None:
         if type_str == "anime":
             return MediaType.ANIME
         if type_str == "tv":

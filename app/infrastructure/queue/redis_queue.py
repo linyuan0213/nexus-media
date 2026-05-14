@@ -1,16 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Redis Stream 消息队列 — 可靠投递，支持 ACK 和幂等去重
 """
-import json
+from __future__ import annotations
+
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Callable, Optional
 
 import log
-
 from app.infrastructure.queue.base import MessageQueue
 from app.utils.redis_store import RedisStore
 
@@ -30,8 +29,8 @@ class RedisMessageQueue(MessageQueue):
         self._executor = ThreadPoolExecutor(max_workers=max_workers,
                                             thread_name_prefix="RedisMQ")
         self._shutdown = False
-        self._dispatcher: Optional[threading.Thread] = None
-        self._handler: Optional[Callable] = None
+        self._dispatcher: threading.Thread | None = None
+        self._handler: Callable | None = None
 
         if self._available:
             self._init_stream()

@@ -1,9 +1,8 @@
-# coding: utf-8
 """
 RSS相关模型
 包含: RSS历史、RSS电影、RSS种子、RSS剧集、RSS剧集分集
 """
-from sqlalchemy import Column, Index, Integer, Text, String, Sequence
+from sqlalchemy import Column, Index, Integer, Sequence, String, Text
 
 from app.db.models.base import Base
 

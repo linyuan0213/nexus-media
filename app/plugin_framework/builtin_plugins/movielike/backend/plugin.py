@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 MovieLike Plugin v2
 媒体服务器中用户将电影设为最爱时，自动转移到精选文件夹
@@ -10,9 +9,8 @@ from app.mediaserver import MediaServer
 from app.plugin_framework.context import PluginContext
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.utils import SystemUtils
-from app.utils.types import MediaServerType, MediaType
-from config import Config
 from app.utils.config_tools import update_favtype
+from app.utils.types import MediaServerType, MediaType
 
 
 class MovieLikePlugin:

@@ -1,7 +1,6 @@
 import log
-from app.indexer.core.models import SearchCandidate
-from app.media import MediaService
 from app.infrastructure.cache_system import get_cache_manager
+from app.media import MediaService
 
 
 class BatchIdentifier:

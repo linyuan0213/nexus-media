@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
 import os
-from typing import Tuple
 
 from app.core.system_config import SystemConfig
 from app.helper import ThreadHelper
@@ -19,9 +17,10 @@ class MediaFileService:
     def __init__(self):
         pass
 
-    def get_dir_list(self, in_dir: str) -> Tuple[bool, list, str]:
+    def get_dir_list(self, in_dir: str) -> tuple[bool, list, str]:
         """获取目录列表"""
         import os
+
         from app.utils import SystemUtils
         from app.utils.types import OsType
 
@@ -53,14 +52,14 @@ class MediaFileService:
                         st = os.stat(ff)
                         item["mtime"] = st.st_mtime
                         item["ctime"] = st.st_ctime
-                    except (OSError, IOError):
+                    except OSError:
                         item["mtime"] = None
                         item["ctime"] = None
                     if not is_dir:
                         item["ext"] = os.path.splitext(f)[1][1:]
                         try:
                             item["size"] = os.path.getsize(ff)
-                        except (OSError, IOError):
+                        except OSError:
                             item["size"] = None
                     result.append(item)
         except Exception as e:
@@ -70,7 +69,7 @@ class MediaFileService:
     def get_library_paths(self, media: dict, sync_svc, downloader_svc=None) -> dict:
         """获取媒体库目录 + 同步源目录"""
         import os
-        from app.db.models import CONFIGSYNCPATHS
+
 
         seen = set()
 
@@ -135,7 +134,7 @@ class MediaFileService:
             "default_path": default_path,
         }
 
-    def download_subtitle(self, path: str, name: str) -> Tuple[bool, str]:
+    def download_subtitle(self, path: str, name: str) -> tuple[bool, str]:
         """下载字幕"""
         media = MediaService().get_media_info(title=name)
         if not media or not media.tmdb_info:
@@ -157,7 +156,7 @@ class MediaFileService:
         ThreadHelper().start_thread(Scraper().folder_scraper, (path, None, 'force_all'))
         return "刮削任务已提交，正在后台运行。"
 
-    def get_category_config(self, category_name: str) -> Tuple[bool, str]:
+    def get_category_config(self, category_name: str) -> tuple[bool, str]:
         """获取二级分类配置"""
         if not category_name:
             return False, "请输入二级分类策略名称"
@@ -166,7 +165,7 @@ class MediaFileService:
         category_path = os.path.join(Config().config_path, f"{category_name}.yaml")
         if not os.path.exists(category_path):
             return False, "请保存生成配置文件"
-        with open(category_path, "r", encoding="utf-8") as f:
+        with open(category_path, encoding="utf-8") as f:
             return True, f.read()
 
     def update_category_config(self, text: str) -> str:

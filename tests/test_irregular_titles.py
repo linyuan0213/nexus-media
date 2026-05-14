@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 影视标题解析器 — 不规则标题格式全面测试
 
@@ -15,15 +14,17 @@
 """
 import sys
 from unittest.mock import MagicMock
+
 sys.modules['log'] = MagicMock()
 
 import os
+
 os.environ['NASTOOL_CONFIG'] = '/home/linyuan/python/config/config.yaml'
 
 import pytest
+
 from app.media.parser.video import parse_video_title
 from app.utils.types import MediaType
-
 
 # ============ 测试数据 ============
 

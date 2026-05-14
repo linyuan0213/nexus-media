@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """app.media.scraper — 媒体元数据刮削模块
 
 重构后架构:
@@ -11,21 +10,21 @@
 import os
 
 import log
-from app.core.system_config import SystemConfig
 from app.core.module_config import ModuleConf
+from app.core.system_config import SystemConfig
 from app.helper import FfmpegHelper
-from app.media.external import DouBan
-from app.media.parser._metainfo import MetaInfo
 from app.helper.image_proxy_helper import ImageProxyHelper
-from app.utils import ExceptionUtils
-from app.utils.types import MediaType, SystemConfigKey
-from app.utils.temp_manager import temp_manager
+from app.media.external import DouBan
 from app.media.factory import get_media_service
+from app.media.parser._metainfo import MetaInfo
+from app.utils import ExceptionUtils
+from app.utils.temp_manager import temp_manager
+from app.utils.types import MediaType, SystemConfigKey
 
+from .chinese_credits import ChineseCredits
 from .image_downloader import ImageDownloader
 from .media_library import MediaLibrary
 from .nfo_generator import NfoGenerator
-from .chinese_credits import ChineseCredits
 
 
 class Scraper:

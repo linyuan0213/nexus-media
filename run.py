@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 NAS-Tools 启动入口 — FastAPI
 已移除 Flask 依赖，统一使用 FastAPI
@@ -7,14 +6,16 @@ NAS-Tools 启动入口 — FastAPI
 import os
 import signal
 import warnings
+import uvicorn
 
-from config_monitor import stop_config_monitor, start_config_monitor
+from config_monitor import stop_config_monitor
 
 warnings.filterwarnings('ignore')
 
-from config import Config
 import log
+from api.main import app
 from app.services.system_service import SystemLifecycleService
+from config import Config
 
 
 def signal_handler(num, stack):
@@ -76,12 +77,6 @@ def main():
     config = get_run_config()
     log.console(f"监听地址：{config['host']}:{config['port']}")
 
-    # 导入 FastAPI app（延迟导入，确保初始化完成）
-    from api.main import app as fastapi_app
-
-    # 启动 uvicorn
-    import uvicorn
-
     ssl_kwargs = {}
     if config['ssl_cert'] and config['ssl_key']:
         ssl_kwargs['ssl_certfile'] = config['ssl_cert']
@@ -89,7 +84,7 @@ def main():
         log.console("SSL 已启用")
 
     uvicorn.run(
-        fastapi_app,
+        app,
         host=config['host'],
         port=config['port'],
         log_level="info" if config['debug'] else "warning",
@@ -98,10 +93,5 @@ def main():
     )
 
 
-# 导出 app 供 gunicorn 使用
-app = None
-
 if __name__ == '__main__':
     main()
-else:
-    from api.main import app

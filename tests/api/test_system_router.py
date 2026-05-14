@@ -3,10 +3,8 @@
 """
 from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
-from api.main import app
 from api.deps import (
     get_backup_restore_service,
     get_config_update_service,
@@ -23,6 +21,7 @@ from api.deps import (
     get_version_service,
     get_web_search_service,
 )
+from api.main import app
 
 # 绕过认证
 app.dependency_overrides[get_current_user] = lambda: "testuser"

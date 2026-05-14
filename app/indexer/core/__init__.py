@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 索引器核心流水线模块
 
@@ -13,10 +12,10 @@
     results = pipeline.process(raw_results, ...)
 """
 
-from .pipeline import SearchPipeline
 from .batch_identifier import BatchIdentifier
-from .result_filter import ResultFilter
 from .models import SearchCandidate
+from .pipeline import SearchPipeline
+from .result_filter import ResultFilter
 
 __all__ = [
     "SearchPipeline",

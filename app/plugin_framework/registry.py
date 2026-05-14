@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Plugin Registry - 插件注册表
 管理插件的扫描、安装、卸载、启用/禁用
@@ -7,14 +6,13 @@ import json
 import os
 import shutil
 import zipfile
-from typing import Dict, List, Optional
 
+import log
 from app.db.repositories import PluginFrameworkRepository
-from app.domain.entities.plugin import PluginManifestEntity, PluginConfigEntity
+from app.domain.entities.plugin import PluginConfigEntity, PluginManifestEntity
 from app.schemas.plugin import PluginManifest, PluginState
 from app.utils.commons import SingletonMeta
 from config import Config
-import log
 
 
 class PluginRegistry(metaclass=SingletonMeta):
@@ -28,8 +26,8 @@ class PluginRegistry(metaclass=SingletonMeta):
         self._builtin_dir = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), 'builtin_plugins'
         )
-        self._manifest_cache: Dict[str, PluginManifest] = {}
-        self._state_cache: Dict[str, PluginState] = {}
+        self._manifest_cache: dict[str, PluginManifest] = {}
+        self._state_cache: dict[str, PluginState] = {}
         self._load_all()
         self._scan_builtin_plugins()
 
@@ -53,7 +51,7 @@ class PluginRegistry(metaclass=SingletonMeta):
         except Exception as e:
             log.warn(f"[PluginRegistry] 加载插件清单表失败（可能表尚未创建）: {e}")
 
-    def scan(self) -> List[PluginManifest]:
+    def scan(self) -> list[PluginManifest]:
         """扫描 plugins 目录，返回所有已安装插件的清单"""
         if not self._manifest_cache:
             self._load_all()
@@ -61,11 +59,11 @@ class PluginRegistry(metaclass=SingletonMeta):
         self._scan_builtin_plugins()
         return list(self._manifest_cache.values())
 
-    def get(self, plugin_id: str) -> Optional[PluginManifest]:
+    def get(self, plugin_id: str) -> PluginManifest | None:
         """获取指定插件的清单"""
         return self._manifest_cache.get(plugin_id)
 
-    def get_state(self, plugin_id: str) -> Optional[PluginState]:
+    def get_state(self, plugin_id: str) -> PluginState | None:
         """获取插件状态"""
         return self._state_cache.get(plugin_id)
 
@@ -87,7 +85,7 @@ class PluginRegistry(metaclass=SingletonMeta):
             shutil.rmtree(extract_dir)
             raise ValueError("插件包缺少 manifest.json")
 
-        with open(manifest_path, 'r', encoding='utf-8') as f:
+        with open(manifest_path, encoding='utf-8') as f:
             manifest_data = json.load(f)
 
         manifest = PluginManifest.from_dict(manifest_data)
@@ -195,7 +193,7 @@ class PluginRegistry(metaclass=SingletonMeta):
             if not os.path.exists(manifest_path):
                 continue
             try:
-                with open(manifest_path, 'r', encoding='utf-8') as f:
+                with open(manifest_path, encoding='utf-8') as f:
                     manifest_data = json.load(f)
                 manifest = PluginManifest.from_dict(manifest_data)
                 if not manifest.id or not manifest.name:
@@ -243,7 +241,7 @@ class PluginRegistry(metaclass=SingletonMeta):
             except Exception as e:
                 log.error(f"[PluginRegistry] 扫描内置插件 {entry} 失败: {e}")
 
-    def get_plugin_path(self, plugin_id: str) -> Optional[str]:
+    def get_plugin_path(self, plugin_id: str) -> str | None:
         """获取插件目录路径"""
         state = self._state_cache.get(plugin_id)
         if not state:

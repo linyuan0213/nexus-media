@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 日志配置读取与 handlers 构建。
 """
@@ -7,7 +6,7 @@ import logging
 import logging.handlers
 import os
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 from config import Config
 
@@ -39,12 +38,12 @@ class _SyslogHandlerFactory:
             pass
 
 
-def build_handlers(module: str) -> List[Dict[str, Any]]:
+def build_handlers(module: str) -> list[dict[str, Any]]:
     """根据全局 Config 生成 loguru handlers 配置。"""
     cfg = Config()
     log_cfg = cfg.get_config("log") or {}
     logtype = log_cfg.get("type") or "console"
-    handlers: List[Dict[str, Any]] = []
+    handlers: list[dict[str, Any]] = []
 
     if logtype == "server":
         logserver = (log_cfg.get("server") or "").split(":")

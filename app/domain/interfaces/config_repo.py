@@ -1,16 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 配置领域 Repository 接口（Python Protocol）
 定义 Config（消息客户端、下载器、过滤规则等）的仓储契约
 """
-from typing import List, Optional, Protocol
+from typing import Protocol
 
 from app.domain.entities.config import (
-    MessageClientEntity,
     DownloaderEntity,
     FilterGroupEntity,
     FilterRuleEntity,
     MediaServerEntity,
+    MessageClientEntity,
     TorrentRemoveTaskEntity,
 )
 
@@ -18,11 +17,11 @@ from app.domain.entities.config import (
 class IMessageClientRepository(Protocol):
     """消息客户端仓储接口"""
 
-    def get_all(self) -> List[MessageClientEntity]:
+    def get_all(self) -> list[MessageClientEntity]:
         """获取所有消息客户端"""
         ...
 
-    def get_by_id(self, cid: int) -> Optional[MessageClientEntity]:
+    def get_by_id(self, cid: int) -> MessageClientEntity | None:
         """根据ID获取消息客户端"""
         ...
 
@@ -39,11 +38,11 @@ class IMessageClientRepository(Protocol):
 class IDownloaderRepository(Protocol):
     """下载器仓储接口"""
 
-    def get_all(self) -> List[DownloaderEntity]:
+    def get_all(self) -> list[DownloaderEntity]:
         """获取所有下载器"""
         ...
 
-    def get_by_id(self, did: int) -> Optional[DownloaderEntity]:
+    def get_by_id(self, did: int) -> DownloaderEntity | None:
         """根据ID获取下载器"""
         ...
 
@@ -65,11 +64,11 @@ class IDownloaderRepository(Protocol):
 class IFilterGroupRepository(Protocol):
     """过滤规则组仓储接口"""
 
-    def get_all(self) -> List[FilterGroupEntity]:
+    def get_all(self) -> list[FilterGroupEntity]:
         """获取所有过滤规则组"""
         ...
 
-    def get_by_id(self, gid: int) -> Optional[FilterGroupEntity]:
+    def get_by_id(self, gid: int) -> FilterGroupEntity | None:
         """根据ID获取过滤规则组"""
         ...
 
@@ -85,7 +84,7 @@ class IFilterGroupRepository(Protocol):
 class IFilterRuleRepository(Protocol):
     """过滤规则仓储接口"""
 
-    def get_by_group(self, group_id: int) -> List[FilterRuleEntity]:
+    def get_by_group(self, group_id: int) -> list[FilterRuleEntity]:
         """根据规则组ID获取规则列表"""
         ...
 
@@ -102,11 +101,11 @@ class IFilterRuleRepository(Protocol):
 class IMediaServerRepository(Protocol):
     """媒体服务器仓储接口"""
 
-    def get_all(self) -> List[MediaServerEntity]:
+    def get_all(self) -> list[MediaServerEntity]:
         """获取所有媒体服务器"""
         ...
 
-    def get_by_id(self, sid: int) -> Optional[MediaServerEntity]:
+    def get_by_id(self, sid: int) -> MediaServerEntity | None:
         """根据ID获取媒体服务器"""
         ...
 
@@ -122,11 +121,11 @@ class IMediaServerRepository(Protocol):
 class ITorrentRemoveTaskRepository(Protocol):
     """自动删种任务仓储接口"""
 
-    def get_all(self) -> List[TorrentRemoveTaskEntity]:
+    def get_all(self) -> list[TorrentRemoveTaskEntity]:
         """获取所有删种任务"""
         ...
 
-    def get_by_id(self, tid: int) -> Optional[TorrentRemoveTaskEntity]:
+    def get_by_id(self, tid: int) -> TorrentRemoveTaskEntity | None:
         """根据ID获取删种任务"""
         ...
 

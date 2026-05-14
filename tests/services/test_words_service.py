@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 WordsService 单元测试
 """
 import base64
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from app.schemas.words import (
     WordDTO,
-    WordGroupExportDTO,
 )
 from app.services.words_service import WordsService
 

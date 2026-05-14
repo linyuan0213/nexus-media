@@ -1,19 +1,16 @@
 import datetime
 import os.path
-import time
 import re
 from urllib.parse import unquote
-from contextlib import contextmanager
 
 from bencode import bdecode
 
 import log
 from app.utils import StringUtils
-from app.utils.http_utils import RequestUtils
-from app.utils.types import MediaType
-from app.utils.temp_manager import temp_manager
-from config import Config
 from app.utils.config_tools import get_proxies
+from app.utils.http_utils import RequestUtils
+from app.utils.temp_manager import temp_manager
+from app.utils.types import MediaType
 
 
 class Torrent:
@@ -213,7 +210,7 @@ class Torrent:
             file_name = unquote(url.split("/")[-1])
         else:
             file_name = str(datetime.datetime.now())
-        
+
         file_name = file_name.replace('/', '-')
         return file_name
 
@@ -281,7 +278,7 @@ class Torrent:
         # 控重
         can_download_list_item = []
         seen_media_names = set()
-        
+
         # 排序后重新加入数组，按真实名称控重，即只取每个名称的第一个
         for t_item in media_list:
             # 控重的主链是名称、年份、季、集
@@ -290,10 +287,10 @@ class Torrent:
                                        t_item.get_season_episode_string())
             else:
                 media_name = t_item.get_title_string()
-        
+
             # 如果名称未被处理过，将其加入结果列表
             if media_name not in seen_media_names:
                 seen_media_names.add(media_name)
                 can_download_list_item.append(t_item)
-        
+
         return can_download_list_item

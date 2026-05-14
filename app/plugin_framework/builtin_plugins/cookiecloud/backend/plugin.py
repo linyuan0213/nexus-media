@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 CookieCloud Plugin v2
 从 CookieCloud 云端同步数据
@@ -6,15 +5,13 @@ CookieCloud Plugin v2
 import json
 import re
 from collections import defaultdict
-from typing import Union
 
 from app.helper import IndexerHelper
 from app.infrastructure.cache_system import get_cache_manager
+from app.plugin_framework.context import PluginContext
 from app.sites import Sites
 from app.sites.engine import SiteEngine
 from app.utils import RequestUtils
-
-from app.plugin_framework.context import PluginContext
 
 
 class CookieCloudPlugin:
@@ -112,7 +109,7 @@ class CookieCloudPlugin:
 
         return False
 
-    def _download_data(self) -> Union[dict, str, bool]:
+    def _download_data(self) -> dict | str | bool:
         config = self._get_config()
         server = config.get("server", "")
         key = config.get("key", "")

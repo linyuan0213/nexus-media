@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Spider enclosure 单元测试 — 验证磁力链接空白前缀问题
 """

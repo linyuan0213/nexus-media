@@ -1,16 +1,14 @@
-from typing import Tuple
+import hashlib
 import os
 import re
 import time
-import hashlib
-from datetime import datetime
 
+import qbittorrentapi
 from bencode import bdecode
 
-from app.schemas.download import Torrent, TorrentStatus
 import log
-import qbittorrentapi
 from app.downloader.client._base import _IDownloadClient
+from app.schemas.download import Torrent, TorrentStatus
 from app.utils import ExceptionUtils, StringUtils
 from app.utils.types import DownloaderType
 
@@ -130,7 +128,7 @@ class Qbittorrent(_IDownloadClient):
                 # 如果分类存在，但是路径不一致，则更新
                 if os.path.normpath(category_item.get("savePath")) != os.path.normpath(save_path):
                     self.__update_category(name=label, save_path=save_path, is_edit=True)
-                    
+
     def __get_qb_category(self):
         """
         查询下载器中已设置的分类
@@ -138,7 +136,7 @@ class Qbittorrent(_IDownloadClient):
         if not self.qbc:
             return {}
         return self.qbc.torrent_categories.categories or {}
-    
+
     def __get_qb_auto(self):
         """
         查询下载器是否开启自动管理
@@ -181,7 +179,7 @@ class Qbittorrent(_IDownloadClient):
                 return category_name
         return None
 
-    def get_torrents(self, ids=None, status=None, tag=None) -> Tuple[list[Torrent], bool]:
+    def get_torrents(self, ids=None, status=None, tag=None) -> tuple[list[Torrent], bool]:
         """
         获取种子列表
         return: 种子列表, 是否发生异常
@@ -498,10 +496,10 @@ class Qbittorrent(_IDownloadClient):
                             log.warn(f"【{self.client_name}】{self.name} 无法获取种子 {torrent_id} 信息验证标签移除")
                     else:
                         log.warn(f"【{self.client_name}】{self.name} 移除种子 {torrent_id} 标签 {tag} 失败，重试 {retry + 1}/3")
-                    
+
                     if retry < 2:  # 如果不是最后一次重试，等待一下
                         time.sleep(2)
-                
+
                 if tag_removed:
                     break
                 else:
@@ -706,7 +704,6 @@ class Qbittorrent(_IDownloadClient):
         """
         修改种子状态
         """
-        pass
 
     def get_downloading_progress(self, tag=None, ids=None):
         """
@@ -779,7 +776,7 @@ class Qbittorrent(_IDownloadClient):
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return
-        
+
     def _get_torrent_trackers(self, torrent_hash):
         """
         获取种子tracker列表
@@ -792,7 +789,7 @@ class Qbittorrent(_IDownloadClient):
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return
-    
+
     def _get_torrent_generic_properties(self, torrent_hash):
         """
         获取种子常用信息
@@ -805,14 +802,14 @@ class Qbittorrent(_IDownloadClient):
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return
-      
+
     def torrent_properties(self, torrent):
         # 当前时间戳
         date_now = int(time.time())
 
         torrent_obj = Torrent()
         properties = self._get_torrent_generic_properties(torrent.get("hash"))
-        
+
         torrent_obj.id = torrent.get("hash")
         torrent_obj.name = torrent.get("name")
         # 下载时间

@@ -1,8 +1,9 @@
 import os
-from config import Config
+
+from alembic.command import revision as alembic_revision, upgrade as alembic_upgrade
 from alembic.config import Config as AlembicConfig
-from alembic.command import revision as alembic_revision
-from alembic.command import upgrade as alembic_upgrade
+
+from config import Config
 
 db_version = input("请输入版本号：")
 db_location = os.path.join(Config().config_path, 'user.db').replace('\\', '/')

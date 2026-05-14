@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 数据库迁移工具模块
 支持跨数据库类型的数据导出与导入（如 SQLite ↔ MySQL ↔ PostgreSQL）
@@ -15,16 +14,14 @@
 - 恢复外键约束
 """
 import json
-import os
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from sqlalchemy import create_engine, inspect, text, MetaData, Table
+from sqlalchemy import MetaData, inspect, text
 from sqlalchemy.engine import Engine
 
 from app.db.database_factory import DatabaseFactory
-from app.db.models import Base
 from app.utils import ExceptionUtils
 from app.utils.string_utils import StringUtils
 
@@ -60,7 +57,7 @@ def _deserialize_value(value: Any) -> Any:
     return value
 
 
-def get_all_table_names(engine: Engine) -> List[str]:
+def get_all_table_names(engine: Engine) -> list[str]:
     """获取数据库中所有表名"""
     inspector = inspect(engine)
     return inspector.get_table_names()
@@ -73,7 +70,7 @@ def _quote_identifier(engine: Engine, name: str) -> str:
     return f'"{name}"'
 
 
-def get_table_data(engine: Engine, table_name: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+def get_table_data(engine: Engine, table_name: str, limit: int | None = None) -> list[dict[str, Any]]:
     """读取指定表的所有数据"""
     with engine.connect() as conn:
         # 使用 text() 构造查询
@@ -93,8 +90,8 @@ def get_table_data(engine: Engine, table_name: str, limit: Optional[int] = None)
 
 
 def export_database(engine: Engine,
-                    include_tables: Optional[List[str]] = None,
-                    exclude_tables: Optional[List[str]] = None) -> Dict[str, Any]:
+                    include_tables: list[str] | None = None,
+                    exclude_tables: list[str] | None = None) -> dict[str, Any]:
     """
     导出数据库中所有表的数据
 
@@ -121,12 +118,7 @@ def export_database(engine: Engine,
         try:
             rows = get_table_data(engine, table_name)
             # 统一 SIZE 相关字段为 bigint（字节数），兼容老 SQLite 中的字符串如 "27.72G"
-            if table_name == 'SEARCH_RESULT_INFO':
-                for row in rows:
-                    size_val = row.get('SIZE')
-                    if isinstance(size_val, str):
-                        row['SIZE'] = StringUtils.num_filesize(size_val)
-            elif table_name == 'CONFIG_SITE':
+            if table_name == 'SEARCH_RESULT_INFO' or table_name == 'CONFIG_SITE':
                 for row in rows:
                     size_val = row.get('SIZE')
                     if isinstance(size_val, str):
@@ -144,7 +136,7 @@ def export_database(engine: Engine,
     return export_data
 
 
-def _sort_tables_topological(engine: Engine, table_names: List[str]) -> List[str]:
+def _sort_tables_topological(engine: Engine, table_names: list[str]) -> list[str]:
     """
     按外键依赖关系对表进行拓扑排序（被依赖的表在前）
     这样清空数据时可以先清空子表，再清空父表；插入时可以先插入父表，再插入子表。
@@ -159,9 +151,9 @@ def _sort_tables_topological(engine: Engine, table_names: List[str]) -> List[str
 
 
 def import_database(engine: Engine,
-                    data: Dict[str, Any],
-                    include_tables: Optional[List[str]] = None,
-                    exclude_tables: Optional[List[str]] = None,
+                    data: dict[str, Any],
+                    include_tables: list[str] | None = None,
+                    exclude_tables: list[str] | None = None,
                     batch_size: int = 1000,
                     clear_before_import: bool = True):
     """
@@ -271,8 +263,8 @@ def import_database(engine: Engine,
 
 def export_to_file(engine: Engine,
                    filepath: str,
-                   include_tables: Optional[List[str]] = None,
-                   exclude_tables: Optional[List[str]] = None):
+                   include_tables: list[str] | None = None,
+                   exclude_tables: list[str] | None = None):
     """导出数据库到 JSON 文件"""
     data = export_database(engine, include_tables=include_tables, exclude_tables=exclude_tables)
     with open(filepath, 'w', encoding='utf-8') as f:
@@ -281,12 +273,12 @@ def export_to_file(engine: Engine,
 
 def import_from_file(engine: Engine,
                      filepath: str,
-                     include_tables: Optional[List[str]] = None,
-                     exclude_tables: Optional[List[str]] = None,
+                     include_tables: list[str] | None = None,
+                     exclude_tables: list[str] | None = None,
                      batch_size: int = 1000,
                      clear_before_import: bool = True):
     """从 JSON 文件导入数据到数据库"""
-    with open(filepath, 'r', encoding='utf-8') as f:
+    with open(filepath, encoding='utf-8') as f:
         data = json.load(f)
     import_database(engine, data,
                     include_tables=include_tables,
@@ -297,7 +289,7 @@ def import_from_file(engine: Engine,
 
 def migrate_database(source_engine: Engine,
                      target_engine: Engine,
-                     exclude_tables: Optional[List[str]] = None,
+                     exclude_tables: list[str] | None = None,
                      batch_size: int = 1000):
     """
     便捷方法：直接从源数据库迁移到目标数据库

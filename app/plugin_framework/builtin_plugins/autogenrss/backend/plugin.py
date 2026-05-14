@@ -1,4 +1,5 @@
 import os
+
 # -*- coding: utf-8 -*-
 """
 AutoGenRss Plugin v2
@@ -14,14 +15,13 @@ import pytz
 from lxml import etree
 
 from app.db.repositories import SiteRepository
-from app.helper import SubmoduleHelper, SiteHelper
+from app.helper import SiteHelper, SubmoduleHelper
 from app.helper.cloudflare_helper import under_challenge
 from app.helper.drissionpage_helper import DrissionPageHelper
 from app.plugin_framework.context import PluginContext
 from app.sites.siteconf import SiteConf
 from app.sites.sites import Sites
-from app.utils import RequestUtils, ExceptionUtils, StringUtils, JsonUtils
-from config import Config
+from app.utils import ExceptionUtils, JsonUtils, RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
 
 

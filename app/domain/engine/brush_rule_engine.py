@@ -5,15 +5,16 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone, timedelta
-from typing import Any, Callable
+from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import dateutil
 import pytz
 
 import log
-from app.utils.types import BrushDeleteType, BrushStopType, MediaType
 from app.utils import ExceptionUtils
+from app.utils.types import BrushDeleteType, BrushStopType, MediaType
 
 
 class BrushRuleEngine:

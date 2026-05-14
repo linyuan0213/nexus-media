@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """刮削器 — 媒体库文件遍历与 NFO 信息读取"""
 import os
 

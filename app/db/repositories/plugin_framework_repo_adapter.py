@@ -1,30 +1,32 @@
-# -*- coding: utf-8 -*-
 """
 Plugin Framework v2 Repository 适配器
 将 PluginFrameworkRepository 适配为新领域接口
 """
-from typing import List, Optional
 
+from app.db.repositories.plugin_framework_repository import PluginFrameworkRepository
 from app.domain.entities.plugin import (
-    PluginManifestEntity, PluginConfigEntity, PluginLogEntity,
+    PluginConfigEntity,
+    PluginLogEntity,
+    PluginManifestEntity,
 )
 from app.domain.interfaces.plugin_repo import (
-    IPluginManifestRepository, IPluginConfigRepository, IPluginLogRepository,
+    IPluginConfigRepository,
+    IPluginLogRepository,
+    IPluginManifestRepository,
 )
-from app.db.repositories.plugin_framework_repository import PluginFrameworkRepository
 
 
 class PluginManifestRepositoryAdapter(IPluginManifestRepository):
     """插件清单仓储适配器"""
 
-    def __init__(self, repo: Optional[PluginFrameworkRepository] = None):
+    def __init__(self, repo: PluginFrameworkRepository | None = None):
         self._repo = repo or PluginFrameworkRepository()
 
-    def get_all(self) -> List[PluginManifestEntity]:
+    def get_all(self) -> list[PluginManifestEntity]:
         rows = self._repo.get_all_manifests()
         return [e for e in [PluginManifestEntity.from_orm(r) for r in rows] if e is not None]
 
-    def get_by_id(self, plugin_id: str) -> Optional[PluginManifestEntity]:
+    def get_by_id(self, plugin_id: str) -> PluginManifestEntity | None:
         row = self._repo.get_manifest_by_id(plugin_id)
         return PluginManifestEntity.from_orm(row) if row else None
 
@@ -44,10 +46,10 @@ class PluginManifestRepositoryAdapter(IPluginManifestRepository):
 class PluginConfigRepositoryAdapter(IPluginConfigRepository):
     """插件配置仓储适配器"""
 
-    def __init__(self, repo: Optional[PluginFrameworkRepository] = None):
+    def __init__(self, repo: PluginFrameworkRepository | None = None):
         self._repo = repo or PluginFrameworkRepository()
 
-    def get(self, plugin_id: str) -> Optional[PluginConfigEntity]:
+    def get(self, plugin_id: str) -> PluginConfigEntity | None:
         row = self._repo.get_config(plugin_id)
         return PluginConfigEntity.from_orm(row) if row else None
 
@@ -61,13 +63,13 @@ class PluginConfigRepositoryAdapter(IPluginConfigRepository):
 class PluginLogRepositoryAdapter(IPluginLogRepository):
     """插件日志仓储适配器"""
 
-    def __init__(self, repo: Optional[PluginFrameworkRepository] = None):
+    def __init__(self, repo: PluginFrameworkRepository | None = None):
         self._repo = repo or PluginFrameworkRepository()
 
     def insert(self, plugin_id: str, level: str, message: str) -> bool:
         return self._repo.insert_log(plugin_id, level, message)
 
-    def get_by_plugin(self, plugin_id: str, page: int = 1, page_size: int = 20) -> List[PluginLogEntity]:
+    def get_by_plugin(self, plugin_id: str, page: int = 1, page_size: int = 20) -> list[PluginLogEntity]:
         rows = self._repo.get_logs_by_plugin(plugin_id, page, page_size)
         return [e for e in [PluginLogEntity.from_orm(r) for r in rows] if e is not None]
 

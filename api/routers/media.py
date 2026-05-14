@@ -1,39 +1,36 @@
-# -*- coding: utf-8 -*-
-from typing import List, Optional, Union
-
+import urllib.parse
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from api.deps import (
-    get_current_user,
-    require_any_permission,
-    require_permission,
     get_config_service,
     get_downloader_service,
+    get_media_config_service,
+    get_media_file_service,
     get_media_info_service,
     get_media_library_service,
-    get_media_file_service,
     get_media_recommendation_service,
+    get_search_result_service,
     get_searcher_service,
     get_sync_service,
-    get_transfer_history_service,
-    get_search_result_service,
     get_tmdb_blacklist_service,
-    get_media_config_service,
+    get_transfer_history_service,
+    require_any_permission,
+    require_permission,
 )
-from app.utils.types import MediaType, MovieTypes
 from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.search_service import Searcher
+from app.services.media_config_service import MediaConfigService
 from app.services.media_service import (
+    MediaFileService,
     MediaInfoService,
+    MediaLibraryService,
     MediaRecommendationService,
     SearchResultService,
-    MediaLibraryService,
     TransferHistoryService,
-    MediaFileService,
 )
-from app.services.media_config_service import MediaConfigService
-from app.utils.response import success, fail
+from app.services.search_service import Searcher
+from app.utils.response import fail, success
+from app.utils.types import MediaType, MovieTypes
 
 router = APIRouter()
 
@@ -47,23 +44,23 @@ class DownloadSubtitleRequest(BaseModel):
 
 class GetSeasonEpisodesRequest(BaseModel):
     tmdbid: int
-    title: Optional[str] = None
-    year: Optional[str] = None
-    season: Optional[int] = None
+    title: str | None = None
+    year: str | None = None
+    season: int | None = None
 
 
 class GetTvSeasonListRequest(BaseModel):
-    tmdbid: Union[str, int]
-    title: Optional[str] = None
+    tmdbid: str | int
+    title: str | None = None
 
 
 class MediaInfoRequest(BaseModel):
-    id: Optional[str] = None
-    type: Optional[str] = None
-    title: Optional[str] = None
-    year: Optional[str] = None
-    page: Optional[str] = None
-    rssid: Optional[str] = None
+    id: str | None = None
+    type: str | None = None
+    title: str | None = None
+    year: str | None = None
+    page: str | None = None
+    rssid: str | None = None
 
 
 class MediaPathScrapRequest(BaseModel):
@@ -71,53 +68,53 @@ class MediaPathScrapRequest(BaseModel):
 
 
 class MediaPersonRequest(BaseModel):
-    tmdbid: Optional[str] = None
-    type: Optional[str] = None
-    keyword: Optional[str] = None
+    tmdbid: str | None = None
+    type: str | None = None
+    keyword: str | None = None
 
 
 class MediaRecommendationsRequest(BaseModel):
     tmdbid: str
-    type: Optional[str] = None
-    page: Optional[int] = 1
+    type: str | None = None
+    page: int | None = 1
 
 
 class MediaSimilarRequest(BaseModel):
     tmdbid: str
-    type: Optional[str] = None
-    page: Optional[int] = 1
+    type: str | None = None
+    page: int | None = 1
 
 
 class MovieCalendarRequest(BaseModel):
-    id: Optional[str] = None
-    rssid: Optional[str] = None
+    id: str | None = None
+    rssid: str | None = None
 
 
 class NameTestRequest(BaseModel):
     name: str
-    subtitle: Optional[str] = None
+    subtitle: str | None = None
 
 
 class PersonMediasRequest(BaseModel):
     personid: int
-    type: Optional[str] = None
-    page: Optional[int] = 1
+    type: str | None = None
+    page: int | None = 1
 
 
 class SaveUserScriptRequest(BaseModel):
-    javascript: Optional[str] = None
-    css: Optional[str] = None
+    javascript: str | None = None
+    css: str | None = None
 
 
 class StartMediasyncRequest(BaseModel):
-    librarys: Optional[List[str]] = None
+    librarys: list[str] | None = None
 
 
 class TvCalendarRequest(BaseModel):
-    id: Optional[str] = None
-    season: Optional[int] = None
-    name: Optional[str] = None
-    rssid: Optional[str] = None
+    id: str | None = None
+    season: int | None = None
+    name: str | None = None
+    rssid: str | None = None
 
 
 class GetCategoryConfigRequest(BaseModel):
@@ -125,47 +122,47 @@ class GetCategoryConfigRequest(BaseModel):
 
 
 class GetDownloadedRequest(BaseModel):
-    page: Optional[int] = None
+    page: int | None = None
 
 
 class GetTransferHistoryRequest(BaseModel):
-    keyword: Optional[str] = None
-    page: Optional[int] = None
-    pagenum: Optional[int] = None
+    keyword: str | None = None
+    page: int | None = None
+    pagenum: int | None = None
 
 
 class GetTransferStatisticsRequest(BaseModel):
-    days: Optional[int] = None
+    days: int | None = None
 
 
 class GetUnknownListByPageRequest(BaseModel):
-    keyword: Optional[str] = None
-    page: Optional[int] = None
-    pagenum: Optional[int] = None
+    keyword: str | None = None
+    page: int | None = None
+    pagenum: int | None = None
 
 
 class MediaDetailRequest(BaseModel):
     tmdbid: str
-    type: Optional[str] = None
+    type: str | None = None
 
 
 class SearchMediaInfosRequest(BaseModel):
     keyword: str
-    searchtype: Optional[str] = None
+    searchtype: str | None = None
 
 
 class UpdateCategoryConfigRequest(BaseModel):
-    config: Optional[str] = None
+    config: str | None = None
 
 
 class DirListRequest(BaseModel):
-    path: Optional[str] = None
-    filter: Optional[str] = None
+    path: str | None = None
+    filter: str | None = None
 
 
 class TmdbBlacklistRequest(BaseModel):
-    tmdb_id: Optional[str] = None
-    media_type: Optional[str] = None
+    tmdb_id: str | None = None
+    media_type: str | None = None
 
 
 # ---------- Endpoints ----------
@@ -552,7 +549,7 @@ def get_unknown_list_by_page(
     return success(data={"total":result.total, "items":result.items, "totalPage":result.total_page, "pageNum":result.page_num, "currentPage":result.current_page,})
 
 
-import urllib.parse
+
 
 @router.post("/detail")
 def media_detail(
@@ -638,7 +635,7 @@ def get_library_paths(
 def get_tmdb_blacklist(
     page: int = Query(1, ge=1),
     count: int = Query(30, ge=1, le=100),
-    s: Optional[str] = Query(""),
+    s: str | None = Query(""),
     current_user = Depends(require_any_permission("library:view", "library:manage")),
     tmdb_svc = Depends(get_tmdb_blacklist_service),
 ):

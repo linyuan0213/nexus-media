@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 CloudflareSpeedTest Plugin v2
 测试 Cloudflare CDN 延迟和速度，自动优选IP
@@ -18,8 +17,7 @@ import requests
 from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter
 from app.domain.entities.plugin import PluginConfigEntity
 from app.plugin_framework.context import PluginContext
-from app.utils import SystemUtils, RequestUtils, IpUtils
-from config import Config
+from app.utils import IpUtils, RequestUtils, SystemUtils
 from app.utils.config_tools import get_proxies
 
 
@@ -139,7 +137,7 @@ class CloudflareSpeedTestPlugin:
 
         # 获取最优ip
         try:
-            with open(result_file, 'r') as f:
+            with open(result_file) as f:
                 lines = f.readlines()
                 if len(lines) >= 2:
                     best_ip = lines[1].strip().split(',')[0]

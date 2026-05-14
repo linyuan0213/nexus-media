@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Customization Plugin v2
 添加自定义占位符识别正则

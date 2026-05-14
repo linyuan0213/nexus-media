@@ -1,13 +1,15 @@
 import json
-import uuid
-import time
 import threading
-import requests
-from typing import Optional, Dict, Any
+import time
+import uuid
+from typing import Any
 
+import requests
+
+import log
 from app.utils.commons import SingletonMeta
 from config import Config
-import log
+
 
 def generate_tab_id() -> str:
     """Generate a unique tab ID."""
@@ -15,7 +17,7 @@ def generate_tab_id() -> str:
 
 
 class DrissionPageHelper(metaclass=SingletonMeta):
-    
+
     def __init__(self):
         self.url = ""
         url = Config().get_config("laboratory").get('chrome_server_host')
@@ -26,7 +28,7 @@ class DrissionPageHelper(metaclass=SingletonMeta):
         """检查 Chrome 服务器连接状态，只有连接成功才返回 True"""
         if not self.url:
             return False
-        
+
         try:
             # 测试连接状态
             response = self._request_with_retry(
@@ -40,11 +42,11 @@ class DrissionPageHelper(metaclass=SingletonMeta):
             log.warn(f"Chrome 服务器连接失败: {str(e)}")
             return False
 
-    def _request_with_retry(self, 
-                           method: str, 
-                           url: str, 
-                           retries: int = 3, 
-                           delay: int = 2, 
+    def _request_with_retry(self,
+                           method: str,
+                           url: str,
+                           retries: int = 3,
+                           delay: int = 2,
                            **kwargs) -> requests.Response:
         """通用的网络请求重试逻辑"""
         for attempt in range(retries):
@@ -61,13 +63,13 @@ class DrissionPageHelper(metaclass=SingletonMeta):
 
     def get_page_html(self,
                       url: str,
-                      cookies: Optional[str] = None,
-                      local_storage: Optional[Dict[str, Any]] = None,
+                      cookies: str | None = None,
+                      local_storage: dict[str, Any] | None = None,
                       timeout: int = 120,
-                      click_xpath: Optional[str] = None,
+                      click_xpath: str | None = None,
                       delay: int = 5,
-                      click_delay: Optional[int] = None,
-                      user_agent: Optional[str] = None) -> str:
+                      click_delay: int | None = None,
+                      user_agent: str | None = None) -> str:
         """获取HTML内容，带超时保护
         
         Args:
@@ -82,7 +84,7 @@ class DrissionPageHelper(metaclass=SingletonMeta):
         """
         if not self.get_status():
             return ""
-        
+
         headers = {"Content-Type": "application/json"}
         tab_id = self.create_tab(url=url, cookies=cookies, local_storage=local_storage, timeout=timeout, user_agent=user_agent)
         if not tab_id:
@@ -90,10 +92,10 @@ class DrissionPageHelper(metaclass=SingletonMeta):
 
         # 设置点击后等待时间，默认为delay
         actual_click_delay = click_delay if click_delay is not None else delay
-        
+
         # 创建超时线程
         timeout_occurred = False
-        
+
         def timeout_handler():
             nonlocal timeout_occurred
             # 计算总超时时间：基础超时 + 延迟时间 + 点击后等待时间（如果有点击）
@@ -102,7 +104,7 @@ class DrissionPageHelper(metaclass=SingletonMeta):
             if not timeout_occurred:
                 log.warn(f"标签页 {tab_id} 超时，强制关闭")
                 self.close_tab(tab_id)
-        
+
         timeout_thread = threading.Thread(target=timeout_handler)
         timeout_thread.daemon = True
         timeout_thread.start()
@@ -110,11 +112,11 @@ class DrissionPageHelper(metaclass=SingletonMeta):
         try:
             # 初始页面加载等待
             time.sleep(delay)
-            
+
             # 获取初始HTML内容
             html_url = f"{self.url}/tabs/{tab_id}/html"
             res_json = self._fetch_html(html_url, timeout)
-            
+
             # 处理点击事件
             if click_xpath:
                 click_url = f"{self.url}/tabs/click/"
@@ -122,7 +124,7 @@ class DrissionPageHelper(metaclass=SingletonMeta):
                     "tab_name": tab_id,
                     "selector": click_xpath
                 }, separators=(',', ':'))
-                
+
                 try:
                     response = self._request_with_retry(
                         method="POST",
@@ -144,12 +146,12 @@ class DrissionPageHelper(metaclass=SingletonMeta):
             # 解析HTML内容
             html_dict = json.loads(res_json)
             content = html_dict.get("html", "")
-            
+
             # 标记操作完成，避免超时线程强制关闭
             timeout_occurred = True
-            
+
             return content
-            
+
         except Exception as e:
             log.error(f"获取页面HTML失败: {str(e)}")
             timeout_occurred = True
@@ -159,16 +161,16 @@ class DrissionPageHelper(metaclass=SingletonMeta):
             self.close_tab(tab_id)
             timeout_occurred = True
 
-    def get_page_html_without_closetab(self, 
-                                       tab_id: str, 
-                                       timeout: int = 20, 
+    def get_page_html_without_closetab(self,
+                                       tab_id: str,
+                                       timeout: int = 20,
                                        is_refresh: bool = False,
                                        cf: bool = False,
                                        tab_category: str = "html") -> str:
         """
         获取html并保持标签页打开
         """
-        
+
         if not self.get_status():
             return ""
 
@@ -209,7 +211,7 @@ class DrissionPageHelper(metaclass=SingletonMeta):
             log.error(f"解析HTML响应失败: {str(e)}")
             return ""
 
-    def create_tab(self, url: str, cookies: Optional[str] = None, local_storage: Optional[Dict[str, Any]] = None, timeout: int = 20, user_agent: Optional[str] = None) -> str:
+    def create_tab(self, url: str, cookies: str | None = None, local_storage: dict[str, Any] | None = None, timeout: int = 20, user_agent: str | None = None) -> str:
         """创建新标签页
         
         Args:
@@ -231,11 +233,11 @@ class DrissionPageHelper(metaclass=SingletonMeta):
             "tab_name": tab_id,
             "cookie": cookies
         }
-        
+
         # 如果有local_storage数据，添加到请求中
         if local_storage:
             open_tab_data["local_storage"] = local_storage
-            
+
         # 如果有user_agent数据，添加到请求中
         if user_agent:
             open_tab_data["user_agent"] = user_agent
@@ -250,7 +252,7 @@ class DrissionPageHelper(metaclass=SingletonMeta):
                 data=json.dumps(open_tab_data, separators=(',', ':')),
                 timeout=timeout
             )
-            if response.status_code not in (200, 400): 
+            if response.status_code not in (200, 400):
                 log.error(f"打开新标签页失败: {response.text}")
                 return ""
             return tab_id
@@ -271,7 +273,7 @@ class DrissionPageHelper(metaclass=SingletonMeta):
                 url=f"{self.url}/tabs/{tab_id}/cookie",
                 timeout=timeout
             )
-            
+
             cookie_dict = response.json()
             content = cookie_dict.get("cookie")
             return content
@@ -281,7 +283,7 @@ class DrissionPageHelper(metaclass=SingletonMeta):
 
     def close_tab(self, tab_id: str):
         """关闭标签页"""
-        
+
         if not self.get_status():
             return
 
@@ -290,7 +292,7 @@ class DrissionPageHelper(metaclass=SingletonMeta):
             self._request_with_retry(method="DELETE", url=close_url)
         except Exception as e:
             log.error(f"关闭标签页异常: {str(e)}")
-            
+
     def _refresh_tab(self, tab_id: str):
         """刷新标签页"""
         try:
@@ -298,20 +300,20 @@ class DrissionPageHelper(metaclass=SingletonMeta):
                 method="GET",
                 url=f"{self.url}/tabs/{tab_id}/refresh"
             )
-            
+
             status_dict = response.json()
             status = status_dict.get("code")
             return status
         except Exception as e:
             log.error(f"_refresh_tab 失败: {str(e)}")
             raise
-        
+
     def input_on_element(self, tab_id: str, selector: str, input_str: str, timeout: int = 20) -> bool:
         """在元素上输入文本"""
         if not self.get_status():
             return False
 
-        headers = {"Content-Type": "application/json"}  
+        headers = {"Content-Type": "application/json"}
         click_url = f"{self.url}/tabs/input/"
         click_data = json.dumps({
             "tab_name": tab_id,

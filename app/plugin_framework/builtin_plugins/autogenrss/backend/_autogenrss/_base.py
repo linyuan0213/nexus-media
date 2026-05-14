@@ -28,7 +28,6 @@ class _ISiteRssGenHandler(metaclass=ABCMeta):
         :param site_info: 站点信息，含有站点Url、站点Cookie、UA等信息
         :return: True|False,生成结果信息
         """
-        pass
 
     def info(self, msg):
         """

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 RSS 种子领域实体
 """
@@ -10,13 +9,13 @@ from typing import Optional
 class RssTorrentEntity:
     """RSS 种子实体"""
     id: int
-    torrent_name: Optional[str]
-    enclosure: Optional[str]
-    type: Optional[str]
-    title: Optional[str]
-    year: Optional[str]
-    season: Optional[str]
-    episode: Optional[str]
+    torrent_name: str | None
+    enclosure: str | None
+    type: str | None
+    title: str | None
+    year: str | None
+    season: str | None
+    episode: str | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["RssTorrentEntity"]:

@@ -1,16 +1,13 @@
-# -*- coding: utf-8 -*-
-from typing import Optional
 
 from app.core.system_config import SystemConfig
 from app.helper import ThreadHelper
+from app.infrastructure.cache_system import TokenCache
 from app.mediaserver import MediaServer
 from app.schemas.media import LibrarySpaceDTO
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.media_config_service import MediaConfigService
 from app.utils import SystemUtils
-from app.infrastructure.cache_system import TokenCache
 from app.utils.types import SystemConfigKey
-from config import Config
 
 
 class MediaLibraryService:
@@ -19,8 +16,8 @@ class MediaLibraryService:
     """
 
     def __init__(self,
-                 media_server: Optional[MediaServer] = None,
-                 filetransfer: Optional[FileTransfer] = None):
+                 media_server: MediaServer | None = None,
+                 filetransfer: FileTransfer | None = None):
         self._media_server = media_server or MediaServer()
         self._filetransfer = filetransfer or FileTransfer()
 
@@ -38,7 +35,7 @@ class MediaLibraryService:
         SystemConfig().set(key=SystemConfigKey.SyncLibrary, value=librarys)
         ThreadHelper().start_thread(self._media_server.sync_mediaserver, ())
 
-    def get_media_count(self) -> Optional[dict]:
+    def get_media_count(self) -> dict | None:
         """获取媒体库统计"""
         media_counts = self._media_server.get_medias_count()
         user_count = self._media_server.get_user_count()
@@ -95,8 +92,8 @@ class MediaLibraryService:
 
         def fmt_space(val):
             if val > 1024:
-                return "{:,} TB".format(round(val / 1024, 2))
-            return "{:,} GB".format(round(val, 2))
+                return f"{round(val / 1024, 2):,} TB"
+            return f"{round(val, 2):,} GB"
 
         return LibrarySpaceDTO(
             used_percent=UsedPercent,

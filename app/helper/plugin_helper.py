@@ -1,5 +1,4 @@
-from app.utils import RequestUtils
-from app.infrastructure.cache_system import cached, MemoryCacheAdapter
+from app.infrastructure.cache_system import MemoryCacheAdapter, cached
 
 # 创建插件统计缓存
 _plugin_stats_cache = MemoryCacheAdapter(maxsize=1, name="plugin_stats")

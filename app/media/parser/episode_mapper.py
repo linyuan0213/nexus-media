@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 集数映射器 — 全自动将解析出的季集映射到 TMDB 标准季集
 
@@ -21,15 +20,13 @@
   推断出4个季块后 → 映射到 S01 对应集
 """
 from datetime import datetime
-from typing import Optional, Tuple
 
 import log
-
 from app.core.constants import (
-    EPISODE_MAPPER_SEASON_GAP_DAYS,
-    EPISODE_MAPPER_SEASON_GAP_FORCE_DAYS,
     EPISODE_MAPPER_MIN_BLOCK_LENGTH,
     EPISODE_MAPPER_MIN_TOTAL_EPISODES,
+    EPISODE_MAPPER_SEASON_GAP_DAYS,
+    EPISODE_MAPPER_SEASON_GAP_FORCE_DAYS,
 )
 from app.media.lookup.tmdb_lookup import TmdbLookup
 from app.utils.types import MediaType
@@ -38,12 +35,12 @@ from app.utils.types import MediaType
 class EpisodeMapper:
     """全自动集数映射器"""
 
-    def __init__(self, tmdb_lookup: Optional[TmdbLookup] = None):
+    def __init__(self, tmdb_lookup: TmdbLookup | None = None):
         self._tmdb = tmdb_lookup
         # 缓存: tmdb_id -> [(block_season, start_ep, end_ep), ...]
-        self._blocks: dict[int, list[Tuple[int, int, int]]] = {}
+        self._blocks: dict[int, list[tuple[int, int, int]]] = {}
 
-    def _fetch_blocks(self, tmdb_id: int) -> Optional[list[Tuple[int, int, int]]]:
+    def _fetch_blocks(self, tmdb_id: int) -> list[tuple[int, int, int]] | None:
         """从 TMDB 获取 episodes，按 air_date 推断季分界"""
         if tmdb_id in self._blocks:
             return self._blocks[tmdb_id]
@@ -130,8 +127,8 @@ class EpisodeMapper:
             log.warn("【EpisodeMapper】推断失败: %s" % e)
             return None
 
-    def map(self, tmdb_id: int, source_season: Optional[int],
-            source_episode: Optional[int]) -> Optional[Tuple[int, int]]:
+    def map(self, tmdb_id: int, source_season: int | None,
+            source_episode: int | None) -> tuple[int, int] | None:
         """
         将 Parser 解析的季集映射到 TMDB 标准季集
 
@@ -161,8 +158,8 @@ class EpisodeMapper:
                  (tmdb_id, source_season, source_episode, target_ep))
         return 1, target_ep
 
-    def map_auto(self, tmdb_id: int, source_season: Optional[int],
-                 source_episode: Optional[int]) -> Optional[Tuple[int, int]]:
+    def map_auto(self, tmdb_id: int, source_season: int | None,
+                 source_episode: int | None) -> tuple[int, int] | None:
         """
         自动选择映射策略
 
@@ -194,7 +191,7 @@ class EpisodeMapper:
             return self.map_absolute(tmdb_id, source_episode)
         return None
 
-    def map_batch(self, items: list[dict]) -> list[Optional[Tuple[int, int]]]:
+    def map_batch(self, items: list[dict]) -> list[tuple[int, int] | None]:
         """
         批量映射 — 相同 tmdb_id 共享缓存，不同 tmdb_id 并发查询
 
@@ -246,7 +243,7 @@ class EpisodeMapper:
             results.append(result)
         return results
 
-    def map_absolute(self, tmdb_id: int, absolute_episode: int) -> Optional[Tuple[int, int]]:
+    def map_absolute(self, tmdb_id: int, absolute_episode: int) -> tuple[int, int] | None:
         """
         将绝对集号映射到 TMDB 标准季集
 
@@ -299,7 +296,7 @@ class EpisodeMapper:
         self._blocks.pop(f"abs:{tmdb_id}", None)
 
 
-def _parse_date(date_str: Optional[str]) -> Optional[datetime]:
+def _parse_date(date_str: str | None) -> datetime | None:
     if not date_str:
         return None
     try:

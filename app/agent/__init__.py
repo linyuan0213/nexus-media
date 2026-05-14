@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """app.agent — 大模型 Agent 层
 
 架构:
@@ -9,13 +8,13 @@
   - prompts/          — 提示词模板
 """
 from app.agent.agents import (
+    BatchResult,
     ChatAgent,
     MediaRecognizer,
     MediaResult,
-    BatchResult,
     QuestionAnswerAgent,
-    SearchIntentAgent,
     SearchIntent,
+    SearchIntentAgent,
 )
 from app.agent.config import ProviderConfig, get_provider
 from app.agent.providers import (

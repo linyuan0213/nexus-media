@@ -1,4 +1,5 @@
 import os
+
 # -*- coding: utf-8 -*-
 """
 TorrentMark Plugin v2
@@ -10,9 +11,8 @@ from threading import Event
 import pytz
 
 from app.plugin_framework.context import PluginContext
-from app.services.downloader_core import DownloaderCore as Downloader
 from app.schemas.download import Torrent
-from config import Config
+from app.services.downloader_core import DownloaderCore as Downloader
 
 
 class TorrentMarkPlugin:

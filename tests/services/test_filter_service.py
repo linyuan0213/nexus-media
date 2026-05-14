@@ -1,5 +1,6 @@
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 from app.services.filter_service import FilterRuleEngine, FilterService
 from app.utils.types import MediaType
@@ -214,7 +215,8 @@ class TestFilterService:
 
 class TestImportFilterGroup:
     def test_success(self, svc):
-        import base64, json
+        import base64
+        import json
         content = base64.b64encode(json.dumps({"name": "Test", "rules": []}).encode()).decode()
         svc.add_group = MagicMock()
         svc.get_filter_groupid_by_name = MagicMock(return_value=1)
@@ -227,7 +229,8 @@ class TestImportFilterGroup:
         assert ok is False
 
     def test_no_name(self, svc):
-        import base64, json
+        import base64
+        import json
         content = base64.b64encode(json.dumps({}).encode()).decode()
         ok, msg = svc.import_filter_group(content)
         assert ok is False

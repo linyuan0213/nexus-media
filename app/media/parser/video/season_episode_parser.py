@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 影视标题解析 — 年份、季、集解析
 """
 import re
 
-from app.media.parser.video.constants import _season_re, _episode_re
+from app.media.parser.video.constants import _episode_re, _season_re
 from app.utils.types import MediaType
 
 
@@ -130,14 +129,7 @@ def init_episode(info, token):
                 and 1 < len(token) < 4 \
                 and info._last_token_type != "year" \
                 and info._last_token_type != "videoencode" \
-                and token != info._unknown_name_str:
-            info.begin_episode = int(token)
-            info.total_episodes = 1
-            info._last_token_type = "episode"
-            info._continue_flag = False
-            info._stop_name_flag = True
-            info.type = MediaType.TV
-        elif info._last_token_type == "EPISODE" \
+                and token != info._unknown_name_str or info._last_token_type == "EPISODE" \
                 and info.begin_episode is None \
                 and len(token) < 5:
             info.begin_episode = int(token)

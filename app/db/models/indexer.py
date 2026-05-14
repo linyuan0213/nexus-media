@@ -1,9 +1,8 @@
-# coding: utf-8
 """
 索引器统计模型
 包含: 索引器统计
 """
-from sqlalchemy import Column, Integer, String, Sequence
+from sqlalchemy import Column, Integer, Sequence, String
 
 from app.db.models.base import Base
 

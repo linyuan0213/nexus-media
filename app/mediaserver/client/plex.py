@@ -1,15 +1,15 @@
 import os
-from urllib.parse import quote
 from functools import lru_cache
-from urllib.parse import quote_plus
+from urllib.parse import quote, quote_plus
+
+from plexapi import media
+from plexapi.myplex import MyPlexAccount
+from plexapi.server import PlexServer
+
 import log
 from app.mediaserver.client._base import _IMediaClient
 from app.utils import ExceptionUtils
 from app.utils.types import MediaServerType, MediaType
-from config import Config
-from plexapi import media
-from plexapi.myplex import MyPlexAccount
-from plexapi.server import PlexServer
 
 
 class Plex(_IMediaClient):

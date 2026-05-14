@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from typing import Tuple
 
 
 class _IMessageClient(metaclass=ABCMeta):
@@ -24,9 +23,9 @@ class _IMessageClient(metaclass=ABCMeta):
         return ctype == cls.schema if cls.schema else False
 
     @abstractmethod
-    def send_msg(self, title, text="", image="", url="", user_id="") -> Tuple[bool, str]:
+    def send_msg(self, title, text="", image="", url="", user_id="") -> tuple[bool, str]:
         pass
 
     @abstractmethod
-    def send_list_msg(self, medias: list, user_id="", title="", **kwargs) -> Tuple[bool, str]:
+    def send_list_msg(self, medias: list, user_id="", title="", **kwargs) -> tuple[bool, str]:
         pass

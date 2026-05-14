@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 结果过滤器
 
@@ -8,9 +7,8 @@
 
 不依赖服务层，规则数据通过仓库层直接查询。
 """
-import log
-from typing import Tuple, List
 
+import log
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
 from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.indexer.core.models import FilterStats, SearchCandidate

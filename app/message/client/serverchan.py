@@ -1,8 +1,8 @@
 from serverchan_sdk import sc_send
 
 from app.message.client._base import _IMessageClient
-from app.utils import ExceptionUtils
 from app.message.client_registry import ClientRegistry
+from app.utils import ExceptionUtils
 
 
 class ServerChan(_IMessageClient):

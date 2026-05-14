@@ -2,14 +2,13 @@
 Filter Router — FastAPI 迁移
 对应原 web/controllers/filter.py，复用 app/services/filter_service.py
 """
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_config_service, require_any_permission, require_permission
-from app.utils.response import success, fail
+from api.deps import get_config_service, require_any_permission
 from app.services.filter_service import FilterService as Filter
+from app.utils.response import fail, success
 
 router = APIRouter()
 
@@ -24,56 +23,56 @@ def _get_script_path():
 # ---------------------------------------------------------------------------
 
 class EmptyRequest(BaseModel):
-    data: Optional[dict] = None
+    data: dict | None = None
 
 
 class AddFilterGroupRequest(BaseModel):
-    name: Optional[str] = None
-    default: Optional[str] = None
+    name: str | None = None
+    default: str | None = None
 
 
 class AddFilterRuleRequest(BaseModel):
-    rule_id: Optional[int] = None
-    group_id: Optional[int] = None
-    rule_name: Optional[str] = None
-    rule_pri: Optional[str] = None
-    rule_include: Optional[str] = None
-    rule_exclude: Optional[str] = None
-    rule_sizelimit: Optional[str] = None
-    rule_free: Optional[str] = None
+    rule_id: int | None = None
+    group_id: int | None = None
+    rule_name: str | None = None
+    rule_pri: str | None = None
+    rule_include: str | None = None
+    rule_exclude: str | None = None
+    rule_sizelimit: str | None = None
+    rule_free: str | None = None
 
 
 class IdRequest(BaseModel):
-    id: Optional[int] = None
+    id: int | None = None
 
 
 class FilterRuleDetailRequest(BaseModel):
-    groupid: Optional[int] = None
-    ruleid: Optional[int] = None
+    groupid: int | None = None
+    ruleid: int | None = None
 
 
 class ImportFilterGroupRequest(BaseModel):
-    content: Optional[str] = None
+    content: str | None = None
 
 
 class RestoreFilterGroupRequest(BaseModel):
-    groupids: Optional[List[int]] = None
-    init_rulegroups: Optional[list] = None
+    groupids: list[int] | None = None
+    init_rulegroups: list | None = None
 
 
 class RuleTestRequest(BaseModel):
-    title: Optional[str] = None
-    subtitle: Optional[str] = None
-    size: Optional[str] = None
-    rulegroup: Optional[str] = None
+    title: str | None = None
+    subtitle: str | None = None
+    size: str | None = None
+    rulegroup: str | None = None
 
 
 class SetDefaultFilterGroupRequest(BaseModel):
-    id: Optional[int] = None
+    id: int | None = None
 
 
 class ShareFilterGroupRequest(BaseModel):
-    id: Optional[int] = None
+    id: int | None = None
 
 
 # ---------------------------------------------------------------------------

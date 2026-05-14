@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """Google Gemini 提供商"""
-import log
-from typing import Any, Optional
+from typing import Any
 
 from google import genai
 from google.genai import types
 
+import log
 from app.agent.providers.base import BaseProvider, ProviderConfig
 
 
@@ -17,7 +16,7 @@ class GeminiProvider(BaseProvider):
         self._client = genai.Client(api_key=config.api_key)
 
     def chat(self, messages: list[dict], system_prompt: str = "", temperature: float = 0.7,
-             response_format: Optional[type] = None) -> Any:
+             response_format: type | None = None) -> Any:
         contents = []
         for m in messages:
             if m.get("role") == "user":

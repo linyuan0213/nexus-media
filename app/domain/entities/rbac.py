@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 RBAC 领域实体
 包含用户、角色、权限、菜单等实体
 """
 from dataclasses import dataclass, fields
-from typing import Any, Dict, List, Optional
 from datetime import datetime
+from typing import Any, Optional
 
 
 @dataclass
@@ -14,16 +13,16 @@ class RBACUserEntity:
     id: int
     username: str
     password_hash: str
-    email: Optional[str]
-    nickname: Optional[str]
-    avatar: Optional[str]
+    email: str | None
+    nickname: str | None
+    avatar: str | None
     status: int
     is_superadmin: int
-    last_login_at: Optional[datetime]
-    last_login_ip: Optional[str]
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
-    roles: List[Dict[str, Any]] = None
+    last_login_at: datetime | None
+    last_login_ip: str | None
+    created_at: datetime | None
+    updated_at: datetime | None
+    roles: list[dict[str, Any]] = None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["RBACUserEntity"]:
@@ -58,7 +57,7 @@ class RBACUserEntity:
             return getattr(self, lower_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = {
             "id": self.id,
             "username": self.username,
@@ -82,13 +81,13 @@ class RBACRoleEntity:
     id: int
     role_name: str
     role_code: str
-    description: Optional[str]
+    description: str | None
     role_level: int
     status: int
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
-    permissions: List[Dict[str, Any]] = None
-    menus: List[Dict[str, Any]] = None
+    created_at: datetime | None
+    updated_at: datetime | None
+    permissions: list[dict[str, Any]] = None
+    menus: list[dict[str, Any]] = None
     users_count: int = 0
 
     @classmethod
@@ -136,7 +135,7 @@ class RBACRoleEntity:
             return getattr(self, lower_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = {
             "id": self.id,
             "role_name": self.role_name,
@@ -159,12 +158,12 @@ class RBACPermissionEntity:
     id: int
     permission_name: str
     permission_code: str
-    description: Optional[str]
+    description: str | None
     permission_type: str
-    module: Optional[str]
+    module: str | None
     status: int
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
+    created_at: datetime | None
+    updated_at: datetime | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["RBACPermissionEntity"]:
@@ -188,7 +187,7 @@ class RBACPermissionEntity:
             return getattr(self, lower_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "permission_name": self.permission_name,
@@ -206,28 +205,28 @@ class RBACMenuEntity:
     id: int
     menu_name: str
     menu_code: str
-    parent_id: Optional[int]
-    path: Optional[str]
-    icon: Optional[str]
-    component: Optional[str]
+    parent_id: int | None
+    path: str | None
+    icon: str | None
+    component: str | None
     sort_order: int
     menu_level: int
     is_hidden: int
     is_external: int
-    external_link: Optional[str]
+    external_link: str | None
     status: int
-    permission_code: Optional[str]
-    redirect: Optional[str]
+    permission_code: str | None
+    redirect: str | None
     keep_alive: int
     affix_tab: int
     hide_in_menu: int
     hide_in_tab: int
     hide_in_breadcrumb: int
-    active_icon: Optional[str]
-    badge: Optional[str]
-    badge_type: Optional[str]
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
+    active_icon: str | None
+    badge: str | None
+    badge_type: str | None
+    created_at: datetime | None
+    updated_at: datetime | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["RBACMenuEntity"]:
@@ -267,7 +266,7 @@ class RBACMenuEntity:
             return getattr(self, lower_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "menu_name": self.menu_name,
@@ -301,13 +300,13 @@ class RBACUserLoginLogEntity:
     id: int
     user_id: int
     username: str
-    login_ip: Optional[str]
-    login_location: Optional[str]
-    user_agent: Optional[str]
+    login_ip: str | None
+    login_location: str | None
+    user_agent: str | None
     login_type: str
     login_status: int
-    fail_reason: Optional[str]
-    login_at: Optional[datetime]
+    fail_reason: str | None
+    login_at: datetime | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["RBACUserLoginLogEntity"]:
@@ -332,7 +331,7 @@ class RBACUserLoginLogEntity:
             return getattr(self, lower_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "user_id": self.user_id,
@@ -350,20 +349,20 @@ class RBACUserLoginLogEntity:
 class RBACOperationLogEntity:
     """RBAC操作日志实体"""
     id: int
-    user_id: Optional[int]
-    username: Optional[str]
-    module: Optional[str]
+    user_id: int | None
+    username: str | None
+    module: str | None
     operation_type: str
-    description: Optional[str]
-    request_method: Optional[str]
-    request_url: Optional[str]
-    request_params: Optional[str]
-    response_data: Optional[str]
-    operation_ip: Optional[str]
-    execution_time: Optional[int]
+    description: str | None
+    request_method: str | None
+    request_url: str | None
+    request_params: str | None
+    response_data: str | None
+    operation_ip: str | None
+    execution_time: int | None
     operation_status: int
-    error_msg: Optional[str]
-    operated_at: Optional[datetime]
+    error_msg: str | None
+    operated_at: datetime | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["RBACOperationLogEntity"]:
@@ -393,7 +392,7 @@ class RBACOperationLogEntity:
             return getattr(self, lower_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "user_id": self.user_id,

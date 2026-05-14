@@ -1,7 +1,5 @@
 from unittest.mock import patch
 
-import pytest
-
 from app.media.parser.base import BaseParser, ParserResult
 from app.media.parser.llm import LLMParser
 from app.utils.types import MediaType

@@ -1,13 +1,7 @@
-# -*- coding: utf-8 -*-
 """站点配置 — 委托 engine 的 JSON 定义，不再依赖 sites.dat"""
-import json
-import re
-from urllib.parse import urlsplit
 
-from app.utils import StringUtils, JsonUtils
-from app.utils.commons import SingletonMeta
 from app.sites.engine import SiteEngine
-import log
+from app.utils.commons import SingletonMeta
 
 
 class SiteConf(metaclass=SingletonMeta):

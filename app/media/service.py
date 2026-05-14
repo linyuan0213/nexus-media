@@ -1,19 +1,17 @@
 import os
 import re
-from typing import Optional
 
 import log
-
 from app.helper.image_proxy_helper import ImageProxyHelper
+from app.infrastructure.cache_system import cacheman
 from app.media.lookup.tmdb_lookup import TmdbLookup
 from app.media.models import MediaInfo
-from app.media.parser.base import BaseParser, ParserResult
+from app.media.parser.base import BaseParser
 from app.media.parser.episode_mapper import EpisodeMapper
 from app.media.parser.llm import LLMParser
 from app.media.parser.regex import RegexParser
-from app.infrastructure.cache_system import cacheman
-from app.utils import EpisodeFormat, NumberUtils, PathUtils, StringUtils
-from app.utils.types import MediaType, MatchMode
+from app.utils import EpisodeFormat, PathUtils, StringUtils
+from app.utils.types import MatchMode, MediaType
 from config import Config
 
 
@@ -55,7 +53,7 @@ class MediaService:
 
     def identify(self, title: str, subtitle: str = "", mtype: MediaType = None,
                  strict=None, cache=True, language=None, chinese=True,
-                 append_to_response=None) -> Optional[MediaInfo]:
+                 append_to_response=None) -> MediaInfo | None:
         if not title:
             return None
 
@@ -201,7 +199,7 @@ class MediaService:
                 info.begin_season = mapped[0]
                 info.begin_episode = mapped[1]
             else:
-                log.info(f"【EpisodeMapper】无需映射或映射失败")
+                log.info("【EpisodeMapper】无需映射或映射失败")
 
         # 保存到缓存
         if cache:
@@ -350,7 +348,7 @@ class MediaService:
     # ---------- 文件列表识别 ----------
 
     def identify_files(self, file_list, tmdb_info=None, media_type=None,
-                       season=None, episode_format: Optional[EpisodeFormat] = None,
+                       season=None, episode_format: EpisodeFormat | None = None,
                        language=None, chinese=True, append_to_response=None):
         if not isinstance(file_list, list):
             file_list = [file_list]

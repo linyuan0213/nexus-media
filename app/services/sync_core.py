@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Sync 核心服务重构
 拆分为 SyncService（业务） + SyncRepository（数据，已存在）
@@ -8,22 +7,21 @@ FileMonitorHandler 保留在此模块。
 import os
 import threading
 import traceback
-from typing import Dict, List, Optional
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
 import log
+from app.core.constants import RMT_MEDIAEXT
 from app.core.module_config import ModuleConf
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import TransferHistoryRepositoryAdapter
 from app.domain.interfaces.sync_repo import ISyncPathRepository
 from app.domain.interfaces.transfer_repo import ITransferHistoryRepository
 from app.services.filetransfer_service import FileTransferService as FileTransfer
-from app.utils import PathUtils, ExceptionUtils
+from app.utils import ExceptionUtils, PathUtils
 from app.utils.types import SyncType
-from app.core.constants import RMT_MEDIAEXT
 
 _synced_files_lock = threading.Lock()
 _need_sync_paths_lock = threading.Lock()
@@ -34,7 +32,7 @@ class FileMonitorHandler(FileSystemEventHandler):
     """目录监控响应类"""
 
     def __init__(self, monpath, sync_core, **kwargs):
-        super(FileMonitorHandler, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self._watch_path = monpath
         self._sync = sync_core
 
@@ -49,17 +47,17 @@ class SyncCore:
     """同步核心服务（替代原 app.sync.Sync）"""
 
     def __init__(self,
-                 filetransfer: Optional[FileTransfer] = None,
-                 sync_repo: Optional[ISyncPathRepository] = None,
-                 transfer_repo: Optional[ITransferHistoryRepository] = None):
+                 filetransfer: FileTransfer | None = None,
+                 sync_repo: ISyncPathRepository | None = None,
+                 transfer_repo: ITransferHistoryRepository | None = None):
         self._filetransfer = filetransfer or FileTransfer()
         self._sync_repo = sync_repo or SyncPathRepositoryAdapter()
         self._transfer_repo = transfer_repo or TransferHistoryRepositoryAdapter()
-        self._sync_path_confs: Dict[str, dict] = {}
-        self._monitor_sync_path_ids: List[int] = []
-        self._observer: List[Observer] = []
-        self._synced_files: List[str] = []
-        self._need_sync_paths: Dict[str, dict] = {}
+        self._sync_path_confs: dict[str, dict] = {}
+        self._monitor_sync_path_ids: list[int] = []
+        self._observer: list[Observer] = []
+        self._synced_files: list[str] = []
+        self._need_sync_paths: dict[str, dict] = {}
         # 自动加载配置（不启动监控，避免 API 请求时重复创建 Observer）
         self._reload_config()
 

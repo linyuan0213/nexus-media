@@ -1,8 +1,9 @@
-from webdav4.client import Client, ResourceAlreadyExists, ResourceNotFound
-from smb.SMBConnection import SMBConnection
-from abc import ABC, abstractmethod
-import shutil
 import os
+import shutil
+from abc import ABC, abstractmethod
+
+from smb.SMBConnection import SMBConnection
+from webdav4.client import Client, ResourceAlreadyExists, ResourceNotFound
 
 
 class FileStorageClient(ABC):

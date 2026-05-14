@@ -1,18 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 搜索领域 Repository 适配器
 将旧版 SearchRepository 适配为新领域接口
 """
-from typing import Optional
 
-from app.domain.interfaces.search_repo import ISearchRepository
 from app.db.repositories.search_repository import SearchRepository
+from app.domain.interfaces.search_repo import ISearchRepository
 
 
 class SearchRepositoryAdapter(ISearchRepository):
     """搜索结果仓储适配器"""
 
-    def __init__(self, repo: Optional[SearchRepository] = None):
+    def __init__(self, repo: SearchRepository | None = None):
         self._repo = repo or SearchRepository()
 
     def insert_search_results(self, media_items: list, title=None, ident_flag=True) -> None:

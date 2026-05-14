@@ -1,30 +1,29 @@
-# coding: utf-8
 """
 数据库迁移工具测试用例
 验证 SQLite ↔ MySQL/PostgreSQL 的数据导出导入能力
 """
 import json
 import os
-import pytest
 import tempfile
 from datetime import datetime
 
+import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 os.environ['FLASK_DEBUG'] = '1'
 
 from app.db.migrate import (
+    _serialize_value,
     export_database,
-    import_database,
     export_to_file,
-    import_from_file,
-    migrate_database,
     get_all_table_names,
     get_table_data,
-    _serialize_value,
+    import_database,
+    import_from_file,
+    migrate_database,
 )
-from app.db.models import Base, CONFIGFILTERGROUP, CUSTOMWORDS
+from app.db.models import CONFIGFILTERGROUP, CUSTOMWORDS, Base
 
 
 class TestSerializeValue:
@@ -123,7 +122,7 @@ class TestExportImport:
 
         try:
             export_to_file(sqlite_engine, filepath)
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, encoding="utf-8") as f:
                 loaded = json.load(f)
             assert loaded["tables"]["CONFIG_FILTER_GROUP"][0]["GROUP_NAME"] == "文件测试"
 
@@ -159,7 +158,8 @@ class TestExportImport:
 
     def test_import_truncate_long_strings(self, sqlite_engine):
         """测试超长字符串在导入目标库时自动截断"""
-        from sqlalchemy import Table, Column, MetaData, Integer as SAInteger, String as SAString
+        from sqlalchemy import Column, Integer as SAInteger, MetaData, String as SAString, Table
+
         from app.db.models import DOWNLOADHISTORY
 
         # 源库写入一条 ENCLOSURE 超长的记录

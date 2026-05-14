@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from config import Config
 
@@ -12,11 +11,11 @@ class ProviderConfig:
     api_key: str
     api_url: str
     model: str
-    proxy: Optional[str] = None
+    proxy: str | None = None
     timeout: int = 60
 
 
-def get_provider(provider_name: str = "") -> Optional[ProviderConfig]:
+def get_provider(provider_name: str = "") -> ProviderConfig | None:
     """获取 LLM 提供商配置"""
     cfg = Config().get_config("agent") or {}
     if not cfg.get("enabled"):

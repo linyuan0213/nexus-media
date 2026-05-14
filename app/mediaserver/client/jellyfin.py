@@ -3,7 +3,7 @@ from urllib.parse import quote
 
 import log
 from app.mediaserver.client._base import _IMediaClient
-from app.utils import RequestUtils, SystemUtils, ExceptionUtils, IpUtils
+from app.utils import ExceptionUtils, IpUtils, RequestUtils, SystemUtils
 from app.utils.types import MediaServerType, MediaType
 from config import Config
 

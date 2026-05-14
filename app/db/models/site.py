@@ -1,9 +1,8 @@
-# coding: utf-8
 """
 站点统计相关模型
 包含: 站点统计历史、站点用户信息、站点图标、站点做种信息
 """
-from sqlalchemy import Column, Float, Index, BigInteger, Integer, Text, String, text, Sequence
+from sqlalchemy import BigInteger, Column, Float, Index, Integer, Sequence, String, Text, text
 
 from app.db.models.base import Base
 

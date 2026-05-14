@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 RSS 核心模块
 
@@ -11,19 +10,18 @@ RSS 核心模块
 4. 择优下载
 """
 import json
-
 from threading import Lock
 
 import log
-from app.services.downloader_core import DownloaderCore as Downloader
-from app.helper import RssHelper
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.rss_repo_adapter import RssHistoryRepositoryAdapter
-from app.media import MediaService, MetaInfo
-from app.sites import Sites, SiteConf
-from app.services.subscribe_service import SubscribeService as Subscribe
+from app.helper import RssHelper
+from app.media import MediaService
+from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.rss_matcher import RssMatcher
-from app.utils import ExceptionUtils, Torrent, JsonUtils
+from app.services.subscribe_service import SubscribeService as Subscribe
+from app.sites import SiteConf, Sites
+from app.utils import ExceptionUtils, JsonUtils, Torrent
 from app.utils.commons import SingletonMeta
 from app.utils.types import MediaType, SearchType
 

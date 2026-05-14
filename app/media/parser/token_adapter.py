@@ -1,4 +1,3 @@
-from typing import Optional
 
 from app.media.parser._video import parse_video_title
 from app.media.parser.base import BaseParser, ParserResult
@@ -8,7 +7,7 @@ from app.utils.types import MediaType
 class TokenAdapter(BaseParser):
     """Tokens 正则解析适配器 — 影视文件名解析"""
 
-    def parse(self, title: str, subtitle: str = "") -> Optional[ParserResult]:
+    def parse(self, title: str, subtitle: str = "") -> ParserResult | None:
         meta = parse_video_title(title, subtitle)
         if not meta.get_name():
             return None

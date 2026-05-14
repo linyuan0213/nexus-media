@@ -1,11 +1,10 @@
-# coding: utf-8
 """
 插件历史和TMDB黑名单模型
 包含: 插件历史、TMDB黑名单、删种任务、自定义RSS任务历史、插件框架v2模型
 """
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, Text, String, Sequence, Boolean, DateTime
+from sqlalchemy import Boolean, Column, DateTime, Integer, Sequence, String, Text
 
 from app.db.models.base import Base
 

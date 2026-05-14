@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 SearchService - 搜索业务层
 
@@ -11,23 +10,23 @@ SearchService - 搜索业务层
 - SearchService：Service 层包装
 """
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 import log
-from app.db.repositories.search_repo_adapter import SearchRepositoryAdapter
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
+from app.db.repositories.search_repo_adapter import SearchRepositoryAdapter
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.domain.interfaces.search_repo import ISearchRepository
-from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.indexer_service import IndexerService
+from app.helper import ProgressHelper
 from app.media import MediaService
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
-from app.helper import ProgressHelper
-from app.schemas.search import SearchOneMediaResultDTO, SearchMediasResultDTO
+from app.schemas.search import SearchMediasResultDTO, SearchOneMediaResultDTO
+from app.services.downloader_core import DownloaderCore as Downloader
+from app.services.indexer_service import IndexerService
 from app.utils.commons import SingletonMeta
 from app.utils.string_utils import StringUtils
-from app.utils.types import SearchType, EventType, ProgressKey
+from app.utils.types import EventType, ProgressKey, SearchType
 from config import Config
 
 
@@ -38,7 +37,7 @@ class SearchQueryBuilder:
     """
 
     @staticmethod
-    def build_search_names(media_info, media_helper: Optional[MediaService] = None) -> Tuple[List[str], int]:
+    def build_search_names(media_info, media_helper: MediaService | None = None) -> tuple[list[str], int]:
         """
         根据媒体信息构建多语言搜索词列表
         :return: (搜索词列表, 建议最大并发数)
@@ -100,7 +99,7 @@ class SearchExecutor:
 
     def execute(self, search_func, search_names: list, filter_args: dict,
                 media_info, in_from: SearchType,
-                progress_updater=None) -> List[Any]:
+                progress_updater=None) -> list[Any]:
         """
         并发执行多词搜索
         :param search_func: 单次搜索函数（如 Searcher.search_medias）
@@ -166,10 +165,10 @@ class SearchResultProcessor:
     """
 
     def __init__(self,
-                 downloader: Optional[Downloader] = None,
-                 download_repo: Optional[IDownloadHistoryRepository] = None,
-                 search_repo: Optional[ISearchRepository] = None,
-                 message: Optional[Message] = None):
+                 downloader: Downloader | None = None,
+                 download_repo: IDownloadHistoryRepository | None = None,
+                 search_repo: ISearchRepository | None = None,
+                 message: Message | None = None):
         self._downloader = downloader or Downloader()
         # 如果没有注入Repository，使用适配器创建默认实例
         if download_repo is None:
@@ -234,8 +233,8 @@ class Searcher(metaclass=SingletonMeta):
     _search_auto = True
 
     def __init__(self,
-                 download_repo: Optional[IDownloadHistoryRepository] = None,
-                 search_repo: Optional[ISearchRepository] = None):
+                 download_repo: IDownloadHistoryRepository | None = None,
+                 search_repo: ISearchRepository | None = None):
         self._download_repo = download_repo
         self._search_repo = search_repo
         self.init_config()
@@ -402,9 +401,9 @@ class SearchService:
     """
 
     def __init__(self,
-                 searcher: Optional[Searcher] = None,
-                 downloader: Optional[Downloader] = None,
-                 media_service: Optional[MediaService] = None):
+                 searcher: Searcher | None = None,
+                 downloader: Downloader | None = None,
+                 media_service: MediaService | None = None):
         self._searcher = searcher or Searcher()
         self._downloader = downloader or Downloader()
         self._media = media_service or MediaService()
@@ -413,7 +412,7 @@ class SearchService:
                       key_word: Any,
                       filter_args: dict,
                       match_media=None,
-                      in_from: Optional[SearchType] = None) -> SearchMediasResultDTO:
+                      in_from: SearchType | None = None) -> SearchMediasResultDTO:
         if not key_word:
             return SearchMediasResultDTO(results=[])
         results = self._searcher.search_medias(
@@ -428,9 +427,9 @@ class SearchService:
                          media_info,
                          in_from: SearchType,
                          no_exists: dict,
-                         sites: Optional[list] = None,
-                         filters: Optional[dict] = None,
-                         user_name: Optional[str] = None) -> SearchOneMediaResultDTO:
+                         sites: list | None = None,
+                         filters: dict | None = None,
+                         user_name: str | None = None) -> SearchOneMediaResultDTO:
         result = self._searcher.search_one_media(
             media_info=media_info,
             in_from=in_from,
@@ -461,6 +460,6 @@ class SearchService:
     def insert_search_results(self, media_items: list, title=None, ident_flag=True) -> None:
         self._searcher.insert_search_results(media_items, title, ident_flag)
 
-    def build_search_names(self, media_info) -> List[str]:
+    def build_search_names(self, media_info) -> list[str]:
         names, _ = SearchQueryBuilder.build_search_names(media_info, self._media)
         return names

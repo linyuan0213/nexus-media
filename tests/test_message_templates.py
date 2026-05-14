@@ -2,16 +2,18 @@
 """
 消息通知模板功能测试
 """
-import pytest
-import sys
 import os
-import time
 import re
+import sys
+import time
+
+import pytest
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from jinja2 import Environment, BaseLoader
+from jinja2 import BaseLoader, Environment
+
 from app.utils import StringUtils
 
 

@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Indexer 领域 DTO 定义
 """
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -41,5 +40,5 @@ class IndexerResourcesResultDTO:
 @dataclass
 class IndexerSearchResultDTO:
     """索引器搜索结果包装"""
-    results: List[Any] = field(default_factory=list)
+    results: list[Any] = field(default_factory=list)
     total_count: int = 0

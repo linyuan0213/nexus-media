@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 消息队列工厂 — 根据 Redis 可用性自动选择实现
 """
 import log
-
 from app.infrastructure.queue.base import MessageQueue
 from app.infrastructure.queue.memory_queue import MemoryMessageQueue
 from app.infrastructure.queue.redis_queue import RedisMessageQueue

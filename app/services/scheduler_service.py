@@ -2,15 +2,15 @@
 调度器业务服务：脱离 Web 框架，可独立单元测试
 """
 import time
-from typing import Any, ClassVar, List, Optional
+from typing import Any, ClassVar
 
 import log
 from app.helper import ThreadHelper
-from app.services.scheduler_core import SchedulerCore
 from app.schemas.scheduler import (
     DeleteSchedulerJobRequest,
     DeleteSchedulerJobResponse,
     GetSchedulerJobsResponse,
+    JobTrigger,
     PauseSchedulerJobRequest,
     PauseSchedulerJobResponse,
     ResumeSchedulerJobRequest,
@@ -18,10 +18,10 @@ from app.schemas.scheduler import (
     RunSchedulerJobRequest,
     RunSchedulerJobResponse,
     SchedulerJob,
-    JobTrigger,
     UpdateSchedulerJobRequest,
     UpdateSchedulerJobResponse,
 )
+from app.services.scheduler_core import SchedulerCore
 
 
 class SchedulerService:
@@ -29,10 +29,10 @@ class SchedulerService:
 
     _UNSET: ClassVar[Any] = object()
 
-    def __init__(self, scheduler: Optional[SchedulerCore] = _UNSET):
+    def __init__(self, scheduler: SchedulerCore | None = _UNSET):
         self._scheduler = scheduler
 
-    def _get_scheduler(self) -> Optional[SchedulerCore]:
+    def _get_scheduler(self) -> SchedulerCore | None:
         if self._scheduler is not self._UNSET:
             return self._scheduler
         core = SchedulerCore()
@@ -54,7 +54,7 @@ class SchedulerService:
 
         jobs = svc.get_jobs()
         stats = svc.get_job_statistics()
-        job_list: List[SchedulerJob] = []
+        job_list: list[SchedulerJob] = []
         for job in jobs:
             trigger_info = JobTrigger()
             trigger_type = "unknown"

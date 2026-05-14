@@ -5,12 +5,12 @@ Revises: a933386acbad
 Create Date: 2026-04-10 11:50:00.000000
 
 """
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy import Column, Integer, Text, String, Sequence
 import ast
 import json
 
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy import Column, Integer, Sequence, String, Text
 
 # revision identifiers, used by Alembic.
 revision = '6766a9cd1d4b'
@@ -86,7 +86,7 @@ def upgrade() -> None:
         config_path = os.environ.get('NASTOOL_CONFIG')
         if config_path:
             import ruamel.yaml
-            with open(config_path, mode='r', encoding='utf-8') as cf:
+            with open(config_path, encoding='utf-8') as cf:
                 cfg = ruamel.yaml.YAML().load(cf)
             if cfg:
                 media_server_type = cfg.get('media', {}).get('media_server', 'emby')

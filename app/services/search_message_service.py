@@ -6,18 +6,17 @@ import os
 import re
 
 import log
-
 from app.agent import ChatAgent
-from app.media import MediaService, DouBan, MetaInfo
+from app.media import MediaService, MetaInfo
 from app.message import Message
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
+from app.services.search_pagination import pagination_mgr
 from app.services.search_service import Searcher
 from app.services.subscribe_service import SubscribeService as Subscribe
-from app.services.search_pagination import pagination_mgr
 from app.sites import Sites
 from app.utils import StringUtils, Torrent
-from app.utils.types import SearchType, IndexerType, RssType, MediaType
+from app.utils.types import IndexerType, MediaType, RssType, SearchType
 from app.utils.web_utils import WebUtils
 from config import Config
 

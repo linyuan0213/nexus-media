@@ -4,16 +4,14 @@
 """
 import asyncio
 
-from fastapi import APIRouter, Request, HTTPException, status
-from typing import Optional
+from fastapi import APIRouter, HTTPException, Request, status
 
 import log
-
-from app.services.system_service import MessageCommandHandler
-from app.services.search_message_service import MessageSearchService
-from app.utils.types import SearchType
-from app.services.apikey_service import APIKeyService
 from app.message import Message
+from app.services.apikey_service import APIKeyService
+from app.services.search_message_service import MessageSearchService
+from app.services.system_service import MessageCommandHandler
+from app.utils.types import SearchType
 
 router = APIRouter()
 

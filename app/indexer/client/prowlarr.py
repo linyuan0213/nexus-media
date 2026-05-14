@@ -1,8 +1,7 @@
-from app.utils import ExceptionUtils
-from app.utils.types import IndexerType
-from app.indexer.client._base import _IIndexClient
-from app.utils import RequestUtils
 from app.helper import IndexerConf
+from app.indexer.client._base import _IIndexClient
+from app.utils import ExceptionUtils, RequestUtils
+from app.utils.types import IndexerType
 
 
 class Prowlarr(_IIndexClient):
@@ -42,7 +41,7 @@ class Prowlarr(_IIndexClient):
 
     def get_client_id(self):
         return self.client_id
-    
+
     def get_status(self):
         """
         检查连通性

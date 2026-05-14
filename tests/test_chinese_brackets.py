@@ -1,10 +1,11 @@
-# -*- coding: utf-8 -*-
 """Debug Chinese brackets title"""
 import sys
 from unittest.mock import MagicMock
+
 sys.modules['log'] = MagicMock()
 
 import os
+
 os.environ['NASTOOL_CONFIG'] = '/home/linyuan/python/config/config.yaml'
 
 from app.media.parser.video import parse_video_title

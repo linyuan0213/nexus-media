@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """引擎连接测试 — 从 engine.py 拆分"""
 import time
 

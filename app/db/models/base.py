@@ -1,9 +1,7 @@
-# coding: utf-8
 """
 数据库模型基础定义
 包含 Base 和 BaseMedia 声明式基类
 """
-from sqlalchemy import Column, Float, Index, Integer, Text, String, text, Sequence, BigInteger
 from sqlalchemy.orm import declarative_base
 
 # 使用单一的 Base 来合并两个数据库

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Config 重构单元测试
 验证：
@@ -11,10 +10,7 @@ import os
 import pickle
 import sys
 import types
-import tempfile
-from unittest.mock import MagicMock, patch, mock_open
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 # 提前注入 mock config，避免加载真实 config.py（会检查 NASTOOL_CONFIG 并 quit）
 _mock_config = types.ModuleType('config')

@@ -1,9 +1,11 @@
 import re
+
 import parse
+
 from app.core.constants import SPLIT_CHARS
 
 
-class EpisodeFormat(object):
+class EpisodeFormat:
     _key = ""
 
     def __init__(self, eformat, details: str = None, part: str = None, offset=None, key="ep"):

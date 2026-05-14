@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from api.deps import get_current_user, get_words_service

@@ -1,29 +1,26 @@
-# -*- coding: utf-8 -*-
 """
 DownloadService - 下载编排业务层
 将 web/controllers/download.py 中的下载业务逻辑下沉到可独立测试的 Service。
 """
 import os
-from typing import List, Optional, Tuple
 
 import log
-from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.indexer_service import IndexerService
+from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
+from app.infrastructure.cache_system import get_cache_manager
 from app.media import MediaService
 from app.media.models import MediaInfo
 from app.schemas.download import (
     DownloadResultDTO,
-    DownloadingTorrentDTO,
     IndexerStatisticsDTO,
 )
+from app.services.downloader_core import DownloaderCore as Downloader
+from app.services.indexer_service import IndexerService
 from app.services.search_service import Searcher
-from app.sites import Sites
 from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
-from app.utils import ExceptionUtils, Torrent
+from app.sites import Sites
+from app.utils import Torrent
 from app.utils.temp_manager import temp_manager
 from app.utils.types import SearchType
-from app.infrastructure.cache_system import get_cache_manager
-from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 
 
 class DownloadService:
@@ -37,12 +34,12 @@ class DownloadService:
     """
 
     def __init__(self,
-                 downloader: Optional[Downloader] = None,
-                 searcher: Optional[Searcher] = None,
-                 media_service: Optional[MediaService] = None,
-                 sites: Optional[Sites] = None,
-                 indexer_service: Optional[IndexerService] = None,
-                 torrent_remover: Optional[TorrentRemover] = None):
+                 downloader: Downloader | None = None,
+                 searcher: Searcher | None = None,
+                 media_service: MediaService | None = None,
+                 sites: Sites | None = None,
+                 indexer_service: IndexerService | None = None,
+                 torrent_remover: TorrentRemover | None = None):
         self._downloader = downloader or Downloader()
         self._searcher = searcher or Searcher()
         self._media = media_service or MediaService()
@@ -52,13 +49,13 @@ class DownloadService:
 
     # ---------- 下载编排 ----------
 
-    def _resolve_download_url(self, page_url: str, enclosure: Optional[str]) -> str:
+    def _resolve_download_url(self, page_url: str, enclosure: str | None) -> str:
         """通过站点引擎解析 API 站点下载链接"""
         if not enclosure:
             return self._downloader.get_download_url(page_url) or ""
         return enclosure or ""
 
-    def resolve_download_url(self, page_url: str, enclosure: Optional[str]) -> str:
+    def resolve_download_url(self, page_url: str, enclosure: str | None) -> str:
         """公开方法：解析站点下载链接"""
         return self._resolve_download_url(page_url, enclosure)
 
@@ -140,13 +137,13 @@ class DownloadService:
     def download_from_torrent_files_or_urls(self, files: list, urls: list,
                                             dl_dir: str, dl_setting: str,
                                             user_name: str,
-                                            page_url: Optional[str] = None,
-                                            upload_volume_factor: Optional[float] = None,
-                                            download_volume_factor: Optional[float] = None,
-                                            title: Optional[str] = None,
-                                            description: Optional[str] = None,
-                                            site: Optional[str] = None,
-                                            size: Optional[int] = None) -> DownloadResultDTO:
+                                            page_url: str | None = None,
+                                            upload_volume_factor: float | None = None,
+                                            download_volume_factor: float | None = None,
+                                            title: str | None = None,
+                                            description: str | None = None,
+                                            site: str | None = None,
+                                            size: int | None = None) -> DownloadResultDTO:
         """从种子文件或 URL 链接添加下载"""
         if not files and not urls:
             return DownloadResultDTO(success=False, message="没有种子文件或者种子链接")
@@ -248,7 +245,7 @@ class DownloadService:
 
     # ---------- 正在下载任务（含媒体信息拼装） ----------
 
-    def get_downloading_with_media_info(self) -> List[dict]:
+    def get_downloading_with_media_info(self) -> list[dict]:
         """
         获取正在下载的任务列表，并拼装媒体信息（标题、海报）
         """
@@ -324,7 +321,7 @@ class DownloadService:
 
     # ---------- 索引器统计 ----------
 
-    def get_indexer_statistics(self) -> Tuple[List[IndexerStatisticsDTO], List[list]]:
+    def get_indexer_statistics(self) -> tuple[list[IndexerStatisticsDTO], list[list]]:
         """
         获取索引器统计数据及 dataset
         :return: (统计数据列表, 图表数据集)
@@ -336,13 +333,13 @@ class DownloadService:
     def auto_remove_torrents(self, taskids=None) -> None:
         self._torrent_remover.auto_remove_torrents(taskids=taskids)
 
-    def get_remove_torrents(self, taskid=None) -> Tuple[bool, Optional[list]]:
+    def get_remove_torrents(self, taskid=None) -> tuple[bool, list | None]:
         return self._torrent_remover.get_remove_torrents(taskid=taskid)
 
     def get_torrent_remove_tasks(self, taskid=None):
         return self._torrent_remover.get_torrent_remove_tasks(taskid=taskid)
 
-    def update_torrent_remove_task(self, data: dict) -> Tuple[bool, str]:
+    def update_torrent_remove_task(self, data: dict) -> tuple[bool, str]:
         return self._torrent_remover.update_torrent_remove_task(data=data)
 
     def delete_torrent_remove_task(self, taskid) -> bool:

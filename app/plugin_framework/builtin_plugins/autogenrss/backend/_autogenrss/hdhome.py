@@ -1,13 +1,13 @@
 import json
+
 from lxml import etree
 
 from app.db.repositories import SiteRepository
 from app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss._base import _ISiteRssGenHandler
+from app.utils.config_tools import get_proxies
 from app.utils.http_utils import RequestUtils
 from app.utils.json_utils import JsonUtils
 from app.utils.string_utils import StringUtils
-from config import Config
-from app.utils.config_tools import get_proxies
 
 
 class HDHome(_ISiteRssGenHandler):
@@ -16,8 +16,8 @@ class HDHome(_ISiteRssGenHandler):
     """
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "hdhome.org"
-    
-    
+
+
     @classmethod
     def match(cls, url):
         """
@@ -26,7 +26,7 @@ class HDHome(_ISiteRssGenHandler):
         :return: 是否匹配，如匹配则会调用该类的gen_rss方法
         """
         return True if StringUtils.url_equal(url, cls.site_url) else False
-    
+
     def gen_rss(self, site_info: dict):
         """
         执行RSS生成
@@ -47,7 +47,7 @@ class HDHome(_ISiteRssGenHandler):
             headers = json.loads(headers)
         else:
             headers = {}
-            
+
         home_url = StringUtils.get_base_url(site_url)
         rss_url = f"{home_url}/getrss.php"
         self.info(f"开始生成RSS站点：{site}")
@@ -62,33 +62,33 @@ class HDHome(_ISiteRssGenHandler):
             "search_mode": "1",
             "exp": "180"
         }
-        
+
         headers.update({'User-Agent': ua})
         html_res = RequestUtils(cookies=site_cookie,
                             headers=headers,
                             proxies=get_proxies() if site_info.get("proxy") else None
                             ).post_res(url=rss_url, data=data)
         if not html_res or html_res.status_code != 200:
-            self.error(f"生成RSS失败，请检查站点连通性")
+            self.error("生成RSS失败，请检查站点连通性")
             return False, f'【{site}】生成RSS失败，请检查站点连通性'
 
         if "login.php" in html_res.text:
-            self.error(f"生成RSS失败，cookie失效")
+            self.error("生成RSS失败，cookie失效")
             return False, f'【{site}】生成RSS失败，cookie失效'
-                
+
         # 解析rss url
         gen_rss_url = self._parse_rss_link(html_res.text)
         self.debug(f"生成的rss: {gen_rss_url}")
         if gen_rss_url:
             #插入到数据库
             SiteRepository().update_site_rssurl(site_info.get("id"), gen_rss_url)
-        
-            self.info(f"生成RSS成功")
+
+            self.info("生成RSS成功")
             return True, f'【{site}】生成RSS成功'
         else:
-            self.info(f"生成RSS失败")
+            self.info("生成RSS失败")
             return True, f'【{site}生成RSS失败'
-    
+
     @staticmethod
     def _parse_rss_link(html_text: str) -> str:
         if not html_text:

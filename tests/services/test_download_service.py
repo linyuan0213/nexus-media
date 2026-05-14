@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 DownloadService 单元测试
 """
@@ -7,7 +6,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.schemas.download import (
-    DownloadResultDTO,
     IndexerStatisticsDTO,
 )
 from app.services.download_service import DownloadService
@@ -265,7 +263,6 @@ class TestGetIndexerStatistics:
         assert dataset == [["indexer", "avg"]]
 
     def test_with_data(self, svc, mock_indexer_service):
-        from app.schemas.download import IndexerStatisticsDTO
         mock_indexer_service.get_indexer_statistics.return_value = (
             [IndexerStatisticsDTO(name="Indexer1", total=100, fail=10, success=90, avg=88.5)],
             [["indexer", "avg"], ["Indexer1", 88.5]]

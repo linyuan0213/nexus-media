@@ -3,7 +3,7 @@ Word Repository
 Handles custom words and word groups related database operations.
 """
 from app.db import DbPersist
-from app.db.models import CUSTOMWORDS, CUSTOMWORDGROUPS
+from app.db.models import CUSTOMWORDGROUPS, CUSTOMWORDS
 from app.db.repositories.base_repository import BaseRepository
 
 
@@ -60,7 +60,7 @@ class WordRepository(BaseRepository):
         """
         if not wid:
             self._db.query(CUSTOMWORDS).delete()
-        self._db.query(CUSTOMWORDS).filter(CUSTOMWORDS.ID == int(wid)).delete()
+        self._db.query(CUSTOMWORDS).filter(int(wid) == CUSTOMWORDS.ID).delete()
 
     @DbPersist(BaseRepository._db)
     def check_custom_word(self, wid=None, enabled=None):
@@ -74,7 +74,7 @@ class WordRepository(BaseRepository):
         if enabled is None:
             return
         if wid:
-            self._db.query(CUSTOMWORDS).filter(CUSTOMWORDS.ID == int(wid)).update({
+            self._db.query(CUSTOMWORDS).filter(int(wid) == CUSTOMWORDS.ID).update({
                 "ENABLED": int(enabled)
             })
         else:
@@ -93,12 +93,12 @@ class WordRepository(BaseRepository):
             自定义识别词列表
         """
         if wid:
-            return self._db.query(CUSTOMWORDS).filter(CUSTOMWORDS.ID == int(wid)).all()
+            return self._db.query(CUSTOMWORDS).filter(int(wid) == CUSTOMWORDS.ID).all()
         elif gid:
-            return self._db.query(CUSTOMWORDS).filter(CUSTOMWORDS.GROUP_ID == int(gid)) \
+            return self._db.query(CUSTOMWORDS).filter(int(gid) == CUSTOMWORDS.GROUP_ID) \
                 .order_by(CUSTOMWORDS.ENABLED.desc(), CUSTOMWORDS.TYPE, CUSTOMWORDS.REGEX, CUSTOMWORDS.ID).all()
         elif enabled is not None:
-            return self._db.query(CUSTOMWORDS).filter(CUSTOMWORDS.ENABLED == int(enabled)) \
+            return self._db.query(CUSTOMWORDS).filter(int(enabled) == CUSTOMWORDS.ENABLED) \
                 .order_by(CUSTOMWORDS.GROUP_ID, CUSTOMWORDS.TYPE, CUSTOMWORDS.REGEX, CUSTOMWORDS.ID).all()
         return self._db.query(CUSTOMWORDS) \
             .order_by(CUSTOMWORDS.GROUP_ID,
@@ -121,10 +121,10 @@ class WordRepository(BaseRepository):
             是否存在
         """
         if replaced:
-            count = self._db.query(CUSTOMWORDS).filter(CUSTOMWORDS.REPLACED == replaced).count()
+            count = self._db.query(CUSTOMWORDS).filter(replaced == CUSTOMWORDS.REPLACED).count()
         elif front and back:
-            count = self._db.query(CUSTOMWORDS).filter(CUSTOMWORDS.FRONT == front,
-                                                        CUSTOMWORDS.BACK == back).count()
+            count = self._db.query(CUSTOMWORDS).filter(front == CUSTOMWORDS.FRONT,
+                                                        back == CUSTOMWORDS.BACK).count()
         else:
             return False
         return count > 0
@@ -163,8 +163,8 @@ class WordRepository(BaseRepository):
         """
         if not gid:
             return
-        self._db.query(CUSTOMWORDS).filter(CUSTOMWORDS.GROUP_ID == int(gid)).delete()
-        self._db.query(CUSTOMWORDGROUPS).filter(CUSTOMWORDGROUPS.ID == int(gid)).delete()
+        self._db.query(CUSTOMWORDS).filter(int(gid) == CUSTOMWORDS.GROUP_ID).delete()
+        self._db.query(CUSTOMWORDGROUPS).filter(int(gid) == CUSTOMWORDGROUPS.ID).delete()
 
     def get_custom_word_groups(self, gid=None, tmdbid=None, gtype=None):
         """
@@ -179,12 +179,12 @@ class WordRepository(BaseRepository):
             自定义识别词组列表
         """
         if gid:
-            return self._db.query(CUSTOMWORDGROUPS).filter(CUSTOMWORDGROUPS.ID == int(gid)).all()
+            return self._db.query(CUSTOMWORDGROUPS).filter(int(gid) == CUSTOMWORDGROUPS.ID).all()
         if tmdbid and gtype:
-            return self._db.query(CUSTOMWORDGROUPS).filter(CUSTOMWORDGROUPS.TMDBID == int(tmdbid),
-                                                            CUSTOMWORDGROUPS.TYPE == int(gtype)).all()
+            return self._db.query(CUSTOMWORDGROUPS).filter(int(tmdbid) == CUSTOMWORDGROUPS.TMDBID,
+                                                            int(gtype) == CUSTOMWORDGROUPS.TYPE).all()
         if tmdbid:
-            return self._db.query(CUSTOMWORDGROUPS).filter(CUSTOMWORDGROUPS.TMDBID == int(tmdbid)).all()
+            return self._db.query(CUSTOMWORDGROUPS).filter(int(tmdbid) == CUSTOMWORDGROUPS.TMDBID).all()
         return self._db.query(CUSTOMWORDGROUPS).all()
 
     def is_custom_word_group_existed(self, tmdbid=None, gtype=None):
@@ -200,6 +200,6 @@ class WordRepository(BaseRepository):
         """
         if not gtype or not tmdbid:
             return False
-        count = self._db.query(CUSTOMWORDGROUPS).filter(CUSTOMWORDGROUPS.TMDBID == int(tmdbid),
-                                                        CUSTOMWORDGROUPS.TYPE == int(gtype)).count()
+        count = self._db.query(CUSTOMWORDGROUPS).filter(int(tmdbid) == CUSTOMWORDGROUPS.TMDBID,
+                                                        int(gtype) == CUSTOMWORDGROUPS.TYPE).count()
         return count > 0

@@ -1,22 +1,19 @@
-# -*- coding: utf-8 -*-
 import base64
 import json
 import re
 from abc import ABCMeta, abstractmethod
-from time import sleep
 from urllib.parse import urljoin, urlsplit
 
 import requests
 from lxml import etree
 
-from app.helper.drissionpage_helper import DrissionPageHelper
 import log
 from app.helper import SiteHelper
 from app.helper.cloudflare_helper import under_challenge
+from app.helper.drissionpage_helper import DrissionPageHelper
 from app.utils import RequestUtils
-from app.utils.types import SiteSchema
-from config import Config
 from app.utils.config_tools import get_proxies
+from app.utils.types import SiteSchema
 
 SITE_BASE_ORDER = 1000
 
@@ -190,7 +187,6 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         :param html_text:
         :return:
         """
-        pass
 
     def _parse_favicon(self, html_text):
         """
@@ -258,7 +254,7 @@ class _ISiteUserInfo(metaclass=ABCMeta):
                 chrome = DrissionPageHelper()
                 if self._emulate and chrome.get_status():
                     html_text = chrome.get_page_html(url=url, cookies=self._site_cookie)
-  
+
                     if not html_text:
                         log.error(f"【Sites】{self.site_name} 无法打开网站")
                         return None
@@ -283,7 +279,6 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         :param html_text:
         :return:
         """
-        pass
 
     @abstractmethod
     def _parse_user_base_info(self, html_text):
@@ -292,7 +287,6 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         :param html_text:
         :return:
         """
-        pass
 
     def _parse_logged_in(self, html_text):
         """
@@ -314,7 +308,6 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         :param html_text:
         :return:
         """
-        pass
 
     @abstractmethod
     def _parse_user_torrent_seeding_info(self, html_text, multi_page=False):
@@ -324,7 +317,6 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         :param multi_page: 是否多页数据
         :return: 下页地址
         """
-        pass
 
     @abstractmethod
     def _parse_user_detail_info(self, html_text):
@@ -334,7 +326,6 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         :param html_text:
         :return:
         """
-        pass
 
     @abstractmethod
     def _parse_message_content(self, html_text):
@@ -343,4 +334,3 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         :param html_text:
         :return:  head: message, date: time, content: message content
         """
-        pass

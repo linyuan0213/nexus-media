@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 CustomReleaseGroups Plugin v2
 添加无法识别的制作组/字幕组

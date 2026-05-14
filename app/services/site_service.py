@@ -1,20 +1,20 @@
-# -*- coding: utf-8 -*-
 import json
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from app.services.indexer_service import IndexerService
+from app.db.repositories import SiteRepository
 from app.schemas.site import (
+    SiteActivityDTO,
     SiteAttrDTO,
     SiteDetailDTO,
-    SiteTestResultDTO,
     SiteHistoryDTO,
-    SiteSeedingDTO,
-    SiteActivityDTO,
     SiteResourcesResultDTO,
+    SiteSeedingDTO,
+    SiteTestResultDTO,
     SiteUpdateResultDTO,
 )
-from app.db.repositories import SiteRepository
-from app.sites import Sites, SiteUserInfo, SiteCookie, SiteConf
+from app.services.indexer_service import IndexerService
+from app.sites import SiteConf, SiteCookie, Sites
+from app.sites.site_userinfo import SiteUserInfo
 from app.utils import StringUtils
 
 
@@ -22,13 +22,13 @@ class SiteService:
     """站点业务服务：站点 CRUD、统计、连通性测试、资源列表"""
 
     def __init__(self,
-                 sites: Optional[Sites] = None,
-                 site_user_info: Optional[SiteUserInfo] = None,
-                 site_conf: Optional[SiteConf] = None,
-                 site_cookie: Optional[SiteCookie] = None,
-                 indexer_service: Optional[IndexerService] = None,
+                 sites: Sites | None = None,
+                 site_user_info: SiteUserInfo | None = None,
+                 site_conf: SiteConf | None = None,
+                 site_cookie: SiteCookie | None = None,
+                 indexer_service: IndexerService | None = None,
                  string_utils=None,
-                 site_repo: Optional[SiteRepository] = None):
+                 site_repo: SiteRepository | None = None):
         self._sites = sites or Sites()
         self._site_user_info = site_user_info or SiteUserInfo()
         self._site_conf = site_conf or SiteConf()
@@ -40,7 +40,7 @@ class SiteService:
     # ------------------------------------------------------------------
     # 站点属性
     # ------------------------------------------------------------------
-    def check_site_attr(self, url: Optional[str]) -> SiteAttrDTO:
+    def check_site_attr(self, url: str | None) -> SiteAttrDTO:
         """检查站点标识（FREE / 2XFREE / HR）"""
         site_attr = self._site_conf.get_grap_conf(url)
         return SiteAttrDTO(
@@ -52,12 +52,12 @@ class SiteService:
     # ------------------------------------------------------------------
     # CRUD
     # ------------------------------------------------------------------
-    def delete_site(self, tid: Optional[str]) -> Optional[int]:
+    def delete_site(self, tid: str | None) -> int | None:
         if not tid:
             return 0
         return self._sites.delete_site(tid)
 
-    def get_site(self, tid: Optional[str]) -> SiteDetailDTO:
+    def get_site(self, tid: str | None) -> SiteDetailDTO:
         if not tid:
             return SiteDetailDTO(site=[])
         ret: Any = self._sites.get_sites(siteid=tid)
@@ -83,7 +83,7 @@ class SiteService:
         return self._sites.get_sites(
             rss=rss, brush=brush, statistic=statistic, public=True)
 
-    def _is_site_duplicate(self, name: Optional[str], tid: Optional[str]) -> bool:
+    def _is_site_duplicate(self, name: str | None, tid: str | None) -> bool:
         if not name:
             return False
         for site in self._sites.get_sites_by_name(name=name):
@@ -138,7 +138,7 @@ class SiteService:
 
     def get_site_history(self,
                          days: int,
-                         end_day: Optional[str] = None) -> SiteHistoryDTO:
+                         end_day: str | None = None) -> SiteHistoryDTO:
         _, _, site, upload, download = \
             self._site_user_info.get_pt_site_statistics_history(
                 days + 1, end_day)
@@ -158,7 +158,7 @@ class SiteService:
 
     def get_site_daily_history(self,
                                days: int = 30,
-                               end_day: Optional[str] = None) -> dict:
+                               end_day: str | None = None) -> dict:
         site_urls = []
         for site in self._sites.get_sites(statistic=True):
             site_url = site.get("strict_url")
@@ -167,16 +167,16 @@ class SiteService:
         return self._site_repo.get_site_daily_history(
             days=days, end_day=end_day, strict_urls=site_urls)
 
-    def refresh_site_data_now(self, specify_sites: Optional[list] = None) -> None:
+    def refresh_site_data_now(self, specify_sites: list | None = None) -> None:
         """强制刷新站点数据"""
         self._site_user_info.refresh_site_data_now(specify_sites=specify_sites)
 
     def get_site_user_statistics(self,
-                                 sites: Optional[list] = None,
+                                 sites: list | None = None,
                                  encoding: str = "DICT",
-                                 sort_by: Optional[str] = None,
-                                 sort_on: Optional[str] = None,
-                                 site_hash: Optional[str] = None) -> List[dict]:
+                                 sort_by: str | None = None,
+                                 sort_on: str | None = None,
+                                 site_hash: str | None = None) -> list[dict]:
         statistics = self._site_user_info.get_site_user_statistics(
             sites=sites, encoding=encoding)
         # 修复馒头站点显示
@@ -199,7 +199,7 @@ class SiteService:
     # ------------------------------------------------------------------
     # Favicon
     # ------------------------------------------------------------------
-    def get_site_favicon(self, name: Optional[str] = None):
+    def get_site_favicon(self, name: str | None = None):
         return self._sites.get_site_favicon(site_name=name)
 
     # ------------------------------------------------------------------

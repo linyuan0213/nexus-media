@@ -8,7 +8,7 @@ Agent 工具层 — 仅定义工具 Schema 与参数校验
 """
 import json
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 
 class ToolResult:
@@ -44,7 +44,6 @@ class BaseTool(ABC):
         子类可在此实现纯本地逻辑（如计算、格式化）。
         若需要调用外部服务，应通过返回 ToolResult 让上层处理。
         """
-        pass
 
     def validate(self, kwargs: dict) -> tuple[bool, str]:
         """
@@ -87,7 +86,7 @@ class ToolRegistry:
         cls._tools[tool.name] = tool
 
     @classmethod
-    def get(cls, name: str) -> Optional[BaseTool]:
+    def get(cls, name: str) -> BaseTool | None:
         return cls._tools.get(name)
 
     @classmethod

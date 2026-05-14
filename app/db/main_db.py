@@ -1,18 +1,17 @@
 import os
 import threading
 from contextlib import contextmanager
-from typing import Optional, Any
+from typing import Any
 
 from sqlalchemy import text
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import scoped_session, sessionmaker
 
-from app.db.models import Base
 from app.db.database_factory import DatabaseFactory
+from app.db.models import Base
 from app.db.sql_adapter import SQLAdapter
 from app.utils import ExceptionUtils, PathUtils
-from config import Config
 from app.utils.path_utils import get_script_path
-
+from config import Config
 
 # =============================================================================
 # SQL 适配器（延迟初始化避免循环导入）
@@ -36,9 +35,9 @@ def get_sql_adapter():
 # 引擎与 Session 工厂（延迟初始化）
 # =============================================================================
 
-_Engine: Optional[Any] = None
-_SessionFactory: Optional[Any] = None
-_ScopedSession: Optional[Any] = None
+_Engine: Any | None = None
+_SessionFactory: Any | None = None
+_ScopedSession: Any | None = None
 
 
 def _init_engine():
@@ -204,7 +203,7 @@ class SessionManager:
         for sql_file in sql_files:
             if os.path.basename(sql_file) not in init_files:
                 config_flag = True
-                with open(sql_file, "r", encoding="utf-8") as f:
+                with open(sql_file, encoding="utf-8") as f:
                     sql_list = f.read().split(';\n')
                     for sql in sql_list:
                         try:

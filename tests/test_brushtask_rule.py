@@ -1,4 +1,3 @@
-import pytest
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.utils.types import BrushDeleteType, BrushStopType
 

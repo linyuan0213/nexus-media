@@ -2,8 +2,6 @@
 Test cases for Repository Layer
 验证 Repository 层的测试用例
 """
-import pytest
-from unittest.mock import MagicMock, patch, Mock
 
 
 class TestRepositoriesImport:
@@ -13,17 +11,17 @@ class TestRepositoriesImport:
         """测试所有 Repository 类可以正常导入"""
         from app.db.repositories import (
             BaseRepository,
-            SearchRepository,
-            TransferRepository,
-            SiteRepository,
-            RssRepository,
             BrushRepository,
-            DownloadRepository,
-            UserRepository,
-            SyncRepository,
-            WordRepository,
             ConfigRepository,
+            DownloadRepository,
             PluginRepository,
+            RssRepository,
+            SearchRepository,
+            SiteRepository,
+            SyncRepository,
+            TransferRepository,
+            UserRepository,
+            WordRepository,
         )
         assert BaseRepository is not None
         assert SearchRepository is not None
@@ -167,11 +165,11 @@ class TestBaseRepositoryUtils:
         """测试路径标准化"""
         from app.db.repositories import BaseRepository
         repo = BaseRepository()
-        
+
         # 测试空路径
         assert repo._normalize_path("") == ""
         assert repo._normalize_path(None) == ""
-        
+
         # 测试正常路径（不实际调用 os.path.normpath，只测试方法存在）
         assert hasattr(repo, '_normalize_path')
 
@@ -185,10 +183,10 @@ class TestBaseRepositoryUtils:
         """测试 LIKE 模式构建"""
         from app.db.repositories import BaseRepository
         repo = BaseRepository()
-        
+
         # 测试空搜索
         assert repo._build_like_pattern("") == "%%"
-        
+
         # 测试正常搜索
         pattern = repo._build_like_pattern("test")
         assert "test" in pattern

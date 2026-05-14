@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 TorrentRemover 重构核心
 拆分为 Repository + ActionEngine + Service，移除 SingletonMeta。
 """
 import json
-from typing import Dict, List, Optional, Tuple
 
 import log
 from app.core.module_config import ModuleConf
 from app.db.repositories.config_repo_adapter import TorrentRemoveTaskRepositoryAdapter
-from app.services.downloader_core import DownloaderCore as Downloader
 from app.message import Message
+from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.scheduler_core import SchedulerCore
 from app.utils import ExceptionUtils
 
@@ -35,7 +33,7 @@ class TorrentRemoverActionEngine:
     """删种动作执行引擎：暂停 / 删除种子 / 删除种子及文件"""
 
     @staticmethod
-    def execute(task: dict, downloader) -> Tuple[int, str]:
+    def execute(task: dict, downloader) -> tuple[int, str]:
         """
         执行单个删种任务
         :return: (处理数量, 处理文本)
@@ -94,15 +92,15 @@ class TorrentRemoverService:
     _jobstore = "torrent_remove"
 
     def __init__(self,
-                 repository: Optional[TorrentRemoverRepository] = None,
+                 repository: TorrentRemoverRepository | None = None,
                  downloader=None,
-                 message: Optional[Message] = None,
+                 message: Message | None = None,
                  scheduler=None):
         self._repo = repository or TorrentRemoverRepository()
         self._downloader = downloader or Downloader()
         self._message = message or Message()
         self._scheduler = scheduler or SchedulerCore()
-        self._tasks: Dict[str, dict] = {}
+        self._tasks: dict[str, dict] = {}
 
     def init_config(self):
         """兼容接口：重新加载任务并启动调度任务"""
@@ -193,7 +191,7 @@ class TorrentRemoverService:
                 ExceptionUtils.exception_traceback(e)
                 log.error(f"【TorrentRemover】自动删种任务：{task.get('name')}异常：{str(e)}")
 
-    def _validate_task_params(self, data: dict) -> Tuple[bool, str]:
+    def _validate_task_params(self, data: dict) -> tuple[bool, str]:
         name = data.get("name")
         if not name:
             return False, "名称参数不合法"
@@ -227,7 +225,7 @@ class TorrentRemoverService:
             return False, "种子大小参数不合法"
         return True, ""
 
-    def update_torrent_remove_task(self, data: dict) -> Tuple[bool, str]:
+    def update_torrent_remove_task(self, data: dict) -> tuple[bool, str]:
         ok, msg = self._validate_task_params(data)
         if not ok:
             return False, msg

@@ -1,22 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 转移领域 Repository 适配器
 将旧版 TransferRepository 适配为新领域接口
 """
-from typing import List, Optional, Tuple
 
+from app.db.repositories.transfer_repository import TransferRepository
 from app.domain.entities.transfer import (
-    TransferBlacklistEntity,
     TransferHistoryEntity,
     TransferUnknownEntity,
 )
-from app.db.repositories.transfer_repository import TransferRepository
 
 
 class TransferHistoryRepositoryAdapter:
     """转移历史仓储适配器"""
 
-    def __init__(self, repo: Optional[TransferRepository] = None):
+    def __init__(self, repo: TransferRepository | None = None):
         self._repo = repo or TransferRepository()
 
     def is_exists(self, source_path: str, source_filename: str, dest_path: str, dest_filename: str) -> bool:
@@ -25,17 +22,17 @@ class TransferHistoryRepositoryAdapter:
     def insert(self, in_from, rmt_mode, in_path, out_path, dest, media_info) -> None:
         self._repo.insert_transfer_history(in_from, rmt_mode, in_path, out_path, dest, media_info)
 
-    def get_page(self, search: Optional[str], page: int, rownum: int) -> Tuple[int, List[TransferHistoryEntity]]:
+    def get_page(self, search: str | None, page: int, rownum: int) -> tuple[int, list[TransferHistoryEntity]]:
         count, rows = self._repo.get_transfer_history(search, page, rownum)
         if not rows:
             return count, []
         return count, [e for e in [TransferHistoryEntity.from_orm(r) for r in rows] if e is not None]
 
-    def get_by_id(self, logid: int) -> Optional[TransferHistoryEntity]:
+    def get_by_id(self, logid: int) -> TransferHistoryEntity | None:
         row = self._repo.get_transfer_info_by_id(logid)
         return TransferHistoryEntity.from_orm(row)
 
-    def get_by_tmdb(self, tmdbid: int, season: Optional[str] = None, season_episode: Optional[str] = None) -> List[TransferHistoryEntity]:
+    def get_by_tmdb(self, tmdbid: int, season: str | None = None, season_episode: str | None = None) -> list[TransferHistoryEntity]:
         rows = self._repo.get_transfer_info_by(tmdbid, season, season_episode)
         if not rows:
             return []
@@ -127,19 +124,19 @@ class TransferHistoryRepositoryAdapter:
 class TransferUnknownRepositoryAdapter:
     """转移未知文件仓储适配器"""
 
-    def __init__(self, repo: Optional[TransferRepository] = None):
+    def __init__(self, repo: TransferRepository | None = None):
         self._repo = repo or TransferRepository()
 
     def insert(self, path: str, dest: str, mode: str) -> None:
         self._repo.insert_transfer_unknown(path, dest, mode)
 
-    def get_all(self) -> List[TransferUnknownEntity]:
+    def get_all(self) -> list[TransferUnknownEntity]:
         rows = self._repo.get_transfer_unknowns()
         if not rows:
             return []
         return [e for e in [TransferUnknownEntity.from_orm(r) for r in rows] if e is not None]
 
-    def get_by_id(self, tid: int) -> Optional[TransferUnknownEntity]:
+    def get_by_id(self, tid: int) -> TransferUnknownEntity | None:
         row = self._repo.get_transfer_unknown_by_id(tid)
         return TransferUnknownEntity.from_orm(row)
 
@@ -156,7 +153,7 @@ class TransferUnknownRepositoryAdapter:
 class TransferBlacklistRepositoryAdapter:
     """转移黑名单仓储适配器"""
 
-    def __init__(self, repo: Optional[TransferRepository] = None):
+    def __init__(self, repo: TransferRepository | None = None):
         self._repo = repo or TransferRepository()
 
     def is_exists(self, path: str) -> bool:

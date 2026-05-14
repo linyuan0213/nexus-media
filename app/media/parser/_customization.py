@@ -1,4 +1,5 @@
 import regex as re
+
 from app.utils.commons import SingletonMeta
 
 

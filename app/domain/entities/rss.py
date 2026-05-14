@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 RSS领域实体
 定义RSS历史、电影订阅、种子、剧集订阅、剧集分集的领域模型
 """
 from dataclasses import dataclass, fields
-from typing import Optional, Dict, Any
+from typing import Any, Optional
 
 
 @dataclass
@@ -60,7 +59,7 @@ class RssHistoryEntity:
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "type": self.rss_type,
@@ -98,7 +97,7 @@ class RssMovieEntity:
     filter_include: str
     filter_exclude: str
     save_path: str
-    download_setting: Optional[int]
+    download_setting: int | None
     fuzzy_match: bool
     state: str
     description: str
@@ -149,7 +148,7 @@ class RssMovieEntity:
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -217,7 +216,7 @@ class RssTorrentEntity:
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "torrent_name": self.torrent_name,
@@ -251,7 +250,7 @@ class RssTvEntity:
     filter_include: str
     filter_exclude: str
     save_path: str
-    download_setting: Optional[int]
+    download_setting: int | None
     fuzzy_match: bool
     total_ep: int
     current_ep: int
@@ -310,7 +309,7 @@ class RssTvEntity:
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -373,7 +372,7 @@ class RssTvEpisodeEntity:
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "rssid": self.rss_id,

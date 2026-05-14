@@ -1,9 +1,8 @@
-# coding: utf-8
 """
 搜索结果模型
 包含: 搜索结果信息
 """
-from sqlalchemy import Column, Float, Integer, BigInteger, Text, String, Sequence
+from sqlalchemy import BigInteger, Column, Float, Integer, Sequence, String, Text
 
 from app.db.models.base import Base
 

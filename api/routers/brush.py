@@ -2,15 +2,14 @@
 Brush Router — FastAPI 迁移
 对应原 web/controllers/brush.py，复用 app/services/brush_service.py
 """
-from typing import Optional, Union
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_brush_service, require_any_permission, require_permission
-from app.utils.response import success, fail
+from api.deps import get_brush_service, require_any_permission, require_permission
 from app.services.brush_service import BrushService
 from app.utils import ExceptionUtils
+from app.utils.response import fail, success
 
 router = APIRouter()
 
@@ -20,55 +19,55 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 class EmptyRequest(BaseModel):
-    data: Optional[dict] = None
+    data: dict | None = None
 
 
 class AddBrushTaskRequest(BaseModel):
-    brushtask_id: Optional[int] = None
-    brushtask_name: Optional[str] = None
-    brushtask_site: Optional[str] = None
-    brushtask_free: Optional[str] = None
-    brushtask_rssurl: Optional[str] = None
-    brushtask_interval: Optional[int] = None
-    brushtask_downloader: Optional[str] = None
-    brushtask_totalsize: Optional[str] = None
-    brushtask_time_range: Optional[str] = None
-    brushtask_label: Optional[str] = None
-    brushtask_savepath: Optional[str] = None
-    brushtask_transfer: Optional[int] = None
-    brushtask_state: Optional[str] = None
-    brushtask_sendmessage: Optional[int] = None
-    brushtask_hr: Optional[str] = None
-    brushtask_torrent_size: Optional[str] = None
-    brushtask_include: Optional[str] = None
-    brushtask_exclude: Optional[str] = None
-    brushtask_dlcount: Optional[str] = None
-    brushtask_peercount: Optional[str] = None
-    brushtask_pubdate: Optional[str] = None
-    brushtask_upspeed: Optional[str] = None
-    brushtask_downspeed: Optional[str] = None
-    brushtask_exclude_subscribe: Optional[Union[str, bool]] = None
-    brushtask_mode: Optional[str] = None
-    brushtask_seedtime: Optional[str] = None
-    brushtask_hr_seedtime: Optional[str] = None
-    brushtask_seedratio: Optional[str] = None
-    brushtask_seedsize: Optional[str] = None
-    brushtask_dltime: Optional[str] = None
-    brushtask_avg_upspeed: Optional[str] = None
-    brushtask_iatime: Optional[str] = None
-    brushtask_pending_time: Optional[str] = None
-    brushtask_freespace: Optional[str] = None
-    brushtask_freestatus: Optional[Union[str, bool]] = None
-    brushtask_stopfree: Optional[int] = None
+    brushtask_id: int | None = None
+    brushtask_name: str | None = None
+    brushtask_site: str | None = None
+    brushtask_free: str | None = None
+    brushtask_rssurl: str | None = None
+    brushtask_interval: int | None = None
+    brushtask_downloader: str | None = None
+    brushtask_totalsize: str | None = None
+    brushtask_time_range: str | None = None
+    brushtask_label: str | None = None
+    brushtask_savepath: str | None = None
+    brushtask_transfer: int | None = None
+    brushtask_state: str | None = None
+    brushtask_sendmessage: int | None = None
+    brushtask_hr: str | None = None
+    brushtask_torrent_size: str | None = None
+    brushtask_include: str | None = None
+    brushtask_exclude: str | None = None
+    brushtask_dlcount: str | None = None
+    brushtask_peercount: str | None = None
+    brushtask_pubdate: str | None = None
+    brushtask_upspeed: str | None = None
+    brushtask_downspeed: str | None = None
+    brushtask_exclude_subscribe: str | bool | None = None
+    brushtask_mode: str | None = None
+    brushtask_seedtime: str | None = None
+    brushtask_hr_seedtime: str | None = None
+    brushtask_seedratio: str | None = None
+    brushtask_seedsize: str | None = None
+    brushtask_dltime: str | None = None
+    brushtask_avg_upspeed: str | None = None
+    brushtask_iatime: str | None = None
+    brushtask_pending_time: str | None = None
+    brushtask_freespace: str | None = None
+    brushtask_freestatus: str | bool | None = None
+    brushtask_stopfree: int | None = None
 
 
 class BrushTaskIdRequest(BaseModel):
-    id: Optional[int] = None
+    id: int | None = None
 
 
 class UpdateBrushTaskStateRequest(BaseModel):
-    state: Optional[str] = None
-    ids: Optional[list] = None
+    state: str | None = None
+    ids: list | None = None
 
 
 # ---------------------------------------------------------------------------

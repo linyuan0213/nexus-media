@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
-from typing import Any, Dict, List, Optional
 
 from datetime import datetime
 
-from app.services.brush_core import BrushTaskService as BrushTask
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.schemas.brush import (
     BrushTaskDTO,
     BrushTorrentListDTO,
 )
+from app.services.brush_core import BrushTaskService as BrushTask
 
 _RSS_RULE_FIELDS = {
     "free": "brushtask_free",
@@ -44,7 +42,7 @@ _STOP_RULE_FIELDS = {
 class BrushService:
     """刷流任务业务服务"""
 
-    def __init__(self, brush_task: Optional[BrushTask] = None):
+    def __init__(self, brush_task: BrushTask | None = None):
         self._brush = brush_task or BrushTask()
 
     def build_task_item(self, data: dict) -> dict:
@@ -105,7 +103,7 @@ class BrushService:
     def run_task(self, taskid) -> None:
         self._brush.check_task_rss(taskid)
 
-    def update_task_state(self, state, task_ids: Optional[list] = None) -> None:
+    def update_task_state(self, state, task_ids: list | None = None) -> None:
         if state is not None:
             if task_ids:
                 for tid in task_ids:
@@ -118,7 +116,7 @@ class BrushService:
 
     @staticmethod
     def check_rss_rule(rss_rule: dict, title: str, torrent_size: float,
-                       pubdate: Optional[datetime], torrent_attr: dict) -> bool:
+                       pubdate: datetime | None, torrent_attr: dict) -> bool:
         """委托给领域规则引擎：检查种子是否符合刷流RSS选种规则"""
         return BrushRuleEngine.check_rss_rule(
             rss_rule=rss_rule,
@@ -129,7 +127,7 @@ class BrushService:
         )
 
     @staticmethod
-    def check_remove_rule(remove_rule: Optional[dict], params: dict):
+    def check_remove_rule(remove_rule: dict | None, params: dict):
         """委托给领域规则引擎：检查是否符合删种规则"""
         return BrushRuleEngine.check_remove_rule(
             remove_rule=remove_rule,
@@ -137,7 +135,7 @@ class BrushService:
         )
 
     @staticmethod
-    def check_stop_rule(stop_rule: Optional[dict], torrent_attr: dict):
+    def check_stop_rule(stop_rule: dict | None, torrent_attr: dict):
         """委托给领域规则引擎：检查是否符合停种规则"""
         return BrushRuleEngine.check_stop_rule(
             stop_rule=stop_rule,
@@ -145,7 +143,7 @@ class BrushService:
         )
 
     @staticmethod
-    def format_rule_html(rules: Optional[dict]) -> str:
+    def format_rule_html(rules: dict | None) -> str:
         """委托给领域规则引擎：将规则字典渲染为 HTML badge 字符串"""
         return BrushRuleEngine.format_rule_html(rules)
 

@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 JWT 认证路由测试
 """
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-import pytest
 from fastapi.testclient import TestClient
 
-from api.main import app
 from api.deps import get_current_user
+from api.main import app
 
 client = TestClient(app)
 
@@ -92,7 +90,7 @@ class TestAuthRouter:
     @patch("api.routers.auth.AuthService.refresh_access_token")
     def test_refresh_token(self, mock_refresh, mock_auth):
         """测试刷新 Token"""
-        from app.schemas.auth import UserContext, TokenPair
+        from app.schemas.auth import TokenPair, UserContext
         mock_auth.return_value = UserContext(
             user_id=1, username="admin", level=1,
             permissions=["*"], is_superadmin=True

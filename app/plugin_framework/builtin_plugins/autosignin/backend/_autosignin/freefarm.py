@@ -1,8 +1,9 @@
-import requests
 import re
+
+import requests
+
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.utils import StringUtils, RequestUtils
-from config import Config
+from app.utils import RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
 
 
@@ -12,7 +13,7 @@ class FreeFarm(_ISiteSigninHandler):
     """
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "pt.0ff.cc"
-    
+
     # session 对象
     _session = requests.Session()
 
@@ -47,17 +48,17 @@ class FreeFarm(_ISiteSigninHandler):
                                 session=self._session
                                 ).get_res(url=url)
         if not sign_res or sign_res.status_code != 200:
-            self.error(f"签到失败，请检查站点连通性")
+            self.error("签到失败，请检查站点连通性")
             return False, f'【{site}】签到失败，请检查站点连通性'
 
         if "login.php" in sign_res.text:
-            self.error(f"签到失败，cookie失效")
+            self.error("签到失败，cookie失效")
             return False, f'【{site}】签到失败，cookie失效'
 
         sign_status = self.sign_in_result(html_res=sign_res.text,
                                           regexs=self._succeed_regex)
         if sign_status:
-            self.info(f"签到成功")
+            self.info("签到成功")
             return True, f'【{site}】签到成功'
         else:
             pattern = r'src="([^"]*slide_check[^"]*\.js)"'
@@ -74,7 +75,7 @@ class FreeFarm(_ISiteSigninHandler):
             if not match2:
                 self.error(f"签到失败，签到接口返回 {slide_response.text}")
                 return False, f'【{site}】签到失败'
-            
+
             access_token_url = match2.group(0).strip('"')
             result_response = self._session.get(access_token_url)
             if result_response.status_code != 200:
@@ -82,11 +83,11 @@ class FreeFarm(_ISiteSigninHandler):
                 return False, f'【{site}】签到失败'
 
             access_response = self._session.get(url)
-        
+
             sign_status = self.sign_in_result(html_res=access_response.text,
                                             regexs=self._succeed_regex)
             if sign_status:
-                self.info(f"签到成功")
+                self.info("签到成功")
                 return True, f'【{site}】签到成功'
 
         self.error(f"签到失败，签到接口返回 {sign_res.text}")

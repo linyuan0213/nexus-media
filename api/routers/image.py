@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 FastAPI 图片代理路由
 兼容前端通过 ImageProxyHelper 生成的 /img/* 请求
@@ -7,25 +6,24 @@ FastAPI 图片代理路由
 import os
 import time
 import urllib.parse
-from typing import Optional
 
-from fastapi import APIRouter, Request, HTTPException
-from starlette.responses import FileResponse, Response, RedirectResponse
+from fastapi import APIRouter, HTTPException, Request
+from starlette.responses import FileResponse, RedirectResponse, Response
 
+import log
 from app.helper.image_proxy_core import (
-    get_cache_path,
-    download_image,
-    resize_image,
+    MAX_CACHE_DAYS,
     SIZE_DIMENSIONS,
     SOURCE_DOMAINS,
-    MAX_CACHE_DAYS,
+    download_image,
+    get_cache_path,
+    resize_image,
 )
-import log
 
 router = APIRouter()
 
 
-def _serve_image(cache_path: str, image_url: str, size: Optional[str] = None, referer: Optional[str] = None):
+def _serve_image(cache_path: str, image_url: str, size: str | None = None, referer: str | None = None):
     """FastAPI 版本的缓存检查/下载/返回图片"""
     # 检查缓存（30 天过期），空缓存直接删除重下
     if os.path.exists(cache_path):
@@ -108,7 +106,7 @@ def proxy_library_image(request: Request, img_url: str):
 
 
 @router.get("")
-def proxy_image_redirect(request: Request, url: Optional[str] = None):
+def proxy_image_redirect(request: Request, url: str | None = None):
     """
     旧格式兼容：/img?url=...
     1. /img?url=/img/tmdb/xxx.jpg -> 重定向到 /img/tmdb/xxx.jpg

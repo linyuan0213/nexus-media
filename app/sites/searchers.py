@@ -1,29 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 站点搜索器 — 基于站点定义的统一搜索实现
 
 替代各专用爬虫类（MteamSpider/RousiSpider/YemaPTSpider 等），
 通过声明式 JSON 配置驱动搜索流程。
 """
-from typing import Optional, List, Dict, Any, Callable
 import datetime
-import json
 import os
 import re
-from copy import deepcopy
-from urllib.parse import parse_qs, urlparse
+from collections.abc import Callable
 
 import pytz
-from lxml import etree
-import log
-from app.sites.engine import SiteDefinition, SiteEngine
-from app.utils import RequestUtils
-from app.utils.config_tools import get_proxies
+
 from app.utils.string_utils import StringUtils
-from app.utils.types import MediaType
 
-
-_TRANSFORMS: Dict[str, Callable] = {
+_TRANSFORMS: dict[str, Callable] = {
     "mteam_labels": lambda val: _mteam_label(val),
     "yemapt_labels": lambda val: "|".join(
         [

@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Pagination Utils 测试
 """
-import pytest
 from app.utils.pagination import get_page_range
 
 

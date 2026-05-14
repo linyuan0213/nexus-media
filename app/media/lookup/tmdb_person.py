@@ -1,9 +1,7 @@
-import log
 import zhconv
 
 from app.helper.image_proxy_helper import ImageProxyHelper
 from app.media.lookup.tmdb_client import TmdbClient
-from app.infrastructure.external.tmdbv3api import TMDbException
 from app.utils import StringUtils
 
 

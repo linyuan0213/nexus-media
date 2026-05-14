@@ -1,19 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Plugin Context - 插件运行时上下文
 提供给插件访问系统能力的接口
 """
 import json
 import os
-from typing import Any, Optional
+from typing import Any
 
-from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter 
-from app.db.repositories.plugin_framework_repo_adapter import PluginLogRepositoryAdapter
+import log
+from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter, PluginLogRepositoryAdapter
 from app.domain.entities.plugin import PluginConfigEntity
 from app.message import Message
 from app.services.scheduler_core import SchedulerCore
 from config import Config
-import log
 
 
 class PluginContext:
@@ -68,12 +66,12 @@ class PluginContext:
         entity = PluginConfigEntity(plugin_id=self._plugin_id, config=config)
         self._config_repo.save(entity)
 
-    def read_data(self, filename: str) -> Optional[str]:
+    def read_data(self, filename: str) -> str | None:
         """读取插件数据文件"""
         filepath = os.path.join(self._data_dir, filename)
         if not os.path.exists(filepath):
             return None
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, encoding='utf-8') as f:
             return f.read()
 
     def write_data(self, filename: str, content: str) -> None:

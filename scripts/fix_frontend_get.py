@@ -32,7 +32,7 @@ POST_PATHS = [
 ]
 
 def fix_file(path: str):
-    with open(path, 'r', encoding='utf-8') as f:
+    with open(path, encoding='utf-8') as f:
         content = f.read()
     original = content
     for p in POST_PATHS:

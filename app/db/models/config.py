@@ -1,9 +1,8 @@
-# coding: utf-8
 """
 配置相关模型
 包含: 过滤器分组、过滤规则、RSS解析器、站点配置、同步路径、用户配置、用户RSS配置
 """
-from sqlalchemy import Column, BigInteger, Integer, Text, String, Sequence
+from sqlalchemy import BigInteger, Column, Integer, Sequence, String, Text
 
 from app.db.models.base import Base
 

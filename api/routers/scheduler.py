@@ -2,13 +2,11 @@
 Scheduler Router — FastAPI 迁移
 对应原 web/controllers/scheduler.py，复用 app/services/scheduler_service.py
 """
-from typing import Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from api.deps import get_scheduler_service, require_any_permission, require_permission
-from app.utils.response import success, fail
 from app.schemas.scheduler import (
     DeleteSchedulerJobRequest,
     PauseSchedulerJobRequest,
@@ -17,6 +15,7 @@ from app.schemas.scheduler import (
     UpdateSchedulerJobRequest,
 )
 from app.services.scheduler_service import SchedulerService
+from app.utils.response import fail, success
 
 router = APIRouter()
 
@@ -26,21 +25,21 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 class EmptyRequest(BaseModel):
-    data: Optional[dict] = None
+    data: dict | None = None
 
 
 class JobIdRequest(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
 
 
 class UpdateJobRequest(BaseModel):
-    id: Optional[str] = None
-    trigger: Optional[str] = None
-    seconds: Optional[int] = None
-    minutes: Optional[int] = None
-    hours: Optional[int] = None
-    cron: Optional[str] = None
-    run_date: Optional[str] = None
+    id: str | None = None
+    trigger: str | None = None
+    seconds: int | None = None
+    minutes: int | None = None
+    hours: int | None = None
+    cron: str | None = None
+    run_date: str | None = None
 
 
 # ---------------------------------------------------------------------------

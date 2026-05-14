@@ -1,4 +1,5 @@
 import os
+
 # -*- coding: utf-8 -*-
 """
 LibraryScraper Plugin v2
@@ -11,7 +12,6 @@ import pytz
 
 from app.media import Scraper
 from app.plugin_framework.context import PluginContext
-from config import Config
 
 
 class LibraryScraperPlugin:

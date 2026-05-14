@@ -1,13 +1,11 @@
-import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-import log
 from lxml import etree
 
-from app.helper.image_proxy_helper import ImageProxyHelper
-from app.media.lookup.tmdb_client import TmdbClient, compare_tmdb_names, get_tmdb_chinese_title
-from app.media.lookup.tmdb_detail import TmdbDetail
+import log
 from app.infrastructure.external.tmdbv3api import TMDbException
+from app.media.lookup.tmdb_client import TmdbClient, compare_tmdb_names
+from app.media.lookup.tmdb_detail import TmdbDetail
 from app.utils import RequestUtils, StringUtils
 from app.utils.types import MediaType
 

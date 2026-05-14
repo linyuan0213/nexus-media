@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 SearchService 单元测试
 """
@@ -6,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.schemas.search import SearchOneMediaResultDTO, SearchMediasResultDTO
+from app.schemas.search import SearchOneMediaResultDTO
 from app.services.search_service import SearchService
 from app.utils.types import SearchType
 
@@ -129,9 +128,8 @@ class TestBuildSearchNames:
         mock_media.get_tmdb_zhtw_title.return_value = "繁體"
         mock_media.get_tmdb_en_title.return_value = "English"
 
-        with patch.object(svc, '_media', mock_media):
-            with patch('config.Config') as MockConfig:
-                MockConfig().get_config.return_value = {"search_multi_language": True}
-                names = svc.build_search_names(media)
-                assert "繁體" in names
-                assert "Orig" in names
+        with patch.object(svc, '_media', mock_media), patch('config.Config') as MockConfig:
+            MockConfig().get_config.return_value = {"search_multi_language": True}
+            names = svc.build_search_names(media)
+            assert "繁體" in names
+            assert "Orig" in names

@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 刷流领域实体
 """
 from dataclasses import dataclass, fields
-from typing import Optional, Dict, Any
+from typing import Any, Optional
 
 
 @dataclass
@@ -68,7 +67,7 @@ class BrushTaskEntity:
             lst_mod_date=orm_model.LST_MOD_DATE or ""
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -122,7 +121,7 @@ class BrushTorrentEntity:
             lst_mod_date=orm_model.LST_MOD_DATE or ""
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "task_id": self.task_id,

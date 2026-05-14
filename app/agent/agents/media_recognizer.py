@@ -1,34 +1,32 @@
-# -*- coding: utf-8 -*-
 """媒体文件名识别 Agent"""
-from typing import Optional
 
-import log
 from pydantic import BaseModel
 
+import log
 from app.agent.prompts.media import MEDIA_BATCH_PROMPT, MEDIA_RECOGNITION_PROMPT
 from app.agent.service import AgentService
 
 
 class MediaResult(BaseModel):
     """媒体识别结果"""
-    title_en: Optional[str] = None
-    title_cn: Optional[str] = None
+    title_en: str | None = None
+    title_cn: str | None = None
     alternate_titles: list = []
-    year: Optional[int] = None
-    season: Optional[int] = None
-    episode: Optional[int] = None
-    end_season: Optional[int] = None
-    end_episode: Optional[int] = None
-    resolution: Optional[str] = None
-    source: Optional[str] = None
-    video_codec: Optional[str] = None
-    audio_codec: Optional[str] = None
+    year: int | None = None
+    season: int | None = None
+    episode: int | None = None
+    end_season: int | None = None
+    end_episode: int | None = None
+    resolution: str | None = None
+    source: str | None = None
+    video_codec: str | None = None
+    audio_codec: str | None = None
     language: list = []
-    platform: Optional[str] = None
-    release_group: Optional[str] = None
-    format: Optional[str] = None
-    edition: Optional[str] = None
-    type: Optional[str] = None
+    platform: str | None = None
+    release_group: str | None = None
+    format: str | None = None
+    edition: str | None = None
+    type: str | None = None
 
 
 class BatchResult(BaseModel):
@@ -46,7 +44,7 @@ class MediaRecognizer:
     def ready(self) -> bool:
         return self._svc.ready
 
-    def recognize(self, filename: str) -> Optional[MediaResult]:
+    def recognize(self, filename: str) -> MediaResult | None:
         """识别单个文件名"""
         if not self.ready:
             return None
@@ -59,10 +57,10 @@ class MediaRecognizer:
         if result and (result.title_en or result.title_cn):
             log.info(f"【MediaRecognizer】识别成功: cn={result.title_cn}, en={result.title_en}, type={result.type}")
         else:
-            log.warn(f"【MediaRecognizer】识别失败或返回空结果")
+            log.warn("【MediaRecognizer】识别失败或返回空结果")
         return result
 
-    def recognize_batch(self, filenames: list[str], batch_size: int = 0) -> list[Optional[MediaResult]]:
+    def recognize_batch(self, filenames: list[str], batch_size: int = 0) -> list[MediaResult | None]:
         """批量识别文件名"""
         if not self.ready:
             log.warn("【MediaRecognizer】批量识别失败：Provider 未就绪")
@@ -74,7 +72,7 @@ class MediaRecognizer:
 
         total = len(filenames)
         log.info(f"【MediaRecognizer】批量识别开始: {total} 条, batch_size={batch_size}")
-        results: list[Optional[MediaResult]] = []
+        results: list[MediaResult | None] = []
         success_count = 0
         for i in range(0, total, batch_size):
             batch = filenames[i:i + batch_size]

@@ -1,12 +1,10 @@
-from urllib.parse import urlencode
 from lxml import etree
 
 from app.db.repositories import SiteRepository
 from app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss._base import _ISiteRssGenHandler
+from app.utils.config_tools import get_proxies
 from app.utils.http_utils import RequestUtils
 from app.utils.string_utils import StringUtils
-from config import Config
-from app.utils.config_tools import get_proxies
 
 
 class TTG(_ISiteRssGenHandler):
@@ -15,8 +13,8 @@ class TTG(_ISiteRssGenHandler):
     """
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "totheglory.im"
-    
-    
+
+
     @classmethod
     def match(cls, url):
         """
@@ -25,7 +23,7 @@ class TTG(_ISiteRssGenHandler):
         :return: 是否匹配，如匹配则会调用该类的gen_rss方法
         """
         return True if StringUtils.url_equal(url, cls.site_url) else False
-    
+
     def gen_rss(self, site_info: dict):
         """
         执行RSS生成
@@ -102,24 +100,24 @@ class TTG(_ISiteRssGenHandler):
                                 proxies=proxy
                                 ).get_res(url="https://totheglory.im/rsstools.php", params=params)
         if not html_res or html_res.status_code != 200:
-            self.error(f"生成RSS失败，请检查站点连通性")
+            self.error("生成RSS失败，请检查站点连通性")
             return False, f'【{site}】生成RSS失败，请检查站点连通性'
 
         if "login.php" in html_res.text:
-            self.error(f"生成RSS失败，cookie失效")
+            self.error("生成RSS失败，cookie失效")
             return False, f'【{site}】生成RSS失败，cookie失效'
-     
+
         rss_link = self._get_link(html_res.text)
         self.debug(f"生成的rss: {rss_link}")
-        
+
         if rss_link:
             SiteRepository().update_site_rssurl(site_info.get('id'), rss_link)
-            self.info(f"生成RSS成功")
+            self.info("生成RSS成功")
             return True, f'【{site}】生成RSS成功'
         else:
-            self.info(f"生成RSS失败")
+            self.info("生成RSS失败")
             return True, f'【{site}生成RSS失败'
-    
+
     @staticmethod
     def _get_link(html_text: str) -> str:
         if not html_text:

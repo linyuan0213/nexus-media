@@ -4,13 +4,43 @@ DTO / Schema 定义中心
 """
 
 # Media
+# Brush
+from .brush import (
+    BrushTaskDTO,
+    BrushTorrentListDTO,
+)
+
+# Download
+from .download import (
+    DownloadingTorrentDTO,
+    DownloadResultDTO,
+    IndexerStatisticsDTO,
+    Torrent,
+    TorrentStatus,
+)
+
+# Indexer
+from .indexer import (
+    IndexerClientInfoDTO,
+    IndexerHashDTO,
+    IndexerResourcesResultDTO,
+    IndexerSearchResultDTO,
+    UserIndexerDTO,
+)
 from .media import (
+    LibrarySpaceDTO,
     MediaInfoResultDTO,
-    SeasonEpisodesResultDTO,
     MediaSearchResultDTO,
+    SeasonEpisodesResultDTO,
     TransferHistoryPageDTO,
     UnknownListPageDTO,
-    LibrarySpaceDTO,
+)
+
+# Plugin
+from .plugin import (
+    PluginAppsDTO,
+    PluginInstallResultDTO,
+    PluginPageDTO,
 )
 
 # RSS
@@ -18,60 +48,26 @@ from .rss import (
     RssAddResultDTO,
     RssDetailResultDTO,
     RssHistoryResultDTO,
-    RssListResultDTO,
     RssIcalResultDTO,
+    RssListResultDTO,
+)
+
+# Search
+from .search import (
+    SearchMediasResultDTO,
+    SearchOneMediaResultDTO,
 )
 
 # Site
 from .site import (
+    SiteActivityDTO,
     SiteAttrDTO,
     SiteDetailDTO,
-    SiteTestResultDTO,
     SiteHistoryDTO,
-    SiteSeedingDTO,
-    SiteActivityDTO,
     SiteResourcesResultDTO,
+    SiteSeedingDTO,
+    SiteTestResultDTO,
     SiteUpdateResultDTO,
-)
-
-# UserRss
-from .userrss import (
-    UserRssArticleListDTO,
-    UserRssHistoryDTO,
-    UserRssArticleTestDTO,
-    UserRssTaskUpdateDTO,
-)
-
-# Brush
-from .brush import (
-    BrushTaskDTO,
-    BrushTorrentListDTO,
-)
-
-# Plugin
-from .plugin import (
-    PluginAppsDTO,
-    PluginPageDTO,
-    PluginInstallResultDTO,
-)
-
-# Download
-from .download import (
-    Torrent,
-    TorrentStatus,
-    DownloadResultDTO,
-    DownloadingTorrentDTO,
-    IndexerStatisticsDTO,
-)
-
-# System
-from .system import (
-    BackupRestoreResultDTO,
-    NetTestResultDTO,
-    IndexerConfigResultDTO,
-    MediaServerConfigResultDTO,
-    WebSearchResultDTO,
-    VersionInfoDTO,
 )
 
 # Sync
@@ -80,24 +76,27 @@ from .sync import (
     ReIdentifyResultDTO,
 )
 
-# Search
-from .search import (
-    SearchOneMediaResultDTO,
-    SearchMediasResultDTO,
+# System
+from .system import (
+    BackupRestoreResultDTO,
+    IndexerConfigResultDTO,
+    MediaServerConfigResultDTO,
+    NetTestResultDTO,
+    VersionInfoDTO,
+    WebSearchResultDTO,
+)
+
+# UserRss
+from .userrss import (
+    UserRssArticleListDTO,
+    UserRssArticleTestDTO,
+    UserRssHistoryDTO,
+    UserRssTaskUpdateDTO,
 )
 
 # Words
 from .words import (
-    WordGroupDTO,
     WordDTO,
+    WordGroupDTO,
     WordGroupExportDTO,
-)
-
-# Indexer
-from .indexer import (
-    UserIndexerDTO,
-    IndexerHashDTO,
-    IndexerClientInfoDTO,
-    IndexerResourcesResultDTO,
-    IndexerSearchResultDTO,
 )

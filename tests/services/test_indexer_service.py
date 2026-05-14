@@ -1,12 +1,12 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 from app.domain.entities.download import IndexerStatisticsEntity
 from app.schemas.download import IndexerStatisticsDTO
 from app.schemas.indexer import (
     IndexerClientInfoDTO,
     IndexerHashDTO,
-    IndexerResourcesResultDTO,
     UserIndexerDTO,
 )
 from app.services.indexer_service import IndexerService

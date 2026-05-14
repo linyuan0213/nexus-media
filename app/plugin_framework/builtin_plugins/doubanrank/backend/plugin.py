@@ -1,4 +1,5 @@
 import os
+
 # -*- coding: utf-8 -*-
 """
 DoubanRank Plugin v2
@@ -16,10 +17,9 @@ from app.media import MediaService
 from app.mediaserver import MediaServer
 from app.plugin_framework.context import PluginContext
 from app.services.subscribe_service import SubscribeService as Subscribe
-from app.utils import RequestUtils, DomUtils
-from app.utils.types import MediaType, SearchType, RssType
+from app.utils import DomUtils, RequestUtils
+from app.utils.types import MediaType, RssType, SearchType
 from app.utils.web_utils import WebUtils
-from config import Config
 
 
 class DoubanRankPlugin:

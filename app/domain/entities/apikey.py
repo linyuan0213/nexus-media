@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 API Key 领域实体
 """
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 @dataclass
@@ -15,14 +14,14 @@ class APIKeyEntity:
     key_value: str
     key_prefix: str
     status: int
-    expires_at: Optional[datetime]
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
-    created_by: Optional[int]
+    expires_at: datetime | None
+    created_at: datetime | None
+    updated_at: datetime | None
+    created_by: int | None
     use_count: int
-    last_used_at: Optional[datetime]
-    description: Optional[str]
-    raw_key: Optional[str]
+    last_used_at: datetime | None
+    description: str | None
+    raw_key: str | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["APIKeyEntity"]:
@@ -52,7 +51,7 @@ class APIKeyEntity:
     def is_active(self) -> bool:
         return self.status == 1 and not self.is_expired()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -76,16 +75,16 @@ class APIKeyLogEntity:
     id: int
     api_key_id: int
     request_id: str
-    request_name: Optional[str]
-    source_ip: Optional[str]
-    user_agent: Optional[str]
-    request_path: Optional[str]
-    request_method: Optional[str]
+    request_name: str | None
+    source_ip: str | None
+    user_agent: str | None
+    request_path: str | None
+    request_method: str | None
     status: int
-    response_code: Optional[int]
-    error_message: Optional[str]
-    request_at: Optional[datetime]
-    response_time_ms: Optional[int]
+    response_code: int | None
+    error_message: str | None
+    request_at: datetime | None
+    response_time_ms: int | None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["APIKeyLogEntity"]:
@@ -107,7 +106,7 @@ class APIKeyLogEntity:
             response_time_ms=getattr(orm_model, 'RESPONSE_TIME_MS', None),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "api_key_id": self.api_key_id,

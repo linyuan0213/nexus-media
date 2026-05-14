@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """LLM Agent Service — 统一入口门面"""
 import json
-from typing import Any, Optional
+from typing import Any
 
 import log
-
 from app.agent.config import get_provider
 from app.agent.providers.base import ProviderConfig
 from app.agent.providers.gemini import GeminiProvider
@@ -26,8 +24,8 @@ class AgentService:
         return cls._instance
 
     def _init(self):
-        self._provider: Optional[Any] = None
-        self._config: Optional[ProviderConfig] = None
+        self._provider: Any | None = None
+        self._config: ProviderConfig | None = None
         self._enabled = False
         self._refresh_config()
 
@@ -66,7 +64,7 @@ class AgentService:
         return self._config.name if self._config else ""
 
     def chat(self, messages: list[dict], system_prompt: str = "", temperature: float = 0.7,
-             response_format: Optional[type] = None, use_cache: bool = True) -> str:
+             response_format: type | None = None, use_cache: bool = True) -> str:
         """通用对话请求"""
         if not self.ready:
             log.warn("【AgentService】chat 调用失败：Provider 未就绪")
@@ -80,7 +78,7 @@ class AgentService:
     @lru_cache_with_ttl(ttl=300, maxsize=256)
     def _cached_chat(self, messages: tuple, system_prompt: str, temperature: float) -> str:
         """带缓存的对话（messages 转为 tuple 使其可 hash）"""
-        log.info(f"【AgentService】缓存未命中，调用 Provider chat")
+        log.info("【AgentService】缓存未命中，调用 Provider chat")
         return self._provider.chat(list(messages), system_prompt, temperature)
 
     def structured_chat(self, messages: list[dict], system_prompt: str = "",

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 SyncService 单元测试
 """
@@ -6,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.schemas.sync import ManualTransferResultDTO, ReIdentifyResultDTO
 from app.services.sync_service import SyncService
 from app.utils.types import MediaType
 
@@ -229,8 +227,9 @@ class TestRenameFile:
         assert result.success is True
 
     def test_rename_file_failure(self, svc, monkeypatch):
-        from app.schemas.sync import SimpleResultDTO
         import shutil
+
+        from app.schemas.sync import SimpleResultDTO
         monkeypatch.setattr(shutil, "move", lambda *args, **kwargs: (_ for _ in ()).throw(Exception("mock error")))
         result = svc.rename_file("/nonexistent/file.txt", "new.txt")
         assert isinstance(result, SimpleResultDTO)
@@ -256,8 +255,9 @@ class TestTestConnection:
         assert result.success is True
 
     def test_test_connection_with_command(self, svc):
-        from app.schemas.sync import SimpleResultDTO
         from unittest.mock import patch
+
+        from app.schemas.sync import SimpleResultDTO
         # Patch the class method to return True for any command, and Config to avoid singleton issues
         with patch.object(SyncService, 'exec_test_command', return_value=True):
             with patch('config.Config') as mock_config:
@@ -269,8 +269,9 @@ class TestTestConnection:
 
 class TestUpdateDirectory:
     def test_update_directory_success(self, svc):
+        from unittest.mock import MagicMock, patch
+
         from app.schemas.sync import SimpleResultDTO
-        from unittest.mock import patch, MagicMock
 
         mock_cfg = {"key": "value"}
         mock_set_config = MagicMock(return_value=mock_cfg)

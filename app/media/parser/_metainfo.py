@@ -1,16 +1,16 @@
 import os.path
+
 import regex as re
-from typing import Optional
 
 import log
+from app.core.constants import RMT_MEDIAEXT
 from app.helper import WordsHelper
 from app.media.parser._anime import parse_anime_title
 from app.media.parser._video import parse_video_title
 from app.utils.types import MediaType
-from app.core.constants import RMT_MEDIAEXT
 
 
-def MetaInfo(title: str, subtitle: Optional[str] = None, mtype: Optional[MediaType] = None):
+def MetaInfo(title: str, subtitle: str | None = None, mtype: MediaType | None = None):
     """
     媒体信息工厂函数，根据名称自动识别类型（动漫/影视）
 

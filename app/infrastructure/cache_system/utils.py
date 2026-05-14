@@ -1,25 +1,25 @@
-# -*- coding: utf-8 -*-
 """
 缓存工具类
 """
 import hashlib
 import pickle
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 
 class CacheKeyBuilder:
     """缓存键构建器"""
-    
+
     @staticmethod
     def simple(*parts) -> str:
         """简单键构建"""
         return ":".join(str(p) for p in parts)
-    
+
     @staticmethod
     def with_prefix(prefix: str, *parts) -> str:
         """带前缀的键构建"""
         return f"{prefix}:{':'.join(str(p) for p in parts)}"
-    
+
     @staticmethod
     def from_func(func: Callable, *args, **kwargs) -> str:
         """从函数调用构建键"""
@@ -27,13 +27,13 @@ class CacheKeyBuilder:
         key_parts.extend(str(arg) for arg in args)
         key_parts.extend(f"{k}={v}" for k, v in sorted(kwargs.items()))
         return ":".join(key_parts)
-    
+
     @staticmethod
     def hash_key(*parts) -> str:
         """构建哈希键（用于长键）"""
         key_str = ":".join(str(p) for p in parts)
         return hashlib.md5(key_str.encode()).hexdigest()
-    
+
     @staticmethod
     def typed(prefix: str, type_val: Any, *parts) -> str:
         """带类型的键构建"""
@@ -59,7 +59,7 @@ def safe_serialize(value: Any) -> bytes:
         return None
 
 
-def safe_deserialize(data: bytes) -> Optional[Any]:
+def safe_deserialize(data: bytes) -> Any | None:
     """安全反序列化（失败返回None）"""
     try:
         return pickle.loads(data)

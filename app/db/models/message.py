@@ -1,9 +1,8 @@
-# coding: utf-8
 """
 消息相关模型
 包含: 消息客户端配置
 """
-from sqlalchemy import Column, Integer, Text, String, Sequence
+from sqlalchemy import Column, Integer, Sequence, String, Text
 
 from app.db.models.base import Base
 

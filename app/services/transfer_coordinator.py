@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TransferCoordinator - 文件转移协调器
 
@@ -7,12 +6,12 @@ TransferCoordinator - 文件转移协调器
 
 将调度逻辑与下载核心逻辑分离，生命周期由外部（如 SystemLifecycleService）控制。
 """
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import log
+from app.core.constants import PT_TRANSFER_INTERVAL
 from app.downloader.client_factory import DownloadClientFactory
 from app.services.scheduler_core import SchedulerCore
-from app.core.constants import PT_TAG, PT_TRANSFER_INTERVAL
 
 
 class TransferCoordinator:
@@ -21,14 +20,14 @@ class TransferCoordinator:
     """
 
     def __init__(self,
-                 client_factory: Optional[DownloadClientFactory] = None,
-                 scheduler: Optional[SchedulerCore] = None):
+                 client_factory: DownloadClientFactory | None = None,
+                 scheduler: SchedulerCore | None = None):
         self._client_factory = client_factory or DownloadClientFactory()
         self._scheduler = scheduler or SchedulerCore()
 
     # ---------- 调度管理 ----------
 
-    def start_service(self, transfer_func: Callable[[Optional[str]], None]):
+    def start_service(self, transfer_func: Callable[[str | None], None]):
         """
         启动转移任务调度
         :param transfer_func: 定时执行的转移函数，签名 transfer_func(downloader_id=None)

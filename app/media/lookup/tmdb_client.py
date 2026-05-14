@@ -1,13 +1,22 @@
 import difflib
-from typing import Optional
 
-import log
 import zhconv
 
 from app.db.repositories.plugin_repo_adapter import TmdbBlacklistRepositoryAdapter
-from app.infrastructure.external.tmdbv3api import TMDb, Search, Movie, TV, Person, Find, TMDbException, Discover, Trending, Episode, Genre
-from app.utils import StringUtils
 from app.infrastructure.cache_system import TMDBCache, get_cache_manager
+from app.infrastructure.external.tmdbv3api import (
+    TV,
+    Discover,
+    Episode,
+    Find,
+    Genre,
+    Movie,
+    Person,
+    Search,
+    TMDb,
+    Trending,
+)
+from app.utils import StringUtils
 from app.utils.config_tools import get_proxies, get_tmdbapi_url
 from app.utils.types import MediaType
 from config import Config

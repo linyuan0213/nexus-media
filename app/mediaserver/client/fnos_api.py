@@ -1,10 +1,12 @@
 import hashlib
+import json
 import random
 import time
-import json
-from typing import Any, Dict, List
+from typing import Any
+from urllib.parse import parse_qs, urlencode, urlparse
+
 import requests
-from urllib.parse import urlparse, parse_qs, urlencode
+
 
 class Singleton(type):
     _instances = {}
@@ -24,7 +26,7 @@ class FnOSClient(metaclass=Singleton):
         self._token = None
         self._token_expiry = None
         self.secret = "NDzZTVxnRKP8Z0jXg1VAMonaG8akvh"
-    
+
     def _generate_signature(self, request_data):
         """生成 API 请求签名"""
         # 1. 判断是否为 GET 请求
@@ -69,16 +71,16 @@ class FnOSClient(metaclass=Singleton):
         """解析 URL 返回路径和查询参数字典"""
         if not url:
             return "", {}
-        
+
         parsed = urlparse(url)
         path = parsed.path
-        
+
         # 解析查询参数
         query_params = {}
         if parsed.query:
             for k, v in parse_qs(parsed.query).items():
                 query_params[k] = v[0] if v else ""
-        
+
         return path, query_params
 
     def _get_token(self):
@@ -86,7 +88,7 @@ class FnOSClient(metaclass=Singleton):
         if self._is_token_expired():
             self._login()
         return self._token
-    
+
     def _is_token_expired(self):
         """检查token是否过期"""
         if not self._token:
@@ -95,7 +97,7 @@ class FnOSClient(metaclass=Singleton):
         if self._token_expiry and time.time() > self._token_expiry:
             return True
         return False
-    
+
     def _login(self):
         """执行登录获取新token"""
         # 由于base_url已在初始化时统一处理，直接拼接即可
@@ -110,16 +112,16 @@ class FnOSClient(metaclass=Singleton):
                 "app_name": self.app_name
             }
         }
-        
+
         signature = self._generate_signature(request_data)
         signature_str = "&".join([f"{k}={v}" for k, v in signature.items()])
-        
+
         headers = {
             "Accept": "application/json, text/plain, */*",
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
             "authx": signature_str
         }
-        
+
         data = json.dumps(request_data["data"], separators=(',', ':'))
         response = requests.post(url, headers=headers, data=data, verify=False)
         res_json = response.json()
@@ -143,7 +145,7 @@ class FnOSClient(metaclass=Singleton):
             "params": params or {},
             "data": data or {}
         }
-        
+
         signature = self._generate_signature(request_data)
         signature_str = "&".join([f"{k}={v}" for k, v in signature.items()])
 
@@ -154,7 +156,7 @@ class FnOSClient(metaclass=Singleton):
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
             "authx": signature_str
         }
-        
+
         method = method.lower()
         if method == "get":
             # GET请求将参数拼接到URL中
@@ -168,7 +170,7 @@ class FnOSClient(metaclass=Singleton):
         return response.json()
 
     def fetch_all_pages(self, parent_id: str = None, max_retries: int = 3, delay: float = 1,
-                       start_page: int = 1, end_page: int = None) -> List[Dict[str, Any]]:
+                       start_page: int = 1, end_page: int = None) -> list[dict[str, Any]]:
         """
         分页获取数据
         
@@ -186,7 +188,7 @@ class FnOSClient(metaclass=Singleton):
         page = start_page
         page_size = 50  # 每页大小
         total_items = None
-        
+
         while True:
             retries = 0
             while retries <= max_retries:
@@ -207,27 +209,27 @@ class FnOSClient(metaclass=Singleton):
                         endpoint="v/api/v1/item/list",
                         data=data
                     )
-                    
+
                     if response.get("code") != 0:
                         raise ValueError(f"API错误: {response.get('msg')}")
-                    
+
                     data = response.get("data", {})
                     items = data.get("list", [])
                     all_items.extend(items)
-                    
+
                     # 第一次请求时获取总数量
                     if total_items is None:
                         total_items = data.get("total", 0)
                         if total_items == 0:  # 如果没有数据，直接返回
                             return all_items
-                    
+
                     # 检查是否已获取所有数据或当前页没有数据或达到结束页
                     if len(all_items) >= total_items or not items or (end_page and page >= end_page):
                         return all_items
-                    
+
                     page += 1
                     break
-                    
+
                 except Exception as e:
                     retries += 1
                     if retries > max_retries:
@@ -235,7 +237,7 @@ class FnOSClient(metaclass=Singleton):
                         return all_items
                     time.sleep(delay)
 
-    def search(self, title: str, libtype: str = "", year: str = "") -> List[Dict[str, Any]]:
+    def search(self, title: str, libtype: str = "", year: str = "") -> list[dict[str, Any]]:
         """
         搜索媒体数据
         
@@ -284,7 +286,7 @@ class FnOSClient(metaclass=Singleton):
         if response.get("code") != 0:
             raise ValueError(f"API错误: {response.get('msg')}")
         return response.get("data")
-    
+
     def get_episode_list(self, item_id: str):
         """
         获取剧集季数据
@@ -305,7 +307,7 @@ class FnOSClient(metaclass=Singleton):
         if response.get("code") != 0:
             raise ValueError(f"API错误: {response.get('msg')}")
         return response.get("data")
-        
+
     def get_episode_info(self, item_id: str):
         """
         获取剧集季数据
@@ -322,7 +324,7 @@ class FnOSClient(metaclass=Singleton):
             method="get",
             data={}
         )
-        
+
         if response.get("code") != 0:
             raise ValueError(f"API错误: {response.get('msg')}")
         return response.get("data")
@@ -335,15 +337,15 @@ class FnOSClient(metaclass=Singleton):
             所有数据的列表
         """
         response = self.request(
-            endpoint=f"v/api/v1/mediadb/list",
+            endpoint="v/api/v1/mediadb/list",
             method="get",
             data={}
         )
         if response.get("code") != 0:
             raise ValueError(f"API错误: {response.get('msg')}")
         return response.get("data")
-        
-    
+
+
     def refresh_library(self, item_id: str):
         """
         刷新媒体库
@@ -372,7 +374,7 @@ class FnOSClient(metaclass=Singleton):
             所有数据的列表
         """
         response = self.request(
-            endpoint=f"v/api/v1/play/list",
+            endpoint="v/api/v1/play/list",
             method="get",
             data={}
         )
@@ -412,11 +414,11 @@ if __name__ == "__main__":
         print("开始获取所有数据...")
         items = client.fetch_all_pages()
         print(f"成功获取 {len(items)} 条数据")
-        
+
         # 保存到JSON文件
         with open("all_items.json", "w", encoding="utf-8") as f:
             json.dump(items, f, ensure_ascii=False, indent=2)
         print("结果已保存到 all_items.json")
-        
+
     except Exception as e:
         print(f"发生错误: {str(e)}")

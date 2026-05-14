@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 RBAC 用户管理路由测试
 """
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-import pytest
 from fastapi.testclient import TestClient
 
-from api.main import app
 from api.deps import get_current_user
+from api.main import app
 
 client = TestClient(app)
 

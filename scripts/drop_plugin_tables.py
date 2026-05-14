@@ -1,12 +1,14 @@
 import sys
+
 sys.path.insert(0, '/home/linyuan/python/nas-tools')
 
 import os
+
 os.environ['NASTOOL_CONFIG'] = '/home/linyuan/python/config/config.yaml'
 
-from app.db.models.base import Base
-from app.db.main_db import _Engine
 from sqlalchemy import text
+
+from app.db.main_db import _Engine
 
 # 删除有错误的插件框架v2表
 tables = ['PLUGIN_MANIFEST', 'PLUGIN_CONFIG', 'PLUGIN_LOGS', 'PLUGIN_HOOKS']

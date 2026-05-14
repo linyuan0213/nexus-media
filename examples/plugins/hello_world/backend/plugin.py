@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Hello World 示例插件
 展示插件框架 v2 的后端能力

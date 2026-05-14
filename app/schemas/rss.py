@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -15,26 +14,26 @@ class RssAddResultDTO:
 @dataclass
 class RssDetailResultDTO:
     """RSS详情结果"""
-    detail: Optional[dict] = None
+    detail: dict | None = None
     mtype_str: str = ""
 
 
 @dataclass
 class RssHistoryResultDTO:
     """RSS历史记录结果"""
-    items: Optional[List[dict]] = None
+    items: list[dict] | None = None
 
 
 @dataclass
 class RssListResultDTO:
     """RSS列表结果"""
-    movie_items: Optional[List[dict]] = None
-    tv_items: Optional[List[dict]] = None
-    movie_list: Optional[dict] = None
-    tv_list: Optional[dict] = None
+    movie_items: list[dict] | None = None
+    tv_items: list[dict] | None = None
+    movie_list: dict | None = None
+    tv_list: dict | None = None
 
 
 @dataclass
 class RssIcalResultDTO:
     """RSS日历事件结果"""
-    events: Optional[List[dict]] = None
+    events: list[dict] | None = None

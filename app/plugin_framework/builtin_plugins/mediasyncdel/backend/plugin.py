@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 MediaSyncDel Plugin v2
 Emby删除媒体后同步删除历史记录或源文件
@@ -109,7 +108,7 @@ class MediaSyncDelPlugin:
             return
 
         if media_type == "Episode" or media_type == "Movie":
-            logids = [history.ID for history in transfer_history if history.DEST_FILENAME == os.path.basename(media_path)]
+            logids = [history.ID for history in transfer_history if os.path.basename(media_path) == history.DEST_FILENAME]
         else:
             logids = [history.ID for history in transfer_history]
 

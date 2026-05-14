@@ -2,7 +2,6 @@
 Sync Repository
 Handles directory sync related database operations.
 """
-from sqlalchemy import cast, Integer
 
 from app.db import DbPersist
 from app.db.models import CONFIGSYNCPATHS
@@ -51,7 +50,7 @@ class SyncRepository(BaseRepository):
         """
         if not sid:
             return
-        self._db.query(CONFIGSYNCPATHS).filter(CONFIGSYNCPATHS.ID == int(sid)).delete()
+        self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).delete()
 
     def get_config_sync_paths(self, sid=None):
         """
@@ -64,7 +63,7 @@ class SyncRepository(BaseRepository):
             同步配置列表
         """
         if sid:
-            return self._db.query(CONFIGSYNCPATHS).filter(CONFIGSYNCPATHS.ID == int(sid)).all()
+            return self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).all()
         return self._db.query(CONFIGSYNCPATHS).order_by(CONFIGSYNCPATHS.SOURCE).all()
 
     @DbPersist(BaseRepository._db)
@@ -79,14 +78,14 @@ class SyncRepository(BaseRepository):
             enabled: 是否启用
         """
         if sid and rename is not None:
-            self._db.query(CONFIGSYNCPATHS).filter(CONFIGSYNCPATHS.ID == int(sid)).update({
+            self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update({
                 "RENAME": int(rename)
             })
         elif sid and enabled is not None:
-            self._db.query(CONFIGSYNCPATHS).filter(CONFIGSYNCPATHS.ID == int(sid)).update({
+            self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update({
                 "ENABLED": int(enabled)
             })
         elif sid and compatibility is not None:
-            self._db.query(CONFIGSYNCPATHS).filter(CONFIGSYNCPATHS.ID == int(sid)).update({
+            self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update({
                 "COMPATIBILITY": int(compatibility)
             })

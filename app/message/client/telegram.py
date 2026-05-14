@@ -1,8 +1,8 @@
-from threading import Event, Lock
+import time
+from threading import Lock
 from urllib.parse import urlencode
 
 import requests
-import time
 
 import log
 from app.helper.thread_helper import ThreadHelper
@@ -10,7 +10,7 @@ from app.message import Message
 from app.message.client._base import _IMessageClient
 from app.message.client_registry import ClientRegistry
 from app.services.apikey_service import APIKeyService
-from app.utils import RequestUtils, ExceptionUtils
+from app.utils import ExceptionUtils, RequestUtils
 from app.utils.config_tools import get_domain, get_proxies
 from config import Config
 

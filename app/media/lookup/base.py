@@ -1,4 +1,3 @@
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -9,13 +8,13 @@ class LookupResult(BaseModel):
     """外部数据库查询结果"""
 
     tmdb_id: int = 0
-    title: Optional[str] = None
-    original_title: Optional[str] = None
-    media_type: Optional[MediaType] = None
-    year: Optional[str] = None
-    overview: Optional[str] = None
-    poster_path: Optional[str] = None
-    backdrop_path: Optional[str] = None
+    title: str | None = None
+    original_title: str | None = None
+    media_type: MediaType | None = None
+    year: str | None = None
+    overview: str | None = None
+    poster_path: str | None = None
+    backdrop_path: str | None = None
     vote_average: float = 0.0
     genres: list = []
     external_ids: dict = {}
@@ -24,5 +23,5 @@ class LookupResult(BaseModel):
 class BaseLookup:
     """查询器基类"""
 
-    def lookup(self, parsed, hint_type: MediaType = None) -> Optional[LookupResult]:
+    def lookup(self, parsed, hint_type: MediaType = None) -> LookupResult | None:
         raise NotImplementedError

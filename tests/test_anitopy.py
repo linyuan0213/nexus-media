@@ -1,10 +1,11 @@
-# -*- coding: utf-8 -*-
 """Debug anitopy parsing"""
 import sys
 from unittest.mock import MagicMock
+
 sys.modules['log'] = MagicMock()
 
 import os
+
 os.environ['NASTOOL_CONFIG'] = '/home/linyuan/python/config/config.yaml'
 
 import anitopy
@@ -23,8 +24,9 @@ for k, v in info.items():
 
 # Also test with prepared title
 from app.media.parser.anime.prepare import prepare_title
+
 prepared = prepare_title(title)
-print(f"\n【prepare_title 后】")
+print("\n【prepare_title 后】")
 print(f"  {prepared}")
 
 info2 = anitopy.parse(prepared)

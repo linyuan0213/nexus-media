@@ -1,22 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 RSS领域层单元测试
 测试RssMovie/Tv/History实体和适配器
 """
-import pytest
 from unittest.mock import MagicMock
 
+from app.db.repositories.rss_repo_adapter import (
+    RssHistoryRepositoryAdapter,
+    RssMovieRepositoryAdapter,
+    RssTvEpisodeRepositoryAdapter,
+    RssTvRepositoryAdapter,
+)
 from app.domain.entities.rss import (
     RssHistoryEntity,
     RssMovieEntity,
     RssTvEntity,
     RssTvEpisodeEntity,
-)
-from app.db.repositories.rss_repo_adapter import (
-    RssMovieRepositoryAdapter,
-    RssTvRepositoryAdapter,
-    RssTvEpisodeRepositoryAdapter,
-    RssHistoryRepositoryAdapter,
 )
 
 

@@ -1,10 +1,9 @@
-# coding: utf-8
 """
 SQL 语句适配器模块
 处理不同数据库之间的 SQL 语法差异
 """
 import re
-from typing import Optional
+
 from sqlalchemy import Engine
 
 from app.db.database_factory import DatabaseFactory
@@ -12,8 +11,8 @@ from app.db.database_factory import DatabaseFactory
 
 class SQLAdapter:
     """SQL 语句适配器类"""
-    
-    def __init__(self, engine: Optional[Engine] = None):
+
+    def __init__(self, engine: Engine | None = None):
         """
         初始化 SQL 适配器
         
@@ -25,7 +24,7 @@ class SQLAdapter:
         self.is_sqlite = DatabaseFactory.is_sqlite(engine)
         self.is_mysql = DatabaseFactory.is_mysql(engine)
         self.is_postgresql = DatabaseFactory.is_postgresql(engine)
-    
+
     def adapt_sql(self, sql: str) -> str:
         """
         适配 SQL 语句到当前数据库类型
@@ -35,26 +34,26 @@ class SQLAdapter:
         """
         if not sql or not sql.strip():
             return sql
-        
+
         sql = sql.strip()
-        
+
         # 处理 INSERT OR IGNORE
         sql = self._adapt_insert_or_ignore(sql)
-        
+
         # 处理 DELETE WHERE 1
         sql = self._adapt_delete_where(sql)
-        
+
         # 处理 REPLACE INTO
         sql = self._adapt_replace_into(sql)
-        
+
         # 处理 AUTOINCREMENT / AUTO_INCREMENT
         sql = self._adapt_autoincrement(sql)
-        
+
         # 处理字符串连接
         sql = self._adapt_concat(sql)
-        
+
         return sql
-    
+
     def _adapt_insert_or_ignore(self, sql: str) -> str:
         """
         适配 INSERT OR IGNORE 语句
@@ -66,12 +65,12 @@ class SQLAdapter:
         # 匹配 INSERT OR IGNORE INTO table (columns) VALUES (...)
         pattern = r'^INSERT\s+OR\s+IGNORE\s+INTO\s+(.+)$'
         match = re.match(pattern, sql, re.IGNORECASE)
-        
+
         if not match:
             return sql
-        
+
         rest = match.group(1)
-        
+
         if self.is_mysql:
             return f"INSERT IGNORE INTO {rest}"
         elif self.is_postgresql:
@@ -82,7 +81,7 @@ class SQLAdapter:
         else:
             # SQLite 保持原样
             return sql
-    
+
     def _adapt_delete_where(self, sql: str) -> str:
         """
         适配 DELETE WHERE 1 语句
@@ -93,20 +92,20 @@ class SQLAdapter:
         # 匹配 DELETE FROM table WHERE 1
         pattern = r'^(DELETE\s+FROM\s+\w+)\s+WHERE\s+1\s*$'
         match = re.match(pattern, sql, re.IGNORECASE)
-        
+
         if not match:
             # 也尝试匹配 delete from table where 1
             pattern2 = r'^(delete\s+from\s+\w+)\s+where\s+1\s*$'
             match = re.match(pattern2, sql)
             if not match:
                 return sql
-        
+
         if self.is_postgresql:
             # PostgreSQL 使用 WHERE TRUE 或省略 WHERE 子句
             return f"{match.group(1)} WHERE TRUE"
         else:
             return sql
-    
+
     def _adapt_replace_into(self, sql: str) -> str:
         """
         适配 REPLACE INTO 语句
@@ -119,19 +118,19 @@ class SQLAdapter:
         # PostgreSQL 需要特殊处理
         if not self.is_postgresql:
             return sql
-        
+
         # PostgreSQL: 将 REPLACE INTO 转换为 INSERT ON CONFLICT
         # 这是一个简化处理，复杂的 REPLACE 可能需要更多逻辑
         pattern = r'^REPLACE\s+INTO\s+(.+)$'
         match = re.match(pattern, sql, re.IGNORECASE)
-        
+
         if not match:
             return sql
-        
+
         # 简单返回原 SQL，因为 REPLACE INTO 在 PostgreSQL 中不支持
         # 实际使用时应该使用 UPSERT 语法
         return sql
-    
+
     def _adapt_autoincrement(self, sql: str) -> str:
         """
         适配 AUTOINCREMENT 关键字
@@ -148,7 +147,7 @@ class SQLAdapter:
             return sql
         else:
             return sql
-    
+
     def _adapt_concat(self, sql: str) -> str:
         """
         适配字符串连接操作符
@@ -158,7 +157,7 @@ class SQLAdapter:
         """
         # 目前保持原样，因为大多数情况使用 ORM
         return sql
-    
+
     def get_limit_clause(self, limit: int, offset: int = 0) -> str:
         """
         获取 LIMIT 子句
@@ -174,7 +173,7 @@ class SQLAdapter:
                 # MySQL 也支持 LIMIT offset, count
                 return f"LIMIT {offset}, {limit}"
         return f"LIMIT {limit}"
-    
+
     def get_current_timestamp(self) -> str:
         """
         获取当前时间戳函数
@@ -187,7 +186,7 @@ class SQLAdapter:
             return "NOW()"
         else:
             return "datetime('now')"
-    
+
     def get_random_function(self) -> str:
         """
         获取随机数函数
@@ -200,7 +199,7 @@ class SQLAdapter:
             return "RAND()"
         else:
             return "RANDOM()"
-    
+
     def get_date_format(self, column: str, format_str: str) -> str:
         """
         获取日期格式化表达式
@@ -226,7 +225,7 @@ class SQLAdapter:
             return f"strftime('{format_str}', {column})"
 
 
-def adapt_sql_for_engine(sql: str, engine: Optional[Engine] = None) -> str:
+def adapt_sql_for_engine(sql: str, engine: Engine | None = None) -> str:
     """
     全局函数：适配 SQL 语句
     

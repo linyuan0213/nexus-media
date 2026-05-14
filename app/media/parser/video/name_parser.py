@@ -1,20 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 影视标题解析 — 名称与季集相关解析
 """
 import re
 
 from app.media.parser.video.constants import (
-    _roman_numerals,
-    _name_se_words,
-    _name_no_chinese_re,
-    _season_re,
     _episode_re,
-    _resources_type_re,
+    _name_no_chinese_re,
+    _name_se_words,
     _resources_pix_re,
+    _resources_type_re,
+    _roman_numerals,
+    _season_re,
 )
 from app.utils import StringUtils
-from app.utils.types import MediaType
 
 
 def init_name(info, token):

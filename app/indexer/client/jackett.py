@@ -1,10 +1,9 @@
 import requests
 
-from app.utils import ExceptionUtils
-from app.utils.types import IndexerType
-from app.indexer.client._base import _IIndexClient
-from app.utils import RequestUtils
 from app.helper import IndexerConf
+from app.indexer.client._base import _IIndexClient
+from app.utils import ExceptionUtils, RequestUtils
+from app.utils.types import IndexerType
 
 
 class Jackett(_IIndexClient):

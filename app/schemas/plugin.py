@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 # ==================== 旧版插件 DTO ====================
 
@@ -13,8 +11,8 @@ class PluginAppsDTO:
 
 @dataclass
 class PluginPageDTO:
-    title: Optional[str] = None
-    content: Optional[str] = None
+    title: str | None = None
+    content: str | None = None
     func: Any = None
 
 
@@ -30,8 +28,8 @@ class PluginInstallResultDTO:
 class PluginBackendConfig:
     entry: str = ""
     api_prefix: str = ""
-    permissions: List[str] = field(default_factory=list)
-    hooks: List[str] = field(default_factory=list)
+    permissions: list[str] = field(default_factory=list)
+    hooks: list[str] = field(default_factory=list)
     supports_run: bool = False
 
 
@@ -61,7 +59,7 @@ class PluginFieldConfig:
 @dataclass
 class PluginSettingsConfig:
     component: str = ""
-    fields: List[PluginFieldConfig] = field(default_factory=list)
+    fields: list[PluginFieldConfig] = field(default_factory=list)
 
 
 @dataclass
@@ -73,9 +71,9 @@ class PluginSlotConfig:
 
 @dataclass
 class PluginFrontendConfig:
-    routes: List[PluginRouteConfig] = field(default_factory=list)
-    settings: Optional[PluginSettingsConfig] = None
-    slots: List[PluginSlotConfig] = field(default_factory=list)
+    routes: list[PluginRouteConfig] = field(default_factory=list)
+    settings: PluginSettingsConfig | None = None
+    slots: list[PluginSlotConfig] = field(default_factory=list)
 
 
 @dataclass
@@ -88,7 +86,7 @@ class PluginManifest:
     author_url: str = ""
     description: str = ""
     category: str = "tool"
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
     icon: str = ""
     color: str = ""
     min_app_version: str = ""
@@ -187,8 +185,8 @@ class PluginState:
     healthy: bool = True
     message: str = ""
     last_error: str = ""
-    manifest: Optional[PluginManifest] = None
-    config: Dict[str, Any] = field(default_factory=dict)
+    manifest: PluginManifest | None = None
+    config: dict[str, Any] = field(default_factory=dict)
     history_count: int = 0
 
 
@@ -217,24 +215,24 @@ class PluginDTO:
     author: str = ""
     author_url: str = ""
     category: str = "tool"
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
     order: int = 0
     installed: bool = False
     enabled: bool = False
     state: bool = False
     readme: str = ""
     changelog: str = ""
-    requires: List[str] = field(default_factory=list)
+    requires: list[str] = field(default_factory=list)
 
 
 @dataclass
 class InstalledPluginDTO(PluginDTO):
-    config: Dict[str, Any] = field(default_factory=dict)
-    fields: Dict[str, PluginFieldDTO] = field(default_factory=dict)
+    config: dict[str, Any] = field(default_factory=dict)
+    fields: dict[str, PluginFieldDTO] = field(default_factory=dict)
     history_count: int = 0
 
 
 @dataclass
 class PluginHistoryPageDTO:
     total: int = 0
-    items: List[Dict[str, Any]] = field(default_factory=list)
+    items: list[dict[str, Any]] = field(default_factory=list)

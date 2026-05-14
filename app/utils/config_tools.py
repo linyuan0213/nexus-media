@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 ConfigTools - 配置辅助纯函数
 从 Config 类拆分出来，所有函数直接从 config 读取并返回结果
 """
 from app.core.config import Config
-from app.core.constants import DEFAULT_UA, TMDB_API_DOMAINS, RMT_FAVTYPE
+from app.core.constants import DEFAULT_UA, TMDB_API_DOMAINS
 
 
 def get_proxies():

@@ -1,14 +1,12 @@
-from time import sleep
 import time
-from app.helper.drissionpage_helper import DrissionPageHelper
-from app.plugin_framework.event_compat import EventHandler
-from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
+
 from app.helper.cookiecloud_helper import CookiecloudHelper
-from app.utils import StringUtils, RequestUtils
+from app.helper.drissionpage_helper import DrissionPageHelper
+from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
+from app.plugin_framework.event_compat import EventHandler
+from app.utils import StringUtils
+from app.utils.config_tools import get_proxies, get_ua
 from app.utils.types import EventType
-from config import Config
-from app.utils.config_tools import get_proxies
-from app.utils.config_tools import get_ua
 
 
 class MTeam(_ISiteSigninHandler):
@@ -40,7 +38,7 @@ class MTeam(_ISiteSigninHandler):
         site_cookie = site_info.get("cookie")
         ua = site_info.get("ua")
         proxy = get_proxies() if site_info.get("proxy") else None
-        
+
         EventHandler.send_event(EventType.LocalStorageSync)
         time.sleep(10)
         local_storage = CookiecloudHelper().get_local_storage('m-team.io')
@@ -48,20 +46,20 @@ class MTeam(_ISiteSigninHandler):
         if not local_storage:
             self.error("仿真登录失败，LocalStorage获取失败或为空")
             return False, f'【{site}】仿真登录失败，LocalStorage获取失败或为空'
-        
+
         persist_user = local_storage.get('persist:user')
         auth = local_storage.get('auth')
         if not persist_user or not auth:
             self.error("仿真登录失败，persist:user获取失败或为空")
             return False, f'【{site}】仿真登录失败，persist:user获取失败或为空'
         self.info(f"{site} 开始仿真登录")
-        
-        
+
+
         # 首页
         chrome = DrissionPageHelper()
         if site_info.get("chrome") and chrome.get_status():
             self.info(f"{site} 开始仿真登录")
-            
+
             html_text = chrome.get_page_html(url="https://kp.m-team.cc/index", local_storage=local_storage, user_agent=get_ua(), timeout=30)
 
             if not html_text:

@@ -3,18 +3,22 @@ Sync Router — FastAPI 迁移
 对应原 web/controllers/sync.py，复用 app/services/sync_service.py
 """
 import os.path
-from typing import List, Optional, Union
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_sync_service, get_filetransfer_service, get_thread_helper, require_any_permission, require_permission
-from app.utils.response import success, fail
+from api.deps import (
+    get_filetransfer_service,
+    get_sync_service,
+    get_thread_helper,
+    require_any_permission,
+    require_permission,
+)
+from app.core.constants import RMT_MEDIAEXT
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.sync_service import SyncService
-from app.services.sync_core import SyncCore as Sync
 from app.utils import ExceptionUtils
-from app.core.constants import RMT_MEDIAEXT
+from app.utils.response import fail, success
 
 router = APIRouter()
 
@@ -24,103 +28,103 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 class EmptyRequest(BaseModel):
-    data: Optional[dict] = None
+    data: dict | None = None
 
 
 class AddOrEditSyncPathRequest(BaseModel):
-    sid: Optional[int] = None
-    source: Optional[str] = None
-    dest: Optional[str] = None
-    unknown: Optional[str] = None
-    mode: Optional[str] = None
-    compatibility: Optional[int] = None
-    rename: Optional[int] = None
-    enabled: Optional[int] = None
+    sid: int | None = None
+    source: str | None = None
+    dest: str | None = None
+    unknown: str | None = None
+    mode: str | None = None
+    compatibility: int | None = None
+    rename: int | None = None
+    enabled: int | None = None
 
 
 class CheckSyncPathRequest(BaseModel):
-    sid: Optional[int] = None
-    flag: Optional[str] = None
-    checked: Optional[bool] = None
+    sid: int | None = None
+    flag: str | None = None
+    checked: bool | None = None
 
 
 class DelUnknownPathRequest(BaseModel):
-    id: Optional[Union[int, List[int]]] = None
+    id: int | list[int] | None = None
 
 
 class DeleteFilesRequest(BaseModel):
-    files: Optional[List[str]] = None
+    files: list[str] | None = None
 
 
 class DeleteSyncPathRequest(BaseModel):
-    id: Optional[int] = None
+    id: int | None = None
 
 
 class GetSubPathRequest(BaseModel):
-    directory: Optional[str] = None
-    filter: Optional[str] = "ALL"
+    directory: str | None = None
+    filter: str | None = "ALL"
 
 
 class RenameRequest(BaseModel):
-    logid: Optional[int] = None
-    unknown_id: Optional[int] = None
-    syncmod: Optional[str] = None
-    tmdb: Optional[int] = None
-    type: Optional[str] = None
-    season: Optional[int] = None
-    episode_format: Optional[str] = None
-    episode_details: Optional[str] = None
-    episode_part: Optional[str] = None
-    episode_offset: Optional[str] = None
-    min_filesize: Optional[int] = None
+    logid: int | None = None
+    unknown_id: int | None = None
+    syncmod: str | None = None
+    tmdb: int | None = None
+    type: str | None = None
+    season: int | None = None
+    episode_format: str | None = None
+    episode_details: str | None = None
+    episode_part: str | None = None
+    episode_offset: str | None = None
+    min_filesize: int | None = None
 
 
 class RenameFileRequest(BaseModel):
-    path: Optional[str] = None
-    name: Optional[str] = None
+    path: str | None = None
+    name: str | None = None
 
 
 class RenameUdfRequest(BaseModel):
-    inpath: Optional[str] = None
-    outpath: Optional[str] = None
-    syncmod: Optional[str] = None
-    tmdb: Optional[int] = None
-    type: Optional[str] = None
-    season: Optional[int] = None
-    episode_format: Optional[str] = None
-    episode_details: Optional[str] = None
-    episode_part: Optional[str] = None
-    episode_offset: Optional[str] = None
-    min_filesize: Optional[int] = None
+    inpath: str | None = None
+    outpath: str | None = None
+    syncmod: str | None = None
+    tmdb: int | None = None
+    type: str | None = None
+    season: int | None = None
+    episode_format: str | None = None
+    episode_details: str | None = None
+    episode_part: str | None = None
+    episode_offset: str | None = None
+    min_filesize: int | None = None
 
 
 class RunDirectorySyncRequest(BaseModel):
-    sid: Optional[int] = None
+    sid: int | None = None
 
 
 class TestConnectionRequest(BaseModel):
-    command: Optional[str] = None
+    command: str | None = None
 
 
 class UpdateDirectoryRequest(BaseModel):
-    oper: Optional[str] = None
-    key: Optional[str] = None
-    value: Optional[str] = None
-    replace_value: Optional[str] = None
+    oper: str | None = None
+    key: str | None = None
+    value: str | None = None
+    replace_value: str | None = None
 
 
 class DeleteHistoryRequest(BaseModel):
-    logids: Optional[List[int]] = None
-    flag: Optional[str] = None
+    logids: list[int] | None = None
+    flag: str | None = None
 
 
 class GetSyncPathRequest(BaseModel):
-    sid: Optional[int] = None
+    sid: int | None = None
 
 
 class ReIdentificationRequest(BaseModel):
-    flag: Optional[str] = None
-    ids: Optional[List[int]] = None
+    flag: str | None = None
+    ids: list[int] | None = None
 
 
 # ---------------------------------------------------------------------------

@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 转移领域 Repository 接口（Python Protocol）
 """
-from typing import Any, List, Optional, Protocol, Tuple
+from typing import Any, Protocol
 
 from app.domain.entities.transfer import (
-    TransferBlacklistEntity,
     TransferHistoryEntity,
     TransferUnknownEntity,
 )
@@ -21,13 +19,13 @@ class ITransferHistoryRepository(Protocol):
     def insert(self, in_from, rmt_mode, in_path, out_path, dest, media_info) -> None:
         ...
 
-    def get_page(self, search: Optional[str], page: int, rownum: int) -> Tuple[int, List[TransferHistoryEntity]]:
+    def get_page(self, search: str | None, page: int, rownum: int) -> tuple[int, list[TransferHistoryEntity]]:
         ...
 
-    def get_by_id(self, logid: int) -> Optional[TransferHistoryEntity]:
+    def get_by_id(self, logid: int) -> TransferHistoryEntity | None:
         ...
 
-    def get_by_tmdb(self, tmdbid: int, season: Optional[str] = None, season_episode: Optional[str] = None) -> List[TransferHistoryEntity]:
+    def get_by_tmdb(self, tmdbid: int, season: str | None = None, season_episode: str | None = None) -> list[TransferHistoryEntity]:
         ...
 
     def delete(self, logid: int) -> None:
@@ -104,10 +102,10 @@ class ITransferUnknownRepository(Protocol):
     def insert(self, path: str, dest: str, mode: str) -> None:
         ...
 
-    def get_all(self) -> List[TransferUnknownEntity]:
+    def get_all(self) -> list[TransferUnknownEntity]:
         ...
 
-    def get_by_id(self, tid: int) -> Optional[TransferUnknownEntity]:
+    def get_by_id(self, tid: int) -> TransferUnknownEntity | None:
         ...
 
     def is_exists(self, path: str) -> bool:

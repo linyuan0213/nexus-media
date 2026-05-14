@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 数据库模型兼容层
 
@@ -25,60 +24,60 @@
 
 # 从新的子模块导入所有模型，保持向后兼容
 from app.db.models import (
-    # 基础
-    Base,
-    BaseMedia,
     # 配置
     CONFIGFILTERGROUP,
     CONFIGFILTERRULES,
     CONFIGRSSPARSER,
     CONFIGSITE,
     CONFIGSYNCPATHS,
-    CONFIGUSERS,
     CONFIGUSERRSS,
+    CONFIGUSERS,
+    CUSTOMWORDGROUPS,
     # 识别词
     CUSTOMWORDS,
-    CUSTOMWORDGROUPS,
     # 下载
     DOWNLOADER,
     DOWNLOADHISTORY,
     DOWNLOADSETTING,
+    # 索引器
+    INDEXERSTATISTICS,
+    # 媒体同步
+    MEDIASYNCITEMS,
+    MEDIASYNCSTATISTIC,
     # 消息
     MESSAGECLIENT,
+    # 插件
+    PLUGINHISTORY,
     # RSS
     RSSHISTORY,
     RSSMOVIES,
     RSSTORRENTS,
-    RSSTVS,
     RSSTVEPISODES,
+    RSSTVS,
+    # 搜索
+    SEARCHRESULTINFO,
     # 刷流
     SITEBRUSHTASK,
     SITEBRUSHTORRENTS,
+    SITEFAVICON,
     # 站点统计
     SITESTATISTICSHISTORY,
     SITEUSERINFOSTATS,
-    SITEFAVICON,
     SITEUSERSEEDINGINFO,
-    # 转移
-    TRANSFERBLACKLIST,
-    TRANSFERHISTORY,
-    TRANSFERUNKNOWN,
-    # 索引器
-    INDEXERSTATISTICS,
-    # 插件
-    PLUGINHISTORY,
-    TMDBBLACKLIST,
-    TORRENTREMOVETASK,
-    USERRSSTASKHISTORY,
-    # 媒体同步
-    MEDIASYNCITEMS,
-    MEDIASYNCSTATISTIC,
-    # 搜索
-    SEARCHRESULTINFO,
     # 同步
     SYNCHISTORY,
     # 系统
     SYSTEMDICT,
+    TMDBBLACKLIST,
+    TORRENTREMOVETASK,
+    # 转移
+    TRANSFERBLACKLIST,
+    TRANSFERHISTORY,
+    TRANSFERUNKNOWN,
+    USERRSSTASKHISTORY,
+    # 基础
+    Base,
+    BaseMedia,
 )
 
 # 保持向后兼容的 __all__ 定义

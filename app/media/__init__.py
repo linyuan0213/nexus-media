@@ -12,6 +12,18 @@
   - cache/           — 缓存层
 """
 
+from .batch import BatchProcessor
+from .cache import MediaCache
+from .category import Category
+from .external import Bangumi, DouBan
+from .factory import get_media_cache, get_media_service
+from .lookup import (
+    BangumiLookup,
+    BaseLookup,
+    DoubanLookup,
+    LookupResult,
+    TmdbLookup,
+)
 from .models import MediaInfo
 from .parser import (
     AnitopyAdapter,
@@ -21,24 +33,11 @@ from .parser import (
     RegexParser,
     TokenAdapter,
 )
-from .lookup import (
-    BaseLookup,
-    BangumiLookup,
-    DoubanLookup,
-    LookupResult,
-    TmdbLookup,
-)
-from .batch import BatchProcessor
-from .cache import MediaCache
-from .service import MediaService
-from .factory import get_media_cache, get_media_service
-from .category import Category
-from .scraper import Scraper
-from .external import DouBan, Bangumi
+from .parser._customization import CustomizationMatcher
 from .parser._metainfo import MetaInfo
 from .parser._release_groups import ReleaseGroupsMatcher
-from .parser._customization import CustomizationMatcher
-
+from .scraper import Scraper
+from .service import MediaService
 
 __all__ = [
     "MediaService",

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 影视标题解析 — 主入口
 将 MetaVideo 类拆分为纯函数模块
@@ -11,7 +10,7 @@ from app.media.models import MediaInfo
 from app.media.parser._customization import CustomizationMatcher
 from app.media.parser._release_groups import ReleaseGroupsMatcher
 from app.media.parser.video.constants import _name_no_begin_re
-from app.media.parser.video.encode_parser import init_video_encode, init_audio_encode
+from app.media.parser.video.encode_parser import init_audio_encode, init_video_encode
 from app.media.parser.video.name_parser import fix_name, init_name
 from app.media.parser.video.resource_parser import init_part, init_resource_pix, init_resource_type
 from app.media.parser.video.season_episode_parser import init_episode, init_season, init_year

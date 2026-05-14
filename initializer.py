@@ -1,21 +1,20 @@
-import json
 import os
 import time
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
-from app.utils.security import generate_password_hash
 
-from app.utils.path_utils import  get_category_path
 import log
 from app.core.system_config import SystemConfig
 from app.db.repositories import ConfigRepository, DownloadRepository
 from app.helper import PluginHelper
+from app.infrastructure.cache_system import CategoryLoadCache, ConfigLoadCache
 from app.media import Category
-from app.infrastructure.cache_system import ConfigLoadCache, CategoryLoadCache
-from app.utils import ExceptionUtils, StringUtils
-from app.utils.types import SystemConfigKey
 from app.services.apikey_service import APIKeyService
+from app.utils import ExceptionUtils
+from app.utils.path_utils import get_category_path
+from app.utils.types import SystemConfigKey
+from app.services.rbac_init import init_admin_user, init_rbac_system as rbac_init
 from config import Config
 
 _observer = Observer(timeout=10)
@@ -103,7 +102,7 @@ def update_config():
             "logserver": "server",
             "logpath": "path"
         }
-        
+
         # 初始化 log 节点（如果不存在）
         if "log" not in _config:
             _config["log"] = {}
@@ -117,7 +116,7 @@ def update_config():
                 app_config.pop(old_key)
                 migrated = True
                 log.info(f"【Config】日志配置已迁移：app.{old_key} -> log.{new_key}，并已移除旧配置。")
-        
+
         if migrated:
             overwrite_cofig = True
     except Exception as e:
@@ -252,7 +251,7 @@ def update_rss_state():
         # 执行SQL脚本更新RSS状态
         sql_file = os.path.join(os.path.dirname(__file__), "scripts", "sqls", "update_rss_state.sql")
         if os.path.exists(sql_file):
-            with open(sql_file, 'r', encoding='utf-8') as f:
+            with open(sql_file, encoding='utf-8') as f:
                 sql_content = f.read()
                 # 分割SQL语句并分别执行
                 sql_statements = [stmt.strip() for stmt in sql_content.split(';') if stmt.strip()]
@@ -274,24 +273,21 @@ def init_rbac_system():
     - 创建管理员用户
     """
     try:
-        from app.services.rbac_init import init_rbac_system as rbac_init, init_admin_user
-        from config import Config
-        
         # 初始化 RBAC 基础数据
         rbac_init()
-        
+
         # 获取配置中的管理员账号
         login_user = Config().get_config('app').get('login_user') or 'admin'
         login_password = Config().get_config('app').get('login_password') or 'password'
-        
+
         # 如果是哈希密码，使用原始密码
         if login_password.startswith('[hash]'):
             login_password = 'password'
-        
+
         # 创建管理员用户
         init_admin_user(login_user, login_password)
         log.info(f"【Initialize】RBAC 系统初始化完成，管理员: {login_user}")
-        
+
     except Exception as e:
         log.error(f"【Initialize】RBAC 系统初始化失败: {str(e)}")
         ExceptionUtils.exception_traceback(e)

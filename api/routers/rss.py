@@ -2,15 +2,14 @@
 RSS Router — FastAPI 迁移
 对应原 web/controllers/rss.py，复用 app/services/rss_service.py
 """
-from typing import Optional, Union
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_rss_subscription_service, require_any_permission, require_permission
-from app.utils.response import success, fail
-from app.services.rss_service import RssSubscriptionService
+from api.deps import get_rss_subscription_service, require_any_permission, require_permission
 from app.core.system_config import SystemConfig
+from app.services.rss_service import RssSubscriptionService
+from app.utils.response import fail, success
 from app.utils.types import SystemConfigKey
 
 router = APIRouter()
@@ -21,87 +20,87 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 class EmptyRequest(BaseModel):
-    data: Optional[dict] = None
+    data: dict | None = None
 
 
 class AddRssMediaRequest(BaseModel):
-    name: Optional[str] = None
-    year: Optional[str] = None
-    season: Optional[str] = None
-    type: Optional[str] = None
-    page: Optional[str] = None
-    rssid: Optional[str] = None
-    in_form: Optional[str] = None
-    keyword: Optional[str] = None
-    fuzzy_match: Optional[bool] = None
-    mediaid: Optional[Union[str, int]] = None
-    rss_sites: Optional[list] = None
-    search_sites: Optional[list] = None
-    over_edition: Optional[bool] = None
-    filter_restype: Optional[str] = None
-    filter_pix: Optional[str] = None
-    filter_team: Optional[str] = None
-    filter_rule: Optional[str] = None
-    filter_include: Optional[str] = None
-    filter_exclude: Optional[str] = None
-    save_path: Optional[str] = None
-    download_setting: Optional[str] = None
-    total_ep: Optional[int] = None
-    current_ep: Optional[int] = None
-    image: Optional[str] = None
-    tmdbid: Optional[Union[str, int]] = None
+    name: str | None = None
+    year: str | None = None
+    season: str | None = None
+    type: str | None = None
+    page: str | None = None
+    rssid: str | None = None
+    in_form: str | None = None
+    keyword: str | None = None
+    fuzzy_match: bool | None = None
+    mediaid: str | int | None = None
+    rss_sites: list | None = None
+    search_sites: list | None = None
+    over_edition: bool | None = None
+    filter_restype: str | None = None
+    filter_pix: str | None = None
+    filter_team: str | None = None
+    filter_rule: str | None = None
+    filter_include: str | None = None
+    filter_exclude: str | None = None
+    save_path: str | None = None
+    download_setting: str | None = None
+    total_ep: int | None = None
+    current_ep: int | None = None
+    image: str | None = None
+    tmdbid: str | int | None = None
 
 
 class RssidRequest(BaseModel):
-    rssid: Optional[str] = None
+    rssid: str | None = None
 
 
 class ReRssHistoryRequest(BaseModel):
-    rssid: Optional[str] = None
-    type: Optional[str] = None
+    rssid: str | None = None
+    type: str | None = None
 
 
 class RefreshRssRequest(BaseModel):
-    type: Optional[str] = None
-    rssid: Optional[str] = None
-    page: Optional[str] = None
+    type: str | None = None
+    rssid: str | None = None
+    page: str | None = None
 
 
 class RemoveRssMediaRequest(BaseModel):
-    name: Optional[str] = None
-    type: Optional[str] = None
-    year: Optional[str] = None
-    season: Optional[str] = None
-    rssid: Optional[str] = None
-    tmdbid: Optional[str] = None
-    page: Optional[str] = None
+    name: str | None = None
+    type: str | None = None
+    year: str | None = None
+    season: str | None = None
+    rssid: str | None = None
+    tmdbid: str | None = None
+    page: str | None = None
 
 
 class RssDetailRequest(BaseModel):
-    rssid: Optional[str] = None
-    rsstype: Optional[str] = None
+    rssid: str | None = None
+    rsstype: str | None = None
 
 
 class GetDefaultRssSettingRequest(BaseModel):
-    mtype: Optional[str] = None
+    mtype: str | None = None
 
 
 class DefaultRssSettingSaveRequest(BaseModel):
-    mtype: Optional[str] = None
-    over_edition: Optional[str] = None
-    restype: Optional[str] = None
-    pix: Optional[str] = None
-    team: Optional[str] = None
-    rule: Optional[str] = None
-    include: Optional[str] = None
-    exclude: Optional[str] = None
-    download_setting: Optional[str] = None
-    rss_sites: Optional[list] = None
-    search_sites: Optional[list] = None
+    mtype: str | None = None
+    over_edition: str | None = None
+    restype: str | None = None
+    pix: str | None = None
+    team: str | None = None
+    rule: str | None = None
+    include: str | None = None
+    exclude: str | None = None
+    download_setting: str | None = None
+    rss_sites: list | None = None
+    search_sites: list | None = None
 
 
 class GetRssHistoryRequest(BaseModel):
-    type: Optional[str] = None
+    type: str | None = None
 
 
 # ---------------------------------------------------------------------------

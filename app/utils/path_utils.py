@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 PathUtils - 路径相关纯函数工具
 从 Config 类拆分出来，避免循环导入
 """
 import os
-from typing import Optional, Union
-
 
 _ROOT_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
@@ -53,7 +50,7 @@ def get_category_path():
 class PathUtils:
 
     @staticmethod
-    def get_dir_files(in_path, exts: Union[str, list] = "", filesize=0, episode_format=None):
+    def get_dir_files(in_path, exts: str | list = "", filesize=0, episode_format=None):
         """
         获得目录下的媒体文件列表List ，按后缀、大小、格式过滤
         """
@@ -113,7 +110,7 @@ class PathUtils:
         return ret_list
 
     @staticmethod
-    def get_dir_level1_medias(in_path, exts: Union[str, list] = ""):
+    def get_dir_level1_medias(in_path, exts: str | list = ""):
         """
         根据后缀，返回目录下所有的文件及文件夹列表（只查询一级）
         """
@@ -199,6 +196,6 @@ class PathUtils:
         """
         获取父目录路径，level为向上查找的层数
         """
-        for lv in range(0, level):
+        for lv in range(level):
             path = os.path.dirname(path)
         return path

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 索引器管理模块
 
@@ -17,8 +16,7 @@ from app.indexer.client import BuiltinIndexer
 from app.indexer.core import SearchPipeline
 from app.utils import ExceptionUtils, StringUtils
 from app.utils.commons import SingletonMeta
-from app.utils.types import SearchType, IndexerType, ProgressKey
-from config import Config
+from app.utils.types import ProgressKey, SearchType
 
 
 class Indexer(metaclass=SingletonMeta):

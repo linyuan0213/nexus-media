@@ -2,9 +2,8 @@
 """
 统一所有后端 router 中 success() 的调用方式，确保只使用 data=... 和 msg=... 参数。
 """
-import re
 import os
-import sys
+import re
 
 ROUTERS_DIR = "api/routers"
 
@@ -75,7 +74,7 @@ def find_top_level_comma(s: str) -> int:
 
 
 def process_file(path: str):
-    with open(path, 'r', encoding='utf-8') as f:
+    with open(path, encoding='utf-8') as f:
         content = f.read()
 
     new_content = fix_multiline_success(content)

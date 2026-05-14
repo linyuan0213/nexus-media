@@ -1,12 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 插件历史 / TMDB黑名单仓储接口 / 插件框架v2仓储接口
 """
-from typing import List, Optional, Protocol
+from typing import Protocol
 
 from app.domain.entities.plugin import (
-    PluginHistoryEntity, TmdbBlacklistEntity,
-    PluginManifestEntity, PluginConfigEntity, PluginLogEntity,
+    PluginConfigEntity,
+    PluginHistoryEntity,
+    PluginLogEntity,
+    PluginManifestEntity,
+    TmdbBlacklistEntity,
 )
 
 
@@ -17,7 +19,7 @@ class IPluginHistoryRepository(Protocol):
         """新增插件运行记录"""
         ...
 
-    def get_plugin_history(self, plugin_id: str, key: Optional[str] = None) -> List[PluginHistoryEntity]:
+    def get_plugin_history(self, plugin_id: str, key: str | None = None) -> list[PluginHistoryEntity]:
         """查询插件运行记录"""
         ...
 
@@ -33,22 +35,22 @@ class IPluginHistoryRepository(Protocol):
 class ITmdbBlacklistRepository(Protocol):
     """TMDB黑名单仓储接口"""
 
-    def is_tmdb_blacklisted(self, tmdb_id: str, media_type: Optional[str] = None) -> bool:
+    def is_tmdb_blacklisted(self, tmdb_id: str, media_type: str | None = None) -> bool:
         """检查TMDB ID是否在黑名单中"""
         ...
 
-    def get_tmdb_blacklist(self) -> List[TmdbBlacklistEntity]:
+    def get_tmdb_blacklist(self) -> list[TmdbBlacklistEntity]:
         """获取所有TMDB黑名单记录"""
         ...
 
-    def insert_tmdb_blacklist(self, tmdb_id: str, title: Optional[str] = None,
-                               year: Optional[str] = None, media_type: Optional[str] = None,
-                               poster_path: Optional[str] = None, backdrop_path: Optional[str] = None,
-                               note: Optional[str] = None) -> bool:
+    def insert_tmdb_blacklist(self, tmdb_id: str, title: str | None = None,
+                               year: str | None = None, media_type: str | None = None,
+                               poster_path: str | None = None, backdrop_path: str | None = None,
+                               note: str | None = None) -> bool:
         """添加到TMDB黑名单"""
         ...
 
-    def delete_tmdb_blacklist(self, tmdb_id: str, media_type: Optional[str] = None) -> bool:
+    def delete_tmdb_blacklist(self, tmdb_id: str, media_type: str | None = None) -> bool:
         """从TMDB黑名单删除"""
         ...
 
@@ -60,11 +62,11 @@ class ITmdbBlacklistRepository(Protocol):
 class IPluginManifestRepository(Protocol):
     """插件框架v2 - 插件清单仓储接口"""
 
-    def get_all(self) -> List[PluginManifestEntity]:
+    def get_all(self) -> list[PluginManifestEntity]:
         """获取所有已安装插件"""
         ...
 
-    def get_by_id(self, plugin_id: str) -> Optional[PluginManifestEntity]:
+    def get_by_id(self, plugin_id: str) -> PluginManifestEntity | None:
         """根据ID获取插件"""
         ...
 
@@ -88,7 +90,7 @@ class IPluginManifestRepository(Protocol):
 class IPluginConfigRepository(Protocol):
     """插件框架v2 - 插件配置仓储接口"""
 
-    def get(self, plugin_id: str) -> Optional[PluginConfigEntity]:
+    def get(self, plugin_id: str) -> PluginConfigEntity | None:
         """获取插件配置"""
         ...
 
@@ -108,7 +110,7 @@ class IPluginLogRepository(Protocol):
         """插入日志"""
         ...
 
-    def get_by_plugin(self, plugin_id: str, page: int = 1, page_size: int = 20) -> List[PluginLogEntity]:
+    def get_by_plugin(self, plugin_id: str, page: int = 1, page_size: int = 20) -> list[PluginLogEntity]:
         """分页获取插件日志"""
         ...
 

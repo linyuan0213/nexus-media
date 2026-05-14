@@ -5,18 +5,39 @@ FastAPI 主应用
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.utils.security import get_secret_key
-from api.routers import system, site, download, rss, sync, brush, filter, scheduler, userrss, words, media, rbac, auth, image, plugin_framework, apikey, message_webhook
+import version
+import log
+from api.routers import (
+    apikey,
+    auth,
+    brush,
+    download,
+    filter,
+    image,
+    media,
+    message_webhook,
+    plugin_framework,
+    rbac,
+    rss,
+    scheduler,
+    site,
+    sync,
+    system,
+    userrss,
+    words,
+)
 from app.message import Message
 from app.plugin_framework.sandbox import PluginSandbox
-import version
+from app.utils.security import get_secret_key
+from app.db import remove_session, init_db
+from app.services.system_service import SystemLifecycleService
 
 # 读取安全密钥（与 Flask 共用 secret_key）
 _secret_key = get_secret_key()
@@ -25,9 +46,6 @@ _secret_key = get_secret_key()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理：启动后台服务"""
-    import log
-    from app.db import init_db
-    from app.services.system_service import SystemLifecycleService
     log.info("【FastAPI】初始化数据库...")
     init_db()
     log.info("【FastAPI】启动后台服务...")
@@ -80,7 +98,6 @@ async def db_session_cleanup(request: Request, call_next):
         response = await call_next(request)
         return response
     finally:
-        from app.db import remove_session
         remove_session()
 
 # 注册 Router（按领域逐步增加）
@@ -112,9 +129,6 @@ app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 def health_check():
     """健康检查"""
     return {"status": "ok", "version": version.APP_VERSION}
-
-
-from starlette.responses import JSONResponse
 
 
 @app.exception_handler(StarletteHTTPException)

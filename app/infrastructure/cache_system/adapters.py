@@ -1,17 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 缓存适配器实现
 支持内存缓存和Redis缓存
 """
-import threading
 import pickle
-from typing import Any, Optional, List, Dict, OrderedDict
+import threading
 from collections import OrderedDict
+from typing import Any
+
 import log
 
 from .base import CacheAdapter, CacheEntry
-from .events import CacheEventManager, CacheEvent, CacheEventType
-
+from .events import CacheEvent, CacheEventManager, CacheEventType
 
 # 获取事件管理器实例
 _event_manager = CacheEventManager()
@@ -32,8 +31,8 @@ def get_cache_value(cache_adapter, key: str) -> Any:
 
 class MemoryCacheAdapter(CacheAdapter):
     """内存缓存适配器 - 使用LRU策略"""
-    
-    def __init__(self, maxsize: int = 1000, name: str = "memory", default_ttl: Optional[int] = None):
+
+    def __init__(self, maxsize: int = 1000, name: str = "memory", default_ttl: int | None = None):
         self._cache: OrderedDict[str, CacheEntry] = OrderedDict()
         self._maxsize = maxsize
         self._name = name
@@ -46,8 +45,8 @@ class MemoryCacheAdapter(CacheAdapter):
             "deletes": 0,
             "evictions": 0
         }
-    
-    def get(self, key: str) -> Optional[Any]:
+
+    def get(self, key: str) -> Any | None:
         """获取缓存值"""
         with self._lock:
             entry = self._cache.get(key)
@@ -60,7 +59,7 @@ class MemoryCacheAdapter(CacheAdapter):
                     key=key
                 ))
                 return None
-            
+
             if entry.is_expired():
                 del self._cache[key]
                 self._stats["misses"] += 1
@@ -71,7 +70,7 @@ class MemoryCacheAdapter(CacheAdapter):
                     key=key
                 ))
                 return None
-            
+
             # LRU: 移动到末尾（最近使用）
             self._cache.move_to_end(key)
             self._stats["hits"] += 1
@@ -89,8 +88,8 @@ class MemoryCacheAdapter(CacheAdapter):
                 value=entry.value
             ))
             return entry.value
-    
-    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+
+    def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """设置缓存值"""
         if ttl is None:
             ttl = self._default_ttl
@@ -98,16 +97,16 @@ class MemoryCacheAdapter(CacheAdapter):
             # 如果键已存在，先删除以便更新位置
             if key in self._cache:
                 del self._cache[key]
-            
+
             # 检查是否需要淘汰
             evicted = False
             while len(self._cache) >= self._maxsize:
                 self._evict_oldest()
                 evicted = True
-            
+
             self._cache[key] = CacheEntry(value, ttl)
             self._stats["sets"] += 1
-            
+
             # 触发SET事件
             _event_manager.emit(CacheEvent(
                 event_type=CacheEventType.SET,
@@ -116,16 +115,16 @@ class MemoryCacheAdapter(CacheAdapter):
                 value=value,
                 ttl=ttl
             ))
-            
+
             # 如果发生了驱逐，触发EVICT事件
             if evicted:
                 _event_manager.emit(CacheEvent(
                     event_type=CacheEventType.EVICT,
                     cache_name=self._name
                 ))
-            
+
             return True
-    
+
     def _evict_oldest(self):
         """淘汰最旧的条目"""
         if self._cache:
@@ -140,7 +139,7 @@ class MemoryCacheAdapter(CacheAdapter):
                 key=oldest_key,
                 value=oldest_entry.value
             ))
-    
+
     def delete(self, key: str) -> bool:
         """删除缓存"""
         with self._lock:
@@ -157,7 +156,7 @@ class MemoryCacheAdapter(CacheAdapter):
                 ))
                 return True
             return False
-    
+
     def exists(self, key: str) -> bool:
         """检查键是否存在"""
         with self._lock:
@@ -168,7 +167,7 @@ class MemoryCacheAdapter(CacheAdapter):
                 del self._cache[key]
                 return False
             return True
-    
+
     def clear(self) -> bool:
         """清空所有缓存"""
         with self._lock:
@@ -179,8 +178,8 @@ class MemoryCacheAdapter(CacheAdapter):
                 cache_name=self._name
             ))
             return True
-    
-    def keys(self, pattern: str = "*") -> List[str]:
+
+    def keys(self, pattern: str = "*") -> list[str]:
         """获取匹配模式的键列表"""
         import fnmatch
         with self._lock:
@@ -190,11 +189,11 @@ class MemoryCacheAdapter(CacheAdapter):
             ]
             for k in expired_keys:
                 del self._cache[k]
-            
+
             if pattern == "*":
                 return list(self._cache.keys())
             return [k for k in self._cache.keys() if fnmatch.fnmatch(k, pattern)]
-    
+
     def ttl(self, key: str) -> int:
         """获取键的剩余生存时间"""
         with self._lock:
@@ -202,7 +201,7 @@ class MemoryCacheAdapter(CacheAdapter):
             if entry is None:
                 return -2
             return entry.get_remaining_ttl()
-    
+
     def expire(self, key: str, seconds: int) -> bool:
         """设置键的过期时间"""
         with self._lock:
@@ -212,8 +211,8 @@ class MemoryCacheAdapter(CacheAdapter):
             entry.ttl = seconds
             entry.created_at = __import__('time').time()
             return True
-    
-    def get_stats(self) -> Dict[str, Any]:
+
+    def get_stats(self) -> dict[str, Any]:
         """获取缓存统计信息"""
         with self._lock:
             total = self._stats["hits"] + self._stats["misses"]
@@ -235,7 +234,7 @@ class MemoryCacheAdapter(CacheAdapter):
 class RedisCacheAdapter(CacheAdapter):
     """Redis缓存适配器 - Redis不可用时自动回退到内存缓存"""
 
-    def __init__(self, name: str = "redis", default_ttl: Optional[int] = None,
+    def __init__(self, name: str = "redis", default_ttl: int | None = None,
                  fallback_maxsize: int = 2000):
         self._name = name
         self._default_ttl = default_ttl
@@ -285,7 +284,7 @@ class RedisCacheAdapter(CacheAdapter):
         self._init_redis()
         return self._redis is not None
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """获取缓存值 - 先查Redis，失败回退到内存"""
         if self._ensure_connection():
             try:
@@ -324,7 +323,7 @@ class RedisCacheAdapter(CacheAdapter):
             ))
         return value
 
-    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """设置缓存值 - 同时写入Redis和内存回退"""
         if ttl is None:
             ttl = self._default_ttl
@@ -409,7 +408,7 @@ class RedisCacheAdapter(CacheAdapter):
         ))
         return True
 
-    def keys(self, pattern: str = "*") -> List[str]:
+    def keys(self, pattern: str = "*") -> list[str]:
         """获取匹配模式的键列表"""
         redis_keys = []
         if self._ensure_connection():
@@ -444,7 +443,7 @@ class RedisCacheAdapter(CacheAdapter):
         fallback_ok = self._fallback.expire(key, seconds)
         return redis_ok or fallback_ok
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取缓存统计信息"""
         with self._lock:
             total = self._stats["hits"] + self._stats["misses"]
@@ -467,8 +466,8 @@ class RedisCacheAdapter(CacheAdapter):
 
 class TieredCacheAdapter(CacheAdapter):
     """分层缓存适配器 - L1(内存) + L2(Redis)"""
-    
-    def __init__(self, memory_maxsize: int = 1000, name: str = "tiered", default_ttl: Optional[int] = None):
+
+    def __init__(self, memory_maxsize: int = 1000, name: str = "tiered", default_ttl: int | None = None):
         self._l1 = MemoryCacheAdapter(maxsize=memory_maxsize, name=f"{name}_l1", default_ttl=default_ttl)
         self._l2 = RedisCacheAdapter(name=f"{name}_l2", default_ttl=default_ttl)
         self._name = name
@@ -477,15 +476,15 @@ class TieredCacheAdapter(CacheAdapter):
             "l2_hits": 0,
             "misses": 0
         }
-    
-    def get(self, key: str) -> Optional[Any]:
+
+    def get(self, key: str) -> Any | None:
         """获取缓存值 - 先查L1，再查L2"""
         # 先查L1
         value = self._l1.get(key)
         if value is not None:
             self._stats["l1_hits"] += 1
             return value
-        
+
         # 再查L2
         value = self._l2.get(key)
         if value is not None:
@@ -493,39 +492,39 @@ class TieredCacheAdapter(CacheAdapter):
             # 回填L1
             self._l1.set(key, value)
             return value
-        
+
         self._stats["misses"] += 1
         return None
-    
-    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+
+    def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """设置缓存值 - 同时设置L1和L2"""
         l1_result = self._l1.set(key, value, ttl)
         l2_result = self._l2.set(key, value, ttl)
         return l1_result or l2_result
-    
+
     def delete(self, key: str) -> bool:
         """删除缓存"""
         l1_result = self._l1.delete(key)
         l2_result = self._l2.delete(key)
         return l1_result or l2_result
-    
+
     def exists(self, key: str) -> bool:
         """检查键是否存在"""
         return self._l1.exists(key) or self._l2.exists(key)
-    
+
     def clear(self) -> bool:
         """清空所有缓存"""
         l1_result = self._l1.clear()
         l2_result = self._l2.clear()
         return l1_result and l2_result
-    
-    def keys(self, pattern: str = "*") -> List[str]:
+
+    def keys(self, pattern: str = "*") -> list[str]:
         """获取匹配模式的键列表"""
         # 合并L1和L2的键
         l1_keys = set(self._l1.keys(pattern))
         l2_keys = set(self._l2.keys(pattern))
         return list(l1_keys | l2_keys)
-    
+
     def ttl(self, key: str) -> int:
         """获取键的剩余生存时间"""
         # 优先使用L1的TTL
@@ -533,14 +532,14 @@ class TieredCacheAdapter(CacheAdapter):
         if l1_ttl >= 0:
             return l1_ttl
         return self._l2.ttl(key)
-    
+
     def expire(self, key: str, seconds: int) -> bool:
         """设置键的过期时间"""
         l1_result = self._l1.expire(key, seconds)
         l2_result = self._l2.expire(key, seconds)
         return l1_result or l2_result
-    
-    def get_stats(self) -> Dict[str, Any]:
+
+    def get_stats(self) -> dict[str, Any]:
         """获取缓存统计信息"""
         total = sum(self._stats.values())
         return {

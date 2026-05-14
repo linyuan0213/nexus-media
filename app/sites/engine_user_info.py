@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """引擎用户信息 — 从 engine.py 拆分"""
 import json
 

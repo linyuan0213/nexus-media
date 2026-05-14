@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 import json
 import re
-from typing import Optional
 
 from app.media.models import MediaInfo
 from app.mediaserver import MediaServer
@@ -17,8 +15,8 @@ class SearchResultService:
     """
 
     def __init__(self,
-                 media_server: Optional[MediaServer] = None,
-                 subscribe: Optional[Subscribe] = None):
+                 media_server: MediaServer | None = None,
+                 subscribe: Subscribe | None = None):
         self._media_server = media_server or MediaServer()
         self._subscribe = subscribe or Subscribe()
 
@@ -33,7 +31,7 @@ class SearchResultService:
             restype, respix, reseffect, video_encode = self._parse_res_type(item.RES_TYPE)
             group_key = re.sub(r"[-.\s@|]", "", f"{respix}_{restype}").lower()
             group_info = {"respix": respix, "restype": restype}
-            unique_key = re.sub(r"[-.\s@|]", "", 
+            unique_key = re.sub(r"[-.\s@|]", "",
                                 f"{respix}_{restype}_{video_encode}_{reseffect}_{item.SIZE}_{item.OTHERINFO}").lower()
             unique_info = {
                 "video_encode": video_encode,

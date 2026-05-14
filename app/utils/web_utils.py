@@ -2,12 +2,12 @@ from functools import lru_cache
 
 import cn2an
 
-from app.media import MediaService, Bangumi, DouBan, MetaInfo
-from app.utils import StringUtils, ExceptionUtils, SystemUtils, RequestUtils, IpUtils
+from app.media import Bangumi, DouBan, MediaService, MetaInfo
+from app.utils import ExceptionUtils, IpUtils, RequestUtils, StringUtils
+from app.utils.config_tools import get_proxies
 from app.utils.types import MediaType
 from config import Config
 from version import APP_VERSION
-from app.utils.config_tools import get_proxies
 
 
 class WebUtils:
@@ -212,7 +212,7 @@ class WebUtils:
         """
         # 解析URL，判断是否需要特殊处理
         parsed_url = url.lower()
-        
+
         # 豆瓣图片
         if 'douban' in parsed_url:
             ret = RequestUtils(referer="https://movie.douban.com").get_res(url)
@@ -252,7 +252,7 @@ class WebUtils:
         # 其他情况
         else:
             ret = RequestUtils().get_res(url)
-            
+
         if ret:
             return ret.content
         return None

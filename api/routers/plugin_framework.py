@@ -1,21 +1,21 @@
-# -*- coding: utf-8 -*-
 """
 Plugin Framework Router - FastAPI
 插件框架 v2 API 路由
 """
 import os
+import json
 import tempfile
+import threading
 
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_plugin_framework_service, require_any_permission, require_permission
-from app.utils.response import success, fail
-from app.services.plugin_framework_service import PluginFrameworkService
-import threading
-
 import log
+from api.deps import get_plugin_framework_service, require_any_permission, require_permission
+from app.services.plugin_framework_service import PluginFrameworkService
+from app.utils.response import fail, success
+from config import Config
 
 router = APIRouter()
 
@@ -254,9 +254,7 @@ def get_plugin_data(
 ):
     """获取插件数据文件（JSON）"""
     try:
-        import json
-        import os
-        from config import Config
+
         data_dir = os.path.join(Config().config_path, 'plugins_data', plugin_id)
         target = os.path.join(data_dir, filename)
         real_dir = os.path.realpath(data_dir)
@@ -265,7 +263,7 @@ def get_plugin_data(
             return fail(msg="非法路径")
         if not os.path.exists(target):
             return success(data=[])
-        with open(target, 'r', encoding='utf-8') as f:
+        with open(target, encoding='utf-8') as f:
             data = json.load(f)
         # 如果是字典，返回 values 列表
         if isinstance(data, dict):
@@ -285,8 +283,8 @@ def delete_plugin_data(
 ):
     """删除插件数据文件中的某条记录"""
     try:
-        import json
-        import os
+
+
         from config import Config
         data_dir = os.path.join(Config().config_path, 'plugins_data', plugin_id)
         target = os.path.join(data_dir, filename)
@@ -296,7 +294,7 @@ def delete_plugin_data(
             return fail(msg="非法路径")
         if not os.path.exists(target):
             return fail(msg="数据文件不存在")
-        with open(target, 'r', encoding='utf-8') as f:
+        with open(target, encoding='utf-8') as f:
             data = json.load(f)
         if isinstance(data, dict) and item_id in data:
             del data[item_id]

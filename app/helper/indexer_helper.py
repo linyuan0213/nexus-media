@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from app.utils import StringUtils
 from app.utils.commons import SingletonMeta
 

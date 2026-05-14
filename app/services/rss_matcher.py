@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 RSS 订阅匹配器
 
@@ -7,8 +6,8 @@ RSS 订阅匹配器
 """
 import re
 
-from app.utils.types import MediaType
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
+from app.utils.types import MediaType
 
 
 class RssMatcher:
@@ -124,7 +123,7 @@ class RssMatcher:
 
         # 站点 Free 检测
         if site_parse:
-            from app.sites import Sites, SiteConf
+            from app.sites import SiteConf, Sites
             sites = Sites()
             siteconf = SiteConf()
             if sites.check_ratelimit(site_id):

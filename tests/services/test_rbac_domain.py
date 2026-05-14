@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 RBAC 领域层测试
 测试 RBAC 实体 from_orm/to_dict 以及适配器代理行为
@@ -8,20 +7,20 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.domain.entities.rbac import (
-    RBACUserEntity,
-    RBACRoleEntity,
-    RBACPermissionEntity,
-    RBACMenuEntity,
-    RBACUserLoginLogEntity,
-    RBACOperationLogEntity,
-)
 from app.db.repositories.rbac_repo_adapter import (
-    RBACUserRepositoryAdapter,
-    RBACRoleRepositoryAdapter,
-    RBACPermissionRepositoryAdapter,
-    RBACMenuRepositoryAdapter,
     RBACLogRepositoryAdapter,
+    RBACMenuRepositoryAdapter,
+    RBACPermissionRepositoryAdapter,
+    RBACRoleRepositoryAdapter,
+    RBACUserRepositoryAdapter,
+)
+from app.domain.entities.rbac import (
+    RBACMenuEntity,
+    RBACOperationLogEntity,
+    RBACPermissionEntity,
+    RBACRoleEntity,
+    RBACUserEntity,
+    RBACUserLoginLogEntity,
 )
 
 

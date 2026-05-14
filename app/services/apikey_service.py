@@ -1,17 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 API Key Service
 API Key 业务逻辑层
 """
-import secrets
 import hashlib
+import secrets
 import uuid
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Any
 
-from app.db.repositories.apikey_repo_adapter import APIKeyRepositoryAdapter, APIKeyLogRepositoryAdapter
-from app.utils import ExceptionUtils
 import log
+from app.db.repositories.apikey_repo_adapter import APIKeyLogRepositoryAdapter, APIKeyRepositoryAdapter
+from app.utils import ExceptionUtils
 
 
 class APIKeyService:
@@ -42,9 +41,9 @@ class APIKeyService:
         """对 API Key 进行 SHA256 哈希"""
         return hashlib.sha256(key.encode()).hexdigest()
 
-    def create_key(self, name: str, expires_days: Optional[int] = None,
-                   description: str = "", created_by: Optional[int] = None,
-                   raw_key: Optional[str] = None) -> Dict[str, Any]:
+    def create_key(self, name: str, expires_days: int | None = None,
+                   description: str = "", created_by: int | None = None,
+                   raw_key: str | None = None) -> dict[str, Any]:
         """
         创建新的 API Key
         """
@@ -82,7 +81,7 @@ class APIKeyService:
             ExceptionUtils.exception_traceback(e)
             raise
 
-    def list_keys(self, page: int = 1, page_size: int = 50) -> Dict[str, Any]:
+    def list_keys(self, page: int = 1, page_size: int = 50) -> dict[str, Any]:
         """获取 API Key 列表"""
         try:
             items, total = self._key_repo.list_keys(page, page_size)
@@ -96,9 +95,9 @@ class APIKeyService:
             ExceptionUtils.exception_traceback(e)
             return {"total": 0, "page": page, "page_size": page_size, "items": []}
 
-    def update_key(self, key_id: int, name: Optional[str] = None,
-                   status: Optional[int] = None,
-                   description: Optional[str] = None) -> bool:
+    def update_key(self, key_id: int, name: str | None = None,
+                   status: int | None = None,
+                   description: str | None = None) -> bool:
         """更新 API Key"""
         try:
             kwargs = {}
@@ -121,7 +120,7 @@ class APIKeyService:
             ExceptionUtils.exception_traceback(e)
             return False
 
-    def validate_key(self, raw_key: str) -> Optional[Any]:
+    def validate_key(self, raw_key: str) -> Any | None:
         """验证 API Key 是否有效"""
         try:
             key_hash = self._hash_key(raw_key)
@@ -133,13 +132,13 @@ class APIKeyService:
             ExceptionUtils.exception_traceback(e)
             return None
 
-    def record_usage(self, api_key_id: int, request_id: Optional[str] = None,
+    def record_usage(self, api_key_id: int, request_id: str | None = None,
                      request_name: str = "", source_ip: str = "",
                      user_agent: str = "", request_path: str = "",
                      request_method: str = "", status: int = 1,
-                     response_code: Optional[int] = None,
+                     response_code: int | None = None,
                      error_message: str = "",
-                     response_time_ms: Optional[int] = None) -> bool:
+                     response_time_ms: int | None = None) -> bool:
         """记录 API Key 使用日志"""
         try:
             if request_id is None:
@@ -164,8 +163,8 @@ class APIKeyService:
             ExceptionUtils.exception_traceback(e)
             return False
 
-    def list_logs(self, api_key_id: Optional[int] = None,
-                  page: int = 1, page_size: int = 50) -> Dict[str, Any]:
+    def list_logs(self, api_key_id: int | None = None,
+                  page: int = 1, page_size: int = 50) -> dict[str, Any]:
         """获取 API Key 使用记录"""
         try:
             items, total = self._log_repo.list_logs(api_key_id, page, page_size)
@@ -210,7 +209,7 @@ class APIKeyService:
             ExceptionUtils.exception_traceback(e)
             raise
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取 API Key 统计信息"""
         try:
             return self._key_repo.get_stats()

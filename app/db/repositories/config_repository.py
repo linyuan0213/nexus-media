@@ -6,10 +6,21 @@ Includes: Message Client, Torrent Remove Task, Downloader, User RSS, Filter Rule
 import json
 import time
 
-from sqlalchemy import cast, Integer
+from sqlalchemy import Integer, cast
+
 from app.db import DbPersist
-from app.db.models import MESSAGECLIENT, TORRENTREMOVETASK, DOWNLOADER, CONFIGUSERRSS, CONFIGRSSPARSER, \
-    USERRSSTASKHISTORY, CONFIGFILTERGROUP, CONFIGFILTERRULES, MEDIASERVER, CONFIGMEDIA
+from app.db.models import (
+    CONFIGFILTERGROUP,
+    CONFIGFILTERRULES,
+    CONFIGMEDIA,
+    CONFIGRSSPARSER,
+    CONFIGUSERRSS,
+    DOWNLOADER,
+    MEDIASERVER,
+    MESSAGECLIENT,
+    TORRENTREMOVETASK,
+    USERRSSTASKHISTORY,
+)
 from app.db.repositories.base_repository import BaseRepository
 
 
@@ -31,7 +42,7 @@ class ConfigRepository(BaseRepository):
         """
         if not cid:
             return
-        self._db.query(MESSAGECLIENT).filter(MESSAGECLIENT.ID == int(cid)).delete()
+        self._db.query(MESSAGECLIENT).filter(int(cid) == MESSAGECLIENT.ID).delete()
 
     def get_message_client(self, cid=None):
         """
@@ -44,7 +55,7 @@ class ConfigRepository(BaseRepository):
             消息客户端列表
         """
         if cid:
-            return self._db.query(MESSAGECLIENT).filter(MESSAGECLIENT.ID == int(cid)).all()
+            return self._db.query(MESSAGECLIENT).filter(int(cid) == MESSAGECLIENT.ID).all()
         return self._db.query(MESSAGECLIENT).all()
 
     @DbPersist(BaseRepository._db)
@@ -83,16 +94,16 @@ class ConfigRepository(BaseRepository):
             ctype: 类型
         """
         if cid and interactive is not None:
-            self._db.query(MESSAGECLIENT).filter(MESSAGECLIENT.ID == int(cid)).update({
+            self._db.query(MESSAGECLIENT).filter(int(cid) == MESSAGECLIENT.ID).update({
                 "INTERACTIVE": int(interactive)
             })
         elif cid and enabled is not None:
-            self._db.query(MESSAGECLIENT).filter(MESSAGECLIENT.ID == int(cid)).update({
+            self._db.query(MESSAGECLIENT).filter(int(cid) == MESSAGECLIENT.ID).update({
                 "ENABLED": int(enabled)
             })
         elif not cid and int(interactive) == 0 and ctype:
             self._db.query(MESSAGECLIENT).filter(MESSAGECLIENT.INTERACTIVE == 1,
-                                                  MESSAGECLIENT.TYPE == ctype).update({
+                                                  ctype == MESSAGECLIENT.TYPE).update({
                 "INTERACTIVE": 0
             })
 
@@ -108,7 +119,7 @@ class ConfigRepository(BaseRepository):
         """
         if not tid:
             return
-        self._db.query(TORRENTREMOVETASK).filter(TORRENTREMOVETASK.ID == int(tid)).delete()
+        self._db.query(TORRENTREMOVETASK).filter(int(tid) == TORRENTREMOVETASK.ID).delete()
 
     def get_torrent_remove_tasks(self, tid=None):
         """
@@ -121,7 +132,7 @@ class ConfigRepository(BaseRepository):
             删种策略列表
         """
         if tid:
-            return self._db.query(TORRENTREMOVETASK).filter(TORRENTREMOVETASK.ID == int(tid)).all()
+            return self._db.query(TORRENTREMOVETASK).filter(int(tid) == TORRENTREMOVETASK.ID).all()
         return self._db.query(TORRENTREMOVETASK).order_by(TORRENTREMOVETASK.NAME).all()
 
     @DbPersist(BaseRepository._db)
@@ -191,7 +202,7 @@ class ConfigRepository(BaseRepository):
             download_dir: 下载目录
         """
         if did:
-            self._db.query(DOWNLOADER).filter(DOWNLOADER.ID == int(did)).update({
+            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({
                 "NAME": name,
                 "ENABLED": int(enabled),
                 "TYPE": dtype,
@@ -225,7 +236,7 @@ class ConfigRepository(BaseRepository):
         """
         if not did:
             return
-        self._db.query(DOWNLOADER).filter(DOWNLOADER.ID == int(did)).delete()
+        self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).delete()
 
     @DbPersist(BaseRepository._db)
     def check_downloader(self, did=None, transfer=None, only_nastool=None, enabled=None, match_path=None):
@@ -242,19 +253,19 @@ class ConfigRepository(BaseRepository):
         if not did:
             return
         if transfer is not None:
-            self._db.query(DOWNLOADER).filter(DOWNLOADER.ID == int(did)).update({
+            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({
                 "TRANSFER": int(transfer)
             })
         elif only_nastool is not None:
-            self._db.query(DOWNLOADER).filter(DOWNLOADER.ID == int(did)).update({
+            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({
                 "ONLY_NASTOOL": int(only_nastool)
             })
         elif match_path is not None:
-            self._db.query(DOWNLOADER).filter(DOWNLOADER.ID == int(did)).update({
+            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({
                 "MATCH_PATH": int(match_path)
             })
         elif enabled is not None:
-            self._db.query(DOWNLOADER).filter(DOWNLOADER.ID == int(did)).update({
+            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({
                 "ENABLED": int(enabled)
             })
 
@@ -280,7 +291,7 @@ class ConfigRepository(BaseRepository):
             任务列表
         """
         if tid:
-            return self._db.query(CONFIGUSERRSS).filter(CONFIGUSERRSS.ID == int(tid)).all()
+            return self._db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).all()
         else:
             return self._db.query(CONFIGUSERRSS).order_by(CONFIGUSERRSS.STATE.desc()).all()
 
@@ -294,7 +305,7 @@ class ConfigRepository(BaseRepository):
         """
         if not tid:
             return
-        self._db.query(CONFIGUSERRSS).filter(CONFIGUSERRSS.ID == int(tid)).delete()
+        self._db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).delete()
 
     @DbPersist(BaseRepository._db)
     def update_userrss_task_info(self, tid, count):
@@ -307,7 +318,7 @@ class ConfigRepository(BaseRepository):
         """
         if not tid:
             return
-        self._db.query(CONFIGUSERRSS).filter(CONFIGUSERRSS.ID == int(tid)).update({
+        self._db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).update({
             "PROCESS_COUNT": CONFIGUSERRSS.PROCESS_COUNT + count,
             "UPDATE_TIME": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
         })
@@ -321,7 +332,7 @@ class ConfigRepository(BaseRepository):
             item: 任务信息字典
         """
         if item.get("id") and self.get_userrss_tasks(item.get("id")):
-            self._db.query(CONFIGUSERRSS).filter(CONFIGUSERRSS.ID == int(item.get("id"))).update({
+            self._db.query(CONFIGUSERRSS).filter(int(item.get("id")) == CONFIGUSERRSS.ID).update({
                 "NAME": item.get("name"),
                 "ADDRESS": json.dumps(item.get("address")),
                 "PARSER": json.dumps(item.get("parser")),
@@ -374,7 +385,7 @@ class ConfigRepository(BaseRepository):
         if state is None:
             return
         if tid:
-            self._db.query(CONFIGUSERRSS).filter(CONFIGUSERRSS.ID == int(tid)).update({
+            self._db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).update({
                 "STATE": state
             })
         else:
@@ -391,7 +402,7 @@ class ConfigRepository(BaseRepository):
         """
         if not tid or not mediainfo:
             return
-        taskinfo = self._db.query(CONFIGUSERRSS).filter(CONFIGUSERRSS.ID == int(tid)).all()
+        taskinfo = self._db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).all()
         if not taskinfo:
             return
 
@@ -410,7 +421,7 @@ class ConfigRepository(BaseRepository):
             "name": mediainfo.title
         })
 
-        self._db.query(CONFIGUSERRSS).filter(CONFIGUSERRSS.ID == int(tid)).update({
+        self._db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).update({
             "MEDIAINFOS": json.dumps(mediainfos)
         })
 
@@ -443,7 +454,7 @@ class ConfigRepository(BaseRepository):
         """
         if not task_id:
             return []
-        return self._db.query(USERRSSTASKHISTORY).filter(USERRSSTASKHISTORY.TASK_ID == task_id) \
+        return self._db.query(USERRSSTASKHISTORY).filter(task_id == USERRSSTASKHISTORY.TASK_ID) \
             .order_by(USERRSSTASKHISTORY.DATE.desc()).all()
 
     # ==================== RSS Parser ====================
@@ -459,7 +470,7 @@ class ConfigRepository(BaseRepository):
             解析器列表或单个解析器
         """
         if pid:
-            return self._db.query(CONFIGRSSPARSER).filter(CONFIGRSSPARSER.ID == int(pid)).first()
+            return self._db.query(CONFIGRSSPARSER).filter(int(pid) == CONFIGRSSPARSER.ID).first()
         else:
             return self._db.query(CONFIGRSSPARSER).all()
 
@@ -473,7 +484,7 @@ class ConfigRepository(BaseRepository):
         """
         if not pid:
             return
-        self._db.query(CONFIGRSSPARSER).filter(CONFIGRSSPARSER.ID == int(pid)).delete()
+        self._db.query(CONFIGRSSPARSER).filter(int(pid) == CONFIGRSSPARSER.ID).delete()
 
     @DbPersist(BaseRepository._db)
     def update_userrss_parser(self, item):
@@ -486,7 +497,7 @@ class ConfigRepository(BaseRepository):
         if not item:
             return
         if item.get("id") and self.get_userrss_parser(item.get("id")):
-            self._db.query(CONFIGRSSPARSER).filter(CONFIGRSSPARSER.ID == int(item.get("id"))).update({
+            self._db.query(CONFIGRSSPARSER).filter(int(item.get("id")) == CONFIGRSSPARSER.ID).update({
                 "NAME": item.get("name"),
                 "TYPE": item.get("type"),
                 "FORMAT": item.get("format"),
@@ -513,7 +524,7 @@ class ConfigRepository(BaseRepository):
             规则组列表
         """
         if gid:
-            return self._db.query(CONFIGFILTERGROUP).filter(CONFIGFILTERGROUP.ID == int(gid)).all()
+            return self._db.query(CONFIGFILTERGROUP).filter(int(gid) == CONFIGFILTERGROUP.ID).all()
         return self._db.query(CONFIGFILTERGROUP).all()
 
     def get_config_filter_rule(self, groupid=None):
@@ -533,7 +544,7 @@ class ConfigRepository(BaseRepository):
             ).all()
         else:
             return self._db.query(CONFIGFILTERRULES).filter(
-                CONFIGFILTERRULES.GROUP_ID == int(groupid)
+                int(groupid) == CONFIGFILTERRULES.GROUP_ID
             ).order_by(
                 CONFIGFILTERRULES.GROUP_ID,
                 cast(CONFIGFILTERRULES.PRIORITY, Integer)
@@ -552,7 +563,7 @@ class ConfigRepository(BaseRepository):
             self.set_default_filtergroup(0)
         group_id = self.get_filter_groupid_by_name(name)
         if group_id:
-            self._db.query(CONFIGFILTERGROUP).filter(CONFIGFILTERGROUP.ID == int(group_id)).update({
+            self._db.query(CONFIGFILTERGROUP).filter(int(group_id) == CONFIGFILTERGROUP.ID).update({
                 "IS_DEFAULT": default
             })
         else:
@@ -571,7 +582,7 @@ class ConfigRepository(BaseRepository):
         Returns:
             组ID
         """
-        ret = self._db.query(CONFIGFILTERGROUP.ID).filter(CONFIGFILTERGROUP.GROUP_NAME == name).first()
+        ret = self._db.query(CONFIGFILTERGROUP.ID).filter(name == CONFIGFILTERGROUP.GROUP_NAME).first()
         if ret:
             return ret[0]
         else:
@@ -585,10 +596,10 @@ class ConfigRepository(BaseRepository):
         Args:
             groupid: 组ID
         """
-        self._db.query(CONFIGFILTERGROUP).filter(CONFIGFILTERGROUP.ID == int(groupid)).update({
+        self._db.query(CONFIGFILTERGROUP).filter(int(groupid) == CONFIGFILTERGROUP.ID).update({
             "IS_DEFAULT": 'Y'
         })
-        self._db.query(CONFIGFILTERGROUP).filter(CONFIGFILTERGROUP.ID != int(groupid)).update({
+        self._db.query(CONFIGFILTERGROUP).filter(int(groupid) != CONFIGFILTERGROUP.ID).update({
             "IS_DEFAULT": 'N'
         })
 
@@ -600,8 +611,8 @@ class ConfigRepository(BaseRepository):
         Args:
             groupid: 组ID
         """
-        self._db.query(CONFIGFILTERRULES).filter(CONFIGFILTERRULES.GROUP_ID == groupid).delete()
-        self._db.query(CONFIGFILTERGROUP).filter(CONFIGFILTERGROUP.ID == int(groupid)).delete()
+        self._db.query(CONFIGFILTERRULES).filter(groupid == CONFIGFILTERRULES.GROUP_ID).delete()
+        self._db.query(CONFIGFILTERGROUP).filter(int(groupid) == CONFIGFILTERGROUP.ID).delete()
 
     @DbPersist(BaseRepository._db)
     def delete_filterrule(self, ruleid):
@@ -611,7 +622,7 @@ class ConfigRepository(BaseRepository):
         Args:
             ruleid: 规则ID
         """
-        self._db.query(CONFIGFILTERRULES).filter(CONFIGFILTERRULES.ID == int(ruleid)).delete()
+        self._db.query(CONFIGFILTERRULES).filter(int(ruleid) == CONFIGFILTERRULES.ID).delete()
 
     @DbPersist(BaseRepository._db)
     def insert_filter_rule(self, item, ruleid=None):
@@ -623,7 +634,7 @@ class ConfigRepository(BaseRepository):
             ruleid: 规则ID（可选）
         """
         if ruleid:
-            self._db.query(CONFIGFILTERRULES).filter(CONFIGFILTERRULES.ID == int(ruleid)).update({
+            self._db.query(CONFIGFILTERRULES).filter(int(ruleid) == CONFIGFILTERRULES.ID).update({
                 "ROLE_NAME": item.get("name"),
                 "PRIORITY": item.get("pri"),
                 "INCLUDE": item.get("include"),
@@ -655,7 +666,7 @@ class ConfigRepository(BaseRepository):
             媒体服务器配置列表
         """
         if sid:
-            return self._db.query(MEDIASERVER).filter(MEDIASERVER.ID == int(sid)).all()
+            return self._db.query(MEDIASERVER).filter(int(sid) == MEDIASERVER.ID).all()
         return self._db.query(MEDIASERVER).all()
 
     def get_media_server_by_name(self, name):
@@ -670,7 +681,7 @@ class ConfigRepository(BaseRepository):
         """
         if not name:
             return None
-        return self._db.query(MEDIASERVER).filter(MEDIASERVER.NAME == name).first()
+        return self._db.query(MEDIASERVER).filter(name == MEDIASERVER.NAME).first()
 
     @DbPersist(BaseRepository._db)
     def update_media_server(self, sid, name, enabled, config, is_default=0, note=None):
@@ -688,7 +699,7 @@ class ConfigRepository(BaseRepository):
         if sid:
             item = self.get_media_servers(sid)
             if item:
-                self._db.query(MEDIASERVER).filter(MEDIASERVER.ID == int(sid)).update({
+                self._db.query(MEDIASERVER).filter(int(sid) == MEDIASERVER.ID).update({
                     "NAME": name,
                     "ENABLED": int(enabled),
                     "CONFIG": config,
@@ -714,7 +725,7 @@ class ConfigRepository(BaseRepository):
         """
         if not sid:
             return
-        self._db.query(MEDIASERVER).filter(MEDIASERVER.ID == int(sid)).delete()
+        self._db.query(MEDIASERVER).filter(int(sid) == MEDIASERVER.ID).delete()
 
     @DbPersist(BaseRepository._db)
     def set_default_media_server(self, name):
@@ -726,7 +737,7 @@ class ConfigRepository(BaseRepository):
         """
         self._db.query(MEDIASERVER).update({"IS_DEFAULT": 0})
         if name:
-            self._db.query(MEDIASERVER).filter(MEDIASERVER.NAME == name).update({"IS_DEFAULT": 1})
+            self._db.query(MEDIASERVER).filter(name == MEDIASERVER.NAME).update({"IS_DEFAULT": 1})
 
     def get_default_media_server(self):
         """

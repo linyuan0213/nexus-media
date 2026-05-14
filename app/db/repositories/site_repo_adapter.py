@@ -1,14 +1,12 @@
-# coding: utf-8
 """
 Site Repository 适配器
 实现 ISiteRepository 接口，将 SQLAlchemy ORM 操作转换为领域实体。
 """
 import json
-from typing import List, Optional
 
-from app.db.repositories.site_repository import SiteRepository
-from app.db.repositories.base_repository import BaseRepository
 from app.db.models import CONFIGSITE
+from app.db.repositories.base_repository import BaseRepository
+from app.db.repositories.site_repository import SiteRepository
 from app.domain.entities.site import SiteEntity
 from app.domain.interfaces.site_repo import ISiteRepository
 
@@ -19,22 +17,22 @@ class SiteRepositoryAdapter(ISiteRepository):
     将现有 SiteRepository 的 ORM 操作适配为领域实体接口
     """
 
-    def __init__(self, repo: Optional[SiteRepository] = None):
+    def __init__(self, repo: SiteRepository | None = None):
         self._repo = repo or SiteRepository()
 
-    def get_by_id(self, site_id: int) -> Optional[SiteEntity]:
+    def get_by_id(self, site_id: int) -> SiteEntity | None:
         """根据ID获取站点"""
         orm_list = self._repo.get_site_by_id(site_id)
         if orm_list and len(orm_list) > 0:
             return SiteEntity.from_orm(orm_list[0])
         return None
 
-    def list_all(self) -> List[SiteEntity]:
+    def list_all(self) -> list[SiteEntity]:
         """获取所有站点（按优先级排序）"""
         orm_list = self._repo.get_config_site()
         return [SiteEntity.from_orm(orm) for orm in orm_list]
 
-    def list_by_name(self, name: str) -> List[SiteEntity]:
+    def list_by_name(self, name: str) -> list[SiteEntity]:
         """按名称查询站点（返回列表是为了兼容可能的重名情况）"""
         # 现有 SiteRepository 没有直接按名称查询的方法
         # 使用 list_all 后过滤
@@ -72,7 +70,7 @@ class SiteRepositoryAdapter(ISiteRepository):
         """删除站点"""
         self._repo.delete_config_site(site_id)
 
-    def update_cookie_ua(self, site_id: int, cookie: str, ua: Optional[str] = None) -> None:
+    def update_cookie_ua(self, site_id: int, cookie: str, ua: str | None = None) -> None:
         """更新站点Cookie和UA"""
         self._repo.update_site_cookie_ua(site_id, cookie, ua)
 
@@ -145,18 +143,18 @@ class SiteRepositoryImpl(BaseRepository):
     当前阶段仅作演示，实际业务仍通过 Adapter 调用旧 Repository
     """
 
-    def get_by_id(self, site_id: int) -> Optional[SiteEntity]:
-        orm = self._db.query(CONFIGSITE).filter(CONFIGSITE.ID == int(site_id)).first()
+    def get_by_id(self, site_id: int) -> SiteEntity | None:
+        orm = self._db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).first()
         return SiteEntity.from_orm(orm) if orm else None
 
-    def list_all(self) -> List[SiteEntity]:
-        from sqlalchemy import cast, Integer
+    def list_all(self) -> list[SiteEntity]:
+        from sqlalchemy import Integer, cast
         orm_list = self._db.query(CONFIGSITE) \
             .order_by(cast(CONFIGSITE.PRI, Integer).asc()).all()
         return [SiteEntity.from_orm(orm) for orm in orm_list]
 
-    def list_by_name(self, name: str) -> List[SiteEntity]:
-        orm_list = self._db.query(CONFIGSITE).filter(CONFIGSITE.NAME == name).all()
+    def list_by_name(self, name: str) -> list[SiteEntity]:
+        orm_list = self._db.query(CONFIGSITE).filter(name == CONFIGSITE.NAME).all()
         return [SiteEntity.from_orm(orm) for orm in orm_list]
 
     def insert(self, entity: SiteEntity) -> None:
@@ -180,7 +178,7 @@ class SiteRepositoryImpl(BaseRepository):
         from app.db import DbPersist
         @DbPersist(self._db)
         def _do_update():
-            self._db.query(CONFIGSITE).filter(CONFIGSITE.ID == int(entity.id)).update({
+            self._db.query(CONFIGSITE).filter(int(entity.id) == CONFIGSITE.ID).update({
                 "NAME": entity.name,
                 "PRI": entity.pri,
                 "RSSURL": entity.rss_url,
@@ -195,14 +193,14 @@ class SiteRepositoryImpl(BaseRepository):
         from app.db import DbPersist
         @DbPersist(self._db)
         def _do_delete():
-            self._db.query(CONFIGSITE).filter(CONFIGSITE.ID == int(site_id)).delete()
+            self._db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).delete()
         _do_delete()
 
-    def update_cookie_ua(self, site_id: int, cookie: str, ua: Optional[str] = None) -> None:
+    def update_cookie_ua(self, site_id: int, cookie: str, ua: str | None = None) -> None:
         from app.db import DbPersist
         @DbPersist(self._db)
         def _do_update():
-            rec = self._db.query(CONFIGSITE).filter(CONFIGSITE.ID == int(site_id)).first()
+            rec = self._db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).first()
             if rec:
                 note = {}
                 if rec.NOTE:
@@ -212,7 +210,7 @@ class SiteRepositoryImpl(BaseRepository):
                         note = {}
                 if ua:
                     note['ua'] = ua
-                self._db.query(CONFIGSITE).filter(CONFIGSITE.ID == int(site_id)).update({
+                self._db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).update({
                     "COOKIE": cookie,
                     "NOTE": json.dumps(note)
                 })

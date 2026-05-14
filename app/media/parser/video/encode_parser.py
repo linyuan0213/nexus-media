@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 影视标题解析 — 视频/音频编码解析
 """
 import re
 
-from app.media.parser.video.constants import _video_encode_re, _audio_encode_re
+from app.media.parser.video.constants import _audio_encode_re, _video_encode_re
 
 
 def init_video_encode(info, token):
@@ -35,9 +34,7 @@ def init_video_encode(info, token):
         info._last_token = token.upper() if token.upper() == "H" else token.lower()
     elif token in ["264", "265"] \
             and info._last_token_type == "videoencode" \
-            and info._last_token in ['H', 'X']:
-        info.video_encode = "%s%s" % (info._last_token, token)
-    elif token.isdigit() \
+            and info._last_token in ['H', 'X'] or token.isdigit() \
             and info._last_token_type == "videoencode" \
             and info._last_token in ['VC', 'MPEG']:
         info.video_encode = "%s%s" % (info._last_token, token)

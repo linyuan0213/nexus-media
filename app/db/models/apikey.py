@@ -1,10 +1,10 @@
-# coding: utf-8
 """
 API Key 管理模型
 包含: API Key 表和使用记录表
 """
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime, Index
+
+from sqlalchemy import Column, DateTime, Index, Integer, String, Text
 
 from app.db.models.base import Base
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TorrentTransfer Plugin v2
 定期转移下载器中的做种任务到另一个下载器
@@ -16,9 +15,8 @@ from app.plugin_framework.context import PluginContext
 from app.schemas.download import TorrentStatus
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.utils import Torrent
-from app.utils.types import DownloaderType
-from config import Config
 from app.utils.path_utils import get_temp_path
+from app.utils.types import DownloaderType
 
 
 class TorrentTransferPlugin:

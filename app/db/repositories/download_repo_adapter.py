@@ -1,22 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 下载领域 Repository 适配器
 将旧版 DownloadRepository 适配为新领域接口
 """
-from typing import List, Optional
 
+from app.db.repositories.download_repository import DownloadRepository
 from app.domain.entities.download import (
     DownloadHistoryEntity,
     DownloadSettingEntity,
     IndexerStatisticsEntity,
 )
-from app.db.repositories.download_repository import DownloadRepository
 
 
 class DownloadHistoryRepositoryAdapter:
     """下载历史仓储适配器"""
 
-    def __init__(self, repo: Optional[DownloadRepository] = None):
+    def __init__(self, repo: DownloadRepository | None = None):
         self._repo = repo or DownloadRepository()
 
     def is_exists(self, enclosure: str, downloader: str, download_id: str) -> bool:
@@ -28,25 +26,25 @@ class DownloadHistoryRepositoryAdapter:
     def insert(self, media_info, downloader: str, download_id: str, save_dir: str) -> None:
         self._repo.insert_download_history(media_info, downloader, download_id, save_dir)
 
-    def get_all(self, date: Optional[str] = None, hid: Optional[int] = None, num: int = 30, page: int = 1) -> List[DownloadHistoryEntity]:
+    def get_all(self, date: str | None = None, hid: int | None = None, num: int = 30, page: int = 1) -> list[DownloadHistoryEntity]:
         rows = self._repo.get_download_history(date=date, hid=hid, num=num, page=page)
         if not rows:
             return []
         return [entity for entity in [DownloadHistoryEntity.from_orm(r) for r in rows] if entity is not None]
 
-    def get_by_title(self, title: str) -> List[DownloadHistoryEntity]:
+    def get_by_title(self, title: str) -> list[DownloadHistoryEntity]:
         rows = self._repo.get_download_history_by_title(title)
         if not rows:
             return []
         return [entity for entity in [DownloadHistoryEntity.from_orm(r) for r in rows] if entity is not None]
 
-    def get_by_path(self, path: str) -> Optional[DownloadHistoryEntity]:
+    def get_by_path(self, path: str) -> DownloadHistoryEntity | None:
         row = self._repo.get_download_history_by_path(path)
         if not row:
             return None
         return DownloadHistoryEntity.from_orm(row)
 
-    def get_by_downloader(self, downloader: str, download_id: str) -> Optional[DownloadHistoryEntity]:
+    def get_by_downloader(self, downloader: str, download_id: str) -> DownloadHistoryEntity | None:
         row = self._repo.get_download_history_by_downloader(downloader, download_id)
         if not row:
             return None
@@ -79,13 +77,13 @@ class DownloadHistoryRepositoryAdapter:
 class DownloadSettingRepositoryAdapter:
     """下载设置仓储适配器"""
 
-    def __init__(self, repo: Optional[DownloadRepository] = None):
+    def __init__(self, repo: DownloadRepository | None = None):
         self._repo = repo or DownloadRepository()
 
     def delete(self, sid: int) -> None:
         self._repo.delete_download_setting(sid)
 
-    def get_all(self, sid: Optional[int] = None) -> List[DownloadSettingEntity]:
+    def get_all(self, sid: int | None = None) -> list[DownloadSettingEntity]:
         rows = self._repo.get_download_setting(sid=sid)
         if not rows:
             return []
@@ -136,7 +134,7 @@ class DownloadSettingRepositoryAdapter:
 class IndexerStatisticsRepositoryAdapter:
     """索引器统计仓储适配器"""
 
-    def __init__(self, repo: Optional[DownloadRepository] = None):
+    def __init__(self, repo: DownloadRepository | None = None):
         self._repo = repo or DownloadRepository()
 
     def insert(self, indexer: str, itype: str, seconds: float, result: str) -> None:
@@ -145,7 +143,7 @@ class IndexerStatisticsRepositoryAdapter:
     def delete_all(self) -> None:
         self._repo.delete_all_indexer_statistics()
 
-    def get_by_client(self, client_id: str) -> List[IndexerStatisticsEntity]:
+    def get_by_client(self, client_id: str) -> list[IndexerStatisticsEntity]:
         rows = self._repo.get_indexer_statistics(client_id)
         if not rows:
             return []

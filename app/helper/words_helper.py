@@ -1,15 +1,15 @@
-import regex as re
-import cn2an
-import functools
 import time
 
+import cn2an
+import regex as re
+
 from app.db.repositories.word_repo_adapter import (
-    CustomWordRepositoryAdapter,
     CustomWordGroupRepositoryAdapter,
+    CustomWordRepositoryAdapter,
 )
+from app.infrastructure.cache_system import get_cache_manager
 from app.utils.commons import SingletonMeta
 from app.utils.exception_utils import ExceptionUtils
-from app.infrastructure.cache_system import get_cache_manager
 
 
 class WordsHelper(metaclass=SingletonMeta):
@@ -29,7 +29,7 @@ class WordsHelper(metaclass=SingletonMeta):
         self.word_repo = CustomWordRepositoryAdapter()
         self.group_repo = CustomWordGroupRepositoryAdapter()
         self._load_words_with_cache()
-    
+
     def _load_words_with_cache(self):
         """带缓存的加载识别词"""
         current_time = time.time()
@@ -50,10 +50,10 @@ class WordsHelper(metaclass=SingletonMeta):
         cached_result = self._cache.get(title)
         if cached_result is not None:
             return cached_result
-        
+
         # 刷新配置（如果需要）
         self._load_words_with_cache()
-        
+
         # 错误信息
         msg = []
         # 应用屏蔽

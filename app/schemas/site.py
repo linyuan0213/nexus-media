@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -28,17 +27,17 @@ class SiteTestResultDTO:
 
 @dataclass
 class SiteHistoryDTO:
-    dataset: List[list] = field(default_factory=list)
+    dataset: list[list] = field(default_factory=list)
 
 
 @dataclass
 class SiteSeedingDTO:
-    dataset: List[list] = field(default_factory=list)
+    dataset: list[list] = field(default_factory=list)
 
 
 @dataclass
 class SiteActivityDTO:
-    dataset: List[list] = field(default_factory=list)
+    dataset: list[list] = field(default_factory=list)
 
 
 @dataclass
@@ -50,5 +49,5 @@ class SiteResourcesResultDTO:
 
 @dataclass
 class SiteUpdateResultDTO:
-    code: Optional[int] = None
-    msg: Optional[str] = None
+    code: int | None = None
+    msg: str | None = None

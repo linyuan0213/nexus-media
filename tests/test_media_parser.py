@@ -1,4 +1,3 @@
-import pytest
 
 from app.media.models import MediaInfo
 from app.media.parser.base import ParserResult
