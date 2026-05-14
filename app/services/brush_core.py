@@ -766,10 +766,10 @@ class BrushTaskService:
         if not transfer:
             tag = tag + ["已整理"] + hr_tag if tag else ["已整理"] + hr_tag
 
-        meta_info = meta_info(title=title)
-        meta_info.set_torrent_info(site=site_info.get("name"), enclosure=enclosure, size=size)
+        mi = meta_info(title=title)
+        mi.set_torrent_info(site=site_info.get("name"), enclosure=enclosure, size=size)
         _, download_id, retmsg = self._downloader.download(
-            media_info=meta_info,
+            media_info=mi,
             tag=tag,
             downloader_id=downloader_id,
             download_dir=download_dir,

@@ -211,30 +211,30 @@ class DoubanSyncPlugin:
                 return
 
         media_type = MediaType.TV if douban_info.get("episodes_count") else MediaType.MOVIE
-        meta_info = meta_info(title="{} {}".format(douban_info.get("title"), douban_info.get("year") or ""))
-        meta_info.douban_id = doubanid
-        meta_info.type = media_type
-        meta_info.overview = douban_info.get("intro")
-        meta_info.poster_path = douban_info.get("cover_url")
+        mi = meta_info(title="{} {}".format(douban_info.get("title"), douban_info.get("year") or ""))
+        mi.douban_id = doubanid
+        mi.type = media_type
+        mi.overview = douban_info.get("intro")
+        mi.poster_path = douban_info.get("cover_url")
         rating = douban_info.get("rating", {}) or {}
-        meta_info.vote_average = rating.get("value") or ""
-        meta_info.imdb_id = douban_info.get("imdbid")
-        meta_info.user_name = info.get("user_name")
+        mi.vote_average = rating.get("value") or ""
+        mi.imdb_id = douban_info.get("imdbid")
+        mi.user_name = info.get("user_name")
 
         history = self._get_history(doubanid)
         if history and history.get("state") != "NEW":
-            self.ctx.info(f"{doubanid} {meta_info.get_name()} 已处理过(state={history.get('state')})")
+            self.ctx.info(f"{doubanid} {mi.get_name()} 已处理过(state={history.get('state')})")
             sleep(round(random.uniform(1, 5), 1))
             return
 
         try:
             if auto_search:
-                self.ctx.info(f"{doubanid} {meta_info.get_name()} 开始自动搜索...")
-                self._auto_search_media(meta_info, auto_rss)
+                self.ctx.info(f"{doubanid} {mi.get_name()} 开始自动搜索...")
+                self._auto_search_media(mi, auto_rss)
             else:
                 if auto_rss:
-                    self.ctx.info(f"{doubanid} {meta_info.get_name()} 开始自动订阅...")
-                    self._auto_subscribe_media(meta_info, state="R")
+                    self.ctx.info(f"{doubanid} {mi.get_name()} 开始自动订阅...")
+                    self._auto_subscribe_media(mi, state="R")
                 else:
                     if history:
                         self.ctx.info(f"{doubanid} {meta_info.get_name()} 已存在NEW记录，跳过")

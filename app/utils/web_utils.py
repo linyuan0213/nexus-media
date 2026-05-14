@@ -161,20 +161,20 @@ class WebUtils:
         mtype, key_word, season_num, episode_num, _, content = StringUtils.get_keyword_from_string(keyword)
 
         def _search_tmdb():
-            meta_info = meta_info(title=content)
+            mi = meta_info(title=content)
             tmdbinfos = MediaService().get_tmdb_infos(
-                title=meta_info.get_name(), year=meta_info.year, mtype=mtype, page=page
+                title=mi.get_name(), year=mi.year, mtype=mtype, page=page
             )
             results = []
             for tmdbinfo in tmdbinfos:
                 tmp_info = meta_info(title=keyword)
                 tmp_info.set_tmdb_info(tmdbinfo)
-                if meta_info.type != MediaType.MOVIE and tmp_info.type == MediaType.MOVIE:
+                if mi.type != MediaType.MOVIE and tmp_info.type == MediaType.MOVIE:
                     continue
                 if tmp_info.begin_season:
-                    tmp_info.title = "{} 第{}季".format(tmp_info.title, cn2an.an2cn(meta_info.begin_season, mode="low"))
+                    tmp_info.title = "{} 第{}季".format(tmp_info.title, cn2an.an2cn(mi.begin_season, mode="low"))
                 if tmp_info.begin_episode:
-                    tmp_info.title = f"{tmp_info.title} 第{meta_info.begin_episode}集"
+                    tmp_info.title = f"{tmp_info.title} 第{mi.begin_episode}集"
                 results.append(tmp_info)
             return results
 

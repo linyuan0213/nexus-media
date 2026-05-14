@@ -76,16 +76,16 @@ class TmdbBlacklistService:
         tmdb_info = self._media.get_tmdb_info(mtype=mtype, tmdbid=tmdb_id)
         if not tmdb_info:
             raise ValueError(f"TMDB 信息获取失败：tmdb_id={tmdb_id}, type={media_type}")
-        meta_info = meta_info(tmdb_info.get("name") or tmdb_info.get("title"))
-        meta_info.set_tmdb_info(tmdb_info)
+        mi = meta_info(tmdb_info.get("name") or tmdb_info.get("title"))
+        mi.set_tmdb_info(tmdb_info)
         self._db.insert_tmdb_blacklist(
             tmdb_id=tmdb_id,
-            title=meta_info.title,
-            year=meta_info.year,
+            title=mi.title,
+            year=mi.year,
             media_type=media_type,
-            poster_path=meta_info.poster_path,
-            backdrop_path=meta_info.backdrop_path,
-            note=str(meta_info.note),
+            poster_path=mi.poster_path,
+            backdrop_path=mi.backdrop_path,
+            note=str(mi.note),
         )
         # 添加后清除缓存，确保下次查询能获取最新数据
         self._cache.clear()

@@ -131,8 +131,8 @@ class MediaRecommendationService:
         return res_list
 
     @staticmethod
-    def _convert_downloaded(Items) -> list[dict]:
-        if not Items:
+    def _convert_downloaded(items) -> list[dict]:
+        if not items:
             return []
         return [
             {
@@ -149,5 +149,5 @@ class MediaRecommendationService:
                 "date": item.DATE,
                 "site": item.SITE,
             }
-            for item in Items
+            for item in items
         ]

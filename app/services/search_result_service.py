@@ -22,7 +22,7 @@ class SearchResultService:
         """
         对搜索结果按标题、季集、分辨率等维度分组
         """
-        SearchResults = {}
+        search_results_dict = {}
         total = len(search_results)
 
         for item in search_results:
@@ -74,9 +74,9 @@ class SearchResultService:
             releasegroup = item.OTHERINFO if item.OTHERINFO is not None else "未知"
             filter_season = SE_key.split()[0] if SE_key and SE_key not in ["MOV", "TV"] else None
 
-            if SearchResults.get(title_string):
+            if search_results_dict.get(title_string):
                 self._merge_into_existing(
-                    SearchResults,
+                    search_results_dict,
                     title_string,
                     SE_key,
                     group_key,
@@ -108,7 +108,7 @@ class SearchResultService:
                     poster_url = ImageProxyHelper.get_proxy_image_url(item.POSTER, use_proxy=True)
                 except Exception:
                     pass
-                SearchResults[title_string] = {
+                search_results_dict[title_string] = {
                     "key": item.ID,
                     "title": item.TITLE,
                     "year": item.YEAR,
@@ -142,11 +142,11 @@ class SearchResultService:
                     },
                 }
 
-        for _title, item in SearchResults.items():
+        for _title, item in search_results_dict.items():
             item["filter"]["season"].sort(reverse=True)
             item["filter"]["releasegroup"] = sorted(item["filter"]["releasegroup"], key=lambda x: (x == "未知", x))
             item["torrent_dict"] = sorted(item["torrent_dict"].items(), key=self._se_sort, reverse=True)
-        return MediaSearchResultDTO(total=total, result=SearchResults)
+        return MediaSearchResultDTO(total=total, result=search_results_dict)
 
     @staticmethod
     def _parse_res_type(res_type_str):
@@ -166,9 +166,9 @@ class SearchResultService:
 
     @staticmethod
     def _merge_into_existing(
-        SearchResults,
+        search_results_dict,
         title_string,
-        SE_key,
+        se_key,
         group_key,
         unique_key,
         torrent_item,
@@ -181,11 +181,11 @@ class SearchResultService:
         filter_season,
     ):
         """将新结果合并到已有标题分组中"""
-        result_item = SearchResults[title_string]
+        result_item = search_results_dict[title_string]
         torrent_dict = result_item.get("torrent_dict")
-        SE_dict = torrent_dict.get(SE_key)
-        if SE_dict:
-            group = SE_dict.get(group_key)
+        se_dict = torrent_dict.get(se_key)
+        if se_dict:
+            group = se_dict.get(group_key)
             if group:
                 unique = group.get("group_torrents").get(unique_key)
                 if unique:
@@ -198,13 +198,13 @@ class SearchResultService:
                         "torrent_list": [torrent_item],
                     }
             else:
-                SE_dict[group_key] = {
+                se_dict[group_key] = {
                     "group_info": group_info,
                     "group_total": 1,
                     "group_torrents": {unique_key: {"unique_info": unique_info, "torrent_list": [torrent_item]}},
                 }
         else:
-            torrent_dict[SE_key] = {
+            torrent_dict[se_key] = {
                 group_key: {
                     "group_info": group_info,
                     "group_total": 1,
