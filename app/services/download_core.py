@@ -245,6 +245,8 @@ class DownloadCore:
         downloader_conf = self._client_factory.get_downloader_conf(downloader_id)
         if not _client:
             return []
+        if not downloader_conf:
+            return []
         torrent_files = self.get_files(tid=tid, downloader_id=downloader_id)
         if not torrent_files:
             return []

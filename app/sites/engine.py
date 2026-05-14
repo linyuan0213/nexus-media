@@ -433,7 +433,7 @@ class SiteEngine:
             )
             if link:
                 dl_cfg_path = dl_cfg.get("path", "").format(tid=tid, subtitle_id=sid)
-                dl_url = f"{site.api.base_url.rstrip('/')}/{dl_cfg_path.lstrip('/')}"
+                dl_url = f"{(site.api.base_url or '').rstrip('/')}/{dl_cfg_path.lstrip('/')}" if site.api else ""
                 if engine_tools._call_endpoint(
                     self,
                     {"method": "GET", "path": dl_url},

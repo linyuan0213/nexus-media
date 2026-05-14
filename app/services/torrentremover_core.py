@@ -238,7 +238,8 @@ class TorrentRemoverService:
         savepath_key = data.get("savepath_key")
         tracker_key = data.get("tracker_key")
         downloader_id = data.get("downloader")
-        downloader_type = self._downloader.get_downloader_conf(str(downloader_id)).get("type")
+        downloader_conf = self._downloader.get_downloader_conf(str(downloader_id))
+        downloader_type = downloader_conf.get("type") if downloader_conf else ""
 
         qb_state = []
         qb_category = []

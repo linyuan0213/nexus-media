@@ -41,7 +41,7 @@ class HDChina(_ISiteSigninHandler):
         # 尝试解决瓷器cookie每天签到后过期,只保留hdchina=部分
         cookie = ""
         # 按照分号进行字符串拆分
-        sub_strs = site_cookie.split(";")
+        sub_strs = (site_cookie or "").split(";")
         # 遍历每个子字符串
         for sub_str in sub_strs:
             if "hdchina=" in sub_str:

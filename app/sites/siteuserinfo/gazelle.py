@@ -26,9 +26,11 @@ def parse(ins: ConfigHtmlUserInfo) -> None:
     tmps = html.xpath('//a[contains(@href, "user.php?id=")]')
     if tmps:
         m = re.search(r"user.php\?id=(\d+)", tmps[0].attrib["href"])
-        if m and m.group(1).strip():
-            ins.userid = m.group(1)
-            ins.username = tmps[0].text.strip()
+        if m:
+            uid = m.group(1)
+            if uid and uid.strip():
+                ins.userid = uid
+                ins.username = (tmps[0].text or "").strip()
 
     tmps = html.xpath('//*[@id="header-uploaded-value"]/@data-value')
     if tmps:

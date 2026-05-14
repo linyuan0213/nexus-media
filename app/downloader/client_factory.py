@@ -90,7 +90,8 @@ class DownloadClientFactory:
             only_nastool = downloader_conf.ONLY_NASTOOL
             match_path = downloader_conf.MATCH_PATH
             rmt_mode = downloader_conf.RMT_MODE
-            rmt_mode_name = ModuleConf.RMT_MODES.get(rmt_mode).value if rmt_mode else ""
+            mode_enum = ModuleConf.RMT_MODES.get(rmt_mode) if rmt_mode else None
+            rmt_mode_name = mode_enum.value if mode_enum else ""
 
             if transfer:
                 log_content = ""
@@ -210,7 +211,7 @@ class DownloadClientFactory:
     def get_client_type(self, downloader_id=None):
         """获取下载器的类型枚举"""
         if not downloader_id:
-            return self.default_client.get_type()
+            return self.default_client.get_type() if self.default_client else None
         client = self.get_client(downloader_id)
         return client.get_type() if client else None
 
@@ -288,7 +289,7 @@ class DownloadClientFactory:
     def get_downloader_conf_simple(self):
         """获取简化下载器配置"""
         ret_dict = {}
-        for downloader_conf in self.get_downloader_conf().values():
+        for downloader_conf in (self.get_downloader_conf() or {}).values():
             ret_dict[str(downloader_conf.get("id"))] = {
                 "id": downloader_conf.get("id"),
                 "name": downloader_conf.get("name"),
@@ -334,7 +335,7 @@ class DownloadClientFactory:
     def get_download_visit_dirs(self):
         """返回所有下载器中设置的访问目录"""
         download_dirs = []
-        for downloader_conf in self.get_downloader_conf().values():
+        for downloader_conf in (self.get_downloader_conf() or {}).values():
             download_dirs += downloader_conf.get("download_dir")
         visit_path_list = [
             attr.get("container_path") or attr.get("save_path") for attr in download_dirs if attr.get("save_path")
@@ -350,6 +351,8 @@ class DownloadClientFactory:
         client = self.get_client(downloader_id)
         if not client:
             return ""
+        if not downloader_conf:
+            return ""
         true_path, _ = client.get_replace_path(download_dir, downloader_conf.get("download_dir"))
         return true_path
 
@@ -357,7 +360,10 @@ class DownloadClientFactory:
         """测试下载器状态"""
         if not config or not dtype:
             return False
-        state = self._build_class(ctype=dtype, conf=config).get_status()
+        client = self._build_class(ctype=dtype, conf=config)
+        if not client:
+            return False
+        state = client.get_status()
         if not state:
             log.error("【Downloader】下载器连接测试失败")
         return state

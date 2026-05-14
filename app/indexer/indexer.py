@@ -113,6 +113,11 @@ class Indexer(metaclass=SingletonMeta):
             return []
 
         progress_key = ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search
+        if not self._client:
+            return []
+
+        _client = self._client
+        _client_type = self._client_type
         indexers = self.get_indexers(check=True)
         if not indexers:
             log.error("没有配置索引器，无法搜索！")
@@ -123,7 +128,7 @@ class Indexer(metaclass=SingletonMeta):
 
         if filter_args and filter_args.get("site"):
             log.info(
-                f"【{self._client_type.value}】开始搜索 %s，站点：%s，并发数：%s ..."
+                f"【{_client_type.value if _client_type else ''}】开始搜索 %s，站点：%s，并发数：%s ..."
                 % (key_word, filter_args.get("site"), max_workers)
             )
             self.progress.update(
@@ -131,7 +136,7 @@ class Indexer(metaclass=SingletonMeta):
             )
         else:
             log.info(
-                f"【{self._client_type.value}】开始并行搜索 %s，站点数：%s，并发数：%s ..."
+                f"【{_client_type.value if _client_type else ''}】开始并行搜索 %s，站点数：%s，并发数：%s ..."
                 % (key_word, len(indexers), max_workers)
             )
             self.progress.update(ptype=progress_key, text=f"开始并行搜索 {key_word}，站点数：{len(indexers)} ...")
@@ -144,7 +149,7 @@ class Indexer(metaclass=SingletonMeta):
             for index in indexers:
                 order_seq = 100 - int(index.pri)
                 task = executor.submit(
-                    self._client.search, order_seq, index, key_word, filter_args, match_media, in_from
+                    _client.search, order_seq, index, key_word, filter_args, match_media, in_from
                 )
                 all_task.append(task)
 
@@ -166,7 +171,7 @@ class Indexer(metaclass=SingletonMeta):
 
         end_time = datetime.datetime.now()
         log.info(
-            f"【{self._client_type.value}】搜索关键词 {key_word} 所有站点完成，"
+                f"【{_client_type.value if _client_type else ''}】搜索关键词 {key_word} 所有站点完成，"
             f"原始结果 {len(all_raw_results)} 条，有效资源数：{len(pipeline_result.results)}，"
             f"总耗时 {(end_time - start_time).seconds} 秒"
         )
@@ -179,4 +184,6 @@ class Indexer(metaclass=SingletonMeta):
 
     def get_indexer_statistics(self):
         """获取索引器统计信息"""
+        if not self._client:
+            return {}
         return self.download_repo.get_indexer_statistics(self._client.get_client_id())

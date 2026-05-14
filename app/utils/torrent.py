@@ -128,7 +128,9 @@ class Torrent:
             # 种子文件路径
             file_path = os.path.join(self._torrent_temp_path, file_name)
             # 种子内容
-            file_content = req.content
+            file_content = req.content if req else None
+            if not file_content:
+                return None, None, "种子内容为空"
             # 写入磁盘
             with open(file_path, "wb") as f:
                 f.write(file_content)

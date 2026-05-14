@@ -11,7 +11,7 @@ class Ntfy(_IMessageClient):
         self._server = StringUtils.get_base_url(cfg.get("server"))
         self._token = cfg.get("token")
         self._topic = cfg.get("topic")
-        self._tags = "rotating_light" if cfg.get("tags") == "" else cfg.get("tags")
+        self._tags = "rotating_light" if cfg.get("tags") == "" else (cfg.get("tags") or "rotating_light")
         self._tags = self._tags.split(",") if "," in self._tags else [self._tags]
         try:
             self._priority = int(cfg.get("priority"))

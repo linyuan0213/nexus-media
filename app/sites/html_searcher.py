@@ -74,7 +74,7 @@ class HtmlSiteSearcher:
             browse_path = self._cfg_get(browse_cfg, "path", "")
             start = self._cfg_get(browse_cfg, "start", 1)
             browse_vars = {**template_vars, "page": str(int(page) + start)}
-            browse_path = browse_path.format(**browse_vars)
+            browse_path = (browse_path or "").format(**browse_vars)
             domain = (self._site.domain or "").rstrip("/")
             path_with_slash = f"/{browse_path.lstrip('/')}" if browse_path else ""
             return f"{domain}{path_with_slash}"
@@ -206,8 +206,8 @@ class HtmlSiteSearcher:
 
         container_xpath = self._cfg_get(torrents_cfg, "container_xpath") or '//table[contains(@class, "gm_table")]'
         row_xpath = self._cfg_get(torrents_cfg, "row_xpath") or './/tr[@id="gm_tr_item"]'
-        container_fields_cfg = self._cfg_get(torrents_cfg, "container_fields", {})
-        fields_cfg = self._cfg_get(torrents_cfg, "fields", {})
+        container_fields_cfg = self._cfg_get(torrents_cfg, "container_fields", {}) or {}
+        fields_cfg = self._cfg_get(torrents_cfg, "fields", {}) or {}
 
         containers = html_doc.xpath(container_xpath)
         torrents = []
@@ -293,7 +293,7 @@ class HtmlSiteSearcher:
         if isinstance(val, list) and val and isinstance(val[0], str):
             join_delim = fcfg.get("join", "")
             val = join_delim.join(v.strip() for v in val) if join_delim else val[0]
-        elif hasattr(val, "text"):
+        elif val is not None and hasattr(val, "text"):
             val = (val.text or "").strip()
 
         replace_map = fcfg.get("replace")

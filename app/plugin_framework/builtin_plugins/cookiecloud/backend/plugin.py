@@ -178,7 +178,7 @@ class CookieCloudPlugin:
     def _store_cookies_to_cache(self, contents: dict):
         """公共逻辑：按域名分组、过滤、去重后存入 Redis，返回 domain->cookie_str 映射"""
         domain_cookie_groups = defaultdict(list)
-        cookie_content = contents.get("cookie_data")
+        cookie_content = contents.get("cookie_data") or {}
         for _site, cookies in cookie_content.items():
             for cookie in cookies:
                 if not self._check_domain(cookie["domain"]):

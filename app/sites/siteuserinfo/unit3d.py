@@ -46,7 +46,8 @@ def parse(ins: ConfigHtmlUserInfo) -> None:
         'or contains(text(),"Registration date")]/text()'
     )
     if join:
-        ins.join_at = StringUtils.unify_datetime_str(join[0].replace("注册日期", "").replace("Registration date", ""))
+        join_text = str(join[0] or "")
+        ins.join_at = StringUtils.unify_datetime_str(join_text.replace("注册日期", "").replace("Registration date", ""))
 
     username = getattr(ins, "username", None) or ""
     if not username:
@@ -110,8 +111,9 @@ def _extract_traffic(ins: ConfigHtmlUserInfo, doc: etree._Element) -> None:
             '|//h4[contains(text(),"注册日期") or contains(text(),"Registration date")]/text()'
         )
         if join:
+            join_text = str(join[0] or "")
             ins.join_at = StringUtils.unify_datetime_str(
-                join[0].replace("注册日期", "").replace("Registration date", "").strip()
+                join_text.replace("注册日期", "").replace("Registration date", "").strip()
             )
 
     if not ins.bonus:

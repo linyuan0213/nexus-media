@@ -43,7 +43,7 @@ class SiteCookie(metaclass=SingletonMeta):
         code_b64 = self.get_captcha_base64(chrome=chrome, image_url=code_url)
         if not code_b64:
             return ""
-        return self.ocrhelper.get_captcha_text(image_b64=code_b64)
+        return self.ocrhelper.get_captcha_text(image_b64=code_b64) if self.ocrhelper else ""
 
     @staticmethod
     def __get_captcha_url(siteurl, imageurl):

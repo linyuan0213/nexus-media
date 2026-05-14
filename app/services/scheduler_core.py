@@ -661,6 +661,8 @@ class SchedulerCore(metaclass=SingletonMeta):
         if hour < 0 or minute < 0:
             log.warn(f"{func_desc}时间 配置格式错误：不启动任务")
             return
+        if not self._scheduler:
+            return
         self._scheduler.add_job(
             func,
             "date",
@@ -1113,6 +1115,8 @@ class SchedulerCore(metaclass=SingletonMeta):
         next_run_time = datetime.datetime.now() + datetime.timedelta(seconds=delay)
 
         try:
+            if not self._scheduler:
+                return False
             # 使用 add_job 创建一次性重试任务
             retry_job_id = f"{job_id}_retry_{retry_count + 1}"
             jobstore = getattr(job, "_jobstore_alias", "default")

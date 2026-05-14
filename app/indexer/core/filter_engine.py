@@ -67,7 +67,8 @@ class IndexerFilterEngine:
 
         # 过滤促销
         if filter_args.get("sp_state"):
-            ul_factor, dl_factor = filter_args.get("sp_state").split()
+            sp_state = filter_args.get("sp_state") or ""
+            ul_factor, dl_factor = sp_state.split()
             if uploadvolumefactor and ul_factor not in ("*", str(uploadvolumefactor)):
                 return False, 0, f"{meta_info.org_string} 不符合促销要求"
             if downloadvolumefactor and dl_factor not in ("*", str(downloadvolumefactor)):

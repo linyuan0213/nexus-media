@@ -91,10 +91,11 @@ class TransferRepository(BaseRepository):
             return
 
         dest = dest or ""
+        mode_value = str(rmt_mode.value) if rmt_mode else ""
         self._db.insert(
             TRANSFERHISTORY(
-                MODE=str(rmt_mode.value),
-                TYPE=media_info.type.value,
+                MODE=mode_value,
+                TYPE=media_info.type.value if media_info.type else "",
                 CATEGORY=media_info.category,
                 TMDBID=int(media_info.tmdb_id),
                 TITLE=title,
@@ -329,7 +330,7 @@ class TransferRepository(BaseRepository):
             dest = os.path.normpath(dest)
         else:
             dest = ""
-        self._db.insert(TRANSFERUNKNOWN(PATH=path, DEST=dest, STATE="N", MODE=str(rmt_mode.value)))
+        self._db.insert(TRANSFERUNKNOWN(PATH=path, DEST=dest, STATE="N", MODE=str(rmt_mode.value if rmt_mode else "")))
 
     def is_transfer_in_blacklist(self, path: str) -> bool:
         """

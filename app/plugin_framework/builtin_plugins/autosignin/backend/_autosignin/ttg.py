@@ -58,8 +58,13 @@ class TTG(_ISiteSigninHandler):
             return True, f"【{site}】今日已签到"
 
         # 获取签到参数
-        signed_timestamp = re.search('(?<=signed_timestamp: ")\\d{10}', html_res.text).group()
-        signed_token = re.search('(?<=signed_token: ").*(?=")', html_res.text).group()
+        signed_timestamp_match = re.search('(?<=signed_timestamp: ")\\d{10}', html_res.text)
+        signed_token_match = re.search('(?<=signed_token: ").*(?=")', html_res.text)
+        if not signed_timestamp_match or not signed_token_match:
+            self.error("签到失败，无法获取签到参数")
+            return False, f"【{site}】签到失败，无法获取签到参数"
+        signed_timestamp = signed_timestamp_match.group()
+        signed_token = signed_token_match.group()
         self.debug(f"signed_timestamp={signed_timestamp} signed_token={signed_token}")
 
         data = {"signed_timestamp": signed_timestamp, "signed_token": signed_token}

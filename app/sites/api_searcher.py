@@ -83,7 +83,7 @@ class ApiSiteSearcher:
         return all_results
 
     def _execute_request(self, search_config, body, template_vars):
-        base_url = self._site.api.base_url.rstrip("/")
+        base_url = (self._site.api.base_url or "").rstrip("/") if self._site.api else ""
         method = search_config.get("method", "GET").upper()
         path = search_config.get("path", "").lstrip("/")
         url = f"{base_url}/{path}"

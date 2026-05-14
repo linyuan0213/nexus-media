@@ -62,7 +62,7 @@ class Ourbits(_ISiteRssGenHandler):
             html_res = RequestUtils(cookies=site_cookie, headers=headers, proxies=proxy).post_res(
                 url="https://star-space.net/p_rss/rss_act.php", data=data
             )
-            if "操作成功" in html_res.text:
+            if html_res and "操作成功" in html_res.text:
                 html_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
                     url="https://star-space.net/p_rss/rss_create.php"
                 )

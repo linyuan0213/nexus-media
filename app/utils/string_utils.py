@@ -348,7 +348,8 @@ class StringUtils:
             return datetime_str
 
         try:
-            return dateparser.parse(datetime_str).strftime("%Y-%m-%d %H:%M:%S")
+            parsed = dateparser.parse(datetime_str)
+            return parsed.strftime("%Y-%m-%d %H:%M:%S") if parsed else datetime_str
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             return datetime_str

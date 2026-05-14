@@ -233,6 +233,9 @@ class IYUUAutoSeedPlugin:
         hashs = [item.get("hash") for item in hash_strs]
         save_paths = {item.get("hash"): item.get("save_path") for item in hash_strs}
 
+        if not self.iyuuhelper:
+            self.ctx.warn("IYUU Token 未配置")
+            return
         seed_list, msg = self.iyuuhelper.get_seed_info(hashs)
         if not isinstance(seed_list, dict):
             self.ctx.warn(f"当前种子列表没有可辅种的站点：{msg}")
@@ -270,6 +273,10 @@ class IYUUAutoSeedPlugin:
         self.ctx.info(f"下载器 {downloader_id} 辅种完成")
 
     def _download_torrent(self, seed, downloader_id, save_path, sites_cfg):
+        if not self.iyuuhelper:
+            self.fail += 1
+            self.cached += 1
+            return False
         self.total += 1
         site_url, download_page = self.iyuuhelper.get_torrent_url(seed.get("sid"))
         if site_url and "m-team" in site_url:

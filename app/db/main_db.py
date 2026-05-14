@@ -113,11 +113,13 @@ class SessionManager:
             raise
         finally:
             sess.close()
-            self._scoped.remove()
+            if self._scoped:
+                self._scoped.remove()
 
     def remove(self):
         """移除当前线程的 session（应在请求结束时调用）"""
-        self._scoped.remove()
+        if self._scoped:
+            self._scoped.remove()
 
     # -------------------------------------------------------------------------
     # 兼容旧 MainDb API
@@ -322,7 +324,8 @@ class DbPersist:
 def remove_session():
     """移除当前线程的 session（应在请求/任务结束时调用）"""
     _init_engine()
-    _ScopedSession.remove()
+    if _ScopedSession:
+        _ScopedSession.remove()
 
 
 def get_session_manager():

@@ -21,7 +21,7 @@ server_lock = threading.Lock()
 class MediaServer(metaclass=SingletonMeta):
     _mediaserver_schemas = []
 
-    _server_type = None
+    _server_type: MediaServerType | str | None = None
     _server = None
     mediadb = None
     progress = None
@@ -47,7 +47,7 @@ class MediaServer(metaclass=SingletonMeta):
         # 当前使用的媒体库服务器
         default_server = self.config_repo.get_default_media_server()
         if default_server:
-            self._server_type = default_server.NAME
+            self._server_type = default_server.name
         else:
             # 兼容旧配置：从配置文件读取
             self._server_type = Config().get_config("media").get("media_server") or "emby"
@@ -69,7 +69,7 @@ class MediaServer(metaclass=SingletonMeta):
                 self._server = self.__get_server(self._server_type)
             return self._server
 
-    def __get_server(self, ctype: [MediaServerType, str], conf=None):
+    def __get_server(self, ctype: MediaServerType | str | None, conf=None):
         return self.__build_class(ctype=ctype, conf=conf)
 
     def get_type(self):

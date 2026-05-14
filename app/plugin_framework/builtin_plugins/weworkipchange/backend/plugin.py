@@ -62,6 +62,8 @@ class WeworkIPChangePlugin:
         self._change_ip()
 
     def _init_chrome_tab(self):
+        if not self._drissonpage_helper or not self._cache:
+            return
         try:
             tab_id = self._cache.get("tab_id")
             if isinstance(tab_id, bytes):
@@ -104,6 +106,8 @@ class WeworkIPChangePlugin:
 
     @EventHandler.register(EventType.WeworkLogin)
     def login_by_code(self, event=None) -> bool:
+        if not self._drissonpage_helper:
+            return False
         item = event.event_data if event else {}
         if item:
             msg = item.get("msg")
@@ -116,6 +120,8 @@ class WeworkIPChangePlugin:
         return False
 
     def _get_cookie_by_chrome(self) -> bool:
+        if not self._drissonpage_helper:
+            return False
         login_status = False
         html_text = self._drissonpage_helper.get_page_html_without_closetab(tab_id=self._tab_id, is_refresh=True)
         if html_text and "退出" in html_text:

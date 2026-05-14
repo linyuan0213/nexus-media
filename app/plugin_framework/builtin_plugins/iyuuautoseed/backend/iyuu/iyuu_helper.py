@@ -46,9 +46,9 @@ class IyuuHelper(metaclass=SingletonMeta):
             return None, None
         if not self._sites:
             self._sites = self.__get_sites()
-        if not self._sites.get(sid):
-            return None, None
         site = self._sites.get(sid)
+        if not site:
+            return None, None
         return site.get("base_url"), site.get("download_page")
 
     def __get_sites(self):

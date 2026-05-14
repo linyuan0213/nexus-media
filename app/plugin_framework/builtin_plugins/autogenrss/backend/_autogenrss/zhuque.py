@@ -62,6 +62,7 @@ class ZhuQue(_ISiteRssGenHandler):
             )
             if not security_res or security_res.status_code != 200:
                 self.error("生成RSS失败")
+                return False, f"【{site}】生成RSS失败"
 
         rss_link = ""
         json_data = security_res.json()

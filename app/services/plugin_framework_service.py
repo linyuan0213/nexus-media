@@ -526,6 +526,8 @@ class PluginFrameworkService:
             sys.path.insert(0, plugin_path)
 
         spec = importlib.util.spec_from_file_location(module_path, file_path)
+        if not spec or not spec.loader:
+            raise ValueError(f"无法加载插件模块: {module_path}")
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_path] = module
         spec.loader.exec_module(module)

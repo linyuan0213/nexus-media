@@ -198,6 +198,8 @@ class Aria2(_IDownloadClient):
         return self.client_type
 
     def get_files(self, tid: str) -> Any:
+        if not self._client:
+            return None
         try:
             return self._client.getFiles(gid=tid)
         except Exception as err:

@@ -98,6 +98,8 @@ class FnOS(_IMediaClient):
         """
         获得用户数量，FnOS只能配置一个用户
         """
+        if not self._fnos:
+            return 0
         res = self._fnos.request(endpoint="v/api/v1/manager/user/list", method="get", data={})
         if res["code"] == 0:
             return len(res["data"])
@@ -359,6 +361,7 @@ class FnOS(_IMediaClient):
             yield {}
         if not self._fnos:
             yield {}
+            return
         try:
             items = self._fnos.fetch_all_pages(parent_id=parent)
             for item in items:
