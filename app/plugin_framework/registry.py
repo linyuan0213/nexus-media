@@ -37,6 +37,8 @@ class PluginRegistry(metaclass=SingletonMeta):
             for orm_model in orm_list:
                 try:
                     entity = PluginManifestEntity.from_orm(orm_model)
+                    if not entity:
+                        continue
                     manifest = PluginManifest.from_dict(json.loads(entity.manifest_json or "{}"))
                     self._manifest_cache[manifest.id] = manifest
                     self._state_cache[manifest.id] = PluginState(
@@ -114,6 +116,8 @@ class PluginRegistry(metaclass=SingletonMeta):
         state = self._state_cache.get(plugin_id)
         if not state:
             raise ValueError(f"插件未安装: {plugin_id}")
+        if not state.manifest:
+            raise ValueError(f"插件状态数据不完整: {plugin_id}")
 
         target_dir = os.path.join(self._plugins_dir, f"{plugin_id}-{state.manifest.version}")
         if os.path.exists(target_dir):
@@ -255,7 +259,8 @@ class PluginRegistry(metaclass=SingletonMeta):
         state = self._state_cache.get(plugin_id)
         if not state:
             return None
-        # 先检查是否是内置插件
+        if not state.manifest:
+            return None
         builtin_path = os.path.join(self._builtin_dir, f"{plugin_id}-{state.manifest.version}")
         if os.path.exists(builtin_path):
             return builtin_path

@@ -87,13 +87,15 @@ class _IIndexClient(metaclass=ABCMeta):
         _ = (datetime.datetime.now() - start_time).seconds
         if len(result_array) == 0:
             log.warn(f"【{self.index_type}】{indexer.name} 关键词 {key_word} 未搜索到数据")
-            self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
+            if self.progress:
+                self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
             return []
         else:
             log.warn(f"【{self.index_type}】{indexer.name} 关键词 {key_word} 返回数据：{len(result_array)}")
-            self.progress.update(
-                ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 返回 {len(result_array)} 条数据"
-            )
+            if self.progress:
+                self.progress.update(
+                    ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 返回 {len(result_array)} 条数据"
+                )
 
         # 注入站点元信息
         for item in result_array:

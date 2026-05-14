@@ -155,7 +155,7 @@ class SubscribeService:
         if not fuzzy_match:
             if mediaid:
                 media_info = WebUtils.get_mediainfo_from_id(mtype=mtype, mediaid=mediaid)
-                if not season:
+                if not season and media_info:
                     season = media_info.begin_season
             else:
                 if season:
@@ -450,7 +450,7 @@ class SubscribeService:
             if mediaid:
                 # 根据ID查询
                 media_info = WebUtils.get_mediainfo_from_id(mtype=mtype, mediaid=mediaid)
-                if not season:
+                if not season and media_info:
                     season = media_info.begin_season
             else:
                 # 根据名称和年份查询

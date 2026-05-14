@@ -39,7 +39,7 @@ class SiteSubtitle:
             return
 
         # 站点流控
-        if self.sites.check_ratelimit(site_id):
+        if self.sites and self.sites.check_ratelimit(site_id):
             return
 
         engine = SiteEngine.get_instance()
@@ -57,7 +57,7 @@ class SiteSubtitle:
                 return
             html = etree.HTML(res.text)
             sublink_list = []
-            for xpath in self.siteconf.get_subtitle_conf():
+            for xpath in (self.siteconf.get_subtitle_conf() if self.siteconf else []):
                 sublinks = html.xpath(xpath)
                 if sublinks:
                     for sublink in sublinks:
@@ -133,7 +133,7 @@ class SiteSubtitle:
         log.info("【Sites】开始从 m-team 下载字幕")
 
         # 获取站点信息
-        site_info = self.sites.get_sites(siteid=site_id)
+        site_info = self.sites.get_sites(siteid=site_id) if self.sites else None
         if not site_info:
             log.warn(f"【Sites】无法获取站点 {site_id} 的信息")
             return

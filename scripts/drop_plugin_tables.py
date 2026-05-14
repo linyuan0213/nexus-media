@@ -13,6 +13,10 @@ from app.db.main_db import _Engine
 # 删除有错误的插件框架v2表
 tables = ["PLUGIN_MANIFEST", "PLUGIN_CONFIG", "PLUGIN_LOGS", "PLUGIN_HOOKS"]
 
+if not _Engine:
+    print("数据库引擎未初始化")
+    exit(1)
+
 with _Engine.connect() as conn:
     for t in tables:
         try:

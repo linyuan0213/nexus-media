@@ -9,7 +9,7 @@ from lxml import etree
 import log
 from app.db.repositories.config_repo_adapter import UserRssConfigRepositoryAdapter
 from app.db.repositories.rss_repo_adapter import RssHistoryRepositoryAdapter
-from app.helper import RssHelper
+from app.helper import RssHelper, ThreadHelper
 from app.media import MediaService, meta_info
 from app.message import Message
 from app.schemas.rss import (
@@ -28,7 +28,6 @@ from app.utils.types import MediaType, MovieTypes, RssType, SearchType
 from config import Config
 
 if TYPE_CHECKING:
-    from app.services.rss_checker_service import RssCheckerService
     from app.services.rss_core import Rss
 
 
@@ -38,10 +37,12 @@ class RssSubscriptionService:
     负责订阅添加/删除、历史管理、列表查询、日历事件、RSS下载
     """
 
-    def __init__(self, subscribe: Subscribe | None = None, rss: "Rss | None" = None, rss_checker: "RssTaskService | None" = None):
+    def __init__(
+        self, subscribe: Subscribe | None = None, rss: "Rss | None" = None, rss_checker: "RssTaskService | None" = None
+    ):
         self._subscribe: Subscribe = subscribe or Subscribe()
         self._rss: Rss | None = rss
-        self._rss_checker: "RssTaskService | None" = rss_checker
+        self._rss_checker: RssTaskService | None = rss_checker
 
     def download_rss(self) -> None:
         """触发RSS订阅下载"""
@@ -212,7 +213,9 @@ class RssSubscriptionService:
         )
         return code, msg
 
-    def remove_rss_media(self, name: str, mtype: str, year: str, season: int | None, rssid: str | None, tmdbid: str | None) -> None:
+    def remove_rss_media(
+        self, name: str, mtype: str, year: str, season: int | None, rssid: str | None, tmdbid: str | None
+    ) -> None:
         """移除RSS订阅"""
         if not str(tmdbid).isdigit():
             tmdbid = None
@@ -306,7 +309,6 @@ class RssSubscriptionService:
 
     def refresh_rss(self, mtype: str, rssid: str) -> None:
         """后台刷新RSS搜索"""
-        from app.helper import ThreadHelper
 
         if mtype == "MOV":
             ThreadHelper().start_thread(self._subscribe.subscribe_search_movie, (rssid,))
@@ -457,16 +459,14 @@ class RssTaskService(metaclass=SingletonMeta):
         rss_parsers = self.config_repo.get_userrss_parser()
         self._rss_parsers = []
         for rss_parser in rss_parsers:
-            self._rss_parsers.append(
-                {
-                    "id": rss_parser.ID,
-                    "name": rss_parser.NAME,
-                    "type": rss_parser.TYPE,
-                    "format": rss_parser.FORMAT,
-                    "params": rss_parser.PARAMS,
-                    "note": rss_parser.NOTE,
-                }
-            )
+            self._rss_parsers.append({
+                "id": rss_parser.ID,
+                "name": rss_parser.NAME,
+                "type": rss_parser.TYPE,
+                "format": rss_parser.FORMAT,
+                "params": rss_parser.PARAMS,
+                "note": rss_parser.NOTE,
+            })
         # 读取任务任务列表
         rsstasks = self.config_repo.get_userrss_tasks()
         self._rss_tasks = []
@@ -501,33 +501,31 @@ class RssTaskService(metaclass=SingletonMeta):
                 print(str(e))
                 parsers = [task.PARSER]
             state = task.STATE in ["Y", "1", True]
-            self._rss_tasks.append(
-                {
-                    "id": task.ID,
-                    "name": task.NAME,
-                    "address": addresses,
-                    "proxy": proxy,
-                    "parser": parsers,
-                    "interval": task.INTERVAL,
-                    "uses": task.USES if task.USES != "S" else "R",
-                    "uses_text": self._site_users.get(task.USES),
-                    "include": task.INCLUDE,
-                    "exclude": task.EXCLUDE,
-                    "filter": task.FILTER,
-                    "filter_name": filterrule.get("name") if filterrule else "",
-                    "update_time": task.UPDATE_TIME,
-                    "counter": task.PROCESS_COUNT,
-                    "state": state,
-                    "save_path": task.SAVE_PATH or save_path,
-                    "download_setting": task.DOWNLOAD_SETTING or "",
-                    "recognization": task.RECOGNIZATION or recognization,
-                    "over_edition": task.OVER_EDITION or 0,
-                    "sites": json.loads(task.SITES) if task.SITES else {"rss_sites": [], "search_sites": []},
-                    "filter_args": json.loads(task.FILTER_ARGS)
-                    if task.FILTER_ARGS
-                    else {"restype": "", "pix": "", "team": ""},
-                }
-            )
+            self._rss_tasks.append({
+                "id": task.ID,
+                "name": task.NAME,
+                "address": addresses,
+                "proxy": proxy,
+                "parser": parsers,
+                "interval": task.INTERVAL,
+                "uses": task.USES if task.USES != "S" else "R",
+                "uses_text": self._site_users.get(task.USES),
+                "include": task.INCLUDE,
+                "exclude": task.EXCLUDE,
+                "filter": task.FILTER,
+                "filter_name": filterrule.get("name") if filterrule else "",
+                "update_time": task.UPDATE_TIME,
+                "counter": task.PROCESS_COUNT,
+                "state": state,
+                "save_path": task.SAVE_PATH or save_path,
+                "download_setting": task.DOWNLOAD_SETTING or "",
+                "recognization": task.RECOGNIZATION or recognization,
+                "over_edition": task.OVER_EDITION or 0,
+                "sites": json.loads(task.SITES) if task.SITES else {"rss_sites": [], "search_sites": []},
+                "filter_args": json.loads(task.FILTER_ARGS)
+                if task.FILTER_ARGS
+                else {"restype": "", "pix": "", "team": ""},
+            })
         if not self._rss_tasks:
             return
         # 启动RSS任务
@@ -539,31 +537,27 @@ class RssTaskService(metaclass=SingletonMeta):
                 if cron.isdigit():
                     # 分钟
                     rss_flag = True
-                    SchedulerCore().start_job(
-                        {
+                    SchedulerCore().start_job({
+                        "func": self.check_task_rss,
+                        "name": f"自定义订阅任务 {task.get('name')}",
+                        "args": (task.get("id"),),
+                        "job_id": job_id,
+                        "trigger": "interval",
+                        "seconds": int(cron) * 60,
+                        "jobstore": self._jobstore,
+                    })
+                elif cron.count(" ") == 4:
+                    # cron表达式
+                    try:
+                        SchedulerCore().start_job({
                             "func": self.check_task_rss,
                             "name": f"自定义订阅任务 {task.get('name')}",
                             "args": (task.get("id"),),
                             "job_id": job_id,
-                            "trigger": "interval",
-                            "seconds": int(cron) * 60,
+                            "trigger": "cron",
+                            "cron": cron,
                             "jobstore": self._jobstore,
-                        }
-                    )
-                elif cron.count(" ") == 4:
-                    # cron表达式
-                    try:
-                        SchedulerCore().start_job(
-                            {
-                                "func": self.check_task_rss,
-                                "name": f"自定义订阅任务 {task.get('name')}",
-                                "args": (task.get("id"),),
-                                "job_id": job_id,
-                                "trigger": "cron",
-                                "cron": cron,
-                                "jobstore": self._jobstore,
-                            }
-                        )
+                        })
                         rss_flag = True
                     except Exception as e:
                         log.info("{} 自定义订阅cron表达式 配置格式错误：{} {}".format(task.get("name"), cron, str(e)))
@@ -772,7 +766,9 @@ class RssTaskService(metaclass=SingletonMeta):
                     self.config_repo.insert_userrss_task_history(taskid, media.org_string, downloader_name)
                 else:
                     log.error(
-                        "【RssTaskService】添加下载任务 {} 失败：{}".format(media.get_title_string(), ret_msg or "请检查下载任务是否已存在")
+                        "【RssTaskService】添加下载任务 {} 失败：{}".format(
+                            media.get_title_string(), ret_msg or "请检查下载任务是否已存在"
+                        )
                     )
         # 添加订阅
         if rss_subscribe_torrents:
@@ -1063,7 +1059,9 @@ class RssTaskService(metaclass=SingletonMeta):
                 self.config_repo.insert_userrss_task_history(taskid, media.org_string, downloader_name)
             else:
                 log.error(
-                    "【RssTaskService】添加下载任务 {} 失败：{}".format(media.get_title_string(), ret_msg or "请检查下载任务是否已存在")
+                    "【RssTaskService】添加下载任务 {} 失败：{}".format(
+                        media.get_title_string(), ret_msg or "请检查下载任务是否已存在"
+                    )
                 )
                 return False
         return True

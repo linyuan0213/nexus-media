@@ -93,27 +93,6 @@ class BrushStopType(Enum):
     NOTSTOP = "不暂停"
 
 
-# 站点框架
-class SiteSchema(Enum):
-    DiscuzX = "Discuz!"
-    Gazelle = "Gazelle"
-    Ipt = "IPTorrents"
-    NexusPhp = "NexusPhp"
-    NexusProject = "NexusProject"
-    NexusRabbit = "NexusRabbit"
-    SmallHorse = "Small Horse"
-    Unit3d = "Unit3d"
-    TorrentLeech = "TorrentLeech"
-    FileList = "FileList"
-    TNode = "TNode"
-    Mteam = "M-Team"
-    HHCLUB = "HHCLUB"
-    FSM = "FSM"
-    YemaPT = "YemaPT"
-    FireFly = "FireFly"
-    RousiPro = "RousiPro"
-
-
 # 可监听事件
 class EventType(Enum):
     # Emby Webhook通知

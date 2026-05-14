@@ -14,4 +14,6 @@ class ThreadHelper(metaclass=SingletonMeta):
         pass
 
     def start_thread(self, func, kwargs):
+        if not self.executor:
+            return None
         return self.executor.submit(func, *kwargs)

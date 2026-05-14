@@ -136,7 +136,7 @@ class AutoBackupPlugin:
                 if cnt:
                     max_keep = int(cnt)
                     files = client.list_files(remote_dir)
-                    backup_files = [f for f in files if "bk_" in f and f.endswith(".zip")]
+                    backup_files = [f for f in files if f and "bk_" in f and f.endswith(".zip")]
                     bk_count = len(backup_files)
                     sorted_files = sorted(backup_files)
                     if len(sorted_files) > max_keep:

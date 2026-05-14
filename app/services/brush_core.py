@@ -788,7 +788,7 @@ class BrushTaskService:
             log.info(f"【Brush】成功添加下载：{title}")
             if sendmessage:
                 downloader_cfg = self._downloader.get_downloader_conf(downloader_id)
-                downlaod_name = downloader_cfg.get("name")
+                downlaod_name = downloader_cfg.get("name") if downloader_cfg else ""
                 msg_title = f"【刷流任务 {taskname} 新增下载】"
                 msg_text = (
                     f"下载器名：{downlaod_name}\n"

@@ -231,6 +231,8 @@ class DoubanRankPlugin:
             ret_array = []
             dom_tree = xml.dom.minidom.parseString(ret_xml)
             root_node = dom_tree.documentElement
+            if not root_node:
+                return ret_array
             items = root_node.getElementsByTagName("item")
             for item in items:
                 try:

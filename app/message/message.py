@@ -438,7 +438,9 @@ class Message(metaclass=SingletonMeta):
             return False
         return self._queue.submit(self._do_sendmsg, client, title, text, image, url, user_id, name=f"sendmsg:{cname}")
 
-    def send_channel_msg(self, channel: Any, title: str, text: str = "", image: str = "", url: str = "", user_id: str = "") -> bool:
+    def send_channel_msg(
+        self, channel: Any, title: str, text: str = "", image: str = "", url: str = "", user_id: str = ""
+    ) -> bool:
         """
         按渠道发送消息，用于消息交互
         :param channel: 消息渠道
@@ -512,7 +514,9 @@ class Message(metaclass=SingletonMeta):
             return state
         return False
 
-    def send_download_message(self, in_from: SearchType, can_item: Any, download_setting_name: Any = None, downloader_name: Any = None) -> None:
+    def send_download_message(
+        self, in_from: SearchType, can_item: Any, download_setting_name: Any = None, downloader_name: Any = None
+    ) -> None:
         """
         发送下载的消息
         :param in_from: 下载来源
@@ -617,7 +621,9 @@ class Message(metaclass=SingletonMeta):
                     url="downloading",
                 )
 
-    def send_transfer_movie_message(self, in_from: Enum, media_info: Any, exist_filenum: int, category_flag: bool) -> None:
+    def send_transfer_movie_message(
+        self, in_from: Enum, media_info: Any, exist_filenum: int, category_flag: bool
+    ) -> None:
         """
         发送转移电影的消息
         :param in_from: 转移来源
@@ -933,7 +939,7 @@ class Message(metaclass=SingletonMeta):
                     variables=variables,
                 )
 
-    def send_mediaserver_message(self, event_info: dict, channel: Any, image_url: str) -> None:
+    def send_mediaserver_message(self, event_info: dict, channel: Any, image_url: str | None) -> None:
         """
         发送媒体服务器的消息
         :param event_info: 事件信息
@@ -1108,7 +1114,9 @@ class Message(metaclass=SingletonMeta):
         self._remove_client(cid)
         return ret
 
-    def check_message_client(self, cid: Any = None, interactive: Any = None, enabled: Any = None, ctype: Any = None) -> Any:
+    def check_message_client(
+        self, cid: Any = None, interactive: Any = None, enabled: Any = None, ctype: Any = None
+    ) -> Any:
         """
         设置消息端（更新DB后刷新受影响的客户端）
         """
@@ -1124,7 +1132,17 @@ class Message(metaclass=SingletonMeta):
                     self._refresh_client(c.get("id"))
         return ret
 
-    def insert_message_client(self, name: str, ctype: Any, config: str, switchs: list, interactive: Any, enabled: Any, note: str = "", templates: Any = None) -> bool:
+    def insert_message_client(
+        self,
+        name: str,
+        ctype: Any,
+        config: str,
+        switchs: list,
+        interactive: Any,
+        enabled: Any,
+        note: str = "",
+        templates: Any = None,
+    ) -> bool:
         """
         插入消息端
         """

@@ -76,6 +76,8 @@ class AgentService:
         if not self.ready:
             log.warn("【AgentService】chat 调用失败：Provider 未就绪")
             raise RuntimeError("LLM service not configured")
+        if not self._provider:
+            raise RuntimeError("LLM service not configured")
 
         if use_cache and not response_format:
             return self._cached_chat(messages, system_prompt, temperature)
@@ -85,6 +87,8 @@ class AgentService:
     @lru_cache_with_ttl(ttl=300, maxsize=256)
     def _cached_chat(self, messages: tuple, system_prompt: str, temperature: float) -> str:
         """带缓存的对话（messages 转为 tuple 使其可 hash）"""
+        if not self._provider:
+            raise RuntimeError("LLM service not configured")
         log.info("【AgentService】缓存未命中，调用 Provider chat")
         return self._provider.chat(list(messages), system_prompt, temperature)
 
@@ -94,6 +98,8 @@ class AgentService:
         """结构化输出对话（返回 pydantic 模型实例）"""
         if not self.ready:
             log.warn("【AgentService】structured_chat 调用失败：Provider 未就绪")
+            raise RuntimeError("LLM service not configured")
+        if not self._provider:
             raise RuntimeError("LLM service not configured")
 
         prompt = (
@@ -117,6 +123,8 @@ class AgentService:
         """查询当前提供商支持的模型列表"""
         if not self.ready:
             return []
+        if not self._provider:
+            return []
         try:
             models = self._provider.list_models()
             log.info(f"【AgentService】查询到 {len(models)} 个模型")
@@ -127,4 +135,4 @@ class AgentService:
 
     def is_available(self) -> bool:
         """检查当前提供商是否可用"""
-        return self.ready and self._provider.is_available()
+        return self.ready and self._provider is not None and self._provider.is_available()

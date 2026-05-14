@@ -69,7 +69,8 @@ class Transmission(_IDownloadClient):
         self.init_config()
         self.connect()
         # 设置未完成种子添加!part后缀
-        self.trc.set_session(rename_partial_files=True)
+        if self.trc:
+            self.trc.set_session(rename_partial_files=True)
 
     def init_config(self) -> None:
         if self._client_config:
@@ -246,6 +247,8 @@ class Transmission(_IDownloadClient):
         """
         if not tid or not tag:
             return
+        if not self.trc:
+            return
         ids = self.__parse_ids(tid)
         try:
             self.trc.change_torrent(labels=tag, ids=ids)
@@ -306,6 +309,8 @@ class Transmission(_IDownloadClient):
         else:
             seed_idle_mode = 2
             seed_idle_limit = 0
+        if not self.trc:
+            return
         try:
             self.trc.change_torrent(
                 ids=ids,
@@ -441,6 +446,8 @@ class Transmission(_IDownloadClient):
         cookie: str | None = None,
         **kwargs: Any,
     ) -> Any:
+        if not self.trc:
+            return False
         try:
             ret = self.trc.add_torrent(torrent=content, download_dir=download_dir, paused=is_paused, cookies=cookie)
             if ret and ret.hashString:
@@ -491,6 +498,8 @@ class Transmission(_IDownloadClient):
         """
         if not tid:
             return None
+        if not self.trc:
+            return None
         try:
             torrent = self.trc.get_torrent(tid)
         except Exception as err:
@@ -516,6 +525,8 @@ class Transmission(_IDownloadClient):
         }
         """
         if not kwargs.get("file_info"):
+            return False
+        if not self.trc:
             return False
         try:
             self.trc.set_files(kwargs.get("file_info"))

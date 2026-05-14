@@ -99,7 +99,7 @@ class SyncCore:
             if compatibility:
                 log_suffix += "，启用兼容模式"
             log.info(
-                f"【Sync】读取到监控目录：{monpath}，{'，'.join(log_parts)}转移方式：{syncmode_enum.value}{log_suffix}"
+                f"【Sync】读取到监控目录：{monpath}，{'，'.join(log_parts)}转移方式：{syncmode_enum.value if syncmode_enum else ''}{log_suffix}"
             )
             if not enabled:
                 log.info(f"【Sync】{monpath} 不进行监控和同步：手动关闭")
@@ -116,7 +116,7 @@ class SyncCore:
                 "to": target_path or "",
                 "unknown": unknown_path or "",
                 "syncmod": syncmode,
-                "syncmod_name": syncmode_enum.value,
+                "syncmod_name": syncmode_enum.value if syncmode_enum else "",
                 "compatibility": compatibility,
                 "rename": rename,
                 "enabled": enabled,
@@ -272,6 +272,9 @@ class SyncCore:
                 if not PathUtils.is_invalid_path(path) and os.path.exists(path):
                     log.info("【Sync】开始转移监控目录文件...")
                     target_info = self._need_sync_paths.get(path)
+                    if not target_info:
+                        self._need_sync_paths.pop(path)
+                        continue
                     bluray_dir = PathUtils.get_bluray_dir(path)
                     if not bluray_dir:
                         src_path = path

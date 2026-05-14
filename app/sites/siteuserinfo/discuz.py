@@ -26,9 +26,11 @@ def parse(ins: ConfigHtmlUserInfo) -> None:
     user_info = html.xpath('//a[contains(@href, "&uid=")]')
     if user_info:
         m = re.search(r"&uid=(\d+)", user_info[0].attrib["href"])
-        if m and m.group(1).strip():
-            ins.userid = m.group(1)
-            ins.username = user_info[0].text.strip()
+        if m:
+            uid = m.group(1)
+            if uid and uid.strip():
+                ins.userid = uid
+                ins.username = (user_info[0].text or "").strip()
 
     level = html.xpath('//a[contains(@href, "usergroup")]/text()')
     if level:
