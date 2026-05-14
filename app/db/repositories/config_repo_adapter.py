@@ -15,6 +15,7 @@ from app.db.models import (
     MEDIASERVER,
     MESSAGECLIENT,
     TORRENTREMOVETASK,
+    USERRSSTASKHISTORY,
 )
 from app.db.repositories.config_repository import ConfigRepository
 from app.domain.entities.config import (
@@ -345,6 +346,9 @@ class UserRssConfigRepositoryAdapter:
 
     def update_userrss_task(self, item: dict) -> None:
         self._repo.update_userrss_task(item)
+
+    def get_userrss_task_history(self, task_id: int) -> list[USERRSSTASKHISTORY]:
+        return self._repo.get_userrss_task_history(task_id)
 
     def check_userrss_task(self, tid: int | None = None, state: str | None = None) -> None:
         self._repo.check_userrss_task(tid, state)

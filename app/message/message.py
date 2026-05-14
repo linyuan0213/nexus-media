@@ -386,7 +386,7 @@ class Message(metaclass=SingletonMeta):
     def _do_sendmsg(self, client, title, text, image, url, user_id):
         """实际执行消息发送（由队列调用）"""
         if not client or not client.get("client"):
-            log.warning("【Message】客户端对象为空，跳过发送")
+            log.warn("【Message】客户端对象为空，跳过发送")
             return
         cname = client.get("name")
         log.info(f"【Message】开始发送消息 {cname}：title={title}")
@@ -413,7 +413,17 @@ class Message(metaclass=SingletonMeta):
                 raise RuntimeError(ret_msg)
         log.info(f"【Message】消息发送成功 {cname}：title={title}")
 
-    def __sendmsg(self, client, title, text="", image="", url="", user_id="", msg_type=None, variables=None):
+    def __sendmsg(
+        self,
+        client,
+        title,
+        text="",
+        image: str | None = None,
+        url: str | None = None,
+        user_id: str = "",
+        msg_type: str | None = None,
+        variables: dict | None = None,
+    ):
         """
         通用消息发送（异步入队）
         :param client: 消息端
@@ -439,7 +449,13 @@ class Message(metaclass=SingletonMeta):
         return self._queue.submit(self._do_sendmsg, client, title, text, image, url, user_id, name=f"sendmsg:{cname}")
 
     def send_channel_msg(
-        self, channel: Any, title: str, text: str = "", image: str = "", url: str = "", user_id: str = ""
+        self,
+        channel: Any,
+        title: str,
+        text: str = "",
+        image: str | None = None,
+        url: str | None = None,
+        user_id: str = "",
     ) -> bool:
         """
         按渠道发送消息，用于消息交互
@@ -466,7 +482,7 @@ class Message(metaclass=SingletonMeta):
     def _do_send_list_msg(self, client, medias, user_id, title):
         """实际执行列表消息发送（由队列调用）"""
         if not client or not client.get("client"):
-            log.warning("【Message】客户端对象为空，跳过列表发送")
+            log.warn("【Message】客户端对象为空，跳过列表发送")
             return
         cname = client.get("name")
         log.info(f"【Message】开始发送列表消息 {cname}：title={title}")
@@ -690,25 +706,25 @@ class Message(metaclass=SingletonMeta):
             if self.messagecenter:
                 self.messagecenter.insert_system_message(title=msg_title, content=msg_str)
             # 发送消息
-        for client in self.active_clients:
-            if "transfer_finished" in client.get("switchs"):
-                variables = {
-                    "media_info": item_info,
-                    "in_from": in_from,
-                    "total_episodes": item_info.total_episodes if hasattr(item_info, "total_episodes") else 1,
-                    "season_episode": item_info.get_season_episode_string()
-                    if hasattr(item_info, "get_season_episode_string")
-                    else "",
-                }
-                self.__sendmsg(
-                    client=client,
-                    title=msg_title,
-                    text=msg_str,
-                    image=item_info.get_message_image(),
-                    url="history",
-                    msg_type="transfer_finished",
-                    variables=variables,
-                )
+            for client in self.active_clients:
+                if "transfer_finished" in client.get("switchs"):
+                    variables = {
+                        "media_info": item_info,
+                        "in_from": in_from,
+                        "total_episodes": item_info.total_episodes if hasattr(item_info, "total_episodes") else 1,
+                        "season_episode": item_info.get_season_episode_string()
+                        if hasattr(item_info, "get_season_episode_string")
+                        else "",
+                    }
+                    self.__sendmsg(
+                        client=client,
+                        title=msg_title,
+                        text=msg_str,
+                        image=item_info.get_message_image(),
+                        url="history",
+                        msg_type="transfer_finished",
+                        variables=variables,
+                    )
 
     def send_download_fail_message(self, item: Any, error_msg: str) -> None:
         """
@@ -968,18 +984,24 @@ class Message(metaclass=SingletonMeta):
             "Jellyfin": "https://play-lh.googleusercontent.com/SCsUK3hCCRqkJbmLDctNYCfehLxsS4ggD1ZPHIFrrAN1Tn9yhjmGMPep2D9lMaaa9eQi",
         }
 
-        if not _webhook_actions.get(event_info.get("event")):
+        if not _webhook_actions.get(event_info.get("event") or ""):
             return
 
         # 消息标题
         if event_info.get("item_type") in ["TV", "SHOW"]:
-            message_title = f"{_webhook_actions.get(event_info.get('event'))}剧集 {event_info.get('item_name')}"
+            message_title = (
+                f"{_webhook_actions.get(event_info.get('event') or '<unknown>')}剧集 {event_info.get('item_name')}"
+            )
         elif event_info.get("item_type") == "MOV":
-            message_title = f"{_webhook_actions.get(event_info.get('event'))}电影 {event_info.get('item_name')}"
+            message_title = (
+                f"{_webhook_actions.get(event_info.get('event') or '<unknown>')}电影 {event_info.get('item_name')}"
+            )
         elif event_info.get("item_type") == "AUD":
-            message_title = f"{_webhook_actions.get(event_info.get('event'))}有声书 {event_info.get('item_name')}"
+            message_title = (
+                f"{_webhook_actions.get(event_info.get('event') or '<unknown>')}有声书 {event_info.get('item_name')}"
+            )
         else:
-            message_title = f"{_webhook_actions.get(event_info.get('event'))}"
+            message_title = f"{_webhook_actions.get(event_info.get('event') or '<unknown>')}"
 
         # 消息内容
         message_texts = []
@@ -990,7 +1012,7 @@ class Message(metaclass=SingletonMeta):
         if event_info.get("ip"):
             message_texts.append(f"位置：{event_info.get('ip')} {WebUtils.get_location(event_info.get('ip'))}")
         if event_info.get("percentage"):
-            percentage = round(float(event_info.get("percentage")), 2)
+            percentage = round(float(event_info.get("percentage") or 0), 2)
             message_texts.append(f"进度：{percentage}%")
         if event_info.get("overview"):
             message_texts.append(f"剧情：{event_info.get('overview')}")
