@@ -409,7 +409,7 @@ def get_downloaded(
                     "date": item.DATE,
                     "site": item.SITE,
                 }
-                for item in Items
+                for item in items
             ]
         )
     return success(data=[])

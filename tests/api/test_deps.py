@@ -19,7 +19,7 @@ app.add_middleware(
 
 
 @app.get("/whoami")
-def whoami(user=Depends(get_current_user)):
+def whoami(user=Depends(get_current_user)):  # noqa: B008
     return {"user": user}
 
 

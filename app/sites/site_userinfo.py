@@ -237,12 +237,12 @@ class SiteUserInfo(metaclass=SingletonMeta):
                     f"\n————————————"
                 )
 
-        if incDownloads or incUploads:
+        if inc_downloads or inc_uploads:
             string_list.insert(
                 0,
                 f"【今日汇总】\n"
-                f"总上传：{StringUtils.str_filesize(incUploads)}\n"
-                f"总下载：{StringUtils.str_filesize(incDownloads)}\n"
+                f"总上传：{StringUtils.str_filesize(inc_uploads)}\n"
+                f"总下载：{StringUtils.str_filesize(inc_downloads)}\n"
                 f"\n————————————",
             )
 
