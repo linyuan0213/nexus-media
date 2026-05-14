@@ -24,7 +24,7 @@ class TransferRepository(BaseRepository):
 
     # ==================== Transfer History ====================
 
-    def is_transfer_history_exists(self, source_path, source_filename, dest_path, dest_filename):
+    def is_transfer_history_exists(self, source_path: str, source_filename: str, dest_path: str, dest_filename: str) -> bool:
         """
         查询识别转移记录是否存在
         """
@@ -43,7 +43,7 @@ class TransferRepository(BaseRepository):
         return ret > 0
 
     @DbPersist(BaseRepository._db)
-    def update_transfer_history_date(self, source_path, source_filename, dest_path, dest_filename, date):
+    def update_transfer_history_date(self, source_path: str, source_filename: str, dest_path: str, dest_filename: str, date: str) -> None:
         """
         更新历史转移记录时间
         """
@@ -55,7 +55,7 @@ class TransferRepository(BaseRepository):
         ).update({"DATE": date})
 
     @DbPersist(BaseRepository._db)
-    def insert_transfer_history(self, in_from: Enum, rmt_mode: RmtMode, in_path, out_path, dest, media_info):
+    def insert_transfer_history(self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: object) -> None:
         """
         插入识别转移记录
         """
@@ -106,7 +106,7 @@ class TransferRepository(BaseRepository):
             )
         )
 
-    def get_transfer_history(self, search, page, rownum):
+    def get_transfer_history(self, search: str | None, page: int, rownum: int) -> tuple[int, list[TRANSFERHISTORY]]:
         """
         查询识别转移记录（分页）
         """
@@ -136,13 +136,13 @@ class TransferRepository(BaseRepository):
                 TRANSFERHISTORY.DATE.desc()
             ).limit(int(rownum)).offset(begin_pos).all()
 
-    def get_transfer_info_by_id(self, logid):
+    def get_transfer_info_by_id(self, logid: int | None) -> TRANSFERHISTORY | None:
         """
         据logid查询PATH
         """
         return self._db.query(TRANSFERHISTORY).filter(int(logid) == TRANSFERHISTORY.ID).first()
 
-    def get_transfer_info_by(self, tmdbid, season=None, season_episode=None):
+    def get_transfer_info_by(self, tmdbid: int | None, season: str | None = None, season_episode: str | None = None) -> list[TRANSFERHISTORY] | None:
         """
         据tmdbid、season、season_episode查询转移记录
         """
@@ -162,7 +162,7 @@ class TransferRepository(BaseRepository):
                 .all()
             )
 
-    def is_transfer_history_exists_by_source_full_path(self, source_full_path):
+    def is_transfer_history_exists_by_source_full_path(self, source_full_path: str) -> bool:
         """
         据源文件的全路径查询识别转移记录
         """
@@ -176,20 +176,20 @@ class TransferRepository(BaseRepository):
         return ret > 0
 
     @DbPersist(BaseRepository._db)
-    def delete_transfer_log_by_id(self, logid):
+    def delete_transfer_log_by_id(self, logid: int) -> None:
         """
         根据logid删除记录
         """
         self._db.query(TRANSFERHISTORY).filter(int(logid) == TRANSFERHISTORY.ID).delete()
 
     @DbPersist(BaseRepository._db)
-    def delete_transfer(self):
+    def delete_transfer(self) -> None:
         """
         删除所有识别记录
         """
         self._db.query(TRANSFERHISTORY).delete()
 
-    def get_transfer_statistics(self, days=30):
+    def get_transfer_statistics(self, days: int = 30) -> list[tuple]:
         """
         查询历史记录统计
         使用 func.substring 替代 func.substr 以支持多种数据库
@@ -204,13 +204,13 @@ class TransferRepository(BaseRepository):
 
     # ==================== Transfer Unknown ====================
 
-    def get_transfer_unknown_paths(self):
+    def get_transfer_unknown_paths(self) -> list[TRANSFERUNKNOWN]:
         """
         查询未识别的记录列表
         """
         return self._db.query(TRANSFERUNKNOWN).filter(TRANSFERUNKNOWN.STATE == "N").all()
 
-    def get_transfer_unknown_paths_by_page(self, search, page, rownum):
+    def get_transfer_unknown_paths_by_page(self, search: str | None, page: int, rownum: int) -> tuple[int, list[TRANSFERUNKNOWN]]:
         """
         按页查询未识别的记录列表
         """
@@ -243,7 +243,7 @@ class TransferRepository(BaseRepository):
             ).all()
 
     @DbPersist(BaseRepository._db)
-    def update_transfer_unknown_state(self, path):
+    def update_transfer_unknown_state(self, path: str) -> None:
         """
         更新未识别记录为识别
         """
@@ -252,7 +252,7 @@ class TransferRepository(BaseRepository):
         self._db.query(TRANSFERUNKNOWN).filter(os.path.normpath(path) == TRANSFERUNKNOWN.PATH).update({"STATE": "Y"})
 
     @DbPersist(BaseRepository._db)
-    def delete_transfer_unknown(self, tid):
+    def delete_transfer_unknown(self, tid: int | None) -> None:
         """
         删除未识别记录
         """
@@ -260,7 +260,7 @@ class TransferRepository(BaseRepository):
             return []
         self._db.query(TRANSFERUNKNOWN).filter(int(tid) == TRANSFERUNKNOWN.ID).delete()
 
-    def get_unknown_info_by_id(self, tid):
+    def get_unknown_info_by_id(self, tid: int | None) -> TRANSFERUNKNOWN | None:
         """
         查询未识别记录
         """
@@ -268,100 +268,14 @@ class TransferRepository(BaseRepository):
             return []
         return self._db.query(TRANSFERUNKNOWN).filter(int(tid) == TRANSFERUNKNOWN.ID).first()
 
-    def get_transfer_unknown_by_path(self, path):
-        """
-        根据路径查询未识别记录
-        """
-        if not path:
-            return []
-        return self._db.query(TRANSFERUNKNOWN).filter(path == TRANSFERUNKNOWN.PATH).all()
-
-    def is_transfer_unknown_exists(self, path):
-        """
-        查询未识别记录是否存在
-        """
-        if not path:
-            return False
-        ret = self._db.query(TRANSFERUNKNOWN).filter(os.path.normpath(path) == TRANSFERUNKNOWN.PATH).count()
-        return ret > 0
-
-    def is_need_insert_transfer_unknown(self, path):
-        """
-        检查是否需要插入未识别记录
-        """
-        if not path:
-            return False
-
-        unknowns = self.get_transfer_unknown_by_path(path)
-        if unknowns:
-            is_all_proceed = True
-            for unknown in unknowns:
-                if unknown.STATE == "N":
-                    is_all_proceed = False
-                    break
-
-            if is_all_proceed:
-                is_transfer_history_exists = self.is_transfer_history_exists_by_source_full_path(path)
-                if is_transfer_history_exists:
-                    return False
-                else:
-                    for unknown in unknowns:
-                        self.delete_transfer_unknown(unknown.ID)
-                    return True
-            else:
-                return True
-        else:
-            return True
-
-    @DbPersist(BaseRepository._db)
-    def insert_transfer_unknown(self, path, dest, rmt_mode):
-        """
-        插入未识别记录
-        """
-        if not path:
-            return
-        if self.is_transfer_unknown_exists(path):
-            return
-
-        path = os.path.normpath(path)
-        if dest:
-            dest = os.path.normpath(dest)
-        else:
-            dest = ""
-
-        self._db.insert(TRANSFERUNKNOWN(PATH=path, DEST=dest, STATE="N", MODE=str(rmt_mode.value)))
-
-    # ==================== Transfer Blacklist ====================
-
-    def is_transfer_in_blacklist(self, path):
-        """
-        查询是否为黑名单
-        """
-        if not path:
-            return False
-        ret = self._db.query(TRANSFERBLACKLIST).filter(os.path.normpath(path) == TRANSFERBLACKLIST.PATH).count()
-        return ret > 0
-
-    def is_transfer_notin_blacklist(self, path):
-        """
-        查询是否不在黑名单
-        """
-        return not self.is_transfer_in_blacklist(path)
-
-    @DbPersist(BaseRepository._db)
-    def insert_transfer_blacklist(self, path):
-        """
-        插入黑名单记录
-        """
-        if not path:
-            return
-        if self.is_transfer_in_blacklist(path):
-            return
-
-        self._db.insert(TRANSFERBLACKLIST(PATH=os.path.normpath(path)))
-
-    @DbPersist(BaseRepository._db)
-    def delete_transfer_blacklist(self, path):
+    def get_transfer_unknown_by_path(self, path: str) -> list[TRANSFERUNKNOWN]:
+    def is_transfer_unknown_exists(self, path: str) -> bool:
+    def is_need_insert_transfer_unknown(self, path: str) -> bool:
+    def insert_transfer_unknown(self, path: str, dest: str, rmt_mode: RmtMode) -> None:
+    def is_transfer_in_blacklist(self, path: str) -> bool:
+    def is_transfer_notin_blacklist(self, path: str) -> bool:
+    def insert_transfer_blacklist(self, path: str) -> None:
+    def delete_transfer_blacklist(self, path: str) -> None:
         """
         删除黑名单记录
         """
@@ -369,7 +283,7 @@ class TransferRepository(BaseRepository):
         self._db.query(SYNCHISTORY).filter(str(path) == SYNCHISTORY.PATH).delete()
 
     @DbPersist(BaseRepository._db)
-    def truncate_transfer_blacklist(self):
+    def truncate_transfer_blacklist(self) -> None:
         """
         清空黑名单记录
         """
@@ -378,7 +292,7 @@ class TransferRepository(BaseRepository):
 
     # ==================== Sync History ====================
 
-    def is_sync_in_history(self, path, dest):
+    def is_sync_in_history(self, path: str, dest: str) -> bool:
         """
         查询是否存在同步历史记录
         """
@@ -392,7 +306,7 @@ class TransferRepository(BaseRepository):
         return count > 0
 
     @DbPersist(BaseRepository._db)
-    def insert_sync_history(self, path, src, dest):
+    def insert_sync_history(self, path: str, src: str, dest: str) -> None:
         """
         插入同步历史记录
         """

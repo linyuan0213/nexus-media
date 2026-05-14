@@ -136,7 +136,7 @@ class SubscribeService:
         if not rssid:
             return -1, "缺少订阅ID", None
 
-        year = int(year) if str(year).isdigit() else ""
+        year = int(str(year)) if str(year).isdigit() else ""
         rss_sites = rss_sites or []
         if isinstance(rss_sites, str):
             rss_sites = rss_sites.split(",")

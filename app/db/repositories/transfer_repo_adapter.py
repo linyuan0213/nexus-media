@@ -3,11 +3,15 @@
 将旧版 TransferRepository 适配为新领域接口
 """
 
+from enum import Enum
+
+from app.db.models import TRANSFERHISTORY, TRANSFERUNKNOWN
 from app.db.repositories.transfer_repository import TransferRepository
 from app.domain.entities.transfer import (
     TransferHistoryEntity,
     TransferUnknownEntity,
 )
+from app.utils.types import RmtMode
 
 
 class TransferHistoryRepositoryAdapter:
@@ -19,7 +23,7 @@ class TransferHistoryRepositoryAdapter:
     def is_exists(self, source_path: str, source_filename: str, dest_path: str, dest_filename: str) -> bool:
         return self._repo.is_transfer_history_exists(source_path, source_filename, dest_path, dest_filename)
 
-    def insert(self, in_from, rmt_mode, in_path, out_path, dest, media_info) -> None:
+    def insert(self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: object) -> None:
         self._repo.insert_transfer_history(in_from, rmt_mode, in_path, out_path, dest, media_info)
 
     def get_page(self, search: str | None, page: int, rownum: int) -> tuple[int, list[TransferHistoryEntity]]:
@@ -55,71 +59,53 @@ class TransferHistoryRepositoryAdapter:
         self._repo.insert_sync_history(path, src, dest)
 
     # 兼容旧Repository方法名
-    def get_transfer_info_by(self, tmdbid, season=None, season_episode=None):
+    def get_transfer_info_by(self, tmdbid: int | None, season: str | None = None, season_episode: str | None = None) -> list[TRANSFERHISTORY] | None:
         return self._repo.get_transfer_info_by(tmdbid, season, season_episode)
 
     # 兼容旧Repository方法名
-    def get_transfer_info_by_id(self, logid):
-        return self._repo.get_transfer_info_by_id(logid)
+    def get_transfer_info_by_id(self, logid: int | None) -> TRANSFERHISTORY | None:
 
-    # 兼容旧Repository方法名
-    def get_transfer_history(self, search, page, rownum):
-        return self._repo.get_transfer_history(search, page, rownum)
+    def get_transfer_history(self, search: str | None, page: int, rownum: int) -> tuple[int, list[TRANSFERHISTORY]]:
 
-    # 兼容旧Repository方法名
-    def delete_transfer_log_by_id(self, logid):
+    def delete_transfer_log_by_id(self, logid: int) -> None:
         self._repo.delete_transfer_log_by_id(logid)
 
     # 兼容旧Repository方法名
-    def delete_transfer(self):
+    def delete_transfer(self) -> None:
         self._repo.delete_transfer()
 
     # 兼容旧Repository方法名
-    def get_transfer_statistics(self, days=30):
-        return self._repo.get_transfer_statistics(days)
+    def get_transfer_statistics(self, days: int = 30) -> list[tuple]:
 
-    # 兼容旧Repository方法名 - 委托给Unknown子适配器
-    def delete_transfer_unknown(self, tid):
-        self._repo.delete_transfer_unknown(tid)
+    def delete_transfer_unknown(self, tid: int | None) -> None:
 
-    # 兼容旧Repository方法名 - 委托给Unknown子适配器
-    def get_unknown_info_by_id(self, tid):
-        return self._repo.get_unknown_info_by_id(tid)
+    def get_unknown_info_by_id(self, tid: int | None) -> TRANSFERUNKNOWN | None:
 
-    # 兼容旧Repository方法名 - 委托给Unknown子适配器
-    def update_transfer_unknown_state(self, path):
+    def update_transfer_unknown_state(self, path: str) -> None:
         self._repo.update_transfer_unknown_state(path)
 
     # 兼容旧Repository方法名 - 委托给Unknown子适配器
-    def get_transfer_unknown_paths(self):
+    def get_transfer_unknown_paths(self) -> list[TRANSFERUNKNOWN]:
         return self._repo.get_transfer_unknown_paths()
 
     # 兼容旧Repository方法名 - 委托给Unknown子适配器
-    def get_transfer_unknown_paths_by_page(self, search, page, rownum):
-        return self._repo.get_transfer_unknown_paths_by_page(search, page, rownum)
+    def get_transfer_unknown_paths_by_page(self, search: str | None, page: int, rownum: int) -> tuple[int, list[TRANSFERUNKNOWN]]:
 
-    # 兼容旧Repository方法名 - 委托给Blacklist子适配器
-    def delete_transfer_blacklist(self, path):
+    def delete_transfer_blacklist(self, path: str) -> None:
         self._repo.delete_transfer_blacklist(path)
 
     # 兼容旧Repository方法名 - 委托给Blacklist子适配器
-    def truncate_transfer_blacklist(self):
+    def truncate_transfer_blacklist(self) -> None:
         self._repo.truncate_transfer_blacklist()
 
     # 兼容旧Repository方法名
-    def is_transfer_notin_blacklist(self, path):
-        return self._repo.is_transfer_notin_blacklist(path)
+    def is_transfer_notin_blacklist(self, path: str) -> bool:
 
-    # 兼容旧Repository方法名
-    def is_need_insert_transfer_unknown(self, path):
-        return self._repo.is_need_insert_transfer_unknown(path)
+    def is_need_insert_transfer_unknown(self, path: str) -> bool:
 
-    # 兼容旧Repository方法名
-    def insert_transfer_unknown(self, path, dest, rmt_mode):
-        self._repo.insert_transfer_unknown(path, dest, rmt_mode)
+    def insert_transfer_unknown(self, path: str, dest: str, rmt_mode: RmtMode) -> None:
 
-    # 兼容旧Repository方法名
-    def insert_transfer_history(self, in_from, rmt_mode, in_path, out_path, dest, media_info):
+    def insert_transfer_history(self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: object) -> None:
         self._repo.insert_transfer_history(in_from, rmt_mode, in_path, out_path, dest, media_info)
 
 
