@@ -346,7 +346,7 @@ class TestRssSubscriptionService:
         )
 
     def test_remove_rss_media_tv(self, svc):
-        with patch("app.services.rss_service.MetaInfo") as MockMeta:
+        with patch("app.services.rss_service.meta_info") as MockMeta:
             MockMeta.return_value.get_name.return_value = "Test Tv"
             svc.remove_rss_media("Test TV", "TV", "2024", 1, "1", "123")
             svc._subscribe.delete_subscribe.assert_called_once_with(

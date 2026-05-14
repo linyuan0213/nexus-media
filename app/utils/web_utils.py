@@ -2,7 +2,7 @@ from functools import lru_cache
 
 import cn2an
 
-from app.media import Bangumi, DouBan, MediaService, MetaInfo
+from app.media import Bangumi, DouBan, MediaService, meta_info
 from app.utils import ExceptionUtils, IpUtils, RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
 from app.utils.types import MediaType
@@ -103,7 +103,7 @@ class WebUtils:
                 )
             # TMDB匹配失败时，使用豆瓣信息构造基础媒体信息，避免退化为不识别模式
             if not media_info or not media_info.tmdb_info:
-                media_info = MetaInfo(title=title)
+                media_info = meta_info(title=title)
                 media_info.title = title
                 media_info.cn_name = title
                 media_info.original_title = original_title or title
@@ -142,7 +142,7 @@ class WebUtils:
             info = MediaService().get_tmdb_info(tmdbid=mediaid, mtype=mtype, append_to_response="all")
             if not info:
                 return None
-            media_info = MetaInfo(title=info.get("title") if mtype == MediaType.MOVIE else info.get("name"))
+            media_info = meta_info(title=info.get("title") if mtype == MediaType.MOVIE else info.get("name"))
             media_info.set_tmdb_info(info)
 
         return media_info
@@ -161,13 +161,13 @@ class WebUtils:
         mtype, key_word, season_num, episode_num, _, content = StringUtils.get_keyword_from_string(keyword)
 
         def _search_tmdb():
-            meta_info = MetaInfo(title=content)
+            meta_info = meta_info(title=content)
             tmdbinfos = MediaService().get_tmdb_infos(
                 title=meta_info.get_name(), year=meta_info.year, mtype=mtype, page=page
             )
             results = []
             for tmdbinfo in tmdbinfos:
-                tmp_info = MetaInfo(title=keyword)
+                tmp_info = meta_info(title=keyword)
                 tmp_info.set_tmdb_info(tmdbinfo)
                 if meta_info.type != MediaType.MOVIE and tmp_info.type == MediaType.MOVIE:
                     continue

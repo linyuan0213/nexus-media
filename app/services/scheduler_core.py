@@ -208,22 +208,22 @@ class SchedulerCore(metaclass=SingletonMeta):
         self._running = False
 
     @property
-    def SCHEDULER(self) -> BackgroundScheduler | None:
+    def SCHEDULER(self) -> BackgroundScheduler | None:  # noqa: N802
         """向后兼容：获取调度器实例"""
         return self._scheduler
 
     @SCHEDULER.setter
-    def SCHEDULER(self, value: BackgroundScheduler | None) -> None:
+    def SCHEDULER(self, value: BackgroundScheduler | None) -> None:  # noqa: N802
         """向后兼容：设置调度器实例"""
         self._scheduler = value
 
     @property
-    def INSTANCE(self) -> str:
+    def INSTANCE(self) -> str:  # noqa: N802
         """向后兼容：获取实例 ID"""
         return self._instance_id
 
     @INSTANCE.setter
-    def INSTANCE(self, value: str) -> None:
+    def INSTANCE(self, value: str) -> None:  # noqa: N802
         """向后兼容：设置实例 ID"""
         self._instance_id = value
 

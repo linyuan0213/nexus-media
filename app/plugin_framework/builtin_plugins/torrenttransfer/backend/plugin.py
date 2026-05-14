@@ -11,7 +11,7 @@ from threading import Event
 import pytz
 from bencode import bdecode, bencode
 
-from app.media import MetaInfo
+from app.media import meta_info
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import TorrentStatus
 from app.services.downloader_core import DownloaderCore as Downloader
@@ -245,7 +245,7 @@ class TorrentTransferPlugin:
 
             # 发送到另一个下载器中下载
             _, download_id, retmsg = self._downloader.download(
-                media_info=MetaInfo("自动转移做种"),
+                media_info=meta_info("自动转移做种"),
                 torrent_file=torrent_file,
                 is_paused=True,
                 tag=deepcopy(self._torrent_tags),

@@ -255,7 +255,7 @@ class TorrentSpider(feapder.AirSpider):
                 response = feapder.Response.from_text(text=html_text, url="", cookies={}, headers={})
         return request, response
 
-    def Gettitle_default(self, torrent):
+    def get_title_default(self, torrent):
         # title default
         if "title" not in self.fields:
             return
@@ -288,7 +288,7 @@ class TorrentSpider(feapder.AirSpider):
             self.torrents_info["title"] = Template(selector.get("text")).render(fields=render_dict)
         self.torrents_info["title"] = self.__filter_text(self.torrents_info.get("title"), selector.get("filters"))
 
-    def Gettitle_optional(self, torrent):
+    def get_title_optional(self, torrent):
         # title optional
         if "description" not in self.fields:
             return
@@ -339,7 +339,7 @@ class TorrentSpider(feapder.AirSpider):
             self.torrents_info.get("description"), selector.get("filters")
         )
 
-    def Getdetails(self, torrent):
+    def get_details(self, torrent):
         # details
         if "details" not in self.fields:
             return
@@ -360,7 +360,7 @@ class TorrentSpider(feapder.AirSpider):
             else:
                 self.torrents_info["page_url"] = detail_link
 
-    def Getdownload(self, torrent):
+    def get_download(self, torrent):
         # download link
         if "download" not in self.fields:
             return
@@ -379,7 +379,7 @@ class TorrentSpider(feapder.AirSpider):
             else:
                 self.torrents_info["enclosure"] = download_link
 
-    def Getimdbid(self, torrent):
+    def get_imdb_id(self, torrent):
         # imdbid
         if "imdbid" not in self.fields:
             return
@@ -391,7 +391,7 @@ class TorrentSpider(feapder.AirSpider):
         self.torrents_info["imdbid"] = item
         self.torrents_info["imdbid"] = self.__filter_text(self.torrents_info.get("imdbid"), selector.get("filters"))
 
-    def Getsize(self, torrent):
+    def get_size(self, torrent):
         # torrent size
         if "size" not in self.fields:
             return
@@ -405,7 +405,7 @@ class TorrentSpider(feapder.AirSpider):
             self.torrents_info["size"] = self.__filter_text(self.torrents_info.get("size"), selector.get("filters"))
             self.torrents_info["size"] = StringUtils.num_filesize(self.torrents_info.get("size"))
 
-    def Getleechers(self, torrent):
+    def get_leechers(self, torrent):
         # torrent leechers
         if "leechers" not in self.fields:
             return
@@ -420,7 +420,7 @@ class TorrentSpider(feapder.AirSpider):
         else:
             self.torrents_info["peers"] = 0
 
-    def Getseeders(self, torrent):
+    def get_seeders(self, torrent):
         # torrent leechers
         if "seeders" not in self.fields:
             return
@@ -437,7 +437,7 @@ class TorrentSpider(feapder.AirSpider):
         else:
             self.torrents_info["seeders"] = 0
 
-    def Getgrabs(self, torrent):
+    def get_grabs(self, torrent):
         # torrent grabs
         if "grabs" not in self.fields:
             return
@@ -452,7 +452,7 @@ class TorrentSpider(feapder.AirSpider):
         else:
             self.torrents_info["grabs"] = 0
 
-    def Getpubdate(self, torrent):
+    def get_pub_date(self, torrent):
         # torrent pubdate
         if "date_added" not in self.fields:
             return
@@ -463,7 +463,7 @@ class TorrentSpider(feapder.AirSpider):
         self.torrents_info["pubdate"] = self.__index(items, selector)
         self.torrents_info["pubdate"] = self.__filter_text(self.torrents_info.get("pubdate"), selector.get("filters"))
 
-    def Getelapsed_date(self, torrent):
+    def get_elapsed_date(self, torrent):
         # torrent pubdate
         if "date_elapsed" not in self.fields:
             return
@@ -476,7 +476,7 @@ class TorrentSpider(feapder.AirSpider):
             self.torrents_info.get("date_elapsed"), selector.get("filters")
         )
 
-    def Getdownloadvolumefactor(self, torrent):
+    def get_download_volume_factor(self, torrent):
         # downloadvolumefactor
         selector = self.fields.get("downloadvolumefactor", {})
         if not selector:
@@ -500,7 +500,7 @@ class TorrentSpider(feapder.AirSpider):
                 if downloadvolumefactor:
                     self.torrents_info["downloadvolumefactor"] = int(downloadvolumefactor.group(1))
 
-    def Getuploadvolumefactor(self, torrent):
+    def get_upload_volume_factor(self, torrent):
         # uploadvolumefactor
         selector = self.fields.get("uploadvolumefactor", {})
         if not selector:
@@ -522,7 +522,7 @@ class TorrentSpider(feapder.AirSpider):
                 if uploadvolumefactor:
                     self.torrents_info["uploadvolumefactor"] = int(uploadvolumefactor.group(1))
 
-    def Getlabels(self, torrent):
+    def get_labels(self, torrent):
         # labels
         if "labels" not in self.fields:
             return
@@ -538,26 +538,26 @@ class TorrentSpider(feapder.AirSpider):
         if items:
             self.torrents_info["labels"] = "|".join(items)
 
-    def Getinfo(self, torrent):
+    def get_info(self, torrent):
         """
         解析单条种子数据
         """
         self.torrents_info = {"indexer": self.indexerid}
         try:
-            self.Gettitle_default(torrent)
-            self.Gettitle_optional(torrent)
-            self.Getdetails(torrent)
-            self.Getdownload(torrent)
-            self.Getgrabs(torrent)
-            self.Getleechers(torrent)
-            self.Getseeders(torrent)
-            self.Getsize(torrent)
-            self.Getimdbid(torrent)
-            self.Getdownloadvolumefactor(torrent)
-            self.Getuploadvolumefactor(torrent)
-            self.Getpubdate(torrent)
-            self.Getelapsed_date(torrent)
-            self.Getlabels(torrent)
+            self.get_title_default(torrent)
+            self.get_title_optional(torrent)
+            self.get_details(torrent)
+            self.get_download(torrent)
+            self.get_grabs(torrent)
+            self.get_leechers(torrent)
+            self.get_seeders(torrent)
+            self.get_size(torrent)
+            self.get_imdb_id(torrent)
+            self.get_download_volume_factor(torrent)
+            self.get_upload_volume_factor(torrent)
+            self.get_pub_date(torrent)
+            self.get_elapsed_date(torrent)
+            self.get_labels(torrent)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             log.error(f"【Spider】{self.indexername} 搜索出现错误：{str(err)}")
@@ -657,7 +657,7 @@ class TorrentSpider(feapder.AirSpider):
                 torrents_selector = torrents_selector.replace("> tr:has", " > tbody > tr:has")
             # 遍历种子html列表
             for torn in html_doc(torrents_selector):
-                self.torrents_info_array.append(copy.deepcopy(self.Getinfo(PyQuery(torn))))
+                self.torrents_info_array.append(copy.deepcopy(self.get_info(PyQuery(torn))))
                 if len(self.torrents_info_array) >= int(self.result_num):
                     break
 

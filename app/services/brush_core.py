@@ -20,7 +20,7 @@ from app.db.repositories import BrushRepository
 from app.db.repositories.brush_repo_adapter import BrushTaskRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.helper import RssHelper
-from app.media import MetaInfo
+from app.media import meta_info
 from app.message import Message
 from app.schemas.download import TorrentStatus
 from app.services.downloader_core import DownloaderCore as Downloader
@@ -766,7 +766,7 @@ class BrushTaskService:
         if not transfer:
             tag = tag + ["已整理"] + hr_tag if tag else ["已整理"] + hr_tag
 
-        meta_info = MetaInfo(title=title)
+        meta_info = meta_info(title=title)
         meta_info.set_torrent_info(site=site_info.get("name"), enclosure=enclosure, size=size)
         _, download_id, retmsg = self._downloader.download(
             media_info=meta_info,

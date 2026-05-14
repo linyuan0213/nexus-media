@@ -17,7 +17,7 @@ from app.helper import FfmpegHelper
 from app.helper.image_proxy_helper import ImageProxyHelper
 from app.media.external import DouBan
 from app.media.factory import get_media_service
-from app.media.parser._metainfo import MetaInfo
+from app.media.parser._metainfo import meta_info
 from app.utils import ExceptionUtils
 from app.utils.temp_manager import temp_manager
 from app.utils.types import MediaType, SystemConfigKey
@@ -61,7 +61,7 @@ class Scraper:
             if not file:
                 continue
             log.info(f"【Scraper】开始刮削媒体库文件：{file} ...")
-            meta_info = MetaInfo(os.path.basename(file))
+            meta_info = meta_info(os.path.basename(file))
             tmdbid = self._extract_tmdbid(file, meta_info)
             if tmdbid and not force_nfo:
                 log.info(f"【Scraper】读取到本地nfo文件的tmdbid：{tmdbid}")

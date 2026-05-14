@@ -140,4 +140,5 @@ line-ending = "auto"
 "tests/**" = ["ARG", "S"]
 "**/__init__.py" = ["F401"]
 "**/_autosignin/52pt.py" = ["N999"]
-"**/WXBizMsgCrypt3.py" = ["N999"]
+"**/WXBizMsgCrypt3.py" = ["N802", "N999"]
+"**/_pyaria2.py" = ["N802"]

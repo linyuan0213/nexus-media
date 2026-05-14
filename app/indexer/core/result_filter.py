@@ -2,7 +2,7 @@
 结果过滤器
 
 提供搜索结果的两阶段过滤：
-1. local_filter：基于 MetaInfo 的本地轻量级过滤（无 TMDB 依赖）
+1. local_filter：基于 meta_info 的本地轻量级过滤（无 TMDB 依赖）
 2. match_filter：基于 TMDB 识别结果的匹配过滤
 
 不依赖服务层，规则数据通过仓库层直接查询。
@@ -12,7 +12,7 @@ import log
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
 from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.indexer.core.models import FilterStats, SearchCandidate
-from app.media import MediaService, MetaInfo
+from app.media import MediaService, meta_info
 from app.utils import StringUtils
 from app.utils.types import MediaType
 
@@ -190,7 +190,7 @@ class ResultFilter:
                 stats.index_rule_fail += 1
                 continue
 
-            meta_info = MetaInfo(title=torrent_name, subtitle=f"{labels} {description}")
+            meta_info = meta_info(title=torrent_name, subtitle=f"{labels} {description}")
             if not meta_info.get_name():
                 log.info(f"【ResultFilter】{torrent_name} 无法识别到名称")
                 stats.index_match_fail += 1

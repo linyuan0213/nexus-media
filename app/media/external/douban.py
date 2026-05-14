@@ -7,7 +7,7 @@ import zhconv
 
 import log
 from app.infrastructure.external.doubanapi import DoubanApi, DoubanWeb
-from app.media.parser._metainfo import MetaInfo
+from app.media.parser._metainfo import meta_info
 from app.utils import ExceptionUtils, RequestUtils, StringUtils
 from app.utils.commons import SingletonMeta
 from app.utils.types import MediaType
@@ -82,7 +82,7 @@ class DouBan(metaclass=SingletonMeta):
             if not search_res:
                 return None
             for res in search_res:
-                douban_meta = MetaInfo(title=res.get("target", {}).get("title"))
+                douban_meta = meta_info(title=res.get("target", {}).get("title"))
                 if metainfo.title == douban_meta.get_name() and (
                     int(res.get("target", {}).get("year")) in year_range or not year_range
                 ):
@@ -93,7 +93,7 @@ class DouBan(metaclass=SingletonMeta):
             if not search_res:
                 return None
             for res in search_res:
-                douban_meta = MetaInfo(title=res.get("target", {}).get("title"))
+                douban_meta = meta_info(title=res.get("target", {}).get("title"))
                 if metainfo.title == douban_meta.get_name() and (
                     str(res.get("target", {}).get("year")) == str(metainfo.year) or not metainfo.year
                 ):
@@ -194,7 +194,7 @@ class DouBan(metaclass=SingletonMeta):
             if item_obj.get("type_name") not in (MediaType.TV.value, MediaType.MOVIE.value):
                 continue
             item = item_obj.get("target")
-            meta_info = MetaInfo(title=item.get("title"))
+            meta_info = meta_info(title=item.get("title"))
             meta_info.title = item.get("title")
             if item_obj.get("type_name") == MediaType.MOVIE.value:
                 meta_info.type = MediaType.MOVIE
@@ -238,7 +238,7 @@ class DouBan(metaclass=SingletonMeta):
             title = web_info.get("title")
             if title:
                 title = title
-                metainfo = MetaInfo(title=title)
+                metainfo = meta_info(title=title)
                 if metainfo.cn_name:
                     title = metainfo.cn_name
                     # 有中文的去掉日文和韩文
