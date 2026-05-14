@@ -11,8 +11,6 @@ import json as _json
 import time
 from threading import Lock
 
-_STATS_LOCK = Lock()
-
 import log
 from app.core.system_config import SystemConfig
 from app.db.repositories import DownloadRepository
@@ -27,6 +25,8 @@ from app.utils import StringUtils
 from app.utils.config_tools import get_ua
 from app.utils.types import IndexerType, ProgressKey, SearchType, SystemConfigKey
 from config import Config
+
+_STATS_LOCK = Lock()
 
 
 class BuiltinIndexer(_IIndexClient):

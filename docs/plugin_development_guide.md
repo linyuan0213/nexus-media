@@ -142,7 +142,7 @@ my_plugin/
 ### 最小插件类
 
 ```python
-# -*- coding: utf-8 -*-
+
 """
 MyPlugin - 插件后端
 """
@@ -584,7 +584,7 @@ zip -r ../my_plugin-v1.0.0.zip .
 ### 后端：backend/plugin.py
 
 ```python
-# -*- coding: utf-8 -*-
+
 """
 示例插件后端
 """

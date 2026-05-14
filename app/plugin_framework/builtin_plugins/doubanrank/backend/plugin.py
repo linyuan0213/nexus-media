@@ -1,10 +1,10 @@
-import os
 
-# -*- coding: utf-8 -*-
 """
 DoubanRank Plugin v2
 监控豆瓣热门榜单，自动添加订阅
 """
+import json
+import os
 import re
 import xml.dom.minidom
 from datetime import datetime, timedelta
@@ -97,16 +97,12 @@ class DoubanRankPlugin:
         content = self.ctx.read_data("history.json")
         if content:
             try:
-                import json
-
                 return json.loads(content)
             except Exception:
                 pass
         return {}
 
     def _save_history(self, data):
-        import json
-
         self.ctx.write_data("history.json", json.dumps(data, ensure_ascii=False, indent=2))
 
     def _update_history(self, media, state):

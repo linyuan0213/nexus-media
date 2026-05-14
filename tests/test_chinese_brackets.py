@@ -1,16 +1,15 @@
 """Debug Chinese brackets title"""
 
+import os
 import sys
 from unittest.mock import MagicMock
 
-sys.modules["log"] = MagicMock()
-
-import os
-
-os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
-
 from app.media.parser.video import parse_video_title
 from app.utils.tokens import Tokens
+
+sys.modules["log"] = MagicMock()
+
+os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 title = "【关于我转生变成史莱姆这档事 Tensei Shitara Slime Datta Ken 】【12】【GB】【1080P】"
 

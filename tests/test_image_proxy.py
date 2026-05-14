@@ -9,6 +9,12 @@ import urllib.parse
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
+from flask import Flask
+
+from web.backend.image_proxy import (
+    _get_cache_path,
+    img_blueprint,
+)
 
 # 提前注入 mock，避免加载真实配置
 mock_config = MagicMock()
@@ -35,13 +41,6 @@ sys.modules["web.security"] = mock_security
 
 # 确保项目根目录在 path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from flask import Flask
-
-from web.backend.image_proxy import (
-    _get_cache_path,
-    img_blueprint,
-)
 
 
 def _load_get_nt_image_url():

@@ -1,11 +1,10 @@
-import os
 
-# -*- coding: utf-8 -*-
 """
 WeworkIPChange Plugin v2
 定时获取动态IP更新到企业微信可信任IP列表
 """
 import contextlib
+import os
 import random
 import re
 import time

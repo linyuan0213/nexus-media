@@ -2,19 +2,18 @@
 完整真实场景测试：Re:Zero 第四季集数映射（修复 Parser 后）
 """
 
+import os
 import sys
 from unittest.mock import MagicMock
-
-sys.modules["log"] = MagicMock()
-
-import os
-
-os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 from app.media.lookup.tmdb_lookup import TmdbLookup
 from app.media.models import MediaInfo
 from app.media.parser.episode_mapper import EpisodeMapper
 from app.media.parser.regex import RegexParser
+
+sys.modules["log"] = MagicMock()
+
+os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 
 def test_rezero_full_scenario():
