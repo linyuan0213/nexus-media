@@ -103,7 +103,7 @@ class HookSystem(metaclass=SingletonMeta):
         except Exception as e:
             log.error(f"[HookSystem] 删除插件钩子订阅失败: {e}")
 
-    def emit(self, event: str, data: dict = None) -> None:
+    def emit(self, event: str, data: dict | None = None) -> None:
         """触发事件"""
         if event not in self._handlers:
             return
@@ -115,25 +115,25 @@ class HookSystem(metaclass=SingletonMeta):
         log.debug(f"[HookSystem] 触发事件: {event}, 订阅数: {len(handlers)}")
         for h in handlers:
             plugin_id = h.get("plugin_id")
+            if not plugin_id:
+                continue
             try:
                 from app.plugin_framework.sandbox import PluginSandbox
 
                 sandbox = PluginSandbox()
-                sandbox.call_hook(plugin_id, event, data or {})
+                sandbox.call_hook(str(plugin_id), event, data or {})
             except Exception as e:
                 log.error(f"[HookSystem] 插件 {plugin_id} 处理事件 {event} 失败: {e}")
 
-    def list_subscriptions(self, plugin_id: str = None) -> list[dict]:
+    def list_subscriptions(self, plugin_id: str | None = None) -> list[dict]:
         """列出钩子订阅"""
         result = []
         for event, handlers in self._handlers.items():
             for h in handlers:
                 if plugin_id and h.get("plugin_id") != plugin_id:
                     continue
-                result.append(
-                    {
-                        "event": event,
-                        "plugin_id": h.get("plugin_id"),
-                    }
-                )
+                result.append({
+                    "event": event,
+                    "plugin_id": h.get("plugin_id"),
+                })
         return result

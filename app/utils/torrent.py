@@ -126,7 +126,7 @@ class Torrent:
             # 读取种子文件名
             file_name = self.__get_url_torrent_filename(req, url)
             # 种子文件路径
-            file_path = os.path.join(self._torrent_temp_path, file_name)
+            file_path = os.path.join(self._torrent_temp_path or "", file_name)
             # 种子内容
             file_content = req.content if req else None
             if not file_content:

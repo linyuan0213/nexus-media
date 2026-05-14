@@ -31,7 +31,7 @@ class SearchPipeline:
         self.progress = progress or ProgressHelper()
 
     def process(
-        self, all_results, filter_args, match_media=None, in_from: SearchType = None, progress_key=ProgressKey.Search
+        self, all_results, filter_args, match_media=None, in_from: SearchType | None = None, progress_key=ProgressKey.Search
     ):
         """
         执行三阶段全局批量搜索过滤流水线

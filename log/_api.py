@@ -21,22 +21,22 @@ def _caller_depth() -> int:
 
 def debug(text: str, module: str | None = None) -> None:
     LOG_BUFFER.append("DEBUG", text)
-    get_logger_instance(module).log.opt(depth=_caller_depth()).debug(text)
+    get_logger_instance(module or "root").log.opt(depth=_caller_depth()).debug(text)
 
 
 def info(text: str, module: str | None = None) -> None:
     LOG_BUFFER.append("INFO", text)
-    get_logger_instance(module).log.opt(depth=_caller_depth()).info(text)
+    get_logger_instance(module or "root").log.opt(depth=_caller_depth()).info(text)
 
 
 def error(text: str, module: str | None = None) -> None:
     LOG_BUFFER.append("ERROR", text)
-    get_logger_instance(module).log.opt(depth=_caller_depth()).error(text)
+    get_logger_instance(module or "root").log.opt(depth=_caller_depth()).error(text)
 
 
 def warn(text: str, module: str | None = None) -> None:
     LOG_BUFFER.append("WARN", text)
-    get_logger_instance(module).log.opt(depth=_caller_depth()).warning(text)
+    get_logger_instance(module or "root").log.opt(depth=_caller_depth()).warning(text)
 
 
 def console(text: str) -> None:

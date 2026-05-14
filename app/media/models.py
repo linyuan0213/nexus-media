@@ -321,7 +321,7 @@ class MediaInfo(BaseModel):
 
     def is_in_season(self, season) -> bool:
         if self.end_season is not None:
-            meta_season = list(range(self.begin_season, self.end_season + 1))
+            meta_season = list(range(self.begin_season or 1, self.end_season + 1))
         else:
             meta_season = [self.begin_season] if self.begin_season is not None else [1]
         if isinstance(season, list):
@@ -334,7 +334,7 @@ class MediaInfo(BaseModel):
 
     def is_in_episode(self, episode) -> bool:
         if self.end_episode is not None:
-            meta_episode = list(range(self.begin_episode, self.end_episode + 1))
+            meta_episode = list(range(self.begin_episode or 1, self.end_episode + 1))
         else:
             meta_episode = [self.begin_episode] if self.begin_episode is not None else []
         if isinstance(episode, list):

@@ -8,7 +8,7 @@ from app.core.constants import SPLIT_CHARS
 class EpisodeFormat:
     _key = ""
 
-    def __init__(self, eformat, details: str = None, part: str = None, offset=None, key="ep"):
+    def __init__(self, eformat, details: str | None = None, part: str | None = None, offset=None, key="ep"):
         self._format = eformat
         self._start_ep = None
         self._end_ep = None

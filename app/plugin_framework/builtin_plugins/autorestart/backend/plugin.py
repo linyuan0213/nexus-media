@@ -53,7 +53,7 @@ class AutoRestartPlugin:
 
         if onlyonce:
             self.ctx.info("重启服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ"))) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "UTC")) + timedelta(seconds=3)
             self.ctx.schedule_date("restart_once", self._do_restart, run_date=run_date)
             # 关闭一次性开关并保存
             self.ctx.set_config("onlyonce", False)

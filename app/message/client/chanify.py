@@ -35,7 +35,7 @@ class Chanify(_IMessageClient):
             ExceptionUtils.exception_traceback(msg_e)
             return False, str(msg_e)
 
-    def send_list_msg(self, medias: list = None, user_id="", title="", **kwargs):
+    def send_list_msg(self, medias: list | None = None, user_id="", title="", **kwargs):
         pass
 
 

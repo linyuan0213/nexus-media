@@ -173,7 +173,7 @@ def remove_rss_media(
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     svc.remove_rss_media(
-        name=req.name or "", mtype=req.type or "", year=req.year or "", season=req.season, rssid=req.rssid, tmdbid=req.tmdbid
+        name=req.name or "", mtype=req.type or "", year=req.year or "", season=int(req.season) if req.season else None, rssid=req.rssid, tmdbid=req.tmdbid
     )
     return success(data=req.page)
 

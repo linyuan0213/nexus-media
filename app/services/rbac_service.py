@@ -54,7 +54,7 @@ class RBACService:
         if not user:
             # 记录登录失败日志（用户不存在时 user_id 为 None）
             self.log_repo.add_login_log(
-                user_id=None,
+                user_id=0,
                 username=username,
                 login_ip=login_ip,
                 user_agent=user_agent,

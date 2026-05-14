@@ -167,12 +167,12 @@ class FnOS(_IMediaClient):
         if not self._fnos:
             return []
         if not item_id:
-            items = self._fnos.search(title=title, year=year, libtype="TV")
+            items = self._fnos.search(title=title or "", year=year or "", libtype="TV")
             if not items:
                 return []
             item_id = items[0].get("guid")
 
-        season_list = self._fnos.get_session_list(item_id)
+        season_list = self._fnos.get_session_list(str(item_id or ""))
 
         ret_tvs = []
         for season_dict in season_list:

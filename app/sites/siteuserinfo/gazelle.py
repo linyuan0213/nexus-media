@@ -25,7 +25,7 @@ def parse(ins: ConfigHtmlUserInfo) -> None:
 
     tmps = html.xpath('//a[contains(@href, "user.php?id=")]')
     if tmps:
-        m = re.search(r"user.php\?id=(\d+)", tmps[0].attrib["href"])
+        m = re.search(r"user.php\?id=(\d+)", str(tmps[0].attrib.get("href", "")))
         if m:
             uid = m.group(1)
             if uid and uid.strip():
@@ -52,14 +52,14 @@ def parse(ins: ConfigHtmlUserInfo) -> None:
 
     tmps = html.xpath('//a[contains(@href, "bonus.php")]/@data-tooltip')
     if tmps:
-        bm = re.search(r"([\d,.]+)", tmps[0])
+        bm = re.search(r"([\d,.]+)", str(tmps[0]))
         if bm and bm.group(1).strip():
             ins.bonus = StringUtils.str_float(bm.group(1))
     else:
         tmps = html.xpath('//a[contains(@href, "bonus.php")]')
         if tmps:
             bt = tmps[0].xpath("string(.)")
-            bm = re.search(r"([\d,.]+)", bt)
+            bm = re.search(r"([\d,.]+)", str(bt))
             if bm and bm.group(1).strip():
                 ins.bonus = StringUtils.str_float(bm.group(1))
 
@@ -69,7 +69,7 @@ def parse(ins: ConfigHtmlUserInfo) -> None:
     else:
         level = html.xpath('//li[contains(text(), "用户等级")]/text()')
         if level:
-            ins.user_level = level[0].split(":")[1].strip()
+            ins.user_level = str(level[0]).split(":")[1].strip()
 
     join = html.xpath('//*[@id="join-date-value"]/@data-value')
     if join:

@@ -112,7 +112,7 @@ class MediaFileService:
             if isinstance(sync_confs, dict):
                 for sp in sync_confs.values():
                     src = sp.get("from") if isinstance(sp, dict) else None
-                    item = add_path(src, "同步源目录", "sync")
+                    item = add_path(src or "", "同步源目录", "sync")
                     if item:
                         sync_source_paths.append(item)
         except Exception:

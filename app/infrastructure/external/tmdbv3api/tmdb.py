@@ -144,7 +144,7 @@ class TMDb:
                 req = self.cached_request(method, url, data, self.proxies)
             else:
                 req = self._session.request(
-                    method, url, data=data, proxies=eval(self.proxies), timeout=10, verify=False
+                    method, url, data=data, proxies=eval(self.proxies or "{}"), timeout=10, verify=False
                 )
             return req
 

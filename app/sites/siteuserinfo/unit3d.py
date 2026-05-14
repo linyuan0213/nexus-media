@@ -26,7 +26,7 @@ def parse(ins: ConfigHtmlUserInfo) -> None:
 
     tmps = html.xpath('//a[contains(@href,"/users/") and contains(@href,"settings")]/@href')
     if tmps:
-        m = re.search(r"/users/(.+)/settings", tmps[0])
+        m = re.search(r"/users/(.+)/settings", str(tmps[0]))
         if m and m.group(1).strip():
             ins.username = m.group(1)
 
@@ -37,7 +37,7 @@ def parse(ins: ConfigHtmlUserInfo) -> None:
     bonus_el = html.xpath('//a[contains(@href,"bonus/earnings")]')
     if bonus_el:
         bt = bonus_el[0].xpath("string(.)")
-        bm = re.search(r"([\d,.]+)", bt)
+        bm = re.search(r"([\d,.]+)", str(bt))
         if bm and bm.group(1).strip():
             ins.bonus = StringUtils.str_float(bm.group(1))
 
@@ -71,7 +71,7 @@ def _extract_traffic(ins: ConfigHtmlUserInfo, doc: etree._Element) -> None:
             f'|//h4[contains(text(),"{label}")]/..//span//text()'
         )
         if vals:
-            val = "".join(vals).strip()
+            val = "".join(str(v) for v in vals).strip()
             setattr(ins, attr, StringUtils.num_filesize(val) if is_size else StringUtils.str_float(val))
 
     if not ins.upload:
@@ -140,7 +140,7 @@ def _extract_seeding(ins: ConfigHtmlUserInfo, doc: etree._Element) -> None:
             f'|//h4[contains(text(),"{label}")]/..//span//text()'
         )
         if vals:
-            val = "".join(vals).strip()
+            val = "".join(str(v) for v in vals).strip()
             m = re.search(r"(\d+)", val)
             if m:
                 setattr(ins, attr, StringUtils.str_int(m.group(1)))

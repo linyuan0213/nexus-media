@@ -40,7 +40,7 @@ class PluginContext:
     def data_dir(self) -> str:
         return self._data_dir
 
-    def get_config(self, key: str = None, default: Any = None) -> Any:
+    def get_config(self, key: str | None = None, default: Any = None) -> Any:
         """获取配置"""
         entity = self._config_repo.get(self._plugin_id)
         if not entity:
@@ -109,7 +109,7 @@ class PluginContext:
 
     debug = log_debug
 
-    def notify(self, title: str, text: str = None, image: str = None) -> None:
+    def notify(self, title: str, text: str | None = None, image: str | None = None) -> None:
         """发送消息通知"""
         Message().send_plugin_message(title=title, text=text, image=image)
 
@@ -167,7 +167,7 @@ class PluginContext:
         prefix = f"plugin_{self._plugin_id}_"
         return [j for j in sched.get_jobs(jobstore="plugin") if j.id.startswith(prefix)]
 
-    def emit(self, event: str, data: dict = None) -> None:
+    def emit(self, event: str, data: dict | None = None) -> None:
         """触发全局事件"""
         from app.plugin_framework.hook_system import HookSystem
 

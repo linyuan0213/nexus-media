@@ -14,11 +14,11 @@ from app.utils.types import RmtMode
 class ImageDownloader:
     """图片下载器 — 负责从 URL 下载图片并保存到本地或远程"""
 
-    def __init__(self, temp_path: str, rmt_mode: RmtMode = None):
+    def __init__(self, temp_path: str, rmt_mode: RmtMode | None = None):
         self._temp_path = temp_path
         self._rmt_mode = rmt_mode
 
-    def set_rmt_mode(self, rmt_mode: RmtMode):
+    def set_rmt_mode(self, rmt_mode: RmtMode | None):
         self._rmt_mode = rmt_mode
 
     @retry(RequestException, logger=log)

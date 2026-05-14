@@ -39,7 +39,7 @@ class IndexerFilterEngine:
 
         # 过滤质量
         if filter_args.get("restype"):
-            restype_re = ModuleConf.TORRENT_SEARCH_PARAMS["restype"].get(filter_args.get("restype"))
+            restype_re = ModuleConf.TORRENT_SEARCH_PARAMS["restype"].get(filter_args.get("restype") or "")
             if not meta_info.get_edtion_string():
                 return False, 0, f"{meta_info.org_string} 不符合质量 {filter_args.get('restype')} 要求"
             if restype_re and not re.search(rf"{restype_re}", meta_info.get_edtion_string(), re.I):
@@ -47,7 +47,7 @@ class IndexerFilterEngine:
 
         # 过滤分辨率
         if filter_args.get("pix"):
-            pix_re = ModuleConf.TORRENT_SEARCH_PARAMS["pix"].get(filter_args.get("pix"))
+            pix_re = ModuleConf.TORRENT_SEARCH_PARAMS["pix"].get(filter_args.get("pix") or "")
             if not meta_info.resource_pix:
                 return False, 0, f"{meta_info.org_string} 不符合分辨率 {filter_args.get('pix')} 要求"
             if pix_re and not re.search(rf"{pix_re}", meta_info.resource_pix, re.I):

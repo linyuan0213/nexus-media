@@ -186,7 +186,7 @@ class PluginSandbox(metaclass=SingletonMeta):
 
         return func(*args, **kwargs)
 
-    def call_hook(self, plugin_id: str, event: str, data: dict) -> None:
+    def call_hook(self, plugin_id: str, event: str, data: dict | None = None) -> None:
         """调用插件的 hook 处理器"""
         instance = self._instances.get(plugin_id)
         if not instance:

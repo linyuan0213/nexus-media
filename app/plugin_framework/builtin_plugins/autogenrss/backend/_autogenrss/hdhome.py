@@ -44,7 +44,7 @@ class HDHome(_ISiteRssGenHandler):
             self.warn(f"未配置 {str(site)} 的Cookie或请求头，无法获取到RSS")
             return ""
         if JsonUtils.is_valid_json(headers):
-            headers = json.loads(headers)
+            headers = json.loads(headers or "{}")
         else:
             headers = {}
 

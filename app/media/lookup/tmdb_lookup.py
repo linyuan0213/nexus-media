@@ -23,12 +23,12 @@ class TmdbLookup(BaseLookup):
         self.discover = TmdbDiscover(self.client)
 
     def lookup(
-        self, parsed, hint_type: MediaType = None, strict: bool = None, language: str = None
+        self, parsed, hint_type: MediaType | None = None, strict: bool | None = None, language: str | None = None
     ) -> LookupResult | None:
         if not parsed.title_en and not parsed.title_cn:
             return None
         if language:
-            self.client.set_language(language)
+            self.client.set_language(language or "")
         search_type = hint_type or parsed.type or MediaType.UNKNOWN
 
         # 优先使用中文名搜索（中文搜索结果通常更精确，避免外传/主系列混淆）
@@ -65,7 +65,7 @@ class TmdbLookup(BaseLookup):
         return self._to_lookup_result(result)
 
     def _lookup_tmdb(
-        self, name, search_type, first_year=None, media_year=None, season_number=None, episode=None, strict: bool = None
+        self, name, search_type, first_year=None, media_year=None, season_number=None, episode=None, strict: bool | None = None
     ):
         info = None
         # 1. 按指定类型搜索
@@ -167,7 +167,7 @@ class TmdbLookup(BaseLookup):
 
     def get_tmdb_info(self, mtype, tmdbid, language=None, append_to_response=None, chinese=True):
         if language:
-            self.client.set_language(language)
+            self.client.set_language(language or "")
         result = self.detail.get_detail(tmdbid, mtype, append_to_response=append_to_response)
         if language:
             self.client.set_language()
@@ -247,7 +247,7 @@ class TmdbLookup(BaseLookup):
             return []
         if not title:
             return []
-        self.client.set_language(language)
+        self.client.set_language(language or "")
         if not mtype and not year:
             results = self.search.search_multi_infos(title)
         else:
@@ -369,7 +369,7 @@ class TmdbLookup(BaseLookup):
     def get_episode_title(self, media_info, language=None):
         if media_info.type == MediaType.MOVIE:
             return None
-        self.client.set_language(language)
+        self.client.set_language(language or "")
         if media_info.tmdb_id:
             if not media_info.begin_episode:
                 self.client.set_language()

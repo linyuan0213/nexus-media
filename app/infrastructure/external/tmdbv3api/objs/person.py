@@ -88,7 +88,7 @@ class Person(TMDb):
         :param person_id:
         :return:
         """
-        return self._get_obj(self._call(self._urls["external_ids"] % (str(person_id)), ""), None)
+        return self._get_obj(self._call(self._urls["external_ids"] % (str(person_id)), ""), "")
 
     def images(self, person_id):
         """

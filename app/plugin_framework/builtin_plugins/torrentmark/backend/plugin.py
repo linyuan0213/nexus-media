@@ -1,8 +1,8 @@
-
 """
 TorrentMark Plugin v2
 标记种子是否是PT
 """
+
 import os
 from datetime import datetime
 from threading import Event
@@ -60,7 +60,7 @@ class TorrentMarkPlugin:
 
         if onlyonce:
             self.ctx.info("标记服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ")))
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "UTC"))
             self.ctx.schedule_date("mark_once", self._do_mark, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 

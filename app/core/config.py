@@ -120,12 +120,12 @@ class Config(metaclass=_SingletonMeta):
             with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as temp_file:
                 yaml.dump(new_cfg, temp_file)
                 temp_path = temp_file.name
-            shutil.move(temp_path, self._config_path)
+            shutil.move(temp_path, self._config_path or "")
 
     @property
     def config_path(self):
         """配置目录路径"""
-        return os.path.dirname(self._config_path)
+        return os.path.dirname(self._config_path or "")
 
     @property
     def current_user(self):

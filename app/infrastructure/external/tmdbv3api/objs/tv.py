@@ -140,7 +140,7 @@ class TV(TMDb):
         :param vid:
         :return:
         """
-        return self._get_obj(self._call(self._urls["external_ids"] % (str(vid)), ""), None)
+        return self._get_obj(self._call(self._urls["external_ids"] % (str(vid)), ""), "")
 
     def keywords(self, tv_id):
         """

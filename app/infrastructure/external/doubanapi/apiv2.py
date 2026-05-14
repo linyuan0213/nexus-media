@@ -155,8 +155,8 @@ class DoubanApi(metaclass=SingletonMeta):
         if kwargs:
             params.update(kwargs)
 
-        ts = params.pop("_ts", int(datetime.strftime(datetime.now(), "%Y%m%d")))
-        params.update({"os_rom": "android", "apiKey": cls._api_key, "_ts": ts, "_sig": cls.__sign(url=req_url, ts=ts)})
+        ts = int(params.pop("_ts", int(datetime.strftime(datetime.now(), "%Y%m%d"))))
+        params.update({"os_rom": "android", "apiKey": cls._api_key, "_ts": str(ts), "_sig": cls.__sign(url=req_url, ts=ts)})
 
         headers = {"User-Agent": choice(cls._user_agents)}
         resp = RequestUtils(headers=headers, session=cls._session).get_res(url=req_url, params=params)

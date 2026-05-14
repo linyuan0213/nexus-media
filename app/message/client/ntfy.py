@@ -14,7 +14,7 @@ class Ntfy(_IMessageClient):
         self._tags = "rotating_light" if cfg.get("tags") == "" else (cfg.get("tags") or "rotating_light")
         self._tags = self._tags.split(",") if "," in self._tags else [self._tags]
         try:
-            self._priority = int(cfg.get("priority"))
+            self._priority = int(cfg.get("priority") or 0)
         except Exception:
             self._priority = 4
 
@@ -44,7 +44,7 @@ class Ntfy(_IMessageClient):
             ExceptionUtils.exception_traceback(msg_e)
             return False, str(msg_e)
 
-    def send_list_msg(self, medias: list = None, user_id="", title="", **kwargs):
+    def send_list_msg(self, medias: list | None = None, user_id="", title="", **kwargs):
         pass
 
 

@@ -472,7 +472,7 @@ class RssRepository(BaseRepository):
         return 0
 
     @DbPersist(BaseRepository._db)
-    def update_rss_tv_lack(self, title: str | None = None, year: str | None = None, season: str | None = None, rssid: int | None = None, lack_episodes: list = None) -> None:
+    def update_rss_tv_lack(self, title: str | None = None, year: str | None = None, season: str | None = None, rssid: int | None = None, lack_episodes: list | None = None) -> None:
         """
         更新电视剧缺失的集数
         """
@@ -498,7 +498,7 @@ class RssRepository(BaseRepository):
         if not title and not rssid:
             return
         if not rssid:
-            rssid = self.get_rss_tv_id(title=title, tmdbid=tmdbid, season=season)
+            rssid = self.get_rss_tv_id(title=title or "", tmdbid=tmdbid, season=season)
         if rssid:
             self.delete_rss_tv_episodes(rssid)
             self._db.query(RSSTVS).filter(int(rssid) == RSSTVS.ID).delete()

@@ -15,7 +15,7 @@ class MetaInfoTest(TestCase):
         for info in meta_cases:
             if not info.get("title"):
                 continue
-            result = meta_info(title=info.get("title"), subtitle=info.get("subtitle"))
+            result = meta_info(title=info.get("title") or "", subtitle=info.get("subtitle"))
             target = {
                 "type": result.type.value,
                 "cn_name": result.cn_name or "",

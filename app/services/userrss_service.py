@@ -18,7 +18,7 @@ class UserRssService:
 
     def check_tasks(self, taskids: list | None, flag: str) -> None:
         flag_dict = {"enable": True, "disable": False}
-        state = flag_dict.get(flag)
+        state = str(flag_dict.get(flag))
         if state is not None:
             if taskids:
                 for taskid in taskids:
@@ -60,8 +60,8 @@ class UserRssService:
             downloads.append({"title": history.TITLE, "downloader": history.DOWNLOADER, "date": history.DATE})
         return UserRssHistoryDTO(downloads=downloads, count=len(downloads))
 
-    def test_article(self, taskid: str, title: str) -> UserRssArticleTestDTO:
-        result: Any = self._checker.test_rss_articles(taskid=taskid, title=title)
+    def test_article(self, taskid: int, title: str) -> UserRssArticleTestDTO:
+        result: Any = self._checker.test_rss_articles(taskid=int(taskid) if taskid else None, title=title)
         if not result:
             return UserRssArticleTestDTO(name="无法识别")
         media_info, match_flag, exist_flag = result
@@ -128,13 +128,11 @@ class UserRssService:
         if uses == "D":
             params.update({"recognization": data.get("recognization")})
         elif uses == "R":
-            params.update(
-                {
-                    "over_edition": data.get("over_edition"),
-                    "sites": data.get("sites"),
-                    "filter_args": {"restype": data.get("restype"), "pix": data.get("pix"), "team": data.get("team")},
-                }
-            )
+            params.update({
+                "over_edition": data.get("over_edition"),
+                "sites": data.get("sites"),
+                "filter_args": {"restype": data.get("restype"), "pix": data.get("pix"), "team": data.get("team")},
+            })
         else:
             return UserRssTaskUpdateDTO(success=False)
 

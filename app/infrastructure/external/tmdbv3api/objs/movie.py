@@ -103,7 +103,7 @@ class Movie(TMDb):
         :param movie_id:
         :return:
         """
-        return self._get_obj(self._call(self._urls["external_ids"] % (str(movie_id)), ""), None)
+        return self._get_obj(self._call(self._urls["external_ids"] % (str(movie_id)), ""), "")
 
     def images(self, movie_id, include_image_language=""):
         """
@@ -246,7 +246,7 @@ class Movie(TMDb):
                 self._urls["external"] % external_id,
                 "external_source=" + external_source,
             ),
-            key=None,
+            key="",
         )
 
     def watch_providers(self, movie_id):

@@ -417,7 +417,7 @@ class Message(metaclass=SingletonMeta):
         self,
         client,
         title,
-        text="",
+        text: str | None = None,
         image: str | None = None,
         url: str | None = None,
         user_id: str = "",
@@ -1049,7 +1049,9 @@ class Message(metaclass=SingletonMeta):
                     variables=variables,
                 )
 
-    def send_plugin_message(self, title: str, text: str = "", image: str = "", url: str = "") -> None:
+    def send_plugin_message(
+        self, title: str, text: str | None = "", image: str | None = "", url: str | None = ""
+    ) -> None:
         """
         发送插件消息
         """

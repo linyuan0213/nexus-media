@@ -15,7 +15,7 @@ urllib3.disable_warnings(InsecureRequestWarning)
 
 class RequestUtils:
     _headers = None
-    _cookies = None
+    _cookies: dict | None = None
     _proxies = None
     _timeout = 20
     _session = None
@@ -50,7 +50,7 @@ class RequestUtils:
         if cookies:
             if isinstance(cookies, str):
                 self._cookies = self.cookie_parse(cookies)
-            else:
+            elif isinstance(cookies, dict):
                 self._cookies = cookies
         if proxies:
             self._proxies = proxies

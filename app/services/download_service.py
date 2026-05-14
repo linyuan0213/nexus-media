@@ -314,7 +314,7 @@ class DownloadService:
                 try:
                     DownloadHistoryRepositoryAdapter().insert_download_history(
                         media_info=media_info,
-                        downloader=default_downloader_id,
+                        downloader=str(default_downloader_id),
                         download_id=torrent.get("id"),
                         save_dir=torrent.get("save_path") or "",
                     )

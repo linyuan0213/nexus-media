@@ -23,19 +23,19 @@ class BrushTorrentRepositoryAdapter:
     def insert(
         self, task_id: str, torrent_name: str, enclosure: str, torrent_size: str, downloader: str, download_id: str
     ) -> None:
-        self._repo.insert_brushtask_torrent(task_id, torrent_name, enclosure, downloader, download_id, torrent_size)
+        self._repo.insert_brushtask_torrent(int(task_id), torrent_name, enclosure, downloader, download_id, torrent_size)
 
     def get_by_task(self, task_id: str) -> list[BrushTorrentEntity]:
-        rows = self._repo.get_brushtask_torrents(task_id)
+        rows = self._repo.get_brushtask_torrents(int(task_id))
         if not rows:
             return []
         return [e for e in [BrushTorrentEntity.from_orm(r) for r in rows] if e is not None]
 
     def delete_by_task(self, task_id: str) -> None:
-        self._repo.delete_brushtask_torrent(task_id, None)
+        self._repo.delete_brushtask_torrent(int(task_id), None)
 
     def delete_by_download_id(self, task_id: str, download_id: str) -> None:
-        self._repo.delete_brushtask_torrent(task_id, download_id)
+        self._repo.delete_brushtask_torrent(int(task_id), download_id)
 
     # 兼容 BrushTaskRepository 方法名
     def get_brushtask_torrents(self, brush_id: int, active: bool = True) -> list[SITEBRUSHTORRENTS]:

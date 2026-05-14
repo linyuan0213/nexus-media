@@ -135,7 +135,7 @@ class FilterRuleEngine:
 
         # 过滤质量
         if filter_args.get("restype"):
-            restype_re = ModuleConf.TORRENT_SEARCH_PARAMS["restype"].get(filter_args.get("restype"))
+            restype_re = ModuleConf.TORRENT_SEARCH_PARAMS["restype"].get(filter_args.get("restype") or "")
             if not meta_info.get_edtion_string():
                 return False, 0, f"{meta_info.org_string} 不符合质量 {filter_args.get('restype')} 要求"
             if restype_re and not re.search(rf"{restype_re}", meta_info.get_edtion_string(), re.I):
@@ -143,7 +143,7 @@ class FilterRuleEngine:
 
         # 过滤分辨率
         if filter_args.get("pix"):
-            pix_re = ModuleConf.TORRENT_SEARCH_PARAMS["pix"].get(filter_args.get("pix"))
+            pix_re = ModuleConf.TORRENT_SEARCH_PARAMS["pix"].get(filter_args.get("pix") or "")
             if not meta_info.resource_pix:
                 return False, 0, f"{meta_info.org_string} 不符合分辨率 {filter_args.get('pix')} 要求"
             if pix_re and not re.search(rf"{pix_re}", meta_info.resource_pix, re.I):
@@ -273,7 +273,7 @@ class FilterService:
                 "exclude": rule.EXCLUDE.split("\n") if rule.EXCLUDE else [],
                 "size": rule.SIZE_LIMIT,
                 "free": rule.NOTE,
-                "free_text": {"1.0 1.0": "普通", "1.0 0.0": "免费", "2.0 0.0": "2X免费"}.get(rule.NOTE, "全部")
+                "free_text": {"1.0 1.0": "普通", "1.0 0.0": "免费", "2.0 0.0": "2X免费"}.get(str(rule.NOTE), "全部")
                 if rule.NOTE
                 else "",
             }
@@ -307,7 +307,7 @@ class FilterService:
             rulegroup = self.get_rule_groups(groupid=rulegroup)
 
         filters = self.get_rules(groupid=rulegroup.get("id"))
-        return FilterRuleEngine.check_rules(meta_info, rulegroup, filters)
+        return FilterRuleEngine.check_rules(meta_info, rulegroup if isinstance(rulegroup, dict) else {}, filters if isinstance(filters, list) else [])
 
     def is_torrent_match_sey(self, media_info, s_num, e_num, year_str):
         """兼容方法：委托给 FilterRuleEngine"""

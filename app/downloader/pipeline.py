@@ -229,14 +229,14 @@ class DownloadPipeline:
                         cookie=cookie,
                         ua=site_info.get("ua"),
                         headers=headers,
-                        proxy=proxy if proxy is not None else site_info.get("proxy"),
+                        proxy=proxy if proxy is not None else site_info.get("proxy") or False,
                     )
                 file_path, content, dl_files_folder, dl_files, retmsg = Torrent().get_torrent_info(
                     url=url,
                     cookie=cookie,
                     ua=site_info.get("ua"),
                     referer=media_info.page_url if not site_info.get("referer") else site_info.get("referer"),
-                    proxy=proxy if proxy is not None else site_info.get("proxy"),
+                    proxy=proxy if proxy is not None else site_info.get("proxy") or False,
                 )
 
         return content, file_path, dl_files_folder, dl_files, retmsg, site_info, torrent_attr
@@ -405,7 +405,7 @@ class DownloadPipeline:
                 return
 
         DownloadHistoryRepositoryAdapter().insert_download_history(
-            media_info=media_info, downloader=downloader_id, download_id=download_id, save_dir=save_dir
+            media_info=media_info, downloader=downloader_id, download_id=download_id, save_dir=save_dir or ""
         )
 
         if page_url and subtitle_dir and site_info and site_info.get("subtitle"):

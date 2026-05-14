@@ -25,7 +25,7 @@ def parse(ins: ConfigHtmlUserInfo) -> None:
 
     user_info = html.xpath('//a[contains(@href, "&uid=")]')
     if user_info:
-        m = re.search(r"&uid=(\d+)", user_info[0].attrib["href"])
+        m = re.search(r"&uid=(\d+)", str(user_info[0].attrib.get("href", "")))
         if m:
             uid = m.group(1)
             if uid and uid.strip():
@@ -46,10 +46,10 @@ def parse(ins: ConfigHtmlUserInfo) -> None:
 
     upload = html.xpath('//li[em[contains(text(),"上传量")]]/text()')
     if upload:
-        ins.upload = StringUtils.num_filesize(upload[0].strip().split("/")[-1])
+        ins.upload = StringUtils.num_filesize(str(upload[0]).strip().split("/")[-1])
 
     download = html.xpath('//li[em[contains(text(),"下载量")]]/text()')
     if download:
-        ins.download = StringUtils.num_filesize(download[0].strip().split("/")[-1])
+        ins.download = StringUtils.num_filesize(str(download[0]).strip().split("/")[-1])
 
     ins.ratio = 0.0 if ins.download <= 0.0 else round(ins.upload / ins.download, 3)

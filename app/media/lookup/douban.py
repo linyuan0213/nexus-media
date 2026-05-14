@@ -9,7 +9,7 @@ class DoubanLookup(BaseLookup):
     def __init__(self):
         self._api = DoubanApi()
 
-    def lookup(self, parsed, hint_type: MediaType = None) -> LookupResult | None:
+    def lookup(self, parsed, hint_type: MediaType | None = None) -> LookupResult | None:
         name = parsed.title_en or parsed.title_cn
         if not name:
             return None

@@ -134,7 +134,7 @@ class CustomHostsPlugin:
                     self.ctx.info(f"已创建hosts文件备份: {system_backup}")
             except Exception:
                 try:
-                    temp_dir = "/tmp" if not SystemUtils.is_windows() else os.getenv("TEMP")
+                    temp_dir = "/tmp" if not SystemUtils.is_windows() else os.getenv("TEMP") or "/tmp"
                     temp_backup = os.path.join(temp_dir, f"hosts_backup_{int(time.time())}.bak")
                     if os.path.exists(hosts_path):
                         shutil.copy2(hosts_path, temp_backup)

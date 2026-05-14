@@ -145,7 +145,7 @@ class TransferRepository(BaseRepository):
         """
         据logid查询PATH
         """
-        return self._db.query(TRANSFERHISTORY).filter(int(logid) == TRANSFERHISTORY.ID).first()
+        return self._db.query(TRANSFERHISTORY).filter(int(logid or 0) == TRANSFERHISTORY.ID).first()
 
     def get_transfer_info_by(self, tmdbid: int | None, season: str | None = None, season_episode: str | None = None) -> list[TRANSFERHISTORY] | None:
         """
@@ -309,7 +309,7 @@ class TransferRepository(BaseRepository):
                     return False
                 else:
                     for unknown in unknowns:
-                        self.delete_transfer_unknown(unknown.ID)
+                        self.delete_transfer_unknown(int(str(unknown.ID)))
                     return True
             else:
                 return True

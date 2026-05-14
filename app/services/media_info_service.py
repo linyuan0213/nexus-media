@@ -86,9 +86,9 @@ class MediaInfoService:
         if rssid:
             rssid = str(rssid)
             if media_type == MediaType.MOVIE:
-                rssinfo = self._subscribe.get_subscribe_movies(rid=rssid)
+                rssinfo = self._subscribe.get_subscribe_movies(rid=int(rssid) if rssid else None)
             else:
-                rssinfo = self._subscribe.get_subscribe_tvs(rid=rssid)
+                rssinfo = self._subscribe.get_subscribe_tvs(rid=int(rssid) if rssid else None)
             if rssinfo:
                 overview = rssinfo[rssid].get("overview") or ""
                 poster_path = rssinfo[rssid].get("poster") or ""
@@ -129,7 +129,7 @@ class MediaInfoService:
             else:
                 release_date = media.tmdb_info.get("release_date") or ""
             if not rssid:
-                rssid = self._subscribe.get_subscribe_id(mtype=media_type, title=title, tmdbid=mediaid)
+                rssid = self._subscribe.get_subscribe_id(mtype=media_type, title=title, tmdbid=str(mediaid) if mediaid else None)
 
         if poster_path:
             poster_path = ImageProxyHelper.get_proxy_image_url(

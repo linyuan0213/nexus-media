@@ -681,7 +681,7 @@ class FileTransferService:
                     in_from=in_from,
                     rmt_mode=rmt_mode,
                     in_path=reg_path,
-                    out_path=out_path,
+                    out_path=out_path or "",
                     dest=dist_path,
                     media_info=media,
                 )
@@ -690,7 +690,7 @@ class FileTransferService:
                     self.update_transfer_unknown_state(file_item)
 
                 if media.type == MediaType.MOVIE:
-                    self.message.send_transfer_movie_message(in_from, media, exist_filenum, self._movie_category_flag)
+                    self.message.send_transfer_movie_message(in_from, media, exist_filenum, self._movie_category_flag or False)
                 else:
                     message_key = f"{media.get_title_string()}-{media.get_season_string()}"
                     if not message_medias.get(message_key):
@@ -994,7 +994,7 @@ class FileTransferService:
                                 {"media_info": media_info, "path": dest_path, "filename": dest_filename},
                             )
                     else:
-                        mi = meta_info(title=source_filename)
+                        mi = meta_info(title=str(source_filename or ""))
                         mi.title = transinfo.TITLE
                         mi.category = transinfo.CATEGORY
                         mi.year = transinfo.YEAR
@@ -1005,7 +1005,7 @@ class FileTransferService:
                         else:
                             mi.type = MediaType.TV
                         dest_path = self.get_dest_path_by_info(dest=dest, meta_info=mi)
-                        if dest_path and dest_path.find(mi.title) != -1:
+                        if dest_path and dest_path.find(mi.title or "") != -1:
                             rm_parent_dir = False
                             if not mi.get_season_list():
                                 try:

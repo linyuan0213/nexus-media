@@ -116,7 +116,7 @@ class AuthService:
             if payload.get("type") != "refresh":
                 return None
 
-            user_id = int(payload.get("sub"))
+            user_id = int(payload.get("sub") or 0)
             if not user_id:
                 return None
 

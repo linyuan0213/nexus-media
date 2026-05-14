@@ -84,10 +84,12 @@ class PtCHDBits(_ISiteSigninHandler):
         option_ids = html.xpath("//input[@name='choice[]']/@value")
         option_values = html.xpath("//input[@name='choice[]']/following-sibling::text()")
         question_str = html.xpath("//td[@class='text' and contains(text(),'请问：')]/text()")[0]
-        answers = list(zip(option_ids, option_values, strict=False))
+        ids = option_ids if isinstance(option_ids, list) else []
+        vals = option_values if isinstance(option_values, list) else []
+        answers = list(zip(ids, vals, strict=False))
 
         # 正则获取问题
-        match = re.search(r"请问：(.+)", question_str)
+        match = re.search(r"请问：(.+)", str(question_str))
         if match:
             question_str = match.group(1)
             self.debug(f"获取到签到问题 {question_str}")
@@ -121,7 +123,8 @@ class PtCHDBits(_ISiteSigninHandler):
             self.debug("查询本地已知答案失败，继续请求豆瓣查询")
 
         # 正确答案，默认随机，如果AI返回则用AI返回的答案提交
-        choice = [option_ids[random.randint(0, len(option_ids) - 1)]]
+        ids = option_ids if isinstance(option_ids, list) else []
+        choice = [ids[random.randint(0, len(ids) - 1)]]
 
         # 组装AI问题
         ai_options = "{\n" + ",\n".join([f"{num}:{value}" for num, value in answers]) + "\n}"

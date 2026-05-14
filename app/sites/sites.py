@@ -74,7 +74,7 @@ class Sites:
                 brush_enable = False
                 statistic_enable = False
             strict_url = ""
-            site_def = SiteEngine.get_instance().get_by_url(site_signurl or site_rssurl or "")
+            site_def = SiteEngine.get_instance().get_by_url(str(site_signurl or site_rssurl or ""))
             if site_def and site_def.api:
                 strict_url = site_def.api.base_url
             else:
@@ -120,7 +120,7 @@ class Sites:
             # 以ID存储
             self._site_by_ids[site.ID] = site_info
             # 以域名存储
-            site_def = SiteEngine.get_instance().get_by_url(site.SIGNURL or site.RSSURL or "")
+            site_def = SiteEngine.get_instance().get_by_url(str(site.SIGNURL or site.RSSURL or ""))
             if site_def and site_def.api:
                 site_strict_url = StringUtils.get_url_domain(site_def.api.base_url)
             else:
@@ -237,7 +237,7 @@ class Sites:
     def get_site_favicon(self, site_name=None):
         if site_name:
             return self._resolve_favicon(site_name)
-        result = dict(self._site_favicons)
+        result = {str(k): str(v) if v else "" for k, v in self._site_favicons.items()}
         for site in self._site_by_ids.values():
             name = site.get("name")
             if name and name not in result:
@@ -316,7 +316,7 @@ class Sites:
             return False, "未配置站点Cookie或headers", 0
 
         if JsonUtils.is_valid_json(headers):
-            headers = json.loads(headers)
+            headers = json.loads(headers or "{}")
         else:
             headers = {}
         headers.update({"User-Agent": ua})

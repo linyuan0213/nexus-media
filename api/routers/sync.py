@@ -244,8 +244,8 @@ def rename(
     if logid:
         transinfo = svc.get_transfer_info_by_id(logid)
         if transinfo:
-            path = os.path.join(transinfo.SOURCE_PATH, transinfo.SOURCE_FILENAME)
-            dest_dir = transinfo.DEST
+            path = os.path.join(str(transinfo.SOURCE_PATH), str(transinfo.SOURCE_FILENAME))
+            dest_dir = str(transinfo.DEST)
         else:
             return fail(code=-1, msg="未查询到转移日志记录")
     else:
@@ -253,8 +253,8 @@ def rename(
         if unknown_id:
             unknowninfo = svc.get_unknown_info_by_id(unknown_id)
             if unknowninfo:
-                path = unknowninfo.PATH
-                dest_dir = unknowninfo.DEST
+                path = str(unknowninfo.PATH)
+                dest_dir = str(unknowninfo.DEST)
             else:
                 return fail(code=-1, msg="未查询到未识别记录")
     if not dest_dir:

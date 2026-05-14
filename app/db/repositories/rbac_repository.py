@@ -61,7 +61,7 @@ class RBACUserRepository(BaseRepository):
         Returns:
             用户对象或None
         """
-        return self._db.query(RBACUser).filter(and_(email == RBACUser.EMAIL, RBACUser.STATUS == 1)).first()
+        return self._db.query(RBACUser).filter(and_(RBACUser.EMAIL == email, RBACUser.STATUS == 1)).first()
 
     def get_users(self, page: int = 1, page_size: int = 20, status: int | None = None) -> tuple:
         """
@@ -345,7 +345,7 @@ class RBACRoleRepository(BaseRepository):
         Returns:
             角色对象或None
         """
-        return self._db.query(RBACRole).filter(and_(role_code == RBACRole.ROLE_CODE, RBACRole.STATUS == 1)).first()
+        return self._db.query(RBACRole).filter(and_(RBACRole.ROLE_CODE == role_code, RBACRole.STATUS == 1)).first()
 
     def get_all_roles(self, status: int | None = None) -> list[RBACRole]:
         """
@@ -566,7 +566,7 @@ class RBACPermissionRepository(BaseRepository):
         """
         return (
             self._db.query(RBACPermission)
-            .filter(and_(permission_code == RBACPermission.PERMISSION_CODE, RBACPermission.STATUS == 1))
+            .filter(and_(RBACPermission.PERMISSION_CODE == permission_code, RBACPermission.STATUS == 1))
             .first()
         )
 
@@ -702,7 +702,7 @@ class RBACMenuRepository(BaseRepository):
         """
         return (
             self._db.query(RBACMenu)
-            .filter(and_(parent_id == RBACMenu.PARENT_ID, RBACMenu.STATUS == 1))
+            .filter(and_(RBACMenu.PARENT_ID == parent_id, RBACMenu.STATUS == 1))
             .order_by(RBACMenu.SORT_ORDER)
             .all()
         )

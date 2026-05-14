@@ -135,7 +135,7 @@ class DownloaderCore:
                 name = downloader_conf.get("name")
                 only_nastool = downloader_conf.get("only_nastool")
                 match_path = downloader_conf.get("match_path")
-                rmt_mode = ModuleConf.RMT_MODES.get(downloader_conf.get("rmt_mode"))
+                rmt_mode = ModuleConf.RMT_MODES.get(str(downloader_conf.get("rmt_mode") or ""))
                 _client = self._client_factory.get_client(did)
             if not _client:
                 continue

@@ -311,7 +311,7 @@ class SiteEngine:
                         ret["hr"] = True
                 for xp in conf.get("PEER_COUNT", []):
                     val = JsonUtils.get_json_object(html_txt, xp)
-                    ret["peer_count"] = int(val) if str(val) else 0
+                    ret["peer_count"] = int(val) if val else 0
             else:
                 doc = etree.HTML(html_txt)
                 if doc is not None:
@@ -328,7 +328,7 @@ class SiteEngine:
                     for xp in conf.get("PEER_COUNT", []):
                         els = doc.xpath(xp)
                         if els:
-                            txt = "".join(els[0].itertext())
+                            txt = "".join(str(t) for t in els[0].itertext())
                             ret["peer_count"] = int("".join(c for c in txt if c.isdigit()) or 0)
         return ret
 
@@ -505,7 +505,7 @@ class SiteEngine:
     _engine_instance: Optional["SiteEngine"] = None
 
     @classmethod
-    def get_instance(cls, definitions_dir: str = None) -> "SiteEngine":
+    def get_instance(cls, definitions_dir: str | None = None) -> "SiteEngine":
         if cls._engine_instance is None:
             cls._engine_instance = cls(definitions_dir)
         return cls._engine_instance

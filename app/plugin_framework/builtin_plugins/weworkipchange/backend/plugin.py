@@ -89,7 +89,7 @@ class WeworkIPChangePlugin:
 
         if onlyonce:
             self.ctx.info("企业微信可信IP更新服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ"))) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "UTC")) + timedelta(seconds=3)
             self.ctx.schedule_date("change_ip_once", self._change_ip, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -113,7 +113,7 @@ class WeworkIPChangePlugin:
             msg = item.get("msg")
             self.ctx.debug(f"验证码: {msg}")
             if self._drissonpage_helper.input_on_element(
-                tab_id=self._tab_id, selector="tag:div@class=number_panel", input_str=msg
+                tab_id=self._tab_id, selector="tag:div@class=number_panel", input_str=msg or ""
             ):
                 self.ctx.debug("验证码输入成功")
                 return True

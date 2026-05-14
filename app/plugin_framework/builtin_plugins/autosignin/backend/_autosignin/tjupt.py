@@ -115,7 +115,7 @@ class Tjupt(_ISiteSigninHandler):
             return False, f"【{site}】签到失败，未获取到答案选项"
 
         # value+选项
-        answers = list(zip(values, options, strict=False))
+        answers = list(zip(list(values), list(options), strict=False))  # type: ignore[reportArgumentType]
         self.debug(f"获取到所有签到选项 {answers}")
 
         # 查询已有答案
@@ -204,7 +204,7 @@ class Tjupt(_ISiteSigninHandler):
             count_results = []
             count_flag = False
             for value, answer in answers:
-                answer_re = re.compile(re.sub(r"\d$", "", answer))
+                answer_re = re.compile(re.sub(r"\d$", "", str(answer)))
                 count = len(re.findall(answer_re, search_results))
                 if count >= min(res_count, 3):
                     count_flag = True

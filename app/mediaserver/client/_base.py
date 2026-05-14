@@ -23,7 +23,7 @@ class _IMediaClient(metaclass=ABCMeta):
         item = repo.get_media_server_by_name(name)
         if item and item.CONFIG:
             try:
-                return json.loads(item.CONFIG)
+                return json.loads(str(item.CONFIG))
             except Exception:
                 pass
         return Config().get_config(name)

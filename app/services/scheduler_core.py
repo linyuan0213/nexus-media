@@ -277,7 +277,7 @@ class SchedulerCore(metaclass=SingletonMeta):
             if isinstance(task, dict):
                 task_config = TaskConfig(
                     job_id=task.get("job_id", ""),
-                    func=task.get("func"),
+                    func=task.get("func") or (lambda: None),
                     name=task.get("name"),
                     trigger=task.get("trigger", "interval"),
                     args=tuple(task.get("args", [])),

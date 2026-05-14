@@ -27,9 +27,10 @@ from app.media import meta_info
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
+from app.schemas.download import Torrent
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.sites import SiteConf, Sites, SiteSubtitle
-from app.utils import ExceptionUtils, Torrent
+from app.utils import ExceptionUtils
 from app.utils.types import DownloaderType
 
 
@@ -118,15 +119,15 @@ class DownloadCore:
             downloader_id = self._client_factory.default_downloader_id
         _client = self._client_factory.get_client(downloader_id)
         if not _client:
-            return None
+            return []
         try:
             torrents, error_flag = _client.get_torrents(tag=tag, ids=ids)
             if error_flag:
-                return None
+                return []
             return torrents
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
-            return None
+            return []
 
     def get_remove_torrents(self, downloader_id=None, config=None):
         if not config or not downloader_id:
@@ -325,7 +326,7 @@ class DownloadCore:
             cookie=site_info.get("cookie"),
             ua=site_info.get("ua"),
             referer=page_url if site_info.get("referer") else None,
-            proxy=site_info.get("proxy"),
+            proxy=site_info.get("proxy") or False,
         )
         if not files:
             log.error(f"【Downloader】读取种子文件集数出错：{retmsg}")

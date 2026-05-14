@@ -6,7 +6,7 @@ from app.utils.types import MediaType
 class LookupResult(BaseModel):
     """外部数据库查询结果"""
 
-    tmdb_id: int = 0
+    tmdb_id: int | str = 0
     title: str | None = None
     original_title: str | None = None
     media_type: MediaType | None = None
@@ -22,5 +22,5 @@ class LookupResult(BaseModel):
 class BaseLookup:
     """查询器基类"""
 
-    def lookup(self, parsed, hint_type: MediaType = None) -> LookupResult | None:
+    def lookup(self, parsed, hint_type: MediaType | None = None) -> LookupResult | None:
         raise NotImplementedError

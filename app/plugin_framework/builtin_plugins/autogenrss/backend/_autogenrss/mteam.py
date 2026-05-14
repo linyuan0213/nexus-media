@@ -32,7 +32,7 @@ class Mteam(_ISiteRssGenHandler):
         """
         site = site_info.get("name")
         ua = site_info.get("ua")
-        headers = json.loads(site_info.get("headers"))
+        headers = json.loads(site_info.get("headers") or "{}")
         headers.update({"contentType": "application/json;charset=UTF-8", "User-Agent": ua})
 
         proxy = get_proxies() if site_info.get("proxy") else None

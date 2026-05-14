@@ -25,7 +25,7 @@ class RBACUserEntity:
     last_login_ip: str | None
     created_at: datetime | None
     updated_at: datetime | None
-    roles: list[dict[str, Any]] = None
+    roles: list[dict[str, Any]] | None = None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["RBACUserEntity"]:
@@ -88,8 +88,8 @@ class RBACRoleEntity:
     status: int
     created_at: datetime | None
     updated_at: datetime | None
-    permissions: list[dict[str, Any]] = None
-    menus: list[dict[str, Any]] = None
+    permissions: list[dict[str, Any]] | None = None
+    menus: list[dict[str, Any]] | None = None
     users_count: int = 0
 
     @classmethod

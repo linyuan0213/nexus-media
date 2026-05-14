@@ -535,7 +535,7 @@ class AutoSubPlugin:
                 merged_subtitle[-1].content = f"{merged_subtitle[-1].content} {content}"
                 merged_subtitle[-1].end = item.end
 
-            if content.endswith(tuple(self._end_token)) or len(merged_subtitle[-1].content) > 350:
+            if any(content[-len(str(t)):] == str(t) for t in self._end_token) or len(merged_subtitle[-1].content) > 350:
                 sentence_end = True
             else:
                 sentence_end = False

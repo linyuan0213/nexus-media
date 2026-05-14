@@ -60,9 +60,11 @@ def _parse_base_info(ins: ConfigHtmlUserInfo) -> None:
         if ret:
             ins.username = str(ret[0])
     message_labels = doc.xpath('//a[@href="messages.php"]/..')
-    message_labels.extend(doc.xpath('//a[contains(@href,"messages.php")]/..'))
+    extra_labels = doc.xpath('//a[contains(@href,"messages.php")]/..')
+    if isinstance(extra_labels, list):
+        message_labels.extend(extra_labels)
     if message_labels:
-        text = message_labels[0].xpath("string(.)")
+        text = str(message_labels[0].xpath("string(.)") or "")
         mm = re.findall(r"[^Date](信息箱\s*|\(|你有\xa0)(\d+)", text)
         if mm and len(mm[-1]) == 2:
             ins.message_unread = StringUtils.str_int(mm[-1][1])
@@ -128,7 +130,7 @@ def _parse_seeding(ins: ConfigHtmlUserInfo) -> None:
                 for pattern in ["getusertorrentlist.php", "getusertorrentlistajax.php"]:
                     links = detail_doc.xpath(f'//{tag}[contains({base},"{pattern}")]/{base}')
                     if links:
-                        href = links[0].strip()
+                        href = str(links[0]).strip()
                         if "userid" not in href:
                             href = f"{href}{'&' if '?' in href else '?'}userid={ins.userid}&type=seeding"
                         if href not in page_paths:
@@ -212,12 +214,11 @@ def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: etree._Element, html_text:
     seeders_texts = doc.xpath(f"{table_prefix}//tr[position()>1]/td[5]/b/a/text()")
     if not seeders_texts:
         seeders_texts = doc.xpath(f"{table_prefix}//tr[position()>1]/td[5]//text()")
-    if not size_texts:
+    if not isinstance(size_texts, list):
         return
-    info = json.loads(ins.seeding_info) if ins.seeding_info and ins.seeding_info != "[]" else []
     for i, sz in enumerate(size_texts):
-        size = StringUtils.num_filesize(sz.xpath("string(.)").strip())
-        sd = StringUtils.str_int(seeders_texts[i]) if i < len(seeders_texts) else 0
+        size = StringUtils.num_filesize(str(sz.xpath("string(.)")).strip())
+        sd = StringUtils.str_int(seeders_texts[i]) if isinstance(seeders_texts, list) and i < len(seeders_texts) else 0
         ins.seeding_size += size
         ins.seeding += 1
         info.append([sd, size])
@@ -231,7 +232,7 @@ def _next_page_url(ins: ConfigHtmlUserInfo, doc: etree._Element) -> str | None:
     next_url = links[-1].strip()
     if ins.userid and "userid" not in next_url:
         next_url = f"{next_url}&userid={ins.userid}&type=seeding"
-    return urljoin(ins._base_url_str + "/", next_url)
+    return urljoin(ins._base_url_str + "/", str(next_url or ""))
 
 
 def _parse_detail(ins: ConfigHtmlUserInfo) -> None:
@@ -268,7 +269,7 @@ def _parse_detail(ins: ConfigHtmlUserInfo) -> None:
         '|//div/b[text()="加入日期"]/../text()'
     )
     if join:
-        ins.join_at = StringUtils.unify_datetime_str(join[0].split(" (")[0].strip())
+        ins.join_at = StringUtils.unify_datetime_str(str(join[0]).split(" (")[0].strip())
     if not ins.bonus:
         ui = ins._def.user_info if isinstance(ins._def.user_info, dict) else {}
         labels = ui.get("bonus_labels", ["魔力值", "猫粮"])
