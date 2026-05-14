@@ -718,9 +718,9 @@ class Qbittorrent(_IDownloadClient):
         """
         获取正在下载的种子进度
         """
-        Torrents = self.get_downloading_torrents(tag=tag, ids=ids) or []
-        DispTorrents = []
-        for torrent in Torrents:
+        torrents = self.get_downloading_torrents(tag=tag, ids=ids) or []
+        disp_torrents = []
+        for torrent in torrents:
             # 进度
             progress = round(torrent.progress * 100, 1)
             if torrent.status in [TorrentStatus.Paused]:
@@ -736,10 +736,10 @@ class Qbittorrent(_IDownloadClient):
                     eta = StringUtils.str_timelong(torrent.eta)
                     speed = f"{chr(8595)}{_dlspeed}B/s {chr(8593)}{_upspeed}B/s {eta}"
             # 主键
-            DispTorrents.append(
+            disp_torrents.append(
                 {"id": torrent.id, "name": torrent.name, "speed": speed, "state": state, "progress": progress}
             )
-        return DispTorrents
+        return disp_torrents
 
     def set_speed_limit(self, download_limit=None, upload_limit=None):
         """

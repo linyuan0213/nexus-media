@@ -117,8 +117,8 @@ class TestBuildSearchNames:
         mock_media.get_tmdb_zhtw_title.return_value = "繁體"
         mock_media.get_tmdb_en_title.return_value = "English"
 
-        with patch.object(svc, "_media", mock_media), patch("config.Config") as MockConfig:
-            MockConfig().get_config.return_value = {"search_multi_language": True}
+        with patch.object(svc, "_media", mock_media), patch("config.Config") as mock_config:
+            mock_config().get_config.return_value = {"search_multi_language": True}
             names = svc.build_search_names(media)
             assert "繁體" in names
             assert "Orig" in names

@@ -129,12 +129,12 @@ class TestMessageClientEndpoints:
 
     def test_send_custom_message(self):
         self._mock_message()
-        with patch("api.routers.system.MessageSenderService") as MockSender:
+        with patch("api.routers.system.MessageSenderService") as mock_sender_cls:
             mock_sender = MagicMock()
             result = MagicMock()
             result.success = True
             mock_sender.send_custom_message.return_value = result
-            MockSender.return_value = mock_sender
+            mock_sender_cls.return_value = mock_sender
             resp = client.post(
                 "/api/system/messages/send",
                 json={

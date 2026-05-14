@@ -120,18 +120,18 @@ class FnOS(_IMediaClient):
         if not self._fnos:
             return {}
         sections = self._fnos.fetch_all_pages()
-        MovieCount = SeriesCount = SongCount = EpisodeCount = 0
+        movie_count = series_count = song_count = episode_count = 0
         for sec in sections:
             if sec.get("type") == "Movie":
-                MovieCount += 1
+                movie_count += 1
             if sec.get("type") == "TV":
-                SeriesCount += int(sec.get("local_number_of_seasons", 0))
-                EpisodeCount += int(sec.get("local_number_of_episodes", 0))
+                series_count += int(sec.get("local_number_of_seasons", 0))
+                episode_count += int(sec.get("local_number_of_episodes", 0))
         return {
-            "MovieCount": MovieCount,
-            "SeriesCount": SeriesCount,
-            "SongCount": SongCount,
-            "EpisodeCount": EpisodeCount,
+            "MovieCount": movie_count,
+            "SeriesCount": series_count,
+            "SongCount": song_count,
+            "EpisodeCount": episode_count,
         }
 
     def get_movies(self, title, year=None):

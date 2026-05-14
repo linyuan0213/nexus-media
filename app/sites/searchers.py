@@ -48,7 +48,7 @@ def _utc_to_local(val):
 def _mteam_label(val):
     if not val:
         return ""
-    LABEL_MAP = {
+    label_map = {
         "1": "DIY",
         "2": "国配",
         "4": "中字",
@@ -58,8 +58,8 @@ def _mteam_label(val):
         "7": "DIY|国配|中字",
     }
     if isinstance(val, list):
-        return "|".join(LABEL_MAP.get(str(v), "") for v in val)
-    return LABEL_MAP.get(str(val), "")
+        return "|".join(label_map.get(str(v), "") for v in val)
+    return label_map.get(str(val), "")
 
 
 def _css_to_xpath(css: str) -> str:

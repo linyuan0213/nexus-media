@@ -182,7 +182,7 @@ class ApiSiteSearcher:
         if "labelsNew" in raw_item:
             new_labels = raw_item.get("labelsNew") or []
             old_label = raw_item.get("labels", "0")
-            LABEL_MAP = {
+            label_map = {
                 "1": "DIY",
                 "2": "国配",
                 "4": "中字",
@@ -193,7 +193,7 @@ class ApiSiteSearcher:
             }
             parts = []
             if old_label and str(old_label) != "0":
-                parts.append(LABEL_MAP.get(str(old_label), ""))
+                parts.append(label_map.get(str(old_label), ""))
             if isinstance(new_labels, list):
                 parts.extend(str(v) for v in new_labels)
             elif new_labels:

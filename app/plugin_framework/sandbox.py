@@ -108,14 +108,14 @@ class PluginSandbox(metaclass=SingletonMeta):
             sys.modules[module_path] = module
             spec.loader.exec_module(module)
 
-            PluginClass = getattr(module, class_name)
-            if not PluginClass:
+            plugin_class = getattr(module, class_name)
+            if not plugin_class:
                 log.error(f"[Sandbox] 插件类未找到: {class_name}")
                 return False
 
             # 创建上下文
             ctx = PluginContext(plugin_id, plugin_name=manifest.name)
-            instance = PluginClass(ctx)
+            instance = plugin_class(ctx)
 
             self._instances[plugin_id] = instance
 

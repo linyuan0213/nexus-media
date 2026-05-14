@@ -42,7 +42,7 @@ class SearchResultService:
             if item.YEAR:
                 title_string = f"{title_string} ({item.YEAR})"
             mtype = item.TYPE or ""
-            SE_key = item.ES_STRING if item.ES_STRING and mtype != "MOV" else "MOV"
+            se_key = item.ES_STRING if item.ES_STRING and mtype != "MOV" else "MOV"
             media_type = {"MOV": "电影", "TV": "电视剧", "ANI": "动漫"}.get(mtype)
             labels = [
                 label
@@ -72,13 +72,13 @@ class SearchResultService:
                 "name": MediaInfo.get_free_string(item.UPLOAD_VOLUME_FACTOR, item.DOWNLOAD_VOLUME_FACTOR),
             }
             releasegroup = item.OTHERINFO if item.OTHERINFO is not None else "未知"
-            filter_season = SE_key.split()[0] if SE_key and SE_key not in ["MOV", "TV"] else None
+            filter_season = se_key.split()[0] if se_key and se_key not in ["MOV", "TV"] else None
 
             if search_results_dict.get(title_string):
                 self._merge_into_existing(
                     search_results_dict,
                     title_string,
-                    SE_key,
+                    se_key,
                     group_key,
                     unique_key,
                     torrent_item,
@@ -123,7 +123,7 @@ class SearchResultService:
                     "fav": fav,
                     "rssid": rssid,
                     "torrent_dict": {
-                        SE_key: {
+                        se_key: {
                             group_key: {
                                 "group_info": group_info,
                                 "group_total": 1,

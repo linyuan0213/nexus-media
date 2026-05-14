@@ -26,21 +26,21 @@ class NumberUtils:
         :param byte_num: 单位Byte
         :return:
         """
-        KB = 1024
-        MB = KB * KB
-        GB = MB * KB
-        TB = GB * KB
+        _kb = 1024
+        _mb = _kb * _kb
+        _gb = _mb * _kb
+        _tb = _gb * _kb
         try:
             if isinstance(byte_num, str):
                 byte_num = int(byte_num)
-            if byte_num > TB:
-                result = f"{round(byte_num / TB, 2)} TB"
-            elif byte_num > GB:
-                result = f"{round(byte_num / GB, 2)} GB"
-            elif byte_num > MB:
-                result = f"{round(byte_num / MB, 2)} MB"
-            elif byte_num > KB:
-                result = f"{round(byte_num / KB, 2)} KB"
+            if byte_num > _tb:
+                result = f"{round(byte_num / _tb, 2)} TB"
+            elif byte_num > _gb:
+                result = f"{round(byte_num / _gb, 2)} GB"
+            elif byte_num > _mb:
+                result = f"{round(byte_num / _mb, 2)} MB"
+            elif byte_num > _kb:
+                result = f"{round(byte_num / _kb, 2)} KB"
             else:
                 result = f"{byte_num} B"
             return result

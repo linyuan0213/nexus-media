@@ -306,9 +306,9 @@ class RequestUtils:
             if len(cstr) > 1:
                 cookie_dict[cstr[0].strip()] = cstr[1].strip()
         if array:
-            cookiesList = []
-            for cookieName, cookieValue in cookie_dict.items():
-                cookies = {"name": cookieName, "value": cookieValue}
-                cookiesList.append(cookies)
-            return cookiesList
+            cookies_list = []
+            for cookie_name, cookie_value in cookie_dict.items():
+                cookies = {"name": cookie_name, "value": cookie_value}
+                cookies_list.append(cookies)
+            return cookies_list
         return cookie_dict

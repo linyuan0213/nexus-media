@@ -375,8 +375,8 @@ class PluginFrameworkService:
         if target_dir and os.path.exists(target_dir):
             shutil.rmtree(target_dir)
 
-        Sandbox = PluginSandbox()
-        Sandbox.unload(plugin_id)
+        sandbox = PluginSandbox()
+        sandbox.unload(plugin_id)
         HookSystem().unregister_all(plugin_id)
 
         # 删除插件菜单
@@ -392,8 +392,8 @@ class PluginFrameworkService:
         """后台线程执行插件加载和初始化"""
         try:
             log.info(f"[PluginFrameworkService] 开始加载插件: {plugin_id}")
-            Sandbox = PluginSandbox()
-            ok = Sandbox.load(plugin_id)
+            sandbox = PluginSandbox()
+            ok = sandbox.load(plugin_id)
             if ok:
                 HookSystem().emit("plugin.enable", {"plugin_id": plugin_id})
                 log.info(f"[PluginFrameworkService] 插件已启用: {plugin_id}")
@@ -431,8 +431,8 @@ class PluginFrameworkService:
         if not orm_model:
             raise ValueError(f"插件未安装: {plugin_id}")
 
-        Sandbox = PluginSandbox()
-        Sandbox.unload(plugin_id)
+        sandbox = PluginSandbox()
+        sandbox.unload(plugin_id)
         self._repo.set_manifest_enabled(plugin_id, False)
 
         # 删除插件菜单
@@ -530,9 +530,9 @@ class PluginFrameworkService:
         sys.modules[module_path] = module
         spec.loader.exec_module(module)
 
-        PluginClass = getattr(module, class_name)
+        plugin_class = getattr(module, class_name)
         ctx = PluginContext(plugin_id, plugin_name=manifest.name)
-        instance = PluginClass(ctx)
+        instance = plugin_class(ctx)
 
         if not hasattr(instance, "run"):
             raise ValueError(f"插件 {plugin_id} 未实现 run() 方法")
@@ -546,6 +546,6 @@ class PluginFrameworkService:
         if not orm_model:
             raise ValueError(f"插件未安装: {plugin_id}")
 
-        Sandbox = PluginSandbox()
-        if not Sandbox.reload(plugin_id):
+        sandbox = PluginSandbox()
+        if not sandbox.reload(plugin_id):
             raise RuntimeError(f"插件 {plugin_id} 热重载失败")

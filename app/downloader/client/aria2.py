@@ -149,9 +149,9 @@ class Aria2(_IDownloadClient):
         """
         获取正在下载的种子进度
         """
-        Torrents = self.get_downloading_torrents()
-        DispTorrents = []
-        for torrent in Torrents:
+        torrents = self.get_downloading_torrents()
+        disp_torrents = []
+        for torrent in torrents:
             # 进度
             try:
                 progress = torrent.progress * 100
@@ -166,11 +166,11 @@ class Aria2(_IDownloadClient):
                 _upspeed = StringUtils.str_filesize(torrent.upload_speed)
                 speed = f"{chr(8595)}{_dlspeed}B/s {chr(8593)}{_upspeed}B/s"
 
-            DispTorrents.append(
+            disp_torrents.append(
                 {"id": torrent.id, "name": torrent.name, "speed": speed, "state": state, "progress": progress}
             )
 
-        return DispTorrents
+        return disp_torrents
 
     def set_speed_limit(self, download_limit=None, upload_limit=None):
         """

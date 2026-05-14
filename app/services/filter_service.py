@@ -428,9 +428,9 @@ class FilterService:
 
     def get_filterrules(self, script_path: str):
         """获取所有过滤规则及初始规则"""
-        RuleGroups = self.get_rule_infos()
+        rule_groups = self.get_rule_infos()
         sql_file = os.path.join(script_path, "init_filter.sql")
-        Init_RuleGroups = []
+        init_rule_groups = []
         if os.path.exists(sql_file):
             with open(sql_file, encoding="utf-8") as f:
                 sql_list = f.read().split(";\n")
@@ -452,9 +452,9 @@ class FilterService:
                             rule_info["exclude"] = rule[5][1:-1]
                             rulegroup["rules"].append(rule_info)
                         rulegroup["sql"].append(sql_list[i + 1])
-                    Init_RuleGroups.append(rulegroup)
+                    init_rule_groups.append(rulegroup)
                     i = i + 2
-        return RuleGroups, Init_RuleGroups
+        return rule_groups, init_rule_groups
 
     def share_filter_group(self, gid) -> tuple[bool, str, str]:
         """分享规则组（返回Base64编码的JSON字符串）"""

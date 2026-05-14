@@ -268,12 +268,12 @@ def mediainfo_dict(media_info):
         return {}
     tmdb_id = media_info.tmdb_id
     tmdb_link = media_info.get_detail_url()
-    tmdb_S_E_link = ""
+    tmdb_se_link = ""
     if tmdb_id:
         if media_info.get_season_string():
-            tmdb_S_E_link = f"{tmdb_link}/season/{media_info.get_season_seq()}"
+            tmdb_se_link = f"{tmdb_link}/season/{media_info.get_season_seq()}"
             if media_info.get_episode_string():
-                tmdb_S_E_link = f"{tmdb_S_E_link}/episode/{media_info.get_episode_seq()}"
+                tmdb_se_link = f"{tmdb_se_link}/episode/{media_info.get_episode_seq()}"
     return {
         "type": media_info.type.value if media_info.type else "",
         "name": media_info.get_name(),
@@ -285,7 +285,7 @@ def mediainfo_dict(media_info):
         "imdbid": media_info.imdb_id,
         "overview": media_info.overview,
         "tmdb_link": tmdb_link,
-        "tmdb_S_E_link": tmdb_S_E_link,
+        "tmdb_se_link": tmdb_se_link,
         "poster_path": media_info.get_poster_image(),
         "backdrop_path": media_info.get_backdrop_image(),
         "vote_average": media_info.vote_average,

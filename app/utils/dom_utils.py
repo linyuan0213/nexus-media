@@ -4,16 +4,16 @@ class DomUtils:
         """
         解析XML标签值
         """
-        tagNames = tag_item.getElementsByTagName(tag_name)
-        if tagNames:
+        tag_names = tag_item.getElementsByTagName(tag_name)
+        if tag_names:
             if attname:
-                attvalue = tagNames[0].getAttribute(attname)
+                attvalue = tag_names[0].getAttribute(attname)
                 if attvalue:
                     return attvalue
             else:
-                firstChild = tagNames[0].firstChild
-                if firstChild:
-                    return firstChild.data
+                first_child = tag_names[0].firstChild
+                if first_child:
+                    return first_child.data
         return default
 
     @staticmethod

@@ -199,8 +199,8 @@ class TestDownloadFromTorrentFilesOrUrls:
 
     def test_from_url_torrent_fail(self, svc, mock_sites):
         mock_sites.get_sites.return_value = {"cookie": "c", "ua": "u", "proxy": False}
-        with patch("app.services.download_service.Torrent") as MockTorrent:
-            MockTorrent().get_torrent_info.return_value = (None, None, None, None, "超时")
+        with patch("app.services.download_service.Torrent") as mock_torrent:
+            mock_torrent().get_torrent_info.return_value = (None, None, None, None, "超时")
             result = svc.download_from_torrent_files_or_urls([], ["http://example.com/torrent"], "/dl", "s1", "user")
             assert result.success is False
             assert "下载种子文件失败" in result.message

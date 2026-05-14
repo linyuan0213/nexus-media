@@ -230,8 +230,8 @@ class DoubanRankPlugin:
             ret_xml = ret.text
             ret_array = []
             dom_tree = xml.dom.minidom.parseString(ret_xml)
-            rootNode = dom_tree.documentElement
-            items = rootNode.getElementsByTagName("item")
+            root_node = dom_tree.documentElement
+            items = root_node.getElementsByTagName("item")
             for item in items:
                 try:
                     title = DomUtils.tag_value(item, "title", default="")

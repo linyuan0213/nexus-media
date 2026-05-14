@@ -18,24 +18,24 @@ class TestGetMediainfoFromId:
         """
         测试豆瓣媒体无法匹配到TMDB时返回None
         """
-        with patch("web.backend.web_utils.DouBan") as MockDouBan, patch("web.backend.web_utils.Media") as MockMedia:
+        with patch("web.backend.web_utils.DouBan") as mock_douban, patch("web.backend.web_utils.Media") as mock_media:
             # 模拟豆瓣返回信息
-            mock_douban = MagicMock()
-            mock_douban.get_douban_detail.return_value = {
+            mock_douban_instance = MagicMock()
+            mock_douban_instance.get_douban_detail.return_value = {
                 "title": "测试电影",
                 "original_title": "Test Movie",
                 "year": "2023",
                 "cover_url": "http://example.com/cover.jpg",
             }
-            MockDouBan.return_value = mock_douban
+            mock_douban.return_value = mock_douban_instance
 
             # 模拟Media().get_media_info返回没有tmdb_info的对象
             mock_media_info = MagicMock()
             mock_media_info.tmdb_info = None  # 没有TMDB信息
 
-            mock_media = MagicMock()
-            mock_media.get_media_info.return_value = mock_media_info
-            MockMedia.return_value = mock_media
+            mock_media_instance = MagicMock()
+            mock_media_instance.get_media_info.return_value = mock_media_info
+            mock_media.return_value = mock_media_instance
 
             # 调用函数
             result = WebUtils.get_mediainfo_from_id(mtype=MediaType.MOVIE, mediaid="DB:12345")
@@ -47,19 +47,19 @@ class TestGetMediainfoFromId:
         """
         测试Bangumi媒体无法匹配到TMDB时返回None
         """
-        with patch("web.backend.web_utils.Bangumi") as MockBangumi, patch("web.backend.web_utils.Media") as MockMedia:
+        with patch("web.backend.web_utils.Bangumi") as mock_bangumi, patch("web.backend.web_utils.Media") as mock_media:
             # 模拟Bangumi返回信息
-            mock_bangumi = MagicMock()
-            mock_bangumi.detail.return_value = {"name": "Test Anime", "name_cn": "测试动漫", "date": "2023-01-01"}
-            MockBangumi.return_value = mock_bangumi
+            mock_bangumi_obj = MagicMock()
+            mock_bangumi_obj.detail.return_value = {"name": "Test Anime", "name_cn": "测试动漫", "date": "2023-01-01"}
+            mock_bangumi.return_value = mock_bangumi_obj
 
             # 模拟Media().get_media_info返回没有tmdb_info的对象
             mock_media_info = MagicMock()
             mock_media_info.tmdb_info = None  # 没有TMDB信息
 
-            mock_media = MagicMock()
-            mock_media.get_media_info.return_value = mock_media_info
-            MockMedia.return_value = mock_media
+            mock_media_obj = MagicMock()
+            mock_media_obj.get_media_info.return_value = mock_media_info
+            mock_media.return_value = mock_media_obj
 
             # 调用函数
             result = WebUtils.get_mediainfo_from_id(mtype=MediaType.TV, mediaid="BG:12345")
@@ -71,25 +71,25 @@ class TestGetMediainfoFromId:
         """
         测试豆瓣媒体成功匹配到TMDB时返回正确对象
         """
-        with patch("web.backend.web_utils.DouBan") as MockDouBan, patch("web.backend.web_utils.Media") as MockMedia:
+        with patch("web.backend.web_utils.DouBan") as mock_douban, patch("web.backend.web_utils.Media") as mock_media:
             # 模拟豆瓣返回信息
-            mock_douban = MagicMock()
-            mock_douban.get_douban_detail.return_value = {
+            mock_douban_obj = MagicMock()
+            mock_douban_obj.get_douban_detail.return_value = {
                 "title": "肖申克的救赎",
                 "original_title": "The Shawshank Redemption",
                 "year": "1994",
                 "cover_url": "http://example.com/cover.jpg",
             }
-            MockDouBan.return_value = mock_douban
+            mock_douban.return_value = mock_douban_obj
 
             # 模拟Media().get_media_info返回有tmdb_info的对象
             mock_media_info = MagicMock()
             mock_media_info.tmdb_info = {"id": 278, "title": "The Shawshank Redemption"}
             mock_media_info.poster_path = "/poster.jpg"
 
-            mock_media = MagicMock()
-            mock_media.get_media_info.return_value = mock_media_info
-            MockMedia.return_value = mock_media
+            mock_media_obj = MagicMock()
+            mock_media_obj.get_media_info.return_value = mock_media_info
+            mock_media.return_value = mock_media_obj
 
             # 调用函数
             result = WebUtils.get_mediainfo_from_id(mtype=MediaType.MOVIE, mediaid="DB:12345")
@@ -103,23 +103,23 @@ class TestGetMediainfoFromId:
         """
         测试Bangumi媒体成功匹配到TMDB时返回正确对象
         """
-        with patch("web.backend.web_utils.Bangumi") as MockBangumi, patch("web.backend.web_utils.Media") as MockMedia:
+        with patch("web.backend.web_utils.Bangumi") as mock_bangumi, patch("web.backend.web_utils.Media") as mock_media:
             # 模拟Bangumi返回信息
-            mock_bangumi = MagicMock()
-            mock_bangumi.detail.return_value = {
+            mock_bangumi_obj = MagicMock()
+            mock_bangumi_obj.detail.return_value = {
                 "name": "Attack on Titan",
                 "name_cn": "进击的巨人",
                 "date": "2013-04-06",
             }
-            MockBangumi.return_value = mock_bangumi
+            mock_bangumi.return_value = mock_bangumi_obj
 
             # 模拟Media().get_media_info返回有tmdb_info的对象
             mock_media_info = MagicMock()
             mock_media_info.tmdb_info = {"id": 1429, "name": "Attack on Titan"}
 
-            mock_media = MagicMock()
-            mock_media.get_media_info.return_value = mock_media_info
-            MockMedia.return_value = mock_media
+            mock_media_obj = MagicMock()
+            mock_media_obj.get_media_info.return_value = mock_media_info
+            mock_media.return_value = mock_media_obj
 
             # 调用函数
             result = WebUtils.get_mediainfo_from_id(mtype=MediaType.TV, mediaid="BG:12345")
@@ -132,15 +132,15 @@ class TestGetMediainfoFromId:
         """
         测试直接通过TMDB ID获取媒体信息
         """
-        with patch("web.backend.web_utils.Media") as MockMedia:
+        with patch("web.backend.web_utils.Media") as mock_media:
             # 模拟get_tmdb_info返回信息
-            mock_media = MagicMock()
-            mock_media.get_tmdb_info.return_value = {
+            mock_media_obj = MagicMock()
+            mock_media_obj.get_tmdb_info.return_value = {
                 "id": 278,
                 "title": "The Shawshank Redemption",
                 "media_type": MediaType.MOVIE,
             }
-            MockMedia.return_value = mock_media
+            mock_media.return_value = mock_media_obj
 
             # 调用函数
             result = WebUtils.get_mediainfo_from_id(mtype=MediaType.MOVIE, mediaid="278")

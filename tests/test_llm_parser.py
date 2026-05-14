@@ -15,15 +15,15 @@ class TestLLMParser:
 
     def test_ready_false_when_recognizer_not_ready(self):
         """MediaRecognizer 未就绪时 ready 为 False"""
-        with patch("app.media.parser.llm.MediaRecognizer") as MockRec:
-            MockRec.return_value.ready = False
+        with patch("app.media.parser.llm.MediaRecognizer") as mock_rec:
+            mock_rec.return_value.ready = False
             parser = LLMParser()
             assert parser.ready is False
 
     def test_parse_returns_none_when_not_ready(self):
         """ready=False 时 parse() 返回 None"""
-        with patch("app.media.parser.llm.MediaRecognizer") as MockRec:
-            mock_inst = MockRec.return_value
+        with patch("app.media.parser.llm.MediaRecognizer") as mock_rec:
+            mock_inst = mock_rec.return_value
             mock_inst.ready = False
             mock_inst.recognize.return_value = None
             parser = LLMParser()
@@ -32,8 +32,8 @@ class TestLLMParser:
 
     def test_parse_batch_returns_none_list_when_not_ready(self):
         """ready=False 时 parse_batch() 返回全 None 列表"""
-        with patch("app.media.parser.llm.MediaRecognizer") as MockRec:
-            mock_inst = MockRec.return_value
+        with patch("app.media.parser.llm.MediaRecognizer") as mock_rec:
+            mock_inst = mock_rec.return_value
             mock_inst.ready = False
             mock_inst.recognize_batch.return_value = [None, None, None]
             parser = LLMParser()

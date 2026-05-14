@@ -274,8 +274,8 @@ class TestDatabaseIntegration:
         engine = create_engine("sqlite:///:memory:")
         Base.metadata.create_all(engine)
 
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        session_factory = sessionmaker(bind=engine)
+        session = session_factory()
 
         try:
             # 创建记录
