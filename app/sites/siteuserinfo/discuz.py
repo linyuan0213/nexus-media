@@ -1,17 +1,23 @@
 """Discuz 架构用户信息解析"""
 
+from __future__ import annotations
+
 import re
+from typing import TYPE_CHECKING
 
 from lxml import etree
 
 from app.utils import StringUtils
 
+if TYPE_CHECKING:
+    from app.sites.siteuserinfo.config_html import ConfigHtmlUserInfo
 
-def is_discuz(ins):
+
+def is_discuz(ins: ConfigHtmlUserInfo) -> bool:
     return "Powered by Discuz!" in ins._index_html
 
 
-def parse(ins):
+def parse(ins: ConfigHtmlUserInfo) -> None:
     html_text = re.sub(r"#\d+", "", re.sub(r"\d+px", "", ins._index_html))
     html = etree.HTML(html_text)
     if html is None:

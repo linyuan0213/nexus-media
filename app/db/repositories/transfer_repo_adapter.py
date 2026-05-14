@@ -64,8 +64,10 @@ class TransferHistoryRepositoryAdapter:
 
     # 兼容旧Repository方法名
     def get_transfer_info_by_id(self, logid: int | None) -> TRANSFERHISTORY | None:
+        return self._repo.get_transfer_info_by_id(logid)
 
     def get_transfer_history(self, search: str | None, page: int, rownum: int) -> tuple[int, list[TRANSFERHISTORY]]:
+        return self._repo.get_transfer_history(search, page, rownum)
 
     def delete_transfer_log_by_id(self, logid: int) -> None:
         self._repo.delete_transfer_log_by_id(logid)
@@ -76,10 +78,13 @@ class TransferHistoryRepositoryAdapter:
 
     # 兼容旧Repository方法名
     def get_transfer_statistics(self, days: int = 30) -> list[tuple]:
+        return self._repo.get_transfer_statistics(days)
 
     def delete_transfer_unknown(self, tid: int | None) -> None:
+        self._repo.delete_transfer_unknown(tid)
 
     def get_unknown_info_by_id(self, tid: int | None) -> TRANSFERUNKNOWN | None:
+        return self._repo.get_unknown_info_by_id(tid)
 
     def update_transfer_unknown_state(self, path: str) -> None:
         self._repo.update_transfer_unknown_state(path)
@@ -90,6 +95,7 @@ class TransferHistoryRepositoryAdapter:
 
     # 兼容旧Repository方法名 - 委托给Unknown子适配器
     def get_transfer_unknown_paths_by_page(self, search: str | None, page: int, rownum: int) -> tuple[int, list[TRANSFERUNKNOWN]]:
+        return self._repo.get_transfer_unknown_paths_by_page(search, page, rownum)
 
     def delete_transfer_blacklist(self, path: str) -> None:
         self._repo.delete_transfer_blacklist(path)
@@ -100,10 +106,13 @@ class TransferHistoryRepositoryAdapter:
 
     # 兼容旧Repository方法名
     def is_transfer_notin_blacklist(self, path: str) -> bool:
+        return self._repo.is_transfer_notin_blacklist(path)
 
     def is_need_insert_transfer_unknown(self, path: str) -> bool:
+        return self._repo.is_need_insert_transfer_unknown(path)
 
     def insert_transfer_unknown(self, path: str, dest: str, rmt_mode: RmtMode) -> None:
+        self._repo.insert_transfer_unknown(path, dest, rmt_mode)
 
     def insert_transfer_history(self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: object) -> None:
         self._repo.insert_transfer_history(in_from, rmt_mode, in_path, out_path, dest, media_info)

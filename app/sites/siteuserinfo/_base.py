@@ -2,6 +2,7 @@ import base64
 import json
 import re
 from abc import ABCMeta, abstractmethod
+from typing import Any
 from urllib.parse import urljoin, urlsplit
 
 import requests
@@ -26,16 +27,16 @@ class _ISiteUserInfo(metaclass=ABCMeta):
 
     def __init__(
         self,
-        site_name,
-        url,
-        site_cookie,
-        index_html,
-        session=None,
-        ua=None,
-        site_headers=None,
-        emulate=False,
-        proxy=None,
-    ):
+        site_name: str,
+        url: str,
+        site_cookie: str,
+        index_html: str,
+        session: requests.Session | None = None,
+        ua: str | dict | None = None,
+        site_headers: dict | None = None,
+        emulate: bool = False,
+        proxy: bool = False,
+    ) -> None:
         super().__init__()
         # 站点信息
         self.site_name = None
@@ -75,9 +76,7 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         # 错误信息
         self.err_msg = None
         # 内部数据
-        self._base_url = None
         self._site_cookie = None
-        self._index_html = None
         self._addition_headers = None
 
         # 站点页面
@@ -93,11 +92,11 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         split_url = urlsplit(url)
         self.site_name = site_name
         self.site_url = url
-        self._base_url = f"{split_url.scheme}://{split_url.netloc}"
+        self._base_url: str = f"{split_url.scheme}://{split_url.netloc}"
         self._favicon_url = urljoin(self._base_url, "favicon.ico")
         self.site_favicon = ""
         self._site_cookie = site_cookie
-        self._index_html = index_html
+        self._index_html: str = index_html
         self._session = session if session else requests.Session()
         self._ua = ua
         self._site_headers = site_headers
@@ -105,7 +104,7 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         self._emulate = emulate
         self._proxy = proxy
 
-    def site_schema(self):
+    def site_schema(self) -> SiteSchema:
         """
         站点解析模型
         :return: 站点解析模型
@@ -113,7 +112,7 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         return self.schema
 
     @classmethod
-    def match(cls, _html_text):
+    def match(cls, _html_text: str) -> bool:
         """
         是否匹配当前解析模型
         :param html_text: 站点首页html
@@ -121,7 +120,7 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         """
         return False
 
-    def parse(self):
+    def parse(self) -> None:
         """
         解析站点信息
         :return:
@@ -141,7 +140,7 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         self._parse_seeding_pages()
         self.seeding_info = json.dumps(self.seeding_info)
 
-    def _pase_unread_msgs(self):
+    def _pase_unread_msgs(self) -> None:
         """
         解析所有未读消息标题和内容
         :return:
@@ -170,7 +169,7 @@ class _ISiteUserInfo(metaclass=ABCMeta):
             log.debug(f"【Sites】{self.site_name} 标题 {head} 时间 {date} 内容 {content}")
             self.message_unread_contents.append((head, date, content))
 
-    def _parse_seeding_pages(self):
+    def _parse_seeding_pages(self) -> None:
         if self._torrent_seeding_page:
             # 第一页
             next_page = self._parse_user_torrent_seeding_info(
@@ -193,21 +192,21 @@ class _ISiteUserInfo(metaclass=ABCMeta):
                 )
 
     @staticmethod
-    def _prepare_html_text(html_text):
+    def _prepare_html_text(html_text: str) -> str:
         """
         处理掉HTML中的干扰部分
         """
         return re.sub(r"#\d+", "", re.sub(r"\d+px", "", html_text))
 
     @abstractmethod
-    def _parse_message_unread_links(self, html_text, msg_links):
+    def _parse_message_unread_links(self, html_text: str | None, msg_links: list) -> str | None:
         """
         获取未阅读消息链接
         :param html_text:
         :return:
         """
 
-    def _parse_favicon(self, html_text):
+    def _parse_favicon(self, html_text: str) -> None:
         """
         解析站点favicon,返回base64 fav图标
         :param html_text:
@@ -225,7 +224,7 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         if res:
             self.site_favicon = base64.b64encode(res.content).decode()
 
-    def _get_page_content(self, url, params=None, headers=None):
+    def _get_page_content(self, url: str, params: dict | None = None, headers: dict | None = None) -> str | None:
         """
         :param url: 网页地址
         :param params: post参数
@@ -292,7 +291,7 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         return ""
 
     @abstractmethod
-    def _parse_site_page(self, html_text):
+    def _parse_site_page(self, html_text: str) -> None:
         """
         解析站点相关信息页面
         :param html_text:
@@ -300,14 +299,14 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _parse_user_base_info(self, html_text):
+    def _parse_user_base_info(self, html_text: str) -> None:
         """
         解析用户基础信息
         :param html_text:
         :return:
         """
 
-    def _parse_logged_in(self, html_text):
+    def _parse_logged_in(self, html_text: str) -> bool:
         """
         解析用户是否已经登陆
         :param html_text:
@@ -321,7 +320,7 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         return logged_in
 
     @abstractmethod
-    def _parse_user_traffic_info(self, html_text):
+    def _parse_user_traffic_info(self, html_text: str | None) -> None:
         """
         解析用户的上传，下载，分享率等信息
         :param html_text:
@@ -329,7 +328,7 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _parse_user_torrent_seeding_info(self, html_text, multi_page=False):
+    def _parse_user_torrent_seeding_info(self, html_text: str | None, multi_page: bool = False) -> str | None:
         """
         解析用户的做种相关信息
         :param html_text:
@@ -338,7 +337,7 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _parse_user_detail_info(self, html_text):
+    def _parse_user_detail_info(self, html_text: str | None) -> None:
         """
         解析用户的详细信息
         加入时间/等级/魔力值等
@@ -347,7 +346,7 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _parse_message_content(self, html_text):
+    def _parse_message_content(self, html_text: str | None) -> tuple[Any, Any, Any] | None:
         """
         解析短消息内容
         :param html_text:

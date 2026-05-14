@@ -1,18 +1,24 @@
 """Unit3d 架构用户信息解析"""
 
+from __future__ import annotations
+
 import re
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin
 
 from lxml import etree
 
 from app.utils import StringUtils
 
+if TYPE_CHECKING:
+    from app.sites.siteuserinfo.config_html import ConfigHtmlUserInfo
 
-def is_unit3d(ins):
+
+def is_unit3d(ins: ConfigHtmlUserInfo) -> bool:
     return "unit3d.js" in ins._index_html
 
 
-def parse(ins):
+def parse(ins: ConfigHtmlUserInfo) -> None:
     html_text = re.sub(r"#\d+", "", re.sub(r"\d+px", "", ins._index_html))
     html = etree.HTML(html_text)
     if html is None:
@@ -57,7 +63,7 @@ def parse(ins):
     _extract_seeding(ins, profile_doc)
 
 
-def _extract_traffic(ins, doc):
+def _extract_traffic(ins: ConfigHtmlUserInfo, doc: etree._Element) -> None:
     for label, attr, is_size in [("Upload", "upload", True), ("Download", "download", True)]:
         vals = doc.xpath(
             f'//h4[contains(text(),"{label}")]/following-sibling::span[1]/text()'
@@ -125,7 +131,7 @@ def _extract_traffic(ins, doc):
                 break
 
 
-def _extract_seeding(ins, doc):
+def _extract_seeding(ins: ConfigHtmlUserInfo, doc: etree._Element) -> None:
     for label, attr in [("Seeding", "seeding"), ("Leeching", "leeching")]:
         vals = doc.xpath(
             f'//h4[contains(text(),"{label}")]/following-sibling::span[1]/text()'

@@ -79,8 +79,13 @@ class SiteRepositoryAdapter(ISiteRepository):
         return self._repo.get_site_user_statistics(strict_urls=strict_urls, num=num)
 
     def update_site_user_statistics(self, site_user_infos: list) -> None:
+        self._repo.update_site_user_statistics(site_user_infos)
+
     def update_site_favicon(self, site_user_infos: list) -> None:
+        self._repo.update_site_favicon(site_user_infos)
+
     def update_site_seed_info(self, site_user_infos: list) -> None:
+        self._repo.update_site_seed_info(site_user_infos)
     def get_site_user_seeding_info(self, site: str) -> tuple | None:
         return self._repo.get_site_seeding_info(site=site)
 
@@ -108,21 +113,32 @@ class SiteRepositoryAdapter(ISiteRepository):
         )
 
     def delete_config_site(self, siteid: int | None) -> None:
+        return self._repo.delete_config_site(siteid)
 
     def update_config_site_note(self, tid: int | None, note: str) -> None:
+        return self._repo.update_config_site_note(tid=tid, note=note)
 
     def get_site_by_id(self, tid: int) -> list[CONFIGSITE]:
         return self._repo.get_site_by_id(tid=tid)
 
     def insert_site_statistics_history(self, site_user_infos: list) -> None:
+        self._repo.insert_site_statistics_history(site_user_infos)
 
     def get_site_statistics_recent_sites(self, days: int, end_day: str | None = None, strict_urls: list | None = None) -> tuple[int, int, list, list, list]:
         return self._repo.get_site_statistics_recent_sites(days=days, end_day=end_day, strict_urls=strict_urls)
 
     def get_site_statistics_history(self, site: str, days: int = 730) -> list[SITESTATISTICSHISTORY]:
+        return self._repo.get_site_statistics_history(site=site, days=days)
+
     def get_site_seeding_info(self, site: str) -> tuple | None:
+        return self._repo.get_site_seeding_info(site=site)
+
     def update_site_user_statistics_site_name(self, new_name: str, old_name: str) -> None:
+        self._repo.update_site_user_statistics_site_name(new_name, old_name)
+
     def update_site_seed_info_site_name(self, new_name: str, old_name: str) -> None:
+        self._repo.update_site_seed_info_site_name(new_name, old_name)
+
     def update_site_statistics_site_name(self, new_name: str, old_name: str) -> None:
         self._repo.update_site_statistics_site_name(new_name, old_name)
 

@@ -7,6 +7,7 @@ import datetime
 import os.path
 import time
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import func
 
@@ -14,6 +15,9 @@ from app.db import DbPersist
 from app.db.models import SYNCHISTORY, TRANSFERBLACKLIST, TRANSFERHISTORY, TRANSFERUNKNOWN
 from app.db.repositories.base_repository import BaseRepository
 from app.utils.types import RmtMode
+
+if TYPE_CHECKING:
+    from app.media.models import MediaInfo
 
 
 class TransferRepository(BaseRepository):
@@ -55,7 +59,7 @@ class TransferRepository(BaseRepository):
         ).update({"DATE": date})
 
     @DbPersist(BaseRepository._db)
-    def insert_transfer_history(self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: object) -> None:
+    def insert_transfer_history(self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: "MediaInfo") -> None:
         """
         插入识别转移记录
         """
@@ -257,7 +261,7 @@ class TransferRepository(BaseRepository):
         删除未识别记录
         """
         if not tid:
-            return []
+            return
         self._db.query(TRANSFERUNKNOWN).filter(int(tid) == TRANSFERUNKNOWN.ID).delete()
 
     def get_unknown_info_by_id(self, tid: int | None) -> TRANSFERUNKNOWN | None:
@@ -265,16 +269,88 @@ class TransferRepository(BaseRepository):
         查询未识别记录
         """
         if not tid:
-            return []
+            return None
         return self._db.query(TRANSFERUNKNOWN).filter(int(tid) == TRANSFERUNKNOWN.ID).first()
 
     def get_transfer_unknown_by_path(self, path: str) -> list[TRANSFERUNKNOWN]:
+        """
+        根据路径查询未识别记录
+        """
+        if not path:
+            return []
+        return self._db.query(TRANSFERUNKNOWN).filter(path == TRANSFERUNKNOWN.PATH).all()
+
     def is_transfer_unknown_exists(self, path: str) -> bool:
+        """
+        查询未识别记录是否存在
+        """
+        if not path:
+            return False
+        ret = self._db.query(TRANSFERUNKNOWN).filter(os.path.normpath(path) == TRANSFERUNKNOWN.PATH).count()
+        return ret > 0
+
     def is_need_insert_transfer_unknown(self, path: str) -> bool:
+        """
+        检查是否需要插入未识别记录
+        """
+        if not path:
+            return False
+        unknowns = self.get_transfer_unknown_by_path(path)
+        if unknowns:
+            is_all_proceed = True
+            for unknown in unknowns:
+                if unknown.STATE == "N":
+                    is_all_proceed = False
+                    break
+            if is_all_proceed:
+                is_transfer_history_exists = self.is_transfer_history_exists_by_source_full_path(path)
+                if is_transfer_history_exists:
+                    return False
+                else:
+                    for unknown in unknowns:
+                        self.delete_transfer_unknown(unknown.ID)
+                    return True
+            else:
+                return True
+        else:
+            return True
+
+    @DbPersist(BaseRepository._db)
     def insert_transfer_unknown(self, path: str, dest: str, rmt_mode: RmtMode) -> None:
+        """
+        插入未识别记录
+        """
+        if not path:
+            return
+        if self.is_transfer_unknown_exists(path):
+            return
+        path = os.path.normpath(path)
+        if dest:
+            dest = os.path.normpath(dest)
+        else:
+            dest = ""
+        self._db.insert(TRANSFERUNKNOWN(PATH=path, DEST=dest, STATE="N", MODE=str(rmt_mode.value)))
+
     def is_transfer_in_blacklist(self, path: str) -> bool:
+        """
+        查询是否为黑名单
+        """
+        if not path:
+            return False
+        ret = self._db.query(TRANSFERBLACKLIST).filter(os.path.normpath(path) == TRANSFERBLACKLIST.PATH).count()
+        return ret > 0
+
     def is_transfer_notin_blacklist(self, path: str) -> bool:
+        """
+        查询是否不在黑名单
+        """
+        return not self.is_transfer_in_blacklist(path)
+
+    @DbPersist(BaseRepository._db)
     def insert_transfer_blacklist(self, path: str) -> None:
+        """
+        插入黑名单记录
+        """
     def delete_transfer_blacklist(self, path: str) -> None:
         """
         删除黑名单记录
