@@ -140,6 +140,8 @@ class Sites:
         """
         加载图标到内存
         """
+        if self.site_repo is None:
+            return
         self._site_favicons = {site.SITE: site.FAVICON for site in self.site_repo.get_site_favicons()}
 
     def get_sites(self, siteid=None, siteurl=None, siteids=None, rss=False, brush=False, statistic=False, public=False):
@@ -381,6 +383,8 @@ class Sites:
         """
         添加站点
         """
+        if self.site_repo is None:
+            return None
         ret = self.site_repo.insert_config_site(
             name=name, site_pri=site_pri, rssurl=rssurl, signurl=signurl, cookie=cookie, note=note, rss_uses=rss_uses
         )
@@ -391,6 +395,8 @@ class Sites:
         """
         更新站点
         """
+        if self.site_repo is None:
+            return None
         ret = self.site_repo.update_config_site(
             tid=tid,
             name=name,
@@ -408,6 +414,8 @@ class Sites:
         """
         删除站点
         """
+        if self.site_repo is None:
+            return None
         ret = self.site_repo.delete_config_site(siteid)
         self.init_config()
         return ret
@@ -416,6 +424,8 @@ class Sites:
         """
         更新站点Cookie和UA
         """
+        if self.site_repo is None:
+            return None
         ret = self.site_repo.update_site_cookie_ua(tid=siteid, cookie=cookie, ua=ua)
         self.init_config()
         return ret
@@ -424,6 +434,8 @@ class Sites:
         """
         更新站点 note
         """
+        if self.site_repo is None:
+            return None
         ret = self.site_repo.update_config_site_note(tid=siteid, note=note)
         self.init_config()
         return ret
@@ -432,6 +444,8 @@ class Sites:
         """
         根据站点id获取站点配置
         """
+        if self.site_repo is None:
+            return {}
         sites = self.site_repo.get_site_by_id(tid=siteid)
         if sites:
             site_note = self.__get_site_note_items(sites[0].NOTE)

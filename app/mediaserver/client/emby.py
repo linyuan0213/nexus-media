@@ -646,6 +646,7 @@ class Emby(_IMediaClient):
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             return {}
+        return {}
 
     def get_play_url(self, item_id):
         """

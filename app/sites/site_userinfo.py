@@ -49,9 +49,13 @@ class SiteUserInfo(metaclass=SingletonMeta):
     def build(self, url, site_id, site_name, site_cookie=None, site_headers=None, ua=None, emulate=None, proxy=False):
         if not site_cookie and not site_headers:
             return None
+        if site_headers is None:
+            return None
         session = requests.Session()
         log.debug(f"【Sites】站点 {site_name} url={url}")
 
+        if self.sites is None:
+            return
         if self.sites.check_ratelimit(site_id):
             return
 
@@ -187,6 +191,8 @@ class SiteUserInfo(metaclass=SingletonMeta):
             log.error(f"【Sites】站点 {site_name} 获取流量数据失败：{str(e)}")
 
     def __notify_unread_msg(self, site_name, site_user_info, unread_msg_notify):
+        if self.message is None:
+            return
         if site_user_info.message_unread <= 0:
             return
         if self._sites_data.get(site_name, {}).get("message_unread") == site_user_info.message_unread:
@@ -238,14 +244,8 @@ class SiteUserInfo(metaclass=SingletonMeta):
                 )
 
         if inc_downloads or inc_uploads:
-            string_list.insert(
-                0,
-                f"【今日汇总】\n"
-                f"总上传：{StringUtils.str_filesize(inc_uploads)}\n"
-                f"总下载：{StringUtils.str_filesize(inc_downloads)}\n"
-                f"\n————————————",
-            )
-
+            if self.message is None:
+                return
             self.message.send_user_statistics_message(string_list)
 
     def get_site_data(self, specify_sites=None, force=False):
@@ -262,6 +262,8 @@ class SiteUserInfo(metaclass=SingletonMeta):
         锁只保护竞争条件检查和 _last_update_time 写入，ThreadPool 和
         HTTP 请求在锁外执行，避免阻塞索引器搜索等其他线程。
         """
+        if self.sites is None:
+            return
         if not self.sites.get_sites():
             return
 
@@ -299,6 +301,8 @@ class SiteUserInfo(metaclass=SingletonMeta):
         """
         获取站点上传下载量
         """
+        if self.sites is None:
+            return 0, 0, [], [], []
         site_urls = []
         for site in self.sites.get_sites(statistic=True):
             site_url = site.get("strict_url")
@@ -314,6 +318,8 @@ class SiteUserInfo(metaclass=SingletonMeta):
         :param encoding: RAW/DICT
         :return:
         """
+        if self.sites is None:
+            return []
         statistic_sites = self.sites.get_sites()
         if not sites:
             site_urls = [site.get("strict_url") for site in statistic_sites]

@@ -77,6 +77,8 @@ class DownloadPipeline:
 
         :return: (downloader_id, download_id, error_msg)
         """
+        if self._client_factory is None:
+            return None, None, "client_factory not set"
         title = media_info.org_string or media_info.get_title_string() or media_info.title or "未知"
 
         self._eventmanager.send_event(
@@ -242,6 +244,8 @@ class DownloadPipeline:
     # ---------- 阶段2：配置解析 ----------
 
     def _stage_resolve(self, media_info, download_setting, downloader_id, tag, is_paused, site_info, torrent_attr):
+        if self._client_factory is None:
+            return {"download_attr": {}, "downloader_id": downloader_id, "tags": [], "is_paused": is_paused}
         if not download_setting and media_info.site:
             download_setting = self._sites.get_site_download_setting(media_info.site)
         if download_setting == "-2":

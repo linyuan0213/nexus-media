@@ -174,10 +174,12 @@ class TorrentSpider(feapder.AirSpider):
             if self.search.get("params"):
                 # 变量字典
                 inputs_dict = {"keyword": search_word}
-                # 查询参数
+            # 查询参数
+            _search_params = self.search.get("params")
+            if _search_params:
                 params = {"search_mode": search_mode, "page": self.page or 0, "notnewword": 1}
                 # 额外参数
-                for key, value in self.search.get("params").items():
+                for key, value in _search_params.items():
                     params.update({f"{key}": str(value).format(**inputs_dict)})
                 # 分类条件
                 if self.category:
@@ -241,6 +243,8 @@ class TorrentSpider(feapder.AirSpider):
 
     def download_midware(self, request):
         response = None
+        if self.site_info is None:
+            return request, response
         if not self.site_info.get("chrome"):
             request.headers = {"User-Agent": self.ua, "referer": self.domain}
             request.cookies = RequestUtils.cookie_parse(self.cookie)
@@ -257,6 +261,8 @@ class TorrentSpider(feapder.AirSpider):
 
     def get_title_default(self, torrent):
         # title default
+        if self.site_info is None:
+            return
         if "title" not in self.fields:
             return
         selector = copy.deepcopy(self.fields.get("title", {}))
@@ -290,6 +296,8 @@ class TorrentSpider(feapder.AirSpider):
 
     def get_title_optional(self, torrent):
         # title optional
+        if self.site_info is None:
+            return
         if "description" not in self.fields:
             return
         selector = copy.deepcopy(self.fields.get("description", {}))
@@ -342,6 +350,8 @@ class TorrentSpider(feapder.AirSpider):
     def get_details(self, torrent):
         # details
         if "details" not in self.fields:
+            return
+        if self.domain is None:
             return
         selector = self.fields.get("details", {})
         details = torrent(selector.get("selector", "")).clone()
@@ -524,6 +534,8 @@ class TorrentSpider(feapder.AirSpider):
 
     def get_labels(self, torrent):
         # labels
+        if self.site_info is None:
+            return
         if "labels" not in self.fields:
             return
         selector = copy.deepcopy(self.fields.get("labels", {}))
@@ -653,7 +665,7 @@ class TorrentSpider(feapder.AirSpider):
             html_doc = PyQuery(html_text)
             # 种子筛选器
             torrents_selector = self.list.get("selector", "")
-            if self.site_info.get("chrome") and torrents_selector.find("tr:has") != -1:
+            if self.site_info is not None and self.site_info.get("chrome") and torrents_selector.find("tr:has") != -1:
                 torrents_selector = torrents_selector.replace("> tr:has", " > tbody > tr:has")
             # 遍历种子html列表
             for torn in html_doc(torrents_selector):

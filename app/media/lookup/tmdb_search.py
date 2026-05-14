@@ -18,6 +18,8 @@ class TmdbSearch:
         self.client = client
 
     def search_movie(self, name: str, year: Any = None) -> Any:
+        if self.client.search is None:
+            return None
         try:
             params = {"query": name}
             if year:
@@ -81,6 +83,8 @@ class TmdbSearch:
         return {}
 
     def search_tv(self, name: str, year: Any = None, season_number: Any = None, episode: Any = None) -> Any:
+        if self.client.search is None:
+            return None
         try:
             params = {"query": name}
             if year:
@@ -183,6 +187,8 @@ class TmdbSearch:
             return False
 
     def search_tv_by_season(self, name: str, media_year: Any, season_number: Any, episode: Any = None) -> Any:
+        if self.client.search is None:
+            return None
         def _season_match(tv_info, season_year):
             if not tv_info:
                 return False
@@ -246,6 +252,8 @@ class TmdbSearch:
         return {}
 
     def search_multi(self, name: str) -> Any:
+        if self.client.search is None:
+            return None
         try:
             multis = self.client.search.multi({"query": name}) or []
         except (TMDbError, Exception) as err:
@@ -286,6 +294,8 @@ class TmdbSearch:
 
     def search_multi_infos(self, name: str) -> list:
         """查询所有匹配的 movie/tv 结果（用于列表展示，不做名称匹配）"""
+        if self.client.search is None:
+            return []
         if not name:
             return []
         try:
@@ -302,6 +312,8 @@ class TmdbSearch:
 
     def search_movie_infos(self, name: str, year: Any = None) -> list:
         """查询所有匹配的电影结果（用于列表展示）"""
+        if self.client.search is None:
+            return []
         if not name:
             return []
         try:
@@ -320,6 +332,8 @@ class TmdbSearch:
 
     def search_tv_infos(self, name: str, year: Any = None) -> list:
         """查询所有匹配的电视剧结果（用于列表展示）"""
+        if self.client.search is None:
+            return []
         if not name:
             return []
         try:

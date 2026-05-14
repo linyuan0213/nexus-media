@@ -249,7 +249,7 @@ class RedisCacheAdapter(CacheAdapter):
 
     def get(self, key: str) -> Any | None:
         """获取缓存值 - 先查Redis，失败回退到内存"""
-        if self._ensure_connection():
+        if self._ensure_connection() and self._redis is not None:
             try:
                 data = self._redis.get(key)
                 if data is not None:
@@ -285,7 +285,7 @@ class RedisCacheAdapter(CacheAdapter):
             ttl = self._default_ttl
 
         redis_ok = False
-        if self._ensure_connection():
+        if self._ensure_connection() and self._redis is not None:
             try:
                 data = pickle.dumps(value)
                 self._redis.set(key, data, ex=ttl)
@@ -313,7 +313,7 @@ class RedisCacheAdapter(CacheAdapter):
     def delete(self, key: str) -> bool:
         """删除缓存 - 同时删除Redis和内存回退"""
         redis_ok = False
-        if self._ensure_connection():
+        if self._ensure_connection() and self._redis is not None:
             try:
                 self._redis.delete(key)
                 with self._lock:
@@ -331,7 +331,7 @@ class RedisCacheAdapter(CacheAdapter):
 
     def exists(self, key: str) -> bool:
         """检查键是否存在 - 先查Redis，再查内存回退"""
-        if self._ensure_connection():
+        if self._ensure_connection() and self._redis is not None:
             try:
                 return self._redis.exists(key)
             except Exception:
@@ -340,7 +340,7 @@ class RedisCacheAdapter(CacheAdapter):
 
     def clear(self) -> bool:
         """清空所有缓存"""
-        if self._ensure_connection():
+        if self._ensure_connection() and self._redis is not None:
             try:
                 keys = self._redis.keys("cache:*")
                 if keys:
@@ -356,7 +356,7 @@ class RedisCacheAdapter(CacheAdapter):
     def keys(self, pattern: str = "*") -> list[str]:
         """获取匹配模式的键列表"""
         redis_keys = []
-        if self._ensure_connection():
+        if self._ensure_connection() and self._redis is not None:
             try:
                 redis_keys = self._redis.keys(pattern)
             except Exception as e:
@@ -368,7 +368,7 @@ class RedisCacheAdapter(CacheAdapter):
 
     def ttl(self, key: str) -> int:
         """获取键的剩余生存时间"""
-        if self._ensure_connection():
+        if self._ensure_connection() and self._redis is not None:
             try:
                 return self._redis.ttl(key)
             except Exception:
@@ -378,7 +378,7 @@ class RedisCacheAdapter(CacheAdapter):
     def expire(self, key: str, seconds: int) -> bool:
         """设置键的过期时间"""
         redis_ok = False
-        if self._ensure_connection():
+        if self._ensure_connection() and self._redis is not None:
             try:
                 self._redis.expire(key, seconds)
                 redis_ok = True

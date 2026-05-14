@@ -265,6 +265,8 @@ class Searcher(metaclass=SingletonMeta):
             return []
         if not self.indexer_service:
             return []
+        if self.eventmanager is None:
+            return []
         self.eventmanager.send_event(
             EventType.SearchStart,
             {
@@ -287,6 +289,8 @@ class Searcher(metaclass=SingletonMeta):
         if not media_info:
             return None, {}, 0, 0
 
+        if self.progress is None:
+            return None, {}, 0, 0
         self.progress.start(ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search)
 
         # 季/集信息
@@ -319,6 +323,8 @@ class Searcher(metaclass=SingletonMeta):
             executor = SearchExecutor(max_workers=optimal_workers)
 
             def _update_progress(finish_count, total):
+                if self.progress is None:
+                    return
                 self.progress.update(
                     ptype=ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search,
                     value=round(100 * (finish_count / total)),
@@ -347,6 +353,8 @@ class Searcher(metaclass=SingletonMeta):
             message=self.message,
         )
 
+        if self.message is None:
+            return None, no_exists, len(media_list), None
         if in_from in self.message.get_search_types():
             # 排序并入库
             media_list = processor.sort_results(media_list)
@@ -373,15 +381,23 @@ class Searcher(metaclass=SingletonMeta):
             return download_items[0], no_exists, len(media_list), len(download_items)
 
     def get_search_result_by_id(self, dl_id):
+        if self.search_repo is None:
+            return None
         return self.search_repo.get_search_result_by_id(dl_id)
 
     def get_search_results(self):
+        if self.search_repo is None:
+            return []
         return self.search_repo.get_search_results()
 
     def delete_all_search_torrents(self):
+        if self.search_repo is None:
+            return
         self.search_repo.delete_all_search_torrents()
 
     def insert_search_results(self, media_items: list, title=None, ident_flag=True):
+        if self.search_repo is None:
+            return
         self.search_repo.insert_search_results(media_items, title, ident_flag)
 
 

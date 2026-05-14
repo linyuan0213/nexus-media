@@ -66,6 +66,10 @@ class Rss(metaclass=SingletonMeta):
         3. 批量订阅匹配和过滤
         4. 择优下载
         """
+        if self.sites is None:
+            return
+        if self.subscribe is None:
+            return
         rss_sites_info = self.sites.get_sites(rss=True, public=True)
         if not rss_sites_info:
             return
@@ -363,6 +367,8 @@ class Rss(metaclass=SingletonMeta):
         """
         判断种子是否命中订阅（委托给 RssMatcher）
         """
+        if self.matcher is None:
+            return False, [], {}
         return self.matcher.match(
             media_info=media_info,
             rss_movies=rss_movies,
@@ -383,6 +389,10 @@ class Rss(metaclass=SingletonMeta):
         if not rss_download_torrents:
             return
 
+        if self.subscribe is None:
+            return
+        if self.downloader is None:
+            return
         finished_rss_torrents = []
         updated_rss_torrents = []
 
@@ -392,6 +402,8 @@ class Rss(metaclass=SingletonMeta):
             if not download_item.rssid or download_item.rssid in finished_rss_torrents:
                 return
             finished_rss_torrents.append(download_item.rssid)
+            if self.subscribe is None:
+                return
             self.subscribe.finish_rss_subscribe(rssid=download_item.rssid, media=download_item)
 
         def __update_tv_rss(download_item, left_media):
@@ -400,6 +412,8 @@ class Rss(metaclass=SingletonMeta):
             if not download_item.rssid or download_item.rssid in updated_rss_torrents:
                 return
             updated_rss_torrents.append(download_item.rssid)
+            if self.subscribe is None:
+                return
             self.subscribe.update_subscribe_tv_lack(
                 rssid=download_item.rssid, media_info=download_item, seasoninfo=left_media
             )
@@ -412,6 +426,8 @@ class Rss(metaclass=SingletonMeta):
             if download_item.get_episode_list():
                 return
             updated_rss_torrents.append(download_item.rssid)
+            if self.subscribe is None:
+                return
             self.subscribe.update_subscribe_over_edition(
                 rtype=download_item.type, rssid=download_item.rssid, media=download_item
             )
@@ -438,10 +454,14 @@ class Rss(metaclass=SingletonMeta):
         """
         删除订阅历史
         """
+        if self.rss_repo is None:
+            return
         self.rss_repo.delete_rss_history(rssid=rssid)
 
     def get_rss_history(self, rtype=None, rid=None):
         """
         获取订阅历史
         """
+        if self.rss_repo is None:
+            return []
         return self.rss_repo.get_rss_history(rtype=rtype, rid=rid)
