@@ -8,13 +8,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
-import version
 import log
+import version
 from api.routers import (
     apikey,
     auth,
@@ -34,11 +34,11 @@ from api.routers import (
     userrss,
     words,
 )
+from app.db import init_db, remove_session
 from app.message import Message
 from app.plugin_framework.sandbox import PluginSandbox
-from app.utils.security import get_secret_key
-from app.db import remove_session, init_db
 from app.services.system_service import SystemLifecycleService
+from app.utils.security import get_secret_key
 
 # 读取安全密钥（与 Flask 共用 secret_key）
 _secret_key = get_secret_key()
