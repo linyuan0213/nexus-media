@@ -7,6 +7,7 @@ import importlib
 import os
 import re
 import shutil
+from typing import TYPE_CHECKING
 from urllib.parse import unquote
 
 from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_MEDIAEXT, RMT_SUBEXT
@@ -24,6 +25,9 @@ from app.utils import EpisodeFormat, ExceptionUtils, PathUtils, StringUtils
 from app.utils.types import MediaType, MovieTypes, OsType, RmtMode, SyncType, TvTypes
 from app.utils.web_utils import set_config_directory
 from config import Config
+
+if TYPE_CHECKING:
+    from app.db.models import TRANSFERUNKNOWN
 
 
 class SyncService:
@@ -265,7 +269,7 @@ class SyncService:
     def get_transfer_info_by_id(self, logid: int):
         return self._filetransfer.get_transfer_info_by_id(logid)
 
-    def get_unknown_info_by_id(self, tid: int) -> object:
+    def get_unknown_info_by_id(self, tid: int) -> "TRANSFERUNKNOWN | None":
         return self._filetransfer.get_unknown_info_by_id(tid)
 
     def get_sub_path(self, directory: str, ft: str = "ALL") -> list[dict]:
