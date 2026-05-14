@@ -14,7 +14,7 @@ class ReflectUtils:
 
         submodules = []
         packages = importlib.import_module(package).__path__
-        for importer, package_name, _ in pkgutil.iter_modules(packages):
+        for _importer, package_name, _ in pkgutil.iter_modules(packages):
             full_package_name = f"{package}.{package_name}"
             if full_package_name.startswith("_"):
                 continue

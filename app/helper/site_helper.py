@@ -23,9 +23,7 @@ class SiteHelper:
             success = json_data.get("success")
             error_message = json_data.get("errorMessage")
 
-            if (message and message.upper() == "SUCCESS") or success or (error_message and "已签" in error_message):
-                return True
-            return False
+            return bool(message and message.upper() == "SUCCESS" or success or error_message and "已签" in error_message)
         if "签到成功" in html_text:
             return True
 
@@ -53,10 +51,7 @@ class SiteHelper:
 
         # 朱雀
         x_csrf_token = html.xpath("//head/meta[contains(@name, 'x-csrf-token')]")
-        if x_csrf_token:
-            return True
-
-        return False
+        return bool(x_csrf_token)
 
     @staticmethod
     def get_url_subtitle_name(disposition, url):
@@ -79,7 +74,7 @@ class SiteHelper:
         """
         转移站点字幕
         """
-        new_sub_file = "%s%s" % (os.path.splitext(media_file)[0], os.path.splitext(source_sub_file)[-1])
+        new_sub_file = f"{os.path.splitext(media_file)[0]}{os.path.splitext(source_sub_file)[-1]}"
         if os.path.exists(new_sub_file):
             return 1
         else:

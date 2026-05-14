@@ -614,7 +614,7 @@ class MessageCommandHandler:
         command = self._commands.get(msg)
         if command:
             ThreadHelper().start_thread(command.get("func"), ())
-            Message().send_channel_msg(channel=in_from, title="正在运行 %s ..." % command.get("desc"), user_id=user_id)
+            Message().send_channel_msg(channel=in_from, title="正在运行 {} ...".format(command.get("desc")), user_id=user_id)
             return
 
         # 插件命令
@@ -627,7 +627,7 @@ class MessageCommandHandler:
             if func:
                 ThreadHelper().start_thread(func, (msg, in_from, user_id, user_name))
             Message().send_channel_msg(
-                channel=in_from, title="正在运行 %s ..." % plugin_cmd.get("desc"), user_id=user_id
+                channel=in_from, title="正在运行 {} ...".format(plugin_cmd.get("desc")), user_id=user_id
             )
             return
 

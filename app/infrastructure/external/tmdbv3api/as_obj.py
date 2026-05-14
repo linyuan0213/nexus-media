@@ -1,4 +1,3 @@
-import sys
 
 from app.infrastructure.external.tmdbv3api.exceptions import TMDbException
 
@@ -35,21 +34,17 @@ class AsObj:
     def __str__(self):
         return str(self.__dict__)
 
-    if sys.version_info >= (3, 8):
+    def __reversed__(self):
+        return reversed(self.__dict__)
 
-        def __reversed__(self):
-            return reversed(self.__dict__)
+    def __class_getitem__(cls, key):
+        return cls.__dict__.__class_getitem__(key)
 
-    if sys.version_info >= (3, 9):
+    def __ior__(self, value):
+        return self.__dict__.__ior__(value)
 
-        def __class_getitem__(cls, key):
-            return cls.__dict__.__class_getitem__(key)
-
-        def __ior__(self, value):
-            return self.__dict__.__ior__(value)
-
-        def __or__(self, value):
-            return self.__dict__.__or__(value)
+    def __or__(self, value):
+        return self.__dict__.__or__(value)
 
     def clear(self):
         return self.__dict__.clear()

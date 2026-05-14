@@ -27,7 +27,7 @@ class MTeam(_ISiteSigninHandler):
         :param url: 站点Url
         :return: 是否匹配，如匹配则会调用该类的signin方法
         """
-        return True if StringUtils.url_equal(url, cls.site_url) else False
+        return bool(StringUtils.url_equal(url, cls.site_url))
 
     def signin(self, site_info: dict):
         """
@@ -36,9 +36,9 @@ class MTeam(_ISiteSigninHandler):
         :return: 签到结果信息
         """
         site = site_info.get("name")
-        site_cookie = site_info.get("cookie")
-        ua = site_info.get("ua")
-        proxy = get_proxies() if site_info.get("proxy") else None
+        site_info.get("cookie")
+        site_info.get("ua")
+        get_proxies() if site_info.get("proxy") else None
 
         EventHandler.send_event(EventType.LocalStorageSync)
         time.sleep(10)
@@ -65,7 +65,7 @@ class MTeam(_ISiteSigninHandler):
             )
 
             if not html_text:
-                self.warn("%s 获取站点源码失败" % site)
+                self.warn(f"{site} 获取站点源码失败")
                 return f"【{site}】仿真登录失败，获取站点源码失败！", None
 
             # 登录成功

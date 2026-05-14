@@ -27,7 +27,7 @@ class ImageDownloader:
         if not url or not out_path:
             return
         if itype:
-            image_path = os.path.join(out_path, "%s.%s" % (itype, str(url).split(".")[-1]))
+            image_path = os.path.join(out_path, "{}.{}".format(itype, str(url).split(".")[-1]))
         else:
             image_path = out_path
         if not force and os.path.exists(image_path):
@@ -51,14 +51,14 @@ class ImageDownloader:
 
     def save_nfo(self, doc, out_file):
         """保存 NFO XML 文件"""
-        log.info("【Scraper】正在保存NFO文件：%s" % out_file)
+        log.info(f"【Scraper】正在保存NFO文件：{out_file}")
         xml_str = doc.toprettyxml(indent="  ", encoding="utf-8")
         if self._rmt_mode in ModuleConf.REMOTE_RMT_MODES:
             self._save_remote(out_file, xml_str)
         else:
             with open(out_file, "wb") as xml_file:
                 xml_file.write(xml_str)
-        log.info("【Scraper】NFO文件已保存：%s" % out_file)
+        log.info(f"【Scraper】NFO文件已保存：{out_file}")
 
     def _save_remote(self, out_file, content):
         """保存到远程存储（RCLONE / MINIO）"""

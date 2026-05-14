@@ -20,7 +20,7 @@ class Chanify(_IMessageClient):
         try:
             if not self._server or not self._token:
                 return False, "参数未配置"
-            sc_url = "%s/v1/sender/%s" % (self._server, self._token)
+            sc_url = f"{self._server}/v1/sender/{self._token}"
             params = parse.parse_qs(self._params or "")
             data = {key: value[0] for key, value in params.items()}
             data.update({"title": title, "text": text})

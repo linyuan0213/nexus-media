@@ -21,7 +21,7 @@ class WebUtils:
         url = (
             "https://sp0.baidu.com/8aQDcjqpAAV3otqbppnN2DJv/api.php?co=&resource_id=6006&t=1529895387942&ie=utf8"
             "&oe=gbk&cb=op_aladdin_callback&format=json&tn=baidu&"
-            "cb=jQuery110203920624944751099_1529894588086&_=1529894588088&query=%s" % ip
+            f"cb=jQuery110203920624944751099_1529894588086&_=1529894588088&query={ip}"
         )
         try:
             r = RequestUtils().get_res(url)
@@ -42,7 +42,7 @@ class WebUtils:
         """
         获取当前版本号
         """
-        return "%s" % (APP_VERSION)
+        return f"{APP_VERSION}"
 
     @staticmethod
     def get_latest_version():
@@ -172,9 +172,9 @@ class WebUtils:
                 if meta_info.type != MediaType.MOVIE and tmp_info.type == MediaType.MOVIE:
                     continue
                 if tmp_info.begin_season:
-                    tmp_info.title = "%s 第%s季" % (tmp_info.title, cn2an.an2cn(meta_info.begin_season, mode="low"))
+                    tmp_info.title = "{} 第{}季".format(tmp_info.title, cn2an.an2cn(meta_info.begin_season, mode="low"))
                 if tmp_info.begin_episode:
-                    tmp_info.title = "%s 第%s集" % (tmp_info.title, meta_info.begin_episode)
+                    tmp_info.title = f"{tmp_info.title} 第{meta_info.begin_episode}集"
                 results.append(tmp_info)
             return results
 
@@ -271,9 +271,9 @@ def mediainfo_dict(media_info):
     tmdb_S_E_link = ""
     if tmdb_id:
         if media_info.get_season_string():
-            tmdb_S_E_link = "%s/season/%s" % (tmdb_link, media_info.get_season_seq())
+            tmdb_S_E_link = f"{tmdb_link}/season/{media_info.get_season_seq()}"
             if media_info.get_episode_string():
-                tmdb_S_E_link = "%s/episode/%s" % (tmdb_S_E_link, media_info.get_episode_seq())
+                tmdb_S_E_link = f"{tmdb_S_E_link}/episode/{media_info.get_episode_seq()}"
     return {
         "type": media_info.type.value if media_info.type else "",
         "name": media_info.get_name(),
@@ -315,16 +315,16 @@ def set_config_value(cfg, cfg_key, cfg_value):
 
     if cfg_key == "app.login_password":
         if cfg_value and not cfg_value.startswith("[hash]"):
-            cfg["app"]["login_password"] = "[hash]%s" % generate_password_hash(cfg_value)
+            cfg["app"]["login_password"] = f"[hash]{generate_password_hash(cfg_value)}"
         else:
             cfg["app"]["login_password"] = cfg_value or "password"
         return cfg
     if cfg_key == "app.proxies":
         if cfg_value:
             if not cfg_value.startswith("http") and not cfg_value.startswith("sock"):
-                cfg["app"]["proxies"] = {"https": "http://%s" % cfg_value, "http": "http://%s" % cfg_value}
+                cfg["app"]["proxies"] = {"https": f"http://{cfg_value}", "http": f"http://{cfg_value}"}
             else:
-                cfg["app"]["proxies"] = {"https": "%s" % cfg_value, "http": "%s" % cfg_value}
+                cfg["app"]["proxies"] = {"https": f"{cfg_value}", "http": f"{cfg_value}"}
         else:
             cfg["app"]["proxies"] = {"https": None, "http": None}
         return cfg

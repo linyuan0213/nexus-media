@@ -110,9 +110,7 @@ class TMDBRetryWithBackoff:
     def should_retry(self, attempt, status_code=None):
         if attempt >= self._max_retries:
             return False
-        if status_code is not None and status_code not in [429, 500, 502, 503, 504]:
-            return False
-        return True
+        return not (status_code is not None and status_code not in [429, 500, 502, 503, 504])
 
     def execute(self, func, *args, **kwargs):
         last_exception = None
@@ -211,38 +209,38 @@ class TestTMDBRateLimiter:
 
         # 应该能立即获取 5 个令牌（burst_size）
         for i in range(5):
-            assert limiter.try_acquire() == True, f"第 {i + 1} 个令牌应该能立即获取"
+            assert limiter.try_acquire(), f"第 {i + 1} 个令牌应该能立即获取"
 
         # 第 6 个应该失败（令牌已用完）
-        assert limiter.try_acquire() == False
+        assert not limiter.try_acquire()
 
     def test_rate_limiting(self):
         """测试速率限制"""
         limiter = TMDBRateLimiter(max_requests_per_second=10, burst_size=1)
 
         # 消耗掉唯一的令牌
-        assert limiter.try_acquire() == True
+        assert limiter.try_acquire()
 
         # 立即再获取应该失败
-        assert limiter.try_acquire() == False
+        assert not limiter.try_acquire()
 
         # 等待 0.15 秒后应该能获取（每秒10个 = 每0.1秒1个）
         time.sleep(0.15)
-        assert limiter.try_acquire() == True
+        assert limiter.try_acquire()
 
     def test_acquire_with_wait(self):
         """测试带等待的获取"""
         limiter = TMDBRateLimiter(max_requests_per_second=2, burst_size=1)
 
         # 消耗掉令牌
-        assert limiter.try_acquire() == True
+        assert limiter.try_acquire()
 
         # 再获取应该需要等待
         start = time.time()
         result = limiter.acquire(timeout=1.0)
         elapsed = time.time() - start
 
-        assert result == True
+        assert result
         assert elapsed >= 0.4  # 每秒2个 = 每0.5秒1个
 
     def test_stats(self):
@@ -322,7 +320,7 @@ class TestRequestDeduper:
 
         # 启动多个线程并发请求相同 key
         threads = []
-        for i in range(5):
+        for _i in range(5):
 
             def worker():
                 result = deduper.execute("test_key", slow_function)

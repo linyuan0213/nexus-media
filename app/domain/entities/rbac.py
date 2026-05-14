@@ -3,6 +3,7 @@ RBAC 领域实体
 包含用户、角色、权限、菜单等实体
 """
 
+import contextlib
 from dataclasses import dataclass, fields
 from datetime import datetime
 from typing import Any, Optional
@@ -32,10 +33,8 @@ class RBACUserEntity:
             return None
 
         roles = []
-        try:
+        with contextlib.suppress(Exception):
             roles = [r.to_dict() for r in orm_model.roles]
-        except Exception:
-            pass
 
         return cls(
             id=orm_model.ID,
@@ -103,20 +102,14 @@ class RBACRoleEntity:
         menus = []
         users_count = 0
 
-        try:
+        with contextlib.suppress(Exception):
             perms = [p.to_dict() for p in orm_model.permissions]
-        except Exception:
-            pass
 
-        try:
+        with contextlib.suppress(Exception):
             menus = [m.to_dict() for m in orm_model.menus]
-        except Exception:
-            pass
 
-        try:
+        with contextlib.suppress(Exception):
             users_count = len(list(orm_model.users))
-        except Exception:
-            pass
 
         return cls(
             id=orm_model.ID,

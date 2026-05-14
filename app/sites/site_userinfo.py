@@ -22,7 +22,7 @@ lock = Lock()
 
 
 def _log_error(site_name):
-    log.error("【Sites】站点 %s 无法识别站点类型" % site_name)
+    log.error(f"【Sites】站点 {site_name} 无法识别站点类型")
     return None
 
 
@@ -220,7 +220,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
         _, _, site, upload, download = SiteUserInfo().get_pt_site_statistics_history(2)
 
         # 按照上传降序排序
-        data_list = list(zip(site, upload, download))
+        data_list = list(zip(site, upload, download, strict=False))
         data_list = sorted(data_list, key=lambda x: x[1], reverse=True)
 
         for data in data_list:

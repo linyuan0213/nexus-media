@@ -42,7 +42,7 @@ for i, line in enumerate(lines):
 # 收集原 apiv1.py 中的 controllers / backend imports（第 2-12 行、22 行左右）
 controller_imports = []
 for i, line in enumerate(lines[:base_start]):
-    if line.startswith("from web.controllers.") or line.startswith("from web.backend."):
+    if line.startswith(("from web.controllers.", "from web.backend.")):
         controller_imports.append(line)
 
 common_header = (

@@ -3,6 +3,7 @@ Plugin Context - 插件运行时上下文
 提供给插件访问系统能力的接口
 """
 
+import contextlib
 import json
 import os
 from typing import Any
@@ -81,10 +82,8 @@ class PluginContext:
 
     def _write_db_log(self, level: str, msg: str) -> None:
         """同时写入数据库日志"""
-        try:
+        with contextlib.suppress(Exception):
             self._log_repo.insert(self._plugin_id, level, msg)
-        except Exception:
-            pass
 
     def log_info(self, msg: str) -> None:
         log.info(f"[Plugin:{self._plugin_id}] {msg}")

@@ -111,7 +111,7 @@ class TestSiteRouter:
     # update_site_cookie_ua
     # ------------------------------------------------------------------
     def test_update_site_cookie_ua(self):
-        mock_svc = self._mock_site()
+        self._mock_site()
         try:
             resp = client.post(
                 "/api/site/update_site_cookie_ua", json={"site_id": "1", "site_cookie": "c=1", "site_ua": "ua"}
@@ -173,7 +173,7 @@ class TestSiteRouter:
     # set_site_captcha_code
     # ------------------------------------------------------------------
     def test_set_site_captcha_code(self):
-        mock_svc = self._mock_site()
+        self._mock_site()
         try:
             resp = client.post("/api/site/set_site_captcha_code", json={"code": "abc", "value": "123"})
             assert resp.status_code == 200

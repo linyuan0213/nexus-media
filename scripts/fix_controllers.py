@@ -33,7 +33,7 @@ for fp in sorted(CONTROLLERS_DIR.glob("*.py")):
             lines = text.splitlines()
             insert_idx = 0
             for i, line in enumerate(lines):
-                if line.startswith("from ") or line.startswith("import "):
+                if line.startswith(("from ", "import ")):
                     insert_idx = i + 1
             lines.insert(insert_idx, "from web.controllers.sync import re_identification")
             text = "\n".join(lines)

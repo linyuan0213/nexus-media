@@ -45,7 +45,7 @@ class Aria2(_IDownloadClient):
 
     @classmethod
     def match(cls, ctype):
-        return True if ctype in [cls.client_id, cls.client_type, cls.client_name] else False
+        return ctype in [cls.client_id, cls.client_type, cls.client_name]
 
     def connect(self):
         pass
@@ -54,7 +54,7 @@ class Aria2(_IDownloadClient):
         if not self._client:
             return False
         ver = self._client.getVersion()
-        return True if ver else False
+        return bool(ver)
 
     def get_torrents(self, ids=None, status=None, **kwargs) -> list[Torrent]:
         if not self._client:
@@ -120,9 +120,9 @@ class Aria2(_IDownloadClient):
                         content = p.headers.get("Location")
                 except Exception as result:
                     ExceptionUtils.exception_traceback(result)
-            return self._client.addUri(uris=[content], options=dict(dir=download_dir))
+            return self._client.addUri(uris=[content], options={"dir": download_dir})
         else:
-            return self._client.addTorrent(torrent=content, uris=[], options=dict(dir=download_dir))
+            return self._client.addTorrent(torrent=content, uris=[], options={"dir": download_dir})
 
     def start_torrents(self, ids):
         if not self._client:
@@ -164,7 +164,7 @@ class Aria2(_IDownloadClient):
                 state = "Downloading"
                 _dlspeed = StringUtils.str_filesize(torrent.download_speed)
                 _upspeed = StringUtils.str_filesize(torrent.upload_speed)
-                speed = "%s%sB/s %s%sB/s" % (chr(8595), _dlspeed, chr(8593), _upspeed)
+                speed = f"{chr(8595)}{_dlspeed}B/s {chr(8593)}{_upspeed}B/s"
 
             DispTorrents.append(
                 {"id": torrent.id, "name": torrent.name, "speed": speed, "state": state, "progress": progress}

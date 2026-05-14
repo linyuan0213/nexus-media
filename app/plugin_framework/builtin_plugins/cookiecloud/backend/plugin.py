@@ -3,6 +3,7 @@ CookieCloud Plugin v2
 从 CookieCloud 云端同步数据
 """
 
+import contextlib
 import json
 import re
 from collections import defaultdict
@@ -78,17 +79,12 @@ class CookieCloudPlugin:
                 self.ctx.error(f"schedule_cron 失败: {e}")
 
     def _stop_service(self):
-        try:
+        with contextlib.suppress(Exception):
             self.ctx.remove_schedule("sync")
-        except Exception:
-            pass
 
     @staticmethod
     def is_domain_in_list(domain, domain_list):
-        for pattern in domain_list:
-            if re.match(pattern, domain):
-                return True
-        return False
+        return any(re.match(pattern, domain) for pattern in domain_list)
 
     def _check_domain(self, domain):
         config = self._get_config()
@@ -118,12 +114,12 @@ class CookieCloudPlugin:
             return {}, "CookieCloud 参数不正确", False
 
         if not server.startswith("http"):
-            server = "http://%s" % server
+            server = f"http://{server}"
         if server.endswith("/"):
             server = server[:-1]
 
         req = RequestUtils(content_type="application/json")
-        req_url = "%s/get/%s" % (server, key)
+        req_url = f"{server}/get/{key}"
         ret = req.post_res(url=req_url, json={"password": password})
 
         if ret and ret.status_code == 200:
@@ -137,7 +133,7 @@ class CookieCloudPlugin:
                 content["local_storage_data"] = result.get("local_storage_data")
             return content, "", True
         elif ret:
-            return {}, "同步 CookieCloud 失败，错误码：%s" % ret.status_code, False
+            return {}, f"同步 CookieCloud 失败，错误码：{ret.status_code}", False
         else:
             return {}, "CookieCloud 请求失败，请检查服务器地址、用户 KEY 及加密密码是否正确", False
 
@@ -183,7 +179,7 @@ class CookieCloudPlugin:
         """公共逻辑：按域名分组、过滤、去重后存入 Redis，返回 domain->cookie_str 映射"""
         domain_cookie_groups = defaultdict(list)
         cookie_content = contents.get("cookie_data")
-        for site, cookies in cookie_content.items():
+        for _site, cookies in cookie_content.items():
             for cookie in cookies:
                 if not self._check_domain(cookie["domain"]):
                     continue

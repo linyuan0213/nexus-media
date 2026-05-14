@@ -55,7 +55,7 @@ class TestConfigService:
     def test_get_config_node(self, mock_config):
         """获取指定节点配置"""
         svc = ConfigService(config=mock_config)
-        result = svc.get_config("app")
+        svc.get_config("app")
         mock_config.get_config.assert_called_with("app")
 
     def test_get_pt_config(self, mock_config):
@@ -158,5 +158,5 @@ class TestConfigService:
             mock_cfg_cls = MagicMock()
             mock_cfg_cls.return_value = MagicMock()
             m.setattr("app.services.config_service.Config", mock_cfg_cls)
-            svc = ConfigService()
+            ConfigService()
             mock_cfg_cls.assert_called_once()

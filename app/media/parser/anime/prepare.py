@@ -41,9 +41,9 @@ def prepare_title(title):
                 name = name[1:]
             if name and name.find("/") != -1:
                 if name.split("/")[-1].strip():
-                    titles.append("%s%s" % (left_char, name.split("/")[-1].strip()))
+                    titles.append("{}{}".format(left_char, name.split("/")[-1].strip()))
                 else:
-                    titles.append("%s%s" % (left_char, name.split("/")[0].strip()))
+                    titles.append("{}{}".format(left_char, name.split("/")[0].strip()))
             elif name:
                 if StringUtils.is_chinese(name) and not StringUtils.is_all_chinese(name):
                     if not re.search(r"\[\d+", name, re.IGNORECASE):
@@ -53,6 +53,6 @@ def prepare_title(title):
                 if name == "[":
                     titles.append("")
                 else:
-                    titles.append("%s%s" % (left_char, name.strip()))
+                    titles.append(f"{left_char}{name.strip()}")
         return "]".join(titles)
     return title

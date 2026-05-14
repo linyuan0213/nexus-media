@@ -89,7 +89,7 @@ class DiskSpaceSaverPlugin:
         duplicates = {}
         file_group_by_size = {}
 
-        for dirpath, dirnames, filenames in os.walk(folder_path):
+        for dirpath, _dirnames, filenames in os.walk(folder_path):
             for filename in filenames:
                 file_path = os.path.join(dirpath, filename)
                 file_ext = os.path.splitext(file_path)[1]
@@ -144,7 +144,7 @@ class DiskSpaceSaverPlugin:
         return duplicates
 
     def _process_duplicates(self, duplicates, dry_run=False):
-        for sha1, files in duplicates.items():
+        for _sha1, files in duplicates.items():
             if len(files) > 1:
                 for file_path in files[1:]:
                     stat_first = os.stat(files[0])

@@ -121,11 +121,11 @@ class EpisodeMapper:
                 return None
 
             self._blocks[tmdb_id] = blocks
-            log.info("【EpisodeMapper】TMDB %s 推断季结构: %s" % (tmdb_id, blocks))
+            log.info(f"【EpisodeMapper】TMDB {tmdb_id} 推断季结构: {blocks}")
             return blocks
 
         except Exception as e:
-            log.warn("【EpisodeMapper】推断失败: %s" % e)
+            log.warn(f"【EpisodeMapper】推断失败: {e}")
             return None
 
     def map(self, tmdb_id: int, source_season: int | None, source_episode: int | None) -> tuple[int, int] | None:
@@ -278,7 +278,7 @@ class EpisodeMapper:
             return None
 
         except Exception as e:
-            log.warn("【EpisodeMapper】绝对集号映射失败: %s" % e)
+            log.warn(f"【EpisodeMapper】绝对集号映射失败: {e}")
             return None
 
     def invalidate(self, tmdb_id: int):

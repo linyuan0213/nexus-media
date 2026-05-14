@@ -69,7 +69,7 @@ class AutoSubPlugin:
         faster_whisper_model = config.get("faster_whisper_model", "base")
         faster_whisper_model_path = config.get("faster_whisper_model_path")
 
-        path_list = list(set([p.strip() for p in path_list_raw.split("\n") if p.strip()]))
+        path_list = list({p.strip() for p in path_list_raw.split("\n") if p.strip()})
 
         if not path_list or not file_size:
             self.ctx.warn("配置信息不完整，不进行处理")
@@ -423,7 +423,7 @@ class AutoSubPlugin:
         if not os.path.isdir(in_path):
             yield in_path
             return
-        for root, dirs, files in os.walk(in_path):
+        for root, _dirs, files in os.walk(in_path):
             if exclude_path and any(
                 os.path.abspath(root).startswith(os.path.abspath(path)) for path in exclude_path.split(",")
             ):
@@ -508,17 +508,14 @@ class AutoSubPlugin:
         return True, subtitle_index, subtitle_lang, subtitle_count
 
     def _is_noisy_subtitle(self, content):
-        for token in self._noisy_token:
-            if content.startswith(token[0]) and content.endswith(token[1]):
-                return True
-        return False
+        return any(content.startswith(token[0]) and content.endswith(token[1]) for token in self._noisy_token)
 
     def _merge_srt(self, subtitle_data):
         subtitle_data = copy.deepcopy(subtitle_data)
         merged_subtitle = []
         sentence_end = True
 
-        for index, item in enumerate(subtitle_data):
+        for _index, item in enumerate(subtitle_data):
             content = item.content.replace("\n", " ").strip()
             parse = etree.HTML(content)
             if parse is not None:
@@ -632,7 +629,4 @@ class AutoSubPlugin:
         if not video_meta:
             return False
         ret, subtitle_index, subtitle_lang, _ = self._get_video_prefer_subtitle(video_meta, prefer_lang=prefer_langs)
-        if ret and subtitle_lang in prefer_langs:
-            return True
-
-        return False
+        return bool(ret and subtitle_lang in prefer_langs)

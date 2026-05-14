@@ -38,16 +38,7 @@ class MediaInfoService:
         for episode in episodes:
             episode.update(
                 {
-                    "state": True
-                    if self._media_server.check_item_exists(
-                        mtype=MediaType.TV,
-                        title=title,
-                        year=year,
-                        tmdbid=tmdbid,
-                        season=season,
-                        episode=episode.get("episode_number"),
-                    )
-                    else False
+                    "state": bool(self._media_server.check_item_exists(mtype=MediaType.TV, title=title, year=year, tmdbid=tmdbid, season=season, episode=episode.get("episode_number")))
                 }
             )
         return SeasonEpisodesResultDTO(episodes=episodes)
@@ -66,10 +57,10 @@ class MediaInfoService:
         else:
             season_infos = self._media.get_tmdb_tv_seasons_byid(tmdbid=tmdbid)
         if title_season:
-            return [{"text": "第%s季" % title_season, "num": title_season}]
+            return [{"text": f"第{title_season}季", "num": title_season}]
         return [
             {
-                "text": "第%s季" % cn2an.an2cn(season.get("season_number"), mode="low"),
+                "text": "第{}季".format(cn2an.an2cn(season.get("season_number"), mode="low")),
                 "num": season.get("season_number"),
             }
             for season in season_infos
@@ -130,7 +121,7 @@ class MediaInfoService:
                 release_date = media.tmdb_info.get("first_air_date") or ""
                 seasons = [
                     {
-                        "text": "第%s季" % cn2an.an2cn(season.get("season_number"), mode="low"),
+                        "text": "第{}季".format(cn2an.an2cn(season.get("season_number"), mode="low")),
                         "num": season.get("season_number"),
                     }
                     for season in self._media.get_tmdb_tv_seasons(tv_info=media.tmdb_info)
@@ -230,16 +221,16 @@ class MediaInfoService:
                 release_date = re.sub(r"\(.*\)", "", douban_info.get("pubdate")[0])
             if not release_date:
                 return None
-            return dict(
-                type="电影",
-                title=title,
-                start=release_date,
-                id=tid,
-                year=release_date[0:4] if release_date else "",
-                poster=poster_path,
-                vote_average=vote_average,
-                rssid=rssid,
-            )
+            return {
+                "type": "电影",
+                "title": title,
+                "start": release_date,
+                "id": tid,
+                "year": release_date[0:4] if release_date else "",
+                "poster": poster_path,
+                "vote_average": vote_average,
+                "rssid": rssid,
+            }
         else:
             if tid:
                 tmdb_info = self._media.get_tmdb_info(mtype=MediaType.MOVIE, tmdbid=tid)
@@ -255,16 +246,16 @@ class MediaInfoService:
             release_date = tmdb_info.get("release_date")
             if not release_date:
                 return None
-            return dict(
-                type="电影",
-                title=title,
-                start=release_date,
-                id=tid,
-                year=release_date[0:4] if release_date else "",
-                poster=poster_path,
-                vote_average=vote_average,
-                rssid=rssid,
-            )
+            return {
+                "type": "电影",
+                "title": title,
+                "start": release_date,
+                "id": tid,
+                "year": release_date[0:4] if release_date else "",
+                "poster": poster_path,
+                "vote_average": vote_average,
+                "rssid": rssid,
+            }
 
     def get_tv_calendar(self, tid, season, name, rssid) -> list | None:
         """查询电视剧上映日期"""
@@ -313,9 +304,9 @@ class MediaInfoService:
             episodes = tmdb_info.get("episodes") or []
             for episode in episodes:
                 if season != 1:
-                    title = "%s 第%s季第%s集" % (name, season, episode.get("episode_number"))
+                    title = "{} 第{}季第{}集".format(name, season, episode.get("episode_number"))
                 else:
-                    title = "%s 第%s集" % (name, episode.get("episode_number"))
+                    title = "{} 第{}集".format(name, episode.get("episode_number"))
                 events.append(
                     {
                         "type": "剧集",
@@ -355,7 +346,7 @@ class MediaInfoService:
                         tmdbid=media_info.tmdb_id,
                         season=season.get("season_number"),
                     )
-                    season.update({"state": True if exists else False})
+                    season.update({"state": bool(exists)})
                 except Exception as e:
                     log.error(f"【media_detail】检查季存在状态失败: {str(e)}")
                     season.update({"state": False})

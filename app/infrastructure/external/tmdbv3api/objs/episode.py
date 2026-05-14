@@ -16,7 +16,7 @@ class Episode(TMDb):
         return self._get_obj(
             self._call(
                 self._urls["images"] % (tv_id, season_num, episode_num),
-                "include_image_language=%s" % include_image_language if include_image_language else "",
+                f"include_image_language={include_image_language}" if include_image_language else "",
             ),
             "stills",
         )

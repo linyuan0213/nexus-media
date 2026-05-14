@@ -54,7 +54,7 @@ class SiteCookie(metaclass=SingletonMeta):
             return ""
         if imageurl.startswith("/"):
             imageurl = imageurl[1:]
-        return "%s/%s" % (StringUtils.get_base_url(siteurl), imageurl)
+        return f"{StringUtils.get_base_url(siteurl)}/{imageurl}"
 
     @staticmethod
     def get_captcha_base64(chrome, image_url):

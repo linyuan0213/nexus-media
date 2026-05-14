@@ -179,7 +179,7 @@ def test_concurrent_performance():
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(worker, 10000) for _ in range(50)]
-        results = [f.result() for f in futures]
+        [f.result() for f in futures]
 
     elapsed = time.time() - start
     print(f"✓ 50个并发任务耗时: {elapsed:.3f}秒")

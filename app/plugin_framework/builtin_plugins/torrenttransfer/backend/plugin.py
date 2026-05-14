@@ -56,7 +56,7 @@ class TorrentTransferPlugin:
 
     def _start_service(self):
         config = self._get_config()
-        enable = config.get("enable", False)
+        config.get("enable", False)
         cron = config.get("cron")
         onlyonce = config.get("onlyonce", False)
 

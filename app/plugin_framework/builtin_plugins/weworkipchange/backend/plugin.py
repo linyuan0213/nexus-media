@@ -5,6 +5,7 @@ import os
 WeworkIPChange Plugin v2
 定时获取动态IP更新到企业微信可信任IP列表
 """
+import contextlib
 import random
 import re
 import time
@@ -210,10 +211,8 @@ class WeworkIPChangePlugin:
             schedules = self.ctx.get_schedules()
             next_run_time = ""
             if schedules:
-                try:
+                with contextlib.suppress(Exception):
                     next_run_time = schedules[0].next_run_time.strftime("%Y-%m-%d %H:%M:%S")
-                except Exception:
-                    pass
             self.ctx.notify(
                 title="【自动更新企业微信可信IP任务完成】", text=final_msg + f"\n下次更新时间: {next_run_time}"
             )

@@ -10,6 +10,7 @@
 位于 app/downloader/ 层，不依赖 app/services/。
 """
 
+import contextlib
 import json
 import os
 
@@ -98,7 +99,7 @@ class DownloadPipeline:
         content, file_path, dl_files_folder, dl_files, retmsg, site_info, torrent_attr = fetch
 
         if retmsg:
-            log.warn("【DownloadPipeline】%s" % retmsg)
+            log.warn(f"【DownloadPipeline】{retmsg}")
         if not content:
             self._fail(media_info, in_from, retmsg)
             return None, None, retmsg
@@ -179,10 +180,8 @@ class DownloadPipeline:
         )
 
         if not media_info.enclosure and file_path:
-            try:
+            with contextlib.suppress(Exception):
                 Torrent().delete_torrent_file(file_path)
-            except Exception:
-                pass
 
         return downloader_id, download_id, ""
 

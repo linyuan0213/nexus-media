@@ -3,6 +3,7 @@ AutoBackup Plugin v2
 自动备份 NAStool 数据和配置文件
 """
 
+import contextlib
 import glob
 import os
 import time
@@ -70,10 +71,8 @@ class AutoBackupPlugin:
 
     def _stop_service(self):
         """停止备份服务"""
-        try:
+        with contextlib.suppress(Exception):
             self.ctx.remove_schedule("backup")
-        except Exception:
-            pass
 
     def _do_backup(self):
         """执行备份"""

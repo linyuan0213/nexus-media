@@ -146,7 +146,7 @@ class TestSiteDataUpdater:
         with open(local_dat, "wb") as f:
             pickle.dump({"version": "1.0.0"}, f)
 
-        new_dat = temp_dir / "sites.dat.tmp"
+        temp_dir / "sites.dat.tmp"
         release_json = {"assets": [{"browser_download_url": "http://example.com/file"}]}
 
         def side_effect(url, **kwargs):

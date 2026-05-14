@@ -42,7 +42,7 @@ class Thunder(_IDownloadClient):
 
     @classmethod
     def match(cls, ctype):
-        return True if ctype in [cls.client_id, cls.client_type, cls.client_name] else False
+        return ctype in [cls.client_id, cls.client_type, cls.client_name]
 
     def connect(self):
         pass
@@ -53,7 +53,7 @@ class Thunder(_IDownloadClient):
         try:
             # 尝试获取设备信息来测试连接
             device_id = self._client.get_device_id()
-            return True if device_id else False
+            return bool(device_id)
         except Exception as e:
             log.error(f"【{self.client_name}】连接测试失败: {str(e)}")
             return False

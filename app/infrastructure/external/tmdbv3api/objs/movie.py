@@ -239,7 +239,7 @@ class Movie(TMDb):
         :return:
         """
         warnings.warn(
-            "external method is deprecated use tmdbv3api.Find().find(external_id, external_source)", DeprecationWarning
+            "external method is deprecated use tmdbv3api.Find().find(external_id, external_source)", DeprecationWarning, stacklevel=2
         )
         return self._get_obj(
             self._call(

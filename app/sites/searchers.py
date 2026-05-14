@@ -66,7 +66,7 @@ def _css_to_xpath(css: str) -> str:
     if not css or not css.strip():
         return "."
     css = css.strip()
-    if css.startswith("//") or css.startswith(".//"):
+    if css.startswith(("//", ".//")):
         return css
 
     def _convert_has(m):

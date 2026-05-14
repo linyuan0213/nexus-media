@@ -39,7 +39,7 @@ class CHDBits(_ISiteSigninHandler):
         :param url: 站点Url
         :return: 是否匹配，如匹配则会调用该类的signin方法
         """
-        return True if StringUtils.url_equal(url, cls.site_url) else False
+        return bool(StringUtils.url_equal(url, cls.site_url))
 
     def signin(self, site_info: dict):
         """
@@ -84,7 +84,7 @@ class CHDBits(_ISiteSigninHandler):
         option_ids = html.xpath("//input[@name='choice[]']/@value")
         option_values = html.xpath("//input[@name='choice[]']/following-sibling::text()")
         question_str = html.xpath("//td[@class='text' and contains(text(),'请问：')]/text()")[0]
-        answers = list(zip(option_ids, option_values))
+        answers = list(zip(option_ids, option_values, strict=False))
 
         # 正则获取问题
         match = re.search(r"请问：(.+)", question_str)

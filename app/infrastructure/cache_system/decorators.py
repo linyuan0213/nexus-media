@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import threading
 from collections.abc import Callable
@@ -142,10 +143,8 @@ def cached_with_lock(
                 result = func(*args, **kwargs)
 
                 # 缓存结果（包括 None）
-                try:
+                with contextlib.suppress(Exception):
                     cache.set(cache_key, result, ttl)
-                except Exception:
-                    pass
 
                 return result
 

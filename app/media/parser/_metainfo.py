@@ -32,7 +32,7 @@ def MetaInfo(title: str, subtitle: str | None = None, mtype: MediaType | None = 
 
     if msg:
         for msg_item in msg:
-            log.warn("【Meta】%s" % msg_item)
+            log.warn(f"【Meta】{msg_item}")
 
     fileflag = bool(org_title and os.path.splitext(org_title)[-1] in RMT_MEDIAEXT)
 
@@ -66,6 +66,4 @@ def _is_anime(name: str) -> bool:
     ):
         return False
     # 匹配英文方括号标记：要求至少包含一个非数字字符，排除纯数字如 [12]
-    if re.search(r"\[(?:[+XVPI-]+\d*|\d*[+XVPI-]+)]\s*\[", name, re.IGNORECASE):
-        return True
-    return False
+    return bool(re.search(r"\[(?:[+XVPI-]+\d*|\d*[+XVPI-]+)]\s*\[", name, re.IGNORECASE))

@@ -50,7 +50,7 @@ class Tjupt(_ISiteSigninHandler):
         :param url: 站点Url
         :return: 是否匹配，如匹配则会调用该类的signin方法
         """
-        return True if StringUtils.url_equal(url, cls.site_url) else False
+        return bool(StringUtils.url_equal(url, cls.site_url))
 
     def signin(self, site_info: dict):
         """
@@ -115,7 +115,7 @@ class Tjupt(_ISiteSigninHandler):
             return False, f"【{site}】签到失败，未获取到答案选项"
 
         # value+选项
-        answers = list(zip(values, options))
+        answers = list(zip(values, options, strict=False))
         self.debug(f"获取到所有签到选项 {answers}")
 
         # 查询已有答案

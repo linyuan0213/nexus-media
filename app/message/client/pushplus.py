@@ -33,7 +33,7 @@ class PushPlus(_IMessageClient):
                 "content": text,
                 "timestamp": time.time_ns() + 60,
             }
-            sc_url = "http://www.pushplus.plus/send?%s" % urlencode(values)
+            sc_url = f"http://www.pushplus.plus/send?{urlencode(values)}"
             res = RequestUtils().get_res(sc_url)
             if res and res.status_code == 200:
                 ret_json = res.json()

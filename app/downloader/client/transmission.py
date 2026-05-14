@@ -81,7 +81,7 @@ class Transmission(_IDownloadClient):
 
     @classmethod
     def match(cls, ctype):
-        return True if ctype in [cls.client_id, cls.client_type, cls.client_name] else False
+        return ctype in [cls.client_id, cls.client_type, cls.client_name]
 
     def get_type(self):
         return self.client_type
@@ -107,14 +107,14 @@ class Transmission(_IDownloadClient):
             return None
 
     def get_status(self):
-        return True if self.trc else False
+        return bool(self.trc)
 
     @staticmethod
     def __parse_ids(ids):
         """
         统一处理种子ID
         """
-        if isinstance(ids, list) and any([str(x).isdigit() for x in ids]):
+        if isinstance(ids, list) and any(str(x).isdigit() for x in ids):
             ids = [int(x) for x in ids if str(x).isdigit()]
         elif not isinstance(ids, list) and str(ids).isdigit():
             ids = int(ids)
@@ -556,7 +556,7 @@ class Transmission(_IDownloadClient):
 
                 _dlspeed = StringUtils.str_filesize(torrent.download_speed)
                 _upspeed = StringUtils.str_filesize(torrent.upload_speed)
-                speed = "%s%sB/s %s%sB/s" % (chr(8595), _dlspeed, chr(8593), _upspeed)
+                speed = f"{chr(8595)}{_dlspeed}B/s {chr(8593)}{_upspeed}B/s"
             # 进度
             progress = round(torrent.progress * 100, 2)
             DispTorrents.append(
@@ -574,8 +574,8 @@ class Transmission(_IDownloadClient):
             return
         try:
             session = self.trc.get_session()
-            download_limit_enabled = True if download_limit else False
-            upload_limit_enabled = True if upload_limit else False
+            download_limit_enabled = bool(download_limit)
+            upload_limit_enabled = bool(upload_limit)
             if (
                 download_limit_enabled == session.speed_limit_down_enabled
                 and upload_limit_enabled == session.speed_limit_up_enabled

@@ -55,27 +55,21 @@ class Category(metaclass=SingletonMeta):
         """
         获取电影分类标志
         """
-        if self._movie_categorys:
-            return True
-        return False
+        return bool(self._movie_categorys)
 
     @property
     def tv_category_flag(self):
         """
         获取电视剧分类标志
         """
-        if self._tv_categorys:
-            return True
-        return False
+        return bool(self._tv_categorys)
 
     @property
     def anime_category_flag(self):
         """
         获取动漫分类标志
         """
-        if self._anime_categorys:
-            return True
-        return False
+        return bool(self._anime_categorys)
 
     @property
     def movie_categorys(self):

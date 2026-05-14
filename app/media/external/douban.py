@@ -41,11 +41,11 @@ class DouBan(metaclass=SingletonMeta):
         """
         根据豆瓣ID返回豆瓣详情，带休眠
         """
-        log.info("【Douban】正在通过API查询豆瓣详情：%s" % doubanid)
+        log.info(f"【Douban】正在通过API查询豆瓣详情：{doubanid}")
         # 随机休眠
         if wait:
             time = round(random.uniform(1, 5), 1)
-            log.info("【Douban】随机休眠：%s 秒" % time)
+            log.info(f"【Douban】随机休眠：{time} 秒")
             sleep(time)
         if mtype == MediaType.MOVIE:
             douban_info = self.doubanapi.movie_detail(doubanid)
@@ -56,16 +56,16 @@ class DouBan(metaclass=SingletonMeta):
             if not douban_info:
                 douban_info = self.doubanapi.tv_detail(doubanid)
         if not douban_info:
-            log.warn("【Douban】%s 未找到豆瓣详细信息" % doubanid)
+            log.warn(f"【Douban】{doubanid} 未找到豆瓣详细信息")
             return None
         if douban_info.get("localized_message"):
-            log.warn("【Douban】查询豆瓣详情错误：%s" % douban_info.get("localized_message"))
+            log.warn("【Douban】查询豆瓣详情错误：{}".format(douban_info.get("localized_message")))
             return None
         if not douban_info.get("title"):
             return None
         if douban_info.get("title") == "未知电影" or douban_info.get("title") == "未知电视剧":
             return None
-        log.info("【Douban】查询到数据：%s" % douban_info.get("title"))
+        log.info("【Douban】查询到数据：{}".format(douban_info.get("title")))
         return douban_info
 
     def __search_douban_id(self, metainfo):
@@ -134,7 +134,7 @@ class DouBan(metaclass=SingletonMeta):
         """
         if wait:
             time = round(random.uniform(1, 5), 1)
-            log.info("【Douban】随机休眠：%s 秒" % time)
+            log.info(f"【Douban】随机休眠：{time} 秒")
             sleep(time)
         if dtype == "do":
             web_infos = self.doubanweb.do_in_interests(userid=userid)
@@ -156,7 +156,7 @@ class DouBan(metaclass=SingletonMeta):
         """
         if wait:
             time = round(random.uniform(1, 5), 1)
-            log.info("【Douban】随机休眠：%s 秒" % time)
+            log.info(f"【Douban】随机休眠：{time} 秒")
             sleep(time)
         if dtype == "do":
             web_infos = self.doubanweb.do(cookie=self.cookie, userid=userid, start=start)
@@ -174,7 +174,7 @@ class DouBan(metaclass=SingletonMeta):
     def get_user_info(self, userid, wait=False):
         if wait:
             time = round(random.uniform(1, 5), 1)
-            log.info("【Douban】随机休眠：%s 秒" % time)
+            log.info(f"【Douban】随机休眠：{time} 秒")
             sleep(time)
         return self.doubanweb.user(cookie=self.cookie, userid=userid)
 
@@ -209,9 +209,9 @@ class DouBan(metaclass=SingletonMeta):
                 if meta_info.type != MediaType.TV:
                     continue
                 meta_info.begin_episode = int(episode)
-                meta_info.title = "%s 第%s集" % (meta_info.title, episode)
+                meta_info.title = f"{meta_info.title} 第{episode}集"
             meta_info.year = item.get("year")
-            meta_info.tmdb_id = "DB:%s" % item.get("id")
+            meta_info.tmdb_id = "DB:{}".format(item.get("id"))
             meta_info.douban_id = item.get("id")
             meta_info.overview = item.get("card_subtitle") or ""
             meta_info.poster_path = item.get("cover_url")
@@ -228,7 +228,7 @@ class DouBan(metaclass=SingletonMeta):
         :param doubanid: 豆瓣ID
         :return: {title, year, intro, cover_url, rating{value}, episodes_count}
         """
-        log.info("【Douban】正在通过网页查询豆瓣详情：%s" % doubanid)
+        log.info(f"【Douban】正在通过网页查询豆瓣详情：{doubanid}")
         web_info = self.doubanweb.detail(cookie=self.cookie, doubanid=doubanid)
         if not web_info:
             return {}
@@ -301,9 +301,9 @@ class DouBan(metaclass=SingletonMeta):
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
         if ret_media:
-            log.info("【Douban】查询到数据：%s" % ret_media.get("title"))
+            log.info("【Douban】查询到数据：{}".format(ret_media.get("title")))
         else:
-            log.warn("【Douban】%s 未查询到豆瓣数据：%s" % doubanid)
+            log.warn("【Douban】{} 未查询到豆瓣数据：{}".format(*doubanid))
         return ret_media
 
     def get_douban_online_movie(self, page=1):
@@ -457,7 +457,7 @@ class DouBan(metaclass=SingletonMeta):
 
             ret_infos.append(
                 {
-                    "id": "DB:%s" % rid,
+                    "id": f"DB:{rid}",
                     "orgid": rid,
                     "title": title,
                     "type": type_str,

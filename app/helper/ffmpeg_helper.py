@@ -14,9 +14,7 @@ class FfmpegHelper:
             return False
         cmd = f'ffmpeg -i "{video_path}" -ss {frames} -vframes 1 -f image2 "{image_path}"'
         result = SystemUtils.execute(cmd)
-        if result:
-            return True
-        return False
+        return bool(result)
 
     @staticmethod
     def extract_wav_from_video(video_path, audio_path, audio_index=None):
@@ -65,9 +63,7 @@ class FfmpegHelper:
             ]
 
         ret = subprocess.run(command).returncode
-        if ret == 0:
-            return True
-        return False
+        return ret == 0
 
     @staticmethod
     def get_video_metadata(video_path):
@@ -79,7 +75,7 @@ class FfmpegHelper:
 
         try:
             command = ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", video_path]
-            result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = subprocess.run(command, capture_output=True)
             if result.returncode == 0:
                 return json.loads(result.stdout.decode("utf-8"))
         except Exception as e:
@@ -110,6 +106,4 @@ class FfmpegHelper:
         else:
             command = ["ffmpeg", "-hide_banner", "-loglevel", "warning", "-y", "-i", video_path, subtitle_path]
         ret = subprocess.run(command).returncode
-        if ret == 0:
-            return True
-        return False
+        return ret == 0

@@ -34,7 +34,7 @@ class SystemConfig(metaclass=SingletonMeta):
 
     @staticmethod
     def _is_obj(value):
-        if isinstance(value, list) or isinstance(value, dict):
+        if isinstance(value, (list, dict)):
             return True
         return str(value).startswith("{") or str(value).startswith("[")
 

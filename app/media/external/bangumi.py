@@ -76,7 +76,7 @@ class Bangumi:
                 pass
         summary = item.get("summary")
         return {
-            "id": "BG:%s" % bid,
+            "id": f"BG:{bid}",
             "orgid": bid,
             "title": title,
             "year": air_date[:4] if air_date else "",

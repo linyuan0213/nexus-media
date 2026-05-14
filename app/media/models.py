@@ -121,23 +121,23 @@ class MediaInfo(BaseModel):
 
     def get_title_string(self) -> str:
         if self.title:
-            return "%s (%s)" % (self.title, self.year) if self.year else self.title
+            return f"{self.title} ({self.year})" if self.year else self.title
         elif self.get_name():
-            return "%s (%s)" % (self.get_name(), self.year) if self.year else self.get_name()
+            return f"{self.get_name()} ({self.year})" if self.year else self.get_name()
         return ""
 
     def get_season_string(self) -> str:
         if self.begin_season is not None:
             if self.end_season is None:
-                return "S%s" % str(self.begin_season).rjust(2, "0")
-            return "S%s-S%s" % (str(self.begin_season).rjust(2, "0"), str(self.end_season).rjust(2, "0"))
+                return "S{}".format(str(self.begin_season).rjust(2, "0"))
+            return "S{}-S{}".format(str(self.begin_season).rjust(2, "0"), str(self.end_season).rjust(2, "0"))
         if self.type == MediaType.MOVIE:
             return ""
         return "S01"
 
     def get_season_item(self) -> str:
         if self.begin_season is not None:
-            return "S%s" % str(self.begin_season).rjust(2, "0")
+            return "S{}".format(str(self.begin_season).rjust(2, "0"))
         if self.type == MediaType.MOVIE:
             return ""
         return "S01"
@@ -189,13 +189,13 @@ class MediaInfo(BaseModel):
     def get_episode_string(self) -> str:
         if self.begin_episode is not None:
             if self.end_episode is None:
-                return "E%s" % str(self.begin_episode).rjust(2, "0")
-            return "E%s-E%s" % (str(self.begin_episode).rjust(2, "0"), str(self.end_episode).rjust(2, "0"))
+                return "E{}".format(str(self.begin_episode).rjust(2, "0"))
+            return "E{}-E{}".format(str(self.begin_episode).rjust(2, "0"), str(self.end_episode).rjust(2, "0"))
         return ""
 
     def get_episode_items(self) -> str:
         """返回集的并列表达方式，用于支持单文件多集"""
-        return "E%s" % "E".join(str(episode).rjust(2, "0") for episode in self.get_episode_list())
+        return "E{}".format("E".join(str(episode).rjust(2, "0") for episode in self.get_episode_list()))
 
     def get_episode_list(self) -> list:
         if self.begin_episode is None:
@@ -210,7 +210,7 @@ class MediaInfo(BaseModel):
             return ""
         if len(episodes) == 1:
             return str(episodes[0])
-        return "%s-%s" % (episodes[0], episodes[-1])
+        return f"{episodes[0]}-{episodes[-1]}"
 
     def get_episode_seq(self) -> str:
         """兼容旧接口 — 同 get_episode_seqs"""
@@ -222,7 +222,7 @@ class MediaInfo(BaseModel):
         season = self.get_season_string()
         episode = self.get_episode_string()
         if season and episode:
-            return "%s %s" % (season, episode)
+            return f"{season} {episode}"
         elif season:
             return season
         elif episode:
@@ -266,11 +266,11 @@ class MediaInfo(BaseModel):
 
     def get_vote_string(self) -> str:
         if self.vote_average:
-            return "评分：%s" % round(float(self.vote_average), 1)
+            return f"评分：{round(float(self.vote_average), 1)}"
         return ""
 
     def get_type_string(self) -> str:
-        return "类型：%s" % self.type.value if self.type else ""
+        return f"类型：{self.type.value}" if self.type else ""
 
     def get_overview_string(self, max_len: int = 140) -> str:
         if not hasattr(self, "overview"):
@@ -282,20 +282,20 @@ class MediaInfo(BaseModel):
 
     def get_star_string(self) -> str:
         if self.vote_average:
-            return "评分：%s (%s)" % (self.get_stars(), round(float(self.vote_average), 1))
+            return f"评分：{self.get_stars()} ({round(float(self.vote_average), 1)})"
         return ""
 
     def get_title_vote_string(self) -> str:
         if not self.vote_average:
             return self.get_title_string()
-        return "%s\n%s" % (self.get_title_string(), self.get_star_string())
+        return f"{self.get_title_string()}\n{self.get_star_string()}"
 
     def get_title_ep_string(self) -> str:
         string = self.get_title_string()
         if self.get_episode_list():
-            return "%s %s" % (string, self.get_season_episode_string())
+            return f"{string} {self.get_season_episode_string()}"
         if self.get_season_list():
-            return "%s %s" % (string, self.get_season_string())
+            return f"{string} {self.get_season_string()}"
         return string
 
     @staticmethod
@@ -314,7 +314,7 @@ class MediaInfo(BaseModel):
             "1.0 0.7": "70%",
             "1.0 0.3": "30%",
         }
-        return free_strs.get("%.1f %.1f" % (uv, dv), "未知")
+        return free_strs.get(f"{uv:.1f} {dv:.1f}", "未知")
 
     def get_volume_factor_string(self) -> str:
         return self.get_free_string(self.upload_volume_factor, self.download_volume_factor)
@@ -481,17 +481,17 @@ class MediaInfo(BaseModel):
     def get_detail_url(self) -> str:
         if self.tmdb_id:
             if str(self.tmdb_id).startswith("DB:"):
-                return "https://movie.douban.com/subject/%s" % str(self.tmdb_id).replace("DB:", "")
+                return "https://movie.douban.com/subject/{}".format(str(self.tmdb_id).replace("DB:", ""))
             if self.type == MediaType.MOVIE:
-                return "https://www.themoviedb.org/movie/%s" % self.tmdb_id
-            return "https://www.themoviedb.org/tv/%s" % self.tmdb_id
+                return f"https://www.themoviedb.org/movie/{self.tmdb_id}"
+            return f"https://www.themoviedb.org/tv/{self.tmdb_id}"
         if self.douban_id:
-            return "https://movie.douban.com/subject/%s" % self.douban_id
+            return f"https://movie.douban.com/subject/{self.douban_id}"
         return ""
 
     def get_douban_detail_url(self) -> str:
         if self.douban_id:
-            return "https://movie.douban.com/subject/%s" % self.douban_id
+            return f"https://movie.douban.com/subject/{self.douban_id}"
         return ""
 
     def get_backdrop_image(self, default=True, original=False):

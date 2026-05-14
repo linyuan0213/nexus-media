@@ -272,7 +272,7 @@ class TestNetTestService:
         svc = self._svc()
         mock_req_cls.return_value.get_res.return_value = None
         result = svc.test("image.tmdb.org")
-        url = mock_req_cls.call_args[1].get("proxies") or {}
+        mock_req_cls.call_args[1].get("proxies") or {}
         # 验证路径拼接
         assert result.success is False
 

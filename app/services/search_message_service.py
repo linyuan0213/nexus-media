@@ -73,7 +73,7 @@ class MessageSearchService:
         media_list = pagination_mgr.get_media_cache(user_id)
         if not media_list or choose < 1 or choose > len(media_list):
             Message().send_channel_msg(channel=in_from, title="输入有误！", user_id=user_id)
-            log.warn("【Web】错误的输入值：%s" % choose)
+            log.warn(f"【Web】错误的输入值：{choose}")
             return
 
         media_info = media_list[choose - 1]
@@ -149,7 +149,7 @@ class MessageSearchService:
     @staticmethod
     def _parse_intent(input_str: str) -> str:
         """解析用户意图"""
-        if input_str.startswith("http") or input_str.startswith("magnet"):
+        if input_str.startswith(("http", "magnet")):
             return "DOWNLOAD"
         if ChatAgent().ready:
             return "ASK"
@@ -214,14 +214,14 @@ class MessageSearchService:
         if download_setting:
             download_setting = download_setting[0]
 
-        log.info("【Web】正在识别 %s 的媒体信息..." % content)
+        log.info(f"【Web】正在识别 {content} 的媒体信息...")
         if not content:
             Message().send_channel_msg(channel=in_from, title="无法识别搜索内容！", user_id=user_id)
             return
 
         medias = WebUtils.search_media_infos(keyword=content)
         if not medias:
-            Message().send_channel_msg(channel=in_from, title="%s 查询不到媒体信息！" % content, user_id=user_id)
+            Message().send_channel_msg(channel=in_from, title=f"{content} 查询不到媒体信息！", user_id=user_id)
             return
 
         media_list = []
@@ -241,11 +241,11 @@ class MessageSearchService:
                 if media_info.douban_id:
                     title = media_info.get_title_string()
                     media_info = MediaService().get_media_info(
-                        title="%s %s" % (media_info.title, media_info.year), mtype=media_info.type, strict=True
+                        title=f"{media_info.title} {media_info.year}", mtype=media_info.type, strict=True
                     )
                     if not media_info or not media_info.tmdb_info:
                         Message().send_channel_msg(
-                            channel=in_from, title="%s 从TMDB查询不到媒体信息！" % title, user_id=user_id
+                            channel=in_from, title=f"{title} 从TMDB查询不到媒体信息！", user_id=user_id
                         )
                         return
                 Message().send_channel_msg(
@@ -260,7 +260,7 @@ class MessageSearchService:
         else:
             Message().send_channel_list_msg(
                 channel=in_from,
-                title="共找到%s条相关信息，请回复对应序号" % len(media_list),
+                title=f"共找到{len(media_list)}条相关信息，请回复对应序号",
                 medias=media_list,
                 user_id=user_id,
             )
@@ -273,7 +273,7 @@ class MessageSearchService:
         if exist_flag:
             return
 
-        Message().send_channel_msg(channel=in_from, title="开始搜索 %s ..." % media_info.title, user_id=user_id)
+        Message().send_channel_msg(channel=in_from, title=f"开始搜索 {media_info.title} ...", user_id=user_id)
         search_result, no_exists, search_count, download_count = self._searcher.search_one_media(
             media_info=media_info,
             in_from=in_from,
@@ -283,7 +283,7 @@ class MessageSearchService:
         )
 
         if not search_count:
-            Message().send_channel_msg(channel=in_from, title="%s 未搜索到任何资源" % media_info.title, user_id=user_id)
+            Message().send_channel_msg(channel=in_from, title=f"{media_info.title} 未搜索到任何资源", user_id=user_id)
             return
 
         if download_count is None:
@@ -294,7 +294,7 @@ class MessageSearchService:
         if download_count == 0:
             Message().send_channel_msg(
                 channel=in_from,
-                title="%s 共搜索到%s个结果，但没有下载到任何资源" % (media_info.title, search_count),
+                title=f"{media_info.title} 共搜索到{search_count}个结果，但没有下载到任何资源",
                 user_id=user_id,
             )
 
@@ -306,7 +306,7 @@ class MessageSearchService:
         search_results = self._searcher.get_search_results()
         if not search_results:
             Message().send_channel_msg(
-                channel=in_from, title="%s 共搜索到结果，但无法获取结果列表" % media_info.title, user_id=user_id
+                channel=in_from, title=f"{media_info.title} 共搜索到结果，但无法获取结果列表", user_id=user_id
             )
             return
 
@@ -332,10 +332,10 @@ class MessageSearchService:
             user_name=user_name,
         )
         if code == 0:
-            log.info("【Web】%s %s 已添加订阅" % (media_info.type.value, media_info.get_title_string()))
+            log.info(f"【Web】{media_info.type.value} {media_info.get_title_string()} 已添加订阅")
         else:
             if in_from in Message().get_search_types():
-                log.info("【Web】%s 添加订阅失败：%s" % (media_info.title, msg))
+                log.info(f"【Web】{media_info.title} 添加订阅失败：{msg}")
                 Message().send_channel_msg(
-                    channel=in_from, title="%s 添加订阅失败：%s" % (media_info.title, msg), user_id=user_id
+                    channel=in_from, title=f"{media_info.title} 添加订阅失败：{msg}", user_id=user_id
                 )

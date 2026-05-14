@@ -84,7 +84,7 @@ class _IIndexClient(metaclass=ABCMeta):
         api_url = f"{indexer.domain}?apikey={self.api_key}&t=search&q={search_word}"
         result_array = self.__parse_torznabxml(api_url)
 
-        seconds = (datetime.datetime.now() - start_time).seconds
+        (datetime.datetime.now() - start_time).seconds
         if len(result_array) == 0:
             log.warn(f"【{self.index_type}】{indexer.name} 关键词 {key_word} 未搜索到数据")
             self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")

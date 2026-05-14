@@ -227,7 +227,7 @@ def get_sub_path(
         r = svc.get_sub_path(directory=req.directory, ft=ft)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
-        return fail(code=-1, message="加载路径失败: %s" % str(e))
+        return fail(code=-1, message=f"加载路径失败: {str(e)}")
     return success(data={"count": len(r), "items": r})
 
 

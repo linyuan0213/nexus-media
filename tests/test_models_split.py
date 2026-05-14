@@ -145,7 +145,7 @@ def test_import_from_compat_layer():
     import sys
 
     # 先移除已缓存的模块，确保重新导入
-    modules_to_remove = [k for k in sys.modules.keys() if "app.db.models" in k]
+    modules_to_remove = [k for k in sys.modules if "app.db.models" in k]
     for m in modules_to_remove:
         del sys.modules[m]
 

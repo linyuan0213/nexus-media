@@ -35,7 +35,7 @@ class TestSchedulerRouter:
             self._teardown()
 
     def test_delete_scheduler_job_empty_id(self):
-        mock_svc = self._mock_scheduler()
+        self._mock_scheduler()
         try:
             resp = client.post("/api/scheduler/jobs/delete", json={})
             assert resp.status_code == 200
@@ -124,7 +124,7 @@ class TestSchedulerRouter:
             self._teardown()
 
     def test_update_scheduler_job_empty_id(self):
-        mock_svc = self._mock_scheduler()
+        self._mock_scheduler()
         try:
             resp = client.post("/api/scheduler/jobs/update", json={"trigger": "interval"})
             assert resp.status_code == 200

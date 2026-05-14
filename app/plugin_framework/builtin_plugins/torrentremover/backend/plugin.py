@@ -63,12 +63,10 @@ class TorrentRemoverPlugin:
         else:
             transfer_record = None
 
-        del_history = False
         if transfer_record and isinstance(transfer_record, dict):
             download = transfer_record.get("to_download")
             download_id = transfer_record.get("to_download_id")
             delete_source = transfer_record.get("delete_source")
-            del_history = True
 
             if not delete_source:
                 self.ctx.info(f"{history_key} 转种时未删除源下载任务，开始删除源下载任务")

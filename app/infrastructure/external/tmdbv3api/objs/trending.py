@@ -5,7 +5,7 @@ class Trending(TMDb):
     _urls = {"trending": "/trending/%s/%s"}
 
     def _trending(self, media_type="all", time_window="day", page=1):
-        return self._get_obj(self._call(self._urls["trending"] % (media_type, time_window), "page=%s" % page))
+        return self._get_obj(self._call(self._urls["trending"] % (media_type, time_window), f"page={page}"))
 
     def all_day(self, page=1):
         """

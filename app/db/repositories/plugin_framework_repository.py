@@ -164,7 +164,7 @@ class PluginFrameworkRepository(BaseRepository):
 
     def get_all_hooks(self) -> list:
         """获取所有启用的钩子订阅"""
-        return self._db.query(PLUGINHOOKS).filter(PLUGINHOOKS.ENABLED == True).all()
+        return self._db.query(PLUGINHOOKS).filter(PLUGINHOOKS.ENABLED).all()
 
     @DbPersist(BaseRepository._db)
     def insert_hook(self, plugin_id: str, event: str) -> bool:

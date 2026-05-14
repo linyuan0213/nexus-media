@@ -275,7 +275,7 @@ class AutoSignInPlugin:
             ua = site_info.get("ua")
             headers = site_info.get("headers")
             if (not site_url or not site_cookie) and not headers:
-                self.ctx.warn("未配置 %s 的Cookie或请求头，无法签到" % str(site))
+                self.ctx.warn(f"未配置 {str(site)} 的Cookie或请求头，无法签到")
                 return ""
             if JsonUtils.is_valid_json(headers):
                 headers = json.loads(headers)
@@ -284,26 +284,26 @@ class AutoSignInPlugin:
 
             chrome = DrissionPageHelper()
             if site_info.get("chrome") and chrome.get_status():
-                self.ctx.info("开始站点仿真签到：%s" % site)
+                self.ctx.info(f"开始站点仿真签到：{site}")
                 home_url = StringUtils.get_base_url(site_url)
                 if "1ptba" in home_url:
                     home_url = f"{home_url}/index.php"
 
                 html_text = chrome.get_page_html(url=home_url, cookies=site_cookie)
                 if not html_text:
-                    self.ctx.warn("%s 无法打开网站" % site)
+                    self.ctx.warn(f"{site} 无法打开网站")
                     return f"【{site}】仿真签到失败，无法打开网站！"
 
                 if re.search(r"已签|签到已得|今日已签|已签到|签到成功", html_text, re.IGNORECASE):
-                    self.ctx.info("%s 今日已签到" % site)
+                    self.ctx.info(f"{site} 今日已签到")
                     return f"【{site}】今日已签到"
 
                 if re.search(r"完成两步验证", html_text, re.IGNORECASE):
-                    self.ctx.warn("%s 仿真签到失败，需要两步验证" % site)
+                    self.ctx.warn(f"{site} 仿真签到失败，需要两步验证")
                     return f"【{site}】仿真签到失败，需要两步验证"
 
                 if not SiteHelper.is_logged_in(html_text):
-                    self.ctx.warn("%s 仿真签到失败，登录状态异常" % site)
+                    self.ctx.warn(f"{site} 仿真签到失败，登录状态异常")
                     return f"【{site}】仿真签到失败，登录状态异常"
 
                 html = etree.HTML(html_text)
@@ -311,42 +311,42 @@ class AutoSignInPlugin:
                 for xpath in self._siteconf.get_checkin_conf():
                     if html.xpath(xpath):
                         xpath_str = xpath
-                        self.ctx.debug("%s 找到签到按钮XPath: %s" % (site, xpath_str))
+                        self.ctx.debug(f"{site} 找到签到按钮XPath: {xpath_str}")
                         break
 
                 if not xpath_str:
-                    self.ctx.warn("%s 未找到签到按钮，但登录成功" % site)
+                    self.ctx.warn(f"{site} 未找到签到按钮，但登录成功")
                     return f"【{site}】模拟登录成功"
 
                 try:
-                    self.ctx.debug("%s 开始点击签到按钮" % site)
+                    self.ctx.debug(f"{site} 开始点击签到按钮")
                     html_text = chrome.get_page_html(
                         url=home_url, cookies=site_cookie, click_xpath=f"xpath:{xpath_str}", delay=10, click_delay=15
                     )
 
                     if not html_text:
-                        self.ctx.warn("%s 仿真签到失败，无法通过Cloudflare" % site)
+                        self.ctx.warn(f"{site} 仿真签到失败，无法通过Cloudflare")
                         return f"【{site}】仿真签到失败，无法通过Cloudflare！"
 
                     if re.search(r"已签|签到已得|签到成功|签到.*成功|获得.*积分|签到.*积分", html_text, re.IGNORECASE):
-                        self.ctx.info("%s 仿真签到成功" % site)
+                        self.ctx.info(f"{site} 仿真签到成功")
                         return f"【{site}】仿真签到成功"
                     elif re.search(r"完成两步验证|两步验证|2FA|二次验证", html_text, re.IGNORECASE):
-                        self.ctx.warn("%s 仿真签到失败，需要两步验证" % site)
+                        self.ctx.warn(f"{site} 仿真签到失败，需要两步验证")
                         return f"【{site}】仿真签到失败，需要两步验证"
                     elif re.search(r"已签到|今日已签|重复签到", html_text, re.IGNORECASE):
-                        self.ctx.info("%s 今日已签到" % site)
+                        self.ctx.info(f"{site} 今日已签到")
                         return f"【{site}】今日已签到"
                     else:
                         if re.search(r"错误|失败|异常|error|fail", html_text, re.IGNORECASE):
-                            self.ctx.warn("%s 仿真签到失败，页面显示错误" % site)
+                            self.ctx.warn(f"{site} 仿真签到失败，页面显示错误")
                             return f"【{site}】仿真签到失败，页面显示错误"
                         else:
-                            self.ctx.warn("%s 仿真签到失败，未知原因" % site)
+                            self.ctx.warn(f"{site} 仿真签到失败，未知原因")
                             return f"【{site}】仿真签到失败，未知原因"
                 except Exception as e:
                     ExceptionUtils.exception_traceback(e)
-                    self.ctx.warn("%s 仿真签到失败：%s" % (site, str(e)))
+                    self.ctx.warn(f"{site} 仿真签到失败：{str(e)}")
                     return f"【{site}】签到失败！"
             else:
                 if site_url.find("attendance.php") != -1 or site_url.find("checkIn") != -1:
@@ -396,7 +396,7 @@ class AutoSignInPlugin:
                         return f"【{site}】{checkin_text}失败，{msg}！"
                     else:
                         if re.search(r"完成两步验证", res.text, re.IGNORECASE):
-                            self.ctx.warn("%s 签到失败，需要两步验证" % site)
+                            self.ctx.warn(f"{site} 签到失败，需要两步验证")
                             return f"【{site}】签到失败，需要两步验证"
                         self.ctx.info(f"{site} {checkin_text}成功")
                         return f"【{site}】{checkin_text}成功"
@@ -408,5 +408,5 @@ class AutoSignInPlugin:
                     return f"【{site}】{checkin_text}失败，无法打开网站！"
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            self.ctx.warn("%s 签到失败：%s" % (site, str(e)))
+            self.ctx.warn(f"{site} 签到失败：{str(e)}")
             return f"【{site}】签到失败：{str(e)}！"

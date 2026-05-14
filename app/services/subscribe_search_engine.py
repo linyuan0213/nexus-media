@@ -99,8 +99,8 @@ class SubscribeSearchEngine:
         else:
             rss_movies = self._service.get_subscribe_movies(state=state) if self._service else {}
         if rss_movies:
-            log.info("【Subscribe】共有 %s 个电影订阅需要搜索" % len(rss_movies))
-        for rid, rss_info in rss_movies.items():
+            log.info(f"【Subscribe】共有 {len(rss_movies)} 个电影订阅需要搜索")
+        for _rid, rss_info in rss_movies.items():
             # 跳过模糊匹配的
             if rss_info.get("fuzzy_match"):
                 continue
@@ -133,7 +133,7 @@ class SubscribeSearchEngine:
                     exist_flag, no_exists, _ = self._downloader.check_exists_medias(meta_info=media_info)
                     # 已经存在
                     if exist_flag:
-                        log.info("【Subscribe】电影 %s 已存在" % media_info.get_title_string())
+                        log.info(f"【Subscribe】电影 {media_info.get_title_string()} 已存在")
                         if self._service:
                             self._service.finish_rss_subscribe(rssid=rssid, media=media_info)
                         continue
@@ -190,9 +190,9 @@ class SubscribeSearchEngine:
         else:
             rss_tvs = self._service.get_subscribe_tvs(state=state) if self._service else {}
         if rss_tvs:
-            log.info("【Subscribe】共有 %s 个电视剧订阅需要检索" % len(rss_tvs))
+            log.info(f"【Subscribe】共有 {len(rss_tvs)} 个电视剧订阅需要检索")
         rss_no_exists = {}
-        for rid, rss_info in rss_tvs.items():
+        for _rid, rss_info in rss_tvs.items():
             # 跳过模糊匹配的
             if rss_info.get("fuzzy_match"):
                 continue
@@ -252,7 +252,7 @@ class SubscribeSearchEngine:
                     if exist_flag:
                         # 已全部存在
                         if not library_no_exists or not library_no_exists.get(media_info.tmdb_id):
-                            log.info("【Subscribe】电视剧 %s 订阅剧集已全部存在" % (media_info.get_title_string()))
+                            log.info(f"【Subscribe】电视剧 {media_info.get_title_string()} 订阅剧集已全部存在")
                             # 完成订阅
                             if self._service:
                                 self._service.finish_rss_subscribe(rssid=rss_info.get("id"), media=media_info)
@@ -263,8 +263,7 @@ class SubscribeSearchEngine:
                     )
                     if rss_no_exists.get(media_info.tmdb_id):
                         log.info(
-                            "【Subscribe】%s 订阅缺失季集：%s"
-                            % (media_info.get_title_string(), rss_no_exists.get(media_info.tmdb_id))
+                            f"【Subscribe】{media_info.get_title_string()} 订阅缺失季集：{rss_no_exists.get(media_info.tmdb_id)}"
                         )
                 else:
                     # 把洗版标志加入检索
@@ -322,5 +321,5 @@ class SubscribeSearchEngine:
             tmdb_info = self._media_cache.get_tmdb_info(mtype=mtype, tmdbid=tmdbid)
             media_info.set_tmdb_info(tmdb_info)
         else:
-            media_info = self._media_service.identify(title="%s %s" % (name, year), mtype=mtype)
+            media_info = self._media_service.identify(title=f"{name} {year}", mtype=mtype)
         return media_info

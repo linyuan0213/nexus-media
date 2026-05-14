@@ -55,7 +55,7 @@ if __name__ == "__main__":
     site_rate_limit = SiteRateLimiter(10, 60, 10)
 
     # 模拟访问
-    for i in range(12):
+    for _i in range(12):
         if site_rate_limit.check_rate_limit():
             print("访问频率超限")
         else:

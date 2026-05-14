@@ -36,7 +36,7 @@ class TestSystemConfigEndpoints:
         app.dependency_overrides.pop(get_config_update_service, None)
 
     def test_update_config_success(self):
-        svc = self._mock_config_update()
+        self._mock_config_update()
         resp = client.post(
             "/api/system/config/update",
             json={
@@ -128,7 +128,7 @@ class TestMessageClientEndpoints:
         self._teardown()
 
     def test_send_custom_message(self):
-        svc = self._mock_message()
+        self._mock_message()
         with patch("api.routers.system.MessageSenderService") as MockSender:
             mock_sender = MagicMock()
             result = MagicMock()
@@ -165,7 +165,7 @@ class TestIndexerConfigEndpoints:
         app.dependency_overrides.pop(get_indexer_config_service, None)
 
     def test_save_indexer_config(self):
-        svc = self._mock_indexer()
+        self._mock_indexer()
         resp = client.post(
             "/api/system/indexers/config",
             json={
@@ -196,7 +196,7 @@ class TestMediaServerConfigEndpoints:
         app.dependency_overrides.pop(get_media_server_config_service, None)
 
     def test_save_mediaserver_config(self):
-        svc = self._mock_mediaserver()
+        self._mock_mediaserver()
         resp = client.post(
             "/api/system/mediaservers/config",
             json={

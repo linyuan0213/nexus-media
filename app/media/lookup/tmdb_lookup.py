@@ -79,8 +79,7 @@ class TmdbLookup(BaseLookup):
                 if info:
                     info["media_type"] = MediaType.MOVIE
                     log.info(
-                        "【Meta】%s 识别到 电影：TMDBID=%s, 名称=%s, 上映日期=%s"
-                        % (name, info.get("id"), info.get("title"), info.get("release_date"))
+                        "【Meta】{} 识别到 电影：TMDBID={}, 名称={}, 上映日期={}".format(name, info.get("id"), info.get("title"), info.get("release_date"))
                     )
                     return info
         else:
@@ -96,8 +95,7 @@ class TmdbLookup(BaseLookup):
             if info:
                 info["media_type"] = MediaType.TV
                 log.info(
-                    "【Meta】%s 识别到 电视剧：TMDBID=%s, 名称=%s, 首播日期=%s"
-                    % (name, info.get("id"), info.get("name"), info.get("first_air_date"))
+                    "【Meta】{} 识别到 电视剧：TMDBID={}, 名称={}, 首播日期={}".format(name, info.get("id"), info.get("name"), info.get("first_air_date"))
                 )
                 return info
             # TV 查不到时，去掉年份再查（仅非严格模式）
@@ -107,8 +105,7 @@ class TmdbLookup(BaseLookup):
                 if info:
                     info["media_type"] = MediaType.TV
                     log.info(
-                        "【Meta】%s 识别到 电视剧：TMDBID=%s, 名称=%s, 首播日期=%s"
-                        % (name, info.get("id"), info.get("name"), info.get("first_air_date"))
+                        "【Meta】{} 识别到 电视剧：TMDBID={}, 名称={}, 首播日期={}".format(name, info.get("id"), info.get("name"), info.get("first_air_date"))
                     )
                     return info
 
@@ -120,7 +117,7 @@ class TmdbLookup(BaseLookup):
                 info["media_type"] = (
                     MediaType.MOVIE if info.get("media_type") in ["movie", MediaType.MOVIE] else MediaType.TV
                 )
-                log.info("【Meta】%s 识别到 %s：TMDBID=%s" % (name, info.get("media_type").value, info.get("id")))
+                log.info("【Meta】{} 识别到 {}：TMDBID={}".format(name, info.get("media_type").value, info.get("id")))
                 return info
 
         # 3. Fallback: 互换类型搜索（去掉年份）
@@ -139,8 +136,7 @@ class TmdbLookup(BaseLookup):
 
         if not info:
             log.info(
-                "【Meta】%s 以年份 %s 在TMDB中未找到%s信息!"
-                % (name, StringUtils.xstr(first_year), search_type.value if search_type else "")
+                "【Meta】{} 以年份 {} 在TMDB中未找到{}信息!".format(name, StringUtils.xstr(first_year), search_type.value if search_type else "")
             )
         return info or {}
 
@@ -496,7 +492,7 @@ class TmdbLookup(BaseLookup):
                 "credit_id": crew.get("credit_id"),
                 "department": crew.get("department"),
                 "job": crew.get("job"),
-                "profile": "https://www.themoviedb.org/person/%s" % crew.get("id"),
+                "profile": "https://www.themoviedb.org/person/{}".format(crew.get("id")),
             }
             for crew in crews or []
         ]
@@ -518,7 +514,7 @@ class TmdbLookup(BaseLookup):
                 "role": cast.get("character"),
                 "credit_id": cast.get("credit_id"),
                 "order": cast.get("order"),
-                "profile": "https://www.themoviedb.org/person/%s" % cast.get("id"),
+                "profile": "https://www.themoviedb.org/person/{}".format(cast.get("id")),
             }
             for cast in casts or []
         ]

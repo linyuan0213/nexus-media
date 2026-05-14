@@ -22,7 +22,7 @@ class Mteam(_ISiteRssGenHandler):
         :param url: 站点Url
         :return: 是否匹配，如匹配则会调用该类的gen_rss方法
         """
-        return True if cls.site_url in url else False
+        return cls.site_url in url
 
     def gen_rss(self, site_info: dict):
         """

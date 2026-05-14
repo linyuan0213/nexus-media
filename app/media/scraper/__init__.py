@@ -130,7 +130,7 @@ class Scraper:
 
         if scraper_movie_nfo.get("basic") or scraper_movie_nfo.get("credits"):
             nfo_exists = os.path.exists(os.path.join(dir_path, "movie.nfo")) or os.path.exists(
-                os.path.join(dir_path, "%s.nfo" % file_name)
+                os.path.join(dir_path, f"{file_name}.nfo")
             )
             if force_nfo or not nfo_exists:
                 doubaninfo = self._fetch_douban(media, scraper_movie_nfo)
@@ -164,7 +164,7 @@ class Scraper:
 
         # episode nfo
         if scraper_tv_nfo.get("episode_basic") or scraper_tv_nfo.get("episode_credits"):
-            if force_nfo or not os.path.exists(os.path.join(dir_path, "%s.nfo" % file_name)):
+            if force_nfo or not os.path.exists(os.path.join(dir_path, f"{file_name}.nfo")):
                 seasoninfo = self.media.get_tmdb_tv_season_detail(
                     tmdbid=media.tmdb_id, season=int(media.get_season_seq())
                 )
@@ -180,7 +180,7 @@ class Scraper:
 
         # season poster
         if scraper_tv_pic.get("season_poster"):
-            season_poster = "season%s-poster" % media.get_season_seq().rjust(2, "0")
+            season_poster = "season{}-poster".format(media.get_season_seq().rjust(2, "0"))
             seasonposter = media.fanart.get_seasonposter(
                 media_type=media.type, queryid=media.tvdb_id, season=media.get_season_seq()
             )
@@ -207,7 +207,7 @@ class Scraper:
             )
             if seasonbanner:
                 self._downloader.download(
-                    seasonbanner, tv_root, "season%s-banner" % media.get_season_seq().rjust(2, "0"), force_pic
+                    seasonbanner, tv_root, "season{}-banner".format(media.get_season_seq().rjust(2, "0")), force_pic
                 )
 
         # season thumb
@@ -217,7 +217,7 @@ class Scraper:
             )
             if seasonthumb:
                 self._downloader.download(
-                    seasonthumb, tv_root, "season%s-landscape" % media.get_season_seq().rjust(2, "0"), force_pic
+                    seasonthumb, tv_root, "season{}-landscape".format(media.get_season_seq().rjust(2, "0")), force_pic
                 )
 
         # episode thumb
@@ -265,7 +265,7 @@ class Scraper:
                 self._downloader.download(backdrop, dir_path, "fanart", force_pic)
         for pic_type in ["background", "logo", "disc", "banner", "thumb"]:
             if scraper_pic.get(pic_type):
-                getter = getattr(media.fanart, "get_%s" % pic_type, None)
+                getter = getattr(media.fanart, f"get_{pic_type}", None)
                 if getter:
                     url = getter(media_type=media.type, queryid=media.tmdb_id)
                     if url:
@@ -283,7 +283,7 @@ class Scraper:
                 self._downloader.download(backdrop, tv_root, "fanart", force_pic)
         for pic_type in ["background", "logo", "disc", "banner", "thumb"]:
             if scraper_pic.get(pic_type):
-                getter = getattr(media.fanart, "get_%s" % pic_type, None)
+                getter = getattr(media.fanart, f"get_{pic_type}", None)
                 if getter:
                     url = getter(media_type=media.type, queryid=media.tvdb_id)
                     if url:

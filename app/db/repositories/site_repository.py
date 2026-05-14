@@ -3,6 +3,7 @@ Site Repository
 Handles site configuration and statistics related database operations.
 """
 
+import contextlib
 import json
 import time
 
@@ -399,10 +400,8 @@ class SiteRepository(BaseRepository):
             strict_urls = []
         end = datetime.datetime.now()
         if end_day:
-            try:
+            with contextlib.suppress(Exception):
                 end = datetime.datetime.strptime(end_day, "%Y-%m-%d")
-            except Exception:
-                pass
 
         b_date = (end - datetime.timedelta(days=days)).strftime("%Y-%m-%d")
         e_date = end.strftime("%Y-%m-%d")
@@ -494,10 +493,8 @@ class SiteRepository(BaseRepository):
             strict_urls = []
         end = datetime.datetime.now()
         if end_day:
-            try:
+            with contextlib.suppress(Exception):
                 end = datetime.datetime.strptime(end_day, "%Y-%m-%d")
-            except Exception:
-                pass
 
         b_date = (end - datetime.timedelta(days=days)).strftime("%Y-%m-%d")
         e_date = end.strftime("%Y-%m-%d")

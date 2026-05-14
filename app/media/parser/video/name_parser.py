@@ -25,7 +25,7 @@ def init_name(info, token):
             if not info.en_name:
                 info.en_name = info._unknown_name_str
             elif info._unknown_name_str != info.year:
-                info.en_name = "%s %s" % (info.en_name, info._unknown_name_str)
+                info.en_name = f"{info.en_name} {info._unknown_name_str}"
             info._last_token_type = "enname"
         info._unknown_name_str = ""
     if info._stop_name_flag:
@@ -46,10 +46,10 @@ def init_name(info, token):
             if len(info.cn_name) >= 6:
                 info._stop_cnname_flag = True
                 return
-            if not re.search("%s" % _name_no_chinese_re, token, flags=re.IGNORECASE) and not re.search(
-                "%s" % _name_se_words, token, flags=re.IGNORECASE
+            if not re.search(f"{_name_no_chinese_re}", token, flags=re.IGNORECASE) and not re.search(
+                f"{_name_se_words}", token, flags=re.IGNORECASE
             ):
-                info.cn_name = "%s %s" % (info.cn_name, token)
+                info.cn_name = f"{info.cn_name} {token}"
             info._stop_cnname_flag = True
     else:
         is_roman_digit = re.search(_roman_numerals, token)
@@ -72,9 +72,9 @@ def init_name(info, token):
                     return
                 if (token.isdigit() and len(token) < 4) or is_roman_digit:
                     if info._last_token_type == "cnname":
-                        info.cn_name = "%s %s" % (info.cn_name, token)
+                        info.cn_name = f"{info.cn_name} {token}"
                     elif info._last_token_type == "enname":
-                        info.en_name = "%s %s" % (info.en_name, token)
+                        info.en_name = f"{info.en_name} {token}"
                     info._continue_flag = False
                 elif token.isdigit() and len(token) == 4:
                     if not info._unknown_name_str:
@@ -82,15 +82,15 @@ def init_name(info, token):
             else:
                 if not info._unknown_name_str:
                     info._unknown_name_str = token
-        elif re.search(r"%s" % _season_re, token, re.IGNORECASE):
+        elif re.search(rf"{_season_re}", token, re.IGNORECASE):
             if info.en_name and re.search(r"SEASON$", info.en_name, re.IGNORECASE):
                 info.en_name += " "
             info._stop_name_flag = True
             return
         elif (
-            re.search(r"%s" % _episode_re, token, re.IGNORECASE)
-            or re.search(r"(%s)" % _resources_type_re, token, re.IGNORECASE)
-            or re.search(r"%s" % _resources_pix_re, token, re.IGNORECASE)
+            re.search(rf"{_episode_re}", token, re.IGNORECASE)
+            or re.search(rf"({_resources_type_re})", token, re.IGNORECASE)
+            or re.search(rf"{_resources_pix_re}", token, re.IGNORECASE)
         ):
             info._stop_name_flag = True
             return
@@ -100,7 +100,7 @@ def init_name(info, token):
             if ".%s".lower() % token in RMT_MEDIAEXT:
                 return
             if info.en_name:
-                info.en_name = "%s %s" % (info.en_name, token)
+                info.en_name = f"{info.en_name} {token}"
             else:
                 info.en_name = token
             info._last_token_type = "enname"
@@ -112,7 +112,7 @@ def fix_name(info, name):
 
     if not name:
         return name
-    name = re.sub(r"%s" % _name_nostring_re, "", name, flags=re.IGNORECASE).strip()
+    name = re.sub(rf"{_name_nostring_re}", "", name, flags=re.IGNORECASE).strip()
     name = re.sub(r"\s+", " ", name)
     if (
         name.isdigit()

@@ -18,7 +18,7 @@ class IyuuMsg(_IMessageClient):
         if not self._token:
             return False, "参数未配置"
         try:
-            sc_url = "http://iyuu.cn/%s.send?%s" % (self._token, urlencode({"text": title, "desp": text}))
+            sc_url = "http://iyuu.cn/{}.send?{}".format(self._token, urlencode({"text": title, "desp": text}))
             res = RequestUtils().get_res(sc_url)
             if res and res.status_code == 200:
                 ret_json = res.json()

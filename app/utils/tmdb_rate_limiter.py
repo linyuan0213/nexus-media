@@ -162,9 +162,7 @@ class TMDBRetryWithBackoff:
         if attempt >= self._max_retries:
             return False
         # 只对速率限制或服务器错误重试
-        if status_code is not None and status_code not in [429, 500, 502, 503, 504]:
-            return False
-        return True
+        return not (status_code is not None and status_code not in [429, 500, 502, 503, 504])
 
     def execute(self, func, *args, **kwargs):
         """

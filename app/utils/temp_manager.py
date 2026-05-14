@@ -3,7 +3,7 @@ import shutil
 import threading
 import time
 from collections.abc import Callable
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from datetime import datetime
 
 import log
@@ -168,13 +168,11 @@ class TempManager:
         if not os.path.exists(self._temp_path):
             return 0
 
-        for dirpath, dirnames, filenames in os.walk(self._temp_path):
+        for dirpath, _dirnames, filenames in os.walk(self._temp_path):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
-                try:
+                with suppress(BaseException):
                     total_size += os.path.getsize(fp)
-                except:
-                    pass
         return total_size
 
     def get_temp_size_human(self) -> str:

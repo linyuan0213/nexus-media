@@ -347,7 +347,7 @@ class TmdbSearch:
             html = etree.HTML(res.text)
             xpath = "//a[@data-id and @data-media-type='tv']/@href" if mtype == MediaType.TV else "//a[@data-id]/@href"
             tmdb_links = [
-                link for link in html.xpath(xpath) if link and (link.startswith("/tv") or link.startswith("/movie"))
+                link for link in html.xpath(xpath) if link and (link.startswith(("/tv", "/movie")))
             ]
             if len(tmdb_links) != 1:
                 log.info(f"【Meta】{name} TMDB网站返回{'数据过多' if tmdb_links else '无'}结果")

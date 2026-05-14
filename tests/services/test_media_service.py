@@ -557,8 +557,8 @@ class TestMediaLibraryService:
     def test_start_sync(self, service):
         with (
             patch("app.services.media_service.TokenCache") as MockCache,
-            patch("app.services.media_service.SystemConfig") as MockSys,
-            patch("app.services.media_service.ThreadHelper") as MockTh,
+            patch("app.services.media_service.SystemConfig"),
+            patch("app.services.media_service.ThreadHelper"),
         ):
             service.start_sync(librarys=["movies"])
             MockCache.delete.assert_called_once_with("index")

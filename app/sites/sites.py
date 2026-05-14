@@ -61,12 +61,10 @@ class Sites:
             site_headers = site_note.get("headers")
             uses = []
             if site_uses:
-                rss_enable = True if "D" in site_uses and site_rssurl else False
-                brush_enable = True if "S" in site_uses and site_rssurl and (site_cookie or site_headers) else False
+                rss_enable = bool("D" in site_uses and site_rssurl)
+                brush_enable = bool("S" in site_uses and site_rssurl and (site_cookie or site_headers))
                 statistic_enable = (
-                    True
-                    if "T" in site_uses and (site_rssurl or site_signurl) and (site_cookie or site_headers)
-                    else False
+                    bool("T" in site_uses and (site_rssurl or site_signurl) and (site_cookie or site_headers))
                 )
                 uses.append("D") if rss_enable else None
                 uses.append("S") if brush_enable else None
@@ -107,11 +105,11 @@ class Sites:
                 "uses": uses,
                 "ua": site_note.get("ua") or get_ua(),
                 "headers": site_note.get("headers"),
-                "parse": True if site_note.get("parse") == "Y" else False,
-                "unread_msg_notify": True if site_note.get("message") == "Y" else False,
-                "chrome": True if site_note.get("chrome") == "Y" else False,
-                "proxy": True if site_note.get("proxy") == "Y" else False,
-                "subtitle": True if site_note.get("subtitle") == "Y" else False,
+                "parse": site_note.get("parse") == "Y",
+                "unread_msg_notify": site_note.get("message") == "Y",
+                "chrome": site_note.get("chrome") == "Y",
+                "proxy": site_note.get("proxy") == "Y",
+                "subtitle": site_note.get("subtitle") == "Y",
                 "limit_interval": site_note.get("limit_interval"),
                 "limit_count": site_note.get("limit_count"),
                 "limit_seconds": site_note.get("limit_seconds"),

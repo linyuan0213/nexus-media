@@ -386,9 +386,9 @@ class Message(metaclass=SingletonMeta):
         if self._domain:
             if url:
                 if "/open?url=" in url:
-                    url = "%s%s" % (self._domain, url)
+                    url = f"{self._domain}{url}"
                 elif not url.startswith("http"):
-                    url = "%s?next=%s" % (self._domain, url)
+                    url = f"{self._domain}?next={url}"
             else:
                 url = ""
         else:
@@ -692,7 +692,7 @@ class Message(metaclass=SingletonMeta):
         """
         发送下载失败的消息
         """
-        title = "添加下载任务失败：%s %s" % (item.get_title_string(), item.get_season_episode_string())
+        title = f"添加下载任务失败：{item.get_title_string()} {item.get_season_episode_string()}"
         text = f"站点：{item.site}\n种子名称：{item.org_string}\n种子链接：{item.enclosure}\n错误信息：{error_msg}"
         # 插入消息中心
         self.messagecenter.insert_system_message(title=title, content=text)
@@ -1075,7 +1075,7 @@ class Message(metaclass=SingletonMeta):
         if client_type:
             return self.active_interactive_clients.get(client_type)
         else:
-            return [client for client in self.active_interactive_clients.values()]
+            return list(self.active_interactive_clients.values())
 
     def delete_message_client(self, cid):
         """

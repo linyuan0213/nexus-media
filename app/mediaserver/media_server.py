@@ -243,7 +243,7 @@ class MediaServer(metaclass=SingletonMeta):
             if str(library.get("id")) not in librarys:
                 continue
             # 获取媒体库所有项目
-            self.progress.update(ptype=ProgressKey.MediaSync, text="正在获取 %s 数据..." % (library.get("name")))
+            self.progress.update(ptype=ProgressKey.MediaSync, text="正在获取 {} 数据...".format(library.get("name")))
             for item in self.get_items(library.get("id")):
                 if not item:
                     continue
@@ -258,7 +258,7 @@ class MediaServer(metaclass=SingletonMeta):
                     seasoninfo = self.get_tv_episodes(item.get("id"))
                 self.progress.update(
                     ptype=ProgressKey.MediaSync,
-                    text="正在同步 %s，已完成：%s / %s ..." % (library.get("name"), total_count, total_media_count),
+                    text="正在同步 {}，已完成：{} / {} ...".format(library.get("name"), total_count, total_media_count),
                     value=round(100 * total_count / total_media_count, 1),
                 )
                 # 插入数据
@@ -270,10 +270,10 @@ class MediaServer(metaclass=SingletonMeta):
         )
         # 结束进度条
         self.progress.update(
-            ptype=ProgressKey.MediaSync, value=100, text="媒体库数据同步完成，同步数量：%s" % total_count
+            ptype=ProgressKey.MediaSync, value=100, text=f"媒体库数据同步完成，同步数量：{total_count}"
         )
         self.progress.end(ProgressKey.MediaSync)
-        log.info("【MediaServer】媒体库数据同步完成，同步数量：%s" % total_count)
+        log.info(f"【MediaServer】媒体库数据同步完成，同步数量：{total_count}")
 
     def check_item_exists(self, mtype, title=None, year=None, tmdbid=None, season=None, episode=None):
         """

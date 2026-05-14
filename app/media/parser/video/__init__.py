@@ -69,7 +69,7 @@ def parse_video_title(title, subtitle=None, fileflag=False) -> MediaInfo:
             info.type = MediaType.TV
 
     # 预处理
-    title = re.sub(r"%s" % _name_no_begin_re, "", title, count=1)
+    title = re.sub(rf"{_name_no_begin_re}", "", title, count=1)
     title = re.sub(r"([\s.]+)(\d{4})-(\d{4})", r"\1\2", title)
     title = re.sub(r"[0-9.]+\s*[MGT]i?B(?![A-Z]+)", "", title, flags=re.IGNORECASE)
     title = re.sub(r"\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}", "", title)

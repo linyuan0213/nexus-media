@@ -58,17 +58,17 @@ class TorrentRemoverActionEngine:
             for torrent in torrents:
                 log.info(f"【TorrentRemover】暂停种子：{torrent.get('name')}")
                 downloader.stop_torrents(downloader_id=downloader_id, ids=[torrent.get("id")])
-            return len(torrents), "共暂停%s个种子\n" % len(torrents) + "\n".join(text_items)
+            return len(torrents), f"共暂停{len(torrents)}个种子\n" + "\n".join(text_items)
         elif action == 2:
             for torrent in torrents:
                 log.info(f"【TorrentRemover】删除种子：{torrent.get('name')}")
                 downloader.delete_torrents(downloader_id=downloader_id, delete_file=False, ids=[torrent.get("id")])
-            return len(torrents), "共删除%s个种子\n" % len(torrents) + "\n".join(text_items)
+            return len(torrents), f"共删除{len(torrents)}个种子\n" + "\n".join(text_items)
         elif action == 3:
             for torrent in torrents:
                 log.info(f"【TorrentRemover】删除种子及文件：{torrent.get('name')}")
                 downloader.delete_torrents(downloader_id=downloader_id, delete_file=True, ids=[torrent.get("id")])
-            return len(torrents), "共删除%s个种子（及文件）\n" % len(torrents) + "\n".join(text_items)
+            return len(torrents), f"共删除{len(torrents)}个种子（及文件）\n" + "\n".join(text_items)
         return len(torrents), ""
 
 

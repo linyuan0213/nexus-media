@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import queue
 import threading
 from collections.abc import Callable
@@ -37,10 +38,8 @@ class MemoryMessageQueue(MessageQueue):
         if not self._started:
             return
         self._shutdown = True
-        try:
+        with contextlib.suppress(queue.Full):
             self._queue.put_nowait(None)
-        except queue.Full:
-            pass
         if wait and self._dispatcher and self._dispatcher.is_alive():
             self._dispatcher.join(timeout=timeout)
         self._executor.shutdown(wait=wait)

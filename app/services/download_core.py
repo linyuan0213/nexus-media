@@ -327,7 +327,7 @@ class DownloadCore:
             proxy=site_info.get("proxy"),
         )
         if not files:
-            log.error("【Downloader】读取种子文件集数出错：%s" % retmsg)
+            log.error(f"【Downloader】读取种子文件集数出错：{retmsg}")
             if file_path:
                 Torrent().delete_torrent_file(file_path)
             return [], None

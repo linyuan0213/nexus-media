@@ -1,3 +1,5 @@
+import contextlib
+
 import log
 from app.plugin_framework.hook_system import HookSystem
 from app.utils.commons import SingletonMeta
@@ -73,10 +75,8 @@ class EventManager(metaclass=SingletonMeta):
             EventType.PluginReload: "plugin.reload",
         }
         if etype in event_map:
-            try:
+            with contextlib.suppress(Exception):
                 HookSystem().emit(event_map[etype], data or {})
-            except Exception:
-                pass
 
     def register(self, etype):
         def decorator(f):

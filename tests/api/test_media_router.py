@@ -176,7 +176,7 @@ class TestMediaRouter:
             self._teardown_media_info()
 
     def test_media_person_no_params(self):
-        mock_svc = self._mock_media_info()
+        self._mock_media_info()
         try:
             resp = client.post("/api/media/person", json={})
             assert resp.status_code == 200

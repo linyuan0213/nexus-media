@@ -38,7 +38,7 @@ def _parse_userid(ins):
 
 
 def _parse_base_info(ins):
-    html = re.sub(r"#\d+", "", re.sub(r"\d+px", "", ins._index_html))
+    re.sub(r"#\d+", "", re.sub(r"\d+px", "", ins._index_html))
     doc = etree.HTML(ins._index_html)
     if doc is None:
         return

@@ -70,7 +70,7 @@ def _clean_old_cache():
     try:
         now = time.time()
         total_size = 0
-        for root, dirs, files in os.walk(CACHE_DIR):
+        for root, _dirs, files in os.walk(CACHE_DIR):
             for file in files:
                 filepath = os.path.join(root, file)
                 try:
@@ -86,7 +86,7 @@ def _clean_old_cache():
 
         if total_size > MAX_CACHE_SIZE:
             files = []
-            for root, dirs, filenames in os.walk(CACHE_DIR):
+            for root, _dirs, filenames in os.walk(CACHE_DIR):
                 for filename in filenames:
                     filepath = os.path.join(root, filename)
                     try:
@@ -95,7 +95,7 @@ def _clean_old_cache():
                     except Exception:
                         pass
             files.sort(key=lambda x: x[1])
-            for filepath, mtime, size in files:
+            for filepath, _mtime, size in files:
                 if total_size <= MAX_CACHE_SIZE:
                     break
                 try:

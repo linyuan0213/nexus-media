@@ -142,10 +142,10 @@ class WordsHelper(metaclass=SingletonMeta):
     @staticmethod
     def replace_regex(title, replaced, replace) -> (str, str, bool):
         try:
-            if not re.findall(r"%s" % replaced, title):
+            if not re.findall(rf"{replaced}", title):
                 return title, "", False
             else:
-                return re.sub(r"%s" % replaced, r"%s" % replace, title), "", True
+                return re.sub(rf"{replaced}", rf"{replace}", title), "", True
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return title, str(err), False
@@ -164,11 +164,11 @@ class WordsHelper(metaclass=SingletonMeta):
     @staticmethod
     def episode_offset(title, front, back, offset) -> (str, str, bool):
         try:
-            if back and not re.findall(r"%s" % back, title):
+            if back and not re.findall(rf"{back}", title):
                 return title, "", False
-            if front and not re.findall(r"%s" % front, title):
+            if front and not re.findall(rf"{front}", title):
                 return title, "", False
-            offset_word_info_re = re.compile(r"(?<=%s.*?)[0-9一二三四五六七八九十]+(?=.*?%s)" % (front, back))
+            offset_word_info_re = re.compile(rf"(?<={front}.*?)[0-9一二三四五六七八九十]+(?=.*?{back})")
             episode_nums_str = re.findall(offset_word_info_re, title)
             if not episode_nums_str:
                 return title, "", False
@@ -194,7 +194,7 @@ class WordsHelper(metaclass=SingletonMeta):
                     else:
                         episode_num_offset_str = str(episode_num_offset_int)
                 episode_nums_offset_str.append(episode_num_offset_str)
-            episode_nums_dict = dict(zip(episode_nums_str, episode_nums_offset_str))
+            episode_nums_dict = dict(zip(episode_nums_str, episode_nums_offset_str, strict=False))
             # 集数向前偏移，集数按升序处理
             if offset_order_flag:
                 episode_nums_list = sorted(episode_nums_dict.items(), key=lambda x: x[1])
@@ -202,8 +202,8 @@ class WordsHelper(metaclass=SingletonMeta):
             else:
                 episode_nums_list = sorted(episode_nums_dict.items(), key=lambda x: x[1], reverse=True)
             for episode_num in episode_nums_list:
-                episode_offset_re = re.compile(r"(?<=%s.*?)%s(?=.*?%s)" % (front, episode_num[0], back))
-                title = re.sub(episode_offset_re, r"%s" % episode_num[1], title)
+                episode_offset_re = re.compile(rf"(?<={front}.*?){episode_num[0]}(?=.*?{back})")
+                title = re.sub(episode_offset_re, rf"{episode_num[1]}", title)
             return title, "", True
         except Exception as err:
             ExceptionUtils.exception_traceback(err)

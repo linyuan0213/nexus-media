@@ -88,7 +88,7 @@ class TestRssRouter:
     # refresh
     # ------------------------------------------------------------------
     def test_refresh_rss(self):
-        mock_svc = self._mock_rss()
+        self._mock_rss()
         try:
             resp = client.post("/api/rss/refresh", json={"type": "MOV", "rssid": "1", "page": "movie"})
             assert resp.status_code == 200
@@ -164,7 +164,7 @@ class TestRssRouter:
     # default_setting/save
     # ------------------------------------------------------------------
     def test_save_default_rss_setting(self):
-        mock_svc = self._mock_rss()
+        self._mock_rss()
         try:
             resp = client.post(
                 "/api/rss/default_setting/save",
@@ -188,7 +188,7 @@ class TestRssRouter:
             self._teardown()
 
     def test_save_default_rss_setting_tv(self):
-        mock_svc = self._mock_rss()
+        self._mock_rss()
         try:
             resp = client.post(
                 "/api/rss/default_setting/save",

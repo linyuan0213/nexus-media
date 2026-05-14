@@ -91,7 +91,7 @@ class TestDownloadRouter:
             self._teardown_downloader()
 
     def test_check_downloader_no_did(self):
-        mock_svc = self._mock_downloader()
+        self._mock_downloader()
         try:
             resp = client.post("/api/download/check_downloader", json={"flag": "enabled", "checked": True})
             assert resp.status_code == 200
@@ -116,7 +116,7 @@ class TestDownloadRouter:
     # delete_download_setting
     # ------------------------------------------------------------------
     def test_delete_download_setting(self):
-        mock_svc = self._mock_downloader()
+        self._mock_downloader()
         try:
             resp = client.post("/api/download/delete_download_setting", json={"sid": "1"})
             assert resp.status_code == 200
@@ -388,7 +388,7 @@ class TestDownloadRouter:
     # update_download_setting
     # ------------------------------------------------------------------
     def test_update_download_setting(self):
-        mock_svc = self._mock_downloader()
+        self._mock_downloader()
         try:
             resp = client.post(
                 "/api/download/update_download_setting", json={"sid": "1", "name": "default", "category": "movie"}
@@ -402,7 +402,7 @@ class TestDownloadRouter:
     # update_downloader
     # ------------------------------------------------------------------
     def test_update_downloader(self):
-        mock_svc = self._mock_downloader()
+        self._mock_downloader()
         try:
             resp = client.post(
                 "/api/download/update_downloader",

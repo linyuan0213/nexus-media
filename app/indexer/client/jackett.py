@@ -50,11 +50,11 @@ class Jackett(_IIndexClient):
         """
         if not self.api_key or not self.host:
             return False
-        return True if self.get_indexers() else False
+        return bool(self.get_indexers())
 
     @classmethod
     def match(cls, ctype):
-        return True if ctype in [cls.schema, cls.index_type] else False
+        return ctype in [cls.schema, cls.index_type]
 
     def get_indexers(self, check=True, indexer_id=None, public=True):
         """
@@ -79,7 +79,7 @@ class Jackett(_IIndexClient):
                         "name": v["name"],
                         "domain": f"{self.host}api/v2.0/indexers/{v['id']}/results/torznab/",
                     },
-                    public=True if v["type"] == "public" else False,
+                    public=v["type"] == "public",
                     builtin=False,
                 )
                 for v in ret.json()

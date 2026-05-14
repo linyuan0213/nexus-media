@@ -1,3 +1,4 @@
+import contextlib
 import urllib.parse
 
 from fastapi import APIRouter, Depends, Query
@@ -31,7 +32,6 @@ from app.services.media_service import (
 )
 from app.services.search_service import Searcher
 from app.utils.response import fail, success
-from app.utils.types import MediaType, MovieTypes
 
 router = APIRouter()
 
@@ -466,10 +466,8 @@ def get_library_home(
         pass
 
     activity = []
-    try:
+    with contextlib.suppress(Exception):
         activity = svc.get_play_history() or []
-    except Exception:
-        pass
 
     library_spaces = {}
     try:
@@ -484,22 +482,16 @@ def get_library_home(
         pass
 
     libraries = []
-    try:
+    with contextlib.suppress(Exception):
         libraries = svc.get_libraries() or []
-    except Exception:
-        pass
 
     resumes = []
-    try:
+    with contextlib.suppress(Exception):
         resumes = svc.get_resume() or []
-    except Exception:
-        pass
 
     latests = []
-    try:
+    with contextlib.suppress(Exception):
         latests = svc.get_latest() or []
-    except Exception:
-        pass
 
     return success(
         data={
@@ -604,7 +596,6 @@ def media_detail(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaInfoService = Depends(get_media_info_service),
 ):
-    mtype = MediaType.MOVIE if req.type in MovieTypes else MediaType.TV
     tmdbid = urllib.parse.unquote(req.tmdbid) if req.tmdbid else req.tmdbid
     if not tmdbid:
         return fail(msg="未指定媒体ID")

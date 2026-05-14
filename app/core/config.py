@@ -63,16 +63,16 @@ class Config(metaclass=_SingletonMeta):
 
             with open(self._config_path, encoding="utf-8") as cf:
                 try:
-                    print("正在加载配置：%s" % self._config_path)
+                    print(f"正在加载配置：{self._config_path}")
                     self._config = ruamel.yaml.YAML().load(cf)
                 except Exception as e:
-                    print("【Config】配置文件 config.yaml 格式出现严重错误！请检查：%s" % str(e))
+                    print(f"【Config】配置文件 config.yaml 格式出现严重错误！请检查：{str(e)}")
                     self._config = {}
 
             self._apply_env_database_config()
 
         except Exception as err:
-            print("【Config】加载 config.yaml 配置出错：%s" % str(err))
+            print(f"【Config】加载 config.yaml 配置出错：{str(err)}")
             return False
 
     def _apply_env_database_config(self):

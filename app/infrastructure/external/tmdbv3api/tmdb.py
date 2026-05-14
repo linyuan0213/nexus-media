@@ -36,15 +36,15 @@ class TMDb:
 
     @property
     def page(self):
-        return os.environ["page"]
+        return os.environ["PAGE"]
 
     @property
     def total_results(self):
-        return os.environ["total_results"]
+        return os.environ["TOTAL_RESULTS"]
 
     @property
     def total_pages(self):
-        return os.environ["total_pages"]
+        return os.environ["TOTAL_PAGES"]
 
     @property
     def api_key(self):
@@ -69,9 +69,9 @@ class TMDb:
             for key, value in proxies.items():
                 if not value:
                     continue
-                proxies_strs.append("'%s': '%s'" % (key, value))
+                proxies_strs.append(f"'{key}': '{value}'")
             if proxies_strs:
-                os.environ[self.TMDB_PROXIES] = "{%s}" % ",".join(proxies_strs)
+                os.environ[self.TMDB_PROXIES] = "{{{}}}".format(",".join(proxies_strs))
             else:
                 os.environ[self.TMDB_PROXIES] = "None"
 
@@ -89,10 +89,7 @@ class TMDb:
 
     @property
     def wait_on_rate_limit(self):
-        if os.environ.get(self.TMDB_WAIT_ON_RATE_LIMIT) == "False":
-            return False
-        else:
-            return True
+        return os.environ.get(self.TMDB_WAIT_ON_RATE_LIMIT) != "False"
 
     @wait_on_rate_limit.setter
     def wait_on_rate_limit(self, wait_on_rate_limit):
@@ -100,10 +97,7 @@ class TMDb:
 
     @property
     def debug(self):
-        if os.environ.get(self.TMDB_DEBUG_ENABLED) == "True":
-            return True
-        else:
-            return False
+        return os.environ.get(self.TMDB_DEBUG_ENABLED) == "True"
 
     @debug.setter
     def debug(self, debug):
@@ -111,10 +105,7 @@ class TMDb:
 
     @property
     def cache(self):
-        if os.environ.get(self.TMDB_CACHE_ENABLED) == "False":
-            return False
-        else:
-            return True
+        return os.environ.get(self.TMDB_CACHE_ENABLED) != "False"
 
     @cache.setter
     def cache(self, cache):
@@ -141,13 +132,7 @@ class TMDb:
         if self.api_key is None or self.api_key == "":
             raise TMDbException("No API key found.")
 
-        url = "%s%s?api_key=%s&include_adult=false&%s&language=%s" % (
-            self.domain,
-            action,
-            self.api_key,
-            append_to_response,
-            self.language,
-        )
+        url = f"{self.domain}{action}?api_key={self.api_key}&include_adult=false&{append_to_response}&language={self.language}"
 
         def do_request():
             # 使用速率限制器控制请求频率
@@ -189,13 +174,13 @@ class TMDb:
         json = req.json()
 
         if "page" in json:
-            os.environ["page"] = str(json["page"])
+            os.environ["PAGE"] = str(json["page"])
 
         if "total_results" in json:
-            os.environ["total_results"] = str(json["total_results"])
+            os.environ["TOTAL_RESULTS"] = str(json["total_results"])
 
         if "total_pages" in json:
-            os.environ["total_pages"] = str(json["total_pages"])
+            os.environ["TOTAL_PAGES"] = str(json["total_pages"])
 
         if self.debug:
             logger.info(json)

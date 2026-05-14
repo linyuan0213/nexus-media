@@ -72,26 +72,17 @@ class StringUtils:
         if isinstance(word, list):
             word = " ".join(word)
         chn = re.compile(r"[\u4e00-\u9fff]")
-        if chn.search(word):
-            return True
-        else:
-            return False
+        return bool(chn.search(word))
 
     @staticmethod
     def is_japanese(word):
         jap = re.compile(r"[\u3040-\u309F\u30A0-\u30FF]")
-        if jap.search(word):
-            return True
-        else:
-            return False
+        return bool(jap.search(word))
 
     @staticmethod
     def is_korean(word):
         kor = re.compile(r"[\uAC00-\uD7FF]")
-        if kor.search(word):
-            return True
-        else:
-            return False
+        return bool(kor.search(word))
 
     @staticmethod
     def is_all_chinese(word):
@@ -167,7 +158,7 @@ class StringUtils:
             text = re.sub(
                 r"[\u200B-\u200D\uFEFF]",
                 "",
-                re.sub(r"%s" % CONVERT_EMPTY_CHARS, replace_word, text),
+                re.sub(rf"{CONVERT_EMPTY_CHARS}", replace_word, text),
                 flags=re.IGNORECASE,
             )
             if not allow_space:
@@ -217,9 +208,7 @@ class StringUtils:
             url2 = parse.urlparse(url2).netloc
         if url1.replace("www.", "") == url2.replace("www.", ""):
             return True
-        if url1.replace("pt.", "") == url2.replace("pt.", ""):
-            return True
-        return False
+        return url1.replace("pt.", "") == url2.replace("pt.", "")
 
     @staticmethod
     def get_url_netloc(url):
@@ -327,7 +316,7 @@ class StringUtils:
         random_str = ""
         base_str = "ABCDEFGHIGKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz0123456789"
         length = len(base_str) - 1
-        for i in range(randomlength):
+        for _i in range(randomlength):
             random_str += base_str[random.randint(0, length)]
         return random_str
 
@@ -392,11 +381,9 @@ class StringUtils:
             return default_val
         if isinstance(text, bool):
             return text
-        if isinstance(text, int) or isinstance(text, float):
-            return True if text > 0 else False
-        if isinstance(text, str) and text.lower() in ["y", "true", "1"]:
-            return True
-        return False
+        if isinstance(text, (int, float)):
+            return text > 0
+        return bool(isinstance(text, str) and text.lower() in ["y", "true", "1"])
 
     @staticmethod
     def str_from_cookiejar(cj):
@@ -455,9 +442,9 @@ class StringUtils:
         hours = minutes // 60
         minutes = minutes % 60
         if hours:
-            return "%s小时%s分" % (hours, minutes)
+            return f"{hours}小时{minutes}分"
         else:
-            return "%s分钟" % minutes
+            return f"{minutes}分钟"
 
     @staticmethod
     def str_amount(amount, curr="$"):
@@ -546,10 +533,7 @@ class StringUtils:
         today = datetime.datetime.today()
         one_month_ago = today - datetime.timedelta(days=30)
         # 比较日期对象，判断是否早于一个月前
-        if date_obj < one_month_ago:
-            return True
-        else:
-            return False
+        return date_obj < one_month_ago
 
     @staticmethod
     def get_tid_by_url(url):
@@ -560,7 +544,7 @@ class StringUtils:
         parsed_url = parse.urlparse(url)
 
         # 解析查询参数
-        params = parse.parse_qs(parsed_url.query)
+        parse.parse_qs(parsed_url.query)
         from app.sites.engine import SiteEngine
 
         site_def = SiteEngine.get_instance().get_by_url(url)

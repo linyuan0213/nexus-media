@@ -22,7 +22,7 @@ from config import Config
 
 def signal_handler(num, stack):
     """信号处理 - 优雅退出"""
-    log.warn("捕捉到退出信号：%s，开始退出..." % num)
+    log.warn(f"捕捉到退出信号：{num}，开始退出...")
     log.info("关闭配置文件监控...")
     stop_config_monitor()
     log.info("关闭服务...")
@@ -53,7 +53,7 @@ def get_run_config():
         _web_port = int(web_port_val) if web_port_val and str(web_port_val).isdigit() else 3000
         _ssl_cert = app_conf.get("ssl_cert")
         _ssl_key = app_conf.get("ssl_key")
-        _debug = True if app_conf.get("debug") else False
+        _debug = bool(app_conf.get("debug"))
 
     return {"host": _web_host, "port": _web_port, "ssl_cert": _ssl_cert, "ssl_key": _ssl_key, "debug": _debug}
 

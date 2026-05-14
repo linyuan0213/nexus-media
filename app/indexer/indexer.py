@@ -127,14 +127,14 @@ class Indexer(metaclass=SingletonMeta):
                 % (key_word, filter_args.get("site"), max_workers)
             )
             self.progress.update(
-                ptype=progress_key, text="开始搜索 %s，站点：%s ..." % (key_word, filter_args.get("site"))
+                ptype=progress_key, text="开始搜索 {}，站点：{} ...".format(key_word, filter_args.get("site"))
             )
         else:
             log.info(
                 f"【{self._client_type.value}】开始并行搜索 %s，站点数：%s，并发数：%s ..."
                 % (key_word, len(indexers), max_workers)
             )
-            self.progress.update(ptype=progress_key, text="开始并行搜索 %s，站点数：%s ..." % (key_word, len(indexers)))
+            self.progress.update(ptype=progress_key, text=f"开始并行搜索 {key_word}，站点数：{len(indexers)} ...")
 
         # ---------- 阶段1：并发搜索所有站点，收集原始结果 ----------
         all_raw_results = []
@@ -172,8 +172,7 @@ class Indexer(metaclass=SingletonMeta):
         )
         self.progress.update(
             ptype=progress_key,
-            text="搜索关键词 %s 所有站点完成，有效资源数：%s，总耗时 %s 秒"
-            % (key_word, len(pipeline_result.results), (end_time - start_time).seconds),
+            text=f"搜索关键词 {key_word} 所有站点完成，有效资源数：{len(pipeline_result.results)}，总耗时 {(end_time - start_time).seconds} 秒",
         )
 
         return pipeline_result.results

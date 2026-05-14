@@ -92,9 +92,7 @@ class FnOSClient(metaclass=Singleton):
         if not self._token:
             return True
         # 更精确的过期检查
-        if self._token_expiry and time.time() > self._token_expiry:
-            return True
-        return False
+        return bool(self._token_expiry and time.time() > self._token_expiry)
 
     def _login(self):
         """执行登录获取新token"""

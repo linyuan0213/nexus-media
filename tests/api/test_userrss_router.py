@@ -221,7 +221,7 @@ class TestUserRssRouter:
             self._teardown()
 
     def test_rss_article_test_missing_params(self):
-        mock_svc = self._mock_userrss()
+        self._mock_userrss()
         try:
             resp = client.post("/api/userrss/articles/test", json={"taskid": "1"})
             assert resp.status_code == 200
@@ -243,7 +243,7 @@ class TestUserRssRouter:
             self._teardown()
 
     def test_rss_articles_check_no_articles(self):
-        mock_svc = self._mock_userrss()
+        self._mock_userrss()
         try:
             resp = client.post("/api/userrss/articles/check", json={"taskid": "1", "flag": "Y"})
             assert resp.status_code == 200

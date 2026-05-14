@@ -73,7 +73,7 @@ class SynologyChat(_IMessageClient):
             ExceptionUtils.exception_traceback(e)
 
     def check_token(self, token):
-        return True if token == self._token else False
+        return token == self._token
 
     def send_msg(self, title, text="", image="", url="", user_id=""):
         if not title and not text:
@@ -87,9 +87,9 @@ class SynologyChat(_IMessageClient):
                 if not text:
                     text = "\n".join(titles[1:])
                 else:
-                    text = "%s\n%s" % ("\n".join(titles[1:]), text)
+                    text = "{}\n{}".format("\n".join(titles[1:]), text)
             if text:
-                caption = "*%s*\n%s" % (title, text.replace("\n\n", "\n"))
+                caption = "*{}*\n{}".format(title, text.replace("\n\n", "\n"))
             else:
                 caption = title
             if url and image:
@@ -121,27 +121,14 @@ class SynologyChat(_IMessageClient):
         try:
             if not title or not isinstance(medias, list):
                 return False, "数据错误"
-            index, image, caption = 1, "", "*%s*" % title
+            index, image, caption = 1, "", f"*{title}*"
             for media in medias:
                 if not image:
                     image = media.get_message_image()
                 if media.get_vote_string():
-                    caption = "%s\n%s. <%s|%s>\n%s，%s" % (
-                        caption,
-                        index,
-                        media.get_detail_url(),
-                        media.get_title_string(),
-                        media.get_type_string(),
-                        media.get_vote_string(),
-                    )
+                    caption = f"{caption}\n{index}. <{media.get_detail_url()}|{media.get_title_string()}>\n{media.get_type_string()}，{media.get_vote_string()}"
                 else:
-                    caption = "%s\n%s. <%s|%s>\n%s" % (
-                        caption,
-                        index,
-                        media.get_detail_url(),
-                        media.get_title_string(),
-                        media.get_type_string(),
-                    )
+                    caption = f"{caption}\n{index}. <{media.get_detail_url()}|{media.get_title_string()}>\n{media.get_type_string()}"
                 index += 1
             if user_id:
                 user_ids = [int(user_id)]

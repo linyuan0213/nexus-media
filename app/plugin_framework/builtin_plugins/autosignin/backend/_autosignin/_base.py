@@ -21,7 +21,7 @@ class _ISiteSigninHandler(metaclass=ABCMeta):
         :param url: 站点Url
         :return: 是否匹配，如匹配则会调用该类的signin方法
         """
-        return True if StringUtils.url_equal(url, self.site_url) else False
+        return bool(StringUtils.url_equal(url, self.site_url))
 
     @abstractmethod
     def signin(self, site_info: dict):
@@ -37,10 +37,7 @@ class _ISiteSigninHandler(metaclass=ABCMeta):
         判断是否签到成功
         """
         html_text = re.sub(r"#\d+", "", re.sub(r"\d+px", "", html_res))
-        for regex in regexs:
-            if re.search(str(regex), html_text):
-                return True
-        return False
+        return any(re.search(str(regex), html_text) for regex in regexs)
 
     def info(self, msg):
         """

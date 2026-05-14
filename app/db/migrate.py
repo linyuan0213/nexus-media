@@ -86,7 +86,7 @@ def get_table_data(engine: Engine, table_name: str, limit: int | None = None) ->
         columns = result.keys()
         rows = []
         for row in result:
-            rows.append({col: _serialize_value(val) for col, val in zip(columns, row)})
+            rows.append({col: _serialize_value(val) for col, val in zip(columns, row, strict=False)})
         return rows
 
 

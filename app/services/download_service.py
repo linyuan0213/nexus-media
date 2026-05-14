@@ -283,9 +283,9 @@ class DownloadService:
                 display_name = download_info.TITLE
                 poster = download_info.POSTER
                 if year:
-                    title = "%s (%s) %s" % (display_name, year, se)
+                    title = f"{display_name} ({year}) {se}"
                 else:
-                    title = "%s %s" % (display_name, se)
+                    title = f"{display_name} {se}"
                 torrent.update({"title": title, "image": poster or ""})
             else:
                 # 先查缓存
@@ -301,7 +301,7 @@ class DownloadService:
         if need_identify:
             items = [{"title": name} for _, _, name in need_identify]
             results = self._media.identify_batch(items)
-            for (idx, torrent, name), media_info in zip(need_identify, results):
+            for (idx, torrent, name), media_info in zip(need_identify, results, strict=False):
                 if not media_info or not media_info.title:
                     torrent.update({"title": name, "image": ""})
                     continue
@@ -330,9 +330,9 @@ class DownloadService:
         se = media_info.get_season_episode_string()
         poster = media_info.get_poster_image()
         if year:
-            title = "%s (%s) %s" % (name, year, se)
+            title = f"{name} ({year}) {se}"
         else:
-            title = "%s %s" % (name, se)
+            title = f"{name} {se}"
         torrent.update({"title": title, "image": poster or ""})
 
     # ---------- 索引器统计 ----------

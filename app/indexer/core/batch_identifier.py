@@ -55,7 +55,7 @@ class BatchIdentifier:
 
         try:
             results = self.media.identify_batch(to_identify)
-            for item, info in zip(to_identify, results):
+            for item, info in zip(to_identify, results, strict=False):
                 self._media_ident_cache.set(item["title"], info)
         except Exception as e:
             log.error(f"【BatchIdentifier】批量识别出错: {e}")

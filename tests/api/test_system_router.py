@@ -359,7 +359,7 @@ class TestSystemRouter:
             self._teardown_message_sender()
 
     def test_send_plugin_message(self):
-        mock_svc = self._mock_message_sender()
+        self._mock_message_sender()
         try:
             resp = client.post("/api/system/send_plugin_message", json={"title": "test", "text": "hello"})
             assert resp.status_code == 200

@@ -15,7 +15,7 @@ class Tokens:
 
     def load_text(self, text):
         processed_text = re.sub(r"^\d+\.\d+", lambda x: x.group().replace(".", "@@"), text)
-        splited_text = re.split(r"%s" % SPLIT_CHARS, processed_text)
+        splited_text = re.split(rf"{SPLIT_CHARS}", processed_text)
         for sub_text in splited_text:
             if sub_text:
                 sub_text = sub_text.replace("@@", ".")

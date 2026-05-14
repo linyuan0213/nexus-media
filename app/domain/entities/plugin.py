@@ -3,6 +3,7 @@
 对应 PLUGIN_HISTORY / TMDB_BLACKLIST / PLUGIN_MANIFEST / PLUGIN_CONFIG / PLUGIN_LOGS 表
 """
 
+import contextlib
 from dataclasses import dataclass, field, fields
 from typing import Any, Optional
 
@@ -119,10 +120,8 @@ class PluginManifestEntity:
         import json
 
         tags = []
-        try:
+        with contextlib.suppress(Exception):
             tags = json.loads(orm_model.TAGS or "[]")
-        except Exception:
-            pass
         return cls(
             id=orm_model.ID or "",
             name=orm_model.NAME or "",
@@ -172,10 +171,8 @@ class PluginConfigEntity:
         import json
 
         cfg = {}
-        try:
+        with contextlib.suppress(Exception):
             cfg = json.loads(orm_model.CONFIG or "{}")
-        except Exception:
-            pass
         return cls(
             plugin_id=orm_model.PLUGIN_ID or "",
             config=cfg,

@@ -1,4 +1,5 @@
 import base64
+import contextlib
 import json
 import os
 import re
@@ -49,7 +50,7 @@ class FilterRuleEngine:
                     for include in includes:
                         if not include:
                             continue
-                        if not re.search(r"%s" % include.strip(), title, re.IGNORECASE):
+                        if not re.search(rf"{include.strip()}", title, re.IGNORECASE):
                             include_flag = False
                             break
                     if not include_flag:
@@ -64,7 +65,7 @@ class FilterRuleEngine:
                         if not exclude:
                             continue
                         exclude_count += 1
-                        if not re.search(r"%s" % exclude.strip(), title, re.IGNORECASE):
+                        if not re.search(rf"{exclude.strip()}", title, re.IGNORECASE):
                             exclude_flag = True
                     if exclude_count > 0 and not exclude_flag:
                         rule_match = False
@@ -137,7 +138,7 @@ class FilterRuleEngine:
             restype_re = ModuleConf.TORRENT_SEARCH_PARAMS["restype"].get(filter_args.get("restype"))
             if not meta_info.get_edtion_string():
                 return False, 0, f"{meta_info.org_string} 不符合质量 {filter_args.get('restype')} 要求"
-            if restype_re and not re.search(r"%s" % restype_re, meta_info.get_edtion_string(), re.I):
+            if restype_re and not re.search(rf"{restype_re}", meta_info.get_edtion_string(), re.I):
                 return False, 0, f"{meta_info.org_string} 不符合质量 {filter_args.get('restype')} 要求"
 
         # 过滤分辨率
@@ -145,7 +146,7 @@ class FilterRuleEngine:
             pix_re = ModuleConf.TORRENT_SEARCH_PARAMS["pix"].get(filter_args.get("pix"))
             if not meta_info.resource_pix:
                 return False, 0, f"{meta_info.org_string} 不符合分辨率 {filter_args.get('pix')} 要求"
-            if pix_re and not re.search(r"%s" % pix_re, meta_info.resource_pix, re.I):
+            if pix_re and not re.search(rf"{pix_re}", meta_info.resource_pix, re.I):
                 return False, 0, f"{meta_info.org_string} 不符合分辨率 {filter_args.get('pix')} 要求"
 
         # 过滤制作组/字幕组
@@ -157,7 +158,7 @@ class FilterRuleEngine:
                     return False, 0, f"{meta_info.org_string} 不符合制作组/字幕组 {team} 要求"
                 else:
                     meta_info.resource_team = resource_team
-            elif not re.search(r"%s" % team, meta_info.resource_team, re.I):
+            elif not re.search(rf"{team}", meta_info.resource_team, re.I):
                 return False, 0, f"{meta_info.org_string} 不符合制作组/字幕组 {team} 要求"
 
         # 过滤促销
@@ -171,19 +172,19 @@ class FilterRuleEngine:
         # 过滤包含
         if filter_args.get("include"):
             include = filter_args.get("include")
-            if not re.search(r"%s" % include, text, re.I):
+            if not re.search(rf"{include}", text, re.I):
                 return False, 0, f"{meta_info.org_string} 不符合包含 {include} 要求"
 
         # 过滤排除
         if filter_args.get("exclude"):
             exclude = filter_args.get("exclude")
-            if re.search(r"%s" % exclude, text, re.I):
+            if re.search(rf"{exclude}", text, re.I):
                 return False, 0, f"{meta_info.org_string} 不符合排除 {exclude} 要求"
 
         # 过滤关键字
         if filter_args.get("key"):
             key = filter_args.get("key")
-            if not re.search(r"%s" % key, text, re.I):
+            if not re.search(rf"{key}", text, re.I):
                 return False, 0, f"{meta_info.org_string} 不符合 {key} 要求"
 
         return True, 0, ""
@@ -320,10 +321,7 @@ class FilterService:
         else:
             rulegroup = self.get_rule_groups(groupid=rulegroup)
         filters = self.get_rules(groupid=rulegroup.get("id"))
-        for filter_info in filters:
-            if filter_info.get("free"):
-                return True
-        return False
+        return any(filter_info.get("free") for filter_info in filters)
 
     def check_torrent_filter(self, meta_info, filter_args, uploadvolumefactor=None, downloadvolumefactor=None):
         """对种子进行过滤"""
@@ -336,21 +334,11 @@ class FilterService:
         # 过滤过滤规则，-1表示不使用过滤规则，空则使用默认过滤规则
         if filter_args.get("rule"):
             match_flag, order_seq, rule_name = self.check_rules(meta_info, filter_args.get("rule"))
-            match_msg = "%s 大小：%s 促销：%s 不符合订阅/站点过滤规则 %s 要求" % (
-                meta_info.org_string,
-                StringUtils.str_filesize(meta_info.size),
-                meta_info.get_volume_factor_string(),
-                rule_name,
-            )
+            match_msg = f"{meta_info.org_string} 大小：{StringUtils.str_filesize(meta_info.size)} 促销：{meta_info.get_volume_factor_string()} 不符合订阅/站点过滤规则 {rule_name} 要求"
             return match_flag, order_seq, match_msg
         else:
             match_flag, order_seq, rule_name = self.check_rules(meta_info)
-            match_msg = "%s 大小：%s 促销：%s 不符合默认过滤规则 %s 要求" % (
-                meta_info.org_string,
-                StringUtils.str_filesize(meta_info.size),
-                meta_info.get_volume_factor_string(),
-                rule_name,
-            )
+            match_msg = f"{meta_info.org_string} 大小：{StringUtils.str_filesize(meta_info.size)} 促销：{meta_info.get_volume_factor_string()} 不符合默认过滤规则 {rule_name} 要求"
             return match_flag, order_seq, match_msg
 
     # ------------------- 规则管理 -------------------
@@ -426,15 +414,13 @@ class FilterService:
             import traceback
 
             traceback.print_exc()
-            return False, "数据格式不正确，%s" % str(err)
+            return False, f"数据格式不正确，{str(err)}"
 
     def restore_filter_group(self, groupids: list, init_rulegroups: list) -> None:
         """恢复初始规则组"""
         for groupid in groupids:
-            try:
+            with contextlib.suppress(Exception):
                 self.delete_filtergroup(groupid)
-            except Exception:
-                pass
             for init_rulegroup in init_rulegroups:
                 if str(init_rulegroup.get("id")) == groupid:
                     for sql in init_rulegroup.get("sql", []):

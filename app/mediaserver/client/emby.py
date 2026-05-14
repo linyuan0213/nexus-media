@@ -57,7 +57,7 @@ class Emby(_IMediaClient):
 
     @classmethod
     def match(cls, ctype):
-        return True if ctype in [cls.client_id, cls.client_type, cls.client_name] else False
+        return ctype in [cls.client_id, cls.client_type, cls.client_name]
 
     def get_type(self):
         return self.client_type
@@ -66,7 +66,7 @@ class Emby(_IMediaClient):
         """
         测试连通性
         """
-        return True if self.get_medias_count() else False
+        return bool(self.get_medias_count())
 
     def __get_emby_folders(self):
         """
@@ -74,7 +74,7 @@ class Emby(_IMediaClient):
         """
         if not self._host or not self._apikey:
             return []
-        req_url = "%semby/Library/SelectableMediaFolders?api_key=%s" % (self._host, self._apikey)
+        req_url = f"{self._host}emby/Library/SelectableMediaFolders?api_key={self._apikey}"
         try:
             res = RequestUtils().get_res(req_url)
             if res:
@@ -112,7 +112,7 @@ class Emby(_IMediaClient):
         """
         if not self._host or not self._apikey:
             return None
-        req_url = "%sUsers?api_key=%s" % (self._host, self._apikey)
+        req_url = f"{self._host}Users?api_key={self._apikey}"
         try:
             res = RequestUtils().get_res(req_url)
             if res:
@@ -194,7 +194,7 @@ class Emby(_IMediaClient):
         """
         if not self._host or not self._apikey:
             return None
-        req_url = "%sSystem/Info?api_key=%s" % (self._host, self._apikey)
+        req_url = f"{self._host}System/Info?api_key={self._apikey}"
         try:
             res = RequestUtils().get_res(req_url)
             if res:
@@ -212,7 +212,7 @@ class Emby(_IMediaClient):
         """
         if not self._host or not self._apikey:
             return 0
-        req_url = "%semby/Users/Query?api_key=%s" % (self._host, self._apikey)
+        req_url = f"{self._host}emby/Users/Query?api_key={self._apikey}"
         try:
             res = RequestUtils().get_res(req_url)
             if res:
@@ -231,7 +231,7 @@ class Emby(_IMediaClient):
         """
         if not self._host or not self._apikey:
             return []
-        req_url = "%semby/System/ActivityLog/Entries?api_key=%s&" % (self._host, self._apikey)
+        req_url = f"{self._host}emby/System/ActivityLog/Entries?api_key={self._apikey}&"
         ret_array = []
         try:
             res = RequestUtils().get_res(req_url)
@@ -242,7 +242,7 @@ class Emby(_IMediaClient):
                     if item.get("Type") == "AuthenticationSucceeded":
                         event_type = "LG"
                         event_date = SystemUtils.get_local_time(item.get("Date"))
-                        event_str = "%s, %s" % (item.get("Name"), item.get("ShortOverview"))
+                        event_str = "{}, {}".format(item.get("Name"), item.get("ShortOverview"))
                         activity = {"type": event_type, "event": event_str, "date": event_date}
                         ret_array.append(activity)
                     if item.get("Type") in ["VideoPlayback", "VideoPlaybackStopped"]:
@@ -267,7 +267,7 @@ class Emby(_IMediaClient):
         """
         if not self._host or not self._apikey:
             return {}
-        req_url = "%semby/Items/Counts?api_key=%s" % (self._host, self._apikey)
+        req_url = f"{self._host}emby/Items/Counts?api_key={self._apikey}"
         try:
             res = RequestUtils().get_res(req_url)
             if res:
@@ -290,8 +290,7 @@ class Emby(_IMediaClient):
         if not self._host or not self._apikey:
             return None
         req_url = (
-            "%semby/Items?IncludeItemTypes=Series&Fields=ProductionYear&StartIndex=0&Recursive=true&SearchTerm=%s&Limit=10&IncludeSearchTypes=false&api_key=%s"
-            % (self._host, name, self._apikey)
+            f"{self._host}emby/Items?IncludeItemTypes=Series&Fields=ProductionYear&StartIndex=0&Recursive=true&SearchTerm={name}&Limit=10&IncludeSearchTypes=false&api_key={self._apikey}"
         )
         try:
             res = RequestUtils().get_res(req_url)
@@ -319,8 +318,7 @@ class Emby(_IMediaClient):
         if not self._host or not self._apikey:
             return None
         req_url = (
-            "%semby/Items?IncludeItemTypes=Movie&Fields=ProductionYear&StartIndex=0&Recursive=true&SearchTerm=%s&Limit=10&IncludeSearchTypes=false&api_key=%s"
-            % (self._host, title, self._apikey)
+            f"{self._host}emby/Items?IncludeItemTypes=Movie&Fields=ProductionYear&StartIndex=0&Recursive=true&SearchTerm={title}&Limit=10&IncludeSearchTypes=false&api_key={self._apikey}"
         )
         try:
             res = RequestUtils().get_res(req_url)
@@ -369,12 +367,7 @@ class Emby(_IMediaClient):
         # /Shows/Id/Episodes 查集的信息
         if not season:
             season = ""
-        req_url = "%semby/Shows/%s/Episodes?Season=%s&IsMissing=false&api_key=%s" % (
-            self._host,
-            item_id,
-            season,
-            self._apikey,
-        )
+        req_url = f"{self._host}emby/Shows/{item_id}/Episodes?Season={season}&IsMissing=false&api_key={self._apikey}"
         try:
             res_json = RequestUtils().get_res(req_url)
             if res_json:
@@ -413,7 +406,7 @@ class Emby(_IMediaClient):
         if not isinstance(exists_episodes, list):
             return None
         exists_episodes = [episode.get("episode_num") for episode in exists_episodes]
-        total_episodes = [episode for episode in range(1, total_num + 1)]
+        total_episodes = list(range(1, total_num + 1))
         return list(set(total_episodes).difference(set(exists_episodes)))
 
     def get_episode_image_by_id(self, item_id, season_id, episode_id):
@@ -427,12 +420,7 @@ class Emby(_IMediaClient):
         if not self._host or not self._apikey:
             return None
         # 查询所有剧集
-        req_url = "%semby/Shows/%s/Episodes?Season=%s&IsMissing=false&api_key=%s" % (
-            self._host,
-            item_id,
-            season_id,
-            self._apikey,
-        )
+        req_url = f"{self._host}emby/Shows/{item_id}/Episodes?Season={season_id}&IsMissing=false&api_key={self._apikey}"
         try:
             res_json = RequestUtils().get_res(req_url)
             if res_json:
@@ -448,7 +436,7 @@ class Emby(_IMediaClient):
                             and not IpUtils.is_internal(self._play_host)
                             and res_item.get("ImageTags", {}).get("Primary")
                         ):
-                            return "%semby/Items/%s/Images/Primary?maxHeight=225&maxWidth=400&tag=%s&quality=90" % (
+                            return "{}emby/Items/{}/Images/Primary?maxHeight=225&maxWidth=400&tag={}&quality=90".format(
                                 self._play_host,
                                 res_item.get("Id"),
                                 res_item.get("ImageTags", {}).get("Primary"),
@@ -468,7 +456,7 @@ class Emby(_IMediaClient):
         """
         if not self._host or not self._apikey:
             return None
-        req_url = "%semby/Items/%s/RemoteImages?api_key=%s" % (self._host, item_id, self._apikey)
+        req_url = f"{self._host}emby/Items/{item_id}/RemoteImages?api_key={self._apikey}"
         try:
             res = RequestUtils().get_res(req_url)
             if res:
@@ -495,13 +483,13 @@ class Emby(_IMediaClient):
         if not self._host or not self._apikey:
             return None
         if not remote:
-            image_url = "%sItems/%s/Images/Primary" % (self._host, item_id)
+            image_url = f"{self._host}Items/{item_id}/Images/Primary"
             if inner:
                 return self.get_nt_image_url(image_url)
             return image_url
         else:
             host = self._play_host or self._host
-            image_url = "%sItems/%s/Images/Primary" % (host, item_id)
+            image_url = f"{host}Items/{item_id}/Images/Primary"
             if IpUtils.is_internal(host):
                 return self.get_nt_image_url(url=image_url, remote=True)
             return image_url
@@ -512,7 +500,7 @@ class Emby(_IMediaClient):
         """
         if not self._host or not self._apikey:
             return False
-        req_url = "%semby/Items/%s/Refresh?Recursive=true&api_key=%s" % (self._host, item_id, self._apikey)
+        req_url = f"{self._host}emby/Items/{item_id}/Refresh?Recursive=true&api_key={self._apikey}"
         try:
             res = RequestUtils().post_res(req_url)
             if res:
@@ -531,7 +519,7 @@ class Emby(_IMediaClient):
         """
         if not self._host or not self._apikey:
             return False
-        req_url = "%semby/Library/Refresh?api_key=%s" % (self._host, self._apikey)
+        req_url = f"{self._host}emby/Library/Refresh?api_key={self._apikey}"
         try:
             res = RequestUtils().post_res(req_url)
             if res:
@@ -608,7 +596,7 @@ class Emby(_IMediaClient):
                 return max_equal_path_id if equal_path_num == 1 else folder.get("Id")
             # 如果找不到，只要路径中有分类目录名就命中
             for subfolder in folder.get("SubFolders"):
-                if subfolder.get("Path") and re.search(r"[/\\]%s" % item.get("category"), subfolder.get("Path")):
+                if subfolder.get("Path") and re.search(r"[/\\]{}".format(item.get("category")), subfolder.get("Path")):
                     return folder.get("Id")
         # 刷新根目录
         return "/"
@@ -650,7 +638,7 @@ class Emby(_IMediaClient):
             return {}
         if not self._host or not self._apikey:
             return {}
-        req_url = "%semby/Users/%s/Items/%s?api_key=%s" % (self._host, self._user, itemid, self._apikey)
+        req_url = f"{self._host}emby/Users/{self._user}/Items/{itemid}?api_key={self._apikey}"
         try:
             res = RequestUtils().get_res(req_url)
             if res and res.status_code == 200:
@@ -676,7 +664,7 @@ class Emby(_IMediaClient):
             yield {}
         if not self._host or not self._apikey:
             yield {}
-        req_url = "%semby/Users/%s/Items?ParentId=%s&api_key=%s" % (self._host, self._user, parent, self._apikey)
+        req_url = f"{self._host}emby/Users/{self._user}/Items?ParentId={parent}&api_key={self._apikey}"
         try:
             res = RequestUtils().get_res(req_url)
             if res and res.status_code == 200:
@@ -699,8 +687,7 @@ class Emby(_IMediaClient):
                             "json": str(item_info),
                         }
                     elif "Folder" in result.get("Type"):
-                        for item in self.get_items(parent=result.get("Id")):
-                            yield item
+                        yield from self.get_items(parent=result.get("Id"))
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接Users/Items出错：" + str(e))
@@ -713,7 +700,7 @@ class Emby(_IMediaClient):
         if not self._host or not self._apikey:
             return []
         playing_sessions = []
-        req_url = "%semby/Sessions?api_key=%s" % (self._host, self._apikey)
+        req_url = f"{self._host}emby/Sessions?api_key={self._apikey}"
         try:
             res = RequestUtils().get_res(req_url)
             if res and res.status_code == 200:
@@ -734,7 +721,7 @@ class Emby(_IMediaClient):
         if message.get("Item"):
             if message.get("Item", {}).get("Type") == "Episode":
                 eventItem["item_type"] = "TV"
-                eventItem["item_name"] = "%s %s%s %s" % (
+                eventItem["item_name"] = "{} {}{} {}".format(
                     message.get("Item", {}).get("SeriesName"),
                     "S" + str(message.get("Item", {}).get("ParentIndexNumber")),
                     "E" + str(message.get("Item", {}).get("IndexNumber")),
@@ -752,7 +739,7 @@ class Emby(_IMediaClient):
                 eventItem["item_id"] = message.get("Item", {}).get("AlbumId")
             else:
                 eventItem["item_type"] = "MOV"
-                eventItem["item_name"] = "%s %s" % (
+                eventItem["item_name"] = "{} {}".format(
                     message.get("Item", {}).get("Name"),
                     "(" + str(message.get("Item", {}).get("ProductionYear")) + ")",
                 )

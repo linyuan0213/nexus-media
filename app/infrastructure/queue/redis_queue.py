@@ -129,7 +129,7 @@ class RedisMessageQueue(MessageQueue):
                 messages = self._redis.xreadgroup(CONSUMER_GROUP, consumer_id, {STREAM_KEY: ">"}, count=1, block=3000)
                 if not messages:
                     continue
-                for stream_name, entries in messages:
+                for _stream_name, entries in messages:
                     for msg_id, fields in entries:
                         fields = {
                             k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v

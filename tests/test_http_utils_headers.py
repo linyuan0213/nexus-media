@@ -30,7 +30,7 @@ class TestRequestUtilsHeaders:
 
             # 创建 RequestUtils 实例（会使用共享 session）
             utils = RequestUtils(headers=headers)
-            res = utils.get_res("http://example.com/api")
+            utils.get_res("http://example.com/api")
 
             # 验证 session.get 被调用时包含了 headers
             mock_session.get.assert_called_once()
@@ -52,7 +52,7 @@ class TestRequestUtilsHeaders:
 
             # 创建 RequestUtils 实例（会使用共享 session）
             utils = RequestUtils(headers=headers)
-            res = utils.post_res("http://example.com/api", json={"key": "value"})
+            utils.post_res("http://example.com/api", json={"key": "value"})
 
             # 验证 session.post 被调用时包含了 headers
             mock_session.post.assert_called_once()
@@ -74,7 +74,7 @@ class TestRequestUtilsHeaders:
 
             # 创建 RequestUtils 实例（会使用共享 session）
             utils = RequestUtils(headers=headers)
-            res = utils.get("http://example.com/api")
+            utils.get("http://example.com/api")
 
             # 验证 session.get 被调用时包含了 headers
             mock_session.get.assert_called_once()
@@ -96,7 +96,7 @@ class TestRequestUtilsHeaders:
 
             # 创建 RequestUtils 实例（会使用共享 session）
             utils = RequestUtils(headers=headers)
-            res = utils.post("http://example.com/api", json={"key": "value"})
+            utils.post("http://example.com/api", json={"key": "value"})
 
             # 验证 session.post 被调用时包含了 headers
             mock_session.post.assert_called_once()

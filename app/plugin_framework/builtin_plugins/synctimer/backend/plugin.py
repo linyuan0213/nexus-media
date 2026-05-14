@@ -3,6 +3,8 @@ SyncTimer Plugin v2
 定时对同步目录进行整理
 """
 
+import contextlib
+
 from app.plugin_framework.context import PluginContext
 from app.services.sync_core import SyncCore as Sync
 
@@ -46,10 +48,8 @@ class SyncTimerPlugin:
             self.ctx.schedule_cron("sync", self._do_sync, cron=str(cron))
 
     def _stop_service(self):
-        try:
+        with contextlib.suppress(Exception):
             self.ctx.remove_schedule("sync")
-        except Exception:
-            pass
 
     def _do_sync(self):
         self.ctx.info("开始定时同步 ...")

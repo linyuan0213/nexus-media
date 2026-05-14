@@ -451,7 +451,7 @@ class PyThunder:
                 elif "," in file_indices:
                     # 列表格式：1,3,5
                     try:
-                        selected_indices = set(int(idx.strip()) for idx in file_indices.split(","))
+                        selected_indices = {int(idx.strip()) for idx in file_indices.split(",")}
                     except ValueError:
                         raise ValueError(f"无效的索引列表格式: {file_indices}")
                 else:

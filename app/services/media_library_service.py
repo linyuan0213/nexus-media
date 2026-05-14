@@ -23,7 +23,7 @@ class MediaLibraryService:
         status = self._media_server.get_mediasync_status()
         if not status:
             return "未同步"
-        return "电影：%s，电视剧：%s，同步时间：%s" % (
+        return "电影：{}，电视剧：{}，同步时间：{}".format(
             status.get("movie_count"),
             status.get("tv_count"),
             status.get("time"),

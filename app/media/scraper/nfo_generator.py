@@ -25,7 +25,7 @@ class NfoGenerator:
             DomUtils.add_node(
                 doc, root, "year", tmdbinfo.get("release_date")[:4] if tmdbinfo.get("release_date") else ""
             )
-        self._downloader.save_nfo(doc, os.path.join(out_path, "%s.nfo" % file_name))
+        self._downloader.save_nfo(doc, os.path.join(out_path, f"{file_name}.nfo"))
 
     def gen_tv_nfo(self, tmdbinfo, directors, actors, scraper_nfo, out_path):
         """生成电视剧 NFO 文件"""
@@ -52,7 +52,7 @@ class NfoGenerator:
         xplot.appendChild(doc.createCDATASection(seasoninfo.get("overview") or ""))
         xoutline = DomUtils.add_node(doc, root, "outline")
         xoutline.appendChild(doc.createCDATASection(seasoninfo.get("overview") or ""))
-        DomUtils.add_node(doc, root, "title", "季 %s" % season)
+        DomUtils.add_node(doc, root, "title", f"季 {season}")
         DomUtils.add_node(doc, root, "premiered", seasoninfo.get("air_date") or "")
         DomUtils.add_node(doc, root, "releasedate", seasoninfo.get("air_date") or "")
         DomUtils.add_node(doc, root, "year", seasoninfo.get("air_date")[:4] if seasoninfo.get("air_date") else "")
@@ -75,7 +75,7 @@ class NfoGenerator:
             uniqueid.setAttribute("type", "tmdb")
             uniqueid.setAttribute("default", "true")
             DomUtils.add_node(doc, root, "tmdbid", episode_detail.get("id") or "")
-            DomUtils.add_node(doc, root, "title", episode_detail.get("name") or "第 %s 集" % episode)
+            DomUtils.add_node(doc, root, "title", episode_detail.get("name") or f"第 {episode} 集")
             xplot = DomUtils.add_node(doc, root, "plot")
             xplot.appendChild(doc.createCDATASection(episode_detail.get("overview") or ""))
             xoutline = DomUtils.add_node(doc, root, "outline")
@@ -98,7 +98,7 @@ class NfoGenerator:
                     DomUtils.add_node(doc, xactor, "name", actor.get("name") or "")
                     DomUtils.add_node(doc, xactor, "type", "Actor")
                     DomUtils.add_node(doc, xactor, "tmdbid", actor.get("id") or "")
-        self._downloader.save_nfo(doc, os.path.join(out_path, "%s.nfo" % file_name))
+        self._downloader.save_nfo(doc, os.path.join(out_path, f"{file_name}.nfo"))
 
     def _gen_common_nfo(self, tmdbinfo, directors, actors, doc, root, scraper_nfo):
         """NFO 公共部分（基础信息 + 演职人员 + 风格/评分）"""

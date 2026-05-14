@@ -21,7 +21,7 @@ class Gotify(_IMessageClient):
         try:
             if not self._server or not self._token:
                 return False, "参数未配置"
-            sc_url = "%s/message?token=%s" % (self._server, self._token)
+            sc_url = f"{self._server}/message?token={self._token}"
             sc_data = {
                 "title": title,
                 "message": text,

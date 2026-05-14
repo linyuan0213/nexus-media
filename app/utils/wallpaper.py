@@ -56,7 +56,7 @@ def __get_bing_wallpaper(today):
     """
     获取Bing每日壁纸
     """
-    url = "https://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&today=%s" % today
+    url = f"https://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&today={today}"
     # Bing每日壁纸1080P高清接口
     try:
         resp = RequestUtils(timeout=5).get_res(url)

@@ -15,7 +15,7 @@ class MediaLibrary:
         if not os.path.isdir(in_path):
             yield in_path
             return
-        for root, dirs, files in os.walk(in_path):
+        for root, _dirs, files in os.walk(in_path):
             if exclude_path and any(
                 os.path.abspath(root).startswith(os.path.abspath(path)) for path in exclude_path.split(",")
             ):

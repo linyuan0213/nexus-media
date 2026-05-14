@@ -20,9 +20,9 @@ class Bark(_IMessageClient):
         try:
             if not self._server or not self._apikey:
                 return False, "参数未配置"
-            sc_url = "%s/%s/%s/%s" % (self._server, self._apikey, quote_plus(title), quote_plus(text))
+            sc_url = f"{self._server}/{self._apikey}/{quote_plus(title)}/{quote_plus(text)}"
             if self._params:
-                sc_url = "%s?%s" % (sc_url, self._params)
+                sc_url = f"{sc_url}?{self._params}"
             res = RequestUtils().post_res(sc_url)
             if res and res.status_code == 200:
                 ret_json = res.json()

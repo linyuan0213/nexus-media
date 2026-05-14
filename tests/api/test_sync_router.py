@@ -115,7 +115,7 @@ class TestSyncRouter:
             self._teardown_ft()
 
     def test_del_unknown_path_list(self):
-        mock_ft = self._mock_ft()
+        self._mock_ft()
         try:
             resp = client.post("/api/sync/del_unknown_path", json={"id": [1, 2]})
             assert resp.status_code == 200
@@ -184,7 +184,7 @@ class TestSyncRouter:
         dto.DEST = "/dst"
         mock_svc.get_transfer_info_by_id.return_value = dto
         mock_svc.manual_transfer.return_value = MagicMock(success=True, message="ok")
-        mock_ft = self._mock_ft()
+        self._mock_ft()
         try:
             resp = client.post("/api/sync/rename", json={"logid": 1, "syncmod": "copy", "tmdb": 123, "type": "MOV"})
             assert resp.status_code == 200
@@ -196,7 +196,7 @@ class TestSyncRouter:
 
     def test_rename_logid_not_found(self):
         mock_svc = self._mock_sync()
-        mock_ft = self._mock_ft()
+        self._mock_ft()
         mock_svc.get_transfer_info_by_id.return_value = None
         try:
             resp = client.post("/api/sync/rename", json={"logid": 99})
@@ -208,7 +208,7 @@ class TestSyncRouter:
 
     def test_rename_unknown_id_not_found(self):
         mock_svc = self._mock_sync()
-        mock_ft = self._mock_ft()
+        self._mock_ft()
         mock_svc.get_transfer_info_by_id.return_value = None
         mock_svc.get_unknown_info_by_id.return_value = None
         try:
@@ -221,7 +221,7 @@ class TestSyncRouter:
 
     def test_rename_no_path(self):
         mock_svc = self._mock_sync()
-        mock_ft = self._mock_ft()
+        self._mock_ft()
         mock_svc.get_transfer_info_by_id.return_value = None
         mock_svc.get_unknown_info_by_id.return_value = None
         try:
@@ -241,7 +241,7 @@ class TestSyncRouter:
         dto.DEST = "/dst"
         mock_svc.get_transfer_info_by_id.return_value = dto
         mock_svc.manual_transfer.return_value = MagicMock(success=False, message="failed")
-        mock_ft = self._mock_ft()
+        self._mock_ft()
         try:
             resp = client.post("/api/sync/rename", json={"logid": 1})
             assert resp.status_code == 200
@@ -291,7 +291,7 @@ class TestSyncRouter:
 
     @patch("api.routers.sync.os.path.exists", return_value=False)
     def test_rename_udf_path_not_exist(self, mock_exists):
-        mock_svc = self._mock_sync()
+        self._mock_sync()
         try:
             resp = client.post("/api/sync/rename_udf", json={"inpath": "/nonexist"})
             assert resp.status_code == 200
@@ -315,7 +315,7 @@ class TestSyncRouter:
     # run_directory_sync
     # ------------------------------------------------------------------
     def test_run_directory_sync(self):
-        mock_svc = self._mock_sync()
+        self._mock_sync()
         mock_th = self._mock_thread()
         try:
             resp = client.post("/api/sync/run_directory_sync", json={"sid": 1})

@@ -54,7 +54,7 @@ class Torrent:
             return file_path, content, files_folder, files, retmsg
 
         except Exception as err:
-            return None, None, "", [], "下载种子文件出现异常：%s" % str(err)
+            return None, None, "", [], f"下载种子文件出现异常：{str(err)}"
 
     def save_torrent_file(self, url, cookie=None, ua=None, referer=None, proxy=False):
         """
@@ -133,11 +133,11 @@ class Torrent:
             with open(file_path, "wb") as f:
                 f.write(file_content)
         elif req is None:
-            return None, None, "无法打开链接：%s" % url
+            return None, None, f"无法打开链接：{url}"
         elif req.status_code == 429:
             return None, None, "触发站点流控，请稍后重试"
         else:
-            return None, None, "下载种子出错，状态码：%s" % req.status_code
+            return None, None, f"下载种子出错，状态码：{req.status_code}"
 
         return file_path, file_content, ""
 
@@ -163,7 +163,7 @@ class Torrent:
                 else:
                     file_names.append(torrent.get("info", {}).get("name"))
         except Exception as err:
-            return file_folder, file_names, "解析种子文件异常：%s" % str(err)
+            return file_folder, file_names, f"解析种子文件异常：{str(err)}"
         return file_folder, file_names, ""
 
     def read_torrent_content(self, path):
@@ -172,7 +172,7 @@ class Torrent:
         :return: 种子内容、种子文件列表主目录、种子文件列表、错误信息
         """
         if not path or not os.path.exists(path):
-            return None, "", [], "种子文件不存在：%s" % path
+            return None, "", [], f"种子文件不存在：{path}"
         content, retmsg, file_folder, files = None, "", "", []
         try:
             # 读取种子文件内容
@@ -181,7 +181,7 @@ class Torrent:
             # 解析种子文件
             file_folder, files, retmsg = self.get_torrent_files(path)
         except Exception as e:
-            retmsg = "读取种子文件出错：%s" % str(e)
+            retmsg = f"读取种子文件出错：{str(e)}"
         return content, file_folder, files, retmsg
 
     @staticmethod
@@ -251,20 +251,20 @@ class Torrent:
             episode_len = str(len(x.get_episode_list())).rjust(4, "0")
             # 排序：标题、资源类型、站点、做种、季集
             if download_order == "seeder":
-                return "%s%s%s%s%s" % (
+                return "{}{}{}{}{}".format(
                     str(x.title).ljust(100, " "),
                     str(x.res_order).rjust(3, "0"),
                     str(x.seeders).rjust(10, "0"),
                     str(x.site_order).rjust(3, "0"),
-                    "%s%s" % (season_len, episode_len),
+                    f"{season_len}{episode_len}",
                 )
             else:
-                return "%s%s%s%s%s" % (
+                return "{}{}{}{}{}".format(
                     str(x.title).ljust(100, " "),
                     str(x.res_order).rjust(3, "0"),
                     str(x.site_order).rjust(3, "0"),
                     str(x.seeders).rjust(10, "0"),
-                    "%s%s" % (season_len, episode_len),
+                    f"{season_len}{episode_len}",
                 )
 
         # 匹配的资源中排序分组选最好的一个下载
@@ -278,7 +278,7 @@ class Torrent:
         for t_item in media_list:
             # 控重的主链是名称、年份、季、集
             if t_item.type != MediaType.MOVIE:
-                media_name = "%s%s" % (t_item.get_title_string(), t_item.get_season_episode_string())
+                media_name = f"{t_item.get_title_string()}{t_item.get_season_episode_string()}"
             else:
                 media_name = t_item.get_title_string()
 

@@ -181,8 +181,7 @@ class SearchResultProcessor:
         return sorted(
             media_list,
             key=lambda x: (
-                "%s%s%s%s"
-                % (
+                "{}{}{}{}".format(
                     str(x.title).ljust(100, " "),
                     str(x.res_order).rjust(3, "0"),
                     str(x.site_order).rjust(3, "0"),
@@ -314,7 +313,7 @@ class Searcher(metaclass=SingletonMeta):
         if media_info.keyword:
             media_list = self.search_medias(media_info.keyword, filter_args, media_info, in_from)
         else:
-            log.info("【Searcher】开始搜索 %s ..." % search_name_list)
+            log.info(f"【Searcher】开始搜索 {search_name_list} ...")
             optimal_workers = min(len(search_name_list), max_workers, 8)
 
             # 2. 并发执行搜索
@@ -339,7 +338,7 @@ class Searcher(metaclass=SingletonMeta):
         media_list = SearchResultDeduplicator.deduplicate(media_list)
 
         if len(media_list) == 0:
-            log.info("【Searcher】%s 未搜索到任何资源" % search_name_list)
+            log.info(f"【Searcher】{search_name_list} 未搜索到任何资源")
             return None, no_exists, 0, 0
 
         processor = SearchResultProcessor(
@@ -366,10 +365,10 @@ class Searcher(metaclass=SingletonMeta):
         download_items, left_medias = processor.batch_download(filtered_media_list, in_from, no_exists, user_name)
 
         if not download_items:
-            log.info("【Searcher】%s 未下载到资源" % media_info.title)
+            log.info(f"【Searcher】{media_info.title} 未下载到资源")
             return None, left_medias, len(media_list), 0
         else:
-            log.info("【Searcher】实际下载了 %s 个资源" % len(download_items))
+            log.info(f"【Searcher】实际下载了 {len(download_items)} 个资源")
             if left_medias:
                 return None, left_medias, len(media_list), len(download_items)
             return download_items[0], no_exists, len(media_list), len(download_items)

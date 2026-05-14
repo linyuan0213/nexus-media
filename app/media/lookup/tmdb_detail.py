@@ -52,7 +52,7 @@ class TmdbDetail:
         if not self.client.movie:
             return {}
         try:
-            log.info("【Meta】正在查询TMDB电影：%s ..." % tmdbid)
+            log.info(f"【Meta】正在查询TMDB电影：{tmdbid} ...")
             info = self.client.movie.details(tmdbid, append_to_response)
             if info:
                 log.info(f"【Meta】{tmdbid} 查询结果：{info.get('title')}")
@@ -65,7 +65,7 @@ class TmdbDetail:
         if not self.client.tv:
             return {}
         try:
-            log.info("【Meta】正在查询TMDB电视剧：%s ..." % tmdbid)
+            log.info(f"【Meta】正在查询TMDB电视剧：{tmdbid} ...")
             info = self.client.tv.details(tmdbid, append_to_response)
             if info:
                 log.info(f"【Meta】{tmdbid} 查询结果：{info.get('name')}")
@@ -82,7 +82,7 @@ class TmdbDetail:
         if not self.client.tv:
             return {}
         try:
-            log.info("【Meta】正在查询TMDB电视剧：%s，季：%s ..." % (tmdbid, season))
+            log.info(f"【Meta】正在查询TMDB电视剧：{tmdbid}，季：{season} ...")
             info = self.client.tv.season_details(tmdbid, season)
             result = info or {}
             if result:

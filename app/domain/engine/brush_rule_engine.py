@@ -54,9 +54,7 @@ class BrushRuleEngine:
             return False
         if operator == "lt" and value > min_value:
             return False
-        if operator == "bw" and (value < min_value or (max_value is not None and value >= max_value)):
-            return False
-        return True
+        return not (operator == "bw" and (value < min_value or max_value is not None and value >= max_value))
 
     # --------------------------------------------------
     # RSS 选种规则
@@ -101,9 +99,7 @@ class BrushRuleEngine:
             return False
         if rule_value == "2XFREE" and not torrent_attr.get("2xfree"):
             return False
-        if rule_value == "NORMAL" and (torrent_attr.get("free") or torrent_attr.get("2xfree")):
-            return False
-        return True
+        return not (rule_value == "NORMAL" and (torrent_attr.get("free") or torrent_attr.get("2xfree")))
 
     @classmethod
     def _check_pubdate(cls, pubdate: datetime | None, torrent_attr: dict, rule_value: str) -> bool:
@@ -138,13 +134,13 @@ class BrushRuleEngine:
         if not rss_movies:
             log.warn("【Brush】没有正在订阅的电影")
         else:
-            log.info("【Brush】电影订阅清单：%s" % " ".join("%s" % info.get("name") for _, info in rss_movies.items()))
+            log.info("【Brush】电影订阅清单：{}".format(" ".join("{}".format(info.get("name")) for _, info in rss_movies.items())))
 
         rss_tvs = subscribe.get_subscribe_tvs(state="R")
         if not rss_tvs:
             log.warn("【Brush】没有正在订阅的电视剧")
         else:
-            log.info("【Brush】电视剧订阅清单：%s" % " ".join("%s" % info.get("name") for _, info in rss_tvs.items()))
+            log.info("【Brush】电视剧订阅清单：{}".format(" ".join("{}".format(info.get("name")) for _, info in rss_tvs.items())))
 
         if not rss_movies and not rss_tvs:
             return False

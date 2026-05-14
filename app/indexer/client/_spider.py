@@ -19,18 +19,18 @@ from config import Config
 
 
 class TorrentSpider(feapder.AirSpider):
-    __custom_setting__ = dict(
-        SPIDER_THREAD_COUNT=2,  # 减少线程数，避免过多并发
-        SPIDER_MAX_RETRY_TIMES=2,  # 减少重试次数，加快失败返回
-        REQUEST_LOST_TIMEOUT=15,  # 增加请求超时时间，确保慢站点有足够时间响应
-        RETRY_FAILED_REQUESTS=False,
-        LOG_LEVEL="INFO",
-        KEEP_ALIVE=False,
-        RANDOM_HEADERS=False,
-        RESPONSE_CACHED_ENABLE=False,
-        RESPONSE_CACHED_EXPIRE_TIME=300,
-        RESPONSE_CACHED_USED=False,
-    )
+    __custom_setting__ = {
+        "SPIDER_THREAD_COUNT": 2,  # 减少线程数，避免过多并发
+        "SPIDER_MAX_RETRY_TIMES": 2,  # 减少重试次数，加快失败返回
+        "REQUEST_LOST_TIMEOUT": 15,  # 增加请求超时时间，确保慢站点有足够时间响应
+        "RETRY_FAILED_REQUESTS": False,
+        "LOG_LEVEL": "INFO",
+        "KEEP_ALIVE": False,
+        "RANDOM_HEADERS": False,
+        "RESPONSE_CACHED_ENABLE": False,
+        "RESPONSE_CACHED_EXPIRE_TIME": 300,
+        "RESPONSE_CACHED_USED": False,
+    }
     # 是否搜索完成标志
     is_complete = False
     # 是否出现错误
@@ -178,7 +178,7 @@ class TorrentSpider(feapder.AirSpider):
                 params = {"search_mode": search_mode, "page": self.page or 0, "notnewword": 1}
                 # 额外参数
                 for key, value in self.search.get("params").items():
-                    params.update({"%s" % key: str(value).format(**inputs_dict)})
+                    params.update({f"{key}": str(value).format(**inputs_dict)})
                 # 分类条件
                 if self.category:
                     if self.mtype == MediaType.MOVIE:
@@ -193,7 +193,7 @@ class TorrentSpider(feapder.AirSpider):
                             value = params.get(self.category.get("field"), "")
                             params.update(
                                 {
-                                    "%s" % self.category.get("field"): value
+                                    "{}".format(self.category.get("field")): value
                                     + self.category.get("delimiter", " ")
                                     + cat.get("id")
                                 }
@@ -560,7 +560,7 @@ class TorrentSpider(feapder.AirSpider):
             self.Getlabels(torrent)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
-            log.error("【Spider】%s 搜索出现错误：%s" % (self.indexername, str(err)))
+            log.error(f"【Spider】{self.indexername} 搜索出现错误：{str(err)}")
         return self.torrents_info
 
     @staticmethod
@@ -579,13 +579,13 @@ class TorrentSpider(feapder.AirSpider):
                 method_name = filter_item.get("name")
                 args = filter_item.get("args")
                 if method_name == "re_search" and isinstance(args, list):
-                    text = re.search(r"%s" % args[0], text).group(args[-1])
+                    text = re.search(rf"{args[0]}", text).group(args[-1])
                 elif method_name == "split" and isinstance(args, list):
-                    text = text.split(r"%s" % args[0])[args[-1]]
+                    text = text.split(rf"{args[0]}")[args[-1]]
                 elif method_name == "replace" and isinstance(args, list):
-                    text = text.replace(r"%s" % args[0], r"%s" % args[-1])
+                    text = text.replace(rf"{args[0]}", rf"{args[-1]}")
                 elif method_name == "dateparse" and isinstance(args, str):
-                    text = datetime.datetime.strptime(text, r"%s" % args)
+                    text = datetime.datetime.strptime(text, rf"{args}")
                 elif method_name == "strip":
                     text = text.strip()
                 elif method_name == "appendleft":

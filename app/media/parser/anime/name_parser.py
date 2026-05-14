@@ -40,14 +40,14 @@ def parse_name(info, name):
             word = word[:-1]
         if word.isdigit():
             if lastword_type == "cn":
-                info.cn_name = "%s %s" % (info.cn_name or "", word)
+                info.cn_name = "{} {}".format(info.cn_name or "", word)
             elif lastword_type == "en":
-                info.en_name = "%s %s" % (info.en_name or "", word)
+                info.en_name = "{} {}".format(info.en_name or "", word)
         elif StringUtils.is_chinese(word):
-            info.cn_name = "%s %s" % (info.cn_name or "", word)
+            info.cn_name = "{} {}".format(info.cn_name or "", word)
             lastword_type = "cn"
         else:
-            info.en_name = "%s %s" % (info.en_name or "", word)
+            info.en_name = "{} {}".format(info.en_name or "", word)
             lastword_type = "en"
 
 
@@ -56,8 +56,8 @@ def clean_name(info):
     if info.cn_name:
         _, info.cn_name, _, _, _, _ = StringUtils.get_keyword_from_string(info.cn_name)
         if info.cn_name:
-            info.cn_name = re.sub(r"%s" % _NAME_NOSTRING_RE, "", info.cn_name, flags=re.IGNORECASE).strip()
+            info.cn_name = re.sub(rf"{_NAME_NOSTRING_RE}", "", info.cn_name, flags=re.IGNORECASE).strip()
             info.cn_name = zhconv.convert(info.cn_name, "zh-hans")
     if info.en_name:
-        info.en_name = re.sub(r"%s" % _NAME_NOSTRING_RE, "", info.en_name, flags=re.IGNORECASE).strip().title()
+        info.en_name = re.sub(rf"{_NAME_NOSTRING_RE}", "", info.en_name, flags=re.IGNORECASE).strip().title()
         info._name = StringUtils.str_title(info.en_name)

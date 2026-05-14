@@ -20,7 +20,7 @@ class _ISiteRssGenHandler(metaclass=ABCMeta):
         :param url: 站点Url
         :return: 是否匹配，如匹配则会调用该类的gen_rss方法
         """
-        return True if StringUtils.url_equal(url, self.site_url) else False
+        return bool(StringUtils.url_equal(url, self.site_url))
 
     @abstractmethod
     def gen_rss(self, site_info: dict):

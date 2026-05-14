@@ -58,7 +58,7 @@ class Qbittorrent(_IDownloadClient):
 
     @classmethod
     def match(cls, ctype):
-        return True if ctype in [cls.client_id, cls.client_type, cls.client_name] else False
+        return ctype in [cls.client_id, cls.client_type, cls.client_name]
 
     def get_type(self):
         return self.client_type
@@ -97,7 +97,7 @@ class Qbittorrent(_IDownloadClient):
         if not self.qbc:
             return False
         try:
-            return True if self.qbc.transfer_info() else False
+            return bool(self.qbc.transfer_info())
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -471,7 +471,7 @@ class Qbittorrent(_IDownloadClient):
         """
         torrent_id = None
         # QB添加下载后需要时间，重试5次每次等待5秒
-        for i in range(1, 6):
+        for _i in range(1, 6):
             time.sleep(5)
             torrent_id = self.__get_last_add_torrentid_by_tag(tag=tag, status=status)
             if torrent_id is None:
@@ -613,7 +613,7 @@ class Qbittorrent(_IDownloadClient):
                 use_auto_torrent_management=is_auto,
                 cookie=cookie,
             )
-            return True if qbc_ret and str(qbc_ret).find("Ok") != -1 else False
+            return bool(qbc_ret and str(qbc_ret).find("Ok") != -1)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -731,10 +731,10 @@ class Qbittorrent(_IDownloadClient):
                 _dlspeed = StringUtils.str_filesize(torrent.download_speed)
                 _upspeed = StringUtils.str_filesize(torrent.upload_speed)
                 if progress >= 100:
-                    speed = "%s%sB/s %s%sB/s" % (chr(8595), _dlspeed, chr(8593), _upspeed)
+                    speed = f"{chr(8595)}{_dlspeed}B/s {chr(8593)}{_upspeed}B/s"
                 else:
                     eta = StringUtils.str_timelong(torrent.eta)
-                    speed = "%s%sB/s %s%sB/s %s" % (chr(8595), _dlspeed, chr(8593), _upspeed, eta)
+                    speed = f"{chr(8595)}{_dlspeed}B/s {chr(8593)}{_upspeed}B/s {eta}"
             # 主键
             DispTorrents.append(
                 {"id": torrent.id, "name": torrent.name, "speed": speed, "state": state, "progress": progress}
@@ -838,11 +838,11 @@ class Qbittorrent(_IDownloadClient):
         # 状态
         torrent_obj.status = Qbittorrent._judge_status(torrent.get("state"))
         # 标签
-        torrent_obj.labels = list(map(lambda s: s.strip(), (torrent.get("tags") or "").split(",")))
+        torrent_obj.labels = [s.strip() for s in (torrent.get("tags") or "").split(",")]
         # content path
         torrent_obj.content_path = torrent.get("content_path")
         # 分类
-        torrent_obj.category = list(map(lambda s: s.strip(), (torrent.get("category") or "").split(",")))
+        torrent_obj.category = [s.strip() for s in (torrent.get("category") or "").split(",")]
         # tracker
         torrent_obj.trackers = [
             tracker.get("url")

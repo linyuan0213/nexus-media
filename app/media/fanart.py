@@ -49,7 +49,7 @@ class Fanart:
                                 if not self._images.get(image_type):
                                     self._images[image_type] = {}
                                 for image in images:
-                                    if image.get("season") not in self._images[image_type].keys():
+                                    if image.get("season") not in self._images[image_type]:
                                         self._images[image_type][image.get("season")] = image.get("url")
                             else:
                                 self._images[image_type] = images[0].get("url") if isinstance(images[0], dict) else ""

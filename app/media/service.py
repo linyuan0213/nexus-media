@@ -412,7 +412,7 @@ class MediaService:
                             info.end_episode = end_ep
                     return_media_infos[file_path] = info
                 except Exception as err:
-                    log.error("【Rmt】发生错误：%s" % str(err))
+                    log.error(f"【Rmt】发生错误：{str(err)}")
 
             # 1.1 集数映射（动漫合并季 / 绝对集号）
             if self._episode_mapping_enabled:
@@ -464,7 +464,7 @@ class MediaService:
                 )
                 path_map[len(items) - 1] = file_path
             except Exception as err:
-                log.error("【Rmt】发生错误：%s" % str(err))
+                log.error(f"【Rmt】发生错误：{str(err)}")
 
         if not items:
             return return_media_infos
@@ -592,7 +592,6 @@ class MediaService:
         if not feature_name:
             return None, False
         log.info(f"【Meta】开始通过搜索引擎辅助查询：{feature_name} ...")
-        cache = {}
 
         def calculate_scores(matches, results):
             if not matches:

@@ -62,7 +62,7 @@ class PathUtils:
             return []
         ret_list = []
         if os.path.isdir(in_path):
-            for root, dirs, files in os.walk(in_path):
+            for root, _dirs, files in os.walk(in_path):
                 for file in files:
                     cur_path = os.path.join(root, file)
                     # 检查路径是否合法
@@ -138,14 +138,7 @@ class PathUtils:
         """
         if not path:
             return True
-        if (
-            path.find("/@Recycle/") != -1
-            or path.find("/#recycle/") != -1
-            or path.find("/.") != -1
-            or path.find("/@eaDir") != -1
-        ):
-            return True
-        return False
+        return bool(path.find("/@Recycle/") != -1 or path.find("/#recycle/") != -1 or path.find("/.") != -1 or path.find("/@eaDir") != -1)
 
     @staticmethod
     def is_path_in_path(path1, path2):
@@ -204,6 +197,6 @@ class PathUtils:
         """
         获取父目录路径，level为向上查找的层数
         """
-        for lv in range(level):
+        for _lv in range(level):
             path = os.path.dirname(path)
         return path

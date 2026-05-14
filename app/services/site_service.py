@@ -79,10 +79,7 @@ class SiteService:
     def _is_site_duplicate(self, name: str | None, tid: str | None) -> bool:
         if not name:
             return False
-        for site in self._sites.get_sites_by_name(name=name):
-            if str(site.get("id")) != str(tid or ""):
-                return True
-        return False
+        return any(str(site.get("id")) != str(tid or "") for site in self._sites.get_sites_by_name(name=name))
 
     def update_site(self, data: dict) -> SiteUpdateResultDTO:
         """新增或更新站点信息"""
@@ -143,7 +140,7 @@ class SiteService:
     def get_site_history(self, days: int, end_day: str | None = None) -> SiteHistoryDTO:
         _, _, site, upload, download = self._site_user_info.get_pt_site_statistics_history(days + 1, end_day)
         dataset = [["site", "upload", "download"]]
-        dataset.extend([[s, u, d] for s, u, d in zip(site, upload, download)])
+        dataset.extend([[s, u, d] for s, u, d in zip(site, upload, download, strict=False)])
         return SiteHistoryDTO(dataset=dataset)
 
     def get_site_seeding_info(self, name: str) -> SiteSeedingDTO:

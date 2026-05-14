@@ -304,7 +304,7 @@ class TestRealWorldScenarios:
         download_locks = {}
         locks_lock = threading.Lock()
         download_results = {}  # 存储下载结果
-        download_lock_counter = threading.Lock()
+        threading.Lock()
 
         def download_image(url):
             cache_key = url.split("/")[-1]

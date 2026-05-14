@@ -157,7 +157,7 @@ class AutoGenRssPlugin:
             ua = site_info.get("ua")
             headers = site_info.get("headers")
             if (not site_url or not site_cookie) and not headers:
-                self.ctx.warn("未配置 %s 的Cookie或请求头，无法获取到RSS" % str(site))
+                self.ctx.warn(f"未配置 {str(site)} 的Cookie或请求头，无法获取到RSS")
                 return ""
             if JsonUtils.is_valid_json(headers):
                 headers = json.loads(headers)
@@ -202,7 +202,7 @@ class AutoGenRssPlugin:
                         return f"【{site}】生成RSS失败，{msg}！"
                     else:
                         if re.search(r"完成两步验证", res.text, re.IGNORECASE):
-                            self.ctx.warn("%s 生成RSS失败，需要两步验证" % site)
+                            self.ctx.warn(f"{site} 生成RSS失败，需要两步验证")
                             return f"【{site}】生成RSS失败，需要两步验证"
 
                         gen_rss_url = self._parse_rss_link(res.text)
@@ -219,7 +219,7 @@ class AutoGenRssPlugin:
                     return f"【{site}】生成RSS失败，无法打开网站！"
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            self.ctx.warn("%s 生成RSS失败：%s" % (site, str(e)))
+            self.ctx.warn(f"{site} 生成RSS失败：{str(e)}")
             return f"【{site}】生成RSS失败：{str(e)}！"
 
     @staticmethod

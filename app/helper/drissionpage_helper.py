@@ -119,7 +119,7 @@ class DrissionPageHelper(metaclass=SingletonMeta):
                 click_data = json.dumps({"tab_name": tab_id, "selector": click_xpath}, separators=(",", ":"))
 
                 try:
-                    response = self._request_with_retry(
+                    self._request_with_retry(
                         method="POST", url=click_url, headers=headers, data=click_data, timeout=timeout
                     )
                     # 点击后等待页面更新 - 使用专门的点击后等待时间

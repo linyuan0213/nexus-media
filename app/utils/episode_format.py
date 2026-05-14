@@ -57,9 +57,7 @@ class EpisodeFormat:
             return False
         if self._start_ep is None:
             return True
-        if self._start_ep <= s <= self._end_ep:
-            return True
-        return False
+        return self._start_ep <= s <= self._end_ep
 
     def split_episode(self, file_name):
         # 指定的具体集数，直接返回
@@ -87,7 +85,7 @@ class EpisodeFormat:
         episode_splits = list(
             filter(
                 lambda x: re.compile(r"[a-zA-Z]*\d{1,4}", re.IGNORECASE).match(x),
-                re.split(r"%s" % SPLIT_CHARS, episodes),
+                re.split(rf"{SPLIT_CHARS}", episodes),
             )
         )
         if len(episode_splits) == 1:

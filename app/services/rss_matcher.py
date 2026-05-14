@@ -56,7 +56,7 @@ class RssMatcher:
 
         # ---------- 匹配电影 ----------
         if media_info.type == MediaType.MOVIE and rss_movies:
-            for rid, rss_info in rss_movies.items():
+            for _rid, rss_info in rss_movies.items():
                 rss_sites = rss_info.get("rss_sites")
                 if rss_sites and media_info.site not in rss_sites:
                     continue
@@ -88,7 +88,7 @@ class RssMatcher:
 
         # ---------- 匹配电视剧 ----------
         elif rss_tvs:
-            for rid, rss_info in rss_tvs.items():
+            for _rid, rss_info in rss_tvs.items():
                 rss_sites = rss_info.get("rss_sites")
                 if rss_sites and media_info.site not in rss_sites:
                     continue
@@ -126,8 +126,7 @@ class RssMatcher:
         # ---------- 匹配成功，应用过滤规则 ----------
         if not match_flag:
             match_msg.append(
-                "%s 识别为 %s %s 不在订阅范围"
-                % (media_info.org_string, media_info.get_title_string(), media_info.get_season_episode_string())
+                f"{media_info.org_string} 识别为 {media_info.get_title_string()} {media_info.get_season_episode_string()} 不在订阅范围"
             )
             return False, match_msg, match_rss_info
 
@@ -210,15 +209,14 @@ class RssMatcher:
                     media_info, rulegroup_info, filters_list
                 )
                 if not match_filter_flag:
-                    match_filter_msg = "%s 不符合过滤规则 %s 要求" % (media_info.org_string, rule_name)
+                    match_filter_msg = f"{media_info.org_string} 不符合过滤规则 {rule_name} 要求"
 
         if not match_filter_flag:
             match_msg.append(match_filter_msg)
             return False, match_msg, match_rss_info
 
         match_msg.append(
-            "%s 识别为 %s %s 匹配订阅成功"
-            % (media_info.org_string, media_info.get_title_string(), media_info.get_season_episode_string())
+            f"{media_info.org_string} 识别为 {media_info.get_title_string()} {media_info.get_season_episode_string()} 匹配订阅成功"
         )
         match_msg.append(f"种子描述：{media_info.subtitle}")
         match_rss_info.update(

@@ -35,7 +35,7 @@ class Prowlarr(_IIndexClient):
 
     @classmethod
     def match(cls, ctype):
-        return True if ctype in [cls.schema, cls.index_type] else False
+        return ctype in [cls.schema, cls.index_type]
 
     def get_type(self):
         return self.client_type
@@ -50,7 +50,7 @@ class Prowlarr(_IIndexClient):
         """
         if not self.api_key or not self.host:
             return False
-        return True if self.get_indexers() else False
+        return bool(self.get_indexers())
 
     def get_indexers(self, check=True, indexer_id=None, public=True):
         """

@@ -1,3 +1,4 @@
+import contextlib
 import importlib
 
 
@@ -38,8 +39,6 @@ class ClientRegistry:
         if cls._clients_loaded:
             return
         for mod in cls._MODULES:
-            try:
+            with contextlib.suppress(ImportError):
                 importlib.import_module(f"app.message.client.{mod}")
-            except ImportError:
-                pass
         cls._clients_loaded = True

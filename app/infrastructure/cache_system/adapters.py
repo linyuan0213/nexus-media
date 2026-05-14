@@ -159,7 +159,7 @@ class MemoryCacheAdapter(CacheAdapter):
 
             if pattern == "*":
                 return list(self._cache.keys())
-            return [k for k in self._cache.keys() if fnmatch.fnmatch(k, pattern)]
+            return [k for k in self._cache if fnmatch.fnmatch(k, pattern)]
 
     def ttl(self, key: str) -> int:
         """获取键的剩余生存时间"""

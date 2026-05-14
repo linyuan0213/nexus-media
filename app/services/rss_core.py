@@ -78,13 +78,13 @@ class Rss(metaclass=SingletonMeta):
         if not rss_movies:
             log.warn("【Rss】没有正在订阅的电影")
         else:
-            log.info("【Rss】电影订阅清单：%s" % " ".join("%s" % info.get("name") for _, info in rss_movies.items()))
+            log.info("【Rss】电影订阅清单：{}".format(" ".join("{}".format(info.get("name")) for _, info in rss_movies.items())))
 
         rss_tvs = self.subscribe.get_subscribe_tvs(state="R")
         if not rss_tvs:
             log.warn("【Rss】没有正在订阅的电视剧")
         else:
-            log.info("【Rss】电视剧订阅清单：%s" % " ".join("%s" % info.get("name") for _, info in rss_tvs.items()))
+            log.info("【Rss】电视剧订阅清单：{}".format(" ".join("{}".format(info.get("name")) for _, info in rss_tvs.items())))
 
         if not rss_movies and not rss_tvs:
             return
@@ -92,7 +92,7 @@ class Rss(metaclass=SingletonMeta):
             # 获取有订阅的站点范围
             check_sites = []
             check_all = False
-            for rid, rinfo in rss_movies.items():
+            for _rid, rinfo in rss_movies.items():
                 rss_sites = rinfo.get("rss_sites")
                 if not rss_sites:
                     check_all = True
@@ -100,7 +100,7 @@ class Rss(metaclass=SingletonMeta):
                 else:
                     check_sites += rss_sites
             if not check_all:
-                for rid, rinfo in rss_tvs.items():
+                for _rid, rinfo in rss_tvs.items():
                     rss_sites = rinfo.get("rss_sites")
                     if not rss_sites:
                         check_all = True
@@ -164,7 +164,6 @@ class Rss(metaclass=SingletonMeta):
             # 去重：按 enclosure 去重已下载的，按 title 去重需识别的
             seen_enclosures = set()
             to_identify = []  # [(index, title)]
-            to_skip = set()  # indices to skip
 
             for idx, item in enumerate(all_articles):
                 article = item["article"]
@@ -191,7 +190,7 @@ class Rss(metaclass=SingletonMeta):
 
                 try:
                     batch_results = self.media.identify_batch(to_identify)
-                    for item, info in zip(to_identify, batch_results):
+                    for item, info in zip(to_identify, batch_results, strict=False):
                         identify_results[item["idx"]] = info
                 except Exception as e:
                     log.error(f"【Rss】批量识别出错: {e}")
@@ -299,8 +298,7 @@ class Rss(metaclass=SingletonMeta):
                                 )
                                 if rss_no_exists.get(media_info.tmdb_id):
                                     log.info(
-                                        "【Rss】%s 订阅缺失季集：%s"
-                                        % (media_info.get_title_string(), rss_no_exists.get(media_info.tmdb_id))
+                                        f"【Rss】{media_info.get_title_string()} 订阅缺失季集：{rss_no_exists.get(media_info.tmdb_id)}"
                                     )
                             if exist_flag:
                                 continue
@@ -343,10 +341,10 @@ class Rss(metaclass=SingletonMeta):
                         res_num += 1
                 except Exception as e:
                     ExceptionUtils.exception_traceback(e)
-                    log.error("【Rss】处理RSS发生错误：%s" % str(e))
+                    log.error(f"【Rss】处理RSS发生错误：{str(e)}")
                     continue
 
-            log.info("【Rss】所有RSS处理结束，共 %s 个有效资源" % len(rss_download_torrents))
+            log.info(f"【Rss】所有RSS处理结束，共 {len(rss_download_torrents)} 个有效资源")
             self.download_rss_torrent(rss_download_torrents=rss_download_torrents, rss_no_exists=rss_no_exists)
 
     def check_torrent_rss(
@@ -432,7 +430,7 @@ class Rss(metaclass=SingletonMeta):
                     __finish_rss(item)
                 else:
                     __update_tv_rss(item, left_medias.get(item.tmdb_id))
-            log.info("【Rss】实际下载了 %s 个资源" % len(download_items))
+            log.info(f"【Rss】实际下载了 {len(download_items)} 个资源")
         else:
             log.info("【Rss】未下载到任何资源")
 

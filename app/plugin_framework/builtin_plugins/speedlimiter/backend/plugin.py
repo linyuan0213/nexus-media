@@ -3,6 +3,7 @@ SpeedLimiter Plugin v2
 媒体服务器播放状态改变时，根据设置对下载器进行限速
 """
 
+import contextlib
 import time
 
 from app.helper.security_helper import SecurityHelper
@@ -117,10 +118,8 @@ class SpeedLimiterPlugin:
         self.ctx.info("播放限速服务启动")
 
     def _stop_service(self):
-        try:
+        with contextlib.suppress(Exception):
             self.ctx.remove_schedule("check_playing")
-        except Exception:
-            pass
 
     def _handle_webhook(self, server_type, data):
         if not self._limit_enabled:

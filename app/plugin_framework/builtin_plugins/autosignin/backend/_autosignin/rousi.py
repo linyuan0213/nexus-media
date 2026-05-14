@@ -27,7 +27,7 @@ class Rousi(_ISiteSigninHandler):
         :param url: 站点Url
         :return: 是否匹配，如匹配则会调用该类的signin方法
         """
-        return True if StringUtils.url_equal(url, cls.site_url) else False
+        return bool(StringUtils.url_equal(url, cls.site_url))
 
     def _get_sign_token(self, site_info: dict):
         """
@@ -113,13 +113,13 @@ class Rousi(_ISiteSigninHandler):
             timeout=30,
         ).post_res(url="https://rousi.pro/api/points/attendance", data='{"mode":"fixed"}')
         if res is None:
-            self.warn("%s 获取签到接口响应失败" % site)
+            self.warn(f"{site} 获取签到接口响应失败")
             return False, f"【{site}】签到失败，获取签到接口响应失败！"
 
         try:
             res_json = res.json()
         except Exception as e:
-            self.warn("%s 解析响应JSON失败: %s" % (site, str(e)))
+            self.warn(f"{site} 解析响应JSON失败: {str(e)}")
             return False, f"【{site}】签到失败，解析响应失败！"
 
         # code 0 表示首次签到成功
@@ -135,5 +135,5 @@ class Rousi(_ISiteSigninHandler):
                 return True, f"【{site}】已签到"
 
         # 其他情况视为失败
-        self.warn("%s 签到接口返回错误，code: %s, 信息：%s" % (site, res_json.get("code"), res_json.get("message")))
+        self.warn("{} 签到接口返回错误，code: {}, 信息：{}".format(site, res_json.get("code"), res_json.get("message")))
         return False, f"【{site}】签到失败，信息：{res_json.get('message')}"

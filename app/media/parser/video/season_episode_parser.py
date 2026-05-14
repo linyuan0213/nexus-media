@@ -18,9 +18,9 @@ def init_year(info, token):
         return
     if info.year:
         if info.en_name:
-            info.en_name = "%s %s" % (info.en_name.strip(), info.year)
+            info.en_name = f"{info.en_name.strip()} {info.year}"
         elif info.cn_name:
-            info.cn_name = "%s %s" % (info.cn_name, info.year)
+            info.cn_name = f"{info.cn_name} {info.year}"
     elif info.en_name and re.search(r"SEASON$", info.en_name, re.IGNORECASE):
         info.en_name += " "
     info.year = token
@@ -31,7 +31,7 @@ def init_year(info, token):
 
 def init_season(info, token):
     """解析季号 token"""
-    re_res = re.findall(r"%s" % _season_re, token, re.IGNORECASE)
+    re_res = re.findall(rf"{_season_re}", token, re.IGNORECASE)
     if re_res:
         info._last_token_type = "season"
         info.type = MediaType.TV
@@ -78,7 +78,7 @@ def init_season(info, token):
 
 def init_episode(info, token):
     """解析集号 token"""
-    re_res = re.findall(r"%s" % _episode_re, token, re.IGNORECASE)
+    re_res = re.findall(rf"{_episode_re}", token, re.IGNORECASE)
     if re_res:
         info._last_token_type = "episode"
         info._continue_flag = False

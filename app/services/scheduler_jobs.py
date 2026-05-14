@@ -62,7 +62,7 @@ def load_default_jobs(scheduler):
                 try:
                     pt_check_interval = round(float(pt_check_interval))
                 except Exception as e:
-                    log.error("RSS订阅周期 配置格式错误：%s" % str(e))
+                    log.error(f"RSS订阅周期 配置格式错误：{str(e)}")
                     pt_check_interval = 0
             if pt_check_interval:
                 if pt_check_interval < 300:
@@ -86,7 +86,7 @@ def load_default_jobs(scheduler):
                 try:
                     search_rss_interval = round(float(search_rss_interval))
                 except Exception as e:
-                    log.error("订阅定时搜索周期 配置格式错误：%s" % str(e))
+                    log.error(f"订阅定时搜索周期 配置格式错误：{str(e)}")
                     search_rss_interval = 0
             if search_rss_interval:
                 if search_rss_interval < 2:
@@ -112,7 +112,7 @@ def load_default_jobs(scheduler):
                     try:
                         mediasync_interval = round(float(mediasync_interval))
                     except Exception as e:
-                        log.info("豆瓣同步服务启动失败：%s" % str(e))
+                        log.info(f"豆瓣同步服务启动失败：{str(e)}")
                         mediasync_interval = 0
             if mediasync_interval:
                 scheduler.register_interval(

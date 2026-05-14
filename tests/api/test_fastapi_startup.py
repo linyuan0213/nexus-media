@@ -14,7 +14,6 @@ class TestFastAPIStartup:
     @patch("app.services.system_service.SystemLifecycleService")
     def test_health_endpoint(self, mock_cls):
         """健康检查端点（mock 后台服务避免启动阻塞）"""
-        mock_inst = mock_cls.return_value
         client = TestClient(app)
         resp = client.get("/health")
         assert resp.status_code == 200

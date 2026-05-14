@@ -1,3 +1,4 @@
+import contextlib
 import time
 from threading import Lock
 from urllib.parse import urlencode
@@ -164,10 +165,8 @@ class Telegram(_IMessageClient):
         if self._admin_ids and user_id not in self._admin_ids:
             return
         ds_url = f"http://127.0.0.1:{Config().get_config('app').get('web_port')}/telegram?apikey={self._api_key}"
-        try:
+        with contextlib.suppress(Exception):
             requests.post(ds_url, json=update, timeout=5)
-        except Exception:
-            pass
 
     def _set_commands(self):
         if not self.token:

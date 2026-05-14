@@ -127,7 +127,7 @@ class ReliableMessageQueue:
                 if not messages:
                     continue
 
-                for stream_name, entries in messages:
+                for _stream_name, entries in messages:
                     for msg_id, fields in entries:
                         # 将 bytes 转换为 str
                         fields = {
@@ -180,7 +180,6 @@ class ReliableMessageQueue:
                 return 0
 
             # 获取 Pending 消息详情并认领
-            consumer_id = "recovery"
             # 简化处理：直接重新投递（实际应该用 XPENDING + XCLAIM）
             log.info(f"【ReliableMessageQueue】发现 {pending} 条 Pending 消息，准备恢复")
             return pending

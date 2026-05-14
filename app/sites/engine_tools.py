@@ -97,7 +97,6 @@ def _resolve_auth_token(engine, site, user_config, token_type):
     cache_key = f"{site.id}:{token_type}"
     if cache_key in engine._auth_cache:
         return engine._auth_cache[cache_key]
-    auth = site.api.auth if site.api else {}
     if token_type == "csrf":
         token = _fetch_csrf_token(engine, site, user_config)
     elif token_type == "passkey":

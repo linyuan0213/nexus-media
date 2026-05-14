@@ -142,7 +142,7 @@ class SearchResultService:
                     },
                 }
 
-        for title, item in SearchResults.items():
+        for _title, item in SearchResults.items():
             item["filter"]["season"].sort(reverse=True)
             item["filter"]["releasegroup"] = sorted(item["filter"]["releasegroup"], key=lambda x: (x == "未知", x))
             item["torrent_dict"] = sorted(item["torrent_dict"].items(), key=self._se_sort, reverse=True)

@@ -22,7 +22,7 @@ def fix_multiline_success(content: str) -> str:
             return "return success()"
 
         # 已经统一为 data=... 或 msg=... 的情况
-        if args.startswith("data=") or args.startswith("msg="):
+        if args.startswith(("data=", "msg=")):
             # 如果只有 data=... 或 msg=...，保留
             # 但也可能有 data=... 后跟其他参数，需要进一步处理
             pass

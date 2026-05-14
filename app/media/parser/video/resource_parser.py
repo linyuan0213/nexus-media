@@ -25,7 +25,7 @@ def init_part(info, token, tokens):
         and not info.resource_type
     ):
         return
-    re_res = re.search(r"%s" % _part_re, token, re.IGNORECASE)
+    re_res = re.search(rf"{_part_re}", token, re.IGNORECASE)
     if re_res:
         if not info.part:
             info.part = re_res.group(1)
@@ -34,7 +34,7 @@ def init_part(info, token, tokens):
             (nextv.isdigit() and (len(nextv) == 1 or len(nextv) == 2 and nextv.startswith("0")))
             or nextv.upper() in ["A", "B", "C", "I", "II", "III"]
         ):
-            info.part = "%s%s" % (info.part, nextv)
+            info.part = f"{info.part}{nextv}"
             tokens.get_next()
         info._last_token_type = "part"
         info._continue_flag = False
@@ -45,7 +45,7 @@ def init_resource_pix(info, token):
     """解析分辨率"""
     if not info.get_name():
         return
-    re_res = re.findall(r"%s" % _resources_pix_re, token, re.IGNORECASE)
+    re_res = re.findall(rf"{_resources_pix_re}", token, re.IGNORECASE)
     if re_res:
         info._last_token_type = "pix"
         info._continue_flag = False
@@ -66,9 +66,9 @@ def init_resource_pix(info, token):
                 info.resource_pix = resource_pix.lower()
                 break
         if info.resource_pix and info.resource_pix.isdigit() and info.resource_pix[-1] not in "kpi":
-            info.resource_pix = "%sp" % info.resource_pix
+            info.resource_pix = f"{info.resource_pix}p"
     else:
-        re_res = re.search(r"%s" % _resources_pix_re2, token, re.IGNORECASE)
+        re_res = re.search(rf"{_resources_pix_re2}", token, re.IGNORECASE)
         if re_res:
             info._last_token_type = "pix"
             info._continue_flag = False
@@ -81,7 +81,7 @@ def init_resource_type(info, token):
     """解析来源和效果"""
     if not info.get_name():
         return
-    source_res = re.search(r"(%s)" % _source_re, token, re.IGNORECASE)
+    source_res = re.search(rf"({_source_re})", token, re.IGNORECASE)
     if source_res:
         info._last_token_type = "source"
         info._continue_flag = False
@@ -102,7 +102,7 @@ def init_resource_type(info, token):
         info._source = "WEB-DL"
         info._continue_flag = False
         return
-    effect_res = re.search(r"(%s)" % _effect_re, token, re.IGNORECASE)
+    effect_res = re.search(rf"({_effect_re})", token, re.IGNORECASE)
     if effect_res:
         info._last_token_type = "effect"
         info._continue_flag = False

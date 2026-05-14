@@ -20,8 +20,8 @@ def check_media_exists(media_server, subscribe, mtype, title, year, mediaid=None
     """
     if not mtype or not title:
         return False, None, ""
-    if not str(mtype).upper() == "MOV":
-        title = "%s (%s)" % (title, year) if year else title
+    if str(mtype).upper() != "MOV":
+        title = f"{title} ({year})" if year else title
     subscribe_mediaid = mediaid
     if mediaid and (str(mediaid).startswith("DB:") or str(mediaid).startswith("BGM:")):
         subscribe_mediaid = None

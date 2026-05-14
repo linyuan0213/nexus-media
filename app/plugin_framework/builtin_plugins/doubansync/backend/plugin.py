@@ -3,6 +3,7 @@ DoubanSync Plugin v2
 同步豆瓣在看、想看、看过记录，自动添加订阅或搜索下载
 """
 
+import contextlib
 import json
 import random
 from datetime import datetime
@@ -85,10 +86,8 @@ class DoubanSyncPlugin:
 
     def _stop_service(self):
         for job_id in ["sync_full", "sync_rss", "sync_once"]:
-            try:
+            with contextlib.suppress(Exception):
                 self.ctx.remove_schedule(job_id)
-            except Exception:
-                pass
 
     def _is_enabled(self) -> bool:
         config = self._get_config()
@@ -104,7 +103,7 @@ class DoubanSyncPlugin:
         types = config.get("types", "")
         sync_type = config.get("sync_type", "0")
         days = config.get("days", 0)
-        cookie = config.get("cookie", "")
+        config.get("cookie", "")
         auto_search = config.get("auto_search", False)
         auto_rss = config.get("auto_rss", False)
 
@@ -212,7 +211,7 @@ class DoubanSyncPlugin:
                 return
 
         media_type = MediaType.TV if douban_info.get("episodes_count") else MediaType.MOVIE
-        meta_info = MetaInfo(title="%s %s" % (douban_info.get("title"), douban_info.get("year") or ""))
+        meta_info = MetaInfo(title="{} {}".format(douban_info.get("title"), douban_info.get("year") or ""))
         meta_info.douban_id = doubanid
         meta_info.type = media_type
         meta_info.overview = douban_info.get("intro")
@@ -299,10 +298,8 @@ class DoubanSyncPlugin:
 
             self.ctx.error(f"_auto_search_media 内部异常: {e}")
             self.ctx.error(traceback.format_exc())
-            try:
+            with contextlib.suppress(Exception):
                 self._update_history(media=media_info, state="FAILED")
-            except Exception:
-                pass
 
     def _auto_subscribe_media(self, media_info, state="R"):
         self.ctx.info(f"{media_info.get_name()} 更新到订阅中...")

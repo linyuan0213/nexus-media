@@ -55,7 +55,7 @@ class BuiltinIndexer(_IIndexClient):
 
     @classmethod
     def match(cls, ctype):
-        return True if ctype in [cls.client_id, cls.client_type, cls.client_name] else False
+        return ctype in [cls.client_id, cls.client_type, cls.client_name]
 
     def get_type(self):
         return self.client_type

@@ -94,7 +94,7 @@ class TestBrushRouter:
             self._teardown()
 
     def test_del_brushtask_no_id(self):
-        mock_svc = self._mock_brush()
+        self._mock_brush()
         try:
             resp = client.post("/api/brush/tasks/delete", json={})
             assert resp.status_code == 200

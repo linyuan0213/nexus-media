@@ -1,3 +1,4 @@
+import contextlib
 import os
 import shutil
 from abc import ABC, abstractmethod
@@ -41,16 +42,12 @@ class WebDAVClient(FileStorageClient):
             os.remove(local_path)
 
     def upload_file(self, local_path, remote_path):
-        try:
+        with contextlib.suppress(ResourceAlreadyExists):
             self.client.upload_file(local_path, remote_path)
-        except ResourceAlreadyExists:
-            pass
 
     def delete_file(self, path):
-        try:
+        with contextlib.suppress(ResourceNotFound):
             self.client.remove(path)
-        except ResourceNotFound:
-            pass
 
 
 class SambaClient(FileStorageClient):
@@ -103,10 +100,8 @@ class LocalClient(FileStorageClient):
         shutil.copy(local_path, full_remote_path)
 
     def delete_file(self, path):
-        try:
+        with contextlib.suppress(FileNotFoundError):
             os.remove(path)
-        except FileNotFoundError:
-            pass
 
 
 class FileClientFactory:

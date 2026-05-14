@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 import math
 import os
@@ -533,7 +534,7 @@ class SchedulerCore(metaclass=SingletonMeta):
                     coalesce=coalesce,
                 )
             except Exception as e:
-                log.info("%s时间cron表达式配置格式错误：%s %s" % (func_desc, cron, str(e)))
+                log.info(f"{func_desc}时间cron表达式配置格式错误：{cron} {str(e)}")
         elif "-" in cron:
             try:
                 time_range = cron.split("-")
@@ -578,17 +579,16 @@ class SchedulerCore(metaclass=SingletonMeta):
                     coalesce=coalesce,
                 )
                 log.info(
-                    "%s服务时间范围随机模式启动，起始时间于%s:%s"
-                    % (func_desc, str(start_hour).rjust(2, "0"), str(start_minute).rjust(2, "0"))
+                    "{}服务时间范围随机模式启动，起始时间于{}:{}".format(func_desc, str(start_hour).rjust(2, "0"), str(start_minute).rjust(2, "0"))
                 )
             except Exception as e:
-                log.info("%s时间 时间范围随机模式 配置格式错误：%s %s" % (func_desc, cron, str(e)))
+                log.info(f"{func_desc}时间 时间范围随机模式 配置格式错误：{cron} {str(e)}")
         elif ":" in cron:
             try:
                 hour = int(cron.split(":")[0])
                 minute = int(cron.split(":")[1])
             except Exception as e:
-                log.info("%s时间 配置格式错误：%s" % (func_desc, str(e)))
+                log.info(f"{func_desc}时间 配置格式错误：{str(e)}")
                 hour = minute = 0
             job = self._scheduler.add_job(
                 func,
@@ -606,12 +606,12 @@ class SchedulerCore(metaclass=SingletonMeta):
                 misfire_grace_time=misfire_grace_time,
                 coalesce=coalesce,
             )
-            log.info("%s服务启动" % func_desc)
+            log.info(f"{func_desc}服务启动")
         else:
             try:
                 hours = float(cron)
             except Exception as e:
-                log.info("%s时间 配置格式错误：%s" % (func_desc, str(e)))
+                log.info(f"{func_desc}时间 配置格式错误：{str(e)}")
                 hours = 0
             if hours:
                 job = self._scheduler.add_job(
@@ -629,7 +629,7 @@ class SchedulerCore(metaclass=SingletonMeta):
                     misfire_grace_time=misfire_grace_time,
                     coalesce=coalesce,
                 )
-                log.info("%s服务启动" % func_desc)
+                log.info(f"{func_desc}服务启动")
         return job
 
     def _register_range_job(
@@ -652,15 +652,14 @@ class SchedulerCore(metaclass=SingletonMeta):
         day = datetime.datetime.now().day
         second = random.randint(1, 59)
         log.info(
-            "%s到时间 即将在%s-%s-%s,%s:%s:%s执行"
-            % (func_desc, str(year), str(month), str(day), str(hour), str(minute), str(second))
+            f"{func_desc}到时间 即将在{str(year)}-{str(month)}-{str(day)},{str(hour)}:{str(minute)}:{str(second)}执行"
         )
         if hour < 0 or hour > 24:
             hour = -1
         if minute < 0 or minute > 60:
             minute = -1
         if hour < 0 or minute < 0:
-            log.warn("%s时间 配置格式错误：不启动任务" % func_desc)
+            log.warn(f"{func_desc}时间 配置格式错误：不启动任务")
             return
         self._scheduler.add_job(
             func,
@@ -962,10 +961,8 @@ class SchedulerCore(metaclass=SingletonMeta):
             self._cleanup()
 
             # 清理数据库 session
-            try:
+            with contextlib.suppress(Exception):
                 remove_session()
-            except Exception:
-                pass
 
             log.info("调度器服务已停止")
             return True
@@ -987,10 +984,8 @@ class SchedulerCore(metaclass=SingletonMeta):
         job_id = event.job_id
 
         # 清理当前线程的数据库 session
-        try:
+        with contextlib.suppress(Exception):
             remove_session()
-        except Exception:
-            pass
 
         if event.code == EVENT_JOB_SUBMITTED:
             self._job_start_times[job_id] = time.time()
@@ -1195,9 +1190,7 @@ class SchedulerCore(metaclass=SingletonMeta):
         }
 
         if self._scheduler:
-            try:
+            with contextlib.suppress(Exception):
                 status["job_count"] = len(self._scheduler.get_jobs())
-            except Exception:
-                pass
 
         return status

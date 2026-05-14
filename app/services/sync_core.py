@@ -181,14 +181,14 @@ class SyncCore:
         try:
             if not os.path.exists(event_path):
                 return
-            log.debug("【Sync】文件%s：%s" % (text, event_path))
+            log.debug(f"【Sync】文件{text}：{event_path}")
             need_handler_flag = False
             with _synced_files_lock:
                 if event_path not in self._synced_files:
                     self._synced_files.append(event_path)
                     need_handler_flag = True
             if not need_handler_flag:
-                log.debug("【Sync】文件已处理过：%s" % event_path)
+                log.debug(f"【Sync】文件已处理过：{event_path}")
                 return
 
             from_dir = os.path.dirname(event_path)
@@ -245,7 +245,7 @@ class SyncCore:
                         rmt_mode=sync_mode,
                     )
                     if not ret:
-                        log.warn("【Sync】%s 转移失败：%s" % (event_path, ret_msg))
+                        log.warn(f"【Sync】{event_path} 转移失败：{ret_msg}")
                 else:
                     with _need_sync_paths_lock:
                         if self._need_sync_paths.get(from_dir):
@@ -262,7 +262,7 @@ class SyncCore:
                             }
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error("【Sync】发生错误：%s - %s" % (str(e), traceback.format_exc()))
+            log.error(f"【Sync】发生错误：{str(e)} - {traceback.format_exc()}")
 
     def transfer_mon_files(self):
         with _need_sync_paths_lock:
@@ -298,7 +298,7 @@ class SyncCore:
                         root_path=is_root_path,
                     )
                     if not ret:
-                        log.warn("【Sync】%s转移失败：%s" % (path, ret_msg))
+                        log.warn(f"【Sync】{path}转移失败：{ret_msg}")
                 self._need_sync_paths.pop(path)
 
     def transfer_sync(self, sid=None):
@@ -330,24 +330,24 @@ class SyncCore:
                         rmt_mode=sync_mode,
                     )
                     if not ret:
-                        log.error("【Sync】%s 处理失败：%s" % (mon_path, ret_msg))
+                        log.error(f"【Sync】{mon_path} 处理失败：{ret_msg}")
 
     def __link(self, event_path, mon_path, target_path, sync_mode):
         if self._transfer_repo.is_sync_in_history(event_path, target_path):
             return
-        log.info("【Sync】开始同步 %s" % event_path)
+        log.info(f"【Sync】开始同步 {event_path}")
         try:
             ret, msg = self._filetransfer.link_sync_file(
                 src_path=mon_path, in_file=event_path, target_dir=target_path, sync_transfer_mode=sync_mode
             )
             if ret != 0:
-                log.warn("【Sync】%s 同步失败，错误码：%s" % (event_path, ret))
+                log.warn(f"【Sync】{event_path} 同步失败，错误码：{ret}")
             elif not msg:
                 self._transfer_repo.insert_sync_history(event_path, mon_path, target_path)
-                log.info("【Sync】%s 同步完成" % event_path)
+                log.info(f"【Sync】{event_path} 同步完成")
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
-            log.error("【Sync】%s 同步失败：%s" % (event_path, str(err)))
+            log.error(f"【Sync】{event_path} 同步失败：{str(err)}")
 
     def check_source(self, source=None, sid=None):
         if source:

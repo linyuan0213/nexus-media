@@ -121,7 +121,7 @@ class WordsService:
 
         if wtype_int == 1:  # 屏蔽
             if self._words.is_custom_words_existed(replaced=replaced):
-                return False, "识别词已存在\n（被替换词：%s）" % replaced
+                return False, f"识别词已存在\n（被替换词：{replaced}）"
             self._words.insert_custom_word(
                 replaced=replaced,
                 replace="",
@@ -139,7 +139,7 @@ class WordsService:
 
         elif wtype_int == 2:  # 替换
             if self._words.is_custom_words_existed(replaced=replaced):
-                return False, "识别词已存在\n（被替换词：%s）" % replaced
+                return False, f"识别词已存在\n（被替换词：{replaced}）"
             self._words.insert_custom_word(
                 replaced=replaced,
                 replace=replace,
@@ -157,7 +157,7 @@ class WordsService:
 
         elif wtype_int == 4:  # 集偏移
             if self._words.is_custom_words_existed(front=front, back=back):
-                return False, "识别词已存在\n（前后定位词：%s@%s）" % (front, back)
+                return False, f"识别词已存在\n（前后定位词：{front}@{back}）"
             self._words.insert_custom_word(
                 replaced="",
                 replace="",
@@ -175,7 +175,7 @@ class WordsService:
 
         elif wtype_int == 3:  # 替换+集偏移
             if self._words.is_custom_words_existed(replaced=replaced):
-                return False, "识别词已存在\n（被替换词：%s）" % replaced
+                return False, f"识别词已存在\n（被替换词：{replaced}）"
             self._words.insert_custom_word(
                 replaced=replaced,
                 replace=replace,
@@ -260,11 +260,11 @@ class WordsService:
             wtype = group.get("type")
             link = ""
             if tmdbid:
-                link = "https://www.themoviedb.org/%s/%s" % ("movie" if int(wtype) == 1 else "tv", tmdbid)
+                link = "https://www.themoviedb.org/{}/{}".format("movie" if int(wtype) == 1 else "tv", tmdbid)
             groups.append(
                 WordGroupExportDTO(
                     id=str(group.get("id", "")),
-                    name="%s（%s）" % (group.get("title"), group.get("year"))
+                    name="{}（{}）".format(group.get("title"), group.get("year"))
                     if group.get("year")
                     else group.get("title", ""),
                     link=link,
@@ -393,10 +393,10 @@ class WordsService:
 
             if wtype in (1, 2, 3):
                 if self._words.is_custom_words_existed(replaced=replaced):
-                    return False, "识别词已存在\n（被替换词：%s）" % replaced
+                    return False, f"识别词已存在\n（被替换词：{replaced}）"
             elif wtype == 4:
                 if self._words.is_custom_words_existed(front=front, back=back):
-                    return False, "识别词已存在\n（前后定位词：%s@%s）" % (front, back)
+                    return False, f"识别词已存在\n（前后定位词：{front}@{back}）"
 
             self._words.insert_custom_word(
                 replaced=replaced or "",
@@ -445,12 +445,12 @@ class WordsService:
         group_infos = self._words.get_custom_word_groups()
         for g in group_infos:
             gid = g.ID
-            name = "%s (%s)" % (g.TITLE, g.YEAR)
+            name = f"{g.TITLE} ({g.YEAR})"
             gtype = g.TYPE
             if gtype == 1:
-                link = "https://www.themoviedb.org/movie/%s" % g.TMDBID
+                link = f"https://www.themoviedb.org/movie/{g.TMDBID}"
             else:
-                link = "https://www.themoviedb.org/tv/%s" % g.TMDBID
+                link = f"https://www.themoviedb.org/tv/{g.TMDBID}"
             words = []
             words_info = self._words.get_custom_words(gid=gid)
             for w in words_info:

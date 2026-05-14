@@ -27,7 +27,7 @@ class Opencd(_ISiteSigninHandler):
         :param url: 站点Url
         :return: 是否匹配，如匹配则会调用该类的signin方法
         """
-        return True if StringUtils.url_equal(url, cls.site_url) else False
+        return bool(StringUtils.url_equal(url, cls.site_url))
 
     def signin(self, site_info: dict):
         """
@@ -75,7 +75,7 @@ class Opencd(_ISiteSigninHandler):
             return False, f"【{site}】签到失败，获取签到参数失败"
 
         # 完整验证码url
-        img_get_url = "https://www.open.cd/%s" % img_url
+        img_get_url = f"https://www.open.cd/{img_url}"
         self.debug(f"获取到{site}验证码链接 {img_get_url}")
 
         # ocr识别多次，获取6位验证码

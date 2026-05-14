@@ -293,7 +293,6 @@ class DbPersist:
 
     def __call__(self, f):
         def persist(*args, **kwargs):
-            last_error = None
             for attempt in range(self.max_retries):
                 try:
                     ret = f(*args, **kwargs)
@@ -301,7 +300,6 @@ class DbPersist:
                         self.db.commit()
                     return ret if ret is not None else True
                 except Exception as e:
-                    last_error = e
                     if self.db:
                         self.db.rollback()
                     if attempt < self.max_retries - 1:

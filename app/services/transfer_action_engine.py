@@ -55,7 +55,7 @@ class TransferActionEngine:
             else:
                 retcode, retmsg = SystemUtils.copy(file_item, target_file)
         if retcode != 0:
-            log.error("【Rmt】%s" % retmsg)
+            log.error(f"【Rmt】{retmsg}")
         return retcode
 
     def transfer_other_files(self, org_name, new_name, rmt_mode, over_flag):
@@ -101,7 +101,7 @@ class TransferActionEngine:
         file_name = os.path.basename(org_name)
         file_list = PathUtils.get_dir_level1_files(dir_name, RMT_SUBEXT)
         if len(file_list) == 0:
-            log.debug("【Rmt】%s 目录下没有找到字幕文件..." % dir_name)
+            log.debug(f"【Rmt】{dir_name} 目录下没有找到字幕文件...")
         else:
             log.debug("【Rmt】字幕文件清单：" + str(file_list))
             metainfo = MetaInfo(title=file_name)
@@ -141,23 +141,23 @@ class TransferActionEngine:
                         new_file = os.path.splitext(new_name)[0] + new_sub_tag + file_ext
                         try:
                             if not os.path.exists(new_file):
-                                log.debug("【Rmt】正在处理字幕：%s" % os.path.basename(file_item))
+                                log.debug(f"【Rmt】正在处理字幕：{os.path.basename(file_item)}")
                                 retcode = self.transfer_command(
                                     file_item=file_item, target_file=new_file, rmt_mode=rmt_mode
                                 )
                                 if retcode == 0:
-                                    log.info("【Rmt】字幕 %s %s完成" % (os.path.basename(file_item), rmt_mode.value))
+                                    log.info(f"【Rmt】字幕 {os.path.basename(file_item)} {rmt_mode.value}完成")
                                     break
                                 else:
                                     log.error(
-                                        "【Rmt】字幕 %s %s失败，错误码 %s" % (file_name, rmt_mode.value, str(retcode))
+                                        f"【Rmt】字幕 {file_name} {rmt_mode.value}失败，错误码 {str(retcode)}"
                                     )
                                     return retcode
                             elif os.path.getsize(new_file) == os.path.getsize(file_item):
-                                log.info("【Rmt】字幕 %s 已存在" % new_file)
+                                log.info(f"【Rmt】字幕 {new_file} 已存在")
                                 break
                         except OSError as reason:
-                            log.info("【Rmt】字幕 %s 出错了,原因: %s" % (new_file, str(reason)))
+                            log.info(f"【Rmt】字幕 {new_file} 出错了,原因: {str(reason)}")
         return 0
 
     def transfer_audio_track_files(self, org_name, new_name, rmt_mode, over_flag):
@@ -174,7 +174,7 @@ class TransferActionEngine:
         file_list = PathUtils.get_dir_level1_files(dir_name, RMT_AUDIO_TRACK_EXT)
         pending_file_list = [file for file in file_list if file_pre_name == os.path.splitext(os.path.basename(file))[0]]
         if len(pending_file_list) == 0:
-            log.debug("【Rmt】%s 目录下没有找到匹配的音轨文件..." % dir_name)
+            log.debug(f"【Rmt】{dir_name} 目录下没有找到匹配的音轨文件...")
         else:
             log.debug("【Rmt】音轨文件清单：" + str(pending_file_list))
             for track_file in pending_file_list:
@@ -182,20 +182,20 @@ class TransferActionEngine:
                 new_track_file = os.path.splitext(new_name)[0] + track_ext
                 if os.path.exists(new_track_file):
                     if not over_flag:
-                        log.warn("【Rmt】音轨文件已存在：%s" % new_track_file)
+                        log.warn(f"【Rmt】音轨文件已存在：{new_track_file}")
                         continue
                     else:
-                        log.info("【Rmt】正在删除已存在的音轨文件：%s" % new_track_file)
+                        log.info(f"【Rmt】正在删除已存在的音轨文件：{new_track_file}")
                         os.remove(new_track_file)
                 try:
-                    log.info("【Rmt】正在转移音轨文件：%s 到 %s" % (track_file, new_track_file))
+                    log.info(f"【Rmt】正在转移音轨文件：{track_file} 到 {new_track_file}")
                     retcode = self.transfer_command(file_item=track_file, target_file=new_track_file, rmt_mode=rmt_mode)
                     if retcode == 0:
-                        log.info("【Rmt】音轨文件 %s %s完成" % (file_name, rmt_mode.value))
+                        log.info(f"【Rmt】音轨文件 {file_name} {rmt_mode.value}完成")
                     else:
-                        log.error("【Rmt】音轨文件 %s %s失败，错误码 %s" % (file_name, rmt_mode.value, str(retcode)))
+                        log.error(f"【Rmt】音轨文件 {file_name} {rmt_mode.value}失败，错误码 {str(retcode)}")
                 except OSError as reason:
-                    log.error("【Rmt】音轨文件 %s %s失败：%s" % (file_name, rmt_mode.value, str(reason)))
+                    log.error(f"【Rmt】音轨文件 {file_name} {rmt_mode.value}失败：{str(reason)}")
         return 0
 
     def transfer_bluray_dir(self, file_path, new_path, rmt_mode):
@@ -205,12 +205,12 @@ class TransferActionEngine:
         :param new_path: 新路径
         :param rmt_mode: RmtMode转移方式
         """
-        log.info("【Rmt】正在%s目录：%s 到 %s" % (rmt_mode.value, file_path, new_path))
+        log.info(f"【Rmt】正在{rmt_mode.value}目录：{file_path} 到 {new_path}")
         retcode = self.transfer_dir_files(src_dir=file_path, target_dir=new_path, rmt_mode=rmt_mode, bludir=True)
         if retcode == 0:
-            log.info("【Rmt】文件 %s %s完成" % (file_path, rmt_mode.value))
+            log.info(f"【Rmt】文件 {file_path} {rmt_mode.value}完成")
         else:
-            log.error("【Rmt】文件%s %s失败，错误码 %s" % (file_path, rmt_mode.value, str(retcode)))
+            log.error(f"【Rmt】文件{file_path} {rmt_mode.value}失败，错误码 {str(retcode)}")
         return retcode
 
     def transfer_dir_files(self, src_dir, target_dir, rmt_mode, bludir=False):
@@ -226,7 +226,7 @@ class TransferActionEngine:
         for file in file_list:
             new_file = file.replace(src_dir, target_dir)
             if os.path.exists(new_file):
-                log.warn("【Rmt】%s 文件已存在" % new_file)
+                log.warn(f"【Rmt】{new_file} 文件已存在")
                 continue
             new_dir = os.path.dirname(new_file)
             if not os.path.exists(new_dir) and rmt_mode not in ModuleConf.REMOTE_RMT_MODES:
@@ -251,28 +251,28 @@ class TransferActionEngine:
         if not file_item or not target_dir:
             return -1
         if not os.path.exists(file_item):
-            log.warn("【Rmt】%s 不存在" % file_item)
+            log.warn(f"【Rmt】{file_item} 不存在")
             return -1
         parent_name = os.path.basename(os.path.dirname(file_item))
         target_dir = os.path.join(target_dir, parent_name)
         if not os.path.exists(target_dir) and rmt_mode not in ModuleConf.REMOTE_RMT_MODES:
-            log.debug("【Rmt】正在创建目录：%s" % target_dir)
+            log.debug(f"【Rmt】正在创建目录：{target_dir}")
             os.makedirs(target_dir)
         if os.path.isdir(file_item):
-            log.info("【Rmt】正在%s目录：%s 到 %s" % (rmt_mode.value, file_item, target_dir))
+            log.info(f"【Rmt】正在{rmt_mode.value}目录：{file_item} 到 {target_dir}")
             retcode = self.transfer_dir_files(src_dir=file_item, target_dir=target_dir, rmt_mode=rmt_mode)
         else:
             target_file = os.path.join(target_dir, os.path.basename(file_item))
             if os.path.exists(target_file):
-                log.warn("【Rmt】%s 文件已存在" % target_file)
+                log.warn(f"【Rmt】{target_file} 文件已存在")
                 return 0
             retcode = self.transfer_command(file_item=file_item, target_file=target_file, rmt_mode=rmt_mode)
             if retcode == 0:
                 self._blacklist_repo.insert(file_item)
         if retcode == 0:
-            log.info("【Rmt】%s %s到unknown完成" % (file_item, rmt_mode.value))
+            log.info(f"【Rmt】{file_item} {rmt_mode.value}到unknown完成")
         else:
-            log.error("【Rmt】%s %s到unknown失败，错误码 %s" % (file_item, rmt_mode.value, retcode))
+            log.error(f"【Rmt】{file_item} {rmt_mode.value}到unknown失败，错误码 {retcode}")
         return retcode
 
     def transfer_file(self, file_item, new_file, rmt_mode, over_flag=False, old_file=None):
@@ -285,18 +285,18 @@ class TransferActionEngine:
         """
         file_name = os.path.basename(file_item)
         if not over_flag and os.path.exists(new_file):
-            log.warn("【Rmt】文件已存在：%s" % new_file)
+            log.warn(f"【Rmt】文件已存在：{new_file}")
             return 0
         if over_flag and old_file and os.path.isfile(old_file):
-            log.info("【Rmt】正在删除已存在的文件：%s" % old_file)
+            log.info(f"【Rmt】正在删除已存在的文件：{old_file}")
             os.remove(old_file)
-        log.info("【Rmt】正在转移文件：%s 到 %s" % (file_name, new_file))
+        log.info(f"【Rmt】正在转移文件：{file_name} 到 {new_file}")
         retcode = self.transfer_command(file_item=file_item, target_file=new_file, rmt_mode=rmt_mode)
         if retcode == 0:
-            log.info("【Rmt】文件 %s %s完成" % (file_name, rmt_mode.value))
+            log.info(f"【Rmt】文件 {file_name} {rmt_mode.value}完成")
             self._blacklist_repo.insert(file_item)
         else:
-            log.error("【Rmt】文件 %s %s失败，错误码 %s" % (file_name, rmt_mode.value, str(retcode)))
+            log.error(f"【Rmt】文件 {file_name} {rmt_mode.value}失败，错误码 {str(retcode)}")
             return retcode
         return self.transfer_other_files(org_name=file_item, new_name=new_file, rmt_mode=rmt_mode, over_flag=over_flag)
 

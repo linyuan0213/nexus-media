@@ -59,10 +59,7 @@ class SystemUtils:
         """
         if not pname:
             return False
-        for process in psutil.process_iter():
-            if process.name() == pname:
-                return True
-        return False
+        return any(process.name() == pname for process in psutil.process_iter())
 
     @staticmethod
     def execute(cmd):
@@ -84,15 +81,15 @@ class SystemUtils:
     def is_synology():
         if SystemUtils.is_windows():
             return False
-        return True if "synology" in SystemUtils.execute("uname -a") else False
+        return "synology" in SystemUtils.execute("uname -a")
 
     @staticmethod
     def is_windows():
-        return True if os.name == "nt" else False
+        return os.name == "nt"
 
     @staticmethod
     def is_macos():
-        return True if platform.system() == "Darwin" else False
+        return platform.system() == "Darwin"
 
     @staticmethod
     def copy(src, dest):

@@ -83,7 +83,7 @@ class FnOS(_IMediaClient):
 
     @classmethod
     def match(cls, ctype):
-        return True if ctype in [cls.client_id, cls.client_type, cls.client_name] else False
+        return ctype in [cls.client_id, cls.client_type, cls.client_name]
 
     def get_type(self):
         return self.client_type
@@ -92,7 +92,7 @@ class FnOS(_IMediaClient):
         """
         测试连通性
         """
-        return True if self._fnos else False
+        return bool(self._fnos)
 
     def get_user_count(self):
         """
@@ -199,7 +199,7 @@ class FnOS(_IMediaClient):
             season = 1
         episodes = self.get_tv_episodes(title=meta_info.title, year=meta_info.year, season=season)
         exists_episodes = [episode["episode_num"] for episode in episodes]
-        total_episodes = [episode for episode in range(1, total_num + 1)]
+        total_episodes = list(range(1, total_num + 1))
         return list(set(total_episodes).difference(set(exists_episodes)))
 
     def get_episode_image_by_id(self, item_id, season_id, episode_id):
@@ -422,9 +422,9 @@ class FnOS(_IMediaClient):
                 name = item.get("title")
             else:
                 if item.get("season_number") == 1:
-                    name = "%s 第%s集" % (item.get("tv_title"), item.get("episode_number") + 1)
+                    name = "{} 第{}集".format(item.get("tv_title"), item.get("episode_number") + 1)
                 else:
-                    name = "%s 第%s季第%s集" % (
+                    name = "{} 第{}季第{}集".format(
                         item.get("tv_title"),
                         item.get("season_number"),
                         item.get("episode_number") + 1,
@@ -463,9 +463,9 @@ class FnOS(_IMediaClient):
                 name = item.get("title")
             else:
                 if item.get("season_number") == 1:
-                    name = "%s 共%s集" % (item.get("title"), item.get("local_number_of_episodes"))
+                    name = "{} 共{}集".format(item.get("title"), item.get("local_number_of_episodes"))
                 else:
-                    name = "%s 第%s季共%s集" % (
+                    name = "{} 第{}季共{}集".format(
                         item.get("title"),
                         item.get("season_number"),
                         item.get("local_number_of_episodes"),

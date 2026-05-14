@@ -70,8 +70,8 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
             log.warn(f"【Web】Agent 意图解析失败: {e}")
 
     if not key_word:
-        log.info("【Web】%s 搜索关键字有误！" % content)
-        return -1, "%s 未识别到搜索关键字！" % content
+        log.info(f"【Web】{content} 搜索关键字有误！")
+        return -1, f"{content} 未识别到搜索关键字！"
 
     if media_type:
         mtype = media_type
@@ -161,7 +161,7 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
     if filters:
         filter_args.update(filters)
 
-    log.info("【Web】开始通过 %s 搜索 ..." % search_name_list)
+    log.info(f"【Web】开始通过 {search_name_list} 搜索 ...")
 
     media_list = []
     if search_name_list:
@@ -193,15 +193,14 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
     _process.end(ProgressKey.Search)
 
     if len(media_list) == 0:
-        log.info("【Web】%s 未搜索到任何资源" % content)
-        return 1, "%s 未搜索到任何资源" % content
+        log.info(f"【Web】{content} 未搜索到任何资源")
+        return 1, f"{content} 未搜索到任何资源"
     else:
-        log.info("【Web】共搜索到 %s 个有效资源" % len(media_list))
+        log.info(f"【Web】共搜索到 {len(media_list)} 个有效资源")
         media_list = sorted(
             media_list,
             key=lambda x: (
-                "%s%s%s"
-                % (str(x.res_order).rjust(3, "0"), str(x.site_order).rjust(3, "0"), str(x.seeders).rjust(10, "0"))
+                "{}{}{}".format(str(x.res_order).rjust(3, "0"), str(x.site_order).rjust(3, "0"), str(x.seeders).rjust(10, "0"))
             ),
             reverse=True,
         )

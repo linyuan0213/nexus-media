@@ -156,7 +156,7 @@ class TestSearchPerformance(unittest.TestCase):
         # 使用线程池并行执行
         with ThreadPoolExecutor(max_workers=4) as executor:
             futures = [executor.submit(mock_search_task, name, delay) for name, delay in tasks]
-            results = [f.result() for f in as_completed(futures)]
+            [f.result() for f in as_completed(futures)]
 
         elapsed = time.time() - start_time
 

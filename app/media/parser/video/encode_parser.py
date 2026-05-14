@@ -19,7 +19,7 @@ def init_video_encode(info, token):
         and not info.begin_episode
     ):
         return
-    re_res = re.search(r"(%s)" % _video_encode_re, token, re.IGNORECASE)
+    re_res = re.search(rf"({_video_encode_re})", token, re.IGNORECASE)
     if re_res:
         info._continue_flag = False
         info._stop_name_flag = True
@@ -43,7 +43,7 @@ def init_video_encode(info, token):
         and info._last_token_type == "videoencode"
         and info._last_token in ["VC", "MPEG"]
     ):
-        info.video_encode = "%s%s" % (info._last_token, token)
+        info.video_encode = f"{info._last_token}{token}"
     elif token.upper() == "10BIT":
         info._last_token_type = "videoencode"
         if not info.video_encode:
@@ -64,7 +64,7 @@ def init_audio_encode(info, token):
         and not info.begin_episode
     ):
         return
-    re_res = re.search(r"(%s)" % _audio_encode_re, token, re.IGNORECASE)
+    re_res = re.search(rf"({_audio_encode_re})", token, re.IGNORECASE)
     if re_res:
         info._continue_flag = False
         info._stop_name_flag = True
@@ -74,15 +74,15 @@ def init_audio_encode(info, token):
             info.audio_encode = re_res.group(1)
         else:
             if info.audio_encode.upper() == "DTS":
-                info.audio_encode = "%s-%s" % (info.audio_encode, re_res.group(1))
+                info.audio_encode = f"{info.audio_encode}-{re_res.group(1)}"
             else:
-                info.audio_encode = "%s %s" % (info.audio_encode, re_res.group(1))
+                info.audio_encode = f"{info.audio_encode} {re_res.group(1)}"
     elif token.isdigit() and info._last_token_type == "audioencode":
         if info.audio_encode:
             if info._last_token.isdigit():
-                info.audio_encode = "%s.%s" % (info.audio_encode, token)
+                info.audio_encode = f"{info.audio_encode}.{token}"
             elif info.audio_encode[-1].isdigit():
-                info.audio_encode = "%s %s.%s" % (info.audio_encode[:-1], info.audio_encode[-1], token)
+                info.audio_encode = f"{info.audio_encode[:-1]} {info.audio_encode[-1]}.{token}"
             else:
-                info.audio_encode = "%s %s" % (info.audio_encode, token)
+                info.audio_encode = f"{info.audio_encode} {token}"
         info._last_token = token

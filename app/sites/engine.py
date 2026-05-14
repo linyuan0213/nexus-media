@@ -96,10 +96,7 @@ class SiteDefinition:
         url_lower = url.lower()
         if self.domain.lower() in url_lower:
             return True
-        for alias in self.domain_aliases:
-            if alias.lower() in url_lower:
-                return True
-        return False
+        return any(alias.lower() in url_lower for alias in self.domain_aliases)
 
     @classmethod
     def from_dict(cls, data: dict) -> "SiteDefinition":

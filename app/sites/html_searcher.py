@@ -352,7 +352,7 @@ class HtmlSiteSearcher:
 
         val = None
         if selector:
-            if selector.startswith("//") or selector.startswith("."):
+            if selector.startswith(("//", ".")):
                 xpath = selector
             else:
                 xpath = _css_to_xpath(selector)

@@ -301,7 +301,7 @@ def net_test(
     svc=Depends(get_net_test_service),
 ):
     result = svc.test(target=req.target or "")
-    return success(data={"res": result.success, "time": "%s 毫秒" % result.time_ms})
+    return success(data={"res": result.success, "time": f"{result.time_ms} 毫秒"})
 
 
 @router.post("/db/reset_version")
@@ -508,7 +508,7 @@ def search(
     except Exception:
         pass
     search_word = req.search_word
-    ident_flag = False if req.unident else True
+    ident_flag = not req.unident
     result = svc.search(
         search_word=search_word,
         ident_flag=ident_flag,
