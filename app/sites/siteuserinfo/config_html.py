@@ -10,8 +10,11 @@
 - JSON user_info.type=html → CSS 选择器
 """
 
+from __future__ import annotations
+
 import json
 import re
+from typing import Any
 from urllib.parse import urljoin
 
 from lxml import etree
@@ -35,60 +38,60 @@ class ConfigHtmlUserInfo:
 
     def __init__(
         self,
-        site_def,
-        site_name,
-        url,
-        site_cookie,
-        site_headers=None,
-        ua="",
-        emulate=False,
-        proxy=False,
-        session=None,
-        json_data=None,
-    ):
-        self.site_name = site_name
-        self.site_url = url
-        self._def = site_def
-        self._cookie = site_cookie
-        self._headers = site_headers or {}
-        self._ua = ua
-        self._emulate = emulate
-        self._proxy = proxy
-        self._session = session
-        self._proxies = get_proxies() if proxy else None
-        self._index_html = json_data or ""
-        self._base_url_str = self.site_url.rstrip("/") if self.site_url else ""
+        site_def: Any,
+        site_name: str,
+        url: str,
+        site_cookie: str,
+        site_headers: dict | None = None,
+        ua: str = "",
+        emulate: bool = False,
+        proxy: bool = False,
+        session: Any = None,
+        json_data: str | None = None,
+    ) -> None:
+        self.site_name: str = site_name
+        self.site_url: str = url
+        self._def: Any = site_def
+        self._cookie: str = site_cookie
+        self._headers: dict = site_headers or {}
+        self._ua: str = ua
+        self._emulate: bool = emulate
+        self._proxy: bool = proxy
+        self._session: Any = session
+        self._proxies: Any = get_proxies() if proxy else None
+        self._index_html: str = json_data or ""
+        self._base_url_str: str = self.site_url.rstrip("/") if self.site_url else ""
 
-        self.username = None
-        self.userid = None
-        self.user_level = None
-        self.join_at = None
-        self.bonus = 0.0
-        self.upload = 0
-        self.download = 0
-        self.ratio = 0.0
-        self.seeding = 0
-        self.seeding_size = 0
-        self.seeding_info = "[]"
-        self.leeching = 0
-        self.leeching_size = 0
-        self.message_unread = 0
-        self.message_unread_contents = []
-        self.err_msg = None
-        self.site_favicon = None
+        self.username: str | None = None
+        self.userid: str | None = None
+        self.user_level: str | None = None
+        self.join_at: str | None = None
+        self.bonus: float = 0.0
+        self.upload: int = 0
+        self.download: int = 0
+        self.ratio: float = 0.0
+        self.seeding: int = 0
+        self.seeding_size: int = 0
+        self.seeding_info: str = "[]"
+        self.leeching: int = 0
+        self.leeching_size: int = 0
+        self.message_unread: int = 0
+        self.message_unread_contents: list = []
+        self.err_msg: str | None = None
+        self.site_favicon: str | None = None
 
     @classmethod
-    def match(cls, _html_text):
+    def match(cls, _html_text: str) -> bool:
         return False
 
     @property
-    def schema(self):
+    def schema(self) -> str:
         return "ConfigHtml"
 
-    def site_schema(self):
+    def site_schema(self) -> str:
         return "ConfigHtml"
 
-    def parse(self):
+    def parse(self) -> None:
         cfg = self._def.user_info if isinstance(self._def.user_info, dict) else {}
         if cfg.get("type") == "html" and cfg.get("fields"):
             nexus_php._parse_userid(self)
@@ -102,7 +105,7 @@ class ConfigHtmlUserInfo:
         if cfg.get("seeding") and not self.seeding:
             self._parse_seeding(cfg)
 
-    def _parse_fields(self, cfg):
+    def _parse_fields(self, cfg: dict) -> None:
         fields = cfg.get("fields", {})
         if not fields:
             return
@@ -123,7 +126,7 @@ class ConfigHtmlUserInfo:
         if self.upload and self.download and not self.ratio:
             self.ratio = round(self.upload / self.download, 2) if self.download else 0
 
-    def _extract_field(self, doc, html_text, cfg):
+    def _extract_field(self, doc: etree._Element, html_text: str, cfg: dict) -> Any:
         selector = cfg.get("selector", "")
         extract = cfg.get("extract", "text")
         attr = cfg.get("attribute", "")
@@ -164,7 +167,7 @@ class ConfigHtmlUserInfo:
             return str(raw).strip()
         return raw
 
-    def _parse_seeding(self, cfg):
+    def _parse_seeding(self, cfg: dict) -> None:
         sc = cfg.get("seeding", {})
         if not sc:
             return
@@ -241,7 +244,7 @@ class ConfigHtmlUserInfo:
         self.seeding_size = total
         self.seeding_info = json.dumps(info)
 
-    def _parse_seeding_api(self, sc):
+    def _parse_seeding_api(self, sc: dict) -> None:
         method = sc.get("method", "GET").upper()
         path = sc.get("path", "").format(userid=self.userid or "")
         url = urljoin(self._base_url_str + "/", path)
@@ -280,7 +283,7 @@ class ConfigHtmlUserInfo:
         self.seeding_info = json.dumps(info)
 
     @staticmethod
-    def _get_nested(obj, keys):
+    def _get_nested(obj: Any, keys: list) -> Any:
         for key in keys:
             if isinstance(obj, dict):
                 obj = obj.get(key)
@@ -293,7 +296,7 @@ class ConfigHtmlUserInfo:
                 return None
         return obj
 
-    def _fetch_html(self, url, referer=None, use_ajax_headers=True):
+    def _fetch_html(self, url: str, referer: str | None = None, use_ajax_headers: bool = True) -> str | None:
         headers = dict(self._headers) if self._headers else {}
         headers.setdefault("User-Agent", self._ua)
         if use_ajax_headers:
@@ -335,8 +338,8 @@ class ConfigHtmlUserInfo:
 
 
 def _html_config_factory(
-    url, site_name, site_cookie, html_text=None, site_headers=None, ua="", emulate=False, proxy=False, session=None
-):
+    url: str, site_name: str, site_cookie: str, html_text: str | None = None, site_headers: dict | None = None, ua: str = "", emulate: bool = False, proxy: bool = False, session: Any = None
+) -> ConfigHtmlUserInfo | None:
     engine = SiteEngine.get_instance()
     site_def = engine.get_by_url(url)
     if not site_def:

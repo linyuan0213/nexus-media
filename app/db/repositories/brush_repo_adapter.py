@@ -2,13 +2,12 @@
 刷流领域 Repository 适配器
 """
 
-from app.db.models import SITEBRUSHTASK, SITEBRUSHTORRENTS
+from app.db.models import SITEBRUSHTORRENTS
 from app.db.repositories.brush_repository import BrushRepository
-from app.domain.entities.brush import BrushTaskEntity, BrushTorrentEntity
+from app.domain.entities.brush import BrushTorrentEntity
 
 
 class BrushTaskRepositoryAdapter:
-    ...
 
     def delete_brushtask_torrent(self, taskid: int, download_id: str) -> None:
         return self._repo.delete_brushtask_torrent(taskid, download_id)
@@ -53,8 +52,10 @@ class BrushTorrentRepositoryAdapter:
         )
 
     def update_brushtask_torrent_state(self, update_torrents: list) -> None:
+        return self._repo.update_brushtask_torrent_state(update_torrents)
 
     def delete_brushtask_torrent(self, taskid: int, download_id: str) -> None:
+        return self._repo.delete_brushtask_torrent(taskid, download_id)
 
     def add_brushtask_upload_count(self, taskid: int, uploaded: int, downloaded: int, count: int) -> None:
         return self._repo.add_brushtask_upload_count(taskid, uploaded, downloaded, count)

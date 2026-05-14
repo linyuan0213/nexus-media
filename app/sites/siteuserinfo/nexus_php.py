@@ -1,15 +1,21 @@
 """NexusPhp 架构用户信息解析 — 从 config_html.py 提取"""
 
+from __future__ import annotations
+
 import json
 import re
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin
 
 from lxml import etree
 
 from app.utils import StringUtils
 
+if TYPE_CHECKING:
+    from app.sites.siteuserinfo.config_html import ConfigHtmlUserInfo
 
-def is_nexusphp(ins):
+
+def is_nexusphp(ins: ConfigHtmlUserInfo) -> bool:
     if "torrents.php" in ins._index_html or "browse.php" in ins._index_html:
         return True
     if "userdetails.php" in ins._index_html or "messages.php" in ins._index_html:
@@ -20,7 +26,7 @@ def is_nexusphp(ins):
     return "torrents.php" in path or "browse.php" in path
 
 
-def parse(ins):
+def parse(ins: ConfigHtmlUserInfo) -> None:
     _parse_userid(ins)
     _parse_base_info(ins)
     _parse_traffic(ins)
@@ -28,7 +34,7 @@ def parse(ins):
     _parse_detail(ins)
 
 
-def _parse_userid(ins):
+def _parse_userid(ins: ConfigHtmlUserInfo) -> None:
     html = re.sub(r"#\d+", "", re.sub(r"\d+px", "", ins._index_html))
     m = re.search(r"userdetails.php\?id=(\d+)", html)
     if m and m.group(1):
@@ -37,7 +43,7 @@ def _parse_userid(ins):
         ins.userid = None
 
 
-def _parse_base_info(ins):
+def _parse_base_info(ins: ConfigHtmlUserInfo) -> None:
     re.sub(r"#\d+", "", re.sub(r"\d+px", "", ins._index_html))
     doc = etree.HTML(ins._index_html)
     if doc is None:
@@ -64,7 +70,7 @@ def _parse_base_info(ins):
             ins.message_unread = StringUtils.str_int(text)
 
 
-def _parse_traffic(ins):
+def _parse_traffic(ins: ConfigHtmlUserInfo) -> None:
     if not ins.userid:
         return
     page_url = urljoin(ins._base_url_str + "/", f"userdetails.php?id={ins.userid}")
@@ -105,7 +111,7 @@ def _parse_traffic(ins):
         ins.bonus = StringUtils.str_float(m.group(1))
 
 
-def _parse_seeding(ins):
+def _parse_seeding(ins: ConfigHtmlUserInfo) -> None:
     if not ins.userid:
         return
     ui = ins._def.user_info if isinstance(ins._def.user_info, dict) else {}
@@ -153,7 +159,7 @@ def _parse_seeding(ins):
             next_url = _next_page_url(ins, doc)
 
 
-def _parse_seeding_html(ins, doc, html_text):
+def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: etree._Element, html_text: str) -> None:
     ui = ins._def.user_info if isinstance(ins._def.user_info, dict) else {}
     sc = ui.get("seeding", {})
     total_regex = sc.get("total_regex")
@@ -218,7 +224,7 @@ def _parse_seeding_html(ins, doc, html_text):
     ins.seeding_info = json.dumps(info)
 
 
-def _next_page_url(ins, doc):
+def _next_page_url(ins: ConfigHtmlUserInfo, doc: etree._Element) -> str | None:
     links = doc.xpath('//a[contains(.,"下一页") or contains(.,"下一頁")]/@href')
     if not links:
         return None
@@ -228,7 +234,7 @@ def _next_page_url(ins, doc):
     return urljoin(ins._base_url_str + "/", next_url)
 
 
-def _parse_detail(ins):
+def _parse_detail(ins: ConfigHtmlUserInfo) -> None:
     if not ins.userid:
         return
     page_url = urljoin(ins._base_url_str + "/", f"userdetails.php?id={ins.userid}")

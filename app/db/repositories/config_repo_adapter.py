@@ -99,9 +99,8 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
         return None
 
     def insert(
-        self, name: str, dtype: str, config: str, transfer: str, only_nastool: int, match_path: int, enabled: int
+        self, name: str, dtype: str, config: str, transfer: int, only_nastool: int, match_path: int, enabled: int
     ) -> None:
-        # ConfigRepository 使用 update_downloader 同时处理 insert/update
         self._repo.update_downloader(
             did=None,
             name=name,
@@ -110,9 +109,9 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
             transfer=transfer,
             only_nastool=only_nastool,
             match_path=match_path,
-            rmt_mode=None,
+            rmt_mode="",
             config=config,
-            download_dir=None,
+            download_dir="",
         )
 
     def update(
@@ -121,7 +120,7 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
         name: str,
         dtype: str,
         config: str,
-        transfer: str,
+        transfer: int,
         only_nastool: int,
         match_path: int,
         enabled: int,
@@ -134,9 +133,9 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
             transfer=transfer,
             only_nastool=only_nastool,
             match_path=match_path,
-            rmt_mode=None,
+            rmt_mode="",
             config=config,
-            download_dir=None,
+            download_dir="",
         )
 
     def delete(self, did: int) -> None:
@@ -336,16 +335,22 @@ class UserRssConfigRepositoryAdapter:
         self._repo.insert_userrss_mediainfos(tid, mediainfo)
 
     def insert_userrss_task_history(self, task_id: int, title: str, downloader: str) -> None:
+        self._repo.insert_userrss_task_history(task_id, title, downloader)
 
     def update_userrss_task_info(self, tid: int | None, count: int) -> None:
+        self._repo.update_userrss_task_info(tid, count)
 
     def delete_userrss_task(self, tid: int | None) -> None:
+        self._repo.delete_userrss_task(tid)
 
     def update_userrss_task(self, item: dict) -> None:
+        self._repo.update_userrss_task(item)
 
     def check_userrss_task(self, tid: int | None = None, state: str | None = None) -> None:
+        self._repo.check_userrss_task(tid, state)
 
     def delete_userrss_parser(self, pid: int | None) -> None:
+        self._repo.delete_userrss_parser(pid)
 
     def update_userrss_parser(self, item: dict) -> None:
         self._repo.update_userrss_parser(item)

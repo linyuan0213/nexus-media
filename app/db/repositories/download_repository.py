@@ -154,7 +154,15 @@ class DownloadRepository(BaseRepository):
             )
 
     def get_download_history_by_title(self, title: str) -> list[DOWNLOADHISTORY]:
+        return self._db.query(DOWNLOADHISTORY).filter(title == DOWNLOADHISTORY.TITLE).all()
+
     def get_download_history_by_path(self, path: str) -> DOWNLOADHISTORY | None:
+        return (
+            self._db.query(DOWNLOADHISTORY)
+            .filter(os.path.normpath(path) == DOWNLOADHISTORY.SAVE_PATH)
+            .order_by(DOWNLOADHISTORY.DATE.desc())
+            .first()
+        )
     def get_download_history_by_downloader(self, downloader: str, download_id: str) -> DOWNLOADHISTORY | None:
         """
         根据下载器查找下载历史
