@@ -184,7 +184,7 @@ class Aria2(_IDownloadClient):
         download_limit = download_limit * 1024
         upload_limit = upload_limit * 1024
         try:
-            speed_opt = self._client.getGlobalOption()
+            speed_opt: dict = self._client.getGlobalOption()
             if speed_opt["max-overall-upload-limit"] != upload_limit:
                 speed_opt["max-overall-upload-limit"] = upload_limit
             if speed_opt["max-overall-download-limit"] != download_limit:
@@ -221,17 +221,17 @@ class Aria2(_IDownloadClient):
         torrent_obj.id = torrent.get("gid")
         torrent_obj.name = torrent.get("bittorrent", {}).get("info", {}).get("name")
         # 种子大小
-        torrent_obj.size = int(torrent.get("totalLength"))
+        torrent_obj.size = int(torrent.get("totalLength") or 0)
         # 下载量
-        torrent_obj.downloaded = int(torrent.get("completedLength"))
+        torrent_obj.downloaded = int(torrent.get("completedLength") or 0)
         # 状态
-        torrent_obj.status = Aria2._judge_status(torrent.get("status"))
+        torrent_obj.status = Aria2._judge_status(torrent.get("status") or "")
         # 下载速度
         torrent_obj.download_speed = torrent.get("downloadSpeed")
         # 上传速度
         torrent_obj.upload_speed = torrent.get("uploadSpeed")
         # 下载进度
-        torrent_obj.progress = round(int(torrent.get("completedLength")) / int(torrent.get("totalLength")), 1)
+        torrent_obj.progress = round(int(torrent.get("completedLength") or 0) / int(torrent.get("totalLength") or 0), 1)
         # 保存路径
         torrent_obj.save_path = torrent.get("dir")
 

@@ -2,7 +2,7 @@ import json
 import re
 import time
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
 from jinja2 import BaseLoader, Environment
 
@@ -163,7 +163,7 @@ class Message(metaclass=SingletonMeta):
         if not self.config_repo:
             return
         for client_config in self.config_repo.get_message_client() or []:
-            if client_config.ENABLED and client_config.CONFIG:
+            if cast(bool, client_config.ENABLED) and str(client_config.CONFIG):
                 self._add_client_from_config(client_config)
         self._loaded = True
 
@@ -213,7 +213,7 @@ class Message(metaclass=SingletonMeta):
         if not client_config:
             self._remove_client(cid)
             return
-        if client_config.ENABLED and client_config.CONFIG:
+        if cast(bool, client_config.ENABLED) and str(client_config.CONFIG):
             self._add_client_from_config(client_config)
         else:
             self._remove_client(str(cid))
@@ -517,10 +517,8 @@ class Message(metaclass=SingletonMeta):
         """
         if channel == SearchType.WEB:
             texts = []
-            index = 1
-            for media in medias:
+            for index, media in enumerate(medias):
                 texts.append(f"{index}. {media.get_title_string()}，{media.get_vote_string()}")
-                index += 1
             if self.messagecenter:
                 self.messagecenter.insert_system_message(title=title, content="\n".join(texts))
             return True
