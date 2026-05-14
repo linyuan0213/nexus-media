@@ -2,6 +2,7 @@ import json
 import re
 import time
 from enum import Enum
+from typing import Any
 
 from jinja2 import BaseLoader, Environment
 
@@ -224,7 +225,7 @@ class Message(metaclass=SingletonMeta):
 
     # ---------- 消息命令管理 ----------
 
-    def register_command(self, cmd: str, desc: str, func, plugin_id: str = "") -> None:
+    def register_command(self, cmd: str, desc: str, func: Any, plugin_id: str = "") -> None:
         """注册消息命令（系统或插件均可调用）"""
         if not cmd.startswith("/"):
             cmd = "/" + cmd
@@ -362,7 +363,7 @@ class Message(metaclass=SingletonMeta):
 
         return rendered_title, rendered_text
 
-    def get_status(self, ctype=None, config=None):
+    def get_status(self, ctype: Any = None, config: Any = None) -> bool:
         """
         测试消息设置状态
         """
@@ -429,7 +430,7 @@ class Message(metaclass=SingletonMeta):
         log.info(f"【Message】消息入队 {cname}：title={title}")
         return self._queue.submit(self._do_sendmsg, client, title, text, image, url, user_id, name=f"sendmsg:{cname}")
 
-    def send_channel_msg(self, channel, title, text="", image="", url="", user_id=""):
+    def send_channel_msg(self, channel: Any, title: str, text: str = "", image: str = "", url: str = "", user_id: str = "") -> bool:
         """
         按渠道发送消息，用于消息交互
         :param channel: 消息渠道
@@ -476,7 +477,7 @@ class Message(metaclass=SingletonMeta):
         log.info(f"【Message】列表消息入队 {cname}：title={title}")
         return self._queue.submit(self._do_send_list_msg, client, medias, user_id, title, name=f"send_list_msg:{cname}")
 
-    def send_channel_list_msg(self, channel, title, medias: list, user_id=""):
+    def send_channel_list_msg(self, channel: Any, title: str, medias: list, user_id: str = "") -> bool:
         """
         发送列表选择消息，用于消息交互
         :param channel: 消息渠道
@@ -499,7 +500,7 @@ class Message(metaclass=SingletonMeta):
             return state
         return False
 
-    def send_download_message(self, in_from: SearchType, can_item, download_setting_name=None, downloader_name=None):
+    def send_download_message(self, in_from: SearchType, can_item: Any, download_setting_name: Any = None, downloader_name: Any = None) -> None:
         """
         发送下载的消息
         :param in_from: 下载来源
@@ -603,7 +604,7 @@ class Message(metaclass=SingletonMeta):
                     url="downloading",
                 )
 
-    def send_transfer_movie_message(self, in_from: Enum, media_info, exist_filenum, category_flag):
+    def send_transfer_movie_message(self, in_from: Enum, media_info: Any, exist_filenum: int, category_flag: bool) -> None:
         """
         发送转移电影的消息
         :param in_from: 转移来源
@@ -646,7 +647,7 @@ class Message(metaclass=SingletonMeta):
                     variables=variables,
                 )
 
-    def send_transfer_tv_message(self, message_medias: dict, in_from: Enum):
+    def send_transfer_tv_message(self, message_medias: dict, in_from: Enum) -> None:
         """
         发送转移电视剧/动漫的消息
         """
@@ -688,7 +689,7 @@ class Message(metaclass=SingletonMeta):
                     variables=variables,
                 )
 
-    def send_download_fail_message(self, item, error_msg):
+    def send_download_fail_message(self, item: Any, error_msg: str) -> None:
         """
         发送下载失败的消息
         """
@@ -712,7 +713,7 @@ class Message(metaclass=SingletonMeta):
                     variables=variables,
                 )
 
-    def send_rss_success_message(self, in_from: Enum, media_info):
+    def send_rss_success_message(self, in_from: Enum, media_info: Any) -> None:
         """
         发送订阅成功的消息
         """
@@ -745,7 +746,7 @@ class Message(metaclass=SingletonMeta):
                     variables=variables,
                 )
 
-    def send_rss_finished_message(self, media_info):
+    def send_rss_finished_message(self, media_info: Any) -> None:
         """
         发送订阅完成的消息，只针对电视剧
         """
@@ -778,7 +779,7 @@ class Message(metaclass=SingletonMeta):
                     variables=variables,
                 )
 
-    def send_site_signin_message(self, msgs: list):
+    def send_site_signin_message(self, msgs: list) -> None:
         """
         发送站点签到消息
         """
@@ -796,7 +797,7 @@ class Message(metaclass=SingletonMeta):
                 }
                 self.__sendmsg(client=client, title=title, text=text, msg_type="site_signin", variables=variables)
 
-    def send_site_message(self, title=None, text=None):
+    def send_site_message(self, title: Any = None, text: Any = None) -> None:
         """
         发送站点消息
         """
@@ -815,7 +816,7 @@ class Message(metaclass=SingletonMeta):
                 }
                 self.__sendmsg(client=client, title=title, text=text, msg_type="site_message", variables=variables)
 
-    def send_transfer_fail_message(self, path, count, text):
+    def send_transfer_fail_message(self, path: str, count: int, text: str) -> None:
         """
         发送转移失败的消息
         """
@@ -842,7 +843,7 @@ class Message(metaclass=SingletonMeta):
                     variables=variables,
                 )
 
-    def send_auto_remove_torrents_message(self, title, text):
+    def send_auto_remove_torrents_message(self, title: str, text: str) -> None:
         """
         发送自动删种的消息
         """
@@ -866,7 +867,7 @@ class Message(metaclass=SingletonMeta):
                     variables=variables,
                 )
 
-    def send_brushtask_remove_message(self, title, text):
+    def send_brushtask_remove_message(self, title: str, text: str) -> None:
         """
         发送刷流删种的消息
         """
@@ -890,7 +891,7 @@ class Message(metaclass=SingletonMeta):
                     variables=variables,
                 )
 
-    def send_brushtask_added_message(self, title, text):
+    def send_brushtask_added_message(self, title: str, text: str) -> None:
         """
         发送刷流下种的消息
         """
@@ -914,7 +915,7 @@ class Message(metaclass=SingletonMeta):
                     variables=variables,
                 )
 
-    def send_mediaserver_message(self, event_info: dict, channel, image_url):
+    def send_mediaserver_message(self, event_info: dict, channel: Any, image_url: str) -> None:
         """
         发送媒体服务器的消息
         :param event_info: 事件信息
@@ -1003,7 +1004,7 @@ class Message(metaclass=SingletonMeta):
                     variables=variables,
                 )
 
-    def send_plugin_message(self, title, text="", image="", url=""):
+    def send_plugin_message(self, title: str, text: str = "", image: str = "", url: str = "") -> None:
         """
         发送插件消息
         """
@@ -1030,7 +1031,7 @@ class Message(metaclass=SingletonMeta):
                     variables=variables,
                 )
 
-    def send_custom_message(self, clients, title, text="", image=""):
+    def send_custom_message(self, clients: Any, title: str, text: str = "", image: str = "") -> None:
         """
         发送自定义消息
         """
@@ -1052,13 +1053,13 @@ class Message(metaclass=SingletonMeta):
                     client=client, title=title, text=text, image=image, msg_type="custom_message", variables=variables
                 )
 
-    def get_search_types(self):
+    def get_search_types(self) -> list:
         """
         获取支持搜索交互的渠道类型（所有消息类渠道）
         """
         return [SearchType.WX, SearchType.TG, SearchType.SLACK, SearchType.SYNOLOGY, SearchType.API, SearchType.PLUGIN]
 
-    def get_message_client_info(self, cid=None):
+    def get_message_client_info(self, cid: Any = None) -> Any:
         """
         获取消息端信息
         """
@@ -1067,7 +1068,7 @@ class Message(metaclass=SingletonMeta):
             return self._client_configs.get(str(cid))
         return self._client_configs
 
-    def get_interactive_client(self, client_type=None):
+    def get_interactive_client(self, client_type: Any = None) -> Any:
         """
         查询当前可以交互的渠道
         """
@@ -1077,7 +1078,7 @@ class Message(metaclass=SingletonMeta):
         else:
             return list(self.active_interactive_clients.values())
 
-    def delete_message_client(self, cid):
+    def delete_message_client(self, cid: Any) -> Any:
         """
         删除消息端
         """
@@ -1086,7 +1087,7 @@ class Message(metaclass=SingletonMeta):
         self._remove_client(cid)
         return ret
 
-    def check_message_client(self, cid=None, interactive=None, enabled=None, ctype=None):
+    def check_message_client(self, cid: Any = None, interactive: Any = None, enabled: Any = None, ctype: Any = None) -> Any:
         """
         设置消息端（更新DB后刷新受影响的客户端）
         """
@@ -1100,7 +1101,7 @@ class Message(metaclass=SingletonMeta):
                     self._refresh_client(c.get("id"))
         return ret
 
-    def insert_message_client(self, name, ctype, config, switchs: list, interactive, enabled, note="", templates=None):
+    def insert_message_client(self, name: str, ctype: Any, config: str, switchs: list, interactive: Any, enabled: Any, note: str = "", templates: Any = None) -> bool:
         """
         插入消息端
         """
@@ -1118,7 +1119,7 @@ class Message(metaclass=SingletonMeta):
         self._refresh_client(new_id)
         return True
 
-    def send_user_statistics_message(self, msgs: list):
+    def send_user_statistics_message(self, msgs: list) -> None:
         if not msgs:
             return
         title = "站点数据统计"
@@ -1135,7 +1136,7 @@ class Message(metaclass=SingletonMeta):
                     client=client, title=title, text=text, msg_type="ptrefresh_date_message", variables=variables
                 )
 
-    def send_brushtask_pause_message(self, title, text):
+    def send_brushtask_pause_message(self, title: str, text: str) -> None:
         """
         发送刷流暂停种子的消息
         """

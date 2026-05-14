@@ -1,5 +1,6 @@
 import os
 from functools import lru_cache
+from typing import Any
 from urllib.parse import quote, quote_plus
 
 from plexapi import media
@@ -38,7 +39,7 @@ class Plex(_IMediaClient):
             self._client_config = self.get_db_config("plex")
         self.init_config()
 
-    def init_config(self):
+    def init_config(self) -> None:
         if self._client_config:
             self._host = self._client_config.get("host")
             self._token = self._client_config.get("token")
@@ -78,26 +79,26 @@ class Plex(_IMediaClient):
                     log.error(f"【{self.client_name}】Plex服务器连接失败：{str(e)}")
 
     @classmethod
-    def match(cls, ctype):
+    def match(cls, ctype: Any) -> bool:
         return ctype in [cls.client_id, cls.client_type, cls.client_name]
 
-    def get_type(self):
+    def get_type(self) -> MediaServerType:
         return self.client_type
 
-    def get_status(self):
+    def get_status(self) -> bool:
         """
         测试连通性
         """
         return bool(self._plex)
 
     @staticmethod
-    def get_user_count(**_kwargs):
+    def get_user_count(**_kwargs: Any) -> int:
         """
         获得用户数量，Plex只能配置一个用户，固定返回1
         """
         return 1
 
-    def get_activity_log(self, num):
+    def get_activity_log(self, num: int) -> list:
         """
         获取Plex活动记录
         """
@@ -135,7 +136,7 @@ class Plex(_IMediaClient):
             ret_array = sorted(ret_array, key=lambda x: x["date"], reverse=True)
         return ret_array
 
-    def get_medias_count(self):
+    def get_medias_count(self) -> dict:
         """
         获得电影、电视剧、动漫媒体数量
         :return: MovieCount SeriesCount SongCount
@@ -159,7 +160,7 @@ class Plex(_IMediaClient):
             "EpisodeCount": episode_count,
         }
 
-    def get_movies(self, title, year=None):
+    def get_movies(self, title: str, year: Any = None) -> Any:
         """
         根据标题和年份，检查电影是否在Plex中存在，存在则返回列表
         :param title: 标题
@@ -177,7 +178,7 @@ class Plex(_IMediaClient):
             ret_movies.append({"title": movie.title, "year": movie.year})
         return ret_movies
 
-    def get_tv_episodes(self, item_id=None, title=None, year=None, tmdbid=None, season=None):
+    def get_tv_episodes(self, item_id: Any = None, title: Any = None, year: Any = None, tmdbid: Any = None, season: Any = None) -> list:
         """
         根据标题、年份、季查询电视剧所有集信息
         :param item_id: Plex中的ID
@@ -203,7 +204,7 @@ class Plex(_IMediaClient):
             ret_tvs.append({"season_num": episode.seasonNumber, "episode_num": episode.index})
         return ret_tvs
 
-    def get_no_exists_episodes(self, meta_info, season, total_num):
+    def get_no_exists_episodes(self, meta_info: Any, season: int, total_num: int) -> Any:
         """
         根据标题、年份、季、总集数，查询Plex中缺少哪几集
         :param meta_info: 已识别的需要查询的媒体信息
@@ -221,7 +222,7 @@ class Plex(_IMediaClient):
         total_episodes = list(range(1, total_num + 1))
         return list(set(total_episodes).difference(set(exists_episodes)))
 
-    def get_episode_image_by_id(self, item_id, season_id, episode_id):
+    def get_episode_image_by_id(self, item_id: Any, season_id: Any, episode_id: Any) -> Any:
         """
         根据itemid、season_id、episode_id从Plex查询图片地址
         :param item_id: 在Plex中具体的一集的ID
@@ -242,7 +243,7 @@ class Plex(_IMediaClient):
             log.error(f"【{self.client_name}】获取剧集封面出错：" + str(e))
             return None
 
-    def get_remote_image_by_id(self, item_id, image_type):
+    def get_remote_image_by_id(self, item_id: Any, image_type: str) -> Any:
         """
         根据ItemId从Plex查询图片地址
         :param item_id: 在Emby中的ID
@@ -264,7 +265,7 @@ class Plex(_IMediaClient):
             log.error(f"【{self.client_name}】获取封面出错：" + str(e))
         return None
 
-    def get_local_image_by_id(self, item_id, remote=True):
+    def get_local_image_by_id(self, item_id: Any, remote: bool = True) -> Any:
         """
         根据ItemId从媒体服务器查询有声书图片地址
         :param item_id: 在Emby中的ID
@@ -272,7 +273,7 @@ class Plex(_IMediaClient):
         """
         return None
 
-    def refresh_root_library(self):
+    def refresh_root_library(self) -> bool:
         """
         通知Plex刷新整个媒体库
         """
@@ -280,7 +281,7 @@ class Plex(_IMediaClient):
             return False
         return self._plex.library.update()
 
-    def refresh_library_by_items(self, items):
+    def refresh_library_by_items(self, items: list) -> None:
         """
         按路径刷新媒体库
         """
@@ -328,7 +329,7 @@ class Plex(_IMediaClient):
             ExceptionUtils.exception_traceback(err)
         return "", ""
 
-    def get_libraries(self):
+    def get_libraries(self) -> list:
         """
         获取媒体服务器所有媒体库列表
         """
@@ -364,7 +365,7 @@ class Plex(_IMediaClient):
         return libraries
 
     @lru_cache(maxsize=10)  # noqa: B019
-    def get_libraries_image(self, library_key, type):
+    def get_libraries_image(self, library_key: Any, type: int) -> str:
         """
         获取媒体服务器最近添加的媒体的图片列表
         param: library_key
@@ -408,7 +409,7 @@ class Plex(_IMediaClient):
         )
         return image_list_str
 
-    def get_iteminfo(self, itemid):
+    def get_iteminfo(self, itemid: Any) -> dict:
         """
         获取单个项目详情
         """
@@ -422,14 +423,14 @@ class Plex(_IMediaClient):
             ExceptionUtils.exception_traceback(err)
             return {}
 
-    def get_play_url(self, item_id):
+    def get_play_url(self, item_id: Any) -> str:
         """
         拼装媒体播放链接
         :param item_id: 媒体的的ID
         """
         return f"{self._play_host or self._host}#!/server/{self._plex.machineIdentifier}/details?key={item_id}"
 
-    def get_items(self, parent):
+    def get_items(self, parent: Any) -> Any:
         """
         获取媒体服务器所有媒体库列表
         """
@@ -483,7 +484,7 @@ class Plex(_IMediaClient):
                         break
         return ids
 
-    def get_playing_sessions(self):
+    def get_playing_sessions(self) -> list:
         """
         获取正在播放的会话
         """
@@ -496,7 +497,7 @@ class Plex(_IMediaClient):
             ret_sessions.append({"type": session.TAG, "bitrate": bitrate, "address": session.player.address})
         return ret_sessions
 
-    def get_webhook_message(self, message):
+    def get_webhook_message(self, message: dict) -> dict:
         """
         解析Plex报文
         eventItem  字段的含义
@@ -548,7 +549,7 @@ class Plex(_IMediaClient):
 
         return event_item
 
-    def get_resume(self, num=12):
+    def get_resume(self, num: int = 12) -> list:
         """
         获取继续观看的媒体
         """
@@ -579,7 +580,7 @@ class Plex(_IMediaClient):
             )
         return ret_resume
 
-    def get_latest(self, num=20):
+    def get_latest(self, num: int = 20) -> list:
         """
         获取最近添加媒体
         """

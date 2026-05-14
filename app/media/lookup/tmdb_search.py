@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any
 
 from lxml import etree
 
@@ -16,7 +17,7 @@ class TmdbSearch:
     def __init__(self, client: TmdbClient):
         self.client = client
 
-    def search_movie(self, name, year=None):
+    def search_movie(self, name: str, year: Any = None) -> Any:
         try:
             params = {"query": name}
             if year:
@@ -79,7 +80,7 @@ class TmdbSearch:
                     return info
         return {}
 
-    def search_tv(self, name, year=None, season_number=None, episode=None):
+    def search_tv(self, name: str, year: Any = None, season_number: Any = None, episode: Any = None) -> Any:
         try:
             params = {"query": name}
             if year:
@@ -181,7 +182,7 @@ class TmdbSearch:
         except Exception:
             return False
 
-    def search_tv_by_season(self, name, media_year, season_number, episode=None):
+    def search_tv_by_season(self, name: str, media_year: Any, season_number: Any, episode: Any = None) -> Any:
         def _season_match(tv_info, season_year):
             if not tv_info:
                 return False
@@ -244,7 +245,7 @@ class TmdbSearch:
                     return info
         return {}
 
-    def search_multi(self, name):
+    def search_multi(self, name: str) -> Any:
         try:
             multis = self.client.search.multi({"query": name}) or []
         except (TMDbError, Exception) as err:
@@ -283,7 +284,7 @@ class TmdbSearch:
             return tv_matches[0]
         return {}
 
-    def search_multi_infos(self, name):
+    def search_multi_infos(self, name: str) -> list:
         """查询所有匹配的 movie/tv 结果（用于列表展示，不做名称匹配）"""
         if not name:
             return []
@@ -299,7 +300,7 @@ class TmdbSearch:
                 ret_infos.append(multi)
         return ret_infos
 
-    def search_movie_infos(self, name, year=None):
+    def search_movie_infos(self, name: str, year: Any = None) -> list:
         """查询所有匹配的电影结果（用于列表展示）"""
         if not name:
             return []
@@ -317,7 +318,7 @@ class TmdbSearch:
             ret_infos.append(movie)
         return ret_infos
 
-    def search_tv_infos(self, name, year=None):
+    def search_tv_infos(self, name: str, year: Any = None) -> list:
         """查询所有匹配的电视剧结果（用于列表展示）"""
         if not name:
             return []
@@ -335,7 +336,7 @@ class TmdbSearch:
             ret_infos.append(tv)
         return ret_infos
 
-    def search_web(self, name, mtype: MediaType):
+    def search_web(self, name: str, mtype: MediaType) -> Any:
         if not name or StringUtils.is_chinese(name):
             return None
         log.info(f"【Meta】正在从TheDbMovie网站查询：{name}...")
