@@ -93,7 +93,7 @@ async def create_api_key(
         )
         return success(data=result, message="API Key 创建成功，请妥善保存 Key，此页面为唯一展示机会")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"创建失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"创建失败: {str(e)}") from e
 
 
 @router.get("/keys", response_model=success)

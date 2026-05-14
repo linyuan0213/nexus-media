@@ -18,6 +18,7 @@ from app.helper.cloudflare_helper import under_challenge
 from app.helper.drissionpage_helper import DrissionPageHelper
 from app.message import Message
 from app.plugin_framework.context import PluginContext
+from app.sites.engine import SiteEngine
 from app.sites.siteconf import SiteConf
 from app.sites.sites import Sites
 from app.utils import ExceptionUtils, JsonUtils, RequestUtils, StringUtils

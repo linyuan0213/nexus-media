@@ -446,20 +446,20 @@ class PyThunder:
                         start = int(start_str.strip())
                         end = int(end_str.strip())
                         selected_indices = set(range(start, end + 1))
-                    except ValueError:
-                        raise ValueError(f"无效的索引范围格式: {file_indices}")
+                    except ValueError as e:
+                        raise ValueError(f"无效的索引范围格式: {file_indices}") from e
                 elif "," in file_indices:
                     # 列表格式：1,3,5
                     try:
                         selected_indices = {int(idx.strip()) for idx in file_indices.split(",")}
-                    except ValueError:
-                        raise ValueError(f"无效的索引列表格式: {file_indices}")
+                    except ValueError as e:
+                        raise ValueError(f"无效的索引列表格式: {file_indices}") from e
                 else:
                     # 单个索引
                     try:
                         selected_indices = {int(file_indices.strip())}
-                    except ValueError:
-                        raise ValueError(f"无效的索引格式: {file_indices}")
+                    except ValueError as e:
+                        raise ValueError(f"无效的索引格式: {file_indices}") from e
 
                 # 筛选文件并计算大小
                 selected_files = [f for f in files if f.get("file_index", 0) in selected_indices]

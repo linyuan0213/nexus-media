@@ -6,14 +6,14 @@ _plugin_stats_cache = MemoryCacheAdapter(maxsize=1, name="plugin_stats")
 
 class PluginHelper:
     @staticmethod
-    def install(plugin_id):
+    def install(_plugin_id):
         """
         插件安装统计计数
         """
         return None
 
     @staticmethod
-    def report(plugins):
+    def report(_plugins):
         """
         批量上报插件安装统计数据
         """

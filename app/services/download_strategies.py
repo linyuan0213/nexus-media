@@ -149,8 +149,8 @@ class EpisodeStrategy:
         get_download_url_callback,
         download_callback,
         get_torrent_episodes_callback,
-        set_files_status_callback,
-        start_torrents_callback,
+        _set_files_status_callback,
+        _start_torrents_callback,
         return_items: list,
     ) -> tuple[list, dict]:
         """

@@ -91,7 +91,7 @@ class Plex(_IMediaClient):
         return bool(self._plex)
 
     @staticmethod
-    def get_user_count(**kwargs):
+    def get_user_count(**_kwargs):
         """
         获得用户数量，Plex只能配置一个用户，固定返回1
         """
@@ -363,7 +363,7 @@ class Plex(_IMediaClient):
             )
         return libraries
 
-    @lru_cache(maxsize=10)
+    @lru_cache(maxsize=10)  # noqa: B019
     def get_libraries_image(self, library_key, type):
         """
         获取媒体服务器最近添加的媒体的图片列表

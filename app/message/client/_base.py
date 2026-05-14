@@ -9,13 +9,16 @@ class _IMessageClient(metaclass=ABCMeta):
         self.read_config()
 
     def read_config(self):
-        pass
+        """Override to read message client configuration."""
+        return
 
     def setup(self):
-        pass
+        """Override to initialize message client resources."""
+        return
 
     def stop(self):
-        pass
+        """Override to clean up message client resources."""
+        return
 
     @classmethod
     def match(cls, ctype):

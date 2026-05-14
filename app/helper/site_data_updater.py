@@ -49,7 +49,7 @@ class SiteDataUpdater:
             return "0"
 
     @staticmethod
-    def check_sites_update(config_path, temp_path, inner_config_path, proxies=None):
+    def check_sites_update(config_path, temp_path, _inner_config_path, proxies=None):
         """检查并更新sites.dat"""
         from app.core.constants import SITES_DATA_URL  # 延迟导入避免循环依赖
 

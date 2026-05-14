@@ -252,8 +252,8 @@ def _parse_detail(ins):
             ins.user_level = level[0].xpath("string(.)").strip()
     if not ins.user_level:
         level = doc.xpath('//a[contains(@href,"userdetails")]/text()')
-        for l in level or []:
-            m = re.search(r"\[(.*)]", l)
+        for label in level or []:
+            m = re.search(r"\[(.*)]", label)
             if m and m.group(1):
                 ins.user_level = m.group(1).strip()
                 break
@@ -268,7 +268,7 @@ def _parse_detail(ins):
         labels = ui.get("bonus_labels", ["魔力值", "猫粮"])
         if not isinstance(labels, list):
             labels = [labels]
-        cond = " or ".join(f'text()="{l}"' for l in labels)
+        cond = " or ".join(f'text()="{label}"' for label in labels)
         bonus = doc.xpath(f"//tr/td[{cond}]/following-sibling::td[1]/text()")
         if bonus:
             ins.bonus = StringUtils.str_float(bonus[0].strip())

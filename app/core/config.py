@@ -113,7 +113,7 @@ class Config(metaclass=_SingletonMeta):
         try:
             yaml.dump(new_cfg, io.StringIO())
         except Exception as e:
-            raise ValueError(f"Invalid YAML data: {e}")
+            raise ValueError(f"Invalid YAML data: {e}") from e
 
         lock_path = self._config_path + ".lock"
         with FileLock(lock_path):

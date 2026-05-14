@@ -56,7 +56,7 @@ def safe_serialize(value: Any) -> bytes:
     """安全序列化（失败返回None）"""
     try:
         return pickle.dumps(value)
-    except:
+    except Exception:
         return None
 
 
@@ -64,5 +64,5 @@ def safe_deserialize(data: bytes) -> Any | None:
     """安全反序列化（失败返回None）"""
     try:
         return pickle.loads(data)
-    except:
+    except Exception:
         return None

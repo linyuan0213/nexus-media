@@ -152,16 +152,17 @@ class Torrent:
         file_names = []
         file_folder = ""
         try:
-            torrent = bdecode(open(path, "rb").read())
-            if torrent.get("info"):
-                files = torrent.get("info", {}).get("files") or []
-                if files:
-                    for item in files:
-                        if item.get("path"):
-                            file_names.append(item["path"][0])
-                    file_folder = torrent.get("info", {}).get("name")
-                else:
-                    file_names.append(torrent.get("info", {}).get("name"))
+            with open(path, "rb") as f:
+                torrent = bdecode(f.read())
+                if torrent.get("info"):
+                    files = torrent.get("info", {}).get("files") or []
+                    if files:
+                        for item in files:
+                            if item.get("path"):
+                                file_names.append(item["path"][0])
+                        file_folder = torrent.get("info", {}).get("name")
+                    else:
+                        file_names.append(torrent.get("info", {}).get("name"))
         except Exception as err:
             return file_folder, file_names, f"解析种子文件异常：{str(err)}"
         return file_folder, file_names, ""

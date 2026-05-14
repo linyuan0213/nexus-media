@@ -78,7 +78,7 @@ class ConfigHtmlUserInfo:
         self.site_favicon = None
 
     @classmethod
-    def match(cls, html_text):
+    def match(cls, _html_text):
         return False
 
     @property
@@ -259,7 +259,6 @@ class ConfigHtmlUserInfo:
             data = json.loads(res) if isinstance(res, str) else res
         except Exception:
             return
-        total = 0
         total_size = 0
         info = []
         items_key = sc.get("response", {}).get("items_key", "data")
@@ -268,14 +267,13 @@ class ConfigHtmlUserInfo:
         items = self._get_nested(data, items_key.split(".")) if isinstance(data, dict) else []
         if not isinstance(items, list):
             items = []
-        for item in items:
+        for _total, item in enumerate(items, start=1):
             if isinstance(item, dict):
                 size = int(self._get_nested(item, size_field.split(".")) or 0)
                 seeders = int(self._get_nested(item, seeders_field.split(".")) or 0)
             else:
                 size = StringUtils.num_filesize(str(item))
                 seeders = 0
-            total += 1
             total_size += size
             info.append([seeders, size])
         self.seeding_size = total_size

@@ -183,17 +183,8 @@ class DoubanWeb(metaclass=SingletonMeta):
             date = datetime.datetime.strptime(pubDate, "%a, %d %b %Y %H:%M:%S %Z")
             new_date = date.strftime("%Y-%m-%d")
 
-            def map_type():
-                if dtype == "想看":
-                    return "wish"
-                elif dtype == "看过":
-                    return "collect"
-                elif dtype == "在看":
-                    return "do"
-                else:
-                    return "collect"
-
-            dtype = map_type()
+            dtype_map = {"想看": "wish", "看过": "collect", "在看": "do"}
+            dtype = dtype_map.get(dtype, "collect")
 
             if "movie" in link:
                 obj = {

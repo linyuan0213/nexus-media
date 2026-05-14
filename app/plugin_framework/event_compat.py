@@ -83,7 +83,7 @@ class EventManager(metaclass=SingletonMeta):
             if isinstance(etype, list):
                 for et in etype:
                     self.add_event_listener(et, f)
-            elif type(etype) == type(EventType):
+            elif isinstance(etype, type):
                 for et in etype.__members__.values():
                     self.add_event_listener(et, f)
             else:

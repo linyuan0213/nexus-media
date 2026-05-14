@@ -68,7 +68,7 @@ class ConfigApiUserInfo:
         self.site_favicon = None
 
     @classmethod
-    def match(cls, html_text):
+    def match(cls, _html_text):
         return False
 
     @property

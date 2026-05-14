@@ -172,9 +172,8 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
                 all_task.append(task)
 
             finish_count = 0
-            for future in as_completed(all_task):
+            for finish_count, future in enumerate(as_completed(all_task), start=1):
                 result = future.result()
-                finish_count += 1
                 _process.update(ptype=ProgressKey.Search, value=round(100 * (finish_count / len(all_task))))
                 if result:
                     media_list.extend(result)

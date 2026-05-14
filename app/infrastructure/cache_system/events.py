@@ -101,7 +101,7 @@ class CacheEventManager:
 
             for event_type in CacheEventType:
                 self._listeners[event_type] = [
-                    (pattern, l) for pattern, l in self._listeners[event_type] if l != listener
+                    (pattern, lst) for pattern, lst in self._listeners[event_type] if lst != listener
                 ]
 
     def emit(self, event: CacheEvent):

@@ -73,7 +73,7 @@ class BrushRuleEngine:
                 "include": lambda rv: bool(re.search(rv, title, re.IGNORECASE)),
                 "exclude": lambda rv: not bool(re.search(rv, title, re.IGNORECASE)),
                 "free": lambda rv: cls._check_free_status(torrent_attr, rv),
-                "hr": lambda rv: not torrent_attr.get("hr"),
+                "hr": lambda _rv: not torrent_attr.get("hr"),
                 "peercount": lambda rv: cls.check_range_rule(torrent_attr.get("peer_count"), rv),
                 "pubdate": lambda rv: cls._check_pubdate(pubdate, torrent_attr, rv),
                 "exclude_subscribe": lambda rv: not cls._check_subscribe_status(title, rv),
@@ -243,7 +243,7 @@ class BrushRuleEngine:
             "iatime": (BrushDeleteType.IATIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
             "pending_time": (BrushDeleteType.PENDINGTIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
             "freespace": (BrushDeleteType.FREESPACE, lambda value, rv: cls.check_range_rule(value, rv, 1024**3)),
-            "freestatus": (BrushDeleteType.FREEEND, lambda value, rv: not value),
+            "freestatus": (BrushDeleteType.FREEEND, lambda value, _rv: not value),
         }
 
         mode = remove_rule.get("mode", "or")

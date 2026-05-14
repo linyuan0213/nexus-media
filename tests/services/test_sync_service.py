@@ -256,12 +256,13 @@ class TestTestConnection:
         from app.schemas.sync import SimpleResultDTO
 
         # Patch the class method to return True for any command, and Config to avoid singleton issues
-        with patch.object(SyncService, "exec_test_command", return_value=True):
-            with patch("config.Config") as mock_config:
-                mock_config.return_value.init_config.return_value = None
-                result = svc.test_connection("Config().get_config()")
-                assert isinstance(result, SimpleResultDTO)
-                assert result.success is True
+        with patch.object(SyncService, "exec_test_command", return_value=True), patch(
+            "config.Config"
+        ) as mock_config:
+            mock_config.return_value.init_config.return_value = None
+            result = svc.test_connection("Config().get_config()")
+            assert isinstance(result, SimpleResultDTO)
+            assert result.success is True
 
 
 class TestUpdateDirectory:
@@ -273,12 +274,13 @@ class TestUpdateDirectory:
         mock_cfg = {"key": "value"}
         mock_set_config = MagicMock(return_value=mock_cfg)
 
-        with patch("config.Config") as mock_config:
-            with patch("web.core.action_utils.set_config_directory", mock_set_config):
-                mock_config.return_value.get_config.return_value = mock_cfg
+        with patch("config.Config") as mock_config, patch(
+            "web.core.action_utils.set_config_directory", mock_set_config
+        ):
+            mock_config.return_value.get_config.return_value = mock_cfg
 
-                result = svc.update_directory("add", "dir", "/new/path")
+            result = svc.update_directory("add", "dir", "/new/path")
 
-                assert isinstance(result, SimpleResultDTO)
-                assert result.success is True
-                mock_set_config.assert_called_once_with(mock_cfg, "add", "dir", "/new/path", None)
+            assert isinstance(result, SimpleResultDTO)
+            assert result.success is True
+            mock_set_config.assert_called_once_with(mock_cfg, "add", "dir", "/new/path", None)

@@ -794,12 +794,12 @@ class TestMediaFileService:
         with (
             patch("os.path.exists", return_value=True),
             patch("builtins.open", mock_open(read_data="movies:\n  - action")),
+            patch("app.services.media_service.Config") as MockCfg,
         ):
-            with patch("app.services.media_service.Config") as MockCfg:
-                MockCfg().get_config_path.return_value = "/config"
-                ok, text = service.get_category_config("custom")
-                assert ok
-                assert text == "movies:\n  - action"
+            MockCfg().get_config_path.return_value = "/config"
+            ok, text = service.get_category_config("custom")
+            assert ok
+            assert text == "movies:\n  - action"
 
     def test_update_category_config(self, service):
         with patch("builtins.open", mock_open()) as mock_file, patch("app.services.media_service.Config") as MockCfg:

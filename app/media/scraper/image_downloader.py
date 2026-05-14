@@ -44,8 +44,8 @@ class ImageDownloader:
                 log.info(f"【Scraper】{itype}图片已保存：{image_path}")
             else:
                 log.info(f"【Scraper】{itype}图片下载失败，请检查网络连通性")
-        except RequestException:
-            raise RequestException
+        except RequestException as ex:
+            raise RequestException from ex
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
 

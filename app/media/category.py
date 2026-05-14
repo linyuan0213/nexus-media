@@ -41,7 +41,7 @@ class Category(metaclass=SingletonMeta):
                     self._categorys = {}
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
-            log.warn(f"【Config】二级分类策略 {category_name} 配置文件加载出错：{str(e)}")
+            log.warn(f"【Config】二级分类策略 {category_name} 配置文件加载出错：{str(err)}")
             return False
 
         if self._categorys:

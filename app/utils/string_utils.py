@@ -175,7 +175,7 @@ class StringUtils:
         """
         if size is None:
             return ""
-        size = re.sub(r"\s|B|iB", "", str(size), re.I)
+        size = re.sub(r"\s|B|iB", "", str(size), flags=re.I)
         if size.replace(".", "").isdigit():
             try:
                 size = float(size)

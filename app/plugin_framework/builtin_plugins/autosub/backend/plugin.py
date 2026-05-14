@@ -445,7 +445,7 @@ class AutoSubPlugin:
             f.write(srt.compose(srt_data))
 
     def _get_video_prefer_audio(self, video_meta, prefer_lang=None):
-        if type(prefer_lang) == str and prefer_lang:
+        if isinstance(prefer_lang, str) and prefer_lang:
             prefer_lang = [prefer_lang]
 
         audio_lang = None
@@ -477,7 +477,7 @@ class AutoSubPlugin:
             "hdmv_pgs_subtitle",
         )
 
-        if type(prefer_lang) == str and prefer_lang:
+        if isinstance(prefer_lang, str) and prefer_lang:
             prefer_lang = [prefer_lang]
 
         subtitle_lang = None
@@ -605,7 +605,7 @@ class AutoSubPlugin:
         video_dir, video_name = os.path.split(video_file)
         video_name, video_ext = os.path.splitext(video_name)
 
-        if type(prefer_langs) == str and prefer_langs:
+        if isinstance(prefer_langs, str) and prefer_langs:
             prefer_langs = [prefer_langs]
 
         for subtitle_lang in prefer_langs or []:

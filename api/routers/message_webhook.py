@@ -24,7 +24,7 @@ def _ensure_message_initialized():
     """确保消息客户端已初始化（懒加载触发）"""
     global _MESSAGE_INITIALIZED
     if not _MESSAGE_INITIALIZED:
-        Message().active_clients
+        _ = Message().active_clients
         _MESSAGE_INITIALIZED = True
 
 

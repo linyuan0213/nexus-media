@@ -26,7 +26,7 @@ class TempManager:
     # 默认清理间隔（6小时）
     DEFAULT_CLEANUP_INTERVAL_HOURS = 6
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *_args, **_kwargs):
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:

@@ -30,5 +30,6 @@ class MessageQueue(ABC):
     def pending(self) -> int:
         """待处理任务数"""
 
-    def register_handler(self, handler: Callable) -> None:
+    def register_handler(self, _handler: Callable) -> None:
         """注册消息处理器（持久化队列消费时使用）"""
+        del _handler

@@ -113,7 +113,7 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         return self.schema
 
     @classmethod
-    def match(cls, html_text):
+    def match(cls, _html_text):
         """
         是否匹配当前解析模型
         :param html_text: 站点首页html

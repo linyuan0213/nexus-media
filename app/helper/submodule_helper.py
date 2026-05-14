@@ -4,7 +4,7 @@ import pkgutil
 
 class SubmoduleHelper:
     @classmethod
-    def import_submodules(cls, package, filter_func=lambda name, obj: True):
+    def import_submodules(cls, package, filter_func=lambda _name, _obj: True):
         """
         导入子模块
         :param package: 父包名

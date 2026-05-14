@@ -121,9 +121,8 @@ class SearchExecutor:
 
             finish_count = 0
             total = len(all_task)
-            for future in as_completed(all_task):
+            for finish_count, future in enumerate(as_completed(all_task), start=1):
                 result = future.result()
-                finish_count += 1
                 if progress_updater:
                     progress_updater(finish_count, total)
                 if result:

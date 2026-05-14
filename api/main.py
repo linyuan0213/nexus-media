@@ -56,7 +56,7 @@ async def lifespan(app: FastAPI):
     PluginSandbox().load_all()
     log.info("【FastAPI】插件加载完成")
     # 预初始化消息客户端（避免 webhook 首次调用时客户端尚未就绪）
-    Message().active_clients
+    _ = Message().active_clients
     log.info("【FastAPI】消息客户端初始化完成")
     # 系统启动完成后统一刷新菜单（确保包含插件命令）
     Message().refresh_menus()

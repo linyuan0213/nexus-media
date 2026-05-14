@@ -143,7 +143,7 @@ class SiteSubtitle:
         if headers and isinstance(headers, str):
             try:
                 headers = json.loads(headers)
-            except:
+            except Exception:
                 headers = {}
         elif not headers:
             headers = {}

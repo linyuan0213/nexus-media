@@ -35,5 +35,5 @@ class TestMessageWebSocket:
     def test_websocket_unauthorized_without_session(self, monkeypatch):
         """无认证时应被拒绝"""
         monkeypatch.setattr(utils_routes, "_get_ws_user", lambda _w: None)
-        with pytest.raises(Exception), client.websocket_connect("/message"):
-            pass
+        with pytest.raises(Exception), client.websocket_connect("/message"):  # noqa: B017
+            ...

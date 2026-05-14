@@ -305,7 +305,7 @@ class FnOS(_IMediaClient):
             )
         return libraries
 
-    @lru_cache(maxsize=10)
+    @lru_cache(maxsize=10)  # noqa: B019
     def get_libraries_image(self, library_key, type):
         """
         获取媒体服务器最近添加的媒体的图片列表

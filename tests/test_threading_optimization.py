@@ -164,7 +164,7 @@ class TestThreadPoolOptimization:
             try:
                 f.result(timeout=1.0)
                 completed += 1
-            except:
+            except Exception:
                 pass
 
         # 大部分任务应该已完成
