@@ -133,7 +133,7 @@ class PluginFrameworkService:
                 continue
 
             # 收集角色当前所有菜单 ID（去重）
-            current_ids = {m.get("id") for m in role.menus if m.get("id")}
+            current_ids = {int(mid) for m in role.menus if (mid := m.get("id")) is not None}
             current_ids.update(menu_ids)
             self._role_repo.assign_menus_to_role(role.id, list(current_ids))
             log.info(f"[PluginFrameworkService] 为角色 '{role.role_name}' 分配 {len(menu_ids)} 个插件菜单")
@@ -148,7 +148,7 @@ class PluginFrameworkService:
         plugins = []
         for orm_model in orm_list:
             try:
-                manifest = PluginManifest.from_dict(json.loads(orm_model.MANIFEST_JSON or "{}"))
+                manifest = PluginManifest.from_dict(json.loads(str(orm_model.MANIFEST_JSON or "{}")))
                 plugins.append({
                     "id": manifest.id,
                     "name": manifest.name,
@@ -195,14 +195,14 @@ class PluginFrameworkService:
         orm_model = self._repo.get_manifest_by_id(plugin_id)
         if not orm_model:
             return None
-        return PluginManifest.from_dict(json.loads(orm_model.MANIFEST_JSON or "{}"))
+        return PluginManifest.from_dict(json.loads(str(orm_model.MANIFEST_JSON or "{}")))
 
     def get_config(self, plugin_id: str) -> dict:
         """获取插件配置"""
         orm_model = self._repo.get_config(plugin_id)
         if orm_model and orm_model.CONFIG:
             try:
-                return json.loads(orm_model.CONFIG)
+                return json.loads(str(orm_model.CONFIG))
             except Exception:
                 pass
         return {}
@@ -299,8 +299,8 @@ class PluginFrameworkService:
             if existing.ENABLED:
                 self.disable(manifest.id)
             old_path = existing.PATH
-            if old_path and os.path.exists(old_path) and old_path != target_dir:
-                shutil.rmtree(old_path)
+            if old_path and os.path.exists(str(old_path)) and str(old_path) != target_dir:
+                shutil.rmtree(str(old_path))
             entity = PluginManifestEntity(
                 id=manifest.id,
                 name=manifest.name,
@@ -368,8 +368,8 @@ class PluginFrameworkService:
             return
 
         # 第三方插件硬卸载：物理删除
-        if target_dir and os.path.exists(target_dir):
-            shutil.rmtree(target_dir)
+        if target_dir and os.path.exists(str(target_dir)):
+            shutil.rmtree(str(target_dir))
 
         sandbox = PluginSandbox()
         sandbox.unload(plugin_id)
@@ -470,7 +470,7 @@ class PluginFrameworkService:
         if not orm_model or not orm_model.PATH:
             return ""
 
-        readme_path = os.path.join(orm_model.PATH, "README.md")
+        readme_path = os.path.join(str(orm_model.PATH), "README.md")
         if not os.path.exists(readme_path):
             return ""
 
@@ -494,17 +494,17 @@ class PluginFrameworkService:
         if not orm_model:
             raise ValueError(f"插件未安装: {plugin_id}")
 
-        manifest = PluginManifest.from_dict(json.loads(orm_model.MANIFEST_JSON or "{}"))
+        manifest = PluginManifest.from_dict(json.loads(str(orm_model.MANIFEST_JSON or "{}")))
         entry = manifest.backend.entry
         if not entry:
             raise ValueError(f"插件未声明后端入口: {plugin_id}")
 
         plugin_path = orm_model.PATH
-        if not plugin_path or not os.path.exists(plugin_path):
+        if not plugin_path or not os.path.exists(str(plugin_path)):
             raise ValueError(f"插件路径不存在: {plugin_id}")
 
         module_path, class_name = entry.split(":")
-        file_path = os.path.join(plugin_path, module_path.replace(".", "/") + ".py")
+        file_path = os.path.join(str(plugin_path), module_path.replace(".", "/") + ".py")
 
         if not os.path.exists(file_path):
             raise ValueError(f"插件入口文件不存在: {file_path}")
@@ -516,8 +516,8 @@ class PluginFrameworkService:
         importlib.invalidate_caches()
 
         # 临时将插件根目录加入 sys.path，使 backend/_autobackup 等子模块可解析
-        if plugin_path not in sys.path:
-            sys.path.insert(0, plugin_path)
+        if str(plugin_path) not in sys.path:
+            sys.path.insert(0, str(plugin_path))
 
         spec = importlib.util.spec_from_file_location(module_path, file_path)
         if not spec or not spec.loader:

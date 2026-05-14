@@ -49,16 +49,16 @@ class BrushTaskRepository:
         return self._repo.get_brushtask_torrents(brush_id, active)
 
     def get_brushtask_torrent_by_enclosure(self, enclosure: str | None) -> Any:
-        return self._repo.get_brushtask_torrent_by_enclosure(enclosure)
+        return self._repo.get_brushtask_torrent_by_enclosure(enclosure or "")
 
     def insert_brushtask_torrent(self, brush_id: int | None, title: str, enclosure: str, downloader: int, download_id: str, size: int) -> Any:
         return self._repo.insert_brushtask_torrent(
             brush_id=brush_id,
             title=title,
             enclosure=enclosure,
-            downloader=downloader,
+            downloader=str(downloader),
             download_id=download_id,
-            size=size,
+            size=str(size),
         )
 
     def add_brushtask_download_count(self, brush_id: int | None) -> Any:
@@ -71,13 +71,13 @@ class BrushTaskRepository:
         return self._repo.update_brushtask(brushtask_id, item)
 
     def delete_brushtask(self, brushtask_id: int | None) -> Any:
-        return self._repo.delete_brushtask(brushtask_id)
+        return self._repo.delete_brushtask(brushtask_id or 0)
 
     def update_brushtask_state(self, tid: int | None, state: str | None) -> Any:
-        return self._repo.update_brushtask_state(tid=tid, state=state)
+        return self._repo.update_brushtask_state(tid=tid, state=state or "")
 
     def update_brushtask_torrent_state(self, update_torrents: list | None) -> Any:
-        return self._repo.update_brushtask_torrent_state(update_torrents)
+        return self._repo.update_brushtask_torrent_state(update_torrents or [])
 
     def delete_brushtask_torrent(self, taskid: int | None, download_id: str | None) -> Any:
         return self._repo.delete_brushtask_torrent(taskid, download_id)
@@ -412,7 +412,7 @@ class BrushTaskService:
         if not self.__is_allow_new_torrent(taskinfo=taskinfo, dlcount=rss_rule.get("dlcount")):
             return
 
-        rss_result = self._rsshelper.parse_rssxml(url=rss_url, proxy=site_proxy)
+        rss_result = self._rsshelper.parse_rssxml(url=rss_url, proxy=bool(site_proxy))
         if rss_result is None:
             log.error(f"【Brush】{task_name} RSS链接已过期，请重新获取！")
             return
@@ -444,7 +444,7 @@ class BrushTaskService:
                     continue
 
                 torrent_attr = self._siteconf.check_torrent_attr(
-                    torrent_url=page_url, cookie=cookie, ua=ua, headers=headers, proxy=site_proxy
+                    torrent_url=page_url, cookie=cookie, ua=ua, headers=headers, proxy=bool(site_proxy)
                 )
                 if not BrushRuleEngine.check_rss_rule(
                     rss_rule=rss_rule, title=torrent_name, torrent_size=size, pubdate=pubdate, torrent_attr=torrent_attr
@@ -537,7 +537,7 @@ class BrushTaskService:
             if remove_torrent_ids:
                 log.info(f"【Brush】任务 {task_name} 删除不存在的下载任务：{remove_torrent_ids}")
                 for rid in remove_torrent_ids:
-                    self._repo.delete_brushtask_torrent(taskid, rid)
+                    self._repo.delete_brushtask_torrent(taskid or 0, rid)
 
             if delete_ids:
                 self._downloader.delete_torrents(downloader_id, delete_ids, delete_file=True)
@@ -558,7 +558,7 @@ class BrushTaskService:
                     log.info(f"【Brush】任务 {task_name} 本次检查未删除下载任务")
 
             self._repo.add_brushtask_upload_count(
-                taskid, total_uploaded, total_downloaded, len(delete_ids) + len(remove_torrent_ids)
+                taskid or 0, total_uploaded, total_downloaded, len(delete_ids) + len(remove_torrent_ids)
             )
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -590,8 +590,7 @@ class BrushTaskService:
             enclosure = torrent_id_maps.get(torrent_id)
             torrent_url, torrent_attr = (None, {})
             if enclosure:
-                torrent_url, torrent_attr = self.get_torrent_attr(site_info, enclosure)
-            log.debug(f"【Brush】{torrent_url} 解析详情 {torrent_attr}")
+                torrent_url, torrent_attr = self.get_torrent_attr(site_info if isinstance(site_info, dict) else {}, enclosure)
 
             torrent_params = {
                 "seeding_time": torrent.seeding_time,
@@ -679,7 +678,7 @@ class BrushTaskService:
             enclosure = torrent_id_maps.get(torrent_id)
             if not enclosure:
                 continue
-            torrent_url, torrent_attr = self.get_torrent_attr(site_info, enclosure)
+            torrent_url, torrent_attr = self.get_torrent_attr(site_info if isinstance(site_info, dict) else {}, enclosure)
             log.debug(f"【Brush】{torrent_url} 解析详情 {torrent_attr}")
 
             need_stop, stop_type = BrushRuleEngine.check_stop_rule(stop_rule, torrent_attr=torrent_attr)
@@ -817,7 +816,7 @@ class BrushTaskService:
         ua = site_info.get("ua")
         headers = site_info.get("headers")
         if JsonUtils.is_valid_json(headers):
-            headers = json.loads(site_info.get("headers"))
+            headers = json.loads(str(headers))
         else:
             headers = {}
         headers.update({"User-Agent": ua})
@@ -829,10 +828,10 @@ class BrushTaskService:
         tid = StringUtils.get_tid_by_url(enclosure)
         from app.sites.engine import SiteEngine
 
-        torrent_url = f"{site_base_url}{SiteEngine.get_instance().resolve_detail_url(enclosure, tid)}"
+        torrent_url = f"{site_base_url}{SiteEngine.get_instance().resolve_detail_url(enclosure, tid or '')}"
 
         torrent_attr = self._siteconf.check_torrent_attr(
-            torrent_url=torrent_url, cookie=site_cookie, ua=ua, headers=headers, proxy=site_proxy
+            torrent_url=torrent_url, cookie=site_cookie, ua=ua, headers=headers, proxy=bool(site_proxy)
         )
         return torrent_url, torrent_attr
 

@@ -56,10 +56,10 @@ class MediaService:
         self,
         title: str,
         subtitle: str = "",
-        mtype: MediaType = None,
+        mtype: MediaType | None = None,
         strict=None,
         cache=True,
-        language=None,
+        language: str | None = None,
         chinese=True,
         append_to_response=None,
     ) -> MediaInfo | None:
@@ -106,7 +106,7 @@ class MediaService:
         # 尝试从缓存获取
         if cache:
             cached = self._lookup.client.redis_cache.get_media_info(
-                title=search_name, year=parsed.year, mtype=parsed.type
+                title=search_name, year=parsed.year or "", mtype=parsed.type
             )
             if cached and isinstance(cached, MediaInfo):
                 # 验证缓存的季集是否与当前解析结果匹配（避免不同集数标题的缓存碰撞）
@@ -131,11 +131,14 @@ class MediaService:
         use_strict = strict if strict is not None else (self._rmt_match_mode == MatchMode.STRICT)
 
         # 2. Lookup: TMDB 查询 (含内部 fallback)
-        result = self._lookup.lookup(parsed, hint_type=mtype, strict=use_strict, language=language)
+        if mtype is not None:
+            result = self._lookup.lookup(parsed, hint_type=mtype, strict=use_strict, language=language or "")
+        else:
+            result = self._lookup.lookup(parsed, strict=use_strict, language=language or "")
 
         # 3. Fallback: WEB 抓取
         if not result and self._search_tmdbweb:
-            web_info = self._lookup.search.search_web(search_name, parsed.type)
+            web_info = self._lookup.search.search_web(search_name, parsed.type or MediaType.UNKNOWN)
             if web_info:
                 result = self._lookup._to_lookup_result(web_info)
 
@@ -209,7 +212,7 @@ class MediaService:
             log.info(
                 f"【EpisodeMapper】尝试映射: {info.get_name()} S{info.begin_season}E{info.begin_episode} (tmdb_id={info.tmdb_id})"
             )
-            mapped = self._episode_mapper.map_auto(info.tmdb_id, info.begin_season, info.begin_episode)
+            mapped = self._episode_mapper.map_auto(int(info.tmdb_id), info.begin_season, info.begin_episode)
             if mapped:
                 log.info(
                     f"【EpisodeMapper】映射成功: S{info.begin_season}E{info.begin_episode} -> S{mapped[0]}E{mapped[1]}"
@@ -222,7 +225,7 @@ class MediaService:
         # 保存到缓存
         if cache:
             self._lookup.client.redis_cache.set_media_info(
-                title=search_name, info=info, year=parsed.year, mtype=parsed.type
+                title=search_name, info=info, year=parsed.year or "", mtype=parsed.type
             )
 
         # 重置语言
@@ -243,9 +246,9 @@ class MediaService:
         append_to_response=None,
     ):
         """兼容旧接口 — 内部调用 identify"""
-        return self.identify(title, subtitle, mtype, strict, cache, language, chinese, append_to_response)
+        return self.identify(title, subtitle or "", mtype, strict, cache, language, chinese, append_to_response)
 
-    def identify_batch(self, items: list[dict], language: str = None) -> list:
+    def identify_batch(self, items: list[dict], language: str | None = None) -> list:
         """批量识别 — Parser batch + 去重后并发 Lookup"""
         if not items:
             return []
@@ -296,7 +299,7 @@ class MediaService:
             max_workers = min(len(unique_keys), 8)
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 future_to_key = {
-                    executor.submit(self._lookup.lookup, parsed, None, None, language): key
+                    executor.submit(self._lookup.lookup, parsed, language=language or ""): key
                     for key, parsed in unique_keys.items()
                 }
                 for future in as_completed(future_to_key):
@@ -497,7 +500,7 @@ class MediaService:
             max_workers = min(len(unique_keys), 8)
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 future_to_key = {
-                    executor.submit(self._lookup.lookup, parsed, None, None, language): key
+                    executor.submit(self._lookup.lookup, parsed, language=language or ""): key
                     for key, parsed in unique_keys.items()
                 }
                 for future in as_completed(future_to_key):
