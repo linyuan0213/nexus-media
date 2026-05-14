@@ -519,15 +519,15 @@ class FileTransferService:
         if not tmdb_info:
             tmdb_info, media_type = self._lookup_download_record(in_path)
 
-        Medias = self.media.get_media_info_on_files(file_list, tmdb_info, media_type, season, episode[0])
-        if not Medias:
+        medias = self.media.get_media_info_on_files(file_list, tmdb_info, media_type, season, episode[0])
+        if not medias:
             return self._finish_transfer(False, "搜索媒体信息出错")
 
-        self.progress.update(ptype=ProgressKey.FileTransfer, text=f"共 {len(Medias)} 个文件需要处理...")
+        self.progress.update(ptype=ProgressKey.FileTransfer, text=f"共 {len(medias)} 个文件需要处理...")
 
         # ---------- 阶段4：逐个文件转移 ----------
         result = self._transfer_files_loop(
-            Medias, in_from, in_path, rmt_mode, target_dir, unknown_dir, bluray_disk_dir, episode, udf_flag
+            medias, in_from, in_path, rmt_mode, target_dir, unknown_dir, bluray_disk_dir, episode, udf_flag
         )
 
         # ---------- 阶段5：后处理 ----------
@@ -590,7 +590,7 @@ class FileTransferService:
         return None, None
 
     def _transfer_files_loop(
-        self, Medias, in_from, in_path, rmt_mode, target_dir, unknown_dir, bluray_disk_dir, episode, udf_flag
+        self, medias, in_from, in_path, rmt_mode, target_dir, unknown_dir, bluray_disk_dir, episode, udf_flag
     ):
         failed_count = 0
         alert_count = 0
@@ -600,7 +600,7 @@ class FileTransferService:
         success_flag = True
         error_message = ""
 
-        for file_item, media in Medias.items():
+        for file_item, media in medias.items():
             try:
                 total_count += 1
                 if not udf_flag and re.search(r"[./\s\[]+Sample[/\.\s\]]+", file_item, re.IGNORECASE):
@@ -610,7 +610,7 @@ class FileTransferService:
                 file_name = os.path.basename(file_item)
                 self.progress.update(
                     ptype=ProgressKey.FileTransfer,
-                    value=round(total_count / len(Medias) * 100) - (0.5 / len(Medias) * 100),
+                    value=round(total_count / len(medias) * 100) - (0.5 / len(medias) * 100),
                     text=f"正在处理：{file_name} ...",
                 )
 
@@ -709,7 +709,7 @@ class FileTransferService:
 
                 self.progress.update(
                     ptype=ProgressKey.FileTransfer,
-                    value=round(total_count / len(Medias) * 100),
+                    value=round(total_count / len(medias) * 100),
                     text=f"{file_name} 转移完成",
                 )
                 if rmt_mode == RmtMode.MOVE:
