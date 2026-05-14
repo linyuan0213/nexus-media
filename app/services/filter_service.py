@@ -7,7 +7,7 @@ import re
 import log
 from app.core.module_config import ModuleConf
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
-from app.media import meta_info, ReleaseGroupsMatcher
+from app.media import ReleaseGroupsMatcher, meta_info
 from app.utils import StringUtils
 from app.utils.types import MediaType
 
@@ -484,10 +484,10 @@ class FilterService:
         self, title: str, subtitle: str | None, size: str | None, rulegroup: str | None
     ) -> tuple[bool, str, int]:
         """测试规则是否匹配给定标题"""
-        meta_info = meta_info(title=title, subtitle=subtitle)
-        meta_info.size = float(size) * 1024**3 if size else 0
+        mi = meta_info(title=title, subtitle=subtitle)
+        mi.size = float(size) * 1024**3 if size else 0
         match_flag, res_order, match_msg = self.check_torrent_filter(
-            meta_info=meta_info, filter_args={"rule": rulegroup}
+            meta_info=mi, filter_args={"rule": rulegroup}
         )
         text = "匹配" if match_flag else "未匹配"
         order = 100 - res_order if res_order else 0

@@ -225,11 +225,11 @@ class MessageSearchService:
             return
 
         media_list = []
-        for meta_info in medias[:8]:
-            meta_info.rss_sites = rss_sites
-            meta_info.search_sites = search_sites
-            meta_info.set_download_info(download_setting=download_setting)
-            media_list.append(meta_info)
+        for media_info in medias[:8]:
+            media_info.rss_sites = rss_sites
+            media_info.search_sites = search_sites
+            media_info.set_download_info(download_setting=download_setting)
+            media_list.append(media_info)
 
         pagination_mgr.set_media_cache(user_id, media_list, mtype)
 

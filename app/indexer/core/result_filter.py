@@ -190,13 +190,13 @@ class ResultFilter:
                 stats.index_rule_fail += 1
                 continue
 
-            meta_info = meta_info(title=torrent_name, subtitle=f"{labels} {description}")
-            if not meta_info.get_name():
+            mi = meta_info(title=torrent_name, subtitle=f"{labels} {description}")
+            if not mi.get_name():
                 log.info(f"【ResultFilter】{torrent_name} 无法识别到名称")
                 stats.index_match_fail += 1
                 continue
 
-            meta_info.set_torrent_info(
+            mi.set_torrent_info(
                 size=size,
                 imdbid=imdbid,
                 upload_volume_factor=uploadvolumefactor,
@@ -204,16 +204,16 @@ class ResultFilter:
                 labels=labels,
             )
 
-            if meta_info.type == MediaType.TV and filter_args.get("type") == MediaType.MOVIE:
+            if mi.type == MediaType.TV and filter_args.get("type") == MediaType.MOVIE:
                 log.info(
-                    f"【ResultFilter】{torrent_name} 是 {meta_info.type.value}，"
+                    f"【ResultFilter】{torrent_name} 是 {mi.type.value}，"
                     f"不匹配类型：{filter_args.get('type').value}"
                 )
                 stats.index_rule_fail += 1
                 continue
 
             match_flag, res_order, match_msg = self._check_full_filter(
-                meta_info=meta_info,
+                meta_info=mi,
                 filter_args=filter_args,
                 uploadvolumefactor=uploadvolumefactor,
                 downloadvolumefactor=downloadvolumefactor,
@@ -224,7 +224,7 @@ class ResultFilter:
                 continue
 
             if not match_media:
-                media_info = meta_info
+                media_info = mi
                 media_info.set_torrent_info(
                     site=indexer_name,
                     site_order=indexer_order,
@@ -246,14 +246,14 @@ class ResultFilter:
                     stats.index_rule_fail += 1
                 continue
 
-            if meta_info.imdb_id and match_media.imdb_id and str(meta_info.imdb_id) == str(match_media.imdb_id):
+            if mi.imdb_id and match_media.imdb_id and str(mi.imdb_id) == str(match_media.imdb_id):
                 candidates.append(
                     SearchCandidate(
                         item=item,
-                        meta_info=meta_info,
+                        meta_info=mi,
                         res_order=res_order,
                         skip_tmdb=True,
-                        media_info=self._media.merge_media_info(meta_info, match_media),
+                        media_info=self._media.merge_media_info(mi, match_media),
                         indexer_name=indexer_name,
                         indexer_order=indexer_order,
                         indexer_public=indexer_public,
@@ -261,15 +261,15 @@ class ResultFilter:
                 )
                 continue
 
-            if self.quick_name_match(meta_info, match_media):
+            if self.quick_name_match(mi, match_media):
                 log.debug(f"【ResultFilter】{torrent_name} 快速名称匹配成功，跳过TMDB查询")
                 candidates.append(
                     SearchCandidate(
                         item=item,
-                        meta_info=meta_info,
+                        meta_info=mi,
                         res_order=res_order,
                         skip_tmdb=True,
-                        media_info=self._media.merge_media_info(meta_info, match_media),
+                        media_info=self._media.merge_media_info(mi, match_media),
                         indexer_name=indexer_name,
                         indexer_order=indexer_order,
                         indexer_public=indexer_public,
@@ -280,7 +280,7 @@ class ResultFilter:
             candidates.append(
                 SearchCandidate(
                     item=item,
-                    meta_info=meta_info,
+                    meta_info=mi,
                     res_order=res_order,
                     skip_tmdb=False,
                     media_info=None,

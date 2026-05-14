@@ -61,14 +61,14 @@ class Scraper:
             if not file:
                 continue
             log.info(f"【Scraper】开始刮削媒体库文件：{file} ...")
-            meta_info = meta_info(os.path.basename(file))
-            tmdbid = self._extract_tmdbid(file, meta_info)
+            mi = meta_info(os.path.basename(file))
+            tmdbid = self._extract_tmdbid(file, mi)
             if tmdbid and not force_nfo:
                 log.info(f"【Scraper】读取到本地nfo文件的tmdbid：{tmdbid}")
-                meta_info.set_tmdb_info(
-                    self.media.get_tmdb_info(mtype=meta_info.type, tmdbid=tmdbid, append_to_response="all")
+                mi.set_tmdb_info(
+                    self.media.get_tmdb_info(mtype=mi.type, tmdbid=tmdbid, append_to_response="all")
                 )
-                media_info = meta_info
+                media_info = mi
             else:
                 medias = self.media.get_media_info_on_files(file_list=[file], append_to_response="all")
                 if not medias:

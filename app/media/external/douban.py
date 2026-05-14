@@ -194,31 +194,31 @@ class DouBan(metaclass=SingletonMeta):
             if item_obj.get("type_name") not in (MediaType.TV.value, MediaType.MOVIE.value):
                 continue
             item = item_obj.get("target")
-            meta_info = meta_info(title=item.get("title"))
-            meta_info.title = item.get("title")
+            mi = meta_info(title=item.get("title"))
+            mi.title = item.get("title")
             if item_obj.get("type_name") == MediaType.MOVIE.value:
-                meta_info.type = MediaType.MOVIE
+                mi.type = MediaType.MOVIE
             else:
-                meta_info.type = MediaType.TV
+                mi.type = MediaType.TV
             if season:
-                if meta_info.type != MediaType.TV:
+                if mi.type != MediaType.TV:
                     continue
-                if season != 1 and meta_info.begin_season != season:
+                if season != 1 and mi.begin_season != season:
                     continue
             if episode and str(episode).isdigit():
-                if meta_info.type != MediaType.TV:
+                if mi.type != MediaType.TV:
                     continue
-                meta_info.begin_episode = int(episode)
-                meta_info.title = f"{meta_info.title} 第{episode}集"
-            meta_info.year = item.get("year")
-            meta_info.tmdb_id = "DB:{}".format(item.get("id"))
-            meta_info.douban_id = item.get("id")
-            meta_info.overview = item.get("card_subtitle") or ""
-            meta_info.poster_path = item.get("cover_url")
+                mi.begin_episode = int(episode)
+                mi.title = f"{mi.title} 第{episode}集"
+            mi.year = item.get("year")
+            mi.tmdb_id = "DB:{}".format(item.get("id"))
+            mi.douban_id = item.get("id")
+            mi.overview = item.get("card_subtitle") or ""
+            mi.poster_path = item.get("cover_url")
             rating = item.get("rating", {}) or {}
-            meta_info.vote_average = rating.get("value")
-            if meta_info not in ret_medias:
-                ret_medias.append(meta_info)
+            mi.vote_average = rating.get("value")
+            if mi not in ret_medias:
+                ret_medias.append(mi)
 
         return ret_medias[(page - 1) * 20 : page * 20]
 

@@ -27,7 +27,7 @@ from app.domain.interfaces.transfer_repo import (
     ITransferUnknownRepository,
 )
 from app.helper import ProgressHelper, ThreadHelper
-from app.media import Category, MediaService, meta_info, Scraper
+from app.media import Category, MediaService, Scraper, meta_info
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
 from app.services.media_config_service import MediaConfigService
@@ -994,20 +994,20 @@ class FileTransferService:
                                 {"media_info": media_info, "path": dest_path, "filename": dest_filename},
                             )
                     else:
-                        meta_info = meta_info(title=source_filename)
-                        meta_info.title = transinfo.TITLE
-                        meta_info.category = transinfo.CATEGORY
-                        meta_info.year = transinfo.YEAR
+                        mi = meta_info(title=source_filename)
+                        mi.title = transinfo.TITLE
+                        mi.category = transinfo.CATEGORY
+                        mi.year = transinfo.YEAR
                         if transinfo.SEASON_EPISODE:
-                            meta_info.begin_season = int(str(transinfo.SEASON_EPISODE).replace("S", ""))
+                            mi.begin_season = int(str(transinfo.SEASON_EPISODE).replace("S", ""))
                         if MediaType.MOVIE.value == transinfo.TYPE:
-                            meta_info.type = MediaType.MOVIE
+                            mi.type = MediaType.MOVIE
                         else:
-                            meta_info.type = MediaType.TV
-                        dest_path = self.get_dest_path_by_info(dest=dest, meta_info=meta_info)
-                        if dest_path and dest_path.find(meta_info.title) != -1:
+                            mi.type = MediaType.TV
+                        dest_path = self.get_dest_path_by_info(dest=dest, meta_info=mi)
+                        if dest_path and dest_path.find(mi.title) != -1:
                             rm_parent_dir = False
-                            if not meta_info.get_season_list():
+                            if not mi.get_season_list():
                                 try:
                                     import shutil
 
@@ -1021,7 +1021,7 @@ class FileTransferService:
                                     from app.utils import ExceptionUtils
 
                                     ExceptionUtils.exception_traceback(e)
-                            elif not meta_info.get_episode_string():
+                            elif not mi.get_episode_string():
                                 try:
                                     import shutil
 
@@ -1041,7 +1041,7 @@ class FileTransferService:
                                     file_meta_info = meta_info(os.path.basename(dest_file))
                                     if file_meta_info.get_episode_list() and set(
                                         file_meta_info.get_episode_list()
-                                    ).issubset(set(meta_info.get_episode_list())):
+                                    ).issubset(set(mi.get_episode_list())):
                                         try:
                                             os.remove(dest_file)
                                             from app.plugin_framework.event_compat import EventManager
