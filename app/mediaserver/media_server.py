@@ -76,6 +76,8 @@ class MediaServer(metaclass=SingletonMeta):
         """
         当前使用的媒体库服务器
         """
+        if not self.server:
+            return None
         return self.server.get_type()
 
     def get_activity_log(self, limit):
@@ -224,6 +226,8 @@ class MediaServer(metaclass=SingletonMeta):
         """
         if not self.server:
             return
+        if not self.mediadb or not self.progress or not self.systemconfig:
+            return
         with lock:
             log.info("【MediaServer】开始同步媒体库数据...")
             self.progress.start(ProgressKey.MediaSync)
@@ -235,6 +239,8 @@ class MediaServer(metaclass=SingletonMeta):
 
         # 汇总统计
         medias_count = self.get_medias_count()
+        if not medias_count:
+            return
         total_media_count = medias_count.get("MovieCount") + medias_count.get("SeriesCount")
         total_count = 0
         movie_count = 0
@@ -286,6 +292,8 @@ class MediaServer(metaclass=SingletonMeta):
         :param episode: 集号
         :return: 媒体服务器中的ITEMID
         """
+        if not self.mediadb:
+            return None
         media = self.mediadb.query(server_type=self._server_type, title=title, year=year, tmdbid=tmdbid)
         if not media:
             return None
@@ -309,6 +317,8 @@ class MediaServer(metaclass=SingletonMeta):
         """
         获取当前媒体库同步状态
         """
+        if not self.mediadb:
+            return {}
         status = self.mediadb.get_statistics(server_type=self._server_type)
         if not status:
             return {}
@@ -337,6 +347,8 @@ class MediaServer(metaclass=SingletonMeta):
 
     def _process_webhook(self, event_info: dict, channel: MediaServerType):
         """异步处理 webhook（图片获取 + 消息发送）"""
+        if not self.message:
+            return
         try:
             if event_info.get("item_type") == "TV":
                 image_url = self.get_episode_image_by_id(

@@ -42,7 +42,8 @@ class Qbittorrent(_IDownloadClient):
         # 种子自动管理模式，根据下载路径设置为下载器设置分类
         self.init_torrent_management()
         # 设置未完成种子添加!qb后缀
-        self.qbc.app_set_preferences({"incomplete_files_ext": True})
+        if self.qbc:
+            self.qbc.app_set_preferences({"incomplete_files_ext": True})
 
     def init_config(self) -> None:
         if self._client_config:
@@ -154,6 +155,8 @@ class Qbittorrent(_IDownloadClient):
         """
         更新分类
         """
+        if not self.qbc:
+            return
         try:
             if is_edit:
                 self.qbc.torrent_categories.edit_category(name=name, save_path=save_path)
@@ -175,6 +178,8 @@ class Qbittorrent(_IDownloadClient):
         # 获取下载器中的分类信息，查询是否有匹配该目录的分类
         categories = self.__get_qb_category()
         for category_name, category_item in categories.items():
+            if not category_item:
+                continue
             catetory_path = category_item.get("savePath")
             if not catetory_path:
                 continue
@@ -239,6 +244,8 @@ class Qbittorrent(_IDownloadClient):
         :param tag: 标签内容
         :return: 是否成功移除
         """
+        if not self.qbc:
+            return False
         try:
             self.qbc.torrents_delete_tags(torrent_hashes=ids, tags=tag)
             return True
@@ -280,6 +287,8 @@ class Qbittorrent(_IDownloadClient):
         """
         设置强制作种
         """
+        if not self.qbc:
+            return
         try:
             self.qbc.torrents_set_force_start(enable=True, torrent_hashes=ids)
         except Exception as err:
@@ -369,7 +378,7 @@ class Qbittorrent(_IDownloadClient):
                             break
                     if not tacker_key_flag:
                         continue
-            if qb_state and torrent.status.name not in qb_state:
+            if qb_state and torrent.status and torrent.status.name not in qb_state:
                 continue
             if qb_category and torrent.category not in qb_category:
                 continue
@@ -650,6 +659,8 @@ class Qbittorrent(_IDownloadClient):
             return False
 
     def get_files(self, tid: str) -> Any:
+        if not self.qbc:
+            return None
         try:
             return self.qbc.torrents_files(torrent_hash=tid)
         except Exception as err:
@@ -660,6 +671,8 @@ class Qbittorrent(_IDownloadClient):
         """
         设置下载文件的状态，priority为0为不下载，priority为1为下载
         """
+        if not self.qbc:
+            return False
         if not kwargs.get("torrent_hash") or not kwargs.get("file_ids"):
             return False
         try:
@@ -778,6 +791,8 @@ class Qbittorrent(_IDownloadClient):
             return
         try:
             status = self.qbc.sync_maindata().get("server_state")
+            if not status:
+                return
             return status.get("free_space_on_disk")
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -827,7 +842,7 @@ class Qbittorrent(_IDownloadClient):
         # 上传量
         torrent_obj.uploaded = torrent.get("uploaded") or 0
         # 平均上传速度 Byte/s
-        torrent_obj.avg_upload_speed = properties.get("up_speed_avg")
+        torrent_obj.avg_upload_speed = properties.get("up_speed_avg") if properties else 0
         # 已未活动 秒
         torrent_obj.iatime = date_now - torrent.get("last_activity") if torrent.get("last_activity") else 0
         # 下载量
