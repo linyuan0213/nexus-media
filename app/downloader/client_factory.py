@@ -90,7 +90,7 @@ class DownloadClientFactory:
             only_nastool = downloader_conf.ONLY_NASTOOL
             match_path = downloader_conf.MATCH_PATH
             rmt_mode = downloader_conf.RMT_MODE
-            mode_enum = ModuleConf.RMT_MODES.get(rmt_mode) if rmt_mode else None
+            mode_enum = ModuleConf.RMT_MODES.get(str(rmt_mode)) if rmt_mode else None
             rmt_mode_name = mode_enum.value if mode_enum else ""
 
             if transfer:
@@ -105,7 +105,7 @@ class DownloadClientFactory:
                 else:
                     log.info(f"【Downloader】下载器：{name} 不进行监控：下载器未启用")
 
-            config = json.loads(downloader_conf.CONFIG)
+            config = json.loads(str(downloader_conf.CONFIG))
             dtype = downloader_conf.TYPE
             self._downloader_confs[str(did)] = {
                 "id": did,
@@ -118,7 +118,7 @@ class DownloadClientFactory:
                 "rmt_mode": rmt_mode,
                 "rmt_mode_name": rmt_mode_name,
                 "config": config,
-                "download_dir": json.loads(downloader_conf.DOWNLOAD_DIR),
+                "download_dir": json.loads(str(downloader_conf.DOWNLOAD_DIR)),
             }
 
         # 生成枚举
@@ -234,7 +234,7 @@ class DownloadClientFactory:
     def default_download_setting_id(self):
         """获取默认下载设置id"""
         default_download_setting_id = self._systemconfig.get(SystemConfigKey.DefaultDownloadSetting) or "-1"
-        if not self._download_settings.get(default_download_setting_id):
+        if not self._download_settings.get(str(default_download_setting_id)):
             default_download_setting_id = "-1"
         return default_download_setting_id
 

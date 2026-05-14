@@ -134,8 +134,8 @@ def aes_decrypt(data: str, key: str) -> str:
     iv = data[:16]
     encrypted = data[16:]
     # 使用AES-256-CBC解密
-    cipher = AES.new(key.encode("utf-8"), AES.MODE_CBC, iv)
-    result = cipher.decrypt(encrypted)
+    cipher = AES.new(key.encode("utf-8"), AES.MODE_CBC, bytes(iv))  # type: ignore[reportArgumentType]
+    result = cipher.decrypt(encrypted)  # type: ignore[reportArgumentType]
     # 去除填充
     padding = result[-1]
     if padding < 1 or padding > AES.block_size:

@@ -73,7 +73,7 @@ class AutoGenRssPlugin:
 
         if onlyonce:
             self.ctx.info("RSS自动生成服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ"))) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "UTC")) + timedelta(seconds=3)
             self.ctx.schedule_date("gen_rss_once", self._do_gen_rss, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 

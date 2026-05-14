@@ -283,9 +283,9 @@ class DoubanSyncPlugin:
                     mtype=mediainfo.type,
                     name=mediainfo.title,
                     year=mediainfo.year,
-                    channel=RssType.Auto,
+                    channel=RssType.Auto.value,
                     mediaid=f"DB:{mediainfo.douban_id}",
-                    in_from=SearchType.DB,
+                    in_from=SearchType.DB.value,
                 )
                 self.ctx.info(f"订阅返回 code={code}, msg={msg}")
                 if code == 0 or code == 9:
@@ -308,10 +308,9 @@ class DoubanSyncPlugin:
                 mtype=media_info.type,
                 name=media_info.get_name(),
                 year=media_info.year,
+                channel=RssType.Auto.value,
                 mediaid=f"DB:{media_info.douban_id}",
-                channel=RssType.Auto,
-                state=state,
-                in_from=SearchType.DB,
+                in_from=SearchType.DB.value,
             )
             self.ctx.info(f"订阅返回 result={result}")
             code, msg, _ = result
@@ -328,7 +327,7 @@ class DoubanSyncPlugin:
             self.ctx.error(f"_auto_subscribe_media 内部异常: {e}")
             self.ctx.error(traceback.format_exc())
 
-    def _get_history(self, douban_id: str = None) -> dict:
+    def _get_history(self, douban_id: str | None = None) -> dict:
         data = self._load_history()
         if douban_id:
             return data.get(str(douban_id))

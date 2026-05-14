@@ -207,7 +207,7 @@ class SiteService:
     # 资源列表
     # ------------------------------------------------------------------
     def list_site_resources(self, index_id: int, page: int, keyword: str) -> SiteResourcesResultDTO:
-        result = self._indexer_service.list_resources(index_id=index_id, page=page, keyword=keyword)
+        result = self._indexer_service.list_resources(index_id=str(index_id), page=page, keyword=keyword)
         return SiteResourcesResultDTO(success=result.success, data=result.data, msg=result.msg)
 
     def get_site_download_setting(self, site_name: str | None = None) -> Any:

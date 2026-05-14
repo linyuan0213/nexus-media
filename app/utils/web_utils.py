@@ -172,7 +172,7 @@ class WebUtils:
                 if mi.type != MediaType.MOVIE and tmp_info.type == MediaType.MOVIE:
                     continue
                 if tmp_info.begin_season:
-                    tmp_info.title = "{} 第{}季".format(tmp_info.title, cn2an.an2cn(mi.begin_season, mode="low"))
+                    tmp_info.title = "{} 第{}季".format(tmp_info.title, cn2an.an2cn(mi.begin_season or 0, mode="low"))
                 if tmp_info.begin_episode:
                     tmp_info.title = f"{tmp_info.title} 第{mi.begin_episode}集"
                 results.append(tmp_info)

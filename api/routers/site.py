@@ -209,7 +209,7 @@ def set_site_captcha_code(
     user: str = Depends(require_permission("site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
-    svc.set_captcha_code(code=req.code, value=req.value)
+    svc.set_captcha_code(code=req.code or "", value=req.value or "")
     return success()
 
 
@@ -219,7 +219,7 @@ def test_site(
     user: str = Depends(require_permission("site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
-    dto = svc.test_site(req.id)
+    dto = svc.test_site(req.id or "")
     return fail(code=dto.code, msg=dto.msg, time=dto.times)
 
 
@@ -239,7 +239,7 @@ def update_site_cookie_ua(
     user: str = Depends(require_permission("site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
-    svc.update_site_cookie_ua(siteid=req.site_id, cookie=req.site_cookie, ua=req.site_ua)
+    svc.update_site_cookie_ua(siteid=req.site_id or "", cookie=req.site_cookie or "", ua=req.site_ua or "")
     return success(data={"messages": "请求发送成功"})
 
 
@@ -262,7 +262,7 @@ def list_site_resources(
     user: str = Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
-    resources = svc.list_site_resources(index_id=req.id, page=req.page, keyword=req.keyword)
+    resources = svc.list_site_resources(index_id=int(req.id or 0), page=req.page or 1, keyword=req.keyword or "")
     if not resources.success:
         return fail(msg=resources.msg)
     return success(data=resources.data)

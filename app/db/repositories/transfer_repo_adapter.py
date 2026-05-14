@@ -3,6 +3,8 @@
 将旧版 TransferRepository 适配为新领域接口
 """
 
+from typing import TYPE_CHECKING
+
 from enum import Enum
 
 from app.db.models import TRANSFERHISTORY, TRANSFERUNKNOWN
@@ -12,6 +14,9 @@ from app.domain.entities.transfer import (
     TransferUnknownEntity,
 )
 from app.utils.types import RmtMode
+
+if TYPE_CHECKING:
+    from app.media.models import MediaInfo
 
 
 class TransferHistoryRepositoryAdapter:
@@ -23,7 +28,7 @@ class TransferHistoryRepositoryAdapter:
     def is_exists(self, source_path: str, source_filename: str, dest_path: str, dest_filename: str) -> bool:
         return self._repo.is_transfer_history_exists(source_path, source_filename, dest_path, dest_filename)
 
-    def insert(self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: object) -> None:
+    def insert(self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: "MediaInfo") -> None:
         self._repo.insert_transfer_history(in_from, rmt_mode, in_path, out_path, dest, media_info)
 
     def get_page(self, search: str | None, page: int, rownum: int) -> tuple[int, list[TransferHistoryEntity]]:
@@ -114,7 +119,7 @@ class TransferHistoryRepositoryAdapter:
     def insert_transfer_unknown(self, path: str, dest: str, rmt_mode: RmtMode) -> None:
         self._repo.insert_transfer_unknown(path, dest, rmt_mode)
 
-    def insert_transfer_history(self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: object) -> None:
+    def insert_transfer_history(self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: "MediaInfo") -> None:
         self._repo.insert_transfer_history(in_from, rmt_mode, in_path, out_path, dest, media_info)
 
 
@@ -124,7 +129,7 @@ class TransferUnknownRepositoryAdapter:
     def __init__(self, repo: TransferRepository | None = None):
         self._repo = repo or TransferRepository()
 
-    def insert(self, path: str, dest: str, mode: str) -> None:
+    def insert(self, path: str, dest: str, mode: RmtMode) -> None:
         self._repo.insert_transfer_unknown(path, dest, mode)
 
     def get_all(self) -> list[TransferUnknownEntity]:

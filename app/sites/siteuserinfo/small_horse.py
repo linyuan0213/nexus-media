@@ -41,11 +41,11 @@ def parse(ins: ConfigHtmlUserInfo) -> None:
             if li[4].xpath("span//text()"):
                 ins.ratio = StringUtils.str_float(str(li[4].xpath("span//text()")[0]).replace("∞", "0"))
             else:
-                ins.ratio = StringUtils.str_float(str(li[5].xpath("text()")[0]).split(":")[1])
+                ins.ratio = StringUtils.str_float(re.split(r":", str(li[5].xpath("text()")[0]))[1])
             ins.bonus = StringUtils.str_float(str(li[5].xpath("text()")[0]).split(":")[1])
             ins.user_level = str(tmps[3].xpath("li")[0].xpath("text()")[0]).split(":")[1].strip()
             ins.leeching = StringUtils.str_int(
-                (tmps[4].xpath("li")[6].xpath("text()")[0]).split(":")[1].replace("[", "")
+                (tmps[4].xpath("li")[6].xpath("text()")[0]).split(":")[1].replace("[", "")  # type: ignore[reportArgumentType]
             )
         except Exception:
             pass

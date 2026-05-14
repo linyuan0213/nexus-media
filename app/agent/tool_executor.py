@@ -294,10 +294,10 @@ class ToolExecutor:
         resources: list,
         min_seeders: int = 0,
         max_size_gb: float = 0,
-        sites: list = None,
-        exclude_sites: list = None,
+        sites: list | None = None,
+        exclude_sites: list | None = None,
         sort_by: str = "seeders",
-        preferred_qualities: list = None,
+        preferred_qualities: list | None = None,
         **_,
     ) -> ToolResult:
         filtered = resources.copy()
@@ -444,6 +444,8 @@ class ToolExecutor:
         mediaid = tmdbid or media_info.tmdb_id
         if mediaid:
             mediaid = str(mediaid)
+        else:
+            mediaid = None
 
         code, msg, media_info = Subscribe().add_rss_subscribe(
             mtype=media_info.type,
@@ -451,7 +453,7 @@ class ToolExecutor:
             year=media_info.year,
             season=season or media_info.begin_season,
             mediaid=mediaid,
-            channel=RssType.Auto,
+            channel=str(RssType.Auto.value),
         )
 
         if code == 0:

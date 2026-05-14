@@ -44,6 +44,7 @@ def _load_module(module_name, rel_path):
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     file_path = os.path.join(base_dir, rel_path)
     spec = importlib.util.spec_from_file_location(module_name, file_path)
+    assert spec is not None
     mod = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = mod
     spec.loader.exec_module(mod)
@@ -63,6 +64,7 @@ class TestSingletonMeta:
 
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         spec = importlib.util.spec_from_file_location("config_real_singleton", os.path.join(base_dir, "config.py"))
+        assert spec is not None
         config_mod = importlib.util.module_from_spec(spec)
         sys.path.insert(0, base_dir)
         spec.loader.exec_module(config_mod)
@@ -82,6 +84,7 @@ class TestSingletonMeta:
 
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         spec = importlib.util.spec_from_file_location("config_real", os.path.join(base_dir, "config.py"))
+        assert spec is not None
         config_mod = importlib.util.module_from_spec(spec)
         # 让 config.py 中的 imports 能正常工作
         sys.path.insert(0, base_dir)

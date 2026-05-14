@@ -99,7 +99,7 @@ class Indexer(metaclass=SingletonMeta):
     def list_resources(self, index_id, page=0, keyword=None):
         return BuiltinIndexer().list(index_id=index_id, page=page, keyword=keyword)
 
-    def search_by_keyword(self, key_word, filter_args: dict, match_media=None, in_from: SearchType = None):
+    def search_by_keyword(self, key_word, filter_args: dict, match_media=None, in_from: SearchType | None = None):
         """
         根据关键字调用索引器搜索
 

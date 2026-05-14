@@ -53,7 +53,7 @@ def test_rezero_full_scenario():
     # 3. EpisodeMapper 映射
     print("\n【Step 3: EpisodeMapper 自动映射】")
     mapper = EpisodeMapper(lookup)
-    mapped = mapper.map(result.tmdb_id, parsed.season, parsed.episode)
+    mapped = mapper.map(int(result.tmdb_id) if isinstance(result.tmdb_id, str) else result.tmdb_id, parsed.season, parsed.episode)
 
     assert mapped is not None, "EpisodeMapper 应返回映射结果"
     target_season, target_episode = mapped

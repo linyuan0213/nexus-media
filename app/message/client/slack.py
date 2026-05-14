@@ -44,7 +44,7 @@ class Slack(_IMessageClient):
         if not self._bot_token:
             return
         try:
-            slack_app = App(token=self._bot_token)
+            slack_app = App(token=self._bot_token if isinstance(self._bot_token, str) else None)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return
@@ -52,30 +52,30 @@ class Slack(_IMessageClient):
 
         @slack_app.event("message")
         def slack_message(message):
-            local_res = requests.post(self._ds_url, json=message, timeout=10)
+            local_res = requests.post(self._ds_url or "", json=message, timeout=10)
             log.debug(f"【Slack】message processed: {local_res.text}")
 
         @slack_app.action(re.compile(r"actionId-\d+"))
         def slack_action(ack, body):
             ack()
-            local_res = requests.post(self._ds_url, json=body, timeout=60)
+            local_res = requests.post(self._ds_url or "", json=body, timeout=60)
             log.debug(f"【Slack】action processed: {local_res.text}")
 
         @slack_app.event("app_mention")
         def slack_mention(say, body):
             say(f"收到，请稍等... <@{body.get('event', {}).get('user')}>")
-            local_res = requests.post(self._ds_url, json=body, timeout=10)
+            local_res = requests.post(self._ds_url or "", json=body, timeout=10)
             log.debug(f"【Slack】mention processed: {local_res.text}")
 
         @slack_app.shortcut(re.compile(r"/*"))
         def slack_shortcut(ack, body):
             ack()
-            local_res = requests.post(self._ds_url, json=body, timeout=10)
+            local_res = requests.post(self._ds_url or "", json=body, timeout=10)
             log.debug(f"【Slack】shortcut processed: {local_res.text}")
 
         if self._interactive and self._app_token:
             try:
-                self._service = SocketModeHandler(slack_app, self._app_token)
+                self._service = SocketModeHandler(slack_app, self._app_token if isinstance(self._app_token, str) else None)
                 self._service.connect()
                 log.info("Slack消息接收服务启动")
             except Exception as err:

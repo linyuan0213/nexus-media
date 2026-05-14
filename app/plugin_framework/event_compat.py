@@ -35,7 +35,7 @@ class EventManager(metaclass=SingletonMeta):
         except KeyError:
             pass
 
-    def send_event(self, etype: EventType, data: dict = None):
+    def send_event(self, etype: EventType, data: dict | None = None):
         if etype not in EventType:
             return
         event = Event(etype.value)

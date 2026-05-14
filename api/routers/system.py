@@ -432,7 +432,7 @@ def get_mediaservers(
     server_dict = {}
     for item in servers:
         try:
-            cfg = json.loads(item.CONFIG) if item.CONFIG else {}
+            cfg = json.loads(str(item.CONFIG)) if item.CONFIG else {}
         except json.JSONDecodeError:
             cfg = {}
         server_dict[item.NAME] = {

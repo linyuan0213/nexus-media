@@ -52,6 +52,7 @@ def _load_get_nt_image_url():
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app", "mediaserver", "client", "_base.py"
     )
     spec = importlib.util.spec_from_file_location("_base_for_test", base_path)
+    assert spec is not None
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod._IMediaClient.get_nt_image_url

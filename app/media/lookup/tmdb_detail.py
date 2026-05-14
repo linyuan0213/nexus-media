@@ -11,7 +11,7 @@ class TmdbDetail:
     def __init__(self, client: TmdbClient):
         self.client = client
 
-    def get_detail(self, tmdbid, mtype: MediaType, language: str = None, append_to_response=None):
+    def get_detail(self, tmdbid, mtype: MediaType, language: str | None = None, append_to_response=None):
         if not mtype:
             mtype = MediaType.UNKNOWN
         if language:
@@ -53,7 +53,7 @@ class TmdbDetail:
             return {}
         try:
             log.info(f"【Meta】正在查询TMDB电影：{tmdbid} ...")
-            info = self.client.movie.details(tmdbid, append_to_response)
+            info = self.client.movie.details(tmdbid, append_to_response or "")
             if info:
                 log.info(f"【Meta】{tmdbid} 查询结果：{info.get('title')}")
             return info or {}
@@ -66,7 +66,7 @@ class TmdbDetail:
             return {}
         try:
             log.info(f"【Meta】正在查询TMDB电视剧：{tmdbid} ...")
-            info = self.client.tv.details(tmdbid, append_to_response)
+            info = self.client.tv.details(tmdbid, append_to_response or "")
             if info:
                 log.info(f"【Meta】{tmdbid} 查询结果：{info.get('name')}")
             return info or {}

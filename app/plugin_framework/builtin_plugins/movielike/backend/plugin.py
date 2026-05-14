@@ -90,8 +90,8 @@ class MovieLikePlugin:
 
         movie_name = os.path.basename(movie_dir)
         movie_path = self._filetransfer.get_best_target_path(mtype=MediaType.MOVIE, in_path=movie_dir)
-        org_path = os.path.join(movie_path, movie_type, movie_name)
-        new_path = os.path.join(movie_path, dir_name, movie_name)
+        org_path = os.path.join(movie_path or "", movie_type, movie_name)
+        new_path = os.path.join(movie_path or "", dir_name, movie_name)
 
         if os.path.exists(org_path):
             self.ctx.info(f"开始转移文件 {org_path} 到 {new_path} ...")

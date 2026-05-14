@@ -13,7 +13,7 @@ class ImageUtils:
         # 获取所有像素颜色值
         pixels = img.getdata()
         # 统计每种颜色在像素中出现的频率
-        pixel_count = Counter(pixels)
+        pixel_count = Counter(pixels)  # type: ignore[reportArgumentType]
         # 找到出现频率最高的颜色，作为主题色
         dominant_color = pixel_count.most_common(1)[0][0]
         # 将主题色转换为16进制表示

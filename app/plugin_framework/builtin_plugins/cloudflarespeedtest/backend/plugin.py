@@ -63,7 +63,7 @@ class CloudflareSpeedTestPlugin:
 
         if onlyonce:
             self.ctx.info("Cloudflare CDN优选服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ"))) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "UTC")) + timedelta(seconds=3)
             self.ctx.schedule_date("speedtest_once", self._do_speedtest, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 

@@ -290,19 +290,19 @@ class DoubanWeb(metaclass=SingletonMeta):
         """
         想看
         """
-        return list(filter(lambda x: x.get("type") == "wish", self.interests(userid)))
+        return list(filter(lambda x: x.get("type") == "wish", self.interests(userid) or []))
 
     def do_in_interests(self, userid):
         """
         在看
         """
-        return list(filter(lambda x: x.get("type") == "do", self.interests(userid)))
+        return list(filter(lambda x: x.get("type") == "do", self.interests(userid) or []))
 
     def collect_in_interests(self, userid):
         """
         看过
         """
-        return list(filter(lambda x: x.get("type") == "collect", self.interests(userid)))
+        return list(filter(lambda x: x.get("type") == "collect", self.interests(userid) or []))
 
     def search(self, cookie, keyword):
         """

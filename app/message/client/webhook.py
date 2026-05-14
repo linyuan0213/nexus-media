@@ -166,11 +166,11 @@ class Webhook(_IMessageClient):
         """
         # GET 请求不发送 body
         if json_data is None:
-            response = requests.request(self._method, self._url, params=query_params, headers=self.header)
+            response = requests.request(self._method or "GET", self._url or "", params=query_params, headers=self.header)
         else:
             # POST/PUT 等请求发送 JSON body
             response = requests.request(
-                self._method, self._url, params=query_params, data=json_data, headers=self.header
+                self._method or "POST", self._url or "", params=query_params, data=json_data, headers=self.header
             )
         if not response:
             return False, "未获取到返回信息"

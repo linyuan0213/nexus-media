@@ -59,7 +59,7 @@ class LibraryRefreshPlugin:
         else:
             self._refresh_library(event_data)
 
-    def _refresh_library(self, event_data: dict = None):
+    def _refresh_library(self, event_data: dict | None = None):
         if self._mediaserver:
             mediaserver_type_obj = self._mediaserver.get_type()
             mediaserver_type = mediaserver_type_obj.value if mediaserver_type_obj else ""

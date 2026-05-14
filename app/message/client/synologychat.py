@@ -104,7 +104,7 @@ class SynologyChat(_IMessageClient):
                 if not user_ids:
                     return False, "机器人没有对任何用户可见"
             for uid in user_ids:
-                payload_data["user_ids"] = [uid]
+                payload_data["user_ids"] = str(uid)
                 error_flag, error_msg = self.__send_request(payload_data)
                 if not error_flag:
                     return error_flag, error_msg

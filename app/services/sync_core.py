@@ -151,7 +151,7 @@ class SyncCore:
                     observer = Observer(timeout=10)
                 with _observers_lock:
                     self._observer.append(observer)
-                observer.schedule(FileMonitorHandler(mon_path, self), path=mon_path, recursive=True)
+                observer.schedule(FileMonitorHandler(mon_path, self), path=mon_path or "", recursive=True)
                 observer.daemon = True
                 observer.start()
                 log.info(f"{mon_path} 的监控服务启动")
@@ -201,7 +201,7 @@ class SyncCore:
                 target_path = sync_path_conf.get("to")
                 unknown_path = sync_path_conf.get("unknown")
                 if PathUtils.is_path_in_path(mon_path, event_path):
-                    if os.path.normpath(mon_path) == os.path.normpath(from_dir):
+                    if os.path.normpath(mon_path or "") == os.path.normpath(from_dir):
                         is_root_path = True
                     sync_id = sid
                 if PathUtils.is_path_in_path(target_path, event_path):
@@ -225,7 +225,7 @@ class SyncCore:
             target_path = sync_path_conf.get("to")
             unknown_path = sync_path_conf.get("unknown")
             rename = sync_path_conf.get("rename")
-            sync_mode = ModuleConf.RMT_MODES.get(sync_path_conf.get("syncmod"))
+            sync_mode = ModuleConf.RMT_MODES.get(sync_path_conf.get("syncmod") or "")
 
             if not rename:
                 self.__link(event_path, mon_path, target_path, sync_mode)
@@ -289,7 +289,7 @@ class SyncCore:
                     unknown_path = target_info.get("unknown")
                     sync_mode = target_info.get("syncmod")
                     is_root_path = any(
-                        os.path.normpath(self.get_sync_path_conf(sid).get("from")) == os.path.normpath(src_path)
+                        os.path.normpath(self.get_sync_path_conf(sid).get("from") or "") == os.path.normpath(src_path)
                         for sid in self._monitor_sync_path_ids
                     )
                     ret, ret_msg = self._filetransfer.transfer_media(
@@ -318,7 +318,7 @@ class SyncCore:
             target_path = sync_path_conf.get("to")
             unknown_path = sync_path_conf.get("unknown")
             rename = sync_path_conf.get("rename")
-            sync_mode = ModuleConf.RMT_MODES.get(sync_path_conf.get("syncmod"))
+            sync_mode = ModuleConf.RMT_MODES.get(sync_path_conf.get("syncmod") or "")
             if not rename:
                 for link_file in PathUtils.get_dir_files(mon_path):
                     self.__link(link_file, mon_path, target_path, sync_mode)
@@ -357,12 +357,12 @@ class SyncCore:
         if source:
             check_monpath = source
         elif sid:
-            check_monpath = self.get_sync_path_conf(sid).get("from")
+            check_monpath = self.get_sync_path_conf(sid).get("from") or ""
         else:
             return
         check_monpath = os.path.normpath(check_monpath)
         for sid, config in self._sync_path_confs.items():
-            monpath = os.path.normpath(config.get("from"))
+            monpath = os.path.normpath(config.get("from") or "")
             if (
                 PathUtils.is_path_in_path(monpath, check_monpath) or PathUtils.is_path_in_path(check_monpath, monpath)
             ) and config.get("enabled"):

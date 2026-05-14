@@ -169,7 +169,7 @@ def rss_article_test(
     title = req.title
     if not taskid or not title:
         return fail(code=-1)
-    dto = svc.test_article(taskid, title)
+    dto = svc.test_article(int(taskid) if taskid else 0, title)
     if dto.name == "无法识别":
         return success(data={"name": "无法识别"})
     return success(data=dto.media_dict)

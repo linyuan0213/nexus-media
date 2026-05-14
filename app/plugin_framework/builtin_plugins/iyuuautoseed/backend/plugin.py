@@ -1,8 +1,8 @@
-
 """
 IYUUAutoSeed Plugin v2
 基于IYUU官方Api实现自动辅种
 """
+
 import json
 import os
 from datetime import datetime, timedelta
@@ -90,7 +90,7 @@ class IYUUAutoSeedPlugin:
 
         if onlyonce:
             self.ctx.info("辅种服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ"))) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "UTC")) + timedelta(seconds=3)
             self.ctx.schedule_date("seed_once", self._do_seed, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -177,13 +177,11 @@ class IYUUAutoSeedPlugin:
             else:
                 self.ctx.info("没有需要辅种的种子")
 
-        self._save_cache(
-            {
-                "error_caches": error_caches,
-                "success_caches": success_caches,
-                "permanent_error_caches": permanent_error_caches,
-            }
-        )
+        self._save_cache({
+            "error_caches": error_caches,
+            "success_caches": success_caches,
+            "permanent_error_caches": permanent_error_caches,
+        })
 
         if notify and (self.success or self.fail):
             self.ctx.notify(
@@ -224,7 +222,7 @@ class IYUUAutoSeedPlugin:
 
     @staticmethod
     def _can_seeding(torrent: Torrent):
-        return torrent.progress == 100 and torrent.state in ["pausedUP", "stoppedUP", "checkingUP", "queuedUP"]
+        return torrent.progress == 100 and torrent.status in ["pausedUP", "stoppedUP", "checkingUP", "queuedUP"]
 
     def _seed_torrents(self, hash_strs, downloader_id, sites_cfg, error_caches, success_caches):
         if not hash_strs:

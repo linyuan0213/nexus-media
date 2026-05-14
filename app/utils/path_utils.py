@@ -97,7 +97,7 @@ class PathUtils:
         return ret_list
 
     @staticmethod
-    def get_dir_level1_files(in_path, exts=""):
+    def get_dir_level1_files(in_path, exts: str | list = ""):
         """
         查询目录下的文件（只查询一级）
         """

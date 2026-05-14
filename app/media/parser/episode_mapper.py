@@ -39,7 +39,7 @@ class EpisodeMapper:
     def __init__(self, tmdb_lookup: TmdbLookup | None = None):
         self._tmdb = tmdb_lookup
         # 缓存: tmdb_id -> [(block_season, start_ep, end_ep), ...]
-        self._blocks: dict[int, list[tuple[int, int, int]]] = {}
+        self._blocks: dict[int | str, list[tuple[int, int, int]]] = {}
 
     def _fetch_blocks(self, tmdb_id: int) -> list[tuple[int, int, int]] | None:
         """从 TMDB 获取 episodes，按 air_date 推断季分界"""
@@ -227,7 +227,7 @@ class EpisodeMapper:
         # 批量计算映射结果
         results = []
         for item in items:
-            result = self.map_auto(item.get("tmdb_id"), item.get("season"), item.get("episode"))
+            result = self.map_auto(int(item.get("tmdb_id") or 0), item.get("season"), item.get("episode"))
             results.append(result)
         return results
 

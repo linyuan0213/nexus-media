@@ -45,7 +45,7 @@ class SiteSubtitle:
         engine = SiteEngine.get_instance()
         site_def = engine.get_by_url(media_info.page_url)
         if site_def and site_def.subtitle:
-            engine.resolve_subtitle(media_info.page_url, None, download_dir)
+            engine.resolve_subtitle(media_info.page_url, "", download_dir)
             return
 
         # 读取网站代码
@@ -86,7 +86,7 @@ class SiteSubtitle:
                         continue
                     if file_name.lower().endswith(".zip"):
                         # ZIP包
-                        zip_file = os.path.join(self._save_tmp_path, file_name)
+                        zip_file = os.path.join(self._save_tmp_path or "", file_name)
                         # 解压路径
                         zip_path = os.path.splitext(zip_file)[0]
                         with open(zip_file, "wb") as f:
@@ -107,7 +107,7 @@ class SiteSubtitle:
                         except Exception as err:
                             ExceptionUtils.exception_traceback(err)
                     else:
-                        sub_file = os.path.join(self._save_tmp_path, file_name)
+                        sub_file = os.path.join(self._save_tmp_path or "", file_name)
                         # 保存
                         with open(sub_file, "wb") as f:
                             f.write(ret.content)
@@ -241,7 +241,7 @@ class SiteSubtitle:
                 file_name = f"{subtitle_name}.{subtitle_ext}"
                 # 清理文件名中的非法字符
                 file_name = re.sub(r'[<>:"/\\|?*]', "_", file_name)
-                sub_file = os.path.join(self._save_tmp_path, file_name)
+                sub_file = os.path.join(self._save_tmp_path or "", file_name)
 
                 with open(sub_file, "wb") as f:
                     f.write(download_res.content)

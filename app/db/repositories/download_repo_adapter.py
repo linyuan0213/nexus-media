@@ -21,7 +21,7 @@ class DownloadHistoryRepositoryAdapter:
         return self._repo.is_exists_download_history(enclosure, downloader, download_id)
 
     def is_exists_by_tmdb(self, tmdb_id: str, season_episode: str) -> bool:
-        return self._repo.is_exists_download_history_by_tmdb(tmdb_id, season_episode)
+        return self._repo.is_exists_download_history_by_tmdb(int(tmdb_id), season_episode)
 
     def insert(self, media_info, downloader: str, download_id: str, save_dir: str) -> None:
         self._repo.insert_download_history(media_info, downloader, download_id, save_dir)
@@ -69,7 +69,7 @@ class DownloadHistoryRepositoryAdapter:
         return self._repo.get_download_history_by_downloader(downloader, download_id)
 
     def is_exists_download_history_by_tmdb(self, tmdb_id, season_episode):
-        return self._repo.is_exists_download_history_by_tmdb(tmdb_id, season_episode)
+        return self._repo.is_exists_download_history_by_tmdb(int(tmdb_id), season_episode)
 
     # 兼容旧Repository方法名
     def get_download_history_by_path(self, path: str):
@@ -158,7 +158,7 @@ class IndexerStatisticsRepositoryAdapter:
         self._repo = repo or DownloadRepository()
 
     def insert(self, indexer: str, itype: str, seconds: float, result: str) -> None:
-        self._repo.insert_indexer_statistics(indexer, itype, seconds, result)
+        self._repo.insert_indexer_statistics(indexer, itype, int(seconds), result)
 
     def delete_all(self) -> None:
         self._repo.delete_all_indexer_statistics()

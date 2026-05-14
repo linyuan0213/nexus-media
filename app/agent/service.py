@@ -93,7 +93,7 @@ class AgentService:
         return self._provider.chat(list(messages), system_prompt, temperature)
 
     def structured_chat(
-        self, messages: list[dict], system_prompt: str = "", response_model: type = None, temperature: float = 0.3
+        self, messages: list[dict], system_prompt: str = "", response_model: type | None = None, temperature: float = 0.3
     ) -> Any:
         """结构化输出对话（返回 pydantic 模型实例）"""
         if not self.ready:

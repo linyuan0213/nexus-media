@@ -44,12 +44,12 @@ class SiteRepositoryAdapter(ISiteRepository):
         """插入站点"""
         self._repo.insert_config_site(
             name=entity.name,
-            site_pri=entity.pri,
-            rssurl=entity.rss_url,
-            signurl=entity.sign_url,
-            cookie=entity.cookie,
-            note=json.dumps(entity.note) if entity.note else None,
-            rss_uses=entity.rss_uses,
+            site_pri=str(entity.pri),
+            rssurl=entity.rss_url or "",
+            signurl=entity.sign_url or "",
+            cookie=entity.cookie or "",
+            note=json.dumps(entity.note) if entity.note else "",
+            rss_uses=entity.rss_uses or "",
         )
 
     def update(self, entity: SiteEntity) -> None:
@@ -59,12 +59,12 @@ class SiteRepositoryAdapter(ISiteRepository):
         self._repo.update_config_site(
             tid=entity.id,
             name=entity.name,
-            site_pri=entity.pri,
-            rssurl=entity.rss_url,
-            signurl=entity.sign_url,
-            cookie=entity.cookie,
-            note=json.dumps(entity.note) if entity.note else None,
-            rss_uses=entity.rss_uses,
+            site_pri=str(entity.pri),
+            rssurl=entity.rss_url or "",
+            signurl=entity.sign_url or "",
+            cookie=entity.cookie or "",
+            note=json.dumps(entity.note) if entity.note else "",
+            rss_uses=entity.rss_uses or "",
         )
 
     def delete(self, site_id: int) -> None:

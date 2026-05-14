@@ -71,8 +71,8 @@ class SiteUserInfo(metaclass=SingletonMeta):
                 site_cookie,
                 html_text=None,
                 site_headers=site_headers,
-                ua=ua,
-                emulate=emulate,
+                ua=ua or "",
+                emulate=emulate or False,
                 proxy=proxy,
                 session=session,
             ) or _log_error(site_name)
@@ -107,8 +107,8 @@ class SiteUserInfo(metaclass=SingletonMeta):
             site_cookie,
             html_text=html_text,
             site_headers=site_headers,
-            ua=ua,
-            emulate=emulate,
+            ua=ua or "",
+            emulate=emulate or False,
             proxy=proxy,
             session=session,
         ) or _log_error(site_name)
@@ -362,18 +362,18 @@ class SiteUserInfo(metaclass=SingletonMeta):
         :param days: 最大数据量
         :return:
         """
-        site_activities = [["time", "upload", "download", "bonus", "seeding", "seeding_size"]]
+        site_activities: list = [["time", "upload", "download", "bonus", "seeding", "seeding_size"]]
         sql_site_activities = self.site_repo.get_site_statistics_history(site=site, days=days)
         for sql_site_activity in sql_site_activities:
-            timestamp = datetime.strptime(sql_site_activity.DATE, "%Y-%m-%d").timestamp() * 1000
+            timestamp = datetime.strptime(str(sql_site_activity.DATE), "%Y-%m-%d").timestamp() * 1000
             site_activities.append(
                 [
                     timestamp,
-                    sql_site_activity.UPLOAD,
-                    sql_site_activity.DOWNLOAD,
-                    sql_site_activity.BONUS,
-                    sql_site_activity.SEEDING,
-                    sql_site_activity.SEEDING_SIZE,
+                    int(str(sql_site_activity.UPLOAD or 0)),
+                    int(str(sql_site_activity.DOWNLOAD or 0)),
+                    float(str(sql_site_activity.BONUS or 0)),
+                    int(str(sql_site_activity.SEEDING or 0)),
+                    int(str(sql_site_activity.SEEDING_SIZE or 0)),
                 ]
             )
 

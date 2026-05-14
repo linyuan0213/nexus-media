@@ -12,16 +12,19 @@ import subprocess
 import tempfile
 import time
 from pathlib import Path
+from typing import cast
 
+import psutil
 from sqlalchemy import create_engine
 
 import log
+from app.core.module_config import ModuleConf
 from app.core.system_config import SystemConfig
 from app.db.database_factory import DatabaseFactory
 from app.db.migrate import export_database, import_database, import_from_file
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
-from app.helper import SubmoduleHelper
+from app.helper import ProgressHelper, SubmoduleHelper
 from app.helper.thread_helper import ThreadHelper
 from app.infrastructure.cache_system import TokenCache
 from app.mediaserver import MediaServer
@@ -53,9 +56,10 @@ from app.sites.site_userinfo import SiteUserInfo
 from app.utils import ExceptionUtils, RequestUtils
 from app.utils.config_tools import get_proxies
 from app.utils.temp_manager import temp_manager
-from app.utils.types import EventType, MediaType, MovieTypes, SearchType
+from app.utils.types import EventType, MediaType, MovieTypes, ProgressKey, SearchType
 from app.utils.web_utils import WebUtils
 from config import Config
+from version import APP_VERSION
 
 
 class MessageClientService:
@@ -263,9 +267,9 @@ class MediaServerConfigService:
         enabled = 1 if config.get("enabled") else 0
         is_default = 1 if config.get("is_default") else 0
         item = self._config_repo.get_media_server_by_name(name)
-        sid = item.ID if item else None
+        sid = cast(int, item.ID) if item else None
         self._config_repo.update_media_server(
-            sid=sid, name=name, enabled=enabled, config=json.dumps(config), is_default=is_default
+            sid=int(sid) if sid else None, name=name, enabled=enabled, config=json.dumps(config), is_default=is_default
         )
         # 如果有设置默认，需要清理其他默认并同步 ENABLED
         if is_default:
@@ -440,12 +444,8 @@ class SystemInfoService:
     @staticmethod
     def get_system_info() -> SystemInfoDTO:
         """获取系统基本信息"""
-        import psutil
-
-        from version import APP_VERSION
-
+        process = psutil.Process()
         try:
-            process = psutil.Process()
             start_time = datetime.datetime.fromtimestamp(process.create_time())
             uptime_seconds = (datetime.datetime.now() - start_time).total_seconds()
             uptime = SystemInfoService._format_uptime(uptime_seconds)
@@ -614,7 +614,9 @@ class MessageCommandHandler:
         command = self._commands.get(msg)
         if command:
             ThreadHelper().start_thread(command.get("func"), ())
-            Message().send_channel_msg(channel=in_from, title="正在运行 {} ...".format(command.get("desc")), user_id=user_id)
+            Message().send_channel_msg(
+                channel=in_from, title="正在运行 {} ...".format(command.get("desc")), user_id=user_id or ""
+            )
             return
 
         # 插件命令
@@ -627,7 +629,7 @@ class MessageCommandHandler:
             if func:
                 ThreadHelper().start_thread(func, (msg, in_from, user_id, user_name))
             Message().send_channel_msg(
-                channel=in_from, title="正在运行 {} ...".format(plugin_cmd.get("desc")), user_id=user_id
+                channel=in_from, title="正在运行 {} ...".format(plugin_cmd.get("desc")), user_id=user_id or ""
             )
             return
 
@@ -653,8 +655,10 @@ class MessageCommandHandler:
 
         item_ids = []
         records = FileTransfer().get_transfer_unknown_paths()
+        if not records:
+            return
         for rec in records:
-            if not rec.PATH:
+            if not cast(str, rec.PATH):
                 continue
             item_ids.append(rec.ID)
         if len(item_ids) > 0:
@@ -666,8 +670,6 @@ def get_commands():
 
 
 def get_rmt_modes():
-    from app.core import ModuleConf
-
     rmt_modes = ModuleConf.RMT_MODES
     return [{"value": value, "name": name.value} for value, name in rmt_modes.items()]
 
@@ -764,12 +766,10 @@ class ProgressService:
     """
 
     def __init__(self, progress_helper=None):
-        from app.helper import ProgressHelper
-
         self._progress = progress_helper or ProgressHelper()
 
     def get_progress(self, ptype: str) -> ProgressResultDTO:
-        detail = self._progress.get_process(ptype)
+        detail = self._progress.get_process(ProgressKey(ptype))
         if detail:
             return ProgressResultDTO(value=detail.get("value", 0), text=detail.get("text", ""), exists=True)
         return ProgressResultDTO(exists=False, text="正在处理...")

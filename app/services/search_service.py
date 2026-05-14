@@ -179,13 +179,11 @@ class SearchResultProcessor:
         """按标题、资源顺序、站点顺序、做种数排序"""
         return sorted(
             media_list,
-            key=lambda x: (
-                "{}{}{}{}".format(
-                    str(x.title).ljust(100, " "),
-                    str(x.res_order).rjust(3, "0"),
-                    str(x.site_order).rjust(3, "0"),
-                    str(x.seeders).rjust(10, "0"),
-                )
+            key=lambda x: "{}{}{}{}".format(
+                str(x.title).ljust(100, " "),
+                str(x.res_order).rjust(3, "0"),
+                str(x.site_order).rjust(3, "0"),
+                str(x.seeders).rjust(10, "0"),
             ),
             reverse=True,
         )
@@ -257,7 +255,7 @@ class Searcher(metaclass=SingletonMeta):
         """兼容旧代码访问 download_repo 属性"""
         return self._download_repo
 
-    def search_medias(self, key_word, filter_args: dict, match_media=None, in_from: SearchType = None):
+    def search_medias(self, key_word, filter_args: dict, match_media=None, in_from: SearchType | None = None):
         """
         根据关键字调用索引器检查媒体
         """
@@ -281,7 +279,13 @@ class Searcher(metaclass=SingletonMeta):
         )
 
     def search_one_media(
-        self, media_info, in_from: SearchType, no_exists: dict, sites: list = None, filters: dict = None, user_name=None
+        self,
+        media_info,
+        in_from: SearchType | None,
+        no_exists: dict,
+        sites: list | None = None,
+        filters: dict | None = None,
+        user_name=None,
     ):
         """
         只搜索和下载一个资源
@@ -335,7 +339,7 @@ class Searcher(metaclass=SingletonMeta):
                 search_names=search_name_list,
                 filter_args=filter_args,
                 media_info=media_info,
-                in_from=in_from,
+                in_from=in_from or SearchType.WEB,
                 progress_updater=_update_progress,
             )
 
@@ -369,7 +373,9 @@ class Searcher(metaclass=SingletonMeta):
             return None, no_exists, len(media_list), 0
 
         # 5. 择优下载
-        download_items, left_medias = processor.batch_download(filtered_media_list, in_from, no_exists, user_name)
+        download_items, left_medias = processor.batch_download(
+            filtered_media_list, in_from or SearchType.WEB, no_exists, user_name
+        )
 
         if not download_items:
             log.info(f"【Searcher】{media_info.title} 未下载到资源")
@@ -429,7 +435,7 @@ class SearchService:
     def search_one_media(
         self,
         media_info,
-        in_from: SearchType,
+        in_from: SearchType | None,
         no_exists: dict,
         sites: list | None = None,
         filters: dict | None = None,
@@ -437,7 +443,7 @@ class SearchService:
     ) -> SearchOneMediaResultDTO:
         result = self._searcher.search_one_media(
             media_info=media_info,
-            in_from=in_from,
+            in_from=in_from or SearchType.WEB,
             no_exists=no_exists,
             sites=sites or [],
             filters=filters or {},

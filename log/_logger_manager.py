@@ -25,7 +25,7 @@ class Logger:
     def __init__(self, module: str):
         self._module = module
         handlers = build_handlers(module)
-        logger.configure(handlers=handlers)
+        logger.configure(handlers=handlers)  # type: ignore[reportArgumentType]
         logging.basicConfig(handlers=[InterceptHandler()], level=0)
         self._log = logger
 

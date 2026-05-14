@@ -150,7 +150,7 @@ class CookieCloudPlugin:
             self._send_message(msg)
             return
 
-        update_count, add_count = self._process_cookies(contents)
+        update_count, add_count = self._process_cookies(contents if isinstance(contents, dict) else {})
 
         if update_count or add_count:
             msg = f"更新了 {update_count} 个站点的 Cookie 数据，新增了 {add_count} 个站点"
@@ -172,7 +172,7 @@ class CookieCloudPlugin:
         if not contents:
             self.ctx.info("未从 CookieCloud 获取到数据")
             return
-        self._store_cookies_to_cache(contents)
+        self._store_cookies_to_cache(contents if isinstance(contents, dict) else {})
         self.ctx.info("Cookie 同步 Redis 成功")
 
     def _store_cookies_to_cache(self, contents: dict):

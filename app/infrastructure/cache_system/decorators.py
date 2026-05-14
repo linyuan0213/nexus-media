@@ -153,7 +153,7 @@ def cached_with_lock(
     return decorator
 
 
-def cached_method(cache_name: str = None, ttl: int | None = None):
+def cached_method(cache_name: str | None = None, ttl: int | None = None):
     """
     类方法缓存装饰器
 

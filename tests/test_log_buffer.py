@@ -21,11 +21,13 @@ _STREAMING_PATH = os.path.join(
 )
 
 spec = importlib.util.spec_from_file_location("log_buffer", _LOG_BUFFER_PATH)
+assert spec is not None
 log_buffer_mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(log_buffer_mod)
 LogBuffer = log_buffer_mod.LogBuffer
 
 spec2 = importlib.util.spec_from_file_location("log_streaming_service", _STREAMING_PATH)
+assert spec2 is not None
 streaming_mod = importlib.util.module_from_spec(spec2)
 sys.modules["app"] = type(sys)("app")
 sys.modules["app.utils"] = type(sys)("app.utils")

@@ -190,7 +190,7 @@ class DouBan(metaclass=SingletonMeta):
             sleep(time)
         return self.doubanweb.user(cookie=self.cookie, userid=userid)
 
-    def search_douban_medias(self, keyword, mtype: MediaType = None, season=None, episode=None, page=1):
+    def search_douban_medias(self, keyword, mtype: MediaType | None = None, season=None, episode=None, page=1):
         """
         根据关键字搜索豆瓣，返回可能的标题和年份信息
         """

@@ -80,7 +80,7 @@ class DoubanRankPlugin:
 
         if onlyonce:
             self.ctx.info("订阅服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ"))) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "")) + timedelta(seconds=3)
             self.ctx.schedule_date("refresh_once", self._refresh_rss, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -124,7 +124,7 @@ class DoubanRankPlugin:
     def _refresh_rss(self):
         config = self._get_config()
         enable = config.get("enable", False)
-        vote = float(config.get("vote")) if config.get("vote") else 0
+        vote = float(config.get("vote") or 0) if config.get("vote") else 0
         rss_addrs = config.get("rss_addrs", [])
         ranks = config.get("ranks", [])
 
@@ -192,7 +192,7 @@ class DoubanRankPlugin:
 
                     if self._subscribe.check_history(
                         type_str="MOV" if media_info.type == MediaType.MOVIE else "TV",
-                        name=media_info.title,
+                        name=media_info.title or "",
                         year=media_info.year,
                         season=media_info.get_season_string(),
                     ):
@@ -206,8 +206,8 @@ class DoubanRankPlugin:
                         name=media_info.title,
                         year=media_info.year,
                         season=media_info.begin_season,
-                        channel=RssType.Auto,
-                        in_from=SearchType.PLUGIN,
+                        channel=str(RssType.Auto.value),
+                        in_from=str(SearchType.PLUGIN.value),
                     )
                     if not rss_media or code != 0:
                         self.ctx.warn(f"{media_info.get_title_string()} 添加订阅失败：{msg}")
@@ -240,7 +240,7 @@ class DoubanRankPlugin:
                     link = DomUtils.tag_value(item, "link", default="")
                     if not title and not link:
                         continue
-                    doubanid = re.findall(r"/(\d+)/", link)
+                    doubanid = re.findall(r"/(\d+)/", str(link or ""))
                     if doubanid:
                         doubanid = doubanid[0]
                     if doubanid and not str(doubanid).isdigit():

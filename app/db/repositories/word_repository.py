@@ -64,7 +64,7 @@ class WordRepository(BaseRepository):
         """
         if not wid:
             self._db.query(CUSTOMWORDS).delete()
-        self._db.query(CUSTOMWORDS).filter(int(wid) == CUSTOMWORDS.ID).delete()
+        self._db.query(CUSTOMWORDS).filter(int(wid or 0) == CUSTOMWORDS.ID).delete()
 
     @DbPersist(BaseRepository._db)
     def check_custom_word(self, wid=None, enabled=None):
