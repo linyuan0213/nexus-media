@@ -239,12 +239,12 @@ class FilterService:
 
     # ------------------- 规则组查询 -------------------
 
-    def get_rule_groups(self, groupid=None, default=False):
+    def get_rule_groups(self, groupid=None, default=False) -> dict | list:
         """获取所有规则组"""
         ret_groups = []
         for group in self._groups:
             group_info = {"id": group.ID, "name": group.GROUP_NAME, "default": group.IS_DEFAULT, "note": group.NOTE}
-            if (groupid and str(groupid) == str(group.ID)) or (default and group.IS_DEFAULT == "Y"):
+            if (groupid and str(groupid) == str(group.ID)) or (default and str(group.IS_DEFAULT or "") == "Y"):
                 return group_info
             ret_groups.append(group_info)
         if groupid or default:
@@ -269,12 +269,12 @@ class FilterService:
                 "group": rule.GROUP_ID,
                 "name": rule.ROLE_NAME,
                 "pri": rule.PRIORITY or 0,
-                "include": rule.INCLUDE.split("\n") if rule.INCLUDE else [],
-                "exclude": rule.EXCLUDE.split("\n") if rule.EXCLUDE else [],
+                "include": str(rule.INCLUDE or "").split("\n") if rule.INCLUDE is not None else [],
+                "exclude": str(rule.EXCLUDE or "").split("\n") if rule.EXCLUDE is not None else [],
                 "size": rule.SIZE_LIMIT,
                 "free": rule.NOTE,
-                "free_text": {"1.0 1.0": "普通", "1.0 0.0": "免费", "2.0 0.0": "2X免费"}.get(str(rule.NOTE), "全部")
-                if rule.NOTE
+                "free_text": {"1.0 1.0": "普通", "1.0 0.0": "免费", "2.0 0.0": "2X免费"}.get(str(rule.NOTE or ""), "全部")
+                if rule.NOTE is not None
                 else "",
             }
             if str(rule.GROUP_ID) == str(groupid) and (not ruleid or int(ruleid) == rule.ID):
@@ -287,7 +287,7 @@ class FilterService:
         """获取规则的最高优先级"""
         if not rulegroup:
             rulegroup = self.get_rule_groups(default=True)
-        first_order = min([int(rule_info.get("pri")) for rule_info in self.get_rules(groupid=rulegroup)] or [0])
+        first_order = min([int(rule_info.get("pri")) for rule_info in self.get_rules(groupid=rulegroup.get("id") if isinstance(rulegroup, dict) else rulegroup)] or [0])
         return 100 - first_order
 
     # ------------------- 规则匹配 -------------------
@@ -306,7 +306,7 @@ class FilterService:
         else:
             rulegroup = self.get_rule_groups(groupid=rulegroup)
 
-        filters = self.get_rules(groupid=rulegroup.get("id"))
+        filters = self.get_rules(groupid=rulegroup.get("id") if isinstance(rulegroup, dict) else rulegroup)
         return FilterRuleEngine.check_rules(meta_info, rulegroup if isinstance(rulegroup, dict) else {}, filters if isinstance(filters, list) else [])
 
     def is_torrent_match_sey(self, media_info, s_num, e_num, year_str):
@@ -321,7 +321,7 @@ class FilterService:
                 return False
         else:
             rulegroup = self.get_rule_groups(groupid=rulegroup)
-        filters = self.get_rules(groupid=rulegroup.get("id"))
+        filters = self.get_rules(groupid=rulegroup.get("id") if isinstance(rulegroup, dict) else rulegroup)
         return any(filter_info.get("free") for filter_info in filters)
 
     def check_torrent_filter(self, meta_info, filter_args, uploadvolumefactor=None, downloadvolumefactor=None):
@@ -486,7 +486,7 @@ class FilterService:
     ) -> tuple[bool, str, int]:
         """测试规则是否匹配给定标题"""
         mi = meta_info(title=title, subtitle=subtitle)
-        mi.size = float(size) * 1024**3 if size else 0
+        mi.size = int(float(size) * 1024**3) if size else 0
         match_flag, res_order, match_msg = self.check_torrent_filter(
             meta_info=mi, filter_args={"rule": rulegroup}
         )
@@ -500,4 +500,4 @@ class FilterService:
         if ruleinfo and isinstance(ruleinfo, dict):
             ruleinfo["include"] = "\n".join(ruleinfo.get("include", []))
             ruleinfo["exclude"] = "\n".join(ruleinfo.get("exclude", []))
-        return ruleinfo
+        return ruleinfo if isinstance(ruleinfo, dict) else {}
