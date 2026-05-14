@@ -79,6 +79,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "lxml-stubs>=0.5.1",
+    "pyright>=1.1.409",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
     "ruff>=0.15.0",

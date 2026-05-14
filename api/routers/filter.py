@@ -143,7 +143,7 @@ def import_filtergroup(
     req: ImportFilterGroupRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
-    ok, msg = Filter().import_filter_group(req.content)
+    ok, msg = Filter().import_filter_group(req.content or "")
     if not ok:
         return fail(msg=msg)
     return success(msg=msg)

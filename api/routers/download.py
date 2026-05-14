@@ -262,7 +262,7 @@ def download(
     def _do_download():
         try:
             svc.download_from_search_results(
-                dl_id=req.id, dl_dir=req.dir or "", dl_setting=req.setting or "", user_name=user.nickname or user.username
+                dl_id=req.id or 0, dl_dir=req.dir or "", dl_setting=req.setting or "", user_name=user.nickname or user.username
             )
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -337,7 +337,7 @@ def download_torrent(
                 title=req.title or "",
                 description=req.description or "",
                 site=req.site or "",
-                size=req.size or "",
+                size=req.size,
             )
         except Exception as e:
             ExceptionUtils.exception_traceback(e)

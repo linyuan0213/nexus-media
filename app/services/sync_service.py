@@ -3,8 +3,13 @@ SyncService - 同步/转移业务层
 将 web/controllers/sync.py 中的业务逻辑下沉到可独立测试的 Service。
 """
 
+import importlib
 import os
+import re
+import shutil
+from urllib.parse import unquote
 
+from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_MEDIAEXT, RMT_SUBEXT
 from app.core.module_config import ModuleConf
 from app.helper.thread_helper import ThreadHelper
 from app.media import MediaCache
@@ -15,8 +20,10 @@ from app.schemas.sync import (
 )
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.sync_core import SyncCore as Sync
-from app.utils import EpisodeFormat, ExceptionUtils, PathUtils
-from app.utils.types import MediaType, MovieTypes, RmtMode, SyncType, TvTypes
+from app.utils import EpisodeFormat, ExceptionUtils, PathUtils, StringUtils
+from app.utils.types import MediaType, MovieTypes, OsType, RmtMode, SyncType, TvTypes
+from app.utils.web_utils import set_config_directory
+from config import Config
 
 
 class SyncService:
@@ -258,20 +265,13 @@ class SyncService:
     def get_transfer_info_by_id(self, logid: int):
         return self._filetransfer.get_transfer_info_by_id(logid)
 
-    def get_unknown_info_by_id(self, tid: int):
+    def get_unknown_info_by_id(self, tid: int) -> object:
         return self._filetransfer.get_unknown_info_by_id(tid)
 
     def get_sub_path(self, directory: str, ft: str = "ALL") -> list[dict]:
         """
         查询下级子目录/文件
         """
-        import os
-        from urllib.parse import unquote
-
-        from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_MEDIAEXT, RMT_SUBEXT
-        from app.utils import StringUtils
-        from app.utils.types import OsType
-
         r = []
         if not directory or directory == "/":
             if os.name == "nt" or (hasattr(OsType, "WINDOWS") and False):
@@ -288,14 +288,12 @@ class SyncService:
         for ff in dirs:
             if os.path.isdir(ff):
                 if "ONLYDIR" in ft or "ALL" in ft:
-                    r.append(
-                        {
-                            "path": ff.replace("\\", "/"),
-                            "name": os.path.basename(ff),
-                            "type": "dir",
-                            "rel": os.path.dirname(ff).replace("\\", "/"),
-                        }
-                    )
+                    r.append({
+                        "path": ff.replace("\\", "/"),
+                        "name": os.path.basename(ff),
+                        "type": "dir",
+                        "rel": os.path.dirname(ff).replace("\\", "/"),
+                    })
             else:
                 ext = os.path.splitext(ff)[-1][1:]
                 flag = False
@@ -311,16 +309,14 @@ class SyncService:
                 ):
                     flag = True
                 if flag:
-                    r.append(
-                        {
-                            "path": ff.replace("\\", "/"),
-                            "name": os.path.basename(ff),
-                            "type": "file",
-                            "rel": os.path.dirname(ff).replace("\\", "/"),
-                            "ext": ext,
-                            "size": StringUtils.str_filesize(os.path.getsize(ff)),
-                        }
-                    )
+                    r.append({
+                        "path": ff.replace("\\", "/"),
+                        "name": os.path.basename(ff),
+                        "type": "file",
+                        "rel": os.path.dirname(ff).replace("\\", "/"),
+                        "ext": ext,
+                        "size": StringUtils.str_filesize(os.path.getsize(ff)),
+                    })
         return r
 
     # ---------- 文件重命名 ----------
@@ -331,8 +327,6 @@ class SyncService:
         if not path or not name:
             return SimpleResultDTO(success=True)
         try:
-            import shutil
-
             shutil.move(path, os.path.join(os.path.dirname(path), name))
             return SimpleResultDTO(success=True)
         except Exception as e:
@@ -346,9 +340,6 @@ class SyncService:
         """
         执行安全映射内的测试命令，返回调用结果或 None
         """
-        import importlib
-        import re
-
         m = re.match(r"^(\w+)\(\)\.(\w+)\(\)$", cmd.strip())
         if not m:
             return None
@@ -387,8 +378,6 @@ class SyncService:
         """
         测试模块连接状态
         """
-        import importlib
-
         ret = None
         module_obj = None
         if not command:
@@ -409,8 +398,6 @@ class SyncService:
                     ret = module_obj.get_status()
                 else:
                     ret = cls.exec_test_command(command)
-            from config import Config
-
             Config().init_config()
             if module_obj:
                 if hasattr(module_obj, "init_config"):
@@ -425,9 +412,6 @@ class SyncService:
     @staticmethod
     def update_directory(oper: str, key: str, value: str, replace_value: str | None = None) -> SimpleResultDTO:
         """更新配置中的目录路径"""
-        from app.utils.web_utils import set_config_directory
-        from config import Config
-
         cfg = set_config_directory(Config().get_config(), oper, key, value, replace_value)
         Config().save_config(cfg)
         return SimpleResultDTO(success=True)

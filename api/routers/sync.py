@@ -141,14 +141,14 @@ def add_or_edit_sync_path(
     svc: SyncService = Depends(get_sync_service),
 ):
     ok, msg = svc.add_or_edit_sync_path(
-        sid=req.sid,
-        source=req.source,
-        dest=req.dest,
-        unknown=req.unknown,
-        mode=req.mode,
-        compatibility=req.compatibility,
-        rename=req.rename,
-        enabled=req.enabled,
+        sid=req.sid or 0,
+        source=req.source or "",
+        dest=req.dest or "",
+        unknown=req.unknown or "",
+        mode=req.mode or "",
+        compatibility=req.compatibility or 0,
+        rename=req.rename or 0,
+        enabled=req.enabled or 0,
     )
     if ok:
         return success(msg=msg)
@@ -161,7 +161,7 @@ def check_sync_path(
     user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
-    ok, msg = svc.check_sync_path(sid=req.sid, flag=req.flag, checked=req.checked)
+    ok, msg = svc.check_sync_path(sid=req.sid or 0, flag=req.flag or "", checked=req.checked or False)
     if ok:
         return success()
     return fail()
@@ -182,7 +182,7 @@ def del_unknown_path(
         return success()
     else:
         retcode = ft.delete_transfer_unknown(tid)
-        return fail(code=retcode)
+        return fail(code=retcode or 1)
 
 
 @router.post("/files/delete")
@@ -212,7 +212,7 @@ def delete_sync_path(
     user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
-    svc.delete_sync_path(req.id)
+    svc.delete_sync_path(req.id or 0)
     return success()
 
 
@@ -224,7 +224,7 @@ def get_sub_path(
 ):
     try:
         ft = req.filter or "ALL"
-        r = svc.get_sub_path(directory=req.directory, ft=ft)
+        r = svc.get_sub_path(directory=req.directory or "", ft=ft)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
         return fail(code=-1, message=f"加载路径失败: {str(e)}")
@@ -270,7 +270,7 @@ def rename(
     episode_part = req.episode_part
     episode_offset = req.episode_offset
     min_filesize = req.min_filesize
-    media_type = svc.build_media_type(mtype)
+    media_type = svc.build_media_type(mtype or "")
     need_fix_all = False
     if os.path.splitext(path)[-1].lower() in RMT_MEDIAEXT and episode_format:
         path = os.path.dirname(path)
@@ -303,7 +303,7 @@ def rename_file(
     user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
-    result = svc.rename_file(path=req.path, name=req.name)
+    result = svc.rename_file(path=req.path or "", name=req.name or "")
     if result.success:
         return success()
     return fail(code=-1, msg=result.message)
@@ -316,7 +316,7 @@ def rename_udf(
     svc: SyncService = Depends(get_sync_service),
 ):
     inpath = req.inpath
-    if not os.path.exists(inpath):
+    if not os.path.exists(inpath or ""):
         return fail(code=-1, msg="输入路径不存在")
     outpath = req.outpath
     syncmod = svc.resolve_rmt_mode(req.syncmod)
@@ -328,10 +328,10 @@ def rename_udf(
     episode_part = req.episode_part
     episode_offset = req.episode_offset
     min_filesize = req.min_filesize
-    media_type = svc.build_media_type(mtype)
+    media_type = svc.build_media_type(mtype or "")
 
     result = svc.manual_transfer(
-        inpath=inpath,
+        inpath=inpath or "",
         syncmod=syncmod,
         outpath=outpath,
         media_type=media_type,
@@ -378,9 +378,9 @@ def update_directory(
     svc: SyncService = Depends(get_sync_service),
 ):
     result = svc.update_directory(
-        oper=req.oper,
-        key=req.key,
-        value=req.value,
+        oper=req.oper or "",
+        key=req.key or "",
+        value=req.value or "",
         replace_value=req.replace_value,
     )
     if result.success:
@@ -416,7 +416,7 @@ def re_identification(
     user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
-    result = svc.re_identify_items(flag=req.flag, ids=req.ids)
+    result = svc.re_identify_items(flag=req.flag or "", ids=req.ids or [])
     if result.success:
         return success(msg=result.message)
     return fail(code=2, msg=result.message)
