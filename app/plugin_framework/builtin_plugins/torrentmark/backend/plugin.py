@@ -1,10 +1,9 @@
-import os
 
-# -*- coding: utf-8 -*-
 """
 TorrentMark Plugin v2
 标记种子是否是PT
 """
+import os
 from datetime import datetime
 from threading import Event
 

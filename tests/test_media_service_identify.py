@@ -7,15 +7,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# mock log 避免加载真实日志模块
-sys.modules["log"] = MagicMock()
-
-# 现在可以安全导入被测代码
 from app.media.lookup.tmdb_lookup import TmdbLookup
 from app.media.models import MediaInfo
 from app.media.parser.base import ParserResult
 from app.media.service import MediaService
 from app.utils.types import MatchMode, MediaType
+
+sys.modules["log"] = MagicMock()
 
 
 class TestMediaServiceIdentify:

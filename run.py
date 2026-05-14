@@ -12,12 +12,12 @@ import uvicorn
 
 from config_monitor import stop_config_monitor
 
-warnings.filterwarnings("ignore")
-
 import log
 from api.main import app
 from app.services.system_service import SystemLifecycleService
 from config import Config
+
+warnings.filterwarnings("ignore")
 
 
 def signal_handler(num, stack):

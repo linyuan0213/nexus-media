@@ -1,10 +1,9 @@
-import os
 
-# -*- coding: utf-8 -*-
 """
 LibraryScraper Plugin v2
 定时对媒体库进行刮削
 """
+import os
 from datetime import datetime, timedelta
 from threading import Event
 

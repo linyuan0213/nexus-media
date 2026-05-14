@@ -1,7 +1,5 @@
-
-
-
 from app.infrastructure.external.tmdbv3api.exceptions import TMDbError
+
 
 class AsObj:
     def __init__(self, **entries):

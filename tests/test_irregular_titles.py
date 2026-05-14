@@ -13,19 +13,18 @@
 9. 合并季标注
 """
 
+import os
 import sys
 from unittest.mock import MagicMock
-
-sys.modules["log"] = MagicMock()
-
-import os
-
-os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 import pytest
 
 from app.media.parser.video import parse_video_title
 from app.utils.types import MediaType
+
+sys.modules["log"] = MagicMock()
+
+os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 # ============ 测试数据 ============
 

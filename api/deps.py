@@ -4,6 +4,9 @@ FastAPI 依赖注入
 支持 JWT + Session 双轨认证（绞杀期）。
 """
 
+from collections.abc import Callable
+from typing import Any, TypeVar
+
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -13,6 +16,8 @@ from app.services.auth_service import AuthService
 from app.services.config_service import ConfigService
 from app.services.rbac_service import rbac_service
 from app.utils.security import generate_access_token, identify
+
+_F = TypeVar("_F", bound=Callable[..., Any])
 
 # OAuth2 / Bearer 方案
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -271,17 +276,6 @@ def require_all_permissions(*permissions: str):
         return user
 
     return checker
-
-
-# ---------------------------------------------------------------------------
-# 依赖注入工厂（DI Container 轻量级实现）
-# 路由层统一通过 Depends 注入，不再直接引用全局单例。
-# ---------------------------------------------------------------------------
-
-from collections.abc import Callable
-from typing import Any, TypeVar
-
-_F = TypeVar("_F", bound=Callable[..., Any])
 
 
 def get_config_service() -> ConfigService:

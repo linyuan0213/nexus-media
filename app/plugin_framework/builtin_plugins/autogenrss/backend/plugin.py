@@ -1,12 +1,10 @@
-import os
-
-# -*- coding: utf-8 -*-
 """
 AutoGenRss Plugin v2
 RSS自动生成
 """
 import copy
 import json
+import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta

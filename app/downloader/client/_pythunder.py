@@ -210,7 +210,7 @@ class PyThunder:
             "raw_response": result if len(file_list) == 0 else None,  # 如果没有文件，保留原始响应
         }
 
-    def get_folders(self, folder_id: str = None):
+    def get_folders(self, folder_id: str|None = None):
         """
         获取迅雷文件夹列表
 
@@ -363,8 +363,8 @@ class PyThunder:
         download_urls: str,
         destination_path: str = "/downloads/xunlei/",
         parent_folder_id: str = "",
-        file_indices: str = None,
-        file_names: list = None,
+        file_indices: str|None = None,
+        file_names: list|None = None,
     ):
         """
         开始下载任务（使用真正的下载API）

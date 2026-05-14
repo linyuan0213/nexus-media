@@ -5,9 +5,9 @@ Spider enclosure 单元测试 — 验证磁力链接空白前缀问题
 import sys
 from unittest.mock import MagicMock
 
-sys.modules["log"] = MagicMock()
-
 from app.indexer.client._spider import TorrentSpider
+
+sys.modules["log"] = MagicMock()
 
 
 class TestSpiderGetdownload:

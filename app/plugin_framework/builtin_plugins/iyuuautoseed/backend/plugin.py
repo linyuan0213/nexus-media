@@ -1,10 +1,10 @@
-import os
 
-# -*- coding: utf-8 -*-
 """
 IYUUAutoSeed Plugin v2
 基于IYUU官方Api实现自动辅种
 """
+import json
+import os
 from datetime import datetime, timedelta
 from threading import Event
 
@@ -111,16 +111,12 @@ class IYUUAutoSeedPlugin:
         content = self.ctx.read_data("cache.json")
         if content:
             try:
-                import json
-
                 return json.loads(content)
             except Exception:
                 pass
         return {"error_caches": [], "success_caches": [], "permanent_error_caches": []}
 
     def _save_cache(self, data):
-        import json
-
         self.ctx.write_data("cache.json", json.dumps(data, ensure_ascii=False, indent=2))
 
     def _do_seed(self):
@@ -327,8 +323,6 @@ class IYUUAutoSeedPlugin:
         try:
             content = self.ctx.read_data("seed_history.json")
             if content:
-                import json
-
                 history = json.loads(content)
             else:
                 history = {}
@@ -344,8 +338,6 @@ class IYUUAutoSeedPlugin:
                 seed_history.append({"downloader": downloader_id, "torrents": list(set(success_torrents))})
 
             history[current_hash] = seed_history
-            import json
-
             self.ctx.write_data("seed_history.json", json.dumps(history, ensure_ascii=False, indent=2))
         except Exception as e:
             self.ctx.error(f"保存辅种历史失败: {e}")
