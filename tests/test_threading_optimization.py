@@ -266,7 +266,7 @@ class TestConcurrencySafety:
         # 测试全局锁
         threads = []
         start = time.time()
-        for i in range(4):
+        for _ in range(4):
             t = threading.Thread(target=work_with_global_lock)
             threads.append(t)
         for t in threads:

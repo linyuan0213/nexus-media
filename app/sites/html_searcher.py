@@ -229,7 +229,7 @@ class HtmlSiteSearcher:
                     field_vals[fname] = self._extract_nested_value(rt, fcfg, template_vars, field_vals)
 
                 item = {}
-                for fname, fcfg in fields_cfg.items():
+                for fname, _ in fields_cfg.items():
                     item[fname] = field_vals.get(fname)
 
                 for cf_name, cf_val in container_vals.items():

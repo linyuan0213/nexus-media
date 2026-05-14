@@ -484,7 +484,7 @@ class MediaService:
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
         unique_keys = {}
-        for idx, parsed in enumerate(parsed_list):
+        for _, parsed in enumerate(parsed_list):
             if not parsed:
                 continue
             key = f"{parsed.title_en or parsed.title_cn or ''}:{parsed.year or ''}:{parsed.type.value if parsed.type else ''}"

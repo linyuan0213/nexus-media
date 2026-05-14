@@ -23,7 +23,6 @@ from app.agent.providers import (
     GeminiProvider,
     OllamaProvider,
     OpenAIProvider,
-    ProviderConfig,
 )
 from app.agent.service import AgentService
 

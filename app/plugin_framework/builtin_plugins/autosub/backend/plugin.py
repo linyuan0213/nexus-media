@@ -586,7 +586,7 @@ class AutoSubPlugin:
                 self.ctx.info(
                     f"翻译结果数量不匹配，翻译结果数量：{len(translated)}, 需要翻译数量：{len(batch)}, 退化为单条翻译 ..."
                 )
-                for index, item in enumerate(batch):
+                for _, item in enumerate(batch):
                     result = self._do_translate_with_retry(item.content)
                     if not result:
                         continue

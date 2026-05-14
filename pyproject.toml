@@ -138,3 +138,4 @@ line-ending = "auto"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["ARG", "S"]
+"**/__init__.py" = ["F401"]

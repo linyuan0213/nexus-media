@@ -301,7 +301,7 @@ class DownloadService:
         if need_identify:
             items = [{"title": name} for _, _, name in need_identify]
             results = self._media.identify_batch(items)
-            for (idx, torrent, name), media_info in zip(need_identify, results, strict=False):
+            for (_, torrent, name), media_info in zip(need_identify, results, strict=False):
                 if not media_info or not media_info.title:
                     torrent.update({"title": name, "image": ""})
                     continue

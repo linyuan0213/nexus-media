@@ -27,7 +27,6 @@ from app.media import MetaInfo
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
-from app.schemas.download import Torrent
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.sites import SiteConf, Sites, SiteSubtitle
 from app.utils import ExceptionUtils, Torrent

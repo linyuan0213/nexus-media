@@ -109,7 +109,7 @@ class CHDBits(_ISiteSigninHandler):
             # 本地存在本次hash对应的正确答案再遍历查询
             choice = []
             for q in question_answer:
-                for num, answer in answers:
+                for num, _ in answers:
                     if str(q) == str(num):
                         choice.append(int(q))
             if len(choice) > 0:

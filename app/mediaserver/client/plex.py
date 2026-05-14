@@ -467,7 +467,7 @@ class Plex(_IMediaClient):
     def __get_ids(guids):
         guid_mapping = {"imdb://": "imdb_id", "tmdb://": "tmdb_id", "tvdb://": "tvdb_id"}
         ids = {}
-        for prefix, varname in guid_mapping.items():
+        for _, varname in guid_mapping.items():
             ids[varname] = None
         for guid in guids:
             for prefix, varname in guid_mapping.items():
