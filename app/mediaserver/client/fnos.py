@@ -30,29 +30,29 @@ class FnOS(_IMediaClient):
         if config:
             self._client_config = config
         else:
-            self._client_config = self.get_db_config('fnos')
+            self._client_config = self.get_db_config("fnos")
         self.init_config()
 
     def init_config(self):
         if self._client_config:
-            self._host = self._client_config.get('host')
-            self._username = self._client_config.get('username')
-            self._password = self._client_config.get('password')
+            self._host = self._client_config.get("host")
+            self._username = self._client_config.get("username")
+            self._password = self._client_config.get("password")
             if self._host:
-                if not self._host.startswith('http'):
+                if not self._host.startswith("http"):
                     self._host = "http://" + self._host
-                if not self._host.endswith('/'):
+                if not self._host.endswith("/"):
                     self._host = self._host + "/"
-            self._play_host = self._client_config.get('play_host')
+            self._play_host = self._client_config.get("play_host")
             if not self._play_host:
                 self._play_host = self._host
             else:
-                if not self._play_host.startswith('http'):
+                if not self._play_host.startswith("http"):
                     self._play_host = "http://" + self._play_host
-                if not self._play_host.endswith('/'):
+                if not self._play_host.endswith("/"):
                     self._play_host = self._play_host + "/"
-            self._username = self._client_config.get('username')
-            self._password = self._client_config.get('password')
+            self._username = self._client_config.get("username")
+            self._password = self._client_config.get("password")
             if self._username and self._password:
                 try:
                     self._fnos = FnOSClient(
@@ -60,10 +60,10 @@ class FnOS(_IMediaClient):
                         username=self._username,
                         password=self._password,
                         app_name="trimemedia-web",
-                        auth_key="16CCEB3D-AB42-077D-36A1-F355324E4237"
+                        auth_key="16CCEB3D-AB42-077D-36A1-F355324E4237",
                     )
                     # 检查登录是否成功
-                    if self._fnos and hasattr(self._fnos, '_get_token'):
+                    if self._fnos and hasattr(self._fnos, "_get_token"):
                         try:
                             # 尝试获取token来验证登录是否成功
                             token = self._fnos._get_token()
@@ -98,13 +98,9 @@ class FnOS(_IMediaClient):
         """
         获得用户数量，FnOS只能配置一个用户
         """
-        res = self._fnos.request(
-                endpoint="v/api/v1/manager/user/list",
-                method="get",
-                data={}
-            )
-        if res['code'] == 0:
-            return len(res['data'])
+        res = self._fnos.request(endpoint="v/api/v1/manager/user/list", method="get", data={})
+        if res["code"] == 0:
+            return len(res["data"])
         return 0
 
     def get_activity_log(self, num):
@@ -135,7 +131,7 @@ class FnOS(_IMediaClient):
             "MovieCount": MovieCount,
             "SeriesCount": SeriesCount,
             "SongCount": SongCount,
-            "EpisodeCount": EpisodeCount
+            "EpisodeCount": EpisodeCount,
         }
 
     def get_movies(self, title, year=None):
@@ -153,15 +149,10 @@ class FnOS(_IMediaClient):
         else:
             movies = self._fnos.search(title=title, libtype="Movie")
         for movie in movies:
-            ret_movies.append({'title': movie["title"], 'year': movie["air_date"][:4]})
+            ret_movies.append({"title": movie["title"], "year": movie["air_date"][:4]})
         return ret_movies
 
-    def get_tv_episodes(self,
-                        item_id=None,
-                        title=None,
-                        year=None,
-                        tmdbid=None,
-                        season=None):
+    def get_tv_episodes(self, item_id=None, title=None, year=None, tmdbid=None, season=None):
         """
         根据标题、年份、季查询电视剧所有集信息
         :param item_id: FnOS中的ID
@@ -188,10 +179,9 @@ class FnOS(_IMediaClient):
             season_id = season_dict.get("guid")
             episodes = self._fnos.get_episode_list(season_id)
             for episode in episodes:
-                ret_tvs.append({
-                    "season_num": episode.get("season_number"),
-                    "episode_num": episode.get("episode_number")
-                })
+                ret_tvs.append(
+                    {"season_num": episode.get("season_number"), "episode_num": episode.get("episode_number")}
+                )
         return ret_tvs
 
     def get_no_exists_episodes(self, meta_info, season, total_num):
@@ -207,10 +197,8 @@ class FnOS(_IMediaClient):
         # 没有季默认为和1季
         if not season:
             season = 1
-        episodes = self.get_tv_episodes(title=meta_info.title,
-                                        year=meta_info.year,
-                                        season=season)
-        exists_episodes = [episode['episode_num'] for episode in episodes]
+        episodes = self.get_tv_episodes(title=meta_info.title, year=meta_info.year, season=season)
+        exists_episodes = [episode["episode_num"] for episode in episodes]
         total_episodes = [episode for episode in range(1, total_num + 1)]
         return list(set(total_episodes).difference(set(exists_episodes)))
 
@@ -246,7 +234,7 @@ class FnOS(_IMediaClient):
         try:
             episode = self._fnos.get_episode_info(item_id)
             if image_type == "Poster":
-               return f"{self._host}v/api/v1/sys/img{episode.get('posters')}"
+                return f"{self._host}v/api/v1/sys/img{episode.get('posters')}"
             else:
                 return f"{self._host}v/api/v1/sys/img{episode.get('still_path')}"
         except Exception as e:
@@ -305,14 +293,16 @@ class FnOS(_IMediaClient):
                     image_list_str = self.get_libraries_image(library.get("guid"), library.get("category"))
                 case _:
                     continue
-            libraries.append({
-                "id": library.get("guid"),
-                "name": library.get("title"),
-                "paths": "",
-                "type": library_type,
-                "image_list": image_list_str,
-                "link": f"{self._play_host or self._host}v/library/{library.get('guid')}"
-            })
+            libraries.append(
+                {
+                    "id": library.get("guid"),
+                    "name": library.get("title"),
+                    "paths": "",
+                    "type": library_type,
+                    "image_list": image_list_str,
+                    "link": f"{self._play_host or self._host}v/library/{library.get('guid')}",
+                }
+            )
         return libraries
 
     @lru_cache(maxsize=10)
@@ -332,8 +322,7 @@ class FnOS(_IMediaClient):
             if type == library.get("category") and library_key == library.get("guid"):
                 posters = library.get("posters")
                 poster_urls = [f"{self._host}v/api/v1/sys/img{poster}" for poster in posters]
-                image_list_str = ", ".join(
-                    [self.get_nt_image_url(url) for url in poster_urls])
+                image_list_str = ", ".join([self.get_nt_image_url(url) for url in poster_urls])
         return image_list_str
 
     def get_iteminfo(self, itemid):
@@ -344,7 +333,7 @@ class FnOS(_IMediaClient):
             return {}
         try:
             item = self._fnos.get_episode_info(itemid)
-            return {'ProviderIds': {'Tmdb': "", 'Imdb': item['imdb_id']}}
+            return {"ProviderIds": {"Tmdb": "", "Imdb": item["imdb_id"]}}
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return {}
@@ -357,9 +346,9 @@ class FnOS(_IMediaClient):
         """v/tv/episode/ v/movie/"""
         url = ""
         if libtype == "TV":
-            url = f'{self._play_host or self._host}v/tv/episode/{item_id}'
+            url = f"{self._play_host or self._host}v/tv/episode/{item_id}"
         else:
-            url = f'{self._play_host or self._host}v/movie/{item_id}'
+            url = f"{self._play_host or self._host}v/movie/{item_id}"
         return url
 
     def get_items(self, parent):
@@ -376,16 +365,18 @@ class FnOS(_IMediaClient):
                 if not item:
                     continue
                 path = None
-                yield {"id": item.get("guid"),
-                        "library": item.get("ancestor_guid"),
-                        "type": item.get("type"),
-                        "title": item.get("title"),
-                        "originalTitle": item.get("title"),
-                        "year": item.get("air_date", "")[:4],
-                        "tmdbid": "",
-                        "imdbid": item.get("imdb_id"),
-                        "tvdbid": "",
-                        "path": path}
+                yield {
+                    "id": item.get("guid"),
+                    "library": item.get("ancestor_guid"),
+                    "type": item.get("type"),
+                    "title": item.get("title"),
+                    "originalTitle": item.get("title"),
+                    "year": item.get("air_date", "")[:4],
+                    "tmdbid": "",
+                    "imdbid": item.get("imdb_id"),
+                    "tvdbid": "",
+                    "path": path,
+                }
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
         yield {}
@@ -433,18 +424,26 @@ class FnOS(_IMediaClient):
                 if item.get("season_number") == 1:
                     name = "%s 第%s集" % (item.get("tv_title"), item.get("episode_number") + 1)
                 else:
-                    name = "%s 第%s季第%s集" % (item.get("tv_title"), item.get("season_number"), item.get("episode_number") + 1)
+                    name = "%s 第%s季第%s集" % (
+                        item.get("tv_title"),
+                        item.get("season_number"),
+                        item.get("episode_number") + 1,
+                    )
             link = self.get_play_url(item.get("guid"), libtype=("TV" if item.get("type") != "Movie" else "Movie"))
             image_link = f"{self._host}v/api/v1/sys/img{item.get('poster')}"
             image = self.get_nt_image_url(image_link)
-            ret_resume.append({
-                "id": item.get("guid"),
-                "name": name,
-                "type": item_type,
-                "image": image,
-                "link": link,
-                "percent": item.get("ts") / item.get("duration") * 100 if item.get("ts") and item.get("duration") else 0
-            })
+            ret_resume.append(
+                {
+                    "id": item.get("guid"),
+                    "name": name,
+                    "type": item_type,
+                    "image": image,
+                    "link": link,
+                    "percent": item.get("ts") / item.get("duration") * 100
+                    if item.get("ts") and item.get("duration")
+                    else 0,
+                }
+            )
         return ret_resume
 
     def get_latest(self, num=20):
@@ -466,17 +465,15 @@ class FnOS(_IMediaClient):
                 if item.get("season_number") == 1:
                     name = "%s 共%s集" % (item.get("title"), item.get("local_number_of_episodes"))
                 else:
-                    name = "%s 第%s季共%s集" % (item.get("title"), item.get("season_number"), item.get("local_number_of_episodes"))
+                    name = "%s 第%s季共%s集" % (
+                        item.get("title"),
+                        item.get("season_number"),
+                        item.get("local_number_of_episodes"),
+                    )
             link = self.get_play_url(item.get("guid"), libtype=("TV" if item.get("type") != "Movie" else "Movie"))
             image_link = f"{self._host}v/api/v1/sys/img{item.get('poster')}"
             image = self.get_nt_image_url(image_link)
-            ret_resume.append({
-                "id": item.get("guid"),
-                "name": name,
-                "type": item_type,
-                "image": image,
-                "link": link
-            })
+            ret_resume.append({"id": item.get("guid"), "name": name, "type": item_type, "image": image, "link": link})
             count += 1
             if count > num:
                 break

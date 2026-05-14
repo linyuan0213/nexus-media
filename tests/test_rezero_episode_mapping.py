@@ -1,14 +1,15 @@
 """
 完整真实场景测试：Re:Zero 第四季集数映射（修复 Parser 后）
 """
+
 import sys
 from unittest.mock import MagicMock
 
-sys.modules['log'] = MagicMock()
+sys.modules["log"] = MagicMock()
 
 import os
 
-os.environ['NASTOOL_CONFIG'] = '/home/linyuan/python/config/config.yaml'
+os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 from app.media.lookup.tmdb_lookup import TmdbLookup
 from app.media.models import MediaInfo

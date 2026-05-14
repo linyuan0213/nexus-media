@@ -4,6 +4,7 @@
 替代硬编码的 MteamUserInfo/YemaPTUserInfo/RousiUserInfo 等，
 通过 site JSON 中的 user_info 配置驱动数据提取。
 """
+
 import json
 import time
 
@@ -23,9 +24,19 @@ class ConfigApiUserInfo:
 
     order = 10
 
-    def __init__(self, site_def: SiteDefinition, site_name, url, site_cookie,
-                 site_headers=None, ua="", emulate=False, proxy=False,
-                 session=None, json_data=None):
+    def __init__(
+        self,
+        site_def: SiteDefinition,
+        site_name,
+        url,
+        site_cookie,
+        site_headers=None,
+        ua="",
+        emulate=False,
+        proxy=False,
+        session=None,
+        json_data=None,
+    ):
         self.site_name = site_name
         self.site_url = url
         self._def = site_def
@@ -89,7 +100,9 @@ class ConfigApiUserInfo:
             if val is not None:
                 setattr(self, field_name, val)
 
-        log.warn(f"【ConfigApiUserInfo】{self.site_name} profile: upload={self.upload} download={self.download} seeding={self.seeding} bonus={self.bonus} username={self.username}")
+        log.warn(
+            f"【ConfigApiUserInfo】{self.site_name} profile: upload={self.upload} download={self.download} seeding={self.seeding} bonus={self.bonus} username={self.username}"
+        )
 
         if self.upload and self.download:
             self.ratio = round(self.upload / self.download, 2) if self.download else 0
@@ -116,11 +129,14 @@ class ConfigApiUserInfo:
                 log.warn(f"【ConfigApiUserInfo】{self.site_name} seeding API 失败")
                 break
             if pagination_type == "page_param":
-                resp_total = int(self._resolve_json_path(
-                    resp,
-                    {"source": pagination.get("total_pages_key", "totalPages")},
-                    str(1),
-                ) or 1)
+                resp_total = int(
+                    self._resolve_json_path(
+                        resp,
+                        {"source": pagination.get("total_pages_key", "totalPages")},
+                        str(1),
+                    )
+                    or 1
+                )
                 if page == 1:
                     total_pages = resp_total
 
@@ -190,10 +206,15 @@ class ConfigApiUserInfo:
         url = f"{base.rstrip('/')}/{path}" if path else base.rstrip("/")
         log.warn(f"【ConfigApiUserInfo】{self.site_name} _api_call url={url}")
         engine = SiteEngine.get_instance()
-        headers = engine._build_headers(self._def, {
-            "cookie": self._cookie, "ua": self._ua, "proxy": self._proxy,
-            "headers": self._headers,
-        })
+        headers = engine._build_headers(
+            self._def,
+            {
+                "cookie": self._cookie,
+                "ua": self._ua,
+                "proxy": self._proxy,
+                "headers": self._headers,
+            },
+        )
 
         if method == "POST":
             data = json.dumps(body or {}, separators=(",", ":"))
@@ -281,17 +302,29 @@ class ConfigApiUserInfo:
         return obj
 
 
-def _api_factory(url, site_name, site_cookie, html_text=None,
-                 site_headers=None, ua="", emulate=False, proxy=False, session=None):
+def _api_factory(
+    url, site_name, site_cookie, html_text=None, site_headers=None, ua="", emulate=False, proxy=False, session=None
+):
     engine = SiteEngine.get_instance()
     site_def, resp = engine.prefetch_user_profile(
-        url, site_cookie, site_headers=site_headers, ua=ua, proxy=proxy, session=session,
+        url,
+        site_cookie,
+        site_headers=site_headers,
+        ua=ua,
+        proxy=proxy,
+        session=session,
     )
     if not site_def or not site_def.user_info or not site_def.user_info.get("profile"):
         return None
     return ConfigApiUserInfo(
-        site_def, site_name, url, site_cookie,
-        site_headers=site_headers, ua=ua, proxy=proxy, session=session,
+        site_def,
+        site_name,
+        url,
+        site_cookie,
+        site_headers=site_headers,
+        ua=ua,
+        proxy=proxy,
+        session=session,
         json_data=resp,
     )
 

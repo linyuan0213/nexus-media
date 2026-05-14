@@ -10,15 +10,17 @@ import requests
 
 class Singleton(type):
     _instances = {}
+
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
             cls._instances[cls] = super().__call__(*args, **kwargs)
         return cls._instances[cls]
 
+
 class FnOSClient(metaclass=Singleton):
     def __init__(self, base_url, username, password, app_name, auth_key):
         # 在初始化时就处理base_url，确保格式统一
-        self.base_url = base_url.rstrip('/') + '/'
+        self.base_url = base_url.rstrip("/") + "/"
         self.username = username
         self.password = password
         self.app_name = app_name
@@ -45,10 +47,10 @@ class FnOSClient(metaclass=Singleton):
                 params.update(query_params)
             data_str = "&".join([f"{k}={v}" for k, v in params.items()]) if params else ""
         else:  # 非 GET 请求
-            data_str = json.dumps(request_data.get("data", {}), separators=(',', ':'))
+            data_str = json.dumps(request_data.get("data", {}), separators=(",", ":"))
 
         # 4. 计算数据 MD5
-        data_md5 = hashlib.md5(data_str.encode('utf-8')).hexdigest()
+        data_md5 = hashlib.md5(data_str.encode("utf-8")).hexdigest()
 
         # 5. 生成随机数 (6位数字)
         nonce = str(random.randint(100000, 999999))
@@ -58,14 +60,10 @@ class FnOSClient(metaclass=Singleton):
 
         # 7. 构建签名字符串并计算签名
         sign_str = "_".join([self.secret, path, nonce, timestamp, data_md5, self.auth_key])
-        sign = hashlib.md5(sign_str.encode('utf-8')).hexdigest()
+        sign = hashlib.md5(sign_str.encode("utf-8")).hexdigest()
 
         # 8. 构造返回结果
-        return {
-            "nonce": nonce,
-            "timestamp": timestamp,
-            "sign": sign
-        }
+        return {"nonce": nonce, "timestamp": timestamp, "sign": sign}
 
     def _parse_url(self, url):
         """解析 URL 返回路径和查询参数字典"""
@@ -106,11 +104,7 @@ class FnOSClient(metaclass=Singleton):
             "method": "post",
             "url": url,
             "params": {},
-            "data": {
-                "username": self.username,
-                "password": self.password,
-                "app_name": self.app_name
-            }
+            "data": {"username": self.username, "password": self.password, "app_name": self.app_name},
         }
 
         signature = self._generate_signature(request_data)
@@ -119,10 +113,10 @@ class FnOSClient(metaclass=Singleton):
         headers = {
             "Accept": "application/json, text/plain, */*",
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
-            "authx": signature_str
+            "authx": signature_str,
         }
 
-        data = json.dumps(request_data["data"], separators=(',', ':'))
+        data = json.dumps(request_data["data"], separators=(",", ":"))
         response = requests.post(url, headers=headers, data=data, verify=False)
         res_json = response.json()
         if res_json.get("code") == 0:
@@ -139,12 +133,7 @@ class FnOSClient(metaclass=Singleton):
         if not token:
             raise Exception("Failed to get valid token")
 
-        request_data = {
-            "method": method,
-            "url": url,
-            "params": params or {},
-            "data": data or {}
-        }
+        request_data = {"method": method, "url": url, "params": params or {}, "data": data or {}}
 
         signature = self._generate_signature(request_data)
         signature_str = "&".join([f"{k}={v}" for k, v in signature.items()])
@@ -154,7 +143,7 @@ class FnOSClient(metaclass=Singleton):
             "Accept": "application/json, text/plain, */*",
             "Authorization": token,
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
-            "authx": signature_str
+            "authx": signature_str,
         }
 
         method = method.lower()
@@ -165,22 +154,23 @@ class FnOSClient(metaclass=Singleton):
             response = requests.get(url, headers=headers, cookies=cookies, verify=False)
         else:
             # 其他请求使用POST，数据放在请求体中
-            data_str = json.dumps(data or {}, separators=(',', ':'))
+            data_str = json.dumps(data or {}, separators=(",", ":"))
             response = requests.post(url, headers=headers, cookies=cookies, verify=False, data=data_str)
         return response.json()
 
-    def fetch_all_pages(self, parent_id: str = None, max_retries: int = 3, delay: float = 1,
-                       start_page: int = 1, end_page: int = None) -> list[dict[str, Any]]:
+    def fetch_all_pages(
+        self, parent_id: str = None, max_retries: int = 3, delay: float = 1, start_page: int = 1, end_page: int = None
+    ) -> list[dict[str, Any]]:
         """
         分页获取数据
-        
+
         Args:
             parent_id: 父级ID (可选)
             max_retries: 最大重试次数 (默认: 3)
             delay: 重试间隔(秒) (默认: 1)
             start_page: 起始页码 (默认: 1)
             end_page: 结束页码 (可选, 不指定则获取所有页)
-            
+
         Returns:
             所有数据的列表
         """
@@ -194,21 +184,16 @@ class FnOSClient(metaclass=Singleton):
             while retries <= max_retries:
                 try:
                     data = {
-                        "tags": {
-                            "type": ["Movie", "TV", "Directory", "Video"]
-                        },
+                        "tags": {"type": ["Movie", "TV", "Directory", "Video"]},
                         "sort_type": "DESC",
                         "sort_column": "create_time",
                         "exclude_grouped_video": 1,
                         "page": page,
-                        "page_size": page_size
+                        "page_size": page_size,
                     }
                     if parent_id:
                         data["ancestor_guid"] = parent_id
-                    response = self.request(
-                        endpoint="v/api/v1/item/list",
-                        data=data
-                    )
+                    response = self.request(endpoint="v/api/v1/item/list", data=data)
 
                     if response.get("code") != 0:
                         raise ValueError(f"API错误: {response.get('msg')}")
@@ -240,48 +225,42 @@ class FnOSClient(metaclass=Singleton):
     def search(self, title: str, libtype: str = "", year: str = "") -> list[dict[str, Any]]:
         """
         搜索媒体数据
-        
+
         Args:
             title: 标题
             year: 年份
-            
+
         Returns:
             所有数据的列表
         """
         all_items = []
 
-        response = self.request(
-            endpoint="v/api/v1/search/list",
-            method="get",
-            data={},
-            params={"q": title}
-        )
+        response = self.request(endpoint="v/api/v1/search/list", method="get", data={}, params={"q": title})
 
         if response.get("code") != 0:
             raise ValueError(f"API错误: {response.get('msg')}")
 
-        all_items = [sec for sec in response.get("data", [])
-                     if (not libtype or sec.get("type") == libtype)
-                     and (not year or (sec.get("air_date") and sec.get("air_date")[:4] == str(year)))]
+        all_items = [
+            sec
+            for sec in response.get("data", [])
+            if (not libtype or sec.get("type") == libtype)
+            and (not year or (sec.get("air_date") and sec.get("air_date")[:4] == str(year)))
+        ]
 
         return all_items
 
     def get_session_list(self, item_id: str):
         """
         获取剧集季数据
-        
+
         Args:
             item_id: 剧集guid
-            
+
         Returns:
             所有数据的列表
         """
 
-        response = self.request(
-            endpoint=f"v/api/v1/season/list/{item_id}",
-            method="get",
-            data={}
-        )
+        response = self.request(endpoint=f"v/api/v1/season/list/{item_id}", method="get", data={})
 
         if response.get("code") != 0:
             raise ValueError(f"API错误: {response.get('msg')}")
@@ -290,19 +269,15 @@ class FnOSClient(metaclass=Singleton):
     def get_episode_list(self, item_id: str):
         """
         获取剧集季数据
-        
+
         Args:
             item_id: 季guid
-            
+
         Returns:
             所有数据的列表
         """
 
-        response = self.request(
-            endpoint=f"v/api/v1/episode/list/{item_id}",
-            method="get",
-            data={}
-        )
+        response = self.request(endpoint=f"v/api/v1/episode/list/{item_id}", method="get", data={})
 
         if response.get("code") != 0:
             raise ValueError(f"API错误: {response.get('msg')}")
@@ -311,19 +286,15 @@ class FnOSClient(metaclass=Singleton):
     def get_episode_info(self, item_id: str):
         """
         获取剧集季数据
-        
+
         Args:
             item_id: 季guid
-            
+
         Returns:
             所有数据的列表
         """
 
-        response = self.request(
-            endpoint=f"v/api/v1/item/{item_id}",
-            method="get",
-            data={}
-        )
+        response = self.request(endpoint=f"v/api/v1/item/{item_id}", method="get", data={})
 
         if response.get("code") != 0:
             raise ValueError(f"API错误: {response.get('msg')}")
@@ -332,36 +303,27 @@ class FnOSClient(metaclass=Singleton):
     def get_library_list(self):
         """
         获取媒体库数据
-            
+
         Returns:
             所有数据的列表
         """
-        response = self.request(
-            endpoint="v/api/v1/mediadb/list",
-            method="get",
-            data={}
-        )
+        response = self.request(endpoint="v/api/v1/mediadb/list", method="get", data={})
         if response.get("code") != 0:
             raise ValueError(f"API错误: {response.get('msg')}")
         return response.get("data")
 
-
     def refresh_library(self, item_id: str):
         """
         刷新媒体库
-        
+
         Args:
             item_id: 媒体库guid
-            
+
         Returns:
             成功或失败
         """
 
-        response = self.request(
-            endpoint=f"v/api/v1/mdb/scan/{item_id}",
-            method="post",
-            data={}
-        )
+        response = self.request(endpoint=f"v/api/v1/mdb/scan/{item_id}", method="post", data={})
         if response.get("code") != 0:
             raise ValueError(f"API错误: {response.get('msg')}")
         return response.get("data")
@@ -369,18 +331,15 @@ class FnOSClient(metaclass=Singleton):
     def get_resume_list(self):
         """
         获取媒体库数据
-            
+
         Returns:
             所有数据的列表
         """
-        response = self.request(
-            endpoint="v/api/v1/play/list",
-            method="get",
-            data={}
-        )
+        response = self.request(endpoint="v/api/v1/play/list", method="get", data={})
         if response.get("code") != 0:
             raise ValueError(f"API错误: {response.get('msg')}")
         return response.get("data")
+
 
 # 使用示例
 if __name__ == "__main__":
@@ -390,22 +349,20 @@ if __name__ == "__main__":
         username="xxx",
         password="xxx",
         app_name="trimemedia-web",
-        auth_key="16CCEB3D-AB42-077D-36A1-F355324E4237"
+        auth_key="16CCEB3D-AB42-077D-36A1-F355324E4237",
     )
 
     # 示例1: 单页请求
     response = client.request(
         endpoint="/v/api/v1/item/list",
         data={
-            "tags": {
-                "type": ["Movie", "TV", "Directory", "Video"]
-            },
+            "tags": {"type": ["Movie", "TV", "Directory", "Video"]},
             "sort_type": "DESC",
             "sort_column": "create_time",
             "exclude_grouped_video": 1,
             "page": 1,
-            "page_size": 5
-        }
+            "page_size": 5,
+        },
     )
     print("单页响应:", response)
 

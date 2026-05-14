@@ -37,7 +37,7 @@ class ConfigMonitor(FileSystemEventHandler):
             logger.warning("检测到系统配置文件已修改，正在重新加载...")
 
             logger.info("Nastool 重启中...")
-            res = subprocess.run(['bash', './restart-server.sh'], cwd='.')
+            res = subprocess.run(["bash", "./restart-server.sh"], cwd=".")
             if res.returncode == 0:
                 logger.info("Nastool 重启成功...")
             else:
@@ -50,7 +50,7 @@ def start_config_monitor():
     """
     global _observer
     # 配置文件监听
-    _observer.schedule(ConfigMonitor(), path=os.environ.get('NASTOOL_CONFIG'), recursive=False)
+    _observer.schedule(ConfigMonitor(), path=os.environ.get("NASTOOL_CONFIG"), recursive=False)
     _observer.daemon = True
     _observer.start()
     try:
@@ -75,9 +75,9 @@ def stop_config_monitor():
 
 
 def signal_handler(sig, frame):
-    logger.info('收到 SIGTERM 信号, 停止监控...')
+    logger.info("收到 SIGTERM 信号, 停止监控...")
     stop_config_monitor()
-    logger.info('监控停止，退出中...')
+    logger.info("监控停止，退出中...")
     exit(0)
 
 
@@ -85,5 +85,5 @@ if __name__ == "__main__":
     signal(SIGTERM, signal_handler)
     signal(SIGINT, signal_handler)
 
-    logger.info('配置文件监控启动...')
+    logger.info("配置文件监控启动...")
     start_config_monitor()

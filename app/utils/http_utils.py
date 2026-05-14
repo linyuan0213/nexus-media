@@ -25,36 +25,28 @@ class RequestUtils:
     _pool_locks = {}
     _locks_lock = threading.Lock()
 
-    def __init__(self,
-                 headers=None,
-                 cookies=None,
-                 proxies=None,
-                 session=None,
-                 timeout=None,
-                 referer=None,
-                 content_type=None,
-                 accept_type=None):
+    def __init__(
+        self,
+        headers=None,
+        cookies=None,
+        proxies=None,
+        session=None,
+        timeout=None,
+        referer=None,
+        content_type=None,
+        accept_type=None,
+    ):
         if not content_type:
             content_type = "application/x-www-form-urlencoded; charset=UTF-8"
         if headers:
             if isinstance(headers, str):
-                self._headers = {
-                    "Content-Type": content_type,
-                    "User-Agent": f"{headers}",
-                    "Accept": accept_type
-                }
+                self._headers = {"Content-Type": content_type, "User-Agent": f"{headers}", "Accept": accept_type}
             else:
                 self._headers = headers
         else:
-            self._headers = {
-                "Content-Type": content_type,
-                "User-Agent": get_ua(),
-                "Accept": accept_type
-            }
+            self._headers = {"Content-Type": content_type, "User-Agent": get_ua(), "Accept": accept_type}
         if referer:
-            self._headers.update({
-                "referer": referer
-            })
+            self._headers.update({"referer": referer})
         if cookies:
             if isinstance(cookies, str):
                 self._cookies = self.cookie_parse(cookies)
@@ -94,15 +86,12 @@ class RequestUtils:
                     total=3,
                     backoff_factor=0.5,
                     status_forcelist=[429, 500, 502, 503, 504],
-                    allowed_methods=["HEAD", "GET", "OPTIONS", "POST"]
+                    allowed_methods=["HEAD", "GET", "OPTIONS", "POST"],
                 )
 
                 # 配置连接池
                 adapter = HTTPAdapter(
-                    pool_connections=10,
-                    pool_maxsize=50,
-                    max_retries=retry_strategy,
-                    pool_block=False
+                    pool_connections=10, pool_maxsize=50, max_retries=retry_strategy, pool_block=False
                 )
 
                 session.mount("http://", adapter)
@@ -117,23 +106,27 @@ class RequestUtils:
         for attempt in range(retries):
             try:
                 if self._session:
-                    response = self._session.post(url,
-                                              data=data,
-                                              verify=False,
-                                              headers=self._headers,
-                                              proxies=self._proxies,
-                                              cookies=self._cookies,
-                                              timeout=self._timeout,
-                                              json=json)
+                    response = self._session.post(
+                        url,
+                        data=data,
+                        verify=False,
+                        headers=self._headers,
+                        proxies=self._proxies,
+                        cookies=self._cookies,
+                        timeout=self._timeout,
+                        json=json,
+                    )
                 else:
-                    response = requests.post(url,
-                                         data=data,
-                                         verify=False,
-                                         headers=self._headers,
-                                         cookies=self._cookies,
-                                         proxies=self._proxies,
-                                         timeout=self._timeout,
-                                         json=json)
+                    response = requests.post(
+                        url,
+                        data=data,
+                        verify=False,
+                        headers=self._headers,
+                        cookies=self._cookies,
+                        proxies=self._proxies,
+                        timeout=self._timeout,
+                        json=json,
+                    )
 
                 # 检查返回的内容是否为空字符串
                 if response.text.strip() == "" and response.status_code not in [301, 302]:
@@ -159,21 +152,25 @@ class RequestUtils:
         for attempt in range(retries):
             try:
                 if self._session:
-                    r = self._session.get(url,
-                                          verify=False,
-                                          headers=self._headers,
-                                          proxies=self._proxies,
-                                          cookies=self._cookies,
-                                          timeout=self._timeout,
-                                          params=params)
+                    r = self._session.get(
+                        url,
+                        verify=False,
+                        headers=self._headers,
+                        proxies=self._proxies,
+                        cookies=self._cookies,
+                        timeout=self._timeout,
+                        params=params,
+                    )
                 else:
-                    r = requests.get(url,
-                                     verify=False,
-                                     headers=self._headers,
-                                     cookies=self._cookies,
-                                     proxies=self._proxies,
-                                     timeout=self._timeout,
-                                     params=params)
+                    r = requests.get(
+                        url,
+                        verify=False,
+                        headers=self._headers,
+                        cookies=self._cookies,
+                        proxies=self._proxies,
+                        timeout=self._timeout,
+                        params=params,
+                    )
                 # 检查返回的内容是否为空字符串
                 if r.text.strip() == "" and r.status_code not in [301, 302]:
                     log.debug(f"Attempt {attempt + 1} returned an empty string.")
@@ -198,23 +195,27 @@ class RequestUtils:
         for attempt in range(retries):
             try:
                 if self._session:
-                    response = self._session.get(url,
-                                            params=params,
-                                            verify=False,
-                                            headers=self._headers,
-                                            proxies=self._proxies,
-                                            cookies=self._cookies,
-                                            timeout=self._timeout,
-                                            allow_redirects=allow_redirects)
+                    response = self._session.get(
+                        url,
+                        params=params,
+                        verify=False,
+                        headers=self._headers,
+                        proxies=self._proxies,
+                        cookies=self._cookies,
+                        timeout=self._timeout,
+                        allow_redirects=allow_redirects,
+                    )
                 else:
-                    response = requests.get(url,
-                                        params=params,
-                                        verify=False,
-                                        headers=self._headers,
-                                        proxies=self._proxies,
-                                        cookies=self._cookies,
-                                        timeout=self._timeout,
-                                        allow_redirects=allow_redirects)
+                    response = requests.get(
+                        url,
+                        params=params,
+                        verify=False,
+                        headers=self._headers,
+                        proxies=self._proxies,
+                        cookies=self._cookies,
+                        timeout=self._timeout,
+                        allow_redirects=allow_redirects,
+                    )
 
                 # 检查返回的内容是否为空字符串
                 if response.text.strip() == "" and response.status_code not in [301, 302]:
@@ -240,29 +241,33 @@ class RequestUtils:
         for attempt in range(retries):
             try:
                 if self._session:
-                    response = self._session.post(url,
-                                                data=data,
-                                                params=params,
-                                                verify=False,
-                                                headers=self._headers,
-                                                proxies=self._proxies,
-                                                cookies=self._cookies,
-                                                timeout=self._timeout,
-                                                allow_redirects=allow_redirects,
-                                                files=files,
-                                                json=json)
+                    response = self._session.post(
+                        url,
+                        data=data,
+                        params=params,
+                        verify=False,
+                        headers=self._headers,
+                        proxies=self._proxies,
+                        cookies=self._cookies,
+                        timeout=self._timeout,
+                        allow_redirects=allow_redirects,
+                        files=files,
+                        json=json,
+                    )
                 else:
-                    response = requests.post(url,
-                                            data=data,
-                                            params=params,
-                                            verify=False,
-                                            headers=self._headers,
-                                            proxies=self._proxies,
-                                            cookies=self._cookies,
-                                            timeout=self._timeout,
-                                            allow_redirects=allow_redirects,
-                                            files=files,
-                                            json=json)
+                    response = requests.post(
+                        url,
+                        data=data,
+                        params=params,
+                        verify=False,
+                        headers=self._headers,
+                        proxies=self._proxies,
+                        cookies=self._cookies,
+                        timeout=self._timeout,
+                        allow_redirects=allow_redirects,
+                        files=files,
+                        json=json,
+                    )
 
                 # 检查返回的内容是否为空字符串
                 if response.text.strip() == "" and response.status_code not in [301, 302]:
@@ -295,15 +300,15 @@ class RequestUtils:
         if not cookies_str:
             return {}
         cookie_dict = {}
-        cookies = cookies_str.split(';')
+        cookies = cookies_str.split(";")
         for cookie in cookies:
-            cstr = cookie.split('=')
+            cstr = cookie.split("=")
             if len(cstr) > 1:
                 cookie_dict[cstr[0].strip()] = cstr[1].strip()
         if array:
             cookiesList = []
             for cookieName, cookieValue in cookie_dict.items():
-                cookies = {'name': cookieName, 'value': cookieValue}
+                cookies = {"name": cookieName, "value": cookieValue}
                 cookiesList.append(cookies)
             return cookiesList
         return cookie_dict

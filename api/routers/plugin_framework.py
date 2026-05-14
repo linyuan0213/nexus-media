@@ -2,6 +2,7 @@
 Plugin Framework Router - FastAPI
 插件框架 v2 API 路由
 """
+
 import os
 import json
 import tempfile
@@ -24,6 +25,7 @@ router = APIRouter()
 # Request Models
 # ---------------------------------------------------------------------------
 
+
 class PluginIdRequest(BaseModel):
     plugin_id: str
 
@@ -36,6 +38,7 @@ class PluginConfigRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get("/plugins")
 def list_plugins(
@@ -139,9 +142,7 @@ def enable_plugin(
     try:
         # 先更新数据库和缓存状态（同步），后台线程加载插件实例
         svc.enable(plugin_id)
-        threading.Thread(
-            target=svc._do_enable, args=(plugin_id,), daemon=True
-        ).start()
+        threading.Thread(target=svc._do_enable, args=(plugin_id,), daemon=True).start()
         return success(msg="启用中，请稍后刷新")
     except Exception as e:
         log.error(f"[PluginAPI] 启用插件失败 {plugin_id}: {e}")
@@ -243,6 +244,7 @@ def list_hook_events(
 ):
     """列出所有可用事件"""
     from app.plugin_framework.hook_system import HookSystem
+
     return success(data=HookSystem().EVENTS)
 
 
@@ -254,8 +256,7 @@ def get_plugin_data(
 ):
     """获取插件数据文件（JSON）"""
     try:
-
-        data_dir = os.path.join(Config().config_path, 'plugins_data', plugin_id)
+        data_dir = os.path.join(Config().config_path, "plugins_data", plugin_id)
         target = os.path.join(data_dir, filename)
         real_dir = os.path.realpath(data_dir)
         real_target = os.path.realpath(target)
@@ -263,7 +264,7 @@ def get_plugin_data(
             return fail(msg="非法路径")
         if not os.path.exists(target):
             return success(data=[])
-        with open(target, encoding='utf-8') as f:
+        with open(target, encoding="utf-8") as f:
             data = json.load(f)
         # 如果是字典，返回 values 列表
         if isinstance(data, dict):
@@ -283,10 +284,9 @@ def delete_plugin_data(
 ):
     """删除插件数据文件中的某条记录"""
     try:
-
-
         from config import Config
-        data_dir = os.path.join(Config().config_path, 'plugins_data', plugin_id)
+
+        data_dir = os.path.join(Config().config_path, "plugins_data", plugin_id)
         target = os.path.join(data_dir, filename)
         real_dir = os.path.realpath(data_dir)
         real_target = os.path.realpath(target)
@@ -294,15 +294,15 @@ def delete_plugin_data(
             return fail(msg="非法路径")
         if not os.path.exists(target):
             return fail(msg="数据文件不存在")
-        with open(target, encoding='utf-8') as f:
+        with open(target, encoding="utf-8") as f:
             data = json.load(f)
         if isinstance(data, dict) and item_id in data:
             del data[item_id]
         elif isinstance(data, list):
-            data = [x for x in data if str(x.get('id', x)) != item_id]
+            data = [x for x in data if str(x.get("id", x)) != item_id]
         else:
             return fail(msg="记录不存在")
-        with open(target, 'w', encoding='utf-8') as f:
+        with open(target, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         return success(msg="删除成功")
     except Exception as e:

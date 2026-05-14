@@ -6,6 +6,7 @@ class SingletonMeta(type):
     """
     定义一个元类，用来实现单例模式
     """
+
     _instances = {}
     _lock = threading.RLock()
 

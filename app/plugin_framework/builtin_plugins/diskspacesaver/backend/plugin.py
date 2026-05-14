@@ -2,6 +2,7 @@
 DiskSpaceSaver Plugin v2
 计算文件SHA1，同磁盘下相同SHA1的文件只保留一个，其他的用硬链接替换
 """
+
 import datetime
 import hashlib
 import json
@@ -39,9 +40,9 @@ class DiskSpaceSaverPlugin:
         fast = config.get("fast", False)
 
         if isinstance(path_list, str):
-            path_list = list(set(path_list.split('\n')))
+            path_list = list(set(path_list.split("\n")))
         if isinstance(ext_list, str):
-            ext_list = list(set(ext_list.split(',')))
+            ext_list = list(set(ext_list.split(",")))
 
         if not path_list or not file_size or not ext_list:
             self.ctx.info("磁盘空间释放配置信息不完整，不进行处理")
@@ -67,7 +68,7 @@ class DiskSpaceSaverPlugin:
         h = hashlib.sha1()
         buffer = bytearray(buffer_size)
         buffer_view = memoryview(buffer)
-        with open(file_path, 'rb', buffering=0) as f:
+        with open(file_path, "rb", buffering=0) as f:
             if fast:
                 file_size = os.path.getsize(file_path)
                 n = f.readinto(buffer)
@@ -100,36 +101,40 @@ class DiskSpaceSaverPlugin:
                 file_mtime = datetime.datetime.fromtimestamp(os.path.getmtime(file_path))
                 if file_group_by_size.get(file_size) is None:
                     file_group_by_size[file_size] = []
-                file_group_by_size[file_size].append({
-                    'filePath': file_path,
-                    'fileExt': file_ext,
-                    'fileSize': file_size,
-                    'fileModifyTime': str(file_mtime)
-                })
+                file_group_by_size[file_size].append(
+                    {
+                        "filePath": file_path,
+                        "fileExt": file_ext,
+                        "fileSize": file_size,
+                        "fileModifyTime": str(file_mtime),
+                    }
+                )
 
         for file_size, file_list in file_group_by_size.items():
             if len(file_list) <= 1:
                 continue
             for file_info in file_list:
-                file_path = file_info['filePath']
+                file_path = file_info["filePath"]
                 file_mtime = datetime.datetime.fromtimestamp(os.path.getmtime(file_path))
                 file_size = os.path.getsize(file_path)
                 sha1 = None
 
-                for info in last_result['file_info']:
-                    if file_path == info['filePath']:
-                        if file_size == info['fileSize'] and str(file_mtime) == info['fileModifyTime']:
-                            sha1 = info['fileSha1']
+                for info in last_result["file_info"]:
+                    if file_path == info["filePath"]:
+                        if file_size == info["fileSize"] and str(file_mtime) == info["fileModifyTime"]:
+                            sha1 = info["fileSha1"]
                         break
 
                 if sha1 is None:
                     sha1 = self._get_sha1(file_path, fast=fast)
-                    last_result['file_info'].append({
-                        'filePath': file_path,
-                        'fileSize': file_size,
-                        'fileModifyTime': str(file_mtime),
-                        'fileSha1': sha1
-                    })
+                    last_result["file_info"].append(
+                        {
+                            "filePath": file_path,
+                            "fileSize": file_size,
+                            "fileModifyTime": str(file_mtime),
+                            "fileSha1": sha1,
+                        }
+                    )
 
                 if sha1 in duplicates:
                     duplicates[sha1].append(file_path)
@@ -146,30 +151,30 @@ class DiskSpaceSaverPlugin:
                     stat_compare = os.stat(file_path)
                     if stat_first.st_dev == stat_compare.st_dev:
                         if stat_first.st_ino == stat_compare.st_ino:
-                            self.ctx.info(f'文件 {files[0]} 和 {file_path} 是同一个文件，无需处理')
+                            self.ctx.info(f"文件 {files[0]} 和 {file_path} 是同一个文件，无需处理")
                         else:
                             if dry_run:
-                                self.ctx.info(f'文件 {files[0]} 和 {file_path} 是重复文件，dry_run中，不做处理')
+                                self.ctx.info(f"文件 {files[0]} 和 {file_path} 是重复文件，dry_run中，不做处理")
                                 continue
                             try:
-                                os.rename(file_path, file_path + '.bak')
+                                os.rename(file_path, file_path + ".bak")
                                 os.link(files[0], file_path)
-                                os.remove(file_path + '.bak')
-                                self.ctx.info(f'文件 {files[0]} 和 {file_path} 是重复文件，已用硬链接替换')
+                                os.remove(file_path + ".bak")
+                                self.ctx.info(f"文件 {files[0]} 和 {file_path} 是重复文件，已用硬链接替换")
                             except Exception:
-                                os.rename(file_path + '.bak', file_path)
-                                self.ctx.info(f'文件 {files[0]} 和 {file_path} 硬链接替换失败，已恢复原文件')
+                                os.rename(file_path + ".bak", file_path)
+                                self.ctx.info(f"文件 {files[0]} 和 {file_path} 硬链接替换失败，已恢复原文件")
                     else:
-                        self.ctx.info(f'文件 {files[0]} 和 {file_path} 不在同一个磁盘，无法用硬链接替换')
+                        self.ctx.info(f"文件 {files[0]} 和 {file_path} 不在同一个磁盘，无法用硬链接替换")
 
     @staticmethod
     def _load_last_result(last_result_path):
         if os.path.exists(last_result_path):
             with open(last_result_path) as f:
                 return json.load(f)
-        return {'file_info': [], 'inode_info': []}
+        return {"file_info": [], "inode_info": []}
 
     @staticmethod
     def _save_last_result(last_result_path, last_result):
-        with open(last_result_path, 'w') as f:
+        with open(last_result_path, "w") as f:
             json.dump(last_result, f)

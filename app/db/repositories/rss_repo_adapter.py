@@ -39,7 +39,7 @@ class RssMovieRepositoryAdapter:
         self._repo.update_rss_movie_state(title, year, rssid, state)
 
     # 兼容旧Repository方法名
-    def update_rss_movie_state(self, title=None, year=None, rssid=None, state='R') -> None:
+    def update_rss_movie_state(self, title=None, year=None, rssid=None, state="R") -> None:
         self.update_state(title, year, rssid, state)
 
     def update(self, rssid: int, **kwargs) -> int:
@@ -47,23 +47,43 @@ class RssMovieRepositoryAdapter:
 
     def update_filter_order(self, rssid: int, res_order: int) -> None:
         from app.utils.types import MediaType
+
         self._repo.update_rss_filter_order(MediaType.MOVIE, rssid, res_order)
 
     def get_filter_order(self, rssid: int) -> int:
         from app.utils.types import MediaType
+
         return self._repo.get_rss_overedition_order(MediaType.MOVIE, rssid)
 
     # 兼容旧Repository方法名
     def get_rss_overedition_order(self, rtype, rssid) -> int:
         return self.get_filter_order(rssid)
 
-    def delete(self, title: str | None = None, year: str | None = None, rssid: int | None = None, tmdbid: str | None = None) -> None:
+    def delete(
+        self, title: str | None = None, year: str | None = None, rssid: int | None = None, tmdbid: str | None = None
+    ) -> None:
         self._repo.delete_rss_movie(title, year, rssid, tmdbid)
 
-    def insert(self, media_info, state="D", rss_sites=None, search_sites=None, over_edition=0,
-               filter_restype=None, filter_pix=None, filter_team=None, filter_rule=None,
-               filter_include=None, filter_exclude=None, save_path=None, download_setting: int | None = -1,
-               fuzzy_match=0, desc=None, note=None, keyword=None) -> int:
+    def insert(
+        self,
+        media_info,
+        state="D",
+        rss_sites=None,
+        search_sites=None,
+        over_edition=0,
+        filter_restype=None,
+        filter_pix=None,
+        filter_team=None,
+        filter_rule=None,
+        filter_include=None,
+        filter_exclude=None,
+        save_path=None,
+        download_setting: int | None = -1,
+        fuzzy_match=0,
+        desc=None,
+        note=None,
+        keyword=None,
+    ) -> int:
         return self._repo.insert_rss_movie(
             media_info=media_info,
             state=state,
@@ -81,7 +101,7 @@ class RssMovieRepositoryAdapter:
             fuzzy_match=fuzzy_match,
             desc=desc,
             note=note,
-            keyword=keyword
+            keyword=keyword,
         )
 
 
@@ -103,40 +123,75 @@ class RssTvRepositoryAdapter:
     def is_exists(self, title: str, year: str, season: str | None = None) -> bool:
         return self._repo.is_exists_rss_tv(title, year, season)
 
-    def update_tmdb(self, rid: int, tmdbid: str, title: str, year: str, total: int, lack: int, image: str, desc: str, note: str) -> None:
+    def update_tmdb(
+        self, rid: int, tmdbid: str, title: str, year: str, total: int, lack: int, image: str, desc: str, note: str
+    ) -> None:
         self._repo.update_rss_tv_tmdb(rid, tmdbid, title, year, total, lack, image, desc, note)
 
     def update_desc(self, rid: int, desc: str) -> None:
         self._repo.update_rss_tv_desc(rid, desc)
 
-    def update_state(self, title: str | None, year: str | None, season: str | None, rssid: int | None, state: str) -> None:
+    def update_state(
+        self, title: str | None, year: str | None, season: str | None, rssid: int | None, state: str
+    ) -> None:
         self._repo.update_rss_tv_state(title, year, season, rssid, state)
 
     # 兼容旧Repository方法名
-    def update_rss_tv_state(self, title=None, year=None, season=None, rssid=None, state='R') -> None:
+    def update_rss_tv_state(self, title=None, year=None, season=None, rssid=None, state="R") -> None:
         self.update_state(title, year, season, rssid, state)
 
-    def update_lack(self, title: str | None, year: str | None, season: str | None, rssid: int | None, lack_episodes: list[int] | None) -> None:
+    def update_lack(
+        self,
+        title: str | None,
+        year: str | None,
+        season: str | None,
+        rssid: int | None,
+        lack_episodes: list[int] | None,
+    ) -> None:
         self._repo.update_rss_tv_lack(title, year, season, rssid, lack_episodes)
 
     def update_filter_order(self, rssid: int, res_order: int) -> None:
         from app.utils.types import MediaType
+
         self._repo.update_rss_filter_order(MediaType.TV, rssid, res_order)
 
     def get_filter_order(self, rssid: int) -> int:
         from app.utils.types import MediaType
+
         return self._repo.get_rss_overedition_order(MediaType.TV, rssid)
 
-    def delete(self, title: str | None = None, season: str | None = None, rssid: int | None = None, tmdbid: str | None = None) -> None:
+    def delete(
+        self, title: str | None = None, season: str | None = None, rssid: int | None = None, tmdbid: str | None = None
+    ) -> None:
         self._repo.delete_rss_tv(title, season, rssid, tmdbid)
 
     def update(self, rssid: int, **kwargs) -> int:
         return self._repo.update_rss_tv(rssid, **kwargs)
 
-    def insert(self, media_info, total, lack=0, state="D", rss_sites=None, search_sites=None, over_edition=0,
-               filter_restype=None, filter_pix=None, filter_team=None, filter_rule=None,
-               filter_include=None, filter_exclude=None, save_path=None, download_setting: int | None = -1,
-               total_ep=None, current_ep=None, fuzzy_match=0, desc=None, note=None, keyword=None) -> int:
+    def insert(
+        self,
+        media_info,
+        total,
+        lack=0,
+        state="D",
+        rss_sites=None,
+        search_sites=None,
+        over_edition=0,
+        filter_restype=None,
+        filter_pix=None,
+        filter_team=None,
+        filter_rule=None,
+        filter_include=None,
+        filter_exclude=None,
+        save_path=None,
+        download_setting: int | None = -1,
+        total_ep=None,
+        current_ep=None,
+        fuzzy_match=0,
+        desc=None,
+        note=None,
+        keyword=None,
+    ) -> int:
         return self._repo.insert_rss_tv(
             media_info=media_info,
             total=total,
@@ -158,7 +213,7 @@ class RssTvRepositoryAdapter:
             fuzzy_match=fuzzy_match,
             desc=desc,
             note=note,
-            keyword=keyword
+            keyword=keyword,
         )
 
 
@@ -207,7 +262,9 @@ class RssHistoryRepositoryAdapter:
         self._repo = repo or RssRepository()
 
     # 兼容旧Repository方法名
-    def insert_rss_history(self, rssid, rtype, name, year, tmdbid, image, desc, season=None, total=None, start=None) -> None:
+    def insert_rss_history(
+        self, rssid, rtype, name, year, tmdbid, image, desc, season=None, total=None, start=None
+    ) -> None:
         self.insert(rssid, rtype, name, year, tmdbid, image, desc, season, total, start)
 
     # 兼容旧Repository方法名
@@ -232,9 +289,19 @@ class RssHistoryRepositoryAdapter:
     def check_exists(self, type_str: str, name: str, year: str, season: str) -> bool:
         return self._repo.check_rss_history(type_str, name, year, season)
 
-    def insert(self, rssid: str, rtype: str, name: str, year: str, tmdbid: str,
-               image: str, desc: str, season: str | None = None, total: int | None = None,
-               start: int | None = None) -> None:
+    def insert(
+        self,
+        rssid: str,
+        rtype: str,
+        name: str,
+        year: str,
+        tmdbid: str,
+        image: str,
+        desc: str,
+        season: str | None = None,
+        total: int | None = None,
+        start: int | None = None,
+    ) -> None:
         self._repo.insert_rss_history(rssid, rtype, name, year, tmdbid, image, desc, season, total, start)
 
     def delete(self, rssid: str) -> None:

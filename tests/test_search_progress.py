@@ -5,11 +5,12 @@
 1. 索引器 search_by_keyword 不再写入 progress value（避免多线程竞争导致进度乱跳）
 2. 外层 web/backend/search_torrents.py 和 app/searcher.py 统一控制进度 value
 """
+
 import ast
 import sys
 import unittest
 
-sys.path.insert(0, '.')
+sys.path.insert(0, ".")
 
 
 class TestSearchProgress(unittest.TestCase):
@@ -26,7 +27,7 @@ class TestSearchProgress(unittest.TestCase):
                             # 简单模式匹配：检查源码文本是否包含 value_pattern
                             start_line = kw.value.lineno
                             end_line = kw.value.end_lineno
-                            lines = self._source_lines[start_line - 1:end_line]
+                            lines = self._source_lines[start_line - 1 : end_line]
                             expr_text = "".join(lines)
                             if value_pattern in expr_text:
                                 return True
@@ -51,12 +52,9 @@ class TestSearchProgress(unittest.TestCase):
 
         self.assertIsNotNone(method_node, "应存在 search_by_keyword 方法")
 
-        has_value_update = self._find_call_kwarg(
-            method_node, "update", "value", "round(100 *"
-        )
+        has_value_update = self._find_call_kwarg(method_node, "update", "value", "round(100 *")
         self.assertFalse(
-            has_value_update,
-            "search_by_keyword 内部不应再更新 progress value，否则多线程竞争会导致进度乱跳"
+            has_value_update, "search_by_keyword 内部不应再更新 progress value，否则多线程竞争会导致进度乱跳"
         )
 
     def test_web_search_updates_progress_externally(self):
@@ -77,13 +75,8 @@ class TestSearchProgress(unittest.TestCase):
 
         self.assertIsNotNone(func_node, "应存在 search_medias_for_web 函数")
 
-        has_value_update = self._find_call_kwarg(
-            func_node, "update", "value", "round(100 *"
-        )
-        self.assertTrue(
-            has_value_update,
-            "search_medias_for_web 应在 as_completed 循环外层统一更新 progress value"
-        )
+        has_value_update = self._find_call_kwarg(func_node, "update", "value", "round(100 *")
+        self.assertTrue(has_value_update, "search_medias_for_web 应在 as_completed 循环外层统一更新 progress value")
 
     def test_searcher_updates_progress_externally(self):
         """
@@ -102,14 +95,9 @@ class TestSearchProgress(unittest.TestCase):
 
         self.assertIsNotNone(func_node, "应存在 search_one_media 方法")
 
-        has_value_update = self._find_call_kwarg(
-            func_node, "update", "value", "round(100 *"
-        )
-        self.assertTrue(
-            has_value_update,
-            "search_one_media 应在 as_completed 循环外层统一更新 progress value"
-        )
+        has_value_update = self._find_call_kwarg(func_node, "update", "value", "round(100 *")
+        self.assertTrue(has_value_update, "search_one_media 应在 as_completed 循环外层统一更新 progress value")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

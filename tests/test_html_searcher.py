@@ -1,10 +1,11 @@
 """
 HtmlSiteSearcher 单元测试 — 验证 enclosure URL 规范化
 """
+
 import sys
 from unittest.mock import MagicMock
 
-sys.modules['log'] = MagicMock()
+sys.modules["log"] = MagicMock()
 
 from app.sites.html_searcher import HtmlSiteSearcher
 

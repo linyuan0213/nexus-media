@@ -2,6 +2,7 @@
 线程优化测试用例
 测试多线程竞争优化后的性能和正确性
 """
+
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -33,8 +34,7 @@ class TestLockOptimization:
         threads = []
         start = time.time()
         for _ in range(10):
-            t = threading.Thread(target=increment_with_lock,
-                                args=(normal_lock, normal_counter, 100))
+            t = threading.Thread(target=increment_with_lock, args=(normal_lock, normal_counter, 100))
             threads.append(t)
         for t in threads:
             t.start()
@@ -47,8 +47,7 @@ class TestLockOptimization:
         threads = []
         start = time.time()
         for _ in range(10):
-            t = threading.Thread(target=increment_with_lock,
-                                args=(rlock, rlock_counter, 100))
+            t = threading.Thread(target=increment_with_lock, args=(rlock, rlock_counter, 100))
             threads.append(t)
         for t in threads:
             t.start()
@@ -122,6 +121,7 @@ class TestThreadPoolOptimization:
 
     def test_thread_pool_vs_sequential(self):
         """测试线程池并发 vs 串行性能"""
+
         def slow_task(n):
             time.sleep(0.01)
             return n * n
@@ -307,7 +307,7 @@ class TestRealWorldScenarios:
         download_lock_counter = threading.Lock()
 
         def download_image(url):
-            cache_key = url.split('/')[-1]
+            cache_key = url.split("/")[-1]
 
             # 获取或创建锁
             with locks_lock:

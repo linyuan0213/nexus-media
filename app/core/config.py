@@ -2,6 +2,7 @@
 Config - YAML 配置管理器（核心）
 只负责 config.yaml 的读写，不含任何业务辅助方法
 """
+
 import io
 import os
 import shutil
@@ -38,12 +39,12 @@ class Config(metaclass=_SingletonMeta):
 
     def __init__(self):
         settings = AppSettings()
-        self._config_path = settings.nastool_config or os.environ.get('NASTOOL_CONFIG')
+        self._config_path = settings.nastool_config or os.environ.get("NASTOOL_CONFIG")
         self._settings = settings
 
-        tz = settings.tz or os.environ.get('TZ')
-        if not os.environ.get('TZ'):
-            os.environ['TZ'] = tz or 'Asia/Shanghai'
+        tz = settings.tz or os.environ.get("TZ")
+        if not os.environ.get("TZ"):
+            os.environ["TZ"] = tz or "Asia/Shanghai"
 
         self._init_syspath()
         self._init_config()
@@ -60,7 +61,7 @@ class Config(metaclass=_SingletonMeta):
                 shutil.copy(template, self._config_path)
                 print("【Config】config.yaml 配置文件不存在，已将配置文件模板复制到配置目录...")
 
-            with open(self._config_path, encoding='utf-8') as cf:
+            with open(self._config_path, encoding="utf-8") as cf:
                 try:
                     print("正在加载配置：%s" % self._config_path)
                     self._config = ruamel.yaml.YAML().load(cf)
@@ -78,9 +79,9 @@ class Config(metaclass=_SingletonMeta):
         env_db_config = self._settings.get_database_config()
         if not env_db_config:
             return
-        current = self._config.get('database', {}) or {}
+        current = self._config.get("database", {}) or {}
         current.update(env_db_config)
-        self._config['database'] = current
+        self._config["database"] = current
         try:
             self.save_config(self._config)
             print("【Config】已从环境变量更新数据库配置到配置文件")
@@ -114,9 +115,9 @@ class Config(metaclass=_SingletonMeta):
         except Exception as e:
             raise ValueError(f"Invalid YAML data: {e}")
 
-        lock_path = self._config_path + '.lock'
+        lock_path = self._config_path + ".lock"
         with FileLock(lock_path):
-            with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', delete=False) as temp_file:
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as temp_file:
                 yaml.dump(new_cfg, temp_file)
                 temp_path = temp_file.name
             shutil.move(temp_path, self._config_path)
@@ -128,7 +129,7 @@ class Config(metaclass=_SingletonMeta):
 
     @property
     def current_user(self):
-        return getattr(self, '_user', None)
+        return getattr(self, "_user", None)
 
     @current_user.setter
     def current_user(self, user):

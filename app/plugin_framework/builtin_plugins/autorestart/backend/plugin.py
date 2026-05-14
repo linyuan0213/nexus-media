@@ -2,6 +2,7 @@
 AutoRestart Plugin v2
 定时自动重启 NAStool 服务
 """
+
 import os
 import signal
 import time
@@ -52,7 +53,7 @@ class AutoRestartPlugin:
 
         if onlyonce:
             self.ctx.info("重启服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ'))) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ"))) + timedelta(seconds=3)
             self.ctx.schedule_date("restart_once", self._do_restart, run_date=run_date)
             # 关闭一次性开关并保存
             self.ctx.set_config("onlyonce", False)
@@ -78,7 +79,7 @@ class AutoRestartPlugin:
         if notify:
             self.ctx.notify(
                 title="【系统重启通知】",
-                text=f"NAStool将在 {delay} 秒后重启\n时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}"
+                text=f"NAStool将在 {delay} 秒后重启\n时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}",
             )
 
         if delay > 0:
@@ -95,5 +96,5 @@ class AutoRestartPlugin:
             if notify:
                 self.ctx.notify(
                     title="【系统重启失败】",
-                    text=f"NAStool重启失败：{str(e)}\n时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}"
+                    text=f"NAStool重启失败：{str(e)}\n时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}",
                 )

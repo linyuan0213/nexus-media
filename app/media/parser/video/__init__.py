@@ -2,6 +2,7 @@
 影视标题解析 — 主入口
 将 MetaVideo 类拆分为纯函数模块
 """
+
 import os
 import re
 
@@ -38,38 +39,40 @@ def parse_video_title(title, subtitle=None, fileflag=False) -> MediaInfo:
     info._unknown_name_str = ""
 
     # 判断是否纯数字命名
-    if os.path.splitext(title)[-1] in RMT_MEDIAEXT \
-            and os.path.splitext(title)[0].isdigit() \
-            and len(os.path.splitext(title)[0]) < 5:
+    if (
+        os.path.splitext(title)[-1] in RMT_MEDIAEXT
+        and os.path.splitext(title)[0].isdigit()
+        and len(os.path.splitext(title)[0]) < 5
+    ):
         info.begin_episode = int(os.path.splitext(title)[0])
         info.type = MediaType.TV
         return info
 
     # 预处理字幕组 episode 标注格式: [XX - 总第YY] → 提取 XX 作为 episode
-    re_res = re.search(r'\[(\d{1,3})\s*-\s*总第\d{1,3}\]', title)
+    re_res = re.search(r"\[(\d{1,3})\s*-\s*总第\d{1,3}\]", title)
     if re_res:
         info.begin_episode = int(re_res.group(1))
         info.type = MediaType.TV
 
     # 预处理中文方括号集号: 【XX】 → 提取 XX 作为 episode
     if not info.begin_episode:
-        re_res = re.search(r'【(\d{1,3})】', title)
+        re_res = re.search(r"【(\d{1,3})】", title)
         if re_res:
             info.begin_episode = int(re_res.group(1))
             info.type = MediaType.TV
 
     # 预处理绝对集号格式: "Title - XX [tags]" / "Title - XX 1080p" / "Title - XX.mkv" → 提取 XX 作为 episode
     if not info.begin_episode:
-        re_res = re.search(r'\s-\s(\d{1,3})\b', title)
+        re_res = re.search(r"\s-\s(\d{1,3})\b", title)
         if re_res:
             info.begin_episode = int(re_res.group(1))
             info.type = MediaType.TV
 
     # 预处理
-    title = re.sub(r'%s' % _name_no_begin_re, "", title, count=1)
-    title = re.sub(r'([\s.]+)(\d{4})-(\d{4})', r'\1\2', title)
-    title = re.sub(r'[0-9.]+\s*[MGT]i?B(?![A-Z]+)', "", title, flags=re.IGNORECASE)
-    title = re.sub(r'\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}', "", title)
+    title = re.sub(r"%s" % _name_no_begin_re, "", title, count=1)
+    title = re.sub(r"([\s.]+)(\d{4})-(\d{4})", r"\1\2", title)
+    title = re.sub(r"[0-9.]+\s*[MGT]i?B(?![A-Z]+)", "", title, flags=re.IGNORECASE)
+    title = re.sub(r"\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}", "", title)
 
     # 拆分 tokens
     tokens = Tokens(title)
@@ -104,8 +107,7 @@ def parse_video_title(title, subtitle=None, fileflag=False) -> MediaInfo:
 
     # 提取原盘DIY
     if info.resource_type and "BluRay" in info.resource_type:
-        if (info.subtitle and re.findall(r'D[Ii]Y', info.subtitle)) \
-                or re.findall(r'-D[Ii]Y@', original_title):
+        if (info.subtitle and re.findall(r"D[Ii]Y", info.subtitle)) or re.findall(r"-D[Ii]Y@", original_title):
             info.resource_type = f"{info.resource_type} DIY"
 
     # 解析副标题
@@ -133,12 +135,22 @@ def parse_video_title(title, subtitle=None, fileflag=False) -> MediaInfo:
 def _subtitle_changed(info, title_text):
     """检测副标题解析是否修改了信息"""
     before = (
-        info.begin_season, info.end_season, info.total_seasons,
-        info.begin_episode, info.end_episode, info.total_episodes, info.type
+        info.begin_season,
+        info.end_season,
+        info.total_seasons,
+        info.begin_episode,
+        info.end_episode,
+        info.total_episodes,
+        info.type,
     )
     info.init_subtitle(title_text)
     after = (
-        info.begin_season, info.end_season, info.total_seasons,
-        info.begin_episode, info.end_episode, info.total_episodes, info.type
+        info.begin_season,
+        info.end_season,
+        info.total_seasons,
+        info.begin_episode,
+        info.end_episode,
+        info.total_episodes,
+        info.type,
     )
     return before != after

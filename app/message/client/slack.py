@@ -97,28 +97,29 @@ class Slack(_IMessageClient):
             return False, "消息客户端未就绪"
         try:
             channel = user_id or self.__find_public_channel()
-            titles = str(title).split('\n')
+            titles = str(title).split("\n")
             if len(titles) > 1:
                 title = titles[0]
                 text = "\n".join(titles[1:]) if not text else f"{chr(10).join(titles[1:])}\n{text}"
-            block = {
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": f"*{title}*\n{text}"}
-            }
+            block = {"type": "section", "text": {"type": "mrkdwn", "text": f"*{title}*\n{text}"}}
             if image:
-                block['accessory'] = {"type": "image", "image_url": image, "alt_text": title}
+                block["accessory"] = {"type": "image", "image_url": image, "alt_text": title}
             blocks = [block]
             if image and url:
-                blocks.append({
-                    "type": "actions",
-                    "elements": [{
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "查看详情", "emoji": True},
-                        "value": "click_me_url",
-                        "url": url,
-                        "action_id": "actionId-url"
-                    }]
-                })
+                blocks.append(
+                    {
+                        "type": "actions",
+                        "elements": [
+                            {
+                                "type": "button",
+                                "text": {"type": "plain_text", "text": "查看详情", "emoji": True},
+                                "value": "click_me_url",
+                                "url": url,
+                                "action_id": "actionId-url",
+                            }
+                        ],
+                    }
+                )
             result = self._client.chat_postMessage(channel=channel, blocks=blocks)
             return True, result
         except Exception as msg_e:
@@ -142,13 +143,32 @@ class Slack(_IMessageClient):
                 else:
                     text = f"{idx}. *<{media.get_detail_url()}|{media.get_title_string()}>*\n{media.get_type_string()}\n{media.get_overview_string(50)}"
                 if media.get_poster_image():
-                    blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": text},
-                        "accessory": {"type": "image", "image_url": media.get_poster_image(), "alt_text": media.get_title_string()}})
+                    blocks.append(
+                        {
+                            "type": "section",
+                            "text": {"type": "mrkdwn", "text": text},
+                            "accessory": {
+                                "type": "image",
+                                "image_url": media.get_poster_image(),
+                                "alt_text": media.get_title_string(),
+                            },
+                        }
+                    )
                 else:
                     blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": text}})
-                blocks.append({"type": "actions", "elements": [{"type": "button",
-                    "text": {"type": "plain_text", "text": "选择", "emoji": True},
-                    "value": str(idx), "action_id": f"actionId-{idx}"}]})
+                blocks.append(
+                    {
+                        "type": "actions",
+                        "elements": [
+                            {
+                                "type": "button",
+                                "text": {"type": "plain_text", "text": "选择", "emoji": True},
+                                "value": str(idx),
+                                "action_id": f"actionId-{idx}",
+                            }
+                        ],
+                    }
+                )
             result = self._client.chat_postMessage(channel=channel, blocks=blocks)
             return True, result
         except Exception as msg_e:
@@ -166,5 +186,6 @@ class Slack(_IMessageClient):
         except SlackApiError as e:
             print(f"Slack Error: {e}")
         return ""
+
 
 ClientRegistry.register(Slack)

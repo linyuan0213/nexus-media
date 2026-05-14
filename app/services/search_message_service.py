@@ -2,6 +2,7 @@
 消息中心搜索服务
 处理 Telegram/WeChat/Slack 等消息渠道的搜索、下载、订阅、对话请求
 """
+
 import os
 import re
 
@@ -36,7 +37,7 @@ class MessageSearchService:
         input_str = str(input_str).strip()
 
         # 分页导航
-        if input_str.lower() in ('n', 'p'):
+        if input_str.lower() in ("n", "p"):
             self._handle_pagination(input_str.lower(), in_from, user_id)
             return
 
@@ -186,28 +187,30 @@ class MessageSearchService:
             answer = "AI出错了，请检查LLM配置，如需搜索电影/电视剧，请发送 搜索或下载 + 名称"
         Message().send_channel_msg(channel=in_from, title="", text=str(answer).strip(), user_id=user_id)
 
-    def _search_media(self, in_from: SearchType, content: str, user_id: str, user_name: str = None, mtype: str = "SEARCH"):
+    def _search_media(
+        self, in_from: SearchType, content: str, user_id: str, user_name: str = None, mtype: str = "SEARCH"
+    ):
         """搜索媒体并展示结果"""
         indexer_type = self._indexer.get_client_type()
         indexers = self._indexer.get_indexers()
 
         # 解析站点和下载设置
-        rss_sites, content = StringUtils.get_idlist_from_string(content, [
-            {"id": site.get("name"), "name": site.get("name")}
-            for site in Sites().get_sites(rss=True, public=True)
-        ])
+        rss_sites, content = StringUtils.get_idlist_from_string(
+            content,
+            [{"id": site.get("name"), "name": site.get("name")} for site in Sites().get_sites(rss=True, public=True)],
+        )
 
         if indexer_type == IndexerType.BUILTIN:
             search_sites = []
         else:
-            search_sites, content = StringUtils.get_idlist_from_string(content, [
-                {"id": indexer.name, "name": indexer.name} for indexer in indexers
-            ])
+            search_sites, content = StringUtils.get_idlist_from_string(
+                content, [{"id": indexer.name, "name": indexer.name} for indexer in indexers]
+            )
 
         download_settings = self._downloader.get_download_setting().values()
-        download_setting, content = StringUtils.get_idlist_from_string(content, [
-            {"id": dl.get("id"), "name": dl.get("name")} for dl in download_settings
-        ])
+        download_setting, content = StringUtils.get_idlist_from_string(
+            content, [{"id": dl.get("id"), "name": dl.get("name")} for dl in download_settings]
+        )
         if download_setting:
             download_setting = download_setting[0]
 
@@ -238,23 +241,29 @@ class MessageSearchService:
                 if media_info.douban_id:
                     title = media_info.get_title_string()
                     media_info = MediaService().get_media_info(
-                        title="%s %s" % (media_info.title, media_info.year),
-                        mtype=media_info.type, strict=True)
+                        title="%s %s" % (media_info.title, media_info.year), mtype=media_info.type, strict=True
+                    )
                     if not media_info or not media_info.tmdb_info:
-                        Message().send_channel_msg(channel=in_from, title="%s 从TMDB查询不到媒体信息！" % title, user_id=user_id)
+                        Message().send_channel_msg(
+                            channel=in_from, title="%s 从TMDB查询不到媒体信息！" % title, user_id=user_id
+                        )
                         return
-                Message().send_channel_msg(channel=in_from,
-                                           title=media_info.get_title_vote_string(),
-                                           text=media_info.get_overview_string(),
-                                           image=media_info.get_message_image(),
-                                           url=media_info.get_detail_url(),
-                                           user_id=user_id)
+                Message().send_channel_msg(
+                    channel=in_from,
+                    title=media_info.get_title_vote_string(),
+                    text=media_info.get_overview_string(),
+                    image=media_info.get_message_image(),
+                    url=media_info.get_detail_url(),
+                    user_id=user_id,
+                )
                 self._search_and_download(in_from, media_info, user_id, user_name)
         else:
-            Message().send_channel_list_msg(channel=in_from,
-                                            title="共找到%s条相关信息，请回复对应序号" % len(media_list),
-                                            medias=media_list,
-                                            user_id=user_id)
+            Message().send_channel_list_msg(
+                channel=in_from,
+                title="共找到%s条相关信息，请回复对应序号" % len(media_list),
+                medias=media_list,
+                user_id=user_id,
+            )
 
     def _search_and_download(self, in_from: SearchType, media_info, user_id: str, user_name: str = None):
         """搜索并下载媒体"""
@@ -266,8 +275,11 @@ class MessageSearchService:
 
         Message().send_channel_msg(channel=in_from, title="开始搜索 %s ..." % media_info.title, user_id=user_id)
         search_result, no_exists, search_count, download_count = self._searcher.search_one_media(
-            media_info=media_info, in_from=in_from, no_exists=no_exists,
-            sites=media_info.search_sites, user_name=user_name
+            media_info=media_info,
+            in_from=in_from,
+            no_exists=no_exists,
+            sites=media_info.search_sites,
+            user_name=user_name,
         )
 
         if not search_count:
@@ -280,40 +292,50 @@ class MessageSearchService:
             return
 
         if download_count == 0:
-            Message().send_channel_msg(channel=in_from,
-                                       title="%s 共搜索到%s个结果，但没有下载到任何资源" % (media_info.title, search_count),
-                                       user_id=user_id)
+            Message().send_channel_msg(
+                channel=in_from,
+                title="%s 共搜索到%s个结果，但没有下载到任何资源" % (media_info.title, search_count),
+                user_id=user_id,
+            )
 
-        if not search_result and Config().get_config('pt').get('search_no_result_rss'):
-            self._add_rss(in_from, media_info, user_id, state='R', user_name=user_name)
+        if not search_result and Config().get_config("pt").get("search_no_result_rss"):
+            self._add_rss(in_from, media_info, user_id, state="R", user_name=user_name)
 
     def _enter_pagination_mode(self, in_from: SearchType, media_info, user_id: str):
         """进入搜索结果分页选择模式"""
         search_results = self._searcher.get_search_results()
         if not search_results:
-            Message().send_channel_msg(channel=in_from,
-                                       title="%s 共搜索到结果，但无法获取结果列表" % media_info.title,
-                                       user_id=user_id)
+            Message().send_channel_msg(
+                channel=in_from, title="%s 共搜索到结果，但无法获取结果列表" % media_info.title, user_id=user_id
+            )
             return
 
         pagination_mgr.set_search_results(user_id, search_results, media_info.title)
         pagination_mgr.send_page_message(in_from, user_id)
 
     @staticmethod
-    def _add_rss(in_from, media_info, user_id=None, state='D', user_name=None):
+    def _add_rss(in_from, media_info, user_id=None, state="D", user_name=None):
         """添加订阅"""
         mediaid = f"DB:{media_info.douban_id}" if media_info.douban_id else media_info.tmdb_id
         code, msg, media_info = Subscribe().add_rss_subscribe(
-            mtype=media_info.type, name=media_info.title, year=media_info.year,
-            channel=RssType.Auto, season=media_info.begin_season, mediaid=mediaid,
-            state=state, rss_sites=media_info.rss_sites, search_sites=media_info.search_sites,
-            download_setting=media_info.download_setting, in_from=in_from, user_name=user_name
+            mtype=media_info.type,
+            name=media_info.title,
+            year=media_info.year,
+            channel=RssType.Auto,
+            season=media_info.begin_season,
+            mediaid=mediaid,
+            state=state,
+            rss_sites=media_info.rss_sites,
+            search_sites=media_info.search_sites,
+            download_setting=media_info.download_setting,
+            in_from=in_from,
+            user_name=user_name,
         )
         if code == 0:
             log.info("【Web】%s %s 已添加订阅" % (media_info.type.value, media_info.get_title_string()))
         else:
             if in_from in Message().get_search_types():
                 log.info("【Web】%s 添加订阅失败：%s" % (media_info.title, msg))
-                Message().send_channel_msg(channel=in_from,
-                                           title="%s 添加订阅失败：%s" % (media_info.title, msg),
-                                           user_id=user_id)
+                Message().send_channel_msg(
+                    channel=in_from, title="%s 添加订阅失败：%s" % (media_info.title, msg), user_id=user_id
+                )

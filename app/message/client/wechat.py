@@ -105,18 +105,15 @@ class WeChat(_IMessageClient):
                 item_title = f"{item_title}\n{media.get_type_string()}，{vote}"
             else:
                 item_title = f"{item_title}\n{media.get_type_string()}"
-            articles.append({
-                "title": item_title,
-                "description": "",
-                "picurl": media.get_message_image() if i == 0 else media.get_poster_image(),
-                "url": media.get_detail_url()
-            })
-        req = {
-            "touser": user_id,
-            "msgtype": "news",
-            "agentid": self.agent_id,
-            "news": {"articles": articles}
-        }
+            articles.append(
+                {
+                    "title": item_title,
+                    "description": "",
+                    "picurl": media.get_message_image() if i == 0 else media.get_poster_image(),
+                    "url": media.get_detail_url(),
+                }
+            )
+        req = {"touser": user_id, "msgtype": "news", "agentid": self.agent_id, "news": {"articles": articles}}
         return self._post_request(message_url, req)
 
     def _send_text(self, token, title, text, url, user_id):
@@ -133,7 +130,7 @@ class WeChat(_IMessageClient):
             "text": {"content": content},
             "safe": 0,
             "enable_id_trans": 0,
-            "enable_duplicate_check": 0
+            "enable_duplicate_check": 0,
         }
         return self._post_request(message_url, req)
 
@@ -145,12 +142,16 @@ class WeChat(_IMessageClient):
             "touser": user_id,
             "msgtype": "news",
             "agentid": self.agent_id,
-            "news": {"articles": [{
-                "title": title,
-                "description": text.replace("\n\n", "\n") if text else "",
-                "picurl": image_url,
-                "url": url
-            }]}
+            "news": {
+                "articles": [
+                    {
+                        "title": title,
+                        "description": text.replace("\n\n", "\n") if text else "",
+                        "picurl": image_url,
+                        "url": url,
+                    }
+                ]
+            },
         }
         return self._post_request(message_url, req)
 
@@ -197,8 +198,9 @@ class WeChat(_IMessageClient):
                         WeChat._menu_done.add(str(self.agent_id))
                         log.info("【WeChat】应用菜单创建成功")
                     else:
-                        log.error("【WeChat】菜单创建失败 errcode=%s errmsg=%s" % (
-                            body.get("errcode"), body.get("errmsg")))
+                        log.error(
+                            "【WeChat】菜单创建失败 errcode=%s errmsg=%s" % (body.get("errcode"), body.get("errmsg"))
+                        )
                 else:
                     log.error("【WeChat】菜单创建失败 HTTP=%s" % (res.status_code if res else "无响应"))
             except Exception as e:
@@ -229,5 +231,6 @@ class WeChat(_IMessageClient):
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False, str(err)
+
 
 ClientRegistry.register(WeChat)

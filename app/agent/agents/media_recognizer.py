@@ -9,6 +9,7 @@ from app.agent.service import AgentService
 
 class MediaResult(BaseModel):
     """媒体识别结果"""
+
     title_en: str | None = None
     title_cn: str | None = None
     alternate_titles: list = []
@@ -31,6 +32,7 @@ class MediaResult(BaseModel):
 
 class BatchResult(BaseModel):
     """批量识别结果"""
+
     items: list[MediaResult] = []
 
 
@@ -68,6 +70,7 @@ class MediaRecognizer:
 
         if batch_size <= 0:
             from config import Config
+
             batch_size = (Config().get_config("agent") or {}).get("batch_size", 100)
 
         total = len(filenames)
@@ -75,7 +78,7 @@ class MediaRecognizer:
         results: list[MediaResult | None] = []
         success_count = 0
         for i in range(0, total, batch_size):
-            batch = filenames[i:i + batch_size]
+            batch = filenames[i : i + batch_size]
             texts = "\n".join(f"[{j}] {f}" for j, f in enumerate(batch))
             prompt = (
                 f"识别以下 {len(batch)} 个文件名，按原始顺序返回 JSON 数组。\n"
@@ -94,7 +97,7 @@ class MediaRecognizer:
                     if r and (r.title_en or r.title_cn):
                         success_count += 1
             except Exception as e:
-                log.warn(f"【MediaRecognizer】Batch {i//batch_size + 1} 失败: {e}, fallback 单条识别")
+                log.warn(f"【MediaRecognizer】Batch {i // batch_size + 1} 失败: {e}, fallback 单条识别")
                 for f in batch:
                     try:
                         r = self.recognize(f)

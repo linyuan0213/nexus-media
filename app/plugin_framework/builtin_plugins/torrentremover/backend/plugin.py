@@ -2,6 +2,7 @@
 TorrentRemover Plugin v2
 历史记录中源文件被删除时，同步删除下载器中的下载任务
 """
+
 import os
 
 from app.plugin_framework.context import PluginContext
@@ -42,9 +43,7 @@ class TorrentRemoverPlugin:
         for info in downloadinfos:
             if not info.DOWNLOADER or not info.DOWNLOAD_ID:
                 continue
-            self._del_torrent(source_file=source_file,
-                              from_download=info.DOWNLOADER,
-                              from_download_id=info.DOWNLOAD_ID)
+            self._del_torrent(source_file=source_file, from_download=info.DOWNLOADER, from_download_id=info.DOWNLOAD_ID)
 
     def _del_torrent(self, source_file, from_download, from_download_id):
         download = from_download
@@ -56,6 +55,7 @@ class TorrentRemoverPlugin:
         if transfer_history:
             try:
                 import json
+
                 history_data = json.loads(transfer_history)
                 transfer_record = history_data.get(history_key)
             except Exception:
@@ -65,9 +65,9 @@ class TorrentRemoverPlugin:
 
         del_history = False
         if transfer_record and isinstance(transfer_record, dict):
-            download = transfer_record.get('to_download')
-            download_id = transfer_record.get('to_download_id')
-            delete_source = transfer_record.get('delete_source')
+            download = transfer_record.get("to_download")
+            download_id = transfer_record.get("to_download_id")
+            delete_source = transfer_record.get("delete_source")
             del_history = True
 
             if not delete_source:

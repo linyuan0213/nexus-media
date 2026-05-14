@@ -1,4 +1,5 @@
 """Google Gemini 提供商"""
+
 from typing import Any
 
 from google import genai
@@ -15,8 +16,13 @@ class GeminiProvider(BaseProvider):
         super().__init__(config)
         self._client = genai.Client(api_key=config.api_key)
 
-    def chat(self, messages: list[dict], system_prompt: str = "", temperature: float = 0.7,
-             response_format: type | None = None) -> Any:
+    def chat(
+        self,
+        messages: list[dict],
+        system_prompt: str = "",
+        temperature: float = 0.7,
+        response_format: type | None = None,
+    ) -> Any:
         contents = []
         for m in messages:
             if m.get("role") == "user":

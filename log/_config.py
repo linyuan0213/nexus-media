@@ -54,8 +54,7 @@ def build_handlers(module: str) -> list[dict[str, Any]]:
                 {
                     "sink": _SyslogHandlerFactory(logip, logport),
                     "format": (
-                        "{time:YYYY-MM-DD HH:mm:ss.SSS} |{level:8}| "
-                        "{file} : {module}.{function}:{line:4} | - {message}"
+                        "{time:YYYY-MM-DD HH:mm:ss.SSS} |{level:8}| {file} : {module}.{function}:{line:4} | - {message}"
                     ),
                     "colorize": False,
                 }
@@ -70,8 +69,7 @@ def build_handlers(module: str) -> list[dict[str, Any]]:
                     "sink": os.path.join(logpath, module + ".log"),
                     "rotation": "5 MB",
                     "format": (
-                        "{time:YYYY-MM-DD HH:mm:ss.SSS} |{level:8}| "
-                        "{file} : {module}.{function}:{line:4} | - {message}"
+                        "{time:YYYY-MM-DD HH:mm:ss.SSS} |{level:8}| {file} : {module}.{function}:{line:4} | - {message}"
                     ),
                     "colorize": False,
                     "retention": "5 days",

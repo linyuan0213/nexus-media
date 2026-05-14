@@ -59,8 +59,12 @@ class BrushTaskRepositoryAdapter:
 
     def insert_brushtask_torrent(self, brush_id, title, enclosure, downloader, download_id, size):
         return self._repo.insert_brushtask_torrent(
-            brush_id=brush_id, title=title, enclosure=enclosure,
-            downloader=downloader, download_id=download_id, size=size
+            brush_id=brush_id,
+            title=title,
+            enclosure=enclosure,
+            downloader=downloader,
+            download_id=download_id,
+            size=size,
         )
 
     def delete_brushtask_torrent(self, taskid, download_id):
@@ -74,8 +78,9 @@ class BrushTorrentRepositoryAdapter:
     def __init__(self, repo: BrushRepository | None = None):
         self._repo = repo or BrushRepository()
 
-    def insert(self, task_id: str, torrent_name: str, enclosure: str, torrent_size: str,
-               downloader: str, download_id: str) -> None:
+    def insert(
+        self, task_id: str, torrent_name: str, enclosure: str, torrent_size: str, downloader: str, download_id: str
+    ) -> None:
         self._repo.insert_brushtask_torrent(task_id, torrent_name, enclosure, downloader, download_id, torrent_size)
 
     def get_by_task(self, task_id: str) -> list[BrushTorrentEntity]:
@@ -96,8 +101,12 @@ class BrushTorrentRepositoryAdapter:
 
     def insert_brushtask_torrent(self, brush_id, title, enclosure, downloader, download_id, size):
         return self._repo.insert_brushtask_torrent(
-            brush_id=brush_id, title=title, enclosure=enclosure,
-            downloader=downloader, download_id=download_id, size=size
+            brush_id=brush_id,
+            title=title,
+            enclosure=enclosure,
+            downloader=downloader,
+            download_id=download_id,
+            size=size,
         )
 
     def update_brushtask_torrent_state(self, update_torrents):

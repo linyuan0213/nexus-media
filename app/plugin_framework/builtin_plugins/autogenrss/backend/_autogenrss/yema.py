@@ -11,9 +11,9 @@ class YemaPT(_ISiteRssGenHandler):
     """
     YemaPT
     """
+
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "yemapt.org"
-
 
     @classmethod
     def match(cls, url):
@@ -34,26 +34,13 @@ class YemaPT(_ISiteRssGenHandler):
         site_cookie = site_info.get("cookie")
         ua = site_info.get("ua")
         proxy = get_proxies() if site_info.get("proxy") else None
-        headers = {
-            "accept": "application/json, text/plain, */*",
-            "content-type": "application/json",
-            "user-agent": ua
-        }
+        headers = {"accept": "application/json, text/plain, */*", "content-type": "application/json", "user-agent": ua}
 
         rss_url = "https://www.yemapt.org/api/rss/generateRssUrl"
-        data = {
-            "categoryIdList": [],
-            "withShortDesc": True,
-            "withSize": True,
-            "showPromotion": False,
-            "pageSize": 50
-        }
-        data = json.dumps(data, separators=(',', ':'))
+        data = {"categoryIdList": [], "withShortDesc": True, "withSize": True, "showPromotion": False, "pageSize": 50}
+        data = json.dumps(data, separators=(",", ":"))
 
-        res = RequestUtils(cookies=site_cookie,
-            headers=headers,
-            proxies=proxy
-        ).post_res(url=rss_url, data=data)
+        res = RequestUtils(cookies=site_cookie, headers=headers, proxies=proxy).post_res(url=rss_url, data=data)
         if not res or res.status_code != 200:
             self.error("生成RSS失败，请检查站点连通性")
 
@@ -65,9 +52,9 @@ class YemaPT(_ISiteRssGenHandler):
             self.debug(f"生成的rss: {rss_link}")
 
         if rss_link:
-            SiteRepository().update_site_rssurl(site_info.get('id'), rss_link)
+            SiteRepository().update_site_rssurl(site_info.get("id"), rss_link)
             self.info("生成RSS成功")
-            return True, f'【{site}】生成RSS成功'
+            return True, f"【{site}】生成RSS成功"
         else:
             self.info("生成RSS失败")
-            return True, f'【{site}生成RSS失败'
+            return True, f"【{site}生成RSS失败"

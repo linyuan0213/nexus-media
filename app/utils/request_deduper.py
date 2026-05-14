@@ -4,6 +4,7 @@
 使用场景：当多个地方同时请求相同的 TMDB ID 时，
 只发送一个实际请求，其他请求等待结果共享
 """
+
 import threading
 from collections.abc import Callable
 from functools import wraps
@@ -24,11 +25,7 @@ class RequestDeduper:
         self._default_timeout = default_timeout
         self._pending_requests: dict[str, tuple] = {}
         self._lock = threading.Lock()
-        self._stats = {
-            "deduped_requests": 0,
-            "actual_requests": 0,
-            "cache_hits": 0
-        }
+        self._stats = {"deduped_requests": 0, "actual_requests": 0, "cache_hits": 0}
 
     def execute(self, key: str, func: Callable, *args, **kwargs) -> Any:
         """
@@ -107,11 +104,7 @@ class RequestDeduper:
     def reset_stats(self):
         """重置统计信息"""
         with self._lock:
-            self._stats = {
-                "deduped_requests": 0,
-                "actual_requests": 0,
-                "cache_hits": 0
-            }
+            self._stats = {"deduped_requests": 0, "actual_requests": 0, "cache_hits": 0}
 
 
 # 全局去重器实例
@@ -132,6 +125,7 @@ def dedupe_tmdb_request(func: Callable) -> Callable:
         def get_tmdb_info(self, tmdbid):
             return self.tmdb.details(tmdbid)
     """
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         key_parts = [func.__name__]

@@ -40,8 +40,7 @@ class SiteCookie(metaclass=SingletonMeta):
         """
         识别验证码图片的内容
         """
-        code_b64 = self.get_captcha_base64(chrome=chrome,
-                                           image_url=code_url)
+        code_b64 = self.get_captcha_base64(chrome=chrome, image_url=code_url)
         if not code_b64:
             return ""
         return self.ocrhelper.get_captcha_text(image_b64=code_b64)
@@ -64,8 +63,7 @@ class SiteCookie(metaclass=SingletonMeta):
         """
         if not image_url:
             return ""
-        ret = RequestUtils(headers=chrome.get_ua(),
-                           cookies=chrome.get_cookies()).get_res(image_url)
+        ret = RequestUtils(headers=chrome.get_ua(), cookies=chrome.get_cookies()).get_res(image_url)
         if ret:
             return base64.b64encode(ret.content).decode()
         return ""

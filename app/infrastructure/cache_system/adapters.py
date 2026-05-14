@@ -2,6 +2,7 @@
 缓存适配器实现
 支持内存缓存和Redis缓存
 """
+
 import pickle
 import threading
 from collections import OrderedDict
@@ -14,6 +15,7 @@ from .events import CacheEvent, CacheEventManager, CacheEventType
 
 # 获取事件管理器实例
 _event_manager = CacheEventManager()
+
 
 def get_cache_value(cache_adapter, key: str) -> Any:
     """
@@ -38,13 +40,7 @@ class MemoryCacheAdapter(CacheAdapter):
         self._name = name
         self._default_ttl = default_ttl
         self._lock = threading.RLock()
-        self._stats = {
-            "hits": 0,
-            "misses": 0,
-            "sets": 0,
-            "deletes": 0,
-            "evictions": 0
-        }
+        self._stats = {"hits": 0, "misses": 0, "sets": 0, "deletes": 0, "evictions": 0}
 
     def get(self, key: str) -> Any | None:
         """获取缓存值"""
@@ -53,40 +49,26 @@ class MemoryCacheAdapter(CacheAdapter):
             if entry is None:
                 self._stats["misses"] += 1
                 # 触发MISS事件
-                _event_manager.emit(CacheEvent(
-                    event_type=CacheEventType.MISS,
-                    cache_name=self._name,
-                    key=key
-                ))
+                _event_manager.emit(CacheEvent(event_type=CacheEventType.MISS, cache_name=self._name, key=key))
                 return None
 
             if entry.is_expired():
                 del self._cache[key]
                 self._stats["misses"] += 1
                 # 触发EXPIRE事件
-                _event_manager.emit(CacheEvent(
-                    event_type=CacheEventType.EXPIRE,
-                    cache_name=self._name,
-                    key=key
-                ))
+                _event_manager.emit(CacheEvent(event_type=CacheEventType.EXPIRE, cache_name=self._name, key=key))
                 return None
 
             # LRU: 移动到末尾（最近使用）
             self._cache.move_to_end(key)
             self._stats["hits"] += 1
             # 触发GET和HIT事件
-            _event_manager.emit(CacheEvent(
-                event_type=CacheEventType.GET,
-                cache_name=self._name,
-                key=key,
-                value=entry.value
-            ))
-            _event_manager.emit(CacheEvent(
-                event_type=CacheEventType.HIT,
-                cache_name=self._name,
-                key=key,
-                value=entry.value
-            ))
+            _event_manager.emit(
+                CacheEvent(event_type=CacheEventType.GET, cache_name=self._name, key=key, value=entry.value)
+            )
+            _event_manager.emit(
+                CacheEvent(event_type=CacheEventType.HIT, cache_name=self._name, key=key, value=entry.value)
+            )
             return entry.value
 
     def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
@@ -108,20 +90,13 @@ class MemoryCacheAdapter(CacheAdapter):
             self._stats["sets"] += 1
 
             # 触发SET事件
-            _event_manager.emit(CacheEvent(
-                event_type=CacheEventType.SET,
-                cache_name=self._name,
-                key=key,
-                value=value,
-                ttl=ttl
-            ))
+            _event_manager.emit(
+                CacheEvent(event_type=CacheEventType.SET, cache_name=self._name, key=key, value=value, ttl=ttl)
+            )
 
             # 如果发生了驱逐，触发EVICT事件
             if evicted:
-                _event_manager.emit(CacheEvent(
-                    event_type=CacheEventType.EVICT,
-                    cache_name=self._name
-                ))
+                _event_manager.emit(CacheEvent(event_type=CacheEventType.EVICT, cache_name=self._name))
 
             return True
 
@@ -133,12 +108,11 @@ class MemoryCacheAdapter(CacheAdapter):
             del self._cache[oldest_key]
             self._stats["evictions"] += 1
             # 触发EVICT事件
-            _event_manager.emit(CacheEvent(
-                event_type=CacheEventType.EVICT,
-                cache_name=self._name,
-                key=oldest_key,
-                value=oldest_entry.value
-            ))
+            _event_manager.emit(
+                CacheEvent(
+                    event_type=CacheEventType.EVICT, cache_name=self._name, key=oldest_key, value=oldest_entry.value
+                )
+            )
 
     def delete(self, key: str) -> bool:
         """删除缓存"""
@@ -148,12 +122,9 @@ class MemoryCacheAdapter(CacheAdapter):
                 del self._cache[key]
                 self._stats["deletes"] += 1
                 # 触发DELETE事件
-                _event_manager.emit(CacheEvent(
-                    event_type=CacheEventType.DELETE,
-                    cache_name=self._name,
-                    key=key,
-                    value=entry.value
-                ))
+                _event_manager.emit(
+                    CacheEvent(event_type=CacheEventType.DELETE, cache_name=self._name, key=key, value=entry.value)
+                )
                 return True
             return False
 
@@ -173,20 +144,16 @@ class MemoryCacheAdapter(CacheAdapter):
         with self._lock:
             self._cache.clear()
             # 触发CLEAR事件
-            _event_manager.emit(CacheEvent(
-                event_type=CacheEventType.CLEAR,
-                cache_name=self._name
-            ))
+            _event_manager.emit(CacheEvent(event_type=CacheEventType.CLEAR, cache_name=self._name))
             return True
 
     def keys(self, pattern: str = "*") -> list[str]:
         """获取匹配模式的键列表"""
         import fnmatch
+
         with self._lock:
             # 清理过期条目
-            expired_keys = [
-                k for k, e in self._cache.items() if e.is_expired()
-            ]
+            expired_keys = [k for k, e in self._cache.items() if e.is_expired()]
             for k in expired_keys:
                 del self._cache[k]
 
@@ -209,7 +176,7 @@ class MemoryCacheAdapter(CacheAdapter):
             if entry is None or entry.is_expired():
                 return False
             entry.ttl = seconds
-            entry.created_at = __import__('time').time()
+            entry.created_at = __import__("time").time()
             return True
 
     def get_stats(self) -> dict[str, Any]:
@@ -227,23 +194,18 @@ class MemoryCacheAdapter(CacheAdapter):
                 "hit_rate": f"{hit_rate:.2%}",
                 "sets": self._stats["sets"],
                 "deletes": self._stats["deletes"],
-                "evictions": self._stats["evictions"]
+                "evictions": self._stats["evictions"],
             }
 
 
 class RedisCacheAdapter(CacheAdapter):
     """Redis缓存适配器 - Redis不可用时自动回退到内存缓存"""
 
-    def __init__(self, name: str = "redis", default_ttl: int | None = None,
-                 fallback_maxsize: int = 2000):
+    def __init__(self, name: str = "redis", default_ttl: int | None = None, fallback_maxsize: int = 2000):
         self._name = name
         self._default_ttl = default_ttl
         self._redis = None
-        self._fallback = MemoryCacheAdapter(
-            maxsize=fallback_maxsize,
-            name=f"{name}_fallback",
-            default_ttl=default_ttl
-        )
+        self._fallback = MemoryCacheAdapter(maxsize=fallback_maxsize, name=f"{name}_fallback", default_ttl=default_ttl)
         self._stats = {
             "hits": 0,
             "misses": 0,
@@ -260,6 +222,7 @@ class RedisCacheAdapter(CacheAdapter):
         """初始化Redis连接"""
         try:
             from app.utils.redis_store import RedisStore
+
             store = RedisStore()
             if store.is_available():
                 self._redis = store
@@ -296,12 +259,9 @@ class RedisCacheAdapter(CacheAdapter):
                         value = data
                     with self._lock:
                         self._stats["hits"] += 1
-                    _event_manager.emit(CacheEvent(
-                        event_type=CacheEventType.HIT,
-                        cache_name=self._name,
-                        key=key,
-                        value=value
-                    ))
+                    _event_manager.emit(
+                        CacheEvent(event_type=CacheEventType.HIT, cache_name=self._name, key=key, value=value)
+                    )
                     return value
             except Exception as e:
                 log.debug(f"【Cache】Redis get 失败，回退内存 {key}: {e}")
@@ -316,11 +276,7 @@ class RedisCacheAdapter(CacheAdapter):
         else:
             with self._lock:
                 self._stats["misses"] += 1
-            _event_manager.emit(CacheEvent(
-                event_type=CacheEventType.MISS,
-                cache_name=self._name,
-                key=key
-            ))
+            _event_manager.emit(CacheEvent(event_type=CacheEventType.MISS, cache_name=self._name, key=key))
         return value
 
     def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
@@ -348,13 +304,9 @@ class RedisCacheAdapter(CacheAdapter):
                 self._stats["fallback_sets"] += 1
 
         if redis_ok or fallback_ok:
-            _event_manager.emit(CacheEvent(
-                event_type=CacheEventType.SET,
-                cache_name=self._name,
-                key=key,
-                value=value,
-                ttl=ttl
-            ))
+            _event_manager.emit(
+                CacheEvent(event_type=CacheEventType.SET, cache_name=self._name, key=key, value=value, ttl=ttl)
+            )
             return True
         return False
 
@@ -373,11 +325,7 @@ class RedisCacheAdapter(CacheAdapter):
         fallback_ok = self._fallback.delete(key)
 
         if redis_ok or fallback_ok:
-            _event_manager.emit(CacheEvent(
-                event_type=CacheEventType.DELETE,
-                cache_name=self._name,
-                key=key
-            ))
+            _event_manager.emit(CacheEvent(event_type=CacheEventType.DELETE, cache_name=self._name, key=key))
             return True
         return False
 
@@ -402,10 +350,7 @@ class RedisCacheAdapter(CacheAdapter):
 
         self._fallback.clear()
 
-        _event_manager.emit(CacheEvent(
-            event_type=CacheEventType.CLEAR,
-            cache_name=self._name
-        ))
+        _event_manager.emit(CacheEvent(event_type=CacheEventType.CLEAR, cache_name=self._name))
         return True
 
     def keys(self, pattern: str = "*") -> list[str]:
@@ -471,11 +416,7 @@ class TieredCacheAdapter(CacheAdapter):
         self._l1 = MemoryCacheAdapter(maxsize=memory_maxsize, name=f"{name}_l1", default_ttl=default_ttl)
         self._l2 = RedisCacheAdapter(name=f"{name}_l2", default_ttl=default_ttl)
         self._name = name
-        self._stats = {
-            "l1_hits": 0,
-            "l2_hits": 0,
-            "misses": 0
-        }
+        self._stats = {"l1_hits": 0, "l2_hits": 0, "misses": 0}
 
     def get(self, key: str) -> Any | None:
         """获取缓存值 - 先查L1，再查L2"""
@@ -550,5 +491,5 @@ class TieredCacheAdapter(CacheAdapter):
             "l1_hits": self._stats["l1_hits"],
             "l2_hits": self._stats["l2_hits"],
             "misses": self._stats["misses"],
-            "total_requests": total
+            "total_requests": total,
         }

@@ -41,9 +41,7 @@ class WeworkIPChangePlugin:
     def on_enable(self):
         self.ctx.info("企业微信可信IP更新插件已启用")
         self._drissonpage_helper = DrissionPageHelper()
-        self._cache = get_cache_manager().get_or_create(
-            "wework_ipchange", cache_type="redis", fallback_maxsize=10
-        )
+        self._cache = get_cache_manager().get_or_create("wework_ipchange", cache_type="redis", fallback_maxsize=10)
         self._init_chrome_tab()
         self._start_service()
 
@@ -67,9 +65,11 @@ class WeworkIPChangePlugin:
         try:
             tab_id = self._cache.get("tab_id")
             if isinstance(tab_id, bytes):
-                tab_id = tab_id.decode('utf-8')
+                tab_id = tab_id.decode("utf-8")
             if not tab_id or not self._drissonpage_helper.get_page_html_without_closetab(tab_id=tab_id):
-                self._tab_id = self._drissonpage_helper.create_tab('https://work.weixin.qq.com/wework_admin/frame', self._get_config().get("cookie", ""))
+                self._tab_id = self._drissonpage_helper.create_tab(
+                    "https://work.weixin.qq.com/wework_admin/frame", self._get_config().get("cookie", "")
+                )
                 self._cache.set("tab_id", self._tab_id)
             else:
                 self._tab_id = tab_id
@@ -87,7 +87,7 @@ class WeworkIPChangePlugin:
 
         if onlyonce:
             self.ctx.info("企业微信可信IP更新服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ'))) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ"))) + timedelta(seconds=3)
             self.ctx.schedule_date("change_ip_once", self._change_ip, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -106,9 +106,11 @@ class WeworkIPChangePlugin:
     def login_by_code(self, event=None) -> bool:
         item = event.event_data if event else {}
         if item:
-            msg = item.get('msg')
+            msg = item.get("msg")
             self.ctx.debug(f"验证码: {msg}")
-            if self._drissonpage_helper.input_on_element(tab_id=self._tab_id, selector="tag:div@class=number_panel", input_str=msg):
+            if self._drissonpage_helper.input_on_element(
+                tab_id=self._tab_id, selector="tag:div@class=number_panel", input_str=msg
+            ):
                 self.ctx.debug("验证码输入成功")
                 return True
         return False
@@ -120,10 +122,12 @@ class WeworkIPChangePlugin:
             login_status = True
             self.ctx.info("登录成功")
         else:
-            html_text = self._drissonpage_helper.get_page_html_without_closetab(tab_id=self._tab_id, is_refresh=False, tab_category="iframe")
+            html_text = self._drissonpage_helper.get_page_html_without_closetab(
+                tab_id=self._tab_id, is_refresh=False, tab_category="iframe"
+            )
             if html_text:
                 html_doc = PyQuery(html_text)
-                img_url = html_doc('img.qrcode_login_img.js_qrcode_img').attr('src')
+                img_url = html_doc("img.qrcode_login_img.js_qrcode_img").attr("src")
                 self.ctx.debug(f"获取二维码成功，当前二维码url: {img_url}")
                 if img_url:
                     img_url = f"https://work.weixin.qq.com{img_url}"
@@ -170,7 +174,7 @@ class WeworkIPChangePlugin:
         if use_cookiecloud:
             EventHandler.send_event(EventType.CookieSync)
             time.sleep(10)
-            cookie = CookiecloudHelper().get_cookie('qq.com')
+            cookie = CookiecloudHelper().get_cookie("qq.com")
 
         if use_chrome:
             if not self._get_cookie_by_chrome():
@@ -182,7 +186,7 @@ class WeworkIPChangePlugin:
             self.ctx.error("获取动态IP失败")
             return
 
-        app_ids_list = [app_id.strip() for app_id in app_ids.split(',') if app_id.strip()]
+        app_ids_list = [app_id.strip() for app_id in app_ids.split(",") if app_id.strip()]
         if not app_ids_list:
             self.ctx.warn("APP ID解析为空")
             return
@@ -207,12 +211,11 @@ class WeworkIPChangePlugin:
             next_run_time = ""
             if schedules:
                 try:
-                    next_run_time = schedules[0].next_run_time.strftime('%Y-%m-%d %H:%M:%S')
+                    next_run_time = schedules[0].next_run_time.strftime("%Y-%m-%d %H:%M:%S")
                 except Exception:
                     pass
             self.ctx.notify(
-                title="【自动更新企业微信可信IP任务完成】",
-                text=final_msg + f"\n下次更新时间: {next_run_time}"
+                title="【自动更新企业微信可信IP任务完成】", text=final_msg + f"\n下次更新时间: {next_run_time}"
             )
 
     def _process_single_app(self, app_id, cookie, dynamic_ip, overwrite):
@@ -236,7 +239,11 @@ class WeworkIPChangePlugin:
             if ip_exist:
                 msg = f"AppID[{app_id}] IP {dynamic_ip} 已存在\n"
             else:
-                msg = f"AppID[{app_id}] 更新可信IP成功，当前IP: {dynamic_ip}\n" if update_status else f"AppID[{app_id}] 更新可信IP失败，请检查cookie\n"
+                msg = (
+                    f"AppID[{app_id}] 更新可信IP成功，当前IP: {dynamic_ip}\n"
+                    if update_status
+                    else f"AppID[{app_id}] 更新可信IP失败，请检查cookie\n"
+                )
         except Exception as e:
             msg = f"AppID[{app_id}] 处理异常: {str(e)}\n"
             self.ctx.error(msg)
@@ -246,7 +253,7 @@ class WeworkIPChangePlugin:
         try:
             response: Response = RequestUtils().get_res(url=self._ip_url)
             if response and response.status_code == 200:
-                pattern = r'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+                pattern = r"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
                 ip_str = response.text.strip()
                 if re.match(pattern, ip_str):
                     self.ctx.debug(f"动态公网IP: {ip_str}")
@@ -263,7 +270,7 @@ class WeworkIPChangePlugin:
             "referer": "https://work.weixin.qq.com/wework_admin/frame",
             "cookie": cookie,
             "user-agent": get_ua(),
-            "x-requested-with": "XMLHttpRequest"
+            "x-requested-with": "XMLHttpRequest",
         }
         url = "https://work.weixin.qq.com/wework_admin/apps/getOpenApiApp"
         params = {
@@ -273,17 +280,17 @@ class WeworkIPChangePlugin:
             "timeZoneInfo%5Bzone_offset%5D": "-8",
             "random": str(random.random()),
             "app_id": app_id,
-            "bind_mini_program": "false"
+            "bind_mini_program": "false",
         }
         try:
             response: Response = RequestUtils(headers=headers).get_res(url=url, params=params)
             if response and response.status_code == 200:
                 app_json = response.json()
                 try:
-                    ip_list = app_json.get('data', {}).get('white_ip_list', {}).get('ip') or []
+                    ip_list = app_json.get("data", {}).get("white_ip_list", {}).get("ip") or []
                 except Exception:
-                    if app_json.get('result', {}).get('errCode'):
-                        self.ctx.debug('获取当前可信任IP失败')
+                    if app_json.get("result", {}).get("errCode"):
+                        self.ctx.debug("获取当前可信任IP失败")
                     return []
                 self.ctx.debug(f"当前可信IP: {ip_list}")
                 return ip_list
@@ -293,23 +300,23 @@ class WeworkIPChangePlugin:
 
     def _set_iplist(self, cookie: str, iplist: list, app_id: str):
         headers = {
-            'accept': 'application/json, text/javascript, */*; q=0.01',
-            'content-type': 'application/x-www-form-urlencoded',
-            'cookie': cookie,
-            'origin': 'https://work.weixin.qq.com',
-            'referer': 'https://work.weixin.qq.com/wework_admin/frame',
-            'user-agent': get_ua(),
-            'x-requested-with': 'XMLHttpRequest',
+            "accept": "application/json, text/javascript, */*; q=0.01",
+            "content-type": "application/x-www-form-urlencoded",
+            "cookie": cookie,
+            "origin": "https://work.weixin.qq.com",
+            "referer": "https://work.weixin.qq.com/wework_admin/frame",
+            "user-agent": get_ua(),
+            "x-requested-with": "XMLHttpRequest",
         }
         params = {
-            'lang': 'zh_CN',
-            'f': 'json',
-            'ajax': '1',
-            'timeZoneInfo[zone_offset]': '-8',
-            'random': str(random.random()),
+            "lang": "zh_CN",
+            "f": "json",
+            "ajax": "1",
+            "timeZoneInfo[zone_offset]": "-8",
+            "random": str(random.random()),
         }
         ip_str = "\u0026".join([f"ipList[]={ip}" for ip in iplist])
-        data = f'app_id={app_id}\u0026{ip_str}'
+        data = f"app_id={app_id}\u0026{ip_str}"
         url = "https://work.weixin.qq.com/wework_admin/apps/saveIpConfig"
 
         try:
@@ -317,12 +324,12 @@ class WeworkIPChangePlugin:
             if response and response.status_code == 200:
                 json_data = response.json()
                 try:
-                    if json_data.get('data'):
+                    if json_data.get("data"):
                         self.ctx.debug("更新可信IP成功")
                         return True
                 except Exception:
-                    if json_data.get('result', {}).get('errCode'):
-                        self.ctx.debug('更新可信IP失败')
+                    if json_data.get("result", {}).get("errCode"):
+                        self.ctx.debug("更新可信IP失败")
                     return False
         except Exception as e:
             self.ctx.error(f"设置可信IP列表失败: {e}")

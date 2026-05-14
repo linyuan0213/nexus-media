@@ -2,6 +2,7 @@
 下载领域层单元测试
 测试DownloadHistory/Setting/IndexerStatistics实体和适配器
 """
+
 from unittest.mock import MagicMock
 
 from app.db.repositories.download_repo_adapter import (
@@ -55,9 +56,16 @@ class TestDownloaderEntity:
     def test_to_dict(self):
         """测试转换为字典"""
         entity = DownloaderEntity(
-            id=1, name="test", enabled=True, type="transmission",
-            transfer=True, only_nastool=False, match_path=True,
-            rmt_mode="copy", config="{}", download_dir="/dl"
+            id=1,
+            name="test",
+            enabled=True,
+            type="transmission",
+            transfer=True,
+            only_nastool=False,
+            match_path=True,
+            rmt_mode="copy",
+            config="{}",
+            download_dir="/dl",
         )
         d = entity.to_dict()
         assert d["id"] == 1
@@ -105,12 +113,23 @@ class TestDownloadHistoryEntity:
     def test_to_dict(self):
         """测试转换为字典"""
         entity = DownloadHistoryEntity(
-            id=1, title="Test", year="2023", media_type="MOV",
-            tmdb_id="123", season_episode="S01", vote="8.0",
-            poster="url", overview="desc", torrent="t.t",
-            enclosure="enc", site="site", description="desc",
-            downloader="qb", download_id="dl1", save_path="/dl",
-            date="2023-01-01"
+            id=1,
+            title="Test",
+            year="2023",
+            media_type="MOV",
+            tmdb_id="123",
+            season_episode="S01",
+            vote="8.0",
+            poster="url",
+            overview="desc",
+            torrent="t.t",
+            enclosure="enc",
+            site="site",
+            description="desc",
+            downloader="qb",
+            download_id="dl1",
+            save_path="/dl",
+            date="2023-01-01",
         )
         d = entity.to_dict()
         assert d["title"] == "Test"
@@ -150,10 +169,17 @@ class TestDownloadSettingEntity:
     def test_to_dict(self):
         """测试转换为字典"""
         entity = DownloadSettingEntity(
-            id=1, name="Test", category="TV", tags="tag1",
-            is_paused=True, upload_limit=100, download_limit=200,
-            ratio_limit=150, seeding_time_limit=60,
-            downloader="qb", note="note"
+            id=1,
+            name="Test",
+            category="TV",
+            tags="tag1",
+            is_paused=True,
+            upload_limit=100,
+            download_limit=200,
+            ratio_limit=150,
+            seeding_time_limit=60,
+            downloader="qb",
+            note="note",
         )
         d = entity.to_dict()
         assert d["name"] == "Test"
@@ -165,9 +191,7 @@ class TestIndexerStatisticsEntity:
 
     def test_to_dict(self):
         """测试转换为字典"""
-        entity = IndexerStatisticsEntity(
-            indexer="SiteA", total=100, fail=5, success=95, avg_seconds=1.5
-        )
+        entity = IndexerStatisticsEntity(indexer="SiteA", total=100, fail=5, success=95, avg_seconds=1.5)
         d = entity.to_dict()
         assert d["indexer"] == "SiteA"
         assert d["total"] == 100
@@ -298,9 +322,16 @@ class TestDownloadSettingRepositoryAdapter:
 
         adapter = DownloadSettingRepositoryAdapter(mock_repo)
         adapter.update(
-            sid=1, name="Test", category="TV", tags="tag",
-            is_paused=True, upload_limit=100.0, download_limit=200.0,
-            ratio_limit=2.0, seeding_time_limit=60.0, downloader="qb"
+            sid=1,
+            name="Test",
+            category="TV",
+            tags="tag",
+            is_paused=True,
+            upload_limit=100.0,
+            download_limit=200.0,
+            ratio_limit=2.0,
+            seeding_time_limit=60.0,
+            downloader="qb",
         )
 
         mock_repo.update_download_setting.assert_called_once()

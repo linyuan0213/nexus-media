@@ -2,15 +2,16 @@
 搜索结果模型
 包含: 搜索结果信息
 """
+
 from sqlalchemy import BigInteger, Column, Float, Integer, Sequence, String, Text
 
 from app.db.models.base import Base
 
 
 class SEARCHRESULTINFO(Base):
-    __tablename__ = 'SEARCH_RESULT_INFO'
+    __tablename__ = "SEARCH_RESULT_INFO"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     TORRENT_NAME = Column(String(255))
     ENCLOSURE = Column(String(8192))
     DESCRIPTION = Column(Text)

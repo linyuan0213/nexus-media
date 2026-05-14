@@ -2,24 +2,25 @@
 配置相关模型
 包含: 过滤器分组、过滤规则、RSS解析器、站点配置、同步路径、用户配置、用户RSS配置
 """
+
 from sqlalchemy import BigInteger, Column, Integer, Sequence, String, Text
 
 from app.db.models.base import Base
 
 
 class CONFIGFILTERGROUP(Base):
-    __tablename__ = 'CONFIG_FILTER_GROUP'
+    __tablename__ = "CONFIG_FILTER_GROUP"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     GROUP_NAME = Column(String(255))
     IS_DEFAULT = Column(String(255))
     NOTE = Column(Text)
 
 
 class CONFIGFILTERRULES(Base):
-    __tablename__ = 'CONFIG_FILTER_RULES'
+    __tablename__ = "CONFIG_FILTER_RULES"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     # 使用 Integer 类型替代 Text，MySQL 不支持在 TEXT 上创建索引
     GROUP_ID = Column(Integer, index=True)
     ROLE_NAME = Column(String(255))
@@ -31,9 +32,9 @@ class CONFIGFILTERRULES(Base):
 
 
 class CONFIGRSSPARSER(Base):
-    __tablename__ = 'CONFIG_RSS_PARSER'
+    __tablename__ = "CONFIG_RSS_PARSER"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     NAME = Column(String(255), index=True)
     TYPE = Column(String(255))
     FORMAT = Column(String(255))
@@ -43,9 +44,9 @@ class CONFIGRSSPARSER(Base):
 
 
 class CONFIGSITE(Base):
-    __tablename__ = 'CONFIG_SITE'
+    __tablename__ = "CONFIG_SITE"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     NAME = Column(String(255))
     PRI = Column(String(255))
     RSSURL = Column(String(512))
@@ -58,9 +59,9 @@ class CONFIGSITE(Base):
 
 
 class CONFIGSYNCPATHS(Base):
-    __tablename__ = 'CONFIG_SYNC_PATHS'
+    __tablename__ = "CONFIG_SYNC_PATHS"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     SOURCE = Column(String(255))
     DEST = Column(String(255))
     UNKNOWN = Column(String(255))
@@ -72,18 +73,18 @@ class CONFIGSYNCPATHS(Base):
 
 
 class CONFIGUSERS(Base):
-    __tablename__ = 'CONFIG_USERS'
+    __tablename__ = "CONFIG_USERS"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     NAME = Column(String(255), index=True)
     PASSWORD = Column(String(255))
     PRIS = Column(String(255))
 
 
 class CONFIGUSERRSS(Base):
-    __tablename__ = 'CONFIG_USER_RSS'
+    __tablename__ = "CONFIG_USER_RSS"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     NAME = Column(String(255), index=True)
     ADDRESS = Column(String(255))
     PARSER = Column(String(255))
@@ -106,9 +107,9 @@ class CONFIGUSERRSS(Base):
 
 
 class MEDIASERVER(Base):
-    __tablename__ = 'MEDIASERVER'
+    __tablename__ = "MEDIASERVER"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     NAME = Column(String(255), index=True)
     ENABLED = Column(Integer)
     CONFIG = Column(Text)
@@ -118,9 +119,10 @@ class MEDIASERVER(Base):
 
 class CONFIGMEDIA(Base):
     """媒体库路径配置表（替代 YAML media 节点中的路径配置）"""
-    __tablename__ = 'CONFIG_MEDIA'
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    __tablename__ = "CONFIG_MEDIA"
+
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     MOVIE_PATH = Column(Text)
     TV_PATH = Column(Text)
     ANIME_PATH = Column(Text)

@@ -2,6 +2,7 @@
 缓存装饰器
 提供便捷的函数级缓存功能
 """
+
 from __future__ import annotations
 
 import functools
@@ -15,29 +16,28 @@ from .base import CacheAdapter
 from .cache_manager import CacheManager
 
 
-def cached(cache_instance: CacheAdapter | str | None = None,
-           key_func: Callable | None = None,
-           ttl: int | None = None):
+def cached(cache_instance: CacheAdapter | str | None = None, key_func: Callable | None = None, ttl: int | None = None):
     """
     缓存装饰器
-    
+
     使用方法:
         @cached()  # 使用默认缓存
         def get_data(id):
             return fetch_from_db(id)
-        
+
         @cached(cache_instance=my_cache, ttl=3600)
         def get_user(user_id):
             return User.query.get(user_id)
-        
+
         @cached(key_func=lambda self, x: f"custom:{x}")
         def compute(self, x):
             return expensive_calculation(x)
-    
+
     :param cache_instance: 缓存实例、缓存名称或None（使用默认内存缓存）
     :param key_func: 自定义缓存键生成函数
     :param ttl: 过期时间（秒）
     """
+
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -81,21 +81,24 @@ def cached(cache_instance: CacheAdapter | str | None = None,
         wrapper.cache_delete = lambda key: _delete_cache(cache_instance, key)
 
         return wrapper
+
     return decorator
 
 
-def cached_with_lock(cache_instance: CacheAdapter | str | None = None,
-                     lock: threading.Lock | None = None,
-                     key_func: Callable | None = None,
-                     ttl: int | None = None):
+def cached_with_lock(
+    cache_instance: CacheAdapter | str | None = None,
+    lock: threading.Lock | None = None,
+    key_func: Callable | None = None,
+    ttl: int | None = None,
+):
     """
     带锁的缓存装饰器（防止缓存穿透）
-    
+
     使用方法:
         @cached_with_lock()
         def get_expensive_data(key):
             return expensive_query(key)
-    
+
     :param cache_instance: 缓存实例、缓存名称或None
     :param lock: 可选的自定义锁
     :param key_func: 自定义缓存键生成函数
@@ -147,21 +150,23 @@ def cached_with_lock(cache_instance: CacheAdapter | str | None = None,
                 return result
 
         return wrapper
+
     return decorator
 
 
 def cached_method(cache_name: str = None, ttl: int | None = None):
     """
     类方法缓存装饰器
-    
+
     自动处理self参数，为每个实例提供独立的缓存
-    
+
     使用方法:
         class MyService:
             @cached_method(ttl=3600)
             def get_user(self, user_id):
                 return User.query.get(user_id)
     """
+
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
@@ -169,6 +174,7 @@ def cached_method(cache_name: str = None, ttl: int | None = None):
             cache_attr = f"_cache_{func.__name__}"
             if not hasattr(self, cache_attr):
                 from .adapters import MemoryCacheAdapter
+
                 setattr(self, cache_attr, MemoryCacheAdapter())
 
             cache = getattr(self, cache_attr)
@@ -186,20 +192,23 @@ def cached_method(cache_name: str = None, ttl: int | None = None):
             return result
 
         return wrapper
+
     return decorator
 
 
 def lru_cache_with_ttl(maxsize: int = 128, ttl: int | None = None):
     """
     带TTL的LRU缓存装饰器（兼容functools.lru_cache风格）
-    
+
     使用方法:
         @lru_cache_with_ttl(maxsize=256, ttl=3600)
         def get_data(key):
             return fetch_data(key)
     """
+
     def decorator(func: Callable) -> Callable:
         from .adapters import MemoryCacheAdapter
+
         cache = MemoryCacheAdapter(maxsize=maxsize)
 
         @functools.wraps(func)
@@ -218,6 +227,7 @@ def lru_cache_with_ttl(maxsize: int = 128, ttl: int | None = None):
         wrapper.cache_clear = cache.clear
 
         return wrapper
+
     return decorator
 
 
@@ -237,7 +247,7 @@ def _get_cache_instance(cache_instance: CacheAdapter | str | None) -> CacheAdapt
 
 def _default_key_builder(func: Callable, *args, **kwargs) -> str:
     """默认缓存键构建器
-    
+
     使用函数签名绑定参数，确保不同调用方式（位置参数/关键字参数）
     生成一致的缓存键
     """
@@ -250,17 +260,22 @@ def _default_key_builder(func: Callable, *args, **kwargs) -> str:
     if args:
         first_arg = args[0]
         func_qualname = func.__qualname__
-        if '.' in func_qualname:
-            class_name = func_qualname.split('.')[0]
+        if "." in func_qualname:
+            class_name = func_qualname.split(".")[0]
 
             # 检查是否是实例方法 (self)
-            if hasattr(first_arg, '__class__') and first_arg.__class__.__name__ == class_name or isinstance(first_arg, type) and first_arg.__name__ == class_name:
+            if (
+                hasattr(first_arg, "__class__")
+                and first_arg.__class__.__name__ == class_name
+                or isinstance(first_arg, type)
+                and first_arg.__name__ == class_name
+            ):
                 bind_args = args[1:]
 
     # 获取实际函数的签名（通过 __wrapped__ 链）
     # func 可能是 wrapper，需要获取原始函数
     actual_func = func
-    while hasattr(actual_func, '__wrapped__'):
+    while hasattr(actual_func, "__wrapped__"):
         actual_func = actual_func.__wrapped__
 
     try:
@@ -269,7 +284,7 @@ def _default_key_builder(func: Callable, *args, **kwargs) -> str:
         params = list(sig.parameters.values())
 
         # 如果第一个参数是 self/cls 且已经被跳过，创建新签名去掉它
-        if params and params[0].name in ('self', 'cls'):
+        if params and params[0].name in ("self", "cls"):
             # 去掉第一个参数（self/cls）
             new_params = params[1:]
             sig = sig.replace(parameters=new_params)

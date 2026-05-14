@@ -11,23 +11,14 @@ class ModuleConf:
         "rclone": RmtMode.RCLONE,
         "rclonecopy": RmtMode.RCLONECOPY,
         "minio": RmtMode.MINIO,
-        "miniocopy": RmtMode.MINIOCOPY
+        "miniocopy": RmtMode.MINIOCOPY,
     }
 
     # 精简版转移模式
-    RMT_MODES_LITE = {
-        "copy": RmtMode.COPY,
-        "link": RmtMode.LINK,
-        "softlink": RmtMode.SOFTLINK,
-        "move": RmtMode.MOVE
-    }
+    RMT_MODES_LITE = {"copy": RmtMode.COPY, "link": RmtMode.LINK, "softlink": RmtMode.SOFTLINK, "move": RmtMode.MOVE}
 
     # 索引器
-    INDEXER_DICT = {
-        "prowlarr": IndexerType.PROWLARR,
-        "jackett": IndexerType.JACKETT,
-        "builtin": IndexerType.BUILTIN
-    }
+    INDEXER_DICT = {"prowlarr": IndexerType.PROWLARR, "jackett": IndexerType.JACKETT, "builtin": IndexerType.BUILTIN}
 
     # 远程转移模式
     REMOTE_RMT_MODES = [RmtMode.RCLONE, RmtMode.RCLONECOPY, RmtMode.MINIO, RmtMode.MINIOCOPY]
@@ -46,14 +37,14 @@ class ModuleConf:
                         "required": True,
                         "title": "Bot Token",
                         "tooltip": "telegram机器人的Token，关注BotFather创建机器人",
-                        "type": "text"
+                        "type": "text",
                     },
                     "chat_id": {
                         "id": "telegram_chat_id",
                         "required": True,
                         "title": "Chat ID",
                         "tooltip": "接受消息通知的用户、群组或频道Chat ID，关注@getidsbot获取",
-                        "type": "text"
+                        "type": "text",
                     },
                     "user_ids": {
                         "id": "telegram_user_ids",
@@ -61,7 +52,7 @@ class ModuleConf:
                         "title": "User IDs",
                         "tooltip": "允许使用交互的用户Chat ID，留空则只允许管理用户使用，关注@getidsbot获取",
                         "type": "text",
-                        "placeholder": "使用,分隔多个Id"
+                        "placeholder": "使用,分隔多个Id",
                     },
                     "admin_ids": {
                         "id": "telegram_admin_ids",
@@ -69,16 +60,16 @@ class ModuleConf:
                         "title": "Admin IDs",
                         "tooltip": "允许使用管理命令的用户Chat ID，关注@getidsbot获取",
                         "type": "text",
-                        "placeholder": "使用,分隔多个Id"
+                        "placeholder": "使用,分隔多个Id",
                     },
                     "webhook": {
                         "id": "telegram_webhook",
                         "required": False,
                         "title": "Webhook",
                         "tooltip": "Telegram机器人消息有两种模式：Webhook或消息轮循；开启后将使用Webhook方式，需要在基础设置中正确配置好外网访问地址，同时受Telegram官方限制，外网访问地址需要设置为以下端口之一：443, 80, 88, 8443，且需要有公网认证的可信SSL证书；关闭后将使用消息轮循方式，使用该方式需要在基础设置->安全处将Telegram ipv4源地址设置为127.0.0.1，如同时使用了内置的SSL证书功能，消息轮循方式可能无法正常使用",
-                        "type": "switch"
-                    }
-                }
+                        "type": "switch",
+                    },
+                },
             },
             "wechat": {
                 "name": "微信",
@@ -92,7 +83,7 @@ class ModuleConf:
                         "required": True,
                         "title": "企业ID",
                         "tooltip": "每个企业都拥有唯一的corpid，获取此信息可在管理后台“我的企业”－“企业信息”下查看“企业ID”（需要有管理员权限）",
-                        "type": "text"
+                        "type": "text",
                     },
                     "corpsecret": {
                         "id": "wechat_corpsecret",
@@ -100,7 +91,7 @@ class ModuleConf:
                         "title": "应用Secret",
                         "tooltip": "每个应用都拥有唯一的secret，获取此信息可在管理后台“应用与小程序”－“自建”下查看“Secret”（需要有管理员权限）",
                         "type": "text",
-                        "placeholder": "Secret"
+                        "placeholder": "Secret",
                     },
                     "agentid": {
                         "id": "wechat_agentid",
@@ -116,7 +107,7 @@ class ModuleConf:
                         "title": "消息推送代理",
                         "tooltip": "由于微信官方限制，2022年6月20日后创建的企业微信应用需要有固定的公网IP地址并加入IP白名单后才能发送消息，使用有固定公网IP的代理服务器转发可解决该问题；代理服务器需自行搭建，搭建方法可参考项目主页说明",
                         "type": "text",
-                        "placeholder": "https://wechat.nastool.cn"
+                        "placeholder": "https://wechat.nastool.cn",
                     },
                     "token": {
                         "id": "wechat_token",
@@ -124,7 +115,7 @@ class ModuleConf:
                         "title": "Token",
                         "tooltip": "需要交互功能时才需要填写，在微信企业应用管理后台-接收消息设置页面生成，填入完成后重启本应用，然后再在微信页面输入地址确定",
                         "type": "text",
-                        "placeholder": "API接收消息Token"
+                        "placeholder": "API接收消息Token",
                     },
                     "encodingAESKey": {
                         "id": "wechat_encodingAESKey",
@@ -132,7 +123,7 @@ class ModuleConf:
                         "title": "EncodingAESKey",
                         "tooltip": "需要交互功能时才需要填写，在微信企业应用管理后台-接收消息设置页面生成，填入完成后重启本应用，然后再在微信页面输入地址确定",
                         "type": "text",
-                        "placeholder": "API接收消息EncodingAESKey"
+                        "placeholder": "API接收消息EncodingAESKey",
                     },
                     "adminUser": {
                         "id": "wechat_adminUser",
@@ -140,9 +131,9 @@ class ModuleConf:
                         "title": "AdminUser",
                         "tooltip": "需要交互功能时才需要填写，可执行交互菜单命令的用户名，为空则不限制，多个;号分割。可在企业微信后台查看成员的Account ID",
                         "type": "text",
-                        "placeholder": "可执行交互菜单的用户名"
-                    }
-                }
+                        "placeholder": "可执行交互菜单的用户名",
+                    },
+                },
             },
             "serverchan": {
                 "name": "Server酱",
@@ -155,9 +146,9 @@ class ModuleConf:
                         "title": "SCKEY",
                         "tooltip": "填写ServerChan的API Key，SCT类型，在https://sct.ftqq.com/中申请",
                         "type": "text",
-                        "placeholder": "SCT..."
+                        "placeholder": "SCT...",
                     }
-                }
+                },
             },
             "bark": {
                 "name": "Bark",
@@ -171,14 +162,14 @@ class ModuleConf:
                         "tooltip": "自己搭建Bark服务端请实际配置，否则可使用：https://api.day.app",
                         "type": "text",
                         "placeholder": "https://api.day.app",
-                        "default": "https://api.day.app"
+                        "default": "https://api.day.app",
                     },
                     "apikey": {
                         "id": "bark_apikey",
                         "required": True,
                         "title": "API Key",
                         "tooltip": "在Bark客户端中点击右上角的“...”按钮，选择“生成Bark Key”，然后将生成的KEY填入此处",
-                        "type": "text"
+                        "type": "text",
                     },
                     "params": {
                         "id": "bark_params",
@@ -186,9 +177,9 @@ class ModuleConf:
                         "title": "附加参数",
                         "tooltip": "添加到Bark通知中的附加参数，可用于自定义通知特性",
                         "type": "text",
-                        "placeholder": "group=xxx&sound=xxx&url=xxx"
-                    }
-                }
+                        "placeholder": "group=xxx&sound=xxx&url=xxx",
+                    },
+                },
             },
             "pushdeer": {
                 "name": "PushDeer",
@@ -202,16 +193,16 @@ class ModuleConf:
                         "tooltip": "自己搭建pushdeer服务端请实际配置，否则可使用：https://api2.pushdeer.com",
                         "type": "text",
                         "placeholder": "https://api2.pushdeer.com",
-                        "default": "https://api2.pushdeer.com"
+                        "default": "https://api2.pushdeer.com",
                     },
                     "apikey": {
                         "id": "pushdeer_apikey",
                         "required": True,
                         "title": "API Key",
                         "tooltip": "pushdeer客户端生成的KEY",
-                        "type": "text"
-                    }
-                }
+                        "type": "text",
+                    },
+                },
             },
             "pushplus": {
                 "name": "PushPlus",
@@ -223,7 +214,7 @@ class ModuleConf:
                         "required": True,
                         "title": "Token",
                         "tooltip": "在PushPlus官网中申请，申请地址：http://pushplus.plus/",
-                        "type": "text"
+                        "type": "text",
                     },
                     "channel": {
                         "id": "pushplus_channel",
@@ -231,27 +222,23 @@ class ModuleConf:
                         "title": "推送渠道",
                         "tooltip": "使用PushPlus中配置的发送渠道，具体参考pushplus.plus官网文档说明，支持第三方webhook、钉钉、飞书、邮箱等",
                         "type": "select",
-                        "options": {
-                            "wechat": "微信",
-                            "mail": "邮箱",
-                            "webhook": "第三方Webhook"
-                        },
-                        "default": "wechat"
+                        "options": {"wechat": "微信", "mail": "邮箱", "webhook": "第三方Webhook"},
+                        "default": "wechat",
                     },
                     "topic": {
                         "id": "pushplus_topic",
                         "required": False,
                         "title": "群组编码",
                         "tooltip": "PushPlus中创建的群组，如未设置可为空",
-                        "type": "text"
+                        "type": "text",
                     },
                     "webhook": {
                         "id": "pushplus_webhook",
                         "required": False,
                         "title": "Webhook编码",
                         "tooltip": "PushPlus中创建的webhook编码，发送渠道为第三方webhook时需要填入",
-                    }
-                }
+                    },
+                },
             },
             "iyuu": {
                 "name": "爱语飞飞",
@@ -264,9 +251,9 @@ class ModuleConf:
                         "title": "令牌Token",
                         "tooltip": "在爱语飞飞官网中申请，申请地址：https://iyuu.cn/",
                         "type": "text",
-                        "placeholder": "登录https://iyuu.cn获取"
+                        "placeholder": "登录https://iyuu.cn获取",
                     }
-                }
+                },
             },
             "slack": {
                 "name": "Slack",
@@ -280,7 +267,7 @@ class ModuleConf:
                         "title": "Bot User OAuth Token",
                         "tooltip": "在Slack中创建应用，获取Bot User OAuth Token",
                         "type": "text",
-                        "placeholder": "xoxb-xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx"
+                        "placeholder": "xoxb-xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx",
                     },
                     "app_token": {
                         "id": "slack_app_token",
@@ -288,7 +275,7 @@ class ModuleConf:
                         "title": "App-Level Token",
                         "tooltip": "在Slack中创建应用，获取App-Level Token",
                         "type": "text",
-                        "placeholder": "xapp-xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx"
+                        "placeholder": "xapp-xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx",
                     },
                     "channel": {
                         "id": "slack_channel",
@@ -296,9 +283,9 @@ class ModuleConf:
                         "title": "频道名称",
                         "tooltip": "Slack中的频道名称，默认为全体；需要将机器人添加到该频道，以接收非交互类的通知消息",
                         "type": "text",
-                        "placeholder": "全体"
-                    }
-                }
+                        "placeholder": "全体",
+                    },
+                },
             },
             "gotify": {
                 "name": "Gotify",
@@ -311,14 +298,14 @@ class ModuleConf:
                         "title": "Gotify服务器地址",
                         "tooltip": "自己搭建gotify服务端地址",
                         "type": "text",
-                        "placeholder": "http://localhost:8800"
+                        "placeholder": "http://localhost:8800",
                     },
                     "token": {
                         "id": "gotify_token",
                         "required": True,
                         "title": "令牌Token",
                         "tooltip": "Gotify服务端APPS下创建的token",
-                        "type": "text"
+                        "type": "text",
                     },
                     "priority": {
                         "id": "gotify_priority",
@@ -326,11 +313,11 @@ class ModuleConf:
                         "title": "消息Priority",
                         "tooltip": "消息通知优先级, 请填写数字(1-8), 默认: 8",
                         "type": "text",
-                        "placeholder": "8"
-                    }
-                }
+                        "placeholder": "8",
+                    },
+                },
             },
-             "ntfy": {
+            "ntfy": {
                 "name": "ntfy",
                 "img_url": "../static/img/message/ntfy.webp",
                 "color": "#409D8A",
@@ -341,21 +328,21 @@ class ModuleConf:
                         "title": "ntfy服务器地址",
                         "tooltip": "自己搭建ntfy服务端地址",
                         "type": "text",
-                        "placeholder": "http://localhost:8800"
+                        "placeholder": "http://localhost:8800",
                     },
                     "token": {
                         "id": "ntfy_token",
                         "required": True,
                         "title": "令牌Token",
                         "tooltip": "ntfy服务端创建的token",
-                        "type": "text"
+                        "type": "text",
                     },
-                     "topic": {
+                    "topic": {
                         "id": "ntfy_topic",
                         "required": True,
                         "title": "topic",
                         "tooltip": "ntfy创建的topic",
-                        "type": "text"
+                        "type": "text",
                     },
                     "priority": {
                         "id": "ntfy_priority",
@@ -363,7 +350,7 @@ class ModuleConf:
                         "title": "消息Priority",
                         "tooltip": "消息通知优先级, 请填写数字(1-5), 默认: 4",
                         "type": "text",
-                        "placeholder": "4"
+                        "placeholder": "4",
                     },
                     "tags": {
                         "id": "ntfy_tags",
@@ -371,9 +358,9 @@ class ModuleConf:
                         "title": "消息tags",
                         "tooltip": "消息tags,以逗号分隔, 请参阅ntfy官网, 默认: rotating_light",
                         "type": "text",
-                        "placeholder": "rotating_light"
-                    }
-                }
+                        "placeholder": "rotating_light",
+                    },
+                },
             },
             "chanify": {
                 "name": "Chanify",
@@ -387,14 +374,14 @@ class ModuleConf:
                         "tooltip": "自己搭建Chanify服务端地址或使用https://api.chanify.net",
                         "type": "text",
                         "placeholder": "https://api.chanify.net",
-                        "default": "https://api.chanify.net"
+                        "default": "https://api.chanify.net",
                     },
                     "token": {
                         "id": "chanify_token",
                         "required": True,
                         "title": "令牌",
                         "tooltip": "在Chanify客户端频道中获取",
-                        "type": "text"
+                        "type": "text",
                     },
                     "params": {
                         "id": "chanify_params",
@@ -402,9 +389,9 @@ class ModuleConf:
                         "title": "附加参数",
                         "tooltip": "添加到Chanify通知中的附加参数，可用于自定义通知特性",
                         "type": "text",
-                        "placeholder": "sound=0&interruption-level=active"
-                    }
-                }
+                        "placeholder": "sound=0&interruption-level=active",
+                    },
+                },
             },
             "synologychat": {
                 "name": "Synology Chat",
@@ -418,7 +405,7 @@ class ModuleConf:
                         "title": "机器人传入URL",
                         "tooltip": "在Synology Chat中创建机器人，获取机器人传入URL",
                         "type": "text",
-                        "placeholder": "https://xxx/webapi/entry.cgi?api=xxx"
+                        "placeholder": "https://xxx/webapi/entry.cgi?api=xxx",
                     },
                     "token": {
                         "id": "synologychat_token",
@@ -426,9 +413,9 @@ class ModuleConf:
                         "title": "令牌",
                         "tooltip": "在Synology Chat中创建机器人，获取机器人令牌",
                         "type": "text",
-                        "placeholder": ""
-                    }
-                }
+                        "placeholder": "",
+                    },
+                },
             },
             "webhook": {
                 "name": "Webhook",
@@ -440,7 +427,7 @@ class ModuleConf:
                         "title": "URL",
                         "tooltip": "",
                         "type": "text",
-                        "placeholder": "https://xxx.com/your_api/"
+                        "placeholder": "https://xxx.com/your_api/",
                     },
                     "method": {
                         "id": "method",
@@ -455,7 +442,7 @@ class ModuleConf:
                             "PATCH": "PATCH",
                             "DELETE": "DELETE",
                         },
-                        "default": "POST"
+                        "default": "POST",
                     },
                     "token": {
                         "id": "token",
@@ -463,7 +450,7 @@ class ModuleConf:
                         "title": "Token",
                         "tooltip": "会放在Header的Authorization中",
                         "type": "text",
-                        "placeholder": """Authorization-Token"""
+                        "placeholder": """Authorization-Token""",
                     },
                     "query_params": {
                         "id": "query_params",
@@ -471,7 +458,7 @@ class ModuleConf:
                         "title": "额外查询参数",
                         "tooltip": "JSON字符串",
                         "type": "text",
-                        "placeholder": """{"search": "keyword"}"""
+                        "placeholder": """{"search": "keyword"}""",
                     },
                     "json_tpl": {
                         "id": "json_tpl",
@@ -479,7 +466,7 @@ class ModuleConf:
                         "title": "单条消息模板",
                         "tooltip": "Jinja2 JSON模板，用于单条消息。可用变量：title, text, image, url, user_id。字符串变量默认会进行 tojson 过滤以保证生成的JSON格式正确，如需使用原始字符串请使用 |safe 过滤器，如：{{ text|safe }}",
                         "type": "textarea",
-                        "placeholder": """{\n  "title": "{{ title }}",\n  "text": "{{ text }}",\n  "image": "{{ image }}",\n  "url": "{{ url }}",\n  "user_id": "{{ user_id }}"\n}"""
+                        "placeholder": """{\n  "title": "{{ title }}",\n  "text": "{{ text }}",\n  "image": "{{ image }}",\n  "url": "{{ url }}",\n  "user_id": "{{ user_id }}"\n}""",
                     },
                     "json_list_tpl": {
                         "id": "json_list_tpl",
@@ -487,73 +474,28 @@ class ModuleConf:
                         "title": "列表消息模板",
                         "tooltip": "Jinja2 JSON模板，用于列表消息。可用变量：title, user_id, medias（数组，每项包含：title, url, type, vote）。字符串变量默认会进行 tojson 过滤以保证生成的JSON格式正确，如需使用原始字符串请使用 |safe 过滤器，如：{{ media.title|safe }}",
                         "type": "textarea",
-                        "placeholder": """{\n  "title": "{{ title }}",\n  "user_id": "{{ user_id }}",\n  "items": [\n    {% for media in medias %}\n    {\n      "title": "{{ media.title }}",\n      "url": "{{ media.url }}",\n      "type": "{{ media.type }}",\n      "vote": "{{ media.vote }}"\n    }{% if not loop.last %},{% endif %}\n    {% endfor %}\n  ]\n}"""
+                        "placeholder": """{\n  "title": "{{ title }}",\n  "user_id": "{{ user_id }}",\n  "items": [\n    {% for media in medias %}\n    {\n      "title": "{{ media.title }}",\n      "url": "{{ media.url }}",\n      "type": "{{ media.type }}",\n      "vote": "{{ media.vote }}"\n    }{% if not loop.last %},{% endif %}\n    {% endfor %}\n  ]\n}""",
                     },
-                }
+                },
             },
         },
         "switch": {
-            "download_start": {
-                "name": "新增下载",
-                "fuc_name": "download_start"
-            },
-            "download_fail": {
-                "name": "下载失败",
-                "fuc_name": "download_fail"
-            },
-            "transfer_finished": {
-                "name": "入库完成",
-                "fuc_name": "transfer_finished"
-            },
-            "transfer_fail": {
-                "name": "入库失败",
-                "fuc_name": "transfer_fail"
-            },
-            "rss_added": {
-                "name": "新增订阅",
-                "fuc_name": "rss_added"
-            },
-            "rss_finished": {
-                "name": "订阅完成",
-                "fuc_name": "rss_finished"
-            },
-            "site_signin": {
-                "name": "站点签到",
-                "fuc_name": "site_signin"
-            },
-            "site_message": {
-                "name": "站点消息",
-                "fuc_name": "site_message"
-            },
-            "brushtask_added": {
-                "name": "刷流下种",
-                "fuc_name": "brushtask_added"
-            },
-            "brushtask_remove": {
-                "name": "刷流删种",
-                "fuc_name": "brushtask_remove"
-            },
-            "brushtask_pause": {
-                "name": "刷流种子暂停",
-                "fuc_name": "brushtask_pause"
-            },
-            "auto_remove_torrents": {
-                "name": "自动删种",
-                "fuc_name": "auto_remove_torrents"
-            },
-            "ptrefresh_date_message": {
-                "name": "数据统计",
-                "fuc_name": "ptrefresh_date_message"
-            },
-            "mediaserver_message": {
-                "name": "媒体服务",
-                "fuc_name": "mediaserver_message"
-            },
-            "custom_message": {
-                "name": "插件消息",
-                "fuc_name": "custom_message"
-            }
-        }
+            "download_start": {"name": "新增下载", "fuc_name": "download_start"},
+            "download_fail": {"name": "下载失败", "fuc_name": "download_fail"},
+            "transfer_finished": {"name": "入库完成", "fuc_name": "transfer_finished"},
+            "transfer_fail": {"name": "入库失败", "fuc_name": "transfer_fail"},
+            "rss_added": {"name": "新增订阅", "fuc_name": "rss_added"},
+            "rss_finished": {"name": "订阅完成", "fuc_name": "rss_finished"},
+            "site_signin": {"name": "站点签到", "fuc_name": "site_signin"},
+            "site_message": {"name": "站点消息", "fuc_name": "site_message"},
+            "brushtask_added": {"name": "刷流下种", "fuc_name": "brushtask_added"},
+            "brushtask_remove": {"name": "刷流删种", "fuc_name": "brushtask_remove"},
+            "brushtask_pause": {"name": "刷流种子暂停", "fuc_name": "brushtask_pause"},
+            "auto_remove_torrents": {"name": "自动删种", "fuc_name": "auto_remove_torrents"},
+            "ptrefresh_date_message": {"name": "数据统计", "fuc_name": "ptrefresh_date_message"},
+            "mediaserver_message": {"name": "媒体服务", "fuc_name": "mediaserver_message"},
+            "custom_message": {"name": "插件消息", "fuc_name": "custom_message"},
+        },
     }
     # ('Downloading', 'Uploading', 'Checking', 'Queued', 'Paused', 'Stopped', 'Pending', 'Error', 'Unknown'))
     # 自动删种配置
@@ -571,7 +513,7 @@ class ModuleConf:
                 "Checking": "检查中",
                 "Queued": "排队",
                 "Unknown": "未知状态",
-            }
+            },
         },
         "transmission": {
             "name": "Transmission",
@@ -584,9 +526,9 @@ class ModuleConf:
                 "Checking": "正在检查",
                 "Queued": "排队",
                 "Stopped": "暂停",
-                "Unknown": "未知状态"
-            }
-        }
+                "Unknown": "未知状态",
+            },
+        },
     }
 
     # 搜索种子过滤属性
@@ -599,14 +541,9 @@ class ModuleConf:
             "HDTV": r"U?HDTV",
             "UHD": r"UHD",
             "HDR": r"HDR",
-            "3D": r"3D"
+            "3D": r"3D",
         },
-        "pix": {
-            "8k": r"8K",
-            "4k": r"4K|2160P|X2160",
-            "1080p": r"1080[PIX]|X1080",
-            "720p": r"720P"
-        }
+        "pix": {"8k": r"8K", "4k": r"4K|2160P|X2160", "1080p": r"1080[PIX]|X1080", "720p": r"720P"},
     }
 
     # 网络测试对象，TMDB API除外
@@ -616,7 +553,7 @@ class ModuleConf:
         "webservice.fanart.tv",
         "api.telegram.org",
         "qyapi.weixin.qq.com",
-        "frodo.douban.com"
+        "frodo.douban.com",
     ]
 
     # 下载器
@@ -634,28 +571,28 @@ class ModuleConf:
                     "title": "地址",
                     "tooltip": "配置IP地址或域名，如为https则需要增加https://前缀",
                     "type": "text",
-                    "placeholder": "127.0.0.1"
+                    "placeholder": "127.0.0.1",
                 },
                 "port": {
                     "id": "qbittorrent_port",
                     "required": True,
                     "title": "端口",
                     "type": "text",
-                    "placeholder": "8080"
+                    "placeholder": "8080",
                 },
                 "username": {
                     "id": "qbittorrent_username",
                     "required": True,
                     "title": "用户名",
                     "type": "text",
-                    "placeholder": "admin"
+                    "placeholder": "admin",
                 },
                 "password": {
                     "id": "qbittorrent_password",
                     "required": False,
                     "title": "密码",
                     "type": "password",
-                    "placeholder": "password"
+                    "placeholder": "password",
                 },
                 "torrent_management": {
                     "id": "qbittorrent_torrent_management",
@@ -667,14 +604,10 @@ class ModuleConf:
                                 【注意】自动管理模式下，NAStool将在启动时根据下载目录设置自动为下载器创建相应分类（需设置下载保存目录和分类标签），下载器中已存在该分类且其保存目录与NAStool中设置的不一致时，将会覆盖下载器的设置。
                                 """,
                     "type": "select",
-                    "options": {
-                        "default": "默认",
-                        "manual": "手动",
-                        "auto": "自动"
-                    },
-                    "default": "manual"
-                }
-            }
+                    "options": {"default": "默认", "manual": "手动", "auto": "自动"},
+                    "default": "manual",
+                },
+            },
         },
         "transmission": {
             "name": "Transmission",
@@ -689,30 +622,30 @@ class ModuleConf:
                     "title": "地址",
                     "tooltip": "配置IP地址或域名，如为https则需要增加https://前缀",
                     "type": "text",
-                    "placeholder": "127.0.0.1"
+                    "placeholder": "127.0.0.1",
                 },
                 "port": {
                     "id": "transmission_port",
                     "required": True,
                     "title": "端口",
                     "type": "text",
-                    "placeholder": "9091"
+                    "placeholder": "9091",
                 },
                 "username": {
                     "id": "transmission_username",
                     "required": True,
                     "title": "用户名",
                     "type": "text",
-                    "placeholder": "admin"
+                    "placeholder": "admin",
                 },
                 "password": {
                     "id": "transmission_password",
                     "required": False,
                     "title": "密码",
                     "type": "password",
-                    "placeholder": "password"
-                }
-            }
+                    "placeholder": "password",
+                },
+            },
         },
         "aria2": {
             "name": "Aria2",
@@ -726,23 +659,11 @@ class ModuleConf:
                     "title": "IP地址",
                     "tooltip": "配置IP地址，如为https则需要增加https://前缀",
                     "type": "text",
-                    "placeholder": "127.0.0.1"
+                    "placeholder": "127.0.0.1",
                 },
-                "port": {
-                    "id": "aria2_port",
-                    "required": True,
-                    "title": "端口",
-                    "type": "text",
-                    "placeholder": "6800"
-                },
-                "secret": {
-                    "id": "aria2_secret",
-                    "required": True,
-                    "title": "令牌",
-                    "type": "text",
-                    "placeholder": ""
-                }
-            }
+                "port": {"id": "aria2_port", "required": True, "title": "端口", "type": "text", "placeholder": "6800"},
+                "secret": {"id": "aria2_secret", "required": True, "title": "令牌", "type": "text", "placeholder": ""},
+            },
         },
         "thunder": {
             "name": "迅雷",
@@ -757,7 +678,7 @@ class ModuleConf:
                     "title": "IP地址",
                     "tooltip": "配置迅雷NAS设备的IP地址",
                     "type": "text",
-                    "placeholder": "192.168.1.100"
+                    "placeholder": "192.168.1.100",
                 },
                 "port": {
                     "id": "thunder_port",
@@ -766,7 +687,7 @@ class ModuleConf:
                     "tooltip": "迅雷NAS Web管理端口，默认为2345",
                     "type": "text",
                     "placeholder": "2345",
-                    "default": "2345"
+                    "default": "2345",
                 },
                 "token": {
                     "id": "thunder_token",
@@ -774,10 +695,10 @@ class ModuleConf:
                     "title": "认证令牌",
                     "tooltip": "迅雷认证令牌，默认为Basic认证，格式为Basic base64(username:password)",
                     "type": "text",
-                    "placeholder": "Basic bGlueXVhbjIxMzpMeTE5OTYwMjEzKio="
-                }
-            }
-        }
+                    "placeholder": "Basic bGlueXVhbjIxMzpMeTE5OTYwMjEzKio=",
+                },
+            },
+        },
     }
 
     # 媒体服务器
@@ -793,14 +714,14 @@ class ModuleConf:
                     "required": False,
                     "title": "启用",
                     "tooltip": "启用该媒体服务器",
-                    "type": "switch"
+                    "type": "switch",
                 },
                 "is_default": {
                     "id": "emby.is_default",
                     "required": False,
                     "title": "默认",
                     "tooltip": "设置为默认使用的媒体服务器，同一时间只能有一个默认",
-                    "type": "switch"
+                    "type": "switch",
                 },
                 "host": {
                     "id": "emby.host",
@@ -808,7 +729,7 @@ class ModuleConf:
                     "title": "服务器地址",
                     "tooltip": "配置IP地址和端口，如为https则需要增加https://前缀",
                     "type": "text",
-                    "placeholder": "http://127.0.0.1:8096"
+                    "placeholder": "http://127.0.0.1:8096",
                 },
                 "api_key": {
                     "id": "emby.api_key",
@@ -816,7 +737,7 @@ class ModuleConf:
                     "title": "Api Key",
                     "tooltip": "在Emby设置->高级->API密钥处生成，注意不要复制到了应用名称",
                     "type": "text",
-                    "placeholder": ""
+                    "placeholder": "",
                 },
                 "play_host": {
                     "id": "emby.play_host",
@@ -824,9 +745,9 @@ class ModuleConf:
                     "title": "媒体播放地址",
                     "tooltip": "配置播放设备的访问地址，用于媒体详情页跳转播放页面；如为https则需要增加https://前缀，留空则默认与服务器地址一致",
                     "type": "text",
-                    "placeholder": "http://127.0.0.1:8096"
-                }
-            }
+                    "placeholder": "http://127.0.0.1:8096",
+                },
+            },
         },
         "jellyfin": {
             "name": "Jellyfin",
@@ -839,14 +760,14 @@ class ModuleConf:
                     "required": False,
                     "title": "启用",
                     "tooltip": "启用该媒体服务器",
-                    "type": "switch"
+                    "type": "switch",
                 },
                 "is_default": {
                     "id": "jellyfin.is_default",
                     "required": False,
                     "title": "默认",
                     "tooltip": "设置为默认使用的媒体服务器，同一时间只能有一个默认",
-                    "type": "switch"
+                    "type": "switch",
                 },
                 "host": {
                     "id": "jellyfin.host",
@@ -854,7 +775,7 @@ class ModuleConf:
                     "title": "服务器地址",
                     "tooltip": "配置IP地址和端口，如为https则需要增加https://前缀",
                     "type": "text",
-                    "placeholder": "http://127.0.0.1:8096"
+                    "placeholder": "http://127.0.0.1:8096",
                 },
                 "api_key": {
                     "id": "jellyfin.api_key",
@@ -862,7 +783,7 @@ class ModuleConf:
                     "title": "Api Key",
                     "tooltip": "在Jellyfin设置->高级->API密钥处生成",
                     "type": "text",
-                    "placeholder": ""
+                    "placeholder": "",
                 },
                 "play_host": {
                     "id": "jellyfin.play_host",
@@ -870,9 +791,9 @@ class ModuleConf:
                     "title": "媒体播放地址",
                     "tooltip": "配置播放设备的访问地址，用于媒体详情页跳转播放页面；如为https则需要增加https://前缀，留空则默认与服务器地址一致",
                     "type": "text",
-                    "placeholder": "http://127.0.0.1:8096"
-                }
-            }
+                    "placeholder": "http://127.0.0.1:8096",
+                },
+            },
         },
         "plex": {
             "name": "Plex",
@@ -885,14 +806,14 @@ class ModuleConf:
                     "required": False,
                     "title": "启用",
                     "tooltip": "启用该媒体服务器",
-                    "type": "switch"
+                    "type": "switch",
                 },
                 "is_default": {
                     "id": "plex.is_default",
                     "required": False,
                     "title": "默认",
                     "tooltip": "设置为默认使用的媒体服务器，同一时间只能有一个默认",
-                    "type": "switch"
+                    "type": "switch",
                 },
                 "host": {
                     "id": "plex.host",
@@ -900,7 +821,7 @@ class ModuleConf:
                     "title": "服务器地址",
                     "tooltip": "配置IP地址和端口，如为https则需要增加https://前缀",
                     "type": "text",
-                    "placeholder": "http://127.0.0.1:32400"
+                    "placeholder": "http://127.0.0.1:32400",
                 },
                 "token": {
                     "id": "plex.token",
@@ -908,7 +829,7 @@ class ModuleConf:
                     "title": "X-Plex-Token",
                     "tooltip": "Plex网页Url中的X-Plex-Token，通过浏览器F12->网络从请求URL中获取，如填写将优先使用；Token与服务器名称、用户名及密码 二选一，推荐使用Token，连接速度更快",
                     "type": "text",
-                    "placeholder": "X-Plex-Token与其它认证信息二选一"
+                    "placeholder": "X-Plex-Token与其它认证信息二选一",
                 },
                 "servername": {
                     "id": "plex.servername",
@@ -916,21 +837,21 @@ class ModuleConf:
                     "title": "服务器名称",
                     "tooltip": "配置Plex设置->左侧下拉框中看到的服务器名称；如填写了Token则无需填写服务器名称、用户名及密码",
                     "type": "text",
-                    "placeholder": ""
+                    "placeholder": "",
                 },
                 "username": {
                     "id": "plex.username",
                     "required": False,
                     "title": "用户名",
                     "type": "text",
-                    "placeholder": ""
+                    "placeholder": "",
                 },
                 "password": {
                     "id": "plex.password",
                     "required": False,
                     "title": "密码",
                     "type": "password",
-                    "placeholder": ""
+                    "placeholder": "",
                 },
                 "play_host": {
                     "id": "plex.play_host",
@@ -938,9 +859,9 @@ class ModuleConf:
                     "title": "媒体播放地址",
                     "tooltip": "配置播放设备的访问地址，用于媒体详情页跳转播放页面；如为https则需要增加https://前缀，留空则默认与服务器地址一致",
                     "type": "text",
-                    "placeholder": "https://app.plex.tv"
-                }
-            }
+                    "placeholder": "https://app.plex.tv",
+                },
+            },
         },
         "fnos": {
             "name": "FnOS",
@@ -953,14 +874,14 @@ class ModuleConf:
                     "required": False,
                     "title": "启用",
                     "tooltip": "启用该媒体服务器",
-                    "type": "switch"
+                    "type": "switch",
                 },
                 "is_default": {
                     "id": "fnos.is_default",
                     "required": False,
                     "title": "默认",
                     "tooltip": "设置为默认使用的媒体服务器，同一时间只能有一个默认",
-                    "type": "switch"
+                    "type": "switch",
                 },
                 "host": {
                     "id": "fnos.host",
@@ -968,21 +889,21 @@ class ModuleConf:
                     "title": "服务器地址",
                     "tooltip": "配置IP地址和端口，如为https则需要增加https://前缀",
                     "type": "text",
-                    "placeholder": "http://127.0.0.1:5666"
+                    "placeholder": "http://127.0.0.1:5666",
                 },
                 "username": {
                     "id": "fnos.username",
                     "required": False,
                     "title": "用户名",
                     "type": "text",
-                    "placeholder": ""
+                    "placeholder": "",
                 },
                 "password": {
                     "id": "fnos.password",
                     "required": False,
                     "title": "密码",
                     "type": "password",
-                    "placeholder": ""
+                    "placeholder": "",
                 },
                 "play_host": {
                     "id": "fnos.play_host",
@@ -990,9 +911,9 @@ class ModuleConf:
                     "title": "媒体播放地址",
                     "tooltip": "配置播放设备的访问地址，用于媒体详情页跳转播放页面；如为https则需要增加https://前缀，留空则默认与服务器地址一致",
                     "type": "text",
-                    "placeholder": "https://app.fnos.tv"
-                }
-            }
+                    "placeholder": "https://app.fnos.tv",
+                },
+            },
         },
     }
 
@@ -1010,7 +931,7 @@ class ModuleConf:
                     "title": "Jackett地址",
                     "tooltip": "Jackett访问地址和端口，如为https需加https://前缀。注意需要先在Jackett中添加indexer，才能正常测试通过和使用",
                     "type": "text",
-                    "placeholder": "http://127.0.0.1:9117"
+                    "placeholder": "http://127.0.0.1:9117",
                 },
                 "api_key": {
                     "id": "jackett.api_key",
@@ -1018,7 +939,7 @@ class ModuleConf:
                     "title": "Api Key",
                     "tooltip": "Jackett管理界面右上角复制API Key",
                     "type": "text",
-                    "placeholder": ""
+                    "placeholder": "",
                 },
                 "password": {
                     "id": "jackett.password",
@@ -1026,9 +947,9 @@ class ModuleConf:
                     "title": "密码",
                     "tooltip": "Jackett管理界面中配置的Admin password，如未配置可为空",
                     "type": "password",
-                    "placeholder": ""
-                }
-            }
+                    "placeholder": "",
+                },
+            },
         },
         "prowlarr": {
             "name": "Prowlarr",
@@ -1042,7 +963,7 @@ class ModuleConf:
                     "title": "Prowlarr地址",
                     "tooltip": "Prowlarr访问地址和端口，如为https需加https://前缀。注意需要先在Prowlarr中添加搜刮器，同时勾选所有搜刮器后搜索一次，才能正常测试通过和使用",
                     "type": "text",
-                    "placeholder": "http://127.0.0.1:9696"
+                    "placeholder": "http://127.0.0.1:9696",
                 },
                 "api_key": {
                     "id": "prowlarr.api_key",
@@ -1050,10 +971,10 @@ class ModuleConf:
                     "title": "Api Key",
                     "tooltip": "在Prowlarr->Settings->General->Security-> API Key中获取",
                     "type": "text",
-                    "placeholder": ""
-                }
-            }
-        }
+                    "placeholder": "",
+                },
+            },
+        },
     }
 
     # 发现过滤器
@@ -1062,135 +983,155 @@ class ModuleConf:
             "sort_by": {
                 "name": "排序",
                 "type": "dropdown",
-                "options": [{'value': '', 'name': '默认'},
-                            {'value': 'popularity.desc', 'name': '近期热度'},
-                            {'value': 'vote_average.desc', 'name': '高分优先'},
-                            {'value': 'release_date.desc', 'name': '首播时间'}]
+                "options": [
+                    {"value": "", "name": "默认"},
+                    {"value": "popularity.desc", "name": "近期热度"},
+                    {"value": "vote_average.desc", "name": "高分优先"},
+                    {"value": "release_date.desc", "name": "首播时间"},
+                ],
             },
             "with_genres": {
                 "name": "类型",
                 "type": "dropdown",
-                "options": [{'value': '', 'name': '全部'},
-                            {'value': '12', 'name': '冒险'},
-                            {'value': '16', 'name': '动画'},
-                            {'value': '35', 'name': '喜剧'},
-                            {'value': '80', 'name': '犯罪'},
-                            {'value': '18', 'name': '剧情'},
-                            {'value': '14', 'name': '奇幻'},
-                            {'value': '27', 'name': '恐怖'},
-                            {'value': '9648', 'name': '悬疑'},
-                            {'value': '10749', 'name': '爱情'},
-                            {'value': '878', 'name': '科幻'},
-                            {'value': '53', 'name': '惊悚'},
-                            {'value': '10752', 'name': '战争'}]
+                "options": [
+                    {"value": "", "name": "全部"},
+                    {"value": "12", "name": "冒险"},
+                    {"value": "16", "name": "动画"},
+                    {"value": "35", "name": "喜剧"},
+                    {"value": "80", "name": "犯罪"},
+                    {"value": "18", "name": "剧情"},
+                    {"value": "14", "name": "奇幻"},
+                    {"value": "27", "name": "恐怖"},
+                    {"value": "9648", "name": "悬疑"},
+                    {"value": "10749", "name": "爱情"},
+                    {"value": "878", "name": "科幻"},
+                    {"value": "53", "name": "惊悚"},
+                    {"value": "10752", "name": "战争"},
+                ],
             },
             "with_original_language": {
                 "name": "语言",
                 "type": "dropdown",
-                "options": [{'value': '', 'name': '全部'},
-                            {'value': 'zh', 'name': '中文'},
-                            {'value': 'en', 'name': '英语'},
-                            {'value': 'ja', 'name': '日语'},
-                            {'value': 'ko', 'name': '韩语'},
-                            {'value': 'fr', 'name': '法语'},
-                            {'value': 'de', 'name': '德语'},
-                            {'value': 'ru', 'name': '俄语'},
-                            {'value': 'hi', 'name': '印地语'}]
-            }
+                "options": [
+                    {"value": "", "name": "全部"},
+                    {"value": "zh", "name": "中文"},
+                    {"value": "en", "name": "英语"},
+                    {"value": "ja", "name": "日语"},
+                    {"value": "ko", "name": "韩语"},
+                    {"value": "fr", "name": "法语"},
+                    {"value": "de", "name": "德语"},
+                    {"value": "ru", "name": "俄语"},
+                    {"value": "hi", "name": "印地语"},
+                ],
+            },
         },
         "tmdb_tv": {
             "sort_by": {
                 "name": "排序",
                 "type": "dropdown",
-                "options": [{'value': '', 'name': '默认'},
-                            {'value': 'popularity.desc', 'name': '近期热度'},
-                            {'value': 'vote_average.desc', 'name': '高分优先'},
-                            {'value': 'first_air_date.desc', 'name': '首播时间'}]
+                "options": [
+                    {"value": "", "name": "默认"},
+                    {"value": "popularity.desc", "name": "近期热度"},
+                    {"value": "vote_average.desc", "name": "高分优先"},
+                    {"value": "first_air_date.desc", "name": "首播时间"},
+                ],
             },
             "with_genres": {
                 "name": "类型",
                 "type": "dropdown",
-                "options": [{'value': '', 'name': '全部'},
-                            {'value': '10759', 'name': '动作冒险'},
-                            {'value': '16', 'name': '动画'},
-                            {'value': '35', 'name': '喜剧'},
-                            {'value': '80', 'name': '犯罪'},
-                            {'value': '99', 'name': '纪录'},
-                            {'value': '18', 'name': '剧情'},
-                            {'value': '10762', 'name': '儿童'},
-                            {'value': '9648', 'name': '悬疑'},
-                            {'value': '10764', 'name': '真人秀'},
-                            {'value': '10765', 'name': '科幻'}]
+                "options": [
+                    {"value": "", "name": "全部"},
+                    {"value": "10759", "name": "动作冒险"},
+                    {"value": "16", "name": "动画"},
+                    {"value": "35", "name": "喜剧"},
+                    {"value": "80", "name": "犯罪"},
+                    {"value": "99", "name": "纪录"},
+                    {"value": "18", "name": "剧情"},
+                    {"value": "10762", "name": "儿童"},
+                    {"value": "9648", "name": "悬疑"},
+                    {"value": "10764", "name": "真人秀"},
+                    {"value": "10765", "name": "科幻"},
+                ],
             },
             "with_original_language": {
                 "name": "语言",
                 "type": "dropdown",
-                "options": [{'value': '', 'name': '全部'},
-                            {'value': 'zh', 'name': '中文'},
-                            {'value': 'en', 'name': '英语'},
-                            {'value': 'ja', 'name': '日语'},
-                            {'value': 'ko', 'name': '韩语'},
-                            {'value': 'fr', 'name': '法语'},
-                            {'value': 'de', 'name': '德语'},
-                            {'value': 'ru', 'name': '俄语'},
-                            {'value': 'hi', 'name': '印地语'}]
-            }
+                "options": [
+                    {"value": "", "name": "全部"},
+                    {"value": "zh", "name": "中文"},
+                    {"value": "en", "name": "英语"},
+                    {"value": "ja", "name": "日语"},
+                    {"value": "ko", "name": "韩语"},
+                    {"value": "fr", "name": "法语"},
+                    {"value": "de", "name": "德语"},
+                    {"value": "ru", "name": "俄语"},
+                    {"value": "hi", "name": "印地语"},
+                ],
+            },
         },
         "douban_movie": {
             "sort": {
                 "name": "排序",
                 "type": "dropdown",
-                "options": [{'value': '', 'name': '默认'},
-                            {'value': 'U', 'name': '综合排序'},
-                            {'value': 'T', 'name': '近期热度'},
-                            {'value': 'S', 'name': '高分优先'},
-                            {'value': 'R', 'name': '首播时间'}]
+                "options": [
+                    {"value": "", "name": "默认"},
+                    {"value": "U", "name": "综合排序"},
+                    {"value": "T", "name": "近期热度"},
+                    {"value": "S", "name": "高分优先"},
+                    {"value": "R", "name": "首播时间"},
+                ],
             },
             "tags": {
                 "name": "类型",
                 "type": "dropdown",
-                "options": [{"value": "", "name": "全部"},
-                            {"value": "喜剧", "name": "喜剧"},
-                            {"value": "爱情", "name": "爱情"},
-                            {"value": "动作", "name": "动作"},
-                            {"value": "科幻", "name": "科幻"},
-                            {"value": "动画", "name": "动画"},
-                            {"value": "悬疑", "name": "悬疑"},
-                            {"value": "犯罪", "name": "犯罪"},
-                            {"value": "惊悚", "name": "惊悚"},
-                            {"value": "冒险", "name": "冒险"},
-                            {"value": "奇幻", "name": "奇幻"},
-                            {"value": "恐怖", "name": "恐怖"},
-                            {"value": "战争", "name": "战争"},
-                            {"value": "武侠", "name": "武侠"},
-                            {"value": "灾难", "name": "灾难"}]
-            }
+                "options": [
+                    {"value": "", "name": "全部"},
+                    {"value": "喜剧", "name": "喜剧"},
+                    {"value": "爱情", "name": "爱情"},
+                    {"value": "动作", "name": "动作"},
+                    {"value": "科幻", "name": "科幻"},
+                    {"value": "动画", "name": "动画"},
+                    {"value": "悬疑", "name": "悬疑"},
+                    {"value": "犯罪", "name": "犯罪"},
+                    {"value": "惊悚", "name": "惊悚"},
+                    {"value": "冒险", "name": "冒险"},
+                    {"value": "奇幻", "name": "奇幻"},
+                    {"value": "恐怖", "name": "恐怖"},
+                    {"value": "战争", "name": "战争"},
+                    {"value": "武侠", "name": "武侠"},
+                    {"value": "灾难", "name": "灾难"},
+                ],
+            },
         },
         "douban_tv": {
             "sort": {
                 "name": "排序",
                 "type": "dropdown",
-                "options": [{'value': '', 'name': '默认'},
-                            {'value': 'U', 'name': '综合排序'},
-                            {'value': 'T', 'name': '近期热度'},
-                            {'value': 'S', 'name': '高分优先'},
-                            {'value': 'R', 'name': '首播时间'}]
+                "options": [
+                    {"value": "", "name": "默认"},
+                    {"value": "U", "name": "综合排序"},
+                    {"value": "T", "name": "近期热度"},
+                    {"value": "S", "name": "高分优先"},
+                    {"value": "R", "name": "首播时间"},
+                ],
             },
             "tags": {
                 "name": "地区",
                 "type": "dropdown",
-                "options": [{"value": "", "name": "全部"},
-                            {"value": "华语", "name": "华语"},
-                            {"value": "中国大陆", "name": "中国大陆"},
-                            {"value": "中国香港", "name": "中国香港"},
-                            {"value": "中国台湾", "name": "中国台湾"},
-                            {"value": "欧美", "name": "欧美"},
-                            {"value": "韩国", "name": "韩国"},
-                            {"value": "日本", "name": "日本"},
-                            {"value": "印度", "name": "印度"},
-                            {"value": "泰国", "name": "泰国"}]
-            }
-        }
+                "options": [
+                    {"value": "", "name": "全部"},
+                    {"value": "华语", "name": "华语"},
+                    {"value": "中国大陆", "name": "中国大陆"},
+                    {"value": "中国香港", "name": "中国香港"},
+                    {"value": "中国台湾", "name": "中国台湾"},
+                    {"value": "欧美", "name": "欧美"},
+                    {"value": "韩国", "name": "韩国"},
+                    {"value": "日本", "name": "日本"},
+                    {"value": "印度", "name": "印度"},
+                    {"value": "泰国", "name": "泰国"},
+                ],
+            },
+        },
     }
 
     @staticmethod

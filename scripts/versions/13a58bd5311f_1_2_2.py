@@ -5,12 +5,13 @@ Revises: 69508d1aed24
 Create Date: 2023-04-04 08:49:43.453901
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = '13a58bd5311f'
-down_revision = '69508d1aed24'
+revision = "13a58bd5311f"
+down_revision = "69508d1aed24"
 branch_labels = None
 depends_on = None
 
@@ -20,14 +21,14 @@ def upgrade() -> None:
     # 1.2.2
     try:
         with op.batch_alter_table("RSS_TVS") as batch_op:
-            batch_op.add_column(sa.Column('FILTER_INCLUDE', sa.Text, nullable=True))
-            batch_op.add_column(sa.Column('FILTER_EXCLUDE', sa.Text, nullable=True))
+            batch_op.add_column(sa.Column("FILTER_INCLUDE", sa.Text, nullable=True))
+            batch_op.add_column(sa.Column("FILTER_EXCLUDE", sa.Text, nullable=True))
     except Exception:
         pass
     try:
         with op.batch_alter_table("RSS_MOVIES") as batch_op:
-            batch_op.add_column(sa.Column('FILTER_INCLUDE', sa.Text, nullable=True))
-            batch_op.add_column(sa.Column('FILTER_EXCLUDE', sa.Text, nullable=True))
+            batch_op.add_column(sa.Column("FILTER_INCLUDE", sa.Text, nullable=True))
+            batch_op.add_column(sa.Column("FILTER_EXCLUDE", sa.Text, nullable=True))
     except Exception:
         pass
     # ### end Alembic commands ###

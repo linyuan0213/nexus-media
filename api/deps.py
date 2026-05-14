@@ -56,9 +56,7 @@ def _extract_user_from_token(auth_header: str | None) -> str | None:
     return username
 
 
-def _extract_user_from_api_key(
-    auth_header: str | None, query_key: str | None
-) -> UserContext | None:
+def _extract_user_from_api_key(auth_header: str | None, query_key: str | None) -> UserContext | None:
     """
     API Key 认证（支持 Header 和 Query 参数）
     使用 APIKeyService 验证 Key 并返回 UserContext
@@ -82,6 +80,7 @@ def _extract_user_from_api_key(
     # 记录使用日志（异步记录，不阻塞认证流程）
     try:
         import uuid
+
         service.record_usage(
             api_key_id=api_key.id,
             request_id=str(uuid.uuid4()),
@@ -105,8 +104,8 @@ def _extract_user_from_api_key(
             if user:
                 username = user.USERNAME or username
                 nickname = api_key.name
-                level = getattr(user, 'LEVEL', 0) or 0
-                is_superadmin = getattr(user, 'IS_SUPERADMIN', 0) == 1
+                level = getattr(user, "LEVEL", 0) or 0
+                is_superadmin = getattr(user, "IS_SUPERADMIN", 0) == 1
                 try:
                     perms = rbac_service.get_user_permissions(created_by)
                     permissions = list(perms) if perms else []
@@ -125,9 +124,7 @@ def _extract_user_from_api_key(
     )
 
 
-def _extract_user_from_jwt(
-    auth_header: str | None
-) -> UserContext | None:
+def _extract_user_from_jwt(auth_header: str | None) -> UserContext | None:
     """
     JWT 认证：从 Authorization header 提取并验证 JWT Token
     """
@@ -161,16 +158,16 @@ def _extract_user_ctx_from_session(request: Request) -> UserContext | None:
         except Exception:
             permissions = []
 
-        level = getattr(user, 'LEVEL', 0) or 0
-        is_superadmin = getattr(user, 'IS_SUPERADMIN', 0) == 1
+        level = getattr(user, "LEVEL", 0) or 0
+        is_superadmin = getattr(user, "IS_SUPERADMIN", 0) == 1
 
         return UserContext(
             user_id=user_id,
-            username=getattr(user, 'USERNAME', ''),
-            nickname=getattr(user, 'NICKNAME', None) or None,
+            username=getattr(user, "USERNAME", ""),
+            nickname=getattr(user, "NICKNAME", None) or None,
             level=level,
             permissions=permissions,
-            is_superadmin=is_superadmin
+            is_superadmin=is_superadmin,
         )
     except Exception:
         return None
@@ -199,13 +196,7 @@ def get_current_user(
     # 3) 旧 Token 认证（APIv1 兼容）
     username = _extract_user_from_token(auth_header)
     if username:
-        return UserContext(
-            user_id=0,
-            username=username,
-            level=0,
-            permissions=[],
-            is_superadmin=False
-        )
+        return UserContext(user_id=0, username=username, level=0, permissions=[], is_superadmin=False)
 
     # 4) API Key 认证
     query_key = request.query_params.get("apikey")
@@ -238,13 +229,12 @@ def require_permission(permission: str):
     权限检查装饰器工厂
     用法: user = Depends(require_permission("download:read"))
     """
+
     def checker(user: UserContext = Depends(get_current_user)) -> UserContext:
         if permission not in user.permissions and not user.is_superadmin:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"权限不足: {permission}"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"权限不足: {permission}")
         return user
+
     return checker
 
 
@@ -253,15 +243,16 @@ def require_any_permission(*permissions: str):
     权限检查装饰器工厂（满足任一权限即可）
     用法: user = Depends(require_any_permission("download:view", "download:manage"))
     """
+
     def checker(user: UserContext = Depends(get_current_user)) -> UserContext:
         if user.is_superadmin:
             return user
         if any(p in user.permissions for p in permissions):
             return user
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"权限不足，需要以下任一权限: {', '.join(permissions)}"
+            status_code=status.HTTP_403_FORBIDDEN, detail=f"权限不足，需要以下任一权限: {', '.join(permissions)}"
         )
+
     return checker
 
 
@@ -270,20 +261,16 @@ def require_all_permissions(*permissions: str):
     权限检查装饰器工厂（需满足所有权限）
     用法: user = Depends(require_all_permissions("user:view", "user:update"))
     """
+
     def checker(user: UserContext = Depends(get_current_user)) -> UserContext:
         if user.is_superadmin:
             return user
         missing = [p for p in permissions if p not in user.permissions]
         if missing:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"权限不足，缺少: {', '.join(missing)}"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"权限不足，缺少: {', '.join(missing)}")
         return user
+
     return checker
-
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -305,6 +292,7 @@ def get_config_service() -> ConfigService:
 def get_message_service():
     """获取消息客户端服务实例（避免路由层直接实例化 MessageClientService）"""
     from app.services.system_service import MessageClientService
+
     return MessageClientService()
 
 
@@ -314,244 +302,285 @@ def get_message_service():
 def get_download_service():
     """获取下载服务实例"""
     from app.services.download_service import DownloadService
+
     return DownloadService()
 
 
 def get_site_service():
     """获取站点服务实例"""
     from app.services.site_service import SiteService
+
     return SiteService()
 
 
 def get_indexer_service():
     """获取索引器服务实例"""
     from app.services.indexer_service import IndexerService
+
     return IndexerService()
 
 
 def get_media_info_service():
     """获取媒体信息服务实例"""
     from app.services.media_service import MediaInfoService
+
     return MediaInfoService()
 
 
 def get_media_library_service():
     """获取媒体库服务实例"""
     from app.services.media_service import MediaLibraryService
+
     return MediaLibraryService()
 
 
 def get_media_file_service():
     """获取媒体文件服务实例"""
     from app.services.media_service import MediaFileService
+
     return MediaFileService()
 
 
 def get_transfer_history_service():
     """获取转移历史服务实例"""
     from app.services.media_service import TransferHistoryService
+
     return TransferHistoryService()
 
 
 def get_search_result_service():
     """获取搜索结果服务实例"""
     from app.services.media_service import SearchResultService
+
     return SearchResultService()
 
 
 def get_sync_service():
     """获取同步服务实例"""
     from app.services.sync_service import SyncService
+
     return SyncService()
 
 
 def get_rss_subscription_service():
     """获取 RSS 订阅服务实例"""
     from app.services.rss_service import RssSubscriptionService
+
     return RssSubscriptionService()
 
 
 def get_rss_task_service():
     """获取 RSS 任务服务实例"""
     from app.services.rss_service import RssTaskService
+
     return RssTaskService()
 
 
 def get_brush_service():
     """获取刷流服务实例"""
     from app.services.brush_service import BrushService
+
     return BrushService()
 
 
 def get_brush_task_service():
     """获取刷流任务核心服务实例"""
     from app.services.brush_core import BrushTaskService
+
     return BrushTaskService()
 
 
 def get_plugin_framework_service():
     """获取插件框架 v2 服务实例"""
     from app.services.plugin_framework_service import PluginFrameworkService
+
     return PluginFrameworkService()
 
 
 def get_words_service():
     """获取自定义识别词服务实例"""
     from app.services.words_service import WordsService
+
     return WordsService()
 
 
 def get_user_rss_service():
     """获取用户 RSS 服务实例"""
     from app.services.userrss_service import UserRssService
+
     return UserRssService()
 
 
 def get_scheduler_service():
     """获取调度器服务实例"""
     from app.services.scheduler_service import SchedulerService
+
     return SchedulerService()
 
 
 def get_system_scheduler_service():
     """获取系统调度器服务实例（用于启动后台服务）"""
     from app.services.system_service import SchedulerService
+
     return SchedulerService()
 
 
 def get_filter_service():
     """获取过滤服务实例"""
     from app.services.filter_service import FilterService
+
     return FilterService()
 
 
 def get_net_test_service():
     """获取网络测试服务实例"""
     from app.services.system_service import NetTestService
+
     return NetTestService()
 
 
 def get_version_service():
     """获取版本服务实例"""
     from app.services.system_service import VersionService
+
     return VersionService()
 
 
 def get_system_config_service():
     """获取系统配置服务实例"""
     from app.services.system_service import SystemConfigService
+
     return SystemConfigService()
 
 
 def get_config_update_service():
     """获取配置更新服务实例"""
     from app.services.system_service import ConfigUpdateService
+
     return ConfigUpdateService()
 
 
 def get_user_manage_service():
     """获取用户管理服务实例"""
     from app.services.system_service import UserManageService
+
     return UserManageService()
 
 
 def get_progress_service():
     """获取进度服务实例"""
     from app.services.system_service import ProgressService
+
     return ProgressService()
 
 
 def get_message_sender_service():
     """获取消息发送服务实例"""
     from app.services.system_service import MessageSenderService
+
     return MessageSenderService()
 
 
 def get_system_info_service():
     """获取系统信息服务实例"""
     from app.services.system_service import SystemInfoService
+
     return SystemInfoService()
 
 
 def get_backup_restore_service():
     """获取备份恢复服务实例"""
     from app.services.system_service import BackupRestoreService
+
     return BackupRestoreService()
 
 
 def get_indexer_config_service():
     """获取索引器配置服务实例"""
     from app.services.system_service import IndexerConfigService
+
     return IndexerConfigService()
 
 
 def get_media_server_config_service():
     """获取媒体服务器配置服务实例"""
     from app.services.system_service import MediaServerConfigService
+
     return MediaServerConfigService()
 
 
 def get_web_search_service():
     """获取 Web 搜索服务实例"""
     from app.services.system_service import WebSearchService
+
     return WebSearchService()
 
 
 def get_downloader_service():
     """获取下载器核心服务实例"""
     from app.services.downloader_core import DownloaderCore
+
     return DownloaderCore()
 
 
 def get_filetransfer_service():
     """获取文件转移服务实例"""
     from app.services.filetransfer_service import FileTransferService
+
     return FileTransferService()
 
 
 def get_torrent_remover_service():
     """获取种子删除服务实例"""
     from app.services.torrentremover_core import TorrentRemoverService
+
     return TorrentRemoverService()
 
 
 def get_media_recommendation_service():
     """获取媒体推荐服务实例"""
     from app.services.media_service import MediaRecommendationService
+
     return MediaRecommendationService()
 
 
 def get_searcher_service():
     """获取搜索服务实例"""
     from app.services.search_service import Searcher
+
     return Searcher()
 
 
 def get_tmdb_blacklist_service():
     """获取 TMDB 黑名单服务实例"""
     from app.services.tmdb_blacklist_service import TmdbBlacklistService
+
     return TmdbBlacklistService()
 
 
 def get_progress_helper():
     """获取进度助手实例"""
     from app.helper.progress_helper import ProgressHelper
+
     return ProgressHelper()
 
 
 def get_drissionpage_helper():
     """获取 DrissionPage 助手实例"""
     from app.helper.drissionpage_helper import DrissionPageHelper
+
     return DrissionPageHelper()
 
 
 def get_thread_helper():
     """获取线程助手实例"""
     from app.helper import ThreadHelper
+
     return ThreadHelper()
 
 
 def get_media_config_service():
     """获取媒体库路径配置服务"""
     from app.services.media_config_service import MediaConfigService
+
     return MediaConfigService()

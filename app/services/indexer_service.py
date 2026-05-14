@@ -7,6 +7,7 @@ IndexerService - 索引器业务服务层
 - 资源列表获取
 - 索引器统计
 """
+
 from typing import Any
 
 from app.db.repositories.download_repo_adapter import IndexerStatisticsRepositoryAdapter
@@ -29,10 +30,12 @@ class IndexerService:
     不直接操作 HTTP 请求，接收/返回显式 DTO，依赖通过构造函数注入。
     """
 
-    def __init__(self,
-                 indexer: Indexer | None = None,
-                 string_utils=None,
-                 indexer_statistics_repo: IIndexerStatisticsRepository | None = None):
+    def __init__(
+        self,
+        indexer: Indexer | None = None,
+        string_utils=None,
+        indexer_statistics_repo: IIndexerStatisticsRepository | None = None,
+    ):
         self._indexer = indexer or Indexer()
         self._string_utils = string_utils or StringUtils
         # 如果没有注入Repository，使用适配器创建默认实例
@@ -49,10 +52,7 @@ class IndexerService:
         """
         获取用户已经选择的索引器列表
         """
-        return [
-            UserIndexerDTO(id=index.id, name=index.name)
-            for index in self._indexer.get_indexers(check=True)
-        ]
+        return [UserIndexerDTO(id=index.id, name=index.name) for index in self._indexer.get_indexers(check=True)]
 
     def get_indexer_hash_dict(self) -> dict[str, IndexerHashDTO]:
         """
@@ -61,12 +61,7 @@ class IndexerService:
         result: dict[str, IndexerHashDTO] = {}
         for item in self._indexer.get_indexers() or []:
             key = self._string_utils.md5_hash(item.name)
-            result[key] = IndexerHashDTO(
-                id=item.id,
-                name=item.name,
-                public=item.public,
-                builtin=item.builtin
-            )
+            result[key] = IndexerHashDTO(id=item.id, name=item.name, public=item.public, builtin=item.builtin)
         return result
 
     def get_user_indexer_names(self) -> list[str]:
@@ -80,8 +75,7 @@ class IndexerService:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def get_builtin_indexers(check: bool = True,
-                             indexer_id: str | None = None) -> Any:
+    def get_builtin_indexers(check: bool = True, indexer_id: str | None = None) -> Any:
         """
         获取内置索引器的索引站点
         :param check: 是否过滤用户选中
@@ -93,9 +87,7 @@ class IndexerService:
     # 资源列表
     # ------------------------------------------------------------------
 
-    def list_resources(self, index_id: str,
-                       page: int = 0,
-                       keyword: str | None = None) -> IndexerResourcesResultDTO:
+    def list_resources(self, index_id: str, page: int = 0, keyword: str | None = None) -> IndexerResourcesResultDTO:
         """
         获取内置索引器的资源列表
         :param index_id: 内置站点ID
@@ -104,12 +96,9 @@ class IndexerService:
         """
         if not index_id:
             return IndexerResourcesResultDTO(success=True, data=[])
-        resources = self._indexer.list_resources(
-            index_id=index_id, page=page, keyword=keyword)
+        resources = self._indexer.list_resources(index_id=index_id, page=page, keyword=keyword)
         if resources is None:
-            return IndexerResourcesResultDTO(
-                success=False,
-                msg="获取站点资源出现错误，无法连接到站点！")
+            return IndexerResourcesResultDTO(success=False, msg="获取站点资源出现错误，无法连接到站点！")
         return IndexerResourcesResultDTO(success=True, data=resources)
 
     # ------------------------------------------------------------------
@@ -123,9 +112,9 @@ class IndexerService:
         client = self._indexer.get_client()
         client_type = self._indexer.get_client_type()
         return IndexerClientInfoDTO(
-            client_id=getattr(client, 'client_id', '') if client else '',
-            client_type=getattr(client_type, 'value', '') if client_type else '',
-            client_name=getattr(client, 'client_name', '') if client else ''
+            client_id=getattr(client, "client_id", "") if client else "",
+            client_type=getattr(client_type, "value", "") if client_type else "",
+            client_name=getattr(client, "client_name", "") if client else "",
         )
 
     def get_client(self) -> Any:
@@ -145,10 +134,7 @@ class IndexerService:
         根据关键字搜索（代理到底层 Indexer）
         """
         return self._indexer.search_by_keyword(
-            key_word=key_word,
-            filter_args=filter_args,
-            match_media=match_media,
-            in_from=in_from
+            key_word=key_word, filter_args=filter_args, match_media=match_media, in_from=in_from
         )
 
     def get_indexers(self, check: bool = False):
@@ -173,19 +159,21 @@ class IndexerService:
         :return: (统计数据列表, 图表数据集)
         """
         client = self._indexer.get_client()
-        client_id = getattr(client, 'client_id', '') if client else ''
+        client_id = getattr(client, "client_id", "") if client else ""
         if not client_id:
             return [], [["indexer", "avg"]]
         result = self._indexer_statistics_repo.get_by_client(client_id)
         dataset = [["indexer", "avg"]]
         stats: list[IndexerStatisticsDTO] = []
         for entity in result:
-            stats.append(IndexerStatisticsDTO(
-                name=entity.indexer,
-                total=entity.total,
-                fail=entity.fail,
-                success=entity.success,
-                avg=round(entity.avg_seconds, 1)
-            ))
+            stats.append(
+                IndexerStatisticsDTO(
+                    name=entity.indexer,
+                    total=entity.total,
+                    fail=entity.fail,
+                    success=entity.success,
+                    avg=round(entity.avg_seconds, 1),
+                )
+            )
             dataset.append([entity.indexer, str(round(entity.avg_seconds, 1))])
         return stats, dataset

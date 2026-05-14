@@ -2,6 +2,7 @@
 消息客户端 Webhook Router
 处理 Telegram / WeChat / SynologyChat / Slack 等消息平台的回调
 """
+
 import asyncio
 
 from fastapi import APIRouter, HTTPException, Request, status
@@ -66,7 +67,7 @@ def _get_text_from_update(update: dict, channel: SearchType) -> str:
                 if ent.get("type") == "bot_command":
                     offset = ent.get("offset", 0)
                     length = ent.get("length", 0)
-                    text = text[offset:offset + length]
+                    text = text[offset : offset + length]
                     break
         return text
     if channel == SearchType.WX:

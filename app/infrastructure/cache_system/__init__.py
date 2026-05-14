@@ -40,52 +40,52 @@ from .warmer import (
 
 __all__ = [
     # 核心管理器
-    'CacheManager',
+    "CacheManager",
     # 适配器
-    'MemoryCacheAdapter',
-    'RedisCacheAdapter',
+    "MemoryCacheAdapter",
+    "RedisCacheAdapter",
     # 装饰器
-    'cached',
-    'cached_with_lock',
-    'lru_cache_with_ttl',
+    "cached",
+    "cached_with_lock",
+    "lru_cache_with_ttl",
     # 专用缓存类
-    'TMDBCache',
-    'MediaInfoCache',
-    'SearchResultCache',
-    'TokenCache',
-    'ConfigLoadCache',
-    'CategoryLoadCache',
-    'OpenAISessionCache',
-    'SiteInfoCache',
+    "TMDBCache",
+    "MediaInfoCache",
+    "SearchResultCache",
+    "TokenCache",
+    "ConfigLoadCache",
+    "CategoryLoadCache",
+    "OpenAISessionCache",
+    "SiteInfoCache",
     # 专用缓存实例
-    'MediaInfoCache',
-    'SearchResultCache',
-    'SiteInfoCache',
-    'TokenCache',
-    'ConfigLoadCache',
-    'CategoryLoadCache',
-    'OpenAISessionCache',
+    "MediaInfoCache",
+    "SearchResultCache",
+    "SiteInfoCache",
+    "TokenCache",
+    "ConfigLoadCache",
+    "CategoryLoadCache",
+    "OpenAISessionCache",
     # 工具
-    'CacheKeyBuilder',
-    'get_cache_manager',
+    "CacheKeyBuilder",
+    "get_cache_manager",
     # 缓存预热
-    'CacheWarmer',
-    'ConfigCacheWarmer',
-    'SiteCacheWarmer',
-    'WordsCacheWarmer',
-    'TMDBTrendingWarmer',
-    'CacheWarmerManager',
-    'get_warmer_manager',
-    'warm_cache_on_startup',
+    "CacheWarmer",
+    "ConfigCacheWarmer",
+    "SiteCacheWarmer",
+    "WordsCacheWarmer",
+    "TMDBTrendingWarmer",
+    "CacheWarmerManager",
+    "get_warmer_manager",
+    "warm_cache_on_startup",
     # 缓存事件
-    'CacheEventType',
-    'CacheEvent',
-    'CacheEventListener',
-    'CacheEventManager',
-    'get_event_manager',
-    'on_cache_event',
+    "CacheEventType",
+    "CacheEvent",
+    "CacheEventListener",
+    "CacheEventManager",
+    "get_event_manager",
+    "on_cache_event",
     # 兼容旧接口
-    'cacheman',
+    "cacheman",
 ]
 
 # 全局缓存管理器实例
@@ -113,9 +113,7 @@ _cache_manager.create_redis_cache("tmdb")
 
 # OpenAI 会话缓存使用分层缓存：L1 内存 + L2 Redis
 # 重启后对话历史不会丢失
-_openai_session_adapter = TieredCacheAdapter(
-    memory_maxsize=200, name="openai_session", default_ttl=None
-)
+_openai_session_adapter = TieredCacheAdapter(memory_maxsize=200, name="openai_session", default_ttl=None)
 
 # 创建专用缓存实例
 MediaInfoCache = MediaInfoCache(_cache_manager.get("media_info"))

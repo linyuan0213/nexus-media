@@ -1,6 +1,7 @@
 """
 领域接口导出
 """
+
 from app.domain.interfaces.brush_repo import IBrushTaskRepository, IBrushTorrentRepository
 from app.domain.interfaces.config_repo import (
     IDownloaderRepository,

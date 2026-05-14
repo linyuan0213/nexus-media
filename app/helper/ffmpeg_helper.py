@@ -5,7 +5,6 @@ from app.utils import SystemUtils
 
 
 class FfmpegHelper:
-
     @staticmethod
     def get_thumb_image_from_video(video_path, image_path, frames="00:03:01"):
         """
@@ -29,12 +28,41 @@ class FfmpegHelper:
 
         # 提取指定音频流
         if audio_index:
-            command = ['ffmpeg', "-hide_banner", "-loglevel", "warning", '-y', '-i', video_path,
-                       '-map', f'0:a:{audio_index}',
-                       '-acodec', 'pcm_s16le', '-ac', '1', '-ar', '16000', audio_path]
+            command = [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "warning",
+                "-y",
+                "-i",
+                video_path,
+                "-map",
+                f"0:a:{audio_index}",
+                "-acodec",
+                "pcm_s16le",
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                audio_path,
+            ]
         else:
-            command = ['ffmpeg', "-hide_banner", "-loglevel", "warning", '-y', '-i', video_path,
-                       '-acodec', 'pcm_s16le', '-ac', '1', '-ar', '16000', audio_path]
+            command = [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "warning",
+                "-y",
+                "-i",
+                video_path,
+                "-acodec",
+                "pcm_s16le",
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                audio_path,
+            ]
 
         ret = subprocess.run(command).returncode
         if ret == 0:
@@ -50,7 +78,7 @@ class FfmpegHelper:
             return False
 
         try:
-            command = ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', '-show_streams', video_path]
+            command = ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", video_path]
             result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if result.returncode == 0:
                 return json.loads(result.stdout.decode("utf-8"))
@@ -67,11 +95,20 @@ class FfmpegHelper:
             return False
 
         if subtitle_index:
-            command = ['ffmpeg', "-hide_banner", "-loglevel", "warning", '-y', '-i', video_path,
-                       '-map', f'0:s:{subtitle_index}',
-                       subtitle_path]
+            command = [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "warning",
+                "-y",
+                "-i",
+                video_path,
+                "-map",
+                f"0:s:{subtitle_index}",
+                subtitle_path,
+            ]
         else:
-            command = ['ffmpeg', "-hide_banner", "-loglevel", "warning", '-y', '-i', video_path, subtitle_path]
+            command = ["ffmpeg", "-hide_banner", "-loglevel", "warning", "-y", "-i", video_path, subtitle_path]
         ret = subprocess.run(command).returncode
         if ret == 0:
             return True

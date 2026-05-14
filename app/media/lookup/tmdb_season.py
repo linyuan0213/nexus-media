@@ -17,15 +17,19 @@ class TmdbSeason:
         for info in tv_info.get("seasons") or []:
             if not info.get("season_number"):
                 continue
-            ret_info.append({
-                "air_date": info.get("air_date"),
-                "episode_count": info.get("episode_count"),
-                "id": info.get("id"),
-                "name": info.get("name"),
-                "overview": info.get("overview"),
-                "poster_path": ImageProxyHelper.get_tmdbimage_url(info.get("poster_path")) if info.get("poster_path") else "",
-                "season_number": info.get("season_number")
-            })
+            ret_info.append(
+                {
+                    "air_date": info.get("air_date"),
+                    "episode_count": info.get("episode_count"),
+                    "id": info.get("id"),
+                    "name": info.get("name"),
+                    "overview": info.get("overview"),
+                    "poster_path": ImageProxyHelper.get_tmdbimage_url(info.get("poster_path"))
+                    if info.get("poster_path")
+                    else "",
+                    "season_number": info.get("season_number"),
+                }
+            )
         ret_info.reverse()
         return ret_info
 
@@ -42,18 +46,22 @@ class TmdbSeason:
             return []
         ret_info = []
         for info in season_info.get("episodes") or []:
-            ret_info.append({
-                "air_date": info.get("air_date"),
-                "episode_number": info.get("episode_number"),
-                "id": info.get("id"),
-                "name": info.get("name"),
-                "overview": info.get("overview"),
-                "production_code": info.get("production_code"),
-                "runtime": info.get("runtime"),
-                "season_number": info.get("season_number"),
-                "show_id": info.get("show_id"),
-                "still_path": ImageProxyHelper.get_tmdbimage_url(info.get("still_path")) if info.get("still_path") else "",
-                "vote_average": info.get("vote_average")
-            })
+            ret_info.append(
+                {
+                    "air_date": info.get("air_date"),
+                    "episode_number": info.get("episode_number"),
+                    "id": info.get("id"),
+                    "name": info.get("name"),
+                    "overview": info.get("overview"),
+                    "production_code": info.get("production_code"),
+                    "runtime": info.get("runtime"),
+                    "season_number": info.get("season_number"),
+                    "show_id": info.get("show_id"),
+                    "still_path": ImageProxyHelper.get_tmdbimage_url(info.get("still_path"))
+                    if info.get("still_path")
+                    else "",
+                    "vote_average": info.get("vote_average"),
+                }
+            )
         ret_info.reverse()
         return ret_info

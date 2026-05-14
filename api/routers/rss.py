@@ -19,6 +19,7 @@ router = APIRouter()
 # Request Models
 # ---------------------------------------------------------------------------
 
+
 class EmptyRequest(BaseModel):
     data: dict | None = None
 
@@ -107,6 +108,7 @@ class GetRssHistoryRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post("/add")
 def add_rss_media(
     req: AddRssMediaRequest,
@@ -114,12 +116,14 @@ def add_rss_media(
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     result = svc.add_rss_media(req.model_dump())
-    return success(data={
-        "msg": result.msg,
-        "page": req.page,
-        "name": req.name,
-        "rssid": result.rssid,
-    })
+    return success(
+        data={
+            "msg": result.msg,
+            "page": req.page,
+            "name": req.name,
+            "rssid": result.rssid,
+        }
+    )
 
 
 @router.post("/update")
@@ -129,8 +133,7 @@ def update_rss_media(
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     result = svc.update_rss_media(req.model_dump())
-    return fail(code=result.code, msg=result.msg,
-                page=req.page, name=req.name, rssid=result.rssid)
+    return fail(code=result.code, msg=result.msg, page=req.page, name=req.name, rssid=result.rssid)
 
 
 @router.post("/history/delete")
@@ -149,8 +152,7 @@ def re_rss_history(
     user: str = Depends(require_permission("rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    code, msg = svc.re_rss_history(
-        rssid=req.rssid, rtype=req.type)
+    code, msg = svc.re_rss_history(rssid=req.rssid, rtype=req.type)
     return fail(code=code, msg=msg)
 
 
@@ -160,8 +162,7 @@ def refresh_rss(
     user: str = Depends(require_permission("rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    svc.refresh_rss(
-        mtype=req.type, rssid=req.rssid)
+    svc.refresh_rss(mtype=req.type, rssid=req.rssid)
     return success(data=req.page)
 
 
@@ -172,12 +173,8 @@ def remove_rss_media(
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     svc.remove_rss_media(
-        name=req.name,
-        mtype=req.type,
-        year=req.year,
-        season=req.season,
-        rssid=req.rssid,
-        tmdbid=req.tmdbid)
+        name=req.name, mtype=req.type, year=req.year, season=req.season, rssid=req.rssid, tmdbid=req.tmdbid
+    )
     return success(data=req.page)
 
 
@@ -187,8 +184,7 @@ def rss_detail(
     user: str = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    result = svc.get_rss_detail(
-        rid=req.rssid, rsstype=req.rsstype)
+    result = svc.get_rss_detail(rid=req.rssid, rsstype=req.rsstype)
     if not result:
         return fail()
     return success(data=result.detail)
@@ -200,8 +196,7 @@ def get_default_rss_setting(
     user: str = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    setting = svc.get_default_rss_setting(
-        mtype=req.mtype)
+    setting = svc.get_default_rss_setting(mtype=req.mtype)
     if setting:
         return success(data=setting)
     return fail()
@@ -257,7 +252,7 @@ def get_rss_history(
     user: str = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    return success(data=svc.get_rss_history( mtype=req.type))
+    return success(data=svc.get_rss_history(mtype=req.type))
 
 
 @router.post("/tv/items")

@@ -1,6 +1,7 @@
 """
 领域实体导出
 """
+
 from app.domain.entities.brush import BrushTaskEntity, BrushTorrentEntity
 from app.domain.entities.config import (
     DownloaderEntity as ConfigDownloaderEntity,

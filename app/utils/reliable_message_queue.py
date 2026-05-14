@@ -6,6 +6,7 @@
 3. 幂等去重：每条消息有唯一 ID，24h 内重复消息自动丢弃
 4. 自动重试：Pending 消息超时后自动重新投递
 """
+
 from __future__ import annotations
 
 import json
@@ -54,9 +55,7 @@ class ReliableMessageQueue:
 
     def _start_dispatcher(self):
         """启动分发线程"""
-        self._dispatcher = threading.Thread(
-            target=self._dispatch_loop, daemon=True, name="ReliableMQDispatcher"
-        )
+        self._dispatcher = threading.Thread(target=self._dispatch_loop, daemon=True, name="ReliableMQDispatcher")
         self._dispatcher.start()
 
     @property
@@ -68,8 +67,9 @@ class ReliableMessageQueue:
         self._handlers[name] = func
         log.info(f"【ReliableMessageQueue】注册处理器: {name}")
 
-    def submit(self, channel: str, title: str, text: str = "", image: str = "",
-               url: str = "", user_id: str = "", **kwargs) -> bool:
+    def submit(
+        self, channel: str, title: str, text: str = "", image: str = "", url: str = "", user_id: str = "", **kwargs
+    ) -> bool:
         """
         提交消息到队列
         自动生成 msg_id 用于幂等去重
@@ -123,19 +123,17 @@ class ReliableMessageQueue:
         consumer_id = f"consumer_{uuid.uuid4().hex[:8]}"
         while not self._shutdown:
             try:
-                messages = self._redis.xreadgroup(
-                    CONSUMER_GROUP, consumer_id,
-                    {STREAM_KEY: ">"}, count=1, block=3000
-                )
+                messages = self._redis.xreadgroup(CONSUMER_GROUP, consumer_id, {STREAM_KEY: ">"}, count=1, block=3000)
                 if not messages:
                     continue
 
                 for stream_name, entries in messages:
                     for msg_id, fields in entries:
                         # 将 bytes 转换为 str
-                        fields = {k.decode() if isinstance(k, bytes) else k:
-                                  v.decode() if isinstance(v, bytes) else v
-                                  for k, v in fields.items()}
+                        fields = {
+                            k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v
+                            for k, v in fields.items()
+                        }
                         self._executor.submit(self._process_message, msg_id, fields)
             except Exception as e:
                 log.error(f"【ReliableMessageQueue】分发异常: {e}")

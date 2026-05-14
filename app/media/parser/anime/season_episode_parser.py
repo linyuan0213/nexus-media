@@ -1,6 +1,7 @@
 """
 动漫标题解析 — 季、集、年份解析
 """
+
 from app.utils import ExceptionUtils
 from app.utils.types import MediaType
 
@@ -64,7 +65,7 @@ def parse_episode(info, anitopy_info):
 def parse_type(info, anitopy_info):
     """解析类型（TV/Movie）"""
     if not info.type:
-        anime_type = anitopy_info.get('anime_type')
+        anime_type = anitopy_info.get("anime_type")
         if isinstance(anime_type, list):
             anime_type = anime_type[0]
         if anime_type and anime_type.upper() == "TV":

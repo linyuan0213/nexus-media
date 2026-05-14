@@ -11,9 +11,9 @@ class Mteam(_ISiteRssGenHandler):
     """
     m-team
     """
+
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "m-team"
-
 
     @classmethod
     def match(cls, url):
@@ -33,30 +33,15 @@ class Mteam(_ISiteRssGenHandler):
         site = site_info.get("name")
         ua = site_info.get("ua")
         headers = json.loads(site_info.get("headers"))
-        headers.update({
-            "contentType": 'application/json;charset=UTF-8',
-            "User-Agent": ua
-        })
+        headers.update({"contentType": "application/json;charset=UTF-8", "User-Agent": ua})
 
         proxy = get_proxies() if site_info.get("proxy") else None
 
         rss_url = f"{MT_URL}/api/rss/genlink"
-        data = {
-            "labels": 0,
-            "tkeys": [
-                "ttitle",
-                "tcat",
-                "tsmalldescr",
-                "tsize"
-            ],
-            "pageSize": 50
-        }
-        data = json.dumps(data, separators=(',', ':'))
+        data = {"labels": 0, "tkeys": ["ttitle", "tcat", "tsmalldescr", "tsize"], "pageSize": 50}
+        data = json.dumps(data, separators=(",", ":"))
 
-        res = RequestUtils(
-            headers=headers,
-            proxies=proxy
-        ).post_res(url=rss_url, data=data)
+        res = RequestUtils(headers=headers, proxies=proxy).post_res(url=rss_url, data=data)
         if not res or res.status_code != 200:
             self.error("生成RSS失败，请检查站点连通性")
 
@@ -67,9 +52,9 @@ class Mteam(_ISiteRssGenHandler):
             self.debug(f"生成的rss: {rss_link}")
 
         if rss_link:
-            SiteRepository().update_site_rssurl(site_info.get('id'), rss_link)
+            SiteRepository().update_site_rssurl(site_info.get("id"), rss_link)
             self.info("生成RSS成功")
-            return True, f'【{site}】生成RSS成功'
+            return True, f"【{site}】生成RSS成功"
         else:
             self.info("生成RSS失败")
-            return True, f'【{site}生成RSS失败'
+            return True, f"【{site}生成RSS失败"

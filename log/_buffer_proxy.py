@@ -14,6 +14,7 @@ def get_log_buffer():
     global _log_buffer
     if _log_buffer is None:
         from app.utils.log_buffer import LogBuffer
+
         _log_buffer = LogBuffer(maxlen=200)
     return _log_buffer
 
@@ -24,9 +25,7 @@ class LogBufferProxy:
     def append(self, level: str, text: str) -> int:
         return get_log_buffer().append(level, text)
 
-    def get_logs(
-        self, source: str | None = None, last_counter: int = 0
-    ) -> tuple[list[Any], int]:
+    def get_logs(self, source: str | None = None, last_counter: int = 0) -> tuple[list[Any], int]:
         return get_log_buffer().get_logs(source=source, last_counter=last_counter)
 
     @property

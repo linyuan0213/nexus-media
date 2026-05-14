@@ -2,6 +2,7 @@
 """
 消息通知模板功能测试
 """
+
 import os
 import re
 import sys
@@ -21,14 +22,14 @@ from app.utils import StringUtils
 def _filesize_filter(value):
     """Jinja2 filter: 格式化文件大小"""
     if value is None:
-        return ''
-    return StringUtils.str_filesize(value) if value else ''
+        return ""
+    return StringUtils.str_filesize(value) if value else ""
 
 
-def _datetime_filter(value, format_str='%Y-%m-%d %H:%M:%S'):
+def _datetime_filter(value, format_str="%Y-%m-%d %H:%M:%S"):
     """Jinja2 filter: 格式化日期时间"""
     if not value:
-        return ''
+        return ""
     if isinstance(value, (int, float)):
         return time.strftime(format_str, time.localtime(value))
     if isinstance(value, str):
@@ -40,14 +41,14 @@ def _datetime_filter(value, format_str='%Y-%m-%d %H:%M:%S'):
     return str(value)
 
 
-def _default_filter(value, default_value=''):
+def _default_filter(value, default_value=""):
     """Jinja2 filter: 默认值处理"""
-    if value is None or value == '':
+    if value is None or value == "":
         return default_value
     return value
 
 
-def _yesno_filter(value, yes='是', no='否'):
+def _yesno_filter(value, yes="是", no="否"):
     """Jinja2 filter: 布尔值转换为是/否"""
     if value is True:
         return yes
@@ -56,38 +57,39 @@ def _yesno_filter(value, yes='是', no='否'):
     return no
 
 
-def _truncatestr_filter(value, length=100, suffix='...'):
+def _truncatestr_filter(value, length=100, suffix="..."):
     """Jinja2 filter: 截断字符串"""
     if not value:
-        return ''
+        return ""
     value = str(value)
     if len(value) <= length:
         return value
-    return value[:length - len(suffix)] + suffix
+    return value[: length - len(suffix)] + suffix
 
 
 def _striptags_filter(value):
     """Jinja2 filter: 去除HTML标签"""
     if not value:
-        return ''
-    return re.sub(r'<[^>]+>', '', str(value))
+        return ""
+    return re.sub(r"<[^>]+>", "", str(value))
 
 
 @pytest.fixture
 def template_env():
     """创建带自定义过滤器的 Jinja2 环境"""
     env = Environment(loader=BaseLoader())
-    env.filters['filesize'] = _filesize_filter
-    env.filters['datetime'] = _datetime_filter
-    env.filters['default'] = _default_filter
-    env.filters['yesno'] = _yesno_filter
-    env.filters['truncatestr'] = _truncatestr_filter
-    env.filters['striptags'] = _striptags_filter
+    env.filters["filesize"] = _filesize_filter
+    env.filters["datetime"] = _datetime_filter
+    env.filters["default"] = _default_filter
+    env.filters["yesno"] = _yesno_filter
+    env.filters["truncatestr"] = _truncatestr_filter
+    env.filters["striptags"] = _striptags_filter
     return env
 
 
 class MockMediaItem:
     """模拟下载项对象"""
+
     def __init__(self):
         self.title = "测试剧集"
         self.year = "2024"
@@ -138,6 +140,7 @@ def mock_item():
 
 # ============ 过滤器测试 ============
 
+
 def test_filesize_filter():
     """测试文件大小过滤器"""
     # 注意：实际值取决于 StringUtils.str_filesize 的实现（使用 1024 或 1000）
@@ -152,7 +155,7 @@ def test_filesize_filter():
 def test_datetime_filter():
     """测试日期时间过滤器"""
     timestamp = 1711459200  # 2024-03-26 12:00:00
-    result = _datetime_filter(timestamp, '%Y-%m-%d')
+    result = _datetime_filter(timestamp, "%Y-%m-%d")
     assert result == "2024-03-26"
 
 
@@ -186,6 +189,7 @@ def test_striptags_filter():
 
 # ============ 模板测试 ============
 
+
 def test_download_start_template_rich(template_env, mock_item):
     """测试下载开始模板（富文本格式）"""
     template_str = """🎬 {{ item.get_title_ep_string() }} 开始下载 ⬇️
@@ -209,7 +213,7 @@ def test_download_start_template_rich(template_env, mock_item):
 def test_download_start_template_simplified(template_env, mock_item):
     """测试下载开始模板（使用简化变量）"""
     # 准备简化变量（模拟 send_download_message 中的处理）
-    description_clean = re.sub(r'<[^>]+>', '', mock_item.description)
+    description_clean = re.sub(r"<[^>]+>", "", mock_item.description)
     size_str = StringUtils.str_filesize(mock_item.size)
 
     variables = {

@@ -1,4 +1,5 @@
 """NexusPhp 架构用户信息解析 — 从 config_html.py 提取"""
+
 import json
 import re
 from urllib.parse import urljoin
@@ -118,12 +119,12 @@ def _parse_seeding(ins):
         detail_doc = etree.HTML(detail_page_text)
         if detail_doc is not None:
             for tag, base in [("a", "@href"), ("form", "@action")]:
-                for pattern in ['getusertorrentlist.php', 'getusertorrentlistajax.php']:
+                for pattern in ["getusertorrentlist.php", "getusertorrentlistajax.php"]:
                     links = detail_doc.xpath(f'//{tag}[contains({base},"{pattern}")]/{base}')
                     if links:
                         href = links[0].strip()
-                        if 'userid' not in href:
-                            href = f'{href}{"&" if "?" in href else "?"}userid={ins.userid}&type=seeding'
+                        if "userid" not in href:
+                            href = f"{href}{'&' if '?' in href else '?'}userid={ins.userid}&type=seeding"
                         if href not in page_paths:
                             page_paths.append(href)
                         break
@@ -134,7 +135,7 @@ def _parse_seeding(ins):
         html_text = ins._fetch_html(page_url, referer=referer, use_ajax_headers=is_ajax)
         if not html_text:
             continue
-        doc = etree.HTML(html_text.replace(r'\/', '/'))
+        doc = etree.HTML(html_text.replace(r"\/", "/"))
         if doc is None:
             continue
         _parse_seeding_html(ins, doc, html_text)
@@ -145,7 +146,7 @@ def _parse_seeding(ins):
             html_text = ins._fetch_html(next_url, referer=referer)
             if not html_text:
                 break
-            doc = etree.HTML(html_text.replace(r'\/', '/'))
+            doc = etree.HTML(html_text.replace(r"\/", "/"))
             if doc is None:
                 break
             _parse_seeding_html(ins, doc, html_text)
@@ -200,11 +201,11 @@ def _parse_seeding_html(ins, doc, html_text):
                 pass
         ins.seeding_info = json.dumps(info)
         return
-    table_prefix = '//table[@class="torrents"]' if doc.xpath('//table[@class="torrents"]') else ''
-    size_texts = doc.xpath(f'{table_prefix}//tr[position()>1]/td[4]')
-    seeders_texts = doc.xpath(f'{table_prefix}//tr[position()>1]/td[5]/b/a/text()')
+    table_prefix = '//table[@class="torrents"]' if doc.xpath('//table[@class="torrents"]') else ""
+    size_texts = doc.xpath(f"{table_prefix}//tr[position()>1]/td[4]")
+    seeders_texts = doc.xpath(f"{table_prefix}//tr[position()>1]/td[5]/b/a/text()")
     if not seeders_texts:
-        seeders_texts = doc.xpath(f'{table_prefix}//tr[position()>1]/td[5]//text()')
+        seeders_texts = doc.xpath(f"{table_prefix}//tr[position()>1]/td[5]//text()")
     if not size_texts:
         return
     info = json.loads(ins.seeding_info) if ins.seeding_info and ins.seeding_info != "[]" else []
@@ -222,8 +223,8 @@ def _next_page_url(ins, doc):
     if not links:
         return None
     next_url = links[-1].strip()
-    if ins.userid and 'userid' not in next_url:
-        next_url = f'{next_url}&userid={ins.userid}&type=seeding'
+    if ins.userid and "userid" not in next_url:
+        next_url = f"{next_url}&userid={ins.userid}&type=seeding"
     return urljoin(ins._base_url_str + "/", next_url)
 
 
@@ -237,31 +238,37 @@ def _parse_detail(ins):
     doc = etree.HTML(html_text)
     if doc is None:
         return
-    level = doc.xpath('//tr/td[text()="等級" or text()="等级" or *[text()="等级"]]/following-sibling::td[1]/img[1]/@title')
+    level = doc.xpath(
+        '//tr/td[text()="等級" or text()="等级" or *[text()="等级"]]/following-sibling::td[1]/img[1]/@title'
+    )
     if level:
         ins.user_level = level[0].strip()
     else:
-        level = doc.xpath('//tr/td[text()="等級" or text()="等级"]/following-sibling::td[1 and not(img)]'
-                         '|//tr/td[text()="等級" or text()="等级"]/following-sibling::td[1 and img[not(@title)]]')
+        level = doc.xpath(
+            '//tr/td[text()="等級" or text()="等级"]/following-sibling::td[1 and not(img)]'
+            '|//tr/td[text()="等級" or text()="等级"]/following-sibling::td[1 and img[not(@title)]]'
+        )
         if level:
             ins.user_level = level[0].xpath("string(.)").strip()
     if not ins.user_level:
         level = doc.xpath('//a[contains(@href,"userdetails")]/text()')
-        for l in (level or []):
+        for l in level or []:
             m = re.search(r"\[(.*)]", l)
             if m and m.group(1):
                 ins.user_level = m.group(1).strip()
                 break
-    join = doc.xpath('//tr/td[text()="加入日期" or text()="注册日期" or *[text()="加入日期"]]/following-sibling::td[1]//text()'
-                    '|//div/b[text()="加入日期"]/../text()')
+    join = doc.xpath(
+        '//tr/td[text()="加入日期" or text()="注册日期" or *[text()="加入日期"]]/following-sibling::td[1]//text()'
+        '|//div/b[text()="加入日期"]/../text()'
+    )
     if join:
-        ins.join_at = StringUtils.unify_datetime_str(join[0].split(' (')[0].strip())
+        ins.join_at = StringUtils.unify_datetime_str(join[0].split(" (")[0].strip())
     if not ins.bonus:
         ui = ins._def.user_info if isinstance(ins._def.user_info, dict) else {}
         labels = ui.get("bonus_labels", ["魔力值", "猫粮"])
         if not isinstance(labels, list):
             labels = [labels]
         cond = " or ".join(f'text()="{l}"' for l in labels)
-        bonus = doc.xpath(f'//tr/td[{cond}]/following-sibling::td[1]/text()')
+        bonus = doc.xpath(f"//tr/td[{cond}]/following-sibling::td[1]/text()")
         if bonus:
             ins.bonus = StringUtils.str_float(bonus[0].strip())

@@ -10,8 +10,8 @@ class PushDeerClient(_IMessageClient):
 
     def read_config(self):
         cfg = self._config or {}
-        self._server = StringUtils.get_base_url(cfg.get('server'))
-        self._apikey = cfg.get('apikey')
+        self._server = StringUtils.get_base_url(cfg.get("server"))
+        self._apikey = cfg.get("apikey")
 
     def send_msg(self, title, text="", image="", url="", user_id=""):
         if not title and not text:
@@ -28,5 +28,6 @@ class PushDeerClient(_IMessageClient):
 
     def send_list_msg(self, medias: list = None, user_id="", title="", **kwargs):
         pass
+
 
 ClientRegistry.register(PushDeerClient)

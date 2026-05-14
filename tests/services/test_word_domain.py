@@ -2,6 +2,7 @@
 自定义识别词领域层测试
 测试 Word 实体 from_orm/to_dict 以及适配器代理行为
 """
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -23,9 +24,19 @@ def _make_orm(**kwargs):
 class TestCustomWordEntity:
     def test_from_orm_full(self):
         orm = _make_orm(
-            ID=1, REPLACED="a", REPLACE="b", FRONT="c", BACK="d",
-            OFFSET="1", TYPE=2, GROUP_ID=3, SEASON=1, ENABLED=1,
-            REGEX=0, HELP="h", NOTE="n",
+            ID=1,
+            REPLACED="a",
+            REPLACE="b",
+            FRONT="c",
+            BACK="d",
+            OFFSET="1",
+            TYPE=2,
+            GROUP_ID=3,
+            SEASON=1,
+            ENABLED=1,
+            REGEX=0,
+            HELP="h",
+            NOTE="n",
         )
         e = CustomWordEntity.from_orm(orm)
         assert e.id == 1
@@ -39,9 +50,19 @@ class TestCustomWordEntity:
 
     def test_to_dict(self):
         e = CustomWordEntity(
-            id=1, replaced="a", replace="b", front=None, back=None,
-            offset=None, type=1, group_id=0, season=0, enabled=1,
-            regex=0, help=None, note=None,
+            id=1,
+            replaced="a",
+            replace="b",
+            front=None,
+            back=None,
+            offset=None,
+            type=1,
+            group_id=0,
+            season=0,
+            enabled=1,
+            regex=0,
+            help=None,
+            note=None,
         )
         d = e.to_dict()
         assert d["replaced"] == "a"
@@ -49,9 +70,19 @@ class TestCustomWordEntity:
 
     def test_getattr_uppercase_compat(self):
         e = CustomWordEntity(
-            id=1, replaced="a", replace="b", front=None, back=None,
-            offset=None, type=1, group_id=0, season=0, enabled=1,
-            regex=0, help=None, note=None,
+            id=1,
+            replaced="a",
+            replace="b",
+            front=None,
+            back=None,
+            offset=None,
+            type=1,
+            group_id=0,
+            season=0,
+            enabled=1,
+            regex=0,
+            help=None,
+            note=None,
         )
         assert e.REPLACED == "a"
         assert e.TYPE == 1
@@ -68,7 +99,13 @@ class TestCustomWordGroupEntity:
 
     def test_to_dict(self):
         e = CustomWordGroupEntity(
-            id=1, title="t", year=None, type=0, tmdbid=0, season_count=0, note=None,
+            id=1,
+            title="t",
+            year=None,
+            type=0,
+            tmdbid=0,
+            season_count=0,
+            note=None,
         )
         assert e.to_dict()["title"] == "t"
 
@@ -76,9 +113,19 @@ class TestCustomWordGroupEntity:
 class TestCustomWordRepositoryAdapter:
     def _make(self):
         word_orm = _make_orm(
-            ID=1, REPLACED="a", REPLACE="b", FRONT=None, BACK=None,
-            OFFSET=None, TYPE=1, GROUP_ID=0, SEASON=0, ENABLED=1,
-            REGEX=0, HELP=None, NOTE=None,
+            ID=1,
+            REPLACED="a",
+            REPLACE="b",
+            FRONT=None,
+            BACK=None,
+            OFFSET=None,
+            TYPE=1,
+            GROUP_ID=0,
+            SEASON=0,
+            ENABLED=1,
+            REGEX=0,
+            HELP=None,
+            NOTE=None,
         )
         mock = MagicMock()
         mock.get_custom_words = MagicMock(return_value=[word_orm])

@@ -1,6 +1,7 @@
 """
 JWT 认证路由测试
 """
+
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -27,15 +28,12 @@ class TestAuthRouter:
     def test_login_success(self, mock_auth):
         """测试登录成功"""
         from app.schemas.auth import UserContext
+
         mock_auth.return_value = UserContext(
-            user_id=1, username="admin", level=1,
-            permissions=["*"], is_superadmin=True
+            user_id=1, username="admin", level=1, permissions=["*"], is_superadmin=True
         )
 
-        resp = client.post(
-            "/api/auth/login",
-            data={"username": "admin", "password": "admin"}
-        )
+        resp = client.post("/api/auth/login", data={"username": "admin", "password": "admin"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["code"] == 0
@@ -49,10 +47,7 @@ class TestAuthRouter:
         """测试登录失败"""
         mock_auth.return_value = None
 
-        resp = client.post(
-            "/api/auth/login",
-            data={"username": "wrong", "password": "wrong"}
-        )
+        resp = client.post("/api/auth/login", data={"username": "wrong", "password": "wrong"})
         assert resp.status_code == 401
 
     def test_me_without_auth(self):
@@ -64,23 +59,17 @@ class TestAuthRouter:
     def test_me_with_auth(self, mock_auth):
         """测试认证后访问 /me"""
         from app.schemas.auth import UserContext
+
         mock_auth.return_value = UserContext(
-            user_id=1, username="testuser", level=0,
-            permissions=[], is_superadmin=False
+            user_id=1, username="testuser", level=0, permissions=[], is_superadmin=False
         )
 
         # 登录
-        login_resp = client.post(
-            "/api/auth/login",
-            data={"username": "testuser", "password": "testpass"}
-        )
+        login_resp = client.post("/api/auth/login", data={"username": "testuser", "password": "testpass"})
         token = login_resp.json()["data"]["access_token"]
 
         # 访问 /me
-        resp = client.get(
-            "/api/auth/me",
-            headers={"Authorization": f"Bearer {token}"}
-        )
+        resp = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["data"]["username"] == "testuser"
@@ -91,28 +80,20 @@ class TestAuthRouter:
     def test_refresh_token(self, mock_refresh, mock_auth):
         """测试刷新 Token"""
         from app.schemas.auth import TokenPair, UserContext
+
         mock_auth.return_value = UserContext(
-            user_id=1, username="admin", level=1,
-            permissions=["*"], is_superadmin=True
+            user_id=1, username="admin", level=1, permissions=["*"], is_superadmin=True
         )
         mock_refresh.return_value = TokenPair(
-            access_token="new_access_token",
-            refresh_token="new_refresh_token",
-            expires_in=900
+            access_token="new_access_token", refresh_token="new_refresh_token", expires_in=900
         )
 
         # 登录获取初始 Token
-        login_resp = client.post(
-            "/api/auth/login",
-            data={"username": "admin", "password": "admin"}
-        )
+        login_resp = client.post("/api/auth/login", data={"username": "admin", "password": "admin"})
         assert login_resp.status_code == 200
 
         # 刷新 Token（携带 Cookie）
-        refresh_resp = client.post(
-            "/api/auth/refresh",
-            cookies=login_resp.cookies
-        )
+        refresh_resp = client.post("/api/auth/refresh", cookies=login_resp.cookies)
         assert refresh_resp.status_code == 200
         data = refresh_resp.json()
         assert data["code"] == 0
@@ -122,23 +103,17 @@ class TestAuthRouter:
     def test_logout(self, mock_auth):
         """测试登出"""
         from app.schemas.auth import UserContext
+
         mock_auth.return_value = UserContext(
-            user_id=1, username="admin", level=1,
-            permissions=["*"], is_superadmin=True
+            user_id=1, username="admin", level=1, permissions=["*"], is_superadmin=True
         )
 
         # 登录
-        login_resp = client.post(
-            "/api/auth/login",
-            data={"username": "admin", "password": "admin"}
-        )
+        login_resp = client.post("/api/auth/login", data={"username": "admin", "password": "admin"})
         token = login_resp.json()["data"]["access_token"]
 
         # 登出
-        resp = client.post(
-            "/api/auth/logout",
-            headers={"Authorization": f"Bearer {token}"}
-        )
+        resp = client.post("/api/auth/logout", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 200
         assert resp.json()["data"] is True
 
@@ -146,15 +121,12 @@ class TestAuthRouter:
     def test_jwt_auth_flow(self, mock_verify):
         """测试完整 JWT 认证流程"""
         from app.schemas.auth import UserContext
+
         mock_verify.return_value = UserContext(
-            user_id=1, username="jwtuser", level=0,
-            permissions=["read"], is_superadmin=False
+            user_id=1, username="jwtuser", level=0, permissions=["read"], is_superadmin=False
         )
 
         # 使用 JWT 访问需要认证的接口
-        resp = client.get(
-            "/api/auth/me",
-            headers={"Authorization": "Bearer fake_jwt_token"}
-        )
+        resp = client.get("/api/auth/me", headers={"Authorization": "Bearer fake_jwt_token"})
         assert resp.status_code == 200
         assert resp.json()["data"]["username"] == "jwtuser"

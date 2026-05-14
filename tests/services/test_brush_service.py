@@ -45,11 +45,11 @@ class TestBuildTaskItem:
         }
         item = svc.build_task_item(data)
         assert item["name"] == "Task1"
-        assert item["transfer"] == 'Y'
-        assert item["sendmessage"] == 'N'
-        assert item["seed_size"] == 10 * 1024 ** 3
+        assert item["transfer"] == "Y"
+        assert item["sendmessage"] == "N"
+        assert item["seed_size"] == 10 * 1024**3
         assert item["rss_rule"]["free"] == "Y"
-        assert item["stop_rule"]["stopfree"] == 'Y'
+        assert item["stop_rule"]["stopfree"] == "Y"
 
     def test_invalid_size(self, svc):
         data = {"brushtask_totalsize": "abc"}
@@ -59,25 +59,38 @@ class TestBuildTaskItem:
 
 class TestAddOrUpdateTask:
     def test_ok(self, svc):
-        svc.add_or_update_task({
-            "brushtask_id": 1,
-            "brushtask_name": "T",
-            "brushtask_totalsize": "",
-            "brushtask_transfer": False,
-            "brushtask_sendmessage": False,
-            "brushtask_free": "", "brushtask_hr": "",
-            "brushtask_torrent_size": "", "brushtask_include": "",
-            "brushtask_exclude": "", "brushtask_dlcount": "",
-            "brushtask_peercount": "", "brushtask_pubdate": "",
-            "brushtask_upspeed": "", "brushtask_downspeed": "",
-            "brushtask_exclude_subscribe": "",
-            "brushtask_mode": "", "brushtask_seedtime": "",
-            "brushtask_hr_seedtime": "", "brushtask_seedratio": "",
-            "brushtask_seedsize": "", "brushtask_dltime": "",
-            "brushtask_avg_upspeed": "", "brushtask_iatime": "",
-            "brushtask_pending_time": "", "brushtask_freespace": "",
-            "brushtask_freestatus": "", "brushtask_stopfree": False,
-        })
+        svc.add_or_update_task(
+            {
+                "brushtask_id": 1,
+                "brushtask_name": "T",
+                "brushtask_totalsize": "",
+                "brushtask_transfer": False,
+                "brushtask_sendmessage": False,
+                "brushtask_free": "",
+                "brushtask_hr": "",
+                "brushtask_torrent_size": "",
+                "brushtask_include": "",
+                "brushtask_exclude": "",
+                "brushtask_dlcount": "",
+                "brushtask_peercount": "",
+                "brushtask_pubdate": "",
+                "brushtask_upspeed": "",
+                "brushtask_downspeed": "",
+                "brushtask_exclude_subscribe": "",
+                "brushtask_mode": "",
+                "brushtask_seedtime": "",
+                "brushtask_hr_seedtime": "",
+                "brushtask_seedratio": "",
+                "brushtask_seedsize": "",
+                "brushtask_dltime": "",
+                "brushtask_avg_upspeed": "",
+                "brushtask_iatime": "",
+                "brushtask_pending_time": "",
+                "brushtask_freespace": "",
+                "brushtask_freestatus": "",
+                "brushtask_stopfree": False,
+            }
+        )
         svc._brush.update_brushtask.assert_called_once()
 
 
@@ -141,19 +154,14 @@ class TestUpdateTaskState:
 
 class TestRuleEngineDelegates:
     def test_check_rss_rule(self):
-        assert BrushService.check_rss_rule(
-            {"size": "gt#1,10"}, "Title", 2 * 1024 ** 3, None, {"free": True}
-        ) is True
+        assert BrushService.check_rss_rule({"size": "gt#1,10"}, "Title", 2 * 1024**3, None, {"free": True}) is True
 
     def test_check_rss_rule_fail_size(self):
-        assert BrushService.check_rss_rule(
-            {"size": "gt#10,20"}, "Title", 2 * 1024 ** 3, None, {"free": True}
-        ) is False
+        assert BrushService.check_rss_rule({"size": "gt#10,20"}, "Title", 2 * 1024**3, None, {"free": True}) is False
 
     def test_check_remove_rule(self):
         need_delete, delete_type = BrushService.check_remove_rule(
-            {"mode": "or", "ratio": "gt#1"},
-            {"ratio": 1.5, "torrent_attr": {"hr": False}}
+            {"mode": "or", "ratio": "gt#1"}, {"ratio": 1.5, "torrent_attr": {"hr": False}}
         )
         assert need_delete is True
 
@@ -162,9 +170,7 @@ class TestRuleEngineDelegates:
         assert need_delete is False
 
     def test_check_stop_rule(self):
-        need_stop, stop_type = BrushService.check_stop_rule(
-            {"stopfree": "Y"}, {"free": False}
-        )
+        need_stop, stop_type = BrushService.check_stop_rule({"stopfree": "Y"}, {"free": False})
         assert need_stop is True
 
     def test_format_rule_html(self):

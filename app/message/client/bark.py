@@ -10,9 +10,9 @@ class Bark(_IMessageClient):
 
     def read_config(self):
         cfg = self._config or {}
-        self._server = StringUtils.get_base_url(cfg.get('server'))
-        self._apikey = cfg.get('apikey')
-        self._params = cfg.get('params')
+        self._server = StringUtils.get_base_url(cfg.get("server"))
+        self._apikey = cfg.get("apikey")
+        self._params = cfg.get("params")
 
     def send_msg(self, title, text="", image="", url="", user_id=""):
         if not title and not text:
@@ -26,8 +26,8 @@ class Bark(_IMessageClient):
             res = RequestUtils().post_res(sc_url)
             if res and res.status_code == 200:
                 ret_json = res.json()
-                code = ret_json['code']
-                message = ret_json['message']
+                code = ret_json["code"]
+                message = ret_json["message"]
                 if code == 200:
                     return True, message
                 else:
@@ -42,5 +42,6 @@ class Bark(_IMessageClient):
 
     def send_list_msg(self, medias: list = None, user_id="", title="", **kwargs):
         pass
+
 
 ClientRegistry.register(Bark)

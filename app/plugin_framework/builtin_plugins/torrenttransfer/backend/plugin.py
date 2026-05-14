@@ -2,6 +2,7 @@
 TorrentTransfer Plugin v2
 定期转移下载器中的做种任务到另一个下载器
 """
+
 import os.path
 from copy import deepcopy
 from datetime import datetime, timedelta
@@ -68,7 +69,7 @@ class TorrentTransferPlugin:
 
         if onlyonce:
             self.ctx.info("转移做种服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ'))) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ"))) + timedelta(seconds=3)
             self.ctx.schedule_date("transfer_once", self._do_transfer, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -151,7 +152,7 @@ class TorrentTransferPlugin:
 
             if nopaths and save_path:
                 skip = False
-                for nopath in nopaths.split('\n'):
+                for nopath in nopaths.split("\n"):
                     if nopath and os.path.normpath(save_path).startswith(os.path.normpath(nopath)):
                         self.ctx.info(f"种子 {hash_str} 保存路径 {save_path} 不需要移转，跳过")
                         skip = True
@@ -162,7 +163,7 @@ class TorrentTransferPlugin:
             torrent_labels = torrent.labels
             if torrent_labels and nolabels:
                 skip = False
-                for label in nolabels.split(','):
+                for label in nolabels.split(","):
                     if label in torrent_labels:
                         self.ctx.info(f"种子 {hash_str} 含有不转移标签 {label}，跳过")
                         skip = True
@@ -210,7 +211,7 @@ class TorrentTransferPlugin:
                     continue
                 try:
                     torrent_main = bdecode(content)
-                    main_announce = torrent_main.get('announce')
+                    main_announce = torrent_main.get("announce")
                 except Exception as err:
                     self.ctx.error(f"解析种子文件 {torrent_file} 失败：{err}")
                     fail += 1
@@ -224,14 +225,18 @@ class TorrentTransferPlugin:
                         fail += 1
                         continue
                     try:
-                        with open(fastresume_file, 'rb') as f:
+                        with open(fastresume_file, "rb") as f:
                             fastresume = f.read()
                         torrent_fastresume = bdecode(fastresume)
-                        fastresume_trackers = torrent_fastresume.get('trackers')
-                        if isinstance(fastresume_trackers, list) and len(fastresume_trackers) > 0 and fastresume_trackers[0]:
-                            torrent_main['announce'] = fastresume_trackers[0][0]
+                        fastresume_trackers = torrent_fastresume.get("trackers")
+                        if (
+                            isinstance(fastresume_trackers, list)
+                            and len(fastresume_trackers) > 0
+                            and fastresume_trackers[0]
+                        ):
+                            torrent_main["announce"] = fastresume_trackers[0][0]
                             torrent_file = os.path.join(get_temp_path(), f"{hash_item.get('hash')}.torrent")
-                            with open(torrent_file, 'wb') as f:
+                            with open(torrent_file, "wb") as f:
                                 f.write(bencode(torrent_main))
                     except Exception as err:
                         self.ctx.error(f"解析fastresume文件 {fastresume_file} 失败：{err}")
@@ -259,7 +264,9 @@ class TorrentTransferPlugin:
                 self._downloader.recheck_torrents(downloader_id=to_downloader, ids=[download_id])
 
             if deletesource:
-                self._downloader.delete_torrents(downloader_id=from_downloader, ids=[hash_item.get("hash")], delete_file=False)
+                self._downloader.delete_torrents(
+                    downloader_id=from_downloader, ids=[hash_item.get("hash")], delete_file=False
+                )
 
             if autostart:
                 if to_downloader not in self._recheck_torrents:
@@ -268,21 +275,21 @@ class TorrentTransferPlugin:
 
             # 插入转种记录
             history_key = f"{int(from_downloader)}-{hash_item.get('hash')}"
-            self._save_history(history_key, {
-                "to_download": int(to_downloader),
-                "to_download_id": download_id,
-                "delete_source": deletesource,
-            })
+            self._save_history(
+                history_key,
+                {
+                    "to_download": int(to_downloader),
+                    "to_download_id": download_id,
+                    "delete_source": deletesource,
+                },
+            )
             success += 1
 
         if success > 0 and autostart:
             self._check_recheck()
 
         if notify:
-            self.ctx.notify(
-                title="【移转做种任务执行完成】",
-                text=f"总数：{total}，成功：{success}，失败：{fail}"
-            )
+            self.ctx.notify(title="【移转做种任务执行完成】", text=f"总数：{total}，成功：{success}，失败：{fail}")
 
         self.ctx.info("移转做种任务执行完成")
 
@@ -333,6 +340,7 @@ class TorrentTransferPlugin:
         if content:
             try:
                 import json
+
                 return json.loads(content)
             except Exception:
                 pass
@@ -340,6 +348,7 @@ class TorrentTransferPlugin:
 
     def _save_history(self, key, value):
         import json
+
         data = self._load_history()
         data[key] = value
         self.ctx.write_data("history.json", json.dumps(data, ensure_ascii=False, indent=2))

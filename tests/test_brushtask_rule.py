@@ -41,8 +41,8 @@ class TestBrushRuleEngine:
 
     def test_check_rss_rule_size(self):
         rule = {"size": "gt#1"}
-        assert BrushRuleEngine.check_rss_rule(rule, "t", 1.5 * 1024 ** 3, None, {}) is True
-        assert BrushRuleEngine.check_rss_rule(rule, "t", 0.5 * 1024 ** 3, None, {}) is False
+        assert BrushRuleEngine.check_rss_rule(rule, "t", 1.5 * 1024**3, None, {}) is True
+        assert BrushRuleEngine.check_rss_rule(rule, "t", 0.5 * 1024**3, None, {}) is False
 
     def test_check_rss_rule_include_exclude(self):
         assert BrushRuleEngine.check_rss_rule({"include": "abc"}, "xxabcxx", 1, None, {}) is True

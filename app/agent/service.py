@@ -1,4 +1,5 @@
 """LLM Agent Service — 统一入口门面"""
+
 import json
 from typing import Any
 
@@ -63,8 +64,14 @@ class AgentService:
     def provider_name(self) -> str:
         return self._config.name if self._config else ""
 
-    def chat(self, messages: list[dict], system_prompt: str = "", temperature: float = 0.7,
-             response_format: type | None = None, use_cache: bool = True) -> str:
+    def chat(
+        self,
+        messages: list[dict],
+        system_prompt: str = "",
+        temperature: float = 0.7,
+        response_format: type | None = None,
+        use_cache: bool = True,
+    ) -> str:
         """通用对话请求"""
         if not self.ready:
             log.warn("【AgentService】chat 调用失败：Provider 未就绪")
@@ -81,8 +88,9 @@ class AgentService:
         log.info("【AgentService】缓存未命中，调用 Provider chat")
         return self._provider.chat(list(messages), system_prompt, temperature)
 
-    def structured_chat(self, messages: list[dict], system_prompt: str = "",
-                        response_model: type = None, temperature: float = 0.3) -> Any:
+    def structured_chat(
+        self, messages: list[dict], system_prompt: str = "", response_model: type = None, temperature: float = 0.3
+    ) -> Any:
         """结构化输出对话（返回 pydantic 模型实例）"""
         if not self.ready:
             log.warn("【AgentService】structured_chat 调用失败：Provider 未就绪")

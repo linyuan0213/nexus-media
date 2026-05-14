@@ -1,6 +1,7 @@
 """
 测试 FastAPI Site Router
 """
+
 from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
@@ -27,8 +28,7 @@ class TestSiteRouter:
     # ------------------------------------------------------------------
     def test_check_site_attr(self):
         mock_svc = self._mock_site()
-        mock_svc.check_site_attr.return_value = MagicMock(
-            site_free=True, site_2xfree=False, site_hr=True)
+        mock_svc.check_site_attr.return_value = MagicMock(site_free=True, site_2xfree=False, site_hr=True)
         try:
             resp = client.post("/api/site/check_site_attr", json={"url": "https://pt.example.com"})
             assert resp.status_code == 200
@@ -44,8 +44,8 @@ class TestSiteRouter:
     def test_get_site(self):
         mock_svc = self._mock_site()
         mock_svc.get_site.return_value = MagicMock(
-            site={"id": "1", "name": "PT"},
-            site_free=False, site_2xfree=False, site_hr=False)
+            site={"id": "1", "name": "PT"}, site_free=False, site_2xfree=False, site_hr=False
+        )
         try:
             resp = client.post("/api/site/get_site", json={"id": "1"})
             assert resp.status_code == 200
@@ -83,8 +83,7 @@ class TestSiteRouter:
     # ------------------------------------------------------------------
     def test_test_site(self):
         mock_svc = self._mock_site()
-        mock_svc.test_site.return_value = MagicMock(
-            flag=True, msg="测试成功", times=0.5, code=0)
+        mock_svc.test_site.return_value = MagicMock(flag=True, msg="测试成功", times=0.5, code=0)
         try:
             resp = client.post("/api/site/test_site", json={"id": "1"})
             assert resp.status_code == 200
@@ -100,10 +99,9 @@ class TestSiteRouter:
         mock_svc = self._mock_site()
         mock_svc.update_site.return_value = MagicMock(code=0, msg="")
         try:
-            resp = client.post("/api/site/update_site", json={
-                "site_id": "", "site_name": "NewPT",
-                "site_signurl": "https://new.pt"
-            })
+            resp = client.post(
+                "/api/site/update_site", json={"site_id": "", "site_name": "NewPT", "site_signurl": "https://new.pt"}
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -115,9 +113,9 @@ class TestSiteRouter:
     def test_update_site_cookie_ua(self):
         mock_svc = self._mock_site()
         try:
-            resp = client.post("/api/site/update_site_cookie_ua", json={
-                "site_id": "1", "site_cookie": "c=1", "site_ua": "ua"
-            })
+            resp = client.post(
+                "/api/site/update_site_cookie_ua", json={"site_id": "1", "site_cookie": "c=1", "site_ua": "ua"}
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -128,8 +126,7 @@ class TestSiteRouter:
     # ------------------------------------------------------------------
     def test_get_site_activity(self):
         mock_svc = self._mock_site()
-        mock_svc.get_site_activity.return_value = MagicMock(
-            dataset=[["upload", "download"], [100, 200]])
+        mock_svc.get_site_activity.return_value = MagicMock(dataset=[["upload", "download"], [100, 200]])
         try:
             resp = client.post("/api/site/get_site_activity", json={"name": "PT"})
             assert resp.status_code == 200
@@ -140,8 +137,7 @@ class TestSiteRouter:
 
     def test_get_site_history(self):
         mock_svc = self._mock_site()
-        mock_svc.get_site_history.return_value = MagicMock(
-            dataset=[["site", "upload", "download"], ["PT", 1, 2]])
+        mock_svc.get_site_history.return_value = MagicMock(dataset=[["site", "upload", "download"], ["PT", 1, 2]])
         try:
             resp = client.post("/api/site/get_site_history", json={"days": 7})
             assert resp.status_code == 200
@@ -151,8 +147,7 @@ class TestSiteRouter:
 
     def test_get_site_seeding_info(self):
         mock_svc = self._mock_site()
-        mock_svc.get_site_seeding_info.return_value = MagicMock(
-            dataset=[["seeders", "size"], [10, "1G"]])
+        mock_svc.get_site_seeding_info.return_value = MagicMock(dataset=[["seeders", "size"], [10, "1G"]])
         try:
             resp = client.post("/api/site/get_site_seeding_info", json={"name": "PT"})
             assert resp.status_code == 200
@@ -180,9 +175,7 @@ class TestSiteRouter:
     def test_set_site_captcha_code(self):
         mock_svc = self._mock_site()
         try:
-            resp = client.post("/api/site/set_site_captcha_code", json={
-                "code": "abc", "value": "123"
-            })
+            resp = client.post("/api/site/set_site_captcha_code", json={"code": "abc", "value": "123"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -207,12 +200,9 @@ class TestSiteRouter:
     # ------------------------------------------------------------------
     def test_list_site_resources(self):
         mock_svc = self._mock_site()
-        mock_svc.list_site_resources.return_value = MagicMock(
-            success=True, data=[{"title": "Movie"}], msg="")
+        mock_svc.list_site_resources.return_value = MagicMock(success=True, data=[{"title": "Movie"}], msg="")
         try:
-            resp = client.post("/api/site/list_site_resources", json={
-                "id": "1", "page": 1, "keyword": ""
-            })
+            resp = client.post("/api/site/list_site_resources", json={"id": "1", "page": 1, "keyword": ""})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["data"][0]["title"] == "Movie"

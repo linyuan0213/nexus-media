@@ -43,11 +43,9 @@ class Torrent:
             return None, url, "", [], f"{url} 为磁力链接"
         try:
             # 下载保存种子文件
-            file_path, content, errmsg = self.save_torrent_file(url=url,
-                                                                cookie=cookie,
-                                                                ua=ua,
-                                                                referer=referer,
-                                                                proxy=proxy)
+            file_path, content, errmsg = self.save_torrent_file(
+                url=url, cookie=cookie, ua=ua, referer=referer, proxy=proxy
+            )
             if not file_path:
                 return None, content, "", [], errmsg
             # 解析种子文件
@@ -64,20 +62,14 @@ class Torrent:
         :return: 种子保存路径，错误信息
         """
         req = RequestUtils(
-            headers=ua,
-            cookies=cookie,
-            referer=referer,
-            proxies=get_proxies() if proxy else None
+            headers=ua, cookies=cookie, referer=referer, proxies=get_proxies() if proxy else None
         ).get_res(url=url, allow_redirects=False)
         while req and req.status_code in [301, 302]:
-            url = req.headers['Location']
+            url = req.headers["Location"]
             if url and url.startswith("magnet:"):
                 return None, url, f"获取到磁力链接：{url}"
             req = RequestUtils(
-                headers=ua,
-                cookies=cookie,
-                referer=referer,
-                proxies=get_proxies() if proxy else None
+                headers=ua, cookies=cookie, referer=referer, proxies=get_proxies() if proxy else None
             ).get_res(url=url, allow_redirects=False)
         if req and req.status_code == 200:
             if not req.content:
@@ -95,7 +87,7 @@ class Torrent:
                         action = form[0][0]
                         if not action or action == "?":
                             action = url
-                        elif not action.startswith('http'):
+                        elif not action.startswith("http"):
                             action = StringUtils.get_base_url(url) + action
                         inputs = re.findall(r'<input.*?name="(.*?)".*?value="(.*?)".*?>', form[0][1], re.S)
                         if action and inputs:
@@ -104,10 +96,7 @@ class Torrent:
                                 data[item[0]] = item[1]
                             # 改写req
                             req = RequestUtils(
-                                headers=ua,
-                                cookies=cookie,
-                                referer=referer,
-                                proxies=get_proxies() if proxy else None
+                                headers=ua, cookies=cookie, referer=referer, proxies=get_proxies() if proxy else None
                             ).post_res(url=action, data=data)
                             if req and req.status_code == 200:
                                 # 检查是不是种子文件，如果不是抛出异常
@@ -116,8 +105,10 @@ class Torrent:
                                 log.info(f"【Downloader】触发了站点首次种子下载，已自动跳过：{url}")
                                 skip_flag = True
                             elif req is not None:
-                                log.warn(f"【Downloader】触发了站点首次种子下载，且无法自动跳过，"
-                                         f"返回码：{req.status_code}，错误原因：{req.reason}")
+                                log.warn(
+                                    f"【Downloader】触发了站点首次种子下载，且无法自动跳过，"
+                                    f"返回码：{req.status_code}，错误原因：{req.reason}"
+                                )
                             else:
                                 log.warn(f"【Downloader】触发了站点首次种子下载，且无法自动跳过：{url}")
                 except Exception as err:
@@ -139,7 +130,7 @@ class Torrent:
             # 种子内容
             file_content = req.content
             # 写入磁盘
-            with open(file_path, 'wb') as f:
+            with open(file_path, "wb") as f:
                 f.write(file_content)
         elif req is None:
             return None, None, "无法打开链接：%s" % url
@@ -161,7 +152,7 @@ class Torrent:
         file_names = []
         file_folder = ""
         try:
-            torrent = bdecode(open(path, 'rb').read())
+            torrent = bdecode(open(path, "rb").read())
             if torrent.get("info"):
                 files = torrent.get("info", {}).get("files") or []
                 if files:
@@ -185,7 +176,7 @@ class Torrent:
         content, retmsg, file_folder, files = None, "", "", []
         try:
             # 读取种子文件内容
-            with open(path, 'rb') as f:
+            with open(path, "rb") as f:
                 content = f.read()
             # 解析种子文件
             file_folder, files, retmsg = self.get_torrent_files(path)
@@ -200,10 +191,10 @@ class Torrent:
         """
         if not req:
             return ""
-        disposition = req.headers.get('content-disposition') or ""
+        disposition = req.headers.get("content-disposition") or ""
         file_name = re.findall(r"filename=\"?(.+)\"?", disposition)
         if file_name:
-            file_name = unquote(str(file_name[0].encode('ISO-8859-1').decode()).split(";")[0].strip())
+            file_name = unquote(str(file_name[0].encode("ISO-8859-1").decode()).split(";")[0].strip())
             if file_name.endswith('"'):
                 file_name = file_name[:-1]
         elif url and url.endswith(".torrent"):
@@ -211,7 +202,7 @@ class Torrent:
         else:
             file_name = str(datetime.datetime.now())
 
-        file_name = file_name.replace('/', '-')
+        file_name = file_name.replace("/", "-")
         return file_name
 
     @staticmethod
@@ -256,21 +247,25 @@ class Torrent:
 
         # 排序函数，标题、站点、资源类型、做种数量
         def get_sort_str(x):
-            season_len = str(len(x.get_season_list())).rjust(2, '0')
-            episode_len = str(len(x.get_episode_list())).rjust(4, '0')
+            season_len = str(len(x.get_season_list())).rjust(2, "0")
+            episode_len = str(len(x.get_episode_list())).rjust(4, "0")
             # 排序：标题、资源类型、站点、做种、季集
             if download_order == "seeder":
-                return "%s%s%s%s%s" % (str(x.title).ljust(100, ' '),
-                                       str(x.res_order).rjust(3, '0'),
-                                       str(x.seeders).rjust(10, '0'),
-                                       str(x.site_order).rjust(3, '0'),
-                                       "%s%s" % (season_len, episode_len))
+                return "%s%s%s%s%s" % (
+                    str(x.title).ljust(100, " "),
+                    str(x.res_order).rjust(3, "0"),
+                    str(x.seeders).rjust(10, "0"),
+                    str(x.site_order).rjust(3, "0"),
+                    "%s%s" % (season_len, episode_len),
+                )
             else:
-                return "%s%s%s%s%s" % (str(x.title).ljust(100, ' '),
-                                       str(x.res_order).rjust(3, '0'),
-                                       str(x.site_order).rjust(3, '0'),
-                                       str(x.seeders).rjust(10, '0'),
-                                       "%s%s" % (season_len, episode_len))
+                return "%s%s%s%s%s" % (
+                    str(x.title).ljust(100, " "),
+                    str(x.res_order).rjust(3, "0"),
+                    str(x.site_order).rjust(3, "0"),
+                    str(x.seeders).rjust(10, "0"),
+                    "%s%s" % (season_len, episode_len),
+                )
 
         # 匹配的资源中排序分组选最好的一个下载
         # 按站点顺序、资源匹配顺序、做种人数下载数逆序排序
@@ -283,8 +278,7 @@ class Torrent:
         for t_item in media_list:
             # 控重的主链是名称、年份、季、集
             if t_item.type != MediaType.MOVIE:
-                media_name = "%s%s" % (t_item.get_title_string(),
-                                       t_item.get_season_episode_string())
+                media_name = "%s%s" % (t_item.get_title_string(), t_item.get_season_episode_string())
             else:
                 media_name = t_item.get_title_string()
 

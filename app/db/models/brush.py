@@ -2,15 +2,16 @@
 刷流相关模型
 包含: 站点刷流任务、站点刷流种子
 """
+
 from sqlalchemy import BigInteger, Column, Integer, Sequence, String, Text
 
 from app.db.models.base import Base
 
 
 class SITEBRUSHTASK(Base):
-    __tablename__ = 'SITE_BRUSH_TASK'
+    __tablename__ = "SITE_BRUSH_TASK"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     NAME = Column(String(255), index=True)
     SITE = Column(String(255))
     RSSURL = Column(String(512))
@@ -35,9 +36,9 @@ class SITEBRUSHTASK(Base):
 
 
 class SITEBRUSHTORRENTS(Base):
-    __tablename__ = 'SITE_BRUSH_TORRENTS'
+    __tablename__ = "SITE_BRUSH_TORRENTS"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     TASK_ID = Column(String(255), index=True)
     TORRENT_NAME = Column(String(255))
     TORRENT_SIZE = Column(Text)

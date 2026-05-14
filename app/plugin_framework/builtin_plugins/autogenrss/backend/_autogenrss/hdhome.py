@@ -14,9 +14,9 @@ class HDHome(_ISiteRssGenHandler):
     """
     HDHome
     """
+
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "hdhome.org"
-
 
     @classmethod
     def match(cls, url):
@@ -60,39 +60,38 @@ class HDHome(_ISiteRssGenHandler):
             "showrows": "50",
             "search": "",
             "search_mode": "1",
-            "exp": "180"
+            "exp": "180",
         }
 
-        headers.update({'User-Agent': ua})
-        html_res = RequestUtils(cookies=site_cookie,
-                            headers=headers,
-                            proxies=get_proxies() if site_info.get("proxy") else None
-                            ).post_res(url=rss_url, data=data)
+        headers.update({"User-Agent": ua})
+        html_res = RequestUtils(
+            cookies=site_cookie, headers=headers, proxies=get_proxies() if site_info.get("proxy") else None
+        ).post_res(url=rss_url, data=data)
         if not html_res or html_res.status_code != 200:
             self.error("生成RSS失败，请检查站点连通性")
-            return False, f'【{site}】生成RSS失败，请检查站点连通性'
+            return False, f"【{site}】生成RSS失败，请检查站点连通性"
 
         if "login.php" in html_res.text:
             self.error("生成RSS失败，cookie失效")
-            return False, f'【{site}】生成RSS失败，cookie失效'
+            return False, f"【{site}】生成RSS失败，cookie失效"
 
         # 解析rss url
         gen_rss_url = self._parse_rss_link(html_res.text)
         self.debug(f"生成的rss: {gen_rss_url}")
         if gen_rss_url:
-            #插入到数据库
+            # 插入到数据库
             SiteRepository().update_site_rssurl(site_info.get("id"), gen_rss_url)
 
             self.info("生成RSS成功")
-            return True, f'【{site}】生成RSS成功'
+            return True, f"【{site}】生成RSS成功"
         else:
             self.info("生成RSS失败")
-            return True, f'【{site}生成RSS失败'
+            return True, f"【{site}生成RSS失败"
 
     @staticmethod
     def _parse_rss_link(html_text: str) -> str:
         if not html_text:
-            return ''
+            return ""
 
         html = etree.HTML(html_text)
-        return next((href for href in html.xpath('//a[contains(@href, "linktype=dl")]/@href')), '')
+        return next((href for href in html.xpath('//a[contains(@href, "linktype=dl")]/@href')), "")

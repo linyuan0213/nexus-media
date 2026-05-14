@@ -1,9 +1,8 @@
-
 import xmlrpc.client
 
-DEFAULT_HOST = 'localhost'
+DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 6800
-SERVER_URI_FORMAT = '%s:%s/rpc'
+SERVER_URI_FORMAT = "%s:%s/rpc"
 
 
 class PyAria2:
@@ -57,8 +56,9 @@ class PyAria2:
 
         return: This method returns list of GID of registered download.
         """
-        return self.server.aria2.addMetalink(self._secret, xmlrpc.client.Binary(open(metalink, 'rb').read()), options,
-                                             position)
+        return self.server.aria2.addMetalink(
+            self._secret, xmlrpc.client.Binary(open(metalink, "rb").read()), options, position
+        )
 
     def remove(self, gid):
         """

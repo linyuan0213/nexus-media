@@ -62,13 +62,15 @@ class ResultFilter:
             for e in entities:
                 include_str = e.include or ""
                 exclude_str = e.exclude or ""
-                filters.append({
-                    "include": [x.strip() for x in include_str.split(",") if x.strip()] if include_str else None,
-                    "exclude": [x.strip() for x in exclude_str.split(",") if x.strip()] if exclude_str else None,
-                    "size": None,
-                    "free": e.note,
-                    "pri": e.priority,
-                })
+                filters.append(
+                    {
+                        "include": [x.strip() for x in include_str.split(",") if x.strip()] if include_str else None,
+                        "exclude": [x.strip() for x in exclude_str.split(",") if x.strip()] if exclude_str else None,
+                        "size": None,
+                        "free": e.note,
+                        "pri": e.priority,
+                    }
+                )
 
         self._rule_cache[cache_key] = (rulegroup_info, filters)
         return rulegroup_info, filters
@@ -83,20 +85,20 @@ class ResultFilter:
             meta_info=meta_info,
             filter_args=filter_args,
             uploadvolumefactor=uploadvolumefactor,
-            downloadvolumefactor=downloadvolumefactor
+            downloadvolumefactor=downloadvolumefactor,
         )
         if not match_flag:
             return match_flag, res_order, match_msg
 
         rulegroup_id = filter_args.get("rule")
         rulegroup_info, filters = self._get_rules(rulegroup_id)
-        match_flag, res_order, rule_name = self._engine.check_rules(
-            meta_info, rulegroup_info, filters
-        )
+        match_flag, res_order, rule_name = self._engine.check_rules(meta_info, rulegroup_info, filters)
         if not match_flag:
-            msg = f"{meta_info.org_string} 大小：{StringUtils.str_filesize(meta_info.size)} " \
-                  f"促销：{meta_info.get_volume_factor_string()} " \
-                  f"不符合过滤规则 {rule_name} 要求"
+            msg = (
+                f"{meta_info.org_string} 大小：{StringUtils.str_filesize(meta_info.size)} "
+                f"促销：{meta_info.get_volume_factor_string()} "
+                f"不符合过滤规则 {rule_name} 要求"
+            )
             return match_flag, res_order, msg
 
         return True, res_order, ""
@@ -158,26 +160,30 @@ class ResultFilter:
         stats = FilterStats()
 
         for item in result_array:
-            torrent_name = item.get('title')
-            description = item.get('description')
+            torrent_name = item.get("title")
+            description = item.get("description")
             if not torrent_name:
                 stats.index_error += 1
                 continue
 
-            enclosure = item.get('enclosure')
-            size = item.get('size')
-            seeders = item.get('seeders')
-            peers = item.get('peers')
-            page_url = item.get('page_url')
-            uploadvolumefactor = round(float(item.get('uploadvolumefactor')), 1) if item.get(
-                'uploadvolumefactor') is not None else 1.0
-            downloadvolumefactor = round(float(item.get('downloadvolumefactor')), 1) if item.get(
-                'downloadvolumefactor') is not None else 1.0
+            enclosure = item.get("enclosure")
+            size = item.get("size")
+            seeders = item.get("seeders")
+            peers = item.get("peers")
+            page_url = item.get("page_url")
+            uploadvolumefactor = (
+                round(float(item.get("uploadvolumefactor")), 1) if item.get("uploadvolumefactor") is not None else 1.0
+            )
+            downloadvolumefactor = (
+                round(float(item.get("downloadvolumefactor")), 1)
+                if item.get("downloadvolumefactor") is not None
+                else 1.0
+            )
             imdbid = item.get("imdbid")
             labels = item.get("labels")
-            indexer_name = item.get('_indexer_name', '')
-            indexer_order = item.get('_indexer_order', 0)
-            indexer_public = item.get('_indexer_public', False)
+            indexer_name = item.get("_indexer_name", "")
+            indexer_order = item.get("_indexer_order", 0)
+            indexer_public = item.get("_indexer_public", False)
 
             if filter_args.get("seeders") and not indexer_public and str(seeders) == "0":
                 log.info(f"【ResultFilter】{torrent_name} 做种数为0")
@@ -190,16 +196,19 @@ class ResultFilter:
                 stats.index_match_fail += 1
                 continue
 
-            meta_info.set_torrent_info(size=size,
-                                       imdbid=imdbid,
-                                       upload_volume_factor=uploadvolumefactor,
-                                       download_volume_factor=downloadvolumefactor,
-                                       labels=labels)
+            meta_info.set_torrent_info(
+                size=size,
+                imdbid=imdbid,
+                upload_volume_factor=uploadvolumefactor,
+                download_volume_factor=downloadvolumefactor,
+                labels=labels,
+            )
 
             if meta_info.type == MediaType.TV and filter_args.get("type") == MediaType.MOVIE:
                 log.info(
                     f"【ResultFilter】{torrent_name} 是 {meta_info.type.value}，"
-                    f"不匹配类型：{filter_args.get('type').value}")
+                    f"不匹配类型：{filter_args.get('type').value}"
+                )
                 stats.index_rule_fail += 1
                 continue
 
@@ -207,7 +216,7 @@ class ResultFilter:
                 meta_info=meta_info,
                 filter_args=filter_args,
                 uploadvolumefactor=uploadvolumefactor,
-                downloadvolumefactor=downloadvolumefactor
+                downloadvolumefactor=downloadvolumefactor,
             )
             if not match_flag:
                 log.info(f"【ResultFilter】{match_msg}")
@@ -216,18 +225,20 @@ class ResultFilter:
 
             if not match_media:
                 media_info = meta_info
-                media_info.set_torrent_info(site=indexer_name,
-                                            site_order=indexer_order,
-                                            enclosure=enclosure,
-                                            res_order=res_order,
-                                            filter_rule=filter_args.get("rule"),
-                                            size=size,
-                                            seeders=seeders,
-                                            peers=peers,
-                                            description=description,
-                                            page_url=page_url,
-                                            upload_volume_factor=uploadvolumefactor,
-                                            download_volume_factor=downloadvolumefactor)
+                media_info.set_torrent_info(
+                    site=indexer_name,
+                    site_order=indexer_order,
+                    enclosure=enclosure,
+                    res_order=res_order,
+                    filter_rule=filter_args.get("rule"),
+                    size=size,
+                    seeders=seeders,
+                    peers=peers,
+                    description=description,
+                    page_url=page_url,
+                    upload_volume_factor=uploadvolumefactor,
+                    download_volume_factor=downloadvolumefactor,
+                )
                 if media_info not in direct_results:
                     stats.index_sucess += 1
                     direct_results.append(media_info)
@@ -236,42 +247,48 @@ class ResultFilter:
                 continue
 
             if meta_info.imdb_id and match_media.imdb_id and str(meta_info.imdb_id) == str(match_media.imdb_id):
-                candidates.append(SearchCandidate(
-                    item=item,
-                    meta_info=meta_info,
-                    res_order=res_order,
-                    skip_tmdb=True,
-                    media_info=self._media.merge_media_info(meta_info, match_media),
-                    indexer_name=indexer_name,
-                    indexer_order=indexer_order,
-                    indexer_public=indexer_public,
-                ))
+                candidates.append(
+                    SearchCandidate(
+                        item=item,
+                        meta_info=meta_info,
+                        res_order=res_order,
+                        skip_tmdb=True,
+                        media_info=self._media.merge_media_info(meta_info, match_media),
+                        indexer_name=indexer_name,
+                        indexer_order=indexer_order,
+                        indexer_public=indexer_public,
+                    )
+                )
                 continue
 
             if self.quick_name_match(meta_info, match_media):
                 log.debug(f"【ResultFilter】{torrent_name} 快速名称匹配成功，跳过TMDB查询")
-                candidates.append(SearchCandidate(
+                candidates.append(
+                    SearchCandidate(
+                        item=item,
+                        meta_info=meta_info,
+                        res_order=res_order,
+                        skip_tmdb=True,
+                        media_info=self._media.merge_media_info(meta_info, match_media),
+                        indexer_name=indexer_name,
+                        indexer_order=indexer_order,
+                        indexer_public=indexer_public,
+                    )
+                )
+                continue
+
+            candidates.append(
+                SearchCandidate(
                     item=item,
                     meta_info=meta_info,
                     res_order=res_order,
-                    skip_tmdb=True,
-                    media_info=self._media.merge_media_info(meta_info, match_media),
+                    skip_tmdb=False,
+                    media_info=None,
                     indexer_name=indexer_name,
                     indexer_order=indexer_order,
                     indexer_public=indexer_public,
-                ))
-                continue
-
-            candidates.append(SearchCandidate(
-                item=item,
-                meta_info=meta_info,
-                res_order=res_order,
-                skip_tmdb=False,
-                media_info=None,
-                indexer_name=indexer_name,
-                indexer_order=indexer_order,
-                indexer_public=indexer_public,
-            ))
+                )
+            )
 
         return candidates, direct_results, stats
 
@@ -285,9 +302,7 @@ class ResultFilter:
 
         ret_array = []
         stats = FilterStats()
-        media_ident_cache = get_cache_manager().get_or_create(
-            "media_ident", "memory", maxsize=2000, ttl=3600
-        )
+        media_ident_cache = get_cache_manager().get_or_create("media_ident", "memory", maxsize=2000, ttl=3600)
 
         for cand in candidates:
             item = cand.item
@@ -299,10 +314,14 @@ class ResultFilter:
             seeders = item.get("seeders")
             peers = item.get("peers")
             page_url = item.get("page_url")
-            uploadvolumefactor = round(float(item.get('uploadvolumefactor')), 1) if item.get(
-                'uploadvolumefactor') is not None else 1.0
-            downloadvolumefactor = round(float(item.get('downloadvolumefactor')), 1) if item.get(
-                'downloadvolumefactor') is not None else 1.0
+            uploadvolumefactor = (
+                round(float(item.get("uploadvolumefactor")), 1) if item.get("uploadvolumefactor") is not None else 1.0
+            )
+            downloadvolumefactor = (
+                round(float(item.get("downloadvolumefactor")), 1)
+                if item.get("downloadvolumefactor") is not None
+                else 1.0
+            )
             enclosure = item.get("enclosure")
             cache_key = meta_info.get_name() or torrent_name
             indexer_name = cand.indexer_name
@@ -322,8 +341,7 @@ class ResultFilter:
                     stats.index_error += 1
                     continue
                 elif not media_info.tmdb_info:
-                    log.info(
-                        f"【ResultFilter】{cache_key} 识别为 {media_info.get_name()} 未匹配到媒体信息")
+                    log.info(f"【ResultFilter】{cache_key} 识别为 {media_info.get_name()} 未匹配到媒体信息")
                     stats.index_match_fail += 1
                     continue
 
@@ -333,28 +351,33 @@ class ResultFilter:
                     log.info(
                         f"【ResultFilter】{cache_key} 识别为 "
                         f"{media_type_str}/{media_info.get_title_string()}/{media_info.tmdb_id} "
-                        f"与 {match_type_str}/{match_media.get_title_string()}/{match_media.tmdb_id} 不匹配")
+                        f"与 {match_type_str}/{match_media.get_title_string()}/{match_media.tmdb_id} 不匹配"
+                    )
                     stats.index_match_fail += 1
                     continue
 
                 media_info = self._media.merge_media_info(media_info, match_media)
 
             if filter_args.get("type"):
-                if (filter_args.get("type") == MediaType.TV and media_info.type == MediaType.MOVIE) \
-                        or (filter_args.get("type") == MediaType.MOVIE and media_info.type == MediaType.TV):
+                if (filter_args.get("type") == MediaType.TV and media_info.type == MediaType.MOVIE) or (
+                    filter_args.get("type") == MediaType.MOVIE and media_info.type == MediaType.TV
+                ):
                     display_name = cache_key if not cand.skip_tmdb else torrent_name
                     log.info(
                         f"【ResultFilter】{display_name} 是 {media_info.type.value}/"
-                        f"{media_info.tmdb_id}，不是 {filter_args.get('type').value}")
+                        f"{media_info.tmdb_id}，不是 {filter_args.get('type').value}"
+                    )
                     stats.index_rule_fail += 1
                     continue
 
             display_name = cache_key if not cand.skip_tmdb else torrent_name
             if match_media.over_edition:
                 if media_info.type != MediaType.MOVIE and media_info.get_episode_list():
-                    log.info(f"【ResultFilter】"
-                             f"{media_info.get_title_string()}{media_info.get_season_string()} "
-                             f"正在洗版，过滤掉季集不完整的资源：{display_name} {description}")
+                    log.info(
+                        f"【ResultFilter】"
+                        f"{media_info.get_title_string()}{media_info.get_season_string()} "
+                        f"正在洗版，过滤掉季集不完整的资源：{display_name} {description}"
+                    )
                     continue
                 if match_media.res_order and int(res_order) <= int(match_media.res_order):
                     log.info(
@@ -366,32 +389,35 @@ class ResultFilter:
                     )
                     continue
 
-            if not self._engine.is_torrent_match_sey(media_info,
-                                                    filter_args.get("season"),
-                                                    filter_args.get("episode"),
-                                                    filter_args.get("year")):
+            if not self._engine.is_torrent_match_sey(
+                media_info, filter_args.get("season"), filter_args.get("episode"), filter_args.get("year")
+            ):
                 media_type_str = media_info.type.value if media_info.type else "Unknown"
                 log.info(
                     f"【ResultFilter】{display_name} 识别为 {media_type_str}/"
-                    f"{media_info.get_title_string()}/{media_info.get_season_episode_string()} 不匹配季/集/年份")
+                    f"{media_info.get_title_string()}/{media_info.get_season_episode_string()} 不匹配季/集/年份"
+                )
                 stats.index_match_fail += 1
                 continue
 
             log.info(
                 f"【ResultFilter】{display_name} {description} 识别为 {media_info.get_title_string()} "
-                f"{media_info.get_season_episode_string()} 匹配成功")
-            media_info.set_torrent_info(site=indexer_name,
-                                        site_order=indexer_order,
-                                        enclosure=enclosure,
-                                        res_order=res_order,
-                                        filter_rule=filter_args.get("rule"),
-                                        size=size,
-                                        seeders=seeders,
-                                        peers=peers,
-                                        description=description,
-                                        page_url=page_url,
-                                        upload_volume_factor=uploadvolumefactor,
-                                        download_volume_factor=downloadvolumefactor)
+                f"{media_info.get_season_episode_string()} 匹配成功"
+            )
+            media_info.set_torrent_info(
+                site=indexer_name,
+                site_order=indexer_order,
+                enclosure=enclosure,
+                res_order=res_order,
+                filter_rule=filter_args.get("rule"),
+                size=size,
+                seeders=seeders,
+                peers=peers,
+                description=description,
+                page_url=page_url,
+                upload_volume_factor=uploadvolumefactor,
+                download_volume_factor=downloadvolumefactor,
+            )
             if media_info not in ret_array:
                 stats.index_sucess += 1
                 ret_array.append(media_info)

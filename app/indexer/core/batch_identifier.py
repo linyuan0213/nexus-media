@@ -13,9 +13,7 @@ class BatchIdentifier:
 
     def __init__(self, media_service=None):
         self.media = media_service or MediaService()
-        self._media_ident_cache = get_cache_manager().get_or_create(
-            "media_ident", "memory", maxsize=2000, ttl=3600
-        )
+        self._media_ident_cache = get_cache_manager().get_or_create("media_ident", "memory", maxsize=2000, ttl=3600)
 
     def identify(self, candidates):
         """
@@ -39,14 +37,16 @@ class BatchIdentifier:
             if cache_key in seen_names:
                 continue
             seen_names.add(cache_key)
-            to_identify.append({
-                "title": cache_key,
-                "subtitle": cand.item.get("description"),
-                "site": cand.item.get("site"),
-                "enclosure": cand.item.get("enclosure"),
-                "size": cand.item.get("size"),
-                "seeders": cand.item.get("seeders"),
-            })
+            to_identify.append(
+                {
+                    "title": cache_key,
+                    "subtitle": cand.item.get("description"),
+                    "site": cand.item.get("site"),
+                    "enclosure": cand.item.get("enclosure"),
+                    "size": cand.item.get("size"),
+                    "seeders": cand.item.get("seeders"),
+                }
+            )
 
         if not to_identify:
             return

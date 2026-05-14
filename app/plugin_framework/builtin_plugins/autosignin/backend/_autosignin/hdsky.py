@@ -11,11 +11,12 @@ class HDSky(_ISiteSigninHandler):
     """
     天空ocr签到
     """
+
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "hdsky.me"
 
     # 已签到
-    _sign_regex = ['已签到']
+    _sign_regex = ["已签到"]
 
     @classmethod
     def match(cls, url):
@@ -38,34 +39,27 @@ class HDSky(_ISiteSigninHandler):
         proxy = get_proxies() if site_info.get("proxy") else None
 
         # 判断今日是否已签到
-        index_res = RequestUtils(cookies=site_cookie,
-                                 headers=ua,
-                                 proxies=proxy
-                                 ).get_res(url='https://hdsky.me')
+        index_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(url="https://hdsky.me")
         if not index_res or index_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
-            return False, f'【{site}】签到失败，请检查站点连通性'
+            return False, f"【{site}】签到失败，请检查站点连通性"
 
         if "login.php" in index_res.text:
             self.error("签到失败，cookie失效")
-            return False, f'【{site}】签到失败，cookie失效'
+            return False, f"【{site}】签到失败，cookie失效"
 
-        sign_status = self.sign_in_result(html_res=index_res.text,
-                                          regexs=self._sign_regex)
+        sign_status = self.sign_in_result(html_res=index_res.text, regexs=self._sign_regex)
         if sign_status:
             self.info("今日已签到")
-            return True, f'【{site}】今日已签到'
+            return True, f"【{site}】今日已签到"
 
         # 获取验证码请求，考虑到网络问题获取失败，多获取几次试试
         res_times = 0
         img_hash = None
         while not img_hash and res_times <= 3:
-            image_res = RequestUtils(cookies=site_cookie,
-                                     headers=ua,
-                                     referer="https://hdsky.me/index.php",
-                                     proxies=proxy
-                                     ).post_res(url='https://hdsky.me/image_code_ajax.php',
-                                                data={'action': 'new'})
+            image_res = RequestUtils(
+                cookies=site_cookie, headers=ua, referer="https://hdsky.me/index.php", proxies=proxy
+            ).post_res(url="https://hdsky.me/image_code_ajax.php", data={"action": "new"})
             if image_res and image_res.status_code == 200:
                 image_json = json.loads(image_res.text)
                 if image_json["success"]:
@@ -78,7 +72,7 @@ class HDSky(_ISiteSigninHandler):
         # 获取到二维码hash
         if img_hash:
             # 完整验证码url
-            img_get_url = 'https://hdsky.me/image.php?action=regimage&imagehash=%s' % img_hash
+            img_get_url = "https://hdsky.me/image.php?action=regimage&imagehash=%s" % img_hash
             self.debug(f"获取到{site}验证码链接 {img_get_url}")
             # ocr识别多次，获取6位验证码
             times = 0
@@ -86,9 +80,7 @@ class HDSky(_ISiteSigninHandler):
             # 识别几次
             while times <= 3:
                 # ocr二维码识别
-                ocr_result = OcrHelper().get_captcha_text(image_url=img_get_url,
-                                                          cookie=site_cookie,
-                                                          ua=ua)
+                ocr_result = OcrHelper().get_captcha_text(image_url=img_get_url, cookie=site_cookie, ua=ua)
                 self.debug(f"ocr识别{site}验证码 {ocr_result}")
                 if ocr_result:
                     if len(ocr_result) == 6:
@@ -100,29 +92,23 @@ class HDSky(_ISiteSigninHandler):
 
             if ocr_result:
                 # 组装请求参数
-                data = {
-                    'action': 'showup',
-                    'imagehash': img_hash,
-                    'imagestring': ocr_result
-                }
+                data = {"action": "showup", "imagehash": img_hash, "imagestring": ocr_result}
                 # 访问签到链接
-                res = RequestUtils(cookies=site_cookie,
-                                   headers=ua,
-                                   referer="https://hdsky.me/index.php",
-                                   proxies=proxy
-                                   ).post_res(url='https://hdsky.me/showup.php', data=data)
+                res = RequestUtils(
+                    cookies=site_cookie, headers=ua, referer="https://hdsky.me/index.php", proxies=proxy
+                ).post_res(url="https://hdsky.me/showup.php", data=data)
                 if res and res.status_code == 200:
                     if json.loads(res.text)["success"]:
                         self.info("签到成功")
-                        return True, f'【{site}】签到成功'
+                        return True, f"【{site}】签到成功"
                     elif str(json.loads(res.text)["message"]) == "date_unmatch":
                         # 重复签到
                         self.warn("重复成功")
-                        return True, f'【{site}】今日已签到'
+                        return True, f"【{site}】今日已签到"
                     elif str(json.loads(res.text)["message"]) == "invalid_imagehash":
                         # 验证码错误
                         self.warn("签到失败：验证码错误")
-                        return False, f'【{site}】签到失败：验证码错误'
+                        return False, f"【{site}】签到失败：验证码错误"
 
-        self.error('签到失败：未获取到验证码')
-        return False, f'【{site}】签到失败：未获取到验证码'
+        self.error("签到失败：未获取到验证码")
+        return False, f"【{site}】签到失败：未获取到验证码"

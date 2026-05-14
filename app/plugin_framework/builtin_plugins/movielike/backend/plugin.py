@@ -2,6 +2,7 @@
 MovieLike Plugin v2
 媒体服务器中用户将电影设为最爱时，自动转移到精选文件夹
 """
+
 import os
 
 from app.media import Category
@@ -47,14 +48,14 @@ class MovieLikePlugin:
         if self._mediaserver.get_type() != MediaServerType.EMBY:
             return
 
-        action_type = event_data.get('Event')
-        if action_type != 'item.rate':
+        action_type = event_data.get("Event")
+        if action_type != "item.rate":
             return
 
-        if event_data.get('Item', {}).get('Type') != 'Movie':
+        if event_data.get("Item", {}).get("Type") != "Movie":
             return
 
-        item_path = event_data.get('Item', {}).get('Path')
+        item_path = event_data.get("Item", {}).get("Path")
         if not item_path:
             return
 
@@ -66,11 +67,11 @@ class MovieLikePlugin:
         remote_path3 = config.get("remote_path3")
 
         if local_path and remote_path and item_path.startswith(remote_path):
-            item_path = item_path.replace(remote_path, local_path).replace('\\', '/')
+            item_path = item_path.replace(remote_path, local_path).replace("\\", "/")
         if local_path2 and remote_path2 and item_path.startswith(remote_path2):
-            item_path = item_path.replace(remote_path2, local_path2).replace('\\', '/')
+            item_path = item_path.replace(remote_path2, local_path2).replace("\\", "/")
         if local_path3 and remote_path3 and item_path.startswith(remote_path3):
-            item_path = item_path.replace(remote_path3, local_path3).replace('\\', '/')
+            item_path = item_path.replace(remote_path3, local_path3).replace("\\", "/")
 
         if not os.path.exists(item_path):
             self.ctx.warn(f"{item_path} 文件不存在")
@@ -102,6 +103,7 @@ class MovieLikePlugin:
                 self.ctx.error(f"{retmsg}")
             else:
                 from app.plugin_framework.hook_system import HookSystem
+
                 HookSystem().emit("media.library_synced", {"dest": new_path, "media_info": {}})
         else:
             self.ctx.warn(f"{org_path} 目录不存在")

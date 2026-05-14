@@ -1,4 +1,3 @@
-
 import log
 from app.helper.image_proxy_helper import ImageProxyHelper
 from app.media.lookup.base import BaseLookup, LookupResult
@@ -23,8 +22,9 @@ class TmdbLookup(BaseLookup):
         self.person = TmdbPerson(self.client)
         self.discover = TmdbDiscover(self.client)
 
-    def lookup(self, parsed, hint_type: MediaType = None,
-               strict: bool = None, language: str = None) -> LookupResult | None:
+    def lookup(
+        self, parsed, hint_type: MediaType = None, strict: bool = None, language: str = None
+    ) -> LookupResult | None:
         if not parsed.title_en and not parsed.title_cn:
             return None
         if language:
@@ -64,8 +64,9 @@ class TmdbLookup(BaseLookup):
             self.client.set_language()
         return self._to_lookup_result(result)
 
-    def _lookup_tmdb(self, name, search_type, first_year=None, media_year=None,
-                     season_number=None, episode=None, strict: bool = None):
+    def _lookup_tmdb(
+        self, name, search_type, first_year=None, media_year=None, season_number=None, episode=None, strict: bool = None
+    ):
         info = None
         # 1. 按指定类型搜索
         if search_type == MediaType.MOVIE:
@@ -76,31 +77,39 @@ class TmdbLookup(BaseLookup):
                 log.debug(f"【Meta】正在识别{search_type.value}：{name}, 年份={year} ...")
                 info = self.search.search_movie(name, year)
                 if info:
-                    info['media_type'] = MediaType.MOVIE
-                    log.info("【Meta】%s 识别到 电影：TMDBID=%s, 名称=%s, 上映日期=%s" % (
-                        name, info.get('id'), info.get('title'), info.get('release_date')))
+                    info["media_type"] = MediaType.MOVIE
+                    log.info(
+                        "【Meta】%s 识别到 电影：TMDBID=%s, 名称=%s, 上映日期=%s"
+                        % (name, info.get("id"), info.get("title"), info.get("release_date"))
+                    )
                     return info
         else:
             if media_year and season_number:
-                log.debug(f"【Meta】正在识别{search_type.value}：{name}, 季集={season_number}, 季集年份={media_year} ...")
+                log.debug(
+                    f"【Meta】正在识别{search_type.value}：{name}, 季集={season_number}, 季集年份={media_year} ..."
+                )
                 info = self.search.search_tv_by_season(name, media_year, season_number, episode)
                 if info:
                     return info
             log.debug(f"【Meta】正在识别{search_type.value}：{name}, 年份={StringUtils.xstr(first_year)} ...")
             info = self.search.search_tv(name, first_year, season_number, episode)
             if info:
-                info['media_type'] = MediaType.TV
-                log.info("【Meta】%s 识别到 电视剧：TMDBID=%s, 名称=%s, 首播日期=%s" % (
-                    name, info.get('id'), info.get('name'), info.get('first_air_date')))
+                info["media_type"] = MediaType.TV
+                log.info(
+                    "【Meta】%s 识别到 电视剧：TMDBID=%s, 名称=%s, 首播日期=%s"
+                    % (name, info.get("id"), info.get("name"), info.get("first_air_date"))
+                )
                 return info
             # TV 查不到时，去掉年份再查（仅非严格模式）
             if not info and first_year and not strict:
                 log.debug(f"【Meta】正在识别{search_type.value}：{name}, 去掉年份再查 ...")
                 info = self.search.search_tv(name, None, season_number, episode)
                 if info:
-                    info['media_type'] = MediaType.TV
-                    log.info("【Meta】%s 识别到 电视剧：TMDBID=%s, 名称=%s, 首播日期=%s" % (
-                        name, info.get('id'), info.get('name'), info.get('first_air_date')))
+                    info["media_type"] = MediaType.TV
+                    log.info(
+                        "【Meta】%s 识别到 电视剧：TMDBID=%s, 名称=%s, 首播日期=%s"
+                        % (name, info.get("id"), info.get("name"), info.get("first_air_date"))
+                    )
                     return info
 
         # 2. Fallback: 多类型搜索
@@ -108,9 +117,10 @@ class TmdbLookup(BaseLookup):
             log.debug(f"【Meta】正在识别：{name}, 多类型搜索 ...")
             info = self.search.search_multi(name)
             if info:
-                info['media_type'] = MediaType.MOVIE if info.get('media_type') in ['movie', MediaType.MOVIE] else MediaType.TV
-                log.info("【Meta】%s 识别到 %s：TMDBID=%s" % (
-                    name, info.get('media_type').value, info.get('id')))
+                info["media_type"] = (
+                    MediaType.MOVIE if info.get("media_type") in ["movie", MediaType.MOVIE] else MediaType.TV
+                )
+                log.info("【Meta】%s 识别到 %s：TMDBID=%s" % (name, info.get("media_type").value, info.get("id")))
                 return info
 
         # 3. Fallback: 互换类型搜索（去掉年份）
@@ -119,17 +129,19 @@ class TmdbLookup(BaseLookup):
             if search_type == MediaType.MOVIE:
                 info = self.search.search_tv(name, None)
                 if info:
-                    info['media_type'] = MediaType.TV
+                    info["media_type"] = MediaType.TV
                     return info
             else:
                 info = self.search.search_movie(name, None)
                 if info:
-                    info['media_type'] = MediaType.MOVIE
+                    info["media_type"] = MediaType.MOVIE
                     return info
 
         if not info:
-            log.info("【Meta】%s 以年份 %s 在TMDB中未找到%s信息!" % (
-                name, StringUtils.xstr(first_year), search_type.value if search_type else ""))
+            log.info(
+                "【Meta】%s 以年份 %s 在TMDB中未找到%s信息!"
+                % (name, StringUtils.xstr(first_year), search_type.value if search_type else "")
+            )
         return info or {}
 
     def _to_lookup_result(self, info: dict) -> LookupResult | None:
@@ -249,15 +261,17 @@ class TmdbLookup(BaseLookup):
                         set(self.search.search_tv_infos(title, year))
                     )
                 )
-                results = sorted(results,
-                                 key=lambda x: x.get("release_date") or x.get("first_air_date") or "0000-00-00",
-                                 reverse=True)
+                results = sorted(
+                    results,
+                    key=lambda x: x.get("release_date") or x.get("first_air_date") or "0000-00-00",
+                    reverse=True,
+                )
             elif mtype == MediaType.MOVIE:
                 results = self.search.search_movie_infos(title, year)
             else:
                 results = self.search.search_tv_infos(title, year)
         self.client.set_language()
-        return results[(page - 1) * 20:page * 20]
+        return results[(page - 1) * 20 : page * 20]
 
     def get_tmdb_tv_season_detail(self, tmdbid, season):
         return self.detail.get_season_detail(tmdbid, season)
@@ -364,8 +378,7 @@ class TmdbLookup(BaseLookup):
             if not media_info.begin_episode:
                 self.client.set_language()
                 return None
-            episodes = self.get_tmdb_season_episodes(tmdbid=media_info.tmdb_id,
-                                                     season=int(media_info.get_season_seq()))
+            episodes = self.get_tmdb_season_episodes(tmdbid=media_info.tmdb_id, season=int(media_info.get_season_seq()))
             self.client.set_language()
             for episode in episodes:
                 if episode.get("episode_number") == media_info.begin_episode:
@@ -470,37 +483,45 @@ class TmdbLookup(BaseLookup):
     @staticmethod
     def _dict_media_crews(crews):
         from app.helper.image_proxy_helper import ImageProxyHelper
-        return [{
-            "id": crew.get("id"),
-            "gender": crew.get("gender"),
-            "known_for_department": crew.get("known_for_department"),
-            "name": crew.get("name"),
-            "original_name": crew.get("original_name"),
-            "popularity": crew.get("popularity"),
-            "image": ImageProxyHelper.get_tmdbimage_url(crew.get("profile_path"), prefix="h632"),
-            "credit_id": crew.get("credit_id"),
-            "department": crew.get("department"),
-            "job": crew.get("job"),
-            "profile": 'https://www.themoviedb.org/person/%s' % crew.get('id')
-        } for crew in crews or []]
+
+        return [
+            {
+                "id": crew.get("id"),
+                "gender": crew.get("gender"),
+                "known_for_department": crew.get("known_for_department"),
+                "name": crew.get("name"),
+                "original_name": crew.get("original_name"),
+                "popularity": crew.get("popularity"),
+                "image": ImageProxyHelper.get_tmdbimage_url(crew.get("profile_path"), prefix="h632"),
+                "credit_id": crew.get("credit_id"),
+                "department": crew.get("department"),
+                "job": crew.get("job"),
+                "profile": "https://www.themoviedb.org/person/%s" % crew.get("id"),
+            }
+            for crew in crews or []
+        ]
 
     @staticmethod
     def _dict_media_casts(casts):
         from app.helper.image_proxy_helper import ImageProxyHelper
-        return [{
-            "id": cast.get("id"),
-            "gender": cast.get("gender"),
-            "known_for_department": cast.get("known_for_department"),
-            "name": cast.get("name"),
-            "original_name": cast.get("original_name"),
-            "popularity": cast.get("popularity"),
-            "image": ImageProxyHelper.get_tmdbimage_url(cast.get("profile_path"), prefix="h632"),
-            "cast_id": cast.get("cast_id"),
-            "role": cast.get("character"),
-            "credit_id": cast.get("credit_id"),
-            "order": cast.get("order"),
-            "profile": 'https://www.themoviedb.org/person/%s' % cast.get('id')
-        } for cast in casts or []]
+
+        return [
+            {
+                "id": cast.get("id"),
+                "gender": cast.get("gender"),
+                "known_for_department": cast.get("known_for_department"),
+                "name": cast.get("name"),
+                "original_name": cast.get("original_name"),
+                "popularity": cast.get("popularity"),
+                "image": ImageProxyHelper.get_tmdbimage_url(cast.get("profile_path"), prefix="h632"),
+                "cast_id": cast.get("cast_id"),
+                "role": cast.get("character"),
+                "credit_id": cast.get("credit_id"),
+                "order": cast.get("order"),
+                "profile": "https://www.themoviedb.org/person/%s" % cast.get("id"),
+            }
+            for cast in casts or []
+        ]
 
     @staticmethod
     def _dict_tmdbinfos(infos, mtype=None):
@@ -508,6 +529,7 @@ class TmdbLookup(BaseLookup):
             return []
         from app.helper.image_proxy_helper import ImageProxyHelper
         from app.utils.types import MediaType
+
         ret_infos = []
         for info in infos:
             tmdbid = info.get("id")
@@ -516,24 +538,38 @@ class TmdbLookup(BaseLookup):
             overview = info.get("overview")
             if mtype:
                 media_type = mtype.value
-                year = info.get("release_date")[0:4] if info.get("release_date") and mtype == MediaType.MOVIE else info.get("first_air_date")[0:4] if info.get("first_air_date") else ""
-                typestr = 'MOV' if mtype == MediaType.MOVIE else 'TV'
+                year = (
+                    info.get("release_date")[0:4]
+                    if info.get("release_date") and mtype == MediaType.MOVIE
+                    else info.get("first_air_date")[0:4]
+                    if info.get("first_air_date")
+                    else ""
+                )
+                typestr = "MOV" if mtype == MediaType.MOVIE else "TV"
                 title = info.get("title") if mtype == MediaType.MOVIE else info.get("name")
             else:
                 media_type = MediaType.MOVIE.value if info.get("media_type") == "movie" else MediaType.TV.value
-                year = info.get("release_date")[0:4] if info.get("release_date") and info.get("media_type") == "movie" else info.get("first_air_date")[0:4] if info.get("first_air_date") else ""
-                typestr = 'MOV' if info.get("media_type") == "movie" else 'TV'
+                year = (
+                    info.get("release_date")[0:4]
+                    if info.get("release_date") and info.get("media_type") == "movie"
+                    else info.get("first_air_date")[0:4]
+                    if info.get("first_air_date")
+                    else ""
+                )
+                typestr = "MOV" if info.get("media_type") == "movie" else "TV"
                 title = info.get("title") if info.get("media_type") == "movie" else info.get("name")
-            ret_infos.append({
-                'id': tmdbid,
-                'orgid': tmdbid,
-                'tmdbid': tmdbid,
-                'title': title,
-                'type': typestr,
-                'media_type': media_type,
-                'year': year,
-                'vote': vote,
-                'image': image,
-                'overview': overview
-            })
+            ret_infos.append(
+                {
+                    "id": tmdbid,
+                    "orgid": tmdbid,
+                    "tmdbid": tmdbid,
+                    "title": title,
+                    "type": typestr,
+                    "media_type": media_type,
+                    "year": year,
+                    "vote": vote,
+                    "image": image,
+                    "overview": overview,
+                }
+            )
         return ret_infos

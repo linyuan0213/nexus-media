@@ -2,6 +2,7 @@
 WEB 资源搜索服务
 对应原 search_medias_for_web 功能
 """
+
 import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
@@ -61,8 +62,10 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
                     episode_num = intent.episode
                 if intent.year is not None:
                     year = str(intent.year)
-                log.info(f"【Web】Agent 解析搜索意图: {content} -> {key_word}, type={mtype}, "
-                         f"season={season_num}, episode={episode_num}, year={year}")
+                log.info(
+                    f"【Web】Agent 解析搜索意图: {content} -> {key_word}, type={mtype}, "
+                    f"season={season_num}, episode={episode_num}, year={year}"
+                )
         except Exception as e:
             log.warn(f"【Web】Agent 意图解析失败: {e}")
 
@@ -128,8 +131,12 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
                 search_zhtw_name = _media.get_tmdb_zhtw_title(media_info)
                 if search_zhtw_name and search_zhtw_name != search_cn_name and search_zhtw_name != search_en_name:
                     search_name_list.append(search_zhtw_name)
-                if (media_info.original_language != 'cn' and media_info.original_title and
-                    media_info.original_title != search_cn_name and media_info.original_title != search_en_name):
+                if (
+                    media_info.original_language != "cn"
+                    and media_info.original_title
+                    and media_info.original_title != search_cn_name
+                    and media_info.original_title != search_en_name
+                ):
                     search_name_list.append(media_info.original_title)
 
             search_name_list = list(set(filter(None, search_name_list)))
@@ -139,25 +146,17 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
                 "season": search_season,
                 "episode": search_episode,
                 "year": media_info.year,
-                "type": media_info.type
+                "type": media_info.type,
             }
         else:
             log.info(f"【Web】{content} 未从TMDB匹配到媒体信息，将使用快速搜索...")
             ident_flag = False
             media_info = None
             search_name_list.append(key_word)
-            filter_args = {
-                "season": season_num,
-                "episode": episode_num,
-                "year": year
-            }
+            filter_args = {"season": season_num, "episode": episode_num, "year": year}
     else:
         search_name_list.append(key_word)
-        filter_args = {
-            "season": season_num,
-            "episode": episode_num,
-            "year": year
-        }
+        filter_args = {"season": season_num, "episode": episode_num, "year": year}
 
     if filters:
         filter_args.update(filters)
@@ -184,7 +183,7 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
     unique_media_list = []
     media_seen = set()
     for d in media_list:
-        org_string = StringUtils.md5_hash(f'{d.org_string}{d.site}{d.description or ""}')
+        org_string = StringUtils.md5_hash(f"{d.org_string}{d.site}{d.description or ''}")
         if org_string not in media_seen:
             unique_media_list.append(d)
             media_seen.add(org_string)
@@ -198,9 +197,13 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
         return 1, "%s 未搜索到任何资源" % content
     else:
         log.info("【Web】共搜索到 %s 个有效资源" % len(media_list))
-        media_list = sorted(media_list, key=lambda x: "%s%s%s" % (
-            str(x.res_order).rjust(3, '0'),
-            str(x.site_order).rjust(3, '0'),
-            str(x.seeders).rjust(10, '0')), reverse=True)
+        media_list = sorted(
+            media_list,
+            key=lambda x: (
+                "%s%s%s"
+                % (str(x.res_order).rjust(3, "0"), str(x.site_order).rjust(3, "0"), str(x.seeders).rjust(10, "0"))
+            ),
+            reverse=True,
+        )
         _searcher.insert_search_results(media_items=media_list, ident_flag=ident_flag, title=content)
         return 0, ""

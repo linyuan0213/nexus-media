@@ -2,6 +2,7 @@
 专用缓存类
 提供针对特定业务场景的缓存封装
 """
+
 from typing import Any
 
 import log
@@ -39,12 +40,12 @@ class TMDBCache(TypedCache):
     """TMDB专用缓存"""
 
     # 不同数据类型的 TTL（秒）
-    TTL_TMDB_INFO = 7 * 24 * 3600      # 7 天
-    TTL_MEDIA_INFO = 24 * 3600          # 24 小时
-    TTL_SEASON_INFO = 12 * 3600         # 12 小时
-    TTL_PERSON_INFO = 30 * 24 * 3600    # 30 天
-    TTL_TRENDING = 2 * 3600             # 2 小时
-    TTL_DEFAULT = 3600                  # 1 小时（默认）
+    TTL_TMDB_INFO = 7 * 24 * 3600  # 7 天
+    TTL_MEDIA_INFO = 24 * 3600  # 24 小时
+    TTL_SEASON_INFO = 12 * 3600  # 12 小时
+    TTL_PERSON_INFO = 30 * 24 * 3600  # 30 天
+    TTL_TRENDING = 2 * 3600  # 2 小时
+    TTL_DEFAULT = 3600  # 1 小时（默认）
 
     def __init__(self, adapter: CacheAdapter | None = None):
         if adapter is None:
@@ -59,18 +60,19 @@ class TMDBCache(TypedCache):
     def get_tmdb_info(self, mtype: Any, tmdbid: str, language: str = None) -> Any | None:
         """获取TMDB信息缓存"""
         from app.utils.types import MediaType
+
         if mtype == MediaType.ANIME:
             mtype = MediaType.TV
-        key = self._make_key("tmdb", mtype.value, tmdbid, language or 'default')
+        key = self._make_key("tmdb", mtype.value, tmdbid, language or "default")
         return self.get(key)
 
-    def set_tmdb_info(self, mtype: Any, tmdbid: str, info: Any,
-                      language: str = None, ttl: int = None) -> bool:
+    def set_tmdb_info(self, mtype: Any, tmdbid: str, info: Any, language: str = None, ttl: int = None) -> bool:
         """设置TMDB信息缓存"""
         from app.utils.types import MediaType
+
         if mtype == MediaType.ANIME:
             mtype = MediaType.TV
-        key = self._make_key("tmdb", mtype.value, tmdbid, language or 'default')
+        key = self._make_key("tmdb", mtype.value, tmdbid, language or "default")
         ttl = ttl or self.TTL_TMDB_INFO
         log.debug(f"【TMDBCache】缓存信息: {key}, TTL={ttl}秒")
         return self.set(key, info, ttl)
@@ -78,18 +80,19 @@ class TMDBCache(TypedCache):
     def get_media_info(self, title: str, year: str = None, mtype: Any = None) -> Any | None:
         """获取媒体信息缓存"""
         from app.utils.types import MediaType
+
         if mtype == MediaType.ANIME:
             mtype = MediaType.TV
-        key = self._make_key("media", title, year or '', mtype.value if mtype else '')
+        key = self._make_key("media", title, year or "", mtype.value if mtype else "")
         return self.get(key)
 
-    def set_media_info(self, title: str, info: Any, year: str = None,
-                       mtype: Any = None, ttl: int = None) -> bool:
+    def set_media_info(self, title: str, info: Any, year: str = None, mtype: Any = None, ttl: int = None) -> bool:
         """设置媒体信息缓存"""
         from app.utils.types import MediaType
+
         if mtype == MediaType.ANIME:
             mtype = MediaType.TV
-        key = self._make_key("media", title, year or '', mtype.value if mtype else '')
+        key = self._make_key("media", title, year or "", mtype.value if mtype else "")
         ttl = ttl or self.TTL_MEDIA_INFO
         return self.set(key, info, ttl)
 
@@ -120,8 +123,7 @@ class TMDBCache(TypedCache):
         key = self._make_key("tmdb:trending", media_type, time_window, page)
         return self.get(key)
 
-    def set_trending(self, media_type: str, time_window: str, page: int,
-                     info: Any, ttl: int = None) -> bool:
+    def set_trending(self, media_type: str, time_window: str, page: int, info: Any, ttl: int = None) -> bool:
         """设置热门趋势缓存"""
         key = self._make_key("tmdb:trending", media_type, time_window, page)
         ttl = ttl or self.TTL_TRENDING

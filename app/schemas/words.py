@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 @dataclass
 class WordGroupDTO:
     """自定义词组 DTO"""
+
     id: int = 0
     title: str = ""
     year: str = ""
@@ -15,6 +16,7 @@ class WordGroupDTO:
 @dataclass
 class WordDTO:
     """自定义识别词 DTO"""
+
     id: int = 0
     replaced: str = ""
     replace: str = ""
@@ -32,6 +34,7 @@ class WordDTO:
 @dataclass
 class WordGroupExportDTO:
     """导出词组 DTO（前端展示用）"""
+
     id: str = ""
     name: str = ""
     link: str = ""

@@ -2,6 +2,7 @@
 TMDB API 速率限制器
 实现令牌桶算法，主动控制请求速率
 """
+
 import threading
 import time
 
@@ -51,10 +52,7 @@ class TMDBRateLimiter:
                 # 更新令牌数
                 now = time.time()
                 elapsed = now - self._last_update
-                self._tokens = min(
-                    self._burst_size,
-                    self._tokens + elapsed * self._max_rate
-                )
+                self._tokens = min(self._burst_size, self._tokens + elapsed * self._max_rate)
                 self._last_update = now
 
                 # 检查是否有可用令牌
@@ -79,17 +77,14 @@ class TMDBRateLimiter:
     def try_acquire(self) -> bool:
         """
         尝试获取令牌，不等待
-        
+
         :return: 是否成功获取
         """
         with self._lock:
             # 更新令牌数
             now = time.time()
             elapsed = now - self._last_update
-            self._tokens = min(
-                self._burst_size,
-                self._tokens + elapsed * self._max_rate
-            )
+            self._tokens = min(self._burst_size, self._tokens + elapsed * self._max_rate)
             self._last_update = now
 
             if self._tokens >= 1:
@@ -103,7 +98,7 @@ class TMDBRateLimiter:
     def get_stats(self) -> dict:
         """
         获取速率限制统计信息
-        
+
         :return: 统计字典
         """
         with self._lock:
@@ -112,7 +107,7 @@ class TMDBRateLimiter:
                 "blocked_requests": self._blocked_requests,
                 "wait_count": self._wait_count,
                 "current_tokens": round(self._tokens, 2),
-                "block_rate": round(self._blocked_requests / max(self._total_requests, 1) * 100, 2)
+                "block_rate": round(self._blocked_requests / max(self._total_requests, 1) * 100, 2),
             }
 
     def reset_stats(self):
@@ -126,18 +121,16 @@ class TMDBRateLimiter:
 class TMDBRetryWithBackoff:
     """
     TMDB API 指数退避重试机制
-    
+
     遇到 429 (Too Many Requests) 时，使用指数退避等待后重试
     """
 
-    def __init__(self,
-                 max_retries: int = 3,
-                 base_delay: float = 1.0,
-                 max_delay: float = 60.0,
-                 exponential_base: float = 2.0):
+    def __init__(
+        self, max_retries: int = 3, base_delay: float = 1.0, max_delay: float = 60.0, exponential_base: float = 2.0
+    ):
         """
         初始化重试器
-        
+
         :param max_retries: 最大重试次数
         :param base_delay: 初始延迟（秒）
         :param max_delay: 最大延迟（秒）
@@ -151,17 +144,17 @@ class TMDBRetryWithBackoff:
     def get_delay(self, attempt: int) -> float:
         """
         获取第 attempt 次重试的延迟时间
-        
+
         :param attempt: 重试次数（从0开始）
         :return: 延迟时间（秒）
         """
-        delay = self._base_delay * (self._exponential_base ** attempt)
+        delay = self._base_delay * (self._exponential_base**attempt)
         return min(delay, self._max_delay)
 
     def should_retry(self, attempt: int, status_code: int | None = None) -> bool:
         """
         判断是否应当重试
-        
+
         :param attempt: 当前重试次数
         :param status_code: HTTP 状态码
         :return: 是否应当重试
@@ -176,7 +169,7 @@ class TMDBRetryWithBackoff:
     def execute(self, func, *args, **kwargs):
         """
         执行带重试的函数
-        
+
         :param func: 要执行的函数
         :param args: 位置参数
         :param kwargs: 关键字参数
@@ -192,8 +185,8 @@ class TMDBRetryWithBackoff:
                 last_exception = e
 
                 # 检查是否应当重试
-                status_code = getattr(e, 'status_code', None)
-                if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
+                status_code = getattr(e, "status_code", None)
+                if hasattr(e, "response") and hasattr(e.response, "status_code"):
                     status_code = e.response.status_code
 
                 if not self.should_retry(attempt, status_code):

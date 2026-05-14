@@ -10,7 +10,6 @@ from app.utils import JsonUtils, SystemUtils
 
 
 class SiteHelper:
-
     @classmethod
     def is_logged_in(cls, html_text):
         """
@@ -20,11 +19,11 @@ class SiteHelper:
         """
         if JsonUtils.is_valid_json(html_text):
             json_data = json.loads(html_text)
-            message = json_data.get('message')
-            success = json_data.get('success')
-            error_message = json_data.get('errorMessage')
+            message = json_data.get("message")
+            success = json_data.get("success")
+            error_message = json_data.get("errorMessage")
 
-            if (message and message.upper() == 'SUCCESS') or success or (error_message and '已签' in error_message):
+            if (message and message.upper() == "SUCCESS") or success or (error_message and "已签" in error_message):
                 return True
             return False
         if "签到成功" in html_text:
@@ -37,12 +36,14 @@ class SiteHelper:
         if html.xpath("//input[@type='password']"):
             return False
         # 是否存在登出和用户面板等链接
-        xpaths = ['//a[contains(@href, "logout")'
-                  ' or contains(@data-url, "logout")'
-                  ' or contains(@href, "mybonus") '
-                  ' or contains(@onclick, "logout")'
-                  ' or contains(@href, "usercp")]',
-                  '//form[contains(@action, "logout")]']
+        xpaths = [
+            '//a[contains(@href, "logout")'
+            ' or contains(@data-url, "logout")'
+            ' or contains(@href, "mybonus") '
+            ' or contains(@onclick, "logout")'
+            ' or contains(@href, "usercp")]',
+            '//form[contains(@action, "logout")]',
+        ]
         for xpath in xpaths:
             if html.xpath(xpath):
                 return True
@@ -64,10 +65,10 @@ class SiteHelper:
         """
         fname = re.findall(r"filename=\"?(.+)\"?", disposition or "")
         if fname:
-            fname = str(fname[0].encode('ISO-8859-1').decode()).split(";")[0].strip()
+            fname = str(fname[0].encode("ISO-8859-1").decode()).split(";")[0].strip()
             if fname.endswith('"'):
                 fname = fname[:-1]
-        elif url and os.path.splitext(url)[-1] in (RMT_SUBEXT + ['.zip']):
+        elif url and os.path.splitext(url)[-1] in (RMT_SUBEXT + [".zip"]):
             fname = url.split("/")[-1]
         else:
             fname = str(datetime.now())

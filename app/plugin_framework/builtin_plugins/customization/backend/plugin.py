@@ -2,6 +2,7 @@
 Customization Plugin v2
 添加自定义占位符识别正则
 """
+
 from app.media import CustomizationMatcher
 from app.plugin_framework.context import PluginContext
 
@@ -31,8 +32,8 @@ class CustomizationPlugin:
 
     def _load_config(self):
         config = self._get_config()
-        customization = config.get('customization')
-        custom_separator = config.get('separator')
+        customization = config.get("customization")
+        custom_separator = config.get("separator")
 
         if customization:
             customization = customization.replace("\n", ";").strip(";").split(";")

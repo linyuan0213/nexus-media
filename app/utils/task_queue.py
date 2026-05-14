@@ -2,6 +2,7 @@
 通用异步任务队列
 使用线程池并发消费任务，避免单个慢任务阻塞队列
 """
+
 from __future__ import annotations
 
 import queue
@@ -18,6 +19,7 @@ from app.utils.commons import SingletonMeta
 @dataclass
 class Task:
     """任务单元"""
+
     func: Callable
     args: tuple = ()
     kwargs: dict = field(default_factory=dict)
@@ -49,9 +51,7 @@ class TaskQueue(metaclass=SingletonMeta):
         if self._started and self._dispatcher and self._dispatcher.is_alive():
             return
         self._shutdown = False
-        self._dispatcher = threading.Thread(
-            target=self._dispatch_loop, daemon=True, name="TaskQueueDispatcher"
-        )
+        self._dispatcher = threading.Thread(target=self._dispatch_loop, daemon=True, name="TaskQueueDispatcher")
         self._dispatcher.start()
         self._started = True
         log.info(f"【TaskQueue】任务队列已启动（并发数: {self._max_workers}）")
@@ -80,8 +80,7 @@ class TaskQueue(metaclass=SingletonMeta):
         retries = kwargs.pop("retries", 3)
         retry_delay = kwargs.pop("retry_delay", 1.0)
 
-        task = Task(func=func, args=args, kwargs=kwargs, name=name,
-                    retries=retries, retry_delay=retry_delay)
+        task = Task(func=func, args=args, kwargs=kwargs, name=name, retries=retries, retry_delay=retry_delay)
         try:
             self._queue.put_nowait(task)
             return True

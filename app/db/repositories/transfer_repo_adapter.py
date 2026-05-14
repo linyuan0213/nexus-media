@@ -32,7 +32,9 @@ class TransferHistoryRepositoryAdapter:
         row = self._repo.get_transfer_info_by_id(logid)
         return TransferHistoryEntity.from_orm(row)
 
-    def get_by_tmdb(self, tmdbid: int, season: str | None = None, season_episode: str | None = None) -> list[TransferHistoryEntity]:
+    def get_by_tmdb(
+        self, tmdbid: int, season: str | None = None, season_episode: str | None = None
+    ) -> list[TransferHistoryEntity]:
         rows = self._repo.get_transfer_info_by(tmdbid, season, season_episode)
         if not rows:
             return []

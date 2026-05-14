@@ -1,6 +1,7 @@
 """
 调度器业务服务：脱离 Web 框架，可独立单元测试
 """
+
 import time
 from typing import Any, ClassVar
 
@@ -59,44 +60,38 @@ class SchedulerService:
             trigger_info = JobTrigger()
             trigger_type = "unknown"
             try:
-                if hasattr(job.trigger, 'interval'):
+                if hasattr(job.trigger, "interval"):
                     trigger_type = "interval"
-                    trigger_info = JobTrigger(
-                        type="interval",
-                        seconds=getattr(job.trigger, 'interval_length', None)
-                    )
-                elif hasattr(job.trigger, 'fields'):
+                    trigger_info = JobTrigger(type="interval", seconds=getattr(job.trigger, "interval_length", None))
+                elif hasattr(job.trigger, "fields"):
                     trigger_type = "cron"
-                    trigger_info = JobTrigger(
-                        type="cron",
-                        expression=str(job.trigger)
-                    )
-                elif hasattr(job.trigger, 'run_date'):
+                    trigger_info = JobTrigger(type="cron", expression=str(job.trigger))
+                elif hasattr(job.trigger, "run_date"):
                     trigger_type = "date"
                     trigger_info = JobTrigger(
-                        type="date",
-                        run_date=job.trigger.run_date.isoformat() if job.trigger.run_date else None
+                        type="date", run_date=job.trigger.run_date.isoformat() if job.trigger.run_date else None
                     )
                 else:
                     trigger_info = JobTrigger(
-                        type=getattr(job.trigger, '__class__.__name__', 'unknown'),
-                        expression=str(job.trigger)
+                        type=getattr(job.trigger, "__class__.__name__", "unknown"), expression=str(job.trigger)
                     )
             except Exception:
                 trigger_info = JobTrigger(type="unknown")
 
-            job_list.append(SchedulerJob(
-                id=job.id,
-                name=job.name or job.id,
-                next_run_time=job.next_run_time.isoformat() if job.next_run_time else None,
-                trigger=trigger_info,
-                trigger_type=trigger_type,
-                args=[str(a) for a in (job.args or [])],
-                kwargs=job.kwargs or {},
-                jobstore=getattr(job, '_jobstore_alias', 'default'),
-                paused=job.next_run_time is None,
-                statistics=stats.get(job.id, {})
-            ))
+            job_list.append(
+                SchedulerJob(
+                    id=job.id,
+                    name=job.name or job.id,
+                    next_run_time=job.next_run_time.isoformat() if job.next_run_time else None,
+                    trigger=trigger_info,
+                    trigger_type=trigger_type,
+                    args=[str(a) for a in (job.args or [])],
+                    kwargs=job.kwargs or {},
+                    jobstore=getattr(job, "_jobstore_alias", "default"),
+                    paused=job.next_run_time is None,
+                    statistics=stats.get(job.id, {}),
+                )
+            )
 
         job_list.sort(key=lambda x: x.id)
         return GetSchedulerJobsResponse(code=0, data=job_list)
@@ -172,17 +167,12 @@ class SchedulerService:
                     return UpdateSchedulerJobResponse(code=1, msg="cron 表达式格式错误")
                 minute, hour, day, month, day_of_week = parts
                 svc.reschedule_job(
-                    req.id,
-                    trigger="cron",
-                    minute=minute,
-                    hour=hour,
-                    day=day,
-                    month=month,
-                    day_of_week=day_of_week
+                    req.id, trigger="cron", minute=minute, hour=hour, day=day, month=month, day_of_week=day_of_week
                 )
             elif req.trigger == "date":
                 from apscheduler.triggers.date import DateTrigger
                 from dateutil import parser as date_parser
+
                 if not req.run_date:
                     return UpdateSchedulerJobResponse(code=1, msg="date 触发器缺少执行时间")
                 run_date = date_parser.parse(req.run_date)

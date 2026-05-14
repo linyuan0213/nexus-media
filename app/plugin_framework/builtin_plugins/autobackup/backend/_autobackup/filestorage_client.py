@@ -26,7 +26,7 @@ class FileStorageClient(ABC):
 
 class WebDAVClient(FileStorageClient):
     def __init__(self, base_url, username, password, share_name):
-        base_url = f'{base_url.rstrip("/")}/{share_name.rstrip("/")}'
+        base_url = f"{base_url.rstrip('/')}/{share_name.rstrip('/')}"
         auth = (username, password)
         self.client = Client(base_url, auth)
 
@@ -62,9 +62,7 @@ class SambaClient(FileStorageClient):
         self.server_ip = url_parts[0]
         self.port = int(url_parts[1]) if len(url_parts) > 1 else 139
 
-        self.conn = SMBConnection(
-            username, password, client_name, server_name, use_ntlm_v2=True
-        )
+        self.conn = SMBConnection(username, password, client_name, server_name, use_ntlm_v2=True)
         self.conn.connect(self.server_ip, self.port)
         self.share_name = share_name
 
@@ -120,7 +118,7 @@ class FileClientFactory:
                 base_url=kwargs.get("base_url"),
                 username=kwargs.get("username"),
                 password=kwargs.get("password"),
-                share_name=kwargs.get("share_name")
+                share_name=kwargs.get("share_name"),
             )
         elif client_type == "samba":
             return SambaClient(
@@ -129,6 +127,6 @@ class FileClientFactory:
                 password=kwargs.get("password"),
                 client_name="NT",
                 server_name="",
-                share_name=kwargs.get("share_name")
+                share_name=kwargs.get("share_name"),
             )
         return None

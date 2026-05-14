@@ -1,4 +1,5 @@
 """Unit3d 架构用户信息解析"""
+
 import re
 from urllib.parse import urljoin
 
@@ -34,13 +35,14 @@ def parse(ins):
         if bm and bm.group(1).strip():
             ins.bonus = StringUtils.str_float(bm.group(1))
 
-    join = html.xpath('//div[contains(@class,"content")]//h4[contains(text(),"注册日期") '
-                      'or contains(text(),"Registration date")]/text()')
+    join = html.xpath(
+        '//div[contains(@class,"content")]//h4[contains(text(),"注册日期") '
+        'or contains(text(),"Registration date")]/text()'
+    )
     if join:
-        ins.join_at = StringUtils.unify_datetime_str(
-            join[0].replace('注册日期','').replace('Registration date',''))
+        ins.join_at = StringUtils.unify_datetime_str(join[0].replace("注册日期", "").replace("Registration date", ""))
 
-    username = getattr(ins, 'username', None) or ''
+    username = getattr(ins, "username", None) or ""
     if not username:
         return
     profile_url = urljoin(ins._base_url_str + "/", f"users/{username}")
@@ -57,8 +59,10 @@ def parse(ins):
 
 def _extract_traffic(ins, doc):
     for label, attr, is_size in [("Upload", "upload", True), ("Download", "download", True)]:
-        vals = doc.xpath(f'//h4[contains(text(),"{label}")]/following-sibling::span[1]/text()'
-                         f'|//h4[contains(text(),"{label}")]/..//span//text()')
+        vals = doc.xpath(
+            f'//h4[contains(text(),"{label}")]/following-sibling::span[1]/text()'
+            f'|//h4[contains(text(),"{label}")]/..//span//text()'
+        )
         if vals:
             val = "".join(vals).strip()
             setattr(ins, attr, StringUtils.num_filesize(val) if is_size else StringUtils.str_float(val))
@@ -94,12 +98,15 @@ def _extract_traffic(ins, doc):
     ins.ratio = 0.0 if ins.download <= 0.0 else round(ins.upload / ins.download, 3)
 
     if not ins.join_at:
-        join = doc.xpath('//h4[contains(text(),"注册日期") or contains(text(),"Registration date")]'
-                         '/following-sibling::span[1]/text()'
-                         '|//h4[contains(text(),"注册日期") or contains(text(),"Registration date")]/text()')
+        join = doc.xpath(
+            '//h4[contains(text(),"注册日期") or contains(text(),"Registration date")]'
+            "/following-sibling::span[1]/text()"
+            '|//h4[contains(text(),"注册日期") or contains(text(),"Registration date")]/text()'
+        )
         if join:
             ins.join_at = StringUtils.unify_datetime_str(
-                join[0].replace('注册日期', '').replace('Registration date', '').strip())
+                join[0].replace("注册日期", "").replace("Registration date", "").strip()
+            )
 
     if not ins.bonus:
         for pat in [
@@ -120,8 +127,10 @@ def _extract_traffic(ins, doc):
 
 def _extract_seeding(ins, doc):
     for label, attr in [("Seeding", "seeding"), ("Leeching", "leeching")]:
-        vals = doc.xpath(f'//h4[contains(text(),"{label}")]/following-sibling::span[1]/text()'
-                         f'|//h4[contains(text(),"{label}")]/..//span//text()')
+        vals = doc.xpath(
+            f'//h4[contains(text(),"{label}")]/following-sibling::span[1]/text()'
+            f'|//h4[contains(text(),"{label}")]/..//span//text()'
+        )
         if vals:
             val = "".join(vals).strip()
             m = re.search(r"(\d+)", val)

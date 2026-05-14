@@ -23,6 +23,7 @@ class TestRepositoriesImport:
             UserRepository,
             WordRepository,
         )
+
         assert BaseRepository is not None
         assert SearchRepository is not None
         assert TransferRepository is not None
@@ -43,6 +44,7 @@ class TestSearchRepository:
     def test_search_repository_initialization(self):
         """测试 SearchRepository 初始化"""
         from app.db.repositories import SearchRepository
+
         repo = SearchRepository()
         assert repo is not None
         assert repo.db is not None
@@ -54,6 +56,7 @@ class TestTransferRepository:
     def test_transfer_repository_initialization(self):
         """测试 TransferRepository 初始化"""
         from app.db.repositories import TransferRepository
+
         repo = TransferRepository()
         assert repo is not None
         assert repo.db is not None
@@ -65,6 +68,7 @@ class TestSiteRepository:
     def test_site_repository_initialization(self):
         """测试 SiteRepository 初始化"""
         from app.db.repositories import SiteRepository
+
         repo = SiteRepository()
         assert repo is not None
         assert repo.db is not None
@@ -76,6 +80,7 @@ class TestRssRepository:
     def test_rss_repository_initialization(self):
         """测试 RssRepository 初始化"""
         from app.db.repositories import RssRepository
+
         repo = RssRepository()
         assert repo is not None
         assert repo.db is not None
@@ -87,6 +92,7 @@ class TestBrushRepository:
     def test_brush_repository_initialization(self):
         """测试 BrushRepository 初始化"""
         from app.db.repositories import BrushRepository
+
         repo = BrushRepository()
         assert repo is not None
         assert repo.db is not None
@@ -98,6 +104,7 @@ class TestDownloadRepository:
     def test_download_repository_initialization(self):
         """测试 DownloadRepository 初始化"""
         from app.db.repositories import DownloadRepository
+
         repo = DownloadRepository()
         assert repo is not None
         assert repo.db is not None
@@ -109,6 +116,7 @@ class TestUserRepository:
     def test_user_repository_initialization(self):
         """测试 UserRepository 初始化"""
         from app.db.repositories import UserRepository
+
         repo = UserRepository()
         assert repo is not None
         assert repo.db is not None
@@ -120,6 +128,7 @@ class TestSyncRepository:
     def test_sync_repository_initialization(self):
         """测试 SyncRepository 初始化"""
         from app.db.repositories import SyncRepository
+
         repo = SyncRepository()
         assert repo is not None
         assert repo.db is not None
@@ -131,6 +140,7 @@ class TestWordRepository:
     def test_word_repository_initialization(self):
         """测试 WordRepository 初始化"""
         from app.db.repositories import WordRepository
+
         repo = WordRepository()
         assert repo is not None
         assert repo.db is not None
@@ -142,6 +152,7 @@ class TestConfigRepository:
     def test_config_repository_initialization(self):
         """测试 ConfigRepository 初始化"""
         from app.db.repositories import ConfigRepository
+
         repo = ConfigRepository()
         assert repo is not None
         assert repo.db is not None
@@ -153,6 +164,7 @@ class TestPluginRepository:
     def test_plugin_repository_initialization(self):
         """测试 PluginRepository 初始化"""
         from app.db.repositories import PluginRepository
+
         repo = PluginRepository()
         assert repo is not None
         assert repo.db is not None
@@ -164,6 +176,7 @@ class TestBaseRepositoryUtils:
     def test_normalize_path(self):
         """测试路径标准化"""
         from app.db.repositories import BaseRepository
+
         repo = BaseRepository()
 
         # 测试空路径
@@ -171,17 +184,19 @@ class TestBaseRepositoryUtils:
         assert repo._normalize_path(None) == ""
 
         # 测试正常路径（不实际调用 os.path.normpath，只测试方法存在）
-        assert hasattr(repo, '_normalize_path')
+        assert hasattr(repo, "_normalize_path")
 
     def test_paginate_exists(self):
         """测试分页方法存在"""
         from app.db.repositories import BaseRepository
+
         repo = BaseRepository()
-        assert hasattr(repo, '_paginate')
+        assert hasattr(repo, "_paginate")
 
     def test_build_like_pattern(self):
         """测试 LIKE 模式构建"""
         from app.db.repositories import BaseRepository
+
         repo = BaseRepository()
 
         # 测试空搜索

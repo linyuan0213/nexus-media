@@ -1,4 +1,3 @@
-
 from app.agent.agents.media_recognizer import MediaRecognizer
 from app.media.parser.base import BaseParser, ParserResult
 from app.utils.types import MediaType

@@ -5,6 +5,7 @@ Config 重构单元测试
 2. SiteDataUpdater 独立逻辑
 3. ImageProxyHelper 独立逻辑
 """
+
 import importlib.util
 import os
 import pickle
@@ -13,25 +14,29 @@ import types
 from unittest.mock import MagicMock, patch
 
 # 提前注入 mock config，避免加载真实 config.py（会检查 NASTOOL_CONFIG 并 quit）
-_mock_config = types.ModuleType('config')
+_mock_config = types.ModuleType("config")
 _mock_config.TMDB_IMAGE_DOMAIN = "image.tmdb.org"
 _mock_config.TMDB_IMAGE_SIZE = {
-    'thumb': 'w92',
-    'small': 'w185',
-    'medium': 'w342',
-    'large': 'w500',
-    'xlarge': 'w780',
-    'original': 'original'
+    "thumb": "w92",
+    "small": "w185",
+    "medium": "w342",
+    "large": "w500",
+    "xlarge": "w780",
+    "original": "original",
 }
 _mock_config.SITES_DATA_URL = "https://api.github.com/repos/linyuan0213/nas-tools-sites/releases/latest"
+
+
 # 提供一个真实 Config 类占位，保证其他测试中 patch('config.Config') 不会 AttributeError
 class _MockConfig:
     pass
+
+
 _mock_config.Config = _MockConfig
-sys.modules['config'] = _mock_config
+sys.modules["config"] = _mock_config
 
 # mock log 避免加载真实日志模块
-sys.modules['log'] = MagicMock()
+sys.modules["log"] = MagicMock()
 
 
 def _load_module(module_name, rel_path):
@@ -55,6 +60,7 @@ class TestSingletonMeta:
     def test_same_instance(self):
         # 通过 importlib 加载真实 config.py 获取 SingletonMeta（sys.modules['config'] 是 mock）
         import importlib.util
+
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         spec = importlib.util.spec_from_file_location("config_real_singleton", os.path.join(base_dir, "config.py"))
         config_mod = importlib.util.module_from_spec(spec)
@@ -73,6 +79,7 @@ class TestSingletonMeta:
     def test_config_singleton(self):
         """Config() 多次调用返回同一实例（通过直接加载 config.py 验证）"""
         import importlib.util
+
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         spec = importlib.util.spec_from_file_location("config_real", os.path.join(base_dir, "config.py"))
         config_mod = importlib.util.module_from_spec(spec)
@@ -89,14 +96,14 @@ class TestSiteDataUpdater:
     def test_get_sites_version_valid(self, tmp_path):
         path = tmp_path / "sites.dat"
         data = {"version": "1.2.3"}
-        with open(path, 'wb') as f:
+        with open(path, "wb") as f:
             pickle.dump(data, f)
         assert SiteDataUpdater._get_sites_version(str(path)) == "1.2.3"
 
     def test_get_sites_version_missing(self, tmp_path):
         path = tmp_path / "sites.dat"
         data = {"other": "value"}
-        with open(path, 'wb') as f:
+        with open(path, "wb") as f:
             pickle.dump(data, f)
         assert SiteDataUpdater._get_sites_version(str(path)) == "0"
 
@@ -105,9 +112,7 @@ class TestSiteDataUpdater:
 
     def test_download_file_success(self, tmp_path):
         dest = tmp_path / "downloaded.dat"
-        release_json = {
-            "assets": [{"browser_download_url": "http://example.com/file"}]
-        }
+        release_json = {"assets": [{"browser_download_url": "http://example.com/file"}]}
         file_content = b"fake content"
 
         with patch("site_data_updater_for_test.requests.get") as mock_get:
@@ -138,13 +143,11 @@ class TestSiteDataUpdater:
         inner_dir.mkdir()
 
         local_dat = tmp_path / "sites.dat"
-        with open(local_dat, 'wb') as f:
+        with open(local_dat, "wb") as f:
             pickle.dump({"version": "1.0.0"}, f)
 
         new_dat = temp_dir / "sites.dat.tmp"
-        release_json = {
-            "assets": [{"browser_download_url": "http://example.com/file"}]
-        }
+        release_json = {"assets": [{"browser_download_url": "http://example.com/file"}]}
 
         def side_effect(url, **kwargs):
             if url == _mock_config.SITES_DATA_URL:
@@ -154,9 +157,7 @@ class TestSiteDataUpdater:
         mock_get.side_effect = side_effect
 
         with patch("os.path.dirname", return_value=str(tmp_path)):
-            result = SiteDataUpdater.check_sites_update(
-                config_path, str(temp_dir), str(inner_dir)
-            )
+            result = SiteDataUpdater.check_sites_update(config_path, str(temp_dir), str(inner_dir))
             assert result is True
             # 旧文件应被替换为新版本
             assert SiteDataUpdater._get_sites_version(str(local_dat)) == "2.0.0"
@@ -171,15 +172,13 @@ class TestSiteDataUpdater:
         # 内置 sites.dat 版本更高
         src = inner_dir / "sites.dat"
         dst = tmp_path / "sites.dat"
-        with open(src, 'wb') as f:
+        with open(src, "wb") as f:
             pickle.dump({"version": "3.0.0"}, f)
-        with open(dst, 'wb') as f:
+        with open(dst, "wb") as f:
             pickle.dump({"version": "1.0.0"}, f)
 
         with patch("site_data_updater_for_test.SiteDataUpdater.check_sites_update", return_value=True):
-            SiteDataUpdater.update_sites_data(
-                config_path, str(temp_dir), str(inner_dir)
-            )
+            SiteDataUpdater.update_sites_data(config_path, str(temp_dir), str(inner_dir))
             captured = capsys.readouterr()
             assert "3.0.0" in captured.out
 
@@ -190,7 +189,7 @@ class TestImageProxyHelper:
     def setup_method(self):
         # test_image_proxy.py 在收集阶段污染了 sys.modules['config']
         # 恢复为当前测试期望的 mock
-        sys.modules['config'] = _mock_config
+        sys.modules["config"] = _mock_config
 
     def test_get_tmdbimage_url_with_prefix(self):
         url = ImageProxyHelper.get_tmdbimage_url("/abc.jpg", prefix="w500", use_proxy=False)
@@ -229,8 +228,10 @@ class TestImageProxyHelper:
         assert ImageProxyHelper.get_image_proxy_enabled(None) is True
 
     def test_get_proxy_image_url_disabled(self):
-        assert ImageProxyHelper.get_proxy_image_url("http://example.com/a.jpg", use_proxy=False) \
+        assert (
+            ImageProxyHelper.get_proxy_image_url("http://example.com/a.jpg", use_proxy=False)
             == "http://example.com/a.jpg"
+        )
 
     def test_get_proxy_image_url_tmdb(self):
         url = "https://image.tmdb.org/t/p/w500/abc.jpg"

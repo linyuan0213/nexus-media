@@ -2,6 +2,7 @@
 图片代理核心逻辑（与 Web 框架无关）
 供 Flask 蓝图和 FastAPI 路由共用。
 """
+
 import hashlib
 import os
 import threading
@@ -22,10 +23,7 @@ _download_locks = {}
 _download_locks_lock = threading.Lock()
 
 # 缓存目录（与 Flask 侧保持一致）
-CACHE_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-    "web", "static", "img_cache"
-)
+CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "web", "static", "img_cache")
 MAX_CACHE_SIZE = 1024 * 1024 * 1024  # 1GB 最大缓存
 MAX_CACHE_DAYS = 30  # 缓存30天
 
@@ -33,22 +31,10 @@ MAX_CACHE_DAYS = 30  # 缓存30天
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 # 图片尺寸映射
-SIZE_DIMENSIONS = {
-    "w92": 92,
-    "w154": 154,
-    "w185": 185,
-    "w342": 342,
-    "w500": 500,
-    "w780": 780,
-    "original": None
-}
+SIZE_DIMENSIONS = {"w92": 92, "w154": 154, "w185": 185, "w342": 342, "w500": 500, "w780": 780, "original": None}
 
 # 来源域名映射
-SOURCE_DOMAINS = {
-    "tmdb": TMDB_IMAGE_DOMAIN,
-    "douban": "img9.doubanio.com",
-    "bgm": "lain.bgm.tv"
-}
+SOURCE_DOMAINS = {"tmdb": TMDB_IMAGE_DOMAIN, "douban": "img9.doubanio.com", "bgm": "lain.bgm.tv"}
 
 # 连接池 Session 管理
 _session_pool = {}
@@ -61,10 +47,7 @@ def _get_session(domain):
         if domain not in _session_pool:
             session = requests.Session()
             adapter = requests.adapters.HTTPAdapter(
-                pool_connections=10,
-                pool_maxsize=20,
-                max_retries=3,
-                pool_block=False
+                pool_connections=10, pool_maxsize=20, max_retries=3, pool_block=False
             )
             session.mount("https://", adapter)
             session.mount("http://", adapter)
@@ -149,19 +132,12 @@ def _download_image(url, timeout=10, referer=None):
             except Exception:
                 proxies = None
 
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            }
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
             if referer:
                 headers["Referer"] = referer
 
             response = session.get(
-                url,
-                proxies=proxies,
-                headers=headers,
-                timeout=timeout,
-                verify=False,
-                allow_redirects=True
+                url, proxies=proxies, headers=headers, timeout=timeout, verify=False, allow_redirects=True
             )
             response.raise_for_status()
             return response.content

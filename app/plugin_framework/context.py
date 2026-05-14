@@ -2,6 +2,7 @@
 Plugin Context - 插件运行时上下文
 提供给插件访问系统能力的接口
 """
+
 import json
 import os
 from typing import Any
@@ -20,9 +21,7 @@ class PluginContext:
     def __init__(self, plugin_id: str, plugin_name: str = ""):
         self._plugin_id = plugin_id
         self._plugin_name = plugin_name or plugin_id
-        self._data_dir = os.path.join(
-            Config().config_path, 'plugins_data', plugin_id
-        )
+        self._data_dir = os.path.join(Config().config_path, "plugins_data", plugin_id)
         if not os.path.exists(self._data_dir):
             os.makedirs(self._data_dir)
         self._config_repo = PluginConfigRepositoryAdapter()
@@ -47,7 +46,7 @@ class PluginContext:
             return default if key else {}
 
         try:
-            config = entity.config if isinstance(entity.config, dict) else json.loads(entity.config or '{}')
+            config = entity.config if isinstance(entity.config, dict) else json.loads(entity.config or "{}")
         except Exception:
             return default if key else {}
 
@@ -71,13 +70,13 @@ class PluginContext:
         filepath = os.path.join(self._data_dir, filename)
         if not os.path.exists(filepath):
             return None
-        with open(filepath, encoding='utf-8') as f:
+        with open(filepath, encoding="utf-8") as f:
             return f.read()
 
     def write_data(self, filename: str, content: str) -> None:
         """写入插件数据文件"""
         filepath = os.path.join(self._data_dir, filename)
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
 
     def _write_db_log(self, level: str, msg: str) -> None:
@@ -122,8 +121,8 @@ class PluginContext:
             func=func,
             name=self._plugin_name,
             cron=cron,
-            jobstore='plugin',
-            **kwargs
+            jobstore="plugin",
+            **kwargs,
         )
         if job:
             self.info(f"定时任务已注册: {job_id} (cron={cron})")
@@ -134,11 +133,7 @@ class PluginContext:
     def schedule_interval(self, job_id: str, func, **kwargs) -> bool:
         """注册 interval 定时任务，返回是否成功"""
         job = SchedulerCore().register_interval(
-            job_id=f"plugin_{self._plugin_id}_{job_id}",
-            func=func,
-            name=self._plugin_name,
-            jobstore='plugin',
-            **kwargs
+            job_id=f"plugin_{self._plugin_id}_{job_id}", func=func, name=self._plugin_name, jobstore="plugin", **kwargs
         )
         if job:
             self.info(f"interval 任务已注册: {job_id}")
@@ -153,7 +148,7 @@ class PluginContext:
             func=func,
             run_date=run_date,
             name=self._plugin_name,
-            jobstore='plugin',
+            jobstore="plugin",
         )
         if job:
             self.info(f"date 任务已注册: {job_id} (run_date={run_date})")
@@ -163,10 +158,7 @@ class PluginContext:
 
     def remove_schedule(self, job_id: str) -> None:
         """移除定时任务"""
-        SchedulerCore().remove_job(
-            job_id=f"plugin_{self._plugin_id}_{job_id}",
-            jobstore='plugin'
-        )
+        SchedulerCore().remove_job(job_id=f"plugin_{self._plugin_id}_{job_id}", jobstore="plugin")
 
     def get_schedules(self):
         """获取当前插件的所有定时任务"""
@@ -174,11 +166,12 @@ class PluginContext:
         if not sched:
             return []
         prefix = f"plugin_{self._plugin_id}_"
-        return [j for j in sched.get_jobs(jobstore='plugin') if j.id.startswith(prefix)]
+        return [j for j in sched.get_jobs(jobstore="plugin") if j.id.startswith(prefix)]
 
     def emit(self, event: str, data: dict = None) -> None:
         """触发全局事件"""
         from app.plugin_framework.hook_system import HookSystem
+
         HookSystem().emit(event, data or {})
 
     # ---------- 消息命令注册（委托给 Message） ----------

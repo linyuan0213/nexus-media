@@ -9,6 +9,7 @@
 - SmallHorse → small_horse.py
 - JSON user_info.type=html → CSS 选择器
 """
+
 import json
 import re
 from urllib.parse import urljoin
@@ -32,9 +33,19 @@ _ARCH_PARSERS = [
 class ConfigHtmlUserInfo:
     order = 5
 
-    def __init__(self, site_def, site_name, url, site_cookie,
-                 site_headers=None, ua="", emulate=False, proxy=False,
-                 session=None, json_data=None):
+    def __init__(
+        self,
+        site_def,
+        site_name,
+        url,
+        site_cookie,
+        site_headers=None,
+        ua="",
+        emulate=False,
+        proxy=False,
+        session=None,
+        json_data=None,
+    ):
         self.site_name = site_name
         self.site_url = url
         self._def = site_def
@@ -129,7 +140,7 @@ class ConfigHtmlUserInfo:
             except Exception:
                 els = []
         if els:
-            raw = (els[0].get(attr, "") if attr else els[0].xpath("string(.)").strip())
+            raw = els[0].get(attr, "") if attr else els[0].xpath("string(.)").strip()
         pattern = cfg.get("pattern", "")
         if pattern and raw:
             m = re.search(pattern, str(raw), re.I)
@@ -183,8 +194,10 @@ class ConfigHtmlUserInfo:
                 if m and m.group(1) and m.group(2):
                     total_match = m
             else:
-                for pat in [r"<b>(\d+)</b>条记录 Total: ([\d.]+\s*[KMGT]B)",
-                            r"<b>(\d+)</b>\s*条记录，共计<b>([\d.]+\s*[KMGT]B)</b>"]:
+                for pat in [
+                    r"<b>(\d+)</b>条记录 Total: ([\d.]+\s*[KMGT]B)",
+                    r"<b>(\d+)</b>\s*条记录，共计<b>([\d.]+\s*[KMGT]B)</b>",
+                ]:
                     m = re.search(pat, html_text, re.I)
                     if m and m.group(1) and m.group(2):
                         total_match = m
@@ -193,7 +206,7 @@ class ConfigHtmlUserInfo:
                 self.seeding = StringUtils.str_int(total_match.group(1))
                 self.seeding_size = StringUtils.num_filesize(total_match.group(2))
                 return
-            doc = etree.HTML(html_text.replace(r'\/', '/'))
+            doc = etree.HTML(html_text.replace(r"\/", "/"))
             if doc is None:
                 break
             rows = doc.cssselect(ls)
@@ -235,8 +248,9 @@ class ConfigHtmlUserInfo:
         headers = {"User-Agent": self._ua} if self._ua else {}
         if method == "POST":
             body = sc.get("body") or {}
-            res = RequestUtils(headers=headers, cookies=self._cookie if self._cookie else None,
-                               proxies=self._proxies, timeout=30).post_res(url=url, data=json.dumps(body))
+            res = RequestUtils(
+                headers=headers, cookies=self._cookie if self._cookie else None, proxies=self._proxies, timeout=30
+            ).post_res(url=url, data=json.dumps(body))
         else:
             res = self._fetch_html(url)
         if not res:
@@ -285,45 +299,62 @@ class ConfigHtmlUserInfo:
         headers = dict(self._headers) if self._headers else {}
         headers.setdefault("User-Agent", self._ua)
         if use_ajax_headers:
-            headers.update({
-                "Accept": "*/*",
-                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7",
-                "X-Requested-With": "XMLHttpRequest",
-                "Sec-Fetch-Dest": "empty",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Site": "same-origin",
-            })
+            headers.update(
+                {
+                    "Accept": "*/*",
+                    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Sec-Fetch-Dest": "empty",
+                    "Sec-Fetch-Mode": "cors",
+                    "Sec-Fetch-Site": "same-origin",
+                }
+            )
         else:
-            headers.update({
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7",
-                "Sec-Fetch-Dest": "document",
-                "Sec-Fetch-Mode": "navigate",
-                "Sec-Fetch-Site": "same-origin",
-            })
+            headers.update(
+                {
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7",
+                    "Sec-Fetch-Dest": "document",
+                    "Sec-Fetch-Mode": "navigate",
+                    "Sec-Fetch-Site": "same-origin",
+                }
+            )
         if referer:
             headers["Referer"] = referer
         elif "Referer" not in headers and "referer" not in headers:
             headers.setdefault("Referer", self._base_url_str)
-        res = RequestUtils(cookies=self._cookie if self._cookie else None,
-                           session=self._session,
-                           headers=headers, proxies=self._proxies,
-                           timeout=30).get_res(url=url)
+        res = RequestUtils(
+            cookies=self._cookie if self._cookie else None,
+            session=self._session,
+            headers=headers,
+            proxies=self._proxies,
+            timeout=30,
+        ).get_res(url=url)
         if res and res.status_code == 200:
             res.encoding = res.apparent_encoding
             return res.text
         return None
 
 
-def _html_config_factory(url, site_name, site_cookie, html_text=None,
-                         site_headers=None, ua="", emulate=False, proxy=False, session=None):
+def _html_config_factory(
+    url, site_name, site_cookie, html_text=None, site_headers=None, ua="", emulate=False, proxy=False, session=None
+):
     engine = SiteEngine.get_instance()
     site_def = engine.get_by_url(url)
     if not site_def:
         return None
-    return ConfigHtmlUserInfo(site_def, site_name, url, site_cookie,
-                              site_headers=site_headers, ua=ua, emulate=emulate,
-                              proxy=proxy, session=session, json_data=html_text)
+    return ConfigHtmlUserInfo(
+        site_def,
+        site_name,
+        url,
+        site_cookie,
+        site_headers=site_headers,
+        ua=ua,
+        emulate=emulate,
+        proxy=proxy,
+        session=session,
+        json_data=html_text,
+    )
 
 
 SiteEngine.get_instance().register_user_info_factory(_html_config_factory)

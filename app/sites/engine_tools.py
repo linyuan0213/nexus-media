@@ -1,4 +1,5 @@
 """引擎内部工具 — 从 engine.py 拆分"""
+
 import json
 import re
 
@@ -45,8 +46,7 @@ def _build_headers(engine, site, user_config):
     return headers
 
 
-def _call_endpoint(engine, cfg, site, user_config, template_vars,
-                   credential="", download_dir="", download=False):
+def _call_endpoint(engine, cfg, site, user_config, template_vars, credential="", download_dir="", download=False):
     method = cfg.get("method", "GET")
     path = cfg.get("path", "").format(**template_vars)
     base = site.api.base_url.rstrip("/") if site.api else ""
@@ -60,6 +60,7 @@ def _call_endpoint(engine, cfg, site, user_config, template_vars,
         res = RequestUtils(headers=headers, proxies=proxy, timeout=30).get_res(url=url)
         if res and res.status_code == 200 and download_dir:
             import os
+
             fname = os.path.join(download_dir, f"{credential}.zip") if credential else "subtitle.zip"
             with open(fname, "wb") as f:
                 f.write(res.content)
@@ -76,9 +77,8 @@ def _call_endpoint(engine, cfg, site, user_config, template_vars,
                 body[k] = {sk: sv.format(**template_vars) if isinstance(sv, str) else sv for sk, sv in v.items()}
             else:
                 body[k] = v
-        post_data = json.dumps(body, separators=(',', ':')) if body else None
-        res = RequestUtils(headers=headers, proxies=proxy, timeout=15).post_res(
-            url=url, data=post_data)
+        post_data = json.dumps(body, separators=(",", ":")) if body else None
+        res = RequestUtils(headers=headers, proxies=proxy, timeout=15).post_res(url=url, data=post_data)
     else:
         params = cfg.get("params")
         if params:
@@ -117,8 +117,9 @@ def _fetch_csrf_token(engine, site, user_config):
     cookie = user_config.get("cookie", "")
     ua = user_config.get("ua", "")
     proxy = get_proxies() if user_config.get("proxy") else None
-    res = RequestUtils(headers={"User-Agent": ua}, cookies=cookie if cookie else None,
-                       proxies=proxy, timeout=15).get_res(url=csrf_url)
+    res = RequestUtils(
+        headers={"User-Agent": ua}, cookies=cookie if cookie else None, proxies=proxy, timeout=15
+    ).get_res(url=csrf_url)
     if not res or res.status_code != 200:
         return None
     selector = auth.get("csrf_selector", "")
@@ -128,10 +129,10 @@ def _fetch_csrf_token(engine, site, user_config):
         return match.group(1) if match else None
     html_doc = etree.HTML(res.text)
     els = html_doc.xpath(selector)
-    if els and hasattr(els[0], 'text') and els[0].text:
+    if els and hasattr(els[0], "text") and els[0].text:
         return els[0].text
-    if els and hasattr(els[0], 'attrs') and 'content' in els[0].attrs:
-        return els[0].attrs['content']
+    if els and hasattr(els[0], "attrs") and "content" in els[0].attrs:
+        return els[0].attrs["content"]
     return None
 
 
@@ -149,11 +150,13 @@ def _fetch_passkey(engine, site, user_config):
     cookie = user_config.get("cookie", "")
     proxy = get_proxies() if user_config.get("proxy") else None
     if method.upper() == "GET":
-        res = RequestUtils(headers=headers, cookies=cookie if cookie else None,
-                           proxies=proxy, timeout=15).get_res(url=url)
+        res = RequestUtils(headers=headers, cookies=cookie if cookie else None, proxies=proxy, timeout=15).get_res(
+            url=url
+        )
     else:
-        res = RequestUtils(headers=headers, cookies=cookie if cookie else None,
-                           proxies=proxy, timeout=15).post_res(url=url)
+        res = RequestUtils(headers=headers, cookies=cookie if cookie else None, proxies=proxy, timeout=15).post_res(
+            url=url
+        )
     if res and res.status_code == 200:
         try:
             data = res.json()
@@ -186,11 +189,13 @@ def _call_html_endpoint(engine, url, html_cfg, user_config):
     proxy = get_proxies() if user_config.get("proxy") else None
 
     if method == "POST":
-        res = RequestUtils(headers=headers, cookies=cookie if cookie else None,
-                           proxies=proxy, timeout=15).post_res(url=req_url, data=body)
+        res = RequestUtils(headers=headers, cookies=cookie if cookie else None, proxies=proxy, timeout=15).post_res(
+            url=req_url, data=body
+        )
     else:
-        res = RequestUtils(headers=headers, cookies=cookie if cookie else None,
-                           proxies=proxy, timeout=15).get_res(url=req_url, params=params)
+        res = RequestUtils(headers=headers, cookies=cookie if cookie else None, proxies=proxy, timeout=15).get_res(
+            url=req_url, params=params
+        )
 
     if not res or res.status_code != 200:
         return None
@@ -210,10 +215,10 @@ def _call_html_endpoint(engine, url, html_cfg, user_config):
             result[field_name] = cfg.get("default", "")
             continue
         attr = cfg.get("attribute", "")
-        if attr and hasattr(els[0], 'attrib') and attr in els[0].attrib:
+        if attr and hasattr(els[0], "attrib") and attr in els[0].attrib:
             result[field_name] = els[0].attrib[attr]
-        elif hasattr(els[0], 'text'):
-            result[field_name] = "".join(e for e in els[0].xpath('.//text()') if e).strip()
+        elif hasattr(els[0], "text"):
+            result[field_name] = "".join(e for e in els[0].xpath(".//text()") if e).strip()
         elif isinstance(els[0], str):
             result[field_name] = els[0]
         else:

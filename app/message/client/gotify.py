@@ -8,10 +8,10 @@ class Gotify(_IMessageClient):
 
     def read_config(self):
         cfg = self._config or {}
-        self._server = StringUtils.get_base_url(cfg.get('server'))
-        self._token = cfg.get('token')
+        self._server = StringUtils.get_base_url(cfg.get("server"))
+        self._token = cfg.get("token")
         try:
-            self._priority = int(cfg.get('priority'))
+            self._priority = int(cfg.get("priority"))
         except Exception:
             self._priority = 8
 
@@ -27,10 +27,8 @@ class Gotify(_IMessageClient):
                 "message": text,
                 "priority": self._priority,
                 "extras": {
-                    "client::notification": {
-                        "click": {"url": url}
-                    },
-                }
+                    "client::notification": {"click": {"url": url}},
+                },
             }
             res = RequestUtils(content_type="application/json").post_res(sc_url, json=sc_data)
             if res and res.status_code == 200:
@@ -45,5 +43,6 @@ class Gotify(_IMessageClient):
 
     def send_list_msg(self, medias: list = None, user_id="", title="", **kwargs):
         pass
+
 
 ClientRegistry.register(Gotify)

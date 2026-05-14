@@ -2,6 +2,7 @@
 SyncService - 同步/转移业务层
 将 web/controllers/sync.py 中的业务逻辑下沉到可独立测试的 Service。
 """
+
 import os
 
 from app.core.module_config import ModuleConf
@@ -26,11 +27,13 @@ class SyncService:
     - 手工转移/自定义识别/重新识别的业务编排
     """
 
-    def __init__(self,
-                 sync: Sync | None = None,
-                 filetransfer: FileTransfer | None = None,
-                 media_cache: MediaCache | None = None,
-                 threadhelper: ThreadHelper | None = None):
+    def __init__(
+        self,
+        sync: Sync | None = None,
+        filetransfer: FileTransfer | None = None,
+        media_cache: MediaCache | None = None,
+        threadhelper: ThreadHelper | None = None,
+    ):
         self._sync = sync or Sync()
         self._filetransfer = filetransfer or FileTransfer()
         self._media_cache = media_cache or MediaCache()
@@ -58,9 +61,9 @@ class SyncService:
                 return False, "硬链接不能跨盘"
         return True, ""
 
-    def add_or_edit_sync_path(self, sid: int, source: str, dest: str,
-                              unknown: str, mode: str, compatibility: int,
-                              rename: int, enabled: int) -> tuple[bool, str]:
+    def add_or_edit_sync_path(
+        self, sid: int, source: str, dest: str, unknown: str, mode: str, compatibility: int, rename: int, enabled: int
+    ) -> tuple[bool, str]:
         """
         添加或编辑同步目录
         :return: (是否成功, 消息)
@@ -84,9 +87,13 @@ class SyncService:
             self._sync.check_source(source=source)
         # 插入数据库
         self._sync.insert_sync_path(
-            source=source, dest=dest, unknown=unknown,
-            mode=mode, compatibility=compatibility,
-            rename=rename, enabled=enabled
+            source=source,
+            dest=dest,
+            unknown=unknown,
+            mode=mode,
+            compatibility=compatibility,
+            rename=rename,
+            enabled=enabled,
         )
         return True, ""
 
@@ -130,19 +137,21 @@ class SyncService:
             return MediaType.TV
         return MediaType.ANIME
 
-    def manual_transfer(self,
-                        inpath: str,
-                        syncmod,
-                        outpath: str | None = None,
-                        media_type: MediaType | None = None,
-                        episode_format: str | None = None,
-                        episode_details: str | None = None,
-                        episode_part: str | None = None,
-                        episode_offset: str | None = None,
-                        min_filesize: int | None = None,
-                        tmdbid: int | None = None,
-                        season: int | None = None,
-                        need_fix_all: bool = False) -> ManualTransferResultDTO:
+    def manual_transfer(
+        self,
+        inpath: str,
+        syncmod,
+        outpath: str | None = None,
+        media_type: MediaType | None = None,
+        episode_format: str | None = None,
+        episode_details: str | None = None,
+        episode_part: str | None = None,
+        episode_offset: str | None = None,
+        min_filesize: int | None = None,
+        tmdbid: int | None = None,
+        season: int | None = None,
+        need_fix_all: bool = False,
+    ) -> ManualTransferResultDTO:
         """
         手工转移文件
         验证参数后提交后台线程执行，避免 API 超时
@@ -155,12 +164,10 @@ class SyncService:
 
         episode = None
         if episode_format:
-            episode = (EpisodeFormat(
-                episode_format,
-                episode_details or "",
-                episode_part or "",
-                episode_offset or ""
-            ), need_fix_all)
+            episode = (
+                EpisodeFormat(episode_format, episode_details or "", episode_part or "", episode_offset or ""),
+                need_fix_all,
+            )
 
         tmdb_info = None
         if tmdbid:
@@ -171,8 +178,20 @@ class SyncService:
         # 提交后台线程执行转移，避免 API 超时
         self._threadhelper.start_thread(
             self._filetransfer.transfer_media,
-            (SyncType.MAN, inpath, syncmod, None, outpath, None,
-             tmdb_info, media_type, season, episode, min_filesize, True)
+            (
+                SyncType.MAN,
+                inpath,
+                syncmod,
+                None,
+                outpath,
+                None,
+                tmdb_info,
+                media_type,
+                season,
+                episode,
+                min_filesize,
+                True,
+            ),
         )
 
         return ManualTransferResultDTO(success=True, message="转移任务已提交，正在后台执行")
@@ -186,6 +205,7 @@ class SyncService:
         :param ids: ID 列表
         提交后台线程执行，避免 API 超时
         """
+
         def _do_re_identify():
             for wid in ids:
                 try:
@@ -195,16 +215,14 @@ class SyncService:
                             continue
                         path = unknowninfo.PATH
                         dest_dir = unknowninfo.DEST
-                        rmt_mode = ModuleConf.get_enum_item(
-                            RmtMode, unknowninfo.MODE) if unknowninfo.MODE else None
+                        rmt_mode = ModuleConf.get_enum_item(RmtMode, unknowninfo.MODE) if unknowninfo.MODE else None
                     elif flag == "history":
                         transinfo = self._filetransfer.get_transfer_info_by_id(wid)
                         if not transinfo:
                             continue
                         path = os.path.join(transinfo.SOURCE_PATH, transinfo.SOURCE_FILENAME)
                         dest_dir = transinfo.DEST
-                        rmt_mode = ModuleConf.get_enum_item(
-                            RmtMode, transinfo.MODE) if transinfo.MODE else None
+                        rmt_mode = ModuleConf.get_enum_item(RmtMode, transinfo.MODE) if transinfo.MODE else None
                     else:
                         continue
 
@@ -214,8 +232,7 @@ class SyncService:
                         continue
 
                     succ_flag, msg = self._filetransfer.transfer_media(
-                        in_from=SyncType.MAN, rmt_mode=rmt_mode,
-                        in_path=path, target_dir=dest_dir
+                        in_from=SyncType.MAN, rmt_mode=rmt_mode, in_path=path, target_dir=dest_dir
                     )
                     if succ_flag and flag == "unidentification":
                         self._filetransfer.update_transfer_unknown_state(path)
@@ -270,27 +287,40 @@ class SyncService:
         dirs.sort()
         for ff in dirs:
             if os.path.isdir(ff):
-                if 'ONLYDIR' in ft or 'ALL' in ft:
-                    r.append({
-                        "path": ff.replace("\\", "/"),
-                        "name": os.path.basename(ff),
-                        "type": "dir",
-                        "rel": os.path.dirname(ff).replace("\\", "/")
-                    })
+                if "ONLYDIR" in ft or "ALL" in ft:
+                    r.append(
+                        {
+                            "path": ff.replace("\\", "/"),
+                            "name": os.path.basename(ff),
+                            "type": "dir",
+                            "rel": os.path.dirname(ff).replace("\\", "/"),
+                        }
+                    )
             else:
                 ext = os.path.splitext(ff)[-1][1:]
                 flag = False
-                if 'ONLYFILE' in ft or 'ALL' in ft or "MEDIAFILE" in ft and f".{str(ext).lower()}" in RMT_MEDIAEXT or "SUBFILE" in ft and f".{str(ext).lower()}" in RMT_SUBEXT or "AUDIOTRACKFILE" in ft and f".{str(ext).lower()}" in RMT_AUDIO_TRACK_EXT:
+                if (
+                    "ONLYFILE" in ft
+                    or "ALL" in ft
+                    or "MEDIAFILE" in ft
+                    and f".{str(ext).lower()}" in RMT_MEDIAEXT
+                    or "SUBFILE" in ft
+                    and f".{str(ext).lower()}" in RMT_SUBEXT
+                    or "AUDIOTRACKFILE" in ft
+                    and f".{str(ext).lower()}" in RMT_AUDIO_TRACK_EXT
+                ):
                     flag = True
                 if flag:
-                    r.append({
-                        "path": ff.replace("\\", "/"),
-                        "name": os.path.basename(ff),
-                        "type": "file",
-                        "rel": os.path.dirname(ff).replace("\\", "/"),
-                        "ext": ext,
-                        "size": StringUtils.str_filesize(os.path.getsize(ff))
-                    })
+                    r.append(
+                        {
+                            "path": ff.replace("\\", "/"),
+                            "name": os.path.basename(ff),
+                            "type": "file",
+                            "rel": os.path.dirname(ff).replace("\\", "/"),
+                            "ext": ext,
+                            "size": StringUtils.str_filesize(os.path.getsize(ff)),
+                        }
+                    )
         return r
 
     # ---------- 文件重命名 ----------
@@ -302,6 +332,7 @@ class SyncService:
             return SimpleResultDTO(success=True)
         try:
             import shutil
+
             shutil.move(path, os.path.join(os.path.dirname(path), name))
             return SimpleResultDTO(success=True)
         except Exception as e:
@@ -317,6 +348,7 @@ class SyncService:
         """
         import importlib
         import re
+
         m = re.match(r"^(\w+)\(\)\.(\w+)\(\)$", cmd.strip())
         if not m:
             return None
@@ -356,6 +388,7 @@ class SyncService:
         测试模块连接状态
         """
         import importlib
+
         ret = None
         module_obj = None
         if not command:
@@ -370,14 +403,14 @@ class SyncService:
                 if command.find("|") != -1:
                     module = command.split("|")[0]
                     class_name = command.split("|")[1]
-                    module_obj = getattr(
-                        importlib.import_module(module), class_name)()
+                    module_obj = getattr(importlib.import_module(module), class_name)()
                     if hasattr(module_obj, "init_config"):
                         module_obj.init_config()
                     ret = module_obj.get_status()
                 else:
                     ret = cls.exec_test_command(command)
             from config import Config
+
             Config().init_config()
             if module_obj:
                 if hasattr(module_obj, "init_config"):
@@ -390,11 +423,11 @@ class SyncService:
     # ---------- 目录配置更新 ----------
 
     @staticmethod
-    def update_directory(oper: str, key: str, value: str,
-                         replace_value: str | None = None) -> SimpleResultDTO:
+    def update_directory(oper: str, key: str, value: str, replace_value: str | None = None) -> SimpleResultDTO:
         """更新配置中的目录路径"""
         from app.utils.web_utils import set_config_directory
         from config import Config
+
         cfg = set_config_directory(Config().get_config(), oper, key, value, replace_value)
         Config().save_config(cfg)
         return SimpleResultDTO(success=True)

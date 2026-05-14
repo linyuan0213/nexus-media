@@ -10,7 +10,6 @@ app.dependency_overrides[get_current_user] = lambda: "testuser"
 
 
 class TestRbacRouter:
-
     # ----- rbac_service endpoints -----
 
     @patch("api.routers.rbac.rbac_service")
@@ -19,18 +18,14 @@ class TestRbacRouter:
         menu.to_dict.return_value = {"id": 1, "name": "menu1"}
         mock_rbac.create_menu.return_value = (True, menu)
 
-        resp = client.post("/api/rbac/create_menu", json={
-            "menu_name": "menu1", "menu_code": "m1"
-        })
+        resp = client.post("/api/rbac/create_menu", json={"menu_name": "menu1", "menu_code": "m1"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["success"] is True
         assert data["data"]["id"] == 1
 
     def test_create_menu_fail_validation(self):
-        resp = client.post("/api/rbac/create_menu", json={
-            "menu_name": "", "menu_code": ""
-        })
+        resp = client.post("/api/rbac/create_menu", json={"menu_name": "", "menu_code": ""})
         assert resp.status_code == 200
         assert resp.json()["success"] is False
 
@@ -40,9 +35,7 @@ class TestRbacRouter:
         role.to_dict.return_value = {"id": 1, "name": "role1"}
         mock_rbac.create_role.return_value = (True, role)
 
-        resp = client.post("/api/rbac/create_role", json={
-            "role_name": "role1", "role_code": "r1"
-        })
+        resp = client.post("/api/rbac/create_role", json={"role_name": "role1", "role_code": "r1"})
         assert resp.status_code == 200
         assert resp.json()["success"] is True
 
@@ -95,9 +88,7 @@ class TestRbacRouter:
     def test_update_menu(self, mock_rbac):
         mock_rbac.update_menu.return_value = (True, "更新成功")
 
-        resp = client.post("/api/rbac/update_menu", json={
-            "id": 1, "menu_name": "new name"
-        })
+        resp = client.post("/api/rbac/update_menu", json={"id": 1, "menu_name": "new name"})
         assert resp.status_code == 200
         assert resp.json()["success"] is True
 
@@ -105,12 +96,15 @@ class TestRbacRouter:
     def test_update_menu_sort(self, mock_rbac):
         mock_rbac.update_menu.return_value = (True, "ok")
 
-        resp = client.post("/api/rbac/update_menu_sort", json={
-            "menu_orders": [
-                {"id": 1, "sort_order": 0, "parent_id": None},
-                {"id": 2, "sort_order": 1, "parent_id": 1}
-            ]
-        })
+        resp = client.post(
+            "/api/rbac/update_menu_sort",
+            json={
+                "menu_orders": [
+                    {"id": 1, "sort_order": 0, "parent_id": None},
+                    {"id": 2, "sort_order": 1, "parent_id": 1},
+                ]
+            },
+        )
         assert resp.status_code == 200
         assert resp.json()["success"] is True
         assert "2" in resp.json()["message"]
@@ -119,9 +113,9 @@ class TestRbacRouter:
     def test_update_role(self, mock_rbac):
         mock_rbac.update_role.return_value = (True, "更新成功")
 
-        resp = client.post("/api/rbac/update_role", json={
-            "id": 1, "role_name": "new", "permission_ids": [1, 2], "menu_ids": [3]
-        })
+        resp = client.post(
+            "/api/rbac/update_role", json={"id": 1, "role_name": "new", "permission_ids": [1, 2], "menu_ids": [3]}
+        )
         assert resp.status_code == 200
         assert resp.json()["success"] is True
         mock_rbac.assign_permissions_to_role.assert_called_once_with(1, [1, 2])
@@ -131,9 +125,7 @@ class TestRbacRouter:
     def test_update_user(self, mock_rbac):
         mock_rbac.update_user.return_value = (True, "更新成功")
 
-        resp = client.post("/api/rbac/update_user", json={
-            "id": 1, "email": "a@b.com", "role_ids": [1]
-        })
+        resp = client.post("/api/rbac/update_user", json={"id": 1, "email": "a@b.com", "role_ids": [1]})
         assert resp.status_code == 200
         assert resp.json()["success"] is True
         mock_rbac.assign_roles_to_user.assert_called_once_with(1, [1])
@@ -146,9 +138,7 @@ class TestRbacRouter:
         user.to_dict.return_value = {"id": 1, "username": "test"}
         mock_rbac.create_user.return_value = (True, user)
 
-        resp = client.post("/api/rbac/create_user", json={
-            "username": "test", "password": "123456"
-        })
+        resp = client.post("/api/rbac/create_user", json={"username": "test", "password": "123456"})
         assert resp.status_code == 200
         assert resp.json()["success"] is True
 
@@ -174,9 +164,7 @@ class TestRbacRouter:
     def test_reset_password(self, mock_rbac):
         mock_rbac.reset_password.return_value = (True, "重置成功")
 
-        resp = client.post("/api/rbac/reset_password", json={
-            "user_id": 1, "new_password": "newpass"
-        })
+        resp = client.post("/api/rbac/reset_password", json={"user_id": 1, "new_password": "newpass"})
         assert resp.status_code == 200
         assert resp.json()["success"] is True
 
@@ -217,9 +205,7 @@ class TestRbacRouter:
 
         mock_rbac.get_user_menus.return_value = [parent, child]
 
-        resp = client.post("/api/rbac/get_user_menus", json={
-            "ignore": ["admin"]
-        })
+        resp = client.post("/api/rbac/get_user_menus", json={"ignore": ["admin"]})
         assert resp.status_code == 200
         assert resp.json()["menus"][0]["name"] == "Home"
         assert resp.json()["level"] == 0  # 测试使用 str override，level 默认为 0

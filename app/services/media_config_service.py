@@ -1,4 +1,5 @@
 """媒体路径配置服务 — 从数据库读取，兼容 YAML 回退"""
+
 import json
 
 from app.db.repositories.config_repo_adapter import MediaConfigRepositoryAdapter
@@ -29,10 +30,18 @@ class MediaConfigService:
     def get_config(self) -> dict:
         db_cfg = self._repo.get_media_config()
         return {
-            "movie_path": self._parse_paths(db_cfg.MOVIE_PATH) if db_cfg and db_cfg.MOVIE_PATH else (self._yaml_fallback.get("movie_path") or []),
-            "tv_path": self._parse_paths(db_cfg.TV_PATH) if db_cfg and db_cfg.TV_PATH else (self._yaml_fallback.get("tv_path") or []),
-            "anime_path": self._parse_paths(db_cfg.ANIME_PATH) if db_cfg and db_cfg.ANIME_PATH else (self._yaml_fallback.get("anime_path") or []),
-            "unknown_path": self._parse_paths(db_cfg.UNKNOWN_PATH) if db_cfg and db_cfg.UNKNOWN_PATH else (self._yaml_fallback.get("unknown_path") or []),
+            "movie_path": self._parse_paths(db_cfg.MOVIE_PATH)
+            if db_cfg and db_cfg.MOVIE_PATH
+            else (self._yaml_fallback.get("movie_path") or []),
+            "tv_path": self._parse_paths(db_cfg.TV_PATH)
+            if db_cfg and db_cfg.TV_PATH
+            else (self._yaml_fallback.get("tv_path") or []),
+            "anime_path": self._parse_paths(db_cfg.ANIME_PATH)
+            if db_cfg and db_cfg.ANIME_PATH
+            else (self._yaml_fallback.get("anime_path") or []),
+            "unknown_path": self._parse_paths(db_cfg.UNKNOWN_PATH)
+            if db_cfg and db_cfg.UNKNOWN_PATH
+            else (self._yaml_fallback.get("unknown_path") or []),
         }
 
     def add_path(self, path_type: str, path: str) -> bool:
@@ -50,13 +59,14 @@ class MediaConfigService:
         self._repo.update_path(path_type, old_path, new_path)
         return True
 
-    def set_config(self, movie_path: list[str], tv_path: list[str],
-                   anime_path: list[str], unknown_path: list[str]) -> bool:
+    def set_config(
+        self, movie_path: list[str], tv_path: list[str], anime_path: list[str], unknown_path: list[str]
+    ) -> bool:
         """一次性保存整个配置"""
         self._repo.set_media_config(
-            movie_path=json.dumps(movie_path) if movie_path else '',
-            tv_path=json.dumps(tv_path) if tv_path else '',
-            anime_path=json.dumps(anime_path) if anime_path else '',
-            unknown_path=json.dumps(unknown_path) if unknown_path else '',
+            movie_path=json.dumps(movie_path) if movie_path else "",
+            tv_path=json.dumps(tv_path) if tv_path else "",
+            anime_path=json.dumps(anime_path) if anime_path else "",
+            unknown_path=json.dumps(unknown_path) if unknown_path else "",
         )
         return True

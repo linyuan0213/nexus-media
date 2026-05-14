@@ -30,7 +30,7 @@ class ImageProxyHelper:
 
         # 如果使用代理，返回本地代理 URL
         if use_proxy:
-            path_clean = path.lstrip('/')
+            path_clean = path.lstrip("/")
             return f"/img/tmdb/{prefix}/{path_clean}"
 
         if tmdb_image_url:
@@ -40,22 +40,22 @@ class ImageProxyHelper:
     @staticmethod
     def get_tmdbimage_thumb_url(path, use_proxy=False):
         """获取缩略图 URL (w92)"""
-        return ImageProxyHelper.get_tmdbimage_url(path, size='thumb', use_proxy=use_proxy)
+        return ImageProxyHelper.get_tmdbimage_url(path, size="thumb", use_proxy=use_proxy)
 
     @staticmethod
     def get_tmdbimage_small_url(path, use_proxy=False):
         """获取小图 URL (w185) - 适合列表"""
-        return ImageProxyHelper.get_tmdbimage_url(path, size='small', use_proxy=use_proxy)
+        return ImageProxyHelper.get_tmdbimage_url(path, size="small", use_proxy=use_proxy)
 
     @staticmethod
     def get_tmdbimage_medium_url(path, use_proxy=False):
         """获取中图 URL (w342) - 适合卡片"""
-        return ImageProxyHelper.get_tmdbimage_url(path, size='medium', use_proxy=use_proxy)
+        return ImageProxyHelper.get_tmdbimage_url(path, size="medium", use_proxy=use_proxy)
 
     @staticmethod
     def get_tmdbimage_large_url(path, use_proxy=False):
         """获取大图 URL (w500) - 适合详情页"""
-        return ImageProxyHelper.get_tmdbimage_url(path, size='large', use_proxy=use_proxy)
+        return ImageProxyHelper.get_tmdbimage_url(path, size="large", use_proxy=use_proxy)
 
     @staticmethod
     def get_image_proxy_enabled(app_config):
@@ -81,36 +81,37 @@ class ImageProxyHelper:
             return url
 
         # 已经是本地代理路径，直接返回
-        if url.startswith('/img/'):
+        if url.startswith("/img/"):
             return url
 
         try:
             # 处理 TMDB 图片
-            if 'image.tmdb.org' in url:
-                match = re.search(r'/t/p/(\w+)(/.+)', url)
+            if "image.tmdb.org" in url:
+                match = re.search(r"/t/p/(\w+)(/.+)", url)
                 if match:
                     size = match.group(1)
-                    path = match.group(2).lstrip('/')
+                    path = match.group(2).lstrip("/")
                     return f"/img/tmdb/{size}/{path}"
                 return url
 
             # 处理豆瓣图片
-            if 'doubanio.com' in url or 'douban.com' in url:
-                encoded_path = urllib.parse.quote(url, safe='')
+            if "doubanio.com" in url or "douban.com" in url:
+                encoded_path = urllib.parse.quote(url, safe="")
                 return f"/img/douban/{encoded_path}"
 
             # 处理 Bangumi 图片
-            if 'lain.bgm.tv' in url:
-                encoded_path = urllib.parse.quote(url, safe='')
+            if "lain.bgm.tv" in url:
+                encoded_path = urllib.parse.quote(url, safe="")
                 return f"/img/bgm/{encoded_path}"
 
             # 其他外部图片统一走 library 代理
-            if url.startswith('http'):
-                encoded_path = urllib.parse.quote(url, safe='')
+            if url.startswith("http"):
+                encoded_path = urllib.parse.quote(url, safe="")
                 return f"/img/library/{encoded_path}"
 
         except Exception as e:
             import log
+
             log.error(f"【get_proxy_image_url】处理图片代理失败: {str(e)}")
 
         return url

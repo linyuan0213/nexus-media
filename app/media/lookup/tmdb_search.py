@@ -24,7 +24,7 @@ class TmdbSearch:
             movies = self.client.search.movies(params)
             blacklist = [str(item.TMDB_ID) for item in self.client.get_blacklist()]
             if movies and blacklist:
-                movies = [m for m in movies if not (m.get('id') and str(m.get('id')) in blacklist)]
+                movies = [m for m in movies if not (m.get("id") and str(m.get("id")) in blacklist)]
         except (TMDbException, Exception) as err:
             log.error(f"【Meta】连接TMDB出错：{str(err)}")
             return None
@@ -32,28 +32,31 @@ class TmdbSearch:
             return {}
         # 第一轮：优先匹配 original_title 完全相等
         for movie in movies:
-            if not movie.get('release_date'):
+            if not movie.get("release_date"):
                 continue
-            year_matched = not year or movie.get('release_date', '')[:4] == str(year)
+            year_matched = not year or movie.get("release_date", "")[:4] == str(year)
             if not year_matched:
                 continue
-            original = movie.get('original_title')
-            if original and StringUtils.handler_special_chars(original).strip().upper() == StringUtils.handler_special_chars(name).strip().upper():
+            original = movie.get("original_title")
+            if (
+                original
+                and StringUtils.handler_special_chars(original).strip().upper()
+                == StringUtils.handler_special_chars(name).strip().upper()
+            ):
                 return movie
         # 第二轮：模糊匹配 title / original_title
         for movie in movies:
-            if not movie.get('release_date'):
+            if not movie.get("release_date"):
                 continue
-            year_matched = not year or movie.get('release_date', '')[:4] == str(year)
+            year_matched = not year or movie.get("release_date", "")[:4] == str(year)
             if not year_matched:
                 continue
-            if (compare_tmdb_names(name, movie.get('title')) or
-                compare_tmdb_names(name, movie.get('original_title'))):
+            if compare_tmdb_names(name, movie.get("title")) or compare_tmdb_names(name, movie.get("original_title")):
                 return movie
         return self._fuzzy_match_movie(name, year, movies)
 
     def _fuzzy_match_movie(self, name, year, movies):
-        candidates = [m for m in movies[:5] if not year or m.get('release_date', '')[:4] == str(year)]
+        candidates = [m for m in movies[:5] if not year or m.get("release_date", "")[:4] == str(year)]
         if not candidates:
             return {}
         results = {}
@@ -84,7 +87,7 @@ class TmdbSearch:
             tvs = self.client.search.tv_shows(params)
             blacklist = [str(item.TMDB_ID) for item in self.client.get_blacklist()]
             if tvs and blacklist:
-                tvs = [t for t in tvs if not (t.get('id') and str(t.get('id')) in blacklist)]
+                tvs = [t for t in tvs if not (t.get("id") and str(t.get("id")) in blacklist)]
         except (TMDbException, Exception) as err:
             log.error(f"【Meta】连接TMDB出错：{str(err)}")
             return None
@@ -95,8 +98,8 @@ class TmdbSearch:
             """验证作品集数是否足够容纳目标集号（高集号动漫专用）"""
             if not episode or episode <= 50:
                 return True
-            detail = self._get_detail(tv_info.get('id'), MediaType.TV)
-            ep_count = detail.get('number_of_episodes', 0) if detail else 0
+            detail = self._get_detail(tv_info.get("id"), MediaType.TV)
+            ep_count = detail.get("number_of_episodes", 0) if detail else 0
             if ep_count < episode:
                 log.debug(f"【Meta】{tv_info.get('name')} 集数({ep_count})不足({episode})，跳过")
                 return False
@@ -105,29 +108,33 @@ class TmdbSearch:
         # 第一轮：收集所有精确匹配项，优先返回 anime（genre_ids 含 16）
         exact_matches = []
         for tv in tvs:
-            if not tv.get('first_air_date'):
+            if not tv.get("first_air_date"):
                 continue
-            year_matched = not year or tv.get('first_air_date', '')[:4] == str(year)
+            year_matched = not year or tv.get("first_air_date", "")[:4] == str(year)
             if not year_matched:
                 continue
-            original = tv.get('original_name')
-            is_exact = original and StringUtils.handler_special_chars(original).strip().upper() == StringUtils.handler_special_chars(name).strip().upper()
-            is_fuzzy = compare_tmdb_names(name, tv.get('name')) or compare_tmdb_names(name, tv.get('original_name'))
+            original = tv.get("original_name")
+            is_exact = (
+                original
+                and StringUtils.handler_special_chars(original).strip().upper()
+                == StringUtils.handler_special_chars(name).strip().upper()
+            )
+            is_fuzzy = compare_tmdb_names(name, tv.get("name")) or compare_tmdb_names(name, tv.get("original_name"))
             if is_exact or is_fuzzy:
-                if season_number and not self._tv_has_season(tv.get('id'), season_number):
+                if season_number and not self._tv_has_season(tv.get("id"), season_number):
                     continue
                 if _episode_valid(tv):
                     exact_matches.append(tv)
         if exact_matches:
             # 优先返回 anime（genre_ids 包含 16 = Animation）
             for tv in exact_matches:
-                if 16 in (tv.get('genre_ids') or []):
+                if 16 in (tv.get("genre_ids") or []):
                     return tv
             return exact_matches[0]
         return self._fuzzy_match_tv(name, year, tvs, season_number, episode)
 
     def _fuzzy_match_tv(self, name, year, tvs, season_number=None, episode=None):
-        candidates = [t for t in tvs[:5] if not year or t.get('first_air_date', '')[:4] == str(year)]
+        candidates = [t for t in tvs[:5] if not year or t.get("first_air_date", "")[:4] == str(year)]
         if not candidates:
             return {}
         results = {}
@@ -148,17 +155,17 @@ class TmdbSearch:
             if res:
                 _, (info, names) = res
                 if compare_tmdb_names(name, names):
-                    if season_number and not self._tv_has_season(tv.get('id'), season_number):
+                    if season_number and not self._tv_has_season(tv.get("id"), season_number):
                         continue
                     if episode and episode > 50 and info:
-                        ep_count = info.get('number_of_episodes', 0)
+                        ep_count = info.get("number_of_episodes", 0)
                         if ep_count < episode:
                             log.debug(f"【Meta】{info.get('name')} 集数({ep_count})不足({episode})，跳过")
                             continue
                     fuzzy_matches.append(info)
         if fuzzy_matches:
             for info in fuzzy_matches:
-                if 16 in (info.get('genre_ids') or []):
+                if 16 in (info.get("genre_ids") or []):
                     return info
             return fuzzy_matches[0]
         return {}
@@ -170,10 +177,7 @@ class TmdbSearch:
             if not tv_info:
                 return False
             seasons = tv_info.get("seasons") or []
-            return any(
-                s.get("season_number") == int(season_number) and s.get("episode_count", 0) > 0
-                for s in seasons
-            )
+            return any(s.get("season_number") == int(season_number) and s.get("episode_count", 0) > 0 for s in seasons)
         except Exception:
             return False
 
@@ -184,8 +188,7 @@ class TmdbSearch:
             try:
                 seasons = tv_info.get("seasons") or []
                 return any(
-                    s.get("air_date", "")[:4] == str(season_year)
-                    and s.get("season_number") == int(season_number)
+                    s.get("air_date", "")[:4] == str(season_year) and s.get("season_number") == int(season_number)
                     for s in seasons
                 )
             except Exception as e:
@@ -195,7 +198,7 @@ class TmdbSearch:
         def _episode_valid(tv_info):
             if not episode or episode <= 50:
                 return True
-            ep_count = tv_info.get('number_of_episodes', 0) if tv_info else 0
+            ep_count = tv_info.get("number_of_episodes", 0) if tv_info else 0
             if ep_count < episode:
                 log.debug(f"【Meta】{tv_info.get('name')} 集数({ep_count})不足({episode})，跳过")
                 return False
@@ -205,17 +208,17 @@ class TmdbSearch:
             tvs = self.client.search.tv_shows({"query": name})
             blacklist = [str(item.TMDB_ID) for item in self.client.get_blacklist()]
             if tvs and blacklist:
-                tvs = [t for t in tvs if not (t.get('id') and str(t.get('id')) in blacklist)]
+                tvs = [t for t in tvs if not (t.get("id") and str(t.get("id")) in blacklist)]
         except (TMDbException, Exception) as err:
             log.error(f"【Meta】连接TMDB出错：{str(err)}")
             return None
         if not tvs:
             return {}
         for tv in tvs:
-            if (compare_tmdb_names(name, tv.get('name')) or
-                compare_tmdb_names(name, tv.get('original_name'))) and \
-               tv.get('first_air_date', '')[:4] == str(media_year):
-                detail = self._get_detail(tv.get('id'), MediaType.TV)
+            if (
+                compare_tmdb_names(name, tv.get("name")) or compare_tmdb_names(name, tv.get("original_name"))
+            ) and tv.get("first_air_date", "")[:4] == str(media_year):
+                detail = self._get_detail(tv.get("id"), MediaType.TV)
                 if _episode_valid(detail):
                     return tv
         candidates = tvs[:5]
@@ -252,16 +255,16 @@ class TmdbSearch:
         tv_matches = []
         for multi in multis:
             if multi.get("media_type") == "movie":
-                if (compare_tmdb_names(name, multi.get('title')) or
-                    compare_tmdb_names(name, multi.get('original_title'))):
+                if compare_tmdb_names(name, multi.get("title")) or compare_tmdb_names(
+                    name, multi.get("original_title")
+                ):
                     return multi
             elif multi.get("media_type") == "tv":
-                if (compare_tmdb_names(name, multi.get('name')) or
-                    compare_tmdb_names(name, multi.get('original_name'))):
+                if compare_tmdb_names(name, multi.get("name")) or compare_tmdb_names(name, multi.get("original_name")):
                     tv_matches.append(multi)
         if tv_matches:
             for tv in tv_matches:
-                if 16 in (tv.get('genre_ids') or []):
+                if 16 in (tv.get("genre_ids") or []):
                     return tv
             return tv_matches[0]
         for multi in multis[:5]:
@@ -275,7 +278,7 @@ class TmdbSearch:
                     tv_matches.append(tv_info)
         if tv_matches:
             for tv in tv_matches:
-                if 16 in (tv.get('genre_ids') or []):
+                if 16 in (tv.get("genre_ids") or []):
                     return tv
             return tv_matches[0]
         return {}
@@ -292,7 +295,7 @@ class TmdbSearch:
         ret_infos = []
         for multi in multis:
             if multi.get("media_type") in ["movie", "tv"]:
-                multi['media_type'] = MediaType.MOVIE if multi.get("media_type") == "movie" else MediaType.TV
+                multi["media_type"] = MediaType.MOVIE if multi.get("media_type") == "movie" else MediaType.TV
                 ret_infos.append(multi)
         return ret_infos
 
@@ -310,7 +313,7 @@ class TmdbSearch:
             return []
         ret_infos = []
         for movie in movies:
-            movie['media_type'] = MediaType.MOVIE
+            movie["media_type"] = MediaType.MOVIE
             ret_infos.append(movie)
         return ret_infos
 
@@ -328,7 +331,7 @@ class TmdbSearch:
             return []
         ret_infos = []
         for tv in tvs:
-            tv['media_type'] = MediaType.TV
+            tv["media_type"] = MediaType.TV
             ret_infos.append(tv)
         return ret_infos
 
@@ -342,12 +345,9 @@ class TmdbSearch:
             return None
         try:
             html = etree.HTML(res.text)
-            xpath = ("//a[@data-id and @data-media-type='tv']/@href"
-                     if mtype == MediaType.TV
-                     else "//a[@data-id]/@href")
+            xpath = "//a[@data-id and @data-media-type='tv']/@href" if mtype == MediaType.TV else "//a[@data-id]/@href"
             tmdb_links = [
-                link for link in html.xpath(xpath)
-                if link and (link.startswith("/tv") or link.startswith("/movie"))
+                link for link in html.xpath(xpath) if link and (link.startswith("/tv") or link.startswith("/movie"))
             ]
             if len(tmdb_links) != 1:
                 log.info(f"【Meta】{name} TMDB网站返回{'数据过多' if tmdb_links else '无'}结果")
@@ -355,7 +355,7 @@ class TmdbSearch:
             media_type = MediaType.TV if tmdb_links[0].startswith("/tv") else MediaType.MOVIE
             tmdbid = tmdb_links[0].split("/")[-1]
             tmdbinfo = self._get_detail(tmdbid, media_type)
-            if not tmdbinfo or (mtype == MediaType.TV and tmdbinfo.get('media_type') != MediaType.TV):
+            if not tmdbinfo or (mtype == MediaType.TV and tmdbinfo.get("media_type") != MediaType.TV):
                 return None
             log.info(
                 f"【Meta】{name} 从WEB识别到 {'电影' if media_type == MediaType.MOVIE else '电视剧'}："

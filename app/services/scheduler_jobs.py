@@ -34,15 +34,15 @@ def load_default_jobs(scheduler):
     if not scheduler:
         return
 
-    _pt = Config().get_config('pt')
-    _media = Config().get_config('media')
-    _jobstore = 'default'
+    _pt = Config().get_config("pt")
+    _media = Config().get_config("media")
+    _jobstore = "default"
 
     if _pt:
         # 数据统计
-        ptrefresh_date_cron = _pt.get('ptrefresh_date_cron')
+        ptrefresh_date_cron = _pt.get("ptrefresh_date_cron")
         if ptrefresh_date_cron:
-            tz = pytz.timezone(os.environ.get('TZ'))
+            tz = pytz.timezone(os.environ.get("TZ"))
             scheduler.register_smart_cron(
                 job_id="SiteUserInfo.refresh_site_data_now",
                 func=_refresh_site_data_now_threaded,
@@ -50,11 +50,11 @@ def load_default_jobs(scheduler):
                 func_desc="站点数据统计",
                 cron=str(ptrefresh_date_cron),
                 next_run_time=datetime.datetime.now(tz) + datetime.timedelta(minutes=1),
-                jobstore=_jobstore
+                jobstore=_jobstore,
             )
 
         # RSS下载器
-        pt_check_interval = _pt.get('pt_check_interval')
+        pt_check_interval = _pt.get("pt_check_interval")
         if pt_check_interval:
             if isinstance(pt_check_interval, str) and pt_check_interval.isdigit():
                 pt_check_interval = int(pt_check_interval)
@@ -73,12 +73,12 @@ def load_default_jobs(scheduler):
                     name="RSS订阅下载",
                     func=Rss().rssdownload,
                     seconds=pt_check_interval,
-                    jobstore=_jobstore
+                    jobstore=_jobstore,
                 )
                 log.info("RSS订阅服务启动")
 
         # RSS订阅定时搜索
-        search_rss_interval = _pt.get('search_rss_interval')
+        search_rss_interval = _pt.get("search_rss_interval")
         if search_rss_interval:
             if isinstance(search_rss_interval, str) and search_rss_interval.isdigit():
                 search_rss_interval = int(search_rss_interval)
@@ -97,7 +97,7 @@ def load_default_jobs(scheduler):
                     name="订阅搜索",
                     func=Subscribe().subscribe_search_all,
                     hours=search_rss_interval,
-                    jobstore=_jobstore
+                    jobstore=_jobstore,
                 )
                 log.info("订阅定时搜索服务启动")
 
@@ -120,7 +120,7 @@ def load_default_jobs(scheduler):
                     name="媒体库同步",
                     func=MediaServer().sync_mediaserver,
                     hours=mediasync_interval,
-                    jobstore=_jobstore
+                    jobstore=_jobstore,
                 )
                 log.info("媒体库同步服务启动")
 
@@ -130,7 +130,7 @@ def load_default_jobs(scheduler):
         name="目录同步监控",
         func=Sync().transfer_mon_files,
         seconds=SYNC_TRANSFER_INTERVAL,
-        jobstore=_jobstore
+        jobstore=_jobstore,
     )
 
     # RSS队列中搜索
@@ -139,7 +139,7 @@ def load_default_jobs(scheduler):
         name="订阅队列状态搜索",
         func=Subscribe().subscribe_search,
         seconds=RSS_CHECK_INTERVAL,
-        jobstore=_jobstore
+        jobstore=_jobstore,
     )
 
     # 豆瓣RSS转TMDB，定时更新TMDB数据
@@ -148,7 +148,7 @@ def load_default_jobs(scheduler):
         name="豆瓣RSS转TMDB",
         func=Subscribe().refresh_rss_metainfo,
         hours=RSS_REFRESH_TMDB_INTERVAL,
-        jobstore=_jobstore
+        jobstore=_jobstore,
     )
 
     # 定时刷新壁纸
@@ -158,7 +158,7 @@ def load_default_jobs(scheduler):
         func=get_login_wallpaper,
         hours=REFRESH_WALLPAPER_INTERVAL,
         next_run_time=datetime.datetime.now(),
-        jobstore=_jobstore
+        jobstore=_jobstore,
     )
 
     # 定时清理临时文件（每6小时执行一次）
@@ -168,5 +168,5 @@ def load_default_jobs(scheduler):
         func=TempCleanupHelper.do_cleanup,
         seconds=6 * 3600,
         next_run_time=datetime.datetime.now(),
-        jobstore=_jobstore
+        jobstore=_jobstore,
     )

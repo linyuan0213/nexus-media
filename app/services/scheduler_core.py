@@ -31,6 +31,7 @@ from app.utils.commons import SingletonMeta
 
 class JobStatus(Enum):
     """任务执行状态"""
+
     PENDING = "pending"
     RUNNING = "running"
     SUCCESS = "success"
@@ -41,6 +42,7 @@ class JobStatus(Enum):
 @dataclass
 class JobStats:
     """任务执行统计"""
+
     job_id: str
     total_runs: int = 0
     success_count: int = 0
@@ -77,29 +79,30 @@ class JobStats:
     def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
-            'job_id': self.job_id,
-            'total_runs': self.total_runs,
-            'success_count': self.success_count,
-            'failure_count': self.failure_count,
-            'retry_count': self.retry_count,
-            'last_run_time': self.last_run_time.isoformat() if self.last_run_time else None,
-            'last_duration': self.last_duration,
-            'avg_duration': round(self.avg_duration, 3),
-            'last_error': self.last_error,
-            'consecutive_failures': self.consecutive_failures
+            "job_id": self.job_id,
+            "total_runs": self.total_runs,
+            "success_count": self.success_count,
+            "failure_count": self.failure_count,
+            "retry_count": self.retry_count,
+            "last_run_time": self.last_run_time.isoformat() if self.last_run_time else None,
+            "last_duration": self.last_duration,
+            "avg_duration": round(self.avg_duration, 3),
+            "last_error": self.last_error,
+            "consecutive_failures": self.consecutive_failures,
         }
 
 
 @dataclass
 class TaskConfig:
     """任务配置数据类"""
+
     job_id: str
     func: Callable
     name: str | None = None
-    trigger: str = 'interval'
+    trigger: str = "interval"
     args: tuple = field(default_factory=tuple)
     kwargs: dict[str, Any] = field(default_factory=dict)
-    jobstore: str = 'default'
+    jobstore: str = "default"
     hours: int | None = None
     minutes: int | None = None
     seconds: int | None = None
@@ -116,51 +119,51 @@ class TaskConfig:
             raise ValueError("job_id 不能为空")
         if not callable(self.func):
             raise ValueError("func 必须是可调用的")
-        if self.trigger not in ('interval', 'date', 'cron'):
+        if self.trigger not in ("interval", "date", "cron"):
             raise ValueError(f"不支持的 trigger 类型: {self.trigger}")
-        if self.trigger == 'interval':
+        if self.trigger == "interval":
             if not any([self.hours, self.minutes, self.seconds]):
                 raise ValueError("interval 类型任务需要设置 hours/minutes/seconds 至少一个")
-        if self.trigger == 'date' and not self.run_date:
+        if self.trigger == "date" and not self.run_date:
             raise ValueError("date 类型任务需要设置 run_date")
-        if self.trigger == 'cron' and not self.cron:
+        if self.trigger == "cron" and not self.cron:
             raise ValueError("cron 类型任务需要设置 cron 表达式")
 
     def to_scheduler_args(self) -> dict[str, Any]:
         """转换为 APScheduler 参数"""
         args = {
-            'func': self.func,
-            'args': self.args,
-            'kwargs': self.kwargs,
-            'id': self.job_id,
-            'name': self.name,
-            'jobstore': self.jobstore,
-            'replace_existing': True,
-            'max_instances': self.max_instances,
-            'misfire_grace_time': self.misfire_grace_time,
-            'coalesce': self.coalesce
+            "func": self.func,
+            "args": self.args,
+            "kwargs": self.kwargs,
+            "id": self.job_id,
+            "name": self.name,
+            "jobstore": self.jobstore,
+            "replace_existing": True,
+            "max_instances": self.max_instances,
+            "misfire_grace_time": self.misfire_grace_time,
+            "coalesce": self.coalesce,
         }
 
-        if self.trigger == 'interval':
+        if self.trigger == "interval":
             trigger_args = {}
             if self.hours is not None:
-                trigger_args['hours'] = self.hours
+                trigger_args["hours"] = self.hours
             if self.minutes is not None:
-                trigger_args['minutes'] = self.minutes
+                trigger_args["minutes"] = self.minutes
             if self.seconds is not None:
-                trigger_args['seconds'] = self.seconds
-            args['trigger'] = 'interval'
+                trigger_args["seconds"] = self.seconds
+            args["trigger"] = "interval"
             args.update(trigger_args)
-        elif self.trigger == 'date':
-            args['trigger'] = 'date'
-            args['run_date'] = self.run_date
-        elif self.trigger == 'cron':
-            args['trigger'] = CronTrigger.from_crontab(self.cron)
+        elif self.trigger == "date":
+            args["trigger"] = "date"
+            args["run_date"] = self.run_date
+        elif self.trigger == "cron":
+            args["trigger"] = CronTrigger.from_crontab(self.cron)
         else:
-            args['trigger'] = self.trigger
+            args["trigger"] = self.trigger
 
         if self.next_run_time is not None:
-            args['next_run_time'] = self.next_run_time
+            args["next_run_time"] = self.next_run_time
 
         return args
 
@@ -174,25 +177,19 @@ class SchedulerCore(metaclass=SingletonMeta):
 
     # 默认 jobstore 配置
     DEFAULT_JOBSTORES = {
-        'default': MemoryJobStore(),
-        'brushtask': MemoryJobStore(),
-        'rsscheck': MemoryJobStore(),
-        'torrent_remove': MemoryJobStore(),
-        'download': MemoryJobStore(),
-        'plugin': MemoryJobStore()
+        "default": MemoryJobStore(),
+        "brushtask": MemoryJobStore(),
+        "rsscheck": MemoryJobStore(),
+        "torrent_remove": MemoryJobStore(),
+        "download": MemoryJobStore(),
+        "plugin": MemoryJobStore(),
     }
 
     # 默认执行器配置
-    DEFAULT_EXECUTORS = {
-        'default': ThreadPoolExecutor(50)
-    }
+    DEFAULT_EXECUTORS = {"default": ThreadPoolExecutor(50)}
 
     # 默认任务默认配置
-    DEFAULT_JOB_DEFAULTS = {
-        'coalesce': True,
-        'max_instances': 100,
-        'misfire_grace_time': 300
-    }
+    DEFAULT_JOB_DEFAULTS = {"coalesce": True, "max_instances": 100, "misfire_grace_time": 300}
 
     # 最大重试次数
     MAX_RETRY_COUNT = 3
@@ -201,7 +198,7 @@ class SchedulerCore(metaclass=SingletonMeta):
     RETRY_DELAY = 60
 
     def __init__(self):
-        self._instance_id: str = os.environ.get('SERVER_INSTANCE', '')
+        self._instance_id: str = os.environ.get("SERVER_INSTANCE", "")
         self._retry_cache = None
         self._scheduler: BackgroundScheduler | None = None
         self._job_stats: dict[str, JobStats] = {}
@@ -278,22 +275,22 @@ class SchedulerCore(metaclass=SingletonMeta):
             # 转换为 TaskConfig
             if isinstance(task, dict):
                 task_config = TaskConfig(
-                    job_id=task.get('job_id', ''),
-                    func=task.get('func'),
-                    name=task.get('name'),
-                    trigger=task.get('trigger', 'interval'),
-                    args=tuple(task.get('args', [])),
-                    kwargs=task.get('kwargs', {}),
-                    jobstore=task.get('jobstore', 'default'),
-                    hours=task.get('hours'),
-                    minutes=task.get('minutes'),
-                    seconds=task.get('seconds'),
-                    cron=task.get('cron'),
-                    run_date=task.get('run_date'),
-                    next_run_time=task.get('next_run_time'),
-                    max_instances=task.get('max_instances', 1),
-                    misfire_grace_time=task.get('misfire_grace_time', 300),
-                    coalesce=task.get('coalesce', True)
+                    job_id=task.get("job_id", ""),
+                    func=task.get("func"),
+                    name=task.get("name"),
+                    trigger=task.get("trigger", "interval"),
+                    args=tuple(task.get("args", [])),
+                    kwargs=task.get("kwargs", {}),
+                    jobstore=task.get("jobstore", "default"),
+                    hours=task.get("hours"),
+                    minutes=task.get("minutes"),
+                    seconds=task.get("seconds"),
+                    cron=task.get("cron"),
+                    run_date=task.get("run_date"),
+                    next_run_time=task.get("next_run_time"),
+                    max_instances=task.get("max_instances", 1),
+                    misfire_grace_time=task.get("misfire_grace_time", 300),
+                    coalesce=task.get("coalesce", True),
                 )
             else:
                 task_config = task
@@ -339,12 +336,12 @@ class SchedulerCore(metaclass=SingletonMeta):
         hours: int | None = None,
         args: tuple | None = None,
         kwargs: dict[str, Any] | None = None,
-        jobstore: str = 'default',
+        jobstore: str = "default",
         next_run_time: Any | None = None,
         max_instances: int = 1,
         misfire_grace_time: int = 300,
         coalesce: bool = True,
-        name: str | None = None
+        name: str | None = None,
     ) -> Job | None:
         """注册 interval 类型定时任务（便捷方法）
 
@@ -369,22 +366,24 @@ class SchedulerCore(metaclass=SingletonMeta):
         if not any([seconds, minutes, hours]):
             log.warn(f"register_interval: {job_id} 需要至少设置 seconds/minutes/hours 之一")
             return None
-        return self.start_job({
-            'job_id': job_id,
-            'func': func,
-            'name': name,
-            'trigger': 'interval',
-            'args': args or (),
-            'kwargs': kwargs or {},
-            'jobstore': jobstore,
-            'seconds': seconds,
-            'minutes': minutes,
-            'hours': hours,
-            'next_run_time': next_run_time,
-            'max_instances': max_instances,
-            'misfire_grace_time': misfire_grace_time,
-            'coalesce': coalesce
-        })
+        return self.start_job(
+            {
+                "job_id": job_id,
+                "func": func,
+                "name": name,
+                "trigger": "interval",
+                "args": args or (),
+                "kwargs": kwargs or {},
+                "jobstore": jobstore,
+                "seconds": seconds,
+                "minutes": minutes,
+                "hours": hours,
+                "next_run_time": next_run_time,
+                "max_instances": max_instances,
+                "misfire_grace_time": misfire_grace_time,
+                "coalesce": coalesce,
+            }
+        )
 
     def register_date(
         self,
@@ -393,11 +392,11 @@ class SchedulerCore(metaclass=SingletonMeta):
         run_date: datetime.datetime,
         args: tuple | None = None,
         kwargs: dict[str, Any] | None = None,
-        jobstore: str = 'default',
+        jobstore: str = "default",
         max_instances: int = 1,
         misfire_grace_time: int = 60,
         coalesce: bool = True,
-        name: str | None = None
+        name: str | None = None,
     ) -> Job | None:
         """注册 date 类型一次性定时任务（便捷方法）
 
@@ -416,19 +415,21 @@ class SchedulerCore(metaclass=SingletonMeta):
         Returns:
             Job 对象或 None
         """
-        return self.start_job({
-            'job_id': job_id,
-            'func': func,
-            'name': name,
-            'trigger': 'date',
-            'args': args or (),
-            'kwargs': kwargs or {},
-            'jobstore': jobstore,
-            'run_date': run_date,
-            'max_instances': max_instances,
-            'misfire_grace_time': misfire_grace_time,
-            'coalesce': coalesce
-        })
+        return self.start_job(
+            {
+                "job_id": job_id,
+                "func": func,
+                "name": name,
+                "trigger": "date",
+                "args": args or (),
+                "kwargs": kwargs or {},
+                "jobstore": jobstore,
+                "run_date": run_date,
+                "max_instances": max_instances,
+                "misfire_grace_time": misfire_grace_time,
+                "coalesce": coalesce,
+            }
+        )
 
     def register_cron(
         self,
@@ -437,12 +438,12 @@ class SchedulerCore(metaclass=SingletonMeta):
         cron: str,
         args: tuple | None = None,
         kwargs: dict[str, Any] | None = None,
-        jobstore: str = 'default',
+        jobstore: str = "default",
         next_run_time: Any | None = None,
         max_instances: int = 1,
         misfire_grace_time: int = 300,
         coalesce: bool = True,
-        name: str | None = None
+        name: str | None = None,
     ) -> Job | None:
         """注册 cron 类型定时任务（便捷方法）
 
@@ -462,20 +463,22 @@ class SchedulerCore(metaclass=SingletonMeta):
         Returns:
             Job 对象或 None
         """
-        return self.start_job({
-            'job_id': job_id,
-            'func': func,
-            'name': name,
-            'trigger': 'cron',
-            'args': args or (),
-            'kwargs': kwargs or {},
-            'jobstore': jobstore,
-            'cron': cron,
-            'next_run_time': next_run_time,
-            'max_instances': max_instances,
-            'misfire_grace_time': misfire_grace_time,
-            'coalesce': coalesce
-        })
+        return self.start_job(
+            {
+                "job_id": job_id,
+                "func": func,
+                "name": name,
+                "trigger": "cron",
+                "args": args or (),
+                "kwargs": kwargs or {},
+                "jobstore": jobstore,
+                "cron": cron,
+                "next_run_time": next_run_time,
+                "max_instances": max_instances,
+                "misfire_grace_time": misfire_grace_time,
+                "coalesce": coalesce,
+            }
+        )
 
     def register_smart_cron(
         self,
@@ -485,12 +488,12 @@ class SchedulerCore(metaclass=SingletonMeta):
         func_desc: str = "",
         args: tuple | None = None,
         kwargs: dict[str, Any] | None = None,
-        jobstore: str = 'default',
+        jobstore: str = "default",
         next_run_time: Any | None = None,
         max_instances: int = 1,
         misfire_grace_time: int = 300,
         coalesce: bool = True,
-        name: str | None = None
+        name: str | None = None,
     ) -> Job | None:
         """
         智能注册定时任务，兼容多种 cron 写法：
@@ -505,6 +508,7 @@ class SchedulerCore(metaclass=SingletonMeta):
 
         if not next_run_time:
             from apscheduler.util import undefined
+
             next_run_time = undefined
 
         job = None
@@ -526,11 +530,11 @@ class SchedulerCore(metaclass=SingletonMeta):
                     jobstore=jobstore,
                     max_instances=max_instances,
                     misfire_grace_time=misfire_grace_time,
-                    coalesce=coalesce
+                    coalesce=coalesce,
                 )
             except Exception as e:
                 log.info("%s时间cron表达式配置格式错误：%s %s" % (func_desc, cron, str(e)))
-        elif '-' in cron:
+        elif "-" in cron:
             try:
                 time_range = cron.split("-")
                 start_time_range_str = time_range[0]
@@ -543,8 +547,7 @@ class SchedulerCore(metaclass=SingletonMeta):
                 end_minute = int(end_time_range_array[1])
 
                 def start_random_job():
-                    task_time_count = random.randint(
-                        start_hour * 60 + start_minute, end_hour * 60 + end_minute)
+                    task_time_count = random.randint(start_hour * 60 + start_minute, end_hour * 60 + end_minute)
                     self._register_range_job(
                         func=func,
                         func_desc=func_desc,
@@ -557,7 +560,7 @@ class SchedulerCore(metaclass=SingletonMeta):
                         next_run_time=next_run_time,
                         max_instances=max_instances,
                         misfire_grace_time=misfire_grace_time,
-                        coalesce=coalesce
+                        coalesce=coalesce,
                     )
 
                 job = self._scheduler.add_job(
@@ -572,13 +575,15 @@ class SchedulerCore(metaclass=SingletonMeta):
                     jobstore=jobstore,
                     max_instances=max_instances,
                     misfire_grace_time=misfire_grace_time,
-                    coalesce=coalesce
+                    coalesce=coalesce,
                 )
-                log.info("%s服务时间范围随机模式启动，起始时间于%s:%s" % (
-                    func_desc, str(start_hour).rjust(2, '0'), str(start_minute).rjust(2, '0')))
+                log.info(
+                    "%s服务时间范围随机模式启动，起始时间于%s:%s"
+                    % (func_desc, str(start_hour).rjust(2, "0"), str(start_minute).rjust(2, "0"))
+                )
             except Exception as e:
                 log.info("%s时间 时间范围随机模式 配置格式错误：%s %s" % (func_desc, cron, str(e)))
-        elif ':' in cron:
+        elif ":" in cron:
             try:
                 hour = int(cron.split(":")[0])
                 minute = int(cron.split(":")[1])
@@ -599,7 +604,7 @@ class SchedulerCore(metaclass=SingletonMeta):
                 jobstore=jobstore,
                 max_instances=max_instances,
                 misfire_grace_time=misfire_grace_time,
-                coalesce=coalesce
+                coalesce=coalesce,
             )
             log.info("%s服务启动" % func_desc)
         else:
@@ -622,20 +627,34 @@ class SchedulerCore(metaclass=SingletonMeta):
                     jobstore=jobstore,
                     max_instances=max_instances,
                     misfire_grace_time=misfire_grace_time,
-                    coalesce=coalesce
+                    coalesce=coalesce,
                 )
                 log.info("%s服务启动" % func_desc)
         return job
 
-    def _register_range_job(self, func, func_desc, hour, minute, job_id=None, args=None, kwargs=None,
-                            jobstore='default', next_run_time=None, max_instances=1,
-                            misfire_grace_time=300, coalesce=True):
+    def _register_range_job(
+        self,
+        func,
+        func_desc,
+        hour,
+        minute,
+        job_id=None,
+        args=None,
+        kwargs=None,
+        jobstore="default",
+        next_run_time=None,
+        max_instances=1,
+        misfire_grace_time=300,
+        coalesce=True,
+    ):
         year = datetime.datetime.now().year
         month = datetime.datetime.now().month
         day = datetime.datetime.now().day
         second = random.randint(1, 59)
-        log.info("%s到时间 即将在%s-%s-%s,%s:%s:%s执行" % (
-            func_desc, str(year), str(month), str(day), str(hour), str(minute), str(second)))
+        log.info(
+            "%s到时间 即将在%s-%s-%s,%s:%s:%s执行"
+            % (func_desc, str(year), str(month), str(day), str(hour), str(minute), str(second))
+        )
         if hour < 0 or hour > 24:
             hour = -1
         if minute < 0 or minute > 60:
@@ -655,7 +674,7 @@ class SchedulerCore(metaclass=SingletonMeta):
             jobstore=jobstore,
             max_instances=max_instances,
             misfire_grace_time=misfire_grace_time,
-            coalesce=coalesce
+            coalesce=coalesce,
         )
 
     def print_jobs(self, jobstore: str | None = None) -> None:
@@ -818,8 +837,7 @@ class SchedulerCore(metaclass=SingletonMeta):
             log.error(f"恢复任务 {job_id} 失败: {e}")
             return False
 
-    def modify_job(self, job_id: str, jobstore: str | None = None,
-                   **changes: Any) -> bool:
+    def modify_job(self, job_id: str, jobstore: str | None = None, **changes: Any) -> bool:
         """修改任务配置
 
         Args:
@@ -879,26 +897,24 @@ class SchedulerCore(metaclass=SingletonMeta):
             return True
 
         try:
-
             # 创建调度器（每次启动都使用新的 jobstore 实例，避免任务残留）
             self._scheduler = BackgroundScheduler(
-                timezone=os.environ.get('TZ'),
+                timezone=os.environ.get("TZ"),
                 jobstores={
-                    'default': MemoryJobStore(),
-                    'brushtask': MemoryJobStore(),
-                    'rsscheck': MemoryJobStore(),
-                    'torrent_remove': MemoryJobStore(),
-                    'download': MemoryJobStore(),
-                    'plugin': MemoryJobStore()
+                    "default": MemoryJobStore(),
+                    "brushtask": MemoryJobStore(),
+                    "rsscheck": MemoryJobStore(),
+                    "torrent_remove": MemoryJobStore(),
+                    "download": MemoryJobStore(),
+                    "plugin": MemoryJobStore(),
                 },
                 executors=self.DEFAULT_EXECUTORS.copy(),
-                job_defaults=self.DEFAULT_JOB_DEFAULTS.copy()
+                job_defaults=self.DEFAULT_JOB_DEFAULTS.copy(),
             )
 
             # 添加事件监听器
             self._scheduler.add_listener(
-                self._job_event_listener,
-                EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED | EVENT_JOB_SUBMITTED
+                self._job_event_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED | EVENT_JOB_SUBMITTED
             )
 
             # 启动调度器
@@ -907,6 +923,7 @@ class SchedulerCore(metaclass=SingletonMeta):
 
             if load_defaults:
                 from app.services.scheduler_jobs import load_default_jobs
+
                 load_default_jobs(self)
 
             log.info("调度器服务已启动")
@@ -1001,8 +1018,8 @@ class SchedulerCore(metaclass=SingletonMeta):
 
     def _handle_job_failure(self, job_id: str, event: JobExecutionEvent) -> None:
         """处理任务执行失败"""
-        exception = event.exception if hasattr(event, 'exception') else 'Unknown error'
-        traceback = event.traceback if hasattr(event, 'traceback') else ''
+        exception = event.exception if hasattr(event, "exception") else "Unknown error"
+        traceback = event.traceback if hasattr(event, "traceback") else ""
 
         # 更新统计
         stats = self._get_job_stats(job_id)
@@ -1023,9 +1040,8 @@ class SchedulerCore(metaclass=SingletonMeta):
         """获取重试计数缓存（内存/Redis自动降级）"""
         if self._retry_cache is None:
             from app.infrastructure.cache_system import get_cache_manager
-            self._retry_cache = get_cache_manager().get_or_create(
-                "scheduler_retry", cache_type="tiered", maxsize=1000
-            )
+
+            self._retry_cache = get_cache_manager().get_or_create("scheduler_retry", cache_type="tiered", maxsize=1000)
         return self._retry_cache
 
     def _get_retry_key(self, job_id: str) -> str:
@@ -1098,27 +1114,29 @@ class SchedulerCore(metaclass=SingletonMeta):
         stats.record_retry()
 
         # 计算重试延迟（指数退避）
-        delay = self.RETRY_DELAY * (2 ** retry_count)
+        delay = self.RETRY_DELAY * (2**retry_count)
         next_run_time = datetime.datetime.now() + datetime.timedelta(seconds=delay)
 
         try:
             # 使用 add_job 创建一次性重试任务
             retry_job_id = f"{job_id}_retry_{retry_count + 1}"
-            jobstore = getattr(job, '_jobstore_alias', 'default')
+            jobstore = getattr(job, "_jobstore_alias", "default")
             self._scheduler.add_job(
                 func=job.func,
                 args=job.args,
                 kwargs=job.kwargs,
-                trigger='date',
+                trigger="date",
                 run_date=next_run_time,
                 id=retry_job_id,
                 jobstore=jobstore,
                 replace_existing=True,
-                misfire_grace_time=60
+                misfire_grace_time=60,
             )
 
-            log.info(f"任务 {job_id} 已安排重试 #{retry_count + 1}, "
-                    f"将在 {delay} 秒后执行 ({next_run_time.strftime('%Y-%m-%d %H:%M:%S')})")
+            log.info(
+                f"任务 {job_id} 已安排重试 #{retry_count + 1}, "
+                f"将在 {delay} 秒后执行 ({next_run_time.strftime('%Y-%m-%d %H:%M:%S')})"
+            )
             return True
 
         except Exception as e:
@@ -1169,16 +1187,16 @@ class SchedulerCore(metaclass=SingletonMeta):
             服务状态字典
         """
         status = {
-            'running': self._running,
-            'instance_id': self._instance_id,
-            'job_count': 0,
-            'jobstores': list(self.DEFAULT_JOBSTORES.keys()),
-            'statistics': self.get_job_statistics()
+            "running": self._running,
+            "instance_id": self._instance_id,
+            "job_count": 0,
+            "jobstores": list(self.DEFAULT_JOBSTORES.keys()),
+            "statistics": self.get_job_statistics(),
         }
 
         if self._scheduler:
             try:
-                status['job_count'] = len(self._scheduler.get_jobs())
+                status["job_count"] = len(self._scheduler.get_jobs())
             except Exception:
                 pass
 

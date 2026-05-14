@@ -1,6 +1,7 @@
 """
 影视标题解析 — 分辨率、资源类型、Part解析
 """
+
 import re
 
 from app.media.parser.video.constants import (
@@ -16,20 +17,23 @@ def init_part(info, token, tokens):
     """解析 PART/CD/DVD/DISK/DISC"""
     if not info.get_name():
         return
-    if not info.year \
-            and not info.begin_season \
-            and not info.begin_episode \
-            and not info.resource_pix \
-            and not info.resource_type:
+    if (
+        not info.year
+        and not info.begin_season
+        and not info.begin_episode
+        and not info.resource_pix
+        and not info.resource_type
+    ):
         return
     re_res = re.search(r"%s" % _part_re, token, re.IGNORECASE)
     if re_res:
         if not info.part:
             info.part = re_res.group(1)
         nextv = tokens.cur()
-        if nextv \
-                and ((nextv.isdigit() and (len(nextv) == 1 or len(nextv) == 2 and nextv.startswith('0')))
-                     or nextv.upper() in ['A', 'B', 'C', 'I', 'II', 'III']):
+        if nextv and (
+            (nextv.isdigit() and (len(nextv) == 1 or len(nextv) == 2 and nextv.startswith("0")))
+            or nextv.upper() in ["A", "B", "C", "I", "II", "III"]
+        ):
             info.part = "%s%s" % (info.part, nextv)
             tokens.get_next()
         info._last_token_type = "part"
@@ -61,9 +65,7 @@ def init_resource_pix(info, token):
             if resource_pix and not info.resource_pix:
                 info.resource_pix = resource_pix.lower()
                 break
-        if info.resource_pix \
-                and info.resource_pix.isdigit() \
-                and info.resource_pix[-1] not in 'kpi':
+        if info.resource_pix and info.resource_pix.isdigit() and info.resource_pix[-1] not in "kpi":
             info.resource_pix = "%sp" % info.resource_pix
     else:
         re_res = re.search(r"%s" % _resources_pix_re2, token, re.IGNORECASE)
@@ -88,15 +90,11 @@ def init_resource_type(info, token):
             info._source = source_res.group(1)
             info._last_token = info._source.upper()
         return
-    elif token.upper() == "DL" \
-            and info._last_token_type == "source" \
-            and info._last_token == "WEB":
+    elif token.upper() == "DL" and info._last_token_type == "source" and info._last_token == "WEB":
         info._source = "WEB-DL"
         info._continue_flag = False
         return
-    elif token.upper() == "RAY" \
-            and info._last_token_type == "source" \
-            and info._last_token == "BLU":
+    elif token.upper() == "RAY" and info._last_token_type == "source" and info._last_token == "BLU":
         info._source = "BluRay"
         info._continue_flag = False
         return

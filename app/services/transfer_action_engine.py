@@ -2,6 +2,7 @@
 TransferActionEngine - 底层文件操作引擎
 负责执行具体的文件系统操作（复制、移动、链接、字幕/音轨转移等）
 """
+
 import os
 import re
 import shutil
@@ -80,16 +81,20 @@ class TransferActionEngine:
         :param new_name: 新文件名
         :param rmt_mode: RmtMode转移方式
         """
-        _zhcn_sub_re = r"([.\[(](((zh[-_])?(cn|ch[si]|sg|sc))|zho?" \
-                       r"|chinese|(cn|ch[si]|sg|zho?|eng)[-_&](cn|ch[si]|sg|zho?|eng)" \
-                       r"|简[体中]?|JPSC)[.\])])" \
-                       r"|([\u4e00-\u9fa5]{0,3}[中双][\u4e00-\u9fa5]{0,2}[字文语][\u4e00-\u9fa5]{0,3})" \
-                       r"|简体|简中" \
-                       r"|(?<![a-z0-9])gb(?![a-z0-9])"
-        _zhtw_sub_re = r"([.\[(](((zh[-_])?(hk|tw|cht|tc))" \
-                       r"|繁[体中]?|JPTC)[.\])])" \
-                       r"|繁体中[文字]|中[文字]繁体|繁体" \
-                       r"|(?<![a-z0-9])big5(?![a-z0-9])"
+        _zhcn_sub_re = (
+            r"([.\[(](((zh[-_])?(cn|ch[si]|sg|sc))|zho?"
+            r"|chinese|(cn|ch[si]|sg|zho?|eng)[-_&](cn|ch[si]|sg|zho?|eng)"
+            r"|简[体中]?|JPSC)[.\])])"
+            r"|([\u4e00-\u9fa5]{0,3}[中双][\u4e00-\u9fa5]{0,2}[字文语][\u4e00-\u9fa5]{0,3})"
+            r"|简体|简中"
+            r"|(?<![a-z0-9])gb(?![a-z0-9])"
+        )
+        _zhtw_sub_re = (
+            r"([.\[(](((zh[-_])?(hk|tw|cht|tc))"
+            r"|繁[体中]?|JPTC)[.\])])"
+            r"|繁体中[文字]|中[文字]繁体|繁体"
+            r"|(?<![a-z0-9])big5(?![a-z0-9])"
+        )
         _eng_sub_re = r"[.\[(]eng[.\])]"
 
         dir_name = os.path.dirname(org_name)
@@ -101,23 +106,25 @@ class TransferActionEngine:
             log.debug("【Rmt】字幕文件清单：" + str(file_list))
             metainfo = MetaInfo(title=file_name)
             for file_item in file_list:
-                sub_file_name = re.sub(_zhtw_sub_re,
-                                       ".",
-                                       re.sub(_zhcn_sub_re,
-                                              ".",
-                                              os.path.basename(file_item),
-                                              flags=re.I),
-                                       flags=re.I)
+                sub_file_name = re.sub(
+                    _zhtw_sub_re, ".", re.sub(_zhcn_sub_re, ".", os.path.basename(file_item), flags=re.I), flags=re.I
+                )
                 sub_file_name = re.sub(_eng_sub_re, ".", sub_file_name, flags=re.I)
                 sub_metainfo = MetaInfo(title=os.path.basename(file_item))
-                if (os.path.splitext(file_name)[0] == os.path.splitext(sub_file_name)[0]) or \
-                        (sub_metainfo.cn_name and sub_metainfo.cn_name == metainfo.cn_name) \
-                        or (sub_metainfo.en_name and sub_metainfo.en_name == metainfo.en_name):
-                    if metainfo.get_season_string() \
-                            and metainfo.get_season_string() != sub_metainfo.get_season_string():
+                if (
+                    (os.path.splitext(file_name)[0] == os.path.splitext(sub_file_name)[0])
+                    or (sub_metainfo.cn_name and sub_metainfo.cn_name == metainfo.cn_name)
+                    or (sub_metainfo.en_name and sub_metainfo.en_name == metainfo.en_name)
+                ):
+                    if (
+                        metainfo.get_season_string()
+                        and metainfo.get_season_string() != sub_metainfo.get_season_string()
+                    ):
                         continue
-                    if metainfo.get_episode_string() \
-                            and metainfo.get_episode_string() != sub_metainfo.get_episode_string():
+                    if (
+                        metainfo.get_episode_string()
+                        and metainfo.get_episode_string() != sub_metainfo.get_episode_string()
+                    ):
                         continue
                     new_file_type = ""
                     if re.search(_zhcn_sub_re, file_item, re.I):
@@ -129,23 +136,22 @@ class TransferActionEngine:
                     file_ext = os.path.splitext(file_item)[-1]
                     if not new_file_type:
                         new_file_type = ".und"
-                    new_sub_tag_list = [
-                        new_file_type if t == 0 else f"{new_file_type}.{t}" for t in range(6)
-                    ]
+                    new_sub_tag_list = [new_file_type if t == 0 else f"{new_file_type}.{t}" for t in range(6)]
                     for new_sub_tag in new_sub_tag_list:
                         new_file = os.path.splitext(new_name)[0] + new_sub_tag + file_ext
                         try:
                             if not os.path.exists(new_file):
                                 log.debug("【Rmt】正在处理字幕：%s" % os.path.basename(file_item))
-                                retcode = self.transfer_command(file_item=file_item,
-                                                                  target_file=new_file,
-                                                                  rmt_mode=rmt_mode)
+                                retcode = self.transfer_command(
+                                    file_item=file_item, target_file=new_file, rmt_mode=rmt_mode
+                                )
                                 if retcode == 0:
                                     log.info("【Rmt】字幕 %s %s完成" % (os.path.basename(file_item), rmt_mode.value))
                                     break
                                 else:
                                     log.error(
-                                        "【Rmt】字幕 %s %s失败，错误码 %s" % (file_name, rmt_mode.value, str(retcode)))
+                                        "【Rmt】字幕 %s %s失败，错误码 %s" % (file_name, rmt_mode.value, str(retcode))
+                                    )
                                     return retcode
                             elif os.path.getsize(new_file) == os.path.getsize(file_item):
                                 log.info("【Rmt】字幕 %s 已存在" % new_file)
@@ -183,9 +189,7 @@ class TransferActionEngine:
                         os.remove(new_track_file)
                 try:
                     log.info("【Rmt】正在转移音轨文件：%s 到 %s" % (track_file, new_track_file))
-                    retcode = self.transfer_command(file_item=track_file,
-                                                      target_file=new_track_file,
-                                                      rmt_mode=rmt_mode)
+                    retcode = self.transfer_command(file_item=track_file, target_file=new_track_file, rmt_mode=rmt_mode)
                     if retcode == 0:
                         log.info("【Rmt】音轨文件 %s %s完成" % (file_name, rmt_mode.value))
                     else:
@@ -202,10 +206,7 @@ class TransferActionEngine:
         :param rmt_mode: RmtMode转移方式
         """
         log.info("【Rmt】正在%s目录：%s 到 %s" % (rmt_mode.value, file_path, new_path))
-        retcode = self.transfer_dir_files(src_dir=file_path,
-                                            target_dir=new_path,
-                                            rmt_mode=rmt_mode,
-                                            bludir=True)
+        retcode = self.transfer_dir_files(src_dir=file_path, target_dir=new_path, rmt_mode=rmt_mode, bludir=True)
         if retcode == 0:
             log.info("【Rmt】文件 %s %s完成" % (file_path, rmt_mode.value))
         else:
@@ -230,9 +231,7 @@ class TransferActionEngine:
             new_dir = os.path.dirname(new_file)
             if not os.path.exists(new_dir) and rmt_mode not in ModuleConf.REMOTE_RMT_MODES:
                 os.makedirs(new_dir)
-            retcode = self.transfer_command(file_item=file,
-                                              target_file=new_file,
-                                              rmt_mode=rmt_mode)
+            retcode = self.transfer_command(file_item=file, target_file=new_file, rmt_mode=rmt_mode)
             if retcode != 0:
                 break
             else:
@@ -261,17 +260,13 @@ class TransferActionEngine:
             os.makedirs(target_dir)
         if os.path.isdir(file_item):
             log.info("【Rmt】正在%s目录：%s 到 %s" % (rmt_mode.value, file_item, target_dir))
-            retcode = self.transfer_dir_files(src_dir=file_item,
-                                                target_dir=target_dir,
-                                                rmt_mode=rmt_mode)
+            retcode = self.transfer_dir_files(src_dir=file_item, target_dir=target_dir, rmt_mode=rmt_mode)
         else:
             target_file = os.path.join(target_dir, os.path.basename(file_item))
             if os.path.exists(target_file):
                 log.warn("【Rmt】%s 文件已存在" % target_file)
                 return 0
-            retcode = self.transfer_command(file_item=file_item,
-                                              target_file=target_file,
-                                              rmt_mode=rmt_mode)
+            retcode = self.transfer_command(file_item=file_item, target_file=target_file, rmt_mode=rmt_mode)
             if retcode == 0:
                 self._blacklist_repo.insert(file_item)
         if retcode == 0:
@@ -296,19 +291,14 @@ class TransferActionEngine:
             log.info("【Rmt】正在删除已存在的文件：%s" % old_file)
             os.remove(old_file)
         log.info("【Rmt】正在转移文件：%s 到 %s" % (file_name, new_file))
-        retcode = self.transfer_command(file_item=file_item,
-                                          target_file=new_file,
-                                          rmt_mode=rmt_mode)
+        retcode = self.transfer_command(file_item=file_item, target_file=new_file, rmt_mode=rmt_mode)
         if retcode == 0:
             log.info("【Rmt】文件 %s %s完成" % (file_name, rmt_mode.value))
             self._blacklist_repo.insert(file_item)
         else:
             log.error("【Rmt】文件 %s %s失败，错误码 %s" % (file_name, rmt_mode.value, str(retcode)))
             return retcode
-        return self.transfer_other_files(org_name=file_item,
-                                           new_name=new_file,
-                                           rmt_mode=rmt_mode,
-                                           over_flag=over_flag)
+        return self.transfer_other_files(org_name=file_item, new_name=new_file, rmt_mode=rmt_mode, over_flag=over_flag)
 
     @staticmethod
     def delete_media_file(filedir, filename):

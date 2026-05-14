@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
@@ -12,6 +11,7 @@ router = APIRouter()
 
 
 # ---------- Request Models ----------
+
 
 class AddCustomWordGroupRequest(BaseModel):
     tmdb_id: int
@@ -73,6 +73,7 @@ class GetCategoriesRequest(BaseModel):
 
 # ---------- Endpoints ----------
 
+
 @router.post("/groups/add")
 def add_custom_word_group(
     req: AddCustomWordGroupRequest,
@@ -130,7 +131,22 @@ def analyse_import_custom_words_code(
 ):
     try:
         groups, note = svc.analyse_import_code(req.import_code)
-        return success(data={"groups":[ { "id": g.id, "name": g.name, "link": g.link, "type": g.type, "seasons": g.seasons, "words": g.words, } for g in groups ], "note_string": note,})
+        return success(
+            data={
+                "groups": [
+                    {
+                        "id": g.id,
+                        "name": g.name,
+                        "link": g.link,
+                        "type": g.type,
+                        "seasons": g.seasons,
+                        "words": g.words,
+                    }
+                    for g in groups
+                ],
+                "note_string": note,
+            }
+        )
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
         return fail(msg=str(e))
@@ -209,12 +225,22 @@ def get_custom_word(
     try:
         word = svc.get_word_by_id(req.wid)
         if word:
-            return success(data={
-                "id": word.id, "replaced": word.replaced, "replace": word.replace,
-                "front": word.front, "back": word.back, "offset": word.offset,
-                "type": word.type, "group_id": word.group_id, "season": word.season,
-                "enabled": word.enabled, "regex": word.regex, "help": word.help,
-            })
+            return success(
+                data={
+                    "id": word.id,
+                    "replaced": word.replaced,
+                    "replace": word.replace,
+                    "front": word.front,
+                    "back": word.back,
+                    "offset": word.offset,
+                    "type": word.type,
+                    "group_id": word.group_id,
+                    "season": word.season,
+                    "enabled": word.enabled,
+                    "regex": word.regex,
+                    "help": word.help,
+                }
+            )
         return success(data={})
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
@@ -251,11 +277,13 @@ def get_categories(
         categories = Category().tv_categorys
     else:
         categories = Category().anime_categorys
-    return success(data={
-        "category": list(categories),
-        "id": req.id,
-        "value": req.value,
-    })
+    return success(
+        data={
+            "category": list(categories),
+            "id": req.id,
+            "value": req.value,
+        }
+    )
 
 
 @router.post("/words")

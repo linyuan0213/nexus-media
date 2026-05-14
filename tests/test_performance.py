@@ -2,13 +2,14 @@
 性能测试模块
 用于测试和验证性能优化效果
 """
+
 import os
 import time
 
 import pytest
 
 # 设置测试环境
-os.environ['NASTOOL_CONFIG'] = "/home/linyuan/python/config/config.yaml"
+os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 
 def test_db_connection_pool():
@@ -19,10 +20,7 @@ def test_db_connection_pool():
 
     # 验证QueuePool被正确使用
     engine = create_engine(
-        "sqlite:///:memory:?check_same_thread=False",
-        poolclass=QueuePool,
-        pool_size=10,
-        max_overflow=20
+        "sqlite:///:memory:?check_same_thread=False", poolclass=QueuePool, pool_size=10, max_overflow=20
     )
 
     # 测试基本连接
@@ -40,10 +38,7 @@ def test_http_session_pool():
     from requests.adapters import HTTPAdapter
 
     session = requests.Session()
-    adapter = HTTPAdapter(
-        pool_connections=10,
-        pool_maxsize=50
-    )
+    adapter = HTTPAdapter(pool_connections=10, pool_maxsize=50)
     session.mount("http://", adapter)
     session.mount("https://", adapter)
 
@@ -118,17 +113,13 @@ def test_bulk_insert_simulation():
     """测试批量插入模拟"""
     data = []
     for i in range(1000):
-        data.append({
-            'id': i,
-            'name': f'item_{i}',
-            'value': i * 10
-        })
+        data.append({"id": i, "name": f"item_{i}", "value": i * 10})
 
     # 模拟批量处理
     batch_size = 100
     start = time.time()
 
-    batches = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
+    batches = [data[i : i + batch_size] for i in range(0, len(data), batch_size)]
     processed = 0
     for batch in batches:
         processed += len(batch)
@@ -170,7 +161,7 @@ def test_query_optimization_simulation():
 
     print(f"✓ 优化前查询耗时: {slow_time:.3f}秒")
     print(f"✓ 优化后查询耗时: {fast_time:.3f}秒")
-    print(f"✓ 性能提升: {slow_time/fast_time:.1f}倍")
+    print(f"✓ 性能提升: {slow_time / fast_time:.1f}倍")
 
 
 def test_concurrent_performance():
@@ -206,11 +197,11 @@ class TestCodeOptimizations:
             "PRAGMA synchronous=NORMAL",
             "PRAGMA cache_size=-64000",
             "PRAGMA temp_store=MEMORY",
-            "PRAGMA mmap_size=268435456"
+            "PRAGMA mmap_size=268435456",
         ]
 
         # 读取main_db.py文件验证设置
-        with open('app/db/main_db.py') as f:
+        with open("app/db/main_db.py") as f:
             content = f.read()
 
         for pragma in expected_pragmas:
@@ -220,7 +211,7 @@ class TestCodeOptimizations:
 
     def test_connection_pool_config(self):
         """测试连接池配置"""
-        with open('app/db/main_db.py') as f:
+        with open("app/db/main_db.py") as f:
             content = f.read()
 
         # 验证使用QueuePool
@@ -231,7 +222,7 @@ class TestCodeOptimizations:
 
     def test_http_session_pool_config(self):
         """测试HTTP会话池配置"""
-        with open('app/utils/http_utils.py') as f:
+        with open("app/utils/http_utils.py") as f:
             content = f.read()
 
         # 验证会话池配置
@@ -242,7 +233,7 @@ class TestCodeOptimizations:
 
     def test_words_helper_cache(self):
         """测试WordsHelper缓存"""
-        with open('app/helper/words_helper.py') as f:
+        with open("app/helper/words_helper.py") as f:
             content = f.read()
 
         # 验证缓存实现
@@ -253,7 +244,7 @@ class TestCodeOptimizations:
 
     def test_rss_helper_query_optimization(self):
         """测试RSSHelper查询优化"""
-        with open('app/helper/rss_helper.py') as f:
+        with open("app/helper/rss_helper.py") as f:
             content = f.read()
 
         # 验证使用first()代替count()
@@ -262,7 +253,7 @@ class TestCodeOptimizations:
 
     def test_cache_manager_enhancements(self):
         """测试缓存管理器增强"""
-        with open('app/utils/cache_manager.py') as f:
+        with open("app/utils/cache_manager.py") as f:
             content = f.read()
 
         # 验证新增缓存和功能

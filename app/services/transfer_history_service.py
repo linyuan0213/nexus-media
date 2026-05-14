@@ -31,8 +31,7 @@ class TransferHistoryService:
             historys_list.append(history)
         total_page = floor(total_count / page_num) + 1
         return TransferHistoryPageDTO(
-            total=total_count, result=historys_list, total_page=total_page,
-            page_num=page_num, current_page=page
+            total=total_count, result=historys_list, total_page=total_page, page_num=page_num, current_page=page
         )
 
     def get_transfer_statistics(self, days=90) -> dict:
@@ -58,8 +57,7 @@ class TransferHistoryService:
                 AnimeNums.append(statistic[2])
                 MovieNums.append(0)
                 TvNums.append(0)
-        return {"Labels": Labels, "MovieNums": MovieNums,
-                "TvNums": TvNums, "AnimeNums": AnimeNums}
+        return {"Labels": Labels, "MovieNums": MovieNums, "TvNums": TvNums, "AnimeNums": AnimeNums}
 
     def get_unknown_list(self) -> list[dict]:
         """获取未识别记录列表"""
@@ -72,10 +70,16 @@ class TransferHistoryService:
             path_to = rec.DEST.replace("\\", "/") if rec.DEST else ""
             sync_mode = rec.MODE or ""
             rmt_mode = ModuleConf.get_dictenum_key(ModuleConf.RMT_MODES, sync_mode) if sync_mode else ""
-            Items.append({
-                "id": rec.ID, "path": path, "to": path_to, "name": path,
-                "sync_mode": sync_mode, "rmt_mode": rmt_mode,
-            })
+            Items.append(
+                {
+                    "id": rec.ID,
+                    "path": path,
+                    "to": path_to,
+                    "name": path,
+                    "sync_mode": sync_mode,
+                    "rmt_mode": rmt_mode,
+                }
+            )
         return Items
 
     def get_unknown_list_by_page(self, search_str, page, page_num) -> UnknownListPageDTO:
@@ -86,8 +90,7 @@ class TransferHistoryService:
             page = 1
         else:
             page = int(page)
-        total_count, Records = self._filetransfer.get_transfer_unknown_paths_by_page(
-            search_str, page, page_num)
+        total_count, Records = self._filetransfer.get_transfer_unknown_paths_by_page(search_str, page, page_num)
         Items = []
         for rec in Records:
             if not rec.PATH:
@@ -96,19 +99,25 @@ class TransferHistoryService:
             path_to = rec.DEST.replace("\\", "/") if rec.DEST else ""
             sync_mode = rec.MODE or ""
             rmt_mode = ModuleConf.get_dictenum_key(ModuleConf.RMT_MODES, sync_mode) if sync_mode else ""
-            Items.append({
-                "id": rec.ID, "path": path, "to": path_to, "name": path,
-                "sync_mode": sync_mode, "rmt_mode": rmt_mode,
-            })
+            Items.append(
+                {
+                    "id": rec.ID,
+                    "path": path,
+                    "to": path_to,
+                    "name": path,
+                    "sync_mode": sync_mode,
+                    "rmt_mode": rmt_mode,
+                }
+            )
         total_page = floor(total_count / page_num) + 1
         return UnknownListPageDTO(
-            total=total_count, items=Items, total_page=total_page,
-            page_num=page_num, current_page=page
+            total=total_count, items=Items, total_page=total_page, page_num=page_num, current_page=page
         )
 
     def re_identify_unknown(self) -> int:
         """重新识别所有未识别记录"""
         from app.services.sync_service import SyncService
+
         ItemIds = []
         Records = self._filetransfer.get_transfer_unknown_paths()
         for rec in Records:

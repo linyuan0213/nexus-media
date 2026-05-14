@@ -30,7 +30,7 @@ class SiteDataUpdater:
             file_response.raise_for_status()
 
             # 保存文件
-            with open(dest_path, 'wb') as f:
+            with open(dest_path, "wb") as f:
                 f.write(file_response.content)
 
             return True
@@ -42,7 +42,7 @@ class SiteDataUpdater:
     def _get_sites_version(filepath):
         """获取sites.dat版本号"""
         try:
-            with open(filepath, 'rb') as f:
+            with open(filepath, "rb") as f:
                 data = pickle.load(f)
                 return data.get("version", "0")
         except Exception:
@@ -52,6 +52,7 @@ class SiteDataUpdater:
     def check_sites_update(config_path, temp_path, inner_config_path, proxies=None):
         """检查并更新sites.dat"""
         from app.core.constants import SITES_DATA_URL  # 延迟导入避免循环依赖
+
         try:
             release_url = SITES_DATA_URL
             local_path = os.path.join(os.path.dirname(config_path), "sites.dat")

@@ -2,6 +2,7 @@
 CustomReleaseGroups Plugin v2
 添加无法识别的制作组/字幕组
 """
+
 from app.media import ReleaseGroupsMatcher
 from app.plugin_framework.context import PluginContext
 
@@ -31,13 +32,13 @@ class CustomReleaseGroupsPlugin:
 
     def _load_config(self):
         config = self._get_config()
-        custom_release_groups = config.get('release_groups')
-        custom_separator = config.get('separator')
+        custom_release_groups = config.get("release_groups")
+        custom_separator = config.get("separator")
 
         if custom_release_groups:
-            if custom_release_groups.startswith(';'):
+            if custom_release_groups.startswith(";"):
                 custom_release_groups = custom_release_groups[1:]
-            if custom_release_groups.endswith(';'):
+            if custom_release_groups.endswith(";"):
                 custom_release_groups = custom_release_groups[:-1]
             custom_release_groups = custom_release_groups.replace(";", "|").replace("\n", "|")
 

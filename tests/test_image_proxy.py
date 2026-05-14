@@ -1,6 +1,7 @@
 """
 图片代理服务测试 - 重点验证媒体库图片本地缓存代理
 """
+
 import importlib.util
 import os
 import sys
@@ -17,20 +18,20 @@ mock_config.Config.return_value.get_proxies.return_value = None
 mock_config.TMDB_IMAGE_DOMAIN = "image.tmdb.org"
 mock_config.TMDB_IMAGE_SIZE = "w500"
 
-sys.modules['config'] = mock_config
+sys.modules["config"] = mock_config
 
 mock_log = MagicMock()
-sys.modules['log'] = mock_log
+sys.modules["log"] = mock_log
 
 # mock PIL
 mock_pil = MagicMock()
-sys.modules['PIL'] = mock_pil
-sys.modules['PIL.Image'] = mock_pil.Image
+sys.modules["PIL"] = mock_pil
+sys.modules["PIL.Image"] = mock_pil.Image
 
 # mock web.security 中的 login_required，避免测试需要真实鉴权
 mock_security = MagicMock()
 mock_security.login_required = lambda f: f
-sys.modules['web.security'] = mock_security
+sys.modules["web.security"] = mock_security
 
 # 确保项目根目录在 path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -49,8 +50,7 @@ def _load_get_nt_image_url():
     绕过 app.mediaserver 包的 __init__.py，避免触发整个 app 初始化。
     """
     base_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        'app', 'mediaserver', 'client', '_base.py'
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app", "mediaserver", "client", "_base.py"
     )
     spec = importlib.util.spec_from_file_location("_base_for_test", base_path)
     mod = importlib.util.module_from_spec(spec)
@@ -66,7 +66,7 @@ def app(tmp_path):
     """创建带图片代理蓝图的测试 Flask 应用"""
     _app = Flask(__name__)
     _app.register_blueprint(img_blueprint, url_prefix="/img")
-    _app.config['TESTING'] = True
+    _app.config["TESTING"] = True
     return _app
 
 
@@ -97,7 +97,7 @@ class TestGetNtImageUrl:
         url = "http://192.168.1.10:8096/Items/123/Images/Primary"
         result = get_nt_image_url(url)
         assert result.startswith("/img/library/")
-        decoded = urllib.parse.unquote(result[len("/img/library/"):])
+        decoded = urllib.parse.unquote(result[len("/img/library/") :])
         assert decoded == url
 
     def test_plex_image_uses_library_route(self):
@@ -120,15 +120,15 @@ class TestLibraryCachePath:
     """测试媒体库图片缓存路径生成"""
 
     def test_get_cache_path_contains_library_source(self, tmp_path):
-        with patch('web.backend.image_proxy.CACHE_DIR', str(tmp_path)):
-            path = _get_cache_path('library', 'http://host/Items/1/Images/Primary')
-            assert 'library' in path
-            assert path.endswith('.jpg')
+        with patch("web.backend.image_proxy.CACHE_DIR", str(tmp_path)):
+            path = _get_cache_path("library", "http://host/Items/1/Images/Primary")
+            assert "library" in path
+            assert path.endswith(".jpg")
 
     def test_get_cache_path_is_deterministic(self, tmp_path):
-        with patch('web.backend.image_proxy.CACHE_DIR', str(tmp_path)):
-            p1 = _get_cache_path('library', 'http://host/img.jpg')
-            p2 = _get_cache_path('library', 'http://host/img.jpg')
+        with patch("web.backend.image_proxy.CACHE_DIR", str(tmp_path)):
+            p1 = _get_cache_path("library", "http://host/img.jpg")
+            p2 = _get_cache_path("library", "http://host/img.jpg")
             assert p1 == p2
 
 
@@ -136,44 +136,44 @@ class TestLibraryImageProxyRoute:
     """测试 /img/library/<path> 路由行为"""
 
     def test_proxy_library_image_decodes_url_and_saves_cache(self, client, tmp_path):
-        with patch('web.backend.image_proxy.CACHE_DIR', str(tmp_path)), \
-             patch('web.backend.image_proxy._download_image') as mock_dl, \
-             patch('web.backend.image_proxy.os.path.exists', return_value=False), \
-             patch('builtins.open', mock_open()) as mock_file:
-
+        with (
+            patch("web.backend.image_proxy.CACHE_DIR", str(tmp_path)),
+            patch("web.backend.image_proxy._download_image") as mock_dl,
+            patch("web.backend.image_proxy.os.path.exists", return_value=False),
+            patch("builtins.open", mock_open()) as mock_file,
+        ):
             mock_dl.return_value = b"fake_image_bytes"
             encoded_url = "http%3A%2F%2Femby%3A8096%2FItems%2F1%2FImages%2FPrimary"
             resp = client.get(f"/img/library/{encoded_url}")
 
             assert resp.status_code == 200
             assert resp.data == b"fake_image_bytes"
-            mock_dl.assert_called_once_with(
-                "http://emby:8096/Items/1/Images/Primary", referer=None
-            )
+            mock_dl.assert_called_once_with("http://emby:8096/Items/1/Images/Primary", referer=None)
             mock_file.assert_called()
 
     def test_proxy_library_image_appends_query_params(self, client, tmp_path):
-        with patch('web.backend.image_proxy.CACHE_DIR', str(tmp_path)), \
-             patch('web.backend.image_proxy._download_image') as mock_dl, \
-             patch('web.backend.image_proxy.os.path.exists', return_value=False), \
-             patch('builtins.open', mock_open()):
-
+        with (
+            patch("web.backend.image_proxy.CACHE_DIR", str(tmp_path)),
+            patch("web.backend.image_proxy._download_image") as mock_dl,
+            patch("web.backend.image_proxy.os.path.exists", return_value=False),
+            patch("builtins.open", mock_open()),
+        ):
             mock_dl.return_value = b"fake_image_bytes"
             encoded_url = "http%3A%2F%2Fplex%3A32400%2Flibrary%2Fmetadata%2F1%2Fthumb"
             resp = client.get(f"/img/library/{encoded_url}?X-Plex-Token=abc123")
 
             assert resp.status_code == 200
             mock_dl.assert_called_once_with(
-                "http://plex:32400/library/metadata/1/thumb?X-Plex-Token=abc123",
-                referer=None
+                "http://plex:32400/library/metadata/1/thumb?X-Plex-Token=abc123", referer=None
             )
 
     def test_proxy_library_image_existing_query_appended_with_ampersand(self, client, tmp_path):
-        with patch('web.backend.image_proxy.CACHE_DIR', str(tmp_path)), \
-             patch('web.backend.image_proxy._download_image') as mock_dl, \
-             patch('web.backend.image_proxy.os.path.exists', return_value=False), \
-             patch('builtins.open', mock_open()):
-
+        with (
+            patch("web.backend.image_proxy.CACHE_DIR", str(tmp_path)),
+            patch("web.backend.image_proxy._download_image") as mock_dl,
+            patch("web.backend.image_proxy.os.path.exists", return_value=False),
+            patch("builtins.open", mock_open()),
+        ):
             mock_dl.return_value = b"fake_image_bytes"
             # 原始 URL 里已经带 ?tag=xxx
             encoded_url = "http%3A%2F%2Fplex%3A32400%2Flibrary%2Fmetadata%2F1%2Fthumb%3Ftag%3Dabc"
@@ -181,17 +181,16 @@ class TestLibraryImageProxyRoute:
 
             assert resp.status_code == 200
             mock_dl.assert_called_once_with(
-                "http://plex:32400/library/metadata/1/thumb?tag=abc&X-Plex-Token=xyz",
-                referer=None
+                "http://plex:32400/library/metadata/1/thumb?tag=abc&X-Plex-Token=xyz", referer=None
             )
 
     def test_proxy_library_image_returns_cache_hit(self, client, tmp_path):
-        with patch('web.backend.image_proxy.CACHE_DIR', str(tmp_path)):
+        with patch("web.backend.image_proxy.CACHE_DIR", str(tmp_path)):
             encoded_url = "http%3A%2F%2Fhost%2Fimg.jpg"
             decoded_url = "http://host/img.jpg"
-            cache_path = _get_cache_path('library', decoded_url)
+            cache_path = _get_cache_path("library", decoded_url)
             os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-            with open(cache_path, 'wb') as f:
+            with open(cache_path, "wb") as f:
                 f.write(b"cached_image_bytes")
 
             resp = client.get(f"/img/library/{encoded_url}")
@@ -199,10 +198,11 @@ class TestLibraryImageProxyRoute:
             assert resp.data == b"cached_image_bytes"
 
     def test_proxy_library_image_404_when_download_fails(self, client, tmp_path):
-        with patch('web.backend.image_proxy.CACHE_DIR', str(tmp_path)), \
-             patch('web.backend.image_proxy._download_image', return_value=None), \
-             patch('web.backend.image_proxy.os.path.exists', return_value=False):
-
+        with (
+            patch("web.backend.image_proxy.CACHE_DIR", str(tmp_path)),
+            patch("web.backend.image_proxy._download_image", return_value=None),
+            patch("web.backend.image_proxy.os.path.exists", return_value=False),
+        ):
             encoded_url = "http%3A%2F%2Fhost%2Fmissing.jpg"
             resp = client.get(f"/img/library/{encoded_url}")
             assert resp.status_code == 404

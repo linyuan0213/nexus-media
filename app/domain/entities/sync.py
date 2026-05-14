@@ -2,6 +2,7 @@
 同步领域实体
 包含目录同步配置实体
 """
+
 from dataclasses import dataclass, fields
 from typing import Any, Optional
 
@@ -9,6 +10,7 @@ from typing import Any, Optional
 @dataclass
 class SyncPathEntity:
     """目录同步路径实体"""
+
     id: int
     source: str
     dest: str
@@ -32,7 +34,7 @@ class SyncPathEntity:
             compatibility=bool(orm_model.COMPATIBILITY),
             rename=bool(orm_model.RENAME),
             enabled=bool(orm_model.ENABLED),
-            note=orm_model.NOTE
+            note=orm_model.NOTE,
         )
 
     _ORM_FIELD_MAP = {}

@@ -38,13 +38,13 @@ class Bangumi:
         """
         获取每日放送
         """
-        return self.__invoke(self._urls["calendar"], _ts=datetime.strftime(datetime.now(), '%Y%m%d'))
+        return self.__invoke(self._urls["calendar"], _ts=datetime.strftime(datetime.now(), "%Y%m%d"))
 
     def detail(self, bid):
         """
         获取番剧详情
         """
-        return self.__invoke(self._urls["detail"] % bid, _ts=datetime.strftime(datetime.now(), '%Y%m%d'))
+        return self.__invoke(self._urls["detail"] % bid, _ts=datetime.strftime(datetime.now(), "%Y%m%d"))
 
     @staticmethod
     def __dict_item(item, weekday):
@@ -64,28 +64,29 @@ class Bangumi:
         if images:
             image = images.get("large")
         else:
-            image = ''
+            image = ""
         # 转换为代理URL格式
         if image:
             try:
                 from config import Config
+
                 if Config().get_config("app").get("enable_image_proxy", True):
                     image = f"/img/bgm/{urllib.parse.quote(image, safe='')}"
             except Exception:
                 pass
         summary = item.get("summary")
         return {
-            'id': "BG:%s" % bid,
-            'orgid': bid,
-            'title': title,
-            'year': air_date[:4] if air_date else "",
-            'type': 'TV',
-            'media_type': MediaType.TV.value,
-            'vote': score,
-            'image': image,
-            'overview': summary,
-            'url': detail,
-            'weekday': weekday
+            "id": "BG:%s" % bid,
+            "orgid": bid,
+            "title": title,
+            "year": air_date[:4] if air_date else "",
+            "type": "TV",
+            "media_type": MediaType.TV.value,
+            "vote": score,
+            "image": image,
+            "overview": summary,
+            "url": detail,
+            "weekday": weekday,
         }
 
     def get_bangumi_calendar(self, page=1, week=None):

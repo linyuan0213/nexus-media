@@ -1,6 +1,7 @@
 """
 SyncService 单元测试
 """
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -41,21 +42,21 @@ class TestValidateSyncPath:
         assert ok is False
         assert "源目录不能为空" in msg
 
-    @patch('os.path.exists')
+    @patch("os.path.exists")
     def test_source_not_exists(self, mock_exists, svc):
         mock_exists.return_value = False
         ok, msg = svc.validate_sync_path("/src", "/dest", "link")
         assert ok is False
         assert "目录不存在" in msg
 
-    @patch('os.path.exists')
+    @patch("os.path.exists")
     def test_link_cross_disk(self, mock_exists, svc):
         mock_exists.return_value = True
         ok, msg = svc.validate_sync_path("/src", "/dest", "link")
         assert ok is False
         assert "硬链接不能跨盘" in msg
 
-    @patch('os.path.exists')
+    @patch("os.path.exists")
     def test_valid(self, mock_exists, svc):
         mock_exists.return_value = True
         ok, msg = svc.validate_sync_path("/src", "/dest", "copy")
@@ -63,25 +64,21 @@ class TestValidateSyncPath:
 
 
 class TestAddOrEditSyncPath:
-    @patch('os.path.exists')
+    @patch("os.path.exists")
     def test_add_new(self, mock_exists, svc, mock_sync):
         mock_exists.return_value = True
         ok, msg = svc.add_or_edit_sync_path(
-            sid=None, source="/src", dest="/dest",
-            unknown="/unknown", mode="copy",
-            compatibility=1, rename=1, enabled=1
+            sid=None, source="/src", dest="/dest", unknown="/unknown", mode="copy", compatibility=1, rename=1, enabled=1
         )
         assert ok is True
         mock_sync.check_source.assert_called_once()
         mock_sync.insert_sync_path.assert_called_once()
 
-    @patch('os.path.exists')
+    @patch("os.path.exists")
     def test_edit_existing(self, mock_exists, svc, mock_sync):
         mock_exists.return_value = True
         ok, msg = svc.add_or_edit_sync_path(
-            sid=5, source="/src", dest="/dest",
-            unknown="", mode="copy",
-            compatibility=0, rename=0, enabled=0
+            sid=5, source="/src", dest="/dest", unknown="", mode="copy", compatibility=0, rename=0, enabled=0
         )
         assert ok is True
         mock_sync.delete_sync_path.assert_called_once_with(5)
@@ -115,32 +112,29 @@ class TestBuildMediaType:
 
 
 class TestManualTransfer:
-    @patch('os.path.exists')
+    @patch("os.path.exists")
     def test_path_not_exists(self, mock_exists, svc):
         mock_exists.return_value = False
         result = svc.manual_transfer("/in", None)
         assert result.success is False
         assert "输入路径不存在" in result.message
 
-    @patch('os.path.exists')
+    @patch("os.path.exists")
     def test_with_tmdb(self, mock_exists, svc, mock_media, mock_filetransfer):
         mock_exists.return_value = True
         mock_media.get_tmdb_info.return_value = {"id": 123}
         mock_filetransfer.transfer_media.return_value = (True, "")
-        result = svc.manual_transfer(
-            "/in", "copy", "/out", MediaType.MOVIE,
-            tmdbid=123
-        )
+        result = svc.manual_transfer("/in", "copy", "/out", MediaType.MOVIE, tmdbid=123)
         assert result.success is True
 
-    @patch('os.path.exists')
+    @patch("os.path.exists")
     def test_without_tmdb(self, mock_exists, svc, mock_filetransfer):
         mock_exists.return_value = True
         mock_filetransfer.transfer_media.return_value = (True, "")
         result = svc.manual_transfer("/in", "copy", "/out", MediaType.TV)
         assert result.success is True
 
-    @patch('os.path.exists')
+    @patch("os.path.exists")
     def test_tmdb_not_found(self, mock_exists, svc, mock_media):
         mock_exists.return_value = True
         mock_media.get_tmdb_info.return_value = None
@@ -184,9 +178,7 @@ class TestReIdentifyItems:
             FakeTransferInfo(PATH="/p1", DEST="/d1", MODE="link"),
             FakeTransferInfo(PATH="/p2", DEST="/d2", MODE="copy"),
         ]
-        mock_filetransfer.transfer_media.side_effect = [
-            (True, ""), (False, "错误1")
-        ]
+        mock_filetransfer.transfer_media.side_effect = [(True, ""), (False, "错误1")]
         result = svc.re_identify_items("unidentification", [1, 2])
         assert result.success is False
         assert "错误1" in result.message
@@ -212,6 +204,7 @@ class TestGetSyncPaths:
 class TestRenameFile:
     def test_rename_file_success(self, svc, tmp_path):
         from app.schemas.sync import SimpleResultDTO
+
         src_file = tmp_path / "test.txt"
         src_file.write_text("content")
         result = svc.rename_file(str(src_file), "renamed.txt")
@@ -222,6 +215,7 @@ class TestRenameFile:
 
     def test_rename_file_empty_path(self, svc):
         from app.schemas.sync import SimpleResultDTO
+
         result = svc.rename_file("", "name")
         assert isinstance(result, SimpleResultDTO)
         assert result.success is True
@@ -230,6 +224,7 @@ class TestRenameFile:
         import shutil
 
         from app.schemas.sync import SimpleResultDTO
+
         monkeypatch.setattr(shutil, "move", lambda *args, **kwargs: (_ for _ in ()).throw(Exception("mock error")))
         result = svc.rename_file("/nonexistent/file.txt", "new.txt")
         assert isinstance(result, SimpleResultDTO)
@@ -250,6 +245,7 @@ class TestExecTestCommand:
 class TestTestConnection:
     def test_test_connection_empty(self, svc):
         from app.schemas.sync import SimpleResultDTO
+
         result = svc.test_connection("")
         assert isinstance(result, SimpleResultDTO)
         assert result.success is True
@@ -258,9 +254,10 @@ class TestTestConnection:
         from unittest.mock import patch
 
         from app.schemas.sync import SimpleResultDTO
+
         # Patch the class method to return True for any command, and Config to avoid singleton issues
-        with patch.object(SyncService, 'exec_test_command', return_value=True):
-            with patch('config.Config') as mock_config:
+        with patch.object(SyncService, "exec_test_command", return_value=True):
+            with patch("config.Config") as mock_config:
                 mock_config.return_value.init_config.return_value = None
                 result = svc.test_connection("Config().get_config()")
                 assert isinstance(result, SimpleResultDTO)
@@ -276,8 +273,8 @@ class TestUpdateDirectory:
         mock_cfg = {"key": "value"}
         mock_set_config = MagicMock(return_value=mock_cfg)
 
-        with patch('config.Config') as mock_config:
-            with patch('web.core.action_utils.set_config_directory', mock_set_config):
+        with patch("config.Config") as mock_config:
+            with patch("web.core.action_utils.set_config_directory", mock_set_config):
                 mock_config.return_value.get_config.return_value = mock_cfg
 
                 result = svc.update_directory("add", "dir", "/new/path")

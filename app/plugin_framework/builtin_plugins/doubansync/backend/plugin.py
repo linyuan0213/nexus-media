@@ -2,6 +2,7 @@
 DoubanSync Plugin v2
 同步豆瓣在看、想看、看过记录，自动添加订阅或搜索下载
 """
+
 import json
 import random
 from datetime import datetime
@@ -91,11 +92,7 @@ class DoubanSyncPlugin:
 
     def _is_enabled(self) -> bool:
         config = self._get_config()
-        return bool(
-            config.get("enable", False)
-            and config.get("users")
-            and config.get("types")
-        )
+        return bool(config.get("enable", False) and config.get("users") and config.get("types"))
 
     def _sync(self):
         with _lock:
@@ -157,9 +154,7 @@ class DoubanSyncPlugin:
                 page = int(start / perpage + 1)
                 self.ctx.debug(f"开始解析第 {page} 页数据...")
                 try:
-                    items = self._douban.get_douban_wish(
-                        dtype=mtype, userid=user, start=start, wait=True
-                    )
+                    items = self._douban.get_douban_wish(dtype=mtype, userid=user, start=start, wait=True)
                     if not items:
                         self.ctx.warn(f"第 {page} 页未获取到数据")
                         break
@@ -190,9 +185,7 @@ class DoubanSyncPlugin:
                     break
 
     def _sync_rss_user(self, user, user_name, type_list, days, douban_ids):
-        all_items = self._douban.get_latest_douban_interests(
-            dtype="all", userid=user, wait=True
-        )
+        all_items = self._douban.get_latest_douban_interests(dtype="all", userid=user, wait=True)
         for mtype in type_list:
             items = [x for x in all_items if x.get("type") == mtype]
             for item in items:
@@ -219,9 +212,7 @@ class DoubanSyncPlugin:
                 return
 
         media_type = MediaType.TV if douban_info.get("episodes_count") else MediaType.MOVIE
-        meta_info = MetaInfo(
-            title="%s %s" % (douban_info.get("title"), douban_info.get("year") or "")
-        )
+        meta_info = MetaInfo(title="%s %s" % (douban_info.get("title"), douban_info.get("year") or ""))
         meta_info.douban_id = doubanid
         meta_info.type = media_type
         meta_info.overview = douban_info.get("intro")
@@ -305,6 +296,7 @@ class DoubanSyncPlugin:
                     self._update_history(media=mediainfo, state="RSS_FAILED")
         except Exception as e:
             import traceback
+
             self.ctx.error(f"_auto_search_media 内部异常: {e}")
             self.ctx.error(traceback.format_exc())
             try:
@@ -335,6 +327,7 @@ class DoubanSyncPlugin:
                 self.ctx.error(f"{media_info.get_name()} 添加订阅失败：{msg}")
         except Exception as e:
             import traceback
+
             self.ctx.error(f"_auto_subscribe_media 内部异常: {e}")
             self.ctx.error(traceback.format_exc())
 

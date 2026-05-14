@@ -9,6 +9,7 @@
 
 位于 app/downloader/ 层，不依赖 app/services/。
 """
+
 import json
 import os
 
@@ -35,15 +36,17 @@ class DownloadPipeline:
         downloader_id, download_id, error = pipeline.execute(media_info=..., ...)
     """
 
-    def __init__(self,
-                 client_factory=None,
-                 message: Message | None = None,
-                 mediaserver: MediaServer | None = None,
-                 filetransfer=None,
-                 sites: Sites | None = None,
-                 siteconf: SiteConf | None = None,
-                 sitesubtitle: SiteSubtitle | None = None,
-                 eventmanager: EventManager | None = None):
+    def __init__(
+        self,
+        client_factory=None,
+        message: Message | None = None,
+        mediaserver: MediaServer | None = None,
+        filetransfer=None,
+        sites: Sites | None = None,
+        siteconf: SiteConf | None = None,
+        sitesubtitle: SiteSubtitle | None = None,
+        eventmanager: EventManager | None = None,
+    ):
         self._client_factory = client_factory
         self._message = message or Message()
         self._mediaserver = mediaserver or MediaServer()
@@ -53,19 +56,21 @@ class DownloadPipeline:
         self._sitesubtitle = sitesubtitle or SiteSubtitle()
         self._eventmanager = eventmanager or EventManager()
 
-    def execute(self,
-                media_info,
-                is_paused=None,
-                tag=None,
-                download_dir=None,
-                download_setting=None,
-                downloader_id=None,
-                upload_limit=None,
-                download_limit=None,
-                torrent_file=None,
-                in_from=None,
-                user_name=None,
-                proxy=None) -> tuple[str | None, str | None, str]:
+    def execute(
+        self,
+        media_info,
+        is_paused=None,
+        tag=None,
+        download_dir=None,
+        download_setting=None,
+        downloader_id=None,
+        upload_limit=None,
+        download_limit=None,
+        torrent_file=None,
+        in_from=None,
+        user_name=None,
+        proxy=None,
+    ) -> tuple[str | None, str | None, str]:
         """
         执行完整下载流水线
 
@@ -73,12 +78,18 @@ class DownloadPipeline:
         """
         title = media_info.org_string or media_info.get_title_string() or media_info.title or "未知"
 
-        self._eventmanager.send_event(EventType.DownloadAdd, {
-            "media_info": media_info.to_dict(),
-            "is_paused": is_paused, "tag": tag,
-            "download_dir": download_dir, "download_setting": download_setting,
-            "downloader_id": downloader_id, "torrent_file": torrent_file
-        })
+        self._eventmanager.send_event(
+            EventType.DownloadAdd,
+            {
+                "media_info": media_info.to_dict(),
+                "is_paused": is_paused,
+                "tag": tag,
+                "download_dir": download_dir,
+                "download_setting": download_setting,
+                "downloader_id": downloader_id,
+                "torrent_file": torrent_file,
+            },
+        )
 
         # ---------- 阶段1：获取种子内容 ----------
         fetch = self._stage_fetch(media_info=media_info, torrent_file=torrent_file, proxy=proxy)
@@ -94,12 +105,16 @@ class DownloadPipeline:
 
         # ---------- 阶段2：解析下载设置 ----------
         resolved = self._stage_resolve(
-            media_info=media_info, download_setting=download_setting,
-            downloader_id=downloader_id, tag=tag, is_paused=is_paused,
-            site_info=site_info, torrent_attr=torrent_attr
+            media_info=media_info,
+            download_setting=download_setting,
+            downloader_id=downloader_id,
+            tag=tag,
+            is_paused=is_paused,
+            site_info=site_info,
+            torrent_attr=torrent_attr,
         )
         download_attr = resolved["download_attr"]
-        download_setting_name = download_attr.get('name')
+        download_setting_name = download_attr.get("name")
         downloader_id = resolved["downloader_id"]
         tags = resolved["tags"]
         is_paused = resolved["is_paused"]
@@ -118,20 +133,27 @@ class DownloadPipeline:
         downloader_name = downloader_conf.get("name")
 
         if not download_dir:
-            download_info = self._client_factory.get_download_dir_info(
-                media_info, downloader_conf.get("download_dir"))
-            download_dir = download_info.get('path')
+            download_info = self._client_factory.get_download_dir_info(media_info, downloader_conf.get("download_dir"))
+            download_dir = download_info.get("path")
             if not category:
-                category = download_info.get('category')
+                category = download_info.get("category")
 
         # ---------- 阶段3：添加任务 ----------
         download_id = self._stage_add(
-            downloader=downloader, downloader_type=downloader.get_type(),
-            content=content, title=title, is_paused=is_paused,
-            download_dir=download_dir, tags=tags, category=category,
-            upload_limit=upload_limit, download_limit=download_limit,
-            ratio_limit=ratio_limit, seeding_time_limit=seeding_time_limit,
-            cookie=site_info.get("cookie"), url=media_info.enclosure or torrent_file or ""
+            downloader=downloader,
+            downloader_type=downloader.get_type(),
+            content=content,
+            title=title,
+            is_paused=is_paused,
+            download_dir=download_dir,
+            tags=tags,
+            category=category,
+            upload_limit=upload_limit,
+            download_limit=download_limit,
+            ratio_limit=ratio_limit,
+            seeding_time_limit=seeding_time_limit,
+            cookie=site_info.get("cookie"),
+            url=media_info.enclosure or torrent_file or "",
         )
         if not download_id:
             return downloader_id, None, f"下载器 {downloader_name} 添加下载任务失败"
@@ -141,13 +163,19 @@ class DownloadPipeline:
 
         # ---------- 阶段4：后续处理 ----------
         self._stage_post(
-            media_info=media_info, downloader_id=downloader_id,
-            download_id=download_id, page_url=media_info.page_url,
-            dl_files_folder=dl_files_folder, dl_files=dl_files,
-            download_dir=download_dir, downloader_name=downloader_name,
+            media_info=media_info,
+            downloader_id=downloader_id,
+            download_id=download_id,
+            page_url=media_info.page_url,
+            dl_files_folder=dl_files_folder,
+            dl_files=dl_files,
+            download_dir=download_dir,
+            downloader_name=downloader_name,
             download_setting_name=download_setting_name,
-            site_info=site_info, torrent_attr=torrent_attr,
-            in_from=in_from, user_name=user_name,
+            site_info=site_info,
+            torrent_attr=torrent_attr,
+            in_from=in_from,
+            user_name=user_name,
         )
 
         if not media_info.enclosure and file_path:
@@ -180,7 +208,8 @@ class DownloadPipeline:
                         "ua": site_info.get("ua", ""),
                         "headers": site_info.get("headers", {}),
                         "proxy": site_info.get("proxy"),
-                    })
+                    },
+                )
             if not url:
                 return None
             if url.startswith("magnet:"):
@@ -196,27 +225,32 @@ class DownloadPipeline:
                 if media_info.page_url and site_info.get("id"):
                     torrent_attr = self._siteconf.check_torrent_attr(
                         torrent_url=media_info.page_url,
-                        cookie=cookie, ua=site_info.get("ua"),
+                        cookie=cookie,
+                        ua=site_info.get("ua"),
                         headers=headers,
-                        proxy=proxy if proxy is not None else site_info.get("proxy"))
+                        proxy=proxy if proxy is not None else site_info.get("proxy"),
+                    )
                 file_path, content, dl_files_folder, dl_files, retmsg = Torrent().get_torrent_info(
-                    url=url, cookie=cookie, ua=site_info.get("ua"),
+                    url=url,
+                    cookie=cookie,
+                    ua=site_info.get("ua"),
                     referer=media_info.page_url if not site_info.get("referer") else site_info.get("referer"),
-                    proxy=proxy if proxy is not None else site_info.get("proxy"))
+                    proxy=proxy if proxy is not None else site_info.get("proxy"),
+                )
 
         return content, file_path, dl_files_folder, dl_files, retmsg, site_info, torrent_attr
 
     # ---------- 阶段2：配置解析 ----------
 
-    def _stage_resolve(self, media_info, download_setting, downloader_id, tag,
-                       is_paused, site_info, torrent_attr):
+    def _stage_resolve(self, media_info, download_setting, downloader_id, tag, is_paused, site_info, torrent_attr):
         if not download_setting and media_info.site:
             download_setting = self._sites.get_site_download_setting(media_info.site)
         if download_setting == "-2":
             download_attr = {}
         elif download_setting:
-            download_attr = self._client_factory.get_download_setting(download_setting) \
-                or self._client_factory.get_download_setting(self._client_factory.default_download_setting_id)
+            download_attr = self._client_factory.get_download_setting(
+                download_setting
+            ) or self._client_factory.get_download_setting(self._client_factory.default_download_setting_id)
         else:
             download_attr = self._client_factory.get_download_setting(self._client_factory.default_download_setting_id)
 
@@ -236,7 +270,7 @@ class DownloadPipeline:
                 tags = tag if isinstance(tag, list) else [tag]
             else:
                 tags = []
-        if torrent_attr and torrent_attr.get('hr'):
+        if torrent_attr and torrent_attr.get("hr"):
             tags.append("HR")
         if site_info and site_info.get("tag"):
             tags.append(site_info.get("tag"))
@@ -249,26 +283,44 @@ class DownloadPipeline:
         else:
             is_paused = bool(is_paused)
 
-        return {"download_attr": download_attr, "downloader_id": downloader_id,
-                "tags": tags, "is_paused": is_paused}
+        return {"download_attr": download_attr, "downloader_id": downloader_id, "tags": tags, "is_paused": is_paused}
 
     # ---------- 阶段3：添加任务 ----------
 
-    def _stage_add(self, downloader, downloader_type, content, title,
-                   is_paused, download_dir, tags, category,
-                   upload_limit, download_limit, ratio_limit, seeding_time_limit,
-                   cookie, url):
+    def _stage_add(
+        self,
+        downloader,
+        downloader_type,
+        content,
+        title,
+        is_paused,
+        download_dir,
+        tags,
+        category,
+        upload_limit,
+        download_limit,
+        ratio_limit,
+        seeding_time_limit,
+        cookie,
+        url,
+    ):
         print_url = content if isinstance(content, str) else url
-        log.info(f"【DownloadPipeline】{'添加任务并暂停' if is_paused else '添加任务'}：%s，目录：%s，Url：%s"
-                 % (title, download_dir, print_url))
+        log.info(
+            f"【DownloadPipeline】{'添加任务并暂停' if is_paused else '添加任务'}：%s，目录：%s，Url：%s"
+            % (title, download_dir, print_url)
+        )
 
         if downloader_type == DownloaderType.TR:
-            ret = downloader.add_torrent(content, is_paused=is_paused,
-                                         download_dir=download_dir, cookie=cookie)
+            ret = downloader.add_torrent(content, is_paused=is_paused, download_dir=download_dir, cookie=cookie)
             if ret:
-                downloader.change_torrent(tid=ret.hashString, tag=tags,
-                                          upload_limit=upload_limit, download_limit=download_limit,
-                                          ratio_limit=ratio_limit, seeding_time_limit=seeding_time_limit)
+                downloader.change_torrent(
+                    tid=ret.hashString,
+                    tag=tags,
+                    upload_limit=upload_limit,
+                    download_limit=download_limit,
+                    ratio_limit=ratio_limit,
+                    seeding_time_limit=seeding_time_limit,
+                )
                 return ret.hashString
         elif downloader_type == DownloaderType.QB:
             exists, _ = downloader.check_torrent_exists(content)
@@ -277,12 +329,19 @@ class DownloadPipeline:
                 return "EXISTS"
             torrent_tag = "NT" + StringUtils.generate_random_str(5)
             tags = tags + [torrent_tag] if tags else [torrent_tag]
-            ret = downloader.add_torrent(content, is_paused=is_paused,
-                                         download_dir=download_dir, tag=tags,
-                                         category=category, content_layout="Original",
-                                         upload_limit=upload_limit, download_limit=download_limit,
-                                         ratio_limit=ratio_limit, seeding_time_limit=seeding_time_limit,
-                                         cookie=cookie)
+            ret = downloader.add_torrent(
+                content,
+                is_paused=is_paused,
+                download_dir=download_dir,
+                tag=tags,
+                category=category,
+                content_layout="Original",
+                upload_limit=upload_limit,
+                download_limit=download_limit,
+                ratio_limit=ratio_limit,
+                seeding_time_limit=seeding_time_limit,
+                cookie=cookie,
+            )
             if ret:
                 download_id = downloader.get_torrent_id_by_tag(torrent_tag)
                 if not download_id:
@@ -293,17 +352,31 @@ class DownloadPipeline:
                     return None
                 return download_id
         else:
-            ret = downloader.add_torrent(content, is_paused=is_paused,
-                                         tag=tags, download_dir=download_dir, category=category)
+            ret = downloader.add_torrent(
+                content, is_paused=is_paused, tag=tags, download_dir=download_dir, category=category
+            )
             if ret:
                 return ret
         return None
 
     # ---------- 阶段4：后续处理 ----------
 
-    def _stage_post(self, media_info, downloader_id, download_id, page_url,
-                    dl_files_folder, dl_files, download_dir, downloader_name,
-                    download_setting_name, site_info, torrent_attr, in_from, user_name):
+    def _stage_post(
+        self,
+        media_info,
+        downloader_id,
+        download_id,
+        page_url,
+        dl_files_folder,
+        dl_files,
+        download_dir,
+        downloader_name,
+        download_setting_name,
+        site_info,
+        torrent_attr,
+        in_from,
+        user_name,
+    ):
         if not self._client_factory:
             return
 
@@ -329,26 +402,28 @@ class DownloadPipeline:
                 return
 
         DownloadHistoryRepositoryAdapter().insert_download_history(
-            media_info=media_info, downloader=downloader_id,
-            download_id=download_id, save_dir=save_dir)
+            media_info=media_info, downloader=downloader_id, download_id=download_id, save_dir=save_dir
+        )
 
         if page_url and subtitle_dir and site_info and site_info.get("subtitle"):
             ThreadHelper().start_thread(
                 self._sitesubtitle.download,
-                (media_info, site_info.get("id"), site_info.get("cookie"),
-                 site_info.get("ua"), subtitle_dir))
+                (media_info, site_info.get("id"), site_info.get("cookie"), site_info.get("ua"), subtitle_dir),
+            )
 
         if in_from:
             media_info.user_name = user_name
-            media_info.hit_and_run = bool(torrent_attr and torrent_attr.get('hr'))
+            media_info.hit_and_run = bool(torrent_attr and torrent_attr.get("hr"))
             self._message.send_download_message(
-                in_from=in_from, can_item=media_info,
-                download_setting_name=download_setting_name, downloader_name=downloader_name)
+                in_from=in_from,
+                can_item=media_info,
+                download_setting_name=download_setting_name,
+                downloader_name=downloader_name,
+            )
 
     # ---------- 辅助 ----------
 
     def _fail(self, media_info, in_from, reason):
-        self._eventmanager.send_event(EventType.DownloadFail, {
-            "media_info": media_info.to_dict(), "reason": reason})
+        self._eventmanager.send_event(EventType.DownloadFail, {"media_info": media_info.to_dict(), "reason": reason})
         if in_from:
             self._message.send_download_fail_message(media_info, f"添加下载任务失败：{reason}")

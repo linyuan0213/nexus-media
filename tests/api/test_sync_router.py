@@ -1,6 +1,7 @@
 """
 测试 FastAPI Sync Router
 """
+
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -50,10 +51,18 @@ class TestSyncRouter:
         mock_svc = self._mock_sync()
         mock_svc.add_or_edit_sync_path.return_value = (True, "保存成功")
         try:
-            resp = client.post("/api/sync/add_or_edit_sync_path", json={
-                "sid": 1, "source": "/src", "dest": "/dst",
-                "mode": "copy", "compatibility": 1, "rename": 1, "enabled": 1
-            })
+            resp = client.post(
+                "/api/sync/add_or_edit_sync_path",
+                json={
+                    "sid": 1,
+                    "source": "/src",
+                    "dest": "/dst",
+                    "mode": "copy",
+                    "compatibility": 1,
+                    "rename": 1,
+                    "enabled": 1,
+                },
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -63,9 +72,7 @@ class TestSyncRouter:
         mock_svc = self._mock_sync()
         mock_svc.add_or_edit_sync_path.return_value = (False, "目录不存在")
         try:
-            resp = client.post("/api/sync/add_or_edit_sync_path", json={
-                "source": "/nonexist"
-            })
+            resp = client.post("/api/sync/add_or_edit_sync_path", json={"source": "/nonexist"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
         finally:
@@ -78,9 +85,7 @@ class TestSyncRouter:
         mock_svc = self._mock_sync()
         mock_svc.check_sync_path.return_value = (True, "")
         try:
-            resp = client.post("/api/sync/check_sync_path", json={
-                "sid": 1, "flag": "enabled", "checked": True
-            })
+            resp = client.post("/api/sync/check_sync_path", json={"sid": 1, "flag": "enabled", "checked": True})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -90,9 +95,7 @@ class TestSyncRouter:
         mock_svc = self._mock_sync()
         mock_svc.check_sync_path.return_value = (False, "")
         try:
-            resp = client.post("/api/sync/check_sync_path", json={
-                "sid": 1, "flag": "enabled", "checked": False
-            })
+            resp = client.post("/api/sync/check_sync_path", json={"sid": 1, "flag": "enabled", "checked": False})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
         finally:
@@ -127,9 +130,7 @@ class TestSyncRouter:
         mock_ft = self._mock_ft()
         mock_ft.delete_media_file.return_value = (True, "deleted")
         try:
-            resp = client.post("/api/sync/delete_files", json={
-                "files": ["/path/to/file.mkv"]
-            })
+            resp = client.post("/api/sync/delete_files", json={"files": ["/path/to/file.mkv"]})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -153,13 +154,9 @@ class TestSyncRouter:
     # ------------------------------------------------------------------
     def test_get_sub_path(self):
         mock_svc = self._mock_sync()
-        mock_svc.get_sub_path.return_value = [
-            {"path": "/a", "name": "a", "type": "dir"}
-        ]
+        mock_svc.get_sub_path.return_value = [{"path": "/a", "name": "a", "type": "dir"}]
         try:
-            resp = client.post("/api/sync/get_sub_path", json={
-                "directory": "/", "filter": "ALL"
-            })
+            resp = client.post("/api/sync/get_sub_path", json={"directory": "/", "filter": "ALL"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["count"] == 1
@@ -170,9 +167,7 @@ class TestSyncRouter:
         mock_svc = self._mock_sync()
         mock_svc.get_sub_path.side_effect = Exception("disk error")
         try:
-            resp = client.post("/api/sync/get_sub_path", json={
-                "directory": "/bad"
-            })
+            resp = client.post("/api/sync/get_sub_path", json={"directory": "/bad"})
             assert resp.status_code == 200
             assert resp.json()["code"] == -1
         finally:
@@ -191,9 +186,7 @@ class TestSyncRouter:
         mock_svc.manual_transfer.return_value = MagicMock(success=True, message="ok")
         mock_ft = self._mock_ft()
         try:
-            resp = client.post("/api/sync/rename", json={
-                "logid": 1, "syncmod": "copy", "tmdb": 123, "type": "MOV"
-            })
+            resp = client.post("/api/sync/rename", json={"logid": 1, "syncmod": "copy", "tmdb": 123, "type": "MOV"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["msg"] == "转移成功"
@@ -264,9 +257,7 @@ class TestSyncRouter:
         mock_svc = self._mock_sync()
         mock_svc.rename_file.return_value = MagicMock(success=True, message="")
         try:
-            resp = client.post("/api/sync/rename_file", json={
-                "path": "/old", "name": "new.mkv"
-            })
+            resp = client.post("/api/sync/rename_file", json={"path": "/old", "name": "new.mkv"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -276,9 +267,7 @@ class TestSyncRouter:
         mock_svc = self._mock_sync()
         mock_svc.rename_file.return_value = MagicMock(success=False, message="err")
         try:
-            resp = client.post("/api/sync/rename_file", json={
-                "path": "/old", "name": "new.mkv"
-            })
+            resp = client.post("/api/sync/rename_file", json={"path": "/old", "name": "new.mkv"})
             assert resp.status_code == 200
             assert resp.json()["code"] == -1
         finally:
@@ -292,10 +281,9 @@ class TestSyncRouter:
         mock_svc = self._mock_sync()
         mock_svc.manual_transfer.return_value = MagicMock(success=True, message="ok")
         try:
-            resp = client.post("/api/sync/rename_udf", json={
-                "inpath": "/in", "outpath": "/out",
-                "syncmod": "copy", "type": "MOV"
-            })
+            resp = client.post(
+                "/api/sync/rename_udf", json={"inpath": "/in", "outpath": "/out", "syncmod": "copy", "type": "MOV"}
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -305,9 +293,7 @@ class TestSyncRouter:
     def test_rename_udf_path_not_exist(self, mock_exists):
         mock_svc = self._mock_sync()
         try:
-            resp = client.post("/api/sync/rename_udf", json={
-                "inpath": "/nonexist"
-            })
+            resp = client.post("/api/sync/rename_udf", json={"inpath": "/nonexist"})
             assert resp.status_code == 200
             assert resp.json()["code"] == -1
             assert resp.json()["msg"] == "输入路径不存在"
@@ -319,9 +305,7 @@ class TestSyncRouter:
         mock_svc = self._mock_sync()
         mock_svc.manual_transfer.return_value = MagicMock(success=False, message="bad")
         try:
-            resp = client.post("/api/sync/rename_udf", json={
-                "inpath": "/in", "syncmod": "copy"
-            })
+            resp = client.post("/api/sync/rename_udf", json={"inpath": "/in", "syncmod": "copy"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 2
         finally:
@@ -349,9 +333,7 @@ class TestSyncRouter:
         mock_svc = self._mock_sync()
         mock_svc.test_connection.return_value = MagicMock(success=True)
         try:
-            resp = client.post("/api/sync/test_connection", json={
-                "command": "Config().get_config()"
-            })
+            resp = client.post("/api/sync/test_connection", json={"command": "Config().get_config()"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -361,9 +343,7 @@ class TestSyncRouter:
         mock_svc = self._mock_sync()
         mock_svc.test_connection.return_value = MagicMock(success=False)
         try:
-            resp = client.post("/api/sync/test_connection", json={
-                "command": "BadCmd()"
-            })
+            resp = client.post("/api/sync/test_connection", json={"command": "BadCmd()"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
         finally:
@@ -376,9 +356,7 @@ class TestSyncRouter:
         mock_svc = self._mock_sync()
         mock_svc.update_directory.return_value = MagicMock(success=True)
         try:
-            resp = client.post("/api/sync/update_directory", json={
-                "oper": "add", "key": "dir", "value": "/new"
-            })
+            resp = client.post("/api/sync/update_directory", json={"oper": "add", "key": "dir", "value": "/new"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -400,13 +378,10 @@ class TestSyncRouter:
     def test_delete_history(self):
         mock_ft = self._mock_ft()
         try:
-            resp = client.post("/api/sync/delete_history", json={
-                "logids": [1, 2], "flag": "hist"
-            })
+            resp = client.post("/api/sync/delete_history", json={"logids": [1, 2], "flag": "hist"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            mock_ft.delete_history.assert_called_once_with(
-                logids=[1, 2], flag="hist")
+            mock_ft.delete_history.assert_called_once_with(logids=[1, 2], flag="hist")
         finally:
             self._teardown_ft()
 
@@ -439,12 +414,9 @@ class TestSyncRouter:
     # ------------------------------------------------------------------
     def test_re_identification(self):
         mock_svc = self._mock_sync()
-        mock_svc.re_identify_items.return_value = MagicMock(
-            success=True, message="转移成功")
+        mock_svc.re_identify_items.return_value = MagicMock(success=True, message="转移成功")
         try:
-            resp = client.post("/api/sync/re_identification", json={
-                "flag": "history", "ids": [1, 2]
-            })
+            resp = client.post("/api/sync/re_identification", json={"flag": "history", "ids": [1, 2]})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["msg"] == "转移成功"
@@ -453,12 +425,9 @@ class TestSyncRouter:
 
     def test_re_identification_fail(self):
         mock_svc = self._mock_sync()
-        mock_svc.re_identify_items.return_value = MagicMock(
-            success=False, message="失败")
+        mock_svc.re_identify_items.return_value = MagicMock(success=False, message="失败")
         try:
-            resp = client.post("/api/sync/re_identification", json={
-                "flag": "unidentification", "ids": [1]
-            })
+            resp = client.post("/api/sync/re_identification", json={"flag": "unidentification", "ids": [1]})
             assert resp.status_code == 200
             assert resp.json()["code"] == 2
         finally:

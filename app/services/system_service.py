@@ -2,6 +2,7 @@
 SystemService - 系统管理业务层
 将 web/controllers/system.py 与 app/system_service.py 中的系统逻辑下沉到可独立测试的 Service。
 """
+
 import datetime
 import json
 import os
@@ -90,9 +91,9 @@ class MessageClientService:
         """测试消息客户端连接"""
         return self._message.get_status(ctype=ctype, config=config)
 
-    def upsert_client(self, name: str, cid: int, ctype: str, config: str,
-                      switchs, interactive: int, enabled: int,
-                      templates: str) -> None:
+    def upsert_client(
+        self, name: str, cid: int, ctype: str, config: str, switchs, interactive: int, enabled: int, templates: str
+    ) -> None:
         """添加或更新消息客户端"""
         # 统一 switchs 为 list
         parsed_switchs = switchs
@@ -110,9 +111,13 @@ class MessageClientService:
         if int(interactive) == 1:
             self._message.check_message_client(interactive=0, ctype=ctype)
         self._message.insert_message_client(
-            name=name, ctype=ctype, config=config,
-            switchs=parsed_switchs, interactive=interactive,
-            enabled=enabled, templates=templates
+            name=name,
+            ctype=ctype,
+            config=config,
+            switchs=parsed_switchs,
+            interactive=interactive,
+            enabled=enabled,
+            templates=templates,
         )
 
 
@@ -137,26 +142,24 @@ class BackupRestoreService:
         try:
             # 1. 解压到临时目录
             temp_dir = tempfile.mkdtemp(prefix="restore_")
-            shutil.unpack_archive(file_path, temp_dir, format='zip')
+            shutil.unpack_archive(file_path, temp_dir, format="zip")
 
             # 2. 恢复配置文件
-            for cfg_name in ['config.yaml', 'default-category.yaml']:
+            for cfg_name in ["config.yaml", "default-category.yaml"]:
                 src = os.path.join(temp_dir, cfg_name)
                 if os.path.exists(src):
                     shutil.copy(src, config_path)
 
             # 3. 判断备份中的数据库格式与当前数据库类型
-            json_backup = os.path.join(temp_dir, 'user_db_export.json')
-            sqlite_backup = os.path.join(temp_dir, 'user.db')
+            json_backup = os.path.join(temp_dir, "user_db_export.json")
+            sqlite_backup = os.path.join(temp_dir, "user.db")
 
             target_engine = DatabaseFactory.create_engine()
 
             if os.path.exists(json_backup):
                 import_from_file(target_engine, json_backup)
             elif os.path.exists(sqlite_backup):
-                source_engine = create_engine(
-                    f"sqlite:///{sqlite_backup}?check_same_thread=False"
-                )
+                source_engine = create_engine(f"sqlite:///{sqlite_backup}?check_same_thread=False")
                 migrate_data = export_database(source_engine)
                 import_database(target_engine, migrate_data)
                 source_engine.dispose()
@@ -183,15 +186,14 @@ class IndexerConfigService:
     负责保存索引器配置、兼容旧配置迁移、测试连接
     """
 
-    def __init__(self,
-                 system_config: SystemConfig | None = None,
-                 indexer_service: IndexerService | None = None):
+    def __init__(self, system_config: SystemConfig | None = None, indexer_service: IndexerService | None = None):
         self._system_config = system_config or SystemConfig()
         self._indexer_service = indexer_service or IndexerService()
 
     def save_config(self, data: dict) -> IndexerConfigResultDTO:
         """保存索引器配置"""
         from app.utils.types import SystemConfigKey
+
         name = data.get("type") or ""
         test = data.get("test") in [True, "true", "on", "1", 1]
         # 兼容旧配置：首次保存时从配置文件迁移
@@ -222,16 +224,14 @@ class IndexerConfigService:
         if test and name != "builtin":
             try:
                 schemas = SubmoduleHelper.import_submodules(
-                    'app.indexer.client',
-                    filter_func=lambda _, obj: hasattr(obj, 'client_id')
+                    "app.indexer.client", filter_func=lambda _, obj: hasattr(obj, "client_id")
                 )
                 for schema in schemas:
                     if schema.match(name):
                         client = schema(config)
                         status = client.get_status()
                         return IndexerConfigResultDTO(
-                            success=True, code=0 if status else 1,
-                            msg="测试成功" if status else "测试失败"
+                            success=True, code=0 if status else 1, msg="测试成功" if status else "测试失败"
                         )
                 return IndexerConfigResultDTO(success=False, code=-1, msg="未找到对应客户端")
             except Exception as e:
@@ -246,9 +246,7 @@ class MediaServerConfigService:
     负责保存媒体服务器配置、测试连接
     """
 
-    def __init__(self,
-                 config_repo=None,
-                 media_server: MediaServer | None = None):
+    def __init__(self, config_repo=None, media_server: MediaServer | None = None):
         self._config_repo = config_repo or MediaServerRepositoryAdapter()
         self._media_server = media_server or MediaServer()
 
@@ -267,8 +265,7 @@ class MediaServerConfigService:
         item = self._config_repo.get_media_server_by_name(name)
         sid = item.ID if item else None
         self._config_repo.update_media_server(
-            sid=sid, name=name, enabled=enabled,
-            config=json.dumps(config), is_default=is_default
+            sid=sid, name=name, enabled=enabled, config=json.dumps(config), is_default=is_default
         )
         # 如果有设置默认，需要清理其他默认并同步 ENABLED
         if is_default:
@@ -280,16 +277,14 @@ class MediaServerConfigService:
         if test:
             try:
                 schemas = SubmoduleHelper.import_submodules(
-                    'app.mediaserver.client',
-                    filter_func=lambda _, obj: hasattr(obj, 'client_id')
+                    "app.mediaserver.client", filter_func=lambda _, obj: hasattr(obj, "client_id")
                 )
                 for schema in schemas:
                     if schema.match(name):
                         client = schema(config)
                         status = client.get_status()
                         return MediaServerConfigResultDTO(
-                            success=True, code=0 if status else 1,
-                            msg="测试成功" if status else "测试失败"
+                            success=True, code=0 if status else 1, msg="测试成功" if status else "测试失败"
                         )
                 return MediaServerConfigResultDTO(success=False, code=-1, msg="未找到对应客户端")
             except Exception as e:
@@ -311,10 +306,12 @@ class NetTestService:
             target = target + "/cgi-bin/message/send"
         target = "https://" + target
         start_time = datetime.datetime.now()
-        if target.find("themoviedb") != -1 \
-                or target.find("telegram") != -1 \
-                or target.find("fanart") != -1 \
-                or target.find("tmdb") != -1:
+        if (
+            target.find("themoviedb") != -1
+            or target.find("telegram") != -1
+            or target.find("fanart") != -1
+            or target.find("tmdb") != -1
+        ):
             res = RequestUtils(proxies=get_proxies(), timeout=5).get_res(target)
         else:
             res = RequestUtils(timeout=5).get_res(target)
@@ -330,12 +327,14 @@ class SchedulerService:
     负责启动各种后台服务（下载转移、目录同步、RSS下载、订阅搜索）
     """
 
-    def __init__(self,
-                 downloader: Downloader | None = None,
-                 sync: Sync | None = None,
-                 rss: Rss | None = None,
-                 subscribe: Subscribe | None = None,
-                 thread_helper: ThreadHelper | None = None):
+    def __init__(
+        self,
+        downloader: Downloader | None = None,
+        sync: Sync | None = None,
+        rss: Rss | None = None,
+        subscribe: Subscribe | None = None,
+        thread_helper: ThreadHelper | None = None,
+    ):
         self._commands = {
             "pttransfer": (downloader or Downloader()).transfer,
             "sync": (sync or Sync()).transfer_sync,
@@ -367,8 +366,9 @@ class WebSearchService:
     def __init__(self, search_fn=None):
         self._search_fn = search_fn or search_medias_for_web
 
-    def search(self, search_word: str, ident_flag: bool = True,
-               filters=None, tmdbid=None, media_type=None) -> WebSearchResultDTO:
+    def search(
+        self, search_word: str, ident_flag: bool = True, filters=None, tmdbid=None, media_type=None
+    ) -> WebSearchResultDTO:
         """执行WEB搜索"""
         if not search_word:
             return WebSearchResultDTO(code=0, msg="")
@@ -378,8 +378,7 @@ class WebSearchService:
             else:
                 media_type = MediaType.TV
         ret, ret_msg = self._search_fn(
-            content=search_word, ident_flag=ident_flag,
-            filters=filters, tmdbid=tmdbid, media_type=media_type
+            content=search_word, ident_flag=ident_flag, filters=filters, tmdbid=tmdbid, media_type=media_type
         )
         return WebSearchResultDTO(code=ret, msg=ret_msg or "")
 
@@ -410,13 +409,12 @@ class VersionService:
         """获取最新版本信息"""
         version, url, flag = WebUtils.get_latest_version()
         if flag:
-            return VersionInfoDTO(
-                version=version or "", url=url or "", has_update=True
-            )
+            return VersionInfoDTO(version=version or "", url=url or "", has_update=True)
         return VersionInfoDTO(version="", url="", has_update=False)
 
 
 # ---------- 以下从原 app/system_service.py 迁移 ----------
+
 
 class SystemInfoService:
     """
@@ -479,16 +477,19 @@ class SystemLifecycleService:
     职责：统一管理系统各服务的启动、停止、重启。
     """
 
-    def __init__(self,
-                 scheduler_core=None,
-                 sync=None,
-                 brush_task_service=None,
-                 rss_checker=None,
-                 torrent_remover=None,
-                 downloader=None,
-                 plugin_manager=None,
-                 file_index_service=None):
+    def __init__(
+        self,
+        scheduler_core=None,
+        sync=None,
+        brush_task_service=None,
+        rss_checker=None,
+        torrent_remover=None,
+        downloader=None,
+        plugin_manager=None,
+        file_index_service=None,
+    ):
         from app.services.scheduler_core import SchedulerCore
+
         self._scheduler = scheduler_core or SchedulerCore()
         # 保存外部注入的依赖（测试时传入 mock），不在 __init__ 中实例化
         self._sync = sync
@@ -512,6 +513,7 @@ class SystemLifecycleService:
             update_config,
             update_rss_state,
         )
+
         # 0. 执行初始化（配置检查、RBAC、消息 webhook key 等）
         check_config()
         update_config()
@@ -537,6 +539,7 @@ class SystemLifecycleService:
             self._downloader = Downloader()
         if self._file_index is None:
             from app.services.file_index_service import FileIndexService
+
             self._file_index = FileIndexService()
         self._file_index.start()
         self._sync.init_config()
@@ -569,9 +572,9 @@ class SystemLifecycleService:
     def restart_server() -> None:
         """停止进程并重启服务器"""
         SystemLifecycleService().stop_service()
-        script_path = os.path.join(os.getcwd(), 'restart-server.sh')
+        script_path = os.path.join(os.getcwd(), "restart-server.sh")
         os.chmod(script_path, 0o755)
-        res = subprocess.run(['bash', script_path], cwd=os.getcwd())
+        res = subprocess.run(["bash", script_path], cwd=os.getcwd())
         if res.returncode == 0:
             log.info("Nastool 重启成功...")
         else:
@@ -603,18 +606,15 @@ class MessageCommandHandler:
         if not msg:
             return
 
-        EventManager().send_event(EventType.MessageIncoming, {
-            "channel": in_from.value,
-            "user_id": user_id,
-            "user_name": user_name,
-            "message": msg
-        })
+        EventManager().send_event(
+            EventType.MessageIncoming,
+            {"channel": in_from.value, "user_id": user_id, "user_name": user_name, "message": msg},
+        )
 
         command = self._commands.get(msg)
         if command:
             ThreadHelper().start_thread(command.get("func"), ())
-            Message().send_channel_msg(
-                channel=in_from, title="正在运行 %s ..." % command.get("desc"), user_id=user_id)
+            Message().send_channel_msg(channel=in_from, title="正在运行 %s ..." % command.get("desc"), user_id=user_id)
             return
 
         # 插件命令
@@ -627,17 +627,18 @@ class MessageCommandHandler:
             if func:
                 ThreadHelper().start_thread(func, (msg, in_from, user_id, user_name))
             Message().send_channel_msg(
-                channel=in_from, title="正在运行 %s ..." % plugin_cmd.get("desc"), user_id=user_id)
+                channel=in_from, title="正在运行 %s ..." % plugin_cmd.get("desc"), user_id=user_id
+            )
             return
 
         TokenCache.delete("search")
         if self._search_handler:
-            ThreadHelper().start_thread(self._search_handler.handle,
-                                        (msg, in_from, user_id, user_name))
+            ThreadHelper().start_thread(self._search_handler.handle, (msg, in_from, user_id, user_name))
 
     @staticmethod
     def _truncate_rsshistory():
         from app.helper import RssHelper
+
         RssHelper().truncate_rss_history()
         Subscribe().truncate_rss_episodes()
 
@@ -649,6 +650,7 @@ class MessageCommandHandler:
     @staticmethod
     def _unidentification():
         from app.services.sync_service import SyncService
+
         ItemIds = []
         Records = FileTransfer().get_transfer_unknown_paths()
         for rec in Records:
@@ -665,11 +667,9 @@ def get_commands():
 
 def get_rmt_modes():
     from app.core import ModuleConf
+
     RmtModes = ModuleConf.RMT_MODES
-    return [{
-        "value": value,
-        "name": name.value
-    } for value, name in RmtModes.items()]
+    return [{"value": value, "name": name.value} for value, name in RmtModes.items()]
 
 
 def get_system_message(lst_time):
@@ -696,21 +696,22 @@ def backup(full_backup=False, bk_path=None):
         else:
             backup_path = config_path / "backup_file" / backup_file
         backup_path.mkdir(parents=True)
-        shutil.copy(f'{config_path}/config.yaml', backup_path)
-        shutil.copy(f'{config_path}/default-category.yaml', backup_path)
+        shutil.copy(f"{config_path}/config.yaml", backup_path)
+        shutil.copy(f"{config_path}/default-category.yaml", backup_path)
 
         db_type = DatabaseFactory._get_config_db_type()
         engine = DatabaseFactory.create_engine()
         if db_type == DatabaseFactory.SQLITE:
-            shutil.copy(f'{config_path}/user.db', backup_path)
+            shutil.copy(f"{config_path}/user.db", backup_path)
         from app.db.migrate import export_to_file
-        export_to_file(engine, str(backup_path / 'user_db_export.json'))
+
+        export_to_file(engine, str(backup_path / "user_db_export.json"))
         engine.dispose()
 
-        zip_file = str(backup_path) + '.zip'
+        zip_file = str(backup_path) + ".zip"
         if os.path.exists(zip_file):
-            zip_file = str(backup_path) + '.zip'
-        shutil.make_archive(str(backup_path), 'zip', str(backup_path))
+            zip_file = str(backup_path) + ".zip"
+        shutil.make_archive(str(backup_path), "zip", str(backup_path))
         shutil.rmtree(str(backup_path))
         return zip_file
     except Exception as e:
@@ -746,16 +747,13 @@ class MessageSenderService:
     def __init__(self, message: Message | None = None):
         self._message = message or Message()
 
-    def send_custom_message(self, clients: list, title: str, text: str,
-                            image: str = "") -> SendMessageResultDTO:
+    def send_custom_message(self, clients: list, title: str, text: str, image: str = "") -> SendMessageResultDTO:
         if not clients:
             return SendMessageResultDTO(success=False, message="未选择消息服务")
-        self._message.send_custom_message(
-            clients=clients, title=title, text=text, image=image)
+        self._message.send_custom_message(clients=clients, title=title, text=text, image=image)
         return SendMessageResultDTO(success=True)
 
-    def send_plugin_message(self, title: str, text: str,
-                            image: str = "") -> SendMessageResultDTO:
+    def send_plugin_message(self, title: str, text: str, image: str = "") -> SendMessageResultDTO:
         self._message.send_plugin_message(title=title, text=text, image=image)
         return SendMessageResultDTO(success=True)
 
@@ -767,16 +765,13 @@ class ProgressService:
 
     def __init__(self, progress_helper=None):
         from app.helper import ProgressHelper
+
         self._progress = progress_helper or ProgressHelper()
 
     def get_progress(self, ptype: str) -> ProgressResultDTO:
         detail = self._progress.get_process(ptype)
         if detail:
-            return ProgressResultDTO(
-                value=detail.get("value", 0),
-                text=detail.get("text", ""),
-                exists=True
-            )
+            return ProgressResultDTO(value=detail.get("value", 0), text=detail.get("text", ""), exists=True)
         return ProgressResultDTO(exists=False, text="正在处理...")
 
 
@@ -791,11 +786,11 @@ class UserManageService:
     def _get_rbac(self):
         if self._rbac is None:
             from app.services.rbac_service import rbac_service
+
             self._rbac = rbac_service
         return self._rbac
 
-    def add_user(self, name: str, password: str,
-                 pris=None) -> UserManageResultDTO:
+    def add_user(self, name: str, password: str, pris=None) -> UserManageResultDTO:
         rbac = self._get_rbac()
         ok, _ = rbac.create_user(username=name, password=password)
         return UserManageResultDTO(success=bool(ok))
@@ -817,6 +812,7 @@ class ConfigUpdateService:
     @staticmethod
     def update_config(data: dict) -> ConfigUpdateResultDTO:
         from app.utils.web_utils import set_config_value
+
         cfg = Config().get_config()
         config_test = False
         for key, value in dict(data).items():

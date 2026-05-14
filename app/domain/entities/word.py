@@ -2,6 +2,7 @@
 自定义识别词领域实体
 对应 CUSTOM_WORDS / CUSTOM_WORD_GROUPS 表
 """
+
 from dataclasses import dataclass, fields
 from typing import Any, Optional
 
@@ -9,6 +10,7 @@ from typing import Any, Optional
 @dataclass
 class CustomWordEntity:
     """自定义识别词实体"""
+
     id: int
     replaced: str | None
     replace: str | None
@@ -29,18 +31,18 @@ class CustomWordEntity:
             return None
         return cls(
             id=orm_model.ID,
-            replaced=getattr(orm_model, 'REPLACED', None),
-            replace=getattr(orm_model, 'REPLACE', None),
-            front=getattr(orm_model, 'FRONT', None),
-            back=getattr(orm_model, 'BACK', None),
-            offset=getattr(orm_model, 'OFFSET', None),
-            type=getattr(orm_model, 'TYPE', 1),
-            group_id=getattr(orm_model, 'GROUP_ID', 0),
-            season=getattr(orm_model, 'SEASON', 0),
-            enabled=getattr(orm_model, 'ENABLED', 1),
-            regex=getattr(orm_model, 'REGEX', 0),
-            help=getattr(orm_model, 'HELP', None),
-            note=getattr(orm_model, 'NOTE', None),
+            replaced=getattr(orm_model, "REPLACED", None),
+            replace=getattr(orm_model, "REPLACE", None),
+            front=getattr(orm_model, "FRONT", None),
+            back=getattr(orm_model, "BACK", None),
+            offset=getattr(orm_model, "OFFSET", None),
+            type=getattr(orm_model, "TYPE", 1),
+            group_id=getattr(orm_model, "GROUP_ID", 0),
+            season=getattr(orm_model, "SEASON", 0),
+            enabled=getattr(orm_model, "ENABLED", 1),
+            regex=getattr(orm_model, "REGEX", 0),
+            help=getattr(orm_model, "HELP", None),
+            note=getattr(orm_model, "NOTE", None),
         )
 
     def __getattr__(self, name: str):
@@ -70,6 +72,7 @@ class CustomWordEntity:
 @dataclass
 class CustomWordGroupEntity:
     """自定义识别词组实体"""
+
     id: int
     title: str | None
     year: str | None
@@ -84,12 +87,12 @@ class CustomWordGroupEntity:
             return None
         return cls(
             id=orm_model.ID,
-            title=getattr(orm_model, 'TITLE', None),
-            year=getattr(orm_model, 'YEAR', None),
-            type=getattr(orm_model, 'TYPE', 0),
-            tmdbid=getattr(orm_model, 'TMDBID', 0),
-            season_count=getattr(orm_model, 'SEASON_COUNT', 0),
-            note=getattr(orm_model, 'NOTE', None),
+            title=getattr(orm_model, "TITLE", None),
+            year=getattr(orm_model, "YEAR", None),
+            type=getattr(orm_model, "TYPE", 0),
+            tmdbid=getattr(orm_model, "TMDBID", 0),
+            season_count=getattr(orm_model, "SEASON_COUNT", 0),
+            note=getattr(orm_model, "NOTE", None),
         )
 
     def __getattr__(self, name: str):

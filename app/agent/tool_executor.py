@@ -44,36 +44,44 @@ class ToolExecutor:
             return self._handle_rss(action, target)
         if action == "transfer_run":
             from app.services.filetransfer_service import FileTransferService
+
             FileTransferService().transfer_manually("", "", "link")
             return ToolResult(success=True, data="文件转移任务已触发")
         if action == "sync_run":
             from app.services.sync_service import SyncService
+
             SyncService().transfer_sync()
             return ToolResult(success=True, data="目录同步任务已触发")
         if action == "subscribe_search_all":
             from app.services.subscribe_service import SubscribeService
+
             SubscribeService().subscribe_search_all()
             return ToolResult(success=True, data="订阅搜索任务已触发")
         if action == "auto_remove_torrents":
             from app.services.torrentremover_core import TorrentRemoverService
+
             TorrentRemoverService().auto_remove_torrents()
             return ToolResult(success=True, data="自动删种任务已触发")
         if action == "truncate_transfer_blacklist":
             from app.services.filetransfer_service import FileTransferService
+
             FileTransferService().truncate_transfer_blacklist()
             return ToolResult(success=True, data="转移黑名单已清理")
         if action == "truncate_rss_history":
             from app.helper import RssHelper
             from app.services.subscribe_service import SubscribeService
+
             RssHelper().truncate_rss_history()
             SubscribeService().truncate_rss_episodes()
             return ToolResult(success=True, data="RSS历史已清理")
         if action == "re_identify":
             from app.services.sync_service import SyncService
+
             SyncService().re_identify_items(flag="unidentification", ids=[])
             return ToolResult(success=True, data="未识别项重新识别已触发")
         if action == "restart_server":
             from app.services.system_service import SystemLifecycleService
+
             SystemLifecycleService.restart_server()
             return ToolResult(success=True, data="服务器重启指令已发送")
         return ToolResult(success=False, error=f"未知命令: {action}")
@@ -86,10 +94,14 @@ class ToolExecutor:
         if action == "scheduler_list":
             resp = svc.get_jobs()
             jobs = resp.data if resp.code == 0 else []
-            return ToolResult(success=True, data={
-                "jobs": [{"id": j.id, "name": j.name, "paused": j.paused,
-                          "next_run": j.next_run_time} for j in jobs]
-            })
+            return ToolResult(
+                success=True,
+                data={
+                    "jobs": [
+                        {"id": j.id, "name": j.name, "paused": j.paused, "next_run": j.next_run_time} for j in jobs
+                    ]
+                },
+            )
         if action == "scheduler_run":
             resp = svc.run_job(RunSchedulerJobRequest(id=target))
             return ToolResult(success=resp.code == 0, data=resp.msg)
@@ -103,13 +115,19 @@ class ToolExecutor:
 
     def _handle_brush(self, action: str, target: str) -> ToolResult:
         from app.services.brush_service import BrushService
+
         svc = BrushService()
         if action == "brush_list":
             tasks = svc.get_tasks()
-            return ToolResult(success=True, data={
-                "tasks": [{"id": t.get("id"), "name": t.get("name"),
-                           "site": t.get("site"), "state": t.get("state")} for t in tasks]
-            })
+            return ToolResult(
+                success=True,
+                data={
+                    "tasks": [
+                        {"id": t.get("id"), "name": t.get("name"), "site": t.get("site"), "state": t.get("state")}
+                        for t in tasks
+                    ]
+                },
+            )
         if action == "brush_delete":
             if not target:
                 return ToolResult(success=False, error="请指定刷流任务ID")
@@ -120,13 +138,13 @@ class ToolExecutor:
     def _handle_site(self, action: str, target: str) -> ToolResult:
         if action == "site_list":
             from app.services.site_service import SiteService
+
             svc = SiteService()
             sites = svc.get_sites()
-            return ToolResult(success=True, data={
-                "sites": [{"id": s.id, "name": s.name} for s in sites]
-            })
+            return ToolResult(success=True, data={"sites": [{"id": s.id, "name": s.name} for s in sites]})
         if action == "site_refresh":
             from app.sites.site_userinfo import SiteUserInfo
+
             if target:
                 SiteUserInfo().refresh_site_data_now(specify_sites=[target])
                 return ToolResult(success=True, data=f"站点 {target} 数据已刷新")
@@ -136,12 +154,11 @@ class ToolExecutor:
 
     def _handle_rss(self, action: str, target: str) -> ToolResult:
         from app.services.rss_service import RssTaskService
+
         svc = RssTaskService()
         if action == "rss_list":
             tasks = svc.get_rsstask_info()
-            return ToolResult(success=True, data={
-                "tasks": [{"id": t.get("id"), "name": t.get("name")} for t in tasks]
-            })
+            return ToolResult(success=True, data={"tasks": [{"id": t.get("id"), "name": t.get("name")} for t in tasks]})
         if action == "rss_run":
             if not target:
                 return ToolResult(success=False, error="请指定RSS任务ID")
@@ -153,8 +170,9 @@ class ToolExecutor:
     # message_template
     # ------------------------------------------------------------------
 
-    def _message_template(self, action: str, msg_type: str = "", title: str = "",
-                          text: str = "", client_id: int = 0, **_) -> ToolResult:
+    def _message_template(
+        self, action: str, msg_type: str = "", title: str = "", text: str = "", client_id: int = 0, **_
+    ) -> ToolResult:
         import json as _json
 
         from app.message.message import Message
@@ -189,9 +207,13 @@ class ToolExecutor:
             templates = target.get("templates", {}) or {}
             templates[msg_type] = {"title": title, "text": text}
             from app.services.system_service import MessageClientService
+
             MessageClientService(message=Message()).upsert_client(
-                name=target.get("name"), cid=target.get("id"), ctype=target.get("type"),
-                config=_json.dumps(target.get("config", {})), switchs=target.get("switchs", []),
+                name=target.get("name"),
+                cid=target.get("id"),
+                ctype=target.get("type"),
+                config=_json.dumps(target.get("config", {})),
+                switchs=target.get("switchs", []),
                 interactive=1 if target.get("interactive") else 0,
                 enabled=1 if target.get("enabled") else 0,
                 templates=_json.dumps(templates),
@@ -204,8 +226,9 @@ class ToolExecutor:
     # media_search
     # ------------------------------------------------------------------
 
-    def _media_search(self, query: str, media_type: str = "", year: int = 0,
-                      season: int = 0, episode: int = 0, limit: int = 10, **_) -> ToolResult:
+    def _media_search(
+        self, query: str, media_type: str = "", year: int = 0, season: int = 0, episode: int = 0, limit: int = 10, **_
+    ) -> ToolResult:
         from app.agent.agents.search_intent import SearchIntentAgent
         from app.media import MediaService
         from app.services.indexer_service import IndexerService
@@ -222,8 +245,12 @@ class ToolExecutor:
 
         filter_args = {
             "year": year or (intent.year if intent else 0),
-            "season": [season or (intent.season if intent else 0)] if (season or (intent.season if intent else 0)) else None,
-            "episode": [episode or (intent.episode if intent else 0)] if (episode or (intent.episode if intent else 0)) else None,
+            "season": [season or (intent.season if intent else 0)]
+            if (season or (intent.season if intent else 0))
+            else None,
+            "episode": [episode or (intent.episode if intent else 0)]
+            if (episode or (intent.episode if intent else 0))
+            else None,
             "type": media_type or (intent.media_type if intent else ""),
             "seeders": True,
         }
@@ -238,31 +265,48 @@ class ToolExecutor:
 
         formatted = []
         for r in results[:limit]:
-            formatted.append({
-                "title": getattr(r, "title", "") or getattr(r, "org_string", ""),
-                "site": getattr(r, "site", ""),
-                "size": getattr(r, "size", 0),
-                "seeders": getattr(r, "seeders", 0),
-                "enclosure": getattr(r, "enclosure", ""),
-            })
-        return ToolResult(success=True, data={
-            "query": query, "keywords": keywords, "media_title": media_info.title,
-            "results_count": len(results), "results": formatted,
-        })
+            formatted.append(
+                {
+                    "title": getattr(r, "title", "") or getattr(r, "org_string", ""),
+                    "site": getattr(r, "site", ""),
+                    "size": getattr(r, "size", 0),
+                    "seeders": getattr(r, "seeders", 0),
+                    "enclosure": getattr(r, "enclosure", ""),
+                }
+            )
+        return ToolResult(
+            success=True,
+            data={
+                "query": query,
+                "keywords": keywords,
+                "media_title": media_info.title,
+                "results_count": len(results),
+                "results": formatted,
+            },
+        )
 
     # ------------------------------------------------------------------
     # resource_filter
     # ------------------------------------------------------------------
 
-    def _resource_filter(self, resources: list, min_seeders: int = 0, max_size_gb: float = 0,
-                         sites: list = None, exclude_sites: list = None,
-                         sort_by: str = "seeders", preferred_qualities: list = None, **_) -> ToolResult:
+    def _resource_filter(
+        self,
+        resources: list,
+        min_seeders: int = 0,
+        max_size_gb: float = 0,
+        sites: list = None,
+        exclude_sites: list = None,
+        sort_by: str = "seeders",
+        preferred_qualities: list = None,
+        **_,
+    ) -> ToolResult:
         filtered = resources.copy()
 
         if min_seeders > 0:
             filtered = [r for r in filtered if r.get("seeders", 0) >= min_seeders]
 
         if max_size_gb > 0:
+
             def _parse_size_gb(s):
                 if not s:
                     return 0
@@ -276,7 +320,8 @@ class ToolExecutor:
                         return float(s.replace("MB", "").strip()) / 1024
                 except ValueError:
                     pass
-                return float('inf')
+                return float("inf")
+
             filtered = [r for r in filtered if _parse_size_gb(r.get("size", "")) <= max_size_gb]
 
         if sites:
@@ -285,9 +330,15 @@ class ToolExecutor:
             filtered = [r for r in filtered if r.get("site", "") not in exclude_sites]
 
         if preferred_qualities:
+
             def _score(r):
                 title = r.get("title", "")
-                return sum(len(preferred_qualities) - i for i, q in enumerate(preferred_qualities) if q.lower() in title.lower())
+                return sum(
+                    len(preferred_qualities) - i
+                    for i, q in enumerate(preferred_qualities)
+                    if q.lower() in title.lower()
+                )
+
             filtered.sort(key=_score, reverse=True)
 
         if sort_by == "seeders":
@@ -295,17 +346,31 @@ class ToolExecutor:
         elif sort_by == "site":
             filtered.sort(key=lambda r: r.get("site", ""))
 
-        return ToolResult(success=True, data={
-            "original_count": len(resources), "filtered_count": len(filtered), "results": filtered,
-        })
+        return ToolResult(
+            success=True,
+            data={
+                "original_count": len(resources),
+                "filtered_count": len(filtered),
+                "results": filtered,
+            },
+        )
 
     # ------------------------------------------------------------------
     # media_download
     # ------------------------------------------------------------------
 
-    def _media_download(self, title: str = "", media_type: str = "", year: int = 0,
-                        enclosure: str = "", site: str = "", size: str = "",
-                        season: int = 0, episode: int = 0, **_) -> ToolResult:
+    def _media_download(
+        self,
+        title: str = "",
+        media_type: str = "",
+        year: int = 0,
+        enclosure: str = "",
+        site: str = "",
+        size: str = "",
+        season: int = 0,
+        episode: int = 0,
+        **_,
+    ) -> ToolResult:
         from app.media import MediaService
         from app.services.downloader_core import DownloaderCore as Downloader
         from app.utils.types import MediaType
@@ -345,6 +410,7 @@ class ToolExecutor:
 
         from app.services.search_service import Searcher
         from app.utils.types import SearchType
+
         searcher = Searcher()
         search_result, no_exists, search_count, download_count = searcher.search_one_media(
             media_info=media_info, in_from=SearchType.API, no_exists={}
@@ -360,8 +426,9 @@ class ToolExecutor:
     # media_subscribe
     # ------------------------------------------------------------------
 
-    def _media_subscribe(self, title: str, media_type: str, year: int = 0,
-                         season: int = 0, tmdbid: str = "", **_) -> ToolResult:
+    def _media_subscribe(
+        self, title: str, media_type: str, year: int = 0, season: int = 0, tmdbid: str = "", **_
+    ) -> ToolResult:
         from app.media import MediaService
         from app.services.subscribe_service import SubscribeService as Subscribe
         from app.utils.types import MediaType, RssType

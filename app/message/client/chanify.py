@@ -10,9 +10,9 @@ class Chanify(_IMessageClient):
 
     def read_config(self):
         cfg = self._config or {}
-        self._server = StringUtils.get_base_url(cfg.get('server'))
-        self._token = cfg.get('token')
-        self._params = cfg.get('params')
+        self._server = StringUtils.get_base_url(cfg.get("server"))
+        self._token = cfg.get("token")
+        self._params = cfg.get("params")
 
     def send_msg(self, title, text="", image="", url="", user_id=""):
         if not title and not text:
@@ -21,9 +21,9 @@ class Chanify(_IMessageClient):
             if not self._server or not self._token:
                 return False, "参数未配置"
             sc_url = "%s/v1/sender/%s" % (self._server, self._token)
-            params = parse.parse_qs(self._params or '')
+            params = parse.parse_qs(self._params or "")
             data = {key: value[0] for key, value in params.items()}
-            data.update({'title': title, 'text': text})
+            data.update({"title": title, "text": text})
             res = RequestUtils().post_res(sc_url, data=parse.urlencode(data).encode())
             if res and res.status_code == 200:
                 return True, "发送成功"
@@ -37,5 +37,6 @@ class Chanify(_IMessageClient):
 
     def send_list_msg(self, medias: list = None, user_id="", title="", **kwargs):
         pass
+
 
 ClientRegistry.register(Chanify)

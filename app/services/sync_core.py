@@ -4,6 +4,7 @@ Sync 核心服务重构
 移除 SingletonMeta，依赖注入。
 FileMonitorHandler 保留在此模块。
 """
+
 import os
 import threading
 import traceback
@@ -46,10 +47,12 @@ class FileMonitorHandler(FileSystemEventHandler):
 class SyncCore:
     """同步核心服务（替代原 app.sync.Sync）"""
 
-    def __init__(self,
-                 filetransfer: FileTransfer | None = None,
-                 sync_repo: ISyncPathRepository | None = None,
-                 transfer_repo: ITransferHistoryRepository | None = None):
+    def __init__(
+        self,
+        filetransfer: FileTransfer | None = None,
+        sync_repo: ISyncPathRepository | None = None,
+        transfer_repo: ITransferHistoryRepository | None = None,
+    ):
         self._filetransfer = filetransfer or FileTransfer()
         self._sync_repo = sync_repo or SyncPathRepositoryAdapter()
         self._transfer_repo = transfer_repo or TransferHistoryRepositoryAdapter()
@@ -94,8 +97,9 @@ class SyncCore:
                 log_suffix += "，启用识别和重命名"
             if compatibility:
                 log_suffix += "，启用兼容模式"
-            log.info(f"【Sync】读取到监控目录：{monpath}，"
-                     f"{'，'.join(log_parts)}转移方式：{syncmode_enum.value}{log_suffix}")
+            log.info(
+                f"【Sync】读取到监控目录：{monpath}，{'，'.join(log_parts)}转移方式：{syncmode_enum.value}{log_suffix}"
+            )
             if not enabled:
                 log.info(f"【Sync】{monpath} 不进行监控和同步：手动关闭")
             if target_path and not os.path.exists(target_path) and syncmode_enum not in ModuleConf.REMOTE_RMT_MODES:
@@ -106,11 +110,15 @@ class SyncCore:
                 os.makedirs(unknown_path)
 
             self._sync_path_confs[str(sid)] = {
-                'id': sid, 'from': monpath,
-                'to': target_path or "", 'unknown': unknown_path or "",
-                'syncmod': syncmode, 'syncmod_name': syncmode_enum.value,
-                "compatibility": compatibility, 'rename': rename,
-                'enabled': enabled
+                "id": sid,
+                "from": monpath,
+                "to": target_path or "",
+                "unknown": unknown_path or "",
+                "syncmod": syncmode,
+                "syncmod_name": syncmode_enum.value,
+                "compatibility": compatibility,
+                "rename": rename,
+                "enabled": enabled,
             }
             if monpath and os.path.exists(monpath) and enabled:
                 self._monitor_sync_path_ids.append(sid)
@@ -188,9 +196,9 @@ class SyncCore:
             is_root_path = False
             for sid in self._monitor_sync_path_ids:
                 sync_path_conf = self.get_sync_path_conf(sid)
-                mon_path = sync_path_conf.get('from')
-                target_path = sync_path_conf.get('to')
-                unknown_path = sync_path_conf.get('unknown')
+                mon_path = sync_path_conf.get("from")
+                target_path = sync_path_conf.get("to")
+                unknown_path = sync_path_conf.get("unknown")
                 if PathUtils.is_path_in_path(mon_path, event_path):
                     if os.path.normpath(mon_path) == os.path.normpath(from_dir):
                         is_root_path = True
@@ -212,11 +220,11 @@ class SyncCore:
                 return
 
             sync_path_conf = self.get_sync_path_conf(sync_id)
-            mon_path = sync_path_conf.get('from')
-            target_path = sync_path_conf.get('to')
-            unknown_path = sync_path_conf.get('unknown')
-            rename = sync_path_conf.get('rename')
-            sync_mode = ModuleConf.RMT_MODES.get(sync_path_conf.get('syncmod'))
+            mon_path = sync_path_conf.get("from")
+            target_path = sync_path_conf.get("to")
+            unknown_path = sync_path_conf.get("unknown")
+            rename = sync_path_conf.get("rename")
+            sync_mode = ModuleConf.RMT_MODES.get(sync_path_conf.get("syncmod"))
 
             if not rename:
                 self.__link(event_path, mon_path, target_path, sync_mode)
@@ -230,22 +238,27 @@ class SyncCore:
                         return
                 if is_root_path:
                     ret, ret_msg = self._filetransfer.transfer_media(
-                        in_from=SyncType.MON, in_path=event_path,
-                        target_dir=target_path, unknown_dir=unknown_path,
-                        rmt_mode=sync_mode)
+                        in_from=SyncType.MON,
+                        in_path=event_path,
+                        target_dir=target_path,
+                        unknown_dir=unknown_path,
+                        rmt_mode=sync_mode,
+                    )
                     if not ret:
                         log.warn("【Sync】%s 转移失败：%s" % (event_path, ret_msg))
                 else:
                     with _need_sync_paths_lock:
                         if self._need_sync_paths.get(from_dir):
-                            files = self._need_sync_paths[from_dir].get('files') or []
+                            files = self._need_sync_paths[from_dir].get("files") or []
                             if event_path not in files:
                                 files.append(event_path)
-                            self._need_sync_paths[from_dir].update({'files': files})
+                            self._need_sync_paths[from_dir].update({"files": files})
                         else:
                             self._need_sync_paths[from_dir] = {
-                                'target': target_path, 'unknown': unknown_path,
-                                'syncmod': sync_mode, 'files': [event_path]
+                                "target": target_path,
+                                "unknown": unknown_path,
+                                "syncmod": sync_mode,
+                                "files": [event_path],
                             }
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -261,24 +274,29 @@ class SyncCore:
                     bluray_dir = PathUtils.get_bluray_dir(path)
                     if not bluray_dir:
                         src_path = path
-                        files = target_info.get('files')
+                        files = target_info.get("files")
                     else:
                         src_path = bluray_dir
                         files = []
                     if src_path in finished_paths:
                         continue
                     finished_paths.append(src_path)
-                    target_path = target_info.get('target')
-                    unknown_path = target_info.get('unknown')
-                    sync_mode = target_info.get('syncmod')
+                    target_path = target_info.get("target")
+                    unknown_path = target_info.get("unknown")
+                    sync_mode = target_info.get("syncmod")
                     is_root_path = any(
                         os.path.normpath(self.get_sync_path_conf(sid).get("from")) == os.path.normpath(src_path)
                         for sid in self._monitor_sync_path_ids
                     )
                     ret, ret_msg = self._filetransfer.transfer_media(
-                        in_from=SyncType.MON, in_path=src_path, files=files,
-                        target_dir=target_path, unknown_dir=unknown_path,
-                        rmt_mode=sync_mode, root_path=is_root_path)
+                        in_from=SyncType.MON,
+                        in_path=src_path,
+                        files=files,
+                        target_dir=target_path,
+                        unknown_dir=unknown_path,
+                        rmt_mode=sync_mode,
+                        root_path=is_root_path,
+                    )
                     if not ret:
                         log.warn("【Sync】%s转移失败：%s" % (path, ret_msg))
                 self._need_sync_paths.pop(path)
@@ -305,9 +323,12 @@ class SyncCore:
                     if PathUtils.is_invalid_path(path):
                         continue
                     ret, ret_msg = self._filetransfer.transfer_media(
-                        in_from=SyncType.MON, in_path=path,
-                        target_dir=target_path, unknown_dir=unknown_path,
-                        rmt_mode=sync_mode)
+                        in_from=SyncType.MON,
+                        in_path=path,
+                        target_dir=target_path,
+                        unknown_dir=unknown_path,
+                        rmt_mode=sync_mode,
+                    )
                     if not ret:
                         log.error("【Sync】%s 处理失败：%s" % (mon_path, ret_msg))
 
@@ -317,8 +338,8 @@ class SyncCore:
         log.info("【Sync】开始同步 %s" % event_path)
         try:
             ret, msg = self._filetransfer.link_sync_file(
-                src_path=mon_path, in_file=event_path,
-                target_dir=target_path, sync_transfer_mode=sync_mode)
+                src_path=mon_path, in_file=event_path, target_dir=target_path, sync_transfer_mode=sync_mode
+            )
             if ret != 0:
                 log.warn("【Sync】%s 同步失败，错误码：%s" % (event_path, ret))
             elif not msg:
@@ -338,8 +359,9 @@ class SyncCore:
         check_monpath = os.path.normpath(check_monpath)
         for sid, config in self._sync_path_confs.items():
             monpath = os.path.normpath(config.get("from"))
-            if (PathUtils.is_path_in_path(monpath, check_monpath)
-                    or PathUtils.is_path_in_path(check_monpath, monpath)) and config.get("enabled"):
+            if (
+                PathUtils.is_path_in_path(monpath, check_monpath) or PathUtils.is_path_in_path(check_monpath, monpath)
+            ) and config.get("enabled"):
                 self._sync_repo.check_config_sync_paths(sid=sid, enabled=0)
 
     # ---------- 数据操作 ----------
@@ -352,17 +374,23 @@ class SyncCore:
 
     def insert_sync_path(self, source, dest, unknown, mode, compatibility, rename, enabled, note=None):
         ret = self._sync_repo.insert_config_sync_path(
-            source=source, dest=dest, unknown=unknown,
-            mode=mode, compatibility=compatibility,
-            rename=rename, enabled=enabled, note=note)
+            source=source,
+            dest=dest,
+            unknown=unknown,
+            mode=mode,
+            compatibility=compatibility,
+            rename=rename,
+            enabled=enabled,
+            note=note,
+        )
         self._reload_config()
         self._start_monitoring()
         return ret
 
     def check_sync_paths(self, sid=None, compatibility=None, rename=None, enabled=None):
         ret = self._sync_repo.check_config_sync_paths(
-            sid=sid, compatibility=compatibility,
-            rename=rename, enabled=enabled)
+            sid=sid, compatibility=compatibility, rename=rename, enabled=enabled
+        )
         self._reload_config()
         self._start_monitoring()
         return ret

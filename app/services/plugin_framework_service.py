@@ -2,6 +2,7 @@
 Plugin Framework Service
 插件框架 v2 业务服务层
 """
+
 import json
 import os
 import shutil
@@ -29,7 +30,7 @@ class PluginFrameworkService:
         self._repo = repo or PluginFrameworkRepository()
         self._menu_repo = RBACMenuRepositoryAdapter()
         self._role_repo = RBACRoleRepositoryAdapter()
-        self._plugins_dir = os.path.join(Config().config_path, 'plugins')
+        self._plugins_dir = os.path.join(Config().config_path, "plugins")
         if not os.path.exists(self._plugins_dir):
             os.makedirs(self._plugins_dir)
 
@@ -64,9 +65,7 @@ class PluginFrameworkService:
             if existing:
                 if existing.parent_id != parent_menu.id:
                     # 如果挂错了位置，修正一下
-                    self._menu_repo.update_menu(
-                        existing.id, parent_id=parent_menu.id, status=1
-                    )
+                    self._menu_repo.update_menu(existing.id, parent_id=parent_menu.id, status=1)
                 new_menu_ids.append(existing.id)
                 continue
 
@@ -129,10 +128,7 @@ class PluginFrameworkService:
             if not role.menus:
                 continue
             # 检查该角色是否拥有 Plugin 父菜单
-            has_plugin = any(
-                m.get("menu_code") == "Plugin" or m.get("id") == parent_menu.id
-                for m in role.menus
-            )
+            has_plugin = any(m.get("menu_code") == "Plugin" or m.get("id") == parent_menu.id for m in role.menus)
             if not has_plugin:
                 continue
 
@@ -146,43 +142,52 @@ class PluginFrameworkService:
         """列出所有已安装插件"""
         # 先扫描内置插件（热新增）
         from app.plugin_framework.registry import PluginRegistry
+
         PluginRegistry().scan()
         orm_list = self._repo.get_all_manifests()
         plugins = []
         for orm_model in orm_list:
             try:
-                manifest = PluginManifest.from_dict(json.loads(orm_model.MANIFEST_JSON or '{}'))
-                plugins.append({
-                    "id": manifest.id,
-                    "name": manifest.name,
-                    "version": manifest.version,
-                    "author": manifest.author,
-                    "description": manifest.description,
-                    "category": manifest.category,
-                    "tags": manifest.tags,
-                    "icon": manifest.icon,
-                    "color": manifest.color,
-                    "enabled": bool(orm_model.ENABLED),
-                    "is_builtin": bool(orm_model.PATH and 'builtin_plugins' in orm_model.PATH),
-                    "installed": bool(getattr(orm_model, 'INSTALLED', True)),
-                    "supports_run": manifest.backend.supports_run,
-                    "backend": {
-                        "entry": manifest.backend.entry,
-                        "api_prefix": manifest.backend.api_prefix,
-                        "hooks": manifest.backend.hooks,
+                manifest = PluginManifest.from_dict(json.loads(orm_model.MANIFEST_JSON or "{}"))
+                plugins.append(
+                    {
+                        "id": manifest.id,
+                        "name": manifest.name,
+                        "version": manifest.version,
+                        "author": manifest.author,
+                        "description": manifest.description,
+                        "category": manifest.category,
+                        "tags": manifest.tags,
+                        "icon": manifest.icon,
+                        "color": manifest.color,
+                        "enabled": bool(orm_model.ENABLED),
+                        "is_builtin": bool(orm_model.PATH and "builtin_plugins" in orm_model.PATH),
+                        "installed": bool(getattr(orm_model, "INSTALLED", True)),
                         "supports_run": manifest.backend.supports_run,
-                    },
-                    "frontend": {
-                        "routes": [
-                            {"path": r.path, "component": r.component, "title": r.title, "icon": r.icon, "menu": r.menu}
-                            for r in manifest.frontend.routes
-                        ],
-                        "slots": [
-                            {"target": s.target, "position": s.position, "component": s.component}
-                            for s in manifest.frontend.slots
-                        ],
-                    },
-                })
+                        "backend": {
+                            "entry": manifest.backend.entry,
+                            "api_prefix": manifest.backend.api_prefix,
+                            "hooks": manifest.backend.hooks,
+                            "supports_run": manifest.backend.supports_run,
+                        },
+                        "frontend": {
+                            "routes": [
+                                {
+                                    "path": r.path,
+                                    "component": r.component,
+                                    "title": r.title,
+                                    "icon": r.icon,
+                                    "menu": r.menu,
+                                }
+                                for r in manifest.frontend.routes
+                            ],
+                            "slots": [
+                                {"target": s.target, "position": s.position, "component": s.component}
+                                for s in manifest.frontend.slots
+                            ],
+                        },
+                    }
+                )
             except Exception as e:
                 log.error(f"[PluginFrameworkService] 解析插件清单失败: {e}")
         return plugins
@@ -192,7 +197,7 @@ class PluginFrameworkService:
         orm_model = self._repo.get_manifest_by_id(plugin_id)
         if not orm_model:
             return None
-        return PluginManifest.from_dict(json.loads(orm_model.MANIFEST_JSON or '{}'))
+        return PluginManifest.from_dict(json.loads(orm_model.MANIFEST_JSON or "{}"))
 
     def get_config(self, plugin_id: str) -> dict:
         """获取插件配置"""
@@ -210,18 +215,20 @@ class PluginFrameworkService:
         fields = []
         if manifest and manifest.frontend and manifest.frontend.settings:
             for f in manifest.frontend.settings.fields:
-                fields.append({
-                    "key": f.key,
-                    "type": f.type,
-                    "label": f.label,
-                    "default": f.default,
-                    "placeholder": f.placeholder,
-                    "options": f.options,
-                    "source": f.source,
-                    "multiple": f.multiple,
-                    "required": f.required,
-                    "help": f.help,
-                })
+                fields.append(
+                    {
+                        "key": f.key,
+                        "type": f.type,
+                        "label": f.label,
+                        "default": f.default,
+                        "placeholder": f.placeholder,
+                        "options": f.options,
+                        "source": f.source,
+                        "multiple": f.multiple,
+                        "required": f.required,
+                        "help": f.help,
+                    }
+                )
         return fields
 
     def save_config(self, plugin_id: str, config: dict) -> None:
@@ -235,21 +242,21 @@ class PluginFrameworkService:
         if not os.path.exists(zip_path):
             raise FileNotFoundError(f"插件包不存在: {zip_path}")
 
-        extract_dir = os.path.join(self._plugins_dir, '__tmp_install')
+        extract_dir = os.path.join(self._plugins_dir, "__tmp_install")
         if os.path.exists(extract_dir):
             shutil.rmtree(extract_dir)
         os.makedirs(extract_dir)
 
-        with zipfile.ZipFile(zip_path, 'r') as z:
+        with zipfile.ZipFile(zip_path, "r") as z:
             z.extractall(extract_dir)
 
-        manifest_path = os.path.join(extract_dir, 'manifest.json')
+        manifest_path = os.path.join(extract_dir, "manifest.json")
         # zip 命令压缩文件夹后，解压出来的根目录是一个子文件夹（如 hello_world/）
         if not os.path.exists(manifest_path):
             for entry in os.listdir(extract_dir):
                 subdir = os.path.join(extract_dir, entry)
                 if os.path.isdir(subdir):
-                    candidate = os.path.join(subdir, 'manifest.json')
+                    candidate = os.path.join(subdir, "manifest.json")
                     if os.path.exists(candidate):
                         manifest_path = candidate
                         break
@@ -258,7 +265,7 @@ class PluginFrameworkService:
             shutil.rmtree(extract_dir)
             raise ValueError("插件包缺少 manifest.json")
 
-        with open(manifest_path, encoding='utf-8') as f:
+        with open(manifest_path, encoding="utf-8") as f:
             manifest_data = json.load(f)
 
         manifest = PluginManifest.from_dict(manifest_data)
@@ -284,7 +291,7 @@ class PluginFrameworkService:
         new_manifest_json = json.dumps(manifest.to_dict(), ensure_ascii=False)
 
         if existing:
-            existing_manifest_json = existing.MANIFEST_JSON or '{}'
+            existing_manifest_json = existing.MANIFEST_JSON or "{}"
             if existing_manifest_json == new_manifest_json:
                 # manifest 完全相同，无需重复安装
                 if os.path.exists(target_dir):
@@ -346,7 +353,7 @@ class PluginFrameworkService:
             raise ValueError(f"插件未安装: {plugin_id}")
 
         target_dir = orm_model.PATH
-        is_builtin = bool(target_dir and 'builtin_plugins' in target_dir)
+        is_builtin = bool(target_dir and "builtin_plugins" in target_dir)
 
         if is_builtin:
             # 内置插件软卸载：禁用 + 标记为未安装（不删除文件）
@@ -355,6 +362,7 @@ class PluginFrameworkService:
             self._repo.set_manifest_installed(plugin_id, False)
             # 同步更新 Registry 缓存，避免扫描时覆盖数据库
             from app.plugin_framework.registry import PluginRegistry
+
             state = PluginRegistry().get_state(plugin_id)
             if state:
                 state.installed = False
@@ -401,7 +409,7 @@ class PluginFrameworkService:
             raise ValueError(f"插件未安装: {plugin_id}")
 
         # 首次启用时标记为已安装
-        if not getattr(orm_model, 'INSTALLED', True):
+        if not getattr(orm_model, "INSTALLED", True):
             self._repo.set_manifest_installed(plugin_id, True)
 
         self._repo.set_manifest_enabled(plugin_id, True)
@@ -411,6 +419,7 @@ class PluginFrameworkService:
 
         # 同步更新注册表缓存，否则后台线程加载时缓存仍为 False
         from app.plugin_framework.registry import PluginRegistry
+
         state = PluginRegistry().get_state(plugin_id)
         if state:
             state.enabled = True
@@ -431,6 +440,7 @@ class PluginFrameworkService:
 
         # 同步更新注册表缓存
         from app.plugin_framework.registry import PluginRegistry
+
         state = PluginRegistry().get_state(plugin_id)
         if state:
             state.enabled = False
@@ -445,12 +455,14 @@ class PluginFrameworkService:
 
         items = []
         for r in records:
-            items.append({
-                "id": r.ID,
-                "level": r.LEVEL,
-                "message": r.MESSAGE,
-                "created_at": r.CREATED_AT,
-            })
+            items.append(
+                {
+                    "id": r.ID,
+                    "level": r.LEVEL,
+                    "message": r.MESSAGE,
+                    "created_at": r.CREATED_AT,
+                }
+            )
 
         return {"total": total, "items": items}
 
@@ -464,11 +476,11 @@ class PluginFrameworkService:
         if not orm_model or not orm_model.PATH:
             return ""
 
-        readme_path = os.path.join(orm_model.PATH, 'README.md')
+        readme_path = os.path.join(orm_model.PATH, "README.md")
         if not os.path.exists(readme_path):
             return ""
 
-        with open(readme_path, encoding='utf-8') as f:
+        with open(readme_path, encoding="utf-8") as f:
             return f.read()
 
     def get_plugin_path(self, plugin_id: str) -> str | None:
@@ -488,7 +500,7 @@ class PluginFrameworkService:
         if not orm_model:
             raise ValueError(f"插件未安装: {plugin_id}")
 
-        manifest = PluginManifest.from_dict(json.loads(orm_model.MANIFEST_JSON or '{}'))
+        manifest = PluginManifest.from_dict(json.loads(orm_model.MANIFEST_JSON or "{}"))
         entry = manifest.backend.entry
         if not entry:
             raise ValueError(f"插件未声明后端入口: {plugin_id}")
@@ -497,14 +509,14 @@ class PluginFrameworkService:
         if not plugin_path or not os.path.exists(plugin_path):
             raise ValueError(f"插件路径不存在: {plugin_id}")
 
-        module_path, class_name = entry.split(':')
-        file_path = os.path.join(plugin_path, module_path.replace('.', '/') + '.py')
+        module_path, class_name = entry.split(":")
+        file_path = os.path.join(plugin_path, module_path.replace(".", "/") + ".py")
 
         if not os.path.exists(file_path):
             raise ValueError(f"插件入口文件不存在: {file_path}")
 
         # 强制清理模块缓存，确保加载最新代码
-        to_remove = [k for k in list(sys.modules.keys()) if k == module_path or k.startswith(module_path + '.')]
+        to_remove = [k for k in list(sys.modules.keys()) if k == module_path or k.startswith(module_path + ".")]
         for k in to_remove:
             del sys.modules[k]
         importlib.invalidate_caches()
@@ -513,9 +525,7 @@ class PluginFrameworkService:
         if plugin_path not in sys.path:
             sys.path.insert(0, plugin_path)
 
-        spec = importlib.util.spec_from_file_location(
-            module_path, file_path
-        )
+        spec = importlib.util.spec_from_file_location(module_path, file_path)
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_path] = module
         spec.loader.exec_module(module)
@@ -524,7 +534,7 @@ class PluginFrameworkService:
         ctx = PluginContext(plugin_id, plugin_name=manifest.name)
         instance = PluginClass(ctx)
 
-        if not hasattr(instance, 'run'):
+        if not hasattr(instance, "run"):
             raise ValueError(f"插件 {plugin_id} 未实现 run() 方法")
 
         threading.Thread(target=instance.run, daemon=True).start()

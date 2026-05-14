@@ -1,6 +1,7 @@
 """
 内存消息队列 — 基于线程池的异步任务队列
 """
+
 from __future__ import annotations
 
 import queue
@@ -17,8 +18,7 @@ class MemoryMessageQueue(MessageQueue):
 
     def __init__(self, max_workers: int = 5, maxsize: int = 1000):
         self._queue: queue.Queue = queue.Queue(maxsize=maxsize)
-        self._executor = ThreadPoolExecutor(max_workers=max_workers,
-                                            thread_name_prefix="MemMQ")
+        self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="MemMQ")
         self._dispatcher: threading.Thread | None = None
         self._shutdown = False
         self._started = False
@@ -28,9 +28,7 @@ class MemoryMessageQueue(MessageQueue):
         if self._started and self._dispatcher and self._dispatcher.is_alive():
             return
         self._shutdown = False
-        self._dispatcher = threading.Thread(
-            target=self._dispatch_loop, daemon=True, name="MemMQDispatcher"
-        )
+        self._dispatcher = threading.Thread(target=self._dispatch_loop, daemon=True, name="MemMQDispatcher")
         self._dispatcher.start()
         self._started = True
         log.info(f"【MemoryMessageQueue】内存队列已启动（并发数: {self._max_workers}）")

@@ -9,7 +9,6 @@ from app.utils.commons import SingletonMeta
 
 
 class DoubanWeb(metaclass=SingletonMeta):
-
     _session = requests.Session()
 
     _movie_base = "https://movie.douban.com"
@@ -38,7 +37,7 @@ class DoubanWeb(metaclass=SingletonMeta):
         # 用户名称
         "user": f"{_movie_base}/people/%s/",
         # 用户动态 RSS
-        "rss": f"{_rss_base}/feed/people/%s/interests"
+        "rss": f"{_rss_base}/feed/people/%s/interests",
     }
 
     _webparsers = {
@@ -50,7 +49,7 @@ class DoubanWeb(metaclass=SingletonMeta):
             "rate": "//strong[@property='v:average']/text()",
             "imdb": "//div[@id='info']/span[contains(text(), 'IMDb:')]/following-sibling::text()",
             "season": "//div[@id='info']/span[contains(text(), '季数')]/following-sibling::text()",
-            "episode_num": "//div[@id='info']/span[contains(text(), '集数')]/following-sibling::text()"
+            "episode_num": "//div[@id='info']/span[contains(text(), '集数')]/following-sibling::text()",
         },
         "nowplaying": {
             "list": "//div[@id='nowplaying']//ul[@class='lists']/li",
@@ -59,8 +58,8 @@ class DoubanWeb(metaclass=SingletonMeta):
                 "title": "./@data-title",
                 "rate": "./@data-score",
                 "cover": "./li[@class='poster']/a/img/@src",
-                "year": "./@data-release"
-            }
+                "year": "./@data-release",
+            },
         },
         "later": {
             "list": "//div[@id='showing-soon']/div",
@@ -68,8 +67,8 @@ class DoubanWeb(metaclass=SingletonMeta):
                 "id": "./@data-subject",
                 "title": "./div[@class='intro']/h3/a/text()]",
                 "cover": "./a[class='thumb']/img/@src",
-                "url": "./div[@class='intro']/h3/a/@href"
-            }
+                "url": "./div[@class='intro']/h3/a/@href",
+            },
         },
         "top250": {
             "list": "//ol[@class='grid_view']/li",
@@ -77,8 +76,8 @@ class DoubanWeb(metaclass=SingletonMeta):
             "item": {
                 "title": "./div[@class='item']/div[@class='pic']/a/img/@alt",
                 "cover": "./div[@class='item']/div[@class='pic']/a/img/@src",
-                "url": "./div[@class='item']/div[@class='pic']/a/@href"
-            }
+                "url": "./div[@class='item']/div[@class='pic']/a/@href",
+            },
         },
         "collect": {
             "list": "//div[@class='grid-view']/div[contains(@class, 'item')]",
@@ -86,8 +85,8 @@ class DoubanWeb(metaclass=SingletonMeta):
             "item": {
                 "title": "./div[@class='info']/ul/li[@class='title']/a/em/text()",
                 "cover": "./div[@class='pic']/a/img/@src",
-                "url": "./div[@class='info']/ul/li[@class='title']/a/@href"
-            }
+                "url": "./div[@class='info']/ul/li[@class='title']/a/@href",
+            },
         },
         "wish": {
             "list": "//div[@class='grid-view']/div[contains(@class, 'item')]",
@@ -95,16 +94,16 @@ class DoubanWeb(metaclass=SingletonMeta):
                 "title": "./div[@class='info']/ul/li[@class='title']/a/em/text()",
                 "cover": "./div[@class='pic']/a/img/@src",
                 "url": "./div[@class='info']/ul/li[@class='title']/a/@href",
-                "date": "./div[@class='info']//span[@class='date']/text()"
-            }
+                "date": "./div[@class='info']//span[@class='date']/text()",
+            },
         },
         "do": {
             "list": "//div[@class='grid-view']/div[contains(@class, 'item')]",
             "item": {
                 "title": "./div[@class='info']/ul/li[@class='title']/a/em/text()",
                 "cover": "./div[@class='pic']/a/img/@src",
-                "url": "./div[@class='info']/ul/li[@class='title']/a/@href"
-            }
+                "url": "./div[@class='info']/ul/li[@class='title']/a/@href",
+            },
         },
         "search": {
             "list": "//div[@class='item-root']",
@@ -114,12 +113,10 @@ class DoubanWeb(metaclass=SingletonMeta):
                 "cover": "./a/img[class='cover']/@src",
                 "intro": "./div[@class='detail']/div[@class='meta abstract']/text()",
                 "rate": "./div[@class='detail']/div[@class='rating']/span[@class='rating_nums']/text()",
-                "actor": "./div[@class='detail']/div[@class='meta abstract_2']/text()"
-            }
+                "actor": "./div[@class='detail']/div[@class='meta abstract_2']/text()",
+            },
         },
-        "user": {
-            "name": "//div[@class='side-info']/div[@class='side-info-txt']/h3/text()"
-        }
+        "user": {"name": "//div[@class='side-info']/div[@class='side-info-txt']/h3/text()"},
     }
 
     _jsonurls = {
@@ -145,17 +142,14 @@ class DoubanWeb(metaclass=SingletonMeta):
         req_url = cls._weburls.get(url)
         if not req_url:
             return None
-        return RequestUtils(cookies=cookie,
-                            session=cls._session,
-                            timeout=cls._timout).get(url=req_url % kwargs)
+        return RequestUtils(cookies=cookie, session=cls._session, timeout=cls._timout).get(url=req_url % kwargs)
 
     @classmethod
     def __invoke_json(cls, url, *kwargs):
         req_url = cls._jsonurls.get(url)
         if not req_url:
             return None
-        req = RequestUtils(session=cls._session,
-                           timeout=cls._timout).get_res(url=req_url % kwargs)
+        req = RequestUtils(session=cls._session, timeout=cls._timout).get_res(url=req_url % kwargs)
         return req.json() if req else None
 
     @classmethod
@@ -188,19 +182,20 @@ class DoubanWeb(metaclass=SingletonMeta):
             pubDate = item.xpath(".//pubDate/text()")[0]
             date = datetime.datetime.strptime(pubDate, "%a, %d %b %Y %H:%M:%S %Z")
             new_date = date.strftime("%Y-%m-%d")
+
             def map_type():
-                if dtype == '想看':
-                    return 'wish'
-                elif dtype == '看过':
-                    return 'collect'
-                elif dtype == '在看':
-                    return 'do'
+                if dtype == "想看":
+                    return "wish"
+                elif dtype == "看过":
+                    return "collect"
+                elif dtype == "在看":
+                    return "do"
                 else:
-                    return 'collect'
+                    return "collect"
 
             dtype = map_type()
 
-            if 'movie' in link:
+            if "movie" in link:
                 obj = {
                     "title": title,
                     "url": link,

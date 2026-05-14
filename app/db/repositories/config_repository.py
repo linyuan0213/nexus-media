@@ -3,6 +3,7 @@ Config Repository
 Handles configuration related database operations.
 Includes: Message Client, Torrent Remove Task, Downloader, User RSS, Filter Rules
 """
+
 import json
 import time
 
@@ -36,7 +37,7 @@ class ConfigRepository(BaseRepository):
     def delete_message_client(self, cid):
         """
         删除消息服务器
-        
+
         Args:
             cid: 客户端ID
         """
@@ -47,10 +48,10 @@ class ConfigRepository(BaseRepository):
     def get_message_client(self, cid=None):
         """
         查询消息服务器
-        
+
         Args:
             cid: 客户端ID
-            
+
         Returns:
             消息客户端列表
         """
@@ -59,15 +60,7 @@ class ConfigRepository(BaseRepository):
         return self._db.query(MESSAGECLIENT).all()
 
     @DbPersist(BaseRepository._db)
-    def insert_message_client(self,
-                               name,
-                               ctype,
-                               config,
-                               switchs: list,
-                               interactive,
-                               enabled,
-                               note='',
-                               templates=None):
+    def insert_message_client(self, name, ctype, config, switchs: list, interactive, enabled, note="", templates=None):
         client = MESSAGECLIENT(
             NAME=name,
             TYPE=ctype,
@@ -76,7 +69,7 @@ class ConfigRepository(BaseRepository):
             INTERACTIVE=int(interactive),
             ENABLED=int(enabled),
             NOTE=note,
-            TEMPLATES=json.dumps(templates) if templates else None
+            TEMPLATES=json.dumps(templates) if templates else None,
         )
         self._db.insert(client)
         self._db.flush()
@@ -86,7 +79,7 @@ class ConfigRepository(BaseRepository):
     def check_message_client(self, cid=None, interactive=None, enabled=None, ctype=None):
         """
         设置消息客户端状态
-        
+
         Args:
             cid: 客户端ID
             interactive: 是否交互
@@ -94,18 +87,13 @@ class ConfigRepository(BaseRepository):
             ctype: 类型
         """
         if cid and interactive is not None:
-            self._db.query(MESSAGECLIENT).filter(int(cid) == MESSAGECLIENT.ID).update({
-                "INTERACTIVE": int(interactive)
-            })
+            self._db.query(MESSAGECLIENT).filter(int(cid) == MESSAGECLIENT.ID).update({"INTERACTIVE": int(interactive)})
         elif cid and enabled is not None:
-            self._db.query(MESSAGECLIENT).filter(int(cid) == MESSAGECLIENT.ID).update({
-                "ENABLED": int(enabled)
-            })
+            self._db.query(MESSAGECLIENT).filter(int(cid) == MESSAGECLIENT.ID).update({"ENABLED": int(enabled)})
         elif not cid and int(interactive) == 0 and ctype:
-            self._db.query(MESSAGECLIENT).filter(MESSAGECLIENT.INTERACTIVE == 1,
-                                                  ctype == MESSAGECLIENT.TYPE).update({
-                "INTERACTIVE": 0
-            })
+            self._db.query(MESSAGECLIENT).filter(MESSAGECLIENT.INTERACTIVE == 1, ctype == MESSAGECLIENT.TYPE).update(
+                {"INTERACTIVE": 0}
+            )
 
     # ==================== Torrent Remove Task ====================
 
@@ -113,7 +101,7 @@ class ConfigRepository(BaseRepository):
     def delete_torrent_remove_task(self, tid):
         """
         删除自动删种策略
-        
+
         Args:
             tid: 任务ID
         """
@@ -124,10 +112,10 @@ class ConfigRepository(BaseRepository):
     def get_torrent_remove_tasks(self, tid=None):
         """
         查询自动删种策略
-        
+
         Args:
             tid: 任务ID
-            
+
         Returns:
             删种策略列表
         """
@@ -136,19 +124,12 @@ class ConfigRepository(BaseRepository):
         return self._db.query(TORRENTREMOVETASK).order_by(TORRENTREMOVETASK.NAME).all()
 
     @DbPersist(BaseRepository._db)
-    def insert_torrent_remove_task(self,
-                                   name,
-                                   action,
-                                   interval,
-                                   enabled,
-                                   samedata,
-                                   onlynastool,
-                                   downloader,
-                                   config: dict,
-                                   note=None):
+    def insert_torrent_remove_task(
+        self, name, action, interval, enabled, samedata, onlynastool, downloader, config: dict, note=None
+    ):
         """
         设置自动删种策略
-        
+
         Args:
             name: 名称
             action: 动作
@@ -160,35 +141,29 @@ class ConfigRepository(BaseRepository):
             config: 配置
             note: 备注
         """
-        self._db.insert(TORRENTREMOVETASK(
-            NAME=name,
-            ACTION=int(action),
-            INTERVAL=int(interval),
-            ENABLED=int(enabled),
-            SAMEDATA=int(samedata),
-            ONLYNASTOOL=int(onlynastool),
-            DOWNLOADER=downloader,
-            CONFIG=json.dumps(config),
-            NOTE=note
-        ))
+        self._db.insert(
+            TORRENTREMOVETASK(
+                NAME=name,
+                ACTION=int(action),
+                INTERVAL=int(interval),
+                ENABLED=int(enabled),
+                SAMEDATA=int(samedata),
+                ONLYNASTOOL=int(onlynastool),
+                DOWNLOADER=downloader,
+                CONFIG=json.dumps(config),
+                NOTE=note,
+            )
+        )
 
     # ==================== Downloader ====================
 
     @DbPersist(BaseRepository._db)
-    def update_downloader(self,
-                          did,
-                          name,
-                          enabled,
-                          dtype,
-                          transfer,
-                          only_nastool,
-                          match_path,
-                          rmt_mode,
-                          config,
-                          download_dir):
+    def update_downloader(
+        self, did, name, enabled, dtype, transfer, only_nastool, match_path, rmt_mode, config, download_dir
+    ):
         """
         更新下载器
-        
+
         Args:
             did: 下载器ID
             name: 名称
@@ -202,35 +177,39 @@ class ConfigRepository(BaseRepository):
             download_dir: 下载目录
         """
         if did:
-            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({
-                "NAME": name,
-                "ENABLED": int(enabled),
-                "TYPE": dtype,
-                "TRANSFER": int(transfer),
-                "ONLY_NASTOOL": int(only_nastool),
-                "MATCH_PATH": int(match_path),
-                "RMT_MODE": rmt_mode,
-                "CONFIG": config,
-                "DOWNLOAD_DIR": download_dir
-            })
+            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update(
+                {
+                    "NAME": name,
+                    "ENABLED": int(enabled),
+                    "TYPE": dtype,
+                    "TRANSFER": int(transfer),
+                    "ONLY_NASTOOL": int(only_nastool),
+                    "MATCH_PATH": int(match_path),
+                    "RMT_MODE": rmt_mode,
+                    "CONFIG": config,
+                    "DOWNLOAD_DIR": download_dir,
+                }
+            )
         else:
-            self._db.insert(DOWNLOADER(
-                NAME=name,
-                ENABLED=int(enabled),
-                TYPE=dtype,
-                TRANSFER=int(transfer),
-                ONLY_NASTOOL=int(only_nastool),
-                MATCH_PATH=int(match_path),
-                RMT_MODE=rmt_mode,
-                CONFIG=config,
-                DOWNLOAD_DIR=download_dir
-            ))
+            self._db.insert(
+                DOWNLOADER(
+                    NAME=name,
+                    ENABLED=int(enabled),
+                    TYPE=dtype,
+                    TRANSFER=int(transfer),
+                    ONLY_NASTOOL=int(only_nastool),
+                    MATCH_PATH=int(match_path),
+                    RMT_MODE=rmt_mode,
+                    CONFIG=config,
+                    DOWNLOAD_DIR=download_dir,
+                )
+            )
 
     @DbPersist(BaseRepository._db)
     def delete_downloader(self, did):
         """
         删除下载器
-        
+
         Args:
             did: 下载器ID
         """
@@ -242,7 +221,7 @@ class ConfigRepository(BaseRepository):
     def check_downloader(self, did=None, transfer=None, only_nastool=None, enabled=None, match_path=None):
         """
         设置下载器状态
-        
+
         Args:
             did: 下载器ID
             transfer: 是否转移
@@ -253,26 +232,18 @@ class ConfigRepository(BaseRepository):
         if not did:
             return
         if transfer is not None:
-            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({
-                "TRANSFER": int(transfer)
-            })
+            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({"TRANSFER": int(transfer)})
         elif only_nastool is not None:
-            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({
-                "ONLY_NASTOOL": int(only_nastool)
-            })
+            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({"ONLY_NASTOOL": int(only_nastool)})
         elif match_path is not None:
-            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({
-                "MATCH_PATH": int(match_path)
-            })
+            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({"MATCH_PATH": int(match_path)})
         elif enabled is not None:
-            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({
-                "ENABLED": int(enabled)
-            })
+            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({"ENABLED": int(enabled)})
 
     def get_downloaders(self):
         """
         查询下载器
-        
+
         Returns:
             下载器列表
         """
@@ -283,10 +254,10 @@ class ConfigRepository(BaseRepository):
     def get_userrss_tasks(self, tid=None):
         """
         查询自定义RSS任务
-        
+
         Args:
             tid: 任务ID
-            
+
         Returns:
             任务列表
         """
@@ -299,7 +270,7 @@ class ConfigRepository(BaseRepository):
     def delete_userrss_task(self, tid):
         """
         删除自定义RSS任务
-        
+
         Args:
             tid: 任务ID
         """
@@ -311,73 +282,79 @@ class ConfigRepository(BaseRepository):
     def update_userrss_task_info(self, tid, count):
         """
         更新自定义RSS任务处理计数
-        
+
         Args:
             tid: 任务ID
             count: 处理数量
         """
         if not tid:
             return
-        self._db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).update({
-            "PROCESS_COUNT": CONFIGUSERRSS.PROCESS_COUNT + count,
-            "UPDATE_TIME": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-        })
+        self._db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).update(
+            {
+                "PROCESS_COUNT": CONFIGUSERRSS.PROCESS_COUNT + count,
+                "UPDATE_TIME": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+            }
+        )
 
     @DbPersist(BaseRepository._db)
     def update_userrss_task(self, item):
         """
         更新或插入自定义RSS任务
-        
+
         Args:
             item: 任务信息字典
         """
         if item.get("id") and self.get_userrss_tasks(item.get("id")):
-            self._db.query(CONFIGUSERRSS).filter(int(item.get("id")) == CONFIGUSERRSS.ID).update({
-                "NAME": item.get("name"),
-                "ADDRESS": json.dumps(item.get("address")),
-                "PARSER": json.dumps(item.get("parser")),
-                "INTERVAL": item.get("interval"),
-                "USES": item.get("uses"),
-                "INCLUDE": item.get("include"),
-                "EXCLUDE": item.get("exclude"),
-                "FILTER": item.get("filter_rule"),
-                "UPDATE_TIME": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
-                "STATE": item.get("state"),
-                "SAVE_PATH": item.get("save_path"),
-                "DOWNLOAD_SETTING": item.get("download_setting"),
-                "RECOGNIZATION": item.get("recognization"),
-                "OVER_EDITION": int(item.get("over_edition")) if str(item.get("over_edition")).isdigit() else 0,
-                "SITES": json.dumps(item.get("sites")),
-                "FILTER_ARGS": json.dumps(item.get("filter_args")),
-                "NOTE": json.dumps(item.get("note"))
-            })
+            self._db.query(CONFIGUSERRSS).filter(int(item.get("id")) == CONFIGUSERRSS.ID).update(
+                {
+                    "NAME": item.get("name"),
+                    "ADDRESS": json.dumps(item.get("address")),
+                    "PARSER": json.dumps(item.get("parser")),
+                    "INTERVAL": item.get("interval"),
+                    "USES": item.get("uses"),
+                    "INCLUDE": item.get("include"),
+                    "EXCLUDE": item.get("exclude"),
+                    "FILTER": item.get("filter_rule"),
+                    "UPDATE_TIME": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+                    "STATE": item.get("state"),
+                    "SAVE_PATH": item.get("save_path"),
+                    "DOWNLOAD_SETTING": item.get("download_setting"),
+                    "RECOGNIZATION": item.get("recognization"),
+                    "OVER_EDITION": int(item.get("over_edition")) if str(item.get("over_edition")).isdigit() else 0,
+                    "SITES": json.dumps(item.get("sites")),
+                    "FILTER_ARGS": json.dumps(item.get("filter_args")),
+                    "NOTE": json.dumps(item.get("note")),
+                }
+            )
         else:
-            self._db.insert(CONFIGUSERRSS(
-                NAME=item.get("name"),
-                ADDRESS=json.dumps(item.get("address")),
-                PARSER=json.dumps(item.get("parser")),
-                INTERVAL=item.get("interval"),
-                USES=item.get("uses"),
-                INCLUDE=item.get("include"),
-                EXCLUDE=item.get("exclude"),
-                FILTER=item.get("filter_rule"),
-                UPDATE_TIME=time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
-                STATE=item.get("state"),
-                SAVE_PATH=item.get("save_path"),
-                DOWNLOAD_SETTING=item.get("download_setting"),
-                RECOGNIZATION=item.get("recognization"),
-                OVER_EDITION=item.get("over_edition"),
-                SITES=json.dumps(item.get("sites")),
-                FILTER_ARGS=json.dumps(item.get("filter_args")),
-                NOTE=json.dumps(item.get("note")),
-                PROCESS_COUNT='0'
-            ))
+            self._db.insert(
+                CONFIGUSERRSS(
+                    NAME=item.get("name"),
+                    ADDRESS=json.dumps(item.get("address")),
+                    PARSER=json.dumps(item.get("parser")),
+                    INTERVAL=item.get("interval"),
+                    USES=item.get("uses"),
+                    INCLUDE=item.get("include"),
+                    EXCLUDE=item.get("exclude"),
+                    FILTER=item.get("filter_rule"),
+                    UPDATE_TIME=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+                    STATE=item.get("state"),
+                    SAVE_PATH=item.get("save_path"),
+                    DOWNLOAD_SETTING=item.get("download_setting"),
+                    RECOGNIZATION=item.get("recognization"),
+                    OVER_EDITION=item.get("over_edition"),
+                    SITES=json.dumps(item.get("sites")),
+                    FILTER_ARGS=json.dumps(item.get("filter_args")),
+                    NOTE=json.dumps(item.get("note")),
+                    PROCESS_COUNT="0",
+                )
+            )
 
     @DbPersist(BaseRepository._db)
     def check_userrss_task(self, tid=None, state=None):
         """
         设置自定义RSS任务状态
-        
+
         Args:
             tid: 任务ID
             state: 状态
@@ -385,9 +362,7 @@ class ConfigRepository(BaseRepository):
         if state is None:
             return
         if tid:
-            self._db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).update({
-                "STATE": state
-            })
+            self._db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).update({"STATE": state})
         else:
             self._db.query(CONFIGUSERRSS).update({"STATE": state})
 
@@ -395,7 +370,7 @@ class ConfigRepository(BaseRepository):
     def insert_userrss_mediainfos(self, tid=None, mediainfo=None):
         """
         插入自定义RSS媒体信息
-        
+
         Args:
             tid: 任务ID
             mediainfo: 媒体信息
@@ -414,58 +389,59 @@ class ConfigRepository(BaseRepository):
             if media.get("id") == tmdbid and media.get("season") == season:
                 return
 
-        mediainfos.append({
-            "id": tmdbid,
-            "rssid": "",
-            "season": season,
-            "name": mediainfo.title
-        })
+        mediainfos.append({"id": tmdbid, "rssid": "", "season": season, "name": mediainfo.title})
 
-        self._db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).update({
-            "MEDIAINFOS": json.dumps(mediainfos)
-        })
+        self._db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).update(
+            {"MEDIAINFOS": json.dumps(mediainfos)}
+        )
 
     @DbPersist(BaseRepository._db)
     def insert_userrss_task_history(self, task_id, title, downloader):
         """
         增加自定义RSS订阅任务的下载记录
-        
+
         Args:
             task_id: 任务ID
             title: 标题
             downloader: 下载器
         """
-        self._db.insert(USERRSSTASKHISTORY(
-            TASK_ID=task_id,
-            TITLE=title,
-            DOWNLOADER=downloader,
-            DATE=time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-        ))
+        self._db.insert(
+            USERRSSTASKHISTORY(
+                TASK_ID=task_id,
+                TITLE=title,
+                DOWNLOADER=downloader,
+                DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+            )
+        )
 
     def get_userrss_task_history(self, task_id):
         """
         查询自定义RSS订阅任务的下载记录
-        
+
         Args:
             task_id: 任务ID
-            
+
         Returns:
             历史记录列表
         """
         if not task_id:
             return []
-        return self._db.query(USERRSSTASKHISTORY).filter(task_id == USERRSSTASKHISTORY.TASK_ID) \
-            .order_by(USERRSSTASKHISTORY.DATE.desc()).all()
+        return (
+            self._db.query(USERRSSTASKHISTORY)
+            .filter(task_id == USERRSSTASKHISTORY.TASK_ID)
+            .order_by(USERRSSTASKHISTORY.DATE.desc())
+            .all()
+        )
 
     # ==================== RSS Parser ====================
 
     def get_userrss_parser(self, pid=None):
         """
         获取自定义RSS解析器
-        
+
         Args:
             pid: 解析器ID
-            
+
         Returns:
             解析器列表或单个解析器
         """
@@ -478,7 +454,7 @@ class ConfigRepository(BaseRepository):
     def delete_userrss_parser(self, pid):
         """
         删除自定义RSS解析器
-        
+
         Args:
             pid: 解析器ID
         """
@@ -490,36 +466,37 @@ class ConfigRepository(BaseRepository):
     def update_userrss_parser(self, item):
         """
         更新或插入自定义RSS解析器
-        
+
         Args:
             item: 解析器信息字典
         """
         if not item:
             return
         if item.get("id") and self.get_userrss_parser(item.get("id")):
-            self._db.query(CONFIGRSSPARSER).filter(int(item.get("id")) == CONFIGRSSPARSER.ID).update({
-                "NAME": item.get("name"),
-                "TYPE": item.get("type"),
-                "FORMAT": item.get("format"),
-                "PARAMS": item.get("params")
-            })
+            self._db.query(CONFIGRSSPARSER).filter(int(item.get("id")) == CONFIGRSSPARSER.ID).update(
+                {
+                    "NAME": item.get("name"),
+                    "TYPE": item.get("type"),
+                    "FORMAT": item.get("format"),
+                    "PARAMS": item.get("params"),
+                }
+            )
         else:
-            self._db.insert(CONFIGRSSPARSER(
-                NAME=item.get("name"),
-                TYPE=item.get("type"),
-                FORMAT=item.get("format"),
-                PARAMS=item.get("params")
-            ))
+            self._db.insert(
+                CONFIGRSSPARSER(
+                    NAME=item.get("name"), TYPE=item.get("type"), FORMAT=item.get("format"), PARAMS=item.get("params")
+                )
+            )
 
     # ==================== Filter Rules ====================
 
     def get_config_filter_group(self, gid=None):
         """
         查询过滤规则组
-        
+
         Args:
             gid: 组ID
-            
+
         Returns:
             规则组列表
         """
@@ -530,55 +507,53 @@ class ConfigRepository(BaseRepository):
     def get_config_filter_rule(self, groupid=None):
         """
         查询过滤规则
-        
+
         Args:
             groupid: 组ID
-            
+
         Returns:
             规则列表
         """
         if not groupid:
-            return self._db.query(CONFIGFILTERRULES).order_by(
-                CONFIGFILTERRULES.GROUP_ID,
-                cast(CONFIGFILTERRULES.PRIORITY, Integer)
-            ).all()
+            return (
+                self._db.query(CONFIGFILTERRULES)
+                .order_by(CONFIGFILTERRULES.GROUP_ID, cast(CONFIGFILTERRULES.PRIORITY, Integer))
+                .all()
+            )
         else:
-            return self._db.query(CONFIGFILTERRULES).filter(
-                int(groupid) == CONFIGFILTERRULES.GROUP_ID
-            ).order_by(
-                CONFIGFILTERRULES.GROUP_ID,
-                cast(CONFIGFILTERRULES.PRIORITY, Integer)
-            ).all()
+            return (
+                self._db.query(CONFIGFILTERRULES)
+                .filter(int(groupid) == CONFIGFILTERRULES.GROUP_ID)
+                .order_by(CONFIGFILTERRULES.GROUP_ID, cast(CONFIGFILTERRULES.PRIORITY, Integer))
+                .all()
+            )
 
     @DbPersist(BaseRepository._db)
-    def add_filter_group(self, name, default='N'):
+    def add_filter_group(self, name, default="N"):
         """
         新增规则组
-        
+
         Args:
             name: 组名
             default: 是否默认
         """
-        if default == 'Y':
+        if default == "Y":
             self.set_default_filtergroup(0)
         group_id = self.get_filter_groupid_by_name(name)
         if group_id:
-            self._db.query(CONFIGFILTERGROUP).filter(int(group_id) == CONFIGFILTERGROUP.ID).update({
-                "IS_DEFAULT": default
-            })
+            self._db.query(CONFIGFILTERGROUP).filter(int(group_id) == CONFIGFILTERGROUP.ID).update(
+                {"IS_DEFAULT": default}
+            )
         else:
-            self._db.insert(CONFIGFILTERGROUP(
-                GROUP_NAME=name,
-                IS_DEFAULT=default
-            ))
+            self._db.insert(CONFIGFILTERGROUP(GROUP_NAME=name, IS_DEFAULT=default))
 
     def get_filter_groupid_by_name(self, name):
         """
         根据名称获取规则组ID
-        
+
         Args:
             name: 组名
-            
+
         Returns:
             组ID
         """
@@ -592,22 +567,18 @@ class ConfigRepository(BaseRepository):
     def set_default_filtergroup(self, groupid):
         """
         设置默认的规则组
-        
+
         Args:
             groupid: 组ID
         """
-        self._db.query(CONFIGFILTERGROUP).filter(int(groupid) == CONFIGFILTERGROUP.ID).update({
-            "IS_DEFAULT": 'Y'
-        })
-        self._db.query(CONFIGFILTERGROUP).filter(int(groupid) != CONFIGFILTERGROUP.ID).update({
-            "IS_DEFAULT": 'N'
-        })
+        self._db.query(CONFIGFILTERGROUP).filter(int(groupid) == CONFIGFILTERGROUP.ID).update({"IS_DEFAULT": "Y"})
+        self._db.query(CONFIGFILTERGROUP).filter(int(groupid) != CONFIGFILTERGROUP.ID).update({"IS_DEFAULT": "N"})
 
     @DbPersist(BaseRepository._db)
     def delete_filtergroup(self, groupid):
         """
         删除规则组
-        
+
         Args:
             groupid: 组ID
         """
@@ -618,7 +589,7 @@ class ConfigRepository(BaseRepository):
     def delete_filterrule(self, ruleid):
         """
         删除规则
-        
+
         Args:
             ruleid: 规则ID
         """
@@ -628,30 +599,34 @@ class ConfigRepository(BaseRepository):
     def insert_filter_rule(self, item, ruleid=None):
         """
         新增或更新规则
-        
+
         Args:
             item: 规则信息字典
             ruleid: 规则ID（可选）
         """
         if ruleid:
-            self._db.query(CONFIGFILTERRULES).filter(int(ruleid) == CONFIGFILTERRULES.ID).update({
-                "ROLE_NAME": item.get("name"),
-                "PRIORITY": item.get("pri"),
-                "INCLUDE": item.get("include"),
-                "EXCLUDE": item.get("exclude"),
-                "SIZE_LIMIT": item.get("size"),
-                "NOTE": item.get("free")
-            })
+            self._db.query(CONFIGFILTERRULES).filter(int(ruleid) == CONFIGFILTERRULES.ID).update(
+                {
+                    "ROLE_NAME": item.get("name"),
+                    "PRIORITY": item.get("pri"),
+                    "INCLUDE": item.get("include"),
+                    "EXCLUDE": item.get("exclude"),
+                    "SIZE_LIMIT": item.get("size"),
+                    "NOTE": item.get("free"),
+                }
+            )
         else:
-            self._db.insert(CONFIGFILTERRULES(
-                GROUP_ID=item.get("group"),
-                ROLE_NAME=item.get("name"),
-                PRIORITY=item.get("pri"),
-                INCLUDE=item.get("include"),
-                EXCLUDE=item.get("exclude"),
-                SIZE_LIMIT=item.get("size"),
-                NOTE=item.get("free")
-            ))
+            self._db.insert(
+                CONFIGFILTERRULES(
+                    GROUP_ID=item.get("group"),
+                    ROLE_NAME=item.get("name"),
+                    PRIORITY=item.get("pri"),
+                    INCLUDE=item.get("include"),
+                    EXCLUDE=item.get("exclude"),
+                    SIZE_LIMIT=item.get("size"),
+                    NOTE=item.get("free"),
+                )
+            )
 
     # ==================== Media Server ====================
 
@@ -699,21 +674,19 @@ class ConfigRepository(BaseRepository):
         if sid:
             item = self.get_media_servers(sid)
             if item:
-                self._db.query(MEDIASERVER).filter(int(sid) == MEDIASERVER.ID).update({
-                    "NAME": name,
-                    "ENABLED": int(enabled),
-                    "CONFIG": config,
-                    "IS_DEFAULT": int(is_default),
-                    "NOTE": note
-                })
+                self._db.query(MEDIASERVER).filter(int(sid) == MEDIASERVER.ID).update(
+                    {
+                        "NAME": name,
+                        "ENABLED": int(enabled),
+                        "CONFIG": config,
+                        "IS_DEFAULT": int(is_default),
+                        "NOTE": note,
+                    }
+                )
                 return
-        self._db.insert(MEDIASERVER(
-            NAME=name,
-            ENABLED=int(enabled),
-            CONFIG=config,
-            IS_DEFAULT=int(is_default),
-            NOTE=note
-        ))
+        self._db.insert(
+            MEDIASERVER(NAME=name, ENABLED=int(enabled), CONFIG=config, IS_DEFAULT=int(is_default), NOTE=note)
+        )
 
     @DbPersist(BaseRepository._db)
     def delete_media_server(self, sid):
@@ -754,10 +727,10 @@ class ConfigRepository(BaseRepository):
     def execute(self, sql):
         """
         执行SQL语句
-        
+
         Args:
             sql: SQL语句
-            
+
         Returns:
             执行结果
         """
@@ -767,10 +740,10 @@ class ConfigRepository(BaseRepository):
     def drop_table(self, table_name):
         """
         删除表
-        
+
         Args:
             table_name: 表名
-            
+
         Returns:
             执行结果
         """
@@ -810,6 +783,3 @@ class ConfigRepository(BaseRepository):
                 UNKNOWN_PATH=unknown_path,
             )
             self._db.insert(config)
-
-
-

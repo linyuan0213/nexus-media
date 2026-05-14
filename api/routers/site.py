@@ -17,6 +17,7 @@ router = APIRouter()
 # Request Models
 # ---------------------------------------------------------------------------
 
+
 class SiteIdRequest(BaseModel):
     id: str | None = None
 
@@ -81,6 +82,7 @@ class SiteResourcesRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post("/sites/check_attr")
 def check_site_attr(
     req: SiteUrlRequest,
@@ -88,7 +90,7 @@ def check_site_attr(
     svc: SiteService = Depends(get_site_service),
 ):
     dto = svc.check_site_attr(req.url)
-    return success(data={"site_free":dto.site_free, "site_2xfree":dto.site_2xfree, "site_hr":dto.site_hr})
+    return success(data={"site_free": dto.site_free, "site_2xfree": dto.site_2xfree, "site_hr": dto.site_hr})
 
 
 @router.post("/sites/delete")
@@ -111,7 +113,9 @@ def get_site(
     svc: SiteService = Depends(get_site_service),
 ):
     dto = svc.get_site(req.id)
-    return success(data={"site":dto.site, "site_free":dto.site_free, "site_2xfree":dto.site_2xfree, "site_hr":dto.site_hr})
+    return success(
+        data={"site": dto.site, "site_free": dto.site_free, "site_2xfree": dto.site_2xfree, "site_hr": dto.site_hr}
+    )
 
 
 @router.post("/sites/activity")
@@ -143,10 +147,7 @@ def get_site_history(
 ):
     if req.days is None or not isinstance(req.days, int):
         return fail(msg="查询参数错误")
-    dto = svc.get_site_history(
-        days=req.days,
-        end_day=req.end_day
-    )
+    dto = svc.get_site_history(days=req.days, end_day=req.end_day)
     return success(data={"dataset": dto.dataset})
 
 
@@ -158,10 +159,7 @@ def get_site_daily_history(
 ):
     if req.days is None or not isinstance(req.days, int):
         return fail(msg="查询参数错误")
-    result = svc.get_site_daily_history(
-        days=req.days,
-        end_day=req.end_day
-    )
+    result = svc.get_site_daily_history(days=req.days, end_day=req.end_day)
     return success(data=result)
 
 
@@ -188,6 +186,7 @@ def refresh_site_statistics(
     svc: SiteService = Depends(get_site_service),
 ):
     from app.helper import ThreadHelper
+
     ThreadHelper().start_thread(svc.refresh_site_data_now, (req.sites,))
     return success(data={"message": "站点数据刷新已启动，请稍候"})
 
@@ -199,10 +198,7 @@ def get_sites(
     svc: SiteService = Depends(get_site_service),
 ):
     sites = svc.get_sites(
-        rss=bool(req.rss),
-        brush=bool(req.brush),
-        statistic=bool(req.statistic),
-        basic=bool(req.basic)
+        rss=bool(req.rss), brush=bool(req.brush), statistic=bool(req.statistic), basic=bool(req.basic)
     )
     return success(data=sites)
 
@@ -213,8 +209,7 @@ def set_site_captcha_code(
     user: str = Depends(require_permission("site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
-    svc.set_captcha_code(
-        code=req.code, value=req.value)
+    svc.set_captcha_code(code=req.code, value=req.value)
     return success()
 
 
@@ -244,12 +239,8 @@ def update_site_cookie_ua(
     user: str = Depends(require_permission("site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
-    svc.update_site_cookie_ua(
-        siteid=req.site_id,
-        cookie=req.site_cookie,
-        ua=req.site_ua
-    )
-    return success(data={"messages":"请求发送成功"})
+    svc.update_site_cookie_ua(siteid=req.site_id, cookie=req.site_cookie, ua=req.site_ua)
+    return success(data={"messages": "请求发送成功"})
 
 
 @router.post("/sites/statistics")
@@ -260,11 +251,7 @@ def get_site_user_statistics(
 ):
     # 强制使用 DICT 编码，确保返回可序列化的字典格式
     statistics = svc.get_site_user_statistics(
-        sites=req.sites,
-        encoding="DICT",
-        sort_by=req.sort_by,
-        sort_on=req.sort_on,
-        site_hash=req.site_hash
+        sites=req.sites, encoding="DICT", sort_by=req.sort_by, sort_on=req.sort_on, site_hash=req.site_hash
     )
     return success(data=statistics)
 
@@ -275,11 +262,7 @@ def list_site_resources(
     user: str = Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
-    resources = svc.list_site_resources(
-        index_id=req.id,
-        page=req.page,
-        keyword=req.keyword
-    )
+    resources = svc.list_site_resources(index_id=req.id, page=req.page, keyword=req.keyword)
     if not resources.success:
         return fail(msg=resources.msg)
     return success(data=resources.data)

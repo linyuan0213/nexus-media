@@ -10,6 +10,7 @@ API 站点搜索器
 - transform: 命名的值转换函数
 - 模板变量：{keyword} {page} {page_1}
 """
+
 import json
 import re
 from typing import Any
@@ -63,8 +64,7 @@ class ApiSiteSearcher:
                     mtype_override = {"mode": str(mapped)}
         template_vars = {"keyword": keyword, "page": str(page), "page_1": str(int(page) + 1)}
         body = self._render_template(body_template, **template_vars)
-        body.update({k: (v.format(**template_vars) if isinstance(v, str) else v)
-                     for k, v in mtype_override.items()})
+        body.update({k: (v.format(**template_vars) if isinstance(v, str) else v) for k, v in mtype_override.items()})
         return self._execute_request(search_config, body, template_vars)
 
     def _fanout_search(self, keyword, page, search_config, body_template, params_template, categories):
@@ -96,12 +96,11 @@ class ApiSiteSearcher:
         else:
             params = dict(search_config.get("params") or {})
             params = self._render_template(params, **template_vars)
-            res = RequestUtils(headers=headers, proxies=proxy, timeout=30).get_res(
-                url=url, params=params
-            )
+            res = RequestUtils(headers=headers, proxies=proxy, timeout=30).get_res(url=url, params=params)
         if not res or res.status_code != 200:
-            log.warn(f"【ApiSiteSearcher】{self._site.name} 搜索失败: "
-                     f"{res.status_code if res else '无响应'}, url={url}")
+            log.warn(
+                f"【ApiSiteSearcher】{self._site.name} 搜索失败: {res.status_code if res else '无响应'}, url={url}"
+            )
             return []
         resp_data = res.json()
         result = self._parse_response(resp_data, search_config)
@@ -125,10 +124,14 @@ class ApiSiteSearcher:
         apikey = self._user_config.get("api_key", "")
         if apikey:
             self._auth_tokens["apikey"] = apikey
-        domain = self._user_config.get("domain") or self._site.domain or (self._site.api.base_url if self._site.api else "")
+        domain = (
+            self._user_config.get("domain") or self._site.domain or (self._site.api.base_url if self._site.api else "")
+        )
         if domain:
             self._auth_tokens["domain"] = domain.rstrip("/")
-            self._auth_tokens["base_url"] = (self._user_config.get("domain") or self._site.api.base_url or domain).rstrip("/")
+            self._auth_tokens["base_url"] = (
+                self._user_config.get("domain") or self._site.api.base_url or domain
+            ).rstrip("/")
 
     def _render_template(self, template, **kwargs) -> dict:
         if not template:
@@ -148,8 +151,10 @@ class ApiSiteSearcher:
                 result[key] = self._render_template(value, **kwargs)
             elif isinstance(value, list):
                 result[key] = [
-                    self._render_template(v, **kwargs) if isinstance(v, dict)
-                    else v.format(**kwargs) if isinstance(v, str)
+                    self._render_template(v, **kwargs)
+                    if isinstance(v, dict)
+                    else v.format(**kwargs)
+                    if isinstance(v, str)
                     else v
                     for v in value
                 ]
@@ -177,9 +182,15 @@ class ApiSiteSearcher:
         if "labelsNew" in raw_item:
             new_labels = raw_item.get("labelsNew") or []
             old_label = raw_item.get("labels", "0")
-            LABEL_MAP = {"1": "DIY", "2": "国配", "4": "中字",
-                         "3": "DIY|国配", "5": "DIY|中字",
-                         "6": "国配|中字", "7": "DIY|国配|中字"}
+            LABEL_MAP = {
+                "1": "DIY",
+                "2": "国配",
+                "4": "中字",
+                "3": "DIY|国配",
+                "5": "DIY|中字",
+                "6": "国配|中字",
+                "7": "DIY|国配|中字",
+            }
             parts = []
             if old_label and str(old_label) != "0":
                 parts.append(LABEL_MAP.get(str(old_label), ""))
@@ -216,7 +227,7 @@ class ApiSiteSearcher:
                 return config.get("value")
             if ftype == "template":
                 template = config.get("value", "")
-                field_vals = dict(self._auth_tokens) if hasattr(self, '_auth_tokens') else {}
+                field_vals = dict(self._auth_tokens) if hasattr(self, "_auth_tokens") else {}
                 for fk, fsource in (config.get("fields") or {}).items():
                     field_vals[fk] = str(self._get_nested(item, fsource.split(".")) or "")
                 try:

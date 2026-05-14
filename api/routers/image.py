@@ -3,6 +3,7 @@ FastAPI 图片代理路由
 兼容前端通过 ImageProxyHelper 生成的 /img/* 请求
 复用 app.helper.image_proxy_core 的下载/缓存逻辑
 """
+
 import os
 import time
 import urllib.parse
@@ -64,6 +65,7 @@ def proxy_tmdb_image(size: str, img_path: str):
         size = "w500"
     cache_path = get_cache_path("tmdb", img_path, size)
     from app.core.constants import TMDB_IMAGE_DOMAIN
+
     original_url = f"https://{TMDB_IMAGE_DOMAIN}/t/p/original/{img_path}"
     return _serve_image(cache_path, original_url, size)
 
@@ -121,6 +123,7 @@ def proxy_image_redirect(request: Request, url: str | None = None):
 
     # 外部图片 URL：转换为代理路径后重定向
     from app.helper.image_proxy_helper import ImageProxyHelper
+
     try:
         proxy_url = ImageProxyHelper.get_proxy_image_url(url, use_proxy=True)
     except Exception:

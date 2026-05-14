@@ -2,6 +2,7 @@
 搜索页面自动触发搜索功能测试
 验证当访问 /search?s=xxx 时页面能正确传递搜索词并自动触发搜索
 """
+
 import os
 
 
@@ -43,7 +44,7 @@ class TestSearchPageTrigger:
             content = f.read()
 
         # 验证包含 s 参数定义
-        assert 's: Optional[str] = Query(None)' in content
+        assert "s: Optional[str] = Query(None)" in content
 
     def test_auto_search_logic_flow(self):
         """验证自动搜索的逻辑流程完整"""

@@ -4,6 +4,7 @@
 - source="douban" 只搜豆瓣
 - source="" 或 None 同时搜索并去重
 """
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -54,11 +55,12 @@ class FakeMetaInfo:
 
 @pytest.fixture
 def mock_deps():
-    with patch("app.utils.web_utils.StringUtils.get_keyword_from_string") as mock_kw, \
-         patch("app.utils.web_utils.MetaInfo") as mock_meta, \
-         patch("app.utils.web_utils.Media") as mock_media_cls, \
-         patch("app.utils.web_utils.DouBan") as mock_douban_cls:
-
+    with (
+        patch("app.utils.web_utils.StringUtils.get_keyword_from_string") as mock_kw,
+        patch("app.utils.web_utils.MetaInfo") as mock_meta,
+        patch("app.utils.web_utils.Media") as mock_media_cls,
+        patch("app.utils.web_utils.DouBan") as mock_douban_cls,
+    ):
         # 模拟 keyword 解析结果: (mtype, key_word, season, episode, _, content)
         mock_kw.return_value = (None, "千与千寻", None, None, None, "千与千寻")
 

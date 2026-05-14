@@ -1,4 +1,5 @@
 """OpenAI / OpenAI 兼容提供商"""
+
 from typing import Any
 
 from openai import OpenAI
@@ -18,8 +19,13 @@ class OpenAIProvider(BaseProvider):
             timeout=config.timeout,
         )
 
-    def chat(self, messages: list[dict], system_prompt: str = "", temperature: float = 0.7,
-             response_format: type | None = None) -> Any:
+    def chat(
+        self,
+        messages: list[dict],
+        system_prompt: str = "",
+        temperature: float = 0.7,
+        response_format: type | None = None,
+    ) -> Any:
         msgs = []
         if system_prompt:
             msgs.append({"role": "system", "content": system_prompt})
@@ -45,6 +51,7 @@ class OpenAIProvider(BaseProvider):
     def _format_error(e: Exception) -> str:
         """将异常转换为用户可读的提示"""
         from openai import APIStatusError
+
         if isinstance(e, APIStatusError):
             code = e.status_code
             body = e.body or {}
@@ -74,5 +81,3 @@ class OpenAIProvider(BaseProvider):
         except Exception as e:
             log.warn(f"【OpenAIProvider】查询模型列表失败: {e}")
             return []
-
-

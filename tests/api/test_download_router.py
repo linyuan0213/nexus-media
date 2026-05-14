@@ -1,6 +1,7 @@
 """
 测试 FastAPI Download Router
 """
+
 from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
@@ -80,22 +81,19 @@ class TestDownloadRouter:
     def test_check_downloader(self):
         mock_svc = self._mock_downloader()
         try:
-            resp = client.post("/api/download/check_downloader", json={
-                "did": "1", "flag": "enabled", "checked": True
-            })
+            resp = client.post("/api/download/check_downloader", json={"did": "1", "flag": "enabled", "checked": True})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             mock_svc.check_downloader.assert_called_once_with(
-                did="1", enabled=1, transfer=None, only_nastool=None, match_path=None)
+                did="1", enabled=1, transfer=None, only_nastool=None, match_path=None
+            )
         finally:
             self._teardown_downloader()
 
     def test_check_downloader_no_did(self):
         mock_svc = self._mock_downloader()
         try:
-            resp = client.post("/api/download/check_downloader", json={
-                "flag": "enabled", "checked": True
-            })
+            resp = client.post("/api/download/check_downloader", json={"flag": "enabled", "checked": True})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
         finally:
@@ -144,28 +142,23 @@ class TestDownloadRouter:
     # ------------------------------------------------------------------
     def test_download(self):
         mock_svc = self._mock_download()
-        mock_svc.download_from_search_results.return_value = MagicMock(
-            success=True, message="下载成功")
+        mock_svc.download_from_search_results.return_value = MagicMock(success=True, message="下载成功")
         try:
-            resp = client.post("/api/download/download", json={
-                "id": 1, "dir": "/downloads", "setting": "default"
-            })
+            resp = client.post("/api/download/download", json={"id": 1, "dir": "/downloads", "setting": "default"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["msg"] == "下载成功"
             mock_svc.download_from_search_results.assert_called_once_with(
-                dl_id=1, dl_dir="/downloads", dl_setting="default", user_name="testuser")
+                dl_id=1, dl_dir="/downloads", dl_setting="default", user_name="testuser"
+            )
         finally:
             self._teardown_download()
 
     def test_download_fail(self):
         mock_svc = self._mock_download()
-        mock_svc.download_from_search_results.return_value = MagicMock(
-            success=False, message="失败")
+        mock_svc.download_from_search_results.return_value = MagicMock(success=False, message="失败")
         try:
-            resp = client.post("/api/download/download", json={
-                "id": 1, "dir": "/downloads", "setting": "default"
-            })
+            resp = client.post("/api/download/download", json={"id": 1, "dir": "/downloads", "setting": "default"})
             assert resp.status_code == 200
             assert resp.json()["code"] == -1
             assert resp.json()["msg"] == "失败"
@@ -177,16 +170,24 @@ class TestDownloadRouter:
     # ------------------------------------------------------------------
     def test_download_link(self):
         mock_svc = self._mock_download()
-        mock_svc.download_from_link.return_value = MagicMock(
-            success=True, message="下载成功")
+        mock_svc.download_from_link.return_value = MagicMock(success=True, message="下载成功")
         try:
-            resp = client.post("/api/download/download_link", json={
-                "site": "PT", "enclosure": "https://x.torrent",
-                "title": "Test", "description": "", "page_url": "",
-                "size": "1G", "seeders": "10",
-                "uploadvolumefactor": "1", "downloadvolumefactor": "1",
-                "dl_dir": "/dl", "dl_setting": "s1"
-            })
+            resp = client.post(
+                "/api/download/download_link",
+                json={
+                    "site": "PT",
+                    "enclosure": "https://x.torrent",
+                    "title": "Test",
+                    "description": "",
+                    "page_url": "",
+                    "size": "1G",
+                    "seeders": "10",
+                    "uploadvolumefactor": "1",
+                    "downloadvolumefactor": "1",
+                    "dl_dir": "/dl",
+                    "dl_setting": "s1",
+                },
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -197,12 +198,11 @@ class TestDownloadRouter:
     # ------------------------------------------------------------------
     def test_download_torrent(self):
         mock_svc = self._mock_download()
-        mock_svc.download_from_torrent_files_or_urls.return_value = MagicMock(
-            success=True, message="完成")
+        mock_svc.download_from_torrent_files_or_urls.return_value = MagicMock(success=True, message="完成")
         try:
-            resp = client.post("/api/download/download_torrent", json={
-                "files": [], "urls": ["magnet:?xt=urn"], "dl_dir": "/dl"
-            })
+            resp = client.post(
+                "/api/download/download_torrent", json={"files": [], "urls": ["magnet:?xt=urn"], "dl_dir": "/dl"}
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -378,9 +378,7 @@ class TestDownloadRouter:
         mock_svc = self._mock_downloader()
         mock_svc.get_status.return_value = True
         try:
-            resp = client.post("/api/download/test_downloader", json={
-                "type": "qb", "config": "{}"
-            })
+            resp = client.post("/api/download/test_downloader", json={"type": "qb", "config": "{}"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -392,9 +390,9 @@ class TestDownloadRouter:
     def test_update_download_setting(self):
         mock_svc = self._mock_downloader()
         try:
-            resp = client.post("/api/download/update_download_setting", json={
-                "sid": "1", "name": "default", "category": "movie"
-            })
+            resp = client.post(
+                "/api/download/update_download_setting", json={"sid": "1", "name": "default", "category": "movie"}
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -406,10 +404,10 @@ class TestDownloadRouter:
     def test_update_downloader(self):
         mock_svc = self._mock_downloader()
         try:
-            resp = client.post("/api/download/update_downloader", json={
-                "did": "1", "name": "qb", "type": "qbittorrent",
-                "config": "{}", "download_dir": "[]"
-            })
+            resp = client.post(
+                "/api/download/update_downloader",
+                json={"did": "1", "name": "qb", "type": "qbittorrent", "config": "{}", "download_dir": "[]"},
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -422,9 +420,7 @@ class TestDownloadRouter:
         mock_svc = self._mock_download()
         mock_svc.update_torrent_remove_task.return_value = (True, "")
         try:
-            resp = client.post("/api/download/update_torrent_remove_task", json={
-                "data": {"name": "task1"}
-            })
+            resp = client.post("/api/download/update_torrent_remove_task", json={"data": {"name": "task1"}})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:

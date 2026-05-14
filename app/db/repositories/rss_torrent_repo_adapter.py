@@ -21,8 +21,9 @@ class RssTorrentRepositoryAdapter(IRssTorrentRepository):
         row = self._repo.get_rss_torrent_by_name(torrent_name)
         return RssTorrentEntity.from_orm(row)
 
-    def insert(self, torrent_name: str, enclosure: str, type_: str, title: str,
-               year: str, season: str, episode: str) -> bool:
+    def insert(
+        self, torrent_name: str, enclosure: str, type_: str, title: str, year: str, season: str, episode: str
+    ) -> bool:
         self._repo.insert_rss_torrent(torrent_name, enclosure, type_, title, year, season, episode)
         return True
 

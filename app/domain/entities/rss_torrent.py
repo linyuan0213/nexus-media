@@ -1,6 +1,7 @@
 """
 RSS 种子领域实体
 """
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -8,6 +9,7 @@ from typing import Optional
 @dataclass
 class RssTorrentEntity:
     """RSS 种子实体"""
+
     id: int
     torrent_name: str | None
     enclosure: str | None
@@ -22,12 +24,12 @@ class RssTorrentEntity:
         if orm_model is None:
             return None
         return cls(
-            id=getattr(orm_model, 'ID', 0),
-            torrent_name=getattr(orm_model, 'TORRENT_NAME', None),
-            enclosure=getattr(orm_model, 'ENCLOSURE', None),
-            type=getattr(orm_model, 'TYPE', None),
-            title=getattr(orm_model, 'TITLE', None),
-            year=getattr(orm_model, 'YEAR', None),
-            season=getattr(orm_model, 'SEASON', None),
-            episode=getattr(orm_model, 'EPISODE', None),
+            id=getattr(orm_model, "ID", 0),
+            torrent_name=getattr(orm_model, "TORRENT_NAME", None),
+            enclosure=getattr(orm_model, "ENCLOSURE", None),
+            type=getattr(orm_model, "TYPE", None),
+            title=getattr(orm_model, "TITLE", None),
+            year=getattr(orm_model, "YEAR", None),
+            season=getattr(orm_model, "SEASON", None),
+            episode=getattr(orm_model, "EPISODE", None),
         )

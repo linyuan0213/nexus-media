@@ -5,6 +5,7 @@ from typing import Any
 @dataclass
 class SearchOneMediaResultDTO:
     """单媒体搜索结果"""
+
     media_info: Any = None
     no_exists: dict = None
     total_count: int = 0
@@ -14,4 +15,5 @@ class SearchOneMediaResultDTO:
 @dataclass
 class SearchMediasResultDTO:
     """搜索返回结果列表"""
+
     results: list[Any] | None = None

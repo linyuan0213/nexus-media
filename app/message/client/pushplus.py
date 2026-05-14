@@ -11,10 +11,10 @@ class PushPlus(_IMessageClient):
 
     def read_config(self):
         cfg = self._config or {}
-        self._token = cfg.get('token')
-        self._topic = cfg.get('topic')
-        self._channel = cfg.get('channel')
-        self._webhook = cfg.get('webhook')
+        self._token = cfg.get("token")
+        self._topic = cfg.get("topic")
+        self._channel = cfg.get("channel")
+        self._webhook = cfg.get("webhook")
 
     def send_msg(self, title, text="", image="", url="", user_id=""):
         if not title and not text:
@@ -31,7 +31,7 @@ class PushPlus(_IMessageClient):
                 "webhook": self._webhook,
                 "title": title,
                 "content": text,
-                "timestamp": time.time_ns() + 60
+                "timestamp": time.time_ns() + 60,
             }
             sc_url = "http://www.pushplus.plus/send?%s" % urlencode(values)
             res = RequestUtils().get_res(sc_url)
@@ -53,5 +53,6 @@ class PushPlus(_IMessageClient):
 
     def send_list_msg(self, medias: list = None, user_id="", title="", **kwargs):
         pass
+
 
 ClientRegistry.register(PushPlus)

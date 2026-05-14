@@ -10,7 +10,6 @@ from app.utils.types import DownloaderType
 
 
 class Aria2(_IDownloadClient):
-
     schema = "aria2"
     # 下载器ID
     client_id = "aria2"
@@ -23,6 +22,7 @@ class Aria2(_IDownloadClient):
     port = None
     secret = None
     download_dir = []
+
     def __init__(self, config=None):
         if config:
             self._client_config = config
@@ -33,13 +33,13 @@ class Aria2(_IDownloadClient):
         if self._client_config:
             self.host = self._client_config.get("host")
             if self.host:
-                if not self.host.startswith('http'):
+                if not self.host.startswith("http"):
                     self.host = "http://" + self.host
-                if self.host.endswith('/'):
+                if self.host.endswith("/"):
                     self.host = self.host[:-1]
             self.port = self._client_config.get("port")
             self.secret = self._client_config.get("secret")
-            self.download_dir = self._client_config.get('download_dir') or []
+            self.download_dir = self._client_config.get("download_dir") or []
             if self.host and self.port:
                 self._client = PyAria2(secret=self.secret, host=self.host, port=self.port)
 
@@ -102,7 +102,7 @@ class Aria2(_IDownloadClient):
             if match_path and not replace_flag:
                 log.debug(f"【{self.client_name}】{self.name} 开启目录隔离，但 {torrent.name} 未匹配下载目录范围")
                 continue
-            trans_tasks.append({'path': os.path.join(true_path, name).replace("\\", "/"), 'id': torrent.id})
+            trans_tasks.append({"path": os.path.join(true_path, name).replace("\\", "/"), "id": torrent.id})
         return trans_tasks
 
     def get_remove_torrents(self, **kwargs):
@@ -166,13 +166,9 @@ class Aria2(_IDownloadClient):
                 _upspeed = StringUtils.str_filesize(torrent.upload_speed)
                 speed = "%s%sB/s %s%sB/s" % (chr(8595), _dlspeed, chr(8593), _upspeed)
 
-            DispTorrents.append({
-                'id': torrent.id,
-                'name': torrent.name,
-                'speed': speed,
-                'state': state,
-                'progress': progress
-            })
+            DispTorrents.append(
+                {"id": torrent.id, "name": torrent.name, "speed": speed, "state": state, "progress": progress}
+            )
 
         return DispTorrents
 
@@ -188,10 +184,10 @@ class Aria2(_IDownloadClient):
         upload_limit = upload_limit * 1024
         try:
             speed_opt = self._client.getGlobalOption()
-            if speed_opt['max-overall-upload-limit'] != upload_limit:
-                speed_opt['max-overall-upload-limit'] = upload_limit
-            if speed_opt['max-overall-download-limit'] != download_limit:
-                speed_opt['max-overall-download-limit'] = download_limit
+            if speed_opt["max-overall-upload-limit"] != upload_limit:
+                speed_opt["max-overall-upload-limit"] = upload_limit
+            if speed_opt["max-overall-download-limit"] != download_limit:
+                speed_opt["max-overall-download-limit"] = download_limit
             return self._client.changeGlobalOption(speed_opt)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -219,20 +215,20 @@ class Aria2(_IDownloadClient):
     def torrent_properties(self, torrent):
 
         torrent_obj = Torrent()
-        torrent_obj.id = torrent.get('gid')
-        torrent_obj.name = torrent.get('bittorrent', {}).get('info', {}).get("name")
+        torrent_obj.id = torrent.get("gid")
+        torrent_obj.name = torrent.get("bittorrent", {}).get("info", {}).get("name")
         # 种子大小
         torrent_obj.size = int(torrent.get("totalLength"))
         # 下载量
-        torrent_obj.downloaded = int(torrent.get('completedLength'))
+        torrent_obj.downloaded = int(torrent.get("completedLength"))
         # 状态
-        torrent_obj.status = Aria2._judge_status(torrent.get('status'))
+        torrent_obj.status = Aria2._judge_status(torrent.get("status"))
         # 下载速度
-        torrent_obj.download_speed = torrent.get('downloadSpeed')
+        torrent_obj.download_speed = torrent.get("downloadSpeed")
         # 上传速度
-        torrent_obj.upload_speed = torrent.get('uploadSpeed')
+        torrent_obj.upload_speed = torrent.get("uploadSpeed")
         # 下载进度
-        torrent_obj.progress = round(int(torrent.get('completedLength')) / int(torrent.get("totalLength")), 1)
+        torrent_obj.progress = round(int(torrent.get("completedLength")) / int(torrent.get("totalLength")), 1)
         # 保存路径
         torrent_obj.save_path = torrent.get("dir")
 
@@ -244,6 +240,6 @@ class Aria2(_IDownloadClient):
             "paused": TorrentStatus.Stopped,
             "downloading": TorrentStatus.Downloading,
             "completed": TorrentStatus.Uploading,
-            "UNKNOWN": TorrentStatus.Unknown
+            "UNKNOWN": TorrentStatus.Unknown,
         }
         return state_mapping.get(state, TorrentStatus.Unknown)

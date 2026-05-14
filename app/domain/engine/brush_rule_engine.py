@@ -2,6 +2,7 @@
 刷流任务规则引擎（领域层）
 集中处理 RSS选种规则、删种规则、停种规则 的解析与检查
 """
+
 from __future__ import annotations
 
 import re
@@ -61,15 +62,16 @@ class BrushRuleEngine:
     # RSS 选种规则
     # --------------------------------------------------
     @classmethod
-    def check_rss_rule(cls, rss_rule: dict | None, title: str, torrent_size: float, pubdate: datetime | None,
-                       torrent_attr: dict) -> bool:
+    def check_rss_rule(
+        cls, rss_rule: dict | None, title: str, torrent_size: float, pubdate: datetime | None, torrent_attr: dict
+    ) -> bool:
         """检查种子是否符合刷流过滤条件"""
         if not rss_rule:
             return True
 
         try:
             rule_checks: dict[str, Callable[[Any], bool]] = {
-                "size": lambda rv: cls.check_range_rule(torrent_size, rv, 1024 ** 3),
+                "size": lambda rv: cls.check_range_rule(torrent_size, rv, 1024**3),
                 "include": lambda rv: bool(re.search(rv, title, re.IGNORECASE)),
                 "exclude": lambda rv: not bool(re.search(rv, title, re.IGNORECASE)),
                 "free": lambda rv: cls._check_free_status(torrent_attr, rv),
@@ -132,19 +134,17 @@ class BrushRuleEngine:
         subscribe = Subscribe()
         log.info("【Brush】开始排除已订阅媒体...")
 
-        rss_movies = subscribe.get_subscribe_movies(state='R')
+        rss_movies = subscribe.get_subscribe_movies(state="R")
         if not rss_movies:
             log.warn("【Brush】没有正在订阅的电影")
         else:
-            log.info("【Brush】电影订阅清单：%s"
-                     % " ".join('%s' % info.get("name") for _, info in rss_movies.items()))
+            log.info("【Brush】电影订阅清单：%s" % " ".join("%s" % info.get("name") for _, info in rss_movies.items()))
 
-        rss_tvs = subscribe.get_subscribe_tvs(state='R')
+        rss_tvs = subscribe.get_subscribe_tvs(state="R")
         if not rss_tvs:
             log.warn("【Brush】没有正在订阅的电视剧")
         else:
-            log.info("【Brush】电视剧订阅清单：%s"
-                     % " ".join('%s' % info.get("name") for _, info in rss_tvs.items()))
+            log.info("【Brush】电视剧订阅清单：%s" % " ".join("%s" % info.get("name") for _, info in rss_tvs.items()))
 
         if not rss_movies and not rss_tvs:
             return False
@@ -166,7 +166,7 @@ class BrushRuleEngine:
         # 匹配电视剧
         elif rss_tvs:
             for rss_info in rss_tvs.values():
-                rss_sites = rss_info.get('rss_sites')
+                rss_sites = rss_info.get("rss_sites")
                 if rss_sites and media_info.site not in rss_sites:
                     continue
                 if BrushRuleEngine._match_media(media_info, rss_info, is_tv=True):
@@ -179,11 +179,11 @@ class BrushRuleEngine:
     @staticmethod
     def _match_media(media_info, rss_info: dict, is_tv: bool = False) -> bool:
         """单个订阅与媒体信息匹配"""
-        name = rss_info.get('name')
-        year = rss_info.get('year')
-        tmdbid = rss_info.get('tmdbid')
-        fuzzy_match = rss_info.get('fuzzy_match')
-        season = rss_info.get('season') if is_tv else None
+        name = rss_info.get("name")
+        year = rss_info.get("year")
+        tmdbid = rss_info.get("tmdbid")
+        fuzzy_match = rss_info.get("fuzzy_match")
+        season = rss_info.get("season") if is_tv else None
 
         if not fuzzy_match:
             if tmdbid and not str(tmdbid).startswith("DB:"):
@@ -210,7 +210,9 @@ class BrushRuleEngine:
     # 删种规则
     # --------------------------------------------------
     @classmethod
-    def check_remove_rule(cls, remove_rule: dict | None, params: dict) -> tuple[bool, BrushDeleteType | list[BrushDeleteType]]:
+    def check_remove_rule(
+        cls, remove_rule: dict | None, params: dict
+    ) -> tuple[bool, BrushDeleteType | list[BrushDeleteType]]:
         """
         检查是否符合删种规则
         :param remove_rule: 删种规则，包含 mode 字段来决定使用 and 或 or 模式
@@ -219,7 +221,7 @@ class BrushRuleEngine:
         if not remove_rule:
             return False, BrushDeleteType.NOTDELETE
 
-        hr = params.get('torrent_attr', {}).get('hr', False)
+        hr = params.get("torrent_attr", {}).get("hr", False)
         log.debug(f"HR 状态 {hr}")
 
         values = {
@@ -232,25 +234,25 @@ class BrushRuleEngine:
             "iatime": params.get("iatime"),
             "pending_time": params.get("pending_time"),
             "freespace": params.get("freespace"),
-            "freestatus": params.get('torrent_attr', {}).get("free", False),
+            "freestatus": params.get("torrent_attr", {}).get("free", False),
         }
 
         rule_checks = {
             "time": (BrushDeleteType.SEEDTIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
             "hr_time": (BrushDeleteType.HRSEEDTIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
             "ratio": (BrushDeleteType.RATIO, lambda value, rv: cls.check_range_rule(value, rv)),
-            "uploadsize": (BrushDeleteType.UPLOADSIZE, lambda value, rv: cls.check_range_rule(value, rv, 1024 ** 3)),
+            "uploadsize": (BrushDeleteType.UPLOADSIZE, lambda value, rv: cls.check_range_rule(value, rv, 1024**3)),
             "dltime": (BrushDeleteType.DLTIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
             "avg_upspeed": (BrushDeleteType.AVGUPSPEED, lambda value, rv: cls.check_range_rule(value, rv, 1024)),
             "iatime": (BrushDeleteType.IATIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
             "pending_time": (BrushDeleteType.PENDINGTIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
-            "freespace": (BrushDeleteType.FREESPACE, lambda value, rv: cls.check_range_rule(value, rv, 1024 ** 3)),
+            "freespace": (BrushDeleteType.FREESPACE, lambda value, rv: cls.check_range_rule(value, rv, 1024**3)),
             "freestatus": (BrushDeleteType.FREEEND, lambda value, rv: not value),
         }
 
-        mode = remove_rule.get('mode', 'or')
+        mode = remove_rule.get("mode", "or")
         delete_type_result: list[BrushDeleteType] = []
-        all_conditions_met = mode == 'and'
+        all_conditions_met = mode == "and"
 
         try:
             for field, (delete_type, check_func) in rule_checks.items():
@@ -273,14 +275,14 @@ class BrushRuleEngine:
 
                 if check_func(value, rule_value):
                     log.debug(f"字段: {field} 符合规则, 删除类型: {delete_type}")
-                    if mode == 'or':
+                    if mode == "or":
                         return True, delete_type
                     delete_type_result.append(delete_type)
                 else:
-                    if mode == 'and':
+                    if mode == "and":
                         all_conditions_met = False
 
-            if mode == 'and' and all_conditions_met and delete_type_result:
+            if mode == "and" and all_conditions_met and delete_type_result:
                 return True, delete_type_result
 
         except Exception as err:
@@ -298,7 +300,7 @@ class BrushRuleEngine:
 
         rule_stopfree = stop_rule.get("stopfree")
         if rule_stopfree and torrent_attr:
-            if rule_stopfree == "Y" and not (torrent_attr.get('2xfree') or torrent_attr.get('free')):
+            if rule_stopfree == "Y" and not (torrent_attr.get("2xfree") or torrent_attr.get("free")):
                 return True, BrushStopType.FREEEND
 
         return False, BrushStopType.NOTSTOP
@@ -422,4 +424,5 @@ class BrushRuleEngine:
     def _filesize(size_bytes: int) -> str:
         # 避免循环导入，从已有工具类引入
         from app.utils import StringUtils
+
         return StringUtils.str_filesize(size_bytes)

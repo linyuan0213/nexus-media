@@ -66,8 +66,7 @@ class TestMessageClientService:
     def test_upsert_client_with_cid(self):
         svc, mock_msg = self._svc()
         svc.upsert_client(
-            name="n", cid=5, ctype="wx", config="{}",
-            switchs="[]", interactive=0, enabled=1, templates=""
+            name="n", cid=5, ctype="wx", config="{}", switchs="[]", interactive=0, enabled=1, templates=""
         )
         mock_msg.delete_message_client.assert_called_once_with(cid=5)
         mock_msg.insert_message_client.assert_called_once()
@@ -75,8 +74,7 @@ class TestMessageClientService:
     def test_upsert_client_interactive(self):
         svc, mock_msg = self._svc()
         svc.upsert_client(
-            name="n", cid=0, ctype="tg", config="{}",
-            switchs="[]", interactive=1, enabled=1, templates=""
+            name="n", cid=0, ctype="tg", config="{}", switchs="[]", interactive=1, enabled=1, templates=""
         )
         mock_msg.check_message_client.assert_called_once_with(interactive=0, ctype="tg")
         mock_msg.insert_message_client.assert_called_once()
@@ -101,8 +99,16 @@ class TestBackupRestoreService:
     @patch("app.services.system_service.DatabaseFactory")
     @patch("app.services.system_service.import_from_file")
     def test_restore_json_backup(
-        self, mock_import, mock_db_factory, mock_rmtree, mock_remove,
-        mock_exists, mock_copy, mock_unpack, mock_mkdtemp, mock_temp_mgr
+        self,
+        mock_import,
+        mock_db_factory,
+        mock_rmtree,
+        mock_remove,
+        mock_exists,
+        mock_copy,
+        mock_unpack,
+        mock_mkdtemp,
+        mock_temp_mgr,
     ):
         svc = self._svc()
         mock_temp_mgr.get_temp_path.return_value = "/tmp/backup.zip"
@@ -141,9 +147,7 @@ class TestBackupRestoreService:
     @patch("app.services.system_service.os.path.exists", return_value=True)
     @patch("app.services.system_service.os.remove")
     @patch("app.services.system_service.shutil.rmtree")
-    def test_restore_exception(
-        self, mock_rmtree, mock_remove, mock_exists, mock_unpack, mock_mkdtemp, mock_temp_mgr
-    ):
+    def test_restore_exception(self, mock_rmtree, mock_remove, mock_exists, mock_unpack, mock_mkdtemp, mock_temp_mgr):
         svc = self._svc()
         mock_temp_mgr.get_temp_path.return_value = "/tmp/backup.zip"
         mock_mkdtemp.return_value = "/tmp/restore_xxx"
@@ -278,8 +282,7 @@ class TestSchedulerService:
         mock_down = MagicMock()
         mock_sync = MagicMock()
         svc = SchedulerService(
-            downloader=mock_down, sync=mock_sync,
-            rss=MagicMock(), subscribe=MagicMock(), thread_helper=MagicMock()
+            downloader=mock_down, sync=mock_sync, rss=MagicMock(), subscribe=MagicMock(), thread_helper=MagicMock()
         )
         ok, msg = svc.start_service("sync")
         assert ok is True
@@ -288,8 +291,7 @@ class TestSchedulerService:
 
     def test_start_service_unknown(self):
         svc = SchedulerService(
-            downloader=MagicMock(), sync=MagicMock(),
-            rss=MagicMock(), subscribe=MagicMock(), thread_helper=MagicMock()
+            downloader=MagicMock(), sync=MagicMock(), rss=MagicMock(), subscribe=MagicMock(), thread_helper=MagicMock()
         )
         ok, msg = svc.start_service("xxx")
         assert ok is False

@@ -33,13 +33,13 @@ class DoubanRankPlugin:
         self._media = MediaService()
         self._event = Event()
         self._douban_address = {
-            'movie-ustop': 'https://rsshub.app/douban/movie/ustop',
-            'movie-weekly': 'https://rsshub.app/douban/movie/weekly',
-            'movie-real-time': 'https://rsshub.app/douban/movie/weekly/subject_real_time_hotest',
-            'show-domestic': 'https://rsshub.app/douban/movie/weekly/show_domestic',
-            'movie-hot-gaia': 'https://rsshub.app/douban/movie/weekly/movie_hot_gaia',
-            'tv-hot': 'https://rsshub.app/douban/movie/weekly/tv_hot',
-            'movie-top250': 'https://rsshub.app/douban/movie/weekly/movie_top250',
+            "movie-ustop": "https://rsshub.app/douban/movie/ustop",
+            "movie-weekly": "https://rsshub.app/douban/movie/weekly",
+            "movie-real-time": "https://rsshub.app/douban/movie/weekly/subject_real_time_hotest",
+            "show-domestic": "https://rsshub.app/douban/movie/weekly/show_domestic",
+            "movie-hot-gaia": "https://rsshub.app/douban/movie/weekly/movie_hot_gaia",
+            "tv-hot": "https://rsshub.app/douban/movie/weekly/tv_hot",
+            "movie-top250": "https://rsshub.app/douban/movie/weekly/movie_top250",
         }
 
     def _get_config(self):
@@ -80,7 +80,7 @@ class DoubanRankPlugin:
 
         if onlyonce:
             self.ctx.info("订阅服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ'))) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ"))) + timedelta(seconds=3)
             self.ctx.schedule_date("refresh_once", self._refresh_rss, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -98,6 +98,7 @@ class DoubanRankPlugin:
         if content:
             try:
                 import json
+
                 return json.loads(content)
             except Exception:
                 pass
@@ -105,6 +106,7 @@ class DoubanRankPlugin:
 
     def _save_history(self, data):
         import json
+
         self.ctx.write_data("history.json", json.dumps(data, ensure_ascii=False, indent=2))
 
     def _update_history(self, media, state):
@@ -119,7 +121,7 @@ class DoubanRankPlugin:
             "rating": media.vote_average or 0,
             "image": media.get_poster_image() if hasattr(media, "get_poster_image") else "",
             "state": state,
-            "add_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "add_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
         self._save_history(data)
 
@@ -134,7 +136,7 @@ class DoubanRankPlugin:
             return
 
         if isinstance(rss_addrs, str):
-            rss_addrs = [a for a in rss_addrs.split('\n') if a]
+            rss_addrs = [a for a in rss_addrs.split("\n") if a]
 
         addr_list = rss_addrs + [self._douban_address.get(rank) for rank in ranks]
         if not addr_list:
@@ -158,9 +160,9 @@ class DoubanRankPlugin:
                         self.ctx.info("订阅服务停止")
                         return
 
-                    title = rss_info.get('title')
-                    douban_id = rss_info.get('doubanid')
-                    mtype = rss_info.get('type')
+                    title = rss_info.get("title")
+                    douban_id = rss_info.get("doubanid")
+                    mtype = rss_info.get("type")
                     unique_flag = f"doubanrank: {title} (DB:{douban_id})"
 
                     if self._rsshelper.is_rssd_by_simple(torrent_name=unique_flag, enclosure=None):
@@ -185,7 +187,7 @@ class DoubanRankPlugin:
                         title=media_info.title,
                         year=media_info.year,
                         tmdbid=media_info.tmdb_id,
-                        season=media_info.get_season_seq()
+                        season=media_info.get_season_seq(),
                     )
                     if item_id:
                         self.ctx.info(f"媒体服务器已存在：{media_info.get_title_string()}")
@@ -196,7 +198,7 @@ class DoubanRankPlugin:
                         type_str="MOV" if media_info.type == MediaType.MOVIE else "TV",
                         name=media_info.title,
                         year=media_info.year,
-                        season=media_info.get_season_string()
+                        season=media_info.get_season_string(),
                     ):
                         self.ctx.info(f"{media_info.get_title_string()} 已订阅过")
                         self._update_history(media=media_info, state="RSS")
@@ -209,7 +211,7 @@ class DoubanRankPlugin:
                         year=media_info.year,
                         season=media_info.begin_season,
                         channel=RssType.Auto,
-                        in_from=SearchType.PLUGIN
+                        in_from=SearchType.PLUGIN,
                     )
                     if not rss_media or code != 0:
                         self.ctx.warn(f"{media_info.get_title_string()} 添加订阅失败：{msg}")
@@ -245,11 +247,7 @@ class DoubanRankPlugin:
                         doubanid = doubanid[0]
                     if doubanid and not str(doubanid).isdigit():
                         continue
-                    ret_array.append({
-                        'title': title,
-                        'link': link,
-                        'doubanid': doubanid
-                    })
+                    ret_array.append({"title": title, "link": link, "doubanid": doubanid})
                 except Exception:
                     continue
             return ret_array

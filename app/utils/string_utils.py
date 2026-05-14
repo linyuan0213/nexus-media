@@ -14,7 +14,6 @@ from app.utils.types import MediaType
 
 
 class StringUtils:
-
     @staticmethod
     def num_filesize(text):
         """
@@ -34,13 +33,13 @@ class StringUtils:
             ExceptionUtils.exception_traceback(e)
             return 0
         if text.find("PB") != -1 or text.find("PIB") != -1:
-            size *= 1024 ** 5
+            size *= 1024**5
         elif text.find("TB") != -1 or text.find("TIB") != -1:
-            size *= 1024 ** 4
+            size *= 1024**4
         elif text.find("GB") != -1 or text.find("GIB") != -1:
-            size *= 1024 ** 3
+            size *= 1024**3
         elif text.find("MB") != -1 or text.find("MIB") != -1:
-            size *= 1024 ** 2
+            size *= 1024**2
         elif text.find("KB") != -1 or text.find("KIB") != -1:
             size *= 1024
         return round(size)
@@ -56,7 +55,7 @@ class StringUtils:
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
                 return ""
-        d = [(0, '秒'), (60 - 1, '分'), (3600 - 1, '小时'), (86400 - 1, '天')]
+        d = [(0, "秒"), (60 - 1, "分"), (3600 - 1, "小时"), (86400 - 1, "天")]
         s = [x[0] for x in d]
         index = bisect.bisect_left(s, time_sec) - 1
         if index == -1:
@@ -72,7 +71,7 @@ class StringUtils:
         """
         if isinstance(word, list):
             word = " ".join(word)
-        chn = re.compile(r'[\u4e00-\u9fff]')
+        chn = re.compile(r"[\u4e00-\u9fff]")
         if chn.search(word):
             return True
         else:
@@ -80,7 +79,7 @@ class StringUtils:
 
     @staticmethod
     def is_japanese(word):
-        jap = re.compile(r'[\u3040-\u309F\u30A0-\u30FF]')
+        jap = re.compile(r"[\u3040-\u309F\u30A0-\u30FF]")
         if jap.search(word):
             return True
         else:
@@ -88,7 +87,7 @@ class StringUtils:
 
     @staticmethod
     def is_korean(word):
-        kor = re.compile(r'[\uAC00-\uD7FF]')
+        kor = re.compile(r"[\uAC00-\uD7FF]")
         if kor.search(word):
             return True
         else:
@@ -100,9 +99,9 @@ class StringUtils:
         判断是否全是中文
         """
         for ch in word:
-            if ch == ' ':
+            if ch == " ":
                 continue
-            if '\u4e00' <= ch <= '\u9fff':
+            if "\u4e00" <= ch <= "\u9fff":
                 continue
             else:
                 return False
@@ -113,7 +112,7 @@ class StringUtils:
         """
         字符串None输出为空
         """
-        return s if s else ''
+        return s if s else ""
 
     @staticmethod
     def str_sql(in_str):
@@ -133,7 +132,7 @@ class StringUtils:
         if not text:
             return int_val
         try:
-            int_val = int(text.strip().replace(',', ''))
+            int_val = int(text.strip().replace(",", ""))
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
 
@@ -150,7 +149,7 @@ class StringUtils:
         if not text:
             return 0.0
         try:
-            float_val = float(text.strip().replace(',', ''))
+            float_val = float(text.strip().replace(",", ""))
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
         return float_val
@@ -165,10 +164,12 @@ class StringUtils:
         if not text:
             return text
         if not isinstance(text, list):
-            text = re.sub(r"[\u200B-\u200D\uFEFF]",
-                          "",
-                          re.sub(r"%s" % CONVERT_EMPTY_CHARS, replace_word, text),
-                          flags=re.IGNORECASE)
+            text = re.sub(
+                r"[\u200B-\u200D\uFEFF]",
+                "",
+                re.sub(r"%s" % CONVERT_EMPTY_CHARS, replace_word, text),
+                flags=re.IGNORECASE,
+            )
             if not allow_space:
                 return re.sub(r"\s+", "", text)
             else:
@@ -187,7 +188,7 @@ class StringUtils:
         if size.replace(".", "").isdigit():
             try:
                 size = float(size)
-                d = [(1024 - 1, 'K'), (1024 ** 2 - 1, 'M'), (1024 ** 3 - 1, 'G'), (1024 ** 4 - 1, 'T')]
+                d = [(1024 - 1, "K"), (1024**2 - 1, "M"), (1024**3 - 1, "G"), (1024**4 - 1, "T")]
                 s = [x[0] for x in d]
                 index = bisect.bisect_left(s, size) - 1
                 if index == -1:
@@ -283,11 +284,11 @@ class StringUtils:
         if not content:
             return None, None, None, None, None
         # 去掉查询中的电影或电视剧关键字
-        if re.search(r'^电视剧|\s+电视剧|^动漫|\s+动漫', content):
+        if re.search(r"^电视剧|\s+电视剧|^动漫|\s+动漫", content):
             mtype = MediaType.TV
         else:
             mtype = None
-        content = re.sub(r'^电影|^电视剧|^动漫|\s+电影|\s+电视剧|\s+动漫', '', content).strip()
+        content = re.sub(r"^电影|^电视剧|^动漫|\s+电影|\s+电视剧|\s+动漫", "", content).strip()
         # 稍微切一下剧集吧
         season_num = None
         episode_num = None
@@ -295,22 +296,24 @@ class StringUtils:
         season_re = re.search(r"第\s*([0-9一二三四五六七八九十]+)\s*季", content, re.IGNORECASE)
         if season_re:
             mtype = MediaType.TV
-            season_num = int(cn2an.cn2an(season_re.group(1), mode='smart'))
+            season_num = int(cn2an.cn2an(season_re.group(1), mode="smart"))
         episode_re = re.search(r"第\s*([0-9一二三四五六七八九十百零]+)\s*集", content, re.IGNORECASE)
         if episode_re:
             mtype = MediaType.TV
-            episode_num = int(cn2an.cn2an(episode_re.group(1), mode='smart'))
+            episode_num = int(cn2an.cn2an(episode_re.group(1), mode="smart"))
             if episode_num and not season_num:
                 season_num = 1
         year_re = re.search(r"[\s(]+(\d{4})[\s)]*", content)
         if year_re:
             year = year_re.group(1)
         key_word = re.sub(
-            r'第\s*[0-9一二三四五六七八九十]+\s*季|第\s*[0-9一二三四五六七八九十百零]+\s*集|[\s(]+(\d{4})[\s)]*', '',
+            r"第\s*[0-9一二三四五六七八九十]+\s*季|第\s*[0-9一二三四五六七八九十百零]+\s*集|[\s(]+(\d{4})[\s)]*",
+            "",
             content,
-            flags=re.IGNORECASE).strip()
+            flags=re.IGNORECASE,
+        ).strip()
         if key_word:
-            key_word = re.sub(r'\s+', ' ', key_word)
+            key_word = re.sub(r"\s+", " ", key_word)
         if not key_word:
             key_word = year
 
@@ -321,8 +324,8 @@ class StringUtils:
         """
         生成一个指定长度的随机字符串
         """
-        random_str = ''
-        base_str = 'ABCDEFGHIGKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz0123456789'
+        random_str = ""
+        base_str = "ABCDEFGHIGKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz0123456789"
         length = len(base_str) - 1
         for i in range(randomlength):
             random_str += base_str[random.randint(0, length)]
@@ -356,13 +359,13 @@ class StringUtils:
             return datetime_str
 
         try:
-            return dateparser.parse(datetime_str).strftime('%Y-%m-%d %H:%M:%S')
+            return dateparser.parse(datetime_str).strftime("%Y-%m-%d %H:%M:%S")
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             return datetime_str
 
     @staticmethod
-    def timestamp_to_date(timestamp, date_format='%Y-%m-%d %H:%M:%S'):
+    def timestamp_to_date(timestamp, date_format="%Y-%m-%d %H:%M:%S"):
         """
         时间戳转日期
         :param timestamp:
@@ -391,7 +394,7 @@ class StringUtils:
             return text
         if isinstance(text, int) or isinstance(text, float):
             return True if text > 0 else False
-        if isinstance(text, str) and text.lower() in ['y', 'true', '1']:
+        if isinstance(text, str) and text.lower() in ["y", "true", "1"]:
             return True
         return False
 
@@ -402,7 +405,7 @@ class StringUtils:
         :param cj:
         :return:
         """
-        return '; '.join(['='.join(item) for item in cj.items()])
+        return "; ".join(["=".join(item) for item in cj.items()])
 
     @staticmethod
     def get_idlist_from_string(content, dicts):
@@ -417,10 +420,10 @@ class StringUtils:
         id_list = []
         content_list = content.split()
         for dic in dicts:
-            if dic.get('name') in content_list and dic.get('id') not in id_list:
-                id_list.append(dic.get('id'))
-                content = content.replace(dic.get('name'), '')
-        return id_list, re.sub(r'\s+', ' ', content).strip()
+            if dic.get("name") in content_list and dic.get("id") not in id_list:
+                id_list.append(dic.get("id"))
+                content = content.replace(dic.get("name"), "")
+        return id_list, re.sub(r"\s+", " ", content).strip()
 
     @staticmethod
     def str_title(s):
@@ -473,7 +476,7 @@ class StringUtils:
         :return: 字符串中包含的单词数量
         """
         # 匹配英文单词
-        if re.match(r'^[A-Za-z0-9\s]+$', s):
+        if re.match(r"^[A-Za-z0-9\s]+$", s):
             # 如果是英文字符串，则按空格分隔单词，并计算单词数量
             num_words = len(s.split())
         else:
@@ -488,27 +491,27 @@ class StringUtils:
         把文本拆分为固定字节长度的数组，优先按换行拆分，避免单词内拆分
         """
         if not text:
-            yield ''
+            yield ""
         # 分行
-        lines = re.split('\n', text)
-        buf = ''
+        lines = re.split("\n", text)
+        buf = ""
         for line in lines:
-            if len(line.encode('utf-8')) > max_length:
+            if len(line.encode("utf-8")) > max_length:
                 # 超长行继续拆分
                 blank = ""
-                if re.match(r'^[A-Za-z0-9.\s]+', line):
+                if re.match(r"^[A-Za-z0-9.\s]+", line):
                     # 英文行按空格拆分
                     parts = line.split()
                     blank = " "
                 else:
                     # 中文行按字符拆分
                     parts = line
-                part = ''
+                part = ""
                 for p in parts:
-                    if len((part + p).encode('utf-8')) > max_length:
+                    if len((part + p).encode("utf-8")) > max_length:
                         # 超长则Yield
                         yield (buf + part).strip()
-                        buf = ''
+                        buf = ""
                         part = f"{blank}{p}"
                     else:
                         part = f"{part}{blank}{p}"
@@ -516,7 +519,7 @@ class StringUtils:
                     # 将最后的部分追加到buf
                     buf += part
             else:
-                if len((buf + "\n" + line).encode('utf-8')) > max_length:
+                if len((buf + "\n" + line).encode("utf-8")) > max_length:
                     # buf超长则Yield
                     yield buf.strip()
                     buf = line
@@ -538,7 +541,7 @@ class StringUtils:
         if not date_str:
             return False
         # 将日期字符串解析为日期对象
-        date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d')
+        date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d")
         # 计算当前日期和一个月前的日期
         today = datetime.datetime.today()
         one_month_ago = today - datetime.timedelta(days=30)
@@ -559,12 +562,13 @@ class StringUtils:
         # 解析查询参数
         params = parse.parse_qs(parsed_url.query)
         from app.sites.engine import SiteEngine
+
         site_def = SiteEngine.get_instance().get_by_url(url)
         if site_def and site_def.download and site_def.download.type in ("api", "api_chained"):
-            tid = re.findall(r'\d+', url)
+            tid = re.findall(r"\d+", url)
             return tid[-1] if tid else None
 
-        tid = re.findall(r'id=(\d+)', url)
+        tid = re.findall(r"id=(\d+)", url)
         if isinstance(tid, list):
             return tid[0] if tid else None
 
@@ -579,4 +583,4 @@ class StringUtils:
 
     @staticmethod
     def is_numeric(s):
-        return bool(re.match(r'^[-+]?[0-9]+(\.[0-9]+)?$', s))
+        return bool(re.match(r"^[-+]?[0-9]+(\.[0-9]+)?$", s))

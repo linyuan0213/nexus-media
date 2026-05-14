@@ -2,6 +2,7 @@
 API Key Repository
 API Key 数据访问层
 """
+
 from datetime import datetime
 
 from sqlalchemy import desc, func
@@ -19,16 +20,11 @@ class APIKeyRepository(BaseRepository):
 
     def get_by_key_value(self, key_value: str) -> APIKEY | None:
         """根据 Key 值获取 API Key"""
-        return self._db.query(APIKEY).filter(
-            key_value == APIKEY.KEY_VALUE
-        ).first()
+        return self._db.query(APIKEY).filter(key_value == APIKEY.KEY_VALUE).first()
 
     def get_by_key_and_status(self, key_value: str, status: int = 1) -> APIKEY | None:
         """根据 Key 值和状态获取 API Key"""
-        return self._db.query(APIKEY).filter(
-            key_value == APIKEY.KEY_VALUE,
-            status == APIKEY.STATUS
-        ).first()
+        return self._db.query(APIKEY).filter(key_value == APIKEY.KEY_VALUE, status == APIKEY.STATUS).first()
 
     def get_by_name(self, name: str, status: int | None = None) -> APIKEY | None:
         """根据名称获取 API Key"""
@@ -44,11 +40,17 @@ class APIKeyRepository(BaseRepository):
         items = self._paginate(query, page, page_size).all()
         return items, total
 
-    def create_key(self, name: str, key_value: str, key_prefix: str,
-                   status: int = 1, expires_at: datetime | None = None,
-                   created_by: int | None = None,
-                   description: str = "",
-                   raw_key: str | None = None) -> APIKEY:
+    def create_key(
+        self,
+        name: str,
+        key_value: str,
+        key_prefix: str,
+        status: int = 1,
+        expires_at: datetime | None = None,
+        created_by: int | None = None,
+        description: str = "",
+        raw_key: str | None = None,
+    ) -> APIKEY:
         """创建 API Key"""
         api_key = APIKEY(
             NAME=name,
@@ -100,14 +102,10 @@ class APIKeyRepository(BaseRepository):
     def get_stats(self) -> dict[str, int]:
         """获取统计信息"""
         total_keys = self._db.query(func.count(APIKEY.ID)).scalar() or 0
-        active_keys = self._db.query(func.count(APIKEY.ID)).filter(
-            APIKEY.STATUS == 1
-        ).scalar() or 0
+        active_keys = self._db.query(func.count(APIKEY.ID)).filter(APIKEY.STATUS == 1).scalar() or 0
         total_requests = self._db.query(func.count(APIKEYLOG.ID)).scalar() or 0
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        today_requests = self._db.query(func.count(APIKEYLOG.ID)).filter(
-            today <= APIKEYLOG.REQUEST_AT
-        ).scalar() or 0
+        today_requests = self._db.query(func.count(APIKEYLOG.ID)).filter(today <= APIKEYLOG.REQUEST_AT).scalar() or 0
         return {
             "total_keys": total_keys,
             "active_keys": active_keys,
@@ -119,13 +117,20 @@ class APIKeyRepository(BaseRepository):
 class APIKeyLogRepository(BaseRepository):
     """API Key 使用记录仓储"""
 
-    def create_log(self, api_key_id: int, request_id: str,
-                   request_name: str = "", source_ip: str = "",
-                   user_agent: str = "", request_path: str = "",
-                   request_method: str = "", status: int = 1,
-                   response_code: int | None = None,
-                   error_message: str = "",
-                   response_time_ms: int | None = None) -> APIKEYLOG:
+    def create_log(
+        self,
+        api_key_id: int,
+        request_id: str,
+        request_name: str = "",
+        source_ip: str = "",
+        user_agent: str = "",
+        request_path: str = "",
+        request_method: str = "",
+        status: int = 1,
+        response_code: int | None = None,
+        error_message: str = "",
+        response_time_ms: int | None = None,
+    ) -> APIKEYLOG:
         """创建使用记录"""
         log_entry = APIKEYLOG(
             API_KEY_ID=api_key_id,
@@ -145,8 +150,9 @@ class APIKeyLogRepository(BaseRepository):
         self._db.session.refresh(log_entry)
         return log_entry
 
-    def list_logs(self, api_key_id: int | None = None,
-                  page: int = 1, page_size: int = 50) -> tuple[list[APIKEYLOG], int]:
+    def list_logs(
+        self, api_key_id: int | None = None, page: int = 1, page_size: int = 50
+    ) -> tuple[list[APIKEYLOG], int]:
         """获取使用记录列表"""
         query = self._db.query(APIKEYLOG).order_by(desc(APIKEYLOG.REQUEST_AT))
         if api_key_id is not None:
@@ -157,14 +163,10 @@ class APIKeyLogRepository(BaseRepository):
 
     def get_log_by_request_id(self, request_id: str) -> APIKEYLOG | None:
         """根据请求 ID 获取记录"""
-        return self._db.query(APIKEYLOG).filter(
-            request_id == APIKEYLOG.REQUEST_ID
-        ).first()
+        return self._db.query(APIKEYLOG).filter(request_id == APIKEYLOG.REQUEST_ID).first()
 
     def delete_logs_by_key_id(self, api_key_id: int) -> int:
         """删除指定 API Key 的所有记录"""
-        result = self._db.query(APIKEYLOG).filter(
-            api_key_id == APIKEYLOG.API_KEY_ID
-        ).delete()
+        result = self._db.query(APIKEYLOG).filter(api_key_id == APIKEYLOG.API_KEY_ID).delete()
         self._db.commit()
         return result

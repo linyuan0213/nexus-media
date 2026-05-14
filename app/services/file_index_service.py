@@ -8,6 +8,7 @@ FileIndexService - 媒体库文件索引服务
 - 索引数据存储在 app.utils.cache_system 的内存缓存中
 - 提供内存中字符串匹配搜索（遍历，万级文件毫秒级）
 """
+
 from __future__ import annotations
 
 import os
@@ -30,9 +31,7 @@ class FileIndexService:
     def __init__(self):
         self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
-        self._cache = get_cache_manager().get_or_create(
-            _CACHE_NAME, "memory", maxsize=10, ttl=None
-        )
+        self._cache = get_cache_manager().get_or_create(_CACHE_NAME, "memory", maxsize=10, ttl=None)
 
     # ---------- 生命周期 ----------
 
@@ -106,8 +105,8 @@ class FileIndexService:
         roots: list[str] = []
 
         # 媒体库目录
-        media = cfg.get_config('media') or {}
-        for key in ('movie_path', 'tv_path', 'anime_path'):
+        media = cfg.get_config("media") or {}
+        for key in ("movie_path", "tv_path", "anime_path"):
             paths = media.get(key) or []
             if isinstance(paths, str):
                 paths = [paths]
@@ -118,10 +117,13 @@ class FileIndexService:
         # 同步源目录
         try:
             from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
+
             sync_repo = SyncPathRepositoryAdapter()
             for conf in sync_repo.get_config_sync_paths():
                 if conf:
-                    src = getattr(conf, 'SOURCE', None) or (conf.__dict__.get('SOURCE') if hasattr(conf, '__dict__') else None)
+                    src = getattr(conf, "SOURCE", None) or (
+                        conf.__dict__.get("SOURCE") if hasattr(conf, "__dict__") else None
+                    )
                     if src:
                         roots.append(os.path.normpath(src).replace("\\", "/"))
         except Exception:
@@ -242,7 +244,7 @@ class FileIndexService:
             if p == norm:
                 continue
             if p.startswith(prefix):
-                rest = p[len(prefix):]
+                rest = p[len(prefix) :]
                 if "/" not in rest:  # 直接子项
                     results.append(dict(item))
 

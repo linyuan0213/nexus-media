@@ -2,6 +2,7 @@
 Plugin / TMDB黑名单领域层测试
 测试 Plugin 实体 from_orm/to_dict 以及适配器代理行为
 """
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -44,8 +45,14 @@ class TestPluginHistoryEntity:
 class TestTmdbBlacklistEntity:
     def test_from_orm(self):
         orm = _make_orm(
-            ID=1, TMDB_ID="123", TITLE="t", YEAR="2024", MEDIA_TYPE="movie",
-            POSTER_PATH="/p", BACKDROP_PATH="/b", NOTE="n",
+            ID=1,
+            TMDB_ID="123",
+            TITLE="t",
+            YEAR="2024",
+            MEDIA_TYPE="movie",
+            POSTER_PATH="/p",
+            BACKDROP_PATH="/b",
+            NOTE="n",
         )
         e = TmdbBlacklistEntity.from_orm(orm)
         assert e.tmdb_id == "123"
@@ -54,8 +61,14 @@ class TestTmdbBlacklistEntity:
 
     def test_to_dict(self):
         e = TmdbBlacklistEntity(
-            id=1, tmdb_id="123", title=None, year=None, media_type=None,
-            poster_path=None, backdrop_path=None, note=None,
+            id=1,
+            tmdb_id="123",
+            title=None,
+            year=None,
+            media_type=None,
+            poster_path=None,
+            backdrop_path=None,
+            note=None,
         )
         assert e.to_dict()["tmdb_id"] == "123"
 
@@ -99,8 +112,14 @@ class TestPluginHistoryRepositoryAdapter:
 class TestTmdbBlacklistRepositoryAdapter:
     def _make(self):
         bl_orm = _make_orm(
-            ID=1, TMDB_ID="123", TITLE="t", YEAR="2024", MEDIA_TYPE="movie",
-            POSTER_PATH="/p", BACKDROP_PATH="/b", NOTE="n",
+            ID=1,
+            TMDB_ID="123",
+            TITLE="t",
+            YEAR="2024",
+            MEDIA_TYPE="movie",
+            POSTER_PATH="/p",
+            BACKDROP_PATH="/b",
+            NOTE="n",
         )
         mock = MagicMock()
         mock.is_tmdb_blacklisted = MagicMock(return_value=False)

@@ -14,8 +14,8 @@ for fp in sorted(CONTROLLERS_DIR.glob("*.py")):
     # 1. rename bp -> {domain}_bp
     old_bp = f'{domain}_bp = Blueprint("{domain}"'
     if 'bp = Blueprint("' in text and old_bp not in text:
-        text = text.replace('bp = Blueprint(', f'{domain}_bp = Blueprint(')
-        text = re.sub(r'@bp\.route', f'@{domain}_bp.route', text)
+        text = text.replace("bp = Blueprint(", f"{domain}_bp = Blueprint(")
+        text = re.sub(r"@bp\.route", f"@{domain}_bp.route", text)
 
     # 2. specific self fixes per file
     if domain == "system":
@@ -46,13 +46,15 @@ for fp in sorted(CONTROLLERS_DIR.glob("*.py")):
         text = text.replace("self._manual_transfer(", "_manual_transfer(")
         # fix undefined command in _exec_test_command
         if "command.strip()" in text:
-            text = text.replace('m = re.match(r"^(\\w+)\\(\\)\\.(\\w+)\\(\\)$", command.strip())',
-                                'cmd = data.get("command", "") if isinstance(data, dict) else str(data)\n        m = re.match(r"^(\\w+)\\(\\)\\.(\\w+)\\(\\)$", cmd.strip())')
+            text = text.replace(
+                'm = re.match(r"^(\\w+)\\(\\)\\.(\\w+)\\(\\)$", command.strip())',
+                'cmd = data.get("command", "") if isinstance(data, dict) else str(data)\n        m = re.match(r"^(\\w+)\\(\\)\\.(\\w+)\\(\\)$", cmd.strip())',
+            )
     elif domain == "brush":
         # Replace WebActionBrushMixin constants with inline copies
         if "WebActionBrushMixin._RSS_RULE_FIELDS" in text:
             # insert constants near top
-            const_block = '''_RSS_RULE_FIELDS = {
+            const_block = """_RSS_RULE_FIELDS = {
     "free": "brushtask_free",
     "hr": "brushtask_hr",
     "size": "brushtask_torrent_size",
@@ -82,7 +84,7 @@ _STOP_RULE_FIELDS = {
     "stopfree": "brushtask_stopfree",
 }
 
-'''
+"""
             # place before blueprint definition
             text = text.replace(f'{domain}_bp = Blueprint("brush"', const_block + f'{domain}_bp = Blueprint("brush"')
             text = text.replace("WebActionBrushMixin._RSS_RULE_FIELDS", "_RSS_RULE_FIELDS")
@@ -92,15 +94,19 @@ _STOP_RULE_FIELDS = {
         text = text.replace("def install_plugin(data):", "def install_plugin(data, reload=True):")
     elif domain == "scheduler":
         # rename local success shadowing
-        text = re.sub(r'^(\s+)success = scheduler\.(remove_job|pause_job|resume_job)\(job_id\)',
-                      r'\1ret = scheduler.\2(job_id)', text, flags=re.M)
-        text = text.replace('if success:', 'if ret:')
-        text = text.replace('return success(msg=', 'return success(msg=')  # no-op, just ensure
+        text = re.sub(
+            r"^(\s+)success = scheduler\.(remove_job|pause_job|resume_job)\(job_id\)",
+            r"\1ret = scheduler.\2(job_id)",
+            text,
+            flags=re.M,
+        )
+        text = text.replace("if success:", "if ret:")
+        text = text.replace("return success(msg=", "return success(msg=")  # no-op, just ensure
     elif domain == "rbac":
         # rename local success shadowing (pattern: success, result = ...)
-        text = re.sub(r'^(\s+)success, result = ', r'\1ok, result = ', text, flags=re.M)
-        text = text.replace('if success:', 'if ok:')
-        text = text.replace('return success(success=True', 'return success(success=True')
+        text = re.sub(r"^(\s+)success, result = ", r"\1ok, result = ", text, flags=re.M)
+        text = text.replace("if success:", "if ok:")
+        text = text.replace("return success(success=True", "return success(success=True")
         # the line above would break after replace? no, we replaced only the assignment.
         # But there are return statements like: return success(success=True, ...)
         # That uses the imported function, so it's fine.

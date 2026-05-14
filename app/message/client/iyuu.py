@@ -10,7 +10,7 @@ class IyuuMsg(_IMessageClient):
 
     def read_config(self):
         cfg = self._config or {}
-        self._token = cfg.get('token')
+        self._token = cfg.get("token")
 
     def send_msg(self, title, text="", image="", url="", user_id=""):
         if not title and not text:
@@ -22,8 +22,8 @@ class IyuuMsg(_IMessageClient):
             res = RequestUtils().get_res(sc_url)
             if res and res.status_code == 200:
                 ret_json = res.json()
-                errno = ret_json.get('errcode')
-                error = ret_json.get('errmsg')
+                errno = ret_json.get("errcode")
+                error = ret_json.get("errmsg")
                 if errno == 0:
                     return True, error
                 else:
@@ -38,5 +38,6 @@ class IyuuMsg(_IMessageClient):
 
     def send_list_msg(self, medias: list = None, user_id="", title="", **kwargs):
         pass
+
 
 ClientRegistry.register(IyuuMsg)

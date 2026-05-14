@@ -18,6 +18,7 @@ router = APIRouter()
 # Request Models
 # ---------------------------------------------------------------------------
 
+
 class EmptyRequest(BaseModel):
     data: dict | None = None
 
@@ -73,6 +74,7 @@ class UpdateBrushTaskStateRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.post("/tasks/add")
 def add_brushtask(
@@ -157,10 +159,7 @@ def update_brushtask_state(
     svc: BrushService = Depends(get_brush_service),
 ):
     try:
-        svc.update_task_state(
-            state=req.state,
-            task_ids=req.ids
-        )
+        svc.update_task_state(state=req.state, task_ids=req.ids)
         return success(msg="")
     except Exception as e:
         ExceptionUtils.exception_traceback(e)

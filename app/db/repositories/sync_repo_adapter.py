@@ -24,8 +24,17 @@ class SyncPathRepositoryAdapter(ISyncPathRepository):
     def get_config_sync_paths(self, sid=None):
         return self._repo.get_config_sync_paths(sid)
 
-    def insert(self, source: str, dest: str, unknown: str, mode: str,
-               compatibility: int, rename: int, enabled: int, note: str | None = None) -> None:
+    def insert(
+        self,
+        source: str,
+        dest: str,
+        unknown: str,
+        mode: str,
+        compatibility: int,
+        rename: int,
+        enabled: int,
+        note: str | None = None,
+    ) -> None:
         self._repo.insert_config_sync_path(source, dest, unknown, mode, compatibility, rename, enabled, note)
 
     # 兼容旧Repository方法名
@@ -39,8 +48,13 @@ class SyncPathRepositoryAdapter(ISyncPathRepository):
     def delete_config_sync_path(self, sid):
         self._repo.delete_config_sync_path(sid)
 
-    def update_state(self, sid: int | None = None, compatibility: int | None = None,
-                     rename: int | None = None, enabled: int | None = None) -> None:
+    def update_state(
+        self,
+        sid: int | None = None,
+        compatibility: int | None = None,
+        rename: int | None = None,
+        enabled: int | None = None,
+    ) -> None:
         self._repo.check_config_sync_paths(sid, compatibility, rename, enabled)
 
     # 兼容旧Repository方法名

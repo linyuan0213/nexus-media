@@ -1,6 +1,7 @@
 """
 测试 FastAPI 认证依赖
 """
+
 from unittest.mock import MagicMock, patch
 
 from fastapi import Depends, FastAPI

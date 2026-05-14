@@ -63,9 +63,7 @@ class TestGetTasks:
 
 class TestGetArticles:
     def test_with_articles(self, svc):
-        svc._checker.get_rsstask_info.return_value = {
-            "uses": "D", "address": ["a1"]
-        }
+        svc._checker.get_rsstask_info.return_value = {"uses": "D", "address": ["a1"]}
         svc._checker.get_rss_articles.return_value = [{"title": "t1"}]
         dto = svc.get_articles(1)
         assert dto.articles == [{"title": "t1"}]
@@ -151,12 +149,15 @@ class TestUpdateTask:
 
     def test_download_type(self, svc):
         svc._checker.update_userrss_task.return_value = True
-        dto = svc.update_task({
-            "uses": "D",
-            "address_parser": {"address_0": "http://a.com", "parser_0": "p1"},
-            "id": 1, "name": "task",
-            "recognization": "Y"
-        })
+        dto = svc.update_task(
+            {
+                "uses": "D",
+                "address_parser": {"address_0": "http://a.com", "parser_0": "p1"},
+                "id": 1,
+                "name": "task",
+                "recognization": "Y",
+            }
+        )
         assert dto.success is True
         call_args = svc._checker.update_userrss_task.call_args[0][0]
         assert call_args["uses"] == "D"
@@ -164,18 +165,13 @@ class TestUpdateTask:
 
     def test_rss_type(self, svc):
         svc._checker.update_userrss_task.return_value = True
-        dto = svc.update_task({
-            "uses": "R",
-            "address_parser": {"address_0": "http://a.com"},
-            "sites": {"rss_sites": []}
-        })
+        dto = svc.update_task(
+            {"uses": "R", "address_parser": {"address_0": "http://a.com"}, "sites": {"rss_sites": []}}
+        )
         assert dto.success is True
         call_args = svc._checker.update_userrss_task.call_args[0][0]
         assert call_args["sites"] == {"rss_sites": []}
 
     def test_invalid_uses(self, svc):
-        dto = svc.update_task({
-            "uses": "X",
-            "address_parser": {"address_0": "http://a.com"}
-        })
+        dto = svc.update_task({"uses": "X", "address_parser": {"address_0": "http://a.com"}})
         assert dto.success is False

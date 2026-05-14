@@ -19,6 +19,7 @@
   TMDB 只有 S01，Parser 季号 4 > 1 → 触发映射
   推断出4个季块后 → 映射到 S01 对应集
 """
+
 from datetime import datetime
 
 import log
@@ -127,8 +128,7 @@ class EpisodeMapper:
             log.warn("【EpisodeMapper】推断失败: %s" % e)
             return None
 
-    def map(self, tmdb_id: int, source_season: int | None,
-            source_episode: int | None) -> tuple[int, int] | None:
+    def map(self, tmdb_id: int, source_season: int | None, source_episode: int | None) -> tuple[int, int] | None:
         """
         将 Parser 解析的季集映射到 TMDB 标准季集
 
@@ -143,23 +143,19 @@ class EpisodeMapper:
             return None
 
         if source_season > len(blocks):
-            log.warn("【EpisodeMapper】源季号 %d > 推断季数 %d" %
-                     (source_season, len(blocks)))
+            log.warn("【EpisodeMapper】源季号 %d > 推断季数 %d" % (source_season, len(blocks)))
             return None
 
         _, start_ep, end_ep = blocks[source_season - 1]
         target_ep = start_ep + source_episode - 1
         if target_ep > end_ep:
-            log.warn("【EpisodeMapper】映射后集号 %d 超出范围 (E%d-E%d)" %
-                     (target_ep, start_ep, end_ep))
+            log.warn("【EpisodeMapper】映射后集号 %d 超出范围 (E%d-E%d)" % (target_ep, start_ep, end_ep))
             return None
 
-        log.info("【EpisodeMapper】TMDB:%s S%02dE%02d → S01E%02d" %
-                 (tmdb_id, source_season, source_episode, target_ep))
+        log.info("【EpisodeMapper】TMDB:%s S%02dE%02d → S01E%02d" % (tmdb_id, source_season, source_episode, target_ep))
         return 1, target_ep
 
-    def map_auto(self, tmdb_id: int, source_season: int | None,
-                 source_episode: int | None) -> tuple[int, int] | None:
+    def map_auto(self, tmdb_id: int, source_season: int | None, source_episode: int | None) -> tuple[int, int] | None:
         """
         自动选择映射策略
 
@@ -182,8 +178,7 @@ class EpisodeMapper:
             # 说明是 episode 超出范围，回退到绝对集号
             blocks = self._blocks.get(tmdb_id)
             if blocks and source_season <= len(blocks):
-                log.info(f"【EpisodeMapper】合并季映射失败（episode 超出范围），"
-                         f"回退到绝对集号映射: E{source_episode}")
+                log.info(f"【EpisodeMapper】合并季映射失败（episode 超出范围），回退到绝对集号映射: E{source_episode}")
                 return self.map_absolute(tmdb_id, source_episode)
             # TMDB 已有该季，无需映射
             return None
@@ -208,16 +203,16 @@ class EpisodeMapper:
 
         # 按 tmdb_id 去重，只查未缓存的（合并季缓存）
         tmdb_ids_blocks = {
-            item["tmdb_id"] for item in items
-            if item.get("tmdb_id") and item["tmdb_id"] not in self._blocks
-            and item.get("season") and item["season"] > 1
+            item["tmdb_id"]
+            for item in items
+            if item.get("tmdb_id") and item["tmdb_id"] not in self._blocks and item.get("season") and item["season"] > 1
         }
 
         # 按 tmdb_id 去重，只查未缓存的（绝对集号缓存）
         tmdb_ids_abs = {
-            item["tmdb_id"] for item in items
-            if item.get("tmdb_id") and f"abs:{item['tmdb_id']}" not in self._blocks
-            and not item.get("season")
+            item["tmdb_id"]
+            for item in items
+            if item.get("tmdb_id") and f"abs:{item['tmdb_id']}" not in self._blocks and not item.get("season")
         }
 
         # 并发查询多个不同 tmdb_id
@@ -227,19 +222,12 @@ class EpisodeMapper:
 
         if tmdb_ids_abs:
             with ThreadPoolExecutor(max_workers=min(len(tmdb_ids_abs), 5)) as executor:
-                list(executor.map(
-                    lambda tid: self.map_absolute(tid, 1),
-                    tmdb_ids_abs
-                ))
+                list(executor.map(lambda tid: self.map_absolute(tid, 1), tmdb_ids_abs))
 
         # 批量计算映射结果
         results = []
         for item in items:
-            result = self.map_auto(
-                item.get("tmdb_id"),
-                item.get("season"),
-                item.get("episode")
-            )
+            result = self.map_auto(item.get("tmdb_id"), item.get("season"), item.get("episode"))
             results.append(result)
         return results
 
@@ -280,8 +268,10 @@ class EpisodeMapper:
                 end = total + count
                 total += count
                 if start <= absolute_episode <= end:
-                    log.info("【EpisodeMapper】TMDB:%s 绝对E%d → S%02dE%02d" %
-                             (tmdb_id, absolute_episode, sn, absolute_episode - start + 1))
+                    log.info(
+                        "【EpisodeMapper】TMDB:%s 绝对E%d → S%02dE%02d"
+                        % (tmdb_id, absolute_episode, sn, absolute_episode - start + 1)
+                    )
                     return sn, absolute_episode - start + 1
 
             log.warn("【EpisodeMapper】绝对集号 %d 超出范围 (1-%d)" % (absolute_episode, total))

@@ -18,6 +18,7 @@ router = APIRouter()
 # Request Models
 # ---------------------------------------------------------------------------
 
+
 class EmptyRequest(BaseModel):
     data: dict | None = None
 
@@ -58,6 +59,7 @@ class UpdateUserRssTaskRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post("/tasks/check")
 def check_userrss_task(
     req: CheckUserRssTaskRequest,
@@ -65,10 +67,7 @@ def check_userrss_task(
     svc: UserRssService = Depends(get_user_rss_service),
 ):
     try:
-        svc.check_tasks(
-            taskids=req.ids,
-            flag=req.flag or ""
-        )
+        svc.check_tasks(taskids=req.ids, flag=req.flag or "")
         return success(msg="")
     except Exception:
         traceback.print_exc()
@@ -141,12 +140,9 @@ def list_rss_articles(
 ):
     dto = svc.get_articles(req.id)
     if dto.articles:
-        return success(data={
-            "articles": dto.articles,
-            "count": dto.count,
-            "uses": dto.uses,
-            "address_count": dto.address_count
-        })
+        return success(
+            data={"articles": dto.articles, "count": dto.count, "uses": dto.uses, "address_count": dto.address_count}
+        )
     return fail(msg="未获取到报文")
 
 
@@ -186,11 +182,7 @@ def rss_articles_check(
 ):
     if not req.articles:
         return fail(code=2)
-    res = svc.check_articles(
-        taskid=req.taskid,
-        flag=req.flag,
-        articles=req.articles
-    )
+    res = svc.check_articles(taskid=req.taskid, flag=req.flag, articles=req.articles)
     return success() if res else fail()
 
 
@@ -202,10 +194,7 @@ def rss_articles_download(
 ):
     if not req.articles:
         return fail(code=2)
-    res = svc.download_articles(
-        taskid=req.taskid,
-        articles=req.articles
-    )
+    res = svc.download_articles(taskid=req.taskid, articles=req.articles)
     return success() if res else fail()
 
 
@@ -225,13 +214,7 @@ def update_rssparser(
     _: None = Depends(require_permission("rss:manage")),
     svc: UserRssService = Depends(get_user_rss_service),
 ):
-    params = {
-        "id": req.id,
-        "name": req.name,
-        "type": req.type,
-        "format": req.format,
-        "params": req.params
-    }
+    params = {"id": req.id, "name": req.name, "type": req.type, "format": req.format, "params": req.params}
     if svc.update_parser(params):
         return success()
     return fail()

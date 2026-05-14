@@ -2,6 +2,7 @@
 动漫标题解析 — 主入口
 将 MetaAnime 类拆分为纯函数模块
 """
+
 import re
 
 import anitopy
@@ -35,7 +36,7 @@ def parse_anime_title(title, subtitle=None, fileflag=False) -> MediaInfo:
     info.fileflag = fileflag
     try:
         original_title = title
-        title = re.sub(r'(\d+\.\d+)\s+', r'\1', title)
+        title = re.sub(r"(\d+\.\d+)\s+", r"\1", title)
         anitopy_info_origin = anitopy.parse(title)
         title = prepare_title(title)
         anitopy_info = anitopy.parse(title)

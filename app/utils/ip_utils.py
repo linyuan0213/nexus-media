@@ -4,7 +4,6 @@ from urllib.parse import urlparse
 
 
 class IpUtils:
-
     @staticmethod
     def is_ipv4(ip):
         """
@@ -17,7 +16,7 @@ class IpUtils:
                 socket.inet_aton(ip)
             except OSError:
                 return False
-            return ip.count('.') == 3
+            return ip.count(".") == 3
         except OSError:  # not a valid ip
             return False
         return True

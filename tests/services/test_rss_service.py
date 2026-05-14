@@ -15,13 +15,9 @@ class TestRssParserEngine:
     def test_parse_items_xml(self):
         rss_parser = {
             "type": "XML",
-            "format": json.dumps({
-                "list": "//item",
-                "item": {
-                    "title": {"path": "title/text()"},
-                    "link": {"path": "link/text()"}
-                }
-            })
+            "format": json.dumps(
+                {"list": "//item", "item": {"title": {"path": "title/text()"}, "link": {"path": "link/text()"}}}
+            ),
         }
         rss_text = """<?xml version="1.0"?>
         <rss>
@@ -38,22 +34,13 @@ class TestRssParserEngine:
     def test_parse_items_json(self):
         rss_parser = {
             "type": "JSON",
-            "format": json.dumps({
-                "list": "$.data.list",
-                "item": {
-                    "title": {"path": "$.title"},
-                    "size": {"path": "$.size"}
-                }
-            })
+            "format": json.dumps(
+                {"list": "$.data.list", "item": {"title": {"path": "$.title"}, "size": {"path": "$.size"}}}
+            ),
         }
-        rss_text = json.dumps({
-            "data": {
-                "list": [
-                    {"title": "Item A", "size": 1024},
-                    {"title": "Item B", "size": 2048}
-                ]
-            }
-        })
+        rss_text = json.dumps(
+            {"data": {"list": [{"title": "Item A", "size": 1024}, {"title": "Item B", "size": 2048}]}}
+        )
         result = RssParserEngine.parse_items(rss_parser, rss_text, 2)
         assert len(result) == 2
         assert result[0]["title"] == "Item A"
@@ -68,16 +55,13 @@ class TestRssParserEngine:
     def test_parse_items_xml_invalid(self):
         rss_parser = {
             "type": "XML",
-            "format": json.dumps({"list": "//item", "item": {"title": {"path": "title/text()"}}})
+            "format": json.dumps({"list": "//item", "item": {"title": {"path": "title/text()"}}}),
         }
         with pytest.raises(ValueError):
             RssParserEngine.parse_items(rss_parser, "not xml", 1)
 
     def test_parse_items_json_invalid(self):
-        rss_parser = {
-            "type": "JSON",
-            "format": json.dumps({"list": "$.data", "item": {"title": {"path": "$.title"}}})
-        }
+        rss_parser = {"type": "JSON", "format": json.dumps({"list": "$.data", "item": {"title": {"path": "$.title"}}})}
         with pytest.raises(ValueError):
             RssParserEngine.parse_items(rss_parser, "not json", 1)
 
@@ -99,10 +83,7 @@ class TestRssTaskService:
             yield service
 
     def test_get_rsstask_info_by_id(self, svc):
-        svc._rss_tasks = [
-            {"id": 1, "name": "task1"},
-            {"id": 2, "name": "task2"}
-        ]
+        svc._rss_tasks = [{"id": 1, "name": "task1"}, {"id": 2, "name": "task2"}]
         assert svc.get_rsstask_info(taskid=1)["name"] == "task1"
         assert svc.get_rsstask_info(taskid="2")["name"] == "task2"
         # 旧实现：数字但找不到时返回全部列表，保持兼容
@@ -237,26 +218,40 @@ class TestRssSubscriptionService:
         mock_subscribe = MagicMock()
         mock_rss = MagicMock()
         mock_checker = MagicMock()
-        return RssSubscriptionService(
-            subscribe=mock_subscribe, rss=mock_rss, rss_checker=mock_checker)
+        return RssSubscriptionService(subscribe=mock_subscribe, rss=mock_rss, rss_checker=mock_checker)
 
     def test_add_rss_media_single(self, svc):
         mock_media_info = MagicMock()
         mock_media_info.tmdb_id = "456"
         svc._subscribe.add_rss_subscribe.side_effect = lambda **kwargs: (0, "成功", mock_media_info)
         svc._subscribe.get_subscribe_id.return_value = "123"
-        result = svc.add_rss_media({
-            "name": "Test", "year": "2024", "type": "MOV",
-            "season": 1, "in_form": "manual", "rssid": None,
-            "keyword": None, "fuzzy_match": None, "mediaid": None,
-            "rss_sites": None, "search_sites": None,
-            "over_edition": None, "filter_restype": None,
-            "filter_pix": None, "filter_team": None,
-            "filter_rule": None, "filter_include": None,
-            "filter_exclude": None, "save_path": None,
-            "download_setting": None, "total_ep": None,
-            "current_ep": None, "page": 1,
-        })
+        result = svc.add_rss_media(
+            {
+                "name": "Test",
+                "year": "2024",
+                "type": "MOV",
+                "season": 1,
+                "in_form": "manual",
+                "rssid": None,
+                "keyword": None,
+                "fuzzy_match": None,
+                "mediaid": None,
+                "rss_sites": None,
+                "search_sites": None,
+                "over_edition": None,
+                "filter_restype": None,
+                "filter_pix": None,
+                "filter_team": None,
+                "filter_rule": None,
+                "filter_include": None,
+                "filter_exclude": None,
+                "save_path": None,
+                "download_setting": None,
+                "total_ep": None,
+                "current_ep": None,
+                "page": 1,
+            }
+        )
         assert result.code == 0
         assert result.rssid == "123"
         assert result.media_info == mock_media_info
@@ -265,34 +260,63 @@ class TestRssSubscriptionService:
     def test_add_rss_media_multi_season(self, svc):
         svc._subscribe.add_rss_subscribe.side_effect = lambda **kwargs: (0, "成功", None)
         svc._subscribe.get_subscribe_id.return_value = "456"
-        result = svc.add_rss_media({
-            "name": "Test", "year": "2024", "type": "TV",
-            "season": [1, 2], "in_form": "auto", "rssid": None,
-            "keyword": None, "fuzzy_match": None, "mediaid": None,
-            "rss_sites": None, "search_sites": None,
-            "over_edition": None, "filter_restype": None,
-            "filter_pix": None, "filter_team": None,
-            "filter_rule": None, "filter_include": None,
-            "filter_exclude": None, "save_path": None,
-            "download_setting": None, "page": 1,
-        })
+        result = svc.add_rss_media(
+            {
+                "name": "Test",
+                "year": "2024",
+                "type": "TV",
+                "season": [1, 2],
+                "in_form": "auto",
+                "rssid": None,
+                "keyword": None,
+                "fuzzy_match": None,
+                "mediaid": None,
+                "rss_sites": None,
+                "search_sites": None,
+                "over_edition": None,
+                "filter_restype": None,
+                "filter_pix": None,
+                "filter_team": None,
+                "filter_rule": None,
+                "filter_include": None,
+                "filter_exclude": None,
+                "save_path": None,
+                "download_setting": None,
+                "page": 1,
+            }
+        )
         assert result.code == 0
         assert svc._subscribe.add_rss_subscribe.call_count == 2
 
     def test_add_rss_media_failure(self, svc):
         svc._subscribe.add_rss_subscribe.return_value = (-1, "失败", None)
-        result = svc.add_rss_media({
-            "name": "Test", "year": "2024", "type": "MOV",
-            "season": 1, "in_form": "manual", "rssid": None,
-            "keyword": None, "fuzzy_match": None, "mediaid": None,
-            "rss_sites": None, "search_sites": None,
-            "over_edition": None, "filter_restype": None,
-            "filter_pix": None, "filter_team": None,
-            "filter_rule": None, "filter_include": None,
-            "filter_exclude": None, "save_path": None,
-            "download_setting": None, "total_ep": None,
-            "current_ep": None, "page": 1,
-        })
+        result = svc.add_rss_media(
+            {
+                "name": "Test",
+                "year": "2024",
+                "type": "MOV",
+                "season": 1,
+                "in_form": "manual",
+                "rssid": None,
+                "keyword": None,
+                "fuzzy_match": None,
+                "mediaid": None,
+                "rss_sites": None,
+                "search_sites": None,
+                "over_edition": None,
+                "filter_restype": None,
+                "filter_pix": None,
+                "filter_team": None,
+                "filter_rule": None,
+                "filter_include": None,
+                "filter_exclude": None,
+                "save_path": None,
+                "download_setting": None,
+                "total_ep": None,
+                "current_ep": None,
+                "page": 1,
+            }
+        )
         assert result.code == -1
         assert result.msg == "失败"
 
@@ -318,32 +342,30 @@ class TestRssSubscriptionService:
     def test_remove_rss_media_movie(self, svc):
         svc.remove_rss_media("Test Movie", "MOV", "2024", None, "1", "123")
         svc._subscribe.delete_subscribe.assert_called_once_with(
-            mtype=MediaType.MOVIE, title="Test Movie", year="2024",
-            rssid="1", tmdbid="123")
+            mtype=MediaType.MOVIE, title="Test Movie", year="2024", rssid="1", tmdbid="123"
+        )
 
     def test_remove_rss_media_tv(self, svc):
-        with patch('app.services.rss_service.MetaInfo') as MockMeta:
+        with patch("app.services.rss_service.MetaInfo") as MockMeta:
             MockMeta.return_value.get_name.return_value = "Test Tv"
             svc.remove_rss_media("Test TV", "TV", "2024", 1, "1", "123")
             svc._subscribe.delete_subscribe.assert_called_once_with(
-                mtype=MediaType.TV, title="Test Tv", season=1,
-                rssid="1", tmdbid="123")
+                mtype=MediaType.TV, title="Test Tv", season=1, rssid="1", tmdbid="123"
+            )
 
     def test_remove_rss_media_non_digit_tmdbid(self, svc):
         svc.remove_rss_media("Test", "MOV", "2024", None, "1", "tv-123")
         svc._subscribe.delete_subscribe.assert_called_once_with(
-            mtype=MediaType.MOVIE, title="Test", year="2024",
-            rssid="1", tmdbid=None)
+            mtype=MediaType.MOVIE, title="Test", year="2024", rssid="1", tmdbid=None
+        )
 
     def test_get_rss_detail_movie(self, svc):
-        svc._subscribe.get_subscribe_movies.return_value = {
-            "1": {"name": "Test", "id": "1"}}
+        svc._subscribe.get_subscribe_movies.return_value = {"1": {"name": "Test", "id": "1"}}
         result = svc.get_rss_detail("1", "MOV")
         assert result.detail["type"] == "MOV"
 
     def test_get_rss_detail_tv(self, svc):
-        svc._subscribe.get_subscribe_tvs.return_value = {
-            "1": {"name": "Test", "id": "1"}}
+        svc._subscribe.get_subscribe_tvs.return_value = {"1": {"name": "Test", "id": "1"}}
         result = svc.get_rss_detail("1", "TV")
         assert result.detail["type"] == "TV"
 
@@ -413,17 +435,17 @@ class TestRssSubscriptionService:
         svc._rss.delete_rss_history.assert_called_once_with(rssid="1")
 
     def test_refresh_rss_movie(self, svc):
-        with patch('app.helper.ThreadHelper') as MockTh:
+        with patch("app.helper.ThreadHelper") as MockTh:
             svc.refresh_rss("MOV", "1")
             MockTh().start_thread.assert_called_once()
 
     def test_refresh_rss_tv(self, svc):
-        with patch('app.helper.ThreadHelper') as MockTh:
+        with patch("app.helper.ThreadHelper") as MockTh:
             svc.refresh_rss("TV", "1")
             MockTh().start_thread.assert_called_once()
 
     def test_truncate_rss_history(self, svc):
-        with patch('app.helper.RssHelper') as MockHelper:
+        with patch("app.helper.RssHelper") as MockHelper:
             mock_inst = MagicMock()
             MockHelper.return_value = mock_inst
             svc.truncate_rss_history()
@@ -431,17 +453,15 @@ class TestRssSubscriptionService:
             svc._subscribe.truncate_rss_episodes.assert_called_once()
 
     def test_get_ical_events(self, svc):
-        svc._subscribe.get_subscribe_movies.return_value = {
-            "1": {"tmdbid": "123", "id": "1"}}
+        svc._subscribe.get_subscribe_movies.return_value = {"1": {"tmdbid": "123", "id": "1"}}
         svc._subscribe.get_subscribe_tvs.return_value = {
-            "1": {"tmdbid": "456", "id": "1", "season": "S01", "name": "Test"}}
+            "1": {"tmdbid": "456", "id": "1", "season": "S01", "name": "Test"}
+        }
         svc._rss_checker.get_userrss_mediainfos.return_value = []
-        with patch('app.services.media_service.MediaInfoService') as MockMedia:
+        with patch("app.services.media_service.MediaInfoService") as MockMedia:
             mock_media_svc = MagicMock()
-            mock_media_svc.get_movie_calendar.return_value = {
-                "id": "123", "title": "Movie"}
-            mock_media_svc.get_tv_calendar.return_value = [
-                {"id": "456", "title": "TV"}]
+            mock_media_svc.get_movie_calendar.return_value = {"id": "123", "title": "Movie"}
+            mock_media_svc.get_tv_calendar.return_value = [{"id": "456", "title": "TV"}]
             MockMedia.return_value = mock_media_svc
             result = svc.get_ical_events()
             assert len(result) == 2

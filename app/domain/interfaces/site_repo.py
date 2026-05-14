@@ -2,6 +2,7 @@
 站点 Repository 接口
 定义纯接口，与具体 ORM 实现解耦。
 """
+
 from typing import Protocol
 
 from app.domain.entities.site import SiteEntity, SiteSeedingEntity, SiteStatisticsEntity

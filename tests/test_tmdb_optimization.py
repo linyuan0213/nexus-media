@@ -8,6 +8,7 @@ TMDB API 优化测试
 
 运行：pytest tests/test_tmdb_optimization.py -v
 """
+
 import os
 import sys
 import threading
@@ -45,10 +46,7 @@ class TMDBRateLimiter:
             while True:
                 now = time.time()
                 elapsed = now - self._last_update
-                self._tokens = min(
-                    self._burst_size,
-                    self._tokens + elapsed * self._max_rate
-                )
+                self._tokens = min(self._burst_size, self._tokens + elapsed * self._max_rate)
                 self._last_update = now
 
                 if self._tokens >= 1:
@@ -74,10 +72,7 @@ class TMDBRateLimiter:
         with self._lock:
             now = time.time()
             elapsed = now - self._last_update
-            self._tokens = min(
-                self._burst_size,
-                self._tokens + elapsed * self._max_rate
-            )
+            self._tokens = min(self._burst_size, self._tokens + elapsed * self._max_rate)
             self._last_update = now
 
             if self._tokens >= 1:
@@ -95,7 +90,7 @@ class TMDBRateLimiter:
                 "blocked_requests": self._blocked_requests,
                 "wait_count": self._wait_count,
                 "current_tokens": round(self._tokens, 2),
-                "block_rate": round(self._blocked_requests / max(self._total_requests, 1) * 100, 2)
+                "block_rate": round(self._blocked_requests / max(self._total_requests, 1) * 100, 2),
             }
 
 
@@ -109,7 +104,7 @@ class TMDBRetryWithBackoff:
         self._exponential_base = exponential_base
 
     def get_delay(self, attempt):
-        delay = self._base_delay * (self._exponential_base ** attempt)
+        delay = self._base_delay * (self._exponential_base**attempt)
         return min(delay, self._max_delay)
 
     def should_retry(self, attempt, status_code=None):
@@ -128,8 +123,8 @@ class TMDBRetryWithBackoff:
             except Exception as e:
                 last_exception = e
 
-                status_code = getattr(e, 'status_code', None)
-                if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
+                status_code = getattr(e, "status_code", None)
+                if hasattr(e, "response") and hasattr(e.response, "status_code"):
                     status_code = e.response.status_code
 
                 if not self.should_retry(attempt, status_code):
@@ -206,6 +201,7 @@ class RequestDeduper:
 
 # ==================== 测试用例 ====================
 
+
 class TestTMDBRateLimiter:
     """测试 TMDB 速率限制器"""
 
@@ -215,7 +211,7 @@ class TestTMDBRateLimiter:
 
         # 应该能立即获取 5 个令牌（burst_size）
         for i in range(5):
-            assert limiter.try_acquire() == True, f"第 {i+1} 个令牌应该能立即获取"
+            assert limiter.try_acquire() == True, f"第 {i + 1} 个令牌应该能立即获取"
 
         # 第 6 个应该失败（令牌已用完）
         assert limiter.try_acquire() == False
@@ -302,9 +298,9 @@ class TestTMDBRetryWithBackoff:
         """测试延迟计算"""
         retry = TMDBRetryWithBackoff(base_delay=1.0, exponential_base=2.0, max_delay=10.0)
 
-        assert retry.get_delay(0) == 1.0   # 第1次: 1 * 2^0 = 1
-        assert retry.get_delay(1) == 2.0   # 第2次: 1 * 2^1 = 2
-        assert retry.get_delay(2) == 4.0   # 第3次: 1 * 2^2 = 4
+        assert retry.get_delay(0) == 1.0  # 第1次: 1 * 2^0 = 1
+        assert retry.get_delay(1) == 2.0  # 第2次: 1 * 2^1 = 2
+        assert retry.get_delay(2) == 4.0  # 第3次: 1 * 2^2 = 4
         assert retry.get_delay(10) == 10.0  # 超过 max_delay
 
 
@@ -327,10 +323,12 @@ class TestRequestDeduper:
         # 启动多个线程并发请求相同 key
         threads = []
         for i in range(5):
+
             def worker():
                 result = deduper.execute("test_key", slow_function)
                 with result_lock:
                     results.append(result)
+
             t = threading.Thread(target=worker)
             threads.append(t)
             t.start()

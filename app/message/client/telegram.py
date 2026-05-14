@@ -38,12 +38,12 @@ class Telegram(_IMessageClient):
 
     def read_config(self):
         cfg = self._config or {}
-        self.token = cfg.get('token')
-        self.chat_id = cfg.get('chat_id')
-        self.webhook = cfg.get('webhook', False)
-        self.interactive = cfg.get('interactive', False)
-        self._admin_ids = cfg.get('admin_ids') or []
-        self._user_ids = cfg.get('user_ids') or []
+        self.token = cfg.get("token")
+        self.chat_id = cfg.get("chat_id")
+        self.webhook = cfg.get("webhook", False)
+        self.interactive = cfg.get("interactive", False)
+        self._admin_ids = cfg.get("admin_ids") or []
+        self._user_ids = cfg.get("user_ids") or []
         self._domain = get_domain()
         self._api_key = APIKeyService().get_or_create_system_key("MessageWebhook")
         admin_ids = cfg.get("admin_ids")
@@ -181,7 +181,11 @@ class Telegram(_IMessageClient):
             headers = {"content-type": "application/json"}
             res = requests.post(
                 f"https://api.telegram.org/bot{self.token}/setMyCommands",
-                json=data, headers=headers, proxies=get_proxies(), timeout=10)
+                json=data,
+                headers=headers,
+                proxies=get_proxies(),
+                timeout=10,
+            )
             if res and res.json().get("ok"):
                 log.info(f"【Telegram】命令菜单已设置，共 {len(cmds)} 个")
             else:

@@ -2,6 +2,7 @@
 搜索分页管理模块
 管理消息中心搜索结果的缓存和分页导航
 """
+
 from typing import Any
 
 from app.message import Message

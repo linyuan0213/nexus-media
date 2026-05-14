@@ -2,6 +2,7 @@
 配置领域 Repository 接口（Python Protocol）
 定义 Config（消息客户端、下载器、过滤规则等）的仓储契约
 """
+
 from typing import Protocol
 
 from app.domain.entities.config import (
@@ -25,8 +26,17 @@ class IMessageClientRepository(Protocol):
         """根据ID获取消息客户端"""
         ...
 
-    def insert(self, name: str, ctype: str, config: str, switchs: list,
-               interactive: int, enabled: int, note: str = '', templates=None) -> None:
+    def insert(
+        self,
+        name: str,
+        ctype: str,
+        config: str,
+        switchs: list,
+        interactive: int,
+        enabled: int,
+        note: str = "",
+        templates=None,
+    ) -> None:
         """插入消息客户端"""
         ...
 
@@ -46,13 +56,23 @@ class IDownloaderRepository(Protocol):
         """根据ID获取下载器"""
         ...
 
-    def insert(self, name: str, dtype: str, config: str, transfer: str,
-               only_nastool: int, match_path: int, enabled: int) -> None:
+    def insert(
+        self, name: str, dtype: str, config: str, transfer: str, only_nastool: int, match_path: int, enabled: int
+    ) -> None:
         """插入下载器"""
         ...
 
-    def update(self, did: int, name: str, dtype: str, config: str, transfer: str,
-               only_nastool: int, match_path: int, enabled: int) -> None:
+    def update(
+        self,
+        did: int,
+        name: str,
+        dtype: str,
+        config: str,
+        transfer: str,
+        only_nastool: int,
+        match_path: int,
+        enabled: int,
+    ) -> None:
         """更新下载器"""
         ...
 
@@ -88,8 +108,7 @@ class IFilterRuleRepository(Protocol):
         """根据规则组ID获取规则列表"""
         ...
 
-    def insert(self, group_id: int, name: str, include: str, exclude: str,
-               note: str, priority: int = 0) -> None:
+    def insert(self, group_id: int, name: str, include: str, exclude: str, note: str, priority: int = 0) -> None:
         """插入过滤规则"""
         ...
 

@@ -2,6 +2,7 @@
 下载领域实体
 定义Downloader、DownloadHistory、DownloadSetting的领域模型
 """
+
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -9,6 +10,7 @@ from typing import Any, Optional
 @dataclass
 class DownloaderEntity:
     """下载器配置实体"""
+
     id: int
     name: str
     enabled: bool
@@ -35,7 +37,7 @@ class DownloaderEntity:
             match_path=bool(orm_model.MATCH_PATH),
             rmt_mode=orm_model.RMT_MODE or "",
             config=orm_model.CONFIG or "{}",
-            download_dir=orm_model.DOWNLOAD_DIR or ""
+            download_dir=orm_model.DOWNLOAD_DIR or "",
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -50,13 +52,14 @@ class DownloaderEntity:
             "match_path": self.match_path,
             "rmt_mode": self.rmt_mode,
             "config": self.config,
-            "download_dir": self.download_dir
+            "download_dir": self.download_dir,
         }
 
 
 @dataclass
 class DownloadHistoryEntity:
     """下载历史实体"""
+
     id: int
     title: str
     year: str
@@ -97,7 +100,7 @@ class DownloadHistoryEntity:
             downloader=orm_model.DOWNLOADER or "",
             download_id=orm_model.DOWNLOAD_ID or "",
             save_path=orm_model.SAVE_PATH or "",
-            date=orm_model.DATE or ""
+            date=orm_model.DATE or "",
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -119,13 +122,14 @@ class DownloadHistoryEntity:
             "downloader": self.downloader,
             "download_id": self.download_id,
             "save_path": self.save_path,
-            "date": self.date
+            "date": self.date,
         }
 
 
 @dataclass
 class DownloadSettingEntity:
     """下载设置实体"""
+
     id: int
     name: str
     category: str
@@ -154,7 +158,7 @@ class DownloadSettingEntity:
             ratio_limit=orm_model.RATIO_LIMIT or 0,
             seeding_time_limit=orm_model.SEEDING_TIME_LIMIT or 0,
             downloader=orm_model.DOWNLOADER or "",
-            note=orm_model.NOTE or ""
+            note=orm_model.NOTE or "",
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -170,13 +174,14 @@ class DownloadSettingEntity:
             "ratio_limit": self.ratio_limit,
             "seeding_time_limit": self.seeding_time_limit,
             "downloader": self.downloader,
-            "note": self.note
+            "note": self.note,
         }
 
 
 @dataclass
 class IndexerStatisticsEntity:
     """索引器统计实体"""
+
     indexer: str
     total: int
     fail: int
@@ -190,5 +195,5 @@ class IndexerStatisticsEntity:
             "total": self.total,
             "fail": self.fail,
             "success": self.success,
-            "avg_seconds": round(self.avg_seconds, 2) if self.avg_seconds else 0
+            "avg_seconds": round(self.avg_seconds, 2) if self.avg_seconds else 0,
         }

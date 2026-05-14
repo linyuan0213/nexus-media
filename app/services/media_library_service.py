@@ -1,4 +1,3 @@
-
 from app.core.system_config import SystemConfig
 from app.helper import ThreadHelper
 from app.infrastructure.cache_system import TokenCache
@@ -15,9 +14,7 @@ class MediaLibraryService:
     媒体库业务服务
     """
 
-    def __init__(self,
-                 media_server: MediaServer | None = None,
-                 filetransfer: FileTransfer | None = None):
+    def __init__(self, media_server: MediaServer | None = None, filetransfer: FileTransfer | None = None):
         self._media_server = media_server or MediaServer()
         self._filetransfer = filetransfer or FileTransfer()
 
@@ -27,7 +24,10 @@ class MediaLibraryService:
         if not status:
             return "未同步"
         return "电影：%s，电视剧：%s，同步时间：%s" % (
-            status.get("movie_count"), status.get("tv_count"), status.get("time"))
+            status.get("movie_count"),
+            status.get("tv_count"),
+            status.get("time"),
+        )
 
     def start_sync(self, librarys: list):
         """开始媒体库同步"""
@@ -41,11 +41,11 @@ class MediaLibraryService:
         user_count = self._media_server.get_user_count()
         if media_counts:
             return {
-                "Movie": "{:,}".format(media_counts.get('MovieCount')),
-                "Series": "{:,}".format(media_counts.get('SeriesCount')),
-                "Episodes": "{:,}".format(media_counts.get('EpisodeCount')) if media_counts.get('EpisodeCount') else "",
-                "Music": "{:,}".format(media_counts.get('SongCount')),
-                "User": user_count
+                "Movie": "{:,}".format(media_counts.get("MovieCount")),
+                "Series": "{:,}".format(media_counts.get("SeriesCount")),
+                "Episodes": "{:,}".format(media_counts.get("EpisodeCount")) if media_counts.get("EpisodeCount") else "",
+                "Music": "{:,}".format(media_counts.get("SongCount")),
+                "User": user_count,
             }
         return None
 
@@ -72,9 +72,9 @@ class MediaLibraryService:
     def get_space_info(self) -> LibrarySpaceDTO:
         """获取媒体库存储空间"""
         media_cfg = MediaConfigService().get_config()
-        movie_paths = media_cfg.get('movie_path') or []
-        tv_paths = media_cfg.get('tv_path') or []
-        anime_paths = media_cfg.get('anime_path') or []
+        movie_paths = media_cfg.get("movie_path") or []
+        tv_paths = media_cfg.get("tv_path") or []
+        anime_paths = media_cfg.get("anime_path") or []
 
         all_paths = movie_paths + tv_paths + anime_paths
         if not all_paths:
@@ -99,5 +99,5 @@ class MediaLibraryService:
             used_percent=UsedPercent,
             free_space=fmt_space(FreeSpace),
             used_space=fmt_space(UsedSpace),
-            total_space=fmt_space(TotalSpace)
+            total_space=fmt_space(TotalSpace),
         )

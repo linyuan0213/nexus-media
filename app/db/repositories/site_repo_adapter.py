@@ -2,6 +2,7 @@
 Site Repository 适配器
 实现 ISiteRepository 接口，将 SQLAlchemy ORM 操作转换为领域实体。
 """
+
 import json
 
 from app.db.models import CONFIGSITE
@@ -95,16 +96,22 @@ class SiteRepositoryAdapter(ISiteRepository):
     def get_site_favicons(self):
         return self._repo.get_site_favicons()
 
-    def insert_config_site(self, name, site_pri, rssurl=None, signurl=None, cookie=None,
-                           note=None, rss_uses=None):
-        return self._repo.insert_config_site(name=name, site_pri=site_pri,
-                                             rssurl=rssurl, signurl=signurl,
-                                             cookie=cookie, note=note, rss_uses=rss_uses)
+    def insert_config_site(self, name, site_pri, rssurl=None, signurl=None, cookie=None, note=None, rss_uses=None):
+        return self._repo.insert_config_site(
+            name=name, site_pri=site_pri, rssurl=rssurl, signurl=signurl, cookie=cookie, note=note, rss_uses=rss_uses
+        )
 
     def update_config_site(self, tid, name, site_pri, rssurl, signurl, cookie, note, rss_uses):
-        return self._repo.update_config_site(tid=tid, name=name, site_pri=site_pri,
-                                             rssurl=rssurl, signurl=signurl,
-                                             cookie=cookie, note=note, rss_uses=rss_uses)
+        return self._repo.update_config_site(
+            tid=tid,
+            name=name,
+            site_pri=site_pri,
+            rssurl=rssurl,
+            signurl=signurl,
+            cookie=cookie,
+            note=note,
+            rss_uses=rss_uses,
+        )
 
     def delete_config_site(self, siteid):
         return self._repo.delete_config_site(siteid)
@@ -149,8 +156,8 @@ class SiteRepositoryImpl(BaseRepository):
 
     def list_all(self) -> list[SiteEntity]:
         from sqlalchemy import Integer, cast
-        orm_list = self._db.query(CONFIGSITE) \
-            .order_by(cast(CONFIGSITE.PRI, Integer).asc()).all()
+
+        orm_list = self._db.query(CONFIGSITE).order_by(cast(CONFIGSITE.PRI, Integer).asc()).all()
         return [SiteEntity.from_orm(orm) for orm in orm_list]
 
     def list_by_name(self, name: str) -> list[SiteEntity]:
@@ -159,45 +166,56 @@ class SiteRepositoryImpl(BaseRepository):
 
     def insert(self, entity: SiteEntity) -> None:
         from app.db import DbPersist
+
         @DbPersist(self._db)
         def _do_insert():
-            self._db.insert(CONFIGSITE(
-                NAME=entity.name,
-                PRI=entity.pri,
-                RSSURL=entity.rss_url,
-                SIGNURL=entity.sign_url,
-                COOKIE=entity.cookie,
-                NOTE=json.dumps(entity.note) if entity.note else None,
-                INCLUDE=entity.rss_uses,
-            ))
+            self._db.insert(
+                CONFIGSITE(
+                    NAME=entity.name,
+                    PRI=entity.pri,
+                    RSSURL=entity.rss_url,
+                    SIGNURL=entity.sign_url,
+                    COOKIE=entity.cookie,
+                    NOTE=json.dumps(entity.note) if entity.note else None,
+                    INCLUDE=entity.rss_uses,
+                )
+            )
+
         _do_insert()
 
     def update(self, entity: SiteEntity) -> None:
         if not entity.id:
             raise ValueError("Entity ID is required")
         from app.db import DbPersist
+
         @DbPersist(self._db)
         def _do_update():
-            self._db.query(CONFIGSITE).filter(int(entity.id) == CONFIGSITE.ID).update({
-                "NAME": entity.name,
-                "PRI": entity.pri,
-                "RSSURL": entity.rss_url,
-                "SIGNURL": entity.sign_url,
-                "COOKIE": entity.cookie,
-                "NOTE": json.dumps(entity.note) if entity.note else None,
-                "INCLUDE": entity.rss_uses,
-            })
+            self._db.query(CONFIGSITE).filter(int(entity.id) == CONFIGSITE.ID).update(
+                {
+                    "NAME": entity.name,
+                    "PRI": entity.pri,
+                    "RSSURL": entity.rss_url,
+                    "SIGNURL": entity.sign_url,
+                    "COOKIE": entity.cookie,
+                    "NOTE": json.dumps(entity.note) if entity.note else None,
+                    "INCLUDE": entity.rss_uses,
+                }
+            )
+
         _do_update()
 
     def delete(self, site_id: int) -> None:
         from app.db import DbPersist
+
         @DbPersist(self._db)
         def _do_delete():
             self._db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).delete()
+
         _do_delete()
 
     def update_cookie_ua(self, site_id: int, cookie: str, ua: str | None = None) -> None:
         from app.db import DbPersist
+
         @DbPersist(self._db)
         def _do_update():
             rec = self._db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).first()
@@ -209,9 +227,9 @@ class SiteRepositoryImpl(BaseRepository):
                     except Exception:
                         note = {}
                 if ua:
-                    note['ua'] = ua
-                self._db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).update({
-                    "COOKIE": cookie,
-                    "NOTE": json.dumps(note)
-                })
+                    note["ua"] = ua
+                self._db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).update(
+                    {"COOKIE": cookie, "NOTE": json.dumps(note)}
+                )
+
         _do_update()

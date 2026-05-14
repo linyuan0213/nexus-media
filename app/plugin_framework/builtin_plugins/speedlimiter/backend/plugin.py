@@ -2,6 +2,7 @@
 SpeedLimiter Plugin v2
 媒体服务器播放状态改变时，根据设置对下载器进行限速
 """
+
 import time
 
 from app.helper.security_helper import SecurityHelper
@@ -144,20 +145,26 @@ class SpeedLimiterPlugin:
 
         if mediaserver_type == MediaServerType.EMBY:
             for session in playing_sessions:
-                if not SecurityHelper.allow_access(self._unlimited_ips, session.get("RemoteEndPoint")) \
-                        and session.get("NowPlayingItem", {}).get("MediaType") == "Video":
+                if (
+                    not SecurityHelper.allow_access(self._unlimited_ips, session.get("RemoteEndPoint"))
+                    and session.get("NowPlayingItem", {}).get("MediaType") == "Video"
+                ):
                     total_bit_rate += int(session.get("NowPlayingItem", {}).get("Bitrate") or 0)
         elif mediaserver_type == MediaServerType.JELLYFIN:
             for session in playing_sessions:
-                if not SecurityHelper.allow_access(self._unlimited_ips, session.get("RemoteEndPoint")) \
-                        and session.get("NowPlayingItem", {}).get("MediaType") == "Video":
+                if (
+                    not SecurityHelper.allow_access(self._unlimited_ips, session.get("RemoteEndPoint"))
+                    and session.get("NowPlayingItem", {}).get("MediaType") == "Video"
+                ):
                     media_streams = session.get("NowPlayingItem", {}).get("MediaStreams") or []
                     for media_stream in media_streams:
                         total_bit_rate += int(media_stream.get("BitRate") or 0)
         elif mediaserver_type == MediaServerType.PLEX:
             for session in playing_sessions:
-                if not SecurityHelper.allow_access(self._unlimited_ips, session.get("address")) \
-                        and session.get("type") == "Video":
+                if (
+                    not SecurityHelper.allow_access(self._unlimited_ips, session.get("address"))
+                    and session.get("type") == "Video"
+                ):
                     total_bit_rate += int(session.get("bitrate") or 0)
         else:
             return
@@ -185,7 +192,7 @@ class SpeedLimiterPlugin:
         limit_log = self._speed_limit(
             downloader_confs=limited_downloader_confs,
             allocation_ratio=limited_allocation_ratio,
-            playing_flag=_playing_flag
+            playing_flag=_playing_flag,
         )
 
         self._playing_flag = _playing_flag
@@ -253,9 +260,7 @@ class SpeedLimiterPlugin:
                 download_limit = self._download_unlimit
 
             self._downloader.set_speed_limit(
-                downloader_id=downloader_conf.get("id"),
-                download_limit=download_limit,
-                upload_limit=upload_limit
+                downloader_id=downloader_conf.get("id"), download_limit=download_limit, upload_limit=upload_limit
             )
 
             log_info = f"{downloader_name}"

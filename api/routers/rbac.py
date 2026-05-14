@@ -15,6 +15,7 @@ router = APIRouter()
 
 # ---------- Request Models ----------
 
+
 class IdRequest(BaseModel):
     id: int
 
@@ -116,12 +117,14 @@ class ResetPasswordRequest(BaseModel):
 
 # ---------- Helpers ----------
 
+
 def _get_user_id_from_ctx(current_user):
     """兼容层：从 UserContext 或 str 提取用户ID"""
-    return getattr(current_user, 'user_id', 0)
+    return getattr(current_user, "user_id", 0)
 
 
 # ---------- 用户管理 ----------
+
 
 @router.post("/users/create")
 def create_user(
@@ -153,7 +156,7 @@ def delete_user(
 
     ok, _ = rbac_service.delete_user(req.id)
     if ok:
-        return success(data={"success":True, "message":"删除成功"})
+        return success(data={"success": True, "message": "删除成功"})
     return fail(success=False, message="删除失败")
 
 
@@ -177,7 +180,7 @@ def update_user(
         rbac_service.assign_roles_to_user(req.id, req.role_ids)
 
     if ok:
-        return success(data={"success":True, "message":message})
+        return success(data={"success": True, "message": message})
     return fail(success=False, message=message)
 
 
@@ -205,27 +208,29 @@ def get_users(
         d = user.to_dict()
         last_login = None
         if user.last_login_at:
-            last_login = user.last_login_at.strftime('%Y-%m-%d %H:%M')
+            last_login = user.last_login_at.strftime("%Y-%m-%d %H:%M")
 
-        roles = d.get('roles', [])
-        Users.append({
-            "id": d['id'],
-            "name": d['username'],
-            "username": d['username'],
-            "nickname": d['nickname'] or d['username'],
-            "email": d['email'],
-            "avatar": d.get('avatar'),
-            "status": d['status'],
-            "roles": roles,
-            "last_login_at": last_login,
-            "pris": [role.get('role_name') for role in roles] if roles else ["普通用户"]
-        })
+        roles = d.get("roles", [])
+        Users.append(
+            {
+                "id": d["id"],
+                "name": d["username"],
+                "username": d["username"],
+                "nickname": d["nickname"] or d["username"],
+                "email": d["email"],
+                "avatar": d.get("avatar"),
+                "status": d["status"],
+                "roles": roles,
+                "last_login_at": last_login,
+                "pris": [role.get("role_name") for role in roles] if roles else ["普通用户"],
+            }
+        )
     return success(data=Users)
 
 
 def _is_admin(user: UserContext) -> bool:
     """检查是否为管理员（超级管理员或有 user:update 权限）"""
-    return user.is_superadmin or 'user:update' in (user.permissions or [])
+    return user.is_superadmin or "user:update" in (user.permissions or [])
 
 
 @router.post("/users/{user_id}/reset-password")
@@ -248,11 +253,9 @@ def reset_password(
     if not is_admin and req.old_password is None:
         return fail(success=False, message="请输入旧密码")
 
-    ok, message = rbac_service.reset_password(
-        user_id, req.new_password, req.old_password
-    )
+    ok, message = rbac_service.reset_password(user_id, req.new_password, req.old_password)
     if ok:
-        return success(data={"success":True, "message":message})
+        return success(data={"success": True, "message": message})
     return fail(success=False, message=message)
 
 
@@ -306,6 +309,7 @@ async def get_avatar(filename: str):
 
 # ---------- 角色管理 ----------
 
+
 @router.post("/roles/create")
 def create_role(
     req: CreateRoleRequest,
@@ -337,7 +341,7 @@ def delete_role(
 
     ok, message = rbac_service.delete_role(req.id)
     if ok:
-        return success(data={"success":True, "message":message})
+        return success(data={"success": True, "message": message})
     return fail(success=False, message=message)
 
 
@@ -364,7 +368,7 @@ def update_role(
         rbac_service.assign_menus_to_role(req.id, req.menu_ids)
 
     if ok:
-        return success(data={"success":True, "message":message})
+        return success(data={"success": True, "message": message})
     return fail(success=False, message=message)
 
 
@@ -380,9 +384,9 @@ def get_role_detail(
     if role:
         d = role.to_dict()
         # 超级管理员返回所有权限和菜单
-        if role.ROLE_CODE == 'superadmin':
-            d['permissions'] = [p.to_dict() for p in rbac_service.get_all_permissions()]
-            d['menus'] = [m.to_dict() for m in rbac_service.menu_repo.get_all_menus()]
+        if role.ROLE_CODE == "superadmin":
+            d["permissions"] = [p.to_dict() for p in rbac_service.get_all_permissions()]
+            d["menus"] = [m.to_dict() for m in rbac_service.menu_repo.get_all_menus()]
         return success(data={"success": True, "data": d})
     return fail(success=False, message="角色不存在")
 
@@ -399,18 +403,19 @@ def get_roles(
     for role in roles:
         d = role.to_dict()
         # 超级管理员返回所有权限和菜单
-        if role.ROLE_CODE == 'superadmin':
+        if role.ROLE_CODE == "superadmin":
             if all_permissions is None:
                 all_permissions = [p.to_dict() for p in rbac_service.get_all_permissions()]
             if all_menus is None:
                 all_menus = [m.to_dict() for m in rbac_service.menu_repo.get_all_menus()]
-            d['permissions'] = all_permissions
-            d['menus'] = all_menus
+            d["permissions"] = all_permissions
+            d["menus"] = all_menus
         result.append(d)
     return success(data=result)
 
 
 # ---------- 菜单管理 ----------
+
 
 @router.post("/menus/create")
 def create_menu(
@@ -455,7 +460,7 @@ def delete_menu(
 
     ok, message = rbac_service.delete_menu(req.id)
     if ok:
-        return success(data={"success":True, "message":message})
+        return success(data={"success": True, "message": message})
     return fail(success=False, message=message)
 
 
@@ -469,18 +474,32 @@ def update_menu(
 
     update_fields = {}
     for field in [
-        "menu_name", "menu_code", "path", "icon", "component", "sort_order",
-        "parent_id", "is_hidden", "status", "permission_code",
-        "redirect", "keep_alive", "affix_tab", "hide_in_menu",
-        "hide_in_tab", "hide_in_breadcrumb", "active_icon",
-        "badge", "badge_type",
+        "menu_name",
+        "menu_code",
+        "path",
+        "icon",
+        "component",
+        "sort_order",
+        "parent_id",
+        "is_hidden",
+        "status",
+        "permission_code",
+        "redirect",
+        "keep_alive",
+        "affix_tab",
+        "hide_in_menu",
+        "hide_in_tab",
+        "hide_in_breadcrumb",
+        "active_icon",
+        "badge",
+        "badge_type",
     ]:
         if field in req.model_fields_set:
             update_fields[field] = getattr(req, field)
 
     ok, message = rbac_service.update_menu(req.id, **update_fields)
     if ok:
-        return success(data={"success":True, "message":message})
+        return success(data={"success": True, "message": message})
     return fail(success=False, message=message)
 
 
@@ -504,7 +523,7 @@ def update_menu_sort(
             if ok2:
                 success_count += 1
 
-    return success(data={"success":True, "message":f"成功更新 {success_count} 个菜单排序"})
+    return success(data={"success": True, "message": f"成功更新 {success_count} 个菜单排序"})
 
 
 @router.post("/menus/detail")
@@ -542,24 +561,24 @@ def _build_management_tree(menus, parent_id=None):
         pid = m.PARENT_ID
         mid = m.ID
         if (parent_id is None and pid is None) or (pid == parent_id):
-            name = getattr(m, 'MENU_NAME', None) or getattr(m, 'menu_name', '')
-            path = getattr(m, 'PATH', None) or getattr(m, 'path', '')
-            icon = getattr(m, 'ICON', None) or getattr(m, 'icon', None)
-            component = getattr(m, 'COMPONENT', None) or getattr(m, 'component', None)
-            sort_order = getattr(m, 'SORT_ORDER', None) or getattr(m, 'sort_order', 0)
-            menu_level = getattr(m, 'MENU_LEVEL', None) or getattr(m, 'menu_level', 1)
-            permission_code = getattr(m, 'PERMISSION_CODE', None) or getattr(m, 'permission_code', None)
-            redirect = getattr(m, 'REDIRECT', None) or getattr(m, 'redirect', None)
-            keep_alive = getattr(m, 'KEEP_ALIVE', None) or getattr(m, 'keep_alive', 0)
-            affix_tab = getattr(m, 'AFFIX_TAB', None) or getattr(m, 'affix_tab', 0)
-            hide_in_menu = getattr(m, 'HIDE_IN_MENU', None) or getattr(m, 'hide_in_menu', 0)
-            hide_in_tab = getattr(m, 'HIDE_IN_TAB', None) or getattr(m, 'hide_in_tab', 0)
-            hide_in_breadcrumb = getattr(m, 'HIDE_IN_BREADCRUMB', None) or getattr(m, 'hide_in_breadcrumb', 0)
-            active_icon = getattr(m, 'ACTIVE_ICON', None) or getattr(m, 'active_icon', None)
-            badge = getattr(m, 'BADGE', None) or getattr(m, 'badge', None)
-            badge_type = getattr(m, 'BADGE_TYPE', None) or getattr(m, 'badge_type', None)
-            status = getattr(m, 'STATUS', None) or getattr(m, 'status', 1)
-            auth_code = permission_code or ''
+            name = getattr(m, "MENU_NAME", None) or getattr(m, "menu_name", "")
+            path = getattr(m, "PATH", None) or getattr(m, "path", "")
+            icon = getattr(m, "ICON", None) or getattr(m, "icon", None)
+            component = getattr(m, "COMPONENT", None) or getattr(m, "component", None)
+            sort_order = getattr(m, "SORT_ORDER", None) or getattr(m, "sort_order", 0)
+            menu_level = getattr(m, "MENU_LEVEL", None) or getattr(m, "menu_level", 1)
+            permission_code = getattr(m, "PERMISSION_CODE", None) or getattr(m, "permission_code", None)
+            redirect = getattr(m, "REDIRECT", None) or getattr(m, "redirect", None)
+            keep_alive = getattr(m, "KEEP_ALIVE", None) or getattr(m, "keep_alive", 0)
+            affix_tab = getattr(m, "AFFIX_TAB", None) or getattr(m, "affix_tab", 0)
+            hide_in_menu = getattr(m, "HIDE_IN_MENU", None) or getattr(m, "hide_in_menu", 0)
+            hide_in_tab = getattr(m, "HIDE_IN_TAB", None) or getattr(m, "hide_in_tab", 0)
+            hide_in_breadcrumb = getattr(m, "HIDE_IN_BREADCRUMB", None) or getattr(m, "hide_in_breadcrumb", 0)
+            active_icon = getattr(m, "ACTIVE_ICON", None) or getattr(m, "active_icon", None)
+            badge = getattr(m, "BADGE", None) or getattr(m, "badge", None)
+            badge_type = getattr(m, "BADGE_TYPE", None) or getattr(m, "badge_type", None)
+            status = getattr(m, "STATUS", None) or getattr(m, "status", 1)
+            auth_code = permission_code or ""
 
             meta = {"title": name}
             if icon:
@@ -583,7 +602,7 @@ def _build_management_tree(menus, parent_id=None):
             if badge_type:
                 meta["badgeType"] = badge_type
 
-            menu_code = getattr(m, 'MENU_CODE', None) or getattr(m, 'menu_code', '')
+            menu_code = getattr(m, "MENU_CODE", None) or getattr(m, "menu_code", "")
             # path 必须唯一，否则 Vben menu 组件会用 path 作为 key 导致多个菜单联动
             # 注意：空字符串是合法的 path，不能用 or fallback 到 menu_code
             route_path = (path if path is not None else menu_code).lstrip("/")
@@ -594,7 +613,9 @@ def _build_management_tree(menus, parent_id=None):
                 "menu_name": name,
                 "menu_code": menu_code,
                 "path": route_path,
-                "type": 'catalog' if menu_level == 1 and not pid else ('button' if auth_code and not component else 'menu'),
+                "type": "catalog"
+                if menu_level == 1 and not pid
+                else ("button" if auth_code and not component else "menu"),
                 "status": status,
                 "permission_code": auth_code,
                 "sort_order": sort_order,
@@ -640,6 +661,7 @@ def get_top_menus(
 
 # ---------- 权限管理 ----------
 
+
 @router.post("/permissions")
 def get_all_permissions(
     current_user: UserContext = Depends(require_any_permission("permission:view", "permission:update")),
@@ -655,6 +677,7 @@ def get_all_permissions(
 
 
 # ---------- 权限码 ----------
+
 
 @router.get("/codes")
 def get_user_codes(

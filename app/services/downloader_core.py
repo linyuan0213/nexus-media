@@ -8,6 +8,7 @@ DownloaderCore - 下载器 Facade（兼容旧 Downloader 接口）
 
 参考：app/services/search_service.py 中 Searcher 的做法
 """
+
 from threading import Lock
 
 import log
@@ -30,11 +31,13 @@ class DownloaderCore:
     对外暴露与原始 Downloader 完全一致的公共方法签名。
     """
 
-    def __init__(self,
-                 client_factory: DownloadClientFactory | None = None,
-                 download_core: DownloadCore | None = None,
-                 transfer_coordinator: TransferCoordinator | None = None,
-                 filetransfer: FileTransferService | None = None):
+    def __init__(
+        self,
+        client_factory: DownloadClientFactory | None = None,
+        download_core: DownloadCore | None = None,
+        transfer_coordinator: TransferCoordinator | None = None,
+        filetransfer: FileTransferService | None = None,
+    ):
         self._client_factory = client_factory or DownloadClientFactory()
         self._download_core = download_core or DownloadCore(client_factory=self._client_factory)
         self._filetransfer = filetransfer or FileTransferService()
@@ -81,10 +84,21 @@ class DownloaderCore:
 
     # ---------- 核心下载 ----------
 
-    def download(self, media_info, is_paused=None, tag=None, download_dir=None,
-                 download_setting=None, downloader_id=None, upload_limit=None,
-                 download_limit=None, torrent_file=None, in_from=None,
-                 user_name=None, proxy=None):
+    def download(
+        self,
+        media_info,
+        is_paused=None,
+        tag=None,
+        download_dir=None,
+        download_setting=None,
+        downloader_id=None,
+        upload_limit=None,
+        download_limit=None,
+        torrent_file=None,
+        in_from=None,
+        user_name=None,
+        proxy=None,
+    ):
         return self._download_core.download(
             media_info=media_info,
             is_paused=is_paused,
@@ -97,15 +111,12 @@ class DownloaderCore:
             torrent_file=torrent_file,
             in_from=in_from,
             user_name=user_name,
-            proxy=proxy
+            proxy=proxy,
         )
 
     def batch_download(self, in_from, media_list, need_tvs=None, user_name=None):
         return self._download_core.batch_download(
-            in_from=in_from,
-            media_list=media_list,
-            need_tvs=need_tvs,
-            user_name=user_name
+            in_from=in_from, media_list=media_list, need_tvs=need_tvs, user_name=user_name
         )
 
     # ---------- 转移 ----------
@@ -135,20 +146,17 @@ class DownloaderCore:
                 continue
             for task in trans_tasks:
                 done_flag, done_msg = self._filetransfer.transfer_media(
-                    in_from=downloader_enum[str(did)],
-                    in_path=task.get("path"),
-                    rmt_mode=rmt_mode)
+                    in_from=downloader_enum[str(did)], in_path=task.get("path"), rmt_mode=rmt_mode
+                )
                 if not done_flag:
                     log.warn(f"【Downloader】下载器 {name} 任务%s 转移失败：%s" % (task.get("path"), done_msg))
-                    _client.set_torrents_status(ids=task.get("id"),
-                                                tags=task.get("tags"))
+                    _client.set_torrents_status(ids=task.get("id"), tags=task.get("tags"))
                 else:
                     if rmt_mode in [RmtMode.MOVE, RmtMode.RCLONE, RmtMode.MINIO]:
                         log.warn(f"【Downloader】下载器 {name} 移动模式下删除种子文件：%s" % task.get("id"))
                         _client.delete_torrents(delete_file=True, ids=task.get("id"))
                     else:
-                        _client.set_torrents_status(ids=task.get("id"),
-                                                    tags=task.get("tags"))
+                        _client.set_torrents_status(ids=task.get("id"), tags=task.get("tags"))
             log.info(f"【Downloader】下载器 {name} 下载文件转移结束")
 
     # ---------- 种子查询/操作 ----------
@@ -253,12 +261,20 @@ class DownloaderCore:
 
     # ---------- 下载器 CRUD ----------
 
-    def update_downloader(self, did, name, enabled, dtype, transfer,
-                          only_nastool, match_path, rmt_mode, config, download_dir):
+    def update_downloader(
+        self, did, name, enabled, dtype, transfer, only_nastool, match_path, rmt_mode, config, download_dir
+    ):
         return self._download_core.update_downloader(
-            did=did, name=name, enabled=enabled, dtype=dtype, transfer=transfer,
-            only_nastool=only_nastool, match_path=match_path, rmt_mode=rmt_mode,
-            config=config, download_dir=download_dir
+            did=did,
+            name=name,
+            enabled=enabled,
+            dtype=dtype,
+            transfer=transfer,
+            only_nastool=only_nastool,
+            match_path=match_path,
+            rmt_mode=rmt_mode,
+            config=config,
+            download_dir=download_dir,
         )
 
     def delete_downloader(self, did):
@@ -266,19 +282,34 @@ class DownloaderCore:
 
     def check_downloader(self, did=None, transfer=None, only_nastool=None, enabled=None, match_path=None):
         return self._download_core.check_downloader(
-            did=did, transfer=transfer, only_nastool=only_nastool,
-            enabled=enabled, match_path=match_path
+            did=did, transfer=transfer, only_nastool=only_nastool, enabled=enabled, match_path=match_path
         )
 
     def delete_download_setting(self, sid):
         return self._download_core.delete_download_setting(sid=sid)
 
-    def update_download_setting(self, sid, name, category, tags, is_paused,
-                                upload_limit, download_limit, ratio_limit,
-                                seeding_time_limit, downloader):
+    def update_download_setting(
+        self,
+        sid,
+        name,
+        category,
+        tags,
+        is_paused,
+        upload_limit,
+        download_limit,
+        ratio_limit,
+        seeding_time_limit,
+        downloader,
+    ):
         return self._download_core.update_download_setting(
-            sid=sid, name=name, category=category, tags=tags,
-            is_paused=is_paused, upload_limit=upload_limit,
-            download_limit=download_limit, ratio_limit=ratio_limit,
-            seeding_time_limit=seeding_time_limit, downloader=downloader
+            sid=sid,
+            name=name,
+            category=category,
+            tags=tags,
+            is_paused=is_paused,
+            upload_limit=upload_limit,
+            download_limit=download_limit,
+            ratio_limit=ratio_limit,
+            seeding_time_limit=seeding_time_limit,
+            downloader=downloader,
         )

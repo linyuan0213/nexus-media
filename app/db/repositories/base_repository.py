@@ -7,6 +7,7 @@ Base Repository Class
 - 保持 query/insert/commit/delete/flush/rollback/execute 兼容方法
 - 新增 transactional() 上下文管理器供新代码使用
 """
+
 from contextlib import contextmanager
 
 from app.db.main_db import SessionManager

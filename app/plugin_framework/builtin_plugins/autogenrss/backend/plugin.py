@@ -68,14 +68,14 @@ class AutoGenRssPlugin:
 
         # 加载模块
         self._site_schema = SubmoduleHelper.import_submodules(
-            'app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss',
-            filter_func=lambda _, obj: hasattr(obj, 'match')
+            "app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss",
+            filter_func=lambda _, obj: hasattr(obj, "match"),
         )
         self.ctx.debug(f"加载特殊站点：{self._site_schema}")
 
         if onlyonce:
             self.ctx.info("RSS自动生成服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ'))) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ"))) + timedelta(seconds=3)
             self.ctx.schedule_date("gen_rss_once", self._do_gen_rss, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -96,7 +96,7 @@ class AutoGenRssPlugin:
         notify = config.get("notify", False)
 
         if isinstance(rss_sites, str):
-            rss_sites = [s for s in rss_sites.split('\n') if s]
+            rss_sites = [s for s in rss_sites.split("\n") if s]
 
         rss_sites = copy.deepcopy(Sites().get_sites(siteids=rss_sites))
         if not rss_sites:
@@ -122,8 +122,7 @@ class AutoGenRssPlugin:
             if notify:
                 rss_message = "\n".join(gen_success_msg + failed_msg)
                 self.ctx.notify(
-                    title="【自动生成RSS任务完成】",
-                    text=f"生成RSS站点数: {len(rss_sites)} \n{rss_message}"
+                    title="【自动生成RSS任务完成】", text=f"生成RSS站点数: {len(rss_sites)} \n{rss_message}"
                 )
         else:
             self.ctx.error("站点生成RSS任务失败！")
@@ -181,14 +180,14 @@ class AutoGenRssPlugin:
                     "itemsize": "1",
                     "showrows": "50",
                     "search": "",
-                    "search_mode": "1"
+                    "search_mode": "1",
                 }
-                headers.update({'User-Agent': ua})
+                headers.update({"User-Agent": ua})
                 res = RequestUtils(
                     cookies=site_cookie,
                     headers=headers,
                     referer=site_url,
-                    proxies=get_proxies() if site_info.get("proxy") else None
+                    proxies=get_proxies() if site_info.get("proxy") else None,
                 ).post_res(url=rss_url, data=data)
 
                 if res and res.status_code in [200, 500, 403]:
@@ -202,7 +201,7 @@ class AutoGenRssPlugin:
                         self.ctx.warn(f"{site} 生成RSS失败，{msg}")
                         return f"【{site}】生成RSS失败，{msg}！"
                     else:
-                        if re.search(r'完成两步验证', res.text, re.IGNORECASE):
+                        if re.search(r"完成两步验证", res.text, re.IGNORECASE):
                             self.ctx.warn("%s 生成RSS失败，需要两步验证" % site)
                             return f"【{site}】生成RSS失败，需要两步验证"
 
@@ -226,6 +225,6 @@ class AutoGenRssPlugin:
     @staticmethod
     def _parse_rss_link(html_text: str) -> str:
         if not html_text:
-            return ''
+            return ""
         html = etree.HTML(html_text)
-        return next((href for href in html.xpath('//a[contains(@href, "linktype=dl")]/@href')), '')
+        return next((href for href in html.xpath('//a[contains(@href, "linktype=dl")]/@href')), "")

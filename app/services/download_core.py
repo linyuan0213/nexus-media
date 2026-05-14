@@ -10,6 +10,7 @@ DownloadCore - 下载核心业务逻辑
 
 依赖注入：所有外部依赖通过构造函数传入。
 """
+
 import os
 
 import log
@@ -38,18 +39,20 @@ class DownloadCore:
     下载核心业务服务
     """
 
-    def __init__(self,
-                 client_factory: DownloadClientFactory | None = None,
-                 message: Message | None = None,
-                 mediaserver: MediaServer | None = None,
-                 filetransfer: FileTransfer | None = None,
-                 sites: Sites | None = None,
-                 siteconf: SiteConf | None = None,
-                 sitesubtitle: SiteSubtitle | None = None,
-                 eventmanager: EventManager | None = None,
-                 download_repo: IDownloadHistoryRepository | None = None,
-                 download_setting_repo=None,
-                 systemconfig: SystemConfig | None = None):
+    def __init__(
+        self,
+        client_factory: DownloadClientFactory | None = None,
+        message: Message | None = None,
+        mediaserver: MediaServer | None = None,
+        filetransfer: FileTransfer | None = None,
+        sites: Sites | None = None,
+        siteconf: SiteConf | None = None,
+        sitesubtitle: SiteSubtitle | None = None,
+        eventmanager: EventManager | None = None,
+        download_repo: IDownloadHistoryRepository | None = None,
+        download_setting_repo=None,
+        systemconfig: SystemConfig | None = None,
+    ):
         self._client_factory = client_factory or DownloadClientFactory()
         self._message = message or Message()
         self._mediaserver = mediaserver or MediaServer()
@@ -74,19 +77,21 @@ class DownloadCore:
 
     # ---------- 核心下载方法 ----------
 
-    def download(self,
-                 media_info,
-                 is_paused=None,
-                 tag=None,
-                 download_dir=None,
-                 download_setting=None,
-                 downloader_id=None,
-                 upload_limit=None,
-                 download_limit=None,
-                 torrent_file=None,
-                 in_from=None,
-                 user_name=None,
-                 proxy=None):
+    def download(
+        self,
+        media_info,
+        is_paused=None,
+        tag=None,
+        download_dir=None,
+        download_setting=None,
+        downloader_id=None,
+        upload_limit=None,
+        download_limit=None,
+        torrent_file=None,
+        in_from=None,
+        user_name=None,
+        proxy=None,
+    ):
         """
         添加下载任务，委托给 DownloadPipeline 执行
 
@@ -189,7 +194,9 @@ class DownloadCore:
     def start_torrents(self, downloader_id=None, ids=None):
         if not ids:
             return False
-        _client = self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
+        _client = (
+            self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
+        )
         if not _client:
             return False
         return _client.start_torrents(ids)
@@ -197,7 +204,9 @@ class DownloadCore:
     def stop_torrents(self, downloader_id=None, ids=None):
         if not ids:
             return False
-        _client = self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
+        _client = (
+            self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
+        )
         if not _client:
             return False
         return _client.stop_torrents(ids)
@@ -205,13 +214,17 @@ class DownloadCore:
     def delete_torrents(self, downloader_id=None, ids=None, delete_file=False):
         if not ids:
             return False
-        _client = self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
+        _client = (
+            self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
+        )
         if not _client:
             return False
         return _client.delete_torrents(delete_file=delete_file, ids=ids)
 
     def get_files(self, tid, downloader_id=None):
-        _client = self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
+        _client = (
+            self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
+        )
         if not _client:
             return []
         torrent_files = _client.get_files(tid)
@@ -250,9 +263,9 @@ class DownloadCore:
                     if selected:
                         sucess_epidised = list(set(sucess_epidised).union(set(meta_info.get_episode_list())))
                 if not files_info.get(tid):
-                    files_info[tid] = {file_id: {'priority': 'normal', 'selected': selected}}
+                    files_info[tid] = {file_id: {"priority": "normal", "selected": selected}}
                 else:
-                    files_info[tid][file_id] = {'priority': 'normal', 'selected': selected}
+                    files_info[tid][file_id] = {"priority": "normal", "selected": selected}
             if sucess_epidised and files_info:
                 _client.set_files(file_info=files_info)
         elif downloader_conf.get("type") == "qbittorrent":
@@ -262,7 +275,8 @@ class DownloadCore:
                 file_name = torrent_file.get("name")
                 meta_info = MetaInfo(file_name)
                 if not meta_info.get_episode_list() or not set(meta_info.get_episode_list()).issubset(
-                        set(need_episodes)):
+                    set(need_episodes)
+                ):
                     file_ids.append(file_id)
                 else:
                     sucess_epidised = list(set(sucess_epidised).union(set(meta_info.get_episode_list())))
@@ -273,7 +287,9 @@ class DownloadCore:
     def recheck_torrents(self, downloader_id=None, ids=None):
         if not ids:
             return False
-        _client = self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
+        _client = (
+            self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
+        )
         if not _client:
             return False
         return _client.recheck_torrents(ids)
@@ -308,7 +324,7 @@ class DownloadCore:
             cookie=site_info.get("cookie"),
             ua=site_info.get("ua"),
             referer=page_url if site_info.get("referer") else None,
-            proxy=site_info.get("proxy")
+            proxy=site_info.get("proxy"),
         )
         if not files:
             log.error("【Downloader】读取种子文件集数出错：%s" % retmsg)
@@ -338,28 +354,38 @@ class DownloadCore:
 
     # ---------- 下载器 CRUD ----------
 
-    def update_downloader(self, did, name, enabled, dtype, transfer,
-                          only_nastool, match_path, rmt_mode, config, download_dir):
+    def update_downloader(
+        self, did, name, enabled, dtype, transfer, only_nastool, match_path, rmt_mode, config, download_dir
+    ):
         from app.db.repositories import ConfigRepository
+
         ret = ConfigRepository().update_downloader(
-            did=did, name=name, enabled=enabled, dtype=dtype, transfer=transfer,
-            only_nastool=only_nastool, match_path=match_path, rmt_mode=rmt_mode,
-            config=config, download_dir=download_dir
+            did=did,
+            name=name,
+            enabled=enabled,
+            dtype=dtype,
+            transfer=transfer,
+            only_nastool=only_nastool,
+            match_path=match_path,
+            rmt_mode=rmt_mode,
+            config=config,
+            download_dir=download_dir,
         )
         self._client_factory.init_config()
         return ret
 
     def delete_downloader(self, did):
         from app.db.repositories import ConfigRepository
+
         ret = ConfigRepository().delete_downloader(did=did)
         self._client_factory.init_config()
         return ret
 
     def check_downloader(self, did=None, transfer=None, only_nastool=None, enabled=None, match_path=None):
         from app.db.repositories import ConfigRepository
+
         ret = ConfigRepository().check_downloader(
-            did=did, transfer=transfer, only_nastool=only_nastool,
-            enabled=enabled, match_path=match_path
+            did=did, transfer=transfer, only_nastool=only_nastool, enabled=enabled, match_path=match_path
         )
         self._client_factory.init_config()
         return ret
@@ -369,14 +395,30 @@ class DownloadCore:
         self._client_factory.init_config()
         return ret
 
-    def update_download_setting(self, sid, name, category, tags, is_paused,
-                                upload_limit, download_limit, ratio_limit,
-                                seeding_time_limit, downloader):
+    def update_download_setting(
+        self,
+        sid,
+        name,
+        category,
+        tags,
+        is_paused,
+        upload_limit,
+        download_limit,
+        ratio_limit,
+        seeding_time_limit,
+        downloader,
+    ):
         ret = self._download_setting_repo.update_download_setting(
-            sid=sid, name=name, category=category, tags=tags,
-            is_paused=is_paused, upload_limit=upload_limit,
-            download_limit=download_limit, ratio_limit=ratio_limit,
-            seeding_time_limit=seeding_time_limit, downloader=downloader
+            sid=sid,
+            name=name,
+            category=category,
+            tags=tags,
+            is_paused=is_paused,
+            upload_limit=upload_limit,
+            download_limit=download_limit,
+            ratio_limit=ratio_limit,
+            seeding_time_limit=seeding_time_limit,
+            downloader=downloader,
         )
         self._client_factory.init_config()
         return ret
@@ -386,6 +428,7 @@ class DownloadCore:
     @staticmethod
     def get_download_url(page_url):
         from app.sites.engine import SiteEngine
+
         site_info = Sites().get_sites(siteurl=page_url)
         return SiteEngine.get_instance().resolve_download_url(
             page_url=page_url,
@@ -394,4 +437,5 @@ class DownloadCore:
                 "ua": site_info.get("ua", ""),
                 "headers": site_info.get("headers", {}),
                 "proxy": site_info.get("proxy"),
-            })
+            },
+        )

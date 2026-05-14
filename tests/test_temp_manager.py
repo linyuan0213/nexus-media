@@ -14,7 +14,7 @@ class TestTempManager:
     @pytest.fixture
     def mock_config(self, tmp_path):
         """模拟配置返回临时目录"""
-        with patch('app.utils.temp_manager.Config') as mock_cfg:
+        with patch("app.utils.temp_manager.Config") as mock_cfg:
             mock_cfg.return_value.get_temp_path.return_value = str(tmp_path / "temp")
             yield mock_cfg
 
@@ -83,7 +83,7 @@ class TestTempManager:
         """测试删除文件"""
         # 创建测试文件
         test_file = clean_manager.get_temp_path("test_delete.txt")
-        with open(test_file, 'w') as f:
+        with open(test_file, "w") as f:
             f.write("test")
 
         assert os.path.exists(test_file)
@@ -99,7 +99,7 @@ class TestTempManager:
         test_dir = clean_manager.get_temp_path("test_dir")
         os.makedirs(test_dir)
         test_file = os.path.join(test_dir, "file.txt")
-        with open(test_file, 'w') as f:
+        with open(test_file, "w") as f:
             f.write("test")
 
         # 删除目录
@@ -111,7 +111,7 @@ class TestTempManager:
         """测试清理过期文件"""
         # 创建旧文件
         old_file = clean_manager.get_temp_path("old_file.txt")
-        with open(old_file, 'w') as f:
+        with open(old_file, "w") as f:
             f.write("old")
         # 修改文件时间为 48 小时前
         old_time = time.time() - 48 * 3600
@@ -119,7 +119,7 @@ class TestTempManager:
 
         # 创建新文件
         new_file = clean_manager.get_temp_path("new_file.txt")
-        with open(new_file, 'w') as f:
+        with open(new_file, "w") as f:
             f.write("new")
 
         # 清理超过 24 小时的文件
@@ -133,7 +133,7 @@ class TestTempManager:
         """测试清理时排除指定模式"""
         # 创建普通旧文件
         old_file = clean_manager.get_temp_path("old_file.txt")
-        with open(old_file, 'w') as f:
+        with open(old_file, "w") as f:
             f.write("old")
         old_time = time.time() - 48 * 3600
         os.utime(old_file, (old_time, old_time))
@@ -142,15 +142,12 @@ class TestTempManager:
         signin_dir = clean_manager.get_temp_path("signin")
         os.makedirs(signin_dir)
         signin_file = os.path.join(signin_dir, "data.json")
-        with open(signin_file, 'w') as f:
+        with open(signin_file, "w") as f:
             f.write("data")
         os.utime(signin_file, (old_time, old_time))
 
         # 清理时排除 signin 目录
-        count = clean_manager.cleanup_old_files(
-            max_age_hours=24,
-            exclude_patterns=["signin"]
-        )
+        count = clean_manager.cleanup_old_files(max_age_hours=24, exclude_patterns=["signin"])
 
         assert count == 1  # 只删除了 old_file.txt
         assert not os.path.exists(old_file)
@@ -161,7 +158,7 @@ class TestTempManager:
         # 创建测试文件
         test_file = clean_manager.get_temp_path("size_test.txt")
         content = "x" * 1000
-        with open(test_file, 'w') as f:
+        with open(test_file, "w") as f:
             f.write(content)
 
         size = clean_manager.get_temp_size()
@@ -170,7 +167,7 @@ class TestTempManager:
     def test_get_temp_size_human(self, clean_manager):
         """测试获取人类可读的大小"""
         test_file = clean_manager.get_temp_path("human_size.txt")
-        with open(test_file, 'w') as f:
+        with open(test_file, "w") as f:
             f.write("x" * 1024)
 
         size_str = clean_manager.get_temp_size_human()
@@ -181,7 +178,7 @@ class TestTempManager:
         # 创建多个文件
         for i in range(5):
             file_path = clean_manager.get_temp_path(f"file_{i}.txt")
-            with open(file_path, 'w') as f:
+            with open(file_path, "w") as f:
                 f.write("test")
 
         # 清空
@@ -195,13 +192,13 @@ class TestTempManager:
         """测试清空时排除指定模式"""
         # 创建普通文件和排除文件
         normal_file = clean_manager.get_temp_path("normal.txt")
-        with open(normal_file, 'w') as f:
+        with open(normal_file, "w") as f:
             f.write("test")
 
         backup_dir = clean_manager.get_temp_path("backup_temp")
         os.makedirs(backup_dir)
         backup_file = os.path.join(backup_dir, "backup.zip")
-        with open(backup_file, 'w') as f:
+        with open(backup_file, "w") as f:
             f.write("backup")
 
         # 清空时排除 backup_temp
@@ -218,7 +215,7 @@ class TestTempFileContext:
     @pytest.fixture
     def mock_config(self, tmp_path):
         """模拟配置"""
-        with patch('app.utils.temp_manager.Config') as mock_cfg:
+        with patch("app.utils.temp_manager.Config") as mock_cfg:
             mock_cfg.return_value.get_temp_path.return_value = str(tmp_path / "temp")
             yield mock_cfg
 
@@ -240,7 +237,7 @@ class TestTempFileContext:
         with temp_file_context(suffix=".txt") as fp:
             file_path = fp
             # 创建文件
-            with open(fp, 'w') as f:
+            with open(fp, "w") as f:
                 f.write("test")
             assert os.path.exists(fp)
 
@@ -250,7 +247,7 @@ class TestTempFileContext:
     def test_temp_file_context_no_auto_delete(self, tmp_path):
         """测试临时文件上下文不自动删除"""
         with temp_file_context(suffix=".txt", auto_delete=False) as fp:
-            with open(fp, 'w') as f:
+            with open(fp, "w") as f:
                 f.write("test")
             assert os.path.exists(fp)
 
@@ -261,7 +258,7 @@ class TestTempFileContext:
         """测试指定文件名的临时文件上下文"""
         with temp_file_context(filename="myfile.txt") as fp:
             assert "myfile.txt" in fp
-            with open(fp, 'w') as f:
+            with open(fp, "w") as f:
                 f.write("test")
             assert os.path.exists(fp)
 
@@ -272,7 +269,7 @@ class TestTempDirContext:
     @pytest.fixture(autouse=True)
     def reset_manager(self, tmp_path):
         """重置管理器"""
-        with patch('app.utils.temp_manager.Config') as mock_cfg:
+        with patch("app.utils.temp_manager.Config") as mock_cfg:
             mock_cfg.return_value.get_temp_path.return_value = str(tmp_path / "temp")
             TempManager._instance = None
             TempManager._initialized = False
@@ -289,7 +286,7 @@ class TestTempDirContext:
             dir_path = dp
             # 创建文件
             test_file = os.path.join(dp, "file.txt")
-            with open(test_file, 'w') as f:
+            with open(test_file, "w") as f:
                 f.write("test")
             assert os.path.exists(dp)
             assert os.path.exists(test_file)
@@ -301,7 +298,7 @@ class TestTempDirContext:
         """测试临时目录上下文不自动删除"""
         with temp_dir_context(auto_delete=False) as dp:
             test_file = os.path.join(dp, "file.txt")
-            with open(test_file, 'w') as f:
+            with open(test_file, "w") as f:
                 f.write("test")
             assert os.path.exists(dp)
 
@@ -315,7 +312,7 @@ class TestGlobalTempManager:
     @pytest.fixture(autouse=True)
     def reset_singleton(self, tmp_path):
         """重置单例"""
-        with patch('app.utils.temp_manager.Config') as mock_cfg:
+        with patch("app.utils.temp_manager.Config") as mock_cfg:
             mock_cfg.return_value.get_temp_path.return_value = str(tmp_path / "temp")
             TempManager._instance = None
             TempManager._initialized = False

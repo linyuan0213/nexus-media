@@ -9,6 +9,7 @@
 关键设计：所有站点的搜索结果收集完成后，统一进入流水线处理，
 实现真正的"批量识别"（跨站点去重，一次并发查询所有不重复名称）。
 """
+
 import datetime
 
 import log
@@ -29,12 +30,9 @@ class SearchPipeline:
         self.batch_identifier = batch_identifier or BatchIdentifier()
         self.progress = progress or ProgressHelper()
 
-    def process(self,
-                all_results,
-                filter_args,
-                match_media=None,
-                in_from: SearchType = None,
-                progress_key=ProgressKey.Search):
+    def process(
+        self, all_results, filter_args, match_media=None, in_from: SearchType = None, progress_key=ProgressKey.Search
+    ):
         """
         执行三阶段全局批量搜索过滤流水线
 
@@ -81,8 +79,10 @@ class SearchPipeline:
             f"不匹配 {total_stats.index_match_fail}，"
             f"错误 {total_stats.index_error}，"
             f"有效 {total_stats.index_sucess}，"
-            f"耗时 {elapsed} 秒")
-        self.progress.update(ptype=progress_key,
-                             text=f"共 {len(all_results)} 条，有效 {total_stats.index_sucess}，耗时 {elapsed} 秒")
+            f"耗时 {elapsed} 秒"
+        )
+        self.progress.update(
+            ptype=progress_key, text=f"共 {len(all_results)} 条，有效 {total_stats.index_sucess}，耗时 {elapsed} 秒"
+        )
 
         return PipelineResult(results=all_matched, stats=total_stats, elapsed_seconds=elapsed)

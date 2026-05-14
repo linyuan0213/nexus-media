@@ -2,6 +2,7 @@
 CloudflareSpeedTest Plugin v2
 测试 Cloudflare CDN 延迟和速度，自动优选IP
 """
+
 import os
 import platform
 import shutil
@@ -26,8 +27,8 @@ class CloudflareSpeedTestPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self._release_prefix = 'https://github.com/XIU2/CloudflareSpeedTest/releases/download'
-        self._binary_name = 'cfst'
+        self._release_prefix = "https://github.com/XIU2/CloudflareSpeedTest/releases/download"
+        self._binary_name = "cfst"
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -62,7 +63,7 @@ class CloudflareSpeedTestPlugin:
 
         if onlyonce:
             self.ctx.info("Cloudflare CDN优选服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ'))) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ"))) + timedelta(seconds=3)
             self.ctx.schedule_date("speedtest_once", self._do_speedtest, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -120,14 +121,14 @@ class CloudflareSpeedTestPlugin:
 
         # 执行优选
         self.ctx.info("正在进行Cloudflare CDN优选，请耐心等待")
-        cf_command = [f'./{self._binary_name}']
+        cf_command = [f"./{self._binary_name}"]
         if additional_args:
             cf_command.extend(additional_args.split())
-        cf_command.extend(['-o', result_file])
+        cf_command.extend(["-o", result_file])
         if ipv4:
-            cf_command.extend(['-f', cf_ipv4])
+            cf_command.extend(["-f", cf_ipv4])
         if ipv6:
-            cf_command.extend(['-f', cf_ipv6])
+            cf_command.extend(["-f", cf_ipv6])
 
         try:
             subprocess.run(cf_command, cwd=cf_path, check=True)
@@ -140,7 +141,7 @@ class CloudflareSpeedTestPlugin:
             with open(result_file) as f:
                 lines = f.readlines()
                 if len(lines) >= 2:
-                    best_ip = lines[1].strip().split(',')[0]
+                    best_ip = lines[1].strip().split(",")[0]
                 else:
                     self.ctx.error("结果文件格式不正确")
                     return
@@ -161,22 +162,24 @@ class CloudflareSpeedTestPlugin:
         # 替换自定义Hosts插件配置
         hosts = customhosts_config.get("hosts", [])
         if isinstance(hosts, str):
-            hosts = hosts.split('\n')
+            hosts = hosts.split("\n")
 
         new_hosts = []
         for host in hosts:
-            if host and host != '\n':
+            if host and host != "\n":
                 host_arr = str(host).split()
                 if host_arr and host_arr[0] == cf_ip:
                     new_hosts.append(host.replace(cf_ip, best_ip))
                 else:
                     new_hosts.append(host)
 
-        self._update_customhosts_config({
-            "hosts": new_hosts,
-            "err_hosts": customhosts_config.get("err_hosts"),
-            "enable": customhosts_config.get("enable", False)
-        })
+        self._update_customhosts_config(
+            {
+                "hosts": new_hosts,
+                "err_hosts": customhosts_config.get("err_hosts"),
+                "enable": customhosts_config.get("enable", False),
+            }
+        )
 
         old_ip = cf_ip
         self.ctx.set_config("cf_ip", best_ip)
@@ -187,10 +190,7 @@ class CloudflareSpeedTestPlugin:
         self.ctx.emit("plugin.config_changed", {"plugin_id": "customhosts"})
 
         if notify:
-            self.ctx.notify(
-                title="【Cloudflare优选任务完成】",
-                text=f"原ip：{old_ip}\n新ip：{best_ip}"
-            )
+            self.ctx.notify(title="【Cloudflare优选任务完成】", text=f"原ip：{old_ip}\n新ip：{best_ip}")
 
     def _get_customhosts_config(self):
         try:
@@ -198,6 +198,7 @@ class CloudflareSpeedTestPlugin:
             entity = repo.get("customhosts")
             if entity and entity.config:
                 import json
+
                 config = entity.config if isinstance(entity.config, dict) else json.loads(entity.config)
                 return config
         except Exception as e:
@@ -244,7 +245,7 @@ class CloudflareSpeedTestPlugin:
             install_flag = True
             try:
                 shutil.rmtree(cf_path)
-                self.ctx.info(f'删除CloudflareSpeedTest目录 {cf_path}，开始重新安装')
+                self.ctx.info(f"删除CloudflareSpeedTest目录 {cf_path}，开始重新安装")
             except Exception as e:
                 self.ctx.error(f"删除目录失败: {e}")
                 return False, None
@@ -262,7 +263,7 @@ class CloudflareSpeedTestPlugin:
         version = config.get("version")
 
         if not release_version:
-            if Path(f'{cf_path}/{self._binary_name}').exists():
+            if Path(f"{cf_path}/{self._binary_name}").exists():
                 self.ctx.warn("获取版本失败，存在可执行版本，继续运行")
                 return True, None
             elif version:
@@ -276,7 +277,7 @@ class CloudflareSpeedTestPlugin:
             self.ctx.info(f"检测到有新版本[{release_version}]，开始安装")
             install_flag = True
 
-        if not install_flag and not Path(f'{cf_path}/{self._binary_name}').exists():
+        if not install_flag and not Path(f"{cf_path}/{self._binary_name}").exists():
             install_flag = True
 
         if not install_flag:
@@ -288,43 +289,43 @@ class CloudflareSpeedTestPlugin:
             return False, None
         elif SystemUtils.is_macos():
             machine = platform.machine().lower()
-            arch = 'amd64' if machine in ('x86_64', 'amd64') else 'arm64'
-            cf_file_name = f'cfst_darwin_{arch}.zip'
-            download_url = f'{self._release_prefix}/{release_version}/{cf_file_name}'
-            return self._os_install(cf_path, download_url, cf_file_name, release_version, 'zip')
+            arch = "amd64" if machine in ("x86_64", "amd64") else "arm64"
+            cf_file_name = f"cfst_darwin_{arch}.zip"
+            download_url = f"{self._release_prefix}/{release_version}/{cf_file_name}"
+            return self._os_install(cf_path, download_url, cf_file_name, release_version, "zip")
         else:
             machine = platform.machine().lower()
-            arch = 'amd64' if machine in ('x86_64', 'amd64') else 'arm64'
-            cf_file_name = f'cfst_linux_{arch}.tar.gz'
-            download_url = f'{self._release_prefix}/{release_version}/{cf_file_name}'
-            return self._os_install(cf_path, download_url, cf_file_name, release_version, 'tar')
+            arch = "amd64" if machine in ("x86_64", "amd64") else "arm64"
+            cf_file_name = f"cfst_linux_{arch}.tar.gz"
+            download_url = f"{self._release_prefix}/{release_version}/{cf_file_name}"
+            return self._os_install(cf_path, download_url, cf_file_name, release_version, "tar")
 
     def _os_install(self, cf_path, download_url, cf_file_name, release_version, archive_type):
-        if not Path(f'{cf_path}/{cf_file_name}').exists():
+        if not Path(f"{cf_path}/{cf_file_name}").exists():
             proxies = get_proxies()
             proxy_dict = proxies if proxies and proxies.get("https") else None
             try:
                 response = requests.get(download_url, proxies=proxy_dict, verify=False)
                 response.raise_for_status()
-                with open(f'{cf_path}/{cf_file_name}', 'wb') as f:
+                with open(f"{cf_path}/{cf_file_name}", "wb") as f:
                     f.write(response.content)
             except Exception as e:
                 self.ctx.error(f"下载安装包失败: {e}")
                 return False, None
 
-        if Path(f'{cf_path}/{cf_file_name}').exists():
+        if Path(f"{cf_path}/{cf_file_name}").exists():
             try:
-                archive_path = f'{cf_path}/{cf_file_name}'
-                if archive_type == 'zip':
-                    with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+                archive_path = f"{cf_path}/{cf_file_name}"
+                if archive_type == "zip":
+                    with zipfile.ZipFile(archive_path, "r") as zip_ref:
                         zip_ref.extractall(cf_path)
-                elif archive_type == 'tar':
-                    with tarfile.open(archive_path, 'r:gz') as tar_ref:
+                elif archive_type == "tar":
+                    with tarfile.open(archive_path, "r:gz") as tar_ref:
                         tar_ref.extractall(cf_path)
 
-                Path(f'{cf_path}/{self._binary_name}').chmod(0o755)
-                Path(f'{cf_path}/{cf_file_name}').unlink()
-                if Path(f'{cf_path}/{self._binary_name}').exists():
+                Path(f"{cf_path}/{self._binary_name}").chmod(0o755)
+                Path(f"{cf_path}/{cf_file_name}").unlink()
+                if Path(f"{cf_path}/{self._binary_name}").exists():
                     self.ctx.info(f"安装成功，当前版本：{release_version}")
                     return True, release_version
                 else:
@@ -332,7 +333,7 @@ class CloudflareSpeedTestPlugin:
                     shutil.rmtree(cf_path)
                     return False, None
             except Exception as err:
-                if Path(f'{cf_path}/{self._binary_name}').exists():
+                if Path(f"{cf_path}/{self._binary_name}").exists():
                     self.ctx.error(f"安装失败：{err}，继续使用现版本")
                     return True, None
                 else:
@@ -343,11 +344,11 @@ class CloudflareSpeedTestPlugin:
 
     @staticmethod
     def _get_release_version():
-        version_res = RequestUtils().get_res(
-            "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
+        version_res = RequestUtils().get_res("https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
         if not version_res:
             version_res = RequestUtils(proxies=get_proxies()).get_res(
-                "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
+                "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest"
+            )
         if version_res:
             ver_json = version_res.json()
             return f"{ver_json['tag_name']}"

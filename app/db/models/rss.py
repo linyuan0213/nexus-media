@@ -2,15 +2,16 @@
 RSS相关模型
 包含: RSS历史、RSS电影、RSS种子、RSS剧集、RSS剧集分集
 """
+
 from sqlalchemy import Column, Index, Integer, Sequence, String, Text
 
 from app.db.models.base import Base
 
 
 class RSSHISTORY(Base):
-    __tablename__ = 'RSS_HISTORY'
+    __tablename__ = "RSS_HISTORY"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     TYPE = Column(String(255))
     RSSID = Column(String(255), index=True)
     NAME = Column(String(255))
@@ -29,9 +30,9 @@ class RSSHISTORY(Base):
 
 
 class RSSMOVIES(Base):
-    __tablename__ = 'RSS_MOVIES'
+    __tablename__ = "RSS_MOVIES"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     NAME = Column(String(255), index=True)
     YEAR = Column(String(255))
     KEYWORD = Column(String(255))
@@ -59,12 +60,10 @@ class RSSMOVIES(Base):
 
 
 class RSSTORRENTS(Base):
-    __tablename__ = 'RSS_TORRENTS'
-    __table_args__ = (
-        Index('INDX_RSS_TORRENTS_NAME', 'TITLE', 'YEAR', 'SEASON', 'EPISODE'),
-    )
+    __tablename__ = "RSS_TORRENTS"
+    __table_args__ = (Index("INDX_RSS_TORRENTS_NAME", "TITLE", "YEAR", "SEASON", "EPISODE"),)
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     TORRENT_NAME = Column(String(255))
     ENCLOSURE = Column(String(8192), index=True)
     TYPE = Column(String(255))
@@ -76,9 +75,9 @@ class RSSTORRENTS(Base):
 
 
 class RSSTVS(Base):
-    __tablename__ = 'RSS_TVS'
+    __tablename__ = "RSS_TVS"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     NAME = Column(String(255), index=True)
     YEAR = Column(String(255))
     KEYWORD = Column(String(255))
@@ -111,8 +110,8 @@ class RSSTVS(Base):
 
 
 class RSSTVEPISODES(Base):
-    __tablename__ = 'RSS_TV_EPISODES'
+    __tablename__ = "RSS_TV_EPISODES"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     RSSID = Column(String(255), index=True)
     EPISODES = Column(String(255))

@@ -2,6 +2,7 @@
 AppSettings - 基于 pydantic-settings 的应用配置
 支持 .env 文件和环境变量，优先级高于 config.yaml
 """
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,9 +13,9 @@ class AppSettings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file='.env',
-        env_file_encoding='utf-8',
-        extra='ignore',
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
         case_sensitive=False,
     )
 

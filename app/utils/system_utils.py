@@ -12,7 +12,6 @@ from app.utils.types import OsType
 
 
 class SystemUtils:
-
     @staticmethod
     def __get_hidden_shell():
         if os.name == "nt":
@@ -45,9 +44,9 @@ class SystemUtils:
         通过UTC的时间字符串获取时间
         """
         try:
-            utc_date = datetime.datetime.strptime(utc_time_str.replace('0000', ''), '%Y-%m-%dT%H:%M:%S.%fZ')
+            utc_date = datetime.datetime.strptime(utc_time_str.replace("0000", ""), "%Y-%m-%dT%H:%M:%S.%fZ")
             local_date = utc_date + datetime.timedelta(hours=8)
-            local_date_str = datetime.datetime.strftime(local_date, '%Y-%m-%d %H:%M:%S')
+            local_date_str = datetime.datetime.strftime(local_date, "%Y-%m-%d %H:%M:%S")
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             return utc_time_str
@@ -79,13 +78,13 @@ class SystemUtils:
 
     @staticmethod
     def is_docker():
-        return os.path.exists('/.dockerenv')
+        return os.path.exists("/.dockerenv")
 
     @staticmethod
     def is_synology():
         if SystemUtils.is_windows():
             return False
-        return True if "synology" in SystemUtils.execute('uname -a') else False
+        return True if "synology" in SystemUtils.execute("uname -a") else False
 
     @staticmethod
     def is_windows():
@@ -93,7 +92,7 @@ class SystemUtils:
 
     @staticmethod
     def is_macos():
-        return True if platform.system() == 'Darwin' else False
+        return True if platform.system() == "Darwin" else False
 
     @staticmethod
     def copy(src, dest):
@@ -113,8 +112,7 @@ class SystemUtils:
         移动
         """
         try:
-            tmp_file = os.path.normpath(os.path.join(os.path.dirname(src),
-                                                     os.path.basename(dest)))
+            tmp_file = os.path.normpath(os.path.join(os.path.dirname(src), os.path.basename(dest)))
             shutil.move(os.path.normpath(src), tmp_file)
             shutil.move(tmp_file, os.path.normpath(dest))
             return 0, ""
@@ -130,8 +128,7 @@ class SystemUtils:
         try:
             if platform.release().find("-z4-") >= 0:
                 # 兼容极空间Z4
-                tmp = os.path.normpath(os.path.join(PathUtils.get_parent_paths(dest, 2),
-                                                    os.path.basename(dest)))
+                tmp = os.path.normpath(os.path.join(PathUtils.get_parent_paths(dest, 2), os.path.basename(dest)))
                 os.link(os.path.normpath(src), tmp)
                 shutil.move(tmp, os.path.normpath(dest))
             else:
@@ -161,10 +158,9 @@ class SystemUtils:
         try:
             src = os.path.normpath(src)
             dest = dest.replace("\\", "/")
-            retcode = subprocess.run(['rclone', 'moveto',
-                                      src,
-                                      f'NASTOOL:{dest}'],
-                                     startupinfo=SystemUtils.__get_hidden_shell()).returncode
+            retcode = subprocess.run(
+                ["rclone", "moveto", src, f"NASTOOL:{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
+            ).returncode
             return retcode, ""
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -178,10 +174,9 @@ class SystemUtils:
         try:
             src = os.path.normpath(src)
             dest = dest.replace("\\", "/")
-            retcode = subprocess.run(['rclone', 'copyto',
-                                      src,
-                                      f'NASTOOL:{dest}'],
-                                     startupinfo=SystemUtils.__get_hidden_shell()).returncode
+            retcode = subprocess.run(
+                ["rclone", "copyto", src, f"NASTOOL:{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
+            ).returncode
             return retcode, ""
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -197,11 +192,9 @@ class SystemUtils:
             dest = dest.replace("\\", "/")
             if dest.startswith("/"):
                 dest = dest[1:]
-            retcode = subprocess.run(['mc', 'mv',
-                                      '--recursive',
-                                      src,
-                                      f'NASTOOL/{dest}'],
-                                     startupinfo=SystemUtils.__get_hidden_shell()).returncode
+            retcode = subprocess.run(
+                ["mc", "mv", "--recursive", src, f"NASTOOL/{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
+            ).returncode
             return retcode, ""
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -217,11 +210,9 @@ class SystemUtils:
             dest = dest.replace("\\", "/")
             if dest.startswith("/"):
                 dest = dest[1:]
-            retcode = subprocess.run(['mc', 'cp',
-                                      '--recursive',
-                                      src,
-                                      f'NASTOOL/{dest}'],
-                                     startupinfo=SystemUtils.__get_hidden_shell()).returncode
+            retcode = subprocess.run(
+                ["mc", "cp", "--recursive", src, f"NASTOOL/{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
+            ).returncode
             return retcode, ""
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -234,7 +225,7 @@ class SystemUtils:
         """
         vols = []
         for i in range(65, 91):
-            vol = chr(i) + ':'
+            vol = chr(i) + ":"
             if os.path.isdir(vol):
                 vols.append(vol)
         return vols
@@ -246,47 +237,35 @@ class SystemUtils:
         ret_files = []
         if os.name == "nt":
             ret = subprocess.run(
-                ['fsutil', 'hardlink', 'list', file],
-                startupinfo=self.__get_hidden_shell(),
-                stdout=subprocess.PIPE
+                ["fsutil", "hardlink", "list", file], startupinfo=self.__get_hidden_shell(), stdout=subprocess.PIPE
             )
             if ret.returncode != 0:
                 return []
             if ret.stdout:
                 drive = os.path.splitdrive(file)[0]
-                link_files = ret.stdout.decode('GBK').replace('\\', '/').split('\r\n')
+                link_files = ret.stdout.decode("GBK").replace("\\", "/").split("\r\n")
                 for link_file in link_files:
-                    if link_file \
-                            and "$RECYCLE.BIN" not in link_file \
-                            and os.path.normpath(file) != os.path.normpath(f'{drive}{link_file}'):
-                        link_file = f'{drive.upper()}{link_file}'
+                    if (
+                        link_file
+                        and "$RECYCLE.BIN" not in link_file
+                        and os.path.normpath(file) != os.path.normpath(f"{drive}{link_file}")
+                    ):
+                        link_file = f"{drive.upper()}{link_file}"
                         file_name = os.path.basename(link_file)
                         file_path = os.path.dirname(link_file)
-                        ret_files.append({
-                            "file": link_file,
-                            "filename": file_name,
-                            "filepath": file_path
-                        })
+                        ret_files.append({"file": link_file, "filename": file_name, "filepath": file_path})
         else:
             inode = os.stat(file).st_ino
             if not fdir:
                 fdir = os.path.dirname(file)
-            stdout = subprocess.run(
-                ['find', fdir, '-inum', str(inode)],
-                stdout=subprocess.PIPE
-            ).stdout
+            stdout = subprocess.run(["find", fdir, "-inum", str(inode)], stdout=subprocess.PIPE).stdout
             if stdout:
-                link_files = stdout.decode('utf-8').split('\n')
+                link_files = stdout.decode("utf-8").split("\n")
                 for link_file in link_files:
-                    if link_file \
-                            and os.path.normpath(file) != os.path.normpath(link_file):
+                    if link_file and os.path.normpath(file) != os.path.normpath(link_file):
                         file_name = os.path.basename(link_file)
                         file_path = os.path.dirname(link_file)
-                        ret_files.append({
-                            "file": link_file,
-                            "filename": file_name,
-                            "filepath": file_path
-                        })
+                        ret_files.append({"file": link_file, "filename": file_name, "filepath": file_path})
 
         return ret_files
 
@@ -346,22 +325,21 @@ class SystemUtils:
         def seconds_to_str(seconds):
             hours, remainder = divmod(seconds, 3600)
             minutes = remainder // 60
-            ret_str = f'{hours}小时{minutes}分钟' if hours > 0 else f'{minutes}分钟'
+            ret_str = f"{hours}小时{minutes}分钟" if hours > 0 else f"{minutes}分钟"
             return ret_str
 
         processes = []
-        for proc in psutil.process_iter(['pid', 'name', 'create_time', 'memory_info', 'status']):
+        for proc in psutil.process_iter(["pid", "name", "create_time", "memory_info", "status"]):
             try:
                 if proc.status() != psutil.STATUS_ZOMBIE:
                     runtime = datetime.datetime.now() - datetime.datetime.fromtimestamp(
-                        int(getattr(proc, 'create_time', 0)()))
+                        int(getattr(proc, "create_time", 0)())
+                    )
                     runtime_str = seconds_to_str(runtime.seconds)
-                    mem_info = getattr(proc, 'memory_info', None)()
+                    mem_info = getattr(proc, "memory_info", None)()
                     if mem_info is not None:
                         mem_mb = round(mem_info.rss / (1024 * 1024), 1)
-                        processes.append({
-                            "id": proc.pid, "name": proc.name(), "time": runtime_str, "memory": mem_mb
-                        })
+                        processes.append({"id": proc.pid, "name": proc.name(), "time": runtime_str, "memory": mem_mb})
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
         return processes

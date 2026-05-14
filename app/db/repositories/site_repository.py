@@ -2,6 +2,7 @@
 Site Repository
 Handles site configuration and statistics related database operations.
 """
+
 import json
 import time
 
@@ -39,15 +40,11 @@ class SiteRepository(BaseRepository):
         """
         if not name:
             return
-        self._db.insert(CONFIGSITE(
-            NAME=name,
-            PRI=site_pri,
-            RSSURL=rssurl,
-            SIGNURL=signurl,
-            COOKIE=cookie,
-            NOTE=note,
-            INCLUDE=rss_uses
-        ))
+        self._db.insert(
+            CONFIGSITE(
+                NAME=name, PRI=site_pri, RSSURL=rssurl, SIGNURL=signurl, COOKIE=cookie, NOTE=note, INCLUDE=rss_uses
+            )
+        )
 
     @DbPersist(BaseRepository._db)
     def delete_config_site(self, tid):
@@ -65,15 +62,17 @@ class SiteRepository(BaseRepository):
         """
         if not tid:
             return
-        self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).update({
-            "NAME": name,
-            "PRI": site_pri,
-            "RSSURL": rssurl,
-            "SIGNURL": signurl,
-            "COOKIE": cookie,
-            "NOTE": note,
-            "INCLUDE": rss_uses
-        })
+        self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).update(
+            {
+                "NAME": name,
+                "PRI": site_pri,
+                "RSSURL": rssurl,
+                "SIGNURL": signurl,
+                "COOKIE": cookie,
+                "NOTE": note,
+                "INCLUDE": rss_uses,
+            }
+        )
 
     @DbPersist(BaseRepository._db)
     def update_config_site_note(self, tid, note):
@@ -95,13 +94,12 @@ class SiteRepository(BaseRepository):
         if rec.NOTE:
             note = json.loads(rec.NOTE)
             if ua:
-                note['ua'] = ua
+                note["ua"] = ua
         else:
             note = {}
-        self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).update({
-            "COOKIE": cookie,
-            "NOTE": json.dumps(note)
-        })
+        self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).update(
+            {"COOKIE": cookie, "NOTE": json.dumps(note)}
+        )
 
     @DbPersist(BaseRepository._db)
     def update_site_rssurl(self, tid, rssurl):
@@ -118,9 +116,7 @@ class SiteRepository(BaseRepository):
         """
         更新站点用户数据中站点名称
         """
-        self._db.query(SITEUSERINFOSTATS).filter(old_name == SITEUSERINFOSTATS.SITE).update({
-            "SITE": new_name
-        })
+        self._db.query(SITEUSERINFOSTATS).filter(old_name == SITEUSERINFOSTATS.SITE).update({"SITE": new_name})
 
     @DbPersist(BaseRepository._db)
     def update_site_user_statistics(self, site_user_infos: list):
@@ -129,7 +125,7 @@ class SiteRepository(BaseRepository):
         """
         if not site_user_infos:
             return
-        update_at = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+        update_at = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
 
         for site_user_info in site_user_infos:
             site = site_user_info.site_name
@@ -147,38 +143,42 @@ class SiteRepository(BaseRepository):
             msg_unread = site_user_info.message_unread
 
             if not self.is_exists_site_user_statistics(url):
-                self._db.insert(SITEUSERINFOSTATS(
-                    SITE=site,
-                    USERNAME=username,
-                    USER_LEVEL=user_level,
-                    JOIN_AT=join_at,
-                    UPDATE_AT=update_at,
-                    UPLOAD=upload,
-                    DOWNLOAD=download,
-                    RATIO=ratio,
-                    SEEDING=seeding,
-                    LEECHING=leeching,
-                    SEEDING_SIZE=seeding_size,
-                    BONUS=bonus,
-                    URL=url,
-                    MSG_UNREAD=msg_unread
-                ))
+                self._db.insert(
+                    SITEUSERINFOSTATS(
+                        SITE=site,
+                        USERNAME=username,
+                        USER_LEVEL=user_level,
+                        JOIN_AT=join_at,
+                        UPDATE_AT=update_at,
+                        UPLOAD=upload,
+                        DOWNLOAD=download,
+                        RATIO=ratio,
+                        SEEDING=seeding,
+                        LEECHING=leeching,
+                        SEEDING_SIZE=seeding_size,
+                        BONUS=bonus,
+                        URL=url,
+                        MSG_UNREAD=msg_unread,
+                    )
+                )
             else:
-                self._db.query(SITEUSERINFOSTATS).filter(url == SITEUSERINFOSTATS.URL).update({
-                    "SITE": site,
-                    "USERNAME": username,
-                    "USER_LEVEL": user_level,
-                    "JOIN_AT": join_at,
-                    "UPDATE_AT": update_at,
-                    "UPLOAD": upload,
-                    "DOWNLOAD": download,
-                    "RATIO": ratio,
-                    "SEEDING": seeding,
-                    "LEECHING": leeching,
-                    "SEEDING_SIZE": seeding_size,
-                    "BONUS": bonus,
-                    "MSG_UNREAD": msg_unread
-                })
+                self._db.query(SITEUSERINFOSTATS).filter(url == SITEUSERINFOSTATS.URL).update(
+                    {
+                        "SITE": site,
+                        "USERNAME": username,
+                        "USER_LEVEL": user_level,
+                        "JOIN_AT": join_at,
+                        "UPDATE_AT": update_at,
+                        "UPLOAD": upload,
+                        "DOWNLOAD": download,
+                        "RATIO": ratio,
+                        "SEEDING": seeding,
+                        "LEECHING": leeching,
+                        "SEEDING_SIZE": seeding_size,
+                        "BONUS": bonus,
+                        "MSG_UNREAD": msg_unread,
+                    }
+                )
 
     def is_exists_site_user_statistics(self, url):
         """
@@ -202,10 +202,14 @@ class SiteRepository(BaseRepository):
         查询站点数据历史
         """
         if strict_urls:
-            return self._db.query(SITEUSERINFOSTATS) \
-                .join(CONFIGSITE, SITEUSERINFOSTATS.SITE == CONFIGSITE.NAME) \
-                .filter(SITEUSERINFOSTATS.URL.in_(tuple(strict_urls + ["__DUMMY__"]))) \
-                .order_by(cast(CONFIGSITE.PRI, Integer).asc()).limit(num).all()
+            return (
+                self._db.query(SITEUSERINFOSTATS)
+                .join(CONFIGSITE, SITEUSERINFOSTATS.SITE == CONFIGSITE.NAME)
+                .filter(SITEUSERINFOSTATS.URL.in_(tuple(strict_urls + ["__DUMMY__"])))
+                .order_by(cast(CONFIGSITE.PRI, Integer).asc())
+                .limit(num)
+                .all()
+            )
         else:
             return self._db.query(SITEUSERINFOSTATS).limit(num).all()
 
@@ -220,20 +224,20 @@ class SiteRepository(BaseRepository):
             return
 
         for site_user_info in site_user_infos:
-            site_icon = "data:image/ico;base64," + \
-                        site_user_info.site_favicon if site_user_info.site_favicon else site_user_info.site_url + "/favicon.ico"
+            site_icon = (
+                "data:image/ico;base64," + site_user_info.site_favicon
+                if site_user_info.site_favicon
+                else site_user_info.site_url + "/favicon.ico"
+            )
 
             if not self.is_exists_site_favicon(site_user_info.site_name):
-                self._db.insert(SITEFAVICON(
-                    SITE=site_user_info.site_name,
-                    URL=site_user_info.site_url,
-                    FAVICON=site_icon
-                ))
+                self._db.insert(
+                    SITEFAVICON(SITE=site_user_info.site_name, URL=site_user_info.site_url, FAVICON=site_icon)
+                )
             elif site_user_info.site_favicon:
-                self._db.query(SITEFAVICON).filter(site_user_info.site_name == SITEFAVICON.SITE).update({
-                    "URL": site_user_info.site_url,
-                    "FAVICON": site_icon
-                })
+                self._db.query(SITEFAVICON).filter(site_user_info.site_name == SITEFAVICON.SITE).update(
+                    {"URL": site_user_info.site_url, "FAVICON": site_icon}
+                )
 
     def is_exists_site_favicon(self, site):
         """
@@ -258,9 +262,7 @@ class SiteRepository(BaseRepository):
         """
         更新站点做种数据中站点名称
         """
-        self._db.query(SITEUSERSEEDINGINFO).filter(old_name == SITEUSERSEEDINGINFO.SITE).update({
-            "SITE": new_name
-        })
+        self._db.query(SITEUSERSEEDINGINFO).filter(old_name == SITEUSERSEEDINGINFO.SITE).update({"SITE": new_name})
 
     @DbPersist(BaseRepository._db)
     def update_site_seed_info(self, site_user_infos: list):
@@ -269,38 +271,38 @@ class SiteRepository(BaseRepository):
         """
         if not site_user_infos:
             return
-        update_at = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+        update_at = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
 
         for site_user_info in site_user_infos:
             if not self.is_site_seeding_info_exist(url=site_user_info.site_url):
-                self._db.insert(SITEUSERSEEDINGINFO(
-                    SITE=site_user_info.site_name,
-                    UPDATE_AT=update_at,
-                    SEEDING_INFO=site_user_info.seeding_info,
-                    URL=site_user_info.site_url
-                ))
+                self._db.insert(
+                    SITEUSERSEEDINGINFO(
+                        SITE=site_user_info.site_name,
+                        UPDATE_AT=update_at,
+                        SEEDING_INFO=site_user_info.seeding_info,
+                        URL=site_user_info.site_url,
+                    )
+                )
             else:
-                self._db.query(SITEUSERSEEDINGINFO).filter(site_user_info.site_url == SITEUSERSEEDINGINFO.URL).update({
-                    "SITE": site_user_info.site_name,
-                    "UPDATE_AT": update_at,
-                    "SEEDING_INFO": site_user_info.seeding_info
-                })
+                self._db.query(SITEUSERSEEDINGINFO).filter(site_user_info.site_url == SITEUSERSEEDINGINFO.URL).update(
+                    {
+                        "SITE": site_user_info.site_name,
+                        "UPDATE_AT": update_at,
+                        "SEEDING_INFO": site_user_info.seeding_info,
+                    }
+                )
 
     def is_site_seeding_info_exist(self, url):
         """
         判断做种数据是否已存在
         """
-        return self._db.query(SITEUSERSEEDINGINFO).filter(
-            url == SITEUSERSEEDINGINFO.URL
-        ).first() is not None
+        return self._db.query(SITEUSERSEEDINGINFO).filter(url == SITEUSERSEEDINGINFO.URL).first() is not None
 
     def get_site_seeding_info(self, site):
         """
         查询站点做种信息
         """
-        return self._db.query(SITEUSERSEEDINGINFO.SEEDING_INFO).filter(
-            site == SITEUSERSEEDINGINFO.SITE
-        ).first()
+        return self._db.query(SITEUSERSEEDINGINFO.SEEDING_INFO).filter(site == SITEUSERSEEDINGINFO.SITE).first()
 
     # ==================== Site Statistics History ====================
 
@@ -310,19 +312,19 @@ class SiteRepository(BaseRepository):
         """
         if not url or not date:
             return False
-        return self._db.query(SITESTATISTICSHISTORY).filter(
-            url == SITESTATISTICSHISTORY.URL,
-            date == SITESTATISTICSHISTORY.DATE
-        ).first() is not None
+        return (
+            self._db.query(SITESTATISTICSHISTORY)
+            .filter(url == SITESTATISTICSHISTORY.URL, date == SITESTATISTICSHISTORY.DATE)
+            .first()
+            is not None
+        )
 
     @DbPersist(BaseRepository._db)
     def update_site_statistics_site_name(self, new_name, old_name):
         """
         更新站点统计数据中站点名称
         """
-        self._db.query(SITESTATISTICSHISTORY).filter(old_name == SITESTATISTICSHISTORY.SITE).update({
-            "SITE": new_name
-        })
+        self._db.query(SITESTATISTICSHISTORY).filter(old_name == SITESTATISTICSHISTORY.SITE).update({"SITE": new_name})
 
     @DbPersist(BaseRepository._db)
     def insert_site_statistics_history(self, site_user_infos: list):
@@ -333,15 +335,16 @@ class SiteRepository(BaseRepository):
         if not site_user_infos:
             return
 
-        date_now = time.strftime('%Y-%m-%d', time.localtime(time.time()))
+        date_now = time.strftime("%Y-%m-%d", time.localtime(time.time()))
 
         urls = [info.site_url for info in site_user_infos if info.site_url]
         existing_records = {}
         if urls:
-            records = self._db.query(SITESTATISTICSHISTORY.URL).filter(
-                date_now == SITESTATISTICSHISTORY.DATE,
-                SITESTATISTICSHISTORY.URL.in_(urls)
-            ).all()
+            records = (
+                self._db.query(SITESTATISTICSHISTORY.URL)
+                .filter(date_now == SITESTATISTICSHISTORY.DATE, SITESTATISTICSHISTORY.URL.in_(urls))
+                .all()
+            )
             existing_records = {r[0] for r in records}
 
         insert_mappings = []
@@ -359,7 +362,7 @@ class SiteRepository(BaseRepository):
                 "LEECHING": site_user_info.leeching,
                 "SEEDING_SIZE": site_user_info.seeding_size,
                 "BONUS": site_user_info.bonus,
-                "URL": site_user_info.site_url
+                "URL": site_user_info.site_url,
             }
 
             if site_user_info.site_url in existing_records:
@@ -372,17 +375,19 @@ class SiteRepository(BaseRepository):
 
         for url, data in update_mappings:
             self._db.query(SITESTATISTICSHISTORY).filter(
-                date_now == SITESTATISTICSHISTORY.DATE,
-                url == SITESTATISTICSHISTORY.URL
+                date_now == SITESTATISTICSHISTORY.DATE, url == SITESTATISTICSHISTORY.URL
             ).update(data)
 
     def get_site_statistics_history(self, site, days=30):
         """
         查询站点数据历史
         """
-        return self._db.query(SITESTATISTICSHISTORY).filter(
-            site == SITESTATISTICSHISTORY.SITE
-        ).order_by(SITESTATISTICSHISTORY.DATE.asc()).limit(days)
+        return (
+            self._db.query(SITESTATISTICSHISTORY)
+            .filter(site == SITESTATISTICSHISTORY.SITE)
+            .order_by(SITESTATISTICSHISTORY.DATE.asc())
+            .limit(days)
+        )
 
     def get_site_statistics_recent_sites(self, days=7, end_day=None, strict_urls=None):
         """
@@ -402,13 +407,11 @@ class SiteRepository(BaseRepository):
         b_date = (end - datetime.timedelta(days=days)).strftime("%Y-%m-%d")
         e_date = end.strftime("%Y-%m-%d")
 
-        date_ret = self._db.query(
-            func.max(SITESTATISTICSHISTORY.DATE),
-            func.min(SITESTATISTICSHISTORY.DATE)
-        ).filter(
-            b_date < SITESTATISTICSHISTORY.DATE,
-            e_date >= SITESTATISTICSHISTORY.DATE
-        ).all()
+        date_ret = (
+            self._db.query(func.max(SITESTATISTICSHISTORY.DATE), func.min(SITESTATISTICSHISTORY.DATE))
+            .filter(b_date < SITESTATISTICSHISTORY.DATE, e_date >= SITESTATISTICSHISTORY.DATE)
+            .all()
+        )
 
         if date_ret and date_ret[0][0]:
             total_upload = 0
@@ -419,34 +422,45 @@ class SiteRepository(BaseRepository):
             max_date = date_ret[0][0]
 
             if strict_urls:
-                subquery = self._db.query(
-                    SITESTATISTICSHISTORY.SITE.label("SITE"),
-                    SITESTATISTICSHISTORY.DATE.label("DATE"),
-                    func.sum(SITESTATISTICSHISTORY.UPLOAD).label("UPLOAD"),
-                    func.sum(SITESTATISTICSHISTORY.DOWNLOAD).label("DOWNLOAD")
-                ).filter(
-                    min_date <= SITESTATISTICSHISTORY.DATE,
-                    max_date >= SITESTATISTICSHISTORY.DATE,
-                    SITESTATISTICSHISTORY.URL.in_(tuple(strict_urls + ["__DUMMY__"]))
-                ).group_by(SITESTATISTICSHISTORY.SITE, SITESTATISTICSHISTORY.DATE).subquery()
+                subquery = (
+                    self._db.query(
+                        SITESTATISTICSHISTORY.SITE.label("SITE"),
+                        SITESTATISTICSHISTORY.DATE.label("DATE"),
+                        func.sum(SITESTATISTICSHISTORY.UPLOAD).label("UPLOAD"),
+                        func.sum(SITESTATISTICSHISTORY.DOWNLOAD).label("DOWNLOAD"),
+                    )
+                    .filter(
+                        min_date <= SITESTATISTICSHISTORY.DATE,
+                        max_date >= SITESTATISTICSHISTORY.DATE,
+                        SITESTATISTICSHISTORY.URL.in_(tuple(strict_urls + ["__DUMMY__"])),
+                    )
+                    .group_by(SITESTATISTICSHISTORY.SITE, SITESTATISTICSHISTORY.DATE)
+                    .subquery()
+                )
             else:
-                subquery = self._db.query(
-                    SITESTATISTICSHISTORY.SITE.label("SITE"),
-                    SITESTATISTICSHISTORY.DATE.label("DATE"),
-                    func.sum(SITESTATISTICSHISTORY.UPLOAD).label("UPLOAD"),
-                    func.sum(SITESTATISTICSHISTORY.DOWNLOAD).label("DOWNLOAD")
-                ).filter(
-                    min_date <= SITESTATISTICSHISTORY.DATE,
-                    max_date >= SITESTATISTICSHISTORY.DATE
-                ).group_by(SITESTATISTICSHISTORY.SITE, SITESTATISTICSHISTORY.DATE).subquery()
+                subquery = (
+                    self._db.query(
+                        SITESTATISTICSHISTORY.SITE.label("SITE"),
+                        SITESTATISTICSHISTORY.DATE.label("DATE"),
+                        func.sum(SITESTATISTICSHISTORY.UPLOAD).label("UPLOAD"),
+                        func.sum(SITESTATISTICSHISTORY.DOWNLOAD).label("DOWNLOAD"),
+                    )
+                    .filter(min_date <= SITESTATISTICSHISTORY.DATE, max_date >= SITESTATISTICSHISTORY.DATE)
+                    .group_by(SITESTATISTICSHISTORY.SITE, SITESTATISTICSHISTORY.DATE)
+                    .subquery()
+                )
 
-            rets = self._db.query(
-                subquery.c.SITE,
-                func.min(subquery.c.UPLOAD),
-                func.min(subquery.c.DOWNLOAD),
-                func.max(subquery.c.UPLOAD),
-                func.max(subquery.c.DOWNLOAD)
-            ).group_by(subquery.c.SITE).all()
+            rets = (
+                self._db.query(
+                    subquery.c.SITE,
+                    func.min(subquery.c.UPLOAD),
+                    func.min(subquery.c.DOWNLOAD),
+                    func.max(subquery.c.UPLOAD),
+                    func.max(subquery.c.DOWNLOAD),
+                )
+                .group_by(subquery.c.SITE)
+                .all()
+            )
 
             ret_sites = []
             for ret_b in rets:
@@ -493,21 +507,17 @@ class SiteRepository(BaseRepository):
             SITESTATISTICSHISTORY.SITE,
             SITESTATISTICSHISTORY.DATE,
             func.sum(SITESTATISTICSHISTORY.UPLOAD).label("UPLOAD"),
-            func.sum(SITESTATISTICSHISTORY.DOWNLOAD).label("DOWNLOAD")
-        ).filter(
-            b_date < SITESTATISTICSHISTORY.DATE,
-            e_date >= SITESTATISTICSHISTORY.DATE
-        )
+            func.sum(SITESTATISTICSHISTORY.DOWNLOAD).label("DOWNLOAD"),
+        ).filter(b_date < SITESTATISTICSHISTORY.DATE, e_date >= SITESTATISTICSHISTORY.DATE)
 
         if strict_urls:
             query = query.filter(SITESTATISTICSHISTORY.URL.in_(tuple(strict_urls + ["__DUMMY__"])))
 
-        results = query.group_by(
-            SITESTATISTICSHISTORY.SITE,
-            SITESTATISTICSHISTORY.DATE
-        ).order_by(
-            SITESTATISTICSHISTORY.DATE.asc()
-        ).all()
+        results = (
+            query.group_by(SITESTATISTICSHISTORY.SITE, SITESTATISTICSHISTORY.DATE)
+            .order_by(SITESTATISTICSHISTORY.DATE.asc())
+            .all()
+        )
 
         if not results:
             return {"dates": [], "series": []}
@@ -556,10 +566,12 @@ class SiteRepository(BaseRepository):
                 downloads.append(inc_down)
                 prev_up = up
                 prev_down = down
-            series.append({
-                "name": site_name,
-                "upload": uploads,
-                "download": downloads,
-            })
+            series.append(
+                {
+                    "name": site_name,
+                    "upload": uploads,
+                    "download": downloads,
+                }
+            )
 
         return {"dates": sorted_dates, "series": series}

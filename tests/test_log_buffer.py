@@ -2,6 +2,7 @@
 """
 测试 LogBuffer 与 LogStreamingService
 """
+
 import json
 import os
 import sys
@@ -13,12 +14,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import importlib.util
 
 _LOG_BUFFER_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "app", "utils", "log_buffer.py"
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app", "utils", "log_buffer.py"
 )
 _STREAMING_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "app", "services", "log_streaming_service.py"
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app", "services", "log_streaming_service.py"
 )
 
 spec = importlib.util.spec_from_file_location("log_buffer", _LOG_BUFFER_PATH)
@@ -122,7 +121,7 @@ class TestLogStreamingService(unittest.TestCase):
 
         gen = service.stream(source="")
         data = next(gen)
-        self.assertIn('data: []', data)
+        self.assertIn("data: []", data)
 
         buf.append("INFO", "【System】测试日志")
         data = next(gen)

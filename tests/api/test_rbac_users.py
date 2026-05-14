@@ -1,6 +1,7 @@
 """
 RBAC 用户管理路由测试
 """
+
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient

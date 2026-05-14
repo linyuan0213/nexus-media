@@ -2,6 +2,7 @@
 Webhook Plugin v2
 事件发生时向第三方地址发送请求
 """
+
 from app.plugin_framework.context import PluginContext
 from app.utils import RequestUtils
 
@@ -29,13 +30,10 @@ class WebhookPlugin:
         if not webhook_url:
             return
 
-        event_info = {
-            "type": event,
-            "data": data or {}
-        }
+        event_info = {"type": event, "data": data or {}}
 
         try:
-            if method == 'post':
+            if method == "post":
                 ret = RequestUtils(content_type="application/json").post_res(webhook_url, json=event_info)
             else:
                 ret = RequestUtils().get_res(webhook_url, params=event_info)

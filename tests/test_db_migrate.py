@@ -2,6 +2,7 @@
 数据库迁移工具测试用例
 验证 SQLite ↔ MySQL/PostgreSQL 的数据导出导入能力
 """
+
 import json
 import os
 import tempfile
@@ -11,7 +12,7 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-os.environ['FLASK_DEBUG'] = '1'
+os.environ["FLASK_DEBUG"] = "1"
 
 from app.db.migrate import (
     _serialize_value,
@@ -65,12 +66,7 @@ class TestExportImport:
         # 插入测试数据
         Session = sessionmaker(bind=sqlite_engine)
         session = Session()
-        group = CONFIGFILTERGROUP(
-            ID=1,
-            GROUP_NAME="测试组",
-            IS_DEFAULT="N",
-            NOTE="测试备注"
-        )
+        group = CONFIGFILTERGROUP(ID=1, GROUP_NAME="测试组", IS_DEFAULT="N", NOTE="测试备注")
         session.add(group)
         session.commit()
         session.close()
@@ -166,12 +162,27 @@ class TestExportImport:
         Session = sessionmaker(bind=sqlite_engine)
         session = Session()
         long_enclosure = "magnet:?xt=urn:btih:" + "x" * 1000
-        session.add(DOWNLOADHISTORY(
-            ID=1, TITLE="测试", YEAR="2024", TYPE="电影",
-            TMDBID="123", SE="", VOTE="8.0", POSTER="", OVERVIEW="",
-            TORRENT="", ENCLOSURE=long_enclosure, SITE="", DESC=None,
-            DOWNLOADER="", DOWNLOAD_ID="", SAVE_PATH="", DATE=""
-        ))
+        session.add(
+            DOWNLOADHISTORY(
+                ID=1,
+                TITLE="测试",
+                YEAR="2024",
+                TYPE="电影",
+                TMDBID="123",
+                SE="",
+                VOTE="8.0",
+                POSTER="",
+                OVERVIEW="",
+                TORRENT="",
+                ENCLOSURE=long_enclosure,
+                SITE="",
+                DESC=None,
+                DOWNLOADER="",
+                DOWNLOAD_ID="",
+                SAVE_PATH="",
+                DATE="",
+            )
+        )
         session.commit()
         session.close()
 
@@ -181,24 +192,25 @@ class TestExportImport:
         target_engine = create_engine("sqlite:///:memory:")
         target_meta = MetaData()
         Table(
-            'DOWNLOAD_HISTORY', target_meta,
-            Column('ID', SAInteger, primary_key=True),
-            Column('TITLE', SAString(255)),
-            Column('YEAR', SAString(255)),
-            Column('TYPE', SAString(255)),
-            Column('TMDBID', SAString(255)),
-            Column('SE', SAString(255)),
-            Column('VOTE', SAString(255)),
-            Column('POSTER', SAString(255)),
-            Column('OVERVIEW', SAString(255)),
-            Column('TORRENT', SAString(255)),
-            Column('ENCLOSURE', SAString(50)),
-            Column('SITE', SAString(255)),
-            Column('DESC', SAString(255)),
-            Column('DOWNLOADER', SAString(255)),
-            Column('DOWNLOAD_ID', SAString(255)),
-            Column('SAVE_PATH', SAString(512)),
-            Column('DATE', SAString(20)),
+            "DOWNLOAD_HISTORY",
+            target_meta,
+            Column("ID", SAInteger, primary_key=True),
+            Column("TITLE", SAString(255)),
+            Column("YEAR", SAString(255)),
+            Column("TYPE", SAString(255)),
+            Column("TMDBID", SAString(255)),
+            Column("SE", SAString(255)),
+            Column("VOTE", SAString(255)),
+            Column("POSTER", SAString(255)),
+            Column("OVERVIEW", SAString(255)),
+            Column("TORRENT", SAString(255)),
+            Column("ENCLOSURE", SAString(50)),
+            Column("SITE", SAString(255)),
+            Column("DESC", SAString(255)),
+            Column("DOWNLOADER", SAString(255)),
+            Column("DOWNLOAD_ID", SAString(255)),
+            Column("SAVE_PATH", SAString(512)),
+            Column("DATE", SAString(20)),
         )
         target_meta.create_all(target_engine)
 
@@ -206,9 +218,7 @@ class TestExportImport:
 
         Session2 = sessionmaker(bind=target_engine)
         session2 = Session2()
-        result = session2.execute(
-            text("SELECT ENCLOSURE FROM DOWNLOAD_HISTORY WHERE ID = 1")
-        ).fetchone()
+        result = session2.execute(text("SELECT ENCLOSURE FROM DOWNLOAD_HISTORY WHERE ID = 1")).fetchone()
         assert result is not None
         assert len(result[0]) <= 50
         session2.close()

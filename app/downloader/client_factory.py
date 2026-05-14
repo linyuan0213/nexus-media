@@ -9,6 +9,7 @@ DownloadClientFactory - 下载器客户端工厂
 
 移除 SingletonMeta，改为普通类 + 依赖注入。
 """
+
 import json
 import os
 from enum import Enum
@@ -36,10 +37,7 @@ class DownloadClientFactory:
     管理下载器 schema、配置、客户端实例缓存。
     """
 
-    def __init__(self,
-                 config_repo=None,
-                 download_repo=None,
-                 systemconfig: SystemConfigClass | None = None):
+    def __init__(self, config_repo=None, download_repo=None, systemconfig: SystemConfigClass | None = None):
         # 注入领域仓库适配器，不允许注入旧的 ConfigRepository/DownloadRepository
         self._config_repo = config_repo or DownloaderRepositoryAdapter()
         self._download_repo = download_repo or DownloadSettingRepositoryAdapter()
@@ -47,8 +45,7 @@ class DownloadClientFactory:
 
         # 下载器类型 schema（从子模块动态加载）
         self._downloader_schema = SubmoduleHelper.import_submodules(
-            'app.downloader.client',
-            filter_func=lambda _, obj: hasattr(obj, 'client_id')
+            "app.downloader.client", filter_func=lambda _, obj: hasattr(obj, "client_id")
         )
         log.debug(f"【Downloader】加载下载器类型：{self._downloader_schema}")
 
@@ -71,7 +68,7 @@ class DownloadClientFactory:
         self._download_order = None
 
         # jobstore 标识
-        self._jobstore = 'download'
+        self._jobstore = "download"
 
         self.init_config()
 
@@ -120,17 +117,16 @@ class DownloadClientFactory:
                 "rmt_mode": rmt_mode,
                 "rmt_mode_name": rmt_mode_name,
                 "config": config,
-                "download_dir": json.loads(downloader_conf.DOWNLOAD_DIR)
+                "download_dir": json.loads(downloader_conf.DOWNLOAD_DIR),
             }
 
         # 生成枚举
         self._downloader_enum = Enum(
-            'DownloaderIdName',
-            {did: conf.get("name") for did, conf in self._downloader_confs.items()}
+            "DownloaderIdName", {did: conf.get("name") for did, conf in self._downloader_confs.items()}
         )
 
         # 下载顺序
-        pt = Config().get_config('pt')
+        pt = Config().get_config("pt")
         if pt:
             self._download_order = pt.get("download_order")
 
@@ -139,7 +135,7 @@ class DownloadClientFactory:
             "-1": {
                 "id": -1,
                 "name": "预设",
-                "category": '',
+                "category": "",
                 "tags": PT_TAG,
                 "is_paused": 0,
                 "upload_limit": 0,
@@ -148,7 +144,7 @@ class DownloadClientFactory:
                 "seeding_time_limit": 0,
                 "downloader": "",
                 "downloader_name": "",
-                "downloader_type": ""
+                "downloader_type": "",
             }
         }
         download_settings = self._download_repo.get_download_setting()
@@ -174,7 +170,7 @@ class DownloadClientFactory:
                 "seeding_time_limit": download_setting.SEEDING_TIME_LIMIT,
                 "downloader": downloader_id,
                 "downloader_name": downloader_name,
-                "downloader_type": downloader_type
+                "downloader_type": downloader_type,
             }
 
     # ---------- 客户端构建 ----------
@@ -187,6 +183,7 @@ class DownloadClientFactory:
                     return downloader_schema(conf)
             except Exception as e:
                 from app.utils import ExceptionUtils
+
                 ExceptionUtils.exception_traceback(e)
         return None
 
@@ -279,13 +276,13 @@ class DownloadClientFactory:
             result = {}
             for k, v in self._downloader_confs.items():
                 item = dict(v)
-                item["is_default"] = (str(item.get("id")) == str(default_id))
+                item["is_default"] = str(item.get("id")) == str(default_id)
                 result[k] = item
             return result
         conf = self._downloader_confs.get(str(did))
         if conf:
             conf = dict(conf)
-            conf["is_default"] = (str(conf.get("id")) == str(default_id))
+            conf["is_default"] = str(conf.get("id")) == str(default_id)
         return conf
 
     def get_downloader_conf_simple(self):
@@ -312,13 +309,13 @@ class DownloadClientFactory:
             result = {}
             for k, v in self._download_settings.items():
                 item = dict(v)
-                item["is_default"] = (str(k) == str(default_sid))
+                item["is_default"] = str(k) == str(default_sid)
                 result[k] = item
             return result
         conf = self._download_settings.get(str(sid)) or {}
         if conf:
             conf = dict(conf)
-            conf["is_default"] = (str(sid) == str(default_sid))
+            conf["is_default"] = str(sid) == str(default_sid)
         return conf
 
     def get_download_dirs(self, setting=None):
@@ -339,8 +336,9 @@ class DownloadClientFactory:
         download_dirs = []
         for downloader_conf in self.get_downloader_conf().values():
             download_dirs += downloader_conf.get("download_dir")
-        visit_path_list = [attr.get("container_path") or attr.get("save_path") for attr in download_dirs if
-                           attr.get("save_path")]
+        visit_path_list = [
+            attr.get("container_path") or attr.get("save_path") for attr in download_dirs if attr.get("save_path")
+        ]
         visit_path_list.sort()
         return list(set(visit_path_list))
 
@@ -386,19 +384,15 @@ class DownloadClientFactory:
                     continue
                 if not attr.get("save_path") and not attr.get("label"):
                     continue
-                if (attr.get("container_path") or attr.get("save_path")) \
-                        and os.path.exists(attr.get("container_path") or attr.get("save_path")) \
-                        and media.size \
-                        and SystemUtils.get_free_space(
-                    attr.get("container_path") or attr.get("save_path")
-                ) < NumberUtils.get_size_gb(
-                    StringUtils.num_filesize(media.size)
+                if (
+                    (attr.get("container_path") or attr.get("save_path"))
+                    and os.path.exists(attr.get("container_path") or attr.get("save_path"))
+                    and media.size
+                    and SystemUtils.get_free_space(attr.get("container_path") or attr.get("save_path"))
+                    < NumberUtils.get_size_gb(StringUtils.num_filesize(media.size))
                 ):
                     continue
-                return {
-                    "path": attr.get("save_path"),
-                    "category": attr.get("label")
-                }
+                return {"path": attr.get("save_path"), "category": attr.get("label")}
         return {"path": None, "category": None}
 
     @staticmethod

@@ -2,6 +2,7 @@
 调度任务 Controller 测试
 测试调度任务的查询、修改、删除、暂停、恢复、立即执行功能
 """
+
 import datetime
 from unittest.mock import MagicMock, patch
 
@@ -34,13 +35,16 @@ def scheduler_mod(app_ctx):
     # 使下面的 monkey-patch 在重新导入时生效
     import sys
     from functools import wraps
+
     sys.modules.pop("web.controllers.scheduler", None)
     sys.modules.pop("web.core.decorators", None)
     import web.core.decorators as dec
+
     dec.any_auth = lambda f: f
     dec.action_login_check = lambda f: f
     dec.parse_json_data = lambda f: wraps(f)(lambda *a, **k: f(a[0] if a else {}, *a[1:], **k))
     import web.controllers.scheduler as mod
+
     return mod
 
 
@@ -66,14 +70,18 @@ def _make_job(job_id, name=None, next_run_time=None, trigger_type="interval", tr
 
 
 class TestSchedulerController:
-
     @patch("app.services.scheduler_service.SchedulerCore")
     def test_get_scheduler_jobs_success(self, mock_scheduler_cls, scheduler_mod):
         scheduler = MagicMock()
         scheduler.is_running = True
         mock_scheduler_cls.return_value = scheduler
 
-        job = _make_job("Rss.rssdownload", next_run_time=datetime.datetime.now(), trigger_type="interval", trigger_attrs={"seconds": 300})
+        job = _make_job(
+            "Rss.rssdownload",
+            next_run_time=datetime.datetime.now(),
+            trigger_type="interval",
+            trigger_attrs={"seconds": 300},
+        )
         scheduler.get_jobs.return_value = [job]
         scheduler.get_job_statistics.return_value = {
             "Rss.rssdownload": {"total_runs": 5, "success_count": 5, "failure_count": 0}
@@ -103,11 +111,7 @@ class TestSchedulerController:
         job = _make_job("Rss.rssdownload")
         scheduler.get_job.return_value = job
 
-        result = scheduler_mod._update_scheduler_job({
-            "id": "Rss.rssdownload",
-            "trigger": "interval",
-            "seconds": 600
-        })
+        result = scheduler_mod._update_scheduler_job({"id": "Rss.rssdownload", "trigger": "interval", "seconds": 600})
         assert result["code"] == 0
         assert "修改成功" in result["msg"]
         scheduler.reschedule_job.assert_called_once()
@@ -120,11 +124,9 @@ class TestSchedulerController:
         job = _make_job("Rss.rssdownload", trigger_type="cron")
         scheduler.get_job.return_value = job
 
-        result = scheduler_mod._update_scheduler_job({
-            "id": "Rss.rssdownload",
-            "trigger": "cron",
-            "cron": "*/10 * * * *"
-        })
+        result = scheduler_mod._update_scheduler_job(
+            {"id": "Rss.rssdownload", "trigger": "cron", "cron": "*/10 * * * *"}
+        )
         assert result["code"] == 0
         scheduler.reschedule_job.assert_called_once()
 
@@ -137,11 +139,7 @@ class TestSchedulerController:
         scheduler.get_job.return_value = job
 
         run_date = datetime.datetime.now().isoformat()
-        result = scheduler_mod._update_scheduler_job({
-            "id": "Rss.rssdownload",
-            "trigger": "date",
-            "run_date": run_date
-        })
+        result = scheduler_mod._update_scheduler_job({"id": "Rss.rssdownload", "trigger": "date", "run_date": run_date})
         assert result["code"] == 0
         scheduler.reschedule_job.assert_called_once()
 
@@ -158,21 +156,14 @@ class TestSchedulerController:
         mock_scheduler_cls.return_value = scheduler
         scheduler.get_job.return_value = None
 
-        result = scheduler_mod._update_scheduler_job({
-            "id": "not_exist",
-            "trigger": "interval",
-            "seconds": 60
-        })
+        result = scheduler_mod._update_scheduler_job({"id": "not_exist", "trigger": "interval", "seconds": 60})
         assert result["code"] == 1
         assert "任务不存在" in result["msg"]
 
     @patch("app.services.scheduler_service.SchedulerCore")
     def test_update_scheduler_job_invalid_trigger(self, mock_scheduler_cls, scheduler_mod):
         # Pydantic DTO 会在 Controller 层直接拦截不合法的 trigger 值
-        result = scheduler_mod._update_scheduler_job({
-            "id": "Rss.rssdownload",
-            "trigger": "unknown"
-        })
+        result = scheduler_mod._update_scheduler_job({"id": "Rss.rssdownload", "trigger": "unknown"})
         assert result["code"] == 1
 
     @patch("app.services.scheduler_service.SchedulerCore")
@@ -184,10 +175,7 @@ class TestSchedulerController:
         job = _make_job("Rss.rssdownload")
         scheduler.get_job.return_value = job
 
-        result = scheduler_mod._update_scheduler_job({
-            "id": "Rss.rssdownload",
-            "trigger": "interval"
-        })
+        result = scheduler_mod._update_scheduler_job({"id": "Rss.rssdownload", "trigger": "interval"})
         # interval 缺少 seconds/minutes/hours，Service 层返回缺少时间参数
         assert result["code"] == 1
         assert "缺少时间参数" in result["msg"]

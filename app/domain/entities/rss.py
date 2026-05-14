@@ -2,6 +2,7 @@
 RSS领域实体
 定义RSS历史、电影订阅、种子、剧集订阅、剧集分集的领域模型
 """
+
 from dataclasses import dataclass, fields
 from typing import Any, Optional
 
@@ -9,6 +10,7 @@ from typing import Any, Optional
 @dataclass
 class RssHistoryEntity:
     """RSS历史记录实体"""
+
     id: int
     rss_type: str
     rss_id: str
@@ -40,13 +42,14 @@ class RssHistoryEntity:
             total=orm_model.TOTAL or 0,
             start=orm_model.START or 0,
             finish_time=orm_model.FINISH_TIME or "",
-            note=orm_model.NOTE or ""
+            note=orm_model.NOTE or "",
         )
+
     # 从 ORM 列名到 dataclass 字段名的映射
     _ORM_FIELD_MAP = {
-        'desc': 'description',
-        'description': 'description',
-        'tmdbid': 'tmdb_id',
+        "desc": "description",
+        "description": "description",
+        "tmdbid": "tmdb_id",
     }
 
     def __getattr__(self, name: str):
@@ -57,7 +60,6 @@ class RssHistoryEntity:
         if field_name in {f.name for f in fields(self)}:
             return getattr(self, field_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
-
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -80,6 +82,7 @@ class RssHistoryEntity:
 @dataclass
 class RssMovieEntity:
     """RSS电影订阅实体"""
+
     id: int
     name: str
     year: str
@@ -129,13 +132,13 @@ class RssMovieEntity:
             fuzzy_match=bool(orm_model.FUZZY_MATCH),
             state=orm_model.STATE or "",
             description=orm_model.DESC or "",
-            note=orm_model.NOTE or ""
+            note=orm_model.NOTE or "",
         )
 
     # 从 ORM 列名到 dataclass 字段名的映射
     _ORM_FIELD_MAP = {
-        'desc': 'description',
-        'tmdbid': 'tmdb_id',
+        "desc": "description",
+        "tmdbid": "tmdb_id",
     }
 
     def __getattr__(self, name: str):
@@ -146,7 +149,6 @@ class RssMovieEntity:
         if field_name in {f.name for f in fields(self)}:
             return getattr(self, field_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
-
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -178,6 +180,7 @@ class RssMovieEntity:
 @dataclass
 class RssTorrentEntity:
     """RSS种子记录实体"""
+
     id: int
     torrent_name: str
     enclosure: str
@@ -199,11 +202,12 @@ class RssTorrentEntity:
             title=orm_model.TITLE or "",
             year=orm_model.YEAR or "",
             season=orm_model.SEASON or "",
-            episode=orm_model.EPISODE or ""
+            episode=orm_model.EPISODE or "",
         )
+
     # 从 ORM 列名到 dataclass 字段名的映射
     _ORM_FIELD_MAP = {
-        'desc': 'description',
+        "desc": "description",
     }
 
     def __getattr__(self, name: str):
@@ -214,7 +218,6 @@ class RssTorrentEntity:
         if field_name in {f.name for f in fields(self)}:
             return getattr(self, field_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
-
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -232,6 +235,7 @@ class RssTorrentEntity:
 @dataclass
 class RssTvEntity:
     """RSS剧集订阅实体"""
+
     id: int
     name: str
     year: str
@@ -291,12 +295,13 @@ class RssTvEntity:
             lack=orm_model.LACK or 0,
             state=orm_model.STATE or "",
             description=orm_model.DESC or "",
-            note=orm_model.NOTE or ""
+            note=orm_model.NOTE or "",
         )
+
     # 从 ORM 列名到 dataclass 字段名的映射
     _ORM_FIELD_MAP = {
-        'desc': 'description',
-        'tmdbid': 'tmdb_id',
+        "desc": "description",
+        "tmdbid": "tmdb_id",
     }
 
     def __getattr__(self, name: str):
@@ -307,7 +312,6 @@ class RssTvEntity:
         if field_name in {f.name for f in fields(self)}:
             return getattr(self, field_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
-
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -344,6 +348,7 @@ class RssTvEntity:
 @dataclass
 class RssTvEpisodeEntity:
     """RSS剧集分集实体"""
+
     id: int
     rss_id: str
     episodes: str
@@ -352,14 +357,11 @@ class RssTvEpisodeEntity:
     def from_orm(cls, orm_model) -> Optional["RssTvEpisodeEntity"]:
         if orm_model is None:
             return None
-        return cls(
-            id=orm_model.ID,
-            rss_id=orm_model.RSSID or "",
-            episodes=orm_model.EPISODES or ""
-        )
+        return cls(id=orm_model.ID, rss_id=orm_model.RSSID or "", episodes=orm_model.EPISODES or "")
+
     # 从 ORM 列名到 dataclass 字段名的映射
     _ORM_FIELD_MAP = {
-        'desc': 'description',
+        "desc": "description",
     }
 
     def __getattr__(self, name: str):
@@ -370,7 +372,6 @@ class RssTvEpisodeEntity:
         if field_name in {f.name for f in fields(self)}:
             return getattr(self, field_name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
-
 
     def to_dict(self) -> dict[str, Any]:
         return {

@@ -1,6 +1,7 @@
 """
 SchedulerService 纯单元测试（无需 Flask app 上下文）
 """
+
 import datetime
 from unittest.mock import MagicMock, patch
 
@@ -36,7 +37,6 @@ def _make_job(job_id, name=None, next_run_time=None, trigger_type="interval", tr
 
 
 class TestSchedulerService:
-
     def test_delete_job_success(self):
         scheduler = MagicMock()
         scheduler.remove_job.return_value = True
@@ -55,7 +55,12 @@ class TestSchedulerService:
 
     def test_get_jobs_success(self):
         scheduler = MagicMock()
-        job = _make_job("Rss.rssdownload", next_run_time=datetime.datetime.now(), trigger_type="interval", trigger_attrs={"seconds": 300})
+        job = _make_job(
+            "Rss.rssdownload",
+            next_run_time=datetime.datetime.now(),
+            trigger_type="interval",
+            trigger_attrs={"seconds": 300},
+        )
         scheduler.get_jobs.return_value = [job]
         scheduler.get_job_statistics.return_value = {"Rss.rssdownload": {"total_runs": 5}}
 
@@ -123,11 +128,7 @@ class TestSchedulerService:
         job = _make_job("Rss.rssdownload")
         scheduler.get_job.return_value = job
         svc = SchedulerService(scheduler=scheduler)
-        resp = svc.update_job(UpdateSchedulerJobRequest(
-            id="Rss.rssdownload",
-            trigger="interval",
-            seconds=600
-        ))
+        resp = svc.update_job(UpdateSchedulerJobRequest(id="Rss.rssdownload", trigger="interval", seconds=600))
         assert resp.code == 0
         assert "修改成功" in resp.msg
         scheduler.reschedule_job.assert_called_once()
@@ -137,11 +138,7 @@ class TestSchedulerService:
         job = _make_job("Rss.rssdownload", trigger_type="cron")
         scheduler.get_job.return_value = job
         svc = SchedulerService(scheduler=scheduler)
-        resp = svc.update_job(UpdateSchedulerJobRequest(
-            id="Rss.rssdownload",
-            trigger="cron",
-            cron="*/10 * * * *"
-        ))
+        resp = svc.update_job(UpdateSchedulerJobRequest(id="Rss.rssdownload", trigger="cron", cron="*/10 * * * *"))
         assert resp.code == 0
         scheduler.reschedule_job.assert_called_once()
 
@@ -150,11 +147,9 @@ class TestSchedulerService:
         job = _make_job("Rss.rssdownload", trigger_type="date")
         scheduler.get_job.return_value = job
         svc = SchedulerService(scheduler=scheduler)
-        resp = svc.update_job(UpdateSchedulerJobRequest(
-            id="Rss.rssdownload",
-            trigger="date",
-            run_date="2024-01-01T00:00:00"
-        ))
+        resp = svc.update_job(
+            UpdateSchedulerJobRequest(id="Rss.rssdownload", trigger="date", run_date="2024-01-01T00:00:00")
+        )
         assert resp.code == 0
         scheduler.reschedule_job.assert_called_once()
 
@@ -163,10 +158,7 @@ class TestSchedulerService:
         job = _make_job("Rss.rssdownload")
         scheduler.get_job.return_value = job
         svc = SchedulerService(scheduler=scheduler)
-        resp = svc.update_job(UpdateSchedulerJobRequest(
-            id="Rss.rssdownload",
-            trigger="interval"
-        ))
+        resp = svc.update_job(UpdateSchedulerJobRequest(id="Rss.rssdownload", trigger="interval"))
         assert resp.code == 1
         assert "缺少时间参数" in resp.msg
 
@@ -174,11 +166,7 @@ class TestSchedulerService:
         scheduler = MagicMock()
         scheduler.get_job.return_value = None
         svc = SchedulerService(scheduler=scheduler)
-        resp = svc.update_job(UpdateSchedulerJobRequest(
-            id="not_exist",
-            trigger="interval",
-            seconds=60
-        ))
+        resp = svc.update_job(UpdateSchedulerJobRequest(id="not_exist", trigger="interval", seconds=60))
         assert resp.code == 1
         assert "任务不存在" in resp.msg
 
@@ -187,10 +175,6 @@ class TestSchedulerService:
         job = _make_job("Rss.rssdownload", trigger_type="cron")
         scheduler.get_job.return_value = job
         svc = SchedulerService(scheduler=scheduler)
-        resp = svc.update_job(UpdateSchedulerJobRequest(
-            id="Rss.rssdownload",
-            trigger="cron",
-            cron="bad"
-        ))
+        resp = svc.update_job(UpdateSchedulerJobRequest(id="Rss.rssdownload", trigger="cron", cron="bad"))
         assert resp.code == 1
         assert "格式错误" in resp.msg

@@ -29,10 +29,9 @@ class Category(metaclass=SingletonMeta):
             return
         try:
             if not os.path.exists(self._category_path):
-                shutil.copy(os.path.join(get_inner_config_path(), "default-category.yaml"),
-                            self._category_path)
+                shutil.copy(os.path.join(get_inner_config_path(), "default-category.yaml"), self._category_path)
                 log.warn(f"【Config】二级分类策略 {category_name} 配置文件不存在，已按模板生成...")
-            with open(self._category_path, encoding='utf-8') as f:
+            with open(self._category_path, encoding="utf-8") as f:
                 try:
                     yaml = ruamel.yaml.YAML()
                     self._categorys = yaml.load(f)
@@ -46,9 +45,9 @@ class Category(metaclass=SingletonMeta):
             return False
 
         if self._categorys:
-            self._movie_categorys = self._categorys.get('movie')
-            self._tv_categorys = self._categorys.get('tv')
-            self._anime_categorys = self._categorys.get('anime')
+            self._movie_categorys = self._categorys.get("movie")
+            self._tv_categorys = self._categorys.get("tv")
+            self._anime_categorys = self._categorys.get("anime")
         log.info(f"【Config】已加载二级分类策略 {category_name}")
 
     @property

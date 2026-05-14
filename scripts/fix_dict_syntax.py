@@ -2,6 +2,7 @@
 """
 修复 data={key=value} 语法错误，改为 data={"key": value}
 """
+
 import os
 import re
 
@@ -9,7 +10,7 @@ ROUTERS_DIR = "api/routers"
 
 
 def fix_data_dict(content: str) -> str:
-    pattern = re.compile(r'data=\{(.*?)\}', re.DOTALL)
+    pattern = re.compile(r"data=\{(.*?)\}", re.DOTALL)
 
     def replacer(m):
         inner = m.group(1)
@@ -19,14 +20,14 @@ def fix_data_dict(content: str) -> str:
         in_str = None
         while i < n:
             ch = inner[i]
-            if ch in '"\'':
+            if ch in "\"'":
                 if in_str is None:
                     in_str = ch
                 elif in_str == ch:
                     # 检查转义
                     bs = 0
                     j = i - 1
-                    while j >= 0 and inner[j] == '\\':
+                    while j >= 0 and inner[j] == "\\":
                         bs += 1
                         j -= 1
                     if bs % 2 == 0:
@@ -40,35 +41,35 @@ def fix_data_dict(content: str) -> str:
                 continue
 
             # 不在字符串内，尝试匹配 identifier=
-            if ch.isalpha() or ch == '_':
+            if ch.isalpha() or ch == "_":
                 j = i
-                while j < n and (inner[j].isalnum() or inner[j] == '_'):
+                while j < n and (inner[j].isalnum() or inner[j] == "_"):
                     j += 1
-                if j < n and inner[j] == '=' and (j + 1 >= n or inner[j + 1] != '='):
+                if j < n and inner[j] == "=" and (j + 1 >= n or inner[j + 1] != "="):
                     key = inner[i:j]
                     result.append(f'"{key}":')
                     i = j + 1
                     continue
             result.append(ch)
             i += 1
-        return 'data={' + ''.join(result) + '}'
+        return "data={" + "".join(result) + "}"
 
     return pattern.sub(replacer, content)
 
 
 def main():
     for fname in os.listdir(ROUTERS_DIR):
-        if not fname.endswith('.py'):
+        if not fname.endswith(".py"):
             continue
         path = os.path.join(ROUTERS_DIR, fname)
-        with open(path, encoding='utf-8') as f:
+        with open(path, encoding="utf-8") as f:
             content = f.read()
         new_content = fix_data_dict(content)
         if new_content != content:
-            with open(path, 'w', encoding='utf-8') as f:
+            with open(path, "w", encoding="utf-8") as f:
                 f.write(new_content)
-            print(f'Fixed dict syntax: {path}')
+            print(f"Fixed dict syntax: {path}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

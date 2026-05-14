@@ -55,14 +55,17 @@ def _is_anime(name: str) -> bool:
     if not name:
         return False
     # 匹配中文方括号标记：要求至少包含一个非数字字符（如 720P、X264、V2），排除纯数字如 【12】
-    if re.search(r'【(?:[+XVPI-]+\d*|\d*[+XVPI-]+)】\s*【', name, re.IGNORECASE):
+    if re.search(r"【(?:[+XVPI-]+\d*|\d*[+XVPI-]+)】\s*【", name, re.IGNORECASE):
         return True
-    if re.search(r'\s+-\s+[\dv]{1,4}\s+', name, re.IGNORECASE):
+    if re.search(r"\s+-\s+[\dv]{1,4}\s+", name, re.IGNORECASE):
         return True
-    if re.search(r"S\d{2}\s*-\s*S\d{2}|S\d{2}|\s+S\d{1,2}|EP?\d{2,4}\s*-\s*EP?\d{2,4}|EP?\d{2,4}|\s+EP?\d{1,4}", name,
-                  re.IGNORECASE):
+    if re.search(
+        r"S\d{2}\s*-\s*S\d{2}|S\d{2}|\s+S\d{1,2}|EP?\d{2,4}\s*-\s*EP?\d{2,4}|EP?\d{2,4}|\s+EP?\d{1,4}",
+        name,
+        re.IGNORECASE,
+    ):
         return False
     # 匹配英文方括号标记：要求至少包含一个非数字字符，排除纯数字如 [12]
-    if re.search(r'\[(?:[+XVPI-]+\d*|\d*[+XVPI-]+)]\s*\[', name, re.IGNORECASE):
+    if re.search(r"\[(?:[+XVPI-]+\d*|\d*[+XVPI-]+)]\s*\[", name, re.IGNORECASE):
         return True
     return False

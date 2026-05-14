@@ -2,22 +2,23 @@
 转移相关模型
 包含: 转移黑名单、转移历史、未知转移记录
 """
+
 from sqlalchemy import Column, Integer, Sequence, String
 
 from app.db.models.base import Base
 
 
 class TRANSFERBLACKLIST(Base):
-    __tablename__ = 'TRANSFER_BLACKLIST'
+    __tablename__ = "TRANSFER_BLACKLIST"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     PATH = Column(String(512), index=True)
 
 
 class TRANSFERHISTORY(Base):
-    __tablename__ = 'TRANSFER_HISTORY'
+    __tablename__ = "TRANSFER_HISTORY"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     MODE = Column(String(255))
     TYPE = Column(String(255))
     CATEGORY = Column(String(255))
@@ -38,9 +39,9 @@ class TRANSFERHISTORY(Base):
 
 
 class TRANSFERUNKNOWN(Base):
-    __tablename__ = 'TRANSFER_UNKNOWN'
+    __tablename__ = "TRANSFER_UNKNOWN"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     PATH = Column(String(512), index=True)
     DEST = Column(String(255))
     MODE = Column(String(255))

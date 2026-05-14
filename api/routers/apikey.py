@@ -18,6 +18,7 @@ router = APIRouter()
 # Pydantic Request/Response Models
 # ---------------------------------------------------------------------------
 
+
 class CreateAPIKeyRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, description="API Key 名称")
     expires_days: int | None = Field(None, ge=1, le=3650, description="过期天数，null 表示永不过期")
@@ -74,6 +75,7 @@ class CreateAPIKeyResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
 
 @router.post("/keys", response_model=success)
 async def create_api_key(

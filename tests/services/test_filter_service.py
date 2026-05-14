@@ -8,17 +8,20 @@ from app.utils.types import MediaType
 
 class FakeMeta:
     """用于测试的简易 MetaInfo 替身"""
-    def __init__(self,
-                 rev_string="Test.Title.2024.1080p.WEB-DL",
-                 subtitle="",
-                 size=None,
-                 type=None,
-                 total_episodes=None,
-                 upload_volume_factor=1.0,
-                 download_volume_factor=1.0,
-                 org_string=None,
-                 resource_pix="",
-                 resource_team=""):
+
+    def __init__(
+        self,
+        rev_string="Test.Title.2024.1080p.WEB-DL",
+        subtitle="",
+        size=None,
+        type=None,
+        total_episodes=None,
+        upload_volume_factor=1.0,
+        download_volume_factor=1.0,
+        org_string=None,
+        resource_pix="",
+        resource_team="",
+    ):
         self.rev_string = rev_string
         self.subtitle = subtitle
         self.size = size
@@ -124,26 +127,23 @@ class TestFilterRuleEngineCheckTorrentFilter:
     def test_sp_state_filter(self):
         meta = FakeMeta()
         ok, _, _ = FilterRuleEngine.check_torrent_filter(
-            meta, {"sp_state": "1.0 0.0"}, MagicMock(),
-            uploadvolumefactor=1.0, downloadvolumefactor=0.0)
+            meta, {"sp_state": "1.0 0.0"}, MagicMock(), uploadvolumefactor=1.0, downloadvolumefactor=0.0
+        )
         assert ok is True
 
     def test_include_keyword_miss(self):
         meta = FakeMeta(rev_string="abc")
-        ok, _, _ = FilterRuleEngine.check_torrent_filter(
-            meta, {"include": "xyz"}, MagicMock())
+        ok, _, _ = FilterRuleEngine.check_torrent_filter(meta, {"include": "xyz"}, MagicMock())
         assert ok is False
 
     def test_exclude_keyword_hit(self):
         meta = FakeMeta(rev_string="abc xyz")
-        ok, _, _ = FilterRuleEngine.check_torrent_filter(
-            meta, {"exclude": "xyz"}, MagicMock())
+        ok, _, _ = FilterRuleEngine.check_torrent_filter(meta, {"exclude": "xyz"}, MagicMock())
         assert ok is False
 
     def test_key_filter(self):
         meta = FakeMeta(rev_string="abc")
-        ok, _, _ = FilterRuleEngine.check_torrent_filter(
-            meta, {"key": "abc"}, MagicMock())
+        ok, _, _ = FilterRuleEngine.check_torrent_filter(meta, {"key": "abc"}, MagicMock())
         assert ok is True
 
 
@@ -170,9 +170,7 @@ def svc():
     mock_rule_repo = MagicMock()
     mock_rule_repo.get_config_filter_rule.return_value = []
     mock_rg = MagicMock()
-    return FilterService(filter_group_repo=mock_group_repo,
-                         filter_rule_repo=mock_rule_repo,
-                         rg_matcher=mock_rg)
+    return FilterService(filter_group_repo=mock_group_repo, filter_rule_repo=mock_rule_repo, rg_matcher=mock_rg)
 
 
 class TestFilterService:
@@ -196,8 +194,11 @@ class TestFilterService:
 
     def test_is_rule_free(self, svc):
         svc._groups = [MagicMock(ID=1, GROUP_NAME="G", IS_DEFAULT="Y", NOTE="")]
-        svc._rules = [MagicMock(GROUP_ID=1, ID=1, ROLE_NAME="R", PRIORITY=1,
-                                INCLUDE="", EXCLUDE="", SIZE_LIMIT="", NOTE="1.0 0.0")]
+        svc._rules = [
+            MagicMock(
+                GROUP_ID=1, ID=1, ROLE_NAME="R", PRIORITY=1, INCLUDE="", EXCLUDE="", SIZE_LIMIT="", NOTE="1.0 0.0"
+            )
+        ]
         assert svc.is_rule_free() is True
 
     def test_add_group_reload(self, svc):
@@ -217,6 +218,7 @@ class TestImportFilterGroup:
     def test_success(self, svc):
         import base64
         import json
+
         content = base64.b64encode(json.dumps({"name": "Test", "rules": []}).encode()).decode()
         svc.add_group = MagicMock()
         svc.get_filter_groupid_by_name = MagicMock(return_value=1)
@@ -231,6 +233,7 @@ class TestImportFilterGroup:
     def test_no_name(self, svc):
         import base64
         import json
+
         content = base64.b64encode(json.dumps({}).encode()).decode()
         ok, msg = svc.import_filter_group(content)
         assert ok is False
@@ -241,10 +244,7 @@ class TestRestoreFilterGroup:
         svc.delete_filtergroup = MagicMock()
         svc._filter_group_repo._repo = MagicMock()
         svc._filter_group_repo._repo.execute = MagicMock()
-        svc.restore_filter_group(
-            ["1"],
-            [{"id": 1, "sql": ["SQL1"]}]
-        )
+        svc.restore_filter_group(["1"], [{"id": 1, "sql": ["SQL1"]}])
         svc.delete_filtergroup.assert_called_once_with("1")
         svc._filter_group_repo._repo.execute.assert_called_once_with("SQL1")
 
@@ -252,10 +252,9 @@ class TestRestoreFilterGroup:
 class TestShareFilterGroup:
     def test_success(self, svc):
         svc.get_filter_group = MagicMock(return_value=[MagicMock(GROUP_NAME="G")])
-        svc.get_filter_rule = MagicMock(return_value=[
-            MagicMock(ROLE_NAME="R", PRIORITY=1, INCLUDE="a",
-                      EXCLUDE="b", SIZE_LIMIT="", NOTE="")
-        ])
+        svc.get_filter_rule = MagicMock(
+            return_value=[MagicMock(ROLE_NAME="R", PRIORITY=1, INCLUDE="a", EXCLUDE="b", SIZE_LIMIT="", NOTE="")]
+        )
         ok, msg, s = svc.share_filter_group(1)
         assert ok is True
         assert s != ""
@@ -291,9 +290,7 @@ class TestTestRule:
 
 class TestGetRuleDetail:
     def test_with_rule(self, svc):
-        svc.get_rules = MagicMock(return_value={
-            "include": ["a", "b"], "exclude": ["c"]
-        })
+        svc.get_rules = MagicMock(return_value={"include": ["a", "b"], "exclude": ["c"]})
         result = svc.get_rule_detail(1, 1)
         assert result["include"] == "a\nb"
         assert result["exclude"] == "c"

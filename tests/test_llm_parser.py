@@ -61,6 +61,7 @@ class TestLLMParser:
     def test_convert_with_full_data(self):
         """_convert 完整字段映射"""
         parser = LLMParser()
+
         # 模拟 MediaResult
         class FakeResult:
             title_en = "Test Title"

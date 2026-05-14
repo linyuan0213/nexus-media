@@ -21,19 +21,20 @@ class Jackett(_IIndexClient):
         else:
             from app.core.system_config import SystemConfig
             from app.utils.types import SystemConfigKey
+
             indexer_config = SystemConfig().get(SystemConfigKey.IndexerConfig) or {}
-            self._client_config = indexer_config.get('jackett') or {}
+            self._client_config = indexer_config.get("jackett") or {}
         self.init_config()
 
     def init_config(self):
         if self._client_config:
-            self.api_key = self._client_config.get('api_key')
-            self._password = self._client_config.get('password')
-            self.host = self._client_config.get('host')
+            self.api_key = self._client_config.get("api_key")
+            self._password = self._client_config.get("password")
+            self.host = self._client_config.get("host")
             if self.host:
-                if not self.host.startswith('http'):
+                if not self.host.startswith("http"):
                     self.host = "http://" + self.host
-                if not self.host.endswith('/'):
+                if not self.host.endswith("/"):
                     self.host = self.host + "/"
 
     def get_type(self):
@@ -63,8 +64,7 @@ class Jackett(_IIndexClient):
         # 获取Cookie
         cookie = None
         session = requests.session()
-        res = RequestUtils(session=session).post_res(url=f"{self.host}UI/Dashboard",
-                                                     data={"password": self._password})
+        res = RequestUtils(session=session).post_res(url=f"{self.host}UI/Dashboard", data={"password": self._password})
         if res and session.cookies:
             cookie = session.cookies.get_dict()
         indexer_query_url = f"{self.host}api/v2.0/indexers?configured=true"
@@ -72,11 +72,18 @@ class Jackett(_IIndexClient):
             ret = RequestUtils(cookies=cookie).get_res(indexer_query_url)
             if not ret or not ret.json():
                 return []
-            return [IndexerConf(datas={"id": v["id"], "name": v["name"],
-                                "domain": f'{self.host}api/v2.0/indexers/{v["id"]}/results/torznab/'},
-                                public=True if v['type'] == 'public' else False,
-                                builtin=False)
-                    for v in ret.json()]
+            return [
+                IndexerConf(
+                    datas={
+                        "id": v["id"],
+                        "name": v["name"],
+                        "domain": f"{self.host}api/v2.0/indexers/{v['id']}/results/torznab/",
+                    },
+                    public=True if v["type"] == "public" else False,
+                    builtin=False,
+                )
+                for v in ret.json()
+            ]
         except Exception as e2:
             ExceptionUtils.exception_traceback(e2)
             return []

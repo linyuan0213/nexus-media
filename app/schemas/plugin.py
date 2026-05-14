@@ -3,6 +3,7 @@ from typing import Any
 
 # ==================== 旧版插件 DTO ====================
 
+
 @dataclass
 class PluginAppsDTO:
     plugins: Any = None
@@ -23,6 +24,7 @@ class PluginInstallResultDTO:
 
 
 # ==================== 插件框架 v2 DTO ====================
+
 
 @dataclass
 class PluginBackendConfig:
@@ -127,7 +129,9 @@ class PluginManifest:
                 settings=PluginSettingsConfig(
                     component=frontend_data.get("settings", {}).get("component", ""),
                     fields=fields,
-                ) if frontend_data.get("settings") else None,
+                )
+                if frontend_data.get("settings")
+                else None,
                 slots=slots,
             ),
         )
@@ -155,23 +159,31 @@ class PluginManifest:
             },
             "frontend": {
                 "routes": [
-                    {"path": r.path, "component": r.component, "title": r.title,
-                     "icon": r.icon, "menu": r.menu}
+                    {"path": r.path, "component": r.component, "title": r.title, "icon": r.icon, "menu": r.menu}
                     for r in self.frontend.routes
                 ],
                 "settings": {
                     "component": self.frontend.settings.component if self.frontend.settings else "",
                     "fields": [
-                        {"key": f.key, "type": f.type, "label": f.label,
-                         "default": f.default, "placeholder": f.placeholder,
-                         "options": f.options, "source": f.source,
-                         "multiple": f.multiple, "required": f.required, "help": f.help}
+                        {
+                            "key": f.key,
+                            "type": f.type,
+                            "label": f.label,
+                            "default": f.default,
+                            "placeholder": f.placeholder,
+                            "options": f.options,
+                            "source": f.source,
+                            "multiple": f.multiple,
+                            "required": f.required,
+                            "help": f.help,
+                        }
                         for f in (self.frontend.settings.fields if self.frontend.settings else [])
                     ],
-                } if self.frontend.settings else None,
+                }
+                if self.frontend.settings
+                else None,
                 "slots": [
-                    {"target": s.target, "position": s.position, "component": s.component}
-                    for s in self.frontend.slots
+                    {"target": s.target, "position": s.position, "component": s.component} for s in self.frontend.slots
                 ],
             },
         }
@@ -191,6 +203,7 @@ class PluginState:
 
 
 # ==================== 共享 DTO ====================
+
 
 @dataclass
 class PluginFieldDTO:

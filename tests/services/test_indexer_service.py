@@ -17,11 +17,7 @@ def svc():
     mock_indexer = MagicMock()
     mock_str = MagicMock()
     mock_stats_repo = MagicMock()
-    service = IndexerService(
-        indexer=mock_indexer,
-        string_utils=mock_str,
-        indexer_statistics_repo=mock_stats_repo
-    )
+    service = IndexerService(indexer=mock_indexer, string_utils=mock_str, indexer_statistics_repo=mock_stats_repo)
     return service
 
 
@@ -65,9 +61,7 @@ class TestGetIndexerHashDict:
         svc._string_utils.md5_hash.return_value = "hash123"
         result = svc.get_indexer_hash_dict()
         assert "hash123" in result
-        assert result["hash123"] == IndexerHashDTO(
-            id="i1", name="SiteA", public=True, builtin=False
-        )
+        assert result["hash123"] == IndexerHashDTO(id="i1", name="SiteA", public=True, builtin=False)
 
 
 class TestGetUserIndexerNames:
@@ -95,7 +89,7 @@ class TestGetBuiltinIndexers:
         # BuiltinIndexer 会触发真实网络和线程池，
         # 直接调用会导致 pytest 退出时 ThreadPoolExecutor 死锁。
         # 这里只验证方法是存在的薄包装即可。
-        assert hasattr(IndexerService, 'get_builtin_indexers')
+        assert hasattr(IndexerService, "get_builtin_indexers")
 
 
 class TestListResources:
@@ -104,8 +98,7 @@ class TestListResources:
         dto = svc.list_resources("idx1", 1, "kw")
         assert dto.success is True
         assert dto.data == [{"id": 1}]
-        svc._indexer.list_resources.assert_called_once_with(
-            index_id="idx1", page=1, keyword="kw")
+        svc._indexer.list_resources.assert_called_once_with(index_id="idx1", page=1, keyword="kw")
 
     def test_failure(self, svc):
         svc._indexer.list_resources.return_value = None
@@ -163,9 +156,7 @@ class TestGetIndexerStatistics:
         ]
         stats, dataset = svc.get_indexer_statistics()
         assert len(stats) == 1
-        assert stats[0] == IndexerStatisticsDTO(
-            name="SiteA", total=10, fail=2, success=8, avg=1.2
-        )
+        assert stats[0] == IndexerStatisticsDTO(name="SiteA", total=10, fail=2, success=8, avg=1.2)
         assert dataset == [["indexer", "avg"], ["SiteA", "1.2"]]
 
     def test_none_result(self, svc):

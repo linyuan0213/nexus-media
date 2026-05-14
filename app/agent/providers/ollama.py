@@ -1,4 +1,5 @@
 """Ollama 本地模型提供商"""
+
 from typing import Any
 
 from ollama import Client
@@ -14,8 +15,13 @@ class OllamaProvider(BaseProvider):
         super().__init__(config)
         self._client = Client(host=config.api_url)
 
-    def chat(self, messages: list[dict], system_prompt: str = "", temperature: float = 0.7,
-             response_format: type | None = None) -> Any:
+    def chat(
+        self,
+        messages: list[dict],
+        system_prompt: str = "",
+        temperature: float = 0.7,
+        response_format: type | None = None,
+    ) -> Any:
         msgs = []
         if system_prompt:
             msgs.append({"role": "system", "content": system_prompt})
@@ -37,7 +43,7 @@ class OllamaProvider(BaseProvider):
     def list_models(self) -> list[str]:
         try:
             result = self._client.list()
-            return [m.model for m in result.models] if hasattr(result, 'models') else []
+            return [m.model for m in result.models] if hasattr(result, "models") else []
         except Exception as e:
             log.warn(f"【OllamaProvider】查询模型列表失败: {e}")
             return []

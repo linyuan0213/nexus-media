@@ -4,6 +4,7 @@ FileTransferService - 文件转移业务 Facade
 底层实现拆分到 TransferActionEngine 与 TransferCoordinator。
 保留与原 FileTransfer 兼容的公共 API。
 """
+
 import os
 import random
 import re
@@ -42,19 +43,21 @@ class FileTransferService:
     保留与原 FileTransfer 兼容的公共 API，移除 SingletonMeta，改为依赖注入。
     """
 
-    def __init__(self,
-                 media_service: MediaService | None = None,
-                 message: Message | None = None,
-                 category: Category | None = None,
-                 scraper: Scraper | None = None,
-                 threadhelper: ThreadHelper | None = None,
-                 transfer_repo: ITransferHistoryRepository | None = None,
-                 transfer_blacklist_repo: ITransferBlacklistRepository | None = None,
-                 transfer_unknown_repo: ITransferUnknownRepository | None = None,
-                 download_repo: IDownloadHistoryRepository | None = None,
-                 progress: ProgressHelper | None = None,
-                 eventmanager: EventManager | None = None,
-                 engine: TransferActionEngine | None = None):
+    def __init__(
+        self,
+        media_service: MediaService | None = None,
+        message: Message | None = None,
+        category: Category | None = None,
+        scraper: Scraper | None = None,
+        threadhelper: ThreadHelper | None = None,
+        transfer_repo: ITransferHistoryRepository | None = None,
+        transfer_blacklist_repo: ITransferBlacklistRepository | None = None,
+        transfer_unknown_repo: ITransferUnknownRepository | None = None,
+        download_repo: IDownloadHistoryRepository | None = None,
+        progress: ProgressHelper | None = None,
+        eventmanager: EventManager | None = None,
+        engine: TransferActionEngine | None = None,
+    ):
         self.media = media_service or MediaService()
         self.message = message or Message()
         self.category = category or Category()
@@ -100,51 +103,52 @@ class FileTransferService:
         self.eventmanager = EventManager()
 
         media_cfg = MediaConfigService().get_config()
-        media = Config().get_config('media')
+        media = Config().get_config("media")
 
-        self._movie_path = media_cfg.get('movie_path') or []
+        self._movie_path = media_cfg.get("movie_path") or []
         self._movie_category_flag = self.category.movie_category_flag
-        self._tv_path = media_cfg.get('tv_path') or []
+        self._tv_path = media_cfg.get("tv_path") or []
         self._tv_category_flag = self.category.tv_category_flag
-        self._anime_path = media_cfg.get('anime_path') or []
+        self._anime_path = media_cfg.get("anime_path") or []
         self._anime_category_flag = self.category.anime_category_flag
         if not self._anime_path:
             self._anime_path = self._tv_path
             self._anime_category_flag = self._tv_category_flag
-        self._unknown_path = media_cfg.get('unknown_path') or []
+        self._unknown_path = media_cfg.get("unknown_path") or []
 
         if media:
-            min_filesize = media.get('min_filesize')
+            min_filesize = media.get("min_filesize")
             if isinstance(min_filesize, int):
                 self._min_filesize = min_filesize * 1024 * 1024
             elif isinstance(min_filesize, str) and min_filesize.isdigit():
                 self._min_filesize = int(min_filesize) * 1024 * 1024
-            ignored_paths = media.get('ignored_paths')
+            ignored_paths = media.get("ignored_paths")
             if ignored_paths:
                 if ignored_paths.endswith(";"):
                     ignored_paths = ignored_paths[:-1]
-                self._ignored_paths = re.compile(r'%s' % re.sub(r';', r'|', ignored_paths))
-            ignored_files = media.get('ignored_files')
+                self._ignored_paths = re.compile(r"%s" % re.sub(r";", r"|", ignored_paths))
+            ignored_files = media.get("ignored_files")
             if ignored_files:
                 if ignored_files.endswith(";"):
                     ignored_files = ignored_files[:-1]
-                self._ignored_files = re.compile(r'%s' % re.sub(r';', r'|', ignored_files))
-            self._filesize_cover = media.get('filesize_cover')
-            movie_name_format = media.get('movie_name_format') or DEFAULT_MOVIE_FORMAT
-            movie_formats = movie_name_format.rsplit('/', 1)
+                self._ignored_files = re.compile(r"%s" % re.sub(r";", r"|", ignored_files))
+            self._filesize_cover = media.get("filesize_cover")
+            movie_name_format = media.get("movie_name_format") or DEFAULT_MOVIE_FORMAT
+            movie_formats = movie_name_format.rsplit("/", 1)
             if movie_formats:
                 self._movie_dir_rmt_format = movie_formats[0]
                 if len(movie_formats) > 1:
                     self._movie_file_rmt_format = movie_formats[-1]
-            tv_name_format = media.get('tv_name_format') or DEFAULT_TV_FORMAT
-            tv_formats = tv_name_format.rsplit('/', 2)
+            tv_name_format = media.get("tv_name_format") or DEFAULT_TV_FORMAT
+            tv_formats = tv_name_format.rsplit("/", 2)
             if tv_formats:
                 self._tv_dir_rmt_format = tv_formats[0]
                 if len(tv_formats) > 2:
                     self._tv_season_rmt_format = tv_formats[-2]
                     self._tv_file_rmt_format = tv_formats[-1]
-        self._default_rmt_mode = ModuleConf.RMT_MODES.get(Config().get_config('pt').get('rmt_mode', 'copy'),
-                                                           RmtMode.COPY)
+        self._default_rmt_mode = ModuleConf.RMT_MODES.get(
+            Config().get_config("pt").get("rmt_mode", "copy"), RmtMode.COPY
+        )
 
     def is_target_dir_path(self, path):
         """
@@ -203,7 +207,8 @@ class FileTransferService:
         else:
             dir_name, season_name, file_name = self.get_tv_dest_path(media)
             if (media.type == MediaType.TV and self._tv_category_flag) or (
-                    media.type == MediaType.ANIME and self._anime_category_flag):
+                media.type == MediaType.ANIME and self._anime_category_flag
+            ):
                 media_path = os.path.join(media_dest, media.category, dir_name)
             else:
                 media_path = os.path.join(media_dest, dir_name)
@@ -264,7 +269,7 @@ class FileTransferService:
                     dest_path = os.path.join(dest_path, dir_name)
                 files = PathUtils.get_dir_files(dest_path, RMT_MEDIAEXT)
                 if len(files) > 0 or len(fav_files) > 0:
-                    return [{'title': meta_info.title, 'year': meta_info.year}]
+                    return [{"title": meta_info.title, "year": meta_info.year}]
             return []
         else:
             dir_name, season_name, _ = self.get_tv_dest_path(meta_info)
@@ -368,9 +373,7 @@ class FileTransferService:
         new_dir = os.path.dirname(new_file)
         if not os.path.exists(new_dir) and sync_transfer_mode not in ModuleConf.REMOTE_RMT_MODES:
             os.makedirs(new_dir)
-        return self._engine.transfer_command(file_item=in_file,
-                                               target_file=new_file,
-                                               rmt_mode=sync_transfer_mode), ""
+        return self._engine.transfer_command(file_item=in_file, target_file=new_file, rmt_mode=sync_transfer_mode), ""
 
     def get_format_dict(self, media):
         """
@@ -401,11 +404,11 @@ class FileTransferService:
             "episode": media.get_episode_seqs(),
             "episode_title": StringUtils.clear_file_name(episode_title),
             "season_episode": "%s%s" % (media.get_season_item(), media.get_episode_items()),
-            "part": media.part
+            "part": media.part,
         }
         for i in media_format_dict:
             if not media_format_dict[i]:
-                media_format_dict[i] = '\t'
+                media_format_dict[i] = "\t"
         return media_format_dict
 
     def get_moive_dest_path(self, media_info):
@@ -464,20 +467,22 @@ class FileTransferService:
 
         return file_list, ""
 
-    def transfer_media(self,
-                        in_from,
-                        in_path,
-                        rmt_mode=None,
-                        files=None,
-                        target_dir=None,
-                        unknown_dir=None,
-                        tmdb_info=None,
-                        media_type=None,
-                        season=None,
-                        episode=None,
-                        min_filesize=None,
-                        udf_flag=False,
-                        root_path=False):
+    def transfer_media(
+        self,
+        in_from,
+        in_path,
+        rmt_mode=None,
+        files=None,
+        target_dir=None,
+        unknown_dir=None,
+        tmdb_info=None,
+        media_type=None,
+        season=None,
+        episode=None,
+        min_filesize=None,
+        udf_flag=False,
+        root_path=False,
+    ):
         """
         识别并转移一个文件、多个文件或者目录
         """
@@ -499,8 +504,8 @@ class FileTransferService:
             return self._finish_transfer(False, "输入路径错误")
         if not file_list:
             return self._finish_transfer(
-                False if bluray_disk_dir is None else True,
-                "目录下未找到媒体文件" if bluray_disk_dir is None else "")
+                False if bluray_disk_dir is None else True, "目录下未找到媒体文件" if bluray_disk_dir is None else ""
+            )
 
         # ---------- 阶段2：过滤 ----------
         file_list, msg = self.check_ignore(file_list=file_list)
@@ -525,18 +530,18 @@ class FileTransferService:
 
         # ---------- 阶段4：逐个文件转移 ----------
         result = self._transfer_files_loop(
-            Medias, in_from, in_path, rmt_mode, target_dir, unknown_dir,
-            bluray_disk_dir, episode, udf_flag)
+            Medias, in_from, in_path, rmt_mode, target_dir, unknown_dir, bluray_disk_dir, episode, udf_flag
+        )
 
         # ---------- 阶段5：后处理 ----------
-        return self._transfer_post_process(
-            result, in_from, in_path, rmt_mode, root_path)
+        return self._transfer_post_process(result, in_from, in_path, rmt_mode, root_path)
 
     # ---------- 转移流水线私有方法 ----------
 
     def _finish_transfer(self, status, message):
-        self.progress.update(ptype=ProgressKey.FileTransfer, value=100,
-                              text=f"转移{'成功' if status else '失败'}：{message}！")
+        self.progress.update(
+            ptype=ProgressKey.FileTransfer, value=100, text=f"转移{'成功' if status else '失败'}：{message}！"
+        )
         self.progress.end(ProgressKey.FileTransfer)
         return status, message
 
@@ -558,11 +563,13 @@ class FileTransferService:
                         if ms_str.isdigit():
                             now_filesize = int(ms_str) * 1024 * 1024
                     file_list = PathUtils.get_dir_files(
-                        in_path=in_path, episode_format=episode[0],
-                        exts=RMT_MEDIAEXT, filesize=now_filesize)
+                        in_path=in_path, episode_format=episode[0], exts=RMT_MEDIAEXT, filesize=now_filesize
+                    )
                     if not file_list:
-                        log.warn("【Rmt】%s 目录下未找到媒体文件，最小文件大小限制为 %s"
-                                 % (in_path, StringUtils.str_filesize(now_filesize)))
+                        log.warn(
+                            "【Rmt】%s 目录下未找到媒体文件，最小文件大小限制为 %s"
+                            % (in_path, StringUtils.str_filesize(now_filesize))
+                        )
             else:
                 if os.path.splitext(in_path)[-1].lower() not in RMT_MEDIAEXT:
                     log.warn("【Rmt】不支持的媒体文件格式，不处理：%s" % in_path)
@@ -586,8 +593,9 @@ class FileTransferService:
             return self.media.get_tmdb_info(mtype=media_type, tmdbid=download_info.TMDBID), media_type
         return None, None
 
-    def _transfer_files_loop(self, Medias, in_from, in_path, rmt_mode,
-                             target_dir, unknown_dir, bluray_disk_dir, episode, udf_flag):
+    def _transfer_files_loop(
+        self, Medias, in_from, in_path, rmt_mode, target_dir, unknown_dir, bluray_disk_dir, episode, udf_flag
+    ):
         failed_count = 0
         alert_count = 0
         alert_messages = []
@@ -599,65 +607,94 @@ class FileTransferService:
         for file_item, media in Medias.items():
             try:
                 total_count += 1
-                if not udf_flag and re.search(r'[./\s\[]+Sample[/\.\s\]]+', file_item, re.IGNORECASE):
+                if not udf_flag and re.search(r"[./\s\[]+Sample[/\.\s\]]+", file_item, re.IGNORECASE):
                     log.warn("【Rmt】%s 可能是预告片，跳过..." % file_item)
                     continue
 
                 file_name = os.path.basename(file_item)
-                self.progress.update(ptype=ProgressKey.FileTransfer,
-                                      value=round(total_count / len(Medias) * 100) - (0.5 / len(Medias) * 100),
-                                      text="正在处理：%s ..." % file_name)
+                self.progress.update(
+                    ptype=ProgressKey.FileTransfer,
+                    value=round(total_count / len(Medias) * 100) - (0.5 / len(Medias) * 100),
+                    text="正在处理：%s ..." % file_name,
+                )
 
                 reg_path = bluray_disk_dir if bluray_disk_dir else file_item
 
                 if not media or not media.tmdb_info or not media.get_title_string():
                     fc, ac, am = self._handle_unrecognized_file(
-                        file_item, reg_path, in_path, unknown_dir, rmt_mode,
-                        target_dir, udf_flag, alert_messages)
-                    failed_count += fc; alert_count += ac; alert_messages = am
+                        file_item, reg_path, in_path, unknown_dir, rmt_mode, target_dir, udf_flag, alert_messages
+                    )
+                    failed_count += fc
+                    alert_count += ac
+                    alert_messages = am
                     if udf_flag:
-                        return {"total_count": total_count, "failed_count": failed_count,
-                                "alert_count": alert_count, "alert_messages": alert_messages,
-                                "message_medias": message_medias, "success_flag": False,
-                                "error_message": "无法识别媒体信息"}
+                        return {
+                            "total_count": total_count,
+                            "failed_count": failed_count,
+                            "alert_count": alert_count,
+                            "alert_messages": alert_messages,
+                            "message_medias": message_medias,
+                            "success_flag": False,
+                            "error_message": "无法识别媒体信息",
+                        }
                     continue
 
                 media.size = os.path.getsize(file_item)
-                dist_path = target_dir or self.get_best_target_path(
-                    mtype=media.type, in_path=in_path, size=media.size)
+                dist_path = target_dir or self.get_best_target_path(mtype=media.type, in_path=in_path, size=media.size)
                 if not dist_path:
                     log.error("【Rmt】文件转移失败，目的路径不存在！")
-                    failed_count += 1; alert_count += 1
+                    failed_count += 1
+                    alert_count += 1
                     alert_messages.append("目的路径不存在")
                     continue
                 if not os.path.exists(dist_path) and rmt_mode not in ModuleConf.REMOTE_RMT_MODES:
-                    return {"total_count": total_count, "failed_count": failed_count,
-                            "alert_count": alert_count, "alert_messages": alert_messages,
-                            "message_medias": message_medias, "success_flag": False,
-                            "error_message": f"目录不存在：{dist_path}"}
+                    return {
+                        "total_count": total_count,
+                        "failed_count": failed_count,
+                        "alert_count": alert_count,
+                        "alert_messages": alert_messages,
+                        "message_medias": message_medias,
+                        "success_flag": False,
+                        "error_message": f"目录不存在：{dist_path}",
+                    }
 
-                fc, ac, am, exist_filenum, new_file, ret_file_path, ret_dir_path = \
-                    self._do_transfer_file(file_item, media, dist_path, bluray_disk_dir,
-                                           rmt_mode, reg_path, target_dir, udf_flag, alert_messages)
-                failed_count += fc; alert_count += ac; alert_messages = am
+                fc, ac, am, exist_filenum, new_file, ret_file_path, ret_dir_path = self._do_transfer_file(
+                    file_item,
+                    media,
+                    dist_path,
+                    bluray_disk_dir,
+                    rmt_mode,
+                    reg_path,
+                    target_dir,
+                    udf_flag,
+                    alert_messages,
+                )
+                failed_count += fc
+                alert_count += ac
+                alert_messages = am
                 if fc > 0:
                     continue
 
                 file_ext = os.path.splitext(file_item)[-1]
-                media.set_tmdb_info(self.media.get_tmdb_info(
-                    mtype=media.type, tmdbid=media.tmdb_id, append_to_response="all"))
+                media.set_tmdb_info(
+                    self.media.get_tmdb_info(mtype=media.type, tmdbid=media.tmdb_id, append_to_response="all")
+                )
                 out_path = new_file if not bluray_disk_dir else ret_dir_path
 
                 self.transfer_repo.insert_transfer_history(
-                    in_from=in_from, rmt_mode=rmt_mode, in_path=reg_path,
-                    out_path=out_path, dest=dist_path, media_info=media)
+                    in_from=in_from,
+                    rmt_mode=rmt_mode,
+                    in_path=reg_path,
+                    out_path=out_path,
+                    dest=dist_path,
+                    media_info=media,
+                )
 
                 if isinstance(episode[1], bool) and episode[1]:
                     self.update_transfer_unknown_state(file_item)
 
                 if media.type == MediaType.MOVIE:
-                    self.message.send_transfer_movie_message(
-                        in_from, media, exist_filenum, self._movie_category_flag)
+                    self.message.send_transfer_movie_message(in_from, media, exist_filenum, self._movie_category_flag)
                 else:
                     message_key = "%s-%s" % (media.get_title_string(), media.get_season_string())
                     if not message_medias.get(message_key):
@@ -666,34 +703,59 @@ class FileTransferService:
                         message_medias[message_key].total_episodes += media.total_episodes
                         message_medias[message_key].size += media.size
 
-                self.scraper.gen_scraper_files(media=media,
-                                                dir_path=ret_dir_path,
-                                                file_name=os.path.basename(ret_file_path or ret_dir_path or ""),
-                                                file_ext=file_ext, rmt_mode=rmt_mode)
+                self.scraper.gen_scraper_files(
+                    media=media,
+                    dir_path=ret_dir_path,
+                    file_name=os.path.basename(ret_file_path or ret_dir_path or ""),
+                    file_ext=file_ext,
+                    rmt_mode=rmt_mode,
+                )
 
-                self.progress.update(ptype=ProgressKey.FileTransfer,
-                                      value=round(total_count / len(Medias) * 100),
-                                      text="%s 转移完成" % file_name)
+                self.progress.update(
+                    ptype=ProgressKey.FileTransfer,
+                    value=round(total_count / len(Medias) * 100),
+                    text="%s 转移完成" % file_name,
+                )
                 if rmt_mode == RmtMode.MOVE:
                     sleep(round(random.uniform(0, 1), 1))
 
-                self.eventmanager.send_event(EventType.SubtitleDownload, {
-                    "media_info": media.to_dict(), "file": ret_file_path,
-                    "file_ext": file_ext, "bluray": True if bluray_disk_dir else False})
-                self.eventmanager.send_event(EventType.TransferFinished, {
-                    "in_path": in_path, "file": file_item, "target_path": out_path,
-                    "dest": dist_path, "media_info": media.to_dict()})
+                self.eventmanager.send_event(
+                    EventType.SubtitleDownload,
+                    {
+                        "media_info": media.to_dict(),
+                        "file": ret_file_path,
+                        "file_ext": file_ext,
+                        "bluray": True if bluray_disk_dir else False,
+                    },
+                )
+                self.eventmanager.send_event(
+                    EventType.TransferFinished,
+                    {
+                        "in_path": in_path,
+                        "file": file_item,
+                        "target_path": out_path,
+                        "dest": dist_path,
+                        "media_info": media.to_dict(),
+                    },
+                )
 
             except Exception as err:
                 ExceptionUtils.exception_traceback(err)
                 log.error("【Rmt】文件转移时发生错误：%s" % str(err))
 
-        return {"total_count": total_count, "failed_count": failed_count,
-                "alert_count": alert_count, "alert_messages": alert_messages,
-                "message_medias": message_medias, "success_flag": success_flag, "error_message": error_message}
+        return {
+            "total_count": total_count,
+            "failed_count": failed_count,
+            "alert_count": alert_count,
+            "alert_messages": alert_messages,
+            "message_medias": message_medias,
+            "success_flag": success_flag,
+            "error_message": error_message,
+        }
 
-    def _handle_unrecognized_file(self, file_item, reg_path, in_path, unknown_dir,
-                                   rmt_mode, target_dir, udf_flag, alert_messages):
+    def _handle_unrecognized_file(
+        self, file_item, reg_path, in_path, unknown_dir, rmt_mode, target_dir, udf_flag, alert_messages
+    ):
         file_name = os.path.basename(file_item)
         error = "无法识别媒体信息"
         log.warn("【Rmt】%s %s！" % (file_name, error))
@@ -715,8 +777,9 @@ class FileTransferService:
             log.error("【Rmt】%s %s！" % (file_name, error))
         return 1, 1 if insert else 0, alert_messages
 
-    def _do_transfer_file(self, file_item, media, dist_path, bluray_disk_dir,
-                           rmt_mode, reg_path, target_dir, udf_flag, alert_messages):
+    def _do_transfer_file(
+        self, file_item, media, dist_path, bluray_disk_dir, rmt_mode, reg_path, target_dir, udf_flag, alert_messages
+    ):
         dir_exist_flag, ret_dir_path, file_exist_flag, ret_file_path = self._is_media_exists(dist_path, media)
         file_ext = os.path.splitext(file_item)[-1]
         new_file = ret_file_path
@@ -735,12 +798,19 @@ class FileTransferService:
                         base, _ = os.path.splitext(ret_file_path)
                         new_file = "%s%s" % (base, file_ext)
                         log.info(f"【Rmt】文件 {old} 已存在，覆盖为 {new_file} ...")
-                        ret = self._engine.transfer_file(file_item=file_item, new_file=new_file,
-                                                          rmt_mode=rmt_mode, over_flag=True, old_file=old)
+                        ret = self._engine.transfer_file(
+                            file_item=file_item, new_file=new_file, rmt_mode=rmt_mode, over_flag=True, old_file=old
+                        )
                         if ret != 0:
-                            return self._record_fail(file_item, reg_path, target_dir, rmt_mode,
-                                                     udf_flag, alert_messages,
-                                                     "文件转移失败，错误码 %s" % ret)
+                            return self._record_fail(
+                                file_item,
+                                reg_path,
+                                target_dir,
+                                rmt_mode,
+                                udf_flag,
+                                alert_messages,
+                                "文件转移失败，错误码 %s" % ret,
+                            )
                         return 0, 0, alert_messages, exist_filenum, new_file, ret_file_path, ret_dir_path
                     else:
                         log.warn("【Rmt】文件 %s 已存在" % ret_file_path)
@@ -750,9 +820,15 @@ class FileTransferService:
                     return 1, 0, alert_messages, exist_filenum, new_file, ret_file_path, ret_dir_path
         else:
             if not ret_dir_path:
-                return self._record_fail(file_item, reg_path, target_dir, rmt_mode,
-                                         udf_flag, alert_messages,
-                                         "识别失败，无法从文件名中识别出季集信息")
+                return self._record_fail(
+                    file_item,
+                    reg_path,
+                    target_dir,
+                    rmt_mode,
+                    udf_flag,
+                    alert_messages,
+                    "识别失败，无法从文件名中识别出季集信息",
+                )
             elif rmt_mode not in ModuleConf.REMOTE_RMT_MODES:
                 os.makedirs(ret_dir_path)
 
@@ -760,18 +836,25 @@ class FileTransferService:
         if bluray_disk_dir:
             ret = self._engine.transfer_bluray_dir(file_item, ret_dir_path, rmt_mode)
         elif not ret_file_path:
-            return self._record_fail(file_item, reg_path, target_dir, rmt_mode,
-                                     udf_flag, alert_messages,
-                                     "识别失败，无法从文件名中识别出集数")
+            return self._record_fail(
+                file_item,
+                reg_path,
+                target_dir,
+                rmt_mode,
+                udf_flag,
+                alert_messages,
+                "识别失败，无法从文件名中识别出集数",
+            )
         else:
             ret_file_path = "%s%s" % (ret_file_path, file_ext)
             new_file = ret_file_path
-            ret = self._engine.transfer_file(file_item=file_item, new_file=ret_file_path,
-                                              rmt_mode=rmt_mode, over_flag=False)
+            ret = self._engine.transfer_file(
+                file_item=file_item, new_file=ret_file_path, rmt_mode=rmt_mode, over_flag=False
+            )
         if ret and ret != 0:
-            return self._record_fail(file_item, reg_path, target_dir, rmt_mode,
-                                     udf_flag, alert_messages,
-                                     "文件转移失败，错误码 %s" % ret)
+            return self._record_fail(
+                file_item, reg_path, target_dir, rmt_mode, udf_flag, alert_messages, "文件转移失败，错误码 %s" % ret
+            )
         return 0, 0, alert_messages, exist_filenum, new_file, ret_file_path, ret_dir_path
 
     def _record_fail(self, file_item, reg_path, target_dir, rmt_mode, udf_flag, alert_messages, msg):
@@ -797,14 +880,19 @@ class FileTransferService:
         log.info("【Rmt】%s 处理完成，总数：%s，失败：%s" % (in_path, total_count, failed_count))
         if alert_count > 0:
             reason = "、".join(alert_messages)
-            self.eventmanager.send_event(EventType.TransferFail, {
-                "path": in_path, "count": alert_count, "reason": reason})
+            self.eventmanager.send_event(
+                EventType.TransferFail, {"path": in_path, "count": alert_count, "reason": reason}
+            )
             self.message.send_transfer_fail_message(in_path, alert_count, reason)
         elif failed_count == 0:
-            if rmt_mode == RmtMode.MOVE and os.path.exists(in_path) \
-                    and os.path.isdir(in_path) and not root_path \
-                    and not PathUtils.get_dir_files(in_path=in_path, exts=RMT_MEDIAEXT) \
-                    and not PathUtils.get_dir_files(in_path=in_path, exts=['.!qb', '.part']):
+            if (
+                rmt_mode == RmtMode.MOVE
+                and os.path.exists(in_path)
+                and os.path.isdir(in_path)
+                and not root_path
+                and not PathUtils.get_dir_files(in_path=in_path, exts=RMT_MEDIAEXT)
+                and not PathUtils.get_dir_files(in_path=in_path, exts=[".!qb", ".part"])
+            ):
                 log.info("【Rmt】目录下已无媒体文件，移动模式下删除目录：%s" % in_path)
                 shutil.rmtree(in_path)
         return self._finish_transfer(success_flag, error_message)
@@ -834,10 +922,7 @@ class FileTransferService:
         for path in PathUtils.get_dir_level1_medias(s_path, RMT_MEDIAEXT):
             if PathUtils.is_invalid_path(path):
                 continue
-            ret, ret_msg = self.transfer_media(in_from=SyncType.MAN,
-                                               in_path=path,
-                                               target_dir=t_path,
-                                               rmt_mode=rmt_mode)
+            ret, ret_msg = self.transfer_media(in_from=SyncType.MAN, in_path=path, target_dir=t_path, rmt_mode=rmt_mode)
             if not ret:
                 print("【Rmt】%s 处理失败：%s" % (path, ret_msg))
 
@@ -845,9 +930,7 @@ class FileTransferService:
         """
         查询转移历史记录
         """
-        return self.transfer_repo.get_transfer_info_by(tmdbid=tmdbid,
-                                                       season=season,
-                                                       season_episode=season_episode)
+        return self.transfer_repo.get_transfer_info_by(tmdbid=tmdbid, season=season, season_episode=season_episode)
 
     def get_transfer_info_by_id(self, logid):
         """
@@ -883,108 +966,113 @@ class FileTransferService:
                     "title": transinfo.TITLE,
                     "year": transinfo.YEAR,
                     "tmdbid": transinfo.TMDBID,
-                    "season_episode": transinfo.SEASON_EPISODE
+                    "season_episode": transinfo.SEASON_EPISODE,
                 }
-                self.delete_transfer_blacklist(
-                    "%s/%s" % (source_path, source_filename))
+                self.delete_transfer_blacklist("%s/%s" % (source_path, source_filename))
                 dest = transinfo.DEST
                 dest_path = transinfo.DEST_PATH
                 dest_filename = transinfo.DEST_FILENAME
                 if flag in ["del_source", "del_all"]:
-                    del_flag, del_msg = self.delete_media_file(
-                        source_path, source_filename)
+                    del_flag, del_msg = self.delete_media_file(source_path, source_filename)
                     if not del_flag:
                         log.error(del_msg)
                     else:
                         log.info(del_msg)
                         from app.plugin_framework.event_compat import EventManager
-                        EventManager().send_event(EventType.SourceFileDeleted, {
-                            "media_info": media_info,
-                            "path": source_path,
-                            "filename": source_filename
-                        })
+
+                        EventManager().send_event(
+                            EventType.SourceFileDeleted,
+                            {"media_info": media_info, "path": source_path, "filename": source_filename},
+                        )
                 if flag in ["del_dest", "del_all"]:
                     if dest_path and dest_filename:
-                        del_flag, del_msg = self.delete_media_file(
-                            dest_path, dest_filename)
+                        del_flag, del_msg = self.delete_media_file(dest_path, dest_filename)
                         if not del_flag:
                             log.error(del_msg)
                         else:
                             log.info(del_msg)
                             from app.plugin_framework.event_compat import EventManager
-                            EventManager().send_event(EventType.LibraryFileDeleted, {
-                                "media_info": media_info,
-                                "path": dest_path,
-                                "filename": dest_filename
-                            })
+
+                            EventManager().send_event(
+                                EventType.LibraryFileDeleted,
+                                {"media_info": media_info, "path": dest_path, "filename": dest_filename},
+                            )
                     else:
                         meta_info = MetaInfo(title=source_filename)
                         meta_info.title = transinfo.TITLE
                         meta_info.category = transinfo.CATEGORY
                         meta_info.year = transinfo.YEAR
                         if transinfo.SEASON_EPISODE:
-                            meta_info.begin_season = int(
-                                str(transinfo.SEASON_EPISODE).replace("S", ""))
+                            meta_info.begin_season = int(str(transinfo.SEASON_EPISODE).replace("S", ""))
                         if MediaType.MOVIE.value == transinfo.TYPE:
                             meta_info.type = MediaType.MOVIE
                         else:
                             meta_info.type = MediaType.TV
-                        dest_path = self.get_dest_path_by_info(
-                            dest=dest, meta_info=meta_info)
+                        dest_path = self.get_dest_path_by_info(dest=dest, meta_info=meta_info)
                         if dest_path and dest_path.find(meta_info.title) != -1:
                             rm_parent_dir = False
                             if not meta_info.get_season_list():
                                 try:
                                     import shutil
+
                                     shutil.rmtree(dest_path)
                                     from app.plugin_framework.event_compat import EventManager
-                                    EventManager().send_event(EventType.LibraryFileDeleted, {
-                                        "media_info": media_info,
-                                        "path": dest_path
-                                    })
+
+                                    EventManager().send_event(
+                                        EventType.LibraryFileDeleted, {"media_info": media_info, "path": dest_path}
+                                    )
                                 except Exception as e:
                                     from app.utils import ExceptionUtils
+
                                     ExceptionUtils.exception_traceback(e)
                             elif not meta_info.get_episode_string():
                                 try:
                                     import shutil
+
                                     shutil.rmtree(dest_path)
                                     from app.plugin_framework.event_compat import EventManager
-                                    EventManager().send_event(EventType.LibraryFileDeleted, {
-                                        "media_info": media_info,
-                                        "path": dest_path
-                                    })
+
+                                    EventManager().send_event(
+                                        EventType.LibraryFileDeleted, {"media_info": media_info, "path": dest_path}
+                                    )
                                 except Exception as e:
                                     from app.utils import ExceptionUtils
+
                                     ExceptionUtils.exception_traceback(e)
                                 rm_parent_dir = True
                             else:
                                 for dest_file in PathUtils.get_dir_files(dest_path):
-                                    file_meta_info = MetaInfo(
-                                        os.path.basename(dest_file))
+                                    file_meta_info = MetaInfo(os.path.basename(dest_file))
                                     if file_meta_info.get_episode_list() and set(
-                                            file_meta_info.get_episode_list()
+                                        file_meta_info.get_episode_list()
                                     ).issubset(set(meta_info.get_episode_list())):
                                         try:
                                             os.remove(dest_file)
                                             from app.plugin_framework.event_compat import EventManager
-                                            EventManager().send_event(EventType.LibraryFileDeleted, {
-                                                "media_info": media_info,
-                                                "path": os.path.dirname(dest_file),
-                                                "filename": os.path.basename(dest_file)
-                                            })
+
+                                            EventManager().send_event(
+                                                EventType.LibraryFileDeleted,
+                                                {
+                                                    "media_info": media_info,
+                                                    "path": os.path.dirname(dest_file),
+                                                    "filename": os.path.basename(dest_file),
+                                                },
+                                            )
                                         except Exception as e:
                                             from app.utils import ExceptionUtils
-                                            ExceptionUtils.exception_traceback(
-                                                e)
+
+                                            ExceptionUtils.exception_traceback(e)
                                 rm_parent_dir = True
-                            if rm_parent_dir \
-                                    and not PathUtils.get_dir_files(os.path.dirname(dest_path), exts=RMT_MEDIAEXT):
+                            if rm_parent_dir and not PathUtils.get_dir_files(
+                                os.path.dirname(dest_path), exts=RMT_MEDIAEXT
+                            ):
                                 try:
                                     import shutil
+
                                     shutil.rmtree(os.path.dirname(dest_path))
                                 except Exception as e:
                                     from app.utils import ExceptionUtils
+
                                     ExceptionUtils.exception_traceback(e)
 
     @staticmethod
@@ -1058,4 +1146,3 @@ class FileTransferService:
         查询未知转移记录
         """
         return self.transfer_repo.get_transfer_unknown_paths_by_page(search=search, page=page, rownum=rownum)
-

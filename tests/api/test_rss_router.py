@@ -1,6 +1,7 @@
 """
 测试 FastAPI RSS Router
 """
+
 from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
@@ -27,12 +28,9 @@ class TestRssRouter:
     # ------------------------------------------------------------------
     def test_add_rss_media(self):
         mock_svc = self._mock_rss()
-        mock_svc.add_rss_media.return_value = MagicMock(
-            code=0, msg="添加成功", rssid="123")
+        mock_svc.add_rss_media.return_value = MagicMock(code=0, msg="添加成功", rssid="123")
         try:
-            resp = client.post("/api/rss/add", json={
-                "name": "Test Movie", "year": "2024", "type": "MOV"
-            })
+            resp = client.post("/api/rss/add", json={"name": "Test Movie", "year": "2024", "type": "MOV"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["rssid"] == "123"
@@ -41,12 +39,9 @@ class TestRssRouter:
 
     def test_add_rss_media_fail(self):
         mock_svc = self._mock_rss()
-        mock_svc.add_rss_media.return_value = MagicMock(
-            code=-1, msg="添加失败", rssid=None)
+        mock_svc.add_rss_media.return_value = MagicMock(code=-1, msg="添加失败", rssid=None)
         try:
-            resp = client.post("/api/rss/add", json={
-                "name": "Test", "type": "MOV"
-            })
+            resp = client.post("/api/rss/add", json={"name": "Test", "type": "MOV"})
             assert resp.status_code == 200
             assert resp.json()["code"] == -1
         finally:
@@ -72,9 +67,7 @@ class TestRssRouter:
         mock_svc = self._mock_rss()
         mock_svc.re_rss_history.return_value = (0, "重新订阅成功")
         try:
-            resp = client.post("/api/rss/history/redo", json={
-                "rssid": "1", "type": "MOV"
-            })
+            resp = client.post("/api/rss/history/redo", json={"rssid": "1", "type": "MOV"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["msg"] == "重新订阅成功"
@@ -85,9 +78,7 @@ class TestRssRouter:
         mock_svc = self._mock_rss()
         mock_svc.re_rss_history.return_value = (-1, "记录不存在")
         try:
-            resp = client.post("/api/rss/history/redo", json={
-                "rssid": "1", "type": "MOV"
-            })
+            resp = client.post("/api/rss/history/redo", json={"rssid": "1", "type": "MOV"})
             assert resp.status_code == 200
             assert resp.json()["code"] == -1
         finally:
@@ -99,9 +90,7 @@ class TestRssRouter:
     def test_refresh_rss(self):
         mock_svc = self._mock_rss()
         try:
-            resp = client.post("/api/rss/refresh", json={
-                "type": "MOV", "rssid": "1", "page": "movie"
-            })
+            resp = client.post("/api/rss/refresh", json={"type": "MOV", "rssid": "1", "page": "movie"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["data"] == "movie"
@@ -114,10 +103,9 @@ class TestRssRouter:
     def test_remove_rss_media(self):
         mock_svc = self._mock_rss()
         try:
-            resp = client.post("/api/rss/remove", json={
-                "name": "Test", "type": "MOV", "year": "2024",
-                "rssid": "1", "tmdbid": "123"
-            })
+            resp = client.post(
+                "/api/rss/remove", json={"name": "Test", "type": "MOV", "year": "2024", "rssid": "1", "tmdbid": "123"}
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             mock_svc.remove_rss_media.assert_called_once()
@@ -129,12 +117,9 @@ class TestRssRouter:
     # ------------------------------------------------------------------
     def test_rss_detail(self):
         mock_svc = self._mock_rss()
-        mock_svc.get_rss_detail.return_value = MagicMock(
-            detail={"name": "Test"})
+        mock_svc.get_rss_detail.return_value = MagicMock(detail={"name": "Test"})
         try:
-            resp = client.post("/api/rss/detail", json={
-                "rssid": "1", "rsstype": "MOV"
-            })
+            resp = client.post("/api/rss/detail", json={"rssid": "1", "rsstype": "MOV"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["data"]["name"] == "Test"
@@ -145,9 +130,7 @@ class TestRssRouter:
         mock_svc = self._mock_rss()
         mock_svc.get_rss_detail.return_value = None
         try:
-            resp = client.post("/api/rss/detail", json={
-                "rssid": "1", "rsstype": "MOV"
-            })
+            resp = client.post("/api/rss/detail", json={"rssid": "1", "rsstype": "MOV"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
         finally:
@@ -160,9 +143,7 @@ class TestRssRouter:
         mock_svc = self._mock_rss()
         mock_svc.get_default_rss_setting.return_value = {"quality": "1080p"}
         try:
-            resp = client.post("/api/rss/default_setting", json={
-                "mtype": "TV"
-            })
+            resp = client.post("/api/rss/default_setting", json={"mtype": "TV"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["data"]["quality"] == "1080p"
@@ -173,9 +154,7 @@ class TestRssRouter:
         mock_svc = self._mock_rss()
         mock_svc.get_default_rss_setting.return_value = None
         try:
-            resp = client.post("/api/rss/default_setting", json={
-                "mtype": "TV"
-            })
+            resp = client.post("/api/rss/default_setting", json={"mtype": "TV"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
         finally:
@@ -187,19 +166,22 @@ class TestRssRouter:
     def test_save_default_rss_setting(self):
         mock_svc = self._mock_rss()
         try:
-            resp = client.post("/api/rss/default_setting/save", json={
-                "mtype": "MOV",
-                "over_edition": "0",
-                "restype": "BluRay",
-                "pix": "1080p",
-                "team": "",
-                "rule": "",
-                "include": "",
-                "exclude": "",
-                "download_setting": "",
-                "rss_sites": [],
-                "search_sites": [],
-            })
+            resp = client.post(
+                "/api/rss/default_setting/save",
+                json={
+                    "mtype": "MOV",
+                    "over_edition": "0",
+                    "restype": "BluRay",
+                    "pix": "1080p",
+                    "team": "",
+                    "rule": "",
+                    "include": "",
+                    "exclude": "",
+                    "download_setting": "",
+                    "rss_sites": [],
+                    "search_sites": [],
+                },
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -208,19 +190,22 @@ class TestRssRouter:
     def test_save_default_rss_setting_tv(self):
         mock_svc = self._mock_rss()
         try:
-            resp = client.post("/api/rss/default_setting/save", json={
-                "mtype": "TV",
-                "over_edition": "1",
-                "restype": "WEB-DL",
-                "pix": "4k",
-                "team": "",
-                "rule": "",
-                "include": "",
-                "exclude": "",
-                "download_setting": "",
-                "rss_sites": ["Site1"],
-                "search_sites": ["Site2"],
-            })
+            resp = client.post(
+                "/api/rss/default_setting/save",
+                json={
+                    "mtype": "TV",
+                    "over_edition": "1",
+                    "restype": "WEB-DL",
+                    "pix": "4k",
+                    "team": "",
+                    "rule": "",
+                    "include": "",
+                    "exclude": "",
+                    "download_setting": "",
+                    "rss_sites": ["Site1"],
+                    "search_sites": ["Site2"],
+                },
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:

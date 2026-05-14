@@ -35,8 +35,7 @@ class TestCheckSiteAttr:
         assert dto.site_hr is False
 
     def test_all_attrs(self, svc):
-        svc._site_conf.get_grap_conf.return_value = {
-            "FREE": True, "2XFREE": True, "HR": True}
+        svc._site_conf.get_grap_conf.return_value = {"FREE": True, "2XFREE": True, "HR": True}
         dto = svc.check_site_attr("http://site.com")
         assert dto.site_free is True
         assert dto.site_2xfree is True
@@ -90,28 +89,29 @@ class TestUpdateSite:
     def test_add_success(self, svc):
         svc._sites.get_sites_by_name.return_value = []
         svc._sites.add_site.return_value = 0
-        dto = svc.update_site({
-            "site_name": "New", "site_pri": 1,
-            "site_rssurl": "", "site_signurl": "",
-            "site_cookie": "", "site_note": {},
-            "site_include": "D"
-        })
+        dto = svc.update_site(
+            {
+                "site_name": "New",
+                "site_pri": 1,
+                "site_rssurl": "",
+                "site_signurl": "",
+                "site_cookie": "",
+                "site_note": {},
+                "site_include": "D",
+            }
+        )
         assert dto.code == 0
 
     def test_duplicate_name(self, svc):
         svc._sites.get_sites_by_name.return_value = [{"id": 2, "name": "New"}]
-        dto = svc.update_site({
-            "site_id": "1", "site_name": "New"
-        })
+        dto = svc.update_site({"site_id": "1", "site_name": "New"})
         assert dto.code == 400
         assert dto.msg == "站点名称重复"
 
     def test_update_not_found(self, svc):
         svc._sites.get_sites_by_name.return_value = []
         svc._sites.get_sites.return_value = {}
-        dto = svc.update_site({
-            "site_id": "99", "site_name": "New"
-        })
+        dto = svc.update_site({"site_id": "99", "site_name": "New"})
         assert dto.code == 400
         assert dto.msg == "站点不存在"
 
@@ -119,12 +119,18 @@ class TestUpdateSite:
         svc._sites.get_sites_by_name.return_value = [{"id": 1, "name": "Old"}]
         svc._sites.get_sites.return_value = {"id": 1, "name": "Old"}
         svc._sites.update_site.return_value = 1
-        dto = svc.update_site({
-            "site_id": "1", "site_name": "New",
-            "site_pri": 1, "site_rssurl": "",
-            "site_signurl": "", "site_cookie": "",
-            "site_note": None, "site_include": ""
-        })
+        dto = svc.update_site(
+            {
+                "site_id": "1",
+                "site_name": "New",
+                "site_pri": 1,
+                "site_rssurl": "",
+                "site_signurl": "",
+                "site_cookie": "",
+                "site_note": None,
+                "site_include": "",
+            }
+        )
         assert dto.code == 1
         svc._site_user_info.update_site_name.assert_called_once_with("New", "Old")
 
@@ -132,12 +138,18 @@ class TestUpdateSite:
         svc._sites.get_sites_by_name.return_value = [{"id": 1, "name": "Same"}]
         svc._sites.get_sites.return_value = {"id": 1, "name": "Same"}
         svc._sites.update_site.return_value = 0
-        dto = svc.update_site({
-            "site_id": "1", "site_name": "Same",
-            "site_pri": 1, "site_rssurl": "",
-            "site_signurl": "", "site_cookie": "",
-            "site_note": None, "site_include": ""
-        })
+        dto = svc.update_site(
+            {
+                "site_id": "1",
+                "site_name": "Same",
+                "site_pri": 1,
+                "site_rssurl": "",
+                "site_signurl": "",
+                "site_cookie": "",
+                "site_note": None,
+                "site_include": "",
+            }
+        )
         assert dto.code == 0
         svc._site_user_info.update_site_name.assert_not_called()
 
@@ -145,49 +157,38 @@ class TestUpdateSite:
 class TestUpdateSiteCookieUa:
     def test_ok(self, svc):
         svc.update_site_cookie_ua("1", "cookie", "ua")
-        svc._sites.update_site_cookie.assert_called_once_with(
-            siteid="1", cookie="cookie", ua="ua")
+        svc._sites.update_site_cookie.assert_called_once_with(siteid="1", cookie="cookie", ua="ua")
 
 
 class TestGetSiteActivity:
     def test_ok(self, svc):
-        svc._site_user_info.get_pt_site_activity_history.return_value = [
-            ["time", "upload"], [1, 2]
-        ]
+        svc._site_user_info.get_pt_site_activity_history.return_value = [["time", "upload"], [1, 2]]
         dto = svc.get_site_activity("s1")
         assert dto.dataset == [["time", "upload"], [1, 2]]
 
 
 class TestGetSiteHistory:
     def test_ok(self, svc):
-        svc._site_user_info.get_pt_site_statistics_history.return_value = (
-            None, None, ["s1"], [100], [200]
-        )
+        svc._site_user_info.get_pt_site_statistics_history.return_value = (None, None, ["s1"], [100], [200])
         dto = svc.get_site_history(days=7)
         assert dto.dataset == [["site", "upload", "download"], ["s1", 100, 200]]
 
 
 class TestGetSiteSeedingInfo:
     def test_ok(self, svc):
-        svc._site_user_info.get_pt_site_seeding_info.return_value = {
-            "seeding_info": [[1, "10GB"]]
-        }
+        svc._site_user_info.get_pt_site_seeding_info.return_value = {"seeding_info": [[1, "10GB"]]}
         dto = svc.get_site_seeding_info("s1")
         assert dto.dataset == [["seeders", "size"], [1, "10GB"]]
 
 
 class TestGetSiteUserStatistics:
     def test_raw(self, svc):
-        svc._site_user_info.get_site_user_statistics.return_value = [
-            {"site": "s1", "url": "http://x.com"}
-        ]
+        svc._site_user_info.get_site_user_statistics.return_value = [{"site": "s1", "url": "http://x.com"}]
         result = svc.get_site_user_statistics()
         assert len(result) == 1
 
     def test_mteam_fix(self, svc):
-        svc._site_user_info.get_site_user_statistics.return_value = [
-            {"site": "mt", "url": "https://m-team.io"}
-        ]
+        svc._site_user_info.get_site_user_statistics.return_value = [{"site": "mt", "url": "https://m-team.io"}]
         svc._sites.get_sites.return_value = {"signurl": "https://xp.m-team.io"}
         result = svc.get_site_user_statistics()
         assert result[0]["url"] == "https://xp.m-team.io"
@@ -209,9 +210,7 @@ class TestGetSiteUserStatistics:
         assert result[0]["site"] == "b"
 
     def test_site_hash(self, svc):
-        svc._site_user_info.get_site_user_statistics.return_value = [
-            {"site": "s1"}
-        ]
+        svc._site_user_info.get_site_user_statistics.return_value = [{"site": "s1"}]
         svc._string_utils.md5_hash.return_value = "abc123"
         result = svc.get_site_user_statistics(site_hash="Y")
         assert result[0]["site_hash"] == "abc123"
@@ -241,13 +240,13 @@ class TestTestSite:
 class TestSetCaptchaCode:
     def test_ok(self, svc):
         svc.set_captcha_code("code1", "val1")
-        svc._site_cookie.set_code.assert_called_once_with(
-            code="code1", value="val1")
+        svc._site_cookie.set_code.assert_called_once_with(code="code1", value="val1")
 
 
 class TestListSiteResources:
     def test_success(self, svc):
         from app.schemas.indexer import IndexerResourcesResultDTO
+
         svc._indexer_service.list_resources.return_value = IndexerResourcesResultDTO(
             success=True, data=[{"id": 1}], msg=""
         )
@@ -257,6 +256,7 @@ class TestListSiteResources:
 
     def test_failure(self, svc):
         from app.schemas.indexer import IndexerResourcesResultDTO
+
         svc._indexer_service.list_resources.return_value = IndexerResourcesResultDTO(
             success=False, data=None, msg="无法连接到站点"
         )

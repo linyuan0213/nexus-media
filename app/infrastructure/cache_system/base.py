@@ -1,6 +1,7 @@
 """
 缓存系统基础接口定义
 """
+
 import time
 from abc import ABC, abstractmethod
 from typing import Any
@@ -71,7 +72,7 @@ class CacheEntry:
 
     def get_remaining_ttl(self) -> int:
         """获取剩余生存时间
-        
+
         Returns:
             >=0: 剩余秒数
             -1: 永不过期

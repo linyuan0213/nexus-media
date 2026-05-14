@@ -2,6 +2,7 @@
 API Key 领域 Repository 适配器
 将底层 APIKeyRepository 适配为领域接口
 """
+
 from typing import Any
 
 from app.db.repositories.apikey_repository import APIKeyLogRepository, APIKeyRepository
@@ -35,13 +36,18 @@ class APIKeyRepositoryAdapter(IAPIKeyRepository):
         rows, total = self._repo.list_keys(page, page_size)
         return [e for e in [APIKeyEntity.from_orm(r) for r in rows] if e is not None], total
 
-    def create_key(self, name: str, key_value: str, key_prefix: str,
-                   status: int = 1, expires_at: Any | None = None,
-                   created_by: int | None = None,
-                   description: str = "",
-                   raw_key: str | None = None) -> APIKeyEntity:
-        row = self._repo.create_key(name, key_value, key_prefix, status,
-                                    expires_at, created_by, description, raw_key)
+    def create_key(
+        self,
+        name: str,
+        key_value: str,
+        key_prefix: str,
+        status: int = 1,
+        expires_at: Any | None = None,
+        created_by: int | None = None,
+        description: str = "",
+        raw_key: str | None = None,
+    ) -> APIKeyEntity:
+        row = self._repo.create_key(name, key_value, key_prefix, status, expires_at, created_by, description, raw_key)
         return APIKeyEntity.from_orm(row)
 
     def update_key(self, key_id: int, **kwargs) -> bool:
@@ -63,21 +69,38 @@ class APIKeyLogRepositoryAdapter(IAPIKeyLogRepository):
     def __init__(self, repo: APIKeyLogRepository | None = None):
         self._repo = repo or APIKeyLogRepository()
 
-    def create_log(self, api_key_id: int, request_id: str,
-                   request_name: str = "", source_ip: str = "",
-                   user_agent: str = "", request_path: str = "",
-                   request_method: str = "", status: int = 1,
-                   response_code: int | None = None,
-                   error_message: str = "",
-                   response_time_ms: int | None = None) -> APIKeyLogEntity:
-        row = self._repo.create_log(api_key_id, request_id, request_name,
-                                    source_ip, user_agent, request_path,
-                                    request_method, status, response_code,
-                                    error_message, response_time_ms)
+    def create_log(
+        self,
+        api_key_id: int,
+        request_id: str,
+        request_name: str = "",
+        source_ip: str = "",
+        user_agent: str = "",
+        request_path: str = "",
+        request_method: str = "",
+        status: int = 1,
+        response_code: int | None = None,
+        error_message: str = "",
+        response_time_ms: int | None = None,
+    ) -> APIKeyLogEntity:
+        row = self._repo.create_log(
+            api_key_id,
+            request_id,
+            request_name,
+            source_ip,
+            user_agent,
+            request_path,
+            request_method,
+            status,
+            response_code,
+            error_message,
+            response_time_ms,
+        )
         return APIKeyLogEntity.from_orm(row)
 
-    def list_logs(self, api_key_id: int | None = None,
-                  page: int = 1, page_size: int = 50) -> tuple[list[APIKeyLogEntity], int]:
+    def list_logs(
+        self, api_key_id: int | None = None, page: int = 1, page_size: int = 50
+    ) -> tuple[list[APIKeyLogEntity], int]:
         rows, total = self._repo.list_logs(api_key_id, page, page_size)
         return [e for e in [APIKeyLogEntity.from_orm(r) for r in rows] if e is not None], total
 

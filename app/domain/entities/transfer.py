@@ -2,6 +2,7 @@
 转移领域实体
 定义TransferHistory/TransferUnknown/TransferBlacklist的领域模型
 """
+
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -9,6 +10,7 @@ from typing import Any, Optional
 @dataclass
 class TransferHistoryEntity:
     """转移历史实体"""
+
     id: int
     mode: str
     media_type: str
@@ -44,7 +46,7 @@ class TransferHistoryEntity:
             dest=orm_model.DEST or "",
             dest_path=orm_model.DEST_PATH or "",
             dest_filename=orm_model.DEST_FILENAME or "",
-            date=orm_model.DATE or ""
+            date=orm_model.DATE or "",
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -70,6 +72,7 @@ class TransferHistoryEntity:
 @dataclass
 class TransferUnknownEntity:
     """未知转移记录实体"""
+
     id: int
     path: str
     dest: str
@@ -85,7 +88,7 @@ class TransferUnknownEntity:
             path=orm_model.PATH or "",
             dest=orm_model.DEST or "",
             mode=orm_model.MODE or "",
-            state=orm_model.STATE or ""
+            state=orm_model.STATE or "",
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -101,6 +104,7 @@ class TransferUnknownEntity:
 @dataclass
 class TransferBlacklistEntity:
     """转移黑名单实体"""
+
     id: int
     path: str
 
@@ -108,10 +112,7 @@ class TransferBlacklistEntity:
     def from_orm(cls, orm_model) -> Optional["TransferBlacklistEntity"]:
         if orm_model is None:
             return None
-        return cls(
-            id=orm_model.ID,
-            path=orm_model.PATH or ""
-        )
+        return cls(id=orm_model.ID, path=orm_model.PATH or "")
 
     def to_dict(self) -> dict[str, Any]:
         return {

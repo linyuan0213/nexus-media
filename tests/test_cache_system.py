@@ -1,6 +1,7 @@
 """
 统一缓存系统测试 - 独立测试，不依赖项目配置
 """
+
 import os
 import sys
 import threading
@@ -331,6 +332,7 @@ class TestCacheUtils:
 
     def test_key_builder_from_func(self):
         """测试从函数构建键"""
+
         def test_func(self, arg1, arg2, kwarg1=None):
             pass
 
@@ -342,6 +344,7 @@ class TestCacheUtils:
 
     def test_key_builder_typed(self):
         """测试带类型的键构建"""
+
         # 模拟MediaType
         class MockMediaType:
             def __init__(self, value):

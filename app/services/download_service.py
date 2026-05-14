@@ -2,6 +2,7 @@
 DownloadService - 下载编排业务层
 将 web/controllers/download.py 中的下载业务逻辑下沉到可独立测试的 Service。
 """
+
 import os
 
 import log
@@ -33,13 +34,15 @@ class DownloadService:
     - 索引器统计数据格式化
     """
 
-    def __init__(self,
-                 downloader: Downloader | None = None,
-                 searcher: Searcher | None = None,
-                 media_service: MediaService | None = None,
-                 sites: Sites | None = None,
-                 indexer_service: IndexerService | None = None,
-                 torrent_remover: TorrentRemover | None = None):
+    def __init__(
+        self,
+        downloader: Downloader | None = None,
+        searcher: Searcher | None = None,
+        media_service: MediaService | None = None,
+        sites: Sites | None = None,
+        indexer_service: IndexerService | None = None,
+        torrent_remover: TorrentRemover | None = None,
+    ):
         self._downloader = downloader or Downloader()
         self._searcher = searcher or Searcher()
         self._media = media_service or MediaService()
@@ -59,8 +62,9 @@ class DownloadService:
         """公开方法：解析站点下载链接"""
         return self._resolve_download_url(page_url, enclosure)
 
-    def download_from_search_results(self, dl_id: int, dl_dir: str, dl_setting: str,
-                                      user_name: str) -> DownloadResultDTO:
+    def download_from_search_results(
+        self, dl_id: int, dl_dir: str, dl_setting: str, user_name: str
+    ) -> DownloadResultDTO:
         """从搜索结果批量下载"""
         results = self._searcher.get_search_result_by_id(dl_id)
         if not results:
@@ -81,24 +85,34 @@ class DownloadService:
                 site=res.SITE,
                 page_url=res.PAGEURL,
                 upload_volume_factor=float(res.UPLOAD_VOLUME_FACTOR),
-                download_volume_factor=float(res.DOWNLOAD_VOLUME_FACTOR)
+                download_volume_factor=float(res.DOWNLOAD_VOLUME_FACTOR),
             )
             _, ret, ret_msg = self._downloader.download(
                 media_info=media,
                 download_dir=dl_dir,
                 download_setting=dl_setting,
                 in_from=SearchType.WEB,
-                user_name=user_name
+                user_name=user_name,
             )
             if not ret:
                 return DownloadResultDTO(success=False, message=ret_msg)
         return DownloadResultDTO(success=True, message="")
 
-    def download_from_link(self, site: str, enclosure: str, title: str,
-                           description: str, page_url: str, size: str,
-                           seeders: str, uploadvolumefactor: str,
-                           downloadvolumefactor: str, dl_dir: str,
-                           dl_setting: str, user_name: str) -> DownloadResultDTO:
+    def download_from_link(
+        self,
+        site: str,
+        enclosure: str,
+        title: str,
+        description: str,
+        page_url: str,
+        size: str,
+        seeders: str,
+        uploadvolumefactor: str,
+        downloadvolumefactor: str,
+        dl_dir: str,
+        dl_setting: str,
+        user_name: str,
+    ) -> DownloadResultDTO:
         """从下载链接添加下载"""
         enclosure = self._resolve_download_url(page_url, enclosure)
         if not title or not enclosure:
@@ -127,23 +141,27 @@ class DownloadService:
             download_dir=dl_dir,
             download_setting=dl_setting,
             in_from=SearchType.WEB,
-            user_name=user_name
+            user_name=user_name,
         )
         if not ret:
-            return DownloadResultDTO(success=False,
-                                     message=ret_msg or "如连接正常，请检查下载任务是否存在")
+            return DownloadResultDTO(success=False, message=ret_msg or "如连接正常，请检查下载任务是否存在")
         return DownloadResultDTO(success=True, message="下载成功")
 
-    def download_from_torrent_files_or_urls(self, files: list, urls: list,
-                                            dl_dir: str, dl_setting: str,
-                                            user_name: str,
-                                            page_url: str | None = None,
-                                            upload_volume_factor: float | None = None,
-                                            download_volume_factor: float | None = None,
-                                            title: str | None = None,
-                                            description: str | None = None,
-                                            site: str | None = None,
-                                            size: int | None = None) -> DownloadResultDTO:
+    def download_from_torrent_files_or_urls(
+        self,
+        files: list,
+        urls: list,
+        dl_dir: str,
+        dl_setting: str,
+        user_name: str,
+        page_url: str | None = None,
+        upload_volume_factor: float | None = None,
+        download_volume_factor: float | None = None,
+        title: str | None = None,
+        description: str | None = None,
+        site: str | None = None,
+        size: int | None = None,
+    ) -> DownloadResultDTO:
         """从种子文件或 URL 链接添加下载"""
         if not files and not urls:
             return DownloadResultDTO(success=False, message="没有种子文件或者种子链接")
@@ -175,7 +193,7 @@ class DownloadService:
                     download_setting=dl_setting,
                     torrent_file=file_path,
                     in_from=SearchType.WEB,
-                    user_name=user_name
+                    user_name=user_name,
                 )
 
             # 处理 URL 链接
@@ -190,11 +208,10 @@ class DownloadService:
                         url=url,
                         cookie=site_info.get("cookie"),
                         ua=site_info.get("ua"),
-                        proxy=site_info.get("proxy") or False
+                        proxy=site_info.get("proxy") or False,
                     )
                     if not file_path:
-                        return DownloadResultDTO(success=False,
-                                                  message=f"下载种子文件失败： {retmsg}")
+                        return DownloadResultDTO(success=False, message=f"下载种子文件失败： {retmsg}")
                     identify_title = title or os.path.basename(file_path)
                     media_info = self._media.get_media_info(title=identify_title, subtitle=description)
                     if not media_info:
@@ -229,7 +246,7 @@ class DownloadService:
                     download_setting=dl_setting,
                     torrent_file=file_path,
                     in_from=SearchType.WEB,
-                    user_name=user_name
+                    user_name=user_name,
                 )
         finally:
             # 清理上传的临时文件
@@ -258,8 +275,7 @@ class DownloadService:
             name = torrent.get("name")
             download_id = torrent.get("id")
             download_info = self._downloader.get_download_history_by_downloader(
-                downloader=default_downloader_id,
-                download_id=download_id
+                downloader=default_downloader_id, download_id=download_id
             )
             if download_info:
                 year = download_info.YEAR

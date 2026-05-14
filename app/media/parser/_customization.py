@@ -7,6 +7,7 @@ class CustomizationMatcher(metaclass=SingletonMeta):
     """
     识别自定义占位符
     """
+
     customization = None
     custom_separator = None
 

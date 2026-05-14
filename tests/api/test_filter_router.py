@@ -1,6 +1,7 @@
 """
 测试 FastAPI Filter Router
 """
+
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -22,9 +23,7 @@ class TestFilterRouter:
         mock_f = MagicMock()
         mock_filter_cls.return_value = mock_f
 
-        resp = client.post("/api/filter/add_filtergroup", json={
-            "name": "Group1", "default": "Y"
-        })
+        resp = client.post("/api/filter/add_filtergroup", json={"name": "Group1", "default": "Y"})
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         mock_f.add_group.assert_called_once_with("Group1", "Y")
@@ -43,16 +42,19 @@ class TestFilterRouter:
         mock_f = MagicMock()
         mock_filter_cls.return_value = mock_f
 
-        resp = client.post("/api/filter/add_filterrule", json={
-            "rule_id": 1,
-            "group_id": 2,
-            "rule_name": "R1",
-            "rule_pri": "10",
-            "rule_include": "1080p",
-            "rule_exclude": "720p",
-            "rule_sizelimit": "1,10",
-            "rule_free": "1.0 0.0"
-        })
+        resp = client.post(
+            "/api/filter/add_filterrule",
+            json={
+                "rule_id": 1,
+                "group_id": 2,
+                "rule_name": "R1",
+                "rule_pri": "10",
+                "rule_include": "1080p",
+                "rule_exclude": "720p",
+                "rule_sizelimit": "1,10",
+                "rule_free": "1.0 0.0",
+            },
+        )
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         mock_f.add_filter_rule.assert_called_once()
@@ -89,14 +91,10 @@ class TestFilterRouter:
     @patch("api.routers.filter.Filter")
     def test_filterrule_detail(self, mock_filter_cls):
         mock_f = MagicMock()
-        mock_f.get_rule_detail.return_value = {
-            "id": 1, "name": "R1", "include": "a\nb"
-        }
+        mock_f.get_rule_detail.return_value = {"id": 1, "name": "R1", "include": "a\nb"}
         mock_filter_cls.return_value = mock_f
 
-        resp = client.post("/api/filter/filterrule_detail", json={
-            "groupid": 1, "ruleid": 2
-        })
+        resp = client.post("/api/filter/filterrule_detail", json={"groupid": 1, "ruleid": 2})
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         assert resp.json()["info"]["name"] == "R1"
@@ -110,9 +108,7 @@ class TestFilterRouter:
         mock_f.import_filter_group.return_value = (True, "导入成功")
         mock_filter_cls.return_value = mock_f
 
-        resp = client.post("/api/filter/import_filtergroup", json={
-            "content": "eyJuYW1lIjogIkdyb3VwMSJ9"
-        })
+        resp = client.post("/api/filter/import_filtergroup", json={"content": "eyJuYW1lIjogIkdyb3VwMSJ9"})
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         assert resp.json()["msg"] == "导入成功"
@@ -123,9 +119,7 @@ class TestFilterRouter:
         mock_f.import_filter_group.return_value = (False, "格式错误")
         mock_filter_cls.return_value = mock_f
 
-        resp = client.post("/api/filter/import_filtergroup", json={
-            "content": "bad"
-        })
+        resp = client.post("/api/filter/import_filtergroup", json={"content": "bad"})
         assert resp.status_code == 200
         assert resp.json()["code"] == 1
         assert resp.json()["msg"] == "格式错误"
@@ -138,15 +132,14 @@ class TestFilterRouter:
         mock_f = MagicMock()
         mock_filter_cls.return_value = mock_f
 
-        resp = client.post("/api/filter/restore_filtergroup", json={
-            "groupids": [1, 2],
-            "init_rulegroups": [{"id": 1, "sql": ["sql1"]}]
-        })
+        resp = client.post(
+            "/api/filter/restore_filtergroup",
+            json={"groupids": [1, 2], "init_rulegroups": [{"id": 1, "sql": ["sql1"]}]},
+        )
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         mock_f.restore_filter_group.assert_called_once_with(
-            groupids=[1, 2],
-            init_rulegroups=[{"id": 1, "sql": ["sql1"]}]
+            groupids=[1, 2], init_rulegroups=[{"id": 1, "sql": ["sql1"]}]
         )
 
     # ------------------------------------------------------------------
@@ -158,12 +151,10 @@ class TestFilterRouter:
         mock_f.test_rule.return_value = (True, "匹配", 10)
         mock_filter_cls.return_value = mock_f
 
-        resp = client.post("/api/filter/rule_test", json={
-            "title": "Test Movie 2024 1080p",
-            "subtitle": "",
-            "size": "5",
-            "rulegroup": "1"
-        })
+        resp = client.post(
+            "/api/filter/rule_test",
+            json={"title": "Test Movie 2024 1080p", "subtitle": "", "size": "5", "rulegroup": "1"},
+        )
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         assert resp.json()["flag"] is True
@@ -227,10 +218,7 @@ class TestFilterRouter:
     @patch("api.routers.filter._get_script_path")
     def test_get_filterrules(self, mock_script_path, mock_filter_cls):
         mock_f = MagicMock()
-        mock_f.get_filterrules.return_value = (
-            [{"id": 1, "name": "G1"}],
-            [{"id": 2, "name": "InitG1"}]
-        )
+        mock_f.get_filterrules.return_value = ([{"id": 1, "name": "G1"}], [{"id": 2, "name": "InitG1"}])
         mock_filter_cls.return_value = mock_f
         mock_script_path.return_value = "/scripts"
 

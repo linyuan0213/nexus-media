@@ -11,6 +11,7 @@ class FreeFarm(_ISiteSigninHandler):
     """
     自由农场签到
     """
+
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "pt.0ff.cc"
 
@@ -18,7 +19,7 @@ class FreeFarm(_ISiteSigninHandler):
     _session = requests.Session()
 
     # 签到成功
-    _succeed_regex = ['签到成功']
+    _succeed_regex = ["签到成功"]
 
     @classmethod
     def match(cls, url):
@@ -42,30 +43,25 @@ class FreeFarm(_ISiteSigninHandler):
 
         url = "https://pt.0ff.cc/attendance.php"
         # 签到
-        sign_res = RequestUtils(cookies=site_cookie,
-                                headers=ua,
-                                proxies=proxy,
-                                session=self._session
-                                ).get_res(url=url)
+        sign_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy, session=self._session).get_res(url=url)
         if not sign_res or sign_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
-            return False, f'【{site}】签到失败，请检查站点连通性'
+            return False, f"【{site}】签到失败，请检查站点连通性"
 
         if "login.php" in sign_res.text:
             self.error("签到失败，cookie失效")
-            return False, f'【{site}】签到失败，cookie失效'
+            return False, f"【{site}】签到失败，cookie失效"
 
-        sign_status = self.sign_in_result(html_res=sign_res.text,
-                                          regexs=self._succeed_regex)
+        sign_status = self.sign_in_result(html_res=sign_res.text, regexs=self._succeed_regex)
         if sign_status:
             self.info("签到成功")
-            return True, f'【{site}】签到成功'
+            return True, f"【{site}】签到成功"
         else:
             pattern = r'src="([^"]*slide_check[^"]*\.js)"'
             match = re.search(pattern, sign_res.text)
             if not match:
                 self.error(f"签到失败，签到接口返回 {sign_res.text}")
-                return False, f'【{site}】签到失败'
+                return False, f"【{site}】签到失败"
             slide_url = f"https://pt.0ff.cc{match.group(1)}"
 
             slide_response = self._session.get(slide_url)
@@ -74,21 +70,20 @@ class FreeFarm(_ISiteSigninHandler):
             match2 = re.search(pattern2, slide_response.text)
             if not match2:
                 self.error(f"签到失败，签到接口返回 {slide_response.text}")
-                return False, f'【{site}】签到失败'
+                return False, f"【{site}】签到失败"
 
             access_token_url = match2.group(0).strip('"')
             result_response = self._session.get(access_token_url)
             if result_response.status_code != 200:
                 self.error(f"签到失败，签到接口返回 {result_response.status_code}")
-                return False, f'【{site}】签到失败'
+                return False, f"【{site}】签到失败"
 
             access_response = self._session.get(url)
 
-            sign_status = self.sign_in_result(html_res=access_response.text,
-                                            regexs=self._succeed_regex)
+            sign_status = self.sign_in_result(html_res=access_response.text, regexs=self._succeed_regex)
             if sign_status:
                 self.info("签到成功")
-                return True, f'【{site}】签到成功'
+                return True, f"【{site}】签到成功"
 
         self.error(f"签到失败，签到接口返回 {sign_res.text}")
-        return False, f'【{site}】签到失败'
+        return False, f"【{site}】签到失败"

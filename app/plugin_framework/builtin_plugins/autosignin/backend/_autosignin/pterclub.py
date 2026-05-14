@@ -9,9 +9,9 @@ class PTerClub(_ISiteSigninHandler):
     """
     猫签到
     """
+
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "pterclub.net"
-
 
     @classmethod
     def match(cls, url):
@@ -34,21 +34,20 @@ class PTerClub(_ISiteSigninHandler):
         proxy = get_proxies() if site_info.get("proxy") else None
 
         # 签到
-        sign_res = RequestUtils(cookies=site_cookie,
-                                headers=ua,
-                                proxies=proxy
-                                ).get_res(url="https://pterclub.net/attendance-ajax.php")
+        sign_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
+            url="https://pterclub.net/attendance-ajax.php"
+        )
         if not sign_res or sign_res.status_code != 200:
             self.error("签到失败，签到接口请求失败")
-            return False, f'【{site}】签到失败，请检查cookie是否失效'
+            return False, f"【{site}】签到失败，请检查cookie是否失效"
 
         sign_dict = json.loads(sign_res.text)
-        if sign_dict['status'] == '1':
+        if sign_dict["status"] == "1":
             # {"status":"1","data":" (签到已成功300)","message":"<p>这是您的第<b>237</b>次签到，
             # 已连续签到<b>237</b>天。</p><p>本次签到获得<b>300</b>克猫粮。</p>"}
             self.info("签到成功")
-            return True, f'【{site}】签到成功'
+            return True, f"【{site}】签到成功"
         else:
             # {"status":"0","data":"抱歉","message":"您今天已经签到过了，请勿重复刷新。"}
             self.info("今日已签到")
-            return True, f'【{site}】今日已签到'
+            return True, f"【{site}】今日已签到"

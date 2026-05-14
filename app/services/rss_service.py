@@ -34,10 +34,7 @@ class RssSubscriptionService:
     负责订阅添加/删除、历史管理、列表查询、日历事件、RSS下载
     """
 
-    def __init__(self,
-                 subscribe: Subscribe | None = None,
-                 rss: Any | None = None,
-                 rss_checker: Any | None = None):
+    def __init__(self, subscribe: Subscribe | None = None, rss: Any | None = None, rss_checker: Any | None = None):
         self._subscribe = subscribe or Subscribe()
         self._rss = rss
         self._rss_checker = rss_checker
@@ -46,15 +43,27 @@ class RssSubscriptionService:
         """触发RSS订阅下载"""
         if not self._rss:
             from app.services.rss_core import Rss
+
             self._rss = Rss()
         self._rss.rssdownload()
 
-    def check_torrent_rss(self, media_info, rss_movies, rss_tvs, site_id,
-                          site_filter_rule, site_cookie, site_parse,
-                          site_ua, site_headers, site_proxy):
+    def check_torrent_rss(
+        self,
+        media_info,
+        rss_movies,
+        rss_tvs,
+        site_id,
+        site_filter_rule,
+        site_cookie,
+        site_parse,
+        site_ua,
+        site_headers,
+        site_proxy,
+    ):
         """判断种子是否命中订阅（委托给 Rss 模块）"""
         if not self._rss:
             from app.services.rss_core import Rss
+
             self._rss = Rss()
         return self._rss.check_torrent_rss(
             media_info=media_info,
@@ -66,7 +75,7 @@ class RssSubscriptionService:
             site_parse=site_parse,
             site_ua=site_ua,
             site_headers=site_headers,
-            site_proxy=site_proxy
+            site_proxy=site_proxy,
         )
 
     def add_rss_media(self, data: dict) -> RssAddResultDTO:
@@ -81,7 +90,9 @@ class RssSubscriptionService:
         msg = ""
 
         kwargs = {
-            "mtype": mtype, "name": name, "year": year,
+            "mtype": mtype,
+            "name": name,
+            "year": year,
             "channel": channel,
             "keyword": data.get("keyword"),
             "fuzzy_match": data.get("fuzzy_match"),
@@ -115,8 +126,7 @@ class RssSubscriptionService:
 
         rssid = None
         if media_info:
-            rssid = self._subscribe.get_subscribe_id(
-                mtype=mtype, title=name, tmdbid=media_info.tmdb_id)
+            rssid = self._subscribe.get_subscribe_id(mtype=mtype, title=name, tmdbid=media_info.tmdb_id)
 
         return RssAddResultDTO(code=code, msg=msg, rssid=rssid, media_info=media_info)
 
@@ -135,7 +145,10 @@ class RssSubscriptionService:
             return RssAddResultDTO(code=-1, msg="缺少订阅ID", rssid=None, media_info=None)
 
         kwargs = {
-            "mtype": mtype, "rssid": rssid, "name": name, "year": year,
+            "mtype": mtype,
+            "rssid": rssid,
+            "name": name,
+            "year": year,
             "keyword": data.get("keyword"),
             "fuzzy_match": data.get("fuzzy_match"),
             "mediaid": data.get("mediaid"),
@@ -173,6 +186,7 @@ class RssSubscriptionService:
         """从历史记录重新订阅"""
         if not self._rss:
             from app.services.rss_core import Rss
+
             self._rss = Rss()
         rssinfo = self._rss.get_rss_history(rtype=rtype, rid=rssid)
         if not rssinfo:
@@ -183,16 +197,21 @@ class RssSubscriptionService:
         else:
             season = None
         code, msg, _ = self._subscribe.add_rss_subscribe(
-            mtype=mtype, name=rssinfo[0].NAME, year=rssinfo[0].YEAR,
-            channel=RssType.Auto, season=season,
+            mtype=mtype,
+            name=rssinfo[0].NAME,
+            year=rssinfo[0].YEAR,
+            channel=RssType.Auto,
+            season=season,
             mediaid=rssinfo[0].TMDBID,
-            total_ep=rssinfo[0].TOTAL, current_ep=rssinfo[0].START)
+            total_ep=rssinfo[0].TOTAL,
+            current_ep=rssinfo[0].START,
+        )
         return code, msg
 
-    def remove_rss_media(self, name: str, mtype: str, year: str,
-                         season, rssid, tmdbid) -> None:
+    def remove_rss_media(self, name: str, mtype: str, year: str, season, rssid, tmdbid) -> None:
         """移除RSS订阅"""
         from app.media import MetaInfo
+
         if not str(tmdbid).isdigit():
             tmdbid = None
         if name:
@@ -200,12 +219,12 @@ class RssSubscriptionService:
         if mtype:
             if mtype in MovieTypes:
                 self._subscribe.delete_subscribe(
-                    mtype=MediaType.MOVIE, title=name, year=year,
-                    rssid=rssid, tmdbid=tmdbid)
+                    mtype=MediaType.MOVIE, title=name, year=year, rssid=rssid, tmdbid=tmdbid
+                )
             else:
                 self._subscribe.delete_subscribe(
-                    mtype=MediaType.TV, title=name, season=season,
-                    rssid=rssid, tmdbid=tmdbid)
+                    mtype=MediaType.TV, title=name, season=season, rssid=rssid, tmdbid=tmdbid
+                )
 
     def get_rss_detail(self, rid: str, rsstype: str) -> RssDetailResultDTO | None:
         """获取订阅详情"""
@@ -245,11 +264,11 @@ class RssSubscriptionService:
             {
                 "id": tv.get("tmdbid"),
                 "rssid": tv.get("id"),
-                "season": int(str(tv.get('season')).replace("S", "")),
+                "season": int(str(tv.get("season")).replace("S", "")),
                 "name": tv.get("name"),
             }
             for tv in self._subscribe.get_subscribe_tvs().values()
-            if tv.get('season') and tv.get("tmdbid")
+            if tv.get("season") and tv.get("tmdbid")
         ]
         # 自定义订阅
         if not self._rss_checker:
@@ -274,44 +293,46 @@ class RssSubscriptionService:
     def get_rss_history(self, mtype: str) -> list[dict]:
         if not self._rss:
             from app.services.rss_core import Rss
+
             self._rss = Rss()
         return [rec.as_dict() for rec in self._rss.get_rss_history(rtype=mtype)]
 
     def delete_rss_history(self, rssid: str):
         if not self._rss:
             from app.services.rss_core import Rss
+
             self._rss = Rss()
         self._rss.delete_rss_history(rssid=rssid)
 
     def refresh_rss(self, mtype: str, rssid: str):
         """后台刷新RSS搜索"""
         from app.helper import ThreadHelper
+
         if mtype == "MOV":
-            ThreadHelper().start_thread(
-                self._subscribe.subscribe_search_movie, (rssid,))
+            ThreadHelper().start_thread(self._subscribe.subscribe_search_movie, (rssid,))
         else:
-            ThreadHelper().start_thread(
-                self._subscribe.subscribe_search_tv, (rssid,))
+            ThreadHelper().start_thread(self._subscribe.subscribe_search_tv, (rssid,))
 
     def truncate_rss_history(self):
         from app.helper import RssHelper
+
         RssHelper().truncate_rss_history()
         self._subscribe.truncate_rss_episodes()
 
     def get_ical_events(self) -> list[dict]:
         """获取RSS日历事件"""
         from app.services.media_service import MediaInfoService
+
         media_service = MediaInfoService()
         Events = []
         for movie in self.get_movie_rss_items():
-            info = media_service.get_movie_calendar(
-                tid=movie.get("id"), rssid=movie.get("rssid"))
+            info = media_service.get_movie_calendar(tid=movie.get("id"), rssid=movie.get("rssid"))
             if info and info.get("id"):
                 Events.append(info)
         for tv in self.get_tv_rss_items():
             infos = media_service.get_tv_calendar(
-                tid=tv.get("id"), season=tv.get("season"),
-                name=tv.get("name"), rssid=tv.get("rssid"))
+                tid=tv.get("id"), season=tv.get("season"), name=tv.get("name"), rssid=tv.get("rssid")
+            )
             if infos and isinstance(infos, list):
                 for info in infos:
                     if info.get("id"):
@@ -345,8 +366,7 @@ class RssParserEngine:
                         if attr.get("path"):
                             if attr.get("namespaces"):
                                 value = item.xpath(
-                                    "//ns:%s" % attr.get("path"),
-                                    namespaces={"ns": attr.get("namespaces")}
+                                    "//ns:%s" % attr.get("path"), namespaces={"ns": attr.get("namespaces")}
                                 )
                             else:
                                 value = item.xpath(attr.get("path"))
@@ -406,22 +426,20 @@ class RssTaskService(metaclass=SingletonMeta):
     _jobstore = "rsscheck"
     _rss_tasks: list[dict[str, Any]] = []
     _rss_parsers: list[dict[str, Any]] = []
-    _site_users = {
-        "D": "下载",
-        "R": "订阅",
-        "S": "搜索"
-    }
+    _site_users = {"D": "下载", "R": "订阅", "S": "搜索"}
 
-    def __init__(self,
-                 config_repo=None,
-                 rss_repo=None,
-                 rsshelper=None,
-                 message=None,
-                 searcher=None,
-                 filter_=None,
-                 media=None,
-                 downloader=None,
-                 subscribe=None):
+    def __init__(
+        self,
+        config_repo=None,
+        rss_repo=None,
+        rsshelper=None,
+        message=None,
+        searcher=None,
+        filter_=None,
+        media=None,
+        downloader=None,
+        subscribe=None,
+    ):
         self.config_repo = config_repo or UserRssConfigRepositoryAdapter()
         self.rss_repo = rss_repo or RssHistoryRepositoryAdapter()
         self.rsshelper = rsshelper or RssHelper()
@@ -446,7 +464,7 @@ class RssTaskService(metaclass=SingletonMeta):
                     "type": rss_parser.TYPE,
                     "format": rss_parser.FORMAT,
                     "params": rss_parser.PARAMS,
-                    "note": rss_parser.NOTE
+                    "note": rss_parser.NOTE,
                 }
             )
         # 读取任务任务列表
@@ -483,30 +501,33 @@ class RssTaskService(metaclass=SingletonMeta):
                 print(str(e))
                 parsers = [task.PARSER]
             state = True if task.STATE in ["Y", "1", True] else False
-            self._rss_tasks.append({
-                "id": task.ID,
-                "name": task.NAME,
-                "address": addresses,
-                "proxy": proxy,
-                "parser": parsers,
-                "interval": task.INTERVAL,
-                "uses": task.USES if task.USES != "S" else "R",
-                "uses_text": self._site_users.get(task.USES),
-                "include": task.INCLUDE,
-                "exclude": task.EXCLUDE,
-                "filter": task.FILTER,
-                "filter_name": filterrule.get("name") if filterrule else "",
-                "update_time": task.UPDATE_TIME,
-                "counter": task.PROCESS_COUNT,
-                "state": state,
-                "save_path": task.SAVE_PATH or save_path,
-                "download_setting": task.DOWNLOAD_SETTING or "",
-                "recognization": task.RECOGNIZATION or recognization,
-                "over_edition": task.OVER_EDITION or 0,
-                "sites": json.loads(task.SITES) if task.SITES else {"rss_sites": [], "search_sites": []},
-                "filter_args": json.loads(task.FILTER_ARGS)
-                if task.FILTER_ARGS else {"restype": "", "pix": "", "team": ""},
-            })
+            self._rss_tasks.append(
+                {
+                    "id": task.ID,
+                    "name": task.NAME,
+                    "address": addresses,
+                    "proxy": proxy,
+                    "parser": parsers,
+                    "interval": task.INTERVAL,
+                    "uses": task.USES if task.USES != "S" else "R",
+                    "uses_text": self._site_users.get(task.USES),
+                    "include": task.INCLUDE,
+                    "exclude": task.EXCLUDE,
+                    "filter": task.FILTER,
+                    "filter_name": filterrule.get("name") if filterrule else "",
+                    "update_time": task.UPDATE_TIME,
+                    "counter": task.PROCESS_COUNT,
+                    "state": state,
+                    "save_path": task.SAVE_PATH or save_path,
+                    "download_setting": task.DOWNLOAD_SETTING or "",
+                    "recognization": task.RECOGNIZATION or recognization,
+                    "over_edition": task.OVER_EDITION or 0,
+                    "sites": json.loads(task.SITES) if task.SITES else {"rss_sites": [], "search_sites": []},
+                    "filter_args": json.loads(task.FILTER_ARGS)
+                    if task.FILTER_ARGS
+                    else {"restype": "", "pix": "", "team": ""},
+                }
+            )
         if not self._rss_tasks:
             return
         # 启动RSS任务
@@ -518,27 +539,31 @@ class RssTaskService(metaclass=SingletonMeta):
                 if cron.isdigit():
                     # 分钟
                     rss_flag = True
-                    SchedulerCore().start_job({
-                        "func": self.check_task_rss,
-                        "name": f"自定义订阅任务 {task.get('name')}",
-                        "args": (task.get("id"),),
-                        "job_id": job_id,
-                        "trigger": "interval",
-                        "seconds": int(cron) * 60,
-                        "jobstore": self._jobstore
-                    })
-                elif cron.count(" ") == 4:
-                    # cron表达式
-                    try:
-                        SchedulerCore().start_job({
+                    SchedulerCore().start_job(
+                        {
                             "func": self.check_task_rss,
                             "name": f"自定义订阅任务 {task.get('name')}",
                             "args": (task.get("id"),),
                             "job_id": job_id,
-                            "trigger": "cron",
-                            "cron": cron,
-                            "jobstore": self._jobstore
-                        })
+                            "trigger": "interval",
+                            "seconds": int(cron) * 60,
+                            "jobstore": self._jobstore,
+                        }
+                    )
+                elif cron.count(" ") == 4:
+                    # cron表达式
+                    try:
+                        SchedulerCore().start_job(
+                            {
+                                "func": self.check_task_rss,
+                                "name": f"自定义订阅任务 {task.get('name')}",
+                                "args": (task.get("id"),),
+                                "job_id": job_id,
+                                "trigger": "cron",
+                                "cron": cron,
+                                "jobstore": self._jobstore,
+                            }
+                        )
                         rss_flag = True
                     except Exception as e:
                         log.info("%s 自定义订阅cron表达式 配置格式错误：%s %s" % (task.get("name"), cron, str(e)))
@@ -589,21 +614,21 @@ class RssTaskService(metaclass=SingletonMeta):
         for res in rss_result:
             try:
                 # 种子名
-                title = res.get('title')
+                title = res.get("title")
                 if not title:
                     continue
                 # 种子链接
-                enclosure = res.get('enclosure')
+                enclosure = res.get("enclosure")
                 # 种子页面
-                page_url = res.get('link')
+                page_url = res.get("link")
                 # 种子大小
-                size = StringUtils.str_filesize(res.get('size'))
+                size = StringUtils.str_filesize(res.get("size"))
                 # 年份
-                year = res.get('year')
+                year = res.get("year")
                 if year and len(year) > 4:
                     year = year[:4]
                 # 类型
-                mediatype = res.get('type')
+                mediatype = res.get("type")
                 if mediatype:
                     mediatype = MediaType.MOVIE if mediatype == "movie" else MediaType.TV
 
@@ -617,11 +642,9 @@ class RssTaskService(metaclass=SingletonMeta):
                     continue
 
                 if task_type == "D":
-                    media_info = MetaInfo(title=meta_name,
-                                          mtype=mediatype)
+                    media_info = MetaInfo(title=meta_name, mtype=mediatype)
                     if taskinfo.get("recognization") == "Y":
-                        media_info = self.media.get_media_info(title=meta_name,
-                                                               mtype=mediatype)
+                        media_info = self.media.get_media_info(title=meta_name, mtype=mediatype)
                         if not media_info:
                             log.warn("【RssTaskService】%s 识别媒体信息出错！" % title)
                             continue
@@ -630,38 +653,43 @@ class RssTaskService(metaclass=SingletonMeta):
                             continue
                         # 检查是否已存在
                         if media_info.type == MediaType.MOVIE:
-                            exist_flag, no_exists, _ = self.downloader.check_exists_medias(meta_info=media_info,
-                                                                                           no_exists=no_exists)
+                            exist_flag, no_exists, _ = self.downloader.check_exists_medias(
+                                meta_info=media_info, no_exists=no_exists
+                            )
                             if exist_flag:
                                 log.info("【RssTaskService】电影 %s 已存在" % media_info.get_title_string())
                                 continue
                         else:
-                            exist_flag, no_exists, _ = self.downloader.check_exists_medias(meta_info=media_info,
-                                                                                           no_exists=no_exists)
+                            exist_flag, no_exists, _ = self.downloader.check_exists_medias(
+                                meta_info=media_info, no_exists=no_exists
+                            )
                             # 当前剧集已存在，跳过
                             if exist_flag:
                                 # 已全部存在
-                                if not no_exists or not no_exists.get(
-                                        media_info.tmdb_id):
-                                    log.info("【RssTaskService】电视剧 %s %s 已存在" % (
-                                        media_info.get_title_string(), media_info.get_season_episode_string()))
+                                if not no_exists or not no_exists.get(media_info.tmdb_id):
+                                    log.info(
+                                        "【RssTaskService】电视剧 %s %s 已存在"
+                                        % (media_info.get_title_string(), media_info.get_season_episode_string())
+                                    )
                                 continue
                             if no_exists.get(media_info.tmdb_id):
-                                log.info("【RssTaskService】%s 缺失季集：%s"
-                                         % (media_info.get_title_string(), no_exists.get(media_info.tmdb_id)))
+                                log.info(
+                                    "【RssTaskService】%s 缺失季集：%s"
+                                    % (media_info.get_title_string(), no_exists.get(media_info.tmdb_id))
+                                )
                     # 大小及种子页面
-                    media_info.set_torrent_info(size=size,
-                                                page_url=page_url,
-                                                site=taskinfo.get("name"),
-                                                enclosure=enclosure)
+                    media_info.set_torrent_info(
+                        size=size, page_url=page_url, site=taskinfo.get("name"), enclosure=enclosure
+                    )
                     # 检查种子是否匹配过滤条件
                     filter_args = {
                         "include": taskinfo.get("include"),
                         "exclude": taskinfo.get("exclude"),
-                        "rule": taskinfo.get("filter")
+                        "rule": taskinfo.get("filter"),
                     }
-                    match_flag, res_order, match_msg = self.filter.check_torrent_filter(meta_info=media_info,
-                                                                                        filter_args=filter_args)
+                    match_flag, res_order, match_msg = self.filter.check_torrent_filter(
+                        meta_info=media_info, filter_args=filter_args
+                    )
                     # 未匹配
                     if not match_flag:
                         log.info(f"【RssTaskService】{match_msg}")
@@ -670,14 +698,15 @@ class RssTaskService(metaclass=SingletonMeta):
                         # 匹配优先级
                         media_info.set_torrent_info(res_order=res_order)
                         if taskinfo.get("recognization") == "Y":
-                            log.info("【RssTaskService】%s 识别为 %s %s 匹配成功" % (
-                                title,
-                                media_info.get_title_string(),
-                                media_info.get_season_episode_string()))
+                            log.info(
+                                "【RssTaskService】%s 识别为 %s %s 匹配成功"
+                                % (title, media_info.get_title_string(), media_info.get_season_episode_string())
+                            )
                             # 补充TMDB完整信息
                             if not media_info.tmdb_info:
-                                media_info.set_tmdb_info(self.media.get_tmdb_info(mtype=media_info.type,
-                                                                                  tmdbid=media_info.tmdb_id))
+                                media_info.set_tmdb_info(
+                                    self.media.get_tmdb_info(mtype=media_info.type, tmdbid=media_info.tmdb_id)
+                                )
                             # TMDB信息插入订阅任务
                             if media_info.type != MediaType.MOVIE:
                                 self.config_repo.insert_userrss_mediainfos(taskid, media_info)
@@ -694,24 +723,24 @@ class RssTaskService(metaclass=SingletonMeta):
                     # 识别种子名称，开始搜索TMDB
                     media_info = MetaInfo(title=meta_name, mtype=mediatype)
                     # 检查种子是否匹配过滤条件
-                    filter_args = {
-                        "include": taskinfo.get("include"),
-                        "exclude": taskinfo.get("exclude"),
-                        "rule": -1
-                    }
-                    match_flag, _, match_msg = self.filter.check_torrent_filter(meta_info=media_info,
-                                                                                filter_args=filter_args)
+                    filter_args = {"include": taskinfo.get("include"), "exclude": taskinfo.get("exclude"), "rule": -1}
+                    match_flag, _, match_msg = self.filter.check_torrent_filter(
+                        meta_info=media_info, filter_args=filter_args
+                    )
                     # 未匹配
                     if not match_flag:
                         log.info(f"【RssTaskService】{match_msg}")
                         continue
                     # 检查是否已订阅过
-                    if self.rss_repo.check_rss_history(type_str="MOV" if media_info.type == MediaType.MOVIE else "TV",
-                                                       name=media_info.title,
-                                                       year=media_info.year,
-                                                       season=media_info.get_season_string()):
+                    if self.rss_repo.check_rss_history(
+                        type_str="MOV" if media_info.type == MediaType.MOVIE else "TV",
+                        name=media_info.title,
+                        year=media_info.year,
+                        season=media_info.get_season_string(),
+                    ):
                         log.info(
-                            f"【RssTaskService】{media_info.get_title_string()}{media_info.get_season_string()} 已订阅过")
+                            f"【RssTaskService】{media_info.get_title_string()}{media_info.get_season_string()} 已订阅过"
+                        )
                         continue
                     # 订阅meta_name存enclosure与下载区别
                     media_info.set_torrent_info(enclosure=meta_name)
@@ -735,7 +764,8 @@ class RssTaskService(metaclass=SingletonMeta):
                     download_dir=taskinfo.get("save_path"),
                     download_setting=taskinfo.get("download_setting"),
                     in_from=SearchType.USERRSS,
-                    proxy=taskinfo.get("proxy"))
+                    proxy=taskinfo.get("proxy"),
+                )
                 if ret:
                     # 下载类型的 这里下载成功了 插入数据库
                     self.rsshelper.insert_rss_torrents(media)
@@ -743,8 +773,10 @@ class RssTaskService(metaclass=SingletonMeta):
                     downloader_name = self.downloader.get_downloader_conf(downloader_id).get("name")
                     self.config_repo.insert_userrss_task_history(taskid, media.org_string, downloader_name)
                 else:
-                    log.error("【RssTaskService】添加下载任务 %s 失败：%s" % (
-                        media.get_title_string(), ret_msg or "请检查下载任务是否已存在"))
+                    log.error(
+                        "【RssTaskService】添加下载任务 %s 失败：%s"
+                        % (media.get_title_string(), ret_msg or "请检查下载任务是否已存在")
+                    )
         # 添加订阅
         if rss_subscribe_torrents:
             for media in rss_subscribe_torrents:
@@ -763,7 +795,7 @@ class RssTaskService(metaclass=SingletonMeta):
                     filter_rule=taskinfo.get("filter"),
                     save_path=taskinfo.get("save_path"),
                     download_setting=taskinfo.get("download_setting"),
-                    in_from=SearchType.USERRSS
+                    in_from=SearchType.USERRSS,
                 )
                 if not rss_media or code != 0:
                     log.warn("【RssTaskService】%s 添加订阅失败：%s" % (media.get_name(), msg))
@@ -772,9 +804,10 @@ class RssTaskService(metaclass=SingletonMeta):
         counter = len(rss_download_torrents) + len(rss_subscribe_torrents) + len(rss_search_torrents)
         if counter:
             self.config_repo.update_userrss_task_info(taskid, counter)
-            taskinfo["counter"] = int(taskinfo.get("counter")) + counter \
-                if str(taskinfo.get("counter")).isdigit() else counter
-            taskinfo["update_time"] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+            taskinfo["counter"] = (
+                int(taskinfo.get("counter")) + counter if str(taskinfo.get("counter")).isdigit() else counter
+            )
+            taskinfo["update_time"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
 
     def __parse_userrss_result(self, taskinfo):
         """
@@ -807,9 +840,7 @@ class RssTaskService(metaclass=SingletonMeta):
 
             # 拼装链接
             if rss_parser.get("params"):
-                _dict = {
-                    "TMDBKEY": Config().get_config("app").get("rmt_tmdbkey")
-                }
+                _dict = {"TMDBKEY": Config().get_config("app").get("rmt_tmdbkey")}
                 try:
                     param_url = rss_parser.get("params").format(**_dict)
                 except Exception as e:
@@ -819,8 +850,7 @@ class RssTaskService(metaclass=SingletonMeta):
                 rss_url = "%s?%s" % (rss_url, param_url) if rss_url.find("?") == -1 else "%s&%s" % (rss_url, param_url)
             # 请求数据
             try:
-                ret = RequestUtils(proxies=get_proxies() if taskinfo.get("proxy") else None
-                                   ).get_res(rss_url)
+                ret = RequestUtils(proxies=get_proxies() if taskinfo.get("proxy") else None).get_res(rss_url)
                 if not ret:
                     continue
                 ret.encoding = ret.apparent_encoding
@@ -865,21 +895,21 @@ class RssTaskService(metaclass=SingletonMeta):
         for res in rss_result:
             try:
                 # 种子名
-                title = res.get('title')
+                title = res.get("title")
                 if not title:
                     continue
                 # 种子链接
-                enclosure = res.get('enclosure')
+                enclosure = res.get("enclosure")
                 # 种子页面
-                link = res.get('link')
+                link = res.get("link")
                 # 副标题
-                description = res.get('description')
+                description = res.get("description")
                 # 种子大小
-                size = StringUtils.str_filesize(res.get('size'))
+                size = StringUtils.str_filesize(res.get("size"))
                 # 发布日期
-                date = StringUtils.unify_datetime_str(res.get('date')) or ""
+                date = StringUtils.unify_datetime_str(res.get("date")) or ""
                 # 年份
-                year = res.get('year')
+                year = res.get("year")
                 if year and len(year) > 4:
                     year = year[:4]
                 # 检查是不是处理过
@@ -894,14 +924,14 @@ class RssTaskService(metaclass=SingletonMeta):
                     "date": date,
                     "finish_flag": finish_flag,
                     "year": year,
-                    "address_index": res.get("address_index")
+                    "address_index": res.get("address_index"),
                 }
                 if params not in rss_articles:
                     rss_articles.append(params)
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
                 log.error("【RssTaskService】获取RSS报文发生错误：%s - %s" % (str(e), traceback.format_exc()))
-        return sorted(rss_articles, key=lambda x: x['date'], reverse=True)
+        return sorted(rss_articles, key=lambda x: x["date"], reverse=True)
 
     def test_rss_articles(self, taskid, title):
         """
@@ -922,18 +952,19 @@ class RssTaskService(metaclass=SingletonMeta):
         filter_args = {
             "include": taskinfo.get("include"),
             "exclude": taskinfo.get("exclude"),
-            "rule": taskinfo.get("filter") if taskinfo.get("uses") == "D" else None
+            "rule": taskinfo.get("filter") if taskinfo.get("uses") == "D" else None,
         }
-        match_flag, res_order, match_msg = self.filter.check_torrent_filter(meta_info=media_info,
-                                                                            filter_args=filter_args)
+        match_flag, res_order, match_msg = self.filter.check_torrent_filter(
+            meta_info=media_info, filter_args=filter_args
+        )
         # 未匹配
         if not match_flag:
             log.info(f"【RssTaskService】{match_msg}")
         else:
-            log.info("【RssTaskService】%s 识别为 %s %s 匹配成功" % (
-                title,
-                media_info.get_title_string(),
-                media_info.get_season_episode_string()))
+            log.info(
+                "【RssTaskService】%s 识别为 %s %s 匹配成功"
+                % (title, media_info.get_title_string(), media_info.get_season_episode_string())
+            )
         media_info.set_torrent_info(res_order=res_order)
         # 检查是否已存在
         no_exists = {}
@@ -942,22 +973,27 @@ class RssTaskService(metaclass=SingletonMeta):
             log.info("【RssTaskService】%s 识别为 %s 未匹配到媒体信息" % (title, media_info.get_name()))
         else:
             if media_info.type == MediaType.MOVIE:
-                exist_flag, no_exists, _ = self.downloader.check_exists_medias(meta_info=media_info,
-                                                                               no_exists=no_exists)
+                exist_flag, no_exists, _ = self.downloader.check_exists_medias(
+                    meta_info=media_info, no_exists=no_exists
+                )
                 if exist_flag:
                     log.info("【RssTaskService】电影 %s 已存在" % media_info.get_title_string())
             else:
-                exist_flag, no_exists, _ = self.downloader.check_exists_medias(meta_info=media_info,
-                                                                               no_exists=no_exists)
+                exist_flag, no_exists, _ = self.downloader.check_exists_medias(
+                    meta_info=media_info, no_exists=no_exists
+                )
                 if exist_flag:
                     # 已全部存在
-                    if not no_exists or not no_exists.get(
-                            media_info.tmdb_id):
-                        log.info("【RssTaskService】电视剧 %s %s 已存在" % (
-                            media_info.get_title_string(), media_info.get_season_episode_string()))
+                    if not no_exists or not no_exists.get(media_info.tmdb_id):
+                        log.info(
+                            "【RssTaskService】电视剧 %s %s 已存在"
+                            % (media_info.get_title_string(), media_info.get_season_episode_string())
+                        )
                 if no_exists.get(media_info.tmdb_id):
-                    log.info("【RssTaskService】%s 缺失季集：%s"
-                             % (media_info.get_title_string(), no_exists.get(media_info.tmdb_id)))
+                    log.info(
+                        "【RssTaskService】%s 缺失季集：%s"
+                        % (media_info.get_title_string(), no_exists.get(media_info.tmdb_id))
+                    )
         return media_info, match_flag, exist_flag
 
     def check_rss_articles(self, taskid, flag, articles):
@@ -1018,7 +1054,8 @@ class RssTaskService(metaclass=SingletonMeta):
                 download_dir=taskinfo.get("save_path"),
                 download_setting=taskinfo.get("download_setting"),
                 in_from=SearchType.USERRSS,
-                proxy=taskinfo.get("proxy"))
+                proxy=taskinfo.get("proxy"),
+            )
             downloader_name = self.downloader.get_downloader_conf(downloader_id).get("name")
             if ret:
                 # 插入数据库
@@ -1026,8 +1063,10 @@ class RssTaskService(metaclass=SingletonMeta):
                 # 登记自定义RSS任务下载记录
                 self.config_repo.insert_userrss_task_history(taskid, media.org_string, downloader_name)
             else:
-                log.error("【RssTaskService】添加下载任务 %s 失败：%s" % (
-                    media.get_title_string(), ret_msg or "请检查下载任务是否已存在"))
+                log.error(
+                    "【RssTaskService】添加下载任务 %s 失败：%s"
+                    % (media.get_title_string(), ret_msg or "请检查下载任务是否已存在")
+                )
                 return False
         return True
 

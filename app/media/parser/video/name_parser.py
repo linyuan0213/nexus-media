@@ -1,6 +1,7 @@
 """
 影视标题解析 — 名称与季集相关解析
 """
+
 import re
 
 from app.media.parser.video.constants import (
@@ -34,7 +35,7 @@ def init_name(info, token):
         info._stop_name_flag = True
         return
     if token in _name_se_words:
-        info._last_token_type = 'name_se_words'
+        info._last_token_type = "name_se_words"
         return
     if StringUtils.is_chinese(token):
         info._last_token_type = "cnname"
@@ -45,8 +46,9 @@ def init_name(info, token):
             if len(info.cn_name) >= 6:
                 info._stop_cnname_flag = True
                 return
-            if not re.search("%s" % _name_no_chinese_re, token, flags=re.IGNORECASE) \
-                    and not re.search("%s" % _name_se_words, token, flags=re.IGNORECASE):
+            if not re.search("%s" % _name_no_chinese_re, token, flags=re.IGNORECASE) and not re.search(
+                "%s" % _name_se_words, token, flags=re.IGNORECASE
+            ):
                 info.cn_name = "%s %s" % (info.cn_name, token)
             info._stop_cnname_flag = True
     else:
@@ -56,19 +58,17 @@ def init_name(info, token):
             if info.begin_episode and token.isdigit() and int(token) == info.begin_episode:
                 info._continue_flag = False
                 return
-            if info._last_token_type == 'name_se_words':
+            if info._last_token_type == "name_se_words":
                 return
             if info.get_name():
-                if token.startswith('0'):
+                if token.startswith("0"):
                     return
                 if token.isdigit():
                     try:
                         int(token)
                     except ValueError:
                         return
-                if not is_roman_digit \
-                        and info._last_token_type == "cnname" \
-                        and int(token) < 1900:
+                if not is_roman_digit and info._last_token_type == "cnname" and int(token) < 1900:
                     return
                 if (token.isdigit() and len(token) < 4) or is_roman_digit:
                     if info._last_token_type == "cnname":
@@ -84,16 +84,19 @@ def init_name(info, token):
                     info._unknown_name_str = token
         elif re.search(r"%s" % _season_re, token, re.IGNORECASE):
             if info.en_name and re.search(r"SEASON$", info.en_name, re.IGNORECASE):
-                info.en_name += ' '
+                info.en_name += " "
             info._stop_name_flag = True
             return
-        elif re.search(r"%s" % _episode_re, token, re.IGNORECASE) \
-                or re.search(r"(%s)" % _resources_type_re, token, re.IGNORECASE) \
-                or re.search(r"%s" % _resources_pix_re, token, re.IGNORECASE):
+        elif (
+            re.search(r"%s" % _episode_re, token, re.IGNORECASE)
+            or re.search(r"(%s)" % _resources_type_re, token, re.IGNORECASE)
+            or re.search(r"%s" % _resources_pix_re, token, re.IGNORECASE)
+        ):
             info._stop_name_flag = True
             return
         else:
             from app.core.constants import RMT_MEDIAEXT
+
             if ".%s".lower() % token in RMT_MEDIAEXT:
                 return
             if info.en_name:
@@ -106,19 +109,21 @@ def init_name(info, token):
 def fix_name(info, name):
     """清理名称中的干扰字符"""
     from app.media.parser.video.constants import _name_nostring_re
+
     if not name:
         return name
-    name = re.sub(r'%s' % _name_nostring_re, '', name,
-                  flags=re.IGNORECASE).strip()
-    name = re.sub(r'\s+', ' ', name)
-    if name.isdigit() \
-            and int(name) < 1800 \
-            and not info.year \
-            and not info.begin_season \
-            and not info.resource_pix \
-            and not info.resource_type \
-            and not info.audio_encode \
-            and not info.video_encode:
+    name = re.sub(r"%s" % _name_nostring_re, "", name, flags=re.IGNORECASE).strip()
+    name = re.sub(r"\s+", " ", name)
+    if (
+        name.isdigit()
+        and int(name) < 1800
+        and not info.year
+        and not info.begin_season
+        and not info.resource_pix
+        and not info.resource_type
+        and not info.audio_encode
+        and not info.video_encode
+    ):
         if info.begin_episode is None:
             info.begin_episode = int(name)
             name = None

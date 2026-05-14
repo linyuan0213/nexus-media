@@ -89,6 +89,7 @@ class EventManager(metaclass=SingletonMeta):
             else:
                 self.add_event_listener(etype, f)
             return f
+
         return decorator
 
 

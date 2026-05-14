@@ -5,7 +5,6 @@ from app.utils import PathUtils
 
 
 class _IDownloadClient(metaclass=ABCMeta):
-
     # 下载器ID
     client_id = ""
     # 下载器类型

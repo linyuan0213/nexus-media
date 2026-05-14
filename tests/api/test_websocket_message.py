@@ -1,6 +1,7 @@
 """
 测试 /message WebSocket 端点
 """
+
 import pytest
 from fastapi.testclient import TestClient
 

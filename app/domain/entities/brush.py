@@ -1,6 +1,7 @@
 """
 刷流领域实体
 """
+
 from dataclasses import dataclass, fields
 from typing import Any, Optional
 
@@ -8,6 +9,7 @@ from typing import Any, Optional
 @dataclass
 class BrushTaskEntity:
     """刷流任务实体"""
+
     id: int
     name: str
     site: str
@@ -64,7 +66,7 @@ class BrushTaskEntity:
             upload_size=orm_model.UPLOAD_SIZE or 0,
             send_message=orm_model.SENDMESSAGE or "",
             state=orm_model.STATE or "",
-            lst_mod_date=orm_model.LST_MOD_DATE or ""
+            lst_mod_date=orm_model.LST_MOD_DATE or "",
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -97,6 +99,7 @@ class BrushTaskEntity:
 @dataclass
 class BrushTorrentEntity:
     """刷流种子实体"""
+
     id: int
     task_id: str
     torrent_name: str
@@ -118,7 +121,7 @@ class BrushTorrentEntity:
             enclosure=orm_model.ENCLOSURE or "",
             downloader=orm_model.DOWNLOADER or "",
             download_id=orm_model.DOWNLOAD_ID or "",
-            lst_mod_date=orm_model.LST_MOD_DATE or ""
+            lst_mod_date=orm_model.LST_MOD_DATE or "",
         )
 
     def to_dict(self) -> dict[str, Any]:

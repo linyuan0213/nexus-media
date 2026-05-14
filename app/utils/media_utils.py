@@ -3,6 +3,7 @@
 
 纯逻辑、无状态，不依赖服务层。
 """
+
 from app.utils.types import MediaType
 
 
@@ -24,21 +25,23 @@ def check_media_exists(media_server, subscribe, mtype, title, year, mediaid=None
     subscribe_mediaid = mediaid
     if mediaid and (str(mediaid).startswith("DB:") or str(mediaid).startswith("BGM:")):
         subscribe_mediaid = None
-    favor = media_server.check_item_exists(
-        mtype=mtype, title=title, year=year, tmdbid=mediaid)
+    favor = media_server.check_item_exists(mtype=mtype, title=title, year=year, tmdbid=mediaid)
     rssid = subscribe.get_subscribe_id(
         mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
-        title=title, year=year, tmdbid=subscribe_mediaid)
+        title=title,
+        year=year,
+        tmdbid=subscribe_mediaid,
+    )
     if not rssid:
         rssid = subscribe.get_subscribe_id(
-            mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
-            title=title, year=year, tmdbid=None)
+            mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV, title=title, year=year, tmdbid=None
+        )
     if not rssid:
         rssid = subscribe.get_subscribe_id(
-            mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
-            title=title, year=None, tmdbid=None)
+            mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV, title=title, year=None, tmdbid=None
+        )
     if rssid:
-        if str(rssid).find('\n') != -1:
+        if str(rssid).find("\n") != -1:
             _, rssid = str(rssid).split("\n")
     else:
         rssid = ""

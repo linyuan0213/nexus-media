@@ -1,4 +1,5 @@
 """SmallHorse 架构用户信息解析"""
+
 import re
 
 from lxml import etree
@@ -7,7 +8,7 @@ from app.utils import StringUtils
 
 
 def is_small_horse(ins):
-    return 'Small Horse' in ins._index_html
+    return "Small Horse" in ins._index_html
 
 
 def parse(ins):
@@ -32,11 +33,13 @@ def parse(ins):
             ins.upload = StringUtils.num_filesize(str(li[2].xpath("text()")[0]).split(":")[1].strip())
             ins.download = StringUtils.num_filesize(str(li[3].xpath("text()")[0]).split(":")[1].strip())
             if li[4].xpath("span//text()"):
-                ins.ratio = StringUtils.str_float(str(li[4].xpath("span//text()")[0]).replace('∞', '0'))
+                ins.ratio = StringUtils.str_float(str(li[4].xpath("span//text()")[0]).replace("∞", "0"))
             else:
                 ins.ratio = StringUtils.str_float(str(li[5].xpath("text()")[0]).split(":")[1])
             ins.bonus = StringUtils.str_float(str(li[5].xpath("text()")[0]).split(":")[1])
             ins.user_level = str(tmps[3].xpath("li")[0].xpath("text()")[0]).split(":")[1].strip()
-            ins.leeching = StringUtils.str_int((tmps[4].xpath("li")[6].xpath("text()")[0]).split(":")[1].replace("[", ""))
+            ins.leeching = StringUtils.str_int(
+                (tmps[4].xpath("li")[6].xpath("text()")[0]).split(":")[1].replace("[", "")
+            )
         except Exception:
             pass

@@ -1,4 +1,3 @@
-
 from app.media.models import MediaInfo
 from app.media.parser.base import ParserResult
 from app.media.parser.regex import RegexParser

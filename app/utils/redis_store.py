@@ -32,9 +32,9 @@ class RedisStore:
         if self._client is None:
             try:
                 import redis
+
                 self._client = redis.StrictRedis(
-                    host=REDIS_HOST, port=REDIS_PORT, db=0,
-                    socket_connect_timeout=2, socket_timeout=2
+                    host=REDIS_HOST, port=REDIS_PORT, db=0, socket_connect_timeout=2, socket_timeout=2
                 )
                 self._client.ping()
                 self._available = True
@@ -106,7 +106,7 @@ class RedisStore:
         if not self._ensure_connection():
             return {}
         try:
-            return {k.decode('utf-8'): self.hget(name, k) for k in self._client.hkeys(name)}
+            return {k.decode("utf-8"): self.hget(name, k) for k in self._client.hkeys(name)}
         except Exception as e:
             log.debug(f"RedisStore hgetall 失败 {name}: {e}")
             return {}
@@ -116,10 +116,7 @@ class RedisStore:
         if not self._ensure_connection():
             return
         try:
-            self._client.lpush(
-                name,
-                *[json.dumps(v) if isinstance(v, (dict, list)) else v for v in values]
-            )
+            self._client.lpush(name, *[json.dumps(v) if isinstance(v, (dict, list)) else v for v in values])
         except Exception as e:
             log.debug(f"RedisStore lpush 失败 {name}: {e}")
 
@@ -138,10 +135,7 @@ class RedisStore:
         if not self._ensure_connection():
             return
         try:
-            self._client.rpush(
-                name,
-                *[json.dumps(v) if isinstance(v, (dict, list)) else v for v in values]
-            )
+            self._client.rpush(name, *[json.dumps(v) if isinstance(v, (dict, list)) else v for v in values])
         except Exception as e:
             log.debug(f"RedisStore rpush 失败 {name}: {e}")
 
@@ -183,7 +177,7 @@ class RedisStore:
         if not self._ensure_connection():
             return []
         try:
-            return [k.decode('utf-8') for k in self._client.keys(pattern)]
+            return [k.decode("utf-8") for k in self._client.keys(pattern)]
         except Exception as e:
             log.debug(f"RedisStore keys 失败 {pattern}: {e}")
             return []
@@ -242,8 +236,7 @@ class RedisStore:
             log.debug(f"RedisStore xgroup_create 失败 {stream}/{group}: {e}")
             return False
 
-    def xreadgroup(self, group: str, consumer: str, streams: dict, count: int = 1,
-                   block: int = 5000) -> list:
+    def xreadgroup(self, group: str, consumer: str, streams: dict, count: int = 1, block: int = 5000) -> list:
         """消费者组读取消息
         :param streams: {stream_name: ">"} 表示只读新消息
         :return: [(stream_name, [(msg_id, {field: value})])]
@@ -251,8 +244,7 @@ class RedisStore:
         if not self._ensure_connection():
             return []
         try:
-            result = self._client.xreadgroup(group, consumer, streams, count=count,
-                                             block=block)
+            result = self._client.xreadgroup(group, consumer, streams, count=count, block=block)
             return result or []
         except Exception as e:
             log.debug(f"RedisStore xreadgroup 失败: {e}")
@@ -279,8 +271,7 @@ class RedisStore:
             log.debug(f"RedisStore xpending 失败 {stream}: {e}")
             return 0
 
-    def xclaim(self, stream: str, group: str, consumer: str, min_idle_time: int,
-               *ids: str) -> list:
+    def xclaim(self, stream: str, group: str, consumer: str, min_idle_time: int, *ids: str) -> list:
         """认领超时未确认的消息（用于重试）"""
         if not self._ensure_connection():
             return []

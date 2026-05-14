@@ -1,4 +1,5 @@
 """刮削器 — 图片与 NFO 文件下载/保存"""
+
 import os
 
 from requests.exceptions import RequestException
@@ -21,12 +22,12 @@ class ImageDownloader:
         self._rmt_mode = rmt_mode
 
     @retry(RequestException, logger=log)
-    def download(self, url, out_path, itype='', force=False):
+    def download(self, url, out_path, itype="", force=False):
         """下载图片并保存"""
         if not url or not out_path:
             return
         if itype:
-            image_path = os.path.join(out_path, "%s.%s" % (itype, str(url).split('.')[-1]))
+            image_path = os.path.join(out_path, "%s.%s" % (itype, str(url).split(".")[-1]))
         else:
             image_path = out_path
         if not force and os.path.exists(image_path):
@@ -62,6 +63,7 @@ class ImageDownloader:
     def _save_remote(self, out_file, content):
         """保存到远程存储（RCLONE / MINIO）"""
         from app.utils import SystemUtils
+
         temp_file = os.path.join(self._temp_path, out_file[1:])
         temp_file_dir = os.path.dirname(temp_file)
         if not os.path.exists(temp_file_dir):

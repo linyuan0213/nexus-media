@@ -1,6 +1,7 @@
 """
 DownloadService 单元测试
 """
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -61,7 +62,7 @@ def svc(mock_downloader, mock_searcher, mock_media, mock_sites, mock_indexer_ser
         media=mock_media,
         sites=mock_sites,
         indexer_service=mock_indexer_service,
-        torrent_remover=mock_remover
+        torrent_remover=mock_remover,
     )
 
 
@@ -87,9 +88,14 @@ class TestDownloadFromSearchResults:
     def test_success(self, svc, mock_searcher, mock_media, mock_downloader):
         mock_searcher.get_search_result_by_id.return_value = [
             FakeSearchResult(
-                PAGEURL="https://example.com", ENCLOSURE="enc1",
-                TORRENT_NAME="Test", DESCRIPTION="", SIZE=100,
-                SITE="Site", UPLOAD_VOLUME_FACTOR=1.0, DOWNLOAD_VOLUME_FACTOR=1.0
+                PAGEURL="https://example.com",
+                ENCLOSURE="enc1",
+                TORRENT_NAME="Test",
+                DESCRIPTION="",
+                SIZE=100,
+                SITE="Site",
+                UPLOAD_VOLUME_FACTOR=1.0,
+                DOWNLOAD_VOLUME_FACTOR=1.0,
             )
         ]
         mock_media.get_media_info.return_value = MagicMock()
@@ -100,9 +106,14 @@ class TestDownloadFromSearchResults:
     def test_mteam_special_url(self, svc, mock_searcher, mock_media, mock_downloader):
         mock_searcher.get_search_result_by_id.return_value = [
             FakeSearchResult(
-                PAGEURL="https://m-team.cc", ENCLOSURE=None,
-                TORRENT_NAME="Test", DESCRIPTION="", SIZE=100,
-                SITE="Site", UPLOAD_VOLUME_FACTOR=1.0, DOWNLOAD_VOLUME_FACTOR=1.0
+                PAGEURL="https://m-team.cc",
+                ENCLOSURE=None,
+                TORRENT_NAME="Test",
+                DESCRIPTION="",
+                SIZE=100,
+                SITE="Site",
+                UPLOAD_VOLUME_FACTOR=1.0,
+                DOWNLOAD_VOLUME_FACTOR=1.0,
             )
         ]
         mock_downloader.get_download_url.return_value = "http://special"
@@ -115,9 +126,14 @@ class TestDownloadFromSearchResults:
     def test_download_fail(self, svc, mock_searcher, mock_media, mock_downloader):
         mock_searcher.get_search_result_by_id.return_value = [
             FakeSearchResult(
-                PAGEURL="https://example.com", ENCLOSURE="enc1",
-                TORRENT_NAME="Test", DESCRIPTION="", SIZE=100,
-                SITE="Site", UPLOAD_VOLUME_FACTOR=1.0, DOWNLOAD_VOLUME_FACTOR=1.0
+                PAGEURL="https://example.com",
+                ENCLOSURE="enc1",
+                TORRENT_NAME="Test",
+                DESCRIPTION="",
+                SIZE=100,
+                SITE="Site",
+                UPLOAD_VOLUME_FACTOR=1.0,
+                DOWNLOAD_VOLUME_FACTOR=1.0,
             )
         ]
         mock_media.get_media_info.return_value = MagicMock()
@@ -129,9 +145,7 @@ class TestDownloadFromSearchResults:
 
 class TestDownloadFromLink:
     def test_missing_info(self, svc):
-        result = svc.download_from_link(
-            "", "", "", "", "", "", "", "", "", "/dl", "s1", "user"
-        )
+        result = svc.download_from_link("", "", "", "", "", "", "", "", "", "/dl", "s1", "user")
         assert result.success is False
         assert "种子信息有误" in result.message
 
@@ -139,8 +153,7 @@ class TestDownloadFromLink:
         mock_media.get_media_info.return_value = MagicMock()
         mock_downloader.download.return_value = (None, True, "")
         result = svc.download_from_link(
-            "site", "enc", "title", "desc", "page", "100", "10",
-            "1.0", "1.0", "/dl", "s1", "user"
+            "site", "enc", "title", "desc", "page", "100", "10", "1.0", "1.0", "/dl", "s1", "user"
         )
         assert result.success is True
         assert result.message == "下载成功"
@@ -150,16 +163,14 @@ class TestDownloadFromLink:
         mock_media.get_media_info.return_value = MagicMock()
         mock_downloader.download.return_value = (None, True, "")
         result = svc.download_from_link(
-            "site", "", "title", "desc", "https://m-team.cc", "100", "10",
-            "1.0", "1.0", "/dl", "s1", "user"
+            "site", "", "title", "desc", "https://m-team.cc", "100", "10", "1.0", "1.0", "/dl", "s1", "user"
         )
         assert result.success is True
 
     def test_media_none(self, svc, mock_media):
         mock_media.get_media_info.return_value = None
         result = svc.download_from_link(
-            "site", "enc", "title", "desc", "page", "100", "10",
-            "1.0", "1.0", "/dl", "s1", "user"
+            "site", "enc", "title", "desc", "page", "100", "10", "1.0", "1.0", "/dl", "s1", "user"
         )
         assert result.success is False
         assert "识别失败" in result.message
@@ -172,7 +183,7 @@ class TestDownloadFromTorrentFilesOrUrls:
         assert "没有种子文件" in result.message
 
     def test_from_files_only(self, svc, mock_downloader, mock_media):
-        with patch('app.services.download_service.temp_manager') as mock_temp:
+        with patch("app.services.download_service.temp_manager") as mock_temp:
             mock_temp.get_temp_path.return_value = "/tmp/test.torrent"
             mock_media.get_media_info.return_value = MagicMock()
             mock_downloader.download.return_value = (None, True, "")
@@ -183,27 +194,21 @@ class TestDownloadFromTorrentFilesOrUrls:
 
     def test_from_magnet_url(self, svc, mock_downloader):
         mock_downloader.download.return_value = (None, True, "")
-        result = svc.download_from_torrent_files_or_urls(
-            [], ["magnet:?xt=urn:btih:abc"], "/dl", "s1", "user"
-        )
+        result = svc.download_from_torrent_files_or_urls([], ["magnet:?xt=urn:btih:abc"], "/dl", "s1", "user")
         assert result.success is True
 
     def test_from_url_torrent_fail(self, svc, mock_sites):
         mock_sites.get_sites.return_value = {"cookie": "c", "ua": "u", "proxy": False}
-        with patch('app.services.download_service.Torrent') as MockTorrent:
+        with patch("app.services.download_service.Torrent") as MockTorrent:
             MockTorrent().get_torrent_info.return_value = (None, None, None, None, "超时")
-            result = svc.download_from_torrent_files_or_urls(
-                [], ["http://example.com/torrent"], "/dl", "s1", "user"
-            )
+            result = svc.download_from_torrent_files_or_urls([], ["http://example.com/torrent"], "/dl", "s1", "user")
             assert result.success is False
             assert "下载种子文件失败" in result.message
 
 
 class TestGetDownloadingWithMediaInfo:
     def test_from_download_history(self, svc, mock_downloader):
-        mock_downloader.get_downloading_progress.return_value = [
-            {"id": "1", "name": "raw_name"}
-        ]
+        mock_downloader.get_downloading_progress.return_value = [{"id": "1", "name": "raw_name"}]
         mock_downloader.default_downloader_id = "qb"
         mock_downloader.get_download_history_by_downloader.return_value = FakeDownloadInfo(
             TITLE="Movie", YEAR="2020", POSTER="/poster.jpg", SE="S01"
@@ -213,9 +218,7 @@ class TestGetDownloadingWithMediaInfo:
         assert result[0]["image"] == "/poster.jpg"
 
     def test_from_media_info(self, svc, mock_downloader, mock_media):
-        mock_downloader.get_downloading_progress.return_value = [
-            {"id": "1", "name": "raw_name"}
-        ]
+        mock_downloader.get_downloading_progress.return_value = [{"id": "1", "name": "raw_name"}]
         mock_downloader.default_downloader_id = "qb"
         mock_downloader.get_download_history_by_downloader.return_value = None
         mock_media_info = MagicMock()
@@ -229,9 +232,7 @@ class TestGetDownloadingWithMediaInfo:
         assert result[0]["image"] == "/tv.jpg"
 
     def test_media_none(self, svc, mock_downloader, mock_media):
-        mock_downloader.get_downloading_progress.return_value = [
-            {"id": "1", "name": "raw_name"}
-        ]
+        mock_downloader.get_downloading_progress.return_value = [{"id": "1", "name": "raw_name"}]
         mock_downloader.default_downloader_id = "qb"
         mock_downloader.get_download_history_by_downloader.return_value = None
         mock_media.get_media_info.return_value = None
@@ -240,9 +241,7 @@ class TestGetDownloadingWithMediaInfo:
         assert result[0]["image"] == ""
 
     def test_no_year(self, svc, mock_downloader, mock_media):
-        mock_downloader.get_downloading_progress.return_value = [
-            {"id": "1", "name": "raw_name"}
-        ]
+        mock_downloader.get_downloading_progress.return_value = [{"id": "1", "name": "raw_name"}]
         mock_downloader.default_downloader_id = "qb"
         mock_downloader.get_download_history_by_downloader.return_value = None
         mock_media_info = MagicMock()
@@ -265,7 +264,7 @@ class TestGetIndexerStatistics:
     def test_with_data(self, svc, mock_indexer_service):
         mock_indexer_service.get_indexer_statistics.return_value = (
             [IndexerStatisticsDTO(name="Indexer1", total=100, fail=10, success=90, avg=88.5)],
-            [["indexer", "avg"], ["Indexer1", 88.5]]
+            [["indexer", "avg"], ["Indexer1", 88.5]],
         )
         stats, dataset = svc.get_indexer_statistics()
         assert len(stats) == 1

@@ -10,7 +10,6 @@ app.dependency_overrides[get_current_user] = lambda: "testuser"
 
 
 class TestWordsRouter:
-
     def _mock_words(self):
         mock_svc = MagicMock()
         app.dependency_overrides[get_words_service] = lambda: mock_svc
@@ -23,10 +22,7 @@ class TestWordsRouter:
         mock_svc = self._mock_words()
         mock_svc.add_word_group.return_value = (True, "添加成功")
         try:
-            resp = client.post("/api/words/add_custom_word_group", json={
-                "tmdb_id": 123,
-                "tmdb_type": "tv"
-            })
+            resp = client.post("/api/words/add_custom_word_group", json={"tmdb_id": 123, "tmdb_type": "tv"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["msg"] == "添加成功"
@@ -38,10 +34,7 @@ class TestWordsRouter:
         mock_svc = self._mock_words()
         mock_svc.add_word_group.return_value = (False, "已存在")
         try:
-            resp = client.post("/api/words/add_custom_word_group", json={
-                "tmdb_id": 123,
-                "tmdb_type": "tv"
-            })
+            resp = client.post("/api/words/add_custom_word_group", json={"tmdb_id": 123, "tmdb_type": "tv"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
             assert resp.json()["msg"] == "已存在"
@@ -52,21 +45,24 @@ class TestWordsRouter:
         mock_svc = self._mock_words()
         mock_svc.add_or_edit_word.return_value = (True, "保存成功")
         try:
-            resp = client.post("/api/words/add_or_edit_custom_word", json={
-                "id": 1,
-                "gid": 10,
-                "group_type": "1",
-                "new_replaced": "old",
-                "new_replace": "new",
-                "new_front": "",
-                "new_back": "",
-                "new_offset": "",
-                "new_help": "",
-                "type": "1",
-                "season": None,
-                "enabled": 1,
-                "regex": 0,
-            })
+            resp = client.post(
+                "/api/words/add_or_edit_custom_word",
+                json={
+                    "id": 1,
+                    "gid": 10,
+                    "group_type": "1",
+                    "new_replaced": "old",
+                    "new_replace": "new",
+                    "new_front": "",
+                    "new_back": "",
+                    "new_offset": "",
+                    "new_help": "",
+                    "type": "1",
+                    "season": None,
+                    "enabled": 1,
+                    "regex": 0,
+                },
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             mock_svc.add_or_edit_word.assert_called_once()
@@ -84,9 +80,7 @@ class TestWordsRouter:
         g.words = {"w1": "v1"}
         mock_svc.analyse_import_code.return_value = ([g], "note text")
         try:
-            resp = client.post("/api/words/analyse_import_custom_words_code", json={
-                "import_code": "somecode"
-            })
+            resp = client.post("/api/words/analyse_import_custom_words_code", json={"import_code": "somecode"})
             assert resp.status_code == 200
             data = resp.json()
             assert data["code"] == 0
@@ -99,10 +93,7 @@ class TestWordsRouter:
         mock_svc = self._mock_words()
         mock_svc.toggle_words.return_value = True
         try:
-            resp = client.post("/api/words/check_custom_words", json={
-                "ids_info": ["1", "2"],
-                "flag": "enable"
-            })
+            resp = client.post("/api/words/check_custom_words", json={"ids_info": ["1", "2"], "flag": "enable"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             mock_svc.toggle_words.assert_called_once_with(ids_info=["1", "2"], flag="enable")
@@ -113,10 +104,7 @@ class TestWordsRouter:
         mock_svc = self._mock_words()
         mock_svc.toggle_words.return_value = False
         try:
-            resp = client.post("/api/words/check_custom_words", json={
-                "ids_info": ["1"],
-                "flag": "disable"
-            })
+            resp = client.post("/api/words/check_custom_words", json={"ids_info": ["1"], "flag": "disable"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
             assert resp.json()["msg"] == "识别词状态设置失败"
@@ -138,9 +126,7 @@ class TestWordsRouter:
         mock_svc = self._mock_words()
         mock_svc.delete_words_by_ids.return_value = True
         try:
-            resp = client.post("/api/words/delete_custom_words", json={
-                "ids_info": ["1", "2"]
-            })
+            resp = client.post("/api/words/delete_custom_words", json={"ids_info": ["1", "2"]})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             mock_svc.delete_words_by_ids.assert_called_once_with(["1", "2"])
@@ -151,10 +137,7 @@ class TestWordsRouter:
         mock_svc = self._mock_words()
         mock_svc.export_words.return_value = ("encoded_string", "note")
         try:
-            resp = client.post("/api/words/export_custom_words", json={
-                "ids_info": "1,2",
-                "note": "my note"
-            })
+            resp = client.post("/api/words/export_custom_words", json={"ids_info": "1,2", "note": "my note"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["string"] == "encoded_string"
@@ -201,10 +184,7 @@ class TestWordsRouter:
         mock_svc = self._mock_words()
         mock_svc.import_words.return_value = (True, "导入成功")
         try:
-            resp = client.post("/api/words/import_custom_words", json={
-                "import_code": "code",
-                "ids_info": "1,2"
-            })
+            resp = client.post("/api/words/import_custom_words", json={"import_code": "code", "ids_info": "1,2"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["msg"] == "导入成功"
@@ -219,11 +199,7 @@ class TestWordsRouter:
         cat.anime_categorys = []
         mock_cat_cls.return_value = cat
 
-        resp = client.post("/api/words/get_categories", json={
-            "type": "电影",
-            "id": "c1",
-            "value": "v1"
-        })
+        resp = client.post("/api/words/get_categories", json={"type": "电影", "id": "c1", "value": "v1"})
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         assert resp.json()["category"] == ["动作", "科幻"]
@@ -236,9 +212,7 @@ class TestWordsRouter:
         cat.anime_categorys = []
         mock_cat_cls.return_value = cat
 
-        resp = client.post("/api/words/get_categories", json={
-            "type": "电视剧"
-        })
+        resp = client.post("/api/words/get_categories", json={"type": "电视剧"})
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         assert resp.json()["category"] == ["剧情", "喜剧"]
@@ -251,9 +225,7 @@ class TestWordsRouter:
         cat.anime_categorys = ["热血"]
         mock_cat_cls.return_value = cat
 
-        resp = client.post("/api/words/get_categories", json={
-            "type": "动漫"
-        })
+        resp = client.post("/api/words/get_categories", json={"type": "动漫"})
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         assert resp.json()["category"] == ["热血"]

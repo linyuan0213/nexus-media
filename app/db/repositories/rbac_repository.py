@@ -3,6 +3,7 @@ RBAC Repository
 基于角色的访问控制(RBAC)数据访问层
 处理用户、角色、权限、菜单的数据库操作
 """
+
 from datetime import datetime
 from typing import Any
 
@@ -29,9 +30,14 @@ class RBACUserRepository(BaseRepository):
         Returns:
             用户对象或None
         """
-        return self._db.query(RBACUser).options(
-            selectinload(RBACUser.roles),
-        ).filter(user_id == RBACUser.ID).first()
+        return (
+            self._db.query(RBACUser)
+            .options(
+                selectinload(RBACUser.roles),
+            )
+            .filter(user_id == RBACUser.ID)
+            .first()
+        )
 
     def get_user_by_username(self, username: str) -> RBACUser | None:
         """
@@ -43,26 +49,21 @@ class RBACUserRepository(BaseRepository):
         Returns:
             用户对象或None
         """
-        return self._db.query(RBACUser).filter(
-            username == RBACUser.USERNAME
-        ).first()
+        return self._db.query(RBACUser).filter(username == RBACUser.USERNAME).first()
 
     def get_user_by_email(self, email: str) -> RBACUser | None:
         """
         根据邮箱获取用户
-        
+
         Args:
             email: 邮箱地址
-            
+
         Returns:
             用户对象或None
         """
-        return self._db.query(RBACUser).filter(
-            and_(email == RBACUser.EMAIL, RBACUser.STATUS == 1)
-        ).first()
+        return self._db.query(RBACUser).filter(and_(email == RBACUser.EMAIL, RBACUser.STATUS == 1)).first()
 
-    def get_users(self, page: int = 1, page_size: int = 20,
-                  status: int | None = None) -> tuple:
+    def get_users(self, page: int = 1, page_size: int = 20, status: int | None = None) -> tuple:
         """
         获取用户列表（支持分页，预加载角色）
 
@@ -93,17 +94,22 @@ class RBACUserRepository(BaseRepository):
         Returns:
             用户列表
         """
-        return self._db.query(RBACUser).options(
-            selectinload(RBACUser.roles),
-        ).filter(RBACUser.STATUS == 1).all()
+        return (
+            self._db.query(RBACUser)
+            .options(
+                selectinload(RBACUser.roles),
+            )
+            .filter(RBACUser.STATUS == 1)
+            .all()
+        )
 
     def is_user_exists(self, username: str) -> bool:
         """
         检查用户名是否已存在
-        
+
         Args:
             username: 用户名
-            
+
         Returns:
             是否存在
         """
@@ -113,10 +119,10 @@ class RBACUserRepository(BaseRepository):
     def is_email_exists(self, email: str) -> bool:
         """
         检查邮箱是否已存在
-        
+
         Args:
             email: 邮箱地址
-            
+
         Returns:
             是否存在
         """
@@ -124,20 +130,24 @@ class RBACUserRepository(BaseRepository):
         return count > 0
 
     @DbPersist(BaseRepository._db)
-    def create_user(self, username: str, password_hash: str,
-                    email: str | None = None,
-                    nickname: str | None = None,
-                    is_superadmin: int = 0) -> RBACUser:
+    def create_user(
+        self,
+        username: str,
+        password_hash: str,
+        email: str | None = None,
+        nickname: str | None = None,
+        is_superadmin: int = 0,
+    ) -> RBACUser:
         """
         创建新用户
-        
+
         Args:
             username: 用户名
             password_hash: 密码哈希
             email: 邮箱
             nickname: 昵称
             is_superadmin: 是否为超级管理员
-            
+
         Returns:
             创建的用户对象
         """
@@ -147,7 +157,7 @@ class RBACUserRepository(BaseRepository):
             EMAIL=email,
             NICKNAME=nickname or username,
             IS_SUPERADMIN=is_superadmin,
-            STATUS=1
+            STATUS=1,
         )
         self._db.insert(user)
         return user
@@ -156,11 +166,11 @@ class RBACUserRepository(BaseRepository):
     def update_user(self, user_id: int, **kwargs) -> bool:
         """
         更新用户信息
-        
+
         Args:
             user_id: 用户ID
             **kwargs: 要更新的字段
-            
+
         Returns:
             是否成功
         """
@@ -168,7 +178,7 @@ class RBACUserRepository(BaseRepository):
         if not user:
             return False
 
-        allowed_fields = ['EMAIL', 'NICKNAME', 'AVATAR', 'STATUS', 'PASSWORD_HASH']
+        allowed_fields = ["EMAIL", "NICKNAME", "AVATAR", "STATUS", "PASSWORD_HASH"]
         for key, value in kwargs.items():
             if key.upper() in allowed_fields:
                 setattr(user, key.upper(), value)
@@ -180,11 +190,11 @@ class RBACUserRepository(BaseRepository):
     def update_last_login(self, user_id: int, ip: str | None = None) -> bool:
         """
         更新用户最后登录时间
-        
+
         Args:
             user_id: 用户ID
             ip: 登录IP
-            
+
         Returns:
             是否成功
         """
@@ -215,10 +225,10 @@ class RBACUserRepository(BaseRepository):
     def hard_delete_user(self, user_id: int) -> bool:
         """
         硬删除用户
-        
+
         Args:
             user_id: 用户ID
-            
+
         Returns:
             是否成功
         """
@@ -230,10 +240,10 @@ class RBACUserRepository(BaseRepository):
     def get_user_roles(self, user_id: int) -> list[RBACRole]:
         """
         获取用户的角色列表
-        
+
         Args:
             user_id: 用户ID
-            
+
         Returns:
             角色列表
         """
@@ -246,11 +256,11 @@ class RBACUserRepository(BaseRepository):
     def assign_roles_to_user(self, user_id: int, role_ids: list[int]) -> bool:
         """
         为用户分配角色
-        
+
         Args:
             user_id: 用户ID
             role_ids: 角色ID列表
-            
+
         Returns:
             是否成功
         """
@@ -259,10 +269,7 @@ class RBACUserRepository(BaseRepository):
             return False
 
         # 获取角色对象
-        roles = self._db.query(RBACRole).filter(
-            RBACRole.ID.in_(role_ids),
-            RBACRole.STATUS == 1
-        ).all()
+        roles = self._db.query(RBACRole).filter(RBACRole.ID.in_(role_ids), RBACRole.STATUS == 1).all()
 
         # 清空现有角色并分配新角色
         user.roles = roles
@@ -272,11 +279,11 @@ class RBACUserRepository(BaseRepository):
     def add_role_to_user(self, user_id: int, role_id: int) -> bool:
         """
         为用户添加单个角色
-        
+
         Args:
             user_id: 用户ID
             role_id: 角色ID
-            
+
         Returns:
             是否成功
         """
@@ -295,11 +302,11 @@ class RBACUserRepository(BaseRepository):
     def remove_role_from_user(self, user_id: int, role_id: int) -> bool:
         """
         移除用户的角色
-        
+
         Args:
             user_id: 用户ID
             role_id: 角色ID
-            
+
         Returns:
             是否成功
         """
@@ -319,10 +326,10 @@ class RBACRoleRepository(BaseRepository):
     def get_role_by_id(self, role_id: int) -> RBACRole | None:
         """
         根据ID获取角色
-        
+
         Args:
             role_id: 角色ID
-            
+
         Returns:
             角色对象或None
         """
@@ -331,24 +338,22 @@ class RBACRoleRepository(BaseRepository):
     def get_role_by_code(self, role_code: str) -> RBACRole | None:
         """
         根据角色代码获取角色
-        
+
         Args:
             role_code: 角色代码
-            
+
         Returns:
             角色对象或None
         """
-        return self._db.query(RBACRole).filter(
-            and_(role_code == RBACRole.ROLE_CODE, RBACRole.STATUS == 1)
-        ).first()
+        return self._db.query(RBACRole).filter(and_(role_code == RBACRole.ROLE_CODE, RBACRole.STATUS == 1)).first()
 
     def get_all_roles(self, status: int | None = None) -> list[RBACRole]:
         """
         获取所有角色（预加载权限、菜单、用户关联）
-        
+
         Args:
             status: 状态筛选
-            
+
         Returns:
             角色列表
         """
@@ -364,19 +369,17 @@ class RBACRoleRepository(BaseRepository):
     def get_roles_page(self, page: int = 1, page_size: int = 20) -> tuple:
         """
         分页获取角色列表
-        
+
         Args:
             page: 页码
             page_size: 每页数量
-            
+
         Returns:
             (角色列表, 总数)
         """
         query = self._db.query(RBACRole).filter(RBACRole.STATUS == 1)
         total = query.count()
-        roles = query.order_by(RBACRole.ROLE_LEVEL).offset(
-            (page - 1) * page_size
-        ).limit(page_size).all()
+        roles = query.order_by(RBACRole.ROLE_LEVEL).offset((page - 1) * page_size).limit(page_size).all()
         return roles, total
 
     def is_role_exists(self, role_code: str) -> bool:
@@ -406,27 +409,23 @@ class RBACRoleRepository(BaseRepository):
         return count > 0
 
     @DbPersist(BaseRepository._db)
-    def create_role(self, role_name: str, role_code: str,
-                    description: str | None = None,
-                    role_level: int = 100) -> RBACRole:
+    def create_role(
+        self, role_name: str, role_code: str, description: str | None = None, role_level: int = 100
+    ) -> RBACRole:
         """
         创建角色
-        
+
         Args:
             role_name: 角色名称
             role_code: 角色代码
             description: 角色描述
             role_level: 角色级别
-            
+
         Returns:
             创建的角色对象
         """
         role = RBACRole(
-            ROLE_NAME=role_name,
-            ROLE_CODE=role_code,
-            DESCRIPTION=description,
-            ROLE_LEVEL=role_level,
-            STATUS=1
+            ROLE_NAME=role_name, ROLE_CODE=role_code, DESCRIPTION=description, ROLE_LEVEL=role_level, STATUS=1
         )
         self._db.insert(role)
         return role
@@ -435,11 +434,11 @@ class RBACRoleRepository(BaseRepository):
     def update_role(self, role_id: int, **kwargs) -> bool:
         """
         更新角色信息
-        
+
         Args:
             role_id: 角色ID
             **kwargs: 要更新的字段
-            
+
         Returns:
             是否成功
         """
@@ -447,7 +446,7 @@ class RBACRoleRepository(BaseRepository):
         if not role:
             return False
 
-        allowed_fields = ['ROLE_NAME', 'DESCRIPTION', 'ROLE_LEVEL', 'STATUS']
+        allowed_fields = ["ROLE_NAME", "DESCRIPTION", "ROLE_LEVEL", "STATUS"]
         for key, value in kwargs.items():
             if key.upper() in allowed_fields:
                 setattr(role, key.upper(), value)
@@ -459,10 +458,10 @@ class RBACRoleRepository(BaseRepository):
     def delete_role(self, role_id: int) -> bool:
         """
         删除角色
-        
+
         Args:
             role_id: 角色ID
-            
+
         Returns:
             是否成功
         """
@@ -474,10 +473,10 @@ class RBACRoleRepository(BaseRepository):
     def get_role_permissions(self, role_id: int) -> list[RBACPermission]:
         """
         获取角色的权限列表
-        
+
         Args:
             role_id: 角色ID
-            
+
         Returns:
             权限列表
         """
@@ -487,15 +486,14 @@ class RBACRoleRepository(BaseRepository):
         return role.permissions
 
     @DbPersist(BaseRepository._db)
-    def assign_permissions_to_role(self, role_id: int,
-                                    permission_ids: list[int]) -> bool:
+    def assign_permissions_to_role(self, role_id: int, permission_ids: list[int]) -> bool:
         """
         为角色分配权限
-        
+
         Args:
             role_id: 角色ID
             permission_ids: 权限ID列表
-            
+
         Returns:
             是否成功
         """
@@ -503,10 +501,11 @@ class RBACRoleRepository(BaseRepository):
         if not role:
             return False
 
-        permissions = self._db.query(RBACPermission).filter(
-            RBACPermission.ID.in_(permission_ids),
-            RBACPermission.STATUS == 1
-        ).all()
+        permissions = (
+            self._db.query(RBACPermission)
+            .filter(RBACPermission.ID.in_(permission_ids), RBACPermission.STATUS == 1)
+            .all()
+        )
 
         role.permissions = permissions
         return True
@@ -516,10 +515,10 @@ class RBACRoleRepository(BaseRepository):
     def get_role_menus(self, role_id: int) -> list[RBACMenu]:
         """
         获取角色的菜单列表
-        
+
         Args:
             role_id: 角色ID
-            
+
         Returns:
             菜单列表
         """
@@ -532,11 +531,11 @@ class RBACRoleRepository(BaseRepository):
     def assign_menus_to_role(self, role_id: int, menu_ids: list[int]) -> bool:
         """
         为角色分配菜单
-        
+
         Args:
             role_id: 角色ID
             menu_ids: 菜单ID列表
-            
+
         Returns:
             是否成功
         """
@@ -544,10 +543,7 @@ class RBACRoleRepository(BaseRepository):
         if not role:
             return False
 
-        menus = self._db.query(RBACMenu).filter(
-            RBACMenu.ID.in_(menu_ids),
-            RBACMenu.STATUS == 1
-        ).all()
+        menus = self._db.query(RBACMenu).filter(RBACMenu.ID.in_(menu_ids), RBACMenu.STATUS == 1).all()
 
         role.menus = menus
         return True
@@ -562,28 +558,28 @@ class RBACPermissionRepository(BaseRepository):
         """
         根据ID获取权限
         """
-        return self._db.query(RBACPermission).filter(
-            permission_id == RBACPermission.ID
-        ).first()
+        return self._db.query(RBACPermission).filter(permission_id == RBACPermission.ID).first()
 
     def get_permission_by_code(self, permission_code: str) -> RBACPermission | None:
         """
         根据权限代码获取权限
         """
-        return self._db.query(RBACPermission).filter(
-            and_(permission_code == RBACPermission.PERMISSION_CODE,
-                 RBACPermission.STATUS == 1)
-        ).first()
+        return (
+            self._db.query(RBACPermission)
+            .filter(and_(permission_code == RBACPermission.PERMISSION_CODE, RBACPermission.STATUS == 1))
+            .first()
+        )
 
-    def get_all_permissions(self, module: str | None = None,
-                            permission_type: str | None = None) -> list[RBACPermission]:
+    def get_all_permissions(
+        self, module: str | None = None, permission_type: str | None = None
+    ) -> list[RBACPermission]:
         """
         获取所有权限
-        
+
         Args:
             module: 模块筛选
             permission_type: 权限类型筛选
-            
+
         Returns:
             权限列表
         """
@@ -600,16 +596,21 @@ class RBACPermissionRepository(BaseRepository):
         """
         根据权限代码列表获取权限
         """
-        return self._db.query(RBACPermission).filter(
-            and_(RBACPermission.PERMISSION_CODE.in_(codes),
-                 RBACPermission.STATUS == 1)
-        ).all()
+        return (
+            self._db.query(RBACPermission)
+            .filter(and_(RBACPermission.PERMISSION_CODE.in_(codes), RBACPermission.STATUS == 1))
+            .all()
+        )
 
     @DbPersist(BaseRepository._db)
-    def create_permission(self, permission_name: str, permission_code: str,
-                          permission_type: str = 'api',
-                          module: str | None = None,
-                          description: str | None = None) -> RBACPermission:
+    def create_permission(
+        self,
+        permission_name: str,
+        permission_code: str,
+        permission_type: str = "api",
+        module: str | None = None,
+        description: str | None = None,
+    ) -> RBACPermission:
         """
         创建权限
         """
@@ -619,7 +620,7 @@ class RBACPermissionRepository(BaseRepository):
             PERMISSION_TYPE=permission_type,
             MODULE=module,
             DESCRIPTION=description,
-            STATUS=1
+            STATUS=1,
         )
         self._db.insert(permission)
         return permission
@@ -633,7 +634,7 @@ class RBACPermissionRepository(BaseRepository):
         if not permission:
             return False
 
-        allowed_fields = ['PERMISSION_NAME', 'DESCRIPTION', 'STATUS', 'MODULE']
+        allowed_fields = ["PERMISSION_NAME", "DESCRIPTION", "STATUS", "MODULE"]
         for key, value in kwargs.items():
             if key.upper() in allowed_fields:
                 setattr(permission, key.upper(), value)
@@ -646,9 +647,7 @@ class RBACPermissionRepository(BaseRepository):
         """
         删除权限
         """
-        result = self._db.query(RBACPermission).filter(
-            permission_id == RBACPermission.ID
-        ).delete()
+        result = self._db.query(RBACPermission).filter(permission_id == RBACPermission.ID).delete()
         return result > 0
 
 
@@ -666,7 +665,7 @@ class RBACMenuRepository(BaseRepository):
     def get_menu_by_code(self, menu_code: str, include_hidden: bool = True) -> RBACMenu | None:
         """
         根据菜单代码获取菜单
-        
+
         Args:
             menu_code: 菜单代码
             include_hidden: 是否包含隐藏的菜单，默认包含
@@ -688,7 +687,7 @@ class RBACMenuRepository(BaseRepository):
     def get_top_menus(self, include_hidden: bool = False) -> list[RBACMenu]:
         """
         获取顶级菜单列表
-        
+
         Args:
             include_hidden: 是否包含隐藏的菜单
         """
@@ -701,21 +700,24 @@ class RBACMenuRepository(BaseRepository):
         """
         获取子菜单列表
         """
-        return self._db.query(RBACMenu).filter(
-            and_(parent_id == RBACMenu.PARENT_ID, RBACMenu.STATUS == 1)
-        ).order_by(RBACMenu.SORT_ORDER).all()
+        return (
+            self._db.query(RBACMenu)
+            .filter(and_(parent_id == RBACMenu.PARENT_ID, RBACMenu.STATUS == 1))
+            .order_by(RBACMenu.SORT_ORDER)
+            .all()
+        )
 
     def get_menu_tree(self, include_hidden: bool = False) -> list[dict[str, Any]]:
         """
         获取菜单树形结构
-        
+
         Args:
             include_hidden: 是否包含隐藏的菜单
         """
+
         def build_tree(parent_id=None):
             query = self._db.query(RBACMenu).filter(
-                parent_id == RBACMenu.PARENT_ID if parent_id is not None
-                else RBACMenu.PARENT_ID.is_(None)
+                parent_id == RBACMenu.PARENT_ID if parent_id is not None else RBACMenu.PARENT_ID.is_(None)
             )
             if not include_hidden:
                 query = query.filter(RBACMenu.STATUS == 1)
@@ -724,7 +726,7 @@ class RBACMenuRepository(BaseRepository):
             result = []
             for menu in menus:
                 menu_dict = menu.to_dict()
-                menu_dict['children'] = build_tree(menu.ID)
+                menu_dict["children"] = build_tree(menu.ID)
                 result.append(menu_dict)
             return result
 
@@ -733,32 +735,38 @@ class RBACMenuRepository(BaseRepository):
     def get_user_menus(self, user_id: int) -> list[RBACMenu]:
         """
         获取用户可访问的菜单列表
-        
+
         通过用户的角色关联获取菜单
         """
         from app.db.models.rbac import role_menus, user_roles
 
         # 获取用户的所有角色关联的菜单
-        menus = self._db.query(RBACMenu).join(
-            role_menus, role_menus.c.menu_id == RBACMenu.ID
-        ).join(
-            user_roles, role_menus.c.role_id == user_roles.c.role_id
-        ).filter(
-            user_roles.c.user_id == user_id
-        ).distinct().order_by(RBACMenu.SORT_ORDER).all()
+        menus = (
+            self._db.query(RBACMenu)
+            .join(role_menus, role_menus.c.menu_id == RBACMenu.ID)
+            .join(user_roles, role_menus.c.role_id == user_roles.c.role_id)
+            .filter(user_roles.c.user_id == user_id)
+            .distinct()
+            .order_by(RBACMenu.SORT_ORDER)
+            .all()
+        )
 
         return menus
 
     @DbPersist(BaseRepository._db)
-    def create_menu(self, menu_name: str, menu_code: str,
-                    parent_id: int | None = None,
-                    path: str | None = None,
-                    icon: str | None = None,
-                    component: str | None = None,
-                    sort_order: int = 0,
-                    menu_level: int = 1,
-                    permission_code: str | None = None,
-                    **kwargs) -> RBACMenu:
+    def create_menu(
+        self,
+        menu_name: str,
+        menu_code: str,
+        parent_id: int | None = None,
+        path: str | None = None,
+        icon: str | None = None,
+        component: str | None = None,
+        sort_order: int = 0,
+        menu_level: int = 1,
+        permission_code: str | None = None,
+        **kwargs,
+    ) -> RBACMenu:
         """
         创建菜单
         """
@@ -772,12 +780,20 @@ class RBACMenuRepository(BaseRepository):
             SORT_ORDER=sort_order,
             MENU_LEVEL=menu_level,
             PERMISSION_CODE=permission_code,
-            STATUS=1
+            STATUS=1,
         )
         # 支持 Vben 扩展字段
-        vben_fields = ['REDIRECT', 'KEEP_ALIVE', 'AFFIX_TAB', 'HIDE_IN_MENU',
-                       'HIDE_IN_TAB', 'HIDE_IN_BREADCRUMB', 'ACTIVE_ICON',
-                       'BADGE', 'BADGE_TYPE']
+        vben_fields = [
+            "REDIRECT",
+            "KEEP_ALIVE",
+            "AFFIX_TAB",
+            "HIDE_IN_MENU",
+            "HIDE_IN_TAB",
+            "HIDE_IN_BREADCRUMB",
+            "ACTIVE_ICON",
+            "BADGE",
+            "BADGE_TYPE",
+        ]
         for key, value in kwargs.items():
             if key.upper() in vben_fields:
                 setattr(menu, key.upper(), value)
@@ -793,21 +809,37 @@ class RBACMenuRepository(BaseRepository):
         if not menu:
             return False
 
-        allowed_fields = ['MENU_NAME', 'MENU_CODE', 'PATH', 'ICON', 'COMPONENT', 'PARENT_ID',
-                         'SORT_ORDER', 'IS_HIDDEN', 'STATUS', 'PERMISSION_CODE',
-                         'REDIRECT', 'KEEP_ALIVE', 'AFFIX_TAB', 'HIDE_IN_MENU',
-                         'HIDE_IN_TAB', 'HIDE_IN_BREADCRUMB', 'ACTIVE_ICON',
-                         'BADGE', 'BADGE_TYPE']
+        allowed_fields = [
+            "MENU_NAME",
+            "MENU_CODE",
+            "PATH",
+            "ICON",
+            "COMPONENT",
+            "PARENT_ID",
+            "SORT_ORDER",
+            "IS_HIDDEN",
+            "STATUS",
+            "PERMISSION_CODE",
+            "REDIRECT",
+            "KEEP_ALIVE",
+            "AFFIX_TAB",
+            "HIDE_IN_MENU",
+            "HIDE_IN_TAB",
+            "HIDE_IN_BREADCRUMB",
+            "ACTIVE_ICON",
+            "BADGE",
+            "BADGE_TYPE",
+        ]
         for key, value in kwargs.items():
             if key.upper() in allowed_fields:
                 setattr(menu, key.upper(), value)
 
         # 更新菜单层级
-        if 'parent_id' in kwargs:
-            if kwargs['parent_id'] is None:
+        if "parent_id" in kwargs:
+            if kwargs["parent_id"] is None:
                 menu.MENU_LEVEL = 1
             else:
-                parent = self.get_menu_by_id(kwargs['parent_id'])
+                parent = self.get_menu_by_id(kwargs["parent_id"])
                 if parent:
                     menu.MENU_LEVEL = parent.MENU_LEVEL + 1
 
@@ -834,13 +866,17 @@ class RBACLogRepository(BaseRepository):
     # ========== 登录日志 ==========
 
     @DbPersist(BaseRepository._db)
-    def add_login_log(self, user_id: int | None, username: str,
-                      login_ip: str | None = None,
-                      login_location: str | None = None,
-                      user_agent: str | None = None,
-                      login_type: str = 'password',
-                      login_status: int = 1,
-                      fail_reason: str | None = None) -> RBACUserLoginLog:
+    def add_login_log(
+        self,
+        user_id: int | None,
+        username: str,
+        login_ip: str | None = None,
+        login_location: str | None = None,
+        user_agent: str | None = None,
+        login_type: str = "password",
+        login_status: int = 1,
+        fail_reason: str | None = None,
+    ) -> RBACUserLoginLog:
         """
         添加登录日志
         """
@@ -852,13 +888,12 @@ class RBACLogRepository(BaseRepository):
             USER_AGENT=user_agent,
             LOGIN_TYPE=login_type,
             LOGIN_STATUS=login_status,
-            FAIL_REASON=fail_reason
+            FAIL_REASON=fail_reason,
         )
         self._db.insert(log)
         return log
 
-    def get_login_logs(self, user_id: int | None = None,
-                       page: int = 1, page_size: int = 20) -> tuple:
+    def get_login_logs(self, user_id: int | None = None, page: int = 1, page_size: int = 20) -> tuple:
         """
         获取登录日志
         """
@@ -868,28 +903,29 @@ class RBACLogRepository(BaseRepository):
             query = query.filter(user_id == RBACUserLoginLog.USER_ID)
 
         total = query.count()
-        logs = query.order_by(desc(RBACUserLoginLog.LOGIN_AT)).offset(
-            (page - 1) * page_size
-        ).limit(page_size).all()
+        logs = query.order_by(desc(RBACUserLoginLog.LOGIN_AT)).offset((page - 1) * page_size).limit(page_size).all()
 
         return logs, total
 
     # ========== 操作日志 ==========
 
     @DbPersist(BaseRepository._db)
-    def add_operation_log(self, user_id: int | None = None,
-                          username: str | None = None,
-                          module: str | None = None,
-                          operation_type: str = 'QUERY',
-                          description: str | None = None,
-                          request_method: str | None = None,
-                          request_url: str | None = None,
-                          request_params: str | None = None,
-                          response_data: str | None = None,
-                          operation_ip: str | None = None,
-                          execution_time: int | None = None,
-                          operation_status: int = 1,
-                          error_msg: str | None = None) -> RBACOperationLog:
+    def add_operation_log(
+        self,
+        user_id: int | None = None,
+        username: str | None = None,
+        module: str | None = None,
+        operation_type: str = "QUERY",
+        description: str | None = None,
+        request_method: str | None = None,
+        request_url: str | None = None,
+        request_params: str | None = None,
+        response_data: str | None = None,
+        operation_ip: str | None = None,
+        execution_time: int | None = None,
+        operation_status: int = 1,
+        error_msg: str | None = None,
+    ) -> RBACOperationLog:
         """
         添加操作日志
         """
@@ -906,14 +942,14 @@ class RBACLogRepository(BaseRepository):
             OPERATION_IP=operation_ip,
             EXECUTION_TIME=execution_time,
             OPERATION_STATUS=operation_status,
-            ERROR_MSG=error_msg
+            ERROR_MSG=error_msg,
         )
         self._db.insert(log)
         return log
 
-    def get_operation_logs(self, user_id: int | None = None,
-                           module: str | None = None,
-                           page: int = 1, page_size: int = 20) -> tuple:
+    def get_operation_logs(
+        self, user_id: int | None = None, module: str | None = None, page: int = 1, page_size: int = 20
+    ) -> tuple:
         """
         获取操作日志
         """
@@ -925,8 +961,6 @@ class RBACLogRepository(BaseRepository):
             query = query.filter(module == RBACOperationLog.MODULE)
 
         total = query.count()
-        logs = query.order_by(desc(RBACOperationLog.OPERATED_AT)).offset(
-            (page - 1) * page_size
-        ).limit(page_size).all()
+        logs = query.order_by(desc(RBACOperationLog.OPERATED_AT)).offset((page - 1) * page_size).limit(page_size).all()
 
         return logs, total

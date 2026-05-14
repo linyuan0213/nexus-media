@@ -2,6 +2,7 @@
 插件历史 / TMDB黑名单领域实体 / 插件框架v2实体
 对应 PLUGIN_HISTORY / TMDB_BLACKLIST / PLUGIN_MANIFEST / PLUGIN_CONFIG / PLUGIN_LOGS 表
 """
+
 from dataclasses import dataclass, field, fields
 from typing import Any, Optional
 
@@ -9,6 +10,7 @@ from typing import Any, Optional
 @dataclass
 class PluginHistoryEntity:
     """插件历史实体"""
+
     id: int
     plugin_id: str
     key: str
@@ -46,6 +48,7 @@ class PluginHistoryEntity:
 @dataclass
 class TmdbBlacklistEntity:
     """TMDB黑名单实体"""
+
     id: int
     tmdb_id: str
     title: str | None
@@ -62,12 +65,12 @@ class TmdbBlacklistEntity:
         return cls(
             id=orm_model.ID,
             tmdb_id=orm_model.TMDB_ID or "",
-            title=getattr(orm_model, 'TITLE', None),
-            year=getattr(orm_model, 'YEAR', None),
-            media_type=getattr(orm_model, 'MEDIA_TYPE', None),
-            poster_path=getattr(orm_model, 'POSTER_PATH', None),
-            backdrop_path=getattr(orm_model, 'BACKDROP_PATH', None),
-            note=getattr(orm_model, 'NOTE', None),
+            title=getattr(orm_model, "TITLE", None),
+            year=getattr(orm_model, "YEAR", None),
+            media_type=getattr(orm_model, "MEDIA_TYPE", None),
+            poster_path=getattr(orm_model, "POSTER_PATH", None),
+            backdrop_path=getattr(orm_model, "BACKDROP_PATH", None),
+            note=getattr(orm_model, "NOTE", None),
         )
 
     def __getattr__(self, name: str):
@@ -92,6 +95,7 @@ class TmdbBlacklistEntity:
 @dataclass
 class PluginManifestEntity:
     """插件框架v2 - 插件清单实体"""
+
     id: str
     name: str
     version: str
@@ -113,6 +117,7 @@ class PluginManifestEntity:
         if orm_model is None:
             return None
         import json
+
         tags = []
         try:
             tags = json.loads(orm_model.TAGS or "[]")
@@ -132,7 +137,7 @@ class PluginManifestEntity:
             installed_at=orm_model.INSTALLED_AT,
             updated_at=orm_model.UPDATED_AT,
             enabled=bool(orm_model.ENABLED),
-            installed=bool(getattr(orm_model, 'INSTALLED', True)),
+            installed=bool(getattr(orm_model, "INSTALLED", True)),
             path=orm_model.PATH or "",
         )
 
@@ -155,6 +160,7 @@ class PluginManifestEntity:
 @dataclass
 class PluginConfigEntity:
     """插件框架v2 - 插件配置实体"""
+
     plugin_id: str
     config: dict[str, Any] = field(default_factory=dict)
     updated_at: str | None = None
@@ -164,6 +170,7 @@ class PluginConfigEntity:
         if orm_model is None:
             return None
         import json
+
         cfg = {}
         try:
             cfg = json.loads(orm_model.CONFIG or "{}")
@@ -179,6 +186,7 @@ class PluginConfigEntity:
 @dataclass
 class PluginLogEntity:
     """插件框架v2 - 插件日志实体"""
+
     id: int
     plugin_id: str
     level: str

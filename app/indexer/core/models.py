@@ -8,8 +8,17 @@ class SearchCandidate:
     搜索候选对象，保存单个搜索结果在流水线各阶段的状态
     """
 
-    def __init__(self, item, meta_info, res_order=0, skip_tmdb=False, media_info=None,
-                 indexer_name="", indexer_order=0, indexer_public=False):
+    def __init__(
+        self,
+        item,
+        meta_info,
+        res_order=0,
+        skip_tmdb=False,
+        media_info=None,
+        indexer_name="",
+        indexer_order=0,
+        indexer_public=False,
+    ):
         self.item = item
         self.meta_info = meta_info
         self.res_order = res_order

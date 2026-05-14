@@ -1,6 +1,7 @@
 """
 测试 FastAPI System Router
 """
+
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -161,22 +162,20 @@ class TestSystemRouter:
     def test_check_message_client_interactive(self):
         mock_svc = self._mock_message()
         try:
-            resp = client.post("/api/system/check_message_client", json={
-                "flag": "interactive", "cid": 1, "type": "tg", "checked": True
-            })
+            resp = client.post(
+                "/api/system/check_message_client",
+                json={"flag": "interactive", "cid": 1, "type": "tg", "checked": True},
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            mock_svc.toggle_interactive.assert_called_once_with(
-                cid=1, ctype="tg", checked=True)
+            mock_svc.toggle_interactive.assert_called_once_with(cid=1, ctype="tg", checked=True)
         finally:
             self._teardown_message()
 
     def test_check_message_client_enable(self):
         mock_svc = self._mock_message()
         try:
-            resp = client.post("/api/system/check_message_client", json={
-                "flag": "enable", "cid": 2, "checked": True
-            })
+            resp = client.post("/api/system/check_message_client", json={"flag": "enable", "cid": 2, "checked": True})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             mock_svc.toggle_enable.assert_called_once_with(cid=2, checked=True)
@@ -187,9 +186,7 @@ class TestSystemRouter:
         mock_svc = self._mock_message()
         mock_svc.test_connection.return_value = True
         try:
-            resp = client.post("/api/system/test_message_client", json={
-                "type": "tg", "config": "{}"
-            })
+            resp = client.post("/api/system/test_message_client", json={"type": "tg", "config": "{}"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -228,8 +225,7 @@ class TestSystemRouter:
     # ------------------------------------------------------------------
     def test_version_has_update(self):
         mock_svc = self._mock_version()
-        mock_svc.get_latest_version.return_value = MagicMock(
-            has_update=True, version="3.8.0", url="http://example.com")
+        mock_svc.get_latest_version.return_value = MagicMock(has_update=True, version="3.8.0", url="http://example.com")
         try:
             resp = client.post("/api/system/version", json={})
             assert resp.status_code == 200
@@ -239,8 +235,7 @@ class TestSystemRouter:
 
     def test_version_no_update(self):
         mock_svc = self._mock_version()
-        mock_svc.get_latest_version.return_value = MagicMock(
-            has_update=False, version="", url="")
+        mock_svc.get_latest_version.return_value = MagicMock(has_update=False, version="", url="")
         try:
             resp = client.post("/api/system/version", json={})
             assert resp.status_code == 200
@@ -253,8 +248,7 @@ class TestSystemRouter:
     # ------------------------------------------------------------------
     def test_refresh_process(self):
         mock_svc = self._mock_progress()
-        mock_svc.get_progress.return_value = MagicMock(
-            exists=True, value=50, text="一半")
+        mock_svc.get_progress.return_value = MagicMock(exists=True, value=50, text="一半")
         try:
             resp = client.post("/api/system/refresh_process", json={"type": "rss"})
             assert resp.status_code == 200
@@ -270,9 +264,7 @@ class TestSystemRouter:
         mock_svc = self._mock_system_config()
         mock_svc.set_config.return_value = True
         try:
-            resp = client.post("/api/system/set_system_config", json={
-                "key": "test_key", "value": "test_value"
-            })
+            resp = client.post("/api/system/set_system_config", json={"key": "test_key", "value": "test_value"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -283,12 +275,9 @@ class TestSystemRouter:
     # ------------------------------------------------------------------
     def test_restory_backup(self):
         mock_svc = self._mock_backup()
-        mock_svc.restore_from_backup.return_value = MagicMock(
-            success=True, message="恢复成功")
+        mock_svc.restore_from_backup.return_value = MagicMock(success=True, message="恢复成功")
         try:
-            resp = client.post("/api/system/restory_backup", json={
-                "file_name": "bk_20240101.zip"
-            })
+            resp = client.post("/api/system/restory_backup", json={"file_name": "bk_20240101.zip"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["msg"] == "恢复成功"
@@ -302,9 +291,7 @@ class TestSystemRouter:
         mock_svc = self._mock_user_manage()
         mock_svc.add_user.return_value = MagicMock(success=True)
         try:
-            resp = client.post("/api/system/user_manager", json={
-                "oper": "add", "name": "admin", "password": "123456"
-            })
+            resp = client.post("/api/system/user_manager", json={"oper": "add", "name": "admin", "password": "123456"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -314,9 +301,7 @@ class TestSystemRouter:
         mock_svc = self._mock_user_manage()
         mock_svc.delete_user.return_value = MagicMock(success=True)
         try:
-            resp = client.post("/api/system/user_manager", json={
-                "oper": "del", "name": "admin"
-            })
+            resp = client.post("/api/system/user_manager", json={"oper": "del", "name": "admin"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -342,9 +327,7 @@ class TestSystemRouter:
         mock_svc = self._mock_indexer_config()
         mock_svc.save_config.return_value = MagicMock(success=True, code=0)
         try:
-            resp = client.post("/api/system/save_indexer_config", json={
-                "data": {"type": "builtin"}
-            })
+            resp = client.post("/api/system/save_indexer_config", json={"data": {"type": "builtin"}})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -354,9 +337,7 @@ class TestSystemRouter:
         mock_svc = self._mock_media_server_config()
         mock_svc.save_config.return_value = MagicMock(success=True, code=0)
         try:
-            resp = client.post("/api/system/save_mediaserver_config", json={
-                "data": {"type": "emby"}
-            })
+            resp = client.post("/api/system/save_mediaserver_config", json={"data": {"type": "emby"}})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -369,9 +350,9 @@ class TestSystemRouter:
         mock_svc = self._mock_message_sender()
         mock_svc.send_custom_message.return_value = MagicMock(success=True)
         try:
-            resp = client.post("/api/system/send_custom_message", json={
-                "message_clients": ["tg"], "title": "test", "text": "hello"
-            })
+            resp = client.post(
+                "/api/system/send_custom_message", json={"message_clients": ["tg"], "title": "test", "text": "hello"}
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -380,9 +361,7 @@ class TestSystemRouter:
     def test_send_plugin_message(self):
         mock_svc = self._mock_message_sender()
         try:
-            resp = client.post("/api/system/send_plugin_message", json={
-                "title": "test", "text": "hello"
-            })
+            resp = client.post("/api/system/send_plugin_message", json={"title": "test", "text": "hello"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:
@@ -395,9 +374,7 @@ class TestSystemRouter:
         mock_svc = self._mock_web_search()
         mock_svc.search.return_value = MagicMock(code=0, msg="")
         try:
-            resp = client.post("/api/system/search", json={
-                "search_word": "流浪地球", "unident": False
-            })
+            resp = client.post("/api/system/search", json={"search_word": "流浪地球", "unident": False})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         finally:

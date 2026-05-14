@@ -18,18 +18,19 @@ class Prowlarr(_IIndexClient):
         else:
             from app.core.system_config import SystemConfig
             from app.utils.types import SystemConfigKey
+
             indexer_config = SystemConfig().get(SystemConfigKey.IndexerConfig) or {}
-            self._client_config = indexer_config.get('prowlarr') or {}
+            self._client_config = indexer_config.get("prowlarr") or {}
         self.init_config()
 
     def init_config(self):
         if self._client_config:
-            self.api_key = self._client_config.get('api_key')
-            self.host = self._client_config.get('host')
+            self.api_key = self._client_config.get("api_key")
+            self.host = self._client_config.get("host")
             if self.host:
-                if not self.host.startswith('http'):
+                if not self.host.startswith("http"):
                     self.host = "http://" + self.host
-                if not self.host.endswith('/'):
+                if not self.host.endswith("/"):
                     self.host = self.host + "/"
 
     @classmethod
@@ -65,11 +66,13 @@ class Prowlarr(_IIndexClient):
         if not ret:
             return []
         indexers = ret.json().get("indexers", [])
-        return [IndexerConf({"id": v["indexerId"],
-                             "name": v["indexerName"],
-                             "domain": f'{self.host}{v["indexerId"]}/api'},
-                            builtin=False)
-                for v in indexers]
+        return [
+            IndexerConf(
+                {"id": v["indexerId"], "name": v["indexerName"], "domain": f"{self.host}{v['indexerId']}/api"},
+                builtin=False,
+            )
+            for v in indexers
+        ]
 
     def search(self, *kwargs):
         return super().search(*kwargs)

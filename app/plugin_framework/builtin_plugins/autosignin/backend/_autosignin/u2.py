@@ -13,15 +13,18 @@ class U2(_ISiteSigninHandler):
     """
     U2签到 随机
     """
+
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "u2.dmhy.org"
 
     # 已签到
-    _sign_regex = ['<a href="showup.php">已签到</a>',
-                   '<a href="showup.php">Show Up</a>',
-                   '<a href="showup.php">Показать</a>',
-                   '<a href="showup.php">已簽到</a>',
-                   '<a href="showup.php">已簽到</a>']
+    _sign_regex = [
+        '<a href="showup.php">已签到</a>',
+        '<a href="showup.php">Show Up</a>',
+        '<a href="showup.php">Показать</a>',
+        '<a href="showup.php">已簽到</a>',
+        '<a href="showup.php">已簽到</a>',
+    ]
 
     # 签到成功
     _success_text = "window.location.href = 'showup.php';</script>"
@@ -50,34 +53,32 @@ class U2(_ISiteSigninHandler):
         # 判断当前时间是否小于9点
         if now.hour < 9:
             self.error("签到失败，9点前不签到")
-            return False, f'【{site}】签到失败，9点前不签到'
+            return False, f"【{site}】签到失败，9点前不签到"
 
         # 获取页面html
-        html_res = RequestUtils(cookies=site_cookie,
-                                headers=ua,
-                                proxies=proxy
-                                ).get_res(url="https://u2.dmhy.org/showup.php")
+        html_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
+            url="https://u2.dmhy.org/showup.php"
+        )
         if not html_res or html_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
-            return False, f'【{site}】签到失败，请检查站点连通性'
+            return False, f"【{site}】签到失败，请检查站点连通性"
 
         if "login.php" in html_res.text:
             self.error("签到失败，cookie失效")
-            return False, f'【{site}】签到失败，cookie失效'
+            return False, f"【{site}】签到失败，cookie失效"
 
         # 判断是否已签到
         html_res.encoding = "utf-8"
-        sign_status = self.sign_in_result(html_res=html_res.text,
-                                          regexs=self._sign_regex)
+        sign_status = self.sign_in_result(html_res=html_res.text, regexs=self._sign_regex)
         if sign_status:
             self.info("今日已签到")
-            return True, f'【{site}】今日已签到'
+            return True, f"【{site}】今日已签到"
 
         # 没有签到则解析html
         html = etree.HTML(html_res.text)
 
         if not html:
-            return False, f'【{site}】签到失败'
+            return False, f"【{site}】签到失败"
 
         # 获取签到参数
         req = html.xpath("//form//td/input[@name='req']/@value")[0]
@@ -87,32 +88,30 @@ class U2(_ISiteSigninHandler):
         submit_value = html.xpath("//form//td/input[@type='submit']/@value")
         if not re or not hash_str or not form or not submit_name or not submit_value:
             self.error("签到失败，未获取到相关签到参数")
-            return False, f'【{site}】签到失败'
+            return False, f"【{site}】签到失败"
 
         # 随机一个答案
         answer_num = random.randint(0, 3)
         data = {
-            'req': req,
-            'hash': hash_str,
-            'form': form,
-            'message': '一切随缘~',
-            submit_name[answer_num]: submit_value[answer_num]
+            "req": req,
+            "hash": hash_str,
+            "form": form,
+            "message": "一切随缘~",
+            submit_name[answer_num]: submit_value[answer_num],
         }
         # 签到
-        sign_res = RequestUtils(cookies=site_cookie,
-                                headers=ua,
-                                proxies=proxy
-                                ).post_res(url="https://u2.dmhy.org/showup.php?action=show",
-                                           data=data)
+        sign_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).post_res(
+            url="https://u2.dmhy.org/showup.php?action=show", data=data
+        )
         if not sign_res or sign_res.status_code != 200:
             self.error("签到失败，签到接口请求失败")
-            return False, f'【{site}】签到失败，签到接口请求失败'
+            return False, f"【{site}】签到失败，签到接口请求失败"
 
         # 判断是否签到成功
         # sign_res.text = "<script type="text/javascript">window.location.href = 'showup.php';</script>"
         if self._success_text in sign_res.text:
             self.info("签到成功")
-            return True, f'【{site}】签到成功'
+            return True, f"【{site}】签到成功"
         else:
             self.error("签到失败，未知原因")
-            return False, f'【{site}】签到失败，未知原因'
+            return False, f"【{site}】签到失败，未知原因"

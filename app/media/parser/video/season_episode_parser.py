@@ -1,6 +1,7 @@
 """
 影视标题解析 — 年份、季、集解析
 """
+
 import re
 
 from app.media.parser.video.constants import _episode_re, _season_re
@@ -21,7 +22,7 @@ def init_year(info, token):
         elif info.cn_name:
             info.cn_name = "%s %s" % (info.cn_name, info.year)
     elif info.en_name and re.search(r"SEASON$", info.en_name, re.IGNORECASE):
-        info.en_name += ' '
+        info.en_name += " "
     info.year = token
     info._last_token_type = "year"
     info._continue_flag = False
@@ -64,9 +65,7 @@ def init_season(info, token):
             int(token)
         except ValueError:
             return
-        if info._last_token_type == "SEASON" \
-                and info.begin_season is None \
-                and len(token) < 3:
+        if info._last_token_type == "SEASON" and info.begin_season is None and len(token) < 3:
             info.begin_season = int(token)
             info.total_seasons = 1
             info._last_token_type = "season"
@@ -113,11 +112,13 @@ def init_episode(info, token):
             int(token)
         except ValueError:
             return
-        if info.begin_episode is not None \
-                and info.end_episode is None \
-                and len(token) < 5 \
-                and int(token) > info.begin_episode \
-                and info._last_token_type == "episode":
+        if (
+            info.begin_episode is not None
+            and info.end_episode is None
+            and len(token) < 5
+            and int(token) > info.begin_episode
+            and info._last_token_type == "episode"
+        ):
             info.end_episode = int(token)
             info.total_episodes = (info.end_episode - info.begin_episode) + 1
             if info.fileflag and info.total_episodes > 2:
@@ -125,31 +126,36 @@ def init_episode(info, token):
                 info.total_episodes = 1
             info._continue_flag = False
             info.type = MediaType.TV
-        elif info.begin_episode is None \
-                and 1 < len(token) < 4 \
-                and info._last_token_type != "year" \
-                and info._last_token_type != "videoencode" \
-                and token != info._unknown_name_str or info._last_token_type == "EPISODE" \
-                and info.begin_episode is None \
-                and len(token) < 5:
+        elif (
+            info.begin_episode is None
+            and 1 < len(token) < 4
+            and info._last_token_type != "year"
+            and info._last_token_type != "videoencode"
+            and token != info._unknown_name_str
+            or info._last_token_type == "EPISODE"
+            and info.begin_episode is None
+            and len(token) < 5
+        ):
             info.begin_episode = int(token)
             info.total_episodes = 1
             info._last_token_type = "episode"
             info._continue_flag = False
             info._stop_name_flag = True
             info.type = MediaType.TV
-    elif re.match(r'^(\d{1,3})[a-zA-Z\u4e00-\u9fff]', token):
+    elif re.match(r"^(\d{1,3})[a-zA-Z\u4e00-\u9fff]", token):
         # token 以数字开头后跟字母或中文（如 24TV全集, 05v2）
-        m = re.match(r'^(\d{1,3})', token)
+        m = re.match(r"^(\d{1,3})", token)
         if m:
             num_str = m.group(1)
             num = int(num_str)
             # 作为 end_episode（如果 begin_episode 已存在且数字更大）
-            if info.begin_episode is not None \
-                    and info.end_episode is None \
-                    and len(num_str) < 5 \
-                    and num > info.begin_episode \
-                    and info._last_token_type == "episode":
+            if (
+                info.begin_episode is not None
+                and info.end_episode is None
+                and len(num_str) < 5
+                and num > info.begin_episode
+                and info._last_token_type == "episode"
+            ):
                 info.end_episode = num
                 info.total_episodes = (info.end_episode - info.begin_episode) + 1
                 if info.fileflag and info.total_episodes > 2:
@@ -158,10 +164,12 @@ def init_episode(info, token):
                 info._continue_flag = False
                 info.type = MediaType.TV
             # 作为 begin_episode（如果尚未设置且数字长度合适）
-            elif info.begin_episode is None \
-                    and 0 < len(num_str) < 4 \
-                    and info._last_token_type != "year" \
-                    and info._last_token_type != "videoencode":
+            elif (
+                info.begin_episode is None
+                and 0 < len(num_str) < 4
+                and info._last_token_type != "year"
+                and info._last_token_type != "videoencode"
+            ):
                 info.begin_episode = num
                 info.total_episodes = 1
                 info._last_token_type = "episode"

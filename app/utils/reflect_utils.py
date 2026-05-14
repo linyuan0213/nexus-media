@@ -3,7 +3,6 @@ import pkgutil
 
 
 class ReflectUtils:
-
     @staticmethod
     def import_submodules(package, filter_func=lambda name, obj: True):
         """
@@ -16,12 +15,12 @@ class ReflectUtils:
         submodules = []
         packages = importlib.import_module(package).__path__
         for importer, package_name, _ in pkgutil.iter_modules(packages):
-            full_package_name = f'{package}.{package_name}'
-            if full_package_name.startswith('_'):
+            full_package_name = f"{package}.{package_name}"
+            if full_package_name.startswith("_"):
                 continue
             module = importlib.import_module(full_package_name)
             for name, obj in module.__dict__.items():
-                if name.startswith('_'):
+                if name.startswith("_"):
                     continue
                 if isinstance(obj, type) and filter_func(name, obj):
                     submodules.append(obj)

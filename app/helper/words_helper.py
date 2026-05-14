@@ -20,9 +20,7 @@ class WordsHelper(metaclass=SingletonMeta):
 
     def __init__(self):
         # 初始化处理结果缓存
-        self._cache = get_cache_manager().get_or_create(
-            "words_process", "memory", maxsize=1000
-        )
+        self._cache = get_cache_manager().get_or_create("words_process", "memory", maxsize=1000)
         self.init_config()
 
     def init_config(self):
@@ -69,8 +67,11 @@ class WordsHelper(metaclass=SingletonMeta):
                     # 屏蔽
                     ignored = word_info.REPLACED
                     ignored_word = ignored
-                    title, ignore_msg, ignore_flag = self.replace_regex(title, ignored, "") \
-                        if word_info.REGEX else self.replace_noregex(title, ignored, "")
+                    title, ignore_msg, ignore_flag = (
+                        self.replace_regex(title, ignored, "")
+                        if word_info.REGEX
+                        else self.replace_noregex(title, ignored, "")
+                    )
                     if ignore_flag:
                         used_ignored_words.append(ignored_word)
                     elif ignore_msg:
@@ -79,8 +80,11 @@ class WordsHelper(metaclass=SingletonMeta):
                     # 替换
                     replaced, replace = word_info.REPLACED, word_info.REPLACE
                     replaced_word = f"{replaced} ⇒ {replace}"
-                    title, replace_msg, replace_flag = self.replace_regex(title, replaced, replace) \
-                        if word_info.REGEX else self.replace_noregex(title, replaced, replace)
+                    title, replace_msg, replace_flag = (
+                        self.replace_regex(title, replaced, replace)
+                        if word_info.REGEX
+                        else self.replace_noregex(title, replaced, replace)
+                    )
                     if replace_flag:
                         used_replaced_words.append(replaced_word)
                     elif replace_msg:
@@ -88,8 +92,13 @@ class WordsHelper(metaclass=SingletonMeta):
 
                 case 3:
                     # 替换+集偏移
-                    replaced, replace, front, back, offset = \
-                        word_info.REPLACED, word_info.REPLACE, word_info.FRONT, word_info.BACK, word_info.OFFSET
+                    replaced, replace, front, back, offset = (
+                        word_info.REPLACED,
+                        word_info.REPLACE,
+                        word_info.FRONT,
+                        word_info.BACK,
+                        word_info.OFFSET,
+                    )
                     replaced_word = f"{replaced} ⇒ {replace}"
                     offset_word = f"{front} + {back} >> {offset}"
                     replaced_offset_word = f"{replaced_word} @@@ {offset_word}"
@@ -107,8 +116,7 @@ class WordsHelper(metaclass=SingletonMeta):
                         elif offset_msg:
                             # 还原title
                             title = title_cache
-                            msg.append(
-                                f"自定义替换+集偏移词 {replaced_offset_word} 集偏移部分格式有误：{offset_msg}")
+                            msg.append(f"自定义替换+集偏移词 {replaced_offset_word} 集偏移部分格式有误：{offset_msg}")
                     elif replace_msg:
                         msg.append(f"自定义替换+集偏移词 {replaced_offset_word} 替换部分格式有误：{replace_msg}")
                 case 4:
@@ -122,7 +130,11 @@ class WordsHelper(metaclass=SingletonMeta):
                         msg.append(f"自定义集偏移词 {offset_word} 格式有误：{offset_msg}")
                 case _:
                     pass
-        result = (title, msg, {"ignored": used_ignored_words, "replaced": used_replaced_words, "offset": used_offset_words})
+        result = (
+            title,
+            msg,
+            {"ignored": used_ignored_words, "replaced": used_replaced_words, "offset": used_offset_words},
+        )
         # 缓存结果（使用统一缓存系统，已配置maxsize=1000）
         self._cache.set(title, result)
         return result
@@ -130,10 +142,10 @@ class WordsHelper(metaclass=SingletonMeta):
     @staticmethod
     def replace_regex(title, replaced, replace) -> (str, str, bool):
         try:
-            if not re.findall(r'%s' % replaced, title):
+            if not re.findall(r"%s" % replaced, title):
                 return title, "", False
             else:
-                return re.sub(r'%s' % replaced, r'%s' % replace, title), "", True
+                return re.sub(r"%s" % replaced, r"%s" % replace, title), "", True
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return title, str(err), False
@@ -152,11 +164,11 @@ class WordsHelper(metaclass=SingletonMeta):
     @staticmethod
     def episode_offset(title, front, back, offset) -> (str, str, bool):
         try:
-            if back and not re.findall(r'%s' % back, title):
+            if back and not re.findall(r"%s" % back, title):
                 return title, "", False
-            if front and not re.findall(r'%s' % front, title):
+            if front and not re.findall(r"%s" % front, title):
                 return title, "", False
-            offset_word_info_re = re.compile(r'(?<=%s.*?)[0-9一二三四五六七八九十]+(?=.*?%s)' % (front, back))
+            offset_word_info_re = re.compile(r"(?<=%s.*?)[0-9一二三四五六七八九十]+(?=.*?%s)" % (front, back))
             episode_nums_str = re.findall(offset_word_info_re, title)
             if not episode_nums_str:
                 return title, "", False
@@ -190,9 +202,8 @@ class WordsHelper(metaclass=SingletonMeta):
             else:
                 episode_nums_list = sorted(episode_nums_dict.items(), key=lambda x: x[1], reverse=True)
             for episode_num in episode_nums_list:
-                episode_offset_re = re.compile(
-                    r'(?<=%s.*?)%s(?=.*?%s)' % (front, episode_num[0], back))
-                title = re.sub(episode_offset_re, r'%s' % episode_num[1], title)
+                episode_offset_re = re.compile(r"(?<=%s.*?)%s(?=.*?%s)" % (front, episode_num[0], back))
+                title = re.sub(episode_offset_re, r"%s" % episode_num[1], title)
             return title, "", True
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -202,27 +213,28 @@ class WordsHelper(metaclass=SingletonMeta):
         """
         判断自定义词是否存在
         """
-        return self.word_repo.is_custom_words_existed(replaced=replaced,
-                                                     front=front,
-                                                     back=back)
+        return self.word_repo.is_custom_words_existed(replaced=replaced, front=front, back=back)
 
-    def insert_custom_word(self, replaced, replace, front, back, offset, wtype, gid, season, enabled, regex, whelp,
-                           note=None):
+    def insert_custom_word(
+        self, replaced, replace, front, back, offset, wtype, gid, season, enabled, regex, whelp, note=None
+    ):
         """
         插入自定义词
         """
-        ret = self.word_repo.insert_custom_word(replaced=replaced,
-                                               replace=replace,
-                                               front=front,
-                                               back=back,
-                                               offset=offset,
-                                               wtype=wtype,
-                                               gid=gid,
-                                               season=season,
-                                               enabled=enabled,
-                                               regex=regex,
-                                               whelp=whelp,
-                                               note=note)
+        ret = self.word_repo.insert_custom_word(
+            replaced=replaced,
+            replace=replace,
+            front=front,
+            back=back,
+            offset=offset,
+            wtype=wtype,
+            gid=gid,
+            season=season,
+            enabled=enabled,
+            regex=regex,
+            whelp=whelp,
+            note=note,
+        )
         self.init_config()
         return ret
 
@@ -256,12 +268,9 @@ class WordsHelper(metaclass=SingletonMeta):
         """
         插入自定义词组
         """
-        ret = self.group_repo.insert_custom_word_groups(title=title,
-                                                      year=year,
-                                                      gtype=gtype,
-                                                      tmdbid=tmdbid,
-                                                      season_count=season_count,
-                                                      note=note)
+        ret = self.group_repo.insert_custom_word_groups(
+            title=title, year=year, gtype=gtype, tmdbid=tmdbid, season_count=season_count, note=note
+        )
         self.init_config()
         return ret
 

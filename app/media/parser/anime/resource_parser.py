@@ -1,6 +1,7 @@
 """
 动漫标题解析 — 分辨率、编码、制作组解析
 """
+
 import re
 
 from app.media.parser._customization import CustomizationMatcher
@@ -13,8 +14,8 @@ def parse_resource_pix(info, anitopy_info):
     if isinstance(info.resource_pix, list):
         info.resource_pix = info.resource_pix[0]
     if info.resource_pix:
-        if re.search(r'x', info.resource_pix, re.IGNORECASE):
-            info.resource_pix = re.split(r'[Xx]', info.resource_pix)[-1] + "p"
+        if re.search(r"x", info.resource_pix, re.IGNORECASE):
+            info.resource_pix = re.split(r"[Xx]", info.resource_pix)[-1] + "p"
         else:
             info.resource_pix = info.resource_pix.lower()
         if str(info.resource_pix).isdigit():
@@ -23,9 +24,9 @@ def parse_resource_pix(info, anitopy_info):
 
 def parse_team(info, original_title, anitopy_info_origin):
     """解析制作组/字幕组"""
-    info.resource_team = \
-        ReleaseGroupsMatcher().match(title=original_title) or \
-        anitopy_info_origin.get("release_group") or None
+    info.resource_team = (
+        ReleaseGroupsMatcher().match(title=original_title) or anitopy_info_origin.get("release_group") or None
+    )
 
 
 def parse_customization(info, original_title):

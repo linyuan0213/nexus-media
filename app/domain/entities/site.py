@@ -2,6 +2,7 @@
 站点领域实体
 映射 ORM 模型为纯数据结构，与 SQLAlchemy 解耦。
 """
+
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -9,6 +10,7 @@ from typing import Any
 @dataclass
 class SiteEntity:
     """站点配置领域实体"""
+
     id: int = 0
     name: str = ""
     pri: int = 0
@@ -24,6 +26,7 @@ class SiteEntity:
         if orm_obj is None:
             return cls()
         import json
+
         note_raw = getattr(orm_obj, "NOTE", None)
         note = {}
         if note_raw:
@@ -59,6 +62,7 @@ class SiteEntity:
 @dataclass
 class SiteStatisticsEntity:
     """站点统计领域实体"""
+
     id: int = 0
     site: str = ""
     date: str = ""
@@ -96,6 +100,7 @@ class SiteStatisticsEntity:
 @dataclass
 class SiteSeedingEntity:
     """站点做种信息领域实体"""
+
     site: str = ""
     seeding_info: str = ""
     update_at: str = ""

@@ -1,4 +1,5 @@
 """LLM 提供商抽象基类"""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
@@ -7,6 +8,7 @@ from typing import Any
 @dataclass
 class ProviderConfig:
     """LLM 提供商配置"""
+
     name: str
     api_key: str
     api_url: str
@@ -26,8 +28,13 @@ class BaseProvider(ABC):
         return self._config.name
 
     @abstractmethod
-    def chat(self, messages: list[dict], system_prompt: str = "", temperature: float = 0.7,
-             response_format: type | None = None) -> Any:
+    def chat(
+        self,
+        messages: list[dict],
+        system_prompt: str = "",
+        temperature: float = 0.7,
+        response_format: type | None = None,
+    ) -> Any:
         """执行对话请求"""
 
     @abstractmethod

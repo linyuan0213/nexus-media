@@ -24,22 +24,16 @@ class IyuuHelper(metaclass=SingletonMeta):
         """
         向IYUUApi发送请求
         """
-        headers = {'token': self._token}
+        headers = {"token": self._token}
         # 开始请求
         if method == "get":
-            ret = RequestUtils(
-                accept_type="application/json",
-                headers=headers
-            ).get_res(f"{url}", params=params)
+            ret = RequestUtils(accept_type="application/json", headers=headers).get_res(f"{url}", params=params)
         else:
-            ret = RequestUtils(
-                accept_type="application/json",
-                headers=headers
-            ).post_res(f"{url}", data=params)
+            ret = RequestUtils(accept_type="application/json", headers=headers).post_res(f"{url}", data=params)
         if ret:
             result = ret.json()
-            if result.get('code') == 0:
-                return result.get('data'), ""
+            if result.get("code") == 0:
+                return result.get("data"), ""
             else:
                 return None, f"请求IYUU失败，状态码：{result.get('code')}，返回信息：{result.get('msg')}"
         elif ret is not None:
@@ -55,7 +49,7 @@ class IyuuHelper(metaclass=SingletonMeta):
         if not self._sites.get(sid):
             return None, None
         site = self._sites.get(sid)
-        return site.get('base_url'), site.get('download_page')
+        return site.get("base_url"), site.get("download_page")
 
     def __get_sites(self):
         """
@@ -78,12 +72,12 @@ class IyuuHelper(metaclass=SingletonMeta):
             }
         }
         """
-        result, msg = self.__request_iyuu(url=self._api_base % '/reseed/sites/index')
+        result, msg = self.__request_iyuu(url=self._api_base % "/reseed/sites/index")
         if result:
             ret_sites = {}
-            sites = result.get('sites') or []
+            sites = result.get("sites") or []
             for site in sites:
-                ret_sites[site.get('id')] = site
+                ret_sites[site.get("id")] = site
             return ret_sites
         else:
             print(msg)
@@ -115,30 +109,34 @@ class IyuuHelper(metaclass=SingletonMeta):
         """
         sites = self.__get_sites()
         site_ids = list(sites.keys())
-        result, msg = self.__request_iyuu(url=self._api_base % '/reseed/sites/reportExisting',
-                                    method="post",
-                                    params=json.dumps({"sid_list": site_ids}))
+        result, msg = self.__request_iyuu(
+            url=self._api_base % "/reseed/sites/reportExisting",
+            method="post",
+            params=json.dumps({"sid_list": site_ids}),
+        )
         if not result:
             return result, msg
-        sid_sha1 = result.get('sid_sha1')
+        sid_sha1 = result.get("sid_sha1")
 
         info_hashs.sort()
-        json_data = json.dumps(info_hashs, separators=(',', ':'), ensure_ascii=False)
+        json_data = json.dumps(info_hashs, separators=(",", ":"), ensure_ascii=False)
         sha1 = self.get_sha1(json_data)
-        result, msg = self.__request_iyuu(url=self._api_base % '/reseed/index/index',
-                                          method="post",
-                                          params={
-                                              "timestamp": int(time.time()),
-                                              "hash": json_data,
-                                              "sid_sha1": sid_sha1,
-                                              "sha1": sha1,
-                                              "version": "8.2.0"
-                                          })
+        result, msg = self.__request_iyuu(
+            url=self._api_base % "/reseed/index/index",
+            method="post",
+            params={
+                "timestamp": int(time.time()),
+                "hash": json_data,
+                "sid_sha1": sid_sha1,
+                "sha1": sha1,
+                "version": "8.2.0",
+            },
+        )
         return result, msg
 
     @staticmethod
     def get_sha1(json_str) -> str:
-        return hashlib.sha1(json_str.encode('utf-8')).hexdigest()
+        return hashlib.sha1(json_str.encode("utf-8")).hexdigest()
 
     def get_auth_sites(self):
         """
@@ -151,9 +149,9 @@ class IyuuHelper(metaclass=SingletonMeta):
             }
         ]
         """
-        result, msg = self.__request_iyuu(url=self._api_base % '/reseed/sites/recommend')
+        result, msg = self.__request_iyuu(url=self._api_base % "/reseed/sites/recommend")
         if result:
-            return result.get('list') or []
+            return result.get("list") or []
         else:
             print(msg)
             return []
@@ -167,20 +165,16 @@ class IyuuHelper(metaclass=SingletonMeta):
         :return: 状态码、错误信息
         """
         sites = self.get_auth_sites()
-        sid = ''
+        sid = ""
         for site_info in sites:
-            if site_info.get('site') == site:
-                sid = site_info.get('id')
+            if site_info.get("site") == site:
+                sid = site_info.get("id")
                 break
         if not sid:
             return None, "获取站点id失败"
-        result, msg = self.__request_iyuu(url=self._api_base % '/reseed/users/bind',
-                                          method="post",
-                                          params={
-                                              "token": self._token,
-                                              "site": site,
-                                              "passkey": self.get_sha1(passkey),
-                                              "id": uid,
-                                              "sid": sid
-                                          })
+        result, msg = self.__request_iyuu(
+            url=self._api_base % "/reseed/users/bind",
+            method="post",
+            params={"token": self._token, "site": site, "passkey": self.get_sha1(passkey), "id": uid, "sid": sid},
+        )
         return result, msg

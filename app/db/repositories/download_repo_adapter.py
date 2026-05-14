@@ -26,7 +26,9 @@ class DownloadHistoryRepositoryAdapter:
     def insert(self, media_info, downloader: str, download_id: str, save_dir: str) -> None:
         self._repo.insert_download_history(media_info, downloader, download_id, save_dir)
 
-    def get_all(self, date: str | None = None, hid: int | None = None, num: int = 30, page: int = 1) -> list[DownloadHistoryEntity]:
+    def get_all(
+        self, date: str | None = None, hid: int | None = None, num: int = 30, page: int = 1
+    ) -> list[DownloadHistoryEntity]:
         rows = self._repo.get_download_history(date=date, hid=hid, num=num, page=page)
         if not rows:
             return []
@@ -89,17 +91,19 @@ class DownloadSettingRepositoryAdapter:
             return []
         return [entity for entity in [DownloadSettingEntity.from_orm(r) for r in rows] if entity is not None]
 
-    def update(self,
-               sid: int,
-               name: str,
-               category: str,
-               tags: str,
-               is_paused: bool,
-               upload_limit: float,
-               download_limit: float,
-               ratio_limit: float,
-               seeding_time_limit: float,
-               downloader: str) -> None:
+    def update(
+        self,
+        sid: int,
+        name: str,
+        category: str,
+        tags: str,
+        is_paused: bool,
+        upload_limit: float,
+        download_limit: float,
+        ratio_limit: float,
+        seeding_time_limit: float,
+        downloader: str,
+    ) -> None:
         self._repo.update_download_setting(
             sid=sid,
             name=name,
@@ -110,7 +114,7 @@ class DownloadSettingRepositoryAdapter:
             download_limit=download_limit,
             ratio_limit=ratio_limit,
             seeding_time_limit=seeding_time_limit,
-            downloader=downloader
+            downloader=downloader,
         )
 
     # 兼容旧Repository方法名
@@ -120,14 +124,30 @@ class DownloadSettingRepositoryAdapter:
     def delete_download_setting(self, sid):
         self._repo.delete_download_setting(sid)
 
-    def update_download_setting(self, sid, name, category, tags, is_paused,
-                                upload_limit, download_limit, ratio_limit,
-                                seeding_time_limit, downloader):
+    def update_download_setting(
+        self,
+        sid,
+        name,
+        category,
+        tags,
+        is_paused,
+        upload_limit,
+        download_limit,
+        ratio_limit,
+        seeding_time_limit,
+        downloader,
+    ):
         self._repo.update_download_setting(
-            sid=sid, name=name, category=category, tags=tags,
-            is_paused=is_paused, upload_limit=upload_limit,
-            download_limit=download_limit, ratio_limit=ratio_limit,
-            seeding_time_limit=seeding_time_limit, downloader=downloader
+            sid=sid,
+            name=name,
+            category=category,
+            tags=tags,
+            is_paused=is_paused,
+            upload_limit=upload_limit,
+            download_limit=download_limit,
+            ratio_limit=ratio_limit,
+            seeding_time_limit=seeding_time_limit,
+            downloader=downloader,
         )
 
 
@@ -149,11 +169,7 @@ class IndexerStatisticsRepositoryAdapter:
             return []
         result = []
         for r in rows:
-            result.append(IndexerStatisticsEntity(
-                indexer=r[0],
-                total=r[1],
-                fail=r[2],
-                success=r[3],
-                avg_seconds=r[4] or 0
-            ))
+            result.append(
+                IndexerStatisticsEntity(indexer=r[0], total=r[1], fail=r[2], success=r[3], avg_seconds=r[4] or 0)
+            )
         return result

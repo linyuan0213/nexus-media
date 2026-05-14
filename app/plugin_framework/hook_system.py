@@ -62,11 +62,11 @@ class HookSystem(metaclass=SingletonMeta):
         try:
             records = self._repo.get_all_hooks()
             for r in records:
-                event = getattr(r, 'EVENT', None)
-                plugin_id = getattr(r, 'PLUGIN_ID', None)
+                event = getattr(r, "EVENT", None)
+                plugin_id = getattr(r, "PLUGIN_ID", None)
                 if event and plugin_id:
                     self._handlers.setdefault(event, [])
-                    if plugin_id not in [h['plugin_id'] for h in self._handlers[event]]:
+                    if plugin_id not in [h["plugin_id"] for h in self._handlers[event]]:
                         self._handlers[event].append({"plugin_id": plugin_id})
         except Exception as e:
             log.warn(f"[HookSystem] 加载钩子订阅失败（可能表尚未创建）: {e}")
@@ -77,7 +77,7 @@ class HookSystem(metaclass=SingletonMeta):
             log.warn(f"[HookSystem] 未知事件类型: {event}")
 
         self._handlers.setdefault(event, [])
-        if plugin_id not in [h['plugin_id'] for h in self._handlers[event]]:
+        if plugin_id not in [h["plugin_id"] for h in self._handlers[event]]:
             self._handlers[event].append({"plugin_id": plugin_id})
             try:
                 self._repo.insert_hook(plugin_id, event)
@@ -88,10 +88,7 @@ class HookSystem(metaclass=SingletonMeta):
     def unregister(self, event: str, plugin_id: str) -> None:
         """取消钩子订阅"""
         if event in self._handlers:
-            self._handlers[event] = [
-                h for h in self._handlers[event]
-                if h.get('plugin_id') != plugin_id
-            ]
+            self._handlers[event] = [h for h in self._handlers[event] if h.get("plugin_id") != plugin_id]
         try:
             self._repo.delete_hook(plugin_id, event)
         except Exception as e:
@@ -100,10 +97,7 @@ class HookSystem(metaclass=SingletonMeta):
     def unregister_all(self, plugin_id: str) -> None:
         """取消插件的所有钩子订阅"""
         for event in list(self._handlers.keys()):
-            self._handlers[event] = [
-                h for h in self._handlers[event]
-                if h.get('plugin_id') != plugin_id
-            ]
+            self._handlers[event] = [h for h in self._handlers[event] if h.get("plugin_id") != plugin_id]
         try:
             self._repo.delete_hooks_by_plugin(plugin_id)
         except Exception as e:
@@ -120,9 +114,10 @@ class HookSystem(metaclass=SingletonMeta):
 
         log.debug(f"[HookSystem] 触发事件: {event}, 订阅数: {len(handlers)}")
         for h in handlers:
-            plugin_id = h.get('plugin_id')
+            plugin_id = h.get("plugin_id")
             try:
                 from app.plugin_framework.sandbox import PluginSandbox
+
                 sandbox = PluginSandbox()
                 sandbox.call_hook(plugin_id, event, data or {})
             except Exception as e:
@@ -133,10 +128,12 @@ class HookSystem(metaclass=SingletonMeta):
         result = []
         for event, handlers in self._handlers.items():
             for h in handlers:
-                if plugin_id and h.get('plugin_id') != plugin_id:
+                if plugin_id and h.get("plugin_id") != plugin_id:
                     continue
-                result.append({
-                    "event": event,
-                    "plugin_id": h.get('plugin_id'),
-                })
+                result.append(
+                    {
+                        "event": event,
+                        "plugin_id": h.get("plugin_id"),
+                    }
+                )
         return result

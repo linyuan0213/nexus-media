@@ -1,4 +1,5 @@
 """刮削器 — NFO XML 文件生成器"""
+
 import os
 import time
 from xml.dom import minidom
@@ -21,8 +22,9 @@ class NfoGenerator:
             DomUtils.add_node(doc, root, "title", tmdbinfo.get("title") or "")
             DomUtils.add_node(doc, root, "originaltitle", tmdbinfo.get("original_title") or "")
             DomUtils.add_node(doc, root, "premiered", tmdbinfo.get("release_date") or "")
-            DomUtils.add_node(doc, root, "year",
-                              tmdbinfo.get("release_date")[:4] if tmdbinfo.get("release_date") else "")
+            DomUtils.add_node(
+                doc, root, "year", tmdbinfo.get("release_date")[:4] if tmdbinfo.get("release_date") else ""
+            )
         self._downloader.save_nfo(doc, os.path.join(out_path, "%s.nfo" % file_name))
 
     def gen_tv_nfo(self, tmdbinfo, directors, actors, scraper_nfo, out_path):
@@ -34,8 +36,9 @@ class NfoGenerator:
             DomUtils.add_node(doc, root, "title", tmdbinfo.get("name") or "")
             DomUtils.add_node(doc, root, "originaltitle", tmdbinfo.get("original_name") or "")
             DomUtils.add_node(doc, root, "premiered", tmdbinfo.get("first_air_date") or "")
-            DomUtils.add_node(doc, root, "year",
-                              tmdbinfo.get("first_air_date")[:4] if tmdbinfo.get("first_air_date") else "")
+            DomUtils.add_node(
+                doc, root, "year", tmdbinfo.get("first_air_date")[:4] if tmdbinfo.get("first_air_date") else ""
+            )
             DomUtils.add_node(doc, root, "season", "-1")
             DomUtils.add_node(doc, root, "episode", "-1")
         self._downloader.save_nfo(doc, os.path.join(out_path, "tvshow.nfo"))
@@ -44,7 +47,7 @@ class NfoGenerator:
         """生成季 NFO 文件"""
         doc = minidom.Document()
         root = DomUtils.add_node(doc, doc, "season")
-        DomUtils.add_node(doc, root, "dateadded", time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
+        DomUtils.add_node(doc, root, "dateadded", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())))
         xplot = DomUtils.add_node(doc, root, "plot")
         xplot.appendChild(doc.createCDATASection(seasoninfo.get("overview") or ""))
         xoutline = DomUtils.add_node(doc, root, "outline")
@@ -67,7 +70,7 @@ class NfoGenerator:
         doc = minidom.Document()
         root = DomUtils.add_node(doc, doc, "episodedetails")
         if scraper_nfo.get("episode_basic"):
-            DomUtils.add_node(doc, root, "dateadded", time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
+            DomUtils.add_node(doc, root, "dateadded", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())))
             uniqueid = DomUtils.add_node(doc, root, "uniqueid", episode_detail.get("id") or "")
             uniqueid.setAttribute("type", "tmdb")
             uniqueid.setAttribute("default", "true")
@@ -78,8 +81,9 @@ class NfoGenerator:
             xoutline = DomUtils.add_node(doc, root, "outline")
             xoutline.appendChild(doc.createCDATASection(episode_detail.get("overview") or ""))
             DomUtils.add_node(doc, root, "aired", episode_detail.get("air_date") or "")
-            DomUtils.add_node(doc, root, "year",
-                              episode_detail.get("air_date")[:4] if episode_detail.get("air_date") else "")
+            DomUtils.add_node(
+                doc, root, "year", episode_detail.get("air_date")[:4] if episode_detail.get("air_date") else ""
+            )
             DomUtils.add_node(doc, root, "season", season)
             DomUtils.add_node(doc, root, "episode", episode)
             DomUtils.add_node(doc, root, "rating", episode_detail.get("vote_average") or "0")
@@ -99,7 +103,7 @@ class NfoGenerator:
     def _gen_common_nfo(self, tmdbinfo, directors, actors, doc, root, scraper_nfo):
         """NFO 公共部分（基础信息 + 演职人员 + 风格/评分）"""
         if scraper_nfo.get("basic"):
-            DomUtils.add_node(doc, root, "dateadded", time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
+            DomUtils.add_node(doc, root, "dateadded", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())))
             DomUtils.add_node(doc, root, "tmdbid", tmdbinfo.get("id") or "")
             uniqueid_tmdb = DomUtils.add_node(doc, root, "uniqueid", tmdbinfo.get("id") or "")
             uniqueid_tmdb.setAttribute("type", "tmdb")
@@ -132,8 +136,8 @@ class NfoGenerator:
                 DomUtils.add_node(doc, xactor, "role", actor.get("role") or "")
                 DomUtils.add_node(doc, xactor, "order", actor.get("order") if actor.get("order") is not None else "")
                 DomUtils.add_node(doc, xactor, "tmdbid", actor.get("id") or "")
-                DomUtils.add_node(doc, xactor, "thumb", actor.get('image'))
-                DomUtils.add_node(doc, xactor, "profile", actor.get('profile'))
+                DomUtils.add_node(doc, xactor, "thumb", actor.get("image"))
+                DomUtils.add_node(doc, xactor, "profile", actor.get("profile"))
         if scraper_nfo.get("basic"):
             for genre in tmdbinfo.get("genres") or []:
                 DomUtils.add_node(doc, root, "genre", genre.get("name") or "")

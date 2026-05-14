@@ -21,14 +21,9 @@ class RssHelper:
         :param proxy: 是否使用代理
         :return: 种子信息列表，如为None代表Rss过期
         """
-        _special_title_sites = {
-            'pt.keepfrds.com': RssTitleUtils.keepfriends_title
-        }
+        _special_title_sites = {"pt.keepfrds.com": RssTitleUtils.keepfriends_title}
 
-        _rss_expired_msg = [
-            "RSS 链接已过期, 您需要获得一个新的!",
-            "RSS Link has expired, You need to get a new one!"
-        ]
+        _rss_expired_msg = ["RSS 链接已过期, 您需要获得一个新的!", "RSS Link has expired, You need to get a new one!"]
 
         # 开始处理
         ret_array = []
@@ -38,7 +33,7 @@ class RssHelper:
         try:
             headers = {
                 "Accept": "application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                "User-Agent": get_ua()
+                "User-Agent": get_ua(),
             }
             ret = RequestUtils(headers=headers, proxies=get_proxies() if proxy else None).get_res(url)
             if not ret:
@@ -78,8 +73,8 @@ class RssHelper:
                             link = None
 
                         # monika rss兼容
-                        if enclosure and 'monikadesign' in enclosure:
-                            tids = re.findall(r'(\d+)\.', enclosure)
+                        if enclosure and "monikadesign" in enclosure:
+                            tids = re.findall(r"(\d+)\.", enclosure)
                             if tids:
                                 split_url = urlsplit(enclosure)
                                 link = f"{split_url.scheme}://{split_url.netloc}/torrents/{tids[0]}"
@@ -97,12 +92,14 @@ class RssHelper:
                             # 转换为时间
                             pubdate = StringUtils.get_time_stamp(pubdate)
                         # 返回对象
-                        tmp_dict = {'title': title,
-                                    'enclosure': enclosure,
-                                    'size': size,
-                                    'description': description,
-                                    'link': link,
-                                    'pubdate': pubdate}
+                        tmp_dict = {
+                            "title": title,
+                            "enclosure": enclosure,
+                            "size": size,
+                            "description": description,
+                            "link": link,
+                            "pubdate": pubdate,
+                        }
                         ret_array.append(tmp_dict)
                     except Exception as e1:
                         ExceptionUtils.exception_traceback(e1)

@@ -70,7 +70,6 @@ class MediaFileService:
         """获取媒体库目录 + 同步源目录"""
         import os
 
-
         seen = set()
 
         def add_path(path: str, label: str, ptype: str):
@@ -84,13 +83,13 @@ class MediaFileService:
             return {"name": name, "path": norm, "type": ptype}
 
         library_paths = []
-        movie_paths = media.get('movie_path') or []
+        movie_paths = media.get("movie_path") or []
         if not isinstance(movie_paths, list):
             movie_paths = [movie_paths] if movie_paths else []
-        tv_paths = media.get('tv_path') or []
+        tv_paths = media.get("tv_path") or []
         if not isinstance(tv_paths, list):
             tv_paths = [tv_paths] if tv_paths else []
-        anime_paths = media.get('anime_path') or []
+        anime_paths = media.get("anime_path") or []
         if not isinstance(anime_paths, list):
             anime_paths = [anime_paths] if anime_paths else []
 
@@ -119,7 +118,7 @@ class MediaFileService:
         except Exception:
             pass
 
-        default_path = media.get('media_default_path')
+        default_path = media.get("media_default_path")
         if not default_path:
             if library_paths:
                 default_path = library_paths[0]["path"]
@@ -141,19 +140,22 @@ class MediaFileService:
             return False, f"{name} 无法从TMDB查询到媒体信息"
         if not media.imdb_id:
             media.set_tmdb_info(MediaService().get_tmdb_info(mtype=media.type, tmdbid=media.tmdb_id))
-        EventManager().send_event(EventType.SubtitleDownload, {
-            "media_info": media.to_dict(),
-            "file": os.path.splitext(path)[0],
-            "file_ext": os.path.splitext(name)[-1],
-            "bluray": False
-        })
+        EventManager().send_event(
+            EventType.SubtitleDownload,
+            {
+                "media_info": media.to_dict(),
+                "file": os.path.splitext(path)[0],
+                "file_ext": os.path.splitext(name)[-1],
+                "bluray": False,
+            },
+        )
         return True, "字幕下载任务已提交，正在后台运行。"
 
     def scrap_media_path(self, path: str) -> str:
         """刮削媒体路径"""
         if not path:
             return "请指定刮削路径"
-        ThreadHelper().start_thread(Scraper().folder_scraper, (path, None, 'force_all'))
+        ThreadHelper().start_thread(Scraper().folder_scraper, (path, None, "force_all"))
         return "刮削任务已提交，正在后台运行。"
 
     def get_category_config(self, category_name: str) -> tuple[bool, str]:
@@ -178,5 +180,4 @@ class MediaFileService:
 
     def save_user_script(self, script: str, css: str):
         """保存用户自定义脚本"""
-        SystemConfig().set(key=SystemConfigKey.CustomScript,
-                           value={"css": css, "javascript": script})
+        SystemConfig().set(key=SystemConfigKey.CustomScript, value={"css": css, "javascript": script})

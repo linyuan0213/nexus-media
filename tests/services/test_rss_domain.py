@@ -2,6 +2,7 @@
 RSS领域层单元测试
 测试RssMovie/Tv/History实体和适配器
 """
+
 from unittest.mock import MagicMock
 
 from app.db.repositories.rss_repo_adapter import (
@@ -38,11 +39,28 @@ class TestRssMovieEntity:
 
     def test_to_dict(self):
         entity = RssMovieEntity(
-            id=1, name="Test", year="2023", keyword="", tmdb_id="123",
-            image="", rss_sites="", search_sites="", over_edition=False,
-            filter_order=0, filter_restype="", filter_pix="", filter_rule=0,
-            filter_team="", filter_include="", filter_exclude="", save_path="",
-            download_setting=None, fuzzy_match=False, state="D", description="", note=""
+            id=1,
+            name="Test",
+            year="2023",
+            keyword="",
+            tmdb_id="123",
+            image="",
+            rss_sites="",
+            search_sites="",
+            over_edition=False,
+            filter_order=0,
+            filter_restype="",
+            filter_pix="",
+            filter_rule=0,
+            filter_team="",
+            filter_include="",
+            filter_exclude="",
+            save_path="",
+            download_setting=None,
+            fuzzy_match=False,
+            state="D",
+            description="",
+            note="",
         )
         d = entity.to_dict()
         assert d["name"] == "Test"
@@ -65,12 +83,33 @@ class TestRssTvEntity:
 
     def test_to_dict(self):
         entity = RssTvEntity(
-            id=1, name="Test", year="2023", keyword="", season="S01", tmdb_id="",
-            image="", rss_sites="", search_sites="", over_edition=False,
-            filter_order=0, filter_restype="", filter_pix="", filter_rule=0,
-            filter_team="", filter_include="", filter_exclude="", save_path="",
-            download_setting=None, fuzzy_match=False, total_ep=10, current_ep=5,
-            total=10, lack=3, state="D", description="", note=""
+            id=1,
+            name="Test",
+            year="2023",
+            keyword="",
+            season="S01",
+            tmdb_id="",
+            image="",
+            rss_sites="",
+            search_sites="",
+            over_edition=False,
+            filter_order=0,
+            filter_restype="",
+            filter_pix="",
+            filter_rule=0,
+            filter_team="",
+            filter_include="",
+            filter_exclude="",
+            save_path="",
+            download_setting=None,
+            fuzzy_match=False,
+            total_ep=10,
+            current_ep=5,
+            total=10,
+            lack=3,
+            state="D",
+            description="",
+            note="",
         )
         d = entity.to_dict()
         assert d["lack"] == 3

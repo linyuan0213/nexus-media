@@ -2,6 +2,7 @@
 CustomHosts Plugin v2
 修改系统hosts文件，加速网络访问
 """
+
 import os
 import shutil
 import time
@@ -44,7 +45,7 @@ class CustomHostsPlugin:
             return
 
         if isinstance(hosts, str):
-            hosts = hosts.split('\n')
+            hosts = hosts.split("\n")
 
         # 排除空行
         new_hosts = []
@@ -82,7 +83,7 @@ class CustomHostsPlugin:
         if SystemUtils.is_windows():
             hosts_path = r"c:\windows\system32\drivers\etc\hosts"
         else:
-            hosts_path = '/etc/hosts'
+            hosts_path = "/etc/hosts"
         return Hosts(path=hosts_path)
 
     def _add_hosts_to_system(self, hosts):
@@ -106,9 +107,9 @@ class CustomHostsPlugin:
             host_arr = str(host).split()
             try:
                 host_entry = HostsEntry(
-                    entry_type='ipv4' if IpUtils.is_ipv4(str(host_arr[0])) else 'ipv6',
+                    entry_type="ipv4" if IpUtils.is_ipv4(str(host_arr[0])) else "ipv6",
                     address=host_arr[0],
-                    names=host_arr[1:]
+                    names=host_arr[1:],
                 )
                 new_entrys.append(host_entry)
             except Exception as err:
@@ -142,7 +143,7 @@ class CustomHostsPlugin:
                 except Exception as e:
                     self.ctx.error(f"创建备份失败: {str(e)}，将继续修改hosts但不创建备份")
 
-            system_hosts.add([HostsEntry(entry_type='comment', comment="# CustomHostsPlugin")])
+            system_hosts.add([HostsEntry(entry_type="comment", comment="# CustomHostsPlugin")])
             system_hosts.add(new_entrys)
             system_hosts.write()
             self.ctx.info("更新系统hosts文件成功")

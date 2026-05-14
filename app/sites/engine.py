@@ -4,6 +4,7 @@
 消除散落在 20+ 个文件中的 'if m-team in url' 逻辑，
 通过声明式 JSON 站点定义提供统一的搜索、下载、字幕等功能入口。
 """
+
 import json
 import os
 import re
@@ -22,9 +23,11 @@ from app.utils.config_tools import get_proxies
 
 # ---- 数据模型 ----
 
+
 @dataclass
 class DownloadConfig:
     """下载链接配置"""
+
     type: str = "api"
     method: str = "GET"
     path: str = ""
@@ -38,6 +41,7 @@ class DownloadConfig:
 @dataclass
 class SubtitleConfig:
     """字幕下载配置"""
+
     type: str = "api"
     list_endpoint: dict | None = None
     genlink_endpoint: dict | None = None
@@ -47,6 +51,7 @@ class SubtitleConfig:
 @dataclass
 class SiteApiConfig:
     """站点 API 配置"""
+
     base_url: str = ""
     auth: dict = field(default_factory=dict)
     endpoints: dict = field(default_factory=dict)
@@ -55,6 +60,7 @@ class SiteApiConfig:
 @dataclass
 class SiteHtmlConfig:
     """HTML 站点配置"""
+
     search: dict = field(default_factory=dict)
     torrents: dict = field(default_factory=dict)
     category: dict = field(default_factory=dict)
@@ -66,6 +72,7 @@ class SiteHtmlConfig:
 @dataclass
 class SiteDefinition:
     """站点完整定义"""
+
     id: str = ""
     name: str = ""
     domain: str = ""
@@ -154,12 +161,12 @@ class SiteDefinition:
 
 # ---- 站点引擎 ----
 
+
 class SiteEngine:
     """站点引擎单例"""
 
     _DEFAULT_DEFINITIONS_DIR = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-        "config", "sites"
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "config", "sites"
     )
 
     def __init__(self, definitions_dir: str | None = None):
@@ -266,8 +273,9 @@ class SiteEngine:
             body = {k: v.format(tid=tid) for k, v in (cfg.get("body") or {}).items()}
             headers = engine_tools._build_headers(self, site, user_config)
             headers.pop("Content-Type", None)
-            res = RequestUtils(headers=headers, proxies=get_proxies() if proxy else None,
-                               timeout=30).post_res(url=url, data=body)
+            res = RequestUtils(headers=headers, proxies=get_proxies() if proxy else None, timeout=30).post_res(
+                url=url, data=body
+            )
             if res and res.status_code == 200:
                 text = res.text
                 free_path = cfg.get("response", {}).get("free_key", "")
@@ -295,11 +303,11 @@ class SiteEngine:
                 return ret
             if JsonUtils.is_valid_json(html_txt):
                 for xp in conf.get("2XFREE", []):
-                    if str(JsonUtils.get_json_object(html_txt, xp.split('=')[0])) == xp.split('=')[1]:
+                    if str(JsonUtils.get_json_object(html_txt, xp.split("=")[0])) == xp.split("=")[1]:
                         ret["free"] = True
                         ret["2xfree"] = True
                 for xp in conf.get("FREE", []):
-                    if str(JsonUtils.get_json_object(html_txt, xp.split('=')[0])) == xp.split('=')[1]:
+                    if str(JsonUtils.get_json_object(html_txt, xp.split("=")[0])) == xp.split("=")[1]:
                         ret["free"] = True
                 for xp in conf.get("HR", []):
                     if JsonUtils.get_json_object(html_txt, xp):
@@ -323,17 +331,20 @@ class SiteEngine:
                     for xp in conf.get("PEER_COUNT", []):
                         els = doc.xpath(xp)
                         if els:
-                            txt = ''.join(els[0].itertext())
-                            ret["peer_count"] = int(''.join(c for c in txt if c.isdigit()) or 0)
+                            txt = "".join(els[0].itertext())
+                            ret["peer_count"] = int("".join(c for c in txt if c.isdigit()) or 0)
         return ret
 
     def _fetch_page(self, url, user_config):
         cookie = user_config.get("cookie", "")
         ua = user_config.get("ua", "")
         headers = {"User-Agent": ua} if ua else {}
-        res = RequestUtils(cookies=cookie if cookie else None,
-                           headers=headers, proxies=get_proxies() if user_config.get("proxy") else None,
-                           timeout=30).get_res(url=url)
+        res = RequestUtils(
+            cookies=cookie if cookie else None,
+            headers=headers,
+            proxies=get_proxies() if user_config.get("proxy") else None,
+            timeout=30,
+        ).get_res(url=url)
         if res and res.status_code == 200:
             res.encoding = res.apparent_encoding
             return res.text
@@ -363,26 +374,44 @@ class SiteEngine:
     def register_user_info_factory(self, factory):
         self._user_info_factories.append(factory)
 
-    def get_user_info(self, url, site_name, site_cookie, html_text=None,
-                      site_headers=None, ua="", emulate=False, proxy=False, session=None):
+    def get_user_info(
+        self,
+        url,
+        site_name,
+        site_cookie,
+        html_text=None,
+        site_headers=None,
+        ua="",
+        emulate=False,
+        proxy=False,
+        session=None,
+    ):
         for factory in self._user_info_factories:
-            result = factory(url, site_name, site_cookie,
-                             html_text=html_text, site_headers=site_headers,
-                             ua=ua, emulate=emulate, proxy=proxy, session=session)
+            result = factory(
+                url,
+                site_name,
+                site_cookie,
+                html_text=html_text,
+                site_headers=site_headers,
+                ua=ua,
+                emulate=emulate,
+                proxy=proxy,
+                session=session,
+            )
             if result:
                 return result
         return None
 
-    def prefetch_user_profile(self, url, site_cookie, site_headers=None,
-                              ua="", proxy=False, session=None):
-        return engine_user_info.prefetch_user_profile(self, url, site_cookie,
-                                                       site_headers=site_headers,
-                                                       ua=ua, proxy=proxy, session=session)
+    def prefetch_user_profile(self, url, site_cookie, site_headers=None, ua="", proxy=False, session=None):
+        return engine_user_info.prefetch_user_profile(
+            self, url, site_cookie, site_headers=site_headers, ua=ua, proxy=proxy, session=session
+        )
 
     # ---- 字幕 ----
 
-    def resolve_subtitle(self, page_url: str, torrent_id: str, subtitle_dir: str,
-                         user_config: dict | None = None) -> int:
+    def resolve_subtitle(
+        self, page_url: str, torrent_id: str, subtitle_dir: str, user_config: dict | None = None
+    ) -> int:
         site = self.get_by_url(page_url)
         if not site or not site.subtitle:
             return 0
@@ -402,26 +431,50 @@ class SiteEngine:
             if not sid:
                 continue
             genlink_vars = {"tid": tid, "subtitle_id": sid}
-            link = engine_tools._call_endpoint(self, genlink_cfg, site, user_config, genlink_vars) if genlink_cfg else None
+            link = (
+                engine_tools._call_endpoint(self, genlink_cfg, site, user_config, genlink_vars) if genlink_cfg else None
+            )
             if link:
                 dl_cfg_path = dl_cfg.get("path", "").format(tid=tid, subtitle_id=sid)
                 dl_url = f"{site.api.base_url.rstrip('/')}/{dl_cfg_path.lstrip('/')}"
-                if engine_tools._call_endpoint(self,
-                                               {"method": "GET", "path": dl_url}, site, user_config, {},
-                                               credential=str(sid), download_dir=subtitle_dir, download=True):
+                if engine_tools._call_endpoint(
+                    self,
+                    {"method": "GET", "path": dl_url},
+                    site,
+                    user_config,
+                    {},
+                    credential=str(sid),
+                    download_dir=subtitle_dir,
+                    download=True,
+                ):
                     cnt += 1
             else:
-                if engine_tools._call_endpoint(self, dl_cfg, site, user_config, {"tid": tid, "subtitle_id": sid},
-                                               credential=str(sid), download_dir=subtitle_dir, download=True):
+                if engine_tools._call_endpoint(
+                    self,
+                    dl_cfg,
+                    site,
+                    user_config,
+                    {"tid": tid, "subtitle_id": sid},
+                    credential=str(sid),
+                    download_dir=subtitle_dir,
+                    download=True,
+                ):
                     cnt += 1
         return cnt
 
     # ---- 内部工具 (委托给 engine_tools) ----
 
-    def _call_endpoint(self, cfg, site, user_config, template_vars,
-                       credential="", download_dir="", download=False):
-        return engine_tools._call_endpoint(self, cfg, site, user_config, template_vars,
-                                           credential=credential, download_dir=download_dir, download=download)
+    def _call_endpoint(self, cfg, site, user_config, template_vars, credential="", download_dir="", download=False):
+        return engine_tools._call_endpoint(
+            self,
+            cfg,
+            site,
+            user_config,
+            template_vars,
+            credential=credential,
+            download_dir=download_dir,
+            download=download,
+        )
 
     def _build_headers(self, site, user_config):
         return engine_tools._build_headers(self, site, user_config)

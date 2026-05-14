@@ -2,6 +2,7 @@
 RBAC 领域层测试
 测试 RBAC 实体 from_orm/to_dict 以及适配器代理行为
 """
+
 from datetime import datetime
 from unittest.mock import MagicMock
 
@@ -42,10 +43,18 @@ class TestRBACUserEntity:
     def test_from_orm_full(self):
         now = datetime.now()
         orm = _make_orm(
-            ID=1, USERNAME="admin", PASSWORD_HASH="h", EMAIL="a@b.com",
-            NICKNAME="nick", AVATAR="ava", STATUS=1, IS_SUPERADMIN=1,
-            LAST_LOGIN_AT=now, LAST_LOGIN_IP="127.0.0.1",
-            CREATED_AT=now, UPDATED_AT=now,
+            ID=1,
+            USERNAME="admin",
+            PASSWORD_HASH="h",
+            EMAIL="a@b.com",
+            NICKNAME="nick",
+            AVATAR="ava",
+            STATUS=1,
+            IS_SUPERADMIN=1,
+            LAST_LOGIN_AT=now,
+            LAST_LOGIN_IP="127.0.0.1",
+            CREATED_AT=now,
+            UPDATED_AT=now,
         )
         e = RBACUserEntity.from_orm(orm)
         assert e.id == 1
@@ -60,10 +69,18 @@ class TestRBACUserEntity:
     def test_to_dict(self):
         now = datetime(2025, 1, 1, 12, 0, 0)
         e = RBACUserEntity(
-            id=1, username="u", password_hash="h", email=None,
-            nickname=None, avatar=None, status=1, is_superadmin=0,
-            last_login_at=now, last_login_ip=None,
-            created_at=now, updated_at=None,
+            id=1,
+            username="u",
+            password_hash="h",
+            email=None,
+            nickname=None,
+            avatar=None,
+            status=1,
+            is_superadmin=0,
+            last_login_at=now,
+            last_login_ip=None,
+            created_at=now,
+            updated_at=None,
         )
         d = e.to_dict()
         assert d["username"] == "u"
@@ -73,10 +90,18 @@ class TestRBACUserEntity:
 
     def test_getattr_uppercase_compat(self):
         e = RBACUserEntity(
-            id=1, username="u", password_hash="h", email=None,
-            nickname=None, avatar=None, status=1, is_superadmin=0,
-            last_login_at=None, last_login_ip=None,
-            created_at=None, updated_at=None,
+            id=1,
+            username="u",
+            password_hash="h",
+            email=None,
+            nickname=None,
+            avatar=None,
+            status=1,
+            is_superadmin=0,
+            last_login_at=None,
+            last_login_ip=None,
+            created_at=None,
+            updated_at=None,
         )
         # 大写属性名兼容
         assert e.USERNAME == "u"
@@ -88,9 +113,14 @@ class TestRBACUserEntity:
 class TestRBACRoleEntity:
     def test_from_orm(self):
         orm = _make_orm(
-            ID=2, ROLE_NAME="admin", ROLE_CODE="admin",
-            DESCRIPTION="desc", ROLE_LEVEL=10, STATUS=1,
-            CREATED_AT=None, UPDATED_AT=None,
+            ID=2,
+            ROLE_NAME="admin",
+            ROLE_CODE="admin",
+            DESCRIPTION="desc",
+            ROLE_LEVEL=10,
+            STATUS=1,
+            CREATED_AT=None,
+            UPDATED_AT=None,
         )
         e = RBACRoleEntity.from_orm(orm)
         assert e.role_name == "admin"
@@ -98,9 +128,14 @@ class TestRBACRoleEntity:
 
     def test_to_dict(self):
         e = RBACRoleEntity(
-            id=2, role_name="r", role_code="rc",
-            description=None, role_level=100, status=1,
-            created_at=None, updated_at=None,
+            id=2,
+            role_name="r",
+            role_code="rc",
+            description=None,
+            role_level=100,
+            status=1,
+            created_at=None,
+            updated_at=None,
         )
         assert e.to_dict()["role_code"] == "rc"
 
@@ -108,9 +143,15 @@ class TestRBACRoleEntity:
 class TestRBACPermissionEntity:
     def test_from_orm(self):
         orm = _make_orm(
-            ID=3, PERMISSION_NAME="p", PERMISSION_CODE="pc",
-            DESCRIPTION=None, PERMISSION_TYPE="api", MODULE="sys",
-            STATUS=1, CREATED_AT=None, UPDATED_AT=None,
+            ID=3,
+            PERMISSION_NAME="p",
+            PERMISSION_CODE="pc",
+            DESCRIPTION=None,
+            PERMISSION_TYPE="api",
+            MODULE="sys",
+            STATUS=1,
+            CREATED_AT=None,
+            UPDATED_AT=None,
         )
         e = RBACPermissionEntity.from_orm(orm)
         assert e.permission_code == "pc"
@@ -118,9 +159,15 @@ class TestRBACPermissionEntity:
 
     def test_to_dict(self):
         e = RBACPermissionEntity(
-            id=3, permission_name="p", permission_code="pc",
-            description=None, permission_type="api", module="sys",
-            status=1, created_at=None, updated_at=None,
+            id=3,
+            permission_name="p",
+            permission_code="pc",
+            description=None,
+            permission_type="api",
+            module="sys",
+            status=1,
+            created_at=None,
+            updated_at=None,
         )
         assert e.to_dict()["module"] == "sys"
 
@@ -128,11 +175,22 @@ class TestRBACPermissionEntity:
 class TestRBACMenuEntity:
     def test_from_orm(self):
         orm = _make_orm(
-            ID=4, MENU_NAME="m", MENU_CODE="mc", PARENT_ID=0,
-            PATH="/p", ICON="i", COMPONENT="c", SORT_ORDER=1,
-            MENU_LEVEL=1, IS_HIDDEN=0, IS_EXTERNAL=0,
-            EXTERNAL_LINK=None, STATUS=1, PERMISSION_CODE=None,
-            CREATED_AT=None, UPDATED_AT=None,
+            ID=4,
+            MENU_NAME="m",
+            MENU_CODE="mc",
+            PARENT_ID=0,
+            PATH="/p",
+            ICON="i",
+            COMPONENT="c",
+            SORT_ORDER=1,
+            MENU_LEVEL=1,
+            IS_HIDDEN=0,
+            IS_EXTERNAL=0,
+            EXTERNAL_LINK=None,
+            STATUS=1,
+            PERMISSION_CODE=None,
+            CREATED_AT=None,
+            UPDATED_AT=None,
         )
         e = RBACMenuEntity.from_orm(orm)
         assert e.menu_code == "mc"
@@ -140,11 +198,22 @@ class TestRBACMenuEntity:
 
     def test_to_dict(self):
         e = RBACMenuEntity(
-            id=4, menu_name="m", menu_code="mc", parent_id=None,
-            path=None, icon=None, component=None, sort_order=0,
-            menu_level=1, is_hidden=0, is_external=0,
-            external_link=None, status=1, permission_code=None,
-            created_at=None, updated_at=None,
+            id=4,
+            menu_name="m",
+            menu_code="mc",
+            parent_id=None,
+            path=None,
+            icon=None,
+            component=None,
+            sort_order=0,
+            menu_level=1,
+            is_hidden=0,
+            is_external=0,
+            external_link=None,
+            status=1,
+            permission_code=None,
+            created_at=None,
+            updated_at=None,
         )
         assert e.to_dict()["menu_name"] == "m"
 
@@ -152,9 +221,16 @@ class TestRBACMenuEntity:
 class TestRBACUserLoginLogEntity:
     def test_from_orm(self):
         orm = _make_orm(
-            ID=5, USER_ID=1, USERNAME="u", LOGIN_IP="127.0.0.1",
-            LOGIN_LOCATION=None, USER_AGENT=None, LOGIN_TYPE="password",
-            LOGIN_STATUS=1, FAIL_REASON=None, LOGIN_AT=None,
+            ID=5,
+            USER_ID=1,
+            USERNAME="u",
+            LOGIN_IP="127.0.0.1",
+            LOGIN_LOCATION=None,
+            USER_AGENT=None,
+            LOGIN_TYPE="password",
+            LOGIN_STATUS=1,
+            FAIL_REASON=None,
+            LOGIN_AT=None,
         )
         e = RBACUserLoginLogEntity.from_orm(orm)
         assert e.username == "u"
@@ -164,12 +240,21 @@ class TestRBACUserLoginLogEntity:
 class TestRBACOperationLogEntity:
     def test_from_orm(self):
         orm = _make_orm(
-            ID=6, USER_ID=1, USERNAME="u", MODULE="sys",
-            OPERATION_TYPE="QUERY", DESCRIPTION=None,
-            REQUEST_METHOD="GET", REQUEST_URL="/api", REQUEST_PARAMS=None,
-            RESPONSE_DATA=None, OPERATION_IP="127.0.0.1",
-            EXECUTION_TIME=100, OPERATION_STATUS=1,
-            ERROR_MSG=None, OPERATED_AT=None,
+            ID=6,
+            USER_ID=1,
+            USERNAME="u",
+            MODULE="sys",
+            OPERATION_TYPE="QUERY",
+            DESCRIPTION=None,
+            REQUEST_METHOD="GET",
+            REQUEST_URL="/api",
+            REQUEST_PARAMS=None,
+            RESPONSE_DATA=None,
+            OPERATION_IP="127.0.0.1",
+            EXECUTION_TIME=100,
+            OPERATION_STATUS=1,
+            ERROR_MSG=None,
+            OPERATED_AT=None,
         )
         e = RBACOperationLogEntity.from_orm(orm)
         assert e.operation_type == "QUERY"
@@ -182,12 +267,22 @@ class TestRBACOperationLogEntity:
 class TestRBACUserRepositoryAdapter:
     def _make(self):
         mock = MagicMock()
-        mock.get_user_by_id = MagicMock(return_value=_make_orm(
-            ID=1, USERNAME="u", PASSWORD_HASH="h", EMAIL=None,
-            NICKNAME=None, AVATAR=None, STATUS=1, IS_SUPERADMIN=0,
-            LAST_LOGIN_AT=None, LAST_LOGIN_IP=None,
-            CREATED_AT=None, UPDATED_AT=None,
-        ))
+        mock.get_user_by_id = MagicMock(
+            return_value=_make_orm(
+                ID=1,
+                USERNAME="u",
+                PASSWORD_HASH="h",
+                EMAIL=None,
+                NICKNAME=None,
+                AVATAR=None,
+                STATUS=1,
+                IS_SUPERADMIN=0,
+                LAST_LOGIN_AT=None,
+                LAST_LOGIN_IP=None,
+                CREATED_AT=None,
+                UPDATED_AT=None,
+            )
+        )
         mock.get_users = MagicMock(return_value=([], 0))
         mock.get_all_users = MagicMock(return_value=[])
         mock.is_user_exists = MagicMock(return_value=True)
@@ -253,10 +348,18 @@ class TestRBACUserRepositoryAdapter:
 class TestRBACRoleRepositoryAdapter:
     def _make(self):
         mock = MagicMock()
-        mock.get_role_by_id = MagicMock(return_value=_make_orm(
-            ID=1, ROLE_NAME="r", ROLE_CODE="rc", DESCRIPTION=None,
-            ROLE_LEVEL=100, STATUS=1, CREATED_AT=None, UPDATED_AT=None,
-        ))
+        mock.get_role_by_id = MagicMock(
+            return_value=_make_orm(
+                ID=1,
+                ROLE_NAME="r",
+                ROLE_CODE="rc",
+                DESCRIPTION=None,
+                ROLE_LEVEL=100,
+                STATUS=1,
+                CREATED_AT=None,
+                UPDATED_AT=None,
+            )
+        )
         mock.get_all_roles = MagicMock(return_value=[])
         mock.get_roles_page = MagicMock(return_value=([], 0))
         mock.is_role_exists = MagicMock(return_value=False)
@@ -301,9 +404,15 @@ class TestRBACRoleRepositoryAdapter:
 class TestRBACPermissionRepositoryAdapter:
     def _make(self):
         perm_orm = _make_orm(
-            ID=1, PERMISSION_NAME="p", PERMISSION_CODE="pc",
-            DESCRIPTION=None, PERMISSION_TYPE="api", MODULE="sys",
-            STATUS=1, CREATED_AT=None, UPDATED_AT=None,
+            ID=1,
+            PERMISSION_NAME="p",
+            PERMISSION_CODE="pc",
+            DESCRIPTION=None,
+            PERMISSION_TYPE="api",
+            MODULE="sys",
+            STATUS=1,
+            CREATED_AT=None,
+            UPDATED_AT=None,
         )
         mock = MagicMock()
         mock.get_permission_by_id = MagicMock(return_value=perm_orm)
@@ -336,13 +445,26 @@ class TestRBACPermissionRepositoryAdapter:
 class TestRBACMenuRepositoryAdapter:
     def _make(self):
         mock = MagicMock()
-        mock.get_menu_by_id = MagicMock(return_value=_make_orm(
-            ID=1, MENU_NAME="m", MENU_CODE="mc", PARENT_ID=None,
-            PATH="/p", ICON=None, COMPONENT=None, SORT_ORDER=0,
-            MENU_LEVEL=1, IS_HIDDEN=0, IS_EXTERNAL=0,
-            EXTERNAL_LINK=None, STATUS=1, PERMISSION_CODE=None,
-            CREATED_AT=None, UPDATED_AT=None,
-        ))
+        mock.get_menu_by_id = MagicMock(
+            return_value=_make_orm(
+                ID=1,
+                MENU_NAME="m",
+                MENU_CODE="mc",
+                PARENT_ID=None,
+                PATH="/p",
+                ICON=None,
+                COMPONENT=None,
+                SORT_ORDER=0,
+                MENU_LEVEL=1,
+                IS_HIDDEN=0,
+                IS_EXTERNAL=0,
+                EXTERNAL_LINK=None,
+                STATUS=1,
+                PERMISSION_CODE=None,
+                CREATED_AT=None,
+                UPDATED_AT=None,
+            )
+        )
         mock.get_all_menus = MagicMock(return_value=[])
         mock.get_top_menus = MagicMock(return_value=[])
         mock.get_children_menus = MagicMock(return_value=[])
@@ -380,20 +502,40 @@ class TestRBACMenuRepositoryAdapter:
 class TestRBACLogRepositoryAdapter:
     def _make(self):
         mock = MagicMock()
-        mock.add_login_log = MagicMock(return_value=_make_orm(
-            ID=1, USER_ID=1, USERNAME="u", LOGIN_IP=None,
-            LOGIN_LOCATION=None, USER_AGENT=None, LOGIN_TYPE="password",
-            LOGIN_STATUS=1, FAIL_REASON=None, LOGIN_AT=None,
-        ))
+        mock.add_login_log = MagicMock(
+            return_value=_make_orm(
+                ID=1,
+                USER_ID=1,
+                USERNAME="u",
+                LOGIN_IP=None,
+                LOGIN_LOCATION=None,
+                USER_AGENT=None,
+                LOGIN_TYPE="password",
+                LOGIN_STATUS=1,
+                FAIL_REASON=None,
+                LOGIN_AT=None,
+            )
+        )
         mock.get_login_logs = MagicMock(return_value=([], 0))
-        mock.add_operation_log = MagicMock(return_value=_make_orm(
-            ID=2, USER_ID=1, USERNAME="u", MODULE="sys",
-            OPERATION_TYPE="QUERY", DESCRIPTION=None,
-            REQUEST_METHOD="GET", REQUEST_URL="/api", REQUEST_PARAMS=None,
-            RESPONSE_DATA=None, OPERATION_IP=None,
-            EXECUTION_TIME=None, OPERATION_STATUS=1,
-            ERROR_MSG=None, OPERATED_AT=None,
-        ))
+        mock.add_operation_log = MagicMock(
+            return_value=_make_orm(
+                ID=2,
+                USER_ID=1,
+                USERNAME="u",
+                MODULE="sys",
+                OPERATION_TYPE="QUERY",
+                DESCRIPTION=None,
+                REQUEST_METHOD="GET",
+                REQUEST_URL="/api",
+                REQUEST_PARAMS=None,
+                RESPONSE_DATA=None,
+                OPERATION_IP=None,
+                EXECUTION_TIME=None,
+                OPERATION_STATUS=1,
+                ERROR_MSG=None,
+                OPERATED_AT=None,
+            )
+        )
         mock.get_operation_logs = MagicMock(return_value=([], 0))
         return mock
 
@@ -403,7 +545,14 @@ class TestRBACLogRepositoryAdapter:
         result = adapter.add_login_log(1, "u", login_ip="127.0.0.1")
         assert result.username == "u"
         mock.add_login_log.assert_called_once_with(
-            1, "u", "127.0.0.1", None, None, "password", 1, None,
+            1,
+            "u",
+            "127.0.0.1",
+            None,
+            None,
+            "password",
+            1,
+            None,
         )
 
     def test_get_login_logs(self):

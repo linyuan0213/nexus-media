@@ -10,23 +10,37 @@ SPLIT_CHARS = r"\.|\s+|\(|\)|\[|]|-|\+|【|】|/|～|;|&|\||#|_|「|」|~|{|}"
 DEFAULT_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"
 
 # 收藏了的媒体的目录名
-RMT_FAVTYPE = '精选'
+RMT_FAVTYPE = "精选"
 
 # 支持的媒体文件后缀格式
-RMT_MEDIAEXT = ['.mp4', '.mkv', '.ts', '.iso',
-                '.rmvb', '.avi', '.mov', '.mpeg',
-                '.mpg', '.wmv', '.3gp', '.asf',
-                '.m4v', '.flv', '.m2ts', '.strm',
-                '.tp']
+RMT_MEDIAEXT = [
+    ".mp4",
+    ".mkv",
+    ".ts",
+    ".iso",
+    ".rmvb",
+    ".avi",
+    ".mov",
+    ".mpeg",
+    ".mpg",
+    ".wmv",
+    ".3gp",
+    ".asf",
+    ".m4v",
+    ".flv",
+    ".m2ts",
+    ".strm",
+    ".tp",
+]
 
 # 支持的字幕文件后缀格式
-RMT_SUBEXT = ['.srt', '.ass', '.ssa']
+RMT_SUBEXT = [".srt", ".ass", ".ssa"]
 
 # 支持的音轨文件后缀格式
-RMT_AUDIO_TRACK_EXT = ['.mka']
+RMT_AUDIO_TRACK_EXT = [".mka"]
 
 # 电视剧动漫的分类genre_ids
-ANIME_GENREIDS = ['16']
+ANIME_GENREIDS = ["16"]
 
 # 默认过滤的文件大小，150M
 RMT_MIN_FILESIZE = 150 * 1024 * 1024
@@ -62,34 +76,34 @@ META_DELETE_UNKNOWN_INTERVAL = 12
 REFRESH_WALLPAPER_INTERVAL = 1
 
 # fanart的api
-FANART_MOVIE_API_URL = 'https://webservice.fanart.tv/v3/movies/%s?api_key=d2d31f9ecabea050fc7d68aa3146015f'
-FANART_TV_API_URL = 'https://webservice.fanart.tv/v3/tv/%s?api_key=d2d31f9ecabea050fc7d68aa3146015f'
+FANART_MOVIE_API_URL = "https://webservice.fanart.tv/v3/movies/%s?api_key=d2d31f9ecabea050fc7d68aa3146015f"
+FANART_TV_API_URL = "https://webservice.fanart.tv/v3/tv/%s?api_key=d2d31f9ecabea050fc7d68aa3146015f"
 
 # 默认背景图地址
-DEFAULT_TMDB_IMAGE = 'https://s3.bmp.ovh/imgs/2022/07/10/77ef9500c851935b.webp'
+DEFAULT_TMDB_IMAGE = "https://s3.bmp.ovh/imgs/2022/07/10/77ef9500c851935b.webp"
 
 # TMDB域名地址
-TMDB_API_DOMAINS = ['api.themoviedb.org', 'api.tmdb.org', 'tmdb.nastool.cn', 'tmdb.nastool.workers.dev']
-TMDB_IMAGE_DOMAIN = 'image.tmdb.org'
+TMDB_API_DOMAINS = ["api.themoviedb.org", "api.tmdb.org", "tmdb.nastool.cn", "tmdb.nastool.workers.dev"]
+TMDB_IMAGE_DOMAIN = "image.tmdb.org"
 
 # TMDB图片尺寸配置
 TMDB_IMAGE_SIZE = {
-    'thumb': 'w92',
-    'small': 'w185',
-    'medium': 'w342',
-    'large': 'w500',
-    'xlarge': 'w780',
-    'original': 'original'
+    "thumb": "w92",
+    "small": "w185",
+    "medium": "w342",
+    "large": "w500",
+    "xlarge": "w780",
+    "original": "original",
 }
 
 # 添加下载时增加的标签
 PT_TAG = "NASTOOL"
 
 # 电影默认命名格式
-DEFAULT_MOVIE_FORMAT = '{title} ({year})/{title} ({year})-{part} - {videoFormat}'
+DEFAULT_MOVIE_FORMAT = "{title} ({year})/{title} ({year})-{part} - {videoFormat}"
 
 # 电视剧默认命名格式
-DEFAULT_TV_FORMAT = '{title} ({year})/Season {season}/{title} - {season_episode}-{part} - 第 {episode} 集'
+DEFAULT_TV_FORMAT = "{title} ({year})/Season {season}/{title} - {season_episode}-{part} - 第 {episode} 集"
 
 # 辅助识别参数
 KEYWORD_SEARCH_WEIGHT_1 = [10, 3, 2, 0.5, 0.5]
@@ -97,16 +111,42 @@ KEYWORD_SEARCH_WEIGHT_2 = [10, 2, 1]
 KEYWORD_SEARCH_WEIGHT_3 = [10, 2]
 KEYWORD_STR_SIMILARITY_THRESHOLD = 0.2
 KEYWORD_DIFF_SCORE_THRESHOLD = 30
-KEYWORD_BLACKLIST = ['中字', '韩语', '双字', '中英', '日语', '双语', '国粤', 'HD', 'BD', '中日', '粤语', '完全版',
-                     '法语', '西班牙语', 'HRHDTVAC3264', '未删减版', '未删减', '国语', '字幕组', '人人影视', 'www66ystv',
-                     '人人影视制作', '英语', 'www6vhaotv', '无删减版', '完成版', '德意']
+KEYWORD_BLACKLIST = [
+    "中字",
+    "韩语",
+    "双字",
+    "中英",
+    "日语",
+    "双语",
+    "国粤",
+    "HD",
+    "BD",
+    "中日",
+    "粤语",
+    "完全版",
+    "法语",
+    "西班牙语",
+    "HRHDTVAC3264",
+    "未删减版",
+    "未删减",
+    "国语",
+    "字幕组",
+    "人人影视",
+    "www66ystv",
+    "人人影视制作",
+    "英语",
+    "www6vhaotv",
+    "无删减版",
+    "完成版",
+    "德意",
+]
 
 # redis 配置
 REDIS_HOST = "127.0.0.1"
 REDIS_PORT = "6379"
 
 # M-Team base url
-MT_URL = 'https://api.m-team.io'
+MT_URL = "https://api.m-team.io"
 
 # sites.dat github
 SITES_DATA_URL = "https://api.github.com/repos/linyuan0213/nas-tools-sites/releases/latest"

@@ -10,7 +10,7 @@ class ServerChan(_IMessageClient):
 
     def read_config(self):
         cfg = self._config or {}
-        self._sckey = cfg.get('sckey')
+        self._sckey = cfg.get("sckey")
 
     def send_msg(self, title, text="", image="", url="", user_id=""):
         if not title and not text:
@@ -20,8 +20,8 @@ class ServerChan(_IMessageClient):
         try:
             formatted_text = self._format_message_content(text, image, url)
             ret_json = sc_send(self._sckey, title, formatted_text, {"tags": "NASTOOL"})
-            errno = ret_json.get('code')
-            error = ret_json.get('message')
+            errno = ret_json.get("code")
+            error = ret_json.get("message")
             return (True, error) if errno == 0 else (False, error)
         except Exception as msg_e:
             ExceptionUtils.exception_traceback(msg_e)
@@ -48,32 +48,33 @@ class ServerChan(_IMessageClient):
         try:
             content_parts = []
             first_media = medias[0]
-            if hasattr(first_media, 'get_message_image'):
+            if hasattr(first_media, "get_message_image"):
                 image_url = first_media.get_message_image()
                 if image_url:
                     content_parts.append(f"![封面图片]({image_url})")
                     content_parts.append("")
             for index, media in enumerate(medias, 1):
                 media_info = []
-                if hasattr(media, 'get_title_string'):
+                if hasattr(media, "get_title_string"):
                     media_info.append(f"**{index}. {media.get_title_string()}**")
                 type_info = []
-                if hasattr(media, 'get_type_string'):
+                if hasattr(media, "get_type_string"):
                     type_info.append(media.get_type_string())
-                if hasattr(media, 'get_vote_string') and media.get_vote_string():
+                if hasattr(media, "get_vote_string") and media.get_vote_string():
                     type_info.append(media.get_vote_string())
                 if type_info:
                     media_info.append(f"*{', '.join(type_info)}*")
-                if hasattr(media, 'get_detail_url') and media.get_detail_url():
+                if hasattr(media, "get_detail_url") and media.get_detail_url():
                     media_info.append(f"[查看详情]({media.get_detail_url()})")
                 content_parts.append("\n\n".join(media_info))
             formatted_content = "\n\n---\n\n".join(content_parts)
             ret_json = sc_send(self._sckey, title or "媒体推荐", formatted_content, {"tags": "NASTOOL"})
-            errno = ret_json.get('code')
-            error = ret_json.get('message')
+            errno = ret_json.get("code")
+            error = ret_json.get("message")
             return (True, error) if errno == 0 else (False, error)
         except Exception as msg_e:
             ExceptionUtils.exception_traceback(msg_e)
             return False, str(msg_e)
+
 
 ClientRegistry.register(ServerChan)

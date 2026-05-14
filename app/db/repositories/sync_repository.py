@@ -18,7 +18,7 @@ class SyncRepository(BaseRepository):
     def insert_config_sync_path(self, source, dest, unknown, mode, compatibility, rename, enabled, note=None):
         """
         增加目录同步
-        
+
         Args:
             source: 源目录
             dest: 目标目录
@@ -29,22 +29,24 @@ class SyncRepository(BaseRepository):
             enabled: 是否启用
             note: 备注
         """
-        return self._db.insert(CONFIGSYNCPATHS(
-            SOURCE=source,
-            DEST=dest,
-            UNKNOWN=unknown,
-            MODE=mode,
-            COMPATIBILITY=int(compatibility),
-            RENAME=int(rename),
-            ENABLED=int(enabled),
-            NOTE=note
-        ))
+        return self._db.insert(
+            CONFIGSYNCPATHS(
+                SOURCE=source,
+                DEST=dest,
+                UNKNOWN=unknown,
+                MODE=mode,
+                COMPATIBILITY=int(compatibility),
+                RENAME=int(rename),
+                ENABLED=int(enabled),
+                NOTE=note,
+            )
+        )
 
     @DbPersist(BaseRepository._db)
     def delete_config_sync_path(self, sid):
         """
         删除目录同步
-        
+
         Args:
             sid: 同步配置ID
         """
@@ -55,10 +57,10 @@ class SyncRepository(BaseRepository):
     def get_config_sync_paths(self, sid=None):
         """
         查询目录同步
-        
+
         Args:
             sid: 同步配置ID
-            
+
         Returns:
             同步配置列表
         """
@@ -70,7 +72,7 @@ class SyncRepository(BaseRepository):
     def check_config_sync_paths(self, sid=None, compatibility=None, rename=None, enabled=None):
         """
         设置目录同步状态
-        
+
         Args:
             sid: 同步配置ID
             compatibility: 兼容性模式
@@ -78,14 +80,10 @@ class SyncRepository(BaseRepository):
             enabled: 是否启用
         """
         if sid and rename is not None:
-            self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update({
-                "RENAME": int(rename)
-            })
+            self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update({"RENAME": int(rename)})
         elif sid and enabled is not None:
-            self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update({
-                "ENABLED": int(enabled)
-            })
+            self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update({"ENABLED": int(enabled)})
         elif sid and compatibility is not None:
-            self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update({
-                "COMPATIBILITY": int(compatibility)
-            })
+            self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update(
+                {"COMPATIBILITY": int(compatibility)}
+            )

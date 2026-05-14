@@ -20,9 +20,7 @@ class MovieDownloadStrategy:
     """
 
     @staticmethod
-    def download_movies(download_list: list,
-                        download_callback,
-                        get_download_url_callback) -> list:
+    def download_movies(download_list: list, download_callback, get_download_url_callback) -> list:
         """
         下载所有电影
         :param download_list: 候选资源列表
@@ -50,12 +48,14 @@ class SeasonPackStrategy:
     """
 
     @staticmethod
-    def find_season_packs(download_list: list,
-                          need_seasons: dict,
-                          need_tvs: dict,
-                          get_download_url_callback,
-                          download_callback,
-                          get_torrent_episodes_callback) -> tuple[list, dict, dict]:
+    def find_season_packs(
+        download_list: list,
+        need_seasons: dict,
+        need_tvs: dict,
+        get_download_url_callback,
+        download_callback,
+        get_torrent_episodes_callback,
+    ) -> tuple[list, dict, dict]:
         """
         查找并下载整季包含的种子
         :param download_list: 候选资源列表
@@ -82,20 +82,16 @@ class SeasonPackStrategy:
                     if len(item_season) == 1:
                         # 只有一季的可能是命名错误，需要打开种子鉴别
                         total_eps = SeasonPackStrategy._get_season_episodes(need_tvs, need_tmdbid, item_season[0])
-                        torrent_episodes, torrent_path = get_torrent_episodes_callback(
-                            item.enclosure, item.page_url
-                        )
+                        torrent_episodes, torrent_path = get_torrent_episodes_callback(item.enclosure, item.page_url)
                         # 如果种子实际集数大于等于总集数（或种子无集数信息但total_eps为0），则下载
                         if torrent_episodes and len(torrent_episodes) >= total_eps:
                             _, download_id, _ = download_callback(item, torrent_file=torrent_path)
                         elif not torrent_episodes and total_eps == 0:
                             # 无法判断集数时保守跳过
-                            log.info(
-                                f"【Downloader】种子 {item.org_string} 未含集数信息，跳过")
+                            log.info(f"【Downloader】种子 {item.org_string} 未含集数信息，跳过")
                             continue
                         elif not torrent_episodes:
-                            log.info(
-                                f"【Downloader】种子 {item.org_string} 未含集数信息，解析文件数为 0")
+                            log.info(f"【Downloader】种子 {item.org_string} 未含集数信息，解析文件数为 0")
                             continue
                         else:
                             continue
@@ -147,14 +143,16 @@ class EpisodeStrategy:
     """
 
     @staticmethod
-    def download_episodes(download_list: list,
-                          need_tvs: dict,
-                          get_download_url_callback,
-                          download_callback,
-                          get_torrent_episodes_callback,
-                          set_files_status_callback,
-                          start_torrents_callback,
-                          return_items: list) -> tuple[list, dict]:
+    def download_episodes(
+        download_list: list,
+        need_tvs: dict,
+        get_download_url_callback,
+        download_callback,
+        get_torrent_episodes_callback,
+        set_files_status_callback,
+        start_torrents_callback,
+        return_items: list,
+    ) -> tuple[list, dict]:
         """
         按单集匹配下载
         :param download_list: 候选资源列表
@@ -198,11 +196,9 @@ class EpisodeStrategy:
                     if not item_episodes:
                         if not item.enclosure:
                             item.enclosure = get_download_url_callback(item.page_url)
-                        if item.enclosure.startswith('magnet'):
+                        if item.enclosure.startswith("magnet"):
                             continue
-                        torrent_episodes, torrent_path = get_torrent_episodes_callback(
-                            item.enclosure, item.page_url
-                        )
+                        torrent_episodes, torrent_path = get_torrent_episodes_callback(item.enclosure, item.page_url)
                         if not torrent_episodes:
                             continue
                         item_episodes = torrent_episodes
@@ -217,14 +213,16 @@ class EpisodeStrategy:
         return return_items, need_tvs
 
     @staticmethod
-    def download_from_season_pack(download_list: list,
-                                  need_tvs: dict,
-                                  get_download_url_callback,
-                                  download_callback,
-                                  get_torrent_episodes_callback,
-                                  set_files_status_callback,
-                                  start_torrents_callback,
-                                  return_items: list) -> tuple[list, dict]:
+    def download_from_season_pack(
+        download_list: list,
+        need_tvs: dict,
+        get_download_url_callback,
+        download_callback,
+        get_torrent_episodes_callback,
+        set_files_status_callback,
+        start_torrents_callback,
+        return_items: list,
+    ) -> tuple[list, dict]:
         """
         从整季包中选取需要的集数下载（仅支持QB/TR）
         :return: (更新后的 return_items, 更新后的 need_tvs)
@@ -267,17 +265,13 @@ class EpisodeStrategy:
                     if not item.enclosure:
                         item.enclosure = get_download_url_callback(item.page_url)
                     # 检查种子看是否有需要的集
-                    torrent_episodes, torrent_path = get_torrent_episodes_callback(
-                        item.enclosure, item.page_url
-                    )
+                    torrent_episodes, torrent_path = get_torrent_episodes_callback(item.enclosure, item.page_url)
                     selected_episodes = set(torrent_episodes).intersection(set(need_episodes))
                     if not selected_episodes:
                         log.info("【Downloader】%s 没有需要的集，跳过..." % item.org_string)
                         continue
                     # 添加下载并暂停
-                    downloader_id, download_id, _ = download_callback(
-                        item, torrent_file=torrent_path, is_paused=True
-                    )
+                    downloader_id, download_id, _ = download_callback(item, torrent_file=torrent_path, is_paused=True)
                     if not download_id:
                         continue
                     # 更新仍需集数
@@ -287,9 +281,7 @@ class EpisodeStrategy:
                     # 设置任务只下载想要的文件
                     log.info("【Downloader】从 %s 中选取集：%s" % (item.org_string, selected_episodes))
                     set_files_status_callback(
-                        tid=download_id,
-                        need_episodes=list(selected_episodes),
-                        downloader_id=downloader_id
+                        tid=download_id, need_episodes=list(selected_episodes), downloader_id=downloader_id
                     )
                     # 重新开始任务
                     log.info("【Downloader】%s 开始下载 " % item.org_string)

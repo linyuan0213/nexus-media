@@ -11,7 +11,6 @@ from version import APP_VERSION
 
 
 class WebUtils:
-
     @staticmethod
     def get_location(ip):
         """
@@ -19,13 +18,15 @@ class WebUtils:
         """
         if not IpUtils.is_ipv4(ip):
             return ""
-        url = 'https://sp0.baidu.com/8aQDcjqpAAV3otqbppnN2DJv/api.php?co=&resource_id=6006&t=1529895387942&ie=utf8' \
-              '&oe=gbk&cb=op_aladdin_callback&format=json&tn=baidu&' \
-              'cb=jQuery110203920624944751099_1529894588086&_=1529894588088&query=%s' % ip
+        url = (
+            "https://sp0.baidu.com/8aQDcjqpAAV3otqbppnN2DJv/api.php?co=&resource_id=6006&t=1529895387942&ie=utf8"
+            "&oe=gbk&cb=op_aladdin_callback&format=json&tn=baidu&"
+            "cb=jQuery110203920624944751099_1529894588086&_=1529894588088&query=%s" % ip
+        )
         try:
             r = RequestUtils().get_res(url)
             if r:
-                r.encoding = 'gbk'
+                r.encoding = "gbk"
                 html = r.text
                 c1 = html.split('location":"')[1]
                 c2 = c1.split('","')[0]
@@ -51,9 +52,11 @@ class WebUtils:
         try:
             releases_update_only = Config().get_config("app").get("releases_update_only")
             version_res = RequestUtils(proxies=get_proxies()).get_res(
-                "https://api.github.com/repos/linyuan0213/nas-tools/releases/latest")
+                "https://api.github.com/repos/linyuan0213/nas-tools/releases/latest"
+            )
             commit_res = RequestUtils(proxies=get_proxies()).get_res(
-                "https://api.github.com/repos/linyuan0213/nas-tools/commits/master")
+                "https://api.github.com/repos/linyuan0213/nas-tools/commits/master"
+            )
             if version_res and commit_res:
                 ver_json = version_res.json()
                 commit_json = commit_res.json()
@@ -91,13 +94,13 @@ class WebUtils:
                 mtype = MediaType.TV if info.get("episodes_count") else MediaType.MOVIE
             media_info = None
             if original_title:
-                media_info = MediaService().get_media_info(title=f"{original_title} {year}",
-                                                    mtype=mtype,
-                                                    append_to_response="all")
+                media_info = MediaService().get_media_info(
+                    title=f"{original_title} {year}", mtype=mtype, append_to_response="all"
+                )
             if not media_info or not media_info.tmdb_info:
-                media_info = MediaService().get_media_info(title=f"{title} {year}",
-                                                    mtype=mtype,
-                                                    append_to_response="all")
+                media_info = MediaService().get_media_info(
+                    title=f"{title} {year}", mtype=mtype, append_to_response="all"
+                )
             # TMDB匹配失败时，使用豆瓣信息构造基础媒体信息，避免退化为不识别模式
             if not media_info or not media_info.tmdb_info:
                 media_info = MetaInfo(title=title)
@@ -124,21 +127,19 @@ class WebUtils:
             title = info.get("name")
             title_cn = info.get("name_cn")
             year = info.get("date")[:4] if info.get("date") else ""
-            media_info = MediaService().get_media_info(title=f"{title} {year}",
-                                                mtype=MediaType.TV,
-                                                append_to_response="all")
+            media_info = MediaService().get_media_info(
+                title=f"{title} {year}", mtype=MediaType.TV, append_to_response="all"
+            )
             if not media_info or not media_info.tmdb_info:
-                media_info = MediaService().get_media_info(title=f"{title_cn} {year}",
-                                                    mtype=MediaType.TV,
-                                                    append_to_response="all")
+                media_info = MediaService().get_media_info(
+                    title=f"{title_cn} {year}", mtype=MediaType.TV, append_to_response="all"
+                )
             # 检查是否成功匹配到TMDB信息
             if not media_info or not media_info.tmdb_info:
                 return None
         else:
             # TMDB
-            info = MediaService().get_tmdb_info(tmdbid=mediaid,
-                                         mtype=mtype,
-                                         append_to_response="all")
+            info = MediaService().get_tmdb_info(tmdbid=mediaid, mtype=mtype, append_to_response="all")
             if not info:
                 return None
             media_info = MetaInfo(title=info.get("title") if mtype == MediaType.MOVIE else info.get("name"))
@@ -161,10 +162,9 @@ class WebUtils:
 
         def _search_tmdb():
             meta_info = MetaInfo(title=content)
-            tmdbinfos = MediaService().get_tmdb_infos(title=meta_info.get_name(),
-                                               year=meta_info.year,
-                                               mtype=mtype,
-                                               page=page)
+            tmdbinfos = MediaService().get_tmdb_infos(
+                title=meta_info.get_name(), year=meta_info.year, mtype=mtype, page=page
+            )
             results = []
             for tmdbinfo in tmdbinfos:
                 tmp_info = MetaInfo(title=keyword)
@@ -172,18 +172,16 @@ class WebUtils:
                 if meta_info.type != MediaType.MOVIE and tmp_info.type == MediaType.MOVIE:
                     continue
                 if tmp_info.begin_season:
-                    tmp_info.title = "%s 第%s季" % (tmp_info.title, cn2an.an2cn(meta_info.begin_season, mode='low'))
+                    tmp_info.title = "%s 第%s季" % (tmp_info.title, cn2an.an2cn(meta_info.begin_season, mode="low"))
                 if tmp_info.begin_episode:
                     tmp_info.title = "%s 第%s集" % (tmp_info.title, meta_info.begin_episode)
                 results.append(tmp_info)
             return results
 
         def _search_douban():
-            return DouBan().search_douban_medias(keyword=key_word,
-                                                 mtype=mtype,
-                                                 season=season_num,
-                                                 episode=episode_num,
-                                                 page=page)
+            return DouBan().search_douban_medias(
+                keyword=key_word, mtype=mtype, season=season_num, episode=episode_num, page=page
+            )
 
         if source == "tmdb":
             medias = _search_tmdb()
@@ -195,14 +193,15 @@ class WebUtils:
             seen = set()
             medias = []
             for media in tmdb_medias + douban_medias:
-                key = (str(media.title or '').lower().strip(),
-                       str(media.year or ''),
-                       str(media.type.value if media.type else ''))
+                key = (
+                    str(media.title or "").lower().strip(),
+                    str(media.year or ""),
+                    str(media.type.value if media.type else ""),
+                )
                 if key not in seen:
                     seen.add(key)
                     medias.append(media)
         return medias
-
 
     @staticmethod
     @lru_cache(maxsize=128)
@@ -214,29 +213,31 @@ class WebUtils:
         parsed_url = url.lower()
 
         # 豆瓣图片
-        if 'douban' in parsed_url:
+        if "douban" in parsed_url:
             ret = RequestUtils(referer="https://movie.douban.com").get_res(url)
         # TMDB图片
-        elif 'tmdb' in parsed_url:
+        elif "tmdb" in parsed_url:
             ret = RequestUtils(proxies=get_proxies()).get_res(url)
         # FnOS图片 - 需要携带cookie
-        elif '/v/api/v1/sys/img/' in url:
+        elif "/v/api/v1/sys/img/" in url:
             # 获取FnOS配置
             try:
                 from app.mediaserver.client.fnos import FnOS
-                fnos_config = FnOS.get_db_config('fnos')
+
+                fnos_config = FnOS.get_db_config("fnos")
             except Exception:
-                fnos_config = Config().get_config('fnos')
+                fnos_config = Config().get_config("fnos")
             if fnos_config:
                 # 从FnOS客户端获取cookie
                 try:
                     from app.mediaserver.client.fnos_api import FnOSClient
+
                     fnos_client = FnOSClient(
-                        base_url=fnos_config.get('host'),
-                        username=fnos_config.get('username'),
-                        password=fnos_config.get('password'),
+                        base_url=fnos_config.get("host"),
+                        username=fnos_config.get("username"),
+                        password=fnos_config.get("password"),
                         app_name="trimemedia-web",
-                        auth_key="16CCEB3D-AB42-077D-36A1-F355324E4237"
+                        auth_key="16CCEB3D-AB42-077D-36A1-F355324E4237",
                     )
                     token = fnos_client._get_token()
                     if token:
@@ -311,20 +312,21 @@ def mediainfo_dict(media_info):
 def set_config_value(cfg, cfg_key, cfg_value):
     """根据Key设置配置值"""
     from app.utils.security import generate_password_hash
+
     if cfg_key == "app.login_password":
         if cfg_value and not cfg_value.startswith("[hash]"):
-            cfg['app']['login_password'] = "[hash]%s" % generate_password_hash(cfg_value)
+            cfg["app"]["login_password"] = "[hash]%s" % generate_password_hash(cfg_value)
         else:
-            cfg['app']['login_password'] = cfg_value or "password"
+            cfg["app"]["login_password"] = cfg_value or "password"
         return cfg
     if cfg_key == "app.proxies":
         if cfg_value:
             if not cfg_value.startswith("http") and not cfg_value.startswith("sock"):
-                cfg['app']['proxies'] = {"https": "http://%s" % cfg_value, "http": "http://%s" % cfg_value}
+                cfg["app"]["proxies"] = {"https": "http://%s" % cfg_value, "http": "http://%s" % cfg_value}
             else:
-                cfg['app']['proxies'] = {"https": "%s" % cfg_value, "http": "%s" % cfg_value}
+                cfg["app"]["proxies"] = {"https": "%s" % cfg_value, "http": "%s" % cfg_value}
         else:
-            cfg['app']['proxies'] = {"https": None, "http": None}
+            cfg["app"]["proxies"] = {"https": None, "http": None}
         return cfg
     keys = cfg_key.split(".")
     if keys:
@@ -356,6 +358,7 @@ def set_config_value(cfg, cfg_key, cfg_value):
 
 def set_config_directory(cfg, oper, cfg_key, cfg_value, update_value=None):
     """更新目录数据"""
+
     def remove_sync_path(obj, key):
         if not isinstance(obj, list):
             return []

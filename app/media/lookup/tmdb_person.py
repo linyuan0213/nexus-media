@@ -43,7 +43,7 @@ class TmdbPerson:
             name = alter_names[0]
         elif len(alter_names) > 1:
             for alter_name in alter_names:
-                if alter_name == zhconv.convert(alter_name, 'zh-hans'):
+                if alter_name == zhconv.convert(alter_name, "zh-hans"):
                     name = alter_name
         return name
 
@@ -66,11 +66,17 @@ class TmdbPerson:
             else:
                 name = info.get("name")
             tmdbid = info.get("id")
-            image = ImageProxyHelper.get_tmdbimage_url(info.get("profile_path"), prefix="h632") if info.get("profile_path") else ""
-            ret_infos.append({
-                "id": tmdbid,
-                "name": name,
-                "role": info.get("name") if info.get("name") != name else "",
-                "image": image
-            })
+            image = (
+                ImageProxyHelper.get_tmdbimage_url(info.get("profile_path"), prefix="h632")
+                if info.get("profile_path")
+                else ""
+            )
+            ret_infos.append(
+                {
+                    "id": tmdbid,
+                    "name": name,
+                    "role": info.get("name") if info.get("name") != name else "",
+                    "image": image,
+                }
+            )
         return ret_infos

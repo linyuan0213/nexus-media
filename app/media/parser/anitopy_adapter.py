@@ -1,4 +1,3 @@
-
 try:
     from anitopy import anitopy as _anitopy_parse
 except ImportError:

@@ -2,6 +2,7 @@
 JWT 认证路由
 提供登录、刷新 Token、登出、获取当前用户信息
 """
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -14,10 +15,7 @@ router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(
-    response: Response,
-    form_data: OAuth2PasswordRequestForm = Depends()
-):
+async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
     """
     用户登录，返回 JWT Token 对。
     Refresh Token 通过 HttpOnly Cookie 返回。
@@ -25,9 +23,7 @@ async def login(
     user_ctx = AuthService.authenticate(form_data.username, form_data.password)
     if not user_ctx:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="用户名或密码错误",
-            headers={"WWW-Authenticate": "Bearer"}
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误", headers={"WWW-Authenticate": "Bearer"}
         )
 
     tokens = AuthService.create_token_pair(user_ctx)
@@ -39,15 +35,10 @@ async def login(
         httponly=True,
         secure=False,  # 生产环境改为 True
         samesite="lax",
-        max_age=7 * 24 * 3600  # 7 天
+        max_age=7 * 24 * 3600,  # 7 天
     )
 
-    return LoginResponse(
-        code=0,
-        success=True,
-        message="登录成功",
-        data=tokens
-    )
+    return LoginResponse(code=0, success=True, message="登录成功", data=tokens)
 
 
 @router.post("/refresh", response_model=LoginResponse)
@@ -57,17 +48,11 @@ async def refresh_token(request: Request, response: Response):
     """
     refresh_token = request.cookies.get("refresh_token")
     if not refresh_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="未提供 Refresh Token"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供 Refresh Token")
 
     tokens = AuthService.refresh_access_token(refresh_token)
     if not tokens:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh Token 无效或已过期"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh Token 无效或已过期")
 
     # Token 轮换：同时刷新 Refresh Token
     response.set_cookie(
@@ -76,15 +61,10 @@ async def refresh_token(request: Request, response: Response):
         httponly=True,
         secure=False,
         samesite="lax",
-        max_age=7 * 24 * 3600
+        max_age=7 * 24 * 3600,
     )
 
-    return LoginResponse(
-        code=0,
-        success=True,
-        message="Token 刷新成功",
-        data=tokens
-    )
+    return LoginResponse(code=0, success=True, message="Token 刷新成功", data=tokens)
 
 
 @router.post("/logout")
@@ -104,23 +84,35 @@ async def get_current_user_info(user: UserContext = Depends(get_current_user)):
     返回统一格式 { code: 0, data: {...} } 以适配前端拦截器。
     """
     if isinstance(user, str):
-        return {"code": 0, "data": {"username": user, "user_id": 0, "level": 0,
-                "permissions": [], "is_superadmin": False, "roles": []}}
+        return {
+            "code": 0,
+            "data": {
+                "username": user,
+                "user_id": 0,
+                "level": 0,
+                "permissions": [],
+                "is_superadmin": False,
+                "roles": [],
+            },
+        }
     roles = rbac_service.get_user_roles(user.user_id)
     user_detail = rbac_service.get_user_by_id(user.user_id)
     avatar = user_detail.AVATAR if user_detail else None
     email = user_detail.EMAIL if user_detail else None
-    return {"code": 0, "data": {
-        "user_id": user.user_id,
-        "username": user.username,
-        "nickname": user.nickname,
-        "email": email,
-        "avatar": avatar,
-        "level": user.level,
-        "permissions": user.permissions,
-        "is_superadmin": user.is_superadmin,
-        "roles": [role.role_name for role in roles] if roles else [],
-    }}
+    return {
+        "code": 0,
+        "data": {
+            "user_id": user.user_id,
+            "username": user.username,
+            "nickname": user.nickname,
+            "email": email,
+            "avatar": avatar,
+            "level": user.level,
+            "permissions": user.permissions,
+            "is_superadmin": user.is_superadmin,
+            "roles": [role.role_name for role in roles] if roles else [],
+        },
+    }
 
 
 @router.get("/wallpaper")
@@ -130,6 +122,7 @@ async def login_wallpaper():
     返回 Base64 编码图片及标题、链接。
     """
     from app.utils.wallpaper import get_login_wallpaper
+
     image_code, img_title, img_link = get_login_wallpaper()
     return {
         "code": 0,

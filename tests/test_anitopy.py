@@ -1,12 +1,13 @@
 """Debug anitopy parsing"""
+
 import sys
 from unittest.mock import MagicMock
 
-sys.modules['log'] = MagicMock()
+sys.modules["log"] = MagicMock()
 
 import os
 
-os.environ['NASTOOL_CONFIG'] = '/home/linyuan/python/config/config.yaml'
+os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 import anitopy
 

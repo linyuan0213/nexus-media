@@ -2,15 +2,16 @@
 下载相关模型
 包含: 下载器配置、下载历史、下载设置
 """
+
 from sqlalchemy import Column, Integer, Sequence, String, Text
 
 from app.db.models.base import Base
 
 
 class DOWNLOADER(Base):
-    __tablename__ = 'DOWNLOADER'
+    __tablename__ = "DOWNLOADER"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     NAME = Column(String(255))
     ENABLED = Column(Integer)
     TYPE = Column(String(255))
@@ -23,9 +24,9 @@ class DOWNLOADER(Base):
 
 
 class DOWNLOADHISTORY(Base):
-    __tablename__ = 'DOWNLOAD_HISTORY'
+    __tablename__ = "DOWNLOAD_HISTORY"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     TITLE = Column(String(255), index=True)
     YEAR = Column(String(255))
     TYPE = Column(String(255))
@@ -48,9 +49,9 @@ class DOWNLOADHISTORY(Base):
 
 
 class DOWNLOADSETTING(Base):
-    __tablename__ = 'DOWNLOAD_SETTING'
+    __tablename__ = "DOWNLOAD_SETTING"
 
-    ID = Column(Integer, Sequence('ID'), primary_key=True)
+    ID = Column(Integer, Sequence("ID"), primary_key=True)
     NAME = Column(String(255))
     CATEGORY = Column(String(255))
     TAGS = Column(String(255))

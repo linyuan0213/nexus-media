@@ -36,13 +36,9 @@ class Thunder(_IDownloadClient):
             self.host = self._client_config.get("host")
             self.port = self._client_config.get("port")
             self.token = self._client_config.get("token")
-            self.download_dir = self._client_config.get('download_dir') or []
+            self.download_dir = self._client_config.get("download_dir") or []
             if self.host and self.port:
-                self._client = PyThunder(
-                    host=self.host,
-                    port=self.port,
-                    token=self.token
-                )
+                self._client = PyThunder(host=self.host, port=self.port, token=self.token)
 
     @classmethod
     def match(cls, ctype):
@@ -142,10 +138,7 @@ class Thunder(_IDownloadClient):
                     log.debug(f"【{self.client_name}】{name} 开启目录隔离，但未匹配下载目录范围")
                     continue
 
-                trans_tasks.append({
-                    'path': os.path.join(true_path, name).replace("\\", "/"),
-                    'id': torrent.id
-                })
+                trans_tasks.append({"path": os.path.join(true_path, name).replace("\\", "/"), "id": torrent.id})
 
             return trans_tasks
         except Exception as e:
@@ -163,10 +156,10 @@ class Thunder(_IDownloadClient):
         try:
             # content可以是磁力链接或种子文件路径
             if isinstance(content, str):
-                if content.startswith('magnet:'):
+                if content.startswith("magnet:"):
                     # 磁力链接
                     download_url = content
-                elif content.endswith('.torrent') or os.path.exists(content):
+                elif content.endswith(".torrent") or os.path.exists(content):
                     # 种子文件，需要转换为磁力链接
                     magnet_url = self._client.torrent_to_magnet(content)
                     if not magnet_url:
@@ -188,10 +181,10 @@ class Thunder(_IDownloadClient):
             task_info = self._client.download(
                 download_urls=download_url,
                 destination_path=download_dir or "/downloads/xunlei/",
-                parent_folder_id=folder_id
+                parent_folder_id=folder_id,
             )
 
-            return task_info.get('id') if task_info else None
+            return task_info.get("id") if task_info else None
         except Exception as e:
             log.error(f"【{self.client_name}】添加下载任务失败: {str(e)}")
             ExceptionUtils.exception_traceback(e)
@@ -286,13 +279,9 @@ class Thunder(_IDownloadClient):
                     _upspeed = StringUtils.str_filesize(torrent.upload_speed)
                     speed = f"{chr(8595)}{_dlspeed}B/s {chr(8593)}{_upspeed}B/s"
 
-                progress_list.append({
-                    'id': torrent.id,
-                    'name': torrent.name,
-                    'speed': speed,
-                    'state': state,
-                    'progress': progress
-                })
+                progress_list.append(
+                    {"id": torrent.id, "name": torrent.name, "speed": speed, "state": state, "progress": progress}
+                )
 
             return progress_list
         except Exception as e:
@@ -318,11 +307,11 @@ class Thunder(_IDownloadClient):
         """将迅雷任务转换为Torrent对象"""
         try:
             torrent = Torrent()
-            torrent.id = task.get('id', '')
-            torrent.name = task.get('name', '')
+            torrent.id = task.get("id", "")
+            torrent.name = task.get("name", "")
 
             # 文件大小
-            file_size = task.get('file_size', 0)
+            file_size = task.get("file_size", 0)
             if isinstance(file_size, str):
                 try:
                     torrent.size = int(file_size)
@@ -332,33 +321,33 @@ class Thunder(_IDownloadClient):
                 torrent.size = file_size
 
             # 下载进度
-            phase = task.get('phase', '')
-            progress = task.get('progress', 0)
+            phase = task.get("phase", "")
+            progress = task.get("progress", 0)
             if isinstance(progress, (int, float)):
                 torrent.progress = round(progress / 100.0, 2)
             else:
                 torrent.progress = 0.0
 
             # 状态映射
-            if phase == 'PHASE_TYPE_COMPLETE':
+            if phase == "PHASE_TYPE_COMPLETE":
                 torrent.status = TorrentStatus.Uploading
                 torrent.downloaded = torrent.size
                 torrent.progress = round(1.0, 2)
-            elif phase in ['PHASE_TYPE_RUNNING', 'PHASE_TYPE_PENDING']:
+            elif phase in ["PHASE_TYPE_RUNNING", "PHASE_TYPE_PENDING"]:
                 torrent.status = TorrentStatus.Downloading
                 torrent.downloaded = int(torrent.size * torrent.progress)
-            elif phase == 'PHASE_TYPE_PAUSED':
+            elif phase == "PHASE_TYPE_PAUSED":
                 torrent.status = TorrentStatus.Stopped
-            elif phase == 'PHASE_TYPE_ERROR':
+            elif phase == "PHASE_TYPE_ERROR":
                 torrent.status = TorrentStatus.Error
             else:
                 torrent.status = TorrentStatus.Unknown
 
             # 速度信息 - 从params中提取
-            params = task.get('params', {})
+            params = task.get("params", {})
 
             # 从params.speed字段获取下载速度（单位：B/s）
-            speed_str = params.get('speed', '0')
+            speed_str = params.get("speed", "0")
             try:
                 # 速度可能是字符串形式的数字
                 download_speed = int(float(speed_str))
@@ -370,7 +359,7 @@ class Thunder(_IDownloadClient):
             torrent.upload_speed = 0
 
             # 保存路径
-            torrent.save_path = params.get('parent_folder_path', '')
+            torrent.save_path = params.get("parent_folder_path", "")
 
             return torrent
         except Exception as e:

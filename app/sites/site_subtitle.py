@@ -16,7 +16,6 @@ from app.utils.temp_manager import temp_manager
 
 
 class SiteSubtitle:
-
     siteconf = None
     sites = None
     _save_tmp_path = None
@@ -81,7 +80,7 @@ class SiteSubtitle:
                     if not os.path.exists(download_dir):
                         os.makedirs(download_dir)
                     # 保存ZIP
-                    file_name = SiteHelper.get_url_subtitle_name(ret.headers.get('content-disposition'), sublink)
+                    file_name = SiteHelper.get_url_subtitle_name(ret.headers.get("content-disposition"), sublink)
                     if not file_name:
                         log.warn(f"【Sites】链接不是字幕文件：{sublink}")
                         continue
@@ -90,14 +89,15 @@ class SiteSubtitle:
                         zip_file = os.path.join(self._save_tmp_path, file_name)
                         # 解压路径
                         zip_path = os.path.splitext(zip_file)[0]
-                        with open(zip_file, 'wb') as f:
+                        with open(zip_file, "wb") as f:
                             f.write(ret.content)
                         # 解压文件
-                        shutil.unpack_archive(zip_file, zip_path, format='zip')
+                        shutil.unpack_archive(zip_file, zip_path, format="zip")
                         # 遍历转移文件
                         for sub_file in PathUtils.get_dir_files(in_path=zip_path, exts=RMT_SUBEXT):
-                            target_sub_file = os.path.join(download_dir,
-                                                           os.path.splitext(os.path.basename(sub_file))[0])
+                            target_sub_file = os.path.join(
+                                download_dir, os.path.splitext(os.path.basename(sub_file))[0]
+                            )
                             log.info(f"【Sites】转移字幕 {sub_file} 到 {target_sub_file}")
                             SiteHelper.transfer_subtitle(sub_file, target_sub_file)
                         # 删除临时文件
@@ -109,10 +109,9 @@ class SiteSubtitle:
                     else:
                         sub_file = os.path.join(self._save_tmp_path, file_name)
                         # 保存
-                        with open(sub_file, 'wb') as f:
+                        with open(sub_file, "wb") as f:
                             f.write(ret.content)
-                        target_sub_file = os.path.join(download_dir,
-                                                       os.path.splitext(os.path.basename(sub_file))[0])
+                        target_sub_file = os.path.join(download_dir, os.path.splitext(os.path.basename(sub_file))[0])
                         log.info(f"【Sites】转移字幕 {sub_file} 到 {target_sub_file}")
                         SiteHelper.transfer_subtitle(sub_file, target_sub_file)
                 else:
@@ -150,10 +149,9 @@ class SiteSubtitle:
             headers = {}
 
         # 添加必要的头信息
-        headers.update({
-            "Content-Type": "application/json; charset=utf-8",
-            "accept": "application/json, text/plain, */*"
-        })
+        headers.update(
+            {"Content-Type": "application/json; charset=utf-8", "accept": "application/json, text/plain, */*"}
+        )
 
         # 添加 User-Agent
         if isinstance(ua, str):
@@ -164,12 +162,12 @@ class SiteSubtitle:
         # 从 page_url 提取 torrent id
         page_url = media_info.page_url
         torrent_id = None
-        match = re.search(r'/detail/(\d+)', page_url)
+        match = re.search(r"/detail/(\d+)", page_url)
         if match:
             torrent_id = match.group(1)
         else:
             # 尝试其他格式
-            match = re.search(r'\d+', page_url)
+            match = re.search(r"\d+", page_url)
             if match:
                 torrent_id = match.group(0)
 
@@ -242,10 +240,10 @@ class SiteSubtitle:
                 # 保存字幕文件
                 file_name = f"{subtitle_name}.{subtitle_ext}"
                 # 清理文件名中的非法字符
-                file_name = re.sub(r'[<>:"/\\|?*]', '_', file_name)
+                file_name = re.sub(r'[<>:"/\\|?*]', "_", file_name)
                 sub_file = os.path.join(self._save_tmp_path, file_name)
 
-                with open(sub_file, 'wb') as f:
+                with open(sub_file, "wb") as f:
                     f.write(download_res.content)
 
                 # 转移字幕文件

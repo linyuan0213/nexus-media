@@ -9,11 +9,12 @@ class Hares(_ISiteSigninHandler):
     """
     白兔签到
     """
+
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "club.hares.top"
 
     # 已签到
-    _sign_text = '已签到'
+    _sign_text = "已签到"
 
     @classmethod
     def match(cls, url):
@@ -36,40 +37,33 @@ class Hares(_ISiteSigninHandler):
         proxy = get_proxies() if site_info.get("proxy") else None
 
         # 获取页面html
-        html_res = RequestUtils(cookies=site_cookie,
-                                headers=ua,
-                                proxies=proxy
-                                ).get_res(url="https://club.hares.top")
+        html_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(url="https://club.hares.top")
         if not html_res or html_res.status_code != 200:
             self.error("模拟访问失败，请检查站点连通性")
-            return False, f'【{site}】模拟访问失败，请检查站点连通性'
+            return False, f"【{site}】模拟访问失败，请检查站点连通性"
 
         if "login.php" in html_res.text:
             self.error("模拟访问失败，cookie失效")
-            return False, f'【{site}】模拟访问失败，cookie失效'
+            return False, f"【{site}】模拟访问失败，cookie失效"
 
         # if self._sign_text in html_res.text:
         #     self.info(f"今日已签到")
         #     return True, f'【{site}】今日已签到'
 
-        headers = {
-            'Accept': 'application/json',
-            "User-Agent": ua
-        }
-        sign_res = RequestUtils(cookies=site_cookie,
-                                headers=headers,
-                                proxies=proxy
-                                ).get_res(url="https://club.hares.top/attendance.php?action=sign")
+        headers = {"Accept": "application/json", "User-Agent": ua}
+        sign_res = RequestUtils(cookies=site_cookie, headers=headers, proxies=proxy).get_res(
+            url="https://club.hares.top/attendance.php?action=sign"
+        )
         if not sign_res or sign_res.status_code != 200:
             self.error("签到失败，签到接口请求失败")
-            return False, f'【{site}】签到失败，签到接口请求失败'
+            return False, f"【{site}】签到失败，签到接口请求失败"
 
         # {"code":1,"msg":"您今天已经签到过了"}
         # {"code":0,"msg":"签到成功"}
         sign_dict = json.loads(sign_res.text)
-        if sign_dict['code'] == 0:
+        if sign_dict["code"] == 0:
             self.info("签到成功")
-            return True, f'【{site}】签到成功'
+            return True, f"【{site}】签到成功"
         else:
             self.info("今日已签到")
-            return True, f'【{site}】今日已签到'
+            return True, f"【{site}】今日已签到"

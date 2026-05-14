@@ -1,4 +1,3 @@
-
 from app.infrastructure.external.doubanapi import DoubanApi
 from app.media.lookup.base import BaseLookup, LookupResult
 from app.utils.types import MediaType

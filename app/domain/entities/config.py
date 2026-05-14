@@ -2,6 +2,7 @@
 配置领域实体
 包含消息客户端、下载器、过滤规则、媒体服务器等配置实体
 """
+
 from dataclasses import dataclass, fields
 from typing import Any, Optional
 
@@ -9,6 +10,7 @@ from typing import Any, Optional
 @dataclass
 class MessageClientEntity:
     """消息客户端实体"""
+
     id: int
     name: str
     type: str
@@ -32,7 +34,7 @@ class MessageClientEntity:
             interactive=bool(orm_model.INTERACTIVE),
             enabled=bool(orm_model.ENABLED),
             note=orm_model.NOTE,
-            templates=getattr(orm_model, 'TEMPLATES', None)
+            templates=getattr(orm_model, "TEMPLATES", None),
         )
 
     _ORM_FIELD_MAP = {}
@@ -62,6 +64,7 @@ class MessageClientEntity:
 @dataclass
 class DownloaderEntity:
     """下载器实体"""
+
     id: int
     name: str
     type: str
@@ -83,7 +86,7 @@ class DownloaderEntity:
             transfer=orm_model.TRANSFER or "",
             only_nastool=bool(orm_model.ONLY_NASTOOL),
             match_path=bool(orm_model.MATCH_PATH),
-            enabled=bool(orm_model.ENABLED)
+            enabled=bool(orm_model.ENABLED),
         )
 
     _ORM_FIELD_MAP = {}
@@ -112,6 +115,7 @@ class DownloaderEntity:
 @dataclass
 class FilterGroupEntity:
     """过滤规则组实体"""
+
     id: int
     name: str
     default: bool
@@ -127,11 +131,11 @@ class FilterGroupEntity:
             name=orm_model.GROUP_NAME or "",
             default=bool(orm_model.IS_DEFAULT),
             create_time=None,
-            update_time=None
+            update_time=None,
         )
 
     _ORM_FIELD_MAP = {
-        'is_default': 'default',
+        "is_default": "default",
     }
 
     def __getattr__(self, name: str):
@@ -155,6 +159,7 @@ class FilterGroupEntity:
 @dataclass
 class FilterRuleEntity:
     """过滤规则实体"""
+
     id: int
     group_id: int
     name: str
@@ -178,7 +183,7 @@ class FilterRuleEntity:
             note=orm_model.NOTE,
             priority=int(orm_model.PRIORITY or 0),
             create_time=None,
-            update_time=None
+            update_time=None,
         )
 
     _ORM_FIELD_MAP = {}
@@ -208,6 +213,7 @@ class FilterRuleEntity:
 @dataclass
 class MediaServerEntity:
     """媒体服务器实体"""
+
     id: int
     name: str
     type: str
@@ -223,7 +229,7 @@ class MediaServerEntity:
             name=orm_model.NAME or "",
             type=orm_model.TYPE or "",
             config=orm_model.CONFIG or "",
-            enabled=bool(orm_model.ENABLED)
+            enabled=bool(orm_model.ENABLED),
         )
 
     _ORM_FIELD_MAP = {}
@@ -249,6 +255,7 @@ class MediaServerEntity:
 @dataclass
 class TorrentRemoveTaskEntity:
     """自动删种任务实体"""
+
     id: int
     name: str
     downloader: str
@@ -264,7 +271,7 @@ class TorrentRemoveTaskEntity:
             name=orm_model.NAME or "",
             downloader=orm_model.DOWNLOADER or "",
             config=orm_model.CONFIG or "",
-            enabled=bool(orm_model.ENABLED)
+            enabled=bool(orm_model.ENABLED),
         )
 
     _ORM_FIELD_MAP = {}

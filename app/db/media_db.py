@@ -44,8 +44,7 @@ class MediaDb:
         try:
             # 删除旧记录
             sess.query(MEDIASYNCITEMS).filter(
-                server_type == MEDIASYNCITEMS.SERVER,
-                iteminfo.get("id") == MEDIASYNCITEMS.ITEM_ID
+                server_type == MEDIASYNCITEMS.SERVER, iteminfo.get("id") == MEDIASYNCITEMS.ITEM_ID
             ).delete()
             # 插入新记录
             new_item = MEDIASYNCITEMS(
@@ -59,7 +58,7 @@ class MediaDb:
                 TMDBID=iteminfo.get("tmdbid"),
                 IMDBID=iteminfo.get("imdbid"),
                 PATH=iteminfo.get("path"),
-                JSON=json.dumps(seasoninfo)
+                JSON=json.dumps(seasoninfo),
             )
             sess.add(new_item)
             sess.commit()
@@ -95,16 +94,14 @@ class MediaDb:
         sess = self.session
         try:
             # 删除旧统计
-            sess.query(MEDIASYNCSTATISTIC).filter(
-                server_type == MEDIASYNCSTATISTIC.SERVER
-            ).delete()
+            sess.query(MEDIASYNCSTATISTIC).filter(server_type == MEDIASYNCSTATISTIC.SERVER).delete()
             # 插入新统计
             new_stat = MEDIASYNCSTATISTIC(
                 SERVER=server_type,
                 TOTAL_COUNT=total_count,
                 MOVIE_COUNT=movie_count,
                 TV_COUNT=tv_count,
-                UPDATE_TIME=time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+                UPDATE_TIME=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
             )
             sess.add(new_stat)
             sess.commit()
@@ -123,9 +120,7 @@ class MediaDb:
             if not server_type or not title:
                 return {}
 
-            query = sess.query(MEDIASYNCITEMS).filter(
-                server_type == MEDIASYNCITEMS.SERVER
-            )
+            query = sess.query(MEDIASYNCITEMS).filter(server_type == MEDIASYNCITEMS.SERVER)
 
             if tmdbid:
                 item = query.filter(tmdbid == MEDIASYNCITEMS.TMDBID).first()
@@ -133,10 +128,7 @@ class MediaDb:
                     return item
 
             if year:
-                item = query.filter(
-                    title == MEDIASYNCITEMS.TITLE,
-                    year == MEDIASYNCITEMS.YEAR
-                ).first()
+                item = query.filter(title == MEDIASYNCITEMS.TITLE, year == MEDIASYNCITEMS.YEAR).first()
             else:
                 item = query.filter(title == MEDIASYNCITEMS.TITLE).first()
 
@@ -149,8 +141,6 @@ class MediaDb:
         try:
             if not server_type:
                 return None
-            return sess.query(MEDIASYNCSTATISTIC).filter(
-                server_type == MEDIASYNCSTATISTIC.SERVER
-            ).first()
+            return sess.query(MEDIASYNCSTATISTIC).filter(server_type == MEDIASYNCSTATISTIC.SERVER).first()
         finally:
             self._close_session(sess)

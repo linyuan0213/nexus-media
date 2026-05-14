@@ -2,6 +2,7 @@
 System Router — FastAPI 迁移
 对应原 web/controllers/system.py，复用 app/services/system_service.py
 """
+
 import json
 import os
 
@@ -63,8 +64,10 @@ router = APIRouter()
 # Pydantic Request Models
 # ---------------------------------------------------------------------------
 
+
 class EmptyRequest(BaseModel):
     """兼容前端 payload 中无 data 字段或 data 为空的情况"""
+
     data: dict | None = None
 
 
@@ -163,6 +166,7 @@ class AgentModelsRequest(BaseModel):
 # 辅助函数：统一从 payload 中提取 data
 # ---------------------------------------------------------------------------
 
+
 def _extract_data(payload: BaseModel) -> dict:
     """从 Pydantic 模型中提取 data 字段，若不存在则返回模型本身的 dict"""
     d = payload.model_dump()
@@ -175,6 +179,7 @@ def _extract_data(payload: BaseModel) -> dict:
 # Router Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post("/info")
 def system_info(
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
@@ -182,15 +187,17 @@ def system_info(
 ):
     """获取系统基本信息（版本、运行时长、Python版本等）"""
     info = svc.get_system_info()
-    return success(data={
-        "version": info.version,
-        "python_version": info.python_version,
-        "platform": info.platform,
-        "uptime": info.uptime,
-        "uptime_seconds": info.uptime_seconds,
-        "start_time": info.start_time,
-        "memory_mb": info.memory_mb,
-    })
+    return success(
+        data={
+            "version": info.version,
+            "python_version": info.python_version,
+            "platform": info.platform,
+            "uptime": info.uptime,
+            "uptime_seconds": info.uptime_seconds,
+            "start_time": info.start_time,
+            "memory_mb": info.memory_mb,
+        }
+    )
 
 
 @router.post("/check_message_client")
@@ -221,6 +228,7 @@ def delete_message_client(
     else:
         return fail()
 
+
 @router.post("/message_clients")
 def get_message_client(
     req: MessageClientRequest,
@@ -234,7 +242,9 @@ def get_message_client(
         for client in data.values():
             switchs = client.get("switchs")
             if isinstance(switchs, str):
-                client["switchs"] = [s.strip() for s in switchs.split(",") if s.strip() and s.strip() in all_switch_keys]
+                client["switchs"] = [
+                    s.strip() for s in switchs.split(",") if s.strip() and s.strip() in all_switch_keys
+                ]
             elif not isinstance(switchs, list):
                 client["switchs"] = []
     return success(data=data)
@@ -268,10 +278,12 @@ def get_message_client_config(
             "name": item.get("name"),
             "fuc_name": item.get("fuc_name"),
         }
-    return success(data={
-        "channels": clients,
-        "switchs": switchs,
-    })
+    return success(
+        data={
+            "channels": clients,
+            "switchs": switchs,
+        }
+    )
 
 
 @router.get("/message_clients/templates/defaults")
@@ -286,7 +298,7 @@ def get_message_client_default_templates(
 def net_test(
     req: NetTestRequest,
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
-    svc = Depends(get_net_test_service),
+    svc=Depends(get_net_test_service),
 ):
     result = svc.test(target=req.target or "")
     return success(data={"res": result.success, "time": "%s 毫秒" % result.time_ms})
@@ -346,7 +358,7 @@ async def backup_upload(
 def restory_backup(
     req: BackupRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
-    svc = Depends(get_backup_restore_service),
+    svc=Depends(get_backup_restore_service),
 ):
     filename = req.file_name
     result = svc.restore_from_backup(filename)
@@ -365,24 +377,26 @@ def get_indexers(
     private_count = len([item.id for item in indexers if not item.public])
     public_count = len([item.id for item in indexers if item.public])
     indexer_sites = SystemConfig().get(SystemConfigKey.UserIndexerSites) or []
-    search_indexer = SystemConfig().get(SystemConfigKey.SearchIndexer) or 'builtin'
+    search_indexer = SystemConfig().get(SystemConfigKey.SearchIndexer) or "builtin"
     indexer_config = SystemConfig().get(SystemConfigKey.IndexerConfig) or {}
-    return success(data={
-        "indexers": indexers,
-        "private_count": private_count,
-        "public_count": public_count,
-        "indexer_conf": ModuleConf.INDEXER_CONF,
-        "indexer_sites": indexer_sites,
-        "search_indexer": search_indexer,
-        "indexer_config": indexer_config,
-    })
+    return success(
+        data={
+            "indexers": indexers,
+            "private_count": private_count,
+            "public_count": public_count,
+            "indexer_conf": ModuleConf.INDEXER_CONF,
+            "indexer_sites": indexer_sites,
+            "search_indexer": search_indexer,
+            "indexer_config": indexer_config,
+        }
+    )
 
 
 @router.post("/indexers/test")
 def test_indexer(
     req: IndexerConfigRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
-    svc = Depends(get_indexer_config_service),
+    svc=Depends(get_indexer_config_service),
 ):
     """测试索引器连接"""
     data = dict(req.data)
@@ -399,7 +413,7 @@ def test_indexer(
 def save_indexer_config(
     req: IndexerConfigRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
-    svc = Depends(get_indexer_config_service),
+    svc=Depends(get_indexer_config_service),
 ):
     result = svc.save_config(req.data)
     if result.success and result.code == 0:
@@ -428,18 +442,20 @@ def get_mediaservers(
             "is_default": item.IS_DEFAULT,
             "config": cfg,
         }
-    return success(data={
-        "servers": server_dict,
-        "default_server": default_server.NAME if default_server else None,
-        "mediaserver_conf": ModuleConf.MEDIASERVER_CONF,
-    })
+    return success(
+        data={
+            "servers": server_dict,
+            "default_server": default_server.NAME if default_server else None,
+            "mediaserver_conf": ModuleConf.MEDIASERVER_CONF,
+        }
+    )
 
 
 @router.post("/mediaservers/test")
 def test_mediaserver(
     req: MediaServerConfigRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
-    svc = Depends(get_media_server_config_service),
+    svc=Depends(get_media_server_config_service),
 ):
     """测试媒体服务器连接"""
     data = dict(req.data)
@@ -456,7 +472,7 @@ def test_mediaserver(
 def save_mediaserver_config(
     req: MediaServerConfigRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
-    svc = Depends(get_media_server_config_service),
+    svc=Depends(get_media_server_config_service),
 ):
     result = svc.save_config(req.data)
     if result.success and result.code == 0:
@@ -468,33 +484,37 @@ def save_mediaserver_config(
 def sch(
     req: SchedulerRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
-    svc = Depends(get_system_scheduler_service),
+    svc=Depends(get_system_scheduler_service),
 ):
     ok, msg = svc.start_service(item=req.item)
     if ok:
-        return success(data={"msg":msg, "item":req.item})
-    return success(data={"msg":msg, "item":req.item})
+        return success(data={"msg": msg, "item": req.item})
+    return success(data={"msg": msg, "item": req.item})
 
 
 @router.post("/search")
 def search(
     req: SearchRequest,
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
-    svc = Depends(get_web_search_service),
+    svc=Depends(get_web_search_service),
 ):
     """
     WEB资源搜索（同步执行，前端并行轮询进度）
     """
     try:
         from app.infrastructure.cache_system import TokenCache
+
         TokenCache.delete("search")
     except Exception:
         pass
     search_word = req.search_word
     ident_flag = False if req.unident else True
     result = svc.search(
-        search_word=search_word, ident_flag=ident_flag,
-        filters=req.filters, tmdbid=req.tmdbid, media_type=req.media_type
+        search_word=search_word,
+        ident_flag=ident_flag,
+        filters=req.filters,
+        tmdbid=req.tmdbid,
+        media_type=req.media_type,
     )
     if result.code != 0:
         return fail(code=result.code, msg=result.msg)
@@ -517,7 +537,7 @@ def _flatten_config(cfg: dict, prefix: str = "") -> dict:
 def set_system_config(
     req: SystemConfigRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
-    svc = Depends(get_system_config_service),
+    svc=Depends(get_system_config_service),
 ):
     if svc.set_config(req.key, req.value):
         return success()
@@ -527,7 +547,7 @@ def set_system_config(
 @router.post("/config/all")
 def get_all_config(
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
-    svc = Depends(get_config_service),
+    svc=Depends(get_config_service),
 ):
     """获取所有系统配置（扁平化，供基础设置页面使用）"""
     cfg = svc.get_config() or {}
@@ -553,12 +573,11 @@ def test_message_client(
         return fail()
 
 
-
 @router.post("/config/update")
 def update_config(
     req: UpdateConfigRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
-    svc = Depends(get_config_update_service),
+    svc=Depends(get_config_update_service),
 ):
     result = svc.update_config(req.data)
     if result.success:
@@ -620,9 +639,10 @@ def update_message_client(
 def user_manager(
     req: UserManagerRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
-    svc = Depends(get_user_manage_service),
+    svc=Depends(get_user_manage_service),
 ):
     from app.utils.security import generate_password_hash
+
     oper = req.oper
     name = req.name
     if oper == "add":
@@ -632,8 +652,8 @@ def user_manager(
         result = svc.delete_user(name=name)
 
     if result.success:
-        return success(data={"success":False})
-    return fail(code=-1, success=False, message=result.message or '操作失败')
+        return success(data={"success": False})
+    return fail(code=-1, success=False, message=result.message or "操作失败")
 
 
 @router.post("/commands")
@@ -642,6 +662,7 @@ def system_commands(
 ):
     """获取系统命令列表"""
     from app.services.system_service import get_commands
+
     cmds = get_commands()
     return success(data=cmds)
 
@@ -650,21 +671,23 @@ def system_commands(
 def system_status(
     req: EmptyRequest = EmptyRequest(),
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
-    info_svc = Depends(get_system_info_service),
+    info_svc=Depends(get_system_info_service),
 ):
     info = info_svc.get_system_info()
-    return success(data={
-        "version": info.version,
-        "uptime": info.uptime_seconds,
-        "python_version": info.python_version,
-    })
+    return success(
+        data={
+            "version": info.version,
+            "uptime": info.uptime_seconds,
+            "python_version": info.python_version,
+        }
+    )
 
 
 @router.post("/refresh")
 def refresh_process(
     req: ProgressRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
-    svc = Depends(get_progress_service),
+    svc=Depends(get_progress_service),
 ):
     result = svc.get_progress(ptype=req.type)
     return success(data={"value": result.value, "text": result.text or "正在处理..."})
@@ -691,7 +714,7 @@ def send_custom_message(
 def send_plugin_message(
     req: SendPluginMessageRequest,
     user: str = Depends(require_permission("setting:update")),
-    svc: MessageSenderService = Depends(get_message_sender_service)
+    svc: MessageSenderService = Depends(get_message_sender_service),
 ):
     svc.send_plugin_message(
         title=req.title,
@@ -699,7 +722,6 @@ def send_plugin_message(
         image=req.image or "",
     )
     return success()
-
 
 
 class LogsRequest(BaseModel):
@@ -714,11 +736,12 @@ def get_logs(
     user: str = Depends(require_permission("log:view")),
 ):
     from log import LOG_BUFFER
+
     logs, _ = LOG_BUFFER.get_logs(source=req.source)
     if req.level:
         logs = [lg for lg in logs if lg.get("level") == req.level]
     if req.limit and req.limit > 0:
-        logs = logs[-req.limit:]
+        logs = logs[-req.limit :]
     return success(data=logs)
 
 
@@ -728,12 +751,14 @@ def processes(
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
     from app.utils.system_utils import SystemUtils
+
     return success(data=SystemUtils.get_all_processes())
 
 
 # ---------------------------------------------------------------------------
 # 日志流 (SSE)
 # ---------------------------------------------------------------------------
+
 
 @router.get("/stream-logging")
 def stream_logging(
@@ -764,7 +789,4 @@ def stream_logging(
         )
 
     log_streaming_service = LogStreamingService(sleep_interval=0.3)
-    return StreamingResponse(
-        log_streaming_service.stream(source or ""),
-        media_type="text/event-stream"
-    )
+    return StreamingResponse(log_streaming_service.stream(source or ""), media_type="text/event-stream")

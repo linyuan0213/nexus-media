@@ -2,6 +2,7 @@
 测试 FastAPI System Router — 设置页面相关接口补充测试
 覆盖基础设置、消息通知、索引器、媒体服务器配置等接口
 """
+
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -36,12 +37,15 @@ class TestSystemConfigEndpoints:
 
     def test_update_config_success(self):
         svc = self._mock_config_update()
-        resp = client.post("/api/system/config/update", json={
-            "data": {
-                "app.wallpaper": "bing",
-                "app.web_port": "3000",
-            }
-        })
+        resp = client.post(
+            "/api/system/config/update",
+            json={
+                "data": {
+                    "app.wallpaper": "bing",
+                    "app.web_port": "3000",
+                }
+            },
+        )
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         self._teardown()
@@ -50,10 +54,13 @@ class TestSystemConfigEndpoints:
         mock_svc = MagicMock()
         mock_svc.set_config.return_value = True
         app.dependency_overrides[get_system_config_service] = lambda: mock_svc
-        resp = client.post("/api/system/config", json={
-            "key": "DefaultDownloader",
-            "value": "qbittorrent",
-        })
+        resp = client.post(
+            "/api/system/config",
+            json={
+                "key": "DefaultDownloader",
+                "value": "qbittorrent",
+            },
+        )
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         app.dependency_overrides.pop(get_system_config_service, None)
@@ -80,16 +87,19 @@ class TestMessageClientEndpoints:
 
     def test_update_message_client(self):
         svc = self._mock_message()
-        resp = client.post("/api/system/message_clients/update", json={
-            "cid": None,
-            "name": "TestBot",
-            "type": "telegram",
-            "config": "{}",
-            "switchs": "download_start,transfer_finished",
-            "interactive": 1,
-            "enabled": 1,
-            "templates": "{}",
-        })
+        resp = client.post(
+            "/api/system/message_clients/update",
+            json={
+                "cid": None,
+                "name": "TestBot",
+                "type": "telegram",
+                "config": "{}",
+                "switchs": "download_start,transfer_finished",
+                "interactive": 1,
+                "enabled": 1,
+                "templates": "{}",
+            },
+        )
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         svc.upsert_client.assert_called_once()
@@ -106,10 +116,13 @@ class TestMessageClientEndpoints:
     def test_test_message_client(self):
         svc = self._mock_message()
         svc.test_connection.return_value = True
-        resp = client.post("/api/system/message_clients/test", json={
-            "type": "telegram",
-            "config": "{}",
-        })
+        resp = client.post(
+            "/api/system/message_clients/test",
+            json={
+                "type": "telegram",
+                "config": "{}",
+            },
+        )
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         self._teardown()
@@ -122,12 +135,15 @@ class TestMessageClientEndpoints:
             result.success = True
             mock_sender.send_custom_message.return_value = result
             MockSender.return_value = mock_sender
-            resp = client.post("/api/system/messages/send", json={
-                "title": "测试消息",
-                "text": "内容",
-                "image": "",
-                "message_clients": ["1"],
-            })
+            resp = client.post(
+                "/api/system/messages/send",
+                json={
+                    "title": "测试消息",
+                    "text": "内容",
+                    "image": "",
+                    "message_clients": ["1"],
+                },
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
         self._teardown()
@@ -150,12 +166,15 @@ class TestIndexerConfigEndpoints:
 
     def test_save_indexer_config(self):
         svc = self._mock_indexer()
-        resp = client.post("/api/system/indexers/config", json={
-            "data": {
-                "type": "builtin",
-                "indexer_sites": ["site1", "site2"],
-            }
-        })
+        resp = client.post(
+            "/api/system/indexers/config",
+            json={
+                "data": {
+                    "type": "builtin",
+                    "indexer_sites": ["site1", "site2"],
+                }
+            },
+        )
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         self._teardown()
@@ -178,13 +197,16 @@ class TestMediaServerConfigEndpoints:
 
     def test_save_mediaserver_config(self):
         svc = self._mock_mediaserver()
-        resp = client.post("/api/system/mediaservers/config", json={
-            "data": {
-                "type": "emby",
-                "host": "127.0.0.1",
-                "port": "8096",
-            }
-        })
+        resp = client.post(
+            "/api/system/mediaservers/config",
+            json={
+                "data": {
+                    "type": "emby",
+                    "host": "127.0.0.1",
+                    "port": "8096",
+                }
+            },
+        )
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         self._teardown()

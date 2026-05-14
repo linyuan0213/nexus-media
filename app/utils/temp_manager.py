@@ -102,8 +102,7 @@ class TempManager:
             log.warn(f"【TempManager】删除失败 {file_path}: {str(e)}")
         return False
 
-    def cleanup_old_files(self, max_age_hours: int | None = None,
-                         exclude_patterns: list[str] | None = None) -> int:
+    def cleanup_old_files(self, max_age_hours: int | None = None, exclude_patterns: list[str] | None = None) -> int:
         """
         清理指定时间之前的临时文件
         :param max_age_hours: 最大保留时间（小时），默认24小时
@@ -184,7 +183,7 @@ class TempManager:
         :return: 如 "1.5 MB"
         """
         size_bytes = self.get_temp_size()
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        for unit in ["B", "KB", "MB", "GB", "TB"]:
             if size_bytes < 1024.0:
                 return f"{size_bytes:.2f} {unit}"
             size_bytes /= 1024.0
@@ -225,10 +224,7 @@ temp_manager = TempManager()
 
 
 @contextmanager
-def temp_file_context(filename: str | None = None,
-                     prefix: str = "tmp_",
-                     suffix: str = "",
-                     auto_delete: bool = True):
+def temp_file_context(filename: str | None = None, prefix: str = "tmp_", suffix: str = "", auto_delete: bool = True):
     """
     临时文件上下文管理器
     使用示例:
@@ -236,7 +232,7 @@ def temp_file_context(filename: str | None = None,
             # 使用 tmp_path 下载文件
             download_file(url, tmp_path)
             # 处理完成后文件会自动删除
-    
+
     :param filename: 指定文件名，如果为None则自动生成
     :param prefix: 自动生成文件名时的前缀
     :param suffix: 自动生成文件名时的后缀
@@ -256,9 +252,7 @@ def temp_file_context(filename: str | None = None,
 
 
 @contextmanager
-def temp_dir_context(dir_name: str | None = None,
-                     prefix: str = "tmpdir_",
-                     auto_delete: bool = True):
+def temp_dir_context(dir_name: str | None = None, prefix: str = "tmpdir_", auto_delete: bool = True):
     """
     临时目录上下文管理器
     使用示例:
@@ -266,7 +260,7 @@ def temp_dir_context(dir_name: str | None = None,
             # 使用 tmp_dir 解压文件
             unzip_file(zip_path, tmp_dir)
             # 处理完成后目录会自动删除
-    
+
     :param dir_name: 指定目录名，如果为None则自动生成
     :param prefix: 自动生成目录名时的前缀
     :param auto_delete: 是否自动删除目录

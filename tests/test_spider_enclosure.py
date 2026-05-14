@@ -1,10 +1,11 @@
 """
 Spider enclosure 单元测试 — 验证磁力链接空白前缀问题
 """
+
 import sys
 from unittest.mock import MagicMock
 
-sys.modules['log'] = MagicMock()
+sys.modules["log"] = MagicMock()
 
 from app.indexer.client._spider import TorrentSpider
 
@@ -24,7 +25,7 @@ class TestSpiderGetdownload:
         mock_torrent.return_value.clone.return_value.items.return_value = [mock_item]
 
         spider.Getdownload(mock_torrent)
-        assert spider.torrents_info['enclosure'] == "magnet:?xt=urn:btih:ABC123"
+        assert spider.torrents_info["enclosure"] == "magnet:?xt=urn:btih:ABC123"
 
     def test_relative_path(self):
         """相对路径应拼接域名"""
@@ -39,7 +40,7 @@ class TestSpiderGetdownload:
         mock_torrent.return_value.clone.return_value.items.return_value = [mock_item]
 
         spider.Getdownload(mock_torrent)
-        assert spider.torrents_info['enclosure'] == "https://dmhy.org/download/123.torrent"
+        assert spider.torrents_info["enclosure"] == "https://dmhy.org/download/123.torrent"
 
     def test_absolute_http(self):
         """绝对 HTTP URL 不应拼接域名"""
@@ -54,4 +55,4 @@ class TestSpiderGetdownload:
         mock_torrent.return_value.clone.return_value.items.return_value = [mock_item]
 
         spider.Getdownload(mock_torrent)
-        assert spider.torrents_info['enclosure'] == "https://other.site/file.torrent"
+        assert spider.torrents_info["enclosure"] == "https://other.site/file.torrent"

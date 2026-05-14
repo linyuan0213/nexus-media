@@ -50,29 +50,18 @@ class UserRssService:
         address_count = len(task_info.get("address", [])) if isinstance(task_info, dict) else 0
         articles = self._checker.get_rss_articles(taskid)
         return UserRssArticleListDTO(
-            articles=articles or [],
-            count=len(articles) if articles else 0,
-            uses=uses,
-            address_count=address_count
+            articles=articles or [], count=len(articles) if articles else 0, uses=uses, address_count=address_count
         )
 
     def get_history(self, taskid) -> UserRssHistoryDTO:
         historys = self._checker.get_userrss_task_history(task_id=taskid)
         downloads = []
         for history in historys:
-            downloads.append({
-                "title": history.TITLE,
-                "downloader": history.DOWNLOADER,
-                "date": history.DATE
-            })
-        return UserRssHistoryDTO(
-            downloads=downloads,
-            count=len(downloads)
-        )
+            downloads.append({"title": history.TITLE, "downloader": history.DOWNLOADER, "date": history.DATE})
+        return UserRssHistoryDTO(downloads=downloads, count=len(downloads))
 
     def test_article(self, taskid: str, title: str) -> UserRssArticleTestDTO:
-        result: Any = self._checker.test_rss_articles(
-            taskid=taskid, title=title)
+        result: Any = self._checker.test_rss_articles(taskid=taskid, title=title)
         if not result:
             return UserRssArticleTestDTO(name="无法识别")
         media_info, match_flag, exist_flag = result
@@ -81,19 +70,14 @@ class UserRssService:
         media_dict = mediainfo_dict(media_info)
         media_dict.update({"match_flag": match_flag, "exist_flag": exist_flag})
         return UserRssArticleTestDTO(
-            name=media_info.get_name(),
-            match_flag=match_flag,
-            exist_flag=exist_flag,
-            media_dict=media_dict
+            name=media_info.get_name(), match_flag=match_flag, exist_flag=exist_flag, media_dict=media_dict
         )
 
     def check_articles(self, taskid, flag, articles) -> bool | None:
-        return self._checker.check_rss_articles(
-            taskid=taskid, flag=flag, articles=articles)
+        return self._checker.check_rss_articles(taskid=taskid, flag=flag, articles=articles)
 
     def download_articles(self, taskid, articles) -> bool | None:
-        return self._checker.download_rss_articles(
-            taskid=taskid, articles=articles)
+        return self._checker.download_rss_articles(taskid=taskid, articles=articles)
 
     def run_task(self, taskid) -> None:
         self._checker.check_task_rss(taskid)
@@ -107,16 +91,24 @@ class UserRssService:
         if not address_parser:
             return UserRssTaskUpdateDTO(success=False)
 
-        address = list(dict(sorted(
-            {k.replace("address_", ""): y for k, y in address_parser.items()
-             if k.startswith("address_")}.items(),
-            key=lambda x: int(x[0])
-        )).values())
-        parser = list(dict(sorted(
-            {k.replace("parser_", ""): y for k, y in address_parser.items()
-             if k.startswith("parser_")}.items(),
-            key=lambda x: int(x[0])
-        )).values())
+        address = list(
+            dict(
+                sorted(
+                    {
+                        k.replace("address_", ""): y for k, y in address_parser.items() if k.startswith("address_")
+                    }.items(),
+                    key=lambda x: int(x[0]),
+                )
+            ).values()
+        )
+        parser = list(
+            dict(
+                sorted(
+                    {k.replace("parser_", ""): y for k, y in address_parser.items() if k.startswith("parser_")}.items(),
+                    key=lambda x: int(x[0]),
+                )
+            ).values()
+        )
 
         params = {
             "id": data.get("id"),
@@ -136,15 +128,13 @@ class UserRssService:
         if uses == "D":
             params.update({"recognization": data.get("recognization")})
         elif uses == "R":
-            params.update({
-                "over_edition": data.get("over_edition"),
-                "sites": data.get("sites"),
-                "filter_args": {
-                    "restype": data.get("restype"),
-                    "pix": data.get("pix"),
-                    "team": data.get("team")
+            params.update(
+                {
+                    "over_edition": data.get("over_edition"),
+                    "sites": data.get("sites"),
+                    "filter_args": {"restype": data.get("restype"), "pix": data.get("pix"), "team": data.get("team")},
                 }
-            })
+            )
         else:
             return UserRssTaskUpdateDTO(success=False)
 

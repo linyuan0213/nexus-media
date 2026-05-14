@@ -1,4 +1,3 @@
-
 from app.media import Bangumi, DouBan, MediaService
 from app.mediaserver import MediaServer
 from app.services.downloader_core import DownloaderCore as Downloader
@@ -13,12 +12,14 @@ class MediaRecommendationService:
     媒体推荐/发现业务服务
     """
 
-    def __init__(self,
-                 media_service: MediaService | None = None,
-                 douban: DouBan | None = None,
-                 bangumi: Bangumi | None = None,
-                 media_server: MediaServer | None = None,
-                 subscribe: Subscribe | None = None):
+    def __init__(
+        self,
+        media_service: MediaService | None = None,
+        douban: DouBan | None = None,
+        bangumi: Bangumi | None = None,
+        media_server: MediaServer | None = None,
+        subscribe: Subscribe | None = None,
+    ):
         self._media = media_service or MediaService()
         self._douban = douban or DouBan()
         self._bangumi = bangumi or Bangumi()
@@ -34,7 +35,7 @@ class MediaRecommendationService:
         CurrentPage = int(data.get("page", 1))
         res_list = []
 
-        if Type in ['MOV', 'TV', 'ALL']:
+        if Type in ["MOV", "TV", "ALL"]:
             if SubType == "hm":
                 res_list = self._media.get_tmdb_hot_movies(CurrentPage)
             elif SubType == "ht":
@@ -67,19 +68,25 @@ class MediaRecommendationService:
             elif SubType == "sim":
                 TmdbId = data.get("tmdbid")
                 from app.services.media_service import MediaInfoService
-                res_list = MediaInfoService().get_media_similar(
-                    tmdbid=TmdbId, mtype_str=Type, page=CurrentPage) or []
+
+                res_list = MediaInfoService().get_media_similar(tmdbid=TmdbId, mtype_str=Type, page=CurrentPage) or []
             elif SubType == "more":
                 TmdbId = data.get("tmdbid")
                 from app.services.media_service import MediaInfoService
-                res_list = MediaInfoService().get_media_recommendations(
-                    tmdbid=TmdbId, mtype_str=Type, page=CurrentPage) or []
+
+                res_list = (
+                    MediaInfoService().get_media_recommendations(tmdbid=TmdbId, mtype_str=Type, page=CurrentPage) or []
+                )
             elif SubType == "person":
                 PersonId = data.get("personid")
                 from app.services.media_service import MediaInfoService
-                res_list = MediaInfoService().get_person_medias(
-                    personid=PersonId, mtype_str=None if Type == 'ALL' else Type,
-                    page=CurrentPage) or []
+
+                res_list = (
+                    MediaInfoService().get_person_medias(
+                        personid=PersonId, mtype_str=None if Type == "ALL" else Type, page=CurrentPage
+                    )
+                    or []
+                )
         elif Type == "SEARCH":
             Keyword = data.get("keyword")
             Source = data.get("source")
@@ -99,21 +106,25 @@ class MediaRecommendationService:
             params = data.get("params") or {}
             sort = params.get("sort") or "R"
             tags = params.get("tags") or ""
-            res_list = self._douban.get_douban_disover(mtype=mtype, sort=sort,
-                                                        tags=tags, page=CurrentPage)
+            res_list = self._douban.get_douban_disover(mtype=mtype, sort=sort, tags=tags, page=CurrentPage)
 
         for res in res_list:
             fav, rssid, _ = check_media_exists(
-                media_server=self._media_server, subscribe=self._subscribe,
-                mtype=res.get("type"), title=res.get("title"),
-                year=res.get("year"), mediaid=res.get("id"))
-            res.update({'fav': fav, 'rssid': rssid})
+                media_server=self._media_server,
+                subscribe=self._subscribe,
+                mtype=res.get("type"),
+                title=res.get("title"),
+                year=res.get("year"),
+                mediaid=res.get("id"),
+            )
+            res.update({"fav": fav, "rssid": rssid})
 
         try:
             from app.helper.image_proxy_helper import ImageProxyHelper
+
             for res in res_list:
-                if res.get('image'):
-                    res['image'] = ImageProxyHelper.get_proxy_image_url(res['image'], use_proxy=True)
+                if res.get("image"):
+                    res["image"] = ImageProxyHelper.get_proxy_image_url(res["image"], use_proxy=True)
         except Exception:
             pass
 
@@ -123,17 +134,20 @@ class MediaRecommendationService:
     def _convert_downloaded(Items) -> list[dict]:
         if not Items:
             return []
-        return [{
-            'id': item.TMDBID,
-            'orgid': item.TMDBID,
-            'tmdbid': item.TMDBID,
-            'title': item.TITLE,
-            'type': 'MOV' if item.TYPE == "电影" else "TV",
-            'media_type': item.TYPE,
-            'year': item.YEAR,
-            'vote': item.VOTE,
-            'image': item.POSTER,
-            'overview': item.TORRENT,
-            "date": item.DATE,
-            "site": item.SITE
-        } for item in Items]
+        return [
+            {
+                "id": item.TMDBID,
+                "orgid": item.TMDBID,
+                "tmdbid": item.TMDBID,
+                "title": item.TITLE,
+                "type": "MOV" if item.TYPE == "电影" else "TV",
+                "media_type": item.TYPE,
+                "year": item.YEAR,
+                "vote": item.VOTE,
+                "image": item.POSTER,
+                "overview": item.TORRENT,
+                "date": item.DATE,
+                "site": item.SITE,
+            }
+            for item in Items
+        ]

@@ -5,6 +5,7 @@
 1. 旧路由 /img?url=... 对本地代理路径的重定向
 2. 外部图片 URL 是否正确转换为代理路径
 """
+
 import pytest
 
 
@@ -65,12 +66,8 @@ class TestSearchResultImageStorage:
         media = MediaInfo(title="Test Movie")
         media.type = MediaType.MOVIE
         media.tmdb_id = 12345
-        media.poster_path = ImageProxyHelper.get_tmdbimage_url(
-            "/abc123.jpg", size="medium"
-        )
-        media.backdrop_path = ImageProxyHelper.get_tmdbimage_url(
-            "/def456.jpg", size="large"
-        )
+        media.poster_path = ImageProxyHelper.get_tmdbimage_url("/abc123.jpg", size="medium")
+        media.backdrop_path = ImageProxyHelper.get_tmdbimage_url("/def456.jpg", size="large")
 
         # poster 应该是 w500 尺寸的外部 URL
         assert media.poster_path == "https://image.tmdb.org/t/p/w342/abc123.jpg"

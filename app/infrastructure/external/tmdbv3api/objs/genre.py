@@ -2,10 +2,7 @@ from app.infrastructure.external.tmdbv3api.tmdb import TMDb
 
 
 class Genre(TMDb):
-    _urls = {
-        "movie_list": "/genre/movie/list",
-        "tv_list": "/genre/tv/list"
-    }
+    _urls = {"movie_list": "/genre/movie/list", "tv_list": "/genre/tv/list"}
 
     def movie_list(self):
         """

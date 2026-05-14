@@ -2,6 +2,7 @@
 搜索领域 Repository 接口（Python Protocol）
 定义搜索结果仓储契约
 """
+
 from typing import Any, Protocol
 
 

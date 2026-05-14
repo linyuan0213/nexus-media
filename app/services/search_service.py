@@ -9,6 +9,7 @@ SearchService - 搜索业务层
 - Searcher：对外保留的入口类（兼容旧调用）
 - SearchService：Service 层包装
 """
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
@@ -80,7 +81,7 @@ class SearchQueryBuilder:
             search_zhtw_name = _media.get_tmdb_zhtw_title(media_info)
             if search_zhtw_name and search_zhtw_name != search_cn_name:
                 search_name_list.append(search_zhtw_name)
-            if media_info.original_language != 'cn' and search_en_name != media_info.original_title:
+            if media_info.original_language != "cn" and search_en_name != media_info.original_title:
                 search_name_list.append(media_info.original_title)
             max_workers = len(search_name_list)
 
@@ -97,9 +98,9 @@ class SearchExecutor:
         self._max_workers = max_workers
         self._thread_name_prefix = thread_name_prefix
 
-    def execute(self, search_func, search_names: list, filter_args: dict,
-                media_info, in_from: SearchType,
-                progress_updater=None) -> list[Any]:
+    def execute(
+        self, search_func, search_names: list, filter_args: dict, media_info, in_from: SearchType, progress_updater=None
+    ) -> list[Any]:
         """
         并发执行多词搜索
         :param search_func: 单次搜索函数（如 Searcher.search_medias）
@@ -113,14 +114,9 @@ class SearchExecutor:
         media_list = []
         all_task = []
 
-        with ThreadPoolExecutor(max_workers=optimal_workers,
-                                thread_name_prefix=self._thread_name_prefix) as executor:
+        with ThreadPoolExecutor(max_workers=optimal_workers, thread_name_prefix=self._thread_name_prefix) as executor:
             for search_name in search_names:
-                task = executor.submit(search_func,
-                                       search_name,
-                                       filter_args,
-                                       media_info,
-                                       in_from)
+                task = executor.submit(search_func, search_name, filter_args, media_info, in_from)
                 all_task.append(task)
 
             finish_count = 0
@@ -150,8 +146,7 @@ class SearchResultDeduplicator:
         unique_media_list = []
         media_seen = set()
         for d in media_list:
-            org_string = StringUtils.md5_hash(
-                f'{d.org_string}{d.site}{d.description or ""}')
+            org_string = StringUtils.md5_hash(f"{d.org_string}{d.site}{d.description or ''}")
             if org_string not in media_seen:
                 unique_media_list.append(d)
                 media_seen.add(org_string)
@@ -164,11 +159,13 @@ class SearchResultProcessor:
     职责：排序、入库、过滤已下载、择优下载
     """
 
-    def __init__(self,
-                 downloader: Downloader | None = None,
-                 download_repo: IDownloadHistoryRepository | None = None,
-                 search_repo: ISearchRepository | None = None,
-                 message: Message | None = None):
+    def __init__(
+        self,
+        downloader: Downloader | None = None,
+        download_repo: IDownloadHistoryRepository | None = None,
+        search_repo: ISearchRepository | None = None,
+        message: Message | None = None,
+    ):
         self._downloader = downloader or Downloader()
         # 如果没有注入Repository，使用适配器创建默认实例
         if download_repo is None:
@@ -181,12 +178,19 @@ class SearchResultProcessor:
     @staticmethod
     def sort_results(media_list: list) -> list:
         """按标题、资源顺序、站点顺序、做种数排序"""
-        return sorted(media_list, key=lambda x: "%s%s%s%s" % (
-            str(x.title).ljust(100, ' '),
-            str(x.res_order).rjust(3, '0'),
-            str(x.site_order).rjust(3, '0'),
-            str(x.seeders).rjust(10, '0')
-        ), reverse=True)
+        return sorted(
+            media_list,
+            key=lambda x: (
+                "%s%s%s%s"
+                % (
+                    str(x.title).ljust(100, " "),
+                    str(x.res_order).rjust(3, "0"),
+                    str(x.site_order).rjust(3, "0"),
+                    str(x.seeders).rjust(10, "0"),
+                )
+            ),
+            reverse=True,
+        )
 
     def filter_downloaded(self, media_list: list) -> list:
         """过滤掉已在下载历史中存在的资源"""
@@ -194,8 +198,7 @@ class SearchResultProcessor:
         for media_item in media_list:
             if media_item.tmdb_id:
                 season_episode = media_item.get_season_episode_string()
-                if self._download_repo.is_exists_by_tmdb(
-                        media_item.tmdb_id, season_episode):
+                if self._download_repo.is_exists_by_tmdb(media_item.tmdb_id, season_episode):
                     log.info(f"【Searcher】{media_item.title} {season_episode} 已在下载历史中存在，跳过下载")
                     continue
             filtered.append(media_item)
@@ -206,14 +209,10 @@ class SearchResultProcessor:
         self._search_repo.delete_all_search_torrents()
         self._search_repo.insert_search_results(media_list, title, ident_flag)
 
-    def batch_download(self, media_list: list, in_from: SearchType,
-                       no_exists: dict, user_name=None):
+    def batch_download(self, media_list: list, in_from: SearchType, no_exists: dict, user_name=None):
         """择优下载"""
         return self._downloader.batch_download(
-            in_from=in_from,
-            media_list=media_list,
-            need_tvs=no_exists,
-            user_name=user_name
+            in_from=in_from, media_list=media_list, need_tvs=no_exists, user_name=user_name
         )
 
 
@@ -222,6 +221,7 @@ class Searcher(metaclass=SingletonMeta):
     搜索器（兼容原 app/searcher.py 的入口类）
     内部已拆分为 SearchQueryBuilder / SearchExecutor / SearchResultDeduplicator / SearchResultProcessor
     """
+
     downloader = None
     media = None
     message = None
@@ -232,9 +232,9 @@ class Searcher(metaclass=SingletonMeta):
 
     _search_auto = True
 
-    def __init__(self,
-                 download_repo: IDownloadHistoryRepository | None = None,
-                 search_repo: ISearchRepository | None = None):
+    def __init__(
+        self, download_repo: IDownloadHistoryRepository | None = None, search_repo: ISearchRepository | None = None
+    ):
         self._download_repo = download_repo
         self._search_repo = search_repo
         self.init_config()
@@ -252,18 +252,14 @@ class Searcher(metaclass=SingletonMeta):
         self.search_repo = self._search_repo
         self.indexer_service = IndexerService()
         self.eventmanager = EventManager()
-        self._search_auto = Config().get_config("pt").get('search_auto', True)
+        self._search_auto = Config().get_config("pt").get("search_auto", True)
 
     @property
     def download_repo(self):
         """兼容旧代码访问 download_repo 属性"""
         return self._download_repo
 
-    def search_medias(self,
-                      key_word,
-                      filter_args: dict,
-                      match_media=None,
-                      in_from: SearchType = None):
+    def search_medias(self, key_word, filter_args: dict, match_media=None, in_from: SearchType = None):
         """
         根据关键字调用索引器检查媒体
         """
@@ -271,31 +267,29 @@ class Searcher(metaclass=SingletonMeta):
             return []
         if not self.indexer_service:
             return []
-        self.eventmanager.send_event(EventType.SearchStart, {
-            "key_word": key_word,
-            "media_info": match_media.to_dict() if match_media else None,
-            "filter_args": filter_args,
-            "search_type": in_from.value if in_from else None
-        })
-        return self.indexer_service.search_by_keyword(key_word=key_word,
-                                                      filter_args=filter_args,
-                                                      match_media=match_media,
-                                                      in_from=in_from)
+        self.eventmanager.send_event(
+            EventType.SearchStart,
+            {
+                "key_word": key_word,
+                "media_info": match_media.to_dict() if match_media else None,
+                "filter_args": filter_args,
+                "search_type": in_from.value if in_from else None,
+            },
+        )
+        return self.indexer_service.search_by_keyword(
+            key_word=key_word, filter_args=filter_args, match_media=match_media, in_from=in_from
+        )
 
-    def search_one_media(self, media_info,
-                         in_from: SearchType,
-                         no_exists: dict,
-                         sites: list = None,
-                         filters: dict = None,
-                         user_name=None):
+    def search_one_media(
+        self, media_info, in_from: SearchType, no_exists: dict, sites: list = None, filters: dict = None, user_name=None
+    ):
         """
         只搜索和下载一个资源
         """
         if not media_info:
             return None, {}, 0, 0
 
-        self.progress.start(
-            ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search)
+        self.progress.start(ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search)
 
         # 季/集信息
         search_season = None if media_info.begin_season is None else media_info.get_season_list()
@@ -309,18 +303,16 @@ class Searcher(metaclass=SingletonMeta):
             "year": media_info.year,
             "type": media_info.type,
             "site": sites,
-            "seeders": True
+            "seeders": True,
         }
         if filters:
             filter_args.update(filters)
 
         # 1. 构建搜索词
-        search_name_list, max_workers = SearchQueryBuilder.build_search_names(
-            media_info, self.media)
+        search_name_list, max_workers = SearchQueryBuilder.build_search_names(media_info, self.media)
 
         if media_info.keyword:
-            media_list = self.search_medias(
-                media_info.keyword, filter_args, media_info, in_from)
+            media_list = self.search_medias(media_info.keyword, filter_args, media_info, in_from)
         else:
             log.info("【Searcher】开始搜索 %s ..." % search_name_list)
             optimal_workers = min(len(search_name_list), max_workers, 8)
@@ -331,7 +323,8 @@ class Searcher(metaclass=SingletonMeta):
             def _update_progress(finish_count, total):
                 self.progress.update(
                     ptype=ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search,
-                    value=round(100 * (finish_count / total)))
+                    value=round(100 * (finish_count / total)),
+                )
 
             media_list = executor.execute(
                 search_func=self.search_medias,
@@ -339,7 +332,7 @@ class Searcher(metaclass=SingletonMeta):
                 filter_args=filter_args,
                 media_info=media_info,
                 in_from=in_from,
-                progress_updater=_update_progress
+                progress_updater=_update_progress,
             )
 
         # 3. 去重
@@ -353,7 +346,7 @@ class Searcher(metaclass=SingletonMeta):
             downloader=self.downloader,
             download_repo=self._download_repo,
             search_repo=self.search_repo,
-            message=self.message
+            message=self.message,
         )
 
         if in_from in self.message.get_search_types():
@@ -370,8 +363,7 @@ class Searcher(metaclass=SingletonMeta):
             return None, no_exists, len(media_list), 0
 
         # 5. 择优下载
-        download_items, left_medias = processor.batch_download(
-            filtered_media_list, in_from, no_exists, user_name)
+        download_items, left_medias = processor.batch_download(filtered_media_list, in_from, no_exists, user_name)
 
         if not download_items:
             log.info("【Searcher】%s 未下载到资源" % media_info.title)
@@ -400,43 +392,42 @@ class SearchService:
     搜索业务服务（Service 层包装）
     """
 
-    def __init__(self,
-                 searcher: Searcher | None = None,
-                 downloader: Downloader | None = None,
-                 media_service: MediaService | None = None):
+    def __init__(
+        self,
+        searcher: Searcher | None = None,
+        downloader: Downloader | None = None,
+        media_service: MediaService | None = None,
+    ):
         self._searcher = searcher or Searcher()
         self._downloader = downloader or Downloader()
         self._media = media_service or MediaService()
 
-    def search_medias(self,
-                      key_word: Any,
-                      filter_args: dict,
-                      match_media=None,
-                      in_from: SearchType | None = None) -> SearchMediasResultDTO:
+    def search_medias(
+        self, key_word: Any, filter_args: dict, match_media=None, in_from: SearchType | None = None
+    ) -> SearchMediasResultDTO:
         if not key_word:
             return SearchMediasResultDTO(results=[])
         results = self._searcher.search_medias(
-            key_word=key_word,
-            filter_args=filter_args,
-            match_media=match_media,
-            in_from=in_from or SearchType.WEB
+            key_word=key_word, filter_args=filter_args, match_media=match_media, in_from=in_from or SearchType.WEB
         )
         return SearchMediasResultDTO(results=results or [])
 
-    def search_one_media(self,
-                         media_info,
-                         in_from: SearchType,
-                         no_exists: dict,
-                         sites: list | None = None,
-                         filters: dict | None = None,
-                         user_name: str | None = None) -> SearchOneMediaResultDTO:
+    def search_one_media(
+        self,
+        media_info,
+        in_from: SearchType,
+        no_exists: dict,
+        sites: list | None = None,
+        filters: dict | None = None,
+        user_name: str | None = None,
+    ) -> SearchOneMediaResultDTO:
         result = self._searcher.search_one_media(
             media_info=media_info,
             in_from=in_from,
             no_exists=no_exists,
             sites=sites or [],
             filters=filters or {},
-            user_name=user_name
+            user_name=user_name,
         )
         if not result:
             return SearchOneMediaResultDTO()
@@ -445,7 +436,7 @@ class SearchService:
             media_info=download_item,
             no_exists=left_medias,
             total_count=total_count or 0,
-            download_count=download_count or 0
+            download_count=download_count or 0,
         )
 
     def get_search_result_by_id(self, dl_id) -> Any:

@@ -2,6 +2,7 @@
 API Key Service
 API Key 业务逻辑层
 """
+
 import hashlib
 import secrets
 import uuid
@@ -41,9 +42,14 @@ class APIKeyService:
         """对 API Key 进行 SHA256 哈希"""
         return hashlib.sha256(key.encode()).hexdigest()
 
-    def create_key(self, name: str, expires_days: int | None = None,
-                   description: str = "", created_by: int | None = None,
-                   raw_key: str | None = None) -> dict[str, Any]:
+    def create_key(
+        self,
+        name: str,
+        expires_days: int | None = None,
+        description: str = "",
+        created_by: int | None = None,
+        raw_key: str | None = None,
+    ) -> dict[str, Any]:
         """
         创建新的 API Key
         """
@@ -95,9 +101,9 @@ class APIKeyService:
             ExceptionUtils.exception_traceback(e)
             return {"total": 0, "page": page, "page_size": page_size, "items": []}
 
-    def update_key(self, key_id: int, name: str | None = None,
-                   status: int | None = None,
-                   description: str | None = None) -> bool:
+    def update_key(
+        self, key_id: int, name: str | None = None, status: int | None = None, description: str | None = None
+    ) -> bool:
         """更新 API Key"""
         try:
             kwargs = {}
@@ -132,13 +138,20 @@ class APIKeyService:
             ExceptionUtils.exception_traceback(e)
             return None
 
-    def record_usage(self, api_key_id: int, request_id: str | None = None,
-                     request_name: str = "", source_ip: str = "",
-                     user_agent: str = "", request_path: str = "",
-                     request_method: str = "", status: int = 1,
-                     response_code: int | None = None,
-                     error_message: str = "",
-                     response_time_ms: int | None = None) -> bool:
+    def record_usage(
+        self,
+        api_key_id: int,
+        request_id: str | None = None,
+        request_name: str = "",
+        source_ip: str = "",
+        user_agent: str = "",
+        request_path: str = "",
+        request_method: str = "",
+        status: int = 1,
+        response_code: int | None = None,
+        error_message: str = "",
+        response_time_ms: int | None = None,
+    ) -> bool:
         """记录 API Key 使用日志"""
         try:
             if request_id is None:
@@ -163,8 +176,7 @@ class APIKeyService:
             ExceptionUtils.exception_traceback(e)
             return False
 
-    def list_logs(self, api_key_id: int | None = None,
-                  page: int = 1, page_size: int = 50) -> dict[str, Any]:
+    def list_logs(self, api_key_id: int | None = None, page: int = 1, page_size: int = 50) -> dict[str, Any]:
         """获取 API Key 使用记录"""
         try:
             items, total = self._log_repo.list_logs(api_key_id, page, page_size)

@@ -23,9 +23,9 @@ class Person(TMDb):
     }
 
     def details(
-            self,
-            person_id,
-            append_to_response="combined_credits,translations,external_ids",
+        self,
+        person_id,
+        append_to_response="combined_credits,translations,external_ids",
     ):
         """
         Get the primary person details by id.
@@ -53,13 +53,9 @@ class Person(TMDb):
         return self._get_obj(
             self._call(
                 self._urls["changes"] % person_id,
-                urlencode({
-                    "start_date": str(start_date),
-                    "end_date": str(end_date),
-                    "page": str(page)
-                })
+                urlencode({"start_date": str(start_date), "end_date": str(end_date), "page": str(page)}),
             ),
-            "changes"
+            "changes",
         )
 
     def movie_credits(self, person_id):
@@ -68,13 +64,7 @@ class Person(TMDb):
         :param person_id:
         :return:
         """
-        return self._get_obj(
-            self._call(
-                self._urls["movie_credits"] % person_id,
-                ""
-            ),
-            "cast"
-        )
+        return self._get_obj(self._call(self._urls["movie_credits"] % person_id, ""), "cast")
 
     def tv_credits(self, person_id):
         """
@@ -82,13 +72,7 @@ class Person(TMDb):
         :param person_id:
         :return:
         """
-        return self._get_obj(
-            self._call(
-                self._urls["tv_credits"] % person_id,
-                ""
-            ),
-            "cast"
-        )
+        return self._get_obj(self._call(self._urls["tv_credits"] % person_id, ""), "cast")
 
     def combined_credits(self, person_id):
         """
@@ -104,9 +88,7 @@ class Person(TMDb):
         :param person_id:
         :return:
         """
-        return self._get_obj(
-            self._call(self._urls["external_ids"] % (str(person_id)), ""), None
-        )
+        return self._get_obj(self._call(self._urls["external_ids"] % (str(person_id)), ""), None)
 
     def images(self, person_id):
         """
@@ -114,7 +96,7 @@ class Person(TMDb):
         :param person_id:
         :return:
         """
-        return AsObj(**self._call(self._urls['images'] % person_id, ""))
+        return AsObj(**self._call(self._urls["images"] % person_id, ""))
 
     def tagged_images(self, person_id):
         """
@@ -122,7 +104,7 @@ class Person(TMDb):
         :param person_id:
         :return:
         """
-        return AsObj(**self._call(self._urls['tagged_images'] % person_id, ""))
+        return AsObj(**self._call(self._urls["tagged_images"] % person_id, ""))
 
     def translations(self, person_id):
         """

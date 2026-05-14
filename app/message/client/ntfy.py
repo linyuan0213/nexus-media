@@ -8,13 +8,13 @@ class Ntfy(_IMessageClient):
 
     def read_config(self):
         cfg = self._config or {}
-        self._server = StringUtils.get_base_url(cfg.get('server'))
-        self._token = cfg.get('token')
-        self._topic = cfg.get('topic')
-        self._tags = 'rotating_light' if cfg.get('tags') == '' else cfg.get('tags')
+        self._server = StringUtils.get_base_url(cfg.get("server"))
+        self._token = cfg.get("token")
+        self._topic = cfg.get("topic")
+        self._tags = "rotating_light" if cfg.get("tags") == "" else cfg.get("tags")
         self._tags = self._tags.split(",") if "," in self._tags else [self._tags]
         try:
-            self._priority = int(cfg.get('priority'))
+            self._priority = int(cfg.get("priority"))
         except Exception:
             self._priority = 4
 
@@ -29,11 +29,10 @@ class Ntfy(_IMessageClient):
                 "title": title,
                 "message": text,
                 "priority": self._priority,
-                "tags": self._tags
+                "tags": self._tags,
             }
             res = RequestUtils(
-                headers={"Authorization": "Bearer " + self._token},
-                content_type="application/json"
+                headers={"Authorization": "Bearer " + self._token}, content_type="application/json"
             ).post_res(self._server, json=sc_data)
             if res and res.status_code == 200:
                 return True, "发送成功"
@@ -47,5 +46,6 @@ class Ntfy(_IMessageClient):
 
     def send_list_msg(self, medias: list = None, user_id="", title="", **kwargs):
         pass
+
 
 ClientRegistry.register(Ntfy)

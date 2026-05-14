@@ -25,16 +25,16 @@ class MediaService:
         self._init_config()
 
     def _init_config(self):
-        app = Config().get_config('app')
-        media = Config().get_config('media')
-        laboratory = Config().get_config('laboratory')
+        app = Config().get_config("app")
+        media = Config().get_config("media")
+        laboratory = Config().get_config("laboratory")
         self._search_keyword = laboratory.get("search_keyword")
         self._search_tmdbweb = laboratory.get("search_tmdbweb")
         self._default_language = media.get("tmdb_language", "zh") or "zh"
         self._episode_mapping_enabled = media.get("episode_mapping_enabled", False)
         if self._episode_mapping_enabled:
             log.info("【MediaService】集数映射已启用")
-        rmt_match_mode = app.get('rmt_match_mode', 'normal')
+        rmt_match_mode = app.get("rmt_match_mode", "normal")
         if rmt_match_mode:
             rmt_match_mode = rmt_match_mode.upper()
         else:
@@ -51,9 +51,17 @@ class MediaService:
 
     # ---------- 单条识别 ----------
 
-    def identify(self, title: str, subtitle: str = "", mtype: MediaType = None,
-                 strict=None, cache=True, language=None, chinese=True,
-                 append_to_response=None) -> MediaInfo | None:
+    def identify(
+        self,
+        title: str,
+        subtitle: str = "",
+        mtype: MediaType = None,
+        strict=None,
+        cache=True,
+        language=None,
+        chinese=True,
+        append_to_response=None,
+    ) -> MediaInfo | None:
         if not title:
             return None
 
@@ -81,12 +89,12 @@ class MediaService:
         # 后处理: 名称末尾年份提取
         if not parsed.year:
             name = parsed.title_cn or parsed.title_en or ""
-            year_match = re.search(r'\s+(\d{4})$', name)
+            year_match = re.search(r"\s+(\d{4})$", name)
             if year_match:
                 extracted_year = year_match.group(1)
                 if 1900 < int(extracted_year) < 2050:
                     parsed.year = extracted_year
-                    cleaned = re.sub(r'\s+\d{4}$', '', name)
+                    cleaned = re.sub(r"\s+\d{4}$", "", name)
                     if parsed.title_cn == name:
                         parsed.title_cn = cleaned
                     elif parsed.title_en == name:
@@ -97,24 +105,26 @@ class MediaService:
         # 尝试从缓存获取
         if cache:
             cached = self._lookup.client.redis_cache.get_media_info(
-                title=search_name,
-                year=parsed.year,
-                mtype=parsed.type
+                title=search_name, year=parsed.year, mtype=parsed.type
             )
             if cached and isinstance(cached, MediaInfo):
                 # 验证缓存的季集是否与当前解析结果匹配（避免不同集数标题的缓存碰撞）
-                if (cached.begin_season == parsed.season and
-                    cached.begin_episode == parsed.episode and
-                    cached.end_episode == parsed.end_episode):
+                if (
+                    cached.begin_season == parsed.season
+                    and cached.begin_episode == parsed.episode
+                    and cached.end_episode == parsed.end_episode
+                ):
                     log.info(f"【MediaService】从缓存获取媒体信息: {search_name}")
                     if language:
                         self._lookup.client.set_language()
                     return cached
-                log.debug(f"【MediaService】缓存季集不匹配，跳过缓存: "
-                          f"cached=S{cached.begin_season}E{cached.begin_episode}-"
-                          f"{cached.end_episode or ''}, "
-                          f"parsed=S{parsed.season}E{parsed.episode}-"
-                          f"{parsed.end_episode or ''}")
+                log.debug(
+                    f"【MediaService】缓存季集不匹配，跳过缓存: "
+                    f"cached=S{cached.begin_season}E{cached.begin_episode}-"
+                    f"{cached.end_episode or ''}, "
+                    f"parsed=S{parsed.season}E{parsed.episode}-"
+                    f"{parsed.end_episode or ''}"
+                )
 
         # 计算 strict 模式
         use_strict = strict if strict is not None else (self._rmt_match_mode == MatchMode.STRICT)
@@ -171,31 +181,38 @@ class MediaService:
                 tmdbid=result.tmdb_id,
                 language=language,
                 append_to_response=append_to_response,
-                chinese=chinese
+                chinese=chinese,
             )
             if full_info:
                 info.tmdb_info = full_info
                 info.title = full_info.get("title") or full_info.get("name") or info.title
-                info.original_title = full_info.get("original_title") or full_info.get("original_name") or info.original_title
-                info.year = (full_info.get("release_date", "")[:4] if full_info.get("release_date")
-                             else full_info.get("first_air_date", "")[:4]) or info.year
+                info.original_title = (
+                    full_info.get("original_title") or full_info.get("original_name") or info.original_title
+                )
+                info.year = (
+                    full_info.get("release_date", "")[:4]
+                    if full_info.get("release_date")
+                    else full_info.get("first_air_date", "")[:4]
+                ) or info.year
                 info.overview = full_info.get("overview") or info.overview
                 info.vote_average = round(float(full_info.get("vote_average", 0)), 1) or info.vote_average
                 info.poster_path = ImageProxyHelper.get_tmdbimage_url(full_info.get("poster_path")) or info.poster_path
-                info.backdrop_path = ImageProxyHelper.get_tmdbimage_url(full_info.get("backdrop_path")) or info.backdrop_path
+                info.backdrop_path = (
+                    ImageProxyHelper.get_tmdbimage_url(full_info.get("backdrop_path")) or info.backdrop_path
+                )
                 # 根据 genre_ids 更新类型（动漫 vs 电视剧）
                 info.set_tmdb_info(full_info)
 
         # 7. 集数映射（动漫合并季 / 绝对集号）
         if self._episode_mapping_enabled and info.type != MediaType.MOVIE and info.tmdb_id and info.begin_episode:
-            log.info(f"【EpisodeMapper】尝试映射: {info.get_name()} S{info.begin_season}E{info.begin_episode} (tmdb_id={info.tmdb_id})")
-            mapped = self._episode_mapper.map_auto(
-                info.tmdb_id,
-                info.begin_season,
-                info.begin_episode
+            log.info(
+                f"【EpisodeMapper】尝试映射: {info.get_name()} S{info.begin_season}E{info.begin_episode} (tmdb_id={info.tmdb_id})"
             )
+            mapped = self._episode_mapper.map_auto(info.tmdb_id, info.begin_season, info.begin_episode)
             if mapped:
-                log.info(f"【EpisodeMapper】映射成功: S{info.begin_season}E{info.begin_episode} -> S{mapped[0]}E{mapped[1]}")
+                log.info(
+                    f"【EpisodeMapper】映射成功: S{info.begin_season}E{info.begin_episode} -> S{mapped[0]}E{mapped[1]}"
+                )
                 info.begin_season = mapped[0]
                 info.begin_episode = mapped[1]
             else:
@@ -204,10 +221,7 @@ class MediaService:
         # 保存到缓存
         if cache:
             self._lookup.client.redis_cache.set_media_info(
-                title=search_name,
-                info=info,
-                year=parsed.year,
-                mtype=parsed.type
+                title=search_name, info=info, year=parsed.year, mtype=parsed.type
             )
 
         # 重置语言
@@ -216,8 +230,17 @@ class MediaService:
 
         return info
 
-    def get_media_info(self, title, subtitle=None, mtype=None, strict=None,
-                       cache=True, language=None, chinese=True, append_to_response=None):
+    def get_media_info(
+        self,
+        title,
+        subtitle=None,
+        mtype=None,
+        strict=None,
+        cache=True,
+        language=None,
+        chinese=True,
+        append_to_response=None,
+    ):
         """兼容旧接口 — 内部调用 identify"""
         return self.identify(title, subtitle, mtype, strict, cache, language, chinese, append_to_response)
 
@@ -241,7 +264,9 @@ class MediaService:
                 llm_parser = LLMParser()
                 if llm_parser.ready:
                     failed_titles = [titles[i] for i in failed_indices]
-                    log.info(f"【MediaService】批量识别: {len(failed_indices)} 条 Regex 解析失败，尝试 LLM Parser fallback")
+                    log.info(
+                        f"【MediaService】批量识别: {len(failed_indices)} 条 Regex 解析失败，尝试 LLM Parser fallback"
+                    )
                     llm_results = llm_parser.parse_batch(failed_titles)
                     for j, idx in enumerate(failed_indices):
                         if llm_results[j]:
@@ -324,11 +349,13 @@ class MediaService:
             map_indices = []
             for idx, info in enumerate(results):
                 if info.type != MediaType.MOVIE and info.tmdb_id and info.begin_episode:
-                    map_items.append({
-                        "tmdb_id": info.tmdb_id,
-                        "season": info.begin_season,
-                        "episode": info.begin_episode,
-                    })
+                    map_items.append(
+                        {
+                            "tmdb_id": info.tmdb_id,
+                            "season": info.begin_season,
+                            "episode": info.begin_episode,
+                        }
+                    )
                     map_indices.append(idx)
             if map_items:
                 log.info(f"【EpisodeMapper】批量映射 {len(map_items)} 条记录")
@@ -347,9 +374,17 @@ class MediaService:
 
     # ---------- 文件列表识别 ----------
 
-    def identify_files(self, file_list, tmdb_info=None, media_type=None,
-                       season=None, episode_format: EpisodeFormat | None = None,
-                       language=None, chinese=True, append_to_response=None):
+    def identify_files(
+        self,
+        file_list,
+        tmdb_info=None,
+        media_type=None,
+        season=None,
+        episode_format: EpisodeFormat | None = None,
+        language=None,
+        chinese=True,
+        append_to_response=None,
+    ):
         if not isinstance(file_list, list):
             file_list = [file_list]
         return_media_infos = {}
@@ -385,11 +420,13 @@ class MediaService:
                 map_paths = []
                 for file_path, info in return_media_infos.items():
                     if info.type != MediaType.MOVIE and info.tmdb_id and info.begin_episode:
-                        map_items.append({
-                            "tmdb_id": info.tmdb_id,
-                            "season": info.begin_season,
-                            "episode": info.begin_episode,
-                        })
+                        map_items.append(
+                            {
+                                "tmdb_id": info.tmdb_id,
+                                "season": info.begin_season,
+                                "episode": info.begin_episode,
+                            }
+                        )
                         map_paths.append(file_path)
                 if map_items:
                     log.info(f"【EpisodeMapper】文件批量映射 {len(map_items)} 条记录")
@@ -418,11 +455,13 @@ class MediaService:
                     continue
                 parent_name = os.path.basename(os.path.dirname(file_path))
                 parent_parent_name = os.path.basename(PathUtils.get_parent_paths(file_path, 2))
-                items.append({
-                    "title": file_name,
-                    "parent_name": parent_name,
-                    "parent_parent_name": parent_parent_name,
-                })
+                items.append(
+                    {
+                        "title": file_name,
+                        "parent_name": parent_name,
+                        "parent_parent_name": parent_parent_name,
+                    }
+                )
                 path_map[len(items) - 1] = file_path
             except Exception as err:
                 log.error("【Rmt】发生错误：%s" % str(err))
@@ -437,10 +476,13 @@ class MediaService:
         # 2.2 fallback：从父目录提取信息
         for idx, item in enumerate(items):
             if not parsed_list[idx]:
-                parsed_list[idx] = self._parser.parse(item["title"], f"{item['parent_name']} {item['parent_parent_name']}")
+                parsed_list[idx] = self._parser.parse(
+                    item["title"], f"{item['parent_name']} {item['parent_parent_name']}"
+                )
 
         # 2.3 去重后并发查 TMDB
         from concurrent.futures import ThreadPoolExecutor, as_completed
+
         unique_keys = {}
         for idx, parsed in enumerate(parsed_list):
             if not parsed:
@@ -504,11 +546,13 @@ class MediaService:
             map_paths = []
             for file_path, info in return_media_infos.items():
                 if info.type != MediaType.MOVIE and info.tmdb_id and info.begin_episode:
-                    map_items.append({
-                        "tmdb_id": info.tmdb_id,
-                        "season": info.begin_season,
-                        "episode": info.begin_episode,
-                    })
+                    map_items.append(
+                        {
+                            "tmdb_id": info.tmdb_id,
+                            "season": info.begin_season,
+                            "episode": info.begin_episode,
+                        }
+                    )
                     map_paths.append(file_path)
             if map_items:
                 log.info(f"【EpisodeMapper】文件识别后映射 {len(map_items)} 条记录")
@@ -525,11 +569,20 @@ class MediaService:
 
         return return_media_infos
 
-    def get_media_info_on_files(self, file_list, tmdb_info=None, media_type=None,
-                                season=None, episode_format=None, language=None,
-                                chinese=True, append_to_response=None):
-        return self.identify_files(file_list, tmdb_info, media_type, season,
-                                   episode_format, language, chinese, append_to_response)
+    def get_media_info_on_files(
+        self,
+        file_list,
+        tmdb_info=None,
+        media_type=None,
+        season=None,
+        episode_format=None,
+        language=None,
+        chinese=True,
+        append_to_response=None,
+    ):
+        return self.identify_files(
+            file_list, tmdb_info, media_type, season, episode_format, language, chinese, append_to_response
+        )
 
     # ---------- AI Fallback ----------
 
@@ -540,6 +593,7 @@ class MediaService:
             return None, False
         log.info(f"【Meta】开始通过搜索引擎辅助查询：{feature_name} ...")
         cache = {}
+
         def calculate_scores(matches, results):
             if not matches:
                 return {}
@@ -553,24 +607,29 @@ class MediaService:
                 for result in results:
                     if not result:
                         continue
-                    result_title = StringUtils.handler_special_chars(result.get('title') or result.get('name', '')).upper()
+                    result_title = StringUtils.handler_special_chars(
+                        result.get("title") or result.get("name", "")
+                    ).upper()
                     if not result_title:
                         continue
                     ratio = difflib.SequenceMatcher(None, match_title, result_title).ratio()
                     if ratio >= 0.8:
-                        search_id = result.get('id')
+                        search_id = result.get("id")
                         if search_id not in search_results:
                             search_results[search_id] = {
-                                'id': search_id,
-                                'title': result.get('title') or result.get('name'),
-                                'type': result.get('media_type'),
-                                'year': result.get('release_date', '')[:4] if result.get('media_type') == MediaType.MOVIE else result.get('first_air_date', '')[:4],
-                                'count': 0,
-                                'score': 0.0
+                                "id": search_id,
+                                "title": result.get("title") or result.get("name"),
+                                "type": result.get("media_type"),
+                                "year": result.get("release_date", "")[:4]
+                                if result.get("media_type") == MediaType.MOVIE
+                                else result.get("first_air_date", "")[:4],
+                                "count": 0,
+                                "score": 0.0,
                             }
-                        search_results[search_id]['count'] += 1
-                        search_results[search_id]['score'] += ratio
+                        search_results[search_id]["count"] += 1
+                        search_results[search_id]["score"] += ratio
             return search_results
+
         # 简化的搜索引擎 fallback 实现
         return None, False
 

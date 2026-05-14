@@ -24,6 +24,7 @@ router = APIRouter()
 # Request Models (兼容前端原始字段名)
 # ---------------------------------------------------------------------------
 
+
 class EmptyRequest(BaseModel):
     data: dict | None = None
 
@@ -45,6 +46,7 @@ class UpdateJobRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.post("/jobs/delete")
 def delete_scheduler_job(

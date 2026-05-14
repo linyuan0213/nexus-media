@@ -2,6 +2,7 @@
 Plugin Registry - 插件注册表
 管理插件的扫描、安装、卸载、启用/禁用
 """
+
 import json
 import os
 import shutil
@@ -20,12 +21,10 @@ class PluginRegistry(metaclass=SingletonMeta):
 
     def __init__(self):
         self._repo = PluginFrameworkRepository()
-        self._plugins_dir = os.path.join(Config().config_path, 'plugins')
+        self._plugins_dir = os.path.join(Config().config_path, "plugins")
         if not os.path.exists(self._plugins_dir):
             os.makedirs(self._plugins_dir)
-        self._builtin_dir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), 'builtin_plugins'
-        )
+        self._builtin_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "builtin_plugins")
         self._manifest_cache: dict[str, PluginManifest] = {}
         self._state_cache: dict[str, PluginState] = {}
         self._load_all()
@@ -38,12 +37,12 @@ class PluginRegistry(metaclass=SingletonMeta):
             for orm_model in orm_list:
                 try:
                     entity = PluginManifestEntity.from_orm(orm_model)
-                    manifest = PluginManifest.from_dict(json.loads(entity.manifest_json or '{}'))
+                    manifest = PluginManifest.from_dict(json.loads(entity.manifest_json or "{}"))
                     self._manifest_cache[manifest.id] = manifest
                     self._state_cache[manifest.id] = PluginState(
                         id=manifest.id,
                         enabled=entity.enabled,
-                        installed=getattr(orm_model, 'INSTALLED', True),
+                        installed=getattr(orm_model, "INSTALLED", True),
                         manifest=manifest,
                     )
                 except Exception as e:
@@ -72,20 +71,20 @@ class PluginRegistry(metaclass=SingletonMeta):
         if not os.path.exists(zip_path):
             raise FileNotFoundError(f"插件包不存在: {zip_path}")
 
-        extract_dir = os.path.join(self._plugins_dir, '__tmp_install')
+        extract_dir = os.path.join(self._plugins_dir, "__tmp_install")
         if os.path.exists(extract_dir):
             shutil.rmtree(extract_dir)
         os.makedirs(extract_dir)
 
-        with zipfile.ZipFile(zip_path, 'r') as z:
+        with zipfile.ZipFile(zip_path, "r") as z:
             z.extractall(extract_dir)
 
-        manifest_path = os.path.join(extract_dir, 'manifest.json')
+        manifest_path = os.path.join(extract_dir, "manifest.json")
         if not os.path.exists(manifest_path):
             shutil.rmtree(extract_dir)
             raise ValueError("插件包缺少 manifest.json")
 
-        with open(manifest_path, encoding='utf-8') as f:
+        with open(manifest_path, encoding="utf-8") as f:
             manifest_data = json.load(f)
 
         manifest = PluginManifest.from_dict(manifest_data)
@@ -189,11 +188,11 @@ class PluginRegistry(metaclass=SingletonMeta):
         if not os.path.exists(self._builtin_dir):
             return
         for entry in os.listdir(self._builtin_dir):
-            manifest_path = os.path.join(self._builtin_dir, entry, 'manifest.json')
+            manifest_path = os.path.join(self._builtin_dir, entry, "manifest.json")
             if not os.path.exists(manifest_path):
                 continue
             try:
-                with open(manifest_path, encoding='utf-8') as f:
+                with open(manifest_path, encoding="utf-8") as f:
                     manifest_data = json.load(f)
                 manifest = PluginManifest.from_dict(manifest_data)
                 if not manifest.id or not manifest.name:
@@ -204,28 +203,38 @@ class PluginRegistry(metaclass=SingletonMeta):
                 if existing_state or existing_orm:
                     # 更新现有内置插件的 manifest
                     # 始终以数据库为准，缓存可能未及时同步
-                    existing_enabled = bool(existing_orm.ENABLED) if existing_orm else (existing_state.enabled if existing_state else False)
-                    existing_installed = bool(getattr(existing_orm, 'INSTALLED', True)) if existing_orm else (existing_state.installed if existing_state else True)
+                    existing_enabled = (
+                        bool(existing_orm.ENABLED)
+                        if existing_orm
+                        else (existing_state.enabled if existing_state else False)
+                    )
+                    existing_installed = (
+                        bool(getattr(existing_orm, "INSTALLED", True))
+                        if existing_orm
+                        else (existing_state.installed if existing_state else True)
+                    )
                     if existing_state:
                         existing_state.manifest = manifest
                         existing_state.enabled = existing_enabled
                         existing_state.installed = existing_installed
                     self._manifest_cache[manifest.id] = manifest
-                    self._repo.update_manifest(PluginManifestEntity(
-                        id=manifest.id,
-                        name=manifest.name,
-                        version=manifest.version,
-                        author=manifest.author,
-                        description=manifest.description,
-                        category=manifest.category,
-                        tags=manifest.tags,
-                        icon=manifest.icon,
-                        color=manifest.color,
-                        manifest_json=json.dumps(manifest.to_dict(), ensure_ascii=False),
-                        enabled=existing_enabled,
-                        installed=existing_installed,
-                        path=plugin_dir,
-                    ))
+                    self._repo.update_manifest(
+                        PluginManifestEntity(
+                            id=manifest.id,
+                            name=manifest.name,
+                            version=manifest.version,
+                            author=manifest.author,
+                            description=manifest.description,
+                            category=manifest.category,
+                            tags=manifest.tags,
+                            icon=manifest.icon,
+                            color=manifest.color,
+                            manifest_json=json.dumps(manifest.to_dict(), ensure_ascii=False),
+                            enabled=existing_enabled,
+                            installed=existing_installed,
+                            path=plugin_dir,
+                        )
+                    )
                     log.info(f"[PluginRegistry] 内置插件已更新: {manifest.id}@{manifest.version}")
                 else:
                     # 新注册（默认未安装）
@@ -253,7 +262,4 @@ class PluginRegistry(metaclass=SingletonMeta):
         builtin_path2 = os.path.join(self._builtin_dir, plugin_id)
         if os.path.exists(builtin_path2):
             return builtin_path2
-        return os.path.join(
-            self._plugins_dir,
-            f"{plugin_id}-{state.manifest.version}"
-        )
+        return os.path.join(self._plugins_dir, f"{plugin_id}-{state.manifest.version}")

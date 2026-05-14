@@ -13,6 +13,7 @@ class Opencd(_ISiteSigninHandler):
     """
     皇后ocr签到
     """
+
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "open.cd"
 
@@ -40,45 +41,41 @@ class Opencd(_ISiteSigninHandler):
         proxy = get_proxies() if site_info.get("proxy") else None
 
         # 判断今日是否已签到
-        index_res = RequestUtils(cookies=site_cookie,
-                                 headers=ua,
-                                 proxies=proxy
-                                 ).get_res(url='https://www.open.cd')
+        index_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(url="https://www.open.cd")
         if not index_res or index_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
-            return False, f'【{site}】签到失败，请检查站点连通性'
+            return False, f"【{site}】签到失败，请检查站点连通性"
 
         if "login.php" in index_res.text:
             self.error("签到失败，cookie失效")
-            return False, f'【{site}】签到失败，cookie失效'
+            return False, f"【{site}】签到失败，cookie失效"
 
         if self._repeat_text in index_res.text:
             self.info("今日已签到")
-            return True, f'【{site}】今日已签到'
+            return True, f"【{site}】今日已签到"
 
         # 获取签到参数
-        sign_param_res = RequestUtils(cookies=site_cookie,
-                                      headers=ua,
-                                      proxies=proxy
-                                      ).get_res(url='https://www.open.cd/plugin_sign-in.php')
+        sign_param_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
+            url="https://www.open.cd/plugin_sign-in.php"
+        )
         if not sign_param_res or sign_param_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
-            return False, f'【{site}】签到失败，请检查站点连通性'
+            return False, f"【{site}】签到失败，请检查站点连通性"
 
         # 没有签到则解析html
         html = etree.HTML(sign_param_res.text)
         if not html:
-            return False, f'【{site}】签到失败'
+            return False, f"【{site}】签到失败"
 
         # 签到参数
         img_url = html.xpath('//form[@id="frmSignin"]//img/@src')[0]
         img_hash = html.xpath('//form[@id="frmSignin"]//input[@name="imagehash"]/@value')[0]
         if not img_url or not img_hash:
             self.error("签到失败，获取签到参数失败")
-            return False, f'【{site}】签到失败，获取签到参数失败'
+            return False, f"【{site}】签到失败，获取签到参数失败"
 
         # 完整验证码url
-        img_get_url = 'https://www.open.cd/%s' % img_url
+        img_get_url = "https://www.open.cd/%s" % img_url
         self.debug(f"获取到{site}验证码链接 {img_get_url}")
 
         # ocr识别多次，获取6位验证码
@@ -87,9 +84,7 @@ class Opencd(_ISiteSigninHandler):
         # 识别几次
         while times <= 3:
             # ocr二维码识别
-            ocr_result = OcrHelper().get_captcha_text(image_url=img_get_url,
-                                                      cookie=site_cookie,
-                                                      ua=ua)
+            ocr_result = OcrHelper().get_captcha_text(image_url=img_get_url, cookie=site_cookie, ua=ua)
             self.debug(f"ocr识别{site}验证码 {ocr_result}")
             if ocr_result:
                 if len(ocr_result) == 6:
@@ -101,25 +96,21 @@ class Opencd(_ISiteSigninHandler):
 
         if ocr_result:
             # 组装请求参数
-            data = {
-                'imagehash': img_hash,
-                'imagestring': ocr_result
-            }
+            data = {"imagehash": img_hash, "imagestring": ocr_result}
             # 访问签到链接
-            sign_res = RequestUtils(cookies=site_cookie,
-                                    headers=ua,
-                                    proxies=proxy
-                                    ).post_res(url='https://www.open.cd/plugin_sign-in.php?cmd=signin', data=data)
+            sign_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).post_res(
+                url="https://www.open.cd/plugin_sign-in.php?cmd=signin", data=data
+            )
             if sign_res and sign_res.status_code == 200:
                 self.debug(f"sign_res返回 {sign_res.text}")
                 # sign_res.text = '{"state":"success","signindays":"0","integral":"10"}'
                 sign_dict = json.loads(sign_res.text)
-                if sign_dict['state']:
+                if sign_dict["state"]:
                     self.info("签到成功")
-                    return True, f'【{site}】签到成功'
+                    return True, f"【{site}】签到成功"
                 else:
                     self.error(f"签到失败，签到接口返回 {sign_dict}")
-                    return False, f'【{site}】签到失败'
+                    return False, f"【{site}】签到失败"
 
-        self.error('签到失败：未获取到验证码')
-        return False, f'【{site}】签到失败：未获取到验证码'
+        self.error("签到失败：未获取到验证码")
+        return False, f"【{site}】签到失败：未获取到验证码"

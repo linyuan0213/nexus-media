@@ -2,6 +2,7 @@
 Download Router — FastAPI 迁移
 对应原 web/controllers/download.py，复用 app/services/download_service.py
 """
+
 import json
 import os
 
@@ -34,6 +35,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 # Request Models
 # ---------------------------------------------------------------------------
+
 
 class EmptyRequest(BaseModel):
     data: dict | None = None
@@ -181,6 +183,7 @@ class UpdateTorrentRemoveTaskRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post("/torrent-remove-tasks/run")
 def auto_remove_torrents(
     req: AutoRemoveTorrentsRequest,
@@ -211,11 +214,7 @@ def check_downloader(
         only_nastool = 1 if checked else 0
     elif flag == "match_path":
         match_path = 1 if checked else 0
-    svc.check_downloader(did=did,
-                         enabled=enabled,
-                         transfer=transfer,
-                         only_nastool=only_nastool,
-                         match_path=match_path)
+    svc.check_downloader(did=did, enabled=enabled, transfer=transfer, only_nastool=only_nastool, match_path=match_path)
     return success()
 
 
@@ -260,10 +259,7 @@ def download(
     def _do_download():
         try:
             svc.download_from_search_results(
-                dl_id=req.id,
-                dl_dir=req.dir,
-                dl_setting=req.setting,
-                user_name=user.nickname or user.username
+                dl_id=req.id, dl_dir=req.dir, dl_setting=req.setting, user_name=user.nickname or user.username
             )
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -292,7 +288,7 @@ def download_link(
                 downloadvolumefactor=req.downloadvolumefactor,
                 dl_dir=req.dl_dir,
                 dl_setting=req.dl_setting,
-                user_name=user.nickname or user.username
+                user_name=user.nickname or user.username,
             )
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -307,10 +303,7 @@ def resolve_download_url(
     user: str = Depends(require_any_permission("download:view", "download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
-    url = svc.resolve_download_url(
-        page_url=req.page_url or "",
-        enclosure=req.enclosure
-    )
+    url = svc.resolve_download_url(page_url=req.page_url or "", enclosure=req.enclosure)
     if not url:
         return fail(msg="无法获取下载链接")
     return success(data={"url": url})
@@ -369,8 +362,7 @@ def find_hardlinks(
     if files:
         try:
             for file in files:
-                hardlinks[os.path.basename(file)] = SystemUtils(
-                ).find_hardlinks(file=file, fdir=file_dir)
+                hardlinks[os.path.basename(file)] = SystemUtils().find_hardlinks(file=file, fdir=file_dir)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             return fail()
@@ -382,7 +374,7 @@ def get_download_dirs(
     req: GetDownloadDirsRequest,
     user: str = Depends(require_any_permission("download:view", "download:manage")),
     site_svc: SiteService = Depends(get_site_service),
-    downloader_svc: Downloader = Depends(get_downloader_service)
+    downloader_svc: Downloader = Depends(get_downloader_service),
 ):
     sid = req.sid
     site = req.site
@@ -402,8 +394,7 @@ def get_download_setting(
     if sid:
         download_setting = svc.get_download_setting(sid=sid)
     else:
-        download_setting = list(
-            svc.get_download_setting().values())
+        download_setting = list(svc.get_download_setting().values())
     return success(data=download_setting)
 
 
@@ -445,11 +436,14 @@ def get_indexer_statistics(
     svc: DownloadService = Depends(get_download_service),
 ):
     stats, dataset = svc.get_indexer_statistics()
-    return success(data={
-        "stats": [{"name": s.name, "total": s.total, "fail": s.fail,
-                   "success": s.success, "avg": s.avg} for s in stats],
-        "dataset": dataset
-    })
+    return success(
+        data={
+            "stats": [
+                {"name": s.name, "total": s.total, "fail": s.fail, "success": s.success, "avg": s.avg} for s in stats
+            ],
+            "dataset": dataset,
+        }
+    )
 
 
 @router.post("/indexers")
@@ -561,7 +555,7 @@ def update_download_setting(
         download_limit=req.download_limit or 0,
         ratio_limit=req.ratio_limit or 0,
         seeding_time_limit=req.seeding_time_limit or 0,
-        downloader=req.downloader
+        downloader=req.downloader,
     )
     return success()
 
@@ -584,7 +578,7 @@ def set_default_download_setting(
 def update_downloader(
     req: UpdateDownloaderRequest,
     user: str = Depends(require_permission("download:manage")),
-    svc: Downloader = Depends(get_downloader_service)
+    svc: Downloader = Depends(get_downloader_service),
 ):
     did = req.did
     name = req.name
@@ -600,16 +594,18 @@ def update_downloader(
     download_dir = req.download_dir
     if download_dir and not isinstance(download_dir, str):
         download_dir = json.dumps(download_dir)
-    svc.update_downloader(did=did,
-                          name=name,
-                          dtype=dtype,
-                          enabled=enabled,
-                          transfer=transfer,
-                          only_nastool=only_nastool,
-                                   match_path=match_path,
-                                   rmt_mode=rmt_mode,
-                                   config=config,
-                                   download_dir=download_dir)
+    svc.update_downloader(
+        did=did,
+        name=name,
+        dtype=dtype,
+        enabled=enabled,
+        transfer=transfer,
+        only_nastool=only_nastool,
+        match_path=match_path,
+        rmt_mode=rmt_mode,
+        config=config,
+        download_dir=download_dir,
+    )
     return success()
 
 

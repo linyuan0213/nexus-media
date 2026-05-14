@@ -22,6 +22,7 @@ def _get_script_path():
 # Request Models
 # ---------------------------------------------------------------------------
 
+
 class EmptyRequest(BaseModel):
     data: dict | None = None
 
@@ -79,6 +80,7 @@ class ShareFilterGroupRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post("/groups/add")
 def add_filtergroup(
     req: AddFilterGroupRequest,
@@ -87,7 +89,7 @@ def add_filtergroup(
     name = req.name
     if not name:
         return fail(code=-1)
-    Filter().add_group(name, req.default or 'N')
+    Filter().add_group(name, req.default or "N")
     return success()
 
 
@@ -132,8 +134,7 @@ def filterrule_detail(
     req: FilterRuleDetailRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
-    ruleinfo = Filter().get_rule_detail(
-        groupid=req.groupid, ruleid=req.ruleid)
+    ruleinfo = Filter().get_rule_detail(groupid=req.groupid, ruleid=req.ruleid)
     return success(data=ruleinfo)
 
 
@@ -153,10 +154,7 @@ def restore_filtergroup(
     req: RestoreFilterGroupRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
-    Filter().restore_filter_group(
-        groupids=req.groupids or [],
-        init_rulegroups=req.init_rulegroups or []
-    )
+    Filter().restore_filter_group(groupids=req.groupids or [], init_rulegroups=req.init_rulegroups or [])
     return success()
 
 
@@ -169,12 +167,9 @@ def rule_test(
     if not title:
         return fail(code=-1)
     match_flag, text, order = Filter().test_rule(
-        title=title,
-        subtitle=req.subtitle,
-        size=req.size,
-        rulegroup=req.rulegroup
+        title=title, subtitle=req.subtitle, size=req.size, rulegroup=req.rulegroup
     )
-    return success(data={"flag":match_flag, "text":text, "order":order})
+    return success(data={"flag": match_flag, "text": text, "order": order})
 
 
 @router.post("/groups/default")
@@ -205,6 +200,5 @@ def get_filterrules(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
-    RuleGroups, Init_RuleGroups = Filter().get_filterrules(
-        _get_script_path())
+    RuleGroups, Init_RuleGroups = Filter().get_filterrules(_get_script_path())
     return success(data=RuleGroups)

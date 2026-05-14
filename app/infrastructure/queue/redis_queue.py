@@ -1,6 +1,7 @@
 """
 Redis Stream 消息队列 — 可靠投递，支持 ACK 和幂等去重
 """
+
 from __future__ import annotations
 
 import threading
@@ -26,8 +27,7 @@ class RedisMessageQueue(MessageQueue):
         self._redis = RedisStore()
         self._available = self._redis.is_available()
         self._max_workers = max_workers
-        self._executor = ThreadPoolExecutor(max_workers=max_workers,
-                                            thread_name_prefix="RedisMQ")
+        self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="RedisMQ")
         self._shutdown = False
         self._dispatcher: threading.Thread | None = None
         self._handler: Callable | None = None
@@ -41,6 +41,7 @@ class RedisMessageQueue(MessageQueue):
         """初始化 Stream 和消费者组"""
         try:
             import redis
+
             client = self._redis._client
             if client:
                 try:
@@ -53,9 +54,7 @@ class RedisMessageQueue(MessageQueue):
             self._available = False
 
     def _start_dispatcher(self):
-        self._dispatcher = threading.Thread(
-            target=self._dispatch_loop, daemon=True, name="RedisMQDispatcher"
-        )
+        self._dispatcher = threading.Thread(target=self._dispatch_loop, daemon=True, name="RedisMQDispatcher")
         self._dispatcher.start()
 
     def start(self) -> None:
@@ -127,17 +126,15 @@ class RedisMessageQueue(MessageQueue):
         consumer_id = f"consumer_{uuid.uuid4().hex[:8]}"
         while not self._shutdown:
             try:
-                messages = self._redis.xreadgroup(
-                    CONSUMER_GROUP, consumer_id,
-                    {STREAM_KEY: ">"}, count=1, block=3000
-                )
+                messages = self._redis.xreadgroup(CONSUMER_GROUP, consumer_id, {STREAM_KEY: ">"}, count=1, block=3000)
                 if not messages:
                     continue
                 for stream_name, entries in messages:
                     for msg_id, fields in entries:
-                        fields = {k.decode() if isinstance(k, bytes) else k:
-                                  v.decode() if isinstance(v, bytes) else v
-                                  for k, v in fields.items()}
+                        fields = {
+                            k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v
+                            for k, v in fields.items()
+                        }
                         self._executor.submit(self._process_message, msg_id, fields)
             except Exception as e:
                 log.error(f"【RedisMessageQueue】分发异常: {e}")

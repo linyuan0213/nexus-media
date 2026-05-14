@@ -13,15 +13,15 @@ def get_login_wallpaper(time_now=None):
     """
     if not time_now:
         time_now = datetime.datetime.now()
-    wallpaper = Config().get_config('app').get('wallpaper')
-    tmdbkey = Config().get_config('app').get('rmt_tmdbkey')
+    wallpaper = Config().get_config("app").get("wallpaper")
+    tmdbkey = Config().get_config("app").get("rmt_tmdbkey")
     if (not wallpaper or wallpaper == "themoviedb") and tmdbkey:
         # 每小时更新
-        curr_time = datetime.datetime.strftime(time_now, '%Y%m%d%H')
+        curr_time = datetime.datetime.strftime(time_now, "%Y%m%d%H")
         img_url, img_title, img_link = __get_themoviedb_wallpaper(curr_time)
     else:
         # 每天更新
-        today = datetime.datetime.strftime(time_now, '%Y%m%d')
+        today = datetime.datetime.strftime(time_now, "%Y%m%d")
         img_url, img_title, img_link = __get_bing_wallpaper(today)
     img_enc = __get_image_b64(img_url)
     if img_enc:
@@ -63,11 +63,11 @@ def __get_bing_wallpaper(today):
         if resp and resp.status_code == 200:
             try:
                 json_data = resp.json()
-                if json_data and json_data.get('images'):
-                    for image in json_data.get('images'):
-                        img_url = f"https://cn.bing.com{image.get('url')}" if 'url' in image else ''
-                        img_title = image.get('title', '')
-                        img_link = image.get('copyrightlink', '')
+                if json_data and json_data.get("images"):
+                    for image in json_data.get("images"):
+                        img_url = f"https://cn.bing.com{image.get('url')}" if "url" in image else ""
+                        img_title = image.get("title", "")
+                        img_link = image.get("copyrightlink", "")
                         return img_url, img_title, img_link
             except Exception as json_err:
                 ExceptionUtils.exception_traceback(json_err)
@@ -86,4 +86,4 @@ def __get_bing_wallpaper(today):
             return img_url, img_title, img_link
     except Exception as backup_err:
         ExceptionUtils.exception_traceback(backup_err)
-    return '', '', ''
+    return "", "", ""

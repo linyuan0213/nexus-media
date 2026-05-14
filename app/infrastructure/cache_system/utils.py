@@ -1,6 +1,7 @@
 """
 缓存工具类
 """
+
 import hashlib
 import pickle
 from collections.abc import Callable
@@ -37,7 +38,7 @@ class CacheKeyBuilder:
     @staticmethod
     def typed(prefix: str, type_val: Any, *parts) -> str:
         """带类型的键构建"""
-        type_str = type_val.value if hasattr(type_val, 'value') else str(type_val)
+        type_str = type_val.value if hasattr(type_val, "value") else str(type_val)
         return f"{prefix}:{type_str}:{':'.join(str(p) for p in parts)}"
 
 

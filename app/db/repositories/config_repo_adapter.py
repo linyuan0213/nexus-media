@@ -40,8 +40,17 @@ class MessageClientRepositoryAdapter(IMessageClientRepository):
             return None
         return MessageClientEntity.from_orm(rows[0])
 
-    def insert(self, name: str, ctype: str, config: str, switchs: list,
-               interactive: int, enabled: int, note: str = '', templates=None) -> None:
+    def insert(
+        self,
+        name: str,
+        ctype: str,
+        config: str,
+        switchs: list,
+        interactive: int,
+        enabled: int,
+        note: str = "",
+        templates=None,
+    ) -> None:
         self._repo.insert_message_client(name, ctype, config, switchs, interactive, enabled, note, templates)
 
     def delete(self, cid: int) -> None:
@@ -76,21 +85,45 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
                 return DownloaderEntity.from_orm(row)
         return None
 
-    def insert(self, name: str, dtype: str, config: str, transfer: str,
-               only_nastool: int, match_path: int, enabled: int) -> None:
+    def insert(
+        self, name: str, dtype: str, config: str, transfer: str, only_nastool: int, match_path: int, enabled: int
+    ) -> None:
         # ConfigRepository 使用 update_downloader 同时处理 insert/update
         self._repo.update_downloader(
-            did=None, name=name, enabled=enabled, dtype=dtype,
-            transfer=transfer, only_nastool=only_nastool, match_path=match_path,
-            rmt_mode=None, config=config, download_dir=None
+            did=None,
+            name=name,
+            enabled=enabled,
+            dtype=dtype,
+            transfer=transfer,
+            only_nastool=only_nastool,
+            match_path=match_path,
+            rmt_mode=None,
+            config=config,
+            download_dir=None,
         )
 
-    def update(self, did: int, name: str, dtype: str, config: str, transfer: str,
-               only_nastool: int, match_path: int, enabled: int) -> None:
+    def update(
+        self,
+        did: int,
+        name: str,
+        dtype: str,
+        config: str,
+        transfer: str,
+        only_nastool: int,
+        match_path: int,
+        enabled: int,
+    ) -> None:
         self._repo.update_downloader(
-            did=did, name=name, enabled=enabled, dtype=dtype,
-            transfer=transfer, only_nastool=only_nastool, match_path=match_path,
-            rmt_mode=None, config=config, download_dir=None
+            did=did,
+            name=name,
+            enabled=enabled,
+            dtype=dtype,
+            transfer=transfer,
+            only_nastool=only_nastool,
+            match_path=match_path,
+            rmt_mode=None,
+            config=config,
+            download_dir=None,
         )
 
     def delete(self, did: int) -> None:
@@ -123,7 +156,7 @@ class FilterGroupRepositoryAdapter(IFilterGroupRepository):
         return FilterGroupEntity.from_orm(rows[0])
 
     def insert(self, name: str, default: int = 0) -> int:
-        self._repo.add_filter_group(name, default='Y' if default else 'N')
+        self._repo.add_filter_group(name, default="Y" if default else "N")
         gid = self._repo.get_filter_groupid_by_name(name)
         return int(gid) if gid else 0
 
@@ -134,7 +167,7 @@ class FilterGroupRepositoryAdapter(IFilterGroupRepository):
     def get_config_filter_group(self, gid=None):
         return self._repo.get_config_filter_group(gid)
 
-    def add_filter_group(self, name, default='N'):
+    def add_filter_group(self, name, default="N"):
         self._repo.add_filter_group(name, default)
 
     def get_filter_groupid_by_name(self, name):
@@ -159,8 +192,7 @@ class FilterRuleRepositoryAdapter(IFilterRuleRepository):
             return []
         return [entity for entity in [FilterRuleEntity.from_orm(r) for r in rows] if entity is not None]
 
-    def insert(self, group_id: int, name: str, include: str, exclude: str,
-               note: str, priority: int = 0) -> None:
+    def insert(self, group_id: int, name: str, include: str, exclude: str, note: str, priority: int = 0) -> None:
         item = {
             "group": group_id,
             "name": name,
@@ -206,9 +238,7 @@ class MediaServerRepositoryAdapter(IMediaServerRepository):
 
     def insert(self, name: str, ctype: str, config: str, enabled: int) -> None:
         # ConfigRepository 使用 update_media_server 同时处理 insert/update
-        self._repo.update_media_server(
-            sid=None, name=name, enabled=enabled, config=config, is_default=0, note=None
-        )
+        self._repo.update_media_server(sid=None, name=name, enabled=enabled, config=config, is_default=0, note=None)
 
     def delete(self, sid: int) -> None:
         self._repo.delete_media_server(sid)
@@ -250,10 +280,17 @@ class TorrentRemoveTaskRepositoryAdapter(ITorrentRemoveTaskRepository):
 
     def insert(self, name: str, downloader: str, config: str, enabled: int = 1) -> None:
         import json
+
         cfg = json.loads(config) if isinstance(config, str) else config
         self._repo.insert_torrent_remove_task(
-            name=name, action=0, interval=0, enabled=enabled,
-            samedata=0, onlynastool=0, downloader=downloader, config=cfg
+            name=name,
+            action=0,
+            interval=0,
+            enabled=enabled,
+            samedata=0,
+            onlynastool=0,
+            downloader=downloader,
+            config=cfg,
         )
 
     def delete(self, tid: int) -> None:
@@ -275,6 +312,7 @@ class UserRssConfigRepositoryAdapter:
 
     def __init__(self, repo=None):
         from app.db.repositories.config_repository import ConfigRepository
+
         self._repo = repo or ConfigRepository()
 
     def get_userrss_parser(self, pid=None):
@@ -321,17 +359,18 @@ class MediaConfigRepositoryAdapter:
         """添加路径到指定类型"""
         cfg = self._repo.get_media_config()
         col_map = {
-            'movie': 'MOVIE_PATH',
-            'tv': 'TV_PATH',
-            'anime': 'ANIME_PATH',
-            'unknown': 'UNKNOWN_PATH',
+            "movie": "MOVIE_PATH",
+            "tv": "TV_PATH",
+            "anime": "ANIME_PATH",
+            "unknown": "UNKNOWN_PATH",
         }
         if path_type not in col_map:
             raise ValueError(f"Unknown path type: {path_type}")
 
         import json
+
         col = col_map[path_type]
-        current = getattr(cfg, col, '') if cfg else ''
+        current = getattr(cfg, col, "") if cfg else ""
         paths = json.loads(current) if current else []
         if not isinstance(paths, list):
             paths = [paths]
@@ -343,17 +382,18 @@ class MediaConfigRepositoryAdapter:
         """从指定类型移除路径"""
         cfg = self._repo.get_media_config()
         col_map = {
-            'movie': 'MOVIE_PATH',
-            'tv': 'TV_PATH',
-            'anime': 'ANIME_PATH',
-            'unknown': 'UNKNOWN_PATH',
+            "movie": "MOVIE_PATH",
+            "tv": "TV_PATH",
+            "anime": "ANIME_PATH",
+            "unknown": "UNKNOWN_PATH",
         }
         if path_type not in col_map:
             raise ValueError(f"Unknown path type: {path_type}")
 
         import json
+
         col = col_map[path_type]
-        current = getattr(cfg, col, '') if cfg else ''
+        current = getattr(cfg, col, "") if cfg else ""
         paths = json.loads(current) if current else []
         if not isinstance(paths, list):
             paths = [paths]
@@ -365,17 +405,18 @@ class MediaConfigRepositoryAdapter:
         """更新指定类型的路径"""
         cfg = self._repo.get_media_config()
         col_map = {
-            'movie': 'MOVIE_PATH',
-            'tv': 'TV_PATH',
-            'anime': 'ANIME_PATH',
-            'unknown': 'UNKNOWN_PATH',
+            "movie": "MOVIE_PATH",
+            "tv": "TV_PATH",
+            "anime": "ANIME_PATH",
+            "unknown": "UNKNOWN_PATH",
         }
         if path_type not in col_map:
             raise ValueError(f"Unknown path type: {path_type}")
 
         import json
+
         col = col_map[path_type]
-        current = getattr(cfg, col, '') if cfg else ''
+        current = getattr(cfg, col, "") if cfg else ""
         paths = json.loads(current) if current else []
         if not isinstance(paths, list):
             paths = [paths]

@@ -4,6 +4,7 @@
 职责：提供搜索结果过滤的纯逻辑计算，不依赖服务层。
 所有方法均为无状态静态方法，仅基于输入参数进行判断。
 """
+
 import re
 
 from app.core.module_config import ModuleConf
@@ -24,10 +25,9 @@ class IndexerFilterEngine:
     _rg_matcher = ReleaseGroupsMatcher()
 
     @staticmethod
-    def check_torrent_filter(meta_info,
-                             filter_args: dict,
-                             uploadvolumefactor=None,
-                             downloadvolumefactor=None) -> tuple[bool, int, str]:
+    def check_torrent_filter(
+        meta_info, filter_args: dict, uploadvolumefactor=None, downloadvolumefactor=None
+    ) -> tuple[bool, int, str]:
         """
         对种子进行过滤（基于 filter_args 中的基础条件）
 
@@ -57,9 +57,7 @@ class IndexerFilterEngine:
         if filter_args.get("team"):
             team = filter_args.get("team")
             if not meta_info.resource_team:
-                resource_team = IndexerFilterEngine._rg_matcher.match(
-                    title=meta_info.rev_string,
-                    groups=team)
+                resource_team = IndexerFilterEngine._rg_matcher.match(title=meta_info.rev_string, groups=team)
                 if not resource_team:
                     return False, 0, f"{meta_info.org_string} 不符合制作组/字幕组 {team} 要求"
                 else:
@@ -118,23 +116,23 @@ class IndexerFilterEngine:
         for filter_info in filters:
             try:
                 rule_match = True
-                order_seq = 100 - int(filter_info.get('pri', 0))
+                order_seq = 100 - int(filter_info.get("pri", 0))
 
                 # 必须包括的项
-                includes = filter_info.get('include')
+                includes = filter_info.get("include")
                 if includes and rule_match:
                     include_flag = True
                     for include in includes:
                         if not include:
                             continue
-                        if not re.search(r'%s' % include.strip(), title, re.IGNORECASE):
+                        if not re.search(r"%s" % include.strip(), title, re.IGNORECASE):
                             include_flag = False
                             break
                     if not include_flag:
                         rule_match = False
 
                 # 不能包含的项
-                excludes = filter_info.get('exclude')
+                excludes = filter_info.get("exclude")
                 if excludes and rule_match:
                     exclude_flag = False
                     exclude_count = 0
@@ -142,17 +140,17 @@ class IndexerFilterEngine:
                         if not exclude:
                             continue
                         exclude_count += 1
-                        if not re.search(r'%s' % exclude.strip(), title, re.IGNORECASE):
+                        if not re.search(r"%s" % exclude.strip(), title, re.IGNORECASE):
                             exclude_flag = True
                     if exclude_count > 0 and not exclude_flag:
                         rule_match = False
 
                 # 大小
-                sizes = filter_info.get('size')
+                sizes = filter_info.get("size")
                 if sizes and rule_match and meta_info.size:
                     meta_info.size = StringUtils.num_filesize(meta_info.size)
-                    if sizes.find(',') != -1:
-                        sizes = sizes.split(',')
+                    if sizes.find(",") != -1:
+                        sizes = sizes.split(",")
                         begin_size = float(sizes[0].strip()) if StringUtils.is_numeric(sizes[0]) else 0
                         end_size = float(sizes[1].strip()) if StringUtils.is_numeric(sizes[1]) else 0
                     else:
@@ -160,19 +158,22 @@ class IndexerFilterEngine:
                         end_size = float(sizes.strip()) if StringUtils.is_numeric(sizes) else 0
 
                     if meta_info.type == MediaType.MOVIE:
-                        if not begin_size * (1024 ** 3) <= int(meta_info.size) <= end_size * (1024 ** 3):
+                        if not begin_size * (1024**3) <= int(meta_info.size) <= end_size * (1024**3):
                             rule_match = False
                     else:
-                        if meta_info.total_episodes \
-                                and not begin_size * (1024 ** 3) <= int(meta_info.size) / int(meta_info.total_episodes) <= end_size * (1024 ** 3):
+                        if meta_info.total_episodes and not begin_size * (1024**3) <= int(meta_info.size) / int(
+                            meta_info.total_episodes
+                        ) <= end_size * (1024**3):
                             rule_match = False
 
                 # 促销
                 free = filter_info.get("free")
                 if free and meta_info.upload_volume_factor is not None and meta_info.download_volume_factor is not None:
                     ul_factor, dl_factor = free.split()
-                    if float(ul_factor) > meta_info.upload_volume_factor \
-                            or float(dl_factor) < meta_info.download_volume_factor:
+                    if (
+                        float(ul_factor) > meta_info.upload_volume_factor
+                        or float(dl_factor) < meta_info.download_volume_factor
+                    ):
                         rule_match = False
 
                 if rule_match:
@@ -181,6 +182,7 @@ class IndexerFilterEngine:
                     group_match = False
             except Exception as err:
                 import log
+
                 log.error(f"【Filter】过滤规则出现严重错误 {err}，请检查：{filter_info}")
 
         if not group_match:

@@ -2,6 +2,7 @@
 """
 测试搜索结果过滤的三阶段并发 TMDB 查询重构
 """
+
 import time
 import unittest
 from unittest.mock import Mock, patch
@@ -35,7 +36,6 @@ class MockIndexClient(_IIndexClient):
 
 
 class TestFilterSearchResults(unittest.TestCase):
-
     def setUp(self):
         self.client = MockIndexClient()
         self.indexer = Mock()
@@ -54,8 +54,8 @@ class TestFilterSearchResults(unittest.TestCase):
         self.match_media.over_edition = False
         self.match_media.res_order = None
 
-    @patch.object(_IIndexClient, '_quick_name_match')
-    @patch.object(MockIndexClient, 'media')
+    @patch.object(_IIndexClient, "_quick_name_match")
+    @patch.object(MockIndexClient, "media")
     def test_concurrent_identify(self, mock_media, mock_quick_match):
         """测试需要 TMDB 识别的候选会被并发查询"""
         mock_quick_match.return_value = False
@@ -78,8 +78,15 @@ class TestFilterSearchResults(unittest.TestCase):
         mock_media.get_media_info.side_effect = slow_get_media_info
 
         result_array = [
-            {"title": f"Movie {i}", "description": "", "size": 1000, "seeders": 1,
-             "uploadvolumefactor": 1.0, "downloadvolumefactor": 1.0, "enclosure": "url"}
+            {
+                "title": f"Movie {i}",
+                "description": "",
+                "size": 1000,
+                "seeders": 1,
+                "uploadvolumefactor": 1.0,
+                "downloadvolumefactor": 1.0,
+                "enclosure": "url",
+            }
             for i in range(6)
         ]
 
@@ -90,7 +97,7 @@ class TestFilterSearchResults(unittest.TestCase):
             indexer=self.indexer,
             filter_args={},
             match_media=self.match_media,
-            start_time=Mock()
+            start_time=Mock(),
         )
         elapsed = time.time() - start
 
@@ -98,21 +105,30 @@ class TestFilterSearchResults(unittest.TestCase):
         self.assertLess(elapsed, 0.6, f"TMDB 查询应该是并发的，实际耗时 {elapsed:.2f}s")
         self.assertEqual(len(call_times), 6, "每个候选都应该被识别一次")
 
-    @patch.object(_IIndexClient, '_quick_name_match')
-    @patch.object(MockIndexClient, 'media')
+    @patch.object(_IIndexClient, "_quick_name_match")
+    @patch.object(MockIndexClient, "media")
     def test_cache_hit_skip_tmdb(self, mock_media, mock_quick_match):
         """测试缓存命中时不会重复查询 TMDB"""
         mock_quick_match.return_value = False
-        mock_media.get_media_info.return_value = Mock(tmdb_info={"id": "12345"},
-                                                       tmdb_id="12345",
-                                                       type=MediaType.MOVIE,
-                                                       get_name=lambda: "Cached",
-                                                       get_title_string=lambda: "Cached",
-                                                       get_season_episode_string=lambda: "")
+        mock_media.get_media_info.return_value = Mock(
+            tmdb_info={"id": "12345"},
+            tmdb_id="12345",
+            type=MediaType.MOVIE,
+            get_name=lambda: "Cached",
+            get_title_string=lambda: "Cached",
+            get_season_episode_string=lambda: "",
+        )
 
         result_array = [
-            {"title": "Cached Movie", "description": "", "size": 1000, "seeders": 1,
-             "uploadvolumefactor": 1.0, "downloadvolumefactor": 1.0, "enclosure": "url"}
+            {
+                "title": "Cached Movie",
+                "description": "",
+                "size": 1000,
+                "seeders": 1,
+                "uploadvolumefactor": 1.0,
+                "downloadvolumefactor": 1.0,
+                "enclosure": "url",
+            }
         ]
 
         # 第一次调用
@@ -122,7 +138,7 @@ class TestFilterSearchResults(unittest.TestCase):
             indexer=self.indexer,
             filter_args={},
             match_media=self.match_media,
-            start_time=Mock()
+            start_time=Mock(),
         )
 
         # 第二次调用，缓存已存在
@@ -132,21 +148,27 @@ class TestFilterSearchResults(unittest.TestCase):
             indexer=self.indexer,
             filter_args={},
             match_media=self.match_media,
-            start_time=Mock()
+            start_time=Mock(),
         )
 
-        self.assertEqual(mock_media.get_media_info.call_count, 1,
-                         "缓存命中后不应再次调用 get_media_info")
+        self.assertEqual(mock_media.get_media_info.call_count, 1, "缓存命中后不应再次调用 get_media_info")
 
-    @patch.object(_IIndexClient, '_quick_name_match')
-    @patch.object(MockIndexClient, 'media')
+    @patch.object(_IIndexClient, "_quick_name_match")
+    @patch.object(MockIndexClient, "media")
     def test_quick_name_match_skip_tmdb(self, mock_media, mock_quick_match):
         """测试快速名称匹配成功时跳过 TMDB 查询"""
         mock_quick_match.return_value = True
 
         result_array = [
-            {"title": "Quick Match", "description": "", "size": 1000, "seeders": 1,
-             "uploadvolumefactor": 1.0, "downloadvolumefactor": 1.0, "enclosure": "url"}
+            {
+                "title": "Quick Match",
+                "description": "",
+                "size": 1000,
+                "seeders": 1,
+                "uploadvolumefactor": 1.0,
+                "downloadvolumefactor": 1.0,
+                "enclosure": "url",
+            }
         ]
 
         self.client.filter_search_results(
@@ -155,7 +177,7 @@ class TestFilterSearchResults(unittest.TestCase):
             indexer=self.indexer,
             filter_args={},
             match_media=self.match_media,
-            start_time=Mock()
+            start_time=Mock(),
         )
 
         mock_media.get_media_info.assert_not_called()

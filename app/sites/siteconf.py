@@ -16,47 +16,30 @@ class SiteConf(metaclass=SingletonMeta):
         '//a[contains(@href, "sign_in")]',
         '//a[contains(@onclick, "do_signin")]',
         '//a[@id="do-attendance"]',
-        '//shark-icon-button[@href="attendance.php"]'
+        '//shark-icon-button[@href="attendance.php"]',
     ]
     _SITE_SUBTITLE_XPATH = [
         '//td[@class="rowhead"][text()="字幕"]/following-sibling::td//a/@href',
     ]
     _SITE_LOGIN_XPATH = {
-        "username": [
-            '//input[@name="username"]',
-            '//input[@id="form_item_username"]',
-            '//input[@id="username"]'
-        ],
-        "password": [
-            '//input[@name="password"]',
-            '//input[@id="form_item_password"]',
-            '//input[@id="password"]'
-        ],
-        "captcha": [
-            '//input[@name="imagestring"]',
-            '//input[@name="captcha"]',
-            '//input[@id="form_item_captcha"]'
-        ],
+        "username": ['//input[@name="username"]', '//input[@id="form_item_username"]', '//input[@id="username"]'],
+        "password": ['//input[@name="password"]', '//input[@id="form_item_password"]', '//input[@id="password"]'],
+        "captcha": ['//input[@name="imagestring"]', '//input[@name="captcha"]', '//input[@id="form_item_captcha"]'],
         "captcha_img": [
             '//img[@alt="CAPTCHA"]/@src',
             '//img[@alt="SECURITY CODE"]/@src',
             '//img[@id="LAY-user-get-vercode"]/@src',
-            '//img[contains(@src,"/api/getCaptcha")]/@src'
+            '//img[contains(@src,"/api/getCaptcha")]/@src',
         ],
         "submit": [
             '//input[@type="submit"]',
             '//button[@type="submit"]',
             '//button[@lay-filter="login"]',
             '//button[@lay-filter="formLogin"]',
-            '//input[@type="button"][@value="登录"]'
+            '//input[@type="button"][@value="登录"]',
         ],
-        "error": [
-            "//table[@class='main']//td[@class='text']/text()"
-        ],
-        "twostep": [
-            '//input[@name="two_step_code"]',
-            '//input[@name="2fa_secret"]'
-        ]
+        "error": ["//table[@class='main']//td[@class='text']/text()"],
+        "twostep": ['//input[@name="two_step_code"]', '//input[@name="2fa_secret"]'],
     }
 
     def __init__(self):

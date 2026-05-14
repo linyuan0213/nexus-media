@@ -12,6 +12,7 @@
 - truncate_transfer_blacklist / truncate_rss_history
 - re_identify / restart_server
 """
+
 from app.agent.tools.base import BaseTool, ToolRegistry
 
 
@@ -40,14 +41,24 @@ class SystemCommandTool(BaseTool):
             "action": {
                 "type": "string",
                 "enum": [
-                    "scheduler_list", "scheduler_run", "scheduler_pause", "scheduler_resume",
-                    "brush_list", "brush_delete",
-                    "site_list", "site_refresh",
-                    "rss_list", "rss_run",
-                    "transfer_run", "sync_run",
-                    "subscribe_search_all", "auto_remove_torrents",
-                    "truncate_transfer_blacklist", "truncate_rss_history",
-                    "re_identify", "restart_server",
+                    "scheduler_list",
+                    "scheduler_run",
+                    "scheduler_pause",
+                    "scheduler_resume",
+                    "brush_list",
+                    "brush_delete",
+                    "site_list",
+                    "site_refresh",
+                    "rss_list",
+                    "rss_run",
+                    "transfer_run",
+                    "sync_run",
+                    "subscribe_search_all",
+                    "auto_remove_torrents",
+                    "truncate_transfer_blacklist",
+                    "truncate_rss_history",
+                    "re_identify",
+                    "restart_server",
                 ],
                 "description": "要执行的命令类型",
             },

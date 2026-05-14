@@ -2,6 +2,7 @@
 SchedulerCore 单元测试
 验证 remove_job 对 JobLookupError 的处理
 """
+
 from unittest.mock import MagicMock, patch
 
 from apscheduler.jobstores.base import JobLookupError
@@ -14,6 +15,7 @@ class TestSchedulerCoreRemoveJob:
     @patch("app.services.scheduler_core.Config")
     def test_remove_job_success(self, mock_config_cls, mock_scheduler_cls):
         from app.services.scheduler_core import SchedulerCore
+
         # 重置单例缓存，确保每次拿到新实例
         SchedulerCore._instances.pop(SchedulerCore, None)
 
@@ -33,6 +35,7 @@ class TestSchedulerCoreRemoveJob:
     def test_remove_job_lookup_error_returns_true(self, mock_config_cls, mock_scheduler_cls):
         """当任务不存在时，remove_job 应返回 True 且不抛异常"""
         from app.services.scheduler_core import SchedulerCore
+
         SchedulerCore._instances.pop(SchedulerCore, None)
 
         mock_scheduler = MagicMock()
@@ -52,6 +55,7 @@ class TestSchedulerCoreRemoveJob:
     def test_remove_job_other_exception_returns_false(self, mock_config_cls, mock_scheduler_cls):
         """当抛出非 JobLookupError 异常时，remove_job 应返回 False"""
         from app.services.scheduler_core import SchedulerCore
+
         SchedulerCore._instances.pop(SchedulerCore, None)
 
         mock_scheduler = MagicMock()

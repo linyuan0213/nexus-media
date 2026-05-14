@@ -1,6 +1,7 @@
 """
 测试 FastAPI Scheduler Router
 """
+
 from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
@@ -14,7 +15,6 @@ client = TestClient(app)
 
 
 class TestSchedulerRouter:
-
     def _mock_scheduler(self):
         mock_svc = MagicMock()
         app.dependency_overrides[get_scheduler_service] = lambda: mock_svc
@@ -116,9 +116,7 @@ class TestSchedulerRouter:
         mock_svc = self._mock_scheduler()
         mock_svc.update_job.return_value = MagicMock(code=0, msg="更新成功")
         try:
-            resp = client.post("/api/scheduler/jobs/update", json={
-                "id": "job1", "trigger": "interval", "seconds": 60
-            })
+            resp = client.post("/api/scheduler/jobs/update", json={"id": "job1", "trigger": "interval", "seconds": 60})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             assert resp.json()["msg"] == "更新成功"
@@ -128,9 +126,7 @@ class TestSchedulerRouter:
     def test_update_scheduler_job_empty_id(self):
         mock_svc = self._mock_scheduler()
         try:
-            resp = client.post("/api/scheduler/jobs/update", json={
-                "trigger": "interval"
-            })
+            resp = client.post("/api/scheduler/jobs/update", json={"trigger": "interval"})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
             assert resp.json()["msg"] == "任务ID不能为空"
@@ -141,9 +137,9 @@ class TestSchedulerRouter:
         mock_svc = self._mock_scheduler()
         mock_svc.update_job.return_value = MagicMock(code=-1, msg="更新失败")
         try:
-            resp = client.post("/api/scheduler/jobs/update", json={
-                "id": "job1", "trigger": "cron", "cron": "0 0 * * *"
-            })
+            resp = client.post(
+                "/api/scheduler/jobs/update", json={"id": "job1", "trigger": "cron", "cron": "0 0 * * *"}
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
             assert resp.json()["msg"] == "更新失败"

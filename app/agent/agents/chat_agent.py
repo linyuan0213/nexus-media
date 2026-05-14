@@ -1,6 +1,7 @@
 """
 通用对话 Agent — 支持多轮会话与工具调用
 """
+
 import json
 
 import log
@@ -119,10 +120,12 @@ class ChatAgent:
         # 4. 第二轮：将工具结果返回给 LLM，生成最终回复
         tool_result_text = result.to_text()
         tool_msg = f"工具执行结果：\n{tool_result_text}\n\n请根据结果回复用户。"
-        messages.extend([
-            {"role": "assistant", "content": first_resp},
-            {"role": "user", "content": tool_msg},
-        ])
+        messages.extend(
+            [
+                {"role": "assistant", "content": first_resp},
+                {"role": "user", "content": tool_msg},
+            ]
+        )
 
         try:
             final_resp = self._svc.chat(messages=messages, system_prompt="", use_cache=False)
@@ -136,8 +139,12 @@ class ChatAgent:
             log.error(f"【ChatAgent】第二轮出错: {e}")
             return f"工具执行成功但生成回复出错: {e}"
 
-    def chat_with_session(self, question: str, session_id: str,
-                          system_prompt: str = "请在接下来的对话中请使用中文回复，并且内容尽可能详细。") -> str:
+    def chat_with_session(
+        self,
+        question: str,
+        session_id: str,
+        system_prompt: str = "请在接下来的对话中请使用中文回复，并且内容尽可能详细。",
+    ) -> str:
         """多轮对话（带会话上下文）"""
         if not self.ready:
             log.warn("【ChatAgent】chat_with_session 失败：Provider 未就绪")
@@ -164,7 +171,7 @@ class ChatAgent:
         """裁剪历史消息，保留最近 MAX_HISTORY_MESSAGES 条，避免超出模型 token 限制"""
         if len(history) > ChatAgent.MAX_HISTORY_MESSAGES:
             # 保留最新的消息，移除最早的
-            trimmed = history[-ChatAgent.MAX_HISTORY_MESSAGES:]
+            trimmed = history[-ChatAgent.MAX_HISTORY_MESSAGES :]
             log.info(f"【ChatAgent】历史消息裁剪: {len(history)} -> {len(trimmed)}")
             return trimmed
         return history
@@ -218,10 +225,12 @@ class ChatAgent:
             session.append({"role": "user", "content": message})
             OpenAISessionCache.set(session_id, ChatAgent._trim_history(session))
         else:
-            session = [{
-                "role": "user",
-                "content": f"系统设定：{system_prompt}\n\n我的问题是：{message}",
-            }]
+            session = [
+                {
+                    "role": "user",
+                    "content": f"系统设定：{system_prompt}\n\n我的问题是：{message}",
+                }
+            ]
             OpenAISessionCache.set(session_id, session)
         return session
 

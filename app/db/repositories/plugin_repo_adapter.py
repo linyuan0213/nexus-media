@@ -45,10 +45,16 @@ class TmdbBlacklistRepositoryAdapter(ITmdbBlacklistRepository):
         rows = self._repo.get_tmdb_blacklist()
         return [e for e in [TmdbBlacklistEntity.from_orm(r) for r in rows] if e is not None]
 
-    def insert_tmdb_blacklist(self, tmdb_id: str, title: str | None = None,
-                               year: str | None = None, media_type: str | None = None,
-                               poster_path: str | None = None, backdrop_path: str | None = None,
-                               note: str | None = None) -> bool:
+    def insert_tmdb_blacklist(
+        self,
+        tmdb_id: str,
+        title: str | None = None,
+        year: str | None = None,
+        media_type: str | None = None,
+        poster_path: str | None = None,
+        backdrop_path: str | None = None,
+        note: str | None = None,
+    ) -> bool:
         return self._repo.insert_tmdb_blacklist(tmdb_id, title, year, media_type, poster_path, backdrop_path, note)
 
     def delete_tmdb_blacklist(self, tmdb_id: str, media_type: str | None = None) -> bool:

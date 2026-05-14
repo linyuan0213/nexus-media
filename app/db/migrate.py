@@ -13,6 +13,7 @@
 - 批量插入数据
 - 恢复外键约束
 """
+
 import json
 from datetime import date, datetime
 from decimal import Decimal
@@ -35,7 +36,7 @@ class _CustomJSONEncoder(json.JSONEncoder):
         if isinstance(obj, Decimal):
             return float(obj)
         if isinstance(obj, bytes):
-            return obj.decode('utf-8', errors='replace')
+            return obj.decode("utf-8", errors="replace")
         return super().default(obj)
 
 
@@ -48,7 +49,7 @@ def _serialize_value(value: Any) -> Any:
     if isinstance(value, Decimal):
         return float(value)
     if isinstance(value, bytes):
-        return value.decode('utf-8', errors='replace')
+        return value.decode("utf-8", errors="replace")
     return value
 
 
@@ -74,13 +75,13 @@ def get_table_data(engine: Engine, table_name: str, limit: int | None = None) ->
     """读取指定表的所有数据"""
     with engine.connect() as conn:
         # 使用 text() 构造查询
-        sql = f'SELECT * FROM {_quote_identifier(engine, table_name)}'
+        sql = f"SELECT * FROM {_quote_identifier(engine, table_name)}"
         if limit is not None:
             # 简单的 LIMIT 处理
             if DatabaseFactory.is_mysql(engine):
-                sql += f' LIMIT {int(limit)}'
+                sql += f" LIMIT {int(limit)}"
             else:
-                sql += f' LIMIT {int(limit)}'
+                sql += f" LIMIT {int(limit)}"
         result = conn.execute(text(sql))
         columns = result.keys()
         rows = []
@@ -89,9 +90,9 @@ def get_table_data(engine: Engine, table_name: str, limit: int | None = None) ->
         return rows
 
 
-def export_database(engine: Engine,
-                    include_tables: list[str] | None = None,
-                    exclude_tables: list[str] | None = None) -> dict[str, Any]:
+def export_database(
+    engine: Engine, include_tables: list[str] | None = None, exclude_tables: list[str] | None = None
+) -> dict[str, Any]:
     """
     导出数据库中所有表的数据
 
@@ -111,23 +112,23 @@ def export_database(engine: Engine,
             "dialect": engine.url.drivername,
             "exported_at": datetime.now().isoformat(),
         },
-        "tables": {}
+        "tables": {},
     }
 
     for table_name in table_names:
         try:
             rows = get_table_data(engine, table_name)
             # 统一 SIZE 相关字段为 bigint（字节数），兼容老 SQLite 中的字符串如 "27.72G"
-            if table_name == 'SEARCH_RESULT_INFO' or table_name == 'CONFIG_SITE':
+            if table_name == "SEARCH_RESULT_INFO" or table_name == "CONFIG_SITE":
                 for row in rows:
-                    size_val = row.get('SIZE')
+                    size_val = row.get("SIZE")
                     if isinstance(size_val, str):
-                        row['SIZE'] = StringUtils.num_filesize(size_val)
-            elif table_name == 'SITE_BRUSH_TASK':
+                        row["SIZE"] = StringUtils.num_filesize(size_val)
+            elif table_name == "SITE_BRUSH_TASK":
                 for row in rows:
-                    size_val = row.get('SEED_SIZE')
+                    size_val = row.get("SEED_SIZE")
                     if isinstance(size_val, str):
-                        row['SEED_SIZE'] = StringUtils.num_filesize(size_val)
+                        row["SEED_SIZE"] = StringUtils.num_filesize(size_val)
             export_data["tables"][table_name] = rows
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -150,12 +151,14 @@ def _sort_tables_topological(engine: Engine, table_names: list[str]) -> list[str
     return [t for t in sorted_names if t in table_names]
 
 
-def import_database(engine: Engine,
-                    data: dict[str, Any],
-                    include_tables: list[str] | None = None,
-                    exclude_tables: list[str] | None = None,
-                    batch_size: int = 1000,
-                    clear_before_import: bool = True):
+def import_database(
+    engine: Engine,
+    data: dict[str, Any],
+    include_tables: list[str] | None = None,
+    exclude_tables: list[str] | None = None,
+    batch_size: int = 1000,
+    clear_before_import: bool = True,
+):
     """
     将导出的数据导入到目标数据库
 
@@ -204,7 +207,7 @@ def import_database(engine: Engine,
                     if not rows:
                         continue
                     try:
-                        conn.execute(text(f'DELETE FROM {_quote_identifier(engine, table_name)}'))
+                        conn.execute(text(f"DELETE FROM {_quote_identifier(engine, table_name)}"))
                     except Exception as e:
                         ExceptionUtils.exception_traceback(e)
 
@@ -227,12 +230,12 @@ def import_database(engine: Engine,
                 # 获取需要截断的列（避免 MySQL Data too long 错误）
                 truncate_columns = {}
                 for col in sa_table.columns:
-                    if hasattr(col.type, 'length') and col.type.length is not None:
+                    if hasattr(col.type, "length") and col.type.length is not None:
                         truncate_columns[col.name] = col.type.length
 
                 # 分批插入，单条捕获异常跳过有问题的行
                 for i in range(0, len(rows), batch_size):
-                    batch = rows[i:i + batch_size]
+                    batch = rows[i : i + batch_size]
                     for row in batch:
                         if truncate_columns:
                             new_row = {}
@@ -261,36 +264,39 @@ def import_database(engine: Engine,
             raise
 
 
-def export_to_file(engine: Engine,
-                   filepath: str,
-                   include_tables: list[str] | None = None,
-                   exclude_tables: list[str] | None = None):
+def export_to_file(
+    engine: Engine, filepath: str, include_tables: list[str] | None = None, exclude_tables: list[str] | None = None
+):
     """导出数据库到 JSON 文件"""
     data = export_database(engine, include_tables=include_tables, exclude_tables=exclude_tables)
-    with open(filepath, 'w', encoding='utf-8') as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, cls=_CustomJSONEncoder)
 
 
-def import_from_file(engine: Engine,
-                     filepath: str,
-                     include_tables: list[str] | None = None,
-                     exclude_tables: list[str] | None = None,
-                     batch_size: int = 1000,
-                     clear_before_import: bool = True):
+def import_from_file(
+    engine: Engine,
+    filepath: str,
+    include_tables: list[str] | None = None,
+    exclude_tables: list[str] | None = None,
+    batch_size: int = 1000,
+    clear_before_import: bool = True,
+):
     """从 JSON 文件导入数据到数据库"""
-    with open(filepath, encoding='utf-8') as f:
+    with open(filepath, encoding="utf-8") as f:
         data = json.load(f)
-    import_database(engine, data,
-                    include_tables=include_tables,
-                    exclude_tables=exclude_tables,
-                    batch_size=batch_size,
-                    clear_before_import=clear_before_import)
+    import_database(
+        engine,
+        data,
+        include_tables=include_tables,
+        exclude_tables=exclude_tables,
+        batch_size=batch_size,
+        clear_before_import=clear_before_import,
+    )
 
 
-def migrate_database(source_engine: Engine,
-                     target_engine: Engine,
-                     exclude_tables: list[str] | None = None,
-                     batch_size: int = 1000):
+def migrate_database(
+    source_engine: Engine, target_engine: Engine, exclude_tables: list[str] | None = None, batch_size: int = 1000
+):
     """
     便捷方法：直接从源数据库迁移到目标数据库
     要求目标数据库表结构已经通过 Alembic/Base.metadata.create_all() 创建好

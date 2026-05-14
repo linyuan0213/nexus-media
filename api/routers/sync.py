@@ -2,6 +2,7 @@
 Sync Router — FastAPI 迁移
 对应原 web/controllers/sync.py，复用 app/services/sync_service.py
 """
+
 import os.path
 
 from fastapi import APIRouter, Depends
@@ -26,6 +27,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 # Request Models
 # ---------------------------------------------------------------------------
+
 
 class EmptyRequest(BaseModel):
     data: dict | None = None
@@ -131,6 +133,7 @@ class ReIdentificationRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post("/paths/save")
 def add_or_edit_sync_path(
     req: AddOrEditSyncPathRequest,
@@ -158,9 +161,7 @@ def check_sync_path(
     user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
-    ok, msg = svc.check_sync_path(
-        sid=req.sid, flag=req.flag, checked=req.checked
-    )
+    ok, msg = svc.check_sync_path(sid=req.sid, flag=req.flag, checked=req.checked)
     if ok:
         return success()
     return fail()
@@ -193,15 +194,14 @@ def delete_files(
     files = req.files
     if files:
         for file in files:
-            del_flag, del_msg = ft.delete_media_file(
-                filedir=os.path.dirname(file),
-                filename=os.path.basename(file)
-            )
+            del_flag, del_msg = ft.delete_media_file(filedir=os.path.dirname(file), filename=os.path.basename(file))
             if not del_flag:
                 import log
+
                 log.error(del_msg)
             else:
                 import log
+
                 log.info(del_msg)
     return success()
 
@@ -277,11 +277,18 @@ def rename(
         need_fix_all = True
 
     result = svc.manual_transfer(
-        inpath=path, syncmod=syncmod, outpath=dest_dir,
-        media_type=media_type, episode_format=episode_format,
-        episode_details=episode_details, episode_part=episode_part,
-        episode_offset=episode_offset, min_filesize=min_filesize,
-        tmdbid=tmdbid, season=season, need_fix_all=need_fix_all
+        inpath=path,
+        syncmod=syncmod,
+        outpath=dest_dir,
+        media_type=media_type,
+        episode_format=episode_format,
+        episode_details=episode_details,
+        episode_part=episode_part,
+        episode_offset=episode_offset,
+        min_filesize=min_filesize,
+        tmdbid=tmdbid,
+        season=season,
+        need_fix_all=need_fix_all,
     )
     if result.success:
         if not need_fix_all and not logid:
@@ -324,11 +331,17 @@ def rename_udf(
     media_type = svc.build_media_type(mtype)
 
     result = svc.manual_transfer(
-        inpath=inpath, syncmod=syncmod, outpath=outpath,
-        media_type=media_type, episode_format=episode_format,
-        episode_details=episode_details, episode_part=episode_part,
-        episode_offset=episode_offset, min_filesize=min_filesize,
-        tmdbid=tmdbid, season=season
+        inpath=inpath,
+        syncmod=syncmod,
+        outpath=outpath,
+        media_type=media_type,
+        episode_format=episode_format,
+        episode_details=episode_details,
+        episode_part=episode_part,
+        episode_offset=episode_offset,
+        min_filesize=min_filesize,
+        tmdbid=tmdbid,
+        season=season,
     )
     if result.success:
         return success(msg="转移成功")
@@ -340,7 +353,7 @@ def run_directory_sync(
     req: RunDirectorySyncRequest,
     user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
-    thread_helper = Depends(get_thread_helper),
+    thread_helper=Depends(get_thread_helper),
 ):
     thread_helper.start_thread(svc.transfer_sync, (req.sid,))
     return success(msg="执行成功")

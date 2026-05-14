@@ -1,7 +1,4 @@
-
-
 class RedisHelper:
-
     @staticmethod
     def is_valid():
         """

@@ -1,4 +1,5 @@
 """Gazelle 架构用户信息解析"""
+
 import re
 
 from lxml import etree
@@ -18,7 +19,7 @@ def parse(ins):
 
     tmps = html.xpath('//a[contains(@href, "user.php?id=")]')
     if tmps:
-        m = re.search(r"user.php\?id=(\d+)", tmps[0].attrib['href'])
+        m = re.search(r"user.php\?id=(\d+)", tmps[0].attrib["href"])
         if m and m.group(1).strip():
             ins.userid = m.group(1)
             ins.username = tmps[0].text.strip()
@@ -60,7 +61,7 @@ def parse(ins):
     else:
         level = html.xpath('//li[contains(text(), "用户等级")]/text()')
         if level:
-            ins.user_level = level[0].split(':')[1].strip()
+            ins.user_level = level[0].split(":")[1].strip()
 
     join = html.xpath('//*[@id="join-date-value"]/@data-value')
     if join:

@@ -3,13 +3,14 @@
 搜索性能优化测试用例
 验证订阅搜索的优化效果
 """
+
 import sys
 import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from unittest.mock import Mock, patch
 
-sys.path.insert(0, '.')
+sys.path.insert(0, ".")
 
 from app.indexer.client.builtin import BuiltinIndexer
 
@@ -33,23 +34,25 @@ class TestSearchPerformance(unittest.TestCase):
         self.mock_indexer.public = False
         self.mock_indexer.id = "test_site"
         self.mock_indexer.search = {
-            'paths': [{'path': '/torrents.php', 'type': 'all'}],
-            'params': {'search': '{keyword}'}
+            "paths": [{"path": "/torrents.php", "type": "all"}],
+            "params": {"search": "{keyword}"},
         }
 
     def test_spider_search_timeout_reduction(self):
         """测试爬虫搜索超时时间缩短"""
         # 验证 __spider_search 方法的默认超时时间已减少
         import inspect
+
         sig = inspect.signature(BuiltinIndexer._BuiltinIndexer__spider_search)
         params = sig.parameters
 
         # 检查 timeout 参数的默认值
-        timeout_param = params.get('timeout')
+        timeout_param = params.get("timeout")
         if timeout_param and timeout_param.default != inspect.Parameter.empty:
             # 优化后的超时时间应该不超过 30 秒
-            self.assertLessEqual(timeout_param.default, 30,
-                f"爬虫搜索超时时间 {timeout_param.default} 秒过长，应不超过 30 秒")
+            self.assertLessEqual(
+                timeout_param.default, 30, f"爬虫搜索超时时间 {timeout_param.default} 秒过长，应不超过 30 秒"
+            )
             print(f"✓ 爬虫搜索默认超时时间: {timeout_param.default} 秒")
 
     def test_searcher_concurrent_workers_limit(self):
@@ -59,8 +62,7 @@ class TestSearchPerformance(unittest.TestCase):
         max_workers = min(len(search_names), 4)
 
         # 验证并发数不超过限制
-        self.assertLessEqual(max_workers, 4,
-            f"并发线程数 {max_workers} 超过限制 4")
+        self.assertLessEqual(max_workers, 4, f"并发线程数 {max_workers} 超过限制 4")
         print(f"✓ 搜索器并发线程数限制: {max_workers}")
 
     def test_indexer_parallel_limit(self):
@@ -70,11 +72,10 @@ class TestSearchPerformance(unittest.TestCase):
 
         # 优化后的最大并发数应该不超过 10
         max_workers = min(len(indexers), 10)
-        self.assertLessEqual(max_workers, 10,
-            f"索引器并行数 {max_workers} 超过限制 10")
+        self.assertLessEqual(max_workers, 10, f"索引器并行数 {max_workers} 超过限制 10")
         print(f"✓ 索引器最大并发数: {max_workers}")
 
-    @patch('time.sleep')
+    @patch("time.sleep")
     def test_spider_polling_interval(self, mock_sleep):
         """测试爬虫轮询间隔优化"""
         # 模拟 __spider_search 的轮询逻辑
@@ -89,8 +90,11 @@ class TestSearchPerformance(unittest.TestCase):
 
         # 验证总睡眠时间减少
         total_sleep = sleep_interval * expected_calls
-        self.assertLess(total_sleep, expected_calls * 1.0,  # 对比原来的 1 秒间隔
-            f"轮询间隔总时间 {total_sleep} 秒未优化")
+        self.assertLess(
+            total_sleep,
+            expected_calls * 1.0,  # 对比原来的 1 秒间隔
+            f"轮询间隔总时间 {total_sleep} 秒未优化",
+        )
         print(f"✓ 爬虫轮询间隔优化: {sleep_interval} 秒/次")
 
     def test_request_timeout_configuration(self):
@@ -101,8 +105,7 @@ class TestSearchPerformance(unittest.TestCase):
         utils = RequestUtils()
 
         # 默认超时应该合理（20秒）
-        self.assertEqual(utils._timeout, 20,
-            f"默认请求超时 {utils._timeout} 秒不合理")
+        self.assertEqual(utils._timeout, 20, f"默认请求超时 {utils._timeout} 秒不合理")
         print(f"✓ HTTP 请求默认超时: {utils._timeout} 秒")
 
         # 验证自定义超时
@@ -116,11 +119,10 @@ class TestSearchPerformance(unittest.TestCase):
 
         # 验证爬虫配置
         settings = TorrentSpider.__custom_setting__
-        thread_count = settings.get('SPIDER_THREAD_COUNT', 3)
+        thread_count = settings.get("SPIDER_THREAD_COUNT", 3)
 
         # 优化后的线程数应该较少（2个）
-        self.assertLessEqual(thread_count, 3,
-            f"爬虫线程数 {thread_count} 过多")
+        self.assertLessEqual(thread_count, 3, f"爬虫线程数 {thread_count} 过多")
         print(f"✓ 爬虫线程数配置: {thread_count}")
 
     def test_spider_retry_times(self):
@@ -128,15 +130,15 @@ class TestSearchPerformance(unittest.TestCase):
         from app.indexer.client._spider import TorrentSpider
 
         settings = TorrentSpider.__custom_setting__
-        retry_times = settings.get('SPIDER_MAX_RETRY_TIMES', 3)
+        retry_times = settings.get("SPIDER_MAX_RETRY_TIMES", 3)
 
         # 优化后的重试次数应该较少
-        self.assertLessEqual(retry_times, 3,
-            f"爬虫重试次数 {retry_times} 过多")
+        self.assertLessEqual(retry_times, 3, f"爬虫重试次数 {retry_times} 过多")
         print(f"✓ 爬虫重试次数: {retry_times}")
 
     def test_parallel_search_performance(self):
         """测试并行搜索性能"""
+
         # 模拟并行搜索任务
         def mock_search_task(name, delay):
             time.sleep(delay)
@@ -153,16 +155,18 @@ class TestSearchPerformance(unittest.TestCase):
 
         # 使用线程池并行执行
         with ThreadPoolExecutor(max_workers=4) as executor:
-            futures = [executor.submit(mock_search_task, name, delay)
-                      for name, delay in tasks]
+            futures = [executor.submit(mock_search_task, name, delay) for name, delay in tasks]
             results = [f.result() for f in as_completed(futures)]
 
         elapsed = time.time() - start_time
 
         # 并行执行时间应该小于串行执行时间
         serial_time = sum(delay for _, delay in tasks)
-        self.assertLess(elapsed, serial_time * 0.6,  # 期望并行效率提升
-            f"并行搜索效率低: {elapsed:.2f}s vs 串行 {serial_time:.2f}s")
+        self.assertLess(
+            elapsed,
+            serial_time * 0.6,  # 期望并行效率提升
+            f"并行搜索效率低: {elapsed:.2f}s vs 串行 {serial_time:.2f}s",
+        )
         print(f"✓ 并行搜索性能: {elapsed:.2f}s (串行 {serial_time:.2f}s)")
 
     def test_connection_pool_reuse(self):
@@ -170,10 +174,8 @@ class TestSearchPerformance(unittest.TestCase):
         from app.utils.http_utils import RequestUtils
 
         # 验证连接池存在
-        self.assertTrue(hasattr(RequestUtils, '_session_pool'),
-            "RequestUtils 缺少连接池")
-        self.assertTrue(hasattr(RequestUtils, '_pool_lock'),
-            "RequestUtils 缺少连接池锁")
+        self.assertTrue(hasattr(RequestUtils, "_session_pool"), "RequestUtils 缺少连接池")
+        self.assertTrue(hasattr(RequestUtils, "_pool_lock"), "RequestUtils 缺少连接池锁")
         print("✓ HTTP 连接池已配置")
 
     def test_progress_update_frequency(self):
@@ -185,8 +187,7 @@ class TestSearchPerformance(unittest.TestCase):
         indexer_count = 10
         expected_progress_calls = indexer_count + 2  # 开始 + 每个站点 + 结束
 
-        self.assertLessEqual(expected_progress_calls, 15,
-            f"进度更新次数 {expected_progress_calls} 过多")
+        self.assertLessEqual(expected_progress_calls, 15, f"进度更新次数 {expected_progress_calls} 过多")
         print(f"✓ 进度更新次数合理: {expected_progress_calls}")
 
 
@@ -238,7 +239,7 @@ class TestSearchOptimizationIntegration(unittest.TestCase):
         print("=" * 60)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # 运行测试
     print("=" * 60)
     print("搜索性能优化测试")

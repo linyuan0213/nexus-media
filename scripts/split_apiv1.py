@@ -4,6 +4,7 @@
 并将基类提取到 web/core/apiv1_base.py。
 重写后的 web/apiv1.py 仅保留 Api 初始化和 add_namespace 注册。
 """
+
 import re
 from pathlib import Path
 
@@ -24,15 +25,13 @@ for i, line in enumerate(lines):
 base_content = "".join(lines[base_start:base_end])
 apiv1_base = Path("web/core/apiv1_base.py")
 apiv1_base.write_text(
-    "from flask_restx import Resource\n"
-    "from web.security import require_auth, login_required\n\n"
-    + base_content,
-    encoding="utf-8"
+    "from flask_restx import Resource\nfrom web.security import require_auth, login_required\n\n" + base_content,
+    encoding="utf-8",
 )
 print("Created web/core/apiv1_base.py")
 
 # 3. 解析 namespace 赋值位置
-ns_re = re.compile(r'^(\w+)\s*=\s*Apiv1\.namespace\(')
+ns_re = re.compile(r"^(\w+)\s*=\s*Apiv1\.namespace\(")
 ns_positions = []
 for i, line in enumerate(lines):
     m = ns_re.match(line)
@@ -73,12 +72,7 @@ for idx, (name, start) in enumerate(ns_positions):
     block = lines[start:end]
     block_text = "".join(block)
     # 把 "xxx = Apiv1.namespace(...)" 替换为 "xxx = Namespace(...)"
-    block_text = re.sub(
-        rf"^{name}\s*=\s*Apiv1\.namespace\(",
-        f"{name} = Namespace(",
-        block_text,
-        flags=re.MULTILINE
-    )
+    block_text = re.sub(rf"^{name}\s*=\s*Apiv1\.namespace\(", f"{name} = Namespace(", block_text, flags=re.MULTILINE)
     # 文件末尾导出 {name}_api，方便 apiv1.py 统一 import
     file_content = common_header + block_text + f"\n{name}_api = {name}\n"
     out_path = OUT_DIR / f"{name}.py"
@@ -86,7 +80,7 @@ for idx, (name, start) in enumerate(ns_positions):
     print(f"Created {out_path}")
 
 # 7. 重写 web/apiv1.py 为入口注册文件
-skeleton = '''from flask import Blueprint
+skeleton = """from flask import Blueprint
 from flask_restx import Api
 
 apiv1_bp = Blueprint("apiv1",
@@ -103,7 +97,7 @@ Apiv1 = Api(apiv1_bp,
             authorizations={"Bearer Auth": {"type": "apiKey", "name": "Authorization", "in": "header"}},
             )
 
-'''
+"""
 
 for name, _ in ns_positions:
     skeleton += f"from web.controllers.api_v1.{name} import {name}_api as {name}\n"

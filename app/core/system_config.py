@@ -18,6 +18,7 @@ class SystemConfig(metaclass=SingletonMeta):
     def init_config(self):
         """缓存系统设置"""
         import log
+
         rows = self._repo.list_by_type(self._type)
         for row in rows:
             if not row or not row.value:
@@ -43,7 +44,9 @@ class SystemConfig(metaclass=SingletonMeta):
             key = key.value
         self.systemconfig[key] = value
 
-        db_value = json.dumps(value) if self._is_obj(value) and value is not None else str(value) if value is not None else ''
+        db_value = (
+            json.dumps(value) if self._is_obj(value) and value is not None else str(value) if value is not None else ""
+        )
         self._repo.set(self._type, key, db_value)
 
     def get(self, key=None):

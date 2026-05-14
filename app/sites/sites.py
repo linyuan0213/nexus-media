@@ -57,15 +57,17 @@ class Sites:
             site_rssurl = site.RSSURL
             site_signurl = site.SIGNURL
             site_cookie = site.COOKIE
-            site_uses = site.INCLUDE or ''
-            site_headers = site_note.get('headers')
+            site_uses = site.INCLUDE or ""
+            site_headers = site_note.get("headers")
             uses = []
             if site_uses:
                 rss_enable = True if "D" in site_uses and site_rssurl else False
-                brush_enable = True if "S" in site_uses and site_rssurl and (
-                    site_cookie or site_headers) else False
-                statistic_enable = True if "T" in site_uses and (
-                    site_rssurl or site_signurl) and (site_cookie or site_headers) else False
+                brush_enable = True if "S" in site_uses and site_rssurl and (site_cookie or site_headers) else False
+                statistic_enable = (
+                    True
+                    if "T" in site_uses and (site_rssurl or site_signurl) and (site_cookie or site_headers)
+                    else False
+                )
                 uses.append("D") if rss_enable else None
                 uses.append("S") if brush_enable else None
                 uses.append("T") if statistic_enable else None
@@ -73,7 +75,7 @@ class Sites:
                 rss_enable = False
                 brush_enable = False
                 statistic_enable = False
-            strict_url = ''
+            strict_url = ""
             site_def = SiteEngine.get_instance().get_by_url(site_signurl or site_rssurl or "")
             if site_def and site_def.api:
                 strict_url = site_def.api.base_url
@@ -115,7 +117,7 @@ class Sites:
                 "limit_seconds": site_note.get("limit_seconds"),
                 "strict_url": strict_url,
                 "tag": site.NAME if site_note.get("tag") == "Y" else "",
-                "public": is_public
+                "public": is_public,
             }
             # 以ID存储
             self._siteByIds[site.ID] = site_info
@@ -124,16 +126,15 @@ class Sites:
             if site_def and site_def.api:
                 site_strict_url = StringUtils.get_url_domain(site_def.api.base_url)
             else:
-                site_strict_url = StringUtils.get_url_domain(
-                    site.SIGNURL or site.RSSURL)
+                site_strict_url = StringUtils.get_url_domain(site.SIGNURL or site.RSSURL)
             if site_strict_url:
                 self._siteByUrls[site_strict_url] = site_info
             # 初始化站点限速器
             self._limiters[site.ID] = SiteRateLimiter(
-                limit_interval=Sites._rate_limit_val(site_note, "limit_interval", multiplier=60,
-                                               require_fields=["limit_count"]),
-                limit_count=Sites._rate_limit_val(site_note, "limit_count",
-                                            require_fields=["limit_interval"]),
+                limit_interval=Sites._rate_limit_val(
+                    site_note, "limit_interval", multiplier=60, require_fields=["limit_count"]
+                ),
+                limit_count=Sites._rate_limit_val(site_note, "limit_count", require_fields=["limit_interval"]),
                 limit_seconds=Sites._rate_limit_val(site_note, "limit_seconds"),
             )
 
@@ -141,17 +142,9 @@ class Sites:
         """
         加载图标到内存
         """
-        self._site_favicons = {
-            site.SITE: site.FAVICON for site in self.site_repo.get_site_favicons()}
+        self._site_favicons = {site.SITE: site.FAVICON for site in self.site_repo.get_site_favicons()}
 
-    def get_sites(self,
-                   siteid=None,
-                   siteurl=None,
-                   siteids=None,
-                   rss=False,
-                   brush=False,
-                   statistic=False,
-                   public=False):
+    def get_sites(self, siteid=None, siteurl=None, siteids=None, rss=False, brush=False, statistic=False, public=False):
         """
         获取站点配置
         """
@@ -165,15 +158,15 @@ class Sites:
 
         ret_sites = []
         for site in self._siteByIds.values():
-            if rss and not site.get('rss_enable'):
+            if rss and not site.get("rss_enable"):
                 continue
-            if brush and not site.get('brush_enable'):
+            if brush and not site.get("brush_enable"):
                 continue
-            if statistic and not site.get('statistic_enable'):
+            if statistic and not site.get("statistic_enable"):
                 continue
-            if not public and site.get('public'):
+            if not public and site.get("public"):
                 continue
-            if siteids and str(site.get('id')) not in siteids:
+            if siteids and str(site.get("id")) not in siteids:
                 continue
             ret_sites.append(site)
         if siteid or siteurl:
@@ -224,42 +217,22 @@ class Sites:
             return 0
         return max([int(site.get("pri")) for site in self._siteByIds.values()])
 
-    def get_site_dict(self,
-                      rss=False,
-                      brush=False,
-                      statistic=False,
-                      signin=False):
+    def get_site_dict(self, rss=False, brush=False, statistic=False, signin=False):
         """
         获取站点字典
         :param signin: 是否为签到用途，True时过滤掉BT站点（公开站点）
         """
         return [
-            {
-                "id": site.get("id"),
-                "name": site.get("name")
-            } for site in self.get_sites(
-                rss=rss,
-                brush=brush,
-                statistic=statistic,
-                public=True
-            ) if not (signin and site.get("public"))
+            {"id": site.get("id"), "name": site.get("name")}
+            for site in self.get_sites(rss=rss, brush=brush, statistic=statistic, public=True)
+            if not (signin and site.get("public"))
         ]
 
-    def get_site_names(self,
-                       rss=False,
-                       brush=False,
-                       statistic=False):
+    def get_site_names(self, rss=False, brush=False, statistic=False):
         """
         获取站点名称
         """
-        return [
-            site.get("name") for site in self.get_sites(
-                rss=rss,
-                brush=brush,
-                statistic=statistic,
-                public=True
-            )
-        ]
+        return [site.get("name") for site in self.get_sites(rss=rss, brush=brush, statistic=statistic, public=True)]
 
     def get_site_favicon(self, site_name=None):
         if site_name:
@@ -325,16 +298,13 @@ class Sites:
         proxy = site_info.get("proxy")
         chrome = site_info.get("chrome")
 
-        site_url = StringUtils.get_base_url(
-            site_info.get("signurl") or site_info.get("rssurl"))
+        site_url = StringUtils.get_base_url(site_info.get("signurl") or site_info.get("rssurl"))
         if not site_url:
             return False, "未配置站点地址", 0
 
         if is_public:
             start_time = datetime.now()
-            res = RequestUtils(
-                proxies=get_proxies() if proxy else None
-            ).get_res(url=site_url)
+            res = RequestUtils(proxies=get_proxies() if proxy else None).get_res(url=site_url)
             seconds = round((datetime.now() - start_time).total_seconds(), 3)
             if res and res.status_code == 200:
                 return True, "连接成功", seconds
@@ -355,8 +325,10 @@ class Sites:
         site_def = SiteEngine.get_instance().get_by_url(site_url)
         if site_def:
             user_config = {
-                "cookie": site_cookie, "ua": ua,
-                "headers": headers, "proxy": proxy,
+                "cookie": site_cookie,
+                "ua": ua,
+                "headers": headers,
+                "proxy": proxy,
             }
             return SiteEngine.get_instance().test_connection(site_url, user_config)
 
@@ -373,10 +345,9 @@ class Sites:
             return False, "Cookie失效", seconds
 
         start_time = datetime.now()
-        res = RequestUtils(
-            cookies=site_cookie, headers=headers,
-            proxies=get_proxies() if proxy else None
-        ).get_res(url=site_url)
+        res = RequestUtils(cookies=site_cookie, headers=headers, proxies=get_proxies() if proxy else None).get_res(
+            url=site_url
+        )
         seconds = round((datetime.now() - start_time).total_seconds(), 3)
         if res and res.status_code == 200:
             if not SiteHelper.is_logged_in(res.text):
@@ -408,34 +379,30 @@ class Sites:
                     return None
         return int(val) * multiplier
 
-    def add_site(self, name, site_pri,
-                 rssurl=None, signurl=None, cookie=None, note=None, rss_uses=None):
+    def add_site(self, name, site_pri, rssurl=None, signurl=None, cookie=None, note=None, rss_uses=None):
         """
         添加站点
         """
-        ret = self.site_repo.insert_config_site(name=name,
-                                                site_pri=site_pri,
-                                                rssurl=rssurl,
-                                                signurl=signurl,
-                                                cookie=cookie,
-                                                note=note,
-                                                rss_uses=rss_uses)
+        ret = self.site_repo.insert_config_site(
+            name=name, site_pri=site_pri, rssurl=rssurl, signurl=signurl, cookie=cookie, note=note, rss_uses=rss_uses
+        )
         self.init_config()
         return ret
 
-    def update_site(self, tid, name, site_pri,
-                    rssurl, signurl, cookie, note, rss_uses):
+    def update_site(self, tid, name, site_pri, rssurl, signurl, cookie, note, rss_uses):
         """
         更新站点
         """
-        ret = self.site_repo.update_config_site(tid=tid,
-                                               name=name,
-                                               site_pri=site_pri,
-                                               rssurl=rssurl,
-                                               signurl=signurl,
-                                               cookie=cookie,
-                                               note=note,
-                                               rss_uses=rss_uses)
+        ret = self.site_repo.update_config_site(
+            tid=tid,
+            name=name,
+            site_pri=site_pri,
+            rssurl=rssurl,
+            signurl=signurl,
+            cookie=cookie,
+            note=note,
+            rss_uses=rss_uses,
+        )
         self.init_config()
         return ret
 
@@ -451,9 +418,7 @@ class Sites:
         """
         更新站点Cookie和UA
         """
-        ret = self.site_repo.update_site_cookie_ua(tid=siteid,
-                                                  cookie=cookie,
-                                                  ua=ua)
+        ret = self.site_repo.update_site_cookie_ua(tid=siteid, cookie=cookie, ua=ua)
         self.init_config()
         return ret
 

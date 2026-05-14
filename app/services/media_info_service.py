@@ -22,10 +22,12 @@ class MediaInfoService:
     负责 TMDB/豆瓣 媒体信息查询、订阅信息回退、季列表等
     """
 
-    def __init__(self,
-                 media_service: MediaService | None = None,
-                 subscribe: Subscribe | None = None,
-                 media_server: MediaServer | None = None):
+    def __init__(
+        self,
+        media_service: MediaService | None = None,
+        subscribe: Subscribe | None = None,
+        media_server: MediaServer | None = None,
+    ):
         self._media = media_service or MediaService()
         self._subscribe = subscribe or Subscribe()
         self._media_server = media_server or MediaServer()
@@ -34,12 +36,20 @@ class MediaInfoService:
         """查询 TMDB 剧集情况并检查媒体服务器存在状态"""
         episodes = self._media.get_tmdb_season_episodes(tmdbid=tmdbid, season=season)
         for episode in episodes:
-            episode.update({
-                "state": True if self._media_server.check_item_exists(
-                    mtype=MediaType.TV, title=title, year=year,
-                    tmdbid=tmdbid, season=season,
-                    episode=episode.get("episode_number")) else False
-            })
+            episode.update(
+                {
+                    "state": True
+                    if self._media_server.check_item_exists(
+                        mtype=MediaType.TV,
+                        title=title,
+                        year=year,
+                        tmdbid=tmdbid,
+                        season=season,
+                        episode=episode.get("episode_number"),
+                    )
+                    else False
+                }
+            )
         return SeasonEpisodesResultDTO(episodes=episodes)
 
     def get_tvseason_list(self, tmdbid, title) -> list[dict]:
@@ -58,8 +68,10 @@ class MediaInfoService:
         if title_season:
             return [{"text": "第%s季" % title_season, "num": title_season}]
         return [
-            {"text": "第%s季" % cn2an.an2cn(season.get("season_number"), mode='low'),
-             "num": season.get("season_number")}
+            {
+                "text": "第%s季" % cn2an.an2cn(season.get("season_number"), mode="low"),
+                "num": season.get("season_number"),
+            }
             for season in season_infos
         ]
 
@@ -93,8 +105,7 @@ class MediaInfoService:
                 vote_average = rssinfo[rssid].get("vote") or 0.0
                 year = rssinfo[rssid].get("year") or ""
                 release_date = rssinfo[rssid].get("release_date") or ""
-                link_url = self._media.get_detail_url(mtype=media_type,
-                                                       tmdbid=rssinfo[rssid].get("tmdbid"))
+                link_url = self._media.get_detail_url(mtype=media_type, tmdbid=rssinfo[rssid].get("tmdbid"))
                 if overview and poster_path:
                     rssid_ok = True
 
@@ -104,8 +115,9 @@ class MediaInfoService:
             else:
                 media = self._media.get_media_info(title=f"{title} {year}", mtype=media_type)
             if not media or not media.tmdb_info:
-                return MediaInfoResultDTO(type=mtype, type_str=media_type.value,
-                                          page=page, title=title or "", year=year or "")
+                return MediaInfoResultDTO(
+                    type=mtype, type_str=media_type.value, page=page, title=title or "", year=year or ""
+                )
             if not mediaid:
                 mediaid = media.tmdb_id
             link_url = media.get_detail_url()
@@ -115,17 +127,18 @@ class MediaInfoService:
             vote_average = round(float(media.vote_average or 0), 1)
             year = media.year or ""
             if media_type != MediaType.MOVIE:
-                release_date = media.tmdb_info.get('first_air_date') or ""
-                seasons = [{
-                    "text": "第%s季" % cn2an.an2cn(season.get("season_number"), mode='low'),
-                    "num": season.get("season_number")}
-                    for season in self._media.get_tmdb_tv_seasons(tv_info=media.tmdb_info)]
+                release_date = media.tmdb_info.get("first_air_date") or ""
+                seasons = [
+                    {
+                        "text": "第%s季" % cn2an.an2cn(season.get("season_number"), mode="low"),
+                        "num": season.get("season_number"),
+                    }
+                    for season in self._media.get_tmdb_tv_seasons(tv_info=media.tmdb_info)
+                ]
             else:
-                release_date = media.tmdb_info.get('release_date') or ""
+                release_date = media.tmdb_info.get("release_date") or ""
             if not rssid:
-                rssid = self._subscribe.get_subscribe_id(mtype=media_type,
-                                                          title=title,
-                                                          tmdbid=mediaid)
+                rssid = self._subscribe.get_subscribe_id(mtype=media_type, title=title, tmdbid=mediaid)
 
         if poster_path:
             poster_path = ImageProxyHelper.get_proxy_image_url(
@@ -133,10 +146,19 @@ class MediaInfoService:
             )
 
         return MediaInfoResultDTO(
-            type=mtype, type_str=media_type.value, page=page,
-            title=title or "", vote_average=vote_average, poster_path=poster_path,
-            release_date=release_date or "", year=year or "", overview=overview or "",
-            link_url=link_url, tmdbid=mediaid, rssid=rssid, seasons=seasons or []
+            type=mtype,
+            type_str=media_type.value,
+            page=page,
+            title=title or "",
+            vote_average=vote_average,
+            poster_path=poster_path,
+            release_date=release_date or "",
+            year=year or "",
+            overview=overview or "",
+            link_url=link_url,
+            tmdbid=mediaid,
+            rssid=rssid,
+            seasons=seasons or [],
         )
 
     def get_media_person(self, tmdbid, mtype_str, keyword) -> Any:
@@ -174,6 +196,7 @@ class MediaInfoService:
     def name_test(self, name, subtitle) -> dict:
         """名称识别测试"""
         from app.utils.web_utils import mediainfo_dict
+
         media_info = self._media.get_media_info(title=name, subtitle=subtitle)
         if not media_info:
             return {"name": "无法识别"}
@@ -185,11 +208,9 @@ class MediaInfoService:
         results = []
         for media in medias:
             d = media.to_dict()
-            for img_key in ['image', 'poster', 'backdrop']:
+            for img_key in ["image", "poster", "backdrop"]:
                 if d.get(img_key):
-                    d[img_key] = ImageProxyHelper.get_proxy_image_url(
-                        d[img_key], use_proxy=True
-                    )
+                    d[img_key] = ImageProxyHelper.get_proxy_image_url(d[img_key], use_proxy=True)
             results.append(d)
         return results
 
@@ -209,9 +230,16 @@ class MediaInfoService:
                 release_date = re.sub(r"\(.*\)", "", douban_info.get("pubdate")[0])
             if not release_date:
                 return None
-            return dict(type="电影", title=title, start=release_date,
-                        id=tid, year=release_date[0:4] if release_date else "",
-                        poster=poster_path, vote_average=vote_average, rssid=rssid)
+            return dict(
+                type="电影",
+                title=title,
+                start=release_date,
+                id=tid,
+                year=release_date[0:4] if release_date else "",
+                poster=poster_path,
+                vote_average=vote_average,
+                rssid=rssid,
+            )
         else:
             if tid:
                 tmdb_info = self._media.get_tmdb_info(mtype=MediaType.MOVIE, tmdbid=tid)
@@ -219,16 +247,24 @@ class MediaInfoService:
                 return None
             if not tmdb_info:
                 return None
-            poster_path = ImageProxyHelper.get_tmdbimage_url(tmdb_info.get('poster_path')) \
-                if tmdb_info.get('poster_path') else ""
-            title = tmdb_info.get('title')
+            poster_path = (
+                ImageProxyHelper.get_tmdbimage_url(tmdb_info.get("poster_path")) if tmdb_info.get("poster_path") else ""
+            )
+            title = tmdb_info.get("title")
             vote_average = tmdb_info.get("vote_average")
-            release_date = tmdb_info.get('release_date')
+            release_date = tmdb_info.get("release_date")
             if not release_date:
                 return None
-            return dict(type="电影", title=title, start=release_date,
-                        id=tid, year=release_date[0:4] if release_date else "",
-                        poster=poster_path, vote_average=vote_average, rssid=rssid)
+            return dict(
+                type="电影",
+                title=title,
+                start=release_date,
+                id=tid,
+                year=release_date[0:4] if release_date else "",
+                poster=poster_path,
+                vote_average=vote_average,
+                rssid=rssid,
+            )
 
     def get_tv_calendar(self, tid, season, name, rssid) -> list | None:
         """查询电视剧上映日期"""
@@ -244,11 +280,18 @@ class MediaInfoService:
             release_date = re.sub(r"\(.*\)", "", douban_info.get("pubdate")[0])
             if not release_date:
                 return None
-            return [{
-                "type": "电视剧", "title": title, "start": release_date,
-                "id": tid, "year": release_date[0:4] if release_date else "",
-                "poster": poster_path, "vote_average": vote_average, "rssid": rssid
-            }]
+            return [
+                {
+                    "type": "电视剧",
+                    "title": title,
+                    "start": release_date,
+                    "id": tid,
+                    "year": release_date[0:4] if release_date else "",
+                    "poster": poster_path,
+                    "vote_average": vote_average,
+                    "rssid": rssid,
+                }
+            ]
         else:
             if tid:
                 tmdb_info = self._media.get_tmdb_tv_season_detail(tmdbid=tid, season=season)
@@ -260,11 +303,11 @@ class MediaInfoService:
             if not tmdb_info.get("poster_path"):
                 tv_tmdb_info = self._media.get_tmdb_info(mtype=MediaType.TV, tmdbid=tid)
                 if tv_tmdb_info:
-                    poster_path = ImageProxyHelper.get_tmdbimage_url(tv_tmdb_info.get('poster_path'))
+                    poster_path = ImageProxyHelper.get_tmdbimage_url(tv_tmdb_info.get("poster_path"))
                 else:
                     poster_path = ""
             else:
-                poster_path = ImageProxyHelper.get_tmdbimage_url(tmdb_info.get('poster_path'))
+                poster_path = ImageProxyHelper.get_tmdbimage_url(tmdb_info.get("poster_path"))
             year = air_date[0:4] if air_date else ""
             events = []
             episodes = tmdb_info.get("episodes") or []
@@ -273,14 +316,18 @@ class MediaInfoService:
                     title = "%s 第%s季第%s集" % (name, season, episode.get("episode_number"))
                 else:
                     title = "%s 第%s集" % (name, episode.get("episode_number"))
-                events.append({
-                    "type": "剧集", "title": title,
-                    "start": episode.get("air_date"),
-                    "id": tid, "year": year,
-                    "poster": poster_path,
-                    "vote_average": episode.get("vote_average") or "无",
-                    "rssid": rssid
-                })
+                events.append(
+                    {
+                        "type": "剧集",
+                        "title": title,
+                        "start": episode.get("air_date"),
+                        "id": tid,
+                        "year": year,
+                        "poster": poster_path,
+                        "vote_average": episode.get("vote_average") or "无",
+                        "rssid": rssid,
+                    }
+                )
             return events
 
     def get_media_detail(self, tmdbid, mtype_str) -> dict[str, Any] | None:
@@ -290,16 +337,24 @@ class MediaInfoService:
         if not media_info or not media_info.tmdb_info:
             return None
         fav, rssid, item_url = check_media_exists(
-            media_server=self._media_server, subscribe=self._subscribe,
-            mtype=mtype, title=media_info.title, year=media_info.year,
-            mediaid=media_info.tmdb_id)
+            media_server=self._media_server,
+            subscribe=self._subscribe,
+            mtype=mtype,
+            title=media_info.title,
+            year=media_info.year,
+            mediaid=media_info.tmdb_id,
+        )
         seasons = self._media.get_tmdb_tv_seasons(media_info.tmdb_info)
         if seasons:
             for season in seasons:
                 try:
                     exists = self._media_server.check_item_exists(
-                        mtype=mtype, title=media_info.title, year=media_info.year,
-                        tmdbid=media_info.tmdb_id, season=season.get("season_number"))
+                        mtype=mtype,
+                        title=media_info.title,
+                        year=media_info.year,
+                        tmdbid=media_info.tmdb_id,
+                        season=season.get("season_number"),
+                    )
                     season.update({"state": True if exists else False})
                 except Exception as e:
                     log.error(f"【media_detail】检查季存在状态失败: {str(e)}")
@@ -328,5 +383,5 @@ class MediaInfoService:
             "fav": fav,
             "item_url": item_url,
             "rssid": rssid,
-            "seasons": seasons
+            "seasons": seasons,
         }

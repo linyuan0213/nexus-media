@@ -5,6 +5,7 @@
 并提供基于 Torznab XML 的通用搜索默认实现。
 所有业务逻辑（过滤、识别）已迁移到 app.indexer.core。
 """
+
 import datetime
 import xml.dom.minidom
 from abc import ABCMeta, abstractmethod
@@ -61,12 +62,7 @@ class _IIndexClient(metaclass=ABCMeta):
     def get_indexers(self, check=True, indexer_id=None, public=True):
         """获取索引站点列表"""
 
-    def search(self, order_seq,
-               indexer,
-               key_word,
-               filter_args: dict,
-               match_media,
-               in_from: SearchType):
+    def search(self, order_seq, indexer, key_word, filter_args: dict, match_media, in_from: SearchType):
         """
         默认搜索实现：基于 Torznab XML 协议
 
@@ -84,28 +80,26 @@ class _IIndexClient(metaclass=ABCMeta):
         start_time = datetime.datetime.now()
         log.info(f"【{self.index_type}】开始搜索Indexer：{indexer.name} ...")
 
-        search_word = StringUtils.handler_special_chars(text=key_word,
-                                                        replace_word=" ",
-                                                        allow_space=True)
+        search_word = StringUtils.handler_special_chars(text=key_word, replace_word=" ", allow_space=True)
         api_url = f"{indexer.domain}?apikey={self.api_key}&t=search&q={search_word}"
         result_array = self.__parse_torznabxml(api_url)
 
         seconds = (datetime.datetime.now() - start_time).seconds
         if len(result_array) == 0:
             log.warn(f"【{self.index_type}】{indexer.name} 关键词 {key_word} 未搜索到数据")
-            self.progress.update(ptype=progress_key,
-                                 text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
+            self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
             return []
         else:
             log.warn(f"【{self.index_type}】{indexer.name} 关键词 {key_word} 返回数据：{len(result_array)}")
-            self.progress.update(ptype=progress_key,
-                                 text=f"{indexer.name} 关键词 {key_word} 返回 {len(result_array)} 条数据")
+            self.progress.update(
+                ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 返回 {len(result_array)} 条数据"
+            )
 
         # 注入站点元信息
         for item in result_array:
-            item['_indexer_name'] = indexer.name
-            item['_indexer_order'] = order_seq
-            item['_indexer_public'] = getattr(indexer, 'public', False)
+            item["_indexer_name"] = indexer.name
+            item["_indexer_order"] = order_seq
+            item["_indexer_public"] = getattr(indexer, "public", False)
 
         return result_array
 
@@ -136,14 +130,16 @@ class _IIndexClient(metaclass=ABCMeta):
                             seeders = node.getAttribute("value")
                         if node.getAttribute("name") == "peers":
                             peers = node.getAttribute("value")
-                    ret_array.append({
-                        "title": title,
-                        "enclosure": enclosure,
-                        "description": description,
-                        "size": size,
-                        "seeders": seeders,
-                        "peers": peers,
-                    })
+                    ret_array.append(
+                        {
+                            "title": title,
+                            "enclosure": enclosure,
+                            "description": description,
+                            "size": size,
+                            "seeders": seeders,
+                            "peers": peers,
+                        }
+                    )
                 except Exception as e:
                     ExceptionUtils.exception_traceback(e)
                     continue

@@ -4,6 +4,7 @@ Pagination Utils - 分页工具函数
 从 web.backend.web_utils.WebUtils 中下沉 get_page_range 方法，
 使路由层不再依赖旧的 Flask 工具类。
 """
+
 from collections.abc import Iterable
 
 

@@ -1,4 +1,3 @@
-
 from datetime import datetime
 
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
@@ -49,13 +48,11 @@ class BrushService:
         """将前端参数转换为刷流任务 item 字典"""
         rss_rule = {k: data.get(v) for k, v in _RSS_RULE_FIELDS.items()}
         remove_rule = {k: data.get(v) for k, v in _REMOVE_RULE_FIELDS.items()}
-        stop_rule = {k: ('Y' if data.get(v) else 'N')
-                     for k, v in _STOP_RULE_FIELDS.items()}
+        stop_rule = {k: ("Y" if data.get(v) else "N") for k, v in _STOP_RULE_FIELDS.items()}
 
         brushtask_totalsize = data.get("brushtask_totalsize")
         try:
-            seed_size_bytes = int(float(brushtask_totalsize) * 1024 ** 3) \
-                if brushtask_totalsize else 0
+            seed_size_bytes = int(float(brushtask_totalsize) * 1024**3) if brushtask_totalsize else 0
         except (ValueError, TypeError):
             seed_size_bytes = 0
 
@@ -70,12 +67,12 @@ class BrushService:
             "time_range": data.get("brushtask_time_range"),
             "label": data.get("brushtask_label"),
             "savepath": data.get("brushtask_savepath"),
-            "transfer": 'Y' if data.get("brushtask_transfer") else 'N',
+            "transfer": "Y" if data.get("brushtask_transfer") else "N",
             "state": data.get("brushtask_state"),
             "rss_rule": rss_rule,
             "remove_rule": remove_rule,
             "stop_rule": stop_rule,
-            "sendmessage": 'Y' if data.get("brushtask_sendmessage") else 'N',
+            "sendmessage": "Y" if data.get("brushtask_sendmessage") else "N",
         }
 
     def add_or_update_task(self, data: dict) -> None:
@@ -93,12 +90,10 @@ class BrushService:
         self._brush.delete_brushtask(taskid)
 
     def get_torrents(self, taskid) -> BrushTorrentListDTO:
-        results = self._brush.get_brushtask_torrents(
-            brush_id=taskid, active=False)
+        results = self._brush.get_brushtask_torrents(brush_id=taskid, active=False)
         if not results:
             return BrushTorrentListDTO(torrents=None)
-        return BrushTorrentListDTO(
-            torrents=[item.as_dict() for item in results])
+        return BrushTorrentListDTO(torrents=[item.as_dict() for item in results])
 
     def run_task(self, taskid) -> None:
         self._brush.check_task_rss(taskid)
@@ -107,40 +102,30 @@ class BrushService:
         if state is not None:
             if task_ids:
                 for tid in task_ids:
-                    self._brush.update_brushtask_state(
-                        state=state, brushtask_id=tid)
+                    self._brush.update_brushtask_state(state=state, brushtask_id=tid)
             else:
                 self._brush.update_brushtask_state(state=state)
 
     # ---------- 规则引擎委托 ----------
 
     @staticmethod
-    def check_rss_rule(rss_rule: dict, title: str, torrent_size: float,
-                       pubdate: datetime | None, torrent_attr: dict) -> bool:
+    def check_rss_rule(
+        rss_rule: dict, title: str, torrent_size: float, pubdate: datetime | None, torrent_attr: dict
+    ) -> bool:
         """委托给领域规则引擎：检查种子是否符合刷流RSS选种规则"""
         return BrushRuleEngine.check_rss_rule(
-            rss_rule=rss_rule,
-            title=title,
-            torrent_size=torrent_size,
-            pubdate=pubdate,
-            torrent_attr=torrent_attr
+            rss_rule=rss_rule, title=title, torrent_size=torrent_size, pubdate=pubdate, torrent_attr=torrent_attr
         )
 
     @staticmethod
     def check_remove_rule(remove_rule: dict | None, params: dict):
         """委托给领域规则引擎：检查是否符合删种规则"""
-        return BrushRuleEngine.check_remove_rule(
-            remove_rule=remove_rule,
-            params=params
-        )
+        return BrushRuleEngine.check_remove_rule(remove_rule=remove_rule, params=params)
 
     @staticmethod
     def check_stop_rule(stop_rule: dict | None, torrent_attr: dict):
         """委托给领域规则引擎：检查是否符合停种规则"""
-        return BrushRuleEngine.check_stop_rule(
-            stop_rule=stop_rule,
-            torrent_attr=torrent_attr
-        )
+        return BrushRuleEngine.check_stop_rule(stop_rule=stop_rule, torrent_attr=torrent_attr)
 
     @staticmethod
     def format_rule_html(rules: dict | None) -> str:
@@ -150,8 +135,4 @@ class BrushService:
     @staticmethod
     def check_range_rule(value, rule_value: str, multiplier: float = 1.0) -> bool:
         """委托给领域规则引擎：通用范围规则检查"""
-        return BrushRuleEngine.check_range_rule(
-            value=value,
-            rule_value=rule_value,
-            multiplier=multiplier
-        )
+        return BrushRuleEngine.check_range_rule(value=value, rule_value=rule_value, multiplier=multiplier)

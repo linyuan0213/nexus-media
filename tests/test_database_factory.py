@@ -2,6 +2,7 @@
 数据库工厂模块测试用例
 测试 SQLite、MySQL、PostgreSQL 三种数据库的支持
 """
+
 import os
 import tempfile
 from unittest.mock import MagicMock
@@ -9,7 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 
 # 设置测试环境变量
-os.environ['FLASK_DEBUG'] = '1'
+os.environ["FLASK_DEBUG"] = "1"
 
 # 测试前需要导入的模块
 from sqlalchemy import Engine, create_engine, text
@@ -24,62 +25,55 @@ class TestDatabaseFactory:
 
     def test_get_database_url_sqlite(self):
         """测试获取 SQLite 连接URL"""
-        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             db_path = f.name
 
         try:
-            url = DatabaseFactory.get_database_url(
-                db_type='sqlite',
-                db_path=db_path
-            )
-            assert 'sqlite:///' in url
+            url = DatabaseFactory.get_database_url(db_type="sqlite", db_path=db_path)
+            assert "sqlite:///" in url
             assert db_path in url
-            assert 'check_same_thread=False' in url
+            assert "check_same_thread=False" in url
         finally:
             os.unlink(db_path)
 
     def test_get_database_url_mysql(self):
         """测试获取 MySQL 连接URL"""
         url = DatabaseFactory.get_database_url(
-            db_type='mysql',
-            host='localhost',
+            db_type="mysql",
+            host="localhost",
             port=3306,
-            username='test_user',
-            password='test_pass@123',
-            database='test_db'
+            username="test_user",
+            password="test_pass@123",
+            database="test_db",
         )
-        assert 'mysql+pymysql://' in url
-        assert 'test_user' in url
-        assert 'test_pass%40123' in url  # URL编码后的@
-        assert 'localhost:3306' in url
-        assert 'test_db' in url
+        assert "mysql+pymysql://" in url
+        assert "test_user" in url
+        assert "test_pass%40123" in url  # URL编码后的@
+        assert "localhost:3306" in url
+        assert "test_db" in url
 
     def test_get_database_url_postgresql(self):
         """测试获取 PostgreSQL 连接URL"""
         url = DatabaseFactory.get_database_url(
-            db_type='postgresql',
-            host='localhost',
+            db_type="postgresql",
+            host="localhost",
             port=5432,
-            username='postgres',
-            password='test_pass@123',
-            database='test_db'
+            username="postgres",
+            password="test_pass@123",
+            database="test_db",
         )
-        assert 'postgresql+psycopg2://' in url
-        assert 'postgres' in url
-        assert 'localhost:5432' in url
-        assert 'test_db' in url
+        assert "postgresql+psycopg2://" in url
+        assert "postgres" in url
+        assert "localhost:5432" in url
+        assert "test_db" in url
 
     def test_create_engine_sqlite(self):
         """测试创建 SQLite 引擎"""
-        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             db_path = f.name
 
         try:
-            engine = DatabaseFactory.create_engine(
-                db_type='sqlite',
-                db_path=db_path,
-                is_media_db=False
-            )
+            engine = DatabaseFactory.create_engine(db_type="sqlite", db_path=db_path, is_media_db=False)
             assert isinstance(engine, Engine)
             assert DatabaseFactory.is_sqlite(engine)
 
@@ -101,14 +95,14 @@ class TestDatabaseFactory:
         """测试检测 MySQL 数据库"""
         # 使用 mock 引擎测试
         mock_engine = MagicMock()
-        mock_engine.url.drivername = 'mysql+pymysql'
+        mock_engine.url.drivername = "mysql+pymysql"
         assert DatabaseFactory.is_mysql(mock_engine)
         assert not DatabaseFactory.is_sqlite(mock_engine)
 
     def test_is_postgresql(self):
         """测试检测 PostgreSQL 数据库"""
         mock_engine = MagicMock()
-        mock_engine.url.drivername = 'postgresql+psycopg2'
+        mock_engine.url.drivername = "postgresql+psycopg2"
         assert DatabaseFactory.is_postgresql(mock_engine)
         assert not DatabaseFactory.is_sqlite(mock_engine)
 
@@ -124,31 +118,31 @@ class TestSQLAdapter:
         sql = 'INSERT OR IGNORE INTO "CONFIG_FILTER_GROUP" ("ID","GROUP_NAME") VALUES (1,"test")'
         result = adapter.adapt_sql(sql)
         # SQLite 保持原样
-        assert 'INSERT OR IGNORE INTO' in result
+        assert "INSERT OR IGNORE INTO" in result
 
     def test_adapt_insert_or_ignore_mysql(self):
         """测试适配 INSERT OR IGNORE - MySQL"""
         mock_engine = MagicMock()
-        mock_engine.url.drivername = 'mysql+pymysql'
+        mock_engine.url.drivername = "mysql+pymysql"
         adapter = SQLAdapter(mock_engine)
 
         sql = 'INSERT OR IGNORE INTO "CONFIG_FILTER_GROUP" ("ID","GROUP_NAME") VALUES (1,"test")'
         result = adapter.adapt_sql(sql)
         # MySQL 转换为 INSERT IGNORE
-        assert 'INSERT IGNORE INTO' in result
-        assert 'OR IGNORE' not in result
+        assert "INSERT IGNORE INTO" in result
+        assert "OR IGNORE" not in result
 
     def test_adapt_insert_or_ignore_postgresql(self):
         """测试适配 INSERT OR IGNORE - PostgreSQL"""
         mock_engine = MagicMock()
-        mock_engine.url.drivername = 'postgresql+psycopg2'
+        mock_engine.url.drivername = "postgresql+psycopg2"
         adapter = SQLAdapter(mock_engine)
 
         sql = 'INSERT OR IGNORE INTO "CONFIG_FILTER_GROUP" ("ID","GROUP_NAME") VALUES (1,"test")'
         result = adapter.adapt_sql(sql)
         # PostgreSQL 添加 ON CONFLICT DO NOTHING
-        assert 'INSERT INTO' in result
-        assert 'ON CONFLICT DO NOTHING' in result
+        assert "INSERT INTO" in result
+        assert "ON CONFLICT DO NOTHING" in result
 
     def test_adapt_delete_where_sqlite(self):
         """测试适配 DELETE WHERE 1 - SQLite"""
@@ -162,7 +156,7 @@ class TestSQLAdapter:
     def test_adapt_delete_where_postgresql(self):
         """测试适配 DELETE WHERE 1 - PostgreSQL"""
         mock_engine = MagicMock()
-        mock_engine.url.drivername = 'postgresql+psycopg2'
+        mock_engine.url.drivername = "postgresql+psycopg2"
         adapter = SQLAdapter(mock_engine)
 
         sql = "DELETE FROM alembic_version WHERE 1"
@@ -181,7 +175,7 @@ class TestSQLAdapter:
     def test_get_limit_clause_mysql(self):
         """测试获取 LIMIT 子句 - MySQL"""
         mock_engine = MagicMock()
-        mock_engine.url.drivername = 'mysql+pymysql'
+        mock_engine.url.drivername = "mysql+pymysql"
         adapter = SQLAdapter(mock_engine)
 
         result = adapter.get_limit_clause(10, 5)
@@ -198,7 +192,7 @@ class TestSQLAdapter:
     def test_get_current_timestamp_postgresql(self):
         """测试获取当前时间戳函数 - PostgreSQL"""
         mock_engine = MagicMock()
-        mock_engine.url.drivername = 'postgresql+psycopg2'
+        mock_engine.url.drivername = "postgresql+psycopg2"
         adapter = SQLAdapter(mock_engine)
 
         result = adapter.get_current_timestamp()
@@ -215,7 +209,7 @@ class TestSQLAdapter:
     def test_get_date_format_mysql(self):
         """测试获取日期格式化表达式 - MySQL"""
         mock_engine = MagicMock()
-        mock_engine.url.drivername = 'mysql+pymysql'
+        mock_engine.url.drivername = "mysql+pymysql"
         adapter = SQLAdapter(mock_engine)
 
         result = adapter.get_date_format("date_column", "%Y-%m-%d")
@@ -224,7 +218,7 @@ class TestSQLAdapter:
     def test_get_date_format_postgresql(self):
         """测试获取日期格式化表达式 - PostgreSQL"""
         mock_engine = MagicMock()
-        mock_engine.url.drivername = 'postgresql+psycopg2'
+        mock_engine.url.drivername = "postgresql+psycopg2"
         adapter = SQLAdapter(mock_engine)
 
         result = adapter.get_date_format("date_column", "%Y-%m-%d")
@@ -245,7 +239,7 @@ class TestDatabaseDialect:
     def test_get_random_function_mysql(self):
         """测试获取随机函数 - MySQL"""
         mock_engine = MagicMock()
-        mock_engine.url.drivername = 'mysql+pymysql'
+        mock_engine.url.drivername = "mysql+pymysql"
         dialect = DatabaseDialect(mock_engine)
 
         result = dialect.get_random_function()
@@ -262,7 +256,7 @@ class TestDatabaseDialect:
     def test_get_concat_function_mysql(self):
         """测试获取字符串连接函数 - MySQL"""
         mock_engine = MagicMock()
-        mock_engine.url.drivername = 'mysql+pymysql'
+        mock_engine.url.drivername = "mysql+pymysql"
         dialect = DatabaseDialect(mock_engine)
 
         result = dialect.get_concat_function("col1", "col2", "col3")
@@ -285,12 +279,7 @@ class TestDatabaseIntegration:
 
         try:
             # 创建记录
-            group = CONFIGFILTERGROUP(
-                ID=1,
-                GROUP_NAME="测试组",
-                IS_DEFAULT="N",
-                NOTE="测试备注"
-            )
+            group = CONFIGFILTERGROUP(ID=1, GROUP_NAME="测试组", IS_DEFAULT="N", NOTE="测试备注")
             session.add(group)
             session.commit()
 
@@ -322,8 +311,8 @@ def test_global_adapt_sql_function():
     # 使用 SQLite 引擎进行测试
     engine = create_engine("sqlite:///:memory:")
     result = adapt_sql_for_engine(sql, engine)
-    assert 'INSERT' in result
+    assert "INSERT" in result
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

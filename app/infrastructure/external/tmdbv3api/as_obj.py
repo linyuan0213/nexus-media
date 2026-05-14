@@ -36,10 +36,12 @@ class AsObj:
         return str(self.__dict__)
 
     if sys.version_info >= (3, 8):
+
         def __reversed__(self):
             return reversed(self.__dict__)
 
     if sys.version_info >= (3, 9):
+
         def __class_getitem__(cls, key):
             return cls.__dict__.__class_getitem__(key)
 

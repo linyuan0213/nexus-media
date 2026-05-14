@@ -1,6 +1,7 @@
 """
 测试 FastAPI Brush Router（DI 工厂 mock 版本）
 """
+
 from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
@@ -14,7 +15,6 @@ client = TestClient(app)
 
 
 class TestBrushRouter:
-
     def _mock_brush(self):
         """辅助方法：创建 mock 并注册 DI override"""
         mock_svc = MagicMock()
@@ -31,11 +31,10 @@ class TestBrushRouter:
     def test_add_brushtask(self):
         mock_svc = self._mock_brush()
         try:
-            resp = client.post("/api/brush/tasks/add", json={
-                "brushtask_name": "Task1",
-                "brushtask_site": "site1",
-                "brushtask_interval": 10
-            })
+            resp = client.post(
+                "/api/brush/tasks/add",
+                json={"brushtask_name": "Task1", "brushtask_site": "site1", "brushtask_interval": 10},
+            )
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             mock_svc.add_or_update_task.assert_called_once()
@@ -108,8 +107,7 @@ class TestBrushRouter:
     # ------------------------------------------------------------------
     def test_list_brushtask_torrents(self):
         mock_svc = self._mock_brush()
-        mock_svc.get_torrents.return_value = MagicMock(
-            torrents=[{"name": "t1"}])
+        mock_svc.get_torrents.return_value = MagicMock(torrents=[{"name": "t1"}])
         try:
             resp = client.post("/api/brush/tasks/torrents", json={"id": 1})
             assert resp.status_code == 200
@@ -148,13 +146,10 @@ class TestBrushRouter:
     def test_update_brushtask_state(self):
         mock_svc = self._mock_brush()
         try:
-            resp = client.post("/api/brush/tasks/state", json={
-                "state": "Y", "ids": [1, 2]
-            })
+            resp = client.post("/api/brush/tasks/state", json={"state": "Y", "ids": [1, 2]})
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
-            mock_svc.update_task_state.assert_called_once_with(
-                state="Y", task_ids=[1, 2])
+            mock_svc.update_task_state.assert_called_once_with(state="Y", task_ids=[1, 2])
         finally:
             self._teardown()
 
@@ -162,9 +157,7 @@ class TestBrushRouter:
         mock_svc = self._mock_brush()
         mock_svc.update_task_state.side_effect = Exception("boom")
         try:
-            resp = client.post("/api/brush/tasks/state", json={
-                "state": "Y", "ids": [1]
-            })
+            resp = client.post("/api/brush/tasks/state", json={"state": "Y", "ids": [1]})
             assert resp.status_code == 200
             assert resp.json()["code"] == 1
             assert resp.json()["msg"] == "刷流任务设置失败"

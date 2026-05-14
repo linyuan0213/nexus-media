@@ -13,11 +13,12 @@ class MTeam(_ISiteSigninHandler):
     """
     馒头登录
     """
+
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "kp.m-team.cc"
 
     # 已登录
-    _sign_text = '魔力值'
+    _sign_text = "魔力值"
 
     @classmethod
     def match(cls, url):
@@ -41,26 +42,27 @@ class MTeam(_ISiteSigninHandler):
 
         EventHandler.send_event(EventType.LocalStorageSync)
         time.sleep(10)
-        local_storage = CookiecloudHelper().get_local_storage('m-team.io')
+        local_storage = CookiecloudHelper().get_local_storage("m-team.io")
 
         if not local_storage:
             self.error("仿真登录失败，LocalStorage获取失败或为空")
-            return False, f'【{site}】仿真登录失败，LocalStorage获取失败或为空'
+            return False, f"【{site}】仿真登录失败，LocalStorage获取失败或为空"
 
-        persist_user = local_storage.get('persist:user')
-        auth = local_storage.get('auth')
+        persist_user = local_storage.get("persist:user")
+        auth = local_storage.get("auth")
         if not persist_user or not auth:
             self.error("仿真登录失败，persist:user获取失败或为空")
-            return False, f'【{site}】仿真登录失败，persist:user获取失败或为空'
+            return False, f"【{site}】仿真登录失败，persist:user获取失败或为空"
         self.info(f"{site} 开始仿真登录")
-
 
         # 首页
         chrome = DrissionPageHelper()
         if site_info.get("chrome") and chrome.get_status():
             self.info(f"{site} 开始仿真登录")
 
-            html_text = chrome.get_page_html(url="https://kp.m-team.cc/index", local_storage=local_storage, user_agent=get_ua(), timeout=30)
+            html_text = chrome.get_page_html(
+                url="https://kp.m-team.cc/index", local_storage=local_storage, user_agent=get_ua(), timeout=30
+            )
 
             if not html_text:
                 self.warn("%s 获取站点源码失败" % site)
@@ -69,8 +71,7 @@ class MTeam(_ISiteSigninHandler):
             # 登录成功
             if self._sign_text in html_text:
                 self.info("仿真登录成功")
-                return True, f'【{site}】仿真登录成功'
+                return True, f"【{site}】仿真登录成功"
             else:
                 self.error("仿真登录失败，未找到登录标识")
-                return False, f'【{site}】仿真登录失败，未找到登录标识'
-
+                return False, f"【{site}】仿真登录失败，未找到登录标识"

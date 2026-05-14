@@ -1,11 +1,12 @@
 """
 EpisodeMapper 单元测试
 """
+
 import sys
 from datetime import datetime
 from unittest.mock import MagicMock
 
-sys.modules['log'] = MagicMock()
+sys.modules["log"] = MagicMock()
 
 from app.media.parser.episode_mapper import EpisodeMapper, _parse_date
 

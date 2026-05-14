@@ -1,6 +1,7 @@
 """
 队列基础设施 — 消息队列抽象接口
 """
+
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 

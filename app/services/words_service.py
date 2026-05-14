@@ -2,6 +2,7 @@
 WordsService - 自定义识别词业务层
 将 web/controllers/words.py 中的业务逻辑下沉到可独立测试的 Service。
 """
+
 import base64
 import json
 import re
@@ -47,7 +48,7 @@ class WordsService:
                 year=tmdb_info.get("first_air_date", "")[0:4],
                 gtype=2,
                 tmdbid=tmdb_id,
-                season_count=tmdb_info.get("number_of_seasons")
+                season_count=tmdb_info.get("number_of_seasons"),
             )
             return True, ""
         elif tmdb_type == "movie":
@@ -61,7 +62,7 @@ class WordsService:
                 year=tmdb_info.get("release_date", "")[0:4],
                 gtype=1,
                 tmdbid=tmdb_id,
-                season_count=0
+                season_count=0,
             )
             return True, ""
         return False, "无法识别媒体类型"
@@ -80,26 +81,28 @@ class WordsService:
         """
         if wtype not in ("3", "4"):
             return None
-        if not re.findall(r'EP', offset):
+        if not re.findall(r"EP", offset):
             return "偏移集数格式有误"
-        if re.findall(r'(?!-|\+|\*|/|[0-9]).', re.sub(r'EP', "", offset)):
+        if re.findall(r"(?!-|\+|\*|/|[0-9]).", re.sub(r"EP", "", offset)):
             return "偏移集数格式有误"
         return None
 
-    def add_or_edit_word(self,
-                         wid: int,
-                         gid: int,
-                         group_type: str,
-                         replaced: str,
-                         replace: str,
-                         front: str,
-                         back: str,
-                         offset: str,
-                         whelp: str,
-                         wtype: str,
-                         season: int,
-                         enabled: int,
-                         regex: int) -> tuple[bool, str]:
+    def add_or_edit_word(
+        self,
+        wid: int,
+        gid: int,
+        group_type: str,
+        replaced: str,
+        replace: str,
+        front: str,
+        back: str,
+        offset: str,
+        whelp: str,
+        wtype: str,
+        season: int,
+        enabled: int,
+        regex: int,
+    ) -> tuple[bool, str]:
         """
         添加或编辑自定义词
         :return: (是否成功, 消息)
@@ -120,9 +123,17 @@ class WordsService:
             if self._words.is_custom_words_existed(replaced=replaced):
                 return False, "识别词已存在\n（被替换词：%s）" % replaced
             self._words.insert_custom_word(
-                replaced=replaced, replace="", front="", back="", offset="",
-                wtype=wtype_int, gid=gid, season=season, enabled=enabled,
-                regex=regex, whelp=whelp or ""
+                replaced=replaced,
+                replace="",
+                front="",
+                back="",
+                offset="",
+                wtype=wtype_int,
+                gid=gid,
+                season=season,
+                enabled=enabled,
+                regex=regex,
+                whelp=whelp or "",
             )
             return True, ""
 
@@ -130,9 +141,17 @@ class WordsService:
             if self._words.is_custom_words_existed(replaced=replaced):
                 return False, "识别词已存在\n（被替换词：%s）" % replaced
             self._words.insert_custom_word(
-                replaced=replaced, replace=replace, front="", back="", offset="",
-                wtype=wtype_int, gid=gid, season=season, enabled=enabled,
-                regex=regex, whelp=whelp or ""
+                replaced=replaced,
+                replace=replace,
+                front="",
+                back="",
+                offset="",
+                wtype=wtype_int,
+                gid=gid,
+                season=season,
+                enabled=enabled,
+                regex=regex,
+                whelp=whelp or "",
             )
             return True, ""
 
@@ -140,9 +159,17 @@ class WordsService:
             if self._words.is_custom_words_existed(front=front, back=back):
                 return False, "识别词已存在\n（前后定位词：%s@%s）" % (front, back)
             self._words.insert_custom_word(
-                replaced="", replace="", front=front, back=back, offset=offset,
-                wtype=wtype_int, gid=gid, season=season, enabled=enabled,
-                regex=regex, whelp=whelp or ""
+                replaced="",
+                replace="",
+                front=front,
+                back=back,
+                offset=offset,
+                wtype=wtype_int,
+                gid=gid,
+                season=season,
+                enabled=enabled,
+                regex=regex,
+                whelp=whelp or "",
             )
             return True, ""
 
@@ -150,9 +177,17 @@ class WordsService:
             if self._words.is_custom_words_existed(replaced=replaced):
                 return False, "识别词已存在\n（被替换词：%s）" % replaced
             self._words.insert_custom_word(
-                replaced=replaced, replace=replace, front=front, back=back, offset=offset,
-                wtype=wtype_int, gid=gid, season=season, enabled=enabled,
-                regex=regex, whelp=whelp or ""
+                replaced=replaced,
+                replace=replace,
+                front=front,
+                back=back,
+                offset=offset,
+                wtype=wtype_int,
+                gid=gid,
+                season=season,
+                enabled=enabled,
+                regex=regex,
+                whelp=whelp or "",
             )
             return True, ""
 
@@ -194,10 +229,18 @@ class WordsService:
             return None
         r = rows[0]
         return WordDTO(
-            id=r.ID, replaced=r.REPLACED, replace=r.REPLACE,
-            front=r.FRONT, back=r.BACK, offset=r.OFFSET,
-            type=r.TYPE, group_id=r.GROUP_ID, season=r.SEASON,
-            enabled=r.ENABLED, regex=r.REGEX, help=r.HELP
+            id=r.ID,
+            replaced=r.REPLACED,
+            replace=r.REPLACE,
+            front=r.FRONT,
+            back=r.BACK,
+            offset=r.OFFSET,
+            type=r.TYPE,
+            group_id=r.GROUP_ID,
+            season=r.SEASON,
+            enabled=r.ENABLED,
+            regex=r.REGEX,
+            help=r.HELP,
         )
 
     # ---------- 导入导出 ----------
@@ -207,7 +250,7 @@ class WordsService:
         解析导入码
         :return: (词组列表, 备注)
         """
-        raw = base64.b64decode(import_code.encode("utf-8")).decode('utf-8')
+        raw = base64.b64decode(import_code.encode("utf-8")).decode("utf-8")
         parts = raw.split("@@@@@@")
         import_dict = json.loads(parts[0])
         note = parts[1] if len(parts) > 1 else ""
@@ -217,16 +260,19 @@ class WordsService:
             wtype = group.get("type")
             link = ""
             if tmdbid:
-                link = "https://www.themoviedb.org/%s/%s" % (
-                    "movie" if int(wtype) == 1 else "tv", tmdbid)
-            groups.append(WordGroupExportDTO(
-                id=str(group.get('id', '')),
-                name="%s（%s）" % (group.get("title"), group.get("year")) if group.get("year") else group.get("title", ""),
-                link=link,
-                type=wtype,
-                seasons=group.get("season_count") or "",
-                words=group.get("words", {})
-            ))
+                link = "https://www.themoviedb.org/%s/%s" % ("movie" if int(wtype) == 1 else "tv", tmdbid)
+            groups.append(
+                WordGroupExportDTO(
+                    id=str(group.get("id", "")),
+                    name="%s（%s）" % (group.get("title"), group.get("year"))
+                    if group.get("year")
+                    else group.get("title", ""),
+                    link=link,
+                    type=wtype,
+                    seasons=group.get("season_count") or "",
+                    words=group.get("words", {}),
+                )
+            )
         return groups, note
 
     def export_words(self, ids_info: str | None = None, note: str = "") -> tuple[str, str]:
@@ -261,9 +307,7 @@ class WordsService:
 
         export_dict = {}
         if not group_ids or "-1" in group_ids:
-            export_dict["-1"] = {
-                "id": -1, "title": "通用", "type": 1, "words": {}
-            }
+            export_dict["-1"] = {"id": -1, "title": "通用", "type": 1, "words": {}}
 
         for g in group_infos:
             export_dict[str(g.ID)] = {
@@ -291,7 +335,7 @@ class WordsService:
             }
 
         export_string = json.dumps(export_dict) + "@@@@@@" + str(note)
-        encoded = base64.b64encode(export_string.encode("utf-8")).decode('utf-8')
+        encoded = base64.b64encode(export_string.encode("utf-8")).decode("utf-8")
         return encoded, note
 
     def import_words(self, import_code: str, ids_info: str) -> tuple[bool, str]:
@@ -299,7 +343,7 @@ class WordsService:
         导入自定义词
         :return: (是否成功, 消息)
         """
-        raw = base64.b64decode(import_code.encode("utf-8")).decode('utf-8')
+        raw = base64.b64decode(import_code.encode("utf-8")).decode("utf-8")
         parts = raw.split("@@@@@@")
         import_dict = json.loads(parts[0])
 
@@ -322,8 +366,7 @@ class WordsService:
 
             if not self._words.is_custom_word_group_existed(tmdbid=tmdbid, gtype=gtype):
                 self._words.insert_custom_word_groups(
-                    title=title, year=year, gtype=gtype,
-                    tmdbid=tmdbid, season_count=season_count
+                    title=title, year=year, gtype=gtype, tmdbid=tmdbid, season_count=season_count
                 )
             existing = self._words.get_custom_word_groups(tmdbid=tmdbid, gtype=gtype)
             if existing:
@@ -366,7 +409,7 @@ class WordsService:
                 season=season,
                 enabled=1,
                 regex=regex,
-                whelp=whelp or ""
+                whelp=whelp or "",
             )
 
         return True, ""
@@ -381,28 +424,23 @@ class WordsService:
         words_info = self._words.get_custom_words(gid=-1)
         words = []
         for w in words_info:
-            words.append({
-                "id": w.ID,
-                "replaced": w.REPLACED,
-                "replace": w.REPLACE,
-                "front": w.FRONT,
-                "back": w.BACK,
-                "offset": w.OFFSET,
-                "type": w.TYPE,
-                "group_id": w.GROUP_ID,
-                "season": w.SEASON,
-                "enabled": w.ENABLED,
-                "regex": w.REGEX,
-                "help": w.HELP,
-            })
-        groups.append({
-            "id": "-1",
-            "name": "通用",
-            "link": "",
-            "type": "1",
-            "seasons": "0",
-            "words": words
-        })
+            words.append(
+                {
+                    "id": w.ID,
+                    "replaced": w.REPLACED,
+                    "replace": w.REPLACE,
+                    "front": w.FRONT,
+                    "back": w.BACK,
+                    "offset": w.OFFSET,
+                    "type": w.TYPE,
+                    "group_id": w.GROUP_ID,
+                    "season": w.SEASON,
+                    "enabled": w.ENABLED,
+                    "regex": w.REGEX,
+                    "help": w.HELP,
+                }
+            )
+        groups.append({"id": "-1", "name": "通用", "link": "", "type": "1", "seasons": "0", "words": words})
 
         group_infos = self._words.get_custom_word_groups()
         for g in group_infos:
@@ -416,27 +454,24 @@ class WordsService:
             words = []
             words_info = self._words.get_custom_words(gid=gid)
             for w in words_info:
-                words.append({
-                    "id": w.ID,
-                    "replaced": w.REPLACED,
-                    "replace": w.REPLACE,
-                    "front": w.FRONT,
-                    "back": w.BACK,
-                    "offset": w.OFFSET,
-                    "type": w.TYPE,
-                    "group_id": w.GROUP_ID,
-                    "season": w.SEASON,
-                    "enabled": w.ENABLED,
-                    "regex": w.REGEX,
-                    "help": w.HELP,
-                })
-            groups.append({
-                "id": gid,
-                "name": name,
-                "link": link,
-                "type": g.TYPE,
-                "seasons": g.SEASON_COUNT,
-                "words": words
-            })
+                words.append(
+                    {
+                        "id": w.ID,
+                        "replaced": w.REPLACED,
+                        "replace": w.REPLACE,
+                        "front": w.FRONT,
+                        "back": w.BACK,
+                        "offset": w.OFFSET,
+                        "type": w.TYPE,
+                        "group_id": w.GROUP_ID,
+                        "season": w.SEASON,
+                        "enabled": w.ENABLED,
+                        "regex": w.REGEX,
+                        "help": w.HELP,
+                    }
+                )
+            groups.append(
+                {"id": gid, "name": name, "link": link, "type": g.TYPE, "seasons": g.SEASON_COUNT, "words": words}
+            )
 
         return groups

@@ -3,6 +3,7 @@
 
 系统启动时自动加载热点数据到缓存，提高后续访问性能
 """
+
 import threading
 import time
 from abc import ABC, abstractmethod
@@ -53,6 +54,7 @@ class ConfigCacheWarmer(CacheWarmer):
             cache_manager = CacheManager()
 
             from config import Config
+
             cfg = Config()
 
             config = cfg.get_config()
@@ -63,6 +65,7 @@ class ConfigCacheWarmer(CacheWarmer):
 
             try:
                 from app.media.category import Category
+
                 category = Category()
                 if category._categorys:
                     cache = cache_manager.get_or_create("category_load", "memory")
@@ -93,6 +96,7 @@ class SiteCacheWarmer(CacheWarmer):
         try:
             log.info("【CacheWarmer】开始预热站点数据...")
             from app.db.repositories import SiteRepository
+
             db = SiteRepository()
 
             sites = db.get_config_site()
@@ -124,6 +128,7 @@ class WordsCacheWarmer(CacheWarmer):
         try:
             log.info("【CacheWarmer】开始预热识别词...")
             from app.helper.words_helper import WordsHelper
+
             words_helper = WordsHelper()
 
             if words_helper.words_info:
@@ -209,7 +214,7 @@ class CacheWarmerManager:
         self.register(WordsCacheWarmer())
         self.register(TMDBTrendingWarmer())
 
-    def register(self, warmer: CacheWarmer) -> 'CacheWarmerManager':
+    def register(self, warmer: CacheWarmer) -> "CacheWarmerManager":
         """注册预热器"""
         self._warmers[warmer.name] = warmer
         log.debug(f"【CacheWarmerManager】注册预热器: {warmer.name}")
@@ -225,10 +230,10 @@ class CacheWarmerManager:
     def warm_all(self, async_mode: bool = False) -> dict[str, bool]:
         """
         执行所有预热
-        
+
         Args:
             async_mode: 是否异步执行
-            
+
         Returns:
             Dict[str, bool]: 各预热器的执行结果
         """
@@ -240,20 +245,13 @@ class CacheWarmerManager:
         self._results = {}
 
         # 按优先级排序
-        sorted_warmers = sorted(
-            self._warmers.values(),
-            key=lambda w: w.priority
-        )
+        sorted_warmers = sorted(self._warmers.values(), key=lambda w: w.priority)
 
         if async_mode:
             # 异步执行
             threads = []
             for warmer in sorted_warmers:
-                t = threading.Thread(
-                    target=self._run_warmer,
-                    args=(warmer,),
-                    name=f"CacheWarmer-{warmer.name}"
-                )
+                t = threading.Thread(target=self._run_warmer, args=(warmer,), name=f"CacheWarmer-{warmer.name}")
                 t.start()
                 threads.append(t)
 
@@ -286,10 +284,10 @@ class CacheWarmerManager:
     def warm(self, name: str) -> bool:
         """
         执行指定预热器
-        
+
         Args:
             name: 预热器名称
-            
+
         Returns:
             bool: 是否成功
         """
@@ -305,15 +303,10 @@ class CacheWarmerManager:
         return {
             "is_running": self._is_running,
             "warmers": {
-                name: {
-                    "is_warmed": w.is_warmed,
-                    "error": w.error,
-                    "duration": w.duration,
-                    "priority": w.priority
-                }
+                name: {"is_warmed": w.is_warmed, "error": w.error, "duration": w.duration, "priority": w.priority}
                 for name, w in self._warmers.items()
             },
-            "last_results": self._results
+            "last_results": self._results,
         }
 
     def reset(self):
@@ -335,7 +328,7 @@ def get_warmer_manager() -> CacheWarmerManager:
 def warm_cache_on_startup(async_mode: bool = False):
     """
     系统启动时执行缓存预热
-    
+
     Args:
         async_mode: 是否异步执行预热
     """

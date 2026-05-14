@@ -2,20 +2,20 @@ from enum import Enum
 
 
 class MediaType(Enum):
-    TV = '电视剧'
-    MOVIE = '电影'
-    ANIME = '动漫'
-    UNKNOWN = '未知'
+    TV = "电视剧"
+    MOVIE = "电影"
+    ANIME = "动漫"
+    UNKNOWN = "未知"
 
 
 class DownloaderType(Enum):
-    QB = 'Qbittorrent'
-    TR = 'Transmission'
-    UT = 'uTorrent'
-    PAN115 = '115网盘'
-    ARIA2 = 'Aria2'
-    PIKPAK = 'PikPak'
-    THUNDER = '迅雷'
+    QB = "Qbittorrent"
+    TR = "Transmission"
+    UT = "uTorrent"
+    PAN115 = "115网盘"
+    ARIA2 = "Aria2"
+    PIKPAK = "PikPak"
+    THUNDER = "迅雷"
 
 
 class SyncType(Enum):
@@ -195,6 +195,7 @@ class SystemConfigKey(Enum):
     # 索引器配置（jackett/prowlarr）
     IndexerConfig = "IndexerConfig"
 
+
 # 处理进度Key字典
 class ProgressKey(Enum):
     # 搜索
@@ -217,6 +218,6 @@ class RssType(Enum):
 
 
 # 电影类型关键字
-MovieTypes = ['MOV', '电影', MediaType.MOVIE]
+MovieTypes = ["MOV", "电影", MediaType.MOVIE]
 # 电视剧类型关键字
-TvTypes = ['TV', '电视剧', MediaType.TV]
+TvTypes = ["TV", "电视剧", MediaType.TV]

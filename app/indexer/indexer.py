@@ -6,6 +6,7 @@
 2. 并发调度多站点搜索
 3. 收集所有原始结果后，统一调用 SearchPipeline 进行批量识别和过滤
 """
+
 import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -32,8 +33,7 @@ class Indexer(metaclass=SingletonMeta):
 
     def __init__(self):
         self._indexer_schemas = SubmoduleHelper.import_submodules(
-            'app.indexer.client',
-            filter_func=lambda _, obj: hasattr(obj, 'client_id')
+            "app.indexer.client", filter_func=lambda _, obj: hasattr(obj, "client_id")
         )
         log.debug(f"【Indexer】加载索引器：{self._indexer_schemas}")
         self.init_config()
@@ -43,7 +43,8 @@ class Indexer(metaclass=SingletonMeta):
         self.download_repo = DownloadRepository()
         from app.core.system_config import SystemConfig
         from app.utils.types import SystemConfigKey
-        indexer = SystemConfig().get(SystemConfigKey.SearchIndexer) or 'builtin'
+
+        indexer = SystemConfig().get(SystemConfigKey.SearchIndexer) or "builtin"
         self._client = self.__get_client(indexer)
         if self._client:
             self._client_type = self._client.get_type()
@@ -75,10 +76,7 @@ class Indexer(metaclass=SingletonMeta):
         return self._client.get_indexers(check=check)
 
     def get_user_indexer_dict(self):
-        return [
-            {"id": index.id, "name": index.name}
-            for index in self.get_indexers(check=True)
-        ]
+        return [{"id": index.id, "name": index.name} for index in self.get_indexers(check=True)]
 
     def get_indexer_hash_dict(self):
         IndexerDict = {}
@@ -87,7 +85,7 @@ class Indexer(metaclass=SingletonMeta):
                 "id": item.id,
                 "name": item.name,
                 "public": item.public,
-                "builtin": item.builtin
+                "builtin": item.builtin,
             }
         return IndexerDict
 
@@ -101,11 +99,7 @@ class Indexer(metaclass=SingletonMeta):
     def list_resources(self, index_id, page=0, keyword=None):
         return BuiltinIndexer().list(index_id=index_id, page=page, keyword=keyword)
 
-    def search_by_keyword(self,
-                          key_word,
-                          filter_args: dict,
-                          match_media=None,
-                          in_from: SearchType = None):
+    def search_by_keyword(self, key_word, filter_args: dict, match_media=None, in_from: SearchType = None):
         """
         根据关键字调用索引器搜索
 
@@ -128,15 +122,19 @@ class Indexer(metaclass=SingletonMeta):
         max_workers = min(len(indexers), 15)
 
         if filter_args and filter_args.get("site"):
-            log.info(f"【{self._client_type.value}】开始搜索 %s，站点：%s，并发数：%s ..."
-                     % (key_word, filter_args.get("site"), max_workers))
-            self.progress.update(ptype=progress_key,
-                                 text="开始搜索 %s，站点：%s ..." % (key_word, filter_args.get("site")))
+            log.info(
+                f"【{self._client_type.value}】开始搜索 %s，站点：%s，并发数：%s ..."
+                % (key_word, filter_args.get("site"), max_workers)
+            )
+            self.progress.update(
+                ptype=progress_key, text="开始搜索 %s，站点：%s ..." % (key_word, filter_args.get("site"))
+            )
         else:
-            log.info(f"【{self._client_type.value}】开始并行搜索 %s，站点数：%s，并发数：%s ..."
-                     % (key_word, len(indexers), max_workers))
-            self.progress.update(ptype=progress_key,
-                                 text="开始并行搜索 %s，站点数：%s ..." % (key_word, len(indexers)))
+            log.info(
+                f"【{self._client_type.value}】开始并行搜索 %s，站点数：%s，并发数：%s ..."
+                % (key_word, len(indexers), max_workers)
+            )
+            self.progress.update(ptype=progress_key, text="开始并行搜索 %s，站点数：%s ..." % (key_word, len(indexers)))
 
         # ---------- 阶段1：并发搜索所有站点，收集原始结果 ----------
         all_raw_results = []
@@ -145,13 +143,9 @@ class Indexer(metaclass=SingletonMeta):
             all_task = []
             for index in indexers:
                 order_seq = 100 - int(index.pri)
-                task = executor.submit(self._client.search,
-                                       order_seq,
-                                       index,
-                                       key_word,
-                                       filter_args,
-                                       match_media,
-                                       in_from)
+                task = executor.submit(
+                    self._client.search, order_seq, index, key_word, filter_args, match_media, in_from
+                )
                 all_task.append(task)
 
             for future in as_completed(all_task):
@@ -179,7 +173,7 @@ class Indexer(metaclass=SingletonMeta):
         self.progress.update(
             ptype=progress_key,
             text="搜索关键词 %s 所有站点完成，有效资源数：%s，总耗时 %s 秒"
-                 % (key_word, len(pipeline_result.results), (end_time - start_time).seconds)
+            % (key_word, len(pipeline_result.results), (end_time - start_time).seconds),
         )
 
         return pipeline_result.results

@@ -2,6 +2,7 @@
 AutoBackup Plugin v2
 自动备份 NAStool 数据和配置文件
 """
+
 import glob
 import os
 import time
@@ -88,9 +89,7 @@ class AutoBackupPlugin:
         password = config.get("password")
         share_name = config.get("share_name")
 
-        self.ctx.info(
-            f"当前时间 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))} 开始备份"
-        )
+        self.ctx.info(f"当前时间 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))} 开始备份")
 
         # 确定本地备份路径
         if storage_type == "local":

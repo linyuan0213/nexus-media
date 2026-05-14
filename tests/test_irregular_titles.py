@@ -12,14 +12,15 @@
 8. 绝对集号
 9. 合并季标注
 """
+
 import sys
 from unittest.mock import MagicMock
 
-sys.modules['log'] = MagicMock()
+sys.modules["log"] = MagicMock()
 
 import os
 
-os.environ['NASTOOL_CONFIG'] = '/home/linyuan/python/config/config.yaml'
+os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 import pytest
 
@@ -94,27 +95,43 @@ MERGED_SEASON_CASES = [
 
 SPECIAL_ANIME_CASES = [
     # 已测试过的真实案例
-    ("[晚街与灯][Re：从零开始的异世界生活 第四季 / Re:Zero kara Hajimeru Isekai Seikatsu 4th Season][04 - 总第70][WebRip][1080P_AVC_AAC][简日双语内嵌]", 4, 4, "Re:Zero 合并季"),
+    (
+        "[晚街与灯][Re：从零开始的异世界生活 第四季 / Re:Zero kara Hajimeru Isekai Seikatsu 4th Season][04 - 总第70][WebRip][1080P_AVC_AAC][简日双语内嵌]",
+        4,
+        4,
+        "Re:Zero 合并季",
+    ),
     ("[ANi] Re：從零開始的異世界生活 第四季 - 05 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]", 4, 5, "Re:Zero ANi格式"),
-    ("[LoliHouse] 关于我转生变成史莱姆这档事 / Tensei Shitara Slime Datta Ken  - 72 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END]", None, 72, "Slime 绝对集号"),
-    ("[DBD-Raws][关于我转生变成史莱姆这档事 第三季/Tensei Shitara Slime Datta Ken S3][01-24TV全集+SP+特典映像][1080P][BDRip][HEVC-10bit][FLAC][MKV](転生したらスライムだった件 S3)", 3, 1, "DBD-Raws 全季包"),
+    (
+        "[LoliHouse] 关于我转生变成史莱姆这档事 / Tensei Shitara Slime Datta Ken  - 72 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END]",
+        None,
+        72,
+        "Slime 绝对集号",
+    ),
+    (
+        "[DBD-Raws][关于我转生变成史莱姆这档事 第三季/Tensei Shitara Slime Datta Ken S3][01-24TV全集+SP+特典映像][1080P][BDRip][HEVC-10bit][FLAC][MKV](転生したらスライムだった件 S3)",
+        3,
+        1,
+        "DBD-Raws 全季包",
+    ),
 ]
 
 ALL_CASES = (
-    STANDARD_CASES +
-    SPACE_SEPARATED_CASES +
-    BRACKET_CASES +
-    CHINESE_CASES +
-    DOT_PREFIX_CASES +
-    SINGLE_DIGIT_CASES +
-    VERSION_SUFFIX_CASES +
-    ABSOLUTE_EPISODE_CASES +
-    MERGED_SEASON_CASES +
-    SPECIAL_ANIME_CASES
+    STANDARD_CASES
+    + SPACE_SEPARATED_CASES
+    + BRACKET_CASES
+    + CHINESE_CASES
+    + DOT_PREFIX_CASES
+    + SINGLE_DIGIT_CASES
+    + VERSION_SUFFIX_CASES
+    + ABSOLUTE_EPISODE_CASES
+    + MERGED_SEASON_CASES
+    + SPECIAL_ANIME_CASES
 )
 
 
 # ============ 测试类 ============
+
 
 class TestStandardFormats:
     @pytest.mark.parametrize("title,season,episode,desc", STANDARD_CASES)

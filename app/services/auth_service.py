@@ -2,6 +2,7 @@
 JWT 认证服务
 提供 Access Token + Refresh Token 双令牌机制
 """
+
 import uuid
 from datetime import datetime, timedelta
 
@@ -56,16 +57,16 @@ class AuthService:
         except Exception:
             permissions = []
 
-        level = getattr(user, 'LEVEL', 0) or 0
-        is_superadmin = getattr(user, 'IS_SUPERADMIN', 0) == 1
+        level = getattr(user, "LEVEL", 0) or 0
+        is_superadmin = getattr(user, "IS_SUPERADMIN", 0) == 1
 
         return UserContext(
             user_id=user.ID,
             username=user.USERNAME,
-            nickname=getattr(user, 'NICKNAME', None) or None,
+            nickname=getattr(user, "NICKNAME", None) or None,
             level=level,
             permissions=permissions,
-            is_superadmin=is_superadmin
+            is_superadmin=is_superadmin,
         )
 
     @staticmethod
@@ -87,7 +88,7 @@ class AuthService:
             "iat": now,
             "exp": now + timedelta(minutes=_ACCESS_TOKEN_EXPIRE_MINUTES),
             "jti": str(uuid.uuid4()),
-            "type": "access"
+            "type": "access",
         }
         access_token = jwt.encode(access_payload, _SECRET_KEY, algorithm=_ALGORITHM)
 
@@ -97,14 +98,12 @@ class AuthService:
             "jti": str(uuid.uuid4()),
             "iat": now,
             "exp": now + timedelta(days=_REFRESH_TOKEN_EXPIRE_DAYS),
-            "type": "refresh"
+            "type": "refresh",
         }
         refresh_token = jwt.encode(refresh_payload, _SECRET_KEY, algorithm=_ALGORITHM)
 
         return TokenPair(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            expires_in=_ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            access_token=access_token, refresh_token=refresh_token, expires_in=_ACCESS_TOKEN_EXPIRE_MINUTES * 60
         )
 
     @staticmethod
@@ -133,16 +132,16 @@ class AuthService:
             except Exception:
                 permissions = []
 
-            level = getattr(user, 'LEVEL', 0) or 0
-            is_superadmin = getattr(user, 'IS_SUPERADMIN', 0) == 1
+            level = getattr(user, "LEVEL", 0) or 0
+            is_superadmin = getattr(user, "IS_SUPERADMIN", 0) == 1
 
             ctx = UserContext(
                 user_id=user_id,
-                username=getattr(user, 'USERNAME', ''),
-                nickname=getattr(user, 'NICKNAME', None) or None,
+                username=getattr(user, "USERNAME", ""),
+                nickname=getattr(user, "NICKNAME", None) or None,
                 level=level,
                 permissions=permissions,
-                is_superadmin=is_superadmin
+                is_superadmin=is_superadmin,
             )
             return AuthService.create_token_pair(ctx)
 
@@ -165,7 +164,7 @@ class AuthService:
                 nickname=payload.get("nickname", None),
                 level=payload.get("level", 0),
                 permissions=payload.get("permissions", []),
-                is_superadmin=payload.get("is_superadmin", False)
+                is_superadmin=payload.get("is_superadmin", False),
             )
         except (jwt.InvalidTokenError, ValueError):
             return None

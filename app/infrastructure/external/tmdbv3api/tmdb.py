@@ -1,4 +1,3 @@
-
 import logging
 import os
 import time
@@ -57,7 +56,7 @@ class TMDb:
 
     @domain.setter
     def domain(self, domain):
-        os.environ[self.TMDB_DOMAIN] = str(domain or '')
+        os.environ[self.TMDB_DOMAIN] = str(domain or "")
 
     @property
     def proxies(self):
@@ -74,7 +73,7 @@ class TMDb:
             if proxies_strs:
                 os.environ[self.TMDB_PROXIES] = "{%s}" % ",".join(proxies_strs)
             else:
-                os.environ[self.TMDB_PROXIES] = 'None'
+                os.environ[self.TMDB_PROXIES] = "None"
 
     @api_key.setter
     def api_key(self, api_key):
@@ -138,9 +137,7 @@ class TMDb:
     def cache_clear(self):
         return self.cached_request.cache_clear()
 
-    def _call(
-            self, action, append_to_response, call_cached=True, method="GET", data=None
-    ):
+    def _call(self, action, append_to_response, call_cached=True, method="GET", data=None):
         if self.api_key is None or self.api_key == "":
             raise TMDbException("No API key found.")
 
@@ -161,7 +158,9 @@ class TMDb:
             if self.cache and self.obj_cached and call_cached and method != "POST":
                 req = self.cached_request(method, url, data, self.proxies)
             else:
-                req = self._session.request(method, url, data=data, proxies=eval(self.proxies), timeout=10, verify=False)
+                req = self._session.request(
+                    method, url, data=data, proxies=eval(self.proxies), timeout=10, verify=False
+                )
             return req
 
         # 使用指数退避重试机制

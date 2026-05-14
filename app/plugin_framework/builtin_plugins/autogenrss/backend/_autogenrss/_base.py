@@ -9,6 +9,7 @@ class _ISiteRssGenHandler(metaclass=ABCMeta):
     实现站点RSS生成的基类，所有站点签到类都需要继承此类，并实现match和gen_rss方法
     实现类放置到autosignin目录下将会自动加载
     """
+
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = ""
 

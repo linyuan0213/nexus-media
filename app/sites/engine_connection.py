@@ -1,4 +1,5 @@
 """引擎连接测试 — 从 engine.py 拆分"""
+
 import time
 
 from app.utils import RequestUtils
@@ -24,6 +25,7 @@ def test_html_connection(engine, site, user_config):
     if res.status_code != 200:
         return False, f"连接失败，状态码：{res.status_code}", latency
     from app.helper import SiteHelper
+
     if not SiteHelper.is_logged_in(res.text):
         return False, "Cookie失效", latency
     return True, "连接成功", latency

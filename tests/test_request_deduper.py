@@ -2,6 +2,7 @@
 """
 测试请求去重器修复
 """
+
 import threading
 import time
 import unittest
@@ -10,7 +11,6 @@ from app.utils.request_deduper import RequestDeduper
 
 
 class TestRequestDeduper(unittest.TestCase):
-
     def test_concurrent_dedup(self):
         """测试并发请求去重能正确共享结果"""
         deduper = RequestDeduper(default_timeout=5.0)

@@ -2,6 +2,7 @@
 CookieCloud Plugin v2
 从 CookieCloud 云端同步数据
 """
+
 import json
 import re
 from collections import defaultdict
@@ -17,15 +18,13 @@ from app.utils import RequestUtils
 class CookieCloudPlugin:
     """CookieCloud 同步插件"""
 
-    _ignore_cookies = ['CookieAutoDeleteBrowsingDataCleanup']
+    _ignore_cookies = ["CookieAutoDeleteBrowsingDataCleanup"]
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
         self.sites = Sites()
         self._index_helper = IndexerHelper()
-        self._cache = get_cache_manager().get_or_create(
-            "plugin_cookiecloud", cache_type="redis"
-        )
+        self._cache = get_cache_manager().get_or_create("plugin_cookiecloud", cache_type="redis")
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -133,9 +132,9 @@ class CookieCloudPlugin:
             if not result:
                 return {}, "", True
             if result.get("cookie_data"):
-                content['cookie_data'] = result.get("cookie_data")
+                content["cookie_data"] = result.get("cookie_data")
             if result.get("local_storage_data"):
-                content['local_storage_data'] = result.get("local_storage_data")
+                content["local_storage_data"] = result.get("local_storage_data")
             return content, "", True
         elif ret:
             return {}, "同步 CookieCloud 失败，错误码：%s" % ret.status_code, False
@@ -209,11 +208,13 @@ class CookieCloudPlugin:
                 continue
 
             cookie_str = ";".join(
-                [f"{content.get('name')}={content.get('value')}"
-                 for content in content_list
-                 if content.get("name") and content.get("name") not in self._ignore_cookies]
+                [
+                    f"{content.get('name')}={content.get('value')}"
+                    for content in content_list
+                    if content.get("name") and content.get("name") not in self._ignore_cookies
+                ]
             )
-            self._cache.set(f'cookie:{domain_url}', cookie_str)
+            self._cache.set(f"cookie:{domain_url}", cookie_str)
             result[domain_url] = cookie_str
 
         return result
@@ -240,7 +241,7 @@ class CookieCloudPlugin:
                         site_pri=site_pri,
                         signurl=indexer_info.get("domain"),
                         cookie=cookie_str,
-                        rss_uses='T'
+                        rss_uses="T",
                     )
                     add_count += 1
 
@@ -270,7 +271,7 @@ class CookieCloudPlugin:
             domain_url = ".".join(domain_key)
             domain_url = SiteEngine.get_instance().normalize_domain(domain_url) or domain_url
 
-            self._cache.set(f'local_storage:{domain_url}', json.dumps(storage))
+            self._cache.set(f"local_storage:{domain_url}", json.dumps(storage))
 
         self.ctx.info("LocalStorage 同步 Redis 成功")
 

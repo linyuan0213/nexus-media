@@ -25,9 +25,10 @@ class OpenAiHelper(metaclass=SingletonMeta):
         proxy_conf = get_proxies()
         proxy = proxy_conf.get("https")
         if api_key:
-            self.client = Client(api_key=api_key,
-                                base_url=api_base,
-                                http_client=httpx.Client(proxy=proxy),
+            self.client = Client(
+                api_key=api_key,
+                base_url=api_base,
+                http_client=httpx.Client(proxy=proxy),
             )
 
     def get_state(self):
@@ -62,10 +63,7 @@ class OpenAiHelper(metaclass=SingletonMeta):
             session.append({"role": "user", "content": message})
         else:
             # 兼容性修改：不使用 system 角色，而是将指令合并到第一条 user 消息
-            session = [{
-                "role": "user",
-                "content": f"系统设定：{system_prompt}\n\n我的问题是：{message}"
-            }]
+            session = [{"role": "user", "content": f"系统设定：{system_prompt}\n\n我的问题是：{message}"}]
             OpenAISessionCache.set(session_id, session)
         return session
 
@@ -112,7 +110,7 @@ class OpenAiHelper(metaclass=SingletonMeta):
             _filename_prompt = (
                 "I will give you a movie/tv show file name. You need to return a JSON."
                 "\nPay attention to correctly identifying the film name."
-                "\n{\"title\":string,\"version\":string,\"part\":string,\"year\":string,\"resolution\":string,\"season\":number|null,\"episode\":number|null}"
+                '\n{"title":string,"version":string,"part":string,"year":string,"resolution":string,"season":number|null,"episode":number|null}'
             )
             completion = self.__get_model(prompt=_filename_prompt, messages=filename)
             result = completion.choices[0].message.content

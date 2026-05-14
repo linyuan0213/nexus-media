@@ -61,7 +61,7 @@ class TorrentMarkPlugin:
 
         if onlyonce:
             self.ctx.info("标记服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ')))
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ")))
             self.ctx.schedule_date("mark_once", self._do_mark, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -112,11 +112,7 @@ class TorrentMarkPlugin:
                     torrent_tags.add("BT")
                     torrent_tags.discard("PT")
 
-                self._downloader.set_torrents_tag(
-                    downloader_id=downloader_id,
-                    ids=hash_str,
-                    tags=list(torrent_tags)
-                )
+                self._downloader.set_torrents_tag(downloader_id=downloader_id, ids=hash_str, tags=list(torrent_tags))
 
         self.ctx.info("标记任务执行完成")
 

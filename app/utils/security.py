@@ -2,6 +2,7 @@
 安全工具 - 与框架无关的安全/认证工具
 供 Flask 和 FastAPI 共用
 """
+
 import base64
 import copy
 import datetime
@@ -62,7 +63,7 @@ def check_password_hash(password_hash: str, password: str) -> bool:
         return False
 
 
-def generate_access_token(username: str, algorithm: str = 'HS256', exp: float = 2) -> str:
+def generate_access_token(username: str, algorithm: str = "HS256", exp: float = 2) -> str:
     """
     生成access_token
     :param username: 用户名(自定义部分)
@@ -72,17 +73,13 @@ def generate_access_token(username: str, algorithm: str = 'HS256', exp: float = 
     """
     now = datetime.datetime.utcnow()
     exp_datetime = now + datetime.timedelta(hours=exp)
-    access_payload = {
-        'exp': exp_datetime,
-        'iat': now,
-        'username': username
-    }
+    access_payload = {"exp": exp_datetime, "iat": now, "username": username}
     secret = get_secret_key()
     access_token = jwt.encode(access_payload, secret, algorithm=algorithm)
     return access_token
 
 
-def decode_auth_token(token: str, algorithms: str = 'HS256') -> tuple[bool, dict]:
+def decode_auth_token(token: str, algorithms: str = "HS256") -> tuple[bool, dict]:
     """
     解密token
     :param token:token字符串
@@ -92,7 +89,7 @@ def decode_auth_token(token: str, algorithms: str = 'HS256') -> tuple[bool, dict
     try:
         payload = jwt.decode(token, key=key, algorithms=algorithms)
     except jwt.ExpiredSignatureError:
-        return False, jwt.decode(token, key=key, algorithms=algorithms, options={'verify_exp': False})
+        return False, jwt.decode(token, key=key, algorithms=algorithms, options={"verify_exp": False})
     except (jwt.DecodeError, jwt.InvalidTokenError, jwt.ImmatureSignatureError):
         return False, {}
     else:
@@ -137,14 +134,14 @@ def aes_decrypt(data: str, key: str) -> str:
     iv = data[:16]
     encrypted = data[16:]
     # 使用AES-256-CBC解密
-    cipher = AES.new(key.encode('utf-8'), AES.MODE_CBC, iv)
+    cipher = AES.new(key.encode("utf-8"), AES.MODE_CBC, iv)
     result = cipher.decrypt(encrypted)
     # 去除填充
     padding = result[-1]
     if padding < 1 or padding > AES.block_size:
         return ""
     result = result[:-padding]
-    return result.decode('utf-8')
+    return result.decode("utf-8")
 
 
 def aes_encrypt(data: str, key: str) -> str:
@@ -154,25 +151,25 @@ def aes_encrypt(data: str, key: str) -> str:
     if not data:
         return ""
     # 使用AES-256-CBC加密
-    cipher = AES.new(key.encode('utf-8'), AES.MODE_CBC)
+    cipher = AES.new(key.encode("utf-8"), AES.MODE_CBC)
     # 填充
     padding = AES.block_size - len(data) % AES.block_size
     data += chr(padding) * padding
-    result = cipher.encrypt(data.encode('utf-8'))
+    result = cipher.encrypt(data.encode("utf-8"))
     # 使用base64编码
-    return b64encode(cipher.iv + result).decode('utf-8')
+    return b64encode(cipher.iv + result).decode("utf-8")
 
 
 def nexusphp_encrypt(data_str: str, key: str) -> str:
     """
     NexusPHP加密
     """
-    key_bytes = key.encode('utf-8')
-    data_bytes = data_str.encode('utf-8')
+    key_bytes = key.encode("utf-8")
+    data_bytes = data_str.encode("utf-8")
     # 使用HMAC-SHA1加密
     signature = hmac.new(key_bytes, data_bytes, hashlib.sha1).digest()
     # 返回base64编码的结果
-    return base64.b64encode(signature).decode('utf-8')
+    return base64.b64encode(signature).decode("utf-8")
 
 
 class TokenManager:

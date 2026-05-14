@@ -32,8 +32,7 @@ class MediaServer(metaclass=SingletonMeta):
 
     def __init__(self):
         self._mediaserver_schemas = SubmoduleHelper.import_submodules(
-            'app.mediaserver.client',
-            filter_func=lambda _, obj: hasattr(obj, 'client_id')
+            "app.mediaserver.client", filter_func=lambda _, obj: hasattr(obj, "client_id")
         )
         log.debug(f"【MediaServer】加载媒体服务器：{self._mediaserver_schemas}")
         self.init_config()
@@ -51,7 +50,7 @@ class MediaServer(metaclass=SingletonMeta):
             self._server_type = default_server.NAME
         else:
             # 兼容旧配置：从配置文件读取
-            self._server_type = Config().get_config('media').get('media_server') or 'emby'
+            self._server_type = Config().get_config("media").get("media_server") or "emby"
         self._server = None
 
     def __build_class(self, ctype, conf):
@@ -115,12 +114,12 @@ class MediaServer(metaclass=SingletonMeta):
 
     def get_episode_image_by_id(self, item_id, season_id, episode_id):
         """
-         根据itemid、season_id、episode_id从Emby查询图片地址
-         :param item_id: 在Emby中的ID
-         :param season_id: 季
-         :param episode_id: 集
-         :return: 图片对应在TMDB中的URL
-         """
+        根据itemid、season_id、episode_id从Emby查询图片地址
+        :param item_id: 在Emby中的ID
+        :param season_id: 季
+        :param episode_id: 集
+        :return: 图片对应在TMDB中的URL
+        """
         if not self.server:
             return None
         if not item_id or not season_id or not episode_id:
@@ -151,9 +150,7 @@ class MediaServer(metaclass=SingletonMeta):
             return None
         return self.server.get_local_image_by_id(item_id)
 
-    def get_no_exists_episodes(self, meta_info,
-                               season_number,
-                               episode_count):
+    def get_no_exists_episodes(self, meta_info, season_number, episode_count):
         """
         根据标题、年份、季、总集数，查询媒体服务器中缺少哪几集
         :param meta_info: 已识别的需要查询的媒体信息
@@ -163,9 +160,7 @@ class MediaServer(metaclass=SingletonMeta):
         """
         if not self.server:
             return None
-        return self.server.get_no_exists_episodes(meta_info,
-                                                  season_number,
-                                                  episode_count)
+        return self.server.get_no_exists_episodes(meta_info, season_number, episode_count)
 
     def get_movies(self, title, year=None):
         """
@@ -248,48 +243,39 @@ class MediaServer(metaclass=SingletonMeta):
             if str(library.get("id")) not in librarys:
                 continue
             # 获取媒体库所有项目
-            self.progress.update(ptype=ProgressKey.MediaSync,
-                                 text="正在获取 %s 数据..." % (library.get("name")))
+            self.progress.update(ptype=ProgressKey.MediaSync, text="正在获取 %s 数据..." % (library.get("name")))
             for item in self.get_items(library.get("id")):
                 if not item:
                     continue
                 # 更新进度
                 seasoninfo = []
                 total_count += 1
-                if item.get("type") in ['Movie', 'movie']:
+                if item.get("type") in ["Movie", "movie"]:
                     movie_count += 1
-                elif item.get("type") in ['Series', 'show']:
+                elif item.get("type") in ["Series", "show"]:
                     tv_count += 1
                     # 查询剧集信息
                     seasoninfo = self.get_tv_episodes(item.get("id"))
-                self.progress.update(ptype=ProgressKey.MediaSync,
-                                     text="正在同步 %s，已完成：%s / %s ..." % (
-                                         library.get("name"), total_count, total_media_count),
-                                     value=round(100 * total_count / total_media_count, 1))
+                self.progress.update(
+                    ptype=ProgressKey.MediaSync,
+                    text="正在同步 %s，已完成：%s / %s ..." % (library.get("name"), total_count, total_media_count),
+                    value=round(100 * total_count / total_media_count, 1),
+                )
                 # 插入数据
-                self.mediadb.insert(server_type=self._server_type,
-                                    iteminfo=item,
-                                    seasoninfo=seasoninfo)
+                self.mediadb.insert(server_type=self._server_type, iteminfo=item, seasoninfo=seasoninfo)
 
         # 更新总体同步情况
-        self.mediadb.statistics(server_type=self._server_type,
-                                total_count=total_count,
-                                movie_count=movie_count,
-                                tv_count=tv_count)
+        self.mediadb.statistics(
+            server_type=self._server_type, total_count=total_count, movie_count=movie_count, tv_count=tv_count
+        )
         # 结束进度条
-        self.progress.update(ptype=ProgressKey.MediaSync,
-                             value=100,
-                             text="媒体库数据同步完成，同步数量：%s" % total_count)
+        self.progress.update(
+            ptype=ProgressKey.MediaSync, value=100, text="媒体库数据同步完成，同步数量：%s" % total_count
+        )
         self.progress.end(ProgressKey.MediaSync)
         log.info("【MediaServer】媒体库数据同步完成，同步数量：%s" % total_count)
 
-    def check_item_exists(self,
-                          mtype,
-                          title=None,
-                          year=None,
-                          tmdbid=None,
-                          season=None,
-                          episode=None):
+    def check_item_exists(self, mtype, title=None, year=None, tmdbid=None, season=None, episode=None):
         """
         检查媒体库是否已存在某项目，非实时同步数据，仅用于展示
         :param mtype: 媒体类型
@@ -300,10 +286,7 @@ class MediaServer(metaclass=SingletonMeta):
         :param episode: 集号
         :return: 媒体服务器中的ITEMID
         """
-        media = self.mediadb.query(server_type=self._server_type,
-                                   title=title,
-                                   year=year,
-                                   tmdbid=tmdbid)
+        media = self.mediadb.query(server_type=self._server_type, title=title, year=year, tmdbid=tmdbid)
         if not media:
             return None
 
@@ -357,22 +340,17 @@ class MediaServer(metaclass=SingletonMeta):
         try:
             if event_info.get("item_type") == "TV":
                 image_url = self.get_episode_image_by_id(
-                    item_id=event_info.get('item_id'),
-                    season_id=event_info.get('season_id'),
-                    episode_id=event_info.get('episode_id'))
+                    item_id=event_info.get("item_id"),
+                    season_id=event_info.get("season_id"),
+                    episode_id=event_info.get("episode_id"),
+                )
             elif event_info.get("item_type") in ["MOV", "SHOW"]:
-                image_url = self.get_remote_image_by_id(
-                    item_id=event_info.get('item_id'),
-                    image_type="Backdrop")
+                image_url = self.get_remote_image_by_id(item_id=event_info.get("item_id"), image_type="Backdrop")
             elif event_info.get("item_type") == "AUD":
-                image_url = self.get_local_image_by_id(
-                    item_id=event_info.get('item_id'))
+                image_url = self.get_local_image_by_id(item_id=event_info.get("item_id"))
             else:
                 image_url = None
-            self.message.send_mediaserver_message(
-                event_info=event_info,
-                channel=channel.value,
-                image_url=image_url)
+            self.message.send_mediaserver_message(event_info=event_info, channel=channel.value, image_url=image_url)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             log.error("【MediaServer】webhook 异步处理异常")
@@ -393,9 +371,7 @@ class MediaServer(metaclass=SingletonMeta):
             log.error("【MediaServer】webhook 消息解析异常")
             return
         if event_info:
-            TaskQueue().submit(
-                self._process_webhook, event_info, channel,
-                name="mediaserver_webhook")
+            TaskQueue().submit(self._process_webhook, event_info, channel, name="mediaserver_webhook")
 
     def get_resume(self, num=12):
         """

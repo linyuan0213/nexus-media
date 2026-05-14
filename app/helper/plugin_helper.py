@@ -5,7 +5,6 @@ _plugin_stats_cache = MemoryCacheAdapter(maxsize=1, name="plugin_stats")
 
 
 class PluginHelper:
-
     @staticmethod
     def install(plugin_id):
         """

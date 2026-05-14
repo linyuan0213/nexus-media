@@ -2,6 +2,7 @@
 搜索领域层测试
 测试 SearchRepositoryAdapter 与 ISearchRepository 接口
 """
+
 from unittest.mock import MagicMock
 
 from app.db.repositories.search_repo_adapter import SearchRepositoryAdapter

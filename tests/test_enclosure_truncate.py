@@ -1,10 +1,11 @@
 """
 Enclosure 截断单元测试 — 验证磁力链接 tracker 截断
 """
+
 import sys
 from unittest.mock import MagicMock
 
-sys.modules['log'] = MagicMock()
+sys.modules["log"] = MagicMock()
 
 
 def _truncate_enclosure(enclosure):

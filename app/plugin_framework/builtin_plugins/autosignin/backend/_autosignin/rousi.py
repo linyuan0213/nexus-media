@@ -13,11 +13,12 @@ class Rousi(_ISiteSigninHandler):
     """
     馒头登录
     """
+
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "rousi.pro"
 
     # 已签到
-    _sign_text = '已签到'
+    _sign_text = "已签到"
 
     @classmethod
     def match(cls, url):
@@ -37,9 +38,9 @@ class Rousi(_ISiteSigninHandler):
         3. 从site_info的headers中获取authorization字段（如果允许复用）
         """
         # 首先尝试从local_storage获取
-        local_storage = CookiecloudHelper().get_local_storage('rousi.pro')
+        local_storage = CookiecloudHelper().get_local_storage("rousi.pro")
         if local_storage:
-            token = local_storage.get('token')
+            token = local_storage.get("token")
             if token:
                 return token
 
@@ -55,19 +56,19 @@ class Rousi(_ISiteSigninHandler):
             if isinstance(headers, dict):
                 # 优先查找专门用于签到的token字段（不区分大小写）
                 for key in headers:
-                    if key.lower() in ['x-sign-token', 'sign-authorization', 'x-sign-authorization']:
+                    if key.lower() in ["x-sign-token", "sign-authorization", "x-sign-authorization"]:
                         token = headers[key]
                         # 如果token已经是Bearer格式，提取实际token值
-                        if token and token.startswith('Bearer '):
+                        if token and token.startswith("Bearer "):
                             token = token[7:]
                         return token
 
                 # 如果没有专门的签到token字段，尝试从authorization提取
                 # 注意：这里的authorization可能不适用于签到，仅作为备用
                 for key in headers:
-                    if key.lower() == 'authorization':
+                    if key.lower() == "authorization":
                         auth = headers[key]
-                        if auth and auth.startswith('Bearer '):
+                        if auth and auth.startswith("Bearer "):
                             # 返回完整的Bearer token格式
                             return auth[7:]
                         elif auth:
@@ -92,11 +93,11 @@ class Rousi(_ISiteSigninHandler):
         token = self._get_sign_token(site_info)
 
         if not token:
-            self.error("签到失败，无法获取签到token，请检查LocalStorage或站点Headers中的x-sign-token/sign-authorization配置")
-            return False, f'【{site}】签到失败，无法获取签到token'
+            self.error(
+                "签到失败，无法获取签到token，请检查LocalStorage或站点Headers中的x-sign-token/sign-authorization配置"
+            )
+            return False, f"【{site}】签到失败，无法获取签到token"
         self.info(f"{site} 开始签到")
-
-
 
         res = RequestUtils(
             headers={
@@ -106,14 +107,11 @@ class Rousi(_ISiteSigninHandler):
                 "origin": "https://rousi.pro",
                 "referer": "https://rousi.pro/",
                 "User-Agent": ua,
-                "Authorization": f"Bearer {token}"
+                "Authorization": f"Bearer {token}",
             },
             proxies=proxy,
-            timeout=30
-        ).post_res(
-            url="https://rousi.pro/api/points/attendance",
-            data='{"mode":"fixed"}'
-        )
+            timeout=30,
+        ).post_res(url="https://rousi.pro/api/points/attendance", data='{"mode":"fixed"}')
         if res is None:
             self.warn("%s 获取签到接口响应失败" % site)
             return False, f"【{site}】签到失败，获取签到接口响应失败！"
@@ -127,16 +125,15 @@ class Rousi(_ISiteSigninHandler):
         # code 0 表示首次签到成功
         if res_json.get("code") == 0:
             self.info("签到成功")
-            return True, f'【{site}】签到成功'
+            return True, f"【{site}】签到成功"
 
         # code 1 表示已经签到过了（可能是400状态码返回的）
         if res_json.get("code") == 1:
             message = res_json.get("message", "")
             if "已签到" in message or "签到" in message:
                 self.info("已签到")
-                return True, f'【{site}】已签到'
+                return True, f"【{site}】已签到"
 
         # 其他情况视为失败
         self.warn("%s 签到接口返回错误，code: %s, 信息：%s" % (site, res_json.get("code"), res_json.get("message")))
         return False, f"【{site}】签到失败，信息：{res_json.get('message')}"
-

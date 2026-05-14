@@ -1,6 +1,7 @@
 """
 插件历史 / TMDB黑名单仓储接口 / 插件框架v2仓储接口
 """
+
 from typing import Protocol
 
 from app.domain.entities.plugin import (
@@ -43,10 +44,16 @@ class ITmdbBlacklistRepository(Protocol):
         """获取所有TMDB黑名单记录"""
         ...
 
-    def insert_tmdb_blacklist(self, tmdb_id: str, title: str | None = None,
-                               year: str | None = None, media_type: str | None = None,
-                               poster_path: str | None = None, backdrop_path: str | None = None,
-                               note: str | None = None) -> bool:
+    def insert_tmdb_blacklist(
+        self,
+        tmdb_id: str,
+        title: str | None = None,
+        year: str | None = None,
+        media_type: str | None = None,
+        poster_path: str | None = None,
+        backdrop_path: str | None = None,
+        note: str | None = None,
+    ) -> bool:
         """添加到TMDB黑名单"""
         ...
 

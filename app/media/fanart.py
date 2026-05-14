@@ -7,24 +7,19 @@ from app.utils.types import MediaType
 
 class Fanart:
     _proxies = get_proxies()
-    _movie_image_types = ['movieposter',
-                          'hdmovielogo',
-                          'moviebackground',
-                          'moviedisc',
-                          'moviebanner',
-                          'moviethumb']
-    _tv_image_types = ['hdtvlogo',
-                       'tvthumb',
-                       'showbackground',
-                       'tvbanner',
-                       'seasonposter',
-                       'seasonbanner',
-                       'seasonthumb',
-                       'tvposter',
-                       'hdclearart']
-    _season_types = ['seasonposter',
-                     'seasonthumb',
-                     'seasonbanner']
+    _movie_image_types = ["movieposter", "hdmovielogo", "moviebackground", "moviedisc", "moviebanner", "moviethumb"]
+    _tv_image_types = [
+        "hdtvlogo",
+        "tvthumb",
+        "showbackground",
+        "tvbanner",
+        "seasonposter",
+        "seasonbanner",
+        "seasonthumb",
+        "tvposter",
+        "hdclearart",
+    ]
+    _season_types = ["seasonposter", "seasonthumb", "seasonbanner"]
     _images = {}
 
     def __init__(self):
@@ -43,7 +38,7 @@ class Fanart:
                     for image_type in self._movie_image_types:
                         images = ret.json().get(image_type)
                         if isinstance(images, list):
-                            self._images[image_type] = images[0].get('url') if isinstance(images[0], dict) else ""
+                            self._images[image_type] = images[0].get("url") if isinstance(images[0], dict) else ""
                         else:
                             self._images[image_type] = ""
                 else:
@@ -57,7 +52,7 @@ class Fanart:
                                     if image.get("season") not in self._images[image_type].keys():
                                         self._images[image_type][image.get("season")] = image.get("url")
                             else:
-                                self._images[image_type] = images[0].get('url') if isinstance(images[0], dict) else ""
+                                self._images[image_type] = images[0].get("url") if isinstance(images[0], dict) else ""
                         else:
                             if image_type in self._season_types:
                                 self._images[image_type] = {}

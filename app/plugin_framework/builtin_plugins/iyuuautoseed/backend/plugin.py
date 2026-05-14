@@ -90,7 +90,7 @@ class IYUUAutoSeedPlugin:
 
         if onlyonce:
             self.ctx.info("辅种服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get('TZ'))) + timedelta(seconds=3)
+            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ"))) + timedelta(seconds=3)
             self.ctx.schedule_date("seed_once", self._do_seed, run_date=run_date)
             self.ctx.set_config("onlyonce", False)
 
@@ -112,17 +112,15 @@ class IYUUAutoSeedPlugin:
         if content:
             try:
                 import json
+
                 return json.loads(content)
             except Exception:
                 pass
-        return {
-            "error_caches": [],
-            "success_caches": [],
-            "permanent_error_caches": []
-        }
+        return {"error_caches": [], "success_caches": [], "permanent_error_caches": []}
 
     def _save_cache(self, data):
         import json
+
         self.ctx.write_data("cache.json", json.dumps(data, ensure_ascii=False, indent=2))
 
     def _do_seed(self):
@@ -168,7 +166,7 @@ class IYUUAutoSeedPlugin:
                 if hash_str in error_caches or hash_str in permanent_error_caches:
                     continue
                 if nolabels and torrent.labels:
-                    skip = any(label in torrent.labels for label in nolabels.split(','))
+                    skip = any(label in torrent.labels for label in nolabels.split(","))
                     if skip:
                         continue
                 hash_strs.append({"hash": hash_str, "save_path": torrent.save_path})
@@ -177,27 +175,29 @@ class IYUUAutoSeedPlugin:
                 self.ctx.info(f"总共需要辅种的种子数：{len(hash_strs)}")
                 chunk_size = 200
                 for i in range(0, len(hash_strs), chunk_size):
-                    chunk = hash_strs[i:i + chunk_size]
+                    chunk = hash_strs[i : i + chunk_size]
                     self._seed_torrents(chunk, downloader_id, sites_cfg, error_caches, success_caches)
                 self._check_recheck()
             else:
                 self.ctx.info("没有需要辅种的种子")
 
-        self._save_cache({
-            "error_caches": error_caches,
-            "success_caches": success_caches,
-            "permanent_error_caches": permanent_error_caches
-        })
+        self._save_cache(
+            {
+                "error_caches": error_caches,
+                "success_caches": success_caches,
+                "permanent_error_caches": permanent_error_caches,
+            }
+        )
 
         if notify and (self.success or self.fail):
             self.ctx.notify(
                 title="【IYUU自动辅种任务完成】",
                 text=f"服务器返回可辅种总数：{self.total}\n"
-                     f"实际可辅种数：{self.realtotal}\n"
-                     f"已存在：{self.exist}\n"
-                     f"成功：{self.success}\n"
-                     f"失败：{self.fail}\n"
-                     f"{self.cached} 条失败记录已加入缓存"
+                f"实际可辅种数：{self.realtotal}\n"
+                f"已存在：{self.exist}\n"
+                f"成功：{self.success}\n"
+                f"失败：{self.fail}\n"
+                f"{self.cached} 条失败记录已加入缓存",
             )
         self.ctx.info("辅种任务执行完成")
 
@@ -228,7 +228,7 @@ class IYUUAutoSeedPlugin:
 
     @staticmethod
     def _can_seeding(torrent: Torrent):
-        return torrent.progress == 100 and torrent.state in ['pausedUP', 'stoppedUP', 'checkingUP', 'queuedUP']
+        return torrent.progress == 100 and torrent.state in ["pausedUP", "stoppedUP", "checkingUP", "queuedUP"]
 
     def _seed_torrents(self, hash_strs, downloader_id, sites_cfg, error_caches, success_caches):
         if not hash_strs:
@@ -276,7 +276,7 @@ class IYUUAutoSeedPlugin:
     def _download_torrent(self, seed, downloader_id, save_path, sites_cfg):
         self.total += 1
         site_url, download_page = self.iyuuhelper.get_torrent_url(seed.get("sid"))
-        if site_url and 'm-team' in site_url:
+        if site_url and "m-team" in site_url:
             site_url = MT_URL
         if not site_url or not download_page:
             self.fail += 1
@@ -298,17 +298,21 @@ class IYUUAutoSeedPlugin:
         # 下载种子
         torrent_url = download_page.replace("{}", seed.get("torrent_id"))
         proxies = get_proxies() if site_info.get("proxy") else None
-        res = RequestUtils(cookies=site_info.get("cookie"), headers={"User-Agent": site_info.get("ua")}, proxies=proxies).get_res(torrent_url)
+        res = RequestUtils(
+            cookies=site_info.get("cookie"), headers={"User-Agent": site_info.get("ua")}, proxies=proxies
+        ).get_res(torrent_url)
         if not res or not res.content:
             self.fail += 1
             return False
 
         # 添加种子到下载器
-        ret = self._downloader.add_torrent(content=res.content,
-                                           downloader_id=downloader_id,
-                                           save_path=save_path,
-                                           is_paused=True,
-                                           tags=self._torrent_tags)
+        ret = self._downloader.add_torrent(
+            content=res.content,
+            downloader_id=downloader_id,
+            save_path=save_path,
+            is_paused=True,
+            tags=self._torrent_tags,
+        )
         if ret:
             self.success += 1
             if downloader_id not in self._recheck_torrents:
@@ -324,6 +328,7 @@ class IYUUAutoSeedPlugin:
             content = self.ctx.read_data("seed_history.json")
             if content:
                 import json
+
                 history = json.loads(content)
             else:
                 history = {}
@@ -340,6 +345,7 @@ class IYUUAutoSeedPlugin:
 
             history[current_hash] = seed_history
             import json
+
             self.ctx.write_data("seed_history.json", json.dumps(history, ensure_ascii=False, indent=2))
         except Exception as e:
             self.ctx.error(f"保存辅种历史失败: {e}")

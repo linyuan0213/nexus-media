@@ -32,13 +32,13 @@ class TmdbDetail:
             if mtype == MediaType.MOVIE:
                 info = self._get_movie_detail(tmdbid, append_to_response)
                 if info:
-                    info['media_type'] = MediaType.MOVIE
+                    info["media_type"] = MediaType.MOVIE
             else:
                 info = self._get_tv_detail(tmdbid, append_to_response)
                 if info:
-                    info['media_type'] = MediaType.TV
+                    info["media_type"] = MediaType.TV
             if info:
-                info['genre_ids'] = get_genre_ids_from_detail(info.get('genres'))
+                info["genre_ids"] = get_genre_ids_from_detail(info.get("genres"))
                 info = update_tmdbinfo_cn_title(info, self.client._default_language)
             self.client.redis_cache.set_tmdb_info(mtype, tmdbid, info, language)
             return info
@@ -95,7 +95,11 @@ class TmdbDetail:
     def get_backdrops(self, tmdbinfo, original=True):
         if not tmdbinfo:
             return []
-        prefix_url = ImageProxyHelper.get_tmdbimage_url(r"%s", prefix="original") if original else ImageProxyHelper.get_tmdbimage_url(r"%s")
+        prefix_url = (
+            ImageProxyHelper.get_tmdbimage_url(r"%s", prefix="original")
+            if original
+            else ImageProxyHelper.get_tmdbimage_url(r"%s")
+        )
         backdrops = tmdbinfo.get("images", {}).get("backdrops") or []
         result = [prefix_url % b.get("file_path") for b in backdrops]
         result.append(prefix_url % tmdbinfo.get("backdrop_path"))

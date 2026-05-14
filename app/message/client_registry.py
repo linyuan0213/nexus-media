@@ -6,9 +6,19 @@ class ClientRegistry:
     _clients_loaded = False
 
     _MODULES = [
-        'wechat', 'telegram', 'bark', 'chanify', 'gotify', 'iyuu',
-        'ntfy', 'pushdeer', 'pushplus', 'serverchan', 'slack',
-        'synologychat', 'webhook',
+        "wechat",
+        "telegram",
+        "bark",
+        "chanify",
+        "gotify",
+        "iyuu",
+        "ntfy",
+        "pushdeer",
+        "pushplus",
+        "serverchan",
+        "slack",
+        "synologychat",
+        "webhook",
     ]
 
     @classmethod
@@ -29,7 +39,7 @@ class ClientRegistry:
             return
         for mod in cls._MODULES:
             try:
-                importlib.import_module(f'app.message.client.{mod}')
+                importlib.import_module(f"app.message.client.{mod}")
             except ImportError:
                 pass
         cls._clients_loaded = True

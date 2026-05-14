@@ -1,6 +1,7 @@
 """
 系统字典领域 Repository 接口
 """
+
 from typing import Protocol
 
 from app.domain.entities.system_dict import SystemDictEntity

@@ -2,6 +2,7 @@
 下载领域 Repository 接口（Python Protocol）
 定义 DownloadHistory、DownloadSetting、IndexerStatistics 的仓储契约
 """
+
 from typing import Protocol
 
 from app.domain.entities.download import (
@@ -26,7 +27,9 @@ class IDownloadHistoryRepository(Protocol):
         """新增下载历史"""
         ...
 
-    def get_all(self, date: str | None = None, hid: int | None = None, num: int = 30, page: int = 1) -> list[DownloadHistoryEntity]:
+    def get_all(
+        self, date: str | None = None, hid: int | None = None, num: int = 30, page: int = 1
+    ) -> list[DownloadHistoryEntity]:
         """查询下载历史列表"""
         ...
 
@@ -58,17 +61,19 @@ class IDownloadSettingRepository(Protocol):
         """查询下载设置列表"""
         ...
 
-    def update(self,
-               sid: int,
-               name: str,
-               category: str,
-               tags: str,
-               is_paused: bool,
-               upload_limit: float,
-               download_limit: float,
-               ratio_limit: float,
-               seeding_time_limit: float,
-               downloader: str) -> None:
+    def update(
+        self,
+        sid: int,
+        name: str,
+        category: str,
+        tags: str,
+        is_paused: bool,
+        upload_limit: float,
+        download_limit: float,
+        ratio_limit: float,
+        seeding_time_limit: float,
+        downloader: str,
+    ) -> None:
         """新增或更新下载设置"""
         ...
 

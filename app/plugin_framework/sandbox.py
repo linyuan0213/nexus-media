@@ -2,6 +2,7 @@
 Plugin Sandbox - 插件沙箱运行环境
 动态加载插件后端模块，提供隔离的运行上下文
 """
+
 import importlib
 import importlib.util
 import os
@@ -27,7 +28,7 @@ class PluginSandbox(metaclass=SingletonMeta):
         manifest = self._registry.get(plugin_id)
         if not manifest or not manifest.backend.entry:
             return None
-        return manifest.backend.entry.split(':')[0]
+        return manifest.backend.entry.split(":")[0]
 
     def _get_plugin_path(self, plugin_id: str) -> str | None:
         """获取插件根目录"""
@@ -46,7 +47,7 @@ class PluginSandbox(metaclass=SingletonMeta):
                 to_remove.append(key)
                 continue
             # 2. 入口模块的子模块（backend.xxx）
-            if module_path and key.startswith(module_path + '.'):
+            if module_path and key.startswith(module_path + "."):
                 to_remove.append(key)
                 continue
             # 3. 遗留兼容：plugin_{id} 前缀
@@ -92,8 +93,8 @@ class PluginSandbox(metaclass=SingletonMeta):
                 log.warn(f"[Sandbox] 插件未声明后端入口: {plugin_id}")
                 return False
 
-            module_path, class_name = entry.split(':')
-            file_path = os.path.join(plugin_path, module_path.replace('.', '/') + '.py')
+            module_path, class_name = entry.split(":")
+            file_path = os.path.join(plugin_path, module_path.replace(".", "/") + ".py")
 
             if not os.path.exists(file_path):
                 log.error(f"[Sandbox] 插件入口文件不存在: {file_path}")
@@ -102,9 +103,7 @@ class PluginSandbox(metaclass=SingletonMeta):
             # 动态加载模块
             if plugin_path not in sys.path:
                 sys.path.insert(0, plugin_path)
-            spec = importlib.util.spec_from_file_location(
-                module_path, file_path
-            )
+            spec = importlib.util.spec_from_file_location(module_path, file_path)
             module = importlib.util.module_from_spec(spec)
             sys.modules[module_path] = module
             spec.loader.exec_module(module)
@@ -121,7 +120,7 @@ class PluginSandbox(metaclass=SingletonMeta):
             self._instances[plugin_id] = instance
 
             # 调用生命周期方法
-            if hasattr(instance, 'on_enable'):
+            if hasattr(instance, "on_enable"):
                 instance.on_enable()
 
             log.info(f"[Sandbox] 插件加载成功: {plugin_id}")
@@ -136,7 +135,7 @@ class PluginSandbox(metaclass=SingletonMeta):
         instance = self._instances.get(plugin_id)
         if instance:
             try:
-                if hasattr(instance, 'on_disable'):
+                if hasattr(instance, "on_disable"):
                     instance.on_disable()
             except Exception as e:
                 log.error(f"[Sandbox] 插件禁用失败 {plugin_id}: {e}")
@@ -190,7 +189,7 @@ class PluginSandbox(metaclass=SingletonMeta):
         if not instance:
             return
 
-        if hasattr(instance, 'on_hook'):
+        if hasattr(instance, "on_hook"):
             try:
                 instance.on_hook(event, data)
             except Exception as e:

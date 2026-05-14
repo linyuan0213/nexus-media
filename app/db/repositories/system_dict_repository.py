@@ -12,9 +12,7 @@ class SystemDictRepository(BaseRepository):
 
     def get_by_type_key(self, dtype: str, key: str) -> SYSTEMDICT | None:
         """根据 type + key 获取记录"""
-        return self._db.query(SYSTEMDICT).filter(
-            dtype == SYSTEMDICT.TYPE, key == SYSTEMDICT.KEY
-        ).first()
+        return self._db.query(SYSTEMDICT).filter(dtype == SYSTEMDICT.TYPE, key == SYSTEMDICT.KEY).first()
 
     def list_by_type(self, dtype: str) -> list[SYSTEMDICT]:
         """根据 type 获取列表"""
@@ -34,15 +32,11 @@ class SystemDictRepository(BaseRepository):
 
     def delete(self, dtype: str, key: str) -> bool:
         """删除字典值"""
-        result = self._db.query(SYSTEMDICT).filter(
-            dtype == SYSTEMDICT.TYPE, key == SYSTEMDICT.KEY
-        ).delete()
+        result = self._db.query(SYSTEMDICT).filter(dtype == SYSTEMDICT.TYPE, key == SYSTEMDICT.KEY).delete()
         self._db.commit()
         return result > 0
 
     def exists(self, dtype: str, key: str) -> bool:
         """检查是否存在"""
-        count = self._db.query(SYSTEMDICT).filter(
-            dtype == SYSTEMDICT.TYPE, key == SYSTEMDICT.KEY
-        ).count()
+        count = self._db.query(SYSTEMDICT).filter(dtype == SYSTEMDICT.TYPE, key == SYSTEMDICT.KEY).count()
         return count > 0

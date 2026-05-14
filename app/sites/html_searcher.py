@@ -8,6 +8,7 @@ HTML 站点搜索器
 - flat（默认）：直接按 list selector 找行，逐行提取字段
 - nested（FireFly）：两层结构，外层 container 提供共享字段
 """
+
 import re
 from copy import deepcopy
 from typing import Any
@@ -59,7 +60,7 @@ class HtmlSiteSearcher:
 
     def _build_url(self, keyword, page, mtype):
         cfg = self._site.html
-        if not (isinstance(cfg, dict) or hasattr(cfg, 'search')):
+        if not (isinstance(cfg, dict) or hasattr(cfg, "search")):
             return None
 
         template_vars = {
@@ -116,7 +117,7 @@ class HtmlSiteSearcher:
         if qs:
             url += f"{'&' if '?' in url else '?'}{qs}"
         if not keyword:
-            url = re.sub(r'(search|keyword)=[^&]*&?', '', url).rstrip("&").rstrip("?")
+            url = re.sub(r"(search|keyword)=[^&]*&?", "", url).rstrip("&").rstrip("?")
             if page >= 0:
                 url += f"{'&' if '?' in url else '?'}page={int(page) + 1}"
         return url
@@ -217,9 +218,7 @@ class HtmlSiteSearcher:
             ct = deepcopy(container)
             container_vals = {}
             for _fname, _fcfg in container_fields_cfg.items():
-                container_vals[_fname] = self._extract_nested_value(
-                    ct, _fcfg, template_vars, container_vals
-                )
+                container_vals[_fname] = self._extract_nested_value(ct, _fcfg, template_vars, container_vals)
             template_vars.update(container_vals)
 
             rows = ct.xpath(row_xpath)
@@ -227,9 +226,7 @@ class HtmlSiteSearcher:
                 rt = deepcopy(row)
                 field_vals = dict(container_vals)
                 for fname, fcfg in fields_cfg.items():
-                    field_vals[fname] = self._extract_nested_value(
-                        rt, fcfg, template_vars, field_vals
-                    )
+                    field_vals[fname] = self._extract_nested_value(rt, fcfg, template_vars, field_vals)
 
                 item = {}
                 for fname, fcfg in fields_cfg.items():
@@ -290,13 +287,13 @@ class HtmlSiteSearcher:
         if isinstance(els, list):
             if isinstance(els[0], str):
                 val = els
-            elif hasattr(els[0], 'attrib'):
+            elif hasattr(els[0], "attrib"):
                 val = els[0] if len(els) == 1 else els
 
         if isinstance(val, list) and val and isinstance(val[0], str):
             join_delim = fcfg.get("join", "")
             val = join_delim.join(v.strip() for v in val) if join_delim else val[0]
-        elif hasattr(val, 'text'):
+        elif hasattr(val, "text"):
             val = (val.text or "").strip()
 
         replace_map = fcfg.get("replace")
@@ -337,7 +334,9 @@ class HtmlSiteSearcher:
                 if fname == "title":
                     t2 = fcfg.get("attribute", "")
                     if t2:
-                        raw = self._extract_field_value(element, {"selector": fcfg.get("selector", ""), "attribute": t2})
+                        raw = self._extract_field_value(
+                            element, {"selector": fcfg.get("selector", ""), "attribute": t2}
+                        )
                         if raw:
                             result[fname] = raw
                     if result[fname] is None:
@@ -372,9 +371,9 @@ class HtmlSiteSearcher:
                 contents = fcfg.get("contents", 0)
                 remove_sel = fcfg.get("remove", "")
 
-                if attr and hasattr(els[0], 'attrib') and attr in els[0].attrib:
+                if attr and hasattr(els[0], "attrib") and attr in els[0].attrib:
                     val = els[0].attrib[attr]
-                elif hasattr(els[0], 'text'):
+                elif hasattr(els[0], "text"):
                     if remove_sel:
                         try:
                             for rm_el in els[0].xpath(remove_sel):
@@ -382,11 +381,11 @@ class HtmlSiteSearcher:
                                     els[0].text = (els[0].text or "").replace(rm_el.text, "")
                         except Exception:
                             pass
-                    val = "".join(e for e in els[0].xpath('.//text()') if e).strip()
+                    val = "".join(e for e in els[0].xpath(".//text()") if e).strip()
                     if not val:
                         val = (els[0].text or "").strip()
                     if not val:
-                        val = (els[0].text_content() or "").strip() if hasattr(els[0], 'text_content') else ""
+                        val = (els[0].text_content() or "").strip() if hasattr(els[0], "text_content") else ""
                     if contents and isinstance(contents, int):
                         lines = val.split("\n")
                         val = lines[contents] if contents < len(lines) else val

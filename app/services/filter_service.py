@@ -40,23 +40,23 @@ class FilterRuleEngine:
         for filter_info in filters:
             try:
                 rule_match = True
-                order_seq = 100 - int(filter_info.get('pri', 0))
+                order_seq = 100 - int(filter_info.get("pri", 0))
 
                 # 必须包括的项
-                includes = filter_info.get('include')
+                includes = filter_info.get("include")
                 if includes and rule_match:
                     include_flag = True
                     for include in includes:
                         if not include:
                             continue
-                        if not re.search(r'%s' % include.strip(), title, re.IGNORECASE):
+                        if not re.search(r"%s" % include.strip(), title, re.IGNORECASE):
                             include_flag = False
                             break
                     if not include_flag:
                         rule_match = False
 
                 # 不能包含的项
-                excludes = filter_info.get('exclude')
+                excludes = filter_info.get("exclude")
                 if excludes and rule_match:
                     exclude_flag = False
                     exclude_count = 0
@@ -64,17 +64,17 @@ class FilterRuleEngine:
                         if not exclude:
                             continue
                         exclude_count += 1
-                        if not re.search(r'%s' % exclude.strip(), title, re.IGNORECASE):
+                        if not re.search(r"%s" % exclude.strip(), title, re.IGNORECASE):
                             exclude_flag = True
                     if exclude_count > 0 and not exclude_flag:
                         rule_match = False
 
                 # 大小
-                sizes = filter_info.get('size')
+                sizes = filter_info.get("size")
                 if sizes and rule_match and meta_info.size:
                     meta_info.size = StringUtils.num_filesize(meta_info.size)
-                    if sizes.find(',') != -1:
-                        sizes = sizes.split(',')
+                    if sizes.find(",") != -1:
+                        sizes = sizes.split(",")
                         begin_size = float(sizes[0].strip()) if StringUtils.is_numeric(sizes[0]) else 0
                         end_size = float(sizes[1].strip()) if StringUtils.is_numeric(sizes[1]) else 0
                     else:
@@ -82,19 +82,22 @@ class FilterRuleEngine:
                         end_size = float(sizes.strip()) if StringUtils.is_numeric(sizes) else 0
 
                     if meta_info.type == MediaType.MOVIE:
-                        if not begin_size * (1024 ** 3) <= int(meta_info.size) <= end_size * (1024 ** 3):
+                        if not begin_size * (1024**3) <= int(meta_info.size) <= end_size * (1024**3):
                             rule_match = False
                     else:
-                        if meta_info.total_episodes \
-                                and not begin_size * (1024 ** 3) <= int(meta_info.size) / int(meta_info.total_episodes) <= end_size * (1024 ** 3):
+                        if meta_info.total_episodes and not begin_size * (1024**3) <= int(meta_info.size) / int(
+                            meta_info.total_episodes
+                        ) <= end_size * (1024**3):
                             rule_match = False
 
                 # 促销
                 free = filter_info.get("free")
                 if free and meta_info.upload_volume_factor is not None and meta_info.download_volume_factor is not None:
                     ul_factor, dl_factor = free.split()
-                    if float(ul_factor) > meta_info.upload_volume_factor \
-                            or float(dl_factor) < meta_info.download_volume_factor:
+                    if (
+                        float(ul_factor) > meta_info.upload_volume_factor
+                        or float(dl_factor) < meta_info.download_volume_factor
+                    ):
                         rule_match = False
 
                 if rule_match:
@@ -109,11 +112,13 @@ class FilterRuleEngine:
         return True, order_seq, group_name
 
     @staticmethod
-    def check_torrent_filter(meta_info,
-                             filter_args: dict,
-                             rg_matcher: ReleaseGroupsMatcher,
-                             uploadvolumefactor=None,
-                             downloadvolumefactor=None) -> tuple[bool, int, str]:
+    def check_torrent_filter(
+        meta_info,
+        filter_args: dict,
+        rg_matcher: ReleaseGroupsMatcher,
+        uploadvolumefactor=None,
+        downloadvolumefactor=None,
+    ) -> tuple[bool, int, str]:
         """
         对种子进行过滤
         :param meta_info: 名称识别后的MetaBase对象
@@ -147,9 +152,7 @@ class FilterRuleEngine:
         if filter_args.get("team"):
             team = filter_args.get("team")
             if not meta_info.resource_team:
-                resource_team = rg_matcher.match(
-                    title=meta_info.rev_string,
-                    groups=team)
+                resource_team = rg_matcher.match(title=meta_info.rev_string, groups=team)
                 if not resource_team:
                     return False, 0, f"{meta_info.org_string} 不符合制作组/字幕组 {team} 要求"
                 else:
@@ -219,10 +222,7 @@ class FilterService:
     负责规则数据加载与规则匹配调度
     """
 
-    def __init__(self,
-                 filter_group_repo=None,
-                 filter_rule_repo=None,
-                 rg_matcher: ReleaseGroupsMatcher | None = None):
+    def __init__(self, filter_group_repo=None, filter_rule_repo=None, rg_matcher: ReleaseGroupsMatcher | None = None):
         self._filter_group_repo = filter_group_repo or FilterGroupRepositoryAdapter()
         self._filter_rule_repo = filter_rule_repo or FilterRuleRepositoryAdapter()
         self._rg_matcher = rg_matcher or ReleaseGroupsMatcher()
@@ -241,14 +241,8 @@ class FilterService:
         """获取所有规则组"""
         ret_groups = []
         for group in self._groups:
-            group_info = {
-                "id": group.ID,
-                "name": group.GROUP_NAME,
-                "default": group.IS_DEFAULT,
-                "note": group.NOTE
-            }
-            if (groupid and str(groupid) == str(group.ID)) \
-                    or (default and group.IS_DEFAULT == "Y"):
+            group_info = {"id": group.ID, "name": group.GROUP_NAME, "default": group.IS_DEFAULT, "note": group.NOTE}
+            if (groupid and str(groupid) == str(group.ID)) or (default and group.IS_DEFAULT == "Y"):
                 return group_info
             ret_groups.append(group_info)
         if groupid or default:
@@ -259,7 +253,7 @@ class FilterService:
         """获取所有的规则组及组内的规则"""
         groups = self.get_rule_groups()
         for group in groups:
-            group['rules'] = self.get_rules(group.get("id"))
+            group["rules"] = self.get_rules(group.get("id"))
         return groups
 
     def get_rules(self, groupid, ruleid=None):
@@ -277,14 +271,11 @@ class FilterService:
                 "exclude": rule.EXCLUDE.split("\n") if rule.EXCLUDE else [],
                 "size": rule.SIZE_LIMIT,
                 "free": rule.NOTE,
-                "free_text": {
-                    "1.0 1.0": "普通",
-                    "1.0 0.0": "免费",
-                    "2.0 0.0": "2X免费"
-                }.get(rule.NOTE, "全部") if rule.NOTE else ""
+                "free_text": {"1.0 1.0": "普通", "1.0 0.0": "免费", "2.0 0.0": "2X免费"}.get(rule.NOTE, "全部")
+                if rule.NOTE
+                else "",
             }
-            if str(rule.GROUP_ID) == str(groupid) \
-                    and (not ruleid or int(ruleid) == rule.ID):
+            if str(rule.GROUP_ID) == str(groupid) and (not ruleid or int(ruleid) == rule.ID):
                 ret_rules.append(rule_info)
         if ruleid:
             return ret_rules[0] if ret_rules else {}
@@ -334,18 +325,10 @@ class FilterService:
                 return True
         return False
 
-    def check_torrent_filter(self,
-                             meta_info,
-                             filter_args,
-                             uploadvolumefactor=None,
-                             downloadvolumefactor=None):
+    def check_torrent_filter(self, meta_info, filter_args, uploadvolumefactor=None, downloadvolumefactor=None):
         """对种子进行过滤"""
         match_flag, order_seq, match_msg = FilterRuleEngine.check_torrent_filter(
-            meta_info,
-            filter_args,
-            self._rg_matcher,
-            uploadvolumefactor,
-            downloadvolumefactor
+            meta_info, filter_args, self._rg_matcher, uploadvolumefactor, downloadvolumefactor
         )
         if not match_flag:
             return match_flag, order_seq, match_msg
@@ -357,7 +340,7 @@ class FilterService:
                 meta_info.org_string,
                 StringUtils.str_filesize(meta_info.size),
                 meta_info.get_volume_factor_string(),
-                rule_name
+                rule_name,
             )
             return match_flag, order_seq, match_msg
         else:
@@ -366,13 +349,13 @@ class FilterService:
                 meta_info.org_string,
                 StringUtils.str_filesize(meta_info.size),
                 meta_info.get_volume_factor_string(),
-                rule_name
+                rule_name,
             )
             return match_flag, order_seq, match_msg
 
     # ------------------- 规则管理 -------------------
 
-    def add_group(self, name, default='N'):
+    def add_group(self, name, default="N"):
         """添加过滤规则组"""
         ret = self._filter_group_repo.add_filter_group(name, default)
         self.reload()
@@ -417,7 +400,7 @@ class FilterService:
     def import_filter_group(self, content: str) -> tuple[bool, str]:
         """导入规则组（Base64编码的JSON字符串）"""
         try:
-            json_str = base64.b64decode(str(content).encode("utf-8")).decode('utf-8')
+            json_str = base64.b64decode(str(content).encode("utf-8")).decode("utf-8")
             json_obj = json.loads(json_str)
             if not json_obj or not json_obj.get("name"):
                 return False, "数据格式不正确"
@@ -427,18 +410,21 @@ class FilterService:
                 return False, "数据内容不正确"
             if json_obj.get("rules"):
                 for rule in json_obj.get("rules"):
-                    self.add_filter_rule(item={
-                        "group": group_id,
-                        "name": rule.get("name"),
-                        "pri": rule.get("pri"),
-                        "include": rule.get("include"),
-                        "exclude": rule.get("exclude"),
-                        "size": rule.get("size"),
-                        "free": rule.get("free")
-                    })
+                    self.add_filter_rule(
+                        item={
+                            "group": group_id,
+                            "name": rule.get("name"),
+                            "pri": rule.get("pri"),
+                            "include": rule.get("include"),
+                            "exclude": rule.get("exclude"),
+                            "size": rule.get("size"),
+                            "free": rule.get("free"),
+                        }
+                    )
             return True, ""
         except Exception as err:
             import traceback
+
             traceback.print_exc()
             return False, "数据格式不正确，%s" % str(err)
 
@@ -461,26 +447,24 @@ class FilterService:
         Init_RuleGroups = []
         if os.path.exists(sql_file):
             with open(sql_file, encoding="utf-8") as f:
-                sql_list = f.read().split(';\n')
+                sql_list = f.read().split(";\n")
                 i = 0
                 while i < len(sql_list):
                     rulegroup = {}
-                    rulegroup_info = re.findall(
-                        r"[0-9]+,'[^\"]+NULL", sql_list[i], re.I)[0].split(",")
-                    rulegroup['id'] = int(rulegroup_info[0])
-                    rulegroup['name'] = rulegroup_info[1][1:-1]
-                    rulegroup['rules'] = []
-                    rulegroup['sql'] = [sql_list[i]]
+                    rulegroup_info = re.findall(r"[0-9]+,'[^\"]+NULL", sql_list[i], re.I)[0].split(",")
+                    rulegroup["id"] = int(rulegroup_info[0])
+                    rulegroup["name"] = rulegroup_info[1][1:-1]
+                    rulegroup["rules"] = []
+                    rulegroup["sql"] = [sql_list[i]]
                     if i + 1 < len(sql_list):
-                        rules = re.findall(
-                            r"[0-9]+,'[^\"]+NULL", sql_list[i + 1], re.I)[0].split("),\n (")
+                        rules = re.findall(r"[0-9]+,'[^\"]+NULL", sql_list[i + 1], re.I)[0].split("),\n (")
                         for rule in rules:
                             rule_info = {}
                             rule = rule.split(",")
-                            rule_info['name'] = rule[2][1:-1]
-                            rule_info['include'] = rule[4][1:-1]
-                            rule_info['exclude'] = rule[5][1:-1]
-                            rulegroup['rules'].append(rule_info)
+                            rule_info["name"] = rule[2][1:-1]
+                            rule_info["include"] = rule[4][1:-1]
+                            rule_info["exclude"] = rule[5][1:-1]
+                            rulegroup["rules"].append(rule_info)
                         rulegroup["sql"].append(sql_list[i + 1])
                     Init_RuleGroups.append(rulegroup)
                     i = i + 2
@@ -496,30 +480,29 @@ class FilterService:
             return False, "规则组没有对应规则", ""
         rules = []
         for rule in group_rules:
-            rules.append({
-                "name": rule.ROLE_NAME,
-                "pri": rule.PRIORITY,
-                "include": rule.INCLUDE,
-                "exclude": rule.EXCLUDE,
-                "size": rule.SIZE_LIMIT,
-                "free": rule.NOTE
-            })
-        rule_json = {
-            "name": group_info[0].GROUP_NAME,
-            "rules": rules
-        }
-        json_string = base64.b64encode(json.dumps(
-            rule_json).encode("utf-8")).decode('utf-8')
+            rules.append(
+                {
+                    "name": rule.ROLE_NAME,
+                    "pri": rule.PRIORITY,
+                    "include": rule.INCLUDE,
+                    "exclude": rule.EXCLUDE,
+                    "size": rule.SIZE_LIMIT,
+                    "free": rule.NOTE,
+                }
+            )
+        rule_json = {"name": group_info[0].GROUP_NAME, "rules": rules}
+        json_string = base64.b64encode(json.dumps(rule_json).encode("utf-8")).decode("utf-8")
         return True, "", json_string
 
-    def test_rule(self, title: str, subtitle: str | None, size: str | None,
-                  rulegroup: str | None) -> tuple[bool, str, int]:
+    def test_rule(
+        self, title: str, subtitle: str | None, size: str | None, rulegroup: str | None
+    ) -> tuple[bool, str, int]:
         """测试规则是否匹配给定标题"""
         meta_info = MetaInfo(title=title, subtitle=subtitle)
-        meta_info.size = float(size) * 1024 ** 3 if size else 0
-        match_flag, res_order, match_msg = \
-            self.check_torrent_filter(meta_info=meta_info,
-                                      filter_args={"rule": rulegroup})
+        meta_info.size = float(size) * 1024**3 if size else 0
+        match_flag, res_order, match_msg = self.check_torrent_filter(
+            meta_info=meta_info, filter_args={"rule": rulegroup}
+        )
         text = "匹配" if match_flag else "未匹配"
         order = 100 - res_order if res_order else 0
         return match_flag, text, order
@@ -528,6 +511,6 @@ class FilterService:
         """获取规则详情（include/exclude 转为换行字符串）"""
         ruleinfo = self.get_rules(groupid=groupid, ruleid=ruleid)
         if ruleinfo and isinstance(ruleinfo, dict):
-            ruleinfo['include'] = "\n".join(ruleinfo.get("include", []))
-            ruleinfo['exclude'] = "\n".join(ruleinfo.get("exclude", []))
+            ruleinfo["include"] = "\n".join(ruleinfo.get("include", []))
+            ruleinfo["exclude"] = "\n".join(ruleinfo.get("exclude", []))
         return ruleinfo

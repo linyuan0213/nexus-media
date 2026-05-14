@@ -24,7 +24,18 @@ class _ISiteUserInfo(metaclass=ABCMeta):
     # 站点解析时判断顺序，值越小越先解析
     order = SITE_BASE_ORDER
 
-    def __init__(self, site_name, url, site_cookie, index_html, session=None, ua=None, site_headers=None, emulate=False, proxy=None):
+    def __init__(
+        self,
+        site_name,
+        url,
+        site_cookie,
+        index_html,
+        session=None,
+        ua=None,
+        site_headers=None,
+        emulate=False,
+        proxy=None,
+    ):
         super().__init__()
         # 站点信息
         self.site_name = None
@@ -144,10 +155,12 @@ class _ISiteUserInfo(metaclass=ABCMeta):
 
                 msg_links = []
                 next_page = self._parse_message_unread_links(
-                    self._get_page_content(urljoin(self._base_url, link)), msg_links)
+                    self._get_page_content(urljoin(self._base_url, link)), msg_links
+                )
                 while next_page:
                     next_page = self._parse_message_unread_links(
-                        self._get_page_content(urljoin(self._base_url, next_page)), msg_links)
+                        self._get_page_content(urljoin(self._base_url, next_page)), msg_links
+                    )
 
                 unread_msg_links.extend(msg_links)
 
@@ -161,17 +174,23 @@ class _ISiteUserInfo(metaclass=ABCMeta):
         if self._torrent_seeding_page:
             # 第一页
             next_page = self._parse_user_torrent_seeding_info(
-                self._get_page_content(urljoin(self._base_url, self._torrent_seeding_page),
-                                       self._torrent_seeding_params,
-                                       self._torrent_seeding_headers))
+                self._get_page_content(
+                    urljoin(self._base_url, self._torrent_seeding_page),
+                    self._torrent_seeding_params,
+                    self._torrent_seeding_headers,
+                )
+            )
 
             # 其他页处理
             while next_page:
                 next_page = self._parse_user_torrent_seeding_info(
-                    self._get_page_content(urljoin(urljoin(self._base_url, self._torrent_seeding_page), next_page),
-                                           self._torrent_seeding_params,
-                                           self._torrent_seeding_headers),
-                    multi_page=True)
+                    self._get_page_content(
+                        urljoin(urljoin(self._base_url, self._torrent_seeding_page), next_page),
+                        self._torrent_seeding_params,
+                        self._torrent_seeding_headers,
+                    ),
+                    multi_page=True,
+                )
 
     @staticmethod
     def _prepare_html_text(html_text):
@@ -201,7 +220,8 @@ class _ISiteUserInfo(metaclass=ABCMeta):
                 self._favicon_url = urljoin(self._base_url, fav_link[0])
 
         res = RequestUtils(cookies=self._site_cookie, session=self._session, timeout=60, headers=self._ua).get_res(
-            url=self._favicon_url)
+            url=self._favicon_url
+        )
         if res:
             self.site_favicon = base64.b64encode(res.content).decode()
 
@@ -220,15 +240,17 @@ class _ISiteUserInfo(metaclass=ABCMeta):
                 req_headers.update(headers)
 
             if isinstance(self._ua, str):
-                req_headers.update({
-                    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                    "accept-language": "zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7",
-                    "user-agent": f"{self._ua}",
-                    "referer": urljoin(self._base_url, self._user_detail_page),
-                    "sec-fetch-dest": "document",
-                    "sec-fetch-mode": "navigate",
-                    "sec-fetch-site": "same-origin"
-                })
+                req_headers.update(
+                    {
+                        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                        "accept-language": "zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7",
+                        "user-agent": f"{self._ua}",
+                        "referer": urljoin(self._base_url, self._user_detail_page),
+                        "sec-fetch-dest": "document",
+                        "sec-fetch-mode": "navigate",
+                        "sec-fetch-site": "same-origin",
+                    }
+                )
             else:
                 req_headers.update(self._ua)
 
@@ -236,17 +258,13 @@ class _ISiteUserInfo(metaclass=ABCMeta):
                 req_headers.update(self._addition_headers)
 
         if params:
-            res = RequestUtils(cookies=self._site_cookie,
-                               session=self._session,
-                               timeout=60,
-                               proxies=proxies,
-                               headers=req_headers).post_res(url=url, data=params)
+            res = RequestUtils(
+                cookies=self._site_cookie, session=self._session, timeout=60, proxies=proxies, headers=req_headers
+            ).post_res(url=url, data=params)
         else:
-            res = RequestUtils(cookies=self._site_cookie,
-                               session=self._session,
-                               timeout=60,
-                               proxies=proxies,
-                               headers=req_headers).get_res(url=url)
+            res = RequestUtils(
+                cookies=self._site_cookie, session=self._session, timeout=60, proxies=proxies, headers=req_headers
+            ).get_res(url=url)
         if res is not None and res.status_code in (200, 500, 403):
             # 如果cloudflare 有防护，尝试使用浏览器仿真
             if under_challenge(res.text):
@@ -262,7 +280,8 @@ class _ISiteUserInfo(metaclass=ABCMeta):
                         return html_text
                 else:
                     log.warn(
-                        f"【Sites】{self.site_name} 检测到Cloudflare，需要浏览器仿真，但是浏览器不可用或者未开启浏览器仿真")
+                        f"【Sites】{self.site_name} 检测到Cloudflare，需要浏览器仿真，但是浏览器不可用或者未开启浏览器仿真"
+                    )
                     return ""
             if "charset=utf-8" in res.text or "charset=UTF-8" in res.text:
                 res.encoding = "UTF-8"

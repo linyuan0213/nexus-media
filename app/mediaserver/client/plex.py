@@ -35,33 +35,33 @@ class Plex(_IMediaClient):
         if config:
             self._client_config = config
         else:
-            self._client_config = self.get_db_config('plex')
+            self._client_config = self.get_db_config("plex")
         self.init_config()
 
     def init_config(self):
         if self._client_config:
-            self._host = self._client_config.get('host')
-            self._token = self._client_config.get('token')
+            self._host = self._client_config.get("host")
+            self._token = self._client_config.get("token")
             if self._host:
-                if not self._host.startswith('http'):
+                if not self._host.startswith("http"):
                     self._host = "http://" + self._host
-                if not self._host.endswith('/'):
+                if not self._host.endswith("/"):
                     self._host = self._host + "/"
-            self._play_host = self._client_config.get('play_host')
+            self._play_host = self._client_config.get("play_host")
             if not self._play_host:
                 self._play_host = self._host
             else:
-                if not self._play_host.startswith('http'):
+                if not self._play_host.startswith("http"):
                     self._play_host = "http://" + self._play_host
-                if not self._play_host.endswith('/'):
+                if not self._play_host.endswith("/"):
                     self._play_host = self._play_host + "/"
             if "app.plex.tv" in self._play_host:
                 self._play_host = self._play_host + "desktop/"
             else:
                 self._play_host = self._play_host + "web/index.html"
-            self._username = self._client_config.get('username')
-            self._password = self._client_config.get('password')
-            self._servername = self._client_config.get('servername')
+            self._username = self._client_config.get("username")
+            self._password = self._client_config.get("password")
+            self._servername = self._client_config.get("servername")
             if self._host and self._token:
                 try:
                     self._plex = PlexServer(self._host, self._token)
@@ -107,7 +107,7 @@ class Plex(_IMediaClient):
         try:
             # type的含义: 1 电影 4 剧集单集 详见 plexapi/utils.py中SEARCHTYPES的定义
             # 根据最后播放时间倒序获取数据
-            historys = self._plex.library.search(sort='lastViewedAt:desc', limit=num, type='1,4')
+            historys = self._plex.library.search(sort="lastViewedAt:desc", limit=num, type="1,4")
             for his in historys:
                 # 过滤掉最后播放时间为空的
                 if his.lastViewedAt:
@@ -116,16 +116,15 @@ class Plex(_IMediaClient):
                             his.grandparentTitle,
                             "S" + str(his.parentIndex),
                             "E" + str(his.index),
-                            his.title
+                            his.title,
                         )
                         event_str = "开始播放剧集 %s" % event_title
                     else:
-                        event_title = "%s %s" % (
-                            his.title, "(" + str(his.year) + ")")
+                        event_title = "%s %s" % (his.title, "(" + str(his.year) + ")")
                         event_str = "开始播放电影 %s" % event_title
 
                     event_type = "PL"
-                    event_date = his.lastViewedAt.strftime('%Y-%m-%d %H:%M:%S')
+                    event_date = his.lastViewedAt.strftime("%Y-%m-%d %H:%M:%S")
                     activity = {"type": event_type, "event": event_str, "date": event_date}
                     ret_array.append(activity)
         except Exception as e:
@@ -133,7 +132,7 @@ class Plex(_IMediaClient):
             log.error(f"【{self.client_name}】连接System/ActivityLog/Entries出错：" + str(e))
             return []
         if ret_array:
-            ret_array = sorted(ret_array, key=lambda x: x['date'], reverse=True)
+            ret_array = sorted(ret_array, key=lambda x: x["date"], reverse=True)
         return ret_array
 
     def get_medias_count(self):
@@ -150,14 +149,14 @@ class Plex(_IMediaClient):
                 MovieCount += sec.totalSize
             if sec.type == "show":
                 SeriesCount += sec.totalSize
-                EpisodeCount += sec.totalViewSize(libtype='episode')
+                EpisodeCount += sec.totalViewSize(libtype="episode")
             if sec.type == "artist":
                 SongCount += sec.totalSize
         return {
             "MovieCount": MovieCount,
             "SeriesCount": SeriesCount,
             "SongCount": SongCount,
-            "EpisodeCount": EpisodeCount
+            "EpisodeCount": EpisodeCount,
         }
 
     def get_movies(self, title, year=None):
@@ -175,15 +174,10 @@ class Plex(_IMediaClient):
         else:
             movies = self._plex.library.search(title=title, libtype="movie")
         for movie in movies:
-            ret_movies.append({'title': movie.title, 'year': movie.year})
+            ret_movies.append({"title": movie.title, "year": movie.year})
         return ret_movies
 
-    def get_tv_episodes(self,
-                        item_id=None,
-                        title=None,
-                        year=None,
-                        tmdbid=None,
-                        season=None):
+    def get_tv_episodes(self, item_id=None, title=None, year=None, tmdbid=None, season=None):
         """
         根据标题、年份、季查询电视剧所有集信息
         :param item_id: Plex中的ID
@@ -206,10 +200,7 @@ class Plex(_IMediaClient):
         for episode in episodes:
             if season and episode.seasonNumber != int(season):
                 continue
-            ret_tvs.append({
-                "season_num": episode.seasonNumber,
-                "episode_num": episode.index
-            })
+            ret_tvs.append({"season_num": episode.seasonNumber, "episode_num": episode.index})
         return ret_tvs
 
     def get_no_exists_episodes(self, meta_info, season, total_num):
@@ -225,10 +216,8 @@ class Plex(_IMediaClient):
         # 没有季默认为和1季
         if not season:
             season = 1
-        episodes = self.get_tv_episodes(title=meta_info.title,
-                                        year=meta_info.year,
-                                        season=season)
-        exists_episodes = [episode['episode_num'] for episode in episodes]
+        episodes = self.get_tv_episodes(title=meta_info.title, year=meta_info.year, season=season)
+        exists_episodes = [episode["episode_num"] for episode in episodes]
         total_episodes = [episode for episode in range(1, total_num + 1)]
         return list(set(total_episodes).difference(set(exists_episodes)))
 
@@ -243,9 +232,9 @@ class Plex(_IMediaClient):
         if not self._plex:
             return None
         try:
-            images = self._plex.fetchItems('/library/metadata/%s/posters' % item_id, cls=media.Poster)
+            images = self._plex.fetchItems("/library/metadata/%s/posters" % item_id, cls=media.Poster)
             for image in images:
-                if hasattr(image, 'key') and image.key.startswith('http'):
+                if hasattr(image, "key") and image.key.startswith("http"):
                     return image.key
             return None
         except Exception as e:
@@ -264,11 +253,11 @@ class Plex(_IMediaClient):
             return None
         try:
             if image_type == "Poster":
-                images = self._plex.fetchItems('/library/metadata/%s/posters' % item_id, cls=media.Poster)
+                images = self._plex.fetchItems("/library/metadata/%s/posters" % item_id, cls=media.Poster)
             else:
-                images = self._plex.fetchItems('/library/metadata/%s/arts' % item_id, cls=media.Art)
+                images = self._plex.fetchItems("/library/metadata/%s/arts" % item_id, cls=media.Art)
             for image in images:
-                if hasattr(image, 'key') and image.key.startswith('http'):
+                if hasattr(image, "key") and image.key.startswith("http"):
                     return image.key
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -316,7 +305,7 @@ class Plex(_IMediaClient):
             # 否则一个一个刷新
             for path, lib_key in result_dict.items():
                 log.info(f"【{self.client_name}】刷新媒体库：{lib_key} : {path}")
-                self._plex.query(f'/library/sections/{lib_key}/refresh?path={quote_plus(path)}')
+                self._plex.query(f"/library/sections/{lib_key}/refresh?path={quote_plus(path)}")
 
     @staticmethod
     def __find_librarie(path, libraries):
@@ -361,15 +350,17 @@ class Plex(_IMediaClient):
                     image_list_str = self.get_libraries_image(library.key, 2)
                 case _:
                     continue
-            libraries.append({
-                "id": library.key,
-                "name": library.title,
-                "paths": library.locations,
-                "type": library_type,
-                "image_list": image_list_str,
-                "link": f"{self._play_host or self._host}#!/media/{self._plex.machineIdentifier}"
-                        f"/com.plexapp.plugins.library?source={library.key}"
-            })
+            libraries.append(
+                {
+                    "id": library.key,
+                    "name": library.title,
+                    "paths": library.locations,
+                    "type": library_type,
+                    "image_list": image_list_str,
+                    "link": f"{self._play_host or self._host}#!/media/{self._plex.machineIdentifier}"
+                    f"/com.plexapp.plugins.library?source={library.key}",
+                }
+            )
         return libraries
 
     @lru_cache(maxsize=10)
@@ -390,11 +381,13 @@ class Plex(_IMediaClient):
 
         # 如果总数不足,接续获取下一页
         while len(poster_urls) < total_size:
-            items = self._plex.fetchItems(f"/hubs/home/recentlyAdded?type={type}&sectionID={library_key}",
-                                          container_size=total_size,
-                                          container_start=container_start)
+            items = self._plex.fetchItems(
+                f"/hubs/home/recentlyAdded?type={type}&sectionID={library_key}",
+                container_size=total_size,
+                container_start=container_start,
+            )
             for item in items:
-                if item.type == 'episode':
+                if item.type == "episode":
                     # 如果是剧集的单集,则去找上级的图片
                     if item.parentThumb is not None:
                         poster_urls[item.parentThumb] = None
@@ -408,8 +401,11 @@ class Plex(_IMediaClient):
                 break
             container_start += total_size
         image_list_str = ", ".join(
-            [f"{self.get_nt_image_url(self._host.rstrip('/') + url)}?X-Plex-Token={self._token}" for url in
-             list(poster_urls.keys())[:total_size]])
+            [
+                f"{self.get_nt_image_url(self._host.rstrip('/') + url)}?X-Plex-Token={self._token}"
+                for url in list(poster_urls.keys())[:total_size]
+            ]
+        )
         return image_list_str
 
     def get_iteminfo(self, itemid):
@@ -421,7 +417,7 @@ class Plex(_IMediaClient):
         try:
             item = self._plex.fetchItem(itemid)
             ids = self.__get_ids(item.guids)
-            return {'ProviderIds': {'Tmdb': ids['tmdb_id'], 'Imdb': ids['imdb_id']}}
+            return {"ProviderIds": {"Tmdb": ids["tmdb_id"], "Imdb": ids["imdb_id"]}}
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return {}
@@ -431,7 +427,7 @@ class Plex(_IMediaClient):
         拼装媒体播放链接
         :param item_id: 媒体的的ID
         """
-        return f'{self._play_host or self._host}#!/server/{self._plex.machineIdentifier}/details?key={item_id}'
+        return f"{self._play_host or self._host}#!/server/{self._plex.machineIdentifier}/details?key={item_id}"
 
     def get_items(self, parent):
         """
@@ -451,41 +447,39 @@ class Plex(_IMediaClient):
                     path = None
                     if item.locations:
                         path = item.locations[0]
-                    yield {"id": item.key,
-                           "library": item.librarySectionID,
-                           "type": item.type,
-                           "title": item.title,
-                           "originalTitle": item.originalTitle,
-                           "year": item.year,
-                           "tmdbid": ids['tmdb_id'],
-                           "imdbid": ids['imdb_id'],
-                           "tvdbid": ids['tvdb_id'],
-                           "path": path}
+                    yield {
+                        "id": item.key,
+                        "library": item.librarySectionID,
+                        "type": item.type,
+                        "title": item.title,
+                        "originalTitle": item.originalTitle,
+                        "year": item.year,
+                        "tmdbid": ids["tmdb_id"],
+                        "imdbid": ids["imdb_id"],
+                        "tvdbid": ids["tvdb_id"],
+                        "path": path,
+                    }
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
         yield {}
 
     @staticmethod
     def __get_ids(guids):
-        guid_mapping = {
-            "imdb://": "imdb_id",
-            "tmdb://": "tmdb_id",
-            "tvdb://": "tvdb_id"
-        }
+        guid_mapping = {"imdb://": "imdb_id", "tmdb://": "tmdb_id", "tvdb://": "tvdb_id"}
         ids = {}
         for prefix, varname in guid_mapping.items():
             ids[varname] = None
         for guid in guids:
             for prefix, varname in guid_mapping.items():
                 if isinstance(guid, dict):
-                    if guid['id'].startswith(prefix):
+                    if guid["id"].startswith(prefix):
                         # 找到匹配的ID
-                        ids[varname] = guid['id'][len(prefix):]
+                        ids[varname] = guid["id"][len(prefix) :]
                         break
                 else:
                     if guid.id.startswith(prefix):
                         # 找到匹配的ID
-                        ids[varname] = guid.id[len(prefix):]
+                        ids[varname] = guid.id[len(prefix) :]
                         break
         return ids
 
@@ -499,11 +493,7 @@ class Plex(_IMediaClient):
         ret_sessions = []
         for session in sessions:
             bitrate = sum([m.bitrate or 0 for m in session.media])
-            ret_sessions.append({
-                "type": session.TAG,
-                "bitrate": bitrate,
-                "address": session.player.address
-            })
+            ret_sessions.append({"type": session.TAG, "bitrate": bitrate, "address": session.player.address})
         return ret_sessions
 
     def get_webhook_message(self, message):
@@ -516,42 +506,46 @@ class Plex(_IMediaClient):
                    MOV:猪猪侠大冒险(2001)
         overview   剧情描述
         """
-        eventItem = {'event': message.get('event', '')}
-        if message.get('Metadata'):
-            if message.get('Metadata', {}).get('type') == 'episode':
-                eventItem['item_type'] = "TV"
-                eventItem['item_name'] = "%s %s%s %s" % (
-                    message.get('Metadata', {}).get('grandparentTitle'),
-                    "S" + str(message.get('Metadata', {}).get('parentIndex')),
-                    "E" + str(message.get('Metadata', {}).get('index')),
-                    message.get('Metadata', {}).get('title'))
-                eventItem['item_id'] = message.get('Metadata', {}).get('ratingKey')
-                eventItem['season_id'] = message.get('Metadata', {}).get('parentIndex')
-                eventItem['episode_id'] = message.get('Metadata', {}).get('index')
+        eventItem = {"event": message.get("event", "")}
+        if message.get("Metadata"):
+            if message.get("Metadata", {}).get("type") == "episode":
+                eventItem["item_type"] = "TV"
+                eventItem["item_name"] = "%s %s%s %s" % (
+                    message.get("Metadata", {}).get("grandparentTitle"),
+                    "S" + str(message.get("Metadata", {}).get("parentIndex")),
+                    "E" + str(message.get("Metadata", {}).get("index")),
+                    message.get("Metadata", {}).get("title"),
+                )
+                eventItem["item_id"] = message.get("Metadata", {}).get("ratingKey")
+                eventItem["season_id"] = message.get("Metadata", {}).get("parentIndex")
+                eventItem["episode_id"] = message.get("Metadata", {}).get("index")
 
-                if message.get('Metadata', {}).get('summary') and len(message.get('Metadata', {}).get('summary')) > 100:
-                    eventItem['overview'] = str(message.get('Metadata', {}).get('summary'))[:100] + "..."
+                if message.get("Metadata", {}).get("summary") and len(message.get("Metadata", {}).get("summary")) > 100:
+                    eventItem["overview"] = str(message.get("Metadata", {}).get("summary"))[:100] + "..."
                 else:
-                    eventItem['overview'] = message.get('Metadata', {}).get('summary')
+                    eventItem["overview"] = message.get("Metadata", {}).get("summary")
             else:
-                eventItem['item_type'] = "MOV" if message.get('Metadata', {}).get('type') == 'movie' else "SHOW"
-                eventItem['item_name'] = "%s %s" % (
-                    message.get('Metadata', {}).get('title'), "(" + str(message.get('Metadata', {}).get('year')) + ")")
-                eventItem['item_id'] = message.get('Metadata', {}).get('ratingKey')
-                if len(message.get('Metadata', {}).get('summary')) > 100:
-                    eventItem['overview'] = str(message.get('Metadata', {}).get('summary'))[:100] + "..."
+                eventItem["item_type"] = "MOV" if message.get("Metadata", {}).get("type") == "movie" else "SHOW"
+                eventItem["item_name"] = "%s %s" % (
+                    message.get("Metadata", {}).get("title"),
+                    "(" + str(message.get("Metadata", {}).get("year")) + ")",
+                )
+                eventItem["item_id"] = message.get("Metadata", {}).get("ratingKey")
+                if len(message.get("Metadata", {}).get("summary")) > 100:
+                    eventItem["overview"] = str(message.get("Metadata", {}).get("summary"))[:100] + "..."
                 else:
-                    eventItem['overview'] = message.get('Metadata', {}).get('summary')
-        if eventItem.get('event') == "library.new":
-            eventItem['play_url'] = f"/open?url=" \
-                                    f"{quote(self.get_play_url(message.get('Metadata', {}).get('key')))}&type=plex"
-        if message.get('Player'):
-            eventItem['ip'] = message.get('Player').get('publicAddress')
-            eventItem['client'] = message.get('Player').get('title')
+                    eventItem["overview"] = message.get("Metadata", {}).get("summary")
+        if eventItem.get("event") == "library.new":
+            eventItem["play_url"] = (
+                f"/open?url={quote(self.get_play_url(message.get('Metadata', {}).get('key')))}&type=plex"
+            )
+        if message.get("Player"):
+            eventItem["ip"] = message.get("Player").get("publicAddress")
+            eventItem["client"] = message.get("Player").get("title")
             # 这里给个空,防止拼消息的时候出现None
-            eventItem['device_name'] = ' '
-        if message.get('Account'):
-            eventItem['user_name'] = message.get("Account").get('title')
+            eventItem["device_name"] = " "
+        if message.get("Account"):
+            eventItem["user_name"] = message.get("Account").get("title")
 
         return eventItem
 
@@ -561,7 +555,7 @@ class Plex(_IMediaClient):
         """
         if not self._plex:
             return []
-        items = self._plex.fetchItems('/hubs/continueWatching/items', container_start=0, container_size=num)
+        items = self._plex.fetchItems("/hubs/continueWatching/items", container_start=0, container_size=num)
         ret_resume = []
         for item in items:
             item_type = MediaType.MOVIE.value if item.TYPE == "movie" else MediaType.TV.value
@@ -574,14 +568,16 @@ class Plex(_IMediaClient):
                     name = "%s 第%s季第%s集" % (item.grandparentTitle, item.parentIndex, item.index)
             link = self.get_play_url(item.key)
             image = self.get_nt_image_url(item.thumbUrl)
-            ret_resume.append({
-                "id": item.key,
-                "name": name,
-                "type": item_type,
-                "image": image,
-                "link": link,
-                "percent": item.viewOffset / item.duration * 100 if item.viewOffset and item.duration else 0
-            })
+            ret_resume.append(
+                {
+                    "id": item.key,
+                    "name": name,
+                    "type": item_type,
+                    "image": image,
+                    "link": link,
+                    "percent": item.viewOffset / item.duration * 100 if item.viewOffset and item.duration else 0,
+                }
+            )
         return ret_resume
 
     def get_latest(self, num=20):
@@ -590,19 +586,12 @@ class Plex(_IMediaClient):
         """
         if not self._plex:
             return []
-        items = self._plex.fetchItems('/library/recentlyAdded', container_start=0, container_size=num)
+        items = self._plex.fetchItems("/library/recentlyAdded", container_start=0, container_size=num)
         ret_resume = []
         for item in items:
             item_type = MediaType.MOVIE.value if item.TYPE == "movie" else MediaType.TV.value
             link = self.get_play_url(item.key)
-            title = item.title if item_type == MediaType.MOVIE.value else \
-                "%s 第%s季" % (item.parentTitle, item.index)
+            title = item.title if item_type == MediaType.MOVIE.value else "%s 第%s季" % (item.parentTitle, item.index)
             image = self.get_nt_image_url(item.posterUrl)
-            ret_resume.append({
-                "id": item.key,
-                "name": title,
-                "type": item_type,
-                "image": image,
-                "link": link
-            })
+            ret_resume.append({"id": item.key, "name": title, "type": item_type, "image": image, "link": link})
         return ret_resume

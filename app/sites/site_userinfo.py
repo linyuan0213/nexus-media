@@ -46,8 +46,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
         # 站点数据
         self._sites_data = {}
 
-    def build(self, url, site_id, site_name,
-              site_cookie=None, site_headers=None, ua=None, emulate=None, proxy=False):
+    def build(self, url, site_id, site_name, site_cookie=None, site_headers=None, ua=None, emulate=None, proxy=False):
         if not site_cookie and not site_headers:
             return None
         session = requests.Session()
@@ -56,16 +55,23 @@ class SiteUserInfo(metaclass=SingletonMeta):
         if self.sites.check_ratelimit(site_id):
             return
 
-        site_headers.update({'User-Agent': ua, 'referer': url})
+        site_headers.update({"User-Agent": ua, "referer": url})
 
         engine = SiteEngine.get_instance()
         site_def = engine.get_by_url(url)
 
         if site_def and site_def.user_info and site_def.user_info.get("profile"):
-            return engine.get_user_info(url, site_name, site_cookie,
-                                        html_text=None, site_headers=site_headers,
-                                        ua=ua, emulate=emulate, proxy=proxy,
-                                        session=session) or _log_error(site_name)
+            return engine.get_user_info(
+                url,
+                site_name,
+                site_cookie,
+                html_text=None,
+                site_headers=site_headers,
+                ua=ua,
+                emulate=emulate,
+                proxy=proxy,
+                session=session,
+            ) or _log_error(site_name)
 
         html_text = None
         if emulate:
@@ -76,8 +82,9 @@ class SiteUserInfo(metaclass=SingletonMeta):
                 return None
         else:
             proxies = get_proxies() if proxy else None
-            res = RequestUtils(cookies=site_cookie, session=session,
-                               headers=site_headers, proxies=proxies).get_res(url=url)
+            res = RequestUtils(cookies=site_cookie, session=session, headers=site_headers, proxies=proxies).get_res(
+                url=url
+            )
             if res and res.status_code == 200:
                 if "charset=utf-8" in res.text or "charset=UTF-8" in res.text:
                     res.encoding = "UTF-8"
@@ -90,10 +97,17 @@ class SiteUserInfo(metaclass=SingletonMeta):
                 log.error(f"【Sites】站点 {site_name} 无法访问：{url}")
                 return None
 
-        return engine.get_user_info(url, site_name, site_cookie,
-                                    html_text=html_text, site_headers=site_headers,
-                                    ua=ua, emulate=emulate, proxy=proxy,
-                                    session=session) or _log_error(site_name)
+        return engine.get_user_info(
+            url,
+            site_name,
+            site_cookie,
+            html_text=html_text,
+            site_headers=site_headers,
+            ua=ua,
+            emulate=emulate,
+            proxy=proxy,
+            session=session,
+        ) or _log_error(site_name)
 
     def __refresh_site_data(self, site_info):
         """
@@ -117,17 +131,18 @@ class SiteUserInfo(metaclass=SingletonMeta):
         chrome = site_info.get("chrome")
         proxy = site_info.get("proxy")
         try:
-            site_user_info = self.build(url=site_url,
-                                        site_id=site_id,
-                                        site_name=site_name,
-                                        site_cookie=site_cookie,
-                                        ua=ua,
-                                        site_headers=headers,
-                                        emulate=chrome,
-                                        proxy=proxy)
+            site_user_info = self.build(
+                url=site_url,
+                site_id=site_id,
+                site_name=site_name,
+                site_cookie=site_cookie,
+                ua=ua,
+                site_headers=headers,
+                emulate=chrome,
+                proxy=proxy,
+            )
             if site_user_info:
-                log.debug(
-                    f"【Sites】站点 {site_name} 开始以 {site_user_info.site_schema()} 模型解析")
+                log.debug(f"【Sites】站点 {site_name} 开始以 {site_user_info.site_schema()} 模型解析")
                 # 开始解析
                 site_user_info.parse()
                 log.debug(f"【Sites】站点 {site_name} 解析完成")
@@ -139,13 +154,11 @@ class SiteUserInfo(metaclass=SingletonMeta):
 
                 # 获取不到数据时，仅返回错误信息，不做历史数据更新
                 if site_user_info.err_msg:
-                    self._sites_data.update(
-                        {site_name: {"err_msg": site_user_info.err_msg}})
+                    self._sites_data.update({site_name: {"err_msg": site_user_info.err_msg}})
                     return
 
                 # 发送通知，存在未读消息
-                self.__notify_unread_msg(
-                    site_name, site_user_info, unread_msg_notify)
+                self.__notify_unread_msg(site_name, site_user_info, unread_msg_notify)
 
                 self._sites_data.update(
                     {
@@ -162,9 +175,10 @@ class SiteUserInfo(metaclass=SingletonMeta):
                             "bonus": site_user_info.bonus,
                             "url": site_url,
                             "err_msg": site_user_info.err_msg,
-                            "message_unread": site_user_info.message_unread
+                            "message_unread": site_user_info.message_unread,
                         }
-                    })
+                    }
+                )
 
                 return site_user_info
 
@@ -175,7 +189,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
     def __notify_unread_msg(self, site_name, site_user_info, unread_msg_notify):
         if site_user_info.message_unread <= 0:
             return
-        if self._sites_data.get(site_name, {}).get('message_unread') == site_user_info.message_unread:
+        if self._sites_data.get(site_name, {}).get("message_unread") == site_user_info.message_unread:
             return
         if not unread_msg_notify:
             return
@@ -188,7 +202,8 @@ class SiteUserInfo(metaclass=SingletonMeta):
                 self.message.send_site_message(title=msg_title, text=msg_text)
         else:
             self.message.send_site_message(
-                title=f"站点 {site_user_info.site_name} 收到 {site_user_info.message_unread} 条新消息，请登陆查看")
+                title=f"站点 {site_user_info.site_name} 收到 {site_user_info.message_unread} 条新消息，请登陆查看"
+            )
 
     def refresh_site_data_now(self, specify_sites=None):
         """
@@ -215,16 +230,21 @@ class SiteUserInfo(metaclass=SingletonMeta):
             if upload > 0 or download > 0:
                 incUploads += int(upload)
                 incDownloads += int(download)
-                string_list.append(f"【{site}】\n"
-                                   f"上传量：{StringUtils.str_filesize(upload)}\n"
-                                   f"下载量：{StringUtils.str_filesize(download)}\n"
-                                   f"\n————————————")
+                string_list.append(
+                    f"【{site}】\n"
+                    f"上传量：{StringUtils.str_filesize(upload)}\n"
+                    f"下载量：{StringUtils.str_filesize(download)}\n"
+                    f"\n————————————"
+                )
 
         if incDownloads or incUploads:
-            string_list.insert(0, f"【今日汇总】\n"
-                                  f"总上传：{StringUtils.str_filesize(incUploads)}\n"
-                                  f"总下载：{StringUtils.str_filesize(incDownloads)}\n"
-                                  f"\n————————————")
+            string_list.insert(
+                0,
+                f"【今日汇总】\n"
+                f"总上传：{StringUtils.str_filesize(incUploads)}\n"
+                f"总下载：{StringUtils.str_filesize(incDownloads)}\n"
+                f"\n————————————",
+            )
 
             self.message.send_user_statistics_message(string_list)
 
@@ -252,8 +272,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
         if not specify_sites:
             refresh_sites = self.sites.get_sites(statistic=True)
         else:
-            refresh_sites = [site for site in self.sites.get_sites(statistic=True) if
-                             site.get("name") in specify_sites]
+            refresh_sites = [site for site in self.sites.get_sites(statistic=True) if site.get("name") in specify_sites]
 
         if not refresh_sites:
             return
@@ -266,8 +285,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
 
         # ThreadPool 移出锁外 —— 不阻塞其他线程
         with ThreadPool(min(len(refresh_sites), self._MAX_CONCURRENCY)) as p:
-            site_user_infos = p.map(
-                self.__refresh_site_data, refresh_sites)
+            site_user_infos = p.map(self.__refresh_site_data, refresh_sites)
             site_user_infos = [info for info in site_user_infos if info]
 
         # 结果处理也在锁外
@@ -300,21 +318,31 @@ class SiteUserInfo(metaclass=SingletonMeta):
         if not sites:
             site_urls = [site.get("strict_url") for site in statistic_sites]
         else:
-            site_urls = [site.get("strict_url") for site in statistic_sites
-                         if site.get("name") in sites]
+            site_urls = [site.get("strict_url") for site in statistic_sites if site.get("name") in sites]
 
-        raw_statistics = list(self.site_repo.get_site_user_statistics(
-            strict_urls=site_urls))
+        raw_statistics = list(self.site_repo.get_site_user_statistics(strict_urls=site_urls))
         existing_urls = {s.URL for s in raw_statistics if s.URL}
         url_to_pri = {s.get("strict_url"): s.get("pri", 0) for s in statistic_sites}
         for site in statistic_sites:
             url = site.get("strict_url")
             if url and url not in existing_urls:
-                raw_statistics.append(_S(
-                    SITE=site.get("name") or "", URL=url, USERNAME="", USER_LEVEL="",
-                    JOIN_AT="", UPDATE_AT="", UPLOAD=0, DOWNLOAD=0, RATIO=0,
-                    SEEDING=0, LEECHING=0, SEEDING_SIZE=0, BONUS=0,
-                ))
+                raw_statistics.append(
+                    _S(
+                        SITE=site.get("name") or "",
+                        URL=url,
+                        USERNAME="",
+                        USER_LEVEL="",
+                        JOIN_AT="",
+                        UPDATE_AT="",
+                        UPLOAD=0,
+                        DOWNLOAD=0,
+                        RATIO=0,
+                        SEEDING=0,
+                        LEECHING=0,
+                        SEEDING_SIZE=0,
+                        BONUS=0,
+                    )
+                )
         raw_statistics.sort(key=lambda s: url_to_pri.get(s.URL, 0))
         if encoding == "RAW":
             return raw_statistics
@@ -328,20 +356,20 @@ class SiteUserInfo(metaclass=SingletonMeta):
         :param days: 最大数据量
         :return:
         """
-        site_activities = [["time", "upload", "download",
-                            "bonus", "seeding", "seeding_size"]]
-        sql_site_activities = self.site_repo.get_site_statistics_history(
-            site=site, days=days)
+        site_activities = [["time", "upload", "download", "bonus", "seeding", "seeding_size"]]
+        sql_site_activities = self.site_repo.get_site_statistics_history(site=site, days=days)
         for sql_site_activity in sql_site_activities:
-            timestamp = datetime.strptime(
-                sql_site_activity.DATE, '%Y-%m-%d').timestamp() * 1000
+            timestamp = datetime.strptime(sql_site_activity.DATE, "%Y-%m-%d").timestamp() * 1000
             site_activities.append(
-                [timestamp,
-                 sql_site_activity.UPLOAD,
-                 sql_site_activity.DOWNLOAD,
-                 sql_site_activity.BONUS,
-                 sql_site_activity.SEEDING,
-                 sql_site_activity.SEEDING_SIZE])
+                [
+                    timestamp,
+                    sql_site_activity.UPLOAD,
+                    sql_site_activity.DOWNLOAD,
+                    sql_site_activity.BONUS,
+                    sql_site_activity.SEEDING,
+                    sql_site_activity.SEEDING_SIZE,
+                ]
+            )
 
         return site_activities
 
@@ -363,16 +391,14 @@ class SiteUserInfo(metaclass=SingletonMeta):
         """
         查询站点加入时间
         """
-        statistics = self.get_site_user_statistics(
-            sites=sites, encoding="DICT")
+        statistics = self.get_site_user_statistics(sites=sites, encoding="DICT")
         if not statistics:
             return ""
         dates = []
         for s in statistics:
             if s.get("join_at"):
                 try:
-                    dates.append(datetime.strptime(
-                        s.get("join_at"), '%Y-%m-%d %H:%M:%S'))
+                    dates.append(datetime.strptime(s.get("join_at"), "%Y-%m-%d %H:%M:%S"))
                 except Exception as err:
                     print(str(err))
         if dates:
@@ -409,22 +435,24 @@ class SiteUserInfo(metaclass=SingletonMeta):
             ratio_str = f"{ratio_val:.2f}" if ratio_val is not None else "0.00"
             bonus_val = site.BONUS
             bonus_str = f"{bonus_val:.2f}" if bonus_val is not None else "0.00"
-            statistics.append({
-                "site_name": site.SITE or "",
-                "username": site.USERNAME or "",
-                "user_level": site.USER_LEVEL or "",
-                "join_at": site.JOIN_AT or "",
-                "update_at": site.UPDATE_AT or "",
-                "upload": SiteUserInfo.__format_filesize(site.UPLOAD),
-                "download": SiteUserInfo.__format_filesize(site.DOWNLOAD),
-                "ratio": ratio_str,
-                "seeding_count": site.SEEDING or 0,
-                "leeching_count": site.LEECHING or 0,
-                "seeding_size": SiteUserInfo.__format_filesize(site.SEEDING_SIZE),
-                "bonus": bonus_str,
-                "url": site.URL or "",
-                "message_count": site.MSG_UNREAD or 0,
-            })
+            statistics.append(
+                {
+                    "site_name": site.SITE or "",
+                    "username": site.USERNAME or "",
+                    "user_level": site.USER_LEVEL or "",
+                    "join_at": site.JOIN_AT or "",
+                    "update_at": site.UPDATE_AT or "",
+                    "upload": SiteUserInfo.__format_filesize(site.UPLOAD),
+                    "download": SiteUserInfo.__format_filesize(site.DOWNLOAD),
+                    "ratio": ratio_str,
+                    "seeding_count": site.SEEDING or 0,
+                    "leeching_count": site.LEECHING or 0,
+                    "seeding_size": SiteUserInfo.__format_filesize(site.SEEDING_SIZE),
+                    "bonus": bonus_str,
+                    "url": site.URL or "",
+                    "message_count": site.MSG_UNREAD or 0,
+                }
+            )
         return statistics
 
     def update_site_name(self, old_name, name):

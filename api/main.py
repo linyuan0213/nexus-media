@@ -2,6 +2,7 @@
 FastAPI 主应用
 与 Flask 应用并行存在，按领域逐步迁移 Router。
 """
+
 import os
 from contextlib import asynccontextmanager
 
@@ -90,6 +91,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Session 清理中间件：每个请求结束后清理 scoped_session
 @app.middleware("http")
 async def db_session_cleanup(request: Request, call_next):
@@ -99,6 +101,7 @@ async def db_session_cleanup(request: Request, call_next):
         return response
     finally:
         remove_session()
+
 
 # 注册 Router（按领域逐步增加）
 app.include_router(system.router, prefix="/api/system", tags=["system"])

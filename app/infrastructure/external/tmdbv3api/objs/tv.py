@@ -29,12 +29,10 @@ class TV(TMDb):
         "alternative_titles": "/tv/%s/alternative_titles",
         "credits": "/tv/%s/credits",
         "discover": "/discover/tv",
-        "images": "/tv/%s/images"
+        "images": "/tv/%s/images",
     }
 
-    def details(
-            self, show_id, append_to_response=""
-    ):
+    def details(self, show_id, append_to_response=""):
         """
         Get the primary TV show details by id.
         :param show_id:
@@ -66,11 +64,7 @@ class TV(TMDb):
         :param page:
         :return:
         """
-        return self._get_obj(
-            self._call(
-                self._urls["search_tv"], "query=" + quote(term) + "&page=" + str(page)
-            )
-        )
+        return self._get_obj(self._call(self._urls["search_tv"], "query=" + quote(term) + "&page=" + str(page)))
 
     def similar(self, tv_id, page=1):
         """
@@ -79,9 +73,7 @@ class TV(TMDb):
         :param page:
         :return:
         """
-        return self._get_obj(
-            self._call(self._urls["similar"] % str(tv_id), "page=" + str(page))
-        )
+        return self._get_obj(self._call(self._urls["similar"] % str(tv_id), "page=" + str(page)))
 
     def popular(self, page=1):
         """
@@ -106,9 +98,7 @@ class TV(TMDb):
         :param page:
         :return:
         """
-        return self._get_obj(
-            self._call(self._urls["recommendations"] % tv_id, "page=" + str(page))
-        )
+        return self._get_obj(self._call(self._urls["recommendations"] % tv_id, "page=" + str(page)))
 
     def videos(self, tv_id, page=1):
         """
@@ -117,9 +107,7 @@ class TV(TMDb):
         :param page:
         :return:
         """
-        return self._get_obj(
-            self._call(self._urls["videos"] % tv_id, "page=" + str(page))
-        )
+        return self._get_obj(self._call(self._urls["videos"] % tv_id, "page=" + str(page)))
 
     def airing_today(self, page=1):
         """
@@ -128,9 +116,7 @@ class TV(TMDb):
         :param page:
         :return:
         """
-        return self._get_obj(
-            self._call(self._urls["airing_today"], "page=" + str(page))
-        )
+        return self._get_obj(self._call(self._urls["airing_today"], "page=" + str(page)))
 
     def on_the_air(self, page=1):
         """
@@ -146,9 +132,7 @@ class TV(TMDb):
         :param tv_id:
         :return:
         """
-        return self._get_obj(
-            self._call(self._urls["screened_theatrically"] % tv_id, "")
-        )
+        return self._get_obj(self._call(self._urls["screened_theatrically"] % tv_id, ""))
 
     def external_ids(self, vid):
         """
@@ -156,9 +140,7 @@ class TV(TMDb):
         :param vid:
         :return:
         """
-        return self._get_obj(
-            self._call(self._urls["external_ids"] % (str(vid)), ""), None
-        )
+        return self._get_obj(self._call(self._urls["external_ids"] % (str(vid)), ""), None)
 
     def keywords(self, tv_id):
         """
@@ -175,9 +157,7 @@ class TV(TMDb):
         :param tv_id: int
         :return:
         """
-        return self._get_obj(
-            self._call(self._urls["reviews"] % tv_id, "page=" + str(page))
-        )
+        return self._get_obj(self._call(self._urls["reviews"] % tv_id, "page=" + str(page)))
 
     def watch_providers(self, tv_id):
         """
@@ -238,4 +218,4 @@ class TV(TMDb):
         :param include_image_language:
         :return:
         """
-        return AsObj(**self._call(self._urls['images'] % tv_id, "include_image_language=" + include_image_language))
+        return AsObj(**self._call(self._urls["images"] % tv_id, "include_image_language=" + include_image_language))

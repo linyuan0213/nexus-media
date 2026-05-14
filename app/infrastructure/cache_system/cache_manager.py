@@ -2,6 +2,7 @@
 统一缓存管理器
 管理所有缓存实例，提供统一的访问接口
 """
+
 import threading
 from typing import Any
 
@@ -14,7 +15,7 @@ from .base import CacheAdapter
 class CacheManager:
     """
     统一缓存管理器
-    
+
     特性：
     1. 统一管理多种缓存后端（内存、Redis、分层）
     2. 支持命名空间隔离
@@ -45,10 +46,10 @@ class CacheManager:
 
         log.debug("【CacheManager】缓存管理器初始化完成")
 
-    def register(self, name: str, adapter: CacheAdapter) -> 'CacheManager':
+    def register(self, name: str, adapter: CacheAdapter) -> "CacheManager":
         """
         注册缓存实例
-        
+
         :param name: 缓存名称
         :param adapter: 缓存适配器实例
         :return: self，支持链式调用
@@ -58,15 +59,15 @@ class CacheManager:
             log.debug(f"【CacheManager】注册缓存: {name}")
         return self
 
-    def create_memory_cache(self, name: str, maxsize: int = 1000, ttl: int | None = None) -> 'CacheManager':
+    def create_memory_cache(self, name: str, maxsize: int = 1000, ttl: int | None = None) -> "CacheManager":
         """创建内存缓存"""
         return self.register(name, MemoryCacheAdapter(maxsize=maxsize, name=name, default_ttl=ttl))
 
-    def create_redis_cache(self, name: str, ttl: int | None = None) -> 'CacheManager':
+    def create_redis_cache(self, name: str, ttl: int | None = None) -> "CacheManager":
         """创建Redis缓存"""
         return self.register(name, RedisCacheAdapter(name=name, default_ttl=ttl))
 
-    def create_tiered_cache(self, name: str, memory_maxsize: int = 1000, ttl: int | None = None) -> 'CacheManager':
+    def create_tiered_cache(self, name: str, memory_maxsize: int = 1000, ttl: int | None = None) -> "CacheManager":
         """创建分层缓存（内存+Redis）"""
         return self.register(name, TieredCacheAdapter(memory_maxsize=memory_maxsize, name=name, default_ttl=ttl))
 

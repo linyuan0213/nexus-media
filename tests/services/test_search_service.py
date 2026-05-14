@@ -1,6 +1,7 @@
 """
 SearchService 单元测试
 """
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -27,11 +28,7 @@ def mock_media():
 
 @pytest.fixture
 def svc(mock_searcher, mock_downloader, mock_media):
-    return SearchService(
-        searcher=mock_searcher,
-        downloader=mock_downloader,
-        media=mock_media
-    )
+    return SearchService(searcher=mock_searcher, downloader=mock_downloader, media=mock_media)
 
 
 class TestSearchMedias:
@@ -48,9 +45,7 @@ class TestSearchMedias:
 
 class TestSearchOneMedia:
     def test_success(self, svc, mock_searcher):
-        mock_searcher.search_one_media.return_value = (
-            MagicMock(), {"left": True}, 5, 3
-        )
+        mock_searcher.search_one_media.return_value = (MagicMock(), {"left": True}, 5, 3)
         media = MagicMock()
         result = svc.search_one_media(
             media_info=media,
@@ -58,7 +53,7 @@ class TestSearchOneMedia:
             no_exists={},
             sites=["s1"],
             filters={"restype": "BluRay"},
-            user_name="user"
+            user_name="user",
         )
         assert isinstance(result, SearchOneMediaResultDTO)
         assert result.total_count == 5
@@ -67,11 +62,7 @@ class TestSearchOneMedia:
 
     def test_none_result(self, svc, mock_searcher):
         mock_searcher.search_one_media.return_value = None
-        result = svc.search_one_media(
-            media_info=MagicMock(),
-            in_from=SearchType.WEB,
-            no_exists={}
-        )
+        result = svc.search_one_media(media_info=MagicMock(), in_from=SearchType.WEB, no_exists={})
         assert result.total_count == 0
         assert result.download_count == 0
 
@@ -91,9 +82,7 @@ class TestSearchResultsManagement:
 
     def test_insert(self, svc, mock_searcher):
         svc.insert_search_results([{"t": 1}], title="test")
-        mock_searcher.insert_search_results.assert_called_once_with(
-            [{"t": 1}], "test", True
-        )
+        mock_searcher.insert_search_results.assert_called_once_with([{"t": 1}], "test", True)
 
 
 class TestBuildSearchNames:
@@ -128,7 +117,7 @@ class TestBuildSearchNames:
         mock_media.get_tmdb_zhtw_title.return_value = "繁體"
         mock_media.get_tmdb_en_title.return_value = "English"
 
-        with patch.object(svc, '_media', mock_media), patch('config.Config') as MockConfig:
+        with patch.object(svc, "_media", mock_media), patch("config.Config") as MockConfig:
             MockConfig().get_config.return_value = {"search_multi_language": True}
             names = svc.build_search_names(media)
             assert "繁體" in names

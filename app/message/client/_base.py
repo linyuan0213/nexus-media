@@ -2,7 +2,6 @@ from abc import ABCMeta, abstractmethod
 
 
 class _IMessageClient(metaclass=ABCMeta):
-
     schema = None
 
     def __init__(self, config: dict):

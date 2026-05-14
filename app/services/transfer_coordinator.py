@@ -6,6 +6,7 @@ TransferCoordinator - 文件转移协调器
 
 将调度逻辑与下载核心逻辑分离，生命周期由外部（如 SystemLifecycleService）控制。
 """
+
 from collections.abc import Callable
 
 import log
@@ -19,9 +20,7 @@ class TransferCoordinator:
     文件转移协调器
     """
 
-    def __init__(self,
-                 client_factory: DownloadClientFactory | None = None,
-                 scheduler: SchedulerCore | None = None):
+    def __init__(self, client_factory: DownloadClientFactory | None = None, scheduler: SchedulerCore | None = None):
         self._client_factory = client_factory or DownloadClientFactory()
         self._scheduler = scheduler or SchedulerCore()
 
@@ -37,14 +36,16 @@ class TransferCoordinator:
         if not monitor_ids:
             return
         job_id = "Downloader.transfer"
-        self._scheduler.start_job({
-            "func": transfer_func,
-            "name": "下载文件转移",
-            "job_id": job_id,
-            "trigger": "interval",
-            "seconds": PT_TRANSFER_INTERVAL,
-            "jobstore": self._client_factory.jobstore
-        })
+        self._scheduler.start_job(
+            {
+                "func": transfer_func,
+                "name": "下载文件转移",
+                "job_id": job_id,
+                "trigger": "interval",
+                "seconds": PT_TRANSFER_INTERVAL,
+                "jobstore": self._client_factory.jobstore,
+            }
+        )
         log.info("下载文件转移服务启动，目的目录：媒体库")
 
     def stop_service(self):

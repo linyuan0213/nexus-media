@@ -4,6 +4,7 @@
 
 支持添加电影/电视剧/动漫的 RSS 订阅，有新资源时自动下载
 """
+
 from app.agent.tools.base import BaseTool, ToolRegistry
 
 
@@ -11,10 +12,7 @@ class MediaSubscribeTool(BaseTool):
     """媒体订阅工具"""
 
     name = "media_subscribe"
-    description = (
-        "添加媒体订阅（RSS 订阅），有新资源时自动下载。"
-        "支持电影、电视剧、动漫订阅。"
-    )
+    description = "添加媒体订阅（RSS 订阅），有新资源时自动下载。支持电影、电视剧、动漫订阅。"
     parameters = {
         "type": "object",
         "properties": {

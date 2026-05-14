@@ -40,14 +40,14 @@ class TmdbClient:
         self._init_config()
 
     def _init_config(self):
-        app = Config().get_config('app')
-        media = Config().get_config('media')
+        app = Config().get_config("app")
+        media = Config().get_config("media")
         self._default_language = media.get("tmdb_language", "zh") or "zh"
-        if app.get('rmt_tmdbkey'):
+        if app.get("rmt_tmdbkey"):
             self.tmdb = TMDb()
             self.tmdb.domain = get_tmdbapi_url()
             self.tmdb.cache = True
-            self.tmdb.api_key = app.get('rmt_tmdbkey')
+            self.tmdb.api_key = app.get("rmt_tmdbkey")
             self.tmdb.language = self._default_language
             self.tmdb.proxies = get_proxies()
             self.tmdb.debug = False
@@ -62,9 +62,7 @@ class TmdbClient:
             self.genre = Genre()
         self.redis_cache = TMDBCache(get_cache_manager().get("tmdb"))
         self.blacklist = TmdbBlacklistRepositoryAdapter()
-        self._blacklist_cache = get_cache_manager().get_or_create(
-            "tmdb_blacklist", "memory", maxsize=1, ttl=300
-        )
+        self._blacklist_cache = get_cache_manager().get_or_create("tmdb_blacklist", "memory", maxsize=1, ttl=300)
 
     def get_blacklist(self):
         cached = self._blacklist_cache.get("all")
@@ -84,6 +82,7 @@ class TmdbClient:
 
 
 # ---------- 纯工具函数 ----------
+
 
 def compare_tmdb_names(file_name, tmdb_names):
     if not file_name or not tmdb_names:
@@ -109,7 +108,7 @@ def compare_tmdb_names(file_name, tmdb_names):
 def get_genre_ids_from_detail(genres):
     if not genres:
         return []
-    return [genre.get('id') for genre in genres]
+    return [genre.get("id") for genre in genres]
 
 
 def get_tmdb_chinese_title(tmdbinfo):
@@ -130,11 +129,11 @@ def get_tmdb_chinese_title(tmdbinfo):
 
 def update_tmdbinfo_cn_title(tmdb_info, default_language):
     org_title = tmdb_info.get("title") if tmdb_info.get("media_type") == MediaType.MOVIE else tmdb_info.get("name")
-    if not StringUtils.is_chinese(org_title) and default_language == 'zh':
+    if not StringUtils.is_chinese(org_title) and default_language == "zh":
         cn_title = get_tmdb_chinese_title(tmdbinfo=tmdb_info)
         if cn_title and cn_title != org_title:
             if tmdb_info.get("media_type") == MediaType.MOVIE:
-                tmdb_info['title'] = cn_title
+                tmdb_info["title"] = cn_title
             else:
-                tmdb_info['name'] = cn_title
+                tmdb_info["name"] = cn_title
     return tmdb_info

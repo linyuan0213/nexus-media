@@ -16,8 +16,7 @@ def resolve_download_api(engine, url, site, user_config, tid):
     headers.pop("Content-Type", None)
     proxy = get_proxies() if user_config.get("proxy") else None
     if site.download.method == "POST":
-        res = RequestUtils(headers=headers, proxies=proxy, timeout=15).post_res(
-            url=url, data=body)
+        res = RequestUtils(headers=headers, proxies=proxy, timeout=15).post_res(url=url, data=body)
     else:
         res = RequestUtils(headers=headers, proxies=proxy, timeout=15).get_res(url=url)
     if res and res.status_code == 200:
@@ -33,18 +32,17 @@ def resolve_download_chained(engine, url, site, user_config, tid):
     if res and res.status_code == 200:
         token = res.json().get(site.download.response_key, "")
         if token and site.download.download_url and site.api:
-            return site.download.download_url.format(
-                base=site.api.base_url.rstrip("/"), token=token, tid=tid
-            )
+            return site.download.download_url.format(base=site.api.base_url.rstrip("/"), token=token, tid=tid)
         return token
     return None
 
 
 def resolve_html_download(engine, page_url, site, user_config):
     from app.sites.engine_tools import _call_html_endpoint
+
     dl = site.download
     cfg = {"method": "GET", "path": "", "selectors": {}}
-    if hasattr(dl, 'selectors') and dl.selectors:
+    if hasattr(dl, "selectors") and dl.selectors:
         cfg["selectors"] = dl.selectors
     elif isinstance(dl, dict) and dl.get("selectors"):
         cfg["selectors"] = dl["selectors"]

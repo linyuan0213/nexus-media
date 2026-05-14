@@ -1,13 +1,14 @@
 """
 MediaService.identify 单元测试 — 验证缓存、strict、language 参数
 """
+
 import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 # mock log 避免加载真实日志模块
-sys.modules['log'] = MagicMock()
+sys.modules["log"] = MagicMock()
 
 # 现在可以安全导入被测代码
 from app.media.lookup.tmdb_lookup import TmdbLookup
@@ -20,7 +21,7 @@ from app.utils.types import MatchMode, MediaType
 class TestMediaServiceIdentify:
     @pytest.fixture
     def service(self):
-        with patch.object(MediaService, '_init_config'):
+        with patch.object(MediaService, "_init_config"):
             svc = MediaService()
             svc._rmt_match_mode = MatchMode.NORMAL
             svc._search_tmdbweb = False
@@ -36,9 +37,7 @@ class TestMediaServiceIdentify:
         """缓存命中时直接返回，不走 TMDB 查询"""
         cached = MediaInfo(tmdb_id=123, title="Cached", year="2024", type=MediaType.MOVIE)
         service._lookup.client.redis_cache.get_media_info.return_value = cached
-        service._parser.parse.return_value = ParserResult(
-            title_en="Test", year="2024", type=MediaType.MOVIE
-        )
+        service._parser.parse.return_value = ParserResult(title_en="Test", year="2024", type=MediaType.MOVIE)
 
         result = service.identify("Test.2024.1080p.mkv")
 
@@ -48,9 +47,7 @@ class TestMediaServiceIdentify:
     def test_identify_cache_miss(self, service):
         """缓存未命中时走正常查询流程"""
         service._lookup.client.redis_cache.get_media_info.return_value = None
-        service._parser.parse.return_value = ParserResult(
-            title_en="Test", year="2024", type=MediaType.MOVIE
-        )
+        service._parser.parse.return_value = ParserResult(title_en="Test", year="2024", type=MediaType.MOVIE)
         mock_result = MagicMock()
         mock_result.tmdb_id = 456
         mock_result.title = "Test Movie"
@@ -70,9 +67,7 @@ class TestMediaServiceIdentify:
     def test_identify_strict_true_no_year_fallback(self, service):
         """strict=True 时，TV 不会去掉年份再查"""
         service._lookup.client.redis_cache.get_media_info.return_value = None
-        service._parser.parse.return_value = ParserResult(
-            title_en="Show", year="2024", type=MediaType.TV
-        )
+        service._parser.parse.return_value = ParserResult(title_en="Show", year="2024", type=MediaType.TV)
         service._lookup.lookup.return_value = None
 
         service.identify("Show.2024.S01E01.mkv", strict=True)
@@ -83,9 +78,7 @@ class TestMediaServiceIdentify:
     def test_identify_strict_false_allows_year_fallback(self, service):
         """strict=False 时，TV 允许去掉年份再查（NORMAL 模式）"""
         service._lookup.client.redis_cache.get_media_info.return_value = None
-        service._parser.parse.return_value = ParserResult(
-            title_en="Show", year="2024", type=MediaType.TV
-        )
+        service._parser.parse.return_value = ParserResult(title_en="Show", year="2024", type=MediaType.TV)
         service._lookup.lookup.return_value = None
 
         service.identify("Show.2024.S01E01.mkv", strict=False)
@@ -96,9 +89,7 @@ class TestMediaServiceIdentify:
     def test_identify_strict_none_uses_config_mode(self, service):
         """strict=None 时，使用配置中的 match_mode"""
         service._lookup.client.redis_cache.get_media_info.return_value = None
-        service._parser.parse.return_value = ParserResult(
-            title_en="Show", year="2024", type=MediaType.TV
-        )
+        service._parser.parse.return_value = ParserResult(title_en="Show", year="2024", type=MediaType.TV)
         service._lookup.lookup.return_value = None
 
         # NORMAL 模式
@@ -114,9 +105,7 @@ class TestMediaServiceIdentify:
     def test_identify_language_passed_to_lookup(self, service):
         """language 参数应传递到 lookup 和 client.set_language"""
         service._lookup.client.redis_cache.get_media_info.return_value = None
-        service._parser.parse.return_value = ParserResult(
-            title_en="Test", year="2024", type=MediaType.MOVIE
-        )
+        service._parser.parse.return_value = ParserResult(title_en="Test", year="2024", type=MediaType.MOVIE)
         service._lookup.lookup.return_value = None
 
         service.identify("Test.2024.1080p.mkv", language="en")
@@ -128,9 +117,7 @@ class TestMediaServiceIdentify:
     def test_identify_cache_disabled(self, service):
         """cache=False 时不读缓存也不写缓存"""
         service._lookup.client.redis_cache.get_media_info.return_value = None
-        service._parser.parse.return_value = ParserResult(
-            title_en="Test", year="2024", type=MediaType.MOVIE
-        )
+        service._parser.parse.return_value = ParserResult(title_en="Test", year="2024", type=MediaType.MOVIE)
         service._lookup.lookup.return_value = None
 
         service.identify("Test.2024.1080p.mkv", cache=False)
@@ -141,9 +128,7 @@ class TestMediaServiceIdentify:
     def test_identify_append_to_response_passed(self, service):
         """append_to_response 应传递到 get_tmdb_info"""
         service._lookup.client.redis_cache.get_media_info.return_value = None
-        service._parser.parse.return_value = ParserResult(
-            title_en="Test", year="2024", type=MediaType.MOVIE
-        )
+        service._parser.parse.return_value = ParserResult(title_en="Test", year="2024", type=MediaType.MOVIE)
         mock_result = MagicMock()
         mock_result.tmdb_id = 456
         mock_result.media_type = MediaType.MOVIE
@@ -161,9 +146,7 @@ class TestMediaServiceIdentify:
         old_meta = MagicMock()  # 模拟旧 MetaInfo 对象
         old_meta.tmdb_id = 123
         service._lookup.client.redis_cache.get_media_info.return_value = old_meta
-        service._parser.parse.return_value = ParserResult(
-            title_en="Test", year="2024", type=MediaType.MOVIE
-        )
+        service._parser.parse.return_value = ParserResult(title_en="Test", year="2024", type=MediaType.MOVIE)
         mock_result = MagicMock()
         mock_result.tmdb_id = 456
         mock_result.media_type = MediaType.MOVIE
@@ -206,8 +189,7 @@ class TestMediaServiceIdentify:
         service._episode_mapping_enabled = True
         service._lookup.client.redis_cache.get_media_info.return_value = None
         service._parser.parse_batch.return_value = [
-            ParserResult(title_en="Anime", year="2021", type=MediaType.ANIME,
-                         season=4, episode=2),
+            ParserResult(title_en="Anime", year="2021", type=MediaType.ANIME, season=4, episode=2),
         ]
         mock_result = MagicMock()
         mock_result.tmdb_id = 202
@@ -227,17 +209,13 @@ class TestMediaServiceIdentify:
         """identify_files: 传入 tmdb_info 时也应支持 EpisodeMapper"""
         service._episode_mapping_enabled = True
         service._parser.parse.return_value = ParserResult(
-            title_en="Anime", year="2021", type=MediaType.ANIME,
-            season=3, episode=5
+            title_en="Anime", year="2021", type=MediaType.ANIME, season=3, episode=5
         )
         service._episode_mapper.map_batch.return_value = [(1, 45)]
 
         tmdb_info = {"id": 303, "media_type": MediaType.TV}
-        with patch('os.path.exists', return_value=True):
-            result = service.identify_files(
-                ["/media/Anime.S03E05.mkv"],
-                tmdb_info=tmdb_info
-            )
+        with patch("os.path.exists", return_value=True):
+            result = service.identify_files(["/media/Anime.S03E05.mkv"], tmdb_info=tmdb_info)
 
         assert "/media/Anime.S03E05.mkv" in result
         info = result["/media/Anime.S03E05.mkv"]
@@ -250,16 +228,12 @@ class TestMediaServiceIdentify:
         """identify_files: EpisodeMapper 禁用时跳过映射"""
         service._episode_mapping_enabled = False
         service._parser.parse.return_value = ParserResult(
-            title_en="Anime", year="2021", type=MediaType.ANIME,
-            season=3, episode=5
+            title_en="Anime", year="2021", type=MediaType.ANIME, season=3, episode=5
         )
 
         tmdb_info = {"id": 303, "media_type": MediaType.TV}
-        with patch('os.path.exists', return_value=True):
-            result = service.identify_files(
-                ["/media/Anime.S03E05.mkv"],
-                tmdb_info=tmdb_info
-            )
+        with patch("os.path.exists", return_value=True):
+            result = service.identify_files(["/media/Anime.S03E05.mkv"], tmdb_info=tmdb_info)
 
         assert "/media/Anime.S03E05.mkv" in result
         info = result["/media/Anime.S03E05.mkv"]

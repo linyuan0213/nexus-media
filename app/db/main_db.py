@@ -64,6 +64,7 @@ def get_engine():
 # SessionManager - Session 生命周期管理
 # =============================================================================
 
+
 class SessionManager:
     """
     Session 管理器
@@ -161,7 +162,7 @@ class SessionManager:
             return
         sess = self._scoped()
         for i in range(0, len(objects), batch_size):
-            batch = objects[i:i + batch_size]
+            batch = objects[i : i + batch_size]
             sess.bulk_save_objects(batch)
             sess.flush()
         sess.commit()
@@ -172,7 +173,7 @@ class SessionManager:
             return
         sess = self._scoped()
         for i in range(0, len(mappings), batch_size):
-            batch = mappings[i:i + batch_size]
+            batch = mappings[i : i + batch_size]
             sess.bulk_insert_mappings(model, batch)
             sess.flush()
         sess.commit()
@@ -204,7 +205,7 @@ class SessionManager:
             if os.path.basename(sql_file) not in init_files:
                 config_flag = True
                 with open(sql_file, encoding="utf-8") as f:
-                    sql_list = f.read().split(';\n')
+                    sql_list = f.read().split(";\n")
                     for sql in sql_list:
                         try:
                             adapted = get_sql_adapter().adapt_sql(sql)
@@ -215,13 +216,14 @@ class SessionManager:
                             print(str(err))
                 init_files.append(os.path.basename(sql_file))
         if config_flag:
-            config['app']['init_files'] = init_files
+            config["app"]["init_files"] = init_files
             Config().save_config(config)
 
 
 # =============================================================================
 # Database - 数据库单例（引擎管理）
 # =============================================================================
+
 
 class Database:
     """
@@ -241,7 +243,7 @@ class Database:
         return cls._instance
 
     def __init__(self):
-        if hasattr(self, '_initialized'):
+        if hasattr(self, "_initialized"):
             return
         self._session_mgr = SessionManager()
         self._initialized = True
@@ -275,6 +277,7 @@ MainDb = SessionManager
 # DbPersist - 自动重试持久化装饰器
 # =============================================================================
 
+
 class DbPersist:
     """
     持久化装饰器 - 自动重试的 commit/rollback
@@ -303,17 +306,20 @@ class DbPersist:
                         self.db.rollback()
                     if attempt < self.max_retries - 1:
                         import time
+
                         time.sleep(self.retry_delay * (attempt + 1))
                     else:
                         ExceptionUtils.exception_traceback(e)
                         return False
             return False
+
         return persist
 
 
 # =============================================================================
 # 模块级快捷函数
 # =============================================================================
+
 
 def remove_session():
     """移除当前线程的 session（应在请求/任务结束时调用）"""

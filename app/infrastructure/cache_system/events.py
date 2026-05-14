@@ -3,6 +3,7 @@
 
 支持监听缓存变更事件，实现缓存数据的同步和通知
 """
+
 import threading
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -16,6 +17,7 @@ import log
 
 class CacheEventType(Enum):
     """缓存事件类型"""
+
     SET = auto()
     GET = auto()
     DELETE = auto()
@@ -29,6 +31,7 @@ class CacheEventType(Enum):
 @dataclass
 class CacheEvent:
     """缓存事件"""
+
     event_type: CacheEventType
     cache_name: str
     key: str | None = None
@@ -70,9 +73,7 @@ class CacheEventManager:
         if self._initialized:
             return
 
-        self._listeners: dict[CacheEventType, list[tuple]] = {
-            event_type: [] for event_type in CacheEventType
-        }
+        self._listeners: dict[CacheEventType, list[tuple]] = {event_type: [] for event_type in CacheEventType}
         self._global_listeners: list[Callable] = []
         self._lock = threading.RLock()
         self._enabled = True
@@ -84,7 +85,7 @@ class CacheEventManager:
         self,
         listener: Callable[[CacheEvent], None],
         event_types: set[CacheEventType] | None = None,
-        cache_name_pattern: str = "*"
+        cache_name_pattern: str = "*",
     ):
         with self._lock:
             if event_types is None:
@@ -100,8 +101,7 @@ class CacheEventManager:
 
             for event_type in CacheEventType:
                 self._listeners[event_type] = [
-                    (pattern, l) for pattern, l in self._listeners[event_type]
-                    if l != listener
+                    (pattern, l) for pattern, l in self._listeners[event_type] if l != listener
                 ]
 
     def emit(self, event: CacheEvent):
@@ -136,12 +136,10 @@ def get_event_manager() -> CacheEventManager:
     return CacheEventManager()
 
 
-def on_cache_event(
-    event_types: set[CacheEventType] | None = None,
-    cache_name_pattern: str = "*"
-):
+def on_cache_event(event_types: set[CacheEventType] | None = None, cache_name_pattern: str = "*"):
     def decorator(func: Callable[[CacheEvent], None]):
         manager = get_event_manager()
         manager.add_listener(func, event_types, cache_name_pattern)
         return func
+
     return decorator

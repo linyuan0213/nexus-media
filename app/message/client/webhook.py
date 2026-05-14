@@ -13,11 +13,12 @@ lock = Lock()
 
 class JsonTemplateEnvironment(Environment):
     """自定义 Jinja2 环境，自动应用 tojson 过滤器到所有变量"""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # 注册默认的 tojson 过滤器（如果 jinja2 内置版本支持）
-        if 'tojson' not in self.filters:
-            self.filters['tojson'] = self._tojson
+        if "tojson" not in self.filters:
+            self.filters["tojson"] = self._tojson
 
     @staticmethod
     def _tojson(value):
@@ -42,7 +43,7 @@ class Webhook(_IMessageClient):
         if self._config:
             self._url = self._config.get("url")
             self._method = self._config.get("method")
-            self._query_params = self.__parse_json(self._config.get("query_params"), 'query_params')
+            self._query_params = self.__parse_json(self._config.get("query_params"), "query_params")
             self._json_tpl = self._config.get("json_tpl", "")
             self._json_list_tpl = self._config.get("json_list_tpl", "")
             self._token = self._config.get("token")
@@ -94,13 +95,7 @@ class Webhook(_IMessageClient):
             return False, "method参数未配置"
         try:
             # 模板变量
-            variables = {
-                'title': title,
-                'text': text,
-                'image': image,
-                'url': url,
-                'user_id': user_id
-            }
+            variables = {"title": title, "text": text, "image": image, "url": url, "user_id": user_id}
 
             query_params = self._query_params.copy() if self._query_params else {}
 
@@ -131,24 +126,23 @@ class Webhook(_IMessageClient):
             return False, "url参数未配置"
         if not self._method:
             return False, "method参数未配置"
-        if self._method == 'GET':
+        if self._method == "GET":
             return False, "GET不支持发送发送列表类消息"
         try:
-            medias_data = [{
-                'title': media.get_title_string(),
-                'url': media.get_detail_url(),
-                'type': media.get_type_string(),
-                'vote': media.get_vote_string()
-            } for media in medias]
+            medias_data = [
+                {
+                    "title": media.get_title_string(),
+                    "url": media.get_detail_url(),
+                    "type": media.get_type_string(),
+                    "vote": media.get_vote_string(),
+                }
+                for media in medias
+            ]
 
             query_params = self._query_params.copy() if self._query_params else {}
 
             # 模板变量
-            variables = {
-                'title': title,
-                'user_id': user_id,
-                'medias': medias_data
-            }
+            variables = {"title": title, "user_id": user_id, "medias": medias_data}
 
             # 渲染JSON模板（使用列表消息模板）
             if self._json_list_tpl:
@@ -172,17 +166,12 @@ class Webhook(_IMessageClient):
         """
         # GET 请求不发送 body
         if json_data is None:
-            response = requests.request(self._method,
-                                        self._url,
-                                        params=query_params,
-                                        headers=self.header)
+            response = requests.request(self._method, self._url, params=query_params, headers=self.header)
         else:
             # POST/PUT 等请求发送 JSON body
-            response = requests.request(self._method,
-                                        self._url,
-                                        params=query_params,
-                                        data=json_data,
-                                        headers=self.header)
+            response = requests.request(
+                self._method, self._url, params=query_params, data=json_data, headers=self.header
+            )
         if not response:
             return False, "未获取到返回信息"
         if 200 <= response.status_code <= 299:
@@ -194,7 +183,8 @@ class Webhook(_IMessageClient):
     def header(self):
         r = {"Content-Type": "application/json"}
         if self._token:
-            r['Authorization'] = self._token
+            r["Authorization"] = self._token
         return r
+
 
 ClientRegistry.register(Webhook)

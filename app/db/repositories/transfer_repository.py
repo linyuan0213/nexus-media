@@ -2,6 +2,7 @@
 Transfer Repository
 Handles transfer history and unrecognized transfer related database operations.
 """
+
 import datetime
 import os.path
 import time
@@ -29,12 +30,16 @@ class TransferRepository(BaseRepository):
         """
         if not source_path or not source_filename or not dest_path or not dest_filename:
             return False
-        ret = self._db.query(TRANSFERHISTORY).filter(
-            source_path == TRANSFERHISTORY.SOURCE_PATH,
-            source_filename == TRANSFERHISTORY.SOURCE_FILENAME,
-            dest_path == TRANSFERHISTORY.DEST_PATH,
-            dest_filename == TRANSFERHISTORY.DEST_FILENAME
-        ).count()
+        ret = (
+            self._db.query(TRANSFERHISTORY)
+            .filter(
+                source_path == TRANSFERHISTORY.SOURCE_PATH,
+                source_filename == TRANSFERHISTORY.SOURCE_FILENAME,
+                dest_path == TRANSFERHISTORY.DEST_PATH,
+                dest_filename == TRANSFERHISTORY.DEST_FILENAME,
+            )
+            .count()
+        )
         return ret > 0
 
     @DbPersist(BaseRepository._db)
@@ -46,7 +51,7 @@ class TransferRepository(BaseRepository):
             source_path == TRANSFERHISTORY.SOURCE_PATH,
             source_filename == TRANSFERHISTORY.SOURCE_FILENAME,
             dest_path == TRANSFERHISTORY.DEST_PATH,
-            dest_filename == TRANSFERHISTORY.DEST_FILENAME
+            dest_filename == TRANSFERHISTORY.DEST_FILENAME,
         ).update({"DATE": date})
 
     @DbPersist(BaseRepository._db)
@@ -75,29 +80,31 @@ class TransferRepository(BaseRepository):
             season_episode = media_info.get_season_string()
 
         title = media_info.title
-        timestr = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+        timestr = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
 
         if self.is_transfer_history_exists(source_path, source_filename, dest_path, dest_filename):
             self.update_transfer_history_date(source_path, source_filename, dest_path, dest_filename, timestr)
             return
 
         dest = dest or ""
-        self._db.insert(TRANSFERHISTORY(
-            MODE=str(rmt_mode.value),
-            TYPE=media_info.type.value,
-            CATEGORY=media_info.category,
-            TMDBID=int(media_info.tmdb_id),
-            TITLE=title,
-            YEAR=media_info.year,
-            SEASON_EPISODE=season_episode,
-            SOURCE=str(in_from.value),
-            SOURCE_PATH=source_path,
-            SOURCE_FILENAME=source_filename,
-            DEST=dest,
-            DEST_PATH=dest_path,
-            DEST_FILENAME=dest_filename,
-            DATE=timestr
-        ))
+        self._db.insert(
+            TRANSFERHISTORY(
+                MODE=str(rmt_mode.value),
+                TYPE=media_info.type.value,
+                CATEGORY=media_info.category,
+                TMDBID=int(media_info.tmdb_id),
+                TITLE=title,
+                YEAR=media_info.year,
+                SEASON_EPISODE=season_episode,
+                SOURCE=str(in_from.value),
+                SOURCE_PATH=source_path,
+                SOURCE_FILENAME=source_filename,
+                DEST=dest,
+                DEST_PATH=dest_path,
+                DEST_FILENAME=dest_filename,
+                DATE=timestr,
+            )
+        )
 
     def get_transfer_history(self, search, page, rownum):
         """
@@ -110,14 +117,19 @@ class TransferRepository(BaseRepository):
 
         if search:
             search = f"%{search}%"
-            count = self._db.query(TRANSFERHISTORY).filter(
-                (TRANSFERHISTORY.SOURCE_FILENAME.like(search)) |
-                (TRANSFERHISTORY.TITLE.like(search))
-            ).count()
-            data = self._db.query(TRANSFERHISTORY).filter(
-                (TRANSFERHISTORY.SOURCE_FILENAME.like(search)) |
-                (TRANSFERHISTORY.TITLE.like(search))
-            ).order_by(TRANSFERHISTORY.DATE.desc()).limit(int(rownum)).offset(begin_pos).all()
+            count = (
+                self._db.query(TRANSFERHISTORY)
+                .filter((TRANSFERHISTORY.SOURCE_FILENAME.like(search)) | (TRANSFERHISTORY.TITLE.like(search)))
+                .count()
+            )
+            data = (
+                self._db.query(TRANSFERHISTORY)
+                .filter((TRANSFERHISTORY.SOURCE_FILENAME.like(search)) | (TRANSFERHISTORY.TITLE.like(search)))
+                .order_by(TRANSFERHISTORY.DATE.desc())
+                .limit(int(rownum))
+                .offset(begin_pos)
+                .all()
+            )
             return count, data
         else:
             return self._db.query(TRANSFERHISTORY).count(), self._db.query(TRANSFERHISTORY).order_by(
@@ -138,15 +150,17 @@ class TransferRepository(BaseRepository):
             return self._db.query(TRANSFERHISTORY).filter(int(tmdbid) == TRANSFERHISTORY.TMDBID).all()
         if tmdbid and season:
             season = f"%{season}%"
-            return self._db.query(TRANSFERHISTORY).filter(
-                int(tmdbid) == TRANSFERHISTORY.TMDBID,
-                TRANSFERHISTORY.SEASON_EPISODE.like(season)
-            ).all()
+            return (
+                self._db.query(TRANSFERHISTORY)
+                .filter(int(tmdbid) == TRANSFERHISTORY.TMDBID, TRANSFERHISTORY.SEASON_EPISODE.like(season))
+                .all()
+            )
         if tmdbid and season_episode:
-            return self._db.query(TRANSFERHISTORY).filter(
-                int(tmdbid) == TRANSFERHISTORY.TMDBID,
-                season_episode == TRANSFERHISTORY.SEASON_EPISODE
-            ).all()
+            return (
+                self._db.query(TRANSFERHISTORY)
+                .filter(int(tmdbid) == TRANSFERHISTORY.TMDBID, season_episode == TRANSFERHISTORY.SEASON_EPISODE)
+                .all()
+            )
 
     def is_transfer_history_exists_by_source_full_path(self, source_full_path):
         """
@@ -154,10 +168,11 @@ class TransferRepository(BaseRepository):
         """
         path = os.path.dirname(source_full_path)
         filename = os.path.basename(source_full_path)
-        ret = self._db.query(TRANSFERHISTORY).filter(
-            path == TRANSFERHISTORY.SOURCE_PATH,
-            filename == TRANSFERHISTORY.SOURCE_FILENAME
-        ).count()
+        ret = (
+            self._db.query(TRANSFERHISTORY)
+            .filter(path == TRANSFERHISTORY.SOURCE_PATH, filename == TRANSFERHISTORY.SOURCE_FILENAME)
+            .count()
+        )
         return ret > 0
 
     @DbPersist(BaseRepository._db)
@@ -180,18 +195,12 @@ class TransferRepository(BaseRepository):
         使用 func.substring 替代 func.substr 以支持多种数据库
         days <= 0 表示查询全部
         """
-        date_str = func.substr(TRANSFERHISTORY.DATE, 1, 10).label('date_str')
-        query = self._db.query(
-            TRANSFERHISTORY.TYPE,
-            date_str,
-            func.count('*')
-        )
+        date_str = func.substr(TRANSFERHISTORY.DATE, 1, 10).label("date_str")
+        query = self._db.query(TRANSFERHISTORY.TYPE, date_str, func.count("*"))
         if days > 0:
             begin_date = (datetime.datetime.now() - datetime.timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
             query = query.filter(begin_date < TRANSFERHISTORY.DATE)
-        return query.group_by(
-            TRANSFERHISTORY.TYPE, date_str
-        ).order_by(date_str).all()
+        return query.group_by(TRANSFERHISTORY.TYPE, date_str).order_by(date_str).all()
 
     # ==================== Transfer Unknown ====================
 
@@ -199,7 +208,7 @@ class TransferRepository(BaseRepository):
         """
         查询未识别的记录列表
         """
-        return self._db.query(TRANSFERUNKNOWN).filter(TRANSFERUNKNOWN.STATE == 'N').all()
+        return self._db.query(TRANSFERUNKNOWN).filter(TRANSFERUNKNOWN.STATE == "N").all()
 
     def get_transfer_unknown_paths_by_page(self, search, page, rownum):
         """
@@ -212,20 +221,26 @@ class TransferRepository(BaseRepository):
 
         if search:
             search = f"%{search}%"
-            count = self._db.query(TRANSFERUNKNOWN).filter(
-                (TRANSFERUNKNOWN.STATE == 'N') &
-                (TRANSFERUNKNOWN.PATH.like(search))
-            ).count()
-            data = self._db.query(TRANSFERUNKNOWN).filter(
-                (TRANSFERUNKNOWN.STATE == 'N') &
-                (TRANSFERUNKNOWN.PATH.like(search))
-            ).order_by(TRANSFERUNKNOWN.ID.desc()).limit(int(rownum)).offset(begin_pos).all()
+            count = (
+                self._db.query(TRANSFERUNKNOWN)
+                .filter((TRANSFERUNKNOWN.STATE == "N") & (TRANSFERUNKNOWN.PATH.like(search)))
+                .count()
+            )
+            data = (
+                self._db.query(TRANSFERUNKNOWN)
+                .filter((TRANSFERUNKNOWN.STATE == "N") & (TRANSFERUNKNOWN.PATH.like(search)))
+                .order_by(TRANSFERUNKNOWN.ID.desc())
+                .limit(int(rownum))
+                .offset(begin_pos)
+                .all()
+            )
             return count, data
         else:
-            return self._db.query(TRANSFERUNKNOWN).filter(TRANSFERUNKNOWN.STATE == 'N').count(), \
-                   self._db.query(TRANSFERUNKNOWN).filter(TRANSFERUNKNOWN.STATE == 'N').order_by(
-                       TRANSFERUNKNOWN.ID.desc()
-                   ).limit(int(rownum)).offset(begin_pos).all()
+            return self._db.query(TRANSFERUNKNOWN).filter(TRANSFERUNKNOWN.STATE == "N").count(), self._db.query(
+                TRANSFERUNKNOWN
+            ).filter(TRANSFERUNKNOWN.STATE == "N").order_by(TRANSFERUNKNOWN.ID.desc()).limit(int(rownum)).offset(
+                begin_pos
+            ).all()
 
     @DbPersist(BaseRepository._db)
     def update_transfer_unknown_state(self, path):
@@ -234,9 +249,7 @@ class TransferRepository(BaseRepository):
         """
         if not path:
             return
-        self._db.query(TRANSFERUNKNOWN).filter(
-            os.path.normpath(path) == TRANSFERUNKNOWN.PATH
-        ).update({"STATE": "Y"})
+        self._db.query(TRANSFERUNKNOWN).filter(os.path.normpath(path) == TRANSFERUNKNOWN.PATH).update({"STATE": "Y"})
 
     @DbPersist(BaseRepository._db)
     def delete_transfer_unknown(self, tid):
@@ -269,9 +282,7 @@ class TransferRepository(BaseRepository):
         """
         if not path:
             return False
-        ret = self._db.query(TRANSFERUNKNOWN).filter(
-            os.path.normpath(path) == TRANSFERUNKNOWN.PATH
-        ).count()
+        ret = self._db.query(TRANSFERUNKNOWN).filter(os.path.normpath(path) == TRANSFERUNKNOWN.PATH).count()
         return ret > 0
 
     def is_need_insert_transfer_unknown(self, path):
@@ -285,7 +296,7 @@ class TransferRepository(BaseRepository):
         if unknowns:
             is_all_proceed = True
             for unknown in unknowns:
-                if unknown.STATE == 'N':
+                if unknown.STATE == "N":
                     is_all_proceed = False
                     break
 
@@ -318,12 +329,7 @@ class TransferRepository(BaseRepository):
         else:
             dest = ""
 
-        self._db.insert(TRANSFERUNKNOWN(
-            PATH=path,
-            DEST=dest,
-            STATE='N',
-            MODE=str(rmt_mode.value)
-        ))
+        self._db.insert(TRANSFERUNKNOWN(PATH=path, DEST=dest, STATE="N", MODE=str(rmt_mode.value)))
 
     # ==================== Transfer Blacklist ====================
 
@@ -333,9 +339,7 @@ class TransferRepository(BaseRepository):
         """
         if not path:
             return False
-        ret = self._db.query(TRANSFERBLACKLIST).filter(
-            os.path.normpath(path) == TRANSFERBLACKLIST.PATH
-        ).count()
+        ret = self._db.query(TRANSFERBLACKLIST).filter(os.path.normpath(path) == TRANSFERBLACKLIST.PATH).count()
         return ret > 0
 
     def is_transfer_notin_blacklist(self, path):
@@ -380,10 +384,11 @@ class TransferRepository(BaseRepository):
         """
         if not path:
             return False
-        count = self._db.query(SYNCHISTORY).filter(
-            os.path.normpath(path) == SYNCHISTORY.PATH,
-            os.path.normpath(dest) == SYNCHISTORY.DEST
-        ).count()
+        count = (
+            self._db.query(SYNCHISTORY)
+            .filter(os.path.normpath(path) == SYNCHISTORY.PATH, os.path.normpath(dest) == SYNCHISTORY.DEST)
+            .count()
+        )
         return count > 0
 
     @DbPersist(BaseRepository._db)
@@ -396,8 +401,6 @@ class TransferRepository(BaseRepository):
         if self.is_sync_in_history(path, dest):
             return
 
-        self._db.insert(SYNCHISTORY(
-            PATH=os.path.normpath(path),
-            SRC=os.path.normpath(src),
-            DEST=os.path.normpath(dest)
-        ))
+        self._db.insert(
+            SYNCHISTORY(PATH=os.path.normpath(path), SRC=os.path.normpath(src), DEST=os.path.normpath(dest))
+        )

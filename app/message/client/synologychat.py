@@ -32,7 +32,7 @@ class SynologyChat(_IMessageClient):
         self._webhook_url = cfg.get("webhook_url")
         if self._webhook_url:
             self._domain = StringUtils.get_base_url(self._webhook_url)
-        self._token = cfg.get('token')
+        self._token = cfg.get("token")
 
     def setup(self):
         if self._interactive:
@@ -55,16 +55,19 @@ class SynologyChat(_IMessageClient):
                         log.debug(f"【SynologyChat】接收到消息: {data}")
                         ThreadHelper().start_thread(self._process_message, (data, ds_url))
                 import time
+
                 time.sleep(2)
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
                 log.error(f"【SynologyChat】消息接收错误: {e}")
                 import time
+
                 time.sleep(5)
 
     def _process_message(self, data, ds_url):
         try:
             import requests
+
             requests.post(ds_url, json=data, timeout=10)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -78,7 +81,7 @@ class SynologyChat(_IMessageClient):
         if not self._webhook_url or not self._token:
             return False, "参数未配置"
         try:
-            titles = str(title).split('\n')
+            titles = str(title).split("\n")
             if len(titles) > 1:
                 title = titles[0]
                 if not text:
@@ -91,9 +94,9 @@ class SynologyChat(_IMessageClient):
                 caption = title
             if url and image:
                 caption = f"{caption}\n\n<{url}|查看详情>"
-            payload_data = {'text': quote(caption)}
+            payload_data = {"text": quote(caption)}
             if image:
-                payload_data['file_url'] = quote(image)
+                payload_data["file_url"] = quote(image)
             if user_id:
                 user_ids = [int(user_id)]
             else:
@@ -101,7 +104,7 @@ class SynologyChat(_IMessageClient):
                 if not user_ids:
                     return False, "机器人没有对任何用户可见"
             for uid in user_ids:
-                payload_data['user_ids'] = [uid]
+                payload_data["user_ids"] = [uid]
                 error_flag, error_msg = self.__send_request(payload_data)
                 if not error_flag:
                     return error_flag, error_msg
@@ -123,13 +126,22 @@ class SynologyChat(_IMessageClient):
                 if not image:
                     image = media.get_message_image()
                 if media.get_vote_string():
-                    caption = "%s\n%s. <%s|%s>\n%s，%s" % (caption, index,
-                        media.get_detail_url(), media.get_title_string(),
-                        media.get_type_string(), media.get_vote_string())
+                    caption = "%s\n%s. <%s|%s>\n%s，%s" % (
+                        caption,
+                        index,
+                        media.get_detail_url(),
+                        media.get_title_string(),
+                        media.get_type_string(),
+                        media.get_vote_string(),
+                    )
                 else:
-                    caption = "%s\n%s. <%s|%s>\n%s" % (caption, index,
-                        media.get_detail_url(), media.get_title_string(),
-                        media.get_type_string())
+                    caption = "%s\n%s. <%s|%s>\n%s" % (
+                        caption,
+                        index,
+                        media.get_detail_url(),
+                        media.get_title_string(),
+                        media.get_type_string(),
+                    )
                 index += 1
             if user_id:
                 user_ids = [int(user_id)]
@@ -148,7 +160,9 @@ class SynologyChat(_IMessageClient):
     def __get_bot_users(self):
         if not self._domain or not self._token:
             return []
-        req_url = f"{self._domain}/webapi/entry.cgi?api=SYNO.Chat.External&method=user_list&version=2&token={self._token}"
+        req_url = (
+            f"{self._domain}/webapi/entry.cgi?api=SYNO.Chat.External&method=user_list&version=2&token={self._token}"
+        )
         ret = self._req.get_res(url=req_url)
         if ret and ret.status_code == 200:
             users = ret.json().get("data", {}).get("users", []) or []
@@ -161,8 +175,8 @@ class SynologyChat(_IMessageClient):
         if ret and ret.status_code == 200:
             result = ret.json()
             if result:
-                errno = result.get('error', {}).get('code')
-                errmsg = result.get('error', {}).get('errors')
+                errno = result.get("error", {}).get("code")
+                errmsg = result.get("error", {}).get("errors")
                 if not errno:
                     return True, ""
                 return False, f"{errno}-{errmsg}"
@@ -170,5 +184,6 @@ class SynologyChat(_IMessageClient):
         elif ret is not None:
             return False, f"错误码：{ret.status_code}，错误原因：{ret.reason}"
         return False, "未获取到返回信息"
+
 
 ClientRegistry.register(SynologyChat)

@@ -9,9 +9,7 @@ class TmdbBlacklistService:
     def __init__(self):
         self._db = TmdbBlacklistRepositoryAdapter()
         self._media = MediaService()
-        self._cache = get_cache_manager().get_or_create(
-            "tmdb_blacklist", "memory", maxsize=1, ttl=300
-        )
+        self._cache = get_cache_manager().get_or_create("tmdb_blacklist", "memory", maxsize=1, ttl=300)
 
     def is_blacklisted(self, tmdb_id, media_type=None):
         """
@@ -48,16 +46,18 @@ class TmdbBlacklistService:
         items = all_items[start:end]
         formatted_items = []
         for item in items:
-            formatted_items.append({
-                'backdrop_path': item.BACKDROP_PATH,
-                'id': item.ID,
-                'media_type': '电影' if MediaType.MOVIE.value == item.MEDIA_TYPE else '电视剧',
-                'note': item.NOTE,
-                'poster_path': item.POSTER_PATH,
-                'title': item.TITLE,
-                'tmdb_id': str(item.TMDB_ID),
-                'year': item.YEAR
-            })
+            formatted_items.append(
+                {
+                    "backdrop_path": item.BACKDROP_PATH,
+                    "id": item.ID,
+                    "media_type": "电影" if MediaType.MOVIE.value == item.MEDIA_TYPE else "电视剧",
+                    "note": item.NOTE,
+                    "poster_path": item.POSTER_PATH,
+                    "title": item.TITLE,
+                    "tmdb_id": str(item.TMDB_ID),
+                    "year": item.YEAR,
+                }
+            )
         return formatted_items, len(all_items)
 
     def add_to_blacklist(self, tmdb_id, media_type=""):
@@ -85,7 +85,7 @@ class TmdbBlacklistService:
             media_type=media_type,
             poster_path=meta_info.poster_path,
             backdrop_path=meta_info.backdrop_path,
-            note=str(meta_info.note)
+            note=str(meta_info.note),
         )
         # 添加后清除缓存，确保下次查询能获取最新数据
         self._cache.clear()

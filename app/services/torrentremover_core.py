@@ -2,6 +2,7 @@
 TorrentRemover 重构核心
 拆分为 Repository + ActionEngine + Service，移除 SingletonMeta。
 """
+
 import json
 
 import log
@@ -41,12 +42,8 @@ class TorrentRemoverActionEngine:
         downloader_id = task.get("downloader")
         task.get("config")["samedata"] = task.get("samedata")
         task.get("config")["onlynastool"] = task.get("onlynastool")
-        torrents = downloader.get_remove_torrents(
-            downloader_id=downloader_id,
-            config=task.get("config")
-        )
-        log.info(f"【TorrentRemover】自动删种任务：{task.get('name')} "
-                 f"获取符合处理条件种子数 {len(torrents)}")
+        torrents = downloader.get_remove_torrents(downloader_id=downloader_id, config=task.get("config"))
+        log.info(f"【TorrentRemover】自动删种任务：{task.get('name')} 获取符合处理条件种子数 {len(torrents)}")
 
         action = task.get("action")
         text_items = []
@@ -60,28 +57,17 @@ class TorrentRemoverActionEngine:
         if action == 1:
             for torrent in torrents:
                 log.info(f"【TorrentRemover】暂停种子：{torrent.get('name')}")
-                downloader.stop_torrents(
-                    downloader_id=downloader_id,
-                    ids=[torrent.get("id")]
-                )
+                downloader.stop_torrents(downloader_id=downloader_id, ids=[torrent.get("id")])
             return len(torrents), "共暂停%s个种子\n" % len(torrents) + "\n".join(text_items)
         elif action == 2:
             for torrent in torrents:
                 log.info(f"【TorrentRemover】删除种子：{torrent.get('name')}")
-                downloader.delete_torrents(
-                    downloader_id=downloader_id,
-                    delete_file=False,
-                    ids=[torrent.get("id")]
-                )
+                downloader.delete_torrents(downloader_id=downloader_id, delete_file=False, ids=[torrent.get("id")])
             return len(torrents), "共删除%s个种子\n" % len(torrents) + "\n".join(text_items)
         elif action == 3:
             for torrent in torrents:
                 log.info(f"【TorrentRemover】删除种子及文件：{torrent.get('name')}")
-                downloader.delete_torrents(
-                    downloader_id=downloader_id,
-                    delete_file=True,
-                    ids=[torrent.get("id")]
-                )
+                downloader.delete_torrents(downloader_id=downloader_id, delete_file=True, ids=[torrent.get("id")])
             return len(torrents), "共删除%s个种子（及文件）\n" % len(torrents) + "\n".join(text_items)
         return len(torrents), ""
 
@@ -91,11 +77,13 @@ class TorrentRemoverService:
 
     _jobstore = "torrent_remove"
 
-    def __init__(self,
-                 repository: TorrentRemoverRepository | None = None,
-                 downloader=None,
-                 message: Message | None = None,
-                 scheduler=None):
+    def __init__(
+        self,
+        repository: TorrentRemoverRepository | None = None,
+        downloader=None,
+        message: Message | None = None,
+        scheduler=None,
+    ):
         self._repo = repository or TorrentRemoverRepository()
         self._downloader = downloader or Downloader()
         self._message = message or Message()
@@ -145,15 +133,17 @@ class TorrentRemoverService:
             if task.get("enabled") and task.get("interval") and task.get("config"):
                 remove_flag = True
                 job_id = f"TorrentRemover.auto_remove_torrents_{task.get('id')}"
-                self._scheduler.start_job({
-                    "func": self.auto_remove_torrents,
-                    "name": f"自动删种任务 {task.get('name')}",
-                    "args": (task.get("id"),),
-                    "job_id": job_id,
-                    "trigger": "interval",
-                    "seconds": int(task.get("interval")) * 60,
-                    "jobstore": self._jobstore
-                })
+                self._scheduler.start_job(
+                    {
+                        "func": self.auto_remove_torrents,
+                        "name": f"自动删种任务 {task.get('name')}",
+                        "args": (task.get("id"),),
+                        "job_id": job_id,
+                        "trigger": "interval",
+                        "seconds": int(task.get("interval")) * 60,
+                        "jobstore": self._jobstore,
+                    }
+                )
         if remove_flag:
             log.info("自动删种服务启动")
 
@@ -186,7 +176,8 @@ class TorrentRemoverService:
                 count, text = TorrentRemoverActionEngine.execute(task, self._downloader)
                 if count and text:
                     self._message.send_auto_remove_torrents_message(
-                        title=f"自动删种任务：{task.get('name')}", text=text)
+                        title=f"自动删种任务：{task.get('name')}", text=text
+                    )
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
                 log.error(f"【TorrentRemover】自动删种任务：{task.get('name')}异常：{str(e)}")
@@ -286,9 +277,14 @@ class TorrentRemoverService:
         if tid:
             self._repo.delete_task(tid=tid)
         self._repo.insert_task(
-            name=name, action=action, interval=interval,
-            enabled=enabled, samedata=samedata, onlynastool=onlynastool,
-            downloader=downloader_id, config=config,
+            name=name,
+            action=action,
+            interval=interval,
+            enabled=enabled,
+            samedata=samedata,
+            onlynastool=onlynastool,
+            downloader=downloader_id,
+            config=config,
         )
         self._load_tasks()
         self._start_scheduler_jobs()
@@ -308,10 +304,7 @@ class TorrentRemoverService:
             return False, []
         task.get("config")["samedata"] = task.get("samedata")
         task.get("config")["onlynastool"] = task.get("onlynastool")
-        torrents = self._downloader.get_remove_torrents(
-            downloader_id=task.get("downloader"),
-            config=task.get("config")
-        )
+        torrents = self._downloader.get_remove_torrents(downloader_id=task.get("downloader"), config=task.get("config"))
         return True, torrents
 
     def stop_service(self):

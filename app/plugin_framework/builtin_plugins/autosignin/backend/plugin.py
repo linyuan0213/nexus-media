@@ -2,6 +2,7 @@
 AutoSignIn Plugin v2
 站点自动签到保号，支持重试
 """
+
 import copy
 import json
 import re
@@ -38,11 +39,7 @@ class AutoSignInPlugin:
         self.ctx.info("站点自动签到插件已启用")
         self._start_service()
         # 注册消息命令：/signin 立即执行签到
-        self.ctx.register_message_command(
-            cmd="/signin",
-            desc="站点签到",
-            func=self._handle_signin_command
-        )
+        self.ctx.register_message_command(cmd="/signin", desc="站点签到", func=self._handle_signin_command)
 
     def on_disable(self):
         self.ctx.info("站点自动签到插件已禁用")
@@ -54,10 +51,7 @@ class AutoSignInPlugin:
         self.ctx.info(f"收到签到命令: user={user_name}, msg={msg}")
         self.run()
         Message().send_channel_msg(
-            channel=in_from,
-            title="站点签到",
-            text="签到任务已触发，请稍后查看签到结果",
-            user_id=user_id
+            channel=in_from, title="站点签到", text="签到任务已触发，请稍后查看签到结果", user_id=user_id
         )
 
     def on_hook(self, event, data):
@@ -83,14 +77,14 @@ class AutoSignInPlugin:
 
         # 加载模块
         self._site_schema = SubmoduleHelper.import_submodules(
-            'app.plugin_framework.builtin_plugins.autosignin.backend._autosignin',
-            filter_func=lambda _, obj: hasattr(obj, 'match')
+            "app.plugin_framework.builtin_plugins.autosignin.backend._autosignin",
+            filter_func=lambda _, obj: hasattr(obj, "match"),
         )
         self.ctx.debug(f"加载站点签到：{self._site_schema}")
 
         # 清理缓存
         if clean:
-            self._delete_history(datetime.today().strftime('%Y-%m-%d'))
+            self._delete_history(datetime.today().strftime("%Y-%m-%d"))
             self.ctx.set_config("clean", False)
 
         if cron:
@@ -143,18 +137,18 @@ class AutoSignInPlugin:
         notify = config.get("notify", False)
 
         today = datetime.today()
-        yesterday_str = (today - timedelta(days=1)).strftime('%Y-%m-%d')
+        yesterday_str = (today - timedelta(days=1)).strftime("%Y-%m-%d")
         self._delete_history(yesterday_str)
 
-        today_str = today.strftime('%Y-%m-%d')
+        today_str = today.strftime("%Y-%m-%d")
         today_history = self._get_history(key=today_str)
 
         if not today_history:
             sign_sites = sign_sites_cfg
             self.ctx.info(f"今日 {today_str} 未签到，开始签到已选站点")
         else:
-            retry_sites_hist = today_history.get('retry', [])
-            already_sign_sites = today_history.get('sign', [])
+            retry_sites_hist = today_history.get("retry", [])
+            already_sign_sites = today_history.get("sign", [])
             no_sign_sites = [s for s in sign_sites_cfg if s not in already_sign_sites]
             sign_sites = list(set(retry_sites_hist + no_sign_sites + special_sites))
             if sign_sites:
@@ -175,7 +169,7 @@ class AutoSignInPlugin:
                 self.ctx.info(f"站点 {site.get('name')} 是BT站点，跳过签到")
                 continue
             if str(site.get("id")) in emulate_set:
-                site['chrome'] = True
+                site["chrome"] = True
             new_sign_sites.append(site)
 
         sign_sites = new_sign_sites
@@ -197,12 +191,12 @@ class AutoSignInPlugin:
             fz_sign_msg = []
             failed_msg = []
 
-            sites_map = {site.get('name'): site.get("id") for site in Sites().get_site_dict()}
+            sites_map = {site.get("name"): site.get("id") for site in Sites().get_site_dict()}
             for s in status:
                 if not s:
                     continue
                 if retry_keyword:
-                    site_names = re.findall(r'【(.*?)】', s)
+                    site_names = re.findall(r"【(.*?)】", s)
                     if site_names:
                         site_id = sites_map.get(site_names[0])
                         if site_id and re.search(retry_keyword, s):
@@ -218,7 +212,7 @@ class AutoSignInPlugin:
                     continue
                 elif "签到成功" in s:
                     sign_success_msg.append(s)
-                elif '已签到' in s:
+                elif "已签到" in s:
                     already_sign_msg.append(s)
                 else:
                     failed_msg.append(s)
@@ -243,10 +237,10 @@ class AutoSignInPlugin:
                 self.ctx.notify(
                     title="【自动签到任务完成】",
                     text=f"本次签到数量: {len(sign_sites)} \n"
-                         f"命中重试数量: {len(retry_sites) if retry_keyword else 0} \n"
-                         f"强制签到数量: {len(special_sites)} \n"
-                         f"下次签到数量: {len(set(retry_sites + special_sites))} \n"
-                         f"详见签到消息"
+                    f"命中重试数量: {len(retry_sites) if retry_keyword else 0} \n"
+                    f"强制签到数量: {len(special_sites)} \n"
+                    f"下次签到数量: {len(set(retry_sites + special_sites))} \n"
+                    f"详见签到消息",
                 )
         else:
             self.ctx.error("站点签到任务失败！")
@@ -300,11 +294,11 @@ class AutoSignInPlugin:
                     self.ctx.warn("%s 无法打开网站" % site)
                     return f"【{site}】仿真签到失败，无法打开网站！"
 
-                if re.search(r'已签|签到已得|今日已签|已签到|签到成功', html_text, re.IGNORECASE):
+                if re.search(r"已签|签到已得|今日已签|已签到|签到成功", html_text, re.IGNORECASE):
                     self.ctx.info("%s 今日已签到" % site)
                     return f"【{site}】今日已签到"
 
-                if re.search(r'完成两步验证', html_text, re.IGNORECASE):
+                if re.search(r"完成两步验证", html_text, re.IGNORECASE):
                     self.ctx.warn("%s 仿真签到失败，需要两步验证" % site)
                     return f"【{site}】仿真签到失败，需要两步验证"
 
@@ -327,28 +321,24 @@ class AutoSignInPlugin:
                 try:
                     self.ctx.debug("%s 开始点击签到按钮" % site)
                     html_text = chrome.get_page_html(
-                        url=home_url,
-                        cookies=site_cookie,
-                        click_xpath=f'xpath:{xpath_str}',
-                        delay=10,
-                        click_delay=15
+                        url=home_url, cookies=site_cookie, click_xpath=f"xpath:{xpath_str}", delay=10, click_delay=15
                     )
 
                     if not html_text:
                         self.ctx.warn("%s 仿真签到失败，无法通过Cloudflare" % site)
                         return f"【{site}】仿真签到失败，无法通过Cloudflare！"
 
-                    if re.search(r'已签|签到已得|签到成功|签到.*成功|获得.*积分|签到.*积分', html_text, re.IGNORECASE):
+                    if re.search(r"已签|签到已得|签到成功|签到.*成功|获得.*积分|签到.*积分", html_text, re.IGNORECASE):
                         self.ctx.info("%s 仿真签到成功" % site)
                         return f"【{site}】仿真签到成功"
-                    elif re.search(r'完成两步验证|两步验证|2FA|二次验证', html_text, re.IGNORECASE):
+                    elif re.search(r"完成两步验证|两步验证|2FA|二次验证", html_text, re.IGNORECASE):
                         self.ctx.warn("%s 仿真签到失败，需要两步验证" % site)
                         return f"【{site}】仿真签到失败，需要两步验证"
-                    elif re.search(r'已签到|今日已签|重复签到', html_text, re.IGNORECASE):
+                    elif re.search(r"已签到|今日已签|重复签到", html_text, re.IGNORECASE):
                         self.ctx.info("%s 今日已签到" % site)
                         return f"【{site}】今日已签到"
                     else:
-                        if re.search(r'错误|失败|异常|error|fail', html_text, re.IGNORECASE):
+                        if re.search(r"错误|失败|异常|error|fail", html_text, re.IGNORECASE):
                             self.ctx.warn("%s 仿真签到失败，页面显示错误" % site)
                             return f"【{site}】仿真签到失败，页面显示错误"
                         else:
@@ -365,30 +355,33 @@ class AutoSignInPlugin:
                     checkin_text = "模拟登录"
                 self.ctx.info(f"开始站点{checkin_text}：{site}")
 
-                if 'm-team' in site_url:
+                if "m-team" in site_url:
                     site_def = SiteEngine.get_instance().get_by_url(site_url)
-                    url = f"{site_def.api.base_url}/api/member/updateLastBrowse" if site_def and site_def.api else f"{MT_URL}/api/member/updateLastBrowse"
-                    headers.update({
-                        "accept": "application/json, text/plain, */*",
-                        "content-type": "application/json",
-                        "user-agent": ua,
-                        "ts": str(int(time()))
-                    })
-                    if headers.get('x-api-key'):
+                    url = (
+                        f"{site_def.api.base_url}/api/member/updateLastBrowse"
+                        if site_def and site_def.api
+                        else f"{MT_URL}/api/member/updateLastBrowse"
+                    )
+                    headers.update(
+                        {
+                            "accept": "application/json, text/plain, */*",
+                            "content-type": "application/json",
+                            "user-agent": ua,
+                            "ts": str(int(time())),
+                        }
+                    )
+                    if headers.get("x-api-key"):
                         headers.pop("x-api-key")
                     if not headers.get("authorization"):
                         self.ctx.warn(f"{site} 请填写请求头 authorization 参数")
                         return f"【{site}】请填写请求头 authorization 参数！"
                     res = RequestUtils(
-                        headers=headers,
-                        proxies=get_proxies() if site_info.get("proxy") else None
+                        headers=headers, proxies=get_proxies() if site_info.get("proxy") else None
                     ).post_res(url=url)
                 else:
-                    headers.update({'User-Agent': ua})
+                    headers.update({"User-Agent": ua})
                     res = RequestUtils(
-                        cookies=site_cookie,
-                        headers=headers,
-                        proxies=get_proxies() if site_info.get("proxy") else None
+                        cookies=site_cookie, headers=headers, proxies=get_proxies() if site_info.get("proxy") else None
                     ).get_res(url=site_url)
 
                 if res and res.status_code in [200, 500, 403]:
@@ -402,7 +395,7 @@ class AutoSignInPlugin:
                         self.ctx.warn(f"{site} {checkin_text}失败，{msg}")
                         return f"【{site}】{checkin_text}失败，{msg}！"
                     else:
-                        if re.search(r'完成两步验证', res.text, re.IGNORECASE):
+                        if re.search(r"完成两步验证", res.text, re.IGNORECASE):
                             self.ctx.warn("%s 签到失败，需要两步验证" % site)
                             return f"【{site}】签到失败，需要两步验证"
                         self.ctx.info(f"{site} {checkin_text}成功")
