@@ -259,12 +259,10 @@ def download(
     if req.id is None:
         return fail(msg="缺少下载ID")
 
-    dl_id = req.id
-
     def _do_download():
         try:
             svc.download_from_search_results(
-                dl_id=dl_id, dl_dir=req.dir, dl_setting=req.setting, user_name=user.nickname or user.username
+                dl_id=req.id, dl_dir=req.dir or "", dl_setting=req.setting or "", user_name=user.nickname or user.username
             )
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -282,17 +280,17 @@ def download_link(
     def _do_download():
         try:
             svc.download_from_link(
-                site=req.site,
-                enclosure=req.enclosure,
-                title=req.title,
-                description=req.description,
-                page_url=req.page_url,
-                size=req.size,
-                seeders=req.seeders,
-                uploadvolumefactor=req.uploadvolumefactor,
-                downloadvolumefactor=req.downloadvolumefactor,
-                dl_dir=req.dl_dir,
-                dl_setting=req.dl_setting,
+                site=req.site or "",
+                enclosure=req.enclosure or "",
+                title=req.title or "",
+                description=req.description or "",
+                page_url=req.page_url or "",
+                size=req.size or "",
+                seeders=req.seeders or "",
+                uploadvolumefactor=req.uploadvolumefactor or "",
+                downloadvolumefactor=req.downloadvolumefactor or "",
+                dl_dir=req.dl_dir or "",
+                dl_setting=req.dl_setting or "",
                 user_name=user.nickname or user.username,
             )
         except Exception as e:
@@ -330,16 +328,16 @@ def download_torrent(
             svc.download_from_torrent_files_or_urls(
                 files=req.files or [],
                 urls=req.urls or [],
-                dl_dir=req.dl_dir,
-                dl_setting=req.dl_setting,
+                dl_dir=req.dl_dir or "",
+                dl_setting=req.dl_setting or "",
                 user_name=user.nickname or user.username,
-                page_url=req.page_url,
+                page_url=req.page_url or "",
                 upload_volume_factor=req.upload_volume_factor,
                 download_volume_factor=req.download_volume_factor,
-                title=req.title,
-                description=req.description,
-                site=req.site,
-                size=req.size,
+                title=req.title or "",
+                description=req.description or "",
+                site=req.site or "",
+                size=req.size or "",
             )
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
