@@ -142,7 +142,7 @@ def delete_rss_history(
     user: str = Depends(require_permission("rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    svc.delete_rss_history(rssid=req.rssid)
+    svc.delete_rss_history(rssid=req.rssid or "")
     return success()
 
 
@@ -152,7 +152,7 @@ def re_rss_history(
     user: str = Depends(require_permission("rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    code, msg = svc.re_rss_history(rssid=req.rssid, rtype=req.type)
+    code, msg = svc.re_rss_history(rssid=req.rssid or "", rtype=req.type or "")
     return fail(code=code, msg=msg)
 
 
@@ -162,7 +162,7 @@ def refresh_rss(
     user: str = Depends(require_permission("rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    svc.refresh_rss(mtype=req.type, rssid=req.rssid)
+    svc.refresh_rss(mtype=req.type or "", rssid=req.rssid or "")
     return success(data=req.page)
 
 
@@ -173,7 +173,7 @@ def remove_rss_media(
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     svc.remove_rss_media(
-        name=req.name, mtype=req.type, year=req.year, season=req.season, rssid=req.rssid, tmdbid=req.tmdbid
+        name=req.name or "", mtype=req.type or "", year=req.year or "", season=req.season, rssid=req.rssid, tmdbid=req.tmdbid
     )
     return success(data=req.page)
 
@@ -184,7 +184,7 @@ def rss_detail(
     user: str = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    result = svc.get_rss_detail(rid=req.rssid, rsstype=req.rsstype)
+    result = svc.get_rss_detail(rid=req.rssid or "", rsstype=req.rsstype or "")
     if not result:
         return fail()
     return success(data=result.detail)
@@ -196,7 +196,7 @@ def get_default_rss_setting(
     user: str = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    setting = svc.get_default_rss_setting(mtype=req.mtype)
+    setting = svc.get_default_rss_setting(mtype=req.mtype or "")
     if setting:
         return success(data=setting)
     return fail()
@@ -252,7 +252,7 @@ def get_rss_history(
     user: str = Depends(require_any_permission("rss:view", "rss:manage")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
-    return success(data=svc.get_rss_history(mtype=req.type))
+    return success(data=svc.get_rss_history(mtype=req.type or ""))
 
 
 @router.post("/tv/items")

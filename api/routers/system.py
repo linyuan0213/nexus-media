@@ -208,10 +208,10 @@ def check_message_client(
 ):
     flag = req.flag
     if flag == "interactive":
-        svc.toggle_interactive(cid=req.cid, ctype=req.type, checked=req.checked)
+        svc.toggle_interactive(cid=req.cid or 0, ctype=req.type or "", checked=req.checked or False)
         return success()
     elif flag == "enable":
-        svc.toggle_enable(cid=req.cid, checked=req.checked)
+        svc.toggle_enable(cid=req.cid or 0, checked=req.checked or False)
         return success()
     else:
         return fail()
@@ -223,7 +223,7 @@ def delete_message_client(
     current_user: UserContext = Depends(require_permission("setting:update")),
     svc: MessageClientService = Depends(get_message_service),
 ):
-    if svc.delete_client(cid=req.cid):
+    if svc.delete_client(cid=req.cid or 0):
         return success()
     else:
         return fail()
@@ -567,7 +567,7 @@ def test_message_client(
     svc: MessageClientService = Depends(get_message_service),
 ):
     config = json.loads(req.config) if req.config else {}
-    if svc.test_connection(ctype=req.type, config=config):
+    if svc.test_connection(ctype=req.type or "", config=config):
         return success()
     else:
         return fail()
@@ -623,14 +623,14 @@ def update_message_client(
     svc: MessageClientService = Depends(get_message_service),
 ):
     svc.upsert_client(
-        name=req.name,
-        cid=req.cid,
-        ctype=req.type,
-        config=req.config,
-        switchs=req.switchs,
-        interactive=req.interactive,
-        enabled=req.enabled,
-        templates=req.templates,
+        name=req.name or "",
+        cid=req.cid or 0,
+        ctype=req.type or "",
+        config=req.config or "",
+        switchs=req.switchs or "",
+        interactive=req.interactive or 0,
+        enabled=req.enabled or 0,
+        templates=req.templates or "",
     )
     return success()
 
@@ -700,8 +700,8 @@ def send_custom_message(
     svc: MessageSenderService = Depends(get_message_sender_service),
 ):
     result = svc.send_custom_message(
-        clients=req.message_clients,
-        title=req.title,
+        clients=req.message_clients or [],
+        title=req.title or "",
         text=req.text or "",
         image=req.image or "",
     )
@@ -717,7 +717,7 @@ def send_plugin_message(
     svc: MessageSenderService = Depends(get_message_sender_service),
 ):
     svc.send_plugin_message(
-        title=req.title,
+        title=req.title or "",
         text=req.text or "",
         image=req.image or "",
     )
