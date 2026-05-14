@@ -143,16 +143,16 @@ class EpisodeMapper:
             return None
 
         if source_season > len(blocks):
-            log.warn("【EpisodeMapper】源季号 %d > 推断季数 %d" % (source_season, len(blocks)))
+            log.warn(f"【EpisodeMapper】源季号 {source_season} > 推断季数 {len(blocks)}")
             return None
 
         _, start_ep, end_ep = blocks[source_season - 1]
         target_ep = start_ep + source_episode - 1
         if target_ep > end_ep:
-            log.warn("【EpisodeMapper】映射后集号 %d 超出范围 (E%d-E%d)" % (target_ep, start_ep, end_ep))
+            log.warn(f"【EpisodeMapper】映射后集号 {target_ep} 超出范围 (E{start_ep}-E{end_ep})")
             return None
 
-        log.info("【EpisodeMapper】TMDB:%s S%02dE%02d → S01E%02d" % (tmdb_id, source_season, source_episode, target_ep))
+        log.info(f"【EpisodeMapper】TMDB:{tmdb_id} S{source_season:02d}E{source_episode:02d} → S01E{target_ep:02d}")
         return 1, target_ep
 
     def map_auto(self, tmdb_id: int, source_season: int | None, source_episode: int | None) -> tuple[int, int] | None:
@@ -269,12 +269,11 @@ class EpisodeMapper:
                 total += count
                 if start <= absolute_episode <= end:
                     log.info(
-                        "【EpisodeMapper】TMDB:%s 绝对E%d → S%02dE%02d"
-                        % (tmdb_id, absolute_episode, sn, absolute_episode - start + 1)
+                        f"【EpisodeMapper】TMDB:{tmdb_id} 绝对E{absolute_episode} → S{sn:02d}E{absolute_episode - start + 1:02d}"
                     )
                     return sn, absolute_episode - start + 1
 
-            log.warn("【EpisodeMapper】绝对集号 %d 超出范围 (1-%d)" % (absolute_episode, total))
+            log.warn(f"【EpisodeMapper】绝对集号 {absolute_episode} 超出范围 (1-{total})")
             return None
 
         except Exception as e:

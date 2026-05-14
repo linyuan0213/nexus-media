@@ -37,7 +37,7 @@ class TestEpisodeMapper:
             {"season_number": 2, "episode_count": 10},
             {"season_number": 3, "episode_count": 10},
         ]
-        episodes = [{"episode_number": i, "air_date": "2024-01-%02d" % i} for i in range(1, 11)]
+        episodes = [{"episode_number": i, "air_date": f"2024-01-{i:02d}"} for i in range(1, 11)]
         tmdb = self._mock_tmdb(seasons, episodes)
         mapper = EpisodeMapper(tmdb)
 
@@ -56,16 +56,16 @@ class TestEpisodeMapper:
         for i in range(1, 92):
             if i <= 25:
                 # Block 1: 2021-01-01 ~ 2021-01-25
-                date = "2021-01-%02d" % i
+                date = f"2021-01-{i:02d}"
             elif i <= 50:
                 # Block 2: 2021-05-01 ~ 2021-05-25 (gap = 95 days)
-                date = "2021-05-%02d" % (i - 25)
+                date = f"2021-05-{i - 25:02d}"
             elif i <= 70:
                 # Block 3: 2021-09-01 ~ 2021-09-20 (gap = 99 days, length=20)
-                date = "2021-09-%02d" % (i - 50)
+                date = f"2021-09-{i - 50:02d}"
             else:
                 # Block 4: 2022-01-01 ~ 2022-01-21 (gap = 103 days, length=21)
-                date = "2022-01-%02d" % (i - 70)
+                date = f"2022-01-{i - 70:02d}"
             episodes.append({"episode_number": i, "air_date": date})
 
         tmdb = self._mock_tmdb(seasons, episodes)
@@ -84,7 +84,7 @@ class TestEpisodeMapper:
         seasons = [
             {"season_number": 1, "episode_count": 12},
         ]
-        episodes = [{"episode_number": i, "air_date": "2024-01-%02d" % i} for i in range(1, 13)]
+        episodes = [{"episode_number": i, "air_date": f"2024-01-{i:02d}"} for i in range(1, 13)]
         tmdb = self._mock_tmdb(seasons, episodes)
         mapper = EpisodeMapper(tmdb)
 
@@ -99,9 +99,9 @@ class TestEpisodeMapper:
         episodes = []
         for i in range(1, 51):
             if i <= 25:
-                date = "2024-01-%02d" % i
+                date = f"2024-01-{i:02d}"
             else:
-                date = "2024-06-%02d" % (i - 25)
+                date = f"2024-06-{i - 25:02d}"
             episodes.append({"episode_number": i, "air_date": date})
 
         tmdb = self._mock_tmdb(seasons, episodes)
@@ -119,9 +119,9 @@ class TestEpisodeMapper:
         episodes = []
         for i in range(1, 51):
             if i <= 25:
-                date = "2024-01-%02d" % i
+                date = f"2024-01-{i:02d}"
             else:
-                date = "2024-06-%02d" % (i - 25)
+                date = f"2024-06-{i - 25:02d}"
             episodes.append({"episode_number": i, "air_date": date})
 
         tmdb = self._mock_tmdb(seasons, episodes)
@@ -144,9 +144,9 @@ class TestEpisodeMapper:
         episodes = []
         for i in range(1, 51):
             if i <= 25:
-                date = "2024-01-%02d" % i
+                date = f"2024-01-{i:02d}"
             else:
-                date = "2024-06-%02d" % (i - 25)
+                date = f"2024-06-{i - 25:02d}"
             episodes.append({"episode_number": i, "air_date": date})
 
         tmdb = self._mock_tmdb(seasons, episodes)
@@ -167,9 +167,9 @@ class TestEpisodeMapper:
         episodes = []
         for i in range(1, 51):
             if i <= 25:
-                date = "2024-01-%02d" % i
+                date = f"2024-01-{i:02d}"
             else:
-                date = "2024-06-%02d" % (i - 25)
+                date = f"2024-06-{i - 25:02d}"
             episodes.append({"episode_number": i, "air_date": date})
 
         tmdb = self._mock_tmdb(seasons, episodes)

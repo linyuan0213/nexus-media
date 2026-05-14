@@ -15,7 +15,7 @@ class Sites:
 
     _sites = []
     _site_by_ids = {}
-    _siteByUrls = {}
+    _site_by_urls = {}
     _site_favicons = {}
     _rss_sites = []
     _brush_sites = []
@@ -35,7 +35,7 @@ class Sites:
         # ID存储站点
         self._site_by_ids = {}
         # URL存储站点
-        self._siteByUrls = {}
+        self._site_by_urls = {}
         # 开启订阅功能站点
         self._rss_sites = []
         # 开启刷流功能站点：
@@ -126,7 +126,7 @@ class Sites:
             else:
                 site_strict_url = StringUtils.get_url_domain(site.SIGNURL or site.RSSURL)
             if site_strict_url:
-                self._siteByUrls[site_strict_url] = site_info
+                self._site_by_urls[site_strict_url] = site_info
             # 初始化站点限速器
             self._limiters[site.ID] = SiteRateLimiter(
                 limit_interval=Sites._rate_limit_val(
@@ -152,7 +152,7 @@ class Sites:
             site_def = SiteEngine.get_instance().get_by_url(siteurl)
             if site_def and site_def.api:
                 siteurl = site_def.api.base_url
-            return self._siteByUrls.get(StringUtils.get_url_domain(siteurl)) or {}
+            return self._site_by_urls.get(StringUtils.get_url_domain(siteurl)) or {}
 
         ret_sites = []
         for site in self._site_by_ids.values():
@@ -188,13 +188,13 @@ class Sites:
         """
         根据url的后缀获取站点配置
         """
-        for key in self._siteByUrls:
+        for key in self._site_by_urls:
             # 使用.分割后再将最后两位(顶级域和二级域)拼起来
             key_parts = key.split(".")
             key_end = ".".join(key_parts[-2:])
             # 将拼起来的结果与参数进行对比
             if suffix == key_end:
-                return self._siteByUrls[key]
+                return self._site_by_urls[key]
         return {}
 
     def get_sites_by_name(self, name):
