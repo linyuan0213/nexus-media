@@ -30,7 +30,7 @@ class MessageSearchService:
         self._searcher = Searcher()
         self._indexer = IndexerService()
 
-    def handle(self, input_str: str, in_from: SearchType, user_id: str, user_name: str = None):
+    def handle(self, input_str: str, in_from: SearchType, user_id: str, user_name: str | None = None):
         """处理消息中心输入"""
         if not input_str:
             return
@@ -62,7 +62,7 @@ class MessageSearchService:
 
         pagination_mgr.send_page_message(in_from, user_id)
 
-    def _handle_selection(self, choose: int, in_from: SearchType, user_id: str, user_name: str = None):
+    def _handle_selection(self, choose: int, in_from: SearchType, user_id: str, user_name: str | None = None):
         """处理数字选择"""
         # 优先从分页缓存选择
         if pagination_mgr.has_page(user_id):
@@ -80,11 +80,11 @@ class MessageSearchService:
         media_type = pagination_mgr.get_media_type(user_id)
 
         if media_type == "SUBSCRIBE":
-            self._add_rss(in_from, media_info, user_id, user_name)
+            self._add_rss(in_from, media_info, user_id=user_id, user_name=user_name)
         else:
             self._search_and_download(in_from, media_info, user_id, user_name)
 
-    def _select_from_pagination(self, choose: int, in_from: SearchType, user_id: str, user_name: str = None):
+    def _select_from_pagination(self, choose: int, in_from: SearchType, user_id: str, user_name: str | None = None):
         """从分页结果中选择下载"""
         item = pagination_mgr.select_item(user_id, choose)
         if not item:
@@ -130,7 +130,7 @@ class MessageSearchService:
         self._downloader.download(media_info=media_info, in_from=in_from, user_name=user_name)
         pagination_mgr.clear_media_cache(user_id)
 
-    def _handle_text(self, input_str: str, in_from: SearchType, user_id: str, user_name: str = None):
+    def _handle_text(self, input_str: str, in_from: SearchType, user_id: str, user_name: str | None = None):
         """处理文本输入"""
         # 判断意图
         intent = self._parse_intent(input_str)
@@ -157,11 +157,11 @@ class MessageSearchService:
             return "SUBSCRIBE"
         return "SEARCH"
 
-    def _download_from_url(self, url: str, in_from: SearchType, user_id: str, user_name: str = None):
+    def _download_from_url(self, url: str, in_from: SearchType, user_id: str, user_name: str | None = None):
         """从 URL 下载种子"""
         site_info = Sites().get_sites(siteurl=url)
         filepath, content, retmsg = Torrent().save_torrent_file(
-            url=url, cookie=site_info.get("cookie"), ua=site_info.get("ua"), proxy=site_info.get("proxy")
+            url=url, cookie=site_info.get("cookie"), ua=site_info.get("ua"), proxy=site_info.get("proxy") or False
         )
         if (not content or not filepath) and retmsg:
             Message().send_channel_msg(channel=in_from, title=retmsg, user_id=user_id)
@@ -188,7 +188,7 @@ class MessageSearchService:
         Message().send_channel_msg(channel=in_from, title="", text=str(answer).strip(), user_id=user_id)
 
     def _search_media(
-        self, in_from: SearchType, content: str, user_id: str, user_name: str = None, mtype: str = "SEARCH"
+        self, in_from: SearchType, content: str, user_id: str, user_name: str | None = None, mtype: str = "SEARCH"
     ):
         """搜索媒体并展示结果"""
         indexer_type = self._indexer.get_client_type()
@@ -236,7 +236,7 @@ class MessageSearchService:
         if len(media_list) == 1:
             media_info = media_list[0]
             if mtype == "SUBSCRIBE":
-                self._add_rss(in_from, media_info, user_id, user_name)
+                self._add_rss(in_from, media_info, user_id=user_id, user_name=user_name)
             else:
                 if media_info.douban_id:
                     title = media_info.get_title_string()
@@ -265,7 +265,7 @@ class MessageSearchService:
                 user_id=user_id,
             )
 
-    def _search_and_download(self, in_from: SearchType, media_info, user_id: str, user_name: str = None):
+    def _search_and_download(self, in_from: SearchType, media_info, user_id: str, user_name: str | None = None):
         """搜索并下载媒体"""
         exist_flag, no_exists, messages = self._downloader.check_exists_medias(meta_info=media_info)
         if messages:
@@ -321,7 +321,7 @@ class MessageSearchService:
             mtype=media_info.type,
             name=media_info.title,
             year=media_info.year,
-            channel=RssType.Auto,
+            channel=RssType.Auto.value,
             season=media_info.begin_season,
             mediaid=mediaid,
             state=state,
@@ -337,5 +337,5 @@ class MessageSearchService:
             if in_from in Message().get_search_types():
                 log.info(f"【Web】{media_info.title} 添加订阅失败：{msg}")
                 Message().send_channel_msg(
-                    channel=in_from, title=f"{media_info.title} 添加订阅失败：{msg}", user_id=user_id
+                    channel=in_from, title=f"{media_info.title} 添加订阅失败：{msg}", user_id=str(user_id or "")
                 )

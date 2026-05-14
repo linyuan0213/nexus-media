@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from google import genai
+from google import genai  # type: ignore  # noqa: PGH003
 from google.genai import types
 
 import log

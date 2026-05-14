@@ -81,7 +81,7 @@ class ConfigRepository(BaseRepository):
             self._db.query(MESSAGECLIENT).filter(int(cid) == MESSAGECLIENT.ID).update({"INTERACTIVE": int(interactive)})
         elif cid and enabled is not None:
             self._db.query(MESSAGECLIENT).filter(int(cid) == MESSAGECLIENT.ID).update({"ENABLED": int(enabled)})
-        elif not cid and int(interactive) == 0 and ctype:
+        elif not cid and int(interactive or 0) == 0 and ctype:
             self._db.query(MESSAGECLIENT).filter(MESSAGECLIENT.INTERACTIVE == 1, ctype == MESSAGECLIENT.TYPE).update(
                 {"INTERACTIVE": 0}
             )
@@ -296,7 +296,7 @@ class ConfigRepository(BaseRepository):
             item: 任务信息字典
         """
         if item.get("id") and self.get_userrss_tasks(item.get("id")):
-            self._db.query(CONFIGUSERRSS).filter(int(item.get("id")) == CONFIGUSERRSS.ID).update(
+            self._db.query(CONFIGUSERRSS).filter(int(item.get("id") or 0) == CONFIGUSERRSS.ID).update(
                 {
                     "NAME": item.get("name"),
                     "ADDRESS": json.dumps(item.get("address")),
@@ -311,7 +311,7 @@ class ConfigRepository(BaseRepository):
                     "SAVE_PATH": item.get("save_path"),
                     "DOWNLOAD_SETTING": item.get("download_setting"),
                     "RECOGNIZATION": item.get("recognization"),
-                    "OVER_EDITION": int(item.get("over_edition")) if str(item.get("over_edition")).isdigit() else 0,
+                    "OVER_EDITION": int(item.get("over_edition") or 0) if str(item.get("over_edition") or "").isdigit() else 0,
                     "SITES": json.dumps(item.get("sites")),
                     "FILTER_ARGS": json.dumps(item.get("filter_args")),
                     "NOTE": json.dumps(item.get("note")),
@@ -464,7 +464,7 @@ class ConfigRepository(BaseRepository):
         if not item:
             return
         if item.get("id") and self.get_userrss_parser(item.get("id")):
-            self._db.query(CONFIGRSSPARSER).filter(int(item.get("id")) == CONFIGRSSPARSER.ID).update(
+            self._db.query(CONFIGRSSPARSER).filter(int(item.get("id") or 0) == CONFIGRSSPARSER.ID).update(
                 {
                     "NAME": item.get("name"),
                     "TYPE": item.get("type"),

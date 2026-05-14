@@ -57,7 +57,7 @@ class TMDBCache(TypedCache):
         """构建缓存键"""
         return f"{prefix}:{':'.join(str(p) for p in parts)}"
 
-    def get_tmdb_info(self, mtype: Any, tmdbid: str, language: str = None) -> Any | None:
+    def get_tmdb_info(self, mtype: Any, tmdbid: str, language: str | None = None) -> Any | None:
         """获取TMDB信息缓存"""
         from app.utils.types import MediaType
 
@@ -66,7 +66,7 @@ class TMDBCache(TypedCache):
         key = self._make_key("tmdb", mtype.value, tmdbid, language or "default")
         return self.get(key)
 
-    def set_tmdb_info(self, mtype: Any, tmdbid: str, info: Any, language: str = None, ttl: int = None) -> bool:
+    def set_tmdb_info(self, mtype: Any, tmdbid: str, info: Any, language: str | None = None, ttl: int | None = None) -> bool:
         """设置TMDB信息缓存"""
         from app.utils.types import MediaType
 
@@ -77,7 +77,7 @@ class TMDBCache(TypedCache):
         log.debug(f"【TMDBCache】缓存信息: {key}, TTL={ttl}秒")
         return self.set(key, info, ttl)
 
-    def get_media_info(self, title: str, year: str = None, mtype: Any = None) -> Any | None:
+    def get_media_info(self, title: str, year: str | None = None, mtype: Any = None) -> Any | None:
         """获取媒体信息缓存"""
         from app.utils.types import MediaType
 
@@ -86,7 +86,7 @@ class TMDBCache(TypedCache):
         key = self._make_key("media", title, year or "", mtype.value if mtype else "")
         return self.get(key)
 
-    def set_media_info(self, title: str, info: Any, year: str = None, mtype: Any = None, ttl: int = None) -> bool:
+    def set_media_info(self, title: str, info: Any, year: str | None = None, mtype: Any = None, ttl: int | None = None) -> bool:
         """设置媒体信息缓存"""
         from app.utils.types import MediaType
 
@@ -101,7 +101,7 @@ class TMDBCache(TypedCache):
         key = self._make_key("tmdb:season", tmdbid, season)
         return self.get(key)
 
-    def set_season_info(self, tmdbid: str, season: int, info: Any, ttl: int = None) -> bool:
+    def set_season_info(self, tmdbid: str, season: int, info: Any, ttl: int | None = None) -> bool:
         """设置季详情缓存"""
         key = self._make_key("tmdb:season", tmdbid, season)
         ttl = ttl or self.TTL_SEASON_INFO
@@ -112,7 +112,7 @@ class TMDBCache(TypedCache):
         key = self._make_key("tmdb:person", person_id)
         return self.get(key)
 
-    def set_person_info(self, person_id: str, info: Any, ttl: int = None) -> bool:
+    def set_person_info(self, person_id: str, info: Any, ttl: int | None = None) -> bool:
         """设置演员信息缓存"""
         key = self._make_key("tmdb:person", person_id)
         ttl = ttl or self.TTL_PERSON_INFO
@@ -123,7 +123,7 @@ class TMDBCache(TypedCache):
         key = self._make_key("tmdb:trending", media_type, time_window, page)
         return self.get(key)
 
-    def set_trending(self, media_type: str, time_window: str, page: int, info: Any, ttl: int = None) -> bool:
+    def set_trending(self, media_type: str, time_window: str, page: int, info: Any, ttl: int | None = None) -> bool:
         """设置热门趋势缓存"""
         key = self._make_key("tmdb:trending", media_type, time_window, page)
         ttl = ttl or self.TTL_TRENDING

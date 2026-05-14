@@ -102,9 +102,9 @@ class SyncService:
             dest=dest,
             unknown=unknown,
             mode=mode,
-            compatibility=compatibility,
-            rename=rename,
-            enabled=enabled,
+            compatibility=bool(compatibility),
+            rename=bool(rename),
+            enabled=bool(enabled),
         )
         return True, ""
 
@@ -115,15 +115,15 @@ class SyncService:
         :return: (是否成功, 消息)
         """
         if flag == "compatibility":
-            self._sync.check_sync_paths(sid=sid, compatibility=1 if checked else 0)
+            self._sync.check_sync_paths(sid=sid, compatibility=checked)
             return True, ""
         elif flag == "rename":
-            self._sync.check_sync_paths(sid=sid, rename=1 if checked else 0)
+            self._sync.check_sync_paths(sid=sid, rename=checked)
             return True, ""
         elif flag == "enable":
             if checked:
                 self._sync.check_source(sid=sid)
-            self._sync.check_sync_paths(sid=sid, enabled=1 if checked else 0)
+            self._sync.check_sync_paths(sid=sid, enabled=checked)
             return True, ""
         return False, ""
 
@@ -182,7 +182,7 @@ class SyncService:
 
         tmdb_info = None
         if tmdbid:
-            tmdb_info = self._media_cache.get_tmdb_info(mtype=media_type, tmdbid=tmdbid)
+            tmdb_info = self._media_cache.get_tmdb_info(mtype=media_type or MediaType.MOVIE, tmdbid=tmdbid)
             if not tmdb_info:
                 return ManualTransferResultDTO(success=False, message="识别失败，无法查询到TMDB信息")
 
@@ -231,8 +231,8 @@ class SyncService:
                         transinfo = self._filetransfer.get_transfer_info_by_id(wid)
                         if not transinfo:
                             continue
-                        path = os.path.join(transinfo.SOURCE_PATH, transinfo.SOURCE_FILENAME)
-                        dest_dir = transinfo.DEST
+                        path = os.path.join(str(transinfo.SOURCE_PATH or ""), str(transinfo.SOURCE_FILENAME or ""))
+                        dest_dir = str(transinfo.DEST or "")
                         rmt_mode = ModuleConf.get_enum_item(RmtMode, transinfo.MODE) if transinfo.MODE else None
                     else:
                         continue
@@ -366,7 +366,7 @@ class SyncService:
             "Scraper": ("app.media", "Scraper"),
         }
         module_path, class_name = safe_mapping.get(obj_name, (None, None))
-        if not module_path:
+        if not module_path or not class_name:
             return None
         try:
             cls = getattr(importlib.import_module(module_path), class_name)

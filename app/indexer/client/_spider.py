@@ -80,7 +80,7 @@ class TorrentSpider(feapder.AirSpider):
     # 重试次数
     retry_times = 0
 
-    def setparam(self, indexer, keyword: [str, list] = None, page=None, referer=None, mtype: MediaType = None):
+    def setparam(self, indexer, keyword: [str, list] = None, page=None, referer=None, mtype: MediaType | None = None):
         """
         设置查询参数
         :param indexer: 索引器
@@ -192,7 +192,7 @@ class TorrentSpider(feapder.AirSpider):
                     param_list = []
                     for cat in cats:
                         if self.category.get("field"):
-                            value = params.get(self.category.get("field"), "")
+                            value = params.get(str(self.category.get("field") or ""), "")
                             params.update(
                                 {
                                     "{}".format(self.category.get("field")): value
@@ -228,7 +228,7 @@ class TorrentSpider(feapder.AirSpider):
                     self.fields = self.browse_fields
                 torrentspath = self.browse.get("path")
                 if self.browse.get("start"):
-                    start_page = int(self.browse.get("start")) + int(self.page or 0)
+                    start_page = int(self.browse.get("start") or 0) + int(self.page or 0)
                     inputs_dict.update({"page": start_page})
             elif self.page:
                 torrentspath = torrentspath + f"?page={self.page}"
@@ -591,15 +591,15 @@ class TorrentSpider(feapder.AirSpider):
                 method_name = filter_item.get("name")
                 args = filter_item.get("args")
                 if method_name == "re_search" and isinstance(args, list):
-                    text = re.search(rf"{args[0]}", text).group(args[-1])
+                    text = re.search(rf"{args[0]}", str(text)).group(args[-1])
                 elif method_name == "split" and isinstance(args, list):
-                    text = text.split(rf"{args[0]}")[args[-1]]
+                    text = str(text).split(rf"{args[0]}")[args[-1]]
                 elif method_name == "replace" and isinstance(args, list):
-                    text = text.replace(rf"{args[0]}", rf"{args[-1]}")
+                    text = str(text).replace(rf"{args[0]}", rf"{args[-1]}")
                 elif method_name == "dateparse" and isinstance(args, str):
-                    text = datetime.datetime.strptime(text, rf"{args}")
+                    text = datetime.datetime.strptime(str(text), rf"{args}")
                 elif method_name == "strip":
-                    text = text.strip()
+                    text = str(text).strip()
                 elif method_name == "appendleft":
                     text = f"{args}{text}"
             except Exception as err:

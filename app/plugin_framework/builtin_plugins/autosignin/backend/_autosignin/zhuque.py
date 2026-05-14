@@ -65,7 +65,7 @@ class ZhuQue(_ISiteSigninHandler):
             )
             if not skill_res or skill_res.status_code != 200:
                 self.error("模拟登录失败，释放技能失败")
-                continue
+                return False, f"【{site}】模拟登录失败，释放技能失败"
 
             # '{"status":200,"data":{"code":"FIRE_GENSHIN_CHARACTER_MAGIC_SUCCESS","bonus":0}}'
             skill_dict = json.loads(skill_res.text)

@@ -48,7 +48,7 @@ class Qbittorrent(_IDownloadClient):
     def init_config(self) -> None:
         if self._client_config:
             self.host = self._client_config.get("host")
-            self.port = int(self._client_config.get("port")) if str(self._client_config.get("port")).isdigit() else 0
+            self.port = int(self._client_config.get("port") or 0) if str(self._client_config.get("port") or "").isdigit() else 0
             self.username = self._client_config.get("username")
             self.password = self._client_config.get("password")
             self.download_dir = self._client_config.get("download_dir") or []
@@ -77,7 +77,7 @@ class Qbittorrent(_IDownloadClient):
         try:
             # 登录
             qbt = qbittorrentapi.Client(
-                host=self.host,
+                host=self.host or "",
                 port=self.port,
                 username=self.username,
                 password=self.password,
@@ -130,7 +130,7 @@ class Qbittorrent(_IDownloadClient):
                 self.__update_category(name=label, save_path=save_path)
             else:
                 # 如果分类存在，但是路径不一致，则更新
-                if os.path.normpath(category_item.get("savePath")) != os.path.normpath(save_path):
+                if os.path.normpath(str(category_item.get("savePath") or "")) != os.path.normpath(save_path):
                     self.__update_category(name=label, save_path=save_path, is_edit=True)
 
     def __get_qb_category(self):
@@ -183,7 +183,7 @@ class Qbittorrent(_IDownloadClient):
             catetory_path = category_item.get("savePath")
             if not catetory_path:
                 continue
-            if os.path.normpath(catetory_path) == os.path.normpath(save_path):
+            if os.path.normpath(str(catetory_path)) == os.path.normpath(save_path):
                 return category_name
         return None
 
@@ -327,7 +327,7 @@ class Qbittorrent(_IDownloadClient):
                     trans_name = trans_name[1:]
             else:
                 trans_name = torrent.name
-            trans_tasks.append({"path": os.path.join(true_path, trans_name).replace("\\", "/"), "id": torrent.id})
+            trans_tasks.append({"path": os.path.join(true_path, trans_name or "").replace("\\", "/"), "id": torrent.id})
         return trans_tasks
 
     def get_remove_torrents(self, config: dict | None = None) -> Any:
@@ -365,7 +365,7 @@ class Qbittorrent(_IDownloadClient):
                 continue
             if upload_avs and torrent_upload_avs >= upload_avs * 1024:
                 continue
-            if savepath_key and not re.findall(savepath_key, torrent.save_path, re.I):
+            if savepath_key and not re.findall(savepath_key, torrent.save_path or "", re.I):
                 continue
             if tracker_key:
                 if not torrent.trackers:
@@ -605,7 +605,7 @@ class Qbittorrent(_IDownloadClient):
 
             # 自动管理模式没有分类时，根据保存目录获取
             if is_auto and not category:
-                category = self.__check_category(save_path)
+                category = self.__check_category(save_path or "")
 
             # 添加下载
             qbc_ret = self.qbc.torrents_add(
@@ -732,7 +732,7 @@ class Qbittorrent(_IDownloadClient):
         """
         获取正在下载的种子进度
         """
-        torrents = self.get_downloading_torrents(tag=tag, ids=ids) or []
+        torrents = self.get_downloading_torrents(tag=tag, ids=ids if isinstance(ids, list) or ids is None else [ids]) or []
         disp_torrents = []
         for torrent in torrents:
             # 进度
@@ -852,7 +852,7 @@ class Qbittorrent(_IDownloadClient):
         # 添加时间
         torrent_obj.add_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(torrent.get("added_on") or 0))
         # 状态
-        torrent_obj.status = Qbittorrent._judge_status(torrent.get("state"))
+        torrent_obj.status = Qbittorrent._judge_status(str(torrent.get("state") or ""))
         # 标签
         torrent_obj.labels = [s.strip() for s in (torrent.get("tags") or "").split(",")]
         # content path
