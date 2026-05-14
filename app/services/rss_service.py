@@ -49,17 +49,17 @@ class RssSubscriptionService:
 
     def check_torrent_rss(
         self,
-        media_info,
-        rss_movies,
-        rss_tvs,
-        site_id,
-        site_filter_rule,
-        site_cookie,
-        site_parse,
-        site_ua,
-        site_headers,
-        site_proxy,
-    ):
+        media_info: Any,
+        rss_movies: list[dict],
+        rss_tvs: list[dict],
+        site_id: int | None,
+        site_filter_rule: int | None,
+        site_cookie: str | None,
+        site_parse: bool,
+        site_ua: str | None,
+        site_headers: str | dict | None,
+        site_proxy: bool,
+    ) -> Any:
         """判断种子是否命中订阅（委托给 Rss 模块）"""
         if not self._rss:
             from app.services.rss_core import Rss
@@ -208,7 +208,7 @@ class RssSubscriptionService:
         )
         return code, msg
 
-    def remove_rss_media(self, name: str, mtype: str, year: str, season, rssid, tmdbid) -> None:
+    def remove_rss_media(self, name: str, mtype: str, year: str, season: int | None, rssid: str | None, tmdbid: str | None) -> None:
         """移除RSS订阅"""
         if not str(tmdbid).isdigit():
             tmdbid = None
@@ -293,14 +293,14 @@ class RssSubscriptionService:
             self._rss = Rss()
         return [rec.as_dict() for rec in self._rss.get_rss_history(rtype=mtype)]
 
-    def delete_rss_history(self, rssid: str):
+    def delete_rss_history(self, rssid: str) -> None:
         if not self._rss:
             from app.services.rss_core import Rss
 
             self._rss = Rss()
         self._rss.delete_rss_history(rssid=rssid)
 
-    def refresh_rss(self, mtype: str, rssid: str):
+    def refresh_rss(self, mtype: str, rssid: str) -> None:
         """后台刷新RSS搜索"""
         from app.helper import ThreadHelper
 
@@ -309,7 +309,7 @@ class RssSubscriptionService:
         else:
             ThreadHelper().start_thread(self._subscribe.subscribe_search_tv, (rssid,))
 
-    def truncate_rss_history(self):
+    def truncate_rss_history(self) -> None:
         from app.helper import RssHelper
 
         RssHelper().truncate_rss_history()
@@ -426,15 +426,15 @@ class RssTaskService(metaclass=SingletonMeta):
 
     def __init__(
         self,
-        config_repo=None,
-        rss_repo=None,
-        rsshelper=None,
-        message=None,
-        searcher=None,
-        filter_=None,
-        media=None,
-        downloader=None,
-        subscribe=None,
+        config_repo: Any | None = None,
+        rss_repo: Any | None = None,
+        rsshelper: Any | None = None,
+        message: Any | None = None,
+        searcher: Any | None = None,
+        filter_: Any | None = None,
+        media: Any | None = None,
+        downloader: Any | None = None,
+        subscribe: Any | None = None,
     ):
         self.config_repo = config_repo or UserRssConfigRepositoryAdapter()
         self.rss_repo = rss_repo or RssHistoryRepositoryAdapter()
@@ -446,7 +446,7 @@ class RssTaskService(metaclass=SingletonMeta):
         self.downloader = downloader or Downloader()
         self.subscribe = subscribe or Subscribe()
 
-    def init_config(self):
+    def init_config(self) -> None:
         # 移除现有任务
         self.stop_service()
         # 读取解析器列表
@@ -567,7 +567,7 @@ class RssTaskService(metaclass=SingletonMeta):
             SchedulerCore().print_jobs(jobstore=self._jobstore)
             log.info("自定义订阅服务启动")
 
-    def get_rsstask_info(self, taskid=None):
+    def get_rsstask_info(self, taskid: int | str | None = None) -> Any:
         """
         获取单个RSS任务详细信息
         """
@@ -581,7 +581,7 @@ class RssTaskService(metaclass=SingletonMeta):
                 return {}
         return self._rss_tasks
 
-    def check_task_rss(self, taskid):
+    def check_task_rss(self, taskid: int | None) -> None:
         """
         处理自定义RSS任务，由定时服务调用
         :param taskid: 自定义RSS的ID
@@ -859,7 +859,7 @@ class RssTaskService(metaclass=SingletonMeta):
                 continue
         return rss_result
 
-    def get_userrss_parser(self, pid=None):
+    def get_userrss_parser(self, pid: int | str | None = None) -> Any:
         if pid:
             for rss_parser in self._rss_parsers:
                 if rss_parser.get("id") == int(pid):
@@ -868,7 +868,7 @@ class RssTaskService(metaclass=SingletonMeta):
         else:
             return self._rss_parsers
 
-    def get_rss_articles(self, taskid):
+    def get_rss_articles(self, taskid: int | None) -> Any:
         """
         查看自定义RSS报文
         :param taskid: 自定义RSS的ID
@@ -925,7 +925,7 @@ class RssTaskService(metaclass=SingletonMeta):
                 log.error(f"【RssTaskService】获取RSS报文发生错误：{str(e)} - {traceback.format_exc()}")
         return sorted(rss_articles, key=lambda x: x["date"], reverse=True)
 
-    def test_rss_articles(self, taskid, title):
+    def test_rss_articles(self, taskid: int | None, title: str) -> tuple[Any, bool, bool] | None:
         """
         测试RSS报文
         :param taskid: 自定义RSS的ID
@@ -985,7 +985,7 @@ class RssTaskService(metaclass=SingletonMeta):
                     )
         return media_info, match_flag, exist_flag
 
-    def check_rss_articles(self, taskid, flag, articles):
+    def check_rss_articles(self, taskid: int | None, flag: str, articles: list[dict]) -> bool:
         """
         RSS报文处理设置
         :param taskid: 自定义RSS的ID
@@ -1023,7 +1023,7 @@ class RssTaskService(metaclass=SingletonMeta):
             log.error(f"【RssTaskService】设置RSS报文状态时发生错误：{str(e)} - {traceback.format_exc()}")
             return False
 
-    def download_rss_articles(self, taskid, articles):
+    def download_rss_articles(self, taskid: int | None, articles: list[dict]) -> bool | None:
         """
         RSS报文下载
         :param taskid: 自定义RSS的ID
@@ -1058,7 +1058,7 @@ class RssTaskService(metaclass=SingletonMeta):
                 return False
         return True
 
-    def get_userrss_mediainfos(self):
+    def get_userrss_mediainfos(self) -> list[dict]:
         taskinfos = self.config_repo.get_userrss_tasks()
         mediainfos_all = []
         for taskinfo in taskinfos:
@@ -1067,7 +1067,7 @@ class RssTaskService(metaclass=SingletonMeta):
                 mediainfos_all += mediainfos
         return mediainfos_all
 
-    def stop_service(self):
+    def stop_service(self) -> None:
         """
         停止服务
         """
@@ -1076,7 +1076,7 @@ class RssTaskService(metaclass=SingletonMeta):
         except Exception as e:
             print(str(e))
 
-    def is_article_processed(self, task_type, title, year, enclosure):
+    def is_article_processed(self, task_type: str, title: str, year: str | None, enclosure: str | None) -> bool:
         """
         检查报文是否已处理
         :param task_type: 订阅任务类型
@@ -1094,7 +1094,7 @@ class RssTaskService(metaclass=SingletonMeta):
             case _:
                 return False
 
-    def delete_userrss_task(self, tid):
+    def delete_userrss_task(self, tid: int | None) -> Any:
         """
         删除自定义RSS任务
         :param tid: 任务ID
@@ -1103,7 +1103,7 @@ class RssTaskService(metaclass=SingletonMeta):
         self.init_config()
         return ret
 
-    def update_userrss_task(self, item):
+    def update_userrss_task(self, item: dict) -> Any:
         """
         更新自定义RSS任务
         :param item: 任务信息
@@ -1112,7 +1112,7 @@ class RssTaskService(metaclass=SingletonMeta):
         self.init_config()
         return ret
 
-    def check_userrss_task(self, tid=None, state=None):
+    def check_userrss_task(self, tid: int | None = None, state: str | None = None) -> Any:
         """
         设置自定义RSS任务
         :param tid: 任务ID
@@ -1122,7 +1122,7 @@ class RssTaskService(metaclass=SingletonMeta):
         self.init_config()
         return ret
 
-    def delete_userrss_parser(self, pid):
+    def delete_userrss_parser(self, pid: int | None) -> Any:
         """
         删除自定义RSS解析器
         :param pid: 解析器ID
@@ -1131,7 +1131,7 @@ class RssTaskService(metaclass=SingletonMeta):
         self.init_config()
         return ret
 
-    def update_userrss_parser(self, item):
+    def update_userrss_parser(self, item: dict) -> Any:
         """
         更新自定义RSS解析器
         :param item: 解析器信息
@@ -1140,7 +1140,7 @@ class RssTaskService(metaclass=SingletonMeta):
         self.init_config()
         return ret
 
-    def get_userrss_task_history(self, task_id):
+    def get_userrss_task_history(self, task_id: int | None) -> Any:
         """
         获取自定义RSS任务下载记录
         :param task_id: 任务ID

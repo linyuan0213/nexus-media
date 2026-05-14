@@ -70,41 +70,41 @@ class SubscribeService:
         self._system_config = system_config or SystemConfig()
 
     @property
-    def default_rss_setting_tv(self):
+    def default_rss_setting_tv(self) -> dict | None:
         return self._system_config.get(SystemConfigKey.DefaultRssSettingTV) or {}
 
     @property
-    def default_rss_setting_mov(self):
+    def default_rss_setting_mov(self) -> dict | None:
         return self._system_config.get(SystemConfigKey.DefaultRssSettingMOV) or {}
 
     def update_rss_subscribe(
         self,
-        mtype,
-        rssid,
-        name=None,
-        year=None,
-        keyword=None,
-        season=None,
-        fuzzy_match=False,
-        mediaid=None,
-        rss_sites=None,
-        search_sites=None,
-        over_edition=False,
-        filter_restype=None,
-        filter_pix=None,
-        filter_team=None,
-        filter_rule=None,
-        filter_include=None,
-        filter_exclude=None,
-        save_path=None,
-        download_setting=None,
-        total_ep=None,
-        current_ep=None,
-        state="D",
-        in_from=None,
-        user_name=None,
-        image=None,
-    ):
+        mtype: Any,
+        rssid: int | None,
+        name: str | None = None,
+        year: Any = None,
+        keyword: str | None = None,
+        season: int | None = None,
+        fuzzy_match: bool = False,
+        mediaid: str | None = None,
+        rss_sites: list[str] | str | None = None,
+        search_sites: list[str] | str | None = None,
+        over_edition: bool | int = False,
+        filter_restype: str | None = None,
+        filter_pix: str | None = None,
+        filter_team: str | None = None,
+        filter_rule: int | str | None = None,
+        filter_include: str | None = None,
+        filter_exclude: str | None = None,
+        save_path: str | None = None,
+        download_setting: int | str | None = None,
+        total_ep: int | None = None,
+        current_ep: int | None = None,
+        state: str = "D",
+        in_from: str | None = None,
+        user_name: str | None = None,
+        image: str | None = None,
+    ) -> tuple[int, str, Any]:
         """
         更新电影、电视剧订阅
         :param mtype: 类型，电影、电视剧、动漫
@@ -332,32 +332,32 @@ class SubscribeService:
 
     def add_rss_subscribe(
         self,
-        mtype,
-        name,
-        year,
-        channel=None,
-        keyword=None,
-        season=None,
-        fuzzy_match=False,
-        mediaid=None,
-        rss_sites=None,
-        search_sites=None,
-        over_edition=False,
-        filter_restype=None,
-        filter_pix=None,
-        filter_team=None,
-        filter_rule=None,
-        filter_include=None,
-        filter_exclude=None,
-        save_path=None,
-        download_setting=None,
-        total_ep=None,
-        current_ep=None,
-        state="D",
-        rssid=None,
-        in_from=None,
-        user_name=None,
-    ):
+        mtype: Any,
+        name: str | None,
+        year: Any,
+        channel: str | None = None,
+        keyword: str | None = None,
+        season: int | None = None,
+        fuzzy_match: bool = False,
+        mediaid: str | None = None,
+        rss_sites: list[str] | str | None = None,
+        search_sites: list[str] | str | None = None,
+        over_edition: bool | int = False,
+        filter_restype: str | None = None,
+        filter_pix: str | None = None,
+        filter_team: str | None = None,
+        filter_rule: int | str | None = None,
+        filter_include: str | None = None,
+        filter_exclude: str | None = None,
+        save_path: str | None = None,
+        download_setting: int | str | None = None,
+        total_ep: int | None = None,
+        current_ep: int | None = None,
+        state: str = "D",
+        rssid: int | None = None,
+        in_from: str | None = None,
+        user_name: str | None = None,
+    ) -> tuple[int, str, Any]:
         """
         添加电影、电视剧订阅
         :param mtype: 类型，电影、电视剧、动漫
@@ -620,7 +620,7 @@ class SubscribeService:
         else:
             return code, "添加订阅失败", media_info
 
-    def finish_rss_subscribe(self, rssid, media):
+    def finish_rss_subscribe(self, rssid: int | None, media: Any) -> None:
         """
         完成订阅
         :param rssid: 订阅ID
@@ -681,7 +681,7 @@ class SubscribeService:
         )
         self._message.send_rss_finished_message(media_info=media)
 
-    def get_subscribe_movies(self, rid=None, state=None):
+    def get_subscribe_movies(self, rid: int | None = None, state: str | None = None) -> dict:
         """
         获取电影订阅
         """
@@ -752,7 +752,7 @@ class SubscribeService:
             }
         return ret_dict
 
-    def get_subscribe_tvs(self, rid=None, state=None):
+    def get_subscribe_tvs(self, rid: int | None = None, state: str | None = None) -> dict:
         ret_dict = {}
         rss_tvs = self._tv_repo.get_all(rssid=rid, state=state)
         rss_sites_valid = self._sites.get_site_names(rss=True)
@@ -841,7 +841,7 @@ class SubscribeService:
         return json.loads(desc) or {}
 
     @staticmethod
-    def gen_rss_note(media):
+    def gen_rss_note(media: Any) -> str:
         """
         生成订阅的JSON备注信息
         :param media: 媒体信息
@@ -852,7 +852,7 @@ class SubscribeService:
         note = {"poster": media.get_poster_image(), "release_date": media.release_date, "vote": media.vote_average}
         return json.dumps(note)
 
-    def refresh_rss_metainfo(self):
+    def refresh_rss_metainfo(self) -> None:
         """
         定时将豆瓣订阅转换为TMDB的订阅，并更新订阅的TMDB信息
         优化：只对没有 tmdbid 的订阅进行查询，有 tmdbid 的订阅延长刷新间隔
@@ -957,31 +957,31 @@ class SubscribeService:
             media_info = self._media.get_media_info(title=f"{name} {year}", mtype=mtype, strict=True, cache=cache)
         return media_info
 
-    def subscribe_search_all(self):
+    def subscribe_search_all(self) -> None:
         """
         搜索R状态的所有订阅，由定时服务调用
         """
         self._search_engine.subscribe_search_all()
 
-    def subscribe_search(self, state="D"):
+    def subscribe_search(self, state: str = "D") -> None:
         """
         RSS订阅队列中状态的任务处理，先进行存量资源搜索，缺失的才标志为RSS状态，由定时服务调用
         """
         self._search_engine.subscribe_search(state=state)
 
-    def subscribe_search_movie(self, rssid=None, state="D"):
+    def subscribe_search_movie(self, rssid: int | None = None, state: str = "D") -> None:
         """
         搜索电影RSS
         """
         self._search_engine.subscribe_search_movie(rssid=rssid, state=state)
 
-    def subscribe_search_tv(self, rssid=None, state="D"):
+    def subscribe_search_tv(self, rssid: int | None = None, state: str = "D") -> None:
         """
         搜索电视剧RSS
         """
         self._search_engine.subscribe_search_tv(rssid=rssid, state=state)
 
-    def update_rss_state(self, rtype, rssid, state):
+    def update_rss_state(self, rtype: str, rssid: int, state: str) -> None:
         """
         根据类型更新订阅状态
         :param rtype: 订阅类型
@@ -993,7 +993,7 @@ class SubscribeService:
         else:
             self._tv_repo.update_state(rssid=rssid, state=state)
 
-    def update_subscribe_over_edition(self, rtype, rssid, media):
+    def update_subscribe_over_edition(self, rtype: str, rssid: int | None, media: Any) -> bool:
         """
         更新洗版订阅
         :param rtype: 订阅类型
@@ -1015,7 +1015,7 @@ class SubscribeService:
             self.update_rss_state(rtype=rtype, rssid=rssid, state="R")
         return False
 
-    def check_subscribe_over_edition(self, rtype, rssid, res_order):
+    def check_subscribe_over_edition(self, rtype: str, rssid: int, res_order: int | None) -> bool:
         """
         检查洗版订阅的优先级
         :param rtype: 订阅类型
@@ -1028,7 +1028,7 @@ class SubscribeService:
             return True
         return int(pre_res_order) < int(res_order)
 
-    def update_subscribe_tv_lack(self, rssid, media_info, seasoninfo):
+    def update_subscribe_tv_lack(self, rssid: int | None, media_info: Any, seasoninfo: list | None) -> None:
         """
         更新电视剧订阅缺失集数
         """
@@ -1044,19 +1044,21 @@ class SubscribeService:
                     self._tv_repo.update_lack(rssid=rssid, lack_episodes=info.get("episodes"))
                 break
 
-    def get_subscribe_tv_episodes(self, rssid):
+    def get_subscribe_tv_episodes(self, rssid: int | None) -> Any:
         """
         查询数据库中订阅的电视剧缺失集数
         """
         return self._tv_episode_repo.get(rssid)
 
-    def check_history(self, type_str, name, year, season):
+    def check_history(self, type_str: str, name: str, year: str | None, season: str | None) -> bool:
         """
         检查订阅历史是否存在
         """
         return self._history_repo.check_exists(type_str=type_str, name=name, year=year, season=season)
 
-    def delete_subscribe(self, mtype, title=None, year=None, season=None, rssid=None, tmdbid=None):
+    def delete_subscribe(
+        self, mtype: MediaType, title: str | None = None, year: str | None = None, season: str | None = None, rssid: int | None = None, tmdbid: str | None = None
+    ) -> Any:
         """
         删除电影订阅
         """
@@ -1065,7 +1067,9 @@ class SubscribeService:
         else:
             return self._tv_repo.delete(title=title, season=season, rssid=rssid, tmdbid=tmdbid)
 
-    def get_subscribe_id(self, mtype, title, year=None, season=None, tmdbid=None):
+    def get_subscribe_id(
+        self, mtype: MediaType, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None
+    ) -> Any:
         """
         获取订阅ID
         """
@@ -1074,7 +1078,7 @@ class SubscribeService:
         else:
             return self._tv_repo.get_id(title=title, year=year, season=season, tmdbid=tmdbid)
 
-    def truncate_rss_episodes(self):
+    def truncate_rss_episodes(self) -> None:
         """
         清空订阅缺失集数
         """

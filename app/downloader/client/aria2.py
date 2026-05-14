@@ -1,5 +1,6 @@
 import os
 import re
+from typing import Any
 
 import log
 from app.downloader.client._base import _IDownloadClient
@@ -23,13 +24,13 @@ class Aria2(_IDownloadClient):
     secret = None
     download_dir = []
 
-    def __init__(self, config=None):
+    def __init__(self, config: dict | None = None):
         if config:
             self._client_config = config
         self.init_config()
         self.connect()
 
-    def init_config(self):
+    def init_config(self) -> None:
         if self._client_config:
             self.host = self._client_config.get("host")
             if self.host:
@@ -44,19 +45,19 @@ class Aria2(_IDownloadClient):
                 self._client = PyAria2(secret=self.secret, host=self.host, port=self.port)
 
     @classmethod
-    def match(cls, ctype):
+    def match(cls, ctype: str) -> Any:
         return ctype in [cls.client_id, cls.client_type, cls.client_name]
 
-    def connect(self):
+    def connect(self) -> Any:
         pass
 
-    def get_status(self):
+    def get_status(self) -> Any:
         if not self._client:
             return False
         ver = self._client.getVersion()
         return bool(ver)
 
-    def get_torrents(self, ids=None, status=None, **kwargs) -> list[Torrent]:
+    def get_torrents(self, ids: list[str] | str | None = None, status: str | None = None, **kwargs: Any) -> Any:
         if not self._client:
             return []
         ret_torrents = []
@@ -76,16 +77,16 @@ class Aria2(_IDownloadClient):
             torrent_list.append(self.torrent_properties(torrent=torrent))
         return torrent_list
 
-    def get_downloading_torrents(self, **kwargs):
+    def get_downloading_torrents(self, ids: Any = None, tag: Any = None, **kwargs: Any) -> Any:
         return self.get_torrents(status="downloading")
 
-    def get_completed_torrents(self, **kwargs):
+    def get_completed_torrents(self, ids: Any = None, tag: Any = None, **kwargs: Any) -> Any:
         return self.get_torrents(status="completed")
 
-    def set_torrents_status(self, ids, **kwargs):
+    def set_torrents_status(self, ids: list[str] | str, **kwargs: Any) -> Any:
         return self.delete_torrents(ids=ids, delete_file=False)
 
-    def get_transfer_task(self, tag=None, match_path=False):
+    def get_transfer_task(self, tag: str | None = None, match_path: bool = False) -> Any:
         if not self._client:
             return []
         torrents = self.get_completed_torrents()
@@ -105,10 +106,10 @@ class Aria2(_IDownloadClient):
             trans_tasks.append({"path": os.path.join(true_path, name).replace("\\", "/"), "id": torrent.id})
         return trans_tasks
 
-    def get_remove_torrents(self, **kwargs):
+    def get_remove_torrents(self, **kwargs: Any) -> Any:
         return []
 
-    def add_torrent(self, content, download_dir=None, **kwargs):
+    def add_torrent(self, content: str | bytes, download_dir: str | None = None, **kwargs: Any) -> Any:
         if not self._client:
             return None
         if isinstance(content, str):
@@ -124,28 +125,28 @@ class Aria2(_IDownloadClient):
         else:
             return self._client.addTorrent(torrent=content, uris=[], options={"dir": download_dir})
 
-    def start_torrents(self, ids):
+    def start_torrents(self, ids: list[str] | str) -> Any:
         if not self._client:
             return False
         return self._client.unpause(gid=ids)
 
-    def stop_torrents(self, ids):
+    def stop_torrents(self, ids: list[str] | str) -> Any:
         if not self._client:
             return False
         return self._client.pause(gid=ids)
 
-    def delete_torrents(self, delete_file, ids):
+    def delete_torrents(self, delete_file: bool, ids: list[str] | str) -> Any:
         if not self._client:
             return False
         return self._client.forceRemove(gid=ids)
 
-    def get_download_dirs(self):
+    def get_download_dirs(self) -> Any:
         return []
 
-    def change_torrent(self, **kwargs):
+    def change_torrent(self, **kwargs: Any) -> Any:
         pass
 
-    def get_downloading_progress(self, **kwargs):
+    def get_downloading_progress(self, **kwargs: Any) -> Any:
         """
         获取正在下载的种子进度
         """
@@ -172,7 +173,7 @@ class Aria2(_IDownloadClient):
 
         return disp_torrents
 
-    def set_speed_limit(self, download_limit=None, upload_limit=None):
+    def set_speed_limit(self, download_limit: int | None = None, upload_limit: int | None = None) -> Any:
         """
         设置速度限制
         :param download_limit: 下载速度限制，单位KB/s
@@ -193,26 +194,26 @@ class Aria2(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return False
 
-    def get_type(self):
+    def get_type(self) -> Any:
         return self.client_type
 
-    def get_files(self, tid):
+    def get_files(self, tid: str) -> Any:
         try:
             return self._client.getFiles(gid=tid)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return None
 
-    def recheck_torrents(self, ids):
+    def recheck_torrents(self, ids: list[str] | str) -> Any:
         pass
 
-    def set_torrents_tag(self, ids, tags):
+    def set_torrents_tag(self, ids: list[str] | str, tags: str | list[str]) -> Any:
         pass
 
-    def get_free_space(self, path: str):
+    def get_free_space(self, path: str) -> Any:
         pass
 
-    def torrent_properties(self, torrent):
+    def torrent_properties(self, torrent: dict) -> Torrent:
 
         torrent_obj = Torrent()
         torrent_obj.id = torrent.get("gid")
@@ -235,7 +236,7 @@ class Aria2(_IDownloadClient):
         return torrent_obj
 
     @staticmethod
-    def _judge_status(state):
+    def _judge_status(state: str) -> TorrentStatus:
         state_mapping = {
             "paused": TorrentStatus.Stopped,
             "downloading": TorrentStatus.Downloading,

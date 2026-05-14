@@ -39,19 +39,19 @@ class BrushTaskRepository:
     def __init__(self, repo: BrushRepository | None = None):
         self._repo = repo or BrushRepository()
 
-    def get_brushtasks(self, brush_id=None):
+    def get_brushtasks(self, brush_id: int | None = None) -> Any:
         return self._repo.get_brushtasks(brush_id=brush_id)
 
-    def get_brushtask_totalsize(self, task_id):
+    def get_brushtask_totalsize(self, task_id: int | None) -> Any:
         return self._repo.get_brushtask_totalsize(task_id)
 
     def get_brushtask_torrents(self, brush_id, active=True):
         return self._repo.get_brushtask_torrents(brush_id, active)
 
-    def get_brushtask_torrent_by_enclosure(self, enclosure):
+    def get_brushtask_torrent_by_enclosure(self, enclosure: str | None) -> Any:
         return self._repo.get_brushtask_torrent_by_enclosure(enclosure)
 
-    def insert_brushtask_torrent(self, brush_id, title, enclosure, downloader, download_id, size):
+    def insert_brushtask_torrent(self, brush_id: int | None, title: str, enclosure: str, downloader: int, download_id: str, size: int) -> Any:
         return self._repo.insert_brushtask_torrent(
             brush_id=brush_id,
             title=title,
@@ -61,25 +61,25 @@ class BrushTaskRepository:
             size=size,
         )
 
-    def add_brushtask_download_count(self, brush_id):
+    def add_brushtask_download_count(self, brush_id: int | None) -> Any:
         return self._repo.add_brushtask_download_count(brush_id=brush_id)
 
-    def add_brushtask_upload_count(self, taskid, uploaded, downloaded, count):
+    def add_brushtask_upload_count(self, taskid: int | None, uploaded: int, downloaded: int, count: int) -> Any:
         return self._repo.add_brushtask_upload_count(taskid, uploaded, downloaded, count)
 
-    def update_brushtask(self, brushtask_id, item):
+    def update_brushtask(self, brushtask_id: int | None, item: dict) -> Any:
         return self._repo.update_brushtask(brushtask_id, item)
 
-    def delete_brushtask(self, brushtask_id):
+    def delete_brushtask(self, brushtask_id: int | None) -> Any:
         return self._repo.delete_brushtask(brushtask_id)
 
-    def update_brushtask_state(self, tid, state):
+    def update_brushtask_state(self, tid: int | None, state: str | None) -> Any:
         return self._repo.update_brushtask_state(tid=tid, state=state)
 
-    def update_brushtask_torrent_state(self, update_torrents):
+    def update_brushtask_torrent_state(self, update_torrents: list | None) -> Any:
         return self._repo.update_brushtask_torrent_state(update_torrents)
 
-    def delete_brushtask_torrent(self, taskid, download_id):
+    def delete_brushtask_torrent(self, taskid: int | None, download_id: str | None) -> Any:
         return self._repo.delete_brushtask_torrent(taskid, download_id)
 
 
@@ -94,7 +94,7 @@ class BrushTaskScheduler:
     def __init__(self, scheduler: SchedulerCore | None = None):
         self._scheduler = scheduler or SchedulerCore()
 
-    def start_job(self, func, name, args, job_id, trigger_type, trigger_args):
+    def start_job(self, func: Any, name: str, args: tuple, job_id: str, trigger_type: str, trigger_args: dict) -> None:
         self._scheduler.start_job(
             {
                 "func": func,
@@ -107,11 +107,11 @@ class BrushTaskScheduler:
             }
         )
 
-    def remove_job(self, job_id):
+    def remove_job(self, job_id: str) -> None:
         with contextlib.suppress(Exception):
             self._scheduler.remove_job(job_id, jobstore=self._jobstore)
 
-    def remove_all_jobs(self):
+    def remove_all_jobs(self) -> None:
         try:
             self._scheduler.remove_all_jobs(jobstore=self._jobstore)
         except Exception as e:
@@ -186,7 +186,7 @@ class BrushTaskService:
 
     # ---------- 生命周期 ----------
 
-    def init_config(self):
+    def init_config(self) -> None:
         """初始化：停止调度、加载任务、启动 RSS 任务。"""
         self.stop_service()
         self.load_brushtasks()
@@ -203,7 +203,7 @@ class BrushTaskService:
             if running_task > 0:
                 log.info(f"{running_task} 个刷流服务正常启动")
 
-    def stop_service(self):
+    def stop_service(self) -> None:
         """停止所有刷流调度任务。"""
         self._scheduler.remove_all_jobs()
 
@@ -252,7 +252,7 @@ class BrushTaskService:
 
     # ---------- 任务 CRUD ----------
 
-    def load_brushtasks(self):
+    def load_brushtasks(self) -> None:
         self._brush_tasks = {}
         brushtasks = self._repo.get_brushtasks()
         if not brushtasks:
@@ -312,14 +312,14 @@ class BrushTaskService:
             "site_url": site_url,
         }
 
-    def get_brushtask_info(self, taskid=None):
+    def get_brushtask_info(self, taskid: int | str | None = None) -> Any:
         if not self._brush_tasks:
             self.load_brushtasks()
         if taskid:
             return self._brush_tasks.get(str(taskid)) or {}
         return list(self._brush_tasks.values())
 
-    def update_brushtask(self, brushtask_id, item):
+    def update_brushtask(self, brushtask_id: int | None, item: dict) -> Any:
         ret = self._repo.update_brushtask(brushtask_id, item)
         if brushtask_id:
             self._reload_single_task(brushtask_id)
@@ -327,13 +327,13 @@ class BrushTaskService:
             self.init_config()
         return ret
 
-    def delete_brushtask(self, brushtask_id):
+    def delete_brushtask(self, brushtask_id: int | None) -> Any:
         self._stop_task_jobs(brushtask_id)
         ret = self._repo.delete_brushtask(brushtask_id)
         self._brush_tasks.pop(str(brushtask_id), None)
         return ret
 
-    def update_brushtask_state(self, state, brushtask_id=None):
+    def update_brushtask_state(self, state: str | None, brushtask_id: int | None = None) -> Any:
         ret = self._repo.update_brushtask_state(tid=brushtask_id, state=state)
         if brushtask_id:
             task = self._brush_tasks.get(str(brushtask_id))
@@ -353,15 +353,15 @@ class BrushTaskService:
                             self._start_task_jobs(task, cron)
         return ret
 
-    def get_brushtask_torrents(self, brush_id, active=True):
+    def get_brushtask_torrents(self, brush_id: int | None, active: bool = True) -> Any:
         return self._repo.get_brushtask_torrents(brush_id, active)
 
-    def is_torrent_handled(self, enclosure):
+    def is_torrent_handled(self, enclosure: str | None) -> Any:
         return self._repo.get_brushtask_torrent_by_enclosure(enclosure)
 
     # ---------- RSS 刷流 ----------
 
-    def check_task_rss(self, taskid):
+    def check_task_rss(self, taskid: int | None) -> None:
         if not taskid:
             return
         taskinfo = self.get_brushtask_info(taskid)
@@ -469,7 +469,7 @@ class BrushTaskService:
 
     # ---------- 删种 ----------
 
-    def remove_task_torrents(self, taskid):
+    def remove_task_torrents(self, taskid: int | None) -> None:
         taskinfo = self.get_brushtask_info(taskid)
         try:
             total_uploaded = 0
@@ -641,7 +641,7 @@ class BrushTaskService:
 
     # ---------- 停种 ----------
 
-    def stop_task_torrents(self, taskid):
+    def stop_task_torrents(self, taskid: int | None) -> None:
         taskinfo = self.get_brushtask_info(taskid)
         task_name = taskinfo.get("name")
         stop_rule = taskinfo.get("stop_rule")
