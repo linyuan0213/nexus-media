@@ -28,7 +28,7 @@ class Indexer(metaclass=SingletonMeta):
     1. 获取所有可用站点
     2. 并发搜索每个站点，收集原始结果（dict 列表）
     3. 将所有原始结果传入 SearchPipeline，统一批量识别和过滤
-    4. 返回最终结果（MetaInfo 列表）
+    4. 返回最终结果（meta_info 列表）
     """
 
     def __init__(self):

@@ -57,7 +57,7 @@ class FakeMetaInfo:
 def mock_deps():
     with (
         patch("app.utils.web_utils.StringUtils.get_keyword_from_string") as mock_kw,
-        patch("app.utils.web_utils.MetaInfo") as mock_meta,
+        patch("app.utils.web_utils.meta_info") as mock_meta,
         patch("app.utils.web_utils.Media") as mock_media_cls,
         patch("app.utils.web_utils.DouBan") as mock_douban_cls,
     ):

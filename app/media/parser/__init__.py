@@ -1,5 +1,5 @@
 from app.media.parser._customization import CustomizationMatcher
-from app.media.parser._metainfo import MetaInfo
+from app.media.parser._metainfo import meta_info
 from app.media.parser._release_groups import ReleaseGroupsMatcher
 from app.media.parser.anitopy_adapter import AnitopyAdapter
 from app.media.parser.base import BaseParser, ParserResult
@@ -14,7 +14,7 @@ __all__ = [
     "LLMParser",
     "AnitopyAdapter",
     "TokenAdapter",
-    "MetaInfo",
+    "meta_info",
     "ReleaseGroupsMatcher",
     "CustomizationMatcher",
 ]

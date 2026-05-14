@@ -18,7 +18,7 @@ from app.domain.interfaces.rss_repo import (
     IRssTvEpisodeRepository,
     IRssTvRepository,
 )
-from app.media import MediaCache, MediaService
+from app.media import MediaCache, MediaService, meta_info
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
 from app.services.downloader_core import DownloaderCore as Downloader
@@ -314,10 +314,8 @@ class SubscribeSearchEngine:
         """
         综合返回媒体信息
         """
-        from app.media import MetaInfo
-
         if tmdbid and not str(tmdbid).startswith("DB:"):
-            media_info = MetaInfo(title="%s %s".strip() % (name, year))
+            media_info = meta_info(title="%s %s".strip() % (name, year))
             tmdb_info = self._media_cache.get_tmdb_info(mtype=mtype, tmdbid=tmdbid)
             media_info.set_tmdb_info(tmdb_info)
         else:

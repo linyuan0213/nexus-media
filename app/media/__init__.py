@@ -34,7 +34,7 @@ from .parser import (
     TokenAdapter,
 )
 from .parser._customization import CustomizationMatcher
-from .parser._metainfo import MetaInfo
+from .parser._metainfo import meta_info
 from .parser._release_groups import ReleaseGroupsMatcher
 from .scraper import Scraper
 from .service import MediaService

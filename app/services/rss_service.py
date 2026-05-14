@@ -10,7 +10,7 @@ import log
 from app.db.repositories.config_repo_adapter import UserRssConfigRepositoryAdapter
 from app.db.repositories.rss_repo_adapter import RssHistoryRepositoryAdapter
 from app.helper import RssHelper
-from app.media import MediaService, MetaInfo
+from app.media import MediaService, meta_info
 from app.message import Message
 from app.schemas.rss import (
     RssAddResultDTO,
@@ -210,12 +210,10 @@ class RssSubscriptionService:
 
     def remove_rss_media(self, name: str, mtype: str, year: str, season, rssid, tmdbid) -> None:
         """移除RSS订阅"""
-        from app.media import MetaInfo
-
         if not str(tmdbid).isdigit():
             tmdbid = None
         if name:
-            name = MetaInfo(title=name).get_name()
+            name = meta_info(title=name).get_name()
         if mtype:
             if mtype in MovieTypes:
                 self._subscribe.delete_subscribe(
@@ -642,7 +640,7 @@ class RssTaskService(metaclass=SingletonMeta):
                     continue
 
                 if task_type == "D":
-                    media_info = MetaInfo(title=meta_name, mtype=mediatype)
+                    media_info = meta_info(title=meta_name, mtype=mediatype)
                     if taskinfo.get("recognization") == "Y":
                         media_info = self.media.get_media_info(title=meta_name, mtype=mediatype)
                         if not media_info:
@@ -718,7 +716,7 @@ class RssTaskService(metaclass=SingletonMeta):
                         res_num = res_num + 1
                 elif task_type == "R":
                     # 识别种子名称，开始搜索TMDB
-                    media_info = MetaInfo(title=meta_name, mtype=mediatype)
+                    media_info = meta_info(title=meta_name, mtype=mediatype)
                     # 检查种子是否匹配过滤条件
                     filter_args = {"include": taskinfo.get("include"), "exclude": taskinfo.get("exclude"), "rule": -1}
                     match_flag, _, match_msg = self.filter.check_torrent_filter(

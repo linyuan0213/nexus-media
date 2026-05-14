@@ -10,7 +10,7 @@ from datetime import datetime
 from threading import Lock
 from time import sleep
 
-from app.media import DouBan, MetaInfo
+from app.media import DouBan, meta_info
 from app.plugin_framework.context import PluginContext
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.search_service import Searcher
@@ -211,7 +211,7 @@ class DoubanSyncPlugin:
                 return
 
         media_type = MediaType.TV if douban_info.get("episodes_count") else MediaType.MOVIE
-        meta_info = MetaInfo(title="{} {}".format(douban_info.get("title"), douban_info.get("year") or ""))
+        meta_info = meta_info(title="{} {}".format(douban_info.get("title"), douban_info.get("year") or ""))
         meta_info.douban_id = doubanid
         meta_info.type = media_type
         meta_info.overview = douban_info.get("intro")

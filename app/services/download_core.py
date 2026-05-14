@@ -23,7 +23,7 @@ from app.db.repositories.download_repo_adapter import (
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.downloader.client_factory import DownloadClientFactory
 from app.downloader.pipeline import DownloadPipeline
-from app.media import MetaInfo
+from app.media import meta_info
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
@@ -254,7 +254,7 @@ class DownloadCore:
             for torrent_file in torrent_files:
                 file_id = torrent_file.get("id")
                 file_name = torrent_file.get("name")
-                meta_info = MetaInfo(file_name)
+                meta_info = meta_info(file_name)
                 if not meta_info.get_episode_list():
                     selected = False
                 else:
@@ -272,7 +272,7 @@ class DownloadCore:
             for torrent_file in torrent_files:
                 file_id = torrent_file.get("id")
                 file_name = torrent_file.get("name")
-                meta_info = MetaInfo(file_name)
+                meta_info = meta_info(file_name)
                 if not meta_info.get_episode_list() or not set(meta_info.get_episode_list()).issubset(
                     set(need_episodes)
                 ):
@@ -334,7 +334,7 @@ class DownloadCore:
         for file in files:
             if os.path.splitext(file)[-1] not in RMT_MEDIAEXT:
                 continue
-            meta = MetaInfo(file)
+            meta = meta_info(file)
             if not meta.begin_episode:
                 continue
             episodes = list(set(episodes).union(set(meta.get_episode_list())))

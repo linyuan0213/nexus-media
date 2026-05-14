@@ -8,7 +8,7 @@ import re
 
 import log
 from app.agent import ChatAgent
-from app.media import MediaService, MetaInfo
+from app.media import MediaService, meta_info
 from app.message import Message
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
@@ -113,7 +113,7 @@ class MessageSearchService:
         else:
             tmdb_info = MediaService().get_media_info(title=title, year=year, mtype=mtype)
 
-        media_info = MetaInfo(title=f"{title} {year}".strip(), mtype=mtype)
+        media_info = meta_info(title=f"{title} {year}".strip(), mtype=mtype)
         media_info.set_tmdb_info(tmdb_info)
 
         if not media_info or not media_info.tmdb_info:

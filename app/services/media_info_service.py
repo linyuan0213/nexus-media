@@ -5,7 +5,7 @@ import cn2an
 
 import log
 from app.helper.image_proxy_helper import ImageProxyHelper
-from app.media import DouBan, MediaService, MetaInfo
+from app.media import DouBan, MediaService, meta_info
 from app.mediaserver import MediaServer
 from app.schemas.media import MediaInfoResultDTO, SeasonEpisodesResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe
@@ -46,7 +46,7 @@ class MediaInfoService:
     def get_tvseason_list(self, tmdbid, title) -> list[dict]:
         """获取剧集季列表"""
         if title:
-            title_season = MetaInfo(title=title).begin_season
+            title_season = meta_info(title=title).begin_season
         else:
             title_season = None
         if not str(tmdbid).isdigit():

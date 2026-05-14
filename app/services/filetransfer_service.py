@@ -27,7 +27,7 @@ from app.domain.interfaces.transfer_repo import (
     ITransferUnknownRepository,
 )
 from app.helper import ProgressHelper, ThreadHelper
-from app.media import Category, MediaService, MetaInfo, Scraper
+from app.media import Category, MediaService, meta_info, Scraper
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
 from app.services.media_config_service import MediaConfigService
@@ -289,7 +289,7 @@ class FileTransferService:
                     continue
                 files = PathUtils.get_dir_files(dest_path, RMT_MEDIAEXT)
                 for file in files:
-                    file_meta_info = MetaInfo(title=os.path.basename(file))
+                    file_meta_info = meta_info(title=os.path.basename(file))
                     if not file_meta_info.get_season_list() or not file_meta_info.get_episode_list():
                         continue
                     if file_meta_info.get_name() != meta_info.title:
@@ -994,7 +994,7 @@ class FileTransferService:
                                 {"media_info": media_info, "path": dest_path, "filename": dest_filename},
                             )
                     else:
-                        meta_info = MetaInfo(title=source_filename)
+                        meta_info = meta_info(title=source_filename)
                         meta_info.title = transinfo.TITLE
                         meta_info.category = transinfo.CATEGORY
                         meta_info.year = transinfo.YEAR
@@ -1038,7 +1038,7 @@ class FileTransferService:
                                 rm_parent_dir = True
                             else:
                                 for dest_file in PathUtils.get_dir_files(dest_path):
-                                    file_meta_info = MetaInfo(os.path.basename(dest_file))
+                                    file_meta_info = meta_info(os.path.basename(dest_file))
                                     if file_meta_info.get_episode_list() and set(
                                         file_meta_info.get_episode_list()
                                     ).issubset(set(meta_info.get_episode_list())):

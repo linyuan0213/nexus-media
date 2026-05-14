@@ -2,7 +2,7 @@
 搜索流水线编排器
 
 三阶段全局批量处理模型：
-1. 本地过滤（Local Filter）：遍历所有站点结果，做 MetaInfo 解析和规则过滤
+1. 本地过滤（Local Filter）：遍历所有站点结果，做 meta_info 解析和规则过滤
 2. 批量识别（Batch Identify）：跨站点收集需要 TMDB 的候选，去重后并发查询
 3. 匹配过滤（Match Filter）：用 TMDB 结果统一匹配和过滤
 

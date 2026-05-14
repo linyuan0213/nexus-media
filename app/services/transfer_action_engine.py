@@ -13,7 +13,7 @@ from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_SUBEXT
 from app.core.module_config import ModuleConf
 from app.db.repositories.transfer_repo_adapter import TransferBlacklistRepositoryAdapter
 from app.domain.interfaces.transfer_repo import ITransferBlacklistRepository
-from app.media import MetaInfo
+from app.media import meta_info
 from app.utils import ExceptionUtils, PathUtils, SystemUtils
 from app.utils.types import RmtMode
 
@@ -104,13 +104,13 @@ class TransferActionEngine:
             log.debug(f"【Rmt】{dir_name} 目录下没有找到字幕文件...")
         else:
             log.debug("【Rmt】字幕文件清单：" + str(file_list))
-            metainfo = MetaInfo(title=file_name)
+            metainfo = meta_info(title=file_name)
             for file_item in file_list:
                 sub_file_name = re.sub(
                     _zhtw_sub_re, ".", re.sub(_zhcn_sub_re, ".", os.path.basename(file_item), flags=re.I), flags=re.I
                 )
                 sub_file_name = re.sub(_eng_sub_re, ".", sub_file_name, flags=re.I)
-                sub_metainfo = MetaInfo(title=os.path.basename(file_item))
+                sub_metainfo = meta_info(title=os.path.basename(file_item))
                 if (
                     (os.path.splitext(file_name)[0] == os.path.splitext(sub_file_name)[0])
                     or (sub_metainfo.cn_name and sub_metainfo.cn_name == metainfo.cn_name)

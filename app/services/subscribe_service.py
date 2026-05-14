@@ -17,7 +17,7 @@ from app.db.repositories.rss_repo_adapter import (
     RssTvEpisodeRepositoryAdapter,
     RssTvRepositoryAdapter,
 )
-from app.media import DouBan, MediaService, MetaInfo
+from app.media import DouBan, MediaService, meta_info
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
 from app.services.downloader_core import DownloaderCore as Downloader
@@ -249,7 +249,7 @@ class SubscribeService:
                     fuzzy_match=0,
                 )
         else:
-            media_info = MetaInfo(title=name, mtype=mtype)
+            media_info = meta_info(title=name, mtype=mtype)
             media_info.title = name
             media_info.type = mtype
             if season:
@@ -544,7 +544,7 @@ class SubscribeService:
                 )
         else:
             # 模糊匹配
-            media_info = MetaInfo(title=name, mtype=mtype)
+            media_info = meta_info(title=name, mtype=mtype)
             media_info.title = name
             media_info.type = mtype
             if season:
@@ -950,7 +950,7 @@ class SubscribeService:
         综合返回媒体信息
         """
         if tmdbid and not str(tmdbid).startswith("DB:"):
-            media_info = MetaInfo(title="%s %s".strip() % (name, year))
+            media_info = meta_info(title="%s %s".strip() % (name, year))
             tmdb_info = self._media.get_tmdb_info(mtype=mtype, tmdbid=tmdbid)
             media_info.set_tmdb_info(tmdb_info)
         else:
