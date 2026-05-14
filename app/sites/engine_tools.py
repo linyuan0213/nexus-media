@@ -129,8 +129,8 @@ def _fetch_csrf_token(engine: Any, site: Any, user_config: dict) -> str | None:
     if selector_type == "regex":
         match = re.search(selector, res.text)
         return match.group(1) if match else None
-    html_doc = etree.HTML(res.text)
-    els = html_doc.xpath(selector)
+    html_doc: Any = etree.HTML(res.text)
+    els: Any = html_doc.xpath(selector)
     if els and hasattr(els[0], "text") and els[0].text:
         return els[0].text
     if els and hasattr(els[0], "attrs") and "content" in els[0].attrs:
@@ -202,7 +202,7 @@ def _call_html_endpoint(engine: Any, url: str, html_cfg: dict, user_config: dict
     if not res or res.status_code != 200:
         return None
 
-    html_doc = etree.HTML(res.text)
+    html_doc: Any = etree.HTML(res.text)
     result = {}
     for field_name, cfg in selectors.items():
         xpath = cfg.get("xpath", "")
@@ -210,7 +210,7 @@ def _call_html_endpoint(engine: Any, url: str, html_cfg: dict, user_config: dict
             result[field_name] = cfg.get("default", "")
             continue
         try:
-            els = html_doc.xpath(xpath)
+            els: Any = html_doc.xpath(xpath)
         except Exception:
             els = []
         if not els:
