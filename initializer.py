@@ -11,10 +11,10 @@ from app.helper import PluginHelper
 from app.infrastructure.cache_system import CategoryLoadCache, ConfigLoadCache
 from app.media import Category
 from app.services.apikey_service import APIKeyService
+from app.services.rbac_init import init_admin_user, init_rbac_system as rbac_init
 from app.utils import ExceptionUtils
 from app.utils.path_utils import get_category_path
 from app.utils.types import SystemConfigKey
-from app.services.rbac_init import init_admin_user, init_rbac_system as rbac_init
 from config import Config
 
 _observer = Observer(timeout=10)

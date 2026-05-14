@@ -5,10 +5,10 @@ System Router — FastAPI 迁移
 
 import json
 import os
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
-from pathlib import Path
 from pydantic import BaseModel
 
 import log
@@ -54,8 +54,8 @@ from app.services.system_service import (
 )
 from app.utils import ExceptionUtils
 from app.utils.response import fail, success
-from app.utils.types import SystemConfigKey
 from app.utils.temp_manager import temp_manager
+from app.utils.types import SystemConfigKey
 
 router = APIRouter()
 

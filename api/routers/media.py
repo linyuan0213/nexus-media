@@ -1,4 +1,5 @@
 import urllib.parse
+
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
