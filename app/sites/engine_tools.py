@@ -1,7 +1,9 @@
 """引擎内部工具 — 从 engine.py 拆分"""
 
 import json
+import os
 import re
+from typing import Any
 
 from lxml import etree
 
@@ -9,7 +11,7 @@ from app.utils import RequestUtils
 from app.utils.config_tools import get_proxies
 
 
-def _build_headers(engine, site, user_config):
+def _build_headers(engine: Any, site: Any, user_config: dict) -> dict:
     headers = user_config.get("headers", {}) or {}
     if isinstance(headers, str):
         try:
@@ -46,7 +48,10 @@ def _build_headers(engine, site, user_config):
     return headers
 
 
-def _call_endpoint(engine, cfg, site, user_config, template_vars, credential="", download_dir="", download=False):
+def _call_endpoint(
+    engine: Any, cfg: dict, site: Any, user_config: dict, template_vars: dict,
+    credential: str = "", download_dir: str = "", download: bool = False,
+) -> bool | list[dict] | None:
     method = cfg.get("method", "GET")
     path = cfg.get("path", "").format(**template_vars)
     base = site.api.base_url.rstrip("/") if site.api else ""
@@ -59,8 +64,6 @@ def _call_endpoint(engine, cfg, site, user_config, template_vars, credential="",
         headers.pop("Content-Type", None)
         res = RequestUtils(headers=headers, proxies=proxy, timeout=30).get_res(url=url)
         if res and res.status_code == 200 and download_dir:
-            import os
-
             fname = os.path.join(download_dir, f"{credential}.zip") if credential else "subtitle.zip"
             with open(fname, "wb") as f:
                 f.write(res.content)
@@ -93,7 +96,7 @@ def _call_endpoint(engine, cfg, site, user_config, template_vars, credential="",
     return None
 
 
-def _resolve_auth_token(engine, site, user_config, token_type):
+def _resolve_auth_token(engine: Any, site: Any, user_config: dict, token_type: str) -> str | None:
     cache_key = f"{site.id}:{token_type}"
     if cache_key in engine._auth_cache:
         return engine._auth_cache[cache_key]
@@ -108,7 +111,7 @@ def _resolve_auth_token(engine, site, user_config, token_type):
     return token
 
 
-def _fetch_csrf_token(engine, site, user_config):
+def _fetch_csrf_token(engine: Any, site: Any, user_config: dict) -> str | None:
     auth = site.api.auth
     csrf_url = auth.get("csrf_url", "").replace("{domain}", site.api.base_url.rstrip("/"))
     if not csrf_url:
@@ -135,7 +138,7 @@ def _fetch_csrf_token(engine, site, user_config):
     return None
 
 
-def _fetch_passkey(engine, site, user_config):
+def _fetch_passkey(engine: Any, site: Any, user_config: dict) -> str | None:
     auth = site.api.auth
     url = auth.get("passkey_url", "")
     if not url:
@@ -171,7 +174,7 @@ def _fetch_passkey(engine, site, user_config):
     return None
 
 
-def _call_html_endpoint(engine, url, html_cfg, user_config):
+def _call_html_endpoint(engine: Any, url: str, html_cfg: dict, user_config: dict) -> dict | None:
     method = html_cfg.get("method", "GET").upper()
     path = html_cfg.get("path", "")
     params = html_cfg.get("params") or {}
