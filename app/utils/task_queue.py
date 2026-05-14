@@ -84,7 +84,7 @@ class TaskQueue(metaclass=SingletonMeta):
             self._queue.put_nowait(task)
             return True
         except queue.Full:
-            log.warning(f"【TaskQueue】队列已满，丢弃任务: {name}")
+            log.warn(f"【TaskQueue】队列已满，丢弃任务: {name}")
             return False
 
     def _dispatch_loop(self):

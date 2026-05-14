@@ -131,7 +131,7 @@ class RssSubscriptionService:
 
         rssid = None
         if media_info:
-            rssid = self._subscribe.get_subscribe_id(mtype=mtype, title=name, tmdbid=media_info.tmdb_id)
+            rssid = self._subscribe.get_subscribe_id(mtype=mtype, title=name or "", tmdbid=media_info.tmdb_id)
 
         return RssAddResultDTO(code=code, msg=msg, rssid=rssid, media_info=media_info)
 
@@ -205,7 +205,7 @@ class RssSubscriptionService:
             mtype=mtype,
             name=rssinfo[0].NAME,
             year=rssinfo[0].YEAR,
-            channel=RssType.Auto,
+            channel=RssType.Auto.value,
             season=season,
             mediaid=rssinfo[0].TMDBID,
             total_ep=rssinfo[0].TOTAL,
@@ -224,23 +224,23 @@ class RssSubscriptionService:
         if mtype:
             if mtype in MovieTypes:
                 self._subscribe.delete_subscribe(
-                    mtype=MediaType.MOVIE, title=name, year=year, rssid=rssid, tmdbid=tmdbid
+                    mtype=MediaType.MOVIE, title=name or "", year=year, rssid=int(rssid) if rssid else None, tmdbid=tmdbid
                 )
             else:
                 self._subscribe.delete_subscribe(
-                    mtype=MediaType.TV, title=name, season=season, rssid=rssid, tmdbid=tmdbid
+                    mtype=MediaType.TV, title=name or "", season=str(season) if season is not None else None, rssid=int(rssid) if rssid else None, tmdbid=tmdbid
                 )
 
     def get_rss_detail(self, rid: str, rsstype: str) -> RssDetailResultDTO | None:
         """获取订阅详情"""
         if rsstype in MovieTypes:
-            rssdetail = self._subscribe.get_subscribe_movies(rid=rid)
+            rssdetail = self._subscribe.get_subscribe_movies(rid=int(rid) if rid else None)
             if not rssdetail:
                 return None
             detail = list(rssdetail.values())[0]
             detail["type"] = "MOV"
         else:
-            rssdetail = self._subscribe.get_subscribe_tvs(rid=rid)
+            rssdetail = self._subscribe.get_subscribe_tvs(rid=int(rid) if rid else None)
             if not rssdetail:
                 return None
             detail = list(rssdetail.values())[0]
@@ -479,7 +479,7 @@ class RssTaskService(metaclass=SingletonMeta):
             note = {}
             if task.NOTE:
                 try:
-                    note = json.loads(task.NOTE)
+                    note = json.loads(str(task.NOTE))
                 except Exception as e:
                     print(str(e))
                     note = {}
@@ -487,14 +487,14 @@ class RssTaskService(metaclass=SingletonMeta):
             recognization = note.get("recognization") or "Y"
             proxy = note.get("proxy") in ["Y", "1", True]
             try:
-                addresses = json.loads(task.ADDRESS)
+                addresses = json.loads(str(task.ADDRESS))
                 if not isinstance(addresses, list):
                     addresses = [addresses]
             except Exception as e:
                 print(str(e))
                 addresses = [task.ADDRESS]
             try:
-                parsers = json.loads(task.PARSER)
+                parsers = json.loads(str(task.PARSER))
                 if not isinstance(parsers, list):
                     parsers = [task.PARSER]
             except Exception as e:
@@ -509,7 +509,7 @@ class RssTaskService(metaclass=SingletonMeta):
                 "parser": parsers,
                 "interval": task.INTERVAL,
                 "uses": task.USES if task.USES != "S" else "R",
-                "uses_text": self._site_users.get(task.USES),
+                "uses_text": self._site_users.get(str(task.USES)),
                 "include": task.INCLUDE,
                 "exclude": task.EXCLUDE,
                 "filter": task.FILTER,
@@ -521,8 +521,8 @@ class RssTaskService(metaclass=SingletonMeta):
                 "download_setting": task.DOWNLOAD_SETTING or "",
                 "recognization": task.RECOGNIZATION or recognization,
                 "over_edition": task.OVER_EDITION or 0,
-                "sites": json.loads(task.SITES) if task.SITES else {"rss_sites": [], "search_sites": []},
-                "filter_args": json.loads(task.FILTER_ARGS)
+                "sites": json.loads(str(task.SITES)) if task.SITES else {"rss_sites": [], "search_sites": []},
+                "filter_args": json.loads(str(task.FILTER_ARGS))
                 if task.FILTER_ARGS
                 else {"restype": "", "pix": "", "team": ""},
             })
@@ -616,7 +616,7 @@ class RssTaskService(metaclass=SingletonMeta):
                 # 种子页面
                 page_url = res.get("link")
                 # 种子大小
-                size = StringUtils.str_filesize(res.get("size"))
+                size = int(res.get("size") or 0)
                 # 年份
                 year = res.get("year")
                 if year and len(year) > 4:
@@ -763,7 +763,7 @@ class RssTaskService(metaclass=SingletonMeta):
                     # 登记自定义RSS任务下载记录
                     conf = self.downloader.get_downloader_conf(downloader_id)
                     downloader_name = conf.get("name") if conf else ""
-                    self.config_repo.insert_userrss_task_history(taskid, media.org_string, downloader_name)
+                    self.config_repo.insert_userrss_task_history(taskid, media.org_string or "", downloader_name or "")
                 else:
                     log.error(
                         "【RssTaskService】添加下载任务 {} 失败：{}".format(
@@ -777,7 +777,7 @@ class RssTaskService(metaclass=SingletonMeta):
                     mtype=media.type,
                     name=media.get_name(),
                     year=media.year,
-                    channel=RssType.Manual,
+                    channel=RssType.Manual.value,
                     season=media.begin_season,
                     rss_sites=taskinfo.get("sites", {}).get("rss_sites"),
                     search_sites=taskinfo.get("sites", {}).get("search_sites"),
@@ -788,7 +788,7 @@ class RssTaskService(metaclass=SingletonMeta):
                     filter_rule=taskinfo.get("filter"),
                     save_path=taskinfo.get("save_path"),
                     download_setting=taskinfo.get("download_setting"),
-                    in_from=SearchType.USERRSS,
+                    in_from=SearchType.USERRSS.value,
                 )
                 if not rss_media or code != 0:
                     log.warn(f"【RssTaskService】{media.get_name()} 添加订阅失败：{msg}")
@@ -1002,7 +1002,7 @@ class RssTaskService(metaclass=SingletonMeta):
                     enclosure = article.get("enclosure")
                     year = article.get("year")
                     meta_name = f"{title} {year}" if year else title
-                    if not self.is_article_processed(task_type, title, enclosure, year):
+                    if not self.is_article_processed(task_type, title or "", enclosure, year):
                         if task_type == "D":
                             self.rsshelper.simple_insert_rss_torrents(meta_name, enclosure)
                         elif task_type == "R":
@@ -1056,7 +1056,7 @@ class RssTaskService(metaclass=SingletonMeta):
                 # 插入数据库
                 self.rsshelper.insert_rss_torrents(media)
                 # 登记自定义RSS任务下载记录
-                self.config_repo.insert_userrss_task_history(taskid, media.org_string, downloader_name)
+                self.config_repo.insert_userrss_task_history(taskid or 0, media.org_string or "", downloader_name or "")
             else:
                 log.error(
                     "【RssTaskService】添加下载任务 {} 失败：{}".format(
@@ -1070,7 +1070,7 @@ class RssTaskService(metaclass=SingletonMeta):
         taskinfos = self.config_repo.get_userrss_tasks()
         mediainfos_all = []
         for taskinfo in taskinfos:
-            mediainfos = json.loads(taskinfo.MEDIAINFOS) if taskinfo.MEDIAINFOS else []
+            mediainfos = json.loads(str(taskinfo.MEDIAINFOS)) if taskinfo.MEDIAINFOS else []
             if mediainfos:
                 mediainfos_all += mediainfos
         return mediainfos_all
@@ -1153,4 +1153,4 @@ class RssTaskService(metaclass=SingletonMeta):
         获取自定义RSS任务下载记录
         :param task_id: 任务ID
         """
-        return self.config_repo.get_userrss_task_history(task_id)
+        return self.config_repo.get_userrss_task_history(task_id or 0)

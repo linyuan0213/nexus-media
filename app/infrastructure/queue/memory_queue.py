@@ -54,7 +54,7 @@ class MemoryMessageQueue(MessageQueue):
             log.info(f"【MemoryMessageQueue】任务已提交: {name}, 队列长度: {self._queue.qsize()}")
             return True
         except queue.Full:
-            log.warning(f"【MemoryMessageQueue】队列已满，丢弃任务: {name}")
+            log.warn(f"【MemoryMessageQueue】队列已满，丢弃任务: {name}")
             return False
 
     def is_available(self) -> bool:

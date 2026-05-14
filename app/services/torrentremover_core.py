@@ -119,7 +119,7 @@ class TorrentRemoverService:
                 "onlynastool": task.ONLYNASTOOL,
                 "samedata": task.SAMEDATA,
                 "action": task.ACTION,
-                "config": json.loads(config) if config else {},
+                "config": json.loads(str(config)) if config else {},
                 "interval": task.INTERVAL,
                 "enabled": task.ENABLED,
             }
@@ -140,7 +140,7 @@ class TorrentRemoverService:
                         "args": (task.get("id"),),
                         "job_id": job_id,
                         "trigger": "interval",
-                        "seconds": int(task.get("interval")) * 60,
+                        "seconds": int(task.get("interval") or 0) * 60,
                         "jobstore": self._jobstore,
                     }
                 )
@@ -187,19 +187,19 @@ class TorrentRemoverService:
         if not name:
             return False, "名称参数不合法"
         action = data.get("action")
-        if not str(action).isdigit() or int(action) not in [1, 2, 3]:
+        if not str(action).isdigit() or int(action or 0) not in [1, 2, 3]:
             return False, "动作参数不合法"
         interval = data.get("interval")
         if not str(interval).isdigit():
             return False, "运行间隔参数不合法"
         enabled = data.get("enabled")
-        if not str(enabled).isdigit() or int(enabled) not in [0, 1]:
+        if not str(enabled).isdigit() or int(enabled or 0) not in [0, 1]:
             return False, "状态参数不合法"
         samedata = data.get("samedata")
-        if not str(samedata).isdigit() or int(samedata) not in [0, 1]:
+        if not str(samedata).isdigit() or int(samedata or 0) not in [0, 1]:
             return False, "处理辅种参数不合法"
         onlynastool = data.get("onlynastool")
-        if not str(onlynastool).isdigit() or int(onlynastool) not in [0, 1]:
+        if not str(onlynastool).isdigit() or int(onlynastool or 0) not in [0, 1]:
             return False, "仅处理NASTOOL添加种子参数不合法"
         ratio = data.get("ratio") or 0
         if not str(ratio).replace(".", "").isdigit():
@@ -223,11 +223,11 @@ class TorrentRemoverService:
 
         tid = data.get("tid")
         name = data.get("name")
-        action = int(data.get("action"))
-        interval = int(data.get("interval"))
-        enabled = int(data.get("enabled"))
-        samedata = int(data.get("samedata"))
-        onlynastool = int(data.get("onlynastool"))
+        action = int(data.get("action") or 0)
+        interval = int(data.get("interval") or 0)
+        enabled = int(data.get("enabled") or 0)
+        samedata = int(data.get("samedata") or 0)
+        onlynastool = int(data.get("onlynastool") or 0)
         ratio = round(float(data.get("ratio") or 0), 2)
         seeding_time = int(data.get("seeding_time") or 0)
         upload_avs = int(data.get("upload_avs") or 0)

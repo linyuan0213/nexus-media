@@ -75,7 +75,8 @@ class Transmission(_IDownloadClient):
     def init_config(self) -> None:
         if self._client_config:
             self.host = self._client_config.get("host")
-            self.port = int(self._client_config.get("port")) if str(self._client_config.get("port")).isdigit() else 0
+            _port = self._client_config.get("port")
+            self.port = int(_port) if _port is not None and str(_port).isdigit() else 0
             self.username = self._client_config.get("username")
             self.password = self._client_config.get("password")
             self.download_dir = self._client_config.get("download_dir") or []
@@ -100,7 +101,7 @@ class Transmission(_IDownloadClient):
         try:
             # 登录
             trt = transmission_rpc.Client(
-                host=self.host, port=self.port, username=self.username, password=self.password, timeout=60
+                host=self.host or "", port=self.port or 0, username=self.username, password=self.password, timeout=60
             )
             return trt
         except Exception as err:
@@ -129,7 +130,7 @@ class Transmission(_IDownloadClient):
         """
         if not self.trc:
             return [], True
-        ids = self.__parse_ids(ids)
+        ids: Any = self.__parse_ids(ids)
         try:
             torrents = self.trc.get_torrents(ids=ids, arguments=self._trarg)
             torrent_list: list[Torrent] = []
@@ -211,7 +212,7 @@ class Transmission(_IDownloadClient):
         """
         if not self.trc:
             return
-        ids = self.__parse_ids(ids)
+        ids: Any = self.__parse_ids(ids)
         # 合成标签
         if tags:
             if not isinstance(tags, list):
@@ -233,7 +234,7 @@ class Transmission(_IDownloadClient):
         """
         if not self.trc:
             return
-        ids = self.__parse_ids(ids)
+        ids: Any = self.__parse_ids(ids)
         # 打标签
         try:
             self.trc.change_torrent(labels=tags, ids=ids)
@@ -249,7 +250,7 @@ class Transmission(_IDownloadClient):
             return
         if not self.trc:
             return
-        ids = self.__parse_ids(tid)
+        ids: Any = self.__parse_ids(tid)
         try:
             self.trc.change_torrent(labels=tag, ids=ids)
         except Exception as err:
@@ -277,7 +278,7 @@ class Transmission(_IDownloadClient):
         if not tid:
             return
         else:
-            ids = self.__parse_ids(tid)
+            ids: Any = self.__parse_ids(tid)
         if tag:
             if isinstance(tag, list):
                 labels = tag
@@ -463,7 +464,7 @@ class Transmission(_IDownloadClient):
     def start_torrents(self, ids: list[str] | str | int) -> Any:
         if not self.trc:
             return False
-        ids = self.__parse_ids(ids)
+        ids: Any = self.__parse_ids(ids)
         try:
             return self.trc.start_torrent(ids=ids)
         except Exception as err:
@@ -473,7 +474,7 @@ class Transmission(_IDownloadClient):
     def stop_torrents(self, ids: list[str] | str | int) -> Any:
         if not self.trc:
             return False
-        ids = self.__parse_ids(ids)
+        ids: Any = self.__parse_ids(ids)
         try:
             return self.trc.stop_torrent(ids=ids)
         except Exception as err:
@@ -485,7 +486,7 @@ class Transmission(_IDownloadClient):
             return False
         if not ids:
             return False
-        ids = self.__parse_ids(ids)
+        ids: Any = self.__parse_ids(ids)
         try:
             return self.trc.remove_torrent(delete_data=delete_file, ids=ids)
         except Exception as err:
@@ -552,7 +553,7 @@ class Transmission(_IDownloadClient):
             return
         if not ids or not limit:
             return
-        ids = self.__parse_ids(ids)
+        ids: Any = self.__parse_ids(ids)
         self.trc.change_torrent(ids, uploadLimit=int(limit))
 
     def set_downloadspeed_limit(self, ids: list[str] | str | int, limit: int) -> None:
@@ -563,7 +564,7 @@ class Transmission(_IDownloadClient):
             return
         if not ids or not limit:
             return
-        ids = self.__parse_ids(ids)
+        ids: Any = self.__parse_ids(ids)
         self.trc.change_torrent(ids, downloadLimit=int(limit))
 
     def get_downloading_progress(self, tag: str | None = None, ids: list[str] | str | int | None = None) -> Any:
@@ -623,7 +624,7 @@ class Transmission(_IDownloadClient):
     def recheck_torrents(self, ids: list[str] | str | int) -> Any:
         if not self.trc:
             return False
-        ids = self.__parse_ids(ids)
+        ids: Any = self.__parse_ids(ids)
         try:
             return self.trc.verify_torrent(ids=ids)
         except Exception as err:

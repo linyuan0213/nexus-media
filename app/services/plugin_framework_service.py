@@ -48,7 +48,7 @@ class PluginFrameworkService:
 
         parent_menu = self._get_plugin_parent_menu()
         if not parent_menu:
-            log.warning("[PluginFrameworkService] Plugin 父菜单不存在，跳过菜单同步")
+            log.warn("[PluginFrameworkService] Plugin 父菜单不存在，跳过菜单同步")
             return
 
         new_menu_ids = []
@@ -149,45 +149,43 @@ class PluginFrameworkService:
         for orm_model in orm_list:
             try:
                 manifest = PluginManifest.from_dict(json.loads(orm_model.MANIFEST_JSON or "{}"))
-                plugins.append(
-                    {
-                        "id": manifest.id,
-                        "name": manifest.name,
-                        "version": manifest.version,
-                        "author": manifest.author,
-                        "description": manifest.description,
-                        "category": manifest.category,
-                        "tags": manifest.tags,
-                        "icon": manifest.icon,
-                        "color": manifest.color,
-                        "enabled": bool(orm_model.ENABLED),
-                        "is_builtin": bool(orm_model.PATH and "builtin_plugins" in orm_model.PATH),
-                        "installed": bool(getattr(orm_model, "INSTALLED", True)),
+                plugins.append({
+                    "id": manifest.id,
+                    "name": manifest.name,
+                    "version": manifest.version,
+                    "author": manifest.author,
+                    "description": manifest.description,
+                    "category": manifest.category,
+                    "tags": manifest.tags,
+                    "icon": manifest.icon,
+                    "color": manifest.color,
+                    "enabled": bool(orm_model.ENABLED),
+                    "is_builtin": bool(orm_model.PATH and "builtin_plugins" in orm_model.PATH),
+                    "installed": bool(getattr(orm_model, "INSTALLED", True)),
+                    "supports_run": manifest.backend.supports_run,
+                    "backend": {
+                        "entry": manifest.backend.entry,
+                        "api_prefix": manifest.backend.api_prefix,
+                        "hooks": manifest.backend.hooks,
                         "supports_run": manifest.backend.supports_run,
-                        "backend": {
-                            "entry": manifest.backend.entry,
-                            "api_prefix": manifest.backend.api_prefix,
-                            "hooks": manifest.backend.hooks,
-                            "supports_run": manifest.backend.supports_run,
-                        },
-                        "frontend": {
-                            "routes": [
-                                {
-                                    "path": r.path,
-                                    "component": r.component,
-                                    "title": r.title,
-                                    "icon": r.icon,
-                                    "menu": r.menu,
-                                }
-                                for r in manifest.frontend.routes
-                            ],
-                            "slots": [
-                                {"target": s.target, "position": s.position, "component": s.component}
-                                for s in manifest.frontend.slots
-                            ],
-                        },
-                    }
-                )
+                    },
+                    "frontend": {
+                        "routes": [
+                            {
+                                "path": r.path,
+                                "component": r.component,
+                                "title": r.title,
+                                "icon": r.icon,
+                                "menu": r.menu,
+                            }
+                            for r in manifest.frontend.routes
+                        ],
+                        "slots": [
+                            {"target": s.target, "position": s.position, "component": s.component}
+                            for s in manifest.frontend.slots
+                        ],
+                    },
+                })
             except Exception as e:
                 log.error(f"[PluginFrameworkService] 解析插件清单失败: {e}")
         return plugins
@@ -215,20 +213,18 @@ class PluginFrameworkService:
         fields = []
         if manifest and manifest.frontend and manifest.frontend.settings:
             for f in manifest.frontend.settings.fields:
-                fields.append(
-                    {
-                        "key": f.key,
-                        "type": f.type,
-                        "label": f.label,
-                        "default": f.default,
-                        "placeholder": f.placeholder,
-                        "options": f.options,
-                        "source": f.source,
-                        "multiple": f.multiple,
-                        "required": f.required,
-                        "help": f.help,
-                    }
-                )
+                fields.append({
+                    "key": f.key,
+                    "type": f.type,
+                    "label": f.label,
+                    "default": f.default,
+                    "placeholder": f.placeholder,
+                    "options": f.options,
+                    "source": f.source,
+                    "multiple": f.multiple,
+                    "required": f.required,
+                    "help": f.help,
+                })
         return fields
 
     def save_config(self, plugin_id: str, config: dict) -> None:
@@ -455,14 +451,12 @@ class PluginFrameworkService:
 
         items = []
         for r in records:
-            items.append(
-                {
-                    "id": r.ID,
-                    "level": r.LEVEL,
-                    "message": r.MESSAGE,
-                    "created_at": r.CREATED_AT,
-                }
-            )
+            items.append({
+                "id": r.ID,
+                "level": r.LEVEL,
+                "message": r.MESSAGE,
+                "created_at": r.CREATED_AT,
+            })
 
         return {"total": total, "items": items}
 
