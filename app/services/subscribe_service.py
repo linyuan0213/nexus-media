@@ -7,7 +7,7 @@ SubscribeService - 订阅业务 Facade
 """
 
 import json
-from typing import Any
+from typing import Any, cast
 
 import log
 from app.core.system_config import SystemConfig
@@ -144,10 +144,10 @@ class SubscribeService:
         if isinstance(search_sites, str):
             search_sites = search_sites.split(",")
         over_edition = 1 if over_edition else 0
-        filter_rule = int(filter_rule) if str(filter_rule).isdigit() else None
-        total_ep = int(total_ep) if str(total_ep).isdigit() else None
-        current_ep = int(current_ep) if str(current_ep).isdigit() else None
-        download_setting = int(download_setting) if str(download_setting).replace("-", "").isdigit() else None
+        filter_rule = int(str(filter_rule)) if str(filter_rule).isdigit() else None
+        total_ep = int(str(total_ep)) if str(total_ep).isdigit() else None
+        current_ep = int(str(current_ep)) if str(current_ep).isdigit() else None
+        download_setting = int(str(download_setting)) if str(download_setting).replace("-", "").isdigit() else None
         fuzzy_match = bool(fuzzy_match)
 
         media_info = None
@@ -185,7 +185,7 @@ class SubscribeService:
                     total_episode = total_seasoninfo[0].get("episode_count")
                 if not total_episode:
                     return 3, f"第{season}季获取剧集数失败，请确认该季是否存在", media_info
-                media_info.begin_season = int(season)
+                media_info.begin_season = int(season or 0)
                 media_info.total_episodes = total_episode
                 if total_ep:
                     total = total_ep
@@ -249,7 +249,7 @@ class SubscribeService:
                     fuzzy_match=0,
                 )
         else:
-            media_info = meta_info(title=name, mtype=mtype)
+            media_info = meta_info(title=name or "", mtype=mtype)
             media_info.title = name
             media_info.type = mtype
             if season:
@@ -325,7 +325,7 @@ class SubscribeService:
             if in_from:
                 if media_info:
                     media_info.user_name = user_name
-                    self._message.send_rss_success_message(in_from=in_from, media_info=media_info)
+                    self._message.send_rss_success_message(in_from=cast(RssType, in_from), media_info=media_info)
             return code, "更新订阅成功", media_info
         else:
             return code, "更新订阅失败", media_info
@@ -397,10 +397,10 @@ class SubscribeService:
         if isinstance(search_sites, str):
             search_sites = search_sites.split(",")
         over_edition = 1 if over_edition else 0
-        filter_rule = int(filter_rule) if str(filter_rule).isdigit() else None
-        total_ep = int(total_ep) if str(total_ep).isdigit() else None
-        current_ep = int(current_ep) if str(current_ep).isdigit() else None
-        download_setting = int(download_setting) if str(download_setting).replace("-", "").isdigit() else None
+        filter_rule = int(str(filter_rule)) if str(filter_rule).isdigit() else None
+        total_ep = int(str(total_ep)) if str(total_ep).isdigit() else None
+        current_ep = int(str(current_ep)) if str(current_ep).isdigit() else None
+        download_setting = int(str(download_setting)) if str(download_setting).replace("-", "").isdigit() else None
         fuzzy_match = bool(fuzzy_match)
         # 仅在新增订阅（无 rssid）时应用默认设置，避免编辑时被默认值覆盖
         if channel == RssType.Auto and not rssid:
@@ -488,7 +488,7 @@ class SubscribeService:
                     total_episode = total_seasoninfo[0].get("episode_count")
                 if not total_episode:
                     return 3, f"第{season}季获取剧集数失败，请确认该季是否存在", media_info
-                media_info.begin_season = int(season)
+                media_info.begin_season = int(season or 0)
                 media_info.total_episodes = total_episode
                 if total_ep:
                     total = total_ep
@@ -613,7 +613,7 @@ class SubscribeService:
             # 发送订阅成功消息
             if in_from:
                 media_info.user_name = user_name
-                self._message.send_rss_success_message(in_from=in_from, media_info=media_info)
+                self._message.send_rss_success_message(in_from=cast(RssType, in_from), media_info=media_info)
             return code, "添加订阅成功", media_info
         elif code == 9:
             return code, "订阅已存在", media_info
@@ -637,7 +637,7 @@ class SubscribeService:
                 return
             # 登记订阅历史
             self._history_repo.insert(
-                rssid=rssid,
+                rssid=str(rssid or ""),
                 rtype=rtype,
                 name=rss[0].NAME,
                 year=rss[0].YEAR,
@@ -658,7 +658,7 @@ class SubscribeService:
             total = rss[0].TOTAL_EP
             # 登记订阅历史
             self._history_repo.insert(
-                rssid=rssid,
+                rssid=str(rssid or ""),
                 rtype=rtype,
                 name=rss[0].NAME,
                 year=rss[0].YEAR,
@@ -882,11 +882,11 @@ class SubscribeService:
                 # 更新订阅信息
                 self._movie_repo.update_tmdb(
                     rid=rssid,
-                    tmdbid=media_info.tmdb_id,
-                    title=media_info.title,
-                    year=media_info.year,
+                    tmdbid=str(media_info.tmdb_id or ""),
+                    title=media_info.title or "",
+                    year=media_info.year or "",
                     image=media_info.get_message_image(),
-                    desc=media_info.overview,
+                    desc=media_info.overview or "",
                     note=self.gen_rss_note(media_info),
                 )
 
@@ -930,18 +930,18 @@ class SubscribeService:
                     # 更新订阅信息
                     self._tv_repo.update_tmdb(
                         rid=rssid,
-                        tmdbid=media_info.tmdb_id,
-                        title=media_info.title,
-                        year=media_info.year,
+                        tmdbid=str(media_info.tmdb_id or ""),
+                        title=media_info.title or "",
+                        year=media_info.year or "",
                         total=total_episode,
                         lack=lack_episode,
                         image=media_info.get_message_image(),
-                        desc=media_info.overview,
+                        desc=media_info.overview or "",
                         note=self.gen_rss_note(media_info),
                     )
                     # 更新缺失季集
                     self._tv_episode_repo.update(
-                        rid=rssid, episodes=range(total_episode - lack_episode + 1, total_episode + 1)
+                        rid=rssid, episodes=list(range(total_episode - lack_episode + 1, total_episode + 1))
                     )
         log.info("【Subscribe】订阅TMDB信息刷新完成")
 
@@ -1026,7 +1026,7 @@ class SubscribeService:
         pre_res_order = self._movie_repo.get_filter_order(rtype=rtype, rssid=rssid)
         if not pre_res_order:
             return True
-        return int(pre_res_order) < int(res_order)
+        return int(pre_res_order) < int(res_order or 0)
 
     def update_subscribe_tv_lack(self, rssid: int | None, media_info: Any, seasoninfo: list | None) -> None:
         """
@@ -1048,13 +1048,13 @@ class SubscribeService:
         """
         查询数据库中订阅的电视剧缺失集数
         """
-        return self._tv_episode_repo.get(rssid)
+        return self._tv_episode_repo.get(int(rssid or 0))
 
     def check_history(self, type_str: str, name: str, year: str | None, season: str | None) -> bool:
         """
         检查订阅历史是否存在
         """
-        return self._history_repo.check_exists(type_str=type_str, name=name, year=year, season=season)
+        return self._history_repo.check_exists(type_str=type_str, name=name, year=year or "", season=season or "")
 
     def delete_subscribe(
         self, mtype: MediaType, title: str | None = None, year: str | None = None, season: str | None = None, rssid: int | None = None, tmdbid: str | None = None
