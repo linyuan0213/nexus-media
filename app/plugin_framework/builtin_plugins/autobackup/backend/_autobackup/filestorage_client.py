@@ -9,7 +9,7 @@ from webdav4.client import Client, ResourceAlreadyExists, ResourceNotFound
 
 class FileStorageClient(ABC):
     @abstractmethod
-    def list_files(self, path):
+    def list_files(self, path) -> list:
         pass
 
     @abstractmethod

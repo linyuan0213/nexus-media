@@ -126,7 +126,7 @@ class DownloaderCore:
         转移下载完成的文件，进行文件识别重命名到媒体库目录
         """
         downloader_ids = [downloader_id] if downloader_id else self._client_factory.monitor_downloader_ids
-        downloader_enum = self._client_factory.downloader_enum
+        downloader_enum = self._client_factory.downloader_enum or {}
         for did in downloader_ids:
             with lock:
                 downloader_conf = self._client_factory.get_downloader_conf(did)
@@ -146,7 +146,7 @@ class DownloaderCore:
                 continue
             for task in trans_tasks:
                 done_flag, done_msg = self._filetransfer.transfer_media(
-                    in_from=downloader_enum[str(did)], in_path=task.get("path"), rmt_mode=rmt_mode
+                    in_from=downloader_enum.get(str(did)), in_path=task.get("path"), rmt_mode=rmt_mode
                 )
                 if not done_flag:
                     log.warn(f"【Downloader】下载器 {name} 任务%s 转移失败：%s" % (task.get("path"), done_msg))
@@ -228,7 +228,7 @@ class DownloaderCore:
         return self._client_factory.get_downloader_conf_simple()
 
     def get_downloader(self, downloader_id=None):
-        return self._client_factory.get_client(downloader_id=downloader_id)
+        return self._client_factory.get_client(did=downloader_id)
 
     def get_downloader_type(self, downloader_id=None):
         return self._client_factory.get_client_type(downloader_id=downloader_id)

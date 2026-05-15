@@ -4,6 +4,7 @@
 
 import re
 
+import anitopy  # type: ignore
 import zhconv
 
 from app.media.parser.anime.constants import _ANIME_NO_WORDS, _NAME_NOSTRING_RE
@@ -16,8 +17,6 @@ def extract_name(info, anitopy_info, title):
     if name and name.find("/") != -1:
         name = name.split("/")[-1].strip()
     if not name or name in _ANIME_NO_WORDS or (len(name) < 5 and not StringUtils.is_chinese(name)):
-        import anitopy
-
         anitopy_info = anitopy.parse("[ANIME]" + title)
         if anitopy_info:
             name = anitopy_info.get("anime_title")
@@ -36,8 +35,7 @@ def parse_name(info, name):
     for word in name.split():
         if not word:
             continue
-        if word.endswith("]"):
-            word = word[:-1]
+        word = word.removesuffix("]")
         if word.isdigit():
             if lastword_type == "cn":
                 info.cn_name = "{} {}".format(info.cn_name or "", word)

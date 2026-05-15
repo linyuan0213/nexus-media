@@ -139,7 +139,7 @@ class SpeedLimiterPlugin:
 
     def _check_playing_sessions(self, time_check=True, message=""):
         mediaserver_type = self._mediaserver.get_type()
-        playing_sessions = self._mediaserver.get_playing_sessions()
+        playing_sessions = self._mediaserver.get_playing_sessions() or []
         total_bit_rate = 0
 
         if mediaserver_type == MediaServerType.EMBY:

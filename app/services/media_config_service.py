@@ -30,17 +30,17 @@ class MediaConfigService:
     def get_config(self) -> dict:
         db_cfg = self._repo.get_media_config()
         return {
-            "movie_path": self._parse_paths(db_cfg.MOVIE_PATH)
-            if db_cfg and db_cfg.MOVIE_PATH
+            "movie_path": self._parse_paths(db_cfg.MOVIE_PATH or "")
+            if db_cfg and db_cfg.MOVIE_PATH is not None
             else (self._yaml_fallback.get("movie_path") or []),
-            "tv_path": self._parse_paths(db_cfg.TV_PATH)
-            if db_cfg and db_cfg.TV_PATH
+            "tv_path": self._parse_paths(db_cfg.TV_PATH or "")
+            if db_cfg and db_cfg.TV_PATH is not None
             else (self._yaml_fallback.get("tv_path") or []),
-            "anime_path": self._parse_paths(db_cfg.ANIME_PATH)
-            if db_cfg and db_cfg.ANIME_PATH
+            "anime_path": self._parse_paths(db_cfg.ANIME_PATH or "")
+            if db_cfg and db_cfg.ANIME_PATH is not None
             else (self._yaml_fallback.get("anime_path") or []),
-            "unknown_path": self._parse_paths(db_cfg.UNKNOWN_PATH)
-            if db_cfg and db_cfg.UNKNOWN_PATH
+            "unknown_path": self._parse_paths(db_cfg.UNKNOWN_PATH or "")
+            if db_cfg and db_cfg.UNKNOWN_PATH is not None
             else (self._yaml_fallback.get("unknown_path") or []),
         }
 
