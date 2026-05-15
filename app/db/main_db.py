@@ -84,6 +84,10 @@ class SessionManager:
         self._engine = _Engine
         self._scoped = _ScopedSession
 
+    def _session(self):
+        assert self._scoped is not None
+        return self._scoped()
+
     @property
     def engine(self):
         return self._engine
@@ -91,7 +95,7 @@ class SessionManager:
     @property
     def session(self):
         """获取当前线程的 session（scoped_session）"""
-        return self._scoped()
+        return self._session()
 
     @contextmanager
     def session_scope(self):
@@ -104,7 +108,7 @@ class SessionManager:
                 # 自动 commit
             # 异常时自动 rollback，最终自动 close + remove
         """
-        sess = self._scoped()
+        sess = self._session()
         try:
             yield sess
             sess.commit()
@@ -127,42 +131,42 @@ class SessionManager:
 
     def query(self, *entities):
         """创建查询（返回 Query 对象，不自动 commit）"""
-        return self._scoped().query(*entities)
+        return self._session().query(*entities)
 
     def insert(self, data):
         """插入对象（单条或列表，不自动 commit）"""
         if isinstance(data, list):
-            self._scoped().add_all(data)
+            self._session().add_all(data)
         else:
-            self._scoped().add(data)
+            self._session().add(data)
 
     def delete(self, obj):
         """删除对象（不自动 commit）"""
-        self._scoped().delete(obj)
+        self._session().delete(obj)
 
     def commit(self):
         """提交当前线程事务"""
-        self._scoped().commit()
+        self._session().commit()
 
     def rollback(self):
         """回滚当前线程事务"""
-        self._scoped().rollback()
+        self._session().rollback()
 
     def flush(self):
         """刷写当前线程 session"""
-        self._scoped().flush()
+        self._session().flush()
 
     def execute(self, sql):
         """执行 SQL（保持旧拼写兼容，内部使用 SQL 适配器）"""
         adapted = get_sql_adapter().adapt_sql(sql)
         if adapted and adapted.strip():
-            self._scoped().execute(text(adapted))
+            self._session().execute(text(adapted))
 
     def bulk_insert(self, objects, batch_size=1000):
         """批量插入 ORM 对象"""
         if not objects:
             return
-        sess = self._scoped()
+        sess = self._session()
         for i in range(0, len(objects), batch_size):
             batch = objects[i : i + batch_size]
             sess.bulk_save_objects(batch)
@@ -173,7 +177,7 @@ class SessionManager:
         """批量插入字典映射（比 ORM 对象插入更快）"""
         if not mappings:
             return
-        sess = self._scoped()
+        sess = self._session()
         for i in range(0, len(mappings), batch_size):
             batch = mappings[i : i + batch_size]
             sess.bulk_insert_mappings(model, batch)
@@ -336,4 +340,5 @@ def get_session_manager():
 def get_db_session():
     """获取当前线程的数据库 session"""
     _init_engine()
+    assert _ScopedSession is not None
     return _ScopedSession()

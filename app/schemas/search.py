@@ -7,7 +7,7 @@ class SearchOneMediaResultDTO:
     """单媒体搜索结果"""
 
     media_info: Any = None
-    no_exists: dict = None
+    no_exists: dict | list | None = None
     total_count: int = 0
     download_count: int = 0
 

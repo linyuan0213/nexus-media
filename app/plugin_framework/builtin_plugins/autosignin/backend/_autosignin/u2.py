@@ -1,6 +1,7 @@
 import datetime
 import random
 import re
+from typing import Any, cast
 
 from lxml import etree
 
@@ -29,16 +30,15 @@ class U2(_ISiteSigninHandler):
     # 签到成功
     _success_text = "window.location.href = 'showup.php';</script>"
 
-    @classmethod
-    def match(cls, url):
+    def match(self, url):
         """
         根据站点Url判断是否匹配当前站点签到类，大部分情况使用默认实现即可
         :param url: 站点Url
         :return: 是否匹配，如匹配则会调用该类的signin方法
         """
-        return bool(StringUtils.url_equal(url, cls.site_url))
+        return bool(StringUtils.url_equal(url, self.site_url))
 
-    def signin(self, site_info: dict):
+    def signin(self, site_info: dict):  # type: ignore[override]
         """
         执行签到操作
         :param site_info: 站点信息，含有站点Url、站点Cookie、UA等信息
@@ -81,11 +81,11 @@ class U2(_ISiteSigninHandler):
             return False, f"【{site}】签到失败"
 
         # 获取签到参数
-        req = html.xpath("//form//td/input[@name='req']/@value")[0]
-        hash_str = html.xpath("//form//td/input[@name='hash']/@value")[0]
-        form = html.xpath("//form//td/input[@name='form']/@value")[0]
-        submit_name = html.xpath("//form//td/input[@type='submit']/@name")
-        submit_value = html.xpath("//form//td/input[@type='submit']/@value")
+        req = str(cast(Any, html.xpath("//form//td/input[@name='req']/@value"))[0])
+        hash_str = str(cast(Any, html.xpath("//form//td/input[@name='hash']/@value"))[0])
+        form = str(cast(Any, html.xpath("//form//td/input[@name='form']/@value"))[0])
+        submit_name = cast(Any, html.xpath("//form//td/input[@type='submit']/@name"))
+        submit_value = cast(Any, html.xpath("//form//td/input[@type='submit']/@value"))
         if not re or not hash_str or not form or not submit_name or not submit_value:
             self.error("签到失败，未获取到相关签到参数")
             return False, f"【{site}】签到失败"

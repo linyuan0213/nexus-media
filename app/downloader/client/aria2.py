@@ -57,7 +57,9 @@ class Aria2(_IDownloadClient):
         ver = self._client.getVersion()
         return bool(ver)
 
-    def get_torrents(self, ids: list[str] | str | None = None, status: str | None = None, tag: str | None = None) -> Any:
+    def get_torrents(
+        self, ids: list[str] | str | None = None, status: str | None = None, tag: str | None = None
+    ) -> list[Torrent]:
         if not self._client:
             return []
         ret_torrents = []
@@ -70,17 +72,22 @@ class Aria2(_IDownloadClient):
                 ret_torrents = [self._client.tellStatus(gid=ids)]
         elif status:
             if status == "downloading":
-                ret_torrents = self._client.tellActive() or [] + self._client.tellWaiting(offset=-1, num=100) or []
+                active = self._client.tellActive()
+                waiting = self._client.tellWaiting(offset=-1, num=100)
+                ret_torrents = (active if isinstance(active, list) else []) + (
+                    waiting if isinstance(waiting, list) else []
+                )
             else:
                 ret_torrents = self._client.tellStopped(offset=-1, num=1000)
-        for torrent in ret_torrents:
-            torrent_list.append(self.torrent_properties(torrent=torrent))
+        for torrent in ret_torrents if isinstance(ret_torrents, list) else []:
+            if isinstance(torrent, dict):
+                torrent_list.append(self.torrent_properties(torrent=torrent))
         return torrent_list
 
-    def get_downloading_torrents(self, ids: Any = None, tag: Any = None, **kwargs: Any) -> Any:
+    def get_downloading_torrents(self, ids: Any = None, tag: Any = None, **kwargs: Any) -> list[Torrent]:
         return self.get_torrents(status="downloading")
 
-    def get_completed_torrents(self, ids: Any = None, tag: Any = None, **kwargs: Any) -> Any:
+    def get_completed_torrents(self, ids: Any = None, tag: Any = None, **kwargs: Any) -> list[Torrent]:
         return self.get_torrents(status="completed")
 
     def set_torrents_status(self, ids: list[str] | str | None = None, tags: str | list[str] | None = None) -> Any:
@@ -101,7 +108,9 @@ class Aria2(_IDownloadClient):
             true_path, replace_flag = self.get_replace_path(path, self.download_dir)
             # 开启目录隔离，未进行目录替换的不处理
             if match_path and not replace_flag:
-                log.debug(f"【{self.client_name}】{self.client_name} 开启目录隔离，但 {torrent.name} 未匹配下载目录范围")
+                log.debug(
+                    f"【{self.client_name}】{self.client_name} 开启目录隔离，但 {torrent.name} 未匹配下载目录范围"
+                )
                 continue
             trans_tasks.append({"path": os.path.join(true_path, name).replace("\\", "/"), "id": torrent.id})
         return trans_tasks
@@ -118,7 +127,7 @@ class Aria2(_IDownloadClient):
                 try:
                     p = RequestUtils().get_res(url=content, allow_redirects=False)
                     if p and p.headers.get("Location"):
-                        content = p.headers.get("Location")
+                        content = p.headers.get("Location") or ""
                 except Exception as result:
                     ExceptionUtils.exception_traceback(result)
             return self._client.addUri(uris=[content], options={"dir": download_dir})
@@ -167,9 +176,13 @@ class Aria2(_IDownloadClient):
                 _upspeed = StringUtils.str_filesize(torrent.upload_speed)
                 speed = f"{chr(8595)}{_dlspeed}B/s {chr(8593)}{_upspeed}B/s"
 
-            disp_torrents.append(
-                {"id": torrent.id, "name": torrent.name, "speed": speed, "state": state, "progress": progress}
-            )
+            disp_torrents.append({
+                "id": torrent.id,
+                "name": torrent.name,
+                "speed": speed,
+                "state": state,
+                "progress": progress,
+            })
 
         return disp_torrents
 
@@ -181,14 +194,16 @@ class Aria2(_IDownloadClient):
         """
         if not self._client:
             return
-        download_limit = download_limit * 1024
-        upload_limit = upload_limit * 1024
+        dl_limit = int(download_limit or 0) * 1024
+        ul_limit = int(upload_limit or 0) * 1024
         try:
-            speed_opt: dict = self._client.getGlobalOption()
-            if speed_opt["max-overall-upload-limit"] != upload_limit:
-                speed_opt["max-overall-upload-limit"] = upload_limit
-            if speed_opt["max-overall-download-limit"] != download_limit:
-                speed_opt["max-overall-download-limit"] = download_limit
+            speed_opt = self._client.getGlobalOption()
+            if not isinstance(speed_opt, dict):
+                return False
+            if speed_opt["max-overall-upload-limit"] != ul_limit:
+                speed_opt["max-overall-upload-limit"] = ul_limit
+            if speed_opt["max-overall-download-limit"] != dl_limit:
+                speed_opt["max-overall-download-limit"] = dl_limit
             return self._client.changeGlobalOption(speed_opt)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)

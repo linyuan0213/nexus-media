@@ -1,5 +1,6 @@
 import json
 import threading
+from typing import cast
 
 import log
 from app.core.system_config import SystemConfig
@@ -47,7 +48,7 @@ class MediaServer(metaclass=SingletonMeta):
         # 当前使用的媒体库服务器
         default_server = self.config_repo.get_default_media_server()
         if default_server:
-            self._server_type = default_server.name
+            self._server_type = cast(str, default_server.NAME)
         else:
             # 兼容旧配置：从配置文件读取
             self._server_type = Config().get_config("media").get("media_server") or "emby"

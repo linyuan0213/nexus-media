@@ -63,8 +63,8 @@ class Sites:
             if site_uses:
                 rss_enable = bool("D" in site_uses and site_rssurl)
                 brush_enable = bool("S" in site_uses and site_rssurl and (site_cookie or site_headers))
-                statistic_enable = (
-                    bool("T" in site_uses and (site_rssurl or site_signurl) and (site_cookie or site_headers))
+                statistic_enable = bool(
+                    "T" in site_uses and (site_rssurl or site_signurl) and (site_cookie or site_headers)
                 )
                 uses.append("D") if rss_enable else None
                 uses.append("S") if brush_enable else None
@@ -215,7 +215,7 @@ class Sites:
         """
         if not self._site_by_ids:
             return 0
-        return max([int(site.get("pri")) for site in self._site_by_ids.values()])
+        return max(int(site.get("pri")) for site in self._site_by_ids.values())
 
     def get_site_dict(self, rss=False, brush=False, statistic=False, signin=False):
         """
@@ -237,7 +237,7 @@ class Sites:
     def get_site_favicon(self, site_name=None):
         if site_name:
             return self._resolve_favicon(site_name)
-        result = {str(k): str(v) if v else "" for k, v in self._site_favicons.items()}
+        result = {str(k): str(v) if str(v) else "" for k, v in self._site_favicons.items()}
         for site in self._site_by_ids.values():
             name = site.get("name")
             if name and name not in result:
@@ -250,7 +250,7 @@ class Sites:
         return result
 
     def _resolve_favicon(self, site_name):
-        data = self._site_favicons.get(site_name)
+        data = str(self._site_favicons.get(site_name))
         if data:
             return data
         for site in self._site_by_ids.values():
@@ -287,8 +287,11 @@ class Sites:
         :param site_id: 站点编号
         :return: 是否连通、错误信息、耗时
         """
-        site_info: dict = self.get_sites(siteid=site_id)
+        site_info = self.get_sites(siteid=site_id)
         if not site_info:
+            return False, "站点获取失败", 0
+
+        if not isinstance(site_info, dict):
             return False, "站点不存在", 0
 
         is_public = site_info.get("public", False)

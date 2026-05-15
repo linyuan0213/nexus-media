@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import jsonpath
 from lxml import etree
+from lxml.etree import _Element
 
 import log
 from app.db.repositories.config_repo_adapter import UserRssConfigRepositoryAdapter
@@ -361,8 +362,11 @@ class RssParserEngine:
         if parser_type == "XML":
             try:
                 result_tree = etree.XML(rss_text.encode("utf-8"))
-                item_list = result_tree.xpath(parser_format.get("list")) or []
+                item_list_raw = result_tree.xpath(parser_format.get("list"))
+                item_list = item_list_raw if isinstance(item_list_raw, list) else []
                 for item in item_list:
+                    if not isinstance(item, _Element):
+                        continue
                     rss_item = {}
                     for key, attr in parser_format.get("item", {}).items():
                         if attr.get("path"):
@@ -376,7 +380,7 @@ class RssParserEngine:
                             value = attr.get("value")
                         else:
                             continue
-                        if value:
+                        if value and isinstance(value, list):
                             rss_item.update({key: value[0]})
                     rss_item.update({"address_index": address_index})
                     rss_result.append(rss_item)
@@ -388,7 +392,7 @@ class RssParserEngine:
                 result_json = json.loads(rss_text)
             except Exception as err:
                 raise ValueError(f"JSON解析失败: {str(err)}") from err
-            item_list = jsonpath.jsonpath(result_json, parser_format.get("list"))
+            item_list = jsonpath.jsonpath(result_json, parser_format.get("list"))  # type: ignore[call-arg]
             if not item_list or not isinstance(item_list, list):
                 raise ValueError("jsonpath结果不是列表")
             item_list = item_list[0]
@@ -398,7 +402,7 @@ class RssParserEngine:
                 rss_item = {}
                 for key, attr in parser_format.get("item", {}).items():
                     if attr.get("path"):
-                        value = jsonpath.jsonpath(item, attr.get("path"))
+                        value = jsonpath.jsonpath(item, attr.get("path"))  # type: ignore[call-arg]
                     elif attr.get("value"):
                         value = attr.get("value")
                     else:
@@ -456,7 +460,7 @@ class RssTaskService(metaclass=SingletonMeta):
         # 移除现有任务
         self.stop_service()
         # 读取解析器列表
-        rss_parsers = self.config_repo.get_userrss_parser()
+        rss_parsers = self.config_repo.get_userrss_parser() or []
         self._rss_parsers = []
         for rss_parser in rss_parsers:
             self._rss_parsers.append({
@@ -471,15 +475,17 @@ class RssTaskService(metaclass=SingletonMeta):
         rsstasks = self.config_repo.get_userrss_tasks()
         self._rss_tasks = []
         for task in rsstasks:
-            if task.FILTER:
-                filterrule = self.filter.get_rule_groups(groupid=task.FILTER)
+            task_filter_id = int(str(task.FILTER or 0))
+            if task_filter_id:
+                filterrule = self.filter.get_rule_groups(groupid=task_filter_id)
             else:
                 filterrule = {}
             # 解析属性
             note = {}
-            if task.NOTE:
+            task_note = str(task.NOTE or "")
+            if task_note:
                 try:
-                    note = json.loads(str(task.NOTE))
+                    note = json.loads(task_note)
                 except Exception as e:
                     print(str(e))
                     note = {}
@@ -508,12 +514,12 @@ class RssTaskService(metaclass=SingletonMeta):
                 "proxy": proxy,
                 "parser": parsers,
                 "interval": task.INTERVAL,
-                "uses": task.USES if task.USES != "S" else "R",
+                "uses": task.USES if str(task.USES or "") != "S" else "R",
                 "uses_text": self._site_users.get(str(task.USES)),
                 "include": task.INCLUDE,
                 "exclude": task.EXCLUDE,
                 "filter": task.FILTER,
-                "filter_name": filterrule.get("name") if filterrule else "",
+                "filter_name": filterrule.get("name") if isinstance(filterrule, dict) else "",
                 "update_time": task.UPDATE_TIME,
                 "counter": task.PROCESS_COUNT,
                 "state": state,
@@ -521,9 +527,9 @@ class RssTaskService(metaclass=SingletonMeta):
                 "download_setting": task.DOWNLOAD_SETTING or "",
                 "recognization": task.RECOGNIZATION or recognization,
                 "over_edition": task.OVER_EDITION or 0,
-                "sites": json.loads(str(task.SITES)) if task.SITES else {"rss_sites": [], "search_sites": []},
-                "filter_args": json.loads(str(task.FILTER_ARGS))
-                if task.FILTER_ARGS
+                "sites": json.loads(str(task.SITES or "")) if str(task.SITES or "") else {"rss_sites": [], "search_sites": []},
+                "filter_args": json.loads(str(task.FILTER_ARGS or ""))
+                if str(task.FILTER_ARGS or "")
                 else {"restype": "", "pix": "", "team": ""},
             })
         if not self._rss_tasks:
@@ -1070,7 +1076,8 @@ class RssTaskService(metaclass=SingletonMeta):
         taskinfos = self.config_repo.get_userrss_tasks()
         mediainfos_all = []
         for taskinfo in taskinfos:
-            mediainfos = json.loads(str(taskinfo.MEDIAINFOS)) if taskinfo.MEDIAINFOS else []
+            mediainfos_raw = str(taskinfo.MEDIAINFOS or "")
+            mediainfos = json.loads(mediainfos_raw) if mediainfos_raw else []
             if mediainfos:
                 mediainfos_all += mediainfos
         return mediainfos_all

@@ -21,7 +21,11 @@ class TransferHistoryService:
             page = 1
         else:
             page = int(page)
-        total_count, historys = self._filetransfer.get_transfer_history(search_str, page, page_num)
+        result = self._filetransfer.get_transfer_history(search_str, page, page_num)
+        if result is None:
+            total_count, historys = 0, []
+        else:
+            total_count, historys = result
         historys_list = []
         for history in historys:
             history = history.as_dict()
@@ -40,7 +44,7 @@ class TransferHistoryService:
         movie_nums = []
         tv_nums = []
         anime_nums = []
-        for statistic in self._filetransfer.get_transfer_statistics(days):
+        for statistic in self._filetransfer.get_transfer_statistics(days) or []:
             if not statistic[2]:
                 continue
             if statistic[1] not in labels:
@@ -62,13 +66,14 @@ class TransferHistoryService:
     def get_unknown_list(self) -> list[dict]:
         """获取未识别记录列表"""
         items = []
-        records = self._filetransfer.get_transfer_unknown_paths()
+        records = self._filetransfer.get_transfer_unknown_paths() or []
         for rec in records:
-            if not rec.PATH:
+            rec_path = str(rec.PATH or "")
+            if not rec_path:
                 continue
-            path = rec.PATH.replace("\\", "/") if rec.PATH else ""
-            path_to = rec.DEST.replace("\\", "/") if rec.DEST else ""
-            sync_mode = rec.MODE or ""
+            path = rec_path.replace("\\", "/")
+            path_to = str(rec.DEST or "").replace("\\", "/")
+            sync_mode = str(rec.MODE or "")
             rmt_mode = ModuleConf.get_dictenum_key(ModuleConf.RMT_MODES, sync_mode) if sync_mode else ""
             items.append(
                 {
@@ -90,14 +95,19 @@ class TransferHistoryService:
             page = 1
         else:
             page = int(page)
-        total_count, records = self._filetransfer.get_transfer_unknown_paths_by_page(search_str, page, page_num)
+        result2 = self._filetransfer.get_transfer_unknown_paths_by_page(search_str, page, page_num)
+        if result2 is None:
+            total_count, records = 0, []
+        else:
+            total_count, records = result2
         items = []
         for rec in records:
-            if not rec.PATH:
+            rec_path = str(rec.PATH or "")
+            if not rec_path:
                 continue
-            path = rec.PATH.replace("\\", "/") if rec.PATH else ""
-            path_to = rec.DEST.replace("\\", "/") if rec.DEST else ""
-            sync_mode = rec.MODE or ""
+            path = rec_path.replace("\\", "/")
+            path_to = str(rec.DEST or "").replace("\\", "/")
+            sync_mode = str(rec.MODE or "")
             rmt_mode = ModuleConf.get_dictenum_key(ModuleConf.RMT_MODES, sync_mode) if sync_mode else ""
             items.append(
                 {
@@ -119,9 +129,10 @@ class TransferHistoryService:
         from app.services.sync_service import SyncService
 
         item_ids = []
-        records = self._filetransfer.get_transfer_unknown_paths()
+        records = self._filetransfer.get_transfer_unknown_paths() or []
         for rec in records:
-            if not rec.PATH:
+            rec_path = str(rec.PATH or "")
+            if not rec_path:
                 continue
             item_ids.append(rec.ID)
         if item_ids:
