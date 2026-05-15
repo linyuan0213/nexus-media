@@ -3,9 +3,8 @@
 将旧版 TransferRepository 适配为新领域接口
 """
 
-from typing import TYPE_CHECKING
-
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from app.db.models import TRANSFERHISTORY, TRANSFERUNKNOWN
 from app.db.repositories.transfer_repository import TransferRepository
@@ -28,7 +27,9 @@ class TransferHistoryRepositoryAdapter:
     def is_exists(self, source_path: str, source_filename: str, dest_path: str, dest_filename: str) -> bool:
         return self._repo.is_transfer_history_exists(source_path, source_filename, dest_path, dest_filename)
 
-    def insert(self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: "MediaInfo") -> None:
+    def insert(
+        self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: "MediaInfo"
+    ) -> None:
         self._repo.insert_transfer_history(in_from, rmt_mode, in_path, out_path, dest, media_info)
 
     def get_page(self, search: str | None, page: int, rownum: int) -> tuple[int, list[TransferHistoryEntity]]:
@@ -64,7 +65,9 @@ class TransferHistoryRepositoryAdapter:
         self._repo.insert_sync_history(path, src, dest)
 
     # 兼容旧Repository方法名
-    def get_transfer_info_by(self, tmdbid: int | None, season: str | None = None, season_episode: str | None = None) -> list[TRANSFERHISTORY] | None:
+    def get_transfer_info_by(
+        self, tmdbid: int | None, season: str | None = None, season_episode: str | None = None
+    ) -> list[TRANSFERHISTORY] | None:
         return self._repo.get_transfer_info_by(tmdbid, season, season_episode)
 
     # 兼容旧Repository方法名
@@ -99,7 +102,9 @@ class TransferHistoryRepositoryAdapter:
         return self._repo.get_transfer_unknown_paths()
 
     # 兼容旧Repository方法名 - 委托给Unknown子适配器
-    def get_transfer_unknown_paths_by_page(self, search: str | None, page: int, rownum: int) -> tuple[int, list[TRANSFERUNKNOWN]]:
+    def get_transfer_unknown_paths_by_page(
+        self, search: str | None, page: int, rownum: int
+    ) -> tuple[int, list[TRANSFERUNKNOWN]]:
         return self._repo.get_transfer_unknown_paths_by_page(search, page, rownum)
 
     def delete_transfer_blacklist(self, path: str) -> None:
@@ -119,7 +124,9 @@ class TransferHistoryRepositoryAdapter:
     def insert_transfer_unknown(self, path: str, dest: str, rmt_mode: RmtMode) -> None:
         self._repo.insert_transfer_unknown(path, dest, rmt_mode)
 
-    def insert_transfer_history(self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: "MediaInfo") -> None:
+    def insert_transfer_history(
+        self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: "MediaInfo"
+    ) -> None:
         self._repo.insert_transfer_history(in_from, rmt_mode, in_path, out_path, dest, media_info)
 
 

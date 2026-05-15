@@ -58,7 +58,7 @@ class Thunder(_IDownloadClient):
             log.error(f"【{self.client_name}】连接测试失败: {str(e)}")
             return False
 
-    def get_torrents(self, ids=None, status=None, tag=None, **kwargs) -> list[Torrent]:
+    def get_torrents(self, ids=None, status=None, tag=None) -> list[Torrent]:
         if not self._client:
             return []
 
@@ -84,13 +84,13 @@ class Thunder(_IDownloadClient):
             log.error(f"【{self.client_name}】获取任务列表失败: {str(e)}")
             return []
 
-    def get_downloading_torrents(self, ids=None, tag=None, **kwargs):
+    def get_downloading_torrents(self, ids=None, tag=None):
         return self.get_torrents(status="downloading")
 
-    def get_completed_torrents(self, ids=None, tag=None, **kwargs):
+    def get_completed_torrents(self, ids=None, tag=None):
         return self.get_torrents(status="completed")
 
-    def get_files(self, tid):
+    def get_files(self, tid=None):
         if not self._client:
             return None
 
@@ -102,15 +102,15 @@ class Thunder(_IDownloadClient):
             log.error(f"【{self.client_name}】获取文件列表失败: {str(e)}")
             return None
 
-    def set_torrents_status(self, ids, tags=None, **kwargs):
+    def set_torrents_status(self, ids=None, tags=None):
         # 迅雷不支持设置种子状态
         pass
 
-    def set_torrents_tag(self, ids, tags, **kwargs):
+    def set_torrents_tag(self, ids=None, tags=None):
         # 迅雷不支持标签功能
         return True
 
-    def get_transfer_task(self, tag=None, match_path=None, **kwargs):
+    def get_transfer_task(self, tag=None, match_path=None):
         if not self._client:
             return []
 
@@ -145,7 +145,7 @@ class Thunder(_IDownloadClient):
             log.error(f"【{self.client_name}】获取转移任务失败: {str(e)}")
             return []
 
-    def get_remove_torrents(self, config, **kwargs):
+    def get_remove_torrents(self, config=None):
         # 迅雷暂不支持自动删种
         return []
 
@@ -190,7 +190,7 @@ class Thunder(_IDownloadClient):
             ExceptionUtils.exception_traceback(e)
             return None
 
-    def start_torrents(self, ids, **kwargs):
+    def start_torrents(self, ids=None):
         if not self._client:
             return False
 
@@ -208,7 +208,7 @@ class Thunder(_IDownloadClient):
             log.error(f"【{self.client_name}】启动任务失败: {str(e)}")
             return False
 
-    def stop_torrents(self, ids, **kwargs):
+    def stop_torrents(self, ids=None):
         if not self._client:
             return False
 
@@ -226,7 +226,7 @@ class Thunder(_IDownloadClient):
             log.error(f"【{self.client_name}】暂停任务失败: {str(e)}")
             return False
 
-    def delete_torrents(self, delete_file, ids, **kwargs):
+    def delete_torrents(self, delete_file=None, ids=None):
         if not self._client:
             return False
 
@@ -244,14 +244,14 @@ class Thunder(_IDownloadClient):
             log.error(f"【{self.client_name}】删除任务失败: {str(e)}")
             return False
 
-    def get_download_dirs(self, **kwargs):
+    def get_download_dirs(self):
         return self.download_dir
 
     def change_torrent(self, **kwargs):
         # 迅雷不支持修改种子
         return True
 
-    def get_downloading_progress(self, **kwargs):
+    def get_downloading_progress(self, ids=None):
         if not self._client:
             return []
 
@@ -295,11 +295,11 @@ class Thunder(_IDownloadClient):
     def get_type(self):
         return self.client_type
 
-    def recheck_torrents(self, ids, **kwargs):
+    def recheck_torrents(self, ids=None):
         # 迅雷不支持重新校验
         return True
 
-    def get_free_space(self, path: str, **kwargs):
+    def get_free_space(self, path: str):
         # 迅雷暂不支持获取剩余空间
         return 0
 

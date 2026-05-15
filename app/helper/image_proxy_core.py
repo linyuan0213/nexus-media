@@ -12,8 +12,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
 
 import requests
-from requests.adapters import HTTPAdapter
 from PIL import Image
+from requests.adapters import HTTPAdapter
 
 import log
 from app.core.constants import TMDB_IMAGE_DOMAIN
@@ -47,9 +47,7 @@ def _get_session(domain):
     with _session_lock:
         if domain not in _session_pool:
             session = requests.Session()
-            adapter = HTTPAdapter(
-                pool_connections=10, pool_maxsize=20, max_retries=3, pool_block=False
-            )
+            adapter = HTTPAdapter(pool_connections=10, pool_maxsize=20, max_retries=3, pool_block=False)
             session.mount("https://", adapter)
             session.mount("http://", adapter)
             _session_pool[domain] = session

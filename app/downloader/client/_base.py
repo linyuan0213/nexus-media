@@ -1,5 +1,6 @@
 import os.path
 from abc import ABCMeta, abstractmethod
+from typing import Any
 
 from app.utils import PathUtils
 
@@ -12,32 +13,33 @@ class _IDownloadClient(metaclass=ABCMeta):
     # 下载器名称
     client_name = ""
 
+    @classmethod
     @abstractmethod
-    def match(self, ctype):
+    def match(cls, ctype) -> Any:
         """
         匹配实例
         """
 
     @abstractmethod
-    def get_type(self):
+    def get_type(self) -> Any:
         """
         获取下载器类型
         """
 
     @abstractmethod
-    def connect(self):
+    def connect(self) -> Any:
         """
         连接
         """
 
     @abstractmethod
-    def get_status(self):
+    def get_status(self) -> Any:
         """
         检查连通性
         """
 
     @abstractmethod
-    def get_torrents(self, ids, status, tag):
+    def get_torrents(self, ids=None, status=None, tag=None) -> Any:
         """
         按条件读取种子信息
         :param ids: 种子ID，单个ID或者ID列表
@@ -47,25 +49,25 @@ class _IDownloadClient(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def get_downloading_torrents(self, ids, tag):
+    def get_downloading_torrents(self, ids=None, tag=None) -> Any:
         """
         读取下载中的种子信息，发生错误时需返回None
         """
 
     @abstractmethod
-    def get_completed_torrents(self, ids, tag):
+    def get_completed_torrents(self, ids=None, tag=None) -> Any:
         """
         读取下载完成的种子信息，发生错误时需返回None
         """
 
     @abstractmethod
-    def get_files(self, tid):
+    def get_files(self, tid=None) -> Any:
         """
         读取种子文件列表
         """
 
     @abstractmethod
-    def set_torrents_status(self, ids, tags=None):
+    def set_torrents_status(self, ids, tags=None) -> Any:
         """
         迁移完成后设置种子标签为 已整理
         :param ids: 种子ID列表
@@ -73,7 +75,7 @@ class _IDownloadClient(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def set_torrents_tag(self, ids, tags):
+    def set_torrents_tag(self, ids=None, tags=None) -> Any:
         """
         设置种子标签
         :param ids: 种子ID列表
@@ -81,13 +83,13 @@ class _IDownloadClient(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def get_transfer_task(self, tag, match_path=None):
+    def get_transfer_task(self, tag=None, match_path=None) -> Any:
         """
         获取需要转移的种子列表
         """
 
     @abstractmethod
-    def get_remove_torrents(self, config):
+    def get_remove_torrents(self, config) -> Any:
         """
         获取需要清理的种子清单
         :param config: 删种策略
@@ -95,31 +97,31 @@ class _IDownloadClient(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def add_torrent(self, **kwargs):
+    def add_torrent(self, *args, **kwargs) -> Any:
         """
         添加下载任务
         """
 
     @abstractmethod
-    def start_torrents(self, ids):
+    def start_torrents(self, ids=None) -> Any:
         """
         下载控制：开始
         """
 
     @abstractmethod
-    def stop_torrents(self, ids):
+    def stop_torrents(self, ids=None) -> Any:
         """
         下载控制：停止
         """
 
     @abstractmethod
-    def delete_torrents(self, delete_file, ids):
+    def delete_torrents(self, delete_file=None, ids=None) -> Any:
         """
         删除种子
         """
 
     @abstractmethod
-    def get_download_dirs(self):
+    def get_download_dirs(self) -> Any:
         """
         获取下载目录清单
         """
@@ -151,31 +153,31 @@ class _IDownloadClient(metaclass=ABCMeta):
         return path, False
 
     @abstractmethod
-    def change_torrent(self, **kwargs):
+    def change_torrent(self, *args, **kwargs) -> Any:
         """
         修改种子状态
         """
 
     @abstractmethod
-    def get_downloading_progress(self):
+    def get_downloading_progress(self, ids=None) -> Any:
         """
         获取下载进度
         """
 
     @abstractmethod
-    def set_speed_limit(self, **kwargs):
+    def set_speed_limit(self, *args, **kwargs) -> Any:
         """
         设置速度限制
         """
 
     @abstractmethod
-    def recheck_torrents(self, ids):
+    def recheck_torrents(self, ids=None) -> Any:
         """
         下载控制：重新校验
         """
 
     @abstractmethod
-    def get_free_space(self, path: str):
+    def get_free_space(self, path: str) -> Any:
         """
         获取剩余空间
         """

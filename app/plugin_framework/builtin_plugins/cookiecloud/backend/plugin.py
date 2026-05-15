@@ -203,13 +203,11 @@ class CookieCloudPlugin:
             if cloudflare_cookie:
                 continue
 
-            cookie_str = ";".join(
-                [
-                    f"{content.get('name')}={content.get('value')}"
-                    for content in content_list
-                    if content.get("name") and content.get("name") not in self._ignore_cookies
-                ]
-            )
+            cookie_str = ";".join([
+                f"{content.get('name')}={content.get('value')}"
+                for content in content_list
+                if content.get("name") and content.get("name") not in self._ignore_cookies
+            ])
             self._cache.set(f"cookie:{domain_url}", cookie_str)
             result[domain_url] = cookie_str
 
@@ -264,12 +262,12 @@ class CookieCloudPlugin:
                 continue
             for cookie_data in storage:
                 if cookie_data.get("domain") and self._check_domain(cookie_data.get("domain", "")):  # type: ignore[union-attr]
-            domain_parts = site.split(".")[-2:]
-            domain_key = tuple(domain_parts)
-            domain_url = ".".join(domain_key)
-            domain_url = SiteEngine.get_instance().normalize_domain(domain_url) or domain_url
+                    domain_parts = site.split(".")[-2:]
+                    domain_key = tuple(domain_parts)
+                    domain_url = ".".join(domain_key)
+                    domain_url = SiteEngine.get_instance().normalize_domain(domain_url) or domain_url
 
-            self._cache.set(f"local_storage:{domain_url}", json.dumps(storage))
+                    self._cache.set(f"local_storage:{domain_url}", json.dumps(storage))
 
         self.ctx.info("LocalStorage 同步 Redis 成功")
 

@@ -47,7 +47,6 @@ class TestTempManager:
         # 清理
         TempManager._instance = None
 
-
     def test_get_temp_path(self, clean_manager):
         """测试获取临时路径"""
         # 获取目录路径
@@ -225,7 +224,6 @@ class TestTempFileContext:
         yield
         TempManager._instance = None
 
-
     def test_temp_file_context_auto_delete(self, tmp_path):
         """测试临时文件上下文自动删除"""
         file_path = None
@@ -268,11 +266,10 @@ class TestTempDirContext:
         with patch("app.utils.temp_manager.Config") as mock_cfg:
             mock_cfg.return_value.get_temp_path.return_value = str(tmp_path / "temp")
             TempManager._instance = None
-    
+
             (tmp_path / "temp").mkdir(exist_ok=True)
             yield
             TempManager._instance = None
-    
 
     def test_temp_dir_context_auto_delete(self, tmp_path):
         """测试临时目录上下文自动删除"""
@@ -311,11 +308,9 @@ class TestGlobalTempManager:
         with patch("app.utils.temp_manager.Config") as mock_cfg:
             mock_cfg.return_value.get_temp_path.return_value = str(tmp_path / "temp")
             TempManager._instance = None
-    
             (tmp_path / "temp").mkdir(exist_ok=True)
             yield
             TempManager._instance = None
-    
 
     def test_global_instance(self, tmp_path):
         """测试全局实例可用"""

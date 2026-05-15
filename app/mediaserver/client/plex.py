@@ -91,8 +91,7 @@ class Plex(_IMediaClient):
         """
         return bool(self._plex)
 
-    @staticmethod
-    def get_user_count(**_kwargs: Any) -> int:
+    def get_user_count(self, **_kwargs: Any) -> int:
         """
         获得用户数量，Plex只能配置一个用户，固定返回1
         """

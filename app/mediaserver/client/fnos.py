@@ -340,7 +340,7 @@ class FnOS(_IMediaClient):
             ExceptionUtils.exception_traceback(err)
             return {}
 
-    def get_play_url(self, item_id, libtype):
+    def get_play_url(self, item_id, libtype=None):
         """
         拼装媒体播放链接
         :param item_id: 媒体的的ID

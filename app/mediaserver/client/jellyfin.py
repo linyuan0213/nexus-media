@@ -263,13 +263,13 @@ class Jellyfin(_IMediaClient):
             return None
         return []
 
-    def get_tv_episodes(self, item_id=None, title=None, year=None, tmdb_id=None, season=None):
+    def get_tv_episodes(self, item_id=None, title=None, year=None, tmdbid=None, season=None):
         """
         根据标题和年份和季，返回Jellyfin中的剧集列表
         :param item_id: Jellyfin中的剧集ID
         :param title: 标题
         :param year: 年份
-        :param tmdb_id: TMDBID
+        :param tmdbid: TMDBID
         :param season: 季
         :return: 集号的列表
         """
@@ -284,8 +284,8 @@ class Jellyfin(_IMediaClient):
                 return []
             # 验证tmdbid是否相同
             item_tmdbid = self.get_iteminfo(item_id).get("ProviderIds", {}).get("Tmdb")
-            if tmdb_id and item_tmdbid:
-                if str(tmdb_id) != str(item_tmdbid):
+            if tmdbid and item_tmdbid:
+                if str(tmdbid) != str(item_tmdbid):
                     return []
         if not season:
             season = ""
@@ -323,7 +323,7 @@ class Jellyfin(_IMediaClient):
         if not season:
             season = 1
         exists_episodes = self.get_tv_episodes(
-            title=meta_info.title, year=meta_info.year, tmdb_id=meta_info.tmdb_id, season=season
+            title=meta_info.title, year=meta_info.year, tmdbid=meta_info.tmdb_id, season=season
         )
         if not isinstance(exists_episodes, list):
             return None

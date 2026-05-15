@@ -254,7 +254,7 @@ class Qbittorrent(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return False
 
-    def set_torrents_status(self, ids: list[str] | str, tags: str | None = None) -> Any:
+    def set_torrents_status(self, ids: list[str] | str | None = None, tags: str | None = None) -> Any:
         """
         设置种子状态为已整理，以及是否强制做种
         """
@@ -266,7 +266,7 @@ class Qbittorrent(_IDownloadClient):
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
 
-    def set_torrents_tag(self, ids: list[str] | str, tags: str) -> Any:
+    def set_torrents_tag(self, ids: list[str] | str | None = None, tags: str | None = None) -> Any:
         """
         设置种子标签，以及是否强制做种
         """
@@ -295,7 +295,7 @@ class Qbittorrent(_IDownloadClient):
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
 
-    def get_transfer_task(self, tag: str | None = None, match_path: bool = False) -> Any:
+    def get_transfer_task(self, tag: str | None = None, match_path: bool | None = None) -> Any:
         """
         获取下载文件转移任务种子
         """
@@ -537,6 +537,7 @@ class Qbittorrent(_IDownloadClient):
         ratio_limit=None,
         seeding_time_limit=None,
         cookie=None,
+        **kwargs,
     ):
         """
         添加种子
@@ -629,7 +630,7 @@ class Qbittorrent(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return False
 
-    def start_torrents(self, ids: list[str] | str) -> Any:
+    def start_torrents(self, ids: list[str] | str | None = None) -> Any:
         if not self.qbc:
             return False
         try:
@@ -638,7 +639,7 @@ class Qbittorrent(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return False
 
-    def stop_torrents(self, ids: list[str] | str) -> Any:
+    def stop_torrents(self, ids: list[str] | str | None = None) -> Any:
         if not self.qbc:
             return False
         try:
@@ -647,7 +648,7 @@ class Qbittorrent(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return False
 
-    def delete_torrents(self, delete_file: bool, ids: list[str] | str) -> Any:
+    def delete_torrents(self, delete_file: bool | None = None, ids: list[str] | str | None = None) -> Any:
         if not self.qbc:
             return False
         if not ids:
@@ -659,7 +660,7 @@ class Qbittorrent(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return False
 
-    def get_files(self, tid: str) -> Any:
+    def get_files(self, tid: str | None = None) -> Any:
         if not self.qbc:
             return None
         try:
@@ -730,7 +731,7 @@ class Qbittorrent(_IDownloadClient):
         修改种子状态
         """
 
-    def get_downloading_progress(self, tag: str | None = None, ids: list[str] | str | None = None) -> Any:
+    def get_downloading_progress(self, ids: list[str] | str | None = None, tag: str | None = None) -> Any:
         """
         获取正在下载的种子进度
         """
@@ -757,7 +758,7 @@ class Qbittorrent(_IDownloadClient):
             )
         return disp_torrents
 
-    def set_speed_limit(self, download_limit: int | None = None, upload_limit: int | None = None) -> Any:
+    def set_speed_limit(self, download_limit: int | None = None, upload_limit: int | None = None, **kwargs: Any) -> Any:
         """
         设置速度限制
         :param download_limit: 下载速度限制，单位KB/s
@@ -776,7 +777,7 @@ class Qbittorrent(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return False
 
-    def recheck_torrents(self, ids: list[str] | str) -> Any:
+    def recheck_torrents(self, ids: list[str] | str | None = None) -> Any:
         if not self.qbc:
             return False
         try:
