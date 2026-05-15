@@ -115,6 +115,23 @@ class DownloadCore:
             proxy=proxy,
         )
 
+    def batch_download(self, in_from: Any, media_list: list, need_tvs: dict | None = None, user_name: str | None = None) -> tuple[list, list]:
+        download_items = []
+        left_medias = []
+        for media_item in media_list:
+            downloader_id, download_id, _ = self.download(
+                media_info=media_item,
+                in_from=in_from,
+                user_name=user_name,
+            )
+            if download_id:
+                media_item.downloader_id = downloader_id
+                media_item.download_id = download_id
+                download_items.append(media_item)
+            else:
+                left_medias.append(media_item)
+        return download_items, left_medias
+
     # ---------- 历史记录 / 配置 CRUD 代理 ----------
 
     def get_torrents(self, downloader_id=None, ids=None, tag=None) -> list[TorrentInfo]:

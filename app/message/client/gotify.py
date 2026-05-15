@@ -34,7 +34,7 @@ class Gotify(_IMessageClient):
             if res and res.status_code == 200:
                 return True, "发送成功"
             elif res is not None:
-                return False, f"错误码：{res.status_code}，错误原因：{res.reason}"
+                return False, f"错误码：{res.status_code}，错误原因：{res.reason}"  # type: ignore[union-attr]
             else:
                 return False, "未获取到返回信息"
         except Exception as msg_e:

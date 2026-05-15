@@ -262,6 +262,8 @@ class CookieCloudPlugin:
                 continue
             if not self._check_domain(site):
                 continue
+            for cookie_data in storage:
+                if cookie_data.get("domain") and self._check_domain(cookie_data.get("domain", "")):  # type: ignore[union-attr]
             domain_parts = site.split(".")[-2:]
             domain_key = tuple(domain_parts)
             domain_url = ".".join(domain_key)

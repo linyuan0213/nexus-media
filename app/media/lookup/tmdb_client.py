@@ -89,9 +89,9 @@ def compare_tmdb_names(file_name, tmdb_names):
         return False
     if not isinstance(tmdb_names, list):
         tmdb_names = [tmdb_names]
-    file_name = StringUtils.handler_special_chars(file_name).upper()
+    file_name = StringUtils.handler_special_chars(str(file_name)).upper()
     for tmdb_name in tmdb_names:
-        tmdb_name = StringUtils.handler_special_chars(tmdb_name).strip().upper()
+        tmdb_name = StringUtils.handler_special_chars(str(tmdb_name)).strip().upper()
         if file_name == tmdb_name:
             return True
         if len(file_name) < 3 or len(tmdb_name) < 3:

@@ -33,7 +33,7 @@ class WebDAVClient(FileStorageClient):
 
     def list_files(self, path="/"):
         files = self.client.ls(path)
-        return [file.get("name") for file in files if file.get("type") != "directory"]
+        return [file.get("name") for file in files if file.get("type") != "directory"]  # type: ignore[union-attr]
 
     def download_file(self, remote_path, local_path):
         try:

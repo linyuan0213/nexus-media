@@ -402,8 +402,8 @@ class AutoSignInPlugin:
                         self.ctx.info(f"{site} {checkin_text}成功")
                         return f"【{site}】{checkin_text}成功"
                 elif res is not None:
-                    self.ctx.warn(f"{site} {checkin_text}失败，状态码：{res.status_code}")
-                    return f"【{site}】{checkin_text}失败，状态码：{res.status_code}！"
+                    self.ctx.warn(f"{site} {checkin_text}失败，状态码：{res.status_code}")  # type: ignore[union-attr]
+                    return f"【{site}】{checkin_text}失败，状态码：{res.status_code}！"  # type: ignore[union-attr]
                 else:
                     self.ctx.warn(f"{site} {checkin_text}失败，无法打开网站")
                     return f"【{site}】{checkin_text}失败，无法打开网站！"

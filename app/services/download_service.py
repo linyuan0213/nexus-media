@@ -131,10 +131,10 @@ class DownloadService:
         media.site = site
         media.enclosure = enclosure
         media.page_url = page_url
-        media.size = size
+        media.size = int(size or 0)
         media.upload_volume_factor = float(uploadvolumefactor)
         media.download_volume_factor = float(downloadvolumefactor)
-        media.seeders = seeders
+        media.seeders = int(seeders or 0)
 
         _, ret, ret_msg = self._downloader.download(
             media_info=media,
@@ -202,7 +202,7 @@ class DownloadService:
             for url in urls:
                 if not url:
                     continue
-                site_info = self._sites.get_sites(siteurl=url) or {}
+                site_info: dict = self._sites.get_sites(siteurl=url) or {}
                 if not url.startswith("magnet:"):
                     file_path, _, _, _, retmsg = Torrent().get_torrent_info(
                         url=url,

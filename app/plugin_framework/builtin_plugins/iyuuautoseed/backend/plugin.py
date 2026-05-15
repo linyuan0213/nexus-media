@@ -284,7 +284,7 @@ class IYUUAutoSeedPlugin:
             self.cached += 1
             return False
 
-        site_info = self._sites.get_sites(siteurl=site_url)
+        site_info: dict = self._sites.get_sites(siteurl=site_url)
         if not site_info:
             return False
         if sites_cfg and str(site_info.get("id")) not in sites_cfg:
@@ -292,12 +292,12 @@ class IYUUAutoSeedPlugin:
 
         self.realtotal += 1
         # 检查hash是否已在下载器中
-        if self._downloader.exists_torrents(downloader_id=downloader_id, hash_str=seed.get("info_hash")):
+        if self._downloader.exists_torrents(downloader_id=downloader_id, hash_str=seed.get("info_hash")):  # type: ignore[union-attr]
             self.exist += 1
             return False
 
         # 下载种子
-        torrent_url = download_page.replace("{}", seed.get("torrent_id"))
+        torrent_url = download_page.replace("{}", str(seed.get("torrent_id")))
         proxies = get_proxies() if site_info.get("proxy") else None
         res = RequestUtils(
             cookies=site_info.get("cookie"), headers={"User-Agent": site_info.get("ua")}, proxies=proxies
@@ -306,8 +306,7 @@ class IYUUAutoSeedPlugin:
             self.fail += 1
             return False
 
-        # 添加种子到下载器
-        ret = self._downloader.add_torrent(
+        ret = self._downloader.add_torrent(  # type: ignore[union-attr]
             content=res.content,
             downloader_id=downloader_id,
             save_path=save_path,

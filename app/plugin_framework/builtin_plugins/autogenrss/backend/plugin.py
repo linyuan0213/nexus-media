@@ -210,8 +210,8 @@ class AutoGenRssPlugin:
                             self.ctx.info(f"{site} 生成RSS成功")
                             return f"【{site}】生成RSS成功"
                 elif res is not None:
-                    self.ctx.warn(f"{site} 生成RSS失败，状态码：{res.status_code}")
-                    return f"【{site}】生成RSS失败，状态码：{res.status_code}！"
+                    self.ctx.warn(f"{site} 生成RSS失败，状态码：{res.status_code}")  # type: ignore[union-attr]
+                    return f"【{site}】生成RSS失败，状态码：{res.status_code}！"  # type: ignore[union-attr]
                 else:
                     self.ctx.warn(f"{site} 生成RSS失败，无法打开网站")
                     return f"【{site}】生成RSS失败，无法打开网站！"

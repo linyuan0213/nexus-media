@@ -43,8 +43,8 @@ class TmdbSearch:
             original = movie.get("original_title")
             if (
                 original
-                and StringUtils.handler_special_chars(original).strip().upper()
-                == StringUtils.handler_special_chars(name).strip().upper()
+                and StringUtils.handler_special_chars(str(original)).strip().upper()
+                == StringUtils.handler_special_chars(str(name)).strip().upper()
             ):
                 return movie
         # 第二轮：模糊匹配 title / original_title
@@ -121,8 +121,8 @@ class TmdbSearch:
             original = tv.get("original_name")
             is_exact = (
                 original
-                and StringUtils.handler_special_chars(original).strip().upper()
-                == StringUtils.handler_special_chars(name).strip().upper()
+                and StringUtils.handler_special_chars(str(original)).strip().upper()
+                == StringUtils.handler_special_chars(str(name)).strip().upper()
             )
             is_fuzzy = compare_tmdb_names(name, tv.get("name")) or compare_tmdb_names(name, tv.get("original_name"))
             if is_exact or is_fuzzy:
@@ -189,6 +189,7 @@ class TmdbSearch:
     def search_tv_by_season(self, name: str, media_year: Any, season_number: Any, episode: Any = None) -> Any:
         if self.client.search is None:
             return None
+
         def _season_match(tv_info, season_year):
             if not tv_info:
                 return False
@@ -361,9 +362,7 @@ class TmdbSearch:
         try:
             html = etree.HTML(res.text)
             xpath = "//a[@data-id and @data-media-type='tv']/@href" if mtype == MediaType.TV else "//a[@data-id]/@href"
-            tmdb_links = [
-                link for link in html.xpath(xpath) if link and (link.startswith(("/tv", "/movie")))
-            ]
+            tmdb_links = [link for link in html.xpath(xpath) if link and (link.startswith(("/tv", "/movie")))]
             if len(tmdb_links) != 1:
                 log.info(f"【Meta】{name} TMDB网站返回{'数据过多' if tmdb_links else '无'}结果")
                 return None

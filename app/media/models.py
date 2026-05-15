@@ -466,7 +466,8 @@ class MediaInfo(BaseModel):
         else:
             self.title = info.get("name")
             self.original_title = info.get("original_name")
-            self.runtime = info.get("episode_run_time")[0] if info.get("episode_run_time") else None
+            runtime_val = info.get("episode_run_time")
+            self.runtime = int(runtime_val[0]) if runtime_val else None  # type: ignore[assignment]
             self.release_date = info.get("first_air_date")
             self.cn_name = info.get("name")
             if info.get("original_language") == "en":

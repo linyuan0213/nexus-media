@@ -117,7 +117,7 @@ class Rousi(_ISiteSigninHandler):
             return False, f"【{site}】签到失败，获取签到接口响应失败！"
 
         try:
-            res_json = res.json()
+            res_json = res.json()  # type: ignore[union-attr]
         except Exception as e:
             self.warn(f"{site} 解析响应JSON失败: {str(e)}")
             return False, f"【{site}】签到失败，解析响应失败！"

@@ -114,7 +114,7 @@ class ResultFilter:
         def _norm(name):
             if not name:
                 return ""
-            return StringUtils.handler_special_chars(name).upper().strip()
+            return StringUtils.handler_special_chars(str(name)).upper().strip()  # type: ignore[union-attr]
 
         match_names = {
             _norm(match_media.title),

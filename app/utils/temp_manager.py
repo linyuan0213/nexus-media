@@ -18,7 +18,8 @@ class TempManager:
     用于统一管理临时文件，支持自动清理、定期清理和上下文管理
     """
 
-    _instance = None
+    _instance: "TempManager | None" = None
+    _initialized: bool = False
     _lock = threading.Lock()
 
     # 默认临时文件保留时间（24小时）

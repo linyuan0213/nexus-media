@@ -11,7 +11,7 @@ from app.infrastructure.queue.redis_queue import RedisMessageQueue
 class MessageQueueFactory:
     """消息队列工厂"""
 
-    _instance: MessageQueue = None
+    _instance: MessageQueue | None = None
 
     @classmethod
     def create(cls, max_workers: int = 5) -> MessageQueue:

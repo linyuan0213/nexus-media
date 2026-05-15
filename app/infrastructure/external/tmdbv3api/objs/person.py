@@ -2,7 +2,7 @@ from app.infrastructure.external.tmdbv3api.as_obj import AsObj
 from app.infrastructure.external.tmdbv3api.tmdb import TMDb
 
 try:
-    from urllib import urlencode
+    from urllib.parse import urlencode  # type: ignore[import-not-found]
 except ImportError:
     from urllib.parse import urlencode
 

@@ -262,8 +262,8 @@ class EpisodeMapper:
 
             total = 0
             for season in seasons:
-                sn = season.get("season_number")
-                count = season.get("episode_count", 0)
+                sn: int = season.get("season_number")  # type: ignore[assignment]
+                count: int = season.get("episode_count", 0)  # type: ignore[assignment]
                 start = total + 1
                 end = total + count
                 total += count

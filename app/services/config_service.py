@@ -123,4 +123,4 @@ class ConfigService:
 
     def init_config(self) -> bool | None:
         """重新加载配置（谨慎使用）"""
-        return self._config.init_config()
+        return self._config.init_config()  # type: ignore[attr-defined]

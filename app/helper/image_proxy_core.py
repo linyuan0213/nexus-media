@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
 
 import requests
+from requests.adapters import HTTPAdapter
 from PIL import Image
 
 import log
@@ -46,7 +47,7 @@ def _get_session(domain):
     with _session_lock:
         if domain not in _session_pool:
             session = requests.Session()
-            adapter = requests.adapters.HTTPAdapter(
+            adapter = HTTPAdapter(
                 pool_connections=10, pool_maxsize=20, max_retries=3, pool_block=False
             )
             session.mount("https://", adapter)
@@ -176,7 +177,7 @@ def _resize_image(image_data, target_size):
 
         ratio = target_width / img.width
         target_height = int(img.height * ratio)
-        img_resized = img.resize((target_width, target_height), Image.LANCZOS)
+        img_resized = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
         output = BytesIO()
         img_resized.save(output, format="JPEG", quality=85, optimize=True)
         return output.getvalue()

@@ -255,10 +255,10 @@ class SyncService:
 
     # ---------- 查询 ----------
 
-    def get_sync_paths(self, sid: int | None = None):
+    def get_sync_paths(self, sid: str | None = None):
         return self._sync.get_sync_path_conf(sid=sid)
 
-    def transfer_sync(self, sid: int | None = None):
+    def transfer_sync(self, sid: str | None = None):
         """触发指定同步目录的同步转移"""
         return self._sync.transfer_sync(sid=sid)
 

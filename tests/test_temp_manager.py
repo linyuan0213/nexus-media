@@ -23,7 +23,6 @@ class TestTempManager:
         """提供干净的 TempManager 实例"""
         # 重置单例状态
         TempManager._instance = None
-        TempManager._initialized = False
 
         test_temp = tmp_path / "temp"
         test_temp.mkdir(exist_ok=True)
@@ -35,12 +34,10 @@ class TestTempManager:
         if test_temp.exists():
             shutil.rmtree(test_temp)
         TempManager._instance = None
-        TempManager._initialized = False
 
     def test_singleton_pattern(self, mock_config, tmp_path):
         """测试单例模式"""
         TempManager._instance = None
-        TempManager._initialized = False
 
         manager1 = TempManager()
         manager2 = TempManager()
@@ -49,7 +46,7 @@ class TestTempManager:
 
         # 清理
         TempManager._instance = None
-        TempManager._initialized = False
+
 
     def test_get_temp_path(self, clean_manager):
         """测试获取临时路径"""
@@ -223,12 +220,11 @@ class TestTempFileContext:
     def reset_manager(self, tmp_path, mock_config):
         """重置管理器"""
         TempManager._instance = None
-        TempManager._initialized = False
         test_temp = tmp_path / "temp"
         test_temp.mkdir(exist_ok=True)
         yield
         TempManager._instance = None
-        TempManager._initialized = False
+
 
     def test_temp_file_context_auto_delete(self, tmp_path):
         """测试临时文件上下文自动删除"""
@@ -272,11 +268,11 @@ class TestTempDirContext:
         with patch("app.utils.temp_manager.Config") as mock_cfg:
             mock_cfg.return_value.get_temp_path.return_value = str(tmp_path / "temp")
             TempManager._instance = None
-            TempManager._initialized = False
+    
             (tmp_path / "temp").mkdir(exist_ok=True)
             yield
             TempManager._instance = None
-            TempManager._initialized = False
+    
 
     def test_temp_dir_context_auto_delete(self, tmp_path):
         """测试临时目录上下文自动删除"""
@@ -315,11 +311,11 @@ class TestGlobalTempManager:
         with patch("app.utils.temp_manager.Config") as mock_cfg:
             mock_cfg.return_value.get_temp_path.return_value = str(tmp_path / "temp")
             TempManager._instance = None
-            TempManager._initialized = False
+    
             (tmp_path / "temp").mkdir(exist_ok=True)
             yield
             TempManager._instance = None
-            TempManager._initialized = False
+    
 
     def test_global_instance(self, tmp_path):
         """测试全局实例可用"""

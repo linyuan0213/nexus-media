@@ -224,7 +224,7 @@ class BuiltinIndexer(_IIndexClient):
             log.warn(f"【BuiltinIndexer】list 未找到站点: {index_id}")
             return None
 
-        log.warn(f"【BuiltinIndexer】list 找到站点: {indexer.name} (id={indexer.id}, domain={indexer.domain})")
+        log.warn(f"【BuiltinIndexer】list 找到站点: {indexer.name} (id={indexer.id}, domain={indexer.domain})")  # type: ignore[union-attr]
         start_time = datetime.datetime.now()
 
         error_flag, result_array = self.__search_via_engine(search_word=keyword, indexer=indexer, page=page)
@@ -232,7 +232,7 @@ class BuiltinIndexer(_IIndexClient):
         seconds = round((datetime.datetime.now() - start_time).seconds, 1)
         with _STATS_LOCK:
             self.download_repo.insert_indexer_statistics(
-                indexer=indexer.name, itype=self.client_id, seconds=seconds, result="N" if error_flag else "Y"
+                indexer=indexer.name, itype=self.client_id, seconds=seconds, result="N" if error_flag else "Y"  # type: ignore[union-attr]
             )
         return result_array
 

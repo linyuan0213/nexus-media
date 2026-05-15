@@ -41,7 +41,7 @@ class WebhookPlugin:
             if ret:
                 self.ctx.info(f"Webhook发送成功：{webhook_url}")
             elif ret is not None:
-                self.ctx.error(f"Webhook发送失败，状态码：{ret.status_code}，返回信息：{ret.text} {ret.reason}")
+                self.ctx.error(f"Webhook发送失败，状态码：{ret.status_code}，返回信息：{ret.text} {ret.reason}")  # type: ignore[union-attr]
             else:
                 self.ctx.error("Webhook发送失败，未获取到返回信息")
         except Exception as e:

@@ -54,7 +54,7 @@ class OpenAIProvider(BaseProvider):
 
         if isinstance(e, APIStatusError):
             code = e.status_code
-            body = e.body or {}
+            body: dict = e.body or {}
             msg = body.get("error", {}).get("message", str(e))
             if code == 401:
                 return f"API Key 无效或已过期 ({msg})"

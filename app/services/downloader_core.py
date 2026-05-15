@@ -205,7 +205,7 @@ class DownloaderCore:
     # ---------- 存在性检查 ----------
 
     def check_exists_medias(self, meta_info, no_exists=None, total_ep=None):
-        return self._download_core.check_exists_medias(meta_info=meta_info, no_exists=no_exists, total_ep=total_ep)
+        return self._download_core.check_exists_medias(meta_info=meta_info, no_exists=no_exists, total_ep=total_ep)  # type: ignore[attr-defined]
 
     # ---------- 目录/设置查询 ----------
 

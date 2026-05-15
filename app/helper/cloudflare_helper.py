@@ -52,7 +52,7 @@ def under_challenge(html_text: str):
     page_title = PyQuery(html_text)("title").text()
     log.debug("under_challenge page_title=" + page_title)
     for title in CHALLENGE_TITLES:
-        if page_title.lower() == title.lower():
+        if str(page_title).lower() == title.lower():
             return True
     for selector in CHALLENGE_SELECTORS:
         html_doc = PyQuery(html_text)
