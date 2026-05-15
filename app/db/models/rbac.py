@@ -127,6 +127,7 @@ class RBACRole(Base):
         _menus = list(self.menus) if self.menus is not None else []
 
         if is_superadmin and _perms:
+            # 超级管理员返回全部权限
             perms = [p.to_dict() for p in _perms]
         elif _perms:
             perms = [p.to_dict() for p in _perms]
@@ -134,6 +135,7 @@ class RBACRole(Base):
             perms = []
 
         if is_superadmin and _menus:
+            # 超级管理员返回全部菜单
             menus = [m.to_dict() for m in _menus]
         elif _menus:
             menus = [m.to_dict() for m in _menus]
