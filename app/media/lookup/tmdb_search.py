@@ -24,7 +24,7 @@ class TmdbSearch:
             params = {"query": name}
             if year:
                 params["year"] = year
-            movies = self.client.search.movies(params)
+            movies: Any = self.client.search.movies(params)
             blacklist = [str(item.TMDB_ID) for item in self.client.get_blacklist()]
             if movies and blacklist:
                 movies = [m for m in movies if not (m.get("id") and str(m.get("id")) in blacklist)]
@@ -89,7 +89,7 @@ class TmdbSearch:
             params = {"query": name}
             if year:
                 params["first_air_date_year"] = year
-            tvs = self.client.search.tv_shows(params)
+            tvs: Any = self.client.search.tv_shows(params)
             blacklist = [str(item.TMDB_ID) for item in self.client.get_blacklist()]
             if tvs and blacklist:
                 tvs = [t for t in tvs if not (t.get("id") and str(t.get("id")) in blacklist)]
@@ -212,7 +212,7 @@ class TmdbSearch:
             return True
 
         try:
-            tvs = self.client.search.tv_shows({"query": name})
+            tvs: Any = self.client.search.tv_shows({"query": name})
             blacklist = [str(item.TMDB_ID) for item in self.client.get_blacklist()]
             if tvs and blacklist:
                 tvs = [t for t in tvs if not (t.get("id") and str(t.get("id")) in blacklist)]
@@ -255,7 +255,7 @@ class TmdbSearch:
         if self.client.search is None:
             return None
         try:
-            multis = self.client.search.multi({"query": name}) or []
+            multis: Any = self.client.search.multi({"query": name}) or []
         except (TMDbError, Exception) as err:
             log.error(f"【Meta】连接TMDB出错：{str(err)}")
             return None
@@ -299,7 +299,7 @@ class TmdbSearch:
         if not name:
             return []
         try:
-            multis = self.client.search.multi({"query": name}) or []
+            multis: Any = self.client.search.multi({"query": name}) or []
         except (TMDbError, Exception) as err:
             log.error(f"【Meta】连接TMDB出错：{str(err)}")
             return []
@@ -320,7 +320,7 @@ class TmdbSearch:
             params = {"query": name}
             if year:
                 params["year"] = year
-            movies = self.client.search.movies(params) or []
+            movies: Any = self.client.search.movies(params) or []
         except (TMDbError, Exception) as err:
             log.error(f"【Meta】连接TMDB出错：{str(err)}")
             return []
@@ -340,7 +340,7 @@ class TmdbSearch:
             params = {"query": name}
             if year:
                 params["first_air_date_year"] = year
-            tvs = self.client.search.tv_shows(params) or []
+            tvs: Any = self.client.search.tv_shows(params) or []
         except (TMDbError, Exception) as err:
             log.error(f"【Meta】连接TMDB出错：{str(err)}")
             return []

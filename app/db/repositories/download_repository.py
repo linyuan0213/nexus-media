@@ -6,6 +6,8 @@ Handles download history, settings and indexer statistics related database opera
 import os.path
 import time
 
+from typing import Any
+
 from sqlalchemy import and_, case, func
 
 from app.db import DbPersist
@@ -50,7 +52,7 @@ class DownloadRepository(BaseRepository):
         return query.count() > 0
 
     @DbPersist(BaseRepository._db)
-    def insert_download_history(self, media_info: object, downloader: str, download_id: str, save_dir: str) -> None:
+    def insert_download_history(self, media_info: Any, downloader: str, download_id: str, save_dir: str) -> None:
         """
         新增下载历史
         """

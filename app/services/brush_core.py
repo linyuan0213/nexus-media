@@ -334,7 +334,7 @@ class BrushTaskService:
         return ret
 
     def update_brushtask_state(self, state: str | None, brushtask_id: int | None = None) -> Any:
-        ret = self._repo.update_brushtask_state(tid=brushtask_id, state=state)
+        ret = self._repo.update_brushtask_state(state=state or "", tid=brushtask_id)
         if brushtask_id:
             task = self._brush_tasks.get(str(brushtask_id))
             if task:

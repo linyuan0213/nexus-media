@@ -124,7 +124,7 @@ class Qbittorrent(_IDownloadClient):
             if not label or not save_path:
                 continue
             # 查询分类是否存在
-            category_item = categories.get(label)
+            category_item: Any = categories.get(label)
             if not category_item:
                 # 分类不存在，则创建
                 self.__update_category(name=label, save_path=save_path)
@@ -180,7 +180,7 @@ class Qbittorrent(_IDownloadClient):
         for category_name, category_item in categories.items():
             if not category_item:
                 continue
-            catetory_path = category_item.get("savePath")
+            catetory_path: Any = category_item.get("savePath")
             if not catetory_path:
                 continue
             if os.path.normpath(str(catetory_path)) == os.path.normpath(save_path):
@@ -402,7 +402,7 @@ class Qbittorrent(_IDownloadClient):
                             {
                                 "id": torrent.id,
                                 "name": torrent.name,
-                                "site": StringUtils.get_url_sld(torrent.tracker),
+                                "site": StringUtils.get_url_sld(torrent.trackers[0]) if torrent.trackers else "",
                                 "size": torrent.size,
                             }
                         )
@@ -700,7 +700,7 @@ class Qbittorrent(_IDownloadClient):
             return []
         for category in categories.values():
             if category and category.get("savePath") and category.get("savePath") not in ret_dirs:
-                ret_dirs.append(category.get("savePath"))
+                ret_dirs.append(str(category.get("savePath") or ""))
         return ret_dirs
 
     def set_uploadspeed_limit(self, ids: list[str] | str, limit: int) -> None:
@@ -790,7 +790,7 @@ class Qbittorrent(_IDownloadClient):
         if not self.qbc:
             return
         try:
-            status = self.qbc.sync_maindata().get("server_state")
+            status: Any = self.qbc.sync_maindata().get("server_state")
             if not status:
                 return
             return status.get("free_space_on_disk")
@@ -842,13 +842,13 @@ class Qbittorrent(_IDownloadClient):
         # 上传量
         torrent_obj.uploaded = torrent.get("uploaded") or 0
         # 平均上传速度 Byte/s
-        torrent_obj.avg_upload_speed = properties.get("up_speed_avg") if properties else 0
+        torrent_obj.avg_upload_speed = float(properties.get("up_speed_avg") or 0) if properties else 0
         # 已未活动 秒
         torrent_obj.iatime = date_now - torrent.get("last_activity") if torrent.get("last_activity") else 0
         # 下载量
-        torrent_obj.downloaded = torrent.get("downloaded")
+        torrent_obj.downloaded = int(torrent.get("downloaded") or 0)
         # 种子大小
-        torrent_obj.size = torrent.get("total_size")
+        torrent_obj.size = int(torrent.get("total_size") or 0)
         # 添加时间
         torrent_obj.add_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(torrent.get("added_on") or 0))
         # 状态
@@ -861,18 +861,18 @@ class Qbittorrent(_IDownloadClient):
         torrent_obj.category = [s.strip() for s in (torrent.get("category") or "").split(",")]
         # tracker
         torrent_obj.trackers = [
-            tracker.get("url")
+            str(tracker.get("url") or "")
             for tracker in self._get_torrent_trackers(torrent_hash=torrent.get("hash"))
-            if not any(keyword in tracker.get("url", "") for keyword in ["DHT", "PeX", "LSD"])
+            if not any(keyword in str(tracker.get("url") or "") for keyword in ["DHT", "PeX", "LSD"])
         ]
         # 下载速度
-        torrent_obj.download_speed = torrent.get("dlspeed")
+        torrent_obj.download_speed = int(torrent.get("dlspeed") or 0)
         # 上传速度
-        torrent_obj.upload_speed = torrent.get("upspeed")
+        torrent_obj.upload_speed = int(torrent.get("upspeed") or 0)
         # eta
-        torrent_obj.eta = torrent.get("eta")
+        torrent_obj.eta = int(torrent.get("eta") or 0)
         # 下载进度
-        torrent_obj.progress = torrent.get("progress")
+        torrent_obj.progress = float(torrent.get("progress") or 0)
         # 保存路径
         torrent_obj.save_path = torrent.get("save_path")
 
