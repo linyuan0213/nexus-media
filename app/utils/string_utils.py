@@ -175,7 +175,7 @@ class StringUtils:
         """
         if size is None:
             return ""
-        size = re.sub(r"\s|B|iB", "", str(size), flags=re.I)
+        size = re.sub(r"\s|B|iB", "", str(size), flags=re.IGNORECASE)
         if size.replace(".", "").isdigit():
             try:
                 size = float(size)
@@ -190,7 +190,7 @@ class StringUtils:
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
                 return ""
-        if re.findall(r"[KMGTP]", size, re.I):
+        if re.findall(r"[KMGTP]", size, re.IGNORECASE):
             return size
         else:
             return size + "B"
@@ -271,7 +271,7 @@ class StringUtils:
         从搜索关键字中拆分中年份、季、集、类型
         """
         if not content:
-            return None, None, None, None, None
+            return None, None, None, None, None, None
         # 去掉查询中的电影或电视剧关键字
         if re.search(r"^电视剧|\s+电视剧|^动漫|\s+动漫", content):
             mtype = MediaType.TV

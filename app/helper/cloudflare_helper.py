@@ -50,7 +50,7 @@ def under_challenge(html_text: str):
     if not html_text:
         return False
     page_title = PyQuery(html_text)("title").text()
-    log.debug("under_challenge page_title=" + page_title)
+    log.debug("under_challenge page_title=" + str(page_title))
     for title in CHALLENGE_TITLES:
         if str(page_title).lower() == title.lower():
             return True

@@ -3,7 +3,10 @@
 包含: 下载器配置、下载历史、下载设置
 """
 
-from sqlalchemy import Column, Integer, Sequence, String, Text
+from typing import Any
+
+from sqlalchemy import Integer, Sequence, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
 
@@ -11,54 +14,54 @@ from app.db.models.base import Base
 class DOWNLOADER(Base):
     __tablename__ = "DOWNLOADER"
 
-    ID = Column(Integer, Sequence("ID"), primary_key=True)
-    NAME = Column(String(255))
-    ENABLED = Column(Integer)
-    TYPE = Column(String(255))
-    TRANSFER = Column(Integer)
-    ONLY_NASTOOL = Column(Integer)
-    MATCH_PATH = Column(Integer)
-    RMT_MODE = Column(String(255))
-    CONFIG = Column(Text)
-    DOWNLOAD_DIR = Column(String(255))
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    NAME: Mapped[str] = mapped_column(String(255))
+    ENABLED: Mapped[int] = mapped_column(Integer)
+    TYPE: Mapped[str] = mapped_column(String(255))
+    TRANSFER: Mapped[int] = mapped_column(Integer)
+    ONLY_NASTOOL: Mapped[int] = mapped_column(Integer)
+    MATCH_PATH: Mapped[int] = mapped_column(Integer)
+    RMT_MODE: Mapped[str] = mapped_column(String(255))
+    CONFIG: Mapped[str] = mapped_column(Text)
+    DOWNLOAD_DIR: Mapped[str] = mapped_column(String(255))
 
 
 class DOWNLOADHISTORY(Base):
     __tablename__ = "DOWNLOAD_HISTORY"
 
-    ID = Column(Integer, Sequence("ID"), primary_key=True)
-    TITLE = Column(String(255), index=True)
-    YEAR = Column(String(255))
-    TYPE = Column(String(255))
-    TMDBID = Column(String(255))
-    SE = Column(String(255))
-    VOTE = Column(String(255))
-    POSTER = Column(String(255))
-    OVERVIEW = Column(Text)
-    TORRENT = Column(String(255))
-    ENCLOSURE = Column(String(8192), index=True)
-    SITE = Column(String(255))
-    DESC = Column(String(255))
-    DOWNLOADER = Column(String(255))
-    DOWNLOAD_ID = Column(String(255), index=True)
-    SAVE_PATH = Column(String(512), index=True)
-    DATE = Column(String(20), index=True)
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    TITLE: Mapped[str] = mapped_column(String(255), index=True)
+    YEAR: Mapped[str] = mapped_column(String(255))
+    TYPE: Mapped[str] = mapped_column(String(255))
+    TMDBID: Mapped[str] = mapped_column(String(255))
+    SE: Mapped[str] = mapped_column(String(255))
+    VOTE: Mapped[str] = mapped_column(String(255))
+    POSTER: Mapped[str] = mapped_column(String(255))
+    OVERVIEW: Mapped[str] = mapped_column(Text)
+    TORRENT: Mapped[str] = mapped_column(String(255))
+    ENCLOSURE: Mapped[str] = mapped_column(String(8192), index=True)
+    SITE: Mapped[str] = mapped_column(String(255))
+    DESC: Mapped[str] = mapped_column(String(255))
+    DOWNLOADER: Mapped[str] = mapped_column(String(255))
+    DOWNLOAD_ID: Mapped[str] = mapped_column(String(255), index=True)
+    SAVE_PATH: Mapped[str] = mapped_column(String(512), index=True)
+    DATE: Mapped[str] = mapped_column(String(20), index=True)
 
-    def as_dict(self):
+    def as_dict(self) -> dict[str, Any]:
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 class DOWNLOADSETTING(Base):
     __tablename__ = "DOWNLOAD_SETTING"
 
-    ID = Column(Integer, Sequence("ID"), primary_key=True)
-    NAME = Column(String(255))
-    CATEGORY = Column(String(255))
-    TAGS = Column(String(255))
-    IS_PAUSED = Column(Integer)
-    UPLOAD_LIMIT = Column(Integer)
-    DOWNLOAD_LIMIT = Column(Integer)
-    RATIO_LIMIT = Column(Integer)
-    SEEDING_TIME_LIMIT = Column(Integer)
-    DOWNLOADER = Column(String(255))
-    NOTE = Column(Text)
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    NAME: Mapped[str] = mapped_column(String(255))
+    CATEGORY: Mapped[str] = mapped_column(String(255))
+    TAGS: Mapped[str] = mapped_column(String(255))
+    IS_PAUSED: Mapped[int] = mapped_column(Integer)
+    UPLOAD_LIMIT: Mapped[int] = mapped_column(Integer)
+    DOWNLOAD_LIMIT: Mapped[int] = mapped_column(Integer)
+    RATIO_LIMIT: Mapped[int] = mapped_column(Integer)
+    SEEDING_TIME_LIMIT: Mapped[int] = mapped_column(Integer)
+    DOWNLOADER: Mapped[str] = mapped_column(String(255))
+    NOTE: Mapped[str] = mapped_column(Text)

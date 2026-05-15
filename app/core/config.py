@@ -115,7 +115,7 @@ class Config(metaclass=_SingletonMeta):
         except Exception as e:
             raise ValueError(f"Invalid YAML data: {e}") from e
 
-        lock_path = self._config_path + ".lock"
+        lock_path = (self._config_path or "") + ".lock"
         with FileLock(lock_path):
             with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as temp_file:
                 yaml.dump(new_cfg, temp_file)

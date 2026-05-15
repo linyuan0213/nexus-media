@@ -48,7 +48,7 @@ class BTSchool(_ISiteSigninHandler):
                 site=site,
             )
             # 仿真访问失败
-            if msg:
+            if msg or not html_text:
                 return False, msg
 
             # 已签到
@@ -65,7 +65,7 @@ class BTSchool(_ISiteSigninHandler):
                 proxy=proxy,
                 site=site,
             )
-            if msg:
+            if msg or not html_text:
                 return False, msg
 
             # 签到成功

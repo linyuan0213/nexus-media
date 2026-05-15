@@ -1,4 +1,5 @@
 import os.path
+from typing import Any
 
 import regex as re
 
@@ -10,7 +11,7 @@ from app.media.parser._video import parse_video_title
 from app.utils.types import MediaType
 
 
-def meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None = None):
+def meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None = None) -> Any:
     """
     媒体信息工厂函数，根据名称自动识别类型（动漫/影视）
 

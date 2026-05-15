@@ -10,6 +10,7 @@ import hashlib
 import hmac
 import secrets
 from base64 import b64encode
+from typing import Any
 
 import jwt
 from Crypto.Cipher import AES
@@ -130,12 +131,12 @@ def aes_decrypt(data: str, key: str) -> str:
     """
     if not data:
         return ""
-    data = base64.b64decode(data)
-    iv = data[:16]
-    encrypted = data[16:]
+    decoded: bytes = base64.b64decode(data)
+    iv = decoded[:16]
+    encrypted = decoded[16:]
     # 使用AES-256-CBC解密
-    cipher = AES.new(key.encode("utf-8"), AES.MODE_CBC, bytes(iv))  # type: ignore[reportArgumentType]
-    result = cipher.decrypt(encrypted)  # type: ignore[reportArgumentType]
+    cipher: Any = AES.new(key.encode("utf-8"), AES.MODE_CBC, iv)
+    result: bytes = cipher.decrypt(encrypted)
     # 去除填充
     padding = result[-1]
     if padding < 1 or padding > AES.block_size:
@@ -151,13 +152,13 @@ def aes_encrypt(data: str, key: str) -> str:
     if not data:
         return ""
     # 使用AES-256-CBC加密
-    cipher = AES.new(key.encode("utf-8"), AES.MODE_CBC)
+    cipher: Any = AES.new(key.encode("utf-8"), AES.MODE_CBC)
     # 填充
     padding = AES.block_size - len(data) % AES.block_size
     data += chr(padding) * padding
-    result = cipher.encrypt(data.encode("utf-8"))
+    result: bytes = cipher.encrypt(data.encode("utf-8"))
     # 使用base64编码
-    return b64encode(cipher.iv + result).decode("utf-8")
+    return b64encode(bytes(cipher.iv) + result).decode("utf-8")
 
 
 def nexusphp_encrypt(data_str: str, key: str) -> str:

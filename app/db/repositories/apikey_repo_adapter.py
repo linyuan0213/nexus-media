@@ -48,7 +48,10 @@ class APIKeyRepositoryAdapter(IAPIKeyRepository):
         raw_key: str | None = None,
     ) -> APIKeyEntity:
         row = self._repo.create_key(name, key_value, key_prefix, status, expires_at, created_by, description, raw_key)
-        return APIKeyEntity.from_orm(row)
+        entity = APIKeyEntity.from_orm(row)
+        if entity is None:
+            raise RuntimeError("Failed to create API key entity")
+        return entity
 
     def update_key(self, key_id: int, **kwargs) -> bool:
         return self._repo.update_key(key_id, **kwargs)
@@ -96,7 +99,10 @@ class APIKeyLogRepositoryAdapter(IAPIKeyLogRepository):
             error_message,
             response_time_ms,
         )
-        return APIKeyLogEntity.from_orm(row)
+        entity = APIKeyLogEntity.from_orm(row)
+        if entity is None:
+            raise RuntimeError("Failed to create API key log entity")
+        return entity
 
     def list_logs(
         self, api_key_id: int | None = None, page: int = 1, page_size: int = 50

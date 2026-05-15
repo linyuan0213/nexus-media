@@ -64,7 +64,7 @@ class ConfigRepository(BaseRepository):
         )
         self._db.insert(client)
         self._db.flush()
-        return client.ID
+        return int(client.ID)
 
     @DbPersist(BaseRepository._db)
     def check_message_client(self, cid: int | None = None, interactive: int | None = None, enabled: int | None = None, ctype: str | None = None) -> None:
@@ -380,7 +380,7 @@ class ConfigRepository(BaseRepository):
             if media.get("id") == tmdbid and media.get("season") == season:
                 return
 
-        mediainfos.append({"id": tmdbid, "rssid": "", "season": season, "name": mediainfo.title})
+        mediainfos.append({"id": tmdbid, "rssid": "", "season": season, "name": getattr(mediainfo, "title", "") or ""})
 
         self._db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).update(
             {"MEDIAINFOS": json.dumps(mediainfos)}

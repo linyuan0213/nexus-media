@@ -119,13 +119,14 @@ class CustomHostsPlugin:
         if not new_entrys:
             return err_flag, err_hosts
 
+        hosts_path = ""
+        backup_path = None
         try:
             hosts_path = system_hosts.path
             if not os.access(hosts_path, os.W_OK):
                 raise PermissionError(f"没有写入权限，请尝试: 1) 以管理员/root运行 2) 检查文件权限: ls -l {hosts_path}")
 
             # 创建备份
-            backup_path = None
             try:
                 system_backup = f"{hosts_path}.bak"
                 if os.path.exists(hosts_path):

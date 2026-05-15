@@ -1,3 +1,4 @@
+from typing import cast
 from urllib.parse import urlencode
 
 from lxml import etree
@@ -77,7 +78,7 @@ class Ourbits(_ISiteRssGenHandler):
             return ""
 
         html = etree.HTML(html_text)
-        return next((href for href in html.xpath('//input[@name="passkey"]/@value')), "")
+        return next((href for href in cast(list, html.xpath('//input[@name="passkey"]/@value'))), "")
 
     @staticmethod
     def _gen_link(site_url, params: list) -> str:

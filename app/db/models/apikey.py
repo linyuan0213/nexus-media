@@ -4,8 +4,10 @@ API Key 管理模型
 """
 
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import Column, DateTime, Index, Integer, String, Text
+from sqlalchemy import DateTime, Index, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
 
@@ -18,39 +20,26 @@ class APIKEY(Base):
 
     __tablename__ = "API_KEYS"
 
-    ID = Column(Integer, primary_key=True)
-    # API Key 名称
-    NAME = Column(String(255), nullable=False)
-    # API Key 值 (前缀 + 哈希或加密后的值)
-    KEY_VALUE = Column(String(255), nullable=False, unique=True, index=True)
-    # API Key 前缀 (用于显示，如 nk_xxxx)
-    KEY_PREFIX = Column(String(20), nullable=False)
-    # 状态: 1=启用, 0=禁用
-    STATUS = Column(Integer, default=1, nullable=False)
-    # 过期时间
-    EXPIRES_AT = Column(DateTime, nullable=True)
-    # 创建时间
-    CREATED_AT = Column(DateTime, default=datetime.now, nullable=False)
-    # 更新时间
-    UPDATED_AT = Column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
-    # 创建人用户ID
-    CREATED_BY = Column(Integer, nullable=True)
-    # 使用次数统计
-    USE_COUNT = Column(Integer, default=0, nullable=False)
-    # 最后使用时间
-    LAST_USED_AT = Column(DateTime, nullable=True)
-    # 描述/备注
-    DESCRIPTION = Column(Text, nullable=True)
-    # 系统级 API Key 的原始值（仅系统 key 使用，用于构造 webhook URL 等）
-    RAW_KEY = Column(Text, nullable=True)
+    ID: Mapped[int] = mapped_column(Integer, primary_key=True)
+    NAME: Mapped[str] = mapped_column(String(255), nullable=False)
+    KEY_VALUE: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    KEY_PREFIX: Mapped[str] = mapped_column(String(20), nullable=False)
+    STATUS: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    EXPIRES_AT: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    UPDATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
+    CREATED_BY: Mapped[int] = mapped_column(Integer, nullable=True)
+    USE_COUNT: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    LAST_USED_AT: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    DESCRIPTION: Mapped[str] = mapped_column(Text, nullable=True)
+    RAW_KEY: Mapped[str] = mapped_column(Text, nullable=True)
 
     __table_args__ = (
         Index("ix_API_KEYS_STATUS", "STATUS"),
         Index("ix_API_KEYS_CREATED_AT", "CREATED_AT"),
     )
 
-    def to_dict(self):
-        """转换为字典"""
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.ID,
             "name": self.NAME,
@@ -67,15 +56,13 @@ class APIKEY(Base):
             "raw_key": self.RAW_KEY,
         }
 
-    def is_expired(self):
-        """检查是否已过期"""
+    def is_expired(self) -> bool:
         if self.EXPIRES_AT is None:
             return False
         return datetime.now() > self.EXPIRES_AT
 
-    def is_active(self):
-        """检查是否可用"""
-        return bool(self.STATUS == 1 and not self.is_expired())
+    def is_active(self) -> bool:
+        return bool(self.STATUS is not None and int(self.STATUS) == 1 and not self.is_expired())
 
 
 class APIKEYLOG(Base):
@@ -86,31 +73,19 @@ class APIKEYLOG(Base):
 
     __tablename__ = "API_KEY_LOGS"
 
-    ID = Column(Integer, primary_key=True)
-    # 关联的 API Key ID
-    API_KEY_ID = Column(Integer, nullable=False, index=True)
-    # 请求ID
-    REQUEST_ID = Column(String(64), nullable=False, unique=True, index=True)
-    # 请求名称/描述
-    REQUEST_NAME = Column(String(255), nullable=True)
-    # 来源IP
-    SOURCE_IP = Column(String(64), nullable=True)
-    # 来源用户代理
-    USER_AGENT = Column(Text, nullable=True)
-    # 请求路径
-    REQUEST_PATH = Column(String(512), nullable=True)
-    # 请求方法
-    REQUEST_METHOD = Column(String(10), nullable=True)
-    # 状态: 1=成功, 0=失败
-    STATUS = Column(Integer, default=1, nullable=False)
-    # 响应状态码
-    RESPONSE_CODE = Column(Integer, nullable=True)
-    # 错误信息
-    ERROR_MESSAGE = Column(Text, nullable=True)
-    # 请求时间
-    REQUEST_AT = Column(DateTime, default=datetime.now, nullable=False)
-    # 响应时间(毫秒)
-    RESPONSE_TIME_MS = Column(Integer, nullable=True)
+    ID: Mapped[int] = mapped_column(Integer, primary_key=True)
+    API_KEY_ID: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    REQUEST_ID: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    REQUEST_NAME: Mapped[str] = mapped_column(String(255), nullable=True)
+    SOURCE_IP: Mapped[str] = mapped_column(String(64), nullable=True)
+    USER_AGENT: Mapped[str] = mapped_column(Text, nullable=True)
+    REQUEST_PATH: Mapped[str] = mapped_column(String(512), nullable=True)
+    REQUEST_METHOD: Mapped[str] = mapped_column(String(10), nullable=True)
+    STATUS: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    RESPONSE_CODE: Mapped[int] = mapped_column(Integer, nullable=True)
+    ERROR_MESSAGE: Mapped[str] = mapped_column(Text, nullable=True)
+    REQUEST_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    RESPONSE_TIME_MS: Mapped[int] = mapped_column(Integer, nullable=True)
 
     __table_args__ = (
         Index("ix_API_KEY_LOGS_API_KEY_ID", "API_KEY_ID"),
@@ -118,8 +93,7 @@ class APIKEYLOG(Base):
         Index("ix_API_KEY_LOGS_STATUS", "STATUS"),
     )
 
-    def to_dict(self):
-        """转换为字典"""
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.ID,
             "api_key_id": self.API_KEY_ID,

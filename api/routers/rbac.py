@@ -384,7 +384,7 @@ def get_role_detail(
     if role:
         d = role.to_dict()
         # 超级管理员返回所有权限和菜单
-        if role.ROLE_CODE == "superadmin":
+        if str(role.ROLE_CODE or "") == "superadmin":
             d["permissions"] = [p.to_dict() for p in rbac_service.get_all_permissions()]
             d["menus"] = [m.to_dict() for m in rbac_service.menu_repo.get_all_menus()]
         return success(data={"success": True, "data": d})
@@ -403,7 +403,7 @@ def get_roles(
     for role in roles:
         d = role.to_dict()
         # 超级管理员返回所有权限和菜单
-        if role.ROLE_CODE == "superadmin":
+        if str(role.ROLE_CODE or "") == "superadmin":
             if all_permissions is None:
                 all_permissions = [p.to_dict() for p in rbac_service.get_all_permissions()]
             if all_menus is None:

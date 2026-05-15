@@ -202,7 +202,9 @@ class DownloadService:
             for url in urls:
                 if not url:
                     continue
-                site_info: dict = self._sites.get_sites(siteurl=url) or {}
+                site_info = self._sites.get_sites(siteurl=url) or {}
+                if not isinstance(site_info, dict):
+                    site_info = {}
                 if not url.startswith("magnet:"):
                     file_path, _, _, _, retmsg = Torrent().get_torrent_info(
                         url=url,
@@ -256,7 +258,7 @@ class DownloadService:
                         os.remove(tmp_file)
                         log.debug(f"【Web】已删除上传的临时文件: {tmp_file}")
                 except Exception as e:
-                    log.warn(f"【Web】删除上传的临时文件失败: {tmp_file}, {str(e)}")
+                    log.warn(f"【Web】删除上传的临时文件失败: {tmp_file}, {e!s}")
 
         return DownloadResultDTO(success=True, message="添加下载完成！")
 

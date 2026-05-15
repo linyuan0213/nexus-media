@@ -2,12 +2,14 @@
 AutoGenRss Plugin v2
 RSS自动生成
 """
+
 import copy
 import json
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from typing import cast
 
 import pytz
 from lxml import etree
@@ -44,11 +46,10 @@ class AutoGenRssPlugin:
         self._stop_service()
 
     def on_hook(self, event, data):
-        if event == "plugin.config_changed":
-            if data.get("plugin_id") == self.ctx.plugin_id:
-                self.ctx.info("配置已变更，重载服务")
-                self._stop_service()
-                self._start_service()
+        if event == "plugin.config_changed" and data.get("plugin_id") == self.ctx.plugin_id:
+            self.ctx.info("配置已变更，重载服务")
+            self._stop_service()
+            self._start_service()
 
     def run(self):
         """立即运行"""
@@ -141,7 +142,7 @@ class AutoGenRssPlugin:
                 status, msg = site_module().gen_rss(site_info)
                 return msg
             except Exception as e:
-                return f"【{site_info.get('name')}】生成RSS失败：{str(e)}"
+                return f"【{site_info.get('name')}】生成RSS失败：{e!s}"
         else:
             return self._gen_rss_base(site_info)
 
@@ -155,7 +156,7 @@ class AutoGenRssPlugin:
             ua = site_info.get("ua")
             headers = site_info.get("headers")
             if (not site_url or not site_cookie) and not headers:
-                self.ctx.warn(f"未配置 {str(site)} 的Cookie或请求头，无法获取到RSS")
+                self.ctx.warn(f"未配置 {site!s} 的Cookie或请求头，无法获取到RSS")
                 return ""
             if JsonUtils.is_valid_json(headers):
                 headers = json.loads(headers)
@@ -217,12 +218,12 @@ class AutoGenRssPlugin:
                     return f"【{site}】生成RSS失败，无法打开网站！"
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            self.ctx.warn(f"{site} 生成RSS失败：{str(e)}")
-            return f"【{site}】生成RSS失败：{str(e)}！"
+            self.ctx.warn(f"{site} 生成RSS失败：{e!s}")
+            return f"【{site}】生成RSS失败：{e!s}！"
 
     @staticmethod
     def _parse_rss_link(html_text: str) -> str:
         if not html_text:
             return ""
         html = etree.HTML(html_text)
-        return next((href for href in html.xpath('//a[contains(@href, "linktype=dl")]/@href')), "")
+        return next((href for href in cast(list, html.xpath('//a[contains(@href, "linktype=dl")]/@href'))), "")

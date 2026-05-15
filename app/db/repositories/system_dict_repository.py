@@ -36,7 +36,7 @@ class SystemDictRepository(BaseRepository):
         self._db.commit()
         return result > 0
 
-    def exists(self, dtype: str, key: str) -> bool:
+    def exists(self, dtype: str, key: str) -> bool:  # type: ignore[override]
         """检查是否存在"""
         count = self._db.query(SYSTEMDICT).filter(dtype == SYSTEMDICT.TYPE, key == SYSTEMDICT.KEY).count()
         return count > 0

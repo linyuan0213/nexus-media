@@ -316,7 +316,7 @@ class TransferRepository(BaseRepository):
         if unknowns:
             is_all_proceed = True
             for unknown in unknowns:
-                if unknown.STATE == "N":
+                if str(unknown.STATE or "") == "N":
                     is_all_proceed = False
                     break
             if is_all_proceed:

@@ -9,6 +9,7 @@ import random
 from datetime import datetime
 from threading import Lock
 from time import sleep
+from typing import Any
 
 from app.media import DouBan, meta_info
 from app.plugin_framework.context import PluginContext
@@ -237,12 +238,12 @@ class DoubanSyncPlugin:
                     self._auto_subscribe_media(mi, state="R")
                 else:
                     if history:
-                        self.ctx.info(f"{doubanid} {meta_info.get_name()} 已存在NEW记录，跳过")
+                        self.ctx.info(f"{doubanid} {mi.get_name()} 已存在NEW记录，跳过")
                     else:
-                        self.ctx.info(f"{doubanid} {meta_info.get_name()} 记录到历史")
-                        self._update_history(meta_info, state="NEW")
+                        self.ctx.info(f"{doubanid} {mi.get_name()} 记录到历史")
+                        self._update_history(mi, state="NEW")
         except Exception as e:
-            self.ctx.error(f"{doubanid} {meta_info.get_name()} 处理失败：{e}")
+            self.ctx.error(f"{doubanid} {mi.get_name()} 处理失败：{e}")
 
         sleep(round(random.uniform(1, 5), 1))
 
@@ -327,13 +328,13 @@ class DoubanSyncPlugin:
             self.ctx.error(f"_auto_subscribe_media 内部异常: {e}")
             self.ctx.error(traceback.format_exc())
 
-    def _get_history(self, douban_id: str | None = None) -> dict:
+    def _get_history(self, douban_id: str | None = None) -> Any:
         data = self._load_history()
         if douban_id:
             return data.get(str(douban_id))
         return data
 
-    def _load_history(self) -> dict:
+    def _load_history(self) -> Any:
         content = self.ctx.read_data("history.json")
         if content:
             try:

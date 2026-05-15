@@ -1,4 +1,5 @@
 import json
+from typing import cast
 
 from lxml import etree
 
@@ -52,7 +53,7 @@ class ZhuQue(_ISiteSigninHandler):
 
         # 释放技能
         msg = "失败"
-        x_csrf_token = html.xpath("//meta[@name='x-csrf-token']/@content")[0]
+        x_csrf_token = cast(list, html.xpath("//meta[@name='x-csrf-token']/@content"))[0]
         if x_csrf_token:
             data = {"all": 1, "resetModal": "true"}
             headers = {

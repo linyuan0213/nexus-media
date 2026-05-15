@@ -1,4 +1,3 @@
-from functools import lru_cache
 from typing import Any
 
 import cn2an
@@ -166,9 +165,7 @@ class WebUtils:
 
         def _search_tmdb():
             mi = meta_info(title=content)
-            tmdbinfos = MediaService().get_tmdb_infos(
-                title=mi.get_name(), year=mi.year, mtype=mtype, page=page
-            )
+            tmdbinfos = MediaService().get_tmdb_infos(title=mi.get_name(), year=mi.year, mtype=mtype, page=page)
             results = []
             for tmdbinfo in tmdbinfos:
                 tmp_info = meta_info(title=keyword)
@@ -207,62 +204,6 @@ class WebUtils:
                     medias.append(media)
         return medias
 
-    @staticmethod
-    @lru_cache(maxsize=128)
-    def request_cache(url):
-        """
-        带缓存的请求
-        """
-        # 解析URL，判断是否需要特殊处理
-        parsed_url = url.lower()
-
-        # 豆瓣图片
-        if "douban" in parsed_url:
-            ret = RequestUtils(referer="https://movie.douban.com").get_res(url)
-        # TMDB图片
-        elif "tmdb" in parsed_url:
-            ret = RequestUtils(proxies=get_proxies()).get_res(url)
-        # FnOS图片 - 需要携带cookie
-        elif "/v/api/v1/sys/img/" in url:
-            # 获取FnOS配置
-            try:
-                from app.mediaserver.client.fnos import FnOS
-
-                fnos_config = FnOS.get_db_config("fnos")
-            except Exception:
-                fnos_config = Config().get_config("fnos")
-            if fnos_config:
-                # 从FnOS客户端获取cookie
-                try:
-                    from app.mediaserver.client.fnos_api import FnOSClient
-
-                    fnos_client = FnOSClient(
-                        base_url=fnos_config.get("host"),
-                        username=fnos_config.get("username"),
-                        password=fnos_config.get("password"),
-                        app_name="trimemedia-web",
-                        auth_key="16CCEB3D-AB42-077D-36A1-F355324E4237",
-                    )
-                    token = fnos_client._get_token()
-                    if token:
-                        # 使用token作为cookie
-                        cookies = {"Trim-MC-token": token}
-                        ret = RequestUtils(cookies=cookies).get_res(url)
-                    else:
-                        ret = RequestUtils().get_res(url)
-                except Exception:
-                    ret = RequestUtils().get_res(url)
-            else:
-                ret = RequestUtils().get_res(url)
-        # 其他情况
-        else:
-            ret = RequestUtils().get_res(url)
-
-        if ret:
-            return ret.content
-        return None
-
-
 # 与框架无关的 Action 工具函数（从 web/core/action_utils.py 迁移）
 
 
@@ -273,11 +214,10 @@ def mediainfo_dict(media_info):
     tmdb_id = media_info.tmdb_id
     tmdb_link = media_info.get_detail_url()
     tmdb_se_link = ""
-    if tmdb_id:
-        if media_info.get_season_string():
-            tmdb_se_link = f"{tmdb_link}/season/{media_info.get_season_seq()}"
-            if media_info.get_episode_string():
-                tmdb_se_link = f"{tmdb_se_link}/episode/{media_info.get_episode_seq()}"
+    if tmdb_id and media_info.get_season_string():
+        tmdb_se_link = f"{tmdb_link}/season/{media_info.get_season_seq()}"
+        if media_info.get_episode_string():
+            tmdb_se_link = f"{tmdb_se_link}/episode/{media_info.get_episode_seq()}"
     return {
         "type": media_info.type.value if media_info.type else "",
         "name": media_info.get_name(),

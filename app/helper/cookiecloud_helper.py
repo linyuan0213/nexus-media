@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from app.infrastructure.cache_system import get_cache_manager
 from app.utils.commons import SingletonMeta
@@ -13,9 +14,10 @@ class CookiecloudHelper(metaclass=SingletonMeta):
         if cookie:
             if isinstance(cookie, bytes):
                 return cookie.decode("utf-8")
-            return cookie
+            return str(cookie)
+        return ""
 
-    def get_local_storage(self, domain_url: str) -> dict:
+    def get_local_storage(self, domain_url: str) -> Any:
         storage = self._cache.get(f"local_storage:{domain_url}")
         if storage:
             if isinstance(storage, bytes):

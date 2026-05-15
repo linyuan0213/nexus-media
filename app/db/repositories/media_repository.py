@@ -12,8 +12,8 @@ class MediaRecord:
     type: MediaType
     title: str = ""
     year: str = ""
-    season: int = None
-    episode: int = None
+    season: int | None = None
+    episode: int | None = None
 
 
 class MediaInfoRepository:

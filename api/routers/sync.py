@@ -406,7 +406,7 @@ def get_sync_path(
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
     svc: SyncService = Depends(get_sync_service),
 ):
-    sync_path = svc.get_sync_paths(sid=req.sid)
+    sync_path = svc.get_sync_paths(sid=str(req.sid) if req.sid is not None else None)
     return success(data=sync_path)
 
 

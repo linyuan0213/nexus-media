@@ -30,14 +30,14 @@ from app.utils.string_utils import StringUtils
 class _CustomJSONEncoder(json.JSONEncoder):
     """处理 datetime/date/Decimal 等不可直接 JSON 序列化的类型"""
 
-    def default(self, obj):
-        if isinstance(obj, (datetime, date)):
-            return obj.isoformat()
-        if isinstance(obj, Decimal):
-            return float(obj)
-        if isinstance(obj, bytes):
-            return obj.decode("utf-8", errors="replace")
-        return super().default(obj)
+    def default(self, o):
+        if isinstance(o, (datetime, date)):
+            return o.isoformat()
+        if isinstance(o, Decimal):
+            return float(o)
+        if isinstance(o, bytes):
+            return o.decode("utf-8", errors="replace")
+        return super().default(o)
 
 
 def _serialize_value(value: Any) -> Any:
@@ -230,8 +230,9 @@ def import_database(
                 # 获取需要截断的列（避免 MySQL Data too long 错误）
                 truncate_columns = {}
                 for col in sa_table.columns:
-                    if hasattr(col.type, "length") and col.type.length is not None:  # type: ignore[union-attr]
-                        truncate_columns[col.name] = col.type.length
+                    col_len = getattr(col.type, "length", None)
+                    if col_len is not None:
+                        truncate_columns[col.name] = col_len
 
                 # 分批插入，单条捕获异常跳过有问题的行
                 for i in range(0, len(rows), batch_size):

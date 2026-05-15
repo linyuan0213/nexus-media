@@ -23,7 +23,7 @@ class RssMovieRepositoryAdapter:
             return []
         return [entity for entity in [RssMovieEntity.from_orm(r) for r in rows] if entity is not None]
 
-    def get_id(self, title: str, year: str | None = None, tmdbid: str | None = None) -> str:
+    def get_id(self, title: str, year: str | None = None, tmdbid: str | None = None) -> str | int | None:
         return self._repo.get_rss_movie_id(title, year, tmdbid)
 
     def is_exists(self, title: str, year: str) -> bool:
@@ -117,7 +117,7 @@ class RssTvRepositoryAdapter:
             return []
         return [entity for entity in [RssTvEntity.from_orm(r) for r in rows] if entity is not None]
 
-    def get_id(self, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None) -> str:
+    def get_id(self, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None) -> int | str | None:
         return self._repo.get_rss_tv_id(title, year, season, tmdbid)
 
     def is_exists(self, title: str, year: str, season: str | None = None) -> bool:

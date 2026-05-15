@@ -47,7 +47,7 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
     intent_agent = SearchIntentAgent()
     if intent_agent.ready and key_word:
         try:
-            intent = intent_agent.parse(content)
+            intent = intent_agent.parse(content or "")
             if intent and intent.is_specific:
                 if intent.keywords and len(intent.keywords) > len(key_word):
                     key_word = intent.keywords

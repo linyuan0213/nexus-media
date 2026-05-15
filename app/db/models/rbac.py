@@ -4,9 +4,10 @@ RBAC (Role-Based Access Control) 权限管理模型
 """
 
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.models.base import Base
 
@@ -45,26 +46,26 @@ class RBACUser(Base):
 
     __tablename__ = "RBAC_USERS"
 
-    ID = Column(Integer, primary_key=True)
-    USERNAME = Column(String(255), unique=True, nullable=False, index=True)
-    PASSWORD_HASH = Column(String(255), nullable=False)
-    EMAIL = Column(String(255), unique=True, nullable=True)
-    NICKNAME = Column(String(255), nullable=True)
-    AVATAR = Column(String(512), nullable=True)
+    ID: Mapped[int] = mapped_column(Integer, primary_key=True)
+    USERNAME: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    PASSWORD_HASH: Mapped[str] = mapped_column(String(255), nullable=False)
+    EMAIL: Mapped[str] = mapped_column(String(255), unique=True, nullable=True)
+    NICKNAME: Mapped[str] = mapped_column(String(255), nullable=True)
+    AVATAR: Mapped[str] = mapped_column(String(512), nullable=True)
 
     # 用户状态: 1=启用, 0=禁用
-    STATUS = Column(Integer, default=1, nullable=False)
+    STATUS: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # 是否为超级管理员: 1=是, 0=否
-    IS_SUPERADMIN = Column(Integer, default=0, nullable=False)
+    IS_SUPERADMIN: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 最后登录信息
-    LAST_LOGIN_AT = Column(DateTime, nullable=True)
-    LAST_LOGIN_IP = Column(String(64), nullable=True)
+    LAST_LOGIN_AT: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    LAST_LOGIN_IP: Mapped[str] = mapped_column(String(64), nullable=True)
 
     # 时间戳
-    CREATED_AT = Column(DateTime, default=datetime.now, nullable=False)
-    UPDATED_AT = Column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
+    CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    UPDATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
 
     # 多对多关联
     roles = relationship("RBACRole", secondary=user_roles, back_populates="users")
@@ -97,20 +98,20 @@ class RBACRole(Base):
 
     __tablename__ = "RBAC_ROLES"
 
-    ID = Column(Integer, primary_key=True)
-    ROLE_NAME = Column(String(255), unique=True, nullable=False, index=True)
-    ROLE_CODE = Column(String(255), unique=True, nullable=False, index=True)
-    DESCRIPTION = Column(Text, nullable=True)
+    ID: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ROLE_NAME: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    ROLE_CODE: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    DESCRIPTION: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 角色级别: 数字越小级别越高
-    ROLE_LEVEL = Column(Integer, default=100, nullable=False)
+    ROLE_LEVEL: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
 
     # 状态: 1=启用, 0=禁用
-    STATUS = Column(Integer, default=1, nullable=False)
+    STATUS: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # 时间戳
-    CREATED_AT = Column(DateTime, default=datetime.now, nullable=False)
-    UPDATED_AT = Column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
+    CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    UPDATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
 
     # 多对多关联
     users = relationship("RBACUser", secondary=user_roles, back_populates="roles")
@@ -164,23 +165,23 @@ class RBACPermission(Base):
 
     __tablename__ = "RBAC_PERMISSIONS"
 
-    ID = Column(Integer, primary_key=True)
-    PERMISSION_NAME = Column(String(255), nullable=False)
-    PERMISSION_CODE = Column(String(255), unique=True, nullable=False, index=True)
-    DESCRIPTION = Column(Text, nullable=True)
+    ID: Mapped[int] = mapped_column(Integer, primary_key=True)
+    PERMISSION_NAME: Mapped[str] = mapped_column(String(255), nullable=False)
+    PERMISSION_CODE: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    DESCRIPTION: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 权限类型: menu=菜单权限, api=接口权限, action=操作权限
-    PERMISSION_TYPE = Column(String(64), default="api", nullable=False)
+    PERMISSION_TYPE: Mapped[str] = mapped_column(String(64), default="api", nullable=False)
 
     # 所属模块
-    MODULE = Column(String(255), nullable=True)
+    MODULE: Mapped[str] = mapped_column(String(255), nullable=True)
 
     # 状态: 1=启用, 0=禁用
-    STATUS = Column(Integer, default=1, nullable=False)
+    STATUS: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # 时间戳
-    CREATED_AT = Column(DateTime, default=datetime.now, nullable=False)
-    UPDATED_AT = Column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
+    CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    UPDATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
 
     # 多对多关联
     roles = relationship("RBACRole", secondary=role_permissions, back_populates="permissions")
@@ -210,57 +211,57 @@ class RBACMenu(Base):
 
     __tablename__ = "RBAC_MENUS"
 
-    ID = Column(Integer, primary_key=True)
-    MENU_NAME = Column(String(255), nullable=False)
-    MENU_CODE = Column(String(255), unique=True, nullable=False, index=True)
+    ID: Mapped[int] = mapped_column(Integer, primary_key=True)
+    MENU_NAME: Mapped[str] = mapped_column(String(255), nullable=False)
+    MENU_CODE: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
 
     # 父菜单ID，为None表示顶级菜单
-    PARENT_ID = Column(Integer, ForeignKey("RBAC_MENUS.ID"), nullable=True, index=True)
+    PARENT_ID: Mapped[int] = mapped_column(Integer, ForeignKey("RBAC_MENUS.ID"), nullable=True, index=True)
 
     # 菜单路径/路由
-    PATH = Column(String(512), nullable=True)
+    PATH: Mapped[str] = mapped_column(String(512), nullable=True)
 
     # 菜单图标
-    ICON = Column(String(512), nullable=True)
+    ICON: Mapped[str] = mapped_column(String(512), nullable=True)
 
     # 组件路径（前端组件）
-    COMPONENT = Column(String(512), nullable=True)
+    COMPONENT: Mapped[str] = mapped_column(String(512), nullable=True)
 
     # 排序号
-    SORT_ORDER = Column(Integer, default=0, nullable=False)
+    SORT_ORDER: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 菜单级别: 1=一级菜单, 2=二级菜单, 3=三级菜单
-    MENU_LEVEL = Column(Integer, default=1, nullable=False)
+    MENU_LEVEL: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # 是否隐藏: 1=隐藏, 0=显示
-    IS_HIDDEN = Column(Integer, default=0, nullable=False)
+    IS_HIDDEN: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 是否外链: 1=是, 0=否
-    IS_EXTERNAL = Column(Integer, default=0, nullable=False)
+    IS_EXTERNAL: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 外链链接
-    EXTERNAL_LINK = Column(String(512), nullable=True)
+    EXTERNAL_LINK: Mapped[str] = mapped_column(String(512), nullable=True)
 
     # 状态: 1=启用, 0=禁用
-    STATUS = Column(Integer, default=1, nullable=False)
+    STATUS: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # 权限标识（关联的权限code）
-    PERMISSION_CODE = Column(String(255), nullable=True)
+    PERMISSION_CODE: Mapped[str] = mapped_column(String(255), nullable=True)
 
     # Vben Admin 路由元数据扩展字段
-    REDIRECT = Column(String(512), nullable=True)
-    KEEP_ALIVE = Column(Integer, default=0, nullable=False)
-    AFFIX_TAB = Column(Integer, default=0, nullable=False)
-    HIDE_IN_MENU = Column(Integer, default=0, nullable=False)
-    HIDE_IN_TAB = Column(Integer, default=0, nullable=False)
-    HIDE_IN_BREADCRUMB = Column(Integer, default=0, nullable=False)
-    ACTIVE_ICON = Column(String(512), nullable=True)
-    BADGE = Column(String(64), nullable=True)
-    BADGE_TYPE = Column(String(32), nullable=True)
+    REDIRECT: Mapped[str] = mapped_column(String(512), nullable=True)
+    KEEP_ALIVE: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    AFFIX_TAB: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    HIDE_IN_MENU: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    HIDE_IN_TAB: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    HIDE_IN_BREADCRUMB: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    ACTIVE_ICON: Mapped[str] = mapped_column(String(512), nullable=True)
+    BADGE: Mapped[str] = mapped_column(String(64), nullable=True)
+    BADGE_TYPE: Mapped[str] = mapped_column(String(32), nullable=True)
 
     # 时间戳
-    CREATED_AT = Column(DateTime, default=datetime.now, nullable=False)
-    UPDATED_AT = Column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
+    CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    UPDATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
 
     # 自关联：子菜单
     children = relationship("RBACMenu", backref="parent", remote_side=[ID])
@@ -330,16 +331,16 @@ class RBACUserLoginLog(Base):
 
     __tablename__ = "RBAC_USER_LOGIN_LOGS"
 
-    ID = Column(Integer, primary_key=True)
-    USER_ID = Column(Integer, ForeignKey("RBAC_USERS.ID", ondelete="CASCADE"), nullable=False, index=True)
-    USERNAME = Column(String(255), nullable=False)
-    LOGIN_IP = Column(String(64), nullable=True)
-    LOGIN_LOCATION = Column(String(255), nullable=True)
-    USER_AGENT = Column(Text, nullable=True)
-    LOGIN_TYPE = Column(String(64), default="password", nullable=False)  # password, token, oauth
-    LOGIN_STATUS = Column(Integer, default=1, nullable=False)  # 1=成功, 0=失败
-    FAIL_REASON = Column(String(255), nullable=True)
-    LOGIN_AT = Column(DateTime, default=datetime.now, nullable=False)
+    ID: Mapped[int] = mapped_column(Integer, primary_key=True)
+    USER_ID: Mapped[int] = mapped_column(Integer, ForeignKey("RBAC_USERS.ID", ondelete="CASCADE"), nullable=False, index=True)
+    USERNAME: Mapped[str] = mapped_column(String(255), nullable=False)
+    LOGIN_IP: Mapped[str] = mapped_column(String(64), nullable=True)
+    LOGIN_LOCATION: Mapped[str] = mapped_column(String(255), nullable=True)
+    USER_AGENT: Mapped[str] = mapped_column(Text, nullable=True)
+    LOGIN_TYPE: Mapped[str] = mapped_column(String(64), default="password", nullable=False)  # password, token, oauth
+    LOGIN_STATUS: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # 1=成功, 0=失败
+    FAIL_REASON: Mapped[str] = mapped_column(String(255), nullable=True)
+    LOGIN_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
 
     def __repr__(self):
         return f"<RBACUserLoginLog(ID={self.ID}, USERNAME='{self.USERNAME}')>"
@@ -367,45 +368,45 @@ class RBACOperationLog(Base):
 
     __tablename__ = "RBAC_OPERATION_LOGS"
 
-    ID = Column(Integer, primary_key=True)
-    USER_ID = Column(Integer, ForeignKey("RBAC_USERS.ID", ondelete="SET NULL"), nullable=True, index=True)
-    USERNAME = Column(String(255), nullable=True)
+    ID: Mapped[int] = mapped_column(Integer, primary_key=True)
+    USER_ID: Mapped[int] = mapped_column(Integer, ForeignKey("RBAC_USERS.ID", ondelete="SET NULL"), nullable=True, index=True)
+    USERNAME: Mapped[str] = mapped_column(String(255), nullable=True)
 
     # 操作模块
-    MODULE = Column(String(255), nullable=True)
+    MODULE: Mapped[str] = mapped_column(String(255), nullable=True)
 
     # 操作类型: CREATE, UPDATE, DELETE, QUERY, EXPORT, etc.
-    OPERATION_TYPE = Column(String(64), nullable=False)
+    OPERATION_TYPE: Mapped[str] = mapped_column(String(64), nullable=False)
 
     # 操作描述
-    DESCRIPTION = Column(Text, nullable=True)
+    DESCRIPTION: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 请求方法: GET, POST, PUT, DELETE
-    REQUEST_METHOD = Column(String(16), nullable=True)
+    REQUEST_METHOD: Mapped[str] = mapped_column(String(16), nullable=True)
 
     # 请求URL
-    REQUEST_URL = Column(String(512), nullable=True)
+    REQUEST_URL: Mapped[str] = mapped_column(String(512), nullable=True)
 
     # 请求参数
-    REQUEST_PARAMS = Column(Text, nullable=True)
+    REQUEST_PARAMS: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 响应结果
-    RESPONSE_DATA = Column(Text, nullable=True)
+    RESPONSE_DATA: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 操作IP
-    OPERATION_IP = Column(String(64), nullable=True)
+    OPERATION_IP: Mapped[str] = mapped_column(String(64), nullable=True)
 
     # 执行时长(毫秒)
-    EXECUTION_TIME = Column(Integer, nullable=True)
+    EXECUTION_TIME: Mapped[int] = mapped_column(Integer, nullable=True)
 
     # 操作结果: 1=成功, 0=失败
-    OPERATION_STATUS = Column(Integer, default=1, nullable=False)
+    OPERATION_STATUS: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # 错误信息
-    ERROR_MSG = Column(Text, nullable=True)
+    ERROR_MSG: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 操作时间
-    OPERATED_AT = Column(DateTime, default=datetime.now, nullable=False)
+    OPERATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
 
     def __repr__(self):
         return f"<RBACOperationLog(ID={self.ID}, USERNAME='{self.USERNAME}')>"

@@ -127,7 +127,7 @@ class _IDownloadClient(metaclass=ABCMeta):
         """
 
     @staticmethod
-    def get_replace_path(path, downloaddir) -> (str, bool):
+    def get_replace_path(path, downloaddir) -> tuple[str, bool]:
         """
         对目录路径进行转换
         :param path: 需要转换的路径

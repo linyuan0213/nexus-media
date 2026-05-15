@@ -1,3 +1,5 @@
+from typing import cast
+
 from lxml import etree
 
 from app.db.repositories import SiteRepository
@@ -85,4 +87,4 @@ class Ourbits(_ISiteRssGenHandler):
         if not html_text:
             return ""
         html = etree.HTML(html_text)
-        return next((href for href in html.xpath('//a[contains(@href, "rss.php?key=")]/@href')), "")
+        return next((href for href in cast(list, html.xpath('//a[contains(@href, "rss.php?key=")]/@href'))), "")

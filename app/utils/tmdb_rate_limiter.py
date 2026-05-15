@@ -184,8 +184,9 @@ class TMDBRetryWithBackoff:
 
                 # 检查是否应当重试
                 status_code = getattr(e, "status_code", None)
-                if hasattr(e, "response") and hasattr(e.response, "status_code"):
-                    status_code = e.response.status_code
+                response = getattr(e, "response", None)
+                if response is not None:
+                    status_code = getattr(response, "status_code", None)
 
                 if not self.should_retry(attempt, status_code):
                     raise
@@ -195,7 +196,7 @@ class TMDBRetryWithBackoff:
                 time.sleep(delay)
 
         # 重试次数用尽
-        raise last_exception
+        raise last_exception if last_exception is not None else RuntimeError("Max retries exceeded")
 
 
 # 全局速率限制器实例
