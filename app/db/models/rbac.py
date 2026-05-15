@@ -82,9 +82,9 @@ class RBACUser(Base):
             "avatar": self.AVATAR,
             "status": self.STATUS,
             "is_superadmin": self.IS_SUPERADMIN,
-            "last_login_at": self.LAST_LOGIN_AT.strftime("%Y-%m-%d %H:%M:%S") if self.LAST_LOGIN_AT else None,
+            "last_login_at": self.LAST_LOGIN_AT.strftime("%Y-%m-%d %H:%M:%S") if self.LAST_LOGIN_AT is not None else None,
             "last_login_ip": self.LAST_LOGIN_IP,
-            "created_at": self.CREATED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.CREATED_AT else None,
+            "created_at": self.CREATED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.CREATED_AT is not None else None,
             "roles": [role.to_dict() for role in self.roles] if self.roles else [],
         }
 
@@ -122,21 +122,21 @@ class RBACRole(Base):
 
     def to_dict(self):
         """转换为字典"""
-        is_superadmin = self.ROLE_CODE == "superadmin"
+        is_superadmin = str(self.ROLE_CODE or "") == "superadmin"
+        _perms = list(self.permissions) if self.permissions is not None else []
+        _menus = list(self.menus) if self.menus is not None else []
 
-        if is_superadmin and self.permissions:
-            # 超级管理员返回全部权限
-            perms = [p.to_dict() for p in self.permissions]
-        elif self.permissions:
-            perms = [p.to_dict() for p in self.permissions]
+        if is_superadmin and _perms:
+            perms = [p.to_dict() for p in _perms]
+        elif _perms:
+            perms = [p.to_dict() for p in _perms]
         else:
             perms = []
 
-        if is_superadmin and self.menus:
-            # 超级管理员返回全部菜单
-            menus = [m.to_dict() for m in self.menus]
-        elif self.menus:
-            menus = [m.to_dict() for m in self.menus]
+        if is_superadmin and _menus:
+            menus = [m.to_dict() for m in _menus]
+        elif _menus:
+            menus = [m.to_dict() for m in _menus]
         else:
             menus = []
 
@@ -147,7 +147,7 @@ class RBACRole(Base):
             "description": self.DESCRIPTION,
             "role_level": self.ROLE_LEVEL,
             "status": self.STATUS,
-            "created_at": self.CREATED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.CREATED_AT else None,
+            "created_at": self.CREATED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.CREATED_AT is not None else None,
             "permissions": perms,
             "menus": menus,
             "users_count": len(self.users) if self.users else 0,
@@ -196,7 +196,7 @@ class RBACPermission(Base):
             "permission_type": self.PERMISSION_TYPE,
             "module": self.MODULE,
             "status": self.STATUS,
-            "created_at": self.CREATED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.CREATED_AT else None,
+            "created_at": self.CREATED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.CREATED_AT is not None else None,
         }
 
 
@@ -308,7 +308,7 @@ class RBACMenu(Base):
             "active_icon": self.ACTIVE_ICON,
             "badge": self.BADGE,
             "badge_type": self.BADGE_TYPE,
-            "created_at": self.CREATED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.CREATED_AT else None,
+            "created_at": self.CREATED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.CREATED_AT is not None else None,
             "children": children_list,
         }
 
@@ -353,7 +353,7 @@ class RBACUserLoginLog(Base):
             "login_type": self.LOGIN_TYPE,
             "login_status": self.LOGIN_STATUS,
             "fail_reason": self.FAIL_REASON,
-            "login_at": self.LOGIN_AT.strftime("%Y-%m-%d %H:%M:%S") if self.LOGIN_AT else None,
+            "login_at": self.LOGIN_AT.strftime("%Y-%m-%d %H:%M:%S") if self.LOGIN_AT is not None else None,
         }
 
 
@@ -423,5 +423,5 @@ class RBACOperationLog(Base):
             "execution_time": self.EXECUTION_TIME,
             "operation_status": self.OPERATION_STATUS,
             "error_msg": self.ERROR_MSG,
-            "operated_at": self.OPERATED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.OPERATED_AT else None,
+            "operated_at": self.OPERATED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.OPERATED_AT is not None else None,
         }

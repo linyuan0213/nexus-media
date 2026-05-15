@@ -104,7 +104,7 @@ class CookieCloudPlugin:
 
         return False
 
-    def _download_data(self) -> dict | str | bool:
+    def _download_data(self) -> tuple[dict, str, bool]:
         config = self._get_config()
         server = config.get("server", "")
         key = config.get("key", "")

@@ -723,8 +723,8 @@ class SubscribeService:
                 note_info = self.__parse_rss_desc(note)
             else:
                 note_info = {}
-            rss_sites = [site for site in rss_sites if site in rss_sites_valid]
-            search_sites = [site for site in search_sites if site in search_sites_valid]
+            rss_sites = [site for site in (rss_sites or []) if site in rss_sites_valid]
+            search_sites = [site for site in (search_sites or []) if site in search_sites_valid]
             ret_dict[str(rss_movie.ID)] = {
                 "id": rss_movie.ID,
                 "name": rss_movie.NAME,
@@ -797,8 +797,8 @@ class SubscribeService:
                 note_info = self.__parse_rss_desc(note)
             else:
                 note_info = {}
-            rss_sites = [site for site in rss_sites if site in rss_sites_valid]
-            search_sites = [site for site in search_sites if site in search_sites_valid]
+            rss_sites = [site for site in (rss_sites or []) if site in rss_sites_valid]
+            search_sites = [site for site in (search_sites or []) if site in search_sites_valid]
             ret_dict[str(rss_tv.ID)] = {
                 "id": rss_tv.ID,
                 "name": rss_tv.NAME,
@@ -848,7 +848,7 @@ class SubscribeService:
         :return: 备注信息
         """
         if not media:
-            return {}
+            return "{}"
         note = {"poster": media.get_poster_image(), "release_date": media.release_date, "vote": media.vote_average}
         return json.dumps(note)
 
@@ -989,9 +989,9 @@ class SubscribeService:
         :param state: 状态 R/D/S
         """
         if rtype == MediaType.MOVIE:
-            self._movie_repo.update_state(rssid=rssid, state=state)
+            self._movie_repo.update_state(title=None, year=None, rssid=rssid, state=state)
         else:
-            self._tv_repo.update_state(rssid=rssid, state=state)
+            self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state=state)
 
     def update_subscribe_over_edition(self, rtype: str, rssid: int | None, media: Any) -> bool:
         """
@@ -1004,7 +1004,7 @@ class SubscribeService:
         if not rssid or not media.res_order or not media.filter_rule or not media.res_order:
             return False
         # 更新订阅命中的优先级
-        self._movie_repo.update_filter_order(rtype=media.type, rssid=rssid, res_order=media.res_order)
+        self._movie_repo.update_filter_order(rssid=rssid, res_order=media.res_order)
         # 检查是否匹配最高优先级规则
         over_edition_order = self._filter.get_rule_first_order(rulegroup=media.filter_rule)
         if int(media.res_order) >= int(over_edition_order):
@@ -1023,7 +1023,7 @@ class SubscribeService:
         :param res_order: 优先级
         :return 资源更优先返回True，否则返回False
         """
-        pre_res_order = self._movie_repo.get_filter_order(rtype=rtype, rssid=rssid)
+        pre_res_order = self._movie_repo.get_filter_order(rssid=rssid)
         if not pre_res_order:
             return True
         return int(pre_res_order) < int(res_order or 0)
@@ -1032,7 +1032,7 @@ class SubscribeService:
         """
         更新电视剧订阅缺失集数
         """
-        self._tv_repo.update_state(rssid=rssid, state="R")
+        self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="R")
         if not seasoninfo:
             return
         for info in seasoninfo:
@@ -1041,7 +1041,7 @@ class SubscribeService:
                     log.info(
                         "【Subscribe】更新电视剧 {} {} 缺失集数为 {}".format(media_info.get_title_string(), media_info.get_season_string(), len(info.get("episodes")))
                     )
-                    self._tv_repo.update_lack(rssid=rssid, lack_episodes=info.get("episodes"))
+                    self._tv_repo.update_lack(title=None, year=None, season=None, rssid=rssid, lack_episodes=info.get("episodes"))
                 break
 
     def get_subscribe_tv_episodes(self, rssid: int | None) -> Any:

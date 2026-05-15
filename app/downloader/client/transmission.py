@@ -130,9 +130,9 @@ class Transmission(_IDownloadClient):
         """
         if not self.trc:
             return [], True
-        ids: Any = self.__parse_ids(ids)
+        parsed_ids: Any = self.__parse_ids(ids)
         try:
-            torrents = self.trc.get_torrents(ids=ids, arguments=self._trarg)
+            torrents = self.trc.get_torrents(ids=parsed_ids, arguments=self._trarg)
             torrent_list: list[Torrent] = []
             for torrent in torrents:
                 torrent_list.append(self.torrent_properties(torrent=torrent))
@@ -212,7 +212,7 @@ class Transmission(_IDownloadClient):
         """
         if not self.trc:
             return
-        ids: Any = self.__parse_ids(ids)
+        parsed_ids: Any = self.__parse_ids(ids)
         # 合成标签
         if tags:
             if not isinstance(tags, list):
@@ -223,7 +223,7 @@ class Transmission(_IDownloadClient):
             tags = ["已整理"]
         # 打标签
         try:
-            self.trc.change_torrent(labels=tags, ids=ids)
+            self.trc.change_torrent(labels=tags, ids=parsed_ids)
             log.info(f"【{self.client_name}】{self.name} 设置种子标签成功")
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -234,10 +234,10 @@ class Transmission(_IDownloadClient):
         """
         if not self.trc:
             return
-        ids: Any = self.__parse_ids(ids)
+        parsed_ids: Any = self.__parse_ids(ids)
         # 打标签
         try:
-            self.trc.change_torrent(labels=tags, ids=ids)
+            self.trc.change_torrent(labels=tags, ids=parsed_ids)
             log.info(f"【{self.client_name}】设置transmission种子标签成功")
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -250,9 +250,9 @@ class Transmission(_IDownloadClient):
             return
         if not self.trc:
             return
-        ids: Any = self.__parse_ids(tid)
+        parsed_ids: Any = self.__parse_ids(tid)
         try:
-            self.trc.change_torrent(labels=tag, ids=ids)
+            self.trc.change_torrent(labels=tag, ids=parsed_ids)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
 
@@ -279,7 +279,7 @@ class Transmission(_IDownloadClient):
         if not tid:
             return
         else:
-            ids: Any = self.__parse_ids(tid)
+            parsed_ids: Any = self.__parse_ids(tid)
         if tag:
             if isinstance(tag, list):
                 labels = tag
@@ -315,7 +315,7 @@ class Transmission(_IDownloadClient):
             return
         try:
             self.trc.change_torrent(
-                ids=ids,
+                ids=parsed_ids,
                 labels=labels,
                 uploadLimited=upload_limited,
                 uploadLimit=upload_limit_val,
@@ -465,9 +465,9 @@ class Transmission(_IDownloadClient):
     def start_torrents(self, ids: list[str] | str | int | None = None) -> Any:
         if not self.trc:
             return False
-        ids: Any = self.__parse_ids(ids)
+        parsed_ids: Any = self.__parse_ids(ids)
         try:
-            return self.trc.start_torrent(ids=ids)
+            return self.trc.start_torrent(ids=parsed_ids)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -475,9 +475,9 @@ class Transmission(_IDownloadClient):
     def stop_torrents(self, ids: list[str] | str | int | None = None) -> Any:
         if not self.trc:
             return False
-        ids: Any = self.__parse_ids(ids)
+        parsed_ids: Any = self.__parse_ids(ids)
         try:
-            return self.trc.stop_torrent(ids=ids)
+            return self.trc.stop_torrent(ids=parsed_ids)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -487,9 +487,9 @@ class Transmission(_IDownloadClient):
             return False
         if not ids:
             return False
-        ids: Any = self.__parse_ids(ids)
+        parsed_ids: Any = self.__parse_ids(ids)
         try:
-            return self.trc.remove_torrent(delete_data=delete_file, ids=ids)
+            return self.trc.remove_torrent(delete_data=bool(delete_file or False), ids=parsed_ids)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -554,8 +554,8 @@ class Transmission(_IDownloadClient):
             return
         if not ids or not limit:
             return
-        ids: Any = self.__parse_ids(ids)
-        self.trc.change_torrent(ids, uploadLimit=int(limit))
+        parsed_ids: Any = self.__parse_ids(ids)
+        self.trc.change_torrent(parsed_ids, uploadLimit=int(limit))
 
     def set_downloadspeed_limit(self, ids: list[str] | str | int, limit: int) -> None:
         """
@@ -565,8 +565,8 @@ class Transmission(_IDownloadClient):
             return
         if not ids or not limit:
             return
-        ids: Any = self.__parse_ids(ids)
-        self.trc.change_torrent(ids, downloadLimit=int(limit))
+        parsed_ids: Any = self.__parse_ids(ids)
+        self.trc.change_torrent(parsed_ids, downloadLimit=int(limit))
 
     def get_downloading_progress(self, ids: list[str] | str | int | None = None, tag: str | None = None) -> Any:
         """
@@ -625,9 +625,9 @@ class Transmission(_IDownloadClient):
     def recheck_torrents(self, ids: list[str] | str | int | None = None) -> Any:
         if not self.trc:
             return False
-        ids: Any = self.__parse_ids(ids)
+        parsed_ids: Any = self.__parse_ids(ids)
         try:
-            return self.trc.verify_torrent(ids=ids)
+            return self.trc.verify_torrent(ids=parsed_ids)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False

@@ -38,12 +38,12 @@ class RssRepository(BaseRepository):
             else:
                 return self._db.query(RSSMOVIES).filter(state == RSSMOVIES.STATE).all()
 
-    def get_rss_movie_id(self, title: str, year: str | None = None, tmdbid: str | None = None) -> int | str:
+    def get_rss_movie_id(self, title: str, year: str | None = None, tmdbid: str | None = None) -> int | str | None:
         """
         获取订阅电影ID
         """
         if not title:
-            return ""
+            return None
         if tmdbid:
             ret = self._db.query(RSSMOVIES.ID).filter(str(tmdbid) == RSSMOVIES.TMDBID).first()
             if ret:
@@ -60,7 +60,7 @@ class RssRepository(BaseRepository):
             else:
                 return items[0].ID
         else:
-            return ""
+            return None
 
     def get_rss_movie_sites(self, rssid: int | None) -> str:
         """
@@ -74,15 +74,22 @@ class RssRepository(BaseRepository):
         return ""
 
     @DbPersist(BaseRepository._db)
-    def update_rss_movie_tmdb(self, rid: int, tmdbid: str, title: str, year: str, image: str, desc: str, note: str) -> None:
+    def update_rss_movie_tmdb(
+        self, rid: int, tmdbid: str, title: str, year: str, image: str, desc: str, note: str
+    ) -> None:
         """
         更新订阅电影的部分信息
         """
         if not tmdbid:
             return
-        self._db.query(RSSMOVIES).filter(int(rid) == RSSMOVIES.ID).update(
-            {"TMDBID": tmdbid, "NAME": title, "YEAR": year, "IMAGE": image, "NOTE": note, "DESC": desc}
-        )
+        self._db.query(RSSMOVIES).filter(int(rid) == RSSMOVIES.ID).update({
+            "TMDBID": tmdbid,
+            "NAME": title,
+            "YEAR": year,
+            "IMAGE": image,
+            "NOTE": note,
+            "DESC": desc,
+        })
 
     @DbPersist(BaseRepository._db)
     def update_rss_movie_desc(self, rid: int, desc: str) -> None:
@@ -114,13 +121,16 @@ class RssRepository(BaseRepository):
         else:
             return 0
 
-    def is_exists_rss_movie(self, title: str, year: str) -> bool:
+    def is_exists_rss_movie(self, title: str, year: str | None = None) -> bool:
         """
         判断RSS电影是否存在
         """
         if not title:
             return False
-        count = self._db.query(RSSMOVIES).filter(title == RSSMOVIES.NAME, str(year) == RSSMOVIES.YEAR).count()
+        if year is not None:
+            count = self._db.query(RSSMOVIES).filter(title == RSSMOVIES.NAME, str(year) == RSSMOVIES.YEAR).count()
+        else:
+            count = self._db.query(RSSMOVIES).filter(title == RSSMOVIES.NAME).count()
         return count > 0
 
     @DbPersist(BaseRepository._db)
@@ -226,7 +236,9 @@ class RssRepository(BaseRepository):
         return 0
 
     @DbPersist(BaseRepository._db)
-    def delete_rss_movie(self, title: str | None = None, year: str | None = None, rssid: int | None = None, tmdbid: str | None = None) -> None:
+    def delete_rss_movie(
+        self, title: str | None = None, year: str | None = None, rssid: int | None = None, tmdbid: str | None = None
+    ) -> None:
         """
         删除RSS电影
         """
@@ -240,7 +252,9 @@ class RssRepository(BaseRepository):
             self._db.query(RSSMOVIES).filter(title == RSSMOVIES.NAME, str(year) == RSSMOVIES.YEAR).delete()
 
     @DbPersist(BaseRepository._db)
-    def update_rss_movie_state(self, title: str | None = None, year: str | None = None, rssid: int | None = None, state: str = "R") -> None:
+    def update_rss_movie_state(
+        self, title: str | None = None, year: str | None = None, rssid: int | None = None, state: str = "R"
+    ) -> None:
         """
         更新电影订阅状态
         """
@@ -249,9 +263,9 @@ class RssRepository(BaseRepository):
         if rssid:
             self._db.query(RSSMOVIES).filter(int(rssid) == RSSMOVIES.ID).update({"STATE": state})
         else:
-            self._db.query(RSSMOVIES).filter(title == RSSMOVIES.NAME, str(year) == RSSMOVIES.YEAR).update(
-                {"STATE": state}
-            )
+            self._db.query(RSSMOVIES).filter(title == RSSMOVIES.NAME, str(year) == RSSMOVIES.YEAR).update({
+                "STATE": state
+            })
 
     # ==================== RSS TV Shows ====================
 
@@ -267,12 +281,14 @@ class RssRepository(BaseRepository):
             else:
                 return self._db.query(RSSTVS).filter(state == RSSTVS.STATE).all()
 
-    def get_rss_tv_id(self, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None) -> int | str:
+    def get_rss_tv_id(
+        self, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None
+    ) -> int | None:
         """
         获取订阅电视剧ID
         """
         if not title:
-            return ""
+            return None
         if tmdbid:
             if season:
                 ret = self._db.query(RSSTVS.ID).filter(tmdbid == RSSTVS.TMDBID, season == RSSTVS.SEASON).first()
@@ -282,7 +298,8 @@ class RssRepository(BaseRepository):
                 return ret[0]
         if season and year:
             items = (
-                self._db.query(RSSTVS)
+                self._db
+                .query(RSSTVS)
                 .filter(title == RSSTVS.NAME, str(season) == RSSTVS.SEASON, str(year) == RSSTVS.YEAR)
                 .all()
             )
@@ -300,7 +317,7 @@ class RssRepository(BaseRepository):
             else:
                 return items[0].ID
         else:
-            return ""
+            return None
 
     def get_rss_tv_sites(self, rssid: int | None) -> RSSTVS | str:
         """
@@ -314,24 +331,24 @@ class RssRepository(BaseRepository):
         return ""
 
     @DbPersist(BaseRepository._db)
-    def update_rss_tv_tmdb(self, rid: int, tmdbid: str, title: str, year: str, total: int, lack: int, image: str, desc: str, note: str) -> None:
+    def update_rss_tv_tmdb(
+        self, rid: int, tmdbid: str, title: str, year: str, total: int, lack: int, image: str, desc: str, note: str
+    ) -> None:
         """
         更新订阅电视剧的TMDB信息
         """
         if not tmdbid:
             return
-        self._db.query(RSSTVS).filter(int(rid) == RSSTVS.ID).update(
-            {
-                "TMDBID": tmdbid,
-                "NAME": title,
-                "YEAR": year,
-                "TOTAL": total,
-                "LACK": lack,
-                "IMAGE": image,
-                "DESC": desc,
-                "NOTE": note,
-            }
-        )
+        self._db.query(RSSTVS).filter(int(rid) == RSSTVS.ID).update({
+            "TMDBID": tmdbid,
+            "NAME": title,
+            "YEAR": year,
+            "TOTAL": total,
+            "LACK": lack,
+            "IMAGE": image,
+            "DESC": desc,
+            "NOTE": note,
+        })
 
     @DbPersist(BaseRepository._db)
     def update_rss_tv_desc(self, rid: int, desc: str) -> None:
@@ -340,7 +357,7 @@ class RssRepository(BaseRepository):
         """
         self._db.query(RSSTVS).filter(int(rid) == RSSTVS.ID).update({"DESC": desc})
 
-    def is_exists_rss_tv(self, title: str, year: str, season: str | None = None) -> bool:
+    def is_exists_rss_tv(self, title: str, year: str | None = None, season: str | None = None) -> bool:
         """
         判断RSS电视剧是否存在
         """
@@ -348,7 +365,8 @@ class RssRepository(BaseRepository):
             return False
         if season:
             count = (
-                self._db.query(RSSTVS)
+                self._db
+                .query(RSSTVS)
                 .filter(title == RSSTVS.NAME, str(year) == RSSTVS.YEAR, season == RSSTVS.SEASON)
                 .count()
             )
@@ -478,7 +496,14 @@ class RssRepository(BaseRepository):
         return 0
 
     @DbPersist(BaseRepository._db)
-    def update_rss_tv_lack(self, title: str | None = None, year: str | None = None, season: str | None = None, rssid: int | None = None, lack_episodes: list | None = None) -> None:
+    def update_rss_tv_lack(
+        self,
+        title: str | None = None,
+        year: str | None = None,
+        season: str | None = None,
+        rssid: int | None = None,
+        lack_episodes: list | None = None,
+    ) -> None:
         """
         更新电视剧缺失的集数
         """
@@ -497,7 +522,9 @@ class RssRepository(BaseRepository):
             ).update({"LACK": lack})
 
     @DbPersist(BaseRepository._db)
-    def delete_rss_tv(self, title: str | None = None, season: str | None = None, rssid: int | None = None, tmdbid: str | None = None) -> None:
+    def delete_rss_tv(
+        self, title: str | None = None, season: str | None = None, rssid: int | None = None, tmdbid: str | None = None
+    ) -> None:
         """
         删除RSS电视剧
         """
@@ -510,7 +537,14 @@ class RssRepository(BaseRepository):
             self._db.query(RSSTVS).filter(int(rssid) == RSSTVS.ID).delete()
 
     @DbPersist(BaseRepository._db)
-    def update_rss_tv_state(self, title: str | None = None, year: str | None = None, season: str | None = None, rssid: int | None = None, state: str = "R") -> None:
+    def update_rss_tv_state(
+        self,
+        title: str | None = None,
+        year: str | None = None,
+        season: str | None = None,
+        rssid: int | None = None,
+        state: str = "R",
+    ) -> None:
         """
         更新电视剧订阅状态
         """
@@ -547,9 +581,9 @@ class RssRepository(BaseRepository):
             episodes = [str(epi) for epi in episodes]
 
         if self.is_exists_rss_tv_episodes(rid):
-            self._db.query(RSSTVEPISODES).filter(int(rid) == RSSTVEPISODES.RSSID).update(
-                {"EPISODES": ",".join(episodes)}
-            )
+            self._db.query(RSSTVEPISODES).filter(int(rid) == RSSTVEPISODES.RSSID).update({
+                "EPISODES": ",".join(episodes)
+            })
         else:
             self._db.insert(RSSTVEPISODES(RSSID=rid, EPISODES=",".join(episodes)))
 
@@ -591,7 +625,8 @@ class RssRepository(BaseRepository):
             return self._db.query(RSSHISTORY).filter(int(rid) == RSSHISTORY.ID).all()
         elif rtype:
             return (
-                self._db.query(RSSHISTORY)
+                self._db
+                .query(RSSHISTORY)
                 .filter(rtype == RSSHISTORY.TYPE)
                 .order_by(RSSHISTORY.FINISH_TIME.desc())
                 .all()
@@ -612,7 +647,8 @@ class RssRepository(BaseRepository):
         检查RSS历史是否存在
         """
         count = (
-            self._db.query(RSSHISTORY)
+            self._db
+            .query(RSSHISTORY)
             .filter(
                 type_str == RSSHISTORY.TYPE,
                 name == RSSHISTORY.NAME,
@@ -624,7 +660,19 @@ class RssRepository(BaseRepository):
         return count > 0
 
     @DbPersist(BaseRepository._db)
-    def insert_rss_history(self, rssid: int, rtype: str, name: str, year: str, tmdbid: str, image: str, desc: str, season: str | None = None, total: str | None = None, start: str | None = None) -> None:
+    def insert_rss_history(
+        self,
+        rssid: int,
+        rtype: str,
+        name: str,
+        year: str,
+        tmdbid: str,
+        image: str,
+        desc: str,
+        season: str | None = None,
+        total: str | None = None,
+        start: str | None = None,
+    ) -> None:
         """
         登记RSS历史
         """
@@ -669,7 +717,9 @@ class RssRepository(BaseRepository):
         return self._db.query(RSSTORRENTS).filter(torrent_name == RSSTORRENTS.TORRENT_NAME).first()
 
     @DbPersist(BaseRepository._db)
-    def insert_rss_torrent(self, torrent_name: str, enclosure: str, type_: str, title: str, year: str, season: str, episode: str) -> None:
+    def insert_rss_torrent(
+        self, torrent_name: str, enclosure: str, type_: str, title: str, year: str, season: str, episode: str
+    ) -> None:
         """插入 RSS 种子记录"""
         if enclosure and enclosure.startswith("magnet:"):
             enclosure = enclosure.split("&")[0]

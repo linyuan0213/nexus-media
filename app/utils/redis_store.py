@@ -102,7 +102,10 @@ class RedisStore:
         if client is None:
             return {}
         try:
-            return {k.decode("utf-8"): self.hget(name, k) for k in client.hkeys(name)}
+            raw_keys = client.hkeys(name)
+            if not isinstance(raw_keys, list):
+                return {}
+            return {k.decode("utf-8"): self.hget(name, k.decode("utf-8")) for k in raw_keys if isinstance(k, bytes)}
         except Exception as e:
             log.debug(f"RedisStore hgetall 失败 {name}: {e}")
             return {}
@@ -155,7 +158,8 @@ class RedisStore:
         if client is None:
             return 0
         try:
-            return client.llen(name)
+            result = client.llen(name)
+            return result if isinstance(result, int) else 0
         except Exception as e:
             log.debug(f"RedisStore llen 失败 {name}: {e}")
             return 0
@@ -180,7 +184,10 @@ class RedisStore:
         if client is None:
             return []
         try:
-            return [k.decode("utf-8") for k in client.keys(pattern)]
+            raw_keys = client.keys(pattern)
+            if not isinstance(raw_keys, list):
+                return []
+            return [k.decode("utf-8") for k in raw_keys if isinstance(k, bytes)]
         except Exception as e:
             log.debug(f"RedisStore keys 失败 {pattern}: {e}")
             return []
@@ -212,7 +219,8 @@ class RedisStore:
         if client is None:
             return -2
         try:
-            return client.ttl(key)
+            result = client.ttl(key)
+            return result if isinstance(result, int) else -2
         except Exception as e:
             log.debug(f"RedisStore ttl 失败 {key}: {e}")
             return -2
@@ -225,7 +233,8 @@ class RedisStore:
         if client is None:
             return None
         try:
-            return client.xadd(stream, fields, maxlen=max_len, approximate=True)
+            result = client.xadd(stream, fields, maxlen=max_len, approximate=True)
+            return str(result) if result is not None and not isinstance(result, list) else None
         except Exception as e:
             log.debug(f"RedisStore xadd 失败 {stream}: {e}")
             return None
@@ -254,7 +263,7 @@ class RedisStore:
             return []
         try:
             result = client.xreadgroup(group, consumer, streams, count=count, block=block)
-            return result or []
+            return result if isinstance(result, list) else []
         except Exception as e:
             log.debug(f"RedisStore xreadgroup 失败: {e}")
             return []
@@ -265,7 +274,8 @@ class RedisStore:
         if client is None:
             return 0
         try:
-            return client.xack(stream, group, *ids)
+            result = client.xack(stream, group, *ids)
+            return result if isinstance(result, int) else 0
         except Exception as e:
             log.debug(f"RedisStore xack 失败 {stream}: {e}")
             return 0
@@ -288,7 +298,8 @@ class RedisStore:
         if client is None:
             return []
         try:
-            return client.xclaim(stream, group, consumer, min_idle_time, ids)
+            result = client.xclaim(stream, group, consumer, min_idle_time, ids)
+            return result if isinstance(result, list) else []
         except Exception as e:
             log.debug(f"RedisStore xclaim 失败 {stream}: {e}")
             return []
@@ -299,7 +310,8 @@ class RedisStore:
         if client is None:
             return 0
         try:
-            return client.xdel(stream, *ids)
+            result = client.xdel(stream, *ids)
+            return result if isinstance(result, int) else 0
         except Exception as e:
             log.debug(f"RedisStore xdel 失败 {stream}: {e}")
             return 0
