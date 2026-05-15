@@ -24,7 +24,7 @@ class RedisStore:
         if self._client is None:
             try:
                 self._client = StrictRedis(
-                    host=REDIS_HOST, port=int(REDIS_PORT), db=0, socket_connect_timeout=2, socket_timeout=2
+                    host=REDIS_HOST, port=int(REDIS_PORT), db=0, socket_connect_timeout=5, socket_timeout=10
                 )
                 self._client.ping()
                 self._available = True
