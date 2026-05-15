@@ -29,6 +29,16 @@ class MediaInfo(BaseModel):
     en_name: str | None = None
     _name: str | None = None
 
+    # ---- 解析器内部属性 ----
+    _source: str = ""
+    _effect: list = []
+    _stop_name_flag: bool = False
+    _stop_cnname_flag: bool = False
+    _last_token: str = ""
+    _last_token_type: str = ""
+    _continue_flag: bool = True
+    _unknown_name_str: str = ""
+
     # ---- 季/集 ----
     total_seasons: int = 0
     begin_season: int | None = None
