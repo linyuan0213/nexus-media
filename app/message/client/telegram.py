@@ -84,9 +84,14 @@ class Telegram(_IMessageClient):
             chat_ids = [user_id]
         else:
             chat_ids = self._user_ids + [self.chat_id]
-        for chat_id in chat_ids:
-            if not chat_id:
-                continue
+        # 去重：避免同一 chat_id 在 user_ids 和 chat_id 中重复配置导致重复发送
+        seen = set()
+        unique_chat_ids = []
+        for cid in chat_ids:
+            if cid and cid not in seen:
+                seen.add(cid)
+                unique_chat_ids.append(cid)
+        for chat_id in unique_chat_ids:
             if image:
                 values = {"chat_id": chat_id, "photo": image, "caption": caption, "parse_mode": "Markdown"}
                 url = f"https://api.telegram.org/bot{self.token}/sendPhoto?" + urlencode(values)
