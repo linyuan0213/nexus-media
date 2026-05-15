@@ -230,7 +230,7 @@ class DouBan(metaclass=SingletonMeta):
             mi.overview = item.get("card_subtitle") or ""
             mi.poster_path = item.get("cover_url")
             rating = item.get("rating", {}) or {}
-            mi.vote_average = rating.get("value")
+            mi.vote_average = float(rating.get("value") or 0)
             if mi not in ret_medias:
                 ret_medias.append(mi)
 

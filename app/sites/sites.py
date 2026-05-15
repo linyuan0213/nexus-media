@@ -13,9 +13,9 @@ from app.utils.config_tools import get_proxies, get_ua
 class Sites:
     site_repo = None
 
-    _sites = []
-    _site_by_ids = {}
-    _site_by_urls = {}
+    _sites: list = []
+    _site_by_ids: dict = {}
+    _site_by_urls: dict = {}
     _site_favicons = {}
     _rss_sites = []
     _brush_sites = []
@@ -287,7 +287,7 @@ class Sites:
         :param site_id: 站点编号
         :return: 是否连通、错误信息、耗时
         """
-        site_info = self.get_sites(siteid=site_id)
+        site_info: dict = self.get_sites(siteid=site_id)
         if not site_info:
             return False, "站点不存在", 0
 
@@ -426,7 +426,7 @@ class Sites:
         """
         if self.site_repo is None:
             return None
-        ret = self.site_repo.update_site_cookie_ua(tid=siteid, cookie=cookie, ua=ua)
+        ret = self.site_repo.update_cookie_ua(site_id=siteid, cookie=cookie, ua=ua)
         self.init_config()
         return ret
 

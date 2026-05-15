@@ -37,7 +37,7 @@ class IyuuHelper(metaclass=SingletonMeta):
             else:
                 return None, f"请求IYUU失败，状态码：{result.get('code')}，返回信息：{result.get('msg')}"
         elif ret is not None:
-            return None, f"请求IYUU失败，状态码：{ret.status_code}，错误原因：{ret.reason}"
+            return None, f"请求IYUU失败，状态码：{ret.status_code}，错误原因：{ret.reason}"  # type: ignore[union-attr]
         else:
             return None, "请求IYUU失败，未获取到返回信息"
 

@@ -169,7 +169,7 @@ class SynologyChat(_IMessageClient):
                 return False, f"{errno}-{errmsg}"
             return False, f"{ret.text}"
         elif ret is not None:
-            return False, f"错误码：{ret.status_code}，错误原因：{ret.reason}"
+            return False, f"错误码：{ret.status_code}，错误原因：{ret.reason}"  # type: ignore[union-attr]
         return False, "未获取到返回信息"
 
 

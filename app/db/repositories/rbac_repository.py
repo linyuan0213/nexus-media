@@ -31,7 +31,8 @@ class RBACUserRepository(BaseRepository):
             用户对象或None
         """
         return (
-            self._db.query(RBACUser)
+            self._db
+            .query(RBACUser)
             .options(
                 selectinload(RBACUser.roles),
             )
@@ -61,7 +62,7 @@ class RBACUserRepository(BaseRepository):
         Returns:
             用户对象或None
         """
-        return self._db.query(RBACUser).filter(and_(RBACUser.EMAIL == email, RBACUser.STATUS == 1)).first()
+        return self._db.query(RBACUser).filter(and_(email == RBACUser.EMAIL, RBACUser.STATUS == 1)).first()
 
     def get_users(self, page: int = 1, page_size: int = 20, status: int | None = None) -> tuple:
         """
@@ -95,7 +96,8 @@ class RBACUserRepository(BaseRepository):
             用户列表
         """
         return (
-            self._db.query(RBACUser)
+            self._db
+            .query(RBACUser)
             .options(
                 selectinload(RBACUser.roles),
             )
@@ -183,7 +185,7 @@ class RBACUserRepository(BaseRepository):
             if key.upper() in allowed_fields:
                 setattr(user, key.upper(), value)
 
-        user.UPDATED_AT = datetime.now()
+        user.UPDATED_AT = datetime.now()  # type: ignore[assignment]
         return True
 
     @DbPersist(BaseRepository._db)
@@ -202,9 +204,9 @@ class RBACUserRepository(BaseRepository):
         if not user:
             return False
 
-        user.LAST_LOGIN_AT = datetime.now()
+        user.LAST_LOGIN_AT = datetime.now()  # type: ignore[assignment]
         if ip:
-            user.LAST_LOGIN_IP = ip
+            user.LAST_LOGIN_IP = ip  # type: ignore[assignment]
         return True
 
     @DbPersist(BaseRepository._db)
@@ -345,7 +347,7 @@ class RBACRoleRepository(BaseRepository):
         Returns:
             角色对象或None
         """
-        return self._db.query(RBACRole).filter(and_(RBACRole.ROLE_CODE == role_code, RBACRole.STATUS == 1)).first()
+        return self._db.query(RBACRole).filter(and_(role_code == RBACRole.ROLE_CODE, RBACRole.STATUS == 1)).first()
 
     def get_all_roles(self, status: int | None = None) -> list[RBACRole]:
         """
@@ -451,7 +453,7 @@ class RBACRoleRepository(BaseRepository):
             if key.upper() in allowed_fields:
                 setattr(role, key.upper(), value)
 
-        role.UPDATED_AT = datetime.now()
+        role.UPDATED_AT = datetime.now()  # type: ignore[assignment]
         return True
 
     @DbPersist(BaseRepository._db)
@@ -502,7 +504,8 @@ class RBACRoleRepository(BaseRepository):
             return False
 
         permissions = (
-            self._db.query(RBACPermission)
+            self._db
+            .query(RBACPermission)
             .filter(RBACPermission.ID.in_(permission_ids), RBACPermission.STATUS == 1)
             .all()
         )
@@ -565,8 +568,9 @@ class RBACPermissionRepository(BaseRepository):
         根据权限代码获取权限
         """
         return (
-            self._db.query(RBACPermission)
-            .filter(and_(RBACPermission.PERMISSION_CODE == permission_code, RBACPermission.STATUS == 1))
+            self._db
+            .query(RBACPermission)
+            .filter(and_(permission_code == RBACPermission.PERMISSION_CODE, RBACPermission.STATUS == 1))
             .first()
         )
 
@@ -597,7 +601,8 @@ class RBACPermissionRepository(BaseRepository):
         根据权限代码列表获取权限
         """
         return (
-            self._db.query(RBACPermission)
+            self._db
+            .query(RBACPermission)
             .filter(and_(RBACPermission.PERMISSION_CODE.in_(codes), RBACPermission.STATUS == 1))
             .all()
         )
@@ -639,7 +644,7 @@ class RBACPermissionRepository(BaseRepository):
             if key.upper() in allowed_fields:
                 setattr(permission, key.upper(), value)
 
-        permission.UPDATED_AT = datetime.now()
+        permission.UPDATED_AT = datetime.now()  # type: ignore[assignment]
         return True
 
     @DbPersist(BaseRepository._db)
@@ -701,8 +706,9 @@ class RBACMenuRepository(BaseRepository):
         获取子菜单列表
         """
         return (
-            self._db.query(RBACMenu)
-            .filter(and_(RBACMenu.PARENT_ID == parent_id, RBACMenu.STATUS == 1))
+            self._db
+            .query(RBACMenu)
+            .filter(and_(parent_id == RBACMenu.PARENT_ID, RBACMenu.STATUS == 1))
             .order_by(RBACMenu.SORT_ORDER)
             .all()
         )
@@ -742,7 +748,8 @@ class RBACMenuRepository(BaseRepository):
 
         # 获取用户的所有角色关联的菜单
         menus = (
-            self._db.query(RBACMenu)
+            self._db
+            .query(RBACMenu)
             .join(role_menus, role_menus.c.menu_id == RBACMenu.ID)
             .join(user_roles, role_menus.c.role_id == user_roles.c.role_id)
             .filter(user_roles.c.user_id == user_id)
@@ -837,13 +844,13 @@ class RBACMenuRepository(BaseRepository):
         # 更新菜单层级
         if "parent_id" in kwargs:
             if kwargs["parent_id"] is None:
-                menu.MENU_LEVEL = 1
+                menu.MENU_LEVEL = 1  # type: ignore[assignment]
             else:
                 parent = self.get_menu_by_id(kwargs["parent_id"])
                 if parent:
-                    menu.MENU_LEVEL = parent.MENU_LEVEL + 1
+                    menu.MENU_LEVEL = parent.MENU_LEVEL + 1  # type: ignore[assignment]
 
-        menu.UPDATED_AT = datetime.now()
+        menu.UPDATED_AT = datetime.now()  # type: ignore[assignment]
         return True
 
     @DbPersist(BaseRepository._db)

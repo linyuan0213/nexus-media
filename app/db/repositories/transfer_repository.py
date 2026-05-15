@@ -167,6 +167,13 @@ class TransferRepository(BaseRepository):
                 .all()
             )
 
+    @DbPersist(BaseRepository._db)
+    def delete_transfer_history_by_source(self, source_path: str, source_filename: str) -> None:
+        self._db.query(TRANSFERHISTORY).filter(
+            source_path == TRANSFERHISTORY.SOURCE_PATH,
+            source_filename == TRANSFERHISTORY.SOURCE_FILENAME,
+        ).delete()
+
     def is_transfer_history_exists_by_source_full_path(self, source_full_path: str) -> bool:
         """
         据源文件的全路径查询识别转移记录
@@ -208,6 +215,9 @@ class TransferRepository(BaseRepository):
         return query.group_by(TRANSFERHISTORY.TYPE, date_str).order_by(date_str).all()
 
     # ==================== Transfer Unknown ====================
+
+    def get_transfer_unknowns(self) -> list[TRANSFERUNKNOWN]:
+        return self.get_transfer_unknown_paths()
 
     def get_transfer_unknown_paths(self) -> list[TRANSFERUNKNOWN]:
         """
@@ -265,6 +275,9 @@ class TransferRepository(BaseRepository):
             return
         self._db.query(TRANSFERUNKNOWN).filter(int(tid) == TRANSFERUNKNOWN.ID).delete()
 
+    def get_transfer_unknown_by_id(self, tid: int | None) -> TRANSFERUNKNOWN | None:
+        return self.get_unknown_info_by_id(tid)
+
     def get_unknown_info_by_id(self, tid: int | None) -> TRANSFERUNKNOWN | None:
         """
         查询未识别记录
@@ -280,6 +293,9 @@ class TransferRepository(BaseRepository):
         if not path:
             return []
         return self._db.query(TRANSFERUNKNOWN).filter(path == TRANSFERUNKNOWN.PATH).all()
+
+    def is_exists_transfer_unknowns(self, path: str) -> bool:
+        return self.is_transfer_unknown_exists(path)
 
     def is_transfer_unknown_exists(self, path: str) -> bool:
         """
@@ -341,6 +357,9 @@ class TransferRepository(BaseRepository):
         ret = self._db.query(TRANSFERBLACKLIST).filter(os.path.normpath(path) == TRANSFERBLACKLIST.PATH).count()
         return ret > 0
 
+    def is_exists_transfer_blacklist(self, path: str) -> bool:
+        return self.is_transfer_in_blacklist(path)
+
     def is_transfer_notin_blacklist(self, path: str) -> bool:
         """
         查询是否不在黑名单
@@ -348,10 +367,16 @@ class TransferRepository(BaseRepository):
         return not self.is_transfer_in_blacklist(path)
 
     @DbPersist(BaseRepository._db)
+    def truncate_transfer_unknowns(self) -> None:
+        self._db.query(TRANSFERUNKNOWN).delete()
+
+    @DbPersist(BaseRepository._db)
     def insert_transfer_blacklist(self, path: str) -> None:
         """
         插入黑名单记录
         """
+        self._db.insert(TRANSFERBLACKLIST(PATH=os.path.normpath(path)))
+
     def delete_transfer_blacklist(self, path: str) -> None:
         """
         删除黑名单记录

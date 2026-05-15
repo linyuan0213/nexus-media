@@ -39,7 +39,7 @@ class AgentService:
                 log.info("【AgentService】Agent 已禁用，释放 Provider")
             self._provider = None
             return
-        self._config = get_provider()
+        self._config = get_provider()  # type: ignore[assignment]
         if self._config:
             self._provider = self._create_provider(self._config)
             log.info(f"【AgentService】Provider 就绪: {self._config.name} / {self._config.model}")

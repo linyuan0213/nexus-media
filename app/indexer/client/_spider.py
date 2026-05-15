@@ -1,6 +1,7 @@
 import copy
 import datetime
 import re
+from typing import Any
 from urllib.parse import quote
 
 import feapder
@@ -76,7 +77,7 @@ class TorrentSpider(feapder.AirSpider):
     # 种子列表
     torrents_info_array = []
     # 站点信息
-    site_info = None
+    site_info: Any = None
     # 重试次数
     retry_times = 0
 
@@ -604,7 +605,7 @@ class TorrentSpider(feapder.AirSpider):
                     text = f"{args}{text}"
             except Exception as err:
                 ExceptionUtils.exception_traceback(err)
-        return text.strip()
+        return str(text).strip() if text else ""
 
     @staticmethod
     def __remove(item, selector):

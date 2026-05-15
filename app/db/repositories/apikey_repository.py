@@ -94,8 +94,8 @@ class APIKeyRepository(BaseRepository):
         key = self.get_by_id(key_id)
         if not key:
             return False
-        key.USE_COUNT = (key.USE_COUNT or 0) + 1
-        key.LAST_USED_AT = datetime.now()
+        key.USE_COUNT = (key.USE_COUNT or 0) + 1  # type: ignore[assignment]
+        key.LAST_USED_AT = datetime.now()  # type: ignore[assignment]
         self._db.commit()
         return True
 

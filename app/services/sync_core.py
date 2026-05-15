@@ -58,7 +58,7 @@ class SyncCore:
         self._sync_repo = sync_repo or SyncPathRepositoryAdapter()
         self._transfer_repo = transfer_repo or TransferHistoryRepositoryAdapter()
         self._sync_path_confs: dict[str, dict] = {}
-        self._monitor_sync_path_ids: list[int] = []
+        self._monitor_sync_path_ids: list[str] = []
         self._observer: list[Observer] = []
         self._synced_files: list[str] = []
         self._need_sync_paths: dict[str, dict] = {}
@@ -75,7 +75,7 @@ class SyncCore:
     def _reload_config(self) -> None:
         self._sync_path_confs = {}
         self._monitor_sync_path_ids = []
-        for sync_conf in self._sync_repo.get_config_sync_paths():
+        for sync_conf in self._sync_repo.get_config_sync_paths():  # type: ignore[attr-defined]
             if not sync_conf:
                 continue
             sid = sync_conf.ID
@@ -130,9 +130,9 @@ class SyncCore:
     def monitor_sync_path_ids(self):
         return self._monitor_sync_path_ids
 
-    def get_sync_path_conf(self, sid: int | None = None) -> dict:
+    def get_sync_path_conf(self, sid: str | None = None) -> dict:
         if sid:
-            return self._sync_path_confs.get(str(sid)) or {}
+            return self._sync_path_confs.get(sid) or {}
         return self._sync_path_confs
 
     # ---------- 监控服务 ----------
@@ -305,7 +305,7 @@ class SyncCore:
                         log.warn(f"【Sync】{path}转移失败：{ret_msg}")
                 self._need_sync_paths.pop(path)
 
-    def transfer_sync(self, sid: int | list[int] | None = None) -> None:
+    def transfer_sync(self, sid: str | list[str] | None = None) -> None:
         if not sid:
             sids = self._monitor_sync_path_ids
         elif isinstance(sid, list):
@@ -353,7 +353,7 @@ class SyncCore:
             ExceptionUtils.exception_traceback(err)
             log.error(f"【Sync】{event_path} 同步失败：{str(err)}")
 
-    def check_source(self, source: str | None = None, sid: int | None = None) -> None:
+    def check_source(self, source: str | None = None, sid: str | None = None) -> None:
         if source:
             check_monpath = source
         elif sid:
@@ -366,18 +366,28 @@ class SyncCore:
             if (
                 PathUtils.is_path_in_path(monpath, check_monpath) or PathUtils.is_path_in_path(check_monpath, monpath)
             ) and config.get("enabled"):
-                self._sync_repo.check_config_sync_paths(sid=sid, enabled=0)
+                self._sync_repo.check_config_sync_paths(sid=sid, enabled=0)  # type: ignore[attr-defined]
 
     # ---------- 数据操作 ----------
 
     def delete_sync_path(self, sid: int) -> Any:
-        ret = self._sync_repo.delete_config_sync_path(sid=sid)
+        ret = self._sync_repo.delete_config_sync_path(sid=sid)  # type: ignore[attr-defined]
         self._reload_config()
         self._start_monitoring()
         return ret
 
-    def insert_sync_path(self, source: str, dest: str, unknown: str, mode: str, compatibility: bool, rename: bool, enabled: bool, note: str | None = None) -> Any:
-        ret = self._sync_repo.insert_config_sync_path(
+    def insert_sync_path(
+        self,
+        source: str,
+        dest: str,
+        unknown: str,
+        mode: str,
+        compatibility: bool,
+        rename: bool,
+        enabled: bool,
+        note: str | None = None,
+    ) -> Any:
+        ret = self._sync_repo.insert_config_sync_path(  # type: ignore[attr-defined]
             source=source,
             dest=dest,
             unknown=unknown,
@@ -391,8 +401,14 @@ class SyncCore:
         self._start_monitoring()
         return ret
 
-    def check_sync_paths(self, sid: int | None = None, compatibility: bool | None = None, rename: bool | None = None, enabled: bool | None = None) -> Any:
-        ret = self._sync_repo.check_config_sync_paths(
+    def check_sync_paths(
+        self,
+        sid: int | None = None,
+        compatibility: bool | None = None,
+        rename: bool | None = None,
+        enabled: bool | None = None,
+    ) -> Any:
+        ret = self._sync_repo.check_config_sync_paths(  # type: ignore[attr-defined]
             sid=sid, compatibility=compatibility, rename=rename, enabled=enabled
         )
         self._reload_config()

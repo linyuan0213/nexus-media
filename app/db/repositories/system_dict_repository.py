@@ -22,9 +22,9 @@ class SystemDictRepository(BaseRepository):
         """设置字典值（存在则更新，不存在则插入）"""
         existing = self.get_by_type_key(dtype, key)
         if existing:
-            existing.VALUE = value
+            existing.VALUE = value  # type: ignore[assignment]
             if note:
-                existing.NOTE = note
+                existing.NOTE = note  # type: ignore[assignment]
         else:
             self._db.insert(SYSTEMDICT(TYPE=dtype, KEY=key, VALUE=value, NOTE=note))
         self._db.commit()

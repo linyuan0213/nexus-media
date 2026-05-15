@@ -386,7 +386,7 @@ class TmdbLookup(BaseLookup):
         if not self.client.tv:
             return ""
         try:
-            episode = self.client.tv.episode(tv_id, season_id, episode_id)
+            episode = self.client.tv.episode(tv_id, season_id, episode_id)  # type: ignore[attr-defined]
             if episode:
                 still_path = episode.get("still_path")
                 if still_path:

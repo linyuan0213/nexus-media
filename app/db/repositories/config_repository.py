@@ -373,8 +373,8 @@ class ConfigRepository(BaseRepository):
             return
 
         mediainfos = json.loads(taskinfo[0].MEDIAINFOS) if taskinfo[0].MEDIAINFOS else []
-        tmdbid = str(mediainfo.tmdb_id)
-        season = int(mediainfo.get_season_seq())
+        tmdbid = str(mediainfo.tmdb_id)  # type: ignore[union-attr]
+        season = int(mediainfo.get_season_seq())  # type: ignore[union-attr]
 
         for media in mediainfos:
             if media.get("id") == tmdbid and media.get("season") == season:

@@ -217,7 +217,7 @@ class DoubanSyncPlugin:
         mi.overview = douban_info.get("intro")
         mi.poster_path = douban_info.get("cover_url")
         rating = douban_info.get("rating", {}) or {}
-        mi.vote_average = rating.get("value") or ""
+        mi.vote_average = float(rating.get("value") or 0)
         mi.imdb_id = douban_info.get("imdbid")
         mi.user_name = info.get("user_name")
 

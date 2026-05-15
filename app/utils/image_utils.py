@@ -9,7 +9,7 @@ class ImageUtils:
         # 打开图片并转换为RGB模式
         img = Image.open(image_path).convert("RGB")
         # 缩小图片尺寸以加快计算速度
-        img = img.resize((100, 100), resample=Image.BILINEAR)
+        img = img.resize((100, 100), resample=Image.Resampling.BILINEAR)
         # 获取所有像素颜色值
         pixels = img.getdata()
         # 统计每种颜色在像素中出现的频率

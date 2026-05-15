@@ -78,8 +78,8 @@ def cached(cache_instance: CacheAdapter | str | None = None, key_func: Callable 
             return result
 
         # 添加缓存操作方法
-        wrapper.cache_clear = lambda: _clear_cache(cache_instance)
-        wrapper.cache_delete = lambda key: _delete_cache(cache_instance, key)
+        wrapper.cache_clear = lambda: _clear_cache(cache_instance)  # type: ignore[attr-defined]
+        wrapper.cache_delete = lambda key: _delete_cache(cache_instance, key)  # type: ignore[attr-defined]
 
         return wrapper
 
@@ -222,8 +222,8 @@ def lru_cache_with_ttl(maxsize: int = 128, ttl: int | None = None):
             cache.set(cache_key, result, ttl)
             return result
 
-        wrapper.cache_info = cache.get_stats
-        wrapper.cache_clear = cache.clear
+        wrapper.cache_info = cache.get_stats  # type: ignore[attr-defined]
+        wrapper.cache_clear = cache.clear  # type: ignore[attr-defined]
 
         return wrapper
 

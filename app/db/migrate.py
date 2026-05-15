@@ -230,7 +230,7 @@ def import_database(
                 # 获取需要截断的列（避免 MySQL Data too long 错误）
                 truncate_columns = {}
                 for col in sa_table.columns:
-                    if hasattr(col.type, "length") and col.type.length is not None:
+                    if hasattr(col.type, "length") and col.type.length is not None:  # type: ignore[union-attr]
                         truncate_columns[col.name] = col.type.length
 
                 # 分批插入，单条捕获异常跳过有问题的行

@@ -507,7 +507,7 @@ class Transmission(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return None
         if torrent:
-            return torrent.files()
+            return torrent.files()  # type: ignore[attr-defined]
         else:
             return None
 
@@ -530,7 +530,7 @@ class Transmission(_IDownloadClient):
         if not self.trc:
             return False
         try:
-            self.trc.set_files(kwargs.get("file_info"))
+            self.trc.set_files(kwargs.get("file_info"))  # type: ignore[attr-defined]
             return True
         except Exception as err:
             ExceptionUtils.exception_traceback(err)

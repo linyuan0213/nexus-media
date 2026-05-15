@@ -606,12 +606,12 @@ class MediaService:
                 match_url = match[1]
                 if not match_title or not match_url:
                     continue
-                match_title = StringUtils.handler_special_chars(match_title).upper()
+                match_title = StringUtils.handler_special_chars(str(match_title)).upper()
                 for result in results:
                     if not result:
                         continue
                     result_title = StringUtils.handler_special_chars(
-                        result.get("title") or result.get("name", "")
+                        str(result.get("title") or result.get("name", ""))
                     ).upper()
                     if not result_title:
                         continue

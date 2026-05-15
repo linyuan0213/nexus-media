@@ -328,7 +328,7 @@ class SiteEngine:
                     for xp in conf.get("PEER_COUNT", []):
                         els = doc.xpath(xp)
                         if els:
-                            txt = "".join(str(t) for t in els[0].itertext())
+                            txt = "".join(str(t) for t in els[0].itertext())  # type: ignore[union-attr]
                             ret["peer_count"] = int("".join(c for c in txt if c.isdigit()) or 0)
         return ret
 

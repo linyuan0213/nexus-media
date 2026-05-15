@@ -101,7 +101,7 @@ class Aria2(_IDownloadClient):
             true_path, replace_flag = self.get_replace_path(path, self.download_dir)
             # 开启目录隔离，未进行目录替换的不处理
             if match_path and not replace_flag:
-                log.debug(f"【{self.client_name}】{self.name} 开启目录隔离，但 {torrent.name} 未匹配下载目录范围")
+                log.debug(f"【{self.client_name}】{self.client_name} 开启目录隔离，但 {torrent.name} 未匹配下载目录范围")
                 continue
             trans_tasks.append({"path": os.path.join(true_path, name).replace("\\", "/"), "id": torrent.id})
         return trans_tasks
@@ -227,9 +227,9 @@ class Aria2(_IDownloadClient):
         # 状态
         torrent_obj.status = Aria2._judge_status(torrent.get("status") or "")
         # 下载速度
-        torrent_obj.download_speed = torrent.get("downloadSpeed")
+        torrent_obj.download_speed = int(torrent.get("downloadSpeed") or 0)
         # 上传速度
-        torrent_obj.upload_speed = torrent.get("uploadSpeed")
+        torrent_obj.upload_speed = int(torrent.get("uploadSpeed") or 0)
         # 下载进度
         torrent_obj.progress = round(int(torrent.get("completedLength") or 0) / int(torrent.get("totalLength") or 0), 1)
         # 保存路径

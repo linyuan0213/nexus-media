@@ -107,7 +107,7 @@ class Torrent:
                             elif req is not None:
                                 log.warn(
                                     f"【Downloader】触发了站点首次种子下载，且无法自动跳过，"
-                                    f"返回码：{req.status_code}，错误原因：{req.reason}"
+                                    f"返回码：{req.status_code}，错误原因：{req.reason}"  # type: ignore[union-attr]
                                 )
                             else:
                                 log.warn(f"【Downloader】触发了站点首次种子下载，且无法自动跳过：{url}")
