@@ -3,7 +3,7 @@ import os
 import re
 import time
 from io import BytesIO
-from typing import Any, cast
+from typing import cast
 
 import zhconv
 from bs4 import BeautifulSoup
@@ -183,9 +183,9 @@ class Tjupt(_ISiteSigninHandler):
         else:
             res_count = len(search_results)
             # 繁体转简体,合成查询内容
-            search_results = "@".join(
-                [zhconv.convert(result.text, "zh-hans") for result in search_results if result.text]
-            )
+            search_results = "@".join([
+                zhconv.convert(result.text, "zh-hans") for result in search_results if result.text
+            ])
             # 查询每个选项出现的次数
             count_results = []
             count_flag = False

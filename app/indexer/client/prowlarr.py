@@ -1,5 +1,3 @@
-from typing import Any
-
 from app.helper import IndexerConf
 from app.indexer.client._base import _IIndexClient
 from app.utils import ExceptionUtils, RequestUtils

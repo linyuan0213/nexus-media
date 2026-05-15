@@ -1,6 +1,6 @@
 import json
 import time
-from typing import Any, cast
+from typing import cast
 
 from lxml import etree
 
@@ -87,10 +87,9 @@ class Opencd(_ISiteSigninHandler):
             # ocr二维码识别
             ocr_result = OcrHelper().get_captcha_text(image_url=img_get_url, cookie=site_cookie, ua=ua)
             self.debug(f"ocr识别{site}验证码 {ocr_result}")
-            if ocr_result:
-                if len(ocr_result) == 6:
-                    self.info(f"ocr识别{site}验证码成功 {ocr_result}")
-                    break
+            if ocr_result and len(ocr_result) == 6:
+                self.info(f"ocr识别{site}验证码成功 {ocr_result}")
+                break
             times += 1
             self.debug(f"ocr识别{site}验证码失败，正在进行重试，目前重试次数 {times}")
             time.sleep(1)

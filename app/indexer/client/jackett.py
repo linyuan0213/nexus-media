@@ -1,5 +1,3 @@
-from typing import Any
-
 import requests
 
 from app.helper import IndexerConf

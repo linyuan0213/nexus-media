@@ -9,9 +9,9 @@ from app.db.repositories import ConfigRepository
 from app.helper import ProgressHelper, SubmoduleHelper
 from app.media import MediaService
 from app.message import Message
+from app.infrastructure.queue import MessageQueueFactory
 from app.utils import ExceptionUtils
 from app.utils.commons import SingletonMeta
-from app.utils.task_queue import TaskQueue
 from app.utils.types import MediaServerType, MovieTypes, ProgressKey, SystemConfigKey
 from config import Config
 
@@ -384,7 +384,7 @@ class MediaServer(metaclass=SingletonMeta):
             log.error("【MediaServer】webhook 消息解析异常")
             return
         if event_info:
-            TaskQueue().submit(self._process_webhook, event_info, channel, name="mediaserver_webhook")
+            MessageQueueFactory.get_instance().submit(self._process_webhook, event_info, channel, name="mediaserver_webhook")
 
     def get_resume(self, num=12):
         """

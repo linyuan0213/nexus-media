@@ -4,7 +4,6 @@ RBAC (Role-Based Access Control) 权限管理模型
 """
 
 from datetime import datetime
-from typing import Any
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -83,7 +82,9 @@ class RBACUser(Base):
             "avatar": self.AVATAR,
             "status": self.STATUS,
             "is_superadmin": self.IS_SUPERADMIN,
-            "last_login_at": self.LAST_LOGIN_AT.strftime("%Y-%m-%d %H:%M:%S") if self.LAST_LOGIN_AT is not None else None,
+            "last_login_at": self.LAST_LOGIN_AT.strftime("%Y-%m-%d %H:%M:%S")
+            if self.LAST_LOGIN_AT is not None
+            else None,
             "last_login_ip": self.LAST_LOGIN_IP,
             "created_at": self.CREATED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.CREATED_AT is not None else None,
             "roles": [role.to_dict() for role in self.roles] if self.roles else [],
@@ -332,7 +333,9 @@ class RBACUserLoginLog(Base):
     __tablename__ = "RBAC_USER_LOGIN_LOGS"
 
     ID: Mapped[int] = mapped_column(Integer, primary_key=True)
-    USER_ID: Mapped[int] = mapped_column(Integer, ForeignKey("RBAC_USERS.ID", ondelete="CASCADE"), nullable=False, index=True)
+    USER_ID: Mapped[int] = mapped_column(
+        Integer, ForeignKey("RBAC_USERS.ID", ondelete="CASCADE"), nullable=False, index=True
+    )
     USERNAME: Mapped[str] = mapped_column(String(255), nullable=False)
     LOGIN_IP: Mapped[str] = mapped_column(String(64), nullable=True)
     LOGIN_LOCATION: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -369,7 +372,9 @@ class RBACOperationLog(Base):
     __tablename__ = "RBAC_OPERATION_LOGS"
 
     ID: Mapped[int] = mapped_column(Integer, primary_key=True)
-    USER_ID: Mapped[int] = mapped_column(Integer, ForeignKey("RBAC_USERS.ID", ondelete="SET NULL"), nullable=True, index=True)
+    USER_ID: Mapped[int] = mapped_column(
+        Integer, ForeignKey("RBAC_USERS.ID", ondelete="SET NULL"), nullable=True, index=True
+    )
     USERNAME: Mapped[str] = mapped_column(String(255), nullable=True)
 
     # 操作模块
