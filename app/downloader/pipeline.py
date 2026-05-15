@@ -13,6 +13,7 @@
 import contextlib
 import json
 import os
+from typing import Any
 
 import log
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
@@ -190,7 +191,10 @@ class DownloadPipeline:
     # ---------- 阶段1：种子获取 ----------
 
     def _stage_fetch(self, media_info, torrent_file=None, proxy=None):
-        site_info, dl_files_folder, dl_files, retmsg = {}, "", [], ""
+        site_info: Any = {}
+        dl_files_folder: Any = ""
+        dl_files: Any = []
+        retmsg: Any = ""
         torrent_attr = {}
         file_path = None
         content = None

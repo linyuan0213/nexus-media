@@ -12,25 +12,28 @@ DownloadCore - 下载核心业务逻辑
 """
 
 import os
+from typing import Any
 
 import log
 from app.core.constants import PT_TAG, RMT_MEDIAEXT
 from app.core.system_config import SystemConfig
+from app.db.repositories import ConfigRepository
 from app.db.repositories.download_repo_adapter import (
     DownloadHistoryRepositoryAdapter,
     DownloadSettingRepositoryAdapter,
 )
-from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.downloader.client_factory import DownloadClientFactory
 from app.downloader.pipeline import DownloadPipeline
 from app.media import meta_info
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.plugin_framework.event_compat import EventManager
-from app.schemas.download import Torrent
+from app.schemas.download import Torrent as TorrentInfo
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.sites import SiteConf, Sites, SiteSubtitle
+from app.sites.engine import SiteEngine
 from app.utils import ExceptionUtils
+from app.utils.torrent import Torrent
 from app.utils.types import DownloaderType
 
 
@@ -49,7 +52,7 @@ class DownloadCore:
         siteconf: SiteConf | None = None,
         sitesubtitle: SiteSubtitle | None = None,
         eventmanager: EventManager | None = None,
-        download_repo: IDownloadHistoryRepository | None = None,
+        download_repo: Any = None,
         download_setting_repo=None,
         systemconfig: SystemConfig | None = None,
     ):
@@ -114,7 +117,7 @@ class DownloadCore:
 
     # ---------- 历史记录 / 配置 CRUD 代理 ----------
 
-    def get_torrents(self, downloader_id=None, ids=None, tag=None) -> list[Torrent]:
+    def get_torrents(self, downloader_id=None, ids=None, tag=None) -> list[TorrentInfo]:
         if not downloader_id:
             downloader_id = self._client_factory.default_downloader_id
         _client = self._client_factory.get_client(downloader_id)
@@ -141,10 +144,11 @@ class DownloadCore:
         else:
             config["filter_tags"] = config["tags"]
         torrents = _client.get_remove_torrents(config=config)
-        torrents.sort(key=lambda x: x.get("name"))
+        if torrents:
+            torrents.sort(key=lambda x: x.get("name"))
         return torrents
 
-    def get_downloading_torrents(self, downloader_id=None, ids=None, tag=None) -> list[Torrent]:
+    def get_downloading_torrents(self, downloader_id=None, ids=None, tag=None) -> list[TorrentInfo]:
         if not downloader_id:
             downloader_id = self._client_factory.default_downloader_id
         _client = self._client_factory.get_client(downloader_id)
@@ -171,7 +175,7 @@ class DownloadCore:
             ExceptionUtils.exception_traceback(err)
             return []
 
-    def get_completed_torrents(self, downloader_id=None, ids=None, tag=None) -> list[Torrent]:
+    def get_completed_torrents(self, downloader_id=None, ids=None, tag=None) -> list[TorrentInfo]:
         if not downloader_id:
             downloader_id = self._client_factory.default_downloader_id
         _client = self._client_factory.get_client(downloader_id)
@@ -222,7 +226,7 @@ class DownloadCore:
         return _client.delete_torrents(delete_file=delete_file, ids=ids)
 
     def get_files(self, tid, downloader_id=None):
-        _client = (
+        _client: Any = (
             self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
         )
         if not _client:
@@ -242,7 +246,7 @@ class DownloadCore:
     def set_files_status(self, tid, need_episodes, downloader_id=None):
         if not downloader_id:
             downloader_id = self._client_factory.default_downloader_id
-        _client = self._client_factory.get_client(downloader_id)
+        _client: Any = self._client_factory.get_client(downloader_id)
         downloader_conf = self._client_factory.get_downloader_conf(downloader_id)
         if not _client:
             return []
@@ -320,7 +324,7 @@ class DownloadCore:
         if not url:
             log.error("【Downloader】url 链接为空")
             return [], None
-        site_info = self._sites.get_sites(siteurl=url)
+        site_info: dict = self._sites.get_sites(siteurl=url)
         file_path, _, _, files, retmsg = Torrent().get_torrent_info(
             url=url,
             cookie=site_info.get("cookie"),
@@ -331,7 +335,7 @@ class DownloadCore:
         if not files:
             log.error(f"【Downloader】读取种子文件集数出错：{retmsg}")
             if file_path:
-                Torrent().delete_torrent_file(file_path)
+                Torrent.delete_torrent_file(file_path)
             return [], None
         episodes = []
         for file in files:
@@ -359,8 +363,6 @@ class DownloadCore:
     def update_downloader(
         self, did, name, enabled, dtype, transfer, only_nastool, match_path, rmt_mode, config, download_dir
     ):
-        from app.db.repositories import ConfigRepository
-
         ret = ConfigRepository().update_downloader(
             did=did,
             name=name,
@@ -377,15 +379,11 @@ class DownloadCore:
         return ret
 
     def delete_downloader(self, did):
-        from app.db.repositories import ConfigRepository
-
         ret = ConfigRepository().delete_downloader(did=did)
         self._client_factory.init_config()
         return ret
 
     def check_downloader(self, did=None, transfer=None, only_nastool=None, enabled=None, match_path=None):
-        from app.db.repositories import ConfigRepository
-
         ret = ConfigRepository().check_downloader(
             did=did, transfer=transfer, only_nastool=only_nastool, enabled=enabled, match_path=match_path
         )
@@ -429,9 +427,7 @@ class DownloadCore:
 
     @staticmethod
     def get_download_url(page_url):
-        from app.sites.engine import SiteEngine
-
-        site_info = Sites().get_sites(siteurl=page_url)
+        site_info: dict = Sites().get_sites(siteurl=page_url)
         return SiteEngine.get_instance().resolve_download_url(
             page_url=page_url,
             user_config={
