@@ -31,11 +31,11 @@ class Slack(_IMessageClient):
         super().__init__(config)
 
     def read_config(self):
-        cfg = self._config or {}
-        self._interactive = cfg.get("interactive", False)
-        self._channel = cfg.get("channel") or "全体"
-        self._bot_token = cfg.get("bot_token")
-        self._app_token = cfg.get("app_token")
+        raw: dict = self._config  # type: ignore[assignment]
+        self._interactive = raw.get("interactive", False)
+        self._channel = raw.get("channel") or "全体"
+        self._bot_token = raw.get("bot_token")
+        self._app_token = raw.get("app_token")
 
     def setup(self):
         _web_port = self._config.get_config("app").get("web_port")
@@ -90,7 +90,7 @@ class Slack(_IMessageClient):
                 print(str(err))
             log.info("Slack消息接收服务已停止")
 
-    def send_msg(self, title, text="", image="", url="", user_id=""):
+    def send_msg(self, title, text="", image="", url="", user_id="") -> tuple[bool, str]:
         if not title and not text:
             return False, "标题和内容不能同时为空"
         if not self._client:
@@ -121,12 +121,12 @@ class Slack(_IMessageClient):
                     }
                 )
             result = self._client.chat_postMessage(channel=channel, blocks=blocks)
-            return True, result
+            return True, str(result)
         except Exception as msg_e:
             ExceptionUtils.exception_traceback(msg_e)
             return False, str(msg_e)
 
-    def send_list_msg(self, medias: list, user_id="", title="", **kwargs):
+    def send_list_msg(self, medias: list, user_id="", title="", **kwargs) -> tuple[bool, str]:
         if not medias:
             return False, "参数有误"
         if not self._client:
@@ -170,7 +170,7 @@ class Slack(_IMessageClient):
                     }
                 )
             result = self._client.chat_postMessage(channel=channel, blocks=blocks)
-            return True, result
+            return True, str(result)
         except Exception as msg_e:
             ExceptionUtils.exception_traceback(msg_e)
             return False, str(msg_e)
@@ -179,8 +179,11 @@ class Slack(_IMessageClient):
         if not self._client:
             return ""
         try:
-            for result in self._client.conversations_list():
-                for channel in result["channels"]:
+            conversations = self._client.conversations_list()
+            if not conversations:
+                return ""
+            for result in conversations:
+                for channel in result.get("channels") or []:
                     if channel.get("name") == self._channel:
                         return channel.get("id")
         except SlackApiError as e:

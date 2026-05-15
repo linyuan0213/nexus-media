@@ -5,7 +5,7 @@
 
 import re
 
-import anitopy
+import anitopy  # type: ignore
 
 from app.media.models import MediaInfo
 from app.media.parser.anime.name_parser import clean_name, extract_name, parse_name

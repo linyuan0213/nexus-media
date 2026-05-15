@@ -56,10 +56,10 @@ class Plex(_IMediaClient):
                     self._play_host = "http://" + self._play_host
                 if not self._play_host.endswith("/"):
                     self._play_host = self._play_host + "/"
-            if "app.plex.tv" in self._play_host:
-                self._play_host = self._play_host + "desktop/"
+            if "app.plex.tv" in (self._play_host or ""):
+                self._play_host = (self._play_host or "") + "desktop/"
             else:
-                self._play_host = self._play_host + "web/index.html"
+                self._play_host = (self._play_host or "") + "web/index.html"
             self._username = self._client_config.get("username")
             self._password = self._client_config.get("password")
             self._servername = self._client_config.get("servername")
@@ -288,7 +288,7 @@ class Plex(_IMediaClient):
         按路径刷新媒体库
         """
         if not self._plex:
-            return False
+            return
         # _libraries可能未初始化,初始化一下
         if not self._libraries:
             try:

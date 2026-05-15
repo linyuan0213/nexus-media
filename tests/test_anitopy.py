@@ -4,7 +4,7 @@ import os
 import sys
 from unittest.mock import MagicMock
 
-import anitopy
+import anitopy  # type: ignore
 
 from app.media.parser.anime.prepare import prepare_title
 

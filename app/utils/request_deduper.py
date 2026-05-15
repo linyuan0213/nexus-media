@@ -38,6 +38,7 @@ class RequestDeduper:
         4. 新请求 → 锁外执行实际函数
         """
         need_wait = False
+        event = None
 
         with self._lock:
             if key in self._pending_requests:
@@ -58,13 +59,13 @@ class RequestDeduper:
         try:
             result = func(*args, **kwargs)
             with self._lock:
-                self._pending_requests[key] = (event, result, None)
-            event.set()
+                self._pending_requests[key] = (event, result, None)  # type: ignore[arg-type]
+            event.set()  # type: ignore[union-attr]
             return result
         except Exception as e:
             with self._lock:
-                self._pending_requests[key] = (event, None, e)
-            event.set()
+                self._pending_requests[key] = (event, None, e)  # type: ignore[arg-type]
+            event.set()  # type: ignore[union-attr]
             raise
         finally:
             threading.Timer(5.0, self._cleanup, args=[key]).start()

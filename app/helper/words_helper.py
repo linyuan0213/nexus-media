@@ -140,7 +140,7 @@ class WordsHelper(metaclass=SingletonMeta):
         return result
 
     @staticmethod
-    def replace_regex(title, replaced, replace) -> (str, str, bool):
+    def replace_regex(title, replaced, replace) -> tuple[str, str, bool]:
         try:
             if not re.findall(rf"{replaced}", title):
                 return title, "", False
@@ -151,7 +151,7 @@ class WordsHelper(metaclass=SingletonMeta):
             return title, str(err), False
 
     @staticmethod
-    def replace_noregex(title, replaced, replace) -> (str, str, bool):
+    def replace_noregex(title, replaced, replace) -> tuple[str, str, bool]:
         try:
             if title.find(replaced) == -1:
                 return title, "", False
@@ -162,7 +162,7 @@ class WordsHelper(metaclass=SingletonMeta):
             return title, str(err), False
 
     @staticmethod
-    def episode_offset(title, front, back, offset) -> (str, str, bool):
+    def episode_offset(title, front, back, offset) -> tuple[str, str, bool]:
         try:
             if back and not re.findall(rf"{back}", title):
                 return title, "", False

@@ -320,7 +320,7 @@ class BrushTaskService:
         return list(self._brush_tasks.values())
 
     def update_brushtask(self, brushtask_id: int | None, item: dict) -> Any:
-        ret = self._repo.update_brushtask(brushtask_id, item)
+        ret = self._repo.update_brushtask(brushtask_id or 0, item)
         if brushtask_id:
             self._reload_single_task(brushtask_id)
         else:
@@ -329,7 +329,7 @@ class BrushTaskService:
 
     def delete_brushtask(self, brushtask_id: int | None) -> Any:
         self._stop_task_jobs(brushtask_id)
-        ret = self._repo.delete_brushtask(brushtask_id)
+        ret = self._repo.delete_brushtask(brushtask_id or 0)
         self._brush_tasks.pop(str(brushtask_id), None)
         return ret
 
@@ -354,10 +354,10 @@ class BrushTaskService:
         return ret
 
     def get_brushtask_torrents(self, brush_id: int | None, active: bool = True) -> Any:
-        return self._repo.get_brushtask_torrents(brush_id, active)
+        return self._repo.get_brushtask_torrents(brush_id or 0, active)
 
     def is_torrent_handled(self, enclosure: str | None) -> Any:
-        return self._repo.get_brushtask_torrent_by_enclosure(enclosure)
+        return self._repo.get_brushtask_torrent_by_enclosure(enclosure or "")
 
     # ---------- RSS 刷流 ----------
 

@@ -138,7 +138,7 @@ class WeworkIPChangePlugin:
                 if img_url:
                     img_url = f"https://work.weixin.qq.com{img_url}"
                     self.ctx.info("登录已过期，重新登录")
-                    self.ctx.notify(title="【企业微信登录过期】", text="请点击扫码重新登录", url=img_url, image=img_url)
+                    self.ctx.notify(title="【企业微信登录过期】", text="请点击扫码重新登录", image=img_url)
 
         if not login_status:
             start = time.time()
@@ -224,6 +224,7 @@ class WeworkIPChangePlugin:
 
     def _process_single_app(self, app_id, cookie, dynamic_ip, overwrite):
         msg = ""
+        update_status = False
         try:
             ips = self._get_current_iplist(cookie=cookie, app_id=app_id)
             ip_exist = dynamic_ip in ips if ips else False
@@ -255,7 +256,7 @@ class WeworkIPChangePlugin:
 
     def _get_current_dynamic_ip(self):
         try:
-            response: Response = RequestUtils().get_res(url=self._ip_url)
+            response = RequestUtils().get_res(url=self._ip_url)
             if response and response.status_code == 200:
                 pattern = r"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
                 ip_str = response.text.strip()
@@ -287,7 +288,7 @@ class WeworkIPChangePlugin:
             "bind_mini_program": "false",
         }
         try:
-            response: Response = RequestUtils(headers=headers).get_res(url=url, params=params)
+            response = RequestUtils(headers=headers).get_res(url=url, params=params)
             if response and response.status_code == 200:
                 app_json = response.json()
                 try:
@@ -324,7 +325,7 @@ class WeworkIPChangePlugin:
         url = "https://work.weixin.qq.com/wework_admin/apps/saveIpConfig"
 
         try:
-            response: Response = RequestUtils(headers=headers).post_res(url=url, params=params, data=data)
+            response = RequestUtils(headers=headers).post_res(url=url, params=params, data=data)
             if response and response.status_code == 200:
                 json_data = response.json()
                 try:

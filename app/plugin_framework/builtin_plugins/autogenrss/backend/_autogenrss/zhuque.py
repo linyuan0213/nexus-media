@@ -50,7 +50,8 @@ class ZhuQue(_ISiteRssGenHandler):
         if not html:
             return False, f"【{site}】生成RSS失败"
 
-        x_csrf_token = html.xpath("//meta[@name='x-csrf-token']/@content")[0]
+        x_csrf_token_list = html.xpath("//meta[@name='x-csrf-token']/@content")
+        x_csrf_token = x_csrf_token_list[0] if x_csrf_token_list else None
         if x_csrf_token:
             headers = {
                 "x-csrf-token": str(x_csrf_token),
@@ -63,6 +64,8 @@ class ZhuQue(_ISiteRssGenHandler):
             if not security_res or security_res.status_code != 200:
                 self.error("生成RSS失败")
                 return False, f"【{site}】生成RSS失败"
+        else:
+            return False, f"【{site}】生成RSS失败"
 
         rss_link = ""
         json_data = security_res.json()

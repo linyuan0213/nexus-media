@@ -111,7 +111,7 @@ class MessageSearchService:
         if item.TMDBID:
             tmdb_info = MediaService().get_tmdb_info(mtype=mtype, tmdbid=item.TMDBID)
         else:
-            tmdb_info = MediaService().get_media_info(title=title, year=year, mtype=mtype)
+            tmdb_info = MediaService().get_media_info(title=f"{title} {year or ''}".strip(), mtype=mtype)
 
         media_info = meta_info(title=f"{title} {year}".strip(), mtype=mtype)
         media_info.set_tmdb_info(tmdb_info)
@@ -159,7 +159,7 @@ class MessageSearchService:
 
     def _download_from_url(self, url: str, in_from: SearchType, user_id: str, user_name: str | None = None):
         """从 URL 下载种子"""
-        site_info = Sites().get_sites(siteurl=url)
+        site_info: dict = Sites().get_sites(siteurl=url)  # type: ignore[assignment]
         filepath, content, retmsg = Torrent().save_torrent_file(
             url=url, cookie=site_info.get("cookie"), ua=site_info.get("ua"), proxy=site_info.get("proxy") or False
         )
