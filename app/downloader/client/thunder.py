@@ -196,11 +196,12 @@ class Thunder(_IDownloadClient):
 
         try:
             success = True
-            # 如果ids不是列表，转换为列表
+            if ids is None:
+                return False
             if not isinstance(ids, list):
                 ids = [ids]
             for task_id in ids:
-                result = self._client.resume_task(task_id)
+                result = self._client.resume_task(str(task_id))
                 if not result:
                     success = False
             return success
@@ -214,11 +215,12 @@ class Thunder(_IDownloadClient):
 
         try:
             success = True
-            # 如果ids不是列表，转换为列表
+            if ids is None:
+                return False
             if not isinstance(ids, list):
                 ids = [ids]
             for task_id in ids:
-                result = self._client.pause_task(task_id)
+                result = self._client.pause_task(str(task_id))
                 if not result:
                     success = False
             return success
@@ -232,11 +234,12 @@ class Thunder(_IDownloadClient):
 
         try:
             success = True
-            # 如果ids不是列表，转换为列表
+            if ids is None:
+                return False
             if not isinstance(ids, list):
                 ids = [ids]
             for task_id in ids:
-                result = self._client.delete_task(task_id, delete_files=delete_file)
+                result = self._client.delete_task(str(task_id), delete_files=bool(delete_file))
                 if not result:
                     success = False
             return success
@@ -251,7 +254,7 @@ class Thunder(_IDownloadClient):
         # 迅雷不支持修改种子
         return True
 
-    def get_downloading_progress(self, ids=None):
+    def get_downloading_progress(self, ids=None, tag=None):
         if not self._client:
             return []
 

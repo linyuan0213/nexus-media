@@ -1,7 +1,4 @@
-try:
-    from anitopy import anitopy as _anitopy_parse
-except ImportError:
-    _anitopy_parse = None
+import anitopy
 
 from app.media.parser.base import BaseParser, ParserResult
 from app.utils.types import MediaType
@@ -11,9 +8,7 @@ class AnitopyAdapter(BaseParser):
     """anitopy 动漫解析适配器"""
 
     def parse(self, title: str, subtitle: str = "") -> ParserResult | None:
-        if _anitopy_parse is None:
-            return None
-        result = _anitopy_parse(title)
+        result = anitopy.parse(title)
         if not result:
             return None
         return ParserResult(

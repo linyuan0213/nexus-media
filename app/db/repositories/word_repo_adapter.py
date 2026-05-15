@@ -40,15 +40,15 @@ class CustomWordRepositoryAdapter(ICustomWordRepository):
         whelp: str,
         note: str | None = None,
     ) -> bool:
-        return self._repo.insert_custom_word(
+        return bool(self._repo.insert_custom_word(
             replaced, replace, front, back, offset, wtype, gid, season, enabled, regex, whelp, note
-        )
+        ))
 
     def delete_custom_word(self, wid: int | None = None) -> bool:
-        return self._repo.delete_custom_word(wid=wid)
+        return bool(self._repo.delete_custom_word(wid=wid))
 
     def check_custom_word(self, wid: int | None = None, enabled: int | None = None) -> bool:
-        return self._repo.check_custom_word(wid=wid, enabled=enabled)
+        return bool(self._repo.check_custom_word(wid=wid, enabled=enabled))
 
 
 class CustomWordGroupRepositoryAdapter(ICustomWordGroupRepository):
@@ -69,7 +69,7 @@ class CustomWordGroupRepositoryAdapter(ICustomWordGroupRepository):
     def insert_custom_word_groups(
         self, title: str, year: str, gtype: int, tmdbid: int, season_count: int, note: str | None = None
     ) -> bool:
-        return self._repo.insert_custom_word_groups(title, year, gtype, tmdbid, season_count, note)
+        return bool(self._repo.insert_custom_word_groups(title, year, gtype, tmdbid, season_count, note))
 
     def delete_custom_word_group(self, gid: int) -> bool:
-        return self._repo.delete_custom_word_group(gid=gid)
+        return bool(self._repo.delete_custom_word_group(gid=gid))

@@ -1,5 +1,6 @@
 import re
 from abc import ABCMeta, abstractmethod
+from typing import Any
 
 import log
 from app.utils import StringUtils
@@ -14,17 +15,18 @@ class _ISiteSigninHandler(metaclass=ABCMeta):
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = ""
 
+    @classmethod
     @abstractmethod
-    def match(self, url):
+    def match(cls, url):
         """
         根据站点Url判断是否匹配当前站点签到类，大部分情况使用默认实现即可
         :param url: 站点Url
         :return: 是否匹配，如匹配则会调用该类的signin方法
         """
-        return bool(StringUtils.url_equal(url, self.site_url))
+        return bool(StringUtils.url_equal(url, cls.site_url))
 
     @abstractmethod
-    def signin(self, site_info: dict):
+    def signin(self, site_info: dict) -> Any:
         """
         执行签到操作
         :param site_info: 站点信息，含有站点Url、站点Cookie、UA等信息

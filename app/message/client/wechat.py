@@ -59,7 +59,9 @@ class WeChat(_IMessageClient):
 
     def _get_access_token(self, force=False):
         need = False
-        if not self._access_token or (datetime.now() - self._token_time).seconds >= (self._expires_in or 7200):
+        duration = (datetime.now() - self._token_time).seconds if self._token_time else 0
+
+        if not self._access_token or duration >= (self._expires_in or 7200):
             need = True
         if not need and not force:
             return self._access_token
@@ -105,14 +107,12 @@ class WeChat(_IMessageClient):
                 item_title = f"{item_title}\n{media.get_type_string()}，{vote}"
             else:
                 item_title = f"{item_title}\n{media.get_type_string()}"
-            articles.append(
-                {
-                    "title": item_title,
-                    "description": "",
-                    "picurl": media.get_message_image() if i == 0 else media.get_poster_image(),
-                    "url": media.get_detail_url(),
-                }
-            )
+            articles.append({
+                "title": item_title,
+                "description": "",
+                "picurl": media.get_message_image() if i == 0 else media.get_poster_image(),
+                "url": media.get_detail_url(),
+            })
         req = {"touser": user_id, "msgtype": "news", "agentid": self.agent_id, "news": {"articles": articles}}
         return self._post_request(message_url, req)
 
@@ -199,7 +199,9 @@ class WeChat(_IMessageClient):
                         log.info("【WeChat】应用菜单创建成功")
                     else:
                         log.error(
-                            "【WeChat】菜单创建失败 errcode={} errmsg={}".format(body.get("errcode"), body.get("errmsg"))
+                            "【WeChat】菜单创建失败 errcode={} errmsg={}".format(
+                                body.get("errcode"), body.get("errmsg")
+                            )
                         )
                 else:
                     log.error("【WeChat】菜单创建失败 HTTP=%s" % (res.status_code if res else "无响应"))

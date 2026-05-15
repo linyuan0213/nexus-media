@@ -3,7 +3,7 @@ RBAC 领域 Repository 适配器
 将旧版 RBACRepository 适配为新领域接口
 """
 
-from typing import Any
+from typing import Any, cast
 
 from app.db.repositories.rbac_repository import (
     RBACLogRepository,
@@ -74,7 +74,7 @@ class RBACUserRepositoryAdapter(IRBACUserRepository):
         row = self._repo.create_user(username, password_hash, email, nickname, is_superadmin)
         if isinstance(row, bool):
             row = self._repo.get_user_by_username(username)
-        return RBACUserEntity.from_orm(row)
+        return cast(RBACUserEntity, RBACUserEntity.from_orm(row))
 
     def update_user(self, user_id: int, **kwargs) -> bool:
         return self._repo.update_user(user_id, **kwargs)
@@ -136,7 +136,7 @@ class RBACRoleRepositoryAdapter(IRBACRoleRepository):
         row = self._repo.create_role(role_name, role_code, description, role_level)
         if isinstance(row, bool):
             row = self._repo.get_role_by_code(role_code)
-        return RBACRoleEntity.from_orm(row)
+        return cast(RBACRoleEntity, RBACRoleEntity.from_orm(row))
 
     def update_role(self, role_id: int, **kwargs) -> bool:
         return self._repo.update_role(role_id, **kwargs)
@@ -194,7 +194,7 @@ class RBACPermissionRepositoryAdapter(IRBACPermissionRepository):
         row = self._repo.create_permission(permission_name, permission_code, permission_type, module, description)
         if isinstance(row, bool):
             row = self._repo.get_permission_by_code(permission_code)
-        return RBACPermissionEntity.from_orm(row)
+        return cast(RBACPermissionEntity, RBACPermissionEntity.from_orm(row))
 
     def update_permission(self, permission_id: int, **kwargs) -> bool:
         return self._repo.update_permission(permission_id, **kwargs)
@@ -254,7 +254,7 @@ class RBACMenuRepositoryAdapter(IRBACMenuRepository):
         )
         if isinstance(row, bool):
             row = self._repo.get_menu_by_code(menu_code)
-        return RBACMenuEntity.from_orm(row)
+        return cast(RBACMenuEntity, RBACMenuEntity.from_orm(row))
 
     def update_menu(self, menu_id: int, **kwargs) -> bool:
         return self._repo.update_menu(menu_id, **kwargs)
@@ -285,7 +285,7 @@ class RBACLogRepositoryAdapter(IRBACLogRepository):
         )
         if isinstance(row, bool):
             row = None
-        return RBACUserLoginLogEntity.from_orm(row)
+        return cast(RBACUserLoginLogEntity, RBACUserLoginLogEntity.from_orm(row))
 
     def get_login_logs(
         self, user_id: int | None = None, page: int = 1, page_size: int = 20
@@ -326,7 +326,7 @@ class RBACLogRepositoryAdapter(IRBACLogRepository):
         )
         if isinstance(row, bool):
             row = None
-        return RBACOperationLogEntity.from_orm(row)
+        return cast(RBACOperationLogEntity, RBACOperationLogEntity.from_orm(row))
 
     def get_operation_logs(
         self, user_id: int | None = None, module: str | None = None, page: int = 1, page_size: int = 20

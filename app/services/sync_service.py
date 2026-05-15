@@ -122,7 +122,7 @@ class SyncService:
             return True, ""
         elif flag == "enable":
             if checked:
-                self._sync.check_source(sid=sid)
+                self._sync.check_source(sid=str(sid))
             self._sync.check_sync_paths(sid=sid, enabled=checked)
             return True, ""
         return False, ""
@@ -225,7 +225,7 @@ class SyncService:
                         if not unknowninfo:
                             continue
                         path = unknowninfo.PATH
-                        dest_dir = unknowninfo.DEST
+                        dest_dir = str(unknowninfo.DEST or "")
                         rmt_mode = ModuleConf.get_enum_item(RmtMode, unknowninfo.MODE) if unknowninfo.MODE else None
                     elif flag == "history":
                         transinfo = self._filetransfer.get_transfer_info_by_id(wid)

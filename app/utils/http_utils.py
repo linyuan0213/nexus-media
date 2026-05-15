@@ -49,7 +49,9 @@ class RequestUtils:
             self._headers.update({"referer": referer})
         if cookies:
             if isinstance(cookies, str):
-                self._cookies = self.cookie_parse(cookies)
+                cookies_tmp = self.cookie_parse(cookies)
+                if isinstance(cookies_tmp, dict):
+                    self._cookies = cookies_tmp
             elif isinstance(cookies, dict):
                 self._cookies = cookies
         if proxies:
@@ -290,7 +292,7 @@ class RequestUtils:
                     return None  # 达到重试次数上限时，返回None
 
     @staticmethod
-    def cookie_parse(cookies_str, array=False):
+    def cookie_parse(cookies_str, array=False) -> dict | list:
         """
         解析cookie，转化为字典或者数组
         :param cookies_str: cookie字符串

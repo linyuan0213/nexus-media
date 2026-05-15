@@ -164,25 +164,23 @@ class SiteUserInfo(metaclass=SingletonMeta):
                 # 发送通知，存在未读消息
                 self.__notify_unread_msg(site_name, site_user_info, unread_msg_notify)
 
-                self._sites_data.update(
-                    {
-                        site_name: {
-                            "upload": site_user_info.upload,
-                            "username": site_user_info.username,
-                            "user_level": site_user_info.user_level,
-                            "join_at": site_user_info.join_at,
-                            "download": site_user_info.download,
-                            "ratio": site_user_info.ratio,
-                            "seeding": site_user_info.seeding,
-                            "seeding_size": site_user_info.seeding_size,
-                            "leeching": site_user_info.leeching,
-                            "bonus": site_user_info.bonus,
-                            "url": site_url,
-                            "err_msg": site_user_info.err_msg,
-                            "message_unread": site_user_info.message_unread,
-                        }
+                self._sites_data.update({
+                    site_name: {
+                        "upload": site_user_info.upload,
+                        "username": site_user_info.username,
+                        "user_level": site_user_info.user_level,
+                        "join_at": site_user_info.join_at,
+                        "download": site_user_info.download,
+                        "ratio": site_user_info.ratio,
+                        "seeding": site_user_info.seeding,
+                        "seeding_size": site_user_info.seeding_size,
+                        "leeching": site_user_info.leeching,
+                        "bonus": site_user_info.bonus,
+                        "url": site_url,
+                        "err_msg": site_user_info.err_msg,
+                        "message_unread": site_user_info.message_unread,
                     }
-                )
+                })
 
                 return site_user_info
 
@@ -327,7 +325,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
             site_urls = [site.get("strict_url") for site in statistic_sites if site.get("name") in sites]
 
         raw_statistics = list(self.site_repo.get_site_user_statistics(strict_urls=site_urls))
-        existing_urls = {s.URL for s in raw_statistics if s.URL}
+        existing_urls = {s.URL for s in raw_statistics if str(s.URL)}
         url_to_pri = {s.get("strict_url"): s.get("pri", 0) for s in statistic_sites}
         for site in statistic_sites:
             url = site.get("strict_url")
@@ -366,16 +364,14 @@ class SiteUserInfo(metaclass=SingletonMeta):
         sql_site_activities = self.site_repo.get_site_statistics_history(site=site, days=days)
         for sql_site_activity in sql_site_activities:
             timestamp = datetime.strptime(str(sql_site_activity.DATE), "%Y-%m-%d").timestamp() * 1000
-            site_activities.append(
-                [
-                    timestamp,
-                    int(str(sql_site_activity.UPLOAD or 0)),
-                    int(str(sql_site_activity.DOWNLOAD or 0)),
-                    float(str(sql_site_activity.BONUS or 0)),
-                    int(str(sql_site_activity.SEEDING or 0)),
-                    int(str(sql_site_activity.SEEDING_SIZE or 0)),
-                ]
-            )
+            site_activities.append([
+                timestamp,
+                int(str(sql_site_activity.UPLOAD or 0)),
+                int(str(sql_site_activity.DOWNLOAD or 0)),
+                float(str(sql_site_activity.BONUS or 0)),
+                int(str(sql_site_activity.SEEDING or 0)),
+                int(str(sql_site_activity.SEEDING_SIZE or 0)),
+            ])
 
         return site_activities
 
@@ -441,24 +437,22 @@ class SiteUserInfo(metaclass=SingletonMeta):
             ratio_str = f"{ratio_val:.2f}" if ratio_val is not None else "0.00"
             bonus_val = site.BONUS
             bonus_str = f"{bonus_val:.2f}" if bonus_val is not None else "0.00"
-            statistics.append(
-                {
-                    "site_name": site.SITE or "",
-                    "username": site.USERNAME or "",
-                    "user_level": site.USER_LEVEL or "",
-                    "join_at": site.JOIN_AT or "",
-                    "update_at": site.UPDATE_AT or "",
-                    "upload": SiteUserInfo.__format_filesize(site.UPLOAD),
-                    "download": SiteUserInfo.__format_filesize(site.DOWNLOAD),
-                    "ratio": ratio_str,
-                    "seeding_count": site.SEEDING or 0,
-                    "leeching_count": site.LEECHING or 0,
-                    "seeding_size": SiteUserInfo.__format_filesize(site.SEEDING_SIZE),
-                    "bonus": bonus_str,
-                    "url": site.URL or "",
-                    "message_count": site.MSG_UNREAD or 0,
-                }
-            )
+            statistics.append({
+                "site_name": site.SITE or "",
+                "username": site.USERNAME or "",
+                "user_level": site.USER_LEVEL or "",
+                "join_at": site.JOIN_AT or "",
+                "update_at": site.UPDATE_AT or "",
+                "upload": SiteUserInfo.__format_filesize(site.UPLOAD),
+                "download": SiteUserInfo.__format_filesize(site.DOWNLOAD),
+                "ratio": ratio_str,
+                "seeding_count": site.SEEDING or 0,
+                "leeching_count": site.LEECHING or 0,
+                "seeding_size": SiteUserInfo.__format_filesize(site.SEEDING_SIZE),
+                "bonus": bonus_str,
+                "url": site.URL or "",
+                "message_count": site.MSG_UNREAD or 0,
+            })
         return statistics
 
     def update_site_name(self, old_name, name):

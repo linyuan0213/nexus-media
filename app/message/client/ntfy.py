@@ -45,7 +45,7 @@ class Ntfy(_IMessageClient):
             return False, str(msg_e)
 
     def send_list_msg(self, medias: list | None = None, user_id="", title="", **kwargs):
-        pass
+        return False, "不支持发送列表消息"
 
 
 ClientRegistry.register(Ntfy)

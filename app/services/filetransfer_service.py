@@ -583,7 +583,7 @@ class FileTransferService:
         download_info = self.download_repo.get_download_history_by_path(in_path)
         if not download_info and os.path.isfile(in_path):
             download_info = self.download_repo.get_download_history_by_path(os.path.dirname(in_path))
-        if download_info and download_info.TMDBID:
+        if download_info and str(download_info.TMDBID or ""):
             log.info(f"【Rmt】{in_path} 找到下载记录，TMDBID：{download_info.TMDBID}")
             media_type = MediaType.MOVIE if download_info.TYPE in MovieTypes else MediaType.TV
             return self.media.get_tmdb_info(mtype=media_type, tmdbid=download_info.TMDBID), media_type
@@ -690,7 +690,9 @@ class FileTransferService:
                     self.update_transfer_unknown_state(file_item)
 
                 if media.type == MediaType.MOVIE:
-                    self.message.send_transfer_movie_message(in_from, media, exist_filenum, self._movie_category_flag or False)
+                    self.message.send_transfer_movie_message(
+                        in_from, media, exist_filenum, self._movie_category_flag or False
+                    )
                 else:
                     message_key = f"{media.get_title_string()}-{media.get_season_string()}"
                     if not message_medias.get(message_key):
@@ -981,7 +983,7 @@ class FileTransferService:
                             {"media_info": media_info, "path": source_path, "filename": source_filename},
                         )
                 if flag in ["del_dest", "del_all"]:
-                    if dest_path and dest_filename:
+                    if str(dest_path) and str(dest_filename):
                         del_flag, del_msg = self.delete_media_file(dest_path, dest_filename)
                         if not del_flag:
                             log.error(del_msg)
@@ -995,10 +997,10 @@ class FileTransferService:
                             )
                     else:
                         mi = meta_info(title=str(source_filename or ""))
-                        mi.title = transinfo.TITLE
-                        mi.category = transinfo.CATEGORY
-                        mi.year = transinfo.YEAR
-                        if transinfo.SEASON_EPISODE:
+                        mi.title = str(transinfo.TITLE or "")
+                        mi.category = str(transinfo.CATEGORY or "")
+                        mi.year = str(transinfo.YEAR or "")
+                        if str(transinfo.SEASON_EPISODE or ""):
                             mi.begin_season = int(str(transinfo.SEASON_EPISODE).replace("S", ""))
                         if MediaType.MOVIE.value == transinfo.TYPE:
                             mi.type = MediaType.MOVIE

@@ -5,7 +5,7 @@ RBAC Service Layer
 """
 
 from functools import wraps
-from typing import Any
+from typing import Any, cast
 
 import log
 from app.db.models.rbac import RBACPermission, RBACRole, RBACUser
@@ -285,13 +285,13 @@ class RBACService:
         """
         根据ID获取用户
         """
-        return self.user_repo.get_user_by_id(user_id)
+        return cast(RBACUser | None, self.user_repo.get_user_by_id(user_id))
 
     def get_user_by_username(self, username: str) -> RBACUser | None:
         """
         根据用户名获取用户
         """
-        return self.user_repo.get_user_by_username(username)
+        return cast(RBACUser | None, self.user_repo.get_user_by_username(username))
 
     def get_users(self, page: int = 1, page_size: int = 20) -> tuple:
         """
@@ -431,13 +431,13 @@ class RBACService:
         """
         根据ID获取角色
         """
-        return self.role_repo.get_role_by_id(role_id)
+        return cast(RBACRole | None, self.role_repo.get_role_by_id(role_id))
 
     def get_all_roles(self) -> list[RBACRole]:
         """
         获取所有角色
         """
-        return self.role_repo.get_all_roles(status=1)
+        return cast(list[RBACRole], self.role_repo.get_all_roles(status=1))
 
     def assign_permissions_to_role(self, role_id: int, permission_ids: list[int]) -> tuple:
         """
@@ -548,7 +548,7 @@ class RBACService:
         """
         获取所有权限
         """
-        return self.permission_repo.get_all_permissions(module=module)
+        return cast(list[RBACPermission], self.permission_repo.get_all_permissions(module=module))
 
     # ==================== 菜单管理 ====================
 

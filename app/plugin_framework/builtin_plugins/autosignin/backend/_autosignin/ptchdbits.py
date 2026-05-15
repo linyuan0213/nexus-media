@@ -2,6 +2,7 @@ import json
 import os
 import random
 import re
+from typing import Any, cast
 
 from lxml import etree
 
@@ -80,10 +81,10 @@ class PtCHDBits(_ISiteSigninHandler):
             return False, f"【{site}】签到失败"
 
         # 获取页面问题、答案
-        questionid = html.xpath("//input[@name='questionid']/@value")[0]
-        option_ids = html.xpath("//input[@name='choice[]']/@value")
-        option_values = html.xpath("//input[@name='choice[]']/following-sibling::text()")
-        question_str = html.xpath("//td[@class='text' and contains(text(),'请问：')]/text()")[0]
+        questionid = str(cast(Any, html.xpath("//input[@name='questionid']/@value"))[0])
+        option_ids = [str(v) for v in cast(Any, html.xpath("//input[@name='choice[]']/@value"))]
+        option_values = [str(v) for v in cast(Any, html.xpath("//input[@name='choice[]']/following-sibling::text()"))]
+        question_str = str(cast(Any, html.xpath("//td[@class='text' and contains(text(),'请问：')]/text()"))[0])
         ids = option_ids if isinstance(option_ids, list) else []
         vals = option_values if isinstance(option_values, list) else []
         answers = list(zip(ids, vals, strict=False))
@@ -148,7 +149,7 @@ class PtCHDBits(_ISiteSigninHandler):
                 choice = []
                 for answer in answer_nums:
                     # 如果返回的数字在option_ids范围内，则直接作为答案
-                    if str(answer) in option_ids:
+                    if str(answer) in [str(o) for o in option_ids]:
                         choice.append(int(answer))
                         self.info(f"AI返回答案id {answer} 在签到选项 {option_ids} 中")
         # 签到

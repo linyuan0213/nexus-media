@@ -43,6 +43,8 @@ class ReflectUtils:
             class_name = func_str.split(".")[0]
             func_name = func_str.split(".")[1]
             cls = ReflectUtils.get_class_by_name(lib_path, class_name)
+            if not cls:
+                return
             func = getattr(cls(), func_name)
         else:
             func = ReflectUtils.get_class_by_name(lib_path, func_str)

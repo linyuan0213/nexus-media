@@ -17,7 +17,7 @@ class SiteRateLimiter:
         self.last_visit_time = 0
         self.count = 0
 
-    def check_rate_limit(self) -> (bool, str):
+    def check_rate_limit(self) -> tuple[bool, str]:
         """
         检查是否超出访问频率控制
         :return: 超出返回True，否则返回False，超出时返回错误信息
