@@ -3,13 +3,19 @@ RSS Repository
 Handles RSS movies, TV shows, episodes and history related database operations.
 """
 
+from __future__ import annotations
+
 import json
 import time
+from typing import TYPE_CHECKING
 
 from app.db import DbPersist
 from app.db.models import RSSHISTORY, RSSMOVIES, RSSTORRENTS, RSSTVEPISODES, RSSTVS
 from app.db.repositories.base_repository import BaseRepository
 from app.utils.types import MediaType
+
+if TYPE_CHECKING:
+    from app.media.models import MediaInfo
 
 
 class RssRepository(BaseRepository):
@@ -120,7 +126,7 @@ class RssRepository(BaseRepository):
     @DbPersist(BaseRepository._db)
     def insert_rss_movie(
         self,
-        media_info: object,
+        media_info: MediaInfo,
         state: str = "D",
         rss_sites: list | None = None,
         search_sites: list | None = None,
@@ -353,7 +359,7 @@ class RssRepository(BaseRepository):
     @DbPersist(BaseRepository._db)
     def insert_rss_tv(
         self,
-        media_info: object,
+        media_info: MediaInfo,
         total: int,
         lack: int = 0,
         state: str = "D",

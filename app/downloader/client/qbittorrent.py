@@ -178,6 +178,7 @@ class Qbittorrent(_IDownloadClient):
         # 获取下载器中的分类信息，查询是否有匹配该目录的分类
         categories = self.__get_qb_category()
         for category_name, category_item in categories.items():
+            category_item: Any = category_item
             if not category_item:
                 continue
             catetory_path: Any = category_item.get("savePath")
@@ -699,6 +700,7 @@ class Qbittorrent(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return []
         for category in categories.values():
+            category: Any = category
             if category and category.get("savePath") and category.get("savePath") not in ret_dirs:
                 ret_dirs.append(str(category.get("savePath") or ""))
         return ret_dirs

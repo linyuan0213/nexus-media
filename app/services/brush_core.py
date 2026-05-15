@@ -274,7 +274,7 @@ class BrushTaskService:
             self._start_task_jobs(self._brush_tasks[str(task.ID)], cron)
 
     def _build_task_dict(self, task) -> dict:
-        site_info = self._sites.get_sites(siteid=task.SITE)
+        site_info: Any = self._sites.get_sites(siteid=task.SITE)
         site_url = StringUtils.get_base_url(site_info.get("signurl") or site_info.get("rssurl")) if site_info else ""
         downloader_info = self._downloader.get_downloader_conf(task.DOWNLOADER)
         total_size = round(int(self._repo.get_brushtask_totalsize(task.ID)) / (1024**3), 1)
@@ -386,7 +386,7 @@ class BrushTaskService:
             log.info(f"【Brush】刷流任务 {task_name} 已停止下载新种！")
             return
 
-        site_info = self._sites.get_sites(siteid=site_id)
+        site_info: Any = self._sites.get_sites(siteid=site_id)
         if not site_info:
             log.error(f"【Brush】刷流任务 {task_name} 的站点已不存在，无法刷流！")
             return
@@ -395,6 +395,21 @@ class BrushTaskService:
         site_name = site_info.get("name")
         site_proxy = site_info.get("proxy")
         if not site_info.get("brush_enable"):
+            log.error(f"【Brush】站点 {site_name} 未开启刷流功能，无法刷流！")
+            return
+        if not rss_url:
+            log.error(f"【Brush】站点 {site_name} 未配置RSS订阅地址，无法刷流！")
+            return
+        if rss_free and (not cookie and not taskinfo.get("headers")):
+            log.warn(f"【Brush】站点 {site_name} 未配置Cookie或请求头，无法开启促销刷流")
+            return
+
+        if not self._downloader.get_downloader_conf(downloader_id):
+            log.error(f"【Brush】任务 {task_name} 下载器不存在，无法刷流！")
+            return
+
+        log.info(f"【Brush】开始站点 {site_name} 的刷流任务：{task_name}...")
+        if not self.__is_allow_new_torrent(taskinfo=taskinfo, dlcount=rss_rule.get("dlcount")):
             log.error(f"【Brush】站点 {site_name} 未开启刷流功能，无法刷流！")
             return
         if not rss_url:
