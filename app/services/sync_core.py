@@ -59,7 +59,7 @@ class SyncCore:
         self._transfer_repo = transfer_repo or TransferHistoryRepositoryAdapter()
         self._sync_path_confs: dict[str, dict] = {}
         self._monitor_sync_path_ids: list[str] = []
-        self._observer: list[Observer] = []
+        self._observer: list = []
         self._synced_files: list[str] = []
         self._need_sync_paths: dict[str, dict] = {}
         # 自动加载配置（不启动监控，避免 API 请求时重复创建 Observer）

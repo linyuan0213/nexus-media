@@ -158,7 +158,7 @@ class TMDBTrendingWarmer(CacheWarmer):
             from app.media import MediaService
 
             media = MediaService()
-            if not media.tmdb:
+            if not getattr(media, "tmdb", None):
                 log.warn("【CacheWarmer】TMDB未配置，跳过预热")
                 self._is_warmed = True
                 return True

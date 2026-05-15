@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Any
 
 import cn2an
 
@@ -158,7 +159,10 @@ class WebUtils:
         """
         if not keyword:
             return []
-        mtype, key_word, season_num, episode_num, _, content = StringUtils.get_keyword_from_string(keyword)
+        result: Any = StringUtils.get_keyword_from_string(keyword)
+        if not result:
+            return []
+        mtype, key_word, season_num, episode_num, _, content = result
 
         def _search_tmdb():
             mi = meta_info(title=content)
