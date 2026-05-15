@@ -7,6 +7,7 @@ import re
 from app.media.parser.video.constants import (
     _episode_re,
     _name_no_chinese_re,
+    _name_nostring_re,
     _name_se_words,
     _resources_pix_re,
     _resources_type_re,
@@ -108,8 +109,6 @@ def init_name(info, token):
 
 def fix_name(info, name):
     """清理名称中的干扰字符"""
-    from app.media.parser.video.constants import _name_nostring_re
-
     if not name:
         return name
     name = re.sub(rf"{_name_nostring_re}", "", name, flags=re.IGNORECASE).strip()

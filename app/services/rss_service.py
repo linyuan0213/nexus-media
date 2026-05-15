@@ -1,7 +1,7 @@
 import json
 import time
 import traceback
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import jsonpath
 from lxml import etree
@@ -21,15 +21,13 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.services.scheduler_core import SchedulerCore
 from app.services.search_service import Searcher
+from app.services.rss_core import Rss
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import ExceptionUtils, RequestUtils, StringUtils
 from app.utils.commons import SingletonMeta
 from app.utils.config_tools import get_proxies
 from app.utils.types import MediaType, MovieTypes, RssType, SearchType
 from config import Config
-
-if TYPE_CHECKING:
-    from app.services.rss_core import Rss
 
 
 class RssSubscriptionService:
@@ -39,7 +37,7 @@ class RssSubscriptionService:
     """
 
     def __init__(
-        self, subscribe: Subscribe | None = None, rss: "Rss | None" = None, rss_checker: "RssTaskService | None" = None
+        self, subscribe: Subscribe | None = None, rss: Rss | None = None, rss_checker: "RssTaskService | None" = None
     ):
         self._subscribe: Subscribe = subscribe or Subscribe()
         self._rss: Rss | None = rss
@@ -48,8 +46,6 @@ class RssSubscriptionService:
     def download_rss(self) -> None:
         """触发RSS订阅下载"""
         if not self._rss:
-            from app.services.rss_core import Rss
-
             self._rss = Rss()
         self._rss.rssdownload()
 
@@ -68,8 +64,6 @@ class RssSubscriptionService:
     ) -> Any:
         """判断种子是否命中订阅（委托给 Rss 模块）"""
         if not self._rss:
-            from app.services.rss_core import Rss
-
             self._rss = Rss()
         return self._rss.check_torrent_rss(
             media_info=media_info,
@@ -191,8 +185,6 @@ class RssSubscriptionService:
     def re_rss_history(self, rssid: str, rtype: str) -> tuple[int, str]:
         """从历史记录重新订阅"""
         if not self._rss:
-            from app.services.rss_core import Rss
-
             self._rss = Rss()
         rssinfo = self._rss.get_rss_history(rtype=rtype, rid=rssid)
         if not rssinfo:
@@ -296,15 +288,11 @@ class RssSubscriptionService:
 
     def get_rss_history(self, mtype: str) -> list[dict]:
         if not self._rss:
-            from app.services.rss_core import Rss
-
             self._rss = Rss()
         return [rec.as_dict() for rec in self._rss.get_rss_history(rtype=mtype)]
 
     def delete_rss_history(self, rssid: str) -> None:
         if not self._rss:
-            from app.services.rss_core import Rss
-
             self._rss = Rss()
         self._rss.delete_rss_history(rssid=rssid)
 

@@ -2,6 +2,7 @@
 
 import time
 
+from app.helper import SiteHelper
 from app.utils import RequestUtils
 from app.utils.config_tools import get_proxies
 
@@ -24,8 +25,6 @@ def test_html_connection(engine, site, user_config):
         return False, "无法打开网站", latency
     if res.status_code != 200:
         return False, f"连接失败，状态码：{res.status_code}", latency
-    from app.helper import SiteHelper
-
     if not SiteHelper.is_logged_in(res.text):
         return False, "Cookie失效", latency
     return True, "连接成功", latency

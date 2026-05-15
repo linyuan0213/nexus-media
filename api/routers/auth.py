@@ -10,6 +10,7 @@ from api.deps import get_current_user
 from app.schemas.auth import LoginResponse, UserContext
 from app.services.auth_service import AuthService
 from app.services.rbac_service import rbac_service
+from app.utils.wallpaper import get_login_wallpaper
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -121,8 +122,6 @@ async def login_wallpaper():
     获取登录页背景壁纸（无需认证）。
     返回 Base64 编码图片及标题、链接。
     """
-    from app.utils.wallpaper import get_login_wallpaper
-
     image_code, img_title, img_link = get_login_wallpaper()
     return {
         "code": 0,

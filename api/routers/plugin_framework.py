@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 import log
 from api.deps import get_plugin_framework_service, require_any_permission, require_permission
+from app.plugin_framework.hook_system import HookSystem
 from app.services.plugin_framework_service import PluginFrameworkService
 from app.utils.response import fail, success
 from config import Config
@@ -243,8 +244,6 @@ def list_hook_events(
     user: str = Depends(require_any_permission("plugin:view", "plugin:manage")),
 ):
     """列出所有可用事件"""
-    from app.plugin_framework.hook_system import HookSystem
-
     return success(data=HookSystem().EVENTS)
 
 

@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 import log
+from log import LOG_BUFFER
 from api.deps import (
     _extract_user_ctx_from_session,
     get_backup_restore_service,
@@ -50,8 +51,11 @@ from app.services.system_service import (
     MessageSenderService,
     SystemInfoService,
     backup as do_backup,
+    get_commands,
     restart_server,
 )
+from app.utils.security import generate_password_hash
+from app.utils.system_utils import SystemUtils
 from app.utils import ExceptionUtils
 from app.utils.response import fail, success
 from app.utils.temp_manager import temp_manager
@@ -641,8 +645,6 @@ def user_manager(
     current_user: UserContext = Depends(require_permission("setting:update")),
     svc=Depends(get_user_manage_service),
 ):
-    from app.utils.security import generate_password_hash
-
     oper = req.oper
     name = req.name
     if oper == "add":
@@ -661,8 +663,6 @@ def system_commands(
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
 ):
     """获取系统命令列表"""
-    from app.services.system_service import get_commands
-
     cmds = get_commands()
     return success(data=cmds)
 
@@ -735,8 +735,6 @@ def get_logs(
     req: LogsRequest,
     user: str = Depends(require_permission("log:view")),
 ):
-    from log import LOG_BUFFER
-
     logs, _ = LOG_BUFFER.get_logs(source=req.source)
     if req.level:
         logs = [lg for lg in logs if lg.get("level") == req.level]
@@ -750,8 +748,6 @@ def processes(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
-    from app.utils.system_utils import SystemUtils
-
     return success(data=SystemUtils.get_all_processes())
 
 

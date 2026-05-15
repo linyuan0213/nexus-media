@@ -21,6 +21,7 @@ from api.deps import (
     require_permission,
 )
 from app.services.downloader_core import DownloaderCore as Downloader
+from app.services.file_index_service import FileIndexService
 from app.services.media_config_service import MediaConfigService
 from app.services.media_service import (
     MediaFileService,
@@ -723,8 +724,6 @@ def search_files(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
 ):
     """全局搜索媒体库 + 同步源目录中的文件（基于后台索引，O(1) 响应）"""
-    from app.services.file_index_service import FileIndexService
-
     svc = FileIndexService()
     results = svc.search(keyword, limit=limit)
     return success(
