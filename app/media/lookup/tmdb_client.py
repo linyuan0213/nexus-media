@@ -42,12 +42,14 @@ class TmdbClient:
     def _init_config(self):
         app = Config().get_config("app")
         media = Config().get_config("media")
-        self._default_language = media.get("tmdb_language", "zh") or "zh"
-        if app.get("rmt_tmdbkey"):
+        _lang = media.get("tmdb_language", "zh")
+        self._default_language = _lang if isinstance(_lang, str) else "zh"
+        _api_key = app.get("rmt_tmdbkey")
+        if isinstance(_api_key, str) and _api_key:
             self.tmdb = TMDb()
             self.tmdb.domain = get_tmdbapi_url()
             self.tmdb.cache = True
-            self.tmdb.api_key = app.get("rmt_tmdbkey")
+            self.tmdb.api_key = _api_key
             self.tmdb.language = self._default_language
             self.tmdb.proxies = get_proxies()
             self.tmdb.debug = False
@@ -89,9 +91,11 @@ def compare_tmdb_names(file_name, tmdb_names):
         return False
     if not isinstance(tmdb_names, list):
         tmdb_names = [tmdb_names]
-    file_name = StringUtils.handler_special_chars(str(file_name)).upper()
+    _fn = StringUtils.handler_special_chars(str(file_name))
+    file_name = _fn.upper() if isinstance(_fn, str) else str(file_name).upper()
     for tmdb_name in tmdb_names:
-        tmdb_name = StringUtils.handler_special_chars(str(tmdb_name)).strip().upper()
+        _tn = StringUtils.handler_special_chars(str(tmdb_name))
+        tmdb_name = _tn.strip().upper() if isinstance(_tn, str) else str(tmdb_name).strip().upper()
         if file_name == tmdb_name:
             return True
         if len(file_name) < 3 or len(tmdb_name) < 3:

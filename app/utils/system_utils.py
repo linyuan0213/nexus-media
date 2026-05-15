@@ -328,12 +328,15 @@ class SystemUtils:
         processes = []
         for proc in psutil.process_iter(["pid", "name", "create_time", "memory_info", "status"]):
             try:
-                if proc.status() != psutil.STATUS_ZOMBIE:
-                    runtime = datetime.datetime.now() - datetime.datetime.fromtimestamp(
-                        int(getattr(proc, "create_time", 0)())
-                    )
-                    runtime_str = seconds_to_str(runtime.seconds)
-                    mem_info = getattr(proc, "memory_info", None)()
+                info = proc.info
+                if info and info.get("status") != psutil.STATUS_ZOMBIE:
+                    create_time = info.get("create_time")
+                    if create_time:
+                        runtime = datetime.datetime.now() - datetime.datetime.fromtimestamp(int(create_time))
+                        runtime_str = seconds_to_str(runtime.seconds)
+                    else:
+                        runtime_str = ""
+                    mem_info = info.get("memory_info")
                     if mem_info is not None:
                         mem_mb = round(mem_info.rss / (1024 * 1024), 1)
                         processes.append({"id": proc.pid, "name": proc.name(), "time": runtime_str, "memory": mem_mb})

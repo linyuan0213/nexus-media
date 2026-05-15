@@ -3,7 +3,8 @@
 包含: 过滤器分组、过滤规则、RSS解析器、站点配置、同步路径、用户配置、用户RSS配置
 """
 
-from sqlalchemy import BigInteger, Column, Integer, Sequence, String, Text
+from sqlalchemy import BigInteger, Integer, Sequence, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
 
@@ -11,110 +12,109 @@ from app.db.models.base import Base
 class CONFIGFILTERGROUP(Base):
     __tablename__ = "CONFIG_FILTER_GROUP"
 
-    ID = Column(Integer, Sequence("ID"), primary_key=True)
-    GROUP_NAME = Column(String(255))
-    IS_DEFAULT = Column(String(255))
-    NOTE = Column(Text)
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    GROUP_NAME: Mapped[str] = mapped_column(String(255))
+    IS_DEFAULT: Mapped[str] = mapped_column(String(255))
+    NOTE: Mapped[str] = mapped_column(Text)
 
 
 class CONFIGFILTERRULES(Base):
     __tablename__ = "CONFIG_FILTER_RULES"
 
-    ID = Column(Integer, Sequence("ID"), primary_key=True)
-    # 使用 Integer 类型替代 Text，MySQL 不支持在 TEXT 上创建索引
-    GROUP_ID = Column(Integer, index=True)
-    ROLE_NAME = Column(String(255))
-    PRIORITY = Column(String(255))
-    INCLUDE = Column(Text)
-    EXCLUDE = Column(Text)
-    SIZE_LIMIT = Column(String(255))
-    NOTE = Column(Text)
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    GROUP_ID: Mapped[int] = mapped_column(Integer, index=True)
+    ROLE_NAME: Mapped[str] = mapped_column(String(255))
+    PRIORITY: Mapped[str] = mapped_column(String(255))
+    INCLUDE: Mapped[str] = mapped_column(Text)
+    EXCLUDE: Mapped[str] = mapped_column(Text)
+    SIZE_LIMIT: Mapped[str] = mapped_column(String(255))
+    NOTE: Mapped[str] = mapped_column(Text)
 
 
 class CONFIGRSSPARSER(Base):
     __tablename__ = "CONFIG_RSS_PARSER"
 
-    ID = Column(Integer, Sequence("ID"), primary_key=True)
-    NAME = Column(String(255), index=True)
-    TYPE = Column(String(255))
-    FORMAT = Column(String(255))
-    PARAMS = Column(Text)
-    NOTE = Column(Text)
-    SYSDEF = Column(String(255))
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    NAME: Mapped[str] = mapped_column(String(255), index=True)
+    TYPE: Mapped[str] = mapped_column(String(255))
+    FORMAT: Mapped[str] = mapped_column(String(255))
+    PARAMS: Mapped[str] = mapped_column(Text)
+    NOTE: Mapped[str] = mapped_column(Text)
+    SYSDEF: Mapped[str] = mapped_column(String(255))
 
 
 class CONFIGSITE(Base):
     __tablename__ = "CONFIG_SITE"
 
-    ID = Column(Integer, Sequence("ID"), primary_key=True)
-    NAME = Column(String(255))
-    PRI = Column(String(255))
-    RSSURL = Column(String(512))
-    SIGNURL = Column(String(512))
-    COOKIE = Column(Text)
-    INCLUDE = Column(Text)
-    EXCLUDE = Column(Text)
-    SIZE = Column(BigInteger)
-    NOTE = Column(Text)
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    NAME: Mapped[str] = mapped_column(String(255))
+    PRI: Mapped[str] = mapped_column(String(255))
+    RSSURL: Mapped[str] = mapped_column(String(512))
+    SIGNURL: Mapped[str] = mapped_column(String(512))
+    COOKIE: Mapped[str] = mapped_column(Text)
+    INCLUDE: Mapped[str] = mapped_column(Text)
+    EXCLUDE: Mapped[str] = mapped_column(Text)
+    SIZE: Mapped[int] = mapped_column(BigInteger)
+    NOTE: Mapped[str] = mapped_column(Text)
 
 
 class CONFIGSYNCPATHS(Base):
     __tablename__ = "CONFIG_SYNC_PATHS"
 
-    ID = Column(Integer, Sequence("ID"), primary_key=True)
-    SOURCE = Column(String(255))
-    DEST = Column(String(255))
-    UNKNOWN = Column(String(255))
-    MODE = Column(String(255))
-    COMPATIBILITY = Column(Integer)
-    RENAME = Column(Integer)
-    ENABLED = Column(Integer)
-    NOTE = Column(Text)
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    SOURCE: Mapped[str] = mapped_column(String(255))
+    DEST: Mapped[str] = mapped_column(String(255))
+    UNKNOWN: Mapped[str] = mapped_column(String(255))
+    MODE: Mapped[str] = mapped_column(String(255))
+    COMPATIBILITY: Mapped[int] = mapped_column(Integer)
+    RENAME: Mapped[int] = mapped_column(Integer)
+    ENABLED: Mapped[int] = mapped_column(Integer)
+    NOTE: Mapped[str] = mapped_column(Text)
 
 
 class CONFIGUSERS(Base):
     __tablename__ = "CONFIG_USERS"
 
-    ID = Column(Integer, Sequence("ID"), primary_key=True)
-    NAME = Column(String(255), index=True)
-    PASSWORD = Column(String(255))
-    PRIS = Column(String(255))
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    NAME: Mapped[str] = mapped_column(String(255), index=True)
+    PASSWORD: Mapped[str] = mapped_column(String(255))
+    PRIS: Mapped[str] = mapped_column(String(255))
 
 
 class CONFIGUSERRSS(Base):
     __tablename__ = "CONFIG_USER_RSS"
 
-    ID = Column(Integer, Sequence("ID"), primary_key=True)
-    NAME = Column(String(255), index=True)
-    ADDRESS = Column(String(255))
-    PARSER = Column(String(255))
-    INTERVAL = Column(String(255))
-    USES = Column(String(255))
-    INCLUDE = Column(Text)
-    EXCLUDE = Column(Text)
-    FILTER = Column(String(255))
-    UPDATE_TIME = Column(String(255))
-    PROCESS_COUNT = Column(String(255))
-    STATE = Column(String(255))
-    SAVE_PATH = Column(String(255))
-    DOWNLOAD_SETTING = Column(Integer, nullable=True)
-    RECOGNIZATION = Column(String(255))
-    OVER_EDITION = Column(Integer)
-    SITES = Column(String(255))
-    FILTER_ARGS = Column(String(255))
-    MEDIAINFOS = Column(String(255))
-    NOTE = Column(Text)
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    NAME: Mapped[str] = mapped_column(String(255), index=True)
+    ADDRESS: Mapped[str] = mapped_column(String(255))
+    PARSER: Mapped[str] = mapped_column(String(255))
+    INTERVAL: Mapped[str] = mapped_column(String(255))
+    USES: Mapped[str] = mapped_column(String(255))
+    INCLUDE: Mapped[str] = mapped_column(Text)
+    EXCLUDE: Mapped[str] = mapped_column(Text)
+    FILTER: Mapped[str] = mapped_column(String(255))
+    UPDATE_TIME: Mapped[str] = mapped_column(String(255))
+    PROCESS_COUNT: Mapped[str] = mapped_column(String(255))
+    STATE: Mapped[str] = mapped_column(String(255))
+    SAVE_PATH: Mapped[str] = mapped_column(String(255))
+    DOWNLOAD_SETTING: Mapped[int] = mapped_column(Integer, nullable=True)
+    RECOGNIZATION: Mapped[str] = mapped_column(String(255))
+    OVER_EDITION: Mapped[int] = mapped_column(Integer)
+    SITES: Mapped[str] = mapped_column(String(255))
+    FILTER_ARGS: Mapped[str] = mapped_column(String(255))
+    MEDIAINFOS: Mapped[str] = mapped_column(String(255))
+    NOTE: Mapped[str] = mapped_column(Text)
 
 
 class MEDIASERVER(Base):
     __tablename__ = "MEDIASERVER"
 
-    ID = Column(Integer, Sequence("ID"), primary_key=True)
-    NAME = Column(String(255), index=True)
-    ENABLED = Column(Integer)
-    CONFIG = Column(Text)
-    IS_DEFAULT = Column(Integer)
-    NOTE = Column(Text)
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    NAME: Mapped[str] = mapped_column(String(255), index=True)
+    ENABLED: Mapped[int] = mapped_column(Integer)
+    CONFIG: Mapped[str] = mapped_column(Text)
+    IS_DEFAULT: Mapped[int] = mapped_column(Integer)
+    NOTE: Mapped[str] = mapped_column(Text)
 
 
 class CONFIGMEDIA(Base):
@@ -122,9 +122,9 @@ class CONFIGMEDIA(Base):
 
     __tablename__ = "CONFIG_MEDIA"
 
-    ID = Column(Integer, Sequence("ID"), primary_key=True)
-    MOVIE_PATH = Column(Text)
-    TV_PATH = Column(Text)
-    ANIME_PATH = Column(Text)
-    UNKNOWN_PATH = Column(Text)
-    NOTE = Column(Text)
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    MOVIE_PATH: Mapped[str] = mapped_column(Text)
+    TV_PATH: Mapped[str] = mapped_column(Text)
+    ANIME_PATH: Mapped[str] = mapped_column(Text)
+    UNKNOWN_PATH: Mapped[str] = mapped_column(Text)
+    NOTE: Mapped[str] = mapped_column(Text)

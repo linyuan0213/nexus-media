@@ -345,7 +345,7 @@ async def backup_upload(
 ):
     """上传备份文件"""
     try:
-        file_path = Path(temp_manager.get_temp_path()) / file.filename
+        file_path = Path(temp_manager.get_temp_path()) / (file.filename or "")
         contents = await file.read()
         with open(file_path, "wb") as f:
             f.write(contents)
@@ -432,7 +432,7 @@ def get_mediaservers(
     server_dict = {}
     for item in servers:
         try:
-            cfg = json.loads(str(item.CONFIG)) if item.CONFIG else {}
+            cfg = json.loads(str(item.CONFIG)) if str(item.CONFIG or "") else {}
         except json.JSONDecodeError:
             cfg = {}
         server_dict[item.NAME] = {

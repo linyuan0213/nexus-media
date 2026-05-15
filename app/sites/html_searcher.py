@@ -58,7 +58,7 @@ class HtmlSiteSearcher:
             return cfg.get(key, default)
         return getattr(cfg, key, default) if hasattr(cfg, key) else default
 
-    def _build_url(self, keyword, page, mtype):
+    def _build_url(self, keyword: str, page: int, mtype: MediaType | None) -> str | None:
         cfg = self._site.html
         if not (isinstance(cfg, dict) or hasattr(cfg, "search")):
             return None
@@ -72,7 +72,7 @@ class HtmlSiteSearcher:
         browse_cfg = self._cfg_get(cfg, "browse")
         if not keyword and browse_cfg:
             browse_path = self._cfg_get(browse_cfg, "path", "")
-            start = self._cfg_get(browse_cfg, "start", 1)
+            start = int(self._cfg_get(browse_cfg, "start", 1) or 1)
             browse_vars = {**template_vars, "page": str(int(page) + start)}
             browse_path = (browse_path or "").format(**browse_vars)
             domain = (self._site.domain or "").rstrip("/")
@@ -83,7 +83,7 @@ class HtmlSiteSearcher:
         if not search_cfg:
             return None
 
-        paths = self._cfg_get(search_cfg, "paths", [{"path": "", "method": "get"}])
+        paths = self._cfg_get(search_cfg, "paths", [{"path": "", "method": "get"}]) or []
         path = ""
         for p in paths:
             if isinstance(p, dict):
@@ -293,7 +293,7 @@ class HtmlSiteSearcher:
         if isinstance(val, list) and val and isinstance(val[0], str):
             join_delim = fcfg.get("join", "")
             val = join_delim.join(v.strip() for v in val) if join_delim else val[0]
-        elif val is not None and hasattr(val, "text"):
+        elif val is not None and not isinstance(val, list) and hasattr(val, "text"):
             val = (val.text or "").strip()
 
         replace_map = fcfg.get("replace")

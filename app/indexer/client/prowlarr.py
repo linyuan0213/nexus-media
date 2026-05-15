@@ -1,3 +1,5 @@
+from typing import Any
+
 from app.helper import IndexerConf
 from app.indexer.client._base import _IIndexClient
 from app.utils import ExceptionUtils, RequestUtils
@@ -74,5 +76,5 @@ class Prowlarr(_IIndexClient):
             for v in indexers
         ]
 
-    def search(self, *kwargs):
-        return super().search(*kwargs)
+    def search(self, order_seq, indexer, key_word, filter_args, match_media, in_from):
+        return super().search(order_seq, indexer, key_word, filter_args, match_media, in_from)

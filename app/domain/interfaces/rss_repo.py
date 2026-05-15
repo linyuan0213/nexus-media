@@ -19,7 +19,7 @@ class IRssMovieRepository(Protocol):
         """查询订阅电影列表"""
         ...
 
-    def get_id(self, title: str, year: str | None = None, tmdbid: str | None = None) -> str:
+    def get_id(self, title: str, year: str | None = None, tmdbid: str | None = None) -> str | int | None:
         """获取订阅电影ID"""
         ...
 
@@ -84,7 +84,7 @@ class IRssTvRepository(Protocol):
         """查询订阅剧集列表"""
         ...
 
-    def get_id(self, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None) -> str:
+    def get_id(self, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None) -> str | int | None:
         """获取订阅剧集ID"""
         ...
 

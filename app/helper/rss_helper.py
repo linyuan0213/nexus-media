@@ -59,7 +59,9 @@ class RssHelper:
                             continue
                         # 标题特殊处理
                         if site_domain and site_domain in _special_title_sites:
-                            title = _special_title_sites.get(site_domain)(title)
+                            handler = _special_title_sites.get(site_domain)
+                            if handler:
+                                title = handler(title)
                         # 描述
                         description = DomUtils.tag_value(item, "description", default="")
                         # 种子页面

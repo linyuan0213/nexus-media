@@ -17,8 +17,9 @@ class EpisodeFormat:
             self._part = part
         if details:
             if re.compile("\\d{1,4}-\\d{1,4}").match(details):
-                self._start_ep = details
-                self._end_ep = details
+                start, end = details.split("-")
+                self._start_ep = int(start)
+                self._end_ep = int(end)
             else:
                 tmp = details.split(",")
                 if len(tmp) > 1:
@@ -55,7 +56,7 @@ class EpisodeFormat:
         s, e = self.__handle_single(file)
         if not s:
             return False
-        if self._start_ep is None:
+        if self._start_ep is None or self._end_ep is None:
             return True
         return self._start_ep <= s <= self._end_ep
 

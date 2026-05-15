@@ -13,7 +13,6 @@ from datetime import datetime, timedelta
 
 import pytz
 from pyquery import PyQuery
-from requests import Response
 
 from app.helper.cookiecloud_helper import CookiecloudHelper
 from app.helper.drissionpage_helper import DrissionPageHelper

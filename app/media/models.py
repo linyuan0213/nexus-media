@@ -337,7 +337,7 @@ class MediaInfo(BaseModel):
         if isinstance(season, list):
             return set(meta_season).issuperset(set(season))
         return (
-            self.begin_season <= int(season) <= self.end_season
+            self.begin_season is not None and self.end_season is not None and self.begin_season <= int(season) <= self.end_season
             if self.end_season is not None
             else int(season) in meta_season
         )
@@ -350,7 +350,7 @@ class MediaInfo(BaseModel):
         if isinstance(episode, list):
             return set(meta_episode).issuperset(set(episode))
         return (
-            self.begin_episode <= int(episode) <= self.end_episode
+            self.begin_episode is not None and self.end_episode is not None and self.begin_episode <= int(episode) <= self.end_episode
             if self.end_episode is not None
             else int(episode) in meta_episode
         )

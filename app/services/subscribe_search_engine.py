@@ -33,6 +33,10 @@ class SubscribeSearchEngine:
     订阅搜索/下载逻辑
     """
 
+    _movie_repo: IRssMovieRepository
+    _tv_repo: IRssTvRepository
+    _tv_episode_repo: IRssTvEpisodeRepository
+
     def __init__(
         self,
         service: Any | None = None,

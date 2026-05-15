@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 import re
+from typing import Any
 
 import bencodepy
 import requests
@@ -793,7 +794,7 @@ class PyThunder:
                 torrent_data = f.read()
 
             # 解码种子文件
-            torrent_dict = bencodepy.decode(torrent_data)
+            torrent_dict: Any = bencodepy.decode(torrent_data)
 
             # 计算 info_hash
             info = torrent_dict[b"info"]

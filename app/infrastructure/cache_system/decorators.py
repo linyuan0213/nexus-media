@@ -275,7 +275,7 @@ def _default_key_builder(func: Callable, *args, **kwargs) -> str:
     # func 可能是 wrapper，需要获取原始函数
     actual_func = func
     while hasattr(actual_func, "__wrapped__"):
-        actual_func = actual_func.__wrapped__
+        actual_func = getattr(actual_func, "__wrapped__")
 
     try:
         # 获取原始函数签名

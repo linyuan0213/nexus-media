@@ -399,7 +399,7 @@ def get_downloaded(
                     "orgid": item.TMDBID,
                     "tmdbid": item.TMDBID,
                     "title": item.TITLE,
-                    "type": "MOV" if item.TYPE == "电影" else "TV",
+                    "type": "MOV" if str(item.TYPE or "") == "电影" else "TV",
                     "media_type": item.TYPE,
                     "year": item.YEAR,
                     "vote": item.VOTE,

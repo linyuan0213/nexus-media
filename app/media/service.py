@@ -36,7 +36,7 @@ class MediaService:
         if self._episode_mapping_enabled:
             log.info("【MediaService】集数映射已启用")
         rmt_match_mode = app.get("rmt_match_mode", "normal")
-        if rmt_match_mode:
+        if isinstance(rmt_match_mode, str):
             rmt_match_mode = rmt_match_mode.upper()
         else:
             rmt_match_mode = "NORMAL"
@@ -606,13 +606,13 @@ class MediaService:
                 match_url = match[1]
                 if not match_title or not match_url:
                     continue
-                match_title = StringUtils.handler_special_chars(str(match_title)).upper()
+                _mt = StringUtils.handler_special_chars(str(match_title))
+                match_title = _mt.upper() if isinstance(_mt, str) else str(match_title).upper()
                 for result in results:
                     if not result:
                         continue
-                    result_title = StringUtils.handler_special_chars(
-                        str(result.get("title") or result.get("name", ""))
-                    ).upper()
+                    _rt = StringUtils.handler_special_chars(str(result.get("title") or result.get("name", "")))
+                    result_title = _rt.upper() if isinstance(_rt, str) else str(result.get("title") or result.get("name", "")).upper()
                     if not result_title:
                         continue
                     ratio = difflib.SequenceMatcher(None, match_title, result_title).ratio()

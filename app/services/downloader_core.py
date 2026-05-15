@@ -9,6 +9,8 @@ DownloaderCore - 下载器 Facade（兼容旧 Downloader 接口）
 参考：app/services/search_service.py 中 Searcher 的做法
 """
 
+from typing import Any
+
 from threading import Lock
 
 import log
@@ -114,7 +116,7 @@ class DownloaderCore:
             proxy=proxy,
         )
 
-    def batch_download(self, in_from, media_list, need_tvs=None, user_name=None):
+    def batch_download(self, in_from, media_list, need_tvs=None, user_name=None) -> Any:
         return self._download_core.batch_download(
             in_from=in_from, media_list=media_list, need_tvs=need_tvs, user_name=user_name
         )
@@ -146,7 +148,7 @@ class DownloaderCore:
                 continue
             for task in trans_tasks:
                 done_flag, done_msg = self._filetransfer.transfer_media(
-                    in_from=downloader_enum.get(str(did)), in_path=task.get("path"), rmt_mode=rmt_mode
+                    in_from=getattr(downloader_enum, str(did), None), in_path=task.get("path"), rmt_mode=rmt_mode
                 )
                 if not done_flag:
                     log.warn(f"【Downloader】下载器 {name} 任务%s 转移失败：%s" % (task.get("path"), done_msg))
@@ -204,7 +206,7 @@ class DownloaderCore:
 
     # ---------- 存在性检查 ----------
 
-    def check_exists_medias(self, meta_info, no_exists=None, total_ep=None):
+    def check_exists_medias(self, meta_info, no_exists=None, total_ep=None) -> tuple[bool, dict, Any]:
         return self._download_core.check_exists_medias(meta_info=meta_info, no_exists=no_exists, total_ep=total_ep)  # type: ignore[attr-defined]
 
     # ---------- 目录/设置查询 ----------

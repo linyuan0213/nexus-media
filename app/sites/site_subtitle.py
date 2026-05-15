@@ -2,6 +2,7 @@ import json
 import os
 import re
 import shutil
+from typing import cast
 
 from lxml import etree
 
@@ -57,8 +58,8 @@ class SiteSubtitle:
                 return
             html = etree.HTML(res.text)
             sublink_list = []
-            for xpath in (self.siteconf.get_subtitle_conf() if self.siteconf else []):
-                sublinks = html.xpath(xpath)
+            for xpath in self.siteconf.get_subtitle_conf() if self.siteconf else []:
+                sublinks = cast(list, html.xpath(xpath))
                 if sublinks:
                     for sublink in sublinks:
                         if not sublink:
@@ -138,6 +139,10 @@ class SiteSubtitle:
             log.warn(f"【Sites】无法获取站点 {site_id} 的信息")
             return
 
+        if not isinstance(site_info, dict):
+            log.warn(f"【Sites】站点信息格式错误，预期为 dict，实际为 {type(site_info)}")
+            return
+
         # 从站点信息中获取 headers
         headers = site_info.get("headers")
         if headers and isinstance(headers, str):
@@ -149,9 +154,10 @@ class SiteSubtitle:
             headers = {}
 
         # 添加必要的头信息
-        headers.update(
-            {"Content-Type": "application/json; charset=utf-8", "accept": "application/json, text/plain, */*"}
-        )
+        headers.update({
+            "Content-Type": "application/json; charset=utf-8",
+            "accept": "application/json, text/plain, */*",
+        })
 
         # 添加 User-Agent
         if isinstance(ua, str):
@@ -263,4 +269,4 @@ class SiteSubtitle:
 
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
-            log.error(f"【Sites】处理 m-team 字幕时发生错误：{str(err)}")
+            log.error(f"【Sites】处理 m-team 字幕时发生错误：{err!s}")

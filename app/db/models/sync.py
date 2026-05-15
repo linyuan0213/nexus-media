@@ -3,7 +3,8 @@
 包含: 同步历史
 """
 
-from sqlalchemy import Column, Integer, Sequence, String
+from sqlalchemy import Integer, Sequence, String
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
 
@@ -11,7 +12,7 @@ from app.db.models.base import Base
 class SYNCHISTORY(Base):
     __tablename__ = "SYNC_HISTORY"
 
-    ID = Column(Integer, Sequence("ID"), primary_key=True)
-    PATH = Column(String(512), index=True)
-    SRC = Column(String(255))
-    DEST = Column(String(255))
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    PATH: Mapped[str] = mapped_column(String(512), index=True)
+    SRC: Mapped[str] = mapped_column(String(255))
+    DEST: Mapped[str] = mapped_column(String(255))

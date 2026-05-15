@@ -60,6 +60,9 @@ class LibraryRefreshPlugin:
             self._refresh_library(event_data)
 
     def _refresh_library(self, event_data: dict | None = None):
+        if not event_data:
+            event_data = {}
+
         if self._mediaserver:
             mediaserver_type_obj = self._mediaserver.get_type()
             mediaserver_type = mediaserver_type_obj.value if mediaserver_type_obj else ""
@@ -71,18 +74,16 @@ class LibraryRefreshPlugin:
             year = media_info.get("year")
             media_name = f"{title} ({year})" if year else title
             self.ctx.info(f"媒体服务器 {mediaserver_type} 刷新媒体 {media_name} ...")
-            self._mediaserver.refresh_library_by_items(
-                [
-                    {
-                        "title": title,
-                        "year": year,
-                        "type": media_info.get("type"),
-                        "category": media_info.get("category"),
-                        "target_path": event_data.get("dest"),
-                        "file_path": event_data.get("target_path"),
-                    }
-                ]
-            )
+            self._mediaserver.refresh_library_by_items([
+                {
+                    "title": title,
+                    "year": year,
+                    "type": media_info.get("type"),
+                    "category": media_info.get("category"),
+                    "target_path": event_data.get("dest"),
+                    "file_path": event_data.get("target_path"),
+                }
+            ])
         else:
             self.ctx.info(f"媒体服务器 {mediaserver_type} 刷新整库 ...")
             self._mediaserver.refresh_root_library()

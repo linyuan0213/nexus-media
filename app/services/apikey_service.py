@@ -131,7 +131,7 @@ class APIKeyService:
         try:
             key_hash = self._hash_key(raw_key)
             key = self._key_repo.get_by_key_and_status(key_hash, status=1)
-            if not key or key.is_expired():
+            if key is None or key.is_expired():
                 return None
             return key
         except Exception as e:
@@ -200,7 +200,7 @@ class APIKeyService:
         try:
             # 查找已有系统 key
             existing = self._key_repo.get_by_name(name, status=1)
-            if existing and existing.raw_key:
+            if existing is not None and existing.raw_key:
                 return existing.raw_key
 
             # 不存在或无效，创建新的

@@ -1,3 +1,5 @@
+from typing import Any
+
 import requests
 
 from app.helper import IndexerConf
@@ -88,5 +90,5 @@ class Jackett(_IIndexClient):
             ExceptionUtils.exception_traceback(e2)
             return []
 
-    def search(self, *kwargs):
-        return super().search(*kwargs)
+    def search(self, order_seq, indexer, key_word, filter_args, match_media, in_from):
+        return super().search(order_seq, indexer, key_word, filter_args, match_media, in_from)

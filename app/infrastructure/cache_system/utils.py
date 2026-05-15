@@ -52,7 +52,7 @@ def deserialize_value(data: bytes) -> Any:
     return pickle.loads(data)
 
 
-def safe_serialize(value: Any) -> bytes:
+def safe_serialize(value: Any) -> bytes | None:
     """安全序列化（失败返回None）"""
     try:
         return pickle.dumps(value)

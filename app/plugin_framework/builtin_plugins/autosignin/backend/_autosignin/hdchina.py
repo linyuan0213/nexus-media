@@ -1,4 +1,5 @@
 import json
+from typing import cast
 
 from lxml import etree
 
@@ -82,7 +83,7 @@ class HDChina(_ISiteSigninHandler):
             return False, f"【{site}】签到失败"
 
         # x_csrf
-        x_csrf = html.xpath("//meta[@name='x-csrf']/@content")[0]
+        x_csrf = cast(list, html.xpath("//meta[@name='x-csrf']/@content"))[0]
         if not x_csrf:
             self.error("签到失败，获取x-csrf失败")
             return False, f"【{site}】签到失败"

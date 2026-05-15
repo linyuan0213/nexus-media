@@ -1,3 +1,5 @@
+from typing import cast
+
 from lxml import etree
 
 from app.db.repositories import SiteRepository
@@ -123,4 +125,4 @@ class TTG(_ISiteRssGenHandler):
             return ""
 
         html = etree.HTML(html_text)
-        return next((href for href in html.xpath('//textarea[@id="trss"]/text()')), "")
+        return next((href for href in cast(list, html.xpath('//textarea[@id="trss"]/text()'))), "")

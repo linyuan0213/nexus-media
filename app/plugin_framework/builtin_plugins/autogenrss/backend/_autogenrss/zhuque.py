@@ -1,3 +1,5 @@
+from typing import cast
+
 from lxml import etree
 
 from app.db.repositories import SiteRepository
@@ -50,7 +52,7 @@ class ZhuQue(_ISiteRssGenHandler):
         if not html:
             return False, f"【{site}】生成RSS失败"
 
-        x_csrf_token_list = html.xpath("//meta[@name='x-csrf-token']/@content")
+        x_csrf_token_list = cast(list, html.xpath("//meta[@name='x-csrf-token']/@content"))
         x_csrf_token = x_csrf_token_list[0] if x_csrf_token_list else None
         if x_csrf_token:
             headers = {

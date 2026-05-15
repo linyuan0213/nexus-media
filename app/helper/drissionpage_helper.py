@@ -38,7 +38,7 @@ class DrissionPageHelper(metaclass=SingletonMeta):
             return False
 
     def _request_with_retry(
-        self, method: str, url: str, retries: int = 3, delay: int = 2, **kwargs
+        self, method: str, url: str, retries: int = 3, delay: int = 2, **kwargs: Any
     ) -> requests.Response:
         """通用的网络请求重试逻辑"""
         for attempt in range(retries):
@@ -52,6 +52,7 @@ class DrissionPageHelper(metaclass=SingletonMeta):
                 else:
                     log.error(f"所有重试失败，失败请求 {url}")
                     raise
+        raise RuntimeError(f"所有重试失败，失败请求 {url}")
 
     def get_page_html(
         self,

@@ -3,6 +3,7 @@ import os
 import re
 import time
 from io import BytesIO
+from typing import Any, cast
 
 import zhconv
 from bs4 import BeautifulSoup
@@ -88,27 +89,12 @@ class Tjupt(_ISiteSigninHandler):
         html = etree.HTML(html_res.text)
         if not html:
             return False, f"【{site}】签到失败"
-        img_url = str(list(html.xpath('//table[@class="captcha"]//img/@src'))[0] or "")
+        img_url = str(cast(list, html.xpath('//table[@class="captcha"]//img/@src'))[0] or "")
+        captcha_img_hash = ""
 
-        if not img_url:
-            self.error("签到失败，未获取到签到图片")
-            return False, f"【{site}】签到失败，未获取到签到图片"
-
-        # 签到图片
-        img_url = "https://www.tjupt.org" + img_url
-        self.info(f"获取到签到图片 {img_url}")
-        # 获取签到图片hash
-        captcha_img_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(url=img_url)
-        if not captcha_img_res or captcha_img_res.status_code != 200:
-            self.error(f"签到图片 {img_url} 请求失败")
-            return False, f"【{site}】签到失败，未获取到签到图片"
-        captcha_img = Image.open(BytesIO(captcha_img_res.content))
-        captcha_img_hash = self._tohash(captcha_img)
-        self.debug(f"签到图片hash {captcha_img_hash}")
-
-        # 签到答案选项
-        values = html.xpath("//input[@name='answer']/@value")
-        options = html.xpath("//input[@name='answer']/following-sibling::text()")
+        # 获取所有选项
+        values = cast(list, html.xpath("//input[@name='answer']/@value"))
+        options = cast(list, html.xpath("//input[@name='answer']/following-sibling::text()"))
 
         if not values or not options:
             self.error("签到失败，未获取到答案选项")

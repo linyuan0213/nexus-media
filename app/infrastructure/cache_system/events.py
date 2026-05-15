@@ -37,7 +37,7 @@ class CacheEvent:
     key: str | None = None
     value: Any = None
     ttl: int | None = None
-    timestamp: datetime = None
+    timestamp: datetime | None = None
 
     def __post_init__(self):
         if self.timestamp is None:

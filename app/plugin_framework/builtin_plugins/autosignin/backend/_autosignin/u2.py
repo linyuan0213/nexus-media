@@ -30,13 +30,14 @@ class U2(_ISiteSigninHandler):
     # 签到成功
     _success_text = "window.location.href = 'showup.php';</script>"
 
-    def match(self, url):
+    @classmethod
+    def match(cls, url):
         """
         根据站点Url判断是否匹配当前站点签到类，大部分情况使用默认实现即可
         :param url: 站点Url
         :return: 是否匹配，如匹配则会调用该类的signin方法
         """
-        return bool(StringUtils.url_equal(url, self.site_url))
+        return bool(StringUtils.url_equal(url, cls.site_url))
 
     def signin(self, site_info: dict):  # type: ignore[override]
         """
