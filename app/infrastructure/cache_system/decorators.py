@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import inspect
 import threading
 from collections.abc import Callable
 
@@ -250,8 +251,6 @@ def _default_key_builder(func: Callable, *args, **kwargs) -> str:
     使用函数签名绑定参数，确保不同调用方式（位置参数/关键字参数）
     生成一致的缓存键
     """
-    import inspect
-
     # 检查并跳过 self/cls 参数
     bind_args = args
     bind_kwargs = kwargs

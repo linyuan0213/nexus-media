@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from api.deps import get_site_service, require_any_permission, require_permission
+from app.helper import ThreadHelper
 from app.services.site_service import SiteService
 from app.utils.response import fail, success
 
@@ -185,8 +186,6 @@ def refresh_site_statistics(
     user: str = Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
-    from app.helper import ThreadHelper
-
     ThreadHelper().start_thread(svc.refresh_site_data_now, (req.sites,))
     return success(data={"message": "站点数据刷新已启动，请稍候"})
 

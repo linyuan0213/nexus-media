@@ -5,6 +5,7 @@ import cn2an
 from app.media import Bangumi, DouBan, MediaService, meta_info
 from app.utils import ExceptionUtils, IpUtils, RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
+from app.utils.security import generate_password_hash
 from app.utils.types import MediaType
 from config import Config
 from version import APP_VERSION
@@ -255,8 +256,6 @@ def mediainfo_dict(media_info):
 
 def set_config_value(cfg, cfg_key, cfg_value):
     """根据Key设置配置值"""
-    from app.utils.security import generate_password_hash
-
     if cfg_key == "app.login_password":
         if cfg_value and not cfg_value.startswith("[hash]"):
             cfg["app"]["login_password"] = f"[hash]{generate_password_hash(cfg_value)}"

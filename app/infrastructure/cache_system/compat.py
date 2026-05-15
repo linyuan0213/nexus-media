@@ -5,6 +5,8 @@
 """
 
 from .adapters import MemoryCacheAdapter, RedisCacheAdapter
+from .decorators import cached as new_cached
+from .decorators import cached_with_lock as new_cached_with_lock
 from .caches import (
     CategoryLoadCache as NewCategoryLoadCache,
     ConfigLoadCache as NewConfigLoadCache,
@@ -74,13 +76,9 @@ TMDBCache = TMDBCacheCompat()
 # 兼容旧的装饰器
 def cached(cache_instance, key_func=None):
     """兼容旧的 cached 装饰器"""
-    from .decorators import cached as new_cached
-
     return new_cached(cache_instance, key_func=key_func)
 
 
 def cached_with_lock(cache_instance, lock=None):
     """兼容旧的 cached_with_lock 装饰器"""
-    from .decorators import cached_with_lock as new_cached_with_lock
-
     return new_cached_with_lock(cache_instance, lock=lock)

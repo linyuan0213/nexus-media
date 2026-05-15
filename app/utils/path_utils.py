@@ -5,6 +5,8 @@ PathUtils - 路径相关纯函数工具
 
 import os
 
+from app.core.config import Config
+
 _ROOT_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 
@@ -15,8 +17,6 @@ def get_root_path():
 
 def get_config_path():
     """配置目录路径"""
-    from app.core.config import Config
-
     return Config().config_path
 
 
@@ -42,8 +42,6 @@ def get_user_plugin_path():
 
 def get_category_path():
     """分类配置文件路径"""
-    from app.core.config import Config
-
     category = Config().get("media").get("category")
     if category:
         return os.path.join(get_config_path(), f"{category}.yaml")
