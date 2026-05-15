@@ -5,6 +5,7 @@
 通过声明式 JSON 站点定义提供统一的搜索、下载、字幕等功能入口。
 """
 
+import importlib
 import json
 import os
 import re
@@ -177,6 +178,12 @@ class SiteEngine:
                 subpath = os.path.join(definitions_dir, subdir)
                 if os.path.isdir(subpath):
                     self._load(subpath)
+        self._register_user_info_factories()
+
+    def _register_user_info_factories(self) -> None:
+        """注册默认的用户信息解析工厂（动态导入避免循环依赖）"""
+        importlib.import_module("app.sites.siteuserinfo.config_api")
+        importlib.import_module("app.sites.siteuserinfo.config_html")
 
     def _load(self, directory: str):
         for fname in sorted(os.listdir(directory)):
@@ -277,9 +284,8 @@ class SiteEngine:
                 text = res.text
                 free_path = cfg.get("response", {}).get("free_key", "")
                 free_val = cfg.get("response", {}).get("free_value", "")
-                if free_path:
-                    if str(JsonUtils.get_json_object(text, free_path)) == free_val:
-                        ret["free"] = True
+                if free_path and str(JsonUtils.get_json_object(text, free_path)) == free_val:
+                    ret["free"] = True
                 peer_path = cfg.get("response", {}).get("peer_count_key", "")
                 if peer_path:
                     val = JsonUtils.get_json_object(text, peer_path)

@@ -23,7 +23,6 @@ lock = Lock()
 
 def _log_error(site_name):
     log.error(f"【Sites】站点 {site_name} 无法识别站点类型")
-    return None
 
 
 class SiteUserInfo(metaclass=SingletonMeta):
@@ -186,7 +185,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【Sites】站点 {site_name} 获取流量数据失败：{str(e)}")
+            log.error(f"【Sites】站点 {site_name} 获取流量数据失败：{e!s}")
 
     def __notify_unread_msg(self, site_name, site_user_info, unread_msg_notify):
         if self.message is None:
