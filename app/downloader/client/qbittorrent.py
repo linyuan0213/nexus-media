@@ -766,13 +766,15 @@ class Qbittorrent(_IDownloadClient):
         """
         if not self.qbc:
             return
-        download_limit = download_limit * 1024
-        upload_limit = upload_limit * 1024
         try:
-            if self.qbc.transfer.upload_limit != upload_limit:
-                self.qbc.transfer.upload_limit = upload_limit
-            if self.qbc.transfer.download_limit != download_limit:
-                self.qbc.transfer.download_limit = download_limit
+            if download_limit is not None:
+                download_limit = download_limit * 1024
+                if self.qbc.transfer.download_limit != download_limit:
+                    self.qbc.transfer.download_limit = download_limit
+            if upload_limit is not None:
+                upload_limit = upload_limit * 1024
+                if self.qbc.transfer.upload_limit != upload_limit:
+                    self.qbc.transfer.upload_limit = upload_limit
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -837,17 +839,21 @@ class Qbittorrent(_IDownloadClient):
         torrent_obj.id = torrent.get("hash")
         torrent_obj.name = torrent.get("name")
         # 下载时间
-        torrent_obj.download_time = (date_now - torrent.get("added_on")) if torrent.get("added_on") else 0
+        added_on = torrent.get("added_on") or 0
+        torrent_obj.download_time = date_now - added_on if added_on else 0
         # 做种时间
-        torrent_obj.seeding_time = (date_now - torrent.get("completion_on")) if torrent.get("completion_on") > 0 else 0
+        completion_on = torrent.get("completion_on") or 0
+        torrent_obj.seeding_time = date_now - completion_on if completion_on > 0 else 0
         # 分享率
         torrent_obj.ratio = torrent.get("ratio") or 0
         # 上传量
         torrent_obj.uploaded = torrent.get("uploaded") or 0
         # 平均上传速度 Byte/s
-        torrent_obj.avg_upload_speed = float(properties.get("up_speed_avg") or 0) if properties else 0
+        up_speed_avg = properties.get("up_speed_avg") if properties else 0
+        torrent_obj.avg_upload_speed = float(up_speed_avg) if isinstance(up_speed_avg, (int, float)) else 0
         # 已未活动 秒
-        torrent_obj.iatime = date_now - torrent.get("last_activity") if torrent.get("last_activity") else 0
+        last_activity = torrent.get("last_activity") or 0
+        torrent_obj.iatime = date_now - last_activity if last_activity else 0
         # 下载量
         torrent_obj.downloaded = int(torrent.get("downloaded") or 0)
         # 种子大小
@@ -865,7 +871,7 @@ class Qbittorrent(_IDownloadClient):
         # tracker
         torrent_obj.trackers = [
             str(tracker.get("url") or "")
-            for tracker in self._get_torrent_trackers(torrent_hash=torrent.get("hash"))
+            for tracker in self._get_torrent_trackers(torrent_hash=torrent.get("hash")) or []
             if not any(keyword in str(tracker.get("url") or "") for keyword in ["DHT", "PeX", "LSD"])
         ]
         # 下载速度

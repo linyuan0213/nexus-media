@@ -402,7 +402,7 @@ class SyncService:
                     ret = module_obj.get_status()
                 else:
                     ret = cls.exec_test_command(command)
-            Config().init_config()
+            Config()._init_config()
             if module_obj:
                 if hasattr(module_obj, "init_config"):
                     module_obj.init_config()

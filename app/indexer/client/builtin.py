@@ -8,7 +8,6 @@
 import copy
 import datetime
 import json as _json
-import time
 from threading import Lock
 
 import log
@@ -17,7 +16,6 @@ from app.db.repositories import DownloadRepository
 from app.helper import IndexerConf, IndexerHelper, ProgressHelper
 from app.helper.drissionpage_helper import DrissionPageHelper
 from app.indexer.client._base import _IIndexClient
-from app.indexer.client._spider import TorrentSpider
 from app.sites import Sites
 from app.sites.engine import SiteEngine
 from app.sites.searcher_factory import create_searcher
@@ -239,17 +237,17 @@ class BuiltinIndexer(_IIndexClient):
     def __search_via_engine(self, search_word, indexer, mtype=None, page=0):
         engine = SiteEngine.get_instance()
         site_def = engine.get_by_id(str(indexer.id)) or engine.get_by_url(indexer.domain or "")
-        if site_def and (site_def.api or site_def.html):
-            user_config = self._build_user_config(indexer)
-            searcher = create_searcher(indexer.domain, user_config)
-            if not searcher:
-                return self.__spider_search(indexer=indexer, keyword=search_word, page=page, mtype=mtype)
-            result_array = searcher.search(keyword=search_word, page=page, mtype=mtype)
-            for item in result_array:
-                if "indexer" not in item:
-                    item["indexer"] = indexer.id or indexer.siteid
-            return False, result_array
-        return self.__spider_search(indexer=indexer, keyword=search_word, page=page, mtype=mtype)
+        if not site_def or not (site_def.api or site_def.html):
+            return True, []
+        user_config = self._build_user_config(indexer)
+        searcher = create_searcher(indexer.domain, user_config)
+        if not searcher:
+            return True, []
+        result_array = searcher.search(keyword=search_word, page=page, mtype=mtype)
+        for item in result_array:
+            if "indexer" not in item:
+                item["indexer"] = indexer.id or indexer.siteid
+        return False, result_array
 
     @staticmethod
     def _build_user_config(indexer):
@@ -269,21 +267,3 @@ class BuiltinIndexer(_IIndexClient):
             except Exception:
                 pass
         return user_config
-
-    @staticmethod
-    def __spider_search(indexer, keyword=None, page=None, mtype=None, timeout=60):
-        spider = TorrentSpider()
-        spider.setparam(indexer=indexer, keyword=keyword, page=page, mtype=mtype)
-        spider.start()
-        sleep_interval = 0.1
-        total_wait = 0
-        while not spider.is_complete:
-            time.sleep(sleep_interval)
-            total_wait += sleep_interval
-            if total_wait >= timeout:
-                spider.stop_spider()
-                break
-        result_flag = spider.is_error
-        result_array = spider.torrents_info_array.copy()
-        spider.torrents_info_array.clear()
-        return result_flag, result_array
