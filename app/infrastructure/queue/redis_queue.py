@@ -93,13 +93,13 @@ class RedisMessageQueue(MessageQueue):
             "msg_id": msg_id,
             "name": name,
             "timestamp": time.time(),
-            "client_id": str(client.get("id", "")),
-            "client_type": client.get("type", ""),
-            "title": title,
-            "text": text,
-            "image": image,
-            "url": url,
-            "user_id": user_id,
+            "client_id": str(client.get("id", "")) if client else "",
+            "client_type": str(client.get("type", "")) if client else "",
+            "title": str(title) if title is not None else "",
+            "text": str(text) if text is not None else "",
+            "image": str(image) if image is not None else "",
+            "url": str(url) if url is not None else "",
+            "user_id": str(user_id) if user_id is not None else "",
         }
 
         # 幂等检查
@@ -136,6 +136,9 @@ class RedisMessageQueue(MessageQueue):
                             for k, v in fields.items()
                         }
                         self._executor.submit(self._process_message, msg_id, fields)
+            except TimeoutError as e:
+                log.debug(f"【RedisMessageQueue】xreadgroup 超时，将重试: {e}")
+                time.sleep(1)
             except Exception as e:
                 log.error(f"【RedisMessageQueue】分发异常: {e}")
                 time.sleep(1)
