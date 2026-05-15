@@ -68,8 +68,8 @@ class Opencd(_ISiteSigninHandler):
             return False, f"【{site}】签到失败"
 
         # 签到参数
-        img_url = html.xpath('//form[@id="frmSignin"]//img/@src')[0]
-        img_hash = html.xpath('//form[@id="frmSignin"]//input[@name="imagehash"]/@value')[0]
+        img_url = str(list(html.xpath('//form[@id="frmSignin"]//img/@src'))[0] or "")
+        img_hash = str(list(html.xpath('//form[@id="frmSignin"]//input[@name="imagehash"]/@value'))[0] or "")
         if not img_url or not img_hash:
             self.error("签到失败，获取签到参数失败")
             return False, f"【{site}】签到失败，获取签到参数失败"

@@ -89,18 +89,18 @@ class DownloadClientFactory:
             transfer = downloader_conf.TRANSFER
             only_nastool = downloader_conf.ONLY_NASTOOL
             match_path = downloader_conf.MATCH_PATH
-            rmt_mode = downloader_conf.RMT_MODE
-            mode_enum = ModuleConf.RMT_MODES.get(str(rmt_mode)) if rmt_mode else None
+            rmt_mode = str(downloader_conf.RMT_MODE or "")
+            mode_enum = ModuleConf.RMT_MODES.get(rmt_mode) if rmt_mode else None
             rmt_mode_name = mode_enum.value if mode_enum else ""
 
-            if transfer:
+            if str(transfer or ""):
                 log_content = ""
-                if only_nastool:
+                if str(only_nastool or ""):
                     log_content += "启用标签隔离，"
-                if match_path:
+                if str(match_path or ""):
                     log_content += "启用目录隔离，"
                 log.info(f"【Downloader】读取到监控下载器：{name}{log_content}转移方式：{rmt_mode_name}")
-                if enabled:
+                if int(str(enabled or 0)):
                     self._monitor_downloader_ids.append(did)
                 else:
                     log.info(f"【Downloader】下载器：{name} 不进行监控：下载器未启用")
@@ -200,7 +200,7 @@ class DownloadClientFactory:
             log.info(f"【Downloader】下载器 {downloader_conf.get('name')} 未启用")
             return None
         ctype = downloader_conf.get("type")
-        config = downloader_conf.get("config")
+        config = downloader_conf.get("config") or {}
         config["download_dir"] = downloader_conf.get("download_dir")
         config["name"] = downloader_conf.get("name")
         with client_lock:

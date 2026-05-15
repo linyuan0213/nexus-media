@@ -9,6 +9,7 @@
 import datetime
 import xml.dom.minidom
 from abc import ABCMeta, abstractmethod
+from typing import Any
 
 import log
 from app.helper import ProgressHelper
@@ -43,26 +44,26 @@ class _IIndexClient(metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def match(cls, ctype):
+    def match(cls, ctype) -> Any:
         """匹配实例"""
 
     @abstractmethod
-    def get_status(self):
+    def get_status(self) -> Any:
         """检查连通性"""
 
     @abstractmethod
-    def get_type(self):
+    def get_type(self) -> Any:
         """获取类型"""
 
     @abstractmethod
-    def get_client_id(self):
+    def get_client_id(self) -> Any:
         """获取索引器id"""
 
     @abstractmethod
-    def get_indexers(self, check=True, indexer_id=None, public=True):
+    def get_indexers(self, check=True, indexer_id=None, public=True) -> Any:
         """获取索引站点列表"""
 
-    def search(self, order_seq, indexer, key_word, filter_args: dict, match_media, in_from: SearchType):
+    def search(self, order_seq, indexer, key_word, filter_args: dict, match_media, in_from: SearchType) -> Any:
         """
         默认搜索实现：基于 Torznab XML 协议
 

@@ -1,6 +1,7 @@
 import json
 from typing import Any
 
+from app.db.models.site import SITEUSERINFOSTATS
 from app.db.repositories import SiteRepository
 from app.schemas.site import (
     SiteActivityDTO,
@@ -168,7 +169,7 @@ class SiteService:
         sort_by: str | None = None,
         sort_on: str | None = None,
         site_hash: str | None = None,
-    ) -> list[dict]:
+    ) -> list[SITEUSERINFOSTATS]:
         statistics = self._site_user_info.get_site_user_statistics(sites=sites, encoding=encoding)
         # 修复馒头站点显示
         for item in statistics:

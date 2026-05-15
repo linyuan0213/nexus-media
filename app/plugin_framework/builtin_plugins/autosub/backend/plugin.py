@@ -30,7 +30,7 @@ class AutoSubPlugin:
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
         self._running = False
-        self._end_token = [".", "!", "?", "。", "！", "？", '。"', '！"', '？"', '."', '!"', '?"']
+        self._end_token: list[str] = [".", "!", "?", "。", "！", "？", '。"', '！"', '？"', '."', '!"', '?"']
         self._noisy_token = [("(", ")"), ("[", "]"), ("{", "}"), ("【", "】"), ("♪", "♪"), ("♫", "♫"), ("♪♪", "♪♪")]
 
     def _get_config(self):
@@ -86,9 +86,9 @@ class AutoSubPlugin:
         ):
             return
 
+        success_count = skip_count = fail_count = process_count = 0
         try:
             self._running = True
-            success_count = skip_count = fail_count = process_count = 0
             for path in path_list:
                 self.ctx.info(f"开始处理目录：{path} ...")
                 if not os.path.exists(path):
@@ -147,7 +147,7 @@ class AutoSubPlugin:
                 self.ctx.warn("faster-whisper模型文件夹不存在，不进行处理")
                 return False
             try:
-                import faster_whisper  # noqa: F401
+                import faster_whisper  # noqa: F401  # type: ignore[import-untyped]
             except ImportError:
                 self.ctx.warn("faster-whisper 未安装，不进行处理")
                 return False
@@ -268,7 +268,7 @@ class AutoSubPlugin:
                 return True, lang
         elif asr_engine == "faster-whisper":
             try:
-                from faster_whisper import WhisperModel, download_model
+                from faster_whisper import WhisperModel, download_model  # type: ignore[import-untyped]
 
                 cache_dir = os.path.join(faster_whisper_model_path, "cache")
                 if not os.path.exists(cache_dir):
@@ -535,7 +535,7 @@ class AutoSubPlugin:
                 merged_subtitle[-1].content = f"{merged_subtitle[-1].content} {content}"
                 merged_subtitle[-1].end = item.end
 
-            if any(content[-len(str(t)):] == str(t) for t in self._end_token) or len(merged_subtitle[-1].content) > 350:
+            if any(str(content)[-len(str(t)):] == str(t) for t in self._end_token) or len(merged_subtitle[-1].content) > 350:
                 sentence_end = True
             else:
                 sentence_end = False

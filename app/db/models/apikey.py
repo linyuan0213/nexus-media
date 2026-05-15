@@ -57,12 +57,12 @@ class APIKEY(Base):
             "key_value": self.KEY_VALUE,
             "key_prefix": self.KEY_PREFIX,
             "status": self.STATUS,
-            "expires_at": self.EXPIRES_AT.isoformat() if self.EXPIRES_AT else None,
-            "created_at": self.CREATED_AT.isoformat() if self.CREATED_AT else None,
-            "updated_at": self.UPDATED_AT.isoformat() if self.UPDATED_AT else None,
+            "expires_at": self.EXPIRES_AT.isoformat() if self.EXPIRES_AT is not None else None,
+            "created_at": self.CREATED_AT.isoformat() if self.CREATED_AT is not None else None,
+            "updated_at": self.UPDATED_AT.isoformat() if self.UPDATED_AT is not None else None,
             "created_by": self.CREATED_BY,
             "use_count": self.USE_COUNT,
-            "last_used_at": self.LAST_USED_AT.isoformat() if self.LAST_USED_AT else None,
+            "last_used_at": self.LAST_USED_AT.isoformat() if self.LAST_USED_AT is not None else None,
             "description": self.DESCRIPTION,
             "raw_key": self.RAW_KEY,
         }
@@ -75,7 +75,7 @@ class APIKEY(Base):
 
     def is_active(self):
         """检查是否可用"""
-        return self.STATUS == 1 and not self.is_expired()
+        return bool(self.STATUS == 1 and not self.is_expired())
 
 
 class APIKEYLOG(Base):
@@ -132,6 +132,6 @@ class APIKEYLOG(Base):
             "status": self.STATUS,
             "response_code": self.RESPONSE_CODE,
             "error_message": self.ERROR_MESSAGE,
-            "request_at": self.REQUEST_AT.isoformat() if self.REQUEST_AT else None,
+            "request_at": self.REQUEST_AT.isoformat() if self.REQUEST_AT is not None else None,
             "response_time_ms": self.RESPONSE_TIME_MS,
         }

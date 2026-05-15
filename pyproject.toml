@@ -91,8 +91,6 @@ line-length = 120
 
 exclude = [
     "third_party",
-    "app/media/doubanapi",
-    "app/media/tmdbv3api",
     ".git",
     ".venv",
     "__pycache__",
@@ -101,41 +99,8 @@ exclude = [
     "dist",
 ]
 
-[tool.ruff.lint]
-select = [
-    "E",      # pycodestyle errors
-    "W",      # pycodestyle warnings
-    "F",      # Pyflakes
-    "I",      # isort
-    "N",      # pep8-naming
-    "UP",     # pyupgrade
-    "B",      # flake8-bugbear
-    "C4",     # flake8-comprehensions
-    "SIM",    # flake8-simplify
-    "ARG",    # flake8-unused-arguments
-    "PIE",    # flake8-pie
-    "PGH",    # pygrep-hooks
-]
-ignore = [
-    "E501",   # line-too-long (handled by formatter)
-    "SIM102", # nested-if (sometimes clearer)
-    "SIM108", # ternary (sometimes clearer)
-    "ARG001", # unused-function-argument (FastAPI deps pattern)
-    "ARG002", # unused-method-argument (overrides)
-]
-
-[tool.ruff.lint.pydocstyle]
-convention = "google"
-
-[tool.ruff.lint.isort]
-known-first-party = ["app", "api", "config", "web"]
-combine-as-imports = true
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "auto"
+[tool.uv.sources]
+anitopy = { path = "third_party/anitopy", editable = true }
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["ARG", "S"]

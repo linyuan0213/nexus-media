@@ -278,13 +278,13 @@ class DownloadCore:
             for torrent_file in torrent_files:
                 file_id = torrent_file.get("id")
                 file_name = torrent_file.get("name")
-                meta_info = meta_info(file_name)
-                if not meta_info.get_episode_list():
+                mi = meta_info(file_name)
+                if not mi.get_episode_list():
                     selected = False
                 else:
-                    selected = set(meta_info.get_episode_list()).issubset(set(need_episodes))
+                    selected = set(mi.get_episode_list()).issubset(set(need_episodes))
                     if selected:
-                        sucess_epidised = list(set(sucess_epidised).union(set(meta_info.get_episode_list())))
+                        sucess_epidised = list(set(sucess_epidised).union(set(mi.get_episode_list())))
                 if not files_info.get(tid):
                     files_info[tid] = {file_id: {"priority": "normal", "selected": selected}}
                 else:
@@ -296,13 +296,13 @@ class DownloadCore:
             for torrent_file in torrent_files:
                 file_id = torrent_file.get("id")
                 file_name = torrent_file.get("name")
-                meta_info = meta_info(file_name)
-                if not meta_info.get_episode_list() or not set(meta_info.get_episode_list()).issubset(
+                mi = meta_info(file_name)
+                if not mi.get_episode_list() or not set(mi.get_episode_list()).issubset(
                     set(need_episodes)
                 ):
                     file_ids.append(file_id)
                 else:
-                    sucess_epidised = list(set(sucess_epidised).union(set(meta_info.get_episode_list())))
+                    sucess_epidised = list(set(sucess_epidised).union(set(mi.get_episode_list())))
             if sucess_epidised and file_ids:
                 _client.set_files(torrent_hash=tid, file_ids=file_ids, priority=0)
         return sucess_epidised
@@ -341,7 +341,7 @@ class DownloadCore:
         if not url:
             log.error("【Downloader】url 链接为空")
             return [], None
-        site_info: dict = self._sites.get_sites(siteurl=url)
+        site_info: Any = self._sites.get_sites(siteurl=url) or {}
         file_path, _, _, files, retmsg = Torrent().get_torrent_info(
             url=url,
             cookie=site_info.get("cookie"),
@@ -444,7 +444,7 @@ class DownloadCore:
 
     @staticmethod
     def get_download_url(page_url):
-        site_info: dict = Sites().get_sites(siteurl=page_url)
+        site_info: Any = Sites().get_sites(siteurl=page_url) or {}
         return SiteEngine.get_instance().resolve_download_url(
             page_url=page_url,
             user_config={

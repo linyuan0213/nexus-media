@@ -1,5 +1,6 @@
 import json
 from threading import Lock
+from typing import Any
 from urllib.parse import quote
 
 import log
@@ -27,7 +28,7 @@ class SynologyChat(_IMessageClient):
         super().__init__(config)
 
     def read_config(self):
-        cfg = self._config or {}
+        cfg: Any = self._config or {}
         self._interactive = cfg.get("interactive", False)
         self._webhook_url = cfg.get("webhook_url")
         if self._webhook_url:
@@ -103,6 +104,8 @@ class SynologyChat(_IMessageClient):
                 user_ids = self.__get_bot_users()
                 if not user_ids:
                     return False, "机器人没有对任何用户可见"
+            error_flag = True
+            error_msg = ""
             for uid in user_ids:
                 payload_data["user_ids"] = str(uid)
                 error_flag, error_msg = self.__send_request(payload_data)
@@ -134,6 +137,8 @@ class SynologyChat(_IMessageClient):
                 user_ids = [int(user_id)]
             else:
                 user_ids = self.__get_bot_users()
+            error_flag = True
+            error_msg = ""
             for uid in user_ids:
                 payload_data = {"text": quote(caption), "user_ids": [uid]}
                 error_flag, error_msg = self.__send_request(payload_data)

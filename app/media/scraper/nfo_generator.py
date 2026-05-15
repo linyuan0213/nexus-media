@@ -82,7 +82,7 @@ class NfoGenerator:
             xoutline.appendChild(doc.createCDATASection(episode_detail.get("overview") or ""))
             DomUtils.add_node(doc, root, "aired", episode_detail.get("air_date") or "")
             DomUtils.add_node(
-                doc, root, "year", episode_detail.get("air_date")[:4] if episode_detail.get("air_date") else ""
+                doc, root, "year", (episode_detail.get("air_date") or "")[:4] if episode_detail.get("air_date") else ""
             )
             DomUtils.add_node(doc, root, "season", season)
             DomUtils.add_node(doc, root, "episode", episode)

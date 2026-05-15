@@ -88,7 +88,7 @@ class Tjupt(_ISiteSigninHandler):
         html = etree.HTML(html_res.text)
         if not html:
             return False, f"【{site}】签到失败"
-        img_url = html.xpath('//table[@class="captcha"]//img/@src')[0]
+        img_url = str(list(html.xpath('//table[@class="captcha"]//img/@src'))[0] or "")
 
         if not img_url:
             self.error("签到失败，未获取到签到图片")

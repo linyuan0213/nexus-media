@@ -284,8 +284,10 @@ class IYUUAutoSeedPlugin:
             self.cached += 1
             return False
 
-        site_info: dict = self._sites.get_sites(siteurl=site_url)
+        site_info = self._sites.get_sites(siteurl=site_url)
         if not site_info:
+            return False
+        if not isinstance(site_info, dict):
             return False
         if sites_cfg and str(site_info.get("id")) not in sites_cfg:
             return False

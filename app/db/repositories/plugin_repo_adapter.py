@@ -15,7 +15,7 @@ class PluginHistoryRepositoryAdapter(IPluginHistoryRepository):
         self._repo = repo or PluginRepository()
 
     def insert_plugin_history(self, plugin_id: str, key: str, value: str) -> bool:
-        return self._repo.insert_plugin_history(plugin_id, key, value)
+        return bool(self._repo.insert_plugin_history(plugin_id, key, value))
 
     def get_plugin_history(self, plugin_id: str, key: str | None = None) -> list[PluginHistoryEntity]:
         rows = self._repo.get_plugin_history(plugin_id, key)
@@ -26,10 +26,10 @@ class PluginHistoryRepositoryAdapter(IPluginHistoryRepository):
         return [e for e in [PluginHistoryEntity.from_orm(r) for r in rows] if e is not None]
 
     def update_plugin_history(self, plugin_id: str, key: str, value: str) -> bool:
-        return self._repo.update_plugin_history(plugin_id, key, value)
+        return bool(self._repo.update_plugin_history(plugin_id, key, value))
 
     def delete_plugin_history(self, plugin_id: str, key: str) -> bool:
-        return self._repo.delete_plugin_history(plugin_id, key)
+        return bool(self._repo.delete_plugin_history(plugin_id, key))
 
 
 class TmdbBlacklistRepositoryAdapter(ITmdbBlacklistRepository):
@@ -39,7 +39,7 @@ class TmdbBlacklistRepositoryAdapter(ITmdbBlacklistRepository):
         self._repo = repo or PluginRepository()
 
     def is_tmdb_blacklisted(self, tmdb_id: str, media_type: str | None = None) -> bool:
-        return self._repo.is_tmdb_blacklisted(tmdb_id, media_type)
+        return bool(self._repo.is_tmdb_blacklisted(tmdb_id, media_type))
 
     def get_tmdb_blacklist(self) -> list[TmdbBlacklistEntity]:
         rows = self._repo.get_tmdb_blacklist()
@@ -55,10 +55,10 @@ class TmdbBlacklistRepositoryAdapter(ITmdbBlacklistRepository):
         backdrop_path: str | None = None,
         note: str | None = None,
     ) -> bool:
-        return self._repo.insert_tmdb_blacklist(tmdb_id, title, year, media_type, poster_path, backdrop_path, note)
+        return bool(self._repo.insert_tmdb_blacklist(tmdb_id, title, year, media_type, poster_path, backdrop_path, note))
 
     def delete_tmdb_blacklist(self, tmdb_id: str, media_type: str | None = None) -> bool:
-        return self._repo.delete_tmdb_blacklist(tmdb_id, media_type)
+        return bool(self._repo.delete_tmdb_blacklist(tmdb_id, media_type))
 
     def clear_tmdb_blacklist(self) -> bool:
-        return self._repo.clear_tmdb_blacklist()
+        return bool(self._repo.clear_tmdb_blacklist())

@@ -159,7 +159,7 @@ class _IDownloadClient(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def get_downloading_progress(self, ids=None) -> Any:
+    def get_downloading_progress(self, ids=None, tag=None) -> Any:
         """
         获取下载进度
         """

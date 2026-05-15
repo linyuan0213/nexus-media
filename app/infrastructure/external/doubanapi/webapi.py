@@ -1,4 +1,5 @@
 import datetime
+from typing import Any
 
 import requests
 from lxml import etree
@@ -171,15 +172,15 @@ class DoubanWeb(metaclass=SingletonMeta):
             return None
 
         tree = etree.XML(xml.encode("utf-8"))
-        items = tree.xpath("//item")
+        items: Any = tree.xpath("//item")
         if not items:
             return None
         result = []
         for item in items:
-            title = item.xpath("./title/text()")[0][2:]
-            dtype = item.xpath("./title/text()")[0][:2]
-            link = item.xpath("./link/text()")[0]
-            pub_date = item.xpath(".//pubDate/text()")[0]
+            title = str(item.xpath("./title/text()")[0])[2:]
+            dtype = str(item.xpath("./title/text()")[0])[:2]
+            link = str(item.xpath("./link/text()")[0])
+            pub_date = str(item.xpath(".//pubDate/text()")[0])
             date = datetime.datetime.strptime(pub_date, "%a, %d %b %Y %H:%M:%S %Z")
             new_date = date.strftime("%Y-%m-%d")
 
@@ -203,16 +204,16 @@ class DoubanWeb(metaclass=SingletonMeta):
         xpaths = cls._webparsers.get(url)
         if not xpaths:
             return None
-        items = etree.HTML(html).xpath(xpaths.get("list"))
+        items: Any = etree.HTML(html).xpath(xpaths.get("list"))
         if not items:
             return None
         result = []
         for item in items:
             obj = {}
             for key, value in xpaths.get("item").items():
-                text = item.xpath(value)
+                text: Any = item.xpath(value)
                 if text:
-                    obj[key] = text[0]
+                    obj[key] = str(text[0])
             if obj:
                 result.append(obj)
         return result
@@ -227,9 +228,9 @@ class DoubanWeb(metaclass=SingletonMeta):
         obj = {}
         for key, value in xpaths.items():
             try:
-                text = etree.HTML(html).xpath(value)
+                text: Any = etree.HTML(html).xpath(value)
                 if text:
-                    obj[key] = text[0]
+                    obj[key] = str(text[0])
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
         return obj
