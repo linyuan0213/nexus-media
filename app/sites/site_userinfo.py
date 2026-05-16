@@ -5,6 +5,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 from threading import Lock
 
 import requests
+import time
 
 import log
 from app.db.models import SITEUSERINFOSTATS as _S
@@ -276,6 +277,16 @@ class SiteUserInfo(metaclass=SingletonMeta):
         if not refresh_sites:
             return
 
+        # 按站点名称去重，避免同一站点被并行刷新多次导致数据库冲突
+        seen_names = set()
+        unique_sites = []
+        for site in refresh_sites:
+            name = site.get("name")
+            if name and name not in seen_names:
+                seen_names.add(name)
+                unique_sites.append(site)
+        refresh_sites = unique_sites
+
         # 锁只保护竞争条件检查和状态写入，不包含 IO 密集型操作
         with lock:
             if not force and not specify_sites and self._last_update_time:
@@ -288,11 +299,22 @@ class SiteUserInfo(metaclass=SingletonMeta):
             site_user_infos = [info for info in site_user_infos if info]
 
         # 结果处理也在锁外
+        log.debug(f"【Sites】开始写入数据库，共 {len(site_user_infos)} 个站点")
+        t0 = time.time()
         self.site_repo.insert_site_statistics_history(site_user_infos)
+        log.debug(f"【Sites】insert_site_statistics_history 耗时 {time.time() - t0:.2f}s")
+        t0 = time.time()
         self.site_repo.update_site_user_statistics(site_user_infos)
+        log.debug(f"【Sites】update_site_user_statistics 耗时 {time.time() - t0:.2f}s")
+        t0 = time.time()
         self.site_repo.update_site_favicon(site_user_infos)
+        log.debug(f"【Sites】update_site_favicon 耗时 {time.time() - t0:.2f}s")
+        t0 = time.time()
         self.site_repo.update_site_seed_info(site_user_infos)
+        log.debug(f"【Sites】update_site_seed_info 耗时 {time.time() - t0:.2f}s")
+        t0 = time.time()
         self.sites.init_favicons()
+        log.debug(f"【Sites】init_favicons 耗时 {time.time() - t0:.2f}s")
 
     def get_pt_site_statistics_history(self, days=7, end_day=None):
         """

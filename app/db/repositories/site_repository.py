@@ -126,6 +126,11 @@ class SiteRepository(BaseRepository):
         """
         if not site_user_infos:
             return
+        # 按 URL 去重，保留最后一个
+        seen = {}
+        for info in site_user_infos:
+            seen[info.site_url] = info
+        site_user_infos = list(seen.values())
         update_at = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
 
         for site_user_info in site_user_infos:
@@ -223,6 +228,11 @@ class SiteRepository(BaseRepository):
         """
         if not site_user_infos:
             return
+        # 按 URL 去重，保留最后一个
+        seen = {}
+        for info in site_user_infos:
+            seen[info.site_url] = info
+        site_user_infos = list(seen.values())
 
         for site_user_info in site_user_infos:
             site_icon = (
@@ -272,6 +282,11 @@ class SiteRepository(BaseRepository):
         """
         if not site_user_infos:
             return
+        # 按 URL 去重，保留最后一个
+        seen = {}
+        for info in site_user_infos:
+            seen[info.site_url] = info
+        site_user_infos = list(seen.values())
         update_at = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
 
         for site_user_info in site_user_infos:

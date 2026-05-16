@@ -157,6 +157,7 @@ class Sites:
             return self._site_by_urls.get(StringUtils.get_url_domain(siteurl)) or {}
 
         ret_sites = []
+        seen_urls = set()
         for site in self._site_by_ids.values():
             if rss and not site.get("rss_enable"):
                 continue
@@ -168,6 +169,11 @@ class Sites:
                 continue
             if siteids and str(site.get("id")) not in siteids:
                 continue
+            url = site.get("strict_url")
+            if url and url in seen_urls:
+                continue
+            if url:
+                seen_urls.add(url)
             ret_sites.append(site)
         if siteid or siteurl:
             return {}

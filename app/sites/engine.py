@@ -178,7 +178,6 @@ class SiteEngine:
                 subpath = os.path.join(definitions_dir, subdir)
                 if os.path.isdir(subpath):
                     self._load(subpath)
-        self._register_user_info_factories()
 
     def _register_user_info_factories(self) -> None:
         """注册默认的用户信息解析工厂（动态导入避免循环依赖）"""
@@ -514,4 +513,5 @@ class SiteEngine:
     def get_instance(cls, definitions_dir: str | None = None) -> "SiteEngine":
         if cls._engine_instance is None:
             cls._engine_instance = cls(definitions_dir)
+            cls._engine_instance._register_user_info_factories()
         return cls._engine_instance
