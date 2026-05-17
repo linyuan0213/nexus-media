@@ -1,17 +1,36 @@
-/.idea/**
-*.pyc
-*.c
-/test.py
-/setup.py
-/build/**
-/venv/**
-/cloudflarespeedtest/**
-.python-version
+# IDE
+/.idea/
 .vscode/
-./config/site_manage/*.json
-./config/site_manage/*.dat
+
+# Python cache
+*.pyc
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Build artifacts
+/build/**
+/dist/
+
+# Virtual environments
+/venv/
+/.venv/
+.python-version
+
+# Cloudflare speedtest tool
+/cloudflarespeedtest/**
+
+# Runtime generated files
+/config/site_manage/*.json
+/config/site_manage/*.dat
+
+# Runtime cache
+web/static/img_cache/*
+web/static/avatars/*
+
+# Nested frontend repo (pnpm workspace)
+web/frontend
+
+# Agent configs
 .roo/
 .kilo/
-web/static/img_cache/*
-web/frontend
-web/static/avatars/*

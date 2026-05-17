@@ -66,13 +66,13 @@ class Config(metaclass=_SingletonMeta):
                     print(f"正在加载配置：{self._config_path}")
                     self._config = ruamel.yaml.YAML().load(cf)
                 except Exception as e:
-                    print(f"【Config】配置文件 config.yaml 格式出现严重错误！请检查：{str(e)}")
+                    print(f"【Config】配置文件 config.yaml 格式出现严重错误！请检查：{e!s}")
                     self._config = {}
 
             self._apply_env_database_config()
 
         except Exception as err:
-            print(f"【Config】加载 config.yaml 配置出错：{str(err)}")
+            print(f"【Config】加载 config.yaml 配置出错：{err!s}")
             return False
 
     def _apply_env_database_config(self):
@@ -86,17 +86,14 @@ class Config(metaclass=_SingletonMeta):
             self.save_config(self._config)
             print("【Config】已从环境变量更新数据库配置到配置文件")
         except Exception as e:
-            print(f"【Config】保存数据库配置到文件失败：{str(e)}")
+            print(f"【Config】保存数据库配置到文件失败：{e!s}")
 
     def _init_syspath(self):
-        txt = os.path.join(_ROOT_PATH, "third_party.txt")
-        if not os.path.exists(txt):
-            return
-        with open(txt) as f:
-            for line in f.readlines():
-                p = os.path.join(_ROOT_PATH, "third_party", line.strip()).replace("\\", "/")
-                if p not in sys.path:
-                    sys.path.append(p)
+        third_party_packages = ["anitopy"]
+        for pkg in third_party_packages:
+            p = os.path.join(_ROOT_PATH, "third_party", pkg).replace("\\", "/")
+            if p not in sys.path:
+                sys.path.append(p)
 
     # ---------- 核心接口 ----------
 
