@@ -5,11 +5,12 @@ Handles brush task and torrent related database operations.
 
 import json
 import time
+from typing import Any
 
 from sqlalchemy import Integer, cast, func
 
 from app.db import DbPersist
-from app.db.models import CONFIGSITE, SITEBRUSHTASK, SITEBRUSHTORRENTS
+from app.db.models import CONFIGSITE, SITEBRUSHRULE, SITEBRUSHTASK, SITEBRUSHTORRENTS
 from app.db.repositories.base_repository import BaseRepository
 from app.sites.engine import SiteEngine
 from app.utils import StringUtils
@@ -35,6 +36,7 @@ class BrushRepository(BaseRepository):
                     RSS_RULE=json.dumps(item.get("rss_rule"), ensure_ascii=False),
                     REMOVE_RULE=json.dumps(item.get("remove_rule"), ensure_ascii=False),
                     STOP_RULE=json.dumps(item.get("stop_rule"), ensure_ascii=False),
+                    RULE_ID=item.get("rule_id"),
                     SEED_SIZE=item.get("seed_size"),
                     TIME_RANGE=item.get("time_range"),
                     RSSURL=item.get("rssurl"),
@@ -60,6 +62,7 @@ class BrushRepository(BaseRepository):
                 "RSS_RULE": json.dumps(item.get("rss_rule"), ensure_ascii=False),
                 "REMOVE_RULE": json.dumps(item.get("remove_rule"), ensure_ascii=False),
                 "STOP_RULE": json.dumps(item.get("stop_rule"), ensure_ascii=False),
+                "RULE_ID": item.get("rule_id"),
                 "SEED_SIZE": item.get("seed_size"),
                 "TIME_RANGE": item.get("time_range"),
                 "RSSURL": item.get("rssurl"),
@@ -291,3 +294,46 @@ class BrushRepository(BaseRepository):
         self._db.query(SITEBRUSHTORRENTS).filter(
             brush_id == SITEBRUSHTORRENTS.TASK_ID, download_id == SITEBRUSHTORRENTS.DOWNLOAD_ID
         ).delete()
+
+    # ---------- 刷流规则模板 ----------
+
+    @DbPersist(BaseRepository._db)
+    def insert_brushrule(self, name: str, rss_rule: str, remove_rule: str, stop_rule: str) -> int:
+        """新增刷流规则模板，返回自增 ID。"""
+        entity = SITEBRUSHRULE(
+            NAME=name,
+            RSS_RULE=rss_rule,
+            REMOVE_RULE=remove_rule,
+            STOP_RULE=stop_rule,
+            LST_MOD_DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+        )
+        self._db.insert(entity)
+        return entity.ID
+
+    @DbPersist(BaseRepository._db)
+    def update_brushrule(self, rule_id: int, name: str | None, rss_rule: str | None, remove_rule: str | None, stop_rule: str | None) -> None:
+        """更新刷流规则模板。"""
+        updates: dict[str, Any] = {}
+        if name is not None:
+            updates["NAME"] = name
+        if rss_rule is not None:
+            updates["RSS_RULE"] = rss_rule
+        if remove_rule is not None:
+            updates["REMOVE_RULE"] = remove_rule
+        if stop_rule is not None:
+            updates["STOP_RULE"] = stop_rule
+        if updates:
+            updates["LST_MOD_DATE"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+            self._db.query(SITEBRUSHRULE).filter(int(rule_id) == SITEBRUSHRULE.ID).update(updates)
+
+    def get_brushrules(self, rule_id: int | None = None) -> SITEBRUSHRULE | None | list[SITEBRUSHRULE]:
+        """查询刷流规则模板。"""
+        if rule_id:
+            return self._db.query(SITEBRUSHRULE).filter(int(rule_id) == SITEBRUSHRULE.ID).first()
+        return self._db.query(SITEBRUSHRULE).order_by(SITEBRUSHRULE.ID.desc()).all()
+
+    @DbPersist(BaseRepository._db)
+    def delete_brushrule(self, rule_id: int) -> None:
+        """删除刷流规则模板，并将关联任务的 RULE_ID 置空。"""
+        self._db.query(SITEBRUSHTASK).filter(int(rule_id) == SITEBRUSHTASK.RULE_ID).update({"RULE_ID": None})
+        self._db.query(SITEBRUSHRULE).filter(int(rule_id) == SITEBRUSHRULE.ID).delete()

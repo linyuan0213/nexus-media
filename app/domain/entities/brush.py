@@ -7,6 +7,51 @@ from typing import Any, Optional
 
 
 @dataclass
+class BrushRuleEntity:
+    """刷流规则模板实体"""
+
+    id: int
+    name: str
+    rss_rule: str
+    remove_rule: str
+    stop_rule: str
+    lst_mod_date: str
+
+    @classmethod
+    def from_orm(cls, orm_model) -> Optional["BrushRuleEntity"]:
+        if orm_model is None:
+            return None
+        return cls(
+            id=orm_model.ID,
+            name=orm_model.NAME or "",
+            rss_rule=orm_model.RSS_RULE or "",
+            remove_rule=orm_model.REMOVE_RULE or "",
+            stop_rule=orm_model.STOP_RULE or "",
+            lst_mod_date=orm_model.LST_MOD_DATE or "",
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        import json
+
+        def _parse(val: str) -> dict[str, Any]:
+            if not val:
+                return {}
+            try:
+                return json.loads(val) if isinstance(val, str) else val
+            except Exception:
+                return {}
+
+        return {
+            "id": self.id,
+            "name": self.name,
+            "rss_rule": _parse(self.rss_rule),
+            "remove_rule": _parse(self.remove_rule),
+            "stop_rule": _parse(self.stop_rule),
+            "lst_mod_date": self.lst_mod_date,
+        }
+
+
+@dataclass
 class BrushTaskEntity:
     """刷流任务实体"""
 
@@ -18,6 +63,7 @@ class BrushTaskEntity:
     rss_rule: str
     remove_rule: str
     stop_rule: str
+    rule_id: int | None
     seed_size: int
     time_range: str
     interval: str
@@ -53,6 +99,7 @@ class BrushTaskEntity:
             rss_rule=orm_model.RSS_RULE or "",
             remove_rule=orm_model.REMOVE_RULE or "",
             stop_rule=orm_model.STOP_RULE or "",
+            rule_id=orm_model.RULE_ID or None,
             seed_size=orm_model.SEED_SIZE or 0,
             time_range=orm_model.TIME_RANGE or "",
             interval=orm_model.INTEVAL or "",
@@ -79,6 +126,7 @@ class BrushTaskEntity:
             "rss_rule": self.rss_rule,
             "remove_rule": self.remove_rule,
             "stop_rule": self.stop_rule,
+            "rule_id": self.rule_id,
             "seed_size": self.seed_size,
             "time_range": self.time_range,
             "interval": self.interval,

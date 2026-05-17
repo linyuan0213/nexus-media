@@ -1,5 +1,7 @@
+import json
 from datetime import datetime
 
+from app.db.repositories.brush_repo_adapter import BrushRuleRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.schemas.brush import (
     BrushTaskDTO,
@@ -37,18 +39,25 @@ _STOP_RULE_FIELDS = {
     "stopfree": "brushtask_stopfree",
 }
 
-
 class BrushService:
     """刷流任务业务服务"""
 
     def __init__(self, brush_task: BrushTask | None = None):
         self._brush = brush_task or BrushTask()
+        self._rule_repo = BrushRuleRepositoryAdapter()
 
     def build_task_item(self, data: dict) -> dict:
         """将前端参数转换为刷流任务 item 字典"""
-        rss_rule = {k: data.get(v) for k, v in _RSS_RULE_FIELDS.items()}
-        remove_rule = {k: data.get(v) for k, v in _REMOVE_RULE_FIELDS.items()}
-        stop_rule = {k: ("Y" if data.get(v) else "N") for k, v in _STOP_RULE_FIELDS.items()}
+        rule_id = data.get("brushtask_rule_id") or None
+
+        if rule_id:
+            rss_rule = {}
+            remove_rule = {}
+            stop_rule = {}
+        else:
+            rss_rule = {k: data.get(v) for k, v in _RSS_RULE_FIELDS.items()}
+            remove_rule = {k: data.get(v) for k, v in _REMOVE_RULE_FIELDS.items()}
+            stop_rule = {k: ("Y" if data.get(v) else "N") for k, v in _STOP_RULE_FIELDS.items()}
 
         brushtask_totalsize = data.get("brushtask_totalsize")
         try:
@@ -72,6 +81,7 @@ class BrushService:
             "rss_rule": rss_rule,
             "remove_rule": remove_rule,
             "stop_rule": stop_rule,
+            "rule_id": rule_id,
             "sendmessage": "Y" if data.get("brushtask_sendmessage") else "N",
         }
 
@@ -105,6 +115,35 @@ class BrushService:
                     self._brush.update_brushtask_state(state=state, brushtask_id=tid)
             else:
                 self._brush.update_brushtask_state(state=state)
+
+    # ---------- 规则模板管理 ----------
+
+    def get_rules(self) -> list[dict]:
+        return [r.to_dict() for r in self._rule_repo.get_all()]
+
+    def get_rule(self, rule_id: int) -> dict | None:
+        entity = self._rule_repo.get_by_id(rule_id)
+        return entity.to_dict() if entity else None
+
+    def add_rule(self, data: dict) -> int:
+        return self._rule_repo.insert(
+            name=data.get("name", ""),
+            rss_rule=json.dumps(data.get("rss_rule", {}), ensure_ascii=False),
+            remove_rule=json.dumps(data.get("remove_rule", {}), ensure_ascii=False),
+            stop_rule=json.dumps(data.get("stop_rule", {}), ensure_ascii=False),
+        )
+
+    def update_rule(self, rule_id: int, data: dict) -> None:
+        self._rule_repo.update(
+            rule_id=rule_id,
+            name=data.get("name"),
+            rss_rule=json.dumps(data.get("rss_rule", {}), ensure_ascii=False) if "rss_rule" in data else None,
+            remove_rule=json.dumps(data.get("remove_rule", {}), ensure_ascii=False) if "remove_rule" in data else None,
+            stop_rule=json.dumps(data.get("stop_rule", {}), ensure_ascii=False) if "stop_rule" in data else None,
+        )
+
+    def delete_rule(self, rule_id: int) -> None:
+        self._rule_repo.delete(rule_id)
 
     # ---------- 规则引擎委托 ----------
 

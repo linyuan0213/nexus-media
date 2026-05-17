@@ -38,6 +38,7 @@ class AddBrushTaskRequest(BaseModel):
     brushtask_transfer: int | None = None
     brushtask_state: str | None = None
     brushtask_sendmessage: int | None = None
+    brushtask_rule_id: int | None = None
     brushtask_hr: str | None = None
     brushtask_torrent_size: str | None = None
     brushtask_include: str | None = None
@@ -71,6 +72,18 @@ class UpdateBrushTaskStateRequest(BaseModel):
     ids: list | None = None
 
 
+class BrushRuleIdRequest(BaseModel):
+    id: int | None = None
+
+
+class SaveBrushRuleRequest(BaseModel):
+    id: int | None = None
+    name: str | None = None
+    rss_rule: dict | None = None
+    remove_rule: dict | None = None
+    stop_rule: dict | None = None
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -79,7 +92,7 @@ class UpdateBrushTaskStateRequest(BaseModel):
 @router.post("/tasks/add")
 def add_brushtask(
     req: AddBrushTaskRequest,
-    _: None = Depends(require_permission("site:manage")),
+    _: None = Depends(require_permission("brush:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
     svc.add_or_update_task(req.model_dump())
@@ -89,7 +102,7 @@ def add_brushtask(
 @router.post("/tasks/update")
 def update_brushtask(
     req: AddBrushTaskRequest,
-    _: None = Depends(require_permission("site:manage")),
+    _: None = Depends(require_permission("brush:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
     svc.add_or_update_task(req.model_dump())
@@ -99,7 +112,7 @@ def update_brushtask(
 @router.post("/tasks/detail")
 def brushtask_detail(
     req: BrushTaskIdRequest,
-    _: None = Depends(require_any_permission("site:view", "site:manage")),
+    _: None = Depends(require_any_permission("brush:view", "brush:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
     dto = svc.get_task(req.id)
@@ -111,7 +124,7 @@ def brushtask_detail(
 @router.post("/tasks")
 def list_brushtasks(
     req: EmptyRequest = EmptyRequest(),
-    _: None = Depends(require_any_permission("site:view", "site:manage")),
+    _: None = Depends(require_any_permission("brush:view", "brush:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
     return success(data=svc.get_tasks())
@@ -120,7 +133,7 @@ def list_brushtasks(
 @router.post("/tasks/delete")
 def del_brushtask(
     req: BrushTaskIdRequest,
-    _: None = Depends(require_permission("site:manage")),
+    _: None = Depends(require_permission("brush:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
     brush_id = req.id
@@ -133,7 +146,7 @@ def del_brushtask(
 @router.post("/tasks/torrents")
 def list_brushtask_torrents(
     req: BrushTaskIdRequest,
-    _: None = Depends(require_any_permission("site:view", "site:manage")),
+    _: None = Depends(require_any_permission("brush:view", "brush:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
     dto = svc.get_torrents(req.id)
@@ -145,7 +158,7 @@ def list_brushtask_torrents(
 @router.post("/tasks/run")
 def run_brushtask(
     req: BrushTaskIdRequest,
-    _: None = Depends(require_permission("site:manage")),
+    _: None = Depends(require_permission("brush:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
     svc.run_task(req.id)
@@ -155,7 +168,7 @@ def run_brushtask(
 @router.post("/tasks/state")
 def update_brushtask_state(
     req: UpdateBrushTaskStateRequest,
-    _: None = Depends(require_permission("site:manage")),
+    _: None = Depends(require_permission("brush:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
     try:
@@ -164,3 +177,56 @@ def update_brushtask_state(
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
         return fail(msg="刷流任务设置失败")
+
+
+# ---------------------------------------------------------------------------
+# Brush Rule Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/rules")
+def list_brush_rules(
+    req: EmptyRequest = EmptyRequest(),
+    _: None = Depends(require_any_permission("brush:view", "brush:manage")),
+    svc: BrushService = Depends(get_brush_service),
+):
+    return success(data=svc.get_rules())
+
+
+@router.post("/rules/detail")
+def brush_rule_detail(
+    req: BrushRuleIdRequest,
+    _: None = Depends(require_any_permission("brush:view", "brush:manage")),
+    svc: BrushService = Depends(get_brush_service),
+):
+    data = svc.get_rule(req.id or 0)
+    if not data:
+        return fail(msg="规则不存在")
+    return success(data=data)
+
+
+@router.post("/rules/save")
+def save_brush_rule(
+    req: SaveBrushRuleRequest,
+    _: None = Depends(require_permission("brush:manage")),
+    svc: BrushService = Depends(get_brush_service),
+):
+    if not req.name:
+        return fail(msg="规则名称不能为空")
+    if req.id:
+        svc.update_rule(req.id, req.model_dump())
+        return success(msg="规则已更新")
+    rid = svc.add_rule(req.model_dump())
+    return success(data={"id": rid}, msg="规则已创建")
+
+
+@router.post("/rules/delete")
+def delete_brush_rule(
+    req: BrushRuleIdRequest,
+    _: None = Depends(require_permission("brush:manage")),
+    svc: BrushService = Depends(get_brush_service),
+):
+    if req.id:
+        svc.delete_rule(req.id)
+        return success()
+    return fail(msg="规则ID不能为空")

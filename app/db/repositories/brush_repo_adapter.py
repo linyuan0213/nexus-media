@@ -4,7 +4,37 @@
 
 from app.db.models import SITEBRUSHTORRENTS
 from app.db.repositories.brush_repository import BrushRepository
-from app.domain.entities.brush import BrushTorrentEntity
+from app.domain.entities.brush import BrushRuleEntity, BrushTorrentEntity
+
+
+class BrushRuleRepositoryAdapter:
+    """刷流规则模板仓库适配器"""
+
+    def __init__(self, repo: BrushRepository | None = None):
+        self._repo = repo or BrushRepository()
+
+    def insert(self, name: str, rss_rule: str, remove_rule: str, stop_rule: str) -> int:
+        return self._repo.insert_brushrule(name, rss_rule, remove_rule, stop_rule)
+
+    def update(self, rule_id: int, name: str | None = None, rss_rule: str | None = None, remove_rule: str | None = None, stop_rule: str | None = None) -> None:
+        self._repo.update_brushrule(rule_id, name, rss_rule, remove_rule, stop_rule)
+
+    def get_all(self) -> list[BrushRuleEntity]:
+        rows = self._repo.get_brushrules()
+        if not rows:
+            return []
+        if not isinstance(rows, list):
+            rows = [rows]
+        return [e for e in [BrushRuleEntity.from_orm(r) for r in rows] if e is not None]
+
+    def get_by_id(self, rule_id: int) -> BrushRuleEntity | None:
+        row = self._repo.get_brushrules(rule_id)
+        if row is None:
+            return None
+        return BrushRuleEntity.from_orm(row)
+
+    def delete(self, rule_id: int) -> None:
+        self._repo.delete_brushrule(rule_id)
 
 
 class BrushTaskRepositoryAdapter:

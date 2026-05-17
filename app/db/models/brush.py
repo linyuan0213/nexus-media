@@ -1,14 +1,25 @@
 """
 刷流相关模型
-包含: 站点刷流任务、站点刷流种子
+包含: 站点刷流规则、站点刷流任务、站点刷流种子
 """
 
 from typing import Any
 
-from sqlalchemy import BigInteger, Integer, Sequence, String, Text
+from sqlalchemy import BigInteger, ForeignKey, Integer, Sequence, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
+
+
+class SITEBRUSHRULE(Base):
+    __tablename__ = "SITE_BRUSH_RULE"
+
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    NAME: Mapped[str] = mapped_column(String(255), index=True)
+    RSS_RULE: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    REMOVE_RULE: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    STOP_RULE: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    LST_MOD_DATE: Mapped[str] = mapped_column(String(255))
 
 
 class SITEBRUSHTASK(Base):
@@ -22,6 +33,7 @@ class SITEBRUSHTASK(Base):
     RSS_RULE: Mapped[str] = mapped_column(String(255))
     REMOVE_RULE: Mapped[str] = mapped_column(String(255))
     STOP_RULE: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    RULE_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("SITE_BRUSH_RULE.ID"), nullable=True)
     SEED_SIZE: Mapped[int] = mapped_column(BigInteger)
     TIME_RANGE: Mapped[str] = mapped_column(Text, nullable=False, default="")
     INTEVAL: Mapped[str] = mapped_column(String(255))
