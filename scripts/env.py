@@ -60,8 +60,8 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts=dialect_opts,
         render_as_batch=True,  # 支持SQLite的批量操作
-        compare_type=True,  # 比较列类型
-        compare_server_default=True,  # 比较默认值
+        compare_type=False,  # 不比较列类型，避免历史遗留类型差异产生垃圾迁移
+        compare_server_default=False,  # 不比较默认值
     )
 
     with context.begin_transaction():
@@ -83,8 +83,8 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             render_as_batch=True,  # 支持SQLite的批量操作
-            compare_type=True,  # 比较列类型
-            compare_server_default=True,  # 比较默认值
+            compare_type=False,  # 不比较列类型，避免历史遗留类型差异产生垃圾迁移
+            compare_server_default=False,  # 不比较默认值
         )
 
         with context.begin_transaction():
