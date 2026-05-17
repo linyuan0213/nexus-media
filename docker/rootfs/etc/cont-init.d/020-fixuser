@@ -10,8 +10,6 @@ function __fixuser {
     usermod -o -u "$PUID" nt
 
     # 创建目录、权限设置
-    mkdir /config/redis_data
-    cp ${WORKDIR}/config/redis.conf /config/
     chown -R nt:nt "${WORKDIR}" "${HOME}" /config /etc/hosts
 
 }

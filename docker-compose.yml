@@ -1,31 +1,40 @@
-version: "3"
 services:
   nas-tools:
     image: linyuan0213/nas-tools:latest
     ports:
-      - 3000:3000        # 默认的webui控制端口
+      - 3000:80
     volumes:
-      - ./config:/config   # 冒号左边请修改为你想保存配置的路径
-      - /你的媒体目录:/你想设置的容器内能见到的目录   # 媒体目录，多个目录需要分别映射进来，需要满足配置文件说明中的要求
-    environment: 
-      - PUID=0    # 想切换为哪个用户来运行程序，该用户的uid
-      - PGID=0    # 想切换为哪个用户来运行程序，该用户的gid
-      - UMASK=000 # 掩码权限，默认000，可以考虑设置为022
-      - NT_PORT=3000 # 不填写 默认3000
+      - ./config:/config
+      - /你的媒体目录:/你想设置的容器内能见到的目录
+    environment:
+      - PUID=0
+      - PGID=0
+      - UMASK=000
+      - NT_PORT=3000
     restart: always
     hostname: nas-tools
     container_name: nas-tools
     networks:
       - nas-tools-network
     healthcheck:
-      test: "wget -qO- http://localhost:3000/healthcheck || exit 1" # 检测方式
-      interval: 30s  # 多次检测间隔多久 (default: 30s)
-      timeout: 30s # 超时时间 (default: 30s)
-      retries: 3 # 尝试次数(default: 3)
-      start_period: 40s # 容器启动后多久开始检测  (default: 0s)
+      test: "wget -qO- http://localhost/health || exit 1"
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 40s
     depends_on:
-      - ocr
-      - chrome
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: nas-tools-redis
+    volumes:
+      - ./config/redis_data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    restart: always
+    networks:
+      - nas-tools-network
 
   ocr:
     image: linyuan0213/nas-tools-ocr:latest
@@ -39,7 +48,7 @@ services:
   chrome:
     image: linyuan0213/nas-tools-chrome:latest
     container_name: nas-tools-chrome
-    shm_size: 2g # 共享内存大小
+    shm_size: 2g
     environment:
       - VNC_PASSWORD=password
     volumes:
