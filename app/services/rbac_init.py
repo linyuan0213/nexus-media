@@ -67,6 +67,9 @@ DEFAULT_PERMISSIONS = [
     {"name": "API Key 创建", "code": "apikey:create", "type": "api", "module": "apikey"},
     {"name": "API Key 编辑", "code": "apikey:update", "type": "api", "module": "apikey"},
     {"name": "API Key 删除", "code": "apikey:delete", "type": "api", "module": "apikey"},
+    # 存储后端权限
+    {"name": "存储后端查看", "code": "storage:view", "type": "menu", "module": "storage"},
+    {"name": "存储后端管理", "code": "storage:manage", "type": "api", "module": "storage"},
 ]
 
 
@@ -576,6 +579,16 @@ DEFAULT_MENUS = [
                 "level": 2,
                 "permission_code": "apikey:view",
             },
+            {
+                "name": "存储后端",
+                "code": "SystemStorage",
+                "path": "/system/storage",
+                "icon": "lucide:hard-drive",
+                "component": "/system/storage/index",
+                "sort_order": 14,
+                "level": 2,
+                "permission_code": "storage:view",
+            },
         ],
     },
     {
@@ -731,6 +744,7 @@ DEFAULT_ROLES = [
             "SystemUsers",
             "SystemRoles",
             "SystemMenus",
+            "SystemStorage",
             "Plugin",
             "PluginMarket",
             "PluginInstalled",

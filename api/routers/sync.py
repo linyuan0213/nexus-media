@@ -39,6 +39,9 @@ class AddOrEditSyncPathRequest(BaseModel):
     dest: str | None = None
     unknown: str | None = None
     mode: str | None = None
+    operation: str | None = None
+    src_backend: str | None = None
+    dst_backend: str | None = None
     compatibility: int | None = None
     rename: int | None = None
     enabled: int | None = None
@@ -146,6 +149,9 @@ def add_or_edit_sync_path(
         dest=req.dest or "",
         unknown=req.unknown or "",
         mode=req.mode or "",
+        operation=req.operation or "",
+        src_backend=req.src_backend or "",
+        dst_backend=req.dst_backend or "",
         compatibility=req.compatibility or 0,
         rename=req.rename or 0,
         enabled=req.enabled or 0,
@@ -239,7 +245,7 @@ def rename(
     ft: FileTransfer = Depends(get_filetransfer_service),
 ):
     path = dest_dir = None
-    syncmod = svc.resolve_rmt_mode(req.syncmod)
+    syncmod = req.syncmod or ""
     logid = req.logid
     if logid:
         transinfo = svc.get_transfer_info_by_id(logid)
@@ -319,7 +325,7 @@ def rename_udf(
     if not os.path.exists(inpath or ""):
         return fail(code=-1, msg="输入路径不存在")
     outpath = req.outpath
-    syncmod = svc.resolve_rmt_mode(req.syncmod)
+    syncmod = req.syncmod or ""
     tmdbid = req.tmdb
     mtype = req.type
     season = req.season

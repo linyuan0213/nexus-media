@@ -39,6 +39,7 @@ from app.domain.entities.rss import (
     RssTvEpisodeEntity,
 )
 from app.domain.entities.site import SiteEntity, SiteSeedingEntity, SiteStatisticsEntity
+from app.domain.entities.storage_backend import StorageBackendEntity
 from app.domain.entities.sync import SyncPathEntity
 from app.domain.entities.transfer import (
     TransferBlacklistEntity,
@@ -69,6 +70,7 @@ __all__ = [
     "BrushTaskEntity",
     "BrushTorrentEntity",
     "SyncPathEntity",
+    "StorageBackendEntity",
     "MessageClientEntity",
     "ConfigDownloaderEntity",
     "FilterGroupEntity",

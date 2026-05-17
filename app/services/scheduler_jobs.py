@@ -9,7 +9,7 @@ from app.helper.thread_helper import ThreadHelper
 from app.mediaserver import MediaServer
 from app.services.rss_core import Rss
 from app.services.subscribe_service import SubscribeService as Subscribe
-from app.services.sync_core import SyncCore as Sync
+from app.services.sync_engine import SyncEngine as Sync
 from app.sites.site_userinfo import SiteUserInfo
 from app.utils.wallpaper import get_login_wallpaper
 from config import (

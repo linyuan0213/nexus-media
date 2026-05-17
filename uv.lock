@@ -2449,6 +2449,7 @@ dependencies = [
     { name = "backports-shutil-get-terminal-size" },
     { name = "beautifulsoup4" },
     { name = "bencodepy" },
+    { name = "boto3" },
     { name = "bs4" },
     { name = "cacheout" },
     { name = "cachetools" },
@@ -2489,7 +2490,6 @@ dependencies = [
     { name = "pypushdeer" },
     { name = "pyquery" },
     { name = "pyrsistent" },
-    { name = "pysmb" },
     { name = "python-dateutil" },
     { name = "python-hosts" },
     { name = "python-multipart" },
@@ -2502,6 +2502,7 @@ dependencies = [
     { name = "serverchan-sdk" },
     { name = "setuptools" },
     { name = "slack-bolt" },
+    { name = "smbprotocol" },
     { name = "sqlalchemy" },
     { name = "srt" },
     { name = "transmission-rpc" },
@@ -2531,6 +2532,7 @@ requires-dist = [
     { name = "backports-shutil-get-terminal-size", specifier = ">=1.0.0" },
     { name = "beautifulsoup4", specifier = ">=4.12.3" },
     { name = "bencodepy", specifier = ">=0.9.5" },
+    { name = "boto3", specifier = ">=1.43.7" },
     { name = "bs4", specifier = ">=0.0.2" },
     { name = "cacheout", specifier = ">=0.16.0" },
     { name = "cachetools", specifier = ">=5.5.0" },
@@ -2571,7 +2573,6 @@ requires-dist = [
     { name = "pypushdeer", specifier = ">=0.0.3" },
     { name = "pyquery", specifier = ">=2.0.1" },
     { name = "pyrsistent", specifier = ">=0.20.0" },
-    { name = "pysmb", specifier = ">=1.2.10" },
     { name = "python-dateutil", specifier = ">=2.9.0.post0" },
     { name = "python-hosts", specifier = ">=1.0.7" },
     { name = "python-multipart", specifier = ">=0.0.26" },
@@ -2584,6 +2585,7 @@ requires-dist = [
     { name = "serverchan-sdk", specifier = ">=1.0.6" },
     { name = "setuptools", specifier = ">=75.7.0" },
     { name = "slack-bolt", specifier = ">=1.22.0" },
+    { name = "smbprotocol", specifier = ">=1.16.1" },
     { name = "sqlalchemy", specifier = ">=2.0.36" },
     { name = "srt", specifier = ">=3.5.3" },
     { name = "transmission-rpc", specifier = ">=7.0.11" },
@@ -3707,25 +3709,25 @@ wheels = [
 ]
 
 [[package]]
-name = "pysmb"
-version = "1.2.14"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyasn1" },
-    { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4c/83/9c9b2c84f86727895fb9b68172c60b841fa87a73bdacae4b95b007a5f688/pysmb-1.2.14.tar.gz", hash = "sha256:16df5eac0278249aa41d669f5ca9d923ee334a003404a7e1c0edd8ca9a7d531c", size = 1182042, upload-time = "2026-05-09T08:40:32.408Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ba/ea/213802f0c9449958900d17e390c5064ae088ce8c78db536fac1aa4058870/pysmb-1.2.14-py3-none-any.whl", hash = "sha256:9fef4aa5d2a0029b8f8dc12292b5b82730407f53148c13acdaa851a4acb9407f", size = 85610, upload-time = "2026-05-09T08:40:29.917Z" },
-]
-
-[[package]]
 name = "pysocks"
 version = "1.7.1"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/bd/11/293dd436aea955d45fc4e8a35b6ae7270f5b8e00b53cf6c024c83b657a11/PySocks-1.7.1.tar.gz", hash = "sha256:3f8804571ebe159c380ac6de37643bb4685970655d3bba243530d6558b799aa0", size = 284429, upload-time = "2019-09-20T02:07:35.714Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8d/59/b4572118e098ac8e46e399a1dd0f2d85403ce8bbaad9ec79373ed6badaf9/PySocks-1.7.1-py3-none-any.whl", hash = "sha256:2725bd0a9925919b9b51739eea5f9e2bae91e83288108a9ad338b2e3a4435ee5", size = 16725, upload-time = "2019-09-20T02:06:22.938Z" },
+]
+
+[[package]]
+name = "pyspnego"
+version = "0.12.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "sspilib", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7d/84/58577bd1b14293650879de0579ec263a1d8350f1d6d227226cf776b5a6a6/pyspnego-0.12.1.tar.gz", hash = "sha256:ff4fb6df38202a012ea2a0f43091ae9680878443f0ea61c9ea0e2e8152a4b810", size = 226027, upload-time = "2026-03-02T20:16:09.74Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/9f/4da6a1b9611af2397289b77d6fd08f5fe8f1f34dabc3bf85b0638d655e64/pyspnego-0.12.1-py3-none-any.whl", hash = "sha256:7237cb47985ccf5da512106ddb2731e4f9cefec00991f76c054488eb95fb1a2d", size = 130247, upload-time = "2026-03-02T20:16:08.331Z" },
 ]
 
 [[package]]
@@ -4324,6 +4326,19 @@ wheels = [
 ]
 
 [[package]]
+name = "smbprotocol"
+version = "1.16.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "pyspnego" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/33/76/c32681e925fc859578d4e41e4bd3ef7e2b9e7d06141f703eec032875b28a/smbprotocol-1.16.1.tar.gz", hash = "sha256:ad7a31662792817c6da3629a3cfb96a51d8213e993ebd0c0a7ee750d2b1f8ec8", size = 186164, upload-time = "2026-04-02T03:01:28.961Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/43/8acc58e24f78af82300a8ebdd457face4c6e4b27f7b52885a239724d3e21/smbprotocol-1.16.1-py3-none-any.whl", hash = "sha256:0f9c35b2a0103314da06aecaffa8821f060a9773ad82cc0d7f29130083d598b4", size = 126532, upload-time = "2026-04-02T03:01:27.718Z" },
+]
+
+[[package]]
 name = "sniffio"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -4420,6 +4435,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f7/2b/58abc2d1fd397e7dde08e947e05c884d8ef2f78d5e2588c17a12d42d6994/sse_starlette-3.4.4.tar.gz", hash = "sha256:07e0fa0460138baf25cdd5fb28683472c3995dc1642225191b3832d62526bcb0", size = 31819, upload-time = "2026-05-12T17:37:17.019Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/dc/67/805710444ea8cc75fbf70b920ed431a560c4bf9c57f7d5a3117213189399/sse_starlette-3.4.4-py3-none-any.whl", hash = "sha256:3f4dd50d8aed2771a091f3a83000323fc3844541c16b4fe585ae2420cc6df973", size = 16514, upload-time = "2026-05-12T17:37:15.601Z" },
+]
+
+[[package]]
+name = "sspilib"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a7/e6/d0d74b18bed8c16949fddc0401005c072947ae7bf1bab982ed28f9ebc2d8/sspilib-0.5.0.tar.gz", hash = "sha256:b62f7f2602aa1add0505eee2417e2df24421224cb411e53bf3ae42a71b62fe98", size = 59920, upload-time = "2025-12-03T00:31:05.564Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/1b/dd9066491168933b0f7ab6e396ac58cc024c8954e95264c38e3dc9363d7c/sspilib-0.5.0-cp311-abi3-win32.whl", hash = "sha256:fcb57b41b3200ef2e6e8846e2a13799d20b35b796267f2f75cc65e3883e8eeb6", size = 451246, upload-time = "2025-12-03T00:30:36.685Z" },
+    { url = "https://files.pythonhosted.org/packages/17/6a/a11abf90172ff580ac2f9ade3496d868e05e851c4ecf487dd5baeb966b1d/sspilib-0.5.0-cp311-abi3-win_amd64.whl", hash = "sha256:ca2a21a4e90db563c2cec639c66b3a29ea53129a0c55ff1e4154a02937f6bd45", size = 540777, upload-time = "2025-12-03T00:30:38.44Z" },
+    { url = "https://files.pythonhosted.org/packages/45/05/983876d281b9e7926f1c9126e72de8bd5928b1de45433163f54d4e217502/sspilib-0.5.0-cp311-abi3-win_arm64.whl", hash = "sha256:6893bad16f122fc3c4bd908461b9728694465c05ca97c22f7e2094791c4ee3cb", size = 470353, upload-time = "2025-12-03T00:30:39.63Z" },
+    { url = "https://files.pythonhosted.org/packages/43/f8/34e8e86883054b961c2eb88a5b42b89b2bf975723b1acca090966c2d03ff/sspilib-0.5.0-cp314-cp314t-win32.whl", hash = "sha256:9dad272abf3f4cf0bf95d495075d2987f6ba1fb300f8d603661ccac07d11272f", size = 567408, upload-time = "2025-12-03T00:30:48.723Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/d8/8c4ba75f925fd9651cb855c47e0e67931a175d6fd41e569193a8d58133ac/sspilib-0.5.0-cp314-cp314t-win_amd64.whl", hash = "sha256:7d7724d5dbb31f68e62465863dfb862fe2793281ce40d0c8f2dc60c8f07998f2", size = 690291, upload-time = "2025-12-03T00:30:49.929Z" },
+    { url = "https://files.pythonhosted.org/packages/74/c3/07af17b6fcc2b02af294a8817e30441a502880a04c8d60be2d71e0a1eacc/sspilib-0.5.0-cp314-cp314t-win_arm64.whl", hash = "sha256:8ce23ec740dee025136370ed4ae64b7d1535368321049ef960012a57c93ebe15", size = 534304, upload-time = "2025-12-03T00:30:51.348Z" },
 ]
 
 [[package]]

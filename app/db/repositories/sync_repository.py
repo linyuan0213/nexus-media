@@ -15,7 +15,9 @@ class SyncRepository(BaseRepository):
     """
 
     @DbPersist(BaseRepository._db)
-    def insert_config_sync_path(self, source, dest, unknown, mode, compatibility, rename, enabled, note=None):
+    def insert_config_sync_path(
+        self, source, dest, unknown, mode, compatibility, rename, enabled, note=None, operation=None, src_backend=None, dst_backend=None
+    ):
         """
         增加目录同步
 
@@ -28,6 +30,9 @@ class SyncRepository(BaseRepository):
             rename: 是否重命名
             enabled: 是否启用
             note: 备注
+            operation: 操作方式
+            src_backend: 源后端
+            dst_backend: 目标后端
         """
         return self._db.insert(
             CONFIGSYNCPATHS(
@@ -35,6 +40,9 @@ class SyncRepository(BaseRepository):
                 DEST=dest,
                 UNKNOWN=unknown,
                 MODE=mode,
+                OPERATION=operation or mode,
+                SRC_BACKEND=src_backend or "local",
+                DST_BACKEND=dst_backend or "local",
                 COMPATIBILITY=int(compatibility),
                 RENAME=int(rename),
                 ENABLED=int(enabled),

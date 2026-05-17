@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 from urllib.parse import unquote
 
 from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_MEDIAEXT, RMT_SUBEXT
-from app.core.module_config import ModuleConf
 from app.helper.thread_helper import ThreadHelper
 from app.media import MediaCache
 from app.schemas.sync import (
@@ -20,9 +19,9 @@ from app.schemas.sync import (
     SimpleResultDTO,
 )
 from app.services.filetransfer_service import FileTransferService as FileTransfer
-from app.services.sync_core import SyncCore as Sync
+from app.services.sync_engine import SyncEngine as Sync
 from app.utils import EpisodeFormat, ExceptionUtils, PathUtils, StringUtils
-from app.utils.types import MediaType, MovieTypes, OsType, RmtMode, SyncType, TvTypes
+from app.utils.types import MediaType, MovieTypes, OsType, SyncType, TvTypes
 from app.utils.web_utils import set_config_directory
 from config import Config
 
@@ -73,7 +72,18 @@ class SyncService:
         return True, ""
 
     def add_or_edit_sync_path(
-        self, sid: int, source: str, dest: str, unknown: str, mode: str, compatibility: int, rename: int, enabled: int
+        self,
+        sid: int,
+        source: str,
+        dest: str,
+        unknown: str,
+        mode: str,
+        operation: str = "",
+        src_backend: str = "",
+        dst_backend: str = "",
+        compatibility: int = 0,
+        rename: int = 0,
+        enabled: int = 0,
     ) -> tuple[bool, str]:
         """
         添加或编辑同步目录
@@ -102,6 +112,9 @@ class SyncService:
             dest=dest,
             unknown=unknown,
             mode=mode,
+            operation=operation or mode,
+            src_backend=src_backend or "local",
+            dst_backend=dst_backend or "local",
             compatibility=bool(compatibility),
             rename=bool(rename),
             enabled=bool(enabled),
@@ -133,11 +146,6 @@ class SyncService:
         """删除同步目录"""
         self._sync.delete_sync_path(sid)
         return SimpleResultDTO(success=True)
-
-    @staticmethod
-    def resolve_rmt_mode(syncmod_raw):
-        """解析同步模式为 RmtMode 枚举"""
-        return ModuleConf.RMT_MODES.get(syncmod_raw)
 
     @staticmethod
     def build_media_type(mtype: str) -> MediaType:
@@ -226,14 +234,14 @@ class SyncService:
                             continue
                         path = unknowninfo.PATH
                         dest_dir = str(unknowninfo.DEST or "")
-                        rmt_mode = ModuleConf.get_enum_item(RmtMode, unknowninfo.MODE) if unknowninfo.MODE else None
+                        operation = unknowninfo.MODE or ""
                     elif flag == "history":
                         transinfo = self._filetransfer.get_transfer_info_by_id(wid)
                         if not transinfo:
                             continue
                         path = os.path.join(str(transinfo.SOURCE_PATH or ""), str(transinfo.SOURCE_FILENAME or ""))
                         dest_dir = str(transinfo.DEST or "")
-                        rmt_mode = ModuleConf.get_enum_item(RmtMode, transinfo.MODE) if transinfo.MODE else None
+                        operation = transinfo.MODE or ""
                     else:
                         continue
 
@@ -243,7 +251,7 @@ class SyncService:
                         continue
 
                     succ_flag, msg = self._filetransfer.transfer_media(
-                        in_from=SyncType.MAN, rmt_mode=rmt_mode, in_path=path, target_dir=dest_dir
+                        in_from=SyncType.MAN, operation=operation, in_path=path, target_dir=dest_dir
                     )
                     if succ_flag and flag == "unidentification":
                         self._filetransfer.update_transfer_unknown_state(path)
@@ -256,15 +264,13 @@ class SyncService:
     # ---------- 查询 ----------
 
     def get_sync_paths(self, sid: str | None = None):
-        return self._sync.get_sync_path_conf(sid=sid)
+        if sid is not None:
+            return self._sync.get_sync_path_conf(sid)
+        return self._sync.get_all_sync_path_conf()
 
     def transfer_sync(self, sid: str | None = None):
         """触发指定同步目录的同步转移"""
         return self._sync.transfer_sync(sid=sid)
-
-    def get_sync_path_conf(self, sid=None):
-        """获取同步目录配置列表"""
-        return self._sync.get_sync_path_conf(sid=sid)
 
     def get_transfer_info_by_id(self, logid: int):
         return self._filetransfer.get_transfer_info_by_id(logid)

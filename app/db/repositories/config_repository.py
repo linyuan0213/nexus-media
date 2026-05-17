@@ -758,7 +758,17 @@ class ConfigRepository(BaseRepository):
             self._db.commit()
 
     @DbPersist(BaseRepository._db)
-    def set_media_config(self, movie_path: str, tv_path: str, anime_path: str, unknown_path: str) -> None:
+    def set_media_config(
+        self,
+        movie_path: str,
+        tv_path: str,
+        anime_path: str,
+        unknown_path: str,
+        movie_backend: str = "",
+        tv_backend: str = "",
+        anime_backend: str = "",
+        unknown_backend: str = "",
+    ) -> None:
         """设置媒体库路径配置（单条记录）"""
         existing = self._db.query(CONFIGMEDIA).first()
         if existing:
@@ -766,11 +776,19 @@ class ConfigRepository(BaseRepository):
             existing.TV_PATH = tv_path
             existing.ANIME_PATH = anime_path
             existing.UNKNOWN_PATH = unknown_path
+            existing.MOVIE_BACKEND = movie_backend or existing.MOVIE_BACKEND
+            existing.TV_BACKEND = tv_backend or existing.TV_BACKEND
+            existing.ANIME_BACKEND = anime_backend or existing.ANIME_BACKEND
+            existing.UNKNOWN_BACKEND = unknown_backend or existing.UNKNOWN_BACKEND
         else:
             config = CONFIGMEDIA(
                 MOVIE_PATH=movie_path,
                 TV_PATH=tv_path,
                 ANIME_PATH=anime_path,
                 UNKNOWN_PATH=unknown_path,
+                MOVIE_BACKEND=movie_backend,
+                TV_BACKEND=tv_backend,
+                ANIME_BACKEND=anime_backend,
+                UNKNOWN_BACKEND=unknown_backend,
             )
             self._db.insert(config)

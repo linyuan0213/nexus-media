@@ -15,12 +15,10 @@ from threading import Lock
 
 import log
 from app.core.constants import PT_TAG
-from app.core.module_config import ModuleConf
 from app.downloader.client_factory import DownloadClientFactory
 from app.services.download_core import DownloadCore
 from app.services.filetransfer_service import FileTransferService
 from app.services.transfer_coordinator import TransferCoordinator
-from app.utils.types import RmtMode
 
 lock = Lock()
 
@@ -137,7 +135,7 @@ class DownloaderCore:
                 name = downloader_conf.get("name")
                 only_nastool = downloader_conf.get("only_nastool")
                 match_path = downloader_conf.get("match_path")
-                rmt_mode = ModuleConf.RMT_MODES.get(str(downloader_conf.get("rmt_mode") or ""))
+                operation = str(downloader_conf.get("rmt_mode") or "")
                 _client = self._client_factory.get_client(did)
             if not _client:
                 continue
@@ -148,13 +146,13 @@ class DownloaderCore:
                 continue
             for task in trans_tasks:
                 done_flag, done_msg = self._filetransfer.transfer_media(
-                    in_from=getattr(downloader_enum, str(did), None), in_path=task.get("path"), rmt_mode=rmt_mode
+                    in_from=getattr(downloader_enum, str(did), None), in_path=task.get("path"), operation=operation
                 )
                 if not done_flag:
                     log.warn(f"【Downloader】下载器 {name} 任务%s 转移失败：%s" % (task.get("path"), done_msg))
                     _client.set_torrents_status(ids=task.get("id"), tags=task.get("tags"))
                 else:
-                    if rmt_mode in [RmtMode.MOVE, RmtMode.RCLONE, RmtMode.MINIO]:
+                    if operation == "move":
                         log.warn(f"【Downloader】下载器 {name} 移动模式下删除种子文件：%s" % task.get("id"))
                         _client.delete_torrents(delete_file=True, ids=task.get("id"))
                     else:

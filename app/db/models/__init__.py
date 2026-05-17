@@ -98,6 +98,11 @@ from app.db.models.site import (
     SITEUSERSEEDINGINFO,
 )
 
+# 存储后端模型
+from app.db.models.storage_backend import (
+    STORAGEBACKEND,
+)
+
 # 同步历史模型
 from app.db.models.sync import (
     SYNCHISTORY,
@@ -135,6 +140,7 @@ __all__ = [
     "CONFIGUSERRSS",
     "MEDIASERVER",
     "CONFIGMEDIA",
+    "STORAGEBACKEND",
     # 识别词
     "CUSTOMWORDS",
     "CUSTOMWORDGROUPS",

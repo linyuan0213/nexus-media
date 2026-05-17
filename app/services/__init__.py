@@ -20,7 +20,7 @@ from .rss_core import Rss
 from .rss_service import RssParserEngine, RssSubscriptionService, RssTaskService
 from .search_service import Searcher, SearchService
 from .site_service import SiteService
-from .sync_core import SyncCore
+from .sync_engine import SyncEngine
 from .sync_service import SyncService
 from .system_service import (
     BackupRestoreService,

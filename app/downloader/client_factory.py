@@ -17,7 +17,7 @@ from threading import Lock
 
 import log
 from app.core.constants import PT_TAG
-from app.core.module_config import ModuleConf
+
 from app.core.system_config import SystemConfig, SystemConfig as SystemConfigClass
 from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
 from app.db.repositories.download_repo_adapter import DownloadSettingRepositoryAdapter
@@ -90,8 +90,7 @@ class DownloadClientFactory:
             only_nastool = downloader_conf.ONLY_NASTOOL
             match_path = downloader_conf.MATCH_PATH
             rmt_mode = str(downloader_conf.RMT_MODE or "")
-            mode_enum = ModuleConf.RMT_MODES.get(rmt_mode) if rmt_mode else None
-            rmt_mode_name = mode_enum.value if mode_enum else ""
+            rmt_mode_name = rmt_mode
 
             if str(transfer or ""):
                 log_content = ""

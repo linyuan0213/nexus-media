@@ -33,7 +33,7 @@ def mock_media():
 
 @pytest.fixture
 def svc(mock_sync, mock_filetransfer, mock_media):
-    return SyncService(sync=mock_sync, filetransfer=mock_filetransfer, media=mock_media)
+    return SyncService(sync=mock_sync, filetransfer=mock_filetransfer, media_cache=mock_media)
 
 
 class TestValidateSyncPath:
@@ -191,7 +191,7 @@ class TestReIdentifyItems:
 
 class TestGetSyncPaths:
     def test_get_all(self, svc, mock_sync):
-        mock_sync.get_sync_path_conf.return_value = {"1": {"from": "/src"}}
+        mock_sync.get_all_sync_path_conf.return_value = {"1": {"from": "/src"}}
         result = svc.get_sync_paths()
         assert result == {"1": {"from": "/src"}}
 

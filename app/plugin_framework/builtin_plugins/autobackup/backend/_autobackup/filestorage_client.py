@@ -3,7 +3,9 @@ import os
 import shutil
 from abc import ABC, abstractmethod
 
-from smb.SMBConnection import SMBConnection
+from smbclient import makedirs, open_file, register_session, remove, scandir
+from smbclient.path import isdir
+from smbclient.shutil import rmtree
 from webdav4.client import Client, ResourceAlreadyExists, ResourceNotFound
 
 
@@ -56,30 +58,46 @@ class SambaClient(FileStorageClient):
             raise ValueError("Samba base_url must start with 'smb://'")
 
         url_parts = base_url.replace("smb://", "").split(":")
-        self.server_ip = url_parts[0]
-        self.port = int(url_parts[1]) if len(url_parts) > 1 else 139
+        self._server = url_parts[0]
+        self._port = int(url_parts[1]) if len(url_parts) > 1 else 445
+        self._share = share_name
+        self._base = f"\\\\{self._server}\\{self._share}"
 
-        self.conn = SMBConnection(username, password, client_name, server_name, use_ntlm_v2=True)
-        self.conn.connect(self.server_ip, self.port)
-        self.share_name = share_name
+        if username:
+            register_session(
+                self._server,
+                username=username,
+                password=password,
+                port=self._port,
+            )
+
+    def _path(self, path: str) -> str:
+        return os.path.join(self._base, path.lstrip("/").replace("/", "\\"))
 
     def list_files(self, path="/"):
-        files = self.conn.listPath(self.share_name, path)
-        return [file.filename for file in files if not file.isDirectory]
+        rp = self._path(path)
+        return [entry.name for entry in scandir(rp) if not entry.is_dir()]
 
     def download_file(self, remote_path, local_path):
         try:
-            with open(local_path, "wb") as f:
-                self.conn.retrieveFile(self.share_name, remote_path, f)
+            with open_file(self._path(remote_path), mode="rb") as src, open(local_path, "wb") as dst:
+                shutil.copyfileobj(src, dst)
         except Exception:
-            os.remove(local_path)
+            with contextlib.suppress(FileNotFoundError):
+                os.remove(local_path)
 
     def upload_file(self, local_path, remote_path):
-        with open(local_path, "rb") as f:
-            self.conn.storeFile(self.share_name, remote_path, f)
+        rp = self._path(remote_path)
+        makedirs(os.path.dirname(rp), exist_ok=True)
+        with open(local_path, "rb") as src, open_file(rp, mode="wb") as dst:
+            shutil.copyfileobj(src, dst)
 
     def delete_file(self, path):
-        self.conn.deleteFiles(self.share_name, path)
+        rp = self._path(path)
+        if isdir(rp):
+            rmtree(rp)
+        else:
+            remove(rp)
 
 
 class LocalClient(FileStorageClient):

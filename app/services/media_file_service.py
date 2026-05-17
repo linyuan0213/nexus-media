@@ -1,11 +1,16 @@
 import os
 
 from app.core.system_config import SystemConfig
+from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.helper import ThreadHelper
 from app.media import MediaService, Scraper
 from app.plugin_framework.event_compat import EventManager
+from app.storage import StorageBackendFactory
+from app.storage.backends.base import StorageType
+from app.storage.config_models import LocalStorageConfig
+from app.utils import SystemUtils
 from app.utils.path_utils import get_category_path
-from app.utils.types import EventType, SystemConfigKey
+from app.utils.types import EventType, OsType, SystemConfigKey
 from config import Config
 
 
@@ -17,15 +22,39 @@ class MediaFileService:
     def __init__(self):
         pass
 
-    def get_dir_list(self, in_dir: str) -> tuple[bool, list, str]:
-        """获取目录列表"""
-        import os
-
-        from app.utils import SystemUtils
-        from app.utils.types import OsType
-
+    def get_dir_list(self, in_dir: str, backend_id: str = "") -> tuple[bool, list, str]:
+        """获取目录列表，支持本地和远程存储后端"""
         result = []
         try:
+            if backend_id and backend_id != "local":
+                repo = StorageBackendRepositoryAdapter()
+                entity = repo.get_by_id(int(backend_id))
+                if not entity:
+                    return False, [], f"未找到存储后端: {backend_id}"
+                info = StorageBackendFactory.get_config_info(entity.type)
+                if info:
+                    stype, cls = info
+                else:
+                    stype, cls = StorageType.LOCAL, LocalStorageConfig
+                config = cls(id=str(entity.id), name=entity.name, type=stype, enabled=entity.enabled)
+                for k, v in entity.config.items():
+                    if hasattr(config, k):
+                        setattr(config, k, v)
+                backend = StorageBackendFactory.create(config)
+                for fi in backend.list_dir(in_dir or "/"):
+                    item = {
+                        "name": os.path.basename(fi.path),
+                        "path": fi.path,
+                        "is_dir": fi.is_dir,
+                    }
+                    if fi.mtime:
+                        item["mtime"] = fi.mtime
+                    if fi.size is not None and not fi.is_dir:
+                        item["size"] = fi.size
+                        item["ext"] = os.path.splitext(fi.path)[1][1:]
+                    result.append(item)
+                return True, result, ""
+
             if not in_dir or in_dir == "/":
                 if SystemUtils.get_system() == OsType.WINDOWS:
                     partitions = SystemUtils.get_windows_drives()
@@ -68,8 +97,6 @@ class MediaFileService:
 
     def get_library_paths(self, media: dict, sync_svc, downloader_svc=None) -> dict:
         """获取媒体库目录 + 同步源目录"""
-        import os
-
         seen = set()
 
         def add_path(path: str, label: str, ptype: str):
@@ -111,7 +138,12 @@ class MediaFileService:
             sync_confs = sync_svc.get_sync_paths()
             if isinstance(sync_confs, dict):
                 for sp in sync_confs.values():
-                    src = sp.get("from") if isinstance(sp, dict) else None
+                    if hasattr(sp, "source"):
+                        src = sp.source
+                    elif isinstance(sp, dict):
+                        src = sp.get("from") or sp.get("source")
+                    else:
+                        src = None
                     item = add_path(src or "", "同步源目录", "sync")
                     if item:
                         sync_source_paths.append(item)

@@ -29,6 +29,7 @@ from api.routers import (
     rss,
     scheduler,
     site,
+    storage_backend,
     sync,
     system,
     userrss,
@@ -109,6 +110,7 @@ app.include_router(site.router, prefix="/api/site", tags=["site"])
 app.include_router(download.router, prefix="/api/download", tags=["download"])
 app.include_router(rss.router, prefix="/api/rss", tags=["rss"])
 app.include_router(sync.router, prefix="/api/sync", tags=["sync"])
+app.include_router(storage_backend.router, prefix="/api/storage", tags=["storage"])
 app.include_router(brush.router, prefix="/api/brush", tags=["brush"])
 app.include_router(filter.router, prefix="/api/filter", tags=["filter"])
 app.include_router(scheduler.router, prefix="/api/scheduler", tags=["scheduler"])

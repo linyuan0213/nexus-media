@@ -18,7 +18,6 @@ import psutil
 from sqlalchemy import create_engine
 
 import log
-from app.core.module_config import ModuleConf
 from app.core.system_config import SystemConfig
 from app.db.database_factory import DatabaseFactory
 from app.db.migrate import export_database, import_database, import_from_file
@@ -50,7 +49,7 @@ from app.services.indexer_service import IndexerService
 from app.services.rss_core import Rss
 from app.services.search_web_service import search_medias_for_web
 from app.services.subscribe_service import SubscribeService as Subscribe
-from app.services.sync_core import SyncCore as Sync
+from app.services.sync_engine import SyncEngine as Sync
 from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
 from app.sites.site_userinfo import SiteUserInfo
 from app.utils import ExceptionUtils, RequestUtils
@@ -542,7 +541,7 @@ class SystemLifecycleService:
 
             self._file_index = FileIndexService()
         self._file_index.start()
-        self._sync.init_config()
+        self._sync.init()
         self._brush.init_config()
         self._rss_checker.init_config()
         self._torrent_remover.init_config()
@@ -551,7 +550,7 @@ class SystemLifecycleService:
         """停止所有后台服务"""
         self._scheduler.stop_service()
         if self._sync:
-            self._sync.stop_service()
+            self._sync.stop()
         if self._brush:
             self._brush.stop_service()
         if self._rss_checker:
@@ -670,8 +669,12 @@ def get_commands():
 
 
 def get_rmt_modes():
-    rmt_modes = ModuleConf.RMT_MODES
-    return [{"value": value, "name": name.value} for value, name in rmt_modes.items()]
+    return [
+        {"value": "copy", "name": "复制"},
+        {"value": "move", "name": "移动"},
+        {"value": "link", "name": "硬链接"},
+        {"value": "softlink", "name": "软链接"},
+    ]
 
 
 def get_system_message(lst_time):

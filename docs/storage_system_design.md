@@ -1,46 +1,67 @@
-# 多存储后端文件同步系统设计文档
+# 多存储后端文件同步系统重构设计
 
-## 背景
+## 1. 设计原则
 
-当前 NAS-Tools 的目录同步功能仅支持本地文件系统操作（硬链接/软链接/复制/移动）以及基于外部命令的 Rclone/MinIO 同步。随着用户需要将媒体文件同步到远程存储（WebDAV、SMB、OpenList 等）的需求增长，需要设计一套统一的存储抽象层，使文件转移逻辑与底层存储实现解耦。
-
-## 目标
-
-1. **统一存储抽象**：定义 `StorageBackend` 接口，屏蔽本地与远程存储差异
-2. **向后兼容**：现有 `RmtMode` 和 `TransferActionEngine` 继续工作
-3. **即插即用**：新增存储类型无需修改业务代码
-4. **支持的场景**：
-   - WebDAV（AList、坚果云、NextCloud 等）
-   - SMB/CIFS（群晖、Windows 共享）
-   - OpenList（媒体服务器文件列表）
-   - 本地文件系统（已有功能）
-   - Rclone/MinIO（已有功能，逐步迁移到新架构）
+- **彻底替换**：`TransferActionEngine`、`SyncCore`、`RmtMode` 枚举、`SystemUtils` 文件操作方法全部废弃，不保留兼容层。
+- **单一抽象**：所有存储通过 `StorageBackend` 接口操作，上层完全无感知。
+- **配置驱动**：存储后端通过数据库配置动态创建。
+- **流式优先**：跨后端传输强制流式读写。
+- **操作即字符串**：转移模式为 `"copy"` / `"move"` / `"link"` / `"softlink"`，由后端自身判断支持性。
 
 ---
 
-## 架构设计
+## 2. 架构总览
 
-### 1. 核心接口层 `app/storage/backends/base.py`
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 应用层                                                       │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────┐    │
+│  │ SyncEngine  │  │TransferEngine│  │ MediaFileScanner │    │
+│  └─────────────┘  └─────────────┘  └──────────────────┘    │
+├─────────────────────────────────────────────────────────────┤
+│ 调度层                                                       │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │         CrossBackendEngine（跨后端复制/移动）         │   │
+│  └─────────────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────────┤
+│ 存储层                                                       │
+│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐  │
+│  │ Local  │ │ WebDAV │ │  SMB   │ │   S3   │ │ Rclone │  │
+│  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘  │
+├─────────────────────────────────────────────────────────────┤
+│ 数据层                                                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │   Entity     │  │  Repository  │  │   Adapter    │     │
+│  └──────────────┘  └──────────────┘  └──────────────┘     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 3. 存储层
+
+### 3.1 抽象接口 `app/storage/backends/base.py`
 
 ```python
+"""存储后端抽象基类。"""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import Enum
-from typing import Any, BinaryIO, Iterator
+from enum import Enum, auto
+from typing import BinaryIO, Iterator
 
 
 class StorageType(Enum):
-    LOCAL = "local"
-    WEBDAV = "webdav"
-    SMB = "smb"
-    OPENLIST = "openlist"
-    RCLONE = "rclone"
-    S3 = "s3"
+    LOCAL = auto()
+    WEBDAV = auto()
+    SMB = auto()
+    S3 = auto()
+    RCLONE = auto()
+    OPENLIST = auto()
 
 
 @dataclass(frozen=True)
 class FileInfo:
-    """文件元信息"""
     path: str
     size: int
     mtime: float
@@ -50,90 +71,53 @@ class FileInfo:
 
 @dataclass
 class StorageConfig:
-    """存储后端配置基类"""
+    id: str
     name: str
     type: StorageType
     enabled: bool = True
 
 
 class StorageBackend(ABC):
-    """
-    存储后端抽象基类。
-
-    所有存储实现必须提供：
-    - 路径存在性检查
-    - 文件/目录读写
-    - 文件转移（复制/移动，支持同后端和跨后端）
-    - 流式读写（大文件场景）
-    """
+    """所有文件操作的唯一入口。"""
 
     def __init__(self, config: StorageConfig) -> None:
         self.config = config
 
-    # ---------- 元信息 ----------
+    @abstractmethod
+    def exists(self, path: str) -> bool: ...
 
     @abstractmethod
-    def exists(self, path: str) -> bool:
-        """检查路径是否存在"""
+    def stat(self, path: str) -> FileInfo | None: ...
 
     @abstractmethod
-    def stat(self, path: str) -> FileInfo | None:
-        """获取文件元信息"""
+    def list_dir(self, path: str) -> Iterator[FileInfo]: ...
 
     @abstractmethod
-    def list_dir(self, path: str) -> Iterator[FileInfo]:
-        """列出目录内容"""
-
-    # ---------- 读写 ----------
+    def mkdir(self, path: str, parents: bool = True) -> None: ...
 
     @abstractmethod
-    def read_file(self, path: str) -> bytes:
-        """读取完整文件（小文件场景）"""
+    def remove(self, path: str, recursive: bool = False) -> None: ...
 
     @abstractmethod
-    def read_stream(self, path: str) -> BinaryIO:
-        """获取文件读取流（大文件场景）"""
+    def read_stream(self, path: str) -> BinaryIO: ...
 
     @abstractmethod
-    def write_file(self, path: str, data: bytes) -> None:
-        """写入完整文件"""
+    def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None: ...
 
     @abstractmethod
-    def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
-        """从流写入文件"""
-
-    # ---------- 目录 ----------
+    def copy(self, src: str, dst: str) -> None: ...
 
     @abstractmethod
-    def mkdir(self, path: str, parents: bool = True) -> None:
-        """创建目录"""
+    def move(self, src: str, dst: str) -> None: ...
 
-    @abstractmethod
-    def remove(self, path: str, recursive: bool = False) -> None:
-        """删除文件或目录"""
+    def hardlink(self, src: str, dst: str) -> None:
+        raise NotImplementedError(f"{self.config.type.name} 不支持硬链接")
 
-    # ---------- 同后端转移 ----------
-
-    @abstractmethod
-    def copy(self, src: str, dst: str) -> None:
-        """同存储后端内复制"""
-
-    @abstractmethod
-    def move(self, src: str, dst: str) -> None:
-        """同存储后端内移动"""
-
-    # ---------- 跨后端支持 ----------
-
-    def supports_streaming_upload(self) -> bool:
-        """是否支持流式上传（用于跨后端复制大文件）"""
-        return True
-
-    def supports_streaming_download(self) -> bool:
-        """是否支持流式下载"""
-        return True
+    def softlink(self, src: str, dst: str) -> None:
+        raise NotImplementedError(f"{self.config.type.name} 不支持软链接")
 ```
 
-### 2. 存储工厂 `app/storage/factory.py`
+### 3.2 工厂 `app/storage/factory.py`
 
 ```python
 from typing import ClassVar
@@ -142,8 +126,6 @@ from app.storage.backends.base import StorageBackend, StorageConfig, StorageType
 
 
 class StorageBackendFactory:
-    """存储后端工厂——注册表模式"""
-
     _registry: ClassVar[dict[StorageType, type[StorageBackend]]] = {}
 
     @classmethod
@@ -158,14 +140,59 @@ class StorageBackendFactory:
         return backend_cls(config)
 
     @classmethod
-    def list_supported_types(cls) -> list[StorageType]:
+    def list_types(cls) -> list[StorageType]:
         return list(cls._registry.keys())
 ```
 
-### 3. 配置模型 `app/storage/config_models.py`
+### 3.3 跨后端引擎 `app/storage/cross_backend.py`
 
 ```python
-from dataclasses import dataclass, field
+from typing import BinaryIO
+
+from app.storage.backends.base import StorageBackend
+
+
+class CrossBackendEngine:
+    DEFAULT_CHUNK_SIZE: int = 8 * 1024 * 1024
+
+    @classmethod
+    def copy(
+        cls,
+        src_backend: StorageBackend,
+        src_path: str,
+        dst_backend: StorageBackend,
+        dst_path: str,
+    ) -> None:
+        if src_backend.config.type == dst_backend.config.type:
+            try:
+                src_backend.copy(src_path, dst_path)
+                return
+            except Exception:
+                pass
+
+        stream: BinaryIO = src_backend.read_stream(src_path)
+        try:
+            dst_backend.mkdir(dst_path, parents=True)
+            dst_backend.write_stream(dst_path, stream)
+        finally:
+            stream.close()
+
+    @classmethod
+    def move(
+        cls,
+        src_backend: StorageBackend,
+        src_path: str,
+        dst_backend: StorageBackend,
+        dst_path: str,
+    ) -> None:
+        cls.copy(src_backend, src_path, dst_backend, dst_path)
+        src_backend.remove(src_path)
+```
+
+### 3.4 配置模型 `app/storage/config_models.py`
+
+```python
+from dataclasses import dataclass
 
 from app.storage.backends.base import StorageConfig, StorageType
 
@@ -173,7 +200,6 @@ from app.storage.backends.base import StorageConfig, StorageType
 @dataclass
 class LocalStorageConfig(StorageConfig):
     type: StorageType = StorageType.LOCAL
-    # 本地存储无额外配置
 
 
 @dataclass
@@ -182,25 +208,42 @@ class WebDAVStorageConfig(StorageConfig):
     url: str = ""
     username: str = ""
     password: str = ""
-    # 是否使用 https
     ssl_verify: bool = True
-    # 超时（秒）
-    timeout: int = 30
-    # 分块上传大小（字节）
+    connect_timeout: int = 10
+    read_timeout: int = 30
     chunk_size: int = 8 * 1024 * 1024
 
 
 @dataclass
 class SMBStorageConfig(StorageConfig):
     type: StorageType = StorageType.SMB
-    server: str = ""          # IP 或域名
-    share: str = ""           # 共享名
+    server: str = ""
+    share: str = ""
     port: int = 445
     username: str = ""
     password: str = ""
     domain: str = ""
-    # 本地挂载路径（如使用 mount.cifs）
     mount_point: str = ""
+
+
+@dataclass
+class S3StorageConfig(StorageConfig):
+    type: StorageType = StorageType.S3
+    endpoint: str = ""
+    access_key: str = ""
+    secret_key: str = ""
+    bucket: str = ""
+    region: str = "us-east-1"
+    secure: bool = True
+
+
+@dataclass
+class RcloneStorageConfig(StorageConfig):
+    type: StorageType = StorageType.RCLONE
+    remote_name: str = ""
+    rc_url: str = ""
+    rc_user: str = ""
+    rc_pass: str = ""
 
 
 @dataclass
@@ -208,14 +251,12 @@ class OpenListStorageConfig(StorageConfig):
     type: StorageType = StorageType.OPENLIST
     base_url: str = ""
     api_token: str = ""
-    timeout: int = 30
-    # OpenList 通常是只读或半只读，需标记支持的写操作
     write_enabled: bool = False
 ```
 
-### 4. 本地实现 `app/storage/backends/local.py`
+### 3.5 后端实现
 
-复用现有 `SystemUtils`/`PathUtils`，完全兼容当前行为：
+#### Local `app/storage/backends/local.py`
 
 ```python
 import os
@@ -223,11 +264,11 @@ import shutil
 from typing import BinaryIO, Iterator
 
 from app.storage.backends.base import FileInfo, StorageBackend, StorageConfig
-from app.utils import PathUtils
 
 
 class LocalStorageBackend(StorageBackend):
-    """本地文件系统存储后端"""
+    def __init__(self, config: StorageConfig) -> None:
+        super().__init__(config)
 
     def _resolve(self, path: str) -> str:
         return os.path.abspath(os.path.expanduser(path))
@@ -240,16 +281,10 @@ class LocalStorageBackend(StorageBackend):
         if not os.path.exists(rp):
             return None
         st = os.stat(rp)
-        return FileInfo(
-            path=path,
-            size=st.st_size,
-            mtime=st.st_mtime,
-            is_dir=os.path.isdir(rp),
-        )
+        return FileInfo(path=path, size=st.st_size, mtime=st.st_mtime, is_dir=os.path.isdir(rp))
 
     def list_dir(self, path: str) -> Iterator[FileInfo]:
-        rp = self._resolve(path)
-        for entry in os.scandir(rp):
+        for entry in os.scandir(self._resolve(path)):
             yield FileInfo(
                 path=entry.path,
                 size=entry.stat().st_size if entry.is_file() else 0,
@@ -257,18 +292,8 @@ class LocalStorageBackend(StorageBackend):
                 is_dir=entry.is_dir(),
             )
 
-    def read_file(self, path: str) -> bytes:
-        with open(self._resolve(path), "rb") as f:
-            return f.read()
-
     def read_stream(self, path: str) -> BinaryIO:
         return open(self._resolve(path), "rb")
-
-    def write_file(self, path: str, data: bytes) -> None:
-        rp = self._resolve(path)
-        os.makedirs(os.path.dirname(rp), exist_ok=True)
-        with open(rp, "wb") as f:
-            f.write(data)
 
     def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
         rp = self._resolve(path)
@@ -294,41 +319,48 @@ class LocalStorageBackend(StorageBackend):
             os.remove(rp)
 
     def copy(self, src: str, dst: str) -> None:
-        from app.utils import SystemUtils
-        ret, _ = SystemUtils.copy(self._resolve(src), self._resolve(dst))
-        if ret != 0:
-            raise OSError(f"复制失败: {src} -> {dst}")
+        src_rp = self._resolve(src)
+        dst_rp = self._resolve(dst)
+        os.makedirs(os.path.dirname(dst_rp), exist_ok=True)
+        shutil.copy2(src_rp, dst_rp)
 
     def move(self, src: str, dst: str) -> None:
-        from app.utils import SystemUtils
-        ret, _ = SystemUtils.move(self._resolve(src), self._resolve(dst))
-        if ret != 0:
-            raise OSError(f"移动失败: {src} -> {dst}")
+        src_rp = self._resolve(src)
+        dst_rp = self._resolve(dst)
+        os.makedirs(os.path.dirname(dst_rp), exist_ok=True)
+        shutil.move(src_rp, dst_rp)
+
+    def hardlink(self, src: str, dst: str) -> None:
+        src_rp = self._resolve(src)
+        dst_rp = self._resolve(dst)
+        os.makedirs(os.path.dirname(dst_rp), exist_ok=True)
+        os.link(src_rp, dst_rp)
+
+    def softlink(self, src: str, dst: str) -> None:
+        src_rp = self._resolve(src)
+        dst_rp = self._resolve(dst)
+        os.makedirs(os.path.dirname(dst_rp), exist_ok=True)
+        os.symlink(src_rp, dst_rp)
 ```
 
-### 5. WebDAV 实现 `app/storage/backends/webdav.py`
-
-基于 `webdav4` 或 `requests` + `lxml` 实现：
+#### WebDAV `app/storage/backends/webdav.py`
 
 ```python
-from io import BytesIO
+import os
 from typing import BinaryIO, Iterator
 
 import requests
-from lxml import etree
 
 from app.storage.backends.base import FileInfo, StorageBackend, StorageConfig
 
 
 class WebDAVStorageBackend(StorageBackend):
-    """WebDAV 存储后端"""
-
     def __init__(self, config: StorageConfig) -> None:
         super().__init__(config)
         self._session = requests.Session()
         self._session.auth = (config.username, config.password)
         self._session.verify = config.ssl_verify
-        self._session.timeout = config.timeout
+        self._session.timeout = (config.connect_timeout, config.read_timeout)
         self._base = config.url.rstrip("/")
         self._chunk_size = config.chunk_size
 
@@ -346,291 +378,1036 @@ class WebDAVStorageBackend(StorageBackend):
         # 解析 PROPFIND 响应 ...
         return FileInfo(path=path, size=0, mtime=0, is_dir=False)
 
+    def list_dir(self, path: str) -> Iterator[FileInfo]:
+        # PROPFIND Depth=1 解析 ...
+        yield from []
+
     def read_stream(self, path: str) -> BinaryIO:
         r = self._session.get(self._url(path), stream=True)
         r.raise_for_status()
         return r.raw
 
     def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
-        # 大文件分块上传（PUT 覆盖）
         self._session.put(self._url(path), data=stream).raise_for_status()
 
     def mkdir(self, path: str, parents: bool = True) -> None:
-        self._session.request("MKCOL", self._url(path))
-        # parents=True 时递归创建父目录
+        parts = path.strip("/").split("/")
+        for i in range(1, len(parts) + 1):
+            sub = "/".join(parts[:i])
+            self._session.request("MKCOL", self._url(sub))
+
+    def remove(self, path: str, recursive: bool = False) -> None:
+        self._session.request("DELETE", self._url(path))
 
     def copy(self, src: str, dst: str) -> None:
         self._session.request(
-            "COPY", self._url(src), headers={"Destination": self._url(dst)}
+            "COPY", self._url(src), headers={"Destination": self._url(dst), "Overwrite": "T"}
         )
 
     def move(self, src: str, dst: str) -> None:
         self._session.request(
-            "MOVE", self._url(src), headers={"Destination": self._url(dst)}
+            "MOVE", self._url(src), headers={"Destination": self._url(dst), "Overwrite": "T"}
         )
 ```
 
-### 6. SMB 实现 `app/storage/backends/smb.py`
-
-基于 `smbprotocol`（纯 Python，无外部依赖）或挂载模式：
+#### SMB `app/storage/backends/smb.py`
 
 ```python
+import os
 from typing import BinaryIO, Iterator
 
-from app.storage.backends.base import FileInfo, StorageBackend, StorageConfig
+from app.storage.backends.base import FileInfo, StorageBackend, StorageConfig, StorageType
+from app.storage.backends.local import LocalStorageBackend
 
 
 class SMBStorageBackend(StorageBackend):
     """
-    SMB/CIFS 存储后端。
-
-    实现方式二选一（按配置切换）：
-    A. 直接协议模式 —— 使用 smbprotocol，无需 mount
-    B. 挂载模式     —— 本地 mount.cifs 后，委托 LocalStorageBackend
+    SMB 后端。挂载模式委托 LocalStorageBackend，协议模式使用 smbprotocol。
     """
 
     def __init__(self, config: StorageConfig) -> None:
         super().__init__(config)
-        if config.mount_point:
-            # 挂载模式：复用本地后端
+        self._mount_point = getattr(config, "mount_point", "")
+        if self._mount_point:
             self._delegate = LocalStorageBackend(
-                StorageConfig(name=config.name, type=StorageType.LOCAL)
+                StorageConfig(id=config.id, name=config.name, type=StorageType.LOCAL)
             )
-            self._root = config.mount_point
         else:
             self._delegate = None
-            self._root = f"//{config.server}/{config.share}"
-            # 初始化 smbprotocol 连接池...
+            from smbprotocol.connection import Connection
+            self._conn = Connection(config.server, config.username, config.password, config.domain)
+
+    def _path(self, path: str) -> str:
+        if self._delegate:
+            return os.path.join(self._mount_point, path.lstrip("/"))
+        return path
 
     def exists(self, path: str) -> bool:
         if self._delegate:
-            return self._delegate.exists(os.path.join(self._root, path))
-        # 直接 SMB 协议实现...
+            return self._delegate.exists(self._path(path))
+        # smbprotocol 实现...
+        return False
+
+    def read_stream(self, path: str) -> BinaryIO:
+        if self._delegate:
+            return self._delegate.read_stream(self._path(path))
+        raise NotImplementedError
+
+    def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
+        if self._delegate:
+            return self._delegate.write_stream(self._path(path), stream, size)
+        raise NotImplementedError
+
+    def copy(self, src: str, dst: str) -> None:
+        if self._delegate:
+            return self._delegate.copy(self._path(src), self._path(dst))
+        raise NotImplementedError
+
+    def move(self, src: str, dst: str) -> None:
+        if self._delegate:
+            return self._delegate.move(self._path(src), self._path(dst))
+        raise NotImplementedError
 ```
 
-### 7. 跨后端复制引擎 `app/storage/cross_backend.py`
+#### S3 `app/storage/backends/s3.py`
 
 ```python
-import shutil
-from typing import BinaryIO
+from typing import BinaryIO, Iterator
 
-from app.storage.backends.base import StorageBackend
+import boto3
+
+from app.storage.backends.base import FileInfo, StorageBackend, StorageConfig
 
 
-def cross_backend_copy(
-    src_backend: StorageBackend,
-    src_path: str,
-    dst_backend: StorageBackend,
-    dst_path: str,
-    chunk_size: int = 8 * 1024 * 1024,
-) -> None:
-    """
-    跨存储后端复制文件。
+class S3StorageBackend(StorageBackend):
+    def __init__(self, config: StorageConfig) -> None:
+        super().__init__(config)
+        self._bucket = getattr(config, "bucket", "data")
+        self._client = boto3.client(
+            "s3",
+            endpoint_url=getattr(config, "endpoint", None) or None,
+            aws_access_key_id=getattr(config, "access_key", "") or None,
+            aws_secret_access_key=getattr(config, "secret_key", "") or None,
+            region_name=getattr(config, "region", "us-east-1") or None,
+            use_ssl=getattr(config, "secure", True),
+        )
 
-    策略优先级：
-    1. 如果两端都支持同协议直连（如两端都是 WebDAV），优先使用服务端 COPY
-    2. 否则使用流式管道：src.read_stream -> dst.write_stream
-    """
-    # 优先检查是否可以使用服务端 COPY
-    if src_backend.config.type == dst_backend.config.type:
+    def _key(self, path: str) -> str:
+        return path.lstrip("/")
+
+    def exists(self, path: str) -> bool:
         try:
-            src_backend.copy(src_path, dst_path)
-            return
+            self._client.head_object(Bucket=self._bucket, Key=self._key(path))
+            return True
         except Exception:
-            pass
+            return False
 
-    # 流式复制（避免大文件内存溢出）
-    stream: BinaryIO = src_backend.read_stream(src_path)
-    try:
-        dst_backend.write_stream(dst_path, stream)
-    finally:
-        stream.close()
+    def stat(self, path: str) -> FileInfo | None:
+        try:
+            resp = self._client.head_object(Bucket=self._bucket, Key=self._key(path))
+            return FileInfo(
+                path=path,
+                size=resp.get("ContentLength", 0),
+                mtime=resp.get("LastModified", 0).timestamp() if resp.get("LastModified") else 0,
+                is_dir=False,
+            )
+        except Exception:
+            return None
+
+    def list_dir(self, path: str) -> Iterator[FileInfo]:
+        prefix = self._key(path)
+        if prefix and not prefix.endswith("/"):
+            prefix += "/"
+        paginator = self._client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=self._bucket, Prefix=prefix, Delimiter="/"):
+            for obj in page.get("Contents", []):
+                if obj["Key"] == prefix:
+                    continue
+                yield FileInfo(
+                    path="/" + obj["Key"],
+                    size=obj.get("Size", 0),
+                    mtime=obj.get("LastModified", 0).timestamp() if obj.get("LastModified") else 0,
+                    is_dir=False,
+                )
+            for cp in page.get("CommonPrefixes", []):
+                if cp["Prefix"] == prefix:
+                    continue
+                yield FileInfo(
+                    path="/" + cp["Prefix"].rstrip("/"),
+                    size=0,
+                    mtime=0,
+                    is_dir=True,
+                )
+
+    def read_stream(self, path: str) -> BinaryIO:
+        resp = self._client.get_object(Bucket=self._bucket, Key=self._key(path))
+        return resp["Body"]
+
+    def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
+        self._client.upload_fileobj(stream, self._bucket, self._key(path))
+
+    def mkdir(self, path: str, parents: bool = True) -> None:
+        pass
+
+    def remove(self, path: str, recursive: bool = False) -> None:
+        key = self._key(path)
+        if recursive:
+            paginator = self._client.get_paginator("list_objects_v2")
+            for page in paginator.paginate(Bucket=self._bucket, Prefix=key):
+                objects = [{"Key": obj["Key"]} for obj in page.get("Contents", [])]
+                if objects:
+                    self._client.delete_objects(Bucket=self._bucket, Delete={"Objects": objects})
+        else:
+            self._client.delete_object(Bucket=self._bucket, Key=key)
+
+    def copy(self, src: str, dst: str) -> None:
+        self._client.copy_object(
+            Bucket=self._bucket,
+            Key=self._key(dst),
+            CopySource={"Bucket": self._bucket, "Key": self._key(src)},
+        )
+
+    def move(self, src: str, dst: str) -> None:
+        self.copy(src, dst)
+        self.remove(src)
+```
+
+#### Rclone `app/storage/backends/rclone.py`
+
+```python
+import os
+from typing import BinaryIO, Iterator
+
+import requests
+
+from app.storage.backends.base import FileInfo, StorageBackend, StorageConfig
+
+
+class RcloneStorageBackend(StorageBackend):
+    """
+    Rclone 后端。使用 rclone rc HTTP API，要求 rclone 已以 daemon 模式运行。
+    """
+
+    def __init__(self, config: StorageConfig) -> None:
+        super().__init__(config)
+        self._rc_url = (getattr(config, "rc_url", "") or "http://localhost:5572").rstrip("/")
+        self._remote = getattr(config, "remote_name", "NASTOOL")
+        self._session = requests.Session()
+        username = getattr(config, "rc_user", "")
+        password = getattr(config, "rc_pass", "")
+        if username:
+            self._session.auth = (username, password)
+
+    def _call(self, endpoint: str, payload: dict) -> dict:
+        resp = self._session.post(f"{self._rc_url}/{endpoint}", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    def exists(self, path: str) -> bool:
+        try:
+            result = self._call("operations/stat", {"fs": self._remote, "remote": path.lstrip("/")})
+            return result.get("item") is not None
+        except Exception:
+            return False
+
+    def stat(self, path: str) -> FileInfo | None:
+        try:
+            result = self._call("operations/stat", {"fs": self._remote, "remote": path.lstrip("/")})
+            item = result.get("item")
+            if not item:
+                return None
+            return FileInfo(
+                path=path,
+                size=item.get("Size", 0),
+                mtime=item.get("ModTime", 0),
+                is_dir=item.get("IsDir", False),
+            )
+        except Exception:
+            return None
+
+    def list_dir(self, path: str) -> Iterator[FileInfo]:
+        result = self._call(
+            "operations/list",
+            {"fs": self._remote, "remote": path.lstrip("/"), "opt": {"recurse": False}},
+        )
+        for item in result.get("list", []):
+            yield FileInfo(
+                path=os.path.join(path, item.get("Name", "")),
+                size=item.get("Size", 0),
+                mtime=item.get("ModTime", 0),
+                is_dir=item.get("IsDir", False),
+            )
+
+    def read_stream(self, path: str) -> BinaryIO:
+        raise NotImplementedError("Rclone 后端暂不支持流式读取")
+
+    def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
+        raise NotImplementedError("Rclone 后端暂不支持流式写入")
+
+    def mkdir(self, path: str, parents: bool = True) -> None:
+        self._call("operations/mkdir", {"fs": self._remote, "remote": path.lstrip("/")})
+
+    def remove(self, path: str, recursive: bool = False) -> None:
+        if recursive:
+            self._call("operations/purge", {"fs": self._remote, "remote": path.lstrip("/")})
+        else:
+            self._call("operations/deletefile", {"fs": self._remote, "remote": path.lstrip("/")})
+
+    def copy(self, src: str, dst: str) -> None:
+        self._call(
+            "operations/copyfile",
+            {
+                "srcFs": self._remote,
+                "srcRemote": src.lstrip("/"),
+                "dstFs": self._remote,
+                "dstRemote": dst.lstrip("/"),
+            },
+        )
+
+    def move(self, src: str, dst: str) -> None:
+        self._call(
+            "operations/movefile",
+            {
+                "srcFs": self._remote,
+                "srcRemote": src.lstrip("/"),
+                "dstFs": self._remote,
+                "dstRemote": dst.lstrip("/"),
+            },
+        )
 ```
 
 ---
 
-## 与现有系统集成
+## 4. 数据层
 
-### 集成点 1：`RmtMode` 扩展
-
-在 `app/utils/types.py` 中新增存储类型枚举值：
+### 4.1 实体 `app/domain/entities/storage_backend.py`
 
 ```python
-class RmtMode(Enum):
-    LINK = "硬链接"
-    SOFTLINK = "软链接"
-    COPY = "复制"
-    MOVE = "移动"
-    RCLONECOPY = "Rclone复制"
-    RCLONE = "Rclone移动"
-    MINIOCOPY = "Minio复制"
-    MINIO = "Minio移动"
-    # 新增
-    WEBDAV = "WebDAV"
-    WEBDAV_COPY = "WebDAV复制"
-    SMB = "SMB"
-    SMB_COPY = "SMB复制"
-    OPENLIST = "OpenList"
+from dataclasses import dataclass
+from typing import Any
+
+
+@dataclass
+class StorageBackendEntity:
+    id: str
+    name: str
+    type: str
+    config: dict[str, Any]
+    enabled: bool
+
+    @classmethod
+    def from_orm(cls, orm_model) -> "StorageBackendEntity | None":
+        if orm_model is None:
+            return None
+        import json
+        return cls(
+            id=orm_model.ID or "",
+            name=orm_model.NAME or "",
+            type=orm_model.TYPE or "",
+            config=json.loads(orm_model.CONFIG or "{}"),
+            enabled=bool(orm_model.ENABLED),
+        )
 ```
 
-### 集成点 2：`TransferActionEngine` 重构
+### 4.2 数据库模型 `app/db/models/storage_backend.py`
 
-将现有的 `transfer_command` 方法重构为通过 `StorageBackend` 执行：
-
-```python
-class TransferActionEngine:
-    def __init__(self, ...):
-        self._storage_factory = StorageBackendFactory()
-        self._local = LocalStorageBackend(StorageConfig(name="local", type=StorageType.LOCAL))
-
-    def transfer(
-        self,
-        src_path: str,
-        dst_path: str,
-        rmt_mode: RmtMode,
-        dst_backend: StorageBackend | None = None,
-    ) -> int:
-        """
-        统一转移入口。
-
-        - dst_backend 为 None → 本地转移（复用现有逻辑）
-        - dst_backend 不为 None → 跨后端转移
-        """
-        if dst_backend is None:
-            return self._local_transfer(src_path, dst_path, rmt_mode)
-
-        # 远程存储转移
-        try:
-            if rmt_mode in (RmtMode.COPY, RmtMode.WEBDAV_COPY, RmtMode.SMB_COPY):
-                cross_backend_copy(self._local, src_path, dst_backend, dst_path)
-            elif rmt_mode in (RmtMode.MOVE, RmtMode.WEBDAV, RmtMode.SMB):
-                cross_backend_copy(self._local, src_path, dst_backend, dst_path)
-                self._local.remove(src_path)
-            else:
-                raise ValueError(f"不支持的远程转移模式: {rmt_mode}")
-            return 0
-        except Exception as e:
-            log.error(f"【Storage】跨后端转移失败: {e}")
-            return 1
-```
-
-### 集成点 3：`SyncCore` 扩展
-
-同步配置表 `CONFIG_SYNC_PATHS` 新增字段 `DEST_BACKEND`（存储后端 ID）：
+遵循项目风格：全大写类名、`Mapped[X] = mapped_column(...)`、`Sequence` 主键。
 
 ```python
-class SyncCore:
-    def _reload_config(self) -> None:
-        for sync_conf in self._sync_repo.get_config_sync_paths():
-            # ... 原有字段解析 ...
-            backend_id = sync_conf.DEST_BACKEND  # 新增
-            target_path = sync_conf.DEST
+"""
+存储后端模型
+包含: 存储后端配置
+"""
 
-            # 加载目标存储后端
-            backend = None
-            if backend_id:
-                backend = StorageBackendFactory.create(
-                    self._load_backend_config(backend_id)
-                )
+from sqlalchemy import Integer, Sequence, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
-            self._sync_path_confs[str(sid)] = {
-                # ...
-                "backend": backend,
-            }
-```
+from app.db.models.base import Base
 
-### 集成点 4：数据库模型扩展
 
-```python
-# app/db/models/sync.py 新增
-class SYNC_STORAGE_BACKEND(Base):
-    __tablename__ = "SYNC_STORAGE_BACKEND"
+class STORAGEBACKEND(Base):
+    __tablename__ = "STORAGE_BACKEND"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     NAME: Mapped[str] = mapped_column(String(255))
-    TYPE: Mapped[str] = mapped_column(String(50))       # webdav/smb/openlist/...
-    CONFIG: Mapped[str] = mapped_column(Text)            # JSON 序列化配置
+    TYPE: Mapped[str] = mapped_column(String(50))
+    CONFIG: Mapped[str] = mapped_column(Text)
     ENABLED: Mapped[int] = mapped_column(Integer, default=1)
 ```
 
----
-
-## 文件目录结构
-
-```
-app/storage/
-├── __init__.py
-├── factory.py                 # StorageBackendFactory
-├── cross_backend.py           # 跨后端复制引擎
-├── config_models.py           # 配置数据类
-├── backends/
-│   ├── __init__.py
-│   ├── base.py                # StorageBackend / FileInfo / StorageConfig
-│   ├── local.py               # LocalStorageBackend
-│   ├── webdav.py              # WebDAVStorageBackend
-│   ├── smb.py                 # SMBStorageBackend
-│   └── openlist.py            # OpenListStorageBackend（只读或代理模式）
-```
-
----
-
-## 使用示例
-
-### 配置 WebDAV 后端并同步
+### 4.3 修改现有模型 `app/db/models/sync.py`
 
 ```python
-from app.storage.factory import StorageBackendFactory
-from app.storage.config_models import WebDAVStorageConfig
+"""
+同步配置模型
+"""
 
-# 1. 创建配置
-config = WebDAVStorageConfig(
-    name="alist-webdav",
-    type=StorageType.WEBDAV,
-    url="https://alist.example.com/dav/media",
-    username="admin",
-    password="***",
-    ssl_verify=True,
-)
+from sqlalchemy import Integer, Sequence, String
+from sqlalchemy.orm import Mapped, mapped_column
 
-# 2. 创建后端
-backend = StorageBackendFactory.create(config)
+from app.db.models.base import Base
 
-# 3. 同步文件
-from app.storage.cross_backend import cross_backend_copy
-from app.storage.backends.local import LocalStorageBackend
 
-local = LocalStorageBackend(StorageConfig(name="local", type=StorageType.LOCAL))
-cross_backend_copy(
-    local, "/downloads/movies/xxx.mkv",
-    backend, "/movies/xxx.mkv",
-)
+class CONFIGSYNC(Base):
+    __tablename__ = "CONFIG_SYNC_PATHS"
+
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    SOURCE: Mapped[str] = mapped_column(String(512))
+    DEST: Mapped[str] = mapped_column(String(512))
+    UNKNOWN: Mapped[str] = mapped_column(String(512))
+    MODE: Mapped[str] = mapped_column(String(50))           # 保留兼容
+    OPERATION: Mapped[str] = mapped_column(String(50))      # 新字段
+    SRC_BACKEND: Mapped[str] = mapped_column(String(64), default="local")
+    DST_BACKEND: Mapped[str] = mapped_column(String(64), default="local")
+    COMPATIBILITY: Mapped[int] = mapped_column(Integer, default=0)
+    RENAME: Mapped[int] = mapped_column(Integer, default=1)
+    ENABLED: Mapped[int] = mapped_column(Integer, default=1)
+    NOTE: Mapped[str | None] = mapped_column(String(512), nullable=True)
 ```
 
-### 在目录同步中使用
+### 4.4 仓储接口 `app/domain/interfaces/storage_backend_repo.py`
 
-用户界面新增"目标存储"下拉框：
-- 选择"本地" → 现有行为（`DEST` 为本地路径）
-- 选择"WebDAV: alist-webdav" → `DEST_BACKEND` 指向对应后端，`DEST` 为 WebDAV 上的目标路径
+```python
+from typing import Protocol
+
+from app.domain.entities.storage_backend import StorageBackendEntity
+
+
+class IStorageBackendRepository(Protocol):
+    def get_all(self) -> list[StorageBackendEntity]: ...
+
+    def get_by_id(self, sid: str) -> StorageBackendEntity | None: ...
+
+    def insert(self, name: str, type: str, config: str) -> int: ...
+
+    def update(self, sid: int, **kwargs) -> None: ...
+
+    def delete(self, sid: int) -> None: ...
+```
+
+### 4.5 仓储实现 `app/db/repositories/storage_backend_repository.py`
+
+```python
+"""
+存储后端仓储
+"""
+
+from app.db import DbPersist
+from app.db.models import STORAGEBACKEND
+from app.db.repositories.base_repository import BaseRepository
+
+
+class StorageBackendRepository(BaseRepository):
+    def get_all(self):
+        return self._db.query(STORAGEBACKEND).all()
+
+    def get_by_id(self, sid):
+        return self._db.query(STORAGEBACKEND).filter(STORAGEBACKEND.ID == sid).first()
+
+    @DbPersist(BaseRepository._db)
+    def insert(self, name, type, config):
+        self._db.insert(STORAGEBACKEND(NAME=name, TYPE=type, CONFIG=config))
+
+    @DbPersist(BaseRepository._db)
+    def update(self, sid, **kwargs):
+        self._db.query(STORAGEBACKEND).filter(STORAGEBACKEND.ID == sid).update(kwargs)
+
+    @DbPersist(BaseRepository._db)
+    def delete(self, sid):
+        self._db.query(STORAGEBACKEND).filter(STORAGEBACKEND.ID == sid).delete()
+```
+
+### 4.6 适配器 `app/db/repositories/storage_backend_repo_adapter.py`
+
+```python
+"""
+存储后端仓储适配器
+"""
+
+from app.db.repositories.storage_backend_repository import StorageBackendRepository
+from app.domain.entities.storage_backend import StorageBackendEntity
+from app.domain.interfaces.storage_backend_repo import IStorageBackendRepository
+
+
+class StorageBackendRepositoryAdapter(IStorageBackendRepository):
+    def __init__(self, repo=None):
+        self._repo = repo or StorageBackendRepository()
+
+    def get_all(self) -> list[StorageBackendEntity]:
+        rows = self._repo.get_all()
+        return [e for e in [StorageBackendEntity.from_orm(r) for r in rows] if e is not None]
+
+    def get_by_id(self, sid: str) -> StorageBackendEntity | None:
+        row = self._repo.get_by_id(sid)
+        return StorageBackendEntity.from_orm(row)
+
+    def insert(self, name: str, type: str, config: str) -> int:
+        return self._repo.insert(name, type, config)
+
+    def update(self, sid: int, **kwargs) -> None:
+        self._repo.update(sid, **kwargs)
+
+    def delete(self, sid: int) -> None:
+        self._repo.delete(sid)
+```
 
 ---
 
-## 风险与兼容性
+## 5. 应用层
 
-| 风险 | 缓解措施 |
-|------|----------|
-| 大文件跨网络复制内存溢出 | 强制使用 `read_stream` + `write_stream` 分块传输（默认 8MB） |
-| 网络抖动导致同步中断 | 增加重试机制（指数退避，最多 3 次） |
-| SMB/WebDAV 服务端不支持部分操作 | 后端实现时降级处理（如不支持服务端 COPY，fallback 到流式传输） |
-| 现有 RmtMode 行为变更 | 本地模式完全保留现有 `SystemUtils` 调用，新增模式独立实现 |
-| 数据库迁移 | 新增 `SYNC_STORAGE_BACKEND` 表，`CONFIG_SYNC_PATHS` 新增可空字段 `DEST_BACKEND` |
+### 5.1 TransferEngine（替换 TransferActionEngine）
+
+```python
+"""文件转移引擎——唯一文件操作入口。"""
+
+import os
+import re
+from threading import Lock
+
+import log
+from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_SUBEXT
+from app.db.repositories.transfer_repo_adapter import TransferBlacklistRepositoryAdapter
+from app.media import meta_info
+from app.storage import LocalStorageBackend, StorageConfig, StorageBackendFactory, cross_copy, cross_move
+from app.storage.backends.base import StorageBackend, StorageType
+from app.utils import PathUtils
+
+_lock = Lock()
+
+
+class TransferEngine:
+    """
+    文件转移引擎。
+    所有文件操作通过 StorageBackend 完成，不再区分本地/远程。
+    operation 为字符串："copy" / "move" / "link" / "softlink"
+    """
+
+    def __init__(self):
+        self._local = LocalStorageBackend(
+            StorageConfig(id="local", name="local", type=StorageType.LOCAL)
+        )
+        self._blacklist = TransferBlacklistRepositoryAdapter()
+
+    def _execute(self, src: str, dst: str, operation: str, dst_backend: StorageBackend | None = None) -> None:
+        backend = dst_backend or self._local
+        with _lock:
+            if backend is not self._local:
+                if operation == "copy":
+                    cross_copy(self._local, src, backend, dst)
+                elif operation == "move":
+                    cross_move(self._local, src, backend, dst)
+                else:
+                    raise ValueError(f"远程后端不支持 {operation}")
+                return
+            if operation == "copy":
+                self._local.copy(src, dst)
+            elif operation == "move":
+                self._local.move(src, dst)
+            elif operation == "link":
+                self._local.hardlink(src, dst)
+            elif operation == "softlink":
+                self._local.softlink(src, dst)
+            else:
+                raise ValueError(f"不支持的操作: {operation}")
+
+    def transfer_subtitles(self, org_name: str, new_name: str, operation: str) -> None:
+        _zhcn_sub_re = (
+            r"([.\[(](((zh[-_])?(cn|ch[si]|sg|sc))|zho?"
+            r"|chinese|(cn|ch[si]|sg|zho?|eng)[-_&](cn|ch[si]|sg|zho?|eng)"
+            r"|简[体中]?|JPSC)[.\])])"
+            r"|([\u4e00-\u9fa5]{0,3}[中双][\u4e00-\u9fa5]{0,2}[字文语][\u4e00-\u9fa5]{0,3})"
+            r"|简体|简中"
+            r"|(?<![a-z0-9])gb(?![a-z0-9])"
+        )
+        _zhtw_sub_re = (
+            r"([.\[(](((zh[-_])?(hk|tw|cht|tc))"
+            r"|繁[体中]?|JPTC)[.\])])"
+            r"|繁体中[文字]|中[文字]繁体|繁体"
+            r"|(?<![a-z0-9])big5(?![a-z0-9])"
+        )
+        _eng_sub_re = r"[.\[(]eng[.\])]"
+
+        dir_name = os.path.dirname(org_name)
+        file_name = os.path.basename(org_name)
+        file_list = PathUtils.get_dir_level1_files(dir_name, RMT_SUBEXT)
+        if not file_list:
+            return
+
+        metainfo = meta_info(title=file_name)
+        for file_item in file_list:
+            sub_file_name = re.sub(
+                _zhtw_sub_re, ".", re.sub(_zhcn_sub_re, ".", os.path.basename(file_item), flags=re.I), flags=re.I
+            )
+            sub_file_name = re.sub(_eng_sub_re, ".", sub_file_name, flags=re.I)
+            sub_metainfo = meta_info(title=os.path.basename(file_item))
+            if not self._subtitle_match(file_name, sub_file_name, metainfo, sub_metainfo):
+                continue
+
+            new_file_type = self._detect_subtitle_type(file_item, _zhcn_sub_re, _zhtw_sub_re, _eng_sub_re)
+            file_ext = os.path.splitext(file_item)[-1]
+            for tag in [new_file_type] + [f"{new_file_type}.{t}" for t in range(1, 6)]:
+                new_file = os.path.splitext(new_name)[0] + tag + file_ext
+                if os.path.exists(new_file) and os.path.getsize(new_file) == os.path.getsize(file_item):
+                    log.info(f"【Rmt】字幕 {new_file} 已存在")
+                    break
+                try:
+                    log.debug(f"【Rmt】正在处理字幕：{os.path.basename(file_item)}")
+                    self._execute(file_item, new_file, operation)
+                    log.info(f"【Rmt】字幕 {os.path.basename(file_item)} {operation}完成")
+                    break
+                except Exception as e:
+                    log.error(f"【Rmt】字幕 {file_name} {operation}失败：{e}")
+                    raise
+
+    def transfer_audio_tracks(self, org_name: str, new_name: str, operation: str, over_flag: bool) -> None:
+        dir_name = os.path.dirname(org_name)
+        file_pre = os.path.splitext(os.path.basename(org_name))[0]
+        for track_file in PathUtils.get_dir_level1_files(dir_name, RMT_AUDIO_TRACK_EXT):
+            if os.path.splitext(os.path.basename(track_file))[0] != file_pre:
+                continue
+            new_track = os.path.splitext(new_name)[0] + os.path.splitext(track_file)[1].lower()
+            if os.path.exists(new_track):
+                if not over_flag:
+                    log.warn(f"【Rmt】音轨文件已存在：{new_track}")
+                    continue
+                os.remove(new_track)
+            log.info(f"【Rmt】正在转移音轨文件：{track_file} 到 {new_track}")
+            self._execute(track_file, new_track, operation)
+            log.info(f"【Rmt】音轨文件 {os.path.basename(track_file)} {operation}完成")
+
+    def transfer_dir(self, src_dir: str, target_dir: str, operation: str, record_blacklist: bool = True) -> None:
+        for file in PathUtils.get_dir_files(src_dir):
+            new_file = file.replace(src_dir, target_dir)
+            if os.path.exists(new_file):
+                log.warn(f"【Rmt】{new_file} 文件已存在")
+                continue
+            os.makedirs(os.path.dirname(new_file), exist_ok=True)
+            self._execute(file, new_file, operation)
+            if record_blacklist:
+                self._blacklist.insert(file)
+
+    def transfer_bluray_dir(self, src_dir: str, target_dir: str, operation: str) -> None:
+        self.transfer_dir(src_dir, target_dir, operation, record_blacklist=False)
+        self._blacklist.insert(src_dir)
+
+    def transfer(
+        self,
+        src: str,
+        dst: str,
+        operation: str,
+        over_flag: bool = False,
+        old_file: str | None = None,
+        dst_backend: StorageBackend | None = None,
+    ) -> None:
+        if not over_flag and os.path.exists(dst):
+            log.warn(f"【Rmt】文件已存在：{dst}")
+            return
+        if over_flag and old_file and os.path.isfile(old_file):
+            os.remove(old_file)
+
+        log.info(f"【Rmt】正在转移文件：{os.path.basename(src)} 到 {dst}")
+        self._execute(src, dst, operation, dst_backend)
+        log.info(f"【Rmt】文件 {os.path.basename(src)} {operation}完成")
+        self._blacklist.insert(src)
+
+        self.transfer_subtitles(src, dst, operation)
+        self.transfer_audio_tracks(src, dst, operation, over_flag)
+
+    @staticmethod
+    def delete_media_file(filedir: str, filename: str) -> tuple[bool, str]:
+        try:
+            file = os.path.join(filedir, filename)
+            if not os.path.exists(file):
+                return False, "文件不存在"
+            os.remove(file)
+            if not os.listdir(filedir):
+                os.rmdir(filedir)
+            return True, "删除成功"
+        except Exception as e:
+            log.error(f"【Rmt】删除文件失败: {e}")
+            return False, str(e)
+
+    @staticmethod
+    def _subtitle_match(file_name: str, sub_name: str, meta, sub_meta) -> bool:
+        if os.path.splitext(file_name)[0] == os.path.splitext(sub_name)[0]:
+            return True
+        if sub_meta.cn_name and sub_meta.cn_name == meta.cn_name:
+            return True
+        if sub_meta.en_name and sub_meta.en_name == meta.en_name:
+            return True
+        if meta.get_season_string() and meta.get_season_string() != sub_meta.get_season_string():
+            return False
+        if meta.get_episode_string() and meta.get_episode_string() != sub_meta.get_episode_string():
+            return False
+        return True
+
+    @staticmethod
+    def _detect_subtitle_type(file_item: str, zhcn_re, zhtw_re, eng_re) -> str:
+        if re.search(zhcn_re, file_item, re.I):
+            return ".chi.zh-cn"
+        if re.search(zhtw_re, file_item, re.I):
+            return ".zh-tw"
+        if re.search(eng_re, file_item, re.I):
+            return ".eng"
+        return ".und"
+```
+
+### 5.2 SyncEngine（替换 SyncCore）
+
+```python
+"""目录同步引擎。"""
+
+import os
+import threading
+import traceback
+from typing import Any
+
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+from watchdog.observers.polling import PollingObserver
+
+import log
+from app.core.constants import RMT_MEDIAEXT
+from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
+from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
+from app.db.repositories.transfer_repo_adapter import TransferHistoryRepositoryAdapter
+from app.services.transfer_engine import TransferEngine
+from app.storage import StorageBackendFactory
+from app.storage.backends.base import StorageType
+from app.storage.config_models import StorageConfig
+from app.utils import PathUtils
+
+_synced_lock = threading.Lock()
+_pending_lock = threading.Lock()
+_observer_lock = threading.Lock()
+
+
+class FileMonitorHandler(FileSystemEventHandler):
+    def __init__(self, monpath: str, engine: "SyncEngine"):
+        super().__init__()
+        self._watch_path = monpath
+        self._engine = engine
+
+    def on_created(self, event):
+        self._engine.on_file_event(event.src_path)
+
+    def on_moved(self, event):
+        self._engine.on_file_event(event.dest_path)
+
+
+class SyncPathConfig:
+    def __init__(self, row: Any):
+        self.id = str(row.ID)
+        self.source = row.SOURCE or ""
+        self.dest = row.DEST or ""
+        self.unknown = row.UNKNOWN or ""
+        self.operation = row.OPERATION or "copy"
+        self.src_backend_id = row.SRC_BACKEND or "local"
+        self.dst_backend_id = row.DST_BACKEND or "local"
+        self.rename = bool(row.RENAME)
+        self.compatibility = bool(row.COMPATIBILITY)
+        self.enabled = bool(row.ENABLED)
+
+
+class SyncEngine:
+    def __init__(self):
+        self._transfer = TransferEngine()
+        self._sync_repo = SyncPathRepositoryAdapter()
+        self._history_repo = TransferHistoryRepositoryAdapter()
+        self._backend_repo = StorageBackendRepositoryAdapter()
+        self._factory = StorageBackendFactory()
+        self._configs: dict[str, SyncPathConfig] = {}
+        self._monitor_ids: list[str] = []
+        self._observers: list[Observer] = []
+        self._synced_files: list[str] = []
+        self._pending: dict[str, dict] = {}
+        self._reload()
+
+    def init(self) -> None:
+        self._reload()
+        self._start()
+
+    def _resolve_backend(self, backend_id: str):
+        if backend_id == "local":
+            from app.storage.backends.local import LocalStorageBackend
+            return LocalStorageBackend(StorageConfig(id="local", name="local", type=StorageType.LOCAL))
+        entity = self._backend_repo.get_by_id(backend_id)
+        if not entity:
+            raise ValueError(f"未找到存储后端: {backend_id}")
+        config = self._build_storage_config(entity)
+        return self._factory.create(config)
+
+    def _build_storage_config(self, entity):
+        from app.storage.config_models import (
+            LocalStorageConfig, WebDAVStorageConfig, SMBStorageConfig,
+            S3StorageConfig, RcloneStorageConfig, OpenListStorageConfig,
+        )
+        from app.storage.backends.base import StorageType
+        mapping = {
+            "local": (StorageType.LOCAL, LocalStorageConfig),
+            "webdav": (StorageType.WEBDAV, WebDAVStorageConfig),
+            "smb": (StorageType.SMB, SMBStorageConfig),
+            "s3": (StorageType.S3, S3StorageConfig),
+            "rclone": (StorageType.RCLONE, RcloneStorageConfig),
+            "openlist": (StorageType.OPENLIST, OpenListStorageConfig),
+        }
+        stype, cls = mapping.get(entity.type, (StorageType.LOCAL, LocalStorageConfig))
+        config = cls(id=entity.id, name=entity.name, type=stype, enabled=entity.enabled)
+        for k, v in entity.config.items():
+            if hasattr(config, k):
+                setattr(config, k, v)
+        return config
+
+    def _reload(self) -> None:
+        self._configs = {}
+        self._monitor_ids = []
+        for row in self._sync_repo.get_config_sync_paths():
+            if not row:
+                continue
+            cfg = SyncPathConfig(row)
+            log.info(
+                f"【Sync】监控目录：{cfg.source} -> {cfg.dest} "
+                f"(操作={cfg.operation}, 目标后端={cfg.dst_backend_id})"
+            )
+            if not cfg.enabled:
+                log.info(f"【Sync】{cfg.source} 已关闭")
+                continue
+            self._configs[cfg.id] = cfg
+            if os.path.exists(cfg.source):
+                self._monitor_ids.append(cfg.id)
+            else:
+                log.error(f"【Sync】{cfg.source} 目录不存在")
+
+    @property
+    def monitor_ids(self) -> list[str]:
+        return self._monitor_ids
+
+    def get_config(self, sid: str | None = None):
+        if sid:
+            return self._configs.get(sid)
+        return self._configs
+
+    def _start(self) -> None:
+        self.stop()
+        for sid in self._monitor_ids:
+            cfg = self.get_config(sid)
+            if not cfg:
+                continue
+            obs = PollingObserver(timeout=10) if cfg.compatibility else Observer(timeout=10)
+            with _observer_lock:
+                self._observers.append(obs)
+            obs.schedule(FileMonitorHandler(cfg.source, self), path=cfg.source, recursive=True)
+            obs.daemon = True
+            obs.start()
+            log.info(f"【Sync】{cfg.source} 监控已启动")
+
+    def stop(self) -> None:
+        with _observer_lock:
+            for obs in self._observers:
+                try:
+                    obs.stop()
+                    obs.join()
+                except Exception as e:
+                    log.error(f"【Sync】停止监控异常: {e}")
+            self._observers = []
+
+    def on_file_event(self, event_path: str) -> None:
+        if not os.path.exists(event_path):
+            return
+        with _synced_lock:
+            if event_path in self._synced_files:
+                return
+            self._synced_files.append(event_path)
+
+        try:
+            cfg = self._find_config(event_path)
+            if not cfg:
+                return
+            if PathUtils.is_invalid_path(event_path):
+                return
+
+            if not cfg.rename:
+                self._do_link(event_path, cfg)
+            else:
+                self._do_transfer(event_path, cfg)
+        except Exception as e:
+            log.error(f"【Sync】处理失败：{e}\n{traceback.format_exc()}")
+
+    def _find_config(self, event_path: str):
+        for sid in self._monitor_ids:
+            cfg = self.get_config(sid)
+            if not cfg:
+                continue
+            if PathUtils.is_path_in_path(cfg.source, event_path):
+                if PathUtils.is_path_in_path(cfg.dest, event_path):
+                    log.error(f"【Sync】嵌套目录：{event_path}")
+                    return None
+                return cfg
+        return None
+
+    def _do_link(self, event_path: str, cfg: SyncPathConfig) -> None:
+        if self._history_repo.is_sync_in_history(event_path, cfg.dest):
+            return
+        rel = os.path.relpath(event_path, cfg.source)
+        dst = os.path.join(cfg.dest, rel)
+        try:
+            self._transfer._execute(event_path, dst, cfg.operation)
+            self._history_repo.insert_sync_history(event_path, cfg.source, cfg.dest)
+            log.info(f"【Sync】{event_path} 同步完成")
+        except Exception as e:
+            log.error(f"【Sync】{event_path} 同步失败：{e}")
+
+    def _do_transfer(self, event_path: str, cfg: SyncPathConfig) -> None:
+        name = os.path.basename(event_path)
+        if name.lower() != "index.bdmv":
+            ext = os.path.splitext(name)[-1].lower()
+            if ext not in RMT_MEDIAEXT:
+                return
+        dst_backend = self._resolve_backend(cfg.dst_backend_id)
+        self._transfer.transfer(
+            src=event_path,
+            dst=os.path.join(cfg.dest, name),
+            operation=cfg.operation,
+            dst_backend=dst_backend if cfg.dst_backend_id != "local" else None,
+        )
+
+    def run_sync(self, sid: str | list[str] | None = None) -> None:
+        sids = sid if isinstance(sid, list) else [sid] if sid else self._monitor_ids
+        for sid in sids:
+            cfg = self.get_config(sid)
+            if not cfg:
+                continue
+            if not cfg.rename:
+                for f in PathUtils.get_dir_files(cfg.source):
+                    self._do_link(f, cfg)
+            else:
+                for p in PathUtils.get_dir_level1_medias(cfg.source, RMT_MEDIAEXT):
+                    if PathUtils.is_invalid_path(p):
+                        continue
+                    self._do_transfer(p, cfg)
+
+    def delete_path(self, sid: int) -> Any:
+        ret = self._sync_repo.delete_config_sync_path(sid=sid)
+        self.init()
+        return ret
+
+    def insert_path(self, **kwargs) -> Any:
+        ret = self._sync_repo.insert_config_sync_path(**kwargs)
+        self.init()
+        return ret
+
+    def update_path(self, **kwargs) -> Any:
+        ret = self._sync_repo.check_config_sync_paths(**kwargs)
+        self.init()
+        return ret
+```
 
 ---
 
-## 实施阶段
+## 6. Alembic 迁移
 
-1. **Phase 1**：定义 `StorageBackend` 接口 + `LocalStorageBackend` + 工厂（1-2 天）
-2. **Phase 2**：接入 `TransferActionEngine`，将本地操作路由到 `LocalStorageBackend`（1 天）
-3. **Phase 3**：实现 `WebDAVStorageBackend` + UI 配置页面（2-3 天）
-4. **Phase 4**：实现 `SMBStorageBackend`（挂载模式优先，1-2 天）
-5. **Phase 5**：实现 `OpenListStorageBackend`（只读扫描，1-2 天）
-6. **Phase 6**：逐步将 Rclone/MinIO 迁移为新后端（可选）
+### 6.1 创建迁移
+
+```bash
+uv run alembic revision -m "add_storage_backend_and_sync_fields"
+```
+
+### 6.2 迁移脚本
+
+```python
+"""add_storage_backend_and_sync_fields
+
+Revision ID: xxx
+Revises: yyy
+Create Date: 2026-05-16
+"""
+
+from alembic import op
+import sqlalchemy as sa
+
+revision = "xxx"
+down_revision = "yyy"
+
+
+def upgrade():
+    # 创建 STORAGE_BACKEND 表
+    op.create_table(
+        "STORAGE_BACKEND",
+        sa.Column("ID", sa.Integer(), sa.Sequence("ID"), nullable=False),
+        sa.Column("NAME", sa.String(255), nullable=False),
+        sa.Column("TYPE", sa.String(50), nullable=False),
+        sa.Column("CONFIG", sa.Text(), nullable=False),
+        sa.Column("ENABLED", sa.Integer(), server_default="1"),
+        sa.PrimaryKeyConstraint("ID"),
+    )
+
+    # 修改 CONFIG_SYNC_PATHS 表
+    op.add_column("CONFIG_SYNC_PATHS", sa.Column("OPERATION", sa.String(50), nullable=True))
+    op.add_column("CONFIG_SYNC_PATHS", sa.Column("SRC_BACKEND", sa.String(64), server_default="local"))
+    op.add_column("CONFIG_SYNC_PATHS", sa.Column("DST_BACKEND", sa.String(64), server_default="local"))
+
+    # 数据迁移：MODE 映射到 OPERATION
+    op.execute("""
+        UPDATE CONFIG_SYNC_PATHS SET OPERATION = CASE
+            WHEN MODE IN ('copy', 'rclonecopy', 'miniocopy') THEN 'copy'
+            WHEN MODE IN ('move', 'rclone', 'minio') THEN 'move'
+            WHEN MODE = 'link' THEN 'link'
+            WHEN MODE = 'softlink' THEN 'softlink'
+            ELSE 'copy'
+        END
+    """)
+
+
+def downgrade():
+    op.drop_column("CONFIG_SYNC_PATHS", "OPERATION")
+    op.drop_column("CONFIG_SYNC_PATHS", "SRC_BACKEND")
+    op.drop_column("CONFIG_SYNC_PATHS", "DST_BACKEND")
+    op.drop_table("STORAGE_BACKEND")
+```
+
+---
+
+## 7. 文件目录结构
+
+```
+app/
+├── storage/
+│   ├── __init__.py
+│   ├── factory.py
+│   ├── cross_backend.py
+│   ├── config_models.py
+│   └── backends/
+│       ├── __init__.py
+│       ├── base.py
+│       ├── local.py
+│       ├── webdav.py
+│       ├── smb.py
+│       ├── s3.py
+│       ├── rclone.py
+│       └── openlist.py
+├── services/
+│   ├── transfer_engine.py      # 替换 transfer_action_engine.py
+│   └── sync_engine.py          # 替换 sync_core.py
+├── domain/
+│   ├── entities/
+│   │   └── storage_backend.py
+│   └── interfaces/
+│       └── storage_backend_repo.py
+├── db/
+│   ├── models/
+│   │   └── storage_backend.py
+│   └── repositories/
+│       ├── storage_backend_repository.py
+│       └── storage_backend_repo_adapter.py
+```
+
+---
+
+## 8. 废弃清单
+
+重构完成后删除：
+1. `app/services/transfer_action_engine.py`
+2. `app/services/sync_core.py`
+3. `app/utils/types.py` 中的 `RmtMode` 枚举
+4. `app/core/module_config.py` 中的 `RMT_MODES` / `RMT_MODES_LITE` / `REMOTE_RMT_MODES`
+5. `SystemUtils` 中的 `copy/move/link/softlink/rclone_move/rclone_copy/minio_move/minio_copy`

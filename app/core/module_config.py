@@ -1,27 +1,9 @@
-from app.utils.types import DownloaderType, IndexerType, RmtMode, SearchType
+from app.utils.types import DownloaderType, IndexerType, SearchType
 
 
 class ModuleConf:
-    # 全量转移模式
-    RMT_MODES = {
-        "copy": RmtMode.COPY,
-        "link": RmtMode.LINK,
-        "softlink": RmtMode.SOFTLINK,
-        "move": RmtMode.MOVE,
-        "rclone": RmtMode.RCLONE,
-        "rclonecopy": RmtMode.RCLONECOPY,
-        "minio": RmtMode.MINIO,
-        "miniocopy": RmtMode.MINIOCOPY,
-    }
-
-    # 精简版转移模式
-    RMT_MODES_LITE = {"copy": RmtMode.COPY, "link": RmtMode.LINK, "softlink": RmtMode.SOFTLINK, "move": RmtMode.MOVE}
-
     # 索引器
     INDEXER_DICT = {"prowlarr": IndexerType.PROWLARR, "jackett": IndexerType.JACKETT, "builtin": IndexerType.BUILTIN}
-
-    # 远程转移模式
-    REMOTE_RMT_MODES = [RmtMode.RCLONE, RmtMode.RCLONECOPY, RmtMode.MINIO, RmtMode.MINIOCOPY]
 
     # 消息通知类型
     MESSAGE_CONF = {

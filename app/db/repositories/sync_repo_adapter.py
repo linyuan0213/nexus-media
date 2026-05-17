@@ -34,12 +34,21 @@ class SyncPathRepositoryAdapter(ISyncPathRepository):
         rename: int,
         enabled: int,
         note: str | None = None,
+        operation: str | None = None,
+        src_backend: str | None = None,
+        dst_backend: str | None = None,
     ) -> None:
-        self._repo.insert_config_sync_path(source, dest, unknown, mode, compatibility, rename, enabled, note)
+        self._repo.insert_config_sync_path(
+            source, dest, unknown, mode, compatibility, rename, enabled, note, operation, src_backend, dst_backend
+        )
 
     # 兼容旧Repository方法名
-    def insert_config_sync_path(self, source, dest, unknown, mode, compatibility, rename, enabled, note=None):
-        self._repo.insert_config_sync_path(source, dest, unknown, mode, compatibility, rename, enabled, note)
+    def insert_config_sync_path(
+        self, source, dest, unknown, mode, compatibility, rename, enabled, note=None, operation=None, src_backend=None, dst_backend=None
+    ):
+        self._repo.insert_config_sync_path(
+            source, dest, unknown, mode, compatibility, rename, enabled, note, operation, src_backend, dst_backend
+        )
 
     def delete(self, sid: int) -> None:
         self._repo.delete_config_sync_path(sid)

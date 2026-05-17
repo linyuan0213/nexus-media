@@ -61,7 +61,6 @@ dependencies = [
     "pickleshare>=0.7.5",
     "pytz-deprecation-shim>=0.1.0.post0",
     "webdav4>=0.10.0",
-    "pysmb>=1.2.10",
     "serverchan-sdk>=1.0.6",
     "bencodepy>=0.9.5",
     "fastapi>=0.136.0",
@@ -74,6 +73,8 @@ dependencies = [
     "pydantic-ai>=1.90.0",
     "ollama>=0.6.2",
     "google-genai>=2.2.0",
+    "boto3>=1.43.7",
+    "smbprotocol>=1.16.1",
 ]
 
 [dependency-groups]

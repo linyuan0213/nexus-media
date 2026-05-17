@@ -369,7 +369,7 @@ class MediaConfigRepositoryAdapter:
     def get_media_config(self) -> CONFIGMEDIA | None:
         return self._repo.get_media_config()
 
-    def add_path(self, path_type: str, path: str) -> None:
+    def add_path(self, path_type: str, path: str, backend: str = "") -> None:
         """添加路径到指定类型"""
         cfg = self._repo.get_media_config()
         col_map = {
@@ -378,12 +378,19 @@ class MediaConfigRepositoryAdapter:
             "anime": "ANIME_PATH",
             "unknown": "UNKNOWN_PATH",
         }
+        backend_col_map = {
+            "movie": "MOVIE_BACKEND",
+            "tv": "TV_BACKEND",
+            "anime": "ANIME_BACKEND",
+            "unknown": "UNKNOWN_BACKEND",
+        }
         if path_type not in col_map:
             raise ValueError(f"Unknown path type: {path_type}")
 
         import json
 
         col = col_map[path_type]
+        backend_col = backend_col_map[path_type]
         current = getattr(cfg, col, "") if cfg else ""
         paths = json.loads(current) if current else []
         if not isinstance(paths, list):
@@ -391,6 +398,13 @@ class MediaConfigRepositoryAdapter:
         if path not in paths:
             paths.append(path)
             self._repo._update_media_config_col(col, json.dumps(paths))
+            # 同步添加后端
+            backend_current = getattr(cfg, backend_col, "") if cfg else ""
+            backends = json.loads(backend_current) if backend_current else []
+            if not isinstance(backends, list):
+                backends = []
+            backends.append(backend or "local")
+            self._repo._update_media_config_col(backend_col, json.dumps(backends))
 
     def remove_path(self, path_type: str, path: str) -> None:
         """从指定类型移除路径"""
@@ -401,21 +415,37 @@ class MediaConfigRepositoryAdapter:
             "anime": "ANIME_PATH",
             "unknown": "UNKNOWN_PATH",
         }
+        backend_col_map = {
+            "movie": "MOVIE_BACKEND",
+            "tv": "TV_BACKEND",
+            "anime": "ANIME_BACKEND",
+            "unknown": "UNKNOWN_BACKEND",
+        }
         if path_type not in col_map:
             raise ValueError(f"Unknown path type: {path_type}")
 
         import json
 
         col = col_map[path_type]
+        backend_col = backend_col_map[path_type]
         current = getattr(cfg, col, "") if cfg else ""
         paths = json.loads(current) if current else []
         if not isinstance(paths, list):
             paths = [paths]
         if path in paths:
-            paths.remove(path)
+            idx = paths.index(path)
+            paths.pop(idx)
             self._repo._update_media_config_col(col, json.dumps(paths))
+            # 同步移除后端
+            backend_current = getattr(cfg, backend_col, "") if cfg else ""
+            backends = json.loads(backend_current) if backend_current else []
+            if not isinstance(backends, list):
+                backends = []
+            if idx < len(backends):
+                backends.pop(idx)
+            self._repo._update_media_config_col(backend_col, json.dumps(backends))
 
-    def update_path(self, path_type: str, old_path: str, new_path: str) -> None:
+    def update_path(self, path_type: str, old_path: str, new_path: str, backend: str = "") -> None:
         """更新指定类型的路径"""
         cfg = self._repo.get_media_config()
         col_map = {
@@ -424,12 +454,19 @@ class MediaConfigRepositoryAdapter:
             "anime": "ANIME_PATH",
             "unknown": "UNKNOWN_PATH",
         }
+        backend_col_map = {
+            "movie": "MOVIE_BACKEND",
+            "tv": "TV_BACKEND",
+            "anime": "ANIME_BACKEND",
+            "unknown": "UNKNOWN_BACKEND",
+        }
         if path_type not in col_map:
             raise ValueError(f"Unknown path type: {path_type}")
 
         import json
 
         col = col_map[path_type]
+        backend_col = backend_col_map[path_type]
         current = getattr(cfg, col, "") if cfg else ""
         paths = json.loads(current) if current else []
         if not isinstance(paths, list):
@@ -438,6 +475,27 @@ class MediaConfigRepositoryAdapter:
             idx = paths.index(old_path)
             paths[idx] = new_path
             self._repo._update_media_config_col(col, json.dumps(paths))
+            # 同步更新后端
+            backend_current = getattr(cfg, backend_col, "") if cfg else ""
+            backends = json.loads(backend_current) if backend_current else []
+            if not isinstance(backends, list):
+                backends = []
+            while len(backends) < len(paths):
+                backends.append("local")
+            backends[idx] = backend or "local"
+            self._repo._update_media_config_col(backend_col, json.dumps(backends))
 
-    def set_media_config(self, movie_path: str, tv_path: str, anime_path: str, unknown_path: str) -> None:
-        self._repo.set_media_config(movie_path, tv_path, anime_path, unknown_path)
+    def set_media_config(
+        self,
+        movie_path: str,
+        tv_path: str,
+        anime_path: str,
+        unknown_path: str,
+        movie_backend: str = "",
+        tv_backend: str = "",
+        anime_backend: str = "",
+        unknown_backend: str = "",
+    ) -> None:
+        self._repo.set_media_config(
+            movie_path, tv_path, anime_path, unknown_path, movie_backend, tv_backend, anime_backend, unknown_backend
+        )

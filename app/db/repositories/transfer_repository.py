@@ -14,7 +14,7 @@ from sqlalchemy import func
 from app.db import DbPersist
 from app.db.models import SYNCHISTORY, TRANSFERBLACKLIST, TRANSFERHISTORY, TRANSFERUNKNOWN
 from app.db.repositories.base_repository import BaseRepository
-from app.utils.types import RmtMode
+
 
 if TYPE_CHECKING:
     from app.media.models import MediaInfo
@@ -59,7 +59,7 @@ class TransferRepository(BaseRepository):
         ).update({"DATE": date})
 
     @DbPersist(BaseRepository._db)
-    def insert_transfer_history(self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: "MediaInfo") -> None:
+    def insert_transfer_history(self, in_from: Enum, rmt_mode: str, in_path: str, out_path: str, dest: str, media_info: "MediaInfo") -> None:
         """
         插入识别转移记录
         """
@@ -91,7 +91,7 @@ class TransferRepository(BaseRepository):
             return
 
         dest = dest or ""
-        mode_value = str(rmt_mode.value) if rmt_mode else ""
+        mode_value = rmt_mode or ""
         self._db.insert(
             TRANSFERHISTORY(
                 MODE=mode_value,
@@ -333,7 +333,7 @@ class TransferRepository(BaseRepository):
             return True
 
     @DbPersist(BaseRepository._db)
-    def insert_transfer_unknown(self, path: str, dest: str, rmt_mode: RmtMode) -> None:
+    def insert_transfer_unknown(self, path: str, dest: str, rmt_mode: str) -> None:
         """
         插入未识别记录
         """
@@ -346,7 +346,7 @@ class TransferRepository(BaseRepository):
             dest = os.path.normpath(dest)
         else:
             dest = ""
-        self._db.insert(TRANSFERUNKNOWN(PATH=path, DEST=dest, STATE="N", MODE=str(rmt_mode.value if rmt_mode else "")))
+        self._db.insert(TRANSFERUNKNOWN(PATH=path, DEST=dest, STATE="N", MODE=rmt_mode or ""))
 
     def is_transfer_in_blacklist(self, path: str) -> bool:
         """

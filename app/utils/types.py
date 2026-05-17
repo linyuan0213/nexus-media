@@ -37,17 +37,6 @@ class SearchType(Enum):
     PLUGIN = "插件"
 
 
-class RmtMode(Enum):
-    LINK = "硬链接"
-    SOFTLINK = "软链接"
-    COPY = "复制"
-    MOVE = "移动"
-    RCLONECOPY = "Rclone复制"
-    RCLONE = "Rclone移动"
-    MINIOCOPY = "Minio复制"
-    MINIO = "Minio移动"
-
-
 class MatchMode(Enum):
     NORMAL = "正常模式"
     STRICT = "严格模式"

@@ -1,6 +1,5 @@
 from math import floor
 
-from app.core.module_config import ModuleConf
 from app.schemas.media import TransferHistoryPageDTO, UnknownListPageDTO
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 
@@ -30,7 +29,7 @@ class TransferHistoryService:
         for history in historys:
             history = history.as_dict()
             sync_mode = history.get("MODE")
-            rmt_mode = ModuleConf.get_dictenum_key(ModuleConf.RMT_MODES, sync_mode) if sync_mode else ""
+            rmt_mode = sync_mode or ""
             history.update({"SYNC_MODE": sync_mode, "RMT_MODE": rmt_mode})
             historys_list.append(history)
         total_page = floor(total_count / page_num) + 1
@@ -74,7 +73,7 @@ class TransferHistoryService:
             path = rec_path.replace("\\", "/")
             path_to = str(rec.DEST or "").replace("\\", "/")
             sync_mode = str(rec.MODE or "")
-            rmt_mode = ModuleConf.get_dictenum_key(ModuleConf.RMT_MODES, sync_mode) if sync_mode else ""
+            rmt_mode = sync_mode
             items.append(
                 {
                     "id": rec.ID,
@@ -108,7 +107,7 @@ class TransferHistoryService:
             path = rec_path.replace("\\", "/")
             path_to = str(rec.DEST or "").replace("\\", "/")
             sync_mode = str(rec.MODE or "")
-            rmt_mode = ModuleConf.get_dictenum_key(ModuleConf.RMT_MODES, sync_mode) if sync_mode else ""
+            rmt_mode = sync_mode
             items.append(
                 {
                     "id": rec.ID,

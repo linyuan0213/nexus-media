@@ -161,6 +161,7 @@ class UpdateCategoryConfigRequest(BaseModel):
 class DirListRequest(BaseModel):
     path: str | None = None
     filter: str | None = None
+    backend_id: str | None = None
 
 
 class TmdbBlacklistRequest(BaseModel):
@@ -644,7 +645,7 @@ def dir_list(
     svc: MediaFileService = Depends(get_media_file_service),
 ):
     """目录列表（JSON格式，供前端文件管理器使用）"""
-    ok, result, msg = svc.get_dir_list(req.path or "")
+    ok, result, msg = svc.get_dir_list(req.path or "", req.backend_id or "")
     if not ok:
         return fail(msg=msg)
     return success(data=result)
@@ -739,6 +740,7 @@ def search_files(
 class MediaPathAddRequest(BaseModel):
     path_type: str
     path: str
+    backend: str = "local"
 
 
 class MediaPathRemoveRequest(BaseModel):
@@ -750,6 +752,7 @@ class MediaPathUpdateRequest(BaseModel):
     path_type: str
     old_path: str
     new_path: str
+    backend: str = "local"
 
 
 @router.post("/library/path")
@@ -768,7 +771,7 @@ def add_media_library_path(
     svc: MediaConfigService = Depends(get_media_config_service),
 ):
     """添加媒体库路径"""
-    svc.add_path(req.path_type, req.path)
+    svc.add_path(req.path_type, req.path, req.backend)
     return success()
 
 
@@ -790,5 +793,5 @@ def update_media_library_path(
     svc: MediaConfigService = Depends(get_media_config_service),
 ):
     """更新媒体库路径"""
-    svc.update_path(req.path_type, req.old_path, req.new_path)
+    svc.update_path(req.path_type, req.old_path, req.new_path, req.backend)
     return success()

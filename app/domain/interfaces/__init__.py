@@ -39,6 +39,7 @@ from app.domain.interfaces.site_repo import (
     ISiteSeedingRepository,
     ISiteStatisticsRepository,
 )
+from app.domain.interfaces.storage_backend_repo import IStorageBackendRepository
 from app.domain.interfaces.sync_repo import ISyncPathRepository
 from app.domain.interfaces.transfer_repo import (
     ITransferBlacklistRepository,
@@ -67,6 +68,7 @@ __all__ = [
     "IBrushTaskRepository",
     "IBrushTorrentRepository",
     "ISyncPathRepository",
+    "IStorageBackendRepository",
     "IMessageClientRepository",
     "IDownloaderRepository",
     "IFilterGroupRepository",

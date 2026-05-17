@@ -6,7 +6,7 @@ SyncTimer Plugin v2
 import contextlib
 
 from app.plugin_framework.context import PluginContext
-from app.services.sync_core import SyncCore as Sync
+from app.services.sync_engine import SyncEngine as Sync
 
 
 class SyncTimerPlugin:

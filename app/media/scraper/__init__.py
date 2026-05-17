@@ -103,7 +103,7 @@ class Scraper:
         return None
 
     def gen_scraper_files(
-        self, media, dir_path, file_name, file_ext, force=False, force_nfo=False, force_pic=False, rmt_mode=None
+        self, media, dir_path, file_name, file_ext, force=False, force_nfo=False, force_pic=False, dst_backend=None
     ):
         """刮削元数据入口"""
         if not force and not self._scraper_flag:
@@ -112,8 +112,8 @@ class Scraper:
             return
         self._scraper_nfo = self._scraper_nfo or {}
         self._scraper_pic = self._scraper_pic or {}
-        self._rmt_mode = rmt_mode
-        self._downloader.set_rmt_mode(rmt_mode)
+        self._dst_backend = dst_backend
+        self._downloader.set_dst_backend(dst_backend)
 
         try:
             if media.type == MediaType.MOVIE:

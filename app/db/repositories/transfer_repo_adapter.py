@@ -12,8 +12,6 @@ from app.domain.entities.transfer import (
     TransferHistoryEntity,
     TransferUnknownEntity,
 )
-from app.utils.types import RmtMode
-
 if TYPE_CHECKING:
     from app.media.models import MediaInfo
 
@@ -28,7 +26,7 @@ class TransferHistoryRepositoryAdapter:
         return self._repo.is_transfer_history_exists(source_path, source_filename, dest_path, dest_filename)
 
     def insert(
-        self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: "MediaInfo"
+        self, in_from: Enum, rmt_mode: str, in_path: str, out_path: str, dest: str, media_info: "MediaInfo"
     ) -> None:
         self._repo.insert_transfer_history(in_from, rmt_mode, in_path, out_path, dest, media_info)
 
@@ -121,11 +119,11 @@ class TransferHistoryRepositoryAdapter:
     def is_need_insert_transfer_unknown(self, path: str) -> bool:
         return self._repo.is_need_insert_transfer_unknown(path)
 
-    def insert_transfer_unknown(self, path: str, dest: str, rmt_mode: RmtMode) -> None:
+    def insert_transfer_unknown(self, path: str, dest: str, rmt_mode: str) -> None:
         self._repo.insert_transfer_unknown(path, dest, rmt_mode)
 
     def insert_transfer_history(
-        self, in_from: Enum, rmt_mode: RmtMode, in_path: str, out_path: str, dest: str, media_info: "MediaInfo"
+        self, in_from: Enum, rmt_mode: str, in_path: str, out_path: str, dest: str, media_info: "MediaInfo"
     ) -> None:
         self._repo.insert_transfer_history(in_from, rmt_mode, in_path, out_path, dest, media_info)
 
@@ -136,7 +134,7 @@ class TransferUnknownRepositoryAdapter:
     def __init__(self, repo: TransferRepository | None = None):
         self._repo = repo or TransferRepository()
 
-    def insert(self, path: str, dest: str, mode: RmtMode) -> None:
+    def insert(self, path: str, dest: str, mode: str) -> None:
         self._repo.insert_transfer_unknown(path, dest, mode)
 
     def get_all(self) -> list[TransferUnknownEntity]:
