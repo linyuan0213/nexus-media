@@ -17,7 +17,9 @@
     "permissions": [],
     "hooks": [
       "plugin.config_changed"
-    ]
+    ],
+    "supports_run": false,
+    "dependencies": []
   },
   "frontend": {
     "routes": [

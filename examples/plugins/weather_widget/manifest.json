@@ -1,0 +1,36 @@
+{
+  "manifest_version": "1.0",
+  "id": "weather_widget",
+  "name": "天气插件",
+  "version": "1.0.0",
+  "author": "NAS-Tools Team",
+  "description": "展示插件依赖管理的示例插件，需要 requests 和 pytz",
+  "category": "tool",
+  "tags": ["示例", "依赖"],
+  "icon": "lucide:cloud",
+  "color": "#3b82f6",
+  "min_app_version": "3.8.0",
+  "backend": {
+    "entry": "backend.plugin:WeatherWidgetPlugin",
+    "api_prefix": "/api/plugin/weather_widget",
+    "permissions": [],
+    "hooks": ["plugin.config_changed"],
+    "supports_run": false,
+    "dependencies": ["requests>=2.28.0", "pytz"]
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "api_key",
+          "type": "input",
+          "label": "API Key",
+          "required": true
+        }
+      ]
+    },
+    "slots": []
+  }
+}
