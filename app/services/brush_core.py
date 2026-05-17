@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 
 import log
 from app.db.repositories import BrushRepository
-from app.db.repositories.brush_repo_adapter import BrushTaskRepositoryAdapter
+from app.db.repositories.brush_repo_adapter import BrushRuleRepositoryAdapter, BrushTaskRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.helper import RssHelper
 from app.media import meta_info
@@ -273,12 +273,31 @@ class BrushTaskService:
         if task.STATE in ["Y", "S"] and cron and (cron.isdigit() or cron.count(" ") == 4):
             self._start_task_jobs(self._brush_tasks[str(task.ID)], cron)
 
+    def _load_rules_from_template(self, task) -> tuple[dict, dict, dict]:
+        """加载任务规则：优先从规则模板读取，否则使用任务自身规则。"""
+        rss_rule = self._parse_json_rule(task.RSS_RULE, {})
+        remove_rule = self._parse_json_rule(task.REMOVE_RULE, {})
+        stop_rule = self._parse_json_rule(task.STOP_RULE, {"stopfree": "Y"})
+        rule_id = getattr(task, "RULE_ID", None)
+        if rule_id:
+            try:
+                adapter = BrushRuleRepositoryAdapter()
+                entity = adapter.get_by_id(int(rule_id))
+                if entity:
+                    rss_rule = self._parse_json_rule(entity.rss_rule, rss_rule)
+                    remove_rule = self._parse_json_rule(entity.remove_rule, remove_rule)
+                    stop_rule = self._parse_json_rule(entity.stop_rule, stop_rule)
+            except Exception:
+                pass
+        return rss_rule, remove_rule, stop_rule
+
     def _build_task_dict(self, task) -> dict:
         site_info: Any = self._sites.get_sites(siteid=task.SITE)
         site_url = StringUtils.get_base_url(site_info.get("signurl") or site_info.get("rssurl")) if site_info else ""
         downloader_info = self._downloader.get_downloader_conf(task.DOWNLOADER)
         total_size = round(int(self._repo.get_brushtask_totalsize(task.ID)) / (1024**3), 1)
         seed_size_gb = round(int(task.SEED_SIZE) / (1024**3), 1) if task.SEED_SIZE else 0
+        rss_rule, remove_rule, stop_rule = self._load_rules_from_template(task)
         return {
             "id": task.ID,
             "name": task.NAME,
@@ -293,9 +312,10 @@ class BrushTaskService:
             "transfer": task.TRANSFER == "Y",
             "sendmessage": task.SENDMESSAGE == "Y",
             "free": task.FREELEECH,
-            "rss_rule": self._parse_json_rule(task.RSS_RULE, {}),
-            "remove_rule": self._parse_json_rule(task.REMOVE_RULE, {}),
-            "stop_rule": self._parse_json_rule(task.STOP_RULE, {"stopfree": "Y"}),
+            "rss_rule": rss_rule,
+            "remove_rule": remove_rule,
+            "stop_rule": stop_rule,
+            "rule_id": getattr(task, "RULE_ID", None),
             "seed_size": seed_size_gb,
             "time_range": task.TIME_RANGE,
             "total_size": total_size,
@@ -360,6 +380,35 @@ class BrushTaskService:
         return self._repo.get_brushtask_torrent_by_enclosure(enclosure or "")
 
     # ---------- RSS 刷流 ----------
+
+    @staticmethod
+    def _rss_rule_needs_torrent_attr(rss_rule: dict) -> bool:
+        """判断 RSS 选种规则是否需要解析种子详情页属性。"""
+        if not rss_rule:
+            return False
+        for key in ("free", "hr", "peercount"):
+            val = rss_rule.get(key)
+            if val and val not in ("#", "N", None, ""):
+                return True
+        return False
+
+    def _check_torrent_attr_if_needed(
+        self,
+        rss_rule: dict,
+        page_url: str | None,
+        cookie: str | None,
+        ua: str | None,
+        headers: dict,
+        site_proxy: bool,
+    ) -> dict:
+        """仅在规则需要时解析种子详情页属性，避免无意义请求。"""
+        if not self._rss_rule_needs_torrent_attr(rss_rule):
+            return {}
+        if not page_url:
+            return {}
+        return self._siteconf.check_torrent_attr(
+            torrent_url=page_url, cookie=cookie, ua=ua, headers=headers, proxy=site_proxy
+        )
 
     def check_task_rss(self, taskid: int | None) -> None:
         if not taskid:
@@ -458,8 +507,13 @@ class BrushTaskService:
                     log.debug(f"【Brush】{torrent_name} 已处理过")
                     continue
 
-                torrent_attr = self._siteconf.check_torrent_attr(
-                    torrent_url=page_url, cookie=cookie, ua=ua, headers=headers, proxy=bool(site_proxy)
+                torrent_attr = self._check_torrent_attr_if_needed(
+                    rss_rule=rss_rule,
+                    page_url=page_url,
+                    cookie=cookie,
+                    ua=ua,
+                    headers=headers,
+                    site_proxy=bool(site_proxy),
                 )
                 if not BrushRuleEngine.check_rss_rule(
                     rss_rule=rss_rule, title=torrent_name, torrent_size=size, pubdate=pubdate, torrent_attr=torrent_attr
@@ -686,6 +740,7 @@ class BrushTaskService:
             log.warn(f"【Brush】任务 {task_name} 获取正在下载种子失败")
             return
 
+        stopfree_enabled = stop_rule and stop_rule.get("stopfree") == "Y"
         for torrent in torrents:
             torrent_id = torrent.id
             torrent_name = torrent.name
@@ -693,8 +748,10 @@ class BrushTaskService:
             enclosure = torrent_id_maps.get(torrent_id)
             if not enclosure:
                 continue
-            torrent_url, torrent_attr = self.get_torrent_attr(site_info if isinstance(site_info, dict) else {}, enclosure)
-            log.debug(f"【Brush】{torrent_url} 解析详情 {torrent_attr}")
+            torrent_attr = {}
+            if stopfree_enabled:
+                torrent_url, torrent_attr = self.get_torrent_attr(site_info if isinstance(site_info, dict) else {}, enclosure)
+                log.debug(f"【Brush】{torrent_url} 解析详情 {torrent_attr}")
 
             need_stop, stop_type = BrushRuleEngine.check_stop_rule(stop_rule, torrent_attr=torrent_attr)
             if need_stop:
@@ -774,8 +831,11 @@ class BrushTaskService:
         upload_limit = rss_rule.get("upspeed")
         download_dir = taskinfo.get("savepath")
 
-        _, torrent_attr = self.get_torrent_attr(site_info, enclosure)
-        hr_tag = ["HR"] if torrent_attr.get("hr") else []
+        hr_tag = []
+        if rss_rule.get("hr"):
+            _, torrent_attr = self.get_torrent_attr(site_info, enclosure)
+            if torrent_attr.get("hr"):
+                hr_tag = ["HR"]
         tag = taskinfo.get("label").split(",") if taskinfo.get("label") else []
         if not transfer:
             tag = tag + ["已整理"] + hr_tag if tag else ["已整理"] + hr_tag

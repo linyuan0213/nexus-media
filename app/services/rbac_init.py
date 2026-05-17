@@ -42,6 +42,9 @@ DEFAULT_PERMISSIONS = [
     # 站点管理权限
     {"name": "站点查看", "code": "site:view", "type": "menu", "module": "site"},
     {"name": "站点管理", "code": "site:manage", "type": "api", "module": "site"},
+    # 刷流权限
+    {"name": "刷流查看", "code": "brush:view", "type": "menu", "module": "brush"},
+    {"name": "刷流管理", "code": "brush:manage", "type": "api", "module": "brush"},
     # 下载管理权限
     {"name": "下载查看", "code": "download:view", "type": "menu", "module": "download"},
     {"name": "下载管理", "code": "download:manage", "type": "api", "module": "download"},
@@ -228,24 +231,45 @@ DEFAULT_MENUS = [
                 "permission_code": "site:view",
             },
             {
-                "name": "刷流任务",
-                "code": "BrushTask",
-                "path": "/brush",
-                "icon": "lucide:menu",
-                "component": "/brush/index",
-                "sort_order": 3,
-                "level": 2,
-                "permission_code": "site:manage",
-            },
-            {
                 "name": "站点资源",
                 "code": "SiteResources",
                 "path": "/site/resources",
                 "icon": "lucide:database",
                 "component": "/site/resources/index",
-                "sort_order": 4,
+                "sort_order": 3,
                 "level": 2,
                 "permission_code": "site:view",
+            },
+        ],
+    },
+    {
+        "name": "刷流中心",
+        "code": "Brush",
+        "path": "",
+        "icon": "lucide:zap",
+        "sort_order": 5,
+        "level": 1,
+        "permission_code": "brush:view",
+        "children": [
+            {
+                "name": "刷流任务",
+                "code": "BrushTask",
+                "path": "/brush",
+                "icon": "lucide:activity",
+                "component": "/brush/index",
+                "sort_order": 1,
+                "level": 2,
+                "permission_code": "brush:manage",
+            },
+            {
+                "name": "刷流规则",
+                "code": "BrushRule",
+                "path": "/brush/rules",
+                "icon": "lucide:filter",
+                "component": "/brush/rules/index",
+                "sort_order": 2,
+                "level": 2,
+                "permission_code": "brush:manage",
             },
         ],
     },
@@ -254,7 +278,7 @@ DEFAULT_MENUS = [
         "code": "Rss",
         "path": "",
         "icon": "lucide:rss",
-        "sort_order": 5,
+        "sort_order": 6,
         "level": 1,
         "permission_code": "rss:view",
         "children": [
@@ -315,9 +339,9 @@ DEFAULT_MENUS = [
         "code": "Download",
         "path": "",
         "icon": "lucide:download",
-        "sort_order": 6,
+        "sort_order": 7,
         "level": 1,
-        "permission_code": "download:view",
+        "permission_code": "library:manage",
         "children": [
             {
                 "name": "正在下载",
@@ -365,7 +389,7 @@ DEFAULT_MENUS = [
         "name": "媒体整理",
         "code": "Rename",
         "icon": "lucide:file-text",
-        "sort_order": 7,
+        "sort_order": 8,
         "level": 1,
         "permission_code": "library:manage",
         "children": [
@@ -415,7 +439,7 @@ DEFAULT_MENUS = [
         "name": "服务",
         "code": "Service",
         "icon": "lucide:layout-grid",
-        "sort_order": 8,
+        "sort_order": 9,
         "level": 1,
         "permission_code": "service:view",
         "children": [
@@ -445,7 +469,7 @@ DEFAULT_MENUS = [
         "name": "系统设置",
         "code": "System",
         "icon": "lucide:settings",
-        "sort_order": 9,
+        "sort_order": 10,
         "level": 1,
         "permission_code": "setting:view",
         "children": [
@@ -595,7 +619,7 @@ DEFAULT_MENUS = [
         "name": "插件中心",
         "code": "Plugin",
         "icon": "lucide:puzzle",
-        "sort_order": 10,
+        "sort_order": 11,
         "level": 1,
         "permission_code": "plugin:view",
         "children": [
@@ -627,7 +651,7 @@ DEFAULT_MENUS = [
         "path": "/logs",
         "icon": "lucide:scroll-text",
         "component": "/system/logs/index",
-        "sort_order": 11,
+        "sort_order": 12,
         "level": 1,
         "permission_code": "log:view",
     },
@@ -680,6 +704,8 @@ DEFAULT_ROLES = [
             "library:manage",
             "site:view",
             "site:manage",
+            "brush:view",
+            "brush:manage",
             "download:view",
             "download:manage",
             "rss:view",
@@ -709,8 +735,10 @@ DEFAULT_ROLES = [
             "Site",
             "SiteMaintenance",
             "SiteStatistics",
-            "BrushTask",
             "SiteResources",
+            "Brush",
+            "BrushTask",
+            "BrushRule",
             "Rss",
             "MovieRss",
             "TvRss",
@@ -946,7 +974,7 @@ def init_rbac_system():
         log.info("【RBAC初始化】RBAC系统初始化完成")
         return True
     except Exception as e:
-        log.error(f"【RBAC初始化】初始化失败: {str(e)}")
+        log.error(f"【RBAC初始化】初始化失败: {e!s}")
         return False
 
 
@@ -990,5 +1018,5 @@ def init_admin_user(admin_username: str, admin_password: str):
         log.info(f"【RBAC初始化】创建管理员用户: {admin_username}")
         return True
     except Exception as e:
-        log.error(f"【RBAC初始化】创建管理员用户失败: {str(e)}")
+        log.error(f"【RBAC初始化】创建管理员用户失败: {e!s}")
         return False
