@@ -11,6 +11,7 @@ import zipfile
 import log
 from app.db.repositories import PluginFrameworkRepository
 from app.domain.entities.plugin import PluginConfigEntity, PluginManifestEntity
+from app.plugin_framework.dependency_manager import PluginDependencyManager
 from app.schemas.plugin import PluginManifest, PluginState
 from app.utils.commons import SingletonMeta
 from config import Config
@@ -98,6 +99,19 @@ class PluginRegistry(metaclass=SingletonMeta):
         if os.path.exists(target_dir):
             shutil.rmtree(target_dir)
         shutil.move(extract_dir, target_dir)
+
+        # 安装插件依赖
+        deps = manifest.backend.dependencies
+        if deps:
+            ok, err = PluginDependencyManager.install_dependencies(
+                dependencies=deps,
+                plugin_id=manifest.id,
+                plugin_path=target_dir,
+            )
+            if not ok:
+                # 依赖安装失败，回滚
+                shutil.rmtree(target_dir)
+                raise RuntimeError(f"插件依赖安装失败: {err}")
 
         self._save_manifest(manifest, target_dir, enabled=False)
         self._manifest_cache[manifest.id] = manifest

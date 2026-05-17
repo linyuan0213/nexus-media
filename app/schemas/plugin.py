@@ -33,6 +33,7 @@ class PluginBackendConfig:
     permissions: list[str] = field(default_factory=list)
     hooks: list[str] = field(default_factory=list)
     supports_run: bool = False
+    dependencies: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -123,6 +124,7 @@ class PluginManifest:
                 permissions=backend_data.get("permissions", []),
                 hooks=backend_data.get("hooks", []),
                 supports_run=backend_data.get("supports_run", False),
+                dependencies=backend_data.get("dependencies", []),
             ),
             frontend=PluginFrontendConfig(
                 routes=routes,
@@ -156,6 +158,7 @@ class PluginManifest:
                 "permissions": self.backend.permissions,
                 "hooks": self.backend.hooks,
                 "supports_run": self.backend.supports_run,
+                "dependencies": self.backend.dependencies,
             },
             "frontend": {
                 "routes": [
