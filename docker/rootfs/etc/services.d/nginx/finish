@@ -1,2 +1,3 @@
 #!/bin/sh
-# nginx 停止时清理
+
+exit 0

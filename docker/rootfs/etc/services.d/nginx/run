@@ -1,9 +1,8 @@
 #!/usr/bin/with-contenv bash
 # shellcheck shell=bash
 
-# 等待后端服务启动
-sleep 2
+cd ${WORKDIR}
 
 exec \
     s6-notifyoncheck -d -n 300 -w 1000 -c "nc -z localhost 80" \
-    s6-setuidgid nt $(which nginx) -g "daemon off;"
+    s6-setuidgid nexus $(which nginx) -g "daemon off;"

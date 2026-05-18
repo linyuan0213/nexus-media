@@ -1,91 +1,74 @@
-## 特点
+## 镜像特点
 
-- 基于alpine实现，镜像体积小；
+- 基于 Alpine，镜像体积小
+- 支持 amd64/arm64 架构
+- 非 root 用户运行，降低权限风险
+- 支持 umask 文件权限掩码设置
 
-- 镜像层数少；
+## 快速开始
 
-- 支持 amd64/arm64 架构；
+推荐使用项目根目录的 `docker-compose.yml` 完整部署（包含前端、后端、Redis、OCR、Chrome）。
 
-- 重启即可更新程序，如果依赖有变化，会自动尝试重新安装依赖，若依赖自动安装不成功，会提示更新镜像；
+```bash
+docker compose up -d
+```
 
-- 可以以非root用户执行任务，降低程序权限和潜在风险；
-
-- 可以设置文件掩码权限umask。
-
-## 创建
-
-**注意**
-
-- 媒体目录的设置必须符合 [配置说明](https://github.com/Nexus Media/nexus-media#%E9%85%8D%E7%BD%AE) 的要求。
-
-- umask含义详见：http://www.01happy.com/linux-umask-analyze 。
-
-- 创建后请根据 [配置说明](https://github.com/Nexus Media/nexus-media#%E9%85%8D%E7%BD%AE) 及该文件本身的注释，修改`config/config.yaml`，修改好后再重启容器，最后访问`http://<ip>:<web_port>`。
+## 单独部署后端
 
 **docker cli**
 
-```
+```bash
 docker run -d \
-    --name nexus-media \
-    --hostname nexus-media \
-    -p 3000:3000   `# 默认的webui控制端口` \
-    -v $(pwd)/config:/config  `# 冒号左边请修改为你想在主机上保存配置文件的路径` \
-    -v /你的媒体目录:/你想设置的容器内能见到的目录    `# 媒体目录，多个目录需要分别映射进来` \
-    -e PUID=0     `# 想切换为哪个用户来运行程序，该用户的uid，详见下方说明` \
-    -e PGID=0     `# 想切换为哪个用户来运行程序，该用户的gid，详见下方说明` \
-    -e UMASK=000  `# 掩码权限，默认000，可以考虑设置为022` \
-    -e NEXUS_MEDIA_AUTO_UPDATE=false `# 如需在启动容器时自动升级程程序请设置为true` \
-    -e NEXUS_MEDIA_CN_UPDATE=false `# 如果开启了容器启动自动升级程序，并且网络不太友好时，可以设置为true，会使用国内源进行软件更新` \
-    linyuan0213/nexus-media
+  --name nexus-media \
+  --hostname nexus-media \
+  -p 3001:3000 \
+  -v $(pwd)/config:/config \
+  -v /你的媒体目录:/media \
+  -e PUID=0 \
+  -e PGID=0 \
+  -e UMASK=000 \
+  linyuan0213/nexus-media:latest
 ```
-
-如果你访问github的网络不太好，可以考虑在创建容器时增加设置一个环境变量`-e REPO_URL="https://ghproxy.com/https://github.com/Nexus Media/nexus-media.git" \`。
 
 **docker-compose**
 
-新建`docker-compose.yaml`文件如下，并以命令`docker-compose up -d`启动。
-
-```
-version: "3"
+```yaml
 services:
   nexus-media:
     image: linyuan0213/nexus-media:latest
     ports:
-      - 3000:3000        # 默认的webui控制端口
+      - 3001:3000
     volumes:
-      - ./config:/config   # 冒号左边请修改为你想保存配置的路径
-      - /你的媒体目录:/你想设置的容器内能见到的目录   # 媒体目录，多个目录需要分别映射进来，需要满足配置文件说明中的要求
-    environment: 
-      - PUID=0    # 想切换为哪个用户来运行程序，该用户的uid
-      - PGID=0    # 想切换为哪个用户来运行程序，该用户的gid
-      - UMASK=000 # 掩码权限，默认000，可以考虑设置为022
-      - NEXUS_MEDIA_AUTO_UPDATE=false  # 如需在启动容器时自动升级程程序请设置为true
-      - NEXUS_MEDIA_CN_UPDATE=false # 如果开启了容器启动自动升级程序，并且网络不太友好时，可以设置为true，会使用国内源进行软件更新
-     #- REPO_URL=https://ghproxy.com/https://github.com/Nexus Media/nexus-media.git  # 当你访问github网络很差时，可以考虑解释本行注释
+      - ./config:/config
+      - /你的媒体目录:/media
+    environment:
+      - PUID=0
+      - PGID=0
+      - UMASK=000
+      - NEXUS_PORT=3000
     restart: always
-    network_mode: bridge
     hostname: nexus-media
     container_name: nexus-media
 ```
 
-## 后续如何更新
+## 环境变量
 
-- 正常情况下，如果设置了`NEXUS_MEDIA_AUTO_UPDATE=true`，重启容器即可自动更新nexus-media程序。
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `PUID` | 0 | 运行用户 UID |
+| `PGID` | 0 | 运行用户 GID |
+| `UMASK` | 000 | 文件权限掩码 |
+| `NEXUS_PORT` | 3000 | 服务端口 |
+| `TZ` | Asia/Shanghai | 时区 |
 
-- 设置了`NEXUS_MEDIA_AUTO_UPDATE=true`时，如果启动时的日志提醒你 "更新失败，继续使用旧的程序来启动..."，请再重启一次，如果一直都报此错误，请改善你的网络。
+## PUID/PGID 说明
 
-- 设置了`NEXUS_MEDIA_AUTO_UPDATE=true`时，如果启动时的日志提醒你 "无法安装依赖，请更新镜像..."，则需要删除旧容器，删除旧镜像，重新pull镜像，再重新创建容器。
+- 若同时使用 Emby/Jellyfin/Plex/qBittorrent 等 Docker 镜像，建议保持 PUID/PGID 一致
+- 在宿主机上执行 `id -u` 和 `id -g` 获取对应值
+- PUID=0 PGID=0 为 root 用户，媒体文件所有者非 root 时不建议设置
 
-## 关于PUID/PGID的说明
+## 硬链接映射
 
-- 如在使用诸如emby、jellyfin、plex、qbittorrent、transmission、deluge、jackett、sonarr、radarr等等的docker镜像，请保证创建本容器时的PUID/PGID和它们一样。
-
-- 在docker宿主上，登陆媒体文件所有者的这个用户，然后分别输入`id -u`和`id -g`可获取到uid和gid，分别设置为PUID和PGID即可。
-
-- `PUID=0` `PGID=0`指root用户，它拥有最高权限，若你的媒体文件的所有者不是root，不建议设置为`PUID=0` `PGID=0`。
-
-## 如果要硬连接如何映射
-
-参考下图，由imogel@telegram制作。
+参考下图（由 imogel@telegram 制作）：
 
 ![如何映射](volume.png)

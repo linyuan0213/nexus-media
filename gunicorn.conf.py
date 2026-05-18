@@ -44,7 +44,7 @@ if not os.path.exists(LOG_PATH):
 
 # ---------- 网络绑定 ----------
 
-port = os.environ.get("NT_PORT", "3000")
+port = os.environ.get("NEXUS_PORT", "3000")
 if not port:
     port = "3000"
 

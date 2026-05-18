@@ -11,7 +11,8 @@ from app.helper import PluginHelper
 from app.infrastructure.cache_system import CategoryLoadCache, ConfigLoadCache
 from app.media import Category
 from app.services.apikey_service import APIKeyService
-from app.services.rbac_init import init_admin_user, init_rbac_system as rbac_init
+from app.services.rbac_init import init_admin_user
+from app.services.rbac_init import init_rbac_system as rbac_init
 from app.utils import ExceptionUtils
 from app.utils.path_utils import get_category_path
 from app.utils.types import SystemConfigKey
@@ -57,21 +58,21 @@ def check_config():
         if not login_user or not login_password:
             log.warn("【Config】WEB管理用户或密码未设置，将使用默认用户：admin，密码：password")
         else:
-            log.info(f"WEB管理页面用户：{str(login_user)}")
+            log.info(f"WEB管理页面用户：{login_user!s}")
 
         # 检查HTTPS
         ssl_cert = Config().get_config("app").get("ssl_cert")
         ssl_key = Config().get_config("app").get("ssl_key")
-        if os.environ.get("NT_PORT"):
-            web_port = os.environ.get("NT_PORT")
+        if os.environ.get("NEXUS_PORT"):
+            web_port = os.environ.get("NEXUS_PORT")
         if not ssl_cert or not ssl_key:
-            log.info(f"未启用https，请使用 http://IP:{str(web_port)} 访问管理页面")
+            log.info(f"未启用https，请使用 http://IP:{web_port!s} 访问管理页面")
         else:
             if not os.path.exists(ssl_cert):
                 log.warn(f"【Config】ssl_cert文件不存在：{ssl_cert}")
             if not os.path.exists(ssl_key):
                 log.warn(f"【Config】ssl_key文件不存在：{ssl_key}")
-            log.info(f"已启用https，请使用 https://IP:{str(web_port)} 访问管理页面")
+            log.info(f"已启用https，请使用 https://IP:{web_port!s} 访问管理页面")
     else:
         log.error("【Config】配置文件格式错误，找不到app配置项！")
 
@@ -240,7 +241,7 @@ def init_message_webhook_apikey():
         service.get_or_create_system_key("MessageWebhook")
         log.info("【Initialize】消息 Webhook API Key 已就绪")
     except Exception as e:
-        log.error(f"【Initialize】消息 Webhook API Key 初始化失败：{str(e)}")
+        log.error(f"【Initialize】消息 Webhook API Key 初始化失败：{e!s}")
         ExceptionUtils.exception_traceback(e)
 
 
@@ -264,7 +265,7 @@ def update_rss_state():
         else:
             log.warn("【Initialize】RSS状态更新SQL文件不存在")
     except Exception as e:
-        log.error(f"【Initialize】更新RSS状态失败：{str(e)}")
+        log.error(f"【Initialize】更新RSS状态失败：{e!s}")
         ExceptionUtils.exception_traceback(e)
 
 
@@ -291,5 +292,5 @@ def init_rbac_system():
         log.info(f"【Initialize】RBAC 系统初始化完成，管理员: {login_user}")
 
     except Exception as e:
-        log.error(f"【Initialize】RBAC 系统初始化失败: {str(e)}")
+        log.error(f"【Initialize】RBAC 系统初始化失败: {e!s}")
         ExceptionUtils.exception_traceback(e)

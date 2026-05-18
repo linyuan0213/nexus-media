@@ -5,12 +5,12 @@ function __fixuser {
 
     echo "以PUID=${PUID}，PGID=${PGID}的身份启动程序..."
 
-    # 更改 nt userid 和 groupid
-    groupmod -o -g "$PGID" nt
-    usermod -o -u "$PUID" nt
+    # 更改 nexus userid 和 groupid
+    groupmod -o -g "$PGID" nexus
+    usermod -o -u "$PUID" nexus
 
     # 创建目录、权限设置
-    chown -R nt:nt "${WORKDIR}" "${HOME}" /config /etc/hosts
+    chown -R nexus:nexus "${WORKDIR}" "${HOME}" /config /etc/hosts
 
 }
 

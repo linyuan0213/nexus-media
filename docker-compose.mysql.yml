@@ -10,7 +10,7 @@ services:
       - PUID=0
       - PGID=0
       - UMASK=000
-      - NT_PORT=3000
+      - NEXUS_PORT=3000
       # MySQL 数据库配置
       - DB_TYPE=mysql
       - DB_HOST=mysql

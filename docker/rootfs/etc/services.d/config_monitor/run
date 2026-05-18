@@ -2,5 +2,7 @@
 
 umask ${UMASK}
 
+cd ${WORKDIR}
+
 exec \
-    cd ${WORKDIR} s6-setuidgid nt .venv/bin/python config_monitor.py
+    s6-setuidgid nexus .venv/bin/python config_monitor.py
