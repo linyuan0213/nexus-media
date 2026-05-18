@@ -48,3 +48,30 @@ NAS 自动化工具，用于媒体管理、种子索引和下载编排。
 
 ## 版本
 - `app/version.py` 导出 `APP_VERSION`。
+
+## Git 工作流
+
+### 分支模型
+采用简化 Git Flow，每个仓库（backend / frontend）独立管理：
+
+| 分支 | 用途 | 保护策略 |
+|------|------|----------|
+| `master` | 稳定发布分支，仅接收 release 合并 | 禁止直接推送 |
+| `dev` | 日常开发分支，所有功能提交至此 | 建议 PR 合并 |
+| `release` | 预发布分支，从 dev 切出，仅做 bug 修复 | 禁止直接推送 |
+| `feature/*` | 功能分支（可选），从 dev 切出 | 无 |
+
+### 提交流程
+1. **日常开发**：在 `dev` 分支直接提交或从 `dev` 切出 `feature/*` 分支开发，完成后合并回 `dev`。
+2. **发布准备**：从 `dev` 切出 `release` 分支，进行最终测试和 bug 修复，禁止引入新功能。
+3. **正式发布**：`release` 分支合并到 `master` 并打 tag，同时合并回 `dev` 保持同步。
+4. **热修复**：从 `master` 切出 `hotfix/*`，修复后合并到 `master` 和 `dev`。
+
+### 提交规范
+- 使用 Conventional Commits 格式：`<type>: <中文描述>`
+- 常用 type：`feat`、`fix`、`refactor`、`perf`、`test`、`docs`、`chore`
+- 示例：`feat: 添加 SMB 存储后端支持`、`fix: 修复跨后端移动文件时的权限问题`
+
+### 前后端协同
+- 后端 (`backend/`) 和前端 (`frontend/`) 为两个独立 git 仓库，分别提交和发布。
+- API 变更时，后端先行提交并确保接口稳定，前端再对接。
