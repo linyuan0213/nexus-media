@@ -41,7 +41,7 @@ my_plugin/
   "category": "media",
   "tags": ["标签1", "标签2"],
   "icon": "lucide:puzzle",
-  "color": "#3b82f6",
+  "color": "hsl(var(--primary))",
   "min_app_version": "3.0.0",
   "backend": {
     "entry": "backend.plugin:MyPlugin",
