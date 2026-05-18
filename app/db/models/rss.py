@@ -68,7 +68,7 @@ class RSSTORRENTS(Base):
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     TORRENT_NAME: Mapped[str] = mapped_column(String(255))
-    ENCLOSURE: Mapped[str] = mapped_column(String(8192), index=True)
+    ENCLOSURE: Mapped[str] = mapped_column(String(8192))
     TYPE: Mapped[str] = mapped_column(String(255))
     TITLE: Mapped[str] = mapped_column(String(255))
     YEAR: Mapped[str] = mapped_column(String(10))

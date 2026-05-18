@@ -57,7 +57,7 @@ class SITEBRUSHTORRENTS(Base):
     TASK_ID: Mapped[str] = mapped_column(String(255), index=True)
     TORRENT_NAME: Mapped[str] = mapped_column(String(255))
     TORRENT_SIZE: Mapped[str] = mapped_column(Text)
-    ENCLOSURE: Mapped[str] = mapped_column(String(8192), index=True)
+    ENCLOSURE: Mapped[str] = mapped_column(String(8192))
     DOWNLOADER: Mapped[str] = mapped_column(String(255))
     DOWNLOAD_ID: Mapped[str] = mapped_column(String(255))
     LST_MOD_DATE: Mapped[str] = mapped_column(String(255))

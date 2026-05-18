@@ -39,7 +39,7 @@ class DOWNLOADHISTORY(Base):
     POSTER: Mapped[str] = mapped_column(String(255))
     OVERVIEW: Mapped[str] = mapped_column(Text)
     TORRENT: Mapped[str] = mapped_column(String(255))
-    ENCLOSURE: Mapped[str] = mapped_column(String(8192), index=True)
+    ENCLOSURE: Mapped[str] = mapped_column(String(8192))
     SITE: Mapped[str] = mapped_column(String(255))
     DESC: Mapped[str] = mapped_column(String(255))
     DOWNLOADER: Mapped[str] = mapped_column(String(255))
