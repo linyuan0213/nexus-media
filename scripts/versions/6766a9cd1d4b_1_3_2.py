@@ -85,7 +85,7 @@ def upgrade() -> None:
     try:
         import os
 
-        config_path = os.environ.get("NASTOOL_CONFIG")
+        config_path = os.environ.get("NEXUS_MEDIA_CONFIG")
         if config_path:
             import ruamel.yaml
 

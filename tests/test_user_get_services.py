@@ -18,7 +18,7 @@ def setup_test_env():
 
     # 设置必要的测试环境
     test_config_path = str(Path(__file__).parent.parent / "config" / "config.yaml")
-    os.environ["NASTOOL_CONFIG"] = test_config_path
+    os.environ["NEXUS_MEDIA_CONFIG"] = test_config_path
 
 
 class TestUserGetServices:

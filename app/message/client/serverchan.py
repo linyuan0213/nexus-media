@@ -19,7 +19,7 @@ class ServerChan(_IMessageClient):
             return False, "参数未配置"
         try:
             formatted_text = self._format_message_content(text, image, url)
-            ret_json = sc_send(self._sckey, title, formatted_text, {"tags": "NASTOOL"})
+            ret_json = sc_send(self._sckey, title, formatted_text, {"tags": "NEXUS_MEDIA"})
             errno = ret_json.get("code")
             error = ret_json.get("message")
             return (True, error) if errno == 0 else (False, error)
@@ -68,7 +68,7 @@ class ServerChan(_IMessageClient):
                     media_info.append(f"[查看详情]({media.get_detail_url()})")
                 content_parts.append("\n\n".join(media_info))
             formatted_content = "\n\n---\n\n".join(content_parts)
-            ret_json = sc_send(self._sckey, title or "媒体推荐", formatted_content, {"tags": "NASTOOL"})
+            ret_json = sc_send(self._sckey, title or "媒体推荐", formatted_content, {"tags": "NEXUS_MEDIA"})
             errno = ret_json.get("code")
             error = ret_json.get("message")
             return (True, error) if errno == 0 else (False, error)

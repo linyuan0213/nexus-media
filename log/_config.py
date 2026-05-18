@@ -60,7 +60,7 @@ def build_handlers(module: str) -> list[dict[str, Any]]:
                 }
             )
     elif logtype == "file":
-        logpath = os.environ.get("NASTOOL_LOG") or log_cfg.get("path") or ""
+        logpath = os.environ.get("NEXUS_MEDIA_LOG") or log_cfg.get("path") or ""
         if logpath:
             if not os.path.exists(logpath):
                 os.makedirs(logpath)

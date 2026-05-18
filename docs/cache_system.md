@@ -434,10 +434,10 @@ for name, stat in all_stats.items():
 
 ```bash
 # 运行所有缓存测试
-NASTOOL_CONFIG=/path/to/config.yaml uv run pytest tests/test_cache_system.py -v
+NEXUS_MEDIA_CONFIG=/path/to/config.yaml uv run pytest tests/test_cache_system.py -v
 
 # 运行特定测试
-NASTOOL_CONFIG=/path/to/config.yaml uv run pytest tests/test_cache_system.py::TestMemoryCacheAdapter -v
+NEXUS_MEDIA_CONFIG=/path/to/config.yaml uv run pytest tests/test_cache_system.py::TestMemoryCacheAdapter -v
 ```
 
 ## 缓存事件系统

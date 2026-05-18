@@ -9,7 +9,7 @@ import time
 import pytest
 
 # 设置测试环境
-os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
+os.environ["NEXUS_MEDIA_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 
 def test_db_connection_pool():

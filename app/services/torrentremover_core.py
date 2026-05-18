@@ -199,7 +199,7 @@ class TorrentRemoverService:
             return False, "处理辅种参数不合法"
         only_nexus_media = data.get("only_nexus_media")
         if not str(only_nexus_media).isdigit() or int(only_nexus_media or 0) not in [0, 1]:
-            return False, "仅处理NASTOOL添加种子参数不合法"
+            return False, "仅处理NEXUS_MEDIA添加种子参数不合法"
         ratio = data.get("ratio") or 0
         if not str(ratio).replace(".", "").isdigit():
             return False, "分享率参数不合法"

@@ -190,7 +190,7 @@ class SystemUtils:
             if dest.startswith("/"):
                 dest = dest[1:]
             retcode = subprocess.run(
-                ["mc", "mv", "--recursive", src, f"NASTOOL/{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
+                ["mc", "mv", "--recursive", src, f"NEXUS_MEDIA/{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
             ).returncode
             return retcode, ""
         except Exception as err:
@@ -208,7 +208,7 @@ class SystemUtils:
             if dest.startswith("/"):
                 dest = dest[1:]
             retcode = subprocess.run(
-                ["mc", "cp", "--recursive", src, f"NASTOOL/{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
+                ["mc", "cp", "--recursive", src, f"NEXUS_MEDIA/{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
             ).returncode
             return retcode, ""
         except Exception as err:

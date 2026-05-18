@@ -283,7 +283,7 @@ class DownloadPipeline:
             tags.append(site_info.get("tag"))
         site_tag = site_info.get("tag") if site_info else None
         if tags:
-            tags.sort(key=lambda x: (0 if x == "NASTOOL" else 1 if x == site_tag else 2, x))
+            tags.sort(key=lambda x: (0 if x == "NEXUS_MEDIA" else 1 if x == site_tag else 2, x))
 
         if is_paused is None:
             is_paused = StringUtils.to_bool(download_attr.get("is_paused"))

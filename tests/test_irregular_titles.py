@@ -24,7 +24,7 @@ from app.utils.types import MediaType
 
 sys.modules["log"] = MagicMock()
 
-os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
+os.environ["NEXUS_MEDIA_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 # ============ 测试数据 ============
 

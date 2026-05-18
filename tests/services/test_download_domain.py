@@ -29,7 +29,7 @@ class TestDownloaderEntity:
         mock_orm.ENABLED = 1
         mock_orm.TYPE = "qbittorrent"
         mock_orm.TRANSFER = 1
-        mock_orm.ONLY_NASTOOL = 0
+        mock_orm.ONLY_NEXUS_MEDIA = 0
         mock_orm.MATCH_PATH = 1
         mock_orm.RMT_MODE = "link"
         mock_orm.CONFIG = '{"host": "127.0.0.1"}'

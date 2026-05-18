@@ -8,7 +8,7 @@ from app.utils.tokens import Tokens
 
 sys.modules["log"] = MagicMock()
 
-os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
+os.environ["NEXUS_MEDIA_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 title = "[LoliHouse] 关于我转生变成史莱姆这档事 / Tensei Shitara Slime Datta Ken  - 72 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕][END]"
 

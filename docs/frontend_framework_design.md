@@ -284,7 +284,7 @@ import '/static/components/custom/chips/index.js';
 ```bash
 # 1. 启动 FastAPI 后端
 cd /home/linyuan/python/nexus-media
-export NASTOOL_CONFIG=/home/linyuan/python/config/config.yaml
+export NEXUS_MEDIA_CONFIG=/home/linyuan/python/config/config.yaml
 uv run python run_fastapi.py
 
 # 2. 启动前端开发服务器（另一个终端）
