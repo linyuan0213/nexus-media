@@ -28,9 +28,6 @@ __pycache__/
 web/static/img_cache/*
 web/static/avatars/*
 
-# Nested frontend repo (pnpm workspace)
-web/frontend
-
 # Agent configs
 .roo/
 .kilo/

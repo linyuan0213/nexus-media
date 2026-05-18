@@ -8,7 +8,8 @@ NAS 自动化工具，用于媒体管理、种子索引和下载编排。
 - **配置**: `config.py` (旧版单例) + `app/conf/` (新配置模块) + `config/config.yaml`
 
 ## 架构
-- **入口**: `run.py` 或 `start-server.sh` → `api/main.py` (FastAPI 应用)
+- **后端入口**: `run.py` 或 `start-prod.sh` → `api/main.py` (FastAPI 应用)
+- **前端**: 独立仓库 [nas-tools-web](https://github.com/linyuan0213/nas-tools-web)，Vue 3 + Vite + Naive UI
 - **启动**: `initializer.py` 初始化数据库、调度器和服务
 - **单例模式**: 几乎所有组件都使用 `app/utils/commons.py` 中的 `SingletonMeta`
 - **缓存**: 自定义框架在 `app/utils/cache_system/` (Redis + 内存适配器、装饰器、事件总线)

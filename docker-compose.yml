@@ -1,8 +1,19 @@
 services:
-  nas-tools:
-    image: linyuan0213/nas-tools:latest
+  frontend:
+    image: linyuan0213/nas-tools-web:latest
     ports:
       - 3000:80
+    restart: always
+    container_name: nas-tools-web
+    networks:
+      - nas-tools-network
+    depends_on:
+      - backend
+
+  backend:
+    image: linyuan0213/nas-tools:latest
+    ports:
+      - 3001:3000
     volumes:
       - ./config:/config
       - /你的媒体目录:/你想设置的容器内能见到的目录
@@ -17,7 +28,7 @@ services:
     networks:
       - nas-tools-network
     healthcheck:
-      test: "wget -qO- http://localhost/health || exit 1"
+      test: "wget -qO- http://localhost:3000/health || exit 1"
       interval: 30s
       timeout: 30s
       retries: 3
