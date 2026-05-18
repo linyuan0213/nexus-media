@@ -81,7 +81,7 @@
       "properties": {
         "field": {"type": "string", "description": "分类参数名"},
         "delimiter": {"type": "string", "description": "分类值分隔符"},
-        "param": {"type": "object", "description": "分类 ID 到参数的映射"},
+        "param": {"type": ["object", "string"], "description": "分类 ID 到参数的映射"},
         "movie": {"type": "array", "items": {"$ref": "#/definitions/category_item"}},
         "tv": {"type": "array", "items": {"$ref": "#/definitions/category_item"}},
         "anime": {"type": "array", "items": {"$ref": "#/definitions/category_item"}}
@@ -90,7 +90,7 @@
     "category_item": {
       "type": "object",
       "properties": {
-        "id": {"type": "string"},
+        "id": {"type": ["string", "number"]},
         "cat": {"type": "string", "description": "媒体类型映射值"},
         "desc": {"type": "string", "description": "分类描述"},
         "default": {"type": "boolean", "description": "是否默认分类"},
@@ -153,7 +153,7 @@
       "properties": {
         "selector": {"type": "string", "description": "CSS/XPath 选择器"},
         "attribute": {"type": "string", "description": "提取的属性名，如 href、src"},
-        "text": {"type": "string", "description": "Jinja2 模板文本，引用其他字段"},
+        "text": {"type": ["string", "number"], "description": "Jinja2 模板文本，引用其他字段"},
         "type": {"type": "string", "description": "字段类型标识"},
         "case": {
           "type": "object",
@@ -169,11 +169,11 @@
             "type": "object",
             "properties": {
               "name": {"type": "string"},
-              "args": {"type": "array"}
+              "args": {"type": ["array", "string"]}
             }
           }
         },
-        "default_value": {"type": "string", "description": "字段缺失时的默认值"},
+        "default_value": {"type": ["string", "number"], "description": "字段缺失时的默认值"},
         "default_value_format": {
           "type": "string",
           "description": "计算默认值的格式（如 now、today）"

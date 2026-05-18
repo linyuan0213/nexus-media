@@ -46,6 +46,7 @@ from app.schemas.auth import UserContext
 from app.services.auth_service import AuthService
 from app.services.indexer_service import IndexerService
 from app.services.log_streaming_service import LogStreamingService
+from app.services.site_config_updater import SiteConfigUpdater
 from app.services.system_service import (
     MessageClientService,
     MessageSenderService,
@@ -786,3 +787,37 @@ def stream_logging(
 
     log_streaming_service = LogStreamingService(sleep_interval=0.3)
     return StreamingResponse(log_streaming_service.stream(source or ""), media_type="text/event-stream")
+
+
+@router.get("/site-config/version")
+def get_site_config_version():
+    """获取站点配置版本信息"""
+    try:
+        info = SiteConfigUpdater().get_version_info()
+        return success(info)
+    except Exception as e:
+        log.error(f"【System】获取站点配置版本失败: {e!s}")
+        return fail(msg=str(e))
+
+
+@router.post("/site-config/update")
+def update_site_config(
+    request: Request,
+    payload: EmptyRequest | None = None,
+):
+    """手动触发站点配置更新"""
+    user_ctx = _extract_user_ctx_from_session(request)
+    if not user_ctx:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录")
+    if not user_ctx.is_superadmin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
+
+    try:
+        force = bool(payload and payload.data and payload.data.get("force"))
+        result = SiteConfigUpdater().update(force=force)
+        if result["success"]:
+            return success(result)
+        return fail(msg=result["message"])
+    except Exception as e:
+        log.error(f"【System】手动更新站点配置失败: {e!s}")
+        return fail(msg=str(e))

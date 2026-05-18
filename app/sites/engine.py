@@ -163,19 +163,26 @@ class SiteDefinition:
 class SiteEngine:
     """站点引擎单例"""
 
-    _DEFAULT_DEFINITIONS_DIR = os.path.join(
+    _BUILTIN_DEFINITIONS_DIR = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "config", "sites"
     )
+
+    @classmethod
+    def _resolve_definitions_dir(cls) -> str:
+        """优先使用环境变量 NEXUS_SITES_DIR，不存在则回退到内置目录"""
+        env_dir = os.environ.get("NEXUS_SITES_DIR")
+        if env_dir and os.path.isdir(env_dir):
+            return env_dir
+        return cls._BUILTIN_DEFINITIONS_DIR
 
     def __init__(self, definitions_dir: str | None = None):
         self._sites: dict[str, SiteDefinition] = {}
         self._auth_cache: dict[str, str] = {}
         self._user_info_factories = []
-        if definitions_dir is None:
-            definitions_dir = self._DEFAULT_DEFINITIONS_DIR
-        if definitions_dir and os.path.isdir(definitions_dir):
+        self._definitions_dir = definitions_dir or self._resolve_definitions_dir()
+        if self._definitions_dir and os.path.isdir(self._definitions_dir):
             for subdir in ("api", "html"):
-                subpath = os.path.join(definitions_dir, subdir)
+                subpath = os.path.join(self._definitions_dir, subdir)
                 if os.path.isdir(subpath):
                     self._load(subpath)
 

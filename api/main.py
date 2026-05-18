@@ -38,7 +38,9 @@ from api.routers import (
 from app.db import init_db, remove_session
 from app.message import Message
 from app.plugin_framework.sandbox import PluginSandbox
+from app.services.site_config_updater import SiteConfigUpdater, update_site_config_at_startup
 from app.services.system_service import SystemLifecycleService
+from app.sites.engine import SiteEngine
 from app.utils.security import get_secret_key
 
 # 读取安全密钥（与 Flask 共用 secret_key）
@@ -50,6 +52,14 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理：启动后台服务"""
     log.info("【FastAPI】初始化数据库...")
     init_db()
+    log.info("【FastAPI】初始化站点配置...")
+    try:
+        updater = SiteConfigUpdater()
+        local_sites_dir = updater.ensure_local_sites(SiteEngine._BUILTIN_DEFINITIONS_DIR)
+        os.environ["NEXUS_SITES_DIR"] = local_sites_dir
+        update_site_config_at_startup()
+    except Exception as e:
+        log.warn(f"【FastAPI】站点配置初始化失败: {e!s}")
     log.info("【FastAPI】启动后台服务...")
     SystemLifecycleService().start_service()
     log.info("【FastAPI】后台服务启动完成")
