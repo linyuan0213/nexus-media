@@ -24,13 +24,16 @@ FROM python:3.11-alpine3.19
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 RUN apk add --no-cache \
-    nginx curl bash sudo su-exec shadow tzdata wget \
+    nginx curl bash sudo su-exec shadow tzdata wget xz \
     libxml2 libxslt libffi openssl postgresql-libs \
-    && curl -sSL https://rclone.org/install.sh | bash \
-    && ARCH=$(case "$(uname -m)" in x86_64) echo "amd64";; aarch64) echo "arm64";; esac) \
-    && curl -sSL https://dl.min.io/client/mc/release/linux-${ARCH}/mc -o /usr/bin/mc \
-    && chmod +x /usr/bin/mc \
     && rm -rf /var/cache/apk/* /tmp/*
+
+ARG S6_OVERLAY_VERSION=3.2.3.0
+RUN S6_ARCH=$(case "$(uname -m)" in x86_64) echo "x86_64";; aarch64) echo "aarch64";; esac) \
+    && curl -sSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" | tar -Jxpf - -C / \
+    && curl -sSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz" | tar -Jxpf - -C / \
+    && curl -sSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-symlinks-noarch.tar.xz" | tar -Jxpf - -C / \
+    && curl -sSL "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-symlinks-arch.tar.xz" | tar -Jxpf - -C /
 
 COPY --chmod=755 docker/rootfs /
 RUN mkdir -p /var/log/nginx /var/run
@@ -38,8 +41,7 @@ RUN mkdir -p /var/log/nginx /var/run
 ENV S6_SERVICES_GRACETIME=30000 \
     S6_KILL_GRACETIME=60000 \
     S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0 \
-    S6_SYNC_DISKS=1 \
-    HOME="/nt" \
+    HOME="/nexus" \
     TERM="xterm" \
     LANG="C.UTF-8" \
     TZ="Asia/Shanghai" \
@@ -48,18 +50,18 @@ ENV S6_SERVICES_GRACETIME=30000 \
     PUID=0 \
     PGID=0 \
     UMASK=000 \
-    NT_PORT=3000 \
+    NEXUS_PORT=3000 \
     WORKDIR="/nexus-media"
 
-RUN addgroup -S nt -g 911 \
-    && adduser -S nt -G nt -h ${HOME} -s /bin/bash -u 911 \
+RUN addgroup -S nexus -g 911 \
+    && adduser -S nexus -G nexus -h ${HOME} -s /bin/bash -u 911 \
     && mkdir -p ${WORKDIR} ${HOME} \
-    && echo "nt ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+    && echo "nexus ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 WORKDIR ${WORKDIR}
 
-COPY --chown=nt:nt . ${WORKDIR}/
-COPY --from=builder --chown=nt:nt /app/.venv ${WORKDIR}/.venv
+COPY --chown=nexus:nexus . ${WORKDIR}/
+COPY --from=builder --chown=nexus:nexus /app/.venv ${WORKDIR}/.venv
 
 RUN chmod +x \
     ${WORKDIR}/start-prod.sh \
