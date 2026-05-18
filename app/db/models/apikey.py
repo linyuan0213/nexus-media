@@ -74,7 +74,7 @@ class APIKEYLOG(Base):
     __tablename__ = "API_KEY_LOGS"
 
     ID: Mapped[int] = mapped_column(Integer, primary_key=True)
-    API_KEY_ID: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    API_KEY_ID: Mapped[int] = mapped_column(Integer, nullable=False)
     REQUEST_ID: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     REQUEST_NAME: Mapped[str] = mapped_column(String(255), nullable=True)
     SOURCE_IP: Mapped[str] = mapped_column(String(64), nullable=True)
