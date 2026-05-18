@@ -1,7 +1,7 @@
 """
 FileTransferService - 文件转移业务 Facade
 将 app/filetransfer.py 重构为依赖注入模式，
-底层实现拆分到 TransferActionEngine 与 TransferCoordinator。
+底层实现拆分到 TransferEngine 与 StorageBackend。
 保留与原 FileTransfer 兼容的公共 API。
 """
 

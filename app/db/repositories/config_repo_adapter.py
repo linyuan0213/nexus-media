@@ -3,6 +3,7 @@
 将旧版 ConfigRepository 适配为新领域接口
 """
 
+import json
 from typing import Any
 
 from app.db.models import (
@@ -292,8 +293,6 @@ class TorrentRemoveTaskRepositoryAdapter(ITorrentRemoveTaskRepository):
         return TorrentRemoveTaskEntity.from_orm(rows[0])
 
     def insert(self, name: str, downloader: str, config: str, enabled: int = 1) -> None:
-        import json
-
         cfg = json.loads(config) if isinstance(config, str) else config
         self._repo.insert_torrent_remove_task(
             name=name,
@@ -387,8 +386,6 @@ class MediaConfigRepositoryAdapter:
         if path_type not in col_map:
             raise ValueError(f"Unknown path type: {path_type}")
 
-        import json
-
         col = col_map[path_type]
         backend_col = backend_col_map[path_type]
         current = getattr(cfg, col, "") if cfg else ""
@@ -423,8 +420,6 @@ class MediaConfigRepositoryAdapter:
         }
         if path_type not in col_map:
             raise ValueError(f"Unknown path type: {path_type}")
-
-        import json
 
         col = col_map[path_type]
         backend_col = backend_col_map[path_type]
@@ -462,8 +457,6 @@ class MediaConfigRepositoryAdapter:
         }
         if path_type not in col_map:
             raise ValueError(f"Unknown path type: {path_type}")
-
-        import json
 
         col = col_map[path_type]
         backend_col = backend_col_map[path_type]

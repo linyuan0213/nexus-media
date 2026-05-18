@@ -58,7 +58,7 @@ class TestBackendRequest(BaseModel):
 @router.post("/list")
 def list_backends(
     req: ListBackendsRequest,
-    user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    user: str = Depends(require_any_permission("storage:view", "storage:manage")),
 ):
     repo = StorageBackendRepositoryAdapter()
     items = [e.to_dict() for e in repo.get_all()]
@@ -68,7 +68,7 @@ def list_backends(
 @router.post("/get")
 def get_backend(
     req: GetBackendRequest,
-    user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    user: str = Depends(require_any_permission("storage:view", "storage:manage")),
 ):
     repo = StorageBackendRepositoryAdapter()
     entity = repo.get_by_id(req.sid)
@@ -80,7 +80,7 @@ def get_backend(
 @router.post("/save")
 def create_backend(
     req: CreateBackendRequest,
-    user: str = Depends(require_permission("setting:update")),
+    user: str = Depends(require_permission("storage:manage")),
 ):
     repo = StorageBackendRepositoryAdapter()
     sid = repo.insert(req.name, req.type, req.config, req.enabled)
@@ -90,7 +90,7 @@ def create_backend(
 @router.post("/update")
 def update_backend(
     req: UpdateBackendRequest,
-    user: str = Depends(require_permission("setting:update")),
+    user: str = Depends(require_permission("storage:manage")),
 ):
     repo = StorageBackendRepositoryAdapter()
     kwargs = {}
@@ -111,7 +111,7 @@ def update_backend(
 @router.post("/delete")
 def delete_backend(
     req: DeleteBackendRequest,
-    user: str = Depends(require_permission("setting:update")),
+    user: str = Depends(require_permission("storage:manage")),
 ):
     repo = StorageBackendRepositoryAdapter()
     repo.delete(req.sid)
@@ -121,7 +121,7 @@ def delete_backend(
 @router.post("/test")
 def test_backend(
     req: TestBackendRequest,
-    user: str = Depends(require_permission("setting:update")),
+    user: str = Depends(require_permission("storage:manage")),
 ):
     """测试存储后端连接"""
     info = StorageBackendFactory.get_config_info(req.type)
@@ -143,6 +143,6 @@ def test_backend(
 
 @router.post("/types")
 def list_types(
-    user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    user: str = Depends(require_any_permission("storage:view", "storage:manage")),
 ):
     return success(data={"items": StorageBackendFactory.get_type_schema()})
