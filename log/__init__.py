@@ -14,7 +14,12 @@ from ._logger_manager import Logger, get_logger_instance
 
 # 抑制第三方库日志噪音
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
-logging.getLogger("watchdog").setLevel(logging.INFO)
+logging.getLogger("watchdog").setLevel(logging.WARNING)
+logging.getLogger("watchdog.observers").setLevel(logging.WARNING)
+logging.getLogger("watchdog.observers.inotify_buffer").setLevel(logging.WARNING)
+# 抑制 watchfiles（uvicorn --reload 使用）日志
+logging.getLogger("watchfiles").setLevel(logging.WARNING)
+logging.getLogger("watchfiles.main").setLevel(logging.WARNING)
 logging.getLogger("charset_normalizer").setLevel(logging.WARNING)
 # 抑制 Agent SDK 的 HTTP 请求 DEBUG 日志
 logging.getLogger("httpx").setLevel(logging.WARNING)
