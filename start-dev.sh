@@ -16,8 +16,8 @@ echo "【FastAPI】启动 Nexus Media FastAPI 版本..."
 echo "【FastAPI】配置文件：$NEXUS_MEDIA_CONFIG"
 echo "【FastAPI】监听端口：$FASTAPI_PORT"
 
-# 使用 uvicorn 启动（单进程开发模式）
-.venv/bin/uvicorn run:app \
+# 使用 uv run 启动（自动使用项目虚拟环境）
+uv run uvicorn run:app \
     --host "::" \
     --port "$FASTAPI_PORT" \
     --log-level info \

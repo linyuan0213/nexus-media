@@ -63,9 +63,8 @@ def main():
     log.console("Nexus Media FastAPI 启动中...")
     log.console("当前版本号：v3.8.0")
 
-    # 启动服务
-    log.console("开始启动服务...")
-    SystemLifecycleService().start_service()
+    # 服务启动由 lifespan 统一管理（api/main.py）
+    # 这里只获取运行配置并启动 uvicorn
 
     # 获取配置
     config = get_run_config()
