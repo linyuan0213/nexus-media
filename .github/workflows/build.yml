@@ -31,7 +31,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      
+
       - name: Login GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -49,3 +49,54 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/nexus-media:${{ env.app_version }}
             ghcr.io/${{ github.repository_owner }}/nexus-media:latest
             ghcr.io/${{ github.repository_owner }}/nexus-media:${{ env.app_version }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    name: Create Release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - name: Extract version and changelog
+        id: extract
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
+
+          # Extract changelog section for this version
+          CONTENT=$(awk '/^## v'"$VERSION"' /{flag=1;next}/^## v/{flag=0}flag' docs/changelog.md)
+          if [ -z "$CONTENT" ]; then
+            CONTENT="Nexus Media $GITHUB_REF_NAME 已发布。"
+          fi
+
+          # Write multi-line output
+          {
+            echo "notes<<CHANGELOG_EOF"
+            echo "$CONTENT"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Nexus Media ${{ steps.extract.outputs.tag }}
+          body: ${{ steps.extract.outputs.notes }}
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Send Telegram Notification
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          message: |
+            🚀 **Nexus Media ${{ steps.extract.outputs.tag }} 已发布**
+
+            ${{ steps.extract.outputs.notes }}
+
+            📦 Docker: `docker pull linyuan0213/nexus-media:${{ steps.extract.outputs.version }}`
+            🔗 [查看 Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.extract.outputs.tag }})

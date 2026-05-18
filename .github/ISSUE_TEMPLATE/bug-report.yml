@@ -1,0 +1,97 @@
+name: 🐛 Bug 报告
+description: 报告问题以帮助我们改进 Nexus Media
+title: 'Bug: '
+labels: ['bug']
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢提交问题反馈！请按模板填写，信息不完整的问题可能会被关闭。
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: 问题组件
+      description: 问题出现在哪个部分？
+      options:
+        - 后端 API / 服务
+        - 前端 Web UI
+        - Docker 部署
+        - 插件
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本号
+      description: 你使用的 Nexus Media 版本
+      placeholder: v3.8.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 部署环境
+      options:
+        - Docker Compose
+        - Docker 单独部署
+        - 本地开发环境
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 清晰描述遇到的问题
+      placeholder: 详细描述问题现象
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 如何复现这个问题
+      placeholder: |
+        1. 进入 xxx 页面
+        2. 点击 xxx
+        3. 出现错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+      description: 你期望发生什么
+      placeholder: 描述正确行为应该是怎样的
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关日志或截图
+      description: |
+        后端问题请提供日志（Docker: `docker logs nexus-media`）；
+        前端问题请提供浏览器控制台报错和截图；
+        部署问题请提供 docker compose 配置（脱敏后）。
+      render: shell
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 已搜索现有 issues，确认未重复提交
+          required: true
+        - label: 已阅读文档，确认不是配置问题
+          required: true
+        - label: 已升级到最新版本，问题仍然存在
+          required: true
