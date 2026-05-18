@@ -4,7 +4,7 @@ sys.path.insert(0, "/home/linyuan/python/nas-tools")
 
 import os
 
-os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
+os.environ["NEXUS_MEDIA_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 from sqlalchemy import text
 

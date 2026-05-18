@@ -116,7 +116,7 @@ class ConfigRepository(BaseRepository):
 
     @DbPersist(BaseRepository._db)
     def insert_torrent_remove_task(
-        self, name: str, action: int, interval: int, enabled: int, samedata: int, onlynastool: int, downloader: str, config: dict, note: str | None = None
+        self, name: str, action: int, interval: int, enabled: int, samedata: int, only_nexus_media: int, downloader: str, config: dict, note: str | None = None
     ) -> None:
         """
         设置自动删种策略
@@ -127,7 +127,7 @@ class ConfigRepository(BaseRepository):
             interval: 间隔
             enabled: 是否启用
             samedata: 相同数据处理
-            onlynastool: 仅NAStool
+            only_nexus_media: 仅NAStool
             downloader: 下载器
             config: 配置
             note: 备注
@@ -139,7 +139,7 @@ class ConfigRepository(BaseRepository):
                 INTERVAL=int(interval),
                 ENABLED=int(enabled),
                 SAMEDATA=int(samedata),
-                ONLYNASTOOL=int(onlynastool),
+                ONLY_NEXUS_MEDIA=int(only_nexus_media),
                 DOWNLOADER=downloader,
                 CONFIG=json.dumps(config),
                 NOTE=note,
@@ -150,7 +150,7 @@ class ConfigRepository(BaseRepository):
 
     @DbPersist(BaseRepository._db)
     def update_downloader(
-        self, did: int | None, name: str, enabled: int, dtype: str, transfer: int, only_nastool: int, match_path: int, rmt_mode: str, config: str, download_dir: str
+        self, did: int | None, name: str, enabled: int, dtype: str, transfer: int, only_nexus_media: int, match_path: int, rmt_mode: str, config: str, download_dir: str
     ) -> None:
         """
         更新下载器
@@ -161,7 +161,7 @@ class ConfigRepository(BaseRepository):
             enabled: 是否启用
             dtype: 类型
             transfer: 是否转移
-            only_nastool: 仅NAStool
+            only_nexus_media: 仅NAStool
             match_path: 匹配路径
             rmt_mode: 转移模式
             config: 配置
@@ -174,7 +174,7 @@ class ConfigRepository(BaseRepository):
                     "ENABLED": int(enabled),
                     "TYPE": dtype,
                     "TRANSFER": int(transfer),
-                    "ONLY_NASTOOL": int(only_nastool),
+                    "ONLY_NEXUS_MEDIA": int(only_nexus_media),
                     "MATCH_PATH": int(match_path),
                     "RMT_MODE": rmt_mode,
                     "CONFIG": config,
@@ -188,7 +188,7 @@ class ConfigRepository(BaseRepository):
                     ENABLED=int(enabled),
                     TYPE=dtype,
                     TRANSFER=int(transfer),
-                    ONLY_NASTOOL=int(only_nastool),
+                    ONLY_NEXUS_MEDIA=int(only_nexus_media),
                     MATCH_PATH=int(match_path),
                     RMT_MODE=rmt_mode,
                     CONFIG=config,
@@ -209,14 +209,14 @@ class ConfigRepository(BaseRepository):
         self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).delete()
 
     @DbPersist(BaseRepository._db)
-    def check_downloader(self, did: int | None = None, transfer: int | None = None, only_nastool: int | None = None, enabled: int | None = None, match_path: int | None = None) -> None:
+    def check_downloader(self, did: int | None = None, transfer: int | None = None, only_nexus_media: int | None = None, enabled: int | None = None, match_path: int | None = None) -> None:
         """
         设置下载器状态
 
         Args:
             did: 下载器ID
             transfer: 是否转移
-            only_nastool: 仅NAStool
+            only_nexus_media: 仅NAStool
             enabled: 是否启用
             match_path: 匹配路径
         """
@@ -224,8 +224,8 @@ class ConfigRepository(BaseRepository):
             return
         if transfer is not None:
             self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({"TRANSFER": int(transfer)})
-        elif only_nastool is not None:
-            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({"ONLY_NASTOOL": int(only_nastool)})
+        elif only_nexus_media is not None:
+            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({"ONLY_NEXUS_MEDIA": int(only_nexus_media)})
         elif match_path is not None:
             self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({"MATCH_PATH": int(match_path)})
         elif enabled is not None:

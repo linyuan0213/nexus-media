@@ -156,7 +156,7 @@ class DownloadCore:
         if not _client:
             return []
         config["filter_tags"] = []
-        if config.get("onlynastool"):
+        if config.get("only_nexus_media"):
             config["filter_tags"] = config["tags"] + [PT_TAG]
         else:
             config["filter_tags"] = config["tags"]
@@ -181,11 +181,11 @@ class DownloadCore:
         if not downloader_id:
             downloader_id = self._client_factory.default_downloader_id
         downloader_conf = self._client_factory.get_downloader_conf(downloader_id)
-        only_nastool = downloader_conf.get("only_nastool") if downloader_conf else None
+        only_nexus_media = downloader_conf.get("only_nexus_media") if downloader_conf else None
         _client = self._client_factory.get_client(downloader_id)
         if not _client:
             return []
-        tag = [PT_TAG] if only_nastool else None
+        tag = [PT_TAG] if only_nexus_media else None
         try:
             return _client.get_downloading_progress(tag=tag, ids=ids) or []
         except Exception as err:
@@ -378,7 +378,7 @@ class DownloadCore:
     # ---------- 下载器 CRUD ----------
 
     def update_downloader(
-        self, did, name, enabled, dtype, transfer, only_nastool, match_path, rmt_mode, config, download_dir
+        self, did, name, enabled, dtype, transfer, only_nexus_media, match_path, rmt_mode, config, download_dir
     ):
         ret = ConfigRepository().update_downloader(
             did=did,
@@ -386,7 +386,7 @@ class DownloadCore:
             enabled=enabled,
             dtype=dtype,
             transfer=transfer,
-            only_nastool=only_nastool,
+            only_nexus_media=only_nexus_media,
             match_path=match_path,
             rmt_mode=rmt_mode,
             config=config,
@@ -400,9 +400,9 @@ class DownloadCore:
         self._client_factory.init_config()
         return ret
 
-    def check_downloader(self, did=None, transfer=None, only_nastool=None, enabled=None, match_path=None):
+    def check_downloader(self, did=None, transfer=None, only_nexus_media=None, enabled=None, match_path=None):
         ret = ConfigRepository().check_downloader(
-            did=did, transfer=transfer, only_nastool=only_nastool, enabled=enabled, match_path=match_path
+            did=did, transfer=transfer, only_nexus_media=only_nexus_media, enabled=enabled, match_path=match_path
         )
         self._client_factory.init_config()
         return ret

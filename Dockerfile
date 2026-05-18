@@ -43,13 +43,13 @@ ENV S6_SERVICES_GRACETIME=30000 \
     TERM="xterm" \
     LANG="C.UTF-8" \
     TZ="Asia/Shanghai" \
-    NASTOOL_CONFIG="/config/config.yaml" \
+    NEXUS_MEDIA_CONFIG="/config/config.yaml" \
     PS1="\u@\h:\w \$ " \
     PUID=0 \
     PGID=0 \
     UMASK=000 \
     NT_PORT=3000 \
-    WORKDIR="/nas-tools"
+    WORKDIR="/nexus-media"
 
 RUN addgroup -S nt -g 911 \
     && adduser -S nt -G nt -h ${HOME} -s /bin/bash -u 911 \

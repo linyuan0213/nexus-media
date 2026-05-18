@@ -39,7 +39,7 @@ class Config(metaclass=_SingletonMeta):
 
     def __init__(self):
         settings = AppSettings()
-        self._config_path = settings.nastool_config or os.environ.get("NASTOOL_CONFIG")
+        self._config_path = settings.nexus_media_config or os.environ.get("NEXUS_MEDIA_CONFIG")
         self._settings = settings
 
         tz = settings.tz or os.environ.get("TZ")
@@ -52,7 +52,7 @@ class Config(metaclass=_SingletonMeta):
     def _init_config(self):
         try:
             if not self._config_path:
-                print("【Config】NASTOOL_CONFIG 环境变量未设置，程序无法工作，正在退出...")
+                print("【Config】NEXUS_MEDIA_CONFIG 环境变量未设置，程序无法工作，正在退出...")
                 quit()
 
             if not os.path.exists(self._config_path):

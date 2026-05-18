@@ -13,7 +13,7 @@ import sys
 import types
 from unittest.mock import MagicMock, patch
 
-# 提前注入 mock config，避免加载真实 config.py（会检查 NASTOOL_CONFIG 并 quit）
+# 提前注入 mock config，避免加载真实 config.py（会检查 NEXUS_MEDIA_CONFIG 并 quit）
 _mock_config = types.ModuleType("config")
 _mock_config.TMDB_IMAGE_DOMAIN = "image.tmdb.org"
 _mock_config.TMDB_IMAGE_SIZE = {

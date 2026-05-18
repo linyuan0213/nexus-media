@@ -94,4 +94,4 @@ Nexus Media 目前支持以下PT站点，支持刷流和搜索订阅功能：
 ## 说明
 1. ✅ 表示支持该功能
 2. ❌ 表示不支持该功能
-3. 如需新增站点支持，请在[nas-tools-sites项目](https://github.com/linyuan0213/nas-tools-sites)提issues
+3. 如需新增站点支持，请在[nas-tools-sites项目](https://github.com/linyuan0213/nexus-media-sites)提issues

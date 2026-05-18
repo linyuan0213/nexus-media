@@ -377,7 +377,7 @@ class Message(metaclass=SingletonMeta):
         if not built_client:
             return False
         state, ret_msg = built_client.send_msg(
-            title="测试", text="这是一条测试消息", url="https://github.com/linyuan0213/nas-tools"
+            title="测试", text="这是一条测试消息", url="https://github.com/linyuan0213/nexus-media"
         )
         if not state:
             log.error(f"【Message】{ctype} 发送测试消息失败：%s" % ret_msg)

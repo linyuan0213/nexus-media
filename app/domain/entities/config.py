@@ -70,7 +70,7 @@ class DownloaderEntity:
     type: str
     config: str
     transfer: str
-    only_nastool: bool
+    only_nexus_media: bool
     match_path: bool
     enabled: bool
 
@@ -84,7 +84,7 @@ class DownloaderEntity:
             type=orm_model.TYPE or "",
             config=orm_model.CONFIG or "",
             transfer=orm_model.TRANSFER or "",
-            only_nastool=bool(orm_model.ONLY_NASTOOL),
+            only_nexus_media=bool(orm_model.ONLY_NEXUS_MEDIA),
             match_path=bool(orm_model.MATCH_PATH),
             enabled=bool(orm_model.ENABLED),
         )
@@ -106,7 +106,7 @@ class DownloaderEntity:
             "type": self.type,
             "config": self.config,
             "transfer": self.transfer,
-            "only_nastool": self.only_nastool,
+            "only_nexus_media": self.only_nexus_media,
             "match_path": self.match_path,
             "enabled": self.enabled,
         }

@@ -13,7 +13,7 @@ from app.media.parser.regex import RegexParser
 
 sys.modules["log"] = MagicMock()
 
-os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
+os.environ["NEXUS_MEDIA_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 
 def test_rezero_full_scenario():

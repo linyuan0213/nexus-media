@@ -50,7 +50,7 @@ def start_config_monitor():
     """
     global _observer
     # 配置文件监听
-    _observer.schedule(ConfigMonitor(), path=os.environ.get("NASTOOL_CONFIG") or ".", recursive=False)
+    _observer.schedule(ConfigMonitor(), path=os.environ.get("NEXUS_MEDIA_CONFIG") or ".", recursive=False)
     _observer.daemon = True
     _observer.start()
     try:

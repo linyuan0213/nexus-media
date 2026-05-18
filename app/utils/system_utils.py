@@ -156,7 +156,7 @@ class SystemUtils:
             src = os.path.normpath(src)
             dest = dest.replace("\\", "/")
             retcode = subprocess.run(
-                ["rclone", "moveto", src, f"NASTOOL:{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
+                ["rclone", "moveto", src, f"NEXUS_MEDIA:{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
             ).returncode
             return retcode, ""
         except Exception as err:
@@ -172,7 +172,7 @@ class SystemUtils:
             src = os.path.normpath(src)
             dest = dest.replace("\\", "/")
             retcode = subprocess.run(
-                ["rclone", "copyto", src, f"NASTOOL:{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
+                ["rclone", "copyto", src, f"NEXUS_MEDIA:{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
             ).returncode
             return retcode, ""
         except Exception as err:

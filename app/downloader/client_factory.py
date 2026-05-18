@@ -87,14 +87,14 @@ class DownloadClientFactory:
             name = downloader_conf.NAME
             enabled = downloader_conf.ENABLED
             transfer = downloader_conf.TRANSFER
-            only_nastool = downloader_conf.ONLY_NASTOOL
+            only_nexus_media = downloader_conf.ONLY_NEXUS_MEDIA
             match_path = downloader_conf.MATCH_PATH
             rmt_mode = str(downloader_conf.RMT_MODE or "")
             rmt_mode_name = rmt_mode
 
             if str(transfer or ""):
                 log_content = ""
-                if str(only_nastool or ""):
+                if str(only_nexus_media or ""):
                     log_content += "启用标签隔离，"
                 if str(match_path or ""):
                     log_content += "启用目录隔离，"
@@ -112,7 +112,7 @@ class DownloadClientFactory:
                 "type": dtype,
                 "enabled": enabled,
                 "transfer": transfer,
-                "only_nastool": only_nastool,
+                "only_nexus_media": only_nexus_media,
                 "match_path": match_path,
                 "rmt_mode": rmt_mode,
                 "rmt_mode_name": rmt_mode_name,

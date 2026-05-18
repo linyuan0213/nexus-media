@@ -81,7 +81,7 @@ class DatabaseFactory:
             port = port or DatabaseFactory._get_config_value("port", 3306)
             username = username or DatabaseFactory._get_config_value("username", "")
             password = password or DatabaseFactory._get_config_value("password", "")
-            database = database or DatabaseFactory._get_config_value("database", "nas_tools")
+            database = database or DatabaseFactory._get_config_value("database", "nexus_media")
 
             # 对密码进行URL编码
             encoded_password = quote_plus(str(password)) if password else ""
@@ -93,7 +93,7 @@ class DatabaseFactory:
             port = port or DatabaseFactory._get_config_value("port", 5432)
             username = username or DatabaseFactory._get_config_value("username", "postgres")
             password = password or DatabaseFactory._get_config_value("password", "")
-            database = database or DatabaseFactory._get_config_value("database", "nas_tools")
+            database = database or DatabaseFactory._get_config_value("database", "nexus_media")
 
             # 对密码进行URL编码
             encoded_password = quote_plus(str(password)) if password else ""
@@ -187,7 +187,7 @@ class DatabaseFactory:
             url = DatabaseFactory.get_database_url(db_type, db_path=db_path)
         else:
             # MySQL/PostgreSQL 使用配置中的数据库名
-            database = DatabaseFactory._get_config_value("database", "nas_tools")
+            database = DatabaseFactory._get_config_value("database", "nexus_media")
 
             # 自动创建数据库（如果不存在）
             DatabaseFactory._ensure_database_exists(db_type, database)
@@ -320,7 +320,7 @@ class DatabaseFactory:
             db_path = os.path.join(Config().config_path, "user.db")
             return DatabaseFactory.get_database_url(db_type, db_path=db_path)
         else:
-            database = DatabaseFactory._get_config_value("database", "nas_tools")
+            database = DatabaseFactory._get_config_value("database", "nexus_media")
             return DatabaseFactory.get_database_url(db_type, database=database)
 
     @staticmethod
@@ -332,7 +332,7 @@ class DatabaseFactory:
             db_path = os.path.join(Config().config_path, "media.db")
             return DatabaseFactory.get_database_url(db_type, db_path=db_path)
         else:
-            database = DatabaseFactory._get_config_value("database", "nas_tools")
+            database = DatabaseFactory._get_config_value("database", "nexus_media")
             return DatabaseFactory.get_database_url(db_type, database=f"{database}_media")
 
     @staticmethod

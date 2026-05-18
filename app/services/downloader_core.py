@@ -133,13 +133,13 @@ class DownloaderCore:
                 if not downloader_conf:
                     continue
                 name = downloader_conf.get("name")
-                only_nastool = downloader_conf.get("only_nastool")
+                only_nexus_media = downloader_conf.get("only_nexus_media")
                 match_path = downloader_conf.get("match_path")
                 operation = str(downloader_conf.get("rmt_mode") or "")
                 _client = self._client_factory.get_client(did)
             if not _client:
                 continue
-            trans_tasks = _client.get_transfer_task(tag=PT_TAG if only_nastool else None, match_path=match_path)
+            trans_tasks = _client.get_transfer_task(tag=PT_TAG if only_nexus_media else None, match_path=match_path)
             if trans_tasks:
                 log.info(f"【Downloader】下载器 {name} 开始转移下载文件...")
             else:
@@ -262,7 +262,7 @@ class DownloaderCore:
     # ---------- 下载器 CRUD ----------
 
     def update_downloader(
-        self, did, name, enabled, dtype, transfer, only_nastool, match_path, rmt_mode, config, download_dir
+        self, did, name, enabled, dtype, transfer, only_nexus_media, match_path, rmt_mode, config, download_dir
     ):
         return self._download_core.update_downloader(
             did=did,
@@ -270,7 +270,7 @@ class DownloaderCore:
             enabled=enabled,
             dtype=dtype,
             transfer=transfer,
-            only_nastool=only_nastool,
+            only_nexus_media=only_nexus_media,
             match_path=match_path,
             rmt_mode=rmt_mode,
             config=config,
@@ -280,9 +280,9 @@ class DownloaderCore:
     def delete_downloader(self, did):
         return self._download_core.delete_downloader(did=did)
 
-    def check_downloader(self, did=None, transfer=None, only_nastool=None, enabled=None, match_path=None):
+    def check_downloader(self, did=None, transfer=None, only_nexus_media=None, enabled=None, match_path=None):
         return self._download_core.check_downloader(
-            did=did, transfer=transfer, only_nastool=only_nastool, enabled=enabled, match_path=match_path
+            did=did, transfer=transfer, only_nexus_media=only_nexus_media, enabled=enabled, match_path=match_path
         )
 
     def delete_download_setting(self, sid):

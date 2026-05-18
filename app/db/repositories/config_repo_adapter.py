@@ -101,7 +101,7 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
         return None
 
     def insert(
-        self, name: str, dtype: str, config: str, transfer: int, only_nastool: int, match_path: int, enabled: int
+        self, name: str, dtype: str, config: str, transfer: int, only_nexus_media: int, match_path: int, enabled: int
     ) -> None:
         self._repo.update_downloader(
             did=None,
@@ -109,7 +109,7 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
             enabled=enabled,
             dtype=dtype,
             transfer=transfer,
-            only_nastool=only_nastool,
+            only_nexus_media=only_nexus_media,
             match_path=match_path,
             rmt_mode="",
             config=config,
@@ -123,7 +123,7 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
         dtype: str,
         config: str,
         transfer: int,
-        only_nastool: int,
+        only_nexus_media: int,
         match_path: int,
         enabled: int,
     ) -> None:
@@ -133,7 +133,7 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
             enabled=enabled,
             dtype=dtype,
             transfer=transfer,
-            only_nastool=only_nastool,
+            only_nexus_media=only_nexus_media,
             match_path=match_path,
             rmt_mode="",
             config=config,
@@ -147,8 +147,8 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
     def get_downloaders(self) -> list[DOWNLOADER]:
         return self._repo.get_downloaders()
 
-    def check_downloader(self, did: int | None = None, transfer: int | None = None, only_nastool: int | None = None, enabled: int | None = None, match_path: int | None = None) -> None:
-        self._repo.check_downloader(did, transfer, only_nastool, enabled, match_path)
+    def check_downloader(self, did: int | None = None, transfer: int | None = None, only_nexus_media: int | None = None, enabled: int | None = None, match_path: int | None = None) -> None:
+        self._repo.check_downloader(did, transfer, only_nexus_media, enabled, match_path)
 
 
 class FilterGroupRepositoryAdapter(IFilterGroupRepository):
@@ -300,7 +300,7 @@ class TorrentRemoveTaskRepositoryAdapter(ITorrentRemoveTaskRepository):
             interval=0,
             enabled=enabled,
             samedata=0,
-            onlynastool=0,
+            only_nexus_media=0,
             downloader=downloader,
             config=cfg,
         )

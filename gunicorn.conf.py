@@ -9,9 +9,9 @@ import ruamel.yaml
 
 # ---------- 配置初始化 ----------
 
-config = os.environ.get("NASTOOL_CONFIG")
+config = os.environ.get("NEXUS_MEDIA_CONFIG")
 if not config:
-    print("环境变量 NASTOOL_CONFIG 不存在")
+    print("环境变量 NEXUS_MEDIA_CONFIG 不存在")
     os._exit(-1)
 
 if not os.path.exists(config):

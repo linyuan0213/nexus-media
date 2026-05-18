@@ -1,17 +1,17 @@
 services:
   frontend:
-    image: linyuan0213/nas-tools-web:latest
+    image: linyuan0213/nexus-media-web:latest
     ports:
       - 3000:80
     restart: always
-    container_name: nas-tools-web
+    container_name: nexus-media-web
     networks:
-      - nas-tools-network
+      - nexus-media-network
     depends_on:
       - backend
 
   backend:
-    image: linyuan0213/nas-tools:latest
+    image: linyuan0213/nexus-media:latest
     ports:
       - 3001:3000
     volumes:
@@ -23,10 +23,10 @@ services:
       - UMASK=000
       - NT_PORT=3000
     restart: always
-    hostname: nas-tools
-    container_name: nas-tools
+    hostname: nexus-media
+    container_name: nexus-media
     networks:
-      - nas-tools-network
+      - nexus-media-network
     healthcheck:
       test: "wget -qO- http://localhost:3000/health || exit 1"
       interval: 30s
@@ -38,27 +38,27 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: nas-tools-redis
+    container_name: nexus-media-redis
     volumes:
       - ./config/redis_data:/data
       - ./config/redis.conf:/usr/local/etc/redis/redis.conf
     command: redis-server /usr/local/etc/redis/redis.conf
     restart: always
     networks:
-      - nas-tools-network
+      - nexus-media-network
 
   ocr:
-    image: linyuan0213/nas-tools-ocr:latest
-    container_name: nas-tools-ocr
+    image: linyuan0213/nexus-media-ocr:latest
+    container_name: nexus-media-ocr
     ports:
       - 9300:9300
     restart: always
     networks:
-      - nas-tools-network
+      - nexus-media-network
 
   chrome:
-    image: linyuan0213/nas-tools-chrome:latest
-    container_name: nas-tools-chrome
+    image: linyuan0213/nexus-media-chrome:latest
+    container_name: nexus-media-chrome
     shm_size: 2g
     environment:
       - VNC_PASSWORD=password
@@ -69,9 +69,9 @@ services:
       - 6080:6080
     restart: always
     networks:
-      - nas-tools-network
+      - nexus-media-network
 
 networks:
-  nas-tools-network:
+  nexus-media-network:
     driver: bridge
-    name: nas-tools-network
+    name: nexus-media-network

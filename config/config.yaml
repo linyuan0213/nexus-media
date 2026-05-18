@@ -62,8 +62,8 @@ database:
   username:
   # 【数据库密码】：MySQL/PostgreSQL时生效
   password:
-  # 【数据库名】：MySQL/PostgreSQL时生效，默认为nas_tools，媒体库会使用后缀_media
-  database: nas_tools
+  # 【数据库名】：MySQL/PostgreSQL时生效，默认为nexus_media，媒体库会使用后缀_media
+  database: nexus_media
 
 # 【配置日志信息】
 log:

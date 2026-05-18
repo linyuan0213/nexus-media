@@ -37,7 +37,7 @@ CHALLENGE_SELECTORS = [
     "div.vc div.text-box h2",
 ]
 SHORT_TIMEOUT = 6
-CF_TIMEOUT = int(os.getenv("NASTOOL_CF_TIMEOUT", "60"))
+CF_TIMEOUT = int(os.getenv("NEXUS_MEDIA_CF_TIMEOUT", "60"))
 
 
 def under_challenge(html_text: str):

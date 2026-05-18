@@ -20,7 +20,7 @@ class AppSettings(BaseSettings):
     )
 
     # 基础路径
-    nastool_config: str = ""
+    nexus_media_config: str = ""
     """config.yaml 配置文件路径"""
 
     tz: str = "Asia/Shanghai"

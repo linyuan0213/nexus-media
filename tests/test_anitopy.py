@@ -10,7 +10,7 @@ from app.media.parser.anime.prepare import prepare_title
 
 sys.modules["log"] = MagicMock()
 
-os.environ["NASTOOL_CONFIG"] = "/home/linyuan/python/config/config.yaml"
+os.environ["NEXUS_MEDIA_CONFIG"] = "/home/linyuan/python/config/config.yaml"
 
 title = "【关于我转生变成史莱姆这档事 Tensei Shitara Slime Datta Ken 】【12】【GB】【1080P】"
 

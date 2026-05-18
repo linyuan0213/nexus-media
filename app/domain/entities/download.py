@@ -16,7 +16,7 @@ class DownloaderEntity:
     enabled: bool
     type: str
     transfer: bool
-    only_nastool: bool
+    only_nexus_media: bool
     match_path: bool
     rmt_mode: str
     config: str  # JSON配置字符串
@@ -33,7 +33,7 @@ class DownloaderEntity:
             enabled=bool(orm_model.ENABLED),
             type=orm_model.TYPE or "",
             transfer=bool(orm_model.TRANSFER),
-            only_nastool=bool(orm_model.ONLY_NASTOOL),
+            only_nexus_media=bool(orm_model.ONLY_NEXUS_MEDIA),
             match_path=bool(orm_model.MATCH_PATH),
             rmt_mode=orm_model.RMT_MODE or "",
             config=orm_model.CONFIG or "{}",
@@ -48,7 +48,7 @@ class DownloaderEntity:
             "enabled": self.enabled,
             "type": self.type,
             "transfer": self.transfer,
-            "only_nastool": self.only_nastool,
+            "only_nexus_media": self.only_nexus_media,
             "match_path": self.match_path,
             "rmt_mode": self.rmt_mode,
             "config": self.config,

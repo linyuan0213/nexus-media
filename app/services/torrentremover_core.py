@@ -42,7 +42,7 @@ class TorrentRemoverActionEngine:
         downloader_id = task.get("downloader")
         config = task.get("config") or {}
         config["samedata"] = task.get("samedata")
-        config["onlynastool"] = task.get("onlynastool")
+        config["only_nexus_media"] = task.get("only_nexus_media")
         torrents = downloader.get_remove_torrents(downloader_id=downloader_id, config=config)
         log.info(f"【TorrentRemover】自动删种任务：{task.get('name')} 获取符合处理条件种子数 {len(torrents)}")
 
@@ -117,7 +117,7 @@ class TorrentRemoverService:
                 "downloader": downloader_id,
                 "downloader_name": downloader_name,
                 "downloader_type": downloader_type,
-                "onlynastool": task.ONLYNASTOOL,
+                "only_nexus_media": task.ONLY_NEXUS_MEDIA,
                 "samedata": task.SAMEDATA,
                 "action": task.ACTION,
                 "config": json.loads(str(config)) if str(config) else {},
@@ -197,8 +197,8 @@ class TorrentRemoverService:
         samedata = data.get("samedata")
         if not str(samedata).isdigit() or int(samedata or 0) not in [0, 1]:
             return False, "处理辅种参数不合法"
-        onlynastool = data.get("onlynastool")
-        if not str(onlynastool).isdigit() or int(onlynastool or 0) not in [0, 1]:
+        only_nexus_media = data.get("only_nexus_media")
+        if not str(only_nexus_media).isdigit() or int(only_nexus_media or 0) not in [0, 1]:
             return False, "仅处理NASTOOL添加种子参数不合法"
         ratio = data.get("ratio") or 0
         if not str(ratio).replace(".", "").isdigit():
@@ -226,7 +226,7 @@ class TorrentRemoverService:
         interval = int(data.get("interval") or 0)
         enabled = int(data.get("enabled") or 0)
         samedata = int(data.get("samedata") or 0)
-        onlynastool = int(data.get("onlynastool") or 0)
+        only_nexus_media = int(data.get("only_nexus_media") or 0)
         ratio = round(float(data.get("ratio") or 0), 2)
         seeding_time = int(data.get("seeding_time") or 0)
         upload_avs = int(data.get("upload_avs") or 0)
@@ -282,7 +282,7 @@ class TorrentRemoverService:
             interval=interval,
             enabled=enabled,
             samedata=samedata,
-            onlynastool=onlynastool,
+            only_nexus_media=only_nexus_media,
             downloader=downloader_id,
             config=config,
         )
@@ -304,7 +304,7 @@ class TorrentRemoverService:
             return False, []
         config = task.get("config") or {}
         config["samedata"] = task.get("samedata")
-        config["onlynastool"] = task.get("onlynastool")
+        config["only_nexus_media"] = task.get("only_nexus_media")
         torrents = self._downloader.get_remove_torrents(downloader_id=task.get("downloader"), config=config)
         return True, torrents
 

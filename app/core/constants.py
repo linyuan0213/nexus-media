@@ -97,7 +97,7 @@ TMDB_IMAGE_SIZE = {
 }
 
 # 添加下载时增加的标签
-PT_TAG = "NASTOOL"
+PT_TAG = "NEXUS_MEDIA"
 
 # 电影默认命名格式
 DEFAULT_MOVIE_FORMAT = "{title} ({year})/{title} ({year})-{part} - {videoFormat}"

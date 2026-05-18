@@ -1,12 +1,12 @@
 #!/bin/sh
 # 停止 gunicorn
 
-if [ -z "$NASTOOL_CONFIG" ]; then
-    echo "错误：NASTOOL_CONFIG 环境变量未设置"
+if [ -z "$NEXUS_MEDIA_CONFIG" ]; then
+    echo "错误：NEXUS_MEDIA_CONFIG 环境变量未设置"
     exit 1
 fi
 
-pid_dir=$(dirname "$NASTOOL_CONFIG")
+pid_dir=$(dirname "$NEXUS_MEDIA_CONFIG")
 pidfile="${pid_dir}/gunicorn.pid"
 
 if [ ! -f "$pidfile" ]; then

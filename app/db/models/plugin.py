@@ -47,7 +47,7 @@ class TORRENTREMOVETASK(Base):
     INTERVAL: Mapped[int] = mapped_column(Integer)
     ENABLED: Mapped[int] = mapped_column(Integer)
     SAMEDATA: Mapped[int] = mapped_column(Integer)
-    ONLYNASTOOL: Mapped[int] = mapped_column(Integer)
+    ONLY_NEXUS_MEDIA: Mapped[int] = mapped_column(Integer)
     DOWNLOADER: Mapped[str] = mapped_column(String(255))
     CONFIG: Mapped[str] = mapped_column(Text)
     NOTE: Mapped[str] = mapped_column(Text)

@@ -26,7 +26,7 @@ class RcloneStorageBackend(StorageBackend):
     def __init__(self, config: StorageConfig) -> None:
         super().__init__(config)
         self._rc_url = (getattr(config, "rc_url", "") or "http://localhost:5572").rstrip("/")
-        self._remote = getattr(config, "remote_name", "NASTOOL")
+        self._remote = getattr(config, "remote_name", "NEXUS_MEDIA")
         self._session = requests.Session()
         username = getattr(config, "rc_user", "")
         password = getattr(config, "rc_pass", "")

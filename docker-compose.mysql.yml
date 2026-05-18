@@ -1,6 +1,6 @@
 services:
-  nas-tools:
-    image: linyuan0213/nas-tools:latest
+  nexus-media:
+    image: linyuan0213/nexus-media:latest
     ports:
       - 3000:80
     volumes:
@@ -15,14 +15,14 @@ services:
       - DB_TYPE=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
-      - DB_USERNAME=nas_tools
-      - DB_PASSWORD=nas_tools_password
-      - DB_NAME=nas_tools
+      - DB_USERNAME=nexus_media
+      - DB_PASSWORD=nexus_media_password
+      - DB_NAME=nexus_media
     restart: always
-    hostname: nas-tools
-    container_name: nas-tools
+    hostname: nexus-media
+    container_name: nexus-media
     networks:
-      - nas-tools-network
+      - nexus-media-network
     healthcheck:
       test: "wget -qO- http://localhost/health || exit 1"
       interval: 30s
@@ -41,12 +41,12 @@ services:
 
   mysql:
     image: mysql:8.0
-    container_name: nas-tools-mysql
+    container_name: nexus-media-mysql
     environment:
       - MYSQL_ROOT_PASSWORD=root_password
-      - MYSQL_DATABASE=nas_tools
-      - MYSQL_USER=nas_tools
-      - MYSQL_PASSWORD=nas_tools_password
+      - MYSQL_DATABASE=nexus_media
+      - MYSQL_USER=nexus_media
+      - MYSQL_PASSWORD=nexus_media_password
       - TZ=Asia/Shanghai
     volumes:
       - ./mysql_data:/var/lib/mysql
@@ -54,7 +54,7 @@ services:
       - 3306:3306
     restart: always
     networks:
-      - nas-tools-network
+      - nexus-media-network
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
@@ -67,26 +67,26 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: nas-tools-redis
+    container_name: nexus-media-redis
     volumes:
       - ./config/redis_data:/data
       - ./config/redis.conf:/usr/local/etc/redis/redis.conf
     command: redis-server /usr/local/etc/redis/redis.conf
     restart: always
     networks:
-      - nas-tools-network
+      - nexus-media-network
 
   ocr:
-    image: linyuan0213/nas-tools-ocr:latest
+    image: linyuan0213/nexus-media-ocr:latest
     container_name: nas-tools-ocr
     ports:
       - 9300:9300
     restart: always
     networks:
-      - nas-tools-network
+      - nexus-media-network
 
   chrome:
-    image: linyuan0213/nas-tools-chrome:latest
+    image: linyuan0213/nexus-media-chrome:latest
     container_name: nas-tools-chrome
     shm_size: 2g
     environment:
@@ -98,9 +98,9 @@ services:
       - 6080:6080
     restart: always
     networks:
-      - nas-tools-network
+      - nexus-media-network
 
 networks:
-  nas-tools-network:
+  nexus-media-network:
     driver: bridge
-    name: nas-tools-network
+    name: nexus-media-network

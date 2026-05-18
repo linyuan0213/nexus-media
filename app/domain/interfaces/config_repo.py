@@ -57,7 +57,7 @@ class IDownloaderRepository(Protocol):
         ...
 
     def insert(
-        self, name: str, dtype: str, config: str, transfer: int, only_nastool: int, match_path: int, enabled: int
+        self, name: str, dtype: str, config: str, transfer: int, only_nexus_media: int, match_path: int, enabled: int
     ) -> None:
         """插入下载器"""
         ...
@@ -69,7 +69,7 @@ class IDownloaderRepository(Protocol):
         dtype: str,
         config: str,
         transfer: int,
-        only_nastool: int,
+        only_nexus_media: int,
         match_path: int,
         enabled: int,
     ) -> None:
