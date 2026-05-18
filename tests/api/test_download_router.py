@@ -85,7 +85,7 @@ class TestDownloadRouter:
             assert resp.status_code == 200
             assert resp.json()["code"] == 0
             mock_svc.check_downloader.assert_called_once_with(
-                did="1", enabled=1, transfer=None, only_nastool=None, match_path=None
+                did="1", enabled=1, transfer=None, only_nexus_media=None, match_path=None
             )
         finally:
             self._teardown_downloader()

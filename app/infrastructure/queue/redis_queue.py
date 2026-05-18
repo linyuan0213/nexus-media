@@ -14,9 +14,9 @@ import log
 from app.infrastructure.queue.base import MessageQueue
 from app.utils.redis_store import RedisStore
 
-STREAM_KEY = "nastools:message_queue"
+STREAM_KEY = "nexus_media:message_queue"
 CONSUMER_GROUP = "message_consumers"
-DEDUP_KEY = "nastools:message_dedup"
+DEDUP_KEY = "nexus_media:message_dedup"
 DEDUP_TTL = 86400  # 24小时
 
 

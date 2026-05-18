@@ -168,7 +168,7 @@ class UpdateDownloaderRequest(BaseModel):
     type: str | None = None
     enabled: int | None = None
     transfer: int | None = None
-    only_nastool: int | None = None
+    only_nexus_media: int | None = None
     match_path: int | None = None
     rmt_mode: str | None = None
     config: str | None = None
@@ -205,16 +205,16 @@ def check_downloader(
         return fail()
     checked = req.checked
     flag = req.flag
-    enabled = transfer = only_nastool = match_path = None
+    enabled = transfer = only_nexus_media = match_path = None
     if flag == "enabled":
         enabled = 1 if checked else 0
     elif flag == "transfer":
         transfer = 1 if checked else 0
-    elif flag == "only_nastool":
-        only_nastool = 1 if checked else 0
+    elif flag == "only_nexus_media":
+        only_nexus_media = 1 if checked else 0
     elif flag == "match_path":
         match_path = 1 if checked else 0
-    svc.check_downloader(did=did, enabled=enabled, transfer=transfer, only_nastool=only_nastool, match_path=match_path)
+    svc.check_downloader(did=did, enabled=enabled, transfer=transfer, only_nexus_media=only_nexus_media, match_path=match_path)
     return success()
 
 
@@ -588,7 +588,7 @@ def update_downloader(
     dtype = req.type
     enabled = req.enabled
     transfer = req.transfer
-    only_nastool = req.only_nastool
+    only_nexus_media = req.only_nexus_media
     match_path = req.match_path
     rmt_mode = req.rmt_mode
     config = req.config
@@ -603,7 +603,7 @@ def update_downloader(
         dtype=dtype,
         enabled=enabled,
         transfer=transfer,
-        only_nastool=only_nastool,
+        only_nexus_media=only_nexus_media,
         match_path=match_path,
         rmt_mode=rmt_mode,
         config=config,

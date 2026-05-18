@@ -947,9 +947,9 @@ bus.publish(TorrentDownloadedEvent(torrent_id="...", ...))
 
 - 在 FastAPI 中集成 `prometheus-fastapi-instrumentator`。
 - 自定义业务指标：
-  - `nastools_downloads_total`（下载总数）
-  - `nastools_rss_checks_total`（RSS 检查总数）
-  - `nastools_site_errors_total`（站点错误数）
+  - `nexus_media_downloads_total`（下载总数）
+  - `nexus_media_rss_checks_total`（RSS 检查总数）
+  - `nexus_media_site_errors_total`（站点错误数）
 
 #### 3. 健康检查与探针
 

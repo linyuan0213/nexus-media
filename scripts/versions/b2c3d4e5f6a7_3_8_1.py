@@ -1,4 +1,4 @@
-"""rename_only_nastool_columns
+"""rename_only_nexus_media_columns
 
 Revision ID: b2c3d4e5f6a7
 Revises: a3b4c5d6e7f8
