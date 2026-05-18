@@ -23,7 +23,7 @@ Nexus Media 现在支持以下三种数据库：
 | `DB_TYPE` | 数据库类型 | `sqlite` / `mysql` / `postgresql` |
 | `DB_HOST` | 数据库主机 | `localhost` |
 | `DB_PORT` | 数据库端口 | `3306` / `5432` |
-| `DB_USERNAME` | 用户名 | `nastools` |
+| `DB_USERNAME` | 用户名 | `nexus_media` |
 | `DB_PASSWORD` | 密码 | `your_password` |
 | `DB_NAME` | 数据库名 | `nas_tools` |
 
@@ -32,7 +32,7 @@ Nexus Media 现在支持以下三种数据库：
 docker run -e DB_TYPE=mysql \
            -e DB_HOST=mysql-server \
            -e DB_PORT=3306 \
-           -e DB_USERNAME=nastools \
+           -e DB_USERNAME=nexus_media \
            -e DB_PASSWORD=secret \
            -e DB_NAME=nas_tools \
            linyuan0213/nexus-media:latest
@@ -58,7 +58,7 @@ database:
   type: mysql
   host: localhost
   port: 3306
-  username: nastools
+  username: nexus_media
   password: your_password
   database: nas_tools
 ```

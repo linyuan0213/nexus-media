@@ -43,7 +43,7 @@ class TestDownloaderEntity:
         assert entity.enabled is True
         assert entity.type == "qbittorrent"
         assert entity.transfer is True
-        assert entity.only_nastool is False
+        assert entity.only_nexus_media is False
         assert entity.match_path is True
         assert entity.rmt_mode == "link"
         assert entity.config == '{"host": "127.0.0.1"}'
@@ -61,7 +61,7 @@ class TestDownloaderEntity:
             enabled=True,
             type="transmission",
             transfer=True,
-            only_nastool=False,
+            only_nexus_media=False,
             match_path=True,
             rmt_mode="copy",
             config="{}",
