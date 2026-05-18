@@ -1,4 +1,4 @@
-name: NAStool Docker
+name: Nexus Media Docker
 
 on:
   workflow_dispatch:
@@ -45,7 +45,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/nas-tools:latest
-            ${{ secrets.DOCKER_USERNAME }}/nas-tools:${{ env.app_version }}
-            ghcr.io/${{ github.repository_owner }}/nas-tools:latest
-            ghcr.io/${{ github.repository_owner }}/nas-tools:${{ env.app_version }}
+            ${{ secrets.DOCKER_USERNAME }}/nexus-media:latest
+            ${{ secrets.DOCKER_USERNAME }}/nexus-media:${{ env.app_version }}
+            ghcr.io/${{ github.repository_owner }}/nexus-media:latest
+            ghcr.io/${{ github.repository_owner }}/nexus-media:${{ env.app_version }}

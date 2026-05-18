@@ -24,7 +24,7 @@ _mock_config.TMDB_IMAGE_SIZE = {
     "xlarge": "w780",
     "original": "original",
 }
-_mock_config.SITES_DATA_URL = "https://api.github.com/repos/linyuan0213/nas-tools-sites/releases/latest"
+_mock_config.SITES_DATA_URL = "https://api.github.com/repos/linyuan0213/nexus-media-sites/releases/latest"
 
 
 # 提供一个真实 Config 类占位，保证其他测试中 patch('config.Config') 不会 AttributeError

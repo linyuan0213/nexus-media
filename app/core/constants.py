@@ -149,7 +149,7 @@ REDIS_PORT = "6379"
 MT_URL = "https://api.m-team.io"
 
 # sites.dat github
-SITES_DATA_URL = "https://api.github.com/repos/linyuan0213/nas-tools-sites/releases/latest"
+SITES_DATA_URL = "https://api.github.com/repos/linyuan0213/nexus-media-sites/releases/latest"
 
 # EpisodeMapper 阈值配置
 EPISODE_MAPPER_SEASON_GAP_DAYS = 90

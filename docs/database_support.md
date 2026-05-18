@@ -35,7 +35,7 @@ docker run -e DB_TYPE=mysql \
            -e DB_USERNAME=nastools \
            -e DB_PASSWORD=secret \
            -e DB_NAME=nas_tools \
-           linyuan0213/nas-tools:latest
+           linyuan0213/nexus-media:latest
 ```
 
 ### 配置文件配置

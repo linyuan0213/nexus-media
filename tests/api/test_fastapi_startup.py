@@ -22,7 +22,7 @@ class TestFastAPIStartup:
 
     def test_fastapi_app_title(self):
         """应用元数据验证"""
-        assert app.title == "NAS-Tools API"
+        assert app.title == "Nexus Media API"
         assert "现代化 FastAPI" in app.description
 
     def test_all_routers_registered(self):

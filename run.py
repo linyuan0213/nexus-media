@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NAS-Tools 启动入口 — FastAPI
+Nexus Media 启动入口 — FastAPI
 已移除 Flask 依赖，统一使用 FastAPI
 """
 
@@ -60,7 +60,7 @@ def get_run_config():
 def main():
     """FastAPI 主入口"""
 
-    log.console("NAS-Tools FastAPI 启动中...")
+    log.console("Nexus Media FastAPI 启动中...")
     log.console("当前版本号：v3.8.0")
 
     # 启动服务

@@ -107,7 +107,7 @@ class _IPluginModule(metaclass=ABCMeta):
     module_readme: str         # README 内容（支持 Markdown）
     module_changelog: str      # 更新日志
     module_requires: list      # 依赖插件列表
-    module_compatible: dict    # 兼容性：{"nas-tools": ">=3.0"}
+    module_compatible: dict    # 兼容性：{"nexus-media": ">=3.0"}
 ```
 
 ### 3.2 配置字段 DSL
@@ -181,7 +181,7 @@ def get_fields():
           icon: lucide:calendar-check
           color: hsl(145, 75%, 42%)
           version: "1.2"
-          author: NAS-Tools
+          author: Nexus Media
           category: site
           tags: ["签到", "定时任务"]
           installed: true

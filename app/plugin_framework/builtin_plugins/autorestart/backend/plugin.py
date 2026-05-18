@@ -1,6 +1,6 @@
 """
 AutoRestart Plugin v2
-定时自动重启 NAStool 服务
+定时自动重启 Nexus Media 服务
 """
 
 import os
@@ -79,7 +79,7 @@ class AutoRestartPlugin:
         if notify:
             self.ctx.notify(
                 title="【系统重启通知】",
-                text=f"NAStool将在 {delay} 秒后重启\n时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}",
+                text=f"Nexus Media将在 {delay} 秒后重启\n时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}",
             )
 
         if delay > 0:
@@ -96,5 +96,5 @@ class AutoRestartPlugin:
             if notify:
                 self.ctx.notify(
                     title="【系统重启失败】",
-                    text=f"NAStool重启失败：{str(e)}\n时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}",
+                    text=f"Nexus Media重启失败：{str(e)}\n时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}",
                 )

@@ -14,20 +14,20 @@ COPY tsconfig*.json turbo.json *.yaml ./
 COPY scripts ./scripts
 COPY internal ./internal
 COPY packages ./packages
-COPY apps/nas-tools/package.json ./apps/nas-tools/
+COPY apps/nexus-media/package.json ./apps/nexus-media/
 
 # 安装依赖
 RUN pnpm install --frozen-lockfile
 
 # 复制源码并构建
-COPY apps/nas-tools ./apps/nas-tools
-RUN pnpm --filter @nas-tools/frontend run build
+COPY apps/nexus-media ./apps/nexus-media
+RUN pnpm --filter @nexus-media/frontend run build
 
 # 运行时：Nginx 服务静态资源
 FROM nginx:alpine
 
 # 复制构建产物
-COPY --from=builder /app/apps/nas-tools/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/nexus-media/dist /usr/share/nginx/html
 
 # 复制 Nginx 配置
 COPY nginx.conf /etc/nginx/conf.d/default.conf

@@ -1,6 +1,6 @@
 import sys
 
-sys.path.insert(0, "/home/linyuan/python/nas-tools")
+sys.path.insert(0, "/home/linyuan/python/nexus-media")
 
 import os
 

@@ -1,4 +1,4 @@
-name: NAStool Docker Dev
+name: Nexus Media Docker Dev
 on:
   workflow_dispatch:
   push:
@@ -37,4 +37,4 @@ jobs:
             linux/arm64
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/nas-tools:latest-beta
+            ${{ secrets.DOCKER_USERNAME }}/nexus-media:latest-beta

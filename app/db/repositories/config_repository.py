@@ -127,7 +127,7 @@ class ConfigRepository(BaseRepository):
             interval: 间隔
             enabled: 是否启用
             samedata: 相同数据处理
-            only_nexus_media: 仅NAStool
+            only_nexus_media: 仅Nexus Media
             downloader: 下载器
             config: 配置
             note: 备注
@@ -161,7 +161,7 @@ class ConfigRepository(BaseRepository):
             enabled: 是否启用
             dtype: 类型
             transfer: 是否转移
-            only_nexus_media: 仅NAStool
+            only_nexus_media: 仅Nexus Media
             match_path: 匹配路径
             rmt_mode: 转移模式
             config: 配置
@@ -216,7 +216,7 @@ class ConfigRepository(BaseRepository):
         Args:
             did: 下载器ID
             transfer: 是否转移
-            only_nexus_media: 仅NAStool
+            only_nexus_media: 仅Nexus Media
             enabled: 是否启用
             match_path: 匹配路径
         """

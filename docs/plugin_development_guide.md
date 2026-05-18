@@ -534,7 +534,7 @@ self.ctx.debug("调试信息")
 
 1. 修改 `backend/plugin.py` 后，在前端点击「重载」按钮热重载
 2. 或重启 Nexus Media 服务
-3. 查看日志：`logs/nas-tools.log` 或前端插件日志面板
+3. 查看日志：`logs/nexus-media.log` 或前端插件日志面板
 
 ### 前端调试
 

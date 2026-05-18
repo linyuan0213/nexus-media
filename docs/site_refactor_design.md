@@ -56,7 +56,7 @@
 
 ## 2. 设计目标
 
-1. **统一站点定义** — 所有站点信息通过结构化 JSON 描述，存放在 `nas-tools-sites` 仓库
+1. **统一站点定义** — 所有站点信息通过结构化 JSON 描述，存放在 `nexus-media-sites` 仓库
 2. **区分 API 接口和 HTML 接口** — 定义标准化的 `site-api.schema.json` 和 `site-html.schema.json`
 3. **统一特殊逻辑** — 下载链接、字幕、用户信息、连接测试全部纳入站点定义
 4. **可扩展** — 新站点只需添加 JSON 配置，不需要编写 Python 代码
@@ -68,7 +68,7 @@
 ### 3.1 目录结构
 
 ```
-nas-tools-sites/
+nexus-media-sites/
 ├── schema/
 │   ├── site-api.schema.json          # API 站点 JSON Schema
 │   └── site-html.schema.json          # HTML 站点 JSON Schema

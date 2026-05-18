@@ -40,7 +40,7 @@ plugin-name-v1.0.0.zip
   "id": "com.example.autosignin",
   "name": "站点自动签到",
   "version": "1.2.0",
-  "author": "NAS-Tools Team",
+  "author": "Nexus Media Team",
   "author_url": "https://github.com/...",
   "description": "自动签到站点获取魔力值",
   "category": "site",
@@ -633,9 +633,9 @@ CREATE TABLE plugin_hooks (
 | `app/plugin_framework/schemas.py` | DTO |
 | `app/plugin_framework/context.py` | 插件上下文 |
 | `api/routers/plugin_framework.py` | API 路由 |
-| `web/frontend/apps/nas-tools/src/plugin-framework/` | 前端框架 |
-| `web/frontend/apps/nas-tools/src/views/plugin/market/` | 插件市场 |
-| `web/frontend/apps/nas-tools/src/views/plugin/installed/` | 已安装 |
+| `web/frontend/apps/nexus-media/src/plugin-framework/` | 前端框架 |
+| `web/frontend/apps/nexus-media/src/views/plugin/market/` | 插件市场 |
+| `web/frontend/apps/nexus-media/src/views/plugin/installed/` | 已安装 |
 
 ### 修改
 

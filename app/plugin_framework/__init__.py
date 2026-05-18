@@ -1,5 +1,5 @@
 """
-NAS-Tools Plugin Framework v2
+Nexus Media Plugin Framework v2
 """
 
 from .hook_system import HookSystem

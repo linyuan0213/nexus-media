@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://nas-tools/schema/site-api.schema.json",
+  "$id": "https://nexus-media/schema/site-api.schema.json",
   "title": "API 站点定义 Schema",
   "description": "通过 HTTP API 进行搜索的站点定义格式",
   "type": "object",
