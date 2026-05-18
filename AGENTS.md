@@ -1,7 +1,7 @@
-# NAS-Tools 项目指南
+# Nexus Media 项目指南
 
 ## 项目概述
-NAS 自动化工具，用于媒体管理、种子索引和下载编排。
+Nexus Media 自动化工具，用于媒体管理、种子索引和下载编排。
 - **后端**: Python 3.x, FastAPI, SQLAlchemy, Alembic
 - **前端**: Vue 3 + TypeScript + Vite + Naive UI + Tailwind CSS
 - **数据库**: SQLite (默认) 或 PostgreSQL，通过 `database_factory.py` 配置

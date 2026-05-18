@@ -1,10 +1,10 @@
 # 多数据库支持文档
 
-本文档说明 NAS-Tools 的多数据库支持功能，包括 SQLite、MySQL 和 PostgreSQL。
+本文档说明 Nexus Media 的多数据库支持功能，包括 SQLite、MySQL 和 PostgreSQL。
 
 ## 概述
 
-NAS-Tools 现在支持以下三种数据库：
+Nexus Media 现在支持以下三种数据库：
 
 1. **SQLite** (默认) - 本地文件数据库，无需额外配置
 2. **MySQL** - 高性能关系型数据库，适合高并发场景

@@ -1,4 +1,4 @@
-# NAS-Tools 插件框架 v2 设计文档
+# Nexus Media 插件框架 v2 设计文档
 
 ## 1. 设计目标
 

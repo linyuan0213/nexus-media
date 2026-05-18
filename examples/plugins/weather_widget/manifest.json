@@ -3,7 +3,7 @@
   "id": "weather_widget",
   "name": "天气插件",
   "version": "1.0.0",
-  "author": "NAS-Tools Team",
+  "author": "Nexus Media Team",
   "description": "展示插件依赖管理的示例插件，需要 requests 和 pytz",
   "category": "tool",
   "tags": ["示例", "依赖"],

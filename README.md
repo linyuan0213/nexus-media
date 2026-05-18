@@ -1,9 +1,9 @@
-# NAS-Tools - 多功能媒体库管理工具
+# Nexus Media - 多功能媒体库管理工具
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/linyuan0213/nas-tools)](https://hub.docker.com/r/linyuan0213/nas-tools)
 [![Telegram Group](https://img.shields.io/badge/Telegram-Group-blue)](https://t.me/+UxUIoJMmH2YwYWE1)
 
-NAS-Tools 是一个功能强大的媒体库管理工具，提供自动化追剧、资源下载、文件整理和订阅管理等功能，适合PT用户和影视爱好者使用。
+Nexus Media 是一个功能强大的媒体库管理工具，提供自动化追剧、资源下载、文件整理和订阅管理等功能，适合PT用户和影视爱好者使用。
 
 ## 文档目录
 

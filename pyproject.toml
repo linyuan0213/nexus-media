@@ -1,7 +1,7 @@
 [project]
-name = "nas-tools"
-version = "3.7.0"
-description = "Nas Tools"
+name = "nexus-media"
+version = "3.8.0"
+description = "Nexus Media"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

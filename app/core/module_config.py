@@ -580,10 +580,10 @@ class ModuleConf:
                     "id": "qbittorrent_torrent_management",
                     "required": False,
                     "title": "种子管理模式",
-                    "tooltip": """【默认】将使用Qbittorrent客户端中的设置，NAStool不进行修改；<br>
-                                【手动】强制开启手动管理模式，下载目录由NAStool传递的下载目录决定；<br>
-                                【自动】强制开启自动管理模式，下载目录由NAStool传递的分类标签决定，没有分类标签的将使用下载器中的默认保存路径；<br>
-                                【注意】自动管理模式下，NAStool将在启动时根据下载目录设置自动为下载器创建相应分类（需设置下载保存目录和分类标签），下载器中已存在该分类且其保存目录与NAStool中设置的不一致时，将会覆盖下载器的设置。
+                    "tooltip": """【默认】将使用Qbittorrent客户端中的设置，Nexus Media不进行修改；<br>
+                                【手动】强制开启手动管理模式，下载目录由Nexus Media传递的下载目录决定；<br>
+                                【自动】强制开启自动管理模式，下载目录由Nexus Media传递的分类标签决定，没有分类标签的将使用下载器中的默认保存路径；<br>
+                                【注意】自动管理模式下，Nexus Media将在启动时根据下载目录设置自动为下载器创建相应分类（需设置下载保存目录和分类标签），下载器中已存在该分类且其保存目录与Nexus Media中设置的不一致时，将会覆盖下载器的设置。
                                 """,
                     "type": "select",
                     "options": {"default": "默认", "manual": "手动", "auto": "自动"},

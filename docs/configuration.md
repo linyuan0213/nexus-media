@@ -1,6 +1,6 @@
 ---
 title: 系统配置说明
-description: NAStool 系统配置指南
+description: Nexus Media 系统配置指南
 date: 2023-05-13
 ---
 

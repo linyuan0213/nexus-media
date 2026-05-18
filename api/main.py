@@ -69,8 +69,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="NAS-Tools API",
-    description="NAS-Tools 现代化 FastAPI 路由（P3 绞杀式迁移）",
+    title="Nexus Media API",
+    description="Nexus Media 现代化 FastAPI 路由（P3 绞杀式迁移）",
     version=version.APP_VERSION,
     lifespan=lifespan,
 )

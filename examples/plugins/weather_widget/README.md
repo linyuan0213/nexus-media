@@ -27,4 +27,4 @@ cd examples/plugins/weather_widget
 zip -r weather_widget.zip .
 ```
 
-然后在 NAS-Tools 插件页面上传安装。
+然后在 Nexus Media 插件页面上传安装。

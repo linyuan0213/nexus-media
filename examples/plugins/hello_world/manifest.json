@@ -3,7 +3,7 @@
   "id": "hello_world",
   "name": "Hello World",
   "version": "1.0.0",
-  "author": "NAS-Tools Team",
+  "author": "Nexus Media Team",
   "author_url": "https://github.com/linyuan0213/nas-tools",
   "description": "插件框架 v2 的示例插件，展示前后端一体化能力",
   "category": "tool",

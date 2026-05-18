@@ -575,9 +575,9 @@ class SystemLifecycleService:
         os.chmod(script_path, 0o755)
         res = subprocess.run(["bash", script_path], cwd=os.getcwd())
         if res.returncode == 0:
-            log.info("Nastool 重启成功...")
+            log.info("Nexus Media 重启成功...")
         else:
-            log.info(f"Nastool 重启失败: {res.stderr.decode()}")
+            log.info(f"Nexus Media 重启失败: {res.stderr.decode()}")
 
 
 class MessageCommandHandler:

@@ -1,4 +1,4 @@
-# NAS-Tools 项目重构计划文档
+# Nexus Media 项目重构计划文档
 
 > 文档生成时间：2026-04-15  
 > 范围：核心 Python 后端代码（`app/`、`web/`、`config.py`）

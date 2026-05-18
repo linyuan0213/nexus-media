@@ -1,4 +1,4 @@
-# NAS-Tools Web 前端 Dockerfile
+# Nexus Media Web 前端 Dockerfile
 # 独立构建前端静态资源，由 Nginx 服务
 
 FROM node:20-alpine AS builder

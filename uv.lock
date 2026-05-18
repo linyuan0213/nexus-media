@@ -2466,8 +2466,8 @@ wheels = [
 ]
 
 [[package]]
-name = "nas-tools"
-version = "3.7.0"
+name = "nexus-media"
+version = "3.8.0"
 source = { virtual = "." }
 dependencies = [
     { name = "alembic" },

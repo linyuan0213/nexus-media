@@ -1,4 +1,4 @@
-# NAS-Tools 后端 Dockerfile
+# Nexus Media 后端 Dockerfile
 # 纯后端构建，前端由独立服务提供
 
 FROM python:3.11-alpine3.19 AS builder

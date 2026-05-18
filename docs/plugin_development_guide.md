@@ -1,8 +1,8 @@
-# NAS-Tools 插件开发文档（Plugin Framework v2）
+# Nexus Media 插件开发文档（Plugin Framework v2）
 
 ## 概述
 
-Plugin Framework v2 是 NAS-Tools 的插件架构，支持前后端一体化开发。每个插件是一个独立的目录包，包含 `manifest.json` 元数据、后端 Python 代码和前端 UMD 组件。
+Plugin Framework v2 是 Nexus Media 的插件架构，支持前后端一体化开发。每个插件是一个独立的目录包，包含 `manifest.json` 元数据、后端 Python 代码和前端 UMD 组件。
 
 **核心特性：**
 - 声明式 manifest 定义，无需修改系统代码
@@ -533,7 +533,7 @@ self.ctx.debug("调试信息")
 ### 后端调试
 
 1. 修改 `backend/plugin.py` 后，在前端点击「重载」按钮热重载
-2. 或重启 NAS-Tools 服务
+2. 或重启 Nexus Media 服务
 3. 查看日志：`logs/nas-tools.log` 或前端插件日志面板
 
 ### 前端调试
@@ -564,7 +564,7 @@ zip -r ../my_plugin-v1.0.0.zip .
 
 ### 安装
 
-1. 进入 NAS-Tools 前端「插件市场」
+1. 进入 Nexus Media 前端「插件市场」
 2. 点击右上角「安装本地插件」
 3. 上传 zip 文件
 4. 在「已安装插件」页面启用
