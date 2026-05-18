@@ -5,7 +5,7 @@
   "version": "2.1.0",
   "author": "linyuan0213",
   "author_url": "https://github.com/linyuan0213",
-  "description": "自动备份 NAStool 数据和配置文件，支持本地、WebDAV 和 Samba 存储。",
+  "description": "自动备份 Nexus Media 数据和配置文件，支持本地、WebDAV 和 Samba 存储。",
   "category": "system",
   "tags": ["备份", "系统"],
   "icon": "lucide:archive",
@@ -30,7 +30,7 @@
           "type": "switch",
           "label": "开启定时备份",
           "default": false,
-          "help": "开启后会根据周期定时备份 NAStool"
+          "help": "开启后会根据周期定时备份 Nexus Media"
         },
         {
           "key": "storage_type",

@@ -36,12 +36,12 @@ class ConfigMonitor(FileSystemEventHandler):
             CategoryLoadCache.set("ConfigLoadBlock", True, ConfigLoadCache.ttl)
             logger.warning("检测到系统配置文件已修改，正在重新加载...")
 
-            logger.info("Nastool 重启中...")
+            logger.info("Nexus Media 重启中...")
             res = subprocess.run(["bash", "./restart-server.sh"], cwd=".")
             if res.returncode == 0:
-                logger.info("Nastool 重启成功...")
+                logger.info("Nexus Media 重启成功...")
             else:
-                logger.info(f"Nastool 重启失败: {res.stderr.decode()}")
+                logger.info(f"Nexus Media 重启失败: {res.stderr.decode()}")
 
 
 def start_config_monitor():

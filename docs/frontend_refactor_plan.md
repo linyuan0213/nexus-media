@@ -10,12 +10,12 @@
 - **交互方式**：jQuery + 原生 JavaScript，ajax_post 调用后端 API
 - **组件化**：少量 Lit 自定义组件（`custom-img`、`normal-card`、`plugin-modal` 等）
 
-### 1.2 新版前端（web/frontend/apps/nas-tools/）
+### 1.2 新版前端（web/frontend/apps/nexus-media/）
 - **技术栈**：Vue 3 + Vite + TypeScript + Naive UI + Pinia + Vue Router
 - **框架底座**：Vben Admin v5.6.0
 - **当前状态**：基础框架已搭建，API 模块已适配后端 FastAPI，但页面内容较简陋
 - **图标系统**：Lucide Icons（通过 `@vben/icons`），废弃旧版 Tabler Icons SVG macro
-- **图片资源**：已迁移 `web/static/img/*` → `web/frontend/apps/nas-tools/public/static/img/`
+- **图片资源**：已迁移 `web/static/img/*` → `web/frontend/apps/nexus-media/public/static/img/`
 
 ### 1.3 后端 API
 - FastAPI 路由已全部迁移至 `/api/*`

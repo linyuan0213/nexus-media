@@ -29,7 +29,7 @@
 ### 1.2 选型理由
 
 1. **FastAPI 生态最匹配**：Vben 的 Mock 系统可与 FastAPI 的 OpenAPI Schema 无缝对接，支持基于 Swagger 文档自动生成 TypeScript 类型。
-2. **中后台功能最完整**：NAS-Tools 需要大量表格展示、表单配置、卡片布局、权限控制、任务调度面板等场景，Vben 开箱即用。
+2. **中后台功能最完整**：Nexus Media 需要大量表格展示、表单配置、卡片布局、权限控制、任务调度面板等场景，Vben 开箱即用。
 3. **长期维护成本最低**：30k+ Stars，Ant Design Vue 阿里生态，组件库稳定性经大规模生产验证。
 4. **RBAC 对接最顺畅**：现有 [`api/routers/rbac.py`](../api/routers/rbac.py:1) 已实现基于角色的权限控制，Vben 的动态路由 + 菜单权限可直接对接后端 RBAC 接口。
 5. **主题定制能力强**：NAS 用户偏好深色模式，Vben 内置完善的主题切换和自定义能力。
@@ -41,7 +41,7 @@
 ### 2.1 目录布局
 
 ```text
-nas-tools/
+nexus-media/
 ├── api/                          # FastAPI 后端（现有，保持不变）
 │   ├── main.py                   # FastAPI 应用入口
 │   ├── routers/                  # API 路由
@@ -52,7 +52,7 @@ nas-tools/
 │   ├── controllers/              # Flask Controllers（逐步废弃）
 │   └── frontend/                 # ⭐ 新建：Vben Admin 前端项目
 │       ├── apps/
-│       │   └── nas-tools/        # 主应用
+│       │   └── nexus-media/        # 主应用
 │       │       ├── src/
 │       │       │   ├── api/      # 后端 API 接口封装
 │       │       │   ├── views/    # 页面视图
@@ -73,7 +73,7 @@ nas-tools/
 
 Vben Admin v5 采用 pnpm workspace monorepo 结构：
 
-- `apps/nas-tools/` — 主应用，NAS-Tools 的业务代码
+- `apps/nexus-media/` — 主应用，Nexus Media 的业务代码
 - `packages/@vben/` — Vben 官方共享包（UI组件、请求封装、权限工具等）
 - `packages/@vben-core/` — 核心工具包
 
@@ -101,7 +101,7 @@ app.add_middleware(
 开发环境通过 Vite `proxy` 转发 API 请求到 FastAPI：
 
 ```typescript
-// apps/nas-tools/vite.config.ts
+// apps/nexus-media/vite.config.ts
 server: {
   proxy: {
     '/api': {
@@ -283,12 +283,12 @@ import '/static/components/custom/chips/index.js';
 
 ```bash
 # 1. 启动 FastAPI 后端
-cd /home/linyuan/python/nas-tools
+cd /home/linyuan/python/nexus-media
 export NASTOOL_CONFIG=/home/linyuan/python/config/config.yaml
 uv run python run_fastapi.py
 
 # 2. 启动前端开发服务器（另一个终端）
-cd web/frontend/apps/nas-tools
+cd web/frontend/apps/nexus-media
 pnpm dev          # 默认端口 5555，代理 /api 到 3000
 ```
 
@@ -296,7 +296,7 @@ pnpm dev          # 默认端口 5555，代理 /api 到 3000
 
 ```bash
 cd web/frontend
-pnpm build        # 构建产物输出到 apps/nas-tools/dist/
+pnpm build        # 构建产物输出到 apps/nexus-media/dist/
 ```
 
 构建产物（`dist/` 目录）通过 FastAPI `StaticFiles` 挂载为 SPA：
@@ -306,14 +306,14 @@ pnpm build        # 构建产物输出到 apps/nas-tools/dist/
 from fastapi.responses import FileResponse
 
 # 挂载前端构建产物
-app.mount("/app", StaticFiles(directory="web/frontend/apps/nas-tools/dist", html=True), name="frontend")
+app.mount("/app", StaticFiles(directory="web/frontend/apps/nexus-media/dist", html=True), name="frontend")
 
 # 兜底路由：所有非 API 请求返回 index.html（SPA 路由）
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str):
     if full_path.startswith("api/") or full_path.startswith("static/"):
         raise HTTPException(status_code=404)
-    return FileResponse("web/frontend/apps/nas-tools/dist/index.html")
+    return FileResponse("web/frontend/apps/nexus-media/dist/index.html")
 ```
 
 ### 6.3 与现有 Flask 共存策略（绞杀式迁移）
@@ -357,7 +357,7 @@ async def serve_spa(full_path: str):
 
 ### 7.2 WebSocket 实时推送
 
-NAS-Tools 现有 WebSocket（`websockets` 库）用于推送下载进度、任务状态等。前端通过 Vben 的 `useWebSocket` 封装对接：
+Nexus Media 现有 WebSocket（`websockets` 库）用于推送下载进度、任务状态等。前端通过 Vben 的 `useWebSocket` 封装对接：
 
 ```typescript
 // 实时下载进度

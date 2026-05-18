@@ -1,6 +1,6 @@
 # Hello World 示例插件
 
-这是 NAS-Tools 插件框架 v2 的示例插件，展示前后端一体化插件包的完整结构。
+这是 Nexus Media 插件框架 v2 的示例插件，展示前后端一体化插件包的完整结构。
 
 ## 插件结构
 
@@ -110,7 +110,7 @@ cd examples/plugins
 zip -r hello_world-v1.0.0.zip hello_world/
 ```
 
-然后在 NAS-Tools 前端「插件市场」→「安装本地插件」上传 zip 包。
+然后在 Nexus Media 前端「插件市场」→「安装本地插件」上传 zip 包。
 
 ## 调试
 

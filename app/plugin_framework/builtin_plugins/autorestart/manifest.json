@@ -5,7 +5,7 @@
   "version": "1.0",
   "author": "linyuan0213",
   "author_url": "https://github.com/linyuan0213",
-  "description": "定时自动重启NAStool服务，保持系统稳定运行。",
+  "description": "定时自动重启Nexus Media服务，保持系统稳定运行。",
   "category": "system",
   "tags": ["重启", "系统"],
   "icon": "lucide:refresh-cw",
@@ -30,7 +30,7 @@
           "type": "switch",
           "label": "开启定时重启",
           "default": false,
-          "help": "开启后会根据周期定时重启NAStool服务"
+          "help": "开启后会根据周期定时重启Nexus Media服务"
         },
         {
           "key": "cron",

@@ -31,7 +31,7 @@
           "type": "switch",
           "label": "开启电影精选",
           "default": false,
-          "help": "目前仅支持Emby，NAStool挂载目录如与Emby媒体库目录不一致则需要配置路径映射"
+          "help": "目前仅支持Emby，Nexus Media挂载目录如与Emby媒体库目录不一致则需要配置路径映射"
         },
         {
           "key": "dir_name",
@@ -47,7 +47,7 @@
           "label": "本地路径1",
           "default": "",
           "placeholder": "本地路径",
-          "help": "NAStool本地路径"
+          "help": "Nexus Media本地路径"
         },
         {
           "key": "remote_path",

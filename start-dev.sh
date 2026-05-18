@@ -1,5 +1,5 @@
 #!/bin/sh
-# NAS-Tools FastAPI 开发模式启动脚本
+# Nexus Media FastAPI 开发模式启动脚本
 # 使用 uvicorn 单进程启动（带热重载）
 
 # 检查环境变量
@@ -12,7 +12,7 @@ fi
 # 默认端口
 export FASTAPI_PORT=${FASTAPI_PORT:-3000}
 
-echo "【FastAPI】启动 NAS-Tools FastAPI 版本..."
+echo "【FastAPI】启动 Nexus Media FastAPI 版本..."
 echo "【FastAPI】配置文件：$NASTOOL_CONFIG"
 echo "【FastAPI】监听端口：$FASTAPI_PORT"
 

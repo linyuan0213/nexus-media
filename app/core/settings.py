@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class AppSettings(BaseSettings):
     """
-    NAS-Tools 应用级环境变量配置
+    Nexus Media 应用级环境变量配置
     所有字段均可通过 .env 文件或环境变量设置
     """
 

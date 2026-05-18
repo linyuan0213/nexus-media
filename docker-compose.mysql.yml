@@ -78,7 +78,7 @@ services:
 
   ocr:
     image: linyuan0213/nexus-media-ocr:latest
-    container_name: nas-tools-ocr
+    container_name: nexus-media-ocr
     ports:
       - 9300:9300
     restart: always
@@ -87,7 +87,7 @@ services:
 
   chrome:
     image: linyuan0213/nexus-media-chrome:latest
-    container_name: nas-tools-chrome
+    container_name: nexus-media-chrome
     shm_size: 2g
     environment:
       - VNC_PASSWORD=password

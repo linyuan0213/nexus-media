@@ -1,6 +1,6 @@
 """
 AutoBackup Plugin v2
-自动备份 NAStool 数据和配置文件
+自动备份 Nexus Media 数据和配置文件
 """
 
 import contextlib
