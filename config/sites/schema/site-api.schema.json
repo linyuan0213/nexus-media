@@ -106,7 +106,7 @@
       "type": "object",
       "properties": {
         "source": {"type": "string", "description": "JSON 路径，点号分隔"},
-        "type": {"enum": ["mapping", "api", "constant", "template", "html"]},
+        "type": {"enum": ["mapping", "api", "constant", "template", "html", "int", "float"]},
         "method": {"enum": ["GET", "POST"]},
         "path": {"type": "string"},
         "body": {"type": "object"},

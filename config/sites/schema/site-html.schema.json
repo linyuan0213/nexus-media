@@ -20,7 +20,7 @@
     "user_info": {"$ref": "#/definitions/user_info_config"},
     "html": {
       "type": "object",
-      "required": ["search", "torrents", "category"],
+      "required": ["search", "torrents"],
       "properties": {
         "search": {"$ref": "#/definitions/search_config"},
         "category": {"$ref": "#/definitions/category_config"},
@@ -99,7 +99,7 @@
     },
     "torrents_config": {
       "type": "object",
-      "required": ["list", "fields"],
+      "required": ["fields"],
       "properties": {
         "list": {
           "type": "object",
@@ -166,11 +166,16 @@
         "filters": {
           "type": "array",
           "items": {
-            "type": "object",
-            "properties": {
-              "name": {"type": "string"},
-              "args": {"type": ["array", "string"]}
-            }
+            "oneOf": [
+              {"type": "string"},
+              {
+                "type": "object",
+                "properties": {
+                  "name": {"type": "string"},
+                  "args": {"type": ["array", "string"]}
+                }
+              }
+            ]
           }
         },
         "default_value": {"type": ["string", "number"], "description": "字段缺失时的默认值"},
