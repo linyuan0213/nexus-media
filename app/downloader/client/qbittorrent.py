@@ -463,6 +463,43 @@ class Qbittorrent(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return False
 
+    def add_torrent_and_get_id(
+        self,
+        content: str | bytes,
+        is_paused: bool = False,
+        download_dir: str | None = None,
+        tags: list[str] | None = None,
+        category: str | None = None,
+        upload_limit: int | None = None,
+        download_limit: int | None = None,
+        ratio_limit: float | None = None,
+        seeding_time_limit: int | None = None,
+        cookie: str | None = None,
+        **kwargs: Any,
+    ) -> str | None:
+        torrent_hash = self.calculate_torrent_hash(content)
+        if not torrent_hash:
+            return None
+        exists, _ = self.check_torrent_exists(content)
+        if exists:
+            return "EXISTS"
+        ret = self.add_torrent(
+            content,
+            is_paused=is_paused,
+            download_dir=download_dir,
+            tag=tags,
+            category=category,
+            content_layout="Original",
+            upload_limit=upload_limit,
+            download_limit=download_limit,
+            ratio_limit=ratio_limit,
+            seeding_time_limit=seeding_time_limit,
+            cookie=cookie,
+        )
+        if ret:
+            return torrent_hash
+        return None
+
     def start_torrents(self, ids: list[str] | str | None = None) -> Any:
         if not self.qbc:
             return False

@@ -17,7 +17,7 @@ from app.services.search_service import Searcher
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.sites import Sites
 from app.utils import StringUtils, Torrent
-from app.utils.types import IndexerType, MediaType, RssType, SearchType
+from app.utils.types import MediaType, RssType, SearchType
 from app.utils.web_utils import WebUtils
 from config import Config
 
@@ -200,7 +200,7 @@ class MessageSearchService:
             [{"id": site.get("name"), "name": site.get("name")} for site in Sites().get_sites(rss=True, public=True)],
         )
 
-        if indexer_type == IndexerType.BUILTIN:
+        if indexer_type == "builtin":
             search_sites = []
         else:
             search_sites, content = StringUtils.get_idlist_from_string(

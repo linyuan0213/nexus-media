@@ -6,7 +6,8 @@ from watchdog.observers import Observer
 
 import log
 from app.core.system_config import SystemConfig
-from app.db.repositories import ConfigRepository, DownloadRepository
+from app.db.repositories.base_repository import BaseRepository
+from app.db.repositories.download_repo_adapter import IndexerStatisticsRepositoryAdapter
 from app.helper import PluginHelper
 from app.infrastructure.cache_system import CategoryLoadCache, ConfigLoadCache
 from app.media import Category
@@ -82,7 +83,7 @@ def update_config():
     升级配置文件
     """
     _config = Config().get_config()
-    _dbhelper = DownloadRepository()
+    _dbhelper = IndexerStatisticsRepositoryAdapter()
     overwrite_cofig = False
 
     # security.api_key 已废弃：
@@ -152,7 +153,7 @@ def update_config():
         Config().save_config(_config)
 
     # 清空索引器统计
-    _dbhelper.delete_all_indexer_statistics()
+    _dbhelper.delete_all()
 
 
 class ConfigMonitor(FileSystemEventHandler):
@@ -250,7 +251,6 @@ def update_rss_state():
     初始化时更新所有RSS订阅状态为R
     """
     try:
-        dbhelper = ConfigRepository()
         # 执行SQL脚本更新RSS状态
         sql_file = os.path.join(os.path.dirname(__file__), "scripts", "sqls", "update_rss_state.sql")
         if os.path.exists(sql_file):
@@ -260,7 +260,7 @@ def update_rss_state():
                 sql_statements = [stmt.strip() for stmt in sql_content.split(";") if stmt.strip()]
                 for sql in sql_statements:
                     if sql:
-                        dbhelper.execute(sql)
+                        BaseRepository._db.execute(sql)
                 log.info("【Initialize】RSS订阅状态已更新为正在订阅")
         else:
             log.warn("【Initialize】RSS状态更新SQL文件不存在")

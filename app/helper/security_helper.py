@@ -46,13 +46,15 @@ class SecurityHelper:
                 for allow_ipv4 in allow_ipv4s:
                     if ipaddr in ipaddress.ip_network(allow_ipv4):
                         return True
-            elif ipaddr.ipv4_mapped:
-                if not allow_ips.get("ipv4"):
-                    return True
-                allow_ipv4s = allow_ips.get("ipv4").split(",")
-                for allow_ipv4 in allow_ipv4s:
-                    if ipaddr.ipv4_mapped in ipaddress.ip_network(allow_ipv4):
+            elif ipaddr.version == 6:
+                ipv4_mapped = getattr(ipaddr, "ipv4_mapped", None)
+                if ipv4_mapped:
+                    if not allow_ips.get("ipv4"):
                         return True
+                    allow_ipv4s = allow_ips.get("ipv4").split(",")
+                    for allow_ipv4 in allow_ipv4s:
+                        if ipv4_mapped in ipaddress.ip_network(allow_ipv4):
+                            return True
             else:
                 if not allow_ips.get("ipv6"):
                     return True

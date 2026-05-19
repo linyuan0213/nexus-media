@@ -12,7 +12,6 @@ DownloadClientFactory - 下载器客户端工厂
 
 import json
 import os
-from enum import Enum
 from threading import Lock
 
 import log
@@ -53,9 +52,6 @@ class DownloadClientFactory:
 
         # 监控下载器ID列表
         self._monitor_downloader_ids = []
-
-        # 下载器ID-名称枚举类
-        self._downloader_enum = None
 
         # 下载设置 {setting_id: setting_dict}
         self._download_settings = {}
@@ -115,11 +111,6 @@ class DownloadClientFactory:
                 "config": config,
                 "download_dir": json.loads(str(downloader_conf.DOWNLOAD_DIR)),
             }
-
-        # 生成枚举
-        self._downloader_enum = Enum(
-            "DownloaderIdName", {did: conf.get("name") for did, conf in self._downloader_confs.items()}
-        )
 
         # 下载顺序
         pt = Config().get_config("pt")
@@ -248,11 +239,6 @@ class DownloadClientFactory:
     def monitor_downloader_ids(self):
         """获取监控下载器ID列表"""
         return self._monitor_downloader_ids
-
-    @property
-    def downloader_enum(self):
-        """获取下载器ID-名称枚举"""
-        return self._downloader_enum
 
     @property
     def jobstore(self):
