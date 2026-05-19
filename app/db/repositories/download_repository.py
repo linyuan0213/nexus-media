@@ -60,7 +60,7 @@ class DownloadRepository(BaseRepository):
             return
         # title 为空时，用 org_string 或 get_name() 回退，确保能写入历史
         title = media_info.title or media_info.get_name() or media_info.org_string
-        if not title or not media_info.tmdb_id:
+        if not title:
             return
         # 回填到 media_info，确保后续使用一致
         media_info.title = title
@@ -81,14 +81,21 @@ class DownloadRepository(BaseRepository):
                 downloader == DOWNLOADHISTORY.DOWNLOADER,
                 download_id == DOWNLOADHISTORY.DOWNLOAD_ID,
             ).update({
+                "TITLE": media_info.title,
+                "YEAR": media_info.year or "",
+                "TYPE": media_info.type.value if media_info.type else "",
+                "TMDBID": media_info.tmdb_id or "",
+                "VOTE": media_info.vote_average or "",
+                "POSTER": media_info.get_poster_image() or "",
+                "OVERVIEW": media_info.overview or "",
                 "TORRENT": media_info.org_string,
                 "ENCLOSURE": media_info.enclosure,
-                "DESC": media_info.description,
-                "SITE": media_info.site,
+                "DESC": media_info.description or "",
+                "SITE": media_info.site or "",
                 "DOWNLOADER": downloader,
                 "DOWNLOAD_ID": download_id,
                 "SAVE_PATH": save_dir,
-                "SE": media_info.get_season_episode_string(),
+                "SE": media_info.get_season_episode_string() or "",
                 "STATE": "downloading",
                 "DATE": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
             })
@@ -96,21 +103,21 @@ class DownloadRepository(BaseRepository):
             self._db.insert(
                 DOWNLOADHISTORY(
                     TITLE=media_info.title,
-                    YEAR=media_info.year,
-                    TYPE=media_info.type.value,
-                    TMDBID=media_info.tmdb_id,
-                    VOTE=media_info.vote_average,
-                    POSTER=media_info.get_poster_image(),
-                    OVERVIEW=media_info.overview,
+                    YEAR=media_info.year or "",
+                    TYPE=media_info.type.value if media_info.type else "",
+                    TMDBID=media_info.tmdb_id or "",
+                    VOTE=media_info.vote_average or "",
+                    POSTER=media_info.get_poster_image() or "",
+                    OVERVIEW=media_info.overview or "",
                     TORRENT=media_info.org_string,
                     ENCLOSURE=media_info.enclosure,
-                    DESC=media_info.description,
+                    DESC=media_info.description or "",
                     DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
-                    SITE=media_info.site,
+                    SITE=media_info.site or "",
                     DOWNLOADER=downloader,
                     DOWNLOAD_ID=download_id,
                     SAVE_PATH=save_dir,
-                    SE=media_info.get_season_episode_string(),
+                    SE=media_info.get_season_episode_string() or "",
                     STATE="downloading",
                 )
             )
@@ -184,7 +191,7 @@ class DownloadRepository(BaseRepository):
             .first()
         )
 
-    def get_active_downloads(self, days: int = 7, limit: int = 500) -> list[DOWNLOADHISTORY]:
+    def get_active_downloads(self, days: int = 30, limit: int = 500) -> list[DOWNLOADHISTORY]:
         """
         获取最近几天内的下载任务（包含 downloading 和 completed）。
         兼容迁移后 STATE 被设为 completed 但任务实际还在下载的情况，

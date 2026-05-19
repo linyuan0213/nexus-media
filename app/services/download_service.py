@@ -290,9 +290,16 @@ class DownloadService:
             downloader_conf = self._downloader.get_downloader_conf(did)
             downloader_name = downloader_conf.get("name") if downloader_conf else did
 
-            # 批量查询这些任务的进度
+            # 批量查询这些任务的进度（直接调用客户端，绕过 only_nexus_media 标签过滤）
             ids = [t.DOWNLOAD_ID for t in tasks if t.DOWNLOAD_ID]
-            progress_list = self._downloader.get_downloading_progress(downloader_id=did, ids=ids)
+            _client = self._downloader.get_downloader(did)
+            if not _client:
+                continue
+            try:
+                progress_list = _client.get_downloading_progress(ids=ids) or []
+            except Exception as e:
+                log.debug(f"【DownloadService】查询下载器 {did} 进度失败：{e}")
+                progress_list = []
             progress_map = {p.get("id"): p for p in progress_list if p.get("id")}
 
             for task in tasks:
