@@ -89,6 +89,7 @@ class DownloadRepository(BaseRepository):
                 "DOWNLOAD_ID": download_id,
                 "SAVE_PATH": save_dir,
                 "SE": media_info.get_season_episode_string(),
+                "STATE": "downloading",
                 "DATE": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
             })
         else:
@@ -110,6 +111,7 @@ class DownloadRepository(BaseRepository):
                     DOWNLOAD_ID=download_id,
                     SAVE_PATH=save_dir,
                     SE=media_info.get_season_episode_string(),
+                    STATE="downloading",
                 )
             )
 
@@ -181,6 +183,28 @@ class DownloadRepository(BaseRepository):
             .order_by(DOWNLOADHISTORY.DATE.desc())
             .first()
         )
+
+    def get_active_downloads(self) -> list[DOWNLOADHISTORY]:
+        """
+        获取所有正在下载中的任务
+        """
+        return (
+            self._db
+            .query(DOWNLOADHISTORY)
+            .filter(DOWNLOADHISTORY.STATE == "downloading")
+            .order_by(DOWNLOADHISTORY.DATE.desc())
+            .all()
+        )
+
+    @DbPersist(BaseRepository._db)
+    def update_download_state(self, downloader: str, download_id: str, state: str) -> None:
+        """
+        更新下载任务状态
+        """
+        self._db.query(DOWNLOADHISTORY).filter(
+            downloader == DOWNLOADHISTORY.DOWNLOADER,
+            download_id == DOWNLOADHISTORY.DOWNLOAD_ID,
+        ).update({"STATE": state})
 
     # ==================== Download Settings ====================
 

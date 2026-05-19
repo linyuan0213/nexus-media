@@ -45,6 +45,7 @@ class DOWNLOADHISTORY(Base):
     DOWNLOADER: Mapped[str] = mapped_column(String(255))
     DOWNLOAD_ID: Mapped[str] = mapped_column(String(255), index=True)
     SAVE_PATH: Mapped[str] = mapped_column(String(512), index=True)
+    STATE: Mapped[str] = mapped_column(String(20), default="downloading")
     DATE: Mapped[str] = mapped_column(String(20), index=True)
 
     def as_dict(self) -> dict[str, Any]:
