@@ -37,10 +37,10 @@ from app.agent.providers.base import ProviderConfig
 from app.agent.providers.gemini import GeminiProvider
 from app.agent.providers.ollama import OllamaProvider
 from app.agent.providers.openai import OpenAIProvider
-from app.core.module_config import ModuleConf
 from app.core.system_config import SystemConfig
 from app.db.repositories import ConfigRepository
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
+from app.indexer.registry import get_all_clients as get_all_indexers
 from app.mediaserver.registry import get_all_clients as get_all_mediaservers
 from app.message.registry import get_all_clients
 from app.message.switches import MESSAGE_SWITCHES
@@ -376,7 +376,11 @@ def get_indexers(
             "indexers": indexers,
             "private_count": private_count,
             "public_count": public_count,
-            "indexer_conf": ModuleConf.INDEXER_CONF,
+            "indexer_conf": {
+                cls.client_id: cls.config_schema.to_dict()
+                for cls in get_all_indexers()
+                if hasattr(cls, "client_id") and cls.client_id and hasattr(cls, "config_schema") and cls.config_schema
+            },
             "indexer_sites": indexer_sites,
             "search_indexer": search_indexer,
             "indexer_config": indexer_config,

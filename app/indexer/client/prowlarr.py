@@ -1,15 +1,38 @@
 from app.helper import IndexerConf
 from app.indexer.client._base import _IIndexClient
+from app.indexer.schema import ConfigField, IndexerConfigSchema
 from app.utils import ExceptionUtils, RequestUtils
-from app.utils.types import IndexerType
 
 
 class Prowlarr(_IIndexClient):
     schema = "prowlarr"
     _client_config = {}
-    index_type = IndexerType.PROWLARR.value
+    index_type = "Prowlarr"
     client_id = "prowlarr"
-    client_type = IndexerType.PROWLARR
+    client_type = "prowlarr"
+    client_name = "Prowlarr"
+    config_schema = IndexerConfigSchema(
+        name="Prowlarr",
+        icon_url="/static/img/indexer/prowlarr.png",
+        fields=[
+            ConfigField(
+                id="host",
+                required=True,
+                title="Prowlarr地址",
+                tooltip="Prowlarr访问地址和端口，如为https需加https://前缀。注意需要先在Prowlarr中添加搜刮器，同时勾选所有搜刮器后搜索一次，才能正常测试通过和使用",
+                type="text",
+                placeholder="http://127.0.0.1:9696",
+            ),
+            ConfigField(
+                id="api_key",
+                required=True,
+                title="Api Key",
+                tooltip="在Prowlarr->Settings->General->Security-> API Key中获取",
+                type="text",
+                placeholder="",
+            ),
+        ],
+    )
 
     def __init__(self, config=None):
         super().__init__()

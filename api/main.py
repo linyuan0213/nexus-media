@@ -37,6 +37,7 @@ from api.routers import (
 )
 from app.db import init_db, remove_session
 from app.downloader.client import init_clients as init_downloaders
+from app.indexer.client import init_clients as init_indexers
 from app.mediaserver.client import init_clients as init_mediaservers
 from app.message import Message
 from app.message.client import init_clients as init_message_clients
@@ -66,6 +67,9 @@ async def lifespan(app: FastAPI):
     log.info("【FastAPI】启动后台服务...")
     SystemLifecycleService().start_service()
     log.info("【FastAPI】后台服务启动完成")
+    # 注册内置索引器
+    init_indexers()
+    log.info("【FastAPI】索引器注册完成")
     # 注册内置下载器
     init_downloaders()
     log.info("【FastAPI】下载器注册完成")

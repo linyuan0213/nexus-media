@@ -2,16 +2,47 @@ import requests
 
 from app.helper import IndexerConf
 from app.indexer.client._base import _IIndexClient
+from app.indexer.schema import ConfigField, IndexerConfigSchema
 from app.utils import ExceptionUtils, RequestUtils
-from app.utils.types import IndexerType
 
 
 class Jackett(_IIndexClient):
     schema = "jackett"
     _client_config = {}
-    index_type = IndexerType.JACKETT.value
+    index_type = "Jackett"
     client_id = "jackett"
-    client_type = IndexerType.JACKETT
+    client_type = "jackett"
+    client_name = "Jackett"
+    config_schema = IndexerConfigSchema(
+        name="Jackett",
+        icon_url="/static/img/indexer/jackett.png",
+        fields=[
+            ConfigField(
+                id="host",
+                required=True,
+                title="Jackett地址",
+                tooltip="Jackett访问地址和端口，如为https需加https://前缀。注意需要先在Jackett中添加indexer，才能正常测试通过和使用",
+                type="text",
+                placeholder="http://127.0.0.1:9117",
+            ),
+            ConfigField(
+                id="api_key",
+                required=True,
+                title="Api Key",
+                tooltip="Jackett管理界面右上角复制API Key",
+                type="text",
+                placeholder="",
+            ),
+            ConfigField(
+                id="password",
+                required=False,
+                title="密码",
+                tooltip="Jackett管理界面中配置的Admin password，如未配置可为空",
+                type="password",
+                placeholder="",
+            ),
+        ],
+    )
     _password = None
 
     def __init__(self, config=None):

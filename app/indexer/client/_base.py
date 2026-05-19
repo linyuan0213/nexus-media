@@ -17,6 +17,9 @@ from app.utils import DomUtils, ExceptionUtils, RequestUtils, StringUtils
 from app.utils.types import ProgressKey, SearchType
 
 
+from app.indexer.schema import IndexerConfigSchema
+
+
 class _IIndexClient(metaclass=ABCMeta):
     """
     索引器客户端抽象基类
@@ -34,6 +37,7 @@ class _IIndexClient(metaclass=ABCMeta):
     client_id = ""
     client_type = ""
     client_name = "Indexer"
+    config_schema: IndexerConfigSchema | None = None
     index_type = ""
     api_key = ""
     host = ""
