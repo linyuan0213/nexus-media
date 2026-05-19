@@ -46,13 +46,6 @@ class IndexerType(Enum):
     PROWLARR = "Prowlarr"
 
 
-class MediaServerType(Enum):
-    JELLYFIN = "Jellyfin"
-    EMBY = "Emby"
-    PLEX = "Plex"
-    FNOS = "FnOS"
-
-
 class BrushDeleteType(Enum):
     NOTDELETE = "不删除"
     SEEDTIME = "做种时间"

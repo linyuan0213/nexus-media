@@ -10,16 +10,60 @@ from plexapi.server import PlexServer
 import log
 from app.mediaserver.client._base import _IMediaClient
 from app.utils import ExceptionUtils
-from app.utils.types import MediaServerType, MediaType
+from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
+from app.utils.types import MediaType
 
 
 class Plex(_IMediaClient):
     # 媒体服务器ID
     client_id = "plex"
     # 媒体服务器类型
-    client_type = MediaServerType.PLEX
+    client_type = "plex"
     # 媒体服务器名称
-    client_name = MediaServerType.PLEX.value
+    client_name = "Plex"
+    # 配置架构
+    config_schema = MediaServerConfigSchema(
+        name="Plex",
+        fields=[
+            ConfigField(
+                id="enabled",
+                required=False,
+                title="启用",
+                type="switch",
+                tooltip="启用该媒体服务器",
+            ),
+            ConfigField(
+                id="is_default",
+                required=False,
+                title="默认",
+                type="switch",
+                tooltip="设置为默认使用的媒体服务器，同一时间只能有一个默认",
+            ),
+            ConfigField(
+                id="host",
+                required=True,
+                title="服务器地址",
+                type="text",
+                tooltip="配置IP地址和端口，如为https则需要增加https://前缀",
+                placeholder="http://127.0.0.1:32400",
+            ),
+            ConfigField(
+                id="token",
+                required=False,
+                title="X-Plex-Token",
+                type="text",
+                tooltip="Plex网页Url中的X-Plex-Token，通过浏览器F12->网络从请求URL中获取，如填写将优先使用；Token与服务器名称、用户名及密码 二选一，推荐使用Token，连接速度更快",
+            ),
+            ConfigField(
+                id="play_host",
+                required=False,
+                title="媒体播放地址",
+                type="text",
+                tooltip="配置播放设备的访问地址，用于媒体详情页跳转播放页面；如为https则需要增加https://前缀，留空则默认与服务器地址一致",
+                placeholder="http://127.0.0.1:32400",
+            ),
+        ],
+    )
 
     # 私有属性
     _client_config = {}
@@ -82,7 +126,7 @@ class Plex(_IMediaClient):
     def match(cls, ctype: Any) -> bool:
         return ctype in [cls.client_id, cls.client_type, cls.client_name]
 
-    def get_type(self) -> MediaServerType:
+    def get_type(self) -> str:
         return self.client_type
 
     def get_status(self) -> bool:

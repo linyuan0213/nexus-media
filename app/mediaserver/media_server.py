@@ -6,13 +6,14 @@ import log
 from app.core.system_config import SystemConfig
 from app.db import MediaDb
 from app.db.repositories import ConfigRepository
-from app.helper import ProgressHelper, SubmoduleHelper
+from app.helper import ProgressHelper
+from app.mediaserver.registry import get_all_clients
 from app.media import MediaService
 from app.message import Message
 from app.infrastructure.queue import MessageQueueFactory
 from app.utils import ExceptionUtils
 from app.utils.commons import SingletonMeta
-from app.utils.types import MediaServerType, MovieTypes, ProgressKey, SystemConfigKey
+from app.utils.types import MovieTypes, ProgressKey, SystemConfigKey
 from config import Config
 
 lock = threading.Lock()
@@ -20,9 +21,7 @@ server_lock = threading.Lock()
 
 
 class MediaServer(metaclass=SingletonMeta):
-    _mediaserver_schemas = []
-
-    _server_type: MediaServerType | str | None = None
+    _server_type: str | None = None
     _server = None
     mediadb = None
     progress = None
@@ -32,10 +31,6 @@ class MediaServer(metaclass=SingletonMeta):
     config_repo = None
 
     def __init__(self):
-        self._mediaserver_schemas = SubmoduleHelper.import_submodules(
-            "app.mediaserver.client", filter_func=lambda _, obj: hasattr(obj, "client_id")
-        )
-        log.debug(f"【MediaServer】加载媒体服务器：{self._mediaserver_schemas}")
         self.init_config()
 
     def init_config(self):
@@ -55,10 +50,10 @@ class MediaServer(metaclass=SingletonMeta):
         self._server = None
 
     def __build_class(self, ctype, conf):
-        for mediaserver_schema in self._mediaserver_schemas:
+        for cls in get_all_clients():
             try:
-                if mediaserver_schema.match(ctype):
-                    return mediaserver_schema(conf)
+                if cls.match(ctype):
+                    return cls(conf)
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
         return None
@@ -70,7 +65,7 @@ class MediaServer(metaclass=SingletonMeta):
                 self._server = self.__get_server(self._server_type)
             return self._server
 
-    def __get_server(self, ctype: MediaServerType | str | None, conf=None):
+    def __get_server(self, ctype: str | None, conf=None):
         return self.__build_class(ctype=ctype, conf=conf)
 
     def get_type(self):
@@ -346,7 +341,7 @@ class MediaServer(metaclass=SingletonMeta):
             return None
         return self.server.get_playing_sessions()
 
-    def _process_webhook(self, event_info: dict, channel: MediaServerType):
+    def _process_webhook(self, event_info: dict, channel: str):
         """异步处理 webhook（图片获取 + 消息发送）"""
         if not self.message:
             return
@@ -363,12 +358,12 @@ class MediaServer(metaclass=SingletonMeta):
                 image_url = self.get_local_image_by_id(item_id=event_info.get("item_id"))
             else:
                 image_url = None
-            self.message.send_mediaserver_message(event_info=event_info, channel=channel.value, image_url=image_url)
+            self.message.send_mediaserver_message(event_info=event_info, channel=channel, image_url=image_url)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             log.error("【MediaServer】webhook 异步处理异常")
 
-    def webhook_message_handler(self, message: str, channel: MediaServerType):
+    def webhook_message_handler(self, message: str, channel: str):
         """
         处理Webhook消息（快速响应，异步处理）
         """
