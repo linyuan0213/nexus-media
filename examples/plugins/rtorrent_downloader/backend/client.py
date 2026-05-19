@@ -324,6 +324,28 @@ class Rtorrent(_IDownloadClient):
             ExceptionUtils.exception_traceback(e)
             return False
 
+    def add_torrent_and_get_id(
+        self,
+        content: str | bytes,
+        is_paused: bool = False,
+        download_dir: str | None = None,
+        tags: list[str] | None = None,
+        category: str | None = None,
+        upload_limit: int | None = None,
+        download_limit: int | None = None,
+        ratio_limit: float | None = None,
+        seeding_time_limit: int | None = None,
+        cookie: str | None = None,
+        **kwargs: Any,
+    ) -> str | None:
+        """rTorrent 不支持通过 API 获取新添加种子的 hash，返回 None"""
+        success = self.add_torrent(
+            content,
+            download_dir=download_dir,
+            **kwargs,
+        )
+        return None if not success else ""
+
     def start_torrents(self, ids: list[str] | str | None = None) -> bool:
         if not self._client or not ids:
             return False

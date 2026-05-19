@@ -62,6 +62,11 @@ class Indexer(metaclass=SingletonMeta):
     def __get_client(self, ctype, conf=None):
         return self.__build_class(ctype=ctype, conf=conf)
 
+    def init_config(self):
+        """重置客户端缓存，下次访问时重新加载"""
+        self._client = None
+        self._client_type = None
+
     def get_client(self):
         self._ensure_client()
         return self._client

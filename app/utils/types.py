@@ -40,12 +40,6 @@ class OsType(Enum):
     DOCKER = "Docker"
 
 
-class IndexerType(Enum):
-    BUILTIN = "Indexer"
-    JACKETT = "Jackett"
-    PROWLARR = "Prowlarr"
-
-
 class BrushDeleteType(Enum):
     NOTDELETE = "不删除"
     SEEDTIME = "做种时间"

@@ -388,6 +388,39 @@ class Transmission(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return False
 
+    def add_torrent_and_get_id(
+        self,
+        content: str | bytes,
+        is_paused: bool = False,
+        download_dir: str | None = None,
+        tags: list[str] | None = None,
+        category: str | None = None,
+        upload_limit: int | None = None,
+        download_limit: int | None = None,
+        ratio_limit: float | None = None,
+        seeding_time_limit: int | None = None,
+        cookie: str | None = None,
+        **kwargs: Any,
+    ) -> str | None:
+        ret = self.add_torrent(
+            content,
+            is_paused=is_paused,
+            download_dir=download_dir,
+            upload_limit=upload_limit,
+            download_limit=download_limit,
+            cookie=cookie,
+        )
+        if ret and ret.hashString:
+            if tags:
+                self.change_torrent(
+                    tid=ret.hashString,
+                    tag=tags,
+                    ratio_limit=ratio_limit,
+                    seeding_time_limit=seeding_time_limit,
+                )
+            return ret.hashString
+        return None
+
     def start_torrents(self, ids: list[str] | str | int | None = None) -> Any:
         if not self.trc:
             return False

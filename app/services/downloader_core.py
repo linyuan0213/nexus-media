@@ -126,7 +126,6 @@ class DownloaderCore:
         转移下载完成的文件，进行文件识别重命名到媒体库目录
         """
         downloader_ids = [downloader_id] if downloader_id else self._client_factory.monitor_downloader_ids
-        downloader_enum = self._client_factory.downloader_enum or {}
         for did in downloader_ids:
             with lock:
                 downloader_conf = self._client_factory.get_downloader_conf(did)
@@ -145,18 +144,21 @@ class DownloaderCore:
             else:
                 continue
             for task in trans_tasks:
+                task_id = task.get("id")
+                if not task_id:
+                    continue
                 done_flag, done_msg = self._filetransfer.transfer_media(
-                    in_from=getattr(downloader_enum, str(did), None), in_path=task.get("path"), operation=operation
+                    in_from=name, in_path=task.get("path"), operation=operation
                 )
                 if not done_flag:
                     log.warn(f"【Downloader】下载器 {name} 任务%s 转移失败：%s" % (task.get("path"), done_msg))
-                    _client.set_torrents_status(ids=task.get("id"), tags=task.get("tags"))
+                    _client.set_torrents_status(ids=task_id, tags=task.get("tags"))
                 else:
                     if operation == "move":
-                        log.warn(f"【Downloader】下载器 {name} 移动模式下删除种子文件：%s" % task.get("id"))
-                        _client.delete_torrents(delete_file=True, ids=task.get("id"))
+                        log.warn(f"【Downloader】下载器 {name} 移动模式下删除种子文件：%s" % task_id)
+                        _client.delete_torrents(delete_file=True, ids=task_id)
                     else:
-                        _client.set_torrents_status(ids=task.get("id"), tags=task.get("tags"))
+                        _client.set_torrents_status(ids=task_id, tags=task.get("tags"))
             log.info(f"【Downloader】下载器 {name} 下载文件转移结束")
 
     # ---------- 种子查询/操作 ----------

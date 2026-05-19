@@ -38,7 +38,7 @@ from app.agent.providers.gemini import GeminiProvider
 from app.agent.providers.ollama import OllamaProvider
 from app.agent.providers.openai import OpenAIProvider
 from app.core.system_config import SystemConfig
-from app.db.repositories import ConfigRepository
+from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.indexer.registry import get_all_clients as get_all_indexers
 from app.mediaserver.registry import get_all_clients as get_all_mediaservers
@@ -302,7 +302,7 @@ def reset_db_version(
     current_user: UserContext = Depends(require_permission("setting:update")),
 ):
     try:
-        ConfigRepository().drop_table("alembic_version")
+        BaseRepository._db.execute("DROP TABLE IF EXISTS alembic_version")
         return success()
     except Exception as e:
         ExceptionUtils.exception_traceback(e)

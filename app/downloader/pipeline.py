@@ -145,7 +145,6 @@ class DownloadPipeline:
         # ---------- 阶段3：添加任务 ----------
         download_id = self._stage_add(
             downloader=downloader,
-            downloader_type=downloader.get_type(),
             content=content,
             title=title,
             is_paused=is_paused,
@@ -297,7 +296,6 @@ class DownloadPipeline:
     def _stage_add(
         self,
         downloader,
-        downloader_type,
         content,
         title,
         is_paused,
@@ -317,54 +315,18 @@ class DownloadPipeline:
             % (title, download_dir, print_url)
         )
 
-        if downloader_type == "transmission":
-            ret = downloader.add_torrent(content, is_paused=is_paused, download_dir=download_dir, cookie=cookie)
-            if ret:
-                downloader.change_torrent(
-                    tid=ret.hashString,
-                    tag=tags,
-                    upload_limit=upload_limit,
-                    download_limit=download_limit,
-                    ratio_limit=ratio_limit,
-                    seeding_time_limit=seeding_time_limit,
-                )
-                return ret.hashString
-        elif downloader_type == "qbittorrent":
-            exists, _ = downloader.check_torrent_exists(content)
-            if exists:
-                log.info("【DownloadPipeline】下载器中已存在该任务，跳过添加")
-                return "EXISTS"
-            torrent_tag = "NT" + StringUtils.generate_random_str(5)
-            tags = tags + [torrent_tag] if tags else [torrent_tag]
-            ret = downloader.add_torrent(
-                content,
-                is_paused=is_paused,
-                download_dir=download_dir,
-                tag=tags,
-                category=category,
-                content_layout="Original",
-                upload_limit=upload_limit,
-                download_limit=download_limit,
-                ratio_limit=ratio_limit,
-                seeding_time_limit=seeding_time_limit,
-                cookie=cookie,
-            )
-            if ret:
-                download_id = downloader.get_torrent_id_by_tag(torrent_tag)
-                if not download_id:
-                    _, torrent_hash = downloader.check_torrent_exists(content)
-                    if torrent_hash:
-                        return "EXISTS"
-                    log.warn("【DownloadPipeline】下载器添加任务成功但无法获取任务ID")
-                    return None
-                return download_id
-        else:
-            ret = downloader.add_torrent(
-                content, is_paused=is_paused, tag=tags, download_dir=download_dir, category=category
-            )
-            if ret:
-                return ret
-        return None
+        return downloader.add_torrent_and_get_id(
+            content,
+            is_paused=is_paused,
+            download_dir=download_dir,
+            tags=tags,
+            category=category,
+            upload_limit=upload_limit,
+            download_limit=download_limit,
+            ratio_limit=ratio_limit,
+            seeding_time_limit=seeding_time_limit,
+            cookie=cookie,
+        )
 
     # ---------- 阶段4：后续处理 ----------
 

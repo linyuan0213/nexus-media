@@ -176,6 +176,37 @@ class _IDownloadClient(metaclass=ABCMeta):
     def add_torrent(self, content: str | bytes, **kwargs) -> bool:
         """添加下载任务"""
 
+    def add_torrent_and_get_id(
+        self,
+        content: str | bytes,
+        is_paused: bool = False,
+        download_dir: str | None = None,
+        tags: list[str] | None = None,
+        category: str | None = None,
+        upload_limit: int | None = None,
+        download_limit: int | None = None,
+        ratio_limit: float | None = None,
+        seeding_time_limit: int | None = None,
+        cookie: str | None = None,
+        **kwargs: Any,
+    ) -> str | None:
+        """
+        添加种子并返回种子ID。
+        默认实现调用 add_torrent；子类可覆盖以处理特殊逻辑。
+        """
+        success = self.add_torrent(
+            content,
+            is_paused=is_paused,
+            download_dir=download_dir,
+            tag=tags,
+            category=category,
+            cookie=cookie,
+            **kwargs,
+        )
+        if success and isinstance(success, str):
+            return success
+        return None
+
     @abstractmethod
     def start_torrents(self, ids: list[str] | str | None = None) -> bool:
         """开始种子"""
