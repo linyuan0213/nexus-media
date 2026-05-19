@@ -29,7 +29,7 @@ def upgrade() -> None:
     if not _column_exists("DOWNLOAD_HISTORY", "STATE"):
         with op.batch_alter_table("DOWNLOAD_HISTORY") as batch_op:
             batch_op.add_column(
-                sa.Column("STATE", sa.String(20), nullable=False, server_default="completed")
+                sa.Column("STATE", sa.String(20), nullable=False, server_default="downloading")
             )
 
 

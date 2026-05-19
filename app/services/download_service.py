@@ -284,6 +284,7 @@ class DownloadService:
 
         result = []
         completed_ids: list[tuple[str, str]] = []
+        active_ids: list[tuple[str, str]] = []
 
         for did, tasks in downloader_groups.items():
             downloader_conf = self._downloader.get_downloader_conf(did)
@@ -309,6 +310,10 @@ class DownloadService:
                     completed_ids.append((did, tid))
                     continue
 
+                # 任务还在下载中，确保 STATE 为 downloading
+                if getattr(task, "STATE", None) != "downloading":
+                    active_ids.append((did, tid))
+
                 title, image = self._build_display_info(task)
                 result.append({
                     "id": tid,
@@ -322,6 +327,14 @@ class DownloadService:
                     "downloader_name": downloader_name,
                     "save_path": task.SAVE_PATH,
                 })
+
+        # 批量标记还在下载中的任务
+        if active_ids:
+            for did, tid in active_ids:
+                try:
+                    repo.update_state(did, tid, "downloading")
+                except Exception as e:
+                    log.debug(f"【DownloadService】更新任务状态失败：{e}")
 
         # 批量标记已完成任务
         if completed_ids:
