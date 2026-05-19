@@ -1,10 +1,39 @@
 from app.message.client._base import _IMessageClient
-from app.message.client_registry import ClientRegistry
+from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils, RequestUtils, StringUtils
 
 
 class Gotify(_IMessageClient):
     schema = "gotify"
+    config_schema = MessageConfigSchema(
+        name="Gotify",
+        icon_url="../static/img/message/gotify.png",
+        fields=[
+            ConfigField(
+                id="server",
+                required=True,
+                title="Gotify服务器地址",
+                tooltip="自己搭建gotify服务端地址",
+                type="text",
+                placeholder="http://localhost:8800",
+            ),
+            ConfigField(
+                id="token",
+                required=True,
+                title="令牌Token",
+                tooltip="Gotify服务端APPS下创建的token",
+                type="text",
+            ),
+            ConfigField(
+                id="priority",
+                required=False,
+                title="消息Priority",
+                tooltip="消息通知优先级, 请填写数字(1-8), 默认: 8",
+                type="text",
+                placeholder="8",
+            ),
+        ],
+    )
 
     def read_config(self):
         cfg = self._config or {}
@@ -43,6 +72,3 @@ class Gotify(_IMessageClient):
 
     def send_list_msg(self, medias: list | None = None, user_id="", title="", **kwargs):
         return False, "不支持发送列表消息"
-
-
-ClientRegistry.register(Gotify)

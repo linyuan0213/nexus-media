@@ -1,12 +1,26 @@
 from urllib.parse import urlencode
 
 from app.message.client._base import _IMessageClient
-from app.message.client_registry import ClientRegistry
+from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils, RequestUtils
 
 
 class IyuuMsg(_IMessageClient):
     schema = "iyuu"
+    config_schema = MessageConfigSchema(
+        name="爱语飞飞",
+        icon_url="../static/img/message/iyuu.png",
+        fields=[
+            ConfigField(
+                id="token",
+                required=True,
+                title="令牌Token",
+                tooltip="在爱语飞飞官网中申请，申请地址：https://iyuu.cn/",
+                type="text",
+                placeholder="登录https://iyuu.cn获取",
+            ),
+        ],
+    )
 
     def read_config(self):
         cfg = self._config or {}
@@ -38,6 +52,3 @@ class IyuuMsg(_IMessageClient):
 
     def send_list_msg(self, medias: list | None = None, user_id="", title="", **kwargs):
         return False, "不支持发送列表消息"
-
-
-ClientRegistry.register(IyuuMsg)

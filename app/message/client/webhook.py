@@ -5,7 +5,7 @@ import requests
 from jinja2 import BaseLoader, Environment
 
 from app.message.client._base import _IMessageClient
-from app.message.client_registry import ClientRegistry
+from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils
 
 lock = Lock()
@@ -28,6 +28,60 @@ class JsonTemplateEnvironment(Environment):
 
 class Webhook(_IMessageClient):
     schema = "webhook"
+    config_schema = MessageConfigSchema(
+        name="Webhook",
+        icon_url="/static/img/webhook_icon.png",
+        fields=[
+            ConfigField(
+                id="url",
+                required=True,
+                title="URL",
+                type="text",
+                placeholder="https://xxx.com/your_api/",
+            ),
+            ConfigField(
+                id="method",
+                required=True,
+                title="HTTP方法",
+                tooltip="GET方法中请求体将被忽略，由于查询参数不支持复杂格式，发送列表类消息请使用POST",
+                type="select",
+                options={"GET": "GET", "POST": "POST", "PUT": "PUT", "PATCH": "PATCH", "DELETE": "DELETE"},
+                default="POST",
+            ),
+            ConfigField(
+                id="token",
+                required=False,
+                title="Token",
+                tooltip="会放在Header的Authorization中",
+                type="text",
+                placeholder="Authorization-Token",
+            ),
+            ConfigField(
+                id="query_params",
+                required=False,
+                title="额外查询参数",
+                tooltip="JSON字符串",
+                type="text",
+                placeholder='{"search": "keyword"}',
+            ),
+            ConfigField(
+                id="json_tpl",
+                required=False,
+                title="单条消息模板",
+                tooltip="Jinja2 JSON模板，用于单条消息。可用变量：title, text, image, url, user_id。字符串变量默认会进行 tojson 过滤以保证生成的JSON格式正确，如需使用原始字符串请使用 |safe 过滤器",
+                type="textarea",
+                placeholder='{\n  "title": "{{ title }}",\n  "text": "{{ text }}"\n}',
+            ),
+            ConfigField(
+                id="json_list_tpl",
+                required=False,
+                title="列表消息模板",
+                tooltip="Jinja2 JSON模板，用于列表消息。可用变量：title, user_id, medias。字符串变量默认会进行 tojson 过滤",
+                type="textarea",
+                placeholder='{\n  "title": "{{ title }}",\n  "items": [\n    {% for media in medias %}\n    {\n      "title": "{{ media.title }}"\n    }{% if not loop.last %},{% endif %}\n    {% endfor %}\n  ]\n}',
+            ),
+        ],
+    )
 
     def __init__(self, config):
         self._domain = None
@@ -187,4 +241,4 @@ class Webhook(_IMessageClient):
         return r
 
 
-ClientRegistry.register(Webhook)
+

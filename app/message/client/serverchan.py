@@ -1,12 +1,26 @@
 from serverchan_sdk import sc_send
 
 from app.message.client._base import _IMessageClient
-from app.message.client_registry import ClientRegistry
+from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils
 
 
 class ServerChan(_IMessageClient):
     schema = "serverchan"
+    config_schema = MessageConfigSchema(
+        name="Server酱",
+        icon_url="../static/img/message/serverchan.png",
+        fields=[
+            ConfigField(
+                id="sckey",
+                required=True,
+                title="SCKEY",
+                type="text",
+                tooltip="填写ServerChan的API Key，SCT类型，在https://sct.ftqq.com/中申请",
+                placeholder="SCT...",
+            ),
+        ],
+    )
 
     def read_config(self):
         cfg = self._config or {}
@@ -75,6 +89,3 @@ class ServerChan(_IMessageClient):
         except Exception as msg_e:
             ExceptionUtils.exception_traceback(msg_e)
             return False, str(msg_e)
-
-
-ClientRegistry.register(ServerChan)

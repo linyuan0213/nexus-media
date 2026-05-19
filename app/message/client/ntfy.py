@@ -1,10 +1,54 @@
 from app.message.client._base import _IMessageClient
-from app.message.client_registry import ClientRegistry
+from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils, RequestUtils, StringUtils
 
 
 class Ntfy(_IMessageClient):
     schema = "ntfy"
+    config_schema = MessageConfigSchema(
+        name="ntfy",
+        icon_url="../static/img/message/ntfy.webp",
+        fields=[
+            ConfigField(
+                id="server",
+                required=True,
+                title="ntfy服务器地址",
+                type="text",
+                tooltip="自己搭建ntfy服务端地址",
+                placeholder="http://localhost:8800",
+            ),
+            ConfigField(
+                id="token",
+                required=True,
+                title="令牌Token",
+                type="text",
+                tooltip="ntfy服务端创建的token",
+            ),
+            ConfigField(
+                id="topic",
+                required=True,
+                title="topic",
+                type="text",
+                tooltip="ntfy创建的topic",
+            ),
+            ConfigField(
+                id="priority",
+                required=False,
+                title="消息Priority",
+                type="text",
+                tooltip="消息通知优先级, 请填写数字(1-5), 默认: 4",
+                placeholder="4",
+            ),
+            ConfigField(
+                id="tags",
+                required=False,
+                title="消息tags",
+                type="text",
+                tooltip="消息tags,以逗号分隔, 请参阅ntfy官网, 默认: rotating_light",
+                placeholder="rotating_light",
+            ),
+        ],
+    )
 
     def read_config(self):
         cfg = self._config or {}
@@ -46,6 +90,3 @@ class Ntfy(_IMessageClient):
 
     def send_list_msg(self, medias: list | None = None, user_id="", title="", **kwargs):
         return False, "不支持发送列表消息"
-
-
-ClientRegistry.register(Ntfy)

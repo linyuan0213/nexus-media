@@ -36,7 +36,9 @@ from api.routers import (
     words,
 )
 from app.db import init_db, remove_session
+from app.downloader.client import init_clients as init_downloaders
 from app.message import Message
+from app.message.client import init_clients as init_message_clients
 from app.plugin_framework.sandbox import PluginSandbox
 from app.services.site_config_updater import SiteConfigUpdater, update_site_config_at_startup
 from app.services.system_service import SystemLifecycleService
@@ -63,6 +65,12 @@ async def lifespan(app: FastAPI):
     log.info("【FastAPI】启动后台服务...")
     SystemLifecycleService().start_service()
     log.info("【FastAPI】后台服务启动完成")
+    # 注册内置下载器
+    init_downloaders()
+    log.info("【FastAPI】下载器注册完成")
+    # 注册内置消息客户端
+    init_message_clients()
+    log.info("【FastAPI】消息客户端注册完成")
     # 加载插件（在消息菜单刷新之前，确保插件命令能显示）
     PluginSandbox().load_all()
     log.info("【FastAPI】插件加载完成")

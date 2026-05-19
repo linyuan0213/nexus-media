@@ -6,7 +6,7 @@ from urllib.parse import quote
 import log
 from app.helper.thread_helper import ThreadHelper
 from app.message.client._base import _IMessageClient
-from app.message.client_registry import ClientRegistry
+from app.message.schema import ConfigField, MessageConfigSchema
 from app.services.apikey_service import APIKeyService
 from app.utils import ExceptionUtils, RequestUtils, StringUtils
 from config import Config
@@ -16,6 +16,29 @@ lock = Lock()
 
 class SynologyChat(_IMessageClient):
     schema = "synologychat"
+    config_schema = MessageConfigSchema(
+        name="Synology Chat",
+        icon_url="/static/img/message/synologychat.png",
+        search_type="SYNOLOGY",
+        fields=[
+            ConfigField(
+                id="webhook_url",
+                required=True,
+                title="机器人传入URL",
+                tooltip="在Synology Chat中创建机器人，获取机器人传入URL",
+                type="text",
+                placeholder="https://xxx/webapi/entry.cgi?api=xxx",
+            ),
+            ConfigField(
+                id="token",
+                required=True,
+                title="令牌",
+                tooltip="在Synology Chat中创建机器人，获取机器人令牌",
+                type="text",
+                placeholder="",
+            ),
+        ],
+    )
     _setup_done = set()
 
     def __init__(self, config):
@@ -178,4 +201,3 @@ class SynologyChat(_IMessageClient):
         return False, "未获取到返回信息"
 
 
-ClientRegistry.register(SynologyChat)

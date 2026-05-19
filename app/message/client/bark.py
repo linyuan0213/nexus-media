@@ -1,12 +1,42 @@
 from urllib.parse import quote_plus
 
 from app.message.client._base import _IMessageClient
-from app.message.client_registry import ClientRegistry
+from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils, RequestUtils, StringUtils
 
 
 class Bark(_IMessageClient):
     schema = "bark"
+    config_schema = MessageConfigSchema(
+        name="Bark",
+        icon_url="../static/img/message/bark.webp",
+        fields=[
+            ConfigField(
+                id="server",
+                required=True,
+                title="Bark服务器地址",
+                tooltip="自己搭建Bark服务端请实际配置，否则可使用：https://api.day.app",
+                type="text",
+                placeholder="https://api.day.app",
+                default="https://api.day.app",
+            ),
+            ConfigField(
+                id="apikey",
+                required=True,
+                title="API Key",
+                tooltip="在Bark客户端中点击右上角的“...”按钮，选择“生成Bark Key”，然后将生成的KEY填入此处",
+                type="text",
+            ),
+            ConfigField(
+                id="params",
+                required=False,
+                title="附加参数",
+                tooltip="添加到Bark通知中的附加参数，可用于自定义通知特性",
+                type="text",
+                placeholder="group=xxx&sound=xxx&url=xxx",
+            ),
+        ],
+    )
 
     def read_config(self):
         cfg = self._config or {}
@@ -42,6 +72,3 @@ class Bark(_IMessageClient):
 
     def send_list_msg(self, medias: list | None = None, user_id="", title="", **kwargs):
         return False, "不支持发送列表消息"
-
-
-ClientRegistry.register(Bark)

@@ -1,8 +1,11 @@
 from abc import ABCMeta, abstractmethod
 
+from app.message.schema import MessageConfigSchema
+
 
 class _IMessageClient(metaclass=ABCMeta):
-    schema = None
+    schema: str | None = None
+    config_schema: MessageConfigSchema | None = None
 
     def __init__(self, config: dict):
         self._config = config

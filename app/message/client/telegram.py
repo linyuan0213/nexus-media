@@ -9,7 +9,7 @@ import log
 from app.helper.thread_helper import ThreadHelper
 from app.message import Message
 from app.message.client._base import _IMessageClient
-from app.message.client_registry import ClientRegistry
+from app.message.schema import ConfigField, MessageConfigSchema
 from app.services.apikey_service import APIKeyService
 from app.utils import ExceptionUtils, RequestUtils
 from app.utils.config_tools import get_domain, get_proxies
@@ -21,6 +21,50 @@ _webhook_set = False
 
 class Telegram(_IMessageClient):
     schema = "telegram"
+    config_schema = MessageConfigSchema(
+        name="Telegram",
+        icon_url="/static/img/message/telegram.png",
+        search_type="TG",
+        fields=[
+            ConfigField(
+                id="token",
+                required=True,
+                title="Bot Token",
+                tooltip="telegram机器人的Token，关注BotFather创建机器人",
+                type="text",
+            ),
+            ConfigField(
+                id="chat_id",
+                required=True,
+                title="Chat ID",
+                tooltip="接受消息通知的用户、群组或频道Chat ID，关注@getidsbot获取",
+                type="text",
+            ),
+            ConfigField(
+                id="user_ids",
+                required=False,
+                title="User IDs",
+                tooltip="允许使用交互的用户Chat ID，留空则只允许管理用户使用，关注@getidsbot获取",
+                type="text",
+                placeholder="使用,分隔多个Id",
+            ),
+            ConfigField(
+                id="admin_ids",
+                required=False,
+                title="Admin IDs",
+                tooltip="允许使用管理命令的用户Chat ID，关注@getidsbot获取",
+                type="text",
+                placeholder="使用,分隔多个Id",
+            ),
+            ConfigField(
+                id="webhook",
+                required=False,
+                title="Webhook",
+                tooltip="Telegram机器人消息有两种模式：Webhook或消息轮循；开启后将使用Webhook方式，需要在基础设置中正确配置好外网访问地址，同时受Telegram官方限制，外网访问地址需要设置为以下端口之一：443, 80, 88, 8443，且需要有公网认证的可信SSL证书；关闭后将使用消息轮循方式，使用该方式需要在基础设置->安全处将Telegram ipv4源地址设置为127.0.0.1，如同时使用了内置的SSL证书功能，消息轮循方式可能无法正常使用",
+                type="switch",
+            ),
+        ],
+    )
     _setup_done = set()
 
     def __init__(self, config):
@@ -249,4 +293,3 @@ class Telegram(_IMessageClient):
             pass
 
 
-ClientRegistry.register(Telegram)

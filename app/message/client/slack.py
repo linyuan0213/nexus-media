@@ -8,7 +8,7 @@ from slack_sdk.errors import SlackApiError
 
 import log
 from app.message.client._base import _IMessageClient
-from app.message.client_registry import ClientRegistry
+from app.message.schema import ConfigField, MessageConfigSchema
 from app.services.apikey_service import APIKeyService
 from app.utils import ExceptionUtils
 from config import Config
@@ -18,6 +18,37 @@ lock = Lock()
 
 class Slack(_IMessageClient):
     schema = "slack"
+    config_schema = MessageConfigSchema(
+        name="Slack",
+        icon_url="/static/img/message/slack.png",
+        search_type="SLACK",
+        fields=[
+            ConfigField(
+                id="bot_token",
+                required=True,
+                title="Bot User OAuth Token",
+                tooltip="在Slack中创建应用，获取Bot User OAuth Token",
+                type="text",
+                placeholder="xoxb-xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx",
+            ),
+            ConfigField(
+                id="app_token",
+                required=True,
+                title="App-Level Token",
+                tooltip="在Slack中创建应用，获取App-Level Token",
+                type="text",
+                placeholder="xapp-xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx",
+            ),
+            ConfigField(
+                id="channel",
+                required=False,
+                title="频道名称",
+                tooltip="Slack中的频道名称，默认为全体；需要将机器人添加到该频道，以接收非交互类的通知消息",
+                type="text",
+                placeholder="全体",
+            ),
+        ],
+    )
 
     def __init__(self, config):
         self._config = Config()
@@ -191,4 +222,3 @@ class Slack(_IMessageClient):
         return ""
 
 
-ClientRegistry.register(Slack)

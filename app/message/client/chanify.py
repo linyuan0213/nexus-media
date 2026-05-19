@@ -1,12 +1,42 @@
 from urllib import parse
 
 from app.message.client._base import _IMessageClient
-from app.message.client_registry import ClientRegistry
+from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils, RequestUtils, StringUtils
 
 
 class Chanify(_IMessageClient):
     schema = "chanify"
+    config_schema = MessageConfigSchema(
+        name="Chanify",
+        icon_url="../static/img/message/chanify.png",
+        fields=[
+            ConfigField(
+                id="server",
+                required=True,
+                title="Chanify服务器地址",
+                tooltip="自己搭建Chanify服务端地址或使用https://api.chanify.net",
+                type="text",
+                placeholder="https://api.chanify.net",
+                default="https://api.chanify.net",
+            ),
+            ConfigField(
+                id="token",
+                required=True,
+                title="令牌",
+                tooltip="在Chanify客户端频道中获取",
+                type="text",
+            ),
+            ConfigField(
+                id="params",
+                required=False,
+                title="附加参数",
+                tooltip="添加到Chanify通知中的附加参数，可用于自定义通知特性",
+                type="text",
+                placeholder="sound=0&interruption-level=active",
+            ),
+        ],
+    )
 
     def read_config(self):
         cfg = self._config or {}
@@ -37,6 +67,3 @@ class Chanify(_IMessageClient):
 
     def send_list_msg(self, medias: list | None = None, user_id="", title="", **kwargs):
         return False, "不支持发送列表消息"
-
-
-ClientRegistry.register(Chanify)

@@ -7,12 +7,13 @@ from typing import Any, cast
 from jinja2 import BaseLoader, Environment
 
 import log
-from app.core.module_config import ModuleConf
 from app.db.repositories import ConfigRepository
 from app.helper.thread_helper import ThreadHelper
 from app.infrastructure.queue import MessageQueueFactory
 from app.message.client_registry import ClientRegistry
 from app.message.message_center import MessageCenter
+from app.message.registry import get_client_class
+from app.message.switches import MESSAGE_SWITCHES
 from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
 from app.utils import ExceptionUtils, StringUtils
 from app.utils.commons import SingletonMeta
@@ -98,11 +99,11 @@ def _parse_client_config(client_config) -> dict:
             if isinstance(parsed, list):
                 switchs = parsed
             elif isinstance(parsed, str):
-                all_keys = set(ModuleConf.MESSAGE_CONF.get("switch", {}).keys())
+                all_keys = set(MESSAGE_SWITCHES.keys())
                 switchs = [s.strip() for s in parsed.split(",") if s.strip() and s.strip() in all_keys]
         except json.JSONDecodeError:
             raw = str(client_config.SWITCHS)
-            all_keys = set(ModuleConf.MESSAGE_CONF.get("switch", {}).keys())
+            all_keys = set(MESSAGE_SWITCHES.keys())
             switchs = [s.strip() for s in raw.split(",") if s.strip() and s.strip() in all_keys]
     return {
         "id": client_config.ID,
@@ -181,8 +182,8 @@ class Message(metaclass=SingletonMeta):
             "interactive": client_config.INTERACTIVE,
             "enabled": client_config.ENABLED,
             "templates": config["templates"],
-            "search_type": (ModuleConf.MESSAGE_CONF.get("client") or {}).get(client_config.TYPE, {}).get("search_type"),
-            "max_length": (ModuleConf.MESSAGE_CONF.get("client") or {}).get(client_config.TYPE, {}).get("max_length"),
+            "search_type": self._get_search_type(client_config.TYPE),
+            "max_length": self._get_max_length(client_config.TYPE),
             "client": ClientRegistry.build(ctype=client_config.TYPE, conf=config["config"]),
         }
         client_instance = client_entry["client"]
@@ -197,6 +198,20 @@ class Message(metaclass=SingletonMeta):
                 client_instance.refresh_menu()
             except Exception as e:
                 log.warn(f"【Message】客户端 {client_config.TYPE} 初始菜单刷新失败: {e}")
+
+    @staticmethod
+    def _get_search_type(ctype: str) -> str | None:
+        cls = get_client_class(ctype)
+        if cls and hasattr(cls, "config_schema") and cls.config_schema:
+            return cls.config_schema.search_type
+        return None
+
+    @staticmethod
+    def _get_max_length(ctype: str) -> int | None:
+        cls = get_client_class(ctype)
+        if cls and hasattr(cls, "config_schema") and cls.config_schema:
+            return cls.config_schema.max_length
+        return None
 
     def _remove_client(self, cid):
         cid = str(cid)
@@ -1183,6 +1198,16 @@ class Message(metaclass=SingletonMeta):
         )
         self._refresh_client(new_id)
         return True
+
+    def reload_by_type(self, ctype: str) -> None:
+        """按类型重新加载消息客户端（供插件注册后调用）"""
+        self._ensure_loaded()
+        if not self.config_repo:
+            return
+        for client_config in self.config_repo.get_message_client() or []:
+            if client_config.TYPE == ctype and cast(bool, client_config.ENABLED):
+                self._refresh_client(client_config.ID)
+                break
 
     def send_user_statistics_message(self, msgs: list) -> None:
         if not msgs:

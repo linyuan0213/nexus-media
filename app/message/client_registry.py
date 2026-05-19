@@ -1,44 +1,19 @@
-import contextlib
-import importlib
+from app.message.registry import get_all_clients, get_client_class
+from app.message.registry import register as _register
 
 
 class ClientRegistry:
-    _registry = {}
-    _clients_loaded = False
-
-    _MODULES = [
-        "wechat",
-        "telegram",
-        "bark",
-        "chanify",
-        "gotify",
-        "iyuu",
-        "ntfy",
-        "pushdeer",
-        "pushplus",
-        "serverchan",
-        "slack",
-        "synologychat",
-        "webhook",
-    ]
-
     @classmethod
     def register(cls, client_cls):
-        cls._registry[client_cls.schema] = client_cls
+        _register(client_cls)
 
     @classmethod
     def build(cls, ctype, conf):
-        cls._ensure_loaded()
-        client_cls = cls._registry.get(ctype)
+        client_cls = get_client_class(ctype)
         if client_cls:
             return client_cls(conf)
         return None
 
     @classmethod
-    def _ensure_loaded(cls):
-        if cls._clients_loaded:
-            return
-        for mod in cls._MODULES:
-            with contextlib.suppress(ImportError):
-                importlib.import_module(f"app.message.client.{mod}")
-        cls._clients_loaded = True
+    def get_all_schemas(cls):
+        return [cls.schema for cls in get_all_clients() if hasattr(cls, "schema") and cls.schema]

@@ -41,6 +41,8 @@ from app.core.module_config import ModuleConf
 from app.core.system_config import SystemConfig
 from app.db.repositories import ConfigRepository
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
+from app.message.registry import get_all_clients
+from app.message.switches import MESSAGE_SWITCHES
 from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
 from app.schemas.auth import UserContext
 from app.services.auth_service import AuthService
@@ -242,7 +244,7 @@ def get_message_client(
 ):
     data = svc.get_client(cid=req.cid)
     # 热修复：确保 switchs 始终是列表（兼容旧脏数据）
-    all_switch_keys = set(ModuleConf.MESSAGE_CONF.get("switch", {}).keys())
+    all_switch_keys = set(MESSAGE_SWITCHES.keys())
     if isinstance(data, dict):
         for client in data.values():
             switchs = client.get("switchs")
@@ -260,29 +262,13 @@ def get_message_client_config(
     current_user: UserContext = Depends(require_permission("setting:update")),
 ):
     """获取消息通知配置模板（channels + switchs），field.id 统一为 config key"""
-    conf = ModuleConf.MESSAGE_CONF
     clients = {}
-    for key, item in conf.get("client", {}).items():
-        # 将 config 中 field.id 统一为 config 的 key（与数据库保持一致）
-        config_fields = {}
-        for field_key, field in item.get("config", {}).items():
-            field_copy = dict(field)
-            field_copy["id"] = field_key
-            config_fields[field_key] = field_copy
-        clients[key] = {
-            "name": item.get("name"),
-            "img_url": item.get("img_url", "").replace("../", "/").replace("./", "/"),
-            "color": item.get("color", ""),
-            "search_type": item.get("search_type"),
-            "max_length": item.get("max_length"),
-            "config": config_fields,
-        }
-    switchs = {}
-    for key, item in conf.get("switch", {}).items():
-        switchs[key] = {
-            "name": item.get("name"),
-            "fuc_name": item.get("fuc_name"),
-        }
+    for cls in get_all_clients():
+        if not hasattr(cls, "schema") or not cls.schema:
+            continue
+        schema_dict = cls.config_schema.to_dict() if hasattr(cls, "config_schema") and cls.config_schema else {"name": cls.schema, "config": {}}
+        clients[cls.schema] = schema_dict
+    switchs = dict(MESSAGE_SWITCHES)
     return success(
         data={
             "channels": clients,

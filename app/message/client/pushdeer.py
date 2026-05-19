@@ -1,12 +1,34 @@
 from pypushdeer import PushDeer
 
 from app.message.client._base import _IMessageClient
-from app.message.client_registry import ClientRegistry
+from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils, StringUtils
 
 
 class PushDeerClient(_IMessageClient):
     schema = "pushdeer"
+    config_schema = MessageConfigSchema(
+        name="PushDeer",
+        icon_url="../static/img/message/pushdeer.png",
+        fields=[
+            ConfigField(
+                id="server",
+                required=True,
+                title="PushDeer服务器地址",
+                type="text",
+                tooltip="自己搭建pushdeer服务端请实际配置，否则可使用：https://api2.pushdeer.com",
+                placeholder="https://api2.pushdeer.com",
+                default="https://api2.pushdeer.com",
+            ),
+            ConfigField(
+                id="apikey",
+                required=True,
+                title="API Key",
+                type="text",
+                tooltip="pushdeer客户端生成的KEY",
+            ),
+        ],
+    )
 
     def read_config(self):
         cfg = self._config or {}
@@ -28,6 +50,3 @@ class PushDeerClient(_IMessageClient):
 
     def send_list_msg(self, medias: list | None = None, user_id="", title="", **kwargs):
         return False, "不支持发送列表消息"
-
-
-ClientRegistry.register(PushDeerClient)

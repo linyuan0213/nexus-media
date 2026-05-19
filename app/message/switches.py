@@ -1,0 +1,17 @@
+MESSAGE_SWITCHES = {
+    "download_start": {"name": "新增下载", "fuc_name": "download_start"},
+    "download_fail": {"name": "下载失败", "fuc_name": "download_fail"},
+    "transfer_finished": {"name": "入库完成", "fuc_name": "transfer_finished"},
+    "transfer_fail": {"name": "入库失败", "fuc_name": "transfer_fail"},
+    "rss_added": {"name": "新增订阅", "fuc_name": "rss_added"},
+    "rss_finished": {"name": "订阅完成", "fuc_name": "rss_finished"},
+    "site_signin": {"name": "站点签到", "fuc_name": "site_signin"},
+    "site_message": {"name": "站点消息", "fuc_name": "site_message"},
+    "brushtask_added": {"name": "刷流下种", "fuc_name": "brushtask_added"},
+    "brushtask_remove": {"name": "刷流删种", "fuc_name": "brushtask_remove"},
+    "brushtask_pause": {"name": "刷流种子暂停", "fuc_name": "brushtask_pause"},
+    "auto_remove_torrents": {"name": "自动删种", "fuc_name": "auto_remove_torrents"},
+    "ptrefresh_date_message": {"name": "数据统计", "fuc_name": "ptrefresh_date_message"},
+    "mediaserver_message": {"name": "媒体服务", "fuc_name": "mediaserver_message"},
+    "custom_message": {"name": "插件消息", "fuc_name": "custom_message"},
+}

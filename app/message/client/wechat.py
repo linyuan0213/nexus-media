@@ -5,7 +5,7 @@ from threading import Lock
 import log
 from app.message import Message
 from app.message.client._base import _IMessageClient
-from app.message.client_registry import ClientRegistry
+from app.message.schema import ConfigField, MessageConfigSchema
 from app.message.commands import WECHAT_MENU, WECHAT_PLUGIN_GROUP
 from app.utils import ExceptionUtils, RequestUtils
 
@@ -14,6 +14,69 @@ _menu_lock = Lock()
 
 class WeChat(_IMessageClient):
     schema = "wechat"
+    config_schema = MessageConfigSchema(
+        name="微信",
+        icon_url="/static/img/message/wechat.png",
+        search_type="WX",
+        max_length=2048,
+        fields=[
+            ConfigField(
+                id="corpid",
+                required=True,
+                title="企业ID",
+                tooltip="每个企业都拥有唯一的corpid，获取此信息可在管理后台\"我的企业\"－\"企业信息\"下查看\"企业ID\"（需要有管理员权限）",
+                type="text",
+            ),
+            ConfigField(
+                id="corpsecret",
+                required=True,
+                title="应用Secret",
+                tooltip="每个应用都拥有唯一的secret，获取此信息可在管理后台\"应用与小程序\"－\"自建\"下查看\"Secret\"（需要有管理员权限）",
+                type="text",
+                placeholder="Secret",
+            ),
+            ConfigField(
+                id="agentid",
+                required=True,
+                title="应用ID",
+                tooltip="每个应用都拥有唯一的agentid，获取此信息可在管理后台\"应用与小程序\"－\"自建\"下查看\"AgentId\"（需要有管理员权限）",
+                type="text",
+                placeholder="AgentId",
+            ),
+            ConfigField(
+                id="default_proxy",
+                required=False,
+                title="消息推送代理",
+                tooltip="由于微信官方限制，2022年6月20日后创建的企业微信应用需要有固定的公网IP地址并加入IP白名单后才能发送消息，使用有固定公网IP的代理服务器转发可解决该问题；代理服务器需自行搭建，搭建方法可参考项目主页说明",
+                type="text",
+                placeholder="https://wechat.nexus-media.cn",
+            ),
+            ConfigField(
+                id="token",
+                required=False,
+                title="Token",
+                tooltip="需要交互功能时才需要填写，在微信企业应用管理后台-接收消息设置页面生成，填入完成后重启本应用，然后再在微信页面输入地址确定",
+                type="text",
+                placeholder="API接收消息Token",
+            ),
+            ConfigField(
+                id="encodingAESKey",
+                required=False,
+                title="EncodingAESKey",
+                tooltip="需要交互功能时才需要填写，在微信企业应用管理后台-接收消息设置页面生成，填入完成后重启本应用，然后再在微信页面输入地址确定",
+                type="text",
+                placeholder="API接收消息EncodingAESKey",
+            ),
+            ConfigField(
+                id="adminUser",
+                required=False,
+                title="AdminUser",
+                tooltip="需要交互功能时才需要填写，可执行交互菜单命令的用户名，为空则不限制，多个;号分割。可在企业微信后台查看成员的Account ID",
+                type="text",
+                placeholder="可执行交互菜单的用户名",
+            ),
+        ],
+    )
 
     _send_msg_url = "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=%s"
     _token_url = "https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=%s&corpsecret=%s"
@@ -235,4 +298,3 @@ class WeChat(_IMessageClient):
             return False, str(err)
 
 
-ClientRegistry.register(WeChat)
