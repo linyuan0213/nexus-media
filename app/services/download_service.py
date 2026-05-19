@@ -6,8 +6,8 @@ DownloadService - 下载编排业务层
 import os
 
 import log
+from app.db.models import DOWNLOADHISTORY
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
-from app.infrastructure.cache_system import get_cache_manager
 from app.media import MediaService
 from app.media.models import MediaInfo
 from app.schemas.download import (
@@ -267,63 +267,83 @@ class DownloadService:
     def get_downloading_with_media_info(self) -> list[dict]:
         """
         获取正在下载的任务列表，并拼装媒体信息（标题、海报）
+        从数据库读取任务列表，按需从下载器获取实时进度
         """
-        torrents = self._downloader.get_downloading_progress()
-        default_downloader_id = self._downloader.default_downloader_id
+        repo = DownloadHistoryRepositoryAdapter()
+        active_tasks = repo.get_active_downloads()
+        if not active_tasks:
+            return []
 
-        # 第一步：分两类，有 history 的直接用，没有的批量识别
-        need_identify = []  # [(index, torrent, name)]
-        for idx, torrent in enumerate(torrents):
-            name = torrent.get("name")
-            download_id = torrent.get("id")
-            download_info = self._downloader.get_download_history_by_downloader(
-                downloader=default_downloader_id, download_id=download_id
-            )
-            if download_info:
-                year = download_info.YEAR
-                se = download_info.SE
-                display_name = download_info.TITLE
-                poster = download_info.POSTER
-                if year:
-                    title = f"{display_name} ({year}) {se}"
-                else:
-                    title = f"{display_name} {se}"
-                torrent.update({"title": title, "image": poster or ""})
-            else:
-                # 先查缓存
-                cache_key = f"dl_task:{name}"
-                _cache = get_cache_manager().get("media_info")
-                cached = _cache.get(cache_key) if _cache else None
-                if cached:
-                    self._fill_torrent_info(torrent, cached)
-                else:
-                    need_identify.append((idx, torrent, name))
+        # 按下载器分组任务
+        downloader_groups: dict[str, list[DOWNLOADHISTORY]] = {}
+        for task in active_tasks:
+            did = task.DOWNLOADER or ""
+            if did not in downloader_groups:
+                downloader_groups[did] = []
+            downloader_groups[did].append(task)
 
-        # 第二步：批量识别（减少 API 调用）
-        if need_identify:
-            items = [{"title": name} for _, _, name in need_identify]
-            results = self._media.identify_batch(items)
-            for (_, torrent, name), media_info in zip(need_identify, results, strict=False):
-                if not media_info or not media_info.title:
-                    torrent.update({"title": name, "image": ""})
+        result = []
+        completed_ids: list[tuple[str, str]] = []
+
+        for did, tasks in downloader_groups.items():
+            downloader_conf = self._downloader.get_downloader_conf(did)
+            downloader_name = downloader_conf.get("name") if downloader_conf else did
+
+            # 批量查询这些任务的进度
+            ids = [t.DOWNLOAD_ID for t in tasks if t.DOWNLOAD_ID]
+            progress_list = self._downloader.get_downloading_progress(downloader_id=did, ids=ids)
+            progress_map = {p.get("id"): p for p in progress_list if p.get("id")}
+
+            for task in tasks:
+                tid = task.DOWNLOAD_ID
+                progress = progress_map.get(tid)
+
+                if not progress:
+                    # 任务在下载器中不存在，标记为完成
+                    completed_ids.append((did, tid))
                     continue
-                self._fill_torrent_info(torrent, media_info)
-                # 写入缓存
-                _cache = get_cache_manager().get("media_info")
-                if _cache:
-                    _cache.set(f"dl_task:{name}", media_info, ttl=300)
-                # 写入下载历史，下次直接从 DB 查
-                try:
-                    DownloadHistoryRepositoryAdapter().insert_download_history(
-                        media_info=media_info,
-                        downloader=str(default_downloader_id),
-                        download_id=torrent.get("id"),
-                        save_dir=torrent.get("save_path") or "",
-                    )
-                except Exception as e:
-                    log.debug(f"【DownloadService】写入下载历史失败：{e}")
 
-        return torrents
+                prog_val = progress.get("progress", 0)
+                if prog_val >= 100:
+                    # 下载已完成
+                    completed_ids.append((did, tid))
+                    continue
+
+                title, image = self._build_display_info(task)
+                result.append({
+                    "id": tid,
+                    "name": progress.get("name") or task.TORRENT or "",
+                    "title": title,
+                    "image": image,
+                    "progress": prog_val,
+                    "state": progress.get("state", ""),
+                    "speed": progress.get("speed", ""),
+                    "downloader_id": did,
+                    "downloader_name": downloader_name,
+                    "save_path": task.SAVE_PATH,
+                })
+
+        # 批量标记已完成任务
+        if completed_ids:
+            for did, tid in completed_ids:
+                try:
+                    repo.update_state(did, tid, "completed")
+                except Exception as e:
+                    log.debug(f"【DownloadService】标记任务完成失败：{e}")
+
+        return result
+
+    def _build_display_info(self, task) -> tuple[str, str]:
+        """根据下载历史任务构建显示标题和海报"""
+        year = task.YEAR
+        se = task.SE
+        display_name = task.TITLE
+        poster = task.POSTER or ""
+        if year:
+            title = f"{display_name} ({year}) {se}"
+        else:
+            title = f"{display_name} {se}"
+        return title, poster
 
     def _fill_torrent_info(self, torrent, media_info):
         """将 MediaInfo 回填到 torrent 字典"""

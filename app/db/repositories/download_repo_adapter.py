@@ -75,6 +75,12 @@ class DownloadHistoryRepositoryAdapter:
     def get_download_history_by_path(self, path: str):
         return self._repo.get_download_history_by_path(path)
 
+    def get_active_downloads(self):
+        return self._repo.get_active_downloads()
+
+    def update_state(self, downloader: str, download_id: str, state: str) -> None:
+        self._repo.update_download_state(downloader, download_id, state)
+
 
 class DownloadSettingRepositoryAdapter:
     """下载设置仓储适配器"""
