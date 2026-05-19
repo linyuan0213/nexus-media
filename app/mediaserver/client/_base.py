@@ -8,13 +8,14 @@ from app.utils.config_tools import get_domain
 from config import Config
 
 
+from app.mediaserver.schema import MediaServerConfigSchema
+
+
 class _IMediaClient(metaclass=ABCMeta):
-    # 媒体服务器ID
     client_id = ""
-    # 媒体服务器类型
     client_type = ""
-    # 媒体服务器名称
     client_name = ""
+    config_schema: MediaServerConfigSchema | None = None
 
     @classmethod
     def get_db_config(cls, name):

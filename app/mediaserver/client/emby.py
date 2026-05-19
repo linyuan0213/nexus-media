@@ -4,8 +4,9 @@ from urllib.parse import quote
 
 import log
 from app.mediaserver.client._base import _IMediaClient
+from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
 from app.utils import ExceptionUtils, IpUtils, RequestUtils, SystemUtils
-from app.utils.types import MediaServerType, MediaType
+from app.utils.types import MediaType
 from config import Config
 
 
@@ -13,9 +14,54 @@ class Emby(_IMediaClient):
     # 媒体服务器ID
     client_id = "emby"
     # 媒体服务器类型
-    client_type = MediaServerType.EMBY
+    client_type = "emby"
     # 媒体服务器名称
-    client_name = MediaServerType.EMBY.value
+    client_name = "Emby"
+    # 配置schema
+    config_schema = MediaServerConfigSchema(
+        name="Emby",
+        icon_url="../static/img/mediaserver/emby.png",
+        fields=[
+            ConfigField(
+                id="enabled",
+                required=False,
+                title="启用",
+                type="switch",
+                tooltip="启用该媒体服务器",
+            ),
+            ConfigField(
+                id="is_default",
+                required=False,
+                title="默认",
+                type="switch",
+                tooltip="设置为默认使用的媒体服务器，同一时间只能有一个默认",
+            ),
+            ConfigField(
+                id="host",
+                required=True,
+                title="服务器地址",
+                type="text",
+                tooltip="配置IP地址和端口，如为https则需要增加https://前缀",
+                placeholder="http://127.0.0.1:8096",
+            ),
+            ConfigField(
+                id="api_key",
+                required=True,
+                title="Api Key",
+                type="text",
+                tooltip="在Emby设置->高级->API密钥处生成，注意不要复制到了应用名称",
+                placeholder="",
+            ),
+            ConfigField(
+                id="play_host",
+                required=False,
+                title="媒体播放地址",
+                type="text",
+                tooltip="配置播放设备的访问地址，用于媒体详情页跳转播放页面；如为https则需要增加https://前缀，留空则默认与服务器地址一致",
+                placeholder="http://127.0.0.1:8096",
+            ),
+        ],
+    )
 
     # 私有属性
     _client_config = {}

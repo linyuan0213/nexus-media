@@ -41,6 +41,7 @@ from app.core.module_config import ModuleConf
 from app.core.system_config import SystemConfig
 from app.db.repositories import ConfigRepository
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
+from app.mediaserver.registry import get_all_clients as get_all_mediaservers
 from app.message.registry import get_all_clients
 from app.message.switches import MESSAGE_SWITCHES
 from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
@@ -433,11 +434,15 @@ def get_mediaservers(
             "is_default": item.IS_DEFAULT,
             "config": cfg,
         }
+    mediaserver_conf = {}
+    for cls in get_all_mediaservers():
+        if hasattr(cls, "client_id") and cls.client_id and hasattr(cls, "config_schema") and cls.config_schema:
+            mediaserver_conf[cls.client_id] = cls.config_schema.to_dict()
     return success(
         data={
             "servers": server_dict,
             "default_server": default_server.NAME if default_server else None,
-            "mediaserver_conf": ModuleConf.MEDIASERVER_CONF,
+            "mediaserver_conf": mediaserver_conf,
         }
     )
 

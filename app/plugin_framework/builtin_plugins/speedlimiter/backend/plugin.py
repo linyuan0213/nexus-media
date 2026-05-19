@@ -10,7 +10,7 @@ from app.helper.security_helper import SecurityHelper
 from app.mediaserver import MediaServer
 from app.plugin_framework.context import PluginContext
 from app.services.downloader_core import DownloaderCore as Downloader
-from app.utils.types import MediaServerType
+
 
 
 class SpeedLimiterPlugin:
@@ -126,13 +126,13 @@ class SpeedLimiterPlugin:
             return
 
         mediaserver_type = self._mediaserver.get_type()
-        if server_type == "emby" and mediaserver_type == MediaServerType.EMBY:
+        if server_type == "emby" and mediaserver_type == "emby":
             if data.get("Event") in ["playback.start", "playback.stop"]:
                 self._check_playing_sessions(time_check=False, message=data.get("Title", ""))
-        elif server_type == "jellyfin" and mediaserver_type == MediaServerType.JELLYFIN:
+        elif server_type == "jellyfin" and mediaserver_type == "jellyfin":
             if data.get("NotificationType") in ["PlaybackStart", "PlaybackStop"]:
                 self._check_playing_sessions(time_check=False)
-        elif server_type == "plex" and mediaserver_type == MediaServerType.PLEX:
+        elif server_type == "plex" and mediaserver_type == "plex":
             if data.get("event") in ["media.play", "media.stop"]:
                 time.sleep(3)
                 self._check_playing_sessions(time_check=False)
@@ -142,14 +142,14 @@ class SpeedLimiterPlugin:
         playing_sessions = self._mediaserver.get_playing_sessions() or []
         total_bit_rate = 0
 
-        if mediaserver_type == MediaServerType.EMBY:
+        if mediaserver_type == "emby":
             for session in playing_sessions:
                 if (
                     not SecurityHelper.allow_access(self._unlimited_ips, session.get("RemoteEndPoint"))
                     and session.get("NowPlayingItem", {}).get("MediaType") == "Video"
                 ):
                     total_bit_rate += int(session.get("NowPlayingItem", {}).get("Bitrate") or 0)
-        elif mediaserver_type == MediaServerType.JELLYFIN:
+        elif mediaserver_type == "jellyfin":
             for session in playing_sessions:
                 if (
                     not SecurityHelper.allow_access(self._unlimited_ips, session.get("RemoteEndPoint"))
@@ -158,7 +158,7 @@ class SpeedLimiterPlugin:
                     media_streams = session.get("NowPlayingItem", {}).get("MediaStreams") or []
                     for media_stream in media_streams:
                         total_bit_rate += int(media_stream.get("BitRate") or 0)
-        elif mediaserver_type == MediaServerType.PLEX:
+        elif mediaserver_type == "plex":
             for session in playing_sessions:
                 if (
                     not SecurityHelper.allow_access(self._unlimited_ips, session.get("address"))
@@ -201,7 +201,7 @@ class SpeedLimiterPlugin:
                 self.ctx.info(f"{'播放' if _playing_flag else '未播放'}限速：{log_info}")
             if self._notify:
                 limit_text = "\n".join(limit_log)
-                title = f"【{'定时检查' if time_check else mediaserver_type.value}{'开始' if _playing_flag else '停止'}播放限速】"
+                title = f"【{'定时检查' if time_check else mediaserver_type}{'开始' if _playing_flag else '停止'}播放限速】"
                 self.ctx.notify(title=title, text=f"{message}\n{limit_text}")
 
     def _calc_limit(self, total_bit_rate):
@@ -249,8 +249,7 @@ class SpeedLimiterPlugin:
                         upload_limit = int(self._upload_limit / allocation_count)
                     else:
                         upload_limit = int(self._upload_limit * allocation_ratio[i] / allocation_count)
-                    if upload_limit < 10:
-                        upload_limit = 10
+                    upload_limit = max(upload_limit, 10)
                 else:
                     upload_limit = self._upload_limit
                 download_limit = self._download_limit

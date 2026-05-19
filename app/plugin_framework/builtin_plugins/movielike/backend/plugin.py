@@ -11,7 +11,7 @@ from app.plugin_framework.context import PluginContext
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.utils import SystemUtils
 from app.utils.config_tools import update_favtype
-from app.utils.types import MediaServerType, MediaType
+from app.utils.types import MediaType
 
 
 class MovieLikePlugin:
@@ -45,7 +45,7 @@ class MovieLikePlugin:
         if dir_name:
             update_favtype(dir_name)
 
-        if self._mediaserver.get_type() != MediaServerType.EMBY:
+        if self._mediaserver.get_type() != "emby":
             return
 
         action_type = event_data.get("Event")
