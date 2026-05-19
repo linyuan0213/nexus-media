@@ -40,7 +40,7 @@ class BuiltinIndexer(_IIndexClient):
     client_name = "内置索引器"
     config_schema = IndexerConfigSchema(
         name="内置索引器",
-        icon_url="/static/img/indexer/builtin.png",
+        icon_url="/static/img/indexer/indexer.jpg",
         fields=[],
     )
 

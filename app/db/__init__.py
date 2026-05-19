@@ -17,7 +17,6 @@ from .main_db import (
     get_session_manager,
     remove_session,
 )
-from .media_db import MediaDb
 from .sql_adapter import SQLAdapter, adapt_sql_for_engine
 
 
@@ -26,7 +25,6 @@ def init_db():
     初始化数据库
     """
     log.console("开始初始化数据库...")
-    MediaDb().init_db()
     SessionManager().create_all()
     log.console("数据库初始化完成")
     update_db()

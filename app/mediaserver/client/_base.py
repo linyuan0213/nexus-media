@@ -3,10 +3,9 @@ from abc import ABCMeta, abstractmethod
 from typing import Any
 from urllib.parse import quote
 
-from app.db.repositories import ConfigRepository
+from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.utils.config_tools import get_domain
 from config import Config
-
 
 from app.mediaserver.schema import MediaServerConfigSchema
 
@@ -21,7 +20,7 @@ class _IMediaClient(metaclass=ABCMeta):
     def get_db_config(cls, name):
         """从数据库获取配置，兼容旧配置文件"""
 
-        repo = ConfigRepository()
+        repo = MediaServerRepositoryAdapter()
         item = repo.get_media_server_by_name(name)
         if item and str(item.CONFIG):
             try:

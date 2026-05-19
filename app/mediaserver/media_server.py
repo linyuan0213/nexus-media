@@ -4,13 +4,13 @@ from typing import cast
 
 import log
 from app.core.system_config import SystemConfig
-from app.db import MediaDb
-from app.db.repositories import ConfigRepository
+from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
+from app.db.repositories.media_sync_repo_adapter import MediaSyncRepositoryAdapter
 from app.helper import ProgressHelper
-from app.mediaserver.registry import get_all_clients
-from app.media import MediaService
-from app.message import Message
 from app.infrastructure.queue import MessageQueueFactory
+from app.media import MediaService
+from app.mediaserver.registry import get_all_clients
+from app.message import Message
 from app.utils import ExceptionUtils
 from app.utils.commons import SingletonMeta
 from app.utils.types import MovieTypes, ProgressKey, SystemConfigKey
@@ -23,31 +23,27 @@ server_lock = threading.Lock()
 class MediaServer(metaclass=SingletonMeta):
     _server_type: str | None = None
     _server = None
-    mediadb = None
-    progress = None
-    message = None
-    media = None
-    systemconfig = None
-    config_repo = None
+    mediadb: MediaSyncRepositoryAdapter | None = None
+    progress: ProgressHelper | None = None
+    message: Message | None = None
+    media: MediaService | None = None
+    systemconfig: SystemConfig | None = None
+    config_repo: MediaServerRepositoryAdapter | None = None
 
     def __init__(self):
-        self.init_config()
-
-    def init_config(self):
-        self.mediadb = MediaDb()
+        self.mediadb = MediaSyncRepositoryAdapter()
         self.message = Message()
         self.progress = ProgressHelper()
         self.media = MediaService()
         self.systemconfig = SystemConfig()
-        self.config_repo = ConfigRepository()
-        # 当前使用的媒体库服务器
-        default_server = self.config_repo.get_default_media_server()
-        if default_server:
-            self._server_type = cast(str, default_server.NAME)
-        else:
-            # 兼容旧配置：从配置文件读取
-            self._server_type = Config().get_config("media").get("media_server") or "emby"
+        self.config_repo = MediaServerRepositoryAdapter()
+        self._server_type = None
         self._server = None
+
+    def init_config(self):
+        """重置服务器实例，下次访问 server property 时重新构建"""
+        self._server = None
+        self._server_type = None
 
     def __build_class(self, ctype, conf):
         for cls in get_all_clients():
@@ -61,6 +57,15 @@ class MediaServer(metaclass=SingletonMeta):
     @property
     def server(self):
         with server_lock:
+            if self._server_type is None:
+                if self.config_repo is None:
+                    self.config_repo = MediaServerRepositoryAdapter()
+                default_server = self.config_repo.get_default_media_server()
+                if default_server:
+                    self._server_type = cast(str, default_server.NAME)
+                else:
+                    # 兼容旧配置：从配置文件读取
+                    self._server_type = Config().get_config("media").get("media_server") or "emby"
             if not self._server:
                 self._server = self.__get_server(self._server_type)
             return self._server
@@ -295,16 +300,16 @@ class MediaServer(metaclass=SingletonMeta):
             return None
 
         # 剧集没有季时默认为第1季
-        if mtype not in MovieTypes:
-            if not season:
-                season = 1
+        if mtype not in MovieTypes and not season:
+            season = 1
         if season:
             # 匹配剧集是否存在
             seasoninfos = json.loads(media.JSON or "[]")
             for seasoninfo in seasoninfos:
-                if seasoninfo.get("season_num") == int(season):
-                    if not episode or seasoninfo.get("episode_num") == int(episode):
-                        return media.ITEM_ID
+                if seasoninfo.get("season_num") == int(season) and (
+                    not episode or seasoninfo.get("episode_num") == int(episode)
+                ):
+                    return media.ITEM_ID
             return None
         else:
             return media.ITEM_ID
@@ -379,7 +384,9 @@ class MediaServer(metaclass=SingletonMeta):
             log.error("【MediaServer】webhook 消息解析异常")
             return
         if event_info:
-            MessageQueueFactory.get_instance().submit(self._process_webhook, event_info, channel, name="mediaserver_webhook")
+            MessageQueueFactory.get_instance().submit(
+                self._process_webhook, event_info, channel, name="mediaserver_webhook"
+            )
 
     def get_resume(self, num=12):
         """

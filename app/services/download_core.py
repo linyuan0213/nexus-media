@@ -17,7 +17,7 @@ from typing import Any
 import log
 from app.core.constants import PT_TAG, RMT_MEDIAEXT
 from app.core.system_config import SystemConfig
-from app.db.repositories import ConfigRepository
+from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
 from app.db.repositories.download_repo_adapter import (
     DownloadHistoryRepositoryAdapter,
     DownloadSettingRepositoryAdapter,
@@ -382,7 +382,7 @@ class DownloadCore:
     def update_downloader(
         self, did, name, enabled, dtype, transfer, only_nexus_media, match_path, rmt_mode, config, download_dir
     ):
-        ret = ConfigRepository().update_downloader(
+        ret = DownloaderRepositoryAdapter().update_downloader(
             did=did,
             name=name,
             enabled=enabled,
@@ -398,12 +398,12 @@ class DownloadCore:
         return ret
 
     def delete_downloader(self, did):
-        ret = ConfigRepository().delete_downloader(did=did)
+        ret = DownloaderRepositoryAdapter().delete_downloader(did=did)
         self._client_factory.init_config()
         return ret
 
     def check_downloader(self, did=None, transfer=None, only_nexus_media=None, enabled=None, match_path=None):
-        ret = ConfigRepository().check_downloader(
+        ret = DownloaderRepositoryAdapter().check_downloader(
             did=did, transfer=transfer, only_nexus_media=only_nexus_media, enabled=enabled, match_path=match_path
         )
         self._client_factory.init_config()

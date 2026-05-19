@@ -11,13 +11,14 @@ import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import log
+from app.core.system_config import SystemConfig
 from app.db.repositories import DownloadRepository
 from app.helper import ProgressHelper
 from app.indexer.core import SearchPipeline
 from app.indexer.registry import get_all_clients, get_client_class
 from app.utils import ExceptionUtils, StringUtils
 from app.utils.commons import SingletonMeta
-from app.utils.types import ProgressKey, SearchType
+from app.utils.types import ProgressKey, SearchType, SystemConfigKey
 
 
 class Indexer(metaclass=SingletonMeta):
@@ -29,29 +30,30 @@ class Indexer(metaclass=SingletonMeta):
     2. 并发搜索每个站点，收集原始结果（dict 列表）
     3. 将所有原始结果传入 SearchPipeline，统一批量识别和过滤
     4. 返回最终结果（meta_info 列表）
+
+    客户端延迟加载：首次需要客户端时才从注册表构建，避免模块导入时注册表为空。
     """
 
     def __init__(self):
-        self.init_config()
-
-    def init_config(self):
         self.progress = ProgressHelper()
         self.download_repo = DownloadRepository()
-        from app.core.system_config import SystemConfig
-        from app.utils.types import SystemConfigKey
+        self._pipeline = SearchPipeline()
+        self._client = None
+        self._client_type = None
 
+    def _ensure_client(self) -> None:
+        """延迟加载当前配置的索引器客户端"""
+        if self._client is not None:
+            return
         indexer = SystemConfig().get(SystemConfigKey.SearchIndexer) or "builtin"
         self._client = self.__get_client(indexer)
-        if self._client:
-            self._client_type = self._client.get_type()
-        else:
-            self._client_type = None
-        self._pipeline = SearchPipeline()
+        self._client_type = self._client.get_type() if self._client else None
 
     def __build_class(self, ctype, conf):
+        ctype_str = ctype.value if hasattr(ctype, "value") else ctype
         for cls in get_all_clients():
             try:
-                if cls.match(ctype):
+                if cls.match(ctype_str):
                     return cls(conf)
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
@@ -61,12 +63,15 @@ class Indexer(metaclass=SingletonMeta):
         return self.__build_class(ctype=ctype, conf=conf)
 
     def get_client(self):
+        self._ensure_client()
         return self._client
 
     def get_client_type(self):
+        self._ensure_client()
         return self._client_type
 
     def get_indexers(self, check=False):
+        self._ensure_client()
         if not self._client:
             return []
         return self._client.get_indexers(check=check)
@@ -115,6 +120,7 @@ class Indexer(metaclass=SingletonMeta):
             return []
 
         progress_key = ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search
+        self._ensure_client()
         if not self._client:
             return []
 
@@ -130,7 +136,7 @@ class Indexer(metaclass=SingletonMeta):
 
         if filter_args and filter_args.get("site"):
             log.info(
-                f"【{_client_type.value if _client_type else ''}】开始搜索 %s，站点：%s，并发数：%s ..."
+                f"【{_client_type or ''}】开始搜索 %s，站点：%s，并发数：%s ..."
                 % (key_word, filter_args.get("site"), max_workers)
             )
             self.progress.update(
@@ -138,7 +144,7 @@ class Indexer(metaclass=SingletonMeta):
             )
         else:
             log.info(
-                f"【{_client_type.value if _client_type else ''}】开始并行搜索 %s，站点数：%s，并发数：%s ..."
+                f"【{_client_type or ''}】开始并行搜索 %s，站点数：%s，并发数：%s ..."
                 % (key_word, len(indexers), max_workers)
             )
             self.progress.update(ptype=progress_key, text=f"开始并行搜索 {key_word}，站点数：{len(indexers)} ...")
@@ -173,7 +179,7 @@ class Indexer(metaclass=SingletonMeta):
 
         end_time = datetime.datetime.now()
         log.info(
-                f"【{_client_type.value if _client_type else ''}】搜索关键词 {key_word} 所有站点完成，"
+                f"【{_client_type or ''}】搜索关键词 {key_word} 所有站点完成，"
             f"原始结果 {len(all_raw_results)} 条，有效资源数：{len(pipeline_result.results)}，"
             f"总耗时 {(end_time - start_time).seconds} 秒"
         )
@@ -186,6 +192,7 @@ class Indexer(metaclass=SingletonMeta):
 
     def get_indexer_statistics(self):
         """获取索引器统计信息"""
+        self._ensure_client()
         if not self._client:
             return {}
         return self.download_repo.get_indexer_statistics(self._client.get_client_id())

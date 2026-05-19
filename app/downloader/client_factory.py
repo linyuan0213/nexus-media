@@ -43,9 +43,7 @@ class DownloadClientFactory:
         self._download_repo = download_repo or DownloadSettingRepositoryAdapter()
         self._systemconfig = systemconfig or SystemConfig()
 
-        # 下载器类型 schema（从注册表获取）
-        self._downloader_schema = get_all_clients()
-        log.debug(f"【Downloader】加载下载器类型：{self._downloader_schema}")
+
 
         # 客户端实例缓存 {downloader_id: client_instance}
         self._clients = {}
@@ -173,12 +171,13 @@ class DownloadClientFactory:
 
     # ---------- 客户端构建 ----------
 
-    def _build_class(self, ctype, conf=None):
+    @staticmethod
+    def _build_class(ctype, conf=None):
         """根据类型名构建客户端类实例"""
-        for downloader_schema in self._downloader_schema:
+        for cls in get_all_clients():
             try:
-                if downloader_schema.match(ctype):
-                    return downloader_schema(conf)
+                if cls.match(ctype):
+                    return cls(conf)
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
         return None

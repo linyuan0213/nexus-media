@@ -15,6 +15,8 @@ from .config_repository import ConfigRepository
 from .download_repository import DownloadRepository
 from .media_repo_adapter import MediaInfoRepositoryAdapter
 from .media_repository import MediaInfoRepository, MediaRecord
+from .media_sync_repo_adapter import MediaSyncRepositoryAdapter
+from .media_sync_repository import MediaSyncRepository
 from .plugin_framework_repo_adapter import (
     PluginConfigRepositoryAdapter,
     PluginLogRepositoryAdapter,
@@ -75,4 +77,7 @@ __all__ = [
     "MediaInfoRepository",
     "MediaRecord",
     "MediaInfoRepositoryAdapter",
+    # Media Sync
+    "MediaSyncRepository",
+    "MediaSyncRepositoryAdapter",
 ]

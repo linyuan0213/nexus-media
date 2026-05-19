@@ -7,7 +7,7 @@ from typing import Any, cast
 from jinja2 import BaseLoader, Environment
 
 import log
-from app.db.repositories import ConfigRepository
+from app.db.repositories.config_repo_adapter import MessageClientRepositoryAdapter
 from app.helper.thread_helper import ThreadHelper
 from app.infrastructure.queue import MessageQueueFactory
 from app.message.client_registry import ClientRegistry
@@ -142,7 +142,7 @@ class Message(metaclass=SingletonMeta):
     def __init__(self):
         self._queue = MessageQueueFactory.create()
         self._queue.register_handler(self._handle_queued_message)
-        self.config_repo = ConfigRepository()
+        self.config_repo = MessageClientRepositoryAdapter()
         self.messagecenter = MessageCenter()
         self._domain = get_domain()
 
@@ -159,14 +159,15 @@ class Message(metaclass=SingletonMeta):
             log.warn(f"【Message】队列中找不到客户端: id={client_id}, type={client_type}")
 
     def _ensure_loaded(self):
-        if self._loaded:
-            return
         if not self.config_repo:
             return
+        loaded_ids = set(self._client_configs.keys())
         for client_config in self.config_repo.get_message_client() or []:
+            cid = str(client_config.ID)
+            if cid in loaded_ids:
+                continue
             if cast(bool, client_config.ENABLED) and str(client_config.CONFIG):
                 self._add_client_from_config(client_config)
-        self._loaded = True
 
     def _add_client_from_config(self, client_config):
         cid = str(client_config.ID)

@@ -37,7 +37,9 @@ from api.routers import (
 )
 from app.db import init_db, remove_session
 from app.downloader.client import init_clients as init_downloaders
+from app.indexer import Indexer
 from app.indexer.client import init_clients as init_indexers
+from app.mediaserver import MediaServer
 from app.mediaserver.client import init_clients as init_mediaservers
 from app.message import Message
 from app.message.client import init_clients as init_message_clients

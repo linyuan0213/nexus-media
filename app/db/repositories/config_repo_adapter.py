@@ -75,6 +75,22 @@ class MessageClientRepositoryAdapter(IMessageClientRepository):
     def get_message_client(self, cid: int | None = None) -> list[MESSAGECLIENT]:
         return self._repo.get_message_client(cid)
 
+    def delete_message_client(self, cid: int | None) -> None:
+        self._repo.delete_message_client(cid)
+
+    def insert_message_client(
+        self,
+        name: str,
+        ctype: str,
+        config: str,
+        switchs: list,
+        interactive: int,
+        enabled: int,
+        note: str = "",
+        templates: str | None = None,
+    ) -> int:
+        return self._repo.insert_message_client(name, ctype, config, switchs, interactive, enabled, note, templates)
+
     def check_message_client(self, cid: int | None = None, interactive: int | None = None, enabled: int | None = None, ctype: str | None = None) -> None:
         self._repo.check_message_client(cid, interactive, enabled, ctype)
 
@@ -146,6 +162,25 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
     # 兼容旧 ConfigRepository 方法
     def get_downloaders(self) -> list[DOWNLOADER]:
         return self._repo.get_downloaders()
+
+    def update_downloader(
+        self, did, name, enabled, dtype, transfer, only_nexus_media, match_path, rmt_mode, config, download_dir
+    ) -> None:
+        self._repo.update_downloader(
+            did=did,
+            name=name,
+            enabled=enabled,
+            dtype=dtype,
+            transfer=transfer,
+            only_nexus_media=only_nexus_media,
+            match_path=match_path,
+            rmt_mode=rmt_mode,
+            config=config,
+            download_dir=download_dir,
+        )
+
+    def delete_downloader(self, did: int | None) -> None:
+        self._repo.delete_downloader(did)
 
     def check_downloader(self, did: int | None = None, transfer: int | None = None, only_nexus_media: int | None = None, enabled: int | None = None, match_path: int | None = None) -> None:
         self._repo.check_downloader(did, transfer, only_nexus_media, enabled, match_path)
