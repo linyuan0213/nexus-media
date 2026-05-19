@@ -24,7 +24,7 @@ from app.plugin_framework.event_compat import EventManager
 from app.sites import SiteConf, Sites, SiteSubtitle
 from app.sites.engine import SiteEngine
 from app.utils import StringUtils, Torrent
-from app.utils.types import DownloaderType, EventType
+from app.utils.types import EventType
 
 
 class DownloadPipeline:
@@ -162,7 +162,7 @@ class DownloadPipeline:
         if not download_id:
             return downloader_id, None, f"下载器 {downloader_name} 添加下载任务失败"
 
-        if downloader.get_type() == DownloaderType.QB and download_id == "EXISTS":
+        if downloader.client_id == "qbittorrent" and download_id == "EXISTS":
             return downloader_id, None, ""
 
         # ---------- 阶段4：后续处理 ----------
@@ -317,7 +317,7 @@ class DownloadPipeline:
             % (title, download_dir, print_url)
         )
 
-        if downloader_type == DownloaderType.TR:
+        if downloader_type == "transmission":
             ret = downloader.add_torrent(content, is_paused=is_paused, download_dir=download_dir, cookie=cookie)
             if ret:
                 downloader.change_torrent(
@@ -329,7 +329,7 @@ class DownloadPipeline:
                     seeding_time_limit=seeding_time_limit,
                 )
                 return ret.hashString
-        elif downloader_type == DownloaderType.QB:
+        elif downloader_type == "qbittorrent":
             exists, _ = downloader.check_torrent_exists(content)
             if exists:
                 log.info("【DownloadPipeline】下载器中已存在该任务，跳过添加")

@@ -6,7 +6,6 @@ TorrentRemover 重构核心
 import json
 
 import log
-from app.core.module_config import ModuleConf
 from app.db.repositories.config_repo_adapter import TorrentRemoveTaskRepositoryAdapter
 from app.message import Message
 from app.services.downloader_core import DownloaderCore as Downloader
@@ -237,29 +236,16 @@ class TorrentRemoverService:
         savepath_key = data.get("savepath_key")
         tracker_key = data.get("tracker_key")
         downloader_id = data.get("downloader")
-        downloader_conf = self._downloader.get_downloader_conf(str(downloader_id))
-        downloader_type = downloader_conf.get("type") if downloader_conf else ""
+        client = self._downloader.get_downloader(str(downloader_id))
+        valid_states = [s.name for s in client._supported_statuses] if client else []
 
-        qb_state = []
-        qb_category = []
-        tr_state = []
-        tr_error_key = ""
-        if downloader_type == "qbittorrent":
-            qb_state = [s for s in str(data.get("qb_state", "")).split(";") if s]
-            if qb_state:
-                valid_states = ModuleConf.TORRENTREMOVER_DICT.get(downloader_type, {}).get("torrent_state", {}).keys()
-                for item in qb_state:
+        filter_status = []
+        if data.get("filter_status"):
+            filter_status = [s for s in str(data.get("filter_status", "")).split(";") if s]
+            if filter_status:
+                for item in filter_status:
                     if item not in valid_states:
                         return False, "种子状态参数不合法"
-            qb_category = [c for c in str(data.get("qb_category", "")).split(";") if c]
-        elif downloader_type == "transmission":
-            tr_state = [s for s in str(data.get("tr_state", "")).split(";") if s]
-            if tr_state:
-                valid_states = ModuleConf.TORRENTREMOVER_DICT.get(downloader_type, {}).get("torrent_state", {}).keys()
-                for item in tr_state:
-                    if item not in valid_states:
-                        return False, "种子状态参数不合法"
-            tr_error_key = data.get("tr_error_key", "")
 
         config = {
             "ratio": ratio,
@@ -269,10 +255,7 @@ class TorrentRemoverService:
             "tags": tags,
             "savepath_key": savepath_key,
             "tracker_key": tracker_key,
-            "qb_state": qb_state,
-            "qb_category": qb_category,
-            "tr_state": tr_state,
-            "tr_error_key": tr_error_key,
+            "filter_status": filter_status,
         }
         if tid:
             self._repo.delete_task(tid=tid)

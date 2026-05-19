@@ -1,5 +1,3 @@
-import os.path
-import re
 import time
 from typing import Any
 
@@ -7,18 +5,54 @@ import transmission_rpc
 
 import log
 from app.downloader.client._base import _IDownloadClient
+from app.downloader.schema import ConfigField, DownloaderConfigSchema
+from app.downloader.strategy import RemoveStrategy
 from app.schemas.download import Torrent, TorrentStatus
-from app.utils import ExceptionUtils, StringUtils
-from app.utils.types import DownloaderType
+from app.utils import ExceptionUtils
 
 
 class Transmission(_IDownloadClient):
     # 下载器ID
     client_id = "transmission"
     # 下载器类型
-    client_type = DownloaderType.TR
+    client_type = "transmission"
     # 下载器名称
-    client_name = DownloaderType.TR.value
+    client_name = "Transmission"
+
+    config_schema = DownloaderConfigSchema(
+        name="Transmission",
+        fields=[
+            ConfigField(
+                id="host",
+                required=True,
+                title="地址",
+                type="text",
+                tooltip="配置IP地址或域名，如为https则需要增加https://前缀",
+                placeholder="127.0.0.1",
+            ),
+            ConfigField(
+                id="port",
+                required=True,
+                title="端口",
+                type="text",
+                placeholder="9091",
+            ),
+            ConfigField(
+                id="username",
+                required=True,
+                title="用户名",
+                type="text",
+                placeholder="admin",
+            ),
+            ConfigField(
+                id="password",
+                required=False,
+                title="密码",
+                type="password",
+                placeholder="password",
+            ),
+        ],
+    )
 
     # 参考transmission web，仅查询需要的参数，加速种子搜索
     _trarg = [
@@ -106,7 +140,7 @@ class Transmission(_IDownloadClient):
             return trt
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
-            log.error(f"【{self.client_name}】{self.name} 连接出错：{str(err)}")
+            log.error(f"【{self.client_name}】{self.name} 连接出错：{err!s}")
             return None
 
     def get_status(self) -> Any:
@@ -123,7 +157,9 @@ class Transmission(_IDownloadClient):
             ids = int(ids)
         return ids
 
-    def get_torrents(self, ids: list[str] | str | int | None = None, status: Any = None, tag: str | list[str] | None = None) -> Any:
+    def get_torrents(
+        self, ids: list[str] | str | int | None = None, status: Any = None, tag: str | list[str] | None = None
+    ) -> Any:
         """
         获取种子列表
         返回结果 种子列表, 是否有错误
@@ -175,7 +211,9 @@ class Transmission(_IDownloadClient):
                 ret_torrents.append(torrent)
         return ret_torrents, False
 
-    def get_completed_torrents(self, ids: list[str] | str | int | None = None, tag: str | None = None) -> Any:
+    def get_completed_torrents(
+        self, ids: list[str] | str | int | None = None, tag: str | list[str] | None = None
+    ) -> Any:
         """
         获取已完成的种子列表
         return 种子列表, 发生错误时返回None
@@ -189,7 +227,9 @@ class Transmission(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return None
 
-    def get_downloading_torrents(self, ids: list[str] | str | int | None = None, tag: str | None = None) -> Any:
+    def get_downloading_torrents(
+        self, ids: list[str] | str | int | None = None, tag: str | list[str] | None = None
+    ) -> Any:
         """
         获取正在下载的种子列表
         return 种子列表, 发生错误时返回None
@@ -256,30 +296,20 @@ class Transmission(_IDownloadClient):
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
 
-    def change_torrent(
-        self,
-        tid: str | int | None,
-        tag: str | list[str] | None = None,
-        upload_limit: int | None = None,
-        download_limit: int | None = None,
-        ratio_limit: float | None = None,
-        seeding_time_limit: int | None = None,
-        **kwargs: Any,
-    ) -> None:
+    def change_torrent(self, tid: str | None = None, **kwargs: Any) -> bool:
         """
         设置种子
         :param tid: ID
-        :param tag: 标签
-        :param upload_limit: 上传限速 Kb/s
-        :param download_limit: 下载限速 Kb/s
-        :param ratio_limit: 分享率限制
-        :param seeding_time_limit: 做种时间限制
         :return: bool
         """
         if not tid:
-            return
-        else:
-            parsed_ids: Any = self.__parse_ids(tid)
+            return False
+        parsed_ids: Any = self.__parse_ids(tid)
+        tag = kwargs.get("tag")
+        upload_limit = kwargs.get("upload_limit")
+        download_limit = kwargs.get("download_limit")
+        ratio_limit = kwargs.get("ratio_limit")
+        seeding_time_limit = kwargs.get("seeding_time_limit")
         if tag:
             if isinstance(tag, list):
                 labels = tag
@@ -312,7 +342,7 @@ class Transmission(_IDownloadClient):
             seed_idle_mode = 2
             seed_idle_limit = 0
         if not self.trc:
-            return
+            return False
         try:
             self.trc.change_torrent(
                 ids=parsed_ids,
@@ -326,117 +356,13 @@ class Transmission(_IDownloadClient):
                 seedIdleMode=seed_idle_mode,
                 seedIdleLimit=seed_idle_limit,
             )
+            return True
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
+            return False
 
-    def get_transfer_task(self, tag: str | None = None, match_path: bool | None = None) -> Any:
-        """
-        获取下载文件转移任务种子
-        """
-        # 处理下载完成的任务
-        torrents = self.get_completed_torrents() or []
-        trans_tasks = []
-        for torrent in torrents:
-            torrent_tags = torrent.labels or ""
-            # 含"已整理"tag的不处理
-            if "已整理" in torrent_tags:
-                continue
-            # 开启标签隔离，未包含指定标签的不处理
-            if tag and tag not in torrent_tags:
-                log.debug(f"【{self.client_name}】{self.name} 开启标签隔离， {torrent.name} 未包含指定标签：{tag}")
-                continue
-            path = torrent.save_path
-            # 无法获取下载路径的不处理
-            if not path:
-                log.debug(f"【{self.client_name}】{self.name} 未获取到 {torrent.name} 下载保存路径")
-                continue
-            true_path, replace_flag = self.get_replace_path(path, self.download_dir)
-            # 开启目录隔离，未进行目录替换的不处理
-            if match_path and not replace_flag:
-                log.debug(f"【{self.client_name}】{self.name} 开启目录隔离，但 {torrent.name} 未匹配下载目录范围")
-                continue
-            trans_tasks.append(
-                {
-                    "path": os.path.join(true_path, torrent.name).replace("\\", "/"),
-                    "id": torrent.id,
-                    "tags": torrent.labels,
-                }
-            )
-        return trans_tasks
-
-    def get_remove_torrents(self, config: dict | None = None) -> Any:
-        """
-        获取自动删种任务
-        """
-        if not config:
-            return []
-        remove_torrents = []
-        remove_torrents_ids = []
-        torrents, error_flag = self.get_torrents(tag=config.get("filter_tags"), status=config.get("tr_state"))
-        if error_flag:
-            return []
-        ratio = config.get("ratio")
-        # 做种时间 单位：小时
-        seeding_time = config.get("seeding_time")
-        # 大小 单位：GB
-        size = config.get("size")
-        minsize = size[0] * 1024 * 1024 * 1024 if size else 0
-        maxsize = size[-1] * 1024 * 1024 * 1024 if size else 0
-        # 平均上传速度 单位 KB/s
-        upload_avs = config.get("upload_avs")
-        savepath_key = config.get("savepath_key")
-        tracker_key = config.get("tracker_key")
-        for torrent in torrents:
-            torrent_seeding_time = torrent.seeding_time
-            torrent_upload_avs = torrent.avg_upload_speed
-            if ratio and torrent.ratio <= ratio:
-                continue
-            if seeding_time and torrent_seeding_time <= seeding_time * 3600:
-                continue
-            if size and (torrent.size >= maxsize or torrent.size <= minsize):
-                continue
-            if upload_avs and torrent_upload_avs >= upload_avs * 1024:
-                continue
-            if savepath_key and not re.findall(savepath_key, torrent.save_path, re.I):
-                continue
-            if tracker_key:
-                if not torrent.trackers:
-                    continue
-                else:
-                    tacker_key_flag = False
-                    for tracker in torrent.trackers:
-                        if re.findall(tracker_key, tracker, re.I):
-                            tacker_key_flag = True
-                            break
-                    if not tacker_key_flag:
-                        continue
-            remove_torrents.append(
-                {
-                    "id": torrent.id,
-                    "name": torrent.name,
-                    "site": StringUtils.get_url_sld(torrent.trackers[0]) if torrent.trackers else "",
-                    "size": torrent.size,
-                }
-            )
-            remove_torrents_ids.append(torrent.id)
-        if config.get("samedata") and remove_torrents:
-            remove_torrents_plus = []
-            for remove_torrent in remove_torrents:
-                name = remove_torrent.get("name")
-                size = remove_torrent.get("size")
-                for torrent in torrents:
-                    if torrent.name == name and torrent.size == size and torrent.id not in remove_torrents_ids:
-                        remove_torrents_plus.append(
-                            {
-                                "id": torrent.id,
-                                "name": torrent.name,
-                                "site": StringUtils.get_url_sld(torrent.trackers[0]) if torrent.trackers else "",
-                                "size": torrent.size,
-                            }
-                        )
-            remove_torrents_plus += remove_torrents
-            return remove_torrents_plus
-        return remove_torrents
+    def _check_extra_remove_conditions(self, torrent: Torrent, strategy: RemoveStrategy) -> bool:
+        return True
 
     def add_torrent(
         self,
@@ -568,29 +494,6 @@ class Transmission(_IDownloadClient):
         parsed_ids: Any = self.__parse_ids(ids)
         self.trc.change_torrent(parsed_ids, downloadLimit=int(limit))
 
-    def get_downloading_progress(self, ids: list[str] | str | int | None = None, tag: str | None = None) -> Any:
-        """
-        获取正在下载的种子进度
-        """
-        torrents = self.get_downloading_torrents(tag=tag, ids=ids) or []
-        disp_torrents = []
-        for torrent in torrents:
-            if torrent.status in [TorrentStatus.Stopped]:
-                state = "Stopped"
-                speed = "已暂停"
-            else:
-                state = "Downloading"
-
-                _dlspeed = StringUtils.str_filesize(torrent.download_speed)
-                _upspeed = StringUtils.str_filesize(torrent.upload_speed)
-                speed = f"{chr(8595)}{_dlspeed}B/s {chr(8593)}{_upspeed}B/s"
-            # 进度
-            progress = round(torrent.progress * 100, 2)
-            disp_torrents.append(
-                {"id": torrent.id, "name": torrent.name, "speed": speed, "state": state, "progress": progress}
-            )
-        return disp_torrents
-
     def set_speed_limit(self, download_limit: int | None = None, upload_limit: int | None = None, **kwargs: Any) -> Any:
         """
         设置速度限制
@@ -721,6 +624,24 @@ class Transmission(_IDownloadClient):
         }
         # 直接匹配英文状态字符串
         return status_mapping.get(status_str, TorrentStatus.Unknown)
+
+    def _map_status(self, raw_state: Any) -> TorrentStatus:
+        if isinstance(raw_state, str):
+            return self._judge_status(raw_state, 0)
+        return TorrentStatus.Unknown
+
+    @property
+    def _supported_statuses(self) -> list[TorrentStatus]:
+        return [
+            TorrentStatus.Uploading,
+            TorrentStatus.Downloading,
+            TorrentStatus.Pending,
+            TorrentStatus.Checking,
+            TorrentStatus.Queued,
+            TorrentStatus.Stopped,
+            TorrentStatus.Unknown,
+            TorrentStatus.Error,
+        ]
 
     @staticmethod
     def _judge_status(state: str, errno: int) -> TorrentStatus:

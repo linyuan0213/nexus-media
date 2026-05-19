@@ -17,14 +17,14 @@ from threading import Lock
 
 import log
 from app.core.constants import PT_TAG
-
-from app.core.system_config import SystemConfig, SystemConfig as SystemConfigClass
+from app.core.system_config import SystemConfig
+from app.core.system_config import SystemConfig as SystemConfigClass
 from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
 from app.db.repositories.download_repo_adapter import DownloadSettingRepositoryAdapter
 from app.downloader.client._base import _IDownloadClient
-from app.helper import SubmoduleHelper
-from app.utils import NumberUtils, StringUtils, SystemUtils
-from app.utils.types import DownloaderType, SystemConfigKey
+from app.downloader.registry import get_all_clients
+from app.utils import ExceptionUtils, NumberUtils, StringUtils, SystemUtils
+from app.utils.types import SystemConfigKey
 from config import Config
 
 client_lock = Lock()
@@ -43,10 +43,8 @@ class DownloadClientFactory:
         self._download_repo = download_repo or DownloadSettingRepositoryAdapter()
         self._systemconfig = systemconfig or SystemConfig()
 
-        # 下载器类型 schema（从子模块动态加载）
-        self._downloader_schema = SubmoduleHelper.import_submodules(
-            "app.downloader.client", filter_func=lambda _, obj: hasattr(obj, "client_id")
-        )
+        # 下载器类型 schema（从注册表获取）
+        self._downloader_schema = get_all_clients()
         log.debug(f"【Downloader】加载下载器类型：{self._downloader_schema}")
 
         # 客户端实例缓存 {downloader_id: client_instance}
@@ -182,8 +180,6 @@ class DownloadClientFactory:
                 if downloader_schema.match(ctype):
                     return downloader_schema(conf)
             except Exception as e:
-                from app.utils import ExceptionUtils
-
                 ExceptionUtils.exception_traceback(e)
         return None
 
@@ -399,13 +395,3 @@ class DownloadClientFactory:
                     continue
                 return {"path": attr.get("save_path"), "category": attr.get("label")}
         return {"path": None, "category": None}
-
-    @staticmethod
-    def get_client_type_by_name(type_name):
-        """根据名称返回下载器类型枚举"""
-        if not type_name:
-            return None
-        for dict_type in DownloaderType:
-            if dict_type.name == type_name or dict_type.value == type_name:
-                return dict_type
-        return None

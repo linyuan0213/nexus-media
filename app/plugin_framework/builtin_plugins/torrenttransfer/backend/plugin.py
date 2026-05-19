@@ -17,7 +17,7 @@ from app.schemas.download import TorrentStatus
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.utils import Torrent
 from app.utils.path_utils import get_temp_path
-from app.utils.types import DownloaderType
+
 
 
 class TorrentTransferPlugin:
@@ -203,7 +203,7 @@ class TorrentTransferPlugin:
                 continue
 
             # 如果是QB检查是否有Tracker，没有的话补充解析
-            if downloader_type == DownloaderType.QB:
+            if downloader_type == "qbittorrent":
                 content, _, _, retmsg = Torrent().read_torrent_content(torrent_file)
                 if not content:
                     self.ctx.error(f"读取种子文件失败：{retmsg}")
@@ -260,7 +260,7 @@ class TorrentTransferPlugin:
 
             self.ctx.info(f"成功添加转移做种任务，种子文件：{torrent_file}")
 
-            if to_downloader_type == DownloaderType.QB:
+            if to_downloader_type == "qbittorrent":
                 self._downloader.recheck_torrents(downloader_id=to_downloader, ids=[download_id])
 
             if deletesource:

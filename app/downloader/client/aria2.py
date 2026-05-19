@@ -1,28 +1,42 @@
-import os
 import re
 from typing import Any
 
-import log
 from app.downloader.client._base import _IDownloadClient
 from app.downloader.client._pyaria2 import PyAria2
+from app.downloader.schema import ConfigField, DownloaderConfigSchema
+from app.downloader.strategy import RemoveStrategy
 from app.schemas.download import Torrent, TorrentStatus
-from app.utils import ExceptionUtils, RequestUtils, StringUtils
-from app.utils.types import DownloaderType
+from app.utils import ExceptionUtils, RequestUtils
 
 
 class Aria2(_IDownloadClient):
-    schema = "aria2"
-    # 下载器ID
     client_id = "aria2"
-    client_type = DownloaderType.ARIA2
-    client_name = DownloaderType.ARIA2.value
-    _client_config = {}
+    client_type = "aria2"
+    client_name = "Aria2"
 
+    config_schema = DownloaderConfigSchema(
+        name="Aria2",
+        monitor_enable=True,
+        fields=[
+            ConfigField(
+                id="host",
+                required=True,
+                title="IP地址",
+                tooltip="配置IP地址，如为https则需要增加https://前缀",
+                type="text",
+                placeholder="127.0.0.1",
+            ),
+            ConfigField(id="port", required=True, title="端口", type="text", placeholder="6800"),
+            ConfigField(id="secret", required=True, title="令牌", type="text", placeholder=""),
+        ],
+    )
+
+    _client_config: dict = {}
     _client = None
     host = None
     port = None
     secret = None
-    download_dir = []
+    download_dir: list = []
 
     def __init__(self, config: dict | None = None):
         if config:
@@ -36,34 +50,28 @@ class Aria2(_IDownloadClient):
             if self.host:
                 if not self.host.startswith("http"):
                     self.host = "http://" + self.host
-                if self.host.endswith("/"):
-                    self.host = self.host[:-1]
+                self.host = self.host.removesuffix("/")
             self.port = self._client_config.get("port")
             self.secret = self._client_config.get("secret")
             self.download_dir = self._client_config.get("download_dir") or []
             if self.host and self.port:
                 self._client = PyAria2(secret=self.secret, host=self.host, port=self.port)
 
-    @classmethod
-    def match(cls, ctype: str) -> Any:
-        return ctype in [cls.client_id, cls.client_type, cls.client_name]
-
-    def connect(self) -> Any:
+    def connect(self) -> None:
         pass
 
-    def get_status(self) -> Any:
+    def get_status(self) -> bool:
         if not self._client:
             return False
         ver = self._client.getVersion()
         return bool(ver)
 
     def get_torrents(
-        self, ids: list[str] | str | None = None, status: str | None = None, tag: str | None = None
-    ) -> list[Torrent]:
+        self, ids: list[str] | str | None = None, status: Any = None, tag: str | list[str] | None = None
+    ) -> tuple[list[Torrent], bool]:
         if not self._client:
-            return []
+            return [], True
         ret_torrents = []
-        torrent_list: list[Torrent] = []
         if ids:
             if isinstance(ids, list):
                 for gid in ids:
@@ -79,185 +87,152 @@ class Aria2(_IDownloadClient):
                 )
             else:
                 ret_torrents = self._client.tellStopped(offset=-1, num=1000)
+
+        torrent_list: list[Torrent] = []
         for torrent in ret_torrents if isinstance(ret_torrents, list) else []:
             if isinstance(torrent, dict):
                 torrent_list.append(self.torrent_properties(torrent=torrent))
-        return torrent_list
+        return torrent_list, False
 
-    def get_downloading_torrents(self, ids: Any = None, tag: Any = None, **kwargs: Any) -> list[Torrent]:
-        return self.get_torrents(status="downloading")
+    def get_downloading_torrents(
+        self, ids: list[str] | str | None = None, tag: str | list[str] | None = None
+    ) -> list[Torrent] | None:
+        torrents, error = self.get_torrents(status="downloading")
+        return None if error else torrents
 
-    def get_completed_torrents(self, ids: Any = None, tag: Any = None, **kwargs: Any) -> list[Torrent]:
-        return self.get_torrents(status="completed")
+    def get_completed_torrents(
+        self, ids: list[str] | str | None = None, tag: str | list[str] | None = None
+    ) -> list[Torrent] | None:
+        torrents, error = self.get_torrents(status="completed")
+        return None if error else torrents
 
-    def set_torrents_status(self, ids: list[str] | str | None = None, tags: str | list[str] | None = None) -> Any:
-        return self.delete_torrents(ids=ids, delete_file=False)
+    def set_torrents_status(self, ids: list[str] | str, tags: str | list[str] | None = None) -> bool:
+        return bool(self.delete_torrents(ids=ids, delete_file=False))
 
-    def get_transfer_task(self, tag: str | None = None, match_path: bool | None = None) -> Any:
-        if not self._client:
-            return []
-        torrents = self.get_completed_torrents()
-        trans_tasks = []
-        for torrent in torrents:
-            name = torrent.name
-            if not name:
-                continue
-            path = torrent.save_path
-            if not path:
-                continue
-            true_path, replace_flag = self.get_replace_path(path, self.download_dir)
-            # 开启目录隔离，未进行目录替换的不处理
-            if match_path and not replace_flag:
-                log.debug(
-                    f"【{self.client_name}】{self.client_name} 开启目录隔离，但 {torrent.name} 未匹配下载目录范围"
-                )
-                continue
-            trans_tasks.append({"path": os.path.join(true_path, name).replace("\\", "/"), "id": torrent.id})
-        return trans_tasks
+    def set_torrents_tag(self, ids: list[str] | str | None = None, tags: str | list[str] | None = None) -> bool:
+        return True
 
-    def get_remove_torrents(self, config: dict | None = None) -> Any:
+    def get_remove_torrents(self, strategy: RemoveStrategy) -> list[dict]:
         return []
 
-    def add_torrent(self, content: str | bytes, download_dir: str | None = None, **kwargs: Any) -> Any:
-        if not self._client:
-            return None
-        if isinstance(content, str):
-            # 转换为磁力链
-            if re.match("^https*://", content):
-                try:
-                    p = RequestUtils().get_res(url=content, allow_redirects=False)
-                    if p and p.headers.get("Location"):
-                        content = p.headers.get("Location") or ""
-                except Exception as result:
-                    ExceptionUtils.exception_traceback(result)
-            return self._client.addUri(uris=[content], options={"dir": download_dir})
-        else:
-            return self._client.addTorrent(torrent=content, uris=[], options={"dir": download_dir})
-
-    def start_torrents(self, ids: list[str] | str | None = None) -> Any:
+    def add_torrent(self, content: str | bytes, **kwargs) -> bool:
+        download_dir = kwargs.get("download_dir")
         if not self._client:
             return False
-        return self._client.unpause(gid=ids)
-
-    def stop_torrents(self, ids: list[str] | str | None = None) -> Any:
-        if not self._client:
-            return False
-        return self._client.pause(gid=ids)
-
-    def delete_torrents(self, delete_file: bool | None = None, ids: list[str] | str | None = None) -> Any:
-        if not self._client:
-            return False
-        return self._client.forceRemove(gid=ids)
-
-    def get_download_dirs(self) -> Any:
-        return []
-
-    def change_torrent(self, **kwargs: Any) -> Any:
-        pass
-
-    def get_downloading_progress(self, ids: Any = None, tag: Any = None) -> Any:
-        """
-        获取正在下载的种子进度
-        """
-        torrents = self.get_downloading_torrents()
-        disp_torrents = []
-        for torrent in torrents:
-            # 进度
-            try:
-                progress = torrent.progress * 100
-            except ZeroDivisionError:
-                progress = 0.0
-            if torrent.status in [TorrentStatus.Stopped]:
-                state = "Stopped"
-                speed = "已暂停"
+        try:
+            if isinstance(content, str):
+                if re.match("^https*://", content):
+                    try:
+                        p = RequestUtils().get_res(url=content, allow_redirects=False)
+                        if p and p.headers.get("Location"):
+                            content = p.headers.get("Location") or ""
+                    except Exception as result:
+                        ExceptionUtils.exception_traceback(result)
+                result = self._client.addUri(uris=[content], options={"dir": download_dir})
+                return bool(result)
             else:
-                state = "Downloading"
-                _dlspeed = StringUtils.str_filesize(torrent.download_speed)
-                _upspeed = StringUtils.str_filesize(torrent.upload_speed)
-                speed = f"{chr(8595)}{_dlspeed}B/s {chr(8593)}{_upspeed}B/s"
+                result = self._client.addTorrent(torrent=content, uris=[], options={"dir": download_dir})
+                return bool(result)
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+            return False
 
-            disp_torrents.append({
-                "id": torrent.id,
-                "name": torrent.name,
-                "speed": speed,
-                "state": state,
-                "progress": progress,
-            })
-
-        return disp_torrents
-
-    def set_speed_limit(self, download_limit: int | None = None, upload_limit: int | None = None, **kwargs: Any) -> Any:
-        """
-        设置速度限制
-        :param download_limit: 下载速度限制，单位KB/s
-        :param upload_limit: 上传速度限制，单位kB/s
-        """
+    def start_torrents(self, ids: list[str] | str | None = None) -> bool:
         if not self._client:
-            return
+            return False
+        try:
+            return bool(self._client.unpause(gid=ids))
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+            return False
+
+    def stop_torrents(self, ids: list[str] | str | None = None) -> bool:
+        if not self._client:
+            return False
+        try:
+            return bool(self._client.pause(gid=ids))
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+            return False
+
+    def delete_torrents(self, delete_file: bool = False, ids: list[str] | str | None = None) -> bool:
+        if not self._client:
+            return False
+        try:
+            return bool(self._client.forceRemove(gid=ids))
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+            return False
+
+    def get_download_dirs(self) -> list[str]:
+        return []
+
+    def change_torrent(self, tid: str | None = None, **kwargs: Any) -> bool:
+        return True
+
+    def set_speed_limit(self, download_limit: int | None = None, upload_limit: int | None = None) -> bool:
+        if not self._client:
+            return False
         dl_limit = int(download_limit or 0) * 1024
         ul_limit = int(upload_limit or 0) * 1024
         try:
             speed_opt = self._client.getGlobalOption()
             if not isinstance(speed_opt, dict):
                 return False
-            if speed_opt["max-overall-upload-limit"] != ul_limit:
+            if speed_opt.get("max-overall-upload-limit") != ul_limit:
                 speed_opt["max-overall-upload-limit"] = ul_limit
-            if speed_opt["max-overall-download-limit"] != dl_limit:
+            if speed_opt.get("max-overall-download-limit") != dl_limit:
                 speed_opt["max-overall-download-limit"] = dl_limit
-            return self._client.changeGlobalOption(speed_opt)
+            return bool(self._client.changeGlobalOption(speed_opt))
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
 
-    def get_type(self) -> Any:
-        return self.client_type
-
-    def get_files(self, tid: str | None = None) -> Any:
+    def get_files(self, tid: str | None = None) -> list[dict] | None:
         if not self._client:
             return None
         try:
-            return self._client.getFiles(gid=tid)
+            files = self._client.getFiles(gid=tid)
+            return files if isinstance(files, list) else None
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return None
 
-    def recheck_torrents(self, ids: list[str] | str | None = None) -> Any:
-        pass
+    def recheck_torrents(self, ids: list[str] | str | None = None) -> bool:
+        return True
 
-    def set_torrents_tag(self, ids: list[str] | str | None = None, tags: str | list[str] | None = None) -> Any:
-        pass
-
-    def get_free_space(self, path: str) -> Any:
-        pass
+    def get_free_space(self, path: str) -> int | None:
+        return None
 
     def torrent_properties(self, torrent: dict) -> Torrent:
-
         torrent_obj = Torrent()
         torrent_obj.id = torrent.get("gid")
         torrent_obj.name = torrent.get("bittorrent", {}).get("info", {}).get("name")
-        # 种子大小
         torrent_obj.size = int(torrent.get("totalLength") or 0)
-        # 下载量
         torrent_obj.downloaded = int(torrent.get("completedLength") or 0)
-        # 状态
-        torrent_obj.status = Aria2._judge_status(torrent.get("status") or "")
-        # 下载速度
+        torrent_obj.status = self._map_status(torrent.get("status") or "")
         torrent_obj.download_speed = int(torrent.get("downloadSpeed") or 0)
-        # 上传速度
         torrent_obj.upload_speed = int(torrent.get("uploadSpeed") or 0)
-        # 下载进度
-        torrent_obj.progress = round(int(torrent.get("completedLength") or 0) / int(torrent.get("totalLength") or 0), 1)
-        # 保存路径
+        total = int(torrent.get("totalLength") or 0)
+        completed = int(torrent.get("completedLength") or 0)
+        torrent_obj.progress = round(completed / total, 1) if total else 0.0
         torrent_obj.save_path = torrent.get("dir")
-
         return torrent_obj
 
-    @staticmethod
-    def _judge_status(state: str) -> TorrentStatus:
-        state_mapping = {
+    def _map_status(self, raw_state: str) -> TorrentStatus:
+        mapping = {
             "paused": TorrentStatus.Stopped,
             "downloading": TorrentStatus.Downloading,
             "completed": TorrentStatus.Uploading,
             "UNKNOWN": TorrentStatus.Unknown,
         }
-        return state_mapping.get(state, TorrentStatus.Unknown)
+        return mapping.get(raw_state, TorrentStatus.Unknown)
+
+    @property
+    def _supported_statuses(self) -> list[TorrentStatus]:
+        return [
+            TorrentStatus.Downloading,
+            TorrentStatus.Uploading,
+            TorrentStatus.Stopped,
+            TorrentStatus.Unknown,
+        ]

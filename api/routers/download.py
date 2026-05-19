@@ -18,7 +18,7 @@ from api.deps import (
     require_any_permission,
     require_permission,
 )
-from app.core.module_config import ModuleConf
+from app.downloader.registry import get_all_clients
 from app.helper.thread_helper import ThreadHelper
 from app.schemas.auth import UserContext
 from app.services.download_service import DownloadService
@@ -429,7 +429,7 @@ def get_downloader_types(
     user: str = Depends(require_any_permission("download:view", "download:manage")),
 ):
     """获取支持的下载器类型配置"""
-    return success(data=ModuleConf.DOWNLOADER_CONF)
+    return success(data={cls.client_id: cls.config_schema.to_dict() for cls in get_all_clients()})
 
 
 @router.post("/indexers/statistics")

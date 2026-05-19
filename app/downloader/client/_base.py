@@ -1,139 +1,200 @@
 import os.path
+import re
 from abc import ABCMeta, abstractmethod
 from typing import Any
 
-from app.utils import PathUtils
+import log
+from app.downloader.strategy import RemoveStrategy
+from app.schemas.download import Torrent, TorrentStatus
+from app.utils import PathUtils, StringUtils
 
 
 class _IDownloadClient(metaclass=ABCMeta):
-    # 下载器ID
     client_id = ""
-    # 下载器类型
     client_type = ""
-    # 下载器名称
     client_name = ""
 
+    _client_config: dict = {}
+    download_dir: list = []
+    name: str = ""
+
     @classmethod
-    @abstractmethod
-    def match(cls, ctype) -> Any:
-        """
-        匹配实例
-        """
+    def match(cls, ctype: str) -> bool:
+        return ctype in [cls.client_id, cls.client_type, cls.client_name]
+
+    def get_type(self) -> str:
+        return self.client_type
 
     @abstractmethod
-    def get_type(self) -> Any:
-        """
-        获取下载器类型
-        """
+    def connect(self) -> None:
+        """连接下载器"""
 
     @abstractmethod
-    def connect(self) -> Any:
-        """
-        连接
-        """
+    def get_status(self) -> bool:
+        """检查连通性"""
 
     @abstractmethod
-    def get_status(self) -> Any:
-        """
-        检查连通性
-        """
+    def get_torrents(
+        self,
+        ids: list[str] | str | None = None,
+        status: Any = None,
+        tag: str | list[str] | None = None,
+    ) -> tuple[list[Torrent], bool]:
+        """按条件读取种子信息。返回 (list[Torrent], bool)，bool 表示是否发生错误。"""
 
     @abstractmethod
-    def get_torrents(self, ids=None, status=None, tag=None) -> Any:
-        """
-        按条件读取种子信息
-        :param ids: 种子ID，单个ID或者ID列表
-        :param status: 种子状态过滤
-        :param tag: 种子标签过滤
-        :return: 种子信息列表，是否发生错误
-        """
+    def get_downloading_torrents(
+        self, ids: list[str] | str | None = None, tag: str | list[str] | None = None
+    ) -> list[Torrent] | None:
+        """读取下载中的种子信息，发生错误时返回 None"""
 
     @abstractmethod
-    def get_downloading_torrents(self, ids=None, tag=None) -> Any:
-        """
-        读取下载中的种子信息，发生错误时需返回None
-        """
+    def get_completed_torrents(
+        self, ids: list[str] | str | None = None, tag: str | list[str] | None = None
+    ) -> list[Torrent] | None:
+        """读取下载完成的种子信息，发生错误时返回 None"""
 
     @abstractmethod
-    def get_completed_torrents(self, ids=None, tag=None) -> Any:
-        """
-        读取下载完成的种子信息，发生错误时需返回None
-        """
+    def get_files(self, tid: str | None = None) -> list[dict] | None:
+        """读取种子文件列表"""
 
     @abstractmethod
-    def get_files(self, tid=None) -> Any:
-        """
-        读取种子文件列表
-        """
+    def set_torrents_status(self, ids: list[str] | str, tags: str | list[str] | None = None) -> bool:
+        """迁移完成后设置种子标签为 已整理"""
 
     @abstractmethod
-    def set_torrents_status(self, ids, tags=None) -> Any:
-        """
-        迁移完成后设置种子标签为 已整理
-        :param ids: 种子ID列表
-        :param tags: 种子标签列表
-        """
+    def set_torrents_tag(
+        self, ids: list[str] | str | None = None, tags: str | list[str] | None = None
+    ) -> bool:
+        """设置种子标签"""
+
+    def get_transfer_task(self, tag: str | None = None, match_path: bool | None = None) -> list[dict]:
+        """获取需要转移的种子列表。子类可覆盖 _get_content_subpath 来自定义路径计算。"""
+        torrents = self.get_completed_torrents() or []
+        trans_tasks = []
+        for torrent in torrents:
+            labels = torrent.labels or []
+            if "已整理" in labels:
+                continue
+            if tag and tag not in labels:
+                log.debug(f"【{self.client_name}】{self.name} 开启标签隔离，{torrent.name} 未包含指定标签：{tag}")
+                continue
+            path = torrent.save_path
+            if not path:
+                log.debug(f"【{self.client_name}】{self.name} 未获取到 {torrent.name} 下载保存路径")
+                continue
+            true_path, replace_flag = self.get_replace_path(path, self.download_dir)
+            if match_path and not replace_flag:
+                log.debug(f"【{self.client_name}】{self.name} 开启目录隔离，{torrent.name} 未匹配下载目录范围")
+                continue
+            subpath = self._get_content_subpath(torrent) or torrent.name or ""
+            trans_tasks.append(
+                {"path": os.path.join(true_path, subpath).replace("\\", "/"), "id": torrent.id}
+            )
+        return trans_tasks
+
+    def _get_content_subpath(self, torrent: Torrent) -> str | None:
+        """获取种子内容相对路径。子类可覆盖，如 QB 的 content_path 处理。"""
+        return None
+
+    def get_remove_torrents(self, strategy: RemoveStrategy) -> list[dict]:
+        """获取自动删种任务种子。通用默认实现，子类可覆盖以添加特有筛选。"""
+        torrents, error_flag = self.get_torrents(status=strategy.filter_status, tag=strategy.filter_tags)
+        if error_flag:
+            return []
+
+        remove_torrents = []
+        remove_torrents_ids: list[str] = []
+
+        for torrent in torrents:
+            if strategy.ratio is not None and torrent.ratio <= strategy.ratio:
+                continue
+            if strategy.seeding_time is not None and torrent.seeding_time <= strategy.seeding_time * 3600:
+                continue
+            if strategy.size_range is not None:
+                minsize, maxsize = strategy.size_range
+                if torrent.size >= maxsize or torrent.size <= minsize:
+                    continue
+            if strategy.upload_avs is not None and torrent.avg_upload_speed >= strategy.upload_avs * 1024:
+                continue
+            if strategy.savepath_key and not re.findall(
+                strategy.savepath_key, torrent.save_path or "", re.I
+            ):
+                continue
+            if strategy.tracker_key:
+                if not torrent.trackers:
+                    continue
+                tracker_match = any(
+                    re.findall(strategy.tracker_key, tracker, re.I) for tracker in torrent.trackers
+                )
+                if not tracker_match:
+                    continue
+            if not self._check_extra_remove_conditions(torrent, strategy):
+                continue
+
+            remove_torrents.append(
+                {
+                    "id": torrent.id,
+                    "name": torrent.name,
+                    "site": StringUtils.get_url_sld(torrent.trackers[0]) if torrent.trackers else "",
+                    "size": torrent.size,
+                }
+            )
+            remove_torrents_ids.append(str(torrent.id) if torrent.id else "")
+
+        if strategy.samedata and remove_torrents:
+            remove_torrents_plus = []
+            for remove_torrent in remove_torrents:
+                name = remove_torrent.get("name")
+                size = remove_torrent.get("size")
+                for torrent in torrents:
+                    if (
+                        torrent.name == name
+                        and torrent.size == size
+                        and str(torrent.id) not in remove_torrents_ids
+                    ):
+                        remove_torrents_plus.append(
+                            {
+                                "id": torrent.id,
+                                "name": torrent.name,
+                                "site": StringUtils.get_url_sld(torrent.trackers[0])
+                                if torrent.trackers
+                                else "",
+                                "size": torrent.size,
+                            }
+                        )
+            remove_torrents_plus += remove_torrents
+            return remove_torrents_plus
+
+        return remove_torrents
+
+    def _check_extra_remove_conditions(self, torrent: Torrent, strategy: RemoveStrategy) -> bool:
+        """子类覆盖此方法以添加下载器特有的删种条件，返回 True 表示保留。"""
+        return True
 
     @abstractmethod
-    def set_torrents_tag(self, ids=None, tags=None) -> Any:
-        """
-        设置种子标签
-        :param ids: 种子ID列表
-        :param tags: 种子标签列表
-        """
+    def add_torrent(self, content: str | bytes, **kwargs) -> bool:
+        """添加下载任务"""
 
     @abstractmethod
-    def get_transfer_task(self, tag=None, match_path=None) -> Any:
-        """
-        获取需要转移的种子列表
-        """
+    def start_torrents(self, ids: list[str] | str | None = None) -> bool:
+        """开始种子"""
 
     @abstractmethod
-    def get_remove_torrents(self, config) -> Any:
-        """
-        获取需要清理的种子清单
-        :param config: 删种策略
-        :return: 种子ID列表
-        """
+    def stop_torrents(self, ids: list[str] | str | None = None) -> bool:
+        """停止种子"""
 
     @abstractmethod
-    def add_torrent(self, *args, **kwargs) -> Any:
-        """
-        添加下载任务
-        """
+    def delete_torrents(self, delete_file: bool = False, ids: list[str] | str | None = None) -> bool:
+        """删除种子"""
 
     @abstractmethod
-    def start_torrents(self, ids=None) -> Any:
-        """
-        下载控制：开始
-        """
-
-    @abstractmethod
-    def stop_torrents(self, ids=None) -> Any:
-        """
-        下载控制：停止
-        """
-
-    @abstractmethod
-    def delete_torrents(self, delete_file=None, ids=None) -> Any:
-        """
-        删除种子
-        """
-
-    @abstractmethod
-    def get_download_dirs(self) -> Any:
-        """
-        获取下载目录清单
-        """
+    def get_download_dirs(self) -> list[str]:
+        """获取下载目录清单"""
 
     @staticmethod
-    def get_replace_path(path, downloaddir) -> tuple[str, bool]:
-        """
-        对目录路径进行转换
-        :param path: 需要转换的路径
-        :param downloaddir: 下载目录清单
-        :return: 转换后的路径, 是否进行转换
-        """
+    def get_replace_path(path: str, downloaddir: list | None) -> tuple[str, bool]:
+        """对目录路径进行转换"""
         if not path or not downloaddir:
             return "", False
         path = os.path.normpath(path)
@@ -143,7 +204,6 @@ class _IDownloadClient(metaclass=ABCMeta):
                 continue
             save_path = os.path.normpath(save_path)
             container_path = attr.get("container_path")
-            # 没有访问目录，视为与下载保存目录相同
             if not container_path:
                 container_path = save_path
             else:
@@ -153,31 +213,52 @@ class _IDownloadClient(metaclass=ABCMeta):
         return path, False
 
     @abstractmethod
-    def change_torrent(self, *args, **kwargs) -> Any:
-        """
-        修改种子状态
-        """
+    def change_torrent(self, tid: str | None = None, **kwargs: Any) -> bool:
+        """修改种子状态"""
+
+    def get_downloading_progress(
+        self, ids: list[str] | str | None = None, tag: str | list[str] | None = None
+    ) -> list[dict]:
+        """获取下载进度。子类可覆盖 _format_progress 或 _format_speed 来自定义。"""
+        torrents = self.get_downloading_torrents(ids=ids, tag=tag) or []
+        return [self._format_progress(t) for t in torrents]
+
+    def _format_progress(self, torrent: Torrent) -> dict:
+        progress = round(torrent.progress * 100, 1)
+        if torrent.status in (TorrentStatus.Paused, TorrentStatus.Stopped):
+            state, speed = "Stopped", "已暂停"
+        else:
+            state = "Downloading"
+            speed = self._format_speed(torrent)
+        return {"id": torrent.id, "name": torrent.name, "speed": speed, "state": state, "progress": progress}
+
+    def _format_speed(self, torrent: Torrent) -> str:
+        dl = StringUtils.str_filesize(torrent.download_speed)
+        ul = StringUtils.str_filesize(torrent.upload_speed)
+        if torrent.progress * 100 >= 100:
+            return f"{chr(8595)}{dl}B/s {chr(8593)}{ul}B/s"
+        eta = StringUtils.str_timelong(torrent.eta)
+        return f"{chr(8595)}{dl}B/s {chr(8593)}{ul}B/s {eta}"
 
     @abstractmethod
-    def get_downloading_progress(self, ids=None, tag=None) -> Any:
-        """
-        获取下载进度
-        """
+    def set_speed_limit(
+        self, download_limit: int | None = None, upload_limit: int | None = None
+    ) -> bool:
+        """设置速度限制"""
 
     @abstractmethod
-    def set_speed_limit(self, *args, **kwargs) -> Any:
-        """
-        设置速度限制
-        """
+    def recheck_torrents(self, ids: list[str] | str | None = None) -> bool:
+        """重新校验种子"""
 
     @abstractmethod
-    def recheck_torrents(self, ids=None) -> Any:
-        """
-        下载控制：重新校验
-        """
+    def get_free_space(self, path: str) -> int | None:
+        """获取剩余空间"""
 
     @abstractmethod
-    def get_free_space(self, path: str) -> Any:
-        """
-        获取剩余空间
-        """
+    def _map_status(self, raw_state: Any) -> TorrentStatus:
+        """将下载器原始状态映射为通用 TorrentStatus"""
+
+    @property
+    @abstractmethod
+    def _supported_statuses(self) -> list[TorrentStatus]:
+        """该下载器支持的状态列表"""

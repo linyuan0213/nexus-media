@@ -24,6 +24,7 @@ from app.db.repositories.download_repo_adapter import (
 )
 from app.downloader.client_factory import DownloadClientFactory
 from app.downloader.pipeline import DownloadPipeline
+from app.downloader.strategy import RemoveStrategy
 from app.media import meta_info
 from app.mediaserver import MediaServer
 from app.message import Message
@@ -34,7 +35,7 @@ from app.sites import SiteConf, Sites, SiteSubtitle
 from app.sites.engine import SiteEngine
 from app.utils import ExceptionUtils
 from app.utils.torrent import Torrent
-from app.utils.types import DownloaderType
+
 
 
 class DownloadCore:
@@ -160,9 +161,10 @@ class DownloadCore:
             config["filter_tags"] = config["tags"] + [PT_TAG]
         else:
             config["filter_tags"] = config["tags"]
-        torrents = _client.get_remove_torrents(config=config)
+        strategy = RemoveStrategy.from_dict(config)
+        torrents = _client.get_remove_torrents(strategy=strategy)
         if torrents:
-            torrents.sort(key=lambda x: x.get("name"))
+            torrents.sort(key=lambda x: x.get("name") or "")
         return torrents
 
     def get_downloading_torrents(self, downloader_id=None, ids=None, tag=None) -> list[TorrentInfo]:
@@ -252,10 +254,10 @@ class DownloadCore:
         if not torrent_files:
             return []
         ret_files = []
-        if _client.get_type() == DownloaderType.TR:
+        if _client.client_id == "transmission":
             for file_id, torrent_file in enumerate(torrent_files):
                 ret_files.append({"id": file_id, "name": torrent_file.name})
-        elif _client.get_type() == DownloaderType.QB:
+        elif _client.client_id == "qbittorrent":
             for torrent_file in torrent_files:
                 ret_files.append({"id": torrent_file.get("index"), "name": torrent_file.get("name")})
         return ret_files

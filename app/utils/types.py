@@ -8,16 +8,6 @@ class MediaType(Enum):
     UNKNOWN = "未知"
 
 
-class DownloaderType(Enum):
-    QB = "Qbittorrent"
-    TR = "Transmission"
-    UT = "uTorrent"
-    PAN115 = "115网盘"
-    ARIA2 = "Aria2"
-    PIKPAK = "PikPak"
-    THUNDER = "迅雷"
-
-
 class SyncType(Enum):
     MAN = "手动整理"
     MON = "目录同步"

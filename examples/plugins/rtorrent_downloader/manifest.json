@@ -1,0 +1,36 @@
+{
+  "manifest_version": "1.0",
+  "id": "rtorrent_downloader",
+  "name": "rTorrent 下载器",
+  "version": "1.0.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213/nexus-media",
+  "description": "为 Nexus Media 添加 rTorrent 下载器支持",
+  "category": "download",
+  "tags": [
+    "下载器",
+    "rTorrent",
+    "BitTorrent"
+  ],
+  "icon": "lucide:download",
+  "color": "#3b82f6",
+  "min_app_version": "3.0.0",
+  "backend": {
+    "entry": "backend.plugin:RtorrentDownloaderPlugin",
+    "api_prefix": "/api/plugin/rtorrent_downloader",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ],
+    "supports_run": false,
+    "dependencies": []
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": []
+    },
+    "slots": []
+  }
+}
