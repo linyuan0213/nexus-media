@@ -12,9 +12,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import log
 from app.db.repositories import DownloadRepository
-from app.helper import ProgressHelper, SubmoduleHelper
-from app.indexer.client import BuiltinIndexer
+from app.helper import ProgressHelper
 from app.indexer.core import SearchPipeline
+from app.indexer.registry import get_all_clients, get_client_class
 from app.utils import ExceptionUtils, StringUtils
 from app.utils.commons import SingletonMeta
 from app.utils.types import ProgressKey, SearchType
@@ -32,10 +32,6 @@ class Indexer(metaclass=SingletonMeta):
     """
 
     def __init__(self):
-        self._indexer_schemas = SubmoduleHelper.import_submodules(
-            "app.indexer.client", filter_func=lambda _, obj: hasattr(obj, "client_id")
-        )
-        log.debug(f"【Indexer】加载索引器：{self._indexer_schemas}")
         self.init_config()
 
     def init_config(self):
@@ -53,10 +49,10 @@ class Indexer(metaclass=SingletonMeta):
         self._pipeline = SearchPipeline()
 
     def __build_class(self, ctype, conf):
-        for indexer_schema in self._indexer_schemas:
+        for cls in get_all_clients():
             try:
-                if indexer_schema.match(ctype):
-                    return indexer_schema(conf)
+                if cls.match(ctype):
+                    return cls(conf)
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
         return None
@@ -94,10 +90,16 @@ class Indexer(metaclass=SingletonMeta):
 
     @staticmethod
     def get_builtin_indexers(check=True, indexer_id=None):
-        return BuiltinIndexer().get_indexers(check=check, indexer_id=indexer_id)
+        cls = get_client_class("builtin")
+        if cls:
+            return cls().get_indexers(check=check, indexer_id=indexer_id)
+        return []
 
     def list_resources(self, index_id, page=0, keyword=None):
-        return BuiltinIndexer().list(index_id=index_id, page=page, keyword=keyword)
+        cls = get_client_class("builtin")
+        if cls:
+            return cls().list(index_id=index_id, page=page, keyword=keyword)
+        return []
 
     def search_by_keyword(self, key_word, filter_args: dict, match_media=None, in_from: SearchType | None = None):
         """

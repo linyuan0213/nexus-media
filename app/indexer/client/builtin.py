@@ -21,7 +21,8 @@ from app.sites.engine import SiteEngine
 from app.sites.searcher_factory import create_searcher
 from app.utils import StringUtils
 from app.utils.config_tools import get_ua
-from app.utils.types import IndexerType, ProgressKey, SearchType, SystemConfigKey
+from app.indexer.schema import IndexerConfigSchema
+from app.utils.types import ProgressKey, SearchType, SystemConfigKey
 from config import Config
 
 _STATS_LOCK = Lock()
@@ -35,8 +36,13 @@ class BuiltinIndexer(_IIndexClient):
     """
 
     client_id = "builtin"
-    client_type = IndexerType.BUILTIN
-    client_name = IndexerType.BUILTIN.value
+    client_type = "builtin"
+    client_name = "内置索引器"
+    config_schema = IndexerConfigSchema(
+        name="内置索引器",
+        icon_url="/static/img/indexer/builtin.png",
+        fields=[],
+    )
 
     _client_config = {}
     _show_more_sites = False
