@@ -203,5 +203,19 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
             ),
             reverse=True,
         )
+        if media_info:
+            poster_url = media_info.get_poster_image()
+            if poster_url:
+                for media_item in media_list:
+                    if not media_item.get_poster_image():
+                        media_item.poster_path = poster_url
+            if media_info.overview:
+                for media_item in media_list:
+                    if not media_item.overview:
+                        media_item.overview = media_info.overview
+            if media_info.vote_average:
+                for media_item in media_list:
+                    if not media_item.vote_average:
+                        media_item.vote_average = media_info.vote_average
         _searcher.insert_search_results(media_items=media_list, ident_flag=ident_flag, title=content)
         return 0, ""
