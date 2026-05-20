@@ -287,8 +287,11 @@ class DownloadService:
         active_ids: list[tuple[str, str]] = []
 
         for did, tasks in downloader_groups.items():
-            downloader_conf = self._downloader.get_downloader_conf(did)
-            downloader_name = downloader_conf.get("name") if downloader_conf else did
+            try:
+                downloader_conf = self._downloader.get_downloader_conf(did)
+                downloader_name = downloader_conf.get("name") if downloader_conf else did
+            except Exception:
+                downloader_name = did
 
             # 批量查询这些任务的进度（直接调用客户端，绕过 only_nexus_media 标签过滤）
             ids = [t.DOWNLOAD_ID for t in tasks if t.DOWNLOAD_ID]
@@ -297,43 +300,45 @@ class DownloadService:
                 continue
             try:
                 progress_list = _client.get_downloading_progress(ids=ids) or []
-            except Exception as e:
-                log.debug(f"【DownloadService】查询下载器 {did} 进度失败：{e}")
+            except Exception:
                 progress_list = []
             progress_map = {p.get("id"): p for p in progress_list if p.get("id")}
 
             for task in tasks:
-                tid = task.DOWNLOAD_ID
-                progress = progress_map.get(tid)
+                try:
+                    tid = task.DOWNLOAD_ID
+                    progress = progress_map.get(tid)
 
-                if not progress:
-                    # 任务在下载器中不存在，标记为完成
-                    completed_ids.append((did, tid))
-                    continue
+                    if not progress:
+                        # 任务在下载器中不存在，标记为完成
+                        completed_ids.append((did, tid))
+                        continue
 
-                prog_val = progress.get("progress", 0)
-                if prog_val >= 100:
-                    # 下载已完成
-                    completed_ids.append((did, tid))
-                    continue
+                    prog_val = progress.get("progress", 0)
+                    if prog_val >= 100:
+                        # 下载已完成
+                        completed_ids.append((did, tid))
+                        continue
 
-                # 任务还在下载中，确保 STATE 为 downloading
-                if getattr(task, "STATE", None) != "downloading":
-                    active_ids.append((did, tid))
+                    # 任务还在下载中，确保 STATE 为 downloading
+                    if getattr(task, "STATE", None) != "downloading":
+                        active_ids.append((did, tid))
 
-                title, image = self._build_display_info(task)
-                result.append({
-                    "id": tid,
-                    "name": progress.get("name") or task.TORRENT or "",
-                    "title": title,
-                    "image": image,
-                    "progress": prog_val,
-                    "state": progress.get("state", ""),
-                    "speed": progress.get("speed", ""),
-                    "downloader_id": did,
-                    "downloader_name": downloader_name,
-                    "save_path": task.SAVE_PATH,
-                })
+                    title, image = self._build_display_info(task)
+                    result.append({
+                        "id": tid,
+                        "name": progress.get("name") or task.TORRENT or "",
+                        "title": title,
+                        "image": image,
+                        "progress": prog_val,
+                        "state": progress.get("state", ""),
+                        "speed": progress.get("speed", ""),
+                        "downloader_id": did,
+                        "downloader_name": downloader_name,
+                        "save_path": task.SAVE_PATH,
+                    })
+                except Exception as e:
+                    log.error(f"【DownloadService】处理任务 {task.DOWNLOAD_ID} 失败：{e}")
 
         # 批量标记还在下载中的任务
         if active_ids:
