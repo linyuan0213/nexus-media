@@ -336,7 +336,7 @@ class DownloadService:
                         "speed": progress.get("speed", ""),
                         "downloader_id": did,
                         "downloader_name": downloader_name,
-                        "client_id": downloader_conf.get("dtype") if downloader_conf else "",
+                        "client_id": downloader_conf.get("type") if downloader_conf else "",
                         "save_path": task.SAVE_PATH,
                     })
                 except Exception as e:
