@@ -22,23 +22,34 @@ class DrissionPageHelper(metaclass=SingletonMeta):
         url = Config().get_config("laboratory").get("chrome_server_host")
         if url:
             self.url = url.rstrip("/")
+        # 缓存状态，避免每次调用都重试
+        self._status_cache: bool | None = None
+        self._status_cache_time: float = 0
+        self._status_cache_ttl: int = 60  # 缓存 60 秒
 
     def get_status(self) -> bool:
         """检查 Chrome 服务器连接状态，只有连接成功才返回 True"""
         if not self.url:
             return False
 
+        # 使用缓存避免频繁重试
+        now = time.time()
+        if self._status_cache is not None and (now - self._status_cache_time) < self._status_cache_ttl:
+            return self._status_cache
+
         try:
-            # 测试连接状态
-            response = self._request_with_retry(method="GET", url=f"{self.url}/status", timeout=5)
-            # 如果响应状态码为 200，表示连接成功
-            return response.status_code == 200
+            response = requests.get(f"{self.url}/status", timeout=2)
+            self._status_cache = response.status_code == 200
+            self._status_cache_time = now
+            return self._status_cache
         except Exception as e:
-            log.warn(f"Chrome 服务器连接失败: {str(e)}")
+            log.debug(f"Chrome 服务器连接失败: {str(e)}")
+            self._status_cache = False
+            self._status_cache_time = now
             return False
 
     def _request_with_retry(
-        self, method: str, url: str, retries: int = 3, delay: int = 2, **kwargs: Any
+        self, method: str, url: str, retries: int = 2, delay: int = 1, **kwargs: Any
     ) -> requests.Response:
         """通用的网络请求重试逻辑"""
         for attempt in range(retries):
@@ -46,11 +57,11 @@ class DrissionPageHelper(metaclass=SingletonMeta):
                 response = requests.request(method, url, **kwargs)
                 return response
             except requests.exceptions.RequestException as e:
-                log.warn(f"请求失败(重试 {attempt + 1}): {e}")
+                log.debug(f"请求失败(重试 {attempt + 1}): {e}")
                 if attempt < retries - 1:
                     time.sleep(delay)
                 else:
-                    log.error(f"所有重试失败，失败请求 {url}")
+                    log.debug(f"所有重试失败，失败请求 {url}")
                     raise
         raise RuntimeError(f"所有重试失败，失败请求 {url}")
 
