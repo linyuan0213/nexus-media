@@ -191,6 +191,18 @@ class DownloadRepository(BaseRepository):
             .first()
         )
 
+    def get_download_history_by_id(self, download_id: str) -> DOWNLOADHISTORY | None:
+        """
+        仅根据下载ID查找最新的下载历史记录
+        """
+        return (
+            self._db
+            .query(DOWNLOADHISTORY)
+            .filter(download_id == DOWNLOADHISTORY.DOWNLOAD_ID)
+            .order_by(DOWNLOADHISTORY.DATE.desc())
+            .first()
+        )
+
     def get_active_downloads(self, days: int = 30, limit: int = 500) -> list[DOWNLOADHISTORY]:
         """
         获取最近几天内的下载任务（包含 downloading 和 completed）。

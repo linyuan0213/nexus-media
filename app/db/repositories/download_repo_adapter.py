@@ -68,6 +68,9 @@ class DownloadHistoryRepositoryAdapter:
     def get_download_history_by_downloader(self, downloader: str, download_id: str):
         return self._repo.get_download_history_by_downloader(downloader, download_id)
 
+    def get_by_id(self, download_id: str):
+        return self._repo.get_download_history_by_id(download_id)
+
     def is_exists_download_history_by_tmdb(self, tmdb_id, season_episode):
         return self._repo.is_exists_download_history_by_tmdb(int(tmdb_id), season_episode)
 
