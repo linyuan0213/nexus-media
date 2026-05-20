@@ -287,6 +287,7 @@ class DownloadService:
         active_ids: list[tuple[str, str]] = []
 
         for did, tasks in downloader_groups.items():
+            downloader_conf = None
             try:
                 downloader_conf = self._downloader.get_downloader_conf(did)
                 downloader_name = downloader_conf.get("name") if downloader_conf else did
@@ -335,6 +336,7 @@ class DownloadService:
                         "speed": progress.get("speed", ""),
                         "downloader_id": did,
                         "downloader_name": downloader_name,
+                        "client_id": downloader_conf.get("dtype") if downloader_conf else "",
                         "save_path": task.SAVE_PATH,
                     })
                 except Exception as e:
