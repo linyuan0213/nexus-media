@@ -139,9 +139,25 @@ class Thunder(_IDownloadClient):
         return []
 
     def add_torrent(self, content: str | bytes, **kwargs) -> bool:
-        download_dir = kwargs.get("download_dir")
+        result = self.add_torrent_and_get_id(content, **kwargs)
+        return result is not None and result != ""
+
+    def add_torrent_and_get_id(
+        self,
+        content: str | bytes,
+        is_paused: bool = False,
+        download_dir: str | None = None,
+        tags: list[str] | None = None,
+        category: str | None = None,
+        upload_limit: int | None = None,
+        download_limit: int | None = None,
+        ratio_limit: float | None = None,
+        seeding_time_limit: int | None = None,
+        cookie: str | None = None,
+        **kwargs: Any,
+    ) -> str | None:
         if not self._client:
-            return False
+            return None
         try:
             if isinstance(content, str):
                 if content.startswith("magnet:"):
@@ -150,13 +166,13 @@ class Thunder(_IDownloadClient):
                     magnet_url = self._client.torrent_to_magnet(content)
                     if not magnet_url:
                         log.error("【{self.client_name}】种子文件转换磁力链接失败")
-                        return False
+                        return None
                     download_url = magnet_url
                 else:
                     download_url = content
             else:
                 log.error("【{self.client_name}】不支持二进制种子内容")
-                return False
+                return None
 
             folder_id = self._client._resolve_folder_id(download_dir or "/downloads/xunlei/")
             task_info = self._client.download(
@@ -164,11 +180,12 @@ class Thunder(_IDownloadClient):
                 destination_path=download_dir or "/downloads/xunlei/",
                 parent_folder_id=folder_id,
             )
-            return bool(task_info.get("id") if task_info else False)
+            task_id = task_info.get("id") if task_info else None
+            return str(task_id) if task_id else None
         except Exception as e:
             log.error(f"【{self.client_name}】添加下载任务失败: {e!s}")
             ExceptionUtils.exception_traceback(e)
-            return False
+            return None
 
     def start_torrents(self, ids: list[str] | str | None = None) -> bool:
         if not self._client:
