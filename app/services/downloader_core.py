@@ -15,6 +15,7 @@ from threading import Lock
 
 import log
 from app.core.constants import PT_TAG
+from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.downloader.client_factory import DownloadClientFactory
 from app.services.download_core import DownloadCore
 from app.services.filetransfer_service import FileTransferService
@@ -181,13 +182,31 @@ class DownloaderCore:
     def set_torrents_tag(self, downloader_id=None, ids=None, tags=None):
         return self._download_core.set_torrents_tag(downloader_id=downloader_id, ids=ids, tags=tags)
 
+    def _resolve_downloader_id(self, download_id: str | None) -> str | None:
+        """根据任务 ID 从下载历史记录中解析对应的下载器 ID"""
+        if not download_id:
+            return None
+        try:
+            history = DownloadHistoryRepositoryAdapter().get_by_id(download_id)
+            if history:
+                return history.DOWNLOADER
+        except Exception as e:
+            log.debug(f"【DownloaderCore】解析任务 {download_id} 的下载器失败: {e}")
+        return None
+
     def start_torrents(self, downloader_id=None, ids=None):
+        if not downloader_id and ids:
+            downloader_id = self._resolve_downloader_id(ids if isinstance(ids, str) else ids[0] if isinstance(ids, list) else None)
         return self._download_core.start_torrents(downloader_id=downloader_id, ids=ids)
 
     def stop_torrents(self, downloader_id=None, ids=None):
+        if not downloader_id and ids:
+            downloader_id = self._resolve_downloader_id(ids if isinstance(ids, str) else ids[0] if isinstance(ids, list) else None)
         return self._download_core.stop_torrents(downloader_id=downloader_id, ids=ids)
 
     def delete_torrents(self, downloader_id=None, ids=None, delete_file=False):
+        if not downloader_id and ids:
+            downloader_id = self._resolve_downloader_id(ids if isinstance(ids, str) else ids[0] if isinstance(ids, list) else None)
         return self._download_core.delete_torrents(downloader_id=downloader_id, ids=ids, delete_file=delete_file)
 
     def get_files(self, tid, downloader_id=None):
