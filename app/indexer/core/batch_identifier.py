@@ -39,7 +39,8 @@ class BatchIdentifier:
             seen_names.add(cache_key)
             to_identify.append(
                 {
-                    "title": cache_key,
+                    "_cache_key": cache_key,
+                    "title": cand.item.get("title") or cache_key,
                     "subtitle": cand.item.get("description"),
                     "site": cand.item.get("site"),
                     "enclosure": cand.item.get("enclosure"),
@@ -56,6 +57,6 @@ class BatchIdentifier:
         try:
             results = self.media.identify_batch(to_identify)
             for item, info in zip(to_identify, results, strict=False):
-                self._media_ident_cache.set(item["title"], info)
+                self._media_ident_cache.set(item["_cache_key"], info)
         except Exception as e:
             log.error(f"【BatchIdentifier】批量识别出错: {e}")

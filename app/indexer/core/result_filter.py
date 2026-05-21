@@ -341,9 +341,26 @@ class ResultFilter:
                     stats.index_error += 1
                     continue
                 elif not media_info.tmdb_info:
-                    log.info(f"【ResultFilter】{cache_key} 识别为 {media_info.get_name()} 未匹配到媒体信息")
-                    stats.index_match_fail += 1
-                    continue
+                    def _type_compatible(a, b):
+                        if a == b:
+                            return True
+                        if a in (MediaType.TV, MediaType.ANIME) and b in (MediaType.TV, MediaType.ANIME):
+                            return True
+                        return False
+
+                    if match_media and _type_compatible(media_info.type, match_media.type):
+                        log.info(
+                            f"【ResultFilter】{cache_key} 未匹配到TMDB，"
+                            f"回退使用搜索媒体信息: {match_media.get_name()}"
+                        )
+                        media_info = self._media.merge_media_info(media_info, match_media)
+                    else:
+                        log.info(
+                            f"【ResultFilter】{cache_key} 识别为 "
+                            f"{media_info.get_name()} 未匹配到媒体信息"
+                        )
+                        stats.index_match_fail += 1
+                        continue
 
                 if str(media_info.tmdb_id) != str(match_media.tmdb_id):
                     media_type_str = media_info.type.value if media_info.type else "Unknown"
