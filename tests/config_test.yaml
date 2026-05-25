@@ -1,0 +1,14 @@
+app:
+  web_host: '0.0.0.0'
+  web_port: 3000
+  rmt_tmdbkey: 'test_tmdb_key'
+  log_level: 'INFO'
+
+database:
+  type: sqlite
+  sqlite_path: ':memory:'
+
+redis:
+  host: localhost
+  port: 6379
+  password: ''
