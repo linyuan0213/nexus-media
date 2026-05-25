@@ -16,10 +16,11 @@ from threading import Lock
 import log
 from app.core.constants import PT_TAG
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
+from app.domain.entities.transfer_task import SourceType, TransferTask
 from app.downloader.client_factory import DownloadClientFactory
 from app.services.download_core import DownloadCore
-from app.services.filetransfer_service import FileTransferService
 from app.services.transfer_coordinator import TransferCoordinator
+from app.services.transfer_pipeline import TransferPipeline
 
 lock = Lock()
 
@@ -37,11 +38,11 @@ class DownloaderCore:
         client_factory: DownloadClientFactory | None = None,
         download_core: DownloadCore | None = None,
         transfer_coordinator: TransferCoordinator | None = None,
-        filetransfer: FileTransferService | None = None,
+        transfer_pipeline: TransferPipeline | None = None,
     ):
         self._client_factory = client_factory or DownloadClientFactory()
         self._download_core = download_core or DownloadCore(client_factory=self._client_factory)
-        self._filetransfer = filetransfer or FileTransferService()
+        self._pipeline = transfer_pipeline or TransferPipeline()
         self._transfer_coordinator = transfer_coordinator or TransferCoordinator()
 
     # ---------- 生命周期（由外部 SystemLifecycleService 控制） ----------
@@ -124,7 +125,7 @@ class DownloaderCore:
 
     def transfer(self, downloader_id: str | None = None):
         """
-        转移下载完成的文件，进行文件识别重命名到媒体库目录
+        转移下载完成的文件，通过 TransferPipeline 统一处理。
         """
         downloader_ids = [downloader_id] if downloader_id else self._client_factory.monitor_downloader_ids
         for did in downloader_ids:
@@ -146,20 +147,38 @@ class DownloaderCore:
                 continue
             for task in trans_tasks:
                 task_id = task.get("id")
-                if not task_id:
+                task_path = task.get("path") or ""
+                if not task_id or not task_path:
                     continue
-                done_flag, done_msg = self._filetransfer.transfer_media(
-                    in_from=name, in_path=task.get("path"), operation=operation
-                )
-                if not done_flag:
-                    log.warn(f"【Downloader】下载器 {name} 任务%s 转移失败：%s" % (task.get("path"), done_msg))
-                    _client.set_torrents_status(ids=task_id, tags=task.get("tags"))
-                else:
-                    if operation == "move":
-                        log.warn(f"【Downloader】下载器 {name} 移动模式下删除种子文件：%s" % task_id)
-                        _client.delete_torrents(delete_file=True, ids=task_id)
+
+                # 构建后处理回调：删种 / 标记状态
+                def _post_process(
+                    t: TransferTask,
+                    success: bool,
+                    msg: str,
+                    client=_client,
+                    tid=str(task_id),
+                    op=operation,
+                    tags=task.get("tags"),
+                ):
+                    if not success:
+                        log.warn(f"【Downloader】任务 {tid} 转移失败：{msg}")
+                        client.set_torrents_status(ids=tid, tags=tags)
+                        return
+                    if op == "move":
+                        log.warn(f"【Downloader】移动模式下删除种子文件：{tid}")
+                        client.delete_torrents(delete_file=True, ids=tid)
                     else:
-                        _client.set_torrents_status(ids=task_id, tags=task.get("tags"))
+                        client.set_torrents_status(ids=tid, tags=tags)
+
+                pipeline_task = TransferTask(
+                    source_type=SourceType.DOWNLOADER,
+                    source_id=name or "",
+                    file_paths=[task_path],
+                    operation=operation,
+                    post_process=_post_process,
+                )
+                self._pipeline.process(pipeline_task)
             log.info(f"【Downloader】下载器 {name} 下载文件转移结束")
 
     # ---------- 种子查询/操作 ----------
@@ -196,17 +215,23 @@ class DownloaderCore:
 
     def start_torrents(self, downloader_id=None, ids=None):
         if not downloader_id and ids:
-            downloader_id = self._resolve_downloader_id(ids if isinstance(ids, str) else ids[0] if isinstance(ids, list) else None)
+            downloader_id = self._resolve_downloader_id(
+                ids if isinstance(ids, str) else ids[0] if isinstance(ids, list) else None
+            )
         return self._download_core.start_torrents(downloader_id=downloader_id, ids=ids)
 
     def stop_torrents(self, downloader_id=None, ids=None):
         if not downloader_id and ids:
-            downloader_id = self._resolve_downloader_id(ids if isinstance(ids, str) else ids[0] if isinstance(ids, list) else None)
+            downloader_id = self._resolve_downloader_id(
+                ids if isinstance(ids, str) else ids[0] if isinstance(ids, list) else None
+            )
         return self._download_core.stop_torrents(downloader_id=downloader_id, ids=ids)
 
     def delete_torrents(self, downloader_id=None, ids=None, delete_file=False):
         if not downloader_id and ids:
-            downloader_id = self._resolve_downloader_id(ids if isinstance(ids, str) else ids[0] if isinstance(ids, list) else None)
+            downloader_id = self._resolve_downloader_id(
+                ids if isinstance(ids, str) else ids[0] if isinstance(ids, list) else None
+            )
         return self._download_core.delete_torrents(downloader_id=downloader_id, ids=ids, delete_file=delete_file)
 
     def get_files(self, tid, downloader_id=None):

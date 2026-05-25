@@ -82,13 +82,21 @@ class Rss(metaclass=SingletonMeta):
         if not rss_movies:
             log.warn("【Rss】没有正在订阅的电影")
         else:
-            log.info("【Rss】电影订阅清单：{}".format(" ".join("{}".format(info.get("name")) for _, info in rss_movies.items())))
+            log.info(
+                "【Rss】电影订阅清单：{}".format(
+                    " ".join("{}".format(info.get("name")) for _, info in rss_movies.items())
+                )
+            )
 
         rss_tvs = self.subscribe.get_subscribe_tvs(state="R")
         if not rss_tvs:
             log.warn("【Rss】没有正在订阅的电视剧")
         else:
-            log.info("【Rss】电视剧订阅清单：{}".format(" ".join("{}".format(info.get("name")) for _, info in rss_tvs.items())))
+            log.info(
+                "【Rss】电视剧订阅清单：{}".format(
+                    " ".join("{}".format(info.get("name")) for _, info in rss_tvs.items())
+                )
+            )
 
         if not rss_movies and not rss_tvs:
             return
@@ -431,6 +439,47 @@ class Rss(metaclass=SingletonMeta):
             self.subscribe.update_subscribe_over_edition(
                 rtype=download_item.type, rssid=download_item.rssid, media=download_item
             )
+
+        # 对疑似合集解析种子，确认实际集数后再排序
+        for media in rss_download_torrents:
+            if media.type not in (MediaType.TV, MediaType.ANIME):
+                continue
+            if media.begin_episode is not None:
+                continue
+            if not media.enclosure or media.enclosure.startswith("magnet:"):
+                continue
+            try:
+                episodes, file_path = self.downloader.get_torrent_episodes(media.enclosure, media.page_url)
+                if file_path:
+                    Torrent().delete_torrent_file(file_path)
+                if episodes:
+                    media.total_episodes = len(episodes)
+                    media.begin_episode = min(episodes)
+                    media.end_episode = max(episodes)
+                    log.info(f"【Rss】{media.org_string or media.title} 解析种子实际集数：{len(episodes)} 集")
+                else:
+                    log.info(f"【Rss】{media.org_string or media.title} 解析种子未识别出集数，视为单集")
+            except Exception as e:
+                log.debug(f"【Rss】解析种子失败：{str(e)}")
+
+        # 合集优先排序：包含更多集数的电视剧资源排在前面，优先下载合集
+        # 明确合集(>1集) > 疑似合集(只有季没有集) > 单集
+        def _rss_sort_key(x):
+            episode_list = x.get_episode_list() if hasattr(x, "get_episode_list") else []
+            episode_count = max(len(episode_list), getattr(x, "total_episodes", 0))
+            if episode_count > 1:
+                collection_priority = 2
+            elif (
+                getattr(x, "type", None) in (MediaType.TV, MediaType.ANIME)
+                and getattr(x, "begin_season", None) is not None
+                and getattr(x, "begin_episode", None) is None
+            ):
+                collection_priority = 1
+            else:
+                collection_priority = 0
+            return (collection_priority, episode_count, x.res_order, x.site_order, x.seeders)
+
+        rss_download_torrents.sort(key=_rss_sort_key, reverse=True)
 
         download_items, left_medias = self.downloader.batch_download(
             SearchType.RSS, rss_download_torrents, rss_no_exists

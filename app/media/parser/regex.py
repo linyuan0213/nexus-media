@@ -12,7 +12,7 @@ class RegexParser(BaseParser):
 
     def parse(self, title: str, subtitle: str = "") -> ParserResult | None:
         fileflag = bool(title and os.path.splitext(title)[-1] in RMT_MEDIAEXT)
-        if _is_anime(title):
+        if _is_anime(title, title):
             meta = parse_anime_title(title, subtitle, fileflag)
         else:
             meta = parse_video_title(title, subtitle, fileflag)
@@ -27,6 +27,7 @@ class RegexParser(BaseParser):
             episode=meta.begin_episode,
             end_episode=meta.end_episode,
             resource_pix=meta.resource_pix,
+            resource_type=meta.resource_type,
             video_encode=meta.video_encode,
             audio_encode=meta.audio_encode,
             resource_team=meta.resource_team,

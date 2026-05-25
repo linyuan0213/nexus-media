@@ -59,8 +59,7 @@ async def lifespan(app: FastAPI):
     log.info("【FastAPI】初始化站点配置...")
     try:
         updater = SiteConfigUpdater()
-        local_sites_dir = updater.ensure_local_sites(SiteEngine._BUILTIN_DEFINITIONS_DIR)
-        os.environ["NEXUS_SITES_DIR"] = local_sites_dir
+        updater.ensure_local_sites(SiteEngine._BUILTIN_DEFINITIONS_DIR)
         update_site_config_at_startup()
     except Exception as e:
         log.warn(f"【FastAPI】站点配置初始化失败: {e!s}")

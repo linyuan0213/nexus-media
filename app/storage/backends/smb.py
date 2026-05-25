@@ -4,6 +4,7 @@ import shutil
 from collections.abc import Iterator
 from typing import BinaryIO
 
+import log
 from smbclient import (
     copyfile,
     makedirs,
@@ -28,7 +29,7 @@ class SMBStorageBackend(StorageBackend):
     def __init__(self, config: StorageConfig) -> None:
         super().__init__(config)
         self._server = getattr(config, "server", "")
-        self._share = getattr(config, "share", "")
+        self._share = (getattr(config, "share", "") or "").lstrip("/\\")
         if not self._server or not self._share:
             raise ValueError("SMB server 和 share 不能为空")
         self._username = getattr(config, "username", "")
@@ -80,12 +81,44 @@ class SMBStorageBackend(StorageBackend):
 
     def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
         rp = self._path(path)
-        makedirs(self._dir(rp), exist_ok=True)
-        with open_file(rp, mode="wb") as f:
-            shutil.copyfileobj(stream, f)
+        self._ensure_dir(self._dir(rp))
+        # 如果目标路径已存在且是目录（之前失败遗留），强制删除
+        if isdir(rp):
+            try:
+                rmdir(rp)
+            except Exception:
+                pass
+        try:
+            with open_file(rp, mode="wb") as f:
+                shutil.copyfileobj(stream, f)
+        except Exception as e:
+            if "Is a directory" in str(e) or getattr(e, "errno", None) == 21:
+                log.warn(f"SMB 目标路径 {rp} 是目录，强制删除后重试写入")
+                rmtree(rp)
+                with open_file(rp, mode="wb") as f:
+                    shutil.copyfileobj(stream, f)
+            else:
+                raise
 
     def _dir(self, path: str) -> str:
         return path.rsplit("\\", 1)[0] if "\\" in path else path
+
+    def _ensure_dir(self, path: str) -> None:
+        """逐层创建 SMB 目录，避免 makedirs 在 Linux 上处理反斜杠路径的问题。"""
+        if not path or path == self._base:
+            return
+        if smb_exists(path) and isdir(path):
+            return
+        # 先确保父目录存在
+        parent = self._dir(path)
+        if parent and parent != path and parent != self._base:
+            self._ensure_dir(parent)
+        try:
+            mkdir(path)
+        except Exception:
+            # 目录可能已存在（race condition）
+            if not (smb_exists(path) and isdir(path)):
+                raise
 
     def mkdir(self, path: str, parents: bool = True) -> None:
         rp = self._path(path)
@@ -95,6 +128,9 @@ class SMBStorageBackend(StorageBackend):
             mkdir(rp)
 
     def remove(self, path: str, recursive: bool = False) -> None:
+        norm = path.replace("\\", "/").strip("/")
+        if not norm:
+            raise ValueError("不能删除 SMB share 根目录")
         rp = self._path(path)
         if isdir(rp):
             if recursive:

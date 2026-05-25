@@ -74,6 +74,7 @@ class TransferHistoryService:
             path_to = str(rec.DEST or "").replace("\\", "/")
             sync_mode = str(rec.MODE or "")
             rmt_mode = sync_mode
+            dst_backend = self._filetransfer.get_sync_backend_by_dest(path_to)
             items.append(
                 {
                     "id": rec.ID,
@@ -82,6 +83,7 @@ class TransferHistoryService:
                     "name": path,
                     "sync_mode": sync_mode,
                     "rmt_mode": rmt_mode,
+                    "dst_backend": dst_backend,
                 }
             )
         return items
@@ -108,6 +110,7 @@ class TransferHistoryService:
             path_to = str(rec.DEST or "").replace("\\", "/")
             sync_mode = str(rec.MODE or "")
             rmt_mode = sync_mode
+            dst_backend = self._filetransfer.get_sync_backend_by_dest(path_to)
             items.append(
                 {
                     "id": rec.ID,
@@ -116,6 +119,7 @@ class TransferHistoryService:
                     "name": path,
                     "sync_mode": sync_mode,
                     "rmt_mode": rmt_mode,
+                    "dst_backend": dst_backend,
                 }
             )
         total_page = floor(total_count / page_num) + 1

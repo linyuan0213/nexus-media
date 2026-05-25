@@ -337,7 +337,9 @@ class MediaInfo(BaseModel):
         if isinstance(season, list):
             return set(meta_season).issuperset(set(season))
         return (
-            self.begin_season is not None and self.end_season is not None and self.begin_season <= int(season) <= self.end_season
+            self.begin_season is not None
+            and self.end_season is not None
+            and self.begin_season <= int(season) <= self.end_season
             if self.end_season is not None
             else int(season) in meta_season
         )
@@ -350,7 +352,9 @@ class MediaInfo(BaseModel):
         if isinstance(episode, list):
             return set(meta_episode).issuperset(set(episode))
         return (
-            self.begin_episode is not None and self.end_episode is not None and self.begin_episode <= int(episode) <= self.end_episode
+            self.begin_episode is not None
+            and self.end_episode is not None
+            and self.begin_episode <= int(episode) <= self.end_episode
             if self.end_episode is not None
             else int(episode) in meta_episode
         )
@@ -505,6 +509,10 @@ class MediaInfo(BaseModel):
             return f"https://movie.douban.com/subject/{self.douban_id}"
         return ""
 
+    @property
+    def fanart(self):
+        return Fanart()
+
     def get_backdrop_image(self, default=True, original=False):
         if self.fanart_backdrop:
             return self.fanart_backdrop
@@ -627,6 +635,7 @@ class MediaInfo(BaseModel):
             begin_episode=parsed.episode,
             end_episode=parsed.end_episode,
             resource_pix=parsed.resource_pix,
+            resource_type=parsed.resource_type,
             video_encode=parsed.video_encode,
             audio_encode=parsed.audio_encode,
             resource_team=parsed.resource_team,

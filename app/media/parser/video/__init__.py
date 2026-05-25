@@ -38,6 +38,9 @@ def parse_video_title(title, subtitle=None, fileflag=False) -> MediaInfo:
     info._continue_flag = True
     info._unknown_name_str = ""
 
+    # 预处理：移除 FPS/Hz 参数，避免被误判为集数（如 120FPS → E120）
+    title = re.sub(r"\d+\s*(FPS|HZ)\b", "", title, flags=re.IGNORECASE)
+
     # 判断是否纯数字命名
     if (
         os.path.splitext(title)[-1] in RMT_MEDIAEXT

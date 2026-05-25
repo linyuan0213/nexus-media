@@ -29,7 +29,7 @@ class SiteConfigUpdater:
     def __init__(self, config_dir: str | None = None):
         if config_dir is None:
             cfg = Config()
-            config_dir = os.path.dirname(cfg.config_path) if cfg.config_path else None
+            config_dir = cfg.config_path if cfg.config_path else None
         self._config_dir = config_dir or "/config"
         self._sites_dir = os.path.join(self._config_dir, "sites")
         self._version_file = os.path.join(self._sites_dir, self._VERSION_FILE)
@@ -63,10 +63,7 @@ class SiteConfigUpdater:
                 return asset.get("browser_download_url")
         tag = release_info.get("tag_name", "")
         if tag:
-            return (
-                f"https://github.com/linyuan0213/nexus-media-sites/releases/download/"
-                f"{tag}/{self._ASSET_NAME}"
-            )
+            return f"https://github.com/linyuan0213/nexus-media-sites/releases/download/{tag}/{self._ASSET_NAME}"
         return None
 
     @staticmethod
@@ -97,11 +94,7 @@ class SiteConfigUpdater:
             if not os.path.isdir(os.path.join(directory, sub)):
                 log.warn(f"【SiteConfigUpdater】目录结构异常，缺少 {sub}/")
                 return False
-        has_json = any(
-            f.endswith(".json")
-            for root, _, files in os.walk(directory)
-            for f in files
-        )
+        has_json = any(f.endswith(".json") for root, _, files in os.walk(directory) for f in files)
         if not has_json:
             log.warn("【SiteConfigUpdater】目录中未找到任何站点定义文件")
             return False

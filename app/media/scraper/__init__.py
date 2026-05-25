@@ -53,53 +53,74 @@ class Scraper:
             self._scraper_nfo = scraper_conf.get("scraper_nfo") or {}
             self._scraper_pic = scraper_conf.get("scraper_pic") or {}
 
-    def folder_scraper(self, path, exclude_path=None, mode=None):
+    def folder_scraper(self, path, exclude_path=None, mode=None, dst_backend=None):
         """刮削指定文件夹或文件"""
-        force_nfo = mode in ["force_nfo", "force_all"]
-        force_pic = mode == "force_all"
-        for file in MediaLibrary.get_library_files(path, exclude_path):
-            if not file:
-                continue
-            log.info(f"【Scraper】开始刮削媒体库文件：{file} ...")
-            mi = meta_info(os.path.basename(file))
-            tmdbid = self._extract_tmdbid(file, mi)
-            if tmdbid and not force_nfo:
-                log.info(f"【Scraper】读取到本地nfo文件的tmdbid：{tmdbid}")
-                mi.set_tmdb_info(
-                    self.media.get_tmdb_info(mtype=mi.type, tmdbid=tmdbid, append_to_response="all")
-                )
-                media_info = mi
-            else:
-                medias = self.media.get_media_info_on_files(file_list=[file], append_to_response="all")
-                if not medias:
+        try:
+            force_nfo = mode in ["force_nfo", "force_all"]
+            force_pic = mode == "force_all"
+            self._downloader.set_dst_backend(dst_backend)
+            files = list(MediaLibrary.get_library_files(path, exclude_path, backend=dst_backend))
+            log.info(f"【Scraper】发现 {len(files)} 个待刮削文件")
+            for file in files:
+                if not file:
                     continue
-                media_info = next(iter(medias.values()), None)
-            if not media_info or not media_info.tmdb_info:
-                continue
-            self.gen_scraper_files(
-                media=media_info,
-                dir_path=os.path.dirname(file),
-                file_name=os.path.splitext(os.path.basename(file))[0],
-                file_ext=os.path.splitext(file)[-1],
-                force=True,
-                force_nfo=force_nfo,
-                force_pic=force_pic,
-            )
-            log.info(f"【Scraper】{file} 刮削完成")
+                log.info(f"【Scraper】开始刮削媒体库文件：{file} ...")
+                mi = meta_info(os.path.basename(file))
+                tmdbid = self._extract_tmdbid(file, mi, dst_backend)
+                if tmdbid and not force_nfo:
+                    log.info(f"【Scraper】读取到本地nfo文件的tmdbid：{tmdbid}")
+                    mi.set_tmdb_info(self.media.get_tmdb_info(mtype=mi.type, tmdbid=tmdbid, append_to_response="all"))
+                    media_info = mi
+                else:
+                    medias = self.media.get_media_info_on_files(
+                        file_list=[file], append_to_response="all", backend=dst_backend
+                    )
+                    if not medias:
+                        log.warn(f"【Scraper】{file} 无法识别媒体信息")
+                        continue
+                    media_info = next(iter(medias.values()), None)
+                if not media_info or not media_info.tmdb_info:
+                    log.warn(f"【Scraper】{file} 无法获取TMDB信息")
+                    continue
+                self.gen_scraper_files(
+                    media=media_info,
+                    dir_path=os.path.dirname(file),
+                    file_name=os.path.splitext(os.path.basename(file))[0],
+                    file_ext=os.path.splitext(file)[-1],
+                    force=True,
+                    force_nfo=force_nfo,
+                    force_pic=force_pic,
+                    dst_backend=dst_backend,
+                )
+                log.info(f"【Scraper】{file} 刮削完成")
+        except Exception as e:
+            log.error(f"【Scraper】刮削异常：{e}")
+            ExceptionUtils.exception_traceback(e)
 
-    def _extract_tmdbid(self, file_path, meta_info):
+    def _extract_tmdbid(self, file_path, meta_info, dst_backend=None):
         """从本地 NFO 文件提取 TMDB ID"""
         if meta_info.type == MediaType.MOVIE:
             movie_nfo = os.path.join(os.path.dirname(file_path), "movie.nfo")
-            if os.path.exists(movie_nfo):
-                return MediaLibrary.get_tmdbid_from_nfo(movie_nfo)
-            file_nfo = os.path.join(os.path.splitext(file_path)[0] + ".nfo")
-            if os.path.exists(file_nfo):
-                return MediaLibrary.get_tmdbid_from_nfo(file_nfo)
+            if dst_backend is not None:
+                if dst_backend.exists(movie_nfo):
+                    return MediaLibrary.get_tmdbid_from_nfo_remote(movie_nfo, dst_backend)
+                file_nfo = os.path.join(os.path.splitext(file_path)[0] + ".nfo")
+                if dst_backend.exists(file_nfo):
+                    return MediaLibrary.get_tmdbid_from_nfo_remote(file_nfo, dst_backend)
+            else:
+                if os.path.exists(movie_nfo):
+                    return MediaLibrary.get_tmdbid_from_nfo(movie_nfo)
+                file_nfo = os.path.join(os.path.splitext(file_path)[0] + ".nfo")
+                if os.path.exists(file_nfo):
+                    return MediaLibrary.get_tmdbid_from_nfo(file_nfo)
         else:
             tv_nfo = os.path.join(os.path.dirname(os.path.dirname(file_path)), "tvshow.nfo")
-            if os.path.exists(tv_nfo):
-                return MediaLibrary.get_tmdbid_from_nfo(tv_nfo)
+            if dst_backend is not None:
+                if dst_backend.exists(tv_nfo):
+                    return MediaLibrary.get_tmdbid_from_nfo_remote(tv_nfo, dst_backend)
+            else:
+                if os.path.exists(tv_nfo):
+                    return MediaLibrary.get_tmdbid_from_nfo(tv_nfo)
         return None
 
     def gen_scraper_files(
@@ -107,20 +128,27 @@ class Scraper:
     ):
         """刮削元数据入口"""
         if not force and not self._scraper_flag:
+            log.warn("【Scraper】刮削标志未启用，跳过")
             return
         if not self._scraper_nfo and not self._scraper_pic:
+            log.warn("【Scraper】刮削配置为空，跳过")
             return
         self._scraper_nfo = self._scraper_nfo or {}
         self._scraper_pic = self._scraper_pic or {}
         self._dst_backend = dst_backend
         self._downloader.set_dst_backend(dst_backend)
+        log.info(
+            f"【Scraper】开始生成刮削文件：dir={dir_path}, file={file_name}, type={media.type}, backend={dst_backend is not None}"
+        )
 
         try:
             if media.type == MediaType.MOVIE:
                 self._scrape_movie(media, dir_path, file_name, force_nfo, force_pic)
             else:
                 self._scrape_tv(media, dir_path, file_name, file_ext, force_nfo, force_pic)
+            log.info(f"【Scraper】刮削文件生成完成：{file_name}")
         except Exception as e:
+            log.error(f"【Scraper】刮削文件生成失败：{file_name}，错误：{e}")
             ExceptionUtils.exception_traceback(e)
 
     def _scrape_movie(self, media, dir_path, file_name, force_nfo, force_pic):

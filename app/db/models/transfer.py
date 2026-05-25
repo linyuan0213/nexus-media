@@ -35,6 +35,7 @@ class TRANSFERHISTORY(Base):
     DEST: Mapped[str] = mapped_column(String(255))
     DEST_PATH: Mapped[str] = mapped_column(String(255))
     DEST_FILENAME: Mapped[str] = mapped_column(String(255))
+    DST_BACKEND: Mapped[str | None] = mapped_column(String(64), nullable=True)
     DATE: Mapped[str] = mapped_column(String(20), index=True)
 
     def as_dict(self) -> dict[str, Any]:

@@ -291,19 +291,33 @@ class SubscribeSearchEngine:
                     sites=rss_info.get("search_sites"),
                     filters=filter_dict,
                 )
-                if search_result or not no_exists or not no_exists.get(media_info.tmdb_id):
-                    # 洗版
-                    if over_edition:
+                if over_edition:
+                    if search_result:
                         if self._service:
                             self._service.update_subscribe_over_edition(
                                 rtype=media_info.type, rssid=rssid, media=search_result
                             )
                     else:
-                        # 完成订阅
+                        self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="R")
+                elif not no_exists or not no_exists.get(media_info.tmdb_id):
+                    # 原始缺失为空，完成订阅
+                    if self._service:
+                        self._service.finish_rss_subscribe(rssid=rssid, media=media_info)
+                elif search_result:
+                    # 有下载但原始缺失非空，重新检查媒体库确认下载是否已覆盖全部缺失
+                    exist_flag, library_no_exists, _ = self._downloader.check_exists_medias(
+                        meta_info=media_info, total_ep={season: total_ep}
+                    )
+                    if not library_no_exists or not library_no_exists.get(media_info.tmdb_id):
                         if self._service:
                             self._service.finish_rss_subscribe(rssid=rssid, media=media_info)
+                    else:
+                        if self._service:
+                            self._service.update_subscribe_tv_lack(
+                                rssid=rssid, media_info=media_info, seasoninfo=library_no_exists.get(media_info.tmdb_id)
+                            )
                 elif no_exists:
-                    # 更新状态
+                    # 没有下载，更新缺失状态
                     if self._service:
                         self._service.update_subscribe_tv_lack(
                             rssid=rssid, media_info=media_info, seasoninfo=no_exists.get(media_info.tmdb_id)

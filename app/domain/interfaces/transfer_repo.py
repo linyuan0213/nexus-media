@@ -71,7 +71,14 @@ class ITransferHistoryRepository(Protocol):
     def insert_transfer_unknown(self, path: str, dest: Any, rmt_mode: Any) -> None: ...
 
     def insert_transfer_history(
-        self, in_from: Any, rmt_mode: Any, in_path: str, out_path: str, dest: str, media_info: Any
+        self,
+        in_from: Any,
+        rmt_mode: Any,
+        in_path: str,
+        out_path: str,
+        dest: str,
+        media_info: Any,
+        dst_backend: str | None = None,
     ) -> None: ...
 
 

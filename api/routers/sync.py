@@ -59,6 +59,7 @@ class DelUnknownPathRequest(BaseModel):
 
 class DeleteFilesRequest(BaseModel):
     files: list[str] | None = None
+    backend_id: str = "local"
 
 
 class DeleteSyncPathRequest(BaseModel):
@@ -200,7 +201,11 @@ def delete_files(
     files = req.files
     if files:
         for file in files:
-            del_flag, del_msg = ft.delete_media_file(filedir=os.path.dirname(file), filename=os.path.basename(file))
+            del_flag, del_msg = ft.delete_media_file(
+                filedir=os.path.dirname(file),
+                filename=os.path.basename(file),
+                backend_id=req.backend_id,
+            )
             if not del_flag:
                 import log
 

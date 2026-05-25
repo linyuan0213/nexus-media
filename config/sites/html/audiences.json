@@ -101,8 +101,9 @@
           "attribute": "href"
         },
         "imdbid": {
-          "selector": "div.imdb_100 > a",
+          "selector": "a[href*='imdb.com']",
           "attribute": "href",
+          "optional": true,
           "filters": [
             {
               "name": "re_search",
@@ -181,10 +182,10 @@
           ]
         },
         "description": {
-          "selector": "td.embedded > span[style]"
+          "selector": "span.torrent-subtitle-text"
         },
         "labels": {
-          "selector": "td.embedded > span.tags"
+          "selector": "span.torrent-subtitle-tags span.tags"
         }
       }
     },

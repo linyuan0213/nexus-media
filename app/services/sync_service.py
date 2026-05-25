@@ -18,9 +18,13 @@ from app.schemas.sync import (
     ReIdentifyResultDTO,
     SimpleResultDTO,
 )
+from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.sync_engine import SyncEngine as Sync
+from app.storage import StorageBackendFactory
+from app.storage.config_models import LocalStorageConfig
 from app.utils import EpisodeFormat, ExceptionUtils, PathUtils, StringUtils
+from app.storage.backends.base import StorageType
 from app.utils.types import MediaType, MovieTypes, OsType, SyncType, TvTypes
 from app.utils.web_utils import set_config_directory
 from config import Config
@@ -51,21 +55,28 @@ class SyncService:
 
     # ---------- 同步目录校验 ----------
 
-    def validate_sync_path(self, source: str, dest: str, mode: str) -> tuple[bool, str]:
+    def validate_sync_path(
+        self,
+        source: str,
+        dest: str,
+        mode: str,
+        src_backend: str = "local",
+        dst_backend: str = "local",
+    ) -> tuple[bool, str]:
         """
-        校验同步目录参数
+        校验同步目录参数（不判断存储层是否存在）
         :return: (是否通过, 错误信息)
         """
         if not source:
             return False, "源目录不能为空"
-        if not os.path.exists(source):
-            return False, f"{source}目录不存在"
         source = os.path.normpath(source)
+        if source in ("/", "\\"):
+            return False, "源目录不能是根目录"
         if dest:
             dest = os.path.normpath(dest)
             if PathUtils.is_path_in_path(source, dest):
                 return False, "目的目录不可包含在源目录中"
-        if mode == "link" and dest:
+        if mode == "link" and dest and src_backend == "local" and dst_backend == "local":
             common_path = os.path.commonprefix([source, dest])
             if not common_path or common_path == "/":
                 return False, "硬链接不能跨盘"
@@ -89,7 +100,7 @@ class SyncService:
         添加或编辑同步目录
         :return: (是否成功, 消息)
         """
-        ok, msg = self.validate_sync_path(source, dest, mode)
+        ok, msg = self.validate_sync_path(source, dest, mode, src_backend or "local", dst_backend or "local")
         if not ok:
             return False, msg
 
@@ -105,7 +116,7 @@ class SyncService:
             self._sync.delete_sync_path(sid)
         # 若启用，则关闭其他相同源目录的同步目录
         if enabled == 1:
-            self._sync.check_source(source=source)
+            self._sync.check_source(source=source, dest=dest)
         # 插入数据库
         self._sync.insert_sync_path(
             source=source,
@@ -194,6 +205,9 @@ class SyncService:
             if not tmdb_info:
                 return ManualTransferResultDTO(success=False, message="识别失败，无法查询到TMDB信息")
 
+        # 根据目的目录查找目标后端
+        dst_backend = self._resolve_dst_backend_by_dest(outpath or "")
+
         # 提交后台线程执行转移，避免 API 超时
         self._threadhelper.start_thread(
             self._filetransfer.transfer_media,
@@ -210,10 +224,35 @@ class SyncService:
                 episode,
                 min_filesize,
                 True,
+                False,
+                dst_backend,
             ),
         )
 
         return ManualTransferResultDTO(success=True, message="转移任务已提交，正在后台执行")
+
+    def _resolve_dst_backend_by_dest(self, dest: str):
+        """根据目的目录查找对应同步配置的目标后端实例"""
+        dst_backend_id = self._filetransfer.get_sync_backend_by_dest(dest)
+        if dst_backend_id == "local":
+            return None
+        try:
+            entity = StorageBackendRepositoryAdapter().get_by_id(int(dst_backend_id))
+            if not entity:
+                return None
+            info = StorageBackendFactory.get_config_info(entity.type)
+            if info:
+                stype, cls = info
+            else:
+                stype, cls = StorageType.LOCAL, LocalStorageConfig
+            config = cls(id=str(entity.id), name=entity.name, type=stype, enabled=entity.enabled)
+            for k, v in entity.config.items():
+                if hasattr(config, k):
+                    setattr(config, k, v)
+            return StorageBackendFactory.create(config)
+        except Exception:
+            pass
+        return None
 
     # ---------- 重新识别 ----------
 
@@ -250,8 +289,13 @@ class SyncService:
                     if not path:
                         continue
 
+                    dst_backend = self._resolve_dst_backend_by_dest(dest_dir)
                     succ_flag, msg = self._filetransfer.transfer_media(
-                        in_from=SyncType.MAN, operation=operation, in_path=path, target_dir=dest_dir
+                        in_from=SyncType.MAN,
+                        operation=operation,
+                        in_path=path,
+                        target_dir=dest_dir,
+                        dst_backend=dst_backend,
                     )
                     if succ_flag and flag == "unidentification":
                         self._filetransfer.update_transfer_unknown_state(path)
@@ -298,12 +342,14 @@ class SyncService:
         for ff in dirs:
             if os.path.isdir(ff):
                 if "ONLYDIR" in ft or "ALL" in ft:
-                    r.append({
-                        "path": ff.replace("\\", "/"),
-                        "name": os.path.basename(ff),
-                        "type": "dir",
-                        "rel": os.path.dirname(ff).replace("\\", "/"),
-                    })
+                    r.append(
+                        {
+                            "path": ff.replace("\\", "/"),
+                            "name": os.path.basename(ff),
+                            "type": "dir",
+                            "rel": os.path.dirname(ff).replace("\\", "/"),
+                        }
+                    )
             else:
                 ext = os.path.splitext(ff)[-1][1:]
                 flag = False
@@ -319,14 +365,16 @@ class SyncService:
                 ):
                     flag = True
                 if flag:
-                    r.append({
-                        "path": ff.replace("\\", "/"),
-                        "name": os.path.basename(ff),
-                        "type": "file",
-                        "rel": os.path.dirname(ff).replace("\\", "/"),
-                        "ext": ext,
-                        "size": StringUtils.str_filesize(os.path.getsize(ff)),
-                    })
+                    r.append(
+                        {
+                            "path": ff.replace("\\", "/"),
+                            "name": os.path.basename(ff),
+                            "type": "file",
+                            "rel": os.path.dirname(ff).replace("\\", "/"),
+                            "ext": ext,
+                            "size": StringUtils.str_filesize(os.path.getsize(ff)),
+                        }
+                    )
         return r
 
     # ---------- 文件重命名 ----------

@@ -15,6 +15,19 @@ class BatchIdentifier:
         self.media = media_service or MediaService()
         self._media_ident_cache = get_cache_manager().get_or_create("media_ident", "memory", maxsize=2000, ttl=3600)
 
+    @staticmethod
+    def build_cache_key(meta_info, fallback_title=None):
+        """构建与 identify 阶段一致的缓存 key"""
+        name = meta_info.get_name() or fallback_title
+        if not name:
+            return None
+        season_ep = ""
+        if meta_info.get_season_list():
+            season_ep += f"_S{'-'.join(str(s) for s in meta_info.get_season_list())}"
+        if meta_info.get_episode_list():
+            season_ep += f"_E{'-'.join(str(e) for e in meta_info.get_episode_list())}"
+        return f"{name}{season_ep}"
+
     def identify(self, candidates):
         """
         对 candidates 中 skip_tmdb=False 的条目批量查询 TMDB。
@@ -28,8 +41,7 @@ class BatchIdentifier:
         for cand in candidates:
             if cand.skip_tmdb:
                 continue
-            meta_info = cand.meta_info
-            cache_key = meta_info.get_name() or cand.item.get("title")
+            cache_key = self.build_cache_key(cand.meta_info, cand.item.get("title"))
             if not cache_key:
                 continue
             if self._media_ident_cache.get(cache_key) is not None:

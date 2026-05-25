@@ -7,6 +7,7 @@
 
 import re
 
+import log
 from app.core.module_config import ModuleConf
 from app.media import ReleaseGroupsMatcher
 from app.utils import StringUtils
@@ -42,7 +43,7 @@ class IndexerFilterEngine:
             restype_re = ModuleConf.TORRENT_SEARCH_PARAMS["restype"].get(filter_args.get("restype") or "")
             if not meta_info.get_edtion_string():
                 return False, 0, f"{meta_info.org_string} 不符合质量 {filter_args.get('restype')} 要求"
-            if restype_re and not re.search(rf"{restype_re}", meta_info.get_edtion_string(), re.I):
+            if restype_re and not re.search(rf"{restype_re}", meta_info.get_edtion_string(), re.IGNORECASE):
                 return False, 0, f"{meta_info.org_string} 不符合质量 {filter_args.get('restype')} 要求"
 
         # 过滤分辨率
@@ -50,7 +51,7 @@ class IndexerFilterEngine:
             pix_re = ModuleConf.TORRENT_SEARCH_PARAMS["pix"].get(filter_args.get("pix") or "")
             if not meta_info.resource_pix:
                 return False, 0, f"{meta_info.org_string} 不符合分辨率 {filter_args.get('pix')} 要求"
-            if pix_re and not re.search(rf"{pix_re}", meta_info.resource_pix, re.I):
+            if pix_re and not re.search(rf"{pix_re}", meta_info.resource_pix, re.IGNORECASE):
                 return False, 0, f"{meta_info.org_string} 不符合分辨率 {filter_args.get('pix')} 要求"
 
         # 过滤制作组/字幕组
@@ -62,7 +63,7 @@ class IndexerFilterEngine:
                     return False, 0, f"{meta_info.org_string} 不符合制作组/字幕组 {team} 要求"
                 else:
                     meta_info.resource_team = resource_team
-            elif not re.search(rf"{team}", meta_info.resource_team, re.I):
+            elif not re.search(rf"{team}", meta_info.resource_team, re.IGNORECASE):
                 return False, 0, f"{meta_info.org_string} 不符合制作组/字幕组 {team} 要求"
 
         # 过滤促销
@@ -77,19 +78,19 @@ class IndexerFilterEngine:
         # 过滤包含
         if filter_args.get("include"):
             include = filter_args.get("include")
-            if not re.search(rf"{include}", text, re.I):
+            if not re.search(rf"{include}", text, re.IGNORECASE):
                 return False, 0, f"{meta_info.org_string} 不符合包含 {include} 要求"
 
         # 过滤排除
         if filter_args.get("exclude"):
             exclude = filter_args.get("exclude")
-            if re.search(rf"{exclude}", text, re.I):
+            if re.search(rf"{exclude}", text, re.IGNORECASE):
                 return False, 0, f"{meta_info.org_string} 不符合排除 {exclude} 要求"
 
         # 过滤关键字
         if filter_args.get("key"):
             key = filter_args.get("key")
-            if not re.search(rf"{key}", text, re.I):
+            if not re.search(rf"{key}", text, re.IGNORECASE):
                 return False, 0, f"{meta_info.org_string} 不符合 {key} 要求"
 
         return True, 0, ""
@@ -182,11 +183,12 @@ class IndexerFilterEngine:
                 else:
                     group_match = False
             except Exception as err:
-                import log
-
                 log.error(f"【Filter】过滤规则出现严重错误 {err}，请检查：{filter_info}")
 
         if not group_match:
+            log.info(
+                f"【FilterEngine】规则组 {group_name} 无匹配: title={title}, pix={meta_info.resource_pix}, encode={meta_info.video_encode}"
+            )
             return False, 0, group_name
         return True, order_seq, group_name
 
@@ -212,7 +214,4 @@ class IndexerFilterEngine:
                 e_num = [e_num]
             if not set(e_num).issuperset(set(media_info.get_episode_list())):
                 return False
-        if year_str:
-            if str(media_info.year) != str(year_str):
-                return False
-        return True
+        return not (year_str and str(media_info.year) != str(year_str))

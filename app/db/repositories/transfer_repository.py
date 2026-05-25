@@ -28,7 +28,9 @@ class TransferRepository(BaseRepository):
 
     # ==================== Transfer History ====================
 
-    def is_transfer_history_exists(self, source_path: str, source_filename: str, dest_path: str, dest_filename: str) -> bool:
+    def is_transfer_history_exists(
+        self, source_path: str, source_filename: str, dest_path: str, dest_filename: str
+    ) -> bool:
         """
         查询识别转移记录是否存在
         """
@@ -47,7 +49,9 @@ class TransferRepository(BaseRepository):
         return ret > 0
 
     @DbPersist(BaseRepository._db)
-    def update_transfer_history_date(self, source_path: str, source_filename: str, dest_path: str, dest_filename: str, date: str) -> None:
+    def update_transfer_history_date(
+        self, source_path: str, source_filename: str, dest_path: str, dest_filename: str, date: str
+    ) -> None:
         """
         更新历史转移记录时间
         """
@@ -59,7 +63,16 @@ class TransferRepository(BaseRepository):
         ).update({"DATE": date})
 
     @DbPersist(BaseRepository._db)
-    def insert_transfer_history(self, in_from: Enum, rmt_mode: str, in_path: str, out_path: str, dest: str, media_info: "MediaInfo") -> None:
+    def insert_transfer_history(
+        self,
+        in_from: Enum,
+        rmt_mode: str,
+        in_path: str,
+        out_path: str,
+        dest: str,
+        media_info: "MediaInfo",
+        dst_backend: str | None = None,
+    ) -> None:
         """
         插入识别转移记录
         """
@@ -107,6 +120,7 @@ class TransferRepository(BaseRepository):
                 DEST=dest,
                 DEST_PATH=dest_path,
                 DEST_FILENAME=dest_filename,
+                DST_BACKEND=dst_backend or "local",
                 DATE=timestr,
             )
         )
@@ -147,7 +161,9 @@ class TransferRepository(BaseRepository):
         """
         return self._db.query(TRANSFERHISTORY).filter(int(logid or 0) == TRANSFERHISTORY.ID).first()
 
-    def get_transfer_info_by(self, tmdbid: int | None, season: str | None = None, season_episode: str | None = None) -> list[TRANSFERHISTORY] | None:
+    def get_transfer_info_by(
+        self, tmdbid: int | None, season: str | None = None, season_episode: str | None = None
+    ) -> list[TRANSFERHISTORY] | None:
         """
         据tmdbid、season、season_episode查询转移记录
         """
@@ -225,7 +241,9 @@ class TransferRepository(BaseRepository):
         """
         return self._db.query(TRANSFERUNKNOWN).filter(TRANSFERUNKNOWN.STATE == "N").all()
 
-    def get_transfer_unknown_paths_by_page(self, search: str | None, page: int, rownum: int) -> tuple[int, list[TRANSFERUNKNOWN]]:
+    def get_transfer_unknown_paths_by_page(
+        self, search: str | None, page: int, rownum: int
+    ) -> tuple[int, list[TRANSFERUNKNOWN]]:
         """
         按页查询未识别的记录列表
         """
@@ -292,7 +310,7 @@ class TransferRepository(BaseRepository):
         """
         if not path:
             return []
-        return self._db.query(TRANSFERUNKNOWN).filter(path == TRANSFERUNKNOWN.PATH).all()
+        return self._db.query(TRANSFERUNKNOWN).filter(os.path.normpath(path) == TRANSFERUNKNOWN.PATH).all()
 
     def is_exists_transfer_unknowns(self, path: str) -> bool:
         return self.is_transfer_unknown_exists(path)

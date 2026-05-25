@@ -52,6 +52,14 @@ def parse_anime_title(title, subtitle=None, fileflag=False) -> MediaInfo:
             parse_team(info, original_title, anitopy_info_origin)
             parse_customization(info, original_title)
             parse_encode(info, anitopy_info)
+            # 提取资源来源（WEB-DL / BluRay / HDTV 等）
+            source_match = re.search(
+                r"(WEB[\s.-]?DL|WEB[\s.-]?RIP|Blu[\s.-]?Ray|HDTV|UHDTV|HDRip|BDRip|DVDRip|HDDVD|BD[\s.-]?Rip)",
+                original_title,
+                re.IGNORECASE,
+            )
+            if source_match:
+                info.resource_type = source_match.group(1).upper().replace(" ", "-").replace(".", "-")
             info.init_subtitle(info.org_string)
             if info.subtitle:
                 info.init_subtitle(info.subtitle)

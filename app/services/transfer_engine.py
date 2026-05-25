@@ -30,6 +30,9 @@ class TransferEngine:
         backend = dst_backend or self._local
         with _lock:
             if backend is not self._local:
+                if operation in ("link", "softlink"):
+                    log.warn(f"【Rmt】远程后端不支持 {operation}，自动降级为 copy")
+                    operation = "copy"
                 if operation == "copy":
                     cross_copy(self._local, src, backend, dst)
                 elif operation == "move":
@@ -116,19 +119,30 @@ class TransferEngine:
             self._execute(track_file, new_track, operation)
             log.info(f"【Rmt】音轨文件 {os.path.basename(track_file)} {operation}完成")
 
-    def transfer_dir(self, src_dir: str, target_dir: str, operation: str, record_blacklist: bool = True) -> None:
+    def transfer_dir(
+        self,
+        src_dir: str,
+        target_dir: str,
+        operation: str,
+        record_blacklist: bool = True,
+        dst_backend: StorageBackend | None = None,
+    ) -> None:
+        backend = dst_backend or self._local
         for file in PathUtils.get_dir_files(src_dir):
             new_file = file.replace(src_dir, target_dir)
-            if os.path.exists(new_file):
-                log.warn(f"【Rmt】{new_file} 文件已存在")
-                continue
-            os.makedirs(os.path.dirname(new_file), exist_ok=True)
-            self._execute(file, new_file, operation)
+            if not os.path.exists(new_file):
+                if backend.exists(new_file):
+                    log.warn(f"【Rmt】{new_file} 文件已存在")
+                    continue
+            backend.mkdir(os.path.dirname(new_file), parents=True)
+            self._execute(file, new_file, operation, dst_backend)
             if record_blacklist:
                 self._blacklist.insert(file)
 
-    def transfer_bluray_dir(self, src_dir: str, target_dir: str, operation: str) -> None:
-        self.transfer_dir(src_dir, target_dir, operation, record_blacklist=False)
+    def transfer_bluray_dir(
+        self, src_dir: str, target_dir: str, operation: str, dst_backend: StorageBackend | None = None
+    ) -> None:
+        self.transfer_dir(src_dir, target_dir, operation, record_blacklist=False, dst_backend=dst_backend)
         self._blacklist.insert(src_dir)
 
     def transfer(
@@ -140,11 +154,16 @@ class TransferEngine:
         old_file: str | None = None,
         dst_backend: StorageBackend | None = None,
     ) -> None:
-        if not over_flag and os.path.exists(dst):
+        backend = dst_backend or self._local
+        if not over_flag and backend.exists(dst):
             log.warn(f"【Rmt】文件已存在：{dst}")
             return
-        if over_flag and old_file and os.path.isfile(old_file):
-            os.remove(old_file)
+        if over_flag and old_file:
+            old_backend = self._local
+            if old_backend.exists(old_file):
+                st = old_backend.stat(old_file)
+                if st and not st.is_dir:
+                    old_backend.remove(old_file)
 
         log.info(f"【Rmt】正在转移文件：{os.path.basename(src)} 到 {dst}")
         self._execute(src, dst, operation, dst_backend)

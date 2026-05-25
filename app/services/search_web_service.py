@@ -105,7 +105,9 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
                 media_info.begin_episode = int(episode_num)
 
         if media_info and media_info.tmdb_info:
-            log.info(f"【Web】从TMDB中匹配到{media_info.type.value if media_info.type else ''}：{media_info.get_title_string()}")
+            log.info(
+                f"【Web】从TMDB中匹配到{media_info.type.value if media_info.type else ''}：{media_info.get_title_string()}"
+            )
             search_season = media_info.get_season_list() if media_info.begin_season is not None else None
             search_episode = media_info.get_episode_list()
             if search_episode and not search_season:
@@ -121,6 +123,7 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
                 en_title = _media.get_tmdb_en_title(media_info)
                 if en_title:
                     search_en_name = en_title
+                    media_info.en_name = en_title
 
             if search_cn_name:
                 search_name_list.append(search_cn_name)
@@ -198,8 +201,8 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
         log.info(f"【Web】共搜索到 {len(media_list)} 个有效资源")
         media_list = sorted(
             media_list,
-            key=lambda x: (
-                "{}{}{}".format(str(x.res_order).rjust(3, "0"), str(x.site_order).rjust(3, "0"), str(x.seeders).rjust(10, "0"))
+            key=lambda x: "{}{}{}".format(
+                str(x.res_order).rjust(3, "0"), str(x.site_order).rjust(3, "0"), str(x.seeders).rjust(10, "0")
             ),
             reverse=True,
         )

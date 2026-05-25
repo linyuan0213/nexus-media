@@ -7,13 +7,17 @@ on:
       - v*
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   build:
     runs-on: ubuntu-latest
     name: Build Docker Image
+    needs: ci
 
     steps:
       - name: Checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@v4
 
       - name: Release version
         id: release_version
@@ -56,7 +60,7 @@ jobs:
     name: Create Release
     steps:
       - name: Checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@v4
 
       - name: Extract version and changelog
         id: extract
@@ -65,13 +69,11 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
 
-          # Extract changelog section for this version
           CONTENT=$(awk '/^## v'"$VERSION"' /{flag=1;next}/^## v/{flag=0}flag' docs/changelog.md)
           if [ -z "$CONTENT" ]; then
             CONTENT="Nexus Media $GITHUB_REF_NAME 已发布。"
           fi
 
-          # Write multi-line output
           {
             echo "notes<<CHANGELOG_EOF"
             echo "$CONTENT"

@@ -28,7 +28,6 @@ def cross_copy(
 
     stream: BinaryIO = src_backend.read_stream(src_path)
     try:
-        dst_backend.mkdir(dst_path, parents=True)
         dst_backend.write_stream(dst_path, stream)
     finally:
         stream.close()
