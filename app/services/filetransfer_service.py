@@ -14,6 +14,7 @@ from time import sleep
 import log
 from app.core.constants import DEFAULT_MOVIE_FORMAT, DEFAULT_TV_FORMAT, RMT_FAVTYPE, RMT_MEDIAEXT, RMT_MIN_FILESIZE
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
+from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import (
     TransferBlacklistRepositoryAdapter,
     TransferHistoryRepositoryAdapter,
@@ -33,8 +34,9 @@ from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepos
 from app.services.media_config_service import MediaConfigService
 from app.services.transfer_engine import TransferEngine
 from app.storage import StorageBackendFactory
-from app.storage.backends.base import StorageType
+from app.storage.backends.base import StorageConfig, StorageType
 from app.storage.config_models import LocalStorageConfig
+from app.storage.backends.local import LocalStorageBackend
 from app.utils import ExceptionUtils, NumberUtils, PathUtils, StringUtils, SystemUtils
 from app.utils.types import EventType, MediaType, MovieTypes, ProgressKey, SyncType
 from config import Config
@@ -70,6 +72,7 @@ class FileTransferService:
         self.transfer_blacklist_repo = transfer_blacklist_repo or TransferBlacklistRepositoryAdapter()
         self.transfer_unknown_repo = transfer_unknown_repo or TransferUnknownRepositoryAdapter()
         self.download_repo = download_repo or DownloadHistoryRepositoryAdapter()
+        self.sync_repo = SyncPathRepositoryAdapter()
         self.progress = progress or ProgressHelper()
         self.eventmanager = eventmanager or EventManager()
         self._default_operation: str = "copy"
@@ -102,6 +105,7 @@ class FileTransferService:
         self.transfer_blacklist_repo = TransferBlacklistRepositoryAdapter()
         self.transfer_unknown_repo = TransferUnknownRepositoryAdapter()
         self.download_repo = DownloadHistoryRepositoryAdapter()
+        self.sync_repo = SyncPathRepositoryAdapter()
         self.progress = ProgressHelper()
         self.eventmanager = EventManager()
 
@@ -209,13 +213,21 @@ class FileTransferService:
                 setattr(config, k, v)
         return StorageBackendFactory.create(config)
 
-    def _is_media_exists(self, media_dest, media):
+    def _is_media_exists(self, media_dest, media, dst_backend=None):
         """
-        判断媒体文件是否已存在
+        判断媒体文件是否已存在（支持本地和远程后端）
         :param media_dest: 媒体文件所在目录
         :param media: 已识别的媒体信息
+        :param dst_backend: 目标存储后端，None 表示本地
         :return: 目录是否存在，目录路径，文件是否存在，文件路径
         """
+        backend = dst_backend
+
+        def _exists(path: str) -> bool:
+            if backend is not None:
+                return backend.exists(path)
+            return os.path.exists(path)
+
         dir_exist_flag = False
         file_exist_flag = False
         ret_dir_path = None
@@ -227,17 +239,17 @@ class FileTransferService:
                 file_path = os.path.join(media_dest, media.category, dir_name)
                 for m_type in [RMT_FAVTYPE, media.category]:
                     type_path = os.path.join(media_dest, m_type, dir_name)
-                    if os.path.exists(type_path):
+                    if _exists(type_path):
                         file_path = type_path
                         break
             ret_dir_path = file_path
-            if os.path.exists(file_path):
+            if _exists(file_path):
                 dir_exist_flag = True
             file_dest = os.path.join(file_path, file_name)
             ret_file_path = file_dest
             for ext in RMT_MEDIAEXT:
                 ext_dest = f"{file_dest}{ext}"
-                if os.path.exists(ext_dest):
+                if _exists(ext_dest):
                     file_exist_flag = True
                     ret_file_path = ext_dest
                     break
@@ -252,7 +264,7 @@ class FileTransferService:
             if media.get_season_list():
                 season_dir = os.path.join(media_path, season_name)
                 ret_dir_path = season_dir
-                if os.path.exists(season_dir):
+                if _exists(season_dir):
                     dir_exist_flag = True
                 episodes = media.get_episode_list()
                 if episodes:
@@ -260,7 +272,7 @@ class FileTransferService:
                     ret_file_path = file_path
                     for ext in RMT_MEDIAEXT:
                         ext_dest = f"{file_path}{ext}"
-                        if os.path.exists(ext_dest):
+                        if _exists(ext_dest):
                             file_exist_flag = True
                             ret_file_path = ext_dest
                             break
@@ -573,7 +585,16 @@ class FileTransferService:
 
         # ---------- 阶段4：逐个文件转移 ----------
         result = self._transfer_files_loop(
-            medias, in_from, in_path, operation, target_dir, unknown_dir, bluray_disk_dir, episode, udf_flag, dst_backend
+            medias,
+            in_from,
+            in_path,
+            operation,
+            target_dir,
+            unknown_dir,
+            bluray_disk_dir,
+            episode,
+            udf_flag,
+            dst_backend,
         )
 
         # ---------- 阶段5：后处理 ----------
@@ -636,7 +657,17 @@ class FileTransferService:
         return None, None
 
     def _transfer_files_loop(
-        self, medias, in_from, in_path, operation, target_dir, unknown_dir, bluray_disk_dir, episode, udf_flag, dst_backend
+        self,
+        medias,
+        in_from,
+        in_path,
+        operation,
+        target_dir,
+        unknown_dir,
+        bluray_disk_dir,
+        episode,
+        udf_flag,
+        dst_backend,
     ):
         failed_count = 0
         alert_count = 0
@@ -732,6 +763,7 @@ class FileTransferService:
                     out_path=out_path or "",
                     dest=dist_path,
                     media_info=media,
+                    dst_backend=dst_backend.id if hasattr(dst_backend, "id") else (dst_backend or "local"),
                 )
 
                 if isinstance(episode[1], bool) and episode[1]:
@@ -788,6 +820,10 @@ class FileTransferService:
             except Exception as err:
                 ExceptionUtils.exception_traceback(err)
                 log.error(f"【Rmt】文件转移时发生错误：{str(err)}")
+                failed_count += 1
+                success_flag = False
+                if not error_message:
+                    error_message = str(err)
 
         return {
             "total_count": total_count,
@@ -826,9 +862,21 @@ class FileTransferService:
         return 1, 1 if insert else 0, alert_messages
 
     def _do_transfer_file(
-        self, file_item, media, dist_path, bluray_disk_dir, operation, reg_path, target_dir, udf_flag, alert_messages, dst_backend=None
+        self,
+        file_item,
+        media,
+        dist_path,
+        bluray_disk_dir,
+        operation,
+        reg_path,
+        target_dir,
+        udf_flag,
+        alert_messages,
+        dst_backend=None,
     ):
-        dir_exist_flag, ret_dir_path, file_exist_flag, ret_file_path = self._is_media_exists(dist_path, media)
+        dir_exist_flag, ret_dir_path, file_exist_flag, ret_file_path = self._is_media_exists(
+            dist_path, media, dst_backend
+        )
         file_ext = os.path.splitext(file_item)[-1]
         new_file = ret_file_path
         exist_filenum = 0
@@ -846,7 +894,9 @@ class FileTransferService:
                         base, _ = os.path.splitext(ret_file_path)
                         new_file = f"{base}{file_ext}"
                         log.info(f"【Rmt】文件 {old} 已存在，覆盖为 {new_file} ...")
-                        self._engine.transfer(file_item, new_file, operation, over_flag=True, old_file=old)
+                        self._engine.transfer(
+                            file_item, new_file, operation, over_flag=True, old_file=old, dst_backend=dst_backend
+                        )
                         return 0, 0, alert_messages, exist_filenum, new_file, ret_file_path, ret_dir_path
                     else:
                         log.warn(f"【Rmt】文件 {ret_file_path} 已存在")
@@ -893,7 +943,7 @@ class FileTransferService:
         else:
             ret_file_path = f"{ret_file_path}{file_ext}"
             new_file = ret_file_path
-            self._engine.transfer(file_item, ret_file_path, operation, over_flag=False)
+            self._engine.transfer(file_item, ret_file_path, operation, over_flag=False, dst_backend=dst_backend)
         return 0, 0, alert_messages, exist_filenum, new_file, ret_file_path, ret_dir_path
 
     def _record_fail(self, file_item, reg_path, target_dir, operation, udf_flag, alert_messages, msg):
@@ -957,7 +1007,9 @@ class FileTransferService:
         for path in PathUtils.get_dir_level1_medias(s_path, RMT_MEDIAEXT):
             if PathUtils.is_invalid_path(path):
                 continue
-            ret, ret_msg = self.transfer_media(in_from=SyncType.MAN, in_path=path, target_dir=t_path, operation=operation)
+            ret, ret_msg = self.transfer_media(
+                in_from=SyncType.MAN, in_path=path, target_dir=t_path, operation=operation
+            )
             if not ret:
                 print(f"【Rmt】{path} 处理失败：{ret_msg}")
 
@@ -1110,23 +1162,58 @@ class FileTransferService:
 
                                     ExceptionUtils.exception_traceback(e)
 
-    @staticmethod
-    def delete_media_file(filedir, filename):
+    def delete_media_file(self, filedir, filename, backend_id="local"):
         """
-        删除媒体文件
+        删除媒体文件（统一使用存储后端接口）
         """
         try:
-            file = os.path.join(filedir, filename)
-            if os.path.exists(file):
-                os.remove(file)
-                if not os.listdir(filedir):
-                    shutil.rmtree(filedir)
-                return True, "删除成功"
-            else:
+            # 清理路径尾部斜杠，避免 os.path.basename 返回空字符串
+            file = os.path.join(filedir, filename).rstrip("/")
+            filedir = os.path.dirname(file)
+            filename = os.path.basename(file)
+
+            # 安全检查
+            if not filename:
+                log.error(f"【Delete】文件名为空，原始路径={filedir}/{filename}")
+                return False, "无效的文件路径"
+            if not filedir or filedir in ("/", "\\"):
+                return False, "不能删除根目录"
+            if file == filedir:
+                return False, "不能删除父目录"
+
+            log.info(f"【Delete】准备删除：filedir={filedir}, filename={filename}, file={file}")
+
+            backend = self._resolve_backend_by_id(backend_id)
+            if not backend:
+                return False, "无法解析存储后端"
+            if not backend.exists(file):
                 return False, "文件不存在"
+
+            backend.remove(file, recursive=True)
+            log.info(f"【Delete】删除成功：{file}")
+            return True, "删除成功"
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             return False, str(e)
+
+    def _resolve_backend_by_id(self, backend_id: str):
+        """根据 ID 解析存储后端（本地返回 LocalStorageBackend 实例）"""
+        if not backend_id or backend_id == "local":
+            return LocalStorageBackend(StorageConfig(id="local", name="local", type=StorageType.LOCAL))
+        repo = StorageBackendRepositoryAdapter()
+        entity = repo.get_by_id(int(backend_id))
+        if not entity:
+            return None
+        info = StorageBackendFactory.get_config_info(entity.type)
+        if info:
+            stype, cls = info
+        else:
+            stype, cls = StorageType.LOCAL, LocalStorageConfig
+        config = cls(id=str(entity.id), name=entity.name, type=stype, enabled=entity.enabled)
+        for k, v in entity.config.items():
+            if hasattr(config, k):
+                setattr(config, k, v)
+        return StorageBackendFactory.create(config)
 
     def delete_transfer(self):
         """
@@ -1181,3 +1268,15 @@ class FileTransferService:
         查询未知转移记录
         """
         return self.transfer_repo.get_transfer_unknown_paths_by_page(search=search, page=page, rownum=rownum)
+
+    def get_sync_backend_by_dest(self, dest: str) -> str:
+        """根据目的目录查找对应同步配置的目标后端"""
+        if not dest:
+            return "local"
+        try:
+            for entity in self.sync_repo.get_all():
+                if str(entity.dest or "") == dest:
+                    return str(entity.dst_backend or "local") or "local"
+        except Exception:
+            pass
+        return "local"

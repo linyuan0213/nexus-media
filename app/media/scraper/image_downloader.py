@@ -47,15 +47,20 @@ class ImageDownloader:
         except RequestException as ex:
             raise RequestException from ex
         except Exception as err:
+            log.error(f"【Scraper】下载{itype}图片失败：{image_path}，错误：{err}")
             ExceptionUtils.exception_traceback(err)
 
     def save_nfo(self, doc, out_file):
         """保存 NFO XML 文件"""
         log.info(f"【Scraper】正在保存NFO文件：{out_file}")
-        xml_str = doc.toprettyxml(indent="  ", encoding="utf-8")
-        if self._dst_backend:
-            self._dst_backend.write_stream(out_file, io.BytesIO(xml_str), len(xml_str))
-        else:
-            with open(out_file, "wb") as xml_file:
-                xml_file.write(xml_str)
-        log.info(f"【Scraper】NFO文件已保存：{out_file}")
+        try:
+            xml_str = doc.toprettyxml(indent="  ", encoding="utf-8")
+            if self._dst_backend:
+                self._dst_backend.write_stream(out_file, io.BytesIO(xml_str), len(xml_str))
+            else:
+                with open(out_file, "wb") as xml_file:
+                    xml_file.write(xml_str)
+            log.info(f"【Scraper】NFO文件已保存：{out_file}")
+        except Exception as err:
+            log.error(f"【Scraper】保存NFO文件失败：{out_file}，错误：{err}")
+            ExceptionUtils.exception_traceback(err)

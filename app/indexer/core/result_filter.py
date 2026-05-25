@@ -10,6 +10,7 @@
 
 import log
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
+from app.indexer.core.batch_identifier import BatchIdentifier
 from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.indexer.core.models import FilterStats, SearchCandidate
 from app.media import MediaService, meta_info
@@ -64,8 +65,8 @@ class ResultFilter:
                 exclude_str = e.exclude or ""
                 filters.append(
                     {
-                        "include": [x.strip() for x in include_str.split(",") if x.strip()] if include_str else None,
-                        "exclude": [x.strip() for x in exclude_str.split(",") if x.strip()] if exclude_str else None,
+                        "include": [x.strip() for x in include_str.splitlines() if x.strip()] if include_str else None,
+                        "exclude": [x.strip() for x in exclude_str.splitlines() if x.strip()] if exclude_str else None,
                         "size": None,
                         "free": e.note,
                         "pri": e.priority,
@@ -73,6 +74,9 @@ class ResultFilter:
                 )
 
         self._rule_cache[cache_key] = (rulegroup_info, filters)
+        log.info(
+            f"【ResultFilter】加载规则组: {rulegroup_info.get('name')} (ID={rulegroup_info.get('id')}), 规则数: {len(filters)}"
+        )
         return rulegroup_info, filters
 
     def _check_full_filter(self, meta_info, filter_args, uploadvolumefactor, downloadvolumefactor):
@@ -148,6 +152,12 @@ class ResultFilter:
 
         return False
 
+    @staticmethod
+    def _type_compatible(a, b):
+        if a == b:
+            return True
+        return bool(a in (MediaType.TV, MediaType.ANIME) and b in (MediaType.TV, MediaType.ANIME))
+
     def local_filter(self, result_array, filter_args, match_media=None):
         """
         第一阶段：本地轻量级过滤
@@ -206,8 +216,7 @@ class ResultFilter:
 
             if mi.type == MediaType.TV and filter_args.get("type") == MediaType.MOVIE:
                 log.info(
-                    f"【ResultFilter】{torrent_name} 是 {mi.type.value}，"
-                    f"不匹配类型：{filter_args.get('type').value}"
+                    f"【ResultFilter】{torrent_name} 是 {mi.type.value}，不匹配类型：{filter_args.get('type').value}"
                 )
                 stats.index_rule_fail += 1
                 continue
@@ -323,12 +332,16 @@ class ResultFilter:
                 else 1.0
             )
             enclosure = item.get("enclosure")
-            cache_key = meta_info.get_name() or torrent_name
+            cache_key = BatchIdentifier.build_cache_key(meta_info, torrent_name)
             indexer_name = cand.indexer_name
             indexer_order = cand.indexer_order
 
             if cand.skip_tmdb:
                 media_info = cand.media_info
+            elif not cache_key:
+                log.warn(f"【ResultFilter】{torrent_name} 无法构建缓存键")
+                stats.index_error += 1
+                continue
             else:
                 media_info = media_ident_cache.get(cache_key)
                 if media_info is not None:
@@ -340,29 +353,18 @@ class ResultFilter:
                     log.warn(f"【ResultFilter】{cache_key} 识别媒体信息出错！")
                     stats.index_error += 1
                     continue
-                elif not media_info.tmdb_info:
-                    def _type_compatible(a, b):
-                        if a == b:
-                            return True
-                        if a in (MediaType.TV, MediaType.ANIME) and b in (MediaType.TV, MediaType.ANIME):
-                            return True
-                        return False
 
-                    if match_media and _type_compatible(media_info.type, match_media.type):
+                if not media_info.tmdb_info:
+                    if match_media and self._type_compatible(meta_info.type, match_media.type):
                         log.info(
-                            f"【ResultFilter】{cache_key} 未匹配到TMDB，"
-                            f"回退使用搜索媒体信息: {match_media.get_name()}"
+                            f"【ResultFilter】{cache_key} 未匹配到TMDB，回退使用搜索媒体信息: {match_media.get_name()}"
                         )
                         media_info = self._media.merge_media_info(media_info, match_media)
                     else:
-                        log.info(
-                            f"【ResultFilter】{cache_key} 识别为 "
-                            f"{media_info.get_name()} 未匹配到媒体信息"
-                        )
+                        log.info(f"【ResultFilter】{cache_key} 识别为 {media_info.get_name()} 未匹配到媒体信息")
                         stats.index_match_fail += 1
                         continue
-
-                if str(media_info.tmdb_id) != str(match_media.tmdb_id):
+                elif str(media_info.tmdb_id) != str(match_media.tmdb_id):
                     media_type_str = media_info.type.value if media_info.type else "Unknown"
                     match_type_str = match_media.type.value if match_media.type else "Unknown"
                     log.info(
@@ -372,8 +374,12 @@ class ResultFilter:
                     )
                     stats.index_match_fail += 1
                     continue
+                else:
+                    media_info = self._media.merge_media_info(media_info, match_media)
 
-                media_info = self._media.merge_media_info(media_info, match_media)
+            # 恢复原始标题：缓存中的 MediaInfo.from_parser 不含 org_string
+            if not media_info.org_string:
+                media_info.org_string = meta_info.org_string
 
             if filter_args.get("type"):
                 if (filter_args.get("type") == MediaType.TV and media_info.type == MediaType.MOVIE) or (

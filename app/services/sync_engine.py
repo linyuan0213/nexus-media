@@ -14,12 +14,15 @@ from app.core.constants import RMT_MEDIAEXT
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import TransferHistoryRepositoryAdapter
+from app.domain.entities.transfer_task import SourceType, TransferTask
 from app.services.transfer_engine import TransferEngine
+from app.services.transfer_pipeline import TransferPipeline
 from app.storage.backends.base import StorageConfig, StorageType
 from app.storage.backends.local import LocalStorageBackend
 from app.storage.config_models import LocalStorageConfig
 from app.storage.factory import StorageBackendFactory
 from app.utils import PathUtils
+from app.utils.commons import SingletonMeta
 
 _synced_lock = threading.Lock()
 _observer_lock = threading.Lock()
@@ -52,9 +55,10 @@ class SyncPathConfig:
         self.enabled = bool(row.ENABLED)
 
 
-class SyncEngine:
+class SyncEngine(metaclass=SingletonMeta):
     def __init__(self):
         self._transfer = TransferEngine()
+        self._pipeline = TransferPipeline()
         self._sync_repo = SyncPathRepositoryAdapter()
         self._history_repo = TransferHistoryRepositoryAdapter()
         self._backend_repo = StorageBackendRepositoryAdapter()
@@ -99,14 +103,21 @@ class SyncEngine:
             log.info(
                 f"【Sync】监控目录：{cfg.source} -> {cfg.dest} (操作={cfg.operation}, 目标后端={cfg.dst_backend_id})"
             )
+            if not cfg.source or cfg.source in ("/", "\\"):
+                log.warn(f"【Sync】跳过无效源目录: {cfg.source}")
+                continue
+            self._configs[cfg.id] = cfg
             if not cfg.enabled:
                 log.info(f"【Sync】{cfg.source} 已关闭")
                 continue
-            self._configs[cfg.id] = cfg
-            if os.path.exists(cfg.source):
-                self._monitor_ids.append(cfg.id)
-            else:
-                log.error(f"【Sync】{cfg.source} 目录不存在")
+            try:
+                src_backend = self._resolve_backend(cfg.src_backend_id)
+                if src_backend.exists(cfg.source):
+                    self._monitor_ids.append(cfg.id)
+                else:
+                    log.error(f"【Sync】{cfg.source} 目录不存在")
+            except Exception as e:
+                log.error(f"【Sync】检查 {cfg.source} 失败: {e}")
 
     @property
     def monitor_sync_path_ids(self) -> list[str]:
@@ -186,6 +197,7 @@ class SyncEngine:
             dst_backend = self._resolve_backend(cfg.dst_backend_id) if cfg.dst_backend_id != "local" else None
             self._transfer._execute(event_path, dst, cfg.operation, dst_backend)
             self._history_repo.insert_sync_history(event_path, cfg.source, cfg.dest)
+            self._transfer._blacklist.insert(event_path)
             log.info(f"【Sync】{event_path} 同步完成")
         except Exception as e:
             log.error(f"【Sync】{event_path} 同步失败：{e}")
@@ -196,13 +208,21 @@ class SyncEngine:
             ext = os.path.splitext(name)[-1].lower()
             if ext not in RMT_MEDIAEXT:
                 return
-        dst_backend = self._resolve_backend(cfg.dst_backend_id)
-        self._transfer.transfer(
-            src=event_path,
-            dst=os.path.join(cfg.dest, name),
+        task = TransferTask(
+            source_type=SourceType.DIRECTORY,
+            source_id=cfg.id,
+            file_paths=[event_path],
             operation=cfg.operation,
-            dst_backend=dst_backend if cfg.dst_backend_id != "local" else None,
+            target_dir=cfg.dest,
+            unknown_dir=cfg.unknown,
+            dst_backend_id=cfg.dst_backend_id,
         )
+        try:
+            ret, msg = self._pipeline.process(task)
+            if not ret:
+                log.error(f"【Sync】{event_path} 转移失败：{msg}")
+        except Exception as e:
+            log.error(f"【Sync】{event_path} 转移异常：{e}")
 
     def transfer_sync(self, sid: str | None = None) -> None:
         try:
@@ -241,10 +261,12 @@ class SyncEngine:
         self.init()
         return ret
 
-    def check_source(self, source: str | None = None, sid: str | None = None) -> None:
+    def check_source(self, source: str | None = None, sid: str | None = None, dest: str | None = None) -> None:
         for cfg_id, cfg in self._configs.items():
             if sid and cfg_id != str(sid):
                 continue
             if source and cfg.source == source:
+                if dest and cfg.dest != dest:
+                    continue
                 self._sync_repo.check_config_sync_paths(sid=cfg_id, enabled=False)
                 log.info(f"【Sync】关闭重复源目录：{cfg.source}")

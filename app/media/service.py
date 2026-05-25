@@ -4,6 +4,7 @@ import re
 
 import log
 from app.helper.image_proxy_helper import ImageProxyHelper
+from app.storage.backends.base import StorageBackend
 from app.infrastructure.cache_system import cacheman
 from app.media.lookup.tmdb_lookup import TmdbLookup
 from app.media.models import MediaInfo
@@ -388,19 +389,29 @@ class MediaService:
         language=None,
         chinese=True,
         append_to_response=None,
+        backend: StorageBackend | None = None,
     ):
         if not isinstance(file_list, list):
             file_list = [file_list]
         return_media_infos = {}
 
+        def _path_exists(p: str) -> bool:
+            return backend.exists(p) if backend else os.path.exists(p)
+
+        def _path_isdir(p: str) -> bool:
+            if backend:
+                info = backend.stat(p)
+                return info is not None and info.is_dir
+            return os.path.isdir(p)
+
         # 1. 有过 tmdb_info 时：本地计算，逐个处理（无需网络）
         if tmdb_info:
             for file_path in file_list:
                 try:
-                    if not os.path.exists(file_path):
+                    if not _path_exists(file_path):
                         continue
                     file_name = os.path.basename(file_path)
-                    if not os.path.isdir(file_path) and PathUtils.get_bluray_dir(file_path):
+                    if not _path_isdir(file_path) and PathUtils.get_bluray_dir(file_path):
                         continue
                     parsed = self._parser.parse(file_name)
                     info = MediaInfo.from_parser(parsed) if parsed else MediaInfo()
@@ -452,10 +463,10 @@ class MediaService:
         path_map = {}
         for file_path in file_list:
             try:
-                if not os.path.exists(file_path):
+                if not _path_exists(file_path):
                     continue
                 file_name = os.path.basename(file_path)
-                if not os.path.isdir(file_path) and PathUtils.get_bluray_dir(file_path):
+                if not _path_isdir(file_path) and PathUtils.get_bluray_dir(file_path):
                     continue
                 parent_name = os.path.basename(os.path.dirname(file_path))
                 parent_parent_name = os.path.basename(PathUtils.get_parent_paths(file_path, 2))
@@ -583,9 +594,10 @@ class MediaService:
         language=None,
         chinese=True,
         append_to_response=None,
+        backend: StorageBackend | None = None,
     ):
         return self.identify_files(
-            file_list, tmdb_info, media_type, season, episode_format, language, chinese, append_to_response
+            file_list, tmdb_info, media_type, season, episode_format, language, chinese, append_to_response, backend
         )
 
     # ---------- AI Fallback ----------
@@ -612,7 +624,11 @@ class MediaService:
                     if not result:
                         continue
                     _rt = StringUtils.handler_special_chars(str(result.get("title") or result.get("name", "")))
-                    result_title = _rt.upper() if isinstance(_rt, str) else str(result.get("title") or result.get("name", "")).upper()
+                    result_title = (
+                        _rt.upper()
+                        if isinstance(_rt, str)
+                        else str(result.get("title") or result.get("name", "")).upper()
+                    )
                     if not result_title:
                         continue
                     ratio = difflib.SequenceMatcher(None, match_title, result_title).ratio()

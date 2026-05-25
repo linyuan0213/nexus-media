@@ -129,7 +129,7 @@ class FilterGroupEntity:
         return cls(
             id=orm_model.ID,
             name=orm_model.GROUP_NAME or "",
-            default=bool(orm_model.IS_DEFAULT),
+            default=str(orm_model.IS_DEFAULT).upper() == "Y",
             create_time=None,
             update_time=None,
         )

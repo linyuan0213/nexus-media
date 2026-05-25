@@ -12,6 +12,7 @@ from app.domain.entities.transfer import (
     TransferHistoryEntity,
     TransferUnknownEntity,
 )
+
 if TYPE_CHECKING:
     from app.media.models import MediaInfo
 
@@ -123,9 +124,16 @@ class TransferHistoryRepositoryAdapter:
         self._repo.insert_transfer_unknown(path, dest, rmt_mode)
 
     def insert_transfer_history(
-        self, in_from: Enum, rmt_mode: str, in_path: str, out_path: str, dest: str, media_info: "MediaInfo"
+        self,
+        in_from: Enum,
+        rmt_mode: str,
+        in_path: str,
+        out_path: str,
+        dest: str,
+        media_info: "MediaInfo",
+        dst_backend: str | None = None,
     ) -> None:
-        self._repo.insert_transfer_history(in_from, rmt_mode, in_path, out_path, dest, media_info)
+        self._repo.insert_transfer_history(in_from, rmt_mode, in_path, out_path, dest, media_info, dst_backend)
 
 
 class TransferUnknownRepositoryAdapter:

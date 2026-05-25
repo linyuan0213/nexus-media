@@ -15,6 +15,17 @@ from app.utils.types import MediaType
 class MediaSyncDelPlugin:
     """Emby同步删除插件"""
 
+    # 熔断器状态（类级变量，跨实例共享）
+    _delete_events: list[tuple[float, str]] = []
+    _circuit_breaker_tripped = False
+    _circuit_breaker_reset_time = 0.0
+
+    # 默认熔断参数
+    DEFAULT_WINDOW = 300
+    DEFAULT_TOTAL_THRESHOLD = 5
+    DEFAULT_SAME_MEDIA_THRESHOLD = 3
+    DEFAULT_COOLDOWN = 1800
+
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
         self._filetransfer = FileTransfer()
@@ -31,6 +42,71 @@ class MediaSyncDelPlugin:
     def on_hook(self, event, data):
         if event == "webhook.emby":
             self._sync_del(data or {})
+
+    def _check_circuit_breaker(self, tmdb_id: str, config: dict) -> bool:
+        """检查是否触发批量删除熔断，防止挂载丢失等异常导致误删"""
+        now = time.time()
+        window = config.get("cb_window", self.DEFAULT_WINDOW)
+        total_threshold = config.get("cb_total_threshold", self.DEFAULT_TOTAL_THRESHOLD)
+        same_threshold = config.get("cb_same_threshold", self.DEFAULT_SAME_MEDIA_THRESHOLD)
+        cooldown = config.get("cb_cooldown", self.DEFAULT_COOLDOWN)
+
+        # 清理过期事件
+        self._delete_events = [(ts, tid) for ts, tid in self._delete_events if now - ts < window]
+
+        # 检查是否处于熔断冷却期
+        if self._circuit_breaker_tripped:
+            if now < self._circuit_breaker_reset_time:
+                self.ctx.warn(
+                    f"【熔断保护】批量删除熔断中，跳过 {tmdb_id} 的删除事件，"
+                    f"将在 {int(self._circuit_breaker_reset_time - now)} 秒后自动恢复"
+                )
+                return True
+            self._circuit_breaker_tripped = False
+            self.ctx.info("【熔断保护】批量删除熔断已自动恢复")
+
+        # 记录当前事件
+        self._delete_events.append((now, str(tmdb_id)))
+
+        # 检查总事件数
+        total_count = len(self._delete_events)
+        if total_count >= total_threshold:
+            self._circuit_breaker_tripped = True
+            self._circuit_breaker_reset_time = now + cooldown
+            self.ctx.error(
+                f"【熔断保护】触发批量删除熔断！{window} 秒内收到 {total_count} 个删除事件，"
+                f"远超阈值 {total_threshold}。可能是挂载丢失或Emby异常导致误报。"
+                f"暂停处理删除事件 {cooldown} 秒，请检查媒体库状态。"
+            )
+            if config.get("send_notify"):
+                self.ctx.notify(
+                    title="【Emby同步删除熔断告警】",
+                    text=f"{window} 秒内收到 {total_count} 个删除事件，已触发熔断保护。\n"
+                    f"可能是挂载丢失或Emby异常导致误报，请检查媒体库状态。\n"
+                    f"暂停处理 {cooldown} 秒后自动恢复。",
+                )
+            return True
+
+        # 检查同一媒体事件数
+        same_media_count = sum(1 for _, tid in self._delete_events if tid == str(tmdb_id))
+        if same_media_count >= same_threshold:
+            self._circuit_breaker_tripped = True
+            self._circuit_breaker_reset_time = now + cooldown
+            self.ctx.error(
+                f"【熔断保护】触发批量删除熔断！媒体 {tmdb_id} 在 {window} 秒内"
+                f"收到 {same_media_count} 个删除事件，远超阈值 {same_threshold}。"
+                f"暂停处理删除事件 {cooldown} 秒。"
+            )
+            if config.get("send_notify"):
+                self.ctx.notify(
+                    title="【Emby同步删除熔断告警】",
+                    text=f"媒体 {tmdb_id} 在 {window} 秒内收到 {same_media_count} 个删除事件，"
+                    f"已触发熔断保护。\n"
+                    f"暂停处理 {cooldown} 秒后自动恢复。",
+                )
+            return True
+
+        return False
 
     def _sync_del(self, event_data):
         config = self._get_config()
@@ -73,6 +149,10 @@ class MediaSyncDelPlugin:
             season_num = str(season_num).rjust(2, "0")
         if episode_num is not None and str(episode_num).isdigit():
             episode_num = str(episode_num).rjust(2, "0")
+
+        # 批量删除熔断检查
+        if self._check_circuit_breaker(str(tmdb_id), config):
+            return
 
         exclude_path = config.get("exclude_path")
         if (
@@ -123,6 +203,32 @@ class MediaSyncDelPlugin:
         if len(logids) == 0:
             self.ctx.warn(f"{media_type} {media_name} 未获取到可删除数据")
             return
+
+        # 删除前文件存在性校验：如果文件仍然实际存在，说明是Emby误报，跳过删除
+        if config.get("check_file_exists", True):
+            skip_logids = []
+            for history in transfer_history:
+                if history.ID not in logids:
+                    continue
+                dest_full = os.path.join(str(history.DEST or ""), str(history.DEST_FILENAME or ""))
+                if dest_full and os.path.exists(dest_full):
+                    self.ctx.warn(
+                        f"【存在性保护】文件仍存在，跳过删除：{dest_full}\n"
+                        f"可能是Emby误报删除事件（如挂载短暂失效后恢复），请检查媒体库状态。"
+                    )
+                    skip_logids.append(history.ID)
+            if skip_logids:
+                logids = [lid for lid in logids if lid not in skip_logids]
+                self.ctx.info(f"【存在性保护】因文件仍存在，跳过 {len(skip_logids)} 条记录的删除")
+            if not logids:
+                self.ctx.info("【存在性保护】所有文件仍存在，取消本次删除操作")
+                if config.get("send_notify"):
+                    self.ctx.notify(
+                        title="【Emby同步删除存在性保护】",
+                        text=f"{msg}\nEmby上报删除但文件实际仍存在，已跳过删除。\n"
+                        f"可能是挂载短暂失效导致Emby误报，请检查媒体库状态。",
+                    )
+                return
 
         self.ctx.info(f"获取到删除媒体数量 {len(logids)}")
         FileTransfer().delete_history(logids=logids, flag="del_source" if config.get("del_source") else "")

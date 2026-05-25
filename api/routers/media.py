@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from api.deps import (
-    get_config_service,
     get_downloader_service,
     get_media_config_service,
     get_media_file_service,
@@ -68,6 +67,7 @@ class MediaInfoRequest(BaseModel):
 
 class MediaPathScrapRequest(BaseModel):
     path: str
+    backend_id: str = "local"
 
 
 class MediaPersonRequest(BaseModel):
@@ -246,7 +246,7 @@ def media_path_scrap(
     current_user=Depends(require_permission("library:manage")),
     svc: MediaFileService = Depends(get_media_file_service),
 ):
-    msg = svc.scrap_media_path(path=req.path)
+    msg = svc.scrap_media_path(path=req.path, backend_id=req.backend_id)
     if msg.startswith("请"):
         return fail(code=-1, msg=msg)
     return success(msg=msg)
@@ -654,12 +654,12 @@ def dir_list(
 @router.post("/library/paths")
 def get_library_paths(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
-    svc=Depends(get_config_service),
+    media_svc=Depends(get_media_config_service),
     sync_svc=Depends(get_sync_service),
     media_file_svc: MediaFileService = Depends(get_media_file_service),
 ):
-    """获取媒体库目录 + 同步源目录"""
-    media = svc.get_media_config()
+    """获取媒体库目录 + 同步源目录（从数据库 CONFIG_MEDIA 读取）"""
+    media = media_svc.get_config()
     result = media_file_svc.get_library_paths(
         media=media,
         sync_svc=sync_svc,

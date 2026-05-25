@@ -5,12 +5,16 @@ on:
     branches:
       - dev
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   build:
     runs-on: ubuntu-latest
     name: Build Docker Image
+    needs: ci
     steps:
       - name: Checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@v4
 
       - name: Release version
         id: release_version

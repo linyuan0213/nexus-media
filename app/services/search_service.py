@@ -27,7 +27,7 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
 from app.utils.commons import SingletonMeta
 from app.utils.string_utils import StringUtils
-from app.utils.types import EventType, ProgressKey, SearchType
+from app.utils.types import EventType, MediaType, ProgressKey, SearchType
 from config import Config
 
 
@@ -176,17 +176,31 @@ class SearchResultProcessor:
 
     @staticmethod
     def sort_results(media_list: list) -> list:
-        """按标题、资源顺序、站点顺序、做种数排序"""
-        return sorted(
-            media_list,
-            key=lambda x: "{}{}{}{}".format(
+        """按合集优先、标题、资源顺序、站点顺序、做种数排序"""
+
+        def _sort_key(x):
+            episode_list = x.get_episode_list() if hasattr(x, "get_episode_list") else []
+            episode_count = max(len(episode_list), getattr(x, "total_episodes", 0))
+            if episode_count > 1:
+                collection_priority = 2
+            elif (
+                getattr(x, "type", None) in (MediaType.TV, MediaType.ANIME)
+                and getattr(x, "begin_season", None) is not None
+                and getattr(x, "begin_episode", None) is None
+            ):
+                collection_priority = 1
+            else:
+                collection_priority = 0
+            return "{}{}{}{}{}{}".format(
                 str(x.title).ljust(100, " "),
+                str(collection_priority).rjust(1, "0"),
+                str(episode_count).rjust(3, "0"),
                 str(x.res_order).rjust(3, "0"),
                 str(x.site_order).rjust(3, "0"),
                 str(x.seeders).rjust(10, "0"),
-            ),
-            reverse=True,
-        )
+            )
+
+        return sorted(media_list, key=_sort_key, reverse=True)
 
     def filter_downloaded(self, media_list: list) -> list:
         """过滤掉已在下载历史中存在的资源"""

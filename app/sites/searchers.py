@@ -76,8 +76,8 @@ def _css_to_xpath(css: str) -> str:
         return f"[.//{inner}]"
 
     def _convert_has_inner(s):
-        s = re.sub(r"\.([\w-]+)", r'[contains(@class,"\1")]', s)
-        s = re.sub(r"#([\w-]+)", r'[@id="\1"]', s)
+        s = re.sub(r"\.([a-zA-Z0-9_-]+)", r'[contains(@class,"\1")]', s)
+        s = re.sub(r"#([a-zA-Z0-9_-]+)", r'[@id="\1"]', s)
         s = re.sub(r'\[(\w+)\*=["\']?(.+?)["\']?\]', r'[contains(@\1,"\2")]', s)
         if not re.match(r"[a-zA-Z\*]", s):
             s = "*" + s
@@ -98,8 +98,8 @@ def _css_to_xpath(css: str) -> str:
             if not sp:
                 continue
             converted = sp
-            converted = re.sub(r"\.([\w-]+)", r'[contains(@class,"\1")]', converted)
-            converted = re.sub(r"#([\w-]+)", r'[@id="\1"]', converted)
+            converted = re.sub(r"\.([a-zA-Z0-9_-]+)", r'[contains(@class,"\1")]', converted)
+            converted = re.sub(r"#([a-zA-Z0-9_-]+)", r'[@id="\1"]', converted)
             converted = re.sub(r"\[([a-zA-Z\-_]+)\]", r"[@\1]", converted)
             converted = re.sub(r'\[([a-zA-Z\-_]+)="([^"]*)"\]', r'[@\1="\2"]', converted)
             if pi == 0 and i == 0:

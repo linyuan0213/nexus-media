@@ -14,6 +14,7 @@ class ParserResult(BaseModel):
     episode: int | None = None
     end_episode: int | None = None
     resource_pix: str | None = None
+    resource_type: str | None = None
     video_encode: str | None = None
     audio_encode: str | None = None
     resource_team: str | None = None

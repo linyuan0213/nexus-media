@@ -121,6 +121,10 @@
         },
         "downloadvolumefactor": {
           "case": {
+            "span[alt='Free']": 0,
+            "span[alt='2X']": 0,
+            "span[alt='50%']": 0.5,
+            "span[alt='30%']": 0.3,
             "img.pro_free": 0,
             "img.pro_free2up": 0,
             "img.pro_50pctdown": 0.5,
@@ -131,6 +135,7 @@
         },
         "uploadvolumefactor": {
           "case": {
+            "span[alt='2X']": 2,
             "img.pro_50pctdown2up": 2,
             "img.pro_free2up": 2,
             "img.pro_2up": 2,

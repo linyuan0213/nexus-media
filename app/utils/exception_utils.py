@@ -1,7 +1,10 @@
 import traceback
 
+import log
+
 
 class ExceptionUtils:
     @classmethod
     def exception_traceback(cls, e):
-        print(f"\nException: {str(e)}\nCallstack:\n{traceback.format_exc()}\n")
+        msg = f"Exception: {str(e)}\nCallstack:\n{traceback.format_exc()}"
+        log.error(msg)

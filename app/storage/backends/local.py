@@ -65,6 +65,8 @@ class LocalStorageBackend(StorageBackend):
 
     def remove(self, path: str, recursive: bool = False) -> None:
         rp = self._resolve(path)
+        if not rp or rp == "/":
+            raise ValueError("不能删除根目录")
         if os.path.isdir(rp):
             if recursive:
                 shutil.rmtree(rp)

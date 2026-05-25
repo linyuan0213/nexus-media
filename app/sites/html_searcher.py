@@ -366,6 +366,7 @@ class HtmlSiteSearcher:
                 except Exception:
                     els = []
 
+            log.debug(f"【HtmlSearcher】selector={selector} xpath={xpath} els_count={len(els)}")
             if els:
                 attr = fcfg.get("attribute", "")
                 contents = fcfg.get("contents", 0)
@@ -374,21 +375,31 @@ class HtmlSiteSearcher:
                 if attr and hasattr(els[0], "attrib") and attr in els[0].attrib:
                     val = els[0].attrib[attr]
                 elif hasattr(els[0], "text"):
-                    if remove_sel:
-                        try:
-                            for rm_el in els[0].xpath(remove_sel):
-                                if rm_el.text:
-                                    els[0].text = (els[0].text or "").replace(rm_el.text, "")
-                        except Exception:
-                            pass
-                    val = "".join(e for e in els[0].xpath(".//text()") if e).strip()
-                    if not val:
-                        val = (els[0].text or "").strip()
-                    if not val:
-                        val = (els[0].text_content() or "").strip() if hasattr(els[0], "text_content") else ""
-                    if contents and isinstance(contents, int):
-                        lines = val.split("\n")
-                        val = lines[contents] if contents < len(lines) else val
+                    if len(els) > 1 and not attr:
+                        # 多元素且无 attribute：提取所有元素文本并拼接
+                        parts = []
+                        for el in els:
+                            txt = "".join(e for e in el.xpath(".//text()") if e).strip()
+                            if txt:
+                                parts.append(txt)
+                        join_delim = fcfg.get("join", "|")
+                        val = join_delim.join(parts)
+                    else:
+                        if remove_sel:
+                            try:
+                                for rm_el in els[0].xpath(remove_sel):
+                                    if rm_el.text:
+                                        els[0].text = (els[0].text or "").replace(rm_el.text, "")
+                            except Exception:
+                                pass
+                        val = "".join(e for e in els[0].xpath(".//text()") if e).strip()
+                        if not val:
+                            val = (els[0].text or "").strip()
+                        if not val:
+                            val = (els[0].text_content() or "").strip() if hasattr(els[0], "text_content") else ""
+                        if contents and isinstance(contents, int):
+                            lines = val.split("\n")
+                            val = lines[contents] if contents < len(lines) else val
                 elif isinstance(els, list) and els and isinstance(els[0], str):
                     val = els[0]
                 else:
@@ -401,6 +412,29 @@ class HtmlSiteSearcher:
                     val = mapped_val
                     break
                 try:
+                    # 支持属性选择器，如 span[alt='Free']
+                    attr_m = re.match(r"(\w+)\[(\w+)=['\"](.+?)['\"]\]", css_class)
+                    if attr_m:
+                        tag, attr, value = attr_m.groups()
+                        found = element.xpath(f".//{tag}[@{attr}='{value}']")
+                        if found:
+                            val = mapped_val
+                            break
+                        continue
+
+                    # 支持文本包含选择器，如 span:contains('Free')
+                    contains_m = re.match(r"(\w*):contains\(['\"](.+?)['\"]\)", css_class)
+                    if contains_m:
+                        tag, text = contains_m.groups()
+                        xpath_expr = (
+                            f".//{tag}[contains(text(), '{text}')]" if tag else f".//*[contains(text(), '{text}')]"
+                        )
+                        found = element.xpath(xpath_expr)
+                        if found:
+                            val = mapped_val
+                            break
+                        continue
+
                     cls_xpath = f".//{css_class.replace('.', '[@class]')}"
                     if element.xpath(cls_xpath):
                         val = mapped_val

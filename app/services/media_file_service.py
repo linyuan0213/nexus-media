@@ -96,20 +96,29 @@ class MediaFileService:
         return True, result, ""
 
     def get_library_paths(self, media: dict, sync_svc, downloader_svc=None) -> dict:
-        """获取媒体库目录 + 同步源目录"""
-        seen = set()
+        """获取媒体库目录 + 同步源目录 + 同步目标目录"""
 
-        def add_path(path: str, label: str, ptype: str):
+        def _make_path(path: str, label: str, ptype: str, backend_id: str = "local"):
             if not path:
                 return None
             norm = path.replace("\\", "/").rstrip("/")
-            if norm in seen:
-                return None
-            seen.add(norm)
             name = os.path.basename(norm) or label
-            return {"name": name, "path": norm, "type": ptype}
+            return {"name": name, "path": norm, "type": ptype, "backend_id": backend_id or "local"}
+
+        def _dedupe(paths: list, seen: set) -> list:
+            result = []
+            for item in paths:
+                if not item:
+                    continue
+                norm = item["path"]
+                if norm in seen:
+                    continue
+                seen.add(norm)
+                result.append(item)
+            return result
 
         library_paths = []
+        seen_lib = set()
         movie_paths = media.get("movie_path") or []
         if not isinstance(movie_paths, list):
             movie_paths = [movie_paths] if movie_paths else []
@@ -120,40 +129,65 @@ class MediaFileService:
         if not isinstance(anime_paths, list):
             anime_paths = [anime_paths] if anime_paths else []
 
-        for p in movie_paths:
-            item = add_path(p, "电影", "movie")
+        movie_backend = media.get("movie_backend") or []
+        tv_backend = media.get("tv_backend") or []
+        anime_backend = media.get("anime_backend") or []
+
+        for i, p in enumerate(movie_paths):
+            item = _make_path(p, "电影", "movie", movie_backend[i] if i < len(movie_backend) else "local")
             if item:
                 library_paths.append(item)
-        for p in tv_paths:
-            item = add_path(p, "电视剧", "tv")
+        for i, p in enumerate(tv_paths):
+            item = _make_path(p, "电视剧", "tv", tv_backend[i] if i < len(tv_backend) else "local")
             if item:
                 library_paths.append(item)
-        for p in anime_paths:
-            item = add_path(p, "动漫", "anime")
+        for i, p in enumerate(anime_paths):
+            item = _make_path(p, "动漫", "anime", anime_backend[i] if i < len(anime_backend) else "local")
             if item:
                 library_paths.append(item)
+        library_paths = _dedupe(library_paths, seen_lib)
 
         sync_source_paths = []
+        sync_dest_paths = []
+        seen_src = set()
+        seen_dst = set()
         try:
             sync_confs = sync_svc.get_sync_paths()
             if isinstance(sync_confs, dict):
                 for sp in sync_confs.values():
                     if hasattr(sp, "source"):
                         src = sp.source
+                        dest = getattr(sp, "dest", "")
+                        src_backend = getattr(sp, "src_backend_id", "local")
+                        dst_backend = getattr(sp, "dst_backend_id", "local")
                     elif isinstance(sp, dict):
                         src = sp.get("from") or sp.get("source")
+                        dest = sp.get("dest") or sp.get("target") or ""
+                        src_backend = sp.get("src_backend_id", "local")
+                        dst_backend = sp.get("dst_backend_id", "local")
                     else:
                         src = None
-                    item = add_path(src or "", "同步源目录", "sync")
-                    if item:
-                        sync_source_paths.append(item)
+                        dest = ""
+                        src_backend = "local"
+                        dst_backend = "local"
+                    src_item = _make_path(src or "", "同步源目录", "sync", src_backend)
+                    if src_item:
+                        sync_source_paths.append(src_item)
+                    if dest and dest != src:
+                        dst_item = _make_path(dest, "同步目标目录", "sync_dest", dst_backend)
+                        if dst_item:
+                            sync_dest_paths.append(dst_item)
         except Exception:
             pass
+        sync_source_paths = _dedupe(sync_source_paths, seen_src)
+        sync_dest_paths = _dedupe(sync_dest_paths, seen_dst)
 
         default_path = media.get("media_default_path")
         if not default_path:
             if library_paths:
                 default_path = library_paths[0]["path"]
+            elif sync_dest_paths:
+                default_path = sync_dest_paths[0]["path"]
             elif sync_source_paths:
                 default_path = sync_source_paths[0]["path"]
             else:
@@ -162,6 +196,7 @@ class MediaFileService:
         return {
             "library_paths": library_paths,
             "sync_source_paths": sync_source_paths,
+            "sync_dest_paths": sync_dest_paths,
             "default_path": default_path,
         }
 
@@ -183,11 +218,26 @@ class MediaFileService:
         )
         return True, "字幕下载任务已提交，正在后台运行。"
 
-    def scrap_media_path(self, path: str) -> str:
-        """刮削媒体路径"""
+    def scrap_media_path(self, path: str, backend_id: str = "local") -> str:
+        """刮削媒体路径，支持本地和远程后端"""
         if not path:
             return "请指定刮削路径"
-        ThreadHelper().start_thread(Scraper().folder_scraper, (path, None, "force_all"))
+        dst_backend = None
+        if backend_id and backend_id != "local":
+            repo = StorageBackendRepositoryAdapter()
+            entity = repo.get_by_id(int(backend_id))
+            if entity:
+                info = StorageBackendFactory.get_config_info(entity.type)
+                if info:
+                    stype, cls = info
+                else:
+                    stype, cls = StorageType.LOCAL, LocalStorageConfig
+                config = cls(id=str(entity.id), name=entity.name, type=stype, enabled=entity.enabled)
+                for k, v in entity.config.items():
+                    if hasattr(config, k):
+                        setattr(config, k, v)
+                dst_backend = StorageBackendFactory.create(config)
+        ThreadHelper().start_thread(Scraper().folder_scraper, (path, None, "force_all", dst_backend))
         return "刮削任务已提交，正在后台运行。"
 
     def get_category_config(self, category_name: str) -> tuple[bool, str]:
