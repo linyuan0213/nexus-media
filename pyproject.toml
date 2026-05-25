@@ -80,9 +80,11 @@ dependencies = [
 [dependency-groups]
 dev = [
     "lxml-stubs>=0.5.1",
+    "pre-commit>=4.6.0",
     "pyright>=1.1.409",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.1.0",
     "ruff>=0.15.0",
 ]
 
@@ -98,6 +100,13 @@ exclude = [
     "*.egg-info",
     "build",
     "dist",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
 ]
 
 [tool.uv.sources]

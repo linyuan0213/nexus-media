@@ -8,6 +8,11 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
+# Coverage
+.coverage
+htmlcov/
+*.cover
+
 # Build artifacts
 /build/**
 /dist/
@@ -23,6 +28,8 @@ __pycache__/
 # Runtime generated files
 /config/site_manage/*.json
 /config/site_manage/*.dat
+/config/*.db
+/config/*.db-journal
 
 # Runtime cache
 web/static/img_cache/*
