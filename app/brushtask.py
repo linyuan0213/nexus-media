@@ -469,9 +469,20 @@ class BrushTask(metaclass=SingletonMeta):
 
             # 删除下载器中已不存在的种子
             if remove_torrent_ids:
-                log.info(f"【Brush】任务 {task_name} 删除不存在的下载任务：{remove_torrent_ids}")
-                for remove_torrent_id in remove_torrent_ids:
-                    self.dbhelper.delete_brushtask_torrent(taskid, remove_torrent_id)
+                # 仅凭 completed/downloading 过滤会误判“已删除”：种子处于
+                # checkingResumeData/checking/moving/error/missingFiles 等边缘状态时不在任一过滤中，
+                # 直接删除记录会留下再也无人管理的孤儿种子。先按 hash 查询下载器确认确实不存在再删除，
+                # 查询失败则本轮跳过。
+                existing_torrents = self.downloader.get_torrents(downloader_id, list(remove_torrent_ids))
+                if existing_torrents is None:
+                    log.warn(f"【Brush】任务 {task_name} 无法确认待清理种子是否仍在下载器，跳过本轮记录清理")
+                    remove_torrent_ids = set()
+                else:
+                    remove_torrent_ids = set(remove_torrent_ids) - {t.id for t in existing_torrents}
+                if remove_torrent_ids:
+                    log.info(f"【Brush】任务 {task_name} 删除不存在的下载任务：{remove_torrent_ids}")
+                    for remove_torrent_id in remove_torrent_ids:
+                        self.dbhelper.delete_brushtask_torrent(taskid, remove_torrent_id)
 
             # 删除符合条件的种子
             if delete_ids:
