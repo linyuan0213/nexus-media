@@ -47,7 +47,22 @@ uv run pyright <文件>
 ### 5. 运行测试
 
 ```bash
+# 运行全部测试
 uv run pytest tests/ -v
+
+# 运行测试并生成覆盖率报告
+uv run pytest tests/ -v --cov=app --cov-report=term-missing
+```
+
+测试使用内存 SQLite 数据库，无需额外配置。测试配置位于 `tests/config_test.yaml`。
+
+### 6. 本地提交前检查
+
+安装 pre-commit 钩子后，每次提交前会自动运行 ruff 和 pyright：
+
+```bash
+uv run pre-commit install
+uv run pre-commit run --all-files
 ```
 
 ## 前端开发
