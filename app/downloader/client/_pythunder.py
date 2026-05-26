@@ -8,6 +8,7 @@ import bencodepy
 import requests
 
 import log
+from app.core.exceptions import InfrastructureError, NetworkError
 
 
 class PyThunder:
@@ -211,7 +212,7 @@ class PyThunder:
             "raw_response": result if len(file_list) == 0 else None,  # 如果没有文件，保留原始响应
         }
 
-    def get_folders(self, folder_id: str|None = None):
+    def get_folders(self, folder_id: str | None = None):
         """
         获取迅雷文件夹列表
 
@@ -319,6 +320,8 @@ class PyThunder:
         """
         try:
             device_id = self.get_device_id()
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as e:
             log.warn(f"获取 device_id 失败，使用默认值: {e}")
             device_id = "7abd3182d399f7bdda199550d8babede"
@@ -364,8 +367,8 @@ class PyThunder:
         download_urls: str,
         destination_path: str = "/downloads/xunlei/",
         parent_folder_id: str = "",
-        file_indices: str|None = None,
-        file_names: list|None = None,
+        file_indices: str | None = None,
+        file_names: list | None = None,
     ):
         """
         开始下载任务（使用真正的下载API）
@@ -483,6 +486,8 @@ class PyThunder:
         # 获取 device_id
         try:
             device_id = self.get_device_id()
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as e:
             log.warn(f"获取 device_id 失败，使用默认值: {e}")
             # 使用示例中的 device_id 作为后备
@@ -566,6 +571,8 @@ class PyThunder:
         # 获取 device_id
         try:
             device_id = self.get_device_id()
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as e:
             log.warn(f"获取 device_id 失败，使用默认值: {e}")
             device_id = "7abd3182d399f7bdda199550d8babede"
@@ -654,6 +661,8 @@ class PyThunder:
         # 获取 device_id
         try:
             device_id = self.get_device_id()
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as e:
             log.warn(f"获取 device_id 失败，使用默认值: {e}")
             device_id = "7abd3182d399f7bdda199550d8babede"
@@ -742,6 +751,8 @@ class PyThunder:
             # 获取 device_id
             try:
                 device_id = self.get_device_id()
+            except (InfrastructureError, NetworkError):
+                raise
             except Exception as e:
                 log.warn(f"获取 device_id 失败，使用默认值: {e}")
                 device_id = "7abd3182d399f7bdda199550d8babede"
@@ -820,6 +831,8 @@ class PyThunder:
             log.debug(f"种子文件 {torrent_file_path} 转换为磁力链接: {magnet_link[:80]}...")
             return magnet_link
 
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as e:
             log.error(f"种子文件转换失败: {e}")
             return None

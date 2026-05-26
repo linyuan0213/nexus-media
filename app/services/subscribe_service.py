@@ -162,9 +162,7 @@ class SubscribeService:
                     title = "%s %s 第%s季".strip() % (name, year, season)
                 else:
                     title = "%s %s".strip() % (name, year)
-                media_info = self._media.get_media_info(
-                    title=title, mtype=mtype, strict=bool(year), cache=False
-                )
+                media_info = self._media.get_media_info(title=title, mtype=mtype, strict=bool(year), cache=False)
             if not media_info or not media_info.tmdb_info:
                 return 1, "TMDB无法查询到媒体信息", None
             if media_info.type != MediaType.MOVIE:
@@ -322,10 +320,9 @@ class SubscribeService:
                     "keyword": keyword,
                 },
             )
-            if in_from:
-                if media_info:
-                    media_info.user_name = user_name
-                    self._message.send_rss_success_message(in_from=cast(RssType, in_from), media_info=media_info)
+            if in_from and media_info:
+                media_info.user_name = user_name
+                self._message.send_rss_success_message(in_from=cast(RssType, in_from), media_info=media_info)
             return code, "更新订阅成功", media_info
         else:
             return code, "更新订阅失败", media_info
@@ -458,9 +455,7 @@ class SubscribeService:
                     title = "%s %s 第%s季".strip() % (name, year, season)
                 else:
                     title = "%s %s".strip() % (name, year)
-                media_info = self._media.get_media_info(
-                    title=title, mtype=mtype, strict=bool(year), cache=False
-                )
+                media_info = self._media.get_media_info(title=title, mtype=mtype, strict=bool(year), cache=False)
             # 检查TMDB信息
             if not media_info or not media_info.tmdb_info:
                 return 1, "TMDB无法查询到媒体信息", None
@@ -1039,9 +1034,13 @@ class SubscribeService:
             if str(info.get("season")) == media_info.get_season_seq():
                 if info.get("episodes"):
                     log.info(
-                        "【Subscribe】更新电视剧 {} {} 缺失集数为 {}".format(media_info.get_title_string(), media_info.get_season_string(), len(info.get("episodes")))
+                        "【Subscribe】更新电视剧 {} {} 缺失集数为 {}".format(
+                            media_info.get_title_string(), media_info.get_season_string(), len(info.get("episodes"))
+                        )
                     )
-                    self._tv_repo.update_lack(title=None, year=None, season=None, rssid=rssid, lack_episodes=info.get("episodes"))
+                    self._tv_repo.update_lack(
+                        title=None, year=None, season=None, rssid=rssid, lack_episodes=info.get("episodes")
+                    )
                 break
 
     def get_subscribe_tv_episodes(self, rssid: int | None) -> Any:
@@ -1057,7 +1056,13 @@ class SubscribeService:
         return self._history_repo.check_exists(type_str=type_str, name=name, year=year or "", season=season or "")
 
     def delete_subscribe(
-        self, mtype: MediaType, title: str | None = None, year: str | None = None, season: str | None = None, rssid: int | None = None, tmdbid: str | None = None
+        self,
+        mtype: MediaType,
+        title: str | None = None,
+        year: str | None = None,
+        season: str | None = None,
+        rssid: int | None = None,
+        tmdbid: str | None = None,
     ) -> Any:
         """
         删除电影订阅
@@ -1068,7 +1073,12 @@ class SubscribeService:
             return self._tv_repo.delete(title=title, season=season, rssid=rssid, tmdbid=tmdbid)
 
     def get_subscribe_id(
-        self, mtype: MediaType, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None
+        self,
+        mtype: MediaType,
+        title: str,
+        year: str | None = None,
+        season: str | None = None,
+        tmdbid: str | None = None,
     ) -> Any:
         """
         获取订阅ID

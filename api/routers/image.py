@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Request
 from starlette.responses import FileResponse, RedirectResponse, Response
 
 import log
+from app.core.exceptions import DomainError, ServiceError
 from app.core.constants import TMDB_IMAGE_DOMAIN
 from app.helper.image_proxy_core import (
     MAX_CACHE_DAYS,
@@ -36,6 +37,8 @@ def _serve_image(cache_path: str, image_url: str, size: str | None = None, refer
                 return FileResponse(cache_path, media_type="image/jpeg")
             else:
                 os.remove(cache_path)
+        except (ServiceError, DomainError) as e:
+            log.error(f"【ImageProxy】读取缓存失败: {e.message}")
         except Exception as e:
             log.error(f"【ImageProxy】读取缓存失败: {str(e)}")
 
@@ -54,6 +57,8 @@ def _serve_image(cache_path: str, image_url: str, size: str | None = None, refer
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)
         with open(cache_path, "wb") as f:
             f.write(image_data)
+    except (ServiceError, DomainError) as e:
+        log.error(f"【ImageProxy】保存缓存失败: {e.message}")
     except Exception as e:
         log.error(f"【ImageProxy】保存缓存失败: {str(e)}")
 
@@ -124,6 +129,8 @@ def proxy_image_redirect(request: Request, url: str | None = None):
     # 外部图片 URL：转换为代理路径后重定向
     try:
         proxy_url = ImageProxyHelper.get_proxy_image_url(url, use_proxy=True)
+    except (ServiceError, DomainError):
+        proxy_url = None
     except Exception:
         proxy_url = None
 

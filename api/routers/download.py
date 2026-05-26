@@ -18,6 +18,7 @@ from api.deps import (
     require_any_permission,
     require_permission,
 )
+from app.core.exceptions import DomainError, ServiceError
 from app.downloader.registry import get_all_clients
 from app.helper.thread_helper import ThreadHelper
 from app.schemas.auth import UserContext
@@ -270,6 +271,8 @@ def download(
                 dl_setting=req.setting or "",
                 user_name=user.nickname or user.username,
             )
+        except (ServiceError, DomainError) as e:
+            ExceptionUtils.exception_traceback(e)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
 
@@ -299,6 +302,8 @@ def download_link(
                 dl_setting=req.dl_setting or "",
                 user_name=user.nickname or user.username,
             )
+        except (ServiceError, DomainError) as e:
+            ExceptionUtils.exception_traceback(e)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
 
@@ -345,6 +350,8 @@ def download_torrent(
                 site=req.site or "",
                 size=req.size,
             )
+        except (ServiceError, DomainError) as e:
+            ExceptionUtils.exception_traceback(e)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
 
@@ -372,6 +379,8 @@ def find_hardlinks(
         try:
             for file in files:
                 hardlinks[os.path.basename(file)] = SystemUtils().find_hardlinks(file=file, fdir=file_dir)
+        except (ServiceError, DomainError) as e:
+            return fail(msg=e.message)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             return fail()
@@ -544,8 +553,10 @@ def test_downloader(
         if res:
             return success(data={"success": True, "message": "连接成功"})
         return success(data={"success": False, "message": "连接失败，请检查地址、端口及认证信息"})
+    except (ServiceError, DomainError) as e:
+        return success(data={"success": False, "message": e.message})
     except Exception as e:
-        return success(data={"success": False, "message": f"连接异常：{str(e)}"})
+        return success(data={"success": False, "message": f"连接异常：{e!s}"})
 
 
 @router.post("/settings/update", response_model=CommonResponse, summary="更新下载设置")

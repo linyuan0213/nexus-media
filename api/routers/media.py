@@ -19,6 +19,8 @@ from api.deps import (
     require_any_permission,
     require_permission,
 )
+from app.core.exceptions import DomainError, ServiceError  # noqa: F401
+from app.schemas.common import CommonResponse
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.file_index_service import FileIndexService
 from app.services.media_config_service import MediaConfigService
@@ -31,7 +33,6 @@ from app.services.media_service import (
     TransferHistoryService,
 )
 from app.services.search_service import Searcher
-from app.schemas.common import CommonResponse
 from app.utils.response import fail, success
 
 router = APIRouter()

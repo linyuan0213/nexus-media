@@ -15,11 +15,11 @@ from pydantic import BaseModel
 import log
 from api.deps import get_plugin_framework_service, require_any_permission, require_permission
 from app.core.exceptions import DomainError, ServiceError
+from app.core.settings import settings
 from app.plugin_framework.hook_system import HookSystem
 from app.schemas.common import CommonResponse
 from app.services.plugin_framework_service import PluginFrameworkService
 from app.utils.response import fail, success
-from app.core.settings import settings
 
 router = APIRouter()
 
@@ -113,7 +113,7 @@ def install_plugin(
         return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 安装插件失败: {e}")
-        return fail(msg=f"安装失败: {str(e)}")
+        return fail(msg=f"安装失败: {e!s}")
 
 
 @router.delete("/plugins/{plugin_id}", response_model=CommonResponse, summary="卸载插件")
@@ -133,7 +133,7 @@ def uninstall_plugin(
         return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 卸载插件失败 {plugin_id}: {e}")
-        return fail(msg=f"卸载失败: {str(e)}")
+        return fail(msg=f"卸载失败: {e!s}")
 
 
 @router.post("/plugins/{plugin_id}/enable", response_model=CommonResponse, summary="启用插件")
@@ -155,7 +155,7 @@ def enable_plugin(
         return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 启用插件失败 {plugin_id}: {e}")
-        return fail(msg=f"启用失败: {str(e)}")
+        return fail(msg=f"启用失败: {e!s}")
 
 
 @router.post("/plugins/{plugin_id}/disable", response_model=CommonResponse, summary="禁用插件")
@@ -175,7 +175,7 @@ def disable_plugin(
         return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 禁用插件失败 {plugin_id}: {e}")
-        return fail(msg=f"禁用失败: {str(e)}")
+        return fail(msg=f"禁用失败: {e!s}")
 
 
 @router.post("/plugins/{plugin_id}/reload", response_model=CommonResponse, summary="重载插件")
@@ -195,7 +195,7 @@ def reload_plugin(
         return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 重载插件失败 {plugin_id}: {e}")
-        return fail(msg=f"重载失败: {str(e)}")
+        return fail(msg=f"重载失败: {e!s}")
 
 
 @router.post("/plugins/{plugin_id}/run", response_model=CommonResponse, summary="运行插件")
@@ -215,7 +215,7 @@ def run_plugin(
         return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 运行插件失败 {plugin_id}: {e}")
-        return fail(msg=f"运行失败: {str(e)}")
+        return fail(msg=f"运行失败: {e!s}")
 
 
 @router.get("/plugins/{plugin_id}/logs", response_model=CommonResponse, summary="获取插件日志")
@@ -287,7 +287,7 @@ def get_plugin_data(
         return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 获取插件数据失败: {e}")
-        return fail(msg=f"获取数据失败: {str(e)}")
+        return fail(msg=f"获取数据失败: {e!s}")
 
 
 @router.delete("/plugins/{plugin_id}/data/{filename}/{item_id}")
@@ -299,8 +299,6 @@ def delete_plugin_data(
 ):
     """删除插件数据文件中的某条记录"""
     try:
-        from app.core.settings import settings
-
         data_dir = os.path.join(settings.config_path, "plugins_data", plugin_id)
         target = os.path.join(data_dir, filename)
         real_dir = os.path.realpath(data_dir)
@@ -324,7 +322,7 @@ def delete_plugin_data(
         return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 删除插件数据失败: {e}")
-        return fail(msg=f"删除失败: {str(e)}")
+        return fail(msg=f"删除失败: {e!s}")
 
 
 @router.get("/plugins/{plugin_id}/assets/{file_path:path}")

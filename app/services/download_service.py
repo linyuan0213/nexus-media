@@ -6,6 +6,7 @@ DownloadService - 下载编排业务层
 import os
 
 import log
+from app.core.exceptions import DomainError, ServiceError
 from app.db.models import DOWNLOADHISTORY
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.media import MediaService
@@ -257,6 +258,8 @@ class DownloadService:
                     if os.path.exists(tmp_file):
                         os.remove(tmp_file)
                         log.debug(f"【Web】已删除上传的临时文件: {tmp_file}")
+                except (DomainError, ServiceError):
+                    raise
                 except Exception as e:
                     log.warn(f"【Web】删除上传的临时文件失败: {tmp_file}, {e!s}")
 
@@ -291,6 +294,8 @@ class DownloadService:
             try:
                 downloader_conf = self._downloader.get_downloader_conf(did)
                 downloader_name = downloader_conf.get("name") if downloader_conf else did
+            except (DomainError, ServiceError):
+                raise
             except Exception:
                 downloader_name = did
 
@@ -301,6 +306,8 @@ class DownloadService:
                 continue
             try:
                 progress_list = _client.get_downloading_progress(ids=ids) or []
+            except (DomainError, ServiceError):
+                raise
             except Exception:
                 progress_list = []
             progress_map = {p.get("id"): p for p in progress_list if p.get("id")}
@@ -326,19 +333,23 @@ class DownloadService:
                         active_ids.append((did, tid))
 
                     title, image = self._build_display_info(task)
-                    result.append({
-                        "id": tid,
-                        "name": progress.get("name") or task.TORRENT or "",
-                        "title": title,
-                        "image": image,
-                        "progress": prog_val,
-                        "state": progress.get("state", ""),
-                        "speed": progress.get("speed", ""),
-                        "downloader_id": did,
-                        "downloader_name": downloader_name,
-                        "client_id": downloader_conf.get("type") if downloader_conf else "",
-                        "save_path": task.SAVE_PATH,
-                    })
+                    result.append(
+                        {
+                            "id": tid,
+                            "name": progress.get("name") or task.TORRENT or "",
+                            "title": title,
+                            "image": image,
+                            "progress": prog_val,
+                            "state": progress.get("state", ""),
+                            "speed": progress.get("speed", ""),
+                            "downloader_id": did,
+                            "downloader_name": downloader_name,
+                            "client_id": downloader_conf.get("type") if downloader_conf else "",
+                            "save_path": task.SAVE_PATH,
+                        }
+                    )
+                except (DomainError, ServiceError):
+                    raise
                 except Exception as e:
                     log.error(f"【DownloadService】处理任务 {task.DOWNLOAD_ID} 失败：{e}")
 
@@ -347,6 +358,8 @@ class DownloadService:
             for did, tid in active_ids:
                 try:
                     repo.update_state(did, tid, "downloading")
+                except (DomainError, ServiceError):
+                    raise
                 except Exception as e:
                     log.debug(f"【DownloadService】更新任务状态失败：{e}")
 
@@ -355,6 +368,8 @@ class DownloadService:
             for did, tid in completed_ids:
                 try:
                     repo.update_state(did, tid, "completed")
+                except (DomainError, ServiceError):
+                    raise
                 except Exception as e:
                     log.debug(f"【DownloadService】标记任务完成失败：{e}")
 

@@ -1,10 +1,11 @@
 from functools import lru_cache
 
 import log
+from app.core.exceptions import InfrastructureError, MediaServerError, NetworkError
 from app.mediaserver.client._base import _IMediaClient
 from app.mediaserver.client.fnos_api import FnOSClient
-from app.utils import ExceptionUtils
 from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
+from app.utils import ExceptionUtils
 from app.utils.types import MediaType
 
 
@@ -116,14 +117,18 @@ class FnOS(_IMediaClient):
                                 self._fnos = None
                             else:
                                 log.info(f"【{self.client_name}】FnOS服务器登录成功")
-                        except Exception as e:
+                        except (InfrastructureError, NetworkError, MediaServerError):
+                            raise
+                        except Exception as e:  # type: ignore[unreachable]
                             ExceptionUtils.exception_traceback(e)
-                            log.error(f"【{self.client_name}】FnOS服务器登录失败：{str(e)}")
+                            log.error(f"【{self.client_name}】FnOS服务器登录失败：{e!s}")
                             self._fnos = None
+                except (InfrastructureError, MediaServerError):
+                    raise
                 except Exception as e:
                     ExceptionUtils.exception_traceback(e)
                     self._fnos = None
-                    log.error(f"【{self.client_name}】FnOS服务器连接失败：{str(e)}")
+                    log.error(f"【{self.client_name}】FnOS服务器连接失败：{e!s}")
 
     @classmethod
     def match(cls, ctype):
@@ -226,7 +231,10 @@ class FnOS(_IMediaClient):
             episodes = self._fnos.get_episode_list(season_id)
             for episode in episodes:
                 ret_tvs.append(
-                    {"season_num": episode.get("season_number"), "episode_num": episode.get("episode_number")}
+                    {
+                        "season_num": episode.get("season_number"),
+                        "episode_num": episode.get("episode_number"),
+                    }
                 )
         return ret_tvs
 
@@ -263,7 +271,9 @@ class FnOS(_IMediaClient):
             if episode:
                 return f"{self._host}v/api/v1/sys/img{episode.get('posters')}"
             return None
-        except Exception as e:
+        except (InfrastructureError, NetworkError, MediaServerError):
+            raise
+        except Exception as e:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】获取剧集封面出错：" + str(e))
             return None
@@ -283,7 +293,9 @@ class FnOS(_IMediaClient):
                 return f"{self._host}v/api/v1/sys/img{episode.get('posters')}"
             else:
                 return f"{self._host}v/api/v1/sys/img{episode.get('still_path')}"
-        except Exception as e:
+        except (InfrastructureError, NetworkError, MediaServerError):
+            raise
+        except Exception as e:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】获取封面出错：" + str(e))
         return None
@@ -294,7 +306,7 @@ class FnOS(_IMediaClient):
         :param item_id: 在FnOS中的ID
         :param remote: 是否远程使用
         """
-        return None
+        return
 
     def refresh_root_library(self):
         """
@@ -325,7 +337,9 @@ class FnOS(_IMediaClient):
             return []
         try:
             self._libraries = self._fnos.get_library_list()
-        except Exception as err:
+        except (InfrastructureError, NetworkError, MediaServerError):
+            raise
+        except Exception as err:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(err)
             return []
         libraries = []
@@ -380,7 +394,9 @@ class FnOS(_IMediaClient):
         try:
             item = self._fnos.get_episode_info(itemid)
             return {"ProviderIds": {"Tmdb": "", "Imdb": item["imdb_id"]}}
-        except Exception as err:
+        except (InfrastructureError, NetworkError, MediaServerError):
+            raise
+        except Exception as err:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(err)
             return {}
 
@@ -424,7 +440,9 @@ class FnOS(_IMediaClient):
                     "tvdbid": "",
                     "path": path,
                 }
-        except Exception as err:
+        except (InfrastructureError, NetworkError, MediaServerError):
+            raise
+        except Exception as err:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(err)
         yield {}
 

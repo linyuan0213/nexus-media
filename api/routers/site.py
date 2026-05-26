@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from api.deps import get_site_service, require_any_permission, require_permission
+from app.core.exceptions import DomainError, ServiceError  # noqa: F401
 from app.helper import ThreadHelper
 from app.schemas.common import CommonResponse
 from app.services.site_service import SiteService

@@ -2,6 +2,7 @@ import re
 from urllib.parse import quote
 
 import log
+from app.core.exceptions import InfrastructureError, MediaServerError
 from app.mediaserver.client._base import _IMediaClient
 from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
 from app.utils import ExceptionUtils, IpUtils, RequestUtils, SystemUtils
@@ -136,7 +137,9 @@ class Jellyfin(_IMediaClient):
             else:
                 log.error(f"【{self.client_name}】Users/Views 未获取到返回数据")
                 return []
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接Users/Views 出错：" + str(e))
             return []
@@ -155,7 +158,9 @@ class Jellyfin(_IMediaClient):
             else:
                 log.error(f"【{self.client_name}】Users 未获取到返回数据")
                 return 0
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接Users出错：" + str(e))
             return 0
@@ -182,7 +187,9 @@ class Jellyfin(_IMediaClient):
                         return user.get("Id")
             else:
                 log.error(f"【{self.client_name}】Users 未获取到返回数据")
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接Users出错：" + str(e))
         return None
@@ -200,7 +207,9 @@ class Jellyfin(_IMediaClient):
                 return res.json().get("Id")
             else:
                 log.error(f"【{self.client_name}】System/Info 未获取到返回数据")
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接System/Info出错：" + str(e))
         return None
@@ -241,7 +250,9 @@ class Jellyfin(_IMediaClient):
             else:
                 log.error(f"【{self.client_name}】System/ActivityLog/Entries 未获取到返回数据")
                 return []
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接System/ActivityLog/Entries出错：" + str(e))
             return []
@@ -262,7 +273,9 @@ class Jellyfin(_IMediaClient):
             else:
                 log.error(f"【{self.client_name}】Items/Counts 未获取到返回数据")
                 return {}
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接Items/Counts出错：" + str(e))
             return {}
@@ -284,7 +297,9 @@ class Jellyfin(_IMediaClient):
                             not year or str(res_item.get("ProductionYear")) == str(year)
                         ):
                             return res_item.get("Id")
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接Items出错：" + str(e))
             return None
@@ -311,10 +326,15 @@ class Jellyfin(_IMediaClient):
                             not year or str(res_item.get("ProductionYear")) == str(year)
                         ):
                             ret_movies.append(
-                                {"title": res_item.get("Name"), "year": str(res_item.get("ProductionYear"))}
+                                {
+                                    "title": res_item.get("Name"),
+                                    "year": str(res_item.get("ProductionYear")),
+                                }
                             )
                             return ret_movies
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接Items出错：" + str(e))
             return None
@@ -341,9 +361,8 @@ class Jellyfin(_IMediaClient):
                 return []
             # 验证tmdbid是否相同
             item_tmdbid = self.get_iteminfo(item_id).get("ProviderIds", {}).get("Tmdb")
-            if tmdbid and item_tmdbid:
-                if str(tmdbid) != str(item_tmdbid):
-                    return []
+            if tmdbid and item_tmdbid and str(tmdbid) != str(item_tmdbid):
+                return []
         if not season:
             season = ""
         req_url = f"{self._host}Shows/{item_id}/Episodes?season={season}&&userId={self._user}&isMissing=false&api_key={self._apikey}"
@@ -360,7 +379,9 @@ class Jellyfin(_IMediaClient):
                         }
                     )
                 return exists_episodes
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接Shows/Id/Episodes出错：" + str(e))
             return None
@@ -421,7 +442,9 @@ class Jellyfin(_IMediaClient):
                                 res_item.get("ImageTags", {}).get("Primary"),
                             )
                         return img_url
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接Shows/Id/Episodes出错：" + str(e))
             return None
@@ -446,7 +469,9 @@ class Jellyfin(_IMediaClient):
             else:
                 log.error(f"【{self.client_name}】Items/RemoteImages 未获取到返回数据")
                 return None
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接Items/Id/RemoteImages出错：" + str(e))
             return None
@@ -486,7 +511,9 @@ class Jellyfin(_IMediaClient):
                 return True
             else:
                 log.info(f"【{self.client_name}】刷新媒体库失败，无法连接Jellyfin！")
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接Library/Refresh出错：" + str(e))
             return False
@@ -604,7 +631,9 @@ class Jellyfin(_IMediaClient):
             res = RequestUtils().get_res(req_url)
             if res and res.status_code == 200:
                 return res.json()
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             return {}
         return {}
@@ -641,7 +670,9 @@ class Jellyfin(_IMediaClient):
                         }
                     elif "Folder" in result.get("Type"):
                         yield from self.get_items(result.get("Id"))
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接Users/Items出错：" + str(e))
         yield {}
@@ -669,7 +700,9 @@ class Jellyfin(_IMediaClient):
                     if session.get("NowPlayingItem") and not session.get("PlayState", {}).get("IsPaused"):
                         playing_sessions.append(session)
             return playing_sessions
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             return []
 
@@ -731,7 +764,9 @@ class Jellyfin(_IMediaClient):
                 return ret_resume
             else:
                 log.error(f"【{self.client_name}】Users/Items/Resume 未获取到返回数据")
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接Users/Items/Resume出错：" + str(e))
         return []
@@ -766,7 +801,9 @@ class Jellyfin(_IMediaClient):
                 return ret_latest
             else:
                 log.error(f"【{self.client_name}】Users/Items/Latest 未获取到返回数据")
-        except Exception as e:
+        except (InfrastructureError, MediaServerError):
+            raise
+        except Exception as e:  # noqa: BLE001
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接Users/Items/Latest出错：" + str(e))
         return []

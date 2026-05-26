@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from api.deps import require_any_permission, require_permission
+from app.core.exceptions import DomainError, ServiceError
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.schemas.common import CommonResponse
 from app.storage import StorageBackendFactory
@@ -132,6 +133,8 @@ def test_backend(
     config = cls(id="test", name="test", type=stype, enabled=True)
     try:
         cfg_dict = json.loads(req.config) if req.config else {}
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception:
         return fail(msg="配置 JSON 格式错误")
     for k, v in cfg_dict.items():

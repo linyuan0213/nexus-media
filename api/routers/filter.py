@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from api.deps import get_config_service, require_any_permission
+from app.core.exceptions import DomainError, ServiceError  # noqa: F401
 from app.schemas.common import CommonResponse
 from app.services.filter_service import FilterService as Filter
 from app.utils.response import fail, success
@@ -201,5 +202,5 @@ def get_filterrules(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
-    rule_groups, init_rule_groups = Filter().get_filterrules(_get_script_path())
+    rule_groups, _init_rule_groups = Filter().get_filterrules(_get_script_path())
     return success(data=rule_groups)

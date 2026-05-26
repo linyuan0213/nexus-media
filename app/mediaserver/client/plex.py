@@ -8,9 +8,10 @@ from plexapi.myplex import MyPlexAccount
 from plexapi.server import PlexServer
 
 import log
+from app.core.exceptions import InfrastructureError, MediaServerError, NetworkError
 from app.mediaserver.client._base import _IMediaClient
-from app.utils import ExceptionUtils
 from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
+from app.utils import ExceptionUtils
 from app.utils.types import MediaType
 
 
@@ -110,17 +111,21 @@ class Plex(_IMediaClient):
             if self._host and self._token:
                 try:
                     self._plex = PlexServer(self._host, self._token)
-                except Exception as e:
+                except (InfrastructureError, NetworkError, MediaServerError):
+                    raise
+                except Exception as e:  # type: ignore[unreachable]
                     ExceptionUtils.exception_traceback(e)
                     self._plex = None
-                    log.error(f"【{self.client_name}】Plex服务器连接失败：{str(e)}")
+                    log.error(f"【{self.client_name}】Plex服务器连接失败：{e!s}")
             elif self._username and self._password and self._servername:
                 try:
                     self._plex = MyPlexAccount(self._username, self._password).resource(self._servername).connect()
-                except Exception as e:
+                except (InfrastructureError, NetworkError, MediaServerError):
+                    raise
+                except Exception as e:  # type: ignore[unreachable]
                     ExceptionUtils.exception_traceback(e)
                     self._plex = None
-                    log.error(f"【{self.client_name}】Plex服务器连接失败：{str(e)}")
+                    log.error(f"【{self.client_name}】Plex服务器连接失败：{e!s}")
 
     @classmethod
     def match(cls, ctype: Any) -> bool:
@@ -171,7 +176,9 @@ class Plex(_IMediaClient):
                     event_date = his.lastViewedAt.strftime("%Y-%m-%d %H:%M:%S")
                     activity = {"type": event_type, "event": event_str, "date": event_date}
                     ret_array.append(activity)
-        except Exception as e:
+        except (InfrastructureError, NetworkError, MediaServerError):
+            raise
+        except Exception as e:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】连接System/ActivityLog/Entries出错：" + str(e))
             return []
@@ -221,7 +228,9 @@ class Plex(_IMediaClient):
             ret_movies.append({"title": movie.title, "year": movie.year})
         return ret_movies
 
-    def get_tv_episodes(self, item_id: Any = None, title: Any = None, year: Any = None, tmdbid: Any = None, season: Any = None) -> list:
+    def get_tv_episodes(
+        self, item_id: Any = None, title: Any = None, year: Any = None, tmdbid: Any = None, season: Any = None
+    ) -> list:
         """
         根据标题、年份、季查询电视剧所有集信息
         :param item_id: Plex中的ID
@@ -284,7 +293,9 @@ class Plex(_IMediaClient):
                 if image is not None and hasattr(image, "key") and image.key.startswith("http"):
                     return image.key
             return None
-        except Exception as e:
+        except (InfrastructureError, NetworkError, MediaServerError):
+            raise
+        except Exception as e:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】获取剧集封面出错：" + str(e))
             return None
@@ -306,7 +317,9 @@ class Plex(_IMediaClient):
             for image in images:
                 if image is not None and hasattr(image, "key") and image.key.startswith("http"):
                     return image.key
-        except Exception as e:
+        except (InfrastructureError, NetworkError, MediaServerError):
+            raise
+        except Exception as e:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(e)
             log.error(f"【{self.client_name}】获取封面出错：" + str(e))
         return None
@@ -337,7 +350,9 @@ class Plex(_IMediaClient):
         if not self._libraries:
             try:
                 self._libraries = self._plex.library.sections()
-            except Exception as err:
+            except (InfrastructureError, NetworkError, MediaServerError):
+                raise
+            except Exception as err:  # type: ignore[unreachable]
                 ExceptionUtils.exception_traceback(err)
         result_dict = {}
         for item in items:
@@ -371,7 +386,9 @@ class Plex(_IMediaClient):
                     for location in lib.locations:
                         if os.path.commonprefix([dir_path, location]) == location:
                             return lib.key, dir_path
-        except Exception as err:
+        except (InfrastructureError, NetworkError, MediaServerError):
+            raise
+        except Exception as err:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(err)
         return "", ""
 
@@ -383,7 +400,9 @@ class Plex(_IMediaClient):
             return []
         try:
             self._libraries = self._plex.library.sections()
-        except Exception as err:
+        except (InfrastructureError, NetworkError, MediaServerError):
+            raise
+        except Exception as err:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(err)
             return []
         libraries = []
@@ -471,7 +490,9 @@ class Plex(_IMediaClient):
                 return {}
             ids = self.__get_ids(item.guids)
             return {"ProviderIds": {"Tmdb": ids["tmdb_id"], "Imdb": ids["imdb_id"]}}
-        except Exception as err:
+        except (InfrastructureError, NetworkError, MediaServerError):
+            raise
+        except Exception as err:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(err)
             return {}
 
@@ -516,7 +537,9 @@ class Plex(_IMediaClient):
                         "tvdbid": ids["tvdb_id"],
                         "path": path,
                     }
-        except Exception as err:
+        except (InfrastructureError, NetworkError, MediaServerError):
+            raise
+        except Exception as err:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(err)
         yield {}
 

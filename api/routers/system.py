@@ -12,7 +12,6 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 import log
-from log import LOG_BUFFER
 from api.deps import (
     _extract_user_ctx_from_session,
     get_backup_restore_service,
@@ -37,6 +36,7 @@ from app.agent.providers.base import ProviderConfig
 from app.agent.providers.gemini import GeminiProvider
 from app.agent.providers.ollama import OllamaProvider
 from app.agent.providers.openai import OpenAIProvider
+from app.core.exceptions import DomainError, ServiceError
 from app.core.system_config import SystemConfig
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
@@ -46,6 +46,7 @@ from app.message.registry import get_all_clients
 from app.message.switches import MESSAGE_SWITCHES
 from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
 from app.schemas.auth import UserContext
+from app.schemas.common import CommonResponse
 from app.services.auth_service import AuthService
 from app.services.indexer_service import IndexerService
 from app.services.log_streaming_service import LogStreamingService
@@ -54,17 +55,19 @@ from app.services.system_service import (
     MessageClientService,
     MessageSenderService,
     SystemInfoService,
-    backup as do_backup,
     get_commands,
     restart_server,
 )
-from app.utils.security import generate_password_hash
-from app.utils.system_utils import SystemUtils
+from app.services.system_service import (
+    backup as do_backup,
+)
 from app.utils import ExceptionUtils
 from app.utils.response import fail, success
+from app.utils.security import generate_password_hash
+from app.utils.system_utils import SystemUtils
 from app.utils.temp_manager import temp_manager
 from app.utils.types import SystemConfigKey
-from app.schemas.common import CommonResponse
+from log import LOG_BUFFER
 
 router = APIRouter()
 
@@ -309,6 +312,8 @@ def reset_db_version(
     try:
         BaseRepository._db.execute("DROP TABLE IF EXISTS alembic_version")
         return success()
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
         return fail(msg=str(e))
@@ -347,6 +352,8 @@ async def backup_upload(
         with open(file_path, "wb") as f:
             f.write(contents)
         return success(data={"filepath": str(file_path)})
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         return fail(msg=str(e))
 
@@ -616,6 +623,8 @@ def list_agent_models(
             provider = OpenAIProvider(config)
         models = provider.list_models()
         return success(data=models)
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         log.warn(f"【Agent】查询模型列表失败: {e}")
         return fail(msg=str(e))
@@ -795,6 +804,8 @@ def get_site_config_version():
     try:
         info = SiteConfigUpdater().get_version_info()
         return success(info)
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         log.error(f"【System】获取站点配置版本失败: {e!s}")
         return fail(msg=str(e))
@@ -818,6 +829,8 @@ def update_site_config(
         if result["success"]:
             return success(result)
         return fail(msg=result["message"])
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         log.error(f"【System】手动更新站点配置失败: {e!s}")
         return fail(msg=str(e))
