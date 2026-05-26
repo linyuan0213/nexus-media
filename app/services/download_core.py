@@ -33,9 +33,9 @@ from app.schemas.download import Torrent as TorrentInfo
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.sites import SiteConf, Sites, SiteSubtitle
 from app.sites.engine import SiteEngine
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.utils import ExceptionUtils
 from app.utils.torrent import Torrent
-
 
 
 class DownloadCore:
@@ -67,7 +67,7 @@ class DownloadCore:
         self._eventmanager = eventmanager or EventManager()
         self._download_repo = download_repo or DownloadHistoryRepositoryAdapter()
         self._download_setting_repo = download_setting_repo or DownloadSettingRepositoryAdapter()
-        self._systemconfig = systemconfig or SystemConfig()
+        self._systemconfig = systemconfig or SystemConfig
         self._pipeline = DownloadPipeline(
             client_factory=self._client_factory,
             message=self._message,
@@ -116,7 +116,9 @@ class DownloadCore:
             proxy=proxy,
         )
 
-    def batch_download(self, in_from: Any, media_list: list, need_tvs: dict | None = None, user_name: str | None = None) -> tuple[list, list]:
+    def batch_download(
+        self, in_from: Any, media_list: list, need_tvs: dict | None = None, user_name: str | None = None
+    ) -> tuple[list, list]:
         download_items = []
         left_medias = []
         for media_item in media_list:
@@ -146,6 +148,8 @@ class DownloadCore:
             if error_flag:
                 return []
             return torrents
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return []
@@ -175,6 +179,8 @@ class DownloadCore:
             return []
         try:
             return _client.get_downloading_torrents(tag=tag, ids=ids) or []
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return []
@@ -190,6 +196,8 @@ class DownloadCore:
         tag = [PT_TAG] if only_nexus_media else None
         try:
             return _client.get_downloading_progress(tag=tag, ids=ids) or []
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return []
@@ -202,6 +210,8 @@ class DownloadCore:
             return []
         try:
             return _client.get_completed_torrents(ids=ids, tag=tag) or []
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return []
@@ -299,9 +309,7 @@ class DownloadCore:
                 file_id = torrent_file.get("id")
                 file_name = torrent_file.get("name")
                 mi = meta_info(file_name)
-                if not mi.get_episode_list() or not set(mi.get_episode_list()).issubset(
-                    set(need_episodes)
-                ):
+                if not mi.get_episode_list() or not set(mi.get_episode_list()).issubset(set(need_episodes)):
                     file_ids.append(file_id)
                 else:
                     sucess_epidised = list(set(sucess_epidised).union(set(mi.get_episode_list())))
@@ -327,11 +335,15 @@ class DownloadCore:
             return
         try:
             download_limit = int(download_limit) if download_limit else 0
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             download_limit = 0
         try:
             upload_limit = int(upload_limit) if upload_limit else 0
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             upload_limit = 0

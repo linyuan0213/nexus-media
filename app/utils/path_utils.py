@@ -5,7 +5,7 @@ PathUtils - 路径相关纯函数工具
 
 import os
 
-from app.core.config import Config
+from app.core.settings import settings
 
 _ROOT_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
@@ -17,7 +17,7 @@ def get_root_path():
 
 def get_config_path():
     """配置目录路径"""
-    return Config().config_path
+    return settings.config_path
 
 
 def get_temp_path():
@@ -42,7 +42,7 @@ def get_user_plugin_path():
 
 def get_category_path():
     """分类配置文件路径"""
-    category = Config().get("media").get("category")
+    category = settings.get("media").get("category")
     if category:
         return os.path.join(get_config_path(), f"{category}.yaml")
     return None
@@ -136,7 +136,12 @@ class PathUtils:
         """
         if not path:
             return True
-        return bool(path.find("/@Recycle/") != -1 or path.find("/#recycle/") != -1 or path.find("/.") != -1 or path.find("/@eaDir") != -1)
+        return bool(
+            path.find("/@Recycle/") != -1
+            or path.find("/#recycle/") != -1
+            or path.find("/.") != -1
+            or path.find("/@eaDir") != -1
+        )
 
     @staticmethod
     def is_path_in_path(path1, path2):

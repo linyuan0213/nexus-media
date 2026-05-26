@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from api.deps import get_rss_subscription_service, require_any_permission, require_permission
 from app.core.system_config import SystemConfig
+from app.schemas.common import CommonResponse
 from app.services.rss_service import RssSubscriptionService
 from app.utils.response import fail, success
 from app.utils.types import SystemConfigKey
@@ -109,7 +110,7 @@ class GetRssHistoryRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/add")
+@router.post("/add", response_model=CommonResponse, summary="添加 RSS 订阅")
 def add_rss_media(
     req: AddRssMediaRequest,
     user: str = Depends(require_any_permission("rss:manage", "rss:view")),
@@ -126,7 +127,7 @@ def add_rss_media(
     )
 
 
-@router.post("/update")
+@router.post("/update", response_model=CommonResponse, summary="更新 RSS 订阅")
 def update_rss_media(
     req: AddRssMediaRequest,
     user: str = Depends(require_permission("rss:manage")),
@@ -136,7 +137,7 @@ def update_rss_media(
     return fail(code=result.code, msg=result.msg, page=req.page, name=req.name, rssid=result.rssid)
 
 
-@router.post("/history/delete")
+@router.post("/history/delete", response_model=CommonResponse, summary="删除 RSS 历史")
 def delete_rss_history(
     req: RssidRequest,
     user: str = Depends(require_permission("rss:manage")),
@@ -146,7 +147,7 @@ def delete_rss_history(
     return success()
 
 
-@router.post("/history/redo")
+@router.post("/history/redo", response_model=CommonResponse, summary="重新执行 RSS 历史")
 def re_rss_history(
     req: ReRssHistoryRequest,
     user: str = Depends(require_permission("rss:manage")),
@@ -156,7 +157,7 @@ def re_rss_history(
     return fail(code=code, msg=msg)
 
 
-@router.post("/refresh")
+@router.post("/refresh", response_model=CommonResponse, summary="刷新 RSS 订阅")
 def refresh_rss(
     req: RefreshRssRequest,
     user: str = Depends(require_permission("rss:manage")),
@@ -166,19 +167,24 @@ def refresh_rss(
     return success(data=req.page)
 
 
-@router.post("/remove")
+@router.post("/remove", response_model=CommonResponse, summary="移除 RSS 订阅")
 def remove_rss_media(
     req: RemoveRssMediaRequest,
     user: str = Depends(require_any_permission("rss:manage", "rss:view")),
     svc: RssSubscriptionService = Depends(get_rss_subscription_service),
 ):
     svc.remove_rss_media(
-        name=req.name or "", mtype=req.type or "", year=req.year or "", season=int(req.season) if req.season else None, rssid=req.rssid, tmdbid=req.tmdbid
+        name=req.name or "",
+        mtype=req.type or "",
+        year=req.year or "",
+        season=int(req.season) if req.season else None,
+        rssid=req.rssid,
+        tmdbid=req.tmdbid,
     )
     return success(data=req.page)
 
 
-@router.post("/detail")
+@router.post("/detail", response_model=CommonResponse, summary="获取 RSS 订阅详情")
 def rss_detail(
     req: RssDetailRequest,
     user: str = Depends(require_any_permission("rss:view", "rss:manage")),
@@ -190,7 +196,7 @@ def rss_detail(
     return success(data=result.detail)
 
 
-@router.post("/default_setting")
+@router.post("/default_setting", response_model=CommonResponse, summary="获取默认 RSS 设置")
 def get_default_rss_setting(
     req: GetDefaultRssSettingRequest,
     user: str = Depends(require_any_permission("rss:view", "rss:manage")),
@@ -202,7 +208,7 @@ def get_default_rss_setting(
     return fail()
 
 
-@router.post("/default_setting/save")
+@router.post("/default_setting/save", response_model=CommonResponse, summary="保存默认 RSS 设置")
 def save_default_rss_setting(
     req: DefaultRssSettingSaveRequest,
     user: str = Depends(require_permission("rss:manage")),
@@ -217,7 +223,7 @@ def save_default_rss_setting(
     return success()
 
 
-@router.post("/calendar/ical")
+@router.post("/calendar/ical", response_model=CommonResponse, summary="获取 RSS 日历事件")
 def get_ical_events(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("rss:view", "rss:manage")),
@@ -227,7 +233,7 @@ def get_ical_events(
     return success(data=events)
 
 
-@router.post("/movie/items")
+@router.post("/movie/items", response_model=CommonResponse, summary="获取电影 RSS 订阅项")
 def get_movie_rss_items(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("rss:view", "rss:manage")),
@@ -236,7 +242,7 @@ def get_movie_rss_items(
     return success(data=svc.get_movie_rss_items())
 
 
-@router.post("/movie/list")
+@router.post("/movie/list", response_model=CommonResponse, summary="获取电影 RSS 订阅列表")
 def get_movie_rss_list(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("rss:view", "rss:manage")),
@@ -246,7 +252,7 @@ def get_movie_rss_list(
     return success(data=list(result.values()) if isinstance(result, dict) else result)
 
 
-@router.post("/history")
+@router.post("/history", response_model=CommonResponse, summary="获取 RSS 历史")
 def get_rss_history(
     req: GetRssHistoryRequest,
     user: str = Depends(require_any_permission("rss:view", "rss:manage")),
@@ -255,7 +261,7 @@ def get_rss_history(
     return success(data=svc.get_rss_history(mtype=req.type or ""))
 
 
-@router.post("/tv/items")
+@router.post("/tv/items", response_model=CommonResponse, summary="获取电视剧 RSS 订阅项")
 def get_tv_rss_items(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("rss:view", "rss:manage")),
@@ -264,7 +270,7 @@ def get_tv_rss_items(
     return success(data=svc.get_tv_rss_items())
 
 
-@router.post("/tv/list")
+@router.post("/tv/list", response_model=CommonResponse, summary="获取电视剧 RSS 订阅列表")
 def get_tv_rss_list(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("rss:view", "rss:manage")),
@@ -274,7 +280,7 @@ def get_tv_rss_list(
     return success(data=list(result.values()) if isinstance(result, dict) else result)
 
 
-@router.post("/history/clear")
+@router.post("/history/clear", response_model=CommonResponse, summary="清空 RSS 历史")
 def truncate_rsshistory(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_permission("rss:manage")),

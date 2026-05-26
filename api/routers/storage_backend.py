@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from api.deps import require_any_permission, require_permission
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
+from app.schemas.common import CommonResponse
 from app.storage import StorageBackendFactory
 from app.utils.response import fail, success
 
@@ -55,7 +56,7 @@ class TestBackendRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/list")
+@router.post("/list", response_model=CommonResponse, summary="获取存储后端列表")
 def list_backends(
     req: ListBackendsRequest,
     user: str = Depends(require_any_permission("storage:view", "storage:manage")),
@@ -65,7 +66,7 @@ def list_backends(
     return success(data={"count": len(items), "items": items})
 
 
-@router.post("/get")
+@router.post("/get", response_model=CommonResponse, summary="获取存储后端详情")
 def get_backend(
     req: GetBackendRequest,
     user: str = Depends(require_any_permission("storage:view", "storage:manage")),
@@ -77,7 +78,7 @@ def get_backend(
     return success(data=entity.to_dict())
 
 
-@router.post("/save")
+@router.post("/save", response_model=CommonResponse, summary="创建存储后端")
 def create_backend(
     req: CreateBackendRequest,
     user: str = Depends(require_permission("storage:manage")),
@@ -87,7 +88,7 @@ def create_backend(
     return success(data={"id": sid})
 
 
-@router.post("/update")
+@router.post("/update", response_model=CommonResponse, summary="更新存储后端")
 def update_backend(
     req: UpdateBackendRequest,
     user: str = Depends(require_permission("storage:manage")),
@@ -108,7 +109,7 @@ def update_backend(
     return success()
 
 
-@router.post("/delete")
+@router.post("/delete", response_model=CommonResponse, summary="删除存储后端")
 def delete_backend(
     req: DeleteBackendRequest,
     user: str = Depends(require_permission("storage:manage")),
@@ -118,7 +119,7 @@ def delete_backend(
     return success()
 
 
-@router.post("/test")
+@router.post("/test", response_model=CommonResponse, summary="测试存储后端连接")
 def test_backend(
     req: TestBackendRequest,
     user: str = Depends(require_permission("storage:manage")),
@@ -141,7 +142,7 @@ def test_backend(
     return success(data={"success": ok, "msg": msg}, msg=msg)
 
 
-@router.post("/types")
+@router.post("/types", response_model=CommonResponse, summary="获取存储后端类型")
 def list_types(
     user: str = Depends(require_any_permission("storage:view", "storage:manage")),
 ):

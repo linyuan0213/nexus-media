@@ -10,7 +10,7 @@ from app.agent.providers.gemini import GeminiProvider
 from app.agent.providers.ollama import OllamaProvider
 from app.agent.providers.openai import OpenAIProvider
 from app.infrastructure.cache_system import lru_cache_with_ttl
-from config import Config
+from app.core.settings import settings
 
 
 class AgentService:
@@ -32,7 +32,7 @@ class AgentService:
 
     def _refresh_config(self):
         """刷新配置（支持热重载）"""
-        cfg = Config().get_config("agent") or {}
+        cfg = settings.get("agent") or {}
         self._enabled = bool(cfg.get("enabled"))
         if not self._enabled:
             if self._provider is not None:
@@ -93,7 +93,11 @@ class AgentService:
         return self._provider.chat(list(messages), system_prompt, temperature)
 
     def structured_chat(
-        self, messages: list[dict], system_prompt: str = "", response_model: type | None = None, temperature: float = 0.3
+        self,
+        messages: list[dict],
+        system_prompt: str = "",
+        response_model: type | None = None,
+        temperature: float = 0.3,
     ) -> Any:
         """结构化输出对话（返回 pydantic 模型实例）"""
         if not self.ready:

@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from api.deps import get_site_service, require_any_permission, require_permission
 from app.helper import ThreadHelper
+from app.schemas.common import CommonResponse
 from app.services.site_service import SiteService
 from app.utils.response import fail, success
 
@@ -84,7 +85,7 @@ class SiteResourcesRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/sites/check_attr")
+@router.post("/sites/check_attr", response_model=CommonResponse, summary="检查站点属性")
 def check_site_attr(
     req: SiteUrlRequest,
     user: str = Depends(require_any_permission("site:view", "site:manage")),
@@ -94,7 +95,7 @@ def check_site_attr(
     return success(data={"site_free": dto.site_free, "site_2xfree": dto.site_2xfree, "site_hr": dto.site_hr})
 
 
-@router.post("/sites/delete")
+@router.post("/sites/delete", response_model=CommonResponse, summary="删除站点")
 def del_site(
     req: SiteIdRequest,
     user: str = Depends(require_permission("site:manage")),
@@ -107,7 +108,7 @@ def del_site(
     return success()
 
 
-@router.post("/sites/detail")
+@router.post("/sites/detail", response_model=CommonResponse, summary="获取站点详情")
 def get_site(
     req: SiteIdRequest,
     user: str = Depends(require_any_permission("site:view", "site:manage")),
@@ -119,7 +120,7 @@ def get_site(
     )
 
 
-@router.post("/sites/activity")
+@router.post("/sites/activity", response_model=CommonResponse, summary="获取站点活跃度")
 def get_site_activity(
     req: SiteNameRequest,
     user: str = Depends(require_any_permission("site:view", "site:manage")),
@@ -131,7 +132,7 @@ def get_site_activity(
     return success(data={"dataset": dto.dataset})
 
 
-@router.post("/sites/favicon")
+@router.post("/sites/favicon", response_model=CommonResponse, summary="获取站点图标")
 def get_site_favicon(
     req: SiteNameRequest,
     user: str = Depends(require_any_permission("site:view", "site:manage")),
@@ -140,7 +141,7 @@ def get_site_favicon(
     return success(data=svc.get_site_favicon(req.name))
 
 
-@router.post("/sites/history")
+@router.post("/sites/history", response_model=CommonResponse, summary="获取站点历史数据")
 def get_site_history(
     req: SiteDaysRequest,
     user: str = Depends(require_any_permission("site:view", "site:manage")),
@@ -152,7 +153,7 @@ def get_site_history(
     return success(data={"dataset": dto.dataset})
 
 
-@router.post("/sites/statistics/daily")
+@router.post("/sites/statistics/daily", response_model=CommonResponse, summary="获取站点日统计")
 def get_site_daily_history(
     req: SiteDaysRequest,
     user: str = Depends(require_any_permission("site:view", "site:manage")),
@@ -164,7 +165,7 @@ def get_site_daily_history(
     return success(data=result)
 
 
-@router.post("/sites/seeding")
+@router.post("/sites/seeding", response_model=CommonResponse, summary="获取站点做种信息")
 def get_site_seeding_info(
     req: SiteNameRequest,
     user: str = Depends(require_any_permission("site:view", "site:manage")),
@@ -180,7 +181,7 @@ class SiteRefreshRequest(BaseModel):
     sites: list | None = None
 
 
-@router.post("/sites/statistics/refresh")
+@router.post("/sites/statistics/refresh", response_model=CommonResponse, summary="刷新站点统计数据")
 def refresh_site_statistics(
     req: SiteRefreshRequest,
     user: str = Depends(require_any_permission("site:view", "site:manage")),
@@ -190,7 +191,7 @@ def refresh_site_statistics(
     return success(data={"message": "站点数据刷新已启动，请稍候"})
 
 
-@router.post("/sites")
+@router.post("/sites", response_model=CommonResponse, summary="获取站点列表")
 def get_sites(
     req: SiteFilterRequest,
     user: str = Depends(require_any_permission("site:view", "site:manage")),
@@ -202,7 +203,7 @@ def get_sites(
     return success(data=sites)
 
 
-@router.post("/sites/captcha")
+@router.post("/sites/captcha", response_model=CommonResponse, summary="设置站点验证码")
 def set_site_captcha_code(
     req: SiteCaptchaRequest,
     user: str = Depends(require_permission("site:manage")),
@@ -212,7 +213,7 @@ def set_site_captcha_code(
     return success()
 
 
-@router.post("/sites/test")
+@router.post("/sites/test", response_model=CommonResponse, summary="测试站点连接")
 def test_site(
     req: SiteIdRequest,
     user: str = Depends(require_permission("site:manage")),
@@ -222,7 +223,7 @@ def test_site(
     return fail(code=dto.code, msg=dto.msg, time=dto.times)
 
 
-@router.post("/sites/update")
+@router.post("/sites/update", response_model=CommonResponse, summary="更新站点配置")
 def update_site(
     req: SiteUpdateRequest,
     user: str = Depends(require_permission("site:manage")),
@@ -232,7 +233,7 @@ def update_site(
     return fail(code=dto.code or 0, msg=dto.msg or "")
 
 
-@router.post("/sites/cookie_ua")
+@router.post("/sites/cookie_ua", response_model=CommonResponse, summary="更新站点 Cookie 和 UA")
 def update_site_cookie_ua(
     req: SiteCookieUaRequest,
     user: str = Depends(require_permission("site:manage")),
@@ -242,7 +243,7 @@ def update_site_cookie_ua(
     return success(data={"messages": "请求发送成功"})
 
 
-@router.post("/sites/statistics")
+@router.post("/sites/statistics", response_model=CommonResponse, summary="获取站点用户统计")
 def get_site_user_statistics(
     req: SiteUserStatisticsRequest,
     user: str = Depends(require_any_permission("site:view", "site:manage")),
@@ -255,7 +256,7 @@ def get_site_user_statistics(
     return success(data=statistics)
 
 
-@router.post("/sites/resources")
+@router.post("/sites/resources", response_model=CommonResponse, summary="获取站点资源列表")
 def list_site_resources(
     req: SiteResourcesRequest,
     user: str = Depends(require_any_permission("site:view", "site:manage")),

@@ -2,6 +2,7 @@ import os
 from typing import Any
 
 import log
+from app.core.exceptions import InfrastructureError, NetworkError
 from app.downloader.client._base import _IDownloadClient
 from app.downloader.client._pythunder import PyThunder
 from app.downloader.schema import ConfigField, DownloaderConfigSchema
@@ -79,6 +80,8 @@ class Thunder(_IDownloadClient):
         try:
             device_id = self._client.get_device_id()
             return bool(device_id)
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as e:
             log.error(f"【{self.client_name}】连接测试失败: {e!s}")
             return False
@@ -104,6 +107,8 @@ class Thunder(_IDownloadClient):
                 if torrent:
                     torrent_list.append(torrent)
             return torrent_list, False
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as e:
             log.error(f"【{self.client_name}】获取任务列表失败: {e!s}")
             return [], True
@@ -125,6 +130,8 @@ class Thunder(_IDownloadClient):
             return None
         try:
             return []
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as e:
             log.error(f"【{self.client_name}】获取文件列表失败: {e!s}")
             return None
@@ -182,6 +189,8 @@ class Thunder(_IDownloadClient):
             )
             task_id = task_info.get("id") if task_info else None
             return str(task_id) if task_id else None
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as e:
             log.error(f"【{self.client_name}】添加下载任务失败: {e!s}")
             ExceptionUtils.exception_traceback(e)
@@ -201,6 +210,8 @@ class Thunder(_IDownloadClient):
                 if not result:
                     success = False
             return success
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as e:
             log.error(f"【{self.client_name}】启动任务失败: {e!s}")
             return False
@@ -219,6 +230,8 @@ class Thunder(_IDownloadClient):
                 if not result:
                     success = False
             return success
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as e:
             log.error(f"【{self.client_name}】暂停任务失败: {e!s}")
             return False
@@ -237,6 +250,8 @@ class Thunder(_IDownloadClient):
                 if not result:
                     success = False
             return success
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as e:
             log.error(f"【{self.client_name}】删除任务失败: {e!s}")
             return False
@@ -321,6 +336,8 @@ class Thunder(_IDownloadClient):
             torrent.upload_speed = 0
             torrent.save_path = params.get("parent_folder_path", "")
             return torrent
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as e:
             log.error(f"【{self.client_name}】转换任务信息失败: {e!s}")
             return None

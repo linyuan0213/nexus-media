@@ -1,7 +1,7 @@
 import json
-from typing import Any
+from typing import Any, cast
 
-from app.db.models.site import SITEUSERINFOSTATS
+from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.db.repositories import SiteRepository
 from app.schemas.site import (
     SiteActivityDTO,
@@ -169,20 +169,22 @@ class SiteService:
         sort_by: str | None = None,
         sort_on: str | None = None,
         site_hash: str | None = None,
-    ) -> list[SITEUSERINFOSTATS]:
-        statistics = self._site_user_info.get_site_user_statistics(sites=sites, encoding=encoding)
+    ) -> list[Any]:
+        statistics = self._site_user_info.get_site_user_statistics(sites=sites, encoding="DICT")
         # 修复馒头站点显示
         for item in statistics:
-            if "m-team" in item.get("url", ""):
-                site_info: Any = self._sites.get_sites(siteurl=item.get("url")) or {}
-                item["url"] = site_info.get("signurl") if isinstance(site_info, dict) else None
+            item_dict = cast(dict[str, Any], item)
+            if "m-team" in item_dict.get("url", ""):
+                site_info: Any = self._sites.get_sites(siteurl=item_dict.get("url")) or {}
+                item_dict["url"] = site_info.get("signurl") if isinstance(site_info, dict) else None
         # 排序：sort_by 存在时默认降序，sort_on 显式指定时按指定方向
         if sort_by:
             reverse = sort_on != "asc"
-            statistics.sort(key=lambda x: x.get(sort_by) or 0, reverse=reverse)
+            statistics.sort(key=lambda x: cast(dict[str, Any], x).get(sort_by) or 0, reverse=reverse)
         if site_hash == "Y":
             for item in statistics:
-                item["site_hash"] = self._string_utils.md5_hash(item.get("site_name"))
+                item_dict = cast(dict[str, Any], item)
+                item_dict["site_hash"] = self._string_utils.md5_hash(item_dict.get("site_name"))
         return statistics
 
     # ------------------------------------------------------------------

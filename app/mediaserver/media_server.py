@@ -14,7 +14,7 @@ from app.message import Message
 from app.utils import ExceptionUtils
 from app.utils.commons import SingletonMeta
 from app.utils.types import MovieTypes, ProgressKey, SystemConfigKey
-from config import Config
+from app.core.settings import settings
 
 lock = threading.Lock()
 server_lock = threading.Lock()
@@ -65,7 +65,7 @@ class MediaServer(metaclass=SingletonMeta):
                     self._server_type = cast(str, default_server.NAME)
                 else:
                     # 兼容旧配置：从配置文件读取
-                    self._server_type = Config().get_config("media").get("media_server") or "emby"
+                    self._server_type = settings.get("media").get("media_server") or "emby"
             if not self._server:
                 self._server = self.__get_server(self._server_type)
             return self._server

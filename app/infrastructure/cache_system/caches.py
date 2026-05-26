@@ -7,6 +7,8 @@ from typing import Any
 
 import log
 
+from app.utils.types import MediaType
+
 from .adapters import MemoryCacheAdapter, RedisCacheAdapter
 from .base import CacheAdapter
 
@@ -59,16 +61,16 @@ class TMDBCache(TypedCache):
 
     def get_tmdb_info(self, mtype: Any, tmdbid: str, language: str | None = None) -> Any | None:
         """获取TMDB信息缓存"""
-        from app.utils.types import MediaType
 
         if mtype == MediaType.ANIME:
             mtype = MediaType.TV
         key = self._make_key("tmdb", mtype.value, tmdbid, language or "default")
         return self.get(key)
 
-    def set_tmdb_info(self, mtype: Any, tmdbid: str, info: Any, language: str | None = None, ttl: int | None = None) -> bool:
+    def set_tmdb_info(
+        self, mtype: Any, tmdbid: str, info: Any, language: str | None = None, ttl: int | None = None
+    ) -> bool:
         """设置TMDB信息缓存"""
-        from app.utils.types import MediaType
 
         if mtype == MediaType.ANIME:
             mtype = MediaType.TV
@@ -79,16 +81,16 @@ class TMDBCache(TypedCache):
 
     def get_media_info(self, title: str, year: str | None = None, mtype: Any = None) -> Any | None:
         """获取媒体信息缓存"""
-        from app.utils.types import MediaType
 
         if mtype == MediaType.ANIME:
             mtype = MediaType.TV
         key = self._make_key("media", title, year or "", mtype.value if mtype else "")
         return self.get(key)
 
-    def set_media_info(self, title: str, info: Any, year: str | None = None, mtype: Any = None, ttl: int | None = None) -> bool:
+    def set_media_info(
+        self, title: str, info: Any, year: str | None = None, mtype: Any = None, ttl: int | None = None
+    ) -> bool:
         """设置媒体信息缓存"""
-        from app.utils.types import MediaType
 
         if mtype == MediaType.ANIME:
             mtype = MediaType.TV

@@ -53,11 +53,9 @@ class ConfigCacheWarmer(CacheWarmer):
             log.info("【CacheWarmer】开始预热配置数据...")
             cache_manager = CacheManager()
 
-            from config import Config
+            from app.core.settings import settings
 
-            cfg = Config()
-
-            config = cfg.get_config()
+            config = settings.get()
             if config:
                 cache = cache_manager.get_or_create("config_load", "memory")
                 cache.set("system_config", config, ttl=60)

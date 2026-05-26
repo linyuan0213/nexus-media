@@ -20,6 +20,7 @@
   推断出4个季块后 → 映射到 S01 对应集
 """
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 import log
@@ -198,8 +199,6 @@ class EpisodeMapper:
         """
         if not items:
             return []
-
-        from concurrent.futures import ThreadPoolExecutor
 
         # 按 tmdb_id 去重，只查未缓存的（合并季缓存）
         tmdb_ids_blocks = {

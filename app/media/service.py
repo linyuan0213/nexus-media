@@ -1,6 +1,7 @@
 import difflib
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import log
 from app.helper.image_proxy_helper import ImageProxyHelper
@@ -14,7 +15,7 @@ from app.media.parser.llm import LLMParser
 from app.media.parser.regex import RegexParser
 from app.utils import EpisodeFormat, PathUtils, StringUtils
 from app.utils.types import MatchMode, MediaType
-from config import Config
+from app.core.settings import settings
 
 
 class MediaService:
@@ -27,9 +28,9 @@ class MediaService:
         self._init_config()
 
     def _init_config(self):
-        app = Config().get_config("app")
-        media = Config().get_config("media")
-        laboratory = Config().get_config("laboratory")
+        app = settings.get("app")
+        media = settings.get("media")
+        laboratory = settings.get("laboratory")
         self._search_keyword = laboratory.get("search_keyword")
         self._search_tmdbweb = laboratory.get("search_tmdbweb")
         self._default_language = media.get("tmdb_language", "zh") or "zh"
@@ -44,7 +45,7 @@ class MediaService:
         self._rmt_match_mode = MatchMode.STRICT if rmt_match_mode == "STRICT" else MatchMode.NORMAL
 
     def _build_parser(self) -> BaseParser:
-        cfg = Config().get_config("agent") or {}
+        cfg = settings.get("agent") or {}
         if cfg.get("enabled") and cfg.get("media_recognizer_enabled"):
             llm = LLMParser()
             if llm.ready:
@@ -253,8 +254,6 @@ class MediaService:
         """批量识别 — Parser batch + 去重后并发 Lookup"""
         if not items:
             return []
-
-        from concurrent.futures import ThreadPoolExecutor, as_completed
 
         titles = [i.get("title", "") for i in items]
         subtitles = [i.get("subtitle", "") for i in items]
@@ -496,7 +495,6 @@ class MediaService:
                 )
 
         # 2.3 去重后并发查 TMDB
-        from concurrent.futures import ThreadPoolExecutor, as_completed
 
         unique_keys = {}
         for _, parsed in enumerate(parsed_list):

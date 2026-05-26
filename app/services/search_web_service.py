@@ -15,7 +15,8 @@ from app.services.search_service import Searcher
 from app.utils import StringUtils
 from app.utils.types import MediaType, ProgressKey, SearchType
 from app.utils.web_utils import WebUtils
-from config import Config
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.core.settings import settings
 
 # 媒体识别结果缓存，避免重复识别
 _MEDIA_IDENT_CACHE: dict = {}
@@ -66,6 +67,8 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
                     f"【Web】Agent 解析搜索意图: {content} -> {key_word}, type={mtype}, "
                     f"season={season_num}, episode={episode_num}, year={year}"
                 )
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             log.warn(f"【Web】Agent 意图解析失败: {e}")
 
@@ -130,7 +133,7 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
             if search_en_name and search_en_name != search_cn_name:
                 search_name_list.append(search_en_name)
 
-            if Config().get_config("laboratory").get("search_multi_language"):
+            if settings.get("laboratory").get("search_multi_language"):
                 search_zhtw_name = _media.get_tmdb_zhtw_title(media_info)
                 if search_zhtw_name and search_zhtw_name != search_cn_name and search_zhtw_name != search_en_name:
                     search_name_list.append(search_zhtw_name)

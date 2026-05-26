@@ -11,7 +11,16 @@ from sqlalchemy import and_, desc
 from sqlalchemy.orm import selectinload
 
 from app.db import DbPersist
-from app.db.models.rbac import RBACMenu, RBACOperationLog, RBACPermission, RBACRole, RBACUser, RBACUserLoginLog
+from app.db.models.rbac import (
+    RBACMenu,
+    RBACOperationLog,
+    RBACPermission,
+    RBACRole,
+    RBACUser,
+    RBACUserLoginLog,
+    role_menus,
+    user_roles,
+)
 from app.db.repositories.base_repository import BaseRepository
 
 
@@ -31,8 +40,7 @@ class RBACUserRepository(BaseRepository):
             用户对象或None
         """
         return (
-            self._db
-            .query(RBACUser)
+            self._db.query(RBACUser)
             .options(
                 selectinload(RBACUser.roles),
             )
@@ -96,8 +104,7 @@ class RBACUserRepository(BaseRepository):
             用户列表
         """
         return (
-            self._db
-            .query(RBACUser)
+            self._db.query(RBACUser)
             .options(
                 selectinload(RBACUser.roles),
             )
@@ -504,8 +511,7 @@ class RBACRoleRepository(BaseRepository):
             return False
 
         permissions = (
-            self._db
-            .query(RBACPermission)
+            self._db.query(RBACPermission)
             .filter(RBACPermission.ID.in_(permission_ids), RBACPermission.STATUS == 1)
             .all()
         )
@@ -568,8 +574,7 @@ class RBACPermissionRepository(BaseRepository):
         根据权限代码获取权限
         """
         return (
-            self._db
-            .query(RBACPermission)
+            self._db.query(RBACPermission)
             .filter(RBACPermission.PERMISSION_CODE == permission_code, RBACPermission.STATUS == 1)
             .first()
         )
@@ -601,8 +606,7 @@ class RBACPermissionRepository(BaseRepository):
         根据权限代码列表获取权限
         """
         return (
-            self._db
-            .query(RBACPermission)
+            self._db.query(RBACPermission)
             .filter(and_(RBACPermission.PERMISSION_CODE.in_(codes), RBACPermission.STATUS == 1))
             .all()
         )
@@ -706,8 +710,7 @@ class RBACMenuRepository(BaseRepository):
         获取子菜单列表
         """
         return (
-            self._db
-            .query(RBACMenu)
+            self._db.query(RBACMenu)
             .filter(RBACMenu.PARENT_ID == parent_id, RBACMenu.STATUS == 1)
             .order_by(RBACMenu.SORT_ORDER)
             .all()
@@ -744,12 +747,10 @@ class RBACMenuRepository(BaseRepository):
 
         通过用户的角色关联获取菜单
         """
-        from app.db.models.rbac import role_menus, user_roles
 
         # 获取用户的所有角色关联的菜单
         menus = (
-            self._db
-            .query(RBACMenu)
+            self._db.query(RBACMenu)
             .join(role_menus, role_menus.c.menu_id == RBACMenu.ID)
             .join(user_roles, role_menus.c.role_id == user_roles.c.role_id)
             .filter(user_roles.c.user_id == user_id)

@@ -522,3 +522,15 @@ class SiteEngine:
             cls._engine_instance = cls(definitions_dir)
             cls._engine_instance._register_user_info_factories()
         return cls._engine_instance
+
+
+def get_tid_by_url(url: str) -> str | None:
+    """从下载链接提取种子 ID"""
+    if not url:
+        return None
+    site_def = SiteEngine.get_instance().get_by_url(url)
+    if site_def and site_def.download and site_def.download.type in ("api", "api_chained"):
+        tid = re.findall(r"\d+", url)
+        return tid[-1] if tid else None
+    tid = re.findall(r"id=(\d+)", url)
+    return tid[0] if tid else None

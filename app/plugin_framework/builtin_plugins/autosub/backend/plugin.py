@@ -17,7 +17,7 @@ import psutil
 import srt
 from lxml import etree
 
-from app.agent import ChatAgent
+from app.agent.agents.chat_agent import ChatAgent
 from app.core.constants import RMT_MEDIAEXT
 from app.helper import FfmpegHelper
 from app.plugin_framework.context import PluginContext
@@ -535,7 +535,10 @@ class AutoSubPlugin:
                 merged_subtitle[-1].content = f"{merged_subtitle[-1].content} {content}"
                 merged_subtitle[-1].end = item.end
 
-            if any(str(content)[-len(str(t)):] == str(t) for t in self._end_token) or len(merged_subtitle[-1].content) > 350:
+            if (
+                any(str(content)[-len(str(t)) :] == str(t) for t in self._end_token)
+                or len(merged_subtitle[-1].content) > 350
+            ):
                 sentence_end = True
             else:
                 sentence_end = False

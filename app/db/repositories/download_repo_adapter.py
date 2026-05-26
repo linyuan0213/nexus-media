@@ -4,6 +4,8 @@
 """
 
 from app.db.repositories.download_repository import DownloadRepository
+from typing import Any
+
 from app.domain.entities.download import (
     DownloadHistoryEntity,
     DownloadSettingEntity,
@@ -11,7 +13,10 @@ from app.domain.entities.download import (
 )
 
 
-class DownloadHistoryRepositoryAdapter:
+from app.domain.interfaces.download_repo import IDownloadHistoryRepository
+
+
+class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
     """下载历史仓储适配器"""
 
     def __init__(self, repo: DownloadRepository | None = None):
@@ -75,7 +80,7 @@ class DownloadHistoryRepositoryAdapter:
         return self._repo.is_exists_download_history_by_tmdb(int(tmdb_id), season_episode)
 
     # 兼容旧Repository方法名
-    def get_download_history_by_path(self, path: str):
+    def get_download_history_by_path(self, path: str) -> Any:
         return self._repo.get_download_history_by_path(path)
 
     def get_active_downloads(self):

@@ -14,7 +14,8 @@ from typing import Any
 import requests
 
 import log
-from app.core.config import Config
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.core.settings import settings
 from app.utils.config_tools import get_proxies
 
 
@@ -28,7 +29,7 @@ class SiteConfigUpdater:
 
     def __init__(self, config_dir: str | None = None):
         if config_dir is None:
-            cfg = Config()
+            cfg = settings
             config_dir = cfg.config_path if cfg.config_path else None
         self._config_dir = config_dir or "/config"
         self._sites_dir = os.path.join(self._config_dir, "sites")
@@ -38,6 +39,8 @@ class SiteConfigUpdater:
         try:
             with open(self._version_file, encoding="utf-8") as f:
                 return f.read().strip()
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception:
             return "0"
 
@@ -52,6 +55,8 @@ class SiteConfigUpdater:
             resp = requests.get(self._RELEASE_API_URL, headers=headers, timeout=15, proxies=proxies)
             resp.raise_for_status()
             return resp.json()
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             log.warn(f"【SiteConfigUpdater】查询远程版本失败: {e!s}")
             return None
@@ -75,6 +80,8 @@ class SiteConfigUpdater:
                 for chunk in resp.iter_content(chunk_size=8192):
                     f.write(chunk)
             return True
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             log.warn(f"【SiteConfigUpdater】下载文件失败: {e!s}")
             return False
@@ -85,6 +92,8 @@ class SiteConfigUpdater:
             with zipfile.ZipFile(zip_path, "r") as zf:
                 zf.extractall(dest_dir)
             return True
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             log.warn(f"【SiteConfigUpdater】解压失败: {e!s}")
             return False
@@ -145,6 +154,8 @@ class SiteConfigUpdater:
             shutil.move(tmp_extract, self._sites_dir)
             self._write_local_version(remote_version)
             log.info(f"【SiteConfigUpdater】站点配置已更新到 {remote_version}")
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             log.error(f"【SiteConfigUpdater】替换配置失败: {e!s}")
             return {"success": False, "message": f"替换配置失败: {e!s}", "version": local_version}
@@ -187,5 +198,7 @@ def update_site_config_at_startup() -> None:
                 log.warn(f"【SiteConfigUpdater】{result['message']}")
         else:
             log.info(f"【SiteConfigUpdater】当前站点配置版本: {info['local']}，无需更新")
+    except (ServiceError, RepositoryError, DomainError):
+        raise
     except Exception as e:
         log.warn(f"【SiteConfigUpdater】启动时自动更新失败: {e!s}")

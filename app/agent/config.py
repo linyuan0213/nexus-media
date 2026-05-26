@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from config import Config
+from app.core.settings import settings
 
 
 @dataclass
@@ -17,7 +17,7 @@ class ProviderConfig:
 
 def get_provider(provider_name: str = "") -> ProviderConfig | None:
     """获取 LLM 提供商配置"""
-    cfg = Config().get_config("agent") or {}
+    cfg = settings.get("agent") or {}
     if not cfg.get("enabled"):
         return None
     providers = cfg.get("providers", {})

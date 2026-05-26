@@ -5,7 +5,7 @@ from urllib.parse import quote
 
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.utils.config_tools import get_domain
-from config import Config
+from app.core.settings import settings
 
 from app.mediaserver.schema import MediaServerConfigSchema
 
@@ -27,7 +27,7 @@ class _IMediaClient(metaclass=ABCMeta):
                 return json.loads(str(item.CONFIG))
             except Exception:
                 pass
-        return Config().get_config(name)
+        return settings.get(name)
 
     @classmethod
     @abstractmethod
@@ -175,7 +175,7 @@ class _IMediaClient(metaclass=ABCMeta):
 
         # 检查是否启用了新的图片代理
         try:
-            if Config().get_config("app").get("enable_image_proxy", True):
+            if settings.get("app").get("enable_image_proxy", True):
                 # 处理 TMDB 图片
                 if "image.tmdb.org" in url:
                     # 提取路径部分

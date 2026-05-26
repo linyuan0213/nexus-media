@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 
+from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.db.repositories.brush_repo_adapter import BrushRuleRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.schemas.brush import (
@@ -38,6 +39,7 @@ _REMOVE_RULE_FIELDS = {
 _STOP_RULE_FIELDS = {
     "stopfree": "brushtask_stopfree",
 }
+
 
 class BrushService:
     """刷流任务业务服务"""
@@ -164,7 +166,7 @@ class BrushService:
     @staticmethod
     def check_stop_rule(stop_rule: dict | None, torrent_attr: dict):
         """委托给领域规则引擎：检查是否符合停种规则"""
-        return BrushRuleEngine.check_stop_rule(stop_rule=stop_rule, torrent_attr=torrent_attr)
+        return BrushRuleEngine.check_stop_rule(stop_rule=stop_rule, params=torrent_attr)
 
     @staticmethod
     def format_rule_html(rules: dict | None) -> str:

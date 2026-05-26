@@ -7,10 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from api.deps import get_current_user
+from app.core.settings import AppSettings
 from app.schemas.auth import LoginResponse, UserContext
+from app.schemas.common import CommonResponse
 from app.services.auth_service import AuthService
 from app.services.rbac_service import rbac_service
 from app.utils.wallpaper import get_login_wallpaper
+
+_settings = AppSettings()
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -34,7 +38,7 @@ async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depen
         key="refresh_token",
         value=tokens.refresh_token,
         httponly=True,
-        secure=False,  # 生产环境改为 True
+        secure=_settings.app.cookie_secure,
         samesite="lax",
         max_age=7 * 24 * 3600,  # 7 天
     )
@@ -60,7 +64,7 @@ async def refresh_token(request: Request, response: Response):
         key="refresh_token",
         value=tokens.refresh_token,
         httponly=True,
-        secure=False,
+        secure=_settings.app.cookie_secure,
         samesite="lax",
         max_age=7 * 24 * 3600,
     )
@@ -68,7 +72,7 @@ async def refresh_token(request: Request, response: Response):
     return LoginResponse(code=0, success=True, message="Token 刷新成功", data=tokens)
 
 
-@router.post("/logout")
+@router.post("/logout", response_model=CommonResponse, summary="用户登出")
 async def logout(response: Response, user: UserContext = Depends(get_current_user)):
     """
     登出，清除 Refresh Token Cookie。
@@ -77,7 +81,7 @@ async def logout(response: Response, user: UserContext = Depends(get_current_use
     return {"code": 0, "data": True, "message": "已登出"}
 
 
-@router.get("/me")
+@router.get("/me", response_model=CommonResponse, summary="获取当前用户信息")
 async def get_current_user_info(user: UserContext = Depends(get_current_user)):
     """
     获取当前登录用户信息。
@@ -116,7 +120,7 @@ async def get_current_user_info(user: UserContext = Depends(get_current_user)):
     }
 
 
-@router.get("/wallpaper")
+@router.get("/wallpaper", response_model=CommonResponse, summary="获取登录页壁纸")
 async def login_wallpaper():
     """
     获取登录页背景壁纸（无需认证）。

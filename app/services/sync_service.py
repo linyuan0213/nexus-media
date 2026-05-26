@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import unquote
 
 from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_MEDIAEXT, RMT_SUBEXT
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.helper.thread_helper import ThreadHelper
 from app.media import MediaCache
 from app.schemas.sync import (
@@ -27,7 +28,7 @@ from app.utils import EpisodeFormat, ExceptionUtils, PathUtils, StringUtils
 from app.storage.backends.base import StorageType
 from app.utils.types import MediaType, MovieTypes, OsType, SyncType, TvTypes
 from app.utils.web_utils import set_config_directory
-from config import Config
+from app.core.settings import settings
 
 if TYPE_CHECKING:
     from app.db.models import TRANSFERUNKNOWN
@@ -250,6 +251,8 @@ class SyncService:
                 if hasattr(config, k):
                     setattr(config, k, v)
             return StorageBackendFactory.create(config)
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception:
             pass
         return None
@@ -299,6 +302,8 @@ class SyncService:
                     )
                     if succ_flag and flag == "unidentification":
                         self._filetransfer.update_transfer_unknown_state(path)
+                except (ServiceError, RepositoryError, DomainError):
+                    raise
                 except Exception as err:
                     ExceptionUtils.exception_traceback(err)
 
@@ -387,6 +392,8 @@ class SyncService:
         try:
             shutil.move(path, os.path.join(os.path.dirname(path), name))
             return SimpleResultDTO(success=True)
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             return SimpleResultDTO(success=False, message=str(e))
@@ -427,6 +434,8 @@ class SyncService:
             obj = cls()
             if hasattr(obj, method_name):
                 return getattr(obj, method_name)()
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception:
             pass
         return None
@@ -456,10 +465,11 @@ class SyncService:
                     ret = module_obj.get_status()
                 else:
                     ret = cls.exec_test_command(command)
-            Config()._init_config()
             if module_obj:
                 if hasattr(module_obj, "init_config"):
                     module_obj.init_config()
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             ret = None
             ExceptionUtils.exception_traceback(e)
@@ -470,6 +480,6 @@ class SyncService:
     @staticmethod
     def update_directory(oper: str, key: str, value: str, replace_value: str | None = None) -> SimpleResultDTO:
         """更新配置中的目录路径"""
-        cfg = set_config_directory(Config().get_config(), oper, key, value, replace_value)
-        Config().save_config(cfg)
+        cfg = set_config_directory(settings.get(), oper, key, value, replace_value)
+        settings.save(cfg)
         return SimpleResultDTO(success=True)

@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from api.deps import get_words_service, require_any_permission, require_permission
+from app.core.exceptions import DomainError, ServiceError
 from app.media import Category
+from app.schemas.common import CommonResponse
 from app.services.words_service import WordsService
 from app.utils import ExceptionUtils
 from app.utils.response import fail, success
@@ -74,7 +76,7 @@ class GetCategoriesRequest(BaseModel):
 # ---------- Endpoints ----------
 
 
-@router.post("/groups/add")
+@router.post("/groups/add", response_model=CommonResponse, summary="添加自定义识别词组")
 def add_custom_word_group(
     req: AddCustomWordGroupRequest,
     current_user: str = Depends(require_permission("setting:update")),
@@ -88,12 +90,14 @@ def add_custom_word_group(
         if ok:
             return success(msg=msg)
         return fail(msg=msg)
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
-        return fail(msg=str(e))
+        return fail(msg=f"操作失败: {str(e)}")
 
 
-@router.post("/words/save")
+@router.post("/words/save", response_model=CommonResponse, summary="保存自定义识别词")
 def add_or_edit_custom_word(
     req: AddOrEditCustomWordRequest,
     current_user: str = Depends(require_permission("setting:update")),
@@ -118,12 +122,14 @@ def add_or_edit_custom_word(
         if ok:
             return success(msg=msg)
         return fail(msg=msg)
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
-        return fail(msg=str(e))
+        return fail(msg=f"操作失败: {str(e)}")
 
 
-@router.post("/words/analyse")
+@router.post("/words/analyse", response_model=CommonResponse, summary="分析导入代码")
 def analyse_import_custom_words_code(
     req: AnalyseImportCodeRequest,
     current_user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -147,12 +153,14 @@ def analyse_import_custom_words_code(
                 "note_string": note,
             }
         )
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
-        return fail(msg=str(e))
+        return fail(msg=f"操作失败: {str(e)}")
 
 
-@router.post("/words/check")
+@router.post("/words/check", response_model=CommonResponse, summary="切换识别词状态")
 def check_custom_words(
     req: CheckCustomWordsRequest,
     current_user: str = Depends(require_permission("setting:update")),
@@ -166,12 +174,14 @@ def check_custom_words(
         if ok:
             return success(msg="")
         return fail(msg="识别词状态设置失败")
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
         return fail(msg="识别词状态设置失败")
 
 
-@router.post("/groups/delete")
+@router.post("/groups/delete", response_model=CommonResponse, summary="删除识别词组")
 def delete_custom_word_group(
     req: DeleteCustomWordGroupRequest,
     current_user: str = Depends(require_permission("setting:update")),
@@ -180,12 +190,14 @@ def delete_custom_word_group(
     try:
         svc.delete_word_group(req.gid)
         return success(msg="")
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
-        return fail(msg=str(e))
+        return fail(msg=f"操作失败: {str(e)}")
 
 
-@router.post("/words/delete")
+@router.post("/words/delete", response_model=CommonResponse, summary="删除识别词")
 def delete_custom_words(
     req: DeleteCustomWordsRequest,
     current_user: str = Depends(require_permission("setting:update")),
@@ -194,12 +206,14 @@ def delete_custom_words(
     try:
         svc.delete_words_by_ids(req.ids_info or [])
         return success(msg="")
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
-        return fail(msg=str(e))
+        return fail(msg=f"操作失败: {str(e)}")
 
 
-@router.post("/words/export")
+@router.post("/words/export", response_model=CommonResponse, summary="导出识别词")
 def export_custom_words(
     req: ExportCustomWordsRequest,
     current_user: str = Depends(require_permission("setting:update")),
@@ -211,12 +225,14 @@ def export_custom_words(
             note=req.note or "",
         )
         return success(data=encoded)
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
-        return fail(msg=str(e))
+        return fail(msg=f"操作失败: {str(e)}")
 
 
-@router.post("/words/detail")
+@router.post("/words/detail", response_model=CommonResponse, summary="获取识别词详情")
 def get_custom_word(
     req: GetCustomWordRequest,
     current_user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -242,12 +258,14 @@ def get_custom_word(
                 }
             )
         return success(data={})
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
         return fail(msg="查询识别词失败")
 
 
-@router.post("/words/import")
+@router.post("/words/import", response_model=CommonResponse, summary="导入识别词")
 def import_custom_words(
     req: ImportCustomWordsRequest,
     current_user: str = Depends(require_permission("setting:update")),
@@ -261,12 +279,14 @@ def import_custom_words(
         if ok:
             return success(msg=msg)
         return fail(msg=msg)
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
-        return fail(msg=str(e))
+        return fail(msg=f"操作失败: {str(e)}")
 
 
-@router.post("/categories")
+@router.post("/categories", response_model=CommonResponse, summary="获取分类")
 def get_categories(
     req: GetCategoriesRequest,
     current_user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -286,7 +306,7 @@ def get_categories(
     )
 
 
-@router.post("/words")
+@router.post("/words", response_model=CommonResponse, summary="获取识别词列表")
 def get_customwords(
     current_user: str = Depends(require_any_permission("setting:view", "setting:update")),
     svc: WordsService = Depends(get_words_service),
@@ -294,6 +314,8 @@ def get_customwords(
     try:
         groups = svc.get_all_word_groups()
         return success(data=groups)
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
-        return fail(msg=str(e))
+        return fail(msg=f"操作失败: {str(e)}")

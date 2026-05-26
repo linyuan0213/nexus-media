@@ -4,7 +4,7 @@ from functools import lru_cache
 
 from app.media import MediaService
 from app.utils import ExceptionUtils, RequestUtils
-from config import Config
+from app.core.settings import settings
 
 
 def get_login_wallpaper(time_now=None):
@@ -13,8 +13,8 @@ def get_login_wallpaper(time_now=None):
     """
     if not time_now:
         time_now = datetime.datetime.now()
-    wallpaper = Config().get_config("app").get("wallpaper")
-    tmdbkey = Config().get_config("app").get("rmt_tmdbkey")
+    wallpaper = settings.get("app").get("wallpaper")
+    tmdbkey = settings.get("app").get("rmt_tmdbkey")
     if (not wallpaper or wallpaper == "themoviedb") and tmdbkey:
         # 每小时更新
         curr_time = datetime.datetime.strftime(time_now, "%Y%m%d%H")

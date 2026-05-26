@@ -9,6 +9,7 @@ from app.domain.entities.rss import (
     RssMovieEntity,
     RssTvEntity,
 )
+from app.utils.types import MediaType
 
 
 class RssMovieRepositoryAdapter:
@@ -46,12 +47,10 @@ class RssMovieRepositoryAdapter:
         return self._repo.update_rss_movie(rssid, **kwargs)
 
     def update_filter_order(self, rssid: int, res_order: int) -> None:
-        from app.utils.types import MediaType
 
         self._repo.update_rss_filter_order(MediaType.MOVIE.value, rssid, str(res_order))
 
     def get_filter_order(self, rssid: int) -> int:
-        from app.utils.types import MediaType
 
         return self._repo.get_rss_overedition_order(MediaType.MOVIE.value, rssid)
 
@@ -117,7 +116,9 @@ class RssTvRepositoryAdapter:
             return []
         return [entity for entity in [RssTvEntity.from_orm(r) for r in rows] if entity is not None]
 
-    def get_id(self, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None) -> int | str | None:
+    def get_id(
+        self, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None
+    ) -> int | str | None:
         return self._repo.get_rss_tv_id(title, year, season, tmdbid)
 
     def is_exists(self, title: str, year: str, season: str | None = None) -> bool:
@@ -151,12 +152,10 @@ class RssTvRepositoryAdapter:
         self._repo.update_rss_tv_lack(title, year, season, rssid, lack_episodes if lack_episodes is not None else [])
 
     def update_filter_order(self, rssid: int, res_order: int) -> None:
-        from app.utils.types import MediaType
 
         self._repo.update_rss_filter_order(MediaType.TV.value, rssid, str(res_order))
 
     def get_filter_order(self, rssid: int) -> int:
-        from app.utils.types import MediaType
 
         return self._repo.get_rss_overedition_order(MediaType.TV.value, rssid)
 

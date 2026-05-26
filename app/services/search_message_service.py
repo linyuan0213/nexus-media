@@ -7,7 +7,7 @@ import os
 import re
 
 import log
-from app.agent import ChatAgent
+from app.agent.agents.chat_agent import ChatAgent
 from app.media import MediaService, meta_info
 from app.message import Message
 from app.services.downloader_core import DownloaderCore as Downloader
@@ -19,7 +19,8 @@ from app.sites import Sites
 from app.utils import StringUtils, Torrent
 from app.utils.types import MediaType, RssType, SearchType
 from app.utils.web_utils import WebUtils
-from config import Config
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.core.settings import settings
 
 
 class MessageSearchService:
@@ -180,6 +181,8 @@ class MessageSearchService:
         """AI 对话（支持工具调用）"""
         try:
             answer = ChatAgent().chat_with_tools(question=question, session_id=str(user_id))
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             log.error(f"【ChatAgent】对话异常: {e}")
             answer = "AI出错了，请检查LLM配置，如需搜索电影/电视剧，请发送 搜索或下载 + 名称"
@@ -298,7 +301,7 @@ class MessageSearchService:
                 user_id=user_id,
             )
 
-        if not search_result and Config().get_config("pt").get("search_no_result_rss"):
+        if not search_result and settings.get("pt").get("search_no_result_rss"):
             self._add_rss(in_from, media_info, user_id, state="R", user_name=user_name)
 
     def _enter_pagination_mode(self, in_from: SearchType, media_info, user_id: str):

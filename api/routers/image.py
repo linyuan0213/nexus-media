@@ -60,7 +60,7 @@ def _serve_image(cache_path: str, image_url: str, size: str | None = None, refer
     return Response(image_data, media_type="image/jpeg")
 
 
-@router.get("/tmdb/{size}/{img_path:path}")
+@router.get("/tmdb/{size}/{img_path:path}", summary="代理 TMDB 图片")
 def proxy_tmdb_image(size: str, img_path: str):
     """代理 TMDB 图片"""
     if size not in SIZE_DIMENSIONS:
@@ -70,7 +70,7 @@ def proxy_tmdb_image(size: str, img_path: str):
     return _serve_image(cache_path, original_url, size)
 
 
-@router.get("/douban/{img_path:path}")
+@router.get("/douban/{img_path:path}", summary="代理豆瓣图片")
 def proxy_douban_image(img_path: str):
     """代理豆瓣图片"""
     decoded_path = urllib.parse.unquote(img_path)
@@ -82,7 +82,7 @@ def proxy_douban_image(img_path: str):
     return _serve_image(cache_path, image_url, referer="https://movie.douban.com")
 
 
-@router.get("/bgm/{img_path:path}")
+@router.get("/bgm/{img_path:path}", summary="代理 Bangumi 图片")
 def proxy_bgm_image(img_path: str):
     """代理 Bangumi 图片"""
     decoded_path = urllib.parse.unquote(img_path)
@@ -94,7 +94,7 @@ def proxy_bgm_image(img_path: str):
     return _serve_image(cache_path, image_url)
 
 
-@router.get("/library/{img_url:path}")
+@router.get("/library/{img_url:path}", summary="代理媒体库图片")
 def proxy_library_image(request: Request, img_url: str):
     """代理媒体库内网图片"""
     decoded_url = urllib.parse.unquote(img_url)
@@ -107,7 +107,7 @@ def proxy_library_image(request: Request, img_url: str):
     return _serve_image(cache_path, decoded_url)
 
 
-@router.get("")
+@router.get("", summary="图片代理重定向")
 def proxy_image_redirect(request: Request, url: str | None = None):
     """
     旧格式兼容：/img?url=...

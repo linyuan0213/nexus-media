@@ -49,23 +49,12 @@ app:
 
 # 【数据库配置】
 database:
-  # 【数据库类型】：支持 sqlite、mysql、postgresql，默认sqlite
-  # sqlite: 本地文件数据库，无需额外配置
-  # mysql: MySQL数据库，需要配置host、port、username、password
-  # postgresql: PostgreSQL数据库，需要配置host、port、username、password
   type: sqlite
-  # 【数据库主机地址】：MySQL/PostgreSQL时生效
   host: localhost
-  # 【数据库端口】：MySQL默认为3306，PostgreSQL默认为5432
   port:
-  # 【数据库用户名】：MySQL/PostgreSQL时生效
   username:
-  # 【数据库密码】：MySQL/PostgreSQL时生效
   password:
-  # 【数据库名】：MySQL/PostgreSQL时生效，默认为nexus_media，媒体库会使用后缀_media
   database: nexus_media
-
-# 【配置日志信息】
 log:
   # 【日志记录类型】：server、file、console
   # 如果是使用Docker安装建议设置为console，通过Docker管理器查看日志

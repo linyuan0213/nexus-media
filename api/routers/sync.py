@@ -16,6 +16,8 @@ from api.deps import (
     require_permission,
 )
 from app.core.constants import RMT_MEDIAEXT
+from app.core.exceptions import DomainError, ServiceError
+from app.schemas.common import CommonResponse
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.sync_service import SyncService
 from app.utils import ExceptionUtils
@@ -138,7 +140,7 @@ class ReIdentificationRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/paths/save")
+@router.post("/paths/save", response_model=CommonResponse, summary="保存同步路径")
 def add_or_edit_sync_path(
     req: AddOrEditSyncPathRequest,
     user: str = Depends(require_permission("setting:update")),
@@ -162,7 +164,7 @@ def add_or_edit_sync_path(
     return fail(msg=msg)
 
 
-@router.post("/paths/check")
+@router.post("/paths/check", response_model=CommonResponse, summary="检查同步路径")
 def check_sync_path(
     req: CheckSyncPathRequest,
     user: str = Depends(require_permission("setting:update")),
@@ -174,7 +176,7 @@ def check_sync_path(
     return fail()
 
 
-@router.post("/unknown/delete")
+@router.post("/unknown/delete", response_model=CommonResponse, summary="删除未识别路径")
 def del_unknown_path(
     req: DelUnknownPathRequest,
     user: str = Depends(require_permission("setting:update")),
@@ -192,7 +194,7 @@ def del_unknown_path(
         return fail(code=retcode or 1)
 
 
-@router.post("/files/delete")
+@router.post("/files/delete", response_model=CommonResponse, summary="删除文件")
 def delete_files(
     req: DeleteFilesRequest,
     user: str = Depends(require_permission("setting:update")),
@@ -217,7 +219,7 @@ def delete_files(
     return success()
 
 
-@router.post("/paths/delete")
+@router.post("/paths/delete", response_model=CommonResponse, summary="删除同步路径")
 def delete_sync_path(
     req: DeleteSyncPathRequest,
     user: str = Depends(require_permission("setting:update")),
@@ -227,7 +229,7 @@ def delete_sync_path(
     return success()
 
 
-@router.post("/paths/sub")
+@router.post("/paths/sub", response_model=CommonResponse, summary="获取子路径")
 def get_sub_path(
     req: GetSubPathRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -236,13 +238,15 @@ def get_sub_path(
     try:
         ft = req.filter or "ALL"
         r = svc.get_sub_path(directory=req.directory or "", ft=ft)
+    except (ServiceError, DomainError) as e:
+        return fail(code=-1, message=e.message)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
         return fail(code=-1, message=f"加载路径失败: {str(e)}")
     return success(data={"count": len(r), "items": r})
 
 
-@router.post("/rename")
+@router.post("/rename", response_model=CommonResponse, summary="手动转移")
 def rename(
     req: RenameRequest,
     user: str = Depends(require_permission("setting:update")),
@@ -308,7 +312,7 @@ def rename(
     return fail(code=2, msg=result.message)
 
 
-@router.post("/rename/file")
+@router.post("/rename/file", response_model=CommonResponse, summary="重命名文件")
 def rename_file(
     req: RenameFileRequest,
     user: str = Depends(require_permission("setting:update")),
@@ -320,7 +324,7 @@ def rename_file(
     return fail(code=-1, msg=result.message)
 
 
-@router.post("/rename/udf")
+@router.post("/rename/udf", response_model=CommonResponse, summary="自定义转移")
 def rename_udf(
     req: RenameUdfRequest,
     user: str = Depends(require_permission("setting:update")),
@@ -359,7 +363,7 @@ def rename_udf(
     return fail(code=2, msg=result.message)
 
 
-@router.post("/run")
+@router.post("/run", response_model=CommonResponse, summary="执行目录同步")
 def run_directory_sync(
     req: RunDirectorySyncRequest,
     user: str = Depends(require_permission("setting:update")),
@@ -370,7 +374,7 @@ def run_directory_sync(
     return success(msg="执行成功")
 
 
-@router.post("/paths/test_connection")
+@router.post("/paths/test_connection", response_model=CommonResponse, summary="测试连接")
 def test_connection(
     req: TestConnectionRequest,
     user: str = Depends(require_permission("setting:update")),
@@ -382,7 +386,7 @@ def test_connection(
     return fail(code=1)
 
 
-@router.post("/directories/update")
+@router.post("/directories/update", response_model=CommonResponse, summary="更新目录")
 def update_directory(
     req: UpdateDirectoryRequest,
     user: str = Depends(require_permission("setting:update")),
@@ -399,7 +403,7 @@ def update_directory(
     return fail()
 
 
-@router.post("/history/delete")
+@router.post("/history/delete", response_model=CommonResponse, summary="删除同步历史")
 def delete_history(
     req: DeleteHistoryRequest,
     user: str = Depends(require_permission("setting:update")),
@@ -411,7 +415,7 @@ def delete_history(
     return success()
 
 
-@router.post("/paths")
+@router.post("/paths", response_model=CommonResponse, summary="获取同步路径")
 def get_sync_path(
     req: GetSyncPathRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -421,7 +425,7 @@ def get_sync_path(
     return success(data=sync_path)
 
 
-@router.post("/reidentify")
+@router.post("/reidentify", response_model=CommonResponse, summary="重新识别")
 def re_identification(
     req: ReIdentificationRequest,
     user: str = Depends(require_permission("setting:update")),

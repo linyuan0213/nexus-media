@@ -16,6 +16,7 @@ from app.db.repositories.rbac_repo_adapter import (
     RBACRoleRepositoryAdapter,
     RBACUserRepositoryAdapter,
 )
+from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.utils.security import check_password_hash, generate_password_hash
 
 
@@ -76,9 +77,9 @@ class RBACService:
 
         if not user.PASSWORD_HASH:
             # 密码为空，使用配置文件中的默认密码作为首次登录密码
-            from config import Config
+            from app.core.settings import settings
 
-            default_password = Config().get_config("app").get("login_password") or "password"
+            default_password = settings.get("app").get("login_password") or "password"
             if password != default_password:
                 self.log_repo.add_login_log(
                     user_id=user.ID,
@@ -159,9 +160,9 @@ class RBACService:
         if old_password is not None:
             # 密码为空时使用默认密码
             if not user.PASSWORD_HASH:
-                from config import Config
+                from app.core.settings import settings
 
-                default_password = Config().get_config("app").get("login_password") or "password"
+                default_password = settings.get("app").get("login_password") or "password"
                 if old_password != default_password:
                     return False, "旧密码错误"
             elif not check_password_hash(user.PASSWORD_HASH, old_password):
@@ -645,7 +646,7 @@ class RBACService:
         超级管理员返回所有菜单
         """
         user = self.get_user_by_id(user_id)
-        if user and user.is_superadmin:
+        if user and user.IS_SUPERADMIN == 1:
             menus = self.menu_repo.get_all_menus()
         else:
             menus = self.menu_repo.get_user_menus(user_id)

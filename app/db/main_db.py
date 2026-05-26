@@ -11,7 +11,7 @@ from app.db.models import Base
 from app.db.sql_adapter import SQLAdapter
 from app.utils import ExceptionUtils, PathUtils
 from app.utils.path_utils import get_script_path
-from config import Config
+from app.core.settings import settings
 
 # =============================================================================
 # SQL 适配器（延迟初始化避免循环导入）
@@ -190,6 +190,7 @@ class SessionManager:
 
     def create_all(self):
         """创建所有表"""
+        assert self._engine is not None
         Base.metadata.create_all(self._engine)
 
     def init_db_version(self):
@@ -202,8 +203,8 @@ class SessionManager:
 
     def init_data(self):
         """读取 SQL 脚本初始化数据"""
-        config = Config().get_config()
-        init_files = Config().get_config("app").get("init_files") or []
+        config = settings.get()
+        init_files = settings.get("app").get("init_files") or []
         config_dir = get_script_path()
         sql_files = PathUtils.get_dir_level1_files(in_path=config_dir, exts=".sql")
         config_flag = False
@@ -223,7 +224,7 @@ class SessionManager:
                 init_files.append(os.path.basename(sql_file))
         if config_flag:
             config["app"]["init_files"] = init_files
-            Config().save_config(config)
+            settings.save(config)
 
 
 # =============================================================================

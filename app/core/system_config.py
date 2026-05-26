@@ -1,5 +1,6 @@
 import json
 
+import log
 from app.db.repositories.system_dict_repo_adapter import SystemDictRepositoryAdapter
 from app.utils.commons import SingletonMeta
 from app.utils.types import SystemConfigKey
@@ -17,8 +18,6 @@ class SystemConfig(metaclass=SingletonMeta):
 
     def init_config(self):
         """缓存系统设置"""
-        import log
-
         rows = self._repo.list_by_type(self._type)
         for row in rows:
             if not row or not row.value:

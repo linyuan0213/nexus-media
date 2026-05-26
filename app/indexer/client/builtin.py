@@ -23,7 +23,7 @@ from app.utils import StringUtils
 from app.utils.config_tools import get_ua
 from app.indexer.schema import IndexerConfigSchema
 from app.utils.types import ProgressKey, SearchType, SystemConfigKey
-from config import Config
+from app.core.settings import settings
 
 _STATS_LOCK = Lock()
 
@@ -55,7 +55,7 @@ class BuiltinIndexer(_IIndexClient):
         self.sites = Sites()
         self.progress = ProgressHelper()
         self.download_repo = DownloadRepository()
-        self._show_more_sites = Config().get_config("laboratory").get("show_more_sites")
+        self._show_more_sites = settings.get("laboratory").get("show_more_sites")
 
     @classmethod
     def match(cls, ctype):
@@ -236,7 +236,10 @@ class BuiltinIndexer(_IIndexClient):
         seconds = round((datetime.datetime.now() - start_time).seconds, 1)
         with _STATS_LOCK:
             self.download_repo.insert_indexer_statistics(
-                indexer=indexer.name, itype=self.client_id, seconds=seconds, result="N" if error_flag else "Y"  # type: ignore[union-attr]
+                indexer=indexer.name,  # type: ignore[union-attr]
+                itype=self.client_id,
+                seconds=seconds,
+                result="N" if error_flag else "Y",  # type: ignore[union-attr]
             )
         return result_array
 

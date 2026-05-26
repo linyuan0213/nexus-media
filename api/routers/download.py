@@ -21,6 +21,7 @@ from api.deps import (
 from app.downloader.registry import get_all_clients
 from app.helper.thread_helper import ThreadHelper
 from app.schemas.auth import UserContext
+from app.schemas.common import CommonResponse
 from app.services.download_service import DownloadService
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filetransfer_service import FileTransferService as FileTransfer
@@ -184,7 +185,7 @@ class UpdateTorrentRemoveTaskRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/torrent-remove-tasks/run")
+@router.post("/torrent-remove-tasks/run", response_model=CommonResponse, summary="执行自动删种任务")
 def auto_remove_torrents(
     req: AutoRemoveTorrentsRequest,
     user: str = Depends(require_permission("download:manage")),
@@ -194,7 +195,7 @@ def auto_remove_torrents(
     return success()
 
 
-@router.post("/downloaders/check")
+@router.post("/downloaders/check", response_model=CommonResponse, summary="切换下载器设置")
 def check_downloader(
     req: CheckDownloaderRequest,
     user: str = Depends(require_permission("download:manage")),
@@ -214,11 +215,13 @@ def check_downloader(
         only_nexus_media = 1 if checked else 0
     elif flag == "match_path":
         match_path = 1 if checked else 0
-    svc.check_downloader(did=did, enabled=enabled, transfer=transfer, only_nexus_media=only_nexus_media, match_path=match_path)
+    svc.check_downloader(
+        did=did, enabled=enabled, transfer=transfer, only_nexus_media=only_nexus_media, match_path=match_path
+    )
     return success()
 
 
-@router.post("/downloaders/delete")
+@router.post("/downloaders/delete", response_model=CommonResponse, summary="删除下载器")
 def del_downloader(
     req: DelDownloaderRequest,
     user: str = Depends(require_permission("download:manage")),
@@ -228,7 +231,7 @@ def del_downloader(
     return success()
 
 
-@router.post("/settings/delete")
+@router.post("/settings/delete", response_model=CommonResponse, summary="删除下载设置")
 def delete_download_setting(
     req: DeleteDownloadSettingRequest,
     user: str = Depends(require_permission("download:manage")),
@@ -238,7 +241,7 @@ def delete_download_setting(
     return success()
 
 
-@router.post("/torrent-remove-tasks/delete")
+@router.post("/torrent-remove-tasks/delete", response_model=CommonResponse, summary="删除删种任务")
 def delete_torrent_remove_task(
     req: DeleteTorrentRemoveTaskRequest,
     user: str = Depends(require_permission("download:manage")),
@@ -250,7 +253,7 @@ def delete_torrent_remove_task(
     return fail()
 
 
-@router.post("/tasks/add")
+@router.post("/tasks/add", response_model=CommonResponse, summary="添加下载任务")
 def download(
     req: DownloadRequest,
     user: UserContext = Depends(require_permission("download:manage")),
@@ -262,7 +265,10 @@ def download(
     def _do_download():
         try:
             svc.download_from_search_results(
-                dl_id=req.id or 0, dl_dir=req.dir or "", dl_setting=req.setting or "", user_name=user.nickname or user.username
+                dl_id=req.id or 0,
+                dl_dir=req.dir or "",
+                dl_setting=req.setting or "",
+                user_name=user.nickname or user.username,
             )
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -271,7 +277,7 @@ def download(
     return success(msg="下载任务已提交")
 
 
-@router.post("/tasks/add_link")
+@router.post("/tasks/add_link", response_model=CommonResponse, summary="添加链接下载任务")
 def download_link(
     req: DownloadLinkRequest,
     user: UserContext = Depends(require_permission("download:manage")),
@@ -300,7 +306,7 @@ def download_link(
     return success(msg="下载任务已提交")
 
 
-@router.post("/tasks/resolve_url")
+@router.post("/tasks/resolve_url", response_model=CommonResponse, summary="解析下载链接")
 def resolve_download_url(
     req: ResolveDownloadUrlRequest,
     user: str = Depends(require_any_permission("download:view", "download:manage")),
@@ -312,7 +318,7 @@ def resolve_download_url(
     return success(data={"url": url})
 
 
-@router.post("/tasks/add_torrent")
+@router.post("/tasks/add_torrent", response_model=CommonResponse, summary="添加种子下载任务")
 def download_torrent(
     req: DownloadTorrentRequest,
     user: UserContext = Depends(require_permission("download:manage")),
@@ -346,7 +352,7 @@ def download_torrent(
     return success(msg="下载任务已提交")
 
 
-@router.post("/tools/hardlinks")
+@router.post("/tools/hardlinks", response_model=CommonResponse, summary="查找硬链接")
 def find_hardlinks(
     req: FindHardlinksRequest,
     user: str = Depends(require_any_permission("download:view", "download:manage")),
@@ -372,7 +378,7 @@ def find_hardlinks(
     return success(data=hardlinks)
 
 
-@router.post("/downloaders/dirs")
+@router.post("/downloaders/dirs", response_model=CommonResponse, summary="获取下载目录")
 def get_download_dirs(
     req: GetDownloadDirsRequest,
     user: str = Depends(require_any_permission("download:view", "download:manage")),
@@ -387,7 +393,7 @@ def get_download_dirs(
     return success(data=dirs)
 
 
-@router.post("/settings")
+@router.post("/settings", response_model=CommonResponse, summary="获取下载设置")
 def get_download_setting(
     req: GetDownloadSettingRequest,
     user: str = Depends(require_any_permission("download:view", "download:manage")),
@@ -401,7 +407,7 @@ def get_download_setting(
     return success(data=download_setting)
 
 
-@router.post("/downloaders")
+@router.post("/downloaders", response_model=CommonResponse, summary="获取下载器配置")
 def get_downloaders(
     req: GetDownloadersRequest,
     user: str = Depends(require_any_permission("download:view", "download:manage")),
@@ -410,7 +416,7 @@ def get_downloaders(
     return success(data=svc.get_downloader_conf(did=req.did))
 
 
-@router.post("/downloaders/default")
+@router.post("/downloaders/default", response_model=CommonResponse, summary="设置默认下载器")
 def set_default_downloader(
     req: SetDefaultDownloaderRequest,
     user: str = Depends(require_permission("download:manage")),
@@ -424,7 +430,7 @@ def set_default_downloader(
     return fail(msg="设置失败，下载器不存在")
 
 
-@router.post("/downloaders/types")
+@router.post("/downloaders/types", response_model=CommonResponse, summary="获取下载器类型配置")
 def get_downloader_types(
     user: str = Depends(require_any_permission("download:view", "download:manage")),
 ):
@@ -432,7 +438,7 @@ def get_downloader_types(
     return success(data={cls.client_id: cls.config_schema.to_dict() for cls in get_all_clients()})
 
 
-@router.post("/indexers/statistics")
+@router.post("/indexers/statistics", response_model=CommonResponse, summary="获取索引器统计")
 def get_indexer_statistics(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("download:view", "download:manage")),
@@ -449,7 +455,7 @@ def get_indexer_statistics(
     )
 
 
-@router.post("/indexers")
+@router.post("/indexers", response_model=CommonResponse, summary="获取用户索引器")
 def get_indexers(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("download:view", "download:manage")),
@@ -459,7 +465,7 @@ def get_indexers(
     return success(data=[{"id": i.id, "name": i.name} for i in indexers])
 
 
-@router.post("/torrent-remove-tasks/candidates")
+@router.post("/torrent-remove-tasks/candidates", response_model=CommonResponse, summary="获取可删除种子列表")
 def get_remove_torrents(
     req: GetRemoveTorrentsRequest,
     user: str = Depends(require_any_permission("download:view", "download:manage")),
@@ -471,7 +477,7 @@ def get_remove_torrents(
     return success(data=torrents)
 
 
-@router.post("/torrent-remove-tasks")
+@router.post("/torrent-remove-tasks", response_model=CommonResponse, summary="获取删种任务")
 def get_torrent_remove_task(
     req: GetTorrentRemoveTaskRequest,
     user: str = Depends(require_any_permission("download:view", "download:manage")),
@@ -480,7 +486,7 @@ def get_torrent_remove_task(
     return success(data=svc.get_torrent_remove_tasks(taskid=req.tid))
 
 
-@router.post("/tasks/info")
+@router.post("/tasks/info", response_model=CommonResponse, summary="获取下载任务信息")
 def pt_info(
     req: PtInfoRequest,
     user: str = Depends(require_any_permission("download:view", "download:manage")),
@@ -490,7 +496,7 @@ def pt_info(
     return success(data=torrents)
 
 
-@router.post("/tasks/remove")
+@router.post("/tasks/remove", response_model=CommonResponse, summary="删除下载任务")
 def pt_remove(
     req: PtIdRequest,
     user: str = Depends(require_any_permission("download:view", "download:manage")),
@@ -502,7 +508,7 @@ def pt_remove(
     return success(data=tid)
 
 
-@router.post("/tasks/start")
+@router.post("/tasks/start", response_model=CommonResponse, summary="开始下载任务")
 def pt_start(
     req: PtIdRequest,
     user: str = Depends(require_permission("download:manage")),
@@ -514,7 +520,7 @@ def pt_start(
     return success(data=tid)
 
 
-@router.post("/tasks/stop")
+@router.post("/tasks/stop", response_model=CommonResponse, summary="停止下载任务")
 def pt_stop(
     req: PtIdRequest,
     user: str = Depends(require_permission("download:manage")),
@@ -526,7 +532,7 @@ def pt_stop(
     return success(data=tid)
 
 
-@router.post("/downloaders/test")
+@router.post("/downloaders/test", response_model=CommonResponse, summary="测试下载器连接")
 def test_downloader(
     req: TestDownloaderRequest,
     user: str = Depends(require_permission("download:manage")),
@@ -542,7 +548,7 @@ def test_downloader(
         return success(data={"success": False, "message": f"连接异常：{str(e)}"})
 
 
-@router.post("/settings/update")
+@router.post("/settings/update", response_model=CommonResponse, summary="更新下载设置")
 def update_download_setting(
     req: UpdateDownloadSettingRequest,
     user: str = Depends(require_permission("download:manage")),
@@ -563,7 +569,7 @@ def update_download_setting(
     return success()
 
 
-@router.post("/settings/default")
+@router.post("/settings/default", response_model=CommonResponse, summary="设置默认下载设置")
 def set_default_download_setting(
     req: SetDefaultDownloadSettingRequest,
     user: str = Depends(require_permission("download:manage")),
@@ -577,7 +583,7 @@ def set_default_download_setting(
     return fail(msg="设置失败")
 
 
-@router.post("/downloaders/update")
+@router.post("/downloaders/update", response_model=CommonResponse, summary="更新下载器配置")
 def update_downloader(
     req: UpdateDownloaderRequest,
     user: str = Depends(require_permission("download:manage")),
@@ -612,7 +618,7 @@ def update_downloader(
     return success()
 
 
-@router.post("/torrent-remove-tasks/save")
+@router.post("/torrent-remove-tasks/save", response_model=CommonResponse, summary="保存删种任务")
 def update_torrent_remove_task(
     req: UpdateTorrentRemoveTaskRequest,
     user: str = Depends(require_permission("download:manage")),
@@ -624,7 +630,7 @@ def update_torrent_remove_task(
     return success()
 
 
-@router.post("/tasks")
+@router.post("/tasks", response_model=CommonResponse, summary="获取下载中任务列表")
 def get_downloading(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("download:view", "download:manage")),
@@ -634,7 +640,7 @@ def get_downloading(
     return success(data=torrents)
 
 
-@router.post("/tools/blacklist/clear")
+@router.post("/tools/blacklist/clear", response_model=CommonResponse, summary="清空转移黑名单")
 def truncate_blacklist(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_permission("download:manage")),

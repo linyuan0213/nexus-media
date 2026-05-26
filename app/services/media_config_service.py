@@ -2,8 +2,9 @@
 
 import json
 
+from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.db.repositories.config_repo_adapter import MediaConfigRepositoryAdapter
-from config import Config
+from app.core.settings import settings
 
 
 class MediaConfigService:
@@ -11,7 +12,7 @@ class MediaConfigService:
 
     def __init__(self, repo: MediaConfigRepositoryAdapter | None = None):
         self._repo = repo or MediaConfigRepositoryAdapter()
-        self._yaml_fallback = Config().get_config("media") or {}
+        self._yaml_fallback = settings.get("media") or {}
 
     @staticmethod
     def _parse_paths(val) -> list[str]:
@@ -64,24 +65,14 @@ class MediaConfigService:
             else (self._yaml_fallback.get("unknown_path") or [])
         )
         movie_backend = (
-            self._parse_backends(db_cfg.MOVIE_BACKEND or "")
-            if db_cfg and db_cfg.MOVIE_BACKEND is not None
-            else []
+            self._parse_backends(db_cfg.MOVIE_BACKEND or "") if db_cfg and db_cfg.MOVIE_BACKEND is not None else []
         )
-        tv_backend = (
-            self._parse_backends(db_cfg.TV_BACKEND or "")
-            if db_cfg and db_cfg.TV_BACKEND is not None
-            else []
-        )
+        tv_backend = self._parse_backends(db_cfg.TV_BACKEND or "") if db_cfg and db_cfg.TV_BACKEND is not None else []
         anime_backend = (
-            self._parse_backends(db_cfg.ANIME_BACKEND or "")
-            if db_cfg and db_cfg.ANIME_BACKEND is not None
-            else []
+            self._parse_backends(db_cfg.ANIME_BACKEND or "") if db_cfg and db_cfg.ANIME_BACKEND is not None else []
         )
         unknown_backend = (
-            self._parse_backends(db_cfg.UNKNOWN_BACKEND or "")
-            if db_cfg and db_cfg.UNKNOWN_BACKEND is not None
-            else []
+            self._parse_backends(db_cfg.UNKNOWN_BACKEND or "") if db_cfg and db_cfg.UNKNOWN_BACKEND is not None else []
         )
         return {
             "movie_path": movie_path,

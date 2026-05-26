@@ -52,11 +52,17 @@ class BrushDeleteType(Enum):
     HRSEEDTIME = "H&R 做种时间"
     FREESPACE = "磁盘剩余空间"
     FREEEND = "Free 到期"
+    FREESTATUS = "Free 状态"
+    HR = "H&R 状态"
 
 
 class BrushStopType(Enum):
     FREEEND = "Free 到期"
     NOTSTOP = "不暂停"
+    RATIO = "分享率"
+    UPLOADSIZE = "上传量"
+    SEEDTIME = "做种时间"
+    AVGUPSPEED = "平均上传速度"
 
 
 # 可监听事件
@@ -117,8 +123,6 @@ class SystemConfigKey(Enum):
     CookieUserInfo = "CookieUserInfo"
     # CookieCloud同步参数
     CookieCloud = "CookieCloud"
-    # 自定义JS/CSS
-    CustomScript = "CustomScript"
     # 默认下载器
     DefaultDownloader = "DefaultDownloader"
     # 默认下载设置

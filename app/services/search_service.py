@@ -28,7 +28,7 @@ from app.services.indexer_service import IndexerService
 from app.utils.commons import SingletonMeta
 from app.utils.string_utils import StringUtils
 from app.utils.types import EventType, MediaType, ProgressKey, SearchType
-from config import Config
+from app.core.settings import settings
 
 
 class SearchQueryBuilder:
@@ -73,7 +73,7 @@ class SearchQueryBuilder:
         # 开启多语言搜索
         max_workers = 1
         try:
-            multi_lang = Config().get_config("laboratory").get("search_multi_language")
+            multi_lang = settings.get("laboratory").get("search_multi_language")
         except Exception:
             multi_lang = False
         if multi_lang:
@@ -262,7 +262,7 @@ class Searcher(metaclass=SingletonMeta):
         self.search_repo = self._search_repo
         self.indexer_service = IndexerService()
         self.eventmanager = EventManager()
-        self._search_auto = Config().get_config("pt").get("search_auto", True)
+        self._search_auto = settings.get("pt").get("search_auto", True)
 
     @property
     def download_repo(self):

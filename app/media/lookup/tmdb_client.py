@@ -19,7 +19,7 @@ from app.infrastructure.external.tmdbv3api import (
 from app.utils import StringUtils
 from app.utils.config_tools import get_proxies, get_tmdbapi_url
 from app.utils.types import MediaType
-from config import Config
+from app.core.settings import settings
 
 
 class TmdbClient:
@@ -40,8 +40,8 @@ class TmdbClient:
         self._init_config()
 
     def _init_config(self):
-        app = Config().get_config("app")
-        media = Config().get_config("media")
+        app = settings.get("app")
+        media = settings.get("media")
         _lang = media.get("tmdb_language", "zh")
         self._default_language = _lang if isinstance(_lang, str) else "zh"
         _api_key = app.get("rmt_tmdbkey")

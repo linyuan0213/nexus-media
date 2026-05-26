@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from api.deps import get_config_service, require_any_permission
+from app.schemas.common import CommonResponse
 from app.services.filter_service import FilterService as Filter
 from app.utils.response import fail, success
 
@@ -81,7 +82,7 @@ class ShareFilterGroupRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/groups/add")
+@router.post("/groups/add", response_model=CommonResponse, summary="添加过滤规则组")
 def add_filtergroup(
     req: AddFilterGroupRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -93,7 +94,7 @@ def add_filtergroup(
     return success()
 
 
-@router.post("/rules/add")
+@router.post("/rules/add", response_model=CommonResponse, summary="添加过滤规则")
 def add_filterrule(
     req: AddFilterRuleRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -111,7 +112,7 @@ def add_filterrule(
     return success()
 
 
-@router.post("/groups/delete")
+@router.post("/groups/delete", response_model=CommonResponse, summary="删除过滤规则组")
 def del_filtergroup(
     req: IdRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -120,7 +121,7 @@ def del_filtergroup(
     return success()
 
 
-@router.post("/rules/delete")
+@router.post("/rules/delete", response_model=CommonResponse, summary="删除过滤规则")
 def del_filterrule(
     req: IdRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -129,7 +130,7 @@ def del_filterrule(
     return success()
 
 
-@router.post("/rules/detail")
+@router.post("/rules/detail", response_model=CommonResponse, summary="获取过滤规则详情")
 def filterrule_detail(
     req: FilterRuleDetailRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -138,7 +139,7 @@ def filterrule_detail(
     return success(data=ruleinfo)
 
 
-@router.post("/groups/import")
+@router.post("/groups/import", response_model=CommonResponse, summary="导入过滤规则组")
 def import_filtergroup(
     req: ImportFilterGroupRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -149,7 +150,7 @@ def import_filtergroup(
     return success(msg=msg)
 
 
-@router.post("/groups/restore")
+@router.post("/groups/restore", response_model=CommonResponse, summary="恢复过滤规则组")
 def restore_filtergroup(
     req: RestoreFilterGroupRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -158,7 +159,7 @@ def restore_filtergroup(
     return success()
 
 
-@router.post("/rules/test")
+@router.post("/rules/test", response_model=CommonResponse, summary="测试过滤规则")
 def rule_test(
     req: RuleTestRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -172,7 +173,7 @@ def rule_test(
     return success(data={"flag": match_flag, "text": text, "order": order})
 
 
-@router.post("/groups/default")
+@router.post("/groups/default", response_model=CommonResponse, summary="设置默认过滤规则组")
 def set_default_filtergroup(
     req: SetDefaultFilterGroupRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -184,7 +185,7 @@ def set_default_filtergroup(
     return success()
 
 
-@router.post("/groups/share")
+@router.post("/groups/share", response_model=CommonResponse, summary="分享过滤规则组")
 def share_filtergroup(
     req: ShareFilterGroupRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -195,7 +196,7 @@ def share_filtergroup(
     return success(data=json_string)
 
 
-@router.post("/rules")
+@router.post("/rules", response_model=CommonResponse, summary="获取过滤规则")
 def get_filterrules(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("setting:view", "setting:update")),

@@ -1,6 +1,7 @@
 import re
 from typing import Any
 
+from app.core.exceptions import InfrastructureError, NetworkError
 from app.downloader.client._base import _IDownloadClient
 from app.downloader.client._pyaria2 import PyAria2
 from app.downloader.schema import ConfigField, DownloaderConfigSchema
@@ -126,6 +127,8 @@ class Aria2(_IDownloadClient):
                         p = RequestUtils().get_res(url=content, allow_redirects=False)
                         if p and p.headers.get("Location"):
                             content = p.headers.get("Location") or ""
+                    except (InfrastructureError, NetworkError):
+                        raise
                     except Exception as result:
                         ExceptionUtils.exception_traceback(result)
                 result = self._client.addUri(uris=[content], options={"dir": download_dir})
@@ -133,6 +136,8 @@ class Aria2(_IDownloadClient):
             else:
                 result = self._client.addTorrent(torrent=content, uris=[], options={"dir": download_dir})
                 return bool(result)
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -142,6 +147,8 @@ class Aria2(_IDownloadClient):
             return False
         try:
             return bool(self._client.unpause(gid=ids))
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -151,6 +158,8 @@ class Aria2(_IDownloadClient):
             return False
         try:
             return bool(self._client.pause(gid=ids))
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -160,6 +169,8 @@ class Aria2(_IDownloadClient):
             return False
         try:
             return bool(self._client.forceRemove(gid=ids))
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -184,6 +195,8 @@ class Aria2(_IDownloadClient):
             if speed_opt.get("max-overall-download-limit") != dl_limit:
                 speed_opt["max-overall-download-limit"] = dl_limit
             return bool(self._client.changeGlobalOption(speed_opt))
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -194,6 +207,8 @@ class Aria2(_IDownloadClient):
         try:
             files = self._client.getFiles(gid=tid)
             return files if isinstance(files, list) else None
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return None

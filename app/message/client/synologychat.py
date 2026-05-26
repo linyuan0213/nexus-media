@@ -9,7 +9,7 @@ from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
 from app.services.apikey_service import APIKeyService
 from app.utils import ExceptionUtils, RequestUtils, StringUtils
-from config import Config
+from app.core.settings import settings
 
 lock = Lock()
 
@@ -42,7 +42,7 @@ class SynologyChat(_IMessageClient):
     _setup_done = set()
 
     def __init__(self, config):
-        self._config = Config()
+        self._config = settings
         self._interactive = False
         self._domain = None
         self._webhook_url = None
@@ -63,7 +63,7 @@ class SynologyChat(_IMessageClient):
             if self._token and self._token in SynologyChat._setup_done:
                 return
             SynologyChat._setup_done.add(self._token)
-            _web_port = self._config.get_config("app").get("web_port")
+            _web_port = settings.get("app").web_port
             _api_key = APIKeyService().get_or_create_system_key("MessageWebhook")
             ds_url = f"http://127.0.0.1:{_web_port}/synologychat?apikey={_api_key}"
             ThreadHelper().start_thread(self._start_polling, (ds_url,))
@@ -199,5 +199,3 @@ class SynologyChat(_IMessageClient):
         elif ret is not None:
             return False, f"错误码：{ret.status_code}，错误原因：{ret.reason}"  # type: ignore[union-attr]
         return False, "未获取到返回信息"
-
-

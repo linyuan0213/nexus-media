@@ -8,7 +8,7 @@ import requests
 
 import log
 from app.utils.commons import SingletonMeta
-from config import Config
+from app.core.settings import settings
 
 
 def generate_tab_id() -> str:
@@ -19,7 +19,7 @@ def generate_tab_id() -> str:
 class DrissionPageHelper(metaclass=SingletonMeta):
     def __init__(self):
         self.url = ""
-        url = Config().get_config("laboratory").get("chrome_server_host")
+        url = settings.get("laboratory").get("chrome_server_host")
         if url:
             self.url = url.rstrip("/")
         # 缓存状态，避免每次调用都重试

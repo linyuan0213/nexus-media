@@ -18,8 +18,8 @@ from cryptography.fernet import Fernet
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 
+from app.core.settings import settings
 from app.infrastructure.cache_system import TokenCache
-from config import Config
 
 _pwd_hash = PasswordHash([Argon2Hasher()])
 
@@ -31,21 +31,20 @@ def get_secret_key() -> str:
     其次从 app.web_secret_key 读取，
     若均不存在则生成密码学安全随机密钥并持久化到配置文件。
     """
-    cfg = Config()
-    secret = cfg.get_config("security").get("jwt_secret")
+    secret = settings.get("security").get("jwt_secret")
     if secret:
         return secret
-    secret = cfg.get_config("app").get("web_secret_key")
+    secret = settings.get("app").get("web_secret_key")
     if secret:
         return secret
 
     # 使用 secrets 生成密码学安全随机密钥并持久化到 security.jwt_secret
     secret = secrets.token_urlsafe(32)
-    new_cfg = copy.deepcopy(cfg.get_config())
+    new_cfg = copy.deepcopy(settings.get())
     if "security" not in new_cfg:
         new_cfg["security"] = {}
     new_cfg["security"]["jwt_secret"] = secret
-    cfg.save_config(new_cfg)
+    settings.save(new_cfg)
     return secret
 
 

@@ -2,7 +2,7 @@
 """
 Nexus Media 启动入口 — FastAPI
 已移除 Flask 依赖，统一使用 FastAPI
-"""
+"""  # noqa: EXE001
 
 import os
 import signal
@@ -12,8 +12,8 @@ import uvicorn
 
 import log
 from api.main import app
+from app.core.settings import settings
 from app.services.system_service import SystemLifecycleService
-from config import Config
 from config_monitor import stop_config_monitor
 
 warnings.filterwarnings("ignore")
@@ -42,7 +42,7 @@ def get_run_config():
     _ssl_key = None
     _debug = False
 
-    app_conf = Config().get_config("app")
+    app_conf = settings.get("app")
     if app_conf:
         if app_conf.get("web_host"):
             host_val = app_conf.get("web_host")

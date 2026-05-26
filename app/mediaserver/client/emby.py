@@ -7,7 +7,6 @@ from app.mediaserver.client._base import _IMediaClient
 from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
 from app.utils import ExceptionUtils, IpUtils, RequestUtils, SystemUtils
 from app.utils.types import MediaType
-from config import Config
 
 
 class Emby(_IMediaClient):
@@ -60,6 +59,14 @@ class Emby(_IMediaClient):
                 tooltip="配置播放设备的访问地址，用于媒体详情页跳转播放页面；如为https则需要增加https://前缀，留空则默认与服务器地址一致",
                 placeholder="http://127.0.0.1:8096",
             ),
+            ConfigField(
+                id="user_id",
+                required=False,
+                title="用户ID",
+                type="text",
+                tooltip="指定Emby用户ID，用于获取该用户的媒体库数据。获取方式：浏览器访问 http://服务器地址:端口/Users?api_key=你的API密钥，在返回的JSON中找到目标用户的Id字段值。留空则自动使用第一个管理员用户",
+                placeholder="",
+            ),
         ],
     )
 
@@ -98,7 +105,11 @@ class Emby(_IMediaClient):
             self._apikey = self._client_config.get("api_key")
             if self._host and self._apikey:
                 self._folders = self.__get_emby_folders()
-                self._user = self.get_user(Config().current_user)
+                _user_id = self._client_config.get("user_id")
+                if _user_id:
+                    self._user = _user_id
+                else:
+                    self._user = self.get_user()
                 self._serverid = self.get_server_id()
 
     @classmethod
@@ -335,9 +346,7 @@ class Emby(_IMediaClient):
         """
         if not self._host or not self._apikey:
             return None
-        req_url = (
-            f"{self._host}emby/Items?IncludeItemTypes=Series&Fields=ProductionYear&StartIndex=0&Recursive=true&SearchTerm={name}&Limit=10&IncludeSearchTypes=false&api_key={self._apikey}"
-        )
+        req_url = f"{self._host}emby/Items?IncludeItemTypes=Series&Fields=ProductionYear&StartIndex=0&Recursive=true&SearchTerm={name}&Limit=10&IncludeSearchTypes=false&api_key={self._apikey}"
         try:
             res = RequestUtils().get_res(req_url)
             if res:
@@ -363,9 +372,7 @@ class Emby(_IMediaClient):
         """
         if not self._host or not self._apikey:
             return None
-        req_url = (
-            f"{self._host}emby/Items?IncludeItemTypes=Movie&Fields=ProductionYear&StartIndex=0&Recursive=true&SearchTerm={title}&Limit=10&IncludeSearchTypes=false&api_key={self._apikey}"
-        )
+        req_url = f"{self._host}emby/Items?IncludeItemTypes=Movie&Fields=ProductionYear&StartIndex=0&Recursive=true&SearchTerm={title}&Limit=10&IncludeSearchTypes=false&api_key={self._apikey}"
         try:
             res = RequestUtils().get_res(req_url)
             if res:

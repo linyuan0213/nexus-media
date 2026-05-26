@@ -57,7 +57,8 @@ from app.utils.config_tools import get_proxies
 from app.utils.temp_manager import temp_manager
 from app.utils.types import EventType, MediaType, MovieTypes, ProgressKey, SearchType
 from app.utils.web_utils import WebUtils
-from config import Config
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.core.settings import settings
 from version import APP_VERSION
 
 
@@ -138,7 +139,7 @@ class BackupRestoreService:
         if not filename:
             return BackupRestoreResultDTO(success=False, message="文件不存在")
 
-        config_path = Config().config_path
+        config_path = settings.config_path
         file_path = temp_manager.get_temp_path(filename)
         temp_dir = None
 
@@ -172,6 +173,8 @@ class BackupRestoreService:
             target_engine.dispose()
             return BackupRestoreResultDTO(success=True, message="恢复成功")
 
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             return BackupRestoreResultDTO(success=False, message=str(e))
@@ -202,7 +205,7 @@ class IndexerConfigService:
         # 兼容旧配置：首次保存时从配置文件迁移
         existing = self._system_config.get(SystemConfigKey.IndexerConfig) or {}
         if name != "builtin" and (not existing or name not in existing):
-            old_cfg = Config().get_config(name)
+            old_cfg = settings.get(name)
             if old_cfg:
                 existing[name] = dict(old_cfg)
         # 提取并保存索引器详细配置
@@ -237,6 +240,8 @@ class IndexerConfigService:
                             success=True, code=0 if status else 1, msg="测试成功" if status else "测试失败"
                         )
                 return IndexerConfigResultDTO(success=False, code=-1, msg="未找到对应客户端")
+            except (ServiceError, RepositoryError, DomainError):
+                raise
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
                 return IndexerConfigResultDTO(success=False, code=-1, msg=str(e))
@@ -290,6 +295,8 @@ class MediaServerConfigService:
                             success=True, code=0 if status else 1, msg="测试成功" if status else "测试失败"
                         )
                 return MediaServerConfigResultDTO(success=False, code=-1, msg="未找到对应客户端")
+            except (ServiceError, RepositoryError, DomainError):
+                raise
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
                 return MediaServerConfigResultDTO(success=False, code=-1, msg=str(e))
@@ -448,6 +455,8 @@ class SystemInfoService:
             start_time = datetime.datetime.fromtimestamp(process.create_time())
             uptime_seconds = (datetime.datetime.now() - start_time).total_seconds()
             uptime = SystemInfoService._format_uptime(uptime_seconds)
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception:
             start_time = None
             uptime = "-"
@@ -456,6 +465,8 @@ class SystemInfoService:
         try:
             mem = process.memory_info()
             memory_mb = round(mem.rss / 1024 / 1024, 1)
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception:
             memory_mb = 0
 
@@ -694,7 +705,7 @@ def backup(full_backup=False, bk_path=None):
     @param bk_path     自定义备份路径
     """
     try:
-        config_path = Path(Config().config_path)
+        config_path = Path(settings.config_path)
         backup_file = f"bk_{time.strftime('%Y%m%d%H%M%S')}"
         if bk_path:
             backup_path = Path(bk_path) / backup_file
@@ -719,6 +730,8 @@ def backup(full_backup=False, bk_path=None):
         shutil.make_archive(str(backup_path), "zip", str(backup_path))
         shutil.rmtree(str(backup_path))
         return zip_file
+    except (ServiceError, RepositoryError, DomainError):
+        raise
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
         return None
@@ -816,7 +829,7 @@ class ConfigUpdateService:
     def update_config(data: dict) -> ConfigUpdateResultDTO:
         from app.utils.web_utils import set_config_value
 
-        cfg = Config().get_config()
+        cfg = settings.get()
         config_test = False
         for key, value in dict(data).items():
             if key == "test" and value:
@@ -825,5 +838,5 @@ class ConfigUpdateService:
             cfg = set_config_value(cfg, key, value)
         if not config_test:
             cfg.pop("test", None)
-            Config().save_config(cfg)
+            settings.save(cfg)
         return ConfigUpdateResultDTO(success=True, test_mode=config_test)

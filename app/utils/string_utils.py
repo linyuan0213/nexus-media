@@ -537,27 +537,6 @@ class StringUtils:
         return date_obj < one_month_ago
 
     @staticmethod
-    def get_tid_by_url(url):
-        """
-        下载链接获取种子id
-        """
-        # 解析URL
-        parsed_url = parse.urlparse(url)
-
-        # 解析查询参数
-        parse.parse_qs(parsed_url.query)
-        from app.sites.engine import SiteEngine
-
-        site_def = SiteEngine.get_instance().get_by_url(url)
-        if site_def and site_def.download and site_def.download.type in ("api", "api_chained"):
-            tid = re.findall(r"\d+", url)
-            return tid[-1] if tid else None
-
-        tid = re.findall(r"id=(\d+)", url)
-        if isinstance(tid, list):
-            return tid[0] if tid else None
-
-    @staticmethod
     def replace_strings(text, replacements):
         """
         替换多个字符串

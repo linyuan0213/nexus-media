@@ -7,7 +7,7 @@ from app.utils import ExceptionUtils, IpUtils, RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
 from app.utils.security import generate_password_hash
 from app.utils.types import MediaType
-from config import Config
+from app.core.settings import settings
 from version import APP_VERSION
 
 
@@ -51,7 +51,7 @@ class WebUtils:
         获取最新版本号
         """
         try:
-            releases_update_only = Config().get_config("app").get("releases_update_only")
+            releases_update_only = settings.get("app").get("releases_update_only")
             version_res = RequestUtils(proxies=get_proxies()).get_res(
                 "https://api.github.com/repos/linyuan0213/nexus-media/releases/latest"
             )
@@ -204,6 +204,7 @@ class WebUtils:
                     seen.add(key)
                     medias.append(media)
         return medias
+
 
 # 与框架无关的 Action 工具函数（从 web/core/action_utils.py 迁移）
 

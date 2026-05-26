@@ -14,6 +14,7 @@ from app.schemas.scheduler import (
     RunSchedulerJobRequest,
     UpdateSchedulerJobRequest,
 )
+from app.schemas.common import CommonResponse
 from app.services.scheduler_service import SchedulerService
 from app.utils.response import fail, success
 
@@ -48,7 +49,7 @@ class UpdateJobRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/jobs/delete")
+@router.post("/jobs/delete", response_model=CommonResponse, summary="删除定时任务")
 def delete_scheduler_job(
     req: JobIdRequest,
     _: None = Depends(require_permission("service:manage")),
@@ -63,7 +64,7 @@ def delete_scheduler_job(
     return fail(msg=resp.msg)
 
 
-@router.post("/jobs")
+@router.post("/jobs", response_model=CommonResponse, summary="获取定时任务列表")
 def get_scheduler_jobs(
     req: EmptyRequest = EmptyRequest(),
     _: None = Depends(require_any_permission("service:view", "service:manage")),
@@ -75,7 +76,7 @@ def get_scheduler_jobs(
     return success(data=[job.model_dump() for job in resp.data])
 
 
-@router.post("/jobs/pause")
+@router.post("/jobs/pause", response_model=CommonResponse, summary="暂停定时任务")
 def pause_scheduler_job(
     req: JobIdRequest,
     _: None = Depends(require_permission("service:manage")),
@@ -90,7 +91,7 @@ def pause_scheduler_job(
     return fail(msg=resp.msg)
 
 
-@router.post("/jobs/resume")
+@router.post("/jobs/resume", response_model=CommonResponse, summary="恢复定时任务")
 def resume_scheduler_job(
     req: JobIdRequest,
     _: None = Depends(require_permission("service:manage")),
@@ -105,7 +106,7 @@ def resume_scheduler_job(
     return fail(msg=resp.msg)
 
 
-@router.post("/jobs/run")
+@router.post("/jobs/run", response_model=CommonResponse, summary="立即执行定时任务")
 def run_scheduler_job(
     req: JobIdRequest,
     _: None = Depends(require_permission("service:manage")),
@@ -120,7 +121,7 @@ def run_scheduler_job(
     return fail(msg=resp.msg)
 
 
-@router.post("/jobs/update")
+@router.post("/jobs/update", response_model=CommonResponse, summary="更新定时任务")
 def update_scheduler_job(
     req: UpdateJobRequest,
     _: None = Depends(require_permission("service:manage")),

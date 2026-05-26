@@ -5,7 +5,7 @@ from alembic.config import Config as AlembicConfig
 
 import log
 from app.utils.path_utils import get_root_path
-from config import Config
+from app.core.settings import settings
 
 from .database_factory import DatabaseFactory
 from .main_db import (

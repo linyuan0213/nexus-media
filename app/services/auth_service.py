@@ -10,6 +10,7 @@ import jwt
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 
+from app.core.exceptions import RepositoryError, ServiceError
 from app.schemas.auth import TokenPair, UserContext
 from app.services.rbac_service import rbac_service
 from app.utils.security import get_secret_key
@@ -54,7 +55,7 @@ class AuthService:
         try:
             permissions = rbac_service.get_user_permissions(user.ID)
             permissions = list(permissions) if permissions else []
-        except Exception:
+        except (ServiceError, RepositoryError):
             permissions = []
 
         level = getattr(user, "LEVEL", 0) or 0
@@ -129,7 +130,7 @@ class AuthService:
             try:
                 permissions = rbac_service.get_user_permissions(user_id)
                 permissions = list(permissions) if permissions else []
-            except Exception:
+            except (ServiceError, RepositoryError):
                 permissions = []
 
             level = getattr(user, "LEVEL", 0) or 0
