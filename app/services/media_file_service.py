@@ -1,6 +1,5 @@
 import os
 
-from app.core.system_config import SystemConfig
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.helper import ThreadHelper
 from app.media import MediaService, Scraper
@@ -10,8 +9,9 @@ from app.storage.backends.base import StorageType
 from app.storage.config_models import LocalStorageConfig
 from app.utils import SystemUtils
 from app.utils.path_utils import get_category_path
-from app.utils.types import EventType, OsType, SystemConfigKey
-from config import Config
+from app.utils.types import EventType, OsType
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.core.settings import settings
 
 
 class MediaFileService:
@@ -91,6 +91,8 @@ class MediaFileService:
                         except OSError:
                             item["size"] = None
                     result.append(item)
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             return False, [], str(e)
         return True, result, ""
@@ -177,6 +179,8 @@ class MediaFileService:
                         dst_item = _make_path(dest, "同步目标目录", "sync_dest", dst_backend)
                         if dst_item:
                             sync_dest_paths.append(dst_item)
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception:
             pass
         sync_source_paths = _dedupe(sync_source_paths, seen_src)
@@ -246,7 +250,7 @@ class MediaFileService:
             return False, "请输入二级分类策略名称"
         if category_name == "config":
             return False, "非法二级分类策略名称"
-        category_path = os.path.join(Config().config_path, f"{category_name}.yaml")
+        category_path = os.path.join(settings.config_path, f"{category_name}.yaml")
         if not os.path.exists(category_path):
             return False, "请保存生成配置文件"
         with open(category_path, encoding="utf-8") as f:
@@ -259,7 +263,3 @@ class MediaFileService:
             with open(category_path, "w", encoding="utf-8") as f:
                 f.write(text)
         return "保存成功"
-
-    def save_user_script(self, script: str, css: str):
-        """保存用户自定义脚本"""
-        SystemConfig().set(key=SystemConfigKey.CustomScript, value={"css": css, "javascript": script})

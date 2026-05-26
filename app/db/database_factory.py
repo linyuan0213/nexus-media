@@ -20,7 +20,7 @@ from urllib.parse import quote_plus
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.pool import QueuePool
 
-from config import Config
+from app.core.settings import settings
 
 # 环境变量名称映射
 ENV_VAR_MAP = {
@@ -183,7 +183,7 @@ class DatabaseFactory:
         if db_type == DatabaseFactory.SQLITE:
             if db_path is None:
                 # 自动从配置路径获取数据库文件路径
-                db_path = os.path.join(Config().config_path, "user.db")
+                db_path = os.path.join(settings.config_path, "user.db")
             url = DatabaseFactory.get_database_url(db_type, db_path=db_path)
         else:
             # MySQL/PostgreSQL 使用配置中的数据库名
@@ -288,7 +288,7 @@ class DatabaseFactory:
 
         # 从配置文件读取
         try:
-            config = Config().get_config()
+            config = settings.get()
             db_config = config.get("database", {})
             db_type = db_config.get("type", "sqlite")
             return db_type.lower()
@@ -305,7 +305,7 @@ class DatabaseFactory:
 
         # 从配置文件读取
         try:
-            config = Config().get_config()
+            config = settings.get()
             db_config = config.get("database", {})
             return db_config.get(key, default)
         except Exception:
@@ -317,7 +317,7 @@ class DatabaseFactory:
         db_type = DatabaseFactory._get_config_db_type()
 
         if db_type == DatabaseFactory.SQLITE:
-            db_path = os.path.join(Config().config_path, "user.db")
+            db_path = os.path.join(settings.config_path, "user.db")
             return DatabaseFactory.get_database_url(db_type, db_path=db_path)
         else:
             database = DatabaseFactory._get_config_value("database", "nexus_media")
@@ -329,7 +329,7 @@ class DatabaseFactory:
         db_type = DatabaseFactory._get_config_db_type()
 
         if db_type == DatabaseFactory.SQLITE:
-            db_path = os.path.join(Config().config_path, "media.db")
+            db_path = os.path.join(settings.config_path, "media.db")
             return DatabaseFactory.get_database_url(db_type, db_path=db_path)
         else:
             database = DatabaseFactory._get_config_value("database", "nexus_media")

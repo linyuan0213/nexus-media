@@ -14,7 +14,7 @@ from app.domain.entities.plugin import PluginConfigEntity, PluginManifestEntity
 from app.plugin_framework.dependency_manager import PluginDependencyManager
 from app.schemas.plugin import PluginManifest, PluginState
 from app.utils.commons import SingletonMeta
-from config import Config
+from app.core.settings import settings
 
 
 class PluginRegistry(metaclass=SingletonMeta):
@@ -22,7 +22,7 @@ class PluginRegistry(metaclass=SingletonMeta):
 
     def __init__(self):
         self._repo = PluginFrameworkRepository()
-        self._plugins_dir = os.path.join(Config().config_path, "plugins")
+        self._plugins_dir = os.path.join(settings.config_path, "plugins")
         if not os.path.exists(self._plugins_dir):
             os.makedirs(self._plugins_dir)
         self._builtin_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "builtin_plugins")

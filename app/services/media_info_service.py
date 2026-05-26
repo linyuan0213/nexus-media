@@ -13,7 +13,8 @@ from app.utils import StringUtils
 from app.utils.media_utils import check_media_exists
 from app.utils.types import MediaType, MovieTypes
 from app.utils.web_utils import WebUtils
-from config import Config
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.core.settings import settings
 
 
 class MediaInfoService:
@@ -38,7 +39,16 @@ class MediaInfoService:
         for episode in episodes:
             episode.update(
                 {
-                    "state": bool(self._media_server.check_item_exists(mtype=MediaType.TV, title=title, year=year, tmdbid=tmdbid, season=season, episode=episode.get("episode_number")))
+                    "state": bool(
+                        self._media_server.check_item_exists(
+                            mtype=MediaType.TV,
+                            title=title,
+                            year=year,
+                            tmdbid=tmdbid,
+                            season=season,
+                            episode=episode.get("episode_number"),
+                        )
+                    )
                 }
             )
         return SeasonEpisodesResultDTO(episodes=episodes)
@@ -129,11 +139,13 @@ class MediaInfoService:
             else:
                 release_date = media.tmdb_info.get("release_date") or ""
             if not rssid:
-                rssid = self._subscribe.get_subscribe_id(mtype=media_type, title=title, tmdbid=str(mediaid) if mediaid else None)
+                rssid = self._subscribe.get_subscribe_id(
+                    mtype=media_type, title=title, tmdbid=str(mediaid) if mediaid else None
+                )
 
         if poster_path:
             poster_path = ImageProxyHelper.get_proxy_image_url(
-                poster_path, use_proxy=Config().get_config("app").get("enable_image_proxy", True)
+                poster_path, use_proxy=settings.get("app").get("enable_image_proxy", True)
             )
 
         return MediaInfoResultDTO(
@@ -347,13 +359,15 @@ class MediaInfoService:
                         season=season.get("season_number"),
                     )
                     season.update({"state": bool(exists)})
+                except (ServiceError, RepositoryError, DomainError):
+                    raise
                 except Exception as e:
                     log.error(f"【media_detail】检查季存在状态失败: {str(e)}")
                     season.update({"state": False})
         poster_image = media_info.get_poster_image()
         if poster_image:
             poster_image = ImageProxyHelper.get_proxy_image_url(
-                poster_image, use_proxy=Config().get_config("app").get("enable_image_proxy", True)
+                poster_image, use_proxy=settings.get("app").get("enable_image_proxy", True)
             )
         return {
             "tmdbid": media_info.tmdb_id,

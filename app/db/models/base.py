@@ -3,10 +3,15 @@
 包含 Base 和 BaseMedia 声明式基类
 """
 
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
-# 使用单一的 Base 来合并两个数据库
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    """SQLAlchemy 2.0 声明式基类"""
+
+    pass
+
+
 # 为了向后兼容，BaseMedia 也指向同一个 Base
 BaseMedia = Base
 

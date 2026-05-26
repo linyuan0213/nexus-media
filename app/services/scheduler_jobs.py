@@ -12,13 +12,13 @@ from app.services.subscribe_service import SubscribeService as Subscribe
 from app.services.sync_engine import SyncEngine as Sync
 from app.sites.site_userinfo import SiteUserInfo
 from app.utils.wallpaper import get_login_wallpaper
-from config import (
+from app.core.constants import (
     REFRESH_WALLPAPER_INTERVAL,
     RSS_CHECK_INTERVAL,
     RSS_REFRESH_TMDB_INTERVAL,
     SYNC_TRANSFER_INTERVAL,
-    Config,
 )
+from app.core.settings import settings
 
 
 def _refresh_site_data_now_threaded():
@@ -34,8 +34,8 @@ def load_default_jobs(scheduler):
     if not scheduler:
         return
 
-    _pt = Config().get_config("pt")
-    _media = Config().get_config("media")
+    _pt = settings.get("pt")
+    _media = settings.get("media")
     _jobstore = "default"
 
     if _pt:

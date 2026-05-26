@@ -36,15 +36,18 @@ from api.routers import (
     words,
 )
 from app.db import init_db, remove_session
+from app.db.main_db import get_engine
 from app.downloader.client import init_clients as init_downloaders
 from app.indexer.client import init_clients as init_indexers
 from app.mediaserver.client import init_clients as init_mediaservers
 from app.message import Message
 from app.message.client import init_clients as init_message_clients
 from app.plugin_framework.sandbox import PluginSandbox
+from app.schemas.common import HealthCheckResponse, HealthServiceStatus
 from app.services.site_config_updater import SiteConfigUpdater, update_site_config_at_startup
 from app.services.system_service import SystemLifecycleService
 from app.sites.engine import SiteEngine
+from app.utils.redis_store import RedisStore
 from app.utils.security import get_secret_key
 
 # 读取安全密钥（与 Flask 共用 secret_key）
@@ -155,10 +158,43 @@ _static_dir = os.path.join(os.path.dirname(__file__), "..", "web", "static")
 app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
 
-@app.get("/health")
+@app.get("/health", response_model=HealthCheckResponse, summary="健康检查")
 def health_check():
-    """健康检查"""
-    return {"status": "ok", "version": version.APP_VERSION}
+    """健康检查：验证数据库、Redis 及关键外部服务的可用性"""
+    result = HealthCheckResponse(status="ok", version=version.APP_VERSION)
+
+    # 数据库检查
+    try:
+        engine = get_engine()
+        if engine is None:
+            raise RuntimeError("数据库引擎未初始化")
+        with engine.connect() as conn:
+            conn.exec_driver_sql("SELECT 1")
+        result.database = HealthServiceStatus(status="ok", detail="数据库连接正常")
+    except Exception as e:
+        result.status = "degraded"
+        result.database = HealthServiceStatus(status="error", detail=f"数据库连接失败: {e!s}")
+
+    # Redis 检查
+    try:
+        redis_ok = RedisStore().ping()
+        if redis_ok:
+            result.redis = HealthServiceStatus(status="ok", detail="Redis 连接正常")
+        else:
+            result.status = "degraded"
+            result.redis = HealthServiceStatus(status="error", detail="Redis 不可用")
+    except Exception as e:
+        result.status = "degraded"
+        result.redis = HealthServiceStatus(status="error", detail=f"Redis 检查失败: {e!s}")
+
+    # 关键外部服务：消息客户端
+    try:
+        msg_clients = Message().active_clients
+        result.services["message"] = HealthServiceStatus(status="ok", detail=f"已配置 {len(msg_clients)} 个消息客户端")
+    except Exception as e:
+        result.services["message"] = HealthServiceStatus(status="error", detail=f"消息客户端检查失败: {e!s}")
+
+    return result
 
 
 @app.exception_handler(StarletteHTTPException)

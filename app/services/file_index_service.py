@@ -17,7 +17,7 @@ import threading
 import log
 from app.core.constants import RMT_MEDIAEXT
 from app.infrastructure.cache_system import get_cache_manager
-from config import Config
+from app.core.settings import settings
 
 _CACHE_NAME = "file_index"
 _KEY_INDEX = "index"
@@ -101,11 +101,11 @@ class FileIndexService:
 
     def _get_root_paths(self) -> list[str]:
         """获取所有需要索引的根目录"""
-        cfg = Config()
+        cfg = settings
         roots: list[str] = []
 
         # 媒体库目录
-        media = cfg.get_config("media") or {}
+        media = cfg.get("media") or {}
         for key in ("movie_path", "tv_path", "anime_path"):
             paths = media.get(key) or []
             if isinstance(paths, str):

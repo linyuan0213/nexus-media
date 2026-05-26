@@ -13,7 +13,7 @@ from app.message.schema import ConfigField, MessageConfigSchema
 from app.services.apikey_service import APIKeyService
 from app.utils import ExceptionUtils, RequestUtils
 from app.utils.config_tools import get_domain, get_proxies
-from config import Config
+from app.core.settings import settings
 
 _webhook_lock = Lock()
 _webhook_set = False
@@ -213,7 +213,7 @@ class Telegram(_IMessageClient):
         user_id = str(user.get("id", ""))
         if self._admin_ids and user_id not in self._admin_ids:
             return
-        ds_url = f"http://127.0.0.1:{Config().get_config('app').get('web_port')}/telegram?apikey={self._api_key}"
+        ds_url = f"http://127.0.0.1:{settings.get('app').get('web_port')}/telegram?apikey={self._api_key}"
         with contextlib.suppress(Exception):
             requests.post(ds_url, json=update, timeout=5)
 
@@ -291,5 +291,3 @@ class Telegram(_IMessageClient):
                 log.info("【Telegram】Webhook 已删除")
         except Exception:
             pass
-
-

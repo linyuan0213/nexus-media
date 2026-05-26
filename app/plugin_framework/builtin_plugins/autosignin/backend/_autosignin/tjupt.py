@@ -14,7 +14,7 @@ from app.helper.drissionpage_helper import DrissionPageHelper
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
 from app.utils import RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
-from config import Config
+from app.core.settings import settings
 
 
 class Tjupt(_ISiteSigninHandler):
@@ -41,7 +41,7 @@ class Tjupt(_ISiteSigninHandler):
     )
 
     # 存储正确的答案，后续可直接查
-    _answer_path = Config().config_path + "/temp/signin"
+    _answer_path = settings.config_path + "/temp/signin"
     _answer_file = _answer_path + "/tjupt.json"
 
     @classmethod
@@ -183,9 +183,9 @@ class Tjupt(_ISiteSigninHandler):
         else:
             res_count = len(search_results)
             # 繁体转简体,合成查询内容
-            search_results = "@".join([
-                zhconv.convert(result.text, "zh-hans") for result in search_results if result.text
-            ])
+            search_results = "@".join(
+                [zhconv.convert(result.text, "zh-hans") for result in search_results if result.text]
+            )
             # 查询每个选项出现的次数
             count_results = []
             count_flag = False

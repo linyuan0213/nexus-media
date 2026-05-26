@@ -18,15 +18,19 @@ from urllib.parse import urlsplit
 import log
 from app.db.repositories import BrushRepository
 from app.db.repositories.brush_repo_adapter import BrushRuleRepositoryAdapter, BrushTaskRepositoryAdapter
+from app.db.repositories.rss_repo_adapter import RssMovieRepositoryAdapter, RssTvRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.helper import RssHelper
 from app.media import meta_info
+from app.media.factory import get_media_service
 from app.message import Message
 from app.schemas.download import TorrentStatus
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.services.scheduler_core import SchedulerCore
 from app.sites import SiteConf, Sites
+from app.sites.engine import SiteEngine, get_tid_by_url
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.utils import ExceptionUtils, JsonUtils, StringUtils
 
 
@@ -51,7 +55,12 @@ class BrushTaskRepository:
     def get_brushtask_torrent_by_enclosure(self, enclosure: str | None) -> Any:
         return self._repo.get_brushtask_torrent_by_enclosure(enclosure or "")
 
-    def insert_brushtask_torrent(self, brush_id: int | None, title: str, enclosure: str, downloader: int, download_id: str, size: int) -> Any:
+    def get_brushtask_torrents_by_domain(self, domain: str | None) -> list:
+        return self._repo.get_brushtask_torrents_by_domain(domain or "")
+
+    def insert_brushtask_torrent(
+        self, brush_id: int | None, title: str, enclosure: str, downloader: int, download_id: str, size: int
+    ) -> Any:
         return self._repo.insert_brushtask_torrent(
             brush_id=brush_id,
             title=title,
@@ -114,6 +123,8 @@ class BrushTaskScheduler:
     def remove_all_jobs(self) -> None:
         try:
             self._scheduler.remove_all_jobs(jobstore=self._jobstore)
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             print(str(e))
 
@@ -164,6 +175,8 @@ class BrushTaskService:
         # 已经是合法 JSON
         try:
             return json.loads(val)
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception:
             pass
         # 被外层引号包裹的情况
@@ -171,15 +184,21 @@ class BrushTaskService:
             inner = val[1:-1]
             try:
                 return json.loads(inner)
+            except (ServiceError, RepositoryError, DomainError):
+                raise
             except Exception:
                 pass
             try:
                 return json.loads(ast.literal_eval(inner))
+            except (ServiceError, RepositoryError, DomainError):
+                raise
             except Exception:
                 pass
         # Python 单引号字典格式
         try:
             return json.loads(ast.literal_eval(val))
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception:
             pass
         return default
@@ -228,6 +247,8 @@ class BrushTaskService:
                     trigger_args=trigger_args,
                 )
                 running = 1
+            except (ServiceError, RepositoryError, DomainError):
+                raise
             except Exception as err:
                 log.error(f"任务 {task_name} 运行周期格式不正确：{str(err)}")
 
@@ -241,6 +262,8 @@ class BrushTaskService:
                     trigger_type=trigger_type,
                     trigger_args=trigger_args,
                 )
+            except (ServiceError, RepositoryError, DomainError):
+                raise
             except Exception as err:
                 log.error(f"任务 {task_name} {name} 运行周期格式不正确：{str(err)}")
 
@@ -287,6 +310,8 @@ class BrushTaskService:
                     rss_rule = self._parse_json_rule(entity.rss_rule, rss_rule)
                     remove_rule = self._parse_json_rule(entity.remove_rule, remove_rule)
                     stop_rule = self._parse_json_rule(entity.stop_rule, stop_rule)
+            except (ServiceError, RepositoryError, DomainError):
+                raise
             except Exception:
                 pass
         return rss_rule, remove_rule, stop_rule
@@ -376,8 +401,16 @@ class BrushTaskService:
     def get_brushtask_torrents(self, brush_id: int | None, active: bool = True) -> Any:
         return self._repo.get_brushtask_torrents(brush_id or 0, active)
 
-    def is_torrent_handled(self, enclosure: str | None) -> Any:
-        return self._repo.get_brushtask_torrent_by_enclosure(enclosure or "")
+    def is_torrent_handled(self, enclosure: str | None) -> bool:
+        if not enclosure:
+            return False
+        engine = SiteEngine.get_instance()
+        if engine.is_tid_based_dedup(enclosure):
+            tid = get_tid_by_url(enclosure)
+            domain = engine.normalize_domain(enclosure)
+            all_torrents = self._repo.get_brushtask_torrents_by_domain(domain)
+            return any(get_tid_by_url(t.ENCLOSURE) == tid for t in all_torrents)
+        return self._repo.get_brushtask_torrent_by_enclosure(enclosure) is not None
 
     # ---------- RSS 刷流 ----------
 
@@ -491,6 +524,28 @@ class BrushTaskService:
             downloading_count = self.__get_downloading_count(downloader_id) or 0
             new_torrent_count = int(max_dlcount) - int(downloading_count)
 
+        # 预加载订阅数据（用于 exclude_subscribe 规则）
+        rss_movies = None
+        rss_tvs = None
+        if rss_rule and rss_rule.get("exclude_subscribe") not in ("#", "N", None, ""):
+            rss_movies = {
+                m.id: {"name": m.name, "year": m.year, "tmdbid": m.tmdbid, "fuzzy_match": m.fuzzy_match}
+                for m in RssMovieRepositoryAdapter().get_all(state="R")
+            }
+            rss_tvs = {
+                t.id: {
+                    "name": t.name,
+                    "year": t.year,
+                    "tmdbid": t.tmdbid,
+                    "fuzzy_match": t.fuzzy_match,
+                    "season": t.season,
+                    "rss_sites": t.rss_sites,
+                }
+                for t in RssTvRepositoryAdapter().get_all(state="R")
+            }
+
+        media_service = get_media_service()
+
         for res in rss_result:
             try:
                 torrent_name = res.get("title")
@@ -515,8 +570,21 @@ class BrushTaskService:
                     headers=headers,
                     site_proxy=bool(site_proxy),
                 )
+
+                # 识别媒体信息（用于 exclude_subscribe 规则）
+                media_info = None
+                if rss_movies is not None or rss_tvs is not None:
+                    media_info = media_service.get_media_info(title=torrent_name)
+
                 if not BrushRuleEngine.check_rss_rule(
-                    rss_rule=rss_rule, title=torrent_name, torrent_size=size, pubdate=pubdate, torrent_attr=torrent_attr
+                    rss_rule=rss_rule,
+                    title=torrent_name,
+                    torrent_size=size,
+                    pubdate=pubdate,
+                    torrent_attr=torrent_attr,
+                    media_info=media_info,
+                    rss_movies=rss_movies,
+                    rss_tvs=rss_tvs,
                 ):
                     continue
                 if not self.__is_allow_new_torrent(taskinfo=taskinfo, dlcount=max_dlcount, torrent_size=size):
@@ -531,6 +599,8 @@ class BrushTaskService:
                         break
                     if not self.__is_allow_new_torrent(taskinfo=taskinfo, dlcount=max_dlcount):
                         break
+            except (ServiceError, RepositoryError, DomainError):
+                raise
             except Exception as err:
                 ExceptionUtils.exception_traceback(err)
                 continue
@@ -629,6 +699,8 @@ class BrushTaskService:
             self._repo.add_brushtask_upload_count(
                 taskid or 0, total_uploaded, total_downloaded, len(delete_ids) + len(remove_torrent_ids)
             )
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
 
@@ -659,7 +731,9 @@ class BrushTaskService:
             enclosure = torrent_id_maps.get(torrent_id)
             torrent_url, torrent_attr = (None, {})
             if enclosure:
-                torrent_url, torrent_attr = self.get_torrent_attr(site_info if isinstance(site_info, dict) else {}, enclosure)
+                torrent_url, torrent_attr = self.get_torrent_attr(
+                    site_info if isinstance(site_info, dict) else {}, enclosure
+                )
 
             torrent_params = {
                 "seeding_time": torrent.seeding_time,
@@ -750,12 +824,18 @@ class BrushTaskService:
                 continue
             torrent_attr = {}
             if stopfree_enabled:
-                torrent_url, torrent_attr = self.get_torrent_attr(site_info if isinstance(site_info, dict) else {}, enclosure)
+                torrent_url, torrent_attr = self.get_torrent_attr(
+                    site_info if isinstance(site_info, dict) else {}, enclosure
+                )
                 log.debug(f"【Brush】{torrent_url} 解析详情 {torrent_attr}")
 
-            need_stop, stop_type = BrushRuleEngine.check_stop_rule(stop_rule, torrent_attr=torrent_attr)
+            need_stop, stop_type = BrushRuleEngine.check_stop_rule(stop_rule, params=torrent_attr)
             if need_stop:
-                log.info(f"【Brush】{torrent_name} 触发停种条件：{stop_type.value}，暂停任务...")
+                if isinstance(stop_type, list):
+                    stop_type_str = ", ".join(t.value for t in stop_type)
+                else:
+                    stop_type_str = stop_type.value
+                log.info(f"【Brush】{torrent_name} 触发停种条件：{stop_type_str}，暂停任务...")
                 self._downloader.stop_torrents(downloader_id, [torrent_id])
                 if sendmessage:
                     self._send_stop_message(task_name, torrent_name, downlaod_name, add_time)
@@ -900,9 +980,9 @@ class BrushTaskService:
         split_url = urlsplit(site_info.get("rssurl"))
         site_base_url = f"{split_url.scheme}://{split_url.netloc}"
 
-        tid = StringUtils.get_tid_by_url(enclosure)
-        from app.sites.engine import SiteEngine
+        from app.sites.engine import SiteEngine, get_tid_by_url
 
+        tid = get_tid_by_url(enclosure)
         torrent_url = f"{site_base_url}{SiteEngine.get_instance().resolve_detail_url(enclosure, tid or '')}"
 
         torrent_attr = self._siteconf.check_torrent_attr(

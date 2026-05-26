@@ -9,9 +9,31 @@
 本层允许依赖 Service / Message / Media 等模块，因为位于 Agent 之上。
 """
 
+import json as _json
+
 import log
+from app.agent.agents.search_intent import SearchIntentAgent
 from app.agent.tools.base import ToolResult
+from app.helper import RssHelper
+from app.media import MediaService
 from app.media.models import MediaInfo
+from app.message.message import Message
+from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
+from app.schemas.scheduler import PauseSchedulerJobRequest, ResumeSchedulerJobRequest, RunSchedulerJobRequest
+from app.services.brush_service import BrushService
+from app.services.downloader_core import DownloaderCore as Downloader
+from app.services.filetransfer_service import FileTransferService
+from app.services.indexer_service import IndexerService
+from app.services.rss_service import RssTaskService
+from app.services.scheduler_service import SchedulerService
+from app.services.search_service import Searcher
+from app.services.site_service import SiteService
+from app.services.subscribe_service import SubscribeService
+from app.services.sync_service import SyncService
+from app.services.system_service import MessageClientService, SystemLifecycleService
+from app.services.torrentremover_core import TorrentRemoverService
+from app.sites.site_userinfo import SiteUserInfo
+from app.utils.types import MediaType, RssType, SearchType
 
 
 class ToolExecutor:
@@ -43,53 +65,33 @@ class ToolExecutor:
         if action.startswith("rss_"):
             return self._handle_rss(action, target)
         if action == "transfer_run":
-            from app.services.filetransfer_service import FileTransferService
-
             FileTransferService().transfer_manually("", "", "link")
             return ToolResult(success=True, data="文件转移任务已触发")
         if action == "sync_run":
-            from app.services.sync_service import SyncService
-
             SyncService().transfer_sync()
             return ToolResult(success=True, data="目录同步任务已触发")
         if action == "subscribe_search_all":
-            from app.services.subscribe_service import SubscribeService
-
             SubscribeService().subscribe_search_all()
             return ToolResult(success=True, data="订阅搜索任务已触发")
         if action == "auto_remove_torrents":
-            from app.services.torrentremover_core import TorrentRemoverService
-
             TorrentRemoverService().auto_remove_torrents()
             return ToolResult(success=True, data="自动删种任务已触发")
         if action == "truncate_transfer_blacklist":
-            from app.services.filetransfer_service import FileTransferService
-
             FileTransferService().truncate_transfer_blacklist()
             return ToolResult(success=True, data="转移黑名单已清理")
         if action == "truncate_rss_history":
-            from app.helper import RssHelper
-            from app.services.subscribe_service import SubscribeService
-
             RssHelper().truncate_rss_history()
             SubscribeService().truncate_rss_episodes()
             return ToolResult(success=True, data="RSS历史已清理")
         if action == "re_identify":
-            from app.services.sync_service import SyncService
-
             SyncService().re_identify_items(flag="unidentification", ids=[])
             return ToolResult(success=True, data="未识别项重新识别已触发")
         if action == "restart_server":
-            from app.services.system_service import SystemLifecycleService
-
             SystemLifecycleService.restart_server()
             return ToolResult(success=True, data="服务器重启指令已发送")
         return ToolResult(success=False, error=f"未知命令: {action}")
 
     def _handle_scheduler(self, action: str, target: str) -> ToolResult:
-        from app.schemas.scheduler import PauseSchedulerJobRequest, ResumeSchedulerJobRequest, RunSchedulerJobRequest
-        from app.services.scheduler_service import SchedulerService
-
         svc = SchedulerService()
         if action == "scheduler_list":
             resp = svc.get_jobs()
@@ -114,8 +116,6 @@ class ToolExecutor:
         return ToolResult(success=False, error=f"未知调度命令: {action}")
 
     def _handle_brush(self, action: str, target: str) -> ToolResult:
-        from app.services.brush_service import BrushService
-
         svc = BrushService()
         if action == "brush_list":
             tasks = svc.get_tasks()
@@ -137,14 +137,10 @@ class ToolExecutor:
 
     def _handle_site(self, action: str, target: str) -> ToolResult:
         if action == "site_list":
-            from app.services.site_service import SiteService
-
             svc = SiteService()
             sites = svc.get_sites()
             return ToolResult(success=True, data={"sites": [{"id": s.id, "name": s.name} for s in sites]})
         if action == "site_refresh":
-            from app.sites.site_userinfo import SiteUserInfo
-
             if target:
                 SiteUserInfo().refresh_site_data_now(specify_sites=[target])
                 return ToolResult(success=True, data=f"站点 {target} 数据已刷新")
@@ -153,8 +149,6 @@ class ToolExecutor:
         return ToolResult(success=False, error=f"未知站点命令: {action}")
 
     def _handle_rss(self, action: str, target: str) -> ToolResult:
-        from app.services.rss_service import RssTaskService
-
         svc = RssTaskService()
         if action == "rss_list":
             tasks = svc.get_rsstask_info()
@@ -173,11 +167,6 @@ class ToolExecutor:
     def _message_template(
         self, action: str, msg_type: str = "", title: str = "", text: str = "", client_id: int = 0, **_
     ) -> ToolResult:
-        import json as _json
-
-        from app.message.message import Message
-        from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
-
         if action == "list":
             types = list(DEFAULT_MESSAGE_TEMPLATES.keys())
             return ToolResult(success=True, data={"types": types})
@@ -206,8 +195,6 @@ class ToolExecutor:
                 return ToolResult(success=False, error="未找到目标客户端")
             templates = target.get("templates", {}) or {}
             templates[msg_type] = {"title": title, "text": text}
-            from app.services.system_service import MessageClientService
-
             MessageClientService(message=Message()).upsert_client(
                 name=target.get("name"),
                 cid=target.get("id"),
@@ -229,10 +216,6 @@ class ToolExecutor:
     def _media_search(
         self, query: str, media_type: str = "", year: int = 0, season: int = 0, episode: int = 0, limit: int = 10, **_
     ) -> ToolResult:
-        from app.agent.agents.search_intent import SearchIntentAgent
-        from app.media import MediaService
-        from app.services.indexer_service import IndexerService
-
         intent_agent = SearchIntentAgent()
         intent = intent_agent.parse(query) if intent_agent.ready else None
         keywords = intent.keywords if intent else query
@@ -371,10 +354,6 @@ class ToolExecutor:
         episode: int = 0,
         **_,
     ) -> ToolResult:
-        from app.media import MediaService
-        from app.services.downloader_core import DownloaderCore as Downloader
-        from app.utils.types import MediaType
-
         # 模式1：直接下载（有 enclosure 链接）
         if enclosure:
             media_info = MediaService().get_media_info(title=title)
@@ -408,9 +387,6 @@ class ToolExecutor:
             type_map = {"movie": MediaType.MOVIE, "tv": MediaType.TV, "anime": MediaType.ANIME}
             media_info.type = type_map.get(media_type, media_info.type)
 
-        from app.services.search_service import Searcher
-        from app.utils.types import SearchType
-
         searcher = Searcher()
         search_result, no_exists, search_count, download_count = searcher.search_one_media(
             media_info=media_info, in_from=SearchType.API, no_exists={}
@@ -429,10 +405,6 @@ class ToolExecutor:
     def _media_subscribe(
         self, title: str, media_type: str, year: int = 0, season: int = 0, tmdbid: str = "", **_
     ) -> ToolResult:
-        from app.media import MediaService
-        from app.services.subscribe_service import SubscribeService as Subscribe
-        from app.utils.types import MediaType, RssType
-
         media_info = MediaService().get_media_info(title=title)
         if not media_info or not media_info.title:
             return ToolResult(success=False, error=f"无法识别媒体: {title}")
@@ -447,7 +419,7 @@ class ToolExecutor:
         else:
             mediaid = None
 
-        code, msg, media_info = Subscribe().add_rss_subscribe(
+        code, msg, media_info = SubscribeService().add_rss_subscribe(
             mtype=media_info.type,
             name=media_info.title,
             year=media_info.year,

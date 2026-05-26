@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from openai import OpenAI
+from openai import APIStatusError, OpenAI
 
 import log
 from app.agent.providers.base import BaseProvider, ProviderConfig
@@ -50,7 +50,6 @@ class OpenAIProvider(BaseProvider):
     @staticmethod
     def _format_error(e: Exception) -> str:
         """将异常转换为用户可读的提示"""
-        from openai import APIStatusError
 
         if isinstance(e, APIStatusError):
             code = e.status_code

@@ -7,7 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from api.deps import get_current_user
+from app.core.exceptions import ServiceError
 from app.schemas.auth import UserContext
+from app.schemas.common import CommonResponse
 from app.services.apikey_service import APIKeyService
 from app.utils.response import success
 
@@ -77,7 +79,7 @@ class CreateAPIKeyResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/keys", response_model=success)
+@router.post("/keys", response_model=CommonResponse, summary="创建 API Key")
 async def create_api_key(
     req: CreateAPIKeyRequest,
     user: UserContext = Depends(get_current_user),
@@ -92,11 +94,11 @@ async def create_api_key(
             created_by=user.user_id,
         )
         return success(data=result, message="API Key 创建成功，请妥善保存 Key，此页面为唯一展示机会")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"创建失败: {str(e)}") from e
+    except ServiceError as e:
+        raise HTTPException(status_code=500, detail=f"创建失败: {e.message}") from e
 
 
-@router.get("/keys", response_model=success)
+@router.get("/keys", response_model=CommonResponse, summary="获取 API Key 列表")
 async def list_api_keys(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
@@ -108,7 +110,7 @@ async def list_api_keys(
     return success(data=result)
 
 
-@router.put("/keys/{key_id}", response_model=success)
+@router.put("/keys/{key_id}", response_model=CommonResponse, summary="更新 API Key")
 async def update_api_key(
     key_id: int,
     req: UpdateAPIKeyRequest,
@@ -127,7 +129,7 @@ async def update_api_key(
     return success(message="更新成功")
 
 
-@router.delete("/keys/{key_id}", response_model=success)
+@router.delete("/keys/{key_id}", response_model=CommonResponse, summary="删除 API Key")
 async def delete_api_key(
     key_id: int,
     user: UserContext = Depends(get_current_user),
@@ -140,7 +142,7 @@ async def delete_api_key(
     return success(message="删除成功")
 
 
-@router.get("/keys/{key_id}/logs", response_model=success)
+@router.get("/keys/{key_id}/logs", response_model=CommonResponse, summary="获取 API Key 使用记录")
 async def list_api_key_logs(
     key_id: int,
     page: int = Query(1, ge=1),
@@ -153,7 +155,7 @@ async def list_api_key_logs(
     return success(data=result)
 
 
-@router.get("/logs", response_model=success)
+@router.get("/logs", response_model=CommonResponse, summary="获取所有 API Key 使用记录")
 async def list_all_logs(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
@@ -165,7 +167,7 @@ async def list_all_logs(
     return success(data=result)
 
 
-@router.get("/stats", response_model=success)
+@router.get("/stats", response_model=CommonResponse, summary="获取 API Key 统计信息")
 async def get_api_key_stats(
     user: UserContext = Depends(get_current_user),
 ):

@@ -24,7 +24,7 @@ from app.downloader.client._base import _IDownloadClient
 from app.downloader.registry import get_all_clients
 from app.utils import ExceptionUtils, NumberUtils, StringUtils, SystemUtils
 from app.utils.types import SystemConfigKey
-from config import Config
+from app.core.settings import settings
 
 client_lock = Lock()
 
@@ -41,8 +41,6 @@ class DownloadClientFactory:
         self._config_repo = config_repo or DownloaderRepositoryAdapter()
         self._download_repo = download_repo or DownloadSettingRepositoryAdapter()
         self._systemconfig = systemconfig or SystemConfig()
-
-
 
         # 客户端实例缓存 {downloader_id: client_instance}
         self._clients = {}
@@ -113,7 +111,7 @@ class DownloadClientFactory:
             }
 
         # 下载顺序
-        pt = Config().get_config("pt")
+        pt = settings.get("pt")
         if pt:
             self._download_order = pt.get("download_order")
 

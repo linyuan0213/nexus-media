@@ -13,6 +13,7 @@ from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter
 from app.indexer.core.batch_identifier import BatchIdentifier
 from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.indexer.core.models import FilterStats, SearchCandidate
+from app.infrastructure.cache_system import get_cache_manager
 from app.media import MediaService, meta_info
 from app.utils import StringUtils
 from app.utils.types import MediaType
@@ -307,8 +308,6 @@ class ResultFilter:
 
         :return: (matched_results, stats)
         """
-        from app.infrastructure.cache_system import get_cache_manager
-
         ret_array = []
         stats = FilterStats()
         media_ident_cache = get_cache_manager().get_or_create("media_ident", "memory", maxsize=2000, ttl=3600)

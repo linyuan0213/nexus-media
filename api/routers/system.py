@@ -64,6 +64,7 @@ from app.utils import ExceptionUtils
 from app.utils.response import fail, success
 from app.utils.temp_manager import temp_manager
 from app.utils.types import SystemConfigKey
+from app.schemas.common import CommonResponse
 
 router = APIRouter()
 
@@ -188,7 +189,7 @@ def _extract_data(payload: BaseModel) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/info")
+@router.post("/info", response_model=CommonResponse, summary="获取系统基本信息")
 def system_info(
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
     svc: SystemInfoService = Depends(get_system_info_service),
@@ -208,7 +209,7 @@ def system_info(
     )
 
 
-@router.post("/check_message_client")
+@router.post("/check_message_client", response_model=CommonResponse, summary="切换消息客户端设置")
 def check_message_client(
     req: MessageClientRequest,
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
@@ -225,7 +226,7 @@ def check_message_client(
         return fail()
 
 
-@router.post("/message_clients/delete")
+@router.post("/message_clients/delete", response_model=CommonResponse, summary="删除消息客户端")
 def delete_message_client(
     req: MessageClientRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -237,7 +238,7 @@ def delete_message_client(
         return fail()
 
 
-@router.post("/message_clients")
+@router.post("/message_clients", response_model=CommonResponse, summary="获取消息客户端列表")
 def get_message_client(
     req: MessageClientRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -258,7 +259,7 @@ def get_message_client(
     return success(data=data)
 
 
-@router.post("/message_clients/config")
+@router.post("/message_clients/config", response_model=CommonResponse, summary="获取消息客户端配置模板")
 def get_message_client_config(
     current_user: UserContext = Depends(require_permission("setting:update")),
 ):
@@ -267,7 +268,11 @@ def get_message_client_config(
     for cls in get_all_clients():
         if not hasattr(cls, "schema") or not cls.schema:
             continue
-        schema_dict = cls.config_schema.to_dict() if hasattr(cls, "config_schema") and cls.config_schema else {"name": cls.schema, "config": {}}
+        schema_dict = (
+            cls.config_schema.to_dict()
+            if hasattr(cls, "config_schema") and cls.config_schema
+            else {"name": cls.schema, "config": {}}
+        )
         clients[cls.schema] = schema_dict
     switchs = dict(MESSAGE_SWITCHES)
     return success(
@@ -278,7 +283,7 @@ def get_message_client_config(
     )
 
 
-@router.get("/message_clients/templates/defaults")
+@router.get("/message_clients/templates/defaults", response_model=CommonResponse, summary="获取消息通知默认模板")
 def get_message_client_default_templates(
     current_user: UserContext = Depends(require_permission("setting:update")),
 ):
@@ -286,7 +291,7 @@ def get_message_client_default_templates(
     return success(data=DEFAULT_MESSAGE_TEMPLATES)
 
 
-@router.post("/net_test")
+@router.post("/net_test", response_model=CommonResponse, summary="网络连通性测试")
 def net_test(
     req: NetTestRequest,
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
@@ -296,7 +301,7 @@ def net_test(
     return success(data={"res": result.success, "time": f"{result.time_ms} 毫秒"})
 
 
-@router.post("/db/reset_version")
+@router.post("/db/reset_version", response_model=CommonResponse, summary="重置数据库版本")
 def reset_db_version(
     req: EmptyRequest = EmptyRequest(),
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -309,7 +314,7 @@ def reset_db_version(
         return fail(msg=str(e))
 
 
-@router.post("/restart")
+@router.post("/restart", response_model=CommonResponse, summary="重启系统")
 def restart(
     req: EmptyRequest = EmptyRequest(),
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -318,7 +323,7 @@ def restart(
     return success()
 
 
-@router.post("/backup")
+@router.post("/backup", summary="备份配置文件")
 def backup(
     current_user: UserContext = Depends(require_permission("setting:update")),
 ):
@@ -330,7 +335,7 @@ def backup(
     return FileResponse(zip_file, filename=os.path.basename(zip_file))
 
 
-@router.post("/backup/upload")
+@router.post("/backup/upload", response_model=CommonResponse, summary="上传备份文件")
 async def backup_upload(
     file: UploadFile = File(...),
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -346,7 +351,7 @@ async def backup_upload(
         return fail(msg=str(e))
 
 
-@router.post("/backup/restore")
+@router.post("/backup/restore", response_model=CommonResponse, summary="恢复备份")
 def restory_backup(
     req: BackupRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -359,7 +364,7 @@ def restory_backup(
     return fail(msg=result.message)
 
 
-@router.post("/indexers")
+@router.post("/indexers", response_model=CommonResponse, summary="获取索引器配置信息")
 def get_indexers(
     current_user: UserContext = Depends(require_permission("setting:update")),
     idx_svc: IndexerService = Depends(get_indexer_service),
@@ -388,7 +393,7 @@ def get_indexers(
     )
 
 
-@router.post("/indexers/test")
+@router.post("/indexers/test", response_model=CommonResponse, summary="测试索引器连接")
 def test_indexer(
     req: IndexerConfigRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -405,7 +410,7 @@ def test_indexer(
     return fail(code=result.code, msg=result.msg)
 
 
-@router.post("/indexers/config")
+@router.post("/indexers/config", response_model=CommonResponse, summary="保存索引器配置")
 def save_indexer_config(
     req: IndexerConfigRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -417,7 +422,7 @@ def save_indexer_config(
     return fail(code=result.code, msg=result.msg)
 
 
-@router.post("/mediaservers")
+@router.post("/mediaservers", response_model=CommonResponse, summary="获取媒体服务器配置信息")
 def get_mediaservers(
     current_user: UserContext = Depends(require_permission("setting:update")),
 ):
@@ -451,7 +456,7 @@ def get_mediaservers(
     )
 
 
-@router.post("/mediaservers/test")
+@router.post("/mediaservers/test", response_model=CommonResponse, summary="测试媒体服务器连接")
 def test_mediaserver(
     req: MediaServerConfigRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -468,7 +473,7 @@ def test_mediaserver(
     return fail(code=result.code, msg=result.msg)
 
 
-@router.post("/mediaservers/config")
+@router.post("/mediaservers/config", response_model=CommonResponse, summary="保存媒体服务器配置")
 def save_mediaserver_config(
     req: MediaServerConfigRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -480,7 +485,7 @@ def save_mediaserver_config(
     return fail(code=result.code, msg=result.msg)
 
 
-@router.post("/scheduler/run")
+@router.post("/scheduler/run", response_model=CommonResponse, summary="运行定时任务")
 def sch(
     req: SchedulerRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -492,7 +497,7 @@ def sch(
     return success(data={"msg": msg, "item": req.item})
 
 
-@router.post("/search")
+@router.post("/search", response_model=CommonResponse, summary="WEB资源搜索")
 def search(
     req: SearchRequest,
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
@@ -533,7 +538,7 @@ def _flatten_config(cfg: dict, prefix: str = "") -> dict:
     return result
 
 
-@router.post("/config")
+@router.post("/config", response_model=CommonResponse, summary="设置系统配置")
 def set_system_config(
     req: SystemConfigRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -544,7 +549,7 @@ def set_system_config(
     return fail()
 
 
-@router.post("/config/all")
+@router.post("/config/all", response_model=CommonResponse, summary="获取所有系统配置")
 def get_all_config(
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
     svc=Depends(get_config_service),
@@ -560,7 +565,7 @@ def get_all_config(
     return success(data=flat)
 
 
-@router.post("/message_clients/test")
+@router.post("/message_clients/test", response_model=CommonResponse, summary="测试消息客户端连接")
 def test_message_client(
     req: TestMessageClientRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -573,7 +578,7 @@ def test_message_client(
         return fail()
 
 
-@router.post("/config/update")
+@router.post("/config/update", response_model=CommonResponse, summary="更新系统配置")
 def update_config(
     req: UpdateConfigRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -585,7 +590,7 @@ def update_config(
     return fail()
 
 
-@router.post("/agent/models")
+@router.post("/agent/models", response_model=CommonResponse, summary="查询 LLM 模型列表")
 def list_agent_models(
     req: AgentModelsRequest,
     current_user: UserContext = Depends(require_permission("setting:view")),
@@ -616,7 +621,7 @@ def list_agent_models(
         return fail(msg=str(e))
 
 
-@router.post("/message_clients/update")
+@router.post("/message_clients/update", response_model=CommonResponse, summary="更新消息客户端")
 def update_message_client(
     req: MessageClientRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -635,7 +640,7 @@ def update_message_client(
     return success()
 
 
-@router.post("/users/legacy")
+@router.post("/users/legacy", response_model=CommonResponse, summary="用户管理")
 def user_manager(
     req: UserManagerRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
@@ -654,7 +659,7 @@ def user_manager(
     return fail(code=-1, success=False, message=result.message or "操作失败")
 
 
-@router.post("/commands")
+@router.post("/commands", response_model=CommonResponse, summary="获取系统命令列表")
 def system_commands(
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
 ):
@@ -663,7 +668,7 @@ def system_commands(
     return success(data=cmds)
 
 
-@router.post("/status")
+@router.post("/status", response_model=CommonResponse, summary="获取系统状态")
 def system_status(
     req: EmptyRequest = EmptyRequest(),
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
@@ -679,7 +684,7 @@ def system_status(
     )
 
 
-@router.post("/refresh")
+@router.post("/refresh", response_model=CommonResponse, summary="获取任务进度")
 def refresh_process(
     req: ProgressRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -689,7 +694,7 @@ def refresh_process(
     return success(data={"value": result.value, "text": result.text or "正在处理..."})
 
 
-@router.post("/messages/send")
+@router.post("/messages/send", response_model=CommonResponse, summary="发送自定义消息")
 def send_custom_message(
     req: SendCustomMessageRequest,
     user: str = Depends(require_permission("setting:update")),
@@ -706,7 +711,7 @@ def send_custom_message(
     return fail(msg=result.message)
 
 
-@router.post("/messages/send_plugin")
+@router.post("/messages/send_plugin", response_model=CommonResponse, summary="发送插件消息")
 def send_plugin_message(
     req: SendPluginMessageRequest,
     user: str = Depends(require_permission("setting:update")),
@@ -726,7 +731,7 @@ class LogsRequest(BaseModel):
     limit: int | None = 200
 
 
-@router.post("/logs")
+@router.post("/logs", response_model=CommonResponse, summary="获取日志")
 def get_logs(
     req: LogsRequest,
     user: str = Depends(require_permission("log:view")),
@@ -739,7 +744,7 @@ def get_logs(
     return success(data=logs)
 
 
-@router.post("/processes")
+@router.post("/processes", response_model=CommonResponse, summary="获取进程列表")
 def processes(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
@@ -752,7 +757,7 @@ def processes(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/stream-logging")
+@router.get("/stream-logging", summary="实时日志流")
 def stream_logging(
     request: Request,
     source: str | None = Query(""),
@@ -784,7 +789,7 @@ def stream_logging(
     return StreamingResponse(log_streaming_service.stream(source or ""), media_type="text/event-stream")
 
 
-@router.get("/site-config/version")
+@router.get("/site-config/version", response_model=CommonResponse, summary="获取站点配置版本")
 def get_site_config_version():
     """获取站点配置版本信息"""
     try:
@@ -795,7 +800,7 @@ def get_site_config_version():
         return fail(msg=str(e))
 
 
-@router.post("/site-config/update")
+@router.post("/site-config/update", response_model=CommonResponse, summary="手动更新站点配置")
 def update_site_config(
     request: Request,
     payload: EmptyRequest | None = None,

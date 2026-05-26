@@ -6,7 +6,7 @@ from typing import Any, cast
 
 from lxml import etree
 
-from app.agent import QuestionAnswerAgent
+from app.agent.agents.question_answer import QuestionAnswerAgent
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
 from app.utils import RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies

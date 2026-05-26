@@ -11,6 +11,7 @@ from watchdog.observers.polling import PollingObserver
 
 import log
 from app.core.constants import RMT_MEDIAEXT
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import TransferHistoryRepositoryAdapter
@@ -116,6 +117,8 @@ class SyncEngine(metaclass=SingletonMeta):
                     self._monitor_ids.append(cfg.id)
                 else:
                     log.error(f"【Sync】{cfg.source} 目录不存在")
+            except (ServiceError, RepositoryError, DomainError):
+                raise
             except Exception as e:
                 log.error(f"【Sync】检查 {cfg.source} 失败: {e}")
 
@@ -149,6 +152,8 @@ class SyncEngine(metaclass=SingletonMeta):
                 try:
                     obs.stop()
                     obs.join()
+                except (ServiceError, RepositoryError, DomainError):
+                    raise
                 except Exception as e:
                     log.error(f"【Sync】停止监控异常: {e}")
             self._observers = []
@@ -173,6 +178,8 @@ class SyncEngine(metaclass=SingletonMeta):
                 self._do_link(event_path, cfg)
             else:
                 self._do_transfer(event_path, cfg)
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             log.error(f"【Sync】处理失败：{e}\n{traceback.format_exc()}")
 
@@ -199,6 +206,8 @@ class SyncEngine(metaclass=SingletonMeta):
             self._history_repo.insert_sync_history(event_path, cfg.source, cfg.dest)
             self._transfer._blacklist.insert(event_path)
             log.info(f"【Sync】{event_path} 同步完成")
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             log.error(f"【Sync】{event_path} 同步失败：{e}")
 
@@ -221,6 +230,8 @@ class SyncEngine(metaclass=SingletonMeta):
             ret, msg = self._pipeline.process(task)
             if not ret:
                 log.error(f"【Sync】{event_path} 转移失败：{msg}")
+        except (ServiceError, RepositoryError, DomainError):
+            raise
         except Exception as e:
             log.error(f"【Sync】{event_path} 转移异常：{e}")
 

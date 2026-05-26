@@ -6,10 +6,12 @@ Site Repository 适配器
 import json
 
 from app.db.models import CONFIGSITE, SITEFAVICON, SITESTATISTICSHISTORY, SITEUSERINFOSTATS
+from app.db import DbPersist
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.site_repository import SiteRepository
 from app.domain.entities.site import SiteEntity
 from app.domain.interfaces.site_repo import ISiteRepository
+from sqlalchemy import Integer, cast
 
 
 class SiteRepositoryAdapter(ISiteRepository):
@@ -86,6 +88,7 @@ class SiteRepositoryAdapter(ISiteRepository):
 
     def update_site_seed_info(self, site_user_infos: list) -> None:
         self._repo.update_site_seed_info(site_user_infos)
+
     def get_site_user_seeding_info(self, site: str) -> tuple | None:
         return self._repo.get_site_seeding_info(site=site)
 
@@ -95,12 +98,31 @@ class SiteRepositoryAdapter(ISiteRepository):
     def get_site_favicons(self) -> list[SITEFAVICON]:
         return self._repo.get_site_favicons()
 
-    def insert_config_site(self, name: str, site_pri: str, rssurl: str | None = None, signurl: str | None = None, cookie: str | None = None, note: str | None = None, rss_uses: str | None = None) -> None:
+    def insert_config_site(
+        self,
+        name: str,
+        site_pri: str,
+        rssurl: str | None = None,
+        signurl: str | None = None,
+        cookie: str | None = None,
+        note: str | None = None,
+        rss_uses: str | None = None,
+    ) -> None:
         return self._repo.insert_config_site(
             name=name, site_pri=site_pri, rssurl=rssurl, signurl=signurl, cookie=cookie, note=note, rss_uses=rss_uses
         )
 
-    def update_config_site(self, tid: int | None, name: str, site_pri: str, rssurl: str, signurl: str, cookie: str, note: str, rss_uses: str) -> None:
+    def update_config_site(
+        self,
+        tid: int | None,
+        name: str,
+        site_pri: str,
+        rssurl: str,
+        signurl: str,
+        cookie: str,
+        note: str,
+        rss_uses: str,
+    ) -> None:
         return self._repo.update_config_site(
             tid=tid,
             name=name,
@@ -124,7 +146,9 @@ class SiteRepositoryAdapter(ISiteRepository):
     def insert_site_statistics_history(self, site_user_infos: list) -> None:
         self._repo.insert_site_statistics_history(site_user_infos)
 
-    def get_site_statistics_recent_sites(self, days: int, end_day: str | None = None, strict_urls: list | None = None) -> tuple[int, int, list, list, list]:
+    def get_site_statistics_recent_sites(
+        self, days: int, end_day: str | None = None, strict_urls: list | None = None
+    ) -> tuple[int, int, list, list, list]:
         return self._repo.get_site_statistics_recent_sites(days=days, end_day=end_day, strict_urls=strict_urls)
 
     def get_site_statistics_history(self, site: str, days: int = 730) -> list[SITESTATISTICSHISTORY]:
@@ -154,7 +178,6 @@ class SiteRepositoryImpl(BaseRepository):
         return SiteEntity.from_orm(orm) if orm else None
 
     def list_all(self) -> list[SiteEntity]:
-        from sqlalchemy import Integer, cast
 
         orm_list = self._db.query(CONFIGSITE).order_by(cast(CONFIGSITE.PRI, Integer).asc()).all()
         return [SiteEntity.from_orm(orm) for orm in orm_list]
@@ -164,7 +187,6 @@ class SiteRepositoryImpl(BaseRepository):
         return [SiteEntity.from_orm(orm) for orm in orm_list]
 
     def insert(self, entity: SiteEntity) -> None:
-        from app.db import DbPersist
 
         @DbPersist(self._db)
         def _do_insert():
@@ -185,7 +207,6 @@ class SiteRepositoryImpl(BaseRepository):
     def update(self, entity: SiteEntity) -> None:
         if not entity.id:
             raise ValueError("Entity ID is required")
-        from app.db import DbPersist
 
         @DbPersist(self._db)
         def _do_update():
@@ -204,7 +225,6 @@ class SiteRepositoryImpl(BaseRepository):
         _do_update()
 
     def delete(self, site_id: int) -> None:
-        from app.db import DbPersist
 
         @DbPersist(self._db)
         def _do_delete():
@@ -213,7 +233,6 @@ class SiteRepositoryImpl(BaseRepository):
         _do_delete()
 
     def update_cookie_ua(self, site_id: int, cookie: str, ua: str | None = None) -> None:
-        from app.db import DbPersist
 
         @DbPersist(self._db)
         def _do_update():

@@ -1,6 +1,11 @@
 """
 刷流任务规则引擎（领域层）
 集中处理 RSS选种规则、删种规则、停种规则 的解析与检查
+
+设计原则：
+- 纯规则逻辑，不依赖数据库、Service 或应用层对象
+- 需要的外部数据通过参数传入
+- 调用方（BrushTaskService）负责获取数据并传入
 """
 
 from __future__ import annotations
@@ -14,12 +19,12 @@ import dateutil
 import pytz
 
 import log
-from app.utils import ExceptionUtils
+from app.utils import ExceptionUtils, StringUtils
 from app.utils.types import BrushDeleteType, BrushStopType, MediaType
 
 
 class BrushRuleEngine:
-    """刷流规则引擎，所有规则相关的方法统一收口"""
+    """刷流规则引擎 — 纯领域逻辑，不持有任何外部依赖"""
 
     # 操作符映射，用于前端展示
     OP_DISPLAY = {"gt": ">", "lt": "<", "bw": ""}
@@ -61,9 +66,28 @@ class BrushRuleEngine:
     # --------------------------------------------------
     @classmethod
     def check_rss_rule(
-        cls, rss_rule: dict | None, title: str, torrent_size: float, pubdate: datetime | None, torrent_attr: dict
+        cls,
+        rss_rule: dict | None,
+        title: str,
+        torrent_size: float,
+        pubdate: datetime | None,
+        torrent_attr: dict,
+        media_info: Any = None,
+        rss_movies: dict | None = None,
+        rss_tvs: dict | None = None,
     ) -> bool:
-        """检查种子是否符合刷流过滤条件"""
+        """
+        检查种子是否符合刷流过滤条件
+
+        :param rss_rule: RSS 选种规则
+        :param title: 种子标题
+        :param torrent_size: 种子体积（字节）
+        :param pubdate: 发布时间
+        :param torrent_attr: 种子属性（free/hr/peer_count 等）
+        :param media_info: 已识别的媒体信息（用于排除已订阅，由调用方提供）
+        :param rss_movies: 电影订阅列表（用于排除已订阅，由调用方提供）
+        :param rss_tvs: 电视剧订阅列表（用于排除已订阅，由调用方提供）
+        """
         if not rss_rule:
             return True
 
@@ -76,7 +100,7 @@ class BrushRuleEngine:
                 "hr": lambda _rv: not torrent_attr.get("hr"),
                 "peercount": lambda rv: cls.check_range_rule(torrent_attr.get("peer_count"), rv),
                 "pubdate": lambda rv: cls._check_pubdate(pubdate, torrent_attr, rv),
-                "exclude_subscribe": lambda rv: not cls._check_subscribe_status(title, rv),
+                "exclude_subscribe": lambda rv: not cls._check_subscribe_status(media_info, rss_movies, rss_tvs, rv),
             }
 
             for rule, check_func in rule_checks.items():
@@ -117,40 +141,17 @@ class BrushRuleEngine:
         return True
 
     @staticmethod
-    def _check_subscribe_status(title: str, rule_value: str) -> bool:
-        """排除已订阅的媒体"""
+    def _check_subscribe_status(
+        media_info: Any,
+        rss_movies: dict | None,
+        rss_tvs: dict | None,
+        rule_value: str,
+    ) -> bool:
+        """排除已订阅的媒体 — 纯逻辑，数据由调用方提供"""
         if rule_value == "N":
             return False
-
-        # 避免循环导入，采用函数内部导入（legacy 兼容）
-        from app.media import MediaService
-        from app.services.subscribe_service import SubscribeService as Subscribe
-
-        media = MediaService()
-        subscribe = Subscribe()
-        log.info("【Brush】开始排除已订阅媒体...")
-
-        rss_movies = subscribe.get_subscribe_movies(state="R")
-        if not rss_movies:
-            log.warn("【Brush】没有正在订阅的电影")
-        else:
-            log.info("【Brush】电影订阅清单：{}".format(" ".join("{}".format(info.get("name")) for _, info in rss_movies.items())))
-
-        rss_tvs = subscribe.get_subscribe_tvs(state="R")
-        if not rss_tvs:
-            log.warn("【Brush】没有正在订阅的电视剧")
-        else:
-            log.info("【Brush】电视剧订阅清单：{}".format(" ".join("{}".format(info.get("name")) for _, info in rss_tvs.items())))
-
-        if not rss_movies and not rss_tvs:
-            return False
-
-        media_info = media.get_media_info(title=title)
         if not media_info:
-            log.warn(f"【Brush】{title} 无法识别出媒体信息！")
             return False
-        elif not media_info.tmdb_info:
-            log.info(f"【Brush】{title} 识别为 {media_info.get_name()} 未匹配到TMDB媒体信息")
 
         match_flag = False
         # 匹配电影
@@ -169,7 +170,6 @@ class BrushRuleEngine:
                     match_flag = True
                     break
 
-        log.info(f"【Brush】匹配到媒体: {match_flag}")
         return match_flag
 
     @staticmethod
@@ -239,71 +239,121 @@ class BrushRuleEngine:
             "ratio": (BrushDeleteType.RATIO, lambda value, rv: cls.check_range_rule(value, rv)),
             "uploadsize": (BrushDeleteType.UPLOADSIZE, lambda value, rv: cls.check_range_rule(value, rv, 1024**3)),
             "dltime": (BrushDeleteType.DLTIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
-            "avg_upspeed": (BrushDeleteType.AVGUPSPEED, lambda value, rv: cls.check_range_rule(value, rv, 1024)),
+            "avg_upspeed": (BrushDeleteType.AVGUPSPEED, lambda value, rv: cls.check_range_rule(value, rv, 1024**3)),
             "iatime": (BrushDeleteType.IATIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
             "pending_time": (BrushDeleteType.PENDINGTIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
             "freespace": (BrushDeleteType.FREESPACE, lambda value, rv: cls.check_range_rule(value, rv, 1024**3)),
-            "freestatus": (BrushDeleteType.FREEEND, lambda value, _rv: not value),
+            "freestatus": (
+                BrushDeleteType.FREESTATUS,
+                lambda value, rv: not value if rv == "FREE" else value if rv == "NORMAL" else True,
+            ),
+            "hr": (BrushDeleteType.HR, lambda value, rv: value if rv == "HR" else not value if rv == "NOHR" else True),
         }
 
-        mode = remove_rule.get("mode", "or")
-        delete_type_result: list[BrushDeleteType] = []
-        all_conditions_met = mode == "and"
+        triggered_types = []
+        mode = remove_rule.get("mode", "and")
 
-        try:
-            for field, (delete_type, check_func) in rule_checks.items():
-                rule_value = remove_rule.get(field)
-                value = values.get(field)
+        for rule, (delete_type, check_func) in rule_checks.items():
+            rule_value = remove_rule.get(rule)
+            if rule_value in ("#", "N", None, ""):
+                continue
 
-                log.debug(f"检查字段: {field}, 规则值: {rule_value}, 实际值: {value}")
-                if not rule_value or value is None:
+            value = values.get(rule)
+            if value is None:
+                if mode == "and":
                     continue
-                if rule_value in ("#", "N"):
-                    log.debug(f"规则 {field} 被设置为忽略 (#)，跳过检查")
-                    continue
-
-                if field == "time" and hr:
-                    log.debug("跳过检查 'time'，因为 hr 为 True")
-                    continue
-                if field == "hr_time" and not hr:
-                    log.debug("跳过检查 'hr_time'，因为 hr 为 False")
-                    continue
-
-                if check_func(value, rule_value):
-                    log.debug(f"字段: {field} 符合规则, 删除类型: {delete_type}")
-                    if mode == "or":
-                        return True, delete_type
-                    delete_type_result.append(delete_type)
                 else:
-                    if mode == "and":
-                        all_conditions_met = False
+                    continue
 
-            if mode == "and" and all_conditions_met and delete_type_result:
-                return True, delete_type_result
+            try:
+                if check_func(float(value), rule_value):
+                    triggered_types.append(delete_type)
+                    log.debug(f"触发删种规则: {rule}={rule_value}, value={value}, type={delete_type}")
+                    if mode == "or":
+                        return True, triggered_types
+            except Exception as err:
+                ExceptionUtils.exception_traceback(err)
+                continue
 
-        except Exception as err:
-            ExceptionUtils.exception_traceback(err)
-
+        if mode == "and" and triggered_types:
+            return True, triggered_types
         return False, BrushDeleteType.NOTDELETE
 
     # --------------------------------------------------
     # 停种规则
     # --------------------------------------------------
     @classmethod
-    def check_stop_rule(cls, stop_rule: dict | None, torrent_attr: dict | None = None) -> tuple[bool, BrushStopType]:
+    def check_stop_rule(cls, stop_rule: dict | None, params: dict) -> tuple[bool, BrushStopType | list[BrushStopType]]:
+        """
+        检查是否符合停种规则
+        """
         if not stop_rule:
             return False, BrushStopType.NOTSTOP
 
-        rule_stopfree = stop_rule.get("stopfree")
-        if rule_stopfree and torrent_attr:
-            if rule_stopfree == "Y" and not (torrent_attr.get("2xfree") or torrent_attr.get("free")):
-                return True, BrushStopType.FREEEND
+        values = {
+            "ratio": params.get("ratio"),
+            "uploadsize": params.get("uploaded"),
+            "seedtime": params.get("seeding_time"),
+            "avg_upspeed": params.get("avg_upspeed"),
+        }
 
+        rule_checks = {
+            "ratio": (BrushStopType.RATIO, lambda value, rv: cls.check_range_rule(value, rv)),
+            "uploadsize": (BrushStopType.UPLOADSIZE, lambda value, rv: cls.check_range_rule(value, rv, 1024**3)),
+            "seedtime": (BrushStopType.SEEDTIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
+            "avg_upspeed": (BrushStopType.AVGUPSPEED, lambda value, rv: cls.check_range_rule(value, rv, 1024**3)),
+        }
+
+        triggered_types = []
+        mode = stop_rule.get("mode", "and")
+
+        for rule, (stop_type, check_func) in rule_checks.items():
+            rule_value = stop_rule.get(rule)
+            if rule_value in ("#", "N", None, ""):
+                continue
+
+            value = values.get(rule)
+            if value is None:
+                continue
+
+            try:
+                if check_func(float(value), rule_value):
+                    triggered_types.append(stop_type)
+                    log.debug(f"触发停种规则: {rule}={rule_value}, value={value}, type={stop_type}")
+                    if mode == "or":
+                        return True, triggered_types
+            except Exception as err:
+                ExceptionUtils.exception_traceback(err)
+                continue
+
+        if mode == "and" and triggered_types:
+            return True, triggered_types
         return False, BrushStopType.NOTSTOP
 
     # --------------------------------------------------
-    # 前端展示辅助
+    # 辅助方法
     # --------------------------------------------------
+    @staticmethod
+    def parse_rule_string(rule_str: str) -> dict:
+        """解析规则字符串为字典"""
+        rules = {}
+        if not rule_str:
+            return rules
+
+        for item in rule_str.split("&&"):
+            item = item.strip()
+            if "#" in item:
+                key, value = item.split("#", 1)
+                rules[key.strip()] = value.strip()
+        return rules
+
+    @staticmethod
+    def format_rule_string(rules: dict) -> str:
+        """将规则字典格式化为字符串"""
+        if not rules:
+            return ""
+        return " && ".join(f"{k}#{v}" for k, v in rules.items() if v not in (None, "", "#"))
+
     @classmethod
     def format_rule_html(cls, rules: dict | None) -> str:
         """将规则字典渲染为 HTML badge 字符串"""
@@ -312,7 +362,6 @@ class BrushRuleEngine:
 
         rule_htmls: list[str] = []
 
-        # 选种规则相关
         if rules.get("exclude_subscribe") == "Y":
             rule_htmls.append(cls._badge("排除订阅: 开", "text-green", "排除订阅"))
         elif rules.get("exclude_subscribe"):
@@ -342,7 +391,6 @@ class BrushRuleEngine:
         if rules.get("dlcount"):
             rule_htmls.append(cls._badge(f"同时下载: {rules['dlcount']}", "text-blue", "同时下载数量限制"))
 
-        # peercount 特殊兼容处理
         peercount = rules.get("peercount")
         if peercount:
             parsed = cls._parse_peercount(peercount)
@@ -352,12 +400,10 @@ class BrushRuleEngine:
                     cls._badge(f"做种人数: {cls.OP_DISPLAY.get(op, op)} {val}", "text-blue", "当前做种人数限制")
                 )
 
-        # 删种模式
         if rules.get("mode"):
             mode_str = "与" if rules["mode"] == "and" else "或"
             rule_htmls.append(cls._badge_wrap(f"删种模式: {mode_str}", "text-red", "删种模式"))
 
-        # 删种规则相关
         for key, title, color, unit in [
             ("time", "做种时间", "text-orange", "小时"),
             ("ratio", "分享率", "text-orange", ""),
@@ -370,7 +416,6 @@ class BrushRuleEngine:
         ]:
             cls._append_range_badge(rule_htmls, rules, key, title, color, unit)
 
-        # freestatus / stopfree
         for key, title in [("freestatus", "Free 到期"), ("stopfree", "Free 到期")]:
             val = rules.get(key)
             if val == "Y":
@@ -380,9 +425,6 @@ class BrushRuleEngine:
 
         return "<br>".join(rule_htmls)
 
-    # --------------------------------------------------
-    # 私有辅助
-    # --------------------------------------------------
     @staticmethod
     def _badge(text: str, color: str, title: str = "") -> str:
         return f'<span class="badge badge-outline {color} me-1 mb-1" title="{title}">{text}</span>'
@@ -418,7 +460,4 @@ class BrushRuleEngine:
 
     @staticmethod
     def _filesize(size_bytes: int) -> str:
-        # 避免循环导入，从已有工具类引入
-        from app.utils import StringUtils
-
         return StringUtils.str_filesize(size_bytes)

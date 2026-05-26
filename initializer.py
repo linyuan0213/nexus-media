@@ -17,7 +17,7 @@ from app.services.rbac_init import init_rbac_system as rbac_init
 from app.utils import ExceptionUtils
 from app.utils.path_utils import get_category_path
 from app.utils.types import SystemConfigKey
-from config import Config
+from app.core.settings import settings
 
 _observer = Observer(timeout=10)
 
@@ -27,18 +27,19 @@ def check_config():
     检查配置文件，如有错误进行日志输出
     """
     # 检查日志输出
-    if Config().get_config("log"):
-        logtype = Config().get_config("log").get("type")
+    _log_cfg = settings.get("log")
+    if _log_cfg:
+        logtype = _log_cfg.get("type")
         if logtype:
             log.info(f"日志输出类型为：{logtype}")
         if logtype == "server":
-            logserver = Config().get_config("log").get("server")
+            logserver = _log_cfg.get("server")
             if not logserver:
                 log.warn("【Config】日志中心地址未配置，无法正常输出日志")
             else:
                 log.info(f"日志将上送到服务器：{logserver}")
         elif logtype == "file":
-            logpath = Config().get_config("log").get("path")
+            logpath = _log_cfg.get("path")
             if not logpath:
                 log.warn("【Config】日志文件路径未配置，无法正常输出日志")
             else:
@@ -47,23 +48,24 @@ def check_config():
         log.error("【Config】配置文件格式错误，找不到log配置项！")
 
     # 检测系统设置
-    if Config().get_config("app"):
+    _app_cfg = settings.get("app")
+    if _app_cfg:
         # 检查WEB端口
-        web_port = Config().get_config("app").get("web_port")
+        web_port = _app_cfg.get("web_port")
         if not web_port:
             log.warn("【Config】WEB服务端口未设置，将使用默认3000端口")
 
         # 检查登录用户和密码
-        login_user = Config().get_config("app").get("login_user")
-        login_password = Config().get_config("app").get("login_password")
+        login_user = _app_cfg.get("login_user")
+        login_password = _app_cfg.get("login_password")
         if not login_user or not login_password:
             log.warn("【Config】WEB管理用户或密码未设置，将使用默认用户：admin，密码：password")
         else:
             log.info(f"WEB管理页面用户：{login_user!s}")
 
         # 检查HTTPS
-        ssl_cert = Config().get_config("app").get("ssl_cert")
-        ssl_key = Config().get_config("app").get("ssl_key")
+        ssl_cert = _app_cfg.get("ssl_cert")
+        ssl_key = _app_cfg.get("ssl_key")
         if os.environ.get("NEXUS_PORT"):
             web_port = os.environ.get("NEXUS_PORT")
         if not ssl_cert or not ssl_key:
@@ -82,17 +84,18 @@ def update_config():
     """
     升级配置文件
     """
-    _config = Config().get_config()
+    _config = settings.get()
     _dbhelper = IndexerStatisticsRepositoryAdapter()
-    overwrite_cofig = False
+    overwrite_config = False
 
     # security.api_key 已废弃：
     # - JWT 签名改用 get_secret_key()（从 security.jwt_secret 或 app.web_secret_key 获取）
     # - Webhook 验证改用数据库管理的 API Key（APIKeyService）
     # 保留此段代码用于清理旧配置项（可选）
-    if _config.get("security", {}).get("api_key"):
+    _security_cfg = _config.get("security", {})
+    if _security_cfg.get("api_key"):
         _config["security"].pop("api_key", None)
-        overwrite_cofig = True
+        overwrite_config = True
 
     # 日志配置迁移：从 app.xxx 迁移到 log.xxx
     try:
@@ -115,15 +118,16 @@ def update_config():
                 log.info(f"【Config】日志配置已迁移：app.{old_key} -> log.{new_key}，并已移除旧配置。")
 
         if migrated:
-            overwrite_cofig = True
+            overwrite_config = True
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
 
     # 站点数据刷新时间默认配置
     try:
-        if "ptrefresh_date_cron" not in _config["pt"]:
+        if "ptrefresh_date_cron" not in _config.get("pt", {}):
+            _config.setdefault("pt", {})
             _config["pt"]["ptrefresh_date_cron"] = "6"
-            overwrite_cofig = True
+            overwrite_config = True
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
 
@@ -140,17 +144,19 @@ def update_config():
 
     # TMDB代理服务开关迁移
     try:
-        tmdb_proxy = Config().get_config("laboratory").get("tmdb_proxy")
+        _lab_cfg = _config.get("laboratory", {})
+        tmdb_proxy = _lab_cfg.get("tmdb_proxy")
         if tmdb_proxy:
+            _config.setdefault("app", {})
             _config["app"]["tmdb_domain"] = "tmdb.nexus-media.cn"
             _config["laboratory"].pop("tmdb_proxy")
-            overwrite_cofig = True
+            overwrite_config = True
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
 
     # 重写配置文件
-    if overwrite_cofig:
-        Config().save_config(_config)
+    if overwrite_config:
+        settings.save(_config)
 
     # 清空索引器统计
     _dbhelper.delete_all()
@@ -179,7 +185,7 @@ class ConfigMonitor(FileSystemEventHandler):
             log.warn(f"【System】进程 {os.getpid()} 检测到系统配置文件已修改，正在重新加载...")
             time.sleep(1)
             # 重新加载配置
-            Config()
+            settings.reload()
         # 正在使用的二级分类策略文件3秒内只能加载一次，配置文件加载时，二级分类策略文件不加载
         elif (
             (category_path := get_category_path())
@@ -200,7 +206,7 @@ def start_config_monitor():
     """
     global _observer
     # 配置文件监听
-    _observer.schedule(ConfigMonitor(), path=Config().config_path, recursive=False)
+    _observer.schedule(ConfigMonitor(), path=settings.config_path, recursive=False)
     _observer.daemon = True
     _observer.start()
 
@@ -280,8 +286,9 @@ def init_rbac_system():
         rbac_init()
 
         # 获取配置中的管理员账号
-        login_user = Config().get_config("app").get("login_user") or "admin"
-        login_password = Config().get_config("app").get("login_password") or "password"
+        _app_cfg = settings.get("app")
+        login_user = _app_cfg.get("login_user") or "admin"
+        login_password = _app_cfg.get("login_password") or "password"
 
         # 如果是哈希密码，使用原始密码
         if login_password.startswith("[hash]"):

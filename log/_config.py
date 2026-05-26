@@ -8,7 +8,7 @@ import os
 import sys
 from typing import Any
 
-from config import Config
+from app.core.settings import settings
 
 __all__ = ["build_handlers"]
 
@@ -40,8 +40,7 @@ class _SyslogHandlerFactory:
 
 def build_handlers(module: str) -> list[dict[str, Any]]:
     """根据全局 Config 生成 loguru handlers 配置。"""
-    cfg = Config()
-    log_cfg = cfg.get_config("log") or {}
+    log_cfg = settings.get("log") or {}
     logtype = log_cfg.get("type") or "console"
     handlers: list[dict[str, Any]] = []
 

@@ -11,6 +11,7 @@ from app.db.repositories.config_repo_adapter import MessageClientRepositoryAdapt
 from app.helper.thread_helper import ThreadHelper
 from app.infrastructure.queue import MessageQueueFactory
 from app.message.client_registry import ClientRegistry
+from app.message.commands import COMMANDS
 from app.message.message_center import MessageCenter
 from app.message.registry import get_client_class
 from app.message.switches import MESSAGE_SWITCHES
@@ -273,7 +274,6 @@ class Message(metaclass=SingletonMeta):
 
     def get_commands(self) -> dict:
         """获取所有消息命令（系统命令 + 插件命令）"""
-        from app.message.commands import COMMANDS
 
         all_cmds = dict(COMMANDS)
         for cmd, info in self._plugin_commands.items():

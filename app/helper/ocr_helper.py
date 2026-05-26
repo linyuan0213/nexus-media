@@ -1,11 +1,11 @@
 import base64
 
 from app.utils import RequestUtils
-from config import Config
+from app.core.settings import settings
 
 
 class OcrHelper:
-    ocr_server_host = Config().get_config("laboratory").get("ocr_server_host")
+    ocr_server_host = settings.get("laboratory").get("ocr_server_host")
     if ocr_server_host:
         if ocr_server_host.endswith("/"):
             ocr_server_host = ocr_server_host[:-1]

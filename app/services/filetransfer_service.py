@@ -39,7 +39,8 @@ from app.storage.config_models import LocalStorageConfig
 from app.storage.backends.local import LocalStorageBackend
 from app.utils import ExceptionUtils, NumberUtils, PathUtils, StringUtils, SystemUtils
 from app.utils.types import EventType, MediaType, MovieTypes, ProgressKey, SyncType
-from config import Config
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.core.settings import settings
 
 
 class FileTransferService:
@@ -110,7 +111,7 @@ class FileTransferService:
         self.eventmanager = EventManager()
 
         media_cfg = MediaConfigService().get_config()
-        media = Config().get_config("media")
+        media = settings.get("media")
 
         self._movie_path = media_cfg.get("movie_path") or []
         self._movie_backend = media_cfg.get("movie_backend") or []
@@ -158,7 +159,7 @@ class FileTransferService:
                 if len(tv_formats) > 2:
                     self._tv_season_rmt_format = tv_formats[-2]
                     self._tv_file_rmt_format = tv_formats[-1]
-        self._default_operation = Config().get_config("pt").get("rmt_mode", "copy") or "copy"
+        self._default_operation = settings.get("pt").get("rmt_mode", "copy") or "copy"
 
     def is_target_dir_path(self, path):
         """
@@ -381,6 +382,8 @@ class FileTransferService:
                     if path_len > max_path_len:
                         max_path_len = path_len
                         max_return_path = dest_path
+                except (ServiceError, RepositoryError, DomainError):
+                    raise
                 except Exception as err:
                     ExceptionUtils.exception_traceback(err)
                     continue

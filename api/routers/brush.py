@@ -7,6 +7,8 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from api.deps import get_brush_service, require_any_permission, require_permission
+from app.core.exceptions import DomainError, ServiceError
+from app.schemas.common import CommonResponse
 from app.services.brush_service import BrushService
 from app.utils import ExceptionUtils
 from app.utils.response import fail, success
@@ -89,7 +91,7 @@ class SaveBrushRuleRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/add")
+@router.post("/tasks/add", response_model=CommonResponse, summary="添加刷流任务")
 def add_brushtask(
     req: AddBrushTaskRequest,
     _: None = Depends(require_permission("brush:manage")),
@@ -99,7 +101,7 @@ def add_brushtask(
     return success()
 
 
-@router.post("/tasks/update")
+@router.post("/tasks/update", response_model=CommonResponse, summary="更新刷流任务")
 def update_brushtask(
     req: AddBrushTaskRequest,
     _: None = Depends(require_permission("brush:manage")),
@@ -109,7 +111,7 @@ def update_brushtask(
     return success()
 
 
-@router.post("/tasks/detail")
+@router.post("/tasks/detail", response_model=CommonResponse, summary="获取刷流任务详情")
 def brushtask_detail(
     req: BrushTaskIdRequest,
     _: None = Depends(require_any_permission("brush:view", "brush:manage")),
@@ -121,7 +123,7 @@ def brushtask_detail(
     return success(data={"task": dto.task})
 
 
-@router.post("/tasks")
+@router.post("/tasks", response_model=CommonResponse, summary="获取刷流任务列表")
 def list_brushtasks(
     req: EmptyRequest = EmptyRequest(),
     _: None = Depends(require_any_permission("brush:view", "brush:manage")),
@@ -130,7 +132,7 @@ def list_brushtasks(
     return success(data=svc.get_tasks())
 
 
-@router.post("/tasks/delete")
+@router.post("/tasks/delete", response_model=CommonResponse, summary="删除刷流任务")
 def del_brushtask(
     req: BrushTaskIdRequest,
     _: None = Depends(require_permission("brush:manage")),
@@ -143,7 +145,7 @@ def del_brushtask(
     return fail()
 
 
-@router.post("/tasks/torrents")
+@router.post("/tasks/torrents", response_model=CommonResponse, summary="获取刷流任务种子")
 def list_brushtask_torrents(
     req: BrushTaskIdRequest,
     _: None = Depends(require_any_permission("brush:view", "brush:manage")),
@@ -155,7 +157,7 @@ def list_brushtask_torrents(
     return success(data={"list": dto.torrents})
 
 
-@router.post("/tasks/run")
+@router.post("/tasks/run", response_model=CommonResponse, summary="运行刷流任务")
 def run_brushtask(
     req: BrushTaskIdRequest,
     _: None = Depends(require_permission("brush:manage")),
@@ -165,7 +167,7 @@ def run_brushtask(
     return success()
 
 
-@router.post("/tasks/state")
+@router.post("/tasks/state", response_model=CommonResponse, summary="更新刷流任务状态")
 def update_brushtask_state(
     req: UpdateBrushTaskStateRequest,
     _: None = Depends(require_permission("brush:manage")),
@@ -174,6 +176,8 @@ def update_brushtask_state(
     try:
         svc.update_task_state(state=req.state, task_ids=req.ids)
         return success(msg="")
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
         return fail(msg="刷流任务设置失败")
@@ -184,7 +188,7 @@ def update_brushtask_state(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/rules")
+@router.post("/rules", response_model=CommonResponse, summary="获取刷流规则")
 def list_brush_rules(
     req: EmptyRequest = EmptyRequest(),
     _: None = Depends(require_any_permission("brush:view", "brush:manage")),
@@ -193,7 +197,7 @@ def list_brush_rules(
     return success(data=svc.get_rules())
 
 
-@router.post("/rules/detail")
+@router.post("/rules/detail", response_model=CommonResponse, summary="获取刷流规则详情")
 def brush_rule_detail(
     req: BrushRuleIdRequest,
     _: None = Depends(require_any_permission("brush:view", "brush:manage")),
@@ -205,7 +209,7 @@ def brush_rule_detail(
     return success(data=data)
 
 
-@router.post("/rules/save")
+@router.post("/rules/save", response_model=CommonResponse, summary="保存刷流规则")
 def save_brush_rule(
     req: SaveBrushRuleRequest,
     _: None = Depends(require_permission("brush:manage")),
@@ -220,7 +224,7 @@ def save_brush_rule(
     return success(data={"id": rid}, msg="规则已创建")
 
 
-@router.post("/rules/delete")
+@router.post("/rules/delete", response_model=CommonResponse, summary="删除刷流规则")
 def delete_brush_rule(
     req: BrushRuleIdRequest,
     _: None = Depends(require_permission("brush:manage")),

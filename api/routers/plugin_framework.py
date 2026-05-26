@@ -14,10 +14,12 @@ from pydantic import BaseModel
 
 import log
 from api.deps import get_plugin_framework_service, require_any_permission, require_permission
+from app.core.exceptions import DomainError, ServiceError
 from app.plugin_framework.hook_system import HookSystem
+from app.schemas.common import CommonResponse
 from app.services.plugin_framework_service import PluginFrameworkService
 from app.utils.response import fail, success
-from config import Config
+from app.core.settings import settings
 
 router = APIRouter()
 
@@ -41,7 +43,7 @@ class PluginConfigRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.get("/plugins")
+@router.get("/plugins", response_model=CommonResponse, summary="列出所有插件")
 def list_plugins(
     user: str = Depends(require_any_permission("plugin:view", "plugin:manage")),
     svc: PluginFrameworkService = Depends(get_plugin_framework_service),
@@ -51,7 +53,7 @@ def list_plugins(
     return success(data=plugins)
 
 
-@router.get("/plugins/{plugin_id}/manifest")
+@router.get("/plugins/{plugin_id}/manifest", response_model=CommonResponse, summary="获取插件清单")
 def get_plugin_manifest(
     plugin_id: str,
     user: str = Depends(require_any_permission("plugin:view", "plugin:manage")),
@@ -64,7 +66,7 @@ def get_plugin_manifest(
     return success(data=manifest.to_dict())
 
 
-@router.get("/plugins/{plugin_id}/config")
+@router.get("/plugins/{plugin_id}/config", response_model=CommonResponse, summary="获取插件配置")
 def get_plugin_config(
     plugin_id: str,
     user: str = Depends(require_any_permission("plugin:view", "plugin:manage")),
@@ -76,7 +78,7 @@ def get_plugin_config(
     return success(data={"config": config, "fields": fields})
 
 
-@router.put("/plugins/{plugin_id}/config")
+@router.put("/plugins/{plugin_id}/config", response_model=CommonResponse, summary="保存插件配置")
 def save_plugin_config(
     plugin_id: str,
     req: PluginConfigRequest,
@@ -90,7 +92,7 @@ def save_plugin_config(
     return success(msg="保存成功")
 
 
-@router.post("/plugins/install")
+@router.post("/plugins/install", response_model=CommonResponse, summary="安装插件")
 def install_plugin(
     file: UploadFile = File(...),
     user: str = Depends(require_permission("plugin:manage")),
@@ -107,12 +109,14 @@ def install_plugin(
         os.unlink(tmp_path)
 
         return success(data={"id": manifest.id, "name": manifest.name}, msg="安装成功")
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 安装插件失败: {e}")
         return fail(msg=f"安装失败: {str(e)}")
 
 
-@router.delete("/plugins/{plugin_id}")
+@router.delete("/plugins/{plugin_id}", response_model=CommonResponse, summary="卸载插件")
 def uninstall_plugin(
     plugin_id: str,
     user: str = Depends(require_permission("plugin:manage")),
@@ -125,12 +129,14 @@ def uninstall_plugin(
     try:
         svc.uninstall(plugin_id)
         return success(msg="卸载成功")
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 卸载插件失败 {plugin_id}: {e}")
         return fail(msg=f"卸载失败: {str(e)}")
 
 
-@router.post("/plugins/{plugin_id}/enable")
+@router.post("/plugins/{plugin_id}/enable", response_model=CommonResponse, summary="启用插件")
 def enable_plugin(
     plugin_id: str,
     user: str = Depends(require_permission("plugin:manage")),
@@ -145,12 +151,14 @@ def enable_plugin(
         svc.enable(plugin_id)
         threading.Thread(target=svc._do_enable, args=(plugin_id,), daemon=True).start()
         return success(msg="启用中，请稍后刷新")
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 启用插件失败 {plugin_id}: {e}")
         return fail(msg=f"启用失败: {str(e)}")
 
 
-@router.post("/plugins/{plugin_id}/disable")
+@router.post("/plugins/{plugin_id}/disable", response_model=CommonResponse, summary="禁用插件")
 def disable_plugin(
     plugin_id: str,
     user: str = Depends(require_permission("plugin:manage")),
@@ -163,12 +171,14 @@ def disable_plugin(
     try:
         svc.disable(plugin_id)
         return success(msg="禁用成功")
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 禁用插件失败 {plugin_id}: {e}")
         return fail(msg=f"禁用失败: {str(e)}")
 
 
-@router.post("/plugins/{plugin_id}/reload")
+@router.post("/plugins/{plugin_id}/reload", response_model=CommonResponse, summary="重载插件")
 def reload_plugin(
     plugin_id: str,
     user: str = Depends(require_permission("plugin:manage")),
@@ -181,12 +191,14 @@ def reload_plugin(
     try:
         svc.reload_plugin(plugin_id)
         return success(msg="重载成功")
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 重载插件失败 {plugin_id}: {e}")
         return fail(msg=f"重载失败: {str(e)}")
 
 
-@router.post("/plugins/{plugin_id}/run")
+@router.post("/plugins/{plugin_id}/run", response_model=CommonResponse, summary="运行插件")
 def run_plugin(
     plugin_id: str,
     user: str = Depends(require_permission("plugin:manage")),
@@ -199,12 +211,14 @@ def run_plugin(
     try:
         svc.run_plugin(plugin_id)
         return success(msg="运行任务已启动")
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 运行插件失败 {plugin_id}: {e}")
         return fail(msg=f"运行失败: {str(e)}")
 
 
-@router.get("/plugins/{plugin_id}/logs")
+@router.get("/plugins/{plugin_id}/logs", response_model=CommonResponse, summary="获取插件日志")
 def get_plugin_logs(
     plugin_id: str,
     page: int = 1,
@@ -217,7 +231,7 @@ def get_plugin_logs(
     return success(data=result)
 
 
-@router.delete("/plugins/{plugin_id}/logs")
+@router.delete("/plugins/{plugin_id}/logs", response_model=CommonResponse, summary="清空插件日志")
 def clear_plugin_logs(
     plugin_id: str,
     user: str = Depends(require_permission("plugin:manage")),
@@ -228,7 +242,7 @@ def clear_plugin_logs(
     return success(msg="日志已清空")
 
 
-@router.get("/plugins/{plugin_id}/readme")
+@router.get("/plugins/{plugin_id}/readme", response_model=CommonResponse, summary="获取插件 README")
 def get_plugin_readme(
     plugin_id: str,
     user: str = Depends(require_any_permission("plugin:view", "plugin:manage")),
@@ -255,7 +269,7 @@ def get_plugin_data(
 ):
     """获取插件数据文件（JSON）"""
     try:
-        data_dir = os.path.join(Config().config_path, "plugins_data", plugin_id)
+        data_dir = os.path.join(settings.config_path, "plugins_data", plugin_id)
         target = os.path.join(data_dir, filename)
         real_dir = os.path.realpath(data_dir)
         real_target = os.path.realpath(target)
@@ -269,6 +283,8 @@ def get_plugin_data(
         if isinstance(data, dict):
             return success(data=list(data.values()))
         return success(data=data)
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 获取插件数据失败: {e}")
         return fail(msg=f"获取数据失败: {str(e)}")
@@ -283,9 +299,9 @@ def delete_plugin_data(
 ):
     """删除插件数据文件中的某条记录"""
     try:
-        from config import Config
+        from app.core.settings import settings
 
-        data_dir = os.path.join(Config().config_path, "plugins_data", plugin_id)
+        data_dir = os.path.join(settings.config_path, "plugins_data", plugin_id)
         target = os.path.join(data_dir, filename)
         real_dir = os.path.realpath(data_dir)
         real_target = os.path.realpath(target)
@@ -304,6 +320,8 @@ def delete_plugin_data(
         with open(target, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         return success(msg="删除成功")
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
     except Exception as e:
         log.error(f"[PluginAPI] 删除插件数据失败: {e}")
         return fail(msg=f"删除失败: {str(e)}")

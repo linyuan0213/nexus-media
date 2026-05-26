@@ -4,18 +4,64 @@ FastAPI 依赖注入
 支持 JWT + Session 双轨认证（绞杀期）。
 """
 
+import uuid
 from collections.abc import Callable
 from typing import Any, TypeVar, cast
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.helper import ThreadHelper
+from app.helper.drissionpage_helper import DrissionPageHelper
+from app.helper.progress_helper import ProgressHelper
 from app.infrastructure.cache_system import TokenCache
 from app.schemas.auth import UserContext
 from app.services.auth_service import AuthService
+from app.services.brush_core import BrushTaskService
+from app.services.brush_service import BrushService
 from app.services.config_service import ConfigService
+from app.services.download_service import DownloadService
+from app.services.downloader_core import DownloaderCore
+from app.services.site_service import SiteService
+from app.services.filetransfer_service import FileTransferService
+from app.services.filter_service import FilterService
+from app.services.indexer_service import IndexerService
+from app.services.media_config_service import MediaConfigService
+from app.services.media_service import (
+    MediaFileService,
+    MediaInfoService,
+    MediaLibraryService,
+    MediaRecommendationService,
+    SearchResultService,
+    TransferHistoryService,
+)
+from app.services.plugin_framework_service import PluginFrameworkService
 from app.services.rbac_service import rbac_service
+from app.services.rss_service import RssSubscriptionService, RssTaskService
+from app.services.scheduler_service import SchedulerService
+from app.services.search_service import Searcher
+from app.services.sync_service import SyncService
+from app.services.system_service import (
+    BackupRestoreService,
+    ConfigUpdateService,
+    IndexerConfigService,
+    MediaServerConfigService,
+    MessageClientService,
+    MessageSenderService,
+    NetTestService,
+    ProgressService,
+    SystemConfigService,
+    SystemInfoService,
+    UserManageService,
+    VersionService,
+    WebSearchService,
+)
+from app.services.tmdb_blacklist_service import TmdbBlacklistService
+from app.services.torrentremover_core import TorrentRemoverService
+from app.services.userrss_service import UserRssService
+from app.services.words_service import WordsService
 from app.utils.security import generate_access_token, identify
+from app.services.apikey_service import APIKeyService
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
@@ -67,7 +113,6 @@ def _extract_user_from_api_key(auth_header: str | None, query_key: str | None) -
     API Key 认证（支持 Header 和 Query 参数）
     使用 APIKeyService 验证 Key 并返回 UserContext
     """
-    from app.services.apikey_service import APIKeyService
 
     raw_key = None
     if auth_header:
@@ -85,8 +130,6 @@ def _extract_user_from_api_key(auth_header: str | None, query_key: str | None) -
 
     # 记录使用日志（异步记录，不阻塞认证流程）
     try:
-        import uuid
-
         service.record_usage(
             api_key_id=api_key.id,
             request_id=str(uuid.uuid4()),
@@ -289,7 +332,6 @@ def get_config_service() -> ConfigService:
 
 def get_message_service():
     """获取消息客户端服务实例（避免路由层直接实例化 MessageClientService）"""
-    from app.services.system_service import MessageClientService
 
     return MessageClientService()
 
@@ -299,286 +341,245 @@ def get_message_service():
 
 def get_download_service():
     """获取下载服务实例"""
-    from app.services.download_service import DownloadService
 
     return DownloadService()
 
 
 def get_site_service():
     """获取站点服务实例"""
-    from app.services.site_service import SiteService
 
     return SiteService()
 
 
 def get_indexer_service():
     """获取索引器服务实例"""
-    from app.services.indexer_service import IndexerService
 
     return IndexerService()
 
 
 def get_media_info_service():
     """获取媒体信息服务实例"""
-    from app.services.media_service import MediaInfoService
 
     return MediaInfoService()
 
 
 def get_media_library_service():
     """获取媒体库服务实例"""
-    from app.services.media_service import MediaLibraryService
 
     return MediaLibraryService()
 
 
 def get_media_file_service():
     """获取媒体文件服务实例"""
-    from app.services.media_service import MediaFileService
 
     return MediaFileService()
 
 
 def get_transfer_history_service():
     """获取转移历史服务实例"""
-    from app.services.media_service import TransferHistoryService
 
     return TransferHistoryService()
 
 
 def get_search_result_service():
     """获取搜索结果服务实例"""
-    from app.services.media_service import SearchResultService
 
     return SearchResultService()
 
 
 def get_sync_service():
     """获取同步服务实例"""
-    from app.services.sync_service import SyncService
 
     return SyncService()
 
 
 def get_rss_subscription_service():
     """获取 RSS 订阅服务实例"""
-    from app.services.rss_service import RssSubscriptionService
 
     return RssSubscriptionService()
 
 
 def get_rss_task_service():
     """获取 RSS 任务服务实例"""
-    from app.services.rss_service import RssTaskService
 
     return RssTaskService()
 
 
 def get_brush_service():
     """获取刷流服务实例"""
-    from app.services.brush_service import BrushService
 
     return BrushService()
 
 
 def get_brush_task_service():
     """获取刷流任务核心服务实例"""
-    from app.services.brush_core import BrushTaskService
 
     return BrushTaskService()
 
 
 def get_plugin_framework_service():
     """获取插件框架 v2 服务实例"""
-    from app.services.plugin_framework_service import PluginFrameworkService
 
     return PluginFrameworkService()
 
 
 def get_words_service():
     """获取自定义识别词服务实例"""
-    from app.services.words_service import WordsService
 
     return WordsService()
 
 
 def get_user_rss_service():
     """获取用户 RSS 服务实例"""
-    from app.services.userrss_service import UserRssService
 
     return UserRssService()
 
 
 def get_scheduler_service():
     """获取调度器服务实例"""
-    from app.services.scheduler_service import SchedulerService
 
     return SchedulerService()
 
 
 def get_system_scheduler_service():
     """获取系统调度器服务实例（用于启动后台服务）"""
-    from app.services.system_service import SchedulerService
 
     return SchedulerService()
 
 
 def get_filter_service():
     """获取过滤服务实例"""
-    from app.services.filter_service import FilterService
 
     return FilterService()
 
 
 def get_net_test_service():
     """获取网络测试服务实例"""
-    from app.services.system_service import NetTestService
 
     return NetTestService()
 
 
 def get_version_service():
     """获取版本服务实例"""
-    from app.services.system_service import VersionService
 
     return VersionService()
 
 
 def get_system_config_service():
     """获取系统配置服务实例"""
-    from app.services.system_service import SystemConfigService
 
     return SystemConfigService()
 
 
 def get_config_update_service():
     """获取配置更新服务实例"""
-    from app.services.system_service import ConfigUpdateService
 
     return ConfigUpdateService()
 
 
 def get_user_manage_service():
     """获取用户管理服务实例"""
-    from app.services.system_service import UserManageService
 
     return UserManageService()
 
 
 def get_progress_service():
     """获取进度服务实例"""
-    from app.services.system_service import ProgressService
 
     return ProgressService()
 
 
 def get_message_sender_service():
     """获取消息发送服务实例"""
-    from app.services.system_service import MessageSenderService
 
     return MessageSenderService()
 
 
 def get_system_info_service():
     """获取系统信息服务实例"""
-    from app.services.system_service import SystemInfoService
 
     return SystemInfoService()
 
 
 def get_backup_restore_service():
     """获取备份恢复服务实例"""
-    from app.services.system_service import BackupRestoreService
 
     return BackupRestoreService()
 
 
 def get_indexer_config_service():
     """获取索引器配置服务实例"""
-    from app.services.system_service import IndexerConfigService
 
     return IndexerConfigService()
 
 
 def get_media_server_config_service():
     """获取媒体服务器配置服务实例"""
-    from app.services.system_service import MediaServerConfigService
 
     return MediaServerConfigService()
 
 
 def get_web_search_service():
     """获取 Web 搜索服务实例"""
-    from app.services.system_service import WebSearchService
 
     return WebSearchService()
 
 
 def get_downloader_service():
     """获取下载器核心服务实例"""
-    from app.services.downloader_core import DownloaderCore
 
     return DownloaderCore()
 
 
 def get_filetransfer_service():
     """获取文件转移服务实例"""
-    from app.services.filetransfer_service import FileTransferService
 
     return FileTransferService()
 
 
 def get_torrent_remover_service():
     """获取种子删除服务实例"""
-    from app.services.torrentremover_core import TorrentRemoverService
 
     return TorrentRemoverService()
 
 
 def get_media_recommendation_service():
     """获取媒体推荐服务实例"""
-    from app.services.media_service import MediaRecommendationService
 
     return MediaRecommendationService()
 
 
 def get_searcher_service():
     """获取搜索服务实例"""
-    from app.services.search_service import Searcher
 
     return Searcher()
 
 
 def get_tmdb_blacklist_service():
     """获取 TMDB 黑名单服务实例"""
-    from app.services.tmdb_blacklist_service import TmdbBlacklistService
 
     return TmdbBlacklistService()
 
 
 def get_progress_helper():
     """获取进度助手实例"""
-    from app.helper.progress_helper import ProgressHelper
 
     return ProgressHelper()
 
 
 def get_drissionpage_helper():
     """获取 DrissionPage 助手实例"""
-    from app.helper.drissionpage_helper import DrissionPageHelper
 
     return DrissionPageHelper()
 
 
 def get_thread_helper():
     """获取线程助手实例"""
-    from app.helper import ThreadHelper
 
     return ThreadHelper()
 
 
 def get_media_config_service():
     """获取媒体库路径配置服务"""
-    from app.services.media_config_service import MediaConfigService
 
     return MediaConfigService()

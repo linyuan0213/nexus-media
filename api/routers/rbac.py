@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from api.deps import get_current_user, require_any_permission, require_permission
 from app.schemas.auth import UserContext
+from app.schemas.common import CommonResponse
 from app.services.rbac_service import rbac_service
 from app.utils.response import fail, success
 
@@ -126,7 +127,7 @@ def _get_user_id_from_ctx(current_user):
 # ---------- 用户管理 ----------
 
 
-@router.post("/users/create")
+@router.post("/users/create", response_model=CommonResponse, summary="创建用户")
 def create_user(
     req: CreateUserRequest,
     current_user: UserContext = Depends(require_permission("user:create")),
@@ -146,7 +147,7 @@ def create_user(
     return fail(success=False, message=result)
 
 
-@router.post("/users/delete")
+@router.post("/users/delete", response_model=CommonResponse, summary="删除用户")
 def delete_user(
     req: IdRequest,
     current_user: UserContext = Depends(require_permission("user:delete")),
@@ -160,7 +161,7 @@ def delete_user(
     return fail(success=False, message="删除失败")
 
 
-@router.post("/users/update")
+@router.post("/users/update", response_model=CommonResponse, summary="更新用户")
 def update_user(
     req: UpdateUserRequest,
     current_user: UserContext = Depends(require_permission("user:update")),
@@ -184,7 +185,7 @@ def update_user(
     return fail(success=False, message=message)
 
 
-@router.post("/users/detail")
+@router.post("/users/detail", response_model=CommonResponse, summary="获取用户详情")
 def get_user_detail(
     req: IdRequest,
     current_user: UserContext = Depends(require_any_permission("user:view", "user:update")),
@@ -198,7 +199,7 @@ def get_user_detail(
     return fail(success=False, message="用户不存在")
 
 
-@router.post("/users")
+@router.post("/users", response_model=CommonResponse, summary="获取用户列表")
 def get_users(
     current_user: UserContext = Depends(require_any_permission("user:view", "user:update")),
 ):
@@ -233,7 +234,7 @@ def _is_admin(user: UserContext) -> bool:
     return user.is_superadmin or "user:update" in (user.permissions or [])
 
 
-@router.post("/users/{user_id}/reset-password")
+@router.post("/users/{user_id}/reset-password", response_model=CommonResponse, summary="重置密码")
 def reset_password(
     user_id: int,
     req: ResetPasswordRequest,
@@ -259,7 +260,7 @@ def reset_password(
     return fail(success=False, message=message)
 
 
-@router.post("/users/{user_id}/avatar")
+@router.post("/users/{user_id}/avatar", response_model=CommonResponse, summary="上传头像")
 async def upload_avatar(
     user_id: int,
     file: UploadFile = File(...),
@@ -297,7 +298,7 @@ async def upload_avatar(
         return fail(success=False, message=f"上传失败: {str(e)}")
 
 
-@router.get("/avatars/{filename}")
+@router.get("/avatars/{filename}", summary="获取头像")
 async def get_avatar(filename: str):
     """获取用户头像文件"""
     avatar_dir = Path(__file__).parent.parent.parent / "web" / "static" / "avatars"
@@ -310,7 +311,7 @@ async def get_avatar(filename: str):
 # ---------- 角色管理 ----------
 
 
-@router.post("/roles/create")
+@router.post("/roles/create", response_model=CommonResponse, summary="创建角色")
 def create_role(
     req: CreateRoleRequest,
     current_user: UserContext = Depends(require_permission("role:create")),
@@ -331,7 +332,7 @@ def create_role(
     return fail(success=False, message=result)
 
 
-@router.post("/roles/delete")
+@router.post("/roles/delete", response_model=CommonResponse, summary="删除角色")
 def delete_role(
     req: IdRequest,
     current_user: UserContext = Depends(require_permission("role:delete")),
@@ -345,7 +346,7 @@ def delete_role(
     return fail(success=False, message=message)
 
 
-@router.post("/roles/update")
+@router.post("/roles/update", response_model=CommonResponse, summary="更新角色")
 def update_role(
     req: UpdateRoleRequest,
     current_user: UserContext = Depends(require_permission("role:update")),
@@ -372,7 +373,7 @@ def update_role(
     return fail(success=False, message=message)
 
 
-@router.post("/roles/detail")
+@router.post("/roles/detail", response_model=CommonResponse, summary="获取角色详情")
 def get_role_detail(
     req: IdRequest,
     current_user: UserContext = Depends(require_any_permission("role:view", "role:update")),
@@ -391,7 +392,7 @@ def get_role_detail(
     return fail(success=False, message="角色不存在")
 
 
-@router.post("/roles")
+@router.post("/roles", response_model=CommonResponse, summary="获取角色列表")
 def get_roles(
     current_user: UserContext = Depends(require_any_permission("role:view", "role:update")),
 ):
@@ -417,7 +418,7 @@ def get_roles(
 # ---------- 菜单管理 ----------
 
 
-@router.post("/menus/create")
+@router.post("/menus/create", response_model=CommonResponse, summary="创建菜单")
 def create_menu(
     req: CreateMenuRequest,
     current_user: UserContext = Depends(require_permission("menu:create")),
@@ -450,7 +451,7 @@ def create_menu(
     return fail(success=False, message=result)
 
 
-@router.post("/menus/delete")
+@router.post("/menus/delete", response_model=CommonResponse, summary="删除菜单")
 def delete_menu(
     req: IdRequest,
     current_user: UserContext = Depends(require_permission("menu:delete")),
@@ -464,7 +465,7 @@ def delete_menu(
     return fail(success=False, message=message)
 
 
-@router.post("/menus/update")
+@router.post("/menus/update", response_model=CommonResponse, summary="更新菜单")
 def update_menu(
     req: UpdateMenuRequest,
     current_user: UserContext = Depends(require_permission("menu:update")),
@@ -503,7 +504,7 @@ def update_menu(
     return fail(success=False, message=message)
 
 
-@router.post("/menus/sort")
+@router.post("/menus/sort", response_model=CommonResponse, summary="更新菜单排序")
 def update_menu_sort(
     req: UpdateMenuSortRequest,
     current_user: UserContext = Depends(require_permission("menu:update")),
@@ -526,7 +527,7 @@ def update_menu_sort(
     return success(data={"success": True, "message": f"成功更新 {success_count} 个菜单排序"})
 
 
-@router.post("/menus/detail")
+@router.post("/menus/detail", response_model=CommonResponse, summary="获取菜单详情")
 def get_menu_detail(
     req: IdRequest,
     current_user: UserContext = Depends(require_any_permission("menu:view", "menu:update")),
@@ -540,7 +541,7 @@ def get_menu_detail(
     return fail(success=False, message="菜单不存在")
 
 
-@router.post("/menus")
+@router.post("/menus", response_model=CommonResponse, summary="获取当前用户菜单")
 def get_user_menus(
     current_user: UserContext = Depends(get_current_user),
 ):
@@ -636,7 +637,7 @@ def _build_management_tree(menus, parent_id=None):
     return result
 
 
-@router.post("/menus/all")
+@router.post("/menus/all", response_model=CommonResponse, summary="获取所有菜单")
 def get_all_menus_for_management(
     current_user: UserContext = Depends(require_any_permission("menu:view", "menu:update")),
 ):
@@ -648,7 +649,7 @@ def get_all_menus_for_management(
     return success(data=tree)
 
 
-@router.post("/menus/top")
+@router.post("/menus/top", response_model=CommonResponse, summary="获取顶部菜单")
 def get_top_menus(
     current_user: UserContext = Depends(get_current_user),
 ):
@@ -662,7 +663,7 @@ def get_top_menus(
 # ---------- 权限管理 ----------
 
 
-@router.post("/permissions")
+@router.post("/permissions", response_model=CommonResponse, summary="获取权限列表")
 def get_all_permissions(
     current_user: UserContext = Depends(require_any_permission("permission:view", "permission:update")),
 ):
@@ -679,7 +680,7 @@ def get_all_permissions(
 # ---------- 权限码 ----------
 
 
-@router.get("/codes")
+@router.get("/codes", response_model=CommonResponse, summary="获取用户权限码")
 def get_user_codes(
     current_user: UserContext = Depends(get_current_user),
 ):

@@ -8,12 +8,12 @@ import glob
 import os
 import time
 
+from app.core.settings import settings
 from app.plugin_framework.context import PluginContext
 from app.services.system_service import backup as do_backup
 from app.utils import SystemUtils
 from app.utils.path_utils import get_temp_path
 from backend._autobackup.filestorage_client import FileClientFactory
-from config import Config
 
 
 class AutoBackupPlugin:
@@ -38,11 +38,10 @@ class AutoBackupPlugin:
 
     def on_hook(self, event, data):
         """事件处理"""
-        if event == "plugin.config_changed":
-            if data.get("plugin_id") == self.ctx.plugin_id:
-                self.ctx.info("配置已变更，重载服务")
-                self._stop_service()
-                self._start_service()
+        if event == "plugin.config_changed" and data.get("plugin_id") == self.ctx.plugin_id:
+            self.ctx.info("配置已变更，重载服务")
+            self._stop_service()
+            self._start_service()
 
     def run(self):
         """立即运行备份"""
@@ -93,9 +92,9 @@ class AutoBackupPlugin:
         # 确定本地备份路径
         if storage_type == "local":
             if SystemUtils.is_docker():
-                bk_path = os.path.join(Config().config_path, "backup_file")
+                bk_path = os.path.join(settings.config_path, "backup_file")
             else:
-                bk_path = bk_path_cfg or os.path.join(Config().config_path, "backup_file")
+                bk_path = bk_path_cfg or os.path.join(settings.config_path, "backup_file")
         else:
             bk_path = os.path.join(get_temp_path(), "backup_temp")
             os.makedirs(bk_path, exist_ok=True)
@@ -146,7 +145,7 @@ class AutoBackupPlugin:
                             self.ctx.info(f"已删除远程备份：{file}")
 
             except Exception as e:
-                self.ctx.error(f"远程备份失败：{str(e)}")
+                self.ctx.error(f"远程备份失败：{e!s}")
                 if os.path.exists(zip_file):
                     os.remove(zip_file)
                 return

@@ -5,6 +5,7 @@ from pydantic import BaseModel
 import log
 from app.agent.prompts.media import MEDIA_BATCH_PROMPT, MEDIA_RECOGNITION_PROMPT
 from app.agent.service import AgentService
+from app.core.settings import settings
 
 
 class MediaResult(BaseModel):
@@ -69,9 +70,7 @@ class MediaRecognizer:
             return [None] * len(filenames)
 
         if batch_size <= 0:
-            from config import Config
-
-            batch_size = (Config().get_config("agent") or {}).get("batch_size", 100)
+            batch_size = (settings.get("agent") or {}).get("batch_size", 100)
 
         total = len(filenames)
         log.info(f"【MediaRecognizer】批量识别开始: {total} 条, batch_size={batch_size}")

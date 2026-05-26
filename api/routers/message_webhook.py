@@ -100,7 +100,7 @@ def _handle_webhook(update: dict, channel: SearchType):
     return {"ok": True}
 
 
-@router.post("/telegram")
+@router.post("/telegram", summary="Telegram Bot Webhook")
 async def telegram_webhook(request: Request):
     """Telegram Bot Webhook"""
     _verify_apikey(request)
@@ -108,7 +108,7 @@ async def telegram_webhook(request: Request):
     return await asyncio.to_thread(_handle_webhook, data, SearchType.TG)
 
 
-@router.post("/wechat")
+@router.post("/wechat", summary="微信 Webhook")
 async def wechat_webhook(request: Request):
     """WeChat 企业微信/公众号 Webhook"""
     _verify_apikey(request)
@@ -116,7 +116,7 @@ async def wechat_webhook(request: Request):
     return await asyncio.to_thread(_handle_webhook, data, SearchType.WX)
 
 
-@router.post("/synologychat")
+@router.post("/synologychat", summary="Synology Chat Webhook")
 async def synologychat_webhook(request: Request):
     """Synology Chat Webhook"""
     _verify_apikey(request)
@@ -124,7 +124,7 @@ async def synologychat_webhook(request: Request):
     return await asyncio.to_thread(_handle_webhook, data, SearchType.SYNOLOGY)
 
 
-@router.post("/slack")
+@router.post("/slack", summary="Slack Webhook")
 async def slack_webhook(request: Request):
     """Slack Event/Webhook"""
     _verify_apikey(request)

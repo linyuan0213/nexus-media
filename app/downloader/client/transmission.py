@@ -4,6 +4,7 @@ from typing import Any
 import transmission_rpc
 
 import log
+from app.core.exceptions import InfrastructureError, NetworkError
 from app.downloader.client._base import _IDownloadClient
 from app.downloader.schema import ConfigField, DownloaderConfigSchema
 from app.downloader.strategy import RemoveStrategy
@@ -138,6 +139,8 @@ class Transmission(_IDownloadClient):
                 host=self.host or "", port=self.port or 0, username=self.username, password=self.password, timeout=60
             )
             return trt
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             log.error(f"【{self.client_name}】{self.name} 连接出错：{err!s}")
@@ -172,6 +175,8 @@ class Transmission(_IDownloadClient):
             torrent_list: list[Torrent] = []
             for torrent in torrents:
                 torrent_list.append(self.torrent_properties(torrent=torrent))
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return [], True
@@ -223,6 +228,8 @@ class Transmission(_IDownloadClient):
         try:
             torrents, error = self.get_torrents(status=[TorrentStatus.Uploading], ids=ids, tag=tag)
             return None if error else torrents or []
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return None
@@ -242,6 +249,8 @@ class Transmission(_IDownloadClient):
             )
             torrents = [t for t in torrents if t.progress * 100 < 100]
             return None if error else torrents or []
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return None
@@ -265,6 +274,8 @@ class Transmission(_IDownloadClient):
         try:
             self.trc.change_torrent(labels=tags, ids=parsed_ids)
             log.info(f"【{self.client_name}】{self.name} 设置种子标签成功")
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
 
@@ -279,6 +290,8 @@ class Transmission(_IDownloadClient):
         try:
             self.trc.change_torrent(labels=tags, ids=parsed_ids)
             log.info(f"【{self.client_name}】设置transmission种子标签成功")
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
 
@@ -293,6 +306,8 @@ class Transmission(_IDownloadClient):
         parsed_ids: Any = self.__parse_ids(tid)
         try:
             self.trc.change_torrent(labels=tag, ids=parsed_ids)
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
 
@@ -357,6 +372,8 @@ class Transmission(_IDownloadClient):
                 seedIdleLimit=seed_idle_limit,
             )
             return True
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -384,6 +401,8 @@ class Transmission(_IDownloadClient):
                 if download_limit:
                     self.set_downloadspeed_limit(ret.hashString, int(download_limit))
             return ret
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -427,6 +446,8 @@ class Transmission(_IDownloadClient):
         parsed_ids: Any = self.__parse_ids(ids)
         try:
             return self.trc.start_torrent(ids=parsed_ids)
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -437,6 +458,8 @@ class Transmission(_IDownloadClient):
         parsed_ids: Any = self.__parse_ids(ids)
         try:
             return self.trc.stop_torrent(ids=parsed_ids)
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -449,6 +472,8 @@ class Transmission(_IDownloadClient):
         parsed_ids: Any = self.__parse_ids(ids)
         try:
             return self.trc.remove_torrent(delete_data=bool(delete_file or False), ids=parsed_ids)
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -463,6 +488,8 @@ class Transmission(_IDownloadClient):
             return None
         try:
             torrent = self.trc.get_torrent(tid)
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return None
@@ -492,6 +519,8 @@ class Transmission(_IDownloadClient):
         try:
             self.trc.set_files(kwargs.get("file_info"))  # type: ignore[attr-defined]
             return True
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -501,6 +530,8 @@ class Transmission(_IDownloadClient):
             return []
         try:
             return [self.trc.get_session(timeout=30).download_dir]
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return []
@@ -554,6 +585,8 @@ class Transmission(_IDownloadClient):
                 speed_limit_down_enabled=download_limit_enabled,
                 speed_limit_up_enabled=upload_limit_enabled,
             )
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -564,6 +597,8 @@ class Transmission(_IDownloadClient):
         parsed_ids: Any = self.__parse_ids(ids)
         try:
             return self.trc.verify_torrent(ids=parsed_ids)
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False
@@ -576,6 +611,8 @@ class Transmission(_IDownloadClient):
             return
         try:
             return self.trc.free_space(path)
+        except (InfrastructureError, NetworkError):
+            raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return

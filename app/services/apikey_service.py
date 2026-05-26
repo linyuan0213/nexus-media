@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import log
+from app.core.exceptions import RepositoryError, ServiceError
 from app.db.repositories.apikey_repo_adapter import APIKeyLogRepositoryAdapter, APIKeyRepositoryAdapter
 from app.utils import ExceptionUtils
 
@@ -83,9 +84,10 @@ class APIKeyService:
                 "created_at": api_key.created_at.isoformat() if api_key.created_at else None,
                 "status": api_key.status,
             }
-        except Exception as e:
-            ExceptionUtils.exception_traceback(e)
+        except (ServiceError, RepositoryError):
             raise
+        except Exception as e:
+            ExceptionUtils.log_and_raise(e, target=ServiceError, message="创建 API Key 失败")
 
     def list_keys(self, page: int = 1, page_size: int = 50) -> dict[str, Any]:
         """获取 API Key 列表"""
@@ -97,9 +99,10 @@ class APIKeyService:
                 "page_size": page_size,
                 "items": [item.to_dict() for item in items],
             }
-        except Exception as e:
-            ExceptionUtils.exception_traceback(e)
+        except (ServiceError, RepositoryError):
             return {"total": 0, "page": page, "page_size": page_size, "items": []}
+        except Exception as e:
+            ExceptionUtils.log_and_raise(e, target=ServiceError, message="获取 API Key 列表失败")
 
     def update_key(
         self, key_id: int, name: str | None = None, status: int | None = None, description: str | None = None
@@ -114,17 +117,19 @@ class APIKeyService:
             if description is not None:
                 kwargs["description"] = description
             return self._key_repo.update_key(key_id, **kwargs)
-        except Exception as e:
-            ExceptionUtils.exception_traceback(e)
+        except (ServiceError, RepositoryError):
             return False
+        except Exception as e:
+            ExceptionUtils.log_and_raise(e, target=ServiceError, message="更新 API Key 失败")
 
     def delete_key(self, key_id: int) -> bool:
         """删除 API Key"""
         try:
             return self._key_repo.delete_key(key_id)
-        except Exception as e:
-            ExceptionUtils.exception_traceback(e)
+        except (ServiceError, RepositoryError):
             return False
+        except Exception as e:
+            ExceptionUtils.log_and_raise(e, target=ServiceError, message="删除 API Key 失败")
 
     def validate_key(self, raw_key: str) -> Any | None:
         """验证 API Key 是否有效"""
@@ -134,9 +139,10 @@ class APIKeyService:
             if key is None or key.is_expired():
                 return None
             return key
-        except Exception as e:
-            ExceptionUtils.exception_traceback(e)
+        except (ServiceError, RepositoryError):
             return None
+        except Exception as e:
+            ExceptionUtils.log_and_raise(e, target=ServiceError, message="验证 API Key 失败")
 
     def record_usage(
         self,
@@ -172,9 +178,10 @@ class APIKeyService:
             )
             self._key_repo.increment_use_count(api_key_id)
             return True
-        except Exception as e:
-            ExceptionUtils.exception_traceback(e)
+        except (ServiceError, RepositoryError):
             return False
+        except Exception as e:
+            ExceptionUtils.log_and_raise(e, target=ServiceError, message="记录 API Key 使用日志失败")
 
     def list_logs(self, api_key_id: int | None = None, page: int = 1, page_size: int = 50) -> dict[str, Any]:
         """获取 API Key 使用记录"""
@@ -186,9 +193,10 @@ class APIKeyService:
                 "page_size": page_size,
                 "items": [item.to_dict() for item in items],
             }
-        except Exception as e:
-            ExceptionUtils.exception_traceback(e)
+        except (ServiceError, RepositoryError):
             return {"total": 0, "page": page, "page_size": page_size, "items": []}
+        except Exception as e:
+            ExceptionUtils.log_and_raise(e, target=ServiceError, message="获取 API Key 使用记录失败")
 
     def get_or_create_system_key(self, name: str) -> str:
         """
@@ -217,19 +225,21 @@ class APIKeyService:
             )
             log.info(f"【APIKey】系统 key 创建成功: {name} (ID={api_key.id})")
             return raw_key
-        except Exception as e:
-            ExceptionUtils.exception_traceback(e)
+        except (ServiceError, RepositoryError):
             raise
+        except Exception as e:
+            ExceptionUtils.log_and_raise(e, target=ServiceError, message="创建系统 API Key 失败")
 
     def get_stats(self) -> dict[str, Any]:
         """获取 API Key 统计信息"""
         try:
             return self._key_repo.get_stats()
-        except Exception as e:
-            ExceptionUtils.exception_traceback(e)
+        except (ServiceError, RepositoryError):
             return {
                 "total_keys": 0,
                 "active_keys": 0,
                 "total_requests": 0,
                 "today_requests": 0,
             }
+        except Exception as e:
+            ExceptionUtils.log_and_raise(e, target=ServiceError, message="获取 API Key 统计信息失败")

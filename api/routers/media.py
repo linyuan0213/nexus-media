@@ -31,6 +31,7 @@ from app.services.media_service import (
     TransferHistoryService,
 )
 from app.services.search_service import Searcher
+from app.schemas.common import CommonResponse
 from app.utils.response import fail, success
 
 router = APIRouter()
@@ -104,11 +105,6 @@ class PersonMediasRequest(BaseModel):
     page: int | None = 1
 
 
-class SaveUserScriptRequest(BaseModel):
-    javascript: str | None = None
-    css: str | None = None
-
-
 class StartMediasyncRequest(BaseModel):
     librarys: list[str] | None = None
 
@@ -172,7 +168,7 @@ class TmdbBlacklistRequest(BaseModel):
 # ---------- Endpoints ----------
 
 
-@router.post("/subtitle/download")
+@router.post("/subtitle/download", response_model=CommonResponse, summary="下载字幕")
 def download_subtitle(
     req: DownloadSubtitleRequest,
     current_user=Depends(require_permission("library:manage")),
@@ -184,7 +180,7 @@ def download_subtitle(
     return success(msg=msg)
 
 
-@router.post("/season/episodes")
+@router.post("/season/episodes", response_model=CommonResponse, summary="获取剧集列表")
 def get_season_episodes(
     req: GetSeasonEpisodesRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -197,7 +193,7 @@ def get_season_episodes(
     return success(data=result.episodes)
 
 
-@router.post("/season/list")
+@router.post("/season/list", response_model=CommonResponse, summary="获取电视剧季列表")
 def get_tvseason_list(
     req: GetTvSeasonListRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -207,7 +203,7 @@ def get_tvseason_list(
     return success(data=seasons)
 
 
-@router.post("/info")
+@router.post("/info", response_model=CommonResponse, summary="获取媒体信息")
 def media_info(
     req: MediaInfoRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -240,7 +236,7 @@ def media_info(
     )
 
 
-@router.post("/scrap")
+@router.post("/scrap", response_model=CommonResponse, summary="刮削媒体路径")
 def media_path_scrap(
     req: MediaPathScrapRequest,
     current_user=Depends(require_permission("library:manage")),
@@ -252,7 +248,7 @@ def media_path_scrap(
     return success(msg=msg)
 
 
-@router.post("/person")
+@router.post("/person", response_model=CommonResponse, summary="获取演员信息")
 def media_person(
     req: MediaPersonRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -264,7 +260,7 @@ def media_person(
     return success(data=result)
 
 
-@router.post("/recommendations")
+@router.post("/recommendations", response_model=CommonResponse, summary="获取媒体推荐")
 def media_recommendations(
     req: MediaRecommendationsRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -276,7 +272,7 @@ def media_recommendations(
     return success(data=result)
 
 
-@router.post("/similar")
+@router.post("/similar", response_model=CommonResponse, summary="获取相似媒体")
 def media_similar(
     req: MediaSimilarRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -288,7 +284,7 @@ def media_similar(
     return success(data=result)
 
 
-@router.post("/sync/state")
+@router.post("/sync/state", response_model=CommonResponse, summary="获取媒体同步状态")
 def mediasync_state(
     current_user=Depends(require_permission("library:manage")),
     svc: MediaLibraryService = Depends(get_media_library_service),
@@ -297,7 +293,7 @@ def mediasync_state(
     return success(data=text)
 
 
-@router.post("/calendar/movie")
+@router.post("/calendar/movie", response_model=CommonResponse, summary="获取电影日历")
 def movie_calendar_data(
     req: MovieCalendarRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -309,7 +305,7 @@ def movie_calendar_data(
     return success(data=result)
 
 
-@router.post("/name_test")
+@router.post("/name_test", response_model=CommonResponse, summary="名称测试")
 def name_test(
     req: NameTestRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -321,7 +317,7 @@ def name_test(
     return success(data=result)
 
 
-@router.post("/person/medias")
+@router.post("/person/medias", response_model=CommonResponse, summary="获取演员作品")
 def person_medias(
     req: PersonMediasRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -333,17 +329,7 @@ def person_medias(
     return success(data=result)
 
 
-@router.post("/script/save")
-def save_user_script(
-    req: SaveUserScriptRequest,
-    current_user=Depends(require_permission("library:manage")),
-    svc: MediaFileService = Depends(get_media_file_service),
-):
-    svc.save_user_script(script=req.javascript or "", css=req.css or "")
-    return success(msg="保存成功")
-
-
-@router.post("/sync/start")
+@router.post("/sync/start", response_model=CommonResponse, summary="启动媒体同步")
 def start_mediasync(
     req: StartMediasyncRequest,
     current_user=Depends(require_permission("library:manage")),
@@ -353,7 +339,7 @@ def start_mediasync(
     return success()
 
 
-@router.post("/calendar/tv")
+@router.post("/calendar/tv", response_model=CommonResponse, summary="获取电视剧日历")
 def tv_calendar_data(
     req: TvCalendarRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -365,7 +351,7 @@ def tv_calendar_data(
     return success(data=result)
 
 
-@router.post("/history/clear")
+@router.post("/history/clear", response_model=CommonResponse, summary="清空转移历史")
 def clear_history(
     current_user=Depends(require_permission("library:manage")),
     svc: TransferHistoryService = Depends(get_transfer_history_service),
@@ -374,7 +360,7 @@ def clear_history(
     return success()
 
 
-@router.post("/category/config")
+@router.post("/category/config", response_model=CommonResponse, summary="获取分类配置")
 def get_category_config(
     req: GetCategoryConfigRequest,
     current_user=Depends(require_permission("library:manage")),
@@ -386,7 +372,7 @@ def get_category_config(
     return success(data=result)
 
 
-@router.post("/library/downloaded")
+@router.post("/library/downloaded", response_model=CommonResponse, summary="获取已下载列表")
 def get_downloaded(
     req: GetDownloadedRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -417,7 +403,7 @@ def get_downloaded(
     return success(data=[])
 
 
-@router.post("/library/count")
+@router.post("/library/count", response_model=CommonResponse, summary="获取媒体库统计")
 def get_library_mediacount(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaLibraryService = Depends(get_media_library_service),
@@ -428,7 +414,7 @@ def get_library_mediacount(
     return fail(code=-1, msg="媒体库服务器连接失败")
 
 
-@router.post("/library/history")
+@router.post("/library/history", response_model=CommonResponse, summary="获取播放历史")
 def get_library_playhistory(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaLibraryService = Depends(get_media_library_service),
@@ -436,7 +422,7 @@ def get_library_playhistory(
     return success(data=svc.get_play_history())
 
 
-@router.post("/library/space")
+@router.post("/library/space", response_model=CommonResponse, summary="获取媒体库空间")
 def get_library_spacesize(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaLibraryService = Depends(get_media_library_service),
@@ -452,7 +438,7 @@ def get_library_spacesize(
     )
 
 
-@router.post("/library/home")
+@router.post("/library/home", response_model=CommonResponse, summary="获取媒体库首页")
 def get_library_home(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaLibraryService = Depends(get_media_library_service),
@@ -514,7 +500,7 @@ def get_library_home(
     )
 
 
-@router.post("/recommend")
+@router.post("/recommend", response_model=CommonResponse, summary="获取推荐")
 def get_recommend(
     req: dict,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -526,7 +512,7 @@ def get_recommend(
     return success(data=res_list)
 
 
-@router.post("/search/results")
+@router.post("/search/results", response_model=CommonResponse, summary="获取搜索结果")
 def get_search_result(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: Searcher = Depends(get_searcher_service),
@@ -537,7 +523,7 @@ def get_search_result(
     return success(data={"total": result.total, "result": result.result})
 
 
-@router.post("/transfer/history")
+@router.post("/transfer/history", response_model=CommonResponse, summary="获取转移历史")
 def get_transfer_history(
     req: GetTransferHistoryRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -555,7 +541,7 @@ def get_transfer_history(
     )
 
 
-@router.post("/transfer/statistics")
+@router.post("/transfer/statistics", response_model=CommonResponse, summary="获取转移统计")
 def get_transfer_statistics(
     req: GetTransferStatisticsRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -565,7 +551,7 @@ def get_transfer_statistics(
     return success(data=result)
 
 
-@router.post("/unknown")
+@router.post("/unknown", response_model=CommonResponse, summary="获取未识别列表")
 def get_unknown_list(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: TransferHistoryService = Depends(get_transfer_history_service),
@@ -574,7 +560,7 @@ def get_unknown_list(
     return success(data=items)
 
 
-@router.post("/unknown/paged")
+@router.post("/unknown/paged", response_model=CommonResponse, summary="分页获取未识别列表")
 def get_unknown_list_by_page(
     req: GetUnknownListByPageRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -592,7 +578,7 @@ def get_unknown_list_by_page(
     )
 
 
-@router.post("/detail")
+@router.post("/detail", response_model=CommonResponse, summary="获取媒体详情")
 def media_detail(
     req: MediaDetailRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -607,7 +593,7 @@ def media_detail(
     return success(data=result)
 
 
-@router.post("/search")
+@router.post("/search", response_model=CommonResponse, summary="搜索媒体")
 def search_media_infos(
     req: SearchMediaInfosRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -619,7 +605,7 @@ def search_media_infos(
     return success(data=result)
 
 
-@router.post("/unknown/list")
+@router.post("/unknown/list", response_model=CommonResponse, summary="重新识别未识别项")
 def unidentification(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: TransferHistoryService = Depends(get_transfer_history_service),
@@ -628,7 +614,7 @@ def unidentification(
     return success()
 
 
-@router.post("/category/config/update")
+@router.post("/category/config/update", response_model=CommonResponse, summary="更新分类配置")
 def update_category_config(
     req: UpdateCategoryConfigRequest,
     current_user=Depends(require_permission("library:manage")),
@@ -638,7 +624,7 @@ def update_category_config(
     return success(msg=msg)
 
 
-@router.post("/dir/list")
+@router.post("/dir/list", response_model=CommonResponse, summary="获取目录列表")
 def dir_list(
     req: DirListRequest,
     current_user=Depends(require_permission("library:manage")),
@@ -651,7 +637,7 @@ def dir_list(
     return success(data=result)
 
 
-@router.post("/library/paths")
+@router.post("/library/paths", response_model=CommonResponse, summary="获取媒体库路径")
 def get_library_paths(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     media_svc=Depends(get_media_config_service),
@@ -667,7 +653,7 @@ def get_library_paths(
     return success(data=result)
 
 
-@router.get("/tmdb_blacklist/list")
+@router.get("/tmdb_blacklist/list", response_model=CommonResponse, summary="获取 TMDB 黑名单")
 def get_tmdb_blacklist(
     page: int = Query(1, ge=1),
     count: int = Query(30, ge=1, le=100),
@@ -686,7 +672,7 @@ def get_tmdb_blacklist(
     )
 
 
-@router.post("/tmdb_blacklist/add")
+@router.post("/tmdb_blacklist/add", response_model=CommonResponse, summary="添加 TMDB 黑名单")
 def add_tmdb_blacklist(
     req: TmdbBlacklistRequest,
     current_user=Depends(require_permission("library:manage")),
@@ -697,7 +683,7 @@ def add_tmdb_blacklist(
     return success()
 
 
-@router.post("/tmdb_blacklist/delete")
+@router.post("/tmdb_blacklist/delete", response_model=CommonResponse, summary="删除 TMDB 黑名单")
 def delete_tmdb_blacklist(
     req: TmdbBlacklistRequest,
     current_user=Depends(require_permission("library:manage")),
@@ -708,7 +694,7 @@ def delete_tmdb_blacklist(
     return success()
 
 
-@router.post("/tmdb_blacklist/clear")
+@router.post("/tmdb_blacklist/clear", response_model=CommonResponse, summary="清空 TMDB 黑名单")
 def clear_tmdb_blacklist(
     current_user=Depends(require_permission("library:manage")),
     tmdb_svc=Depends(get_tmdb_blacklist_service),
@@ -718,7 +704,7 @@ def clear_tmdb_blacklist(
     return success()
 
 
-@router.get("/search/files")
+@router.get("/search/files", response_model=CommonResponse, summary="搜索文件")
 def search_files(
     keyword: str = Query(..., min_length=1),
     limit: int = Query(100, ge=1, le=500),
@@ -755,7 +741,7 @@ class MediaPathUpdateRequest(BaseModel):
     backend: str = "local"
 
 
-@router.post("/library/path")
+@router.post("/library/path", response_model=CommonResponse, summary="获取媒体库配置")
 def get_media_library_config(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaConfigService = Depends(get_media_config_service),
@@ -764,7 +750,7 @@ def get_media_library_config(
     return success(data=svc.get_config())
 
 
-@router.post("/library/path/add")
+@router.post("/library/path/add", response_model=CommonResponse, summary="添加媒体库路径")
 def add_media_library_path(
     req: MediaPathAddRequest,
     current_user=Depends(require_permission("library:manage")),
@@ -775,7 +761,7 @@ def add_media_library_path(
     return success()
 
 
-@router.post("/library/path/remove")
+@router.post("/library/path/remove", response_model=CommonResponse, summary="移除媒体库路径")
 def remove_media_library_path(
     req: MediaPathRemoveRequest,
     current_user=Depends(require_permission("library:manage")),
@@ -786,7 +772,7 @@ def remove_media_library_path(
     return success()
 
 
-@router.post("/library/path/update")
+@router.post("/library/path/update", response_model=CommonResponse, summary="更新媒体库路径")
 def update_media_library_path(
     req: MediaPathUpdateRequest,
     current_user=Depends(require_permission("library:manage")),

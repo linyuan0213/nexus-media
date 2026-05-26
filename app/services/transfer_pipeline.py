@@ -137,9 +137,9 @@ class TransferPipeline:
         """检查路径是否属于媒体库。"""
         if not path:
             return False
-        from config import Config
+        from app.core.settings import settings
 
-        media = Config().get_config("media")
+        media = settings.get("media")
         if not media:
             return False
         all_paths = []

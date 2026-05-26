@@ -1,7 +1,7 @@
 import ipaddress
 
+from app.core.settings import settings
 from app.utils import ExceptionUtils
-from config import Config
 
 
 class SecurityHelper:
@@ -10,7 +10,7 @@ class SecurityHelper:
     synology_webhook_allow_ip = {}
 
     def __init__(self):
-        security = Config().get_config("security")
+        security = settings.get("security")
         if security:
             self.media_server_webhook_allow_ip = security.get("media_server_webhook_allow_ip") or {}
             self.telegram_webhook_allow_ip = security.get("telegram_webhook_allow_ip") or {}

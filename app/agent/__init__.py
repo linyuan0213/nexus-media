@@ -10,10 +10,8 @@
 
 from app.agent.agents import (
     BatchResult,
-    ChatAgent,
     MediaRecognizer,
     MediaResult,
-    QuestionAnswerAgent,
     SearchIntent,
     SearchIntentAgent,
 )
@@ -43,6 +41,4 @@ __all__ = [
     "BatchResult",
     "SearchIntentAgent",
     "SearchIntent",
-    "ChatAgent",
-    "QuestionAnswerAgent",
 ]

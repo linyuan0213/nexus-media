@@ -11,7 +11,7 @@ from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
 from app.services.apikey_service import APIKeyService
 from app.utils import ExceptionUtils
-from config import Config
+from app.core.settings import settings
 
 lock = Lock()
 
@@ -51,7 +51,7 @@ class Slack(_IMessageClient):
     )
 
     def __init__(self, config):
-        self._config = Config()
+        self._config = settings
         self._interactive = False
         self._ds_url = None
         self._service = None
@@ -69,7 +69,7 @@ class Slack(_IMessageClient):
         self._app_token = raw.get("app_token")
 
     def setup(self):
-        _web_port = self._config.get_config("app").get("web_port")
+        _web_port = settings.get("app").web_port
         _api_key = APIKeyService().get_or_create_system_key("MessageWebhook")
         self._ds_url = f"http://127.0.0.1:{_web_port}/slack?apikey={_api_key}"
         if not self._bot_token:
@@ -106,7 +106,9 @@ class Slack(_IMessageClient):
 
         if self._interactive and self._app_token:
             try:
-                self._service = SocketModeHandler(slack_app, self._app_token if isinstance(self._app_token, str) else None)
+                self._service = SocketModeHandler(
+                    slack_app, self._app_token if isinstance(self._app_token, str) else None
+                )
                 self._service.connect()
                 log.info("Slack消息接收服务启动")
             except Exception as err:
@@ -220,5 +222,3 @@ class Slack(_IMessageClient):
         except SlackApiError as e:
             print(f"Slack Error: {e}")
         return ""
-
-

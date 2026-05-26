@@ -65,7 +65,14 @@ class TmdbLookup(BaseLookup):
         return self._to_lookup_result(result)
 
     def _lookup_tmdb(
-        self, name, search_type, first_year=None, media_year=None, season_number=None, episode=None, strict: bool | None = None
+        self,
+        name,
+        search_type,
+        first_year=None,
+        media_year=None,
+        season_number=None,
+        episode=None,
+        strict: bool | None = None,
     ):
         info = None
         # 1. 按指定类型搜索
@@ -79,7 +86,9 @@ class TmdbLookup(BaseLookup):
                 if info:
                     info["media_type"] = MediaType.MOVIE
                     log.info(
-                        "【Meta】{} 识别到 电影：TMDBID={}, 名称={}, 上映日期={}".format(name, info.get("id"), info.get("title"), info.get("release_date"))
+                        "【Meta】{} 识别到 电影：TMDBID={}, 名称={}, 上映日期={}".format(
+                            name, info.get("id"), info.get("title"), info.get("release_date")
+                        )
                     )
                     return info
         else:
@@ -95,7 +104,9 @@ class TmdbLookup(BaseLookup):
             if info:
                 info["media_type"] = MediaType.TV
                 log.info(
-                    "【Meta】{} 识别到 电视剧：TMDBID={}, 名称={}, 首播日期={}".format(name, info.get("id"), info.get("name"), info.get("first_air_date"))
+                    "【Meta】{} 识别到 电视剧：TMDBID={}, 名称={}, 首播日期={}".format(
+                        name, info.get("id"), info.get("name"), info.get("first_air_date")
+                    )
                 )
                 return info
             # TV 查不到时，去掉年份再查（仅非严格模式）
@@ -105,7 +116,9 @@ class TmdbLookup(BaseLookup):
                 if info:
                     info["media_type"] = MediaType.TV
                     log.info(
-                        "【Meta】{} 识别到 电视剧：TMDBID={}, 名称={}, 首播日期={}".format(name, info.get("id"), info.get("name"), info.get("first_air_date"))
+                        "【Meta】{} 识别到 电视剧：TMDBID={}, 名称={}, 首播日期={}".format(
+                            name, info.get("id"), info.get("name"), info.get("first_air_date")
+                        )
                     )
                     return info
 
@@ -136,7 +149,9 @@ class TmdbLookup(BaseLookup):
 
         if not info:
             log.info(
-                "【Meta】{} 以年份 {} 在TMDB中未找到{}信息!".format(name, StringUtils.xstr(first_year), search_type.value if search_type else "")
+                "【Meta】{} 以年份 {} 在TMDB中未找到{}信息!".format(
+                    name, StringUtils.xstr(first_year), search_type.value if search_type else ""
+                )
             )
         return info or {}
 
@@ -478,8 +493,6 @@ class TmdbLookup(BaseLookup):
 
     @staticmethod
     def _dict_media_crews(crews):
-        from app.helper.image_proxy_helper import ImageProxyHelper
-
         return [
             {
                 "id": crew.get("id"),
@@ -499,8 +512,6 @@ class TmdbLookup(BaseLookup):
 
     @staticmethod
     def _dict_media_casts(casts):
-        from app.helper.image_proxy_helper import ImageProxyHelper
-
         return [
             {
                 "id": cast.get("id"),
@@ -523,9 +534,6 @@ class TmdbLookup(BaseLookup):
     def _dict_tmdbinfos(infos, mtype=None):
         if not infos:
             return []
-        from app.helper.image_proxy_helper import ImageProxyHelper
-        from app.utils.types import MediaType
-
         ret_infos = []
         for info in infos:
             tmdbid = info.get("id")

@@ -68,9 +68,9 @@ class Bangumi:
         # 转换为代理URL格式
         if image:
             try:
-                from config import Config
+                from app.core.settings import settings
 
-                if Config().get_config("app").get("enable_image_proxy", True):
+                if settings.get("app").get("enable_image_proxy", True):
                     image = f"/img/bgm/{urllib.parse.quote(image, safe='')}"
             except Exception:
                 pass

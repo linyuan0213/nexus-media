@@ -12,8 +12,9 @@ import log
 from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter, PluginLogRepositoryAdapter
 from app.domain.entities.plugin import PluginConfigEntity
 from app.message import Message
+from app.plugin_framework.hook_system import HookSystem
 from app.services.scheduler_core import SchedulerCore
-from config import Config
+from app.core.settings import settings
 
 
 class PluginContext:
@@ -22,7 +23,7 @@ class PluginContext:
     def __init__(self, plugin_id: str, plugin_name: str = ""):
         self._plugin_id = plugin_id
         self._plugin_name = plugin_name or plugin_id
-        self._data_dir = os.path.join(Config().config_path, "plugins_data", plugin_id)
+        self._data_dir = os.path.join(settings.config_path, "plugins_data", plugin_id)
         if not os.path.exists(self._data_dir):
             os.makedirs(self._data_dir)
         self._config_repo = PluginConfigRepositoryAdapter()
@@ -169,7 +170,6 @@ class PluginContext:
 
     def emit(self, event: str, data: dict | None = None) -> None:
         """触发全局事件"""
-        from app.plugin_framework.hook_system import HookSystem
 
         HookSystem().emit(event, data or {})
 

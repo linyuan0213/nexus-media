@@ -13,7 +13,7 @@ from collections.abc import Callable
 
 import log
 
-from .adapters import get_cache_value
+from .adapters import MemoryCacheAdapter, get_cache_value
 from .base import CacheAdapter
 from .cache_manager import CacheManager
 
@@ -173,8 +173,6 @@ def cached_method(cache_name: str | None = None, ttl: int | None = None):
             # 获取或创建实例缓存
             cache_attr = f"_cache_{func.__name__}"
             if not hasattr(self, cache_attr):
-                from .adapters import MemoryCacheAdapter
-
                 setattr(self, cache_attr, MemoryCacheAdapter())
 
             cache = getattr(self, cache_attr)
@@ -207,7 +205,6 @@ def lru_cache_with_ttl(maxsize: int = 128, ttl: int | None = None):
     """
 
     def decorator(func: Callable) -> Callable:
-        from .adapters import MemoryCacheAdapter
 
         cache = MemoryCacheAdapter(maxsize=maxsize)
 
