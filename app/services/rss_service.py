@@ -23,6 +23,7 @@ from app.services.scheduler_core import SchedulerCore
 from app.services.search_service import Searcher
 from app.services.rss_core import Rss
 from app.services.subscribe_service import SubscribeService as Subscribe
+from app.core.exceptions import RepositoryError, ServiceError
 from app.utils import ExceptionUtils, RequestUtils, StringUtils
 from app.utils.commons import SingletonMeta
 from app.utils.config_tools import get_proxies
@@ -380,12 +381,16 @@ class RssParserEngine:
                             rss_item.update({key: value[0]})
                     rss_item.update({"address_index": address_index})
                     rss_result.append(rss_item)
+            except (ServiceError, RepositoryError) as e:
+                raise ValueError(f"XML解析失败: {str(e)}") from e
             except Exception as err:
                 raise ValueError(f"XML解析失败: {str(err)}") from err
 
         elif parser_type == "JSON":
             try:
                 result_json = json.loads(rss_text)
+            except (ServiceError, RepositoryError) as e:
+                raise ValueError(f"JSON解析失败: {str(e)}") from e
             except Exception as err:
                 raise ValueError(f"JSON解析失败: {str(err)}") from err
             item_list = jsonpath.jsonpath(result_json, parser_format.get("list"))  # type: ignore[call-arg]
@@ -485,6 +490,8 @@ class RssTaskService(metaclass=SingletonMeta):
             if task_note:
                 try:
                     note = json.loads(task_note)
+                except (ServiceError, RepositoryError):
+                    raise
                 except Exception as e:
                     print(str(e))
                     note = {}
@@ -495,6 +502,8 @@ class RssTaskService(metaclass=SingletonMeta):
                 addresses = json.loads(str(task.ADDRESS))
                 if not isinstance(addresses, list):
                     addresses = [addresses]
+            except (ServiceError, RepositoryError):
+                raise
             except Exception as e:
                 print(str(e))
                 addresses = [task.ADDRESS]
@@ -502,6 +511,8 @@ class RssTaskService(metaclass=SingletonMeta):
                 parsers = json.loads(str(task.PARSER))
                 if not isinstance(parsers, list):
                     parsers = [task.PARSER]
+            except (ServiceError, RepositoryError):
+                raise
             except Exception as e:
                 print(str(e))
                 parsers = [task.PARSER]
@@ -572,6 +583,8 @@ class RssTaskService(metaclass=SingletonMeta):
                             }
                         )
                         rss_flag = True
+                    except (ServiceError, RepositoryError):
+                        raise
                     except Exception as e:
                         log.info("{} 自定义订阅cron表达式 配置格式错误：{} {}".format(task.get("name"), cron, str(e)))
         if rss_flag:
@@ -755,8 +768,10 @@ class RssTaskService(metaclass=SingletonMeta):
                         res_num = res_num + 1
                 else:
                     continue
+            except (ServiceError, RepositoryError):
+                raise
             except Exception as e:
-                ExceptionUtils.exception_traceback(e)
+                ExceptionUtils.exception_traceback(e, "处理RSS任务时发生错误")
                 log.error(f"【RssTaskService】处理RSS发生错误：{str(e)} - {traceback.format_exc()}")
                 continue
         log.info("【RssTaskService】{} 处理结束，匹配到 {} 个有效资源".format(taskinfo.get("name"), res_num))
@@ -839,8 +854,10 @@ class RssTaskService(metaclass=SingletonMeta):
                 continue
             try:
                 json.loads(rss_parser.get("format"))
+            except (ServiceError, RepositoryError):
+                raise
             except Exception as e:
-                ExceptionUtils.exception_traceback(e)
+                ExceptionUtils.exception_traceback(e, f"任务 {task_name} 配置解析器 {parser_name} JSON格式错误")
                 log.error(f"【RssTaskService】任务 {task_name} 配置解析器 {parser_name} 不是合法的Json格式")
                 continue
 
@@ -849,8 +866,10 @@ class RssTaskService(metaclass=SingletonMeta):
                 _dict = {"TMDBKEY": settings.get("app").get("rmt_tmdbkey")}
                 try:
                     param_url = rss_parser.get("params").format(**_dict)
+                except (ServiceError, RepositoryError):
+                    raise
                 except Exception as e:
-                    ExceptionUtils.exception_traceback(e)
+                    ExceptionUtils.exception_traceback(e, f"任务 {task_name} 配置解析器 {parser_name} 附加参数不合法")
                     log.error(f"【RssTaskService】任务 {task_name} 配置解析器 {parser_name} 附加参数不合法")
                     continue
                 rss_url = f"{rss_url}?{param_url}" if rss_url.find("?") == -1 else f"{rss_url}&{param_url}"
@@ -860,15 +879,19 @@ class RssTaskService(metaclass=SingletonMeta):
                 if not ret:
                     continue
                 ret.encoding = ret.apparent_encoding
+            except (ServiceError, RepositoryError):
+                raise
             except Exception as e2:
-                ExceptionUtils.exception_traceback(e2)
+                ExceptionUtils.exception_traceback(e2, f"请求RSS地址 {rss_url} 失败")
                 continue
             # 解析数据
             try:
                 items = RssParserEngine.parse_items(rss_parser, ret.text, i + 1)
                 rss_result.extend(items)
+            except (ServiceError, RepositoryError):
+                raise
             except Exception as err:
-                ExceptionUtils.exception_traceback(err)
+                ExceptionUtils.exception_traceback(err, f"任务 {task_name} RSS报文解析失败")
                 log.error(f"【RssTaskService】任务 {task_name} RSS地址 {rss_url} 获取的订阅报文无法解析：{str(err)}")
                 continue
         return rss_result
@@ -934,8 +957,10 @@ class RssTaskService(metaclass=SingletonMeta):
                 }
                 if params not in rss_articles:
                     rss_articles.append(params)
+            except (ServiceError, RepositoryError):
+                raise
             except Exception as e:
-                ExceptionUtils.exception_traceback(e)
+                ExceptionUtils.exception_traceback(e, "获取RSS报文时发生错误")
                 log.error(f"【RssTaskService】获取RSS报文发生错误：{str(e)} - {traceback.format_exc()}")
         return sorted(rss_articles, key=lambda x: x["date"], reverse=True)
 
@@ -1033,8 +1058,10 @@ class RssTaskService(metaclass=SingletonMeta):
             else:
                 return False
             return True
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
-            ExceptionUtils.exception_traceback(e)
+            ExceptionUtils.exception_traceback(e, "设置RSS报文状态时发生错误")
             log.error(f"【RssTaskService】设置RSS报文状态时发生错误：{str(e)} - {traceback.format_exc()}")
             return False
 
@@ -1095,6 +1122,8 @@ class RssTaskService(metaclass=SingletonMeta):
         """
         try:
             SchedulerCore().remove_all_jobs(jobstore=self._jobstore)
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             print(str(e))
 
