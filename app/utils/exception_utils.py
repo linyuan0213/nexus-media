@@ -16,8 +16,9 @@ if TYPE_CHECKING:
 
 class ExceptionUtils:
     @classmethod
-    def exception_traceback(cls, e: BaseException) -> None:
-        msg = f"Exception: {str(e)}\nCallstack:\n{traceback.format_exc()}"
+    def exception_traceback(cls, e: BaseException, message: str = "") -> None:
+        prefix = f"{message}: " if message else ""
+        msg = f"{prefix}Exception: {str(e)}\nCallstack:\n{traceback.format_exc()}"
         log.error(msg)
 
     @classmethod

@@ -28,6 +28,7 @@ from app.services.indexer_service import IndexerService
 from app.utils.commons import SingletonMeta
 from app.utils.string_utils import StringUtils
 from app.utils.types import EventType, MediaType, ProgressKey, SearchType
+from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
 
 
@@ -74,6 +75,8 @@ class SearchQueryBuilder:
         max_workers = 1
         try:
             multi_lang = settings.get("laboratory").get("search_multi_language")
+        except (ServiceError, RepositoryError):
+            raise
         except Exception:
             multi_lang = False
         if multi_lang:

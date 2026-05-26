@@ -26,6 +26,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 import log
 from app.db import remove_session
+from app.core.exceptions import RepositoryError, ServiceError
 from app.utils import ExceptionUtils
 from app.utils.commons import SingletonMeta
 
@@ -308,9 +309,11 @@ class SchedulerCore(metaclass=SingletonMeta):
             log.info(f"任务已添加: {task_config.job_id} (jobstore={task_config.jobstore})")
             return job
 
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"添加任务失败: {e}")
-            ExceptionUtils.exception_traceback(e)
+            ExceptionUtils.exception_traceback(e, "调度器添加任务失败")
             return None
 
     def start_job_batch(self, tasks: list[dict[str, Any] | TaskConfig]) -> list[Job | None]:
@@ -533,6 +536,8 @@ class SchedulerCore(metaclass=SingletonMeta):
                     misfire_grace_time=misfire_grace_time,
                     coalesce=coalesce,
                 )
+            except (ServiceError, RepositoryError):
+                raise
             except Exception as e:
                 log.info(f"{func_desc}时间cron表达式配置格式错误：{cron} {str(e)}")
         elif "-" in cron:
@@ -579,14 +584,20 @@ class SchedulerCore(metaclass=SingletonMeta):
                     coalesce=coalesce,
                 )
                 log.info(
-                    "{}服务时间范围随机模式启动，起始时间于{}:{}".format(func_desc, str(start_hour).rjust(2, "0"), str(start_minute).rjust(2, "0"))
+                    "{}服务时间范围随机模式启动，起始时间于{}:{}".format(
+                        func_desc, str(start_hour).rjust(2, "0"), str(start_minute).rjust(2, "0")
+                    )
                 )
+            except (ServiceError, RepositoryError):
+                raise
             except Exception as e:
                 log.info(f"{func_desc}时间 时间范围随机模式 配置格式错误：{cron} {str(e)}")
         elif ":" in cron:
             try:
                 hour = int(cron.split(":")[0])
                 minute = int(cron.split(":")[1])
+            except (ServiceError, RepositoryError):
+                raise
             except Exception as e:
                 log.info(f"{func_desc}时间 配置格式错误：{str(e)}")
                 hour = minute = 0
@@ -610,6 +621,8 @@ class SchedulerCore(metaclass=SingletonMeta):
         else:
             try:
                 hours = float(cron)
+            except (ServiceError, RepositoryError):
+                raise
             except Exception as e:
                 log.info(f"{func_desc}时间 配置格式错误：{str(e)}")
                 hours = 0
@@ -693,6 +706,8 @@ class SchedulerCore(metaclass=SingletonMeta):
                 self._scheduler.print_jobs(jobstore=jobstore)
             else:
                 self._scheduler.print_jobs()
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"打印任务列表失败: {e}")
 
@@ -717,6 +732,8 @@ class SchedulerCore(metaclass=SingletonMeta):
                 self._scheduler.remove_all_jobs()
                 log.info("已移除所有任务")
             return True
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"移除任务失败: {e}")
             return False
@@ -738,6 +755,8 @@ class SchedulerCore(metaclass=SingletonMeta):
                 return self._scheduler.get_jobs(jobstore=jobstore)
             else:
                 return self._scheduler.get_jobs()
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"获取任务列表失败: {e}")
             return []
@@ -757,6 +776,8 @@ class SchedulerCore(metaclass=SingletonMeta):
 
         try:
             return self._scheduler.get_job(job_id=job_id, jobstore=jobstore)
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"获取任务 {job_id} 失败: {e}")
             return None
@@ -786,6 +807,8 @@ class SchedulerCore(metaclass=SingletonMeta):
         except JobLookupError:
             log.debug(f"任务 {job_id} 不存在，无需移除")
             return True
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"移除任务 {job_id} 失败: {e}")
             return False
@@ -809,6 +832,8 @@ class SchedulerCore(metaclass=SingletonMeta):
             job.pause()
             log.info(f"任务已暂停: {job_id}")
             return True
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"暂停任务 {job_id} 失败: {e}")
             return False
@@ -834,6 +859,8 @@ class SchedulerCore(metaclass=SingletonMeta):
             self._clear_retry_count(job_id)
             log.info(f"任务已恢复: {job_id}")
             return True
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"恢复任务 {job_id} 失败: {e}")
             return False
@@ -858,6 +885,8 @@ class SchedulerCore(metaclass=SingletonMeta):
             job.modify(**changes)
             log.info(f"任务已修改: {job_id}, 变更: {changes}")
             return True
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"修改任务 {job_id} 失败: {e}")
             return False
@@ -880,6 +909,8 @@ class SchedulerCore(metaclass=SingletonMeta):
 
         try:
             return self._scheduler.reschedule_job(job_id, jobstore=jobstore, trigger=trigger, **trigger_args)
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"重新调度任务 {job_id} 失败: {e}")
             return None
@@ -930,9 +961,11 @@ class SchedulerCore(metaclass=SingletonMeta):
             log.info("调度器服务已启动")
             return True
 
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"启动调度器服务失败: {e}")
-            ExceptionUtils.exception_traceback(e)
+            ExceptionUtils.exception_traceback(e, "启动调度器服务失败")
             self._cleanup()
             return False
 
@@ -969,9 +1002,11 @@ class SchedulerCore(metaclass=SingletonMeta):
             log.info("调度器服务已停止")
             return True
 
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"停止调度器服务失败: {e}")
-            ExceptionUtils.exception_traceback(e)
+            ExceptionUtils.exception_traceback(e, "停止调度器服务失败")
             return False
 
     def _job_event_listener(self, event: JobExecutionEvent) -> None:
@@ -1052,6 +1087,8 @@ class SchedulerCore(metaclass=SingletonMeta):
             retry_key = self._get_retry_key(job_id)
             count = cache.get(retry_key)
             return int(count) if count is not None else 0
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"获取重试次数失败 {job_id}: {e}")
             return 0
@@ -1063,6 +1100,8 @@ class SchedulerCore(metaclass=SingletonMeta):
             retry_key = self._get_retry_key(job_id)
             cache.set(retry_key, count, ttl=3600)  # 1小时过期
             return True
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"设置重试次数失败 {job_id}: {e}")
             return False
@@ -1074,6 +1113,8 @@ class SchedulerCore(metaclass=SingletonMeta):
             retry_key = self._get_retry_key(job_id)
             cache.delete(retry_key)
             return True
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"清除重试次数失败 {job_id}: {e}")
             return False
@@ -1138,6 +1179,8 @@ class SchedulerCore(metaclass=SingletonMeta):
             )
             return True
 
+        except (ServiceError, RepositoryError):
+            raise
         except Exception as e:
             log.error(f"安排任务 {job_id} 重试失败: {e}")
             return False

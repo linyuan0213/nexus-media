@@ -18,6 +18,7 @@ from app.core.constants import (
     RSS_REFRESH_TMDB_INTERVAL,
     SYNC_TRANSFER_INTERVAL,
 )
+from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
 
 
@@ -61,6 +62,8 @@ def load_default_jobs(scheduler):
             else:
                 try:
                     pt_check_interval = round(float(pt_check_interval))
+                except (ServiceError, RepositoryError):
+                    raise
                 except Exception as e:
                     log.error(f"RSS订阅周期 配置格式错误：{str(e)}")
                     pt_check_interval = 0
@@ -85,6 +88,8 @@ def load_default_jobs(scheduler):
             else:
                 try:
                     search_rss_interval = round(float(search_rss_interval))
+                except (ServiceError, RepositoryError):
+                    raise
                 except Exception as e:
                     log.error(f"订阅定时搜索周期 配置格式错误：{str(e)}")
                     search_rss_interval = 0
@@ -111,6 +116,8 @@ def load_default_jobs(scheduler):
                 else:
                     try:
                         mediasync_interval = round(float(mediasync_interval))
+                    except (ServiceError, RepositoryError):
+                        raise
                     except Exception as e:
                         log.info(f"豆瓣同步服务启动失败：{str(e)}")
                         mediasync_interval = 0
