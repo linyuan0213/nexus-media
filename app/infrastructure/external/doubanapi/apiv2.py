@@ -9,10 +9,9 @@ import requests
 
 from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.utils import RequestUtils
-from app.utils.commons import SingletonMeta
 
 
-class DoubanApi(metaclass=SingletonMeta):
+class DoubanApi:
     _urls = {
         # 搜索类
         # sort=U:近期热门 T:标记最多 S:评分最高 R:最新上映
@@ -156,7 +155,9 @@ class DoubanApi(metaclass=SingletonMeta):
             params.update(kwargs)
 
         ts = int(params.pop("_ts", int(datetime.strftime(datetime.now(), "%Y%m%d"))))
-        params.update({"os_rom": "android", "apiKey": cls._api_key, "_ts": str(ts), "_sig": cls.__sign(url=req_url, ts=ts)})
+        params.update(
+            {"os_rom": "android", "apiKey": cls._api_key, "_ts": str(ts), "_sig": cls.__sign(url=req_url, ts=ts)}
+        )
 
         headers = {"User-Agent": choice(cls._user_agents)}
         resp = RequestUtils(headers=headers, session=cls._session).get_res(url=req_url, params=params)
