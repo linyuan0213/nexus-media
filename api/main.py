@@ -47,6 +47,7 @@ from app.schemas.common import HealthCheckResponse, HealthServiceStatus
 from app.services.site_config_updater import SiteConfigUpdater, update_site_config_at_startup
 from app.services.system_service import SystemLifecycleService
 from app.sites.engine import SiteEngine
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.utils.redis_store import RedisStore
 from app.utils.security import get_secret_key
 
@@ -58,7 +59,15 @@ _secret_key = get_secret_key()
 async def lifespan(app: FastAPI):
     """应用生命周期管理：启动后台服务"""
     log.info("【FastAPI】初始化数据库...")
-    init_db()
+    lock = get_lock_manager().create_lock("db:alembic_migration", ttl_seconds=300)
+    acquired = lock.acquire()
+    if not acquired:
+        log.info("【FastAPI】数据库迁移正在进行中，当前实例跳过...")
+    try:
+        init_db()
+    finally:
+        if acquired:
+            lock.release()
     log.info("【FastAPI】初始化站点配置...")
     try:
         updater = SiteConfigUpdater()

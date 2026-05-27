@@ -1,3 +1,4 @@
+import hashlib
 import json
 import threading
 from typing import cast
@@ -7,6 +8,7 @@ from app.core.system_config import SystemConfig
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.db.repositories.media_sync_repo_adapter import MediaSyncRepositoryAdapter
 from app.helper import ProgressHelper
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.queue import MessageQueueFactory
 from app.media import MediaService
 from app.mediaserver.registry import get_all_clients
@@ -370,7 +372,7 @@ class MediaServer(metaclass=SingletonMeta):
 
     def webhook_message_handler(self, message: str, channel: str):
         """
-        处理Webhook消息（快速响应，异步处理）
+        处理Webhook消息（快速响应，异步处理，多实例部署时通过分布式锁去重）
         """
         if not self.server:
             return
@@ -383,10 +385,29 @@ class MediaServer(metaclass=SingletonMeta):
             ExceptionUtils.exception_traceback(e)
             log.error("【MediaServer】webhook 消息解析异常")
             return
-        if event_info:
+        if not event_info:
+            return
+
+        # 分布式锁去重：同一事件在多实例环境下只处理一次
+        event = event_info.get("event") or "unknown"
+        item_id = event_info.get("item_id") or ""
+        user_id = event_info.get("user_id") or ""
+        timestamp = str(event_info.get("timestamp") or "")
+        raw_key = f"{event}:{item_id}:{user_id}:{timestamp}"
+        lock_key = f"webhook:{channel}:{hashlib.md5(raw_key.encode()).hexdigest()}"
+
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=60)
+        acquired = lock.acquire()
+        if not acquired:
+            log.debug(f"【MediaServer】webhook 事件已处理，跳过: {raw_key}")
+            return
+
+        try:
             MessageQueueFactory.get_instance().submit(
                 self._process_webhook, event_info, channel, name="mediaserver_webhook"
             )
+        finally:
+            lock.release()
 
     def get_resume(self, num=12):
         """
