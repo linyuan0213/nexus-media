@@ -2,10 +2,9 @@ import json
 from typing import Any
 
 from app.infrastructure.cache_system import get_cache_manager
-from app.utils.commons import SingletonMeta
 
 
-class CookiecloudHelper(metaclass=SingletonMeta):
+class CookiecloudHelper:
     def __init__(self):
         self._cache = get_cache_manager().get_or_create("plugin_cookiecloud", cache_type="redis")
 
