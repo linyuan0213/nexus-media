@@ -17,6 +17,7 @@ import log
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.rss_repo_adapter import RssHistoryRepositoryAdapter
 from app.helper import RssHelper
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media import MediaService
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.rss_matcher import RssMatcher
@@ -66,6 +67,19 @@ class Rss(metaclass=SingletonMeta):
         3. 批量订阅匹配和过滤
         4. 择优下载
         """
+        dist_lock = get_lock_manager().create_lock("rss:download", ttl_seconds=1800)
+        acquired = dist_lock.acquire()
+        if not acquired:
+            log.info("【Rss】RSS 下载正在其他实例执行，跳过")
+            return
+
+        try:
+            self._do_rssdownload()
+        finally:
+            dist_lock.release()
+
+    def _do_rssdownload(self):
+        """RSS 下载实际逻辑"""
         if self.sites is None:
             return
         if self.subscribe is None:
