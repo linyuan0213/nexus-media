@@ -13,6 +13,7 @@ from urllib.parse import unquote
 from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_MEDIAEXT, RMT_SUBEXT
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.helper.thread_helper import ThreadHelper
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media import MediaCache
 from app.schemas.sync import (
     ManualTransferResultDTO,
@@ -266,46 +267,54 @@ class SyncService:
         :param ids: ID 列表
         提交后台线程执行，避免 API 超时
         """
+        lock_key = f"sync:re_identify:{flag}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=1800)
+        acquired = lock.acquire()
+        if not acquired:
+            return ReIdentifyResultDTO(success=False, message="重新识别任务正在执行中")
 
         def _do_re_identify():
-            for wid in ids:
-                try:
-                    if flag == "unidentification":
-                        unknowninfo = self._filetransfer.get_unknown_info_by_id(wid)
-                        if not unknowninfo:
+            try:
+                for wid in ids:
+                    try:
+                        if flag == "unidentification":
+                            unknowninfo = self._filetransfer.get_unknown_info_by_id(wid)
+                            if not unknowninfo:
+                                continue
+                            path = unknowninfo.PATH
+                            dest_dir = str(unknowninfo.DEST or "")
+                            operation = unknowninfo.MODE or ""
+                        elif flag == "history":
+                            transinfo = self._filetransfer.get_transfer_info_by_id(wid)
+                            if not transinfo:
+                                continue
+                            path = os.path.join(str(transinfo.SOURCE_PATH or ""), str(transinfo.SOURCE_FILENAME or ""))
+                            dest_dir = str(transinfo.DEST or "")
+                            operation = transinfo.MODE or ""
+                        else:
                             continue
-                        path = unknowninfo.PATH
-                        dest_dir = str(unknowninfo.DEST or "")
-                        operation = unknowninfo.MODE or ""
-                    elif flag == "history":
-                        transinfo = self._filetransfer.get_transfer_info_by_id(wid)
-                        if not transinfo:
+
+                        if not dest_dir:
+                            dest_dir = ""
+                        if not path:
                             continue
-                        path = os.path.join(str(transinfo.SOURCE_PATH or ""), str(transinfo.SOURCE_FILENAME or ""))
-                        dest_dir = str(transinfo.DEST or "")
-                        operation = transinfo.MODE or ""
-                    else:
-                        continue
 
-                    if not dest_dir:
-                        dest_dir = ""
-                    if not path:
-                        continue
-
-                    dst_backend = self._resolve_dst_backend_by_dest(dest_dir)
-                    succ_flag, msg = self._filetransfer.transfer_media(
-                        in_from=SyncType.MAN,
-                        operation=operation,
-                        in_path=path,
-                        target_dir=dest_dir,
-                        dst_backend=dst_backend,
-                    )
-                    if succ_flag and flag == "unidentification":
-                        self._filetransfer.update_transfer_unknown_state(path)
-                except (ServiceError, RepositoryError, DomainError):
-                    raise
-                except Exception as err:
-                    ExceptionUtils.exception_traceback(err)
+                        dst_backend = self._resolve_dst_backend_by_dest(dest_dir)
+                        succ_flag, msg = self._filetransfer.transfer_media(
+                            in_from=SyncType.MAN,
+                            operation=operation,
+                            in_path=path,
+                            target_dir=dest_dir,
+                            dst_backend=dst_backend,
+                        )
+                        if succ_flag and flag == "unidentification":
+                            self._filetransfer.update_transfer_unknown_state(path)
+                    except (ServiceError, RepositoryError, DomainError):
+                        raise
+                    except Exception as err:
+                        ExceptionUtils.exception_traceback(err)
+            finally:
+                lock.release()
 
         self._threadhelper.start_thread(_do_re_identify, ())
         return ReIdentifyResultDTO(success=True, message="重新识别任务已提交，正在后台执行")
