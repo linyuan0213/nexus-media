@@ -17,6 +17,7 @@ import threading
 import log
 from app.core.constants import RMT_MEDIAEXT
 from app.infrastructure.cache_system import get_cache_manager
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.core.settings import settings
 
 _CACHE_NAME = "file_index"
@@ -75,29 +76,37 @@ class FileIndexService:
 
     def _rebuild_index(self) -> None:
         """全量扫描所有根目录，重建索引"""
-        roots = self._get_root_paths()
-        if not roots:
-            log.warn("【FileIndex】未配置媒体库或同步源目录，索引为空")
-            self._cache.set(_KEY_INDEX, {})
-            self._cache.set(_KEY_READY, True)
-            self._cache.set(_KEY_COUNT, 0)
+        lock = get_lock_manager().create_lock("fileindex:rebuild", ttl_seconds=600)
+        acquired = lock.acquire()
+        if not acquired:
+            log.info("【FileIndex】索引重建正在执行，跳过")
             return
+        try:
+            roots = self._get_root_paths()
+            if not roots:
+                log.warn("【FileIndex】未配置媒体库或同步源目录，索引为空")
+                self._cache.set(_KEY_INDEX, {})
+                self._cache.set(_KEY_READY, True)
+                self._cache.set(_KEY_COUNT, 0)
+                return
 
-        new_index: dict[str, dict] = {}
-        seen: set[str] = set()
+            new_index: dict[str, dict] = {}
+            seen: set[str] = set()
 
-        for root in roots:
-            if not root or not os.path.isdir(root):
-                continue
-            try:
-                self._scan_dir(root, new_index, seen)
-            except Exception as e:
-                log.warn(f"【FileIndex】扫描目录失败 {root}: {e}")
+            for root in roots:
+                if not root or not os.path.isdir(root):
+                    continue
+                try:
+                    self._scan_dir(root, new_index, seen)
+                except Exception as e:
+                    log.warn(f"【FileIndex】扫描目录失败 {root}: {e}")
 
-        self._cache.set(_KEY_INDEX, new_index)
-        self._cache.set(_KEY_READY, True)
-        self._cache.set(_KEY_COUNT, len(new_index))
-        log.info(f"【FileIndex】索引重建完成，共 {len(new_index)} 个文件，根目录: {roots}")
+            self._cache.set(_KEY_INDEX, new_index)
+            self._cache.set(_KEY_READY, True)
+            self._cache.set(_KEY_COUNT, len(new_index))
+            log.info(f"【FileIndex】索引重建完成，共 {len(new_index)} 个文件，根目录: {roots}")
+        finally:
+            lock.release()
 
     def _get_root_paths(self) -> list[str]:
         """获取所有需要索引的根目录"""

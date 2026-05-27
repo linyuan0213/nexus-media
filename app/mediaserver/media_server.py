@@ -185,7 +185,17 @@ class MediaServer(metaclass=SingletonMeta):
         """
         if not self.server:
             return
-        return self.server.refresh_library_by_items(items)
+        items_str = str(sorted([str(i) for i in items]))
+        lock_key = f"mediaserver:refresh:{hashlib.md5(items_str.encode()).hexdigest()}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
+        acquired = lock.acquire()
+        if not acquired:
+            log.info("【MediaServer】媒体库刷新正在执行，跳过")
+            return
+        try:
+            return self.server.refresh_library_by_items(items)
+        finally:
+            lock.release()
 
     def get_libraries(self):
         """

@@ -3,6 +3,7 @@ Plugin Framework Service
 插件框架 v2 业务服务层
 """
 
+import importlib.util
 import json
 import os
 import shutil
@@ -11,17 +12,18 @@ import threading
 import zipfile
 
 import log
+from app.core.settings import settings
 from app.db.repositories import PluginFrameworkRepository
-from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.db.repositories.rbac_repo_adapter import (
     RBACMenuRepositoryAdapter,
     RBACRoleRepositoryAdapter,
 )
 from app.domain.entities.plugin import PluginConfigEntity, PluginManifestEntity
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
+from app.plugin_framework.context import PluginContext
 from app.plugin_framework.hook_system import HookSystem
 from app.plugin_framework.sandbox import PluginSandbox
 from app.schemas.plugin import PluginManifest
-from app.core.settings import settings
 
 
 class PluginFrameworkService:
@@ -523,10 +525,20 @@ class PluginFrameworkService:
 
     def run_plugin(self, plugin_id: str) -> None:
         """立即运行插件（临时加载并调用 run 方法）"""
-        import importlib.util
+        lock_key = f"plugin:run:{plugin_id}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
+        acquired = lock.acquire()
+        if not acquired:
+            log.info(f"【Plugin】插件 {plugin_id} 正在运行中，跳过")
+            return
 
-        from app.plugin_framework.context import PluginContext
+        try:
+            self._do_run_plugin(plugin_id)
+        finally:
+            lock.release()
 
+    def _do_run_plugin(self, plugin_id: str) -> None:
+        """实际运行插件逻辑"""
         orm_model = self._repo.get_manifest_by_id(plugin_id)
         if not orm_model:
             raise ValueError(f"插件未安装: {plugin_id}")

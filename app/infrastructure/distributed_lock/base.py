@@ -48,6 +48,8 @@ class DistributedLock(ABC):
         ...
 
     def __enter__(self):
+        if self._owned:
+            return self
         if not self.acquire():
             raise LockAcquisitionError(f"无法获取锁: {self._lock_key}")
         return self

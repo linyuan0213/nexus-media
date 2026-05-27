@@ -4,6 +4,7 @@
 路径解析、存在性检查、历史管理、清理逻辑委托给独立组件.
 """
 
+import hashlib
 import os
 import random
 import re
@@ -12,6 +13,7 @@ from time import sleep
 
 import log
 from app.core.constants import RMT_MEDIAEXT, RMT_MIN_FILESIZE
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
@@ -165,7 +167,16 @@ class FileTransferService:
     # ---------- 清理服务委托方法 ----------
 
     def delete_history(self, logids, flag=None):
-        return self._cleanup.delete_history(logids, flag)
+        lock_key = f"transfer:delete:{hashlib.md5(str(logids).encode()).hexdigest()}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
+        acquired = lock.acquire()
+        if not acquired:
+            log.info("【Rmt】删除历史任务正在执行，跳过")
+            return None
+        try:
+            return self._cleanup.delete_history(logids, flag)
+        finally:
+            lock.release()
 
     def delete_media_file(self, filedir, filename, backend_id="local"):
         return self._cleanup.delete_media_file(filedir, filename, backend_id)
@@ -242,66 +253,75 @@ class FileTransferService:
         udf_flag=False,
         root_path=False,
         dst_backend=None,
-    ):
+    ) -> tuple[bool, str]:
         """识别并转移一个文件、多个文件或者目录."""
         if not in_path or not os.path.exists(in_path):
             return self._finish_transfer(False, f"文件转移失败，目录或文件不存在：{in_path}")
 
-        if not operation:
-            operation = self._default_operation
+        # 分布式锁：多实例同时处理同一文件/目录时互斥
+        lock_key = f"filetransfer:media:{hashlib.md5(in_path.encode()).hexdigest()}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=3600)
+        acquired = lock.acquire()
+        if not acquired:
+            log.info(f"【Rmt】{in_path} 正在其他实例转移中，跳过")
+            return self._finish_transfer(False, f"文件正在转移中：{in_path}")
 
-        self.progress.start(ProgressKey.FileTransfer)
-        assert operation is not None
-        log.info(f"【Rmt】开始处理：{in_path}，转移方式：{operation}")
+        with lock:
+            if not operation:
+                operation = self._default_operation
 
-        episode = episode if episode else (None, False)
+            self.progress.start(ProgressKey.FileTransfer)
+            assert operation is not None
+            log.info(f"【Rmt】开始处理：{in_path}，转移方式：{operation}")
 
-        # ---------- 阶段 1：发现文件 ----------
-        bluray_disk_dir, file_list = self._discover_files(in_path, files, episode, min_filesize)
-        if file_list is None:
-            return self._finish_transfer(False, "输入路径错误")
-        if not file_list:
-            return self._finish_transfer(
-                bluray_disk_dir is not None, "目录下未找到媒体文件" if bluray_disk_dir is None else ""
+            episode = episode if episode else (None, False)
+
+            # ---------- 阶段 1：发现文件 ----------
+            bluray_disk_dir, file_list = self._discover_files(in_path, files, episode, min_filesize)
+            if file_list is None:
+                return self._finish_transfer(False, "输入路径错误")
+            if not file_list:
+                return self._finish_transfer(
+                    bluray_disk_dir is not None, "目录下未找到媒体文件" if bluray_disk_dir is None else ""
+                )
+
+            # ---------- 阶段 2：过滤 ----------
+            file_list, msg = self.check_ignore(file_list=file_list)
+            if not file_list:
+                return self._finish_transfer(True, msg)
+
+            if in_from == SyncType.MON:
+                file_list = list(filter(self._history.is_transfer_notin_blacklist, file_list))
+                if not file_list:
+                    log.info("【Rmt】所有文件均已成功转移过")
+                    return self._finish_transfer(True, "没有新文件需要处理")
+
+            # ---------- 阶段 3：查下载记录 + 批量识别 ----------
+            if not tmdb_info:
+                tmdb_info, media_type = self._lookup_download_record(in_path)
+
+            medias = self.media.get_media_info_on_files(file_list, tmdb_info, media_type, season, episode[0])
+            if not medias:
+                return self._finish_transfer(False, "搜索媒体信息出错")
+
+            self.progress.update(ptype=ProgressKey.FileTransfer, text=f"共 {len(medias)} 个文件需要处理...")
+
+            # ---------- 阶段 4：逐个文件转移 ----------
+            result = self._transfer_files_loop(
+                medias,
+                in_from,
+                in_path,
+                operation,
+                target_dir,
+                unknown_dir,
+                bluray_disk_dir,
+                episode,
+                udf_flag,
+                dst_backend,
             )
 
-        # ---------- 阶段 2：过滤 ----------
-        file_list, msg = self.check_ignore(file_list=file_list)
-        if not file_list:
-            return self._finish_transfer(True, msg)
-
-        if in_from == SyncType.MON:
-            file_list = list(filter(self._history.is_transfer_notin_blacklist, file_list))
-            if not file_list:
-                log.info("【Rmt】所有文件均已成功转移过")
-                return self._finish_transfer(True, "没有新文件需要处理")
-
-        # ---------- 阶段 3：查下载记录 + 批量识别 ----------
-        if not tmdb_info:
-            tmdb_info, media_type = self._lookup_download_record(in_path)
-
-        medias = self.media.get_media_info_on_files(file_list, tmdb_info, media_type, season, episode[0])
-        if not medias:
-            return self._finish_transfer(False, "搜索媒体信息出错")
-
-        self.progress.update(ptype=ProgressKey.FileTransfer, text=f"共 {len(medias)} 个文件需要处理...")
-
-        # ---------- 阶段 4：逐个文件转移 ----------
-        result = self._transfer_files_loop(
-            medias,
-            in_from,
-            in_path,
-            operation,
-            target_dir,
-            unknown_dir,
-            bluray_disk_dir,
-            episode,
-            udf_flag,
-            dst_backend,
-        )
-
-        # ---------- 阶段 5：后处理 ----------
-        return self._transfer_post_process(result, in_from, in_path, operation, root_path)
+            # ---------- 阶段 5：后处理 ----------
+            return self._transfer_post_process(result, in_from, in_path, operation, root_path)
 
     # ---------- 转移流水线私有方法 ----------
 
@@ -663,7 +683,7 @@ class FileTransferService:
             alert_messages = alert_messages + [msg]
         return 1, 1 if insert else 0, alert_messages, 0, None, None, None
 
-    def _transfer_post_process(self, result, in_from, in_path, operation, root_path):
+    def _transfer_post_process(self, result, in_from, in_path, operation, root_path) -> tuple[bool, str]:
         if result["message_medias"]:
             self.message.send_transfer_tv_message(result["message_medias"], in_from)
 
@@ -701,19 +721,30 @@ class FileTransferService:
         if not os.path.exists(s_path):
             print(f"【Rmt】源目录不存在：{s_path}")
             return
-        if t_path and not os.path.exists(t_path):
-            print(f"【Rmt】目的目录不存在：{t_path}")
+
+        lock_key = f"filetransfer:manual:{hashlib.md5(s_path.encode()).hexdigest()}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=3600)
+        acquired = lock.acquire()
+        if not acquired:
+            print(f"【Rmt】源目录正在转移中：{s_path}")
             return
-        print(f"【Rmt】转移模式为：{operation}")
-        print(f"【Rmt】正在转移以下目录中的全量文件：{s_path}")
-        for path in PathUtils.get_dir_level1_medias(s_path, RMT_MEDIAEXT):
-            if PathUtils.is_invalid_path(path):
-                continue
-            ret, ret_msg = self.transfer_media(
-                in_from=SyncType.MAN, in_path=path, target_dir=t_path, operation=operation
-            )
-            if not ret:
-                print(f"【Rmt】{path} 处理失败：{ret_msg}")
+
+        try:
+            if t_path and not os.path.exists(t_path):
+                print(f"【Rmt】目的目录不存在：{t_path}")
+                return
+            print(f"【Rmt】转移模式为：{operation}")
+            print(f"【Rmt】正在转移以下目录中的全量文件：{s_path}")
+            for path in PathUtils.get_dir_level1_medias(s_path, RMT_MEDIAEXT):
+                if PathUtils.is_invalid_path(path):
+                    continue
+                ret, ret_msg = self.transfer_media(
+                    in_from=SyncType.MAN, in_path=path, target_dir=t_path, operation=operation
+                )
+                if not ret:
+                    print(f"【Rmt】{path} 处理失败：{ret_msg}")
+        finally:
+            lock.release()
 
     def get_sync_backend_by_dest(self, dest: str) -> str:
         """根据目的目录查找对应同步配置的目标后端."""
