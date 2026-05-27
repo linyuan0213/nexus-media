@@ -1,10 +1,9 @@
 """站点配置 — 委托 engine 的 JSON 定义，不再依赖 sites.dat"""
 
 from app.sites.engine import SiteEngine
-from app.utils.commons import SingletonMeta
 
 
-class SiteConf(metaclass=SingletonMeta):
+class SiteConf:
     _SITE_CHECKIN_XPATH = [
         '//a[@id="signed"]',
         '//a[contains(@href, "attendance")]',
