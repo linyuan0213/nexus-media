@@ -16,6 +16,7 @@ from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepos
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import TransferHistoryRepositoryAdapter
 from app.domain.entities.transfer_task import SourceType, TransferTask
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.services.transfer_engine import TransferEngine
 from app.services.transfer_pipeline import TransferPipeline
 from app.storage.backends.base import StorageConfig, StorageType
@@ -236,6 +237,13 @@ class SyncEngine(metaclass=SingletonMeta):
             log.error(f"【Sync】{event_path} 转移异常：{e}")
 
     def transfer_sync(self, sid: str | None = None) -> None:
+        lock_key = f"sync:transfer_sync:{sid or 'all'}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
+        acquired = lock.acquire()
+        if not acquired:
+            log.info(f"【Sync】transfer_sync({sid or 'all'}) 正在执行，跳过")
+            return
+
         try:
             sids = [sid] if sid else self._monitor_ids
             for sid in sids:
@@ -253,6 +261,7 @@ class SyncEngine(metaclass=SingletonMeta):
         finally:
             with _synced_lock:
                 self._synced_files = []
+            lock.release()
 
     def transfer_mon_files(self) -> None:
         self.transfer_sync()
