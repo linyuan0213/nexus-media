@@ -30,6 +30,7 @@ htmlcov/
 /config/site_manage/*.dat
 /config/*.db
 /config/*.db-journal
+/test/*.db
 
 # Runtime cache
 web/static/img_cache/*

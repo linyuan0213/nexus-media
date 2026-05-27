@@ -109,6 +109,11 @@ from app.db.models.sync import (
     SYNCHISTORY,
 )
 
+# 分布式锁模型
+from app.db.models.distributed_lock import (
+    DISTRIBUTEDLOCK,
+)
+
 # 系统字典模型
 from app.db.models.system import (
     SYSTEMDICT,
@@ -200,4 +205,6 @@ __all__ = [
     # API Key
     "APIKEY",
     "APIKEYLOG",
+    # 分布式锁
+    "DISTRIBUTEDLOCK",
 ]

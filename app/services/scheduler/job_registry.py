@@ -1,5 +1,6 @@
 """任务注册与管理组件."""
 
+from collections.abc import Callable
 from typing import Any
 
 from apscheduler.job import Job
@@ -7,6 +8,7 @@ from apscheduler.jobstores.base import JobLookupError
 
 import log
 from app.core.exceptions import RepositoryError, ServiceError
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.services.scheduler.models import TaskConfig
 from app.utils import ExceptionUtils
 
@@ -16,6 +18,26 @@ class JobRegistry:
 
     def __init__(self, core):
         self._core = core
+
+    @staticmethod
+    def _wrap_with_lock(func, job_id: str, lock_ttl: int = 300):
+        """包装任务函数，执行前获取分布式锁."""
+        if func is None:
+            return func
+
+        def wrapped(*args, **kwargs):
+            lock_key = f"scheduler:lock:{job_id}"
+            lock = get_lock_manager().create_lock(lock_key, lock_ttl)
+            acquired = lock.acquire()
+            if not acquired:
+                log.info(f"【Scheduler】任务 {job_id} 跳过执行（锁被占用）")
+                return None
+            try:
+                return func(*args, **kwargs)
+            finally:
+                lock.release()
+
+        return wrapped
 
     def start_job(self, task: dict[str, Any] | TaskConfig) -> Job | None:
         """启动单个定时任务
@@ -71,6 +93,12 @@ class JobRegistry:
 
             # 验证配置
             task_config.validate()
+
+            # 包装函数添加分布式锁
+            from typing import cast
+
+            original_func = task_config.func
+            task_config.func = cast(Callable, self._wrap_with_lock(original_func, task_config.job_id))
 
             # 添加到调度器
             job = self._core._scheduler.add_job(**task_config.to_scheduler_args())
