@@ -12,6 +12,7 @@ import zipfile
 
 import log
 from app.db.repositories import PluginFrameworkRepository
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.db.repositories.rbac_repo_adapter import (
     RBACMenuRepositoryAdapter,
     RBACRoleRepositoryAdapter,
@@ -238,10 +239,24 @@ class PluginFrameworkService:
         HookSystem().emit("plugin.config_changed", {"plugin_id": plugin_id, "config": config})
 
     def install(self, zip_path: str) -> PluginManifest:
-        """安装插件包"""
+        """安装插件包（多实例部署时通过分布式锁保证只有一个实例执行安装）"""
         if not os.path.exists(zip_path):
             raise FileNotFoundError(f"插件包不存在: {zip_path}")
 
+        lock_key = f"plugin:install:{os.path.basename(zip_path)}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
+        acquired = lock.acquire()
+        if not acquired:
+            log.info(f"【Plugin】插件安装正在进行中，跳过: {zip_path}")
+            raise RuntimeError("插件安装正在执行中，请稍后再试")
+
+        try:
+            return self._do_install(zip_path)
+        finally:
+            lock.release()
+
+    def _do_install(self, zip_path: str) -> PluginManifest:
+        """实际安装逻辑"""
         extract_dir = os.path.join(self._plugins_dir, "__tmp_install")
         if os.path.exists(extract_dir):
             shutil.rmtree(extract_dir)
