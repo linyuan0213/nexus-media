@@ -3,17 +3,15 @@ import json
 import time
 
 from app.utils import RequestUtils
-from app.utils.commons import SingletonMeta
 
 
-class IyuuHelper(metaclass=SingletonMeta):
+class IyuuHelper:
     _version = "2.0.0"
     _api_base = "http://2025.iyuu.cn%s"
-    _sites = {}
-    _token = None
 
     def __init__(self, token):
         self._token = token
+        self._sites = {}
         if self._token:
             self.init_config()
 
