@@ -24,38 +24,36 @@ from app.services.rss_matcher import RssMatcher
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.sites import SiteConf, Sites
 from app.utils import ExceptionUtils, JsonUtils, Torrent
-from app.utils.commons import SingletonMeta
 from app.utils.types import MediaType, SearchType
 
 lock = Lock()
 
 
-class Rss(metaclass=SingletonMeta):
-    filter = None
-    media = None
-    sites = None
-    siteconf = None
-    downloader = None
-    searcher = None
-    download_repo = None
-    rss_repo = None
-    rsshelper = None
-    subscribe = None
-    matcher = None
+class Rss:
+    """RSS 订阅搜索下载协调器."""
 
-    def __init__(self):
-        self.init_config()
-
-    def init_config(self):
-        self.media = MediaService()
-        self.downloader = Downloader()
-        self.sites = Sites()
-        self.siteconf = SiteConf()
-        self.download_repo = DownloadHistoryRepositoryAdapter()
-        self.rss_repo = RssHistoryRepositoryAdapter()
-        self.rsshelper = RssHelper()
-        self.subscribe = Subscribe()
-        self.matcher = RssMatcher()
+    def __init__(
+        self,
+        media=None,
+        downloader=None,
+        sites=None,
+        siteconf=None,
+        download_repo=None,
+        rss_repo=None,
+        rsshelper=None,
+        subscribe=None,
+        matcher=None,
+    ):
+        self.filter = None
+        self.media = media or MediaService()
+        self.sites = sites or Sites()
+        self.siteconf = siteconf or SiteConf()
+        self.downloader = downloader or Downloader()
+        self.download_repo = download_repo or DownloadHistoryRepositoryAdapter()
+        self.rss_repo = rss_repo or RssHistoryRepositoryAdapter()
+        self.rsshelper = rsshelper or RssHelper()
+        self.subscribe = subscribe or Subscribe()
+        self.matcher = matcher or RssMatcher()
 
     def rssdownload(self):
         """
