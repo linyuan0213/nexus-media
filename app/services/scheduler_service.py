@@ -7,6 +7,7 @@ from typing import Any, ClassVar
 
 import log
 from app.helper import ThreadHelper
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.schemas.scheduler import (
     DeleteSchedulerJobRequest,
     DeleteSchedulerJobResponse,
@@ -123,19 +124,29 @@ class SchedulerService:
         if not job:
             return RunSchedulerJobResponse(code=1, msg="任务不存在")
 
+        # 分布式锁：手动执行任务也需要互斥（与定时触发保持一致）
+        lock_key = f"scheduler:manual:{req.id}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
+        acquired = lock.acquire()
+        if not acquired:
+            return RunSchedulerJobResponse(code=1, msg="任务正在执行中")
+
         def _wrapper():
-            start = time.time()
             try:
-                job.func(*(job.args or ()), **(job.kwargs or {}))
-                duration = time.time() - start
-                if svc:
-                    svc._get_job_stats(req.id).record_success(duration)
-                log.info(f"手动执行任务 {req.id} 成功, 耗时: {duration:.3f}s")
-            except Exception as e:
-                duration = time.time() - start
-                if svc:
-                    svc._get_job_stats(req.id).record_failure(str(e))
-                log.error(f"立即执行任务 {req.id} 执行异常: {e}")
+                start = time.time()
+                try:
+                    job.func(*(job.args or ()), **(job.kwargs or {}))
+                    duration = time.time() - start
+                    if svc:
+                        svc._stats_collector._get_job_stats(req.id).record_success(duration)
+                    log.info(f"手动执行任务 {req.id} 成功, 耗时: {duration:.3f}s")
+                except Exception as e:
+                    duration = time.time() - start
+                    if svc:
+                        svc._stats_collector._get_job_stats(req.id).record_failure(str(e))
+                    log.error(f"立即执行任务 {req.id} 执行异常: {e}")
+            finally:
+                lock.release()
 
         ThreadHelper().start_thread(_wrapper, ())
         return RunSchedulerJobResponse(code=0, msg="任务已触发")

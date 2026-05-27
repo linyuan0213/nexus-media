@@ -1,5 +1,6 @@
 from typing import Any
 
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.schemas.userrss import (
     UserRssArticleListDTO,
     UserRssArticleTestDTO,
@@ -80,7 +81,15 @@ class UserRssService:
         return self._checker.download_rss_articles(taskid=taskid, articles=articles)
 
     def run_task(self, taskid) -> None:
-        self._checker.check_task_rss(taskid)
+        lock_key = f"userrss:run_task:{taskid}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
+        acquired = lock.acquire()
+        if not acquired:
+            return
+        try:
+            self._checker.check_task_rss(taskid)
+        finally:
+            lock.release()
 
     def update_parser(self, params: dict) -> bool | None:
         return self._checker.update_userrss_parser(params)
@@ -128,11 +137,13 @@ class UserRssService:
         if uses == "D":
             params.update({"recognization": data.get("recognization")})
         elif uses == "R":
-            params.update({
-                "over_edition": data.get("over_edition"),
-                "sites": data.get("sites"),
-                "filter_args": {"restype": data.get("restype"), "pix": data.get("pix"), "team": data.get("team")},
-            })
+            params.update(
+                {
+                    "over_edition": data.get("over_edition"),
+                    "sites": data.get("sites"),
+                    "filter_args": {"restype": data.get("restype"), "pix": data.get("pix"), "team": data.get("team")},
+                }
+            )
         else:
             return UserRssTaskUpdateDTO(success=False)
 

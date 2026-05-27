@@ -3,6 +3,7 @@ from datetime import datetime
 
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.db.repositories.brush_repo_adapter import BrushRuleRepositoryAdapter
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.schemas.brush import (
     BrushTaskDTO,
@@ -108,7 +109,15 @@ class BrushService:
         return BrushTorrentListDTO(torrents=[item.as_dict() for item in results])
 
     def run_task(self, taskid) -> None:
-        self._brush.check_task_rss(taskid)
+        lock_key = f"brush:run_task:{taskid}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
+        acquired = lock.acquire()
+        if not acquired:
+            return
+        try:
+            self._brush.check_task_rss(taskid)
+        finally:
+            lock.release()
 
     def update_task_state(self, state, task_ids: list | None = None) -> None:
         if state is not None:
