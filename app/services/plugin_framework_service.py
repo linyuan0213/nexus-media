@@ -362,7 +362,21 @@ class PluginFrameworkService:
         return manifest
 
     def uninstall(self, plugin_id: str) -> None:
-        """卸载插件"""
+        """卸载插件（多实例部署时通过分布式锁保证只有一个实例执行）"""
+        lock_key = f"plugin:uninstall:{plugin_id}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
+        acquired = lock.acquire()
+        if not acquired:
+            log.info(f"【Plugin】插件卸载正在进行中，跳过: {plugin_id}")
+            raise RuntimeError("插件卸载正在执行中，请稍后再试")
+
+        try:
+            self._do_uninstall(plugin_id)
+        finally:
+            lock.release()
+
+    def _do_uninstall(self, plugin_id: str) -> None:
+        """实际卸载逻辑"""
         orm_model = self._repo.get_manifest_by_id(plugin_id)
         if not orm_model:
             raise ValueError(f"插件未安装: {plugin_id}")
