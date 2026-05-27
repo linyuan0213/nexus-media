@@ -8,6 +8,7 @@ from typing import Any
 
 import log
 from app.db.repositories import RssRepository
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.db.repositories.rss_repo_adapter import (
     RssMovieRepositoryAdapter,
     RssTvEpisodeRepositoryAdapter,
@@ -83,6 +84,12 @@ class SubscribeSearchEngine:
         """
         RSS订阅队列中状态的任务处理，先进行存量资源搜索，缺失的才标志为RSS状态，由定时服务调用
         """
+        lock_key = f"subscribe:search:{state}"
+        dist_lock = get_lock_manager().create_lock(lock_key, ttl_seconds=1800)
+        acquired = dist_lock.acquire()
+        if not acquired:
+            log.info(f"【Subscribe】订阅搜索(state={state}) 正在执行，跳过")
+            return
         try:
             self._lock.acquire()
             # 处理电影
@@ -91,6 +98,7 @@ class SubscribeSearchEngine:
             self.subscribe_search_tv(state=state)
         finally:
             self._lock.release()
+            dist_lock.release()
 
     def subscribe_search_movie(self, rssid=None, state="D"):
         """

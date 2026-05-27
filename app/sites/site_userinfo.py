@@ -13,6 +13,7 @@ from app.db.models import SITEUSERINFOSTATS as _S
 from app.db.repositories import SiteRepository
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.helper import DrissionPageHelper
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.message import Message
 from app.sites.engine import SiteEngine
 from app.sites.sites import Sites
@@ -217,7 +218,16 @@ class SiteUserInfo(metaclass=SingletonMeta):
         强制刷新站点数据
         :param specify_sites: 指定站点名称列表，None 表示全部
         """
-        self.__refresh_all_site_data(force=True, specify_sites=specify_sites)
+        lock_key = f"site:refresh:{','.join(specify_sites) if specify_sites else 'all'}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=600)
+        acquired = lock.acquire()
+        if not acquired:
+            log.info("【Sites】站点数据刷新正在执行，跳过")
+            return
+        try:
+            self.__refresh_all_site_data(force=True, specify_sites=specify_sites)
+        finally:
+            lock.release()
         # 刷完发送消息
         string_list = []
 

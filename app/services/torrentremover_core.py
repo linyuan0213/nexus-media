@@ -7,6 +7,7 @@ import json
 
 import log
 from app.db.repositories.config_repo_adapter import TorrentRemoveTaskRepositoryAdapter
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.message import Message
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.scheduler_core import SchedulerCore
@@ -133,15 +134,17 @@ class TorrentRemoverService:
             if task.get("enabled") and task.get("interval") and task.get("config"):
                 remove_flag = True
                 job_id = f"TorrentRemover.auto_remove_torrents_{task.get('id')}"
-                self._scheduler.start_job({
-                    "func": self.auto_remove_torrents,
-                    "name": f"自动删种任务 {task.get('name')}",
-                    "args": (task.get("id"),),
-                    "job_id": job_id,
-                    "trigger": "interval",
-                    "seconds": int(task.get("interval") or 0) * 60,
-                    "jobstore": self._jobstore,
-                })
+                self._scheduler.start_job(
+                    {
+                        "func": self.auto_remove_torrents,
+                        "name": f"自动删种任务 {task.get('name')}",
+                        "args": (task.get("id"),),
+                        "job_id": job_id,
+                        "trigger": "interval",
+                        "seconds": int(task.get("interval") or 0) * 60,
+                        "jobstore": self._jobstore,
+                    }
+                )
         if remove_flag:
             log.info("自动删种服务启动")
 
@@ -154,31 +157,40 @@ class TorrentRemoverService:
         return self._tasks
 
     def auto_remove_torrents(self, taskids=None):
-        tasks = []
-        if not taskids:
-            for task in self._tasks.values():
-                if task.get("enabled") and task.get("interval") and task.get("config"):
-                    tasks.append(task)
-        elif isinstance(taskids, list):
-            for tid in taskids:
-                task = self._tasks.get(str(tid))
-                if task:
-                    tasks.append(task)
-        else:
-            task = self._tasks.get(str(taskids))
-            tasks = [task] if task else []
-        if not tasks:
+        lock_key = f"torrentremover:execute:{','.join(str(t) for t in taskids) if isinstance(taskids, list) else (taskids or 'all')}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=600)
+        acquired = lock.acquire()
+        if not acquired:
+            log.info("【TorrentRemover】删种任务正在执行，跳过")
             return
-        for task in tasks:
-            try:
-                count, text = TorrentRemoverActionEngine.execute(task, self._downloader)
-                if count and text:
-                    self._message.send_auto_remove_torrents_message(
-                        title=f"自动删种任务：{task.get('name')}", text=text
-                    )
-            except Exception as e:
-                ExceptionUtils.exception_traceback(e)
-                log.error(f"【TorrentRemover】自动删种任务：{task.get('name')}异常：{str(e)}")
+        try:
+            tasks = []
+            if not taskids:
+                for task in self._tasks.values():
+                    if task.get("enabled") and task.get("interval") and task.get("config"):
+                        tasks.append(task)
+            elif isinstance(taskids, list):
+                for tid in taskids:
+                    task = self._tasks.get(str(tid))
+                    if task:
+                        tasks.append(task)
+            else:
+                task = self._tasks.get(str(taskids))
+                tasks = [task] if task else []
+            if not tasks:
+                return
+            for task in tasks:
+                try:
+                    count, text = TorrentRemoverActionEngine.execute(task, self._downloader)
+                    if count and text:
+                        self._message.send_auto_remove_torrents_message(
+                            title=f"自动删种任务：{task.get('name')}", text=text
+                        )
+                except Exception as e:
+                    ExceptionUtils.exception_traceback(e)
+                    log.error(f"【TorrentRemover】自动删种任务：{task.get('name')}异常：{str(e)}")
+        finally:
+            lock.release()
 
     def _validate_task_params(self, data: dict) -> tuple[bool, str]:
         name = data.get("name")
