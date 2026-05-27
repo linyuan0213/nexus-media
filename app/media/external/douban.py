@@ -9,26 +9,26 @@ import log
 from app.infrastructure.external.doubanapi import DoubanApi, DoubanWeb
 from app.media.parser._metainfo import meta_info
 from app.utils import ExceptionUtils, RequestUtils, StringUtils
-from app.utils.commons import SingletonMeta
 from app.utils.types import MediaType
 
 lock = Lock()
 
 
-class DouBan(metaclass=SingletonMeta):
-    cookie = None
-    doubanapi = None
-    doubanweb = None
-    message = None
-    _movie_num = 20
-    _tv_num = 20
-
-    def __init__(self):
-        self.init_config()
-
-    def init_config(self):
-        self.doubanapi = DoubanApi()
-        self.doubanweb = DoubanWeb()
+class DouBan:
+    def __init__(self, doubanapi=None, doubanweb=None):
+        self._movie_num = 20
+        self._tv_num = 20
+        self.doubanapi = doubanapi or DoubanApi()
+        self.doubanweb = doubanweb or DoubanWeb()
+        self.cookie = None
+        self.message = None
+        try:
+            res = RequestUtils(timeout=5).get_res("https://www.douban.com/")
+            if res:
+                self.cookie = StringUtils.str_from_cookiejar(res.cookies)
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+            log.warn(f"【Douban】获取cookie失败：{format(err)}")
         try:
             res = RequestUtils(timeout=5).get_res("https://www.douban.com/")
             if res:

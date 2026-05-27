@@ -6,10 +6,9 @@ from lxml import etree
 
 from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.utils import ExceptionUtils, RequestUtils
-from app.utils.commons import SingletonMeta
 
 
-class DoubanWeb(metaclass=SingletonMeta):
+class DoubanWeb:
     _session = requests.Session()
 
     _movie_base = "https://movie.douban.com"
