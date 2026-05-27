@@ -47,8 +47,9 @@ class BuiltinIndexer(_IIndexClient):
     _client_config = {}
     _show_more_sites = False
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, indexer_helper=None):
         self._client_config = config or {}
+        self._indexer_helper = indexer_helper or IndexerHelper()
         self.init_config()
 
     def init_config(self):
@@ -94,7 +95,7 @@ class BuiltinIndexer(_IIndexClient):
                         "language": s.language,
                     }
                 )
-        IndexerHelper().set_indexers(engine_sites)
+        self._indexer_helper.set_indexers(engine_sites)
 
         for site in Sites().get_sites(public=True):
             url = site.get("signurl") or site.get("rssurl")
@@ -108,7 +109,7 @@ class BuiltinIndexer(_IIndexClient):
                 continue
 
             render = False if not chrome_ok else site.get("chrome")
-            indexer = IndexerHelper().get_indexer(
+            indexer = self._indexer_helper.get_indexer(
                 url=url,
                 siteid=site.get("id"),
                 cookie=cookie,
@@ -132,7 +133,7 @@ class BuiltinIndexer(_IIndexClient):
                     ret_indexers.append(indexer)
 
         if public and self._show_more_sites:
-            for indexer in IndexerHelper().get_all_indexers():
+            for indexer in self._indexer_helper.get_all_indexers():
                 if not indexer.get("public"):
                     continue
                 if indexer_id and indexer.get("id") == indexer_id:

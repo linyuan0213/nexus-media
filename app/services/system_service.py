@@ -511,7 +511,6 @@ class SystemLifecycleService:
 
     def start_service(self) -> None:
         """启动所有后台服务（调度器优先启动，确保后续模块注册任务时调度器已就绪）"""
-        from app.helper import IndexerHelper
         from app.services.brush_core import BrushTaskService
         from app.services.rss_service import RssTaskService
         from app.sites import SiteConf
@@ -534,7 +533,6 @@ class SystemLifecycleService:
         # 1. 先启动调度器，确保所有后台服务的定时任务可以正常注册
         self._scheduler.start_service(load_defaults=True)
         # 2. 加载基础组件
-        IndexerHelper()
         SiteConf()
         # 3. 启动各业务服务（此时调度器已运行，init_config 里的 stop/start_job 可正常执行）
         if self._sync is None:

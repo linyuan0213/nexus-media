@@ -4,24 +4,14 @@ from app.helper import OcrHelper, ProgressHelper
 from app.sites.siteconf import SiteConf
 from app.sites.sites import Sites
 from app.utils import RequestUtils, StringUtils
-from app.utils.commons import SingletonMeta
 
 
-class SiteCookie(metaclass=SingletonMeta):
-    progress = None
-    sites = None
-    siteconf = None
-    ocrhelper = None
-    captcha_code = {}
-
-    def __init__(self):
-        self.init_config()
-
-    def init_config(self):
-        self.progress = ProgressHelper()
-        self.sites = Sites()
-        self.siteconf = SiteConf()
-        self.ocrhelper = OcrHelper()
+class SiteCookie:
+    def __init__(self, progress=None, sites=None, siteconf=None, ocrhelper=None):
+        self.progress = progress or ProgressHelper()
+        self.sites = sites or Sites()
+        self.siteconf = siteconf or SiteConf()
+        self.ocrhelper = ocrhelper or OcrHelper()
         self.captcha_code = {}
 
     def set_code(self, code, value):

@@ -1,8 +1,7 @@
 from app.utils import StringUtils
-from app.utils.commons import SingletonMeta
 
 
-class IndexerHelper(metaclass=SingletonMeta):
+class IndexerHelper:
     def __init__(self):
         self._indexers = []
 
