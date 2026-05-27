@@ -1,16 +1,11 @@
 import regex as re
 
-from app.utils.commons import SingletonMeta
 
-
-class ReleaseGroupsMatcher(metaclass=SingletonMeta):
+class ReleaseGroupsMatcher:
     """
     识别制作组、字幕组
     """
 
-    __release_groups = None
-    custom_release_groups = None
-    custom_separator = None
     RELEASE_GROUPS = {
         "0ff": ["FF(?:(?:A|WE)B|CD|E(?:DU|B)|TV)"],
         "1pt": [],
@@ -85,11 +80,13 @@ class ReleaseGroupsMatcher(metaclass=SingletonMeta):
     }
 
     def __init__(self):
+        self.custom_release_groups = None
+        self.custom_separator = None
         release_groups = []
         for site_groups in self.RELEASE_GROUPS.values():
             for release_group in site_groups:
                 release_groups.append(release_group)
-        self.__release_groups = "|".join(release_groups)
+        self._release_groups = "|".join(release_groups)
 
     def match(self, title=None, groups=None):
         """
@@ -101,9 +98,9 @@ class ReleaseGroupsMatcher(metaclass=SingletonMeta):
             return ""
         if not groups:
             if self.custom_release_groups:
-                groups = f"{self.__release_groups}|{self.custom_release_groups}"
+                groups = f"{self._release_groups}|{self.custom_release_groups}"
             else:
-                groups = self.__release_groups
+                groups = self._release_groups
         title = f"{title} "
         groups_re = re.compile(rf"(?<=[-@\[￡【&])(?:{groups})(?=[@.\s\]\[】&])", re.I)
         # 处理一个制作组识别多次的情况，保留顺序

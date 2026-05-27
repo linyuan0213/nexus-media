@@ -25,7 +25,6 @@ from app.plugin_framework.event_compat import EventManager
 from app.schemas.search import SearchMediasResultDTO, SearchOneMediaResultDTO
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
-from app.utils.commons import SingletonMeta
 from app.utils.string_utils import StringUtils
 from app.utils.types import EventType, MediaType, ProgressKey, SearchType
 from app.core.exceptions import RepositoryError, ServiceError
@@ -229,27 +228,25 @@ class SearchResultProcessor:
         )
 
 
-class Searcher(metaclass=SingletonMeta):
+class Searcher:
     """
     搜索器（兼容原 app/searcher.py 的入口类）
     内部已拆分为 SearchQueryBuilder / SearchExecutor / SearchResultDeduplicator / SearchResultProcessor
     """
-
-    downloader = None
-    media = None
-    message = None
-    indexer = None
-    progress = None
-    search_repo = None
-    eventmanager = None
-
-    _search_auto = True
 
     def __init__(
         self, download_repo: IDownloadHistoryRepository | None = None, search_repo: ISearchRepository | None = None
     ):
         self._download_repo = download_repo
         self._search_repo = search_repo
+        self.downloader = None
+        self.media = None
+        self.message = None
+        self.indexer = None
+        self.progress = None
+        self.search_repo = None
+        self.eventmanager = None
+        self._search_auto = True
         self.init_config()
 
     def init_config(self):
