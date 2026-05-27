@@ -1,15 +1,10 @@
 import regex as re
 
-from app.utils.commons import SingletonMeta
 
-
-class CustomizationMatcher(metaclass=SingletonMeta):
+class CustomizationMatcher:
     """
     识别自定义占位符
     """
-
-    customization = None
-    custom_separator = None
 
     def __init__(self):
         self.customization = None
