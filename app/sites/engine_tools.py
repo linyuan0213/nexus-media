@@ -49,8 +49,14 @@ def _build_headers(engine: Any, site: Any, user_config: dict) -> dict:
 
 
 def _call_endpoint(
-    engine: Any, cfg: dict, site: Any, user_config: dict, template_vars: dict,
-    credential: str = "", download_dir: str = "", download: bool = False,
+    engine: Any,
+    cfg: dict,
+    site: Any,
+    user_config: dict,
+    template_vars: dict,
+    credential: str = "",
+    download_dir: str = "",
+    download: bool = False,
 ) -> bool | list[dict] | None:
     method = cfg.get("method", "GET")
     path = cfg.get("path", "").format(**template_vars)

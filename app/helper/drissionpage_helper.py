@@ -7,7 +7,6 @@ from typing import Any
 import requests
 
 import log
-from app.utils.commons import SingletonMeta
 from app.core.settings import settings
 
 
@@ -16,7 +15,7 @@ def generate_tab_id() -> str:
     return str(uuid.uuid4())
 
 
-class DrissionPageHelper(metaclass=SingletonMeta):
+class DrissionPageHelper:
     def __init__(self):
         self.url = ""
         url = settings.get("laboratory").get("chrome_server_host")

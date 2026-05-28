@@ -14,15 +14,10 @@ import json
 from threading import Lock
 
 import log
-from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.rss_repo_adapter import RssHistoryRepositoryAdapter
-from app.helper import RssHelper
+from app.di import container
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
-from app.media import MediaService
-from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.rss_matcher import RssMatcher
-from app.services.subscribe_service import SubscribeService as Subscribe
-from app.sites import SiteConf, Sites
 from app.utils import ExceptionUtils, JsonUtils, Torrent
 from app.utils.types import MediaType, SearchType
 
@@ -45,14 +40,14 @@ class Rss:
         matcher=None,
     ):
         self.filter = None
-        self.media = media or MediaService()
-        self.sites = sites or Sites()
-        self.siteconf = siteconf or SiteConf()
-        self.downloader = downloader or Downloader()
-        self.download_repo = download_repo or DownloadHistoryRepositoryAdapter()
+        self.media = media or container.media_service()
+        self.sites = sites or container.sites()
+        self.siteconf = siteconf or container.site_conf()
+        self.downloader = downloader or container.downloader_core()
+        self.download_repo = download_repo or container.download_history_repo()
         self.rss_repo = rss_repo or RssHistoryRepositoryAdapter()
-        self.rsshelper = rsshelper or RssHelper()
-        self.subscribe = subscribe or Subscribe()
+        self.rsshelper = rsshelper or container.rss_helper()
+        self.subscribe = subscribe or container.subscribe_service()
         self.matcher = matcher or RssMatcher()
 
     def rssdownload(self):

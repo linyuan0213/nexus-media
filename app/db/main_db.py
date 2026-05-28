@@ -6,12 +6,12 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import scoped_session, sessionmaker
 
+from app.core.settings import settings
 from app.db.database_factory import DatabaseFactory
 from app.db.models import Base
 from app.db.sql_adapter import SQLAdapter
 from app.utils import ExceptionUtils, PathUtils
 from app.utils.path_utils import get_script_path
-from app.core.settings import settings
 
 # =============================================================================
 # SQL 适配器（延迟初始化避免循环导入）

@@ -12,15 +12,20 @@ from apscheduler.events import (
     JobExecutionEvent,
 )
 
+from app.di import container
 from app.services.scheduler.core import SchedulerCore
 from app.services.scheduler.event_handler import EventHandler
 from app.services.scheduler.models import JobStats, JobStatus, TaskConfig
-from app.utils.commons import SingletonMeta
+
+
+def clear_scheduler_state():
+    """Helper to clear SchedulerCore state between tests."""
+    container.scheduler_core.reset()
 
 
 def clear_scheduler_singleton():
     """Helper to clear SchedulerCore singleton between tests."""
-    SingletonMeta._instances.pop(SchedulerCore, None)
+    container.scheduler_core.reset()
 
 
 class TestJobStatus:
@@ -141,11 +146,13 @@ class TestSchedulerCoreLifecycle:
 
     def teardown_method(self):
         # Ensure scheduler is stopped after each test
-        if SchedulerCore in SingletonMeta._instances:
-            core = SingletonMeta._instances[SchedulerCore]
+        try:
+            core = container.scheduler_core()
             if core._scheduler and core._scheduler.running:
                 core._scheduler.shutdown(wait=False)
-            clear_scheduler_singleton()
+        except KeyError:
+            pass
+        clear_scheduler_state()
 
     def test_init(self):
         core = SchedulerCore()
@@ -199,11 +206,13 @@ class TestSchedulerCoreJobRegistry:
         clear_scheduler_singleton()
 
     def teardown_method(self):
-        if SchedulerCore in SingletonMeta._instances:
-            core = SingletonMeta._instances[SchedulerCore]
+        try:
+            core = container.scheduler_core()
             if core._scheduler and core._scheduler.running:
                 core._scheduler.shutdown(wait=False)
-            clear_scheduler_singleton()
+        except KeyError:
+            pass
+        clear_scheduler_state()
 
     def test_start_job_no_scheduler(self):
         core = SchedulerCore()
@@ -308,11 +317,13 @@ class TestEventHandler:
         clear_scheduler_singleton()
 
     def teardown_method(self):
-        if SchedulerCore in SingletonMeta._instances:
-            core = SingletonMeta._instances[SchedulerCore]
+        try:
+            core = container.scheduler_core()
             if core._scheduler and core._scheduler.running:
                 core._scheduler.shutdown(wait=False)
-            clear_scheduler_singleton()
+        except KeyError:
+            pass
+        clear_scheduler_state()
 
     def test_job_event_listener_submitted(self):
         core = SchedulerCore()
@@ -393,11 +404,13 @@ class TestRetryManager:
         clear_scheduler_singleton()
 
     def teardown_method(self):
-        if SchedulerCore in SingletonMeta._instances:
-            core = SingletonMeta._instances[SchedulerCore]
+        try:
+            core = container.scheduler_core()
             if core._scheduler and core._scheduler.running:
                 core._scheduler.shutdown(wait=False)
-            clear_scheduler_singleton()
+        except KeyError:
+            pass
+        clear_scheduler_state()
 
     def test_get_retry_key(self):
         core = SchedulerCore()
@@ -445,11 +458,13 @@ class TestStatsCollector:
         clear_scheduler_singleton()
 
     def teardown_method(self):
-        if SchedulerCore in SingletonMeta._instances:
-            core = SingletonMeta._instances[SchedulerCore]
+        try:
+            core = container.scheduler_core()
             if core._scheduler and core._scheduler.running:
                 core._scheduler.shutdown(wait=False)
-            clear_scheduler_singleton()
+        except KeyError:
+            pass
+        clear_scheduler_state()
 
     def test_get_job_stats_creates_new(self):
         core = SchedulerCore()
@@ -508,11 +523,13 @@ class TestSchedulerCoreIntegration:
         clear_scheduler_singleton()
 
     def teardown_method(self):
-        if SchedulerCore in SingletonMeta._instances:
-            core = SingletonMeta._instances[SchedulerCore]
+        try:
+            core = container.scheduler_core()
             if core._scheduler and core._scheduler.running:
                 core._scheduler.shutdown(wait=False)
-            clear_scheduler_singleton()
+        except KeyError:
+            pass
+        clear_scheduler_state()
 
     def test_full_lifecycle(self):
         core = SchedulerCore()
@@ -542,7 +559,7 @@ class TestSchedulerCoreIntegration:
         with patch.object(core._event_handler, "_handle_job_success") as mock_success:
             core._scheduler.add_job(lambda: None, "interval", seconds=1, id="test_evt")
             # Manually trigger event dispatch
-            from apscheduler.events import JobExecutionEvent, EVENT_JOB_EXECUTED
+            from apscheduler.events import EVENT_JOB_EXECUTED, JobExecutionEvent
 
             evt = JobExecutionEvent(EVENT_JOB_EXECUTED, "test_evt", "default", time.time(), retval=None)
             core._event_handler._job_event_listener(evt)

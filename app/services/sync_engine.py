@@ -12,19 +12,16 @@ from watchdog.observers.polling import PollingObserver
 import log
 from app.core.constants import RMT_MEDIAEXT
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
-from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
-from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import TransferHistoryRepositoryAdapter
 from app.domain.entities.transfer_task import SourceType, TransferTask
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
-from app.services.transfer_engine import TransferEngine
 from app.services.transfer_pipeline import TransferPipeline
 from app.storage.backends.base import StorageConfig, StorageType
 from app.storage.backends.local import LocalStorageBackend
 from app.storage.config_models import LocalStorageConfig
 from app.storage.factory import StorageBackendFactory
 from app.utils import PathUtils
-from app.utils.commons import SingletonMeta
+from app.di import container
 
 _synced_lock = threading.Lock()
 _observer_lock = threading.Lock()
@@ -57,13 +54,13 @@ class SyncPathConfig:
         self.enabled = bool(row.ENABLED)
 
 
-class SyncEngine(metaclass=SingletonMeta):
+class SyncEngine:
     def __init__(self):
-        self._transfer = TransferEngine()
+        self._transfer = container.transfer_engine()
         self._pipeline = TransferPipeline()
-        self._sync_repo = SyncPathRepositoryAdapter()
+        self._sync_repo = container.sync_path_repo()
         self._history_repo = TransferHistoryRepositoryAdapter()
-        self._backend_repo = StorageBackendRepositoryAdapter()
+        self._backend_repo = container.storage_backend_repo()
         self._configs: dict[str, SyncPathConfig] = {}
         self._monitor_ids: list[str] = []
         self._observers: list = []

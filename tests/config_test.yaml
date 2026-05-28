@@ -1,14 +1,84 @@
 app:
-  web_host: '0.0.0.0'
+  web_host: 0.0.0.0
   web_port: 3000
-  rmt_tmdbkey: 'test_tmdb_key'
-  log_level: 'INFO'
-
+  login_user: admin
+  login_password: password
+  ssl_cert: ''
+  ssl_key: ''
+  rmt_tmdbkey: test_tmdb_key
+  rmt_match_mode: normal
+  proxies:
+    https:
+    http:
+  domain: ''
+  user_agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36
+    (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+  init_files: []
+  tmdb_domain: api.themoviedb.org
+  wallpaper: bing
+  debug: true
+  releases_update_only: false
+  tmdb_image_url: ''
+  enable_image_proxy: 1
+  cookie_secure: false
+media:
+  mediasync_interval: '8'
+  category: default-category
+  min_filesize: '150'
+  filesize_cover: true
+  movie_name_format: '{title} ({year})/{title}-{part} ({year}) - {videoFormat}'
+  tv_name_format: '{title} ({year})/Season {season}/{title}-{part} - {season_episode}
+    - 第{episode}集'
+  nfo_poster: true
+  refresh_mediaserver: true
+  ignored_paths: Specials;Extras;Bonus.*;.*Scan;Menu.*;CDs
+  ignored_files: SP\d+
+  media_default_path: ''
+  default_rmt_mode: link
+  tmdb_language: zh
+  episode_mapping_enabled: true
+pt:
+  search_auto: false
+  search_no_result_rss: false
+  pt_check_interval: '3600'
+  search_rss_interval: '6'
+  download_order: seeder
+  ptrefresh_date_cron: 22:36
+security:
+  media_server_webhook_allow_ip:
+    ipv4: 0.0.0.0/0
+    ipv6: ::/0
+  telegram_webhook_allow_ip:
+    ipv4: 0.0.0.0/0
+    ipv6: ::/0
+  synology_webhook_allow_ip:
+    ipv4: 0.0.0.0/0
+    ipv6: ::/0
+  jwt_secret: jJ-d9kDmnLWd9IczbUInmGZWOqgsGu8t8dJ5zxlWS0o
+laboratory:
+  search_keyword: false
+  tmdb_cache_expire: true
+  use_douban_titles: true
+  search_en_title: true
+  show_more_sites: true
+  ocr_server_host: ''
+  search_multi_language: true
+  chrome_server_host: ''
+agent:
+  enabled: true
+  default_provider: ''
+  media_recognizer_enabled: false
+  batch_size: 100
+  providers: {}
 database:
   type: sqlite
-  sqlite_path: ':memory:'
-
-redis:
   host: localhost
-  port: 6379
+  port: 0
+  username: ''
   password: ''
+  database: nas_tools
+log:
+  type: file
+  level: debug
+  server: ''
+  path: ''

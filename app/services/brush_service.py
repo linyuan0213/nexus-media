@@ -2,14 +2,14 @@ import json
 from datetime import datetime
 
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
-from app.db.repositories.brush_repo_adapter import BrushRuleRepositoryAdapter
-from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.schemas.brush import (
     BrushTaskDTO,
     BrushTorrentListDTO,
 )
 from app.services.brush_core import BrushTaskService as BrushTask
+from app.di import container
 
 _RSS_RULE_FIELDS = {
     "free": "brushtask_free",
@@ -47,7 +47,7 @@ class BrushService:
 
     def __init__(self, brush_task: BrushTask | None = None):
         self._brush = brush_task or BrushTask()
-        self._rule_repo = BrushRuleRepositoryAdapter()
+        self._rule_repo = container.brush_rule_repo()
 
     def build_task_item(self, data: dict) -> dict:
         """将前端参数转换为刷流任务 item 字典"""

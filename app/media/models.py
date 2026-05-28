@@ -6,8 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.core.constants import ANIME_GENREIDS, DEFAULT_TMDB_IMAGE
 from app.helper.image_proxy_helper import ImageProxyHelper
-from app.media.category import Category
-from app.media.fanart import Fanart
+from app.di import container
 from app.utils import StringUtils
 from app.utils.types import MediaType
 
@@ -423,7 +422,7 @@ class MediaInfo(BaseModel):
     def set_tmdb_info(self, info):
         if not info:
             return
-        category_handler = Category()
+        category_handler = container.category()
         media_type = info.get("media_type")
         if media_type == MediaType.TV:
             genre_ids = info.get("genre_ids", [])
@@ -511,12 +510,12 @@ class MediaInfo(BaseModel):
 
     @property
     def fanart(self):
-        return Fanart()
+        return container.fanart()
 
     def get_backdrop_image(self, default=True, original=False):
         if self.fanart_backdrop:
             return self.fanart_backdrop
-        fanart = Fanart()
+        fanart = container.fanart()
         self.fanart_backdrop = fanart.get_backdrop(
             media_type=self.type, queryid=self.tmdb_id if self.type == MediaType.MOVIE else self.tvdb_id
         )
@@ -531,7 +530,7 @@ class MediaInfo(BaseModel):
     def get_message_image(self):
         if self.fanart_backdrop:
             return self.fanart_backdrop
-        fanart = Fanart()
+        fanart = container.fanart()
         self.fanart_backdrop = fanart.get_backdrop(
             media_type=self.type, queryid=self.tmdb_id if self.type == MediaType.MOVIE else self.tvdb_id
         )
@@ -549,7 +548,7 @@ class MediaInfo(BaseModel):
                 return self.poster_path.replace("/w500", "/original")
             return self.poster_path
         if not self.fanart_poster:
-            fanart = Fanart()
+            fanart = container.fanart()
             self.fanart_poster = fanart.get_poster(
                 media_type=self.type, queryid=self.tmdb_id if self.type == MediaType.MOVIE else self.tvdb_id
             )

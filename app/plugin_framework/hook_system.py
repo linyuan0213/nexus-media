@@ -4,11 +4,10 @@ Hook System - 全局事件钩子系统
 """
 
 import log
-from app.db.repositories import PluginFrameworkRepository
-from app.utils.commons import SingletonMeta
+from app.di import container
 
 
-class HookSystem(metaclass=SingletonMeta):
+class HookSystem:
     """全局事件钩子系统"""
 
     EVENTS = [
@@ -53,7 +52,7 @@ class HookSystem(metaclass=SingletonMeta):
     ]
 
     def __init__(self):
-        self._repo = PluginFrameworkRepository()
+        self._repo = container.plugin_framework_repo()
         self._handlers: dict[str, list[dict]] = {}
         self._load_from_db()
 
@@ -118,9 +117,7 @@ class HookSystem(metaclass=SingletonMeta):
             if not plugin_id:
                 continue
             try:
-                from app.plugin_framework.sandbox import PluginSandbox
-
-                sandbox = PluginSandbox()
+                sandbox = container.plugin_sandbox()
                 sandbox.call_hook(str(plugin_id), event, data or {})
             except Exception as e:
                 log.error(f"[HookSystem] 插件 {plugin_id} 处理事件 {event} 失败: {e}")
@@ -132,8 +129,10 @@ class HookSystem(metaclass=SingletonMeta):
             for h in handlers:
                 if plugin_id and h.get("plugin_id") != plugin_id:
                     continue
-                result.append({
-                    "event": event,
-                    "plugin_id": h.get("plugin_id"),
-                })
+                result.append(
+                    {
+                        "event": event,
+                        "plugin_id": h.get("plugin_id"),
+                    }
+                )
         return result

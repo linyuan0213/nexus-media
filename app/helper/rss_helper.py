@@ -2,16 +2,16 @@ import re
 import xml.dom.minidom
 from urllib.parse import urlsplit
 
-from app.db.repositories.rss_torrent_repo_adapter import RssTorrentRepositoryAdapter
 from app.utils import DomUtils, ExceptionUtils, RequestUtils, RssTitleUtils, StringUtils
 from app.utils.config_tools import get_proxies, get_ua
+from app.di import container
 
 
 class RssHelper:
     """RSS 解析助手"""
 
     def __init__(self):
-        self._repo = RssTorrentRepositoryAdapter()
+        self._repo = container.rss_torrent_repo()
 
     @staticmethod
     def parse_rssxml(url, proxy=False):

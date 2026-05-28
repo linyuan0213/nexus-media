@@ -17,6 +17,7 @@ from app.services.indexer_service import IndexerService
 from app.sites import SiteConf, SiteCookie, Sites
 from app.sites.site_userinfo import SiteUserInfo
 from app.utils import StringUtils
+from app.di import container
 
 
 class SiteService:
@@ -32,13 +33,13 @@ class SiteService:
         string_utils=None,
         site_repo: SiteRepository | None = None,
     ):
-        self._sites = sites or Sites()
+        self._sites = sites or container.sites()
         self._site_user_info = site_user_info or SiteUserInfo()
-        self._site_conf = site_conf or SiteConf()
+        self._site_conf = site_conf or container.site_conf()
         self._site_cookie = site_cookie or SiteCookie()
         self._indexer_service = indexer_service or IndexerService()
         self._string_utils = string_utils or StringUtils
-        self._site_repo = site_repo or SiteRepository()
+        self._site_repo = site_repo or container.site_repository()
 
     # ------------------------------------------------------------------
     # 站点属性

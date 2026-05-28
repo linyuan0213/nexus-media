@@ -11,13 +11,11 @@ from threading import Lock
 from time import sleep
 from typing import Any
 
-from app.media import DouBan, meta_info
+from app.media import meta_info
 from app.plugin_framework.context import PluginContext
-from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.search_service import Searcher
-from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils.types import MediaType, RssType, SearchType
 from app.utils.web_utils import WebUtils
+from app.di import container
 
 _lock = Lock()
 
@@ -27,10 +25,10 @@ class DoubanSyncPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self._douban = DouBan()
-        self._searcher = Searcher()
-        self._downloader = Downloader()
-        self._subscribe = Subscribe()
+        self._douban = container.douban()
+        self._searcher = container.searcher()
+        self._downloader = container.downloader_core()
+        self._subscribe = container.subscribe_service()
 
     def _get_config(self):
         return self.ctx.get_config() or {}

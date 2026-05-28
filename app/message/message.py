@@ -11,17 +11,16 @@ from app.message.core.command_manager import CommandManager
 from app.message.core.dispatcher import MessageDispatcher
 from app.message.core.message_builder import MessageBuilder
 from app.message.core.template_engine import TemplateEngine
-from app.message.message_center import MessageCenter
-from app.utils.commons import SingletonMeta
 from app.utils.config_tools import get_domain
+from app.di import container
 
 
-class Message(metaclass=SingletonMeta):
+class Message:
     """消息业务 Facade，兼容原有 Singleton 行为."""
 
     def __init__(self):
         self._domain = get_domain() or ""
-        self.messagecenter = MessageCenter()
+        self.messagecenter = container.message_center()
         self._client_manager = ClientManager()
         self._command_manager = CommandManager(self._client_manager)
         self._template_engine = TemplateEngine()

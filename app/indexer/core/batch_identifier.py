@@ -1,6 +1,6 @@
 import log
+from app.di import container
 from app.infrastructure.cache_system import get_cache_manager
-from app.media import MediaService
 
 
 class BatchIdentifier:
@@ -12,7 +12,7 @@ class BatchIdentifier:
     """
 
     def __init__(self, media_service=None):
-        self.media = media_service or MediaService()
+        self.media = media_service or container.media_service()
         self._media_ident_cache = get_cache_manager().get_or_create("media_ident", "memory", maxsize=2000, ttl=3600)
 
     @staticmethod

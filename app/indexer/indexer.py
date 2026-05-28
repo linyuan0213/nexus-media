@@ -11,17 +11,13 @@ import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import log
-from app.core.system_config import SystemConfig
-from app.db.repositories import DownloadRepository
-from app.helper import ProgressHelper
-from app.indexer.core import SearchPipeline
 from app.indexer.registry import get_all_clients, get_client_class
 from app.utils import ExceptionUtils, StringUtils
-from app.utils.commons import SingletonMeta
 from app.utils.types import ProgressKey, SearchType, SystemConfigKey
+from app.di import container
 
 
-class Indexer(metaclass=SingletonMeta):
+class Indexer:
     """
     索引器管理单例
 
@@ -35,9 +31,9 @@ class Indexer(metaclass=SingletonMeta):
     """
 
     def __init__(self):
-        self.progress = ProgressHelper()
-        self.download_repo = DownloadRepository()
-        self._pipeline = SearchPipeline()
+        self.progress = container.progress_helper()
+        self.download_repo = container.download_repo()
+        self._pipeline = container.search_pipeline()
         self._client = None
         self._client_type = None
 
@@ -45,7 +41,7 @@ class Indexer(metaclass=SingletonMeta):
         """延迟加载当前配置的索引器客户端"""
         if self._client is not None:
             return
-        indexer = SystemConfig().get(SystemConfigKey.SearchIndexer) or "builtin"
+        indexer = container.system_config().get(SystemConfigKey.SearchIndexer) or "builtin"
         self._client = self.__get_client(indexer)
         self._client_type = self._client.get_type() if self._client else None
 
@@ -62,7 +58,7 @@ class Indexer(metaclass=SingletonMeta):
     def __get_client(self, ctype, conf=None):
         return self.__build_class(ctype=ctype, conf=conf)
 
-    def init_config(self):
+    def _refresh(self):
         """重置客户端缓存，下次访问时重新加载"""
         self._client = None
         self._client_type = None
@@ -161,9 +157,7 @@ class Indexer(metaclass=SingletonMeta):
             all_task = []
             for index in indexers:
                 order_seq = 100 - int(index.pri)
-                task = executor.submit(
-                    _client.search, order_seq, index, key_word, filter_args, match_media, in_from
-                )
+                task = executor.submit(_client.search, order_seq, index, key_word, filter_args, match_media, in_from)
                 all_task.append(task)
 
             for future in as_completed(all_task):
@@ -184,7 +178,7 @@ class Indexer(metaclass=SingletonMeta):
 
         end_time = datetime.datetime.now()
         log.info(
-                f"【{_client_type or ''}】搜索关键词 {key_word} 所有站点完成，"
+            f"【{_client_type or ''}】搜索关键词 {key_word} 所有站点完成，"
             f"原始结果 {len(all_raw_results)} 条，有效资源数：{len(pipeline_result.results)}，"
             f"总耗时 {(end_time - start_time).seconds} 秒"
         )

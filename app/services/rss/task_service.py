@@ -7,6 +7,7 @@ import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.db.repositories.config_repo_adapter import UserRssConfigRepositoryAdapter
 from app.db.repositories.rss_repo_adapter import RssHistoryRepositoryAdapter
+from app.di import container
 from app.helper import RssHelper
 from app.media import MediaService
 from app.message import Message
@@ -19,13 +20,11 @@ from app.services.rss._articles import (
     _test_rss_articles,
 )
 from app.services.rss._executor import _check_task_rss
-from app.services.scheduler_core import SchedulerCore
 from app.services.search_service import Searcher
 from app.services.subscribe_service import SubscribeService as Subscribe
-from app.utils.commons import SingletonMeta
 
 
-class RssTaskService(metaclass=SingletonMeta):
+class RssTaskService:
     """RSS 任务服务：负责任务加载、调度管理、报文处理"""
 
     message: Message
@@ -58,15 +57,15 @@ class RssTaskService(metaclass=SingletonMeta):
     ):
         self.config_repo = config_repo or UserRssConfigRepositoryAdapter()
         self.rss_repo = rss_repo or RssHistoryRepositoryAdapter()
-        self.rsshelper = rsshelper or RssHelper()
-        self.message = message or Message()
-        self.searcher = searcher or Searcher()
-        self.filter = filter_ or Filter()
-        self.media = media or MediaService()
-        self.downloader = downloader or Downloader()
-        self.subscribe = subscribe or Subscribe()
+        self.rsshelper = rsshelper or container.rss_helper()
+        self.message = message or container.message()
+        self.searcher = searcher or container.searcher()
+        self.filter = filter_ or container.filter_service()
+        self.media = media or container.media_service()
+        self.downloader = downloader or container.downloader_core()
+        self.subscribe = subscribe or container.subscribe_service()
 
-    def init_config(self) -> None:
+    def _refresh(self) -> None:
         # 移除现有任务
         self.stop_service()
         # 读取解析器列表
@@ -166,7 +165,7 @@ class RssTaskService(metaclass=SingletonMeta):
                 if cron.isdigit():
                     # 分钟
                     rss_flag = True
-                    SchedulerCore().start_job(
+                    container.scheduler_core().start_job(
                         {
                             "func": self.check_task_rss,
                             "name": f"自定义订阅任务 {task.get('name')}",
@@ -180,7 +179,7 @@ class RssTaskService(metaclass=SingletonMeta):
                 elif cron.count(" ") == 4:
                     # cron表达式
                     try:
-                        SchedulerCore().start_job(
+                        container.scheduler_core().start_job(
                             {
                                 "func": self.check_task_rss,
                                 "name": f"自定义订阅任务 {task.get('name')}",
@@ -197,7 +196,7 @@ class RssTaskService(metaclass=SingletonMeta):
                     except Exception as e:
                         log.info("{} 自定义订阅cron表达式 配置格式错误：{} {}".format(task.get("name"), cron, str(e)))
         if rss_flag:
-            SchedulerCore().print_jobs(jobstore=self._jobstore)
+            container.scheduler_core().print_jobs(jobstore=self._jobstore)
             log.info("自定义订阅服务启动")
 
     def get_rsstask_info(self, taskid: int | str | None = None) -> Any:
@@ -234,7 +233,7 @@ class RssTaskService(metaclass=SingletonMeta):
     def stop_service(self) -> None:
         """停止服务"""
         try:
-            SchedulerCore().remove_all_jobs(jobstore=self._jobstore)
+            container.scheduler_core().remove_all_jobs(jobstore=self._jobstore)
         except (ServiceError, RepositoryError):
             raise
         except Exception as e:
@@ -254,31 +253,31 @@ class RssTaskService(metaclass=SingletonMeta):
     def delete_userrss_task(self, tid: int | None) -> Any:
         """删除自定义RSS任务"""
         ret = self.config_repo.delete_userrss_task(tid)
-        self.init_config()
+        self._refresh()
         return ret
 
     def update_userrss_task(self, item: dict) -> Any:
         """更新自定义RSS任务"""
         ret = self.config_repo.update_userrss_task(item)
-        self.init_config()
+        self._refresh()
         return ret
 
     def check_userrss_task(self, tid: int | None = None, state: str | None = None) -> Any:
         """设置自定义RSS任务"""
         ret = self.config_repo.check_userrss_task(tid, state)
-        self.init_config()
+        self._refresh()
         return ret
 
     def delete_userrss_parser(self, pid: int | None) -> Any:
         """删除自定义RSS解析器"""
         ret = self.config_repo.delete_userrss_parser(pid)
-        self.init_config()
+        self._refresh()
         return ret
 
     def update_userrss_parser(self, item: dict) -> Any:
         """更新自定义RSS解析器"""
         ret = self.config_repo.update_userrss_parser(item)
-        self.init_config()
+        self._refresh()
         return ret
 
     def get_userrss_task_history(self, task_id: int | None) -> Any:

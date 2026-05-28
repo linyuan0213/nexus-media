@@ -32,6 +32,11 @@ from app.db.models.config import (
     MEDIASERVER,
 )
 
+# 分布式锁模型
+from app.db.models.distributed_lock import (
+    DISTRIBUTEDLOCK,
+)
+
 # 下载相关模型
 from app.db.models.download import (
     DOWNLOADER,
@@ -107,11 +112,6 @@ from app.db.models.storage_backend import (
 # 同步历史模型
 from app.db.models.sync import (
     SYNCHISTORY,
-)
-
-# 分布式锁模型
-from app.db.models.distributed_lock import (
-    DISTRIBUTEDLOCK,
 )
 
 # 系统字典模型

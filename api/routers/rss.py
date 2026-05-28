@@ -7,11 +7,11 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from api.deps import get_rss_subscription_service, require_any_permission, require_permission
-from app.core.system_config import SystemConfig
 from app.schemas.common import CommonResponse
 from app.services.rss_service import RssSubscriptionService
 from app.utils.response import fail, success
 from app.utils.types import SystemConfigKey
+from app.di import container
 
 router = APIRouter()
 
@@ -217,9 +217,9 @@ def save_default_rss_setting(
     data = req.model_dump()
     data.pop("mtype", None)
     if mtype == "TV":
-        SystemConfig().set(key=SystemConfigKey.DefaultRssSettingTV, value=data)
+        container.system_config().set(key=SystemConfigKey.DefaultRssSettingTV, value=data)
     elif mtype == "MOV":
-        SystemConfig().set(key=SystemConfigKey.DefaultRssSettingMOV, value=data)
+        container.system_config().set(key=SystemConfigKey.DefaultRssSettingMOV, value=data)
     return success()
 
 

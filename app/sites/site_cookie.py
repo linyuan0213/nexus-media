@@ -1,16 +1,15 @@
 import base64
 
-from app.helper import OcrHelper, ProgressHelper
-from app.sites.siteconf import SiteConf
-from app.sites.sites import Sites
+from app.helper import OcrHelper
 from app.utils import RequestUtils, StringUtils
+from app.di import container
 
 
 class SiteCookie:
     def __init__(self, progress=None, sites=None, siteconf=None, ocrhelper=None):
-        self.progress = progress or ProgressHelper()
-        self.sites = sites or Sites()
-        self.siteconf = siteconf or SiteConf()
+        self.progress = progress or container.progress_helper()
+        self.sites = sites or container.sites()
+        self.siteconf = siteconf or container.site_conf()
         self.ocrhelper = ocrhelper or OcrHelper()
         self.captcha_code = {}
 

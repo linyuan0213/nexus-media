@@ -46,7 +46,7 @@ class SiteEntity:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        """转换为兼容现有 Sites() 返回格式的 dict"""
+        """转换为兼容现有 container.sites() 返回格式的 dict"""
         return {
             "id": self.id,
             "name": self.name,

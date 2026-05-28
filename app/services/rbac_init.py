@@ -4,12 +4,7 @@ RBAC初始化模块
 """
 
 import log
-from app.db.repositories.rbac_repo_adapter import (
-    RBACMenuRepositoryAdapter,
-    RBACPermissionRepositoryAdapter,
-    RBACRoleRepositoryAdapter,
-    RBACUserRepositoryAdapter,
-)
+from app.di import container
 
 # 默认权限定义
 DEFAULT_PERMISSIONS = [
@@ -854,7 +849,7 @@ DEFAULT_ROLES = [
 
 def init_rbac_permissions():
     """初始化权限数据"""
-    permission_repo = RBACPermissionRepositoryAdapter()
+    permission_repo = container.rbac_permission_repo()
     created_count = 0
 
     for perm_data in DEFAULT_PERMISSIONS:
@@ -875,7 +870,7 @@ def init_rbac_permissions():
 
 def init_rbac_menus():
     """初始化菜单数据"""
-    menu_repo = RBACMenuRepositoryAdapter()
+    menu_repo = container.rbac_menu_repo()
     created_count = 0
 
     def create_menu_recursive(menu_data, parent_id=None):
@@ -923,9 +918,9 @@ def init_rbac_menus():
 
 def init_rbac_roles():
     """初始化角色数据"""
-    role_repo = RBACRoleRepositoryAdapter()
-    permission_repo = RBACPermissionRepositoryAdapter()
-    menu_repo = RBACMenuRepositoryAdapter()
+    role_repo = container.rbac_role_repo()
+    permission_repo = container.rbac_permission_repo()
+    menu_repo = container.rbac_menu_repo()
     created_count = 0
 
     for role_data in DEFAULT_ROLES:
@@ -987,8 +982,8 @@ def init_admin_user(admin_username: str, admin_password: str):
         admin_password: 管理员密码
     """
     try:
-        user_repo = RBACUserRepositoryAdapter()
-        role_repo = RBACRoleRepositoryAdapter()
+        user_repo = container.rbac_user_repo()
+        role_repo = container.rbac_role_repo()
 
         existing = user_repo.get_user_by_username(admin_username)
         if existing:

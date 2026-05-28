@@ -14,6 +14,7 @@ from app.schemas.words import (
     WordGroupExportDTO,
 )
 from app.utils.types import MediaType
+from app.di import container
 
 
 class WordsService:
@@ -28,7 +29,7 @@ class WordsService:
 
     def __init__(self, words_helper: WordsHelper | None = None, media_cache: MediaCache | None = None):
         self._words = words_helper or WordsHelper()
-        self._media_cache = media_cache or MediaCache()
+        self._media_cache = media_cache or container.media_cache()
 
     # ---------- 词组操作 ----------
 

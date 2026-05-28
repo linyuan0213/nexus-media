@@ -16,15 +16,15 @@ import os
 from typing import Any
 
 import log
-from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.helper import ThreadHelper
 from app.mediaserver import MediaServer
 from app.message import Message
-from app.plugin_framework.event_compat import EventManager
+from app.plugin_framework.event_compat import EventHandler, EventManager
 from app.sites import SiteConf, Sites, SiteSubtitle
 from app.sites.engine import SiteEngine
 from app.utils import StringUtils, Torrent
 from app.utils.types import EventType
+from app.di import container
 
 
 class DownloadPipeline:
@@ -51,12 +51,12 @@ class DownloadPipeline:
     ):
         self._client_factory = client_factory
         self._message = message or Message()
-        self._mediaserver = mediaserver or MediaServer()
+        self._mediaserver = mediaserver or container.media_server()
         self._filetransfer = filetransfer
-        self._sites = sites or Sites()
-        self._siteconf = siteconf or SiteConf()
+        self._sites = sites or container.sites()
+        self._siteconf = siteconf or container.site_conf()
         self._sitesubtitle = sitesubtitle or SiteSubtitle()
-        self._eventmanager = eventmanager or EventManager()
+        self._eventmanager = eventmanager or EventHandler
 
     def execute(
         self,
@@ -370,7 +370,7 @@ class DownloadPipeline:
                 self._fail(media_info, in_from, "请检查下载任务保存目录是否正确")
                 return
 
-        DownloadHistoryRepositoryAdapter().insert_download_history(
+        container.download_history_repo().insert_download_history(
             media_info=media_info, downloader=downloader_id, download_id=download_id, save_dir=save_dir or ""
         )
 

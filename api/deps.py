@@ -11,57 +11,12 @@ from typing import Any, TypeVar, cast
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.helper import ThreadHelper
-from app.helper.drissionpage_helper import DrissionPageHelper
-from app.helper.progress_helper import ProgressHelper
+from app.di import container
 from app.infrastructure.cache_system import TokenCache
 from app.schemas.auth import UserContext
 from app.services.auth_service import AuthService
-from app.services.brush_core import BrushTaskService
-from app.services.brush_service import BrushService
 from app.services.config_service import ConfigService
-from app.services.download_service import DownloadService
-from app.services.downloader_core import DownloaderCore
-from app.services.site_service import SiteService
-from app.services.filetransfer_service import FileTransferService
-from app.services.filter_service import FilterService
-from app.services.indexer_service import IndexerService
-from app.services.media_config_service import MediaConfigService
-from app.services.media_service import (
-    MediaFileService,
-    MediaInfoService,
-    MediaLibraryService,
-    MediaRecommendationService,
-    SearchResultService,
-    TransferHistoryService,
-)
-from app.services.plugin_framework_service import PluginFrameworkService
-from app.services.rbac_service import rbac_service
-from app.services.rss_service import RssSubscriptionService, RssTaskService
-from app.services.scheduler_service import SchedulerService
-from app.services.search_service import Searcher
-from app.services.sync_service import SyncService
-from app.services.system_service import (
-    BackupRestoreService,
-    ConfigUpdateService,
-    IndexerConfigService,
-    MediaServerConfigService,
-    MessageClientService,
-    MessageSenderService,
-    NetTestService,
-    ProgressService,
-    SystemConfigService,
-    SystemInfoService,
-    UserManageService,
-    VersionService,
-    WebSearchService,
-)
-from app.services.tmdb_blacklist_service import TmdbBlacklistService
-from app.services.torrentremover_core import TorrentRemoverService
-from app.services.userrss_service import UserRssService
-from app.services.words_service import WordsService
 from app.utils.security import generate_access_token, identify
-from app.services.apikey_service import APIKeyService
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
@@ -82,7 +37,7 @@ def _extract_user_from_session(request: Request) -> str | None:
         return None
     # 通过 RBAC Service 查询用户名
     try:
-        user = rbac_service.get_user_by_id(user_id)
+        user = container.rbac_service().get_user_by_id(user_id)
         if user is not None and getattr(user, "STATUS", 0) == 1:
             return cast(str, user.USERNAME)
     except Exception:
@@ -123,7 +78,7 @@ def _extract_user_from_api_key(auth_header: str | None, query_key: str | None) -
     if not raw_key:
         return None
 
-    service = APIKeyService()
+    service = container.apikey_service()
     api_key = service.validate_key(raw_key)
     if not api_key:
         return None
@@ -149,14 +104,14 @@ def _extract_user_from_api_key(auth_header: str | None, query_key: str | None) -
 
     if created_by:
         try:
-            user = rbac_service.get_user_by_id(created_by)
+            user = container.rbac_service().get_user_by_id(created_by)
             if user is not None:
                 username = cast(str, getattr(user, "USERNAME", username) or username)
                 nickname = cast(str, api_key.name)
                 level = getattr(user, "LEVEL", 0) or 0
                 is_superadmin = getattr(user, "IS_SUPERADMIN", 0) == 1
                 try:
-                    perms = rbac_service.get_user_permissions(created_by)
+                    perms = container.rbac_service().get_user_permissions(created_by)
                     permissions = list(perms) if perms else []
                 except Exception:
                     pass
@@ -196,13 +151,13 @@ def _extract_user_ctx_from_session(request: Request) -> UserContext | None:
     if not user_id:
         return None
     try:
-        user = rbac_service.get_user_by_id(user_id)
+        user = container.rbac_service().get_user_by_id(user_id)
         if user is None or getattr(user, "STATUS", 0) != 1:
             return None
 
         # 获取权限
         try:
-            permissions = rbac_service.get_user_permissions(user_id)
+            permissions = container.rbac_service().get_user_permissions(user_id)
             permissions = list(permissions) if permissions else []
         except Exception:
             permissions = []
@@ -327,13 +282,13 @@ def require_all_permissions(*permissions: str):
 
 def get_config_service() -> ConfigService:
     """获取配置服务实例"""
-    return ConfigService()
+    return container.config_service()
 
 
 def get_message_service():
     """获取消息客户端服务实例（避免路由层直接实例化 MessageClientService）"""
 
-    return MessageClientService()
+    return container.message_client_service()
 
 
 # --- 领域 Service 工厂 ---
@@ -342,244 +297,250 @@ def get_message_service():
 def get_download_service():
     """获取下载服务实例"""
 
-    return DownloadService()
+    return container.download_service()
 
 
 def get_site_service():
     """获取站点服务实例"""
 
-    return SiteService()
+    return container.site_service()
 
 
 def get_indexer_service():
     """获取索引器服务实例"""
 
-    return IndexerService()
+    return container.indexer_service()
 
 
 def get_media_info_service():
     """获取媒体信息服务实例"""
 
-    return MediaInfoService()
+    return container.media_info_service()
 
 
 def get_media_library_service():
     """获取媒体库服务实例"""
 
-    return MediaLibraryService()
+    return container.media_library_service()
 
 
 def get_media_file_service():
     """获取媒体文件服务实例"""
 
-    return MediaFileService()
+    return container.media_file_service()
+
+
+def get_file_index_service():
+    """获取文件索引服务实例"""
+
+    return container.file_index_service()
 
 
 def get_transfer_history_service():
     """获取转移历史服务实例"""
 
-    return TransferHistoryService()
+    return container.transfer_history_service()
 
 
 def get_search_result_service():
     """获取搜索结果服务实例"""
 
-    return SearchResultService()
+    return container.search_result_service()
 
 
 def get_sync_service():
     """获取同步服务实例"""
 
-    return SyncService()
+    return container.sync_service()
 
 
 def get_rss_subscription_service():
     """获取 RSS 订阅服务实例"""
 
-    return RssSubscriptionService()
+    return container.rss_subscription_service()
 
 
 def get_rss_task_service():
     """获取 RSS 任务服务实例"""
 
-    return RssTaskService()
+    return container.rss_task_service()
 
 
 def get_brush_service():
     """获取刷流服务实例"""
 
-    return BrushService()
+    return container.brush_service()
 
 
 def get_brush_task_service():
     """获取刷流任务核心服务实例"""
 
-    return BrushTaskService()
+    return container.brush_task_service()
 
 
 def get_plugin_framework_service():
     """获取插件框架 v2 服务实例"""
 
-    return PluginFrameworkService()
+    return container.plugin_framework_service()
 
 
 def get_words_service():
     """获取自定义识别词服务实例"""
 
-    return WordsService()
+    return container.words_service()
 
 
 def get_user_rss_service():
     """获取用户 RSS 服务实例"""
 
-    return UserRssService()
+    return container.user_rss_service()
 
 
 def get_scheduler_service():
     """获取调度器服务实例"""
 
-    return SchedulerService()
+    return container.scheduler_core()
 
 
 def get_system_scheduler_service():
     """获取系统调度器服务实例（用于启动后台服务）"""
 
-    return SchedulerService()
+    return container.scheduler_core()
 
 
 def get_filter_service():
     """获取过滤服务实例"""
 
-    return FilterService()
+    return container.filter_service()
 
 
 def get_net_test_service():
     """获取网络测试服务实例"""
 
-    return NetTestService()
+    return container.net_test_service()
 
 
 def get_version_service():
     """获取版本服务实例"""
 
-    return VersionService()
+    return container.version_service()
 
 
 def get_system_config_service():
     """获取系统配置服务实例"""
 
-    return SystemConfigService()
+    return container.system_config_service()
 
 
 def get_config_update_service():
     """获取配置更新服务实例"""
 
-    return ConfigUpdateService()
+    return container.config_update_service()
 
 
 def get_user_manage_service():
     """获取用户管理服务实例"""
 
-    return UserManageService()
+    return container.user_manage_service()
 
 
 def get_progress_service():
     """获取进度服务实例"""
 
-    return ProgressService()
+    return container.progress_service()
 
 
 def get_message_sender_service():
     """获取消息发送服务实例"""
 
-    return MessageSenderService()
+    return container.message_sender_service()
 
 
 def get_system_info_service():
     """获取系统信息服务实例"""
 
-    return SystemInfoService()
+    return container.system_info_service()
 
 
 def get_backup_restore_service():
     """获取备份恢复服务实例"""
 
-    return BackupRestoreService()
+    return container.backup_restore_service()
 
 
 def get_indexer_config_service():
     """获取索引器配置服务实例"""
 
-    return IndexerConfigService()
+    return container.indexer_config_service()
 
 
 def get_media_server_config_service():
     """获取媒体服务器配置服务实例"""
 
-    return MediaServerConfigService()
+    return container.media_server_config_service()
 
 
 def get_web_search_service():
     """获取 Web 搜索服务实例"""
 
-    return WebSearchService()
+    return container.web_search_service()
 
 
 def get_downloader_service():
     """获取下载器核心服务实例"""
 
-    return DownloaderCore()
+    return container.downloader_core()
 
 
 def get_filetransfer_service():
     """获取文件转移服务实例"""
 
-    return FileTransferService()
+    return container.filetransfer_service()
 
 
 def get_torrent_remover_service():
     """获取种子删除服务实例"""
 
-    return TorrentRemoverService()
+    return container.torrentremover_service()
 
 
 def get_media_recommendation_service():
     """获取媒体推荐服务实例"""
 
-    return MediaRecommendationService()
+    return container.media_recommendation_service()
 
 
 def get_searcher_service():
     """获取搜索服务实例"""
 
-    return Searcher()
+    return container.searcher()
 
 
 def get_tmdb_blacklist_service():
     """获取 TMDB 黑名单服务实例"""
 
-    return TmdbBlacklistService()
+    return container.tmdb_blacklist_service()
 
 
 def get_progress_helper():
     """获取进度助手实例"""
 
-    return ProgressHelper()
+    return container.progress_helper()
 
 
 def get_drissionpage_helper():
     """获取 DrissionPage 助手实例"""
 
-    return DrissionPageHelper()
+    return container.drissionpage_helper()
 
 
 def get_thread_helper():
     """获取线程助手实例"""
 
-    return ThreadHelper()
+    return container.thread_helper()
 
 
 def get_media_config_service():
     """获取媒体库路径配置服务"""
 
-    return MediaConfigService()
+    return container.media_config_service()

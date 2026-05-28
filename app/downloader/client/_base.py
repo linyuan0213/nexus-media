@@ -63,9 +63,7 @@ class _IDownloadClient(metaclass=ABCMeta):
         """迁移完成后设置种子标签为 已整理"""
 
     @abstractmethod
-    def set_torrents_tag(
-        self, ids: list[str] | str | None = None, tags: str | list[str] | None = None
-    ) -> bool:
+    def set_torrents_tag(self, ids: list[str] | str | None = None, tags: str | list[str] | None = None) -> bool:
         """设置种子标签"""
 
     def get_transfer_task(self, tag: str | None = None, match_path: bool | None = None) -> list[dict]:
@@ -88,9 +86,7 @@ class _IDownloadClient(metaclass=ABCMeta):
                 log.debug(f"【{self.client_name}】{self.name} 开启目录隔离，{torrent.name} 未匹配下载目录范围")
                 continue
             subpath = self._get_content_subpath(torrent) or torrent.name or ""
-            trans_tasks.append(
-                {"path": os.path.join(true_path, subpath).replace("\\", "/"), "id": torrent.id}
-            )
+            trans_tasks.append({"path": os.path.join(true_path, subpath).replace("\\", "/"), "id": torrent.id})
         return trans_tasks
 
     def _get_content_subpath(self, torrent: Torrent) -> str | None:
@@ -117,16 +113,12 @@ class _IDownloadClient(metaclass=ABCMeta):
                     continue
             if strategy.upload_avs is not None and torrent.avg_upload_speed >= strategy.upload_avs * 1024:
                 continue
-            if strategy.savepath_key and not re.findall(
-                strategy.savepath_key, torrent.save_path or "", re.I
-            ):
+            if strategy.savepath_key and not re.findall(strategy.savepath_key, torrent.save_path or "", re.I):
                 continue
             if strategy.tracker_key:
                 if not torrent.trackers:
                     continue
-                tracker_match = any(
-                    re.findall(strategy.tracker_key, tracker, re.I) for tracker in torrent.trackers
-                )
+                tracker_match = any(re.findall(strategy.tracker_key, tracker, re.I) for tracker in torrent.trackers)
                 if not tracker_match:
                     continue
             if not self._check_extra_remove_conditions(torrent, strategy):
@@ -148,18 +140,12 @@ class _IDownloadClient(metaclass=ABCMeta):
                 name = remove_torrent.get("name")
                 size = remove_torrent.get("size")
                 for torrent in torrents:
-                    if (
-                        torrent.name == name
-                        and torrent.size == size
-                        and str(torrent.id) not in remove_torrents_ids
-                    ):
+                    if torrent.name == name and torrent.size == size and str(torrent.id) not in remove_torrents_ids:
                         remove_torrents_plus.append(
                             {
                                 "id": torrent.id,
                                 "name": torrent.name,
-                                "site": StringUtils.get_url_sld(torrent.trackers[0])
-                                if torrent.trackers
-                                else "",
+                                "site": StringUtils.get_url_sld(torrent.trackers[0]) if torrent.trackers else "",
                                 "size": torrent.size,
                             }
                         )
@@ -272,9 +258,7 @@ class _IDownloadClient(metaclass=ABCMeta):
         return f"{chr(8595)}{dl}B/s {chr(8593)}{ul}B/s {eta}"
 
     @abstractmethod
-    def set_speed_limit(
-        self, download_limit: int | None = None, upload_limit: int | None = None
-    ) -> bool:
+    def set_speed_limit(self, download_limit: int | None = None, upload_limit: int | None = None) -> bool:
         """设置速度限制"""
 
     @abstractmethod

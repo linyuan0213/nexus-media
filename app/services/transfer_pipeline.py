@@ -13,6 +13,7 @@ from app.storage.backends.base import StorageBackend, StorageType
 from app.storage.config_models import LocalStorageConfig
 from app.storage.factory import StorageBackendFactory
 from app.utils.types import SyncType
+from app.di import container
 
 
 class TransferPipeline:
@@ -38,9 +39,9 @@ class TransferPipeline:
         backend_repo: StorageBackendRepositoryAdapter | None = None,
     ):
         self._filetransfer = filetransfer or FileTransferService()
-        self._scraper = scraper or Scraper()
+        self._scraper = scraper or container.scraper()
         self._blacklist = blacklist_repo or TransferBlacklistRepositoryAdapter()
-        self._backend_repo = backend_repo or StorageBackendRepositoryAdapter()
+        self._backend_repo = backend_repo or container.storage_backend_repo()
 
     def process(self, task: TransferTask) -> tuple[bool, str]:
         """

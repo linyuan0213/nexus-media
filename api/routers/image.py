@@ -12,8 +12,8 @@ from fastapi import APIRouter, HTTPException, Request
 from starlette.responses import FileResponse, RedirectResponse, Response
 
 import log
-from app.core.exceptions import DomainError, ServiceError
 from app.core.constants import TMDB_IMAGE_DOMAIN
+from app.core.exceptions import DomainError, ServiceError
 from app.helper.image_proxy_core import (
     MAX_CACHE_DAYS,
     SIZE_DIMENSIONS,

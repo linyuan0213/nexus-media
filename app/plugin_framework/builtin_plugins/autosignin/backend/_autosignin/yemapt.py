@@ -1,7 +1,7 @@
-from app.helper.drissionpage_helper import DrissionPageHelper
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
 from app.utils import RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
+from app.di import container
 
 
 class YemaPT(_ISiteSigninHandler):
@@ -36,7 +36,7 @@ class YemaPT(_ISiteSigninHandler):
         proxy = get_proxies() if site_info.get("proxy") else None
 
         # 首页
-        chrome = DrissionPageHelper()
+        chrome = container.drissionpage_helper()
         if site_info.get("chrome") and chrome.get_status():
             self.info(f"{site} 开始仿真签到")
 

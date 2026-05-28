@@ -51,7 +51,17 @@ class ConfigRepository(BaseRepository):
         return self._db.query(MESSAGECLIENT).all()
 
     @DbPersist(BaseRepository._db)
-    def insert_message_client(self, name: str, ctype: str, config: str, switchs: list, interactive: int, enabled: int, note: str = "", templates: str | None = None) -> int:
+    def insert_message_client(
+        self,
+        name: str,
+        ctype: str,
+        config: str,
+        switchs: list,
+        interactive: int,
+        enabled: int,
+        note: str = "",
+        templates: str | None = None,
+    ) -> int:
         client = MESSAGECLIENT(
             NAME=name,
             TYPE=ctype,
@@ -67,7 +77,13 @@ class ConfigRepository(BaseRepository):
         return int(client.ID)
 
     @DbPersist(BaseRepository._db)
-    def check_message_client(self, cid: int | None = None, interactive: int | None = None, enabled: int | None = None, ctype: str | None = None) -> None:
+    def check_message_client(
+        self,
+        cid: int | None = None,
+        interactive: int | None = None,
+        enabled: int | None = None,
+        ctype: str | None = None,
+    ) -> None:
         """
         设置消息客户端状态
 
@@ -116,7 +132,16 @@ class ConfigRepository(BaseRepository):
 
     @DbPersist(BaseRepository._db)
     def insert_torrent_remove_task(
-        self, name: str, action: int, interval: int, enabled: int, samedata: int, only_nexus_media: int, downloader: str, config: dict, note: str | None = None
+        self,
+        name: str,
+        action: int,
+        interval: int,
+        enabled: int,
+        samedata: int,
+        only_nexus_media: int,
+        downloader: str,
+        config: dict,
+        note: str | None = None,
     ) -> None:
         """
         设置自动删种策略
@@ -150,7 +175,17 @@ class ConfigRepository(BaseRepository):
 
     @DbPersist(BaseRepository._db)
     def update_downloader(
-        self, did: int | None, name: str, enabled: int, dtype: str, transfer: int, only_nexus_media: int, match_path: int, rmt_mode: str, config: str, download_dir: str
+        self,
+        did: int | None,
+        name: str,
+        enabled: int,
+        dtype: str,
+        transfer: int,
+        only_nexus_media: int,
+        match_path: int,
+        rmt_mode: str,
+        config: str,
+        download_dir: str,
     ) -> None:
         """
         更新下载器
@@ -209,7 +244,14 @@ class ConfigRepository(BaseRepository):
         self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).delete()
 
     @DbPersist(BaseRepository._db)
-    def check_downloader(self, did: int | None = None, transfer: int | None = None, only_nexus_media: int | None = None, enabled: int | None = None, match_path: int | None = None) -> None:
+    def check_downloader(
+        self,
+        did: int | None = None,
+        transfer: int | None = None,
+        only_nexus_media: int | None = None,
+        enabled: int | None = None,
+        match_path: int | None = None,
+    ) -> None:
         """
         设置下载器状态
 
@@ -225,7 +267,9 @@ class ConfigRepository(BaseRepository):
         if transfer is not None:
             self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({"TRANSFER": int(transfer)})
         elif only_nexus_media is not None:
-            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({"ONLY_NEXUS_MEDIA": int(only_nexus_media)})
+            self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update(
+                {"ONLY_NEXUS_MEDIA": int(only_nexus_media)}
+            )
         elif match_path is not None:
             self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).update({"MATCH_PATH": int(match_path)})
         elif enabled is not None:
@@ -311,7 +355,9 @@ class ConfigRepository(BaseRepository):
                     "SAVE_PATH": item.get("save_path"),
                     "DOWNLOAD_SETTING": item.get("download_setting"),
                     "RECOGNIZATION": item.get("recognization"),
-                    "OVER_EDITION": int(item.get("over_edition") or 0) if str(item.get("over_edition") or "").isdigit() else 0,
+                    "OVER_EDITION": int(item.get("over_edition") or 0)
+                    if str(item.get("over_edition") or "").isdigit()
+                    else 0,
                     "SITES": json.dumps(item.get("sites")),
                     "FILTER_ARGS": json.dumps(item.get("filter_args")),
                     "NOTE": json.dumps(item.get("note")),
@@ -650,7 +696,9 @@ class ConfigRepository(BaseRepository):
         return self._db.query(MEDIASERVER).filter(name == MEDIASERVER.NAME).first()
 
     @DbPersist(BaseRepository._db)
-    def update_media_server(self, sid: int | None, name: str, enabled: int, config: str, is_default: int = 0, note: str | None = None) -> None:
+    def update_media_server(
+        self, sid: int | None, name: str, enabled: int, config: str, is_default: int = 0, note: str | None = None
+    ) -> None:
         """
         更新或插入媒体服务器配置
 

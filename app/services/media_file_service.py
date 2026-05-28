@@ -1,17 +1,15 @@
 import os
 
-from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
-from app.helper import ThreadHelper
-from app.media import MediaService, Scraper
-from app.plugin_framework.event_compat import EventManager
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.core.settings import settings
+from app.di import container
+from app.plugin_framework.event_compat import EventHandler
 from app.storage import StorageBackendFactory
 from app.storage.backends.base import StorageType
 from app.storage.config_models import LocalStorageConfig
 from app.utils import SystemUtils
 from app.utils.path_utils import get_category_path
 from app.utils.types import EventType, OsType
-from app.core.exceptions import DomainError, RepositoryError, ServiceError
-from app.core.settings import settings
 
 
 class MediaFileService:
@@ -27,7 +25,7 @@ class MediaFileService:
         result = []
         try:
             if backend_id and backend_id != "local":
-                repo = StorageBackendRepositoryAdapter()
+                repo = container.storage_backend_repo()
                 entity = repo.get_by_id(int(backend_id))
                 if not entity:
                     return False, [], f"未找到存储后端: {backend_id}"
@@ -206,12 +204,12 @@ class MediaFileService:
 
     def download_subtitle(self, path: str, name: str) -> tuple[bool, str]:
         """下载字幕"""
-        media = MediaService().get_media_info(title=name)
+        media = container.media_service().get_media_info(title=name)
         if not media or not media.tmdb_info:
             return False, f"{name} 无法从TMDB查询到媒体信息"
         if not media.imdb_id:
-            media.set_tmdb_info(MediaService().get_tmdb_info(mtype=media.type, tmdbid=media.tmdb_id))
-        EventManager().send_event(
+            media.set_tmdb_info(container.media_service().get_tmdb_info(mtype=media.type, tmdbid=media.tmdb_id))
+        EventHandler.send_event(
             EventType.SubtitleDownload,
             {
                 "media_info": media.to_dict(),
@@ -228,7 +226,7 @@ class MediaFileService:
             return "请指定刮削路径"
         dst_backend = None
         if backend_id and backend_id != "local":
-            repo = StorageBackendRepositoryAdapter()
+            repo = container.storage_backend_repo()
             entity = repo.get_by_id(int(backend_id))
             if entity:
                 info = StorageBackendFactory.get_config_info(entity.type)
@@ -241,7 +239,9 @@ class MediaFileService:
                     if hasattr(config, k):
                         setattr(config, k, v)
                 dst_backend = StorageBackendFactory.create(config)
-        ThreadHelper().start_thread(Scraper().folder_scraper, (path, None, "force_all", dst_backend))
+        container.thread_helper().start_thread(
+            container.scraper().folder_scraper, (path, None, "force_all", dst_backend)
+        )
         return "刮削任务已提交，正在后台运行。"
 
     def get_category_config(self, category_name: str) -> tuple[bool, str]:

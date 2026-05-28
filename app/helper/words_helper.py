@@ -3,16 +3,12 @@ import time
 import cn2an
 import regex as re
 
-from app.db.repositories.word_repo_adapter import (
-    CustomWordGroupRepositoryAdapter,
-    CustomWordRepositoryAdapter,
-)
 from app.infrastructure.cache_system import get_cache_manager
-from app.utils.commons import SingletonMeta
 from app.utils.exception_utils import ExceptionUtils
+from app.di import container
 
 
-class WordsHelper(metaclass=SingletonMeta):
+class WordsHelper:
     # 识别词
     words_info = []
     _cache_time = 0
@@ -21,11 +17,11 @@ class WordsHelper(metaclass=SingletonMeta):
     def __init__(self):
         # 初始化处理结果缓存
         self._cache = get_cache_manager().get_or_create("words_process", "memory", maxsize=1000)
-        self.init_config()
+        self._refresh()
 
-    def init_config(self):
-        self.word_repo = CustomWordRepositoryAdapter()
-        self.group_repo = CustomWordGroupRepositoryAdapter()
+    def _refresh(self):
+        self.word_repo = container.custom_word_repo()
+        self.group_repo = container.custom_word_group_repo()
         self._load_words_with_cache()
 
     def _load_words_with_cache(self):
@@ -41,7 +37,7 @@ class WordsHelper(metaclass=SingletonMeta):
         """清除缓存，用于配置更新后"""
         self._cache_time = 0
         self._cache.clear()
-        self.init_config()
+        self._refresh()
 
     def process(self, title):
         # 检查缓存
@@ -235,7 +231,7 @@ class WordsHelper(metaclass=SingletonMeta):
             whelp=whelp,
             note=note,
         )
-        self.init_config()
+        self._refresh()
         return ret
 
     def delete_custom_word(self, wid=None):
@@ -243,7 +239,7 @@ class WordsHelper(metaclass=SingletonMeta):
         删除自定义词
         """
         ret = self.word_repo.delete_custom_word(wid=wid)
-        self.init_config()
+        self._refresh()
         return ret
 
     def get_custom_words(self, wid=None, gid=None, enabled=None):
@@ -271,7 +267,7 @@ class WordsHelper(metaclass=SingletonMeta):
         ret = self.group_repo.insert_custom_word_groups(
             title=title, year=year, gtype=gtype, tmdbid=tmdbid, season_count=season_count, note=note
         )
-        self.init_config()
+        self._refresh()
         return ret
 
     def delete_custom_word_group(self, gid):
@@ -279,7 +275,7 @@ class WordsHelper(metaclass=SingletonMeta):
         删除自定义词组
         """
         ret = self.group_repo.delete_custom_word_group(gid=gid)
-        self.init_config()
+        self._refresh()
         return ret
 
     def check_custom_word(self, wid=None, enabled=None):
@@ -287,5 +283,5 @@ class WordsHelper(metaclass=SingletonMeta):
         检查自定义词
         """
         ret = self.word_repo.check_custom_word(wid=wid, enabled=enabled)
-        self.init_config()
+        self._refresh()
         return ret

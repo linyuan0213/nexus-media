@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.di import container
 from app.services.transfer.cleanup_service import TransferCleanupService
 from app.services.transfer.existence_checker import MediaExistenceChecker
 from app.services.transfer.filetransfer_service import FileTransferService
@@ -300,19 +301,11 @@ class TestFileTransferService:
     def mock_service(self):
         """Build a FileTransferService with all dependencies mocked."""
         with (
-            patch("app.services.transfer.filetransfer_service.MediaService"),
-            patch("app.services.transfer.filetransfer_service.Message"),
-            patch("app.services.transfer.filetransfer_service.Category"),
-            patch("app.services.transfer.filetransfer_service.Scraper"),
-            patch("app.services.transfer.filetransfer_service.ThreadHelper"),
-            patch("app.services.transfer.filetransfer_service.ProgressHelper"),
-            patch("app.services.transfer.filetransfer_service.EventManager"),
-            patch("app.services.transfer.filetransfer_service.TransferEngine") as mock_eng_cls,
             patch("app.services.transfer.filetransfer_service.TransferPathResolver") as mock_res_cls,
             patch("app.services.transfer.filetransfer_service.MediaExistenceChecker"),
             patch("app.services.transfer.filetransfer_service.TransferHistoryManager") as mock_hist_cls,
             patch("app.services.transfer.filetransfer_service.TransferCleanupService") as mock_cln_cls,
-            patch("app.services.transfer.filetransfer_service.SyncPathRepositoryAdapter"),
+            patch.object(container, "sync_path_repo", return_value=MagicMock()),
             patch("app.services.transfer.filetransfer_service.settings") as mock_settings,
         ):
             mock_settings.get.return_value = {}
@@ -327,9 +320,20 @@ class TestFileTransferService:
             mock_cln_cls.return_value = mock_cleanup
 
             mock_engine = MagicMock()
-            mock_eng_cls.return_value = mock_engine
 
-            service = FileTransferService()
+            service = FileTransferService(
+                media_service=MagicMock(),
+                message=MagicMock(),
+                category=MagicMock(),
+                scraper=MagicMock(),
+                threadhelper=MagicMock(),
+                progress=MagicMock(),
+                eventmanager=MagicMock(),
+                engine=mock_engine,
+                path_resolver=mock_resolver,
+                existence_checker=MagicMock(),
+                cleanup_service=mock_cleanup,
+            )
             service._path_resolver = mock_resolver
             service._history = mock_history
             service._cleanup = mock_cleanup

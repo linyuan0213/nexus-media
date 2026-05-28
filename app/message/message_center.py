@@ -2,15 +2,13 @@ import datetime
 import time
 from collections import deque
 
-from app.utils.commons import SingletonMeta
 
-
-class MessageCenter(metaclass=SingletonMeta):
-    _message_queue = deque(maxlen=50)
-    _message_index = 0
+class MessageCenter:
+    """系统消息中心 — 内存队列（非单例，由调用方管理实例生命周期）"""
 
     def __init__(self):
-        pass
+        self._message_queue = deque(maxlen=50)
+        self._message_index = 0
 
     def insert_system_message(self, title, content=None):
         """

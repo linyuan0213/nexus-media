@@ -1,13 +1,13 @@
-from app.infrastructure.external.doubanapi import DoubanApi
 from app.media.lookup.base import BaseLookup, LookupResult
 from app.utils.types import MediaType
+from app.di import container
 
 
 class DoubanLookup(BaseLookup):
     """豆瓣查询器 — 直接调用 DoubanApi，不依赖旧模型"""
 
     def __init__(self):
-        self._api = DoubanApi()
+        self._api = container.douban_api()
 
     def lookup(self, parsed, hint_type: MediaType | None = None) -> LookupResult | None:
         name = parsed.title_en or parsed.title_cn

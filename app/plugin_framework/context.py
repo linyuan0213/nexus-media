@@ -9,12 +9,10 @@ import os
 from typing import Any
 
 import log
-from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter, PluginLogRepositoryAdapter
-from app.domain.entities.plugin import PluginConfigEntity
-from app.message import Message
-from app.plugin_framework.hook_system import HookSystem
-from app.services.scheduler_core import SchedulerCore
 from app.core.settings import settings
+from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter
+from app.di import container
+from app.domain.entities.plugin import PluginConfigEntity
 
 
 class PluginContext:
@@ -27,7 +25,7 @@ class PluginContext:
         if not os.path.exists(self._data_dir):
             os.makedirs(self._data_dir)
         self._config_repo = PluginConfigRepositoryAdapter()
-        self._log_repo = PluginLogRepositoryAdapter()
+        self._log_repo = container.plugin_log_repo()
 
     @property
     def plugin_id(self) -> str:
@@ -112,11 +110,11 @@ class PluginContext:
 
     def notify(self, title: str, text: str | None = None, image: str | None = None) -> None:
         """发送消息通知"""
-        Message().send_plugin_message(title=title, text=text, image=image)
+        container.message().send_plugin_message(title=title, text=text, image=image)
 
     def schedule_cron(self, job_id: str, func, cron: str, **kwargs) -> bool:
         """注册 cron 定时任务，返回是否成功"""
-        job = SchedulerCore().register_smart_cron(
+        job = container.scheduler_core().register_smart_cron(
             job_id=f"plugin_{self._plugin_id}_{job_id}",
             func=func,
             name=self._plugin_name,
@@ -132,7 +130,7 @@ class PluginContext:
 
     def schedule_interval(self, job_id: str, func, **kwargs) -> bool:
         """注册 interval 定时任务，返回是否成功"""
-        job = SchedulerCore().register_interval(
+        job = container.scheduler_core().register_interval(
             job_id=f"plugin_{self._plugin_id}_{job_id}", func=func, name=self._plugin_name, jobstore="plugin", **kwargs
         )
         if job:
@@ -143,7 +141,7 @@ class PluginContext:
 
     def schedule_date(self, job_id: str, func, run_date) -> bool:
         """注册一次性日期任务，返回是否成功"""
-        job = SchedulerCore().register_date(
+        job = container.scheduler_core().register_date(
             job_id=f"plugin_{self._plugin_id}_{job_id}",
             func=func,
             run_date=run_date,
@@ -158,11 +156,11 @@ class PluginContext:
 
     def remove_schedule(self, job_id: str) -> None:
         """移除定时任务"""
-        SchedulerCore().remove_job(job_id=f"plugin_{self._plugin_id}_{job_id}", jobstore="plugin")
+        container.scheduler_core().remove_job(job_id=f"plugin_{self._plugin_id}_{job_id}", jobstore="plugin")
 
     def get_schedules(self):
         """获取当前插件的所有定时任务"""
-        sched = SchedulerCore()
+        sched = container.scheduler_core()
         if not sched:
             return []
         prefix = f"plugin_{self._plugin_id}_"
@@ -171,18 +169,18 @@ class PluginContext:
     def emit(self, event: str, data: dict | None = None) -> None:
         """触发全局事件"""
 
-        HookSystem().emit(event, data or {})
+        container.hook_system().emit(event, data or {})
 
     # ---------- 消息命令注册（委托给 Message） ----------
 
     def register_message_command(self, cmd: str, desc: str, func) -> None:
         """注册消息命令，用户发送该命令时触发 func"""
-        Message().register_command(cmd=cmd, desc=desc, func=func, plugin_id=self._plugin_id)
+        container.message().register_command(cmd=cmd, desc=desc, func=func, plugin_id=self._plugin_id)
 
     def unregister_message_command(self, cmd: str) -> None:
         """注销消息命令"""
-        Message().unregister_command(cmd)
+        container.message().unregister_command(cmd)
 
     def unregister_all_message_commands(self) -> None:
         """注销该插件的所有消息命令"""
-        Message().clear_plugin_commands(self._plugin_id)
+        container.message().clear_plugin_commands(self._plugin_id)

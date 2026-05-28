@@ -9,8 +9,8 @@ from app.agent.providers.base import ProviderConfig
 from app.agent.providers.gemini import GeminiProvider
 from app.agent.providers.ollama import OllamaProvider
 from app.agent.providers.openai import OpenAIProvider
-from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.core.settings import settings
+from app.infrastructure.cache_system import lru_cache_with_ttl
 
 
 class AgentService:

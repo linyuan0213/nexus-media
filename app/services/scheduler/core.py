@@ -29,10 +29,9 @@ from app.services.scheduler.retry_manager import RetryManager
 from app.services.scheduler.stats_collector import StatsCollector
 from app.services.scheduler.trigger_factory import TriggerFactory
 from app.utils import ExceptionUtils
-from app.utils.commons import SingletonMeta
 
 
-class SchedulerCore(metaclass=SingletonMeta):
+class SchedulerCore:
     """调度器核心服务
 
     提供任务调度、执行监控、失败重试、统计收集等功能。

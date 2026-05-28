@@ -7,6 +7,7 @@ from app.schemas.media import MediaSearchResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import StringUtils
 from app.utils.media_utils import check_media_exists
+from app.di import container
 
 
 class SearchResultService:
@@ -15,8 +16,8 @@ class SearchResultService:
     """
 
     def __init__(self, media_server: MediaServer | None = None, subscribe: Subscribe | None = None):
-        self._media_server = media_server or MediaServer()
-        self._subscribe = subscribe or Subscribe()
+        self._media_server = media_server or container.media_server()
+        self._subscribe = subscribe or container.subscribe_service()
 
     def group_search_results(self, search_results: list) -> MediaSearchResultDTO:
         """

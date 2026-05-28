@@ -11,6 +11,7 @@ from collections.abc import Callable
 
 import log
 from app.core.constants import PT_TRANSFER_INTERVAL
+from app.di import container
 from app.downloader.client_factory import DownloadClientFactory
 from app.services.scheduler_core import SchedulerCore
 
@@ -21,8 +22,8 @@ class TransferCoordinator:
     """
 
     def __init__(self, client_factory: DownloadClientFactory | None = None, scheduler: SchedulerCore | None = None):
-        self._client_factory = client_factory or DownloadClientFactory()
-        self._scheduler = scheduler or SchedulerCore()
+        self._client_factory = client_factory or container.download_client_factory()
+        self._scheduler = scheduler or container.scheduler_core()
 
     # ---------- 调度管理 ----------
 

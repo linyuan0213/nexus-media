@@ -26,17 +26,8 @@ from .events import (
     get_event_manager,
     on_cache_event,
 )
+from .manager import get_cache_manager
 from .utils import CacheKeyBuilder
-from .warmer import (
-    CacheWarmer,
-    CacheWarmerManager,
-    ConfigCacheWarmer,
-    SiteCacheWarmer,
-    TMDBTrendingWarmer,
-    WordsCacheWarmer,
-    get_warmer_manager,
-    warm_cache_on_startup,
-)
 
 __all__ = [
     # 核心管理器
@@ -68,15 +59,6 @@ __all__ = [
     # 工具
     "CacheKeyBuilder",
     "get_cache_manager",
-    # 缓存预热
-    "CacheWarmer",
-    "ConfigCacheWarmer",
-    "SiteCacheWarmer",
-    "WordsCacheWarmer",
-    "TMDBTrendingWarmer",
-    "CacheWarmerManager",
-    "get_warmer_manager",
-    "warm_cache_on_startup",
     # 缓存事件
     "CacheEventType",
     "CacheEvent",
@@ -87,18 +69,6 @@ __all__ = [
     # 兼容旧接口
     "cacheman",
 ]
-
-# 全局缓存管理器实例
-_global_cache_manager = None
-
-
-def get_cache_manager() -> CacheManager:
-    """获取全局缓存管理器实例"""
-    global _global_cache_manager
-    if _global_cache_manager is None:
-        _global_cache_manager = CacheManager()
-    return _global_cache_manager
-
 
 # 初始化全局缓存管理器并创建默认缓存
 _cache_manager = get_cache_manager()

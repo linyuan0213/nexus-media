@@ -11,8 +11,8 @@ from typing import Any
 
 import log
 from app.core.exceptions import RepositoryError, ServiceError
-from app.db.repositories.apikey_repo_adapter import APIKeyLogRepositoryAdapter, APIKeyRepositoryAdapter
 from app.utils import ExceptionUtils
+from app.di import container
 
 
 class APIKeyService:
@@ -29,8 +29,8 @@ class APIKeyService:
     def __init__(self):
         if self._initialized:
             return
-        self._key_repo = APIKeyRepositoryAdapter()
-        self._log_repo = APIKeyLogRepositoryAdapter()
+        self._key_repo = container.apikey_repo()
+        self._log_repo = container.apikey_log_repo()
         self._initialized = True
 
     @staticmethod

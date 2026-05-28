@@ -1,14 +1,14 @@
 """问题回答 Agent — 用于选择题等场景"""
 
 import log
-from app.agent.service import AgentService
+from app.di import container
 
 
 class QuestionAnswerAgent:
     """问题回答 Agent — 选择题、判断题等"""
 
     def __init__(self):
-        self._svc = AgentService()
+        self._svc = container.agent_service()
 
     @property
     def ready(self) -> bool:

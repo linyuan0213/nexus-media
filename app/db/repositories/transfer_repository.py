@@ -15,7 +15,6 @@ from app.db import DbPersist
 from app.db.models import SYNCHISTORY, TRANSFERBLACKLIST, TRANSFERHISTORY, TRANSFERUNKNOWN
 from app.db.repositories.base_repository import BaseRepository
 
-
 if TYPE_CHECKING:
     from app.media.models import MediaInfo
 

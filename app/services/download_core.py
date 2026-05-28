@@ -16,10 +16,9 @@ from typing import Any
 
 import log
 from app.core.constants import PT_TAG, RMT_MEDIAEXT
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.system_config import SystemConfig
-from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
 from app.db.repositories.download_repo_adapter import (
-    DownloadHistoryRepositoryAdapter,
     DownloadSettingRepositoryAdapter,
 )
 from app.downloader.client_factory import DownloadClientFactory
@@ -28,14 +27,14 @@ from app.downloader.strategy import RemoveStrategy
 from app.media import meta_info
 from app.mediaserver import MediaServer
 from app.message import Message
-from app.plugin_framework.event_compat import EventManager
+from app.plugin_framework.event_compat import EventHandler, EventManager
 from app.schemas.download import Torrent as TorrentInfo
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.sites import SiteConf, Sites, SiteSubtitle
 from app.sites.engine import SiteEngine
-from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.utils import ExceptionUtils
 from app.utils.torrent import Torrent
+from app.di import container
 
 
 class DownloadCore:
@@ -59,13 +58,13 @@ class DownloadCore:
     ):
         self._client_factory = client_factory or DownloadClientFactory()
         self._message = message or Message()
-        self._mediaserver = mediaserver or MediaServer()
-        self._filetransfer = filetransfer or FileTransfer()
-        self._sites = sites or Sites()
-        self._siteconf = siteconf or SiteConf()
+        self._mediaserver = mediaserver or container.media_server()
+        self._filetransfer = filetransfer or container.filetransfer_service()
+        self._sites = sites or container.sites()
+        self._siteconf = siteconf or container.site_conf()
         self._sitesubtitle = sitesubtitle or SiteSubtitle()
-        self._eventmanager = eventmanager or EventManager()
-        self._download_repo = download_repo or DownloadHistoryRepositoryAdapter()
+        self._eventmanager = eventmanager or EventHandler
+        self._download_repo = download_repo or container.download_history_repo()
         self._download_setting_repo = download_setting_repo or DownloadSettingRepositoryAdapter()
         self._systemconfig = systemconfig or SystemConfig
         self._pipeline = DownloadPipeline(
@@ -394,7 +393,7 @@ class DownloadCore:
     def update_downloader(
         self, did, name, enabled, dtype, transfer, only_nexus_media, match_path, rmt_mode, config, download_dir
     ):
-        ret = DownloaderRepositoryAdapter().update_downloader(
+        ret = container.downloader_repo().update_downloader(
             did=did,
             name=name,
             enabled=enabled,
@@ -406,24 +405,24 @@ class DownloadCore:
             config=config,
             download_dir=download_dir,
         )
-        self._client_factory.init_config()
+        self._client_factory._refresh()
         return ret
 
     def delete_downloader(self, did):
-        ret = DownloaderRepositoryAdapter().delete_downloader(did=did)
-        self._client_factory.init_config()
+        ret = container.downloader_repo().delete_downloader(did=did)
+        self._client_factory._refresh()
         return ret
 
     def check_downloader(self, did=None, transfer=None, only_nexus_media=None, enabled=None, match_path=None):
-        ret = DownloaderRepositoryAdapter().check_downloader(
+        ret = container.downloader_repo().check_downloader(
             did=did, transfer=transfer, only_nexus_media=only_nexus_media, enabled=enabled, match_path=match_path
         )
-        self._client_factory.init_config()
+        self._client_factory._refresh()
         return ret
 
     def delete_download_setting(self, sid):
         ret = self._download_setting_repo.delete_download_setting(sid=sid)
-        self._client_factory.init_config()
+        self._client_factory._refresh()
         return ret
 
     def update_download_setting(
@@ -451,14 +450,14 @@ class DownloadCore:
             seeding_time_limit=seeding_time_limit,
             downloader=downloader,
         )
-        self._client_factory.init_config()
+        self._client_factory._refresh()
         return ret
 
     # ---------- 静态工具 ----------
 
     @staticmethod
     def get_download_url(page_url):
-        site_info: Any = Sites().get_sites(siteurl=page_url) or {}
+        site_info: Any = container.sites().get_sites(siteurl=page_url) or {}
         return SiteEngine.get_instance().resolve_download_url(
             page_url=page_url,
             user_config={

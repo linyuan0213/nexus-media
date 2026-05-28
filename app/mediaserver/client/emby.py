@@ -85,9 +85,9 @@ class Emby(_IMediaClient):
             self._client_config = config
         else:
             self._client_config = self.get_db_config("emby")
-        self.init_config()
+        self._refresh()
 
-    def init_config(self):
+    def _refresh(self):
         if self._client_config:
             self._host = self._client_config.get("host")
             if self._host:

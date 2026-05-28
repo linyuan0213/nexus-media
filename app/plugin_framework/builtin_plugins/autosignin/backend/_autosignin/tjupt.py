@@ -10,11 +10,11 @@ from bs4 import BeautifulSoup
 from lxml import etree
 from PIL import Image
 
-from app.helper.drissionpage_helper import DrissionPageHelper
+from app.core.settings import settings
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
 from app.utils import RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
-from app.core.settings import settings
+from app.di import container
 
 
 class Tjupt(_ISiteSigninHandler):
@@ -173,7 +173,7 @@ class Tjupt(_ISiteSigninHandler):
 
         # 豆瓣未获取到答案，使用google识图
         image_search_url = f"https://lens.google.com/uploadbyurl?url={img_url}"
-        chrome = DrissionPageHelper()
+        chrome = container.drissionpage_helper()
 
         html_text = chrome.get_page_html(url=image_search_url)
 

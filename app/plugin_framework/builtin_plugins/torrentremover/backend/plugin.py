@@ -6,7 +6,7 @@ TorrentRemover Plugin v2
 import os
 
 from app.plugin_framework.context import PluginContext
-from app.services.downloader_core import DownloaderCore as Downloader
+from app.di import container
 
 
 class TorrentRemoverPlugin:
@@ -14,7 +14,7 @@ class TorrentRemoverPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self._downloader = Downloader()
+        self._downloader = container.downloader_core()
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -39,7 +39,7 @@ class TorrentRemoverPlugin:
         media_title = event_info.get("media_info", {}).get("title")
         source_file = os.path.join(source_path, source_filename)
 
-        downloadinfos = Downloader().get_download_history_by_title(title=media_title)
+        downloadinfos = container.downloader_core().get_download_history_by_title(title=media_title)
         for info in downloadinfos:
             if not info.DOWNLOADER or not info.DOWNLOAD_ID:
                 continue

@@ -44,7 +44,18 @@ class SyncPathRepositoryAdapter(ISyncPathRepository):
 
     # 兼容旧Repository方法名
     def insert_config_sync_path(
-        self, source, dest, unknown, mode, compatibility, rename, enabled, note=None, operation=None, src_backend=None, dst_backend=None
+        self,
+        source,
+        dest,
+        unknown,
+        mode,
+        compatibility,
+        rename,
+        enabled,
+        note=None,
+        operation=None,
+        src_backend=None,
+        dst_backend=None,
     ):
         self._repo.insert_config_sync_path(
             source, dest, unknown, mode, compatibility, rename, enabled, note, operation, src_backend, dst_backend

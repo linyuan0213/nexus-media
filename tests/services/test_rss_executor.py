@@ -2,7 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-
 from app.services.rss._executor import _parse_userrss_result
 
 

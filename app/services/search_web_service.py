@@ -9,14 +9,13 @@ from contextlib import contextmanager
 
 import log
 from app.agent import SearchIntentAgent
-from app.helper import ProgressHelper
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.core.settings import settings
 from app.media import MediaService
-from app.services.search_service import Searcher
 from app.utils import StringUtils
 from app.utils.types import MediaType, ProgressKey, SearchType
 from app.utils.web_utils import WebUtils
-from app.core.exceptions import DomainError, RepositoryError, ServiceError
-from app.core.settings import settings
+from app.di import container
 
 # 媒体识别结果缓存，避免重复识别
 _MEDIA_IDENT_CACHE: dict = {}
@@ -79,8 +78,8 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
     if media_type:
         mtype = media_type
 
-    _searcher = Searcher()
-    _process = ProgressHelper()
+    _searcher = container.searcher()
+    _process = container.progress_helper()
     _media = MediaService()
     _process.start(ProgressKey.Search)
 

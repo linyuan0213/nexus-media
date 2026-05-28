@@ -2,7 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-
 from app.services.rss._articles import (
     _check_rss_articles,
     _download_rss_articles,

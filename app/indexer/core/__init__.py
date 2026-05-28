@@ -5,11 +5,6 @@
 1. 本地解析和过滤（Local Filter）
 2. 批量媒体识别（Batch Identification）
 3. TMDB 匹配和最终过滤（Match Filter）
-
-使用方式：
-    from app.indexer.core import SearchPipeline
-    pipeline = SearchPipeline()
-    results = pipeline.process(raw_results, ...)
 """
 
 from .batch_identifier import BatchIdentifier

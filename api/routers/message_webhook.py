@@ -9,10 +9,10 @@ from fastapi import APIRouter, HTTPException, Request, status
 
 import log
 from app.message import Message
-from app.services.apikey_service import APIKeyService
 from app.services.search_message_service import MessageSearchService
 from app.services.system_service import MessageCommandHandler
 from app.utils.types import SearchType
+from app.di import container
 
 router = APIRouter()
 
@@ -34,7 +34,7 @@ def _verify_apikey(request: Request):
     if not api_key:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing API Key")
 
-    service = APIKeyService()
+    service = container.apikey_service()
     key = service.validate_key(api_key)
     if not key:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API Key")

@@ -13,8 +13,7 @@ import uvicorn
 import log
 from api.main import app
 from app.core.settings import settings
-from app.services.system_service import SystemLifecycleService
-from config_monitor import stop_config_monitor
+from app.di import container
 
 warnings.filterwarnings("ignore")
 
@@ -22,12 +21,14 @@ warnings.filterwarnings("ignore")
 def signal_handler(num, stack):
     """信号处理 - 优雅退出"""
     log.warn(f"捕捉到退出信号：{num}，开始退出...")
-    log.info("关闭配置文件监控...")
-    stop_config_monitor()
-    log.info("关闭服务...")
-    SystemLifecycleService().stop_service()
-    log.info("退出主进程...")
-    os._exit(0)
+    try:
+        log.info("关闭服务...")
+        container.system_lifecycle_service().stop_service()
+    except Exception as e:
+        log.error(f"关闭服务时出错: {e}")
+    finally:
+        log.info("退出主进程...")
+        os._exit(0)
 
 
 signal.signal(signal.SIGINT, signal_handler)

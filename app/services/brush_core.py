@@ -11,14 +11,17 @@ import ast
 import contextlib
 import json
 import time
-from datetime import datetime, time as dtime
+from datetime import datetime
+from datetime import time as dtime
 from typing import Any
 from urllib.parse import urlsplit
 
 import log
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.db.repositories import BrushRepository
-from app.db.repositories.brush_repo_adapter import BrushRuleRepositoryAdapter, BrushTaskRepositoryAdapter
+from app.db.repositories.brush_repo_adapter import BrushTaskRepositoryAdapter
 from app.db.repositories.rss_repo_adapter import RssMovieRepositoryAdapter, RssTvRepositoryAdapter
+from app.di import container
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.helper import RssHelper
 from app.media import meta_info
@@ -26,11 +29,9 @@ from app.media.factory import get_media_service
 from app.message import Message
 from app.schemas.download import TorrentStatus
 from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.filter_service import FilterService as Filter
 from app.services.scheduler_core import SchedulerCore
 from app.sites import SiteConf, Sites
 from app.sites.engine import SiteEngine, get_tid_by_url
-from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.utils import ExceptionUtils, JsonUtils, StringUtils
 
 
@@ -101,7 +102,7 @@ class BrushTaskScheduler:
     _jobstore = "brushtask"
 
     def __init__(self, scheduler: SchedulerCore | None = None):
-        self._scheduler = scheduler or SchedulerCore()
+        self._scheduler = scheduler or container.scheduler_core()
 
     def start_job(self, func: Any, name: str, args: tuple, job_id: str, trigger_type: str, trigger_args: dict) -> None:
         self._scheduler.start_job(
@@ -153,12 +154,12 @@ class BrushTaskService:
     ):
         self._repo = repository or BrushTaskRepositoryAdapter()
         self._scheduler = scheduler or BrushTaskScheduler()
-        self._downloader = downloader or Downloader()
+        self._downloader = downloader or container.downloader_core()
         self._message = message or Message()
-        self._sites = sites or Sites()
-        self._siteconf = siteconf or SiteConf()
+        self._sites = sites or container.sites()
+        self._siteconf = siteconf or container.site_conf()
         self._rsshelper = rsshelper or RssHelper()
-        self._filter = Filter()
+        self._filter = container.filter_service()
         self._brush_tasks: dict = {}
         self._torrents_cache: set = set()
 
@@ -205,8 +206,8 @@ class BrushTaskService:
 
     # ---------- 生命周期 ----------
 
-    def init_config(self) -> None:
-        """初始化：停止调度、加载任务、启动 RSS 任务。"""
+    def start_service(self) -> None:
+        """启动刷流服务：加载任务并启动调度。"""
         self.stop_service()
         self.load_brushtasks()
         self._torrents_cache.clear()
@@ -304,7 +305,7 @@ class BrushTaskService:
         rule_id = getattr(task, "RULE_ID", None)
         if rule_id:
             try:
-                adapter = BrushRuleRepositoryAdapter()
+                adapter = container.brush_rule_repo()
                 entity = adapter.get_by_id(int(rule_id))
                 if entity:
                     rss_rule = self._parse_json_rule(entity.rss_rule, rss_rule)
@@ -369,7 +370,7 @@ class BrushTaskService:
         if brushtask_id:
             self._reload_single_task(brushtask_id)
         else:
-            self.init_config()
+            self.start_service()
         return ret
 
     def delete_brushtask(self, brushtask_id: int | None) -> Any:

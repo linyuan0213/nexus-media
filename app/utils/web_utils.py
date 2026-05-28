@@ -2,12 +2,13 @@ from typing import Any
 
 import cn2an
 
-from app.media import Bangumi, DouBan, MediaService, meta_info
+from app.core.settings import settings
+from app.di import container
+from app.media import meta_info
 from app.utils import ExceptionUtils, IpUtils, RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
 from app.utils.security import generate_password_hash
 from app.utils.types import MediaType
-from app.core.settings import settings
 from version import APP_VERSION
 
 
@@ -82,7 +83,7 @@ class WebUtils:
         if str(mediaid).startswith("DB:"):
             # 豆瓣
             doubanid = mediaid[3:]
-            info = DouBan().get_douban_detail(doubanid=doubanid, mtype=mtype, wait=wait)
+            info = container.douban().get_douban_detail(doubanid=doubanid, mtype=mtype, wait=wait)
             if not info:
                 return None
             title = info.get("title")
@@ -95,11 +96,11 @@ class WebUtils:
                 mtype = MediaType.TV if info.get("episodes_count") else MediaType.MOVIE
             media_info = None
             if original_title:
-                media_info = MediaService().get_media_info(
+                media_info = container.media_service().get_media_info(
                     title=f"{original_title} {year}", mtype=mtype, append_to_response="all"
                 )
             if not media_info or not media_info.tmdb_info:
-                media_info = MediaService().get_media_info(
+                media_info = container.media_service().get_media_info(
                     title=f"{title} {year}", mtype=mtype, append_to_response="all"
                 )
             # TMDB匹配失败时，使用豆瓣信息构造基础媒体信息，避免退化为不识别模式
@@ -122,17 +123,17 @@ class WebUtils:
         elif str(mediaid).startswith("BG:"):
             # BANGUMI
             bangumiid = str(mediaid)[3:]
-            info = Bangumi().detail(bid=bangumiid)
+            info = container.bangumi().detail(bid=bangumiid)
             if not info:
                 return None
             title = info.get("name")
             title_cn = info.get("name_cn")
             year = info.get("date")[:4] if info.get("date") else ""
-            media_info = MediaService().get_media_info(
+            media_info = container.media_service().get_media_info(
                 title=f"{title} {year}", mtype=MediaType.TV, append_to_response="all"
             )
             if not media_info or not media_info.tmdb_info:
-                media_info = MediaService().get_media_info(
+                media_info = container.media_service().get_media_info(
                     title=f"{title_cn} {year}", mtype=MediaType.TV, append_to_response="all"
                 )
             # 检查是否成功匹配到TMDB信息
@@ -140,7 +141,7 @@ class WebUtils:
                 return None
         else:
             # TMDB
-            info = MediaService().get_tmdb_info(tmdbid=mediaid, mtype=mtype, append_to_response="all")
+            info = container.media_service().get_tmdb_info(tmdbid=mediaid, mtype=mtype, append_to_response="all")
             if not info:
                 return None
             media_info = meta_info(title=info.get("title") if mtype == MediaType.MOVIE else info.get("name"))
@@ -166,7 +167,9 @@ class WebUtils:
 
         def _search_tmdb():
             mi = meta_info(title=content)
-            tmdbinfos = MediaService().get_tmdb_infos(title=mi.get_name(), year=mi.year, mtype=mtype, page=page)
+            tmdbinfos = container.media_service().get_tmdb_infos(
+                title=mi.get_name(), year=mi.year, mtype=mtype, page=page
+            )
             results = []
             for tmdbinfo in tmdbinfos:
                 tmp_info = meta_info(title=keyword)
@@ -181,7 +184,7 @@ class WebUtils:
             return results
 
         def _search_douban():
-            return DouBan().search_douban_medias(
+            return container.douban().search_douban_medias(
                 keyword=key_word, mtype=mtype, season=season_num, episode=episode_num, page=page
             )
 

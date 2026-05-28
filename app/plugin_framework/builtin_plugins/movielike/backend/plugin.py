@@ -5,13 +5,11 @@ MovieLike Plugin v2
 
 import os
 
-from app.media import Category
-from app.mediaserver import MediaServer
 from app.plugin_framework.context import PluginContext
-from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.utils import SystemUtils
 from app.utils.config_tools import update_favtype
 from app.utils.types import MediaType
+from app.di import container
 
 
 class MovieLikePlugin:
@@ -19,9 +17,9 @@ class MovieLikePlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self._mediaserver = MediaServer()
-        self._filetransfer = FileTransfer()
-        self._category = Category()
+        self._mediaserver = container.media_server()
+        self._filetransfer = container.filetransfer_service()
+        self._category = container.category()
 
     def _get_config(self):
         return self.ctx.get_config() or {}

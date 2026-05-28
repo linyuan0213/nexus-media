@@ -9,6 +9,7 @@ from app.domain.entities.plugin import (
     PluginLogEntity,
     PluginManifestEntity,
 )
+from app.di import container
 from app.domain.interfaces.plugin_repo import (
     IPluginConfigRepository,
     IPluginLogRepository,
@@ -20,7 +21,7 @@ class PluginManifestRepositoryAdapter(IPluginManifestRepository):
     """插件清单仓储适配器"""
 
     def __init__(self, repo: PluginFrameworkRepository | None = None):
-        self._repo = repo or PluginFrameworkRepository()
+        self._repo = repo or container.plugin_framework_repo()
 
     def get_all(self) -> list[PluginManifestEntity]:
         rows = self._repo.get_all_manifests()
@@ -47,7 +48,7 @@ class PluginConfigRepositoryAdapter(IPluginConfigRepository):
     """插件配置仓储适配器"""
 
     def __init__(self, repo: PluginFrameworkRepository | None = None):
-        self._repo = repo or PluginFrameworkRepository()
+        self._repo = repo or container.plugin_framework_repo()
 
     def get(self, plugin_id: str) -> PluginConfigEntity | None:
         row = self._repo.get_config(plugin_id)
@@ -64,7 +65,7 @@ class PluginLogRepositoryAdapter(IPluginLogRepository):
     """插件日志仓储适配器"""
 
     def __init__(self, repo: PluginFrameworkRepository | None = None):
-        self._repo = repo or PluginFrameworkRepository()
+        self._repo = repo or container.plugin_framework_repo()
 
     def insert(self, plugin_id: str, level: str, message: str) -> bool:
         return self._repo.insert_log(plugin_id, level, message)

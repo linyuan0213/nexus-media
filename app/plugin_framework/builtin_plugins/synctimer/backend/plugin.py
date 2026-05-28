@@ -6,7 +6,7 @@ SyncTimer Plugin v2
 import contextlib
 
 from app.plugin_framework.context import PluginContext
-from app.services.sync_engine import SyncEngine as Sync
+from app.di import container
 
 
 class SyncTimerPlugin:
@@ -14,7 +14,7 @@ class SyncTimerPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self._sync = Sync()
+        self._sync = container.sync_engine()
 
     def _get_config(self):
         return self.ctx.get_config() or {}

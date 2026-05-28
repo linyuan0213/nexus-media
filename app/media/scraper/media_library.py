@@ -84,6 +84,7 @@ class MediaLibrary:
             content = stream.read()
             stream.close()
             from io import BytesIO
+
             from lxml import etree
 
             root = etree.parse(BytesIO(content)).getroot()

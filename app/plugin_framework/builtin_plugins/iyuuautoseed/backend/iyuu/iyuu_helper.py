@@ -12,11 +12,6 @@ class IyuuHelper:
     def __init__(self, token):
         self._token = token
         self._sites = {}
-        if self._token:
-            self.init_config()
-
-    def init_config(self):
-        pass
 
     def __request_iyuu(self, url, method="get", params=None):
         """

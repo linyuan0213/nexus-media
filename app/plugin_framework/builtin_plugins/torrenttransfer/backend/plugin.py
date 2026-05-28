@@ -14,10 +14,9 @@ from bencode import bdecode, bencode
 from app.media import meta_info
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import TorrentStatus
-from app.services.downloader_core import DownloaderCore as Downloader
 from app.utils import Torrent
 from app.utils.path_utils import get_temp_path
-
+from app.di import container
 
 
 class TorrentTransferPlugin:
@@ -25,7 +24,7 @@ class TorrentTransferPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self._downloader = Downloader()
+        self._downloader = container.downloader_core()
         self._event = Event()
         self._recheck_torrents = {}
         self._is_recheck_running = False

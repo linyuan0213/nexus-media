@@ -2,11 +2,10 @@ import json
 
 import log
 from app.db.repositories.system_dict_repo_adapter import SystemDictRepositoryAdapter
-from app.utils.commons import SingletonMeta
 from app.utils.types import SystemConfigKey
 
 
-class SystemConfig(metaclass=SingletonMeta):
+class SystemConfig:
     """系统配置单例"""
 
     _type = "SystemConfig"
@@ -14,9 +13,9 @@ class SystemConfig(metaclass=SingletonMeta):
     def __init__(self):
         self._repo = SystemDictRepositoryAdapter()
         self.systemconfig = {}
-        self.init_config()
+        self._load_config()
 
-    def init_config(self):
+    def _load_config(self):
         """缓存系统设置"""
         rows = self._repo.list_by_type(self._type)
         for row in rows:

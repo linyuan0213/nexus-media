@@ -16,9 +16,10 @@ import threading
 
 import log
 from app.core.constants import RMT_MEDIAEXT
+from app.core.settings import settings
 from app.infrastructure.cache_system import get_cache_manager
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
-from app.core.settings import settings
+from app.di import container
 
 _CACHE_NAME = "file_index"
 _KEY_INDEX = "index"
@@ -125,9 +126,7 @@ class FileIndexService:
 
         # 同步源目录
         try:
-            from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
-
-            sync_repo = SyncPathRepositoryAdapter()
+            sync_repo = container.sync_path_repo()
             for conf in sync_repo.get_config_sync_paths():
                 if conf:
                     src = getattr(conf, "SOURCE", None) or (

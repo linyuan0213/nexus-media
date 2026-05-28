@@ -2,11 +2,10 @@ import contextlib
 
 import log
 from app.plugin_framework.hook_system import HookSystem
-from app.utils.commons import SingletonMeta
 from app.utils.types import EventType
 
 
-class EventManager(metaclass=SingletonMeta):
+class EventManager:
     """
     事件管理器（HookSystem 兼容层）
     保留函数级事件注册/监听能力，事件发送同时同步调用本地 handlers 和 HookSystem

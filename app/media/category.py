@@ -5,21 +5,19 @@ import ruamel.yaml
 
 import log
 from app.utils import ExceptionUtils
-from app.utils.commons import SingletonMeta
 from app.utils.path_utils import get_category_path, get_inner_config_path
 
 
-class Category(metaclass=SingletonMeta):
-    _category_path = None
-    _categorys = None
-    _tv_categorys = None
-    _movie_categorys = None
-    _anime_categorys = None
-
+class Category:
     def __init__(self):
-        self.init_config()
+        self._category_path = None
+        self._categorys = None
+        self._tv_categorys = None
+        self._movie_categorys = None
+        self._anime_categorys = None
+        self._load_category()
 
-    def init_config(self):
+    def _load_category(self):
         self._category_path = get_category_path()
         if not self._category_path:
             return
@@ -42,7 +40,7 @@ class Category(metaclass=SingletonMeta):
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             log.warn(f"【Config】二级分类策略 {category_name} 配置文件加载出错：{str(err)}")
-            return False
+            return
 
         if self._categorys:
             self._movie_categorys = self._categorys.get("movie")

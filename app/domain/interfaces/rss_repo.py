@@ -84,7 +84,9 @@ class IRssTvRepository(Protocol):
         """查询订阅剧集列表"""
         ...
 
-    def get_id(self, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None) -> str | int | None:
+    def get_id(
+        self, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None
+    ) -> str | int | None:
         """获取订阅剧集ID"""
         ...
 

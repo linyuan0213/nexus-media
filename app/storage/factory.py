@@ -23,9 +23,7 @@ class StorageBackendFactory:
     """存储后端工厂，同时管理后端类与配置类的注册。"""
 
     _registry: ClassVar[dict[StorageType, type[StorageBackend]]] = {}
-    _config_registry: ClassVar[
-        dict[str, tuple[StorageType, type[StorageConfig], list[dict], str]]
-    ] = {}
+    _config_registry: ClassVar[dict[str, tuple[StorageType, type[StorageConfig], list[dict], str]]] = {}
 
     @classmethod
     def register(
@@ -109,8 +107,16 @@ StorageBackendFactory.register(
     StorageType.S3, S3StorageBackend, config_cls=S3StorageConfig, type_key="s3", icon="lucide:cloud"
 )
 StorageBackendFactory.register(
-    StorageType.RCLONE, RcloneStorageBackend, config_cls=RcloneStorageConfig, type_key="rclone", icon="lucide:arrow-left-right"
+    StorageType.RCLONE,
+    RcloneStorageBackend,
+    config_cls=RcloneStorageConfig,
+    type_key="rclone",
+    icon="lucide:arrow-left-right",
 )
 StorageBackendFactory.register(
-    StorageType.OPENLIST, OpenListStorageBackend, config_cls=OpenListStorageConfig, type_key="openlist", icon="lucide:list"
+    StorageType.OPENLIST,
+    OpenListStorageBackend,
+    config_cls=OpenListStorageConfig,
+    type_key="openlist",
+    icon="lucide:list",
 )

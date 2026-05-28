@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from api.deps import get_current_user, require_any_permission, require_permission
 from app.schemas.auth import UserContext
 from app.schemas.common import CommonResponse
-from app.services.rbac_service import rbac_service
+from app.di import container
 from app.utils.response import fail, success
 
 router = APIRouter()
@@ -135,7 +135,7 @@ def create_user(
     if not req.username or not req.password:
         return fail(success=False, message="用户名和密码不能为空")
 
-    ok, result = rbac_service.create_user(
+    ok, result = container.rbac_service().create_user(
         username=req.username,
         password=req.password,
         email=req.email or "",
@@ -155,7 +155,7 @@ def delete_user(
     if not req.id:
         return fail(success=False, message="用户ID不能为空")
 
-    ok, _ = rbac_service.delete_user(req.id)
+    ok, _ = container.rbac_service().delete_user(req.id)
     if ok:
         return success(data={"success": True, "message": "删除成功"})
     return fail(success=False, message="删除失败")
@@ -175,10 +175,10 @@ def update_user(
         if val is not None:
             update_fields[field] = val
 
-    ok, message = rbac_service.update_user(req.id, **update_fields)
+    ok, message = container.rbac_service().update_user(req.id, **update_fields)
 
     if req.role_ids is not None:
-        rbac_service.assign_roles_to_user(req.id, req.role_ids)
+        container.rbac_service().assign_roles_to_user(req.id, req.role_ids)
 
     if ok:
         return success(data={"success": True, "message": message})
@@ -193,7 +193,7 @@ def get_user_detail(
     if not req.id:
         return fail(success=False, message="用户ID不能为空")
 
-    user = rbac_service.get_user_by_id(req.id)
+    user = container.rbac_service().get_user_by_id(req.id)
     if user:
         return success(data={"success": True, "data": user.to_dict()})
     return fail(success=False, message="用户不存在")
@@ -203,7 +203,7 @@ def get_user_detail(
 def get_users(
     current_user: UserContext = Depends(require_any_permission("user:view", "user:update")),
 ):
-    users_raw, _ = rbac_service.get_users(page=1, page_size=1000)
+    users_raw, _ = container.rbac_service().get_users(page=1, page_size=1000)
     users = []
     for user in users_raw:
         d = user.to_dict()
@@ -254,7 +254,7 @@ def reset_password(
     if not is_admin and req.old_password is None:
         return fail(success=False, message="请输入旧密码")
 
-    ok, message = rbac_service.reset_password(user_id, req.new_password, req.old_password)
+    ok, message = container.rbac_service().reset_password(user_id, req.new_password, req.old_password)
     if ok:
         return success(data={"success": True, "message": message})
     return fail(success=False, message=message)
@@ -291,7 +291,7 @@ async def upload_avatar(
         avatar_url = f"/api/rbac/avatars/{filename}"
 
         # 更新用户头像到数据库
-        rbac_service.update_user(user_id, avatar=avatar_url)
+        container.rbac_service().update_user(user_id, avatar=avatar_url)
 
         return success(data={"success": True, "url": avatar_url})
     except Exception as e:
@@ -319,7 +319,7 @@ def create_role(
     if not req.role_name or not req.role_code:
         return fail(success=False, message="角色名称和代码不能为空")
 
-    ok, result = rbac_service.create_role(
+    ok, result = container.rbac_service().create_role(
         role_name=req.role_name,
         role_code=req.role_code,
         description=req.description,
@@ -340,7 +340,7 @@ def delete_role(
     if not req.id:
         return fail(success=False, message="角色ID不能为空")
 
-    ok, message = rbac_service.delete_role(req.id)
+    ok, message = container.rbac_service().delete_role(req.id)
     if ok:
         return success(data={"success": True, "message": message})
     return fail(success=False, message=message)
@@ -360,13 +360,13 @@ def update_role(
         if val is not None:
             update_fields[field] = val
 
-    ok, message = rbac_service.update_role(req.id, **update_fields)
+    ok, message = container.rbac_service().update_role(req.id, **update_fields)
 
     if req.permission_ids is not None:
-        rbac_service.assign_permissions_to_role(req.id, req.permission_ids)
+        container.rbac_service().assign_permissions_to_role(req.id, req.permission_ids)
 
     if req.menu_ids is not None:
-        rbac_service.assign_menus_to_role(req.id, req.menu_ids)
+        container.rbac_service().assign_menus_to_role(req.id, req.menu_ids)
 
     if ok:
         return success(data={"success": True, "message": message})
@@ -381,13 +381,13 @@ def get_role_detail(
     if not req.id:
         return fail(success=False, message="角色ID不能为空")
 
-    role = rbac_service.get_role_by_id(req.id)
+    role = container.rbac_service().get_role_by_id(req.id)
     if role:
         d = role.to_dict()
         # 超级管理员返回所有权限和菜单
         if str(role.ROLE_CODE or "") == "superadmin":
-            d["permissions"] = [p.to_dict() for p in rbac_service.get_all_permissions()]
-            d["menus"] = [m.to_dict() for m in rbac_service.menu_repo.get_all_menus()]
+            d["permissions"] = [p.to_dict() for p in container.rbac_service().get_all_permissions()]
+            d["menus"] = [m.to_dict() for m in container.rbac_service().menu_repo.get_all_menus()]
         return success(data={"success": True, "data": d})
     return fail(success=False, message="角色不存在")
 
@@ -397,7 +397,7 @@ def get_roles(
     current_user: UserContext = Depends(require_any_permission("role:view", "role:update")),
 ):
     """角色列表（新增）"""
-    roles = rbac_service.get_all_roles()
+    roles = container.rbac_service().get_all_roles()
     result = []
     all_permissions = None
     all_menus = None
@@ -406,9 +406,9 @@ def get_roles(
         # 超级管理员返回所有权限和菜单
         if str(role.ROLE_CODE or "") == "superadmin":
             if all_permissions is None:
-                all_permissions = [p.to_dict() for p in rbac_service.get_all_permissions()]
+                all_permissions = [p.to_dict() for p in container.rbac_service().get_all_permissions()]
             if all_menus is None:
-                all_menus = [m.to_dict() for m in rbac_service.menu_repo.get_all_menus()]
+                all_menus = [m.to_dict() for m in container.rbac_service().menu_repo.get_all_menus()]
             d["permissions"] = all_permissions
             d["menus"] = all_menus
         result.append(d)
@@ -426,7 +426,7 @@ def create_menu(
     if not req.menu_name or not req.menu_code:
         return fail(success=False, message="菜单名称和代码不能为空")
 
-    ok, result = rbac_service.create_menu(
+    ok, result = container.rbac_service().create_menu(
         menu_name=req.menu_name,
         menu_code=req.menu_code,
         parent_id=req.parent_id,
@@ -459,7 +459,7 @@ def delete_menu(
     if not req.id:
         return fail(success=False, message="菜单ID不能为空")
 
-    ok, message = rbac_service.delete_menu(req.id)
+    ok, message = container.rbac_service().delete_menu(req.id)
     if ok:
         return success(data={"success": True, "message": message})
     return fail(success=False, message=message)
@@ -498,7 +498,7 @@ def update_menu(
         if field in req.model_fields_set:
             update_fields[field] = getattr(req, field)
 
-    ok, message = rbac_service.update_menu(req.id, **update_fields)
+    ok, message = container.rbac_service().update_menu(req.id, **update_fields)
     if ok:
         return success(data={"success": True, "message": message})
     return fail(success=False, message=message)
@@ -520,7 +520,7 @@ def update_menu_sort(
 
         if menu_id is not None and sort_order is not None:
             update_fields = {"sort_order": sort_order, "parent_id": parent_id}
-            ok2, _ = rbac_service.update_menu(menu_id, **update_fields)
+            ok2, _ = container.rbac_service().update_menu(menu_id, **update_fields)
             if ok2:
                 success_count += 1
 
@@ -535,7 +535,7 @@ def get_menu_detail(
     if not req.id:
         return fail(success=False, message="菜单ID不能为空")
 
-    menu = rbac_service.menu_repo.get_menu_by_id(req.id)
+    menu = container.rbac_service().menu_repo.get_menu_by_id(req.id)
     if menu:
         return success(data={"success": True, "data": menu.to_dict()})
     return fail(success=False, message="菜单不存在")
@@ -551,7 +551,7 @@ def get_user_menus(
     user_id = _get_user_id_from_ctx(current_user)
     if not user_id:
         return fail(success=False, message="用户不存在")
-    tree = rbac_service.get_user_menus(user_id)
+    tree = container.rbac_service().get_user_menus(user_id)
     return success(data=tree)
 
 
@@ -644,7 +644,7 @@ def get_all_menus_for_management(
     """
     获取所有菜单（菜单管理专用，包含完整管理字段）
     """
-    menus = rbac_service.menu_repo.get_all_menus()
+    menus = container.rbac_service().menu_repo.get_all_menus()
     tree = _build_management_tree(menus)
     return success(data=tree)
 
@@ -656,7 +656,7 @@ def get_top_menus(
     user_id = _get_user_id_from_ctx(current_user)
     if not user_id:
         return fail(success=False, message="用户不存在")
-    menus = rbac_service.get_user_menus(user_id)
+    menus = container.rbac_service().get_user_menus(user_id)
     return success(data=menus)
 
 
@@ -671,7 +671,7 @@ def get_all_permissions(
     获取所有权限列表（供角色权限配置使用）
     """
     try:
-        permissions = rbac_service.get_all_permissions()
+        permissions = container.rbac_service().get_all_permissions()
         return success(data=[p.to_dict() for p in permissions])
     except Exception as e:
         return fail(success=False, message=str(e))
@@ -691,7 +691,7 @@ def get_user_codes(
     if not user_id:
         return fail(success=False, message="用户不存在")
     try:
-        permissions = rbac_service.get_user_permissions(user_id)
+        permissions = container.rbac_service().get_user_permissions(user_id)
         codes = list(permissions) if permissions else []
         return success(data=codes)
     except Exception as e:

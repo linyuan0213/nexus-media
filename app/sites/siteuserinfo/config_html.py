@@ -338,7 +338,15 @@ class ConfigHtmlUserInfo:
 
 
 def _html_config_factory(
-    url: str, site_name: str, site_cookie: str, html_text: str | None = None, site_headers: dict | None = None, ua: str = "", emulate: bool = False, proxy: bool = False, session: Any = None
+    url: str,
+    site_name: str,
+    site_cookie: str,
+    html_text: str | None = None,
+    site_headers: dict | None = None,
+    ua: str = "",
+    emulate: bool = False,
+    proxy: bool = False,
+    session: Any = None,
 ) -> ConfigHtmlUserInfo | None:
     engine = SiteEngine.get_instance()
     site_def = engine.get_by_url(url)

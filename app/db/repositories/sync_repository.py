@@ -16,7 +16,18 @@ class SyncRepository(BaseRepository):
 
     @DbPersist(BaseRepository._db)
     def insert_config_sync_path(
-        self, source, dest, unknown, mode, compatibility, rename, enabled, note=None, operation=None, src_backend=None, dst_backend=None
+        self,
+        source,
+        dest,
+        unknown,
+        mode,
+        compatibility,
+        rename,
+        enabled,
+        note=None,
+        operation=None,
+        src_backend=None,
+        dst_backend=None,
     ):
         """
         增加目录同步

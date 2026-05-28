@@ -1,7 +1,7 @@
 import base64
 
-from app.utils import RequestUtils
 from app.core.settings import settings
+from app.utils import RequestUtils
 
 
 class OcrHelper:

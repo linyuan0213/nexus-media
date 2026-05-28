@@ -5,8 +5,8 @@ from threading import Lock
 import log
 from app.message import Message
 from app.message.client._base import _IMessageClient
-from app.message.schema import ConfigField, MessageConfigSchema
 from app.message.commands import WECHAT_MENU, WECHAT_PLUGIN_GROUP
+from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils, RequestUtils
 
 _menu_lock = Lock()
@@ -24,14 +24,14 @@ class WeChat(_IMessageClient):
                 id="corpid",
                 required=True,
                 title="企业ID",
-                tooltip="每个企业都拥有唯一的corpid，获取此信息可在管理后台\"我的企业\"－\"企业信息\"下查看\"企业ID\"（需要有管理员权限）",
+                tooltip='每个企业都拥有唯一的corpid，获取此信息可在管理后台"我的企业"－"企业信息"下查看"企业ID"（需要有管理员权限）',
                 type="text",
             ),
             ConfigField(
                 id="corpsecret",
                 required=True,
                 title="应用Secret",
-                tooltip="每个应用都拥有唯一的secret，获取此信息可在管理后台\"应用与小程序\"－\"自建\"下查看\"Secret\"（需要有管理员权限）",
+                tooltip='每个应用都拥有唯一的secret，获取此信息可在管理后台"应用与小程序"－"自建"下查看"Secret"（需要有管理员权限）',
                 type="text",
                 placeholder="Secret",
             ),
@@ -39,7 +39,7 @@ class WeChat(_IMessageClient):
                 id="agentid",
                 required=True,
                 title="应用ID",
-                tooltip="每个应用都拥有唯一的agentid，获取此信息可在管理后台\"应用与小程序\"－\"自建\"下查看\"AgentId\"（需要有管理员权限）",
+                tooltip='每个应用都拥有唯一的agentid，获取此信息可在管理后台"应用与小程序"－"自建"下查看"AgentId"（需要有管理员权限）',
                 type="text",
                 placeholder="AgentId",
             ),
@@ -170,12 +170,14 @@ class WeChat(_IMessageClient):
                 item_title = f"{item_title}\n{media.get_type_string()}，{vote}"
             else:
                 item_title = f"{item_title}\n{media.get_type_string()}"
-            articles.append({
-                "title": item_title,
-                "description": "",
-                "picurl": media.get_message_image() if i == 0 else media.get_poster_image(),
-                "url": media.get_detail_url(),
-            })
+            articles.append(
+                {
+                    "title": item_title,
+                    "description": "",
+                    "picurl": media.get_message_image() if i == 0 else media.get_poster_image(),
+                    "url": media.get_detail_url(),
+                }
+            )
         req = {"touser": user_id, "msgtype": "news", "agentid": self.agent_id, "news": {"articles": articles}}
         return self._post_request(message_url, req)
 
@@ -296,5 +298,3 @@ class WeChat(_IMessageClient):
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False, str(err)
-
-

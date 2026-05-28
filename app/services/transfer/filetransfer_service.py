@@ -13,14 +13,14 @@ from time import sleep
 
 import log
 from app.core.constants import RMT_MEDIAEXT, RMT_MIN_FILESIZE
-from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
-from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
+from app.di import container
 from app.helper import ProgressHelper, ThreadHelper
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media import Category, MediaService, Scraper
 from app.message import Message
-from app.plugin_framework.event_compat import EventManager
+from app.plugin_framework.event_compat import EventHandler, EventManager
 from app.services.transfer.cleanup_service import TransferCleanupService
 from app.services.transfer.existence_checker import MediaExistenceChecker
 from app.services.transfer.history_manager import TransferHistoryManager
@@ -48,20 +48,20 @@ class FileTransferService:
         existence_checker: MediaExistenceChecker | None = None,
         cleanup_service: TransferCleanupService | None = None,
     ):
-        self.media = media_service or MediaService()
-        self.message = message or Message()
-        self.category = category or Category()
-        self.scraper = scraper or Scraper()
-        self.threadhelper = threadhelper or ThreadHelper()
-        self.progress = progress or ProgressHelper()
-        self.eventmanager = eventmanager or EventManager()
-        self._engine = engine or TransferEngine()
+        self.media = media_service or container.media_service()
+        self.message = message or container.message()
+        self.category = category or container.category()
+        self.scraper = scraper or container.scraper()
+        self.threadhelper = threadhelper or container.thread_helper()
+        self.progress = progress or container.progress_helper()
+        self.eventmanager = eventmanager or EventHandler
+        self._engine = engine or container.transfer_engine()
         self._default_operation: str = "copy"
         self._min_filesize = RMT_MIN_FILESIZE
         self._filesize_cover = False
         self._ignored_paths: re.Pattern[str] | None = None
         self._ignored_files: re.Pattern[str] | None = None
-        self._sync_repo = SyncPathRepositoryAdapter()
+        self._sync_repo = container.sync_path_repo()
 
         self._path_resolver = path_resolver or TransferPathResolver.from_settings(self.category)
         self._existence = existence_checker or MediaExistenceChecker(self._path_resolver)
@@ -70,19 +70,8 @@ class FileTransferService:
             self._history, self._path_resolver, self.media, self.message, self.eventmanager
         )
 
-        self.init_config()
-
-    def init_config(self):
-        """重新加载配置并同步到各组件."""
+        # 从配置读取媒体处理参数
         media = settings.get("media")
-
-        self._path_resolver = TransferPathResolver.from_settings(self.category)
-        self._existence = MediaExistenceChecker(self._path_resolver)
-        self._cleanup = TransferCleanupService(
-            self._history, self._path_resolver, self.media, self.message, self.eventmanager
-        )
-
-        self._min_filesize = RMT_MIN_FILESIZE
         if media:
             min_filesize = media.get("min_filesize")
             if isinstance(min_filesize, int):

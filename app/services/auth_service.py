@@ -12,7 +12,7 @@ from pwdlib.hashers.argon2 import Argon2Hasher
 
 from app.core.exceptions import RepositoryError, ServiceError
 from app.schemas.auth import TokenPair, UserContext
-from app.services.rbac_service import rbac_service
+from app.di import container
 from app.utils.security import get_secret_key
 
 # 密码加密上下文（Argon2）
@@ -45,7 +45,7 @@ class AuthService:
         """
         验证用户名密码，返回用户上下文
         """
-        success, result = rbac_service.authenticate_user(username, password)
+        success, result = container.rbac_service().authenticate_user(username, password)
         if not success:
             return None
 
@@ -53,7 +53,7 @@ class AuthService:
 
         # 获取用户权限
         try:
-            permissions = rbac_service.get_user_permissions(user.ID)
+            permissions = container.rbac_service().get_user_permissions(user.ID)
             permissions = list(permissions) if permissions else []
         except (ServiceError, RepositoryError):
             permissions = []
@@ -122,13 +122,13 @@ class AuthService:
                 return None
 
             # 重新获取用户信息
-            user = rbac_service.get_user_by_id(user_id)
+            user = container.rbac_service().get_user_by_id(user_id)
             if not user:
                 return None
 
             # 构建用户上下文
             try:
-                permissions = rbac_service.get_user_permissions(user_id)
+                permissions = container.rbac_service().get_user_permissions(user_id)
                 permissions = list(permissions) if permissions else []
             except (ServiceError, RepositoryError):
                 permissions = []

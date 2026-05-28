@@ -4,18 +4,18 @@ import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import log
+from app.core.settings import settings
 from app.helper.image_proxy_helper import ImageProxyHelper
-from app.storage.backends.base import StorageBackend
 from app.infrastructure.cache_system import cacheman
-from app.media.lookup.tmdb_lookup import TmdbLookup
 from app.media.models import MediaInfo
 from app.media.parser.base import BaseParser
 from app.media.parser.episode_mapper import EpisodeMapper
 from app.media.parser.llm import LLMParser
 from app.media.parser.regex import RegexParser
+from app.storage.backends.base import StorageBackend
 from app.utils import EpisodeFormat, PathUtils, StringUtils
 from app.utils.types import MatchMode, MediaType
-from app.core.settings import settings
+from app.di import container
 
 
 class MediaService:
@@ -23,7 +23,7 @@ class MediaService:
 
     def __init__(self):
         self._parser = self._build_parser()
-        self._lookup = TmdbLookup()
+        self._lookup = container.tmdb_lookup()
         self._episode_mapper = EpisodeMapper(self._lookup)
         self._init_config()
 
@@ -47,7 +47,7 @@ class MediaService:
     def _build_parser(self) -> BaseParser:
         cfg = settings.get("agent") or {}
         if cfg.get("enabled") and cfg.get("media_recognizer_enabled"):
-            llm = LLMParser()
+            llm = container.llm_parser()
             if llm.ready:
                 return llm
         return RegexParser()
@@ -76,7 +76,7 @@ class MediaService:
         parsed = self._parser.parse(title, subtitle)
         if not parsed and not isinstance(self._parser, LLMParser):
             # Fallback: 默认是 RegexParser 时，用 LLM Parser 兜底
-            llm_parser = LLMParser()
+            llm_parser = container.llm_parser()
             if llm_parser.ready:
                 parsed = llm_parser.parse(title, subtitle)
                 if parsed:
@@ -265,7 +265,7 @@ class MediaService:
         if not isinstance(self._parser, LLMParser):
             failed_indices = [i for i, p in enumerate(parsed_list) if not p]
             if failed_indices:
-                llm_parser = LLMParser()
+                llm_parser = container.llm_parser()
                 if llm_parser.ready:
                     failed_titles = [titles[i] for i in failed_indices]
                     log.info(

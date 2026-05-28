@@ -4,8 +4,8 @@ from alembic.command import upgrade as alembic_upgrade
 from alembic.config import Config as AlembicConfig
 
 import log
-from app.utils.path_utils import get_root_path
 from app.core.settings import settings
+from app.utils.path_utils import get_root_path
 
 from .database_factory import DatabaseFactory
 from .main_db import (

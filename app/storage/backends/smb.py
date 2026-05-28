@@ -4,7 +4,6 @@ import shutil
 from collections.abc import Iterator
 from typing import BinaryIO
 
-import log
 from smbclient import (
     copyfile,
     makedirs,
@@ -20,6 +19,7 @@ from smbclient.path import exists as smb_exists
 from smbclient.path import isdir
 from smbclient.shutil import rmtree
 
+import log
 from app.storage.backends.base import FileInfo, StorageBackend, StorageConfig
 
 

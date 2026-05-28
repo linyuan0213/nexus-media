@@ -5,13 +5,15 @@ Site Repository 适配器
 
 import json
 
-from app.db.models import CONFIGSITE, SITEFAVICON, SITESTATISTICSHISTORY, SITEUSERINFOSTATS
+from sqlalchemy import Integer, cast
+
 from app.db import DbPersist
+from app.db.models import CONFIGSITE, SITEFAVICON, SITESTATISTICSHISTORY, SITEUSERINFOSTATS
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.site_repository import SiteRepository
 from app.domain.entities.site import SiteEntity
 from app.domain.interfaces.site_repo import ISiteRepository
-from sqlalchemy import Integer, cast
+from app.di import container
 
 
 class SiteRepositoryAdapter(ISiteRepository):
@@ -21,7 +23,7 @@ class SiteRepositoryAdapter(ISiteRepository):
     """
 
     def __init__(self, repo: SiteRepository | None = None):
-        self._repo = repo or SiteRepository()
+        self._repo = repo or container.site_repository()
 
     def get_by_id(self, site_id: int) -> SiteEntity | None:
         """根据ID获取站点"""
@@ -169,7 +171,7 @@ class SiteRepositoryAdapter(ISiteRepository):
 
 class SiteRepositoryImpl(BaseRepository):
     """
-    纯领域仓储实现（可选，用于完全替换 Sites() 单例时）
+    纯领域仓储实现（可选，用于完全替换 container.sites() 单例时）
     当前阶段仅作演示，实际业务仍通过 Adapter 调用旧 Repository
     """
 

@@ -9,18 +9,17 @@ DownloaderCore - 下载器 Facade（兼容旧 Downloader 接口）
 参考：app/services/search_service.py 中 Searcher 的做法
 """
 
-from typing import Any
-
 from threading import Lock
+from typing import Any
 
 import log
 from app.core.constants import PT_TAG
-from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.domain.entities.transfer_task import SourceType, TransferTask
 from app.downloader.client_factory import DownloadClientFactory
 from app.services.download_core import DownloadCore
 from app.services.transfer_coordinator import TransferCoordinator
 from app.services.transfer_pipeline import TransferPipeline
+from app.di import container
 
 lock = Lock()
 
@@ -46,11 +45,6 @@ class DownloaderCore:
         self._transfer_coordinator = transfer_coordinator or TransferCoordinator()
 
     # ---------- 生命周期（由外部 SystemLifecycleService 控制） ----------
-
-    def init_config(self):
-        """重新加载配置并启动转移调度"""
-        self._client_factory.init_config()
-        self._transfer_coordinator.start_service(self.transfer)
 
     def start_service(self):
         """启动转移任务调度"""
@@ -206,7 +200,7 @@ class DownloaderCore:
         if not download_id:
             return None
         try:
-            history = DownloadHistoryRepositoryAdapter().get_by_id(download_id)
+            history = container.download_history_repo().get_by_id(download_id)
             if history:
                 return history.DOWNLOADER
         except Exception as e:

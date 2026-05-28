@@ -5,6 +5,8 @@
 from app.domain.entities.brush import BrushTaskEntity, BrushTorrentEntity
 from app.domain.entities.config import (
     DownloaderEntity as ConfigDownloaderEntity,
+)
+from app.domain.entities.config import (
     FilterGroupEntity,
     FilterRuleEntity,
     MediaServerEntity,

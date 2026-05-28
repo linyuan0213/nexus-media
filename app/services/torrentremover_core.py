@@ -6,11 +6,9 @@ TorrentRemover 重构核心
 import json
 
 import log
-from app.db.repositories.config_repo_adapter import TorrentRemoveTaskRepositoryAdapter
+from app.di import container
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.message import Message
-from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.scheduler_core import SchedulerCore
 from app.utils import ExceptionUtils
 
 
@@ -18,7 +16,7 @@ class TorrentRemoverRepository:
     """删种任务数据仓库"""
 
     def __init__(self, config_repo=None):
-        self._config_repo = config_repo or TorrentRemoveTaskRepositoryAdapter()
+        self._config_repo = config_repo or container.torrent_remove_task_repo()
 
     def get_tasks(self):
         return self._config_repo.get_torrent_remove_tasks()
@@ -86,13 +84,13 @@ class TorrentRemoverService:
         scheduler=None,
     ):
         self._repo = repository or TorrentRemoverRepository()
-        self._downloader = downloader or Downloader()
-        self._message = message or Message()
-        self._scheduler = scheduler or SchedulerCore()
+        self._downloader = downloader or container.downloader_core()
+        self._message = message or container.message()
+        self._scheduler = scheduler or container.scheduler_core()
         self._tasks: dict[str, dict] = {}
 
-    def init_config(self):
-        """兼容接口：重新加载任务并启动调度任务"""
+    def start_service(self):
+        """加载任务并启动调度任务"""
         self._load_tasks()
         self._start_scheduler_jobs()
 

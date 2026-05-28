@@ -13,6 +13,7 @@ import os
 import log
 from app.core.module_config import ModuleConf
 from app.core.system_config import SystemConfig
+from app.di import container
 from app.helper import FfmpegHelper
 from app.helper.image_proxy_helper import ImageProxyHelper
 from app.media.external import DouBan
@@ -33,7 +34,7 @@ class Scraper:
 
     def __init__(self):
         self.media = get_media_service()
-        self.douban = DouBan()
+        self.douban = container.douban()
         self._scraper_flag = False
         self._scraper_nfo = {}
         self._scraper_pic = {}
@@ -48,7 +49,7 @@ class Scraper:
         from app.core.settings import settings
 
         self._scraper_flag = settings.get("media").get("nfo_poster")
-        scraper_conf = SystemConfig().get(SystemConfigKey.UserScraperConf)
+        scraper_conf = container.system_config().get(SystemConfigKey.UserScraperConf)
         if scraper_conf:
             self._scraper_nfo = scraper_conf.get("scraper_nfo") or {}
             self._scraper_pic = scraper_conf.get("scraper_pic") or {}

@@ -12,6 +12,8 @@ from urllib.parse import unquote
 
 from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_MEDIAEXT, RMT_SUBEXT
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.core.settings import settings
+from app.di import container
 from app.helper.thread_helper import ThreadHelper
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media import MediaCache
@@ -20,16 +22,14 @@ from app.schemas.sync import (
     ReIdentifyResultDTO,
     SimpleResultDTO,
 )
-from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.sync_engine import SyncEngine as Sync
 from app.storage import StorageBackendFactory
+from app.storage.backends.base import StorageType
 from app.storage.config_models import LocalStorageConfig
 from app.utils import EpisodeFormat, ExceptionUtils, PathUtils, StringUtils
-from app.storage.backends.base import StorageType
 from app.utils.types import MediaType, MovieTypes, OsType, SyncType, TvTypes
 from app.utils.web_utils import set_config_directory
-from app.core.settings import settings
 
 if TYPE_CHECKING:
     from app.db.models import TRANSFERUNKNOWN
@@ -50,10 +50,10 @@ class SyncService:
         media_cache: MediaCache | None = None,
         threadhelper: ThreadHelper | None = None,
     ):
-        self._sync = sync or Sync()
-        self._filetransfer = filetransfer or FileTransfer()
-        self._media_cache = media_cache or MediaCache()
-        self._threadhelper = threadhelper or ThreadHelper()
+        self._sync = sync or container.sync_engine()
+        self._filetransfer = filetransfer or container.filetransfer_service()
+        self._media_cache = media_cache or container.media_cache()
+        self._threadhelper = threadhelper or container.thread_helper()
 
     # ---------- 同步目录校验 ----------
 
@@ -239,7 +239,7 @@ class SyncService:
         if dst_backend_id == "local":
             return None
         try:
-            entity = StorageBackendRepositoryAdapter().get_by_id(int(dst_backend_id))
+            entity = container.storage_backend_repo().get_by_id(int(dst_backend_id))
             if not entity:
                 return None
             info = StorageBackendFactory.get_config_info(entity.type)

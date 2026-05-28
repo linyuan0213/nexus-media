@@ -82,14 +82,16 @@ class RssRepository(BaseRepository):
         """
         if not tmdbid:
             return
-        self._db.query(RSSMOVIES).filter(int(rid) == RSSMOVIES.ID).update({
-            "TMDBID": tmdbid,
-            "NAME": title,
-            "YEAR": year,
-            "IMAGE": image,
-            "NOTE": note,
-            "DESC": desc,
-        })
+        self._db.query(RSSMOVIES).filter(int(rid) == RSSMOVIES.ID).update(
+            {
+                "TMDBID": tmdbid,
+                "NAME": title,
+                "YEAR": year,
+                "IMAGE": image,
+                "NOTE": note,
+                "DESC": desc,
+            }
+        )
 
     @DbPersist(BaseRepository._db)
     def update_rss_movie_desc(self, rid: int, desc: str) -> None:
@@ -263,9 +265,9 @@ class RssRepository(BaseRepository):
         if rssid:
             self._db.query(RSSMOVIES).filter(int(rssid) == RSSMOVIES.ID).update({"STATE": state})
         else:
-            self._db.query(RSSMOVIES).filter(title == RSSMOVIES.NAME, str(year) == RSSMOVIES.YEAR).update({
-                "STATE": state
-            })
+            self._db.query(RSSMOVIES).filter(title == RSSMOVIES.NAME, str(year) == RSSMOVIES.YEAR).update(
+                {"STATE": state}
+            )
 
     # ==================== RSS TV Shows ====================
 
@@ -298,8 +300,7 @@ class RssRepository(BaseRepository):
                 return ret[0]
         if season and year:
             items = (
-                self._db
-                .query(RSSTVS)
+                self._db.query(RSSTVS)
                 .filter(title == RSSTVS.NAME, str(season) == RSSTVS.SEASON, str(year) == RSSTVS.YEAR)
                 .all()
             )
@@ -339,16 +340,18 @@ class RssRepository(BaseRepository):
         """
         if not tmdbid:
             return
-        self._db.query(RSSTVS).filter(int(rid) == RSSTVS.ID).update({
-            "TMDBID": tmdbid,
-            "NAME": title,
-            "YEAR": year,
-            "TOTAL": total,
-            "LACK": lack,
-            "IMAGE": image,
-            "DESC": desc,
-            "NOTE": note,
-        })
+        self._db.query(RSSTVS).filter(int(rid) == RSSTVS.ID).update(
+            {
+                "TMDBID": tmdbid,
+                "NAME": title,
+                "YEAR": year,
+                "TOTAL": total,
+                "LACK": lack,
+                "IMAGE": image,
+                "DESC": desc,
+                "NOTE": note,
+            }
+        )
 
     @DbPersist(BaseRepository._db)
     def update_rss_tv_desc(self, rid: int, desc: str) -> None:
@@ -365,8 +368,7 @@ class RssRepository(BaseRepository):
             return False
         if season:
             count = (
-                self._db
-                .query(RSSTVS)
+                self._db.query(RSSTVS)
                 .filter(title == RSSTVS.NAME, str(year) == RSSTVS.YEAR, season == RSSTVS.SEASON)
                 .count()
             )
@@ -581,9 +583,9 @@ class RssRepository(BaseRepository):
             episodes = [str(epi) for epi in episodes]
 
         if self.is_exists_rss_tv_episodes(rid):
-            self._db.query(RSSTVEPISODES).filter(int(rid) == RSSTVEPISODES.RSSID).update({
-                "EPISODES": ",".join(episodes)
-            })
+            self._db.query(RSSTVEPISODES).filter(int(rid) == RSSTVEPISODES.RSSID).update(
+                {"EPISODES": ",".join(episodes)}
+            )
         else:
             self._db.insert(RSSTVEPISODES(RSSID=rid, EPISODES=",".join(episodes)))
 
@@ -625,8 +627,7 @@ class RssRepository(BaseRepository):
             return self._db.query(RSSHISTORY).filter(int(rid) == RSSHISTORY.ID).all()
         elif rtype:
             return (
-                self._db
-                .query(RSSHISTORY)
+                self._db.query(RSSHISTORY)
                 .filter(rtype == RSSHISTORY.TYPE)
                 .order_by(RSSHISTORY.FINISH_TIME.desc())
                 .all()
@@ -647,8 +648,7 @@ class RssRepository(BaseRepository):
         检查RSS历史是否存在
         """
         count = (
-            self._db
-            .query(RSSHISTORY)
+            self._db.query(RSSHISTORY)
             .filter(
                 type_str == RSSHISTORY.TYPE,
                 name == RSSHISTORY.NAME,

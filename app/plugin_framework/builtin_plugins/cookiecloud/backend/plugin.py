@@ -8,12 +8,11 @@ import json
 import re
 from collections import defaultdict
 
-from app.helper import IndexerHelper
 from app.infrastructure.cache_system import get_cache_manager
 from app.plugin_framework.context import PluginContext
-from app.sites import Sites
 from app.sites.engine import SiteEngine
 from app.utils import RequestUtils
+from app.di import container
 
 
 class CookieCloudPlugin:
@@ -23,8 +22,8 @@ class CookieCloudPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self.sites = Sites()
-        self._index_helper = IndexerHelper()
+        self.sites = container.sites()
+        self._index_helper = container.indexer_helper()
         self._cache = get_cache_manager().get_or_create("plugin_cookiecloud", cache_type="redis")
 
     def _get_config(self):
@@ -203,11 +202,13 @@ class CookieCloudPlugin:
             if cloudflare_cookie:
                 continue
 
-            cookie_str = ";".join([
-                f"{content.get('name')}={content.get('value')}"
-                for content in content_list
-                if content.get("name") and content.get("name") not in self._ignore_cookies
-            ])
+            cookie_str = ";".join(
+                [
+                    f"{content.get('name')}={content.get('value')}"
+                    for content in content_list
+                    if content.get("name") and content.get("name") not in self._ignore_cookies
+                ]
+            )
             self._cache.set(f"cookie:{domain_url}", cookie_str)
             result[domain_url] = cookie_str
 

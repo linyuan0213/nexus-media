@@ -15,14 +15,12 @@ from lxml import etree
 from app.core.constants import MT_URL
 from app.helper import SiteHelper, SubmoduleHelper
 from app.helper.cloudflare_helper import under_challenge
-from app.helper.drissionpage_helper import DrissionPageHelper
 from app.message import Message
 from app.plugin_framework.context import PluginContext
 from app.sites.engine import SiteEngine
-from app.sites.siteconf import SiteConf
-from app.sites.sites import Sites
 from app.utils import ExceptionUtils, JsonUtils, RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
+from app.di import container
 
 
 class AutoSignInPlugin:
@@ -31,7 +29,7 @@ class AutoSignInPlugin:
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
         self._site_schema = []
-        self._siteconf = SiteConf()
+        self._siteconf = container.site_conf()
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -159,7 +157,7 @@ class AutoSignInPlugin:
                 return
 
         emulate_set = set(emulate_sites).intersection(set(sign_sites))
-        sign_sites = copy.deepcopy(Sites().get_sites(siteids=sign_sites))
+        sign_sites = copy.deepcopy(container.sites().get_sites(siteids=sign_sites))
         if not sign_sites:
             self.ctx.info("没有可签到站点，停止运行")
             return
@@ -192,7 +190,7 @@ class AutoSignInPlugin:
             fz_sign_msg = []
             failed_msg = []
 
-            sites_map = {site.get("name"): site.get("id") for site in Sites().get_site_dict()}
+            sites_map = {site.get("name"): site.get("id") for site in container.sites().get_site_dict()}
             for s in status:
                 if not s:
                     continue
@@ -224,7 +222,7 @@ class AutoSignInPlugin:
             self.ctx.debug(f"下次签到重试站点 {retry_sites}")
 
             # 存储站点名称映射（用于前端展示）
-            id_to_name = {str(site.get("id")): site.get("name") for site in Sites().get_site_dict()}
+            id_to_name = {str(site.get("id")): site.get("name") for site in container.sites().get_site_dict()}
             history_data = {"sign": sign_sites_cfg, "retry": retry_sites, "names": id_to_name}
             self._update_history(today_str, history_data)
 
@@ -283,7 +281,7 @@ class AutoSignInPlugin:
             else:
                 headers = {}
 
-            chrome = DrissionPageHelper()
+            chrome = container.drissionpage_helper()
             if site_info.get("chrome") and chrome.get_status():
                 self.ctx.info(f"开始站点仿真签到：{site}")
                 home_url = StringUtils.get_base_url(site_url)

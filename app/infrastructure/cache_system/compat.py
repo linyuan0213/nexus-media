@@ -5,15 +5,23 @@
 """
 
 from .adapters import MemoryCacheAdapter, RedisCacheAdapter
-from .decorators import cached as new_cached
-from .decorators import cached_with_lock as new_cached_with_lock
 from .caches import (
     CategoryLoadCache as NewCategoryLoadCache,
+)
+from .caches import (
     ConfigLoadCache as NewConfigLoadCache,
+)
+from .caches import (
     OpenAISessionCache as NewOpenAISessionCache,
+)
+from .caches import (
     TMDBCache as NewTMDBCache,
+)
+from .caches import (
     TokenCache as NewTokenCache,
 )
+from .decorators import cached as new_cached
+from .decorators import cached_with_lock as new_cached_with_lock
 
 
 # 兼容旧的 cacheman

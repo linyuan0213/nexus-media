@@ -157,7 +157,12 @@ class FnOSClient(metaclass=Singleton):
         return response.json()
 
     def fetch_all_pages(
-        self, parent_id: str | None = None, max_retries: int = 3, delay: float = 1, start_page: int = 1, end_page: int | None = None
+        self,
+        parent_id: str | None = None,
+        max_retries: int = 3,
+        delay: float = 1,
+        start_page: int = 1,
+        end_page: int | None = None,
     ) -> list[dict[str, Any]]:
         """
         分页获取数据

@@ -7,10 +7,10 @@ from pydantic import BaseModel
 
 from api.deps import require_any_permission, require_permission
 from app.core.exceptions import DomainError, ServiceError
-from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.schemas.common import CommonResponse
 from app.storage import StorageBackendFactory
 from app.utils.response import fail, success
+from app.di import container
 
 router = APIRouter()
 
@@ -62,7 +62,7 @@ def list_backends(
     req: ListBackendsRequest,
     user: str = Depends(require_any_permission("storage:view", "storage:manage")),
 ):
-    repo = StorageBackendRepositoryAdapter()
+    repo = container.storage_backend_repo()
     items = [e.to_dict() for e in repo.get_all()]
     return success(data={"count": len(items), "items": items})
 
@@ -72,7 +72,7 @@ def get_backend(
     req: GetBackendRequest,
     user: str = Depends(require_any_permission("storage:view", "storage:manage")),
 ):
-    repo = StorageBackendRepositoryAdapter()
+    repo = container.storage_backend_repo()
     entity = repo.get_by_id(req.sid)
     if not entity:
         return fail(msg="存储后端不存在")
@@ -84,7 +84,7 @@ def create_backend(
     req: CreateBackendRequest,
     user: str = Depends(require_permission("storage:manage")),
 ):
-    repo = StorageBackendRepositoryAdapter()
+    repo = container.storage_backend_repo()
     sid = repo.insert(req.name, req.type, req.config, req.enabled)
     return success(data={"id": sid})
 
@@ -94,7 +94,7 @@ def update_backend(
     req: UpdateBackendRequest,
     user: str = Depends(require_permission("storage:manage")),
 ):
-    repo = StorageBackendRepositoryAdapter()
+    repo = container.storage_backend_repo()
     kwargs = {}
     if req.name is not None:
         kwargs["NAME"] = req.name
@@ -115,7 +115,7 @@ def delete_backend(
     req: DeleteBackendRequest,
     user: str = Depends(require_permission("storage:manage")),
 ):
-    repo = StorageBackendRepositoryAdapter()
+    repo = container.storage_backend_repo()
     repo.delete(req.sid)
     return success()
 

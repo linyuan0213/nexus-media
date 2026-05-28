@@ -273,7 +273,9 @@ class FilterService:
                 "exclude": str(rule.EXCLUDE or "").split("\n") if rule.EXCLUDE is not None else [],
                 "size": rule.SIZE_LIMIT,
                 "free": rule.NOTE,
-                "free_text": {"1.0 1.0": "普通", "1.0 0.0": "免费", "2.0 0.0": "2X免费"}.get(str(rule.NOTE or ""), "全部")
+                "free_text": {"1.0 1.0": "普通", "1.0 0.0": "免费", "2.0 0.0": "2X免费"}.get(
+                    str(rule.NOTE or ""), "全部"
+                )
                 if rule.NOTE is not None
                 else "",
             }
@@ -287,7 +289,15 @@ class FilterService:
         """获取规则的最高优先级"""
         if not rulegroup:
             rulegroup = self.get_rule_groups(default=True)
-        first_order = min([int(rule_info.get("pri")) for rule_info in self.get_rules(groupid=rulegroup.get("id") if isinstance(rulegroup, dict) else rulegroup)] or [0])
+        first_order = min(
+            [
+                int(rule_info.get("pri"))
+                for rule_info in self.get_rules(
+                    groupid=rulegroup.get("id") if isinstance(rulegroup, dict) else rulegroup
+                )
+            ]
+            or [0]
+        )
         return 100 - first_order
 
     # ------------------- 规则匹配 -------------------
@@ -307,7 +317,9 @@ class FilterService:
             rulegroup = self.get_rule_groups(groupid=rulegroup)
 
         filters = self.get_rules(groupid=rulegroup.get("id") if isinstance(rulegroup, dict) else rulegroup)
-        return FilterRuleEngine.check_rules(meta_info, rulegroup if isinstance(rulegroup, dict) else {}, filters if isinstance(filters, list) else [])
+        return FilterRuleEngine.check_rules(
+            meta_info, rulegroup if isinstance(rulegroup, dict) else {}, filters if isinstance(filters, list) else []
+        )
 
     def is_torrent_match_sey(self, media_info, s_num, e_num, year_str):
         """兼容方法：委托给 FilterRuleEngine"""
@@ -487,9 +499,7 @@ class FilterService:
         """测试规则是否匹配给定标题"""
         mi = meta_info(title=title, subtitle=subtitle)
         mi.size = int(float(size) * 1024**3) if size else 0
-        match_flag, res_order, match_msg = self.check_torrent_filter(
-            meta_info=mi, filter_args={"rule": rulegroup}
-        )
+        match_flag, res_order, match_msg = self.check_torrent_filter(meta_info=mi, filter_args={"rule": rulegroup})
         text = "匹配" if match_flag else "未匹配"
         order = 100 - res_order if res_order else 0
         return match_flag, text, order

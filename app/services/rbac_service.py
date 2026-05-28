@@ -8,16 +8,13 @@ from functools import wraps
 from typing import Any, cast
 
 import log
+from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.db.models.rbac import RBACPermission, RBACRole, RBACUser
 from app.db.repositories.rbac_repo_adapter import (
     RBACLogRepositoryAdapter,
-    RBACMenuRepositoryAdapter,
-    RBACPermissionRepositoryAdapter,
-    RBACRoleRepositoryAdapter,
-    RBACUserRepositoryAdapter,
 )
-from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.utils.security import check_password_hash, generate_password_hash
+from app.di import container
 
 
 class RBACService:
@@ -27,10 +24,10 @@ class RBACService:
     """
 
     def __init__(self, user_repo=None, role_repo=None, permission_repo=None, menu_repo=None, log_repo=None):
-        self.user_repo = user_repo or RBACUserRepositoryAdapter()
-        self.role_repo = role_repo or RBACRoleRepositoryAdapter()
-        self.permission_repo = permission_repo or RBACPermissionRepositoryAdapter()
-        self.menu_repo = menu_repo or RBACMenuRepositoryAdapter()
+        self.user_repo = user_repo or container.rbac_user_repo()
+        self.role_repo = role_repo or container.rbac_role_repo()
+        self.permission_repo = permission_repo or container.rbac_permission_repo()
+        self.menu_repo = menu_repo or container.rbac_menu_repo()
         self.log_repo = log_repo or RBACLogRepositoryAdapter()
 
     # ==================== 用户认证 ====================
@@ -841,7 +838,6 @@ class RBACService:
 
 
 # 全局RBAC服务实例
-rbac_service = RBACService()
 
 
 def require_permission(permission_code: str):

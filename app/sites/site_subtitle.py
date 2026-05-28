@@ -10,10 +10,9 @@ import log
 from app.core.constants import MT_URL, RMT_SUBEXT
 from app.helper import SiteHelper
 from app.sites.engine import SiteEngine
-from app.sites.siteconf import SiteConf
-from app.sites.sites import Sites
 from app.utils import ExceptionUtils, PathUtils, RequestUtils, StringUtils
 from app.utils.temp_manager import temp_manager
+from app.di import container
 
 
 class SiteSubtitle:
@@ -22,8 +21,8 @@ class SiteSubtitle:
     _save_tmp_path = None
 
     def __init__(self):
-        self.siteconf = SiteConf()
-        self.sites = Sites()
+        self.siteconf = container.site_conf()
+        self.sites = container.sites()
         self._save_tmp_path = temp_manager.get_temp_path()
 
     def download(self, media_info, site_id, cookie, ua, download_dir):
@@ -154,10 +153,12 @@ class SiteSubtitle:
             headers = {}
 
         # 添加必要的头信息
-        headers.update({
-            "Content-Type": "application/json; charset=utf-8",
-            "accept": "application/json, text/plain, */*",
-        })
+        headers.update(
+            {
+                "Content-Type": "application/json; charset=utf-8",
+                "accept": "application/json, text/plain, */*",
+            }
+        )
 
         # 添加 User-Agent
         if isinstance(ua, str):

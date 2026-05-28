@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from api.deps import get_scheduler_service, require_any_permission, require_permission
+from app.schemas.common import CommonResponse
 from app.schemas.scheduler import (
     DeleteSchedulerJobRequest,
     PauseSchedulerJobRequest,
@@ -14,7 +15,6 @@ from app.schemas.scheduler import (
     RunSchedulerJobRequest,
     UpdateSchedulerJobRequest,
 )
-from app.schemas.common import CommonResponse
 from app.services.scheduler_service import SchedulerService
 from app.utils.response import fail, success
 

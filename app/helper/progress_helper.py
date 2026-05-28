@@ -1,17 +1,13 @@
 from enum import Enum
 
-from app.utils.commons import SingletonMeta
 from app.utils.types import ProgressKey
 
 
-class ProgressHelper(metaclass=SingletonMeta):
+class ProgressHelper:
     _process_detail = {}
 
     def __init__(self):
         self._process_detail = {}
-
-    def init_config(self):
-        pass
 
     def __reset(self, ptype=ProgressKey.Search):
         if isinstance(ptype, Enum):

@@ -6,14 +6,14 @@ from urllib.parse import urlencode
 import requests
 
 import log
+from app.core.settings import settings
 from app.helper.thread_helper import ThreadHelper
 from app.message import Message
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
-from app.services.apikey_service import APIKeyService
 from app.utils import ExceptionUtils, RequestUtils
 from app.utils.config_tools import get_domain, get_proxies
-from app.core.settings import settings
+from app.di import container
 
 _webhook_lock = Lock()
 _webhook_set = False
@@ -90,7 +90,7 @@ class Telegram(_IMessageClient):
         self._admin_ids = cfg.get("admin_ids") or []
         self._user_ids = cfg.get("user_ids") or []
         self._domain = get_domain()
-        self._api_key = APIKeyService().get_or_create_system_key("MessageWebhook")
+        self._api_key = container.apikey_service().get_or_create_system_key("MessageWebhook")
         admin_ids = cfg.get("admin_ids")
         if admin_ids and not isinstance(admin_ids, list):
             self._admin_ids = [admin_ids]

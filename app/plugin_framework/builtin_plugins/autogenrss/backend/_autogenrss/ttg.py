@@ -2,11 +2,11 @@ from typing import cast
 
 from lxml import etree
 
-from app.db.repositories import SiteRepository
 from app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss._base import _ISiteRssGenHandler
 from app.utils.config_tools import get_proxies
 from app.utils.http_utils import RequestUtils
 from app.utils.string_utils import StringUtils
+from app.di import container
 
 
 class TTG(_ISiteRssGenHandler):
@@ -112,7 +112,7 @@ class TTG(_ISiteRssGenHandler):
         self.debug(f"生成的rss: {rss_link}")
 
         if rss_link:
-            SiteRepository().update_site_rssurl(site_info.get("id"), rss_link)
+            container.site_repository().update_site_rssurl(site_info.get("id"), rss_link)
             self.info("生成RSS成功")
             return True, f"【{site}】生成RSS成功"
         else:

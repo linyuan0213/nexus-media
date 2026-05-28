@@ -16,15 +16,14 @@ from threading import Lock
 
 import log
 from app.core.constants import PT_TAG
-from app.core.system_config import SystemConfig
+from app.core.settings import settings
 from app.core.system_config import SystemConfig as SystemConfigClass
-from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
 from app.db.repositories.download_repo_adapter import DownloadSettingRepositoryAdapter
+from app.di import container
 from app.downloader.client._base import _IDownloadClient
 from app.downloader.registry import get_all_clients
 from app.utils import ExceptionUtils, NumberUtils, StringUtils, SystemUtils
 from app.utils.types import SystemConfigKey
-from app.core.settings import settings
 
 client_lock = Lock()
 
@@ -38,9 +37,9 @@ class DownloadClientFactory:
 
     def __init__(self, config_repo=None, download_repo=None, systemconfig: SystemConfigClass | None = None):
         # 注入领域仓库适配器，不允许注入旧的 ConfigRepository/DownloadRepository
-        self._config_repo = config_repo or DownloaderRepositoryAdapter()
+        self._config_repo = config_repo or container.downloader_repo()
         self._download_repo = download_repo or DownloadSettingRepositoryAdapter()
-        self._systemconfig = systemconfig or SystemConfig()
+        self._systemconfig = systemconfig or container.system_config()
 
         # 客户端实例缓存 {downloader_id: client_instance}
         self._clients = {}
@@ -60,11 +59,11 @@ class DownloadClientFactory:
         # jobstore 标识
         self._jobstore = "download"
 
-        self.init_config()
+        self._refresh()
 
     # ---------- 配置加载 ----------
 
-    def init_config(self):
+    def _refresh(self):
         """重新加载所有下载器配置和下载设置"""
         self._clients.clear()
         self._downloader_confs = {}

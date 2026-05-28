@@ -13,11 +13,11 @@
 import datetime
 
 import log
-from app.helper import ProgressHelper
 from app.indexer.core.batch_identifier import BatchIdentifier
 from app.indexer.core.models import FilterStats, PipelineResult
 from app.indexer.core.result_filter import ResultFilter
 from app.utils.types import ProgressKey, SearchType
+from app.di import container
 
 
 class SearchPipeline:
@@ -28,10 +28,15 @@ class SearchPipeline:
     def __init__(self, result_filter=None, batch_identifier=None, progress=None):
         self.result_filter = result_filter or ResultFilter()
         self.batch_identifier = batch_identifier or BatchIdentifier()
-        self.progress = progress or ProgressHelper()
+        self.progress = progress or container.progress_helper()
 
     def process(
-        self, all_results, filter_args, match_media=None, in_from: SearchType | None = None, progress_key=ProgressKey.Search
+        self,
+        all_results,
+        filter_args,
+        match_media=None,
+        in_from: SearchType | None = None,
+        progress_key=ProgressKey.Search,
     ):
         """
         执行三阶段全局批量搜索过滤流水线

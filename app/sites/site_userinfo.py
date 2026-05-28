@@ -1,25 +1,22 @@
 import base64
 import json
+import time
 from datetime import datetime
 from multiprocessing.dummy import Pool as ThreadPool
 from threading import Lock
 from typing import Any
 
 import requests
-import time
 
 import log
 from app.db.models import SITEUSERINFOSTATS as _S
-from app.db.repositories import SiteRepository
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
-from app.helper import DrissionPageHelper
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.message import Message
 from app.sites.engine import SiteEngine
-from app.sites.sites import Sites
 from app.utils import ExceptionUtils, JsonUtils, RequestUtils, StringUtils
-from app.utils.commons import SingletonMeta
 from app.utils.config_tools import get_proxies
+from app.di import container
 
 lock = Lock()
 
@@ -28,7 +25,7 @@ def _log_error(site_name):
     log.error(f"【Sites】站点 {site_name} 无法识别站点类型")
 
 
-class SiteUserInfo(metaclass=SingletonMeta):
+class SiteUserInfo:
     sites = None
     message = None
 
@@ -37,11 +34,11 @@ class SiteUserInfo(metaclass=SingletonMeta):
     _sites_data = {}
 
     def __init__(self):
-        self.init_config()
+        self._refresh()
 
-    def init_config(self):
-        self.sites = Sites()
-        self.site_repo = SiteRepositoryAdapter(SiteRepository())
+    def _refresh(self):
+        self.sites = container.sites()
+        self.site_repo = SiteRepositoryAdapter(container.site_repository())
         self.message = Message()
         # 站点上一次更新时间
         self._last_update_time = None
@@ -81,7 +78,7 @@ class SiteUserInfo(metaclass=SingletonMeta):
 
         html_text = None
         if emulate:
-            chrome = DrissionPageHelper()
+            chrome = container.drissionpage_helper()
             html_text = chrome.get_page_html(url=url, cookies=site_cookie)
             if not html_text:
                 log.error(f"【Sites】{site_name} 跳转站点失败")

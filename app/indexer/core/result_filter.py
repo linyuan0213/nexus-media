@@ -9,12 +9,11 @@
 """
 
 import log
-from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
+from app.di import container
 from app.indexer.core.batch_identifier import BatchIdentifier
-from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.indexer.core.models import FilterStats, SearchCandidate
 from app.infrastructure.cache_system import get_cache_manager
-from app.media import MediaService, meta_info
+from app.media import meta_info
 from app.utils import StringUtils
 from app.utils.types import MediaType
 
@@ -28,10 +27,10 @@ class ResultFilter:
     """
 
     def __init__(self, media=None):
-        self._engine = IndexerFilterEngine()
-        self._media = media or MediaService()
-        self._group_repo = FilterGroupRepositoryAdapter()
-        self._rule_repo = FilterRuleRepositoryAdapter()
+        self._engine = container.indexer_filter_engine()
+        self._media = media or container.media_service()
+        self._group_repo = container.filter_group_repo()
+        self._rule_repo = container.filter_rule_repo()
         self._rule_cache = {}
 
     def _get_rules(self, rulegroup_id=None):

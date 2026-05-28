@@ -1,25 +1,12 @@
 import os
-import time
-
-from watchdog.events import FileSystemEventHandler
-from watchdog.observers import Observer
 
 import log
-from app.core.system_config import SystemConfig
+from app.core.settings import settings
 from app.db.repositories.base_repository import BaseRepository
-from app.db.repositories.download_repo_adapter import IndexerStatisticsRepositoryAdapter
-from app.helper import PluginHelper
-from app.infrastructure.cache_system import CategoryLoadCache, ConfigLoadCache
-from app.media import Category
-from app.services.apikey_service import APIKeyService
+from app.di import container
 from app.services.rbac_init import init_admin_user
 from app.services.rbac_init import init_rbac_system as rbac_init
 from app.utils import ExceptionUtils
-from app.utils.path_utils import get_category_path
-from app.utils.types import SystemConfigKey
-from app.core.settings import settings
-
-_observer = Observer(timeout=10)
 
 
 def check_config():
@@ -85,7 +72,7 @@ def update_config():
     升级配置文件
     """
     _config = settings.get()
-    _dbhelper = IndexerStatisticsRepositoryAdapter()
+    _dbhelper = container.indexer_statistics_repo()
     overwrite_config = False
 
     # security.api_key 已废弃：
@@ -131,17 +118,6 @@ def update_config():
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
 
-    # 存量插件安装情况统计
-    try:
-        plugin_report_state = SystemConfig().get(SystemConfigKey.UserInstalledPluginsReport)
-        installed_plugins = SystemConfig().get(SystemConfigKey.UserInstalledPlugins)
-        if not plugin_report_state and installed_plugins:
-            ret = PluginHelper().report(installed_plugins)
-            if ret:
-                SystemConfig().set(SystemConfigKey.UserInstalledPluginsReport, "1")
-    except Exception as e:
-        ExceptionUtils.exception_traceback(e)
-
     # TMDB代理服务开关迁移
     try:
         _lab_cfg = _config.get("laboratory", {})
@@ -160,68 +136,6 @@ def update_config():
 
     # 清空索引器统计
     _dbhelper.delete_all()
-
-
-class ConfigMonitor(FileSystemEventHandler):
-    """
-    配置文件变化响应
-    """
-
-    def __init__(self):
-        FileSystemEventHandler.__init__(self)
-
-    def on_modified(self, event):
-        if event.is_directory:
-            return
-        src_path = event.src_path
-        file_name = os.path.basename(src_path)
-        file_head, file_ext = os.path.splitext(os.path.basename(file_name))
-        if file_ext != ".yaml":
-            return
-        # 配置文件10秒内只能加载一次
-        if file_name == "config.yaml" and not ConfigLoadCache.get(str(src_path)):
-            ConfigLoadCache.set(str(src_path), True)
-            CategoryLoadCache.set("ConfigLoadBlock", True)
-            log.warn(f"【System】进程 {os.getpid()} 检测到系统配置文件已修改，正在重新加载...")
-            time.sleep(1)
-            # 重新加载配置
-            settings.reload()
-        # 正在使用的二级分类策略文件3秒内只能加载一次，配置文件加载时，二级分类策略文件不加载
-        elif (
-            (category_path := get_category_path())
-            and file_name == os.path.basename(category_path)
-            and not CategoryLoadCache.get(str(src_path))
-            and not CategoryLoadCache.get("ConfigLoadBlock")
-        ):
-            CategoryLoadCache.set(str(src_path), True)
-            log.warn(f"【System】进程 {os.getpid()} 检测到二级分类策略 {file_head} 配置文件已修改，正在重新加载...")
-            time.sleep(1)
-            # 重新加载二级分类策略
-            Category().init_config()
-
-
-def start_config_monitor():
-    """
-    启动服务
-    """
-    global _observer
-    # 配置文件监听
-    _observer.schedule(ConfigMonitor(), path=settings.config_path, recursive=False)
-    _observer.daemon = True
-    _observer.start()
-
-
-def stop_config_monitor():
-    """
-    停止服务
-    """
-    global _observer
-    try:
-        if _observer:
-            _observer.stop()
-            _observer.join()
-    except Exception as err:
-        print(str(err))
 
 
 def check_redis():
@@ -244,8 +158,7 @@ def init_message_webhook_apikey():
     在 API_KEYS 表中创建/获取名为 MessageWebhook 的系统 key
     """
     try:
-        service = APIKeyService()
-        service.get_or_create_system_key("MessageWebhook")
+        container.apikey_service().get_or_create_system_key("MessageWebhook")
         log.info("【Initialize】消息 Webhook API Key 已就绪")
     except Exception as e:
         log.error(f"【Initialize】消息 Webhook API Key 初始化失败：{e!s}")

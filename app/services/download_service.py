@@ -8,7 +8,7 @@ import os
 import log
 from app.core.exceptions import DomainError, ServiceError
 from app.db.models import DOWNLOADHISTORY
-from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
+from app.di import container
 from app.media import MediaService
 from app.media.models import MediaInfo
 from app.schemas.download import (
@@ -44,12 +44,12 @@ class DownloadService:
         indexer_service: IndexerService | None = None,
         torrent_remover: TorrentRemover | None = None,
     ):
-        self._downloader = downloader or Downloader()
-        self._searcher = searcher or Searcher()
-        self._media = media_service or MediaService()
-        self._sites = sites or Sites()
-        self._indexer_service = indexer_service or IndexerService()
-        self._torrent_remover = torrent_remover or TorrentRemover()
+        self._downloader = downloader or container.downloader_core()
+        self._searcher = searcher or container.searcher()
+        self._media = media_service or container.media_service()
+        self._sites = sites or container.sites()
+        self._indexer_service = indexer_service or container.indexer_service()
+        self._torrent_remover = torrent_remover or container.torrentremover_service()
 
     # ---------- 下载编排 ----------
 
@@ -272,7 +272,7 @@ class DownloadService:
         获取正在下载的任务列表，并拼装媒体信息（标题、海报）
         从数据库读取任务列表，按需从下载器获取实时进度
         """
-        repo = DownloadHistoryRepositoryAdapter()
+        repo = container.download_history_repo()
         active_tasks = repo.get_active_downloads()
         if not active_tasks:
             return []

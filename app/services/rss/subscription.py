@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.helper import RssHelper, ThreadHelper
+from app.di import container
 from app.media import meta_info
 from app.schemas.rss import (
     RssAddResultDTO,
@@ -25,15 +25,17 @@ class RssSubscriptionService:
     def __init__(
         self, subscribe: Subscribe | None = None, rss: Rss | None = None, rss_checker: RssTaskService | None = None
     ):
-        self._subscribe: Subscribe = subscribe or Subscribe()
+        self._subscribe: Subscribe = subscribe or container.subscribe_service()
         self._rss: Rss | None = rss
         self._rss_checker: RssTaskService | None = rss_checker
 
     def download_rss(self) -> None:
         """触发RSS订阅下载"""
-        if not self._rss:
-            self._rss = Rss()
-        self._rss.rssdownload()
+        rss = self._rss
+        if not rss:
+            rss = container.rss_core()
+            self._rss = rss
+        rss.rssdownload()
 
     def check_torrent_rss(
         self,
@@ -49,9 +51,11 @@ class RssSubscriptionService:
         site_proxy: bool,
     ) -> Any:
         """判断种子是否命中订阅（委托给 Rss 模块）"""
-        if not self._rss:
-            self._rss = Rss()
-        return self._rss.check_torrent_rss(
+        rss = self._rss
+        if not rss:
+            rss = container.rss_core()
+            self._rss = rss
+        return rss.check_torrent_rss(
             media_info=media_info,
             rss_movies=rss_movies,
             rss_tvs=rss_tvs,
@@ -170,9 +174,11 @@ class RssSubscriptionService:
 
     def re_rss_history(self, rssid: str, rtype: str) -> tuple[int, str]:
         """从历史记录重新订阅"""
-        if not self._rss:
-            self._rss = Rss()
-        rssinfo = self._rss.get_rss_history(rtype=rtype, rid=rssid)
+        rss = self._rss
+        if not rss:
+            rss = container.rss_core()
+            self._rss = rss
+        rssinfo = rss.get_rss_history(rtype=rtype, rid=rssid)
         if not rssinfo:
             return -1, "订阅历史记录不存在"
         mtype = MediaType.MOVIE if rtype == "MOV" else MediaType.TV
@@ -262,9 +268,11 @@ class RssSubscriptionService:
             for tv in self._subscribe.get_subscribe_tvs().values()
             if tv.get("season") and tv.get("tmdbid")
         ]
-        if not self._rss_checker:
-            self._rss_checker = RssTaskService()
-        rss_tv_items += self._rss_checker.get_userrss_mediainfos()
+        checker = self._rss_checker
+        if not checker:
+            checker = container.rss_task_service()
+            self._rss_checker = checker
+        rss_tv_items += checker.get_userrss_mediainfos()
         uniques = set()
         unique_tv_items = []
         for item in rss_tv_items:
@@ -281,33 +289,36 @@ class RssSubscriptionService:
         return self._subscribe.get_subscribe_tvs()
 
     def get_rss_history(self, mtype: str) -> list[dict]:
-        if not self._rss:
-            self._rss = Rss()
-        return [rec.as_dict() for rec in self._rss.get_rss_history(rtype=mtype)]
+        rss = self._rss
+        if not rss:
+            rss = container.rss_core()
+            self._rss = rss
+        return [rec.as_dict() for rec in rss.get_rss_history(rtype=mtype)]
 
     def delete_rss_history(self, rssid: str) -> None:
-        if not self._rss:
-            self._rss = Rss()
-        self._rss.delete_rss_history(rssid=rssid)
+        rss = self._rss
+        if not rss:
+            rss = container.rss_core()
+            self._rss = rss
+        rss.delete_rss_history(rssid=rssid)
 
     def refresh_rss(self, mtype: str, rssid: str) -> None:
         """后台刷新RSS搜索"""
 
         if mtype == "MOV":
-            ThreadHelper().start_thread(self._subscribe.subscribe_search_movie, (rssid,))
+            container.thread_helper().start_thread(self._subscribe.subscribe_search_movie, (rssid,))
         else:
-            ThreadHelper().start_thread(self._subscribe.subscribe_search_tv, (rssid,))
+            container.thread_helper().start_thread(self._subscribe.subscribe_search_tv, (rssid,))
 
     def truncate_rss_history(self) -> None:
 
-        RssHelper().truncate_rss_history()
+        container.rss_helper().truncate_rss_history()
         self._subscribe.truncate_rss_episodes()
 
     def get_ical_events(self) -> list[dict]:
         """获取RSS日历事件"""
-        from app.services.media_service import MediaInfoService
 
-        media_service = MediaInfoService()
+        media_service = container.media_info_service()
         events = []
         for movie in self.get_movie_rss_items():
             info = media_service.get_movie_calendar(tid=movie.get("id"), rssid=movie.get("rssid"))

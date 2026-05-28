@@ -8,8 +8,8 @@ import time
 
 from app.media import MediaService
 from app.plugin_framework.context import PluginContext
-from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.utils.types import MediaType
+from app.di import container
 
 
 class MediaSyncDelPlugin:
@@ -28,7 +28,7 @@ class MediaSyncDelPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self._filetransfer = FileTransfer()
+        self._filetransfer = container.filetransfer_service()
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -231,7 +231,9 @@ class MediaSyncDelPlugin:
                 return
 
         self.ctx.info(f"获取到删除媒体数量 {len(logids)}")
-        FileTransfer().delete_history(logids=logids, flag="del_source" if config.get("del_source") else "")
+        container.filetransfer_service().delete_history(
+            logids=logids, flag="del_source" if config.get("del_source") else ""
+        )
 
         if config.get("send_notify"):
             if media_type == "Episode":

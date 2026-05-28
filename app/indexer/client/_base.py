@@ -12,12 +12,10 @@ from abc import ABCMeta, abstractmethod
 from typing import Any
 
 import log
-from app.helper import ProgressHelper
+from app.indexer.schema import IndexerConfigSchema
 from app.utils import DomUtils, ExceptionUtils, RequestUtils, StringUtils
 from app.utils.types import ProgressKey, SearchType
-
-
-from app.indexer.schema import IndexerConfigSchema
+from app.di import container
 
 
 class _IIndexClient(metaclass=ABCMeta):
@@ -44,7 +42,7 @@ class _IIndexClient(metaclass=ABCMeta):
     progress = None
 
     def __init__(self):
-        self.progress = ProgressHelper()
+        self.progress = container.progress_helper()
 
     @classmethod
     @abstractmethod

@@ -11,7 +11,7 @@ from app.core.settings import AppSettings
 from app.schemas.auth import LoginResponse, UserContext
 from app.schemas.common import CommonResponse
 from app.services.auth_service import AuthService
-from app.services.rbac_service import rbac_service
+from app.di import container
 from app.utils.wallpaper import get_login_wallpaper
 
 _settings = AppSettings()
@@ -100,8 +100,8 @@ async def get_current_user_info(user: UserContext = Depends(get_current_user)):
                 "roles": [],
             },
         }
-    roles = rbac_service.get_user_roles(user.user_id)
-    user_detail = rbac_service.get_user_by_id(user.user_id)
+    roles = container.rbac_service().get_user_roles(user.user_id)
+    user_detail = container.rbac_service().get_user_by_id(user.user_id)
     avatar = user_detail.AVATAR if user_detail else None
     email = user_detail.EMAIL if user_detail else None
     return {

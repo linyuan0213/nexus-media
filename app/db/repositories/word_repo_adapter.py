@@ -40,9 +40,11 @@ class CustomWordRepositoryAdapter(ICustomWordRepository):
         whelp: str,
         note: str | None = None,
     ) -> bool:
-        return bool(self._repo.insert_custom_word(
-            replaced, replace, front, back, offset, wtype, gid, season, enabled, regex, whelp, note
-        ))
+        return bool(
+            self._repo.insert_custom_word(
+                replaced, replace, front, back, offset, wtype, gid, season, enabled, regex, whelp, note
+            )
+        )
 
     def delete_custom_word(self, wid: int | None = None) -> bool:
         return bool(self._repo.delete_custom_word(wid=wid))

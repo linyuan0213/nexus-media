@@ -1,8 +1,8 @@
-
 """
 WeworkIPChange Plugin v2
 定时获取动态IP更新到企业微信可信任IP列表
 """
+
 import contextlib
 import os
 import random
@@ -15,13 +15,13 @@ import pytz
 from pyquery import PyQuery
 
 from app.helper.cookiecloud_helper import CookiecloudHelper
-from app.helper.drissionpage_helper import DrissionPageHelper
 from app.infrastructure.cache_system import get_cache_manager
 from app.plugin_framework.context import PluginContext
 from app.plugin_framework.event_compat import EventHandler
 from app.utils.config_tools import get_ua
 from app.utils.http_utils import RequestUtils
 from app.utils.types import EventType
+from app.di import container
 
 
 class WeworkIPChangePlugin:
@@ -39,7 +39,7 @@ class WeworkIPChangePlugin:
 
     def on_enable(self):
         self.ctx.info("企业微信可信IP更新插件已启用")
-        self._drissonpage_helper = DrissionPageHelper()
+        self._drissonpage_helper = container.drissionpage_helper()
         self._cache = get_cache_manager().get_or_create("wework_ipchange", cache_type="redis", fallback_maxsize=10)
         self._init_chrome_tab()
         self._start_service()

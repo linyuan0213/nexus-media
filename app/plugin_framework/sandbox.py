@@ -12,16 +12,15 @@ from typing import Any
 import log
 from app.message import Message
 from app.plugin_framework.context import PluginContext
-from app.plugin_framework.registry import PluginRegistry
-from app.utils.commons import SingletonMeta
+from app.di import container
 
 
-class PluginSandbox(metaclass=SingletonMeta):
+class PluginSandbox:
     """插件沙箱，管理插件后端模块的加载和运行"""
 
     def __init__(self):
         self._instances: dict[str, Any] = {}
-        self._registry = PluginRegistry()
+        self._registry = container.plugin_registry()
 
     def _get_module_path(self, plugin_id: str) -> str | None:
         """根据插件 entry 计算 module_path"""

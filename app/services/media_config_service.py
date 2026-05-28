@@ -3,8 +3,8 @@
 import json
 
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
-from app.db.repositories.config_repo_adapter import MediaConfigRepositoryAdapter
 from app.core.settings import settings
+from app.db.repositories.config_repo_adapter import MediaConfigRepositoryAdapter
 
 
 class MediaConfigService:

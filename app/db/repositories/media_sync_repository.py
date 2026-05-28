@@ -63,18 +63,14 @@ class MediaSyncRepository(BaseRepository):
         return True
 
     @DbPersist(BaseRepository._db)
-    def save_statistics(
-        self, server_type: str, total_count: int, movie_count: int, tv_count: int
-    ) -> bool:
+    def save_statistics(self, server_type: str, total_count: int, movie_count: int, tv_count: int) -> bool:
         """
         保存媒体同步统计
         """
         if not server_type:
             return False
 
-        self._db.query(MEDIASYNCSTATISTIC).filter(
-            MEDIASYNCSTATISTIC.SERVER == server_type
-        ).delete()
+        self._db.query(MEDIASYNCSTATISTIC).filter(MEDIASYNCSTATISTIC.SERVER == server_type).delete()
 
         new_stat = MEDIASYNCSTATISTIC(
             SERVER=server_type,
@@ -116,6 +112,4 @@ class MediaSyncRepository(BaseRepository):
         """
         if not server_type:
             return None
-        return self._db.query(MEDIASYNCSTATISTIC).filter(
-            MEDIASYNCSTATISTIC.SERVER == server_type
-        ).first()
+        return self._db.query(MEDIASYNCSTATISTIC).filter(MEDIASYNCSTATISTIC.SERVER == server_type).first()

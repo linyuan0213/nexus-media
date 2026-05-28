@@ -1,10 +1,8 @@
-from app.core.system_config import SystemConfig
-from app.helper import ThreadHelper
+from app.di import container
 from app.infrastructure.cache_system import TokenCache
 from app.mediaserver import MediaServer
 from app.schemas.media import LibrarySpaceDTO
 from app.services.filetransfer_service import FileTransferService as FileTransfer
-from app.services.media_config_service import MediaConfigService
 from app.utils import SystemUtils
 from app.utils.types import SystemConfigKey
 
@@ -15,8 +13,8 @@ class MediaLibraryService:
     """
 
     def __init__(self, media_server: MediaServer | None = None, filetransfer: FileTransfer | None = None):
-        self._media_server = media_server or MediaServer()
-        self._filetransfer = filetransfer or FileTransfer()
+        self._media_server = media_server or container.media_server()
+        self._filetransfer = filetransfer or container.filetransfer_service()
 
     def get_sync_state(self) -> str:
         """获取同步状态文本"""
@@ -32,8 +30,8 @@ class MediaLibraryService:
     def start_sync(self, librarys: list):
         """开始媒体库同步"""
         TokenCache.delete("index")
-        SystemConfig().set(key=SystemConfigKey.SyncLibrary, value=librarys)
-        ThreadHelper().start_thread(self._media_server.sync_mediaserver, ())
+        container.system_config().set(key=SystemConfigKey.SyncLibrary, value=librarys)
+        container.thread_helper().start_thread(self._media_server.sync_mediaserver, ())
 
     def get_media_count(self) -> dict | None:
         """获取媒体库统计"""
@@ -53,10 +51,6 @@ class MediaLibraryService:
         """获取播放记录"""
         return self._media_server.get_activity_log(30)
 
-    def init_config(self):
-        """初始化媒体服务器配置（代理）"""
-        self._media_server.init_config()
-
     def get_libraries(self):
         """获取媒体库列表（代理）"""
         return self._media_server.get_libraries()
@@ -71,7 +65,7 @@ class MediaLibraryService:
 
     def get_space_info(self) -> LibrarySpaceDTO:
         """获取媒体库存储空间"""
-        media_cfg = MediaConfigService().get_config()
+        media_cfg = container.media_config_service().get_config()
         movie_paths = media_cfg.get("movie_path") or []
         tv_paths = media_cfg.get("tv_path") or []
         anime_paths = media_cfg.get("anime_path") or []

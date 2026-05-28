@@ -4,14 +4,6 @@ import os
 import pytz
 
 import log
-from app.helper.temp_cleanup_helper import TempCleanupHelper
-from app.helper.thread_helper import ThreadHelper
-from app.mediaserver import MediaServer
-from app.services.rss_core import Rss
-from app.services.subscribe_service import SubscribeService as Subscribe
-from app.services.sync_engine import SyncEngine as Sync
-from app.sites.site_userinfo import SiteUserInfo
-from app.utils.wallpaper import get_login_wallpaper
 from app.core.constants import (
     REFRESH_WALLPAPER_INTERVAL,
     RSS_CHECK_INTERVAL,
@@ -20,11 +12,14 @@ from app.core.constants import (
 )
 from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
+from app.di import container
+from app.helper.temp_cleanup_helper import TempCleanupHelper
+from app.utils.wallpaper import get_login_wallpaper
 
 
 def _refresh_site_data_now_threaded():
     """站点数据刷新 — 在独立线程中执行，避免阻塞调度器"""
-    ThreadHelper().start_thread(SiteUserInfo().refresh_site_data_now, ())
+    container.thread_helper().start_thread(container.site_userinfo().refresh_site_data_now, ())
 
 
 def load_default_jobs(scheduler):
@@ -74,7 +69,7 @@ def load_default_jobs(scheduler):
                 scheduler.register_interval(
                     job_id="Rss.rssdownload",
                     name="RSS订阅下载",
-                    func=Rss().rssdownload,
+                    func=container.rss_core().rssdownload,
                     seconds=pt_check_interval,
                     jobstore=_jobstore,
                 )
@@ -100,7 +95,7 @@ def load_default_jobs(scheduler):
                 scheduler.register_interval(
                     job_id="Subscribe.subscribe_search_all",
                     name="订阅搜索",
-                    func=Subscribe().subscribe_search_all,
+                    func=container.subscribe_service().subscribe_search_all,
                     hours=search_rss_interval,
                     jobstore=_jobstore,
                 )
@@ -125,7 +120,7 @@ def load_default_jobs(scheduler):
                 scheduler.register_interval(
                     job_id="MediaServer.sync_mediaserver",
                     name="媒体库同步",
-                    func=MediaServer().sync_mediaserver,
+                    func=container.media_server().sync_mediaserver,
                     hours=mediasync_interval,
                     jobstore=_jobstore,
                 )
@@ -135,7 +130,7 @@ def load_default_jobs(scheduler):
     scheduler.register_interval(
         job_id="Sync.transfer_mon_files",
         name="目录同步监控",
-        func=Sync().transfer_mon_files,
+        func=container.sync_engine().transfer_mon_files,
         seconds=SYNC_TRANSFER_INTERVAL,
         jobstore=_jobstore,
     )
@@ -144,7 +139,7 @@ def load_default_jobs(scheduler):
     scheduler.register_interval(
         job_id="Subscribe.subscribe_search",
         name="订阅队列状态搜索",
-        func=Subscribe().subscribe_search,
+        func=container.subscribe_service().subscribe_search,
         seconds=RSS_CHECK_INTERVAL,
         jobstore=_jobstore,
     )
@@ -153,7 +148,7 @@ def load_default_jobs(scheduler):
     scheduler.register_interval(
         job_id="Subscribe.refresh_rss_metainfo",
         name="豆瓣RSS转TMDB",
-        func=Subscribe().refresh_rss_metainfo,
+        func=container.subscribe_service().refresh_rss_metainfo,
         hours=RSS_REFRESH_TMDB_INTERVAL,
         jobstore=_jobstore,
     )

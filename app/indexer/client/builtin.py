@@ -11,19 +11,16 @@ import json as _json
 from threading import Lock
 
 import log
-from app.core.system_config import SystemConfig
-from app.db.repositories import DownloadRepository
-from app.helper import IndexerConf, IndexerHelper, ProgressHelper
-from app.helper.drissionpage_helper import DrissionPageHelper
+from app.core.settings import settings
+from app.helper import IndexerConf
 from app.indexer.client._base import _IIndexClient
-from app.sites import Sites
+from app.indexer.schema import IndexerConfigSchema
 from app.sites.engine import SiteEngine
 from app.sites.searcher_factory import create_searcher
 from app.utils import StringUtils
 from app.utils.config_tools import get_ua
-from app.indexer.schema import IndexerConfigSchema
 from app.utils.types import ProgressKey, SearchType, SystemConfigKey
-from app.core.settings import settings
+from app.di import container
 
 _STATS_LOCK = Lock()
 
@@ -49,13 +46,13 @@ class BuiltinIndexer(_IIndexClient):
 
     def __init__(self, config=None, indexer_helper=None):
         self._client_config = config or {}
-        self._indexer_helper = indexer_helper or IndexerHelper()
-        self.init_config()
+        self._indexer_helper = indexer_helper or container.indexer_helper()
+        self._refresh()
 
-    def init_config(self):
-        self.sites = Sites()
-        self.progress = ProgressHelper()
-        self.download_repo = DownloadRepository()
+    def _refresh(self):
+        self.sites = container.sites()
+        self.progress = container.progress_helper()
+        self.download_repo = container.download_repo()
         self._show_more_sites = settings.get("laboratory").get("show_more_sites")
 
     @classmethod
@@ -74,10 +71,10 @@ class BuiltinIndexer(_IIndexClient):
     def get_indexers(self, check=True, indexer_id=None, public=True):
         """获取当前索引器的索引站点"""
         ret_indexers = []
-        indexer_sites = SystemConfig().get(SystemConfigKey.UserIndexerSites) or []
+        indexer_sites = container.system_config().get(SystemConfigKey.UserIndexerSites) or []
         _indexer_domains = []
 
-        chrome_ok = DrissionPageHelper().get_status()
+        chrome_ok = container.drissionpage_helper().get_status()
 
         engine_sites = []
         for s in SiteEngine.get_instance().all_sites():
@@ -97,7 +94,7 @@ class BuiltinIndexer(_IIndexClient):
                 )
         self._indexer_helper.set_indexers(engine_sites)
 
-        for site in Sites().get_sites(public=True):
+        for site in container.sites().get_sites(public=True):
             url = site.get("signurl") or site.get("rssurl")
             cookie = site.get("cookie")
             headers = site.get("headers")

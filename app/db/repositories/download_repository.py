@@ -30,8 +30,7 @@ class DownloadRepository(BaseRepository):
             count = self._db.query(DOWNLOADHISTORY).filter(enclosure == DOWNLOADHISTORY.ENCLOSURE).count()
         else:
             count = (
-                self._db
-                .query(DOWNLOADHISTORY)
+                self._db.query(DOWNLOADHISTORY)
                 .filter(downloader == DOWNLOADHISTORY.DOWNLOADER, download_id == DOWNLOADHISTORY.DOWNLOAD_ID)
                 .count()
             )
@@ -80,25 +79,27 @@ class DownloadRepository(BaseRepository):
                 media_info.enclosure == DOWNLOADHISTORY.ENCLOSURE,
                 downloader == DOWNLOADHISTORY.DOWNLOADER,
                 download_id == DOWNLOADHISTORY.DOWNLOAD_ID,
-            ).update({
-                "TITLE": media_info.title,
-                "YEAR": media_info.year or "",
-                "TYPE": media_info.type.value if media_info.type else "",
-                "TMDBID": media_info.tmdb_id or "",
-                "VOTE": media_info.vote_average or "",
-                "POSTER": media_info.get_poster_image() or "",
-                "OVERVIEW": media_info.overview or "",
-                "TORRENT": media_info.org_string,
-                "ENCLOSURE": media_info.enclosure,
-                "DESC": media_info.description or "",
-                "SITE": media_info.site or "",
-                "DOWNLOADER": downloader,
-                "DOWNLOAD_ID": download_id,
-                "SAVE_PATH": save_dir,
-                "SE": media_info.get_season_episode_string() or "",
-                "STATE": "downloading",
-                "DATE": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
-            })
+            ).update(
+                {
+                    "TITLE": media_info.title,
+                    "YEAR": media_info.year or "",
+                    "TYPE": media_info.type.value if media_info.type else "",
+                    "TMDBID": media_info.tmdb_id or "",
+                    "VOTE": media_info.vote_average or "",
+                    "POSTER": media_info.get_poster_image() or "",
+                    "OVERVIEW": media_info.overview or "",
+                    "TORRENT": media_info.org_string,
+                    "ENCLOSURE": media_info.enclosure,
+                    "DESC": media_info.description or "",
+                    "SITE": media_info.site or "",
+                    "DOWNLOADER": downloader,
+                    "DOWNLOAD_ID": download_id,
+                    "SAVE_PATH": save_dir,
+                    "SE": media_info.get_season_episode_string() or "",
+                    "STATE": "downloading",
+                    "DATE": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+                }
+            )
         else:
             self._db.insert(
                 DOWNLOADHISTORY(
@@ -134,16 +135,14 @@ class DownloadRepository(BaseRepository):
 
         # 使用子查询获取每个 TITLE 的最大日期
         sub_query = (
-            self._db
-            .query(DOWNLOADHISTORY.TITLE, func.max(DOWNLOADHISTORY.DATE).label("max_date"))
+            self._db.query(DOWNLOADHISTORY.TITLE, func.max(DOWNLOADHISTORY.DATE).label("max_date"))
             .group_by(DOWNLOADHISTORY.TITLE)
             .subquery()
         )
 
         if date:
             return (
-                self._db
-                .query(DOWNLOADHISTORY)
+                self._db.query(DOWNLOADHISTORY)
                 .filter(date < DOWNLOADHISTORY.DATE)
                 .join(
                     sub_query,
@@ -155,8 +154,7 @@ class DownloadRepository(BaseRepository):
         else:
             offset = (int(page) - 1) * int(num)
             return (
-                self._db
-                .query(DOWNLOADHISTORY)
+                self._db.query(DOWNLOADHISTORY)
                 .join(
                     sub_query,
                     and_(sub_query.c.TITLE == DOWNLOADHISTORY.TITLE, sub_query.c.max_date == DOWNLOADHISTORY.DATE),
@@ -172,8 +170,7 @@ class DownloadRepository(BaseRepository):
 
     def get_download_history_by_path(self, path: str) -> DOWNLOADHISTORY | None:
         return (
-            self._db
-            .query(DOWNLOADHISTORY)
+            self._db.query(DOWNLOADHISTORY)
             .filter(os.path.normpath(path) == DOWNLOADHISTORY.SAVE_PATH)
             .order_by(DOWNLOADHISTORY.DATE.desc())
             .first()
@@ -184,8 +181,7 @@ class DownloadRepository(BaseRepository):
         根据下载器查找下载历史
         """
         return (
-            self._db
-            .query(DOWNLOADHISTORY)
+            self._db.query(DOWNLOADHISTORY)
             .filter(downloader == DOWNLOADHISTORY.DOWNLOADER, download_id == DOWNLOADHISTORY.DOWNLOAD_ID)
             .order_by(DOWNLOADHISTORY.DATE.desc())
             .first()
@@ -196,8 +192,7 @@ class DownloadRepository(BaseRepository):
         仅根据下载ID查找最新的下载历史记录
         """
         return (
-            self._db
-            .query(DOWNLOADHISTORY)
+            self._db.query(DOWNLOADHISTORY)
             .filter(download_id == DOWNLOADHISTORY.DOWNLOAD_ID)
             .order_by(DOWNLOADHISTORY.DATE.desc())
             .first()
@@ -213,8 +208,7 @@ class DownloadRepository(BaseRepository):
 
         cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
         return (
-            self._db
-            .query(DOWNLOADHISTORY)
+            self._db.query(DOWNLOADHISTORY)
             .filter(
                 DOWNLOADHISTORY.STATE.in_(["downloading", "completed"]),
                 DOWNLOADHISTORY.DATE >= cutoff,
@@ -271,17 +265,19 @@ class DownloadRepository(BaseRepository):
         设置下载设置
         """
         if sid:
-            self._db.query(DOWNLOADSETTING).filter(int(sid) == DOWNLOADSETTING.ID).update({
-                "NAME": name,
-                "CATEGORY": category,
-                "TAGS": tags,
-                "IS_PAUSED": int(is_paused),
-                "UPLOAD_LIMIT": int(float(upload_limit)),
-                "DOWNLOAD_LIMIT": int(float(download_limit)),
-                "RATIO_LIMIT": int(round(float(ratio_limit), 2) * 100),
-                "SEEDING_TIME_LIMIT": int(float(seeding_time_limit)),
-                "DOWNLOADER": downloader,
-            })
+            self._db.query(DOWNLOADSETTING).filter(int(sid) == DOWNLOADSETTING.ID).update(
+                {
+                    "NAME": name,
+                    "CATEGORY": category,
+                    "TAGS": tags,
+                    "IS_PAUSED": int(is_paused),
+                    "UPLOAD_LIMIT": int(float(upload_limit)),
+                    "DOWNLOAD_LIMIT": int(float(download_limit)),
+                    "RATIO_LIMIT": int(round(float(ratio_limit), 2) * 100),
+                    "SEEDING_TIME_LIMIT": int(float(seeding_time_limit)),
+                    "DOWNLOADER": downloader,
+                }
+            )
         else:
             self._db.insert(
                 DOWNLOADSETTING(
@@ -326,8 +322,7 @@ class DownloadRepository(BaseRepository):
         查询索引器统计
         """
         return (
-            self._db
-            .query(
+            self._db.query(
                 INDEXERSTATISTICS.INDEXER,
                 func.count(INDEXERSTATISTICS.ID).label("TOTAL"),
                 func.sum(case((INDEXERSTATISTICS.RESULT == "N", 1), else_=0)).label("FAIL"),

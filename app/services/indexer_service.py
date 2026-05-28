@@ -10,7 +10,6 @@ IndexerService - 索引器业务服务层
 
 from typing import Any
 
-from app.db.repositories.download_repo_adapter import IndexerStatisticsRepositoryAdapter
 from app.domain.interfaces.download_repo import IIndexerStatisticsRepository
 from app.indexer import Indexer
 from app.indexer.client import BuiltinIndexer
@@ -22,6 +21,7 @@ from app.schemas.indexer import (
     UserIndexerDTO,
 )
 from app.utils import StringUtils
+from app.di import container
 
 
 class IndexerService:
@@ -36,11 +36,11 @@ class IndexerService:
         string_utils=None,
         indexer_statistics_repo: IIndexerStatisticsRepository | None = None,
     ):
-        self._indexer = indexer or Indexer()
+        self._indexer = indexer or container.indexer()
         self._string_utils = string_utils or StringUtils
         # 如果没有注入Repository，使用适配器创建默认实例
         if indexer_statistics_repo is None:
-            self._indexer_statistics_repo = IndexerStatisticsRepositoryAdapter()
+            self._indexer_statistics_repo = container.indexer_statistics_repo()
         else:
             self._indexer_statistics_repo = indexer_statistics_repo
 
@@ -142,12 +142,6 @@ class IndexerService:
         获取索引器列表（低层兼容）
         """
         return self._indexer.get_indexers(check=check)
-
-    def init_config(self) -> None:
-        """
-        刷新底层 Indexer 单例配置（兼容 IndexerConfigService）
-        """
-        self._indexer.init_config()
 
     # ------------------------------------------------------------------
     # 统计

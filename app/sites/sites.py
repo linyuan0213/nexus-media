@@ -2,12 +2,12 @@ import json
 from datetime import datetime
 
 import log
-from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
-from app.helper import DrissionPageHelper, SiteHelper
+from app.helper import SiteHelper
 from app.sites.engine import SiteEngine
 from app.sites.site_limiter import SiteRateLimiter
 from app.utils import JsonUtils, RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies, get_ua
+from app.di import container
 
 
 class Sites:
@@ -26,10 +26,10 @@ class Sites:
     _MAX_CONCURRENCY = 10
 
     def __init__(self):
-        self.init_config()
+        self._refresh()
 
-    def init_config(self):
-        self.site_repo = SiteRepositoryAdapter()
+    def _refresh(self):
+        self.site_repo = container.site_repo_adapter()
         # 原始站点列表
         self._sites = []
         # ID存储站点
@@ -343,7 +343,7 @@ class Sites:
 
         # 兜底：旧逻辑（无 JSON 定义的 HTML 站点）
         if chrome:
-            chrome_inst = DrissionPageHelper()
+            chrome_inst = container.drissionpage_helper()
             start_time = datetime.now()
             html_text = chrome_inst.get_page_html(url=site_url, cookies=site_cookie)
             seconds = round((datetime.now() - start_time).total_seconds(), 3)
@@ -397,7 +397,7 @@ class Sites:
         ret = self.site_repo.insert_config_site(
             name=name, site_pri=site_pri, rssurl=rssurl, signurl=signurl, cookie=cookie, note=note, rss_uses=rss_uses
         )
-        self.init_config()
+        self._refresh()
         return ret
 
     def update_site(self, tid, name, site_pri, rssurl, signurl, cookie, note, rss_uses):
@@ -416,7 +416,7 @@ class Sites:
             note=note,
             rss_uses=rss_uses,
         )
-        self.init_config()
+        self._refresh()
         return ret
 
     def delete_site(self, siteid):
@@ -426,7 +426,7 @@ class Sites:
         if self.site_repo is None:
             return None
         ret = self.site_repo.delete_config_site(siteid)
-        self.init_config()
+        self._refresh()
         return ret
 
     def update_site_cookie(self, siteid, cookie, ua=None):
@@ -436,7 +436,7 @@ class Sites:
         if self.site_repo is None:
             return None
         ret = self.site_repo.update_cookie_ua(site_id=siteid, cookie=cookie, ua=ua)
-        self.init_config()
+        self._refresh()
         return ret
 
     def update_site_note(self, siteid, note):
@@ -446,7 +446,7 @@ class Sites:
         if self.site_repo is None:
             return None
         ret = self.site_repo.update_config_site_note(tid=siteid, note=note)
-        self.init_config()
+        self._refresh()
         return ret
 
     def get_site_note_by_id(self, siteid):

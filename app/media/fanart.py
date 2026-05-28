@@ -23,9 +23,9 @@ class Fanart:
     _images = {}
 
     def __init__(self):
-        self.init_config()
+        self._refresh()
 
-    def init_config(self):
+    def _refresh(self):
         self._images = {}
 
     def __get_fanart_images(self, media_type, queryid):

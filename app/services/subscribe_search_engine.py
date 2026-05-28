@@ -8,20 +8,21 @@ from typing import Any
 
 import log
 from app.db.repositories import RssRepository
-from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.db.repositories.rss_repo_adapter import (
     RssMovieRepositoryAdapter,
     RssTvEpisodeRepositoryAdapter,
     RssTvRepositoryAdapter,
 )
+from app.di import container
 from app.domain.interfaces.rss_repo import (
     IRssMovieRepository,
     IRssTvEpisodeRepository,
     IRssTvRepository,
 )
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media import MediaCache, MediaService, meta_info
 from app.message import Message
-from app.plugin_framework.event_compat import EventManager
+from app.plugin_framework.event_compat import EventHandler, EventManager
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.services.search_service import Searcher
@@ -65,13 +66,13 @@ class SubscribeSearchEngine:
         self._movie_repo = movie_repo
         self._tv_repo = tv_repo
         self._tv_episode_repo = tv_episode_repo
-        self._searcher = searcher or Searcher()
-        self._media_service = media_service or MediaService()
-        self._media_cache = media_cache or MediaCache()
-        self._downloader = downloader or Downloader()
-        self._filter = filter_service or Filter()
-        self._message = message or Message()
-        self._eventmanager = eventmanager or EventManager()
+        self._searcher = searcher or container.searcher()
+        self._media_service = media_service or container.media_service()
+        self._media_cache = media_cache or container.media_cache()
+        self._downloader = downloader or container.downloader_core()
+        self._filter = filter_service or container.filter_service()
+        self._message = message or container.message()
+        self._eventmanager = eventmanager or EventHandler
         self._lock = Lock()
 
     def subscribe_search_all(self):

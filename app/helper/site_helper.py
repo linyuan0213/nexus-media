@@ -23,7 +23,9 @@ class SiteHelper:
             success = json_data.get("success")
             error_message = json_data.get("errorMessage")
 
-            return bool(message and message.upper() == "SUCCESS" or success or error_message and "已签" in error_message)
+            return bool(
+                message and message.upper() == "SUCCESS" or success or error_message and "已签" in error_message
+            )
         if "签到成功" in html_text:
             return True
 

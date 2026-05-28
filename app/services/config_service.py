@@ -108,7 +108,7 @@ class ConfigService:
     # 兼容属性
     # ------------------------------------------------------------------
 
-    def init_config(self) -> bool | None:
+    def reload(self) -> bool | None:
         """重新加载配置（谨慎使用）"""
         self._config.reload()
         return True

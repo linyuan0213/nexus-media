@@ -18,18 +18,20 @@ import psutil
 from sqlalchemy import create_engine
 
 import log
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.core.settings import settings
 from app.core.system_config import SystemConfig
 from app.db.database_factory import DatabaseFactory
 from app.db.migrate import export_database, import_database, import_from_file
-from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
+from app.di import container
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
-from app.helper import ProgressHelper, SubmoduleHelper
+from app.helper import SubmoduleHelper
 from app.helper.thread_helper import ThreadHelper
 from app.infrastructure.cache_system import TokenCache
 from app.mediaserver import MediaServer
-from app.message import Message, MessageCenter
+from app.message import Message
 from app.message.commands import COMMANDS
-from app.plugin_framework.event_compat import EventManager
+from app.plugin_framework.event_compat import EventHandler
 from app.schemas.system import (
     BackupRestoreResultDTO,
     ConfigUpdateResultDTO,
@@ -44,21 +46,18 @@ from app.schemas.system import (
     WebSearchResultDTO,
 )
 from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.indexer_service import IndexerService
 from app.services.rss_core import Rss
 from app.services.search_web_service import search_medias_for_web
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.services.sync_engine import SyncEngine as Sync
+from app.services.sync_service import SyncService
 from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
-from app.sites.site_userinfo import SiteUserInfo
 from app.utils import ExceptionUtils, RequestUtils
 from app.utils.config_tools import get_proxies
 from app.utils.temp_manager import temp_manager
 from app.utils.types import EventType, MediaType, MovieTypes, ProgressKey, SearchType
 from app.utils.web_utils import WebUtils
-from app.core.exceptions import DomainError, RepositoryError, ServiceError
-from app.core.settings import settings
 from version import APP_VERSION
 
 
@@ -69,7 +68,7 @@ class MessageClientService:
     """
 
     def __init__(self, message: Message | None = None):
-        self._message = message or Message()
+        self._message = message or container.message()
 
     def delete_client(self, cid: int) -> bool:
         """删除消息客户端"""
@@ -193,8 +192,8 @@ class IndexerConfigService:
     """
 
     def __init__(self, system_config: SystemConfig | None = None, indexer_service: IndexerService | None = None):
-        self._system_config = system_config or SystemConfig()
-        self._indexer_service = indexer_service or IndexerService()
+        self._system_config = system_config or container.system_config()
+        self._indexer_service = indexer_service or container.indexer_service()
 
     def save_config(self, data: dict) -> IndexerConfigResultDTO:
         """保存索引器配置"""
@@ -225,7 +224,7 @@ class IndexerConfigService:
             if sites is not None:
                 self._system_config.set(SystemConfigKey.UserIndexerSites, sites)
         # 刷新 Indexer 单例配置
-        self._indexer_service.init_config()
+        container.indexer()._refresh()
         # 测试连接
         if test and name != "builtin":
             try:
@@ -255,8 +254,8 @@ class MediaServerConfigService:
     """
 
     def __init__(self, config_repo=None, media_server: MediaServer | None = None):
-        self._config_repo = config_repo or MediaServerRepositoryAdapter()
-        self._media_server = media_server or MediaServer()
+        self._config_repo = config_repo or container.media_server_repo()
+        self._media_server = media_server or container.media_server()
 
     def save_config(self, data: dict) -> MediaServerConfigResultDTO:
         """保存媒体服务器配置"""
@@ -279,7 +278,7 @@ class MediaServerConfigService:
         if is_default:
             self._config_repo.set_default_media_server(name)
         # 刷新 MediaServer 单例配置
-        self._media_server.init_config()
+        container.media_server()._refresh()
         TokenCache.delete("index")
         # 测试连接
         if test:
@@ -346,18 +345,18 @@ class SchedulerService:
         thread_helper: ThreadHelper | None = None,
     ):
         self._commands = {
-            "pttransfer": (downloader or Downloader()).transfer,
-            "sync": (sync or Sync()).transfer_sync,
-            "rssdownload": (rss or Rss()).rssdownload,
-            "subscribe_search_all": (subscribe or Subscribe()).subscribe_search_all,
+            "pttransfer": (downloader or container.downloader_core()).transfer,
+            "sync": (sync or container.sync_engine()).transfer_sync,
+            "rssdownload": (rss or container.rss_core()).rssdownload,
+            "subscribe_search_all": (subscribe or container.subscribe_service()).subscribe_search_all,
             # 消息命令兼容映射
-            "/ptt": (downloader or Downloader()).transfer,
-            "/ptr": (TorrentRemover()).auto_remove_torrents,
-            "/rst": (sync or Sync()).transfer_sync,
-            "/rss": (rss or Rss()).rssdownload,
-            "/ssa": (subscribe or Subscribe()).subscribe_search_all,
+            "/ptt": (downloader or container.downloader_core()).transfer,
+            "/ptr": container.torrentremover_service().auto_remove_torrents,
+            "/rst": (sync or container.sync_engine()).transfer_sync,
+            "/rss": (rss or container.rss_core()).rssdownload,
+            "/ssa": (subscribe or container.subscribe_service()).subscribe_search_all,
         }
-        self._thread_helper = thread_helper or ThreadHelper()
+        self._thread_helper = thread_helper or container.thread_helper()
 
     def start_service(self, item: str) -> tuple[bool, str]:
         """启动指定服务"""
@@ -399,7 +398,7 @@ class SystemConfigService:
     """
 
     def __init__(self, system_config: SystemConfig | None = None):
-        self._system_config = system_config or SystemConfig()
+        self._system_config = system_config or container.system_config()
 
     def set_config(self, key: str, value) -> bool:
         """设置系统配置项"""
@@ -498,9 +497,7 @@ class SystemLifecycleService:
         plugin_manager=None,
         file_index_service=None,
     ):
-        from app.services.scheduler_core import SchedulerCore
-
-        self._scheduler = scheduler_core or SchedulerCore()
+        self._scheduler = scheduler_core or container.scheduler_core()
         # 保存外部注入的依赖（测试时传入 mock），不在 __init__ 中实例化
         self._sync = sync
         self._brush = brush_task_service
@@ -511,9 +508,6 @@ class SystemLifecycleService:
 
     def start_service(self) -> None:
         """启动所有后台服务（调度器优先启动，确保后续模块注册任务时调度器已就绪）"""
-        from app.services.brush_core import BrushTaskService
-        from app.services.rss_service import RssTaskService
-        from app.sites import SiteConf
         from initializer import (
             check_config,
             check_redis,
@@ -533,27 +527,25 @@ class SystemLifecycleService:
         # 1. 先启动调度器，确保所有后台服务的定时任务可以正常注册
         self._scheduler.start_service(load_defaults=True)
         # 2. 加载基础组件
-        SiteConf()
+        container.site_conf()
         # 3. 启动各业务服务（此时调度器已运行，init_config 里的 stop/start_job 可正常执行）
         if self._sync is None:
-            self._sync = Sync()
+            self._sync = container.sync_engine()
         if self._brush is None:
-            self._brush = BrushTaskService()
+            self._brush = container.brush_task_service()
         if self._rss_checker is None:
-            self._rss_checker = RssTaskService()
+            self._rss_checker = container.rss_task_service()
         if self._torrent_remover is None:
-            self._torrent_remover = TorrentRemover()
+            self._torrent_remover = container.torrentremover_service()
         if self._downloader is None:
-            self._downloader = Downloader()
+            self._downloader = container.downloader_core()
         if self._file_index is None:
-            from app.services.file_index_service import FileIndexService
-
-            self._file_index = FileIndexService()
+            self._file_index = container.file_index_service()
         self._file_index.start()
         self._sync.init()
-        self._brush.init_config()
-        self._rss_checker.init_config()
-        self._torrent_remover.init_config()
+        self._brush.start_service()
+        self._rss_checker._refresh()
+        self._torrent_remover.start_service()
 
     def stop_service(self) -> None:
         """停止所有后台服务"""
@@ -597,11 +589,11 @@ class MessageCommandHandler:
     def __init__(self, search_handler=None):
         self._commands = {
             "/ptr": {"func": TorrentRemover().auto_remove_torrents, "desc": COMMANDS["/ptr"]},
-            "/ptt": {"func": Downloader().transfer, "desc": COMMANDS["/ptt"]},
-            "/rst": {"func": Sync().transfer_sync, "desc": COMMANDS["/rst"]},
+            "/ptt": {"func": container.downloader_core().transfer, "desc": COMMANDS["/ptt"]},
+            "/rst": {"func": container.sync_service().transfer_sync, "desc": COMMANDS["/rst"]},
             "/rss": {"func": Rss().rssdownload, "desc": COMMANDS["/rss"]},
-            "/ssa": {"func": Subscribe().subscribe_search_all, "desc": COMMANDS["/ssa"]},
-            "/tbl": {"func": FileTransfer().truncate_transfer_blacklist, "desc": COMMANDS["/tbl"]},
+            "/ssa": {"func": container.subscribe_service().subscribe_search_all, "desc": COMMANDS["/ssa"]},
+            "/tbl": {"func": container.filetransfer_service().truncate_transfer_blacklist, "desc": COMMANDS["/tbl"]},
             "/trh": {"func": self._truncate_rsshistory, "desc": COMMANDS["/trh"]},
             "/utf": {"func": self._unidentification, "desc": COMMANDS["/utf"]},
             "/udt": {"func": SystemLifecycleService.restart_server, "desc": COMMANDS["/udt"]},
@@ -614,55 +606,51 @@ class MessageCommandHandler:
         if not msg:
             return
 
-        EventManager().send_event(
+        EventHandler.send_event(
             EventType.MessageIncoming,
             {"channel": in_from.value, "user_id": user_id, "user_name": user_name, "message": msg},
         )
 
         command = self._commands.get(msg)
         if command:
-            ThreadHelper().start_thread(command.get("func"), ())
-            Message().send_channel_msg(
+            container.thread_helper().start_thread(command.get("func"), ())
+            container.message().send_channel_msg(
                 channel=in_from, title="正在运行 {} ...".format(command.get("desc")), user_id=user_id or ""
             )
             return
 
         # 插件命令
-        plugin_commands = Message().get_plugin_commands()
+        plugin_commands = container.message().get_plugin_commands()
         msg_list = msg.split(" ")
         cmd_key = msg_list[0]
         plugin_cmd = plugin_commands.get(cmd_key)
         if plugin_cmd:
             func = plugin_cmd.get("func")
             if func:
-                ThreadHelper().start_thread(func, (msg, in_from, user_id, user_name))
-            Message().send_channel_msg(
+                container.thread_helper().start_thread(func, (msg, in_from, user_id, user_name))
+            container.message().send_channel_msg(
                 channel=in_from, title="正在运行 {} ...".format(plugin_cmd.get("desc")), user_id=user_id or ""
             )
             return
 
         TokenCache.delete("search")
         if self._search_handler:
-            ThreadHelper().start_thread(self._search_handler.handle, (msg, in_from, user_id, user_name))
+            container.thread_helper().start_thread(self._search_handler.handle, (msg, in_from, user_id, user_name))
 
     @staticmethod
     def _truncate_rsshistory():
-        from app.helper import RssHelper
-
-        RssHelper().truncate_rss_history()
-        Subscribe().truncate_rss_episodes()
+        container.rss_helper().truncate_rss_history()
+        container.subscribe_service().truncate_rss_episodes()
 
     @staticmethod
     def _user_statistics():
         TokenCache.delete("statistics")
-        SiteUserInfo().refresh_site_data_now()
+        container.site_userinfo().refresh_site_data_now()
 
     @staticmethod
     def _unidentification():
-        from app.services.sync_service import SyncService
-
         item_ids = []
-        records = FileTransfer().get_transfer_unknown_paths()
+        records = container.filetransfer_service().get_transfer_unknown_paths()
         if not records:
             return
         for rec in records:
@@ -687,7 +675,7 @@ def get_rmt_modes():
 
 
 def get_system_message(lst_time):
-    messages = MessageCenter().get_system_messages(lst_time=lst_time)
+    messages = container.message().messagecenter.get_system_messages(lst_time=lst_time)
     if messages:
         lst_time = messages[0].get("time")
     return {"code": 0, "message": messages, "lst_time": lst_time}
@@ -761,7 +749,7 @@ class MessageSenderService:
     """
 
     def __init__(self, message: Message | None = None):
-        self._message = message or Message()
+        self._message = message or container.message()
 
     def send_custom_message(self, clients: list, title: str, text: str, image: str = "") -> SendMessageResultDTO:
         if not clients:
@@ -780,7 +768,7 @@ class ProgressService:
     """
 
     def __init__(self, progress_helper=None):
-        self._progress = progress_helper or ProgressHelper()
+        self._progress = progress_helper or container.progress_helper()
 
     def get_progress(self, ptype: str) -> ProgressResultDTO:
         detail = self._progress.get_process(ProgressKey(ptype))
@@ -799,9 +787,9 @@ class UserManageService:
 
     def _get_rbac(self):
         if self._rbac is None:
-            from app.services.rbac_service import rbac_service
+            from app.di import container
 
-            self._rbac = rbac_service
+            self._rbac = container.rbac_service()
         return self._rbac
 
     def add_user(self, name: str, password: str, pris=None) -> UserManageResultDTO:

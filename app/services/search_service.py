@@ -14,21 +14,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import log
-from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
-from app.db.repositories.search_repo_adapter import SearchRepositoryAdapter
-from app.domain.interfaces.download_repo import IDownloadHistoryRepository
-from app.domain.interfaces.search_repo import ISearchRepository
-from app.helper import ProgressHelper
-from app.media import MediaService
-from app.message import Message
-from app.plugin_framework.event_compat import EventManager
-from app.schemas.search import SearchMediasResultDTO, SearchOneMediaResultDTO
-from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.indexer_service import IndexerService
-from app.utils.string_utils import StringUtils
-from app.utils.types import EventType, MediaType, ProgressKey, SearchType
 from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
+from app.di import container
+from app.domain.interfaces.download_repo import IDownloadHistoryRepository
+from app.domain.interfaces.search_repo import ISearchRepository
+from app.media import MediaService
+from app.message import Message
+from app.plugin_framework.event_compat import EventHandler
+from app.schemas.search import SearchMediasResultDTO, SearchOneMediaResultDTO
+from app.services.downloader_core import DownloaderCore as Downloader
+from app.utils.string_utils import StringUtils
+from app.utils.types import EventType, MediaType, ProgressKey, SearchType
 
 
 class SearchQueryBuilder:
@@ -62,7 +59,7 @@ class SearchQueryBuilder:
             if media_info.original_language == "en":
                 search_en_name = media_info.original_title
             else:
-                _media = media_helper or MediaService()
+                _media = media_helper or container.media_service()
                 en_title = _media.get_tmdb_en_title(media_info)
                 if en_title:
                     search_en_name = en_title
@@ -79,7 +76,7 @@ class SearchQueryBuilder:
         except Exception:
             multi_lang = False
         if multi_lang:
-            _media = media_helper or MediaService()
+            _media = media_helper or container.media_service()
             search_zhtw_name = _media.get_tmdb_zhtw_title(media_info)
             if search_zhtw_name and search_zhtw_name != search_cn_name:
                 search_name_list.append(search_zhtw_name)
@@ -167,13 +164,13 @@ class SearchResultProcessor:
         search_repo: ISearchRepository | None = None,
         message: Message | None = None,
     ):
-        self._downloader = downloader or Downloader()
+        self._downloader = downloader or container.downloader_core()
         # 如果没有注入Repository，使用适配器创建默认实例
         if download_repo is None:
-            self._download_repo = DownloadHistoryRepositoryAdapter()
+            self._download_repo = container.download_history_repo()
         else:
             self._download_repo = download_repo
-        self._search_repo = search_repo or SearchRepositoryAdapter()
+        self._search_repo = search_repo or container.search_repo()
         self._message = message or Message()
 
     @staticmethod
@@ -237,31 +234,15 @@ class Searcher:
     def __init__(
         self, download_repo: IDownloadHistoryRepository | None = None, search_repo: ISearchRepository | None = None
     ):
-        self._download_repo = download_repo
-        self._search_repo = search_repo
-        self.downloader = None
-        self.media = None
-        self.message = None
-        self.indexer = None
-        self.progress = None
-        self.search_repo = None
-        self.eventmanager = None
-        self._search_auto = True
-        self.init_config()
-
-    def init_config(self):
-        self.downloader = Downloader()
-        self.media = MediaService()
-        self.message = Message()
-        self.progress = ProgressHelper()
-        # 如果没有注入Repository，使用适配器创建默认实例
-        if self._download_repo is None:
-            self._download_repo = DownloadHistoryRepositoryAdapter()
-        if self._search_repo is None:
-            self._search_repo = SearchRepositoryAdapter()
+        self._download_repo = download_repo or container.download_history_repo()
+        self._search_repo = search_repo or container.search_repo()
+        self.downloader = container.downloader_core()
+        self.media = container.media_service()
+        self.message = container.message()
+        self.progress = container.progress_helper()
         self.search_repo = self._search_repo
-        self.indexer_service = IndexerService()
-        self.eventmanager = EventManager()
+        self.indexer_service = container.indexer_service()
+        self.eventmanager = EventHandler
         self._search_auto = settings.get("pt").get("search_auto", True)
 
     @property
@@ -432,9 +413,9 @@ class SearchService:
         downloader: Downloader | None = None,
         media_service: MediaService | None = None,
     ):
-        self._searcher = searcher or Searcher()
-        self._downloader = downloader or Downloader()
-        self._media = media_service or MediaService()
+        self._searcher = searcher or container.searcher()
+        self._downloader = downloader or container.downloader_core()
+        self._media = media_service or container.media_service()
 
     def search_medias(
         self, key_word: Any, filter_args: dict, match_media=None, in_from: SearchType | None = None

@@ -1,12 +1,12 @@
 """TransferHistoryManager - 转移历史记录 CRUD 管理."""
 
-from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import (
     TransferBlacklistRepositoryAdapter,
     TransferHistoryRepositoryAdapter,
     TransferUnknownRepositoryAdapter,
 )
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
+from app.di import container
 from app.domain.interfaces.transfer_repo import (
     ITransferBlacklistRepository,
     ITransferHistoryRepository,
@@ -27,7 +27,7 @@ class TransferHistoryManager:
         self.transfer_repo = transfer_repo or TransferHistoryRepositoryAdapter()
         self.transfer_blacklist_repo = transfer_blacklist_repo or TransferBlacklistRepositoryAdapter()
         self.transfer_unknown_repo = transfer_unknown_repo or TransferUnknownRepositoryAdapter()
-        self.download_repo = download_repo or DownloadHistoryRepositoryAdapter()
+        self.download_repo = download_repo or container.download_history_repo()
 
     # ---------- 下载记录 ----------
 

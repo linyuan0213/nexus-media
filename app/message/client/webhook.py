@@ -220,7 +220,9 @@ class Webhook(_IMessageClient):
         """
         # GET 请求不发送 body
         if json_data is None:
-            response = requests.request(self._method or "GET", self._url or "", params=query_params, headers=self.header)
+            response = requests.request(
+                self._method or "GET", self._url or "", params=query_params, headers=self.header
+            )
         else:
             # POST/PUT 等请求发送 JSON body
             response = requests.request(
@@ -239,6 +241,3 @@ class Webhook(_IMessageClient):
         if self._token:
             r["Authorization"] = self._token
         return r
-
-
-

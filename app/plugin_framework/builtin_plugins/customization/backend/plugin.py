@@ -3,8 +3,8 @@ Customization Plugin v2
 添加自定义占位符识别正则
 """
 
-from app.media import CustomizationMatcher
 from app.plugin_framework.context import PluginContext
+from app.di import container
 
 
 class CustomizationPlugin:
@@ -12,7 +12,7 @@ class CustomizationPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self._matcher = CustomizationMatcher()
+        self._matcher = container.customization_matcher()
 
     def _get_config(self):
         return self.ctx.get_config() or {}

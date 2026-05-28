@@ -7,11 +7,11 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.errors import SlackApiError
 
 import log
+from app.core.settings import settings
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
-from app.services.apikey_service import APIKeyService
 from app.utils import ExceptionUtils
-from app.core.settings import settings
+from app.di import container
 
 lock = Lock()
 
@@ -70,7 +70,7 @@ class Slack(_IMessageClient):
 
     def setup(self):
         _web_port = settings.get("app").web_port
-        _api_key = APIKeyService().get_or_create_system_key("MessageWebhook")
+        _api_key = container.apikey_service().get_or_create_system_key("MessageWebhook")
         self._ds_url = f"http://127.0.0.1:{_web_port}/slack?apikey={_api_key}"
         if not self._bot_token:
             return

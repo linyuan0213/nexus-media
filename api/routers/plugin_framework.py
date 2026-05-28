@@ -16,7 +16,7 @@ import log
 from api.deps import get_plugin_framework_service, require_any_permission, require_permission
 from app.core.exceptions import DomainError, ServiceError
 from app.core.settings import settings
-from app.plugin_framework.hook_system import HookSystem
+from app.di import container
 from app.schemas.common import CommonResponse
 from app.services.plugin_framework_service import PluginFrameworkService
 from app.utils.response import fail, success
@@ -258,7 +258,7 @@ def list_hook_events(
     user: str = Depends(require_any_permission("plugin:view", "plugin:manage")),
 ):
     """列出所有可用事件"""
-    return success(data=HookSystem().EVENTS)
+    return success(data=container.hook_system().EVENTS)
 
 
 @router.get("/plugins/{plugin_id}/data/{filename}")

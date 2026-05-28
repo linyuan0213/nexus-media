@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import log
+from app.di import container
 
 from .cache_manager import CacheManager
 
@@ -62,9 +63,7 @@ class ConfigCacheWarmer(CacheWarmer):
                 log.debug("【CacheWarmer】已缓存 app 配置")
 
             try:
-                from app.media.category import Category
-
-                category = Category()
+                category = container.category()
                 if category._categorys:
                     cache = cache_manager.get_or_create("category_load", "memory")
                     cache.set("categories", category._categorys, ttl=60)
@@ -93,9 +92,8 @@ class SiteCacheWarmer(CacheWarmer):
         start_time = time.time()
         try:
             log.info("【CacheWarmer】开始预热站点数据...")
-            from app.db.repositories import SiteRepository
 
-            db = SiteRepository()
+            db = container.site_repository()
 
             sites = db.get_config_site()
             if sites:
@@ -125,9 +123,7 @@ class WordsCacheWarmer(CacheWarmer):
         start_time = time.time()
         try:
             log.info("【CacheWarmer】开始预热识别词...")
-            from app.helper.words_helper import WordsHelper
-
-            words_helper = WordsHelper()
+            words_helper = container.words_helper()
 
             if words_helper.words_info:
                 log.debug(f"【CacheWarmer】已加载 {len(words_helper.words_info)} 条识别词")
@@ -207,10 +203,10 @@ class CacheWarmerManager:
 
     def _register_default_warmers(self):
         """注册默认的预热器"""
-        self.register(ConfigCacheWarmer())
-        self.register(SiteCacheWarmer())
-        self.register(WordsCacheWarmer())
-        self.register(TMDBTrendingWarmer())
+        self.register(container.config_cache_warmer())
+        self.register(container.site_cache_warmer())
+        self.register(container.words_cache_warmer())
+        self.register(container.tmdb_trending_warmer())
 
     def register(self, warmer: CacheWarmer) -> "CacheWarmerManager":
         """注册预热器"""

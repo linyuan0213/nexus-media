@@ -14,10 +14,9 @@ from app.core.constants import MT_URL
 from app.plugin_framework.builtin_plugins.iyuuautoseed.backend.iyuu.iyuu_helper import IyuuHelper
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import Torrent
-from app.services.downloader_core import DownloaderCore as Downloader
-from app.sites import Sites
 from app.utils import RequestUtils
 from app.utils.config_tools import get_proxies
+from app.di import container
 
 
 class IYUUAutoSeedPlugin:
@@ -25,8 +24,8 @@ class IYUUAutoSeedPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self._downloader = Downloader()
-        self._sites = Sites()
+        self._downloader = container.downloader_core()
+        self._sites = container.sites()
         self._event = Event()
         self.iyuuhelper = None
         self._recheck_torrents = {}
@@ -177,11 +176,13 @@ class IYUUAutoSeedPlugin:
             else:
                 self.ctx.info("没有需要辅种的种子")
 
-        self._save_cache({
-            "error_caches": error_caches,
-            "success_caches": success_caches,
-            "permanent_error_caches": permanent_error_caches,
-        })
+        self._save_cache(
+            {
+                "error_caches": error_caches,
+                "success_caches": success_caches,
+                "permanent_error_caches": permanent_error_caches,
+            }
+        )
 
         if notify and (self.success or self.fail):
             self.ctx.notify(

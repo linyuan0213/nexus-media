@@ -8,28 +8,24 @@ import re
 
 import log
 from app.agent.agents.chat_agent import ChatAgent
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.core.settings import settings
 from app.media import MediaService, meta_info
 from app.message import Message
-from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.indexer_service import IndexerService
 from app.services.search_pagination import pagination_mgr
-from app.services.search_service import Searcher
-from app.services.subscribe_service import SubscribeService as Subscribe
-from app.sites import Sites
 from app.utils import StringUtils, Torrent
 from app.utils.types import MediaType, RssType, SearchType
 from app.utils.web_utils import WebUtils
-from app.core.exceptions import DomainError, RepositoryError, ServiceError
-from app.core.settings import settings
+from app.di import container
 
 
 class MessageSearchService:
     """消息中心搜索服务"""
 
     def __init__(self):
-        self._downloader = Downloader()
-        self._searcher = Searcher()
-        self._indexer = IndexerService()
+        self._downloader = container.downloader_core()
+        self._searcher = container.searcher()
+        self._indexer = container.indexer_service()
 
     def handle(self, input_str: str, in_from: SearchType, user_id: str, user_name: str | None = None):
         """处理消息中心输入"""
@@ -160,7 +156,7 @@ class MessageSearchService:
 
     def _download_from_url(self, url: str, in_from: SearchType, user_id: str, user_name: str | None = None):
         """从 URL 下载种子"""
-        site_info: dict = Sites().get_sites(siteurl=url)  # type: ignore[assignment]
+        site_info: dict = container.sites().get_sites(siteurl=url)  # type: ignore[assignment]
         filepath, content, retmsg = Torrent().save_torrent_file(
             url=url, cookie=site_info.get("cookie"), ua=site_info.get("ua"), proxy=site_info.get("proxy") or False
         )
@@ -200,7 +196,10 @@ class MessageSearchService:
         # 解析站点和下载设置
         rss_sites, content = StringUtils.get_idlist_from_string(
             content,
-            [{"id": site.get("name"), "name": site.get("name")} for site in Sites().get_sites(rss=True, public=True)],
+            [
+                {"id": site.get("name"), "name": site.get("name")}
+                for site in container.sites().get_sites(rss=True, public=True)
+            ],
         )
 
         if indexer_type == "builtin":
@@ -320,7 +319,7 @@ class MessageSearchService:
     def _add_rss(in_from, media_info, user_id=None, state="D", user_name=None):
         """添加订阅"""
         mediaid = f"DB:{media_info.douban_id}" if media_info.douban_id else media_info.tmdb_id
-        code, msg, media_info = Subscribe().add_rss_subscribe(
+        code, msg, media_info = container.subscribe_service().add_rss_subscribe(
             mtype=media_info.type,
             name=media_info.title,
             year=media_info.year,

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from api.deps import (
     get_downloader_service,
+    get_file_index_service,
     get_media_config_service,
     get_media_file_service,
     get_media_info_service,
@@ -19,7 +20,6 @@ from api.deps import (
     require_any_permission,
     require_permission,
 )
-from app.core.exceptions import DomainError, ServiceError  # noqa: F401
 from app.schemas.common import CommonResponse
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.file_index_service import FileIndexService
@@ -709,10 +709,10 @@ def clear_tmdb_blacklist(
 def search_files(
     keyword: str = Query(..., min_length=1),
     limit: int = Query(100, ge=1, le=500),
+    svc: FileIndexService = Depends(get_file_index_service),
     current_user=Depends(require_any_permission("library:view", "library:manage")),
 ):
     """全局搜索媒体库 + 同步源目录中的文件（基于后台索引，O(1) 响应）"""
-    svc = FileIndexService()
     results = svc.search(keyword, limit=limit)
     return success(
         data={

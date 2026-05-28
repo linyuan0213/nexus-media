@@ -37,9 +37,7 @@ from app.agent.providers.gemini import GeminiProvider
 from app.agent.providers.ollama import OllamaProvider
 from app.agent.providers.openai import OpenAIProvider
 from app.core.exceptions import DomainError, ServiceError
-from app.core.system_config import SystemConfig
 from app.db.repositories.base_repository import BaseRepository
-from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.indexer.registry import get_all_clients as get_all_indexers
 from app.mediaserver.registry import get_all_clients as get_all_mediaservers
 from app.message.registry import get_all_clients
@@ -68,6 +66,7 @@ from app.utils.system_utils import SystemUtils
 from app.utils.temp_manager import temp_manager
 from app.utils.types import SystemConfigKey
 from log import LOG_BUFFER
+from app.di import container
 
 router = APIRouter()
 
@@ -380,9 +379,10 @@ def get_indexers(
     indexers = idx_svc.get_builtin_indexers(check=False)
     private_count = len([item.id for item in indexers if not item.public])
     public_count = len([item.id for item in indexers if item.public])
-    indexer_sites = SystemConfig().get(SystemConfigKey.UserIndexerSites) or []
-    search_indexer = SystemConfig().get(SystemConfigKey.SearchIndexer) or "builtin"
-    indexer_config = SystemConfig().get(SystemConfigKey.IndexerConfig) or {}
+    _cfg = container.system_config()
+    indexer_sites = _cfg.get(SystemConfigKey.UserIndexerSites) or []
+    search_indexer = _cfg.get(SystemConfigKey.SearchIndexer) or "builtin"
+    indexer_config = _cfg.get(SystemConfigKey.IndexerConfig) or {}
     return success(
         data={
             "indexers": indexers,
@@ -434,7 +434,7 @@ def get_mediaservers(
     current_user: UserContext = Depends(require_permission("setting:update")),
 ):
     """获取媒体服务器配置信息"""
-    repo = MediaServerRepositoryAdapter()
+    repo = container.media_server_repo()
     servers = repo.get_media_servers()
     default_server = repo.get_default_media_server()
     server_dict = {}
@@ -833,4 +833,19 @@ def update_site_config(
         return fail(msg=e.message)
     except Exception as e:
         log.error(f"【System】手动更新站点配置失败: {e!s}")
+        return fail(msg=str(e))
+
+
+@router.post("/config/reload", response_model=CommonResponse, summary="手动触发配置重载")
+def reload_config(
+    current_user: UserContext = Depends(require_permission("setting:update")),
+):
+    """手动触发全量配置重载（通过 ConfigReloader 按优先级 reset 各 provider）"""
+    try:
+        result = container.config_reloader().reload(container)
+        if result["failed"]:
+            return fail(msg=f"配置重载部分失败: {result['failed']}")
+        return success(data={"version": result["version"], "steps": result["results"]})
+    except Exception as e:
+        log.error(f"【System】配置重载失败: {e!s}")
         return fail(msg=str(e))

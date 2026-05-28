@@ -14,15 +14,12 @@ from typing import cast
 import pytz
 from lxml import etree
 
-from app.db.repositories import SiteRepository
 from app.helper import SiteHelper, SubmoduleHelper
 from app.helper.cloudflare_helper import under_challenge
-from app.helper.drissionpage_helper import DrissionPageHelper
 from app.plugin_framework.context import PluginContext
-from app.sites.siteconf import SiteConf
-from app.sites.sites import Sites
 from app.utils import ExceptionUtils, JsonUtils, RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
+from app.di import container
 
 
 class AutoGenRssPlugin:
@@ -31,8 +28,8 @@ class AutoGenRssPlugin:
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
         self._site_schema = []
-        self._site_repo = SiteRepository()
-        self._siteconf = SiteConf()
+        self._site_repo = container.site_repository()
+        self._siteconf = container.site_conf()
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -97,7 +94,7 @@ class AutoGenRssPlugin:
         if isinstance(rss_sites, str):
             rss_sites = [s for s in rss_sites.split("\n") if s]
 
-        rss_sites = copy.deepcopy(Sites().get_sites(siteids=rss_sites))
+        rss_sites = copy.deepcopy(container.sites().get_sites(siteids=rss_sites))
         if not rss_sites:
             self.ctx.info("没有需要生成的站点，停止运行")
             return
@@ -165,7 +162,7 @@ class AutoGenRssPlugin:
 
             home_url = StringUtils.get_base_url(site_url)
             rss_url = f"{home_url}/getrss.php"
-            chrome = DrissionPageHelper()
+            chrome = container.drissionpage_helper()
             if site_info.get("chrome") and chrome.get_status():
                 self.ctx.info(f"开始生成RSS站点（Chrome）：{site}")
                 # TODO: Chrome仿真实现

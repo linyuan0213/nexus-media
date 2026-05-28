@@ -6,7 +6,7 @@ import time
 from typing import Any, ClassVar
 
 import log
-from app.helper import ThreadHelper
+from app.di import container
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.schemas.scheduler import (
     DeleteSchedulerJobRequest,
@@ -37,7 +37,7 @@ class SchedulerService:
     def _get_scheduler(self) -> SchedulerCore | None:
         if self._scheduler is not self._UNSET:
             return self._scheduler
-        core = SchedulerCore()
+        core = container.scheduler_core()
         return core if core.is_running else None
 
     def delete_job(self, req: DeleteSchedulerJobRequest) -> DeleteSchedulerJobResponse:
@@ -148,7 +148,7 @@ class SchedulerService:
             finally:
                 lock.release()
 
-        ThreadHelper().start_thread(_wrapper, ())
+        container.thread_helper().start_thread(_wrapper, ())
         return RunSchedulerJobResponse(code=0, msg="任务已触发")
 
     def update_job(self, req: UpdateSchedulerJobRequest) -> UpdateSchedulerJobResponse:

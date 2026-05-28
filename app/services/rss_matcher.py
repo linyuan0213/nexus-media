@@ -9,6 +9,7 @@ import re
 
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
 from app.utils.types import MediaType
+from app.di import container
 
 
 class RssMatcher:
@@ -132,10 +133,8 @@ class RssMatcher:
 
         # 站点 Free 检测
         if site_parse:
-            from app.sites import SiteConf, Sites
-
-            sites = Sites()
-            siteconf = SiteConf()
+            sites = container.sites()
+            siteconf = container.site_conf()
             if sites.check_ratelimit(site_id):
                 match_msg.append("触发站点流控")
                 return False, match_msg, match_rss_info

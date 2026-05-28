@@ -42,9 +42,9 @@ class SiteConf:
     }
 
     def __init__(self):
-        self.init_config()
+        self._refresh()
 
-    def init_config(self):
+    def _refresh(self):
         pass
 
     def get_checkin_conf(self):

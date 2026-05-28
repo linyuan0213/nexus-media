@@ -1,9 +1,9 @@
 from app.downloader.registry import register
 
-from .qbittorrent import Qbittorrent
-from .transmission import Transmission
 from .aria2 import Aria2
+from .qbittorrent import Qbittorrent
 from .thunder import Thunder
+from .transmission import Transmission
 
 
 def init_clients() -> None:

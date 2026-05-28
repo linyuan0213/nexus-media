@@ -35,7 +35,16 @@ class SiteRepository(BaseRepository):
         return self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).all()
 
     @DbPersist(BaseRepository._db)
-    def insert_config_site(self, name: str, site_pri: str, rssurl: str | None = None, signurl: str | None = None, cookie: str | None = None, note: str | None = None, rss_uses: str | None = None) -> None:
+    def insert_config_site(
+        self,
+        name: str,
+        site_pri: str,
+        rssurl: str | None = None,
+        signurl: str | None = None,
+        cookie: str | None = None,
+        note: str | None = None,
+        rss_uses: str | None = None,
+    ) -> None:
         """
         插入站点信息
         """
@@ -57,7 +66,17 @@ class SiteRepository(BaseRepository):
         self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).delete()
 
     @DbPersist(BaseRepository._db)
-    def update_config_site(self, tid: int | None, name: str, site_pri: str, rssurl: str, signurl: str, cookie: str, note: str, rss_uses: str) -> None:
+    def update_config_site(
+        self,
+        tid: int | None,
+        name: str,
+        site_pri: str,
+        rssurl: str,
+        signurl: str,
+        cookie: str,
+        note: str,
+        rss_uses: str,
+    ) -> None:
         """
         更新站点信息
         """
@@ -405,7 +424,9 @@ class SiteRepository(BaseRepository):
             .limit(days)
         )
 
-    def get_site_statistics_recent_sites(self, days: int = 7, end_day: str | None = None, strict_urls: list | None = None) -> tuple[int, int, list, list, list]:
+    def get_site_statistics_recent_sites(
+        self, days: int = 7, end_day: str | None = None, strict_urls: list | None = None
+    ) -> tuple[int, int, list, list, list]:
         """
         查询近期上传下载量
         """
@@ -498,7 +519,9 @@ class SiteRepository(BaseRepository):
         else:
             return 0, 0, [], [], []
 
-    def get_site_daily_history(self, days: int = 30, end_day: str | None = None, strict_urls: list | None = None) -> dict:
+    def get_site_daily_history(
+        self, days: int = 30, end_day: str | None = None, strict_urls: list | None = None
+    ) -> dict:
         """
         查询各站点每日上传量（按站点、按天分组，返回增量）
         """

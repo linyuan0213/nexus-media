@@ -91,7 +91,13 @@ class MessageClientRepositoryAdapter(IMessageClientRepository):
     ) -> int:
         return self._repo.insert_message_client(name, ctype, config, switchs, interactive, enabled, note, templates)
 
-    def check_message_client(self, cid: int | None = None, interactive: int | None = None, enabled: int | None = None, ctype: str | None = None) -> None:
+    def check_message_client(
+        self,
+        cid: int | None = None,
+        interactive: int | None = None,
+        enabled: int | None = None,
+        ctype: str | None = None,
+    ) -> None:
         self._repo.check_message_client(cid, interactive, enabled, ctype)
 
 
@@ -182,7 +188,14 @@ class DownloaderRepositoryAdapter(IDownloaderRepository):
     def delete_downloader(self, did: int | None) -> None:
         self._repo.delete_downloader(did)
 
-    def check_downloader(self, did: int | None = None, transfer: int | None = None, only_nexus_media: int | None = None, enabled: int | None = None, match_path: int | None = None) -> None:
+    def check_downloader(
+        self,
+        did: int | None = None,
+        transfer: int | None = None,
+        only_nexus_media: int | None = None,
+        enabled: int | None = None,
+        match_path: int | None = None,
+    ) -> None:
         self._repo.check_downloader(did, transfer, only_nexus_media, enabled, match_path)
 
 
@@ -299,7 +312,9 @@ class MediaServerRepositoryAdapter(IMediaServerRepository):
     def get_media_server_by_name(self, name: str) -> MEDIASERVER | None:
         return self._repo.get_media_server_by_name(name)
 
-    def update_media_server(self, sid: int | None, name: str, enabled: int, config: str, is_default: int = 0, note: str | None = None) -> None:
+    def update_media_server(
+        self, sid: int | None, name: str, enabled: int, config: str, is_default: int = 0, note: str | None = None
+    ) -> None:
         self._repo.update_media_server(sid, name, enabled, config, is_default, note)
 
     def set_default_media_server(self, name: str) -> None:

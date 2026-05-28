@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from app.infrastructure.cache_system import get_cache_manager
+from app.infrastructure.cache_system.manager import get_cache_manager
 
 
 class CookiecloudHelper:

@@ -55,7 +55,9 @@ class TmdbBlacklistRepositoryAdapter(ITmdbBlacklistRepository):
         backdrop_path: str | None = None,
         note: str | None = None,
     ) -> bool:
-        return bool(self._repo.insert_tmdb_blacklist(tmdb_id, title, year, media_type, poster_path, backdrop_path, note))
+        return bool(
+            self._repo.insert_tmdb_blacklist(tmdb_id, title, year, media_type, poster_path, backdrop_path, note)
+        )
 
     def delete_tmdb_blacklist(self, tmdb_id: str, media_type: str | None = None) -> bool:
         return bool(self._repo.delete_tmdb_blacklist(tmdb_id, media_type))

@@ -9,19 +9,18 @@ import shutil
 import zipfile
 
 import log
-from app.db.repositories import PluginFrameworkRepository
+from app.core.settings import settings
 from app.domain.entities.plugin import PluginConfigEntity, PluginManifestEntity
 from app.plugin_framework.dependency_manager import PluginDependencyManager
 from app.schemas.plugin import PluginManifest, PluginState
-from app.utils.commons import SingletonMeta
-from app.core.settings import settings
+from app.di import container
 
 
-class PluginRegistry(metaclass=SingletonMeta):
+class PluginRegistry:
     """插件注册表单例"""
 
     def __init__(self):
-        self._repo = PluginFrameworkRepository()
+        self._repo = container.plugin_framework_repo()
         self._plugins_dir = os.path.join(settings.config_path, "plugins")
         if not os.path.exists(self._plugins_dir):
             os.makedirs(self._plugins_dir)

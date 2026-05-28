@@ -4,9 +4,11 @@ import threading
 from typing import cast
 
 import log
+from app.core.settings import settings
 from app.core.system_config import SystemConfig
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.db.repositories.media_sync_repo_adapter import MediaSyncRepositoryAdapter
+from app.di import container
 from app.helper import ProgressHelper
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.queue import MessageQueueFactory
@@ -14,15 +16,13 @@ from app.media import MediaService
 from app.mediaserver.registry import get_all_clients
 from app.message import Message
 from app.utils import ExceptionUtils
-from app.utils.commons import SingletonMeta
 from app.utils.types import MovieTypes, ProgressKey, SystemConfigKey
-from app.core.settings import settings
 
 lock = threading.Lock()
 server_lock = threading.Lock()
 
 
-class MediaServer(metaclass=SingletonMeta):
+class MediaServer:
     _server_type: str | None = None
     _server = None
     mediadb: MediaSyncRepositoryAdapter | None = None
@@ -33,16 +33,16 @@ class MediaServer(metaclass=SingletonMeta):
     config_repo: MediaServerRepositoryAdapter | None = None
 
     def __init__(self):
-        self.mediadb = MediaSyncRepositoryAdapter()
-        self.message = Message()
-        self.progress = ProgressHelper()
-        self.media = MediaService()
-        self.systemconfig = SystemConfig()
-        self.config_repo = MediaServerRepositoryAdapter()
+        self.mediadb = container.media_sync_repo()
+        self.message = container.message()
+        self.progress = container.progress_helper()
+        self.media = container.media_service()
+        self.systemconfig = container.system_config()
+        self.config_repo = container.media_server_repo()
         self._server_type = None
         self._server = None
 
-    def init_config(self):
+    def _refresh(self):
         """重置服务器实例，下次访问 server property 时重新构建"""
         self._server = None
         self._server_type = None
@@ -61,7 +61,7 @@ class MediaServer(metaclass=SingletonMeta):
         with server_lock:
             if self._server_type is None:
                 if self.config_repo is None:
-                    self.config_repo = MediaServerRepositoryAdapter()
+                    self.config_repo = container.media_server_repo()
                 default_server = self.config_repo.get_default_media_server()
                 if default_server:
                     self._server_type = cast(str, default_server.NAME)

@@ -5,10 +5,10 @@
 import json
 
 import log
-from app.agent.service import AgentService
 from app.agent.tool_executor import get_tool_executor
 from app.agent.tools import ToolRegistry
 from app.infrastructure.cache_system import OpenAISessionCache
+from app.di import container
 
 _TOOL_PROMPT = """你是一个智能助手，可以帮助用户管理 NAS 媒体库系统。
 
@@ -36,7 +36,7 @@ class ChatAgent:
     MAX_HISTORY_MESSAGES = 20
 
     def __init__(self):
-        self._svc = AgentService()
+        self._svc = container.agent_service()
 
     @property
     def ready(self) -> bool:

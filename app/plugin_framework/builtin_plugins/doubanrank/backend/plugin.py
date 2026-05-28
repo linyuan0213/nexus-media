@@ -1,8 +1,8 @@
-
 """
 DoubanRank Plugin v2
 监控豆瓣热门榜单，自动添加订阅
 """
+
 import json
 import os
 import re
@@ -14,12 +14,11 @@ import pytz
 
 from app.helper import RssHelper
 from app.media import MediaService
-from app.mediaserver import MediaServer
 from app.plugin_framework.context import PluginContext
-from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import DomUtils, RequestUtils
 from app.utils.types import MediaType, RssType, SearchType
 from app.utils.web_utils import WebUtils
+from app.di import container
 
 
 class DoubanRankPlugin:
@@ -27,8 +26,8 @@ class DoubanRankPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self._mediaserver = MediaServer()
-        self._subscribe = Subscribe()
+        self._mediaserver = container.media_server()
+        self._subscribe = container.subscribe_service()
         self._rsshelper = RssHelper()
         self._media = MediaService()
         self._event = Event()

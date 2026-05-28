@@ -37,17 +37,16 @@ from api.routers import (
 )
 from app.db import init_db, remove_session
 from app.db.main_db import get_engine
+from app.di import container
 from app.downloader.client import init_clients as init_downloaders
 from app.indexer.client import init_clients as init_indexers
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.mediaserver.client import init_clients as init_mediaservers
-from app.message import Message
 from app.message.client import init_clients as init_message_clients
-from app.plugin_framework.sandbox import PluginSandbox
 from app.schemas.common import HealthCheckResponse, HealthServiceStatus
 from app.services.site_config_updater import SiteConfigUpdater, update_site_config_at_startup
 from app.services.system_service import SystemLifecycleService
 from app.sites.engine import SiteEngine
-from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.utils.redis_store import RedisStore
 from app.utils.security import get_secret_key
 
@@ -76,7 +75,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.warn(f"【FastAPI】站点配置初始化失败: {e!s}")
     log.info("【FastAPI】启动后台服务...")
-    SystemLifecycleService().start_service()
+    container.system_lifecycle_service().start_service()
     log.info("【FastAPI】后台服务启动完成")
     # 注册内置索引器
     init_indexers()
@@ -91,13 +90,13 @@ async def lifespan(app: FastAPI):
     init_message_clients()
     log.info("【FastAPI】消息客户端注册完成")
     # 加载插件（在消息菜单刷新之前，确保插件命令能显示）
-    PluginSandbox().load_all()
+    container.plugin_sandbox().load_all()
     log.info("【FastAPI】插件加载完成")
     # 预初始化消息客户端（避免 webhook 首次调用时客户端尚未就绪）
-    _ = Message().active_clients
+    _ = container.message().active_clients
     log.info("【FastAPI】消息客户端初始化完成")
     # 系统启动完成后统一刷新菜单（确保包含插件命令）
-    Message().refresh_menus()
+    container.message().refresh_menus()
     log.info("【FastAPI】消息菜单刷新完成")
     yield
     log.info("【FastAPI】关闭后台服务...")
@@ -198,7 +197,7 @@ def health_check():
 
     # 关键外部服务：消息客户端
     try:
-        msg_clients = Message().active_clients
+        msg_clients = container.message().active_clients
         result.services["message"] = HealthServiceStatus(status="ok", detail=f"已配置 {len(msg_clients)} 个消息客户端")
     except Exception as e:
         result.services["message"] = HealthServiceStatus(status="error", detail=f"消息客户端检查失败: {e!s}")

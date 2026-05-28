@@ -2,9 +2,9 @@ import base64
 import datetime
 from functools import lru_cache
 
+from app.core.settings import settings
 from app.media import MediaService
 from app.utils import ExceptionUtils, RequestUtils
-from app.core.settings import settings
 
 
 def get_login_wallpaper(time_now=None):

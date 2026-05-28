@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from api.deps import get_words_service, require_any_permission, require_permission
 from app.core.exceptions import DomainError, ServiceError
-from app.media import Category
+from app.di import container
 from app.schemas.common import CommonResponse
 from app.services.words_service import WordsService
 from app.utils import ExceptionUtils
@@ -291,12 +291,13 @@ def get_categories(
     req: GetCategoriesRequest,
     current_user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
+    _category = container.category()
     if req.type == "电影":
-        categories = Category().movie_categorys
+        categories = _category.movie_categorys
     elif req.type == "电视剧":
-        categories = Category().tv_categorys
+        categories = _category.tv_categorys
     else:
-        categories = Category().anime_categorys
+        categories = _category.anime_categorys
     return success(
         data={
             "category": list(categories),

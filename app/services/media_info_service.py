@@ -4,8 +4,11 @@ from typing import Any
 import cn2an
 
 import log
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.core.settings import settings
+from app.di import container
 from app.helper.image_proxy_helper import ImageProxyHelper
-from app.media import DouBan, MediaService, meta_info
+from app.media import MediaService, meta_info
 from app.mediaserver import MediaServer
 from app.schemas.media import MediaInfoResultDTO, SeasonEpisodesResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe
@@ -13,8 +16,6 @@ from app.utils import StringUtils
 from app.utils.media_utils import check_media_exists
 from app.utils.types import MediaType, MovieTypes
 from app.utils.web_utils import WebUtils
-from app.core.exceptions import DomainError, RepositoryError, ServiceError
-from app.core.settings import settings
 
 
 class MediaInfoService:
@@ -29,9 +30,9 @@ class MediaInfoService:
         subscribe: Subscribe | None = None,
         media_server: MediaServer | None = None,
     ):
-        self._media = media_service or MediaService()
-        self._subscribe = subscribe or Subscribe()
-        self._media_server = media_server or MediaServer()
+        self._media = media_service or container.media_service()
+        self._subscribe = subscribe or container.subscribe_service()
+        self._media_server = media_server or container.media_server()
 
     def get_season_episodes(self, tmdbid, title, year, season) -> SeasonEpisodesResultDTO:
         """查询 TMDB 剧集情况并检查媒体服务器存在状态"""
@@ -221,7 +222,7 @@ class MediaInfoService:
         """查询电影上映日期"""
         if tid and tid.startswith("DB:"):
             doubanid = tid.replace("DB:", "")
-            douban_info = DouBan().get_douban_detail(doubanid=doubanid, mtype=MediaType.MOVIE)
+            douban_info = container.douban().get_douban_detail(doubanid=doubanid, mtype=MediaType.MOVIE)
             if not douban_info:
                 return None
             poster_path = douban_info.get("cover_url") or ""
@@ -273,7 +274,7 @@ class MediaInfoService:
         """查询电视剧上映日期"""
         if tid and tid.startswith("DB:"):
             doubanid = tid.replace("DB:", "")
-            douban_info = DouBan().get_douban_detail(doubanid=doubanid, mtype=MediaType.TV)
+            douban_info = container.douban().get_douban_detail(doubanid=doubanid, mtype=MediaType.TV)
             if not douban_info:
                 return None
             poster_path = douban_info.get("cover_url") or ""

@@ -11,7 +11,7 @@ import pytz
 
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import Torrent
-from app.services.downloader_core import DownloaderCore as Downloader
+from app.di import container
 
 
 class TorrentMarkPlugin:
@@ -19,7 +19,7 @@ class TorrentMarkPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self._downloader = Downloader()
+        self._downloader = container.downloader_core()
         self._event = Event()
 
     def _get_config(self):

@@ -7,10 +7,8 @@ import contextlib
 import time
 
 from app.helper.security_helper import SecurityHelper
-from app.mediaserver import MediaServer
 from app.plugin_framework.context import PluginContext
-from app.services.downloader_core import DownloaderCore as Downloader
-
+from app.di import container
 
 
 class SpeedLimiterPlugin:
@@ -18,8 +16,8 @@ class SpeedLimiterPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self._downloader = Downloader()
-        self._mediaserver = MediaServer()
+        self._downloader = container.downloader_core()
+        self._mediaserver = container.media_server()
         self._playing_flag = False
         self._limit_enabled = False
         self._download_limit = 0
@@ -201,7 +199,9 @@ class SpeedLimiterPlugin:
                 self.ctx.info(f"{'播放' if _playing_flag else '未播放'}限速：{log_info}")
             if self._notify:
                 limit_text = "\n".join(limit_log)
-                title = f"【{'定时检查' if time_check else mediaserver_type}{'开始' if _playing_flag else '停止'}播放限速】"
+                title = (
+                    f"【{'定时检查' if time_check else mediaserver_type}{'开始' if _playing_flag else '停止'}播放限速】"
+                )
                 self.ctx.notify(title=title, text=f"{message}\n{limit_text}")
 
     def _calc_limit(self, total_bit_rate):

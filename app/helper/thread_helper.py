@@ -1,19 +1,11 @@
 from concurrent.futures import ThreadPoolExecutor
 
-from app.utils.commons import SingletonMeta
+_THREAD_NUM = 100
+_executor = ThreadPoolExecutor(max_workers=_THREAD_NUM)
 
 
-class ThreadHelper(metaclass=SingletonMeta):
-    _thread_num = 100
-    executor = None
-
-    def __init__(self):
-        self.executor = ThreadPoolExecutor(max_workers=self._thread_num)
-
-    def init_config(self):
-        pass
-
+class ThreadHelper:
     def start_thread(self, func, kwargs):
-        if not self.executor:
+        if not _executor:
             return None
-        return self.executor.submit(func, *kwargs)
+        return _executor.submit(func, *kwargs)

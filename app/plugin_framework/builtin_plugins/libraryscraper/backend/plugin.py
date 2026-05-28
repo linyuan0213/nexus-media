@@ -1,16 +1,16 @@
-
 """
 LibraryScraper Plugin v2
 定时对媒体库进行刮削
 """
+
 import os
 from datetime import datetime, timedelta
 from threading import Event
 
 import pytz
 
-from app.media import Scraper
 from app.plugin_framework.context import PluginContext
+from app.di import container
 
 
 class LibraryScraperPlugin:
@@ -18,7 +18,7 @@ class LibraryScraperPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self._scraper = Scraper()
+        self._scraper = container.scraper()
         self._event = Event()
 
     def _get_config(self):

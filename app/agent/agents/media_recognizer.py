@@ -4,8 +4,8 @@ from pydantic import BaseModel
 
 import log
 from app.agent.prompts.media import MEDIA_BATCH_PROMPT, MEDIA_RECOGNITION_PROMPT
-from app.agent.service import AgentService
 from app.core.settings import settings
+from app.di import container
 
 
 class MediaResult(BaseModel):
@@ -41,7 +41,7 @@ class MediaRecognizer:
     """媒体文件名识别器 — 基于 LLM"""
 
     def __init__(self):
-        self._svc = AgentService()
+        self._svc = container.agent_service()
 
     @property
     def ready(self) -> bool:

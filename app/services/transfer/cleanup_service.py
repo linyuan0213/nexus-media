@@ -4,17 +4,17 @@ import os
 import shutil
 
 import log
+from app.core.constants import RMT_MEDIAEXT
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
-from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.media import meta_info
-from app.plugin_framework.event_compat import EventManager
+from app.plugin_framework.event_compat import EventHandler
 from app.storage import StorageBackendFactory
 from app.storage.backends.base import StorageConfig, StorageType
 from app.storage.backends.local import LocalStorageBackend
 from app.storage.config_models import LocalStorageConfig
 from app.utils import ExceptionUtils, PathUtils
-from app.core.constants import RMT_MEDIAEXT
 from app.utils.types import EventType, MediaType
+from app.di import container
 
 
 class TransferCleanupService:
@@ -25,7 +25,7 @@ class TransferCleanupService:
         self._path_resolver = path_resolver
         self._media = media_service
         self._message = message
-        self._eventmanager = eventmanager or EventManager()
+        self._eventmanager = eventmanager or EventHandler
 
     def delete_media_file(self, filedir, filename, backend_id="local"):
         """删除媒体文件（统一使用存储后端接口）."""
@@ -63,7 +63,7 @@ class TransferCleanupService:
         """根据 ID 解析存储后端（本地返回 LocalStorageBackend 实例）."""
         if not backend_id or backend_id == "local":
             return LocalStorageBackend(StorageConfig(id="local", name="local", type=StorageType.LOCAL))
-        repo = StorageBackendRepositoryAdapter()
+        repo = container.storage_backend_repo()
         entity = repo.get_by_id(int(backend_id))
         if not entity:
             return None

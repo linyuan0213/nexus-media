@@ -4,16 +4,15 @@ import os
 import re
 
 from app.core.constants import DEFAULT_MOVIE_FORMAT, DEFAULT_TV_FORMAT
-from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
+from app.core.settings import settings
+from app.di import container
 from app.media import Category
-from app.services.media_config_service import MediaConfigService
 from app.storage import StorageBackendFactory
 from app.storage.backends.base import StorageConfig, StorageType
 from app.storage.backends.local import LocalStorageBackend
 from app.storage.config_models import LocalStorageConfig
 from app.utils import NumberUtils, PathUtils, StringUtils, SystemUtils
 from app.utils.types import MediaType
-from app.core.settings import settings
 
 
 class TransferPathResolver:
@@ -58,8 +57,9 @@ class TransferPathResolver:
     @classmethod
     def from_settings(cls, category: Category | None = None) -> "TransferPathResolver":
         """从全局配置构造解析器."""
-        category = category or Category()
-        media_cfg = MediaConfigService().get_config()
+        category = category or container.category()
+        assert category is not None
+        media_cfg = container.media_config_service().get_config()
         media = settings.get("media")
 
         movie_path = media_cfg.get("movie_path") or []
@@ -225,7 +225,7 @@ class TransferPathResolver:
             backend_id = self._get_backend_for_path(dist_path, self._anime_path, self._anime_backend)
         if backend_id == "local":
             return None
-        entity = StorageBackendRepositoryAdapter().get_by_id(int(backend_id))
+        entity = container.storage_backend_repo().get_by_id(int(backend_id))
         if not entity:
             return None
         info = StorageBackendFactory.get_config_info(entity.type)
@@ -243,7 +243,7 @@ class TransferPathResolver:
         """根据 ID 解析存储后端（本地返回 LocalStorageBackend 实例）."""
         if not backend_id or backend_id == "local":
             return LocalStorageBackend(StorageConfig(id="local", name="local", type=StorageType.LOCAL))
-        repo = StorageBackendRepositoryAdapter()
+        repo = container.storage_backend_repo()
         entity = repo.get_by_id(int(backend_id))
         if not entity:
             return None
