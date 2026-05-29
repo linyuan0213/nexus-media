@@ -2,7 +2,7 @@
 
 > 本文档描述 Nexus Media 后端（`backend/`）的整体架构、模块分层、数据流和关键设计模式。
 >
-> 技术栈：Python 3.x + FastAPI + SQLAlchemy + Alembic + APScheduler
+> 技术栈：Python 3.11+ + FastAPI + SQLAlchemy + Alembic + APScheduler
 
 ---
 
@@ -10,34 +10,46 @@
 
 ```
 backend/
-├── api/                    # FastAPI 入口与路由层
-│   ├── main.py             # FastAPI 应用实例 + lifespan 生命周期
-│   ├── deps.py             # 依赖注入（认证、Service 工厂）
-│   └── routers/            # 按领域拆分的 API 路由
-├── app/                    # 核心业务层
-│   ├── agent/              # AI Agent 相关
-│   ├── core/               # 核心配置、常量
-│   ├── db/                 # 数据库模型、仓库、连接工厂
-│   ├── domain/             # 领域层（实体 + 接口 + 引擎）
-│   ├── downloader/         # 下载器客户端抽象
-│   ├── helper/             # 辅助工具类
-│   ├── indexer/            # 索引器客户端
-│   ├── infrastructure/     # 基础设施（缓存、事件总线）
-│   ├── media/              # 媒体处理（识别、查询、刮削）
-│   ├── mediaserver/        # 媒体服务器客户端（Emby/Jellyfin/Plex）
-│   ├── message/            # 消息通知客户端
-│   ├── plugin_framework/   # 插件框架 v2
-│   ├── schemas/            # Pydantic Schema / DTO
-│   ├── services/           # 业务服务层
-│   ├── sites/              # 站点引擎与管理
-│   ├── storage/            # 存储后端抽象
-│   └── utils/              # 通用工具、类型定义
-├── config/                 # 站点 JSON 定义、配置文件
-├── docs/                   # 文档
+├── src/                    # 源代码（PEP 517/518 src layout）
+│   ├── api/                # FastAPI 入口与路由层
+│   │   ├── main.py         # FastAPI 应用实例 + lifespan 生命周期
+│   │   └── routers/        # 按领域拆分的 API 路由
+│   ├── app/                # 核心业务层
+│   │   ├── agent/          # AI Agent 相关
+│   │   ├── core/           # 核心配置、常量
+│   │   ├── db/             # 数据库模型、仓库、连接工厂
+│   │   ├── domain/         # 领域层（实体 + 接口 + 引擎）
+│   │   ├── downloader/     # 下载器客户端抽象
+│   │   ├── helper/         # 辅助工具类
+│   │   ├── indexer/        # 索引器客户端
+│   │   ├── infrastructure/ # 基础设施（缓存、事件总线）
+│   │   ├── media/          # 媒体处理（识别、查询、刮削）
+│   │   ├── mediaserver/    # 媒体服务器客户端（Emby/Jellyfin/Plex）
+│   │   ├── message/        # 消息通知客户端
+│   │   ├── plugin_framework/ # 插件框架
+│   │   ├── services/       # 业务服务层
+│   │   ├── sites/          # 站点引擎与管理
+│   │   ├── storage/        # 存储后端抽象
+│   │   └── utils/          # 通用工具、类型定义
+│   ├── log/                # 日志模块（loguru）
+│   ├── version.py          # 版本（从 pyproject.toml 动态读取）
+│   └── initializer.py      # 启动初始化逻辑
 ├── tests/                  # 测试
-├── initializer.py          # 传统初始化逻辑（配置检查、RBAC 等）
+│   ├── unit/               # 单元测试
+│   ├── integration/        # 集成测试
+│   └── conftest.py
+├── config/                 # 站点 JSON 定义、配置模板
+│   └── config.yaml.example # 提交到 git 的配置模板
+├── alembic/                # Alembic 迁移目录
+│   ├── env.py
+│   └── versions/
+├── static/                 # 静态文件
+├── scripts/                # 工具脚本
+├── docker/                 # Docker 构建文件
+├── justfile                # 任务运行器
 ├── run.py                  # 启动入口（uvicorn）
-└── config.py               # 配置单例兼容入口
+├── gunicorn.conf.py        # Gunicorn 生产配置
+└── pyproject.toml
 ```
 
 ### `app/` 子目录职责
@@ -92,30 +104,16 @@ api/routers/
 
 ### 依赖注入模式
 
-路由层不直接实例化 Service，而是通过 `api/deps.py` 中的工厂函数获取：
+路由层通过 `dependency-injector` 容器（`src/app/di/container.py`）
+绑定与惰性注入依赖，路由函数中通过 `Depends(get_service_factory)` 或直接调用 `container.xxx_service()` 获取 Service 实例。
 
 ```python
-# api/routers/site.py
-@router.post("/sites")
-def get_sites(
-    req: SiteFilterRequest,
-    user: str = Depends(require_any_permission("site:view", "site:manage")),
-    svc: SiteService = Depends(get_site_service),  # <-- 依赖注入
-):
-    sites = svc.get_sites(rss=bool(req.rss), ...)
-    return success(data=sites)
+from app.di import container
 ```
-
-`api/deps.py` 提供两类依赖：
-- **认证依赖**：`get_current_user`（支持 JWT / Session / API Key 三轨认证）
-- **Service 工厂**：`get_site_service`、`get_download_service`、`get_media_info_service` 等 30+ 个领域 Service 工厂
 
 ### 与旧 Flask 控制器的关系
 
-项目处于 **绞杀式迁移（Strangler Fig Pattern）** 阶段：
-- 新功能使用 FastAPI Router 实现（`api/routers/`）
-- 旧功能可能仍由 Flask 控制器处理（`web/controllers/`）
-- 两者共享同一套 `app/services/` 业务逻辑层
+Flask 已完全移除，统一使用 FastAPI。`api/deps.py` 提供兼容的重导出。
 
 ---
 
@@ -225,7 +223,9 @@ app/db/repositories/
 - **MySQL**：`mysql+pymysql://...`
 - **PostgreSQL**：`postgresql+psycopg2://...`
 
-配置优先级：**环境变量** > `config/config.yaml`。首次启动时自动创建数据库。
+配置优先级：**环境变量** > `.env` > `config/config.yaml`（可选）。
+`NEXUS_MEDIA_CONFIG` 已降级为可选，未设置时自动发现 `./config/config.yaml` 或 `/config/config.yaml`。
+首次启动时自动从模板 `config/config.yaml.example` 创建配置文件。
 
 `DatabaseDialect` 类处理跨数据库 SQL 差异（日期函数、LIMIT、字符串连接、随机函数等）。
 
@@ -634,39 +634,37 @@ run.py
         └── api/main.py:app
 ```
 
-### 10.2 FastAPI 生命周期（`api/main.py::lifespan`）
+### 10.2 FastAPI 生命周期（`src/api/main.py::lifespan`）
 
 ```python
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. 初始化数据库（建表、Alembic 迁移）
+    # 1. 初始化数据库表结构（create_all，不执行迁移）
     init_db()
 
-    # 2. 初始化站点配置（确保内置站点定义存在）
+    # 2. 初始化站点配置
     SiteConfigUpdater().ensure_local_sites(...)
     update_site_config_at_startup()
 
-    # 3. 启动后台服务（SystemLifecycleService）
+    # 3. 启动后台服务
     SystemLifecycleService().start_service()
 
-    # 4. 注册内置客户端
-    init_indexers()       # 索引器
-    init_downloaders()    # 下载器
-    init_mediaservers()   # 媒体服务器
-    init_message_clients() # 消息客户端
-
-    # 5. 加载插件
+    # 4-6. 注册内置客户端 + 加载插件 + 初始化消息
+    init_indexers()
+    init_downloaders()
+    init_mediaservers()
+    init_message_clients()
     PluginSandbox().load_all()
-
-    # 6. 初始化消息客户端（避免 webhook 首次调用失败）
     _ = Message().active_clients
-    Message().refresh_menus()  # 刷新菜单（包含插件命令）
+    Message().refresh_menus()
 
-    yield  # 应用运行中...
+    yield
 
     # 7. 关闭
     SystemLifecycleService().stop_service()
 ```
+
+> 注意：Alembic 数据库迁移已从代码中移除，由 Docker entrypoint 或 `docker-compose migrate` 服务在启动前执行 `alembic upgrade head`。
 
 ### 10.3 后台服务启动（`SystemLifecycleService.start_service()`）
 
@@ -697,12 +695,10 @@ class SystemLifecycleService:
         FileIndexService().start()         # 文件索引服务
 ```
 
-### 10.4 配置文件监控（`initializer.py::ConfigMonitor`）
+### 10.4 配置重载
 
-使用 `watchdog` 库监听 `config/config.yaml` 和分类策略文件变化：
-- 配置变化 → 自动重载 `Config()` 单例
-- 分类策略变化 → 自动重载 `Category().init_config()`
-- 防抖机制：配置文件 10 秒内只加载一次
+使用 `src/app/core/settings.py` 中的 `AppSettings.reload()` 方法手动重载配置。
+应用层调用 `SettingsService.reload_config()` 或通过 API `/system/reload_config` 触发。
 
 ---
 
