@@ -283,7 +283,7 @@ async def upload_avatar(
 
     try:
         # 头像保存目录
-        avatar_dir = Path(__file__).parent.parent.parent / "web" / "static" / "avatars"
+        avatar_dir = Path(__file__).resolve().parents[3] / "static" / "avatars"
         avatar_dir.mkdir(parents=True, exist_ok=True)
 
         # 生成文件名
