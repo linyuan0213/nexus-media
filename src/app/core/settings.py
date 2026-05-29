@@ -15,7 +15,9 @@ from filelock import FileLock
 from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+from app.core.root_path import get_project_root
+
+_PROJECT_ROOT = get_project_root()
 
 
 def _load_dotenv(path: str | None = None) -> bool:

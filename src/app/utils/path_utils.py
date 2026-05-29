@@ -5,19 +5,18 @@ PathUtils - 路径相关纯函数工具
 
 import os
 
+from app.core.root_path import get_project_root
 from app.core.settings import settings
-
-_ROOT_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))))
-
-
-def get_root_path():
-    """项目根目录"""
-    return _ROOT_PATH
 
 
 def get_config_path():
     """配置目录路径"""
     return settings.config_path
+
+
+def get_root_path():
+    """项目根目录"""
+    return str(get_project_root())
 
 
 def get_temp_path():

@@ -1,6 +1,8 @@
 from datetime import datetime
 from pathlib import Path
 
+from app.core.root_path import get_project_root
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -283,7 +285,7 @@ async def upload_avatar(
 
     try:
         # 头像保存目录
-        avatar_dir = Path(__file__).resolve().parents[3] / "static" / "avatars"
+        avatar_dir = get_project_root() / "static" / "avatars"
         avatar_dir.mkdir(parents=True, exist_ok=True)
 
         # 生成文件名
@@ -312,7 +314,7 @@ async def upload_avatar(
 @router.get("/avatars/{filename}", summary="获取头像")
 async def get_avatar(filename: str):
     """获取用户头像文件"""
-    avatar_dir = Path(__file__).parent.parent.parent / "web" / "static" / "avatars"
+    avatar_dir = get_project_root() / "static" / "avatars"
     file_path = avatar_dir / filename
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="头像不存在")

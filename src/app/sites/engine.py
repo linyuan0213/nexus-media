@@ -17,6 +17,8 @@ from urllib.parse import urlparse
 
 from lxml import etree
 
+from app.core.root_path import get_project_root
+
 import log
 from app.sites import engine_connection, engine_download, engine_tools, engine_user_info
 from app.utils import JsonUtils, RequestUtils
@@ -163,9 +165,7 @@ class SiteDefinition:
 class SiteEngine:
     """站点引擎单例"""
 
-    _BUILTIN_DEFINITIONS_DIR = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "config", "sites"
-    )
+    _BUILTIN_DEFINITIONS_DIR = os.path.join(get_project_root(), "config", "sites")
 
     @classmethod
     def _resolve_definitions_dir(cls) -> str:
