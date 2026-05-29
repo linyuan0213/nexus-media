@@ -164,7 +164,7 @@ class SiteEngine:
     """站点引擎单例"""
 
     _BUILTIN_DEFINITIONS_DIR = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "config", "sites"
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "config", "sites"
     )
 
     @classmethod
