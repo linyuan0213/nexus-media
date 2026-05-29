@@ -68,7 +68,7 @@ services:
 | `PGID` | 0 | 运行用户 GID |
 | `UMASK` | 000 | 文件权限掩码 |
 | `NEXUS_PORT` | 3000 | 服务端口 |
-| `NEXUS_MEDIA_CONFIG` | /config/config.yaml | 配置文件路径 |
+| `NEXUS_MEDIA_CONFIG` | — | 配置文件路径（可选，默认自动发现） |
 | `LOG_FORMAT` | — | 设为 `json` 输出 ELK 兼容日志 |
 | `TZ` | Asia/Shanghai | 时区 |
 
@@ -89,9 +89,3 @@ services:
 
 - 若同时使用 Emby / Jellyfin / Plex / qBittorrent 等 Docker 镜像，建议保持 PUID / PGID 一致
 - 在宿主机上执行 `id -u` 和 `id -g` 获取对应值
-
-## 硬链接映射
-
-参考下图（由 imogel@telegram 制作）：
-
-![如何映射](volume.png)
