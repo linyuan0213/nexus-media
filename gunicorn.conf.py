@@ -1,6 +1,8 @@
 # gunicorn FastAPI 配置文件
 # 使用方式: gunicorn -c gunicorn.conf.py run:app
 
+import logging
+import logging.handlers
 import os
 import sys
 from pathlib import Path
@@ -44,6 +46,28 @@ loglevel = os.environ.get("GUNICORN_LOG_LEVEL", "info")
 access_log_format = '%(t)s %(p)s %(h)s "%(r)s" %(s)s %(L)s %(b)s %(f)s" "%(a)s"'
 accesslog = os.path.join(_log_path, "gunicorn_access.log")
 errorlog = "-"
+
+_access_log_rotation_count = int(os.environ.get("GUNICORN_ACCESS_LOG_BACKUP", "30"))
+
+
+def on_starting(server):
+    """替换 access log handler 为 TimedRotatingFileHandler，每日轮转，自动清理过期日志。"""
+    access_logger = logging.getLogger("gunicorn.access")
+    for handler in list(access_logger.handlers):
+        if isinstance(handler, logging.FileHandler):
+            rotated = logging.handlers.TimedRotatingFileHandler(
+                handler.baseFilename,
+                when="midnight",
+                interval=1,
+                backupCount=_access_log_rotation_count,
+                encoding="utf-8",
+            )
+            rotated.setFormatter(handler.formatter)
+            rotated.setLevel(handler.level)
+            access_logger.removeHandler(handler)
+            handler.close()
+            access_logger.addHandler(rotated)
+
 
 # ---------- 进程管理 ----------
 
