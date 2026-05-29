@@ -42,3 +42,6 @@ static/avatars/*
 
 # Build metadata
 *.egg-info/
+
+# Environment
+.env
