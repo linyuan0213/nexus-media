@@ -15,7 +15,14 @@ def extract_name(info, anitopy_info, title):
     """从 anitopy 结果中提取名称"""
     name = anitopy_info.get("anime_title")
     if name and name.find("/") != -1:
-        name = name.split("/")[-1].strip()
+        parts = [p.strip() for p in name.split("/")]
+        left = parts[0]
+        right = parts[-1]
+        if StringUtils.is_chinese(left) and not StringUtils.is_all_chinese(right):
+            info.cn_name = left
+            name = right
+        elif not StringUtils.is_chinese(right) or len(parts) > 1:
+            name = right if not StringUtils.is_all_chinese(right) else left
     if not name or name in _ANIME_NO_WORDS or (len(name) < 5 and not StringUtils.is_chinese(name)):
         anitopy_info = anitopy.parse("[ANIME]" + title)
         if anitopy_info:
