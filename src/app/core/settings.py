@@ -78,7 +78,6 @@ class AppConfig(BaseModel):
     tmdb_domain: str = "api.themoviedb.org"
     wallpaper: str = "bing"
     debug: bool = True
-    releases_update_only: bool = False
     tmdb_image_url: str = ""
     enable_image_proxy: int = 1
     cookie_secure: bool = False
