@@ -5,6 +5,8 @@ umask ${UMASK}
 
 cd ${WORKDIR}
 
+.venv/bin/alembic upgrade head
+
 exec \
     s6-notifyoncheck -d -n 300 -w 1000 -c "nc -z localhost ${NEXUS_PORT}" \
     s6-setuidgid nexus sh ./start-prod.sh

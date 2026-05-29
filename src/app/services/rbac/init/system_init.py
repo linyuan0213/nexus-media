@@ -1,0 +1,69 @@
+"""RBAC 系统初始化入口."""
+
+import log
+from app.di import container
+
+
+def init_rbac_system():
+    """
+    初始化RBAC系统
+    创建默认的权限、菜单、角色
+    """
+    from app.services.rbac.init.permission_init import init_rbac_permissions
+    from app.services.rbac.init.menu_init import init_rbac_menus
+    from app.services.rbac.init.role_init import init_rbac_roles
+
+    try:
+        log.info("【RBAC初始化】开始初始化RBAC系统...")
+        init_rbac_permissions()
+        init_rbac_menus()
+        init_rbac_roles()
+        log.info("【RBAC初始化】RBAC系统初始化完成")
+        return True
+    except Exception as e:
+        log.error(f"【RBAC初始化】初始化失败: {e!s}")
+        return False
+
+
+def init_admin_user(admin_username: str, admin_password: str):
+    """
+    初始化管理员用户
+
+    Args:
+        admin_username: 管理员用户名
+        admin_password: 管理员密码
+    """
+    try:
+        user_repo = container.rbac_user_repo()
+        role_repo = container.rbac_role_repo()
+
+        existing = user_repo.get_user_by_username(admin_username)
+        if existing:
+            old_hash = existing.PASSWORD_HASH or ""
+            if old_hash.startswith(("pbkdf2:", "scrypt:")) or not old_hash:
+                from app.utils.security import generate_password_hash
+
+                new_hash = generate_password_hash(admin_password)
+                user_repo.update_user(existing.ID, password_hash=new_hash)
+                log.info(f"【RBAC初始化】管理员用户 {admin_username} 密码已从旧格式迁移到 Argon2")
+            else:
+                log.info(f"【RBAC初始化】管理员用户 {admin_username} 已存在")
+            return True
+
+        from app.utils.security import generate_password_hash
+
+        password_hash = generate_password_hash(admin_password)
+
+        user = user_repo.create_user(
+            username=admin_username, password_hash=password_hash, nickname="系统管理员", is_superadmin=1
+        )
+
+        superadmin_role = role_repo.get_role_by_code("superadmin")
+        if superadmin_role:
+            user_repo.assign_roles_to_user(user.ID, [superadmin_role.ID])
+
+        log.info(f"【RBAC初始化】创建管理员用户: {admin_username}")
+        return True
+    except Exception as e:
+        log.error(f"【RBAC初始化】创建管理员用户失败: {e!s}")
+        return False

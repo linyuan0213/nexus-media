@@ -1,3 +1,13 @@
+[build-system]
+requires = ["setuptools>=75.7.0", "wheel>=0.45.1"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [project]
 name = "nexus-media"
 version = "3.8.0"
@@ -6,6 +16,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "alembic>=1.14.0",
+    "anitopy",
     "apscheduler>=3.11.0",
     "beautifulsoup4>=4.12.3",
     "bs4>=0.0.2",
@@ -26,7 +37,6 @@ dependencies = [
     "parse>=1.20.2",
     "plexapi>=4.16.0",
     "psutil>=6.1.1",
-    "pycryptodome>=3.21.0",
     "pyjwt>=2.10.1",
     "pymysql>=1.1.1",
     "psycopg2-binary>=2.9.10",
@@ -80,7 +90,9 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "bandit>=1.9.4",
     "lxml-stubs>=0.5.1",
+    "pip-audit>=2.10.0",
     "pre-commit>=4.6.0",
     "pyright>=1.1.409",
     "pytest>=9.0.2",
@@ -115,8 +127,16 @@ anitopy = { path = "third_party/anitopy", editable = true }
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["ARG", "S"]
-"api/routers/**" = ["B008"]
-"app/infrastructure/external/doubanapi/**" = ["B008"]
+"src/api/routers/**" = ["B008"]
+"src/app/infrastructure/external/doubanapi/**" = ["B008"]
 "**/__init__.py" = ["F401"]
 "**/_autosignin/52pt.py" = ["N999"]
 "**/_pyaria2.py" = ["N802", "N803"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "third_party", ".venv", ".git", "scripts", "alembic"]
+skips = ["B101", "B311", "B404"]
+targets = ["src"]
+
+[tool.safety]
+ignore = []

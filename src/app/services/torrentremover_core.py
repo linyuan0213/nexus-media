@@ -1,0 +1,303 @@
+"""
+TorrentRemover 重构核心
+拆分为 Repository + ActionEngine + Service，移除 SingletonMeta。
+"""
+
+import json
+
+import log
+from app.core.exceptions import ResourceNotFoundError, ValidationError
+from app.di import container
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
+from app.message import Message
+from app.utils import ExceptionUtils
+
+
+class TorrentRemoverRepository:
+    """删种任务数据仓库"""
+
+    def __init__(self, config_repo=None):
+        self._config_repo = config_repo or container.torrent_remove_task_repo()
+
+    def get_tasks(self):
+        return self._config_repo.get_torrent_remove_tasks()
+
+    def delete_task(self, tid):
+        self._config_repo.delete_torrent_remove_task(tid=tid)
+
+    def insert_task(self, **kwargs):
+        self._config_repo.insert_torrent_remove_task(**kwargs)
+
+
+class TorrentRemoverActionEngine:
+    """删种动作执行引擎：暂停 / 删除种子 / 删除种子及文件"""
+
+    @staticmethod
+    def execute(task: dict, downloader) -> tuple[int, str]:
+        """
+        执行单个删种任务
+        :return: (处理数量, 处理文本)
+        """
+        downloader_id = task.get("downloader")
+        config = task.get("config") or {}
+        config["samedata"] = task.get("samedata")
+        config["only_nexus_media"] = task.get("only_nexus_media")
+        torrents = downloader.get_remove_torrents(downloader_id=downloader_id, config=config)
+        log.info(f"【TorrentRemover】自动删种任务：{task.get('name')} 获取符合处理条件种子数 {len(torrents)}")
+
+        action = task.get("action")
+        text_items = []
+        for torrent in torrents:
+            name = torrent.get("name")
+            site = torrent.get("site")
+            size = round(torrent.get("size") / 1021 / 1024 / 1024, 3)
+            text_item = f"{name} 来自站点：{site} 大小：{size} GB"
+            text_items.append(text_item)
+
+        if action == 1:
+            for torrent in torrents:
+                log.info(f"【TorrentRemover】暂停种子：{torrent.get('name')}")
+                downloader.stop_torrents(downloader_id=downloader_id, ids=[torrent.get("id")])
+            return len(torrents), f"共暂停{len(torrents)}个种子\n" + "\n".join(text_items)
+        elif action == 2:
+            for torrent in torrents:
+                log.info(f"【TorrentRemover】删除种子：{torrent.get('name')}")
+                downloader.delete_torrents(downloader_id=downloader_id, delete_file=False, ids=[torrent.get("id")])
+            return len(torrents), f"共删除{len(torrents)}个种子\n" + "\n".join(text_items)
+        elif action == 3:
+            for torrent in torrents:
+                log.info(f"【TorrentRemover】删除种子及文件：{torrent.get('name')}")
+                downloader.delete_torrents(downloader_id=downloader_id, delete_file=True, ids=[torrent.get("id")])
+            return len(torrents), f"共删除{len(torrents)}个种子（及文件）\n" + "\n".join(text_items)
+        return len(torrents), ""
+
+
+class TorrentRemoverService:
+    """删种业务服务（替代原 TorrentRemover）"""
+
+    _jobstore = "torrent_remove"
+
+    def __init__(
+        self,
+        repository: TorrentRemoverRepository | None = None,
+        downloader=None,
+        message: Message | None = None,
+        scheduler=None,
+    ):
+        self._repo = repository or TorrentRemoverRepository()
+        self._downloader = downloader or container.downloader_core()
+        self._message = message or container.message()
+        self._scheduler = scheduler or container.scheduler_core()
+        self._tasks: dict[str, dict] = {}
+
+    def start_service(self):
+        """加载任务并启动调度任务"""
+        self._load_tasks()
+        self._start_scheduler_jobs()
+
+    # ---------- 内部任务加载与调度 ----------
+
+    def _load_tasks(self) -> None:
+        self._tasks = {}
+        for task in self._repo.get_tasks():
+            config = task.CONFIG
+            downloader_id = task.DOWNLOADER
+            download_conf = self._downloader.get_downloader_conf(str(downloader_id))
+            if download_conf:
+                downloader_name = download_conf.get("name", "")
+                downloader_type = download_conf.get("type", "")
+            else:
+                downloader_name = ""
+                downloader_type = ""
+                downloader_id = ""
+            self._tasks[str(task.ID)] = {
+                "id": task.ID,
+                "name": task.NAME,
+                "downloader": downloader_id,
+                "downloader_name": downloader_name,
+                "downloader_type": downloader_type,
+                "only_nexus_media": task.ONLY_NEXUS_MEDIA,
+                "samedata": task.SAMEDATA,
+                "action": task.ACTION,
+                "config": json.loads(str(config)) if str(config) else {},
+                "interval": task.INTERVAL,
+                "enabled": task.ENABLED,
+            }
+
+    def _start_scheduler_jobs(self) -> None:
+        self.stop_service()
+        if not self._tasks:
+            return
+        remove_flag = False
+        for task in self._tasks.values():
+            if task.get("enabled") and task.get("interval") and task.get("config"):
+                remove_flag = True
+                job_id = f"TorrentRemover.auto_remove_torrents_{task.get('id')}"
+                self._scheduler.start_job(
+                    {
+                        "func": self.auto_remove_torrents,
+                        "name": f"自动删种任务 {task.get('name')}",
+                        "args": (task.get("id"),),
+                        "job_id": job_id,
+                        "trigger": "interval",
+                        "seconds": int(task.get("interval") or 0) * 60,
+                        "jobstore": self._jobstore,
+                    }
+                )
+        if remove_flag:
+            log.info("自动删种服务启动")
+
+    # ---------- 公共 API ----------
+
+    def get_torrent_remove_tasks(self, taskid=None):
+        if taskid:
+            task = self._tasks.get(str(taskid))
+            return task if task else {}
+        return self._tasks
+
+    def auto_remove_torrents(self, taskids=None):
+        lock_key = f"torrentremover:execute:{','.join(str(t) for t in taskids) if isinstance(taskids, list) else (taskids or 'all')}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=600)
+        acquired = lock.acquire()
+        if not acquired:
+            log.info("【TorrentRemover】删种任务正在执行，跳过")
+            return
+        try:
+            tasks = []
+            if not taskids:
+                for task in self._tasks.values():
+                    if task.get("enabled") and task.get("interval") and task.get("config"):
+                        tasks.append(task)
+            elif isinstance(taskids, list):
+                for tid in taskids:
+                    task = self._tasks.get(str(tid))
+                    if task:
+                        tasks.append(task)
+            else:
+                task = self._tasks.get(str(taskids))
+                tasks = [task] if task else []
+            if not tasks:
+                return
+            for task in tasks:
+                try:
+                    count, text = TorrentRemoverActionEngine.execute(task, self._downloader)
+                    if count and text:
+                        self._message.send_auto_remove_torrents_message(
+                            title=f"自动删种任务：{task.get('name')}", text=text
+                        )
+                except Exception as e:
+                    ExceptionUtils.exception_traceback(e)
+                    log.error(f"【TorrentRemover】自动删种任务：{task.get('name')}异常：{str(e)}")
+        finally:
+            lock.release()
+
+    def _validate_task_params(self, data: dict) -> None:
+        name = data.get("name")
+        if not name:
+            raise ValidationError("名称参数不合法")
+        action = data.get("action")
+        if not str(action).isdigit() or int(action or 0) not in [1, 2, 3]:
+            raise ValidationError("动作参数不合法")
+        interval = data.get("interval")
+        if not str(interval).isdigit():
+            raise ValidationError("运行间隔参数不合法")
+        enabled = data.get("enabled")
+        if not str(enabled).isdigit() or int(enabled or 0) not in [0, 1]:
+            raise ValidationError("状态参数不合法")
+        samedata = data.get("samedata")
+        if not str(samedata).isdigit() or int(samedata or 0) not in [0, 1]:
+            raise ValidationError("处理辅种参数不合法")
+        only_nexus_media = data.get("only_nexus_media")
+        if not str(only_nexus_media).isdigit() or int(only_nexus_media or 0) not in [0, 1]:
+            raise ValidationError("仅处理NEXUS_MEDIA添加种子参数不合法")
+        ratio = data.get("ratio") or 0
+        if not str(ratio).replace(".", "").isdigit():
+            raise ValidationError("分享率参数不合法")
+        seeding_time = data.get("seeding_time") or 0
+        if not str(seeding_time).isdigit():
+            raise ValidationError("做种时间参数不合法")
+        upload_avs = data.get("upload_avs") or 0
+        if not str(upload_avs).isdigit():
+            raise ValidationError("平均上传速度参数不合法")
+        size = data.get("size")
+        size = str(size).split("-") if size else []
+        if size and (len(size) != 2 or not str(size[0]).isdigit() or not str(size[-1]).isdigit()):
+            raise ValidationError("种子大小参数不合法")
+
+    def update_torrent_remove_task(self, data: dict) -> None:
+        self._validate_task_params(data)
+
+        tid = data.get("tid")
+        name = data.get("name")
+        action = int(data.get("action") or 0)
+        interval = int(data.get("interval") or 0)
+        enabled = int(data.get("enabled") or 0)
+        samedata = int(data.get("samedata") or 0)
+        only_nexus_media = int(data.get("only_nexus_media") or 0)
+        ratio = round(float(data.get("ratio") or 0), 2)
+        seeding_time = int(data.get("seeding_time") or 0)
+        upload_avs = int(data.get("upload_avs") or 0)
+        size = str(data.get("size")).split("-") if data.get("size") else []
+        size = [int(size[0]), int(size[-1])] if size else []
+        tags = data.get("tags")
+        tags = [tag for tag in str(tags).split(";") if tag] if tags else []
+        savepath_key = data.get("savepath_key")
+        tracker_key = data.get("tracker_key")
+        downloader_id = data.get("downloader")
+        client = self._downloader.get_downloader(str(downloader_id))
+        valid_states = [s.name for s in client._supported_statuses] if client else []
+
+        filter_status = []
+        if data.get("filter_status"):
+            filter_status = [s for s in str(data.get("filter_status", "")).split(";") if s]
+            if filter_status:
+                for item in filter_status:
+                    if item not in valid_states:
+                        raise ValidationError("种子状态参数不合法")
+
+        config = {
+            "ratio": ratio,
+            "seeding_time": seeding_time,
+            "upload_avs": upload_avs,
+            "size": size,
+            "tags": tags,
+            "savepath_key": savepath_key,
+            "tracker_key": tracker_key,
+            "filter_status": filter_status,
+        }
+        if tid:
+            self._repo.delete_task(tid=tid)
+        self._repo.insert_task(
+            name=name,
+            action=action,
+            interval=interval,
+            enabled=enabled,
+            samedata=samedata,
+            only_nexus_media=only_nexus_media,
+            downloader=downloader_id,
+            config=config,
+        )
+        self._load_tasks()
+        self._start_scheduler_jobs()
+
+    def delete_torrent_remove_task(self, taskid=None) -> None:
+        if not taskid:
+            raise ValidationError("任务ID不能为空")
+        self._repo.delete_task(tid=taskid)
+        self._load_tasks()
+        self._start_scheduler_jobs()
+
+    def get_remove_torrents(self, taskid) -> list:
+        task = self._tasks.get(str(taskid))
+        if not task:
+            raise ResourceNotFoundError("任务不存在")
+        config = task.get("config") or {}
+        config["samedata"] = task.get("samedata")
+        config["only_nexus_media"] = task.get("only_nexus_media")
+        return self._downloader.get_remove_torrents(downloader_id=task.get("downloader"), config=config)
+
+    def stop_service(self):
+        try:
+            self._scheduler.remove_all_jobs(jobstore=self._jobstore)
+        except Exception as e:
+            log.error(f"【TorrentRemover】停止服务异常: {str(e)}")

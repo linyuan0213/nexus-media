@@ -1,4 +1,24 @@
 services:
+  migration:
+    image: linyuan0213/nexus-media:latest
+    volumes:
+      - ./config:/config
+    environment:
+      - DB_TYPE=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USERNAME=nexus_media
+      - DB_PASSWORD=nexus_media_password
+      - DB_NAME=nexus_media
+    command: .venv/bin/alembic upgrade head
+    restart: "no"
+    container_name: nexus-media-migration
+    networks:
+      - nexus-media-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+
   nexus-media:
     image: linyuan0213/nexus-media:latest
     ports:
@@ -30,8 +50,8 @@ services:
       retries: 3
       start_period: 40s
     depends_on:
-      mysql:
-        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
       redis:
         condition: service_started
       ocr:

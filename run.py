@@ -6,7 +6,11 @@ Nexus Media 启动入口 — FastAPI
 
 import os
 import signal
+import sys
 import warnings
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
 import uvicorn
 

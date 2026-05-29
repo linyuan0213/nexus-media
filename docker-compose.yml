@@ -10,6 +10,16 @@ services:
     depends_on:
       - backend
 
+  migration:
+    image: linyuan0213/nexus-media:latest
+    volumes:
+      - ./config:/config
+    command: .venv/bin/alembic upgrade head
+    restart: "no"
+    container_name: nexus-media-migration
+    networks:
+      - nexus-media-network
+
   backend:
     image: linyuan0213/nexus-media:latest
     ports:
@@ -34,7 +44,10 @@ services:
       retries: 3
       start_period: 40s
     depends_on:
-      - redis
+      migration:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
 
   redis:
     image: redis:7-alpine

@@ -33,8 +33,8 @@ htmlcov/
 /tests/*.db
 
 # Runtime cache
-web/static/img_cache/*
-web/static/avatars/*
+static/img_cache/*
+static/avatars/*
 
 # Agent configs
 .roo/

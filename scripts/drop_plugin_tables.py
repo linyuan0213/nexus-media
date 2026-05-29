@@ -1,14 +1,14 @@
-import sys
-
-sys.path.insert(0, "/home/linyuan/python/nexus-media")
-
 import os
-
-os.environ["NEXUS_MEDIA_CONFIG"] = "/home/linyuan/python/config/config.yaml"
+import sys
 
 from sqlalchemy import text
 
-from app.db.main_db import _Engine
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(_root, "src"))
+
+os.environ["NEXUS_MEDIA_CONFIG"] = os.path.join(_root, "config", "config.yaml")
+
+from app.db.main_db import _Engine  # noqa: E402
 
 # 删除有错误的插件框架v2表
 tables = ["PLUGIN_MANIFEST", "PLUGIN_CONFIG", "PLUGIN_LOGS", "PLUGIN_HOOKS"]

@@ -17,6 +17,9 @@ import string
 import sys
 
 _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_src = os.path.join(_root, "src")
+if _src not in sys.path:
+    sys.path.insert(0, _src)
 if _root not in sys.path:
     sys.path.insert(0, _root)
 
@@ -106,7 +109,7 @@ def generate_migration(message: str) -> None:
     rev_id = _random_rev_id()
     slug = _slugify(message)
     version = APP_VERSION.replace(".", "_")
-    versions_dir = os.path.join(_root, "scripts", "versions")
+    versions_dir = os.path.join(_root, "alembic", "versions")
     head_rev = _get_head_revision(versions_dir)
 
     filename = f"{rev_id}_{slug}_{version}.py"

@@ -1,0 +1,286 @@
+"""Brush task service - 刷流任务业务 Facade."""
+
+from typing import Any
+
+import log
+from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.db.repositories.brush_repo_adapter import BrushTaskRepositoryAdapter
+from app.di import container
+from app.helper import RssHelper
+from app.message import Message
+from app.services.brush.helpers import BrushTaskHelper
+from app.services.brush.rss_checker import BrushRssChecker
+from app.services.brush.scheduler import BrushTaskScheduler
+from app.services.brush.torrent_lifecycle import BrushTorrentLifecycle
+from app.services.downloader_core import DownloaderCore as Downloader
+from app.sites import SiteConf, Sites
+from app.utils import StringUtils
+
+
+class BrushTaskService:
+    """
+    刷流任务核心业务服务 Facade
+    职责：任务加载与内存缓存维护、调度编排，RSS/删种/停种委托给子组件。
+    """
+
+    def __init__(
+        self,
+        repository: Any | None = None,
+        scheduler: BrushTaskScheduler | None = None,
+        downloader: Downloader | None = None,
+        message: Message | None = None,
+        sites: Sites | None = None,
+        siteconf: SiteConf | None = None,
+        rsshelper: RssHelper | None = None,
+    ):
+        self._repo: Any = repository or BrushTaskRepositoryAdapter()
+        self._scheduler = scheduler or BrushTaskScheduler()
+        self._downloader: Any = downloader or container.downloader_core()
+        self._message: Message = message or Message()
+        self._sites = sites or container.sites()
+        self._siteconf = siteconf or container.site_conf()
+        self._rsshelper = rsshelper or RssHelper()
+        self._filter = container.filter_service()
+        self._brush_tasks: dict = {}
+        self._torrents_cache: set = set()
+
+        self._helper = BrushTaskHelper(
+            repo=self._repo,
+            downloader=self._downloader,
+            sites=self._sites,
+            siteconf=self._siteconf,
+            message=self._message,
+        )
+        self._rss_checker = BrushRssChecker(
+            helper=self._helper,
+            rsshelper=self._rsshelper,
+            sites=self._sites,
+            siteconf=self._siteconf,
+            torrents_cache=self._torrents_cache,
+        )
+        self._torrent_lifecycle = BrushTorrentLifecycle(
+            helper=self._helper,
+            repo=self._repo,
+            downloader=self._downloader,
+            sites=self._sites,
+            message=self._message,
+        )
+
+    # ---------- 生命周期 ----------
+
+    def start_service(self) -> None:
+        """启动刷流服务：加载任务并启动调度。"""
+        self.stop_service()
+        self.load_brushtasks()
+        self._torrents_cache.clear()
+        if self._brush_tasks:
+            running_task = 0
+            for task in self._brush_tasks.values():
+                if task.get("state") in ["Y", "S"] and task.get("interval"):
+                    cron = str(task.get("interval")).strip()
+                    if cron.isdigit() or cron.count(" ") == 4:
+                        running_task += self._start_task_jobs(task, cron)
+                    else:
+                        log.error(f"任务 {task.get('name')} 运行周期格式不正确")
+            if running_task > 0:
+                log.info(f"{running_task} 个刷流服务正常启动")
+
+    def stop_service(self) -> None:
+        """停止所有刷流调度任务。"""
+        self._scheduler.remove_all_jobs()
+
+    # ---------- 调度管理 ----------
+
+    def _start_task_jobs(self, task: dict, cron: str) -> int:
+        task_id = task.get("id")
+        task_name = task.get("name")
+        is_running = task.get("state") == "Y"
+        running = 0
+        trigger_type = "interval" if cron.isdigit() else "cron"
+        trigger_args = {"seconds": int(cron) * 60} if trigger_type == "interval" else {"cron": cron}
+
+        if is_running:
+            try:
+                self._scheduler.start_job(
+                    func=self.check_task_rss,
+                    name=f"刷流任务 {task_name} ",
+                    args=(task_id,),
+                    job_id=f"BrushTask.check_task_rss_{task_id}",
+                    trigger_type=trigger_type,
+                    trigger_args=trigger_args,
+                )
+                running = 1
+            except (ServiceError, RepositoryError, DomainError):
+                raise
+            except Exception as err:
+                log.error(f"任务 {task_name} 运行周期格式不正确：{err!s}")
+
+        for func, name in [(self.stop_task_torrents, "停种任务"), (self.remove_task_torrents, "删种任务")]:
+            try:
+                self._scheduler.start_job(
+                    func=func,
+                    name=f"{name} {task_name} ",
+                    args=(task_id,),
+                    job_id=f"BrushTask.{func.__name__}_{task_id}",
+                    trigger_type=trigger_type,
+                    trigger_args=trigger_args,
+                )
+            except (ServiceError, RepositoryError, DomainError):
+                raise
+            except Exception as err:
+                log.error(f"任务 {task_name} {name} 运行周期格式不正确：{err!s}")
+
+        return running
+
+    def _stop_task_jobs(self, task_id):
+        for suffix in ["check_task_rss", "stop_task_torrents", "remove_task_torrents"]:
+            self._scheduler.remove_job(f"BrushTask.{suffix}_{task_id}")
+
+    # ---------- 任务 CRUD ----------
+
+    def load_brushtasks(self) -> None:
+        self._brush_tasks = {}
+        brushtasks = self._repo.get_brushtasks()
+        if not brushtasks:
+            return
+        for task in brushtasks:
+            self._brush_tasks[str(task.ID)] = self._build_task_dict(task)
+
+    def _reload_single_task(self, task_id):
+        task_rows = self._repo.get_brushtasks(brush_id=task_id)
+        if not task_rows:
+            self._brush_tasks.pop(str(task_id), None)
+            self._stop_task_jobs(task_id)
+            return
+        task = task_rows[0] if isinstance(task_rows, (list, tuple)) else task_rows
+        self._brush_tasks[str(task.ID)] = self._build_task_dict(task)
+        self._stop_task_jobs(task.ID)
+        cron = str(task.INTEVAL).strip()
+        if task.STATE in ["Y", "S"] and cron and (cron.isdigit() or cron.count(" ") == 4):
+            self._start_task_jobs(self._brush_tasks[str(task.ID)], cron)
+
+    def _load_rules_from_template(self, task) -> tuple[dict, dict, dict]:
+        """加载任务规则：优先从规则模板读取，否则使用任务自身规则。"""
+        rss_rule = self._helper.parse_json_rule(task.RSS_RULE, {})
+        remove_rule = self._helper.parse_json_rule(task.REMOVE_RULE, {})
+        stop_rule = self._helper.parse_json_rule(task.STOP_RULE, {"stopfree": "Y"})
+        rule_id = getattr(task, "RULE_ID", None)
+        if rule_id:
+            try:
+                adapter = container.brush_rule_repo()
+                entity = adapter.get_by_id(int(rule_id))
+                if entity:
+                    rss_rule = self._helper.parse_json_rule(entity.rss_rule, rss_rule)
+                    remove_rule = self._helper.parse_json_rule(entity.remove_rule, remove_rule)
+                    stop_rule = self._helper.parse_json_rule(entity.stop_rule, stop_rule)
+            except (ServiceError, RepositoryError, DomainError):
+                raise
+            except Exception:
+                pass
+        return rss_rule, remove_rule, stop_rule
+
+    def _build_task_dict(self, task) -> dict:
+        site_info: Any = self._sites.get_sites(siteid=task.SITE)
+        site_url = StringUtils.get_base_url(site_info.get("signurl") or site_info.get("rssurl")) if site_info else ""
+        downloader_info = self._downloader.get_downloader_conf(task.DOWNLOADER)
+        total_size = round(int(self._repo.get_brushtask_totalsize(task.ID)) / (1024**3), 1)
+        seed_size_gb = round(int(task.SEED_SIZE) / (1024**3), 1) if task.SEED_SIZE else 0
+        rss_rule, remove_rule, stop_rule = self._load_rules_from_template(task)
+        return {
+            "id": task.ID,
+            "name": task.NAME,
+            "site": site_info.get("name") if site_info else None,
+            "site_id": task.SITE,
+            "interval": task.INTEVAL,
+            "label": task.LABEL,
+            "savepath": task.SAVEPATH,
+            "state": task.STATE,
+            "downloader": task.DOWNLOADER,
+            "downloader_name": downloader_info.get("name") if downloader_info else None,
+            "transfer": task.TRANSFER == "Y",
+            "sendmessage": task.SENDMESSAGE == "Y",
+            "free": task.FREELEECH,
+            "rss_rule": rss_rule,
+            "remove_rule": remove_rule,
+            "stop_rule": stop_rule,
+            "rule_id": getattr(task, "RULE_ID", None),
+            "seed_size": seed_size_gb,
+            "time_range": task.TIME_RANGE,
+            "total_size": total_size,
+            "rss_url": task.RSSURL if task.RSSURL else (site_info.get("rssurl") if site_info else None),
+            "rss_url_show": task.RSSURL,
+            "cookie": site_info.get("cookie") if site_info else None,
+            "ua": site_info.get("ua") if site_info else None,
+            "headers": site_info.get("headers") if site_info else None,
+            "download_count": task.DOWNLOAD_COUNT,
+            "remove_count": task.REMOVE_COUNT,
+            "download_size": StringUtils.str_filesize(task.DOWNLOAD_SIZE),
+            "upload_size": StringUtils.str_filesize(task.UPLOAD_SIZE),
+            "lst_mod_date": task.LST_MOD_DATE,
+            "site_url": site_url,
+        }
+
+    def get_brushtask_info(self, taskid: int | str | None = None) -> Any:
+        if not self._brush_tasks:
+            self.load_brushtasks()
+        if taskid:
+            return self._brush_tasks.get(str(taskid)) or {}
+        return list(self._brush_tasks.values())
+
+    def update_brushtask(self, brushtask_id: int | None, item: dict) -> Any:
+        ret = self._repo.update_brushtask(brushtask_id or 0, item)
+        if brushtask_id:
+            self._reload_single_task(brushtask_id)
+        else:
+            self.start_service()
+        return ret
+
+    def delete_brushtask(self, brushtask_id: int | None) -> Any:
+        self._stop_task_jobs(brushtask_id)
+        ret = self._repo.delete_brushtask(brushtask_id or 0)
+        self._brush_tasks.pop(str(brushtask_id), None)
+        return ret
+
+    def update_brushtask_state(self, state: str | None, brushtask_id: int | None = None) -> Any:
+        ret = self._repo.update_brushtask_state(state=state or "", tid=brushtask_id)
+        if brushtask_id:
+            task = self._brush_tasks.get(str(brushtask_id))
+            if task:
+                task["state"] = state
+            self._reload_single_task(brushtask_id)
+        else:
+            for task in self._brush_tasks.values():
+                task["state"] = state
+            self.load_brushtasks()
+            self.stop_service()
+            if self._brush_tasks:
+                for task in self._brush_tasks.values():
+                    if task.get("state") in ["Y", "S"] and task.get("interval"):
+                        cron = str(task.get("interval")).strip()
+                        if cron.isdigit() or cron.count(" ") == 4:
+                            self._start_task_jobs(task, cron)
+        return ret
+
+    def get_brushtask_torrents(self, brush_id: int | None, active: bool = True) -> Any:
+        return self._repo.get_brushtask_torrents(brush_id or 0, active)
+
+    def is_torrent_handled(self, enclosure: str | None) -> bool:
+        return self._helper.is_torrent_handled(enclosure)
+
+    # ---------- RSS 刷流（委托） ----------
+
+    def check_task_rss(self, taskid: int | None) -> None:
+        taskinfo = self.get_brushtask_info(taskid)
+        self._rss_checker.check_task_rss(taskid, taskinfo)
+
+    # ---------- 删种（委托） ----------
+
+    def remove_task_torrents(self, taskid: int | None) -> None:
+        taskinfo = self.get_brushtask_info(taskid)
+        self._torrent_lifecycle.remove_task_torrents(taskid, taskinfo)
+
+    # ---------- 停种（委托） ----------
+
+    def stop_task_torrents(self, taskid: int | None) -> None:
+        taskinfo = self.get_brushtask_info(taskid)
+        self._torrent_lifecycle.stop_task_torrents(taskid, taskinfo)

@@ -1,0 +1,838 @@
+"""
+System Router — FastAPI 迁移
+对应原 web/controllers/system.py，复用 app/services/system_service.py
+"""
+
+import json
+import os
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
+from fastapi.responses import FileResponse, StreamingResponse
+from pydantic import BaseModel
+
+import log
+from api.deps import (
+    _extract_user_ctx_from_session,
+    get_backup_restore_service,
+    get_config_service,
+    get_config_update_service,
+    get_indexer_config_service,
+    get_indexer_service,
+    get_media_server_config_service,
+    get_message_sender_service,
+    get_message_service,
+    get_net_test_service,
+    get_progress_service,
+    get_system_config_service,
+    get_system_info_service,
+    get_system_scheduler_service,
+    get_user_manage_service,
+    get_web_search_service,
+    require_any_permission,
+    require_permission,
+)
+from app.agent.providers.base import ProviderConfig
+from app.agent.providers.gemini import GeminiProvider
+from app.agent.providers.ollama import OllamaProvider
+from app.agent.providers.openai import OpenAIProvider
+from app.core.exceptions import DomainError, ResourceNotFoundError, ServiceError
+from app.indexer.registry import get_all_clients as get_all_indexers
+from app.mediaserver.registry import get_all_clients as get_all_mediaservers
+from app.message.registry import get_all_clients
+from app.message.switches import MESSAGE_SWITCHES
+from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
+from app.schemas.auth import UserContext
+from app.schemas.common import CommonResponse
+from app.services.auth_service import AuthService
+from app.services.indexer_service import IndexerService
+from app.services.log_streaming_service import LogStreamingService
+from app.services.site_config_updater import SiteConfigUpdater
+from app.services.system_service import (
+    MessageClientService,
+    MessageSenderService,
+    SystemInfoService,
+    get_commands,
+    restart_server,
+)
+from app.services.system_service import (
+    backup as do_backup,
+)
+from app.utils import ExceptionUtils
+from app.utils.response import fail, success
+from app.utils.security import generate_password_hash
+from app.utils.system_utils import SystemUtils
+from app.utils.temp_manager import temp_manager
+from app.utils.types import SystemConfigKey
+from log import LOG_BUFFER
+from app.di import container
+
+router = APIRouter()
+
+
+# ---------------------------------------------------------------------------
+# Pydantic Request Models
+# ---------------------------------------------------------------------------
+
+
+class EmptyRequest(BaseModel):
+    """兼容前端 payload 中无 data 字段或 data 为空的情况"""
+
+    data: dict | None = None
+
+
+class MessageClientRequest(BaseModel):
+    flag: str | None = None
+    cid: int | None = None
+    type: str | None = None
+    checked: bool | None = None
+    name: str | None = None
+    config: str | None = None
+    switchs: str | None = None
+    interactive: int | None = None
+    enabled: int | None = None
+    templates: str | None = None
+
+
+class NetTestRequest(BaseModel):
+    target: str | None = None
+
+
+class IndexerConfigRequest(BaseModel):
+    data: dict
+
+
+class MediaServerConfigRequest(BaseModel):
+    data: dict
+
+
+class SchedulerRequest(BaseModel):
+    item: str | None = None
+
+
+class SearchRequest(BaseModel):
+    search_word: str | None = None
+    unident: bool | None = None
+    filters: dict | None = None
+    tmdbid: str | None = None
+    media_type: str | None = None
+
+
+class SystemConfigRequest(BaseModel):
+    key: str | None = None
+    value: str | None = None
+
+
+class TestMessageClientRequest(BaseModel):
+    type: str | None = None
+    config: str | None = None
+
+
+class UpdateAllConfigRequest(BaseModel):
+    conf: dict | None = None
+    db: dict | None = None
+    test: bool | None = None
+
+
+class UpdateConfigRequest(BaseModel):
+    data: dict
+
+
+class BackupRequest(BaseModel):
+    file_name: str | None = None
+
+
+class UserManagerRequest(BaseModel):
+    oper: str | None = None
+    name: str | None = None
+    password: str | None = None
+    pris: str | None = None
+
+
+class ProgressRequest(BaseModel):
+    type: str | None = None
+
+
+class SendCustomMessageRequest(BaseModel):
+    message_clients: list | None = None
+    title: str | None = None
+    text: str | None = None
+    image: str | None = None
+
+
+class SendPluginMessageRequest(BaseModel):
+    title: str | None = None
+    text: str | None = None
+    image: str | None = None
+
+
+class AgentModelsRequest(BaseModel):
+    provider_name: str
+    api_url: str | None = None
+    api_key: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# 辅助函数：统一从 payload 中提取 data
+# ---------------------------------------------------------------------------
+
+
+def _extract_data(payload: BaseModel) -> dict:
+    """从 Pydantic 模型中提取 data 字段，若不存在则返回模型本身的 dict"""
+    d = payload.model_dump()
+    if "data" in d and d["data"] is not None:
+        return d["data"]
+    return d
+
+
+# ---------------------------------------------------------------------------
+# Router Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/info", response_model=CommonResponse, summary="获取系统基本信息")
+def system_info(
+    current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
+    svc: SystemInfoService = Depends(get_system_info_service),
+):
+    """获取系统基本信息（版本、运行时长、Python版本等）"""
+    info = svc.get_system_info()
+    return success(
+        data={
+            "version": info.version,
+            "python_version": info.python_version,
+            "platform": info.platform,
+            "uptime": info.uptime,
+            "uptime_seconds": info.uptime_seconds,
+            "start_time": info.start_time,
+            "memory_mb": info.memory_mb,
+        }
+    )
+
+
+@router.post("/check_message_client", response_model=CommonResponse, summary="切换消息客户端设置")
+def check_message_client(
+    req: MessageClientRequest,
+    current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
+    svc: MessageClientService = Depends(get_message_service),
+):
+    flag = req.flag
+    if flag == "interactive":
+        svc.toggle_interactive(cid=req.cid or 0, ctype=req.type or "", checked=req.checked or False)
+        return success()
+    elif flag == "enable":
+        svc.toggle_enable(cid=req.cid or 0, checked=req.checked or False)
+        return success()
+    else:
+        return fail()
+
+
+@router.post("/message_clients/delete", response_model=CommonResponse, summary="删除消息客户端")
+def delete_message_client(
+    req: MessageClientRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc: MessageClientService = Depends(get_message_service),
+):
+    if svc.delete_client(cid=req.cid or 0):
+        return success()
+    else:
+        return fail()
+
+
+@router.post("/message_clients", response_model=CommonResponse, summary="获取消息客户端列表")
+def get_message_client(
+    req: MessageClientRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc: MessageClientService = Depends(get_message_service),
+):
+    data = svc.get_client(cid=req.cid)
+    # 热修复：确保 switchs 始终是列表（兼容旧脏数据）
+    all_switch_keys = set(MESSAGE_SWITCHES.keys())
+    if isinstance(data, dict):
+        for client in data.values():
+            switchs = client.get("switchs")
+            if isinstance(switchs, str):
+                client["switchs"] = [
+                    s.strip() for s in switchs.split(",") if s.strip() and s.strip() in all_switch_keys
+                ]
+            elif not isinstance(switchs, list):
+                client["switchs"] = []
+    return success(data=data)
+
+
+@router.post("/message_clients/config", response_model=CommonResponse, summary="获取消息客户端配置模板")
+def get_message_client_config(
+    current_user: UserContext = Depends(require_permission("setting:update")),
+):
+    """获取消息通知配置模板（channels + switchs），field.id 统一为 config key"""
+    clients = {}
+    for cls in get_all_clients():
+        if not hasattr(cls, "schema") or not cls.schema:
+            continue
+        schema_dict = (
+            cls.config_schema.to_dict()
+            if hasattr(cls, "config_schema") and cls.config_schema
+            else {"name": cls.schema, "config": {}}
+        )
+        clients[cls.schema] = schema_dict
+    switchs = dict(MESSAGE_SWITCHES)
+    return success(
+        data={
+            "channels": clients,
+            "switchs": switchs,
+        }
+    )
+
+
+@router.get("/message_clients/templates/defaults", response_model=CommonResponse, summary="获取消息通知默认模板")
+def get_message_client_default_templates(
+    current_user: UserContext = Depends(require_permission("setting:update")),
+):
+    """获取消息通知默认模板"""
+    return success(data=DEFAULT_MESSAGE_TEMPLATES)
+
+
+@router.post("/net_test", response_model=CommonResponse, summary="网络连通性测试")
+def net_test(
+    req: NetTestRequest,
+    current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
+    svc=Depends(get_net_test_service),
+):
+    result = svc.test(target=req.target or "")
+    return success(data={"res": result.success, "time": f"{result.time_ms} 毫秒"})
+
+
+@router.post("/db/reset_version", response_model=CommonResponse, summary="重置数据库版本")
+def reset_db_version(
+    req: EmptyRequest = EmptyRequest(),
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_system_config_service),
+):
+    try:
+        svc.reset_db_version()
+        return success()
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
+    except Exception as e:
+        ExceptionUtils.exception_traceback(e)
+        return fail(msg=str(e))
+
+
+@router.post("/restart", response_model=CommonResponse, summary="重启系统")
+def restart(
+    req: EmptyRequest = EmptyRequest(),
+    current_user: UserContext = Depends(require_permission("setting:update")),
+):
+    restart_server()
+    return success()
+
+
+@router.post("/backup", summary="备份配置文件")
+def backup(
+    current_user: UserContext = Depends(require_permission("setting:update")),
+):
+    """备份配置文件"""
+
+    zip_file = do_backup()
+    if not zip_file:
+        return fail(msg="创建备份失败")
+    return FileResponse(zip_file, filename=os.path.basename(zip_file))
+
+
+@router.post("/backup/upload", response_model=CommonResponse, summary="上传备份文件")
+async def backup_upload(
+    file: UploadFile = File(...),
+    current_user: UserContext = Depends(require_permission("setting:update")),
+):
+    """上传备份文件"""
+    try:
+        file_path = Path(temp_manager.get_temp_path()) / (file.filename or "")
+        contents = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        return success(data={"filepath": str(file_path)})
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
+    except Exception as e:
+        return fail(msg=str(e))
+
+
+@router.post("/backup/restore", response_model=CommonResponse, summary="恢复备份")
+def restory_backup(
+    req: BackupRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_backup_restore_service),
+):
+    filename = req.file_name
+    result = svc.restore_from_backup(filename)
+    if result.success:
+        return success(data=[], msg=result.message)
+    return fail(msg=result.message)
+
+
+@router.post("/indexers", response_model=CommonResponse, summary="获取索引器配置信息")
+def get_indexers(
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    idx_svc: IndexerService = Depends(get_indexer_service),
+):
+    """获取索引器配置信息（外部索引器配置、内置站点列表、当前配置）"""
+    indexers = idx_svc.get_builtin_indexers(check=False)
+    private_count = len([item.id for item in indexers if not item.public])
+    public_count = len([item.id for item in indexers if item.public])
+    _cfg = container.system_config()
+    indexer_sites = _cfg.get(SystemConfigKey.UserIndexerSites) or []
+    search_indexer = _cfg.get(SystemConfigKey.SearchIndexer) or "builtin"
+    indexer_config = _cfg.get(SystemConfigKey.IndexerConfig) or {}
+    return success(
+        data={
+            "indexers": indexers,
+            "private_count": private_count,
+            "public_count": public_count,
+            "indexer_conf": {
+                cls.client_id: cls.config_schema.to_dict()
+                for cls in get_all_indexers()
+                if hasattr(cls, "client_id") and cls.client_id and hasattr(cls, "config_schema") and cls.config_schema
+            },
+            "indexer_sites": indexer_sites,
+            "search_indexer": search_indexer,
+            "indexer_config": indexer_config,
+        }
+    )
+
+
+@router.post("/indexers/test", response_model=CommonResponse, summary="测试索引器连接")
+def test_indexer(
+    req: IndexerConfigRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_indexer_config_service),
+):
+    """测试索引器连接"""
+    data = dict(req.data)
+    data["test"] = True
+    result = svc.save_config(data)
+    if result.success:
+        if result.code == 0:
+            return success(msg=result.msg)
+        return fail(code=result.code, msg=result.msg)
+    return fail(code=result.code, msg=result.msg)
+
+
+@router.post("/indexers/config", response_model=CommonResponse, summary="保存索引器配置")
+def save_indexer_config(
+    req: IndexerConfigRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_indexer_config_service),
+):
+    result = svc.save_config(req.data)
+    if result.success and result.code == 0:
+        return success()
+    return fail(code=result.code, msg=result.msg)
+
+
+@router.post("/mediaservers", response_model=CommonResponse, summary="获取媒体服务器配置信息")
+def get_mediaservers(
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_media_server_config_service),
+):
+    """获取媒体服务器配置信息"""
+    info = svc.get_media_servers_info()
+    mediaserver_conf = {}
+    for cls in get_all_mediaservers():
+        if hasattr(cls, "client_id") and cls.client_id and hasattr(cls, "config_schema") and cls.config_schema:
+            mediaserver_conf[cls.client_id] = cls.config_schema.to_dict()
+    return success(
+        data={
+            "servers": info["servers"],
+            "default_server": info["default_server"],
+            "mediaserver_conf": mediaserver_conf,
+        }
+    )
+
+
+@router.post("/mediaservers/test", response_model=CommonResponse, summary="测试媒体服务器连接")
+def test_mediaserver(
+    req: MediaServerConfigRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_media_server_config_service),
+):
+    """测试媒体服务器连接"""
+    data = dict(req.data)
+    data["test"] = True
+    result = svc.save_config(data)
+    if result.success:
+        if result.code == 0:
+            return success(msg=result.msg)
+        return fail(code=result.code, msg=result.msg)
+    return fail(code=result.code, msg=result.msg)
+
+
+@router.post("/mediaservers/config", response_model=CommonResponse, summary="保存媒体服务器配置")
+def save_mediaserver_config(
+    req: MediaServerConfigRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_media_server_config_service),
+):
+    result = svc.save_config(req.data)
+    if result.success and result.code == 0:
+        return success()
+    return fail(code=result.code, msg=result.msg)
+
+
+@router.post("/scheduler/run", response_model=CommonResponse, summary="运行定时任务")
+def sch(
+    req: SchedulerRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_system_scheduler_service),
+):
+    try:
+        msg = svc.start_service(item=req.item)
+        return success(data={"msg": msg, "item": req.item})
+    except ResourceNotFoundError as e:
+        return fail(msg=e.message)
+
+
+@router.post("/search", response_model=CommonResponse, summary="WEB资源搜索")
+def search(
+    req: SearchRequest,
+    current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
+    svc=Depends(get_web_search_service),
+):
+    """
+    WEB资源搜索（同步执行，前端并行轮询进度）
+    """
+    try:
+        from app.infrastructure.cache_system import TokenCache
+
+        TokenCache.delete("search")
+    except Exception:
+        pass
+    search_word = req.search_word
+    ident_flag = not req.unident
+    result = svc.search(
+        search_word=search_word,
+        ident_flag=ident_flag,
+        filters=req.filters,
+        tmdbid=req.tmdbid,
+        media_type=req.media_type,
+    )
+    if result.code != 0:
+        return fail(code=result.code, msg=result.msg)
+    return success()
+
+
+def _flatten_config(cfg: dict, prefix: str = "") -> dict:
+    """将嵌套配置字典扁平化为 dot-notation 键值对"""
+    result = {}
+    for key, value in cfg.items():
+        full_key = f"{prefix}.{key}" if prefix else key
+        if isinstance(value, dict):
+            result.update(_flatten_config(value, full_key))
+        else:
+            result[full_key] = value
+    return result
+
+
+@router.post("/config", response_model=CommonResponse, summary="设置系统配置")
+def set_system_config(
+    req: SystemConfigRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_system_config_service),
+):
+    if svc.set_config(req.key, req.value):
+        return success()
+    return fail()
+
+
+@router.post("/config/all", response_model=CommonResponse, summary="获取所有系统配置")
+def get_all_config(
+    current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
+    svc=Depends(get_config_service),
+):
+    """获取所有系统配置（扁平化，供基础设置页面使用）"""
+    cfg = svc.get_config() or {}
+    flat = _flatten_config(cfg)
+    # 代理特殊处理：显示 http 代理地址
+    proxies = cfg.get("app", {}).get("proxies", {})
+    http_proxy = proxies.get("http") if isinstance(proxies, dict) else None
+    if http_proxy:
+        flat["app.proxies"] = http_proxy.replace("http://", "")
+    return success(data=flat)
+
+
+@router.post("/message_clients/test", response_model=CommonResponse, summary="测试消息客户端连接")
+def test_message_client(
+    req: TestMessageClientRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc: MessageClientService = Depends(get_message_service),
+):
+    config = json.loads(req.config) if req.config else {}
+    if svc.test_connection(ctype=req.type or "", config=config):
+        return success()
+    else:
+        return fail()
+
+
+@router.post("/config/update", response_model=CommonResponse, summary="更新系统配置")
+def update_config(
+    req: UpdateConfigRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_config_update_service),
+):
+    result = svc.update_config(req.data)
+    if result.success:
+        return success()
+    return fail()
+
+
+@router.post("/agent/models", response_model=CommonResponse, summary="查询 LLM 模型列表")
+def list_agent_models(
+    req: AgentModelsRequest,
+    current_user: UserContext = Depends(require_permission("setting:view")),
+):
+    """查询 LLM Provider 支持的模型列表"""
+
+    if not req.api_url or not req.api_key:
+        return success(data=[])
+
+    config = ProviderConfig(
+        name=req.provider_name,
+        api_url=req.api_url,
+        api_key=req.api_key,
+        model="",
+    )
+
+    try:
+        if req.provider_name == "ollama":
+            provider = OllamaProvider(config)
+        elif req.provider_name == "gemini":
+            provider = GeminiProvider(config)
+        else:
+            provider = OpenAIProvider(config)
+        models = provider.list_models()
+        return success(data=models)
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
+    except Exception as e:
+        log.warn(f"【Agent】查询模型列表失败: {e}")
+        return fail(msg=str(e))
+
+
+@router.post("/message_clients/update", response_model=CommonResponse, summary="更新消息客户端")
+def update_message_client(
+    req: MessageClientRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc: MessageClientService = Depends(get_message_service),
+):
+    svc.upsert_client(
+        name=req.name or "",
+        cid=req.cid or 0,
+        ctype=req.type or "",
+        config=req.config or "",
+        switchs=req.switchs or "",
+        interactive=req.interactive or 0,
+        enabled=req.enabled or 0,
+        templates=req.templates or "",
+    )
+    return success()
+
+
+@router.post("/users/legacy", response_model=CommonResponse, summary="用户管理")
+def user_manager(
+    req: UserManagerRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_user_manage_service),
+):
+    oper = req.oper
+    name = req.name
+    if oper == "add":
+        password = generate_password_hash(str(req.password))
+        result = svc.add_user(name=name, password=password)
+    else:
+        result = svc.delete_user(name=name)
+
+    if result.success:
+        return success(data={"success": False})
+    return fail(code=-1, success=False, message=result.message or "操作失败")
+
+
+@router.post("/commands", response_model=CommonResponse, summary="获取系统命令列表")
+def system_commands(
+    current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
+):
+    """获取系统命令列表"""
+    cmds = get_commands()
+    return success(data=cmds)
+
+
+@router.post("/status", response_model=CommonResponse, summary="获取系统状态")
+def system_status(
+    req: EmptyRequest = EmptyRequest(),
+    current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
+    info_svc=Depends(get_system_info_service),
+):
+    info = info_svc.get_system_info()
+    return success(
+        data={
+            "version": info.version,
+            "uptime": info.uptime_seconds,
+            "python_version": info.python_version,
+        }
+    )
+
+
+@router.post("/refresh", response_model=CommonResponse, summary="获取任务进度")
+def refresh_process(
+    req: ProgressRequest,
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    svc=Depends(get_progress_service),
+):
+    result = svc.get_progress(ptype=req.type)
+    return success(data={"value": result.value, "text": result.text or "正在处理..."})
+
+
+@router.post("/messages/send", response_model=CommonResponse, summary="发送自定义消息")
+def send_custom_message(
+    req: SendCustomMessageRequest,
+    user: str = Depends(require_permission("setting:update")),
+    svc: MessageSenderService = Depends(get_message_sender_service),
+):
+    result = svc.send_custom_message(
+        clients=req.message_clients or [],
+        title=req.title or "",
+        text=req.text or "",
+        image=req.image or "",
+    )
+    if result.success:
+        return success()
+    return fail(msg=result.message)
+
+
+@router.post("/messages/send_plugin", response_model=CommonResponse, summary="发送插件消息")
+def send_plugin_message(
+    req: SendPluginMessageRequest,
+    user: str = Depends(require_permission("setting:update")),
+    svc: MessageSenderService = Depends(get_message_sender_service),
+):
+    svc.send_plugin_message(
+        title=req.title or "",
+        text=req.text or "",
+        image=req.image or "",
+    )
+    return success()
+
+
+class LogsRequest(BaseModel):
+    source: str | None = None
+    level: str | None = None
+    limit: int | None = 200
+
+
+@router.post("/logs", response_model=CommonResponse, summary="获取日志")
+def get_logs(
+    req: LogsRequest,
+    user: str = Depends(require_permission("log:view")),
+):
+    logs, _ = LOG_BUFFER.get_logs(source=req.source)
+    if req.level:
+        logs = [lg for lg in logs if lg.get("level") == req.level]
+    if req.limit and req.limit > 0:
+        logs = logs[-req.limit :]
+    return success(data=logs)
+
+
+@router.post("/processes", response_model=CommonResponse, summary="获取进程列表")
+def processes(
+    req: EmptyRequest = EmptyRequest(),
+    user: str = Depends(require_any_permission("setting:view", "setting:update")),
+):
+    return success(data=SystemUtils.get_all_processes())
+
+
+# ---------------------------------------------------------------------------
+# 日志流 (SSE)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/stream-logging", summary="实时日志流")
+def stream_logging(
+    request: Request,
+    source: str | None = Query(""),
+    token: str | None = Query(""),
+):
+    """实时日志 EventSource 响应
+    兼容 EventSource 无法携带自定义 Header 的限制，支持从 query param 传入 token。
+    """
+    # 认证：优先 query param token，其次 session
+    user_ctx = None
+    if token:
+        user_ctx = AuthService.verify_token(token)
+    if not user_ctx:
+        user_ctx = _extract_user_ctx_from_session(request)
+    if not user_ctx:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="认证失败，请检查登录状态或 Token",
+        )
+
+    # 权限检查
+    if not user_ctx.is_superadmin and "log:view" not in user_ctx.permissions:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="权限不足，需要日志查看权限",
+        )
+
+    log_streaming_service = LogStreamingService(sleep_interval=0.3)
+    return StreamingResponse(log_streaming_service.stream(source or ""), media_type="text/event-stream")
+
+
+@router.get("/site-config/version", response_model=CommonResponse, summary="获取站点配置版本")
+def get_site_config_version():
+    """获取站点配置版本信息"""
+    try:
+        info = SiteConfigUpdater().get_version_info()
+        return success(info)
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
+    except Exception as e:
+        log.error(f"【System】获取站点配置版本失败: {e!s}")
+        return fail(msg=str(e))
+
+
+@router.post("/site-config/update", response_model=CommonResponse, summary="手动更新站点配置")
+def update_site_config(
+    request: Request,
+    payload: EmptyRequest | None = None,
+):
+    """手动触发站点配置更新"""
+    user_ctx = _extract_user_ctx_from_session(request)
+    if not user_ctx:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录")
+    if not user_ctx.is_superadmin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
+
+    try:
+        force = bool(payload and payload.data and payload.data.get("force"))
+        result = SiteConfigUpdater().update(force=force)
+        if result["success"]:
+            return success(result)
+        return fail(msg=result["message"])
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
+    except Exception as e:
+        log.error(f"【System】手动更新站点配置失败: {e!s}")
+        return fail(msg=str(e))
+
+
+@router.post("/config/reload", response_model=CommonResponse, summary="手动触发配置重载")
+def reload_config(
+    current_user: UserContext = Depends(require_permission("setting:update")),
+):
+    """手动触发全量配置重载（通过 ConfigReloader 按优先级 reset 各 provider）"""
+    try:
+        result = container.config_reloader().reload(container)
+        if result["failed"]:
+            return fail(msg=f"配置重载部分失败: {result['failed']}")
+        return success(data={"version": result["version"], "steps": result["results"]})
+    except Exception as e:
+        log.error(f"【System】配置重载失败: {e!s}")
+        return fail(msg=str(e))
