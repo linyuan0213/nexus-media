@@ -1,16 +1,25 @@
+# Nexus Media Docker 部署
+
 ## 镜像特点
 
 - 基于 Alpine，镜像体积小
-- 支持 amd64/arm64 架构
-- 非 root 用户运行，降低权限风险
-- 支持 umask 文件权限掩码设置
+- 支持 amd64 / arm64 架构
+- 非 root 用户运行（nexus:nexus）
+- s6-overlay 进程管理，支持优雅退出
+- 数据库迁移在启动时自动执行（alembic upgrade head）
 
 ## 快速开始
 
-推荐使用项目根目录的 `docker-compose.yml` 完整部署（包含前端、后端、Redis、OCR、Chrome）。
+推荐使用项目根目录的 `docker-compose.yml` 完整部署：
 
 ```bash
 docker compose up -d
+```
+
+MySQL 版本：
+
+```bash
+docker compose -f docker-compose.mysql.yml up -d
 ```
 
 ## 单独部署后端
@@ -59,13 +68,27 @@ services:
 | `PGID` | 0 | 运行用户 GID |
 | `UMASK` | 000 | 文件权限掩码 |
 | `NEXUS_PORT` | 3000 | 服务端口 |
+| `NEXUS_MEDIA_CONFIG` | /config/config.yaml | 配置文件路径 |
+| `LOG_FORMAT` | — | 设为 `json` 输出 ELK 兼容日志 |
 | `TZ` | Asia/Shanghai | 时区 |
 
-## PUID/PGID 说明
+### 数据库环境变量（可选）
 
-- 若同时使用 Emby/Jellyfin/Plex/qBittorrent 等 Docker 镜像，建议保持 PUID/PGID 一致
+以下变量仅在需要使用外部数据库时设置：
+
+| 变量 | 说明 |
+|------|------|
+| `DB_TYPE` | 数据库类型：`sqlite` / `mysql` / `postgresql` |
+| `DB_HOST` | 数据库地址 |
+| `DB_PORT` | 数据库端口 |
+| `DB_USERNAME` | 数据库用户名 |
+| `DB_PASSWORD` | 数据库密码 |
+| `DB_NAME` | 数据库名称 |
+
+## PUID / PGID 说明
+
+- 若同时使用 Emby / Jellyfin / Plex / qBittorrent 等 Docker 镜像，建议保持 PUID / PGID 一致
 - 在宿主机上执行 `id -u` 和 `id -g` 获取对应值
-- PUID=0 PGID=0 为 root 用户，媒体文件所有者非 root 时不建议设置
 
 ## 硬链接映射
 
