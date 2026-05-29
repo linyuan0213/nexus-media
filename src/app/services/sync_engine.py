@@ -149,7 +149,7 @@ class SyncEngine:
             for obs in self._observers:
                 try:
                     obs.stop()
-                    obs.join()
+                    obs.join(timeout=5)
                 except (ServiceError, RepositoryError, DomainError):
                     raise
                 except Exception as e:

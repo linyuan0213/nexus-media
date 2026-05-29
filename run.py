@@ -4,10 +4,7 @@ Nexus Media 启动入口 — FastAPI
 已移除 Flask 依赖，统一使用 FastAPI
 """  # noqa: EXE001
 
-import os
-import signal
 import sys
-import warnings
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
@@ -17,26 +14,6 @@ import uvicorn
 import log
 from api.main import app
 from app.core.settings import settings
-from app.di import container
-
-warnings.filterwarnings("ignore")
-
-
-def signal_handler(num, stack):
-    """信号处理 - 优雅退出"""
-    log.warn(f"捕捉到退出信号：{num}，开始退出...")
-    try:
-        log.info("关闭服务...")
-        container.system_lifecycle_service().stop_service()
-    except Exception as e:
-        log.error(f"关闭服务时出错: {e}")
-    finally:
-        log.info("退出主进程...")
-        os._exit(0)
-
-
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
 
 
 def get_run_config():
@@ -68,10 +45,6 @@ def main():
     log.console("Nexus Media FastAPI 启动中...")
     log.console("当前版本号：v3.8.0")
 
-    # 服务启动由 lifespan 统一管理（api/main.py）
-    # 这里只获取运行配置并启动 uvicorn
-
-    # 获取配置
     config = get_run_config()
     log.console(f"监听地址：{config['host']}:{config['port']}")
 
@@ -81,14 +54,17 @@ def main():
         ssl_kwargs["ssl_keyfile"] = config["ssl_key"]
         log.console("SSL 已启用")
 
-    uvicorn.run(
-        app,
-        host=config["host"],
-        port=config["port"],
-        log_level="info" if config["debug"] else "warning",
-        access_log=config["debug"],
-        **ssl_kwargs,
+    server = uvicorn.Server(
+        uvicorn.Config(
+            app,
+            host=config["host"],
+            port=config["port"],
+            log_level="info" if config["debug"] else "warning",
+            access_log=config["debug"],
+            **ssl_kwargs,
+        )
     )
+    server.run()
 
 
 if __name__ == "__main__":
