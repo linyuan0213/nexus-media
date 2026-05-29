@@ -26,6 +26,7 @@ htmlcov/
 /cloudflarespeedtest/**
 
 # Runtime generated files
+/static/
 /config/logs/
 /config/config.yaml
 /config/site_manage/*.json
