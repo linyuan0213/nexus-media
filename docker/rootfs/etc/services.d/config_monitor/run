@@ -1,8 +1,0 @@
-#!/usr/bin/with-contenv bash
-
-umask ${UMASK}
-
-cd ${WORKDIR}
-
-exec \
-    s6-setuidgid nexus .venv/bin/python config_monitor.py
