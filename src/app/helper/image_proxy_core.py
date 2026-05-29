@@ -24,7 +24,9 @@ _download_locks = {}
 _download_locks_lock = threading.Lock()
 
 # 缓存目录（与 Flask 侧保持一致）
-CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "static", "img_cache")
+CACHE_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "static", "img_cache"
+)
 MAX_CACHE_SIZE = 1024 * 1024 * 1024  # 1GB 最大缓存
 MAX_CACHE_DAYS = 30  # 缓存30天
 
