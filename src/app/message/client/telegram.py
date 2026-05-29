@@ -63,6 +63,24 @@ class Telegram(_IMessageClient):
                 tooltip="Telegram机器人消息有两种模式：Webhook或消息轮循；开启后将使用Webhook方式，需要在基础设置中正确配置好外网访问地址，同时受Telegram官方限制，外网访问地址需要设置为以下端口之一：443, 80, 88, 8443，且需要有公网认证的可信SSL证书；关闭后将使用消息轮循方式，使用该方式需要在基础设置->安全处将Telegram ipv4源地址设置为127.0.0.1，如同时使用了内置的SSL证书功能，消息轮循方式可能无法正常使用",
                 type="switch",
             ),
+            ConfigField(
+                id="webhook_ipv4",
+                required=False,
+                title="Webhook IPv4 白名单",
+                tooltip="允许的 IPv4 地址段（CIDR），逗号分隔，默认 0.0.0.0/0 放行所有",
+                type="text",
+                placeholder="0.0.0.0/0",
+                advanced=True,
+            ),
+            ConfigField(
+                id="webhook_ipv6",
+                required=False,
+                title="Webhook IPv6 白名单",
+                tooltip="允许的 IPv6 地址段（CIDR），逗号分隔，默认 ::/0 放行所有",
+                type="text",
+                placeholder="::/0",
+                advanced=True,
+            ),
         ],
     )
     _setup_done = set()

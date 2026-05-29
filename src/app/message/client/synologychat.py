@@ -37,6 +37,24 @@ class SynologyChat(_IMessageClient):
                 type="text",
                 placeholder="",
             ),
+            ConfigField(
+                id="webhook_ipv4",
+                required=False,
+                title="Webhook IPv4 白名单",
+                tooltip="允许的 IPv4 地址段（CIDR），逗号分隔，默认 0.0.0.0/0 放行所有",
+                type="text",
+                placeholder="0.0.0.0/0",
+                advanced=True,
+            ),
+            ConfigField(
+                id="webhook_ipv6",
+                required=False,
+                title="Webhook IPv6 白名单",
+                tooltip="允许的 IPv6 地址段（CIDR），逗号分隔，默认 ::/0 放行所有",
+                type="text",
+                placeholder="::/0",
+                advanced=True,
+            ),
         ],
     )
     _setup_done = set()

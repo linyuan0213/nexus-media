@@ -23,6 +23,13 @@ class _IMessageClient(metaclass=ABCMeta):
         """Override to clean up message client resources."""
         return
 
+    def get_webhook_allow_ip(self) -> dict:
+        """从客户端 CONFIG 读取 webhook IP 白名单，默认全放行。"""
+        return {
+            "ipv4": str(self._config.get("webhook_ipv4") or "0.0.0.0/0"),
+            "ipv6": str(self._config.get("webhook_ipv6") or "::/0"),
+        }
+
     @classmethod
     def match(cls, ctype):
         return ctype == cls.schema if cls.schema else False

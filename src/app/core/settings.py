@@ -114,19 +114,9 @@ class PtConfig(BaseModel):
     ptrefresh_date_cron: str = "22:36"
 
 
-class WebhookAllowIp(BaseModel):
-    """Webhook 允许 IP 范围"""
-
-    ipv4: str = "0.0.0.0/0"
-    ipv6: str = "::/0"
-
-
 class SecurityConfig(BaseModel):
     """安全配置"""
 
-    media_server_webhook_allow_ip: WebhookAllowIp = Field(default_factory=WebhookAllowIp)
-    telegram_webhook_allow_ip: WebhookAllowIp = Field(default_factory=WebhookAllowIp)
-    synology_webhook_allow_ip: WebhookAllowIp = Field(default_factory=WebhookAllowIp)
     jwt_secret: str = ""
 
 

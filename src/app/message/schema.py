@@ -12,6 +12,7 @@ class ConfigField:
     placeholder: str = ""
     default: Any = None
     options: dict[str, str] = field(default_factory=dict)
+    advanced: bool = False
 
 
 @dataclass
@@ -48,5 +49,7 @@ class MessageConfigSchema:
                 field_dict["default"] = cfg_field.default
             if cfg_field.options:
                 field_dict["options"] = cfg_field.options
+            if cfg_field.advanced:
+                field_dict["advanced"] = cfg_field.advanced
             result["config"][cfg_field.id] = field_dict
         return result

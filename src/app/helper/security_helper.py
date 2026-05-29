@@ -1,33 +1,9 @@
 import ipaddress
 
-from app.core.settings import settings
 from app.utils import ExceptionUtils
 
 
 class SecurityHelper:
-    media_server_webhook_allow_ip = {}
-    telegram_webhook_allow_ip = {}
-    synology_webhook_allow_ip = {}
-
-    def __init__(self):
-        security = settings.get("security")
-        if security:
-            self.media_server_webhook_allow_ip = security.get("media_server_webhook_allow_ip") or {}
-            self.telegram_webhook_allow_ip = security.get("telegram_webhook_allow_ip") or {}
-            self.synology_webhook_allow_ip = security.get("synology_webhook_allow_ip") or {}
-
-    def check_mediaserver_ip(self, ip):
-        return self.allow_access(self.media_server_webhook_allow_ip, ip)
-
-    def check_telegram_ip(self, ip):
-        return self.allow_access(self.telegram_webhook_allow_ip, ip)
-
-    def check_synology_ip(self, ip):
-        return self.allow_access(self.synology_webhook_allow_ip, ip)
-
-    def check_slack_ip(self, ip):
-        return self.allow_access({"ipve": "127.0.0.1"}, ip)
-
     @staticmethod
     def allow_access(allow_ips, ip):
         """
