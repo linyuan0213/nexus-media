@@ -6,7 +6,6 @@ AppSettings - 基于 pydantic-settings 的应用配置
 import io
 import os
 import shutil
-import sys
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -16,7 +15,46 @@ from filelock import FileLock
 from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
-_ROOT_PATH = Path(__file__).parent.parent.parent.resolve()
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _load_dotenv(path: str | None = None) -> bool:
+    """手动加载 .env 文件（早于 pydantic-settings，用于发现 NEXUS_MEDIA_CONFIG）。"""
+    env_path = Path(path) if path else _PROJECT_ROOT / ".env"
+    if not env_path.is_file():
+        return False
+    with open(env_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+    return True
+
+
+def _resolve_config_path() -> str:
+    """解析配置文件路径，按优先级：环境变量 > ./config/config.yaml > /config/config.yaml > 有效默认值。"""
+    candidate = os.environ.get("NEXUS_MEDIA_CONFIG", "")
+    if candidate and os.path.exists(candidate):
+        return candidate
+    if candidate:
+        os.makedirs(os.path.dirname(candidate), exist_ok=True)
+
+    search = candidate or "config/config.yaml"
+    if os.path.exists(search):
+        return os.path.abspath(search)
+
+    alt = os.environ.get("NEXUS_MEDIA_CONFIG", "") or "config/config.yaml"
+    os.makedirs(os.path.dirname(alt) or ".", exist_ok=True)
+    template = str(_PROJECT_ROOT / "config" / "config.yaml.example")
+    if os.path.exists(template):
+        shutil.copy(template, alt)
+        print(f"【Config】已从模板创建配置文件：{alt}")
+    return os.path.abspath(alt)
 
 
 class AppConfig(BaseModel):
@@ -277,17 +315,8 @@ class AppSettings(BaseSettings):
 
 
 def _init_config_file() -> str:
-    config_path = os.environ.get("NEXUS_MEDIA_CONFIG", "")
-    if not config_path:
-        print("【Config】NEXUS_MEDIA_CONFIG 环境变量未设置，程序无法工作，正在退出...")
-        sys.exit()
-
-    if not os.path.exists(config_path):
-        os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        template = str(_ROOT_PATH / "config" / "config.yaml")
-        shutil.copy(template, config_path)
-        print("【Config】config.yaml 配置文件不存在，已将配置文件模板复制到配置目录...")
-
+    config_path = _resolve_config_path()
+    os.environ.setdefault("NEXUS_MEDIA_CONFIG", config_path)
     return config_path
 
 
@@ -316,6 +345,8 @@ def _apply_env_database_config(settings: AppSettings) -> None:
         print(f"【Config】保存数据库配置到文件失败：{e!s}")
 
 
+_load_dotenv()
+
 _config_path = _init_config_file()
 
 tz = os.environ.get("TZ", "Asia/Shanghai")
@@ -324,6 +355,5 @@ if not os.environ.get("TZ"):
 
 settings = AppSettings()
 
-if _config_path:
-    print(f"正在加载配置：{_config_path}")
-    _apply_env_database_config(settings)
+print(f"正在加载配置：{_config_path}")
+_apply_env_database_config(settings)

@@ -45,7 +45,7 @@ check: lint typecheck test
 
 # 启动开发服务器
 run:
-    NEXUS_MEDIA_CONFIG=./config/config.yaml uv run python run.py
+    uv run python run.py
 
 # 清理缓存文件
 clean:
