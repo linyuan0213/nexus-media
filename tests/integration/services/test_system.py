@@ -167,7 +167,7 @@ class TestProgressService:
         helper = MagicMock()
         helper.get_process.return_value = {"value": 50, "text": "half"}
         svc = ProgressService(helper)
-        result = svc.get_progress(ProgressKey.Search)
+        result = svc.get_progress(ProgressKey.Search.value)
         assert result.exists is True
         assert result.value == 50
         assert result.text == "half"
@@ -176,7 +176,7 @@ class TestProgressService:
         helper = MagicMock()
         helper.get_process.return_value = None
         svc = ProgressService(helper)
-        result = svc.get_progress(ProgressKey.Search)
+        result = svc.get_progress(ProgressKey.Search.value)
         assert result.exists is False
 
 

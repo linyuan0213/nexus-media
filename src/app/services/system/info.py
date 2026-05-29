@@ -177,15 +177,15 @@ class UserManageService:
 
     def add_user(self, name: str, password: str, pris=None) -> UserManageResultDTO:
         rbac = self._get_rbac()
-        ok, _ = rbac.create_user(username=name, password=password)
-        return UserManageResultDTO(success=bool(ok))
+        user = rbac.create_user(username=name, password=password)
+        return UserManageResultDTO(success=user is not None)
 
     def delete_user(self, name: str) -> UserManageResultDTO:
         rbac = self._get_rbac()
         user = rbac.get_user_by_username(name)
         if user:
-            ok, _ = rbac.delete_user(user.ID)  # type: ignore[arg-type]
-            return UserManageResultDTO(success=bool(ok))
+            rbac.delete_user(user.ID)  # type: ignore[arg-type]
+            return UserManageResultDTO(success=True)
         return UserManageResultDTO(success=False, message="用户不存在")
 
 
