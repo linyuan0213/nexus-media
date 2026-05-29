@@ -112,6 +112,6 @@ class ImageProxyHelper:
         except Exception as e:
             import log
 
-            log.error(f"【get_proxy_image_url】处理图片代理失败: {str(e)}")
+            log.error(f"[get_proxy_image_url]处理图片代理失败: {str(e)}")
 
         return url

@@ -36,15 +36,15 @@ class AgentService:
         self._enabled = bool(cfg.get("enabled"))
         if not self._enabled:
             if self._provider is not None:
-                log.info("【AgentService】Agent 已禁用，释放 Provider")
+                log.info("[AgentService]Agent 已禁用，释放 Provider")
             self._provider = None
             return
         self._config = get_provider()  # type: ignore[assignment]
         if self._config:
             self._provider = self._create_provider(self._config)
-            log.info(f"【AgentService】Provider 就绪: {self._config.name} / {self._config.model}")
+            log.info(f"[AgentService]Provider 就绪: {self._config.name} / {self._config.model}")
         else:
-            log.warn("【AgentService】Agent 已启用但未找到有效 Provider 配置")
+            log.warn("[AgentService]Agent 已启用但未找到有效 Provider 配置")
             self._provider = None
 
     @staticmethod
@@ -74,7 +74,7 @@ class AgentService:
     ) -> str:
         """通用对话请求"""
         if not self.ready:
-            log.warn("【AgentService】chat 调用失败：Provider 未就绪")
+            log.warn("[AgentService]chat 调用失败：Provider 未就绪")
             raise RuntimeError("LLM service not configured")
         if not self._provider:
             raise RuntimeError("LLM service not configured")
@@ -89,7 +89,7 @@ class AgentService:
         """带缓存的对话（messages 转为 tuple 使其可 hash）"""
         if not self._provider:
             raise RuntimeError("LLM service not configured")
-        log.info("【AgentService】缓存未命中，调用 Provider chat")
+        log.info("[AgentService]缓存未命中，调用 Provider chat")
         return self._provider.chat(list(messages), system_prompt, temperature)
 
     def structured_chat(
@@ -101,7 +101,7 @@ class AgentService:
     ) -> Any:
         """结构化输出对话（返回 pydantic 模型实例）"""
         if not self.ready:
-            log.warn("【AgentService】structured_chat 调用失败：Provider 未就绪")
+            log.warn("[AgentService]structured_chat 调用失败：Provider 未就绪")
             raise RuntimeError("LLM service not configured")
         if not self._provider:
             raise RuntimeError("LLM service not configured")
@@ -116,11 +116,11 @@ class AgentService:
             data = json.loads(content)
             if response_model:
                 result = response_model.model_validate(data)
-                log.info(f"【AgentService】structured_chat 解析成功: {response_model.__name__}")
+                log.info(f"[AgentService]structured_chat 解析成功: {response_model.__name__}")
                 return result
             return data
         except Exception as e:
-            log.warn(f"【AgentService】结构化解析失败: {e}, content={content[:200]}")
+            log.warn(f"[AgentService]结构化解析失败: {e}, content={content[:200]}")
             return None
 
     def list_models(self) -> list[str]:
@@ -131,10 +131,10 @@ class AgentService:
             return []
         try:
             models = self._provider.list_models()
-            log.info(f"【AgentService】查询到 {len(models)} 个模型")
+            log.info(f"[AgentService]查询到 {len(models)} 个模型")
             return models
         except Exception as e:
-            log.warn(f"【AgentService】查询模型列表失败: {e}")
+            log.warn(f"[AgentService]查询模型列表失败: {e}")
             return []
 
     def is_available(self) -> bool:

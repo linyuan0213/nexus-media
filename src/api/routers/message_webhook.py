@@ -28,7 +28,7 @@ def _verify_webhook_ip(channel: SearchType, request: Request) -> None:
         allow_ips = {"ipv4": "0.0.0.0/0", "ipv6": "::/0"}
     client_ip = request.client.host if request.client else ""
     if not SecurityHelper.allow_access(allow_ips, client_ip):
-        log.warn(f"【Webhook】{channel.value} IP 白名单拒绝: {client_ip}")
+        log.warn(f"[Webhook]{channel.value} IP 白名单拒绝: {client_ip}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="IP not allowed")
 
 
@@ -107,7 +107,7 @@ def _handle_webhook(update: dict, channel: SearchType):
     if not text:
         return {"ok": True}
 
-    log.info(f"【Webhook】{channel.value} 收到消息: user={user_id}, text={text[:60]}...")
+    log.info(f"[Webhook]{channel.value} 收到消息: user={user_id}, text={text[:60]}...")
 
     search_handler = MessageSearchService()
     handler = MessageCommandHandler(search_handler=search_handler)

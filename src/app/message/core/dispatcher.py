@@ -28,15 +28,15 @@ class MessageDispatcher:
         if client:
             self._do_sendmsg(client, title, text, image, url, user_id)
         else:
-            log.warn(f"【Message】队列中找不到客户端: id={client_id}, type={client_type}")
+            log.warn(f"[Message]队列中找不到客户端: id={client_id}, type={client_type}")
 
     def _do_sendmsg(self, client, title, text, image, url, user_id):
         """实际执行消息发送（由队列调用）."""
         if not client or not client.get("client"):
-            log.warn("【Message】客户端对象为空，跳过发送")
+            log.warn("[Message]客户端对象为空，跳过发送")
             return
         cname = client.get("name")
-        log.info(f"【Message】开始发送消息 {cname}：title={title}")
+        log.info(f"[Message]开始发送消息 {cname}：title={title}")
         if self._domain:
             if url:
                 if "/open?url=" in url:
@@ -56,9 +56,9 @@ class MessageDispatcher:
                 title=cur_title, text=cur_text, image=image, url=url, user_id=user_id
             )
             if not state:
-                log.error(f"【Message】{cname} 消息发送失败：%s" % ret_msg)
+                log.error(f"[Message]{cname} 消息发送失败：%s" % ret_msg)
                 raise RuntimeError(ret_msg)
-        log.info(f"【Message】消息发送成功 {cname}：title={title}")
+        log.info(f"[Message]消息发送成功 {cname}：title={title}")
 
     def sendmsg(
         self,
@@ -80,7 +80,7 @@ class MessageDispatcher:
             title = template_title if template_title is not None else title
             text = template_text if template_text is not None else text
         cname = client.get("name")
-        log.info(f"【Message】消息入队 {cname}：title={title}")
+        log.info(f"[Message]消息入队 {cname}：title={title}")
         if not self._queue:
             return False
         return self._queue.submit(self._do_sendmsg, client, title, text, image, url, user_id, name=f"sendmsg:{cname}")
@@ -107,24 +107,24 @@ class MessageDispatcher:
     def _do_send_list_msg(self, client, medias, user_id, title):
         """实际执行列表消息发送（由队列调用）."""
         if not client or not client.get("client"):
-            log.warn("【Message】客户端对象为空，跳过列表发送")
+            log.warn("[Message]客户端对象为空，跳过列表发送")
             return
         cname = client.get("name")
-        log.info(f"【Message】开始发送列表消息 {cname}：title={title}")
+        log.info(f"[Message]开始发送列表消息 {cname}：title={title}")
         state, ret_msg = client.get("client").send_list_msg(
             medias=medias, user_id=user_id, title=title, url=self._domain
         )
         if not state:
-            log.error(f"【Message】{cname} 发送列表消息失败：%s" % ret_msg)
+            log.error(f"[Message]{cname} 发送列表消息失败：%s" % ret_msg)
             raise RuntimeError(ret_msg)
-        log.info(f"【Message】列表消息发送成功 {cname}：title={title}")
+        log.info(f"[Message]列表消息发送成功 {cname}：title={title}")
 
     def send_list_msg(self, client, medias, user_id, title):
         """发送选择类消息（异步入队）."""
         if not client or not client.get("client"):
             return False
         cname = client.get("name")
-        log.info(f"【Message】列表消息入队 {cname}：title={title}")
+        log.info(f"[Message]列表消息入队 {cname}：title={title}")
         if not self._queue:
             return False
         return self._queue.submit(self._do_send_list_msg, client, medias, user_id, title, name=f"send_list_msg:{cname}")

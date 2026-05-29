@@ -43,7 +43,7 @@ class RBACMenuService:
             permission_code=permission_code,
             **kwargs,
         )
-        log.info(f"【RBAC】创建菜单成功: {menu_name}")
+        log.info(f"[RBAC]创建菜单成功: {menu_name}")
         return menu
 
     def update_menu(self, menu_id: int, **kwargs) -> None:
@@ -63,7 +63,7 @@ class RBACMenuService:
         success = self.menu_repo.delete_menu(menu_id)
         if not success:
             raise ResourceNotFoundError("删除失败")
-        log.info(f"【RBAC】删除菜单: {menu.MENU_NAME}")
+        log.info(f"[RBAC]删除菜单: {menu.MENU_NAME}")
 
     def get_menu_tree(self, include_hidden: bool = False) -> list[dict[str, Any]]:
         """获取菜单树形结构"""

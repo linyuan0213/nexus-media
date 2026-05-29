@@ -11,7 +11,7 @@ class LogBuffer:
     通过单调递增计数器解决 maxlen 场景下无法识别新增日志的问题。
     """
 
-    _SOURCE_PATTERN = re.compile(r"(?<=【).*?(?=】)")
+    _SOURCE_PATTERN = re.compile(r"(?<=[).*?(?=])")
 
     def __init__(self, maxlen: int = 200):
         self._queue: deque[dict[str, Any]] = deque(maxlen=maxlen)
@@ -22,11 +22,11 @@ class LogBuffer:
         """添加一条日志记录，返回当前计数器值。
         不再做 html.escape，Vue 前端会自动处理 XSS 防护。
         """
-        if text.startswith("【"):
+        if text.startswith("["):
             match = self._SOURCE_PATTERN.search(text)
             if match:
                 source = match.group(0)
-                text = text.replace(f"【{source}】", "")
+                text = text.replace(f"[{source}]", "")
             else:
                 source = "System"
         else:

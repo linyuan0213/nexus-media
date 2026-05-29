@@ -244,7 +244,7 @@ class PluginFrameworkService:
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
         acquired = lock.acquire()
         if not acquired:
-            log.info(f"【Plugin】插件安装正在进行中，跳过: {zip_path}")
+            log.info(f"[Plugin]插件安装正在进行中，跳过: {zip_path}")
             raise RuntimeError("插件安装正在执行中，请稍后再试")
 
         try:
@@ -364,7 +364,7 @@ class PluginFrameworkService:
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
         acquired = lock.acquire()
         if not acquired:
-            log.info(f"【Plugin】插件卸载正在进行中，跳过: {plugin_id}")
+            log.info(f"[Plugin]插件卸载正在进行中，跳过: {plugin_id}")
             raise RuntimeError("插件卸载正在执行中，请稍后再试")
 
         try:
@@ -521,7 +521,7 @@ class PluginFrameworkService:
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
         acquired = lock.acquire()
         if not acquired:
-            log.info(f"【Plugin】插件 {plugin_id} 正在运行中，跳过")
+            log.info(f"[Plugin]插件 {plugin_id} 正在运行中，跳过")
             return
 
         try:

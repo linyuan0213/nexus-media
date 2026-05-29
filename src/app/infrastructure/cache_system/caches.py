@@ -75,7 +75,7 @@ class TMDBCache(TypedCache):
             mtype = MediaType.TV
         key = self._make_key("tmdb", mtype.value, tmdbid, language or "default")
         ttl = ttl or self.TTL_TMDB_INFO
-        log.debug(f"【TMDBCache】缓存信息: {key}, TTL={ttl}秒")
+        log.debug(f"[TMDBCache]缓存信息: {key}, TTL={ttl}秒")
         return self.set(key, info, ttl)
 
     def get_media_info(self, title: str, year: str | None = None, mtype: Any = None) -> Any | None:
@@ -136,7 +136,7 @@ class TMDBCache(TypedCache):
         keys = self._adapter.keys(pattern)
         for key in keys:
             self._adapter.delete(key)
-        log.debug(f"【TMDBCache】清除TMDB ID {tmdbid} 的所有缓存")
+        log.debug(f"[TMDBCache]清除TMDB ID {tmdbid} 的所有缓存")
 
     def clear_media_cache(self, title: str) -> None:
         """清除指定标题的所有媒体缓存"""
@@ -144,7 +144,7 @@ class TMDBCache(TypedCache):
         keys = self._adapter.keys(pattern)
         for key in keys:
             self._adapter.delete(key)
-        log.debug(f"【TMDBCache】清除标题 {title} 的所有媒体缓存")
+        log.debug(f"[TMDBCache]清除标题 {title} 的所有媒体缓存")
 
 
 class MediaInfoCache(TypedCache):

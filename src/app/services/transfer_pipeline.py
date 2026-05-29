@@ -71,11 +71,11 @@ class TransferPipeline:
             except ValidationError as e:
                 total_success = False
                 messages.append(e.message)
-                log.error(f"【Pipeline】处理失败：{file_path}，{e.message}")
+                log.error(f"[Pipeline]处理失败：{file_path}，{e.message}")
             except Exception as e:
                 total_success = False
                 messages.append(str(e))
-                log.error(f"【Pipeline】处理失败：{file_path}，{e}")
+                log.error(f"[Pipeline]处理失败：{file_path}，{e}")
 
         final_msg = "; ".join(messages) if messages else "处理完成"
 
@@ -84,7 +84,7 @@ class TransferPipeline:
             try:
                 task.post_process(task, total_success, final_msg)
             except Exception as e:
-                log.error(f"【Pipeline】后处理失败：{e}")
+                log.error(f"[Pipeline]后处理失败：{e}")
 
         return total_success, final_msg
 
@@ -137,9 +137,9 @@ class TransferPipeline:
                 mode="force_all",
                 dst_backend=dst_backend,
             )
-            log.info(f"【Pipeline】刮削完成：{scrape_path}")
+            log.info(f"[Pipeline]刮削完成：{scrape_path}")
         except Exception as e:
-            log.error(f"【Pipeline】刮削失败：{scrape_path}，{e}")
+            log.error(f"[Pipeline]刮削失败：{scrape_path}，{e}")
 
     def _is_media_library_path(self, path: str) -> bool:
         """检查路径是否属于媒体库。"""
@@ -170,7 +170,7 @@ class TransferPipeline:
             return None
         entity = self._backend_repo.get_by_id(int(backend_id))
         if not entity:
-            log.warn(f"【Pipeline】未找到后端：{backend_id}")
+            log.warn(f"[Pipeline]未找到后端：{backend_id}")
             return None
         info = StorageBackendFactory.get_config_info(entity.type)
         if info:

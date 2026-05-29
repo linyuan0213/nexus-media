@@ -138,13 +138,13 @@ class Emby(_IMediaClient):
             if res:
                 return res.json()
             else:
-                log.error(f"【{self.client_name}】Library/SelectableMediaFolders 未获取到返回数据")
+                log.error(f"[{self.client_name}]Library/SelectableMediaFolders 未获取到返回数据")
                 return []
         except (InfrastructureError, NetworkError, MediaServerError):
             raise
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接Library/SelectableMediaFolders 出错：" + str(e))
+            log.error(f"[{self.client_name}]连接Library/SelectableMediaFolders 出错：" + str(e))
             return []
 
     def __get_emby_librarys(self):
@@ -159,13 +159,13 @@ class Emby(_IMediaClient):
             if res:
                 return res.json().get("Items")
             else:
-                log.error(f"【{self.client_name}】User/Views 未获取到返回数据")
+                log.error(f"[{self.client_name}]User/Views 未获取到返回数据")
                 return []
         except (InfrastructureError, NetworkError, MediaServerError):
             raise
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接User/Views 出错：" + str(e))
+            log.error(f"[{self.client_name}]连接User/Views 出错：" + str(e))
             return []
 
     def get_user(self, user_name=None):
@@ -189,12 +189,12 @@ class Emby(_IMediaClient):
                     if user.get("Policy", {}).get("IsAdministrator"):
                         return user.get("Id")
             else:
-                log.error(f"【{self.client_name}】Users 未获取到返回数据")
+                log.error(f"[{self.client_name}]Users 未获取到返回数据")
         except (InfrastructureError, NetworkError, MediaServerError):
             raise
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接Users出错：" + str(e))
+            log.error(f"[{self.client_name}]连接Users出错：" + str(e))
         return None
 
     def __get_backdrop_url(self, item_id, image_tag, remote=True, inner=False):
@@ -264,12 +264,12 @@ class Emby(_IMediaClient):
             if res:
                 return res.json().get("Id")
             else:
-                log.error(f"【{self.client_name}】System/Info 未获取到返回数据")
+                log.error(f"[{self.client_name}]System/Info 未获取到返回数据")
         except (InfrastructureError, NetworkError, MediaServerError):
             raise
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接System/Info出错：" + str(e))
+            log.error(f"[{self.client_name}]连接System/Info出错：" + str(e))
         return None
 
     def get_user_count(self):
@@ -284,14 +284,14 @@ class Emby(_IMediaClient):
             if res:
                 return res.json().get("TotalRecordCount")
             else:
-                log.error(f"【{self.client_name}】Users/Query 未获取到返回数据")
+                log.error(f"[{self.client_name}]Users/Query 未获取到返回数据")
                 return 0
         except (InfrastructureError, NetworkError, MediaServerError):
             raise
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接Users/Query出错：" + str(e))
+            log.error(f"[{self.client_name}]连接Users/Query出错：" + str(e))
             return 0
 
     def get_activity_log(self, num):
@@ -321,14 +321,14 @@ class Emby(_IMediaClient):
                         activity = {"type": event_type, "event": event_str, "date": event_date}
                         ret_array.append(activity)
             else:
-                log.error(f"【{self.client_name}】System/ActivityLog/Entries 未获取到返回数据")
+                log.error(f"[{self.client_name}]System/ActivityLog/Entries 未获取到返回数据")
                 return []
         except (InfrastructureError, NetworkError, MediaServerError):
             raise
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接System/ActivityLog/Entries出错：" + str(e))
+            log.error(f"[{self.client_name}]连接System/ActivityLog/Entries出错：" + str(e))
             return []
         return ret_array[:num]
 
@@ -345,14 +345,14 @@ class Emby(_IMediaClient):
             if res:
                 return res.json()
             else:
-                log.error(f"【{self.client_name}】Items/Counts 未获取到返回数据")
+                log.error(f"[{self.client_name}]Items/Counts 未获取到返回数据")
                 return {}
         except (InfrastructureError, NetworkError, MediaServerError):
             raise
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接Items/Counts出错：" + str(e))
+            log.error(f"[{self.client_name}]连接Items/Counts出错：" + str(e))
             return {}
 
     def __get_emby_series_id_by_name(self, name, year):
@@ -380,7 +380,7 @@ class Emby(_IMediaClient):
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接Items出错：" + str(e))
+            log.error(f"[{self.client_name}]连接Items出错：" + str(e))
             return None
         return ""
 
@@ -416,7 +416,7 @@ class Emby(_IMediaClient):
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接Items出错：" + str(e))
+            log.error(f"[{self.client_name}]连接Items出错：" + str(e))
             return None
         return []
 
@@ -465,7 +465,7 @@ class Emby(_IMediaClient):
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接Shows/Id/Episodes出错：" + str(e))
+            log.error(f"[{self.client_name}]连接Shows/Id/Episodes出错：" + str(e))
             return None
         return []
 
@@ -529,7 +529,7 @@ class Emby(_IMediaClient):
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接Shows/Id/Episodes出错：" + str(e))
+            log.error(f"[{self.client_name}]连接Shows/Id/Episodes出错：" + str(e))
             return None
 
     def get_remote_image_by_id(self, item_id, image_type):
@@ -550,14 +550,14 @@ class Emby(_IMediaClient):
                     if image.get("ProviderName") == "TheMovieDb" and image.get("Type") == image_type:
                         return image.get("Url")
             else:
-                log.error(f"【{self.client_name}】Items/RemoteImages 未获取到返回数据")
+                log.error(f"[{self.client_name}]Items/RemoteImages 未获取到返回数据")
                 return None
         except (InfrastructureError, NetworkError, MediaServerError):
             raise
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接Items/Id/RemoteImages出错：" + str(e))
+            log.error(f"[{self.client_name}]连接Items/Id/RemoteImages出错：" + str(e))
             return None
         return None
 
@@ -594,13 +594,13 @@ class Emby(_IMediaClient):
             if res:
                 return True
             else:
-                log.info(f"【{self.client_name}】刷新媒体库对象 {item_id} 失败，无法连接Emby！")
+                log.info(f"[{self.client_name}]刷新媒体库对象 {item_id} 失败，无法连接Emby！")
         except (InfrastructureError, NetworkError, MediaServerError):
             raise
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接Items/Id/Refresh出错：" + str(e))
+            log.error(f"[{self.client_name}]连接Items/Id/Refresh出错：" + str(e))
             return False
         return False
 
@@ -616,13 +616,13 @@ class Emby(_IMediaClient):
             if res:
                 return True
             else:
-                log.info(f"【{self.client_name}】刷新媒体库失败，无法连接Emby！")
+                log.info(f"[{self.client_name}]刷新媒体库失败，无法连接Emby！")
         except (InfrastructureError, NetworkError, MediaServerError):
             raise
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接Library/Refresh出错：" + str(e))
+            log.error(f"[{self.client_name}]连接Library/Refresh出错：" + str(e))
             return False
         return False
 
@@ -634,7 +634,7 @@ class Emby(_IMediaClient):
         if not items:
             return
         # 收集要刷新的媒体库信息
-        log.info(f"【{self.client_name}】开始刷新Emby媒体库...")
+        log.info(f"[{self.client_name}]开始刷新Emby媒体库...")
         library_ids = []
         for item in items:
             if not item:
@@ -649,7 +649,7 @@ class Emby(_IMediaClient):
         for library_id in library_ids:
             if library_id != "/":
                 self.__refresh_emby_library_by_id(library_id)
-        log.info(f"【{self.client_name}】Emby媒体库刷新完成")
+        log.info(f"[{self.client_name}]Emby媒体库刷新完成")
 
     def __get_emby_library_id_by_item(self, item):
         """
@@ -793,7 +793,7 @@ class Emby(_IMediaClient):
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接Users/Items出错：" + str(e))
+            log.error(f"[{self.client_name}]连接Users/Items出错：" + str(e))
         yield {}
 
     def get_playing_sessions(self):
@@ -929,13 +929,13 @@ class Emby(_IMediaClient):
                     )
                 return ret_resume
             else:
-                log.error(f"【{self.client_name}】Users/Items/Resume 未获取到返回数据")
+                log.error(f"[{self.client_name}]Users/Items/Resume 未获取到返回数据")
         except (InfrastructureError, NetworkError, MediaServerError):
             raise
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接Users/Items/Resume出错：" + str(e))
+            log.error(f"[{self.client_name}]连接Users/Items/Resume出错：" + str(e))
         return []
 
     def get_latest(self, num=20):
@@ -967,11 +967,11 @@ class Emby(_IMediaClient):
                     )
                 return ret_latest
             else:
-                log.error(f"【{self.client_name}】Users/Items/Latest 未获取到返回数据")
+                log.error(f"[{self.client_name}]Users/Items/Latest 未获取到返回数据")
         except (InfrastructureError, NetworkError, MediaServerError):
             raise
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接Users/Items/Latest出错：" + str(e))
+            log.error(f"[{self.client_name}]连接Users/Items/Latest出错：" + str(e))
         return []

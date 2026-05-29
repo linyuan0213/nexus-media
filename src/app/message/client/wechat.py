@@ -228,7 +228,7 @@ class WeChat(_IMessageClient):
                 return
             token = self._get_access_token()
             if not token:
-                log.error("【WeChat】无法获取access_token，菜单创建跳过")
+                log.error("[WeChat]无法获取access_token，菜单创建跳过")
                 return
             try:
                 commands = Message().get_commands()
@@ -251,28 +251,26 @@ class WeChat(_IMessageClient):
                         buttons.append({"name": group["name"], "sub_button": subs})
                 if not buttons:
                     return
-                log.info(f"【WeChat】正在创建菜单：{json.dumps(buttons, ensure_ascii=False)}")
+                log.info(f"[WeChat]正在创建菜单：{json.dumps(buttons, ensure_ascii=False)}")
                 data = json.dumps({"button": buttons}, ensure_ascii=False).encode("utf-8")
                 headers = {"content-type": "application/json"}
                 menu_url = self._menu_url % (token, self.agent_id)
-                log.info(f"【WeChat】菜单请求URL: {menu_url}")
+                log.info(f"[WeChat]菜单请求URL: {menu_url}")
                 res = RequestUtils(headers=headers).post(menu_url, data=data)
                 if res and res.status_code == 200:
                     body = res.json()
                     if body.get("errcode") == 0:
                         WeChat._menu_done.add(str(self.agent_id))
-                        log.info("【WeChat】应用菜单创建成功")
+                        log.info("[WeChat]应用菜单创建成功")
                     else:
                         log.error(
-                            "【WeChat】菜单创建失败 errcode={} errmsg={}".format(
-                                body.get("errcode"), body.get("errmsg")
-                            )
+                            "[WeChat]菜单创建失败 errcode={} errmsg={}".format(body.get("errcode"), body.get("errmsg"))
                         )
                 else:
-                    log.error("【WeChat】菜单创建失败 HTTP=%s" % (res.status_code if res else "无响应"))
+                    log.error("[WeChat]菜单创建失败 HTTP=%s" % (res.status_code if res else "无响应"))
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
-                log.error(f"【WeChat】菜单创建异常：{e}")
+                log.error(f"[WeChat]菜单创建异常：{e}")
 
     def refresh_menu(self):
         """刷新命令菜单（插件命令变更时调用）"""
@@ -283,7 +281,7 @@ class WeChat(_IMessageClient):
         headers = {"content-type": "application/json"}
         try:
             data = json.dumps(req_json, ensure_ascii=False).encode("utf-8")
-            log.debug("【WeChat】POST {}".format(url.split("?")[0]) if "?" in url else url)
+            log.debug("[WeChat]POST {}".format(url.split("?")[0]) if "?" in url else url)
             res = RequestUtils(headers=headers).post(url, data=data)
             if res and res.status_code == 200:
                 body = res.json()

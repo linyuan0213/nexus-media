@@ -36,7 +36,7 @@ class MediaService:
         self._default_language = media.get("tmdb_language", "zh") or "zh"
         self._episode_mapping_enabled = media.get("episode_mapping_enabled", False)
         if self._episode_mapping_enabled:
-            log.info("【MediaService】集数映射已启用")
+            log.info("[MediaService]集数映射已启用")
         rmt_match_mode = app.get("rmt_match_mode", "normal")
         if isinstance(rmt_match_mode, str):
             rmt_match_mode = rmt_match_mode.upper()
@@ -80,7 +80,7 @@ class MediaService:
             if llm_parser.ready:
                 parsed = llm_parser.parse(title, subtitle)
                 if parsed:
-                    log.info(f"【MediaService】LLM Parser fallback 成功: {parsed.title_cn or parsed.title_en}")
+                    log.info(f"[MediaService]LLM Parser fallback 成功: {parsed.title_cn or parsed.title_en}")
         if not parsed:
             if language:
                 self._lookup.client.set_language()
@@ -117,12 +117,12 @@ class MediaService:
                     and cached.begin_episode == parsed.episode
                     and cached.end_episode == parsed.end_episode
                 ):
-                    log.info(f"【MediaService】从缓存获取媒体信息: {search_name}")
+                    log.info(f"[MediaService]从缓存获取媒体信息: {search_name}")
                     if language:
                         self._lookup.client.set_language()
                     return cached
                 log.debug(
-                    f"【MediaService】缓存季集不匹配，跳过缓存: "
+                    f"[MediaService]缓存季集不匹配，跳过缓存: "
                     f"cached=S{cached.begin_season}E{cached.begin_episode}-"
                     f"{cached.end_episode or ''}, "
                     f"parsed=S{parsed.season}E{parsed.episode}-"
@@ -212,17 +212,17 @@ class MediaService:
         # 7. 集数映射（动漫合并季 / 绝对集号）
         if self._episode_mapping_enabled and info.type != MediaType.MOVIE and info.tmdb_id and info.begin_episode:
             log.info(
-                f"【EpisodeMapper】尝试映射: {info.get_name()} S{info.begin_season}E{info.begin_episode} (tmdb_id={info.tmdb_id})"
+                f"[EpisodeMapper]尝试映射: {info.get_name()} S{info.begin_season}E{info.begin_episode} (tmdb_id={info.tmdb_id})"
             )
             mapped = self._episode_mapper.map_auto(int(info.tmdb_id), info.begin_season, info.begin_episode)
             if mapped:
                 log.info(
-                    f"【EpisodeMapper】映射成功: S{info.begin_season}E{info.begin_episode} -> S{mapped[0]}E{mapped[1]}"
+                    f"[EpisodeMapper]映射成功: S{info.begin_season}E{info.begin_episode} -> S{mapped[0]}E{mapped[1]}"
                 )
                 info.begin_season = mapped[0]
                 info.begin_episode = mapped[1]
             else:
-                log.info("【EpisodeMapper】无需映射或映射失败")
+                log.info("[EpisodeMapper]无需映射或映射失败")
 
         # 保存到缓存
         if cache:
@@ -269,13 +269,13 @@ class MediaService:
                 if llm_parser.ready:
                     failed_titles = [titles[i] for i in failed_indices]
                     log.info(
-                        f"【MediaService】批量识别: {len(failed_indices)} 条 Regex 解析失败，尝试 LLM Parser fallback"
+                        f"[MediaService]批量识别: {len(failed_indices)} 条 Regex 解析失败，尝试 LLM Parser fallback"
                     )
                     llm_results = llm_parser.parse_batch(failed_titles)
                     for j, idx in enumerate(failed_indices):
                         if llm_results[j]:
                             parsed_list[idx] = llm_results[j]
-                            log.info(f"【MediaService】LLM Parser fallback [{idx}]: {failed_titles[j][:60]}...")
+                            log.info(f"[MediaService]LLM Parser fallback [{idx}]: {failed_titles[j][:60]}...")
 
         # 2. 去重: 按 (title, year, type) 分组，相同内容只查一次 TMDB
         unique_keys = {}
@@ -295,7 +295,7 @@ class MediaService:
         # 3. Lookup: 并发查询去重后的唯一组合
         lookup_results = {}
         if unique_keys:
-            log.info(f"【MediaService】批量识别 {len(items)} 条，去重后 {len(unique_keys)} 条需查 TMDB")
+            log.info(f"[MediaService]批量识别 {len(items)} 条，去重后 {len(unique_keys)} 条需查 TMDB")
             max_workers = min(len(unique_keys), 8)
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 future_to_key = {
@@ -307,7 +307,7 @@ class MediaService:
                     try:
                         lookup_results[key] = future.result()
                     except Exception as e:
-                        log.error(f"【MediaService】TMDB 查询出错: {key}, {e}")
+                        log.error(f"[MediaService]TMDB 查询出错: {key}, {e}")
                         lookup_results[key] = None
 
         # 4. 组装: 将结果映射回原始列表
@@ -362,7 +362,7 @@ class MediaService:
                     )
                     map_indices.append(idx)
             if map_items:
-                log.info(f"【EpisodeMapper】批量映射 {len(map_items)} 条记录")
+                log.info(f"[EpisodeMapper]批量映射 {len(map_items)} 条记录")
                 mapped = self._episode_mapper.map_batch(map_items)
                 mapped_count = 0
                 for i, mapped_result in enumerate(mapped):
@@ -372,7 +372,7 @@ class MediaService:
                         results[idx].begin_episode = mapped_result[1]
                         mapped_count += 1
                 if mapped_count > 0:
-                    log.info(f"【EpisodeMapper】批量映射完成: {mapped_count}/{len(map_items)} 条已映射")
+                    log.info(f"[EpisodeMapper]批量映射完成: {mapped_count}/{len(map_items)} 条已映射")
 
         return results
 
@@ -426,7 +426,7 @@ class MediaService:
                             info.end_episode = end_ep
                     return_media_infos[file_path] = info
                 except Exception as err:
-                    log.error(f"【Rmt】发生错误：{str(err)}")
+                    log.error(f"[Rmt]发生错误：{str(err)}")
 
             # 1.1 集数映射（动漫合并季 / 绝对集号）
             if self._episode_mapping_enabled:
@@ -443,7 +443,7 @@ class MediaService:
                         )
                         map_paths.append(file_path)
                 if map_items:
-                    log.info(f"【EpisodeMapper】文件批量映射 {len(map_items)} 条记录")
+                    log.info(f"[EpisodeMapper]文件批量映射 {len(map_items)} 条记录")
                     mapped = self._episode_mapper.map_batch(map_items)
                     mapped_count = 0
                     for i, mapped_result in enumerate(mapped):
@@ -453,7 +453,7 @@ class MediaService:
                             return_media_infos[file_path].begin_episode = mapped_result[1]
                             mapped_count += 1
                     if mapped_count > 0:
-                        log.info(f"【EpisodeMapper】文件批量映射完成: {mapped_count}/{len(map_items)} 条已映射")
+                        log.info(f"[EpisodeMapper]文件批量映射完成: {mapped_count}/{len(map_items)} 条已映射")
 
             return return_media_infos
 
@@ -478,7 +478,7 @@ class MediaService:
                 )
                 path_map[len(items) - 1] = file_path
             except Exception as err:
-                log.error(f"【Rmt】发生错误：{str(err)}")
+                log.error(f"[Rmt]发生错误：{str(err)}")
 
         if not items:
             return return_media_infos
@@ -517,7 +517,7 @@ class MediaService:
                     try:
                         lookup_results[key] = future.result()
                     except Exception as e:
-                        log.error(f"【MediaService】文件批量识别 TMDB 出错: {key}, {e}")
+                        log.error(f"[MediaService]文件批量识别 TMDB 出错: {key}, {e}")
                         lookup_results[key] = None
 
         # 2.4 组装结果
@@ -568,7 +568,7 @@ class MediaService:
                     )
                     map_paths.append(file_path)
             if map_items:
-                log.info(f"【EpisodeMapper】文件识别后映射 {len(map_items)} 条记录")
+                log.info(f"[EpisodeMapper]文件识别后映射 {len(map_items)} 条记录")
                 mapped = self._episode_mapper.map_batch(map_items)
                 mapped_count = 0
                 for i, mapped_result in enumerate(mapped):
@@ -578,7 +578,7 @@ class MediaService:
                         return_media_infos[file_path].begin_episode = mapped_result[1]
                         mapped_count += 1
                 if mapped_count > 0:
-                    log.info(f"【EpisodeMapper】文件识别后映射完成: {mapped_count}/{len(map_items)} 条已映射")
+                    log.info(f"[EpisodeMapper]文件识别后映射完成: {mapped_count}/{len(map_items)} 条已映射")
 
         return return_media_infos
 
@@ -605,7 +605,7 @@ class MediaService:
     def _search_engine(self, feature_name):
         if not feature_name:
             return None, False
-        log.info(f"【Meta】开始通过搜索引擎辅助查询：{feature_name} ...")
+        log.info(f"[Meta]开始通过搜索引擎辅助查询：{feature_name} ...")
 
         def calculate_scores(matches, results):
             if not matches:

@@ -161,7 +161,7 @@ class FileTransferService:
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
         acquired = lock.acquire()
         if not acquired:
-            log.info("【Rmt】删除历史任务正在执行，跳过")
+            log.info("[Rmt]删除历史任务正在执行，跳过")
             return None
         try:
             return self._cleanup.delete_history(logids, flag)
@@ -182,26 +182,26 @@ class FileTransferService:
             try:
                 for file in file_list[:]:
                     if re.findall(ignored_paths, os.path.dirname(file)):
-                        log.info(f"【Rmt】{file} 文件路径含转移忽略词，已忽略转移")
+                        log.info(f"[Rmt]{file} 文件路径含转移忽略词，已忽略转移")
                         file_list.remove(file)
                 if not file_list:
                     return [], "排除文件路径转移忽略词后，没有新文件需要处理"
             except Exception as err:
                 ExceptionUtils.exception_traceback(err)
-                log.error(f"【Rmt】文件路径转移忽略词设置有误：{err!s}")
+                log.error(f"[Rmt]文件路径转移忽略词设置有误：{err!s}")
 
         ignored_files = self._ignored_files
         if ignored_files:
             try:
                 for file in file_list[:]:
                     if re.findall(ignored_files, os.path.basename(file)):
-                        log.info(f"【Rmt】{file} 文件名包含转移忽略词，已忽略转移")
+                        log.info(f"[Rmt]{file} 文件名包含转移忽略词，已忽略转移")
                         file_list.remove(file)
                 if not file_list:
                     return [], "排除文件名转移忽略词后，没有新文件需要处理"
             except Exception as err:
                 ExceptionUtils.exception_traceback(err)
-                log.error(f"【Rmt】文件名转移忽略词设置有误：{err!s}")
+                log.error(f"[Rmt]文件名转移忽略词设置有误：{err!s}")
 
         return file_list, ""
 
@@ -222,7 +222,7 @@ class FileTransferService:
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.error(f"【Rmt】link_sync_file 失败：{e}")
+            log.error(f"[Rmt]link_sync_file 失败：{e}")
             return 1, str(e)
 
     # ---------- 核心转移流程（保留在 Facade） ----------
@@ -253,7 +253,7 @@ class FileTransferService:
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=3600)
         acquired = lock.acquire()
         if not acquired:
-            log.info(f"【Rmt】{in_path} 正在其他实例转移中，跳过")
+            log.info(f"[Rmt]{in_path} 正在其他实例转移中，跳过")
             return self._finish_transfer(False, f"文件正在转移中：{in_path}")
 
         with lock:
@@ -262,7 +262,7 @@ class FileTransferService:
 
             self.progress.start(ProgressKey.FileTransfer)
             assert operation is not None
-            log.info(f"【Rmt】开始处理：{in_path}，转移方式：{operation}")
+            log.info(f"[Rmt]开始处理：{in_path}，转移方式：{operation}")
 
             episode = episode if episode else (None, False)
 
@@ -283,7 +283,7 @@ class FileTransferService:
             if in_from == SyncType.MON:
                 file_list = list(filter(self._history.is_transfer_notin_blacklist, file_list))
                 if not file_list:
-                    log.info("【Rmt】所有文件均已成功转移过")
+                    log.info("[Rmt]所有文件均已成功转移过")
                     return self._finish_transfer(True, "没有新文件需要处理")
 
             # ---------- 阶段 3：查下载记录 + 批量识别 ----------
@@ -332,7 +332,7 @@ class FileTransferService:
                 bluray_disk_dir = PathUtils.get_bluray_dir(in_path)
                 if bluray_disk_dir:
                     file_list = [bluray_disk_dir]
-                    log.info(f"【Rmt】当前为蓝光原盘文件夹：{in_path!s}")
+                    log.info(f"[Rmt]当前为蓝光原盘文件夹：{in_path!s}")
                 else:
                     now_filesize = self._min_filesize
                     if str(min_filesize or "0") != "0":
@@ -344,12 +344,12 @@ class FileTransferService:
                     )
                     if not file_list:
                         log.warn(
-                            f"【Rmt】{in_path} 目录下未找到媒体文件，"
+                            f"[Rmt]{in_path} 目录下未找到媒体文件，"
                             f"最小文件大小限制为 {StringUtils.str_filesize(now_filesize)}"
                         )
             else:
                 if os.path.splitext(in_path)[-1].lower() not in RMT_MEDIAEXT:
-                    log.warn(f"【Rmt】不支持的媒体文件格式，不处理：{in_path}")
+                    log.warn(f"[Rmt]不支持的媒体文件格式，不处理：{in_path}")
                     return None, []
                 bluray_disk_dir = PathUtils.get_bluray_dir(in_path)
                 if bluray_disk_dir:
@@ -365,7 +365,7 @@ class FileTransferService:
         if not download_info and os.path.isfile(in_path):
             download_info = self._history.download_repo.get_download_history_by_path(os.path.dirname(in_path))
         if download_info and str(download_info.TMDBID or ""):
-            log.info(f"【Rmt】{in_path} 找到下载记录，TMDBID：{download_info.TMDBID}")
+            log.info(f"[Rmt]{in_path} 找到下载记录，TMDBID：{download_info.TMDBID}")
             media_type = MediaType.MOVIE if download_info.TYPE in MovieTypes else MediaType.TV
             return self.media.get_tmdb_info(mtype=media_type, tmdbid=download_info.TMDBID), media_type
         return None, None
@@ -395,7 +395,7 @@ class FileTransferService:
             try:
                 total_count += 1
                 if not udf_flag and re.search(r"[./\s\[]+Sample[/\.\s\]]+", file_item, re.IGNORECASE):
-                    log.warn(f"【Rmt】{file_item} 可能是预告片，跳过...")
+                    log.warn(f"[Rmt]{file_item} 可能是预告片，跳过...")
                     continue
 
                 file_name = os.path.basename(file_item)
@@ -431,7 +431,7 @@ class FileTransferService:
                     mtype=media.type, in_path=in_path, size=media.size
                 )
                 if not dist_path:
-                    log.error("【Rmt】文件转移失败，目的路径不存在！")
+                    log.error("[Rmt]文件转移失败，目的路径不存在！")
                     failed_count += 1
                     alert_count += 1
                     alert_messages.append("目的路径不存在")
@@ -546,7 +546,7 @@ class FileTransferService:
                 raise
             except Exception as err:
                 ExceptionUtils.exception_traceback(err)
-                log.error(f"【Rmt】文件转移时发生错误：{err!s}")
+                log.error(f"[Rmt]文件转移时发生错误：{err!s}")
                 failed_count += 1
                 success_flag = False
                 if not error_message:
@@ -567,7 +567,7 @@ class FileTransferService:
     ):
         file_name = os.path.basename(file_item)
         error = "无法识别媒体信息"
-        log.warn(f"【Rmt】{file_name} {error}！")
+        log.warn(f"[Rmt]{file_name} {error}！")
         self.progress.update(ptype=ProgressKey.FileTransfer, text=error)
         insert = self._history.is_need_insert_transfer_unknown(reg_path)
         if insert:
@@ -575,17 +575,17 @@ class FileTransferService:
         if error not in alert_messages and insert:
             alert_messages = alert_messages + [error]
         if unknown_dir:
-            log.warn(f"【Rmt】{file_name} 按原文件名转移到未识别目录：{unknown_dir}")
+            log.warn(f"[Rmt]{file_name} 按原文件名转移到未识别目录：{unknown_dir}")
             new_file = os.path.join(unknown_dir, os.path.basename(file_item))
             self._engine.transfer(file_item, new_file, operation)
         elif self._path_resolver.unknown_path:
             p = self._path_resolver._get_best_unknown_path(in_path)
             if p:
-                log.warn(f"【Rmt】{file_name} 按原文件名转移到未识别目录：{p}")
+                log.warn(f"[Rmt]{file_name} 按原文件名转移到未识别目录：{p}")
                 new_file = os.path.join(p, os.path.basename(file_item))
                 self._engine.transfer(file_item, new_file, operation)
         else:
-            log.error(f"【Rmt】{file_name} {error}！")
+            log.error(f"[Rmt]{file_name} {error}！")
         return 1, 1 if insert else 0, alert_messages
 
     def _do_transfer_file(
@@ -610,7 +610,7 @@ class FileTransferService:
 
         if dir_exist_flag:
             if bluray_disk_dir:
-                log.warn(f"【Rmt】蓝光原盘目录已存在：{ret_dir_path}")
+                log.warn(f"[Rmt]蓝光原盘目录已存在：{ret_dir_path}")
                 return 1, 0, alert_messages, 0, new_file, ret_file_path, ret_dir_path
             if file_exist_flag and ret_file_path:
                 exist_filenum = 1
@@ -620,16 +620,16 @@ class FileTransferService:
                         old = ret_file_path
                         base, _ = os.path.splitext(ret_file_path)
                         new_file = f"{base}{file_ext}"
-                        log.info(f"【Rmt】文件 {old} 已存在，覆盖为 {new_file} ...")
+                        log.info(f"[Rmt]文件 {old} 已存在，覆盖为 {new_file} ...")
                         self._engine.transfer(
                             file_item, new_file, operation, over_flag=True, old_file=old, dst_backend=dst_backend
                         )
                         return 0, 0, alert_messages, exist_filenum, new_file, ret_file_path, ret_dir_path
                     else:
-                        log.warn(f"【Rmt】文件 {ret_file_path} 已存在")
+                        log.warn(f"[Rmt]文件 {ret_file_path} 已存在")
                         return 1, 0, alert_messages, exist_filenum, new_file, ret_file_path, ret_dir_path
                 else:
-                    log.warn(f"【Rmt】文件 {ret_file_path} 已存在")
+                    log.warn(f"[Rmt]文件 {ret_file_path} 已存在")
                     return 1, 0, alert_messages, exist_filenum, new_file, ret_file_path, ret_dir_path
         else:
             if not ret_dir_path:
@@ -693,7 +693,7 @@ class FileTransferService:
         success_flag = result["success_flag"]
         error_message = result["error_message"]
 
-        log.info(f"【Rmt】{in_path} 处理完成，总数：{total_count}，失败：{failed_count}")
+        log.info(f"[Rmt]{in_path} 处理完成，总数：{total_count}，失败：{failed_count}")
         if alert_count > 0:
             reason = "、".join(alert_messages)
             self.eventmanager.send_event(
@@ -709,7 +709,7 @@ class FileTransferService:
                 and not PathUtils.get_dir_files(in_path=in_path, exts=RMT_MEDIAEXT)
                 and not PathUtils.get_dir_files(in_path=in_path, exts=[".!qb", ".part"])
             ):
-                log.info(f"【Rmt】目录下已无媒体文件，移动模式下删除目录：{in_path}")
+                log.info(f"[Rmt]目录下已无媒体文件，移动模式下删除目录：{in_path}")
                 shutil.rmtree(in_path)
         return self._finish_transfer(success_flag, error_message)
 
@@ -718,22 +718,22 @@ class FileTransferService:
         if not s_path:
             return
         if not os.path.exists(s_path):
-            print(f"【Rmt】源目录不存在：{s_path}")
+            print(f"[Rmt]源目录不存在：{s_path}")
             return
 
         lock_key = f"filetransfer:manual:{hashlib.md5(s_path.encode(), usedforsecurity=False).hexdigest()}"
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=3600)
         acquired = lock.acquire()
         if not acquired:
-            print(f"【Rmt】源目录正在转移中：{s_path}")
+            print(f"[Rmt]源目录正在转移中：{s_path}")
             return
 
         try:
             if t_path and not os.path.exists(t_path):
-                print(f"【Rmt】目的目录不存在：{t_path}")
+                print(f"[Rmt]目的目录不存在：{t_path}")
                 return
-            print(f"【Rmt】转移模式为：{operation}")
-            print(f"【Rmt】正在转移以下目录中的全量文件：{s_path}")
+            print(f"[Rmt]转移模式为：{operation}")
+            print(f"[Rmt]正在转移以下目录中的全量文件：{s_path}")
             for path in PathUtils.get_dir_level1_medias(s_path, RMT_MEDIAEXT):
                 if PathUtils.is_invalid_path(path):
                     continue
@@ -741,7 +741,7 @@ class FileTransferService:
                     in_from=SyncType.MAN, in_path=path, target_dir=t_path, operation=operation
                 )
                 if not ret:
-                    print(f"【Rmt】{path} 处理失败：{ret_msg}")
+                    print(f"[Rmt]{path} 处理失败：{ret_msg}")
         finally:
             lock.release()
 
@@ -756,5 +756,5 @@ class FileTransferService:
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception:
-            log.error("【Rmt】获取同步配置失败，无法根据目的目录识别目标后端，默认使用 local")
+            log.error("[Rmt]获取同步配置失败，无法根据目的目录识别目标后端，默认使用 local")
         return "local"

@@ -25,14 +25,14 @@ class ToolExecutor:
 
     def execute(self, tool_name: str, **kwargs) -> ToolResult:
         """执行指定工具"""
-        log.info(f"【ToolExecutor】执行工具: {tool_name}, 参数: {kwargs}")
+        log.info(f"[ToolExecutor]执行工具: {tool_name}, 参数: {kwargs}")
         handler = getattr(self, f"_{tool_name}", None)
         if not handler:
             return ToolResult(success=False, error=f"未实现工具: {tool_name}")
         try:
             return handler(**kwargs)
         except Exception as e:
-            log.error(f"【ToolExecutor】{tool_name} 执行失败: {e}")
+            log.error(f"[ToolExecutor]{tool_name} 执行失败: {e}")
             return ToolResult(success=False, error=str(e))
 
     # ------------------------------------------------------------------

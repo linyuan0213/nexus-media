@@ -18,7 +18,7 @@ class TmdbDetail:
             self.client.set_language(language)
         cached = self.client.redis_cache.get_tmdb_info(mtype, tmdbid, language)
         if cached:
-            log.debug(f"【Meta】从缓存获取TMDB信息: {mtype.value}/{tmdbid}")
+            log.debug(f"[Meta]从缓存获取TMDB信息: {mtype.value}/{tmdbid}")
             if language:
                 self.client.set_language()
             return cached
@@ -27,7 +27,7 @@ class TmdbDetail:
 
         def _fetch():
             if not self.client.tmdb:
-                log.error("【Meta】TMDB API Key 未设置！")
+                log.error("[Meta]TMDB API Key 未设置！")
                 return None
             if mtype == MediaType.MOVIE:
                 info = self._get_movie_detail(tmdbid, append_to_response)
@@ -52,10 +52,10 @@ class TmdbDetail:
         if not self.client.movie:
             return {}
         try:
-            log.info(f"【Meta】正在查询TMDB电影：{tmdbid} ...")
+            log.info(f"[Meta]正在查询TMDB电影：{tmdbid} ...")
             info = self.client.movie.details(tmdbid, append_to_response or "")
             if info:
-                log.info(f"【Meta】{tmdbid} 查询结果：{info.get('title')}")
+                log.info(f"[Meta]{tmdbid} 查询结果：{info.get('title')}")
             return info or {}
         except Exception as e:
             print(str(e))
@@ -65,10 +65,10 @@ class TmdbDetail:
         if not self.client.tv:
             return {}
         try:
-            log.info(f"【Meta】正在查询TMDB电视剧：{tmdbid} ...")
+            log.info(f"[Meta]正在查询TMDB电视剧：{tmdbid} ...")
             info = self.client.tv.details(tmdbid, append_to_response or "")
             if info:
-                log.info(f"【Meta】{tmdbid} 查询结果：{info.get('name')}")
+                log.info(f"[Meta]{tmdbid} 查询结果：{info.get('name')}")
             return info or {}
         except Exception as e:
             print(str(e))
@@ -77,12 +77,12 @@ class TmdbDetail:
     def get_season_detail(self, tmdbid, season: int):
         cached = self.client.redis_cache.get_season_info(tmdbid, season)
         if cached:
-            log.debug(f"【Meta】从缓存获取季详情: {tmdbid}, 季: {season}")
+            log.debug(f"[Meta]从缓存获取季详情: {tmdbid}, 季: {season}")
             return cached
         if not self.client.tv:
             return {}
         try:
-            log.info(f"【Meta】正在查询TMDB电视剧：{tmdbid}，季：{season} ...")
+            log.info(f"[Meta]正在查询TMDB电视剧：{tmdbid}，季：{season} ...")
             info = self.client.tv.season_details(tmdbid, season)
             result = info or {}
             if result:

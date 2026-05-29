@@ -79,7 +79,7 @@ class CacheEventManager:
         self._enabled = True
         self._initialized = True
 
-        log.debug("【CacheEventManager】缓存事件管理器初始化完成")
+        log.debug("[CacheEventManager]缓存事件管理器初始化完成")
 
     def add_listener(
         self,
@@ -115,7 +115,7 @@ class CacheEventManager:
                 try:
                     listener(event)
                 except Exception as e:
-                    log.error(f"【CacheEventManager】监听器执行失败: {e}")
+                    log.error(f"[CacheEventManager]监听器执行失败: {e}")
 
             listeners = self._listeners.get(event.event_type, [])
             for pattern, listener in listeners:
@@ -123,7 +123,7 @@ class CacheEventManager:
                     if pattern == "*" or fnmatch.fnmatch(event.cache_name, pattern):
                         listener(event)
                 except Exception as e:
-                    log.error(f"【CacheEventManager】监听器执行失败: {e}")
+                    log.error(f"[CacheEventManager]监听器执行失败: {e}")
 
     def enable(self):
         self._enabled = True

@@ -96,7 +96,7 @@ class Rousi(_ISiteSigninHandler):
             self.error(
                 "签到失败，无法获取签到token，请检查LocalStorage或站点Headers中的x-sign-token/sign-authorization配置"
             )
-            return False, f"【{site}】签到失败，无法获取签到token"
+            return False, f"[{site}]签到失败，无法获取签到token"
         self.info(f"{site} 开始签到")
 
         res = RequestUtils(
@@ -114,26 +114,26 @@ class Rousi(_ISiteSigninHandler):
         ).post_res(url="https://rousi.pro/api/points/attendance", data='{"mode":"fixed"}')
         if res is None:
             self.warn(f"{site} 获取签到接口响应失败")
-            return False, f"【{site}】签到失败，获取签到接口响应失败！"
+            return False, f"[{site}]签到失败，获取签到接口响应失败！"
 
         try:
             res_json = res.json()  # type: ignore[union-attr]
         except Exception as e:
             self.warn(f"{site} 解析响应JSON失败: {str(e)}")
-            return False, f"【{site}】签到失败，解析响应失败！"
+            return False, f"[{site}]签到失败，解析响应失败！"
 
         # code 0 表示首次签到成功
         if res_json.get("code") == 0:
             self.info("签到成功")
-            return True, f"【{site}】签到成功"
+            return True, f"[{site}]签到成功"
 
         # code 1 表示已经签到过了（可能是400状态码返回的）
         if res_json.get("code") == 1:
             message = res_json.get("message", "")
             if "已签到" in message or "签到" in message:
                 self.info("已签到")
-                return True, f"【{site}】已签到"
+                return True, f"[{site}]已签到"
 
         # 其他情况视为失败
         self.warn("{} 签到接口返回错误，code: {}, 信息：{}".format(site, res_json.get("code"), res_json.get("message")))
-        return False, f"【{site}】签到失败，信息：{res_json.get('message')}"
+        return False, f"[{site}]签到失败，信息：{res_json.get('message')}"

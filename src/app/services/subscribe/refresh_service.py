@@ -17,7 +17,7 @@ class SubscribeRefreshService:
 
     def refresh_rss_metainfo(self, get_subscribe_movies_fn, get_subscribe_tvs_fn) -> None:
         """定时将豆瓣订阅转换为TMDB的订阅，并更新订阅的TMDB信息"""
-        log.info("【Subscribe】开始刷新订阅TMDB信息...")
+        log.info("[Subscribe]开始刷新订阅TMDB信息...")
         rss_movies = get_subscribe_movies_fn(state="R")
         for _rid, rss_info in rss_movies.items():
             if rss_info.get("fuzzy_match"):
@@ -27,11 +27,11 @@ class SubscribeRefreshService:
             year = rss_info.get("year") or ""
             tmdbid = rss_info.get("tmdbid")
             if tmdbid:
-                log.debug(f"【Subscribe】电影 {name} 已有 TMDB ID {tmdbid}，跳过刷新")
+                log.debug(f"[Subscribe]电影 {name} 已有 TMDB ID {tmdbid}，跳过刷新")
                 continue
             media_info = self.__get_media_info(tmdbid=tmdbid, name=name, year=year, mtype=MediaType.MOVIE, cache=True)
             if media_info and media_info.tmdb_id and media_info.title != name:
-                log.info(f"【Subscribe】检测到TMDB信息变化，更新电影订阅 {name} 为 {media_info.title}")
+                log.info(f"[Subscribe]检测到TMDB信息变化，更新电影订阅 {name} 为 {media_info.title}")
                 self._movie_repo.update_tmdb(
                     rid=rssid,
                     tmdbid=str(media_info.tmdb_id or ""),
@@ -55,7 +55,7 @@ class SubscribeRefreshService:
             total_ep = rss_info.get("total_ep")
             lack = rss_info.get("lack")
             if tmdbid:
-                log.debug(f"【Subscribe】电视剧 {name} 已有 TMDB ID {tmdbid}，跳过刷新")
+                log.debug(f"[Subscribe]电视剧 {name} 已有 TMDB ID {tmdbid}，跳过刷新")
                 continue
             media_info = self.__get_media_info(tmdbid=tmdbid, name=name, year=year, mtype=MediaType.TV, cache=True)
             if media_info and media_info.tmdb_id:
@@ -67,7 +67,7 @@ class SubscribeRefreshService:
                 if total_episode and (name != media_info.title or total != total_episode):
                     lack_episode = total_episode - (total - lack)
                     log.info(
-                        f"【Subscribe】检测到TMDB信息变化，更新电视剧订阅 {name} 为 {media_info.title}，"
+                        f"[Subscribe]检测到TMDB信息变化，更新电视剧订阅 {name} 为 {media_info.title}，"
                         f"总集数为：{total_episode}"
                     )
                     self._tv_repo.update_tmdb(
@@ -84,7 +84,7 @@ class SubscribeRefreshService:
                     self._tv_episode_repo.update(
                         rid=rssid, episodes=list(range(total_episode - lack_episode + 1, total_episode + 1))
                     )
-        log.info("【Subscribe】订阅TMDB信息刷新完成")
+        log.info("[Subscribe]订阅TMDB信息刷新完成")
 
     def __get_media_info(self, tmdbid, name, year, mtype, cache=True):
         """综合返回媒体信息"""

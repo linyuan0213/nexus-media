@@ -58,12 +58,12 @@ class MediaSyncDelPlugin:
         if self._circuit_breaker_tripped:
             if now < self._circuit_breaker_reset_time:
                 self.ctx.warn(
-                    f"【熔断保护】批量删除熔断中，跳过 {tmdb_id} 的删除事件，"
+                    f"[熔断保护]批量删除熔断中，跳过 {tmdb_id} 的删除事件，"
                     f"将在 {int(self._circuit_breaker_reset_time - now)} 秒后自动恢复"
                 )
                 return True
             self._circuit_breaker_tripped = False
-            self.ctx.info("【熔断保护】批量删除熔断已自动恢复")
+            self.ctx.info("[熔断保护]批量删除熔断已自动恢复")
 
         # 记录当前事件
         self._delete_events.append((now, str(tmdb_id)))
@@ -74,13 +74,13 @@ class MediaSyncDelPlugin:
             self._circuit_breaker_tripped = True
             self._circuit_breaker_reset_time = now + cooldown
             self.ctx.error(
-                f"【熔断保护】触发批量删除熔断！{window} 秒内收到 {total_count} 个删除事件，"
+                f"[熔断保护]触发批量删除熔断！{window} 秒内收到 {total_count} 个删除事件，"
                 f"远超阈值 {total_threshold}。可能是挂载丢失或Emby异常导致误报。"
                 f"暂停处理删除事件 {cooldown} 秒，请检查媒体库状态。"
             )
             if config.get("send_notify"):
                 self.ctx.notify(
-                    title="【Emby同步删除熔断告警】",
+                    title="[Emby同步删除熔断告警]",
                     text=f"{window} 秒内收到 {total_count} 个删除事件，已触发熔断保护。\n"
                     f"可能是挂载丢失或Emby异常导致误报，请检查媒体库状态。\n"
                     f"暂停处理 {cooldown} 秒后自动恢复。",
@@ -93,13 +93,13 @@ class MediaSyncDelPlugin:
             self._circuit_breaker_tripped = True
             self._circuit_breaker_reset_time = now + cooldown
             self.ctx.error(
-                f"【熔断保护】触发批量删除熔断！媒体 {tmdb_id} 在 {window} 秒内"
+                f"[熔断保护]触发批量删除熔断！媒体 {tmdb_id} 在 {window} 秒内"
                 f"收到 {same_media_count} 个删除事件，远超阈值 {same_threshold}。"
                 f"暂停处理删除事件 {cooldown} 秒。"
             )
             if config.get("send_notify"):
                 self.ctx.notify(
-                    title="【Emby同步删除熔断告警】",
+                    title="[Emby同步删除熔断告警]",
                     text=f"媒体 {tmdb_id} 在 {window} 秒内收到 {same_media_count} 个删除事件，"
                     f"已触发熔断保护。\n"
                     f"暂停处理 {cooldown} 秒后自动恢复。",
@@ -213,18 +213,18 @@ class MediaSyncDelPlugin:
                 dest_full = os.path.join(str(history.DEST or ""), str(history.DEST_FILENAME or ""))
                 if dest_full and os.path.exists(dest_full):
                     self.ctx.warn(
-                        f"【存在性保护】文件仍存在，跳过删除：{dest_full}\n"
+                        f"[存在性保护]文件仍存在，跳过删除：{dest_full}\n"
                         f"可能是Emby误报删除事件（如挂载短暂失效后恢复），请检查媒体库状态。"
                     )
                     skip_logids.append(history.ID)
             if skip_logids:
                 logids = [lid for lid in logids if lid not in skip_logids]
-                self.ctx.info(f"【存在性保护】因文件仍存在，跳过 {len(skip_logids)} 条记录的删除")
+                self.ctx.info(f"[存在性保护]因文件仍存在，跳过 {len(skip_logids)} 条记录的删除")
             if not logids:
-                self.ctx.info("【存在性保护】所有文件仍存在，取消本次删除操作")
+                self.ctx.info("[存在性保护]所有文件仍存在，取消本次删除操作")
                 if config.get("send_notify"):
                     self.ctx.notify(
-                        title="【Emby同步删除存在性保护】",
+                        title="[Emby同步删除存在性保护]",
                         text=f"{msg}\nEmby上报删除但文件实际仍存在，已跳过删除。\n"
                         f"可能是挂载短暂失效导致Emby误报，请检查媒体库状态。",
                     )
@@ -245,7 +245,7 @@ class MediaSyncDelPlugin:
                     mtype=MediaType.MOVIE if media_type == "Movie" else MediaType.TV, tmdbid=tmdb_id
                 )
             self.ctx.notify(
-                title="【Emby同步删除任务完成】",
+                title="[Emby同步删除任务完成]",
                 image=image_url or "https://emby.media/notificationicon.png",
                 text=f"{msg}\n数量 {len(logids)}\n时间 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}",
             )

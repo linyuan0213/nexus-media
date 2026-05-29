@@ -190,7 +190,7 @@ class CloudflareSpeedTestPlugin:
         self.ctx.emit("plugin.config_changed", {"plugin_id": "customhosts"})
 
         if notify:
-            self.ctx.notify(title="【Cloudflare优选任务完成】", text=f"原ip：{old_ip}\n新ip：{best_ip}")
+            self.ctx.notify(title="[Cloudflare优选任务完成]", text=f"原ip：{old_ip}\n新ip：{best_ip}")
 
     def _get_customhosts_config(self):
         try:

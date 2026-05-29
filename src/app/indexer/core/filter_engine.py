@@ -183,11 +183,11 @@ class IndexerFilterEngine:
                 else:
                     group_match = False
             except Exception as err:
-                log.error(f"【Filter】过滤规则出现严重错误 {err}，请检查：{filter_info}")
+                log.error(f"[Filter]过滤规则出现严重错误 {err}，请检查：{filter_info}")
 
         if not group_match:
             log.info(
-                f"【FilterEngine】规则组 {group_name} 无匹配: title={title}, pix={meta_info.resource_pix}, encode={meta_info.video_encode}"
+                f"[FilterEngine]规则组 {group_name} 无匹配: title={title}, pix={meta_info.resource_pix}, encode={meta_info.video_encode}"
             )
             return False, 0, group_name
         return True, order_seq, group_name

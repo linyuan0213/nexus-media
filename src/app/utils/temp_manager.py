@@ -92,15 +92,15 @@ class TempManager:
             if os.path.exists(file_path):
                 if os.path.isfile(file_path):
                     os.remove(file_path)
-                    log.debug(f"【TempManager】已删除文件: {file_path}")
+                    log.debug(f"[TempManager]已删除文件: {file_path}")
                 elif os.path.isdir(file_path):
                     shutil.rmtree(file_path)
-                    log.debug(f"【TempManager】已删除目录: {file_path}")
+                    log.debug(f"[TempManager]已删除目录: {file_path}")
                 return True
         except Exception as e:
             if not ignore_errors:
                 raise
-            log.warn(f"【TempManager】删除失败 {file_path}: {str(e)}")
+            log.warn(f"[TempManager]删除失败 {file_path}: {str(e)}")
         return False
 
     def cleanup_old_files(self, max_age_hours: int | None = None, exclude_patterns: list[str] | None = None) -> int:
@@ -136,10 +136,10 @@ class TempManager:
                         self.delete_file(item_path)
                         deleted_count += 1
                 except Exception as e:
-                    log.warn(f"【TempManager】检查 {item} 时出错: {str(e)}")
+                    log.warn(f"[TempManager]检查 {item} 时出错: {str(e)}")
 
             if deleted_count > 0:
-                log.info(f"【TempManager】已清理 {deleted_count} 个过期临时文件")
+                log.info(f"[TempManager]已清理 {deleted_count} 个过期临时文件")
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -149,7 +149,7 @@ class TempManager:
             try:
                 callback(max_age_hours, exclude_patterns)
             except Exception as e:
-                log.warn(f"【TempManager】清理回调执行失败: {str(e)}")
+                log.warn(f"[TempManager]清理回调执行失败: {str(e)}")
 
         return deleted_count
 
@@ -210,7 +210,7 @@ class TempManager:
                 if self.delete_file(item_path):
                     deleted_count += 1
 
-            log.info(f"【TempManager】已清空 {deleted_count} 个临时文件")
+            log.info(f"[TempManager]已清空 {deleted_count} 个临时文件")
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)

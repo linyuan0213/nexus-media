@@ -93,7 +93,7 @@ class ConfigReloader:
         :return: {"version": int, "results": {name: bool}, "failed": [name]}
         """
         self._version += 1
-        log.info(f"【ConfigReloader】开始配置重载，版本 v{self._version}")
+        log.info(f"[ConfigReloader]开始配置重载，版本 v{self._version}")
 
         results: dict[str, bool] = {}
         failed: list[str] = []
@@ -102,24 +102,24 @@ class ConfigReloader:
             try:
                 provider = getattr(container, step.name, None)
                 if provider is None:
-                    log.warn(f"【ConfigReloader】[{step.priority}] {step.name} 未找到对应 provider，跳过")
+                    log.warn(f"[ConfigReloader][{step.priority}] {step.name} 未找到对应 provider，跳过")
                     continue
 
-                log.debug(f"【ConfigReloader】[{step.priority}] reset {step.name} ...")
+                log.debug(f"[ConfigReloader][{step.priority}] reset {step.name} ...")
                 provider.reset()
-                log.debug(f"【ConfigReloader】[{step.priority}] re-instantiate {step.name} ...")
+                log.debug(f"[ConfigReloader][{step.priority}] re-instantiate {step.name} ...")
                 provider()
                 results[step.name] = True
-                log.debug(f"【ConfigReloader】[{step.priority}] {step.name} OK")
+                log.debug(f"[ConfigReloader][{step.priority}] {step.name} OK")
             except Exception as e:
                 results[step.name] = False
                 failed.append(step.name)
-                log.error(f"【ConfigReloader】[{step.priority}] {step.name} 失败: {e}")
+                log.error(f"[ConfigReloader][{step.priority}] {step.name} 失败: {e}")
 
         if failed:
-            log.warn(f"【ConfigReloader】重载完成 v{self._version}，{len(failed)}/{len(self._steps)} 失败: {failed}")
+            log.warn(f"[ConfigReloader]重载完成 v{self._version}，{len(failed)}/{len(self._steps)} 失败: {failed}")
         else:
-            log.info(f"【ConfigReloader】重载完成 v{self._version}，全部 {len(self._steps)} 步成功")
+            log.info(f"[ConfigReloader]重载完成 v{self._version}，全部 {len(self._steps)} 步成功")
 
         return {"version": self._version, "results": results, "failed": failed}
 

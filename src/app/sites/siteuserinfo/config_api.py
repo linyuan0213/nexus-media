@@ -101,7 +101,7 @@ class ConfigApiUserInfo:
                 setattr(self, field_name, val)
 
         log.warn(
-            f"【ConfigApiUserInfo】{self.site_name} profile: upload={self.upload} download={self.download} seeding={self.seeding} bonus={self.bonus} username={self.username}"
+            f"[ConfigApiUserInfo]{self.site_name} profile: upload={self.upload} download={self.download} seeding={self.seeding} bonus={self.bonus} username={self.username}"
         )
 
         if self.upload and self.download:
@@ -110,7 +110,7 @@ class ConfigApiUserInfo:
     def _parse_seeding(self, cfg):
         seeding_cfg = cfg.get("seeding")
         if not seeding_cfg:
-            log.debug(f"【ConfigApiUserInfo】{self.site_name} 无独立 seeding 配置")
+            log.debug(f"[ConfigApiUserInfo]{self.site_name} 无独立 seeding 配置")
             return
         pagination = seeding_cfg.get("pagination", {})
         pagination_type = pagination.get("type", "page_param")
@@ -126,7 +126,7 @@ class ConfigApiUserInfo:
             body = self._render_body(body, page=page, **extra_vars)
             resp = self._api_call(seeding_cfg, body)
             if resp is None:
-                log.warn(f"【ConfigApiUserInfo】{self.site_name} seeding API 失败")
+                log.warn(f"[ConfigApiUserInfo]{self.site_name} seeding API 失败")
                 break
             if pagination_type == "page_param":
                 resp_total = int(
@@ -204,7 +204,7 @@ class ConfigApiUserInfo:
         base = self._def.api.base_url if self._def.api else ""
         path = endpoint_cfg.get("path", "").lstrip("/")
         url = f"{base.rstrip('/')}/{path}" if path else base.rstrip("/")
-        log.warn(f"【ConfigApiUserInfo】{self.site_name} _api_call url={url}")
+        log.warn(f"[ConfigApiUserInfo]{self.site_name} _api_call url={url}")
         engine = SiteEngine.get_instance()
         headers = engine._build_headers(
             self._def,
@@ -224,7 +224,7 @@ class ConfigApiUserInfo:
             headers.setdefault("Referer", base)
             headers.setdefault("Origin", base)
             res = RequestUtils(headers=headers, proxies=self._proxies, timeout=30).post_res(url=url, data=data)
-            log.warn(f"【ConfigApiUserInfo】{self.site_name} seeding POST status={res.status_code if res else 'None'}")
+            log.warn(f"[ConfigApiUserInfo]{self.site_name} seeding POST status={res.status_code if res else 'None'}")
         else:
             params = dict(endpoint_cfg.get("params") or {})
             params = {k: v.format(page="1") if isinstance(v, str) else v for k, v in params.items()} if params else None
@@ -233,9 +233,9 @@ class ConfigApiUserInfo:
             try:
                 return res.json()
             except Exception:
-                log.warn(f"【ConfigApiUserInfo】{self.site_name} JSON decode fail, text={res.text[:200]}")
+                log.warn(f"[ConfigApiUserInfo]{self.site_name} JSON decode fail, text={res.text[:200]}")
                 return None
-        log.warn(f"【ConfigApiUserInfo】{self.site_name} API call fail, status={res.status_code if res else 'None'}")
+        log.warn(f"[ConfigApiUserInfo]{self.site_name} API call fail, status={res.status_code if res else 'None'}")
 
     def _render_body(self, body, **kwargs):
         if not body:

@@ -117,9 +117,7 @@ class AutoGenRssPlugin:
 
             if notify:
                 rss_message = "\n".join(gen_success_msg + failed_msg)
-                self.ctx.notify(
-                    title="【自动生成RSS任务完成】", text=f"生成RSS站点数: {len(rss_sites)} \n{rss_message}"
-                )
+                self.ctx.notify(title="[自动生成RSS任务完成]", text=f"生成RSS站点数: {len(rss_sites)} \n{rss_message}")
         else:
             self.ctx.error("站点生成RSS任务失败！")
 
@@ -139,7 +137,7 @@ class AutoGenRssPlugin:
                 status, msg = site_module().gen_rss(site_info)
                 return msg
             except Exception as e:
-                return f"【{site_info.get('name')}】生成RSS失败：{e!s}"
+                return f"[{site_info.get('name')}]生成RSS失败：{e!s}"
         else:
             return self._gen_rss_base(site_info)
 
@@ -166,7 +164,7 @@ class AutoGenRssPlugin:
             if site_info.get("chrome") and chrome.get_status():
                 self.ctx.info(f"开始生成RSS站点（Chrome）：{site}")
                 # TODO: Chrome仿真实现
-                return f"【{site}】Chrome仿真生成RSS暂未实现"
+                return f"[{site}]Chrome仿真生成RSS暂未实现"
             else:
                 self.ctx.info(f"开始生成RSS站点：{site}")
                 data = {
@@ -195,28 +193,28 @@ class AutoGenRssPlugin:
                         else:
                             msg = f"状态码：{res.status_code}"
                         self.ctx.warn(f"{site} 生成RSS失败，{msg}")
-                        return f"【{site}】生成RSS失败，{msg}！"
+                        return f"[{site}]生成RSS失败，{msg}！"
                     else:
                         if re.search(r"完成两步验证", res.text, re.IGNORECASE):
                             self.ctx.warn(f"{site} 生成RSS失败，需要两步验证")
-                            return f"【{site}】生成RSS失败，需要两步验证"
+                            return f"[{site}]生成RSS失败，需要两步验证"
 
                         gen_rss_url = self._parse_rss_link(res.text)
                         self.ctx.debug(f"生成的rss: {gen_rss_url}")
                         if gen_rss_url:
                             self._site_repo.update_site_rssurl(site_info.get("id"), gen_rss_url)
                             self.ctx.info(f"{site} 生成RSS成功")
-                            return f"【{site}】生成RSS成功"
+                            return f"[{site}]生成RSS成功"
                 elif res is not None:
                     self.ctx.warn(f"{site} 生成RSS失败，状态码：{res.status_code}")  # type: ignore[union-attr]
-                    return f"【{site}】生成RSS失败，状态码：{res.status_code}！"  # type: ignore[union-attr]
+                    return f"[{site}]生成RSS失败，状态码：{res.status_code}！"  # type: ignore[union-attr]
                 else:
                     self.ctx.warn(f"{site} 生成RSS失败，无法打开网站")
-                    return f"【{site}】生成RSS失败，无法打开网站！"
+                    return f"[{site}]生成RSS失败，无法打开网站！"
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             self.ctx.warn(f"{site} 生成RSS失败：{e!s}")
-            return f"【{site}】生成RSS失败：{e!s}！"
+            return f"[{site}]生成RSS失败：{e!s}！"
 
     @staticmethod
     def _parse_rss_link(html_text: str) -> str:

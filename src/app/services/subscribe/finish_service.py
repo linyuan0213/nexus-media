@@ -56,6 +56,6 @@ class SubscribeFinishService:
 
         self._eventmanager.send_event(EventType.SubscribeFinished, {"media_info": media.to_dict(), "rssid": rssid})
         log.info(
-            f"【Rss】{media.type.value} {media.get_title_string()} {media.get_season_string()} 订阅完成，删除订阅..."
+            f"[Rss]{media.type.value} {media.get_title_string()} {media.get_season_string()} 订阅完成，删除订阅..."
         )
         self._message.send_rss_finished_message(media_info=media)

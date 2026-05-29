@@ -37,22 +37,22 @@ class RedisDistributedLock(DistributedLock):
         """尝试获取 Redis 分布式锁."""
         client = self._redis._ensure_connection()
         if client is None:
-            log.warn(f"【RedisLock】Redis 不可用，无法获取锁: {self._lock_key}")
+            log.warn(f"[RedisLock]Redis 不可用，无法获取锁: {self._lock_key}")
             return False
 
         try:
             result = client.set(self._lock_key, self._token, nx=True, ex=self._ttl_seconds)
             if result:
                 self._owned = True
-                log.debug(f"【RedisLock】获取锁成功: {self._lock_key}")
+                log.debug(f"[RedisLock]获取锁成功: {self._lock_key}")
                 return True
             else:
-                log.debug(f"【RedisLock】锁已被占用: {self._lock_key}")
+                log.debug(f"[RedisLock]锁已被占用: {self._lock_key}")
                 return False
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.error(f"【RedisLock】获取锁异常: {self._lock_key}, {e}")
+            log.error(f"[RedisLock]获取锁异常: {self._lock_key}, {e}")
             return False
 
     def release(self) -> None:
@@ -62,20 +62,20 @@ class RedisDistributedLock(DistributedLock):
 
         client = self._redis._ensure_connection()
         if client is None:
-            log.warn(f"【RedisLock】Redis 不可用，无法释放锁: {self._lock_key}")
+            log.warn(f"[RedisLock]Redis 不可用，无法释放锁: {self._lock_key}")
             self._owned = False
             return
 
         try:
             result = client.eval(self._RELEASE_SCRIPT, 1, self._lock_key, self._token)
             if result:
-                log.debug(f"【RedisLock】释放锁成功: {self._lock_key}")
+                log.debug(f"[RedisLock]释放锁成功: {self._lock_key}")
             else:
-                log.warn(f"【RedisLock】释放锁失败（非持有者）: {self._lock_key}")
+                log.warn(f"[RedisLock]释放锁失败（非持有者）: {self._lock_key}")
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.error(f"【RedisLock】释放锁异常: {self._lock_key}, {e}")
+            log.error(f"[RedisLock]释放锁异常: {self._lock_key}, {e}")
         finally:
             self._owned = False
 
@@ -94,5 +94,5 @@ class RedisDistributedLock(DistributedLock):
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.error(f"【RedisLock】延长锁异常: {self._lock_key}, {e}")
+            log.error(f"[RedisLock]延长锁异常: {self._lock_key}, {e}")
             return False

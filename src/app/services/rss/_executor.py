@@ -27,10 +27,10 @@ def _check_task_rss(service, taskid: int | None) -> None:
         return
     rss_result = _parse_userrss_result(service, taskinfo)
     if len(rss_result) == 0:
-        log.warn("【RssTaskService】{} 未下载到数据".format(taskinfo.get("name")))
+        log.warn("[RssTaskService]{} 未下载到数据".format(taskinfo.get("name")))
         return
     else:
-        log.info("【RssTaskService】{} 获取数据：{}".format(taskinfo.get("name"), len(rss_result)))
+        log.info("[RssTaskService]{} 获取数据：{}".format(taskinfo.get("name"), len(rss_result)))
     res_num = 0
     no_exists = {}
     for res in rss_result:
@@ -48,12 +48,12 @@ def _check_task_rss(service, taskid: int | None) -> None:
             if mediatype:
                 mediatype = MediaType.MOVIE if mediatype == "movie" else MediaType.TV
 
-            log.info(f"【RssTaskService】开始处理：{title}")
+            log.info(f"[RssTaskService]开始处理：{title}")
 
             task_type = taskinfo.get("uses")
             meta_name = f"{title} {year}" if year else title
             if service.is_article_processed(task_type, title, year, enclosure):
-                log.info(f"【RssTaskService】{title} 已处理过")
+                log.info(f"[RssTaskService]{title} 已处理过")
                 continue
 
             if task_type == "D":
@@ -61,17 +61,17 @@ def _check_task_rss(service, taskid: int | None) -> None:
                 if taskinfo.get("recognization") == "Y":
                     media_info = service.media.get_media_info(title=meta_name, mtype=mediatype)
                     if not media_info:
-                        log.warn(f"【RssTaskService】{title} 识别媒体信息出错！")
+                        log.warn(f"[RssTaskService]{title} 识别媒体信息出错！")
                         continue
                     if not media_info.tmdb_info:
-                        log.info(f"【RssTaskService】{title} 识别为 {media_info.get_name()} 未匹配到媒体信息")
+                        log.info(f"[RssTaskService]{title} 识别为 {media_info.get_name()} 未匹配到媒体信息")
                         continue
                     if media_info.type == MediaType.MOVIE:
                         exist_flag, no_exists, _ = service.downloader.check_exists_medias(
                             meta_info=media_info, no_exists=no_exists
                         )
                         if exist_flag:
-                            log.info(f"【RssTaskService】电影 {media_info.get_title_string()} 已存在")
+                            log.info(f"[RssTaskService]电影 {media_info.get_title_string()} 已存在")
                             continue
                     else:
                         exist_flag, no_exists, _ = service.downloader.check_exists_medias(
@@ -80,12 +80,12 @@ def _check_task_rss(service, taskid: int | None) -> None:
                         if exist_flag:
                             if not no_exists or not no_exists.get(media_info.tmdb_id):
                                 log.info(
-                                    f"【RssTaskService】电视剧 {media_info.get_title_string()} {media_info.get_season_episode_string()} 已存在"
+                                    f"[RssTaskService]电视剧 {media_info.get_title_string()} {media_info.get_season_episode_string()} 已存在"
                                 )
                             continue
                         if no_exists.get(media_info.tmdb_id):
                             log.info(
-                                f"【RssTaskService】{media_info.get_title_string()} 缺失季集：{no_exists.get(media_info.tmdb_id)}"
+                                f"[RssTaskService]{media_info.get_title_string()} 缺失季集：{no_exists.get(media_info.tmdb_id)}"
                             )
                 media_info.set_torrent_info(
                     size=size, page_url=page_url, site=taskinfo.get("name"), enclosure=enclosure
@@ -99,13 +99,13 @@ def _check_task_rss(service, taskid: int | None) -> None:
                     meta_info=media_info, filter_args=filter_args
                 )
                 if not match_flag:
-                    log.info(f"【RssTaskService】{match_msg}")
+                    log.info(f"[RssTaskService]{match_msg}")
                     continue
                 else:
                     media_info.set_torrent_info(res_order=res_order)
                     if taskinfo.get("recognization") == "Y":
                         log.info(
-                            f"【RssTaskService】{title} 识别为 {media_info.get_title_string()} {media_info.get_season_episode_string()} 匹配成功"
+                            f"[RssTaskService]{title} 识别为 {media_info.get_title_string()} {media_info.get_season_episode_string()} 匹配成功"
                         )
                         if not media_info.tmdb_info:
                             media_info.set_tmdb_info(
@@ -114,9 +114,9 @@ def _check_task_rss(service, taskid: int | None) -> None:
                         if media_info.type != MediaType.MOVIE:
                             service.config_repo.insert_userrss_mediainfos(taskid, media_info)
                     else:
-                        log.info(f"【RssTaskService】{title}  匹配成功")
+                        log.info(f"[RssTaskService]{title}  匹配成功")
                 if not enclosure:
-                    log.warn("【RssTaskService】{} RSS报文中没有enclosure种子链接".format(taskinfo.get("name")))
+                    log.warn("[RssTaskService]{} RSS报文中没有enclosure种子链接".format(taskinfo.get("name")))
                     continue
                 if media_info not in rss_download_torrents:
                     rss_download_torrents.append(media_info)
@@ -128,7 +128,7 @@ def _check_task_rss(service, taskid: int | None) -> None:
                     meta_info=media_info, filter_args=filter_args
                 )
                 if not match_flag:
-                    log.info(f"【RssTaskService】{match_msg}")
+                    log.info(f"[RssTaskService]{match_msg}")
                     continue
                 if service.rss_repo.check_rss_history(
                     type_str="MOV" if media_info.type == MediaType.MOVIE else "TV",
@@ -137,7 +137,7 @@ def _check_task_rss(service, taskid: int | None) -> None:
                     season=media_info.get_season_string(),
                 ):
                     log.info(
-                        f"【RssTaskService】{media_info.get_title_string()}{media_info.get_season_string()} 已订阅过"
+                        f"[RssTaskService]{media_info.get_title_string()}{media_info.get_season_string()} 已订阅过"
                     )
                     continue
                 media_info.set_torrent_info(enclosure=meta_name)
@@ -151,9 +151,9 @@ def _check_task_rss(service, taskid: int | None) -> None:
             raise
         except Exception as e:
             ExceptionUtils.exception_traceback(e, "处理RSS任务时发生错误")
-            log.error(f"【RssTaskService】处理RSS发生错误：{e!s} - {traceback.format_exc()}")
+            log.error(f"[RssTaskService]处理RSS发生错误：{e!s} - {traceback.format_exc()}")
             continue
-    log.info("【RssTaskService】{} 处理结束，匹配到 {} 个有效资源".format(taskinfo.get("name"), res_num))
+    log.info("[RssTaskService]{} 处理结束，匹配到 {} 个有效资源".format(taskinfo.get("name"), res_num))
     if rss_download_torrents:
         for media in rss_download_torrents:
             downloader_id, ret, ret_msg = service.downloader.download(
@@ -170,7 +170,7 @@ def _check_task_rss(service, taskid: int | None) -> None:
                 service.config_repo.insert_userrss_task_history(taskid, media.org_string or "", downloader_name or "")
             else:
                 log.error(
-                    "【RssTaskService】添加下载任务 {} 失败：{}".format(
+                    "[RssTaskService]添加下载任务 {} 失败：{}".format(
                         media.get_title_string(), ret_msg or "请检查下载任务是否已存在"
                     )
                 )
@@ -194,7 +194,7 @@ def _check_task_rss(service, taskid: int | None) -> None:
                 in_from=SearchType.USERRSS.value,
             )
             if not rss_media or code != 0:
-                log.warn(f"【RssTaskService】{media.get_name()} 添加订阅失败：{msg}")
+                log.warn(f"[RssTaskService]{media.get_name()} 添加订阅失败：{msg}")
 
     counter = len(rss_download_torrents) + len(rss_subscribe_torrents) + len(rss_search_torrents)
     if counter:
@@ -218,11 +218,11 @@ def _parse_userrss_result(service, taskinfo: dict[str, Any]) -> list[dict[str, A
             continue
         rss_parser = service.get_userrss_parser(rss_parsers[i])
         if not rss_parser:
-            log.error(f"【RssTaskService】任务 {task_name} RSS地址 {rss_url} 配置解析器不存在")
+            log.error(f"[RssTaskService]任务 {task_name} RSS地址 {rss_url} 配置解析器不存在")
             continue
         parser_name = rss_parser.get("name")
         if not rss_parser.get("format"):
-            log.error(f"【RssTaskService】任务 {task_name} 配置解析器 {parser_name} 格式不正确")
+            log.error(f"[RssTaskService]任务 {task_name} 配置解析器 {parser_name} 格式不正确")
             continue
         try:
             json.loads(rss_parser.get("format"))
@@ -230,7 +230,7 @@ def _parse_userrss_result(service, taskinfo: dict[str, Any]) -> list[dict[str, A
             raise
         except Exception as e:
             ExceptionUtils.exception_traceback(e, f"任务 {task_name} 配置解析器 {parser_name} JSON格式错误")
-            log.error(f"【RssTaskService】任务 {task_name} 配置解析器 {parser_name} 不是合法的Json格式")
+            log.error(f"[RssTaskService]任务 {task_name} 配置解析器 {parser_name} 不是合法的Json格式")
             continue
 
         if rss_parser.get("params"):
@@ -241,7 +241,7 @@ def _parse_userrss_result(service, taskinfo: dict[str, Any]) -> list[dict[str, A
                 raise
             except Exception as e:
                 ExceptionUtils.exception_traceback(e, f"任务 {task_name} 配置解析器 {parser_name} 附加参数不合法")
-                log.error(f"【RssTaskService】任务 {task_name} 配置解析器 {parser_name} 附加参数不合法")
+                log.error(f"[RssTaskService]任务 {task_name} 配置解析器 {parser_name} 附加参数不合法")
                 continue
             rss_url = f"{rss_url}?{param_url}" if rss_url.find("?") == -1 else f"{rss_url}&{param_url}"
         try:
@@ -261,6 +261,6 @@ def _parse_userrss_result(service, taskinfo: dict[str, Any]) -> list[dict[str, A
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err, f"任务 {task_name} RSS报文解析失败")
-            log.error(f"【RssTaskService】任务 {task_name} RSS地址 {rss_url} 获取的订阅报文无法解析：{err!s}")
+            log.error(f"[RssTaskService]任务 {task_name} RSS地址 {rss_url} 获取的订阅报文无法解析：{err!s}")
             continue
     return rss_result

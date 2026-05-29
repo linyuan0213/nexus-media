@@ -23,14 +23,14 @@ def init_rbac_roles():
                 role_level=role_data["level"],
             )
             created_count += 1
-            log.info(f"【RBAC初始化】创建角色: {role_data['name']}")
+            log.info(f"[RBAC初始化]创建角色: {role_data['name']}")
 
             if role_data["permissions"]:
                 permissions = permission_repo.get_permissions_by_codes(role_data["permissions"])
                 permission_ids = [p.ID for p in permissions]
                 if permission_ids:
                     role_repo.assign_permissions_to_role(role.ID, permission_ids)
-                    log.info(f"【RBAC初始化】为角色 {role_data['name']} 分配 {len(permission_ids)} 个权限")
+                    log.info(f"[RBAC初始化]为角色 {role_data['name']} 分配 {len(permission_ids)} 个权限")
 
             if role_data["menus"]:
                 menu_ids = []
@@ -40,7 +40,7 @@ def init_rbac_roles():
                         menu_ids.append(menu.ID)
                 if menu_ids:
                     role_repo.assign_menus_to_role(role.ID, menu_ids)
-                    log.info(f"【RBAC初始化】为角色 {role_data['name']} 分配 {len(menu_ids)} 个菜单")
+                    log.info(f"[RBAC初始化]为角色 {role_data['name']} 分配 {len(menu_ids)} 个菜单")
 
-    log.info(f"【RBAC初始化】角色初始化完成，新增 {created_count} 个角色")
+    log.info(f"[RBAC初始化]角色初始化完成，新增 {created_count} 个角色")
     return created_count

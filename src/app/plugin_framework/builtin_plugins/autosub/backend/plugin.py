@@ -31,7 +31,7 @@ class AutoSubPlugin:
         self.ctx = ctx
         self._running = False
         self._end_token: list[str] = [".", "!", "?", "。", "！", "？", '。"', '！"', '？"', '."', '!"', '?"']
-        self._noisy_token = [("(", ")"), ("[", "]"), ("{", "}"), ("【", "】"), ("♪", "♪"), ("♫", "♫"), ("♪♪", "♪♪")]
+        self._noisy_token = [("(", ")"), ("[", "]"), ("{", "}"), ("[", "]"), ("♪", "♪"), ("♫", "♫"), ("♪♪", "♪♪")]
 
     def _get_config(self):
         return self.ctx.get_config() or {}

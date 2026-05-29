@@ -137,7 +137,7 @@ class WeworkIPChangePlugin:
                 if img_url:
                     img_url = f"https://work.weixin.qq.com{img_url}"
                     self.ctx.info("登录已过期，重新登录")
-                    self.ctx.notify(title="【企业微信登录过期】", text="请点击扫码重新登录", image=img_url)
+                    self.ctx.notify(title="[企业微信登录过期]", text="请点击扫码重新登录", image=img_url)
 
         if not login_status:
             start = time.time()
@@ -147,7 +147,7 @@ class WeworkIPChangePlugin:
                 html_text = self._drissonpage_helper.get_page_html_without_closetab(tab_id=self._tab_id)
                 if html_text and ("短信安全验证" in html_text or "SMS" in html_text):
                     self.ctx.info("等待输入验证码...")
-                    self.ctx.notify(title="【企业微信登录验证码】", text="请输入 /wxl+验证码 认证")
+                    self.ctx.notify(title="[企业微信登录验证码]", text="请输入 /wxl+验证码 认证")
                 if html_text and ("退出" in html_text or "Quit" in html_text):
                     login_status = True
                     break
@@ -218,7 +218,7 @@ class WeworkIPChangePlugin:
                 with contextlib.suppress(Exception):
                     next_run_time = schedules[0].next_run_time.strftime("%Y-%m-%d %H:%M:%S")
             self.ctx.notify(
-                title="【自动更新企业微信可信IP任务完成】", text=final_msg + f"\n下次更新时间: {next_run_time}"
+                title="[自动更新企业微信可信IP任务完成]", text=final_msg + f"\n下次更新时间: {next_run_time}"
             )
 
     def _process_single_app(self, app_id, cookie, dynamic_ip, overwrite):

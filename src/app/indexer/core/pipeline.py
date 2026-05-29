@@ -79,7 +79,7 @@ class SearchPipeline:
         elapsed = (end_time - start_time).seconds
 
         log.info(
-            f"【SearchPipeline】{len(all_results)} 条数据中，"
+            f"[SearchPipeline]{len(all_results)} 条数据中，"
             f"过滤 {total_stats.index_rule_fail}，"
             f"不匹配 {total_stats.index_match_fail}，"
             f"错误 {total_stats.index_error}，"

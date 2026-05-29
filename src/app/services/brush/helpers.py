@@ -96,7 +96,7 @@ class BrushTaskHelper:
                         return True
             return False
         except ValueError:
-            log.warn("【Brush】时间段格式错误，应为 'HH:MM-HH:MM'")
+            log.warn("[Brush]时间段格式错误，应为 'HH:MM-HH:MM'")
             return False
 
     def is_torrent_handled(self, enclosure: str | None) -> bool:
@@ -146,30 +146,30 @@ class BrushTaskHelper:
         if torrent_size and seed_size:
             if float(torrent_size) + int(total_size) >= (float(seed_size) + 5) * 1024**3:
                 log.warn(
-                    f"【Brush】刷流任务 {task_name} 当前保种体积 {round(int(total_size) / (1024**3), 1)}GB，"
+                    f"[Brush]刷流任务 {task_name} 当前保种体积 {round(int(total_size) / (1024**3), 1)}GB，"
                     f"种子大小 {round(int(torrent_size) / (1024**3), 1)}GB，不添加刷流任务"
                 )
                 return False
         if seed_size:
             if float(seed_size) * 1024**3 <= int(total_size):
                 log.warn(
-                    f"【Brush】刷流任务 {task_name} 当前保种体积 {round(int(total_size) / 1024 / 1024 / 1024, 1)}GB，不再新增下载"
+                    f"[Brush]刷流任务 {task_name} 当前保种体积 {round(int(total_size) / 1024 / 1024 / 1024, 1)}GB，不再新增下载"
                 )
                 return False
 
         if dlcount:
             downloading_count = self.get_downloading_count(downloader_id)
             if downloading_count is None:
-                log.error(f"【Brush】任务 {task_name} 下载器 {downloader_name} 无法连接")
+                log.error(f"[Brush]任务 {task_name} 下载器 {downloader_name} 无法连接")
                 return False
             if int(downloading_count) >= int(dlcount):
                 log.warn(
-                    f"【Brush】下载器 {downloader_name} 正在下载任务数：{downloading_count}，超过设定上限，暂不添加下载"
+                    f"[Brush]下载器 {downloader_name} 正在下载任务数：{downloading_count}，超过设定上限，暂不添加下载"
                 )
                 return False
 
         if not self.is_in_time_range(time_range=time_range):
-            log.warn(f"【Brush】任务 {task_name} 不在所选时间段 {time_range} 内，暂不添加下载")
+            log.warn(f"[Brush]任务 {task_name} 不在所选时间段 {time_range} 内，暂不添加下载")
             return False
         return True
 
@@ -214,17 +214,17 @@ class BrushTaskHelper:
         )
         if not download_id:
             log.warn(
-                f"【Brush】{taskname} 添加下载任务出错：{title}，"
+                f"[Brush]{taskname} 添加下载任务出错：{title}，"
                 f"错误原因：{retmsg or '下载器添加任务失败'}，"
                 f"种子链接：{enclosure}"
             )
             return False
         else:
-            log.info(f"【Brush】成功添加下载：{title}")
+            log.info(f"[Brush]成功添加下载：{title}")
             if sendmessage:
                 downloader_cfg = self._downloader.get_downloader_conf(downloader_id)
                 downlaod_name = downloader_cfg.get("name") if downloader_cfg else ""
-                msg_title = f"【刷流任务 {taskname} 新增下载】"
+                msg_title = f"[刷流任务 {taskname} 新增下载]"
                 msg_text = (
                     f"下载器名：{downlaod_name}\n"
                     f"种子名称：{title}\n"
@@ -243,5 +243,5 @@ class BrushTaskHelper:
         ):
             self._repo.add_brushtask_download_count(brush_id=taskid)
         else:
-            log.info(f"【Brush】{title} 已下载过")
+            log.info(f"[Brush]{title} 已下载过")
         return True

@@ -44,14 +44,14 @@ class FileIndexService:
         self._stop_event.clear()
         self._thread = threading.Thread(target=self._build_index_loop, daemon=True)
         self._thread.start()
-        log.info("【FileIndex】文件索引服务已启动")
+        log.info("[FileIndex]文件索引服务已启动")
 
     def stop(self) -> None:
         """停止后台索引线程"""
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=5)
-        log.info("【FileIndex】文件索引服务已停止")
+        log.info("[FileIndex]文件索引服务已停止")
 
     def refresh(self) -> None:
         """手动触发一次重建"""
@@ -80,12 +80,12 @@ class FileIndexService:
         lock = get_lock_manager().create_lock("fileindex:rebuild", ttl_seconds=600)
         acquired = lock.acquire()
         if not acquired:
-            log.info("【FileIndex】索引重建正在执行，跳过")
+            log.info("[FileIndex]索引重建正在执行，跳过")
             return
         try:
             roots = self._get_root_paths()
             if not roots:
-                log.warn("【FileIndex】未配置媒体库或同步源目录，索引为空")
+                log.warn("[FileIndex]未配置媒体库或同步源目录，索引为空")
                 self._cache.set(_KEY_INDEX, {})
                 self._cache.set(_KEY_READY, True)
                 self._cache.set(_KEY_COUNT, 0)
@@ -100,12 +100,12 @@ class FileIndexService:
                 try:
                     self._scan_dir(root, new_index, seen)
                 except Exception as e:
-                    log.warn(f"【FileIndex】扫描目录失败 {root}: {e}")
+                    log.warn(f"[FileIndex]扫描目录失败 {root}: {e}")
 
             self._cache.set(_KEY_INDEX, new_index)
             self._cache.set(_KEY_READY, True)
             self._cache.set(_KEY_COUNT, len(new_index))
-            log.info(f"【FileIndex】索引重建完成，共 {len(new_index)} 个文件，根目录: {roots}")
+            log.info(f"[FileIndex]索引重建完成，共 {len(new_index)} 个文件，根目录: {roots}")
         finally:
             lock.release()
 

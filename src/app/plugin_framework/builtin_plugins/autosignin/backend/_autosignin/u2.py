@@ -54,7 +54,7 @@ class U2(_ISiteSigninHandler):
         # 判断当前时间是否小于9点
         if now.hour < 9:
             self.error("签到失败，9点前不签到")
-            return False, f"【{site}】签到失败，9点前不签到"
+            return False, f"[{site}]签到失败，9点前不签到"
 
         # 获取页面html
         html_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
@@ -62,24 +62,24 @@ class U2(_ISiteSigninHandler):
         )
         if not html_res or html_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
-            return False, f"【{site}】签到失败，请检查站点连通性"
+            return False, f"[{site}]签到失败，请检查站点连通性"
 
         if "login.php" in html_res.text:
             self.error("签到失败，cookie失效")
-            return False, f"【{site}】签到失败，cookie失效"
+            return False, f"[{site}]签到失败，cookie失效"
 
         # 判断是否已签到
         html_res.encoding = "utf-8"
         sign_status = self.sign_in_result(html_res=html_res.text, regexs=self._sign_regex)
         if sign_status:
             self.info("今日已签到")
-            return True, f"【{site}】今日已签到"
+            return True, f"[{site}]今日已签到"
 
         # 没有签到则解析html
         html = etree.HTML(html_res.text)
 
         if not html:
-            return False, f"【{site}】签到失败"
+            return False, f"[{site}]签到失败"
 
         # 获取签到参数
         req = str(cast(Any, html.xpath("//form//td/input[@name='req']/@value"))[0])
@@ -89,7 +89,7 @@ class U2(_ISiteSigninHandler):
         submit_value = cast(Any, html.xpath("//form//td/input[@type='submit']/@value"))
         if not re or not hash_str or not form or not submit_name or not submit_value:
             self.error("签到失败，未获取到相关签到参数")
-            return False, f"【{site}】签到失败"
+            return False, f"[{site}]签到失败"
 
         # 随机一个答案
         answer_num = random.randint(0, 3)
@@ -106,13 +106,13 @@ class U2(_ISiteSigninHandler):
         )
         if not sign_res or sign_res.status_code != 200:
             self.error("签到失败，签到接口请求失败")
-            return False, f"【{site}】签到失败，签到接口请求失败"
+            return False, f"[{site}]签到失败，签到接口请求失败"
 
         # 判断是否签到成功
         # sign_res.text = "<script type="text/javascript">window.location.href = 'showup.php';</script>"
         if self._success_text in sign_res.text:
             self.info("签到成功")
-            return True, f"【{site}】签到成功"
+            return True, f"[{site}]签到成功"
         else:
             self.error("签到失败，未知原因")
-            return False, f"【{site}】签到失败，未知原因"
+            return False, f"[{site}]签到失败，未知原因"

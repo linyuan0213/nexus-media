@@ -70,11 +70,11 @@ class HDHome(_ISiteRssGenHandler):
         ).post_res(url=rss_url, data=data)
         if not html_res or html_res.status_code != 200:
             self.error("生成RSS失败，请检查站点连通性")
-            return False, f"【{site}】生成RSS失败，请检查站点连通性"
+            return False, f"[{site}]生成RSS失败，请检查站点连通性"
 
         if "login.php" in html_res.text:
             self.error("生成RSS失败，cookie失效")
-            return False, f"【{site}】生成RSS失败，cookie失效"
+            return False, f"[{site}]生成RSS失败，cookie失效"
 
         # 解析rss url
         gen_rss_url = self._parse_rss_link(html_res.text)
@@ -84,10 +84,10 @@ class HDHome(_ISiteRssGenHandler):
             container.site_repository().update_site_rssurl(site_info.get("id"), gen_rss_url)
 
             self.info("生成RSS成功")
-            return True, f"【{site}】生成RSS成功"
+            return True, f"[{site}]生成RSS成功"
         else:
             self.info("生成RSS失败")
-            return True, f"【{site}生成RSS失败"
+            return True, f"[{site}生成RSS失败"
 
     @staticmethod
     def _parse_rss_link(html_text: str) -> str:

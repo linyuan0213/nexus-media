@@ -106,7 +106,7 @@ class Qbittorrent(_IDownloadClient):
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
-            log.error(f"【{self.client_name}】{self.name} 连接出错：{err!s}")
+            log.error(f"[{self.client_name}]{self.name} 连接出错：{err!s}")
             return None
 
     def get_status(self) -> Any:
@@ -155,15 +155,15 @@ class Qbittorrent(_IDownloadClient):
         try:
             if is_edit:
                 self.qbc.torrent_categories.edit_category(name=name, save_path=save_path)
-                log.info(f"【{self.client_name}】{self.name} 更新分类：{name}，路径：{save_path}")
+                log.info(f"[{self.client_name}]{self.name} 更新分类：{name}，路径：{save_path}")
             else:
                 self.qbc.torrent_categories.create_category(name=name, save_path=save_path)
-                log.info(f"【{self.client_name}】{self.name} 创建分类：{name}，路径：{save_path}")
+                log.info(f"[{self.client_name}]{self.name} 创建分类：{name}，路径：{save_path}")
         except (InfrastructureError, NetworkError):
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
-            log.error(f"【{self.client_name}】{self.name} 设置分类：{name}，路径：{save_path} 错误：{err!s}")
+            log.error(f"[{self.client_name}]{self.name} 设置分类：{name}，路径：{save_path} 错误：{err!s}")
 
     def __check_category(self, save_path=""):
         if not save_path:
@@ -336,7 +336,7 @@ class Qbittorrent(_IDownloadClient):
             except (InfrastructureError, NetworkError):
                 raise
             except Exception as err:
-                log.debug(f"【{Qbittorrent.client_name}】计算种子hash失败: {err!s}")
+                log.debug(f"[{Qbittorrent.client_name}]计算种子hash失败: {err!s}")
                 return None
         return None
 
@@ -353,7 +353,7 @@ class Qbittorrent(_IDownloadClient):
         except (InfrastructureError, NetworkError):
             raise
         except Exception as err:
-            log.debug(f"【{self.client_name}】{self.name} 检查种子存在性失败: {err!s}")
+            log.debug(f"[{self.client_name}]{self.name} 检查种子存在性失败: {err!s}")
         return False, torrent_hash
 
     def get_torrent_id_by_tag(self, tag: str, status: str | None = None) -> str | None:
@@ -373,17 +373,17 @@ class Qbittorrent(_IDownloadClient):
                             torrent = torrents[0]
                             if tag not in torrent.labels:
                                 tag_removed = True
-                                log.info(f"【{self.client_name}】{self.name} 成功移除种子 {torrent_id} 的标签: {tag}")
+                                log.info(f"[{self.client_name}]{self.name} 成功移除种子 {torrent_id} 的标签: {tag}")
                                 break
                             else:
                                 log.warn(
-                                    f"【{self.client_name}】{self.name} 种子 {torrent_id} 标签 {tag} 移除失败，重试 {retry + 1}/3"
+                                    f"[{self.client_name}]{self.name} 种子 {torrent_id} 标签 {tag} 移除失败，重试 {retry + 1}/3"
                                 )
                         else:
-                            log.warn(f"【{self.client_name}】{self.name} 无法获取种子 {torrent_id} 信息验证标签移除")
+                            log.warn(f"[{self.client_name}]{self.name} 无法获取种子 {torrent_id} 信息验证标签移除")
                     else:
                         log.warn(
-                            f"【{self.client_name}】{self.name} 移除种子 {torrent_id} 标签 {tag} 失败，重试 {retry + 1}/3"
+                            f"[{self.client_name}]{self.name} 移除种子 {torrent_id} 标签 {tag} 失败，重试 {retry + 1}/3"
                         )
 
                     if retry < 2:
@@ -393,7 +393,7 @@ class Qbittorrent(_IDownloadClient):
                     break
                 else:
                     log.error(
-                        f"【{self.client_name}】{self.name} 无法移除种子 {torrent_id} 的标签 {tag}，继续尝试获取新种子"
+                        f"[{self.client_name}]{self.name} 无法移除种子 {torrent_id} 的标签 {tag}，继续尝试获取新种子"
                     )
                     torrent_id = None
         return torrent_id

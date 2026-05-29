@@ -208,7 +208,7 @@ class SearchResultProcessor:
             if media_item.tmdb_id:
                 season_episode = media_item.get_season_episode_string()
                 if self._download_repo.is_exists_by_tmdb(media_item.tmdb_id, season_episode):
-                    log.info(f"【Searcher】{media_item.title} {season_episode} 已在下载历史中存在，跳过下载")
+                    log.info(f"[Searcher]{media_item.title} {season_episode} 已在下载历史中存在，跳过下载")
                     continue
             filtered.append(media_item)
         return filtered
@@ -315,7 +315,7 @@ class Searcher:
         if media_info.keyword:
             media_list = self.search_medias(media_info.keyword, filter_args, media_info, in_from)
         else:
-            log.info(f"【Searcher】开始搜索 {search_name_list} ...")
+            log.info(f"[Searcher]开始搜索 {search_name_list} ...")
             optimal_workers = min(len(search_name_list), max_workers, 8)
 
             # 2. 并发执行搜索
@@ -342,7 +342,7 @@ class Searcher:
         media_list = SearchResultDeduplicator.deduplicate(media_list)
 
         if len(media_list) == 0:
-            log.info(f"【Searcher】{search_name_list} 未搜索到任何资源")
+            log.info(f"[Searcher]{search_name_list} 未搜索到任何资源")
             return None, no_exists, 0, 0
 
         processor = SearchResultProcessor(
@@ -364,7 +364,7 @@ class Searcher:
         # 4. 过滤已下载
         filtered_media_list = processor.filter_downloaded(media_list)
         if not filtered_media_list:
-            log.info("【Searcher】所有搜索结果已在下载历史中存在，跳过下载")
+            log.info("[Searcher]所有搜索结果已在下载历史中存在，跳过下载")
             return None, no_exists, len(media_list), 0
 
         # 5. 择优下载
@@ -373,10 +373,10 @@ class Searcher:
         )
 
         if not download_items:
-            log.info(f"【Searcher】{media_info.title} 未下载到资源")
+            log.info(f"[Searcher]{media_info.title} 未下载到资源")
             return None, left_medias, len(media_list), 0
         else:
-            log.info(f"【Searcher】实际下载了 {len(download_items)} 个资源")
+            log.info(f"[Searcher]实际下载了 {len(download_items)} 个资源")
             if left_medias:
                 return None, left_medias, len(media_list), len(download_items)
             return download_items[0], no_exists, len(media_list), len(download_items)

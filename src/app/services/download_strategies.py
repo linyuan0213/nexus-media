@@ -38,7 +38,7 @@ class MovieDownloadStrategy:
                     if item not in return_items:
                         return_items.append(item)
                 else:
-                    log.error(f"【Downloader】下载失败: {item.title}, 错误: {msg}")
+                    log.error(f"[Downloader]下载失败: {item.title}, 错误: {msg}")
         return return_items
 
 
@@ -88,10 +88,10 @@ class SeasonPackStrategy:
                             _, download_id, _ = download_callback(item, torrent_file=torrent_path)
                         elif not torrent_episodes and total_eps == 0:
                             # 无法判断集数时保守跳过
-                            log.info(f"【Downloader】种子 {item.org_string} 未含集数信息，跳过")
+                            log.info(f"[Downloader]种子 {item.org_string} 未含集数信息，跳过")
                             continue
                         elif not torrent_episodes:
-                            log.info(f"【Downloader】种子 {item.org_string} 未含集数信息，解析文件数为 0")
+                            log.info(f"[Downloader]种子 {item.org_string} 未含集数信息，解析文件数为 0")
                             continue
                         else:
                             continue
@@ -268,7 +268,7 @@ class EpisodeStrategy:
                     torrent_episodes, torrent_path = get_torrent_episodes_callback(item.enclosure, item.page_url)
                     selected_episodes = set(torrent_episodes).intersection(set(need_episodes))
                     if not selected_episodes:
-                        log.info(f"【Downloader】{item.org_string} 没有需要的集，跳过...")
+                        log.info(f"[Downloader]{item.org_string} 没有需要的集，跳过...")
                         continue
                     # 添加下载并暂停
                     downloader_id, download_id, _ = download_callback(item, torrent_file=torrent_path, is_paused=True)
@@ -279,12 +279,12 @@ class EpisodeStrategy:
                         need_tvs, need_tmdbid, need_episodes, list(selected_episodes)
                     )
                     # 设置任务只下载想要的文件
-                    log.info(f"【Downloader】从 {item.org_string} 中选取集：{selected_episodes}")
+                    log.info(f"[Downloader]从 {item.org_string} 中选取集：{selected_episodes}")
                     set_files_status_callback(
                         tid=download_id, need_episodes=list(selected_episodes), downloader_id=downloader_id
                     )
                     # 重新开始任务
-                    log.info(f"【Downloader】{item.org_string} 开始下载 ")
+                    log.info(f"[Downloader]{item.org_string} 开始下载 ")
                     start_torrents_callback(ids=download_id, downloader_id=downloader_id)
                     # 记录下载项
                     if item not in return_items:

@@ -363,7 +363,7 @@ class MediaInfoService:
                 except (ServiceError, RepositoryError, DomainError):
                     raise
                 except Exception as e:
-                    log.error(f"【media_detail】检查季存在状态失败: {str(e)}")
+                    log.error(f"[media_detail]检查季存在状态失败: {str(e)}")
                     season.update({"state": False})
         poster_image = media_info.get_poster_image()
         if poster_image:

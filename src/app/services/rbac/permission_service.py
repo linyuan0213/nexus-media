@@ -33,7 +33,7 @@ class RBACPermissionService:
             module=module,
             description=description,
         )
-        log.info(f"【RBAC】创建权限成功: {permission_name}")
+        log.info(f"[RBAC]创建权限成功: {permission_name}")
         return permission
 
     def update_permission(self, permission_id: int, **kwargs) -> None:
@@ -53,7 +53,7 @@ class RBACPermissionService:
         success = self.permission_repo.delete_permission(permission_id)
         if not success:
             raise ResourceNotFoundError("删除失败")
-        log.info(f"【RBAC】删除权限: {permission.PERMISSION_NAME}")
+        log.info(f"[RBAC]删除权限: {permission.PERMISSION_NAME}")
 
     def get_all_permissions(self, module: str | None = None) -> list[RBACPermission]:
         return cast(list[RBACPermission], self.permission_repo.get_all_permissions(module=module))

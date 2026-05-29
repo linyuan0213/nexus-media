@@ -53,7 +53,7 @@ def _resolve_config_path() -> str:
     template = str(_PROJECT_ROOT / "config" / "config.yaml.example")
     if os.path.exists(template):
         shutil.copy(template, alt)
-        print(f"【Config】已从模板创建配置文件：{alt}")
+        print(f"[Config]已从模板创建配置文件：{alt}")
     return os.path.abspath(alt)
 
 
@@ -343,9 +343,9 @@ def _apply_env_database_config(settings: AppSettings) -> None:
     current.update(env_db)
     try:
         settings.save({"database": current})
-        print("【Config】已从环境变量更新数据库配置到配置文件")
+        print("[Config]已从环境变量更新数据库配置到配置文件")
     except Exception as e:
-        print(f"【Config】保存数据库配置到文件失败：{e!s}")
+        print(f"[Config]保存数据库配置到文件失败：{e!s}")
 
 
 _load_dotenv()

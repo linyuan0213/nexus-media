@@ -219,7 +219,7 @@ class Telegram(_IMessageClient):
                             self._process_update(update)
                 time.sleep(2)
             except Exception as e:
-                log.error(f"【Telegram】轮询异常: {e}")
+                log.error(f"[Telegram]轮询异常: {e}")
                 time.sleep(5)
 
     def _process_update(self, update):
@@ -237,12 +237,12 @@ class Telegram(_IMessageClient):
 
     def _set_commands(self):
         if not self.token:
-            log.warn("【Telegram】跳过设置菜单：token 为空")
+            log.warn("[Telegram]跳过设置菜单：token 为空")
             return
         try:
             commands = Message().get_commands()
             cmds = [{"command": k[1:], "description": v} for k, v in commands.items()]
-            log.info(f"【Telegram】正在设置菜单，共 {len(cmds)} 个命令: {list(commands.keys())}")
+            log.info(f"[Telegram]正在设置菜单，共 {len(cmds)} 个命令: {list(commands.keys())}")
             data = {"commands": cmds, "scope": {"type": "default"}}
             headers = {"content-type": "application/json"}
             res = requests.post(
@@ -253,15 +253,15 @@ class Telegram(_IMessageClient):
                 timeout=10,
             )
             if res and res.json().get("ok"):
-                log.info(f"【Telegram】命令菜单已设置，共 {len(cmds)} 个")
+                log.info(f"[Telegram]命令菜单已设置，共 {len(cmds)} 个")
             else:
-                log.error("【Telegram】命令菜单设置失败：%s" % (res.json().get("description") if res else "网络错误"))
+                log.error("[Telegram]命令菜单设置失败：%s" % (res.json().get("description") if res else "网络错误"))
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
 
     def refresh_menu(self):
         """刷新命令菜单（插件命令变更时调用）"""
-        log.info("【Telegram】收到菜单刷新请求")
+        log.info("[Telegram]收到菜单刷新请求")
         self._set_commands()
 
     def _set_webhook(self):
@@ -282,7 +282,7 @@ class Telegram(_IMessageClient):
             res = RequestUtils(proxies=get_proxies()).get_res(url)
             if res and res.json().get("ok"):
                 _webhook_set = True
-                log.info(f"【Telegram】Webhook 设置成功：{self._webhook_url}")
+                log.info(f"[Telegram]Webhook 设置成功：{self._webhook_url}")
 
     def _get_webhook_status(self):
         url = f"https://api.telegram.org/bot{self.token}/getWebhookInfo"
@@ -306,6 +306,6 @@ class Telegram(_IMessageClient):
         try:
             res = RequestUtils(proxies=get_proxies()).get_res(url)
             if res and res.status_code == 200:
-                log.info("【Telegram】Webhook 已删除")
+                log.info("[Telegram]Webhook 已删除")
         except Exception:
             pass

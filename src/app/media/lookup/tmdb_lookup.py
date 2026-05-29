@@ -81,42 +81,40 @@ class TmdbLookup(BaseLookup):
             if first_year:
                 year_range.append(str(int(first_year) - 1))
             for year in year_range:
-                log.debug(f"【Meta】正在识别{search_type.value}：{name}, 年份={year} ...")
+                log.debug(f"[Meta]正在识别{search_type.value}：{name}, 年份={year} ...")
                 info = self.search.search_movie(name, year)
                 if info:
                     info["media_type"] = MediaType.MOVIE
                     log.info(
-                        "【Meta】{} 识别到 电影：TMDBID={}, 名称={}, 上映日期={}".format(
+                        "[Meta]{} 识别到 电影：TMDBID={}, 名称={}, 上映日期={}".format(
                             name, info.get("id"), info.get("title"), info.get("release_date")
                         )
                     )
                     return info
         else:
             if media_year and season_number:
-                log.debug(
-                    f"【Meta】正在识别{search_type.value}：{name}, 季集={season_number}, 季集年份={media_year} ..."
-                )
+                log.debug(f"[Meta]正在识别{search_type.value}：{name}, 季集={season_number}, 季集年份={media_year} ...")
                 info = self.search.search_tv_by_season(name, media_year, season_number, episode)
                 if info:
                     return info
-            log.debug(f"【Meta】正在识别{search_type.value}：{name}, 年份={StringUtils.xstr(first_year)} ...")
+            log.debug(f"[Meta]正在识别{search_type.value}：{name}, 年份={StringUtils.xstr(first_year)} ...")
             info = self.search.search_tv(name, first_year, season_number, episode)
             if info:
                 info["media_type"] = MediaType.TV
                 log.info(
-                    "【Meta】{} 识别到 电视剧：TMDBID={}, 名称={}, 首播日期={}".format(
+                    "[Meta]{} 识别到 电视剧：TMDBID={}, 名称={}, 首播日期={}".format(
                         name, info.get("id"), info.get("name"), info.get("first_air_date")
                     )
                 )
                 return info
             # TV 查不到时，去掉年份再查（仅非严格模式）
             if not info and first_year and not strict:
-                log.debug(f"【Meta】正在识别{search_type.value}：{name}, 去掉年份再查 ...")
+                log.debug(f"[Meta]正在识别{search_type.value}：{name}, 去掉年份再查 ...")
                 info = self.search.search_tv(name, None, season_number, episode)
                 if info:
                     info["media_type"] = MediaType.TV
                     log.info(
-                        "【Meta】{} 识别到 电视剧：TMDBID={}, 名称={}, 首播日期={}".format(
+                        "[Meta]{} 识别到 电视剧：TMDBID={}, 名称={}, 首播日期={}".format(
                             name, info.get("id"), info.get("name"), info.get("first_air_date")
                         )
                     )
@@ -124,18 +122,18 @@ class TmdbLookup(BaseLookup):
 
         # 2. Fallback: 多类型搜索
         if not info:
-            log.debug(f"【Meta】正在识别：{name}, 多类型搜索 ...")
+            log.debug(f"[Meta]正在识别：{name}, 多类型搜索 ...")
             info = self.search.search_multi(name)
             if info:
                 info["media_type"] = (
                     MediaType.MOVIE if info.get("media_type") in ["movie", MediaType.MOVIE] else MediaType.TV
                 )
-                log.info("【Meta】{} 识别到 {}：TMDBID={}".format(name, info.get("media_type").value, info.get("id")))
+                log.info("[Meta]{} 识别到 {}：TMDBID={}".format(name, info.get("media_type").value, info.get("id")))
                 return info
 
         # 3. Fallback: 互换类型搜索（去掉年份）
         if not info and search_type != MediaType.UNKNOWN:
-            log.debug(f"【Meta】正在识别：{name}, 互换类型搜索 ...")
+            log.debug(f"[Meta]正在识别：{name}, 互换类型搜索 ...")
             if search_type == MediaType.MOVIE:
                 info = self.search.search_tv(name, None)
                 if info:
@@ -149,7 +147,7 @@ class TmdbLookup(BaseLookup):
 
         if not info:
             log.info(
-                "【Meta】{} 以年份 {} 在TMDB中未找到{}信息!".format(
+                "[Meta]{} 以年份 {} 在TMDB中未找到{}信息!".format(
                     name, StringUtils.xstr(first_year), search_type.value if search_type else ""
                 )
             )
@@ -258,7 +256,7 @@ class TmdbLookup(BaseLookup):
 
     def get_tmdb_infos(self, title, year=None, mtype=None, language=None, page=1):
         if not self.client.tmdb:
-            log.error("【Meta】TMDB API Key 未设置！")
+            log.error("[Meta]TMDB API Key 未设置！")
             return []
         if not title:
             return []

@@ -63,7 +63,7 @@ class Rss:
         dist_lock = get_lock_manager().create_lock("rss:download", ttl_seconds=1800)
         acquired = dist_lock.acquire()
         if not acquired:
-            log.info("【Rss】RSS 下载正在其他实例执行，跳过")
+            log.info("[Rss]RSS 下载正在其他实例执行，跳过")
             return
 
         try:
@@ -82,27 +82,25 @@ class Rss:
             return
 
         with lock:
-            log.info("【Rss】开始RSS订阅...")
+            log.info("[Rss]开始RSS订阅...")
 
         # 读取订阅清单
         rss_movies = self.subscribe.get_subscribe_movies(state="R")
         if not rss_movies:
-            log.warn("【Rss】没有正在订阅的电影")
+            log.warn("[Rss]没有正在订阅的电影")
         else:
             log.info(
-                "【Rss】电影订阅清单：{}".format(
+                "[Rss]电影订阅清单：{}".format(
                     " ".join("{}".format(info.get("name")) for _, info in rss_movies.items())
                 )
             )
 
         rss_tvs = self.subscribe.get_subscribe_tvs(state="R")
         if not rss_tvs:
-            log.warn("【Rss】没有正在订阅的电视剧")
+            log.warn("[Rss]没有正在订阅的电视剧")
         else:
             log.info(
-                "【Rss】电视剧订阅清单：{}".format(
-                    " ".join("{}".format(info.get("name")) for _, info in rss_tvs.items())
-                )
+                "[Rss]电视剧订阅清单：{}".format(" ".join("{}".format(info.get("name")) for _, info in rss_tvs.items()))
             )
 
         if not rss_movies and not rss_tvs:
@@ -141,24 +139,24 @@ class Rss:
                     continue
                 rss_url = site_info.get("rssurl")
                 if not rss_url:
-                    log.info(f"【Rss】{site_name} 未配置rssurl，跳过...")
+                    log.info(f"[Rss]{site_name} 未配置rssurl，跳过...")
                     continue
                 site_id = site_info.get("id")
                 site_order = 100 - int(site_info.get("pri")) if site_info.get("pri") else 0
 
-                log.info(f"【Rss】正在处理：{site_name}")
+                log.info(f"[Rss]正在处理：{site_name}")
                 rss_articles = self.rsshelper.parse_rssxml(url=rss_url)
                 if rss_articles is None:
-                    log.error(f"【Rss】站点 {site_name} RSS链接已过期，请重新获取！")
+                    log.error(f"[Rss]站点 {site_name} RSS链接已过期，请重新获取！")
                     self.message.send_site_message(
-                        title="【RSS链接过期提醒】", text=f"站点：{site_name}\n链接：{rss_url}"
+                        title="[RSS链接过期提醒]", text=f"站点：{site_name}\n链接：{rss_url}"
                     )
                     continue
                 if not rss_articles:
-                    log.warn(f"【Rss】{site_name} 未下载到数据")
+                    log.warn(f"[Rss]{site_name} 未下载到数据")
                     continue
 
-                log.info(f"【Rss】{site_name} 获取数据：{len(rss_articles)}")
+                log.info(f"[Rss]{site_name} 获取数据：{len(rss_articles)}")
                 for article in rss_articles:
                     all_articles.append(
                         {
@@ -176,7 +174,7 @@ class Rss:
                     )
 
             if not all_articles:
-                log.info("【Rss】所有站点RSS处理结束，无有效数据")
+                log.info("[Rss]所有站点RSS处理结束，无有效数据")
                 return
 
             # ---------- 阶段2：批量媒体识别 ----------
@@ -197,14 +195,14 @@ class Rss:
                     continue
                 if enclosure:
                     if self.rsshelper.is_rssd_by_enclosure(enclosure):
-                        log.info(f"【Rss】{title} 已成功订阅过")
+                        log.info(f"[Rss]{title} 已成功订阅过")
                         continue
                 seen_enclosures.add(enclosure or "")
 
                 to_identify.append({"idx": idx, "title": title})
 
             if to_identify:
-                log.info(f"【Rss】批量识别 {len(to_identify)} 条不重复结果 ...")
+                log.info(f"[Rss]批量识别 {len(to_identify)} 条不重复结果 ...")
                 identify_results = {}  # {idx: media_info}
 
                 try:
@@ -212,7 +210,7 @@ class Rss:
                     for item, info in zip(to_identify, batch_results, strict=False):
                         identify_results[item["idx"]] = info
                 except Exception as e:
-                    log.error(f"【Rss】批量识别出错: {e}")
+                    log.error(f"[Rss]批量识别出错: {e}")
 
             # ---------- 阶段3：批量订阅匹配和过滤 ----------
             rss_download_torrents = []
@@ -233,16 +231,16 @@ class Rss:
                     site_id = item["site_id"]
                     site_order = item["site_order"]
 
-                    log.info(f"【Rss】开始处理：{title}")
+                    log.info(f"[Rss]开始处理：{title}")
 
                     if idx not in identify_results:
                         continue
                     media_info = identify_results[idx]
                     if not media_info:
-                        log.warn(f"【Rss】{title} 无法识别出媒体信息！")
+                        log.warn(f"[Rss]{title} 无法识别出媒体信息！")
                         continue
                     elif not media_info.tmdb_info:
-                        log.info(f"【Rss】{title} 识别为 {media_info.get_name()} 未匹配到TMDB媒体信息")
+                        log.info(f"[Rss]{title} 识别为 {media_info.get_name()} 未匹配到TMDB媒体信息")
 
                     media_info.set_torrent_info(
                         size=size, page_url=page_url, site=site_name, site_order=site_order, enclosure=enclosure
@@ -252,7 +250,7 @@ class Rss:
                     if media_info.tmdb_id:
                         season_episode = media_info.get_season_episode_string()
                         if self.download_repo.is_exists_download_history_by_tmdb(media_info.tmdb_id, season_episode):
-                            log.info(f"【Rss】{title} 已在下载历史中存在，跳过下载")
+                            log.info(f"[Rss]{title} 已在下载历史中存在，跳过下载")
                             continue
 
                     # 匹配订阅
@@ -272,7 +270,7 @@ class Rss:
                     )
 
                     for msg in match_msg:
-                        log.info(f"【Rss】{msg}")
+                        log.info(f"[Rss]{msg}")
 
                     if not match_flag:
                         continue
@@ -317,7 +315,7 @@ class Rss:
                                 )
                                 if rss_no_exists.get(media_info.tmdb_id):
                                     log.info(
-                                        f"【Rss】{media_info.get_title_string()} 订阅缺失季集：{rss_no_exists.get(media_info.tmdb_id)}"
+                                        f"[Rss]{media_info.get_title_string()} 订阅缺失季集：{rss_no_exists.get(media_info.tmdb_id)}"
                                     )
                             if exist_flag:
                                 continue
@@ -325,7 +323,7 @@ class Rss:
                             # 洗版模式
                             if media_info.type != MediaType.MOVIE and media_info.get_episode_list():
                                 log.info(
-                                    f"【Rss】{media_info.get_title_string()}{media_info.get_season_string()} "
+                                    f"[Rss]{media_info.get_title_string()}{media_info.get_season_string()} "
                                     f"正在洗版，过滤掉季集不完整的资源：{title}"
                                 )
                                 continue
@@ -333,7 +331,7 @@ class Rss:
                                 rtype=media_info.type, rssid=match_info.get("id"), res_order=match_info.get("res_order")
                             ):
                                 log.info(
-                                    f"【Rss】{media_info.get_title_string()}{media_info.get_season_string()} "
+                                    f"[Rss]{media_info.get_title_string()}{media_info.get_season_string()} "
                                     f"正在洗版，跳过低优先级或同优先级资源：{title}"
                                 )
                                 continue
@@ -360,10 +358,10 @@ class Rss:
                         res_num += 1
                 except Exception as e:
                     ExceptionUtils.exception_traceback(e)
-                    log.error(f"【Rss】处理RSS发生错误：{str(e)}")
+                    log.error(f"[Rss]处理RSS发生错误：{str(e)}")
                     continue
 
-            log.info(f"【Rss】所有RSS处理结束，共 {len(rss_download_torrents)} 个有效资源")
+            log.info(f"[Rss]所有RSS处理结束，共 {len(rss_download_torrents)} 个有效资源")
             self.download_rss_torrent(rss_download_torrents=rss_download_torrents, rss_no_exists=rss_no_exists)
 
     def check_torrent_rss(
@@ -463,11 +461,11 @@ class Rss:
                     media.total_episodes = len(episodes)
                     media.begin_episode = min(episodes)
                     media.end_episode = max(episodes)
-                    log.info(f"【Rss】{media.org_string or media.title} 解析种子实际集数：{len(episodes)} 集")
+                    log.info(f"[Rss]{media.org_string or media.title} 解析种子实际集数：{len(episodes)} 集")
                 else:
-                    log.info(f"【Rss】{media.org_string or media.title} 解析种子未识别出集数，视为单集")
+                    log.info(f"[Rss]{media.org_string or media.title} 解析种子未识别出集数，视为单集")
             except Exception as e:
-                log.debug(f"【Rss】解析种子失败：{str(e)}")
+                log.debug(f"[Rss]解析种子失败：{str(e)}")
 
         # 合集优先排序：包含更多集数的电视剧资源排在前面，优先下载合集
         # 明确合集(>1集) > 疑似合集(只有季没有集) > 单集
@@ -502,9 +500,9 @@ class Rss:
                     __finish_rss(item)
                 else:
                     __update_tv_rss(item, left_medias.get(item.tmdb_id))
-            log.info(f"【Rss】实际下载了 {len(download_items)} 个资源")
+            log.info(f"[Rss]实际下载了 {len(download_items)} 个资源")
         else:
-            log.info("【Rss】未下载到任何资源")
+            log.info("[Rss]未下载到任何资源")
 
     def delete_rss_history(self, rssid):
         """

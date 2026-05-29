@@ -301,9 +301,9 @@ class PyThunder:
                 new_folder = self.create_folder(current_id, part)
                 if new_folder:
                     current_id = new_folder["id"]
-                    log.info(f"【迅雷】创建文件夹: {part} (id={current_id})")
+                    log.info(f"[迅雷]创建文件夹: {part} (id={current_id})")
                 else:
-                    log.warn(f"【迅雷】创建文件夹失败: {part} (在 {path} 中)")
+                    log.warn(f"[迅雷]创建文件夹失败: {part} (在 {path} 中)")
                     break
 
         return current_id

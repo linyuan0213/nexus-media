@@ -135,7 +135,7 @@ class HtmlSiteSearcher:
             timeout=30,
         ).get_res(url=url)
         if not res or res.status_code != 200:
-            log.warn(f"【HtmlSiteSearcher】{self._site.name} 请求失败")
+            log.warn(f"[HtmlSiteSearcher]{self._site.name} 请求失败")
             return None
         encoding = self._site.encoding or None
         if encoding:
@@ -366,7 +366,7 @@ class HtmlSiteSearcher:
                 except Exception:
                     els = []
 
-            log.debug(f"【HtmlSearcher】selector={selector} xpath={xpath} els_count={len(els)}")
+            log.debug(f"[HtmlSearcher]selector={selector} xpath={xpath} els_count={len(els)}")
             if els:
                 attr = fcfg.get("attribute", "")
                 contents = fcfg.get("contents", 0)

@@ -44,7 +44,7 @@ class OpenAIProvider(BaseProvider):
             return resp.choices[0].message.content
         except Exception as e:
             err_msg = self._format_error(e)
-            log.warn(f"【OpenAIProvider】请求失败: {err_msg}")
+            log.warn(f"[OpenAIProvider]请求失败: {err_msg}")
             return ""
 
     @staticmethod
@@ -78,5 +78,5 @@ class OpenAIProvider(BaseProvider):
             models = self._client.models.list()
             return [m.id for m in models.data]
         except Exception as e:
-            log.warn(f"【OpenAIProvider】查询模型列表失败: {e}")
+            log.warn(f"[OpenAIProvider]查询模型列表失败: {e}")
             return []

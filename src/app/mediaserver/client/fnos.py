@@ -113,22 +113,22 @@ class FnOS(_IMediaClient):
                             # 尝试获取token来验证登录是否成功
                             token = self._fnos._get_token()
                             if not token:
-                                log.error(f"【{self.client_name}】FnOS服务器登录失败：无法获取有效token")
+                                log.error(f"[{self.client_name}]FnOS服务器登录失败：无法获取有效token")
                                 self._fnos = None
                             else:
-                                log.info(f"【{self.client_name}】FnOS服务器登录成功")
+                                log.info(f"[{self.client_name}]FnOS服务器登录成功")
                         except (InfrastructureError, NetworkError, MediaServerError):
                             raise
                         except Exception as e:  # type: ignore[unreachable]
                             ExceptionUtils.exception_traceback(e)
-                            log.error(f"【{self.client_name}】FnOS服务器登录失败：{e!s}")
+                            log.error(f"[{self.client_name}]FnOS服务器登录失败：{e!s}")
                             self._fnos = None
                 except (InfrastructureError, MediaServerError):
                     raise
                 except Exception as e:
                     ExceptionUtils.exception_traceback(e)
                     self._fnos = None
-                    log.error(f"【{self.client_name}】FnOS服务器连接失败：{e!s}")
+                    log.error(f"[{self.client_name}]FnOS服务器连接失败：{e!s}")
 
     @classmethod
     def match(cls, ctype):
@@ -275,7 +275,7 @@ class FnOS(_IMediaClient):
             raise
         except Exception as e:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】获取剧集封面出错：" + str(e))
+            log.error(f"[{self.client_name}]获取剧集封面出错：" + str(e))
             return None
 
     def get_remote_image_by_id(self, item_id, image_type):
@@ -297,7 +297,7 @@ class FnOS(_IMediaClient):
             raise
         except Exception as e:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】获取封面出错：" + str(e))
+            log.error(f"[{self.client_name}]获取封面出错：" + str(e))
         return None
 
     def get_local_image_by_id(self, item_id, remote=True):

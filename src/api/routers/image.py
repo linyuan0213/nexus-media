@@ -38,14 +38,14 @@ def _serve_image(cache_path: str, image_url: str, size: str | None = None, refer
             else:
                 os.remove(cache_path)
         except (ServiceError, DomainError) as e:
-            log.error(f"【ImageProxy】读取缓存失败: {e.message}")
+            log.error(f"[ImageProxy]读取缓存失败: {e.message}")
         except Exception as e:
-            log.error(f"【ImageProxy】读取缓存失败: {str(e)}")
+            log.error(f"[ImageProxy]读取缓存失败: {str(e)}")
 
     # 下载图片
     image_data = download_image(image_url, referer=referer)
     if not image_data or len(image_data) < 100:
-        log.error(f"【ImageProxy】下载内容为空或过小: {image_url}")
+        log.error(f"[ImageProxy]下载内容为空或过小: {image_url}")
         raise HTTPException(status_code=404, detail="获取图片失败")
 
     # 调整尺寸
@@ -58,9 +58,9 @@ def _serve_image(cache_path: str, image_url: str, size: str | None = None, refer
         with open(cache_path, "wb") as f:
             f.write(image_data)
     except (ServiceError, DomainError) as e:
-        log.error(f"【ImageProxy】保存缓存失败: {e.message}")
+        log.error(f"[ImageProxy]保存缓存失败: {e.message}")
     except Exception as e:
-        log.error(f"【ImageProxy】保存缓存失败: {str(e)}")
+        log.error(f"[ImageProxy]保存缓存失败: {str(e)}")
 
     return Response(image_data, media_type="image/jpeg")
 

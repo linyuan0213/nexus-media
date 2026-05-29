@@ -293,7 +293,7 @@ class MessageBuilder:
     def send_transfer_fail_message(self, path: str, count: int, text: str) -> None:
         if not path or not count:
             return
-        title = f"【{count} 个文件入库失败】"
+        title = f"[{count} 个文件入库失败]"
         text = f"源路径：{path}\n原因：{text}"
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=title, content=text)

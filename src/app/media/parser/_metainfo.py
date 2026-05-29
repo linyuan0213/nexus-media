@@ -33,7 +33,7 @@ def meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None =
 
     if msg:
         for msg_item in msg:
-            log.warn(f"【Meta】{msg_item}")
+            log.warn(f"[Meta]{msg_item}")
 
     fileflag = bool(org_title and os.path.splitext(org_title)[-1] in RMT_MEDIAEXT)
 
@@ -70,8 +70,8 @@ def _is_anime(rev_name: str, org_name: str) -> bool:
             return False
     if not rev_name:
         return False
-    # 匹配中文方括号标记：要求至少包含一个非数字字符（如 720P、X264、V2），排除纯数字如 【12】
-    if re.search(r"【(?:[+XVPI-]+\d*|\d*[+XVPI-]+)】\s*【", rev_name, re.IGNORECASE):
+    # 匹配中文方括号标记：要求至少包含一个非数字字符（如 720P、X264、V2），排除纯数字如 [12]
+    if re.search(r"[(?:[+XVPI-]+\d*|\d*[+XVPI-]+)]\s*[", rev_name, re.IGNORECASE):
         return True
     # 匹配动漫绝对集号格式（如 Title - 02）
     if re.search(r"\s+-\s+[\dv]{1,4}\b", rev_name, re.IGNORECASE):

@@ -102,7 +102,7 @@ class DownloadPipeline:
         content, file_path, dl_files_folder, dl_files, retmsg, site_info, torrent_attr = fetch
 
         if retmsg:
-            log.warn(f"【DownloadPipeline】{retmsg}")
+            log.warn(f"[DownloadPipeline]{retmsg}")
         if not content:
             self._fail(media_info, in_from, retmsg)
             return None, None, retmsg
@@ -311,7 +311,7 @@ class DownloadPipeline:
     ):
         print_url = content if isinstance(content, str) else url
         log.info(
-            f"【DownloadPipeline】{'添加任务并暂停' if is_paused else '添加任务'}：%s，目录：%s，Url：%s"
+            f"[DownloadPipeline]{'添加任务并暂停' if is_paused else '添加任务'}：%s，目录：%s，Url：%s"
             % (title, download_dir, print_url)
         )
 

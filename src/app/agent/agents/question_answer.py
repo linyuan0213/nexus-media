@@ -17,9 +17,9 @@ class QuestionAnswerAgent:
     def answer(self, question: str) -> str:
         """回答问题，返回最简洁的答案"""
         if not self.ready:
-            log.warn("【QuestionAnswerAgent】answer 失败：Provider 未就绪")
+            log.warn("[QuestionAnswerAgent]answer 失败：Provider 未就绪")
             return ""
-        log.info(f"【QuestionAnswerAgent】答题: {question[:60]}...")
+        log.info(f"[QuestionAnswerAgent]答题: {question[:60]}...")
         try:
             answer = self._svc.chat(
                 messages=[{"role": "user", "content": question}],
@@ -28,8 +28,8 @@ class QuestionAnswerAgent:
                     "我会给你一个题目和几个选项，你的回复必须是给定选项中正确答案对应的序号，请直接回复数字。"
                 ),
             )
-            log.info(f"【QuestionAnswerAgent】答案: {answer}")
+            log.info(f"[QuestionAnswerAgent]答案: {answer}")
             return answer
         except Exception as e:
-            log.error(f"【QuestionAnswerAgent】答题出错: {e}")
+            log.error(f"[QuestionAnswerAgent]答题出错: {e}")
             return ""

@@ -87,7 +87,7 @@ class TemplateEngine:
             return result
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【Message】模板渲染失败：{str(e)}")
+            log.error(f"[Message]模板渲染失败：{str(e)}")
             return None
 
     def apply_client_template(self, client, msg_type, variables):
@@ -95,41 +95,41 @@ class TemplateEngine:
         client_name = client.get("name", "未知")
         templates = client.get("templates")
 
-        log.debug(f"【Message】客户端 {client_name} 模板配置: {templates}")
+        log.debug(f"[Message]客户端 {client_name} 模板配置: {templates}")
 
         if isinstance(templates, str):
             try:
                 templates = json.loads(templates)
-                log.debug(f"【Message】客户端 {client_name} 模板配置已解析为字典")
+                log.debug(f"[Message]客户端 {client_name} 模板配置已解析为字典")
             except json.JSONDecodeError as e:
-                log.error(f"【Message】客户端 {client_name} 模板配置 JSON 解析失败: {e}")
+                log.error(f"[Message]客户端 {client_name} 模板配置 JSON 解析失败: {e}")
                 return None, None
 
         if not templates or not isinstance(templates, dict):
-            log.debug(f"【Message】客户端 {client_name} 没有模板配置或格式不正确, 类型: {type(templates)}")
+            log.debug(f"[Message]客户端 {client_name} 没有模板配置或格式不正确, 类型: {type(templates)}")
             return None, None
 
         template_config = templates.get(msg_type)
-        log.debug(f"【Message】客户端 {client_name} 消息类型 {msg_type} 的模板: {template_config}")
+        log.debug(f"[Message]客户端 {client_name} 消息类型 {msg_type} 的模板: {template_config}")
 
         if not template_config or not isinstance(template_config, dict):
-            log.debug(f"【Message】客户端 {client_name} 没有 {msg_type} 类型的自定义模板，尝试使用默认模板")
+            log.debug(f"[Message]客户端 {client_name} 没有 {msg_type} 类型的自定义模板，尝试使用默认模板")
             template_config = DEFAULT_MESSAGE_TEMPLATES.get(msg_type)
             if not template_config:
-                log.debug(f"【Message】消息类型 {msg_type} 没有默认模板")
+                log.debug(f"[Message]消息类型 {msg_type} 没有默认模板")
                 return None, None
 
         title_template = template_config.get("title")
         text_template = template_config.get("text")
 
-        log.debug(f"【Message】客户端 {client_name} 标题模板: {title_template}")
-        log.debug(f"【Message】客户端 {client_name} 内容模板: {text_template}")
+        log.debug(f"[Message]客户端 {client_name} 标题模板: {title_template}")
+        log.debug(f"[Message]客户端 {client_name} 内容模板: {text_template}")
 
         rendered_title = self.render_template(title_template, variables) if title_template else None
         rendered_text = self.render_template(text_template, variables) if text_template else None
 
         log.info(
-            f"【Message】客户端 {client_name} 模板渲染结果 - "
+            f"[Message]客户端 {client_name} 模板渲染结果 - "
             f"标题: {rendered_title is not None}, 内容: {rendered_text is not None}"
         )
 

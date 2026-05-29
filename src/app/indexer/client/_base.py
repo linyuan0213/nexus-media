@@ -81,7 +81,7 @@ class _IIndexClient(metaclass=ABCMeta):
 
         progress_key = ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search
         start_time = datetime.datetime.now()
-        log.info(f"【{self.index_type}】开始搜索Indexer：{indexer.name} ...")
+        log.info(f"[{self.index_type}]开始搜索Indexer：{indexer.name} ...")
 
         search_word = StringUtils.handler_special_chars(text=key_word, replace_word=" ", allow_space=True)
         api_url = f"{indexer.domain}?apikey={self.api_key}&t=search&q={search_word}"
@@ -89,12 +89,12 @@ class _IIndexClient(metaclass=ABCMeta):
 
         _ = (datetime.datetime.now() - start_time).seconds
         if len(result_array) == 0:
-            log.warn(f"【{self.index_type}】{indexer.name} 关键词 {key_word} 未搜索到数据")
+            log.warn(f"[{self.index_type}]{indexer.name} 关键词 {key_word} 未搜索到数据")
             if self.progress:
                 self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
             return []
         else:
-            log.warn(f"【{self.index_type}】{indexer.name} 关键词 {key_word} 返回数据：{len(result_array)}")
+            log.warn(f"[{self.index_type}]{indexer.name} 关键词 {key_word} 返回数据：{len(result_array)}")
             if self.progress:
                 self.progress.update(
                     ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 返回 {len(result_array)} 条数据"

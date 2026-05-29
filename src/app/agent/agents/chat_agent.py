@@ -45,32 +45,32 @@ class ChatAgent:
     def ask(self, question: str, system_prompt: str = "你是一个有用的助手。") -> str:
         """单轮问答"""
         if not self.ready:
-            log.warn("【ChatAgent】ask 失败：Provider 未就绪")
+            log.warn("[ChatAgent]ask 失败：Provider 未就绪")
             return "AI 服务未配置"
-        log.info(f"【ChatAgent】ask: {question[:60]}...")
+        log.info(f"[ChatAgent]ask: {question[:60]}...")
         try:
             answer = self._svc.chat(
                 messages=[{"role": "user", "content": question}],
                 system_prompt=system_prompt,
             )
-            log.info("【ChatAgent】ask 成功")
+            log.info("[ChatAgent]ask 成功")
             return answer
         except Exception as e:
-            log.error(f"【ChatAgent】ask 出错: {e}")
+            log.error(f"[ChatAgent]ask 出错: {e}")
             return f"AI 回答出错: {e}"
 
     def chat_with_tools(self, question: str, session_id: str = "") -> str:
         """带工具调用的对话（支持会话历史）"""
         if not self.ready:
-            log.warn("【ChatAgent】chat_with_tools 失败：Provider 未就绪")
+            log.warn("[ChatAgent]chat_with_tools 失败：Provider 未就绪")
             return "AI 服务未配置"
 
         if question == "#清除":
-            log.info(f"【ChatAgent】清除会话: {session_id}")
+            log.info(f"[ChatAgent]清除会话: {session_id}")
             self.clear_session(session_id)
             return "会话已清除"
 
-        log.info(f"【ChatAgent】tools session={session_id}, q={question[:60]}...")
+        log.info(f"[ChatAgent]tools session={session_id}, q={question[:60]}...")
 
         # 加载已有会话历史
         history = OpenAISessionCache.get(session_id) or []
@@ -86,16 +86,16 @@ class ChatAgent:
         try:
             first_resp = self._svc.chat(messages=messages, system_prompt="", use_cache=False)
         except Exception as e:
-            log.error(f"【ChatAgent】第一轮出错: {e}")
+            log.error(f"[ChatAgent]第一轮出错: {e}")
             return f"请求出错: {e}"
 
-        log.debug(f"【ChatAgent】第一轮响应: {first_resp[:200] if first_resp else '(空)'}")
+        log.debug(f"[ChatAgent]第一轮响应: {first_resp[:200] if first_resp else '(空)'}")
 
         # 2. 解析工具调用
         try:
             tool_call = self._parse_tool_call(first_resp)
         except Exception as e:
-            log.error(f"【ChatAgent】解析工具调用出错: {e}")
+            log.error(f"[ChatAgent]解析工具调用出错: {e}")
             return first_resp or f"解析响应出错: {e}"
 
         # 保存用户提问 + 助手首轮回复
@@ -104,17 +104,17 @@ class ChatAgent:
 
         if not tool_call:
             # 不需要工具，直接返回
-            log.info("【ChatAgent】无需工具，直接回复")
+            log.info("[ChatAgent]无需工具，直接回复")
             OpenAISessionCache.set(session_id, self._trim_history(history))
             return first_resp
 
         # 3. 执行工具（通过 ToolExecutor，避免 Tools 层跨层依赖 Service）
-        log.info(f"【ChatAgent】调用工具: {tool_call.get('tool')}, 参数: {tool_call.get('parameters')}")
+        log.info(f"[ChatAgent]调用工具: {tool_call.get('tool')}, 参数: {tool_call.get('parameters')}")
         executor = get_tool_executor()
         try:
             result = executor.execute(tool_call["tool"], **tool_call["parameters"])
         except Exception as e:
-            log.error(f"【ChatAgent】工具执行异常: {e}")
+            log.error(f"[ChatAgent]工具执行异常: {e}")
             return f"工具执行出错: {e}"
 
         # 4. 第二轮：将工具结果返回给 LLM，生成最终回复
@@ -129,14 +129,14 @@ class ChatAgent:
 
         try:
             final_resp = self._svc.chat(messages=messages, system_prompt="", use_cache=False)
-            log.info("【ChatAgent】工具调用完成")
+            log.info("[ChatAgent]工具调用完成")
             # 保存工具结果 + 最终回复
             history.append({"role": "user", "content": tool_msg})
             history.append({"role": "assistant", "content": final_resp})
             OpenAISessionCache.set(session_id, self._trim_history(history))
             return final_resp
         except Exception as e:
-            log.error(f"【ChatAgent】第二轮出错: {e}")
+            log.error(f"[ChatAgent]第二轮出错: {e}")
             return f"工具执行成功但生成回复出错: {e}"
 
     def chat_with_session(
@@ -147,23 +147,23 @@ class ChatAgent:
     ) -> str:
         """多轮对话（带会话上下文）"""
         if not self.ready:
-            log.warn("【ChatAgent】chat_with_session 失败：Provider 未就绪")
+            log.warn("[ChatAgent]chat_with_session 失败：Provider 未就绪")
             return ""
 
         if question == "#清除":
-            log.info(f"【ChatAgent】清除会话: {session_id}")
+            log.info(f"[ChatAgent]清除会话: {session_id}")
             self.clear_session(session_id)
             return "会话已清除"
 
-        log.info(f"【ChatAgent】session={session_id}, question={question[:60]}...")
+        log.info(f"[ChatAgent]session={session_id}, question={question[:60]}...")
         messages = self._get_session(session_id, question, system_prompt)
         try:
             answer = self._svc.chat(messages=messages, system_prompt="")
             self._save_session(session_id, answer)
-            log.info(f"【ChatAgent】session={session_id} 回复成功")
+            log.info(f"[ChatAgent]session={session_id} 回复成功")
             return answer
         except Exception as e:
-            log.error(f"【ChatAgent】session={session_id} 出错: {e}")
+            log.error(f"[ChatAgent]session={session_id} 出错: {e}")
             return f"请求 AI API 出现错误：{e}"
 
     @staticmethod
@@ -172,25 +172,25 @@ class ChatAgent:
         if len(history) > ChatAgent.MAX_HISTORY_MESSAGES:
             # 保留最新的消息，移除最早的
             trimmed = history[-ChatAgent.MAX_HISTORY_MESSAGES :]
-            log.info(f"【ChatAgent】历史消息裁剪: {len(history)} -> {len(trimmed)}")
+            log.info(f"[ChatAgent]历史消息裁剪: {len(history)} -> {len(trimmed)}")
             return trimmed
         return history
 
     def translate_to_zh(self, text: str) -> str:
         """翻译为中文"""
         if not self.ready:
-            log.warn("【ChatAgent】translate_to_zh 失败：Provider 未就绪")
+            log.warn("[ChatAgent]translate_to_zh 失败：Provider 未就绪")
             return text
-        log.info(f"【ChatAgent】翻译: {text[:60]}...")
+        log.info(f"[ChatAgent]翻译: {text[:60]}...")
         try:
             result = self._svc.chat(
                 messages=[{"role": "user", "content": f"translate to zh-CN:\n\n{text}"}],
                 system_prompt="You are a translation engine that can only translate text and cannot interpret it.",
             )
-            log.info("【ChatAgent】翻译成功")
+            log.info("[ChatAgent]翻译成功")
             return result
         except Exception as e:
-            log.error(f"【ChatAgent】翻译出错: {e}")
+            log.error(f"[ChatAgent]翻译出错: {e}")
             return text
 
     @staticmethod

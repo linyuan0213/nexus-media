@@ -69,7 +69,7 @@ class TmdbDiscover:
     def get_tmdb_hot_movies(self, page):
         cached = self.client.redis_cache.get_trending("movie", "popular", page)
         if cached:
-            log.debug(f"【Meta】从缓存获取热门电影，第 {page} 页")
+            log.debug(f"[Meta]从缓存获取热门电影，第 {page} 页")
             return cached
         if not self.client.movie:
             return []
@@ -81,7 +81,7 @@ class TmdbDiscover:
     def get_tmdb_hot_tvs(self, page):
         cached = self.client.redis_cache.get_trending("tv", "popular", page)
         if cached:
-            log.debug(f"【Meta】从缓存获取热门电视剧，第 {page} 页")
+            log.debug(f"[Meta]从缓存获取热门电视剧，第 {page} 页")
             return cached
         if not self.client.tv:
             return []
@@ -93,7 +93,7 @@ class TmdbDiscover:
     def get_tmdb_new_movies(self, page):
         cached = self.client.redis_cache.get_trending("movie", "now_playing", page)
         if cached:
-            log.debug(f"【Meta】从缓存获取最新电影，第 {page} 页")
+            log.debug(f"[Meta]从缓存获取最新电影，第 {page} 页")
             return cached
         if not self.client.movie:
             return []
@@ -105,7 +105,7 @@ class TmdbDiscover:
     def get_tmdb_new_tvs(self, page):
         cached = self.client.redis_cache.get_trending("tv", "on_the_air", page)
         if cached:
-            log.debug(f"【Meta】从缓存获取最新电视剧，第 {page} 页")
+            log.debug(f"[Meta]从缓存获取最新电视剧，第 {page} 页")
             return cached
         if not self.client.tv:
             return []
@@ -117,7 +117,7 @@ class TmdbDiscover:
     def get_tmdb_upcoming_movies(self, page):
         cached = self.client.redis_cache.get_trending("movie", "upcoming", page)
         if cached:
-            log.debug(f"【Meta】从缓存获取即将上映电影，第 {page} 页")
+            log.debug(f"[Meta]从缓存获取即将上映电影，第 {page} 页")
             return cached
         if not self.client.movie:
             return []
@@ -129,7 +129,7 @@ class TmdbDiscover:
     def get_tmdb_trending_all_week(self, page=1):
         cached = self.client.redis_cache.get_trending("all", "week", page)
         if cached:
-            log.debug(f"【Meta】从缓存获取本周趋势，第 {page} 页")
+            log.debug(f"[Meta]从缓存获取本周趋势，第 {page} 页")
             return cached
         if not self.client.trending:
             return []

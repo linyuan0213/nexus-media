@@ -22,7 +22,7 @@ class MessageQueueFactory:
         if cls._instance is not None:
             # 如果缓存的是 Redis 队列但当前不可用，降级到内存队列
             if isinstance(cls._instance, RedisMessageQueue) and not cls._instance.is_available():
-                log.warn("【MessageQueueFactory】Redis 队列已不可用，降级到内存队列")
+                log.warn("[MessageQueueFactory]Redis 队列已不可用，降级到内存队列")
                 cls._instance.stop(wait=False)
                 cls._instance = None
             else:
@@ -32,14 +32,14 @@ class MessageQueueFactory:
         redis_queue = RedisMessageQueue(max_workers=max_workers)
         if redis_queue.is_available():
             cls._instance = redis_queue
-            log.info("【MessageQueueFactory】使用 Redis Stream 消息队列")
+            log.info("[MessageQueueFactory]使用 Redis Stream 消息队列")
             return cls._instance
 
         # 降级到内存队列
         mem_queue = MemoryMessageQueue(max_workers=max_workers)
         mem_queue.start()
         cls._instance = mem_queue
-        log.info("【MessageQueueFactory】使用内存消息队列（Redis 不可用）")
+        log.info("[MessageQueueFactory]使用内存消息队列（Redis 不可用）")
         return cls._instance
 
     @classmethod

@@ -190,7 +190,7 @@ class MediaServer:
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
         acquired = lock.acquire()
         if not acquired:
-            log.info("【MediaServer】媒体库刷新正在执行，跳过")
+            log.info("[MediaServer]媒体库刷新正在执行，跳过")
             return
         try:
             return self.server.refresh_library_by_items(items)
@@ -246,12 +246,12 @@ class MediaServer:
         dist_lock = get_lock_manager().create_lock("mediaserver:sync", ttl_seconds=3600)
         acquired = dist_lock.acquire()
         if not acquired:
-            log.info("【MediaServer】媒体库同步正在其他实例执行，跳过")
+            log.info("[MediaServer]媒体库同步正在其他实例执行，跳过")
             return
 
         try:
             with lock:
-                log.info("【MediaServer】开始同步媒体库数据...")
+                log.info("[MediaServer]开始同步媒体库数据...")
                 self.progress.start(ProgressKey.MediaSync)
                 self.progress.update(ptype=ProgressKey.MediaSync, text="请稍候...")
                 # 获取需同步的媒体库
@@ -305,7 +305,7 @@ class MediaServer:
                 ptype=ProgressKey.MediaSync, value=100, text=f"媒体库数据同步完成，同步数量：{total_count}"
             )
             self.progress.end(ProgressKey.MediaSync)
-            log.info(f"【MediaServer】媒体库数据同步完成，同步数量：{total_count}")
+            log.info(f"[MediaServer]媒体库数据同步完成，同步数量：{total_count}")
         finally:
             dist_lock.release()
 
@@ -393,7 +393,7 @@ class MediaServer:
             self.message.send_mediaserver_message(event_info=event_info, channel=channel, image_url=image_url)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error("【MediaServer】webhook 异步处理异常")
+            log.error("[MediaServer]webhook 异步处理异常")
 
     def webhook_message_handler(self, message: str, channel: str):
         """
@@ -408,7 +408,7 @@ class MediaServer:
             event_info = self.server.get_webhook_message(message)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error("【MediaServer】webhook 消息解析异常")
+            log.error("[MediaServer]webhook 消息解析异常")
             return
         if not event_info:
             return
@@ -424,7 +424,7 @@ class MediaServer:
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=60)
         acquired = lock.acquire()
         if not acquired:
-            log.debug(f"【MediaServer】webhook 事件已处理，跳过: {raw_key}")
+            log.debug(f"[MediaServer]webhook 事件已处理，跳过: {raw_key}")
             return
 
         try:

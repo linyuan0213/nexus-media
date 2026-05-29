@@ -45,7 +45,7 @@ class RBACUserService:
             raise ResourceNotFoundError("用户创建失败")
         if role_ids:
             self.user_repo.assign_roles_to_user(user.ID, role_ids)
-        log.info(f"【RBAC】创建用户成功: {username}")
+        log.info(f"[RBAC]创建用户成功: {username}")
         return user
 
     def update_user(self, user_id: int, **kwargs) -> None:
@@ -68,7 +68,7 @@ class RBACUserService:
         success = self.user_repo.delete_user(user_id)
         if not success:
             raise ResourceNotFoundError("删除失败")
-        log.info(f"【RBAC】删除用户: {user.USERNAME}")
+        log.info(f"[RBAC]删除用户: {user.USERNAME}")
 
     def get_user_by_id(self, user_id: int) -> RBACUser | None:
         return cast(RBACUser | None, self.user_repo.get_user_by_id(user_id))

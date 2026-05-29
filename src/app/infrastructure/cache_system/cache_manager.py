@@ -44,7 +44,7 @@ class CacheManager:
         self._initialized = True
         self._default_cache_type = "memory"
 
-        log.debug("【CacheManager】缓存管理器初始化完成")
+        log.debug("[CacheManager]缓存管理器初始化完成")
 
     def register(self, name: str, adapter: CacheAdapter) -> "CacheManager":
         """
@@ -56,7 +56,7 @@ class CacheManager:
         """
         with self._lock:
             self._caches[name] = adapter
-            log.debug(f"【CacheManager】注册缓存: {name}")
+            log.debug(f"[CacheManager]注册缓存: {name}")
         return self
 
     def create_memory_cache(self, name: str, maxsize: int = 1000, ttl: int | None = None) -> "CacheManager":
@@ -105,7 +105,7 @@ class CacheManager:
         with self._lock:
             if name in self._caches:
                 del self._caches[name]
-                log.debug(f"【CacheManager】移除缓存: {name}")
+                log.debug(f"[CacheManager]移除缓存: {name}")
                 return True
             return False
 
@@ -115,9 +115,9 @@ class CacheManager:
             for name, cache in self._caches.items():
                 try:
                     cache.clear()
-                    log.debug(f"【CacheManager】清空缓存: {name}")
+                    log.debug(f"[CacheManager]清空缓存: {name}")
                 except Exception as e:
-                    log.error(f"【CacheManager】清空缓存失败 {name}: {e}")
+                    log.error(f"[CacheManager]清空缓存失败 {name}: {e}")
 
     def get_stats(self) -> dict[str, Any]:
         """获取所有缓存统计信息"""

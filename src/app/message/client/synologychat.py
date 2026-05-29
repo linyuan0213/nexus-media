@@ -94,14 +94,14 @@ class SynologyChat(_IMessageClient):
                 if res and res.status_code == 200:
                     data = res.json()
                     if data and "post_id" in data:
-                        log.debug(f"【SynologyChat】接收到消息: {data}")
+                        log.debug(f"[SynologyChat]接收到消息: {data}")
                         ThreadHelper().start_thread(self._process_message, (data, ds_url))
                 import time
 
                 time.sleep(2)
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
-                log.error(f"【SynologyChat】消息接收错误: {e}")
+                log.error(f"[SynologyChat]消息接收错误: {e}")
                 import time
 
                 time.sleep(5)

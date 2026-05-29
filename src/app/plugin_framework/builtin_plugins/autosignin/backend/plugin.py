@@ -195,7 +195,7 @@ class AutoSignInPlugin:
                 if not s:
                     continue
                 if retry_keyword:
-                    site_names = re.findall(r"【(.*?)】", s)
+                    site_names = re.findall(r"[(.*?)]", s)
                     if site_names:
                         site_id = sites_map.get(site_names[0])
                         if site_id and re.search(retry_keyword, s):
@@ -234,7 +234,7 @@ class AutoSignInPlugin:
                 Message().send_site_signin_message(signin_message)
 
                 self.ctx.notify(
-                    title="【自动签到任务完成】",
+                    title="[自动签到任务完成]",
                     text=f"本次签到数量: {len(sign_sites)} \n"
                     f"命中重试数量: {len(retry_sites) if retry_keyword else 0} \n"
                     f"强制签到数量: {len(special_sites)} \n"
@@ -260,7 +260,7 @@ class AutoSignInPlugin:
                 status, msg = site_module().signin(site_info)
                 return msg
             except Exception as e:
-                return f"【{site_info.get('name')}】签到失败：{str(e)}"
+                return f"[{site_info.get('name')}]签到失败：{str(e)}"
         else:
             return self._signin_base(site_info)
 
@@ -291,19 +291,19 @@ class AutoSignInPlugin:
                 html_text = chrome.get_page_html(url=home_url, cookies=site_cookie)
                 if not html_text:
                     self.ctx.warn(f"{site} 无法打开网站")
-                    return f"【{site}】仿真签到失败，无法打开网站！"
+                    return f"[{site}]仿真签到失败，无法打开网站！"
 
                 if re.search(r"已签|签到已得|今日已签|已签到|签到成功", html_text, re.IGNORECASE):
                     self.ctx.info(f"{site} 今日已签到")
-                    return f"【{site}】今日已签到"
+                    return f"[{site}]今日已签到"
 
                 if re.search(r"完成两步验证", html_text, re.IGNORECASE):
                     self.ctx.warn(f"{site} 仿真签到失败，需要两步验证")
-                    return f"【{site}】仿真签到失败，需要两步验证"
+                    return f"[{site}]仿真签到失败，需要两步验证"
 
                 if not SiteHelper.is_logged_in(html_text):
                     self.ctx.warn(f"{site} 仿真签到失败，登录状态异常")
-                    return f"【{site}】仿真签到失败，登录状态异常"
+                    return f"[{site}]仿真签到失败，登录状态异常"
 
                 html = etree.HTML(html_text)
                 xpath_str = None
@@ -315,7 +315,7 @@ class AutoSignInPlugin:
 
                 if not xpath_str:
                     self.ctx.warn(f"{site} 未找到签到按钮，但登录成功")
-                    return f"【{site}】模拟登录成功"
+                    return f"[{site}]模拟登录成功"
 
                 try:
                     self.ctx.debug(f"{site} 开始点击签到按钮")
@@ -325,28 +325,28 @@ class AutoSignInPlugin:
 
                     if not html_text:
                         self.ctx.warn(f"{site} 仿真签到失败，无法通过Cloudflare")
-                        return f"【{site}】仿真签到失败，无法通过Cloudflare！"
+                        return f"[{site}]仿真签到失败，无法通过Cloudflare！"
 
                     if re.search(r"已签|签到已得|签到成功|签到.*成功|获得.*积分|签到.*积分", html_text, re.IGNORECASE):
                         self.ctx.info(f"{site} 仿真签到成功")
-                        return f"【{site}】仿真签到成功"
+                        return f"[{site}]仿真签到成功"
                     elif re.search(r"完成两步验证|两步验证|2FA|二次验证", html_text, re.IGNORECASE):
                         self.ctx.warn(f"{site} 仿真签到失败，需要两步验证")
-                        return f"【{site}】仿真签到失败，需要两步验证"
+                        return f"[{site}]仿真签到失败，需要两步验证"
                     elif re.search(r"已签到|今日已签|重复签到", html_text, re.IGNORECASE):
                         self.ctx.info(f"{site} 今日已签到")
-                        return f"【{site}】今日已签到"
+                        return f"[{site}]今日已签到"
                     else:
                         if re.search(r"错误|失败|异常|error|fail", html_text, re.IGNORECASE):
                             self.ctx.warn(f"{site} 仿真签到失败，页面显示错误")
-                            return f"【{site}】仿真签到失败，页面显示错误"
+                            return f"[{site}]仿真签到失败，页面显示错误"
                         else:
                             self.ctx.warn(f"{site} 仿真签到失败，未知原因")
-                            return f"【{site}】仿真签到失败，未知原因"
+                            return f"[{site}]仿真签到失败，未知原因"
                 except Exception as e:
                     ExceptionUtils.exception_traceback(e)
                     self.ctx.warn(f"{site} 仿真签到失败：{str(e)}")
-                    return f"【{site}】签到失败！"
+                    return f"[{site}]签到失败！"
             else:
                 if site_url.find("attendance.php") != -1 or site_url.find("checkIn") != -1:
                     checkin_text = "签到"
@@ -373,7 +373,7 @@ class AutoSignInPlugin:
                         headers.pop("x-api-key")
                     if not headers.get("authorization"):
                         self.ctx.warn(f"{site} 请填写请求头 authorization 参数")
-                        return f"【{site}】请填写请求头 authorization 参数！"
+                        return f"[{site}]请填写请求头 authorization 参数！"
                     res = RequestUtils(
                         headers=headers, proxies=get_proxies() if site_info.get("proxy") else None
                     ).post_res(url=url)
@@ -392,20 +392,20 @@ class AutoSignInPlugin:
                         else:
                             msg = f"状态码：{res.status_code}"
                         self.ctx.warn(f"{site} {checkin_text}失败，{msg}")
-                        return f"【{site}】{checkin_text}失败，{msg}！"
+                        return f"[{site}]{checkin_text}失败，{msg}！"
                     else:
                         if re.search(r"完成两步验证", res.text, re.IGNORECASE):
                             self.ctx.warn(f"{site} 签到失败，需要两步验证")
-                            return f"【{site}】签到失败，需要两步验证"
+                            return f"[{site}]签到失败，需要两步验证"
                         self.ctx.info(f"{site} {checkin_text}成功")
-                        return f"【{site}】{checkin_text}成功"
+                        return f"[{site}]{checkin_text}成功"
                 elif res is not None:
                     self.ctx.warn(f"{site} {checkin_text}失败，状态码：{res.status_code}")  # type: ignore[union-attr]
-                    return f"【{site}】{checkin_text}失败，状态码：{res.status_code}！"  # type: ignore[union-attr]
+                    return f"[{site}]{checkin_text}失败，状态码：{res.status_code}！"  # type: ignore[union-attr]
                 else:
                     self.ctx.warn(f"{site} {checkin_text}失败，无法打开网站")
-                    return f"【{site}】{checkin_text}失败，无法打开网站！"
+                    return f"[{site}]{checkin_text}失败，无法打开网站！"
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             self.ctx.warn(f"{site} 签到失败：{str(e)}")
-            return f"【{site}】签到失败：{str(e)}！"
+            return f"[{site}]签到失败：{str(e)}！"

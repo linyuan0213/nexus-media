@@ -64,11 +64,11 @@ class BatchIdentifier:
         if not to_identify:
             return
 
-        log.info(f"【BatchIdentifier】批量识别 {len(to_identify)} 条不重复结果 ...")
+        log.info(f"[BatchIdentifier]批量识别 {len(to_identify)} 条不重复结果 ...")
 
         try:
             results = self.media.identify_batch(to_identify)
             for item, info in zip(to_identify, results, strict=False):
                 self._media_ident_cache.set(item["_cache_key"], info)
         except Exception as e:
-            log.error(f"【BatchIdentifier】批量识别出错: {e}")
+            log.error(f"[BatchIdentifier]批量识别出错: {e}")

@@ -222,9 +222,9 @@ def delete_files(
                     filename=os.path.basename(file),
                     backend_id=req.backend_id,
                 )
-                log.info(f"【Delete】删除成功: {file}")
+                log.info(f"[Delete]删除成功: {file}")
             except (ValidationError, ResourceNotFoundError, ServiceError) as e:
-                log.error(f"【Delete】删除失败: {file} - {e.message}")
+                log.error(f"[Delete]删除失败: {file} - {e.message}")
     return success()
 
 

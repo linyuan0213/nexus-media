@@ -14,14 +14,14 @@ def init_rbac_system():
     from app.services.rbac.init.role_init import init_rbac_roles
 
     try:
-        log.info("【RBAC初始化】开始初始化RBAC系统...")
+        log.info("[RBAC初始化]开始初始化RBAC系统...")
         init_rbac_permissions()
         init_rbac_menus()
         init_rbac_roles()
-        log.info("【RBAC初始化】RBAC系统初始化完成")
+        log.info("[RBAC初始化]RBAC系统初始化完成")
         return True
     except Exception as e:
-        log.error(f"【RBAC初始化】初始化失败: {e!s}")
+        log.error(f"[RBAC初始化]初始化失败: {e!s}")
         return False
 
 
@@ -45,9 +45,9 @@ def init_admin_user(admin_username: str, admin_password: str):
 
                 new_hash = generate_password_hash(admin_password)
                 user_repo.update_user(existing.ID, password_hash=new_hash)
-                log.info(f"【RBAC初始化】管理员用户 {admin_username} 密码已从旧格式迁移到 Argon2")
+                log.info(f"[RBAC初始化]管理员用户 {admin_username} 密码已从旧格式迁移到 Argon2")
             else:
-                log.info(f"【RBAC初始化】管理员用户 {admin_username} 已存在")
+                log.info(f"[RBAC初始化]管理员用户 {admin_username} 已存在")
             return True
 
         from app.utils.security import generate_password_hash
@@ -62,8 +62,8 @@ def init_admin_user(admin_username: str, admin_password: str):
         if superadmin_role:
             user_repo.assign_roles_to_user(user.ID, [superadmin_role.ID])
 
-        log.info(f"【RBAC初始化】创建管理员用户: {admin_username}")
+        log.info(f"[RBAC初始化]创建管理员用户: {admin_username}")
         return True
     except Exception as e:
-        log.error(f"【RBAC初始化】创建管理员用户失败: {e!s}")
+        log.error(f"[RBAC初始化]创建管理员用户失败: {e!s}")
         return False

@@ -31,7 +31,7 @@ class TransferEngine:
         with _lock:
             if backend is not self._local:
                 if operation in ("link", "softlink"):
-                    log.warn(f"【Rmt】远程后端不支持 {operation}，自动降级为 copy")
+                    log.warn(f"[Rmt]远程后端不支持 {operation}，自动降级为 copy")
                     operation = "copy"
                 if operation == "copy":
                     cross_copy(self._local, src, backend, dst)
@@ -92,15 +92,15 @@ class TransferEngine:
             for tag in [new_file_type] + [f"{new_file_type}.{t}" for t in range(1, 6)]:
                 new_file = os.path.splitext(new_name)[0] + tag + file_ext
                 if os.path.exists(new_file) and os.path.getsize(new_file) == os.path.getsize(file_item):
-                    log.info(f"【Rmt】字幕 {new_file} 已存在")
+                    log.info(f"[Rmt]字幕 {new_file} 已存在")
                     break
                 try:
-                    log.debug(f"【Rmt】正在处理字幕：{os.path.basename(file_item)}")
+                    log.debug(f"[Rmt]正在处理字幕：{os.path.basename(file_item)}")
                     self._execute(file_item, new_file, operation)
-                    log.info(f"【Rmt】字幕 {os.path.basename(file_item)} {operation}完成")
+                    log.info(f"[Rmt]字幕 {os.path.basename(file_item)} {operation}完成")
                     break
                 except Exception as e:
-                    log.error(f"【Rmt】字幕 {file_name} {operation}失败：{e}")
+                    log.error(f"[Rmt]字幕 {file_name} {operation}失败：{e}")
                     raise
 
     def transfer_audio_tracks(self, org_name: str, new_name: str, operation: str, over_flag: bool) -> None:
@@ -112,12 +112,12 @@ class TransferEngine:
             new_track = os.path.splitext(new_name)[0] + os.path.splitext(track_file)[1].lower()
             if os.path.exists(new_track):
                 if not over_flag:
-                    log.warn(f"【Rmt】音轨文件已存在：{new_track}")
+                    log.warn(f"[Rmt]音轨文件已存在：{new_track}")
                     continue
                 os.remove(new_track)
-            log.info(f"【Rmt】正在转移音轨文件：{track_file} 到 {new_track}")
+            log.info(f"[Rmt]正在转移音轨文件：{track_file} 到 {new_track}")
             self._execute(track_file, new_track, operation)
-            log.info(f"【Rmt】音轨文件 {os.path.basename(track_file)} {operation}完成")
+            log.info(f"[Rmt]音轨文件 {os.path.basename(track_file)} {operation}完成")
 
     def transfer_dir(
         self,
@@ -132,7 +132,7 @@ class TransferEngine:
             new_file = file.replace(src_dir, target_dir)
             if not os.path.exists(new_file):
                 if backend.exists(new_file):
-                    log.warn(f"【Rmt】{new_file} 文件已存在")
+                    log.warn(f"[Rmt]{new_file} 文件已存在")
                     continue
             backend.mkdir(os.path.dirname(new_file), parents=True)
             self._execute(file, new_file, operation, dst_backend)
@@ -156,7 +156,7 @@ class TransferEngine:
     ) -> None:
         backend = dst_backend or self._local
         if not over_flag and backend.exists(dst):
-            log.warn(f"【Rmt】文件已存在：{dst}")
+            log.warn(f"[Rmt]文件已存在：{dst}")
             return
         if over_flag and old_file:
             old_backend = self._local
@@ -165,9 +165,9 @@ class TransferEngine:
                 if st and not st.is_dir:
                     old_backend.remove(old_file)
 
-        log.info(f"【Rmt】正在转移文件：{os.path.basename(src)} 到 {dst}")
+        log.info(f"[Rmt]正在转移文件：{os.path.basename(src)} 到 {dst}")
         self._execute(src, dst, operation, dst_backend)
-        log.info(f"【Rmt】文件 {os.path.basename(src)} {operation}完成")
+        log.info(f"[Rmt]文件 {os.path.basename(src)} {operation}完成")
         self._blacklist.insert(src)
 
         self.transfer_subtitles(src, dst, operation)

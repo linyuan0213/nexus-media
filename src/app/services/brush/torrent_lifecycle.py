@@ -43,7 +43,7 @@ class BrushTorrentLifecycle:
             site_info = self._sites.get_sites(siteid=site_id)
 
             if not downloader_cfg:
-                log.warn(f"【Brush】任务 {task_name} 下载器不存在")
+                log.warn(f"[Brush]任务 {task_name} 下载器不存在")
                 return
 
             task_torrents = self._repo.get_brushtask_torrents(taskid)
@@ -54,7 +54,7 @@ class BrushTorrentLifecycle:
 
             completed_torrents = self._downloader.get_completed_torrents(downloader_id, torrent_ids)
             if completed_torrents is None:
-                log.warn(f"【Brush】任务 {task_name} 获取下载完成种子失败")
+                log.warn(f"[Brush]任务 {task_name} 获取下载完成种子失败")
                 return
             remove_torrent_ids = set(torrent_ids) - {torrent.id for torrent in completed_torrents}
             total_uploaded, total_downloaded, delete_ids, update_torrents = self._process_torrents(
@@ -72,7 +72,7 @@ class BrushTorrentLifecycle:
 
             downloading_torrents = self._downloader.get_downloading_torrents(downloader_id, torrent_ids)
             if downloading_torrents is None:
-                log.warn(f"【Brush】任务 {task_name} 获取下载中种子失败")
+                log.warn(f"[Brush]任务 {task_name} 获取下载中种子失败")
                 return
             remove_torrent_ids -= {torrent.id for torrent in downloading_torrents}
             total_uploaded, total_downloaded, delete_ids, update_torrents = self._process_torrents(
@@ -90,7 +90,7 @@ class BrushTorrentLifecycle:
             )
 
             if remove_torrent_ids:
-                log.info(f"【Brush】任务 {task_name} 删除不存在的下载任务：{remove_torrent_ids}")
+                log.info(f"[Brush]任务 {task_name} 删除不存在的下载任务：{remove_torrent_ids}")
                 for rid in remove_torrent_ids:
                     self._repo.delete_brushtask_torrent(taskid or 0, rid)
 
@@ -108,9 +108,9 @@ class BrushTorrentLifecycle:
 
                 if delete_ids:
                     self._repo.update_brushtask_torrent_state(update_torrents)
-                    log.info(f"【Brush】任务 {task_name} 共删除 {len(delete_ids)} 个刷流下载任务")
+                    log.info(f"[Brush]任务 {task_name} 共删除 {len(delete_ids)} 个刷流下载任务")
                 else:
-                    log.info(f"【Brush】任务 {task_name} 本次检查未删除下载任务")
+                    log.info(f"[Brush]任务 {task_name} 本次检查未删除下载任务")
 
             self._repo.add_brushtask_upload_count(
                 taskid or 0, total_uploaded, total_downloaded, len(delete_ids) + len(remove_torrent_ids)
@@ -173,7 +173,7 @@ class BrushTorrentLifecycle:
                 delete_type_str = (
                     ",".join([d.value for d in delete_type]) if isinstance(delete_type, list) else delete_type.value
                 )
-                log.info(f"【Brush】{torrent.name} 达到删种条件：{delete_type_str}，删除任务...")
+                log.info(f"[Brush]{torrent.name} 达到删种条件：{delete_type_str}，删除任务...")
                 if sendmessage:
                     self._send_remove_message(task_name, delete_type_str, torrent, downloader_cfg, torrent_params)
                 if torrent_id not in delete_ids:
@@ -183,7 +183,7 @@ class BrushTorrentLifecycle:
         return total_uploaded, total_downloaded, delete_ids, update_torrents
 
     def _send_remove_message(self, task_name, delete_type, torrent, downloader_cfg, torrent_params):
-        _msg_title = f"【刷流任务 {task_name} 删除做种】"
+        _msg_title = f"[刷流任务 {task_name} 删除做种]"
         _msg_text = (
             f"下载器名：{downloader_cfg.get('name')}\n"
             f"种子名称：{torrent.name}\n"
@@ -206,10 +206,10 @@ class BrushTorrentLifecycle:
 
         site_info = self._sites.get_sites(siteid=site_id)
         if not site_info:
-            log.error(f"【Brush】刷流任务 {task_name} 的站点已不存在，无法刷流！")
+            log.error(f"[Brush]刷流任务 {task_name} 的站点已不存在，无法刷流！")
             return
 
-        log.info(f"【Brush】开始非免费种子暂停任务：{task_name}...")
+        log.info(f"[Brush]开始非免费种子暂停任务：{task_name}...")
         task_torrents = self._repo.get_brushtask_torrents(taskid)
         torrent_id_maps = {item.DOWNLOAD_ID: item.ENCLOSURE for item in task_torrents if item.DOWNLOAD_ID}
         torrent_ids = list(torrent_id_maps.keys())
@@ -218,13 +218,13 @@ class BrushTorrentLifecycle:
 
         downloader_cfg = self._downloader.get_downloader_conf(downloader_id)
         if not downloader_cfg:
-            log.warn(f"【Brush】任务 {task_name} 下载器不存在")
+            log.warn(f"[Brush]任务 {task_name} 下载器不存在")
             return
 
         downlaod_name = downloader_cfg.get("name")
         torrents = self._downloader.get_downloading_torrents(downloader_id=downloader_id, ids=torrent_ids)
         if torrents is None:
-            log.warn(f"【Brush】任务 {task_name} 获取正在下载种子失败")
+            log.warn(f"[Brush]任务 {task_name} 获取正在下载种子失败")
             return
 
         stopfree_enabled = stop_rule and stop_rule.get("stopfree") == "Y"
@@ -240,7 +240,7 @@ class BrushTorrentLifecycle:
                 torrent_url, torrent_attr = self._helper.get_torrent_attr(
                     site_info if isinstance(site_info, dict) else {}, enclosure
                 )
-                log.debug(f"【Brush】{torrent_url} 解析详情 {torrent_attr}")
+                log.debug(f"[Brush]{torrent_url} 解析详情 {torrent_attr}")
 
             need_stop, stop_type = BrushRuleEngine.check_stop_rule(stop_rule, params=torrent_attr)
             if need_stop:
@@ -248,13 +248,13 @@ class BrushTorrentLifecycle:
                     stop_type_str = ", ".join(t.value for t in stop_type)
                 else:
                     stop_type_str = stop_type.value
-                log.info(f"【Brush】{torrent_name} 触发停种条件：{stop_type_str}，暂停任务...")
+                log.info(f"[Brush]{torrent_name} 触发停种条件：{stop_type_str}，暂停任务...")
                 self._downloader.stop_torrents(downloader_id, [torrent_id])
                 if sendmessage:
                     self._send_stop_message(task_name, torrent_name, downlaod_name, add_time)
 
     def _send_stop_message(self, task_name, torrent_name, download_name, add_time):
-        _msg_title = f"【刷流任务 {task_name} 暂停做种】"
+        _msg_title = f"[刷流任务 {task_name} 暂停做种]"
         _msg_text = (
             f"下载器名：{download_name}\n"
             f"种子名称：{torrent_name}\n"

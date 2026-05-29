@@ -70,7 +70,7 @@ class MessageSearchService:
         media_list = pagination_mgr.get_media_cache(user_id)
         if not media_list or choose < 1 or choose > len(media_list):
             Message().send_channel_msg(channel=in_from, title="输入有误！", user_id=user_id)
-            log.warn(f"【Web】错误的输入值：{choose}")
+            log.warn(f"[Web]错误的输入值：{choose}")
             return
 
         media_info = media_list[choose - 1]
@@ -180,7 +180,7 @@ class MessageSearchService:
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.error(f"【ChatAgent】对话异常: {e}")
+            log.error(f"[ChatAgent]对话异常: {e}")
             answer = "AI出错了，请检查LLM配置，如需搜索电影/电视剧，请发送 搜索或下载 + 名称"
         if not answer:
             answer = "AI出错了，请检查LLM配置，如需搜索电影/电视剧，请发送 搜索或下载 + 名称"
@@ -216,7 +216,7 @@ class MessageSearchService:
         if download_setting:
             download_setting = download_setting[0]
 
-        log.info(f"【Web】正在识别 {content} 的媒体信息...")
+        log.info(f"[Web]正在识别 {content} 的媒体信息...")
         if not content:
             Message().send_channel_msg(channel=in_from, title="无法识别搜索内容！", user_id=user_id)
             return
@@ -334,10 +334,10 @@ class MessageSearchService:
             user_name=user_name,
         )
         if code == 0:
-            log.info(f"【Web】{media_info.type.value} {media_info.get_title_string()} 已添加订阅")
+            log.info(f"[Web]{media_info.type.value} {media_info.get_title_string()} 已添加订阅")
         else:
             if in_from in Message().get_search_types():
-                log.info(f"【Web】{media_info.title} 添加订阅失败：{msg}")
+                log.info(f"[Web]{media_info.title} 添加订阅失败：{msg}")
                 Message().send_channel_msg(
                     channel=in_from, title=f"{media_info.title} 添加订阅失败：{msg}", user_id=str(user_id or "")
                 )

@@ -89,7 +89,7 @@ class SubscribeSearchEngine:
         dist_lock = get_lock_manager().create_lock(lock_key, ttl_seconds=1800)
         acquired = dist_lock.acquire()
         if not acquired:
-            log.info(f"【Subscribe】订阅搜索(state={state}) 正在执行，跳过")
+            log.info(f"[Subscribe]订阅搜索(state={state}) 正在执行，跳过")
             return
         try:
             self._lock.acquire()
@@ -112,7 +112,7 @@ class SubscribeSearchEngine:
         else:
             rss_movies = self._service.get_subscribe_movies(state=state) if self._service else {}
         if rss_movies:
-            log.info(f"【Subscribe】共有 {len(rss_movies)} 个电影订阅需要搜索")
+            log.info(f"[Subscribe]共有 {len(rss_movies)} 个电影订阅需要搜索")
         for _rid, rss_info in rss_movies.items():
             # 跳过模糊匹配的
             if rss_info.get("fuzzy_match"):
@@ -146,7 +146,7 @@ class SubscribeSearchEngine:
                     exist_flag, no_exists, _ = self._downloader.check_exists_medias(meta_info=media_info)
                     # 已经存在
                     if exist_flag:
-                        log.info(f"【Subscribe】电影 {media_info.get_title_string()} 已存在")
+                        log.info(f"[Subscribe]电影 {media_info.get_title_string()} 已存在")
                         if self._service:
                             self._service.finish_rss_subscribe(rssid=rssid, media=media_info)
                         continue
@@ -188,7 +188,7 @@ class SubscribeSearchEngine:
                     self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="R")
             except Exception as err:
                 self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="R")
-                log.error(f"【Subscribe】电影 {name} 订阅搜索失败：{str(err)}")
+                log.error(f"[Subscribe]电影 {name} 订阅搜索失败：{str(err)}")
                 log.debug(f"异常详细信息: {traceback.format_exc()}")
                 continue
 
@@ -203,7 +203,7 @@ class SubscribeSearchEngine:
         else:
             rss_tvs = self._service.get_subscribe_tvs(state=state) if self._service else {}
         if rss_tvs:
-            log.info(f"【Subscribe】共有 {len(rss_tvs)} 个电视剧订阅需要检索")
+            log.info(f"[Subscribe]共有 {len(rss_tvs)} 个电视剧订阅需要检索")
         rss_no_exists = {}
         for _rid, rss_info in rss_tvs.items():
             # 跳过模糊匹配的
@@ -265,7 +265,7 @@ class SubscribeSearchEngine:
                     if exist_flag:
                         # 已全部存在
                         if not library_no_exists or not library_no_exists.get(media_info.tmdb_id):
-                            log.info(f"【Subscribe】电视剧 {media_info.get_title_string()} 订阅剧集已全部存在")
+                            log.info(f"[Subscribe]电视剧 {media_info.get_title_string()} 订阅剧集已全部存在")
                             # 完成订阅
                             if self._service:
                                 self._service.finish_rss_subscribe(rssid=rss_info.get("id"), media=media_info)
@@ -276,7 +276,7 @@ class SubscribeSearchEngine:
                     )
                     if rss_no_exists.get(media_info.tmdb_id):
                         log.info(
-                            f"【Subscribe】{media_info.get_title_string()} 订阅缺失季集：{rss_no_exists.get(media_info.tmdb_id)}"
+                            f"[Subscribe]{media_info.get_title_string()} 订阅缺失季集：{rss_no_exists.get(media_info.tmdb_id)}"
                         )
                 else:
                     # 把洗版标志加入检索
@@ -332,7 +332,7 @@ class SubscribeSearchEngine:
                             rssid=rssid, media_info=media_info, seasoninfo=no_exists.get(media_info.tmdb_id)
                         )
             except Exception as err:
-                log.error(f"【Subscribe】电视剧 {name} 订阅搜索失败：{str(err)}")
+                log.error(f"[Subscribe]电视剧 {name} 订阅搜索失败：{str(err)}")
                 log.debug(f"异常详细信息: {traceback.format_exc()}")
                 self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="R")
                 continue

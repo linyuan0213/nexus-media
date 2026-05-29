@@ -136,7 +136,7 @@ class DownloaderCore:
                 continue
             trans_tasks = _client.get_transfer_task(tag=PT_TAG if only_nexus_media else None, match_path=match_path)
             if trans_tasks:
-                log.info(f"【Downloader】下载器 {name} 开始转移下载文件...")
+                log.info(f"[Downloader]下载器 {name} 开始转移下载文件...")
             else:
                 continue
             for task in trans_tasks:
@@ -156,11 +156,11 @@ class DownloaderCore:
                     tags=task.get("tags"),
                 ):
                     if not success:
-                        log.warn(f"【Downloader】任务 {tid} 转移失败：{msg}")
+                        log.warn(f"[Downloader]任务 {tid} 转移失败：{msg}")
                         client.set_torrents_status(ids=tid, tags=tags)
                         return
                     if op == "move":
-                        log.warn(f"【Downloader】移动模式下删除种子文件：{tid}")
+                        log.warn(f"[Downloader]移动模式下删除种子文件：{tid}")
                         client.delete_torrents(delete_file=True, ids=tid)
                     else:
                         client.set_torrents_status(ids=tid, tags=tags)
@@ -173,7 +173,7 @@ class DownloaderCore:
                     post_process=_post_process,
                 )
                 self._pipeline.process(pipeline_task)
-            log.info(f"【Downloader】下载器 {name} 下载文件转移结束")
+            log.info(f"[Downloader]下载器 {name} 下载文件转移结束")
 
     # ---------- 种子查询/操作 ----------
 
@@ -204,7 +204,7 @@ class DownloaderCore:
             if history:
                 return history.DOWNLOADER
         except Exception as e:
-            log.debug(f"【DownloaderCore】解析任务 {download_id} 的下载器失败: {e}")
+            log.debug(f"[DownloaderCore]解析任务 {download_id} 的下载器失败: {e}")
         return None
 
     def start_torrents(self, downloader_id=None, ids=None):

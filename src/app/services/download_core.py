@@ -352,7 +352,7 @@ class DownloadCore:
 
     def get_torrent_episodes(self, url, page_url=None):
         if not url:
-            log.error("【Downloader】url 链接为空")
+            log.error("[Downloader]url 链接为空")
             return [], None
         site_info: Any = self._sites.get_sites(siteurl=url) or {}
         file_path, _, _, files, retmsg = Torrent().get_torrent_info(
@@ -363,7 +363,7 @@ class DownloadCore:
             proxy=site_info.get("proxy") or False,
         )
         if not files:
-            log.error(f"【Downloader】读取种子文件集数出错：{retmsg}")
+            log.error(f"[Downloader]读取种子文件集数出错：{retmsg}")
             if file_path:
                 Torrent.delete_torrent_file(file_path)
             return [], None

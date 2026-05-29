@@ -13,7 +13,7 @@ def prepare_title(title):
     """对命名进行预处理"""
     if not title:
         return title
-    title = title.replace("【", "[").replace("】", "]").strip()
+    title = title.replace("[", "[").replace("]", "]").strip()
     match = re.search(r"新番|月?番|[日美国][漫剧]", title)
     if match and match.span()[1] < len(title) - 1:
         title = re.sub(".*番.|.*[日美国][漫剧].", "", title)

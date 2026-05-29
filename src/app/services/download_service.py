@@ -257,11 +257,11 @@ class DownloadService:
                 try:
                     if os.path.exists(tmp_file):
                         os.remove(tmp_file)
-                        log.debug(f"【Web】已删除上传的临时文件: {tmp_file}")
+                        log.debug(f"[Web]已删除上传的临时文件: {tmp_file}")
                 except (DomainError, ServiceError):
                     raise
                 except Exception as e:
-                    log.warn(f"【Web】删除上传的临时文件失败: {tmp_file}, {e!s}")
+                    log.warn(f"[Web]删除上传的临时文件失败: {tmp_file}, {e!s}")
 
         return DownloadResultDTO(success=True, message="添加下载完成！")
 
@@ -351,7 +351,7 @@ class DownloadService:
                 except (DomainError, ServiceError):
                     raise
                 except Exception as e:
-                    log.error(f"【DownloadService】处理任务 {task.DOWNLOAD_ID} 失败：{e}")
+                    log.error(f"[DownloadService]处理任务 {task.DOWNLOAD_ID} 失败：{e}")
 
         # 批量标记还在下载中的任务
         if active_ids:
@@ -361,7 +361,7 @@ class DownloadService:
                 except (DomainError, ServiceError):
                     raise
                 except Exception as e:
-                    log.debug(f"【DownloadService】更新任务状态失败：{e}")
+                    log.debug(f"[DownloadService]更新任务状态失败：{e}")
 
         # 批量标记已完成任务
         if completed_ids:
@@ -371,7 +371,7 @@ class DownloadService:
                 except (DomainError, ServiceError):
                     raise
                 except Exception as e:
-                    log.debug(f"【DownloadService】标记任务完成失败：{e}")
+                    log.debug(f"[DownloadService]标记任务完成失败：{e}")
 
         return result
 

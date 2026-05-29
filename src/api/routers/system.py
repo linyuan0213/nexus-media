@@ -613,7 +613,7 @@ def list_agent_models(
     except (ServiceError, DomainError) as e:
         return fail(msg=e.message)
     except Exception as e:
-        log.warn(f"【Agent】查询模型列表失败: {e}")
+        log.warn(f"[Agent]查询模型列表失败: {e}")
         return fail(msg=str(e))
 
 
@@ -794,7 +794,7 @@ def get_site_config_version():
     except (ServiceError, DomainError) as e:
         return fail(msg=e.message)
     except Exception as e:
-        log.error(f"【System】获取站点配置版本失败: {e!s}")
+        log.error(f"[System]获取站点配置版本失败: {e!s}")
         return fail(msg=str(e))
 
 
@@ -819,7 +819,7 @@ def update_site_config(
     except (ServiceError, DomainError) as e:
         return fail(msg=e.message)
     except Exception as e:
-        log.error(f"【System】手动更新站点配置失败: {e!s}")
+        log.error(f"[System]手动更新站点配置失败: {e!s}")
         return fail(msg=str(e))
 
 
@@ -834,5 +834,5 @@ def reload_config(
             return fail(msg=f"配置重载部分失败: {result['failed']}")
         return success(data={"version": result["version"], "steps": result["results"]})
     except Exception as e:
-        log.error(f"【System】配置重载失败: {e!s}")
+        log.error(f"[System]配置重载失败: {e!s}")
         return fail(msg=str(e))

@@ -102,25 +102,25 @@ class Slack(_IMessageClient):
         @slack_app.event("message")
         def slack_message(message):
             local_res = requests.post(self._ds_url or "", json=message, timeout=10)
-            log.debug(f"【Slack】message processed: {local_res.text}")
+            log.debug(f"[Slack]message processed: {local_res.text}")
 
         @slack_app.action(re.compile(r"actionId-\d+"))
         def slack_action(ack, body):
             ack()
             local_res = requests.post(self._ds_url or "", json=body, timeout=60)
-            log.debug(f"【Slack】action processed: {local_res.text}")
+            log.debug(f"[Slack]action processed: {local_res.text}")
 
         @slack_app.event("app_mention")
         def slack_mention(say, body):
             say(f"收到，请稍等... <@{body.get('event', {}).get('user')}>")
             local_res = requests.post(self._ds_url or "", json=body, timeout=10)
-            log.debug(f"【Slack】mention processed: {local_res.text}")
+            log.debug(f"[Slack]mention processed: {local_res.text}")
 
         @slack_app.shortcut(re.compile(r"/*"))
         def slack_shortcut(ack, body):
             ack()
             local_res = requests.post(self._ds_url or "", json=body, timeout=10)
-            log.debug(f"【Slack】shortcut processed: {local_res.text}")
+            log.debug(f"[Slack]shortcut processed: {local_res.text}")
 
         if self._interactive and self._app_token:
             try:

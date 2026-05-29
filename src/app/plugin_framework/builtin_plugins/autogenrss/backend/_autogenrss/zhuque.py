@@ -41,16 +41,16 @@ class ZhuQue(_ISiteRssGenHandler):
         html_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(url="https://zhuque.in")
         if not html_res or html_res.status_code != 200:
             self.error("生成RSS失败，请检查站点连通性")
-            return False, f"【{site}】生成RSS失败，请检查站点连通性"
+            return False, f"[{site}]生成RSS失败，请检查站点连通性"
 
         if "login.php" in html_res.text:
             self.error("生成RSS失败，cookie失效")
-            return False, f"【{site}】生成RSS失败，cookie失效"
+            return False, f"[{site}]生成RSS失败，cookie失效"
 
         html = etree.HTML(html_res.text)
 
         if not html:
-            return False, f"【{site}】生成RSS失败"
+            return False, f"[{site}]生成RSS失败"
 
         x_csrf_token_list = cast(list, html.xpath("//meta[@name='x-csrf-token']/@content"))
         x_csrf_token = x_csrf_token_list[0] if x_csrf_token_list else None
@@ -65,9 +65,9 @@ class ZhuQue(_ISiteRssGenHandler):
             )
             if not security_res or security_res.status_code != 200:
                 self.error("生成RSS失败")
-                return False, f"【{site}】生成RSS失败"
+                return False, f"[{site}]生成RSS失败"
         else:
-            return False, f"【{site}】生成RSS失败"
+            return False, f"[{site}]生成RSS失败"
 
         rss_link = ""
         json_data = security_res.json()
@@ -79,7 +79,7 @@ class ZhuQue(_ISiteRssGenHandler):
 
             container.site_repository().update_site_rssurl(site_info.get("id"), rss_link)
             self.info("生成RSS成功")
-            return True, f"【{site}】生成RSS成功"
+            return True, f"[{site}]生成RSS成功"
         else:
             self.info("生成RSS失败")
-            return True, f"【{site}生成RSS失败"
+            return True, f"[{site}生成RSS失败"

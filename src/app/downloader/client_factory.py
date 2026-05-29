@@ -87,11 +87,11 @@ class DownloadClientFactory:
                     log_content += "启用标签隔离，"
                 if str(match_path or ""):
                     log_content += "启用目录隔离，"
-                log.info(f"【Downloader】读取到监控下载器：{name}{log_content}转移方式：{rmt_mode_name}")
+                log.info(f"[Downloader]读取到监控下载器：{name}{log_content}转移方式：{rmt_mode_name}")
                 if int(str(enabled or 0)):
                     self._monitor_downloader_ids.append(did)
                 else:
-                    log.info(f"【Downloader】下载器：{name} 不进行监控：下载器未启用")
+                    log.info(f"[Downloader]下载器：{name} 不进行监控：下载器未启用")
 
             config = json.loads(str(downloader_conf.CONFIG))
             dtype = downloader_conf.TYPE
@@ -176,10 +176,10 @@ class DownloadClientFactory:
             return None
         downloader_conf = self.get_downloader_conf(did)
         if not downloader_conf:
-            log.info("【Downloader】下载器配置不存在")
+            log.info("[Downloader]下载器配置不存在")
             return None
         if not downloader_conf.get("enabled"):
-            log.info(f"【Downloader】下载器 {downloader_conf.get('name')} 未启用")
+            log.info(f"[Downloader]下载器 {downloader_conf.get('name')} 未启用")
             return None
         ctype = downloader_conf.get("type")
         config = downloader_conf.get("config") or {}
@@ -342,7 +342,7 @@ class DownloadClientFactory:
             return False
         state = client.get_status()
         if not state:
-            log.error("【Downloader】下载器连接测试失败")
+            log.error("[Downloader]下载器连接测试失败")
         return state
 
     def get_free_space(self, downloader_id, path: str):

@@ -228,7 +228,7 @@ class _IMediaClient(metaclass=ABCMeta):
         except Exception as e:
             import log
 
-            log.error(f"【get_nt_image_url】处理图片代理失败: {str(e)}")
+            log.error(f"[get_nt_image_url]处理图片代理失败: {str(e)}")
 
         # 默认使用旧的 Redis 缓存代理
         if remote:

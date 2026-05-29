@@ -201,9 +201,9 @@ class SiteEngine:
                     data = json.load(f)
                 site_def = SiteDefinition.from_dict(data)
                 self._sites[site_def.id] = site_def
-                log.debug(f"【SiteEngine】加载站点定义: {site_def.name} ({site_def.id})")
+                log.debug(f"[SiteEngine]加载站点定义: {site_def.name} ({site_def.id})")
             except Exception:
-                log.warn(f"【SiteEngine】加载站点定义失败: {fname}\n{traceback.format_exc()}")
+                log.warn(f"[SiteEngine]加载站点定义失败: {fname}\n{traceback.format_exc()}")
 
     def register(self, site_def: SiteDefinition):
         self._sites[site_def.id] = site_def

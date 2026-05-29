@@ -63,22 +63,22 @@ class PtCHDBits(_ISiteSigninHandler):
         )
         if not index_res or index_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
-            return False, f"【{site}】签到失败，请检查站点连通性"
+            return False, f"[{site}]签到失败，请检查站点连通性"
 
         if "login.php" in index_res.text:
             self.error("签到失败，cookie失效")
-            return False, f"【{site}】签到失败，cookie失效"
+            return False, f"[{site}]签到失败，cookie失效"
 
         sign_status = self.sign_in_result(html_res=index_res.text, regexs=self._sign_regex)
         if sign_status:
             self.info("今日已签到")
-            return True, f"【{site}】今日已签到"
+            return True, f"[{site}]今日已签到"
 
         # 没有签到则解析html
         html = etree.HTML(index_res.text)
 
         if not html:
-            return False, f"【{site}】签到失败"
+            return False, f"[{site}]签到失败"
 
         # 获取页面问题、答案
         questionid = str(cast(Any, html.xpath("//input[@name='questionid']/@value"))[0])
@@ -96,7 +96,7 @@ class PtCHDBits(_ISiteSigninHandler):
             self.debug(f"获取到签到问题 {question_str}")
         else:
             self.error("未获取到签到问题")
-            return False, f"【{site}】签到失败，未获取到签到问题"
+            return False, f"[{site}]签到失败，未获取到签到问题"
 
         # 查询已有答案
         exits_answers = {}
@@ -139,7 +139,7 @@ class PtCHDBits(_ISiteSigninHandler):
         # 处理AI返回的答案信息
         if answer is None:
             self.warn("AI未启用, 开始随机签到")
-            # return f"【{site}】签到失败，AI未启用"
+            # return f"[{site}]签到失败，AI未启用"
         elif answer:
             # 正则获取字符串中的数字
             answer_nums = list(map(int, re.findall(r"\d+", answer)))
@@ -187,7 +187,7 @@ class PtCHDBits(_ISiteSigninHandler):
         )
         if not sign_res or sign_res.status_code != 200:
             self.error("签到失败，签到接口请求失败")
-            return False, f"【{site}】签到失败，签到接口请求失败"
+            return False, f"[{site}]签到失败，签到接口请求失败"
 
         # 判断是否签到成功
         sign_status = self.sign_in_result(html_res=sign_res.text, regexs=self._success_regex)
@@ -196,15 +196,15 @@ class PtCHDBits(_ISiteSigninHandler):
             if exits_answers and question:
                 # 签到成功写入本地文件
                 self.__write_local_answer(exits_answers=exits_answers or {}, question=question, answer=choice)
-            return True, f"【{site}】签到成功"
+            return True, f"[{site}]签到成功"
         else:
             sign_status = self.sign_in_result(html_res=sign_res.text, regexs=self._sign_regex)
             if sign_status:
                 self.info("今日已签到")
-                return True, f"【{site}】今日已签到"
+                return True, f"[{site}]今日已签到"
 
             self.error("签到失败，请到页面查看")
-            return False, f"【{site}】签到失败，请到页面查看"
+            return False, f"[{site}]签到失败，请到页面查看"
 
     def __write_local_answer(self, exits_answers, question, answer):
         """

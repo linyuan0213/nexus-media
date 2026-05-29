@@ -21,7 +21,7 @@ class TempCleanupHelper:
         执行清理任务
         """
         try:
-            log.info("【TempCleanupHelper】开始执行临时文件清理...")
+            log.info("[TempCleanupHelper]开始执行临时文件清理...")
 
             # 获取清理前的大小
             size_before = temp_manager.get_temp_size_human()
@@ -37,14 +37,13 @@ class TempCleanupHelper:
 
             if deleted_count > 0:
                 log.info(
-                    f"【TempCleanupHelper】清理完成：删除 {deleted_count} 个文件，"
-                    f"大小从 {size_before} 变为 {size_after}"
+                    f"[TempCleanupHelper]清理完成：删除 {deleted_count} 个文件，大小从 {size_before} 变为 {size_after}"
                 )
             else:
-                log.debug(f"【TempCleanupHelper】没有需要清理的临时文件，当前大小: {size_after}")
+                log.debug(f"[TempCleanupHelper]没有需要清理的临时文件，当前大小: {size_after}")
 
         except Exception as e:
-            log.error(f"【TempCleanupHelper】执行清理任务出错: {str(e)}")
+            log.error(f"[TempCleanupHelper]执行清理任务出错: {str(e)}")
 
     @staticmethod
     def get_temp_info():
@@ -64,5 +63,5 @@ class TempCleanupHelper:
 
             return {"size": temp_manager.get_temp_size_human(), "count": file_count, "path": temp_path}
         except Exception as e:
-            log.error(f"【TempCleanupHelper】获取临时目录信息失败: {str(e)}")
+            log.error(f"[TempCleanupHelper]获取临时目录信息失败: {str(e)}")
             return {"size": "unknown", "count": -1, "path": temp_manager.get_temp_path()}

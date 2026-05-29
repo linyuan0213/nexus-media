@@ -52,11 +52,11 @@ def prefetch_user_profile(engine, url, site_cookie, site_headers=None, ua="", pr
             ).get_res(url=req_url, params=params)
         if res and res.status_code == 200:
             parsed = res.json()
-            log.warn(f"【prefetch】{site_def.name} status={res.status_code} keys={list(parsed.keys())[:5]}")
+            log.warn(f"[prefetch]{site_def.name} status={res.status_code} keys={list(parsed.keys())[:5]}")
             if "data" in parsed and isinstance(parsed["data"], dict):
-                log.warn(f"【prefetch】{site_def.name} data keys={list(parsed['data'].keys())[:10]}")
+                log.warn(f"[prefetch]{site_def.name} data keys={list(parsed['data'].keys())[:10]}")
             return site_def, parsed
     except Exception:
         pass
-    log.warn(f"【prefetch】{site_def.name if site_def else '?'} FAIL")
+    log.warn(f"[prefetch]{site_def.name if site_def else '?'} FAIL")
     return site_def, None

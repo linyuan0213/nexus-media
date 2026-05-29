@@ -100,25 +100,25 @@ class SyncEngine:
                 continue
             cfg = SyncPathConfig(row)
             log.info(
-                f"【Sync】监控目录：{cfg.source} -> {cfg.dest} (操作={cfg.operation}, 目标后端={cfg.dst_backend_id})"
+                f"[Sync]监控目录：{cfg.source} -> {cfg.dest} (操作={cfg.operation}, 目标后端={cfg.dst_backend_id})"
             )
             if not cfg.source or cfg.source in ("/", "\\"):
-                log.warn(f"【Sync】跳过无效源目录: {cfg.source}")
+                log.warn(f"[Sync]跳过无效源目录: {cfg.source}")
                 continue
             self._configs[cfg.id] = cfg
             if not cfg.enabled:
-                log.info(f"【Sync】{cfg.source} 已关闭")
+                log.info(f"[Sync]{cfg.source} 已关闭")
                 continue
             try:
                 src_backend = self._resolve_backend(cfg.src_backend_id)
                 if src_backend.exists(cfg.source):
                     self._monitor_ids.append(cfg.id)
                 else:
-                    log.error(f"【Sync】{cfg.source} 目录不存在")
+                    log.error(f"[Sync]{cfg.source} 目录不存在")
             except (ServiceError, RepositoryError, DomainError):
                 raise
             except Exception as e:
-                log.error(f"【Sync】检查 {cfg.source} 失败: {e}")
+                log.error(f"[Sync]检查 {cfg.source} 失败: {e}")
 
     @property
     def monitor_sync_path_ids(self) -> list[str]:
@@ -142,7 +142,7 @@ class SyncEngine:
             obs.schedule(FileMonitorHandler(cfg.source, self), path=cfg.source, recursive=True)
             obs.daemon = True
             obs.start()
-            log.info(f"【Sync】{cfg.source} 监控已启动")
+            log.info(f"[Sync]{cfg.source} 监控已启动")
 
     def stop(self) -> None:
         with _observer_lock:
@@ -153,7 +153,7 @@ class SyncEngine:
                 except (ServiceError, RepositoryError, DomainError):
                     raise
                 except Exception as e:
-                    log.error(f"【Sync】停止监控异常: {e}")
+                    log.error(f"[Sync]停止监控异常: {e}")
             self._observers = []
 
     def on_file_event(self, event_path: str) -> None:
@@ -179,7 +179,7 @@ class SyncEngine:
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.error(f"【Sync】处理失败：{e}\n{traceback.format_exc()}")
+            log.error(f"[Sync]处理失败：{e}\n{traceback.format_exc()}")
 
     def _find_config(self, event_path: str):
         for sid in self._monitor_ids:
@@ -188,7 +188,7 @@ class SyncEngine:
                 continue
             if PathUtils.is_path_in_path(cfg.source, event_path):
                 if PathUtils.is_path_in_path(cfg.dest, event_path):
-                    log.error(f"【Sync】嵌套目录：{event_path}")
+                    log.error(f"[Sync]嵌套目录：{event_path}")
                     return None
                 return cfg
         return None
@@ -203,11 +203,11 @@ class SyncEngine:
             self._transfer._execute(event_path, dst, cfg.operation, dst_backend)
             self._history_repo.insert_sync_history(event_path, cfg.source, cfg.dest)
             self._transfer._blacklist.insert(event_path)
-            log.info(f"【Sync】{event_path} 同步完成")
+            log.info(f"[Sync]{event_path} 同步完成")
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.error(f"【Sync】{event_path} 同步失败：{e}")
+            log.error(f"[Sync]{event_path} 同步失败：{e}")
 
     def _do_transfer(self, event_path: str, cfg: SyncPathConfig) -> None:
         name = os.path.basename(event_path)
@@ -227,18 +227,18 @@ class SyncEngine:
         try:
             ret, msg = self._pipeline.process(task)
             if not ret:
-                log.error(f"【Sync】{event_path} 转移失败：{msg}")
+                log.error(f"[Sync]{event_path} 转移失败：{msg}")
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.error(f"【Sync】{event_path} 转移异常：{e}")
+            log.error(f"[Sync]{event_path} 转移异常：{e}")
 
     def transfer_sync(self, sid: str | None = None) -> None:
         lock_key = f"sync:transfer_sync:{sid or 'all'}"
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
         acquired = lock.acquire()
         if not acquired:
-            log.info(f"【Sync】transfer_sync({sid or 'all'}) 正在执行，跳过")
+            log.info(f"[Sync]transfer_sync({sid or 'all'}) 正在执行，跳过")
             return
 
         try:
@@ -286,4 +286,4 @@ class SyncEngine:
                 if dest and cfg.dest != dest:
                     continue
                 self._sync_repo.check_config_sync_paths(sid=cfg_id, enabled=False)
-                log.info(f"【Sync】关闭重复源目录：{cfg.source}")
+                log.info(f"[Sync]关闭重复源目录：{cfg.source}")

@@ -173,11 +173,11 @@ class BuiltinIndexer(_IIndexClient):
             _filter_args.update({"rule": indexer.rule})
 
         start_time = datetime.datetime.now()
-        log.info(f"【{self.client_name}】开始搜索Indexer：{indexer.name} ...")
+        log.info(f"[{self.client_name}]开始搜索Indexer：{indexer.name} ...")
 
         search_word = StringUtils.handler_special_chars(text=key_word, replace_word=" ", allow_space=True)
         if indexer.language == "en" and StringUtils.is_chinese(search_word):
-            log.warn(f"【{self.client_name}】{indexer.name} 无法使用中文名搜索")
+            log.warn(f"[{self.client_name}]{indexer.name} 无法使用中文名搜索")
             return []
 
         result_array = []
@@ -198,11 +198,11 @@ class BuiltinIndexer(_IIndexClient):
             )
 
         if len(result_array) == 0:
-            log.warn(f"【{self.client_name}】{indexer.name} 关键词 {key_word} 未搜索到数据")
+            log.warn(f"[{self.client_name}]{indexer.name} 关键词 {key_word} 未搜索到数据")
             self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
             return []
         else:
-            log.warn(f"【{self.client_name}】{indexer.name} 关键词 {key_word} 返回数据：{len(result_array)}")
+            log.warn(f"[{self.client_name}]{indexer.name} 关键词 {key_word} 返回数据：{len(result_array)}")
             self.progress.update(
                 ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 返回 {len(result_array)} 条数据"
             )
@@ -223,10 +223,10 @@ class BuiltinIndexer(_IIndexClient):
             return None
         indexer = self.get_indexers(indexer_id=index_id)
         if not indexer:
-            log.warn(f"【BuiltinIndexer】list 未找到站点: {index_id}")
+            log.warn(f"[BuiltinIndexer]list 未找到站点: {index_id}")
             return None
 
-        log.warn(f"【BuiltinIndexer】list 找到站点: {indexer.name} (id={indexer.id}, domain={indexer.domain})")  # type: ignore[union-attr]
+        log.warn(f"[BuiltinIndexer]list 找到站点: {indexer.name} (id={indexer.id}, domain={indexer.domain})")  # type: ignore[union-attr]
         start_time = datetime.datetime.now()
 
         error_flag, result_array = self.__search_via_engine(search_word=keyword, indexer=indexer, page=page)

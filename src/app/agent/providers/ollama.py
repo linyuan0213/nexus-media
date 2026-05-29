@@ -45,5 +45,5 @@ class OllamaProvider(BaseProvider):
             result = self._client.list()
             return [m.model for m in result.models if m.model is not None] if hasattr(result, "models") else []
         except Exception as e:
-            log.warn(f"【OllamaProvider】查询模型列表失败: {e}")
+            log.warn(f"[OllamaProvider]查询模型列表失败: {e}")
             return []

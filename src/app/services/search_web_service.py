@@ -63,16 +63,16 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
                 if intent.year is not None:
                     year = str(intent.year)
                 log.info(
-                    f"【Web】Agent 解析搜索意图: {content} -> {key_word}, type={mtype}, "
+                    f"[Web]Agent 解析搜索意图: {content} -> {key_word}, type={mtype}, "
                     f"season={season_num}, episode={episode_num}, year={year}"
                 )
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.warn(f"【Web】Agent 意图解析失败: {e}")
+            log.warn(f"[Web]Agent 意图解析失败: {e}")
 
     if not key_word:
-        log.info(f"【Web】{content} 搜索关键字有误！")
+        log.info(f"[Web]{content} 搜索关键字有误！")
         return -1, f"{content} 未识别到搜索关键字！"
 
     if media_type:
@@ -94,7 +94,7 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
             cache_key = hashlib.md5(f"{content}_{mtype}".encode(), usedforsecurity=False).hexdigest()
             if cache_key in _MEDIA_IDENT_CACHE:
                 media_info = _MEDIA_IDENT_CACHE[cache_key]
-                log.info(f"【Web】从缓存获取媒体信息: {content}")
+                log.info(f"[Web]从缓存获取媒体信息: {content}")
             else:
                 media_info = _media.get_media_info(mtype=media_type or mtype, title=content)
                 if media_info and media_info.tmdb_info:
@@ -108,7 +108,7 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
 
         if media_info and media_info.tmdb_info:
             log.info(
-                f"【Web】从TMDB中匹配到{media_info.type.value if media_info.type else ''}：{media_info.get_title_string()}"
+                f"[Web]从TMDB中匹配到{media_info.type.value if media_info.type else ''}：{media_info.get_title_string()}"
             )
             search_season = media_info.get_season_list() if media_info.begin_season is not None else None
             search_episode = media_info.get_episode_list()
@@ -154,7 +154,7 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
                 "type": media_info.type,
             }
         else:
-            log.info(f"【Web】{content} 未从TMDB匹配到媒体信息，将使用快速搜索...")
+            log.info(f"[Web]{content} 未从TMDB匹配到媒体信息，将使用快速搜索...")
             ident_flag = False
             media_info = None
             search_name_list.append(key_word)
@@ -166,7 +166,7 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
     if filters:
         filter_args.update(filters)
 
-    log.info(f"【Web】开始通过 {search_name_list} 搜索 ...")
+    log.info(f"[Web]开始通过 {search_name_list} 搜索 ...")
 
     media_list = []
     if search_name_list:
@@ -197,10 +197,10 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
     _process.end(ProgressKey.Search)
 
     if len(media_list) == 0:
-        log.info(f"【Web】{content} 未搜索到任何资源")
+        log.info(f"[Web]{content} 未搜索到任何资源")
         return 1, f"{content} 未搜索到任何资源"
     else:
-        log.info(f"【Web】共搜索到 {len(media_list)} 个有效资源")
+        log.info(f"[Web]共搜索到 {len(media_list)} 个有效资源")
         media_list = sorted(
             media_list,
             key=lambda x: "{}{}{}".format(

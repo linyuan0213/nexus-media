@@ -43,11 +43,11 @@ class Ourbits(_ISiteRssGenHandler):
         )
         if not html_res or html_res.status_code != 200:
             self.error("生成RSS失败，请检查站点连通性")
-            return False, f"【{site}】生成RSS失败，请检查站点连通性"
+            return False, f"[{site}]生成RSS失败，请检查站点连通性"
 
         if "login_act.php" in html_res.text:
             self.error("生成RSS失败，cookie失效")
-            return False, f"【{site}】生成RSS失败，cookie失效"
+            return False, f"[{site}]生成RSS失败，cookie失效"
         rss_link = self._get_rss_link(html_res.text)
 
         # 如果rss链接不存在，重新生成一个
@@ -70,17 +70,17 @@ class Ourbits(_ISiteRssGenHandler):
                 )
                 if not html_res or html_res.status_code != 200:
                     self.error("生成RSS失败，请检查站点连通性")
-                    return False, f"【{site}】生成RSS失败，请检查站点连通性"
+                    return False, f"[{site}]生成RSS失败，请检查站点连通性"
                 rss_link = self._get_rss_link(html_res.text)
         self.debug(f"生成的rss: {rss_link}")
 
         if rss_link:
             container.site_repository().update_site_rssurl(site_info.get("id"), rss_link)
             self.info("生成RSS成功")
-            return True, f"【{site}】生成RSS成功"
+            return True, f"[{site}]生成RSS成功"
         else:
             self.info("生成RSS失败")
-            return True, f"【{site}生成RSS失败"
+            return True, f"[{site}生成RSS失败"
 
     @staticmethod
     def _get_rss_link(html_text: str) -> str:

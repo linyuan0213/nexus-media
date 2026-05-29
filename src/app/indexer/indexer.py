@@ -137,7 +137,7 @@ class Indexer:
 
         if filter_args and filter_args.get("site"):
             log.info(
-                f"【{_client_type or ''}】开始搜索 %s，站点：%s，并发数：%s ..."
+                f"[{_client_type or ''}]开始搜索 %s，站点：%s，并发数：%s ..."
                 % (key_word, filter_args.get("site"), max_workers)
             )
             self.progress.update(
@@ -145,7 +145,7 @@ class Indexer:
             )
         else:
             log.info(
-                f"【{_client_type or ''}】开始并行搜索 %s，站点数：%s，并发数：%s ..."
+                f"[{_client_type or ''}]开始并行搜索 %s，站点数：%s，并发数：%s ..."
                 % (key_word, len(indexers), max_workers)
             )
             self.progress.update(ptype=progress_key, text=f"开始并行搜索 {key_word}，站点数：{len(indexers)} ...")
@@ -178,7 +178,7 @@ class Indexer:
 
         end_time = datetime.datetime.now()
         log.info(
-            f"【{_client_type or ''}】搜索关键词 {key_word} 所有站点完成，"
+            f"[{_client_type or ''}]搜索关键词 {key_word} 所有站点完成，"
             f"原始结果 {len(all_raw_results)} 条，有效资源数：{len(pipeline_result.results)}，"
             f"总耗时 {(end_time - start_time).seconds} 秒"
         )

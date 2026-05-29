@@ -83,7 +83,7 @@ class Thunder(_IDownloadClient):
         except (InfrastructureError, NetworkError):
             raise
         except Exception as e:
-            log.error(f"【{self.client_name}】连接测试失败: {e!s}")
+            log.error(f"[{self.client_name}]连接测试失败: {e!s}")
             return False
 
     def get_torrents(
@@ -110,7 +110,7 @@ class Thunder(_IDownloadClient):
         except (InfrastructureError, NetworkError):
             raise
         except Exception as e:
-            log.error(f"【{self.client_name}】获取任务列表失败: {e!s}")
+            log.error(f"[{self.client_name}]获取任务列表失败: {e!s}")
             return [], True
 
     def get_downloading_torrents(
@@ -133,7 +133,7 @@ class Thunder(_IDownloadClient):
         except (InfrastructureError, NetworkError):
             raise
         except Exception as e:
-            log.error(f"【{self.client_name}】获取文件列表失败: {e!s}")
+            log.error(f"[{self.client_name}]获取文件列表失败: {e!s}")
             return None
 
     def set_torrents_status(self, ids: list[str] | str, tags: str | list[str] | None = None) -> bool:
@@ -172,13 +172,13 @@ class Thunder(_IDownloadClient):
                 elif content.endswith(".torrent") or os.path.exists(content):
                     magnet_url = self._client.torrent_to_magnet(content)
                     if not magnet_url:
-                        log.error("【{self.client_name}】种子文件转换磁力链接失败")
+                        log.error("[{self.client_name}]种子文件转换磁力链接失败")
                         return None
                     download_url = magnet_url
                 else:
                     download_url = content
             else:
-                log.error("【{self.client_name}】不支持二进制种子内容")
+                log.error("[{self.client_name}]不支持二进制种子内容")
                 return None
 
             folder_id = self._client._resolve_folder_id(download_dir or "/downloads/xunlei/")
@@ -192,7 +192,7 @@ class Thunder(_IDownloadClient):
         except (InfrastructureError, NetworkError):
             raise
         except Exception as e:
-            log.error(f"【{self.client_name}】添加下载任务失败: {e!s}")
+            log.error(f"[{self.client_name}]添加下载任务失败: {e!s}")
             ExceptionUtils.exception_traceback(e)
             return None
 
@@ -213,7 +213,7 @@ class Thunder(_IDownloadClient):
         except (InfrastructureError, NetworkError):
             raise
         except Exception as e:
-            log.error(f"【{self.client_name}】启动任务失败: {e!s}")
+            log.error(f"[{self.client_name}]启动任务失败: {e!s}")
             return False
 
     def stop_torrents(self, ids: list[str] | str | None = None) -> bool:
@@ -233,7 +233,7 @@ class Thunder(_IDownloadClient):
         except (InfrastructureError, NetworkError):
             raise
         except Exception as e:
-            log.error(f"【{self.client_name}】暂停任务失败: {e!s}")
+            log.error(f"[{self.client_name}]暂停任务失败: {e!s}")
             return False
 
     def delete_torrents(self, delete_file: bool = False, ids: list[str] | str | None = None) -> bool:
@@ -253,7 +253,7 @@ class Thunder(_IDownloadClient):
         except (InfrastructureError, NetworkError):
             raise
         except Exception as e:
-            log.error(f"【{self.client_name}】删除任务失败: {e!s}")
+            log.error(f"[{self.client_name}]删除任务失败: {e!s}")
             return False
 
     def get_download_dirs(self) -> list[str]:
@@ -339,5 +339,5 @@ class Thunder(_IDownloadClient):
         except (InfrastructureError, NetworkError):
             raise
         except Exception as e:
-            log.error(f"【{self.client_name}】转换任务信息失败: {e!s}")
+            log.error(f"[{self.client_name}]转换任务信息失败: {e!s}")
             return None

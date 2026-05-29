@@ -30,7 +30,7 @@ class JobRegistry:
             lock = get_lock_manager().create_lock(lock_key, lock_ttl)
             acquired = lock.acquire()
             if not acquired:
-                log.info(f"【Scheduler】任务 {job_id} 跳过执行（锁被占用）")
+                log.info(f"[Scheduler]任务 {job_id} 跳过执行（锁被占用）")
                 return None
             try:
                 return func(*args, **kwargs)

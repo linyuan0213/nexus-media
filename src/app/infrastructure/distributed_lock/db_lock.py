@@ -31,14 +31,14 @@ class DbDistributedLock(DistributedLock):
             )
             if result:
                 self._owned = True
-                log.debug(f"【DbLock】获取锁成功: {self._lock_key}")
+                log.debug(f"[DbLock]获取锁成功: {self._lock_key}")
             else:
-                log.debug(f"【DbLock】锁已被占用: {self._lock_key}")
+                log.debug(f"[DbLock]锁已被占用: {self._lock_key}")
             return result
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.error(f"【DbLock】获取锁异常: {self._lock_key}, {e}")
+            log.error(f"[DbLock]获取锁异常: {self._lock_key}, {e}")
             return False
 
     def release(self) -> None:
@@ -47,11 +47,11 @@ class DbDistributedLock(DistributedLock):
             return
         try:
             self._repo.release(self._lock_key, self._token)
-            log.debug(f"【DbLock】释放锁成功: {self._lock_key}")
+            log.debug(f"[DbLock]释放锁成功: {self._lock_key}")
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.error(f"【DbLock】释放锁异常: {self._lock_key}, {e}")
+            log.error(f"[DbLock]释放锁异常: {self._lock_key}, {e}")
         finally:
             self._owned = False
 
@@ -64,5 +64,5 @@ class DbDistributedLock(DistributedLock):
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.error(f"【DbLock】延长锁异常: {self._lock_key}, {e}")
+            log.error(f"[DbLock]延长锁异常: {self._lock_key}, {e}")
             return False

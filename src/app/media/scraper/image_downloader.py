@@ -33,7 +33,7 @@ class ImageDownloader:
         if not force and os.path.exists(image_path):
             return
         try:
-            log.info(f"【Scraper】正在下载{itype}图片：{url} ...")
+            log.info(f"[Scraper]正在下载{itype}图片：{url} ...")
             r = RequestUtils().get_res(url=url, raise_exception=True)
             if r:
                 if self._dst_backend:
@@ -41,18 +41,18 @@ class ImageDownloader:
                 else:
                     with open(file=image_path, mode="wb") as img:
                         img.write(r.content)
-                log.info(f"【Scraper】{itype}图片已保存：{image_path}")
+                log.info(f"[Scraper]{itype}图片已保存：{image_path}")
             else:
-                log.info(f"【Scraper】{itype}图片下载失败，请检查网络连通性")
+                log.info(f"[Scraper]{itype}图片下载失败，请检查网络连通性")
         except RequestException as ex:
             raise RequestException from ex
         except Exception as err:
-            log.error(f"【Scraper】下载{itype}图片失败：{image_path}，错误：{err}")
+            log.error(f"[Scraper]下载{itype}图片失败：{image_path}，错误：{err}")
             ExceptionUtils.exception_traceback(err)
 
     def save_nfo(self, doc, out_file):
         """保存 NFO XML 文件"""
-        log.info(f"【Scraper】正在保存NFO文件：{out_file}")
+        log.info(f"[Scraper]正在保存NFO文件：{out_file}")
         try:
             xml_str = doc.toprettyxml(indent="  ", encoding="utf-8")
             if self._dst_backend:
@@ -60,7 +60,7 @@ class ImageDownloader:
             else:
                 with open(out_file, "wb") as xml_file:
                     xml_file.write(xml_str)
-            log.info(f"【Scraper】NFO文件已保存：{out_file}")
+            log.info(f"[Scraper]NFO文件已保存：{out_file}")
         except Exception as err:
-            log.error(f"【Scraper】保存NFO文件失败：{out_file}，错误：{err}")
+            log.error(f"[Scraper]保存NFO文件失败：{out_file}，错误：{err}")
             ExceptionUtils.exception_traceback(err)

@@ -163,7 +163,7 @@ class AutoBackupPlugin:
         # 发送通知
         if notify:
             self.ctx.notify(
-                title="【自动备份任务完成】",
+                title="[自动备份任务完成]",
                 text=(
                     f"创建备份{'成功' if zip_file else '失败'}\n"
                     f"清理备份数量 {del_count}\n"

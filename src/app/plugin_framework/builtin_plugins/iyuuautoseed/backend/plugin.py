@@ -186,7 +186,7 @@ class IYUUAutoSeedPlugin:
 
         if notify and (self.success or self.fail):
             self.ctx.notify(
-                title="【IYUU自动辅种任务完成】",
+                title="[IYUU自动辅种任务完成]",
                 text=f"服务器返回可辅种总数：{self.total}\n"
                 f"实际可辅种数：{self.realtotal}\n"
                 f"已存在：{self.exist}\n"

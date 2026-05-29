@@ -181,7 +181,7 @@ class SubscribeService:
             if str(info.get("season")) == media_info.get_season_seq():
                 if info.get("episodes"):
                     log.info(
-                        "【Subscribe】更新电视剧 {} {} 缺失集数为 {}".format(
+                        "[Subscribe]更新电视剧 {} {} 缺失集数为 {}".format(
                             media_info.get_title_string(), media_info.get_season_string(), len(info.get("episodes"))
                         )
                     )

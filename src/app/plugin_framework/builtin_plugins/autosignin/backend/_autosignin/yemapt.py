@@ -52,7 +52,7 @@ class YemaPT(_ISiteSigninHandler):
                 )
                 if html_text and "已签到" in html_text:
                     self.info("今日已签到")
-                    return True, f"【{site}】今日已签到"
+                    return True, f"[{site}]今日已签到"
 
                 html_text = chrome.get_page_html(
                     url="https://www.yemapt.org/#/consumer/checkIn",
@@ -63,10 +63,10 @@ class YemaPT(_ISiteSigninHandler):
                 # 签到成功
                 if html_text and "已签到" in html_text:
                     self.info("签到成功")
-                    return True, f"【{site}】签到成功"
+                    return True, f"[{site}]签到成功"
             else:
                 self.error("签到失败，签到接口请求失败")
-                return False, f"【{site}】签到失败，cookie失效"
+                return False, f"[{site}]签到失败，cookie失效"
 
         else:
             self.info(f"{site} 开始签到")
@@ -75,25 +75,25 @@ class YemaPT(_ISiteSigninHandler):
             )
             if not html_res or html_res.status_code != 200:
                 self.error("签到失败，请检查站点连通性")
-                return False, f"【{site}】签到失败，请检查站点连通性"
+                return False, f"[{site}]签到失败，请检查站点连通性"
 
             if "login.php" in html_res.text:
                 self.error("签到失败，cookie失效")
-                return False, f"【{site}】签到失败，cookie失效"
+                return False, f"[{site}]签到失败，cookie失效"
 
             # 已签到
             if self._sign_text not in html_res.text:
                 self.info("今日已签到")
-                return True, f"【{site}】今日已签到"
+                return True, f"[{site}]今日已签到"
 
             sign_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
                 url="https://www.yemapt.org/api/consumer/checkIn"
             )
             if not sign_res or sign_res.status_code != 200:
                 self.error("签到失败，签到接口请求失败")
-                return False, f"【{site}】签到失败，签到接口请求失败"
+                return False, f"[{site}]签到失败，签到接口请求失败"
 
             # 签到成功
             if self._sign_text not in sign_res.text:
                 self.info("签到成功")
-                return True, f"【{site}】签到成功"
+                return True, f"[{site}]签到成功"

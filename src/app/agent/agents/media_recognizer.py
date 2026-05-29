@@ -51,29 +51,29 @@ class MediaRecognizer:
         """识别单个文件名"""
         if not self.ready:
             return None
-        log.info(f"【MediaRecognizer】识别单个文件名: {filename[:80]}...")
+        log.info(f"[MediaRecognizer]识别单个文件名: {filename[:80]}...")
         result = self._svc.structured_chat(
             messages=[{"role": "user", "content": filename}],
             system_prompt=MEDIA_RECOGNITION_PROMPT,
             response_model=MediaResult,
         )
         if result and (result.title_en or result.title_cn):
-            log.info(f"【MediaRecognizer】识别成功: cn={result.title_cn}, en={result.title_en}, type={result.type}")
+            log.info(f"[MediaRecognizer]识别成功: cn={result.title_cn}, en={result.title_en}, type={result.type}")
         else:
-            log.warn("【MediaRecognizer】识别失败或返回空结果")
+            log.warn("[MediaRecognizer]识别失败或返回空结果")
         return result
 
     def recognize_batch(self, filenames: list[str], batch_size: int = 0) -> list[MediaResult | None]:
         """批量识别文件名"""
         if not self.ready:
-            log.warn("【MediaRecognizer】批量识别失败：Provider 未就绪")
+            log.warn("[MediaRecognizer]批量识别失败：Provider 未就绪")
             return [None] * len(filenames)
 
         if batch_size <= 0:
             batch_size = (settings.get("agent") or {}).get("batch_size", 100)
 
         total = len(filenames)
-        log.info(f"【MediaRecognizer】批量识别开始: {total} 条, batch_size={batch_size}")
+        log.info(f"[MediaRecognizer]批量识别开始: {total} 条, batch_size={batch_size}")
         results: list[MediaResult | None] = []
         success_count = 0
         for i in range(0, total, batch_size):
@@ -96,7 +96,7 @@ class MediaRecognizer:
                     if r and (r.title_en or r.title_cn):
                         success_count += 1
             except Exception as e:
-                log.warn(f"【MediaRecognizer】Batch {i // batch_size + 1} 失败: {e}, fallback 单条识别")
+                log.warn(f"[MediaRecognizer]Batch {i // batch_size + 1} 失败: {e}, fallback 单条识别")
                 for f in batch:
                     try:
                         r = self.recognize(f)
@@ -105,5 +105,5 @@ class MediaRecognizer:
                             success_count += 1
                     except Exception:
                         results.append(None)
-        log.info(f"【MediaRecognizer】批量识别完成: {success_count}/{total} 成功")
+        log.info(f"[MediaRecognizer]批量识别完成: {success_count}/{total} 成功")
         return results

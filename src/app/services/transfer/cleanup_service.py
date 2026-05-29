@@ -44,7 +44,7 @@ class TransferCleanupService:
         if file == filedir:
             raise ValidationError("不能删除父目录")
 
-        log.info(f"【Delete】准备删除：filedir={filedir}, filename={filename}, file={file}")
+        log.info(f"[Delete]准备删除：filedir={filedir}, filename={filename}, file={file}")
 
         backend = self._resolve_backend_by_id(backend_id)
         if not backend:
@@ -53,7 +53,7 @@ class TransferCleanupService:
             raise ResourceNotFoundError("文件不存在")
 
         backend.remove(file, recursive=True)
-        log.info(f"【Delete】删除成功：{file}")
+        log.info(f"[Delete]删除成功：{file}")
 
     def _resolve_backend_by_id(self, backend_id: str):
         """根据 ID 解析存储后端（本地返回 LocalStorageBackend 实例）."""
@@ -102,7 +102,7 @@ class TransferCleanupService:
                             {"media_info": media_info_dict, "path": source_path, "filename": source_filename},
                         )
                     except (ServiceError, ResourceNotFoundError, ValidationError) as e:
-                        log.error(f"【Delete】删除源文件失败: {e.message}")
+                        log.error(f"[Delete]删除源文件失败: {e.message}")
                 if flag in ["del_dest", "del_all"]:
                     if str(dest_path) and str(dest_filename):
                         try:
@@ -112,7 +112,7 @@ class TransferCleanupService:
                                 {"media_info": media_info_dict, "path": dest_path, "filename": dest_filename},
                             )
                         except (ServiceError, ResourceNotFoundError, ValidationError) as e:
-                            log.error(f"【Delete】删除目标文件失败: {e.message}")
+                            log.error(f"[Delete]删除目标文件失败: {e.message}")
                     else:
                         mi = meta_info(title=str(source_filename or ""))
                         mi.title = str(transinfo.TITLE or "")

@@ -12,7 +12,7 @@ class ChineseCredits:
     def match(self, directors, actors, doubaninfo):
         """匹配并返回中文名替换后的导演/演员列表"""
         if not doubaninfo:
-            log.info("【Scraper】豆瓣无该影片或剧集信息")
+            log.info("[Scraper]豆瓣无该影片或剧集信息")
             return directors, actors
         if directors:
             douban_directors = doubaninfo.get("directors") or []
@@ -23,7 +23,7 @@ class ChineseCredits:
                 if matched:
                     director["name"] = matched.get("name")
                 else:
-                    log.info("【Scraper】豆瓣该影片或剧集无导演 {} 信息".format(director.get("name")))
+                    log.info("[Scraper]豆瓣该影片或剧集无导演 {} 信息".format(director.get("name")))
         if actors:
             douban_actors = doubaninfo.get("actors") or []
             for da in douban_actors:
@@ -35,7 +35,7 @@ class ChineseCredits:
                     if matched.get("character") != "演员":
                         actor["character"] = matched.get("character", "")[2:]
                 else:
-                    log.info("【Scraper】豆瓣该影片或剧集无演员 {} 信息".format(actor.get("name")))
+                    log.info("[Scraper]豆瓣该影片或剧集无演员 {} 信息".format(actor.get("name")))
         return directors, actors
 
     def _match_person(self, person, douban_people):

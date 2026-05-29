@@ -122,11 +122,11 @@ class EpisodeMapper:
                 return None
 
             self._blocks[tmdb_id] = blocks
-            log.info(f"【EpisodeMapper】TMDB {tmdb_id} 推断季结构: {blocks}")
+            log.info(f"[EpisodeMapper]TMDB {tmdb_id} 推断季结构: {blocks}")
             return blocks
 
         except Exception as e:
-            log.warn(f"【EpisodeMapper】推断失败: {e}")
+            log.warn(f"[EpisodeMapper]推断失败: {e}")
             return None
 
     def map(self, tmdb_id: int, source_season: int | None, source_episode: int | None) -> tuple[int, int] | None:
@@ -144,16 +144,16 @@ class EpisodeMapper:
             return None
 
         if source_season > len(blocks):
-            log.warn(f"【EpisodeMapper】源季号 {source_season} > 推断季数 {len(blocks)}")
+            log.warn(f"[EpisodeMapper]源季号 {source_season} > 推断季数 {len(blocks)}")
             return None
 
         _, start_ep, end_ep = blocks[source_season - 1]
         target_ep = start_ep + source_episode - 1
         if target_ep > end_ep:
-            log.warn(f"【EpisodeMapper】映射后集号 {target_ep} 超出范围 (E{start_ep}-E{end_ep})")
+            log.warn(f"[EpisodeMapper]映射后集号 {target_ep} 超出范围 (E{start_ep}-E{end_ep})")
             return None
 
-        log.info(f"【EpisodeMapper】TMDB:{tmdb_id} S{source_season:02d}E{source_episode:02d} → S01E{target_ep:02d}")
+        log.info(f"[EpisodeMapper]TMDB:{tmdb_id} S{source_season:02d}E{source_episode:02d} → S01E{target_ep:02d}")
         return 1, target_ep
 
     def map_auto(self, tmdb_id: int, source_season: int | None, source_episode: int | None) -> tuple[int, int] | None:
@@ -179,7 +179,7 @@ class EpisodeMapper:
             # 说明是 episode 超出范围，回退到绝对集号
             blocks = self._blocks.get(tmdb_id)
             if blocks and source_season <= len(blocks):
-                log.info(f"【EpisodeMapper】合并季映射失败（episode 超出范围），回退到绝对集号映射: E{source_episode}")
+                log.info(f"[EpisodeMapper]合并季映射失败（episode 超出范围），回退到绝对集号映射: E{source_episode}")
                 return self.map_absolute(tmdb_id, source_episode)
             # TMDB 已有该季，无需映射
             return None
@@ -268,15 +268,15 @@ class EpisodeMapper:
                 total += count
                 if start <= absolute_episode <= end:
                     log.info(
-                        f"【EpisodeMapper】TMDB:{tmdb_id} 绝对E{absolute_episode} → S{sn:02d}E{absolute_episode - start + 1:02d}"
+                        f"[EpisodeMapper]TMDB:{tmdb_id} 绝对E{absolute_episode} → S{sn:02d}E{absolute_episode - start + 1:02d}"
                     )
                     return sn, absolute_episode - start + 1
 
-            log.warn(f"【EpisodeMapper】绝对集号 {absolute_episode} 超出范围 (1-{total})")
+            log.warn(f"[EpisodeMapper]绝对集号 {absolute_episode} 超出范围 (1-{total})")
             return None
 
         except Exception as e:
-            log.warn(f"【EpisodeMapper】绝对集号映射失败: {e}")
+            log.warn(f"[EpisodeMapper]绝对集号映射失败: {e}")
             return None
 
     def invalidate(self, tmdb_id: int):

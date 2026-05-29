@@ -73,7 +73,7 @@ class APIKeyService:
                 raw_key=_raw_key,
             )
 
-            log.info(f"【APIKey】创建成功: {name} (ID={api_key.id})")
+            log.info(f"[APIKey]创建成功: {name} (ID={api_key.id})")
 
             return {
                 "id": api_key.id,
@@ -223,7 +223,7 @@ class APIKeyService:
                 description=f"系统自动创建: {name}",
                 raw_key=raw_key,
             )
-            log.info(f"【APIKey】系统 key 创建成功: {name} (ID={api_key.id})")
+            log.info(f"[APIKey]系统 key 创建成功: {name} (ID={api_key.id})")
             return raw_key
         except (ServiceError, RepositoryError):
             raise

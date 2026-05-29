@@ -116,7 +116,7 @@ class Plex(_IMediaClient):
                 except Exception as e:  # type: ignore[unreachable]
                     ExceptionUtils.exception_traceback(e)
                     self._plex = None
-                    log.error(f"【{self.client_name}】Plex服务器连接失败：{e!s}")
+                    log.error(f"[{self.client_name}]Plex服务器连接失败：{e!s}")
             elif self._username and self._password and self._servername:
                 try:
                     self._plex = MyPlexAccount(self._username, self._password).resource(self._servername).connect()
@@ -125,7 +125,7 @@ class Plex(_IMediaClient):
                 except Exception as e:  # type: ignore[unreachable]
                     ExceptionUtils.exception_traceback(e)
                     self._plex = None
-                    log.error(f"【{self.client_name}】Plex服务器连接失败：{e!s}")
+                    log.error(f"[{self.client_name}]Plex服务器连接失败：{e!s}")
 
     @classmethod
     def match(cls, ctype: Any) -> bool:
@@ -180,7 +180,7 @@ class Plex(_IMediaClient):
             raise
         except Exception as e:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】连接System/ActivityLog/Entries出错：" + str(e))
+            log.error(f"[{self.client_name}]连接System/ActivityLog/Entries出错：" + str(e))
             return []
         if ret_array:
             ret_array = sorted(ret_array, key=lambda x: x["date"], reverse=True)
@@ -297,7 +297,7 @@ class Plex(_IMediaClient):
             raise
         except Exception as e:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】获取剧集封面出错：" + str(e))
+            log.error(f"[{self.client_name}]获取剧集封面出错：" + str(e))
             return None
 
     def get_remote_image_by_id(self, item_id: Any, image_type: str) -> Any:
@@ -321,7 +321,7 @@ class Plex(_IMediaClient):
             raise
         except Exception as e:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【{self.client_name}】获取封面出错：" + str(e))
+            log.error(f"[{self.client_name}]获取封面出错：" + str(e))
         return None
 
     def get_local_image_by_id(self, item_id: Any, remote: bool = True) -> Any:
@@ -366,7 +366,7 @@ class Plex(_IMediaClient):
         else:
             # 否则一个一个刷新
             for path, lib_key in result_dict.items():
-                log.info(f"【{self.client_name}】刷新媒体库：{lib_key} : {path}")
+                log.info(f"[{self.client_name}]刷新媒体库：{lib_key} : {path}")
                 self._plex.query(f"/library/sections/{lib_key}/refresh?path={quote_plus(path)}")
 
     @staticmethod

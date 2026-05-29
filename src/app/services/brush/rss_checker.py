@@ -81,56 +81,56 @@ class BrushRssChecker:
             headers = {}
         headers.update({"User-Agent": ua})
         if taskinfo.get("state") != "Y":
-            log.info(f"【Brush】刷流任务 {task_name} 已停止下载新种！")
+            log.info(f"[Brush]刷流任务 {task_name} 已停止下载新种！")
             return
 
         site_info: Any = self._sites.get_sites(siteid=site_id)
         if not site_info:
-            log.error(f"【Brush】刷流任务 {task_name} 的站点已不存在，无法刷流！")
+            log.error(f"[Brush]刷流任务 {task_name} 的站点已不存在，无法刷流！")
             return
 
         site_id = site_info.get("id")
         site_name = site_info.get("name")
         site_proxy = site_info.get("proxy")
         if not site_info.get("brush_enable"):
-            log.error(f"【Brush】站点 {site_name} 未开启刷流功能，无法刷流！")
+            log.error(f"[Brush]站点 {site_name} 未开启刷流功能，无法刷流！")
             return
         if not rss_url:
-            log.error(f"【Brush】站点 {site_name} 未配置RSS订阅地址，无法刷流！")
+            log.error(f"[Brush]站点 {site_name} 未配置RSS订阅地址，无法刷流！")
             return
         if rss_free and (not cookie and not taskinfo.get("headers")):
-            log.warn(f"【Brush】站点 {site_name} 未配置Cookie或请求头，无法开启促销刷流")
+            log.warn(f"[Brush]站点 {site_name} 未配置Cookie或请求头，无法开启促销刷流")
             return
 
         if not self._helper._downloader.get_downloader_conf(downloader_id):
-            log.error(f"【Brush】任务 {task_name} 下载器不存在，无法刷流！")
+            log.error(f"[Brush]任务 {task_name} 下载器不存在，无法刷流！")
             return
 
-        log.info(f"【Brush】开始站点 {site_name} 的刷流任务：{task_name}...")
+        log.info(f"[Brush]开始站点 {site_name} 的刷流任务：{task_name}...")
         if not self._helper.is_allow_new_torrent(taskinfo=taskinfo, dlcount=rss_rule.get("dlcount")):
-            log.error(f"【Brush】站点 {site_name} 未开启刷流功能，无法刷流！")
+            log.error(f"[Brush]站点 {site_name} 未开启刷流功能，无法刷流！")
             return
         if not rss_url:
-            log.error(f"【Brush】站点 {site_name} 未配置RSS订阅地址，无法刷流！")
+            log.error(f"[Brush]站点 {site_name} 未配置RSS订阅地址，无法刷流！")
             return
         if rss_free and (not cookie and not taskinfo.get("headers")):
-            log.warn(f"【Brush】站点 {site_name} 未配置Cookie或请求头，无法开启促销刷流")
+            log.warn(f"[Brush]站点 {site_name} 未配置Cookie或请求头，无法开启促销刷流")
             return
 
         if not self._helper._downloader.get_downloader_conf(downloader_id):
-            log.error(f"【Brush】任务 {task_name} 下载器不存在，无法刷流！")
+            log.error(f"[Brush]任务 {task_name} 下载器不存在，无法刷流！")
             return
 
-        log.info(f"【Brush】开始站点 {site_name} 的刷流任务：{task_name}...")
+        log.info(f"[Brush]开始站点 {site_name} 的刷流任务：{task_name}...")
         if not self._helper.is_allow_new_torrent(taskinfo=taskinfo, dlcount=rss_rule.get("dlcount")):
             return
 
         rss_result = self._rsshelper.parse_rssxml(url=rss_url, proxy=bool(site_proxy))
         if rss_result is None:
-            log.error(f"【Brush】{task_name} RSS链接已过期，请重新获取！")
+            log.error(f"[Brush]{task_name} RSS链接已过期，请重新获取！")
             return
         if len(rss_result) == 0:
-            log.warn(f"【Brush】{site_name} RSS未下载到数据")
+            log.warn(f"[Brush]{site_name} RSS未下载到数据")
             return
 
         max_dlcount = rss_rule.get("dlcount")
@@ -175,7 +175,7 @@ class BrushRssChecker:
                         self._torrents_cache = set(list(self._torrents_cache)[5000:])
                     self._torrents_cache.add(enclosure)
                 else:
-                    log.debug(f"【Brush】{torrent_name} 已处理过")
+                    log.debug(f"[Brush]{torrent_name} 已处理过")
                     continue
 
                 torrent_attr = self._check_torrent_attr_if_needed(
@@ -206,7 +206,7 @@ class BrushRssChecker:
                 if not self._helper.is_allow_new_torrent(taskinfo=taskinfo, dlcount=max_dlcount, torrent_size=size):
                     continue
                 if self._helper.is_torrent_handled(enclosure=enclosure):
-                    log.info(f"【Brush】{torrent_name} 已在刷流任务中")
+                    log.info(f"[Brush]{torrent_name} 已在刷流任务中")
                     continue
 
                 if self._helper.download_torrent(
@@ -222,4 +222,4 @@ class BrushRssChecker:
             except Exception as err:
                 ExceptionUtils.exception_traceback(err)
                 continue
-        log.info(f"【Brush】任务 {task_name} 本次添加了 {success_count} 个下载")
+        log.info(f"[Brush]任务 {task_name} 本次添加了 {success_count} 个下载")

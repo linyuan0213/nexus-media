@@ -17,7 +17,7 @@ class CommandManager:
         if not cmd.startswith("/"):
             cmd = "/" + cmd
         self._plugin_commands[cmd] = {"plugin_id": plugin_id, "desc": desc, "func": func}
-        log.info(f"【Message】命令注册: {cmd} ({desc})")
+        log.info(f"[Message]命令注册: {cmd} ({desc})")
         self._refresh_client_menus()
 
     def unregister_command(self, cmd: str) -> None:
@@ -25,7 +25,7 @@ class CommandManager:
             cmd = "/" + cmd
         if cmd in self._plugin_commands:
             del self._plugin_commands[cmd]
-            log.info(f"【Message】命令注销: {cmd}")
+            log.info(f"[Message]命令注销: {cmd}")
             self._refresh_client_menus()
 
     def clear_plugin_commands(self, plugin_id: str) -> None:
@@ -33,7 +33,7 @@ class CommandManager:
         for cmd in to_remove:
             del self._plugin_commands[cmd]
         if to_remove:
-            log.info(f"【Message】插件 {plugin_id} 命令已清除: {to_remove}")
+            log.info(f"[Message]插件 {plugin_id} 命令已清除: {to_remove}")
             self._refresh_client_menus()
 
     def get_commands(self) -> dict:
@@ -61,6 +61,6 @@ class CommandManager:
                 try:
                     client.refresh_menu()
                 except Exception as e:
-                    log.warn(f"【Message】刷新 {ctype} 菜单失败: {e}")
+                    log.warn(f"[Message]刷新 {ctype} 菜单失败: {e}")
         if found:
-            log.info(f"【Message】菜单刷新完成，{found} 个客户端已更新")
+            log.info(f"[Message]菜单刷新完成，{found} 个客户端已更新")

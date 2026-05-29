@@ -44,16 +44,16 @@ class HDUpt(_ISiteSigninHandler):
         index_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(url="https://pt.hdupt.com")
         if not index_res or index_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
-            return False, f"【{site}】签到失败，请检查站点连通性"
+            return False, f"[{site}]签到失败，请检查站点连通性"
 
         if "login.php" in index_res.text:
             self.error("签到失败，cookie失效")
-            return False, f"【{site}】签到失败，cookie失效"
+            return False, f"[{site}]签到失败，cookie失效"
 
         sign_status = self.sign_in_result(html_res=index_res.text, regexs=self._sign_regex)
         if sign_status:
             self.info("今日已签到")
-            return True, f"【{site}】今日已签到"
+            return True, f"[{site}]今日已签到"
 
         # 签到
         sign_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).post_res(
@@ -61,13 +61,13 @@ class HDUpt(_ISiteSigninHandler):
         )
         if not sign_res or sign_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
-            return False, f"【{site}】签到失败，请检查站点连通性"
+            return False, f"[{site}]签到失败，请检查站点连通性"
 
         log.debug(f"签到接口返回 {sign_res.text}")
         # 判断是否已签到 sign_res.text = ".23"
         if len(list(map(int, re.findall(r"\d+", sign_res.text)))) > 0:
             self.info("签到成功")
-            return True, f"【{site}】签到成功"
+            return True, f"[{site}]签到成功"
 
         self.error(f"签到失败，签到接口返回 {sign_res.text}")
-        return False, f"【{site}】签到失败"
+        return False, f"[{site}]签到失败"

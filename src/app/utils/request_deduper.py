@@ -44,12 +44,12 @@ class RequestDeduper:
             if key in self._pending_requests:
                 self._stats["deduped_requests"] += 1
                 need_wait = True
-                log.debug(f"【RequestDeduper】检测到重复请求，等待共享结果: {key}")
+                log.debug(f"[RequestDeduper]检测到重复请求，等待共享结果: {key}")
             else:
                 event = threading.Event()
                 self._pending_requests[key] = (event, None, None)
                 self._stats["actual_requests"] += 1
-                log.debug(f"【RequestDeduper】开始执行请求: {key}")
+                log.debug(f"[RequestDeduper]开始执行请求: {key}")
 
         # 必须在完全释放锁后再进入可能阻塞的分支
         if need_wait:

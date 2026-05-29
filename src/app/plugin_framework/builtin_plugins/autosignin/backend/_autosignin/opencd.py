@@ -45,15 +45,15 @@ class Opencd(_ISiteSigninHandler):
         index_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(url="https://www.open.cd")
         if not index_res or index_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
-            return False, f"【{site}】签到失败，请检查站点连通性"
+            return False, f"[{site}]签到失败，请检查站点连通性"
 
         if "login.php" in index_res.text:
             self.error("签到失败，cookie失效")
-            return False, f"【{site}】签到失败，cookie失效"
+            return False, f"[{site}]签到失败，cookie失效"
 
         if self._repeat_text in index_res.text:
             self.info("今日已签到")
-            return True, f"【{site}】今日已签到"
+            return True, f"[{site}]今日已签到"
 
         # 获取签到参数
         sign_param_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
@@ -61,19 +61,19 @@ class Opencd(_ISiteSigninHandler):
         )
         if not sign_param_res or sign_param_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
-            return False, f"【{site}】签到失败，请检查站点连通性"
+            return False, f"[{site}]签到失败，请检查站点连通性"
 
         # 没有签到则解析html
         html = etree.HTML(sign_param_res.text)
         if not html:
-            return False, f"【{site}】签到失败"
+            return False, f"[{site}]签到失败"
 
         # 签到参数
         img_url = str(cast(list, html.xpath('//form[@id="frmSignin"]//img/@src'))[0] or "")
         img_hash = str(cast(list, html.xpath('//form[@id="frmSignin"]//input[@name="imagehash"]/@value'))[0] or "")
         if not img_url or not img_hash:
             self.error("签到失败，获取签到参数失败")
-            return False, f"【{site}】签到失败，获取签到参数失败"
+            return False, f"[{site}]签到失败，获取签到参数失败"
 
         # 完整验证码url
         img_get_url = f"https://www.open.cd/{img_url}"
@@ -107,10 +107,10 @@ class Opencd(_ISiteSigninHandler):
                 sign_dict = json.loads(sign_res.text)
                 if sign_dict["state"]:
                     self.info("签到成功")
-                    return True, f"【{site}】签到成功"
+                    return True, f"[{site}]签到成功"
                 else:
                     self.error(f"签到失败，签到接口返回 {sign_dict}")
-                    return False, f"【{site}】签到失败"
+                    return False, f"[{site}]签到失败"
 
         self.error("签到失败：未获取到验证码")
-        return False, f"【{site}】签到失败：未获取到验证码"
+        return False, f"[{site}]签到失败：未获取到验证码"

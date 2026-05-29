@@ -43,7 +43,7 @@ class TorrentRemoverActionEngine:
         config["samedata"] = task.get("samedata")
         config["only_nexus_media"] = task.get("only_nexus_media")
         torrents = downloader.get_remove_torrents(downloader_id=downloader_id, config=config)
-        log.info(f"【TorrentRemover】自动删种任务：{task.get('name')} 获取符合处理条件种子数 {len(torrents)}")
+        log.info(f"[TorrentRemover]自动删种任务：{task.get('name')} 获取符合处理条件种子数 {len(torrents)}")
 
         action = task.get("action")
         text_items = []
@@ -56,17 +56,17 @@ class TorrentRemoverActionEngine:
 
         if action == 1:
             for torrent in torrents:
-                log.info(f"【TorrentRemover】暂停种子：{torrent.get('name')}")
+                log.info(f"[TorrentRemover]暂停种子：{torrent.get('name')}")
                 downloader.stop_torrents(downloader_id=downloader_id, ids=[torrent.get("id")])
             return len(torrents), f"共暂停{len(torrents)}个种子\n" + "\n".join(text_items)
         elif action == 2:
             for torrent in torrents:
-                log.info(f"【TorrentRemover】删除种子：{torrent.get('name')}")
+                log.info(f"[TorrentRemover]删除种子：{torrent.get('name')}")
                 downloader.delete_torrents(downloader_id=downloader_id, delete_file=False, ids=[torrent.get("id")])
             return len(torrents), f"共删除{len(torrents)}个种子\n" + "\n".join(text_items)
         elif action == 3:
             for torrent in torrents:
-                log.info(f"【TorrentRemover】删除种子及文件：{torrent.get('name')}")
+                log.info(f"[TorrentRemover]删除种子及文件：{torrent.get('name')}")
                 downloader.delete_torrents(downloader_id=downloader_id, delete_file=True, ids=[torrent.get("id")])
             return len(torrents), f"共删除{len(torrents)}个种子（及文件）\n" + "\n".join(text_items)
         return len(torrents), ""
@@ -160,7 +160,7 @@ class TorrentRemoverService:
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=600)
         acquired = lock.acquire()
         if not acquired:
-            log.info("【TorrentRemover】删种任务正在执行，跳过")
+            log.info("[TorrentRemover]删种任务正在执行，跳过")
             return
         try:
             tasks = []
@@ -187,7 +187,7 @@ class TorrentRemoverService:
                         )
                 except Exception as e:
                     ExceptionUtils.exception_traceback(e)
-                    log.error(f"【TorrentRemover】自动删种任务：{task.get('name')}异常：{str(e)}")
+                    log.error(f"[TorrentRemover]自动删种任务：{task.get('name')}异常：{str(e)}")
         finally:
             lock.release()
 
@@ -300,4 +300,4 @@ class TorrentRemoverService:
         try:
             self._scheduler.remove_all_jobs(jobstore=self._jobstore)
         except Exception as e:
-            log.error(f"【TorrentRemover】停止服务异常: {str(e)}")
+            log.error(f"[TorrentRemover]停止服务异常: {str(e)}")

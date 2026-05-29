@@ -226,12 +226,12 @@ class RedisCacheAdapter(CacheAdapter):
             store = RedisStore()
             if store.is_available():
                 self._redis = store
-                log.debug(f"【Cache】Redis适配器初始化成功: {self._name}")
+                log.debug(f"[Cache]Redis适配器初始化成功: {self._name}")
             else:
-                log.info(f"【Cache】Redis不可用，使用内存回退: {self._name}")
+                log.info(f"[Cache]Redis不可用，使用内存回退: {self._name}")
                 self._redis = None
         except Exception as e:
-            log.info(f"【Cache】Redis适配器初始化失败，使用内存回退: {e}")
+            log.info(f"[Cache]Redis适配器初始化失败，使用内存回退: {e}")
             self._redis = None
 
     def _ensure_connection(self) -> bool:
@@ -264,7 +264,7 @@ class RedisCacheAdapter(CacheAdapter):
                     )
                     return value
             except Exception as e:
-                log.debug(f"【Cache】Redis get 失败，回退内存 {key}: {e}")
+                log.debug(f"[Cache]Redis get 失败，回退内存 {key}: {e}")
                 with self._lock:
                     self._stats["errors"] += 1
 
@@ -293,7 +293,7 @@ class RedisCacheAdapter(CacheAdapter):
                     self._stats["sets"] += 1
                 redis_ok = True
             except Exception as e:
-                log.debug(f"【Cache】Redis set 失败 {key}: {e}")
+                log.debug(f"[Cache]Redis set 失败 {key}: {e}")
                 with self._lock:
                     self._stats["errors"] += 1
 
@@ -320,7 +320,7 @@ class RedisCacheAdapter(CacheAdapter):
                     self._stats["deletes"] += 1
                 redis_ok = True
             except Exception as e:
-                log.debug(f"【Cache】Redis delete 失败 {key}: {e}")
+                log.debug(f"[Cache]Redis delete 失败 {key}: {e}")
 
         fallback_ok = self._fallback.delete(key)
 
@@ -346,7 +346,7 @@ class RedisCacheAdapter(CacheAdapter):
                 if keys:
                     self._redis.delete(*keys)
             except Exception as e:
-                log.debug(f"【Cache】Redis clear 失败: {e}")
+                log.debug(f"[Cache]Redis clear 失败: {e}")
 
         self._fallback.clear()
 
@@ -360,7 +360,7 @@ class RedisCacheAdapter(CacheAdapter):
             try:
                 redis_keys = self._redis.keys(pattern)
             except Exception as e:
-                log.debug(f"【Cache】Redis keys 失败: {e}")
+                log.debug(f"[Cache]Redis keys 失败: {e}")
 
         fallback_keys = self._fallback.keys(pattern)
         # 合并去重
@@ -383,7 +383,7 @@ class RedisCacheAdapter(CacheAdapter):
                 self._redis.expire(key, seconds)
                 redis_ok = True
             except Exception as e:
-                log.debug(f"【Cache】Redis expire 失败 {key}: {e}")
+                log.debug(f"[Cache]Redis expire 失败 {key}: {e}")
 
         fallback_ok = self._fallback.expire(key, seconds)
         return redis_ok or fallback_ok

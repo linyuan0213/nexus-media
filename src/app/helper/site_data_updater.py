@@ -37,7 +37,7 @@ class SiteDataUpdater:
 
             return True
         except Exception as e:
-            print(f"【Config】下载文件失败: {str(e)}")
+            print(f"[Config]下载文件失败: {str(e)}")
             return False
 
     @staticmethod
@@ -67,14 +67,14 @@ class SiteDataUpdater:
 
             if new_version > current_version:
                 shutil.move(temp_file, local_path)
-                print(f"【Config】sites.dat 已更新到版本 {new_version}")
+                print(f"[Config]sites.dat 已更新到版本 {new_version}")
             else:
                 os.remove(temp_file)
-                print(f"【Config】当前版本 {current_version} 已是最新")
+                print(f"[Config]当前版本 {current_version} 已是最新")
 
             return True
         except Exception as e:
-            print(f"【Config】更新sites.dat失败: {str(e)}")
+            print(f"[Config]更新sites.dat失败: {str(e)}")
             return False
 
     @staticmethod
@@ -87,4 +87,4 @@ class SiteDataUpdater:
         dst_version = SiteDataUpdater._get_sites_version(dst_sites) if os.path.exists(dst_sites) else "0"
         if not os.path.exists(dst_sites) or src_version > dst_version:
             shutil.copy2(src_sites, dst_sites)
-            print(f"【Config】sites.dat 已更新到版本 {src_version}")
+            print(f"[Config]sites.dat 已更新到版本 {src_version}")

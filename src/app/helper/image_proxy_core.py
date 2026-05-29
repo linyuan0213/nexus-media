@@ -79,11 +79,11 @@ def _clean_old_cache():
                     file_age = now - stat.st_mtime
                     if file_age > MAX_CACHE_DAYS * 24 * 3600:
                         os.remove(filepath)
-                        log.debug(f"【ImageProxy】删除过期缓存: {filepath}")
+                        log.debug(f"[ImageProxy]删除过期缓存: {filepath}")
                     else:
                         total_size += stat.st_size
                 except Exception as e:
-                    log.error(f"【ImageProxy】清理缓存失败: {str(e)}")
+                    log.error(f"[ImageProxy]清理缓存失败: {str(e)}")
 
         if total_size > MAX_CACHE_SIZE:
             files = []
@@ -102,11 +102,11 @@ def _clean_old_cache():
                 try:
                     os.remove(filepath)
                     total_size -= size
-                    log.debug(f"【ImageProxy】删除旧缓存释放空间: {filepath}")
+                    log.debug(f"[ImageProxy]删除旧缓存释放空间: {filepath}")
                 except Exception:
                     pass
     except Exception as e:
-        log.error(f"【ImageProxy】清理缓存失败: {str(e)}")
+        log.error(f"[ImageProxy]清理缓存失败: {str(e)}")
 
 
 def _download_image(url, timeout=10, referer=None):
@@ -143,7 +143,7 @@ def _download_image(url, timeout=10, referer=None):
             response.raise_for_status()
             return response.content
         except Exception as e:
-            log.error(f"【ImageProxy】下载图片失败 {url}: {str(e)}")
+            log.error(f"[ImageProxy]下载图片失败 {url}: {str(e)}")
             return None
         finally:
             with _download_locks_lock:
@@ -182,7 +182,7 @@ def _resize_image(image_data, target_size):
         img_resized.save(output, format="JPEG", quality=85, optimize=True)
         return output.getvalue()
     except Exception as e:
-        log.error(f"【ImageProxy】调整图片尺寸失败: {str(e)}")
+        log.error(f"[ImageProxy]调整图片尺寸失败: {str(e)}")
         return image_data
 
 

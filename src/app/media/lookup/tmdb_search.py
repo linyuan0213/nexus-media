@@ -29,10 +29,10 @@ class TmdbSearch:
             if movies and blacklist:
                 movies = [m for m in movies if not (m.get("id") and str(m.get("id")) in blacklist)]
         except TMDBError as err:
-            log.error(f"【Meta】连接TMDB出错：{str(err)}")
+            log.error(f"[Meta]连接TMDB出错：{str(err)}")
             return None
         except Exception as err:
-            log.error(f"【Meta】搜索电影时异常：{str(err)}")
+            log.error(f"[Meta]搜索电影时异常：{str(err)}")
             return None
         if not movies:
             return {}
@@ -76,7 +76,7 @@ class TmdbSearch:
                 try:
                     results[movie.get("id")] = future.result()
                 except Exception as err:
-                    log.error(f"【Meta】获取电影详情出错: {err}")
+                    log.error(f"[Meta]获取电影详情出错: {err}")
         for movie in candidates:
             res = results.get(movie.get("id"))
             if res:
@@ -97,10 +97,10 @@ class TmdbSearch:
             if tvs and blacklist:
                 tvs = [t for t in tvs if not (t.get("id") and str(t.get("id")) in blacklist)]
         except TMDBError as err:
-            log.error(f"【Meta】连接TMDB出错：{str(err)}")
+            log.error(f"[Meta]连接TMDB出错：{str(err)}")
             return None
         except Exception as err:
-            log.error(f"【Meta】搜索剧集时异常：{str(err)}")
+            log.error(f"[Meta]搜索剧集时异常：{str(err)}")
             return None
         if not tvs:
             return {}
@@ -112,7 +112,7 @@ class TmdbSearch:
             detail = self._get_detail(tv_info.get("id"), MediaType.TV)
             ep_count = detail.get("number_of_episodes", 0) if detail else 0
             if ep_count < episode:
-                log.debug(f"【Meta】{tv_info.get('name')} 集数({ep_count})不足({episode})，跳过")
+                log.debug(f"[Meta]{tv_info.get('name')} 集数({ep_count})不足({episode})，跳过")
                 return False
             return True
 
@@ -159,7 +159,7 @@ class TmdbSearch:
                 try:
                     results[tv.get("id")] = future.result()
                 except Exception as err:
-                    log.error(f"【Meta】获取剧集详情出错: {err}")
+                    log.error(f"[Meta]获取剧集详情出错: {err}")
         fuzzy_matches = []
         for tv in candidates:
             res = results.get(tv.get("id"))
@@ -171,7 +171,7 @@ class TmdbSearch:
                     if episode and episode > 50 and info:
                         ep_count = info.get("number_of_episodes", 0)
                         if ep_count < episode:
-                            log.debug(f"【Meta】{info.get('name')} 集数({ep_count})不足({episode})，跳过")
+                            log.debug(f"[Meta]{info.get('name')} 集数({ep_count})不足({episode})，跳过")
                             continue
                     fuzzy_matches.append(info)
         if fuzzy_matches:
@@ -206,7 +206,7 @@ class TmdbSearch:
                     for s in seasons
                 )
             except Exception as e:
-                log.error(f"【Meta】连接TMDB出错：{e}")
+                log.error(f"[Meta]连接TMDB出错：{e}")
                 return False
 
         def _episode_valid(tv_info):
@@ -214,7 +214,7 @@ class TmdbSearch:
                 return True
             ep_count = tv_info.get("number_of_episodes", 0) if tv_info else 0
             if ep_count < episode:
-                log.debug(f"【Meta】{tv_info.get('name')} 集数({ep_count})不足({episode})，跳过")
+                log.debug(f"[Meta]{tv_info.get('name')} 集数({ep_count})不足({episode})，跳过")
                 return False
             return True
 
@@ -224,10 +224,10 @@ class TmdbSearch:
             if tvs and blacklist:
                 tvs = [t for t in tvs if not (t.get("id") and str(t.get("id")) in blacklist)]
         except TMDBError as err:
-            log.error(f"【Meta】连接TMDB出错：{str(err)}")
+            log.error(f"[Meta]连接TMDB出错：{str(err)}")
             return None
         except Exception as err:
-            log.error(f"【Meta】按季搜索剧集时异常：{str(err)}")
+            log.error(f"[Meta]按季搜索剧集时异常：{str(err)}")
             return None
         if not tvs:
             return {}
@@ -252,7 +252,7 @@ class TmdbSearch:
                 try:
                     results[tv.get("id")] = future.result()
                 except Exception as err:
-                    log.error(f"【Meta】获取剧集详情出错: {err}")
+                    log.error(f"[Meta]获取剧集详情出错: {err}")
         for tv in candidates:
             res = results.get(tv.get("id"))
             if res:
@@ -267,10 +267,10 @@ class TmdbSearch:
         try:
             multis: Any = self.client.search.multi({"query": name}) or []
         except TMDBError as err:
-            log.error(f"【Meta】连接TMDB出错：{str(err)}")
+            log.error(f"[Meta]连接TMDB出错：{str(err)}")
             return None
         except Exception as err:
-            log.error(f"【Meta】多媒体搜索时异常：{str(err)}")
+            log.error(f"[Meta]多媒体搜索时异常：{str(err)}")
             return None
         if not multis:
             return {}
@@ -314,10 +314,10 @@ class TmdbSearch:
         try:
             multis: Any = self.client.search.multi({"query": name}) or []
         except TMDBError as err:
-            log.error(f"【Meta】连接TMDB出错：{str(err)}")
+            log.error(f"[Meta]连接TMDB出错：{str(err)}")
             return []
         except Exception as err:
-            log.error(f"【Meta】多媒体信息查询时异常：{str(err)}")
+            log.error(f"[Meta]多媒体信息查询时异常：{str(err)}")
             return []
         ret_infos = []
         for multi in multis:
@@ -338,10 +338,10 @@ class TmdbSearch:
                 params["year"] = year
             movies: Any = self.client.search.movies(params) or []
         except TMDBError as err:
-            log.error(f"【Meta】连接TMDB出错：{str(err)}")
+            log.error(f"[Meta]连接TMDB出错：{str(err)}")
             return []
         except Exception as err:
-            log.error(f"【Meta】电影信息查询时异常：{str(err)}")
+            log.error(f"[Meta]电影信息查询时异常：{str(err)}")
             return []
         ret_infos = []
         for movie in movies:
@@ -361,10 +361,10 @@ class TmdbSearch:
                 params["first_air_date_year"] = year
             tvs: Any = self.client.search.tv_shows(params) or []
         except TMDBError as err:
-            log.error(f"【Meta】连接TMDB出错：{str(err)}")
+            log.error(f"[Meta]连接TMDB出错：{str(err)}")
             return []
         except Exception as err:
-            log.error(f"【Meta】剧集信息查询时异常：{str(err)}")
+            log.error(f"[Meta]剧集信息查询时异常：{str(err)}")
             return []
         ret_infos = []
         for tv in tvs:
@@ -375,7 +375,7 @@ class TmdbSearch:
     def search_web(self, name: str, mtype: MediaType) -> Any:
         if not name or StringUtils.is_chinese(name):
             return None
-        log.info(f"【Meta】正在从TheDbMovie网站查询：{name}...")
+        log.info(f"[Meta]正在从TheDbMovie网站查询：{name}...")
         tmdb_url = f"https://www.themoviedb.org/search?query={name}"
         res = RequestUtils(timeout=5).get_res(url=tmdb_url)
         if not res or res.status_code != 200 or not res.text:
@@ -387,7 +387,7 @@ class TmdbSearch:
                 link for link in cast(list, html.xpath(xpath)) if link and (link.startswith(("/tv", "/movie")))
             ]
             if len(tmdb_links) != 1:
-                log.info(f"【Meta】{name} TMDB网站返回{'数据过多' if tmdb_links else '无'}结果")
+                log.info(f"[Meta]{name} TMDB网站返回{'数据过多' if tmdb_links else '无'}结果")
                 return None
             media_type = MediaType.TV if tmdb_links[0].startswith("/tv") else MediaType.MOVIE
             tmdbid = tmdb_links[0].split("/")[-1]
@@ -395,14 +395,14 @@ class TmdbSearch:
             if not tmdbinfo or (mtype == MediaType.TV and tmdbinfo.get("media_type") != MediaType.TV):
                 return None
             log.info(
-                f"【Meta】{name} 从WEB识别到 {'电影' if media_type == MediaType.MOVIE else '电视剧'}："
+                f"[Meta]{name} 从WEB识别到 {'电影' if media_type == MediaType.MOVIE else '电视剧'}："
                 f"TMDBID={tmdbinfo.get('id')}, "
                 f"名称={tmdbinfo.get('title' if media_type == MediaType.MOVIE else 'name')}, "
                 f"日期={tmdbinfo.get('release_date' if media_type == MediaType.MOVIE else 'first_air_date')}"
             )
             return tmdbinfo
         except Exception as err:
-            log.error(f"【Meta】TMDB网站查询出错：{str(err)}")
+            log.error(f"[Meta]TMDB网站查询出错：{str(err)}")
             return None
 
     def _fetch_allnames(self, mtype, tmdb_id):

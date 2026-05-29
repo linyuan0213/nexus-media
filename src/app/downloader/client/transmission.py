@@ -143,7 +143,7 @@ class Transmission(_IDownloadClient):
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
-            log.error(f"【{self.client_name}】{self.name} 连接出错：{err!s}")
+            log.error(f"[{self.client_name}]{self.name} 连接出错：{err!s}")
             return None
 
     def get_status(self) -> Any:
@@ -273,7 +273,7 @@ class Transmission(_IDownloadClient):
         # 打标签
         try:
             self.trc.change_torrent(labels=tags, ids=parsed_ids)
-            log.info(f"【{self.client_name}】{self.name} 设置种子标签成功")
+            log.info(f"[{self.client_name}]{self.name} 设置种子标签成功")
         except (InfrastructureError, NetworkError):
             raise
         except Exception as err:
@@ -289,7 +289,7 @@ class Transmission(_IDownloadClient):
         # 打标签
         try:
             self.trc.change_torrent(labels=tags, ids=parsed_ids)
-            log.info(f"【{self.client_name}】设置transmission种子标签成功")
+            log.info(f"[{self.client_name}]设置transmission种子标签成功")
         except (InfrastructureError, NetworkError):
             raise
         except Exception as err:
@@ -607,7 +607,7 @@ class Transmission(_IDownloadClient):
         if not self.trc:
             return
         if not path:
-            log.error(f"【{self.client_name}】{self.name} 未设置保存路径，获取磁盘剩余空间失败")
+            log.error(f"[{self.client_name}]{self.name} 未设置保存路径，获取磁盘剩余空间失败")
             return
         try:
             return self.trc.free_space(path)

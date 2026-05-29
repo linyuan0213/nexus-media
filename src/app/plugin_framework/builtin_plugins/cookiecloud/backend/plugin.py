@@ -274,6 +274,6 @@ class CookieCloudPlugin:
 
     def _send_message(self, msg):
         self.ctx.notify(
-            title="【CookieCloud 同步任务执行完成】",
+            title="[CookieCloud 同步任务执行完成]",
             text=msg,
         )

@@ -22,7 +22,7 @@ lock = Lock()
 
 
 def _log_error(site_name):
-    log.error(f"【Sites】站点 {site_name} 无法识别站点类型")
+    log.error(f"[Sites]站点 {site_name} 无法识别站点类型")
 
 
 class SiteUserInfo:
@@ -51,7 +51,7 @@ class SiteUserInfo:
         if site_headers is None:
             return None
         session = requests.Session()
-        log.debug(f"【Sites】站点 {site_name} url={url}")
+        log.debug(f"[Sites]站点 {site_name} url={url}")
 
         if self.sites is None:
             return
@@ -81,7 +81,7 @@ class SiteUserInfo:
             chrome = container.drissionpage_helper()
             html_text = chrome.get_page_html(url=url, cookies=site_cookie)
             if not html_text:
-                log.error(f"【Sites】{site_name} 跳转站点失败")
+                log.error(f"[Sites]{site_name} 跳转站点失败")
                 return None
         else:
             proxies = get_proxies() if proxy else None
@@ -97,7 +97,7 @@ class SiteUserInfo:
             elif res is not None:
                 html_text = None
             else:
-                log.error(f"【Sites】站点 {site_name} 无法访问：{url}")
+                log.error(f"[Sites]站点 {site_name} 无法访问：{url}")
                 return None
 
         return engine.get_user_info(
@@ -145,10 +145,10 @@ class SiteUserInfo:
                 proxy=proxy,
             )
             if site_user_info:
-                log.debug(f"【Sites】站点 {site_name} 开始以 {site_user_info.site_schema()} 模型解析")
+                log.debug(f"[Sites]站点 {site_name} 开始以 {site_user_info.site_schema()} 模型解析")
                 # 开始解析
                 site_user_info.parse()
-                log.debug(f"【Sites】站点 {site_name} 解析完成")
+                log.debug(f"[Sites]站点 {site_name} 解析完成")
 
                 if not site_user_info.site_favicon:
                     site_def = SiteEngine.get_instance().get_by_url(site_url)
@@ -187,7 +187,7 @@ class SiteUserInfo:
 
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            log.error(f"【Sites】站点 {site_name} 获取流量数据失败：{e!s}")
+            log.error(f"[Sites]站点 {site_name} 获取流量数据失败：{e!s}")
 
     def __notify_unread_msg(self, site_name, site_user_info, unread_msg_notify):
         if self.message is None:
@@ -202,7 +202,7 @@ class SiteUserInfo:
         # 解析出内容，则发送内容
         if len(site_user_info.message_unread_contents) > 0:
             for head, date, content in site_user_info.message_unread_contents:
-                msg_title = f"【站点 {site_user_info.site_name} 消息】"
+                msg_title = f"[站点 {site_user_info.site_name} 消息]"
                 msg_text = f"时间：{date}\n标题：{head}\n内容：\n{content}"
                 self.message.send_site_message(title=msg_title, text=msg_text)
         else:
@@ -219,7 +219,7 @@ class SiteUserInfo:
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=600)
         acquired = lock.acquire()
         if not acquired:
-            log.info("【Sites】站点数据刷新正在执行，跳过")
+            log.info("[Sites]站点数据刷新正在执行，跳过")
             return
         try:
             self.__refresh_all_site_data(force=True, specify_sites=specify_sites)
@@ -245,7 +245,7 @@ class SiteUserInfo:
                 inc_uploads += int(upload)
                 inc_downloads += int(download)
                 string_list.append(
-                    f"【{site}】\n"
+                    f"[{site}]\n"
                     f"上传量：{StringUtils.str_filesize(upload)}\n"
                     f"下载量：{StringUtils.str_filesize(download)}\n"
                     f"\n————————————"
@@ -309,22 +309,22 @@ class SiteUserInfo:
             site_user_infos = [info for info in site_user_infos if info]
 
         # 结果处理也在锁外
-        log.debug(f"【Sites】开始写入数据库，共 {len(site_user_infos)} 个站点")
+        log.debug(f"[Sites]开始写入数据库，共 {len(site_user_infos)} 个站点")
         t0 = time.time()
         self.site_repo.insert_site_statistics_history(site_user_infos)
-        log.debug(f"【Sites】insert_site_statistics_history 耗时 {time.time() - t0:.2f}s")
+        log.debug(f"[Sites]insert_site_statistics_history 耗时 {time.time() - t0:.2f}s")
         t0 = time.time()
         self.site_repo.update_site_user_statistics(site_user_infos)
-        log.debug(f"【Sites】update_site_user_statistics 耗时 {time.time() - t0:.2f}s")
+        log.debug(f"[Sites]update_site_user_statistics 耗时 {time.time() - t0:.2f}s")
         t0 = time.time()
         self.site_repo.update_site_favicon(site_user_infos)
-        log.debug(f"【Sites】update_site_favicon 耗时 {time.time() - t0:.2f}s")
+        log.debug(f"[Sites]update_site_favicon 耗时 {time.time() - t0:.2f}s")
         t0 = time.time()
         self.site_repo.update_site_seed_info(site_user_infos)
-        log.debug(f"【Sites】update_site_seed_info 耗时 {time.time() - t0:.2f}s")
+        log.debug(f"[Sites]update_site_seed_info 耗时 {time.time() - t0:.2f}s")
         t0 = time.time()
         self.sites.init_favicons()
-        log.debug(f"【Sites】init_favicons 耗时 {time.time() - t0:.2f}s")
+        log.debug(f"[Sites]init_favicons 耗时 {time.time() - t0:.2f}s")
 
     def get_pt_site_statistics_history(self, days=7, end_day=None):
         """

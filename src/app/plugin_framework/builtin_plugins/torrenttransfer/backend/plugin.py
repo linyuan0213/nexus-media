@@ -288,7 +288,7 @@ class TorrentTransferPlugin:
             self._check_recheck()
 
         if notify:
-            self.ctx.notify(title="【移转做种任务执行完成】", text=f"总数：{total}，成功：{success}，失败：{fail}")
+            self.ctx.notify(title="[移转做种任务执行完成]", text=f"总数：{total}，成功：{success}，失败：{fail}")
 
         self.ctx.info("移转做种任务执行完成")
 

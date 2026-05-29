@@ -98,15 +98,13 @@ class ApiSiteSearcher:
             params = self._render_template(params, **template_vars)
             res = RequestUtils(headers=headers, proxies=proxy, timeout=30).get_res(url=url, params=params)
         if not res or res.status_code != 200:
-            log.warn(
-                f"【ApiSiteSearcher】{self._site.name} 搜索失败: {res.status_code if res else '无响应'}, url={url}"
-            )
+            log.warn(f"[ApiSiteSearcher]{self._site.name} 搜索失败: {res.status_code if res else '无响应'}, url={url}")
             return []
         resp_data = res.json()
         result = self._parse_response(resp_data, search_config)
-        log.warn(f"【ApiSiteSearcher】{self._site.name} 返回 {len(result)} 条结果, url={url}")
+        log.warn(f"[ApiSiteSearcher]{self._site.name} 返回 {len(result)} 条结果, url={url}")
         if len(result) == 0:
-            log.warn(f"【ApiSiteSearcher】{self._site.name} raw resp: {str(resp_data)[:200]}")
+            log.warn(f"[ApiSiteSearcher]{self._site.name} raw resp: {str(resp_data)[:200]}")
         return result
 
     def _resolve_auth_tokens(self):

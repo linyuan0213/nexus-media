@@ -153,7 +153,7 @@ class TMDb:
         try:
             req = retry_handler.execute(do_request)
         except Exception as e:
-            logger.error(f"【TMDB】请求失败，重试后仍失败: {str(e)}")
+            logger.error(f"[TMDB]请求失败，重试后仍失败: {str(e)}")
             raise
 
         headers = req.headers
@@ -167,7 +167,7 @@ class TMDb:
         # 如果响应码是 429，说明被限流了，触发指数退避
         if req.status_code == 429:
             retry_after = int(headers.get("Retry-After", 1))
-            logger.warning(f"【TMDB】收到 429 响应，等待 {retry_after} 秒后重试")
+            logger.warning(f"[TMDB]收到 429 响应，等待 {retry_after} 秒后重试")
             time.sleep(retry_after)
             return self._call(action, append_to_response, call_cached, method, data)
 

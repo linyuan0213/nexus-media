@@ -58,7 +58,7 @@ class SiteConfigUpdater:
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.warn(f"【SiteConfigUpdater】查询远程版本失败: {e!s}")
+            log.warn(f"[SiteConfigUpdater]查询远程版本失败: {e!s}")
             return None
 
     def _find_asset_url(self, release_info: dict) -> str | None:
@@ -83,7 +83,7 @@ class SiteConfigUpdater:
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.warn(f"【SiteConfigUpdater】下载文件失败: {e!s}")
+            log.warn(f"[SiteConfigUpdater]下载文件失败: {e!s}")
             return False
 
     @staticmethod
@@ -95,17 +95,17 @@ class SiteConfigUpdater:
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.warn(f"【SiteConfigUpdater】解压失败: {e!s}")
+            log.warn(f"[SiteConfigUpdater]解压失败: {e!s}")
             return False
 
     def _validate_sites_dir(self, directory: str) -> bool:
         for sub in self._REQUIRED_SUBDIRS:
             if not os.path.isdir(os.path.join(directory, sub)):
-                log.warn(f"【SiteConfigUpdater】目录结构异常，缺少 {sub}/")
+                log.warn(f"[SiteConfigUpdater]目录结构异常，缺少 {sub}/")
                 return False
         has_json = any(f.endswith(".json") for root, _, files in os.walk(directory) for f in files)
         if not has_json:
-            log.warn("【SiteConfigUpdater】目录中未找到任何站点定义文件")
+            log.warn("[SiteConfigUpdater]目录中未找到任何站点定义文件")
             return False
         return True
 
@@ -154,11 +154,11 @@ class SiteConfigUpdater:
                 shutil.move(self._sites_dir, backup_dir)
             shutil.move(tmp_extract, self._sites_dir)
             self._write_local_version(remote_version)
-            log.info(f"【SiteConfigUpdater】站点配置已更新到 {remote_version}")
+            log.info(f"[SiteConfigUpdater]站点配置已更新到 {remote_version}")
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.error(f"【SiteConfigUpdater】替换配置失败: {e!s}")
+            log.error(f"[SiteConfigUpdater]替换配置失败: {e!s}")
             return {"success": False, "message": f"替换配置失败: {e!s}", "version": local_version}
         finally:
             if os.path.exists(tmp_zip):
@@ -175,14 +175,14 @@ class SiteConfigUpdater:
             for sub in ("api", "html")
         )
         if not has_valid_config and os.path.isdir(builtin_sites_dir):
-            log.info("【SiteConfigUpdater】本地站点配置不存在，从内置目录复制...")
+            log.info("[SiteConfigUpdater]本地站点配置不存在，从内置目录复制...")
             for sub in ("api", "html", "schema"):
                 src = os.path.join(builtin_sites_dir, sub)
                 dst = os.path.join(self._sites_dir, sub)
                 if os.path.isdir(src) and not os.path.exists(dst):
                     shutil.copytree(src, dst)
             self._write_local_version("builtin")
-            log.info("【SiteConfigUpdater】内置站点配置已复制到本地")
+            log.info("[SiteConfigUpdater]内置站点配置已复制到本地")
         return self._sites_dir
 
 
@@ -191,15 +191,15 @@ def update_site_config_at_startup() -> None:
         updater = SiteConfigUpdater()
         info = updater.get_version_info()
         if info.get("needs_update"):
-            log.info(f"【SiteConfigUpdater】发现新版本 {info['remote']}，开始自动更新...")
+            log.info(f"[SiteConfigUpdater]发现新版本 {info['remote']}，开始自动更新...")
             result = updater.update()
             if result["success"]:
-                log.info(f"【SiteConfigUpdater】{result['message']}")
+                log.info(f"[SiteConfigUpdater]{result['message']}")
             else:
-                log.warn(f"【SiteConfigUpdater】{result['message']}")
+                log.warn(f"[SiteConfigUpdater]{result['message']}")
         else:
-            log.info(f"【SiteConfigUpdater】当前站点配置版本: {info['local']}，无需更新")
+            log.info(f"[SiteConfigUpdater]当前站点配置版本: {info['local']}，无需更新")
     except (ServiceError, RepositoryError, DomainError):
         raise
     except Exception as e:
-        log.warn(f"【SiteConfigUpdater】启动时自动更新失败: {e!s}")
+        log.warn(f"[SiteConfigUpdater]启动时自动更新失败: {e!s}")

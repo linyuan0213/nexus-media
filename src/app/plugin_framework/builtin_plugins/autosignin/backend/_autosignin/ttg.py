@@ -44,25 +44,25 @@ class TTG(_ISiteSigninHandler):
         html_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(url="https://totheglory.im")
         if not html_res or html_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
-            return False, f"【{site}】签到失败，请检查站点连通性"
+            return False, f"[{site}]签到失败，请检查站点连通性"
 
         if "login.php" in html_res.text:
             self.error("签到失败，cookie失效")
-            return False, f"【{site}】签到失败，cookie失效"
+            return False, f"[{site}]签到失败，cookie失效"
 
         # 判断是否已签到
         html_res.encoding = "utf-8"
         sign_status = self.sign_in_result(html_res=html_res.text, regexs=self._sign_regex)
         if sign_status:
             self.info("今日已签到")
-            return True, f"【{site}】今日已签到"
+            return True, f"[{site}]今日已签到"
 
         # 获取签到参数
         signed_timestamp_match = re.search('(?<=signed_timestamp: ")\\d{10}', html_res.text)
         signed_token_match = re.search('(?<=signed_token: ").*(?=")', html_res.text)
         if not signed_timestamp_match or not signed_token_match:
             self.error("签到失败，无法获取签到参数")
-            return False, f"【{site}】签到失败，无法获取签到参数"
+            return False, f"[{site}]签到失败，无法获取签到参数"
         signed_timestamp = signed_timestamp_match.group()
         signed_token = signed_token_match.group()
         self.debug(f"signed_timestamp={signed_timestamp} signed_token={signed_token}")
@@ -74,15 +74,15 @@ class TTG(_ISiteSigninHandler):
         )
         if not sign_res or sign_res.status_code != 200:
             self.error("签到失败，签到接口请求失败")
-            return False, f"【{site}】签到失败，签到接口请求失败"
+            return False, f"[{site}]签到失败，签到接口请求失败"
 
         sign_res.encoding = "utf-8"
         if self._success_text in sign_res.text:
             self.info("签到成功")
-            return True, f"【{site}】签到成功"
+            return True, f"[{site}]签到成功"
         if self._sign_text in sign_res.text:
             self.info("今日已签到")
-            return True, f"【{site}】今日已签到"
+            return True, f"[{site}]今日已签到"
 
         self.error("签到失败，未知原因")
-        return False, f"【{site}】签到失败，未知原因"
+        return False, f"[{site}]签到失败，未知原因"

@@ -52,5 +52,5 @@ class GeminiProvider(BaseProvider):
             models = self._client.models.list()
             return [m.name for m in models]
         except Exception as e:
-            log.warn(f"【GeminiProvider】查询模型列表失败: {e}")
+            log.warn(f"[GeminiProvider]查询模型列表失败: {e}")
             return []

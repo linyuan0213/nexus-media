@@ -37,7 +37,7 @@ class RBACRoleService:
             self.role_repo.assign_permissions_to_role(role.id, permission_ids)
         if menu_ids:
             self.role_repo.assign_menus_to_role(role.id, menu_ids)
-        log.info(f"【RBAC】创建角色成功: {role_name}")
+        log.info(f"[RBAC]创建角色成功: {role_name}")
         return role
 
     def update_role(self, role_id: int, **kwargs) -> None:
@@ -57,7 +57,7 @@ class RBACRoleService:
         success = self.role_repo.delete_role(role_id)
         if not success:
             raise ResourceNotFoundError("删除失败")
-        log.info(f"【RBAC】删除角色: {role.ROLE_NAME}")
+        log.info(f"[RBAC]删除角色: {role.ROLE_NAME}")
 
     def get_role_by_id(self, role_id: int) -> RBACRole | None:
         return cast(RBACRole | None, self.role_repo.get_role_by_id(role_id))

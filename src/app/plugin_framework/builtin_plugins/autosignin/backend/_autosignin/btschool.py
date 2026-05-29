@@ -54,7 +54,7 @@ class BTSchool(_ISiteSigninHandler):
             # 已签到
             if self._sign_text not in html_text:
                 self.info("今日已签到")
-                return True, f"【{site}】今日已签到"
+                return True, f"[{site}]今日已签到"
 
             # 仿真签到
             msg, html_text = self.__chrome_visit(
@@ -71,7 +71,7 @@ class BTSchool(_ISiteSigninHandler):
             # 签到成功
             if self._sign_text not in html_text:
                 self.info("签到成功")
-                return True, f"【{site}】签到成功"
+                return True, f"[{site}]签到成功"
         else:
             self.info(f"{site} 开始签到")
             html_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
@@ -79,38 +79,38 @@ class BTSchool(_ISiteSigninHandler):
             )
             if not html_res or html_res.status_code != 200:
                 self.error("签到失败，请检查站点连通性")
-                return False, f"【{site}】签到失败，请检查站点连通性"
+                return False, f"[{site}]签到失败，请检查站点连通性"
 
             if "login.php" in html_res.text:
                 self.error("签到失败，cookie失效")
-                return False, f"【{site}】签到失败，cookie失效"
+                return False, f"[{site}]签到失败，cookie失效"
 
             # 已签到
             if self._sign_text not in html_res.text:
                 self.info("今日已签到")
-                return True, f"【{site}】今日已签到"
+                return True, f"[{site}]今日已签到"
 
             sign_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
                 url="https://pt.btschool.club/index.php?action=addbonus"
             )
             if not sign_res or sign_res.status_code != 200:
                 self.error("签到失败，签到接口请求失败")
-                return False, f"【{site}】签到失败，签到接口请求失败"
+                return False, f"[{site}]签到失败，签到接口请求失败"
 
             # 签到成功
             if self._sign_text not in sign_res.text:
                 self.info("签到成功")
-                return True, f"【{site}】签到成功"
+                return True, f"[{site}]签到成功"
 
     def __chrome_visit(self, chrome, url, ua, site_cookie, proxy, site):
         html_text = chrome.get_page_html(url=url, cookies=site_cookie)
 
         if not html_text:
             self.warn(f"{site} 获取站点源码失败")
-            return f"【{site}】仿真签到失败，获取站点源码失败！", None
+            return f"[{site}]仿真签到失败，获取站点源码失败！", None
         if "魔力值" not in html_text:
             self.error("签到失败，站点无法访问")
-            return f"【{site}】仿真签到失败，站点无法访问", None
+            return f"[{site}]仿真签到失败，站点无法访问", None
 
         # 站点访问正常，返回html
         return None, html_text

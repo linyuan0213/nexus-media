@@ -35,10 +35,10 @@ def init_rbac_menus():
 
             if menu:
                 created_count += 1
-                log.info(f"【RBAC初始化】创建菜单: {menu_data['name']}")
+                log.info(f"[RBAC初始化]创建菜单: {menu_data['name']}")
                 menu_id = menu.ID
             else:
-                log.error(f"【RBAC初始化】创建菜单失败: {menu_data['name']}")
+                log.error(f"[RBAC初始化]创建菜单失败: {menu_data['name']}")
                 return
         else:
             menu_id = existing.ID
@@ -50,5 +50,5 @@ def init_rbac_menus():
     for menu_data in DEFAULT_MENUS:
         create_menu_recursive(menu_data)
 
-    log.info(f"【RBAC初始化】菜单初始化完成，新增 {created_count} 个菜单")
+    log.info(f"[RBAC初始化]菜单初始化完成，新增 {created_count} 个菜单")
     return created_count

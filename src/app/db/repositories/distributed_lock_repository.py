@@ -54,7 +54,7 @@ class DistributedLockRepository(BaseRepository):
                 result = session.execute(stmt)
                 return result.rowcount > 0
         except Exception as e:
-            log.error(f"【DbLock】释放锁异常: {lock_key}, {e}")
+            log.error(f"[DbLock]释放锁异常: {lock_key}, {e}")
             return False
 
     def extend(self, lock_key: str, token: str, additional_seconds: int) -> bool:
@@ -72,7 +72,7 @@ class DistributedLockRepository(BaseRepository):
                 result = session.execute(stmt)
                 return result.rowcount > 0
         except Exception as e:
-            log.error(f"【DbLock】延长锁异常: {lock_key}, {e}")
+            log.error(f"[DbLock]延长锁异常: {lock_key}, {e}")
             return False
 
     def get_by_key(self, lock_key: str) -> DISTRIBUTEDLOCK | None:

@@ -22,17 +22,17 @@ def check_config():
         if logtype == "server":
             logserver = _log_cfg.get("server")
             if not logserver:
-                log.warn("【Config】日志中心地址未配置，无法正常输出日志")
+                log.warn("[Config]日志中心地址未配置，无法正常输出日志")
             else:
                 log.info(f"日志将上送到服务器：{logserver}")
         elif logtype == "file":
             logpath = _log_cfg.get("path")
             if not logpath:
-                log.warn("【Config】日志文件路径未配置，无法正常输出日志")
+                log.warn("[Config]日志文件路径未配置，无法正常输出日志")
             else:
                 log.info(f"日志将写入文件：{logpath}")
     else:
-        log.error("【Config】配置文件格式错误，找不到log配置项！")
+        log.error("[Config]配置文件格式错误，找不到log配置项！")
 
     # 检测系统设置
     _app_cfg = settings.get("app")
@@ -40,13 +40,13 @@ def check_config():
         # 检查WEB端口
         web_port = _app_cfg.get("web_port")
         if not web_port:
-            log.warn("【Config】WEB服务端口未设置，将使用默认3000端口")
+            log.warn("[Config]WEB服务端口未设置，将使用默认3000端口")
 
         # 检查登录用户和密码
         login_user = _app_cfg.get("login_user")
         login_password = _app_cfg.get("login_password")
         if not login_user or not login_password:
-            log.warn("【Config】WEB管理用户或密码未设置，将使用默认用户：admin，密码：password")
+            log.warn("[Config]WEB管理用户或密码未设置，将使用默认用户：admin，密码：password")
         else:
             log.info(f"WEB管理页面用户：{login_user!s}")
 
@@ -59,12 +59,12 @@ def check_config():
             log.info(f"未启用https，请使用 http://IP:{web_port!s} 访问管理页面")
         else:
             if not os.path.exists(ssl_cert):
-                log.warn(f"【Config】ssl_cert文件不存在：{ssl_cert}")
+                log.warn(f"[Config]ssl_cert文件不存在：{ssl_cert}")
             if not os.path.exists(ssl_key):
-                log.warn(f"【Config】ssl_key文件不存在：{ssl_key}")
+                log.warn(f"[Config]ssl_key文件不存在：{ssl_key}")
             log.info(f"已启用https，请使用 https://IP:{web_port!s} 访问管理页面")
     else:
-        log.error("【Config】配置文件格式错误，找不到app配置项！")
+        log.error("[Config]配置文件格式错误，找不到app配置项！")
 
 
 def update_config():
@@ -102,7 +102,7 @@ def update_config():
                 # 2. 删除旧位置的数据
                 app_config.pop(old_key)
                 migrated = True
-                log.info(f"【Config】日志配置已迁移：app.{old_key} -> log.{new_key}，并已移除旧配置。")
+                log.info(f"[Config]日志配置已迁移：app.{old_key} -> log.{new_key}，并已移除旧配置。")
 
         if migrated:
             overwrite_config = True
@@ -159,9 +159,9 @@ def init_message_webhook_apikey():
     """
     try:
         container.apikey_service().get_or_create_system_key("MessageWebhook")
-        log.info("【Initialize】消息 Webhook API Key 已就绪")
+        log.info("[Initialize]消息 Webhook API Key 已就绪")
     except Exception as e:
-        log.error(f"【Initialize】消息 Webhook API Key 初始化失败：{e!s}")
+        log.error(f"[Initialize]消息 Webhook API Key 初始化失败：{e!s}")
         ExceptionUtils.exception_traceback(e)
 
 
@@ -171,9 +171,9 @@ def update_rss_state():
     """
     try:
         RssRepository().reset_rss_state()
-        log.info("【Initialize】RSS订阅状态已更新为正在订阅")
+        log.info("[Initialize]RSS订阅状态已更新为正在订阅")
     except Exception as e:
-        log.error(f"【Initialize】更新RSS状态失败：{e!s}")
+        log.error(f"[Initialize]更新RSS状态失败：{e!s}")
         ExceptionUtils.exception_traceback(e)
 
 
@@ -198,8 +198,8 @@ def init_rbac_system():
 
         # 创建管理员用户
         init_admin_user(login_user, login_password)
-        log.info(f"【Initialize】RBAC 系统初始化完成，管理员: {login_user}")
+        log.info(f"[Initialize]RBAC 系统初始化完成，管理员: {login_user}")
 
     except Exception as e:
-        log.error(f"【Initialize】RBAC 系统初始化失败: {e!s}")
+        log.error(f"[Initialize]RBAC 系统初始化失败: {e!s}")
         ExceptionUtils.exception_traceback(e)

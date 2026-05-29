@@ -189,7 +189,7 @@ class Sites:
             return False
         state, msg = self._limiters[site_id].check_rate_limit()
         if msg:
-            log.warn(f"【Sites】站点 {self._site_by_ids[site_id].get('name')} {msg}")
+            log.warn(f"[Sites]站点 {self._site_by_ids[site_id].get('name')} {msg}")
         return state
 
     def get_sites_by_suffix(self, suffix):

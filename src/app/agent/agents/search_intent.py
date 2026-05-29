@@ -35,7 +35,7 @@ class SearchIntentAgent:
         """解析用户搜索意图"""
         if not self.ready:
             return None
-        log.info(f"【SearchIntentAgent】解析意图: {query[:80]}...")
+        log.info(f"[SearchIntentAgent]解析意图: {query[:80]}...")
         result = self._svc.structured_chat(
             messages=[{"role": "user", "content": query}],
             system_prompt=SEARCH_INTENT_PROMPT,
@@ -43,11 +43,11 @@ class SearchIntentAgent:
         )
         if result and result.is_specific:
             log.info(
-                f"【SearchIntentAgent】解析成功: keywords={result.keywords}, type={result.media_type}, "
+                f"[SearchIntentAgent]解析成功: keywords={result.keywords}, type={result.media_type}, "
                 f"season={result.season}, ep={result.episode}, year={result.year}"
             )
         elif result:
-            log.info(f"【SearchIntentAgent】意图不明确: keywords={result.keywords}")
+            log.info(f"[SearchIntentAgent]意图不明确: keywords={result.keywords}")
         else:
-            log.warn("【SearchIntentAgent】解析失败")
+            log.warn("[SearchIntentAgent]解析失败")
         return result

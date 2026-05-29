@@ -35,7 +35,7 @@ class RedisMessageQueue(MessageQueue):
         if self._available:
             self._init_stream()
             self._start_dispatcher()
-            log.info("【RedisMessageQueue】Redis Stream 队列已启动")
+            log.info("[RedisMessageQueue]Redis Stream 队列已启动")
 
     def _init_stream(self):
         """初始化 Stream 和消费者组"""
@@ -50,7 +50,7 @@ class RedisMessageQueue(MessageQueue):
                     if "already exists" not in str(e):
                         raise
         except Exception as e:
-            log.error(f"【RedisMessageQueue】初始化 Stream 失败: {e}")
+            log.error(f"[RedisMessageQueue]初始化 Stream 失败: {e}")
             self._available = False
 
     def _start_dispatcher(self):
@@ -66,7 +66,7 @@ class RedisMessageQueue(MessageQueue):
         if self._dispatcher and self._dispatcher.is_alive():
             self._dispatcher.join(timeout=timeout)
         self._executor.shutdown(wait=wait)
-        log.info("【RedisMessageQueue】队列已停止")
+        log.info("[RedisMessageQueue]队列已停止")
 
     def register_handler(self, handler: Callable) -> None:
         """注册消息处理器，处理器接收 (title, text, image, url, user_id, client_id, client_type)"""
@@ -109,7 +109,7 @@ class RedisMessageQueue(MessageQueue):
         stream_id = self._redis.xadd(STREAM_KEY, payload, max_len=10000)
         if stream_id:
             self._redis.set(f"{DEDUP_KEY}:{msg_id}", "1", ex=DEDUP_TTL)
-            log.info(f"【RedisMessageQueue】消息已入队: {name} (id={stream_id})")
+            log.info(f"[RedisMessageQueue]消息已入队: {name} (id={stream_id})")
             return True
         return False
 
@@ -137,10 +137,10 @@ class RedisMessageQueue(MessageQueue):
                         }
                         self._executor.submit(self._process_message, msg_id, fields)
             except TimeoutError as e:
-                log.debug(f"【RedisMessageQueue】xreadgroup 超时，将重试: {e}")
+                log.debug(f"[RedisMessageQueue]xreadgroup 超时，将重试: {e}")
                 time.sleep(1)
             except Exception as e:
-                log.error(f"【RedisMessageQueue】分发异常: {e}")
+                log.error(f"[RedisMessageQueue]分发异常: {e}")
                 time.sleep(1)
 
     def _process_message(self, msg_id: str, fields: dict):
@@ -158,9 +158,9 @@ class RedisMessageQueue(MessageQueue):
                 self._handler(title, text, image, url, user_id, client_id, client_type)
 
             self._redis.xack(STREAM_KEY, CONSUMER_GROUP, msg_id)
-            log.info(f"【RedisMessageQueue】消息处理成功: {name}")
+            log.info(f"[RedisMessageQueue]消息处理成功: {name}")
         except Exception as e:
-            log.error(f"【RedisMessageQueue】消息处理失败: {e}")
+            log.error(f"[RedisMessageQueue]消息处理失败: {e}")
             # 不 ACK，保留在 Pending 列表中自动重试
 
     @property

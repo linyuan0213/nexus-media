@@ -162,7 +162,7 @@ class DatabaseFactory:
 
         except Exception as e:
             # 记录错误但不抛出，让后续连接尝试决定最终成败
-            print(f"【DatabaseFactory】自动创建数据库 {database} 失败: {str(e)}")
+            print(f"[DatabaseFactory]自动创建数据库 {database} 失败: {str(e)}")
 
     @staticmethod
     def create_engine(db_type: str | None = None, db_path: str | None = None, **kwargs) -> Engine:

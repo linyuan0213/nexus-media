@@ -56,43 +56,43 @@ _secret_key = get_secret_key()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理：启动后台服务"""
-    log.info("【FastAPI】初始化数据库表结构...")
+    log.info("[FastAPI]初始化数据库表结构...")
     init_db()
-    log.info("【FastAPI】初始化站点配置...")
+    log.info("[FastAPI]初始化站点配置...")
     try:
         updater = SiteConfigUpdater()
         updater.ensure_local_sites(SiteEngine._BUILTIN_DEFINITIONS_DIR)
         update_site_config_at_startup()
     except Exception as e:
-        log.warn(f"【FastAPI】站点配置初始化失败: {e!s}")
-    log.info("【FastAPI】启动后台服务...")
+        log.warn(f"[FastAPI]站点配置初始化失败: {e!s}")
+    log.info("[FastAPI]启动后台服务...")
     container.system_lifecycle_service().start_service()
-    log.info("【FastAPI】后台服务启动完成")
+    log.info("[FastAPI]后台服务启动完成")
     # 注册内置索引器
     init_indexers()
-    log.info("【FastAPI】索引器注册完成")
+    log.info("[FastAPI]索引器注册完成")
     # 注册内置下载器
     init_downloaders()
-    log.info("【FastAPI】下载器注册完成")
+    log.info("[FastAPI]下载器注册完成")
     # 注册内置媒体服务器
     init_mediaservers()
-    log.info("【FastAPI】媒体服务器注册完成")
+    log.info("[FastAPI]媒体服务器注册完成")
     # 注册内置消息客户端
     init_message_clients()
-    log.info("【FastAPI】消息客户端注册完成")
+    log.info("[FastAPI]消息客户端注册完成")
     # 加载插件（在消息菜单刷新之前，确保插件命令能显示）
     container.plugin_sandbox().load_all()
-    log.info("【FastAPI】插件加载完成")
+    log.info("[FastAPI]插件加载完成")
     # 预初始化消息客户端（避免 webhook 首次调用时客户端尚未就绪）
     _ = container.message().active_clients
-    log.info("【FastAPI】消息客户端初始化完成")
+    log.info("[FastAPI]消息客户端初始化完成")
     # 系统启动完成后统一刷新菜单（确保包含插件命令）
     container.message().refresh_menus()
-    log.info("【FastAPI】消息菜单刷新完成")
+    log.info("[FastAPI]消息菜单刷新完成")
     yield
-    log.info("【FastAPI】关闭后台服务...")
+    log.info("[FastAPI]关闭后台服务...")
     SystemLifecycleService().stop_service()
-    log.info("【FastAPI】后台服务已关闭")
+    log.info("[FastAPI]后台服务已关闭")
 
 
 app = FastAPI(

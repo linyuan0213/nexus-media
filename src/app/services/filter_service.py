@@ -107,7 +107,7 @@ class FilterRuleEngine:
                 else:
                     group_match = False
             except Exception as err:
-                log.error(f"【Filter】过滤规则出现严重错误 {err}，请检查：{filter_info}")
+                log.error(f"[Filter]过滤规则出现严重错误 {err}，请检查：{filter_info}")
 
         if not group_match:
             return False, 0, group_name

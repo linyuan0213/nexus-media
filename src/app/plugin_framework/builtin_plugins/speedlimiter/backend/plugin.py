@@ -200,7 +200,7 @@ class SpeedLimiterPlugin:
             if self._notify:
                 limit_text = "\n".join(limit_log)
                 title = (
-                    f"【{'定时检查' if time_check else mediaserver_type}{'开始' if _playing_flag else '停止'}播放限速】"
+                    f"[{'定时检查' if time_check else mediaserver_type}{'开始' if _playing_flag else '停止'}播放限速]"
                 )
                 self.ctx.notify(title=title, text=f"{message}\n{limit_text}")
 

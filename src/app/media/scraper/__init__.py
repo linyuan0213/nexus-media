@@ -61,15 +61,15 @@ class Scraper:
             force_pic = mode == "force_all"
             self._downloader.set_dst_backend(dst_backend)
             files = list(MediaLibrary.get_library_files(path, exclude_path, backend=dst_backend))
-            log.info(f"【Scraper】发现 {len(files)} 个待刮削文件")
+            log.info(f"[Scraper]发现 {len(files)} 个待刮削文件")
             for file in files:
                 if not file:
                     continue
-                log.info(f"【Scraper】开始刮削媒体库文件：{file} ...")
+                log.info(f"[Scraper]开始刮削媒体库文件：{file} ...")
                 mi = meta_info(os.path.basename(file))
                 tmdbid = self._extract_tmdbid(file, mi, dst_backend)
                 if tmdbid and not force_nfo:
-                    log.info(f"【Scraper】读取到本地nfo文件的tmdbid：{tmdbid}")
+                    log.info(f"[Scraper]读取到本地nfo文件的tmdbid：{tmdbid}")
                     mi.set_tmdb_info(self.media.get_tmdb_info(mtype=mi.type, tmdbid=tmdbid, append_to_response="all"))
                     media_info = mi
                 else:
@@ -77,11 +77,11 @@ class Scraper:
                         file_list=[file], append_to_response="all", backend=dst_backend
                     )
                     if not medias:
-                        log.warn(f"【Scraper】{file} 无法识别媒体信息")
+                        log.warn(f"[Scraper]{file} 无法识别媒体信息")
                         continue
                     media_info = next(iter(medias.values()), None)
                 if not media_info or not media_info.tmdb_info:
-                    log.warn(f"【Scraper】{file} 无法获取TMDB信息")
+                    log.warn(f"[Scraper]{file} 无法获取TMDB信息")
                     continue
                 self.gen_scraper_files(
                     media=media_info,
@@ -93,9 +93,9 @@ class Scraper:
                     force_pic=force_pic,
                     dst_backend=dst_backend,
                 )
-                log.info(f"【Scraper】{file} 刮削完成")
+                log.info(f"[Scraper]{file} 刮削完成")
         except Exception as e:
-            log.error(f"【Scraper】刮削异常：{e}")
+            log.error(f"[Scraper]刮削异常：{e}")
             ExceptionUtils.exception_traceback(e)
 
     def _extract_tmdbid(self, file_path, meta_info, dst_backend=None):
@@ -129,17 +129,17 @@ class Scraper:
     ):
         """刮削元数据入口"""
         if not force and not self._scraper_flag:
-            log.warn("【Scraper】刮削标志未启用，跳过")
+            log.warn("[Scraper]刮削标志未启用，跳过")
             return
         if not self._scraper_nfo and not self._scraper_pic:
-            log.warn("【Scraper】刮削配置为空，跳过")
+            log.warn("[Scraper]刮削配置为空，跳过")
             return
         self._scraper_nfo = self._scraper_nfo or {}
         self._scraper_pic = self._scraper_pic or {}
         self._dst_backend = dst_backend
         self._downloader.set_dst_backend(dst_backend)
         log.info(
-            f"【Scraper】开始生成刮削文件：dir={dir_path}, file={file_name}, type={media.type}, backend={dst_backend is not None}"
+            f"[Scraper]开始生成刮削文件：dir={dir_path}, file={file_name}, type={media.type}, backend={dst_backend is not None}"
         )
 
         try:
@@ -147,9 +147,9 @@ class Scraper:
                 self._scrape_movie(media, dir_path, file_name, force_nfo, force_pic)
             else:
                 self._scrape_tv(media, dir_path, file_name, file_ext, force_nfo, force_pic)
-            log.info(f"【Scraper】刮削文件生成完成：{file_name}")
+            log.info(f"[Scraper]刮削文件生成完成：{file_name}")
         except Exception as e:
-            log.error(f"【Scraper】刮削文件生成失败：{file_name}，错误：{e}")
+            log.error(f"[Scraper]刮削文件生成失败：{file_name}，错误：{e}")
             ExceptionUtils.exception_traceback(e)
 
     def _scrape_movie(self, media, dir_path, file_name, force_nfo, force_pic):
@@ -263,9 +263,9 @@ class Scraper:
                     self._downloader.download(episode_image, episode_thumb, "", force_pic)
                 elif scraper_tv_pic.get("episode_thumb_ffmpeg"):
                     video_path = os.path.join(dir_path, file_name + file_ext)
-                    log.info(f"【Scraper】正在生成缩略图：{video_path} ...")
+                    log.info(f"[Scraper]正在生成缩略图：{video_path} ...")
                     FfmpegHelper().get_thumb_image_from_video(video_path=video_path, image_path=episode_thumb)
-                    log.info(f"【Scraper】缩略图生成完成：{episode_thumb}")
+                    log.info(f"[Scraper]缩略图生成完成：{episode_thumb}")
 
     def _fetch_douban(self, media, scraper_nfo):
         """获取豆瓣信息（用于中文演职人员）"""

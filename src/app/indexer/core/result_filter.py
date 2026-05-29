@@ -75,7 +75,7 @@ class ResultFilter:
 
         self._rule_cache[cache_key] = (rulegroup_info, filters)
         log.info(
-            f"【ResultFilter】加载规则组: {rulegroup_info.get('name')} (ID={rulegroup_info.get('id')}), 规则数: {len(filters)}"
+            f"[ResultFilter]加载规则组: {rulegroup_info.get('name')} (ID={rulegroup_info.get('id')}), 规则数: {len(filters)}"
         )
         return rulegroup_info, filters
 
@@ -196,13 +196,13 @@ class ResultFilter:
             indexer_public = item.get("_indexer_public", False)
 
             if filter_args.get("seeders") and not indexer_public and str(seeders) == "0":
-                log.info(f"【ResultFilter】{torrent_name} 做种数为0")
+                log.info(f"[ResultFilter]{torrent_name} 做种数为0")
                 stats.index_rule_fail += 1
                 continue
 
             mi = meta_info(title=torrent_name, subtitle=f"{labels} {description}")
             if not mi.get_name():
-                log.info(f"【ResultFilter】{torrent_name} 无法识别到名称")
+                log.info(f"[ResultFilter]{torrent_name} 无法识别到名称")
                 stats.index_match_fail += 1
                 continue
 
@@ -216,7 +216,7 @@ class ResultFilter:
 
             if mi.type == MediaType.TV and filter_args.get("type") == MediaType.MOVIE:
                 log.info(
-                    f"【ResultFilter】{torrent_name} 是 {mi.type.value}，不匹配类型：{filter_args.get('type').value}"
+                    f"[ResultFilter]{torrent_name} 是 {mi.type.value}，不匹配类型：{filter_args.get('type').value}"
                 )
                 stats.index_rule_fail += 1
                 continue
@@ -228,7 +228,7 @@ class ResultFilter:
                 downloadvolumefactor=downloadvolumefactor,
             )
             if not match_flag:
-                log.info(f"【ResultFilter】{match_msg}")
+                log.info(f"[ResultFilter]{match_msg}")
                 stats.index_rule_fail += 1
                 continue
 
@@ -271,7 +271,7 @@ class ResultFilter:
                 continue
 
             if self.quick_name_match(mi, match_media):
-                log.debug(f"【ResultFilter】{torrent_name} 快速名称匹配成功，跳过TMDB查询")
+                log.debug(f"[ResultFilter]{torrent_name} 快速名称匹配成功，跳过TMDB查询")
                 candidates.append(
                     SearchCandidate(
                         item=item,
@@ -337,36 +337,36 @@ class ResultFilter:
             if cand.skip_tmdb:
                 media_info = cand.media_info
             elif not cache_key:
-                log.warn(f"【ResultFilter】{torrent_name} 无法构建缓存键")
+                log.warn(f"[ResultFilter]{torrent_name} 无法构建缓存键")
                 stats.index_error += 1
                 continue
             else:
                 media_info = media_ident_cache.get(cache_key)
                 if media_info is not None:
-                    log.debug(f"【ResultFilter】从缓存获取媒体信息: {cache_key}")
+                    log.debug(f"[ResultFilter]从缓存获取媒体信息: {cache_key}")
                 else:
                     media_info = None
 
                 if not media_info:
-                    log.warn(f"【ResultFilter】{cache_key} 识别媒体信息出错！")
+                    log.warn(f"[ResultFilter]{cache_key} 识别媒体信息出错！")
                     stats.index_error += 1
                     continue
 
                 if not media_info.tmdb_info:
                     if match_media and self._type_compatible(meta_info.type, match_media.type):
                         log.info(
-                            f"【ResultFilter】{cache_key} 未匹配到TMDB，回退使用搜索媒体信息: {match_media.get_name()}"
+                            f"[ResultFilter]{cache_key} 未匹配到TMDB，回退使用搜索媒体信息: {match_media.get_name()}"
                         )
                         media_info = self._media.merge_media_info(media_info, match_media)
                     else:
-                        log.info(f"【ResultFilter】{cache_key} 识别为 {media_info.get_name()} 未匹配到媒体信息")
+                        log.info(f"[ResultFilter]{cache_key} 识别为 {media_info.get_name()} 未匹配到媒体信息")
                         stats.index_match_fail += 1
                         continue
                 elif str(media_info.tmdb_id) != str(match_media.tmdb_id):
                     media_type_str = media_info.type.value if media_info.type else "Unknown"
                     match_type_str = match_media.type.value if match_media.type else "Unknown"
                     log.info(
-                        f"【ResultFilter】{cache_key} 识别为 "
+                        f"[ResultFilter]{cache_key} 识别为 "
                         f"{media_type_str}/{media_info.get_title_string()}/{media_info.tmdb_id} "
                         f"与 {match_type_str}/{match_media.get_title_string()}/{match_media.tmdb_id} 不匹配"
                     )
@@ -385,7 +385,7 @@ class ResultFilter:
                 ):
                     display_name = cache_key if not cand.skip_tmdb else torrent_name
                     log.info(
-                        f"【ResultFilter】{display_name} 是 {media_info.type.value}/"
+                        f"[ResultFilter]{display_name} 是 {media_info.type.value}/"
                         f"{media_info.tmdb_id}，不是 {filter_args.get('type').value}"
                     )
                     stats.index_rule_fail += 1
@@ -395,14 +395,14 @@ class ResultFilter:
             if match_media.over_edition:
                 if media_info.type != MediaType.MOVIE and media_info.get_episode_list():
                     log.info(
-                        f"【ResultFilter】"
+                        f"[ResultFilter]"
                         f"{media_info.get_title_string()}{media_info.get_season_string()} "
                         f"正在洗版，过滤掉季集不完整的资源：{display_name} {description}"
                     )
                     continue
                 if match_media.res_order and int(res_order) <= int(match_media.res_order):
                     log.info(
-                        f"【ResultFilter】"
+                        f"[ResultFilter]"
                         f"{media_info.get_title_string()}{media_info.get_season_string()} "
                         f"正在洗版，已洗版优先级：{100 - int(match_media.res_order)}，"
                         f"当前资源优先级：{100 - int(res_order)}，"
@@ -415,14 +415,14 @@ class ResultFilter:
             ):
                 media_type_str = media_info.type.value if media_info.type else "Unknown"
                 log.info(
-                    f"【ResultFilter】{display_name} 识别为 {media_type_str}/"
+                    f"[ResultFilter]{display_name} 识别为 {media_type_str}/"
                     f"{media_info.get_title_string()}/{media_info.get_season_episode_string()} 不匹配季/集/年份"
                 )
                 stats.index_match_fail += 1
                 continue
 
             log.info(
-                f"【ResultFilter】{display_name} {description} 识别为 {media_info.get_title_string()} "
+                f"[ResultFilter]{display_name} {description} 识别为 {media_info.get_title_string()} "
                 f"{media_info.get_season_episode_string()} 匹配成功"
             )
             media_info.set_torrent_info(

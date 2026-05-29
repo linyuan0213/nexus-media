@@ -78,7 +78,7 @@ class AutoRestartPlugin:
 
         if notify:
             self.ctx.notify(
-                title="【系统重启通知】",
+                title="[系统重启通知]",
                 text=f"Nexus Media将在 {delay} 秒后重启\n时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}",
             )
 
@@ -95,6 +95,6 @@ class AutoRestartPlugin:
             self.ctx.error(f"重启失败：{str(e)}")
             if notify:
                 self.ctx.notify(
-                    title="【系统重启失败】",
+                    title="[系统重启失败]",
                     text=f"Nexus Media重启失败：{str(e)}\n时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}",
                 )

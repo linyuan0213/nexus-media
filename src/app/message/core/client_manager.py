@@ -20,14 +20,14 @@ def parse_client_config(client_config) -> dict:
         try:
             config = json.loads(client_config.CONFIG)
         except json.JSONDecodeError:
-            log.error(f"【Message】客户端 {client_config.NAME} 的 CONFIG 不是有效 JSON: {client_config.CONFIG}")
+            log.error(f"[Message]客户端 {client_config.NAME} 的 CONFIG 不是有效 JSON: {client_config.CONFIG}")
     config.update({"interactive": client_config.INTERACTIVE})
     templates = {}
     if client_config.TEMPLATES:
         try:
             templates = json.loads(client_config.TEMPLATES)
         except json.JSONDecodeError:
-            log.error(f"【Message】客户端 {client_config.NAME} 的模板配置不是有效的 JSON: {client_config.TEMPLATES}")
+            log.error(f"[Message]客户端 {client_config.NAME} 的模板配置不是有效的 JSON: {client_config.TEMPLATES}")
     switchs = []
     if client_config.SWITCHS:
         try:
@@ -233,5 +233,5 @@ class ClientManager:
             title="测试", text="这是一条测试消息", url="https://github.com/linyuan0213/nexus-media"
         )
         if not state:
-            log.error(f"【Message】{ctype} 发送测试消息失败：%s" % ret_msg)
+            log.error(f"[Message]{ctype} 发送测试消息失败：%s" % ret_msg)
         return state

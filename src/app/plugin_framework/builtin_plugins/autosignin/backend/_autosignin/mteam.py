@@ -46,13 +46,13 @@ class MTeam(_ISiteSigninHandler):
 
         if not local_storage:
             self.error("仿真登录失败，LocalStorage获取失败或为空")
-            return False, f"【{site}】仿真登录失败，LocalStorage获取失败或为空"
+            return False, f"[{site}]仿真登录失败，LocalStorage获取失败或为空"
 
         persist_user = local_storage.get("persist:user")
         auth = local_storage.get("auth")
         if not persist_user or not auth:
             self.error("仿真登录失败，persist:user获取失败或为空")
-            return False, f"【{site}】仿真登录失败，persist:user获取失败或为空"
+            return False, f"[{site}]仿真登录失败，persist:user获取失败或为空"
         self.info(f"{site} 开始仿真登录")
 
         # 首页
@@ -66,12 +66,12 @@ class MTeam(_ISiteSigninHandler):
 
             if not html_text:
                 self.warn(f"{site} 获取站点源码失败")
-                return f"【{site}】仿真登录失败，获取站点源码失败！", None
+                return f"[{site}]仿真登录失败，获取站点源码失败！", None
 
             # 登录成功
             if self._sign_text in html_text:
                 self.info("仿真登录成功")
-                return True, f"【{site}】仿真登录成功"
+                return True, f"[{site}]仿真登录成功"
             else:
                 self.error("仿真登录失败，未找到登录标识")
-                return False, f"【{site}】仿真登录失败，未找到登录标识"
+                return False, f"[{site}]仿真登录失败，未找到登录标识"

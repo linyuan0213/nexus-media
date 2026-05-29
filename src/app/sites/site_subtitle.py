@@ -33,9 +33,9 @@ class SiteSubtitle:
         if not media_info.page_url:
             return
         # 字幕下载目录
-        log.info(f"【Sites】开始从站点下载字幕：{media_info.page_url}")
+        log.info(f"[Sites]开始从站点下载字幕：{media_info.page_url}")
         if not download_dir:
-            log.warn("【Sites】未找到字幕下载目录")
+            log.warn("[Sites]未找到字幕下载目录")
             return
 
         # 站点流控
@@ -53,7 +53,7 @@ class SiteSubtitle:
         res = request.get_res(media_info.page_url)
         if res and res.status_code == 200:
             if not res.text:
-                log.warn(f"【Sites】读取页面代码失败：{media_info.page_url}")
+                log.warn(f"[Sites]读取页面代码失败：{media_info.page_url}")
                 return
             html = etree.HTML(res.text)
             sublink_list = []
@@ -72,7 +72,7 @@ class SiteSubtitle:
                         sublink_list.append(sublink)
             # 下载所有字幕文件
             for sublink in sublink_list:
-                log.info(f"【Sites】找到字幕下载链接：{sublink}，开始下载...")
+                log.info(f"[Sites]找到字幕下载链接：{sublink}，开始下载...")
                 # 下载
                 ret = request.get_res(sublink)
                 if ret and ret.status_code == 200:
@@ -82,7 +82,7 @@ class SiteSubtitle:
                     # 保存ZIP
                     file_name = SiteHelper.get_url_subtitle_name(ret.headers.get("content-disposition"), sublink)
                     if not file_name:
-                        log.warn(f"【Sites】链接不是字幕文件：{sublink}")
+                        log.warn(f"[Sites]链接不是字幕文件：{sublink}")
                         continue
                     if file_name.lower().endswith(".zip"):
                         # ZIP包
@@ -98,7 +98,7 @@ class SiteSubtitle:
                             target_sub_file = os.path.join(
                                 download_dir, os.path.splitext(os.path.basename(sub_file))[0]
                             )
-                            log.info(f"【Sites】转移字幕 {sub_file} 到 {target_sub_file}")
+                            log.info(f"[Sites]转移字幕 {sub_file} 到 {target_sub_file}")
                             SiteHelper.transfer_subtitle(sub_file, target_sub_file)
                         # 删除临时文件
                         try:
@@ -112,34 +112,34 @@ class SiteSubtitle:
                         with open(sub_file, "wb") as f:
                             f.write(ret.content)
                         target_sub_file = os.path.join(download_dir, os.path.splitext(os.path.basename(sub_file))[0])
-                        log.info(f"【Sites】转移字幕 {sub_file} 到 {target_sub_file}")
+                        log.info(f"[Sites]转移字幕 {sub_file} 到 {target_sub_file}")
                         SiteHelper.transfer_subtitle(sub_file, target_sub_file)
                 else:
-                    log.error(f"【Sites】下载字幕文件失败：{sublink}")
+                    log.error(f"[Sites]下载字幕文件失败：{sublink}")
                     continue
             if sublink_list:
-                log.info(f"【Sites】{media_info.page_url} 页面字幕下载完成")
+                log.info(f"[Sites]{media_info.page_url} 页面字幕下载完成")
             else:
-                log.warn(f"【Sites】{media_info.page_url} 页面未找到字幕下载链接")
+                log.warn(f"[Sites]{media_info.page_url} 页面未找到字幕下载链接")
         elif res is not None:
-            log.warn(f"【Sites】连接 {media_info.page_url} 失败，状态码：{res.status_code}")
+            log.warn(f"[Sites]连接 {media_info.page_url} 失败，状态码：{res.status_code}")
         else:
-            log.warn(f"【Sites】无法打开链接：{media_info.page_url}")
+            log.warn(f"[Sites]无法打开链接：{media_info.page_url}")
 
     def _download_mteam_subtitle(self, media_info, site_id, cookie, ua, download_dir):
         """
         下载 m-team 站点字幕
         """
-        log.info("【Sites】开始从 m-team 下载字幕")
+        log.info("[Sites]开始从 m-team 下载字幕")
 
         # 获取站点信息
         site_info = self.sites.get_sites(siteid=site_id) if self.sites else None
         if not site_info:
-            log.warn(f"【Sites】无法获取站点 {site_id} 的信息")
+            log.warn(f"[Sites]无法获取站点 {site_id} 的信息")
             return
 
         if not isinstance(site_info, dict):
-            log.warn(f"【Sites】站点信息格式错误，预期为 dict，实际为 {type(site_info)}")
+            log.warn(f"[Sites]站点信息格式错误，预期为 dict，实际为 {type(site_info)}")
             return
 
         # 从站点信息中获取 headers
@@ -179,7 +179,7 @@ class SiteSubtitle:
                 torrent_id = match.group(0)
 
         if not torrent_id:
-            log.warn(f"【Sites】无法从页面URL提取 torrent id: {page_url}")
+            log.warn(f"[Sites]无法从页面URL提取 torrent id: {page_url}")
             return
 
         # 获取字幕列表
@@ -188,21 +188,21 @@ class SiteSubtitle:
         res = request.post_res(url=subtitle_list_url, data=json.dumps({"id": torrent_id}))
 
         if not res or res.status_code != 200:
-            log.warn(f"【Sites】获取 m-team 字幕列表失败，状态码：{res.status_code if res else '无响应'}")
+            log.warn(f"[Sites]获取 m-team 字幕列表失败，状态码：{res.status_code if res else '无响应'}")
             return
 
         try:
             data = res.json()
             if data.get("code") != "0" or data.get("message") != "SUCCESS":
-                log.warn(f"【Sites】m-team 字幕列表返回错误：{data.get('message')}")
+                log.warn(f"[Sites]m-team 字幕列表返回错误：{data.get('message')}")
                 return
 
             subtitles = data.get("data", [])
             if not subtitles:
-                log.info(f"【Sites】m-team 种子 {torrent_id} 没有可用的字幕")
+                log.info(f"[Sites]m-team 种子 {torrent_id} 没有可用的字幕")
                 return
 
-            log.info(f"【Sites】找到 {len(subtitles)} 个字幕文件")
+            log.info(f"[Sites]找到 {len(subtitles)} 个字幕文件")
 
             # 创建下载目录
             if not os.path.exists(download_dir):
@@ -223,17 +223,17 @@ class SiteSubtitle:
                 genlink_res = request.post_res(url=genlink_url, data=json.dumps({"id": subtitle_id}))
 
                 if not genlink_res or genlink_res.status_code != 200:
-                    log.warn(f"【Sites】获取字幕 {subtitle_id} 下载链接失败")
+                    log.warn(f"[Sites]获取字幕 {subtitle_id} 下载链接失败")
                     continue
 
                 genlink_data = genlink_res.json()
                 if genlink_data.get("code") != "0":
-                    log.warn(f"【Sites】字幕 {subtitle_id} 下载链接返回错误：{genlink_data.get('message')}")
+                    log.warn(f"[Sites]字幕 {subtitle_id} 下载链接返回错误：{genlink_data.get('message')}")
                     continue
 
                 credential = genlink_data.get("data", "")
                 if not credential:
-                    log.warn(f"【Sites】字幕 {subtitle_id} 下载凭证为空")
+                    log.warn(f"[Sites]字幕 {subtitle_id} 下载凭证为空")
                     continue
 
                 # 下载字幕文件
@@ -241,7 +241,7 @@ class SiteSubtitle:
                 download_res = request.get_res(url=download_url)
 
                 if not download_res or download_res.status_code != 200:
-                    log.warn(f"【Sites】下载字幕 {subtitle_id} 失败")
+                    log.warn(f"[Sites]下载字幕 {subtitle_id} 失败")
                     continue
 
                 # 保存字幕文件
@@ -255,7 +255,7 @@ class SiteSubtitle:
 
                 # 转移字幕文件
                 target_sub_file = os.path.join(download_dir, os.path.splitext(file_name)[0])
-                log.info(f"【Sites】转移字幕 {sub_file} 到 {target_sub_file}")
+                log.info(f"[Sites]转移字幕 {sub_file} 到 {target_sub_file}")
                 SiteHelper.transfer_subtitle(sub_file, target_sub_file)
 
                 # 删除临时文件
@@ -266,8 +266,8 @@ class SiteSubtitle:
 
                 downloaded_count += 1
 
-            log.info(f"【Sites】m-team 字幕下载完成，共下载 {downloaded_count} 个字幕")
+            log.info(f"[Sites]m-team 字幕下载完成，共下载 {downloaded_count} 个字幕")
 
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
-            log.error(f"【Sites】处理 m-team 字幕时发生错误：{err!s}")
+            log.error(f"[Sites]处理 m-team 字幕时发生错误：{err!s}")
