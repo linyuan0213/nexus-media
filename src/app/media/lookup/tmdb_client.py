@@ -93,16 +93,16 @@ def compare_tmdb_names(file_name, tmdb_names):
         tmdb_names = [tmdb_names]
     _fn = StringUtils.handler_special_chars(str(file_name))
     file_name = _fn.upper() if isinstance(_fn, str) else str(file_name).upper()
+    file_name_simplified = zhconv.convert(file_name, "zh-hans").upper()
     for tmdb_name in tmdb_names:
         _tn = StringUtils.handler_special_chars(str(tmdb_name))
         tmdb_name = _tn.strip().upper() if isinstance(_tn, str) else str(tmdb_name).strip().upper()
-        if file_name == tmdb_name:
+        if file_name == tmdb_name or file_name_simplified == tmdb_name:
             return True
         if len(file_name) < 3 or len(tmdb_name) < 3:
             continue
-        # 子串关系（如 "海贼王" vs "海贼王女"）→ 要求更高相似度，避免短名误匹配
-        is_substring = file_name in tmdb_name or tmdb_name in file_name
-        ratio = difflib.SequenceMatcher(None, file_name, tmdb_name).ratio()
+        is_substring = file_name in tmdb_name or tmdb_name in file_name or file_name_simplified in tmdb_name
+        ratio = difflib.SequenceMatcher(None, file_name_simplified, tmdb_name).ratio()
         threshold = 0.95 if is_substring else 0.75
         if ratio >= threshold:
             return True
@@ -122,12 +122,24 @@ def get_tmdb_chinese_title(tmdbinfo):
         alternative_titles = tmdbinfo.get("alternative_titles", {}).get("titles", [])
     else:
         alternative_titles = tmdbinfo.get("alternative_titles", {}).get("results", [])
+    zh_cn = None
+    zh_tw = None
     for alternative_title in alternative_titles:
         iso_3166_1 = alternative_title.get("iso_3166_1")
-        if iso_3166_1 == "CN":
-            title = alternative_title.get("title")
-            if title and StringUtils.is_chinese(title) and zhconv.convert(title, "zh-hans") == title:
-                return title
+        title = alternative_title.get("title")
+        if not title or not StringUtils.is_chinese(title):
+            continue
+        if iso_3166_1 in ("CN", "SG"):
+            simplified = zhconv.convert(title, "zh-hans")
+            if simplified == title:
+                zh_cn = title
+                break
+        if iso_3166_1 in ("TW", "HK"):
+            zh_tw = title
+    if zh_cn:
+        return zh_cn
+    if zh_tw:
+        return zhconv.convert(zh_tw, "zh-hans")
     return tmdbinfo.get("title") if tmdbinfo.get("media_type") == MediaType.MOVIE else tmdbinfo.get("name")
 
 

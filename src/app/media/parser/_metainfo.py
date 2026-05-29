@@ -60,28 +60,24 @@ def meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None =
 
 def _is_anime(rev_name: str, org_name: str) -> bool:
     """判断名称是否属于动漫"""
-    # 先移除 CRC32/哈希值标记，避免干扰判断
-    rev_name = re.sub(r"\[[0-9A-F]{8}\]", "", rev_name, flags=re.IGNORECASE)
-    org_name = re.sub(r"\[[0-9A-F]{8}\]", "", org_name, flags=re.IGNORECASE)
+    rev_name = re.sub(r"\[[0-9A-F]{8}]", "", rev_name, flags=re.IGNORECASE)
+    org_name = re.sub(r"\[[0-9A-F]{8}]", "", org_name, flags=re.IGNORECASE)
 
-    # 排除成人视频（SEX 后可能直接跟数字如 SEX153，不能用 \b）
     for name in (rev_name, org_name):
         if name and re.search(r"(?:SEX|HENTAI|AV\b|無码|R18|成人)", name, re.IGNORECASE):
             return False
     if not rev_name:
         return False
-    # 匹配中文方括号标记：要求至少包含一个非数字字符（如 720P、X264、V2），排除纯数字如 [12]
     if re.search(r"[(?:[+XVPI-]+\d*|\d*[+XVPI-]+)]\s*[", rev_name, re.IGNORECASE):
         return True
-    # 匹配动漫绝对集号格式（如 Title - 02）
     if re.search(r"\s+-\s+[\dv]{1,4}\b", rev_name, re.IGNORECASE):
         return True
-    # 排除电视剧集号格式
     if re.search(
         r"S\d{2}\s*-\s*S\d{2}|S\d{2}|\s+S\d{1,2}|EP?\d{2,4}\s*-\s*EP?\d{2,4}|\s+E\d{1,4}\b|\s+EP\d{1,4}\b",
         rev_name,
         re.IGNORECASE,
     ):
         return False
-    # 匹配英文方括号标记：要求至少包含一个非数字字符，排除纯数字如 [12]
-    return bool(re.search(r"\[(?:[+XVPI-]+\d*|\d*[+XVPI-]+)]\s*\[", rev_name, re.IGNORECASE))
+    if re.search(r"\[(?:[+XVPI-]+\d*|\d*[+XVPI-]+)]\s*\[", rev_name, re.IGNORECASE):
+        return True
+    return False

@@ -60,7 +60,7 @@ def parse_video_title(title, subtitle=None, fileflag=False) -> MediaInfo:
 
     # 预处理中文方括号集号: [XX] → 提取 XX 作为 episode
     if not info.begin_episode:
-        re_res = re.search(r"[(\d{1,3})]", title)
+        re_res = re.search(r"\[(\d{1,3})\]", title)
         if re_res:
             info.begin_episode = int(re_res.group(1))
             info.type = MediaType.TV

@@ -1,12 +1,17 @@
-"""
-动漫标题解析 — 预处理函数
-"""
-
 import re
 
-import zhconv
-
 from app.utils import StringUtils
+
+_RE_SITE_TAG = re.compile(
+    r"^[【\[]?(?:[动漫画纪录片电影视连续剧集日美韩中港台海外华语综艺原盘高清]{2,}|TV|Animation|Movie|Documentar|Anime|完结][】\]]?|★\d+月新番★)",
+    re.IGNORECASE,
+)
+_RE_FILESIZE = re.compile(r"[0-9.]+\s*[MGT]i?B(?![A-Z]+)", re.IGNORECASE)
+_RE_TV_NUMBER = re.compile(r"\[TV\s+(\d{1,4})", re.IGNORECASE)
+_RE_4K = re.compile(r"\[4[Kk]]", re.IGNORECASE)
+_RE_KANA_TITLE = re.compile(r"[\u3040-\u309f\u30a0-\u30ff]+")
+_RE_JP_EN_SUFFIX = re.compile(r"\s*[/／]\s*[^\[\]]+$")
+_RE_BRACKET_GROUP = re.compile(r"^\[[^\]]+]$")
 
 
 def prepare_title(title):
@@ -14,21 +19,12 @@ def prepare_title(title):
     if not title:
         return title
     title = title.replace("[", "[").replace("]", "]").strip()
-    match = re.search(r"新番|月?番|[日美国][漫剧]", title)
-    if match and match.span()[1] < len(title) - 1:
-        title = re.sub(".*番.|.*[日美国][漫剧].", "", title)
-    elif match:
-        title = title[: title.rfind("[")]
-    first_item = title.split("]")[0]
-    if first_item and re.search(
-        r"[动漫画纪录片电影视连续剧集日美韩中港台海外亚洲华语大陆综艺原盘高清]{2,}|TV|Animation|Movie|Documentar|Anime",
-        zhconv.convert(first_item, "zh-hans"),
-        re.IGNORECASE,
-    ):
-        title = re.sub(r"^[^]]*]", "", title).strip()
-    title = re.sub(r"[0-9.]+\s*[MGT]i?B(?![A-Z]+)", "", title, flags=re.IGNORECASE)
-    title = re.sub(r"\[TV\s+(\d{1,4})", r"[\1", title, flags=re.IGNORECASE)
-    title = re.sub(r"\[4k]", "2160p", title, flags=re.IGNORECASE)
+
+    title = _RE_SITE_TAG.sub("", title).strip()
+    title = _RE_FILESIZE.sub("", title)
+    title = _RE_TV_NUMBER.sub(r"[\1", title)
+    title = _RE_4K.sub("2160p", title)
+
     names = title.split("]")
     if len(names) > 1 and title.find("- ") == -1:
         titles = []
@@ -50,9 +46,23 @@ def prepare_title(title):
                         name = re.sub(r"[\d|#:：\-()（）\u4e00-\u9fff]", "", name).strip()
                     if not name or name.strip().isdigit():
                         continue
-                if name == "[":
-                    titles.append("")
+                if _RE_BRACKET_GROUP.match(name):
+                    titles.append(name.strip())
                 else:
                     titles.append(f"{left_char}{name.strip()}")
         return "]".join(titles)
     return title
+
+
+def extract_japanese_title(title):
+    """从 dmhy/mikan 格式中提取日文罗马音标题用于 TMDB 匹配"""
+    if not title:
+        return None
+    parts = re.split(r"[/／]", title)
+    for part in parts:
+        part = part.strip()
+        if _RE_KANA_TITLE.search(part):
+            continue
+        if re.search(r"[a-zA-Z]{3,}", part) and not re.search(r"[\u4e00-\u9fff]", part):
+            return part.strip()
+    return None

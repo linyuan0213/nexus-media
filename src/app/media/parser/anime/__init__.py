@@ -9,7 +9,7 @@ import anitopy  # type: ignore
 
 from app.media.models import MediaInfo
 from app.media.parser.anime.name_parser import clean_name, extract_name, parse_name
-from app.media.parser.anime.prepare import prepare_title
+from app.media.parser.anime.prepare import extract_japanese_title, prepare_title
 from app.media.parser.anime.resource_parser import (
     parse_customization,
     parse_encode,
@@ -65,6 +65,9 @@ def parse_anime_title(title, subtitle=None, fileflag=False) -> MediaInfo:
                 info.init_subtitle(info.subtitle)
         if not info.type:
             info.type = MediaType.TV
+        jp_title = extract_japanese_title(original_title)
+        if jp_title and not info.en_name:
+            info.en_name = jp_title
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
     return info
