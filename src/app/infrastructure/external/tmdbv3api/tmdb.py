@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import time
@@ -123,7 +124,8 @@ class TMDb:
     @staticmethod
     @lru_cache(maxsize=REQUEST_CACHE_MAXSIZE)
     def cached_request(method, url, data, proxies):
-        return requests.request(method, url, data=data, proxies=eval(proxies), verify=False, timeout=10)
+        _proxies = json.loads(proxies) if isinstance(proxies, str) else (proxies or {})
+        return requests.request(method, url, data=data, proxies=_proxies, verify=False, timeout=10)
 
     def cache_clear(self):
         return self.cached_request.cache_clear()
@@ -143,9 +145,8 @@ class TMDb:
             if self.cache and self.obj_cached and call_cached and method != "POST":
                 req = self.cached_request(method, url, data, self.proxies)
             else:
-                req = self._session.request(
-                    method, url, data=data, proxies=eval(self.proxies or "{}"), timeout=10, verify=False
-                )
+                _proxies = json.loads(self.proxies) if isinstance(self.proxies, str) else (self.proxies or {})
+                req = self._session.request(method, url, data=data, proxies=_proxies, timeout=10, verify=False)
             return req
 
         # 使用指数退避重试机制
