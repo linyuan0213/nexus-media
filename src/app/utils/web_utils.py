@@ -2,7 +2,6 @@ from typing import Any
 
 import cn2an
 
-from app.core.settings import settings
 from app.di import container
 from app.media import meta_info
 from app.utils import ExceptionUtils, IpUtils, RequestUtils, StringUtils
@@ -52,7 +51,6 @@ class WebUtils:
         获取最新版本号
         """
         try:
-            releases_update_only = settings.get("app").get("releases_update_only")
             version_res = RequestUtils(proxies=get_proxies()).get_res(
                 "https://api.github.com/repos/linyuan0213/nexus-media/releases/latest"
             )
@@ -62,10 +60,7 @@ class WebUtils:
             if version_res and commit_res:
                 ver_json = version_res.json()
                 commit_json = commit_res.json()
-                if releases_update_only:
-                    version = f"{ver_json['tag_name']}"
-                else:
-                    version = f"{ver_json['tag_name']} {commit_json['sha'][:7]}"
+                version = f"{ver_json['tag_name']} {commit_json['sha'][:7]}"
                 url = ver_json["html_url"]
                 return version, url, True
         except Exception as e:
