@@ -8,6 +8,7 @@ import asyncio
 from fastapi import APIRouter, HTTPException, Request, status
 
 import log
+from app.helper.security_helper import SecurityHelper
 from app.message import Message
 from app.services.search_message_service import MessageSearchService
 from app.services.system_service import MessageCommandHandler
@@ -15,6 +16,20 @@ from app.utils.types import SearchType
 from app.di import container
 
 router = APIRouter()
+
+
+def _verify_webhook_ip(channel: SearchType, request: Request) -> None:
+    """从对应消息客户端配置读取 IP 白名单并进行校验。"""
+    msg = Message()
+    entry = msg.active_interactive_clients.get(channel)
+    if entry and entry.get("client"):
+        allow_ips = entry["client"].get_webhook_allow_ip()
+    else:
+        allow_ips = {"ipv4": "0.0.0.0/0", "ipv6": "::/0"}
+    client_ip = request.client.host if request.client else ""
+    if not SecurityHelper.allow_access(allow_ips, client_ip):
+        log.warn(f"【Webhook】{channel.value} IP 白名单拒绝: {client_ip}")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="IP not allowed")
 
 
 _MESSAGE_INITIALIZED = False
@@ -104,6 +119,7 @@ def _handle_webhook(update: dict, channel: SearchType):
 async def telegram_webhook(request: Request):
     """Telegram Bot Webhook"""
     _verify_apikey(request)
+    _verify_webhook_ip(SearchType.TG, request)
     data = await request.json()
     return await asyncio.to_thread(_handle_webhook, data, SearchType.TG)
 
@@ -120,6 +136,7 @@ async def wechat_webhook(request: Request):
 async def synologychat_webhook(request: Request):
     """Synology Chat Webhook"""
     _verify_apikey(request)
+    _verify_webhook_ip(SearchType.SYNOLOGY, request)
     data = await request.json()
     return await asyncio.to_thread(_handle_webhook, data, SearchType.SYNOLOGY)
 
@@ -128,8 +145,8 @@ async def synologychat_webhook(request: Request):
 async def slack_webhook(request: Request):
     """Slack Event/Webhook"""
     _verify_apikey(request)
+    _verify_webhook_ip(SearchType.SLACK, request)
     data = await request.json()
-    # Slack 有 URL 验证 challenge
     if data.get("type") == "url_verification":
         return {"challenge": data.get("challenge")}
     return await asyncio.to_thread(_handle_webhook, data, SearchType.SLACK)
