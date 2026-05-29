@@ -39,3 +39,6 @@ static/avatars/*
 # Agent configs
 .roo/
 .kilo/
+
+# Build metadata
+*.egg-info/
