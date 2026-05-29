@@ -181,6 +181,19 @@ class LogConfig(BaseModel):
     path: str = ""
 
 
+def _filter_none(data: dict[str, Any]) -> dict[str, Any]:
+    """递归移除 YAML 中的 None 值（ruamel.yaml 将空值解析为 None）。"""
+    result: dict[str, Any] = {}
+    for k, v in data.items():
+        if v is None:
+            continue
+        if isinstance(v, dict):
+            result[k] = _filter_none(v)
+        else:
+            result[k] = v
+    return result
+
+
 class YamlConfigSettingsSource(PydanticBaseSettingsSource):
     """从 config.yaml 加载配置的自定义 SettingsSource"""
 
@@ -199,13 +212,15 @@ class YamlConfigSettingsSource(PydanticBaseSettingsSource):
                 result[field_name] = yaml_data[field_name]
         return result
 
-    def _load_yaml(self) -> dict[str, Any]:
+    @staticmethod
+    def _load_yaml() -> dict[str, Any]:
         config_path = os.environ.get("NEXUS_MEDIA_CONFIG", "")
         if not config_path or not os.path.exists(config_path):
             return {}
         try:
             with open(config_path, encoding="utf-8") as f:
-                return ruamel.yaml.YAML().load(f) or {}
+                data = ruamel.yaml.YAML().load(f) or {}
+            return _filter_none(data)
         except Exception:
             return {}
 
