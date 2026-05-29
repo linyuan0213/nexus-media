@@ -6,6 +6,7 @@ MovieLike Plugin v2
 import os
 
 from app.plugin_framework.context import PluginContext
+from app.plugin_framework.hook_system import HookSystem
 from app.utils import SystemUtils
 from app.utils.config_tools import update_favtype
 from app.utils.types import MediaType
@@ -100,8 +101,6 @@ class MovieLikePlugin:
             if ret != 0:
                 self.ctx.error(f"{retmsg}")
             else:
-                from app.plugin_framework.hook_system import HookSystem
-
                 HookSystem().emit("media.library_synced", {"dest": new_path, "media_info": {}})
         else:
             self.ctx.warn(f"{org_path} 目录不存在")

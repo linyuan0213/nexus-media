@@ -237,7 +237,7 @@ class AutoSubPlugin:
                 message = f" 媒体: {file_name}\n 处理失败\n 耗时：{round(end_time - start_time, 2)}秒"
                 if send_notify:
                     self.ctx.notify(title="自动字幕生成", text=message)
-                traceback.print_exc()
+                self.ctx.error(f"处理异常: {traceback.format_exc()}")
                 fail_count += 1
         return success_count, skip_count, fail_count, process_count
 
@@ -322,8 +322,8 @@ class AutoSubPlugin:
                 self.ctx.warn("faster-whisper 未安装，不进行处理")
                 return False, None
             except Exception as e:
-                traceback.print_exc()
-                self.ctx.error(f"faster-whisper 处理异常：{e}")
+                err_msg = f"faster-whisper 处理异常：{e}\n{traceback.format_exc()}"
+                self.ctx.error(err_msg)
                 return False, None
         return False, None
 

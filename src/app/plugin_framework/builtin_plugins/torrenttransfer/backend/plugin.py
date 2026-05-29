@@ -12,6 +12,8 @@ import pytz
 from bencode import bdecode, bencode
 
 from app.media import meta_info
+import json
+
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import TorrentStatus
 from app.utils import Torrent
@@ -338,15 +340,12 @@ class TorrentTransferPlugin:
         content = self.ctx.read_data("history.json")
         if content:
             try:
-                import json
-
                 return json.loads(content)
             except Exception:
                 pass
         return {}
 
     def _save_history(self, key, value):
-        import json
 
         data = self._load_history()
         data[key] = value

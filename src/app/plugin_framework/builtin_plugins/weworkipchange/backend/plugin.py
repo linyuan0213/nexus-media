@@ -18,8 +18,8 @@ from app.helper.cookiecloud_helper import CookiecloudHelper
 from app.infrastructure.cache_system import get_cache_manager
 from app.plugin_framework.context import PluginContext
 from app.plugin_framework.event_compat import EventHandler
+from app.utils import RequestUtils
 from app.utils.config_tools import get_ua
-from app.utils.http_utils import RequestUtils
 from app.utils.types import EventType
 from app.di import container
 

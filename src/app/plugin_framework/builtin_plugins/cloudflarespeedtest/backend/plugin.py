@@ -3,6 +3,7 @@ CloudflareSpeedTest Plugin v2
 测试 Cloudflare CDN 延迟和速度，自动优选IP
 """
 
+import json
 import os
 import platform
 import shutil
@@ -20,6 +21,13 @@ from app.domain.entities.plugin import PluginConfigEntity
 from app.plugin_framework.context import PluginContext
 from app.utils import IpUtils, RequestUtils, SystemUtils
 from app.utils.config_tools import get_proxies
+
+
+def _safe_extractall(tar, path):
+    for member in tar.getmembers():
+        if os.path.isabs(member.name) or ".." in member.name:
+            continue
+        tar.extract(member, path)
 
 
 class CloudflareSpeedTestPlugin:
@@ -197,8 +205,6 @@ class CloudflareSpeedTestPlugin:
             repo = PluginConfigRepositoryAdapter()
             entity = repo.get("customhosts")
             if entity and entity.config:
-                import json
-
                 config = entity.config if isinstance(entity.config, dict) else json.loads(entity.config)
                 return config
         except Exception as e:
@@ -305,7 +311,7 @@ class CloudflareSpeedTestPlugin:
             proxies = get_proxies()
             proxy_dict = proxies if proxies and proxies.get("https") else None
             try:
-                response = requests.get(download_url, proxies=proxy_dict, verify=False)
+                response = requests.get(download_url, proxies=proxy_dict)
                 response.raise_for_status()
                 with open(f"{cf_path}/{cf_file_name}", "wb") as f:
                     f.write(response.content)
@@ -321,7 +327,7 @@ class CloudflareSpeedTestPlugin:
                         zip_ref.extractall(cf_path)
                 elif archive_type == "tar":
                     with tarfile.open(archive_path, "r:gz") as tar_ref:
-                        tar_ref.extractall(cf_path)
+                        _safe_extractall(tar_ref, cf_path)
 
                 Path(f"{cf_path}/{self._binary_name}").chmod(0o755)
                 Path(f"{cf_path}/{cf_file_name}").unlink()

@@ -1,8 +1,11 @@
 import hashlib
 import json
+import logging
 import time
 
 from app.utils import RequestUtils
+
+_logger = logging.getLogger(__name__)
 
 
 class IyuuHelper:
@@ -73,7 +76,7 @@ class IyuuHelper:
                 ret_sites[site.get("id")] = site
             return ret_sites
         else:
-            print(msg)
+            _logger.error(msg)
             return {}
 
     def get_seed_info(self, info_hashs: list):
@@ -146,7 +149,7 @@ class IyuuHelper:
         if result:
             return result.get("list") or []
         else:
-            print(msg)
+            _logger.error(msg)
             return []
 
     def bind_site(self, site, passkey, uid):

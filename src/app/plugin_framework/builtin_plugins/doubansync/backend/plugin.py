@@ -5,6 +5,7 @@ DoubanSync Plugin v2
 
 import contextlib
 import json
+import traceback
 import random
 from datetime import datetime
 from threading import Lock
@@ -293,8 +294,6 @@ class DoubanSyncPlugin:
                     self.ctx.error(f"{mediainfo.title} 添加订阅失败：{msg}")
                     self._update_history(media=mediainfo, state="RSS_FAILED")
         except Exception as e:
-            import traceback
-
             self.ctx.error(f"_auto_search_media 内部异常: {e}")
             self.ctx.error(traceback.format_exc())
             with contextlib.suppress(Exception):
@@ -321,8 +320,6 @@ class DoubanSyncPlugin:
             else:
                 self.ctx.error(f"{media_info.get_name()} 添加订阅失败：{msg}")
         except Exception as e:
-            import traceback
-
             self.ctx.error(f"_auto_subscribe_media 内部异常: {e}")
             self.ctx.error(traceback.format_exc())
 

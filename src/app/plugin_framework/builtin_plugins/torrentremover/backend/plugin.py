@@ -5,6 +5,8 @@ TorrentRemover Plugin v2
 
 import os
 
+import json
+
 from app.plugin_framework.context import PluginContext
 from app.di import container
 
@@ -54,8 +56,6 @@ class TorrentRemoverPlugin:
         transfer_history = self.ctx.read_data("torrenttransfer_history.json")
         if transfer_history:
             try:
-                import json
-
                 history_data = json.loads(transfer_history)
                 transfer_record = history_data.get(history_key)
             except Exception:
