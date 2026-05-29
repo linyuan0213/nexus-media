@@ -76,7 +76,6 @@ class AppConfig(BaseModel):
     )
     init_files: list[str] = Field(default_factory=list)
     tmdb_domain: str = "api.themoviedb.org"
-    wallpaper: str = "bing"
     debug: bool = True
     tmdb_image_url: str = ""
     enable_image_proxy: int = 1

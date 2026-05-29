@@ -5,7 +5,6 @@ import pytz
 
 import log
 from app.core.constants import (
-    REFRESH_WALLPAPER_INTERVAL,
     RSS_CHECK_INTERVAL,
     RSS_REFRESH_TMDB_INTERVAL,
     SYNC_TRANSFER_INTERVAL,
@@ -14,7 +13,6 @@ from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
 from app.di import container
 from app.helper.temp_cleanup_helper import TempCleanupHelper
-from app.utils.wallpaper import get_login_wallpaper
 
 
 def _refresh_site_data_now_threaded():
@@ -150,16 +148,6 @@ def load_default_jobs(scheduler):
         name="豆瓣RSS转TMDB",
         func=container.subscribe_service().refresh_rss_metainfo,
         hours=RSS_REFRESH_TMDB_INTERVAL,
-        jobstore=_jobstore,
-    )
-
-    # 定时刷新壁纸
-    scheduler.register_interval(
-        job_id="get_login_wallpaper",
-        name="定时刷新壁纸",
-        func=get_login_wallpaper,
-        hours=REFRESH_WALLPAPER_INTERVAL,
-        next_run_time=datetime.datetime.now(),
         jobstore=_jobstore,
     )
 

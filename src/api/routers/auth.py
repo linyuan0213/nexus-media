@@ -8,11 +8,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from api.deps import get_current_user
 from app.core.settings import AppSettings
+from app.di import container
 from app.schemas.auth import LoginResponse, UserContext
 from app.schemas.common import CommonResponse
 from app.services.auth_service import AuthService
-from app.di import container
-from app.utils.wallpaper import get_login_wallpaper
 
 _settings = AppSettings()
 
@@ -117,22 +116,4 @@ async def get_current_user_info(user: UserContext = Depends(get_current_user)):
             "is_superadmin": user.is_superadmin,
             "roles": [role.role_name for role in roles] if roles else [],
         },
-    }
-
-
-@router.get("/wallpaper", response_model=CommonResponse, summary="获取登录页壁纸")
-async def login_wallpaper():
-    """
-    获取登录页背景壁纸（无需认证）。
-    返回 Base64 编码图片及标题、链接。
-    """
-    image_code, img_title, img_link = get_login_wallpaper()
-    return {
-        "code": 0,
-        "data": {
-            "image_code": image_code,
-            "img_title": img_title,
-            "img_link": img_link,
-        },
-        "message": "",
     }
