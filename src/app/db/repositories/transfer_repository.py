@@ -10,7 +10,7 @@ from enum import Enum
 
 from sqlalchemy import func
 
-from app.db import auto_commit
+from app.db.transaction import auto_commit
 from app.db.models import SYNCHISTORY, TRANSFERBLACKLIST, TRANSFERHISTORY, TRANSFERUNKNOWN
 from app.db.repositories.base_repository import BaseRepository
 from app.schemas.media import TransferMediaDTO

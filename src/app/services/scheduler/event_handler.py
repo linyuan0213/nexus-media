@@ -12,7 +12,7 @@ from apscheduler.events import (
 )
 
 import log
-from app.db import remove_session
+from app.db.session import remove_session
 
 
 class EventHandler:

@@ -3,7 +3,7 @@ Word Repository
 Handles custom words and word groups related database operations.
 """
 
-from app.db import auto_commit
+from app.db.transaction import auto_commit
 from app.db.models import CUSTOMWORDGROUPS, CUSTOMWORDS
 from app.db.repositories.base_repository import BaseRepository
 

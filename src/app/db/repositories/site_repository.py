@@ -9,7 +9,7 @@ import time
 
 from sqlalchemy import Integer, cast, func
 
-from app.db import auto_commit
+from app.db.transaction import auto_commit
 from app.db.models import CONFIGSITE, SITEFAVICON, SITESTATISTICSHISTORY, SITEUSERINFOSTATS, SITEUSERSEEDINGINFO
 from app.db.repositories.base_repository import BaseRepository
 

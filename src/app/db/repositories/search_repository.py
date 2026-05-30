@@ -5,7 +5,7 @@ Handles search result related database operations.
 
 import json
 
-from app.db import auto_commit
+from app.db.transaction import auto_commit
 from app.db.models import SEARCHRESULTINFO
 from app.db.repositories.base_repository import BaseRepository
 from app.utils.types import MediaType

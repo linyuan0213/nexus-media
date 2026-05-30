@@ -5,7 +5,7 @@ Handles plugin history and TMDB blacklist related database operations.
 
 import time
 
-from app.db import auto_commit
+from app.db.transaction import auto_commit
 from app.db.models import PLUGINHISTORY, TMDBBLACKLIST
 from app.db.repositories.base_repository import BaseRepository
 

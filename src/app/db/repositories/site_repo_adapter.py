@@ -7,7 +7,7 @@ import json
 
 from sqlalchemy import Integer, cast
 
-from app.db import auto_commit
+from app.db.transaction import auto_commit
 from app.db.models import CONFIGSITE, SITEFAVICON, SITESTATISTICSHISTORY, SITEUSERINFOSTATS
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.site_repository import SiteRepository

@@ -6,7 +6,7 @@
 import json
 import time
 
-from app.db import auto_commit
+from app.db.transaction import auto_commit
 from app.db.models import MEDIASYNCITEMS, MEDIASYNCSTATISTIC
 from app.db.repositories.base_repository import BaseRepository
 

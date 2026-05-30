@@ -9,7 +9,7 @@ import time
 
 from sqlalchemy import Integer, cast
 
-from app.db import auto_commit
+from app.db.transaction import auto_commit
 from app.db.models import (
     CONFIGFILTERGROUP,
     CONFIGFILTERRULES,

@@ -3,7 +3,7 @@ Sync Repository
 Handles directory sync related database operations.
 """
 
-from app.db import auto_commit
+from app.db.transaction import auto_commit
 from app.db.models import CONFIGSYNCPATHS
 from app.db.repositories.base_repository import BaseRepository
 

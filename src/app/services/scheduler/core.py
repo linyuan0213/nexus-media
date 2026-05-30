@@ -20,7 +20,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 import log
 from app.core.exceptions import RepositoryError, ServiceError
-from app.db import remove_session
+from app.db.session import remove_session
 from app.services.scheduler.cron_parser import CronParser
 from app.services.scheduler.event_handler import EventHandler
 from app.services.scheduler.job_registry import JobRegistry

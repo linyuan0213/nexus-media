@@ -2,7 +2,7 @@
 存储后端仓储
 """
 
-from app.db import auto_commit
+from app.db.transaction import auto_commit
 from app.db.models import STORAGEBACKEND
 from app.db.repositories.base_repository import BaseRepository
 

@@ -9,7 +9,7 @@ from typing import Any
 
 from sqlalchemy import and_, case, func
 
-from app.db import auto_commit
+from app.db.transaction import auto_commit
 from app.db.models import DOWNLOADHISTORY, DOWNLOADSETTING, INDEXERSTATISTICS
 from app.db.repositories.base_repository import BaseRepository
 

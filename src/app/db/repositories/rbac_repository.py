@@ -10,7 +10,7 @@ from typing import Any
 from sqlalchemy import and_, desc
 from sqlalchemy.orm import selectinload
 
-from app.db import auto_commit
+from app.db.transaction import auto_commit
 from app.db.models.rbac import (
     RBACMenu,
     RBACOperationLog,

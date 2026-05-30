@@ -9,7 +9,7 @@ from typing import Any
 
 from sqlalchemy import Integer, cast, func
 
-from app.db import auto_commit
+from app.db.transaction import auto_commit
 from app.db.models import CONFIGSITE, SITEBRUSHRULE, SITEBRUSHTASK, SITEBRUSHTORRENTS
 from app.db.repositories.base_repository import BaseRepository
 

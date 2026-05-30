@@ -5,7 +5,7 @@ Plugin Framework v2 Repository
 
 import json
 
-from app.db import auto_commit
+from app.db.transaction import auto_commit
 from app.db.models import PLUGINCONFIG, PLUGINHOOKS, PLUGINLOGS, PLUGINMANIFEST
 from app.db.repositories.base_repository import BaseRepository
 from app.domain.entities.plugin import (

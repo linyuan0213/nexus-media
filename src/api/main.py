@@ -35,7 +35,8 @@ from api.routers import (
     userrss,
     words,
 )
-from app.db import init_db, remove_session
+from app.db import init_db
+from app.db.session import remove_session
 from app.db.engine import get_engine
 from app.di import container
 from app.downloader.client import init_clients as init_downloaders
