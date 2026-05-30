@@ -410,7 +410,7 @@ class TmdbLookup(BaseLookup):
 
     def get_tmdb_factinfo(self, media_info):
         if not media_info or not media_info.tmdb_info:
-            return ""
+            return []
         tmdbinfo = media_info.tmdb_info
         media_type = media_info.type
         if media_type == MediaType.MOVIE:
@@ -422,8 +422,14 @@ class TmdbLookup(BaseLookup):
             genres = self.get_tmdb_genres_names(tmdbinfo)
             countries = self.get_tmdb_production_country_names(tmdbinfo)
             companies = self.get_tmdb_production_company_names(tmdbinfo)
-            parts = [f"{title} ({year})", genres, countries, companies, runtime_str]
-            return " | ".join(filter(None, parts))
+            return [
+                {"原名": title},
+                {"年份": year},
+                {"类型": genres},
+                {"国家/地区": countries},
+                {"制作公司": companies},
+                {"片长": runtime_str},
+            ]
         else:
             name = tmdbinfo.get("name", "")
             first_air_date = tmdbinfo.get("first_air_date", "")
@@ -434,8 +440,14 @@ class TmdbLookup(BaseLookup):
             genres = self.get_tmdb_genres_names(tmdbinfo)
             countries = self.get_tmdb_production_country_names(tmdbinfo)
             companies = self.get_tmdb_production_company_names(tmdbinfo)
-            parts = [f"{name} ({year})", genres, countries, companies, episode_str]
-            return " | ".join(filter(None, parts))
+            return [
+                {"原名": name},
+                {"年份": year},
+                {"类型": genres},
+                {"国家/地区": countries},
+                {"制作公司": companies},
+                {"总集数": episode_str},
+            ]
 
     def get_tmdb_production_country_names(self, tmdbinfo):
         if not tmdbinfo:

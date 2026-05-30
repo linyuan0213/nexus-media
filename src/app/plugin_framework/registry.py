@@ -280,4 +280,8 @@ class PluginRegistry:
         builtin_path2 = os.path.join(self._builtin_dir, plugin_id)
         if os.path.exists(builtin_path2):
             return builtin_path2
-        return os.path.join(self._plugins_dir, f"{plugin_id}-{state.manifest.version}")
+        user_path = os.path.join(self._plugins_dir, f"{plugin_id}-{state.manifest.version}")
+        if os.path.exists(user_path):
+            return user_path
+        log.warn(f"[PluginRegistry] 插件文件缺失: {plugin_id}，路径 {user_path} 不存在")
+        return None

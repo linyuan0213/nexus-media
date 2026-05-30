@@ -399,7 +399,7 @@ def get_user_rss_service():
 def get_scheduler_service():
     """获取调度器服务实例"""
 
-    return container.scheduler_core()
+    return container.scheduler_service()
 
 
 def get_system_scheduler_service():

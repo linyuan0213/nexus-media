@@ -114,7 +114,7 @@ class SearchRequest(BaseModel):
     search_word: str | None = None
     unident: bool | None = None
     filters: dict | None = None
-    tmdbid: str | None = None
+    tmdbid: str | int | None = None
     media_type: str | None = None
 
 
