@@ -74,6 +74,7 @@ class SessionManager:
     2. 提供 session_scope() 上下文管理器确保自动提交/回滚/关闭
     3. 兼容旧 MainDb API（query/insert/commit/delete/flush/execute）
     4. 提供 bulk_insert / bulk_insert_mappings 批量操作
+    5. 支持显式事务控制（transaction_scope）
 
     线程安全：scoped_session 保证同一线程内返回同一个 session 实例
     Session 清理：请求结束后必须调用 remove() 清理线程本地存储
@@ -83,10 +84,49 @@ class SessionManager:
         _init_engine()
         self._engine = _Engine
         self._scoped = _ScopedSession
+        # 线程本地事务深度计数器（支持嵌套事务）
+        self._tx_local = threading.local()
 
     def _session(self):
         assert self._scoped is not None
         return self._scoped()
+
+    @property
+    def _tx_depth(self) -> int:
+        return getattr(self._tx_local, "depth", 0)
+
+    @_tx_depth.setter
+    def _tx_depth(self, value: int):
+        self._tx_local.depth = value
+
+    @property
+    def in_transaction(self) -> bool:
+        """当前线程是否处于显式事务中"""
+        return self._tx_depth > 0
+
+    @contextmanager
+    def transaction_scope(self):
+        """
+        显式事务上下文管理器（支持嵌套）
+
+        使用模式：
+            with transaction_scope():
+                repo1.update(...)
+                repo2.insert(...)
+            # 全部成功时 commit，任一失败时 rollback
+        """
+        self._tx_depth += 1
+        depth = self._tx_depth
+        try:
+            yield
+            if depth == 1:
+                self.commit()
+        except Exception:
+            if depth == 1:
+                self.rollback()
+            raise
+        finally:
+            self._tx_depth = depth - 1
 
     @property
     def engine(self):
@@ -289,6 +329,9 @@ class DbPersist:
     """
     持久化装饰器 - 自动重试的 commit/rollback
 
+    事务感知：当外部存在显式事务（SessionManager.in_transaction=True）时，
+    跳过内部 commit/rollback，由外层事务统一管理。
+
     重要变更：不再关闭 session（scoped_session 同线程共享，
     由请求级别 remove_session() 统一清理）
     """
@@ -300,14 +343,19 @@ class DbPersist:
 
     def __call__(self, f):
         def persist(*args, **kwargs):
+            # 检查是否处于显式事务中
+            in_tx = False
+            if self.db and hasattr(self.db, "in_transaction"):
+                in_tx = self.db.in_transaction
+
             for attempt in range(self.max_retries):
                 try:
                     ret = f(*args, **kwargs)
-                    if self.db:
+                    if self.db and not in_tx:
                         self.db.commit()
                     return ret if ret is not None else True
                 except Exception as e:
-                    if self.db:
+                    if self.db and not in_tx:
                         self.db.rollback()
                     if attempt < self.max_retries - 1:
                         import time
@@ -343,3 +391,19 @@ def get_db_session():
     _init_engine()
     assert _ScopedSession is not None
     return _ScopedSession()
+
+
+@contextmanager
+def transaction_scope():
+    """
+    模块级显式事务上下文管理器
+
+    使用模式：
+        from app.db.main_db import transaction_scope
+        with transaction_scope():
+            repo1.update(...)
+            repo2.insert(...)
+    """
+    manager = get_session_manager()
+    with manager.transaction_scope():
+        yield

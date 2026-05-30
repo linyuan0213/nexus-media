@@ -1,6 +1,7 @@
 """Subscribe refresh service - 刷新订阅TMDB信息."""
 
 import log
+from app.db.main_db import transaction_scope
 from app.media import meta_info
 from app.services.subscribe.utils import gen_rss_note
 from app.utils.types import MediaType
@@ -70,20 +71,22 @@ class SubscribeRefreshService:
                         f"[Subscribe]检测到TMDB信息变化，更新电视剧订阅 {name} 为 {media_info.title}，"
                         f"总集数为：{total_episode}"
                     )
-                    self._tv_repo.update_tmdb(
-                        rid=rssid,
-                        tmdbid=str(media_info.tmdb_id or ""),
-                        title=media_info.title or "",
-                        year=media_info.year or "",
-                        total=total_episode,
-                        lack=lack_episode,
-                        image=media_info.get_message_image(),
-                        desc=media_info.overview or "",
-                        note=gen_rss_note(media_info),
-                    )
-                    self._tv_episode_repo.update(
-                        rid=rssid, episodes=list(range(total_episode - lack_episode + 1, total_episode + 1))
-                    )
+                    # TV 订阅需同时更新 tv_repo + tv_episode_repo，使用事务保证原子性
+                    with transaction_scope():
+                        self._tv_repo.update_tmdb(
+                            rid=rssid,
+                            tmdbid=str(media_info.tmdb_id or ""),
+                            title=media_info.title or "",
+                            year=media_info.year or "",
+                            total=total_episode,
+                            lack=lack_episode,
+                            image=media_info.get_message_image(),
+                            desc=media_info.overview or "",
+                            note=gen_rss_note(media_info),
+                        )
+                        self._tv_episode_repo.update(
+                            rid=rssid, episodes=list(range(total_episode - lack_episode + 1, total_episode + 1))
+                        )
         log.info("[Subscribe]订阅TMDB信息刷新完成")
 
     def __get_media_info(self, tmdbid, name, year, mtype, cache=True):
