@@ -7,7 +7,6 @@ import importlib
 import os
 import re
 import shutil
-from typing import TYPE_CHECKING
 from urllib.parse import unquote
 
 from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_MEDIAEXT, RMT_SUBEXT
@@ -15,6 +14,7 @@ from app.core.exceptions import DomainError, RepositoryError, ServiceError, Vali
 from app.core.settings import settings
 from app.di import container
 from app.domain.entities.sync import SyncPathEntity
+from app.domain.entities.transfer import TransferUnknownEntity
 from app.helper.thread_helper import ThreadHelper
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media import MediaCache
@@ -31,9 +31,6 @@ from app.storage.config_models import LocalStorageConfig
 from app.utils import EpisodeFormat, ExceptionUtils, StringUtils
 from app.utils.types import MediaType, MovieTypes, OsType, SyncType, TvTypes
 from app.utils.web_utils import set_config_directory
-
-if TYPE_CHECKING:
-    from app.db.models import TRANSFERUNKNOWN
 
 
 class SyncService:
@@ -288,16 +285,16 @@ class SyncService:
                             unknowninfo = self._filetransfer.get_unknown_info_by_id(wid)
                             if not unknowninfo:
                                 continue
-                            path = unknowninfo.PATH
-                            dest_dir = str(unknowninfo.DEST or "")
-                            operation = unknowninfo.MODE or ""
+                            path = unknowninfo.path
+                            dest_dir = str(unknowninfo.dest or "")
+                            operation = unknowninfo.mode or ""
                         elif flag == "history":
                             transinfo = self._filetransfer.get_transfer_info_by_id(wid)
                             if not transinfo:
                                 continue
-                            path = os.path.join(str(transinfo.SOURCE_PATH or ""), str(transinfo.SOURCE_FILENAME or ""))
-                            dest_dir = str(transinfo.DEST or "")
-                            operation = transinfo.MODE or ""
+                            path = os.path.join(str(transinfo.source_path or ""), str(transinfo.source_filename or ""))
+                            dest_dir = str(transinfo.dest or "")
+                            operation = transinfo.mode or ""
                         else:
                             continue
 
@@ -340,7 +337,7 @@ class SyncService:
     def get_transfer_info_by_id(self, logid: int):
         return self._filetransfer.get_transfer_info_by_id(logid)
 
-    def get_unknown_info_by_id(self, tid: int) -> "TRANSFERUNKNOWN | None":
+    def get_unknown_info_by_id(self, tid: int) -> TransferUnknownEntity | None:
         return self._filetransfer.get_unknown_info_by_id(tid)
 
     def get_sub_path(self, directory: str, ft: str = "ALL") -> list[dict]:

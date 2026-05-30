@@ -4,10 +4,11 @@ DownloadService - 下载编排业务层
 """
 
 import os
+from typing import Any
 
 import log
 from app.core.exceptions import DomainError, ServiceError
-from app.db.models import DOWNLOADHISTORY
+
 from app.di import container
 from app.media import MediaService
 from app.media.models import MediaInfo
@@ -288,9 +289,9 @@ class DownloadService:
             return []
 
         # 按下载器分组任务
-        downloader_groups: dict[str, list[DOWNLOADHISTORY]] = {}
+        downloader_groups: dict[str, list[Any]] = {}
         for task in active_tasks:
-            did = task.DOWNLOADER or ""
+            did = task.downloader or ""
             if did not in downloader_groups:
                 downloader_groups[did] = []
             downloader_groups[did].append(task)
@@ -310,7 +311,7 @@ class DownloadService:
                 downloader_name = did
 
             # 批量查询这些任务的进度（直接调用客户端，绕过 only_nexus_media 标签过滤）
-            ids = [t.DOWNLOAD_ID for t in tasks if t.DOWNLOAD_ID]
+            ids = [t.download_id for t in tasks if t.download_id]
             _client = self._downloader.get_downloader(did)
             if not _client:
                 continue
@@ -324,7 +325,7 @@ class DownloadService:
 
             for task in tasks:
                 try:
-                    tid = task.DOWNLOAD_ID
+                    tid = task.download_id
                     progress = progress_map.get(tid)
 
                     if not progress:
@@ -338,15 +339,15 @@ class DownloadService:
                         completed_ids.append((did, tid))
                         continue
 
-                    # 任务还在下载中，确保 STATE 为 downloading
-                    if getattr(task, "STATE", None) != "downloading":
+                    # 任务还在下载中，确保 state 为 downloading
+                    if getattr(task, "state", None) != "downloading":
                         active_ids.append((did, tid))
 
                     title, image = self._build_display_info(task)
                     result.append(
                         {
                             "id": tid,
-                            "name": progress.get("name") or task.TORRENT or "",
+                            "name": progress.get("name") or task.torrent or "",
                             "title": title,
                             "image": image,
                             "progress": prog_val,
@@ -355,13 +356,13 @@ class DownloadService:
                             "downloader_id": did,
                             "downloader_name": downloader_name,
                             "client_id": downloader_conf.get("type") if downloader_conf else "",
-                            "save_path": task.SAVE_PATH,
+                            "save_path": task.save_path,
                         }
                     )
                 except (DomainError, ServiceError):
                     raise
                 except Exception as e:
-                    log.error(f"[DownloadService]处理任务 {task.DOWNLOAD_ID} 失败：{e}")
+                    log.error(f"[DownloadService]处理任务 {task.download_id} 失败：{e}")
 
         # 批量标记还在下载中的任务
         if active_ids:
@@ -385,10 +386,10 @@ class DownloadService:
 
     def _build_display_info(self, task) -> tuple[str, str]:
         """根据下载历史任务构建显示标题和海报"""
-        year = task.YEAR
-        se = task.SE
-        display_name = task.TITLE
-        poster = task.POSTER or ""
+        year = task.year
+        se = task.season_episode
+        display_name = task.title
+        poster = task.poster or ""
         if year:
             title = f"{display_name} ({year}) {se}"
         else:
