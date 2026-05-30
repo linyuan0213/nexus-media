@@ -5,6 +5,7 @@ import uuid
 from typing import Any
 
 import requests
+from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 import log
 from app.core.settings import settings
@@ -51,17 +52,20 @@ class DrissionPageHelper:
         self, method: str, url: str, retries: int = 2, delay: int = 1, **kwargs: Any
     ) -> requests.Response:
         """通用的网络请求重试逻辑"""
-        for attempt in range(retries):
-            try:
-                response = requests.request(method, url, **kwargs)
-                return response
-            except requests.exceptions.RequestException as e:
-                log.debug(f"请求失败(重试 {attempt + 1}): {e}")
-                if attempt < retries - 1:
-                    time.sleep(delay)
-                else:
-                    log.debug(f"所有重试失败，失败请求 {url}")
-                    raise
+
+        def _log_retry(retry_state):
+            exc = retry_state.outcome.exception()
+            log.debug(f"请求失败(重试 {retry_state.attempt_number}): {exc}")
+
+        for attempt in Retrying(
+            stop=stop_after_attempt(retries),
+            wait=wait_fixed(delay),
+            retry=retry_if_exception_type(requests.exceptions.RequestException),
+            before_sleep=_log_retry,
+            reraise=True,
+        ):
+            with attempt:
+                return requests.request(method, url, **kwargs)
         raise RuntimeError(f"所有重试失败，失败请求 {url}")
 
     def get_page_html(

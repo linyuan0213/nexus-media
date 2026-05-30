@@ -2,6 +2,7 @@ import json
 from typing import Any
 
 from redis import StrictRedis
+from redis.exceptions import RedisError
 
 import log
 from app.core.constants import REDIS_HOST, REDIS_PORT
@@ -17,7 +18,7 @@ class RedisStore:
             try:
                 self._client.ping()
                 return self._client
-            except Exception:
+            except RedisError:
                 self._available = False
                 self._client = None
 
@@ -30,7 +31,7 @@ class RedisStore:
                 self._available = True
                 log.debug("RedisStore 连接成功")
                 return self._client
-            except Exception as e:
+            except RedisError as e:
                 self._client = None
                 self._available = False
                 log.debug(f"RedisStore 连接失败: {e}")
@@ -49,7 +50,7 @@ class RedisStore:
             return
         try:
             client.set(key, value, ex=ex)
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore set 失败 {key}: {e}")
 
     def get(self, key: str) -> Any | None:
@@ -59,7 +60,7 @@ class RedisStore:
             return None
         try:
             return client.get(key)
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore get 失败 {key}: {e}")
             return None
 
@@ -72,7 +73,7 @@ class RedisStore:
             if isinstance(value, (dict, list)):
                 value = json.dumps(value)
             client.hset(name, key, value)
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore hset 失败 {name}/{key}: {e}")
 
     def hget(self, name: str, key: str) -> Any | None:
@@ -82,7 +83,7 @@ class RedisStore:
             return None
         try:
             return client.hget(name, key)
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore hget 失败 {name}/{key}: {e}")
             return None
 
@@ -93,7 +94,7 @@ class RedisStore:
             return
         try:
             client.hdel(name, key)
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore hdel 失败 {name}/{key}: {e}")
 
     def hgetall(self, name: str) -> dict:
@@ -106,7 +107,7 @@ class RedisStore:
             if not isinstance(raw_keys, list):
                 return {}
             return {k.decode("utf-8"): self.hget(name, k.decode("utf-8")) for k in raw_keys if isinstance(k, bytes)}
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore hgetall 失败 {name}: {e}")
             return {}
 
@@ -117,7 +118,7 @@ class RedisStore:
             return
         try:
             client.lpush(name, *[json.dumps(v) if isinstance(v, (dict, list)) else v for v in values])
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore lpush 失败 {name}: {e}")
 
     def rpop(self, name: str) -> Any | None:
@@ -127,7 +128,7 @@ class RedisStore:
             return None
         try:
             return client.rpop(name)
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore rpop 失败 {name}: {e}")
             return None
 
@@ -138,7 +139,7 @@ class RedisStore:
             return
         try:
             client.rpush(name, *[json.dumps(v) if isinstance(v, (dict, list)) else v for v in values])
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore rpush 失败 {name}: {e}")
 
     def lpop(self, name: str) -> Any | None:
@@ -148,7 +149,7 @@ class RedisStore:
             return None
         try:
             return client.lpop(name)
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore lpop 失败 {name}: {e}")
             return None
 
@@ -160,7 +161,7 @@ class RedisStore:
         try:
             result = client.llen(name)
             return result if isinstance(result, int) else 0
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore llen 失败 {name}: {e}")
             return 0
 
@@ -171,7 +172,7 @@ class RedisStore:
             return
         try:
             client.delete(*keys)
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore delete 失败 {keys}: {e}")
 
     def ping(self) -> bool:
@@ -188,7 +189,7 @@ class RedisStore:
             if not isinstance(raw_keys, list):
                 return []
             return [k.decode("utf-8") for k in raw_keys if isinstance(k, bytes)]
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore keys 失败 {pattern}: {e}")
             return []
 
@@ -199,7 +200,7 @@ class RedisStore:
             return
         try:
             client.expire(key, seconds)
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore expire 失败 {key}: {e}")
 
     def exists(self, key: str) -> bool:
@@ -209,9 +210,68 @@ class RedisStore:
             return False
         try:
             return bool(client.exists(key))
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore exists 失败 {key}: {e}")
             return False
+
+    def script_load(self, script: str) -> str | None:
+        """加载 Lua 脚本并返回 SHA1 摘要"""
+        client = self._ensure_connection()
+        if client is None:
+            return None
+        try:
+            result = client.script_load(script)
+            return str(result) if result is not None else None
+        except RedisError as e:
+            log.debug(f"RedisStore script_load 失败: {e}")
+            return None
+
+    def evalsha(self, sha: str, numkeys: int, *keys_and_args) -> Any | None:
+        """通过 SHA1 执行已加载的 Lua 脚本"""
+        client = self._ensure_connection()
+        if client is None:
+            return None
+        try:
+            return client.evalsha(sha, numkeys, *keys_and_args)
+        except RedisError as e:
+            log.debug(f"RedisStore evalsha 失败 {sha}: {e}")
+            return None
+
+    def zremrangebyscore(self, name: str, min_score: float, max_score: float) -> int:
+        """删除有序集合中指定分数范围的成员"""
+        client = self._ensure_connection()
+        if client is None:
+            return 0
+        try:
+            result = client.zremrangebyscore(name, min_score, max_score)
+            return result if isinstance(result, int) else 0
+        except RedisError as e:
+            log.debug(f"RedisStore zremrangebyscore 失败 {name}: {e}")
+            return 0
+
+    def zcard(self, name: str) -> int:
+        """获取有序集合的成员数"""
+        client = self._ensure_connection()
+        if client is None:
+            return 0
+        try:
+            result = client.zcard(name)
+            return result if isinstance(result, int) else 0
+        except RedisError as e:
+            log.debug(f"RedisStore zcard 失败 {name}: {e}")
+            return 0
+
+    def zadd(self, name: str, mapping: dict) -> int:
+        """向有序集合添加成员"""
+        client = self._ensure_connection()
+        if client is None:
+            return 0
+        try:
+            result = client.zadd(name, mapping)
+            return result if isinstance(result, int) else 0
+        except RedisError as e:
+            log.debug(f"RedisStore zadd 失败 {name}: {e}")
+            return 0
 
     def ttl(self, key: str) -> int:
         """获取键的剩余生存时间(秒)"""
@@ -221,7 +281,7 @@ class RedisStore:
         try:
             result = client.ttl(key)
             return result if isinstance(result, int) else -2
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore ttl 失败 {key}: {e}")
             return -2
 
@@ -235,7 +295,7 @@ class RedisStore:
         try:
             result = client.xadd(stream, fields, maxlen=max_len, approximate=True)
             return str(result) if result is not None and not isinstance(result, list) else None
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore xadd 失败 {stream}: {e}")
             return None
 
@@ -247,7 +307,7 @@ class RedisStore:
         try:
             client.xgroup_create(stream, group, id="0", mkstream=mkstream)
             return True
-        except Exception as e:
+        except RedisError as e:
             if "already exists" in str(e):
                 return True
             log.debug(f"RedisStore xgroup_create 失败 {stream}/{group}: {e}")
@@ -264,7 +324,7 @@ class RedisStore:
         try:
             result = client.xreadgroup(group, consumer, streams, count=count, block=block)
             return result if isinstance(result, list) else []
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore xreadgroup 失败: {e}")
             return []
 
@@ -276,7 +336,7 @@ class RedisStore:
         try:
             result = client.xack(stream, group, *ids)
             return result if isinstance(result, int) else 0
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore xack 失败 {stream}: {e}")
             return 0
 
@@ -288,7 +348,7 @@ class RedisStore:
         try:
             info = client.xpending(stream, group)
             return info.get("pending", 0) if isinstance(info, dict) else 0
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore xpending 失败 {stream}: {e}")
             return 0
 
@@ -300,7 +360,7 @@ class RedisStore:
         try:
             result = client.xclaim(stream, group, consumer, min_idle_time, ids)
             return result if isinstance(result, list) else []
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore xclaim 失败 {stream}: {e}")
             return []
 
@@ -312,6 +372,6 @@ class RedisStore:
         try:
             result = client.xdel(stream, *ids)
             return result if isinstance(result, int) else 0
-        except Exception as e:
+        except RedisError as e:
             log.debug(f"RedisStore xdel 失败 {stream}: {e}")
             return 0

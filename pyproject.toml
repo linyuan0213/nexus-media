@@ -86,6 +86,7 @@ dependencies = [
     "boto3>=1.43.7",
     "smbprotocol>=1.16.1",
     "dependency-injector>=4.49.0",
+    "tenacity>=9.1.4",
 ]
 
 [dependency-groups]

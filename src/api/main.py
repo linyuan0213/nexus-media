@@ -12,6 +12,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.infrastructure.rate_limiter import RateLimitMiddleware
+
 import log
 import version
 from api.routers import (
@@ -118,6 +120,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# 速率限制中间件：Redis 可用时分布式限流，否则降级为内存限流
+app.add_middleware(RateLimitMiddleware, limit=60, window=60)
 
 
 # Session 清理中间件：每个请求结束后清理 scoped_session

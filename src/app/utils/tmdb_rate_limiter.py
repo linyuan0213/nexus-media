@@ -7,6 +7,7 @@ import threading
 import time
 
 import log
+from tenacity import Retrying, retry_if_exception, stop_after_attempt, wait_exponential
 
 
 class TMDBRateLimiter:
@@ -118,9 +119,20 @@ class TMDBRateLimiter:
             self._blocked_requests = 0
 
 
+def _should_retry_tmdb(exc):
+    """判断 TMDB 异常是否应当重试（仅对限流或服务器错误重试）"""
+    status_code = getattr(exc, "status_code", None)
+    response = getattr(exc, "response", None)
+    if response is not None:
+        status_code = getattr(response, "status_code", None)
+    if status_code is not None and status_code not in [429, 500, 502, 503, 504]:
+        return False
+    return True
+
+
 class TMDBRetryWithBackoff:
     """
-    TMDB API 指数退避重试机制
+    TMDB API 指数退避重试机制（基于 tenacity）
 
     遇到 429 (Too Many Requests) 时，使用指数退避等待后重试
     """
@@ -128,75 +140,34 @@ class TMDBRetryWithBackoff:
     def __init__(
         self, max_retries: int = 3, base_delay: float = 1.0, max_delay: float = 60.0, exponential_base: float = 2.0
     ):
-        """
-        初始化重试器
-
-        :param max_retries: 最大重试次数
-        :param base_delay: 初始延迟（秒）
-        :param max_delay: 最大延迟（秒）
-        :param exponential_base: 指数基数
-        """
         self._max_retries = max_retries
         self._base_delay = base_delay
         self._max_delay = max_delay
         self._exponential_base = exponential_base
 
-    def get_delay(self, attempt: int) -> float:
-        """
-        获取第 attempt 次重试的延迟时间
-
-        :param attempt: 重试次数（从0开始）
-        :return: 延迟时间（秒）
-        """
-        delay = self._base_delay * (self._exponential_base**attempt)
-        return min(delay, self._max_delay)
-
-    def should_retry(self, attempt: int, status_code: int | None = None) -> bool:
-        """
-        判断是否应当重试
-
-        :param attempt: 当前重试次数
-        :param status_code: HTTP 状态码
-        :return: 是否应当重试
-        """
-        if attempt >= self._max_retries:
-            return False
-        # 只对速率限制或服务器错误重试
-        return not (status_code is not None and status_code not in [429, 500, 502, 503, 504])
-
     def execute(self, func, *args, **kwargs):
-        """
-        执行带重试的函数
+        """执行带重试的函数"""
 
-        :param func: 要执行的函数
-        :param args: 位置参数
-        :param kwargs: 关键字参数
-        :return: 函数返回值
-        :raises: 最后一次异常
-        """
-        last_exception = None
+        def _log_retry(retry_state):
+            exc = retry_state.outcome.exception()
+            wait_time = retry_state.next_action.sleep if retry_state.next_action else 0
+            log.warn(f"[TMDBRetry]请求失败，{wait_time:.1f}秒后进行第 {retry_state.attempt_number} 次重试: {exc}")
 
-        for attempt in range(self._max_retries + 1):
-            try:
+        for attempt in Retrying(
+            stop=stop_after_attempt(self._max_retries + 1),
+            wait=wait_exponential(
+                multiplier=self._base_delay,
+                exp_base=self._exponential_base,
+                min=self._base_delay,
+                max=self._max_delay,
+            ),
+            retry=retry_if_exception(_should_retry_tmdb),
+            before_sleep=_log_retry,
+            reraise=True,
+        ):
+            with attempt:
                 return func(*args, **kwargs)
-            except Exception as e:
-                last_exception = e
-
-                # 检查是否应当重试
-                status_code = getattr(e, "status_code", None)
-                response = getattr(e, "response", None)
-                if response is not None:
-                    status_code = getattr(response, "status_code", None)
-
-                if not self.should_retry(attempt, status_code):
-                    raise
-
-                delay = self.get_delay(attempt)
-                log.warn(f"[TMDBRetry]请求失败，{delay:.1f}秒后进行第 {attempt + 1} 次重试: {str(e)}")
-                time.sleep(delay)
-
-        # 重试次数用尽
-        raise last_exception if last_exception is not None else RuntimeError("Max retries exceeded")
+        return None
 
 
 # 全局速率限制器实例
