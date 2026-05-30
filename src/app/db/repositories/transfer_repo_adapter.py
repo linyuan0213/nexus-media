@@ -4,7 +4,7 @@
 """
 
 from enum import Enum
-from app.db.models import TRANSFERHISTORY, TRANSFERUNKNOWN
+from app.db.models import TRANSFERUNKNOWN
 from app.db.repositories.transfer_repository import TransferRepository
 from app.domain.entities.transfer import (
     TransferHistoryEntity,
@@ -62,15 +62,23 @@ class TransferHistoryRepositoryAdapter:
     # 兼容旧Repository方法名
     def get_transfer_info_by(
         self, tmdbid: int | None, season: str | None = None, season_episode: str | None = None
-    ) -> list[TRANSFERHISTORY] | None:
-        return self._repo.get_transfer_info_by(tmdbid, season, season_episode)
+    ) -> list[TransferHistoryEntity] | None:
+        rows = self._repo.get_transfer_info_by(tmdbid, season, season_episode)
+        if not rows:
+            return None
+        return [e for e in [TransferHistoryEntity.from_orm(r) for r in rows] if e is not None]
 
     # 兼容旧Repository方法名
-    def get_transfer_info_by_id(self, logid: int | None) -> TRANSFERHISTORY | None:
-        return self._repo.get_transfer_info_by_id(logid)
+    def get_transfer_info_by_id(self, logid: int | None) -> TransferHistoryEntity | None:
+        row = self._repo.get_transfer_info_by_id(logid)
+        return TransferHistoryEntity.from_orm(row)
 
-    def get_transfer_history(self, search: str | None, page: int, rownum: int) -> tuple[int, list[TRANSFERHISTORY]]:
-        return self._repo.get_transfer_history(search, page, rownum)
+    def get_transfer_history(
+        self, search: str | None, page: int, rownum: int
+    ) -> tuple[int, list[TransferHistoryEntity]]:
+        total, rows = self._repo.get_transfer_history(search, page, rownum)
+        entities = [e for e in [TransferHistoryEntity.from_orm(r) for r in rows] if e is not None]
+        return total, entities
 
     def delete_transfer_log_by_id(self, logid: int) -> None:
         self._repo.delete_transfer_log_by_id(logid)
@@ -86,8 +94,9 @@ class TransferHistoryRepositoryAdapter:
     def delete_transfer_unknown(self, tid: int | None) -> None:
         self._repo.delete_transfer_unknown(tid)
 
-    def get_unknown_info_by_id(self, tid: int | None) -> TRANSFERUNKNOWN | None:
-        return self._repo.get_unknown_info_by_id(tid)
+    def get_unknown_info_by_id(self, tid: int | None) -> TransferUnknownEntity | None:
+        row = self._repo.get_unknown_info_by_id(tid)
+        return TransferUnknownEntity.from_orm(row)
 
     def update_transfer_unknown_state(self, path: str) -> None:
         self._repo.update_transfer_unknown_state(path)

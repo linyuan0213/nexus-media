@@ -82,8 +82,11 @@ class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
     def get_download_history_by_path(self, path: str) -> Any:
         return self._repo.get_download_history_by_path(path)
 
-    def get_active_downloads(self):
-        return self._repo.get_active_downloads()
+    def get_active_downloads(self) -> list[DownloadHistoryEntity]:
+        rows = self._repo.get_active_downloads()
+        if not rows:
+            return []
+        return [entity for entity in [DownloadHistoryEntity.from_orm(r) for r in rows] if entity is not None]
 
     def update_state(self, downloader: str, download_id: str, state: str) -> None:
         self._repo.update_download_state(downloader, download_id, state)

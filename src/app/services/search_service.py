@@ -295,15 +295,15 @@ class Searcher:
         sites: list | None = None,
         filters: dict | None = None,
         user_name=None,
-    ):
+    ) -> tuple[Any, dict, int, int]:
         """
         只搜索和下载一个资源
         """
         if not media_info:
-            return None, {}, 0, 0
+            return None, no_exists, 0, 0
 
         if self.progress is None:
-            return None, {}, 0, 0
+            return None, no_exists, 0, 0
         self.progress.start(ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search)
 
         # 季/集信息
@@ -367,13 +367,13 @@ class Searcher:
         )
 
         if self.message is None:
-            return None, no_exists, len(media_list), None
+            return None, no_exists, len(media_list), 0
         if in_from in self.message.get_search_types():
             # 排序并入库
             media_list = processor.sort_results(media_list)
             processor.persist_results(media_list)
             if not self._search_auto:
-                return None, no_exists, len(media_list), None
+                return None, no_exists, len(media_list), 0
 
         # 4. 过滤已下载
         filtered_media_list = processor.filter_downloaded(media_list)
