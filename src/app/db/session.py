@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from sqlalchemy import text
 
 from app.core.settings import settings
-from app.db.engine import _Engine, _init_engine, _ScopedSession, get_sql_adapter
+from app.db.engine import _init_engine, get_engine, get_scoped_session, get_sql_adapter
 from app.db.models import Base
 from app.utils import PathUtils
 from app.utils.path_utils import get_script_path
@@ -33,8 +33,8 @@ class SessionManager:
 
     def __init__(self):
         _init_engine()
-        self._engine = _Engine
-        self._scoped = _ScopedSession
+        self._engine = get_engine()
+        self._scoped = get_scoped_session()
         self._tx_local = threading.local()
 
     def _session(self):
@@ -262,13 +262,13 @@ def get_session_manager() -> SessionManager:
 
 def remove_session():
     """移除当前线程的 session（应在请求/任务结束时调用）"""
-    _init_engine()
-    if _ScopedSession:
-        _ScopedSession.remove()
+    scoped = get_scoped_session()
+    if scoped:
+        scoped.remove()
 
 
 def get_db_session():
     """获取当前线程的数据库 session"""
-    _init_engine()
-    assert _ScopedSession is not None
-    return _ScopedSession()
+    scoped = get_scoped_session()
+    assert scoped is not None
+    return scoped()
