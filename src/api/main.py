@@ -3,7 +3,6 @@ FastAPI 主应用
 与 Flask 应用并行存在，按领域逐步迁移 Router。
 """
 
-import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -35,9 +34,10 @@ from api.routers import (
     userrss,
     words,
 )
+from app.core.root_path import get_project_root
 from app.db import init_db
-from app.db.session import remove_session
 from app.db.engine import get_engine
+from app.db.session import remove_session
 from app.di import container
 from app.downloader.client import init_clients as init_downloaders
 from app.indexer.client import init_clients as init_indexers
@@ -153,7 +153,7 @@ app.include_router(apikey.router, prefix="/api/apikey", tags=["apikey"])
 app.include_router(message_webhook.router, tags=["message-webhook"])
 
 # 挂载静态文件
-_static_dir = os.path.join(os.path.dirname(__file__), "..", "..", "static")
+_static_dir = str(get_project_root() / "static")
 app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
 
