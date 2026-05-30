@@ -45,7 +45,6 @@ from app.mediaserver.client import init_clients as init_mediaservers
 from app.message.client import init_clients as init_message_clients
 from app.schemas.common import HealthCheckResponse, HealthServiceStatus
 from app.services.site_config_updater import SiteConfigUpdater, update_site_config_at_startup
-from app.services.system_service import SystemLifecycleService
 from app.sites.engine import SiteEngine
 from app.utils.redis_store import RedisStore
 from app.utils.security import get_secret_key
@@ -92,7 +91,7 @@ async def lifespan(app: FastAPI):
     log.info("[FastAPI]消息菜单刷新完成")
     yield
     log.info("[FastAPI]关闭后台服务...")
-    SystemLifecycleService().stop_service()
+    container.system_lifecycle_service().stop_service()
     log.info("[FastAPI]后台服务已关闭")
 
 

@@ -154,7 +154,7 @@ class SystemLifecycleService:
     @staticmethod
     def restart_server() -> None:
         """停止进程并重启服务器"""
-        SystemLifecycleService().stop_service()
+        container.system_lifecycle_service().stop_service()
         script_path = os.path.join(os.getcwd(), "restart-server.sh")
         os.chmod(script_path, 0o700)
         res = subprocess.run(["bash", script_path], cwd=os.getcwd())
@@ -166,17 +166,17 @@ class SystemLifecycleService:
 
 def start_service():
     """启动所有后台服务（顶层兼容函数）"""
-    SystemLifecycleService().start_service()
+    container.system_lifecycle_service().start_service()
 
 
 def stop_service():
     """停止所有后台服务（顶层兼容函数）"""
-    SystemLifecycleService().stop_service()
+    container.system_lifecycle_service().stop_service()
 
 
 def restart_service():
     """重启所有后台服务（顶层兼容函数）"""
-    SystemLifecycleService().restart_service()
+    container.system_lifecycle_service().restart_service()
 
 
 def restart_server():
