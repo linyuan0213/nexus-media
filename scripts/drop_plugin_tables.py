@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(_root, "src"))
 
 os.environ["NEXUS_MEDIA_CONFIG"] = os.path.join(_root, "config", "config.yaml")
 
-from app.db.main_db import _Engine  # noqa: E402
+from app.db.engine import _Engine  # noqa: E402
 
 # 删除有错误的插件框架v2表
 tables = ["PLUGIN_MANIFEST", "PLUGIN_CONFIG", "PLUGIN_LOGS", "PLUGIN_HOOKS"]

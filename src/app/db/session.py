@@ -1,68 +1,19 @@
+"""
+Session 管理器
+提供 scoped_session 生命周期管理和兼容 API
+"""
+
 import os
 import threading
 from contextlib import contextmanager
-from typing import Any
 
 from sqlalchemy import text
-from sqlalchemy.orm import scoped_session, sessionmaker
 
 from app.core.settings import settings
-from app.db.database_factory import DatabaseFactory
+from app.db.engine import _Engine, _init_engine, _ScopedSession, get_sql_adapter
 from app.db.models import Base
-from app.db.sql_adapter import SQLAdapter
-from app.utils import ExceptionUtils, PathUtils
+from app.utils import PathUtils
 from app.utils.path_utils import get_script_path
-
-# =============================================================================
-# SQL 适配器（延迟初始化避免循环导入）
-# =============================================================================
-
-_sql_adapter = None
-_sql_adapter_lock = threading.Lock()
-
-
-def get_sql_adapter():
-    """获取 SQL 适配器实例 - 线程安全"""
-    global _sql_adapter
-    if _sql_adapter is None:
-        with _sql_adapter_lock:
-            if _sql_adapter is None:
-                _sql_adapter = SQLAdapter(get_engine())
-    return _sql_adapter
-
-
-# =============================================================================
-# 引擎与 Session 工厂（延迟初始化）
-# =============================================================================
-
-_Engine: Any | None = None
-_SessionFactory: Any | None = None
-_ScopedSession: Any | None = None
-
-
-def _init_engine():
-    """延迟初始化引擎和 session 工厂"""
-    global _Engine, _SessionFactory, _ScopedSession
-    if _Engine is None:
-        _Engine = DatabaseFactory.create_engine()
-        _SessionFactory = sessionmaker(
-            bind=_Engine,
-            autoflush=False,
-            autocommit=False,
-            expire_on_commit=False,
-        )
-        _ScopedSession = scoped_session(_SessionFactory)
-
-
-def get_engine():
-    """获取数据库引擎"""
-    _init_engine()
-    return _Engine
-
-
-# =============================================================================
-# SessionManager - Session 生命周期管理
-# =============================================================================
 
 
 class SessionManager:
@@ -84,7 +35,6 @@ class SessionManager:
         _init_engine()
         self._engine = _Engine
         self._scoped = _ScopedSession
-        # 线程本地事务深度计数器（支持嵌套事务）
         self._tx_local = threading.local()
 
     def _session(self):
@@ -108,12 +58,6 @@ class SessionManager:
     def transaction_scope(self):
         """
         显式事务上下文管理器（支持嵌套）
-
-        使用模式：
-            with transaction_scope():
-                repo1.update(...)
-                repo2.insert(...)
-            # 全部成功时 commit，任一失败时 rollback
         """
         self._tx_depth += 1
         depth = self._tx_depth
@@ -141,12 +85,6 @@ class SessionManager:
     def session_scope(self):
         """
         事务范围的 session 上下文管理器
-
-        使用模式：
-            with session_scope() as session:
-                session.add(obj)
-                # 自动 commit
-            # 异常时自动 rollback，最终自动 close + remove
         """
         sess = self._session()
         try:
@@ -267,11 +205,6 @@ class SessionManager:
             settings.save(config)
 
 
-# =============================================================================
-# Database - 数据库单例（引擎管理）
-# =============================================================================
-
-
 class Database:
     """
     数据库单例
@@ -313,65 +246,18 @@ class Database:
         self._session_mgr.init_data()
 
 
-# =============================================================================
 # 向后兼容别名
-# =============================================================================
-
 MainDb = SessionManager
 
 
-# =============================================================================
-# auto_commit - 自动重试持久化装饰器
-# =============================================================================
-
-
-class auto_commit:
-    """
-    持久化装饰器 - 自动重试的 commit/rollback
-
-    事务感知：当外部存在显式事务（SessionManager.in_transaction=True）时，
-    跳过内部 commit/rollback，由外层事务统一管理。
-
-    重要变更：不再关闭 session（scoped_session 同线程共享，
-    由请求级别 remove_session() 统一清理）
-    """
-
-    def __init__(self, db=None, max_retries=3, retry_delay=0.1):
-        self.db = db
-        self.max_retries = max_retries
-        self.retry_delay = retry_delay
-
-    def __call__(self, f):
-        def persist(*args, **kwargs):
-            # 检查是否处于显式事务中
-            in_tx = False
-            if self.db and hasattr(self.db, "in_transaction"):
-                in_tx = self.db.in_transaction
-
-            for attempt in range(self.max_retries):
-                try:
-                    ret = f(*args, **kwargs)
-                    if self.db and not in_tx:
-                        self.db.commit()
-                    return ret if ret is not None else True
-                except Exception as e:
-                    if self.db and not in_tx:
-                        self.db.rollback()
-                    if attempt < self.max_retries - 1:
-                        import time
-
-                        time.sleep(self.retry_delay * (attempt + 1))
-                    else:
-                        ExceptionUtils.exception_traceback(e)
-                        return False
-            return False
-
-        return persist
-
-
-# =============================================================================
+# ---------------------------------------------------------------------------
 # 模块级快捷函数
-# =============================================================================
+# ---------------------------------------------------------------------------
+
+
+def get_session_manager() -> SessionManager:
+    """获取 SessionManager 实例"""
+    return SessionManager()
 
 
 def remove_session():
@@ -381,29 +267,8 @@ def remove_session():
         _ScopedSession.remove()
 
 
-def get_session_manager():
-    """获取 SessionManager 实例"""
-    return SessionManager()
-
-
 def get_db_session():
     """获取当前线程的数据库 session"""
     _init_engine()
     assert _ScopedSession is not None
     return _ScopedSession()
-
-
-@contextmanager
-def transaction_scope():
-    """
-    模块级显式事务上下文管理器
-
-    使用模式：
-        from app.db.main_db import transaction_scope
-        with transaction_scope():
-            repo1.update(...)
-            repo2.insert(...)
-    """
-    manager = get_session_manager()
-    with manager.transaction_scope():
-        yield

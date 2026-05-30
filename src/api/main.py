@@ -36,7 +36,7 @@ from api.routers import (
     words,
 )
 from app.db import init_db, remove_session
-from app.db.main_db import get_engine
+from app.db.engine import get_engine
 from app.di import container
 from app.downloader.client import init_clients as init_downloaders
 from app.indexer.client import init_clients as init_indexers

@@ -1,7 +1,7 @@
 """Subscribe refresh service - 刷新订阅TMDB信息."""
 
 import log
-from app.db.main_db import transaction_scope
+from app.db.transaction import transaction_scope
 from app.media import meta_info
 from app.services.subscribe.utils import gen_rss_note
 from app.utils.types import MediaType
