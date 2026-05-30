@@ -10,7 +10,7 @@ Base Repository Class
 
 from contextlib import contextmanager
 
-from app.db.session import SessionManager
+from app.db.session import Database
 
 
 class BaseRepository:
@@ -30,8 +30,8 @@ class BaseRepository:
     - session_scope()      → 事务上下文管理器（推荐新代码使用）
     """
 
-    # 类级别初始化 SessionManager，兼容 @auto_commit(BaseRepository._db) 用法
-    _db = SessionManager()
+    # 通过 Database 单例统一获取 SessionManager，避免独立实例和导入时副作用
+    _db = Database().session_manager
 
     def __init__(self):
         pass

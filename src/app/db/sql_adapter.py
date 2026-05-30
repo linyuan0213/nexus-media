@@ -4,10 +4,30 @@ SQL 语句适配器模块
 """
 
 import re
+import threading
 
 from sqlalchemy import Engine
 
 from app.db.database_factory import DatabaseFactory
+from app.db.engine import get_engine
+
+
+# =============================================================================
+# SQL 适配器（延迟初始化避免循环导入）
+# =============================================================================
+
+_sql_adapter = None
+_sql_adapter_lock = threading.Lock()
+
+
+def get_sql_adapter():
+    """获取 SQL 适配器实例 - 线程安全"""
+    global _sql_adapter
+    if _sql_adapter is None:
+        with _sql_adapter_lock:
+            if _sql_adapter is None:
+                _sql_adapter = SQLAdapter(get_engine())
+    return _sql_adapter
 
 
 class SQLAdapter:
@@ -20,7 +40,7 @@ class SQLAdapter:
         :param engine: SQLAlchemy Engine，如果为None则从配置中获取
         """
         if engine is None:
-            engine = DatabaseFactory.create_engine()
+            engine = get_engine()
         self.engine = engine
         self.is_sqlite = DatabaseFactory.is_sqlite(engine)
         self.is_mysql = DatabaseFactory.is_mysql(engine)
@@ -233,8 +253,8 @@ def adapt_sql_for_engine(sql: str, engine: Engine | None = None) -> str:
     全局函数：适配 SQL 语句
 
     :param sql: 原始 SQL 语句
-    :param engine: SQLAlchemy Engine，如果为None则从配置中获取
+    :param engine: SQLAlchemy Engine，如果为None则复用全局单例引擎
     :return: 适配后的 SQL 语句
     """
-    adapter = SQLAdapter(engine)
+    adapter = SQLAdapter(engine if engine is not None else get_engine())
     return adapter.adapt_sql(sql)

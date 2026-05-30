@@ -316,7 +316,11 @@ class AppSettings(BaseSettings):
 
     @property
     def config_path(self) -> str:
-        return os.path.dirname(self._config_path())
+        path = self._config_path()
+        if not path:
+            path = _resolve_config_path()
+        dirname = os.path.dirname(path)
+        return dirname or "."
 
 
 def _init_config_file() -> str:

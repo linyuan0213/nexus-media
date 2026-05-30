@@ -10,7 +10,8 @@ from contextlib import contextmanager
 from sqlalchemy import text
 
 from app.core.settings import settings
-from app.db.engine import _init_engine, get_engine, get_scoped_session, get_sql_adapter
+from app.db.engine import _init_engine, get_engine, get_scoped_session
+from app.db.sql_adapter import get_sql_adapter
 from app.db.models import Base
 from app.utils import PathUtils
 from app.utils.path_utils import get_script_path
@@ -31,11 +32,12 @@ class SessionManager:
     Session 清理：请求结束后必须调用 remove() 清理线程本地存储
     """
 
+    _tx_local = threading.local()
+
     def __init__(self):
         _init_engine()
         self._engine = get_engine()
         self._scoped = get_scoped_session()
-        self._tx_local = threading.local()
 
     def _session(self):
         assert self._scoped is not None

@@ -1,6 +1,5 @@
 """事件监听与处理组件."""
 
-import contextlib
 import time
 
 from apscheduler.events import (
@@ -12,7 +11,6 @@ from apscheduler.events import (
 )
 
 import log
-from app.db.session import remove_session
 
 
 class EventHandler:
@@ -24,17 +22,13 @@ class EventHandler:
     def _job_event_listener(self, event: JobExecutionEvent) -> None:
         """任务事件监听器
 
-        处理任务执行完成、失败、错过等事件，
-        同时清理数据库 session 防止连接池泄漏。
+        处理任务执行完成、失败、错过等事件。
+        数据库 session 清理由 JobRegistry._wrap_with_lock 在作业线程中完成。
 
         Args:
             event: APScheduler 事件对象
         """
         job_id = event.job_id
-
-        # 清理当前线程的数据库 session
-        with contextlib.suppress(Exception):
-            remove_session()
 
         if event.code == EVENT_JOB_SUBMITTED:
             self._core._job_start_times[job_id] = time.time()
