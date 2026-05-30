@@ -117,7 +117,7 @@ class TransferCleanupService:
             for finfo in backend.list_dir(path):
                 if not finfo.is_dir:
                     ext = os.path.splitext(finfo.path)[1].lower()
-                    if ext in (".mp4", ".mkv", ".avi", ".wmv", ".mov", ".flv", ".ts", ".m2ts"):
+                    if ext in RMT_MEDIAEXT:
                         return True
             return False
         except Exception:
