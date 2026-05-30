@@ -56,3 +56,9 @@ def get_engine():
     """获取数据库引擎"""
     _init_engine()
     return _Engine
+
+
+def get_scoped_session():
+    """获取当前线程的 scoped_session"""
+    _init_engine()
+    return _ScopedSession
