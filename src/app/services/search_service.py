@@ -19,13 +19,15 @@ from app.core.settings import settings
 from app.di import container
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.domain.interfaces.search_repo import ISearchRepository
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media import MediaService
 from app.message import Message
-from app.plugin_framework.event_compat import EventHandler
+from app.events import Event
+from app.events.constants import SEARCH_START
 from app.schemas.search import SearchMediasResultDTO, SearchOneMediaResultDTO
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.utils.string_utils import StringUtils
-from app.utils.types import EventType, MediaType, ProgressKey, SearchType
+from app.utils.types import MediaType, ProgressKey, SearchType
 
 
 class SearchQueryBuilder:
@@ -214,9 +216,16 @@ class SearchResultProcessor:
         return filtered
 
     def persist_results(self, media_list: list, title=None, ident_flag=True) -> None:
-        """清空并保存搜索结果到数据库"""
-        self._search_repo.delete_all_search_torrents()
-        self._search_repo.insert_search_results(media_list, title, ident_flag)
+        """清空并保存搜索结果到数据库（加分布式锁防止并发覆盖）"""
+        lock = get_lock_manager().create_lock("search:persist_results", ttl_seconds=60)
+        if not lock.acquire():
+            log.warn("[Search]persist_results 正在执行，跳过")
+            return
+        try:
+            self._search_repo.delete_all_search_torrents()
+            self._search_repo.insert_search_results(media_list, title, ident_flag)
+        finally:
+            lock.release()
 
     def batch_download(self, media_list: list, in_from: SearchType, no_exists: dict, user_name=None):
         """择优下载"""
@@ -232,7 +241,10 @@ class Searcher:
     """
 
     def __init__(
-        self, download_repo: IDownloadHistoryRepository | None = None, search_repo: ISearchRepository | None = None
+        self,
+        download_repo: IDownloadHistoryRepository | None = None,
+        search_repo: ISearchRepository | None = None,
+        event_bus=None,
     ):
         self._download_repo = download_repo or container.download_history_repo()
         self._search_repo = search_repo or container.search_repo()
@@ -242,7 +254,7 @@ class Searcher:
         self.progress = container.progress_helper()
         self.search_repo = self._search_repo
         self.indexer_service = container.indexer_service()
-        self.eventmanager = EventHandler
+        self._event_bus = event_bus or container.event_bus()
         self._search_auto = settings.get("pt").get("search_auto", True)
 
     @property
@@ -258,16 +270,18 @@ class Searcher:
             return []
         if not self.indexer_service:
             return []
-        if self.eventmanager is None:
+        if self._event_bus is None:
             return []
-        self.eventmanager.send_event(
-            EventType.SearchStart,
-            {
-                "key_word": key_word,
-                "media_info": match_media.to_dict() if match_media else None,
-                "filter_args": filter_args,
-                "search_type": in_from.value if in_from else None,
-            },
+        self._event_bus.publish(
+            Event(
+                event_type=SEARCH_START,
+                payload={
+                    "key_word": key_word,
+                    "media_info": match_media.to_dict() if match_media else None,
+                    "filter_args": filter_args,
+                    "search_type": in_from.value if in_from else None,
+                },
+            )
         )
         return self.indexer_service.search_by_keyword(
             key_word=key_word, filter_args=filter_args, match_media=match_media, in_from=in_from

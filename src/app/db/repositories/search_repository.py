@@ -21,7 +21,7 @@ class SearchRepository(BaseRepository):
     def insert_search_results(self, media_items: list, title=None, ident_flag=True):
         """
         将返回信息插入数据库
-        使用批量插入映射以提高性能
+        使用 UPSERT 语义：先删除冲突记录，再批量插入
 
         Args:
             media_items: 媒体信息列表
@@ -30,6 +30,20 @@ class SearchRepository(BaseRepository):
         """
         if not media_items:
             return
+
+        # 收集本次插入的 pageurl + site 用于删除冲突记录
+        pageurl_site_pairs = []
+        for media_item in media_items:
+            if media_item.page_url and media_item.site:
+                pageurl_site_pairs.append((media_item.page_url, media_item.site))
+
+        if pageurl_site_pairs:
+            from sqlalchemy import and_, or_
+
+            conditions = [
+                and_(SEARCHRESULTINFO.PAGEURL == pu, SEARCHRESULTINFO.SITE == st) for pu, st in pageurl_site_pairs
+            ]
+            self._db.query(SEARCHRESULTINFO).filter(or_(*conditions)).delete(synchronize_session=False)
 
         mappings = []
         for media_item in media_items:

@@ -125,6 +125,12 @@ class Thunder(_IDownloadClient):
         torrents, error = self.get_torrents(status="completed")
         return None if error else torrents
 
+    def _normalize_files(self, raw_files: list[dict]) -> list[dict]:
+        return raw_files
+
+    def set_file_selection(self, tid: str | None, selected_map: dict[int, bool]) -> bool:
+        return True
+
     def get_files(self, tid: str | None = None) -> list[dict] | None:
         if not self._client:
             return None

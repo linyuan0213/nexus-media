@@ -498,6 +498,26 @@ class Transmission(_IDownloadClient):
         else:
             return None
 
+    def _normalize_files(self, raw_files: Any) -> list[dict]:
+        """将 transmission 文件列表转换为统一格式."""
+        return [{"id": idx, "name": getattr(f, "name", "")} for idx, f in enumerate(raw_files)]
+
+    def set_file_selection(self, tid: str | None, selected_map: dict[int, bool]) -> bool:
+        """设置种子文件的选择状态."""
+        if not tid or not selected_map or not self.trc:
+            return False
+        files_info = {
+            tid: {fid: {"priority": "normal", "selected": selected} for fid, selected in selected_map.items()}
+        }
+        try:
+            self.trc.set_files(files_info)  # type: ignore[attr-defined]
+            return True
+        except (InfrastructureError, NetworkError):
+            raise
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+            return False
+
     def set_files(self, **kwargs: Any) -> bool:
         """
         设置下载文件的状态

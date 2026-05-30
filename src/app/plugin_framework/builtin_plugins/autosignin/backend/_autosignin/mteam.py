@@ -1,12 +1,11 @@
 import time
 
+from app.di import container
 from app.helper.cookiecloud_helper import CookiecloudHelper
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.plugin_framework.event_compat import EventHandler
+from app.plugin_framework.hook_system import HookSystem
 from app.utils import StringUtils
 from app.utils.config_tools import get_proxies, get_ua
-from app.utils.types import EventType
-from app.di import container
 
 
 class MTeam(_ISiteSigninHandler):
@@ -40,7 +39,7 @@ class MTeam(_ISiteSigninHandler):
         site_info.get("ua")
         get_proxies() if site_info.get("proxy") else None
 
-        EventHandler.send_event(EventType.LocalStorageSync)
+        HookSystem().emit("site.local_storage_sync", {})
         time.sleep(10)
         local_storage = CookiecloudHelper().get_local_storage("m-team.io")
 

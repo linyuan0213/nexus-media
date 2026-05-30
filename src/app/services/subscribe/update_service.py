@@ -2,9 +2,11 @@
 
 from typing import Any, cast
 
+from app.events import Event
+from app.events.constants import SUBSCRIBE_ADD
 from app.media import meta_info
 from app.services.subscribe.utils import gen_rss_note
-from app.utils.types import EventType, MediaType, RssType
+from app.utils.types import MediaType, RssType
 from app.utils.web_utils import WebUtils
 
 
@@ -17,14 +19,14 @@ class SubscribeUpdateService:
         tv_repo,
         media_service,
         message,
-        eventmanager,
+        event_bus,
         system_config,
     ):
         self._movie_repo = movie_repo
         self._tv_repo = tv_repo
         self._media = media_service
         self._message = message
-        self._eventmanager = eventmanager
+        self._event_bus = event_bus
         self._system_config = system_config
 
     def update_rss_subscribe(
@@ -222,25 +224,27 @@ class SubscribeUpdateService:
                 )
 
         if code == 0:
-            self._eventmanager.send_event(
-                EventType.SubscribeAdd,
-                {
-                    "media": media_info.to_dict() if media_info else {},
-                    "rssid": rssid,
-                    "rss_sites": rss_sites,
-                    "search_sites": search_sites,
-                    "over_edition": over_edition,
-                    "filter_restype": filter_restype,
-                    "filter_pix": filter_pix,
-                    "filter_team": filter_team,
-                    "filter_rule": filter_rule,
-                    "save_path": save_path,
-                    "download_setting": download_setting,
-                    "total_ep": total_ep,
-                    "current_ep": current_ep,
-                    "fuzzy_match": fuzzy_match,
-                    "keyword": keyword,
-                },
+            self._event_bus.publish(
+                Event(
+                    event_type=SUBSCRIBE_ADD,
+                    payload={
+                        "media": media_info.to_dict() if media_info else {},
+                        "rssid": rssid,
+                        "rss_sites": rss_sites,
+                        "search_sites": search_sites,
+                        "over_edition": over_edition,
+                        "filter_restype": filter_restype,
+                        "filter_pix": filter_pix,
+                        "filter_team": filter_team,
+                        "filter_rule": filter_rule,
+                        "save_path": save_path,
+                        "download_setting": download_setting,
+                        "total_ep": total_ep,
+                        "current_ep": current_ep,
+                        "fuzzy_match": fuzzy_match,
+                        "keyword": keyword,
+                    },
+                ),
             )
             if in_from and media_info:
                 media_info.user_name = user_name

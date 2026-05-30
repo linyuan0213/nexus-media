@@ -8,6 +8,7 @@ import json
 import log
 from app.core.exceptions import ResourceNotFoundError, ValidationError
 from app.di import container
+from app.domain.entities.config import TorrentRemoveTaskEntity
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.message import Message
 from app.utils import ExceptionUtils
@@ -192,37 +193,9 @@ class TorrentRemoverService:
             lock.release()
 
     def _validate_task_params(self, data: dict) -> None:
-        name = data.get("name")
-        if not name:
-            raise ValidationError("名称参数不合法")
-        action = data.get("action")
-        if not str(action).isdigit() or int(action or 0) not in [1, 2, 3]:
-            raise ValidationError("动作参数不合法")
-        interval = data.get("interval")
-        if not str(interval).isdigit():
-            raise ValidationError("运行间隔参数不合法")
-        enabled = data.get("enabled")
-        if not str(enabled).isdigit() or int(enabled or 0) not in [0, 1]:
-            raise ValidationError("状态参数不合法")
-        samedata = data.get("samedata")
-        if not str(samedata).isdigit() or int(samedata or 0) not in [0, 1]:
-            raise ValidationError("处理辅种参数不合法")
-        only_nexus_media = data.get("only_nexus_media")
-        if not str(only_nexus_media).isdigit() or int(only_nexus_media or 0) not in [0, 1]:
-            raise ValidationError("仅处理NEXUS_MEDIA添加种子参数不合法")
-        ratio = data.get("ratio") or 0
-        if not str(ratio).replace(".", "").isdigit():
-            raise ValidationError("分享率参数不合法")
-        seeding_time = data.get("seeding_time") or 0
-        if not str(seeding_time).isdigit():
-            raise ValidationError("做种时间参数不合法")
-        upload_avs = data.get("upload_avs") or 0
-        if not str(upload_avs).isdigit():
-            raise ValidationError("平均上传速度参数不合法")
-        size = data.get("size")
-        size = str(size).split("-") if size else []
-        if size and (len(size) != 2 or not str(size[0]).isdigit() or not str(size[-1]).isdigit()):
-            raise ValidationError("种子大小参数不合法")
+        errors = TorrentRemoveTaskEntity.validate_params(data)
+        if errors:
+            raise ValidationError(errors[0])
 
     def update_torrent_remove_task(self, data: dict) -> None:
         self._validate_task_params(data)

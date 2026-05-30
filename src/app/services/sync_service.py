@@ -14,6 +14,7 @@ from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_MEDIAEXT, RMT_SUBEXT
 from app.core.exceptions import DomainError, RepositoryError, ServiceError, ValidationError
 from app.core.settings import settings
 from app.di import container
+from app.domain.entities.sync import SyncPathEntity
 from app.helper.thread_helper import ThreadHelper
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media import MediaCache
@@ -27,7 +28,7 @@ from app.services.sync_engine import SyncEngine as Sync
 from app.storage import StorageBackendFactory
 from app.storage.backends.base import StorageType
 from app.storage.config_models import LocalStorageConfig
-from app.utils import EpisodeFormat, ExceptionUtils, PathUtils, StringUtils
+from app.utils import EpisodeFormat, ExceptionUtils, StringUtils
 from app.utils.types import MediaType, MovieTypes, OsType, SyncType, TvTypes
 from app.utils.web_utils import set_config_directory
 
@@ -69,19 +70,31 @@ class SyncService:
         校验同步目录参数（不判断存储层是否存在）
         失败时抛出 ValidationError
         """
-        if not source:
-            raise ValidationError("源目录不能为空")
         source = os.path.normpath(source)
-        if source in ("/", "\\"):
-            raise ValidationError("源目录不能是根目录")
         if dest:
             dest = os.path.normpath(dest)
-            if PathUtils.is_path_in_path(source, dest):
-                raise ValidationError("目的目录不可包含在源目录中")
+
+        entity = SyncPathEntity(
+            id=0,
+            source=source,
+            dest=dest or "",
+            unknown="",
+            mode=mode,
+            compatibility=False,
+            rename=False,
+            enabled=False,
+            note=None,
+        )
+        errors = entity.validate()
+        if errors:
+            raise ValidationError(errors[0])
+
+        if dest and SyncPathEntity.is_subpath(source, dest):
+            raise ValidationError("目的目录不可包含在源目录中")
         if mode == "link" and dest and src_backend == "local" and dst_backend == "local":
-            common_path = os.path.commonprefix([source, dest])
-            if not common_path or common_path == "/":
-                raise ValidationError("硬链接不能跨盘")
+            err = SyncPathEntity.validate_hardlink(source, dest)
+            if err:
+                raise ValidationError(err)
 
     def add_or_edit_sync_path(
         self,

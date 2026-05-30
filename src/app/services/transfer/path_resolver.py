@@ -2,6 +2,7 @@
 
 import os
 import re
+from typing import Any
 
 from app.core.constants import DEFAULT_MOVIE_FORMAT, DEFAULT_TV_FORMAT
 from app.core.settings import settings
@@ -53,6 +54,7 @@ class TransferPathResolver:
         self._tv_dir_rmt_format = tv_dir_rmt_format
         self._tv_season_rmt_format = tv_season_rmt_format
         self._tv_file_rmt_format = tv_file_rmt_format
+        self._backend_cache: dict[str, Any] = {}
 
     @classmethod
     def from_settings(cls, category: Category | None = None) -> "TransferPathResolver":
@@ -240,9 +242,12 @@ class TransferPathResolver:
         return StorageBackendFactory.create(config)
 
     def resolve_backend_by_id(self, backend_id: str):
-        """根据 ID 解析存储后端（本地返回 LocalStorageBackend 实例）."""
+        """根据 ID 解析存储后端（本地返回 LocalStorageBackend 实例，带缓存）."""
         if not backend_id or backend_id == "local":
             return LocalStorageBackend(StorageConfig(id="local", name="local", type=StorageType.LOCAL))
+        cached = self._backend_cache.get(backend_id)
+        if cached is not None:
+            return cached
         repo = container.storage_backend_repo()
         entity = repo.get_by_id(int(backend_id))
         if not entity:
@@ -256,7 +261,9 @@ class TransferPathResolver:
         for k, v in entity.config.items():
             if hasattr(config, k):
                 setattr(config, k, v)
-        return StorageBackendFactory.create(config)
+        backend = StorageBackendFactory.create(config)
+        self._backend_cache[backend_id] = backend
+        return backend
 
     # ---------- 格式化 ----------
 

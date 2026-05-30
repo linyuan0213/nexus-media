@@ -14,6 +14,7 @@ from app.services.sync_engine import SyncEngine as Sync
 from initializer import (
     check_config,
     check_redis,
+    init_event_handlers,
     init_message_webhook_apikey,
     init_rbac_system,
     update_config,
@@ -104,6 +105,7 @@ class SystemLifecycleService:
         check_redis()
         update_rss_state()
         init_rbac_system()
+        init_event_handlers()
         init_message_webhook_apikey()
         # 1. 先启动调度器，确保所有后台服务的定时任务可以正常注册
         self._scheduler.start_service(load_defaults=True)

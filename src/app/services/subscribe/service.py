@@ -9,7 +9,6 @@ from app.db.repositories.rss_repo_adapter import (
 )
 from app.di import container
 from app.domain.entities.rss import SubscribeState
-from app.plugin_framework.event_compat import EventHandler
 from app.services.subscribe.add_service import SubscribeAddService
 from app.services.subscribe.finish_service import SubscribeFinishService
 from app.services.subscribe.query_service import SubscribeQueryService
@@ -28,7 +27,7 @@ class SubscribeService:
         tv_repo=None,
         tv_episode_repo=None,
         history_repo=None,
-        search_engine=None,
+        search_engine: SubscribeSearchEngine | None = None,
         message=None,
         media_service=None,
         downloader=None,
@@ -36,7 +35,7 @@ class SubscribeService:
         douban=None,
         indexer_service=None,
         filter_service=None,
-        eventmanager=None,
+        event_bus=None,
         system_config=None,
     ):
         self._movie_repo = movie_repo or RssMovieRepositoryAdapter()
@@ -50,17 +49,17 @@ class SubscribeService:
         self._douban = douban or container.douban()
         self._indexer_service = indexer_service or container.indexer_service()
         self._filter = filter_service or container.filter_service()
-        self._eventmanager = eventmanager or EventHandler
+        self._event_bus = event_bus or container.event_bus()
         self._system_config = system_config or container.system_config()
 
         self._update_svc = SubscribeUpdateService(
-            self._movie_repo, self._tv_repo, self._media, self._message, self._eventmanager, self._system_config
+            self._movie_repo, self._tv_repo, self._media, self._message, self._event_bus, self._system_config
         )
         self._add_svc = SubscribeAddService(
-            self._movie_repo, self._tv_repo, self._media, self._message, self._eventmanager, self._system_config
+            self._movie_repo, self._tv_repo, self._media, self._message, self._event_bus, self._system_config
         )
         self._finish_svc = SubscribeFinishService(
-            self._movie_repo, self._tv_repo, self._history_repo, self._message, self._eventmanager
+            self._movie_repo, self._tv_repo, self._history_repo, self._message, self._event_bus
         )
         self._query_svc = SubscribeQueryService(
             self._movie_repo,
@@ -158,7 +157,10 @@ class SubscribeService:
     def update_subscribe_over_edition(self, rtype, rssid, media):
         if not rssid or not media.res_order or not media.filter_rule:
             return False
-        self._movie_repo.update_filter_order(rssid=rssid, res_order=media.res_order)
+        if rtype == MediaType.MOVIE:
+            self._movie_repo.update_filter_order(rssid=rssid, res_order=media.res_order)
+        else:
+            self._tv_repo.update_filter_order(rssid=rssid, res_order=media.res_order)
         over_edition_order = self._filter.get_rule_first_order(rulegroup=media.filter_rule)
         if int(media.res_order) >= int(over_edition_order):
             self.finish_rss_subscribe(rssid=rssid, media=media)
@@ -168,7 +170,10 @@ class SubscribeService:
         return False
 
     def check_subscribe_over_edition(self, rtype, rssid, res_order):
-        pre_res_order = self._movie_repo.get_filter_order(rssid=rssid)
+        if rtype == MediaType.MOVIE:
+            pre_res_order = self._movie_repo.get_filter_order(rssid=rssid)
+        else:
+            pre_res_order = self._tv_repo.get_filter_order(rssid=rssid)
         if not pre_res_order:
             return True
         return int(pre_res_order) < int(res_order or 0)

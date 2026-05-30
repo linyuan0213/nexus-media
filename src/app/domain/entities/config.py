@@ -3,6 +3,7 @@
 包含消息客户端、下载器、过滤规则、媒体服务器等配置实体
 """
 
+import json
 from dataclasses import dataclass, fields
 from typing import Any, Optional
 
@@ -275,6 +276,74 @@ class TorrentRemoveTaskEntity:
         )
 
     _ORM_FIELD_MAP = {}
+
+    @property
+    def parsed_config(self) -> dict[str, Any]:
+        """解析 JSON 配置字符串为字典"""
+        try:
+            return json.loads(self.config) if self.config else {}
+        except Exception:
+            return {}
+
+    @property
+    def action_display(self) -> str:
+        """动作展示文本"""
+        return {1: "暂停", 2: "删除种子", 3: "删除种子及文件"}.get(self.parsed_config.get("action", 0), "未知")
+
+    @staticmethod
+    def validate_params(data: dict) -> list[str]:
+        """校验删种任务参数字典，返回错误信息列表（空列表表示验证通过）"""
+        errors = []
+        name = data.get("name")
+        if not name:
+            errors.append("名称参数不合法")
+        action = data.get("action")
+        if not str(action).isdigit() or int(action or 0) not in (1, 2, 3):
+            errors.append("动作参数不合法")
+        interval = data.get("interval")
+        if not str(interval).isdigit():
+            errors.append("运行间隔参数不合法")
+        enabled = data.get("enabled")
+        if not str(enabled).isdigit() or int(enabled or 0) not in (0, 1):
+            errors.append("状态参数不合法")
+        samedata = data.get("samedata")
+        if not str(samedata).isdigit() or int(samedata or 0) not in (0, 1):
+            errors.append("处理辅种参数不合法")
+        only_nexus_media = data.get("only_nexus_media")
+        if not str(only_nexus_media).isdigit() or int(only_nexus_media or 0) not in (0, 1):
+            errors.append("仅处理NEXUS_MEDIA添加种子参数不合法")
+        ratio = data.get("ratio") or 0
+        if not str(ratio).replace(".", "").isdigit():
+            errors.append("分享率参数不合法")
+        seeding_time = data.get("seeding_time") or 0
+        if not str(seeding_time).isdigit():
+            errors.append("做种时间参数不合法")
+        upload_avs = data.get("upload_avs") or 0
+        if not str(upload_avs).isdigit():
+            errors.append("平均上传速度参数不合法")
+        size = data.get("size")
+        size = str(size).split("-") if size else []
+        if size and (len(size) != 2 or not str(size[0]).isdigit() or not str(size[-1]).isdigit()):
+            errors.append("种子大小参数不合法")
+        return errors
+
+    @staticmethod
+    def validate_config(config: dict) -> list[str]:
+        """校验删种配置字典，返回错误信息列表"""
+        errors = []
+        ratio = config.get("ratio")
+        if ratio is not None and not str(ratio).replace(".", "").isdigit():
+            errors.append("分享率参数不合法")
+        seeding_time = config.get("seeding_time")
+        if seeding_time is not None and not str(seeding_time).isdigit():
+            errors.append("做种时间参数不合法")
+        upload_avs = config.get("upload_avs")
+        if upload_avs is not None and not str(upload_avs).isdigit():
+            errors.append("平均上传速度参数不合法")
+        size = config.get("size")
+        if size and (not isinstance(size, list) or len(size) != 2):
+            errors.append("种子大小参数不合法")
+        return errors
 
     def __getattr__(self, name: str):
         """兼容旧代码的大写属性访问"""

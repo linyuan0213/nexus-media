@@ -561,6 +561,33 @@ class Qbittorrent(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return False
 
+    def _normalize_files(self, raw_files: Any) -> list[dict]:
+        """将 qbittorrent 文件列表转换为统一格式."""
+        if not raw_files:
+            return []
+        return [{"id": f.get("index", i), "name": f.get("name", "")} for i, f in enumerate(raw_files)]
+
+    def set_file_selection(self, tid: str | None, selected_map: dict[int, bool]) -> bool:
+        """设置种子文件的选择状态（priority=0 表示不下载，priority=1 表示正常）."""
+        if not tid or not selected_map or not self.qbc:
+            return False
+        # priority: 0=不下载, 1=正常
+        file_ids_to_skip = [fid for fid, selected in selected_map.items() if not selected]
+        if not file_ids_to_skip:
+            return True
+        try:
+            self.qbc.torrents_file_priority(
+                torrent_hash=tid,
+                file_ids=file_ids_to_skip,
+                priority=0,
+            )
+            return True
+        except (InfrastructureError, NetworkError):
+            raise
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+            return False
+
     def get_files(self, tid: str | None = None) -> Any:
         if not self.qbc:
             return None

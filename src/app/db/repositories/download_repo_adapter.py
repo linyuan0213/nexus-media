@@ -88,6 +88,12 @@ class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
     def update_state(self, downloader: str, download_id: str, state: str) -> None:
         self._repo.update_download_state(downloader, download_id, state)
 
+    def batch_update_state(self, items: list[tuple[str, str, str]]) -> None:
+        """批量更新下载任务状态"""
+        if not items:
+            return
+        self._repo.batch_update_download_state(items)
+
 
 class DownloadSettingRepositoryAdapter:
     """下载设置仓储适配器"""

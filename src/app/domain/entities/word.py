@@ -115,6 +115,21 @@ class CustomWordEntity:
             return self.has_front_back
         return False
 
+    def validate_offset(self) -> str | None:
+        """验证偏移量格式，返回错误信息或 None"""
+        if not self.is_offset:
+            return None
+        if not self.offset:
+            return "偏移集数格式有误"
+        if "EP" not in self.offset:
+            return "偏移集数格式有误"
+        import re
+
+        cleaned = re.sub(r"EP", "", self.offset)
+        if re.search(r"[^-+*/0-9]", cleaned):
+            return "偏移集数格式有误"
+        return None
+
     @classmethod
     def from_orm(cls, orm_model) -> Optional["CustomWordEntity"]:
         if orm_model is None:

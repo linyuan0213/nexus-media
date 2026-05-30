@@ -4,6 +4,7 @@ import log
 from app.core.settings import settings
 from app.db.repositories.rss_repository import RssRepository
 from app.di import container
+from app.events import auto_register
 from app.services.rbac_init import init_admin_user
 from app.services.rbac_init import init_rbac_system as rbac_init
 from app.utils import ExceptionUtils
@@ -174,6 +175,18 @@ def update_rss_state():
         log.info("[Initialize]RSS订阅状态已更新为正在订阅")
     except Exception as e:
         log.error(f"[Initialize]更新RSS状态失败：{e!s}")
+        ExceptionUtils.exception_traceback(e)
+
+
+def init_event_handlers():
+    """
+    初始化事件处理器（注册所有 @on_event 装饰的函数）
+    """
+    try:
+        auto_register(container.event_bus())
+        log.info("[Initialize]事件处理器已注册")
+    except Exception as e:
+        log.error(f"[Initialize]事件处理器注册失败：{e!s}")
         ExceptionUtils.exception_traceback(e)
 
 

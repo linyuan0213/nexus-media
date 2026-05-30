@@ -129,6 +129,10 @@ class IRssTvRepository(Protocol):
         """更新缺失集数"""
         ...
 
+    def update(self, rssid: int, **kwargs) -> int:
+        """更新RSS剧集字段（支持 current_ep, lack, state 等）"""
+        ...
+
     def insert(
         self,
         media_info,

@@ -3,18 +3,20 @@
 from typing import Any
 
 import log
-from app.utils.types import EventType, MediaType
+from app.events import Event
+from app.events.constants import SUBSCRIBE_FINISHED
+from app.utils.types import MediaType
 
 
 class SubscribeFinishService:
     """完成订阅服务"""
 
-    def __init__(self, movie_repo, tv_repo, history_repo, message, eventmanager):
+    def __init__(self, movie_repo, tv_repo, history_repo, message, event_bus):
         self._movie_repo = movie_repo
         self._tv_repo = tv_repo
         self._history_repo = history_repo
         self._message = message
-        self._eventmanager = eventmanager
+        self._event_bus = event_bus
 
     def finish_rss_subscribe(self, rssid: int | None, media: Any, delete_subscribe_fn) -> None:
         """完成订阅"""
@@ -54,7 +56,9 @@ class SubscribeFinishService:
             )
             delete_subscribe_fn(mtype=MediaType.TV, rssid=rssid)
 
-        self._eventmanager.send_event(EventType.SubscribeFinished, {"media_info": media.to_dict(), "rssid": rssid})
+        self._event_bus.publish(
+            Event(event_type=SUBSCRIBE_FINISHED, payload={"media_info": media.to_dict(), "rssid": rssid})
+        )
         log.info(
             f"[Rss]{media.type.value} {media.get_title_string()} {media.get_season_string()} 订阅完成，删除订阅..."
         )

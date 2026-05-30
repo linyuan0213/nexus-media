@@ -8,48 +8,7 @@ from app.di import container
 
 
 class HookSystem:
-    """全局事件钩子系统"""
-
-    EVENTS = [
-        "plugin.install",
-        "plugin.enable",
-        "plugin.disable",
-        "plugin.uninstall",
-        "plugin.config_changed",
-        "plugin.reload",
-        "media.scraped",
-        "media.transfered",
-        "media.library_synced",
-        "media.source_deleted",
-        "media.douban_sync",
-        "download.started",
-        "download.completed",
-        "download.failed",
-        "download.removed",
-        "site.signed_in",
-        "site.statistics_updated",
-        "site.cookie_sync",
-        "site.local_storage_sync",
-        "site.signin",
-        "rss.subscribed",
-        "rss.found",
-        "rss.downloaded",
-        "scheduler.tick",
-        "system.startup",
-        "system.shutdown",
-        "webhook.emby",
-        "webhook.jellyfin",
-        "webhook.plex",
-        "wework.login",
-        "subtitle.download",
-        "message.incoming",
-        "subscribe.add",
-        "subscribe.finished",
-        "search.start",
-        "transfer.fail",
-        "library.file_deleted",
-        "autoseed.start",
-    ]
+    """全局事件钩子系统——插件可自由注册任意事件，无白名单限制"""
 
     def __init__(self):
         self._repo = container.plugin_framework_repo()
@@ -71,10 +30,7 @@ class HookSystem:
             log.warn(f"[HookSystem] 加载钩子订阅失败（可能表尚未创建）: {e}")
 
     def register(self, event: str, plugin_id: str) -> None:
-        """注册钩子订阅"""
-        if event not in self.EVENTS:
-            log.warn(f"[HookSystem] 未知事件类型: {event}")
-
+        """注册钩子订阅——允许任意事件名"""
         self._handlers.setdefault(event, [])
         if plugin_id not in [h["plugin_id"] for h in self._handlers[event]]:
             self._handlers[event].append({"plugin_id": plugin_id})

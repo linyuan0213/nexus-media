@@ -228,6 +228,28 @@ class DownloadRepository(BaseRepository):
             download_id == DOWNLOADHISTORY.DOWNLOAD_ID,
         ).update({"STATE": state})
 
+    @DbPersist(BaseRepository._db)
+    def batch_update_download_state(self, items: list[tuple[str, str, str]]) -> None:
+        """
+        批量更新下载任务状态
+        :param items: [(downloader, download_id, state), ...]
+        """
+        if not items:
+            return
+
+        # 按 state 分组批量更新
+        states_map: dict[str, list[tuple[str, str]]] = {}
+        for downloader, download_id, state in items:
+            states_map.setdefault(state, []).append((downloader, download_id))
+
+        for state, id_pairs in states_map.items():
+            downloaders = [d for d, _ in id_pairs]
+            download_ids = [i for _, i in id_pairs]
+            self._db.query(DOWNLOADHISTORY).filter(
+                DOWNLOADHISTORY.DOWNLOADER.in_(downloaders),
+                DOWNLOADHISTORY.DOWNLOAD_ID.in_(download_ids),
+            ).update({"STATE": state}, synchronize_session=False)
+
     # ==================== Download Settings ====================
 
     @DbPersist(BaseRepository._db)

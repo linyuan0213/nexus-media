@@ -49,6 +49,12 @@ class IDownloadHistoryRepository(Protocol):
         """根据下载器查找下载历史"""
         ...
 
+    def batch_update_state(self, items: list[tuple[str, str, str]]) -> None:
+        """批量更新下载任务状态
+        :param items: [(downloader, download_id, state), ...]
+        """
+        ...
+
 
 class IDownloadSettingRepository(Protocol):
     """下载设置仓储接口"""

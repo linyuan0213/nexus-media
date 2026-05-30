@@ -3,6 +3,9 @@ from typing import Any, cast
 
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.db.repositories import SiteRepository
+from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
+from app.domain.entities.site import SiteEntity
+from app.domain.interfaces.site_repo import ISiteRepository
 from app.schemas.site import (
     SiteActivityDTO,
     SiteAttrDTO,
@@ -32,6 +35,7 @@ class SiteService:
         indexer_service: IndexerService | None = None,
         string_utils=None,
         site_repo: SiteRepository | None = None,
+        site_entity_repo: ISiteRepository | None = None,
     ):
         self._sites = sites or container.sites()
         self._site_user_info = site_user_info or SiteUserInfo()
@@ -40,6 +44,7 @@ class SiteService:
         self._indexer_service = indexer_service or IndexerService()
         self._string_utils = string_utils or StringUtils
         self._site_repo = site_repo or container.site_repository()
+        self._site_entity_repo = site_entity_repo or SiteRepositoryAdapter(self._site_repo)
 
     # ------------------------------------------------------------------
     # 站点属性
@@ -59,19 +64,25 @@ class SiteService:
     def delete_site(self, tid: str | None) -> int | None:
         if not tid:
             return 0
-        return self._sites.delete_site(tid)
+        try:
+            self._site_entity_repo.delete(int(tid))
+            return 1
+        except Exception:
+            return 0
 
     def get_site(self, tid: str | None) -> SiteDetailDTO:
         if not tid:
             return SiteDetailDTO(site=[])
-        ret: Any = self._sites.get_sites(siteid=tid)
+        entity = self._site_entity_repo.get_by_id(int(tid))
+        if not entity:
+            return SiteDetailDTO(site=[])
         site_free = site_2xfree = site_hr = False
-        if ret and isinstance(ret, dict) and ret.get("signurl"):
-            attr = self._site_conf.get_grap_conf(ret.get("signurl"))
+        if entity.sign_url:
+            attr = self._site_conf.get_grap_conf(entity.sign_url)
             site_free = bool(attr.get("FREE"))
             site_2xfree = bool(attr.get("2XFREE"))
             site_hr = bool(attr.get("HR"))
-        return SiteDetailDTO(site=ret, site_free=site_free, site_2xfree=site_2xfree, site_hr=site_hr)
+        return SiteDetailDTO(site=entity.to_dict(), site_free=site_free, site_2xfree=site_2xfree, site_hr=site_hr)
 
     def get_sites(self, rss: bool = False, brush: bool = False, statistic: bool = False, basic: bool = False) -> Any:
         if basic:
@@ -81,10 +92,11 @@ class SiteService:
     def _is_site_duplicate(self, name: str | None, tid: str | None) -> bool:
         if not name:
             return False
-        return any(str(site.get("id")) != str(tid or "") for site in self._sites.get_sites_by_name(name=name))
+        sites = self._site_entity_repo.list_by_name(name)
+        return any(str(site.id) != str(tid or "") for site in sites)
 
     def update_site(self, data: dict) -> SiteUpdateResultDTO:
-        """新增或更新站点信息"""
+        """新增或更新站点信息（使用领域实体 + ISiteRepository）"""
         tid = data.get("site_id")
         name = data.get("site_name")
         site_pri = data.get("site_pri")
@@ -92,45 +104,47 @@ class SiteService:
         signurl = data.get("site_signurl")
         cookie = data.get("site_cookie")
         note = data.get("site_note")
-        if isinstance(note, dict):
-            note = json.dumps(note)
+        if isinstance(note, str):
+            try:
+                note = json.loads(note)
+            except Exception:
+                note = {}
         rss_uses = data.get("site_include")
 
         if self._is_site_duplicate(name, tid):
             return SiteUpdateResultDTO(code=400, msg="站点名称重复")
 
+        entity = SiteEntity(
+            id=int(tid) if tid else 0,
+            name=name or "",
+            pri=int(site_pri) if site_pri else 0,
+            rss_url=rssurl,
+            sign_url=signurl,
+            cookie=cookie,
+            note=note or {},
+            rss_uses=rss_uses,
+        )
+
         if tid:
-            sites: Any = self._sites.get_sites(siteid=tid)
-            if not sites:
+            existing = self._site_entity_repo.get_by_id(int(tid))
+            if not existing:
                 return SiteUpdateResultDTO(code=400, msg="站点不存在")
-            old_name = sites.get("name") if isinstance(sites, dict) else None
-            ret = self._sites.update_site(
-                tid=tid,
-                name=name,
-                site_pri=site_pri,
-                rssurl=rssurl,
-                signurl=signurl,
-                cookie=cookie,
-                note=note,
-                rss_uses=rss_uses,
-            )
-            if ret and name != old_name and old_name:
-                self._site_user_info.update_site_name(name, old_name)
-            return SiteUpdateResultDTO(code=0 if ret else 500)
+            try:
+                self._site_entity_repo.update(entity)
+                if name != existing.name and existing.name:
+                    self._site_user_info.update_site_name(name, existing.name)
+                return SiteUpdateResultDTO(code=0)
+            except Exception:
+                return SiteUpdateResultDTO(code=500)
         else:
-            ret = self._sites.add_site(
-                name=name,
-                site_pri=site_pri,
-                rssurl=rssurl,
-                signurl=signurl,
-                cookie=cookie,
-                note=note,
-                rss_uses=rss_uses,
-            )
-            return SiteUpdateResultDTO(code=0 if ret else 500)
+            try:
+                self._site_entity_repo.insert(entity)
+                return SiteUpdateResultDTO(code=0)
+            except Exception:
+                return SiteUpdateResultDTO(code=500)
 
     def update_site_cookie_ua(self, siteid: int | str, cookie: str, ua: str) -> None:
-        self._sites.update_site_cookie(siteid=siteid, cookie=cookie, ua=ua)
+        self._site_entity_repo.update_cookie_ua(int(siteid), cookie, ua)
 
     # ------------------------------------------------------------------
     # 统计

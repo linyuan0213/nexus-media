@@ -3,10 +3,9 @@ import time
 
 from app.helper.cookiecloud_helper import CookiecloudHelper
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.plugin_framework.event_compat import EventHandler
+from app.plugin_framework.hook_system import HookSystem
 from app.utils import RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies
-from app.utils.types import EventType
 
 
 class Rousi(_ISiteSigninHandler):
@@ -86,7 +85,7 @@ class Rousi(_ISiteSigninHandler):
         ua = site_info.get("ua")
         proxy = get_proxies() if site_info.get("proxy") else None
 
-        EventHandler.send_event(EventType.LocalStorageSync)
+        HookSystem().emit("site.local_storage_sync", {})
         time.sleep(10)
 
         # 获取签到token

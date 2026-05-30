@@ -13,6 +13,39 @@ class MediaExistenceChecker:
     def __init__(self, path_resolver):
         self._path_resolver = path_resolver
 
+    def _exists(self, path: str, backend_id: str = "local") -> bool:
+        """根据后端检查路径是否存在."""
+        if backend_id == "local":
+            return os.path.exists(path)
+        backend = self._path_resolver.resolve_backend_by_id(backend_id)
+        if not backend:
+            return False
+        return backend.exists(path)
+
+    def _get_dir_files(self, path: str, backend_id: str = "local", exts: str | list | None = None) -> list[str]:
+        """根据后端获取目录下匹配扩展名的文件列表."""
+        if not path:
+            return []
+        _exts = exts or ""
+        if backend_id == "local":
+            return PathUtils.get_dir_files(path, _exts)
+        backend = self._path_resolver.resolve_backend_by_id(backend_id)
+        if not backend:
+            return []
+        files = []
+        try:
+            for finfo in backend.list_dir(path):
+                if finfo.is_dir:
+                    continue
+                if exts:
+                    ext = os.path.splitext(finfo.path)[1].lower()
+                    if ext not in exts:
+                        continue
+                files.append(finfo.path)
+        except Exception:
+            pass
+        return files
+
     def is_media_exists(self, media_dest, media, dst_backend=None):
         """
         判断媒体文件是否已存在.
@@ -83,14 +116,16 @@ class MediaExistenceChecker:
         """
         if meta_info_obj.type == MediaType.MOVIE:
             dir_name, _ = self._path_resolver.get_movie_dest_path(meta_info_obj)
-            for dest_path in self._path_resolver.movie_path:
+            backends = self._path_resolver._movie_backend or []
+            for idx, dest_path in enumerate(self._path_resolver.movie_path):
+                backend_id = backends[idx] if idx < len(backends) else "local"
                 fav_path = os.path.join(dest_path, RMT_FAVTYPE, dir_name)
-                fav_files = PathUtils.get_dir_files(fav_path, RMT_MEDIAEXT)
+                fav_files = self._get_dir_files(fav_path, backend_id, RMT_MEDIAEXT)
                 if self._path_resolver.movie_category_flag:
-                    dest_path = os.path.join(dest_path, meta_info_obj.category, dir_name)
+                    check_path = os.path.join(dest_path, meta_info_obj.category, dir_name)
                 else:
-                    dest_path = os.path.join(dest_path, dir_name)
-                files = PathUtils.get_dir_files(dest_path, RMT_MEDIAEXT)
+                    check_path = os.path.join(dest_path, dir_name)
+                files = self._get_dir_files(check_path, backend_id, RMT_MEDIAEXT)
                 if len(files) > 0 or len(fav_files) > 0:
                     return [{"title": meta_info_obj.title, "year": meta_info_obj.year}]
             return []
@@ -101,19 +136,22 @@ class MediaExistenceChecker:
             if meta_info_obj.type == MediaType.ANIME:
                 dest_paths = self._path_resolver.anime_path
                 category_flag = self._path_resolver.anime_category_flag
+                backends = self._path_resolver._anime_backend or []
             else:
                 dest_paths = self._path_resolver.tv_path
                 category_flag = self._path_resolver.tv_category_flag
+                backends = self._path_resolver._tv_backend or []
             total_episodes = list(range(1, total_num + 1))
             exists_episodes = []
-            for dest_path in dest_paths:
+            for idx, dest_path in enumerate(dest_paths):
+                backend_id = backends[idx] if idx < len(backends) else "local"
                 if category_flag:
-                    dest_path = os.path.join(dest_path, meta_info_obj.category, dir_name, season_name)
+                    check_path = os.path.join(dest_path, meta_info_obj.category, dir_name, season_name)
                 else:
-                    dest_path = os.path.join(dest_path, dir_name, season_name)
-                if not os.path.exists(dest_path):
+                    check_path = os.path.join(dest_path, dir_name, season_name)
+                if not self._exists(check_path, backend_id):
                     continue
-                files = PathUtils.get_dir_files(dest_path, RMT_MEDIAEXT)
+                files = self._get_dir_files(check_path, backend_id, RMT_MEDIAEXT)
                 for file in files:
                     file_meta_info = meta_info_fn(title=os.path.basename(file))
                     if not file_meta_info.get_season_list() or not file_meta_info.get_episode_list():
