@@ -11,10 +11,10 @@ from typing import Any
 import log
 
 from .base import CacheAdapter, CacheEntry
-from .events import CacheEvent, CacheEventManager, CacheEventType
+from .events import CacheEvent, CacheEventType, get_event_manager
 
 # 获取事件管理器实例
-_event_manager = CacheEventManager()
+_event_manager = get_event_manager()
 
 
 def get_cache_value(cache_adapter, key: str) -> Any:

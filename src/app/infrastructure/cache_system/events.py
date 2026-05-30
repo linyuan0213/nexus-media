@@ -1,11 +1,12 @@
 """
 缓存事件系统
 
-支持监听缓存变更事件，实现缓存数据的同步和通知
+与 EventBus 整合，支持监听缓存变更事件。
+保留本地高性能监听器 + 可选 EventBus 桥接。
 """
 
+import fnmatch
 import threading
-from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -13,6 +14,8 @@ from enum import Enum, auto
 from typing import Any
 
 import log
+from app.di import container
+from app.events import Event
 
 
 class CacheEventType(Enum):
@@ -44,42 +47,15 @@ class CacheEvent:
             self.timestamp = datetime.now()
 
 
-class CacheEventListener(ABC):
-    """缓存事件监听器基类"""
-
-    @abstractmethod
-    def on_event(self, event: CacheEvent):
-        pass
-
-    def __call__(self, event: CacheEvent):
-        self.on_event(event)
-
-
 class CacheEventManager:
-    """缓存事件管理器"""
+    """缓存事件管理器 — 本地高性能分发 + EventBus 桥接"""
 
-    _instance = None
-    _lock = threading.Lock()
-
-    def __new__(cls):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-                    cls._instance._initialized = False
-        return cls._instance
-
-    def __init__(self):
-        if self._initialized:
-            return
-
+    def __init__(self, event_bus=None):
         self._listeners: dict[CacheEventType, list[tuple]] = {event_type: [] for event_type in CacheEventType}
         self._global_listeners: list[Callable] = []
         self._lock = threading.RLock()
         self._enabled = True
-        self._initialized = True
-
-        log.debug("[CacheEventManager]缓存事件管理器初始化完成")
+        self._event_bus = event_bus
 
     def add_listener(
         self,
@@ -108,8 +84,7 @@ class CacheEventManager:
         if not self._enabled:
             return
 
-        import fnmatch
-
+        # 1. 本地高性能分发
         with self._lock:
             for listener in self._global_listeners:
                 try:
@@ -125,6 +100,18 @@ class CacheEventManager:
                 except Exception as e:
                     log.error(f"[CacheEventManager]监听器执行失败: {e}")
 
+        # 2. EventBus 桥接（异步，不阻塞缓存操作）
+        if self._event_bus:
+            try:
+                self._event_bus.publish(
+                    Event(
+                        event_type=f"cache.{event.event_type.name.lower()}",
+                        payload=event,
+                    )
+                )
+            except Exception as e:
+                log.debug(f"[CacheEventManager]EventBus 桥接失败: {e}")
+
     def enable(self):
         self._enabled = True
 
@@ -133,7 +120,12 @@ class CacheEventManager:
 
 
 def get_event_manager() -> CacheEventManager:
-    return CacheEventManager()
+    """获取缓存事件管理器实例（通过 DI 注入 EventBus）"""
+    try:
+        bus = container.event_bus()
+    except Exception:
+        bus = None
+    return CacheEventManager(event_bus=bus)
 
 
 def on_cache_event(event_types: set[CacheEventType] | None = None, cache_name_pattern: str = "*"):

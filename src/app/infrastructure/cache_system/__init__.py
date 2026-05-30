@@ -20,7 +20,6 @@ from .compat import cacheman
 from .decorators import cached, cached_with_lock, lru_cache_with_ttl
 from .events import (
     CacheEvent,
-    CacheEventListener,
     CacheEventManager,
     CacheEventType,
     get_event_manager,
@@ -62,7 +61,6 @@ __all__ = [
     # 缓存事件
     "CacheEventType",
     "CacheEvent",
-    "CacheEventListener",
     "CacheEventManager",
     "get_event_manager",
     "on_cache_event",
