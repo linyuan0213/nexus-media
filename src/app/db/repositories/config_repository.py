@@ -9,7 +9,7 @@ import time
 
 from sqlalchemy import Integer, cast
 
-from app.db import DbPersist
+from app.db import auto_commit
 from app.db.models import (
     CONFIGFILTERGROUP,
     CONFIGFILTERRULES,
@@ -33,7 +33,7 @@ class ConfigRepository(BaseRepository):
 
     # ==================== Message Client ====================
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_message_client(self, cid: int | None) -> None:
         """
         删除消息服务器
@@ -50,7 +50,7 @@ class ConfigRepository(BaseRepository):
             return self._db.query(MESSAGECLIENT).filter(int(cid) == MESSAGECLIENT.ID).all()
         return self._db.query(MESSAGECLIENT).all()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_message_client(
         self,
         name: str,
@@ -76,7 +76,7 @@ class ConfigRepository(BaseRepository):
         self._db.flush()
         return int(client.ID)
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def check_message_client(
         self,
         cid: int | None = None,
@@ -104,7 +104,7 @@ class ConfigRepository(BaseRepository):
 
     # ==================== Torrent Remove Task ====================
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_torrent_remove_task(self, tid: int | None) -> None:
         """
         删除自动删种策略
@@ -130,7 +130,7 @@ class ConfigRepository(BaseRepository):
             return self._db.query(TORRENTREMOVETASK).filter(int(tid) == TORRENTREMOVETASK.ID).all()
         return self._db.query(TORRENTREMOVETASK).order_by(TORRENTREMOVETASK.NAME).all()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_torrent_remove_task(
         self,
         name: str,
@@ -173,7 +173,7 @@ class ConfigRepository(BaseRepository):
 
     # ==================== Downloader ====================
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_downloader(
         self,
         did: int | None,
@@ -231,7 +231,7 @@ class ConfigRepository(BaseRepository):
                 )
             )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_downloader(self, did: int | None) -> None:
         """
         删除下载器
@@ -243,7 +243,7 @@ class ConfigRepository(BaseRepository):
             return
         self._db.query(DOWNLOADER).filter(int(did) == DOWNLOADER.ID).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def check_downloader(
         self,
         did: int | None = None,
@@ -301,7 +301,7 @@ class ConfigRepository(BaseRepository):
         else:
             return self._db.query(CONFIGUSERRSS).order_by(CONFIGUSERRSS.STATE.desc()).all()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_userrss_task(self, tid: int | None) -> None:
         """
         删除自定义RSS任务
@@ -313,7 +313,7 @@ class ConfigRepository(BaseRepository):
             return
         self._db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_userrss_task_info(self, tid: int | None, count: int) -> None:
         """
         更新自定义RSS任务处理计数
@@ -331,7 +331,7 @@ class ConfigRepository(BaseRepository):
             }
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_userrss_task(self, item: dict) -> None:
         """
         更新或插入自定义RSS任务
@@ -387,7 +387,7 @@ class ConfigRepository(BaseRepository):
                 )
             )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def check_userrss_task(self, tid: int | None = None, state: str | None = None) -> None:
         """
         设置自定义RSS任务状态
@@ -403,7 +403,7 @@ class ConfigRepository(BaseRepository):
         else:
             self._db.query(CONFIGUSERRSS).update({"STATE": state})
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_userrss_mediainfos(self, tid: int | None = None, mediainfo: object | None = None) -> None:
         """
         插入自定义RSS媒体信息
@@ -432,7 +432,7 @@ class ConfigRepository(BaseRepository):
             {"MEDIAINFOS": json.dumps(mediainfos)}
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_userrss_task_history(self, task_id: int, title: str, downloader: str) -> None:
         """
         增加自定义RSS订阅任务的下载记录
@@ -487,7 +487,7 @@ class ConfigRepository(BaseRepository):
         else:
             return self._db.query(CONFIGRSSPARSER).all()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_userrss_parser(self, pid: int | None) -> None:
         """
         删除自定义RSS解析器
@@ -499,7 +499,7 @@ class ConfigRepository(BaseRepository):
             return
         self._db.query(CONFIGRSSPARSER).filter(int(pid) == CONFIGRSSPARSER.ID).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_userrss_parser(self, item: dict) -> None:
         """
         更新或插入自定义RSS解析器
@@ -565,7 +565,7 @@ class ConfigRepository(BaseRepository):
                 .all()
             )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def add_filter_group(self, name: str, default: str = "N") -> None:
         """
         新增规则组
@@ -600,7 +600,7 @@ class ConfigRepository(BaseRepository):
         else:
             return ""
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def set_default_filtergroup(self, groupid: int) -> None:
         """
         设置默认的规则组
@@ -611,7 +611,7 @@ class ConfigRepository(BaseRepository):
         self._db.query(CONFIGFILTERGROUP).filter(int(groupid) == CONFIGFILTERGROUP.ID).update({"IS_DEFAULT": "Y"})
         self._db.query(CONFIGFILTERGROUP).filter(int(groupid) != CONFIGFILTERGROUP.ID).update({"IS_DEFAULT": "N"})
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_filtergroup(self, groupid: int) -> None:
         """
         删除规则组
@@ -622,7 +622,7 @@ class ConfigRepository(BaseRepository):
         self._db.query(CONFIGFILTERRULES).filter(groupid == CONFIGFILTERRULES.GROUP_ID).delete()
         self._db.query(CONFIGFILTERGROUP).filter(int(groupid) == CONFIGFILTERGROUP.ID).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_filterrule(self, ruleid: int) -> None:
         """
         删除规则
@@ -632,7 +632,7 @@ class ConfigRepository(BaseRepository):
         """
         self._db.query(CONFIGFILTERRULES).filter(int(ruleid) == CONFIGFILTERRULES.ID).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_filter_rule(self, item: dict, ruleid: int | None = None) -> None:
         """
         新增或更新规则
@@ -695,7 +695,7 @@ class ConfigRepository(BaseRepository):
             return None
         return self._db.query(MEDIASERVER).filter(name == MEDIASERVER.NAME).first()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_media_server(
         self, sid: int | None, name: str, enabled: int, config: str, is_default: int = 0, note: str | None = None
     ) -> None:
@@ -727,7 +727,7 @@ class ConfigRepository(BaseRepository):
             MEDIASERVER(NAME=name, ENABLED=int(enabled), CONFIG=config, IS_DEFAULT=int(is_default), NOTE=note)
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_media_server(self, sid: int | None) -> None:
         """
         删除媒体服务器配置
@@ -739,7 +739,7 @@ class ConfigRepository(BaseRepository):
             return
         self._db.query(MEDIASERVER).filter(int(sid) == MEDIASERVER.ID).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def set_default_media_server(self, name: str) -> None:
         """
         设置默认媒体服务器，仅更新 IS_DEFAULT 标记
@@ -762,7 +762,7 @@ class ConfigRepository(BaseRepository):
 
     # ==================== SQL Operations ====================
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def execute(self, sql: str) -> object:
         """
         执行SQL语句
@@ -775,7 +775,7 @@ class ConfigRepository(BaseRepository):
         """
         return self._db.execute(sql)
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def drop_table(self, table_name: str) -> object:
         """
         删除表
@@ -805,7 +805,7 @@ class ConfigRepository(BaseRepository):
             self._db.insert(config)
             self._db.commit()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def set_media_config(
         self,
         movie_path: str,

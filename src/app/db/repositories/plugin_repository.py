@@ -5,7 +5,7 @@ Handles plugin history and TMDB blacklist related database operations.
 
 import time
 
-from app.db import DbPersist
+from app.db import auto_commit
 from app.db.models import PLUGINHISTORY, TMDBBLACKLIST
 from app.db.repositories.base_repository import BaseRepository
 
@@ -18,7 +18,7 @@ class PluginRepository(BaseRepository):
 
     # ==================== Plugin History ====================
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_plugin_history(self, plugin_id, key, value):
         """
         新增插件运行记录
@@ -59,7 +59,7 @@ class PluginRepository(BaseRepository):
         else:
             return self._db.query(PLUGINHISTORY).filter(plugin_id == PLUGINHISTORY.PLUGIN_ID).all()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_plugin_history(self, plugin_id, key, value):
         """
         更新插件运行记录
@@ -73,7 +73,7 @@ class PluginRepository(BaseRepository):
             {"VALUE": value}
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_plugin_history(self, plugin_id, key):
         """
         删除插件运行记录
@@ -118,7 +118,7 @@ class PluginRepository(BaseRepository):
         """
         return self._db.query(TMDBBLACKLIST).all()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_tmdb_blacklist(
         self, tmdb_id, title=None, year=None, media_type=None, poster_path=None, backdrop_path=None, note=None
     ):
@@ -149,7 +149,7 @@ class PluginRepository(BaseRepository):
             )
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_tmdb_blacklist(self, tmdb_id, media_type=None):
         """
         从TMDB黑名单删除
@@ -167,7 +167,7 @@ class PluginRepository(BaseRepository):
         else:
             self._db.query(TMDBBLACKLIST).filter(str(tmdb_id) == TMDBBLACKLIST.TMDB_ID).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def clear_tmdb_blacklist(self):
         """
         清空所有TMDB黑名单记录

@@ -3,7 +3,7 @@ Sync Repository
 Handles directory sync related database operations.
 """
 
-from app.db import DbPersist
+from app.db import auto_commit
 from app.db.models import CONFIGSYNCPATHS
 from app.db.repositories.base_repository import BaseRepository
 
@@ -14,7 +14,7 @@ class SyncRepository(BaseRepository):
     处理目录同步配置的数据库操作
     """
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_config_sync_path(
         self,
         source,
@@ -61,7 +61,7 @@ class SyncRepository(BaseRepository):
             )
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_config_sync_path(self, sid):
         """
         删除目录同步
@@ -87,7 +87,7 @@ class SyncRepository(BaseRepository):
             return self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).all()
         return self._db.query(CONFIGSYNCPATHS).order_by(CONFIGSYNCPATHS.SOURCE).all()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def check_config_sync_paths(self, sid=None, compatibility=None, rename=None, enabled=None):
         """
         设置目录同步状态

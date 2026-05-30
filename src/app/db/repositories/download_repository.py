@@ -9,7 +9,7 @@ from typing import Any
 
 from sqlalchemy import and_, case, func
 
-from app.db import DbPersist
+from app.db import auto_commit
 from app.db.models import DOWNLOADHISTORY, DOWNLOADSETTING, INDEXERSTATISTICS
 from app.db.repositories.base_repository import BaseRepository
 
@@ -50,7 +50,7 @@ class DownloadRepository(BaseRepository):
 
         return query.count() > 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_download_history(self, media_info: Any, downloader: str, download_id: str, save_dir: str) -> None:
         """
         新增下载历史
@@ -218,7 +218,7 @@ class DownloadRepository(BaseRepository):
             .all()
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_download_state(self, downloader: str, download_id: str, state: str) -> None:
         """
         更新下载任务状态
@@ -228,7 +228,7 @@ class DownloadRepository(BaseRepository):
             download_id == DOWNLOADHISTORY.DOWNLOAD_ID,
         ).update({"STATE": state})
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def batch_update_download_state(self, items: list[tuple[str, str, str]]) -> None:
         """
         批量更新下载任务状态
@@ -252,7 +252,7 @@ class DownloadRepository(BaseRepository):
 
     # ==================== Download Settings ====================
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_download_setting(self, sid: int | None) -> None:
         """
         删除下载设置
@@ -269,7 +269,7 @@ class DownloadRepository(BaseRepository):
             return self._db.query(DOWNLOADSETTING).filter(int(sid) == DOWNLOADSETTING.ID).all()
         return self._db.query(DOWNLOADSETTING).all()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_download_setting(
         self,
         sid: int | None,
@@ -317,7 +317,7 @@ class DownloadRepository(BaseRepository):
 
     # ==================== Indexer Statistics ====================
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_indexer_statistics(self, indexer: str, itype: str, seconds: int, result: str) -> None:
         """
         插入索引器统计
@@ -332,7 +332,7 @@ class DownloadRepository(BaseRepository):
             )
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_all_indexer_statistics(self) -> None:
         """
         删除所有搜索的记录

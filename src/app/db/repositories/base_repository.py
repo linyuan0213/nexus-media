@@ -30,7 +30,7 @@ class BaseRepository:
     - session_scope()      → 事务上下文管理器（推荐新代码使用）
     """
 
-    # 类级别初始化 SessionManager，兼容 @DbPersist(BaseRepository._db) 用法
+    # 类级别初始化 SessionManager，兼容 @auto_commit(BaseRepository._db) 用法
     _db = SessionManager()
 
     def __init__(self):

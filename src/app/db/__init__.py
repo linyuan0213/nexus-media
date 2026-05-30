@@ -2,7 +2,7 @@ import log
 
 from .main_db import (
     Database,
-    DbPersist,
+    auto_commit,
     MainDb,
     SessionManager,
     get_engine,

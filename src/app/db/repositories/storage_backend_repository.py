@@ -2,7 +2,7 @@
 存储后端仓储
 """
 
-from app.db import DbPersist
+from app.db import auto_commit
 from app.db.models import STORAGEBACKEND
 from app.db.repositories.base_repository import BaseRepository
 
@@ -22,10 +22,10 @@ class StorageBackendRepository(BaseRepository):
         self._db.commit()
         return model.ID
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update(self, sid, **kwargs):
         self._db.query(STORAGEBACKEND).filter(STORAGEBACKEND.ID == sid).update(kwargs)
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete(self, sid):
         self._db.query(STORAGEBACKEND).filter(STORAGEBACKEND.ID == sid).delete()

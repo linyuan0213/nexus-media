@@ -9,7 +9,7 @@ import json
 import time
 from typing import TYPE_CHECKING
 
-from app.db import DbPersist
+from app.db import auto_commit
 from app.db.models import RSSHISTORY, RSSMOVIES, RSSTORRENTS, RSSTVEPISODES, RSSTVS
 from app.db.repositories.base_repository import BaseRepository
 from app.utils.types import MediaType
@@ -24,7 +24,7 @@ class RssRepository(BaseRepository):
     处理RSS电影、电视剧、剧集和历史记录的数据库操作
     """
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def reset_rss_state(self) -> None:
         """
         初始化时批量重置所有 RSS 订阅状态
@@ -82,7 +82,7 @@ class RssRepository(BaseRepository):
             return ret[0]
         return ""
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_rss_movie_tmdb(
         self, rid: int, tmdbid: str, title: str, year: str, image: str, desc: str, note: str
     ) -> None:
@@ -102,14 +102,14 @@ class RssRepository(BaseRepository):
             }
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_rss_movie_desc(self, rid: int, desc: str) -> None:
         """
         更新订阅电影的DESC
         """
         self._db.query(RSSMOVIES).filter(int(rid) == RSSMOVIES.ID).update({"DESC": desc})
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_rss_filter_order(self, rtype: str, rssid: int, res_order: str) -> None:
         """
         更新订阅命中的过滤规则优先级
@@ -144,7 +144,7 @@ class RssRepository(BaseRepository):
             count = self._db.query(RSSMOVIES).filter(title == RSSMOVIES.NAME).count()
         return count > 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_rss_movie(
         self,
         media_info: MediaInfo,
@@ -205,7 +205,7 @@ class RssRepository(BaseRepository):
         )
         return 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_rss_movie(self, rssid: int, **kwargs: str | int | list | None) -> int:
         """
         更新RSS电影订阅信息（根据rssid）
@@ -246,7 +246,7 @@ class RssRepository(BaseRepository):
             self._db.query(RSSMOVIES).filter(int(rssid) == RSSMOVIES.ID).update(update_fields)
         return 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_rss_movie(
         self, title: str | None = None, year: str | None = None, rssid: int | None = None, tmdbid: str | None = None
     ) -> None:
@@ -262,7 +262,7 @@ class RssRepository(BaseRepository):
                 self._db.query(RSSMOVIES).filter(tmdbid == RSSMOVIES.TMDBID).delete()
             self._db.query(RSSMOVIES).filter(title == RSSMOVIES.NAME, str(year) == RSSMOVIES.YEAR).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_rss_movie_state(
         self, title: str | None = None, year: str | None = None, rssid: int | None = None, state: str = "R"
     ) -> None:
@@ -340,7 +340,7 @@ class RssRepository(BaseRepository):
             return ret
         return ""
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_rss_tv_tmdb(
         self, rid: int, tmdbid: str, title: str, year: str, total: int, lack: int, image: str, desc: str, note: str
     ) -> None:
@@ -362,7 +362,7 @@ class RssRepository(BaseRepository):
             }
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_rss_tv_desc(self, rid: int, desc: str) -> None:
         """
         更新订阅电视剧的DESC
@@ -385,7 +385,7 @@ class RssRepository(BaseRepository):
             count = self._db.query(RSSTVS).filter(title == RSSTVS.NAME, str(year) == RSSTVS.YEAR).count()
         return count > 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_rss_tv(
         self,
         media_info: MediaInfo,
@@ -460,7 +460,7 @@ class RssRepository(BaseRepository):
         )
         return 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_rss_tv(self, rssid: int, **kwargs: str | int | list | None) -> int:
         """
         更新RSS电视剧订阅信息（根据rssid）
@@ -506,7 +506,7 @@ class RssRepository(BaseRepository):
             self._db.query(RSSTVS).filter(int(rssid) == RSSTVS.ID).update(update_fields)
         return 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_rss_tv_lack(
         self,
         title: str | None = None,
@@ -532,7 +532,7 @@ class RssRepository(BaseRepository):
                 title == RSSTVS.NAME, str(year) == RSSTVS.YEAR, season == RSSTVS.SEASON
             ).update({"LACK": lack})
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_rss_tv(
         self, title: str | None = None, season: str | None = None, rssid: int | None = None, tmdbid: str | None = None
     ) -> None:
@@ -547,7 +547,7 @@ class RssRepository(BaseRepository):
             self.delete_rss_tv_episodes(rssid)
             self._db.query(RSSTVS).filter(int(rssid) == RSSTVS.ID).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_rss_tv_state(
         self,
         title: str | None = None,
@@ -579,7 +579,7 @@ class RssRepository(BaseRepository):
         count = self._db.query(RSSTVEPISODES).filter(int(rid) == RSSTVEPISODES.RSSID).count()
         return count > 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_rss_tv_episodes(self, rid: int | None, episodes: list | None) -> None:
         """
         插入或更新电视剧订阅缺失剧集
@@ -610,7 +610,7 @@ class RssRepository(BaseRepository):
         else:
             return None
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_rss_tv_episodes(self, rid: int | None) -> None:
         """
         删除电视剧订阅缺失剧集
@@ -619,7 +619,7 @@ class RssRepository(BaseRepository):
             return
         self._db.query(RSSTVEPISODES).filter(int(rid) == RSSTVEPISODES.RSSID).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def truncate_rss_episodes(self) -> None:
         """
         清空RSS历史记录
@@ -668,7 +668,7 @@ class RssRepository(BaseRepository):
         )
         return count > 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_rss_history(
         self,
         rssid: int,
@@ -702,7 +702,7 @@ class RssRepository(BaseRepository):
                 )
             )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_rss_history(self, rssid: int | None) -> None:
         """
         删除RSS历史
@@ -725,7 +725,7 @@ class RssRepository(BaseRepository):
             return None
         return self._db.query(RSSTORRENTS).filter(torrent_name == RSSTORRENTS.TORRENT_NAME).first()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_rss_torrent(
         self, torrent_name: str, enclosure: str, type_: str, title: str, year: str, season: str, episode: str
     ) -> None:
@@ -746,7 +746,7 @@ class RssRepository(BaseRepository):
             )
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def simple_insert_rss_torrent(self, title: str, enclosure: str) -> None:
         """简式插入 RSS 种子记录"""
         if enclosure and enclosure.startswith("magnet:"):
@@ -760,7 +760,7 @@ class RssRepository(BaseRepository):
             )
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def simple_delete_rss_torrent(self, title: str, enclosure: str | None = None) -> None:
         """删除 RSS 种子记录"""
         if enclosure:
@@ -771,7 +771,7 @@ class RssRepository(BaseRepository):
         else:
             self._db.query(RSSTORRENTS).filter(title == RSSTORRENTS.TORRENT_NAME).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def truncate_rss_torrents(self) -> None:
         """清空 RSS 种子记录"""
         self._db.query(RSSTORRENTS).delete()

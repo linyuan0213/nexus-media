@@ -7,7 +7,7 @@ import json
 
 from sqlalchemy import Integer, cast
 
-from app.db import DbPersist
+from app.db import auto_commit
 from app.db.models import CONFIGSITE, SITEFAVICON, SITESTATISTICSHISTORY, SITEUSERINFOSTATS
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.site_repository import SiteRepository
@@ -190,7 +190,7 @@ class SiteRepositoryImpl(BaseRepository):
 
     def insert(self, entity: SiteEntity) -> None:
 
-        @DbPersist(self._db)
+        @auto_commit(self._db)
         def _do_insert():
             self._db.insert(
                 CONFIGSITE(
@@ -210,7 +210,7 @@ class SiteRepositoryImpl(BaseRepository):
         if not entity.id:
             raise ValueError("Entity ID is required")
 
-        @DbPersist(self._db)
+        @auto_commit(self._db)
         def _do_update():
             self._db.query(CONFIGSITE).filter(int(entity.id) == CONFIGSITE.ID).update(
                 {
@@ -228,7 +228,7 @@ class SiteRepositoryImpl(BaseRepository):
 
     def delete(self, site_id: int) -> None:
 
-        @DbPersist(self._db)
+        @auto_commit(self._db)
         def _do_delete():
             self._db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).delete()
 
@@ -236,7 +236,7 @@ class SiteRepositoryImpl(BaseRepository):
 
     def update_cookie_ua(self, site_id: int, cookie: str, ua: str | None = None) -> None:
 
-        @DbPersist(self._db)
+        @auto_commit(self._db)
         def _do_update():
             rec = self._db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).first()
             if rec:

@@ -5,7 +5,7 @@ Handles search result related database operations.
 
 import json
 
-from app.db import DbPersist
+from app.db import auto_commit
 from app.db.models import SEARCHRESULTINFO
 from app.db.repositories.base_repository import BaseRepository
 from app.utils.types import MediaType
@@ -17,7 +17,7 @@ class SearchRepository(BaseRepository):
     处理搜索结果的数据库操作
     """
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_search_results(self, media_items: list, title=None, ident_flag=True):
         """
         将返回信息插入数据库
@@ -128,7 +128,7 @@ class SearchRepository(BaseRepository):
         """
         return self._db.query(SEARCHRESULTINFO).all()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_all_search_torrents(self):
         """
         删除所有搜索的记录

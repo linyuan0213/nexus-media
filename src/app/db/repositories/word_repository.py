@@ -3,7 +3,7 @@ Word Repository
 Handles custom words and word groups related database operations.
 """
 
-from app.db import DbPersist
+from app.db import auto_commit
 from app.db.models import CUSTOMWORDGROUPS, CUSTOMWORDS
 from app.db.repositories.base_repository import BaseRepository
 
@@ -16,7 +16,7 @@ class WordRepository(BaseRepository):
 
     # ==================== Custom Words ====================
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_custom_word(
         self, replaced, replace, front, back, offset, wtype, gid, season, enabled, regex, whelp, note=None
     ):
@@ -54,7 +54,7 @@ class WordRepository(BaseRepository):
             )
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_custom_word(self, wid=None):
         """
         删除自定义识别词
@@ -66,7 +66,7 @@ class WordRepository(BaseRepository):
             self._db.query(CUSTOMWORDS).delete()
         self._db.query(CUSTOMWORDS).filter(int(wid or 0) == CUSTOMWORDS.ID).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def check_custom_word(self, wid=None, enabled=None):
         """
         设置自定义识别词状态
@@ -140,7 +140,7 @@ class WordRepository(BaseRepository):
 
     # ==================== Custom Word Groups ====================
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_custom_word_groups(self, title, year, gtype, tmdbid, season_count, note=None):
         """
         增加自定义识别词组
@@ -159,7 +159,7 @@ class WordRepository(BaseRepository):
             )
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_custom_word_group(self, gid):
         """
         删除自定义识别词组

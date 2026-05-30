@@ -9,7 +9,7 @@ import time
 
 from sqlalchemy import Integer, cast, func
 
-from app.db import DbPersist
+from app.db import auto_commit
 from app.db.models import CONFIGSITE, SITEFAVICON, SITESTATISTICSHISTORY, SITEUSERINFOSTATS, SITEUSERSEEDINGINFO
 from app.db.repositories.base_repository import BaseRepository
 
@@ -34,7 +34,7 @@ class SiteRepository(BaseRepository):
         """
         return self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).all()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_config_site(
         self,
         name: str,
@@ -56,7 +56,7 @@ class SiteRepository(BaseRepository):
             )
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_config_site(self, tid: int | None) -> None:
         """
         删除站点信息
@@ -65,7 +65,7 @@ class SiteRepository(BaseRepository):
             return
         self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_config_site(
         self,
         tid: int | None,
@@ -94,7 +94,7 @@ class SiteRepository(BaseRepository):
             }
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_config_site_note(self, tid: int | None, note: str) -> None:
         """
         更新站点属性
@@ -103,7 +103,7 @@ class SiteRepository(BaseRepository):
             return
         self._db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).update({"NOTE": note})
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_site_cookie_ua(self, tid: int | None, cookie: str, ua: str | None = None) -> None:
         """
         更新站点Cookie和ua
@@ -121,7 +121,7 @@ class SiteRepository(BaseRepository):
             {"COOKIE": cookie, "NOTE": json.dumps(note)}
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_site_rssurl(self, tid: int | None, rssurl: str) -> None:
         """
         更新站点rssurl
@@ -138,7 +138,7 @@ class SiteRepository(BaseRepository):
         """
         self._db.query(SITEUSERINFOSTATS).filter(old_name == SITEUSERINFOSTATS.SITE).update({"SITE": new_name})
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_site_user_statistics(self, site_user_infos: list) -> None:
         """
         更新站点用户粒度数据
@@ -240,7 +240,7 @@ class SiteRepository(BaseRepository):
 
     # ==================== Site Favicon ====================
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_site_favicon(self, site_user_infos: list) -> None:
         """
         更新站点图标数据
@@ -287,14 +287,14 @@ class SiteRepository(BaseRepository):
 
     # ==================== Site Seeding Info ====================
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_site_seed_info_site_name(self, new_name: str, old_name: str) -> None:
         """
         更新站点做种数据中站点名称
         """
         self._db.query(SITEUSERSEEDINGINFO).filter(old_name == SITEUSERSEEDINGINFO.SITE).update({"SITE": new_name})
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_site_seed_info(self, site_user_infos: list) -> None:
         """
         更新站点做种数据
@@ -354,14 +354,14 @@ class SiteRepository(BaseRepository):
             is not None
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_site_statistics_site_name(self, new_name: str, old_name: str) -> None:
         """
         更新站点统计数据中站点名称
         """
         self._db.query(SITESTATISTICSHISTORY).filter(old_name == SITESTATISTICSHISTORY.SITE).update({"SITE": new_name})
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_site_statistics_history(self, site_user_infos: list) -> None:
         """
         插入站点数据

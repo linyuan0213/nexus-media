@@ -6,7 +6,7 @@
 import json
 import time
 
-from app.db import DbPersist
+from app.db import auto_commit
 from app.db.models import MEDIASYNCITEMS, MEDIASYNCSTATISTIC
 from app.db.repositories.base_repository import BaseRepository
 
@@ -17,7 +17,7 @@ class MediaSyncRepository(BaseRepository):
     处理 MEDIASYNCITEMS 和 MEDIASYNCSTATISTIC 的数据库操作
     """
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_item(self, server_type: str, iteminfo: dict, seasoninfo: list | None = None) -> bool:
         """
         插入/更新媒体同步项目
@@ -46,7 +46,7 @@ class MediaSyncRepository(BaseRepository):
         self._db.insert(new_item)
         return True
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def empty_items(self, server_type: str | None = None, library: str | None = None) -> bool:
         """
         清空媒体同步项目
@@ -62,7 +62,7 @@ class MediaSyncRepository(BaseRepository):
         query.delete()
         return True
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def save_statistics(self, server_type: str, total_count: int, movie_count: int, tv_count: int) -> bool:
         """
         保存媒体同步统计

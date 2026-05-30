@@ -9,7 +9,7 @@ from typing import Any
 
 from sqlalchemy import Integer, cast, func
 
-from app.db import DbPersist
+from app.db import auto_commit
 from app.db.models import CONFIGSITE, SITEBRUSHRULE, SITEBRUSHTASK, SITEBRUSHTORRENTS
 from app.db.repositories.base_repository import BaseRepository
 
@@ -20,7 +20,7 @@ class BrushRepository(BaseRepository):
     处理刷流任务和种子信息的数据库操作
     """
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_brushtask(self, brush_id: int | None, item: dict) -> None:
         """
         新增或更新刷流任务
@@ -76,7 +76,7 @@ class BrushRepository(BaseRepository):
                 }
             )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_brushtask(self, brush_id: int) -> None:
         """
         删除刷流任务
@@ -116,7 +116,7 @@ class BrushRepository(BaseRepository):
         )
         return ret[0] or 0 if ret else 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_brushtask_state(self, state: str, tid: int | None = None) -> None:
         """
         改变刷流任务的状态
@@ -128,7 +128,7 @@ class BrushRepository(BaseRepository):
         else:
             self._db.query(SITEBRUSHTASK).update({"STATE": "Y" if state == "Y" else "N"})
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def add_brushtask_download_count(self, brush_id: int | None) -> None:
         """
         增加刷流下载数
@@ -154,7 +154,7 @@ class BrushRepository(BaseRepository):
             .all()
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def add_brushtask_upload_count(
         self, brush_id: int | None, upload_size: int, download_size: int, remove_count: int
     ) -> None:
@@ -185,7 +185,7 @@ class BrushRepository(BaseRepository):
             }
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_brushtask_torrent(
         self, brush_id: int | None, title: str, enclosure: str, downloader: str, download_id: str, size: str
     ) -> None:
@@ -267,7 +267,7 @@ class BrushRepository(BaseRepository):
         )
         return count > 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_brushtask_torrent_state(self, ids: list) -> None:
         """
         更新刷流种子的状态
@@ -279,7 +279,7 @@ class BrushRepository(BaseRepository):
                 _id[1] == SITEBRUSHTORRENTS.TASK_ID, _id[2] == SITEBRUSHTORRENTS.DOWNLOAD_ID
             ).update({"TORRENT_SIZE": _id[0], "DOWNLOAD_ID": "0"})
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_brushtask_torrent(self, brush_id: int | None, download_id: str | None) -> None:
         """
         删除刷流种子记录
@@ -292,7 +292,7 @@ class BrushRepository(BaseRepository):
 
     # ---------- 刷流规则模板 ----------
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_brushrule(self, name: str, rss_rule: str, remove_rule: str, stop_rule: str) -> int:
         """新增刷流规则模板，返回自增 ID。"""
         entity = SITEBRUSHRULE(
@@ -305,7 +305,7 @@ class BrushRepository(BaseRepository):
         self._db.insert(entity)
         return entity.ID
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_brushrule(
         self, rule_id: int, name: str | None, rss_rule: str | None, remove_rule: str | None, stop_rule: str | None
     ) -> None:
@@ -329,7 +329,7 @@ class BrushRepository(BaseRepository):
             return self._db.query(SITEBRUSHRULE).filter(int(rule_id) == SITEBRUSHRULE.ID).first()
         return self._db.query(SITEBRUSHRULE).order_by(SITEBRUSHRULE.ID.desc()).all()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_brushrule(self, rule_id: int) -> None:
         """删除刷流规则模板，并将关联任务的 RULE_ID 置空。"""
         self._db.query(SITEBRUSHTASK).filter(int(rule_id) == SITEBRUSHTASK.RULE_ID).update({"RULE_ID": None})

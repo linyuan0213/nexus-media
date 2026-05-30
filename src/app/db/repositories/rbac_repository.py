@@ -10,7 +10,7 @@ from typing import Any
 from sqlalchemy import and_, desc
 from sqlalchemy.orm import selectinload
 
-from app.db import DbPersist
+from app.db import auto_commit
 from app.db.models.rbac import (
     RBACMenu,
     RBACOperationLog,
@@ -138,7 +138,7 @@ class RBACUserRepository(BaseRepository):
         count = self._db.query(RBACUser).filter(email == RBACUser.EMAIL).count()
         return count > 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def create_user(
         self,
         username: str,
@@ -171,7 +171,7 @@ class RBACUserRepository(BaseRepository):
         self._db.insert(user)
         return user
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_user(self, user_id: int, **kwargs) -> bool:
         """
         更新用户信息
@@ -195,7 +195,7 @@ class RBACUserRepository(BaseRepository):
         user.UPDATED_AT = datetime.now()  # type: ignore[assignment]
         return True
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_last_login(self, user_id: int, ip: str | None = None) -> bool:
         """
         更新用户最后登录时间
@@ -216,7 +216,7 @@ class RBACUserRepository(BaseRepository):
             user.LAST_LOGIN_IP = ip  # type: ignore[assignment]
         return True
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_user(self, user_id: int) -> bool:
         """
         删除用户（硬删除）
@@ -230,7 +230,7 @@ class RBACUserRepository(BaseRepository):
         result = self._db.query(RBACUser).filter(user_id == RBACUser.ID).delete()
         return result > 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def hard_delete_user(self, user_id: int) -> bool:
         """
         硬删除用户
@@ -261,7 +261,7 @@ class RBACUserRepository(BaseRepository):
             return []
         return user.roles
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def assign_roles_to_user(self, user_id: int, role_ids: list[int]) -> bool:
         """
         为用户分配角色
@@ -284,7 +284,7 @@ class RBACUserRepository(BaseRepository):
         user.roles = roles
         return True
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def add_role_to_user(self, user_id: int, role_id: int) -> bool:
         """
         为用户添加单个角色
@@ -307,7 +307,7 @@ class RBACUserRepository(BaseRepository):
 
         return True
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def remove_role_from_user(self, user_id: int, role_id: int) -> bool:
         """
         移除用户的角色
@@ -417,7 +417,7 @@ class RBACRoleRepository(BaseRepository):
         count = self._db.query(RBACRole).filter(role_name == RBACRole.ROLE_NAME).count()
         return count > 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def create_role(
         self, role_name: str, role_code: str, description: str | None = None, role_level: int = 100
     ) -> RBACRole:
@@ -439,7 +439,7 @@ class RBACRoleRepository(BaseRepository):
         self._db.insert(role)
         return role
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_role(self, role_id: int, **kwargs) -> bool:
         """
         更新角色信息
@@ -463,7 +463,7 @@ class RBACRoleRepository(BaseRepository):
         role.UPDATED_AT = datetime.now()  # type: ignore[assignment]
         return True
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_role(self, role_id: int) -> bool:
         """
         删除角色
@@ -494,7 +494,7 @@ class RBACRoleRepository(BaseRepository):
             return []
         return role.permissions
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def assign_permissions_to_role(self, role_id: int, permission_ids: list[int]) -> bool:
         """
         为角色分配权限
@@ -536,7 +536,7 @@ class RBACRoleRepository(BaseRepository):
             return []
         return role.menus
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def assign_menus_to_role(self, role_id: int, menu_ids: list[int]) -> bool:
         """
         为角色分配菜单
@@ -611,7 +611,7 @@ class RBACPermissionRepository(BaseRepository):
             .all()
         )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def create_permission(
         self,
         permission_name: str,
@@ -634,7 +634,7 @@ class RBACPermissionRepository(BaseRepository):
         self._db.insert(permission)
         return permission
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_permission(self, permission_id: int, **kwargs) -> bool:
         """
         更新权限信息
@@ -651,7 +651,7 @@ class RBACPermissionRepository(BaseRepository):
         permission.UPDATED_AT = datetime.now()  # type: ignore[assignment]
         return True
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_permission(self, permission_id: int) -> bool:
         """
         删除权限
@@ -761,7 +761,7 @@ class RBACMenuRepository(BaseRepository):
 
         return menus
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def create_menu(
         self,
         menu_name: str,
@@ -808,7 +808,7 @@ class RBACMenuRepository(BaseRepository):
         self._db.insert(menu)
         return menu
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_menu(self, menu_id: int, **kwargs) -> bool:
         """
         更新菜单信息
@@ -854,7 +854,7 @@ class RBACMenuRepository(BaseRepository):
         menu.UPDATED_AT = datetime.now()  # type: ignore[assignment]
         return True
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_menu(self, menu_id: int) -> bool:
         """
         删除菜单（同时删除子菜单）
@@ -873,7 +873,7 @@ class RBACLogRepository(BaseRepository):
 
     # ========== 登录日志 ==========
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def add_login_log(
         self,
         user_id: int | None,
@@ -917,7 +917,7 @@ class RBACLogRepository(BaseRepository):
 
     # ========== 操作日志 ==========
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def add_operation_log(
         self,
         user_id: int | None = None,

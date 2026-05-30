@@ -10,7 +10,7 @@ from enum import Enum
 
 from sqlalchemy import func
 
-from app.db import DbPersist
+from app.db import auto_commit
 from app.db.models import SYNCHISTORY, TRANSFERBLACKLIST, TRANSFERHISTORY, TRANSFERUNKNOWN
 from app.db.repositories.base_repository import BaseRepository
 from app.schemas.media import TransferMediaDTO
@@ -44,7 +44,7 @@ class TransferRepository(BaseRepository):
         )
         return ret > 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_transfer_history_date(
         self, source_path: str, source_filename: str, dest_path: str, dest_filename: str, date: str
     ) -> None:
@@ -58,7 +58,7 @@ class TransferRepository(BaseRepository):
             dest_filename == TRANSFERHISTORY.DEST_FILENAME,
         ).update({"DATE": date})
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_transfer_history(
         self,
         in_from: Enum,
@@ -179,7 +179,7 @@ class TransferRepository(BaseRepository):
                 .all()
             )
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_transfer_history_by_source(self, source_path: str, source_filename: str) -> None:
         self._db.query(TRANSFERHISTORY).filter(
             source_path == TRANSFERHISTORY.SOURCE_PATH,
@@ -199,14 +199,14 @@ class TransferRepository(BaseRepository):
         )
         return ret > 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_transfer_log_by_id(self, logid: int) -> None:
         """
         根据logid删除记录
         """
         self._db.query(TRANSFERHISTORY).filter(int(logid) == TRANSFERHISTORY.ID).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_transfer(self) -> None:
         """
         删除所有识别记录
@@ -271,7 +271,7 @@ class TransferRepository(BaseRepository):
                 begin_pos
             ).all()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def update_transfer_unknown_state(self, path: str) -> None:
         """
         更新未识别记录为识别
@@ -280,7 +280,7 @@ class TransferRepository(BaseRepository):
             return
         self._db.query(TRANSFERUNKNOWN).filter(os.path.normpath(path) == TRANSFERUNKNOWN.PATH).update({"STATE": "Y"})
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def delete_transfer_unknown(self, tid: int | None) -> None:
         """
         删除未识别记录
@@ -346,7 +346,7 @@ class TransferRepository(BaseRepository):
         else:
             return True
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_transfer_unknown(self, path: str, dest: str, rmt_mode: str) -> None:
         """
         插入未识别记录
@@ -380,11 +380,11 @@ class TransferRepository(BaseRepository):
         """
         return not self.is_transfer_in_blacklist(path)
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def truncate_transfer_unknowns(self) -> None:
         self._db.query(TRANSFERUNKNOWN).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_transfer_blacklist(self, path: str) -> None:
         """
         插入黑名单记录
@@ -398,7 +398,7 @@ class TransferRepository(BaseRepository):
         self._db.query(TRANSFERBLACKLIST).filter(str(path) == TRANSFERBLACKLIST.PATH).delete()
         self._db.query(SYNCHISTORY).filter(str(path) == SYNCHISTORY.PATH).delete()
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def truncate_transfer_blacklist(self) -> None:
         """
         清空黑名单记录
@@ -421,7 +421,7 @@ class TransferRepository(BaseRepository):
         )
         return count > 0
 
-    @DbPersist(BaseRepository._db)
+    @auto_commit(BaseRepository._db)
     def insert_sync_history(self, path: str, src: str, dest: str) -> None:
         """
         插入同步历史记录
