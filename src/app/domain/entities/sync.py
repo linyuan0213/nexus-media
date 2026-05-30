@@ -3,6 +3,7 @@
 包含目录同步配置实体
 """
 
+import os
 from dataclasses import dataclass, fields
 from typing import Any, Optional
 
@@ -74,6 +75,34 @@ class SyncPathEntity:
         )
 
     _ORM_FIELD_MAP = {}
+
+    def validate(self) -> list[str]:
+        """验证同步路径配置，返回错误信息列表（空列表表示验证通过）"""
+        errors = []
+        if not self.source:
+            errors.append("源目录不能为空")
+        elif self.source in ("/", "\\"):
+            errors.append("源目录不能是根目录")
+        if self.mode and self.mode not in self._VALID_MODES:
+            errors.append(f"无效的同步模式: {self.mode}")
+        return errors
+
+    @staticmethod
+    def validate_hardlink(source: str, dest: str) -> str | None:
+        """校验硬链接是否跨盘，返回错误信息或 None"""
+        if not dest:
+            return None
+        common = os.path.commonprefix([source, dest])
+        if not common or common == "/":
+            return "硬链接不能跨盘"
+        return None
+
+    @staticmethod
+    def is_subpath(parent: str, child: str) -> bool:
+        """判断 child 路径是否在 parent 路径之下"""
+        parent = os.path.normpath(parent)
+        child = os.path.normpath(child)
+        return child == parent or child.startswith(parent + os.sep)
 
     def __getattr__(self, name: str):
         """兼容旧代码的大写属性访问"""

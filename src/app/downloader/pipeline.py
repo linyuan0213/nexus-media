@@ -19,11 +19,11 @@ import log
 from app.helper import ThreadHelper
 from app.mediaserver import MediaServer
 from app.message import Message
-from app.plugin_framework.event_compat import EventHandler, EventManager
+from app.events import Event
+from app.events.constants import DOWNLOAD_STARTED, DOWNLOAD_FAILED
 from app.sites import SiteConf, Sites, SiteSubtitle
 from app.sites.engine import SiteEngine
 from app.utils import StringUtils, Torrent
-from app.utils.types import EventType
 from app.di import container
 
 
@@ -47,7 +47,7 @@ class DownloadPipeline:
         sites: Sites | None = None,
         siteconf: SiteConf | None = None,
         sitesubtitle: SiteSubtitle | None = None,
-        eventmanager: EventManager | None = None,
+        event_bus=None,
     ):
         self._client_factory = client_factory
         self._message = message or Message()
@@ -56,7 +56,7 @@ class DownloadPipeline:
         self._sites = sites or container.sites()
         self._siteconf = siteconf or container.site_conf()
         self._sitesubtitle = sitesubtitle or SiteSubtitle()
-        self._eventmanager = eventmanager or EventHandler
+        self._event_bus = event_bus or container.event_bus()
 
     def execute(
         self,
@@ -82,17 +82,19 @@ class DownloadPipeline:
             return None, None, "client_factory not set"
         title = media_info.org_string or media_info.get_title_string() or media_info.title or "未知"
 
-        self._eventmanager.send_event(
-            EventType.DownloadAdd,
-            {
-                "media_info": media_info.to_dict(),
-                "is_paused": is_paused,
-                "tag": tag,
-                "download_dir": download_dir,
-                "download_setting": download_setting,
-                "downloader_id": downloader_id,
-                "torrent_file": torrent_file,
-            },
+        self._event_bus.publish(
+            Event(
+                event_type=DOWNLOAD_STARTED,
+                payload={
+                    "media_info": media_info.to_dict(),
+                    "is_paused": is_paused,
+                    "tag": tag,
+                    "download_dir": download_dir,
+                    "download_setting": download_setting,
+                    "downloader_id": downloader_id,
+                    "torrent_file": torrent_file,
+                },
+            )
         )
 
         # ---------- 阶段1：获取种子内容 ----------
@@ -393,6 +395,8 @@ class DownloadPipeline:
     # ---------- 辅助 ----------
 
     def _fail(self, media_info, in_from, reason):
-        self._eventmanager.send_event(EventType.DownloadFail, {"media_info": media_info.to_dict(), "reason": reason})
+        self._event_bus.publish(
+            Event(event_type=DOWNLOAD_FAILED, payload={"media_info": media_info.to_dict(), "reason": reason})
+        )
         if in_from:
             self._message.send_download_fail_message(media_info, f"添加下载任务失败：{reason}")

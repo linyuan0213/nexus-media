@@ -150,18 +150,16 @@ class TransferPipeline:
         media = settings.get("media")
         if not media:
             return False
-        all_paths = []
+        norm_path = os.path.normpath(path) + os.sep
         for key in ("movie_path", "tv_path", "anime_path"):
             val = media.get(key)
-            if val:
-                if isinstance(val, list):
-                    all_paths.extend(val)
-                else:
-                    all_paths.append(val)
-        norm = path.rstrip("/") + "/"
-        for lib_path in all_paths:
-            if norm.startswith(lib_path.rstrip("/") + "/"):
-                return True
+            if not val:
+                continue
+            paths = val if isinstance(val, list) else [val]
+            for lib_path in paths:
+                lib_norm = os.path.normpath(lib_path) + os.sep
+                if norm_path == lib_norm or norm_path.startswith(lib_norm):
+                    return True
         return False
 
     def _resolve_backend(self, backend_id: str) -> StorageBackend | None:

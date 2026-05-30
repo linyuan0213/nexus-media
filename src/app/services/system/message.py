@@ -3,16 +3,17 @@
 import json
 
 from app.di import container
+from app.events import Event
+from app.events.constants import MESSAGE_INCOMING
 from app.infrastructure.cache_system import TokenCache
 from app.message import Message
 from app.message.commands import COMMANDS
-from app.plugin_framework.event_compat import EventHandler
 from app.schemas.system import SendMessageResultDTO
 from app.services.rss_core import Rss
 from app.services.sync_service import SyncService
 from app.services.system.lifecycle import SystemLifecycleService
 from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
-from app.utils.types import EventType, SearchType
+from app.utils.types import SearchType
 
 
 class MessageClientService:
@@ -110,6 +111,7 @@ class MessageCommandHandler:
         rss=None,
         subscribe_svc=None,
         filetransfer=None,
+        event_bus=None,
     ):
         self._search_handler = search_handler
         self._torrent_remover = torrent_remover
@@ -118,6 +120,7 @@ class MessageCommandHandler:
         self._rss = rss
         self._subscribe_svc = subscribe_svc
         self._filetransfer = filetransfer
+        self._event_bus = event_bus or container.event_bus()
         self._commands = None
 
     @property
@@ -151,9 +154,11 @@ class MessageCommandHandler:
         if not msg:
             return
 
-        EventHandler.send_event(
-            EventType.MessageIncoming,
-            {"channel": in_from.value, "user_id": user_id, "user_name": user_name, "message": msg},
+        self._event_bus.publish(
+            Event(
+                event_type=MESSAGE_INCOMING,
+                payload={"channel": in_from.value, "user_id": user_id, "user_name": user_name, "message": msg},
+            )
         )
 
         command = self._command_map.get(msg)

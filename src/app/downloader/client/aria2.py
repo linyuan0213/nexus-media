@@ -201,6 +201,12 @@ class Aria2(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return False
 
+    def _normalize_files(self, raw_files: list[dict]) -> list[dict]:
+        return [{"id": i, "name": f.get("path", "").split("/")[-1]} for i, f in enumerate(raw_files)]
+
+    def set_file_selection(self, tid: str | None, selected_map: dict[int, bool]) -> bool:
+        return True
+
     def get_files(self, tid: str | None = None) -> list[dict] | None:
         if not self._client:
             return None

@@ -21,7 +21,15 @@ from app.services.transfer_coordinator import TransferCoordinator
 from app.services.transfer_pipeline import TransferPipeline
 from app.di import container
 
-lock = Lock()
+_downloader_locks: dict[str, Lock] = {}
+
+
+def _get_downloader_lock(downloader_id: str) -> Lock:
+    lock = _downloader_locks.get(downloader_id)
+    if lock is None:
+        lock = Lock()
+        _downloader_locks[downloader_id] = lock
+    return lock
 
 
 class DownloaderCore:
@@ -123,7 +131,7 @@ class DownloaderCore:
         """
         downloader_ids = [downloader_id] if downloader_id else self._client_factory.monitor_downloader_ids
         for did in downloader_ids:
-            with lock:
+            with _get_downloader_lock(did):
                 downloader_conf = self._client_factory.get_downloader_conf(did)
                 if not downloader_conf:
                     continue

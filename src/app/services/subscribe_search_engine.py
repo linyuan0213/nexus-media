@@ -3,7 +3,6 @@ SubscribeSearchEngine - 订阅搜索/下载逻辑
 """
 
 import traceback
-from threading import Lock
 from typing import Any
 
 import log
@@ -14,15 +13,17 @@ from app.db.repositories.rss_repo_adapter import (
     RssTvRepositoryAdapter,
 )
 from app.di import container
+from app.domain.entities.rss import SubscribeState
 from app.domain.interfaces.rss_repo import (
     IRssMovieRepository,
     IRssTvEpisodeRepository,
     IRssTvRepository,
 )
+from app.events import Event, on_event
+from app.events.constants import MEDIA_EPISODE_TRANSFERRED
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media import MediaCache, MediaService, meta_info
 from app.message import Message
-from app.plugin_framework.event_compat import EventHandler, EventManager
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.services.search_service import Searcher
@@ -52,7 +53,6 @@ class SubscribeSearchEngine:
         downloader: Downloader | None = None,
         filter_service: Filter | None = None,
         message: Message | None = None,
-        eventmanager: EventManager | None = None,
     ):
         self._service = service
         self._rss_repo = rss_repo or RssRepository()
@@ -72,8 +72,6 @@ class SubscribeSearchEngine:
         self._downloader = downloader or container.downloader_core()
         self._filter = filter_service or container.filter_service()
         self._message = message or container.message()
-        self._eventmanager = eventmanager or EventHandler
-        self._lock = Lock()
 
     def subscribe_search_all(self):
         """
@@ -92,13 +90,11 @@ class SubscribeSearchEngine:
             log.info(f"[Subscribe]订阅搜索(state={state}) 正在执行，跳过")
             return
         try:
-            self._lock.acquire()
             # 处理电影
             self.subscribe_search_movie(state=state)
             # 处理电视剧
             self.subscribe_search_tv(state=state)
         finally:
-            self._lock.release()
             dist_lock.release()
 
     def subscribe_search_movie(self, rssid=None, state="D"):
@@ -348,3 +344,45 @@ class SubscribeSearchEngine:
         else:
             media_info = self._media_service.identify(title=f"{name} {year}", mtype=mtype)
         return media_info
+
+
+@on_event(MEDIA_EPISODE_TRANSFERRED)
+def _on_episode_transferred(event: Event):
+    """处理单集转移完成事件，更新订阅进度"""
+    data = event.payload
+    tmdb_id = data.get("tmdb_id")
+    season = data.get("season")
+    episodes = data.get("episodes", [])
+    if not tmdb_id or not episodes:
+        return
+    try:
+        rss_repo = RssRepository()
+        tv_repo = RssTvRepositoryAdapter(rss_repo)
+        all_tvs = tv_repo.get_all(state=SubscribeState.RUNNING.value)
+        for tv in all_tvs:
+            if str(tv.tmdb_id) != str(tmdb_id):
+                continue
+            if season and str(tv.season) != str(season):
+                continue
+            new_current = max(tv.current_ep, max(episodes))
+            new_lack = max(0, tv.total - new_current)
+            if new_current != tv.current_ep or new_lack != tv.lack:
+                tv_repo.update(
+                    rssid=tv.id,
+                    current_ep=new_current,
+                    lack=new_lack,
+                )
+                log.info(
+                    f"[Subscribe]剧集《{tv.name}》S{tv.season} 进度更新: current_ep={new_current}, lack={new_lack}"
+                )
+            if new_lack == 0 and tv.is_running:
+                tv_repo.update_state(
+                    title=tv.name,
+                    year=tv.year,
+                    season=tv.season,
+                    rssid=tv.id,
+                    state=SubscribeState.COMPLETED.value,
+                )
+                log.info(f"[Subscribe]剧集《{tv.name}》S{tv.season} 全部集数已入库，标记为完成")
+    except Exception as e:
+        log.error(f"[Subscribe]处理 EpisodeTransferred 事件失败: {e}")

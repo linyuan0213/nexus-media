@@ -8,6 +8,7 @@ import json
 import re
 
 from app.core.exceptions import ResourceAlreadyExistsError, ResourceNotFoundError, ValidationError
+from app.domain.entities.word import CustomWordEntity
 from app.helper import WordsHelper
 from app.media import MediaCache
 from app.schemas.words import (
@@ -74,13 +75,28 @@ class WordsService:
 
     # ---------- 词汇操作 ----------
 
-    def _validate_offset(self, wtype: str, offset: str) -> str | None:
+    @staticmethod
+    def _validate_offset(wtype: str, offset: str) -> str | None:
         """
-        校验集数偏移格式
+        校验集数偏移格式（委托给领域实体）
         :return: 错误信息，None 表示通过
         """
-        if wtype not in ("3", "4"):
-            return None
+        temp = CustomWordEntity(
+            id=0,
+            replaced=None,
+            replace=None,
+            front="",
+            back="",
+            offset=offset or "",
+            type=int(wtype) if wtype in ("3", "4") else 1,
+            group_id=0,
+            season=0,
+            enabled=1,
+            regex=0,
+            help=None,
+            note=None,
+        )
+        return temp.validate_offset()
         if not re.findall(r"EP", offset):
             return "偏移集数格式有误"
         if re.findall(r"(?!-|\+|\*|/|[0-9]).", re.sub(r"EP", "", offset)):

@@ -65,56 +65,6 @@ class BrushStopType(Enum):
     AVGUPSPEED = "平均上传速度"
 
 
-# 可监听事件
-class EventType(Enum):
-    # Emby Webhook通知
-    EmbyWebhook = "emby.webhook"
-    # Jellyfin Webhook通知
-    JellyfinWebhook = "jellyfin.webhook"
-    # Plex Webhook通知
-    PlexWebhook = "plex.webhook"
-    # 新增下载
-    DownloadAdd = "download.add"
-    # 下载失败
-    DownloadFail = "download.fail"
-    # 入库完成
-    TransferFinished = "transfer.finished"
-    # 入库失败
-    TransferFail = "transfer.fail"
-    # 下载字幕
-    SubtitleDownload = "subtitle.download"
-    # 新增订阅
-    SubscribeAdd = "subscribe.add"
-    # 订阅完成
-    SubscribeFinished = "subscribe.finished"
-    # 交互消息
-    MessageIncoming = "message.incoming"
-    # 开始搜索
-    SearchStart = "search.start"
-    # 源文件被删除
-    SourceFileDeleted = "sourcefile.deleted"
-    # 媒件库文件被删除
-    LibraryFileDeleted = "libraryfile.deleted"
-    # 刮削媒体信息
-    MediaScrapStart = "media.scrap.start"
-    # 插件重载
-    PluginReload = "plugin.reload"
-    # 豆瓣想看同步
-    DoubanSync = "douban.sync"
-    # 辅种任务开始
-    AutoSeedStart = "autoseed.start"
-    # 刷新媒体库
-    RefreshMediaServer = "refresh.mediaserver"
-    # 站点签到
-    SiteSignin = "site.signin"
-    # Cookie同步
-    CookieSync = "cookie.sync"
-    # LocalStorage同步
-    LocalStorageSync = "localstorage.sync"
-    # 微信登录
-    WeworkLogin = "wework.login"
-
-
 # 系统配置Key字典
 class SystemConfigKey(Enum):
     # 同步媒体库范围

@@ -1,5 +1,7 @@
 """TransferHistoryManager - 转移历史记录 CRUD 管理."""
 
+import os
+
 from app.db.repositories.transfer_repo_adapter import (
     TransferBlacklistRepositoryAdapter,
     TransferHistoryRepositoryAdapter,
@@ -35,8 +37,8 @@ class TransferHistoryManager:
     def lookup_download_record(self, in_path):
         """根据路径查找下载记录中的媒体信息."""
         download_info = self.download_repo.get_download_history_by_path(in_path)
-        if not download_info and __import__("os").path.isfile(in_path):
-            download_info = self.download_repo.get_download_history_by_path(__import__("os").path.dirname(in_path))
+        if not download_info and os.path.isfile(in_path):
+            download_info = self.download_repo.get_download_history_by_path(os.path.dirname(in_path))
         if download_info and str(download_info.TMDBID or ""):
             return download_info.TMDBID, download_info.TYPE
         return None, None

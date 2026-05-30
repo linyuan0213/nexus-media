@@ -80,7 +80,6 @@ class Container(containers.DeclarativeContainer):
     # --- Message & Plugin Framework ---
     message: Provider["Message"] = _s("app.message.message.Message")
     message_center: Provider["MessageCenter"] = _s("app.message.message_center.MessageCenter")
-    event_manager: Provider["EventManager"] = _s("app.plugin_framework.event_compat.EventManager")
     plugin_registry: Provider["PluginRegistry"] = _s("app.plugin_framework.registry.PluginRegistry")
     hook_system: Provider["HookSystem"] = _s("app.plugin_framework.hook_system.HookSystem")
     plugin_sandbox: Provider["PluginSandbox"] = _s("app.plugin_framework.sandbox.PluginSandbox")
@@ -252,6 +251,9 @@ class Container(containers.DeclarativeContainer):
         "app.infrastructure.cache_system.warmer.TMDBTrendingWarmer"
     )
 
+    # --- Event Bus ---
+    event_bus: Provider["EventBus"] = _s("app.events.factory.create_event_bus")
+
 
 # 全局容器实例
 container = Container()
@@ -291,6 +293,7 @@ if TYPE_CHECKING:
         CustomWordRepositoryAdapter,
     )
     from app.downloader.client_factory import DownloadClientFactory
+    from app.events.bus import EventBus
     from app.helper.drissionpage_helper import DrissionPageHelper
     from app.helper.indexer_helper import IndexerHelper
     from app.helper.progress_helper import ProgressHelper
@@ -318,7 +321,6 @@ if TYPE_CHECKING:
     from app.mediaserver.media_server import MediaServer
     from app.message.message import Message
     from app.message.message_center import MessageCenter
-    from app.plugin_framework.event_compat import EventManager
     from app.plugin_framework.hook_system import HookSystem
     from app.plugin_framework.registry import PluginRegistry
     from app.plugin_framework.sandbox import PluginSandbox

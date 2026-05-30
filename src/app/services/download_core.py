@@ -27,7 +27,6 @@ from app.downloader.strategy import RemoveStrategy
 from app.media import meta_info
 from app.mediaserver import MediaServer
 from app.message import Message
-from app.plugin_framework.event_compat import EventHandler, EventManager
 from app.schemas.download import Torrent as TorrentInfo
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.sites import SiteConf, Sites, SiteSubtitle
@@ -51,7 +50,7 @@ class DownloadCore:
         sites: Sites | None = None,
         siteconf: SiteConf | None = None,
         sitesubtitle: SiteSubtitle | None = None,
-        eventmanager: EventManager | None = None,
+        event_bus=None,
         download_repo: Any = None,
         download_setting_repo=None,
         systemconfig: SystemConfig | None = None,
@@ -63,7 +62,7 @@ class DownloadCore:
         self._sites = sites or container.sites()
         self._siteconf = siteconf or container.site_conf()
         self._sitesubtitle = sitesubtitle or SiteSubtitle()
-        self._eventmanager = eventmanager or EventHandler
+        self._event_bus = event_bus or container.event_bus()
         self._download_repo = download_repo or container.download_history_repo()
         self._download_setting_repo = download_setting_repo or DownloadSettingRepositoryAdapter()
         self._systemconfig = systemconfig or SystemConfig
@@ -75,7 +74,7 @@ class DownloadCore:
             sites=self._sites,
             siteconf=self._siteconf,
             sitesubtitle=self._sitesubtitle,
-            eventmanager=self._eventmanager,
+            event_bus=self._event_bus,
         )
 
     # ---------- 核心下载方法 ----------
@@ -259,62 +258,33 @@ class DownloadCore:
         )
         if not _client:
             return []
-        torrent_files = _client.get_files(tid)
-        if not torrent_files:
-            return []
-        ret_files = []
-        if _client.client_id == "transmission":
-            for file_id, torrent_file in enumerate(torrent_files):
-                ret_files.append({"id": file_id, "name": torrent_file.name})
-        elif _client.client_id == "qbittorrent":
-            for torrent_file in torrent_files:
-                ret_files.append({"id": torrent_file.get("index"), "name": torrent_file.get("name")})
-        return ret_files
+        return _client.get_normalized_files(tid)
 
     def set_files_status(self, tid, need_episodes, downloader_id=None):
         if not downloader_id:
             downloader_id = self._client_factory.default_downloader_id
         _client: Any = self._client_factory.get_client(downloader_id)
-        downloader_conf = self._client_factory.get_downloader_conf(downloader_id)
         if not _client:
-            return []
-        if not downloader_conf:
             return []
         torrent_files = self.get_files(tid=tid, downloader_id=downloader_id)
         if not torrent_files:
             return []
-        sucess_epidised = []
-        if downloader_conf.get("type") == "transmission":
-            files_info = {}
-            for torrent_file in torrent_files:
-                file_id = torrent_file.get("id")
-                file_name = torrent_file.get("name")
-                mi = meta_info(file_name)
-                if not mi.get_episode_list():
-                    selected = False
-                else:
-                    selected = set(mi.get_episode_list()).issubset(set(need_episodes))
-                    if selected:
-                        sucess_epidised = list(set(sucess_epidised).union(set(mi.get_episode_list())))
-                if not files_info.get(tid):
-                    files_info[tid] = {file_id: {"priority": "normal", "selected": selected}}
-                else:
-                    files_info[tid][file_id] = {"priority": "normal", "selected": selected}
-            if sucess_epidised and files_info:
-                _client.set_files(file_info=files_info)
-        elif downloader_conf.get("type") == "qbittorrent":
-            file_ids = []
-            for torrent_file in torrent_files:
-                file_id = torrent_file.get("id")
-                file_name = torrent_file.get("name")
-                mi = meta_info(file_name)
-                if not mi.get_episode_list() or not set(mi.get_episode_list()).issubset(set(need_episodes)):
-                    file_ids.append(file_id)
-                else:
-                    sucess_epidised = list(set(sucess_epidised).union(set(mi.get_episode_list())))
-            if sucess_epidised and file_ids:
-                _client.set_files(torrent_hash=tid, file_ids=file_ids, priority=0)
-        return sucess_epidised
+        success_episodes = []
+        selected_map = {}
+        for torrent_file in torrent_files:
+            file_id = torrent_file.get("id")
+            file_name = torrent_file.get("name")
+            mi = meta_info(file_name)
+            if not mi.get_episode_list():
+                selected = False
+            else:
+                selected = set(mi.get_episode_list()).issubset(set(need_episodes))
+                if selected:
+                    success_episodes = list(set(success_episodes).union(set(mi.get_episode_list())))
+            selected_map[file_id] = selected
+        if success_episodes and selected_map:
+            _client.set_file_selection(tid, selected_map)
+        return success_episodes
 
     def recheck_torrents(self, downloader_id=None, ids=None):
         if not ids:

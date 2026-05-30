@@ -326,7 +326,7 @@ class TestFileTransferService:
                 scraper=MagicMock(),
                 threadhelper=MagicMock(),
                 progress=MagicMock(),
-                eventmanager=MagicMock(),
+                event_bus=MagicMock(),
                 engine=mock_engine,
                 path_resolver=mock_resolver,
                 existence_checker=MagicMock(),
@@ -337,7 +337,7 @@ class TestFileTransferService:
             service._cleanup = mock_cleanup
             service._engine = mock_engine
             service.progress = MagicMock()
-            service.eventmanager = MagicMock()
+            service._event_bus = MagicMock()
             service.message = MagicMock()
             yield service
 
@@ -420,7 +420,7 @@ class TestFileTransferService:
             "error_message": "",
         }
         mock_service._transfer_post_process(result, SyncType.MAN, "/src", "copy", False)
-        mock_service.eventmanager.send_event.assert_called()
+        mock_service._event_bus.publish.assert_called()
         mock_service.message.send_transfer_fail_message.assert_called_once()
 
     def test_transfer_post_process_success_move_cleanup(self, mock_service):

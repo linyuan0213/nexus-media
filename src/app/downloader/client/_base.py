@@ -56,7 +56,30 @@ class _IDownloadClient(metaclass=ABCMeta):
 
     @abstractmethod
     def get_files(self, tid: str | None = None) -> list[dict] | None:
-        """读取种子文件列表"""
+        """读取种子文件列表（返回下载器原始格式，不建议外部直接调用）"""
+
+    def get_normalized_files(self, tid: str | None = None) -> list[dict]:
+        """
+        读取种子文件列表并返回统一格式。
+        :return: [{"id": file_id, "name": file_name}, ...]
+        """
+        raw_files = self.get_files(tid)
+        if not raw_files:
+            return []
+        return self._normalize_files(raw_files)
+
+    def _normalize_files(self, raw_files: list[dict]) -> list[dict]:
+        """将原始文件列表转换为统一格式。子类必须覆盖。"""
+        raise NotImplementedError(f"{self.__class__.__name__} 未实现 _normalize_files")
+
+    def set_file_selection(self, tid: str | None, selected_map: dict[int, bool]) -> bool:
+        """
+        设置种子文件的选择状态（下载/跳过）。
+        :param tid: 种子ID
+        :param selected_map: {file_id: True/False, ...}
+        :return: 是否成功
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} 未实现 set_file_selection")
 
     @abstractmethod
     def set_torrents_status(self, ids: list[str] | str, tags: str | list[str] | None = None) -> bool:

@@ -66,11 +66,13 @@ class DownloadService:
     def download_from_search_results(
         self, dl_id: int, dl_dir: str, dl_setting: str, user_name: str
     ) -> DownloadResultDTO:
-        """从搜索结果批量下载"""
+        """从搜索结果批量下载，收集所有结果后返回批量状态."""
         results = self._searcher.get_search_result_by_id(dl_id)
         if not results:
             return DownloadResultDTO(success=False, message="未找到搜索结果")
 
+        success_count = 0
+        fail_messages = []
         for res in results:
             enclosure = self._resolve_download_url(res.PAGEURL, res.ENCLOSURE)
             media = self._media.get_media_info(title=res.TORRENT_NAME, subtitle=res.DESCRIPTION)
@@ -95,9 +97,17 @@ class DownloadService:
                 in_from=SearchType.WEB,
                 user_name=user_name,
             )
-            if not ret:
-                return DownloadResultDTO(success=False, message=ret_msg)
-        return DownloadResultDTO(success=True, message="")
+            if ret:
+                success_count += 1
+            else:
+                fail_messages.append(f"{res.TORRENT_NAME}: {ret_msg}")
+
+        if fail_messages:
+            return DownloadResultDTO(
+                success=False,
+                message=f"批量下载完成：{success_count}/{len(results)} 成功\n" + "\n".join(fail_messages),
+            )
+        return DownloadResultDTO(success=True, message=f"全部下载成功：{success_count}/{len(results)}")
 
     def download_from_link(
         self,
@@ -355,23 +365,21 @@ class DownloadService:
 
         # 批量标记还在下载中的任务
         if active_ids:
-            for did, tid in active_ids:
-                try:
-                    repo.update_state(did, tid, "downloading")
-                except (DomainError, ServiceError):
-                    raise
-                except Exception as e:
-                    log.debug(f"[DownloadService]更新任务状态失败：{e}")
+            try:
+                repo.batch_update_state([(did, tid, "downloading") for did, tid in active_ids])
+            except (DomainError, ServiceError):
+                raise
+            except Exception as e:
+                log.debug(f"[DownloadService]批量更新任务状态失败：{e}")
 
         # 批量标记已完成任务
         if completed_ids:
-            for did, tid in completed_ids:
-                try:
-                    repo.update_state(did, tid, "completed")
-                except (DomainError, ServiceError):
-                    raise
-                except Exception as e:
-                    log.debug(f"[DownloadService]标记任务完成失败：{e}")
+            try:
+                repo.batch_update_state([(did, tid, "completed") for did, tid in completed_ids])
+            except (DomainError, ServiceError):
+                raise
+            except Exception as e:
+                log.debug(f"[DownloadService]批量标记任务完成失败：{e}")
 
         return result
 

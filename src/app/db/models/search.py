@@ -3,7 +3,7 @@
 包含: 搜索结果信息
 """
 
-from sqlalchemy import BigInteger, Float, Integer, Sequence, String, Text
+from sqlalchemy import BigInteger, Float, Integer, Sequence, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -11,6 +11,7 @@ from app.db.models.base import Base
 
 class SEARCHRESULTINFO(Base):
     __tablename__ = "SEARCH_RESULT_INFO"
+    __table_args__ = (UniqueConstraint("PAGEURL", "SITE", name="uq_search_pageurl_site"),)
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     TORRENT_NAME: Mapped[str] = mapped_column(String(255))

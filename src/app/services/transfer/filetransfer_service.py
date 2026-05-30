@@ -20,7 +20,8 @@ from app.helper import ProgressHelper, ThreadHelper
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media import Category, MediaService, Scraper
 from app.message import Message
-from app.plugin_framework.event_compat import EventHandler, EventManager
+from app.events import Event
+from app.events.constants import MEDIA_EPISODE_TRANSFERRED, MEDIA_TRANSFER_FINISHED, SUBTITLE_DOWNLOAD, TRANSFER_FAIL
 from app.services.transfer.cleanup_service import TransferCleanupService
 from app.services.transfer.existence_checker import MediaExistenceChecker
 from app.services.transfer.history_manager import TransferHistoryManager
@@ -28,7 +29,7 @@ from app.schemas.media import TransferMediaDTO
 from app.services.transfer.path_resolver import TransferPathResolver
 from app.services.transfer_engine import TransferEngine
 from app.utils import ExceptionUtils, PathUtils, StringUtils
-from app.utils.types import EventType, MediaType, MovieTypes, ProgressKey, SyncType
+from app.utils.types import MediaType, MovieTypes, ProgressKey, SyncType
 
 
 class FileTransferService:
@@ -43,7 +44,7 @@ class FileTransferService:
         threadhelper: ThreadHelper | None = None,
         history_manager: TransferHistoryManager | None = None,
         progress: ProgressHelper | None = None,
-        eventmanager: EventManager | None = None,
+        event_bus=None,
         engine: TransferEngine | None = None,
         path_resolver: TransferPathResolver | None = None,
         existence_checker: MediaExistenceChecker | None = None,
@@ -55,7 +56,7 @@ class FileTransferService:
         self.scraper = scraper or container.scraper()
         self.threadhelper = threadhelper or container.thread_helper()
         self.progress = progress or container.progress_helper()
-        self.eventmanager = eventmanager or EventHandler
+        self._event_bus = event_bus or container.event_bus()
         self._engine = engine or container.transfer_engine()
         self._default_operation: str = "copy"
         self._min_filesize = RMT_MIN_FILESIZE
@@ -68,7 +69,7 @@ class FileTransferService:
         self._existence = existence_checker or MediaExistenceChecker(self._path_resolver)
         self._history = history_manager or TransferHistoryManager()
         self._cleanup = cleanup_service or TransferCleanupService(
-            self._history, self._path_resolver, self.media, self.message, self.eventmanager
+            self._history, self._path_resolver, self.media, self.message, self._event_bus
         )
 
         # 从配置读取媒体处理参数
@@ -522,25 +523,43 @@ class FileTransferService:
                 if operation == "move":
                     sleep(round(random.uniform(0, 1), 1))
 
-                self.eventmanager.send_event(
-                    EventType.SubtitleDownload,
-                    {
-                        "media_info": media.to_dict(),
-                        "file": ret_file_path,
-                        "file_ext": file_ext,
-                        "bluray": bool(bluray_disk_dir),
-                    },
+                self._event_bus.publish(
+                    Event(
+                        event_type=SUBTITLE_DOWNLOAD,
+                        payload={
+                            "media_info": media.to_dict(),
+                            "file": ret_file_path,
+                            "file_ext": file_ext,
+                            "bluray": bool(bluray_disk_dir),
+                        },
+                    )
                 )
-                self.eventmanager.send_event(
-                    EventType.TransferFinished,
-                    {
-                        "in_path": in_path,
-                        "file": file_item,
-                        "target_path": out_path,
-                        "dest": dist_path,
-                        "media_info": media.to_dict(),
-                    },
+                self._event_bus.publish(
+                    Event(
+                        event_type=MEDIA_TRANSFER_FINISHED,
+                        payload={
+                            "in_path": in_path,
+                            "file": file_item,
+                            "target_path": out_path,
+                            "dest": dist_path,
+                            "media_info": media.to_dict(),
+                        },
+                    )
                 )
+                # TV/动漫单集转移完成事件（驱动订阅进度更新）
+                if media.type in (MediaType.TV, MediaType.ANIME) and media.get_episode_list():
+                    self._event_bus.publish(
+                        Event(
+                            event_type=MEDIA_EPISODE_TRANSFERRED,
+                            payload={
+                                "tmdb_id": media.tmdb_id,
+                                "title": media.title,
+                                "season": media.get_season_seq(),
+                                "episodes": media.get_episode_list(),
+                                "total_episodes": media.total_episodes,
+                            },
+                        )
+                    )
 
             except (ServiceError, RepositoryError, DomainError):
                 raise
@@ -615,8 +634,8 @@ class FileTransferService:
             if file_exist_flag and ret_file_path:
                 exist_filenum = 1
                 if operation != "softlink":
-                    orgin_size = os.path.getsize(ret_file_path)
-                    if media.size > orgin_size and self._filesize_cover or udf_flag:
+                    original_size = os.path.getsize(ret_file_path)
+                    if (media.size > original_size and self._filesize_cover) or udf_flag:
                         old = ret_file_path
                         base, _ = os.path.splitext(ret_file_path)
                         new_file = f"{base}{file_ext}"
@@ -696,8 +715,8 @@ class FileTransferService:
         log.info(f"[Rmt]{in_path} 处理完成，总数：{total_count}，失败：{failed_count}")
         if alert_count > 0:
             reason = "、".join(alert_messages)
-            self.eventmanager.send_event(
-                EventType.TransferFail, {"path": in_path, "count": alert_count, "reason": reason}
+            self._event_bus.publish(
+                Event(event_type=TRANSFER_FAIL, payload={"path": in_path, "count": alert_count, "reason": reason})
             )
             self.message.send_transfer_fail_message(in_path, alert_count, reason)
         elif failed_count == 0:

@@ -16,12 +16,11 @@ from pyquery import PyQuery
 
 from app.helper.cookiecloud_helper import CookiecloudHelper
 from app.infrastructure.cache_system import get_cache_manager
+from app.di import container
 from app.plugin_framework.context import PluginContext
-from app.plugin_framework.event_compat import EventHandler
+from app.plugin_framework.hook_system import HookSystem
 from app.utils import RequestUtils
 from app.utils.config_tools import get_ua
-from app.utils.types import EventType
-from app.di import container
 
 
 class WeworkIPChangePlugin:
@@ -42,6 +41,7 @@ class WeworkIPChangePlugin:
         self._drissonpage_helper = container.drissionpage_helper()
         self._cache = get_cache_manager().get_or_create("wework_ipchange", cache_type="redis", fallback_maxsize=10)
         self._init_chrome_tab()
+        HookSystem().register("wework.login", self.ctx.plugin_id)
         self._start_service()
 
     def on_disable(self):
@@ -54,6 +54,8 @@ class WeworkIPChangePlugin:
                 self.ctx.info("配置已变更，重载服务")
                 self._stop_service()
                 self._start_service()
+        elif event == "wework.login":
+            self.login_by_code(data)
 
     def run(self):
         """立即运行IP更新"""
@@ -103,11 +105,10 @@ class WeworkIPChangePlugin:
         except Exception:
             pass
 
-    @EventHandler.register(EventType.WeworkLogin)
-    def login_by_code(self, event=None) -> bool:
+    def login_by_code(self, data=None) -> bool:
         if not self._drissonpage_helper:
             return False
-        item = event.event_data if event else {}
+        item = data or {}
         if item:
             msg = item.get("msg")
             self.ctx.debug(f"验证码: {msg}")
@@ -177,7 +178,7 @@ class WeworkIPChangePlugin:
             return
 
         if use_cookiecloud:
-            EventHandler.send_event(EventType.CookieSync)
+            HookSystem().emit("site.cookie_sync", {})
             time.sleep(10)
             cookie = CookiecloudHelper().get_cookie("qq.com")
 

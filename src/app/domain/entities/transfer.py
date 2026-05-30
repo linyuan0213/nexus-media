@@ -3,6 +3,7 @@
 定义TransferHistory/TransferUnknown/TransferBlacklist的领域模型
 """
 
+import os
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -26,6 +27,36 @@ class TransferHistoryEntity:
     dest_path: str
     dest_filename: str
     date: str
+
+    @property
+    def is_renamed(self) -> bool:
+        """文件是否被重命名"""
+        return self.source_filename != self.dest_filename
+
+    @property
+    def source_ext(self) -> str:
+        """源文件扩展名"""
+        return os.path.splitext(self.source_filename)[1].lower()
+
+    @property
+    def dest_ext(self) -> str:
+        """目标文件扩展名"""
+        return os.path.splitext(self.dest_filename)[1].lower()
+
+    @property
+    def is_same_drive(self) -> bool:
+        """源和目标是否在同一盘（简单字符串前缀判断）"""
+        if not self.source_path or not self.dest_path:
+            return False
+        common = os.path.commonprefix([self.source_path, self.dest_path])
+        return bool(common and common != "/")
+
+    @property
+    def is_season_pack(self) -> bool:
+        """是否为整季包（season_episode 不含具体集数标记）"""
+        if not self.season_episode:
+            return False
+        return "E" not in self.season_episode.upper()
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["TransferHistoryEntity"]:

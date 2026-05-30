@@ -3,6 +3,7 @@
 定义Downloader、DownloadHistory、DownloadSetting的领域模型
 """
 
+import re
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -118,6 +119,34 @@ class DownloadHistoryEntity:
     download_id: str
     save_path: str
     date: str
+
+    @property
+    def is_movie(self) -> bool:
+        return self.media_type == "电影"
+
+    @property
+    def is_tv(self) -> bool:
+        return self.media_type == "电视剧"
+
+    @property
+    def is_anime(self) -> bool:
+        return self.media_type == "动漫"
+
+    @property
+    def parsed_season(self) -> int | None:
+        """从 season_episode 解析季号，如 S01 -> 1"""
+        if not self.season_episode:
+            return None
+        m = re.search(r"S(\d+)", self.season_episode, re.IGNORECASE)
+        return int(m.group(1)) if m else None
+
+    @property
+    def parsed_episodes(self) -> list[int]:
+        """从 season_episode 解析集号列表，如 S01E01 -> [1], S01E01-E02 -> [1, 2]"""
+        if not self.season_episode:
+            return []
+        matches = re.findall(r"E(\d+)", self.season_episode, re.IGNORECASE)
+        return [int(m) for m in matches]
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["DownloadHistoryEntity"]:

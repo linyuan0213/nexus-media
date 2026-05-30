@@ -9,13 +9,14 @@ from app.core.exceptions import (
 )
 from app.core.settings import settings
 from app.di import container
-from app.plugin_framework.event_compat import EventHandler
+from app.events import Event
+from app.events.constants import SUBTITLE_DOWNLOAD
 from app.storage import StorageBackendFactory
 from app.storage.backends.base import StorageType
 from app.storage.config_models import LocalStorageConfig
 from app.utils import SystemUtils
 from app.utils.path_utils import get_category_path
-from app.utils.types import EventType, OsType
+from app.utils.types import OsType
 
 
 class MediaFileService:
@@ -23,8 +24,8 @@ class MediaFileService:
     媒体文件操作业务服务
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, event_bus=None):
+        self._event_bus = event_bus or container.event_bus()
 
     def get_dir_list(self, in_dir: str, backend_id: str = "") -> list:
         """获取目录列表，支持本地和远程存储后端，失败时抛出异常"""
@@ -210,14 +211,16 @@ class MediaFileService:
             raise ResourceNotFoundError(f"{name} 无法从TMDB查询到媒体信息")
         if not media.imdb_id:
             media.set_tmdb_info(container.media_service().get_tmdb_info(mtype=media.type, tmdbid=media.tmdb_id))
-        EventHandler.send_event(
-            EventType.SubtitleDownload,
-            {
-                "media_info": media.to_dict(),
-                "file": os.path.splitext(path)[0],
-                "file_ext": os.path.splitext(name)[-1],
-                "bluray": False,
-            },
+        self._event_bus.publish(
+            Event(
+                event_type=SUBTITLE_DOWNLOAD,
+                payload={
+                    "media_info": media.to_dict(),
+                    "file": os.path.splitext(path)[0],
+                    "file_ext": os.path.splitext(name)[-1],
+                    "bluray": False,
+                },
+            )
         )
 
     def scrap_media_path(self, path: str, backend_id: str = "local") -> str:
