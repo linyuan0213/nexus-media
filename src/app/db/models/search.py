@@ -3,7 +3,7 @@
 包含: 搜索结果信息
 """
 
-from sqlalchemy import BigInteger, Float, Integer, Sequence, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Float, Index, Integer, Sequence, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -11,7 +11,17 @@ from app.db.models.base import Base
 
 class SEARCHRESULTINFO(Base):
     __tablename__ = "SEARCH_RESULT_INFO"
-    __table_args__ = (UniqueConstraint("PAGEURL", "SITE", name="uq_search_pageurl_site"),)
+    __table_args__ = (
+        # 使用前缀索引避免超过 MySQL InnoDB utf8mb4 3072 字节限制
+        Index(
+            "uq_search_pageurl_site_session",
+            "PAGEURL",
+            "SITE",
+            "SEARCH_SESSION_ID",
+            unique=True,
+            mysql_length={"PAGEURL": 191},
+        ),
+    )
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     TORRENT_NAME: Mapped[str] = mapped_column(String(255))
@@ -40,3 +50,4 @@ class SEARCHRESULTINFO(Base):
     UPLOAD_VOLUME_FACTOR: Mapped[float] = mapped_column(Float)
     DOWNLOAD_VOLUME_FACTOR: Mapped[float] = mapped_column(Float)
     NOTE: Mapped[str] = mapped_column(Text)
+    SEARCH_SESSION_ID: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)

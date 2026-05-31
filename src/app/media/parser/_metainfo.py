@@ -27,6 +27,18 @@ def meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None =
         MediaInfo 实例
     """
     org_title = title
+    # 预处理：移除网址与常见垃圾串，避免干扰解析
+    if title:
+        cleaned = re.sub(
+            r"(?i)\b(?:www\s+\w+|\w+\.(?:com|net|org|tv|cc|me|io)\b|pthdtv|qqhdtv|剧集网发布)\b",
+            "",
+            title,
+        )
+        cleaned = re.sub(r"\[\s*[^\]]*(?:发布|字幕组|翻译组)[^\]]*\]", "", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        if cleaned != title:
+            title = cleaned
+
     rev_title, msg, used_info = WordsHelper().process(title)
     if subtitle:
         subtitle, _, _ = WordsHelper().process(subtitle)

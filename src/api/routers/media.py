@@ -26,6 +26,7 @@ from app.core.exceptions import (
     ServiceError,
     ValidationError,
 )
+from app.infrastructure.cache_system import TokenCache
 from app.schemas.common import CommonResponse
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.file_index_service import FileIndexService
@@ -527,7 +528,8 @@ def get_search_result(
     svc: Searcher = Depends(get_searcher_service),
     result_svc: SearchResultService = Depends(get_search_result_service),
 ):
-    search_results = svc.get_search_results()
+    session_id = TokenCache.get(f"search_session:{current_user.user_id}")
+    search_results = svc.get_search_results(session_id)
     result = result_svc.group_search_results(search_results)
     return success(data={"total": result.total, "result": result.result})
 

@@ -49,8 +49,14 @@ class SearchPipeline:
         :return: PipelineResult
         """
         start_time = datetime.datetime.now()
+        total_raw = len(all_results)
 
         # ---------- 阶段1：本地解析和过滤 ----------
+        self.progress.update(
+            ptype=progress_key,
+            value=60,
+            text=f"本地解析过滤 {total_raw} 条结果...",
+        )
         candidates, direct_results, local_stats = self.result_filter.local_filter(
             result_array=all_results,
             filter_args=filter_args,
@@ -59,10 +65,21 @@ class SearchPipeline:
 
         # ---------- 阶段2：批量识别（跨站点去重） ----------
         if candidates:
-            self.batch_identifier.identify(candidates)
+            ident_count = sum(1 for c in candidates if not c.skip_tmdb)
+            self.progress.update(
+                ptype=progress_key,
+                value=70,
+                text=f"批量识别 {ident_count} 条不重复结果...",
+            )
+            self.batch_identifier.identify(candidates, progress_key=progress_key)
 
         # ---------- 阶段3：TMDB匹配和最终过滤 ----------
         if match_media and candidates:
+            self.progress.update(
+                ptype=progress_key,
+                value=85,
+                text=f"TMDB 匹配过滤 {len(candidates)} 条候选...",
+            )
             matched_results, match_stats = self.result_filter.match_filter(
                 candidates=candidates,
                 match_media=match_media,
@@ -87,7 +104,9 @@ class SearchPipeline:
             f"耗时 {elapsed} 秒"
         )
         self.progress.update(
-            ptype=progress_key, text=f"共 {len(all_results)} 条，有效 {total_stats.index_sucess}，耗时 {elapsed} 秒"
+            ptype=progress_key,
+            value=95,
+            text=f"共 {len(all_results)} 条，过滤 {total_stats.index_rule_fail}，不匹配 {total_stats.index_match_fail}，有效 {total_stats.index_sucess}",
         )
 
         return PipelineResult(results=all_matched, stats=total_stats, elapsed_seconds=elapsed)

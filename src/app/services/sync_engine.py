@@ -13,6 +13,7 @@ import log
 from app.core.constants import RMT_MEDIAEXT
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.db.repositories.transfer_repo_adapter import TransferHistoryRepositoryAdapter
+from app.di import container
 from app.domain.entities.transfer_task import SourceType, TransferTask
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.services.transfer_pipeline import TransferPipeline
@@ -21,7 +22,6 @@ from app.storage.backends.local import LocalStorageBackend
 from app.storage.config_models import LocalStorageConfig
 from app.storage.factory import StorageBackendFactory
 from app.utils import PathUtils
-from app.di import container
 
 _synced_lock = threading.Lock()
 _observer_lock = threading.Lock()

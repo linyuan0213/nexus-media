@@ -47,6 +47,13 @@ class auto_commit:
                     else:
                         ExceptionUtils.exception_traceback(e)
                         return False
+                finally:
+                    if self.db and not in_tx:
+                        try:
+                            self.db.session.close()
+                        except Exception:
+                            pass
+                        self.db.remove()
             return False
 
         return persist

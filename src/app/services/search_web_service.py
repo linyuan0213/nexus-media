@@ -31,7 +31,9 @@ def _web_search_executor(max_workers=8):
         executor.shutdown(wait=False)
 
 
-def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, media_type=None):
+def search_medias_for_web(
+    content, ident_flag=True, filters=None, tmdbid=None, media_type=None, session_id: str | None = None
+):
     """
     WEB资源搜索
     :param content: 关键字文本，可以包括 类型、标题、季、集、年份等信息
@@ -170,6 +172,7 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
 
     media_list = []
     if search_name_list:
+        _process.update(ptype=ProgressKey.Search, value=5, text=f"准备搜索 {content} ...")
         with _web_search_executor(max_workers) as executor:
             all_task = []
             for search_name in search_name_list:
@@ -179,11 +182,18 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
             finish_count = 0
             for finish_count, future in enumerate(as_completed(all_task), start=1):
                 result = future.result()
-                _process.update(ptype=ProgressKey.Search, value=round(100 * (finish_count / len(all_task))))
+                # 关键词搜索占 5-70%，去重排序占 70-90%，入库占 90-100%
+                pct = 5 + round(65 * (finish_count / len(all_task)))
+                _process.update(
+                    ptype=ProgressKey.Search,
+                    value=pct,
+                    text=f"关键词 {finish_count}/{len(all_task)} 完成 ({pct}%)",
+                )
                 if result:
                     media_list.extend(result)
 
     # 去重
+    _process.update(ptype=ProgressKey.Search, value=70, text="去重排序中...")
     unique_media_list = []
     media_seen = set()
     for d in media_list:
@@ -193,14 +203,13 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
             media_seen.add(org_string)
     media_list = unique_media_list
 
-    _searcher.delete_all_search_torrents()
-    _process.end(ProgressKey.Search)
-
     if len(media_list) == 0:
+        _process.end(ProgressKey.Search)
         log.info(f"[Web]{content} 未搜索到任何资源")
         return 1, f"{content} 未搜索到任何资源"
     else:
         log.info(f"[Web]共搜索到 {len(media_list)} 个有效资源")
+        _process.update(ptype=ProgressKey.Search, value=90, text=f"共 {len(media_list)} 个有效资源，入库中...")
         media_list = sorted(
             media_list,
             key=lambda x: "{}{}{}".format(
@@ -222,5 +231,14 @@ def search_medias_for_web(content, ident_flag=True, filters=None, tmdbid=None, m
                 for media_item in media_list:
                     if not media_item.vote_average:
                         media_item.vote_average = media_info.vote_average
-        _searcher.insert_search_results(media_items=media_list, ident_flag=ident_flag, title=content)
+        # 按 session 隔离：先清同 session 旧数据再插入
+        if session_id:
+            _searcher.search_repo.delete_by_session(session_id)
+        else:
+            _searcher.delete_all_search_torrents()
+        _searcher.insert_search_results(
+            media_items=media_list, ident_flag=ident_flag, title=content, session_id=session_id
+        )
+        _process.update(ptype=ProgressKey.Search, value=100, text=f"搜索完成，共 {len(media_list)} 个资源")
+        _process.end(ProgressKey.Search)
         return 0, ""

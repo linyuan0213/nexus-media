@@ -5,6 +5,7 @@ System Router — FastAPI 迁移
 
 import json
 import os
+import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
@@ -37,6 +38,7 @@ from app.agent.providers.gemini import GeminiProvider
 from app.agent.providers.ollama import OllamaProvider
 from app.agent.providers.openai import OpenAIProvider
 from app.core.exceptions import DomainError, ResourceNotFoundError, ServiceError
+from app.infrastructure.cache_system import TokenCache
 from app.indexer.registry import get_all_clients as get_all_indexers
 from app.mediaserver.registry import get_all_clients as get_all_mediaservers
 from app.message.registry import get_all_clients
@@ -500,12 +502,9 @@ def search(
     """
     WEB资源搜索（同步执行，前端并行轮询进度）
     """
-    try:
-        from app.infrastructure.cache_system import TokenCache
-
-        TokenCache.delete("search")
-    except Exception:
-        pass
+    session_id = str(uuid.uuid4())
+    TokenCache.delete("search")
+    TokenCache.set(f"search_session:{current_user.user_id}", session_id, ttl=600)
     search_word = req.search_word
     ident_flag = not req.unident
     result = svc.search(
@@ -514,6 +513,7 @@ def search(
         filters=req.filters,
         tmdbid=req.tmdbid,
         media_type=req.media_type,
+        session_id=session_id,
     )
     if result.code != 0:
         return fail(code=result.code, msg=result.msg)

@@ -131,6 +131,7 @@ def init_episode(info, token):
             and 1 < len(token) < 4
             and info._last_token_type != "year"
             and info._last_token_type != "videoencode"
+            and info._last_token_type != "audioencode"
             and token != info._unknown_name_str
             or info._last_token_type == "EPISODE"
             and info.begin_episode is None
@@ -169,6 +170,7 @@ def init_episode(info, token):
                 and 0 < len(num_str) < 4
                 and info._last_token_type != "year"
                 and info._last_token_type != "videoencode"
+                and info._last_token_type != "audioencode"
             ):
                 info.begin_episode = num
                 info.total_episodes = 1

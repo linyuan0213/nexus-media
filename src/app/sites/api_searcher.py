@@ -174,6 +174,10 @@ class ApiSiteSearcher:
                 result[field] = self._map_field(item, config)
             self._post_process_labels(result, item)
             results.append(result)
+            log.info(
+                f"[ApiSiteSearcher]{self._site.name} item: title={result.get('title')!r}, "
+                f"description={result.get('description')!r}"
+            )
         return results
 
     def _post_process_labels(self, result, raw_item):

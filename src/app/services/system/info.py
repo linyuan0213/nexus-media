@@ -131,7 +131,13 @@ class WebSearchService:
         self._search_fn = search_fn or search_medias_for_web
 
     def search(
-        self, search_word: str, ident_flag: bool = True, filters=None, tmdbid=None, media_type=None
+        self,
+        search_word: str,
+        ident_flag: bool = True,
+        filters=None,
+        tmdbid=None,
+        media_type=None,
+        session_id: str | None = None,
     ) -> WebSearchResultDTO:
         """执行WEB搜索"""
         if not search_word:
@@ -142,7 +148,12 @@ class WebSearchService:
             else:
                 media_type = MediaType.TV
         ret, ret_msg = self._search_fn(
-            content=search_word, ident_flag=ident_flag, filters=filters, tmdbid=tmdbid, media_type=media_type
+            content=search_word,
+            ident_flag=ident_flag,
+            filters=filters,
+            tmdbid=tmdbid,
+            media_type=media_type,
+            session_id=session_id,
         )
         return WebSearchResultDTO(code=ret, msg=ret_msg or "")
 

@@ -80,9 +80,22 @@ class TmdbLookup(BaseLookup):
             year_range = [first_year]
             if first_year:
                 year_range.append(str(int(first_year) - 1))
+                year_range.append(str(int(first_year) + 1))
             for year in year_range:
                 log.debug(f"[Meta]正在识别{search_type.value}：{name}, 年份={year} ...")
                 info = self.search.search_movie(name, year)
+                if info:
+                    info["media_type"] = MediaType.MOVIE
+                    log.info(
+                        "[Meta]{} 识别到 电影：TMDBID={}, 名称={}, 上映日期={}".format(
+                            name, info.get("id"), info.get("title"), info.get("release_date")
+                        )
+                    )
+                    return info
+            # 电影无年份 fallback（类似 TV 的逻辑）
+            if not info and first_year and not strict:
+                log.debug(f"[Meta]正在识别{search_type.value}：{name}, 去掉年份再查 ...")
+                info = self.search.search_movie(name, None)
                 if info:
                     info["media_type"] = MediaType.MOVIE
                     log.info(
@@ -226,7 +239,7 @@ class TmdbLookup(BaseLookup):
         return self.discover.discover(mtype, params, page)
 
     def get_tmdb_en_title(self, media_info):
-        en_info = self.detail.get_detail(media_info.tmdb_id, media_info.type)
+        en_info = self.detail.get_detail(media_info.tmdb_id, media_info.type, language="en")
         if en_info:
             return en_info.get("title") if media_info.type == MediaType.MOVIE else en_info.get("name")
         return None

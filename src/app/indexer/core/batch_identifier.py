@@ -1,6 +1,7 @@
 import log
 from app.di import container
 from app.infrastructure.cache_system import get_cache_manager
+from app.utils.types import ProgressKey
 
 
 class BatchIdentifier:
@@ -11,8 +12,9 @@ class BatchIdentifier:
     不直接修改候选对象，仅填充缓存供后续 match_filter 阶段读取。
     """
 
-    def __init__(self, media_service=None):
+    def __init__(self, media_service=None, progress=None):
         self.media = media_service or container.media_service()
+        self.progress = progress or container.progress_helper()
         self._media_ident_cache = get_cache_manager().get_or_create("media_ident", "memory", maxsize=2000, ttl=3600)
 
     @staticmethod
@@ -28,7 +30,7 @@ class BatchIdentifier:
             season_ep += f"_E{'-'.join(str(e) for e in meta_info.get_episode_list())}"
         return f"{name}{season_ep}"
 
-    def identify(self, candidates):
+    def identify(self, candidates, progress_key=ProgressKey.Search):
         """
         对 candidates 中 skip_tmdb=False 的条目批量查询 TMDB。
         """
@@ -68,7 +70,13 @@ class BatchIdentifier:
 
         try:
             results = self.media.identify_batch(to_identify)
-            for item, info in zip(to_identify, results, strict=False):
+            for idx, (item, info) in enumerate(zip(to_identify, results, strict=False)):
                 self._media_ident_cache.set(item["_cache_key"], info)
+                # 每 10 条更新一次进度
+                if idx % 10 == 0 or idx == len(to_identify) - 1:
+                    self.progress.update(
+                        ptype=progress_key,
+                        text=f"识别 {item['title'][:20]}... ({idx + 1}/{len(to_identify)})",
+                    )
         except Exception as e:
             log.error(f"[BatchIdentifier]批量识别出错: {e}")

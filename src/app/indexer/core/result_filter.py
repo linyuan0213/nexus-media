@@ -8,6 +8,9 @@
 不依赖服务层，规则数据通过仓库层直接查询。
 """
 
+import difflib
+import re
+
 import log
 from app.di import container
 from app.indexer.core.batch_identifier import BatchIdentifier
@@ -120,6 +123,14 @@ class ResultFilter:
                 return ""
             return StringUtils.handler_special_chars(str(name)).upper().strip()  # type: ignore[union-attr]
 
+        # 中文虚词归一化：去掉 "的"/"之"/"与"/"和" 等，解决 "黄泉使者" vs "黄泉的使者"
+        def _cn_simplify(name):
+            if not name:
+                return ""
+            if not any("\u4e00" <= c <= "\u9fff" for c in name):
+                return name
+            return re.sub(r"[\u7684\u4e4b\u4e0e\u548c\u4e4e\u4e4b]", "", name)
+
         match_names = {
             _norm(match_media.title),
             _norm(match_media.cn_name),
@@ -147,7 +158,23 @@ class ResultFilter:
             for mmn in match_names:
                 if len(mmn) < 3:
                     continue
-                if mn in mmn or mmn in mn:
+                if mn == mmn:
+                    return True
+                # 子串匹配：要求公共子串占较长字符串的比例 >= 50%
+                # 避免 "The Boys" 被 "Miracle The Boys Of" 误匹配
+                if mn in mmn:
+                    if len(mn) / len(mmn) >= 0.5:
+                        return True
+                elif mmn in mn:
+                    if len(mmn) / len(mn) >= 0.5:
+                        return True
+                # 中文虚词归一化后二次匹配
+                mn_simp = _cn_simplify(mn)
+                mmn_simp = _cn_simplify(mmn)
+                if mn_simp and mmn_simp and (mn_simp == mmn_simp or mn_simp in mmn_simp or mmn_simp in mn_simp):
+                    return True
+                # SequenceMatcher 兜底：比例 >= 0.8（避免过宽松）
+                if difflib.SequenceMatcher(None, mn, mmn).ratio() >= 0.8:
                     return True
 
         return False
@@ -201,6 +228,25 @@ class ResultFilter:
                 continue
 
             mi = meta_info(title=torrent_name, subtitle=f"{labels} {description}")
+            # 若标题未解析出中文名，尝试从 description 中提取与目标媒体匹配的中文短语
+            if not mi.cn_name and description and match_media:
+                desc = str(description)
+                i = 0
+                while i < len(desc):
+                    while i < len(desc) and not ("\u4e00" <= desc[i] <= "\u9fff"):
+                        i += 1
+                    start = i
+                    while i < len(desc) and "\u4e00" <= desc[i] <= "\u9fff":
+                        i += 1
+                    if i - start >= 2:
+                        phrase: str = desc[start:i]
+                        p_norm = str(StringUtils.handler_special_chars(phrase)).upper().strip()
+                        m_norm = str(StringUtils.handler_special_chars(match_media.cn_name or "")).upper().strip()
+                        t_norm = str(StringUtils.handler_special_chars(match_media.title or "")).upper().strip()
+                        if p_norm and (p_norm == m_norm or p_norm == t_norm or p_norm in m_norm or m_norm in p_norm):
+                            mi.cn_name = phrase
+                            log.info(f"[ResultFilter]{torrent_name} 从 description 提取中文名: {phrase}")
+                            break
             if not mi.get_name():
                 log.info(f"[ResultFilter]{torrent_name} 无法识别到名称")
                 stats.index_match_fail += 1
@@ -256,6 +302,7 @@ class ResultFilter:
                 continue
 
             if mi.imdb_id and match_media.imdb_id and str(mi.imdb_id) == str(match_media.imdb_id):
+                log.debug(f"[ResultFilter]{torrent_name} IMDB匹配成功，跳过TMDB查询")
                 candidates.append(
                     SearchCandidate(
                         item=item,
@@ -270,34 +317,30 @@ class ResultFilter:
                 )
                 continue
 
-            if self.quick_name_match(mi, match_media):
-                log.debug(f"[ResultFilter]{torrent_name} 快速名称匹配成功，跳过TMDB查询")
-                candidates.append(
-                    SearchCandidate(
-                        item=item,
-                        meta_info=mi,
-                        res_order=res_order,
-                        skip_tmdb=True,
-                        media_info=self._media.merge_media_info(mi, match_media),
-                        indexer_name=indexer_name,
-                        indexer_order=indexer_order,
-                        indexer_public=indexer_public,
-                    )
-                )
-                continue
-
-            candidates.append(
-                SearchCandidate(
-                    item=item,
-                    meta_info=mi,
-                    res_order=res_order,
-                    skip_tmdb=False,
-                    media_info=None,
-                    indexer_name=indexer_name,
-                    indexer_order=indexer_order,
-                    indexer_public=indexer_public,
-                )
+            qnm_result = self.quick_name_match(mi, match_media)
+            log.info(
+                f"[ResultFilter]{torrent_name} quick_name_match: {qnm_result}, meta_name={mi.get_name()}, match_name={match_media.get_name()}"
             )
+            if qnm_result:
+                log.info(f"[ResultFilter]{torrent_name} 快速名称匹配成功，跳过TMDB查询")
+                candidates.append(
+                    SearchCandidate(
+                        item=item,
+                        meta_info=mi,
+                        res_order=res_order,
+                        skip_tmdb=True,
+                        media_info=self._media.merge_media_info(mi, match_media),
+                        indexer_name=indexer_name,
+                        indexer_order=indexer_order,
+                        indexer_public=indexer_public,
+                    )
+                )
+                continue
+
+            # 快速名称不匹配且无可信 IMDB 时，直接丢弃，避免无意义 TMDB 查询
+            log.info(f"[ResultFilter]{torrent_name} 快速名称不匹配，跳过")
+            stats.index_match_fail += 1
+            continue
 
         return candidates, direct_results, stats
 
@@ -336,6 +379,9 @@ class ResultFilter:
 
             if cand.skip_tmdb:
                 media_info = cand.media_info
+                log.info(
+                    f"[ResultFilter]{torrent_name} skip_tmdb=True, merged_media_info: tmdb_id={media_info.tmdb_id}, type={media_info.type}, season={media_info.begin_season}, episode={media_info.begin_episode}"
+                )
             elif not cache_key:
                 log.warn(f"[ResultFilter]{torrent_name} 无法构建缓存键")
                 stats.index_error += 1
@@ -343,30 +389,38 @@ class ResultFilter:
             else:
                 media_info = media_ident_cache.get(cache_key)
                 if media_info is not None:
-                    log.debug(f"[ResultFilter]从缓存获取媒体信息: {cache_key}")
+                    log.info(
+                        f"[ResultFilter]{torrent_name} 从缓存获取: {cache_key}, tmdb_id={media_info.tmdb_id}, tmdb_info={media_info.tmdb_info is not None}"
+                    )
                 else:
                     media_info = None
 
                 if not media_info:
-                    log.warn(f"[ResultFilter]{cache_key} 识别媒体信息出错！")
+                    log.warn(f"[ResultFilter]{torrent_name} ({cache_key}) 识别媒体信息出错！")
                     stats.index_error += 1
                     continue
 
                 if not media_info.tmdb_info:
-                    if match_media and self._type_compatible(meta_info.type, match_media.type):
+                    if (
+                        match_media
+                        and self._type_compatible(meta_info.type, match_media.type)
+                        and self.quick_name_match(meta_info, match_media)
+                    ):
                         log.info(
-                            f"[ResultFilter]{cache_key} 未匹配到TMDB，回退使用搜索媒体信息: {match_media.get_name()}"
+                            f"[ResultFilter]{torrent_name} ({cache_key}) 未匹配到TMDB，回退使用搜索媒体信息: {match_media.get_name()}"
                         )
                         media_info = self._media.merge_media_info(media_info, match_media)
                     else:
-                        log.info(f"[ResultFilter]{cache_key} 识别为 {media_info.get_name()} 未匹配到媒体信息")
+                        log.info(
+                            f"[ResultFilter]{torrent_name} ({cache_key}) 识别为 {media_info.get_name()} 未匹配到媒体信息, quick_name_match={self.quick_name_match(meta_info, match_media) if match_media else False}"
+                        )
                         stats.index_match_fail += 1
                         continue
                 elif str(media_info.tmdb_id) != str(match_media.tmdb_id):
                     media_type_str = media_info.type.value if media_info.type else "Unknown"
                     match_type_str = match_media.type.value if match_media.type else "Unknown"
                     log.info(
-                        f"[ResultFilter]{cache_key} 识别为 "
+                        f"[ResultFilter]{torrent_name} ({cache_key}) 识别为 "
                         f"{media_type_str}/{media_info.get_title_string()}/{media_info.tmdb_id} "
                         f"与 {match_type_str}/{match_media.get_title_string()}/{match_media.tmdb_id} 不匹配"
                     )
@@ -410,13 +464,16 @@ class ResultFilter:
                     )
                     continue
 
-            if not self._engine.is_torrent_match_sey(
+            sey_match = self._engine.is_torrent_match_sey(
                 media_info, filter_args.get("season"), filter_args.get("episode"), filter_args.get("year")
-            ):
+            )
+            if not sey_match:
                 media_type_str = media_info.type.value if media_info.type else "Unknown"
                 log.info(
                     f"[ResultFilter]{display_name} 识别为 {media_type_str}/"
-                    f"{media_info.get_title_string()}/{media_info.get_season_episode_string()} 不匹配季/集/年份"
+                    f"{media_info.get_title_string()}/{media_info.get_season_episode_string()} 不匹配季/集/年份 "
+                    f"(filter_season={filter_args.get('season')}, filter_episode={filter_args.get('episode')}, filter_year={filter_args.get('year')}, "
+                    f"media_season={media_info.get_season_list()}, media_episode={media_info.get_episode_list()}, media_year={media_info.year})"
                 )
                 stats.index_match_fail += 1
                 continue

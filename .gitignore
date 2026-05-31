@@ -33,6 +33,7 @@ htmlcov/
 /config/site_manage/*.dat
 /config/*.db
 /config/*.db-journal
+/config/plugins/
 /tests/*.db
 
 # Runtime cache

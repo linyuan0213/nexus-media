@@ -38,9 +38,7 @@ class TmdbSearch:
             return {}
         # 第一轮：优先匹配 original_title 完全相等
         for movie in movies:
-            if not movie.get("release_date"):
-                continue
-            year_matched = not year or movie.get("release_date", "")[:4] == str(year)
+            year_matched = not year or (movie.get("release_date") and movie.get("release_date", "")[:4] == str(year))
             if not year_matched:
                 continue
             original = movie.get("original_title")
@@ -52,9 +50,7 @@ class TmdbSearch:
                 return movie
         # 第二轮：模糊匹配 title / original_title
         for movie in movies:
-            if not movie.get("release_date"):
-                continue
-            year_matched = not year or movie.get("release_date", "")[:4] == str(year)
+            year_matched = not year or (movie.get("release_date") and movie.get("release_date", "")[:4] == str(year))
             if not year_matched:
                 continue
             if compare_tmdb_names(name, movie.get("title")) or compare_tmdb_names(name, movie.get("original_title")):
@@ -119,9 +115,7 @@ class TmdbSearch:
         # 第一轮：收集所有精确匹配项，优先返回 anime（genre_ids 含 16）
         exact_matches = []
         for tv in tvs:
-            if not tv.get("first_air_date"):
-                continue
-            year_matched = not year or tv.get("first_air_date", "")[:4] == str(year)
+            year_matched = not year or (tv.get("first_air_date") and tv.get("first_air_date", "")[:4] == str(year))
             if not year_matched:
                 continue
             original = tv.get("original_name")
@@ -392,8 +386,22 @@ class TmdbSearch:
             media_type = MediaType.TV if tmdb_links[0].startswith("/tv") else MediaType.MOVIE
             tmdbid = tmdb_links[0].split("/")[-1]
             tmdbinfo = self._get_detail(tmdbid, media_type)
-            if not tmdbinfo or (mtype == MediaType.TV and tmdbinfo.get("media_type") != MediaType.TV):
+            if not tmdbinfo or (mtype != MediaType.UNKNOWN and tmdbinfo.get("media_type") != mtype):
                 return None
+            if media_type == MediaType.MOVIE:
+                if not (
+                    compare_tmdb_names(name, tmdbinfo.get("title"))
+                    or compare_tmdb_names(name, tmdbinfo.get("original_title"))
+                ):
+                    log.info(f"[Meta]{name} TMDB网站返回结果名称不匹配，跳过")
+                    return None
+            else:
+                if not (
+                    compare_tmdb_names(name, tmdbinfo.get("name"))
+                    or compare_tmdb_names(name, tmdbinfo.get("original_name"))
+                ):
+                    log.info(f"[Meta]{name} TMDB网站返回结果名称不匹配，跳过")
+                    return None
             log.info(
                 f"[Meta]{name} 从WEB识别到 {'电影' if media_type == MediaType.MOVIE else '电视剧'}："
                 f"TMDBID={tmdbinfo.get('id')}, "

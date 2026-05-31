@@ -22,6 +22,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     _EXEMPT_PATHS = {"/health", "/static", "/docs", "/openapi.json", "/redoc"}
 
+    # 特定路径自定义限流规则：{path: (limit, window)}
+    _PATH_LIMITS: dict[str, tuple[int, int]] = {
+        "/api/system/refresh": (10, 10),
+    }
+
     def __init__(self, app, limit: int = 60, window: int = 60):
         super().__init__(app)
         self._limiter = RateLimiter()
@@ -39,7 +44,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         client_ip = self._get_client_ip(request)
         key = f"rate_limit:{client_ip}:{path}"
 
-        if not self._limiter.is_allowed(key, self._limit, self._window):
+        # 特定路径使用自定义限流，其余使用全局默认值
+        limit, window = self._PATH_LIMITS.get(path, (self._limit, self._window))
+
+        if not self._limiter.is_allowed(key, limit, window):
             log.warn(f"[RateLimit]IP {client_ip} 请求 {path} 触发限流")
             return Response(
                 content='{"detail":"请求过于频繁，请稍后再试"}',
