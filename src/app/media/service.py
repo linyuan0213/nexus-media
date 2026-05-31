@@ -14,6 +14,7 @@ from app.media.parser.llm import LLMParser
 from app.media.parser.regex import RegexParser
 from app.storage.backends.base import StorageBackend
 from app.utils import EpisodeFormat, PathUtils, StringUtils
+from app.domain.validators.media_title import is_valid_media_title
 from app.utils.types import MatchMode, MediaType
 from app.di import container
 
@@ -82,6 +83,14 @@ class MediaService:
                 if parsed:
                     log.info(f"[MediaService]LLM Parser fallback 成功: {parsed.title_cn or parsed.title_en}")
         if not parsed:
+            if language:
+                self._lookup.client.set_language()
+            return None
+
+        # 领域规则：标题质量过滤，排除纯网站名/垃圾词
+        search_name = parsed.title_en or parsed.title_cn or ""
+        if not is_valid_media_title(search_name):
+            log.debug(f"[MediaService]标题质量不合格，跳过识别: {title} -> {search_name}")
             if language:
                 self._lookup.client.set_language()
             return None
@@ -209,6 +218,15 @@ class MediaService:
                 # 根据 genre_ids 更新类型（动漫 vs 电视剧）
                 info.set_tmdb_info(full_info)
 
+        # 6.1 获取英文标题用于匹配
+        if info.tmdb_id and not info.en_name:
+            try:
+                en_title = self._lookup.get_tmdb_en_title(info)
+                if en_title and en_title != info.title and en_title != info.original_title:
+                    info.en_name = en_title
+            except Exception:
+                pass
+
         # 7. 集数映射（动漫合并季 / 绝对集号）
         if self._episode_mapping_enabled and info.type != MediaType.MOVIE and info.tmdb_id and info.begin_episode:
             log.info(
@@ -285,6 +303,12 @@ class MediaService:
                 parsed = self._parser.parse(titles[idx], subtitles[idx])
                 parsed_list[idx] = parsed
             if not parsed:
+                continue
+            # 领域规则：标题质量过滤
+            search_name = parsed.title_en or parsed.title_cn or ""
+            if not is_valid_media_title(search_name):
+                log.debug(f"[MediaService]批量识别标题质量不合格，跳过: {titles[idx]} -> {search_name}")
+                parsed_list[idx] = None
                 continue
             key = f"{parsed.title_en or parsed.title_cn or ''}:{parsed.year or ''}:{parsed.type.value if parsed.type else ''}"
             if key not in unique_keys:

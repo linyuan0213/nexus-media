@@ -77,6 +77,12 @@ class TestSeasonEpisodeStandard:
         assert result.begin_season == 1
         assert result.end_season == 3
 
+    def test_audio_token_not_episode(self):
+        result = parse_video_title("Dr.STONE.S04.2025.1080p.BluRay.x265.10bit.FLAC.2.0.2Audio-ADE")
+        assert result.begin_season == 4
+        assert result.begin_episode is None
+        assert result.type == MediaType.TV
+
 
 class TestReleaseGroups:
     def test_ntb_group(self):

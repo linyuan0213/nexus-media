@@ -10,6 +10,7 @@ import datetime
 import xml.dom.minidom
 from abc import ABCMeta, abstractmethod
 from typing import Any
+from urllib.parse import quote
 
 import log
 from app.indexer.schema import IndexerConfigSchema
@@ -83,8 +84,8 @@ class _IIndexClient(metaclass=ABCMeta):
         start_time = datetime.datetime.now()
         log.info(f"[{self.index_type}]开始搜索Indexer：{indexer.name} ...")
 
-        search_word = StringUtils.handler_special_chars(text=key_word, replace_word=" ", allow_space=True)
-        api_url = f"{indexer.domain}?apikey={self.api_key}&t=search&q={search_word}"
+        search_word = str(StringUtils.handler_special_chars(text=key_word, replace_word=" ", allow_space=True) or "")
+        api_url = f"{indexer.domain}?apikey={self.api_key}&t=search&q={quote(search_word)}"
         result_array = self.__parse_torznabxml(api_url)
 
         _ = (datetime.datetime.now() - start_time).seconds

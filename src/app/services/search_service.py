@@ -215,15 +215,18 @@ class SearchResultProcessor:
             filtered.append(media_item)
         return filtered
 
-    def persist_results(self, media_list: list, title=None, ident_flag=True) -> None:
-        """清空并保存搜索结果到数据库（加分布式锁防止并发覆盖）"""
+    def persist_results(self, media_list: list, title=None, ident_flag=True, session_id: str | None = None) -> None:
+        """清空并保存搜索结果到数据库（加分布式锁防止并发覆盖，支持会话隔离）"""
         lock = get_lock_manager().create_lock("search:persist_results", ttl_seconds=60)
         if not lock.acquire():
             log.warn("[Search]persist_results 正在执行，跳过")
             return
         try:
-            self._search_repo.delete_all_search_torrents()
-            self._search_repo.insert_search_results(media_list, title, ident_flag)
+            if session_id:
+                self._search_repo.delete_by_session(session_id)
+            else:
+                self._search_repo.delete_all_search_torrents()
+            self._search_repo.insert_search_results(media_list, title, ident_flag, session_id)
         finally:
             lock.release()
 
@@ -400,20 +403,20 @@ class Searcher:
             return None
         return self.search_repo.get_search_result_by_id(dl_id)
 
-    def get_search_results(self):
+    def get_search_results(self, session_id: str | None = None):
         if self.search_repo is None:
             return []
-        return self.search_repo.get_search_results()
+        return self.search_repo.get_search_results(session_id)
 
     def delete_all_search_torrents(self):
         if self.search_repo is None:
             return
         self.search_repo.delete_all_search_torrents()
 
-    def insert_search_results(self, media_items: list, title=None, ident_flag=True):
+    def insert_search_results(self, media_items: list, title=None, ident_flag=True, session_id: str | None = None):
         if self.search_repo is None:
             return
-        self.search_repo.insert_search_results(media_items, title, ident_flag)
+        self.search_repo.insert_search_results(media_items, title, ident_flag, session_id)
 
 
 class SearchService:
@@ -471,14 +474,16 @@ class SearchService:
     def get_search_result_by_id(self, dl_id) -> Any:
         return self._searcher.get_search_result_by_id(dl_id)
 
-    def get_search_results(self) -> Any:
-        return self._searcher.get_search_results()
+    def get_search_results(self, session_id: str | None = None) -> Any:
+        return self._searcher.get_search_results(session_id)
 
     def delete_all_search_torrents(self) -> None:
         self._searcher.delete_all_search_torrents()
 
-    def insert_search_results(self, media_items: list, title=None, ident_flag=True) -> None:
-        self._searcher.insert_search_results(media_items, title, ident_flag)
+    def insert_search_results(
+        self, media_items: list, title=None, ident_flag=True, session_id: str | None = None
+    ) -> None:
+        self._searcher.insert_search_results(media_items, title, ident_flag, session_id)
 
     def build_search_names(self, media_info) -> list[str]:
         names, _ = SearchQueryBuilder.build_search_names(media_info, self._media)

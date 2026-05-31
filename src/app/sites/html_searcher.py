@@ -12,6 +12,7 @@ HTML 站点搜索器
 import re
 from copy import deepcopy
 from typing import Any
+from urllib.parse import quote
 
 from lxml import etree
 
@@ -111,7 +112,7 @@ class HtmlSiteSearcher:
                     cat_map = {"MOVIE": "mo", "TV": "tv", "ANIME": "an"}
                     params_filled[pk] = cat_map.get(mtype_name, "")
 
-        qs = "&".join(f"{k}={v}" for k, v in params_filled.items() if v)
+        qs = "&".join(f"{k}={quote(str(v))}" for k, v in params_filled.items() if v)
         path_with_slash = f"/{path.lstrip('/')}" if path else ""
         url = f"{domain}{path_with_slash}"
         if qs:
@@ -184,6 +185,11 @@ class HtmlSiteSearcher:
                 self._fix_size(item)
                 self._normalize_html_result(item)
                 results.append(item)
+                log.info(
+                    f"[HtmlSiteSearcher]{self._site.name} item: title={item.get('title')!r}, "
+                    f"size={item.get('size')!r}, seeders={item.get('seeders')!r}, "
+                    f"description={item.get('description')!r}"
+                )
         return results
 
     def _normalize_html_result(self, item):
@@ -243,6 +249,10 @@ class HtmlSiteSearcher:
                     self._fix_size(item)
                     self._normalize_html_result(item)
                     torrents.append(item)
+                    log.info(
+                        f"[HtmlSiteSearcher]{self._site.name} item: title={item.get('title')!r}, "
+                        f"description={item.get('description')!r}"
+                    )
 
         return torrents
 
@@ -254,7 +264,8 @@ class HtmlSiteSearcher:
         if isinstance(size, (int, float)):
             return
         if isinstance(size, str):
-            m = re.match(r"([\d,.]+)\s*([KMGT]B|B)", str(size), re.IGNORECASE)
+            # 同时支持十进制单位 (GB/MB/KB) 和二进制单位 (GiB/MiB/KiB)
+            m = re.match(r"([\d,.]+)\s*([KMGT]?i?B)", str(size), re.IGNORECASE)
             if m:
                 val = float(m.group(1).replace(",", ""))
                 unit = m.group(2).upper()[0]

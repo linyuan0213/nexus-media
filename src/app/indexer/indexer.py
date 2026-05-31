@@ -160,8 +160,17 @@ class Indexer:
                 task = executor.submit(_client.search, order_seq, index, key_word, filter_args, match_media, in_from)
                 all_task.append(task)
 
+            completed = 0
             for future in as_completed(all_task):
                 result = future.result()
+                completed += 1
+                # 站点搜索占 10-60%
+                pct = 10 + round(50 * (completed / len(all_task)))
+                self.progress.update(
+                    ptype=progress_key,
+                    value=pct,
+                    text=f"站点搜索 {completed}/{len(all_task)} 完成 ({pct}%)",
+                )
                 if result:
                     all_raw_results.extend(result)
         finally:

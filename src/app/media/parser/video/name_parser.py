@@ -44,14 +44,13 @@ def init_name(info, token):
             info.cn_name = token
         elif not info._stop_cnname_flag:
             # 已有名称较长时不再追加，避免把外传名+主系列名拼接
-            if len(info.cn_name) >= 6:
+            if len(info.cn_name) >= 15:
                 info._stop_cnname_flag = True
                 return
             if not re.search(f"{_name_no_chinese_re}", token, flags=re.IGNORECASE) and not re.search(
                 f"{_name_se_words}", token, flags=re.IGNORECASE
             ):
                 info.cn_name = f"{info.cn_name} {token}"
-            info._stop_cnname_flag = True
     else:
         is_roman_digit = re.search(_roman_numerals, token)
         if token.isdigit() or is_roman_digit:
