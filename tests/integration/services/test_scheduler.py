@@ -336,7 +336,7 @@ class TestEventHandler:
             scheduled_run_time=time.time(),
         )
 
-        with patch("app.services.scheduler.event_handler.remove_session"):
+        with patch("app.db.session.remove_session"):
             handler._job_event_listener(event)
 
         assert "j1" in core._job_start_times

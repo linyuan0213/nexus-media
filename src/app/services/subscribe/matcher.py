@@ -1,20 +1,15 @@
-"""
-RSS 订阅匹配器
-
-职责：判断 RSS 条目的媒体信息是否匹配用户订阅清单。
-纯逻辑计算，不涉及网络请求或数据库操作（数据通过参数传入）。
-"""
+"""Subscribe matcher — 判断种子是否命中用户订阅清单."""
 
 import re
 
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
-from app.utils.types import MediaType
 from app.di import container
+from app.indexer.core.filter_engine import IndexerFilterEngine
+from app.utils.types import MediaType
 
 
-class RssMatcher:
-    """
-    RSS 订阅匹配器
+class SubscribeMatcher:
+    """订阅匹配器.
 
     匹配流程：
     1. 根据媒体类型（电影/电视剧）选择对应的订阅清单
@@ -23,8 +18,6 @@ class RssMatcher:
     """
 
     def __init__(self, filter_engine=None):
-        from app.indexer.core.filter_engine import IndexerFilterEngine
-
         self._filter = filter_engine or IndexerFilterEngine()
 
     def match(
@@ -40,8 +33,7 @@ class RssMatcher:
         site_headers,
         site_proxy,
     ):
-        """
-        判断种子是否命中订阅
+        """判断种子是否命中订阅.
 
         :param media_info: 已识别的种子媒体信息
         :param rss_movies: 电影订阅清单 {rid: info}

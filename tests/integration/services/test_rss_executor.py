@@ -1,8 +1,8 @@
-"""Tests for app.services.rss._executor module."""
+"""Tests for app.services.rss_automation.executor module."""
 
 from unittest.mock import MagicMock, patch
 
-from app.services.rss._executor import _parse_userrss_result
+from app.services.rss_automation.executor import _parse_userrss_result
 
 
 class TestParseUserrssResult:
@@ -35,8 +35,8 @@ class TestParseUserrssResult:
         assert result == []
         service.get_userrss_parser.assert_called_once_with(1)
 
-    @patch("app.services.rss._executor.RequestUtils")
-    @patch("app.services.rss._executor.RssParserEngine.parse_items")
+    @patch("app.services.rss_automation.executor.RequestUtils")
+    @patch("app.services.rss_automation.executor.RssParserEngine.parse_items")
     def test_successful_parse(self, mock_parse_items, mock_request_utils):
         """Successful RSS fetch and parse."""
         service = MagicMock()
@@ -66,7 +66,7 @@ class TestParseUserrssResult:
         mock_request_utils.return_value.get_res.assert_called_once()
         mock_parse_items.assert_called_once()
 
-    @patch("app.services.rss._executor.RequestUtils")
+    @patch("app.services.rss_automation.executor.RequestUtils")
     def test_request_failure_returns_empty(self, mock_request_utils):
         """Failed HTTP request should return empty result."""
         service = MagicMock()

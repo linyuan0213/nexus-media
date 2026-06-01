@@ -1,6 +1,6 @@
 """
 RSS相关模型
-包含: RSS历史、RSS电影、RSS种子、RSS剧集、RSS剧集分集
+包含: 订阅历史、订阅电影、订阅种子、订阅剧集、订阅剧集分集
 """
 
 from typing import Any
@@ -11,8 +11,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.models.base import Base
 
 
-class RSSHISTORY(Base):
-    __tablename__ = "RSS_HISTORY"
+class SubscribeHistory(Base):
+    __tablename__ = "SUBSCRIBE_HISTORY"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     TYPE: Mapped[str] = mapped_column(String(255))
@@ -32,8 +32,8 @@ class RSSHISTORY(Base):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
-class RSSMOVIES(Base):
-    __tablename__ = "RSS_MOVIES"
+class SubscribeMovies(Base):
+    __tablename__ = "SUBSCRIBE_MOVIES"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     NAME: Mapped[str] = mapped_column(String(255), index=True)
@@ -62,9 +62,9 @@ class RSSMOVIES(Base):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
-class RSSTORRENTS(Base):
-    __tablename__ = "RSS_TORRENTS"
-    __table_args__ = (Index("INDX_RSS_TORRENTS_NAME", "TITLE", "YEAR", "SEASON", "EPISODE"),)
+class SubscribeTorrents(Base):
+    __tablename__ = "SUBSCRIBE_TORRENTS"
+    __table_args__ = (Index("INDX_SUBSCRIBE_TORRENTS_NAME", "TITLE", "YEAR", "SEASON", "EPISODE"),)
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     TORRENT_NAME: Mapped[str] = mapped_column(String(255))
@@ -76,8 +76,8 @@ class RSSTORRENTS(Base):
     EPISODE: Mapped[str] = mapped_column(String(10))
 
 
-class RSSTVS(Base):
-    __tablename__ = "RSS_TVS"
+class SubscribeTvs(Base):
+    __tablename__ = "SUBSCRIBE_TVS"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     NAME: Mapped[str] = mapped_column(String(255), index=True)
@@ -111,8 +111,8 @@ class RSSTVS(Base):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
-class RSSTVEPISODES(Base):
-    __tablename__ = "RSS_TV_EPISODES"
+class SubscribeTvEpisodes(Base):
+    __tablename__ = "SUBSCRIBE_TV_EPISODES"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     RSSID: Mapped[str] = mapped_column(String(255), index=True)

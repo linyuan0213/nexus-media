@@ -83,12 +83,12 @@ from app.db.models.rbac import (
 )
 
 # RSS相关模型
-from app.db.models.rss import (
-    RSSHISTORY,
-    RSSMOVIES,
-    RSSTORRENTS,
-    RSSTVEPISODES,
-    RSSTVS,
+from app.db.models.subscribe import (
+    SubscribeHistory,
+    SubscribeMovies,
+    SubscribeTorrents,
+    SubscribeTvEpisodes,
+    SubscribeTvs,
 )
 
 # 搜索结果模型
@@ -157,11 +157,11 @@ __all__ = [
     # 消息
     "MESSAGECLIENT",
     # RSS
-    "RSSHISTORY",
-    "RSSMOVIES",
-    "RSSTORRENTS",
-    "RSSTVS",
-    "RSSTVEPISODES",
+    "SubscribeHistory",
+    "SubscribeMovies",
+    "SubscribeTorrents",
+    "SubscribeTvs",
+    "SubscribeTvEpisodes",
     # 刷流
     "SITEBRUSHRULE",
     "SITEBRUSHTASK",

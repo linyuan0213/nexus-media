@@ -31,8 +31,10 @@ from app.schemas.download import Torrent as TorrentInfo
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.sites import SiteConf, Sites, SiteSubtitle
 from app.sites.engine import SiteEngine
+from app.services.download_strategies import EpisodeStrategy, MovieDownloadStrategy, SeasonPackStrategy
 from app.utils import ExceptionUtils
 from app.utils.torrent import Torrent
+from app.utils.types import MediaType
 from app.di import container
 
 
@@ -77,6 +79,30 @@ class DownloadCore:
             event_bus=self._event_bus,
         )
 
+    # ---------- 媒体存在性检查 ----------
+
+    def check_exists_medias(self, meta_info, no_exists=None, total_ep=None):
+        """检查媒体是否已存在于媒体库中."""
+        if meta_info.type == MediaType.MOVIE:
+            exists = self._filetransfer.get_no_exists_medias(meta_info)
+            if exists:
+                return True, {}, None
+            return False, {}, None
+        else:
+            season = meta_info.get_season_seq()
+            if isinstance(total_ep, dict):
+                total = total_ep.get(season)
+            else:
+                total = total_ep
+            if not total:
+                total = meta_info.total_episodes
+            if not total:
+                return False, no_exists or {}, None
+            no_exists_result = self._filetransfer.get_no_exists_medias(meta_info, season=season, total_num=total)
+            if no_exists_result:
+                return False, no_exists_result, None
+            return True, {}, None
+
     # ---------- 核心下载方法 ----------
 
     def download(
@@ -93,6 +119,8 @@ class DownloadCore:
         in_from=None,
         user_name=None,
         proxy=None,
+        file_indices=None,
+        file_names=None,
     ):
         """
         添加下载任务，委托给 DownloadPipeline 执行
@@ -112,25 +140,79 @@ class DownloadCore:
             in_from=in_from,
             user_name=user_name,
             proxy=proxy,
+            file_indices=file_indices,
+            file_names=file_names,
         )
 
     def batch_download(
         self, in_from: Any, media_list: list, need_tvs: dict | None = None, user_name: str | None = None
     ) -> tuple[list, list]:
-        download_items = []
-        left_medias = []
-        for media_item in media_list:
+        download_items: list = []
+        download_order = self._client_factory.download_order if self._client_factory else None
+        download_list = Torrent.get_download_list(media_list, download_order)
+
+        def _download_callback(item, torrent_file=None, is_paused=None):
             downloader_id, download_id, _ = self.download(
-                media_info=media_item,
+                media_info=item,
+                torrent_file=torrent_file,
+                is_paused=is_paused,
                 in_from=in_from,
                 user_name=user_name,
             )
-            if download_id:
-                media_item.downloader_id = downloader_id
-                media_item.download_id = download_id
-                download_items.append(media_item)
-            else:
-                left_medias.append(media_item)
+            if download_id and item not in download_items:
+                download_items.append(item)
+            return downloader_id, download_id, ""
+
+        # 1. 下载所有电影
+        download_items = MovieDownloadStrategy.download_movies(
+            download_list=download_list,
+            download_callback=_download_callback,
+            get_download_url_callback=DownloadCore.get_download_url,
+        )
+
+        # 2. 电视剧整季匹配
+        if need_tvs:
+            need_seasons = SeasonPackStrategy.build_need_seasons(need_tvs)
+            _, _, need_tvs = SeasonPackStrategy.find_season_packs(
+                download_list=download_list,
+                need_seasons=need_seasons,
+                need_tvs=need_tvs,
+                get_download_url_callback=DownloadCore.get_download_url,
+                download_callback=_download_callback,
+                get_torrent_episodes_callback=self.get_torrent_episodes,
+            )
+
+        # 3. 电视剧单集匹配
+        if need_tvs:
+            download_items, need_tvs = EpisodeStrategy.download_episodes(
+                download_list=download_list,
+                need_tvs=need_tvs,
+                get_download_url_callback=DownloadCore.get_download_url,
+                download_callback=_download_callback,
+                get_torrent_episodes_callback=self.get_torrent_episodes,
+                _set_files_status_callback=self.set_files_status,
+                _start_torrents_callback=lambda ids, downloader_id: self.start_torrents(
+                    downloader_id=downloader_id, ids=ids
+                ),
+                return_items=download_items,
+            )
+
+        # 4. 从整季包中拆包下载
+        if need_tvs:
+            download_items, need_tvs = EpisodeStrategy.download_from_season_pack(
+                download_list=download_list,
+                need_tvs=need_tvs,
+                get_download_url_callback=DownloadCore.get_download_url,
+                download_callback=_download_callback,
+                get_torrent_episodes_callback=self.get_torrent_episodes,
+                set_files_status_callback=self.set_files_status,
+                start_torrents_callback=lambda ids, downloader_id: self.start_torrents(
+                    downloader_id=downloader_id, ids=ids
+                ),
+                return_items=download_items,
+            )
+
+        left_medias = [item for item in media_list if item not in download_items]
         return download_items, left_medias
 
     # ---------- 历史记录 / 配置 CRUD 代理 ----------

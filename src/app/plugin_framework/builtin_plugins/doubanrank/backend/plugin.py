@@ -16,7 +16,7 @@ from app.helper import RssHelper
 from app.media import MediaService
 from app.plugin_framework.context import PluginContext
 from app.utils import DomUtils, RequestUtils
-from app.utils.types import MediaType, RssType, SearchType
+from app.utils.types import MediaType, SearchType
 from app.utils.web_utils import WebUtils
 from app.di import container
 
@@ -205,7 +205,7 @@ class DoubanRankPlugin:
                         name=media_info.title,
                         year=media_info.year,
                         season=media_info.begin_season,
-                        channel=str(RssType.Auto.value),
+                        channel="auto",
                         in_from=str(SearchType.PLUGIN.value),
                     )
                     if not rss_media or code != 0:

@@ -187,10 +187,8 @@ class TestSchedulerService:
         with patch("app.services.system.lifecycle.container"):
             downloader = MagicMock()
             sync = MagicMock()
-            rss = MagicMock()
-            subscribe = MagicMock()
             thread_helper = MagicMock()
-            svc = SchedulerService(downloader, sync, rss, subscribe, thread_helper)
+            svc = SchedulerService(downloader, sync, thread_helper)
             msg = svc.start_service("pttransfer")
             assert msg == "服务已启动"
             thread_helper.start_thread.assert_called_once()
@@ -201,10 +199,8 @@ class TestSchedulerService:
         with patch("app.services.system.lifecycle.container"):
             downloader = MagicMock()
             sync = MagicMock()
-            rss = MagicMock()
-            subscribe = MagicMock()
             thread_helper = MagicMock()
-            svc = SchedulerService(downloader, sync, rss, subscribe, thread_helper)
+            svc = SchedulerService(downloader, sync, thread_helper)
             with pytest.raises(ResourceNotFoundError):
                 svc.start_service("unknown")
 
@@ -293,13 +289,11 @@ class TestMessageCommandHandler:
                 torrent_remover=MagicMock(),
                 downloader=MagicMock(),
                 sync_svc=MagicMock(),
-                rss=MagicMock(),
-                subscribe_svc=MagicMock(),
                 filetransfer=MagicMock(),
             )
             assert "/ptr" in handler._command_map
             assert "/ptt" in handler._command_map
-            assert "/rss" in handler._command_map
+            assert "/sub" in handler._command_map
 
 
 class TestUtilityFunctions:

@@ -114,6 +114,14 @@ class PtConfig(BaseModel):
     ptrefresh_date_cron: str = "22:36"
 
 
+class SubscribeConfig(BaseModel):
+    """订阅监控调度配置（ADR-007 统一配置）"""
+
+    queue_interval: str = "300"
+    rss_interval: str = "1800"
+    search_interval: str = "6"
+
+
 class SecurityConfig(BaseModel):
     """安全配置"""
 
@@ -235,6 +243,7 @@ class AppSettings(BaseSettings):
     app: AppConfig = Field(default_factory=AppConfig)
     media: MediaConfig = Field(default_factory=MediaConfig)
     pt: PtConfig = Field(default_factory=PtConfig)
+    subscribe: SubscribeConfig = Field(default_factory=SubscribeConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     laboratory: LaboratoryConfig = Field(default_factory=LaboratoryConfig)
     agent: AgentConfig = Field(default_factory=AgentConfig, validate_default=True)

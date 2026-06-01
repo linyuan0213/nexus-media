@@ -4,7 +4,7 @@
 """
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Any, Optional
 
 
@@ -80,6 +80,16 @@ class TransferHistoryEntity:
             date=orm_model.DATE or "",
         )
 
+    def __getattr__(self, name: str) -> Any:
+        """兼容旧代码的大写属性访问"""
+        lower_name = name.lower()
+        if lower_name in {f.name for f in fields(self)}:
+            return getattr(self, lower_name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+
+    def as_dict(self) -> dict[str, Any]:
+        return self.to_dict()
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
@@ -121,6 +131,13 @@ class TransferUnknownEntity:
             mode=orm_model.MODE or "",
             state=orm_model.STATE or "",
         )
+
+    def __getattr__(self, name: str) -> Any:
+        """兼容旧代码的大写属性访问"""
+        lower_name = name.lower()
+        if lower_name in {f.name for f in fields(self)}:
+            return getattr(self, lower_name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
     def to_dict(self) -> dict[str, Any]:
         return {

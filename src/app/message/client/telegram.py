@@ -154,20 +154,22 @@ class Telegram(_IMessageClient):
                 seen.add(cid)
                 unique_chat_ids.append(cid)
         for chat_id in unique_chat_ids:
+            req = RequestUtils(proxies=proxies)
             if image:
-                values = {"chat_id": chat_id, "photo": image, "caption": caption, "parse_mode": "Markdown"}
-                url = f"https://api.telegram.org/bot{self.token}/sendPhoto?" + urlencode(values)
-                res = RequestUtils(proxies=proxies).get_res(url)
-                ok, msg = self._parse_response(res)
-                if not ok:
-                    return ok, msg
+                url = f"https://api.telegram.org/bot{self.token}/sendPhoto"
+                res = req.post_res(
+                    url,
+                    data={"chat_id": chat_id, "photo": image, "caption": caption, "parse_mode": "Markdown"},
+                )
             else:
-                values = {"chat_id": chat_id, "text": caption, "parse_mode": "Markdown"}
-                url = f"https://api.telegram.org/bot{self.token}/sendMessage?" + urlencode(values)
-                res = RequestUtils(proxies=proxies).get_res(url)
-                ok, msg = self._parse_response(res)
-                if not ok:
-                    return ok, msg
+                url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+                res = req.post_res(
+                    url,
+                    data={"chat_id": chat_id, "text": caption, "parse_mode": "Markdown"},
+                )
+            ok, msg = self._parse_response(res)
+            if not ok:
+                return ok, msg
         return True, ""
 
     def _parse_response(self, res):

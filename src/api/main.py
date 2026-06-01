@@ -27,13 +27,13 @@ from api.routers import (
     message_webhook,
     plugin_framework,
     rbac,
-    rss,
+    rss_automation,
     scheduler,
     site,
     storage_backend,
+    subscription,
     sync,
     system,
-    userrss,
     words,
 )
 from app.core.root_path import get_project_root
@@ -141,14 +141,14 @@ async def db_session_cleanup(request: Request, call_next):
 app.include_router(system.router, prefix="/api/system", tags=["system"])
 app.include_router(site.router, prefix="/api/site", tags=["site"])
 app.include_router(download.router, prefix="/api/download", tags=["download"])
-app.include_router(rss.router, prefix="/api/rss", tags=["rss"])
+app.include_router(subscription.router, prefix="/api/subscription", tags=["subscription"])
 app.include_router(sync.router, prefix="/api/sync", tags=["sync"])
 app.include_router(storage_backend.router, prefix="/api/storage", tags=["storage"])
 app.include_router(brush.router, prefix="/api/brush", tags=["brush"])
 app.include_router(filter.router, prefix="/api/filter", tags=["filter"])
 app.include_router(scheduler.router, prefix="/api/scheduler", tags=["scheduler"])
 app.include_router(plugin_framework.router, prefix="/api/plugin-framework", tags=["plugin-framework"])
-app.include_router(userrss.router, prefix="/api/userrss", tags=["userrss"])
+app.include_router(rss_automation.router, prefix="/api/rss-automation", tags=["rss-automation"])
 app.include_router(words.router, prefix="/api/words", tags=["words"])
 app.include_router(media.router, prefix="/api/media", tags=["media"])
 app.include_router(rbac.router, prefix="/api/rbac", tags=["rbac"])

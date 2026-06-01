@@ -21,6 +21,7 @@ DOWNLOAD_FAILED = "download.failed"
 # 订阅相关
 SUBSCRIBE_ADD = "subscribe.add"
 SUBSCRIBE_FINISHED = "subscribe.finished"
+RSS_AUTO_SUBSCRIBE_REQUESTED = "rss_automation.subscribe_requested"
 
 # 搜索相关
 SEARCH_START = "search.start"

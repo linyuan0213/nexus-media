@@ -2,24 +2,24 @@
 RSS 种子领域 Repository 适配器
 """
 
-from app.db.repositories.rss_repository import RssRepository
-from app.domain.entities.rss_torrent import RssTorrentEntity
+from app.db.repositories.subscribe_repository import SubscribeRepository
+from app.domain.entities.rss_torrent import SubscribeTorrentEntity
 from app.domain.interfaces.rss_torrent_repo import IRssTorrentRepository
 
 
-class RssTorrentRepositoryAdapter(IRssTorrentRepository):
+class SubscribeTorrentRepositoryAdapter(IRssTorrentRepository):
     """RSS 种子仓储适配器"""
 
-    def __init__(self, repo: RssRepository | None = None):
-        self._repo = repo or RssRepository()
+    def __init__(self, repo: SubscribeRepository | None = None):
+        self._repo = repo or SubscribeRepository()
 
-    def get_by_enclosure(self, enclosure: str) -> RssTorrentEntity | None:
+    def get_by_enclosure(self, enclosure: str) -> SubscribeTorrentEntity | None:
         row = self._repo.get_rss_torrent_by_enclosure(enclosure)
-        return RssTorrentEntity.from_orm(row)
+        return SubscribeTorrentEntity.from_orm(row)
 
-    def get_by_name(self, torrent_name: str) -> RssTorrentEntity | None:
+    def get_by_name(self, torrent_name: str) -> SubscribeTorrentEntity | None:
         row = self._repo.get_rss_torrent_by_name(torrent_name)
-        return RssTorrentEntity.from_orm(row)
+        return SubscribeTorrentEntity.from_orm(row)
 
     def insert(
         self, torrent_name: str, enclosure: str, type_: str, title: str, year: str, season: str, episode: str

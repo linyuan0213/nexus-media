@@ -1,9 +1,9 @@
-"""Tests for app.services.rss.task_service module."""
+"""Tests for app.services.rss_automation.task_service module."""
 
 from unittest.mock import MagicMock, patch
 
 from app.di import container
-from app.services.rss.task_service import RssTaskService
+from app.services.rss_automation.task_service import RssTaskService
 
 
 def _make_service(**kwargs):
@@ -17,7 +17,6 @@ def _make_service(**kwargs):
         "filter_": MagicMock(),
         "media": MagicMock(),
         "downloader": MagicMock(),
-        "subscribe": MagicMock(),
     }
     defaults.update(kwargs)
     return RssTaskService(**defaults)
@@ -28,7 +27,7 @@ class TestRssTaskService:
 
     def test_init_default_dependencies(self):
         """Default initialization should create all dependencies."""
-        with patch("app.services.rss.task_service.UserRssConfigRepositoryAdapter") as mock_repo:
+        with patch("app.services.rss_automation.task_service.UserRssConfigRepositoryAdapter") as mock_repo:
             mock_repo_instance = MagicMock()
             mock_repo.return_value = mock_repo_instance
             service = RssTaskService(
@@ -40,7 +39,6 @@ class TestRssTaskService:
                 filter_=MagicMock(),
                 media=MagicMock(),
                 downloader=MagicMock(),
-                subscribe=MagicMock(),
             )
             assert service.config_repo is mock_repo_instance
 

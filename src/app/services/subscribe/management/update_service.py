@@ -5,7 +5,7 @@ from typing import Any, cast
 from app.events import Event
 from app.events.constants import SUBSCRIBE_ADD
 from app.media import meta_info
-from app.services.subscribe.utils import gen_rss_note
+from app.services.subscribe.management.utils import gen_rss_note
 from app.utils.types import MediaType, RssType
 from app.utils.web_utils import WebUtils
 

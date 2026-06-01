@@ -14,7 +14,7 @@ from app.media import MediaService, meta_info
 from app.message import Message
 from app.services.search_pagination import pagination_mgr
 from app.utils import StringUtils, Torrent
-from app.utils.types import MediaType, RssType, SearchType
+from app.utils.types import MediaType, SearchType
 from app.utils.web_utils import WebUtils
 from app.di import container
 
@@ -323,7 +323,7 @@ class MessageSearchService:
             mtype=media_info.type,
             name=media_info.title,
             year=media_info.year,
-            channel=RssType.Auto.value,
+            channel="auto",
             season=media_info.begin_season,
             mediaid=mediaid,
             state=state,

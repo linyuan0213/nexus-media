@@ -17,7 +17,7 @@ from app.di import container
 from app.media.models import MediaInfo
 from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
 from app.schemas.scheduler import PauseSchedulerJobRequest, ResumeSchedulerJobRequest, RunSchedulerJobRequest
-from app.utils.types import MediaType, RssType, SearchType
+from app.utils.types import MediaType, SearchType
 
 
 class ToolExecutor:
@@ -55,8 +55,8 @@ class ToolExecutor:
             container.sync_service().transfer_sync()
             return ToolResult(success=True, data="目录同步任务已触发")
         if action == "subscribe_search_all":
-            container.subscribe_service().subscribe_search_all()
-            return ToolResult(success=True, data="订阅搜索任务已触发")
+            container.subscription_monitor().run()
+            return ToolResult(success=True, data="订阅监控任务已触发")
         if action == "auto_remove_torrents":
             container.torrentremover_service().auto_remove_torrents()
             return ToolResult(success=True, data="自动删种任务已触发")
@@ -408,7 +408,7 @@ class ToolExecutor:
             year=media_info.year,
             season=season or media_info.begin_season,
             mediaid=mediaid,
-            channel=str(RssType.Auto.value),
+            channel="auto",
         )
 
         if code == 0:

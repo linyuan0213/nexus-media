@@ -6,16 +6,16 @@ RSS领域 Repository 接口（Python Protocol）
 from typing import Protocol
 
 from app.domain.entities.rss import (
-    RssHistoryEntity,
-    RssMovieEntity,
-    RssTvEntity,
+    SubscribeHistoryEntity,
+    SubscribeMovieEntity,
+    SubscribeTvEntity,
 )
 
 
 class IRssMovieRepository(Protocol):
     """RSS电影订阅仓储接口"""
 
-    def get_all(self, state: str | None = None, rssid: int | None = None) -> list[RssMovieEntity]:
+    def get_all(self, state: str | None = None, rssid: int | None = None) -> list[SubscribeMovieEntity]:
         """查询订阅电影列表"""
         ...
 
@@ -80,7 +80,7 @@ class IRssMovieRepository(Protocol):
 class IRssTvRepository(Protocol):
     """RSS剧集订阅仓储接口"""
 
-    def get_all(self, state: str | None = None, rssid: int | None = None) -> list[RssTvEntity]:
+    def get_all(self, state: str | None = None, rssid: int | None = None) -> list[SubscribeTvEntity]:
         """查询订阅剧集列表"""
         ...
 
@@ -194,7 +194,7 @@ class IRssTvEpisodeRepository(Protocol):
 class IRssHistoryRepository(Protocol):
     """RSS历史仓储接口"""
 
-    def get_all(self, rtype: str | None = None, rid: int | None = None) -> list[RssHistoryEntity]:
+    def get_all(self, rtype: str | None = None, rid: int | None = None) -> list[SubscribeHistoryEntity]:
         """查询RSS历史"""
         ...
 

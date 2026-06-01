@@ -6,22 +6,21 @@ from typing import Any, cast
 import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.db.repositories.config_repo_adapter import UserRssConfigRepositoryAdapter
-from app.db.repositories.rss_repo_adapter import RssHistoryRepositoryAdapter
+from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.di import container
 from app.helper import RssHelper
 from app.media import MediaService
 from app.message import Message
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
-from app.services.rss._articles import (
+from app.services.rss_automation.articles import (
     _check_rss_articles,
     _download_rss_articles,
     _get_rss_articles,
     _test_rss_articles,
 )
-from app.services.rss._executor import _check_task_rss
+from app.services.rss_automation.executor import _check_task_rss
 from app.services.search_service import Searcher
-from app.services.subscribe_service import SubscribeService as Subscribe
 
 
 class RssTaskService:
@@ -33,9 +32,8 @@ class RssTaskService:
     media: MediaService
     filterrule: Any
     downloader: Downloader
-    subscribe: Subscribe
     config_repo: UserRssConfigRepositoryAdapter
-    rss_repo: RssHistoryRepositoryAdapter
+    rss_repo: SubscribeHistoryRepositoryAdapter
     rsshelper: RssHelper
 
     _jobstore = "rsscheck"
@@ -53,17 +51,15 @@ class RssTaskService:
         filter_: Any | None = None,
         media: Any | None = None,
         downloader: Any | None = None,
-        subscribe: Any | None = None,
     ):
         self.config_repo = config_repo or UserRssConfigRepositoryAdapter()
-        self.rss_repo = rss_repo or RssHistoryRepositoryAdapter()
+        self.rss_repo = rss_repo or SubscribeHistoryRepositoryAdapter()
         self.rsshelper = rsshelper or container.rss_helper()
         self.message = message or container.message()
         self.searcher = searcher or container.searcher()
         self.filter = filter_ or container.filter_service()
         self.media = media or container.media_service()
         self.downloader = downloader or container.downloader_core()
-        self.subscribe = subscribe or container.subscribe_service()
 
     def _refresh(self) -> None:
         # 移除现有任务

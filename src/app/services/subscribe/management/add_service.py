@@ -5,7 +5,7 @@ from typing import Any, cast
 from app.events import Event
 from app.events.constants import SUBSCRIBE_ADD
 from app.media import meta_info
-from app.services.subscribe.utils import gen_rss_note
+from app.services.subscribe.management.utils import gen_rss_note
 from app.utils.types import MediaType, RssType, SystemConfigKey
 from app.utils.web_utils import WebUtils
 
@@ -82,7 +82,7 @@ class SubscribeAddService:
         download_setting = int(str(download_setting)) if str(download_setting).replace("-", "").isdigit() else None
         fuzzy_match = bool(fuzzy_match)
 
-        if channel == RssType.Auto and not rssid:
+        if channel == "auto" and not rssid:
             default_rss_setting = (
                 self.default_rss_setting_tv
                 if mtype in [MediaType.TV, MediaType.ANIME]

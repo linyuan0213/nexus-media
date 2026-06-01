@@ -1,28 +1,28 @@
 """
 RSS领域 Repository 适配器
-将旧版 RssRepository 适配为新领域接口
+将旧版 SubscribeRepository 适配为新领域接口
 """
 
-from app.db.repositories.rss_repository import RssRepository
+from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.domain.entities.rss import (
-    RssHistoryEntity,
-    RssMovieEntity,
-    RssTvEntity,
+    SubscribeHistoryEntity,
+    SubscribeMovieEntity,
+    SubscribeTvEntity,
 )
 from app.utils.types import MediaType
 
 
-class RssMovieRepositoryAdapter:
+class SubscribeMovieRepositoryAdapter:
     """RSS电影订阅仓储适配器"""
 
-    def __init__(self, repo: RssRepository | None = None):
-        self._repo = repo or RssRepository()
+    def __init__(self, repo: SubscribeRepository | None = None):
+        self._repo = repo or SubscribeRepository()
 
-    def get_all(self, state: str | None = None, rssid: int | None = None) -> list[RssMovieEntity]:
+    def get_all(self, state: str | None = None, rssid: int | None = None) -> list[SubscribeMovieEntity]:
         rows = self._repo.get_rss_movies(state=state, rssid=rssid)
         if not rows:
             return []
-        return [entity for entity in [RssMovieEntity.from_orm(r) for r in rows] if entity is not None]
+        return [entity for entity in [SubscribeMovieEntity.from_orm(r) for r in rows] if entity is not None]
 
     def get_id(self, title: str, year: str | None = None, tmdbid: str | None = None) -> str | int | None:
         return self._repo.get_rss_movie_id(title, year, tmdbid)
@@ -104,17 +104,17 @@ class RssMovieRepositoryAdapter:
         )
 
 
-class RssTvRepositoryAdapter:
+class SubscribeTvRepositoryAdapter:
     """RSS剧集订阅仓储适配器"""
 
-    def __init__(self, repo: RssRepository | None = None):
-        self._repo = repo or RssRepository()
+    def __init__(self, repo: SubscribeRepository | None = None):
+        self._repo = repo or SubscribeRepository()
 
-    def get_all(self, state: str | None = None, rssid: int | None = None) -> list[RssTvEntity]:
+    def get_all(self, state: str | None = None, rssid: int | None = None) -> list[SubscribeTvEntity]:
         rows = self._repo.get_rss_tvs(state=state, rssid=rssid)
         if not rows:
             return []
-        return [entity for entity in [RssTvEntity.from_orm(r) for r in rows] if entity is not None]
+        return [entity for entity in [SubscribeTvEntity.from_orm(r) for r in rows] if entity is not None]
 
     def get_id(
         self, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None
@@ -219,8 +219,8 @@ class RssTvRepositoryAdapter:
 class RssTvEpisodeRepositoryAdapter:
     """RSS剧集分集仓储适配器"""
 
-    def __init__(self, repo: RssRepository | None = None):
-        self._repo = repo or RssRepository()
+    def __init__(self, repo: SubscribeRepository | None = None):
+        self._repo = repo or SubscribeRepository()
 
     # 兼容旧Repository方法名
     def update_rss_tv_episodes(self, rid, episodes) -> None:
@@ -254,11 +254,11 @@ class RssTvEpisodeRepositoryAdapter:
         self.delete_all()
 
 
-class RssHistoryRepositoryAdapter:
+class SubscribeHistoryRepositoryAdapter:
     """RSS历史仓储适配器"""
 
-    def __init__(self, repo: RssRepository | None = None):
-        self._repo = repo or RssRepository()
+    def __init__(self, repo: SubscribeRepository | None = None):
+        self._repo = repo or SubscribeRepository()
 
     # 兼容旧Repository方法名
     def insert_rss_history(
@@ -276,11 +276,11 @@ class RssHistoryRepositoryAdapter:
     def delete_rss_history(self, rssid):
         self.delete(rssid)
 
-    def get_all(self, rtype: str | None = None, rid: int | None = None) -> list[RssHistoryEntity]:
+    def get_all(self, rtype: str | None = None, rid: int | None = None) -> list[SubscribeHistoryEntity]:
         rows = self._repo.get_rss_history(rtype=rtype, rid=rid)
         if not rows:
             return []
-        return [entity for entity in [RssHistoryEntity.from_orm(r) for r in rows] if entity is not None]
+        return [entity for entity in [SubscribeHistoryEntity.from_orm(r) for r in rows] if entity is not None]
 
     def is_exists(self, rssid: str) -> bool:
         return self._repo.is_exists_rss_history(int(rssid))

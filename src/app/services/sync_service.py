@@ -432,10 +432,9 @@ class SyncService:
             "Sites": ("app.sites", "Sites"),
             "Sync": ("app.sync", "Sync"),
             "BrushTask": ("app.brushtask", "BrushTask"),
-            "RssChecker": ("app.services.rss_service", "RssTaskService"),
+            "RssChecker": ("app.services.rss_automation.task_service", "RssTaskService"),
             "TorrentRemover": ("app.torrentremover", "TorrentRemover"),
-            "Rss": ("app.rss", "Rss"),
-            "Subscribe": ("app.subscribe", "Subscribe"),
+            "SubscriptionMonitor": ("app.services.subscribe.monitor", "SubscriptionMonitor"),
             "SchedulerCore": ("app.services.scheduler_core", "SchedulerCore"),
             "Scraper": ("app.media", "Scraper"),
         }

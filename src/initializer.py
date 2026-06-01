@@ -2,9 +2,8 @@ import os
 
 import log
 from app.core.settings import settings
-from app.db.repositories.rss_repository import RssRepository
+from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.di import container
-from app.events import auto_register
 from app.services.rbac_init import init_admin_user
 from app.services.rbac_init import init_rbac_system as rbac_init
 from app.utils import ExceptionUtils
@@ -171,7 +170,7 @@ def update_rss_state():
     初始化时批量重置所有 RSS 订阅状态为 R
     """
     try:
-        RssRepository().reset_rss_state()
+        SubscribeRepository().reset_rss_state()
         log.info("[Initialize]RSS订阅状态已更新为正在订阅")
     except Exception as e:
         log.error(f"[Initialize]更新RSS状态失败：{e!s}")
@@ -180,10 +179,10 @@ def update_rss_state():
 
 def init_event_handlers():
     """
-    初始化事件处理器（注册所有 @on_event 装饰的函数）
+    初始化事件处理器：创建 SubscribeService 触发显式 handler 注册
     """
     try:
-        auto_register(container.event_bus())
+        container.subscribe_service()
         log.info("[Initialize]事件处理器已注册")
     except Exception as e:
         log.error(f"[Initialize]事件处理器注册失败：{e!s}")

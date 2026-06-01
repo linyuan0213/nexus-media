@@ -3,7 +3,7 @@
 import log
 from app.db.transaction import transaction_scope
 from app.media import meta_info
-from app.services.subscribe.utils import gen_rss_note
+from app.services.subscribe.management.utils import gen_rss_note
 from app.utils.types import MediaType
 
 
@@ -44,7 +44,7 @@ class SubscribeRefreshService:
                 )
 
         rss_tvs = get_subscribe_tvs_fn(state="R")
-        for _rid, rss_info in rss_tvs.items():
+        for rss_info in rss_tvs.values():
             if rss_info.get("fuzzy_match"):
                 continue
             rssid = rss_info.get("id")

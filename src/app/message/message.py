@@ -128,8 +128,8 @@ class Message:
     def send_transfer_movie_message(self, in_from, media_info, exist_filenum, category_flag) -> None:
         self._builder.send_transfer_movie_message(in_from, media_info, exist_filenum, category_flag)
 
-    def send_transfer_tv_message(self, message_medias: dict, in_from) -> None:
-        self._builder.send_transfer_tv_message(message_medias, in_from)
+    def send_transfer_tv_message(self, message_medias: dict, in_from, exist_filenum=0, category_flag=False) -> None:
+        self._builder.send_transfer_tv_message(message_medias, in_from, exist_filenum, category_flag)
 
     def send_download_fail_message(self, item, error_msg: str) -> None:
         self._builder.send_download_fail_message(item, error_msg)

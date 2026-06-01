@@ -8,8 +8,6 @@ from app.core.exceptions import ResourceNotFoundError
 from app.di import container
 from app.helper.thread_helper import ThreadHelper
 from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.rss_core import Rss
-from app.services.subscribe_service import SubscribeService as Subscribe
 from app.services.sync_engine import SyncEngine as Sync
 from initializer import (
     check_config,
@@ -32,15 +30,11 @@ class SchedulerService:
         self,
         downloader: Downloader | None = None,
         sync: Sync | None = None,
-        rss: Rss | None = None,
-        subscribe: Subscribe | None = None,
         thread_helper: ThreadHelper | None = None,
         torrent_remover=None,
     ):
         self._downloader = downloader
         self._sync = sync
-        self._rss = rss
-        self._subscribe = subscribe
         self._torrent_remover = torrent_remover
         self._thread_helper = thread_helper or container.thread_helper()
         self._commands = None
@@ -51,14 +45,12 @@ class SchedulerService:
             self._commands = {
                 "pttransfer": (self._downloader or container.downloader_core()).transfer,
                 "sync": (self._sync or container.sync_engine()).transfer_sync,
-                "rssdownload": (self._rss or container.rss_core()).rssdownload,
-                "subscribe_search_all": (self._subscribe or container.subscribe_service()).subscribe_search_all,
+                "subscription_monitor": container.subscription_monitor().run,
                 # 消息命令兼容映射
                 "/ptt": (self._downloader or container.downloader_core()).transfer,
                 "/ptr": (self._torrent_remover or container.torrentremover_service()).auto_remove_torrents,
                 "/rst": (self._sync or container.sync_engine()).transfer_sync,
-                "/rss": (self._rss or container.rss_core()).rssdownload,
-                "/ssa": (self._subscribe or container.subscribe_service()).subscribe_search_all,
+                "/sub": container.subscription_monitor().run,
             }
         return self._commands
 

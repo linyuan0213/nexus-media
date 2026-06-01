@@ -78,6 +78,11 @@ class HookSystem:
             except Exception as e:
                 log.error(f"[HookSystem] 插件 {plugin_id} 处理事件 {event} 失败: {e}")
 
+    @property
+    def EVENTS(self) -> list[str]:
+        """列出所有已注册的事件名"""
+        return list(self._handlers.keys())
+
     def list_subscriptions(self, plugin_id: str | None = None) -> list[dict]:
         """列出钩子订阅"""
         result = []

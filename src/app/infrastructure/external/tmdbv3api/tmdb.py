@@ -157,6 +157,9 @@ class TMDb:
             logger.error(f"[TMDB]请求失败，重试后仍失败: {str(e)}")
             raise
 
+        if req is None:
+            raise TMDbError("请求返回空响应")
+
         headers = req.headers
 
         if "X-RateLimit-Remaining" in headers:

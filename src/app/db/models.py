@@ -49,11 +49,11 @@ from app.db.models import (
     # 插件
     PLUGINHISTORY,
     # RSS
-    RSSHISTORY,
-    RSSMOVIES,
-    RSSTORRENTS,
-    RSSTVEPISODES,
-    RSSTVS,
+    SubscribeHistory,
+    SubscribeMovies,
+    SubscribeTorrents,
+    SubscribeTvEpisodes,
+    SubscribeTvs,
     # 搜索
     SEARCHRESULTINFO,
     # 刷流
@@ -103,11 +103,11 @@ __all__ = [
     # 消息
     "MESSAGECLIENT",
     # RSS
-    "RSSHISTORY",
-    "RSSMOVIES",
-    "RSSTORRENTS",
-    "RSSTVS",
-    "RSSTVEPISODES",
+    "SubscribeHistory",
+    "SubscribeMovies",
+    "SubscribeTorrents",
+    "SubscribeTvs",
+    "SubscribeTvEpisodes",
     # 刷流
     "SITEBRUSHTASK",
     "SITEBRUSHTORRENTS",

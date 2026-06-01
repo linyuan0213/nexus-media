@@ -9,7 +9,6 @@ from app.infrastructure.cache_system import TokenCache
 from app.message import Message
 from app.message.commands import COMMANDS
 from app.schemas.system import SendMessageResultDTO
-from app.services.rss_core import Rss
 from app.services.sync_service import SyncService
 from app.services.system.lifecycle import SystemLifecycleService
 from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
@@ -108,8 +107,6 @@ class MessageCommandHandler:
         torrent_remover=None,
         downloader=None,
         sync_svc=None,
-        rss=None,
-        subscribe_svc=None,
         filetransfer=None,
         event_bus=None,
     ):
@@ -117,8 +114,6 @@ class MessageCommandHandler:
         self._torrent_remover = torrent_remover
         self._downloader = downloader
         self._sync_svc = sync_svc
-        self._rss = rss
-        self._subscribe_svc = subscribe_svc
         self._filetransfer = filetransfer
         self._event_bus = event_bus or container.event_bus()
         self._commands = None
@@ -133,11 +128,7 @@ class MessageCommandHandler:
                 },
                 "/ptt": {"func": (self._downloader or container.downloader_core()).transfer, "desc": COMMANDS["/ptt"]},
                 "/rst": {"func": (self._sync_svc or container.sync_service()).transfer_sync, "desc": COMMANDS["/rst"]},
-                "/rss": {"func": (self._rss or Rss()).rssdownload, "desc": COMMANDS["/rss"]},
-                "/ssa": {
-                    "func": (self._subscribe_svc or container.subscribe_service()).subscribe_search_all,
-                    "desc": COMMANDS["/ssa"],
-                },
+                "/sub": {"func": container.subscription_monitor().run, "desc": COMMANDS.get("/sub", "订阅监控")},
                 "/tbl": {
                     "func": (self._filetransfer or container.filetransfer_service()).truncate_transfer_blacklist,
                     "desc": COMMANDS["/tbl"],

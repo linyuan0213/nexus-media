@@ -5,7 +5,7 @@ from typing import Any
 
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
-from app.db.repositories.rss_repo_adapter import RssMovieRepositoryAdapter, RssTvRepositoryAdapter
+from app.db.repositories.subscribe_repo_adapter import SubscribeMovieRepositoryAdapter, SubscribeTvRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.helper import RssHelper
 from app.media.factory import get_media_service
@@ -146,7 +146,7 @@ class BrushRssChecker:
         if rss_rule and rss_rule.get("exclude_subscribe") not in ("#", "N", None, ""):
             rss_movies = {
                 m.id: {"name": m.name, "year": m.year, "tmdbid": m.tmdbid, "fuzzy_match": m.fuzzy_match}
-                for m in RssMovieRepositoryAdapter().get_all(state="R")
+                for m in SubscribeMovieRepositoryAdapter().get_all(state="R")
             }
             rss_tvs = {
                 t.id: {
@@ -157,7 +157,7 @@ class BrushRssChecker:
                     "season": t.season,
                     "rss_sites": t.rss_sites,
                 }
-                for t in RssTvRepositoryAdapter().get_all(state="R")
+                for t in SubscribeTvRepositoryAdapter().get_all(state="R")
             }
 
         media_service = get_media_service()

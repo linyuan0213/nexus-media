@@ -5,7 +5,7 @@ from typing import Any
 
 import log
 from app.core.exceptions import RepositoryError, ServiceError
-from app.services.rss._executor import _parse_userrss_result
+from app.services.rss_automation.executor import _parse_userrss_result
 from app.utils import ExceptionUtils, StringUtils
 from app.utils.types import MediaType, SearchType
 

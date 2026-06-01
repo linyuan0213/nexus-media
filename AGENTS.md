@@ -47,7 +47,7 @@ backend/
 - **权限**: `src/app/db/models/rbac.py` 中的自定义 RBAC 系统
 
 ## 重要约定
-- 除非要求，否则不要添加注释。
+- 注释需要精简。
 - **所有 `import`/`from` 必须放在文件顶部**，严禁在函数/方法/类内部导入依赖。如遇循环依赖，必须通过重构 `__init__.py` 延迟导入或调整模块结构来解除，禁止使用函数内部导入规避。
 - **所有修改必须通过 ruff 和 pyright 检查**后才能提交。运行命令：`uv run ruff check .` 和 `uv run pyright src/ tests/`。
 - 优先编辑现有文件，而不是创建新文件。

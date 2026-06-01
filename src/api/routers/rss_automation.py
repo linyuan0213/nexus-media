@@ -1,5 +1,5 @@
 """
-UserRss Router — FastAPI 迁移
+RSS Automation Router — FastAPI 迁移
 对应原 web/controllers/userrss.py，复用 app/services/userrss_service.py
 """
 
@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from api.deps import get_user_rss_service, require_any_permission, require_permission
 from app.core.exceptions import DomainError, ServiceError
 from app.schemas.common import CommonResponse
-from app.services.userrss_service import UserRssService
+from app.services.rss_automation.userrss_service import UserRssService
 from app.utils.response import fail, success
 
 router = APIRouter()

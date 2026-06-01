@@ -391,11 +391,11 @@ class Searcher:
 
         if not download_items:
             log.info(f"[Searcher]{media_info.title} 未下载到资源")
-            return None, left_medias, len(media_list), 0
+            return None, no_exists, len(media_list), 0
         else:
             log.info(f"[Searcher]实际下载了 {len(download_items)} 个资源")
             if left_medias:
-                return None, left_medias, len(media_list), len(download_items)
+                return None, no_exists, len(media_list), len(download_items)
             return download_items[0], no_exists, len(media_list), len(download_items)
 
     def get_search_result_by_id(self, dl_id):

@@ -1,25 +1,25 @@
 """Subscribe service - 订阅业务 Facade."""
 
 import log
-from app.db.repositories.rss_repo_adapter import (
-    RssHistoryRepositoryAdapter,
-    RssMovieRepositoryAdapter,
+from app.db.repositories.subscribe_repo_adapter import (
+    SubscribeHistoryRepositoryAdapter,
+    SubscribeMovieRepositoryAdapter,
     RssTvEpisodeRepositoryAdapter,
-    RssTvRepositoryAdapter,
+    SubscribeTvRepositoryAdapter,
 )
 from app.di import container
 from app.domain.entities.rss import SubscribeState
-from app.services.subscribe.add_service import SubscribeAddService
-from app.services.subscribe.finish_service import SubscribeFinishService
-from app.services.subscribe.query_service import SubscribeQueryService
-from app.services.subscribe.refresh_service import SubscribeRefreshService
-from app.services.subscribe.update_service import SubscribeUpdateService
-from app.services.subscribe_search_engine import SubscribeSearchEngine
+from app.events.constants import RSS_AUTO_SUBSCRIBE_REQUESTED
+from app.services.subscribe.management.add_service import SubscribeAddService
+from app.services.subscribe.management.finish_service import SubscribeFinishService
+from app.services.subscribe.management.query_service import SubscribeQueryService
+from app.services.subscribe.management.refresh_service import SubscribeRefreshService
+from app.services.subscribe.management.update_service import SubscribeUpdateService
 from app.utils.types import MediaType, SystemConfigKey
 
 
 class SubscribeService:
-    """订阅业务 Facade - 保留与原 Subscribe 兼容的公共 API"""
+    """订阅业务 Facade — 订阅的添加、完成、更新、查询、状态变更."""
 
     def __init__(
         self,
@@ -27,7 +27,6 @@ class SubscribeService:
         tv_repo=None,
         tv_episode_repo=None,
         history_repo=None,
-        search_engine: SubscribeSearchEngine | None = None,
         message=None,
         media_service=None,
         downloader=None,
@@ -38,10 +37,10 @@ class SubscribeService:
         event_bus=None,
         system_config=None,
     ):
-        self._movie_repo = movie_repo or RssMovieRepositoryAdapter()
-        self._tv_repo = tv_repo or RssTvRepositoryAdapter()
+        self._movie_repo = movie_repo or SubscribeMovieRepositoryAdapter()
+        self._tv_repo = tv_repo or SubscribeTvRepositoryAdapter()
         self._tv_episode_repo = tv_episode_repo or RssTvEpisodeRepositoryAdapter()
-        self._history_repo = history_repo or RssHistoryRepositoryAdapter()
+        self._history_repo = history_repo or SubscribeHistoryRepositoryAdapter()
         self._message = message or container.message()
         self._media = media_service or container.media_service()
         self._downloader = downloader or container.downloader_core()
@@ -70,9 +69,23 @@ class SubscribeService:
             self._indexer_service,
         )
         self._refresh_svc = SubscribeRefreshService(self._movie_repo, self._tv_repo, self._tv_episode_repo, self._media)
-        self._search_engine = search_engine or SubscribeSearchEngine(
-            service=self, movie_repo=self._movie_repo, tv_repo=self._tv_repo, tv_episode_repo=self._tv_episode_repo
-        )
+        self._register_event_handlers()
+
+    def _register_event_handlers(self) -> None:
+        """注册事件处理器."""
+        self._event_bus.subscribe(RSS_AUTO_SUBSCRIBE_REQUESTED, self._handle_rss_auto_subscribe)
+
+    def _handle_rss_auto_subscribe(self, event) -> None:
+        """处理自定义 RSS 自动化任务的订阅请求."""
+        payload = event.payload
+        try:
+            code, msg, _ = self.add_rss_subscribe(**payload)
+            if code != 0:
+                log.warn(f"[Subscribe]自定义RSS订阅请求处理失败：{msg}")
+            else:
+                log.info(f"[Subscribe]自定义RSS订阅请求已处理：{payload.get('name')}")
+        except Exception as e:
+            log.error(f"[Subscribe]处理自定义RSS订阅请求失败：{e!s}")
 
     @property
     def default_rss_setting_tv(self) -> dict | None:
@@ -112,18 +125,6 @@ class SubscribeService:
     def refresh_rss_metainfo(self):
         return self._refresh_svc.refresh_rss_metainfo(self.get_subscribe_movies, self.get_subscribe_tvs)
 
-    def subscribe_search_all(self):
-        self._search_engine.subscribe_search_all()
-
-    def subscribe_search(self, state="D"):
-        self._search_engine.subscribe_search(state=state)
-
-    def subscribe_search_movie(self, rssid=None, state="D"):
-        self._search_engine.subscribe_search_movie(rssid=rssid, state=state)
-
-    def subscribe_search_tv(self, rssid=None, state="D"):
-        self._search_engine.subscribe_search_tv(rssid=rssid, state=state)
-
     def update_rss_state(self, rtype, rssid, state):
         if rtype == MediaType.MOVIE:
             movies = self._movie_repo.get_all(rssid=rssid)
@@ -138,6 +139,8 @@ class SubscribeService:
                 entity.mark_cancelled()
             elif state == SubscribeState.PENDING.value:
                 entity.state = SubscribeState.PENDING.value
+            elif state == SubscribeState.ERROR.value:
+                entity.state = SubscribeState.ERROR.value
             self._movie_repo.update(rssid=rssid, state=entity.state)
         else:
             tvs = self._tv_repo.get_all(rssid=rssid)
@@ -152,6 +155,8 @@ class SubscribeService:
                 entity.mark_cancelled()
             elif state == SubscribeState.PENDING.value:
                 entity.state = SubscribeState.PENDING.value
+            elif state == SubscribeState.ERROR.value:
+                entity.state = SubscribeState.ERROR.value
             self._tv_repo.update(rssid=rssid, state=entity.state)
 
     def update_subscribe_over_edition(self, rtype, rssid, media):

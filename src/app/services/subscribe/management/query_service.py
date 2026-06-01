@@ -3,7 +3,7 @@
 import json
 from typing import Any
 
-from app.services.subscribe.utils import parse_rss_desc
+from app.services.subscribe.management.utils import parse_rss_desc
 from app.utils.types import MediaType
 
 

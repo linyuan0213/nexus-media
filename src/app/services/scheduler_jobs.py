@@ -5,7 +5,6 @@ import pytz
 
 import log
 from app.core.constants import (
-    RSS_CHECK_INTERVAL,
     RSS_REFRESH_TMDB_INTERVAL,
     SYNC_TRANSFER_INTERVAL,
 )
@@ -20,6 +19,21 @@ def _refresh_site_data_now_threaded():
     container.thread_helper().start_thread(container.site_userinfo().refresh_site_data_now, ())
 
 
+def _parse_interval(value, min_val=0, default=0):
+    """解析配置中的间隔值（支持字符串/数字）."""
+    if not value:
+        return default
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    try:
+        return round(float(value))
+    except (ServiceError, RepositoryError):
+        raise
+    except Exception as e:
+        log.error(f"配置格式错误：{str(e)}")
+        return default
+
+
 def load_default_jobs(scheduler):
     """
     加载系统默认定时任务
@@ -29,6 +43,7 @@ def load_default_jobs(scheduler):
         return
 
     _pt = settings.get("pt")
+    _subscribe = settings.get("subscribe")
     _media = settings.get("media")
     _jobstore = "default"
 
@@ -47,57 +62,22 @@ def load_default_jobs(scheduler):
                 jobstore=_jobstore,
             )
 
-        # RSS下载器
-        pt_check_interval = _pt.get("pt_check_interval")
-        if pt_check_interval:
-            if isinstance(pt_check_interval, str) and pt_check_interval.isdigit():
-                pt_check_interval = int(pt_check_interval)
-            else:
-                try:
-                    pt_check_interval = round(float(pt_check_interval))
-                except (ServiceError, RepositoryError):
-                    raise
-                except Exception as e:
-                    log.error(f"RSS订阅周期 配置格式错误：{str(e)}")
-                    pt_check_interval = 0
-            if pt_check_interval:
-                if pt_check_interval < 300:
-                    pt_check_interval = 300
+    # 订阅监控（统一调度器）— 聚合 RSS 轮询、主动搜索、队列搜索
+    # 外部调度周期使用三者中最小的 queue_interval（秒），默认 300s
+    # 内部 run() 按各自独立间隔控制：queue_interval / rss_interval / search_interval
+    subscribe_interval = _parse_interval(_subscribe.get("queue_interval") if _subscribe else None, default=300)
+    if subscribe_interval:
+        if subscribe_interval < 60:
+            subscribe_interval = 60
 
-                scheduler.register_interval(
-                    job_id="Rss.rssdownload",
-                    name="RSS订阅下载",
-                    func=container.rss_core().rssdownload,
-                    seconds=pt_check_interval,
-                    jobstore=_jobstore,
-                )
-                log.info("RSS订阅服务启动")
-
-        # RSS订阅定时搜索
-        search_rss_interval = _pt.get("search_rss_interval")
-        if search_rss_interval:
-            if isinstance(search_rss_interval, str) and search_rss_interval.isdigit():
-                search_rss_interval = int(search_rss_interval)
-            else:
-                try:
-                    search_rss_interval = round(float(search_rss_interval))
-                except (ServiceError, RepositoryError):
-                    raise
-                except Exception as e:
-                    log.error(f"订阅定时搜索周期 配置格式错误：{str(e)}")
-                    search_rss_interval = 0
-            if search_rss_interval:
-                if search_rss_interval < 2:
-                    search_rss_interval = 2
-
-                scheduler.register_interval(
-                    job_id="Subscribe.subscribe_search_all",
-                    name="订阅搜索",
-                    func=container.subscribe_service().subscribe_search_all,
-                    hours=search_rss_interval,
-                    jobstore=_jobstore,
-                )
-                log.info("订阅定时搜索服务启动")
+        scheduler.register_interval(
+            job_id="SubscriptionMonitor.run",
+            name="订阅监控",
+            func=container.subscription_monitor().run,
+            seconds=subscribe_interval,
+            jobstore=_jobstore,
+        )
+        log.info("订阅监控服务启动")
 
     # 媒体库同步
     if _media:
@@ -130,15 +110,6 @@ def load_default_jobs(scheduler):
         name="目录同步监控",
         func=container.sync_engine().transfer_mon_files,
         seconds=SYNC_TRANSFER_INTERVAL,
-        jobstore=_jobstore,
-    )
-
-    # RSS队列中搜索
-    scheduler.register_interval(
-        job_id="Subscribe.subscribe_search",
-        name="订阅队列状态搜索",
-        func=container.subscribe_service().subscribe_search,
-        seconds=RSS_CHECK_INTERVAL,
         jobstore=_jobstore,
     )
 

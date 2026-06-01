@@ -78,7 +78,7 @@ class MessageDispatcher:
         if msg_type and variables and template_engine:
             template_title, template_text = template_engine.apply_client_template(client, msg_type, variables)
             title = template_title if template_title is not None else title
-            text = template_text if template_text is not None else text
+            text = template_text if template_text else text
         cname = client.get("name")
         log.info(f"[Message]消息入队 {cname}：title={title}")
         if not self._queue:

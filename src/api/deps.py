@@ -5,8 +5,7 @@ FastAPI 依赖注入
 """
 
 import uuid
-from collections.abc import Callable
-from typing import Any, TypeVar, cast
+from typing import cast
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -16,9 +15,10 @@ from app.infrastructure.cache_system import TokenCache
 from app.schemas.auth import UserContext
 from app.services.auth_service import AuthService
 from app.services.config_service import ConfigService
+from app.services.subscribe.management.calendar_service import SubscribeCalendarService
+from app.services.subscribe.management.history_service import SubscribeHistoryService
+from app.services.subscribe.management.service import SubscribeService
 from app.utils.security import generate_access_token, identify
-
-_F = TypeVar("_F", bound=Callable[..., Any])
 
 # OAuth2 / Bearer 方案
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -354,10 +354,22 @@ def get_sync_service():
     return container.sync_service()
 
 
-def get_rss_subscription_service():
-    """获取 RSS 订阅服务实例"""
+def get_subscribe_service() -> SubscribeService:
+    """获取订阅服务实例"""
 
-    return container.rss_subscription_service()
+    return container.subscribe_service()
+
+
+def get_subscribe_history_service() -> SubscribeHistoryService:
+    """获取订阅历史服务实例"""
+
+    return container.subscribe_history_service()
+
+
+def get_subscribe_calendar_service() -> SubscribeCalendarService:
+    """获取订阅日历服务实例"""
+
+    return container.subscribe_calendar_service()
 
 
 def get_rss_task_service():

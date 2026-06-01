@@ -34,11 +34,11 @@ from app.domain.entities.rbac import (
 
 # 注意：config 中的 DownloaderEntity 与 download 中的不同，重命名避免冲突
 from app.domain.entities.rss import (
-    RssHistoryEntity,
-    RssMovieEntity,
-    RssTorrentEntity,
-    RssTvEntity,
-    RssTvEpisodeEntity,
+    SubscribeHistoryEntity,
+    SubscribeMovieEntity,
+    SubscribeTorrentEntity,
+    SubscribeTvEntity,
+    SubscribeTvEpisodeEntity,
 )
 from app.domain.entities.site import SiteEntity, SiteSeedingEntity, SiteStatisticsEntity
 from app.domain.entities.storage_backend import StorageBackendEntity
@@ -61,11 +61,11 @@ __all__ = [
     "DownloadHistoryEntity",
     "DownloadSettingEntity",
     "IndexerStatisticsEntity",
-    "RssHistoryEntity",
-    "RssMovieEntity",
-    "RssTorrentEntity",
-    "RssTvEntity",
-    "RssTvEpisodeEntity",
+    "SubscribeHistoryEntity",
+    "SubscribeMovieEntity",
+    "SubscribeTorrentEntity",
+    "SubscribeTvEntity",
+    "SubscribeTvEpisodeEntity",
     "TransferBlacklistEntity",
     "TransferHistoryEntity",
     "TransferUnknownEntity",

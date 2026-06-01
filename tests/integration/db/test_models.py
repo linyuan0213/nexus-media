@@ -43,10 +43,10 @@ class TestDatabaseModels:
         assert result.PRIS == "admin"
 
     def test_rss_movies_crud(self, db_session):
-        """RSSMOVIES 增删改查"""
-        from app.db.models import RSSMOVIES
+        """SubscribeMovies 增删改查"""
+        from app.db.models import SubscribeMovies
 
-        movie = RSSMOVIES(
+        movie = SubscribeMovies(
             NAME="Test Movie",
             YEAR="2024",
             TMDBID="12345",
@@ -72,7 +72,7 @@ class TestDatabaseModels:
         db_session.add(movie)
         db_session.commit()
 
-        result = db_session.query(RSSMOVIES).filter_by(NAME="Test Movie").first()
+        result = db_session.query(SubscribeMovies).filter_by(NAME="Test Movie").first()
         assert result is not None
         assert result.YEAR == "2024"
 

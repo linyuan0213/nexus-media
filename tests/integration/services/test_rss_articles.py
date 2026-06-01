@@ -1,8 +1,8 @@
-"""Tests for app.services.rss._articles module."""
+"""Tests for app.services.rss_automation.articles module."""
 
 from unittest.mock import MagicMock, patch
 
-from app.services.rss._articles import (
+from app.services.rss_automation.articles import (
     _check_rss_articles,
     _download_rss_articles,
     _get_rss_articles,
@@ -19,7 +19,7 @@ class TestGetRssArticles:
         result = _get_rss_articles(service, None)
         assert result is None
 
-    @patch("app.services.rss._articles._parse_userrss_result")
+    @patch("app.services.rss_automation.articles._parse_userrss_result")
     def test_empty_rss_result_returns_empty_list(self, mock_parse):
         """Empty RSS result should return empty list."""
         service = MagicMock()
@@ -30,7 +30,7 @@ class TestGetRssArticles:
         assert result == []
         service.get_rsstask_info.assert_called_once_with(1)
 
-    @patch("app.services.rss._articles._parse_userrss_result")
+    @patch("app.services.rss_automation.articles._parse_userrss_result")
     def test_successful_article_extraction(self, mock_parse):
         """Successfully extract articles from RSS result."""
         service = MagicMock()

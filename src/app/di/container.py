@@ -120,9 +120,14 @@ class Container(containers.DeclarativeContainer):
     plugin_framework_service: Provider["PluginFrameworkService"] = _s(
         "app.services.plugin_framework_service.PluginFrameworkService"
     )
-    rss_task_service: Provider["RssTaskService"] = _s("app.services.rss.task_service.RssTaskService")
-    rss_core: Provider["Rss"] = _s("app.services.rss_core.Rss")
-    rss_subscription_service: Provider["RssSubscriptionService"] = _s("app.services.rss_service.RssSubscriptionService")
+    rss_task_service: Provider["RssTaskService"] = _s("app.services.rss_automation.task_service.RssTaskService")
+    subscribe_history_service: Provider["SubscribeHistoryService"] = _s(
+        "app.services.subscribe.management.history_service.SubscribeHistoryService"
+    )
+    subscribe_calendar_service: Provider["SubscribeCalendarService"] = _s(
+        "app.services.subscribe.management.calendar_service.SubscribeCalendarService"
+    )
+    subscription_monitor: Provider["SubscriptionMonitor"] = _s("app.services.subscribe.monitor.SubscriptionMonitor")
     searcher: Provider["Searcher"] = _s("app.services.search_service.Searcher")
     site_service: Provider["SiteService"] = _s("app.services.site_service.SiteService")
     subscribe_service: Provider["SubscribeService"] = _s("app.services.subscribe_service.SubscribeService")
@@ -139,7 +144,7 @@ class Container(containers.DeclarativeContainer):
     tmdb_blacklist_service: Provider["TmdbBlacklistService"] = _s(
         "app.services.tmdb_blacklist_service.TmdbBlacklistService"
     )
-    user_rss_service: Provider["UserRssService"] = _s("app.services.userrss_service.UserRssService")
+    user_rss_service: Provider["UserRssService"] = _s("app.services.rss_automation.userrss_service.UserRssService")
     words_service: Provider["WordsService"] = _s("app.services.words_service.WordsService")
     storage_backend_service: Provider["StorageBackendService"] = _s(
         "app.services.storage_backend_service.StorageBackendService"
@@ -208,8 +213,8 @@ class Container(containers.DeclarativeContainer):
     rbac_user_repo: Provider["RBACUserRepositoryAdapter"] = _s(
         "app.db.repositories.rbac_repo_adapter.RBACUserRepositoryAdapter"
     )
-    rss_torrent_repo: Provider["RssTorrentRepositoryAdapter"] = _s(
-        "app.db.repositories.rss_torrent_repo_adapter.RssTorrentRepositoryAdapter"
+    rss_torrent_repo: Provider["SubscribeTorrentRepositoryAdapter"] = _s(
+        "app.db.repositories.subscribe_torrent_repo_adapter.SubscribeTorrentRepositoryAdapter"
     )
     custom_word_repo: Provider["CustomWordRepositoryAdapter"] = _s(
         "app.db.repositories.word_repo_adapter.CustomWordRepositoryAdapter"
@@ -283,7 +288,7 @@ if TYPE_CHECKING:
         RBACRoleRepositoryAdapter,
         RBACUserRepositoryAdapter,
     )
-    from app.db.repositories.rss_torrent_repo_adapter import RssTorrentRepositoryAdapter
+    from app.db.repositories.subscribe_torrent_repo_adapter import SubscribeTorrentRepositoryAdapter
     from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
     from app.db.repositories.site_repository import SiteRepository
     from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
@@ -339,9 +344,10 @@ if TYPE_CHECKING:
     from app.services.media_recommendation_service import MediaRecommendationService
     from app.services.plugin_framework_service import PluginFrameworkService
     from app.services.rbac_service import RBACService
-    from app.services.rss.task_service import RssTaskService
-    from app.services.rss_core import Rss
-    from app.services.rss_service import RssSubscriptionService
+    from app.services.rss_automation.task_service import RssTaskService
+    from app.services.subscribe.management.calendar_service import SubscribeCalendarService
+    from app.services.subscribe.management.history_service import SubscribeHistoryService
+    from app.services.subscribe.monitor import SubscriptionMonitor
     from app.services.scheduler.core import SchedulerCore
     from app.services.scheduler_service import SchedulerService
     from app.services.search_service import Searcher
@@ -356,7 +362,7 @@ if TYPE_CHECKING:
     from app.services.transfer.filetransfer_service import FileTransferService
     from app.services.transfer_engine import TransferEngine
     from app.services.transfer_pipeline import TransferPipeline
-    from app.services.userrss_service import UserRssService
+    from app.services.rss_automation.userrss_service import UserRssService
     from app.services.words_service import WordsService
     from app.sites.site_userinfo import SiteUserInfo
     from app.sites.siteconf import SiteConf

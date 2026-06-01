@@ -72,6 +72,8 @@ class DownloadPipeline:
         in_from=None,
         user_name=None,
         proxy=None,
+        file_indices=None,
+        file_names=None,
     ) -> tuple[str | None, str | None, str]:
         """
         执行完整下载流水线
@@ -159,6 +161,8 @@ class DownloadPipeline:
             seeding_time_limit=seeding_time_limit,
             cookie=site_info.get("cookie"),
             url=media_info.enclosure or torrent_file or "",
+            file_indices=file_indices,
+            file_names=file_names,
         )
         if not download_id:
             return downloader_id, None, f"下载器 {downloader_name} 添加下载任务失败"
@@ -310,6 +314,8 @@ class DownloadPipeline:
         seeding_time_limit,
         cookie,
         url,
+        file_indices=None,
+        file_names=None,
     ):
         print_url = content if isinstance(content, str) else url
         log.info(
@@ -328,6 +334,8 @@ class DownloadPipeline:
             ratio_limit=ratio_limit,
             seeding_time_limit=seeding_time_limit,
             cookie=cookie,
+            file_indices=file_indices,
+            file_names=file_names,
         )
 
     # ---------- 阶段4：后续处理 ----------

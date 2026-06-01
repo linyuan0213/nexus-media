@@ -14,7 +14,7 @@ from typing import Any
 
 from app.media import meta_info
 from app.plugin_framework.context import PluginContext
-from app.utils.types import MediaType, RssType, SearchType
+from app.utils.types import MediaType, SearchType
 from app.utils.web_utils import WebUtils
 from app.di import container
 
@@ -283,7 +283,7 @@ class DoubanSyncPlugin:
                     mtype=mediainfo.type,
                     name=mediainfo.title,
                     year=mediainfo.year,
-                    channel=RssType.Auto.value,
+                    channel="auto",
                     mediaid=f"DB:{mediainfo.douban_id}",
                     in_from=SearchType.DB.value,
                 )
@@ -306,7 +306,7 @@ class DoubanSyncPlugin:
                 mtype=media_info.type,
                 name=media_info.get_name(),
                 year=media_info.year,
-                channel=RssType.Auto.value,
+                channel="auto",
                 mediaid=f"DB:{media_info.douban_id}",
                 in_from=SearchType.DB.value,
             )

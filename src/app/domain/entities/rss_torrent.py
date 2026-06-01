@@ -7,7 +7,7 @@ from typing import Optional
 
 
 @dataclass
-class RssTorrentEntity:
+class SubscribeTorrentEntity:
     """RSS 种子实体"""
 
     id: int
@@ -20,7 +20,7 @@ class RssTorrentEntity:
     episode: str | None
 
     @classmethod
-    def from_orm(cls, orm_model) -> Optional["RssTorrentEntity"]:
+    def from_orm(cls, orm_model) -> Optional["SubscribeTorrentEntity"]:
         if orm_model is None:
             return None
         return cls(

@@ -44,7 +44,7 @@ from .plugin import (
 )
 
 # RSS
-from .rss import (
+from .subscribe import (
     RssAddResultDTO,
     RssDetailResultDTO,
     RssHistoryResultDTO,

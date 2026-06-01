@@ -4,23 +4,34 @@ from collections import defaultdict
 from collections.abc import Callable
 from typing import Any
 
+from app.di import container
+from app.events.bus import EventBus
+
 _pending_handlers: dict[str, list[Callable[[Any], None]]] = defaultdict(list)
 
 
 def on_event(event_type: str) -> Callable:
-    """将函数注册为指定事件类型的处理器."""
+    """将函数注册为指定事件类型的处理器.
+
+    定义时直接注册到 EventBus；若 EventBus 尚未就绪则暂存到 pending，
+    待 EventBus 创建后由 auto_register 统一注册。
+    """
 
     def decorator(func: Callable[[Any], None]) -> Callable[[Any], None]:
-        _pending_handlers[event_type].append(func)
+        try:
+            container.event_bus().subscribe(event_type, func)
+        except Exception:
+            _pending_handlers[event_type].append(func)
         return func
 
     return decorator
 
 
 def auto_register(event_bus: Any) -> None:
-    """将所有 pending 的处理器注册到 EventBus 实例."""
-    from app.events.bus import EventBus
+    """将所有 pending 的处理器注册到 EventBus 实例.
 
+    在 EventBus 工厂函数中调用，处理那些定义时 EventBus 尚未创建的处理器。
+    """
     if not isinstance(event_bus, EventBus):
         return
 

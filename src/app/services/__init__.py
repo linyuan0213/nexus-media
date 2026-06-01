@@ -16,8 +16,7 @@ from .media_service import (
     SearchResultService,
     TransferHistoryService,
 )
-from .rss_core import Rss
-from .rss_service import RssParserEngine, RssSubscriptionService, RssTaskService
+from .rss_automation import RssParserEngine, RssTaskService
 from .search_service import Searcher, SearchService
 from .site_service import SiteService
 from .sync_engine import SyncEngine
@@ -41,5 +40,5 @@ from .system_service import (
     parse_brush_rule_string,
 )
 from .torrentremover_core import TorrentRemoverService
-from .userrss_service import UserRssService
+from .rss_automation.userrss_service import UserRssService
 from .words_service import WordsService

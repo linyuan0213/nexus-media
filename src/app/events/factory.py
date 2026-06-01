@@ -4,6 +4,7 @@ EventBus 工厂函数
 """
 
 from app.events.bus import EventBus
+from app.events.decorators import auto_register
 from app.events.middleware import ErrorHandlingMiddleware, LoggingMiddleware
 from app.events.registry import EventHandlerRegistry
 from app.infrastructure.queue.factory import MessageQueueFactory
@@ -21,7 +22,7 @@ def create_event_bus() -> EventBus:
     """创建并配置 EventBus 实例（供 DI 容器使用）"""
     registry = EventHandlerRegistry()
     queue = MessageQueueFactory.create(max_workers=4)
-    return EventBus(
+    bus = EventBus(
         registry=registry,
         message_queue=queue,
         middleware=[
@@ -30,3 +31,5 @@ def create_event_bus() -> EventBus:
         ],
         async_event_types=_ASYNC_EVENT_TYPES,
     )
+    auto_register(bus)
+    return bus

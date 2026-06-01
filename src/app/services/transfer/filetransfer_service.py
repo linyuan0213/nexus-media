@@ -16,16 +16,16 @@ from app.core.constants import RMT_MEDIAEXT, RMT_MIN_FILESIZE
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
 from app.di import container
+from app.events import Event
+from app.events.constants import MEDIA_EPISODE_TRANSFERRED, MEDIA_TRANSFER_FINISHED, SUBTITLE_DOWNLOAD, TRANSFER_FAIL
 from app.helper import ProgressHelper, ThreadHelper
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media import Category, MediaService, Scraper
 from app.message import Message
-from app.events import Event
-from app.events.constants import MEDIA_EPISODE_TRANSFERRED, MEDIA_TRANSFER_FINISHED, SUBTITLE_DOWNLOAD, TRANSFER_FAIL
+from app.schemas.media import TransferMediaDTO
 from app.services.transfer.cleanup_service import TransferCleanupService
 from app.services.transfer.existence_checker import MediaExistenceChecker
 from app.services.transfer.history_manager import TransferHistoryManager
-from app.schemas.media import TransferMediaDTO
 from app.services.transfer.path_resolver import TransferPathResolver
 from app.services.transfer_engine import TransferEngine
 from app.utils import ExceptionUtils, PathUtils, StringUtils
@@ -388,6 +388,7 @@ class FileTransferService:
         alert_count = 0
         alert_messages = []
         total_count = 0
+        total_exist_filenum = 0
         message_medias = {}
         success_flag = True
         error_message = ""
@@ -464,6 +465,7 @@ class FileTransferService:
                 failed_count += fc
                 alert_count += ac
                 alert_messages = am
+                total_exist_filenum += exist_filenum
                 if fc > 0:
                     continue
 
@@ -579,6 +581,7 @@ class FileTransferService:
             "message_medias": message_medias,
             "success_flag": success_flag,
             "error_message": error_message,
+            "exist_filenum": total_exist_filenum,
         }
 
     def _handle_unrecognized_file(
@@ -703,7 +706,12 @@ class FileTransferService:
 
     def _transfer_post_process(self, result, in_from, in_path, operation, root_path) -> tuple[bool, str]:
         if result["message_medias"]:
-            self.message.send_transfer_tv_message(result["message_medias"], in_from)
+            self.message.send_transfer_tv_message(
+                result["message_medias"],
+                in_from,
+                result.get("exist_filenum", 0),
+                self._path_resolver.tv_category_flag or False,
+            )
 
         total_count = result["total_count"]
         failed_count = result["failed_count"]

@@ -8,11 +8,14 @@ from typing import Any
 import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
+from app.di import container
+from app.events.constants import RSS_AUTO_SUBSCRIBE_REQUESTED
+from app.events.types import Event
 from app.media import meta_info
-from app.services.rss.parser import RssParserEngine
+from app.services.rss_automation.parser import RssParserEngine
 from app.utils import ExceptionUtils, RequestUtils
 from app.utils.config_tools import get_proxies
-from app.utils.types import MediaType, RssType, SearchType
+from app.utils.types import MediaType, SearchType
 
 
 def _check_task_rss(service, taskid: int | None) -> None:
@@ -176,25 +179,28 @@ def _check_task_rss(service, taskid: int | None) -> None:
                 )
     if rss_subscribe_torrents:
         for media in rss_subscribe_torrents:
-            code, msg, rss_media = service.subscribe.add_rss_subscribe(
-                mtype=media.type,
-                name=media.get_name(),
-                year=media.year,
-                channel=RssType.Manual.value,
-                season=media.begin_season,
-                rss_sites=taskinfo.get("sites", {}).get("rss_sites"),
-                search_sites=taskinfo.get("sites", {}).get("search_sites"),
-                over_edition=bool(taskinfo.get("over_edition")),
-                filter_restype=taskinfo.get("filter_args", {}).get("restype"),
-                filter_pix=taskinfo.get("filter_args", {}).get("pix"),
-                filter_team=taskinfo.get("filter_args", {}).get("team"),
-                filter_rule=taskinfo.get("filter"),
-                save_path=taskinfo.get("save_path"),
-                download_setting=taskinfo.get("download_setting"),
-                in_from=SearchType.USERRSS.value,
+            container.event_bus().publish(
+                Event(
+                    event_type=RSS_AUTO_SUBSCRIBE_REQUESTED,
+                    payload={
+                        "mtype": media.type,
+                        "name": media.get_name(),
+                        "year": media.year,
+                        "channel": "manual",
+                        "season": media.begin_season,
+                        "rss_sites": taskinfo.get("sites", {}).get("rss_sites"),
+                        "search_sites": taskinfo.get("sites", {}).get("search_sites"),
+                        "over_edition": bool(taskinfo.get("over_edition")),
+                        "filter_restype": taskinfo.get("filter_args", {}).get("restype"),
+                        "filter_pix": taskinfo.get("filter_args", {}).get("pix"),
+                        "filter_team": taskinfo.get("filter_args", {}).get("team"),
+                        "filter_rule": taskinfo.get("filter"),
+                        "save_path": taskinfo.get("save_path"),
+                        "download_setting": taskinfo.get("download_setting"),
+                    },
+                )
             )
-            if not rss_media or code != 0:
-                log.warn(f"[RssTaskService]{media.get_name()} 添加订阅失败：{msg}")
+            log.info(f"[RssTaskService]{media.get_name()} 已发送订阅请求事件")
 
     counter = len(rss_download_torrents) + len(rss_subscribe_torrents) + len(rss_search_torrents)
     if counter:

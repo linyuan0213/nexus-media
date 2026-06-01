@@ -55,6 +55,7 @@ class Thunder(_IDownloadClient):
     port = None
     token = None
     download_dir: list = []
+    _recreated_tasks: dict[str, str] = {}
 
     def __init__(self, config: dict | None = None):
         if config:
@@ -128,19 +129,89 @@ class Thunder(_IDownloadClient):
     def _normalize_files(self, raw_files: list[dict]) -> list[dict]:
         return raw_files
 
-    def set_file_selection(self, tid: str | None, selected_map: dict[int, bool]) -> bool:
-        return True
+    def _resolve_tid(self, tid: str | None) -> str | None:
+        if tid and tid in self._recreated_tasks:
+            return self._recreated_tasks[tid]
+        return tid
 
-    def get_files(self, tid: str | None = None) -> list[dict] | None:
+    def _get_task_by_id(self, tid: str) -> dict | None:
         if not self._client:
             return None
         try:
-            return []
+            tasks = self._client.get_downloading_tasks(limit=1000) + self._client.get_complete_tasks(limit=1000)
+            for task in tasks:
+                if task.get("id") == tid:
+                    return task
+        except Exception as e:
+            log.error(f"[{self.client_name}]查找任务失败: {e!s}")
+        return None
+
+    def get_files(self, tid: str | None = None) -> list[dict] | None:
+        if not self._client or not tid:
+            return None
+        try:
+            task = self._get_task_by_id(tid)
+            if not task:
+                return None
+            params = task.get("params", {})
+            download_url = params.get("url", "")
+            if not download_url:
+                return None
+            torrent_info = self._client.get_torrent_info(download_url, extract_info=True)
+            if not torrent_info or "files" not in torrent_info:
+                return None
+            return [
+                {
+                    "id": f.get("file_index", 0),
+                    "name": f.get("name", ""),
+                    "size": f.get("size_bytes", 0),
+                }
+                for f in torrent_info["files"]
+            ]
         except (InfrastructureError, NetworkError):
             raise
         except Exception as e:
             log.error(f"[{self.client_name}]获取文件列表失败: {e!s}")
             return None
+
+    def set_file_selection(self, tid: str | None, selected_map: dict[int, bool]) -> bool:
+        if not self._client or not tid:
+            return True
+        try:
+            task = self._get_task_by_id(tid)
+            if not task:
+                return False
+            params = task.get("params", {})
+            download_url = params.get("url", "")
+            save_path = params.get("parent_folder_path", "/downloads/xunlei/")
+            if not download_url:
+                return False
+
+            selected_indices = [str(fid) for fid, selected in selected_map.items() if selected]
+            if not selected_indices:
+                return False
+            file_indices = ",".join(selected_indices)
+
+            self._client.delete_task(tid, delete_files=False)
+
+            folder_id = self._client._resolve_folder_id(save_path)
+            task_info = self._client.download(
+                download_urls=download_url,
+                destination_path=save_path,
+                parent_folder_id=folder_id,
+                file_indices=file_indices,
+            )
+            new_tid = task_info.get("id") if task_info else None
+            if new_tid:
+                self._recreated_tasks[tid] = str(new_tid)
+                log.info(f"[{self.client_name}]任务 {tid} 已拆包重建为 {new_tid}，选中文件: {file_indices}")
+                return True
+            return False
+        except (InfrastructureError, NetworkError):
+            raise
+        except Exception as e:
+            log.error(f"[{self.client_name}]设置文件选择失败: {e!s}")
+            return False
 
     def set_torrents_status(self, ids: list[str] | str, tags: str | list[str] | None = None) -> bool:
         return True
@@ -188,10 +259,14 @@ class Thunder(_IDownloadClient):
                 return None
 
             folder_id = self._client._resolve_folder_id(download_dir or "/downloads/xunlei/")
+            file_indices = kwargs.get("file_indices")
+            file_names = kwargs.get("file_names")
             task_info = self._client.download(
                 download_urls=download_url,
                 destination_path=download_dir or "/downloads/xunlei/",
                 parent_folder_id=folder_id,
+                file_indices=file_indices,
+                file_names=file_names,
             )
             task_id = task_info.get("id") if task_info else None
             return str(task_id) if task_id else None
@@ -212,7 +287,8 @@ class Thunder(_IDownloadClient):
                 ids = [ids]
             success = True
             for task_id in ids:
-                result = self._client.resume_task(str(task_id))
+                resolved = self._resolve_tid(task_id)
+                result = self._client.resume_task(str(resolved))
                 if not result:
                     success = False
             return success
@@ -232,7 +308,8 @@ class Thunder(_IDownloadClient):
                 ids = [ids]
             success = True
             for task_id in ids:
-                result = self._client.pause_task(str(task_id))
+                resolved = self._resolve_tid(task_id)
+                result = self._client.pause_task(str(resolved))
                 if not result:
                     success = False
             return success
@@ -252,7 +329,8 @@ class Thunder(_IDownloadClient):
                 ids = [ids]
             success = True
             for task_id in ids:
-                result = self._client.delete_task(str(task_id), delete_files=bool(delete_file))
+                resolved = self._resolve_tid(task_id)
+                result = self._client.delete_task(str(resolved), delete_files=bool(delete_file))
                 if not result:
                     success = False
             return success

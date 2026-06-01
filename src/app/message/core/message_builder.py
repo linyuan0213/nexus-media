@@ -139,7 +139,9 @@ class MessageBuilder:
                     template_engine=self._template_engine,
                 )
 
-    def send_transfer_tv_message(self, message_medias: dict, in_from: Enum) -> None:
+    def send_transfer_tv_message(
+        self, message_medias: dict, in_from: Enum, exist_filenum: int = 0, category_flag: bool = False
+    ) -> None:
         for item_info in message_medias.values():
             if item_info.total_episodes == 1:
                 msg_title = f"{item_info.get_title_string()} {item_info.get_season_episode_string()} 已入库"
@@ -162,6 +164,8 @@ class MessageBuilder:
                     variables = {
                         "media_info": item_info,
                         "in_from": in_from,
+                        "exist_filenum": exist_filenum,
+                        "category_flag": category_flag,
                         "total_episodes": item_info.total_episodes if hasattr(item_info, "total_episodes") else 1,
                         "season_episode": item_info.get_season_episode_string()
                         if hasattr(item_info, "get_season_episode_string")

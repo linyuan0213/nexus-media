@@ -12,8 +12,10 @@ class SubscribeState(Enum):
     """订阅状态值对象"""
 
     PENDING = "D"
+    SEARCHING = "S"
     RUNNING = "R"
-    COMPLETED = "S"
+    COMPLETED = "C"
+    ERROR = "E"
     CANCELLED = "N"
 
     @classmethod
@@ -27,14 +29,16 @@ class SubscribeState(Enum):
     def display_name(self) -> str:
         return {
             "D": "待处理",
-            "R": "搜索中",
-            "S": "已完成",
+            "S": "搜索中",
+            "R": "监控中",
+            "C": "已完成",
+            "E": "错误",
             "N": "已取消",
         }.get(self.value, self.value)
 
 
 @dataclass
-class RssHistoryEntity:
+class SubscribeHistoryEntity:
     """RSS历史记录实体"""
 
     id: int
@@ -52,7 +56,7 @@ class RssHistoryEntity:
     note: str
 
     @classmethod
-    def from_orm(cls, orm_model) -> Optional["RssHistoryEntity"]:
+    def from_orm(cls, orm_model) -> Optional["SubscribeHistoryEntity"]:
         if orm_model is None:
             return None
         return cls(
@@ -106,7 +110,7 @@ class RssHistoryEntity:
 
 
 @dataclass
-class RssMovieEntity:
+class SubscribeMovieEntity:
     """RSS电影订阅实体"""
 
     id: int
@@ -146,8 +150,13 @@ class RssMovieEntity:
         return self.state == SubscribeState.PENDING.value
 
     @property
-    def is_running(self) -> bool:
+    def is_searching(self) -> bool:
         """是否搜索中"""
+        return self.state == SubscribeState.SEARCHING.value
+
+    @property
+    def is_running(self) -> bool:
+        """是否监控中"""
         return self.state == SubscribeState.RUNNING.value
 
     @property
@@ -156,34 +165,47 @@ class RssMovieEntity:
         return self.state == SubscribeState.COMPLETED.value
 
     @property
+    def is_error(self) -> bool:
+        """是否错误"""
+        return self.state == SubscribeState.ERROR.value
+
+    @property
     def is_cancelled(self) -> bool:
         """是否已取消"""
         return self.state == SubscribeState.CANCELLED.value
 
     @property
     def is_active(self) -> bool:
-        """是否处于活动状态（待处理或搜索中）"""
-        return self.is_pending or self.is_running
+        """是否处于活动状态"""
+        return self.is_pending or self.is_searching or self.is_running
 
     @property
     def can_search(self) -> bool:
         """是否可以开始搜索"""
-        return self.is_pending
+        return self.is_pending or self.is_error
+
+    def mark_searching(self) -> None:
+        """标记为搜索中"""
+        self.state = SubscribeState.SEARCHING.value
 
     def mark_running(self) -> None:
-        """标记为搜索中"""
+        """标记为监控中"""
         self.state = SubscribeState.RUNNING.value
 
     def mark_completed(self) -> None:
         """标记为已完成"""
         self.state = SubscribeState.COMPLETED.value
 
+    def mark_error(self) -> None:
+        """标记为错误"""
+        self.state = SubscribeState.ERROR.value
+
     def mark_cancelled(self) -> None:
         """标记为已取消"""
         self.state = SubscribeState.CANCELLED.value
 
     @classmethod
-    def from_orm(cls, orm_model) -> Optional["RssMovieEntity"]:
+    def from_orm(cls, orm_model) -> Optional["SubscribeMovieEntity"]:
         if orm_model is None:
             return None
         return cls(
@@ -254,7 +276,7 @@ class RssMovieEntity:
 
 
 @dataclass
-class RssTorrentEntity:
+class SubscribeTorrentEntity:
     """RSS种子记录实体"""
 
     id: int
@@ -267,7 +289,7 @@ class RssTorrentEntity:
     episode: str
 
     @classmethod
-    def from_orm(cls, orm_model) -> Optional["RssTorrentEntity"]:
+    def from_orm(cls, orm_model) -> Optional["SubscribeTorrentEntity"]:
         if orm_model is None:
             return None
         return cls(
@@ -309,7 +331,7 @@ class RssTorrentEntity:
 
 
 @dataclass
-class RssTvEntity:
+class SubscribeTvEntity:
     """RSS剧集订阅实体"""
 
     id: int
@@ -354,8 +376,13 @@ class RssTvEntity:
         return self.state == SubscribeState.PENDING.value
 
     @property
-    def is_running(self) -> bool:
+    def is_searching(self) -> bool:
         """是否搜索中"""
+        return self.state == SubscribeState.SEARCHING.value
+
+    @property
+    def is_running(self) -> bool:
+        """是否监控中"""
         return self.state == SubscribeState.RUNNING.value
 
     @property
@@ -364,27 +391,40 @@ class RssTvEntity:
         return self.state == SubscribeState.COMPLETED.value
 
     @property
+    def is_error(self) -> bool:
+        """是否错误"""
+        return self.state == SubscribeState.ERROR.value
+
+    @property
     def is_cancelled(self) -> bool:
         """是否已取消"""
         return self.state == SubscribeState.CANCELLED.value
 
     @property
     def is_active(self) -> bool:
-        """是否处于活动状态（待处理或搜索中）"""
-        return self.is_pending or self.is_running
+        """是否处于活动状态"""
+        return self.is_pending or self.is_searching or self.is_running
 
     @property
     def can_search(self) -> bool:
         """是否可以开始搜索"""
-        return self.is_pending
+        return self.is_pending or self.is_error
+
+    def mark_searching(self) -> None:
+        """标记为搜索中"""
+        self.state = SubscribeState.SEARCHING.value
 
     def mark_running(self) -> None:
-        """标记为搜索中"""
+        """标记为监控中"""
         self.state = SubscribeState.RUNNING.value
 
     def mark_completed(self) -> None:
         """标记为已完成"""
         self.state = SubscribeState.COMPLETED.value
+
+    def mark_error(self) -> None:
+        """标记为错误"""
+        self.state = SubscribeState.ERROR.value
 
     def mark_cancelled(self) -> None:
         """标记为已取消"""
@@ -406,7 +446,7 @@ class RssTvEntity:
         self.lack = max(0, self.total_ep - self.current_ep)
 
     @classmethod
-    def from_orm(cls, orm_model) -> Optional["RssTvEntity"]:
+    def from_orm(cls, orm_model) -> Optional["SubscribeTvEntity"]:
         if orm_model is None:
             return None
         return cls(
@@ -487,7 +527,7 @@ class RssTvEntity:
 
 
 @dataclass
-class RssTvEpisodeEntity:
+class SubscribeTvEpisodeEntity:
     """RSS剧集分集实体"""
 
     id: int
@@ -495,7 +535,7 @@ class RssTvEpisodeEntity:
     episodes: str
 
     @classmethod
-    def from_orm(cls, orm_model) -> Optional["RssTvEpisodeEntity"]:
+    def from_orm(cls, orm_model) -> Optional["SubscribeTvEpisodeEntity"]:
         if orm_model is None:
             return None
         return cls(id=orm_model.ID, rss_id=orm_model.RSSID or "", episodes=orm_model.EPISODES or "")

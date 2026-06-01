@@ -31,8 +31,8 @@ from .rbac_repository import (
     RBACRoleRepository,
     RBACUserRepository,
 )
-from .rss_repository import RssRepository
-from .rss_torrent_repo_adapter import RssTorrentRepositoryAdapter
+from .subscribe_repository import SubscribeRepository
+from .subscribe_torrent_repo_adapter import SubscribeTorrentRepositoryAdapter
 from .search_repository import SearchRepository
 from .site_repository import SiteRepository
 from .sync_repository import SyncRepository
@@ -46,7 +46,7 @@ __all__ = [
     "SearchRepository",
     "TransferRepository",
     "SiteRepository",
-    "RssRepository",
+    "SubscribeRepository",
     "BrushRepository",
     "DownloadRepository",
     "SyncRepository",
@@ -72,7 +72,7 @@ __all__ = [
     "SystemDictRepository",
     "SystemDictRepositoryAdapter",
     # RSS Torrent
-    "RssTorrentRepositoryAdapter",
+    "SubscribeTorrentRepositoryAdapter",
     # Media
     "MediaInfoRepository",
     "MediaRecord",

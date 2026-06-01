@@ -143,13 +143,17 @@ class TestEventBus:
 
 class TestOnEventDecorator:
     def test_on_event_registration(self):
+        from unittest.mock import patch
+
         from app.events.decorators import clear_subscribers, get_subscribers
 
         clear_subscribers()
 
-        @on_event("test.event")
-        def my_handler(event):
-            pass
+        with patch("app.events.decorators.container.event_bus", side_effect=RuntimeError("not ready")):
+
+            @on_event("test.event")
+            def my_handler(event):
+                pass
 
         subscribers = get_subscribers()
         assert len(subscribers) == 1
@@ -159,13 +163,17 @@ class TestOnEventDecorator:
         clear_subscribers()
 
     def test_auto_register(self):
+        from unittest.mock import patch
+
         from app.events.decorators import auto_register, clear_subscribers
 
         clear_subscribers()
 
-        @on_event("auto.test")
-        def auto_handler(event):
-            pass
+        with patch("app.events.decorators.container.event_bus", side_effect=RuntimeError("not ready")):
+
+            @on_event("auto.test")
+            def auto_handler(event):
+                pass
 
         registry = EventHandlerRegistry()
         bus = EventBus(registry=registry)

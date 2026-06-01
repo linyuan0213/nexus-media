@@ -98,6 +98,8 @@ class SeasonPackStrategy:
                     else:
                         _, download_id, _ = download_callback(item)
                     if download_id:
+                        if item not in return_items:
+                            return_items.append(item)
                         need_season = list(set(need_season).difference(set(item_season)))
                         for cur in item_season:
                             for nt in list(need_tvs.get(need_tmdbid, [])):
@@ -111,7 +113,7 @@ class SeasonPackStrategy:
         return return_items, need_seasons, need_tvs
 
     @staticmethod
-    def build_need_seasons(need_tvs: dict) -> dict:
+    def build_need_seasons(need_tvs: dict | None) -> dict:
         """从 need_tvs 中提取整季缺失的季数"""
         need_seasons = {}
         if not need_tvs:
@@ -206,8 +208,10 @@ class EpisodeStrategy:
                     if set(item_episodes).issubset(set(need_episodes)):
                         _, download_id, _ = download_callback(item)
                         if download_id:
+                            if item not in return_items:
+                                return_items.append(item)
                             need_episodes = EpisodeStrategy._update_episodes(
-                                need_tvs, need_tmdbid, need_episodes, item_episodes
+                                need_tvs, need_tmdbid, need_episodes, item_episodes, index
                             )
                 index += 1
         return return_items, need_tvs
@@ -276,7 +280,7 @@ class EpisodeStrategy:
                         continue
                     # 更新仍需集数
                     need_episodes = EpisodeStrategy._update_episodes(
-                        need_tvs, need_tmdbid, need_episodes, list(selected_episodes)
+                        need_tvs, need_tmdbid, need_episodes, list(selected_episodes), index
                     )
                     # 设置任务只下载想要的文件
                     log.info(f"[Downloader]从 {item.org_string} 中选取集：{selected_episodes}")
@@ -293,22 +297,16 @@ class EpisodeStrategy:
         return return_items, need_tvs
 
     @staticmethod
-    def _update_episodes(need_tvs, tmdbid, need, current):
-        """更新 need_tvs 集数"""
+    def _update_episodes(need_tvs, tmdbid, need, current, seq=0):
+        """更新 need_tvs 中指定 seq 条目的集数"""
         need = list(set(need).difference(set(current)))
-        # 直接更新该 tmdbid 下所有条目的 episodes（简化逻辑，与原始行为一致）
+        tv_list = need_tvs.get(tmdbid, [])
+        if not tv_list or seq >= len(tv_list):
+            return need
         if need:
-            for tv in need_tvs.get(tmdbid, []):
-                if tv.get("episodes") is not None:
-                    tv["episodes"] = need
+            tv_list[seq]["episodes"] = need
         else:
-            # 如果该 tmdbid 下所有条目都空了，移除
-            to_remove = []
-            for tv in need_tvs.get(tmdbid, []):
-                if tv.get("episodes") is not None and not tv.get("episodes"):
-                    to_remove.append(tv)
-            for tv in to_remove:
-                need_tvs[tmdbid].remove(tv)
-            if not need_tvs.get(tmdbid):
+            tv_list.pop(seq)
+            if not tv_list:
                 need_tvs.pop(tmdbid, None)
         return need
