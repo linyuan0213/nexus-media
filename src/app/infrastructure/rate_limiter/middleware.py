@@ -4,14 +4,14 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import log
-from app.infrastructure.rate_limiter.backends import RateLimiter
+from app.infrastructure.rate_limiter import RateLimitEngine
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     全局 API 速率限制中间件
 
-    基于客户端 IP 的滑动窗口限流，Redis 可用时分布式生效，
+    基于客户端 IP 的令牌桶限流，Redis 可用时分布式生效，
     否则降级为单进程内存限流。
 
     豁免路径：
@@ -22,16 +22,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     _EXEMPT_PATHS = {"/health", "/static", "/docs", "/openapi.json", "/redoc"}
 
-    # 特定路径自定义限流规则：{path: (limit, window)}
-    _PATH_LIMITS: dict[str, tuple[int, int]] = {
-        "/api/system/refresh": (10, 10),
+    # 特定路径自定义限流规则：{path: rate}
+    _PATH_LIMITS: dict[str, str] = {
+        "/api/system/refresh": "10/m",
     }
 
-    def __init__(self, app, limit: int = 60, window: int = 60):
+    def __init__(self, app, rate: str = "60/m"):
         super().__init__(app)
-        self._limiter = RateLimiter()
-        self._limit = limit
-        self._window = window
+        self._engine = RateLimitEngine()
+        self._rate = rate
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -42,12 +41,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # 提取客户端 IP
         client_ip = self._get_client_ip(request)
-        key = f"rate_limit:{client_ip}:{path}"
+        key = f"api:{client_ip}:{path}"
 
         # 特定路径使用自定义限流，其余使用全局默认值
-        limit, window = self._PATH_LIMITS.get(path, (self._limit, self._window))
+        rate = self._PATH_LIMITS.get(path, self._rate)
 
-        if not self._limiter.is_allowed(key, limit, window):
+        if not self._engine.try_acquire(key, rate=rate):
             log.warn(f"[RateLimit]IP {client_ip} 请求 {path} 触发限流")
             return Response(
                 content='{"detail":"请求过于频繁，请稍后再试"}',

@@ -258,6 +258,7 @@ class Container(containers.DeclarativeContainer):
 
     # --- Event Bus ---
     event_bus: Provider["EventBus"] = _s("app.events.factory.create_event_bus")
+    rate_limit_engine: Provider["RateLimitEngine"] = _s("app.infrastructure.rate_limiter.RateLimitEngine")
 
 
 # 全局容器实例
@@ -299,6 +300,7 @@ if TYPE_CHECKING:
     )
     from app.downloader.client_factory import DownloadClientFactory
     from app.events.bus import EventBus
+    from app.infrastructure.rate_limiter import RateLimitEngine
     from app.helper.drissionpage_helper import DrissionPageHelper
     from app.helper.indexer_helper import IndexerHelper
     from app.helper.progress_helper import ProgressHelper

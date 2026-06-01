@@ -1,4 +1,7 @@
-"""API 速率限制器 - Redis/内存双后端滑动窗口实现."""
+"""RateLimitEngine - 统一限流引擎.
+
+支持令牌桶和滑动窗口两种算法，Redis/内存双后端，支持等待模式.
+"""
 
 import threading
 import time
@@ -9,63 +12,191 @@ import log
 from app.utils.redis_store import RedisStore
 
 
+def _parse_rate(rate: str) -> tuple[float, int]:
+    """解析速率字符串，如 '10/m' -> (10, 60), '2.5/s' -> (2.5, 1).
+
+    :return: (count, window_seconds)
+    """
+    parts = rate.split("/")
+    if len(parts) != 2:
+        raise ValueError(f"Invalid rate format: {rate}")
+    count = float(parts[0])
+    unit = parts[1].lower()
+    multipliers = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    window = multipliers.get(unit, 60)
+    return count, window
+
+
 class RateLimitBackend(ABC):
-    """速率限制后端抽象基类"""
+    """限流后端抽象基类."""
 
     @abstractmethod
-    def is_allowed(self, key: str, limit: int, window: int) -> bool:
-        """检查 key 在 window 秒内是否未超过 limit 次请求"""
+    def acquire(self, key: str, rate: float, burst: int, tokens: int, timeout: float | None) -> bool:
+        """原子化获取许可.
+
+        :param rate: 每秒速率
+        :param burst: 桶容量/窗口上限
+        :param tokens: 本次消耗令牌数
+        :param timeout: 最大等待秒数，None=不等待，0=立即返回
+        :return: True=获得许可
+        """
+
+    @abstractmethod
+    def get_status(self, key: str | None = None) -> dict:
+        """获取限流状态."""
 
 
-class MemoryBackend(RateLimitBackend):
-    """内存滑动窗口后端（线程安全）"""
+class MemoryTokenBucketBackend(RateLimitBackend):
+    """内存令牌桶后端（线程安全）."""
+
+    def __init__(self):
+        self._buckets: dict[str, dict] = {}
+        self._lock = threading.Lock()
+        self._stats: dict[str, dict] = {}
+
+    def acquire(self, key, rate, burst, tokens, timeout) -> bool:
+        deadline = time.time() + timeout if timeout is not None else None
+        while True:
+            with self._lock:
+                bucket = self._buckets.setdefault(key, {"tokens": burst, "last_update": time.time()})
+                self._stats.setdefault(key, {"blocked": 0, "waited": 0})
+                now = time.time()
+                bucket["tokens"] = min(burst, bucket["tokens"] + (now - bucket["last_update"]) * rate)
+                bucket["last_update"] = now
+                if bucket["tokens"] >= tokens:
+                    bucket["tokens"] -= tokens
+                    return True
+                wait_time = (tokens - bucket["tokens"]) / rate
+            if deadline and time.time() + wait_time > deadline:
+                with self._lock:
+                    self._stats[key]["blocked"] += 1
+                return False
+            if timeout == 0:
+                with self._lock:
+                    self._stats[key]["blocked"] += 1
+                return False
+            with self._lock:
+                self._stats[key]["waited"] += 1
+            time.sleep(wait_time)
+
+    def get_status(self, key=None) -> dict:
+        with self._lock:
+            if key:
+                bucket = self._buckets.get(key, {})
+                stats = self._stats.get(key, {})
+                return {
+                    "tokens": round(bucket.get("tokens", 0), 2),
+                    "blocked": stats.get("blocked", 0),
+                    "waited": stats.get("waited", 0),
+                }
+            return {
+                k: {
+                    "tokens": round(self._buckets.get(k, {}).get("tokens", 0), 2),
+                    "blocked": self._stats.get(k, {}).get("blocked", 0),
+                    "waited": self._stats.get(k, {}).get("waited", 0),
+                }
+                for k in self._buckets
+            }
+
+
+class MemorySlidingWindowBackend(RateLimitBackend):
+    """内存滑动窗口后端（线程安全）."""
 
     def __init__(self):
         self._windows: dict[str, deque[float]] = {}
         self._lock = threading.Lock()
+        self._stats: dict[str, dict] = {}
 
-    def is_allowed(self, key: str, limit: int, window: int) -> bool:
-        now = time.time()
-        cutoff = now - window
-
-        with self._lock:
-            timestamps = self._windows.get(key)
-            if timestamps is None:
-                timestamps = deque()
-                self._windows[key] = timestamps
-            else:
-                # 清理过期时间戳
+    def acquire(self, key, rate, burst, tokens, timeout) -> bool:
+        # 滑动窗口不支持等待模式（无法预测何时有容量）
+        deadline = time.time() + timeout if timeout is not None else None
+        window = burst / rate if rate > 0 else 60
+        while True:
+            with self._lock:
+                now = time.time()
+                cutoff = now - window
+                timestamps = self._windows.setdefault(key, deque())
                 while timestamps and timestamps[0] < cutoff:
                     timestamps.popleft()
-
-            if len(timestamps) >= limit:
+                if len(timestamps) + tokens <= burst:
+                    for _ in range(tokens):
+                        timestamps.append(now)
+                    return True
+                stats = self._stats.setdefault(key, {"blocked": 0, "waited": 0})
+                if timeout == 0:
+                    stats["blocked"] += 1
+                    return False
+                if deadline and now >= deadline:
+                    stats["blocked"] += 1
+                    return False
+                wait_time = (timestamps[0] + window) - now if timestamps else 0.1
+            if deadline and time.time() + wait_time > deadline:
+                with self._lock:
+                    self._stats.setdefault(key, {"blocked": 0, "waited": 0})["blocked"] += 1
                 return False
+            with self._lock:
+                self._stats.setdefault(key, {"blocked": 0, "waited": 0})["waited"] += 1
+            time.sleep(min(wait_time, 0.5))
 
-            timestamps.append(now)
-            return True
+    def get_status(self, key=None) -> dict:
+        with self._lock:
+            if key:
+                timestamps = self._windows.get(key, deque())
+                stats = self._stats.get(key, {})
+                return {
+                    "count": len(timestamps),
+                    "blocked": stats.get("blocked", 0),
+                    "waited": stats.get("waited", 0),
+                }
+            return {
+                k: {
+                    "count": len(self._windows.get(k, deque())),
+                    "blocked": self._stats.get(k, {}).get("blocked", 0),
+                    "waited": self._stats.get(k, {}).get("waited", 0),
+                }
+                for k in self._windows
+            }
 
 
-class RedisBackend(RateLimitBackend):
-    """Redis 滑动窗口后端（分布式）"""
+class RedisTokenBucketBackend(RateLimitBackend):
+    """Redis 分布式令牌桶（Lua 原子脚本）."""
 
-    # Lua 脚本：原子清理旧记录 + 计数 + 添加新记录
-    _SLIDING_WINDOW_SCRIPT = """
+    _TOKEN_BUCKET_SCRIPT = """
     local key = KEYS[1]
-    local window = tonumber(ARGV[1])
-    local limit = tonumber(ARGV[2])
-    local now = tonumber(ARGV[3])
-    local cutoff = now - window
+    local rate = tonumber(ARGV[1])
+    local burst = tonumber(ARGV[2])
+    local tokens = tonumber(ARGV[3])
+    local now = tonumber(ARGV[4])
+    local timeout_ms = tonumber(ARGV[5])
 
-    redis.call('ZREMRANGEBYSCORE', key, 0, cutoff)
-    local count = redis.call('ZCARD', key)
-
-    if count >= limit then
-        return 0
+    local function try_acquire()
+        local data = redis.call('HMGET', key, 'tokens', 'last_update')
+        local current_tokens = tonumber(data[1]) or burst
+        local last_update = tonumber(data[2]) or now
+        current_tokens = math.min(burst, current_tokens + (now - last_update) * rate / 1000.0)
+        if current_tokens >= tokens then
+            current_tokens = current_tokens - tokens
+            redis.call('HMSET', key, 'tokens', current_tokens, 'last_update', now)
+            redis.call('EXPIRE', key, math.ceil(burst / rate * 1000) + 1)
+            return 1
+        else
+            redis.call('HMSET', key, 'tokens', current_tokens, 'last_update', now)
+            return 0
+        end
     end
 
-    redis.call('ZADD', key, now, now)
-    redis.call('EXPIRE', key, window)
-    return 1
+    local deadline = now + timeout_ms
+    while true do
+        local result = try_acquire()
+        if result == 1 then
+            return 1
+        end
+        local remaining = deadline - redis.call('TIME')[1]
+        if remaining <= 0 then
+            return 0
+        end
+        redis.call('SET', key .. ':wait', '1', 'PX', math.min(remaining, 100))
+    end
     """
 
     def __init__(self):
@@ -73,47 +204,96 @@ class RedisBackend(RateLimitBackend):
         self._script_sha: str | None = None
 
     def _load_script(self) -> str | None:
-        sha = self._redis.script_load(self._SLIDING_WINDOW_SCRIPT)
-        return sha
+        return self._redis.script_load(self._TOKEN_BUCKET_SCRIPT)
 
-    def is_allowed(self, key: str, limit: int, window: int) -> bool:
+    def acquire(self, key, rate, burst, tokens, timeout) -> bool:
         if not self._redis.is_available():
-            return True  # Redis 不可用时不限流
-
-        now = int(time.time() * 1000)  # 毫秒精度避免碰撞
-
+            return True
+        now_ms = int(time.time() * 1000)
+        timeout_ms = int((timeout or 0) * 1000) if timeout is not None else 0
         try:
             if self._script_sha is None:
                 self._script_sha = self._load_script()
-
             if self._script_sha:
-                result = self._redis.evalsha(self._script_sha, 1, key, window * 1000, limit, now)
+                result = self._redis.evalsha(self._script_sha, 1, key, rate, burst, tokens, now_ms, timeout_ms)
                 return bool(result)
-            # Fallback：非原子操作（使用 RedisStore 包装方法）
-            cutoff = now - window * 1000
-            self._redis.zremrangebyscore(key, 0, cutoff)
-            count = self._redis.zcard(key)
-            if count >= limit:
-                return False
-            self._redis.zadd(key, {now: now})
-            self._redis.expire(key, window)
             return True
         except Exception as e:
-            log.debug(f"RedisBackend 限流检查失败 {key}: {e}")
-            return True  # 出错时不限流
+            log.debug(f"RedisTokenBucketBackend 限流检查失败 {key}: {e}")
+            return True
+
+    def get_status(self, key=None) -> dict:
+        return {}
 
 
+class RateLimitEngine:
+    """统一限流引擎 — 令牌桶 + 滑动窗口，Redis/内存双后端."""
+
+    def __init__(self, backend: RateLimitBackend | None = None, algorithm: str = "token_bucket"):
+        self._algorithm = algorithm
+        self._sliding_window_backend: MemorySlidingWindowBackend | None = None
+        if backend is None:
+            redis = RedisTokenBucketBackend()
+            if redis._redis.is_available():
+                self._backend = redis
+                log.info("[RateLimitEngine]使用 Redis 后端")
+            else:
+                self._backend = MemoryTokenBucketBackend()
+                log.info("[RateLimitEngine]使用内存后端")
+        else:
+            self._backend = backend
+
+    def acquire(
+        self,
+        key: str,
+        rate: str = "10/m",
+        burst: int | None = None,
+        tokens: int = 1,
+        timeout: float | None = None,
+        algorithm: str | None = None,
+    ) -> bool:
+        """获取执行许可.
+
+        :param key: 限流标识
+        :param rate: 速率字符串，如 '10/m', '2.5/s', '100/h'
+        :param burst: 突发容量，默认等于 rate 数值
+        :param tokens: 本次消耗令牌数
+        :param timeout: 最大等待秒数，None=不等待，0=立即返回
+        :param algorithm: 覆盖默认算法
+        :return: True=获得许可
+        """
+        count, window = _parse_rate(rate)
+        rate_per_sec = count / window
+        if burst is None:
+            burst = int(count)
+        algo = algorithm or self._algorithm
+        # 滑动窗口使用不同的内存后端
+        if algo == "sliding_window" and isinstance(self._backend, (MemoryTokenBucketBackend, RedisTokenBucketBackend)):
+            if self._sliding_window_backend is None:
+                self._sliding_window_backend = MemorySlidingWindowBackend()
+            return self._sliding_window_backend.acquire(key, rate_per_sec, burst, tokens, timeout)
+        return self._backend.acquire(key, rate_per_sec * 1000, burst, tokens, timeout)
+
+    def try_acquire(self, key: str, rate: str = "10/m", tokens: int = 1) -> bool:
+        """不等待，立即返回."""
+        return self.acquire(key, rate, tokens=tokens, timeout=0)
+
+    def get_status(self, key: str | None = None) -> dict:
+        """获取限流状态."""
+        return self._backend.get_status(key)
+
+
+# 兼容旧 API 的快捷类
 class RateLimiter:
-    """速率限制器 - 自动选择 Redis/内存后端"""
+    """兼容旧接口的限流器 — 滑动窗口，自动选择 Redis/内存后端."""
 
     def __init__(self):
-        redis_backend = RedisBackend()
-        if redis_backend._redis.is_available():
-            self._backend: RateLimitBackend = redis_backend
-            log.info("[RateLimiter]使用 Redis 后端")
+        redis = RedisTokenBucketBackend()
+        if redis._redis.is_available():
+            self._backend: RateLimitBackend = redis
         else:
-            self._backend = MemoryBackend()
-            log.info("[RateLimiter]使用内存后端（Redis 不可用）")
+            self._backend = MemorySlidingWindowBackend()
 
     def is_allowed(self, key: str, limit: int, window: int) -> bool:
-        return self._backend.is_allowed(key, limit, window)
+        rate_per_sec = limit / window
+        return self._backend.acquire(key, rate_per_sec * 1000, limit, 1, 0)

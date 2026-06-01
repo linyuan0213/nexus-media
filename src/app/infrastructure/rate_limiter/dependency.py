@@ -2,7 +2,7 @@
 
 from fastapi import HTTPException, Request
 
-from app.infrastructure.rate_limiter.backends import RateLimiter
+from app.infrastructure.rate_limiter import RateLimitEngine
 
 
 class RateLimitDependency:
@@ -15,20 +15,18 @@ class RateLimitDependency:
         @app.post("/api/auth/login")
         async def login(
             credentials: LoginRequest,
-            _rate: None = Depends(RateLimitDependency(limit=5, window=60)),
+            _rate: None = Depends(RateLimitDependency(rate="5/m")),
         ):
             ...
 
-    :param limit: 窗口内最大请求次数
-    :param window: 时间窗口（秒）
+    :param rate: 速率字符串，如 "60/m"
     :param key_prefix: 限流 key 前缀，默认使用路由路径
     """
 
-    _limiter = RateLimiter()
+    _engine = RateLimitEngine()
 
-    def __init__(self, limit: int = 60, window: int = 60, key_prefix: str | None = None):
-        self.limit = limit
-        self.window = window
+    def __init__(self, rate: str = "60/m", key_prefix: str | None = None):
+        self.rate = rate
         self.key_prefix = key_prefix
 
     async def __call__(self, request: Request) -> None:
@@ -36,7 +34,7 @@ class RateLimitDependency:
         route = self.key_prefix or request.url.path
         key = f"rate_limit_dep:{client_ip}:{route}"
 
-        if not self._limiter.is_allowed(key, self.limit, self.window):
+        if not self._engine.try_acquire(key, rate=self.rate):
             raise HTTPException(
                 status_code=429,
                 detail="请求过于频繁，请稍后再试",
