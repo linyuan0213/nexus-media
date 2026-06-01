@@ -2,6 +2,8 @@
 
 import datetime
 
+import pytz
+
 import log
 from app.core.exceptions import DownloadError, IndexerError, MediaError, NetworkError, RepositoryError, ServiceError
 from app.core.settings import settings
@@ -86,17 +88,17 @@ class SubscriptionMonitor:
     def _run_queue_search(self) -> None:
         log.info("[SubscriptionMonitor] 开始队列搜索...")
         self._queue_strategy.run()
-        self._last_queue_run = datetime.datetime.now()
+        self._last_queue_run = datetime.datetime.now(pytz.timezone(settings.tz))
 
     def _run_rss_feed(self) -> None:
         log.info("[SubscriptionMonitor] 开始 RSS 轮询...")
         self._rss_strategy.run()
-        self._last_rss_run = datetime.datetime.now()
+        self._last_rss_run = datetime.datetime.now(pytz.timezone(settings.tz))
 
     def _run_indexer_search(self) -> None:
         log.info("[SubscriptionMonitor] 开始主动搜索...")
         self._indexer_strategy.run()
-        self._last_search_run = datetime.datetime.now()
+        self._last_search_run = datetime.datetime.now(pytz.timezone(settings.tz))
 
     def _should_run_queue(self) -> bool:
         """队列搜索：按 subscribe.queue_interval（秒）周期执行."""
@@ -114,7 +116,7 @@ class SubscriptionMonitor:
             return True
         if self._last_queue_run is None:
             return True
-        elapsed = (datetime.datetime.now() - self._last_queue_run).total_seconds()
+        elapsed = (datetime.datetime.now(pytz.timezone(settings.tz)) - self._last_queue_run).total_seconds()
         return elapsed >= queue_interval
 
     def _should_run_rss(self) -> bool:
@@ -133,7 +135,7 @@ class SubscriptionMonitor:
             return False
         if self._last_rss_run is None:
             return True
-        elapsed = (datetime.datetime.now() - self._last_rss_run).total_seconds()
+        elapsed = (datetime.datetime.now(pytz.timezone(settings.tz)) - self._last_rss_run).total_seconds()
         return elapsed >= rss_interval
 
     def _should_run_search(self) -> bool:
@@ -152,7 +154,7 @@ class SubscriptionMonitor:
             return False
         if self._last_search_run is None:
             return True
-        elapsed = (datetime.datetime.now() - self._last_search_run).total_seconds()
+        elapsed = (datetime.datetime.now(pytz.timezone(settings.tz)) - self._last_search_run).total_seconds()
         return elapsed >= search_interval * 3600
 
     def trigger(self) -> None:
