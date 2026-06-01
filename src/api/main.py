@@ -123,7 +123,7 @@ app.add_middleware(
 
 
 # 速率限制中间件：Redis 可用时分布式限流，否则降级为内存限流
-app.add_middleware(RateLimitMiddleware, limit=60, window=60)
+app.add_middleware(RateLimitMiddleware, rate="60/m")
 
 
 # Session 清理中间件：每个请求结束后清理 scoped_session

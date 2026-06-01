@@ -4,7 +4,7 @@ from datetime import datetime
 import log
 from app.helper import SiteHelper
 from app.sites.engine import SiteEngine
-from app.sites.site_limiter import SiteRateLimiter
+from app.services.site_rate_limiter import SiteRateLimiterService
 from app.utils import JsonUtils, RequestUtils, StringUtils
 from app.utils.config_tools import get_proxies, get_ua
 from app.di import container
@@ -44,8 +44,7 @@ class Sites:
         self._statistic_sites = []
         # 开启签到功能站点：
         self._signin_sites = []
-        # 站点限速器
-        self._limiters = {}
+
         # 站点图标
         self.init_favicons()
         # 站点数据
@@ -127,14 +126,11 @@ class Sites:
                 site_strict_url = StringUtils.get_url_domain(site.SIGNURL or site.RSSURL)
             if site_strict_url:
                 self._site_by_urls[site_strict_url] = site_info
-            # 初始化站点限速器
-            self._limiters[site.ID] = SiteRateLimiter(
-                limit_interval=Sites._rate_limit_val(
-                    site_note, "limit_interval", multiplier=60, require_fields=["limit_count"]
-                ),
-                limit_count=Sites._rate_limit_val(site_note, "limit_count", require_fields=["limit_interval"]),
-                limit_seconds=Sites._rate_limit_val(site_note, "limit_seconds"),
-            )
+        # 初始化站点限流服务（统一限流引擎）
+        self._site_limiter = SiteRateLimiterService()
+        for site in self._sites:
+            site_note = self.__get_site_note_items(site.NOTE)
+            self._site_limiter.register_site(str(site.ID), site_note)
 
     def init_favicons(self):
         """
@@ -185,11 +181,9 @@ class Sites:
         :param site_id: 站点ID
         :return: True为触发了流控，False为未触发
         """
-        if not self._limiters.get(site_id):
-            return False
-        state, msg = self._limiters[site_id].check_rate_limit()
-        if msg:
-            log.warn(f"[Sites]站点 {self._site_by_ids[site_id].get('name')} {msg}")
+        state = self._site_limiter.check(str(site_id), timeout=0)
+        if state:
+            log.warn(f"[Sites]站点 {self._site_by_ids.get(site_id, {}).get('name')} 触发流控")
         return state
 
     def get_sites_by_suffix(self, suffix):

@@ -21,7 +21,7 @@ def mock_redis_unavailable():
 class TestRateLimitMiddleware:
     def test_exempt_paths_bypass_limit(self, mock_redis_unavailable):
         app = FastAPI()
-        app.add_middleware(RateLimitMiddleware, limit=1, window=60)
+        app.add_middleware(RateLimitMiddleware, rate="1/m")
 
         @app.get("/health")
         def health():
@@ -34,7 +34,7 @@ class TestRateLimitMiddleware:
 
     def test_blocks_when_limit_reached(self, mock_redis_unavailable):
         app = FastAPI()
-        app.add_middleware(RateLimitMiddleware, limit=2, window=60)
+        app.add_middleware(RateLimitMiddleware, rate="2/m")
 
         @app.get("/api/test")
         def test_endpoint():
@@ -49,7 +49,7 @@ class TestRateLimitMiddleware:
 
     def test_uses_x_forwarded_for_header(self, mock_redis_unavailable):
         app = FastAPI()
-        app.add_middleware(RateLimitMiddleware, limit=2, window=60)
+        app.add_middleware(RateLimitMiddleware, rate="2/m")
 
         @app.get("/api/test")
         def test_endpoint():
@@ -63,7 +63,7 @@ class TestRateLimitMiddleware:
 
     def test_different_ips_have_independent_limits(self, mock_redis_unavailable):
         app = FastAPI()
-        app.add_middleware(RateLimitMiddleware, limit=2, window=60)
+        app.add_middleware(RateLimitMiddleware, rate="2/m")
 
         @app.get("/api/test")
         def test_endpoint():
@@ -81,7 +81,7 @@ class TestRateLimitMiddleware:
 
     def test_static_path_exempt(self, mock_redis_unavailable):
         app = FastAPI()
-        app.add_middleware(RateLimitMiddleware, limit=1, window=60)
+        app.add_middleware(RateLimitMiddleware, rate="1/m")
 
         @app.get("/static/file.txt")
         def static_file():
