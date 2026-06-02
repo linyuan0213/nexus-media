@@ -77,21 +77,22 @@ class RssFeedStrategy:
 
         rss_movies = self.subscribe.get_subscribe_movies(state="R")
         if not rss_movies:
-            log.warn("[RssFeedStrategy] 没有正在订阅的电影")
+            log.warn(f"[RssFeedStrategy] 没有正在订阅的{MediaType.MOVIE.display_name}")
         else:
             log.info(
-                "[RssFeedStrategy] 电影订阅清单：{}".format(
-                    " ".join("{}".format(info.get("name")) for info in rss_movies.values())
+                "[RssFeedStrategy] {}订阅清单：{}".format(
+                    MediaType.MOVIE.display_name,
+                    " ".join("{}".format(info.get("name")) for info in rss_movies.values()),
                 )
             )
 
         rss_tvs = self.subscribe.get_subscribe_tvs(state="R")
         if not rss_tvs:
-            log.warn("[RssFeedStrategy] 没有正在订阅的电视剧")
+            log.warn(f"[RssFeedStrategy] 没有正在订阅的{MediaType.TV.display_name}")
         else:
             log.info(
-                "[RssFeedStrategy] 电视剧订阅清单：{}".format(
-                    " ".join("{}".format(info.get("name")) for info in rss_tvs.values())
+                "[RssFeedStrategy] {}订阅清单：{}".format(
+                    MediaType.TV.display_name, " ".join("{}".format(info.get("name")) for info in rss_tvs.values())
                 )
             )
 
@@ -436,7 +437,7 @@ class RssFeedStrategy:
                     log.info(f"[RssFeedStrategy] {item.title} 已被其他策略锁定，跳过")
             rss_download_torrents = filtered
 
-        download_items, _ = self.downloader.batch_download(SearchType.RSS, rss_download_torrents, rss_no_exists)
+        download_items, _ = self.downloader.batch_download(SearchType.SUBSCRIBE, rss_download_torrents, rss_no_exists)
 
         if download_items:
             for item in download_items:

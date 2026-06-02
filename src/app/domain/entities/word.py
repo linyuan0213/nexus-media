@@ -7,6 +7,8 @@ from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Any, Optional
 
+from app.utils.types import MediaType
+
 
 class CustomWordType(Enum):
     """识别词类型值对象"""
@@ -48,7 +50,11 @@ class WordGroupType(Enum):
 
     @property
     def display_name(self) -> str:
-        return {1: "电影", 2: "电视剧"}.get(self.value, "未知")
+        if self == WordGroupType.MOVIE:
+            return MediaType.MOVIE.display_name
+        if self == WordGroupType.TV:
+            return MediaType.TV.display_name
+        return "未知"
 
 
 @dataclass

@@ -2,17 +2,17 @@
 
 ## Status
 
-Proposed
+Accepted / Implemented
 
 ## Date
 
-2026-05-31
+2026-05-31（决策）/ 2026-06-01（实施完成）
 
 ## Context
 
 系统中存在电影、电视剧、动漫三种媒体类型，但在枚举值、字符串表示、数据库存储、API 返回、前端展示等层面使用了多种不同的命名，导致维护困难和潜在 bug。
 
-### 当前命名混乱现状
+### 重构前命名混乱现状
 
 #### 1. 枚举层
 
@@ -38,34 +38,28 @@ class MediaType(Enum):
 #### 3. 代码中混用示例
 
 ```python
-# 1. 数据库查询映射 — 3 种字符串
-# app/db/repositories/search_repository.py
+# 1. 数据库查询映射 — 枚举值是中文
 if media_item.type == MediaType.TV:
     mtype = "TV"
 elif media_item.type == MediaType.MOVIE:
-    mtype = "MOVIE"  # 不一致！TV 是缩写，MOVIE 是全称
+    mtype = "MOVIE"
 else:
-    mtype = "ANI"     # 又是缩写！
+    mtype = "ANI"
 
-# 2. API 返回 — 中文转缩写
-# app/api/routers/media.py
-"type": "MOV" if str(item.TYPE or "") == "电影" else "TV"
+# 2. API 返回 — 枚举值直接返回中文
+return {"type": media_info.type.value}  # 返回 "电影" / "剧集" / "动漫"
 
 # 3. 站点分类映射 — 枚举名转站点代码
-# app/sites/html_searcher.py
 cat_map = {"MOVIE": "mo", "TV": "tv", "ANIME": "an"}
 
-# 4. TMDB 查询 — 枚举转 TMDB 类型
-# app/media/lookup/tmdb_lookup.py
+# 4. TMDB 查询 — 枚举转字符串（ANIME 被忽略）
 typestr = "MOV" if mtype == MediaType.MOVIE else "TV"
 # 注意：这里没有 ANIME 分支，动漫被当成 TV 处理
 
-# 5. 条件判断 — 用字符串匹配
-# app/services/search_service.py
+# 5. 条件判断 — 枚举比较（正确用法，但值是中文）
 getattr(x, "type", None) in (MediaType.TV, MediaType.ANIME)
 
 # 6. 数据库存储 — TYPE 字段存中文
-# 某表结构
 TYPE = Column(String(20))  # 存 "电影", "剧集", "动漫"
 ```
 
@@ -75,7 +69,7 @@ TYPE = Column(String(20))  # 存 "电影", "剧集", "动漫"
 |------|------|------|
 | 枚举值是中文 | `MediaType` | JSON 序列化后无法反序列化（中文字段名问题） |
 | 数据库 TYPE 存中文 | 多张表 | 查询时需要字符串匹配，易出错；国际化困难 |
-| API 返回不统一 | `media.py`, `search.py` | 前端需要处理 `"MOV"`, `"TV"`, `"ANI"`, `"movie"`, `"tv"` 等多种格式 |
+| API 返回不统一 | `subscription.py`, `search.py` | 前端需要处理 `"MOV"`, `"TV"`, `"ANI"`, `"movie"`, `"tv"` 等多种格式 |
 | 动漫类型被忽略 | `tmdb_lookup.py:575` | `typestr = "MOV" if mtype == MediaType.MOVIE else "TV"` — ANIME 被当成 TV |
 | 缩写不一致 | `search_repository.py` | TV 用 `"TV"`, 电影用 `"MOVIE"`, 动漫用 `"ANI"` |
 | 站点映射硬编码 | `html_searcher.py` | 每个站点可能有自己的 cat 编码，目前集中在代码里 |
@@ -137,15 +131,6 @@ _MEDIA_TYPE_DISPLAY_NAMES: dict[MediaType, str] = {
     MediaType.ANIME: "动漫",
     MediaType.UNKNOWN: "未知",
 }
-
-
-def _normalize_media_type(value: str | MediaType | None) -> str:
-    """将任意媒体类型表示统一归一化为小写英文 value"""
-    if value is None:
-        return "unknown"
-    if isinstance(value, MediaType):
-        return value.value
-    return str(value).strip().lower()
 ```
 
 ### 统一规则
@@ -253,94 +238,57 @@ if media_info.type != MediaType.MOVIE and media_info.get_episode_list():
     ...
 ```
 
-### 数据库迁移
-
-```sql
--- 更新所有 TYPE 字段为小写英文
-UPDATE rss_movie SET type = 'movie' WHERE type IN ('电影', 'MOVIE', 'MOV', 'movie');
-UPDATE rss_tv SET type = 'tv' WHERE type IN ('剧集', '电视剧', 'TV', 'tv');
-UPDATE rss_tv SET type = 'anime' WHERE type IN ('动漫', 'ANIME', 'ANI', 'anime');
-
--- 或更安全的：先添加检查约束
-ALTER TABLE rss_movie ADD CONSTRAINT chk_type CHECK (type IN ('movie', 'tv', 'anime', 'unknown'));
-```
-
 ---
 
-## 实施步骤
+## 实施记录
 
-### Phase 1：重构枚举和工具
+### Phase 1：重构枚举和工具（已完成）
 
-1. **修改 `app/utils/types.py`**
-   - `MediaType` 枚举值改为小写英文
-   - 添加 `display_name` property
-   - 添加 `from_string()` 类方法，统一归一化为小写英文
-   - 修改 `__str__()` 返回 `self.value`
+- **修改 `app/utils/types.py`**：`MediaType` 枚举值改为小写英文；添加 `display_name` property、`from_string()` 类方法、`__str__()` 返回 `self.value`；删除 `MovieTypes` / `TvTypes`
+- **新建 `app/utils/media_type_utils.py`**：`MediaTypeMapper` 类，TMDB / 站点 cat 映射
 
-2. **新建 `app/utils/media_type_utils.py`**
-   - `MediaTypeMapper` 类
-   - TMDB / 站点 cat 映射
+### Phase 2：数据库迁移（已完成）
 
-3. **运行全量测试**
-   - 确保 `MediaType.from_string()` 正确解析标准格式
+- **Alembic 迁移脚本**：`1fd6712c2b1f_unify_media_type_to_lowercase.py`
+  - 更新 7 张表的媒体类型字段：`DOWNLOAD_HISTORY`, `SUBSCRIBE_HISTORY`, `SUBSCRIBE_TORRENTS`, `SEARCH_RESULT_INFO`, `TRANSFER_HISTORY`, `TMDB_BLACKLIST`, `MEDIASYNC_ITEMS`
+  - 映射规则：`电影`/`MOVIE`/`MOV` → `movie`，`剧集`/`电视剧`/`TV` → `tv`，`动漫`/`ANIME`/`ANI` → `anime`
 
-### Phase 2：数据库迁移
+### Phase 3：代码层改造（已完成）
 
-4. **Alembic 迁移脚本**
-   - 更新所有 TYPE 字段为标准小写英文
-   - 添加 CHECK 约束
+涉及约 40+ 文件：
 
-5. **Repository 层改造**
-   - `search_repository.py` — 删除手动字符串映射
-   - `rss_repo_adapter.py` — 统一使用 `media_type.value`
-   - 所有 `Column(String)` 类型的 TYPE 字段存储改为枚举值
+| 层级 | 修改文件 |
+|------|----------|
+| API Routers | `subscription.py`, `media.py`, `words.py`, `sync.py` |
+| Services | `media_info_service.py`, `sync_service.py`, `search_result_service.py`, `search_message_service.py`, `tmdb_blacklist_service.py`, `transfer/filetransfer_service.py`, `rss_automation/executor.py`, `transfer_history_service.py`, `media_file_service.py`, `system/info.py`, `media_recommendation_service.py`, `search_web_service.py` |
+| Subscribe | `monitor.py`, `finish_service.py`, `history_service.py`, `rss_feed.py`, `base_search.py`, `refresh_service.py`, `add_service.py`, `update_service.py`, `query_service.py`, `matcher.py`, `search_engine.py` |
+| Media/Lookup | `tmdb_lookup.py`, `tmdb_discover.py`, `html_searcher.py`, `bangumi.py`, `douban.py` |
+| Mediaserver | `plex.py`, `emby.py`, `jellyfin.py`, `fnos.py`, `media_server.py` |
+| Repository/Domain | `search_repository.py`, `media_repository.py`, `download.py`, `word.py` |
+| Message/Plugins | `message_builder.py`, `doubanrank/plugin.py`, `doubansync/plugin.py` |
+| Agent | `tool_executor.py` |
 
-### Phase 3：API 和 Service 层改造
+### Phase 4：前端适配（待前端仓库实施）
 
-6. **API Router 改造**
-   - `media.py` — API 返回直接使用 `media_type.value`
-   - `search.py` — 返回 `movie` / `tv` / `anime`
-   - `rss.py` — 返回标准格式
-
-7. **Service 层改造**
-   - `search_service.py` — 删除 `getattr(x, "type", None) in (MediaType.TV, MediaType.ANIME)` 中的字符串比较
-   - `rss_core.py` — 统一使用枚举比较
-   - `download_strategies.py` — 统一使用枚举比较
-   - `media/service.py` — 删除 `MediaType.MOVIE.value` 等混用
-
-8. **外部接口改造**
-   - `tmdb_lookup.py` — 使用 `MediaTypeMapper.to_tmdb()`
-   - `html_searcher.py` — 使用 `MediaTypeMapper.to_site_cat()` / `from_site_cat()`
-   - `indexer/` — 统一使用枚举值
-
-### Phase 4：前端适配
-
-9. **前端类型映射**
-   - 前端接收 `movie` / `tv` / `anime`，通过映射表转为中文展示
-   - 删除前端所有硬编码 `"MOV"` / `"TV"` / `"ANI"` 判断
-
-10. **前端本地化**
-    - `zh-CN/page.json` 中添加媒体类型映射：
-    ```json
-    {
-      "media_type": {
-        "movie": "电影",
-        "tv": "电视剧",
-        "anime": "动漫",
-        "unknown": "未知"
-      }
+- 前端接收 `movie` / `tv` / `anime`，通过映射表转为中文展示
+- 删除前端所有硬编码 `"MOV"` / `"TV"` / `"ANI"` 判断
+- `zh-CN/page.json` 中添加 `media_type` 映射：
+  ```json
+  {
+    "media_type": {
+      "movie": "电影",
+      "tv": "电视剧",
+      "anime": "动漫",
+      "unknown": "未知"
     }
-    ```
-
-11. **前端组件改造**
-    - 所有显示媒体类型的组件使用 `t('media_type.' + type)` 而非硬编码
-    - 搜索/筛选条件使用小写英文作为 value
+  }
+  ```
 
 ---
 
 ## 决策
 
-等待 review 后按 Phase 逐步实施。
+按本方案四阶段全部实施。
 
 ---
 
@@ -369,8 +317,14 @@ ALTER TABLE rss_movie ADD CONSTRAINT chk_type CHECK (type IN ('movie', 'tv', 'an
 grep -r '"电影"\|"剧集"\|"动漫"\|"MOV"\|"ANI"\|"movie"\|"tv"\|"anime"' src/ --include="*.py" | grep -v "display_name"
 
 # 2. 检查数据库 TYPE 字段是否统一
-# SQL: SELECT DISTINCT type FROM rss_movie UNION SELECT DISTINCT type FROM rss_tv;
+# SQL: SELECT DISTINCT type FROM subscribe_movies UNION SELECT DISTINCT type FROM subscribe_tvs;
 
 # 3. 检查 API 返回是否统一
 # curl /api/media/list | jq '.data[].type' | sort | uniq
 ```
+
+### 质量检查结果
+
+- `ruff check src/ tests/` — 通过
+- `pyright src/ tests/` — 0 errors
+- `pytest tests/ -v` — 621 passed, 0 failed

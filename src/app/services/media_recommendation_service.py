@@ -4,7 +4,7 @@ from app.media import Bangumi, DouBan, MediaService
 from app.mediaserver import MediaServer
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils.media_utils import check_media_exists
-from app.utils.types import MediaType, MovieTypes
+from app.utils.types import MediaType
 from app.utils.web_utils import WebUtils
 
 
@@ -36,7 +36,7 @@ class MediaRecommendationService:
         current_page = int(data.get("page", 1))
         res_list = []
 
-        if type_ in ["MOV", "TV", "ALL"]:
+        if type_ in [MediaType.MOVIE.value, MediaType.TV.value, "ALL"]:
             if subtype == "hm":
                 res_list = self._media.get_tmdb_hot_movies(current_page)
             elif subtype == "ht":
@@ -102,11 +102,11 @@ class MediaRecommendationService:
         elif type_ == "TRENDING":
             res_list = self._media.get_tmdb_trending_all_week(page=current_page)
         elif type_ == "DISCOVER":
-            mtype = MediaType.MOVIE if subtype in MovieTypes else MediaType.TV
+            mtype = MediaType.MOVIE if MediaType.from_string(subtype or "") == MediaType.MOVIE else MediaType.TV
             params = data.get("params") or {}
             res_list = self._media.get_tmdb_discover(mtype=mtype, page=current_page, params=params)
         elif type_ == "DOUBANTAG":
-            mtype = MediaType.MOVIE if subtype in MovieTypes else MediaType.TV
+            mtype = MediaType.MOVIE if MediaType.from_string(subtype or "") == MediaType.MOVIE else MediaType.TV
             params = data.get("params") or {}
             sort = params.get("sort") or "R"
             tags = params.get("tags") or ""
@@ -142,8 +142,8 @@ class MediaRecommendationService:
                 "orgid": item.TMDBID,
                 "tmdbid": item.TMDBID,
                 "title": item.TITLE,
-                "type": "MOV" if item.TYPE == "电影" else "TV",
-                "media_type": item.TYPE,
+                "type": MediaType.from_string(item.TYPE).value,
+                "media_type": MediaType.from_string(item.TYPE).display_name,
                 "year": item.YEAR,
                 "vote": item.VOTE,
                 "image": item.POSTER,

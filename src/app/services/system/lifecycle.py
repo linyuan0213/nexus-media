@@ -121,6 +121,8 @@ class SystemLifecycleService:
         self._brush.start_service()
         self._rss_checker._refresh()
         self._torrent_remover.start_service()
+        # 4. 启动下载完成实时监控（事件驱动转移）
+        container.download_monitor().start()
 
     def stop_service(self) -> None:
         """停止所有后台服务"""
@@ -137,6 +139,7 @@ class SystemLifecycleService:
             self._downloader.stop_service()
         if self._file_index:
             self._file_index.stop()
+        container.download_monitor().stop()
 
     def restart_service(self) -> None:
         """重启所有后台服务"""

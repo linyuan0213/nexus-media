@@ -307,7 +307,7 @@ class Searcher:
 
         if self.progress is None:
             return None, no_exists, 0, 0
-        self.progress.start(ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search)
+        self.progress.start(ProgressKey.SubscribeSearch if in_from == SearchType.SUBSCRIBE else ProgressKey.Search)
 
         # 季/集信息
         search_season = None if media_info.begin_season is None else media_info.get_season_list()
@@ -342,7 +342,7 @@ class Searcher:
                 if self.progress is None:
                     return
                 self.progress.update(
-                    ptype=ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search,
+                    ptype=ProgressKey.SubscribeSearch if in_from == SearchType.SUBSCRIBE else ProgressKey.Search,
                     value=round(100 * (finish_count / total)),
                 )
 

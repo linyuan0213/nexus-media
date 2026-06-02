@@ -80,7 +80,7 @@ class Bangumi:
             "orgid": bid,
             "title": title,
             "year": air_date[:4] if air_date else "",
-            "type": "TV",
+            "type": "tv",
             "media_type": MediaType.TV.value,
             "vote": score,
             "image": image,

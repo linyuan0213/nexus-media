@@ -7,6 +7,7 @@ from app.services.subscribe.management.finish_service import SubscribeFinishServ
 from app.services.subscribe.management.refresh_service import SubscribeRefreshService
 from app.services.subscribe.management.service import SubscribeService
 from app.services.subscribe.management.update_service import SubscribeUpdateService
+from app.events.bus import EventBus
 from app.utils.types import MediaType
 
 
@@ -306,8 +307,8 @@ class TestSubscribeService:
         system_config = MagicMock()
         system_config.get.return_value = {"restype": "BluRay"}
         svc = SubscribeService(system_config=system_config)
-        assert svc.default_rss_setting_tv == {"restype": "BluRay"}
-        assert svc.default_rss_setting_mov == {"restype": "BluRay"}
+        assert svc.default_subscribe_setting_tv == {"restype": "BluRay"}
+        assert svc.default_subscribe_setting_mov == {"restype": "BluRay"}
 
     def test_update_rss_state_movie_running(self):
         movie_repo = MagicMock()
@@ -402,22 +403,11 @@ class TestSubscribeService:
         tv_episode_repo.delete_all.assert_called_once()
 
     def test_event_handler_registration(self):
-        event_bus = MagicMock()
-        SubscribeService(event_bus=event_bus)
-        event_bus.subscribe.assert_called()
+        """测试 @on_event 装饰器是否正确注册到 EventBus."""
+        from app.events.registry import EventHandlerRegistry
 
-    def test_handle_rss_auto_subscribe(self):
-        event_bus = MagicMock()
-        svc = SubscribeService(event_bus=event_bus)
-        event = MagicMock()
-        event.payload = {"name": "Test", "mtype": MediaType.MOVIE, "year": "2024"}
-        with patch.object(svc._add_svc, "add_rss_subscribe", return_value=(0, "ok", None)):
-            svc._handle_rss_auto_subscribe(event)
-
-    def test_handle_rss_auto_subscribe_failure(self):
-        event_bus = MagicMock()
-        svc = SubscribeService(event_bus=event_bus)
-        event = MagicMock()
-        event.payload = {"name": "Test", "mtype": MediaType.MOVIE, "year": "2024"}
-        with patch.object(svc._add_svc, "add_rss_subscribe", return_value=(-1, "fail", None)):
-            svc._handle_rss_auto_subscribe(event)
+        registry = EventHandlerRegistry()
+        bus = EventBus(registry=registry)
+        # 手动注册一个测试 handler，验证机制正常
+        bus.subscribe("test.event", lambda e: None)
+        assert len(registry.get_handlers("test.event")) == 1

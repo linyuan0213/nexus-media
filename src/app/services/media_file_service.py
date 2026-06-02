@@ -16,7 +16,7 @@ from app.storage.backends.base import StorageType
 from app.storage.config_models import LocalStorageConfig
 from app.utils import SystemUtils
 from app.utils.path_utils import get_category_path
-from app.utils.types import OsType
+from app.utils.types import MediaType, OsType
 
 
 class MediaFileService:
@@ -136,15 +136,19 @@ class MediaFileService:
         anime_backend = media.get("anime_backend") or []
 
         for i, p in enumerate(movie_paths):
-            item = _make_path(p, "电影", "movie", movie_backend[i] if i < len(movie_backend) else "local")
+            item = _make_path(
+                p, MediaType.MOVIE.display_name, "movie", movie_backend[i] if i < len(movie_backend) else "local"
+            )
             if item:
                 library_paths.append(item)
         for i, p in enumerate(tv_paths):
-            item = _make_path(p, "电视剧", "tv", tv_backend[i] if i < len(tv_backend) else "local")
+            item = _make_path(p, MediaType.TV.display_name, "tv", tv_backend[i] if i < len(tv_backend) else "local")
             if item:
                 library_paths.append(item)
         for i, p in enumerate(anime_paths):
-            item = _make_path(p, "动漫", "anime", anime_backend[i] if i < len(anime_backend) else "local")
+            item = _make_path(
+                p, MediaType.ANIME.display_name, "anime", anime_backend[i] if i < len(anime_backend) else "local"
+            )
             if item:
                 library_paths.append(item)
         library_paths = _dedupe(library_paths, seen_lib)

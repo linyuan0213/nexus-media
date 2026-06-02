@@ -7,6 +7,7 @@ from app.schemas.media import MediaSearchResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import StringUtils
 from app.utils.media_utils import check_media_exists
+from app.utils.types import MediaType
 from app.di import container
 
 
@@ -43,8 +44,9 @@ class SearchResultService:
             if item.YEAR:
                 title_string = f"{title_string} ({item.YEAR})"
             mtype = item.TYPE or ""
-            se_key = item.ES_STRING if item.ES_STRING and mtype != "MOV" else "MOV"
-            media_type = {"MOV": "电影", "TV": "电视剧", "ANI": "动漫"}.get(mtype)
+            parsed_mtype = MediaType.from_string(mtype)
+            se_key = item.ES_STRING if item.ES_STRING and parsed_mtype != MediaType.MOVIE else MediaType.MOVIE.value
+            media_type = parsed_mtype.display_name if parsed_mtype != MediaType.UNKNOWN else None
             labels = [
                 label
                 for label in str(item.NOTE).split("|")
@@ -73,7 +75,7 @@ class SearchResultService:
                 "name": MediaInfo.get_free_string(item.UPLOAD_VOLUME_FACTOR, item.DOWNLOAD_VOLUME_FACTOR),
             }
             releasegroup = item.OTHERINFO if item.OTHERINFO is not None else "未知"
-            filter_season = se_key.split()[0] if se_key and se_key not in ["MOV", "TV"] else None
+            filter_season = se_key.split()[0] if se_key and se_key != MediaType.MOVIE.value else None
 
             if search_results_dict.get(title_string):
                 self._merge_into_existing(

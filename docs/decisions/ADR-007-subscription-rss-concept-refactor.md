@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Date
 
@@ -161,22 +161,24 @@ Proposed
 app/services/
 ├── rss_core.py                 ├── subscribe/
 │   (class Rss)                 │   ├── monitor.py          ← 统一调度器
+│                               │   ├── coordinator.py      ← 下载协调器
+│                               │   ├── matcher.py          ← 订阅匹配器
+│                               │   ├── search_engine.py    ← 手动搜索 facade
 │                               │   ├── strategies/
+│                               │   │   ├── base_search.py  ← 搜索策略基类
 │                               │   │   ├── rss_feed.py     ← RSS 轮询策略
 │                               │   │   ├── indexer_search.py ← 主动搜索策略
 │                               │   │   └── queue_search.py   ← 队列搜索策略
-│                               │   └── coordinator.py      ← 下载协调器
-│                               │
-│                               ├── management/
-│                               │   ├── add_service.py       ← 添加订阅
-│                               │   ├── update_service.py    ← 更新订阅设置
-│                               │   ├── finish_service.py    ← 完成订阅
-│                               │   ├── query_service.py     ← 查询订阅列表/详情
-│                               │   ├── history_service.py   ← 订阅历史 CRUD
-│                               │   └── calendar_service.py  ← 订阅日历事件
-│                               │
-│                               └── search_engine.py         ← 手动搜索 facade
-│                                   (前端用户触发的单媒体搜索，如搜索"石纪元")
+│                               │   └── management/
+│                               │       ├── add_service.py       ← 添加订阅
+│                               │       ├── update_service.py    ← 更新订阅设置
+│                               │       ├── finish_service.py    ← 完成订阅
+│                               │       ├── query_service.py     ← 查询订阅列表/详情
+│                               │       ├── history_service.py   ← 订阅历史 CRUD
+│                               │       ├── calendar_service.py  ← 订阅日历事件
+│                               │       ├── refresh_service.py   ← 刷新订阅搜索
+│                               │       ├── service.py           ← 订阅管理 facade
+│                               │       └── utils.py             ← 订阅工具方法
 │
 ├── rss/                        ├── rss_automation/           ← 原 rss/ (自定义RSS)
 │   ├── task_service.py         │   ├── task_service.py      ← 任务调度管理
@@ -197,10 +199,11 @@ app/api/routers/
 | 模块 | 职责 | 与订阅的关系 |
 |------|------|-------------|
 | `subscribe/monitor.py` | 统一调度器，按策略分时触发 | 核心入口 |
-| `subscribe/strategies/` | RSS 轮询、主动搜索、队列搜索三种策略 | 被 monitor 调用 |
 | `subscribe/coordinator.py` | 下载锁、去重、优先级排序 | 被 strategies 调用 |
-| `subscribe/management/` | 订阅的添加、完成、更新、查询 | 被 monitor 和 API 调用 |
+| `subscribe/matcher.py` | 订阅匹配器（判断种子是否命中订阅） | 被 monitor 调用 |
 | `subscribe/search_engine.py` | 手动搜索 facade（用户前端触发） | 独立服务，不直接参与自动下载 |
+| `subscribe/strategies/` | RSS 轮询、主动搜索、队列搜索三种策略 | 被 monitor 调用 |
+| `subscribe/management/` | 订阅的添加、完成、更新、查询、历史、日历 | 被 monitor 和 API 调用 |
 | `rss_automation/` | 用户自定义 RSS URL 的自动化任务 | **完全独立**，与订阅无耦合 |
 
 ### 数据库表重命名（可选，长期）

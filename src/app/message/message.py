@@ -134,8 +134,8 @@ class Message:
     def send_download_fail_message(self, item, error_msg: str) -> None:
         self._builder.send_download_fail_message(item, error_msg)
 
-    def send_rss_success_message(self, in_from, media_info) -> None:
-        self._builder.send_rss_success_message(in_from, media_info)
+    def send_subscribe_success_message(self, in_from, media_info) -> None:
+        self._builder.send_subscribe_success_message(in_from, media_info)
 
     def send_rss_finished_message(self, media_info) -> None:
         self._builder.send_rss_finished_message(media_info)

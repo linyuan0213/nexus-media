@@ -1,6 +1,6 @@
 """
-RSS领域 Repository 接口（Python Protocol）
-定义 RssMovie/RssTv/RssHistory 的仓储契约
+订阅领域 Repository 接口（Python Protocol）
+定义 SubscribeMovie/SubscribeTv/SubscribeHistory 的仓储契约
 """
 
 from typing import Protocol
@@ -12,8 +12,8 @@ from app.domain.entities.rss import (
 )
 
 
-class IRssMovieRepository(Protocol):
-    """RSS电影订阅仓储接口"""
+class ISubscribeMovieRepository(Protocol):
+    """订阅电影仓储接口"""
 
     def get_all(self, state: str | None = None, rssid: int | None = None) -> list[SubscribeMovieEntity]:
         """查询订阅电影列表"""
@@ -24,7 +24,7 @@ class IRssMovieRepository(Protocol):
         ...
 
     def is_exists(self, title: str, year: str) -> bool:
-        """判断RSS电影是否存在"""
+        """判断订阅电影是否存在"""
         ...
 
     def update_tmdb(self, rid: int, tmdbid: str, title: str, year: str, image: str, desc: str, note: str) -> None:
@@ -67,18 +67,18 @@ class IRssMovieRepository(Protocol):
         note=None,
         keyword=None,
     ) -> int:
-        """插入RSS电影"""
+        """插入订阅电影"""
         ...
 
     def delete(
         self, title: str | None = None, year: str | None = None, rssid: int | None = None, tmdbid: str | None = None
     ) -> None:
-        """删除RSS电影"""
+        """删除订阅电影"""
         ...
 
 
-class IRssTvRepository(Protocol):
-    """RSS剧集订阅仓储接口"""
+class ISubscribeTvRepository(Protocol):
+    """订阅剧集仓储接口"""
 
     def get_all(self, state: str | None = None, rssid: int | None = None) -> list[SubscribeTvEntity]:
         """查询订阅剧集列表"""
@@ -91,7 +91,7 @@ class IRssTvRepository(Protocol):
         ...
 
     def is_exists(self, title: str, year: str, season: str | None = None) -> bool:
-        """判断RSS剧集是否存在"""
+        """判断订阅剧集是否存在"""
         ...
 
     def update_tmdb(
@@ -130,7 +130,7 @@ class IRssTvRepository(Protocol):
         ...
 
     def update(self, rssid: int, **kwargs) -> int:
-        """更新RSS剧集字段（支持 current_ep, lack, state 等）"""
+        """更新订阅剧集字段（支持 current_ep, lack, state 等）"""
         ...
 
     def insert(
@@ -157,18 +157,18 @@ class IRssTvRepository(Protocol):
         note=None,
         keyword=None,
     ) -> int:
-        """插入RSS剧集"""
+        """插入订阅剧集"""
         ...
 
     def delete(
         self, title: str | None = None, season: str | None = None, rssid: int | None = None, tmdbid: str | None = None
     ) -> None:
-        """删除RSS剧集"""
+        """删除订阅剧集"""
         ...
 
 
-class IRssTvEpisodeRepository(Protocol):
-    """RSS剧集分集仓储接口"""
+class ISubscribeTvEpisodeRepository(Protocol):
+    """订阅剧集分集仓储接口"""
 
     def is_exists(self, rid: int) -> bool:
         """判断是否存在"""
@@ -191,11 +191,11 @@ class IRssTvEpisodeRepository(Protocol):
         ...
 
 
-class IRssHistoryRepository(Protocol):
-    """RSS历史仓储接口"""
+class ISubscribeHistoryRepository(Protocol):
+    """订阅历史仓储接口"""
 
     def get_all(self, rtype: str | None = None, rid: int | None = None) -> list[SubscribeHistoryEntity]:
-        """查询RSS历史"""
+        """查询订阅历史"""
         ...
 
     def is_exists(self, rssid: str) -> bool:

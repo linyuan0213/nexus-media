@@ -25,7 +25,7 @@ class SubscribeHistoryService:
         history = self._history_repo.get_all(rtype=rtype, rid=int(rssid) if rssid else None)
         if not history:
             return -1, "订阅历史记录不存在"
-        mtype = MediaType.MOVIE if rtype == "MOV" else MediaType.TV
+        mtype = MediaType.MOVIE if rtype == MediaType.MOVIE.value else MediaType.TV
         if history[0].season:
             season = int(str(history[0].season).replace("S", ""))
         else:

@@ -2,10 +2,33 @@ from enum import Enum
 
 
 class MediaType(Enum):
-    TV = "电视剧"
-    MOVIE = "电影"
-    ANIME = "动漫"
-    UNKNOWN = "未知"
+    TV = "tv"
+    MOVIE = "movie"
+    ANIME = "anime"
+    UNKNOWN = "unknown"
+
+    @property
+    def display_name(self) -> str:
+        return _MEDIA_TYPE_DISPLAY_NAMES.get(self, "未知")
+
+    @classmethod
+    def from_string(cls, value: str) -> "MediaType":
+        normalized = str(value).strip().lower()
+        for member in cls:
+            if member.value == normalized:
+                return member
+        return cls.UNKNOWN
+
+    def __str__(self) -> str:
+        return self.value
+
+
+_MEDIA_TYPE_DISPLAY_NAMES: dict[MediaType, str] = {
+    MediaType.MOVIE: "电影",
+    MediaType.TV: "电视剧",
+    MediaType.ANIME: "动漫",
+    MediaType.UNKNOWN: "未知",
+}
 
 
 class SyncType(Enum):
@@ -17,7 +40,7 @@ class SearchType(Enum):
     WX = "微信"
     WEB = "WEB"
     DB = "豆瓣"
-    RSS = "电影/电视剧订阅"
+    SUBSCRIBE = "订阅"
     USERRSS = "自定义订阅"
     OT = "手动下载"
     TG = "Telegram"
@@ -78,9 +101,9 @@ class SystemConfigKey(Enum):
     # 默认下载设置
     DefaultDownloadSetting = "DefaultDownloadSetting"
     # 默认电影订阅设置
-    DefaultRssSettingMOV = "DefaultRssSettingMOV"
+    DefaultSubscribeSettingMOV = "DefaultSubscribeSettingMOV"
     # 默认电视剧订阅设置
-    DefaultRssSettingTV = "DefaultRssSettingTV"
+    DefaultSubscribeSettingTV = "DefaultSubscribeSettingTV"
     # 用户已安装的插件
     UserInstalledPlugins = "UserInstalledPlugins"
     # 已安装插件汇报状态
@@ -100,7 +123,7 @@ class ProgressKey(Enum):
     # 搜索
     Search = "search"
     # RSS订阅搜索
-    RssSearch = "rsssearch"
+    SubscribeSearch = "rsssearch"
     # 转移
     FileTransfer = "filetransfer"
     # 媒体库同步
@@ -109,14 +132,8 @@ class ProgressKey(Enum):
     SiteCookie = "sitecookie"
 
 
-class RssType(Enum):
+class SubscribeType(Enum):
     # 手动
     Manual = "manual"
     # 自动
     Auto = "auto"
-
-
-# 电影类型关键字
-MovieTypes = ["MOV", "电影", MediaType.MOVIE]
-# 电视剧类型关键字
-TvTypes = ["TV", "电视剧", MediaType.TV]

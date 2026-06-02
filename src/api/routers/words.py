@@ -14,6 +14,7 @@ from app.schemas.common import CommonResponse
 from app.services.words_service import WordsService
 from app.utils import ExceptionUtils
 from app.utils.response import fail, success
+from app.utils.types import MediaType
 
 router = APIRouter()
 
@@ -289,9 +290,10 @@ def get_categories(
     current_user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
     _category = container.category()
-    if req.type == "电影":
+    parsed = MediaType.from_string(req.type)
+    if parsed == MediaType.MOVIE:
         categories = _category.movie_categorys
-    elif req.type == "电视剧":
+    elif parsed == MediaType.TV:
         categories = _category.tv_categorys
     else:
         categories = _category.anime_categorys

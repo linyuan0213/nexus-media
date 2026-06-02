@@ -5,6 +5,7 @@ from app.di import container
 from app.schemas.media import TransferHistoryPageDTO, UnknownListPageDTO
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.sync_service import SyncService
+from app.utils.types import MediaType
 
 
 class TransferHistoryService:
@@ -52,15 +53,16 @@ class TransferHistoryService:
                 continue
             if statistic[1] not in labels:
                 labels.append(statistic[1])
-            if statistic[0] == "电影":
+            parsed = MediaType.from_string(statistic[0])
+            if parsed == MediaType.MOVIE:
                 movie_nums.append(statistic[2])
                 tv_nums.append(0)
                 anime_nums.append(0)
-            elif statistic[0] == "电视剧":
+            elif parsed == MediaType.TV:
                 tv_nums.append(statistic[2])
                 movie_nums.append(0)
                 anime_nums.append(0)
-            else:
+            elif parsed == MediaType.ANIME:
                 anime_nums.append(statistic[2])
                 movie_nums.append(0)
                 tv_nums.append(0)

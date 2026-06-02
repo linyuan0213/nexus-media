@@ -15,6 +15,7 @@ from app.media import meta_info
 from app.services.rss_automation.parser import RssParserEngine
 from app.utils import ExceptionUtils, RequestUtils
 from app.utils.config_tools import get_proxies
+from app.utils.media_type_utils import MediaTypeMapper
 from app.utils.types import MediaType, SearchType
 
 
@@ -49,7 +50,7 @@ def _check_task_rss(service, taskid: int | None) -> None:
                 year = year[:4]
             mediatype = res.get("type")
             if mediatype:
-                mediatype = MediaType.MOVIE if mediatype == "movie" else MediaType.TV
+                mediatype = MediaType.from_string(mediatype)
 
             log.info(f"[RssTaskService]开始处理：{title}")
 
@@ -134,7 +135,7 @@ def _check_task_rss(service, taskid: int | None) -> None:
                     log.info(f"[RssTaskService]{match_msg}")
                     continue
                 if service.rss_repo.check_rss_history(
-                    type_str="MOV" if media_info.type == MediaType.MOVIE else "TV",
+                    type_str=MediaTypeMapper.to_tmdb(media_info.type),
                     name=media_info.title,
                     year=media_info.year,
                     season=media_info.get_season_string(),

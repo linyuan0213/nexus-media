@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
-from app.utils.types import MediaType, MovieTypes
+from app.utils.types import MediaType
 from app.di import container
 
 
@@ -41,7 +41,7 @@ class MediaInfoRepository:
     def _to_record(entity) -> MediaRecord | None:
         if not entity or not entity.tmdb_id:
             return None
-        mtype = MediaType.MOVIE if entity.type in MovieTypes else MediaType.TV
+        mtype = MediaType.MOVIE if entity.type == MediaType.MOVIE.value else MediaType.TV
         return MediaRecord(
             tmdbid=str(entity.tmdb_id),
             type=mtype,

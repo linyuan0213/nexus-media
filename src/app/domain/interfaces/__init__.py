@@ -28,10 +28,10 @@ from app.domain.interfaces.rbac_repo import (
     IRBACUserRepository,
 )
 from app.domain.interfaces.rss_repo import (
-    IRssHistoryRepository,
-    IRssMovieRepository,
-    IRssTvEpisodeRepository,
-    IRssTvRepository,
+    ISubscribeHistoryRepository,
+    ISubscribeMovieRepository,
+    ISubscribeTvEpisodeRepository,
+    ISubscribeTvRepository,
 )
 from app.domain.interfaces.search_repo import ISearchRepository
 from app.domain.interfaces.site_repo import (
@@ -58,10 +58,10 @@ __all__ = [
     "IDownloadHistoryRepository",
     "IDownloadSettingRepository",
     "IIndexerStatisticsRepository",
-    "IRssMovieRepository",
-    "IRssTvRepository",
-    "IRssTvEpisodeRepository",
-    "IRssHistoryRepository",
+    "ISubscribeMovieRepository",
+    "ISubscribeTvRepository",
+    "ISubscribeTvEpisodeRepository",
+    "ISubscribeHistoryRepository",
     "ITransferHistoryRepository",
     "ITransferUnknownRepository",
     "ITransferBlacklistRepository",

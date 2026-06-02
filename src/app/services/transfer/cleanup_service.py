@@ -175,7 +175,7 @@ class TransferCleanupService:
                     mi.year = str(transinfo.YEAR or "")
                     if str(transinfo.SEASON_EPISODE or ""):
                         mi.begin_season = int(str(transinfo.SEASON_EPISODE).replace("S", ""))
-                    if MediaType.MOVIE.value == transinfo.TYPE:
+                    if MediaType.from_string(transinfo.TYPE) == MediaType.MOVIE:
                         mi.type = MediaType.MOVIE
                     else:
                         mi.type = MediaType.TV

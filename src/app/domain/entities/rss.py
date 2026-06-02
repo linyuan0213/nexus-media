@@ -1,6 +1,6 @@
 """
-RSS领域实体
-定义RSS历史、电影订阅、种子、剧集订阅、剧集分集的领域模型
+订阅领域实体
+定义订阅历史、电影订阅、种子、剧集订阅、剧集分集的领域模型
 """
 
 from dataclasses import dataclass, fields
@@ -39,11 +39,11 @@ class SubscribeState(Enum):
 
 @dataclass
 class SubscribeHistoryEntity:
-    """RSS历史记录实体"""
+    """订阅历史记录实体"""
 
     id: int
-    rss_type: str
-    rss_id: str
+    subscribe_type: str
+    subscribe_id: str
     name: str
     year: str
     tmdb_id: str
@@ -61,8 +61,8 @@ class SubscribeHistoryEntity:
             return None
         return cls(
             id=orm_model.ID,
-            rss_type=orm_model.TYPE or "",
-            rss_id=orm_model.RSSID or "",
+            subscribe_type=orm_model.TYPE or "",
+            subscribe_id=orm_model.RSSID or "",
             name=orm_model.NAME or "",
             year=orm_model.YEAR or "",
             tmdb_id=orm_model.TMDBID or "",
@@ -94,8 +94,8 @@ class SubscribeHistoryEntity:
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
-            "type": self.rss_type,
-            "rssid": self.rss_id,
+            "type": self.subscribe_type,
+            "rssid": self.subscribe_id,
             "name": self.name,
             "year": self.year,
             "tmdbid": self.tmdb_id,
@@ -111,7 +111,7 @@ class SubscribeHistoryEntity:
 
 @dataclass
 class SubscribeMovieEntity:
-    """RSS电影订阅实体"""
+    """订阅电影订阅实体"""
 
     id: int
     name: str
@@ -119,7 +119,7 @@ class SubscribeMovieEntity:
     keyword: str
     tmdb_id: str
     image: str
-    rss_sites: str
+    subscribe_sites: str
     search_sites: str
     over_edition: bool
     filter_order: int
@@ -215,7 +215,7 @@ class SubscribeMovieEntity:
             keyword=orm_model.KEYWORD or "",
             tmdb_id=orm_model.TMDBID or "",
             image=orm_model.IMAGE or "",
-            rss_sites=orm_model.RSS_SITES or "",
+            subscribe_sites=orm_model.RSS_SITES or "",
             search_sites=orm_model.SEARCH_SITES or "",
             over_edition=bool(orm_model.OVER_EDITION),
             filter_order=orm_model.FILTER_ORDER or 0,
@@ -256,7 +256,7 @@ class SubscribeMovieEntity:
             "keyword": self.keyword,
             "tmdbid": self.tmdb_id,
             "image": self.image,
-            "rss_sites": self.rss_sites,
+            "rss_sites": self.subscribe_sites,
             "search_sites": self.search_sites,
             "over_edition": self.over_edition,
             "filter_order": self.filter_order,
@@ -277,12 +277,12 @@ class SubscribeMovieEntity:
 
 @dataclass
 class SubscribeTorrentEntity:
-    """RSS种子记录实体"""
+    """订阅种子记录实体"""
 
     id: int
     torrent_name: str
     enclosure: str
-    rss_type: str
+    subscribe_type: str
     title: str
     year: str
     season: str
@@ -296,7 +296,7 @@ class SubscribeTorrentEntity:
             id=orm_model.ID,
             torrent_name=orm_model.TORRENT_NAME or "",
             enclosure=orm_model.ENCLOSURE or "",
-            rss_type=orm_model.TYPE or "",
+            subscribe_type=orm_model.TYPE or "",
             title=orm_model.TITLE or "",
             year=orm_model.YEAR or "",
             season=orm_model.SEASON or "",
@@ -322,7 +322,7 @@ class SubscribeTorrentEntity:
             "id": self.id,
             "torrent_name": self.torrent_name,
             "enclosure": self.enclosure,
-            "type": self.rss_type,
+            "type": self.subscribe_type,
             "title": self.title,
             "year": self.year,
             "season": self.season,
@@ -332,7 +332,7 @@ class SubscribeTorrentEntity:
 
 @dataclass
 class SubscribeTvEntity:
-    """RSS剧集订阅实体"""
+    """订阅剧集订阅实体"""
 
     id: int
     name: str
@@ -341,7 +341,7 @@ class SubscribeTvEntity:
     season: str
     tmdb_id: str
     image: str
-    rss_sites: str
+    subscribe_sites: str
     search_sites: str
     over_edition: bool
     filter_order: int
@@ -457,7 +457,7 @@ class SubscribeTvEntity:
             season=orm_model.SEASON or "",
             tmdb_id=orm_model.TMDBID or "",
             image=orm_model.IMAGE or "",
-            rss_sites=orm_model.RSS_SITES or "",
+            subscribe_sites=orm_model.RSS_SITES or "",
             search_sites=orm_model.SEARCH_SITES or "",
             over_edition=bool(orm_model.OVER_EDITION),
             filter_order=orm_model.FILTER_ORDER or 0,
@@ -503,7 +503,7 @@ class SubscribeTvEntity:
             "season": self.season,
             "tmdbid": self.tmdb_id,
             "image": self.image,
-            "rss_sites": self.rss_sites,
+            "rss_sites": self.subscribe_sites,
             "search_sites": self.search_sites,
             "over_edition": self.over_edition,
             "filter_order": self.filter_order,
@@ -528,17 +528,17 @@ class SubscribeTvEntity:
 
 @dataclass
 class SubscribeTvEpisodeEntity:
-    """RSS剧集分集实体"""
+    """订阅剧集分集实体"""
 
     id: int
-    rss_id: str
+    subscribe_id: str
     episodes: str
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["SubscribeTvEpisodeEntity"]:
         if orm_model is None:
             return None
-        return cls(id=orm_model.ID, rss_id=orm_model.RSSID or "", episodes=orm_model.EPISODES or "")
+        return cls(id=orm_model.ID, subscribe_id=orm_model.RSSID or "", episodes=orm_model.EPISODES or "")
 
     # 从 ORM 列名到 dataclass 字段名的映射
     _ORM_FIELD_MAP = {
@@ -557,6 +557,6 @@ class SubscribeTvEpisodeEntity:
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
-            "rssid": self.rss_id,
+            "rssid": self.subscribe_id,
             "episodes": self.episodes,
         }

@@ -190,7 +190,7 @@ class DoubanRankPlugin:
                         continue
 
                     if self._subscribe.check_history(
-                        type_str="MOV" if media_info.type == MediaType.MOVIE else "TV",
+                        type_str="movie" if media_info.type == MediaType.MOVIE else "tv",
                         name=media_info.title or "",
                         year=media_info.year,
                         season=media_info.get_season_string(),

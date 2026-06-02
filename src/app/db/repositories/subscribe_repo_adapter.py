@@ -40,7 +40,7 @@ class SubscribeMovieRepositoryAdapter:
         self._repo.update_rss_movie_state(title, year, rssid, state)
 
     # 兼容旧Repository方法名
-    def update_rss_movie_state(self, title=None, year=None, rssid=None, state="R") -> None:
+    def update_subscribe_movie_state(self, title=None, year=None, rssid=None, state="R") -> None:
         self.update_state(title, year, rssid, state)
 
     def update(self, rssid: int, **kwargs) -> int:
@@ -138,7 +138,7 @@ class SubscribeTvRepositoryAdapter:
         self._repo.update_rss_tv_state(title, year, season, rssid, state)
 
     # 兼容旧Repository方法名
-    def update_rss_tv_state(self, title=None, year=None, season=None, rssid=None, state="R") -> None:
+    def update_subscribe_tv_state(self, title=None, year=None, season=None, rssid=None, state="R") -> None:
         self.update_state(title, year, season, rssid, state)
 
     def update_lack(
@@ -216,7 +216,7 @@ class SubscribeTvRepositoryAdapter:
         )
 
 
-class RssTvEpisodeRepositoryAdapter:
+class SubscribeTvEpisodeRepositoryAdapter:
     """RSS剧集分集仓储适配器"""
 
     def __init__(self, repo: SubscribeRepository | None = None):

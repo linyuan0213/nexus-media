@@ -203,14 +203,15 @@ class DouBan:
             return []
         ret_medias = []
         for item_obj in result.get("items"):
-            if mtype and mtype.value != item_obj.get("type_name"):
+            parsed_type = MediaType.from_string(item_obj.get("type_name") or "")
+            if mtype and parsed_type != mtype:
                 continue
-            if item_obj.get("type_name") not in (MediaType.TV.value, MediaType.MOVIE.value):
+            if parsed_type not in (MediaType.TV, MediaType.MOVIE):
                 continue
             item = item_obj.get("target")
             mi = meta_info(title=item.get("title"))
             mi.title = item.get("title")
-            if item_obj.get("type_name") == MediaType.MOVIE.value:
+            if parsed_type == MediaType.MOVIE:
                 mi.type = MediaType.MOVIE
             else:
                 mi.type = MediaType.TV
@@ -437,7 +438,7 @@ class DouBan:
                 mtype = media_type
 
             if mtype == MediaType.MOVIE:
-                type_str = "MOV"
+                type_str = "movie"
                 # 海报
                 poster_path = info.get("cover", {}).get("url")
                 if not poster_path:
@@ -445,7 +446,7 @@ class DouBan:
                 if not poster_path:
                     poster_path = info.get("pic", {}).get("large")
             else:
-                type_str = "TV"
+                type_str = "tv"
                 # 海报
                 poster_path = info.get("pic", {}).get("normal")
 

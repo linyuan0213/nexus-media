@@ -7,6 +7,8 @@ import re
 from dataclasses import dataclass
 from typing import Any, Optional
 
+from app.utils.types import MediaType
+
 
 @dataclass
 class DownloaderEntity:
@@ -122,15 +124,15 @@ class DownloadHistoryEntity:
 
     @property
     def is_movie(self) -> bool:
-        return self.media_type == "电影"
+        return self.media_type == MediaType.MOVIE.value
 
     @property
     def is_tv(self) -> bool:
-        return self.media_type == "电视剧"
+        return self.media_type == MediaType.TV.value
 
     @property
     def is_anime(self) -> bool:
-        return self.media_type == "动漫"
+        return self.media_type == MediaType.ANIME.value
 
     @property
     def parsed_season(self) -> int | None:

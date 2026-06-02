@@ -120,7 +120,7 @@ class Indexer:
         if not key_word:
             return []
 
-        progress_key = ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search
+        progress_key = ProgressKey.SubscribeSearch if in_from == SearchType.SUBSCRIBE else ProgressKey.Search
         self._ensure_client()
         if not self._client:
             return []

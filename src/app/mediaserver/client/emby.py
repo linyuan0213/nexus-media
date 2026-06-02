@@ -826,7 +826,7 @@ class Emby(_IMediaClient):
         event_item = {"event": message.get("Event", "")}
         if message.get("Item"):
             if message.get("Item", {}).get("Type") == "Episode":
-                event_item["item_type"] = "TV"
+                event_item["item_type"] = "tv"
                 event_item["item_name"] = "{} {}{} {}".format(
                     message.get("Item", {}).get("SeriesName"),
                     "S" + str(message.get("Item", {}).get("ParentIndexNumber")),
@@ -844,7 +844,7 @@ class Emby(_IMediaClient):
                 event_item["overview"] = file_name
                 event_item["item_id"] = message.get("Item", {}).get("AlbumId")
             else:
-                event_item["item_type"] = "MOV"
+                event_item["item_type"] = "movie"
                 event_item["item_name"] = "{} {}".format(
                     message.get("Item", {}).get("Name"),
                     "(" + str(message.get("Item", {}).get("ProductionYear")) + ")",

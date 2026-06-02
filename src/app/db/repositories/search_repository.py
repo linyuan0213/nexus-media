@@ -52,11 +52,11 @@ class SearchRepository(BaseRepository):
         mappings = []
         for media_item in media_items:
             if media_item.type == MediaType.TV:
-                mtype = "TV"
+                mtype = MediaType.TV.value
             elif media_item.type == MediaType.MOVIE:
-                mtype = "MOV"
+                mtype = MediaType.MOVIE.value
             else:
-                mtype = "ANI"
+                mtype = MediaType.ANIME.value
 
             # 截断超长 ENCLOSURE：去掉磁力链接中多余的 tracker，只保留核心 btih
             enclosure = media_item.enclosure

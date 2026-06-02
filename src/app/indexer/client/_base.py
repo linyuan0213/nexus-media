@@ -80,7 +80,7 @@ class _IIndexClient(metaclass=ABCMeta):
         if filter_args.get("site") and indexer.name not in filter_args.get("site"):
             return []
 
-        progress_key = ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search
+        progress_key = ProgressKey.SubscribeSearch if in_from == SearchType.SUBSCRIBE else ProgressKey.Search
         start_time = datetime.datetime.now()
         log.info(f"[{self.index_type}]开始搜索Indexer：{indexer.name} ...")
 

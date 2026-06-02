@@ -11,6 +11,7 @@ from app.di import container
 from app.services.subscribe.coordinator import DownloadCoordinator
 from app.services.subscribe.search_engine import SubscribeSearchEngine
 from app.services.subscribe.strategies.indexer_search import IndexerSearchStrategy
+from app.utils.types import MediaType
 from app.services.subscribe.strategies.queue_search import QueueSearchStrategy
 from app.services.subscribe.strategies.rss_feed import RssFeedStrategy
 
@@ -164,7 +165,7 @@ class SubscriptionMonitor:
     def refresh_subscription(self, mtype: str, rssid: str) -> None:
         """后台刷新单个订阅搜索."""
         engine = SubscribeSearchEngine(service=container.subscribe_service())
-        if mtype == "MOV":
+        if MediaType.from_string(mtype) == MediaType.MOVIE:
             container.thread_helper().start_thread(engine.subscribe_search_movie, (rssid,))
         else:
             container.thread_helper().start_thread(engine.subscribe_search_tv, (rssid,))

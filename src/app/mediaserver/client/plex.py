@@ -591,7 +591,7 @@ class Plex(_IMediaClient):
         event_item = {"event": message.get("event", "")}
         if message.get("Metadata"):
             if message.get("Metadata", {}).get("type") == "episode":
-                event_item["item_type"] = "TV"
+                event_item["item_type"] = "tv"
                 event_item["item_name"] = "{} {}{} {}".format(
                     message.get("Metadata", {}).get("grandparentTitle"),
                     "S" + str(message.get("Metadata", {}).get("parentIndex")),
@@ -607,7 +607,7 @@ class Plex(_IMediaClient):
                 else:
                     event_item["overview"] = message.get("Metadata", {}).get("summary")
             else:
-                event_item["item_type"] = "MOV" if message.get("Metadata", {}).get("type") == "movie" else "SHOW"
+                event_item["item_type"] = "movie" if message.get("Metadata", {}).get("type") == "movie" else "show"
                 event_item["item_name"] = "{} {}".format(
                     message.get("Metadata", {}).get("title"),
                     "(" + str(message.get("Metadata", {}).get("year")) + ")",

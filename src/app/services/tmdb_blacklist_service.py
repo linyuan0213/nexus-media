@@ -45,11 +45,12 @@ class TmdbBlacklistService:
         items = all_items[start:end]
         formatted_items = []
         for item in items:
+            _mtype = MediaType.from_string(item.MEDIA_TYPE)
             formatted_items.append(
                 {
                     "backdrop_path": item.BACKDROP_PATH,
                     "id": item.ID,
-                    "media_type": "电影" if MediaType.MOVIE.value == item.MEDIA_TYPE else "电视剧",
+                    "media_type": _mtype.display_name,
                     "note": item.NOTE,
                     "poster_path": item.POSTER_PATH,
                     "title": item.TITLE,
@@ -65,11 +66,8 @@ class TmdbBlacklistService:
         :param tmdb_id: TMDB ID
         :param media_type: 媒体类型
         """
-        if media_type == "电视剧":
-            mtype = MediaType.TV
-        elif media_type == "电影":
-            mtype = MediaType.MOVIE
-        else:
+        mtype = MediaType.from_string(media_type)
+        if mtype == MediaType.UNKNOWN:
             mtype = MediaType.UNKNOWN
 
         tmdb_info = self._media.get_tmdb_info(mtype=mtype, tmdbid=tmdb_id)

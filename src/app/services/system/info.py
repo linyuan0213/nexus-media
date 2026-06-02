@@ -20,7 +20,7 @@ from app.schemas.system import (
 from app.services.search_web_service import search_medias_for_web
 from app.utils import RequestUtils
 from app.utils.config_tools import get_proxies
-from app.utils.types import MediaType, MovieTypes, ProgressKey
+from app.utils.types import MediaType, ProgressKey
 from app.utils.web_utils import WebUtils
 from version import APP_VERSION
 
@@ -143,7 +143,7 @@ class WebSearchService:
         if not search_word:
             return WebSearchResultDTO(code=0, msg="")
         if media_type:
-            if media_type in MovieTypes:
+            if MediaType.from_string(media_type) == MediaType.MOVIE:
                 media_type = MediaType.MOVIE
             else:
                 media_type = MediaType.TV

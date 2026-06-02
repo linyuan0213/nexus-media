@@ -152,7 +152,7 @@ class BuiltinIndexer(_IIndexClient):
         - _indexer_order
         - _indexer_public
         """
-        progress_key = ProgressKey.RssSearch if in_from == SearchType.RSS else ProgressKey.Search
+        progress_key = ProgressKey.SubscribeSearch if in_from == SearchType.SUBSCRIBE else ProgressKey.Search
         if not indexer or not key_word:
             return []
 

@@ -48,8 +48,11 @@ RMT_MIN_FILESIZE = 150 * 1024 * 1024
 # 删种检查时间间隔
 AUTO_REMOVE_TORRENTS_INTERVAL = 1800
 
-# 下载文件转移检查时间间隔
-PT_TRANSFER_INTERVAL = 300
+# 下载文件转移高频轮询间隔（DownloadMonitor 实时检测）
+PT_TRANSFER_INTERVAL = 30
+
+# 下载文件转移低频兜底时间间隔（pttransfer，处理事件丢失）
+PT_TRANSFER_INTERVAL_FALLBACK = 1800
 
 # TMDB信息缓存定时保存时间
 METAINFO_SAVE_INTERVAL = 600

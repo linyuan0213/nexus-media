@@ -5,6 +5,7 @@ from typing import Any
 import log
 from app.events import Event
 from app.events.constants import SUBSCRIBE_FINISHED
+from app.utils.media_type_utils import MediaTypeMapper
 from app.utils.types import MediaType
 
 
@@ -22,7 +23,7 @@ class SubscribeFinishService:
         """完成订阅"""
         if not rssid or not media:
             return
-        rtype = "MOV" if media.type == MediaType.MOVIE else "TV"
+        rtype = MediaTypeMapper.to_tmdb(media.type)
         if media.type == MediaType.MOVIE:
             rss = self._movie_repo.get_all(rssid=rssid)
             if not rss:

@@ -4,6 +4,8 @@ import log
 from app.core.settings import settings
 from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.di import container
+from app.events import auto_register, register_modules
+from app.events.config import EVENT_HANDLER_MODULES
 from app.services.rbac_init import init_admin_user
 from app.services.rbac_init import init_rbac_system as rbac_init
 from app.utils import ExceptionUtils
@@ -167,22 +169,24 @@ def init_message_webhook_apikey():
 
 def update_rss_state():
     """
-    初始化时批量重置所有 RSS 订阅状态为 R
+    初始化时批量重置搜索中(S)的订阅为待处理(D)
+    由 SubscriptionMonitor 自动重新启动队列搜索
     """
     try:
         SubscribeRepository().reset_rss_state()
-        log.info("[Initialize]RSS订阅状态已更新为正在订阅")
+        log.info("[Initialize]搜索中订阅已重置为待处理")
     except Exception as e:
-        log.error(f"[Initialize]更新RSS状态失败：{e!s}")
+        log.error(f"[Initialize]重置订阅状态失败：{e!s}")
         ExceptionUtils.exception_traceback(e)
 
 
 def init_event_handlers():
     """
-    初始化事件处理器：创建 SubscribeService 触发显式 handler 注册
+    初始化事件处理器：显式导入 handler 模块触发 @on_event 注册
     """
     try:
-        container.subscribe_service()
+        register_modules(EVENT_HANDLER_MODULES)
+        auto_register(container.event_bus())
         log.info("[Initialize]事件处理器已注册")
     except Exception as e:
         log.error(f"[Initialize]事件处理器注册失败：{e!s}")

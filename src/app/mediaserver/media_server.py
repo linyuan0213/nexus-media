@@ -16,7 +16,7 @@ from app.media import MediaService
 from app.mediaserver.registry import get_all_clients
 from app.message import Message
 from app.utils import ExceptionUtils
-from app.utils.types import MovieTypes, ProgressKey, SystemConfigKey
+from app.utils.types import MediaType, ProgressKey, SystemConfigKey
 
 lock = threading.Lock()
 server_lock = threading.Lock()
@@ -327,7 +327,7 @@ class MediaServer:
             return None
 
         # 剧集没有季时默认为第1季
-        if mtype not in MovieTypes and not season:
+        if mtype != MediaType.MOVIE and not season:
             season = 1
         if season:
             # 匹配剧集是否存在
@@ -378,13 +378,13 @@ class MediaServer:
         if not self.message:
             return
         try:
-            if event_info.get("item_type") == "TV":
+            if event_info.get("item_type") == "tv":
                 image_url = self.get_episode_image_by_id(
                     item_id=event_info.get("item_id"),
                     season_id=event_info.get("season_id"),
                     episode_id=event_info.get("episode_id"),
                 )
-            elif event_info.get("item_type") in ["MOV", "SHOW"]:
+            elif event_info.get("item_type") in ["movie", "show"]:
                 image_url = self.get_remote_image_by_id(item_id=event_info.get("item_id"), image_type="Backdrop")
             elif event_info.get("item_type") == "AUD":
                 image_url = self.get_local_image_by_id(item_id=event_info.get("item_id"))

@@ -30,10 +30,10 @@ class DoubanLookup(BaseLookup):
             return None
 
         for item_obj in items:
-            item_type = item_obj.get("type_name")
-            if item_type not in (MediaType.MOVIE.value, MediaType.TV.value):
+            parsed_type = MediaType.from_string(item_obj.get("type_name") or "")
+            if parsed_type not in (MediaType.MOVIE, MediaType.TV):
                 continue
-            if mtype and mtype.value != item_type:
+            if mtype and parsed_type != mtype:
                 continue
             item = item_obj.get("target")
             if not item:

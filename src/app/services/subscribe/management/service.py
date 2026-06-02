@@ -4,12 +4,11 @@ import log
 from app.db.repositories.subscribe_repo_adapter import (
     SubscribeHistoryRepositoryAdapter,
     SubscribeMovieRepositoryAdapter,
-    RssTvEpisodeRepositoryAdapter,
+    SubscribeTvEpisodeRepositoryAdapter,
     SubscribeTvRepositoryAdapter,
 )
 from app.di import container
 from app.domain.entities.rss import SubscribeState
-from app.events.constants import RSS_AUTO_SUBSCRIBE_REQUESTED
 from app.services.subscribe.management.add_service import SubscribeAddService
 from app.services.subscribe.management.finish_service import SubscribeFinishService
 from app.services.subscribe.management.query_service import SubscribeQueryService
@@ -39,7 +38,7 @@ class SubscribeService:
     ):
         self._movie_repo = movie_repo or SubscribeMovieRepositoryAdapter()
         self._tv_repo = tv_repo or SubscribeTvRepositoryAdapter()
-        self._tv_episode_repo = tv_episode_repo or RssTvEpisodeRepositoryAdapter()
+        self._tv_episode_repo = tv_episode_repo or SubscribeTvEpisodeRepositoryAdapter()
         self._history_repo = history_repo or SubscribeHistoryRepositoryAdapter()
         self._message = message or container.message()
         self._media = media_service or container.media_service()
@@ -69,31 +68,14 @@ class SubscribeService:
             self._indexer_service,
         )
         self._refresh_svc = SubscribeRefreshService(self._movie_repo, self._tv_repo, self._tv_episode_repo, self._media)
-        self._register_event_handlers()
-
-    def _register_event_handlers(self) -> None:
-        """注册事件处理器."""
-        self._event_bus.subscribe(RSS_AUTO_SUBSCRIBE_REQUESTED, self._handle_rss_auto_subscribe)
-
-    def _handle_rss_auto_subscribe(self, event) -> None:
-        """处理自定义 RSS 自动化任务的订阅请求."""
-        payload = event.payload
-        try:
-            code, msg, _ = self.add_rss_subscribe(**payload)
-            if code != 0:
-                log.warn(f"[Subscribe]自定义RSS订阅请求处理失败：{msg}")
-            else:
-                log.info(f"[Subscribe]自定义RSS订阅请求已处理：{payload.get('name')}")
-        except Exception as e:
-            log.error(f"[Subscribe]处理自定义RSS订阅请求失败：{e!s}")
 
     @property
-    def default_rss_setting_tv(self) -> dict | None:
-        return self._system_config.get(SystemConfigKey.DefaultRssSettingTV) or {}
+    def default_subscribe_setting_tv(self) -> dict | None:
+        return self._system_config.get(SystemConfigKey.DefaultSubscribeSettingTV) or {}
 
     @property
-    def default_rss_setting_mov(self) -> dict | None:
-        return self._system_config.get(SystemConfigKey.DefaultRssSettingMOV) or {}
+    def default_subscribe_setting_mov(self) -> dict | None:
+        return self._system_config.get(SystemConfigKey.DefaultSubscribeSettingMOV) or {}
 
     def update_rss_subscribe(self, *args, **kwargs):
         return self._update_svc.update_rss_subscribe(*args, **kwargs)

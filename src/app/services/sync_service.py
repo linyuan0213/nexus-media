@@ -29,7 +29,7 @@ from app.storage import StorageBackendFactory
 from app.storage.backends.base import StorageType
 from app.storage.config_models import LocalStorageConfig
 from app.utils import EpisodeFormat, ExceptionUtils, StringUtils
-from app.utils.types import MediaType, MovieTypes, OsType, SyncType, TvTypes
+from app.utils.types import MediaType, OsType, SyncType
 from app.utils.web_utils import set_config_directory
 
 
@@ -167,11 +167,7 @@ class SyncService:
     @staticmethod
     def build_media_type(mtype: str) -> MediaType:
         """根据前端类型字符串解析为 MediaType 枚举"""
-        if mtype in MovieTypes:
-            return MediaType.MOVIE
-        elif mtype in TvTypes:
-            return MediaType.TV
-        return MediaType.ANIME
+        return MediaType.from_string(mtype)
 
     def manual_transfer(
         self,

@@ -95,14 +95,7 @@ class MessageSearchService:
         title = item.TITLE or item.TORRENT_NAME or "未知标题"
         year = item.YEAR or ""
 
-        if item.TYPE == "MOV":
-            mtype = MediaType.MOVIE
-        elif item.TYPE == "TV":
-            mtype = MediaType.TV
-        elif item.TYPE == "ANI":
-            mtype = MediaType.ANIME
-        else:
-            mtype = MediaType.UNKNOWN
+        mtype = MediaType.from_string(item.TYPE)
 
         tmdb_info = None
         if item.TMDBID:

@@ -246,6 +246,7 @@ class Container(containers.DeclarativeContainer):
     download_client_factory: Provider["DownloadClientFactory"] = _s(
         "app.downloader.client_factory.DownloadClientFactory"
     )
+    download_monitor: Provider[Any] = _s("app.services.download_monitor.DownloadMonitor")
 
     # --- Cache Warmers ---
     config_reloader: Provider[Any] = _s("app.services.config_reloader.ConfigReloader")

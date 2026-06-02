@@ -107,9 +107,9 @@ class MessageBuilder:
     def send_transfer_movie_message(self, in_from, media_info, exist_filenum, category_flag) -> None:
         msg_title = f"{media_info.get_title_string()} 已入库"
         if media_info.vote_average:
-            msg_str = f"{media_info.get_vote_string()}，类型：电影"
+            msg_str = f"{media_info.get_vote_string()}，类型：{MediaType.MOVIE.display_name}"
         else:
-            msg_str = "类型：电影"
+            msg_str = f"类型：{MediaType.MOVIE.display_name}"
         if media_info.category:
             if category_flag:
                 msg_str = f"{msg_str}，类别：{media_info.category}"
@@ -148,9 +148,9 @@ class MessageBuilder:
             else:
                 msg_title = f"{item_info.get_title_string()} {item_info.get_season_string()} 共{item_info.total_episodes}集 已入库"
             if item_info.vote_average:
-                msg_str = f"{item_info.get_vote_string()}，类型：{item_info.type.value}"
+                msg_str = f"{item_info.get_vote_string()}，类型：{item_info.type.display_name}"
             else:
-                msg_str = f"类型：{item_info.type.value}"
+                msg_str = f"类型：{item_info.type.display_name}"
             if item_info.category:
                 msg_str = f"{msg_str}，类别：{item_info.category}"
             if item_info.total_episodes == 1:
@@ -200,12 +200,12 @@ class MessageBuilder:
                     template_engine=self._template_engine,
                 )
 
-    def send_rss_success_message(self, in_from: Enum, media_info) -> None:
+    def send_subscribe_success_message(self, in_from: Enum, media_info) -> None:
         if media_info.type == MediaType.MOVIE:
             msg_title = f"{media_info.get_title_string()} 已添加订阅"
         else:
             msg_title = f"{media_info.get_title_string()} {media_info.get_season_string()} 已添加订阅"
-        msg_str = f"类型：{media_info.type.value}"
+        msg_str = f"类型：{media_info.type.display_name}"
         if media_info.vote_average:
             msg_str = f"{msg_str}，{media_info.get_vote_string()}"
         msg_str = f"{msg_str}，来自：{in_from.value}"
@@ -234,7 +234,7 @@ class MessageBuilder:
             msg_title = f"{media_info.get_title_string()} {media_info.get_season_string()} 已完成洗版"
         else:
             msg_title = f"{media_info.get_title_string()} {media_info.get_season_string()} 已完成订阅"
-        msg_str = f"类型：{media_info.type.value}"
+        msg_str = f"类型：{media_info.type.display_name}"
         if media_info.vote_average:
             msg_str = f"{msg_str}，{media_info.get_vote_string()}"
         if self._messagecenter:
@@ -409,14 +409,12 @@ class MessageBuilder:
         }
         if not _webhook_actions.get(event_info.get("event") or ""):
             return
-        if event_info.get("item_type") in ["TV", "SHOW"]:
-            message_title = (
-                f"{_webhook_actions.get(event_info.get('event') or '<unknown>')}剧集 {event_info.get('item_name')}"
-            )
-        elif event_info.get("item_type") == "MOV":
-            message_title = (
-                f"{_webhook_actions.get(event_info.get('event') or '<unknown>')}电影 {event_info.get('item_name')}"
-            )
+        item_type = event_info.get("item_type") or ""
+        parsed = MediaType.from_string(item_type)
+        if parsed in (MediaType.TV, MediaType.ANIME) or item_type == "show":
+            message_title = f"{_webhook_actions.get(event_info.get('event') or '<unknown>')}{MediaType.TV.display_name} {event_info.get('item_name')}"
+        elif parsed == MediaType.MOVIE:
+            message_title = f"{_webhook_actions.get(event_info.get('event') or '<unknown>')}{MediaType.MOVIE.display_name} {event_info.get('item_name')}"
         elif event_info.get("item_type") == "AUD":
             message_title = (
                 f"{_webhook_actions.get(event_info.get('event') or '<unknown>')}有声书 {event_info.get('item_name')}"

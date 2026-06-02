@@ -1,5 +1,6 @@
 """事件装饰器 — 支持 @on_event 声明式注册."""
 
+import importlib
 from collections import defaultdict
 from collections.abc import Callable
 from typing import Any
@@ -40,6 +41,19 @@ def auto_register(event_bus: Any) -> None:
             event_bus.subscribe(event_type, handler)
 
     _pending_handlers.clear()
+
+
+def register_modules(modules: list[str]) -> None:
+    """显式导入模块列表，触发 @on_event 装饰器注册.
+
+    在 init_event_handlers() 中调用，确保所有 handler 模块被加载。
+    单个模块导入失败不影响其他模块。
+    """
+    for name in modules:
+        try:
+            importlib.import_module(name)
+        except ImportError:
+            pass
 
 
 def get_subscribers() -> list[tuple[str, list[Callable[[Any], None]]]]:

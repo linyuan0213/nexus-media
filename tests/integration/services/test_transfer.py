@@ -472,7 +472,7 @@ class TestFileTransferService:
     def test_lookup_download_record(self, mock_service):
         download_info = MagicMock()
         download_info.TMDBID = 123
-        download_info.TYPE = "电影"
+        download_info.TYPE = "movie"
         mock_service._history.download_repo.get_download_history_by_path.return_value = download_info
         mock_service.media.get_tmdb_info.return_value = {"id": 123}
 

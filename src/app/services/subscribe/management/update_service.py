@@ -6,7 +6,7 @@ from app.events import Event
 from app.events.constants import SUBSCRIBE_ADD
 from app.media import meta_info
 from app.services.subscribe.management.utils import gen_rss_note
-from app.utils.types import MediaType, RssType
+from app.utils.types import MediaType, SubscribeType
 from app.utils.web_utils import WebUtils
 
 
@@ -248,7 +248,9 @@ class SubscribeUpdateService:
             )
             if in_from and media_info:
                 media_info.user_name = user_name
-                self._message.send_rss_success_message(in_from=cast(RssType, in_from), media_info=media_info)
+                self._message.send_subscribe_success_message(
+                    in_from=cast(SubscribeType, in_from), media_info=media_info
+                )
             return code, "更新订阅成功", media_info
         else:
             return code, "更新订阅失败", media_info

@@ -29,7 +29,7 @@ from app.services.transfer.history_manager import TransferHistoryManager
 from app.services.transfer.path_resolver import TransferPathResolver
 from app.services.transfer_engine import TransferEngine
 from app.utils import ExceptionUtils, PathUtils, StringUtils
-from app.utils.types import MediaType, MovieTypes, ProgressKey, SyncType
+from app.utils.types import MediaType, ProgressKey, SyncType
 
 
 class FileTransferService:
@@ -367,7 +367,8 @@ class FileTransferService:
             download_info = self._history.download_repo.get_download_history_by_path(os.path.dirname(in_path))
         if download_info and str(download_info.TMDBID or ""):
             log.info(f"[Rmt]{in_path} 找到下载记录，TMDBID：{download_info.TMDBID}")
-            media_type = MediaType.MOVIE if download_info.TYPE in MovieTypes else MediaType.TV
+            parsed_type = MediaType.from_string(download_info.TYPE)
+            media_type = parsed_type
             return self.media.get_tmdb_info(mtype=media_type, tmdbid=download_info.TMDBID), media_type
         return None, None
 

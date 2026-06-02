@@ -28,12 +28,12 @@ class SubscribeRepository(BaseRepository):
     def reset_rss_state(self) -> None:
         """
         初始化时批量重置所有 RSS 订阅状态
-        将 STATE='S' 的订阅重置为 STATE='R'
+        将 STATE='S' 的订阅重置为 STATE='D'，由 SubscriptionMonitor 重新启动队列搜索
         """
         self._db.query(SubscribeMovies).filter(SubscribeMovies.STATE == "S").update(
-            {"STATE": "R"}, synchronize_session=False
+            {"STATE": "D"}, synchronize_session=False
         )
-        self._db.query(SubscribeTvs).filter(SubscribeTvs.STATE == "S").update({"STATE": "R"}, synchronize_session=False)
+        self._db.query(SubscribeTvs).filter(SubscribeTvs.STATE == "S").update({"STATE": "D"}, synchronize_session=False)
 
     # ==================== RSS Movies ====================
 

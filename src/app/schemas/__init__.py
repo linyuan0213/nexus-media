@@ -45,11 +45,11 @@ from .plugin import (
 
 # RSS
 from .subscribe import (
-    RssAddResultDTO,
-    RssDetailResultDTO,
-    RssHistoryResultDTO,
-    RssIcalResultDTO,
-    RssListResultDTO,
+    SubscribeAddResultDTO,
+    SubscribeDetailResultDTO,
+    SubscribeHistoryResultDTO,
+    SubscribeIcalResultDTO,
+    SubscribeListResultDTO,
 )
 
 # Search

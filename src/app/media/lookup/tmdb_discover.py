@@ -3,6 +3,7 @@ import random
 import log
 from app.helper.image_proxy_helper import ImageProxyHelper
 from app.media.lookup.tmdb_client import TmdbClient
+from app.utils.media_type_utils import MediaTypeMapper
 from app.utils.types import MediaType
 
 
@@ -178,7 +179,7 @@ class TmdbDiscover:
                     if info.get("first_air_date")
                     else ""
                 )
-                typestr = "MOV" if mtype == MediaType.MOVIE else "TV"
+                typestr = MediaTypeMapper.to_tmdb(mtype)
                 title = info.get("title") if mtype == MediaType.MOVIE else info.get("name")
             else:
                 media_type = MediaType.MOVIE.value if info.get("media_type") == "movie" else MediaType.TV.value
@@ -189,7 +190,7 @@ class TmdbDiscover:
                     if info.get("first_air_date")
                     else ""
                 )
-                typestr = "MOV" if info.get("media_type") == "movie" else "TV"
+                typestr = "movie" if info.get("media_type") == "movie" else "tv"
                 title = info.get("title") if info.get("media_type") == "movie" else info.get("name")
             ret_infos.append(
                 {

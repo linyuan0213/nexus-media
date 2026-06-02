@@ -20,25 +20,31 @@ def check_media_exists(media_server, subscribe, mtype, title, year, mediaid=None
     """
     if not mtype or not title:
         return False, None, ""
-    if str(mtype).upper() != "MOV":
+    if str(mtype).lower() != "movie":
         title = f"{title} ({year})" if year else title
     subscribe_mediaid = mediaid
     if mediaid and (str(mediaid).startswith("DB:") or str(mediaid).startswith("BGM:")):
         subscribe_mediaid = None
     favor = media_server.check_item_exists(mtype=mtype, title=title, year=year, tmdbid=mediaid)
     rssid = subscribe.get_subscribe_id(
-        mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV,
+        mtype=MediaType.MOVIE if str(mtype).lower() == "movie" else MediaType.TV,
         title=title,
         year=year,
         tmdbid=subscribe_mediaid,
     )
     if not rssid:
         rssid = subscribe.get_subscribe_id(
-            mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV, title=title, year=year, tmdbid=None
+            mtype=MediaType.MOVIE if str(mtype).lower() == "movie" else MediaType.TV,
+            title=title,
+            year=year,
+            tmdbid=None,
         )
     if not rssid:
         rssid = subscribe.get_subscribe_id(
-            mtype=MediaType.MOVIE if str(mtype).upper() == "MOV" else MediaType.TV, title=title, year=None, tmdbid=None
+            mtype=MediaType.MOVIE if str(mtype).lower() == "movie" else MediaType.TV,
+            title=title,
+            year=None,
+            tmdbid=None,
         )
     if rssid:
         if str(rssid).find("\n") != -1:

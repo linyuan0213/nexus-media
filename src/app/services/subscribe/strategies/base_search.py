@@ -15,14 +15,14 @@ from app.core.exceptions import (
 from app.db.repositories import SubscribeRepository
 from app.db.repositories.subscribe_repo_adapter import (
     SubscribeMovieRepositoryAdapter,
-    RssTvEpisodeRepositoryAdapter,
+    SubscribeTvEpisodeRepositoryAdapter,
     SubscribeTvRepositoryAdapter,
 )
 from app.di import container
 from app.domain.interfaces.rss_repo import (
-    IRssMovieRepository,
-    IRssTvEpisodeRepository,
-    IRssTvRepository,
+    ISubscribeMovieRepository,
+    ISubscribeTvEpisodeRepository,
+    ISubscribeTvRepository,
 )
 from app.media import MediaCache, MediaService, meta_info
 from app.message import Message
@@ -37,17 +37,17 @@ from app.utils.types import MediaType, SearchType
 class BaseSearchStrategy:
     """搜索策略基类 — 封装 movie/tv 的公共搜索/下载逻辑."""
 
-    _movie_repo: IRssMovieRepository
-    _tv_repo: IRssTvRepository
-    _tv_episode_repo: IRssTvEpisodeRepository
+    _movie_repo: ISubscribeMovieRepository
+    _tv_repo: ISubscribeTvRepository
+    _tv_episode_repo: ISubscribeTvEpisodeRepository
 
     def __init__(
         self,
         service: Any | None = None,
         rss_repo: SubscribeRepository | None = None,
-        movie_repo: IRssMovieRepository | None = None,
-        tv_repo: IRssTvRepository | None = None,
-        tv_episode_repo: IRssTvEpisodeRepository | None = None,
+        movie_repo: ISubscribeMovieRepository | None = None,
+        tv_repo: ISubscribeTvRepository | None = None,
+        tv_episode_repo: ISubscribeTvEpisodeRepository | None = None,
         searcher: Searcher | None = None,
         media_service: MediaService | None = None,
         media_cache: MediaCache | None = None,
@@ -63,7 +63,7 @@ class BaseSearchStrategy:
         if tv_repo is None:
             tv_repo = SubscribeTvRepositoryAdapter(self._rss_repo)
         if tv_episode_repo is None:
-            tv_episode_repo = RssTvEpisodeRepositoryAdapter(self._rss_repo)
+            tv_episode_repo = SubscribeTvEpisodeRepositoryAdapter(self._rss_repo)
         self._movie_repo = movie_repo
         self._tv_repo = tv_repo
         self._tv_episode_repo = tv_episode_repo
@@ -81,7 +81,7 @@ class BaseSearchStrategy:
         else:
             rss_movies = self._service.get_subscribe_movies(state=state) if self._service else {}
         if rss_movies:
-            log.info(f"[Subscribe]共有 {len(rss_movies)} 个电影订阅需要搜索")
+            log.info(f"[Subscribe]共有 {len(rss_movies)} 个{MediaType.MOVIE.display_name}订阅需要搜索")
         for rss_info in rss_movies.values():
             if rss_info.get("fuzzy_match"):
                 continue
@@ -98,7 +98,7 @@ class BaseSearchStrategy:
             try:
                 media_info = self._get_media_info(tmdbid, name, year, MediaType.MOVIE)
                 if not media_info or not media_info.tmdb_info:
-                    log.warn(f"[Subscribe]电影 {name} TMDB 识别失败，标记为错误状态")
+                    log.warn(f"[Subscribe]{MediaType.MOVIE.display_name} {name} TMDB 识别失败，标记为错误状态")
                     self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="E")
                     continue
                 media_info.set_download_info(
@@ -108,7 +108,7 @@ class BaseSearchStrategy:
                 if not over_edition:
                     exist_flag, no_exists, _ = self._downloader.check_exists_medias(meta_info=media_info)
                     if exist_flag:
-                        log.info(f"[Subscribe]电影 {media_info.get_title_string()} 已存在")
+                        log.info(f"[Subscribe]{MediaType.MOVIE.display_name} {media_info.get_title_string()} 已存在")
                         if self._service:
                             self._service.finish_rss_subscribe(rssid=rssid, media=media_info)
                         continue
@@ -119,7 +119,7 @@ class BaseSearchStrategy:
                         media_info.res_order = self._movie_repo.get_filter_order(rssid=rssid)
 
                 if self._coordinator and not self._coordinator.try_acquire(media_info):
-                    log.info(f"[Subscribe]电影 {name} 已被其他策略处理，跳过")
+                    log.info(f"[Subscribe]{MediaType.MOVIE.display_name} {name} 已被其他策略处理，跳过")
                     self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="R")
                     continue
 
@@ -134,7 +134,7 @@ class BaseSearchStrategy:
                 }
                 search_result, _, _, _ = self._searcher.search_one_media(
                     media_info=media_info,
-                    in_from=SearchType.RSS,
+                    in_from=SearchType.SUBSCRIBE,
                     no_exists=no_exists,
                     sites=rss_info.get("search_sites"),
                     filters=filter_dict,
@@ -152,7 +152,7 @@ class BaseSearchStrategy:
                     self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="R")
             except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as err:
                 self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="R")
-                log.error(f"[Subscribe]电影 {name} 订阅搜索失败：{err!s}")
+                log.error(f"[Subscribe]{MediaType.MOVIE.display_name} {name} 订阅搜索失败：{err!s}")
                 log.debug(f"异常详细信息: {traceback.format_exc()}")
                 continue
             finally:
@@ -165,7 +165,7 @@ class BaseSearchStrategy:
         else:
             rss_tvs = self._service.get_subscribe_tvs(state=state) if self._service else {}
         if rss_tvs:
-            log.info(f"[Subscribe]共有 {len(rss_tvs)} 个电视剧订阅需要检索")
+            log.info(f"[Subscribe]共有 {len(rss_tvs)} 个{MediaType.TV.display_name}订阅需要检索")
         rss_no_exists = {}
         for rss_info in rss_tvs.values():
             if rss_info.get("fuzzy_match"):
@@ -183,7 +183,7 @@ class BaseSearchStrategy:
             try:
                 media_info = self._get_media_info(tmdbid, name, year, MediaType.TV)
                 if not media_info or not media_info.tmdb_info:
-                    log.warn(f"[Subscribe]电视剧 {name} TMDB 识别失败，标记为错误状态")
+                    log.warn(f"[Subscribe]{MediaType.TV.display_name} {name} TMDB 识别失败，标记为错误状态")
                     self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="E")
                     continue
                 media_info.set_download_info(
@@ -215,7 +215,9 @@ class BaseSearchStrategy:
                     )
                     if exist_flag:
                         if not library_no_exists or not library_no_exists.get(media_info.tmdb_id):
-                            log.info(f"[Subscribe]电视剧 {media_info.get_title_string()} 订阅剧集已全部存在")
+                            log.info(
+                                f"[Subscribe]{MediaType.TV.display_name} {media_info.get_title_string()} 订阅剧集已全部存在"
+                            )
                             if self._service:
                                 self._service.finish_rss_subscribe(rssid=rss_info.get("id"), media=media_info)
                         continue
@@ -232,7 +234,7 @@ class BaseSearchStrategy:
                         media_info.res_order = self._tv_repo.get_filter_order(rssid=rssid)
 
                 if self._coordinator and not self._coordinator.try_acquire(media_info):
-                    log.info(f"[Subscribe]电视剧 {name} 已被其他策略处理，跳过")
+                    log.info(f"[Subscribe]{MediaType.TV.display_name} {name} 已被其他策略处理，跳过")
                     self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="R")
                     continue
 
@@ -247,7 +249,7 @@ class BaseSearchStrategy:
                 }
                 search_result, no_exists, _, _ = self._searcher.search_one_media(
                     media_info=media_info,
-                    in_from=SearchType.RSS,
+                    in_from=SearchType.SUBSCRIBE,
                     no_exists=rss_no_exists,
                     sites=rss_info.get("search_sites"),
                     filters=filter_dict,
@@ -280,7 +282,7 @@ class BaseSearchStrategy:
                         rssid=rssid, media_info=media_info, seasoninfo=no_exists.get(media_info.tmdb_id)
                     )
             except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as err:
-                log.error(f"[Subscribe]电视剧 {name} 订阅搜索失败：{err!s}")
+                log.error(f"[Subscribe]{MediaType.TV.display_name} {name} 订阅搜索失败：{err!s}")
                 log.debug(f"异常详细信息: {traceback.format_exc()}")
                 self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="R")
                 continue

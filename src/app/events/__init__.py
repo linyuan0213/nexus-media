@@ -3,7 +3,7 @@
 """
 
 from app.events.bus import EventBus
-from app.events.decorators import auto_register, clear_subscribers, on_event
+from app.events.decorators import auto_register, clear_subscribers, on_event, register_modules
 from app.events.middleware import ErrorHandlingMiddleware, LoggingMiddleware, Middleware, MiddlewareChain
 from app.events.registry import EventHandlerRegistry
 from app.events.types import Event
@@ -18,5 +18,6 @@ __all__ = [
     "ErrorHandlingMiddleware",
     "on_event",
     "auto_register",
+    "register_modules",
     "clear_subscribers",
 ]

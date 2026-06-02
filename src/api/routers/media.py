@@ -41,6 +41,7 @@ from app.services.media_service import (
 )
 from app.services.search_service import Searcher
 from app.utils.response import fail, success
+from app.utils.types import MediaType
 
 router = APIRouter()
 
@@ -397,8 +398,8 @@ def get_downloaded(
                     "orgid": item.TMDBID,
                     "tmdbid": item.TMDBID,
                     "title": item.TITLE,
-                    "type": "MOV" if str(item.TYPE or "") == "电影" else "TV",
-                    "media_type": item.TYPE,
+                    "type": MediaType.from_string(item.TYPE or "").value,
+                    "media_type": MediaType.from_string(item.TYPE or "").display_name,
                     "year": item.YEAR,
                     "vote": item.VOTE,
                     "image": item.POSTER,

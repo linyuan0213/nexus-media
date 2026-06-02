@@ -14,7 +14,7 @@ from app.schemas.media import MediaInfoResultDTO, SeasonEpisodesResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import StringUtils
 from app.utils.media_utils import check_media_exists
-from app.utils.types import MediaType, MovieTypes
+from app.utils.types import MediaType
 from app.utils.web_utils import WebUtils
 
 
@@ -81,9 +81,8 @@ class MediaInfoService:
         """
         查询媒体信息（优先订阅信息，不足时回退到 TMDB）
         """
-        if mtype in MovieTypes:
-            media_type = MediaType.MOVIE
-        else:
+        media_type = MediaType.from_string(mtype)
+        if media_type == MediaType.UNKNOWN:
             media_type = MediaType.TV
 
         rssid_ok = False
@@ -167,7 +166,7 @@ class MediaInfoService:
 
     def get_media_person(self, tmdbid, mtype_str, keyword) -> Any:
         """查询演员"""
-        mtype = MediaType.MOVIE if mtype_str in MovieTypes else MediaType.TV
+        mtype = MediaType.MOVIE if MediaType.from_string(mtype_str) == MediaType.MOVIE else MediaType.TV
         if tmdbid:
             return self._media.get_tmdb_cats(tmdbid=tmdbid, mtype=mtype)
         else:
@@ -175,7 +174,7 @@ class MediaInfoService:
 
     def get_media_recommendations(self, tmdbid, mtype_str, page) -> Any:
         """查询推荐"""
-        mtype = MediaType.MOVIE if mtype_str in MovieTypes else MediaType.TV
+        mtype = MediaType.MOVIE if MediaType.from_string(mtype_str) == MediaType.MOVIE else MediaType.TV
         if mtype == MediaType.MOVIE:
             return self._media.get_movie_recommendations(tmdbid=tmdbid, page=page)
         else:
@@ -183,7 +182,7 @@ class MediaInfoService:
 
     def get_media_similar(self, tmdbid, mtype_str, page) -> Any:
         """查询相似"""
-        mtype = MediaType.MOVIE if mtype_str in MovieTypes else MediaType.TV
+        mtype = MediaType.MOVIE if MediaType.from_string(mtype_str) == MediaType.MOVIE else MediaType.TV
         if mtype == MediaType.MOVIE:
             return self._media.get_movie_similar(tmdbid=tmdbid, page=page)
         else:
@@ -192,7 +191,7 @@ class MediaInfoService:
     def get_person_medias(self, personid, mtype_str, page) -> Any:
         """查询演员参演作品"""
         if mtype_str:
-            mtype = MediaType.MOVIE if mtype_str in MovieTypes else MediaType.TV
+            mtype = MediaType.MOVIE if MediaType.from_string(mtype_str) == MediaType.MOVIE else MediaType.TV
         else:
             mtype = None
         return self._media.get_person_medias(personid=personid, mtype=mtype, page=page)
@@ -235,7 +234,7 @@ class MediaInfoService:
             if not release_date:
                 return None
             return {
-                "type": "电影",
+                "type": MediaType.MOVIE.value,
                 "title": title,
                 "start": release_date,
                 "id": tid,
@@ -260,7 +259,7 @@ class MediaInfoService:
             if not release_date:
                 return None
             return {
-                "type": "电影",
+                "type": MediaType.MOVIE.value,
                 "title": title,
                 "start": release_date,
                 "id": tid,
@@ -286,7 +285,7 @@ class MediaInfoService:
                 return None
             return [
                 {
-                    "type": "电视剧",
+                    "type": MediaType.TV.value,
                     "title": title,
                     "start": release_date,
                     "id": tid,
@@ -322,7 +321,7 @@ class MediaInfoService:
                     title = "{} 第{}集".format(name, episode.get("episode_number"))
                 events.append(
                     {
-                        "type": "剧集",
+                        "type": MediaType.TV.value,
                         "title": title,
                         "start": episode.get("air_date"),
                         "id": tid,
@@ -336,7 +335,7 @@ class MediaInfoService:
 
     def get_media_detail(self, tmdbid, mtype_str) -> dict[str, Any] | None:
         """获取媒体详情"""
-        mtype = MediaType.MOVIE if mtype_str in MovieTypes else MediaType.TV
+        mtype = MediaType.MOVIE if MediaType.from_string(mtype_str) == MediaType.MOVIE else MediaType.TV
         media_info = WebUtils.get_mediainfo_from_id(mtype=mtype, mediaid=tmdbid)
         if not media_info or not media_info.tmdb_info:
             return None

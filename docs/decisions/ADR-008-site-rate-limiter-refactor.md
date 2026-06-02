@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Date
 
@@ -383,40 +383,41 @@ async def get_rate_limits(engine: RateLimitEngine = Depends(get_rate_limit_engin
 ### Phase 1：扩展通用限流引擎
 
 1. **重构 `app/infrastructure/rate_limiter/`**
-   - `engine.py` — `RateLimitEngine` 统一引擎
-   - `backends.py` — `MemoryBackend` + `RedisBackend`（令牌桶 + 滑动窗口）
-   - `decorators.py` — `@rate_limited` 装饰器 + `rate_limit` 上下文管理器
+   - `backends.py` — `RateLimitBackend` + `MemoryBackend` + `RedisBackend`（令牌桶实现）
    - `monitor.py` — `RateLimitMonitor` 监控统计
+   - `decorators.py` — `@rate_limited` 装饰器 + `rate_limit` 上下文管理器
+   - `middleware.py` — FastAPI 中间件限流（保留，委托给新后端）
+   - `dependency.py` — FastAPI 依赖注入限流（保留，委托给新后端）
 
 ### Phase 2：替换站点限流
 
-3. **创建 `app/services/site_rate_limiter.py`**
+2. **创建 `app/services/site_rate_limiter.py`**
    - `SiteRateLimiterService` 封装站点限流逻辑
    - 从 `Sites` 类中解耦
 
-4. **逐个替换调用点**
+3. **逐个替换调用点**
    - `indexer/client/builtin.py`
-   - `rss_core.py`
-   - `rss_matcher.py`
+   - `subscribe/strategies/rss_feed.py`
+   - `subscribe/matcher.py`
    - `brush/helpers.py`
    - `site_subtitle.py`
    - `site_userinfo.py`
 
-5. **删除旧代码**
+4. **删除旧代码**
    - `app/sites/site_limiter.py`
    - `Sites._limiters` / `Sites.check_ratelimit()` / `Sites._rate_limit_val()`
 
 ### Phase 3：替换 TMDB 限流
 
-6. **重构 `app/utils/tmdb_rate_limiter.py`**
-   - `TMDBRateLimiter` 内部使用 `RateLimitEngine`
+5. **重构 `app/utils/tmdb_rate_limiter.py`**
+   - `TMDBRateLimiter` 内部使用 `RateLimitBackend`
    - 支持按 API Key 区分限流
    - 保留 `TMDBRetryWithBackoff`（重试逻辑与限流无关）
 
 ### Phase 4：API 限流迁移
 
-7. **重构 `app/infrastructure/rate_limiter/middleware.py` 和 `dependency.py`**
-   - 使用 `RateLimitEngine` 替代独立的 `RateLimiter`
+6. **重构 `app/infrastructure/rate_limiter/middleware.py` 和 `dependency.py`**
+   - 使用新 `RateLimitBackend` 替代独立的旧 `RateLimiter`
    - 支持按路由配置不同限流规则
 
 ---

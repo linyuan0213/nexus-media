@@ -10,7 +10,7 @@ TransferCoordinator - 文件转移协调器
 from collections.abc import Callable
 
 import log
-from app.core.constants import PT_TRANSFER_INTERVAL
+from app.core.constants import PT_TRANSFER_INTERVAL_FALLBACK
 from app.di import container
 from app.downloader.client_factory import DownloadClientFactory
 from app.services.scheduler_core import SchedulerCore
@@ -40,14 +40,14 @@ class TransferCoordinator:
         self._scheduler.start_job(
             {
                 "func": transfer_func,
-                "name": "下载文件转移",
+                "name": "下载文件转移兜底",
                 "job_id": job_id,
                 "trigger": "interval",
-                "seconds": PT_TRANSFER_INTERVAL,
+                "seconds": PT_TRANSFER_INTERVAL_FALLBACK,
                 "jobstore": self._client_factory.jobstore,
             }
         )
-        log.info("下载文件转移服务启动，目的目录：媒体库")
+        log.info("下载文件转移兜底服务启动，目的目录：媒体库")
 
     def stop_service(self):
         """

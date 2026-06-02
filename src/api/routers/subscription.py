@@ -20,7 +20,7 @@ from app.services.subscribe.management.calendar_service import SubscribeCalendar
 from app.services.subscribe.management.history_service import SubscribeHistoryService
 from app.services.subscribe.management.service import SubscribeService
 from app.utils.response import fail, success
-from app.utils.types import MediaType, MovieTypes, SystemConfigKey
+from app.utils.types import MediaType, SystemConfigKey
 
 router = APIRouter()
 
@@ -62,11 +62,11 @@ class AddRssMediaRequest(BaseModel):
     tmdbid: str | int | None = None
 
 
-class RssidRequest(BaseModel):
+class SubscribeIdRequest(BaseModel):
     rssid: str | None = None
 
 
-class ReRssHistoryRequest(BaseModel):
+class RedoHistoryRequest(BaseModel):
     rssid: str | None = None
     type: str | None = None
 
@@ -87,16 +87,16 @@ class RemoveRssMediaRequest(BaseModel):
     page: str | None = None
 
 
-class RssDetailRequest(BaseModel):
+class SubscribeDetailRequest(BaseModel):
     rssid: str | None = None
     rsstype: str | None = None
 
 
-class GetDefaultRssSettingRequest(BaseModel):
+class GetDefaultSubscribeSettingRequest(BaseModel):
     mtype: str | None = None
 
 
-class DefaultRssSettingSaveRequest(BaseModel):
+class DefaultSubscribeSettingSaveRequest(BaseModel):
     mtype: str | None = None
     over_edition: str | None = None
     restype: str | None = None
@@ -110,7 +110,7 @@ class DefaultRssSettingSaveRequest(BaseModel):
     search_sites: list | None = None
 
 
-class GetRssHistoryRequest(BaseModel):
+class GetSubscribeHistoryRequest(BaseModel):
     type: str | None = None
 
 
@@ -120,7 +120,7 @@ class GetRssHistoryRequest(BaseModel):
 
 
 def _build_add_kwargs(req: AddRssMediaRequest) -> dict:
-    mtype = MediaType.MOVIE if req.type in MovieTypes else MediaType.TV
+    mtype = MediaType.MOVIE if MediaType.from_string(req.type or "") == MediaType.MOVIE else MediaType.TV
     channel = "R" if req.in_form == "manual" else "D"
     return {
         "mtype": mtype,
@@ -145,7 +145,7 @@ def _build_add_kwargs(req: AddRssMediaRequest) -> dict:
 
 
 def _build_update_kwargs(req: AddRssMediaRequest) -> dict:
-    mtype = MediaType.MOVIE if req.type in MovieTypes else MediaType.TV
+    mtype = MediaType.MOVIE if MediaType.from_string(req.type or "") == MediaType.MOVIE else MediaType.TV
     return {
         "mtype": mtype,
         "rssid": req.rssid,
@@ -246,7 +246,7 @@ def update_rss_media(
 
 @router.post("/history/delete", response_model=CommonResponse, summary="删除 RSS 历史")
 def delete_rss_history(
-    req: RssidRequest,
+    req: SubscribeIdRequest,
     user: str = Depends(require_permission("subscription:manage")),
     svc: SubscribeHistoryService = Depends(get_subscribe_history_service),
 ):
@@ -256,11 +256,13 @@ def delete_rss_history(
 
 @router.post("/history/redo", response_model=CommonResponse, summary="重新执行 RSS 历史")
 def re_rss_history(
-    req: ReRssHistoryRequest,
+    req: RedoHistoryRequest,
     user: str = Depends(require_permission("subscription:manage")),
     svc: SubscribeHistoryService = Depends(get_subscribe_history_service),
 ):
-    code, msg = svc.redo(rssid=req.rssid or "", rtype=req.type or "")
+    parsed = MediaType.from_string(req.type or "")
+    rtype = MediaType.MOVIE.value if parsed == MediaType.MOVIE else MediaType.TV.value
+    code, msg = svc.redo(rssid=req.rssid or "", rtype=rtype)
     return fail(code=code, msg=msg)
 
 
@@ -286,7 +288,7 @@ def remove_rss_media(
     if name:
         name = meta_info(title=name).get_name()
     mtype = req.type
-    if mtype in MovieTypes:
+    if MediaType.from_string(mtype or "") == MediaType.MOVIE:
         svc.delete_subscribe(
             mtype=MediaType.MOVIE,
             title=name or "",
@@ -307,35 +309,43 @@ def remove_rss_media(
 
 @router.post("/detail", response_model=CommonResponse, summary="获取 RSS 订阅详情")
 def rss_detail(
-    req: RssDetailRequest,
+    req: SubscribeDetailRequest,
     user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
-    if req.rsstype in MovieTypes:
+    parsed = MediaType.from_string(req.rsstype or "")
+    if parsed == MediaType.MOVIE:
         rssdetail = svc.get_subscribe_movies(rid=int(req.rssid) if req.rssid else None)
         if not rssdetail:
             return fail()
         detail = list(rssdetail.values())[0]
-        detail["type"] = "MOV"
+        detail["type"] = MediaType.MOVIE.value
+    elif parsed == MediaType.ANIME:
+        rssdetail = svc.get_subscribe_tvs(rid=int(req.rssid) if req.rssid else None)
+        if not rssdetail:
+            return fail()
+        detail = list(rssdetail.values())[0]
+        detail["type"] = MediaType.ANIME.value
     else:
         rssdetail = svc.get_subscribe_tvs(rid=int(req.rssid) if req.rssid else None)
         if not rssdetail:
             return fail()
         detail = list(rssdetail.values())[0]
-        detail["type"] = "TV"
+        detail["type"] = MediaType.TV.value
     return success(data=detail)
 
 
 @router.post("/default_setting", response_model=CommonResponse, summary="获取默认 RSS 设置")
 def get_default_rss_setting(
-    req: GetDefaultRssSettingRequest,
+    req: GetDefaultSubscribeSettingRequest,
     user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
-    if req.mtype == "TV":
-        setting = svc.default_rss_setting_tv
-    elif req.mtype == "MOV":
-        setting = svc.default_rss_setting_mov
+    parsed = MediaType.from_string(req.mtype or "")
+    if parsed in (MediaType.TV, MediaType.ANIME):
+        setting = svc.default_subscribe_setting_tv
+    elif parsed == MediaType.MOVIE:
+        setting = svc.default_subscribe_setting_mov
     else:
         setting = {}
     if setting:
@@ -345,16 +355,17 @@ def get_default_rss_setting(
 
 @router.post("/default_setting/save", response_model=CommonResponse, summary="保存默认 RSS 设置")
 def save_default_rss_setting(
-    req: DefaultRssSettingSaveRequest,
+    req: DefaultSubscribeSettingSaveRequest,
     user: str = Depends(require_permission("subscription:manage")),
 ):
     mtype = req.mtype
     data = req.model_dump()
     data.pop("mtype", None)
-    if mtype == "TV":
-        container.system_config().set(key=SystemConfigKey.DefaultRssSettingTV, value=data)
-    elif mtype == "MOV":
-        container.system_config().set(key=SystemConfigKey.DefaultRssSettingMOV, value=data)
+    parsed = MediaType.from_string(mtype or "")
+    if parsed == MediaType.TV:
+        container.system_config().set(key=SystemConfigKey.DefaultSubscribeSettingTV, value=data)
+    elif parsed == MediaType.MOVIE:
+        container.system_config().set(key=SystemConfigKey.DefaultSubscribeSettingMOV, value=data)
     return success()
 
 
@@ -389,11 +400,13 @@ def get_movie_rss_list(
 
 @router.post("/history", response_model=CommonResponse, summary="获取 RSS 历史")
 def get_rss_history(
-    req: GetRssHistoryRequest,
+    req: GetSubscribeHistoryRequest,
     user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeHistoryService = Depends(get_subscribe_history_service),
 ):
-    return success(data=svc.get_history(mtype=req.type or ""))
+    parsed = MediaType.from_string(req.type or "")
+    mtype = MediaType.MOVIE.value if parsed == MediaType.MOVIE else MediaType.TV.value
+    return success(data=svc.get_history(mtype=mtype))
 
 
 @router.post("/tv/items", response_model=CommonResponse, summary="获取电视剧 RSS 订阅项")

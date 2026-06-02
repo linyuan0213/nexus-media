@@ -22,6 +22,7 @@ from app.sites.engine import SiteDefinition
 from app.sites.searchers import _TRANSFORMS, _css_to_xpath, _resolve_jinja
 from app.utils import RequestUtils
 from app.utils.config_tools import get_proxies
+from app.utils.media_type_utils import MediaTypeMapper
 from app.utils.types import MediaType
 
 
@@ -106,11 +107,9 @@ class HtmlSiteSearcher:
                 params_filled[k] = v
 
         if mtype:
-            mtype_name = mtype.name if hasattr(mtype, "name") else str(mtype)
             for pk in ("cat", "category", "cat_id"):
-                if pk in params_filled and mtype_name:
-                    cat_map = {"MOVIE": "mo", "TV": "tv", "ANIME": "an"}
-                    params_filled[pk] = cat_map.get(mtype_name, "")
+                if pk in params_filled:
+                    params_filled[pk] = MediaTypeMapper.to_site_cat(mtype)
 
         qs = "&".join(f"{k}={quote(str(v))}" for k, v in params_filled.items() if v)
         path_with_slash = f"/{path.lstrip('/')}" if path else ""

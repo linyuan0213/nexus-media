@@ -6,7 +6,7 @@ from app.events import Event
 from app.events.constants import SUBSCRIBE_ADD
 from app.media import meta_info
 from app.services.subscribe.management.utils import gen_rss_note
-from app.utils.types import MediaType, RssType, SystemConfigKey
+from app.utils.types import MediaType, SubscribeType, SystemConfigKey
 from app.utils.web_utils import WebUtils
 
 
@@ -30,12 +30,12 @@ class SubscribeAddService:
         self._system_config = system_config
 
     @property
-    def default_rss_setting_tv(self) -> dict | None:
-        return self._system_config.get(SystemConfigKey.DefaultRssSettingTV) or {}
+    def default_subscribe_setting_tv(self) -> dict | None:
+        return self._system_config.get(SystemConfigKey.DefaultSubscribeSettingTV) or {}
 
     @property
-    def default_rss_setting_mov(self) -> dict | None:
-        return self._system_config.get(SystemConfigKey.DefaultRssSettingMOV) or {}
+    def default_subscribe_setting_mov(self) -> dict | None:
+        return self._system_config.get(SystemConfigKey.DefaultSubscribeSettingMOV) or {}
 
     def add_rss_subscribe(
         self,
@@ -84,9 +84,9 @@ class SubscribeAddService:
 
         if channel == "auto" and not rssid:
             default_rss_setting = (
-                self.default_rss_setting_tv
+                self.default_subscribe_setting_tv
                 if mtype in [MediaType.TV, MediaType.ANIME]
-                else self.default_rss_setting_mov
+                else self.default_subscribe_setting_mov
             )
             if default_rss_setting:
                 default_restype = default_rss_setting.get("restype")
@@ -275,7 +275,9 @@ class SubscribeAddService:
             )
             if in_from:
                 media_info.user_name = user_name
-                self._message.send_rss_success_message(in_from=cast(RssType, in_from), media_info=media_info)
+                self._message.send_subscribe_success_message(
+                    in_from=cast(SubscribeType, in_from), media_info=media_info
+                )
             return code, "添加订阅成功", media_info
         elif code == 9:
             return code, "订阅已存在", media_info
