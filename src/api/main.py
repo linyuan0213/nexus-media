@@ -12,7 +12,10 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
+from scalar_fastapi import get_scalar_api_reference
+
 from app.infrastructure.rate_limiter import RateLimitMiddleware
+from app.core.settings import settings
 
 import log
 import version
@@ -102,7 +105,22 @@ app = FastAPI(
     description="Nexus Media 现代化 FastAPI 路由（P3 绞杀式迁移）",
     version=version.APP_VERSION,
     lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
 )
+
+
+_debug = bool((settings.get("app") or {}).get("debug"))
+
+if _debug:
+
+    @app.get("/docs", include_in_schema=False)
+    async def scalar_html():
+        return get_scalar_api_reference(
+            openapi_url=app.openapi_url,
+            title=app.title,
+        )
+
 
 # SessionMiddleware：兼容现有 Flask Session（Redis）
 app.add_middleware(

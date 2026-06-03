@@ -53,6 +53,7 @@ def main():
         interface=Interfaces.ASGI,
         workers=workers,
         reload=dev,
+        reload_ignore_dirs=["logs", "__pycache__", ".venv", ".git"],
         log_enabled=True,
         log_level=LogLevels.info if dev else LogLevels.warning,
         log_access=dev,
