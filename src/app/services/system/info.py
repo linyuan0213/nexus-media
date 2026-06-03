@@ -18,10 +18,12 @@ from app.schemas.system import (
     WebSearchResultDTO,
 )
 from app.services.search_web_service import search_medias_for_web
-from app.utils import RequestUtils
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.utils.config_tools import get_proxies
-from app.utils.types import MediaType, ProgressKey
-from app.utils.web_utils import WebUtils
+from app.domain.mediatypes import MediaType
+from app.domain.enums import ProgressKey
+from app.services.web import WebUtils
 from version import APP_VERSION
 
 
@@ -107,19 +109,22 @@ class NetTestService:
             target = target + "/cgi-bin/message/send"
         target = "https://" + target
         start_time = datetime.datetime.now()
-        if (
-            target.find("themoviedb") != -1
-            or target.find("telegram") != -1
-            or target.find("fanart") != -1
-            or target.find("tmdb") != -1
-        ):
-            res = RequestUtils(proxies=get_proxies(), timeout=5).get_res(target)
-        else:
-            res = RequestUtils(timeout=5).get_res(target)
+        proxies = get_proxies()
+        proxy_url = proxies.get("http") if proxies else None
         seconds = int((datetime.datetime.now() - start_time).microseconds / 1000)
-        if res and res.ok:
+        try:
+            if (
+                target.find("themoviedb") != -1
+                or target.find("telegram") != -1
+                or target.find("fanart") != -1
+                or target.find("tmdb") != -1
+            ):
+                HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=5)).get(target)
+            else:
+                HttpClient(config=HttpClientConfig(timeout=5)).get(target)
             return NetTestResultDTO(success=True, time_ms=seconds)
-        return NetTestResultDTO(success=False, time_ms=seconds)
+        except Exception:
+            return NetTestResultDTO(success=False, time_ms=seconds)
 
 
 class WebSearchService:

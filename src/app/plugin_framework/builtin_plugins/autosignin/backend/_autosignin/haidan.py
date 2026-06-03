@@ -1,5 +1,9 @@
+from app.infrastructure.http.auth import CookieAuth
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.utils import RequestUtils, StringUtils
+from app.sites.engine import SiteEngine
+from app.utils import StringUtils
 from app.utils.config_tools import get_proxies
 
 
@@ -35,10 +39,17 @@ class HaiDan(_ISiteSigninHandler):
         proxy = get_proxies() if site_info.get("proxy") else None
 
         # 签到
-        sign_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
-            url="https://www.haidan.video/signin.php"
-        )
-        if not sign_res or sign_res.status_code != 200:
+        proxy_url = proxy.get("http") if isinstance(proxy, dict) else proxy
+        engine = SiteEngine.get_instance()
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        try:
+            sign_res = HttpClient(config=HttpClientConfig(proxy_url=proxy_url), rate_limiter=rate_limiter_engine).get(
+                url="https://www.haidan.video/signin.php",
+                headers={"User-Agent": ua} if ua else None,
+                cookies=CookieAuth._parse_cookies(site_cookie),
+            )
+        except Exception:
             self.error("签到失败，请检查站点连通性")
             return False, f"[{site}]签到失败，请检查站点连通性"
 

@@ -236,6 +236,8 @@ class SubscribeMovieEntity:
     # 从 ORM 列名到 dataclass 字段名的映射
     _ORM_FIELD_MAP = {
         "desc": "description",
+        "rss_sites": "subscribe_sites",
+        "search_sites": "search_sites",
         "tmdbid": "tmdb_id",
     }
 
@@ -482,6 +484,8 @@ class SubscribeTvEntity:
     # 从 ORM 列名到 dataclass 字段名的映射
     _ORM_FIELD_MAP = {
         "desc": "description",
+        "rss_sites": "subscribe_sites",
+        "search_sites": "search_sites",
         "tmdbid": "tmdb_id",
     }
 

@@ -16,8 +16,10 @@ from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositor
 from app.di import container
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.services.subscribe.matcher import SubscribeMatcher
-from app.utils import ExceptionUtils, JsonUtils, Torrent
-from app.utils.types import MediaType, SearchType
+from app.sites.torrent import Torrent
+from app.utils import ExceptionUtils, JsonUtils
+from app.domain.mediatypes import MediaType
+from app.domain.enums import SearchType
 
 lock = Lock()
 

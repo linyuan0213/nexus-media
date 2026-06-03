@@ -7,7 +7,8 @@ from requests.exceptions import RequestException
 
 import log
 from app.storage.backends.base import StorageBackend
-from app.utils import ExceptionUtils, RequestUtils
+from app.infrastructure.http import HttpClient
+from app.utils import ExceptionUtils
 from app.utils.commons import retry
 
 
@@ -34,7 +35,7 @@ class ImageDownloader:
             return
         try:
             log.info(f"[Scraper]正在下载{itype}图片：{url} ...")
-            r = RequestUtils().get_res(url=url, raise_exception=True)
+            r = HttpClient().get(url=url, raise_exception=True)
             if r:
                 if self._dst_backend:
                     self._dst_backend.write_stream(image_path, io.BytesIO(r.content), len(r.content))

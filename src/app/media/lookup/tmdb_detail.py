@@ -1,8 +1,8 @@
 import log
-from app.helper.image_proxy_helper import ImageProxyHelper
+from app.infrastructure.image_proxy import ImageProxy
 from app.media.lookup.tmdb_client import TmdbClient, get_genre_ids_from_detail, update_tmdbinfo_cn_title
-from app.utils.request_deduper import get_deduper
-from app.utils.types import MediaType
+from app.infrastructure.request_deduper import get_deduper
+from app.domain.mediatypes import MediaType
 
 
 class TmdbDetail:
@@ -96,9 +96,7 @@ class TmdbDetail:
         if not tmdbinfo:
             return []
         prefix_url = (
-            ImageProxyHelper.get_tmdbimage_url(r"%s", prefix="original")
-            if original
-            else ImageProxyHelper.get_tmdbimage_url(r"%s")
+            ImageProxy.get_tmdbimage_url(r"%s", prefix="original") if original else ImageProxy.get_tmdbimage_url(r"%s")
         )
         backdrops = tmdbinfo.get("images", {}).get("backdrops") or []
         result = [prefix_url % b.get("file_path") for b in backdrops]

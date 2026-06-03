@@ -1,7 +1,7 @@
 import time
 
 from app.di import container
-from app.helper.cookiecloud_helper import CookiecloudHelper
+from app.infrastructure.cache_system.cookiecloud_adapter import CookiecloudAdapter
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
 from app.plugin_framework.hook_system import HookSystem
 from app.utils import StringUtils
@@ -41,7 +41,7 @@ class MTeam(_ISiteSigninHandler):
 
         HookSystem().emit("site.local_storage_sync", {})
         time.sleep(10)
-        local_storage = CookiecloudHelper().get_local_storage("m-team.io")
+        local_storage = CookiecloudAdapter().get_local_storage("m-team.io")
 
         if not local_storage:
             self.error("仿真登录失败，LocalStorage获取失败或为空")

@@ -12,7 +12,7 @@ import re
 import time
 import traceback
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import urlparse
 
 from lxml import etree
@@ -21,7 +21,10 @@ from app.core.root_path import get_project_root
 
 import log
 from app.sites import engine_connection, engine_download, engine_tools, engine_user_info
-from app.utils import JsonUtils, RequestUtils
+from app.infrastructure.http.auth import CookieAuth
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.utils import JsonUtils
 from app.utils.config_tools import get_proxies
 
 # ---- 数据模型 ----
@@ -117,11 +120,7 @@ class SiteDefinition:
         if data.get("api"):
             api = data["api"]
             endpoints = api.get("endpoints", {})
-            d.api = SiteApiConfig(
-                base_url=api.get("base_url", ""),
-                auth=api.get("auth", {}),
-                endpoints=endpoints,
-            )
+            d.api = SiteApiConfig(base_url=api.get("base_url", ""), auth=api.get("auth", {}), endpoints=endpoints)
         if data.get("html"):
             html = data["html"]
             d.html = SiteHtmlConfig(
@@ -179,6 +178,7 @@ class SiteEngine:
         self._sites: dict[str, SiteDefinition] = {}
         self._auth_cache: dict[str, str] = {}
         self._user_info_factories = []
+        self.site_limiter: Any = None
         self._definitions_dir = definitions_dir or self._resolve_definitions_dir()
         if self._definitions_dir and os.path.isdir(self._definitions_dir):
             for subdir in ("api", "html"):
@@ -283,10 +283,16 @@ class SiteEngine:
             body = {k: v.format(tid=tid) for k, v in (cfg.get("body") or {}).items()}
             headers = engine_tools._build_headers(self, site, user_config)
             headers.pop("Content-Type", None)
-            res = RequestUtils(headers=headers, proxies=get_proxies() if proxy else None, timeout=30).post_res(
-                url=url, data=body
-            )
-            if res and res.status_code == 200:
+            proxies = get_proxies() if proxy else None
+            proxy_url = proxies.get("http") if proxies else None
+            try:
+                rate_limiter = getattr(self, "site_limiter", None)
+                rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+                rl_kwargs = engine_tools._get_rate_limit_kwargs(self, site)
+                res = HttpClient(
+                    config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                    rate_limiter=rate_limiter_engine,
+                ).post(url=url, data=body, headers=headers, **rl_kwargs)
                 text = res.text
                 free_path = cfg.get("response", {}).get("free_key", "")
                 free_val = cfg.get("response", {}).get("free_value", "")
@@ -300,6 +306,8 @@ class SiteEngine:
                         ret["peer_count"] = str(val) if val else ""
                     else:
                         ret["peer_count"] = int(val) if val else 0
+            except Exception:
+                pass
             return ret
 
         if site.html and site.html.conf:
@@ -348,16 +356,20 @@ class SiteEngine:
         cookie = user_config.get("cookie", "")
         ua = user_config.get("ua", "")
         headers = {"User-Agent": ua} if ua else {}
-        res = RequestUtils(
-            cookies=cookie if cookie else None,
-            headers=headers,
-            proxies=get_proxies() if user_config.get("proxy") else None,
-            timeout=30,
-        ).get_res(url=url)
-        if res and res.status_code == 200:
-            res.encoding = res.apparent_encoding
+        proxies = get_proxies() if user_config.get("proxy") else None
+        proxy_url = proxies.get("http") if proxies else None
+        site = self.get_by_url(url)
+        rate_limiter = getattr(self, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        rl_kwargs = engine_tools._get_rate_limit_kwargs(self, site)
+        try:
+            res = HttpClient(
+                config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                rate_limiter=rate_limiter_engine,
+            ).get(url=url, headers=headers, auth=CookieAuth(cookie) if cookie else None, **rl_kwargs)
             return res.text
-        return None
+        except Exception:
+            return None
 
     # ---- 连接测试 ----
 
@@ -484,6 +496,9 @@ class SiteEngine:
             download_dir=download_dir,
             download=download,
         )
+
+    def _build_auth(self, site, user_config):
+        return engine_tools._build_auth(self, site, user_config)
 
     def _build_headers(self, site, user_config):
         return engine_tools._build_headers(self, site, user_config)

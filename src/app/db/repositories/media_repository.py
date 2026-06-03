@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 from app.di import container
 
 

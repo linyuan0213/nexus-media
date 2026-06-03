@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class LookupResult(BaseModel):

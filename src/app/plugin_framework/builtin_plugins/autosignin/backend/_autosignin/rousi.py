@@ -1,10 +1,15 @@
 import json
 import time
 
-from app.helper.cookiecloud_helper import CookiecloudHelper
+from app.infrastructure.cache_system.cookiecloud_adapter import CookiecloudAdapter
+from app.infrastructure.http.auth import BearerAuth
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.infrastructure.http.exceptions import HttpClientError
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
 from app.plugin_framework.hook_system import HookSystem
-from app.utils import RequestUtils, StringUtils
+from app.sites.engine import SiteEngine
+from app.utils import StringUtils
 from app.utils.config_tools import get_proxies
 
 
@@ -37,7 +42,7 @@ class Rousi(_ISiteSigninHandler):
         3. 从site_info的headers中获取authorization字段（如果允许复用）
         """
         # 首先尝试从local_storage获取
-        local_storage = CookiecloudHelper().get_local_storage("rousi.pro")
+        local_storage = CookiecloudAdapter().get_local_storage("rousi.pro")
         if local_storage:
             token = local_storage.get("token")
             if token:
@@ -98,25 +103,38 @@ class Rousi(_ISiteSigninHandler):
             return False, f"[{site}]签到失败，无法获取签到token"
         self.info(f"{site} 开始签到")
 
-        res = RequestUtils(
-            headers={
-                "accept": "application/json, text/plain, */*",
-                "accept-language": "zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7",
-                "content-type": "application/json",
-                "origin": "https://rousi.pro",
-                "referer": "https://rousi.pro/",
-                "User-Agent": ua,
-                "Authorization": f"Bearer {token}",
-            },
-            proxies=proxy,
-            timeout=30,
-        ).post_res(url="https://rousi.pro/api/points/attendance", data='{"mode":"fixed"}')
-        if res is None:
+        proxy_url = proxy.get("http") if isinstance(proxy, dict) else proxy
+        engine = SiteEngine.get_instance()
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        res_text = None
+        try:
+            res = HttpClient(
+                config=HttpClientConfig(proxy_url=proxy_url, timeout=30.0, auth=BearerAuth(token)),
+                rate_limiter=rate_limiter_engine,
+            ).post(
+                url="https://rousi.pro/api/points/attendance",
+                data='{"mode":"fixed"}',
+                headers={
+                    "accept": "application/json, text/plain, */*",
+                    "accept-language": "zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7",
+                    "content-type": "application/json",
+                    "origin": "https://rousi.pro",
+                    "referer": "https://rousi.pro/",
+                    "User-Agent": ua,
+                },
+            )
+            res_text = res.text
+        except HttpClientError as e:
+            if e.status_code is not None and e.response_text:
+                res_text = e.response_text
+
+        if res_text is None:
             self.warn(f"{site} 获取签到接口响应失败")
             return False, f"[{site}]签到失败，获取签到接口响应失败！"
 
         try:
-            res_json = res.json()  # type: ignore[union-attr]
+            res_json = json.loads(res_text)
         except Exception as e:
             self.warn(f"{site} 解析响应JSON失败: {str(e)}")
             return False, f"[{site}]签到失败，解析响应失败！"

@@ -1,10 +1,9 @@
-import requests
-
-from app.helper import IndexerConf
+from app.di import container
+from app.indexer.configuration import IndexerConf
 from app.indexer.client._base import _IIndexClient
 from app.indexer.schema import ConfigField, IndexerConfigSchema
-from app.utils import ExceptionUtils, RequestUtils
-from app.di import container
+from app.infrastructure.http.client import HttpClient
+from app.utils import ExceptionUtils
 
 
 class Jackett(_IIndexClient):
@@ -51,7 +50,7 @@ class Jackett(_IIndexClient):
         if config:
             self._client_config = config
         else:
-            from app.utils.types import SystemConfigKey
+            from app.domain.enums import SystemConfigKey
 
             indexer_config = container.system_config().get(SystemConfigKey.IndexerConfig) or {}
             self._client_config = indexer_config.get("jackett") or {}
@@ -92,17 +91,11 @@ class Jackett(_IIndexClient):
         获取配置的jackett indexer
         :return: indexer 信息 [(indexerId, indexerName, url)]
         """
-        # 获取Cookie
-        cookie = None
-        session = requests.session()
-        res = RequestUtils(session=session).post_res(url=f"{self.host}UI/Dashboard", data={"password": self._password})
-        if res and session.cookies:
-            cookie = session.cookies.get_dict()
         indexer_query_url = f"{self.host}api/v2.0/indexers?configured=true"
         try:
-            ret = RequestUtils(cookies=cookie).get_res(indexer_query_url)
-            if not ret or not ret.json():
-                return []
+            client = HttpClient()
+            client.post(url=f"{self.host}UI/Dashboard", data={"password": self._password})
+            ret = client.get(indexer_query_url)
             return [
                 IndexerConf(
                     datas={

@@ -7,7 +7,7 @@ from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Any, Optional
 
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class CustomWordType(Enum):

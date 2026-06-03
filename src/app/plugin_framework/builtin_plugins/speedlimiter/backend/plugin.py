@@ -6,7 +6,7 @@ SpeedLimiter Plugin v2
 import contextlib
 import time
 
-from app.helper.security_helper import SecurityHelper
+from app.infrastructure.security import SecurityChecker
 from app.plugin_framework.context import PluginContext
 from app.di import container
 
@@ -143,14 +143,14 @@ class SpeedLimiterPlugin:
         if mediaserver_type == "emby":
             for session in playing_sessions:
                 if (
-                    not SecurityHelper.allow_access(self._unlimited_ips, session.get("RemoteEndPoint"))
+                    not SecurityChecker.allow_access(self._unlimited_ips, session.get("RemoteEndPoint"))
                     and session.get("NowPlayingItem", {}).get("MediaType") == "Video"
                 ):
                     total_bit_rate += int(session.get("NowPlayingItem", {}).get("Bitrate") or 0)
         elif mediaserver_type == "jellyfin":
             for session in playing_sessions:
                 if (
-                    not SecurityHelper.allow_access(self._unlimited_ips, session.get("RemoteEndPoint"))
+                    not SecurityChecker.allow_access(self._unlimited_ips, session.get("RemoteEndPoint"))
                     and session.get("NowPlayingItem", {}).get("MediaType") == "Video"
                 ):
                     media_streams = session.get("NowPlayingItem", {}).get("MediaStreams") or []
@@ -159,7 +159,7 @@ class SpeedLimiterPlugin:
         elif mediaserver_type == "plex":
             for session in playing_sessions:
                 if (
-                    not SecurityHelper.allow_access(self._unlimited_ips, session.get("address"))
+                    not SecurityChecker.allow_access(self._unlimited_ips, session.get("address"))
                     and session.get("type") == "Video"
                 ):
                     total_bit_rate += int(session.get("bitrate") or 0)

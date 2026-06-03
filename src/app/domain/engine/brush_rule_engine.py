@@ -20,7 +20,8 @@ import pytz
 
 import log
 from app.utils import ExceptionUtils, StringUtils
-from app.utils.types import BrushDeleteType, BrushStopType, MediaType
+from app.domain.mediatypes import MediaType
+from app.domain.enums import BrushDeleteType, BrushStopType
 
 
 class BrushRuleEngine:

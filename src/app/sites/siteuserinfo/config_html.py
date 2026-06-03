@@ -19,9 +19,12 @@ from urllib.parse import urljoin
 
 from lxml import etree
 
+from app.sites import engine_tools
 from app.sites.engine import SiteEngine
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.sites.siteuserinfo import discuz, gazelle, nexus_php, small_horse, unit3d
-from app.utils import RequestUtils, StringUtils
+from app.utils import StringUtils
 from app.utils.config_tools import get_proxies
 
 _ARCH_PARSERS = [
@@ -245,15 +248,27 @@ class ConfigHtmlUserInfo:
         self.seeding_info = json.dumps(info)
 
     def _parse_seeding_api(self, sc: dict) -> None:
+        engine = SiteEngine.get_instance()
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._def)
         method = sc.get("method", "GET").upper()
         path = sc.get("path", "").format(userid=self.userid or "")
         url = urljoin(self._base_url_str + "/", path)
         headers = {"User-Agent": self._ua} if self._ua else {}
         if method == "POST":
             body = sc.get("body") or {}
-            res = RequestUtils(
-                headers=headers, cookies=self._cookie if self._cookie else None, proxies=self._proxies, timeout=30
-            ).post_res(url=url, data=json.dumps(body))
+            proxy_url = self._proxies.get("http") if self._proxies else None
+            res = HttpClient(
+                config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                rate_limiter=rate_limiter_engine,
+            ).post(
+                url=url,
+                data=json.dumps(body),
+                headers=headers,
+                cookies=self._cookie if self._cookie else None,
+                **rl_kwargs,
+            )
         else:
             res = self._fetch_html(url)
         if not res:
@@ -324,17 +339,19 @@ class ConfigHtmlUserInfo:
             headers["Referer"] = referer
         elif "Referer" not in headers and "referer" not in headers:
             headers.setdefault("Referer", self._base_url_str)
-        res = RequestUtils(
-            cookies=self._cookie if self._cookie else None,
-            session=self._session,
-            headers=headers,
-            proxies=self._proxies,
-            timeout=30,
-        ).get_res(url=url)
-        if res and res.status_code == 200:
-            res.encoding = res.apparent_encoding
+        proxy_url = self._proxies.get("http") if self._proxies else None
+        engine = SiteEngine.get_instance()
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._def)
+        try:
+            res = HttpClient(
+                config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                rate_limiter=rate_limiter_engine,
+            ).get(url=url, headers=headers, cookies=self._cookie if self._cookie else None, **rl_kwargs)
             return res.text
-        return None
+        except Exception:
+            return None
 
 
 def _html_config_factory(

@@ -1,7 +1,8 @@
-from app.helper import IndexerConf
+from app.indexer.configuration import IndexerConf
 from app.indexer.client._base import _IIndexClient
 from app.indexer.schema import ConfigField, IndexerConfigSchema
-from app.utils import ExceptionUtils, RequestUtils
+from app.infrastructure.http.client import HttpClient
+from app.utils import ExceptionUtils
 from app.di import container
 
 
@@ -40,7 +41,7 @@ class Prowlarr(_IIndexClient):
         if config:
             self._client_config = config
         else:
-            from app.utils.types import SystemConfigKey
+            from app.domain.enums import SystemConfigKey
 
             indexer_config = container.system_config().get(SystemConfigKey.IndexerConfig) or {}
             self._client_config = indexer_config.get("prowlarr") or {}
@@ -82,11 +83,9 @@ class Prowlarr(_IIndexClient):
         """
         indexer_query_url = f"{self.host}api/v1/indexerstats?apikey={self.api_key}"
         try:
-            ret = RequestUtils().get_res(indexer_query_url)
+            ret = HttpClient().get(indexer_query_url)
         except Exception as e2:
             ExceptionUtils.exception_traceback(e2)
-            return []
-        if not ret:
             return []
         indexers = ret.json().get("indexers", [])
         return [

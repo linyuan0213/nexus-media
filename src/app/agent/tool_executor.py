@@ -17,7 +17,8 @@ from app.di import container
 from app.media.models import MediaInfo
 from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
 from app.schemas.scheduler import PauseSchedulerJobRequest, ResumeSchedulerJobRequest, RunSchedulerJobRequest
-from app.utils.types import MediaType, SearchType
+from app.domain.mediatypes import MediaType
+from app.domain.enums import SearchType
 
 
 class ToolExecutor:

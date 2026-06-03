@@ -18,12 +18,15 @@ from lxml import etree
 
 import log
 from app.sites.api_searcher import ApiSiteSearcher
-from app.sites.engine import SiteDefinition
+from app.sites.engine import SiteDefinition, SiteEngine
+from app.sites import engine_tools
 from app.sites.searchers import _TRANSFORMS, _css_to_xpath, _resolve_jinja
-from app.utils import RequestUtils
+from app.infrastructure.http.auth import CookieAuth
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.utils.config_tools import get_proxies
-from app.utils.media_type_utils import MediaTypeMapper
-from app.utils.types import MediaType
+from app.domain.media_type_utils import MediaTypeMapper
+from app.domain.mediatypes import MediaType
 
 
 class HtmlSiteSearcher:
@@ -35,12 +38,7 @@ class HtmlSiteSearcher:
         self._site = site_def
         self._user_config = user_config or {}
 
-    def search(
-        self,
-        keyword: str = "",
-        page: int = 0,
-        mtype: MediaType | None = None,
-    ) -> list[dict[str, Any]]:
+    def search(self, keyword: str = "", page: int = 0, mtype: MediaType | None = None) -> list[dict[str, Any]]:
         if not self._site.html:
             return []
         is_browse = not keyword
@@ -128,18 +126,23 @@ class HtmlSiteSearcher:
         ua = self._user_config.get("ua", "")
         if ua:
             headers["User-Agent"] = ua
-        res = RequestUtils(
-            headers=headers,
-            cookies=cookie if cookie else None,
-            proxies=get_proxies() if self._user_config.get("proxy") else None,
-            timeout=30,
-        ).get_res(url=url)
-        if not res or res.status_code != 200:
+        proxies = get_proxies() if self._user_config.get("proxy") else None
+        proxy_url = proxies.get("http") if proxies else None
+        engine = SiteEngine.get_instance()
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._site)
+        try:
+            res = HttpClient(
+                config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                rate_limiter=rate_limiter_engine,
+            ).get(url=url, headers=headers, auth=CookieAuth(cookie) if cookie else None, **rl_kwargs)
+        except Exception:
             log.warn(f"[HtmlSiteSearcher]{self._site.name} 请求失败")
             return None
         encoding = self._site.encoding or None
         if encoding:
-            res.encoding = encoding
+            return res.content.decode(encoding)
         return res.text
 
     def _parse_html(self, html_text, is_browse=False):

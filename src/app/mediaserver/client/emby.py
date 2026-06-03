@@ -6,8 +6,9 @@ import log
 from app.core.exceptions import InfrastructureError, MediaServerError, NetworkError
 from app.mediaserver.client._base import _IMediaClient
 from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
-from app.utils import ExceptionUtils, IpUtils, RequestUtils, SystemUtils
-from app.utils.types import MediaType
+from app.infrastructure.http import HttpClient
+from app.utils import ExceptionUtils, IpUtils, SystemUtils
+from app.domain.mediatypes import MediaType
 
 
 class Emby(_IMediaClient):
@@ -134,7 +135,7 @@ class Emby(_IMediaClient):
             return []
         req_url = f"{self._host}emby/Library/SelectableMediaFolders?api_key={self._apikey}"
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res:
                 return res.json()
             else:
@@ -155,7 +156,7 @@ class Emby(_IMediaClient):
             return []
         req_url = f"{self._host}emby/Users/{self._user}/Views?api_key={self._apikey}"
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res:
                 return res.json().get("Items")
             else:
@@ -176,7 +177,7 @@ class Emby(_IMediaClient):
             return None
         req_url = f"{self._host}Users?api_key={self._apikey}"
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res:
                 users = res.json()
                 # 先查询是否有与当前用户名称匹配的
@@ -260,7 +261,7 @@ class Emby(_IMediaClient):
             return None
         req_url = f"{self._host}System/Info?api_key={self._apikey}"
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res:
                 return res.json().get("Id")
             else:
@@ -280,7 +281,7 @@ class Emby(_IMediaClient):
             return 0
         req_url = f"{self._host}emby/Users/Query?api_key={self._apikey}"
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res:
                 return res.json().get("TotalRecordCount")
             else:
@@ -303,7 +304,7 @@ class Emby(_IMediaClient):
         req_url = f"{self._host}emby/System/ActivityLog/Entries?api_key={self._apikey}&"
         ret_array = []
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res:
                 ret_json = res.json()
                 items = ret_json.get("Items")
@@ -341,7 +342,7 @@ class Emby(_IMediaClient):
             return {}
         req_url = f"{self._host}emby/Items/Counts?api_key={self._apikey}"
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res:
                 return res.json()
             else:
@@ -366,7 +367,7 @@ class Emby(_IMediaClient):
             return None
         req_url = f"{self._host}emby/Items?IncludeItemTypes=Series&Fields=ProductionYear&StartIndex=0&Recursive=true&SearchTerm={name}&Limit=10&IncludeSearchTypes=false&api_key={self._apikey}"
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res:
                 res_items = res.json().get("Items")
                 if res_items:
@@ -395,7 +396,7 @@ class Emby(_IMediaClient):
             return None
         req_url = f"{self._host}emby/Items?IncludeItemTypes=Movie&Fields=ProductionYear&StartIndex=0&Recursive=true&SearchTerm={title}&Limit=10&IncludeSearchTypes=false&api_key={self._apikey}"
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res:
                 res_items = res.json().get("Items")
                 if res_items:
@@ -448,7 +449,7 @@ class Emby(_IMediaClient):
             season = ""
         req_url = f"{self._host}emby/Shows/{item_id}/Episodes?Season={season}&IsMissing=false&api_key={self._apikey}"
         try:
-            res_json = RequestUtils().get_res(req_url)
+            res_json = HttpClient().get(req_url)
             if res_json:
                 res_items = res_json.json().get("Items")
                 exists_episodes = []
@@ -504,7 +505,7 @@ class Emby(_IMediaClient):
         # 查询所有剧集
         req_url = f"{self._host}emby/Shows/{item_id}/Episodes?Season={season_id}&IsMissing=false&api_key={self._apikey}"
         try:
-            res_json = RequestUtils().get_res(req_url)
+            res_json = HttpClient().get(req_url)
             if res_json:
                 res_items = res_json.json().get("Items")
                 for res_item in res_items:
@@ -543,7 +544,7 @@ class Emby(_IMediaClient):
             return None
         req_url = f"{self._host}emby/Items/{item_id}/RemoteImages?api_key={self._apikey}"
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res:
                 images = res.json().get("Images")
                 for image in images:
@@ -590,7 +591,7 @@ class Emby(_IMediaClient):
             return False
         req_url = f"{self._host}emby/Items/{item_id}/Refresh?Recursive=true&api_key={self._apikey}"
         try:
-            res = RequestUtils().post_res(req_url)
+            res = HttpClient().post(req_url)
             if res:
                 return True
             else:
@@ -612,7 +613,7 @@ class Emby(_IMediaClient):
             return False
         req_url = f"{self._host}emby/Library/Refresh?api_key={self._apikey}"
         try:
-            res = RequestUtils().post_res(req_url)
+            res = HttpClient().post(req_url)
             if res:
                 return True
             else:
@@ -736,7 +737,7 @@ class Emby(_IMediaClient):
             return {}
         req_url = f"{self._host}emby/Users/{self._user}/Items/{itemid}?api_key={self._apikey}"
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res and res.status_code == 200:
                 return res.json()
         except (InfrastructureError, NetworkError, MediaServerError):
@@ -766,7 +767,7 @@ class Emby(_IMediaClient):
             yield {}
         req_url = f"{self._host}emby/Users/{self._user}/Items?ParentId={parent}&api_key={self._apikey}"
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res and res.status_code == 200:
                 results = res.json().get("Items") or []
                 for result in results:
@@ -805,7 +806,7 @@ class Emby(_IMediaClient):
         playing_sessions = []
         req_url = f"{self._host}emby/Sessions?api_key={self._apikey}"
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res and res.status_code == 200:
                 sessions = res.json()
                 for session in sessions:
@@ -882,7 +883,7 @@ class Emby(_IMediaClient):
             return None
         req_url = f"{self._host}Users/{self._user}/Items/Resume?Limit={num}&MediaTypes=Video&api_key={self._apikey}"
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res:
                 result = res.json().get("Items") or []
                 ret_resume = []
@@ -946,7 +947,7 @@ class Emby(_IMediaClient):
             return None
         req_url = f"{self._host}Users/{self._user}/Items/Latest?Limit={num}&MediaTypes=Video&api_key={self._apikey}"
         try:
-            res = RequestUtils().get_res(req_url)
+            res = HttpClient().get(req_url)
             if res:
                 result = res.json() or []
                 ret_latest = []

@@ -18,7 +18,7 @@ from app.indexer.core.models import FilterStats, SearchCandidate
 from app.infrastructure.cache_system import get_cache_manager
 from app.media import meta_info
 from app.utils import StringUtils
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class ResultFilter:

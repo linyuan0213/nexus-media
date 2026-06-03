@@ -7,7 +7,9 @@ from app.message import Message
 from app.message.client._base import _IMessageClient
 from app.message.commands import WECHAT_MENU, WECHAT_PLUGIN_GROUP
 from app.message.schema import ConfigField, MessageConfigSchema
-from app.utils import ExceptionUtils, RequestUtils
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.utils import ExceptionUtils
 
 _menu_lock = Lock()
 
@@ -132,13 +134,12 @@ class WeChat(_IMessageClient):
             return None
         try:
             token_url = self._token_url % (self.corpid, self.corpsecret)
-            res = RequestUtils().get_res(token_url)
-            if res:
-                data = res.json()
-                if data.get("errcode") == 0:
-                    self._access_token = data.get("access_token")
-                    self._expires_in = data.get("expires_in")
-                    self._token_time = datetime.now()
+            res = HttpClient().get(token_url)
+            data = res.json()
+            if data.get("errcode") == 0:
+                self._access_token = data.get("access_token")
+                self._expires_in = data.get("expires_in")
+                self._token_time = datetime.now()
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
         return self._access_token
@@ -256,18 +257,15 @@ class WeChat(_IMessageClient):
                 headers = {"content-type": "application/json"}
                 menu_url = self._menu_url % (token, self.agent_id)
                 log.info(f"[WeChat]菜单请求URL: {menu_url}")
-                res = RequestUtils(headers=headers).post(menu_url, data=data)
-                if res and res.status_code == 200:
-                    body = res.json()
-                    if body.get("errcode") == 0:
-                        WeChat._menu_done.add(str(self.agent_id))
-                        log.info("[WeChat]应用菜单创建成功")
-                    else:
-                        log.error(
-                            "[WeChat]菜单创建失败 errcode={} errmsg={}".format(body.get("errcode"), body.get("errmsg"))
-                        )
+                res = HttpClient(config=HttpClientConfig(default_headers=headers)).post(menu_url, data=data)
+                body = res.json()
+                if body.get("errcode") == 0:
+                    WeChat._menu_done.add(str(self.agent_id))
+                    log.info("[WeChat]应用菜单创建成功")
                 else:
-                    log.error("[WeChat]菜单创建失败 HTTP=%s" % (res.status_code if res else "无响应"))
+                    log.error(
+                        "[WeChat]菜单创建失败 errcode={} errmsg={}".format(body.get("errcode"), body.get("errmsg"))
+                    )
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
                 log.error(f"[WeChat]菜单创建异常：{e}")
@@ -282,17 +280,13 @@ class WeChat(_IMessageClient):
         try:
             data = json.dumps(req_json, ensure_ascii=False).encode("utf-8")
             log.debug("[WeChat]POST {}".format(url.split("?")[0]) if "?" in url else url)
-            res = RequestUtils(headers=headers).post(url, data=data)
-            if res and res.status_code == 200:
-                body = res.json()
-                if body.get("errcode") == 0:
-                    return True, body.get("errmsg")
-                if body.get("errcode") == 42001:
-                    self._get_access_token(force=True)
-                return False, body.get("errmsg")
-            if res is not None:
-                return False, f"错误码：{res.status_code}"
-            return False, "未获取到返回信息"
+            res = HttpClient(config=HttpClientConfig(default_headers=headers)).post(url, data=data)
+            body = res.json()
+            if body.get("errcode") == 0:
+                return True, body.get("errmsg")
+            if body.get("errcode") == 42001:
+                self._get_access_token(force=True)
+            return False, body.get("errmsg")
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return False, str(err)

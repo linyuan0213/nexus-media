@@ -221,7 +221,7 @@ class RedisCacheAdapter(CacheAdapter):
     def _init_redis(self):
         """初始化Redis连接"""
         try:
-            from app.utils.redis_store import RedisStore
+            from app.infrastructure.redis import RedisStore
 
             store = RedisStore()
             if store.is_available():

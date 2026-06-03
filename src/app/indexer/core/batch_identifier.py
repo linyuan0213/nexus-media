@@ -1,7 +1,7 @@
 import log
 from app.di import container
 from app.infrastructure.cache_system import get_cache_manager
-from app.utils.types import ProgressKey
+from app.domain.enums import ProgressKey
 
 
 class BatchIdentifier:

@@ -14,7 +14,10 @@ from app.core.constants import MT_URL
 from app.plugin_framework.builtin_plugins.iyuuautoseed.backend.iyuu.iyuu_helper import IyuuHelper
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import Torrent
-from app.utils import RequestUtils
+from app.infrastructure.http.auth import CookieAuth
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.sites.engine import SiteEngine
 from app.utils.config_tools import get_proxies
 from app.di import container
 
@@ -302,10 +305,20 @@ class IYUUAutoSeedPlugin:
         # 下载种子
         torrent_url = download_page.replace("{}", str(seed.get("torrent_id")))
         proxies = get_proxies() if site_info.get("proxy") else None
-        res = RequestUtils(
-            cookies=site_info.get("cookie"), headers={"User-Agent": site_info.get("ua")}, proxies=proxies
-        ).get_res(torrent_url)
-        if not res or not res.content:
+        proxy_url = proxies.get("http") if proxies else None
+        engine = SiteEngine.get_instance()
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        try:
+            res = HttpClient(
+                config=HttpClientConfig(proxy_url=proxy_url),
+                rate_limiter=rate_limiter_engine,
+            ).get(
+                torrent_url,
+                headers={"User-Agent": site_info.get("ua")},
+                auth=CookieAuth(site_info.get("cookie")),
+            )
+        except Exception:
             self.fail += 1
             return False
 

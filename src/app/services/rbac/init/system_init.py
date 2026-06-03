@@ -41,7 +41,7 @@ def init_admin_user(admin_username: str, admin_password: str):
         if existing:
             old_hash = existing.PASSWORD_HASH or ""
             if old_hash.startswith(("pbkdf2:", "scrypt:")) or not old_hash:
-                from app.utils.security import generate_password_hash
+                from app.infrastructure.security import generate_password_hash
 
                 new_hash = generate_password_hash(admin_password)
                 user_repo.update_user(existing.ID, password_hash=new_hash)
@@ -50,7 +50,7 @@ def init_admin_user(admin_username: str, admin_password: str):
                 log.info(f"[RBAC初始化]管理员用户 {admin_username} 已存在")
             return True
 
-        from app.utils.security import generate_password_hash
+        from app.infrastructure.security import generate_password_hash
 
         password_hash = generate_password_hash(admin_password)
 

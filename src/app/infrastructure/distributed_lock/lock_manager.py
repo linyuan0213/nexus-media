@@ -8,7 +8,7 @@ from collections.abc import Callable
 from app.infrastructure.distributed_lock.base import DistributedLock, LockAcquisitionError
 from app.infrastructure.distributed_lock.db_lock import DbDistributedLock
 from app.infrastructure.distributed_lock.redis_lock import RedisDistributedLock
-from app.utils.redis_store import RedisStore
+from app.infrastructure.redis import RedisStore
 
 
 class LockManager:

@@ -11,10 +11,13 @@ from lxml import etree
 from PIL import Image
 
 from app.core.settings import settings
-from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.utils import RequestUtils, StringUtils
-from app.utils.config_tools import get_proxies
 from app.di import container
+from app.infrastructure.http.auth import CookieAuth
+from app.infrastructure.http.client import HttpClient, HttpClientError
+from app.infrastructure.http.config import HttpClientConfig
+from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
+from app.utils import StringUtils
+from app.utils.config_tools import get_proxies
 
 
 class Tjupt(_ISiteSigninHandler):
@@ -69,10 +72,19 @@ class Tjupt(_ISiteSigninHandler):
             os.makedirs(os.path.dirname(self._answer_file))
 
         # 获取北洋签到页面html
-        html_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(url=self._sign_in_url)
+        try:
+            html_res = HttpClient(config=HttpClientConfig(proxy_url=proxy.get("http") if proxy else None)).get(
+                url=self._sign_in_url,
+                headers={"User-Agent": ua} if ua else None,
+                auth=CookieAuth(site_cookie) if site_cookie else None,
+                raise_for_status=False,
+            )
+        except HttpClientError:
+            self.error("签到失败，请检查站点连通性")
+            return False, f"[{site}]签到失败，请检查站点连通性"
 
         # 获取签到后返回html，判断是否签到成功
-        if not html_res or html_res.status_code != 200:
+        if html_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
             return False, f"[{site}]签到失败，请检查站点连通性"
 
@@ -126,8 +138,16 @@ class Tjupt(_ISiteSigninHandler):
         for value, answer in answers:
             if answer:
                 # 豆瓣检索
-                db_res = RequestUtils().get_res(url=f"https://movie.douban.com/j/subject_suggest?q={answer}")
-                if not db_res or db_res.status_code != 200:
+                try:
+                    db_res = HttpClient().get(
+                        url=f"https://movie.douban.com/j/subject_suggest?q={answer}",
+                        raise_for_status=False,
+                    )
+                except HttpClientError:
+                    self.debug(f"签到选项 {answer} 未查询到豆瓣数据")
+                    continue
+
+                if db_res.status_code != 200:
                     self.debug(f"签到选项 {answer} 未查询到豆瓣数据")
                     continue
 
@@ -143,8 +163,16 @@ class Tjupt(_ISiteSigninHandler):
                     answer_img_url = db_answer["img"]
 
                     # 获取答案hash
-                    answer_img_res = RequestUtils().get_res(url=answer_img_url)
-                    if not answer_img_res or answer_img_res.status_code != 200:
+                    try:
+                        answer_img_res = HttpClient().get(
+                            url=answer_img_url,
+                            raise_for_status=False,
+                        )
+                    except HttpClientError:
+                        self.debug(f"签到答案 {answer} {answer_img_url} 请求失败")
+                        continue
+
+                    if answer_img_res.status_code != 200:
                         self.debug(f"签到答案 {answer} {answer_img_url} 请求失败")
                         continue
 
@@ -223,10 +251,19 @@ class Tjupt(_ISiteSigninHandler):
         """
         data = {"answer": answer, "submit": "提交"}
         self.debug(f"提交data {data}")
-        sign_in_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).post_res(
-            url=self._sign_in_url, data=data
-        )
-        if not sign_in_res or sign_in_res.status_code != 200:
+        try:
+            sign_in_res = HttpClient(config=HttpClientConfig(proxy_url=proxy.get("http") if proxy else None)).post(
+                url=self._sign_in_url,
+                data=data,
+                headers={"User-Agent": ua} if ua else None,
+                auth=CookieAuth(site_cookie) if site_cookie else None,
+                raise_for_status=False,
+            )
+        except HttpClientError:
+            self.error("签到失败，签到接口请求失败")
+            return False, f"[{site}]签到失败，签到接口请求失败"
+
+        if sign_in_res.status_code != 200:
             self.error("签到失败，签到接口请求失败")
             return False, f"[{site}]签到失败，签到接口请求失败"
 

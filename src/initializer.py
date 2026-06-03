@@ -6,6 +6,7 @@ from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.di import container
 from app.events import auto_register, register_modules
 from app.events.config import EVENT_HANDLER_MODULES
+from app.infrastructure.cache_system.events import init_event_bridge
 from app.services.rbac_init import init_admin_user
 from app.services.rbac_init import init_rbac_system as rbac_init
 from app.utils import ExceptionUtils
@@ -142,7 +143,7 @@ def update_config():
 
 def check_redis():
     """检查 Redis 状态，仅记录日志，不阻塞启动"""
-    from app.utils.redis_store import RedisStore
+    from app.infrastructure.redis import RedisStore
 
     try:
         redis_store = RedisStore()
@@ -186,7 +187,9 @@ def init_event_handlers():
     """
     try:
         register_modules(EVENT_HANDLER_MODULES)
-        auto_register(container.event_bus())
+        bus = container.event_bus()
+        auto_register(bus)
+        init_event_bridge(bus)
         log.info("[Initialize]事件处理器已注册")
     except Exception as e:
         log.error(f"[Initialize]事件处理器注册失败：{e!s}")

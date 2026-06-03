@@ -41,7 +41,7 @@ from app.services.media_service import (
 )
 from app.services.search_service import Searcher
 from app.utils.response import fail, success
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 router = APIRouter()
 

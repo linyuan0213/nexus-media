@@ -1,10 +1,10 @@
 import random
 
 import log
-from app.helper.image_proxy_helper import ImageProxyHelper
+from app.infrastructure.image_proxy import ImageProxy
 from app.media.lookup.tmdb_client import TmdbClient
-from app.utils.media_type_utils import MediaTypeMapper
-from app.utils.types import MediaType
+from app.domain.media_type_utils import MediaTypeMapper
+from app.domain.mediatypes import MediaType
 
 
 class TmdbDiscover:
@@ -147,7 +147,7 @@ class TmdbDiscover:
             if medias:
                 media = random.choice(medias)
                 img_url = (
-                    ImageProxyHelper.get_tmdbimage_url(media.get("backdrop_path"), prefix="original")
+                    ImageProxy.get_tmdbimage_url(media.get("backdrop_path"), prefix="original")
                     if media.get("backdrop_path")
                     else ""
                 )
@@ -166,7 +166,7 @@ class TmdbDiscover:
         for info in infos:
             tmdbid = info.get("id")
             vote = round(float(info.get("vote_average")), 1) if info.get("vote_average") else 0
-            image = ImageProxyHelper.get_tmdbimage_url(info.get("poster_path"))
+            image = ImageProxy.get_tmdbimage_url(info.get("poster_path"))
             if poster_filter and not image:
                 continue
             overview = info.get("overview")

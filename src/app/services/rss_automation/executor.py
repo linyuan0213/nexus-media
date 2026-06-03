@@ -13,10 +13,14 @@ from app.events.constants import RSS_AUTO_SUBSCRIBE_REQUESTED
 from app.events.types import Event
 from app.media import meta_info
 from app.services.rss_automation.parser import RssParserEngine
-from app.utils import ExceptionUtils, RequestUtils
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.sites.engine import SiteEngine
+from app.utils import ExceptionUtils
 from app.utils.config_tools import get_proxies
-from app.utils.media_type_utils import MediaTypeMapper
-from app.utils.types import MediaType, SearchType
+from app.domain.media_type_utils import MediaTypeMapper
+from app.domain.mediatypes import MediaType
+from app.domain.enums import SearchType
 
 
 def _check_task_rss(service, taskid: int | None) -> None:
@@ -251,11 +255,16 @@ def _parse_userrss_result(service, taskinfo: dict[str, Any]) -> list[dict[str, A
                 log.error(f"[RssTaskService]任务 {task_name} 配置解析器 {parser_name} 附加参数不合法")
                 continue
             rss_url = f"{rss_url}?{param_url}" if rss_url.find("?") == -1 else f"{rss_url}&{param_url}"
+        proxies = get_proxies() if taskinfo.get("proxy") else None
+        proxy_url = proxies.get("http") if proxies else None
+        engine = SiteEngine.get_instance()
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         try:
-            ret = RequestUtils(proxies=get_proxies() if taskinfo.get("proxy") else None).get_res(rss_url)
-            if not ret:
-                continue
-            ret.encoding = ret.apparent_encoding
+            ret = HttpClient(
+                config=HttpClientConfig(proxy_url=proxy_url),
+                rate_limiter=rate_limiter_engine,
+            ).get(rss_url)
         except (ServiceError, RepositoryError):
             raise
         except Exception as e2:

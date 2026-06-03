@@ -2,7 +2,7 @@
 
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.di import container
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class SubscribeHistoryService:

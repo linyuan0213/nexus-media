@@ -2,7 +2,7 @@ import json
 from typing import Any, cast
 
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
-from app.db.repositories import SiteRepository
+from app.db.repositories.site_repository import SiteRepository
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.domain.entities.site import SiteEntity
 from app.domain.interfaces.site_repo import ISiteRepository
@@ -103,6 +103,9 @@ class SiteService:
         rssurl = data.get("site_rssurl")
         signurl = data.get("site_signurl")
         cookie = data.get("site_cookie")
+        api_key = data.get("site_api_key")
+        bearer_token = data.get("site_bearer_token")
+        headers = data.get("site_headers")
         note = data.get("site_note")
         if isinstance(note, str):
             try:
@@ -121,6 +124,9 @@ class SiteService:
             rss_url=rssurl,
             sign_url=signurl,
             cookie=cookie,
+            api_key=api_key,
+            bearer_token=bearer_token,
+            headers=headers,
             note=note or {},
             rss_uses=rss_uses,
         )

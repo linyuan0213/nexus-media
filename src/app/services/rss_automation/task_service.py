@@ -8,7 +8,7 @@ from app.core.exceptions import RepositoryError, ServiceError
 from app.db.repositories.config_repo_adapter import UserRssConfigRepositoryAdapter
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.di import container
-from app.helper import RssHelper
+from app.services.rss_processor import RssHelper
 from app.media import MediaService
 from app.message import Message
 from app.services.downloader_core import DownloaderCore as Downloader

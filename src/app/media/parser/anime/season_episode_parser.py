@@ -3,7 +3,7 @@
 """
 
 from app.utils import ExceptionUtils
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 def parse_year(info, anitopy_info):

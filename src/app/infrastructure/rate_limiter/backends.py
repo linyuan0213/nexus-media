@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from collections import deque
 
 import log
-from app.utils.redis_store import RedisStore
+from app.infrastructure.redis import RedisStore
 
 
 def _parse_rate(rate: str) -> tuple[float, int]:
@@ -167,35 +167,19 @@ class RedisTokenBucketBackend(RateLimitBackend):
     local burst = tonumber(ARGV[2])
     local tokens = tonumber(ARGV[3])
     local now = tonumber(ARGV[4])
-    local timeout_ms = tonumber(ARGV[5])
 
-    local function try_acquire()
-        local data = redis.call('HMGET', key, 'tokens', 'last_update')
-        local current_tokens = tonumber(data[1]) or burst
-        local last_update = tonumber(data[2]) or now
-        current_tokens = math.min(burst, current_tokens + (now - last_update) * rate / 1000.0)
-        if current_tokens >= tokens then
-            current_tokens = current_tokens - tokens
-            redis.call('HMSET', key, 'tokens', current_tokens, 'last_update', now)
-            redis.call('EXPIRE', key, math.ceil(burst / rate * 1000) + 1)
-            return 1
-        else
-            redis.call('HMSET', key, 'tokens', current_tokens, 'last_update', now)
-            return 0
-        end
-    end
-
-    local deadline = now + timeout_ms
-    while true do
-        local result = try_acquire()
-        if result == 1 then
-            return 1
-        end
-        local remaining = deadline - redis.call('TIME')[1]
-        if remaining <= 0 then
-            return 0
-        end
-        redis.call('SET', key .. ':wait', '1', 'PX', math.min(remaining, 100))
+    local data = redis.call('HMGET', key, 'tokens', 'last_update')
+    local current_tokens = tonumber(data[1]) or burst
+    local last_update = tonumber(data[2]) or now
+    current_tokens = math.min(burst, current_tokens + (now - last_update) * rate / 1000.0)
+    if current_tokens >= tokens then
+        current_tokens = current_tokens - tokens
+        redis.call('HMSET', key, 'tokens', current_tokens, 'last_update', now)
+        redis.call('EXPIRE', key, math.ceil(burst / rate * 1000) + 1)
+        return 1
+    else
+        redis.call('HMSET', key, 'tokens', current_tokens, 'last_update', now)
+        return 0
     end
     """
 
@@ -210,12 +194,11 @@ class RedisTokenBucketBackend(RateLimitBackend):
         if not self._redis.is_available():
             return True
         now_ms = int(time.time() * 1000)
-        timeout_ms = int((timeout or 0) * 1000) if timeout is not None else 0
         try:
             if self._script_sha is None:
                 self._script_sha = self._load_script()
             if self._script_sha:
-                result = self._redis.evalsha(self._script_sha, 1, key, rate, burst, tokens, now_ms, timeout_ms)
+                result = self._redis.evalsha(self._script_sha, 1, key, rate, burst, tokens, now_ms)
                 return bool(result)
             return True
         except Exception as e:

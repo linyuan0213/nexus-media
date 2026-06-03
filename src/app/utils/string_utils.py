@@ -10,7 +10,7 @@ import dateparser
 import dateutil.parser
 
 from app.utils.exception_utils import ExceptionUtils
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class StringUtils:

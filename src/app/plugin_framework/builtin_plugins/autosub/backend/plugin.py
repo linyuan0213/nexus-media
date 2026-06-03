@@ -19,7 +19,7 @@ from lxml import etree
 
 from app.agent.agents.chat_agent import ChatAgent
 from app.core.constants import RMT_MEDIAEXT
-from app.helper import FfmpegHelper
+from app.infrastructure.ffmpeg import FfmpegProcessor
 from app.plugin_framework.context import PluginContext
 from app.utils import SystemUtils
 
@@ -339,7 +339,7 @@ class AutoSubPlugin:
         faster_whisper_model,
         faster_whisper_model_path,
     ):
-        video_meta = FfmpegHelper().get_video_metadata(video_file)
+        video_meta = FfmpegProcessor().get_video_metadata(video_file)
         if not video_meta:
             self.ctx.error("获取视频文件元数据失败，跳过后续处理")
             return False, None
@@ -375,7 +375,9 @@ class AutoSubPlugin:
                 if (iso639.find(subtitle_lang) and iso639.to_iso639_1(subtitle_lang))
                 else "und"
             )
-            FfmpegHelper().extract_subtitle_from_video(video_file, f"{subtitle_file}.{audio_lang}.srt", subtitle_index)
+            FfmpegProcessor().extract_subtitle_from_video(
+                video_file, f"{subtitle_file}.{audio_lang}.srt", subtitle_index
+            )
             self.ctx.info(f"提取字幕完成：{subtitle_file}.{audio_lang}.srt")
             return True, audio_lang
 
@@ -394,7 +396,7 @@ class AutoSubPlugin:
 
         with tempfile.NamedTemporaryFile(prefix="autosub-", suffix=".wav", delete=True) as audio_file:
             self.ctx.info(f"提取音频：{audio_file.name} ...")
-            FfmpegHelper().extract_wav_from_video(video_file, audio_file.name, audio_index)
+            FfmpegProcessor().extract_wav_from_video(video_file, audio_file.name, audio_index)
             self.ctx.info(f"提取音频完成：{audio_file.name}")
 
             self.ctx.info(f"开始生成字幕, 语言 {audio_lang} ...")
@@ -628,7 +630,7 @@ class AutoSubPlugin:
         if exist:
             return True
 
-        video_meta = FfmpegHelper().get_video_metadata(video_file)
+        video_meta = FfmpegProcessor().get_video_metadata(video_file)
         if not video_meta:
             return False
         ret, subtitle_index, subtitle_lang, _ = self._get_video_prefer_subtitle(video_meta, prefer_lang=prefer_langs)

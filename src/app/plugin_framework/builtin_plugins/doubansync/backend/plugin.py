@@ -14,8 +14,9 @@ from typing import Any
 
 from app.media import meta_info
 from app.plugin_framework.context import PluginContext
-from app.utils.types import MediaType, SearchType
-from app.utils.web_utils import WebUtils
+from app.domain.mediatypes import MediaType
+from app.domain.enums import SearchType
+from app.services.web import WebUtils
 from app.di import container
 
 _lock = Lock()

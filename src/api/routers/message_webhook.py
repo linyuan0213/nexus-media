@@ -8,11 +8,11 @@ import asyncio
 from fastapi import APIRouter, HTTPException, Request, status
 
 import log
-from app.helper.security_helper import SecurityHelper
+from app.infrastructure.security import SecurityChecker
 from app.message import Message
 from app.services.search_message_service import MessageSearchService
 from app.services.system_service import MessageCommandHandler
-from app.utils.types import SearchType
+from app.domain.enums import SearchType
 from app.di import container
 
 router = APIRouter()
@@ -27,7 +27,7 @@ def _verify_webhook_ip(channel: SearchType, request: Request) -> None:
     else:
         allow_ips = {"ipv4": "0.0.0.0/0", "ipv6": "::/0"}
     client_ip = request.client.host if request.client else ""
-    if not SecurityHelper.allow_access(allow_ips, client_ip):
+    if not SecurityChecker.allow_access(allow_ips, client_ip):
         log.warn(f"[Webhook]{channel.value} IP 白名单拒绝: {client_ip}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="IP not allowed")
 

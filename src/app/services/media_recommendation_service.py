@@ -1,11 +1,11 @@
 from app.di import container
-from app.helper.image_proxy_helper import ImageProxyHelper
+from app.infrastructure.image_proxy import ImageProxy
 from app.media import Bangumi, DouBan, MediaService
 from app.mediaserver import MediaServer
 from app.services.subscribe_service import SubscribeService as Subscribe
-from app.utils.media_utils import check_media_exists
-from app.utils.types import MediaType
-from app.utils.web_utils import WebUtils
+from app.domain.media_utils import check_media_exists
+from app.domain.mediatypes import MediaType
+from app.services.web import WebUtils
 
 
 class MediaRecommendationService:
@@ -126,7 +126,7 @@ class MediaRecommendationService:
         try:
             for res in res_list:
                 if res.get("image"):
-                    res["image"] = ImageProxyHelper.get_proxy_image_url(res["image"], use_proxy=True)
+                    res["image"] = ImageProxy.get_proxy_image_url(res["image"], use_proxy=True)
         except Exception:
             pass
 

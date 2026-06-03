@@ -1,6 +1,8 @@
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
-from app.utils import ExceptionUtils, RequestUtils, StringUtils
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.utils import ExceptionUtils, StringUtils
 
 
 class Gotify(_IMessageClient):
@@ -59,13 +61,10 @@ class Gotify(_IMessageClient):
                     "client::notification": {"click": {"url": url}},
                 },
             }
-            res = RequestUtils(content_type="application/json").post_res(sc_url, json=sc_data)
-            if res and res.status_code == 200:
-                return True, "发送成功"
-            elif res is not None:
-                return False, f"错误码：{res.status_code}，错误原因：{res.reason}"  # type: ignore[union-attr]
-            else:
-                return False, "未获取到返回信息"
+            HttpClient(config=HttpClientConfig(default_headers={"Content-Type": "application/json"})).post(
+                sc_url, json=sc_data
+            )
+            return True, "发送成功"
         except Exception as msg_e:
             ExceptionUtils.exception_traceback(msg_e)
             return False, str(msg_e)

@@ -13,12 +13,15 @@ from time import time
 from lxml import etree
 
 from app.core.constants import MT_URL
-from app.helper import SiteHelper, SubmoduleHelper
-from app.helper.cloudflare_helper import under_challenge
+from app.utils.submodule_loader import SubmoduleLoader
+from app.infrastructure.cloudflare import under_challenge
+from app.infrastructure.http.client import HttpClient, HttpClientError
+from app.infrastructure.http.config import HttpClientConfig
 from app.message import Message
 from app.plugin_framework.context import PluginContext
+from app.sites.utils import is_logged_in
 from app.sites.engine import SiteEngine
-from app.utils import ExceptionUtils, JsonUtils, RequestUtils, StringUtils
+from app.utils import ExceptionUtils, JsonUtils, StringUtils
 from app.utils.config_tools import get_proxies
 from app.di import container
 
@@ -37,7 +40,6 @@ class AutoSignInPlugin:
     def on_enable(self):
         self.ctx.info("站点自动签到插件已启用")
         self._start_service()
-        # 注册消息命令：/signin 立即执行签到
         self.ctx.register_message_command(cmd="/signin", desc="站点签到", func=self._handle_signin_command)
 
     def on_disable(self):
@@ -74,14 +76,12 @@ class AutoSignInPlugin:
         if not enabled:
             return
 
-        # 加载模块
-        self._site_schema = SubmoduleHelper.import_submodules(
+        self._site_schema = SubmoduleLoader.import_submodules(
             "app.plugin_framework.builtin_plugins.autosignin.backend._autosignin",
             filter_func=lambda _, obj: hasattr(obj, "match"),
         )
         self.ctx.debug(f"加载站点签到：{self._site_schema}")
 
-        # 清理缓存
         if clean:
             self._delete_history(datetime.today().strftime("%Y-%m-%d"))
             self.ctx.set_config("clean", False)
@@ -221,7 +221,6 @@ class AutoSignInPlugin:
 
             self.ctx.debug(f"下次签到重试站点 {retry_sites}")
 
-            # 存储站点名称映射（用于前端展示）
             id_to_name = {str(site.get("id")): site.get("name") for site in container.sites().get_site_dict()}
             history_data = {"sign": sign_sites_cfg, "retry": retry_sites, "names": id_to_name}
             self._update_history(today_str, history_data)
@@ -301,7 +300,7 @@ class AutoSignInPlugin:
                     self.ctx.warn(f"{site} 仿真签到失败，需要两步验证")
                     return f"[{site}]仿真签到失败，需要两步验证"
 
-                if not SiteHelper.is_logged_in(html_text):
+                if not is_logged_in(html_text):
                     self.ctx.warn(f"{site} 仿真签到失败，登录状态异常")
                     return f"[{site}]仿真签到失败，登录状态异常"
 
@@ -354,8 +353,12 @@ class AutoSignInPlugin:
                     checkin_text = "模拟登录"
                 self.ctx.info(f"开始站点{checkin_text}：{site}")
 
+                engine = SiteEngine.get_instance()
+                rate_limiter = getattr(engine, "site_limiter", None)
+                rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+
                 if "m-team" in site_url:
-                    site_def = SiteEngine.get_instance().get_by_url(site_url)
+                    site_def = engine.get_by_url(site_url)
                     url = (
                         f"{site_def.api.base_url}/api/member/updateLastBrowse"
                         if site_def and site_def.api
@@ -374,37 +377,46 @@ class AutoSignInPlugin:
                     if not headers.get("authorization"):
                         self.ctx.warn(f"{site} 请填写请求头 authorization 参数")
                         return f"[{site}]请填写请求头 authorization 参数！"
-                    res = RequestUtils(
-                        headers=headers, proxies=get_proxies() if site_info.get("proxy") else None
-                    ).post_res(url=url)
+                    proxy = get_proxies() if site_info.get("proxy") else None
+                    proxy_url = proxy.get("http") if proxy else None
+                    _client = HttpClient(
+                        config=HttpClientConfig(proxy_url=proxy_url),
+                        rate_limiter=rate_limiter_engine,
+                    )
+                    try:
+                        res = _client.post(url=url, headers=headers, raise_for_status=False)
+                    except HttpClientError:
+                        self.ctx.warn(f"{site} {checkin_text}失败，无法打开网站")
+                        return f"[{site}]{checkin_text}失败，无法打开网站！"
                 else:
                     headers.update({"User-Agent": ua})
-                    res = RequestUtils(
-                        cookies=site_cookie, headers=headers, proxies=get_proxies() if site_info.get("proxy") else None
-                    ).get_res(url=site_url)
+                    proxy = get_proxies() if site_info.get("proxy") else None
+                    proxy_url = proxy.get("http") if proxy else None
+                    _client = HttpClient(
+                        config=HttpClientConfig(proxy_url=proxy_url),
+                        rate_limiter=rate_limiter_engine,
+                    )
+                    try:
+                        res = _client.get(url=site_url, headers=headers, cookies=site_cookie, raise_for_status=False)
+                    except HttpClientError:
+                        self.ctx.warn(f"{site} {checkin_text}失败，无法打开网站")
+                        return f"[{site}]{checkin_text}失败，无法打开网站！"
 
-                if res and res.status_code in [200, 500, 403]:
-                    if not SiteHelper.is_logged_in(res.text):
-                        if under_challenge(res.text):
-                            msg = "站点被Cloudflare防护，请开启浏览器仿真"
-                        elif res.status_code == 200:
-                            msg = "Cookie已失效"
-                        else:
-                            msg = f"状态码：{res.status_code}"
-                        self.ctx.warn(f"{site} {checkin_text}失败，{msg}")
-                        return f"[{site}]{checkin_text}失败，{msg}！"
+                if not is_logged_in(res.text):
+                    if under_challenge(res.text):
+                        msg = "站点被Cloudflare防护，请开启浏览器仿真"
+                    elif res.status_code == 200:
+                        msg = "Cookie已失效"
                     else:
-                        if re.search(r"完成两步验证", res.text, re.IGNORECASE):
-                            self.ctx.warn(f"{site} 签到失败，需要两步验证")
-                            return f"[{site}]签到失败，需要两步验证"
-                        self.ctx.info(f"{site} {checkin_text}成功")
-                        return f"[{site}]{checkin_text}成功"
-                elif res is not None:
-                    self.ctx.warn(f"{site} {checkin_text}失败，状态码：{res.status_code}")  # type: ignore[union-attr]
-                    return f"[{site}]{checkin_text}失败，状态码：{res.status_code}！"  # type: ignore[union-attr]
+                        msg = f"状态码：{res.status_code}"
+                    self.ctx.warn(f"{site} {checkin_text}失败，{msg}")
+                    return f"[{site}]{checkin_text}失败，{msg}！"
                 else:
-                    self.ctx.warn(f"{site} {checkin_text}失败，无法打开网站")
-                    return f"[{site}]{checkin_text}失败，无法打开网站！"
+                    if re.search(r"完成两步验证", res.text, re.IGNORECASE):
+                        self.ctx.warn(f"{site} 签到失败，需要两步验证")
+                        return f"[{site}]签到失败，需要两步验证"
+                    self.ctx.info(f"{site} {checkin_text}成功")
+                    return f"[{site}]{checkin_text}成功"
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             self.ctx.warn(f"{site} 签到失败：{str(e)}")

@@ -8,7 +8,7 @@ import json
 from app.db.transaction import auto_commit
 from app.db.models import SEARCHRESULTINFO
 from app.db.repositories.base_repository import BaseRepository
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class SearchRepository(BaseRepository):

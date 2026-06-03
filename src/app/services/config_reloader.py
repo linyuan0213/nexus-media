@@ -40,7 +40,7 @@ class ConfigReloader:
     PRIORITY_SERVICE = 30  # FileTransfer, SearchService, BrushCore
     PRIORITY_INDEXER = 40  # Indexer 及客户端
     PRIORITY_PLUGIN = 50  # PluginFramework
-    PRIORITY_AUX = 100  # ProgressHelper, ThreadHelper, WordsHelper
+    PRIORITY_AUX = 100  # ProgressTracker, ThreadExecutor, WordsHelper
 
     def __init__(self):
         self._steps: list[_ReloadStep] = []
@@ -67,7 +67,7 @@ class ConfigReloader:
         self.register("rss_task_service", self.PRIORITY_SERVICE)
         self.register("indexer_service", self.PRIORITY_INDEXER)
         # 辅助
-        self.register("words_helper", self.PRIORITY_AUX)
+        self.register("words_service", self.PRIORITY_AUX)
         self.register("fanart", self.PRIORITY_AUX)
 
     def register(self, provider_name: str, priority: int = 100) -> None:

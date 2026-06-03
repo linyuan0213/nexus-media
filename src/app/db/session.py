@@ -9,12 +9,11 @@ from contextlib import contextmanager
 
 from sqlalchemy import text
 
+from app.core.root_path import get_project_root
 from app.core.settings import settings
 from app.db.engine import _init_engine, get_engine, get_scoped_session
 from app.db.sql_adapter import get_sql_adapter
 from app.db.models import Base
-from app.utils import PathUtils
-from app.utils.path_utils import get_script_path
 
 
 class SessionManager:
@@ -185,8 +184,8 @@ class SessionManager:
         """读取 SQL 脚本初始化数据"""
         config = settings.get()
         init_files = settings.get("app").get("init_files") or []
-        config_dir = get_script_path()
-        sql_files = PathUtils.get_dir_level1_files(in_path=config_dir, exts=".sql")
+        config_dir = str(get_project_root() / "src" / "app" / "db" / "data")
+        sql_files = [os.path.join(config_dir, f) for f in os.listdir(config_dir) if f.endswith(".sql")]
         config_flag = False
         for sql_file in sql_files:
             if os.path.basename(sql_file) not in init_files:

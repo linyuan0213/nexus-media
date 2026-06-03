@@ -19,7 +19,9 @@ import requests
 from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter
 from app.domain.entities.plugin import PluginConfigEntity
 from app.plugin_framework.context import PluginContext
-from app.utils import IpUtils, RequestUtils, SystemUtils
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.utils import IpUtils, SystemUtils
 from app.utils.config_tools import get_proxies
 
 
@@ -350,12 +352,13 @@ class CloudflareSpeedTestPlugin:
 
     @staticmethod
     def _get_release_version():
-        version_res = RequestUtils().get_res("https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest")
-        if not version_res:
-            version_res = RequestUtils(proxies=get_proxies()).get_res(
+        proxies = get_proxies()
+        proxy_url = proxies.get("http") if proxies else None
+        try:
+            res = HttpClient(config=HttpClientConfig(proxy_url=proxy_url)).get(
                 "https://api.github.com/repos/XIU2/CloudflareSpeedTest/releases/latest"
             )
-        if version_res:
-            ver_json = version_res.json()
+            ver_json = res.json()
             return f"{ver_json['tag_name']}"
-        return None
+        except Exception:
+            return None

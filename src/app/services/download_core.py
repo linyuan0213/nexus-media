@@ -33,8 +33,8 @@ from app.sites import SiteConf, Sites, SiteSubtitle
 from app.sites.engine import SiteEngine
 from app.services.download_strategies import EpisodeStrategy, MovieDownloadStrategy, SeasonPackStrategy
 from app.utils import ExceptionUtils
-from app.utils.torrent import Torrent
-from app.utils.types import MediaType
+from app.sites.torrent import Torrent
+from app.domain.mediatypes import MediaType
 from app.di import container
 
 

@@ -86,6 +86,19 @@ class SiteRateLimiterService:
         acquired = self._engine.acquire(key, rate=rate_str, burst=burst, timeout=timeout)
         return not acquired
 
+    @property
+    def engine(self) -> RateLimitEngine:
+        """暴露底层限流引擎，供 HttpClient 注入使用."""
+        return self._engine
+
+    def get_rate(self, site_id: str) -> tuple[str, int] | None:
+        """获取站点限流配置.
+
+        :return: (rate_str, burst) 或 None（未配置限流）
+        """
+        with self._lock:
+            return self._site_rates.get(site_id)
+
     def get_status(self, site_id: str | None = None) -> dict:
         """获取站点限流状态."""
         if site_id:

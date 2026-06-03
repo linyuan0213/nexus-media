@@ -17,6 +17,9 @@ class SiteEntity:
     rss_url: str | None = None
     sign_url: str | None = None
     cookie: str | None = None
+    api_key: str | None = None
+    bearer_token: str | None = None
+    headers: str | None = None
     note: dict[str, Any] = field(default_factory=dict)
     rss_uses: str | None = None
 
@@ -47,8 +50,9 @@ class SiteEntity:
 
     @property
     def is_active(self) -> bool:
-        """站点是否可用（有Cookie且至少启用一项功能）"""
-        return bool(self.cookie) and (
+        """站点是否可用（有认证信息且至少启用一项功能）"""
+        has_auth = bool(self.cookie or self.api_key or self.bearer_token)
+        return has_auth and (
             self.is_brush_enabled or self.is_signin_enabled or self.is_search_enabled or self.is_rss_enabled
         )
 
@@ -58,9 +62,11 @@ class SiteEntity:
         return self.note.get("ua") or None
 
     @property
-    def headers(self) -> dict[str, Any] | None:
-        """获取站点自定义请求头"""
-        raw = self.note.get("headers")
+    def parsed_headers(self) -> dict[str, Any] | None:
+        """解析站点自定义请求头（独立字段优先，兼容旧配置）"""
+        raw = self.headers
+        if not raw:
+            raw = self.note.get("headers")
         if not raw:
             return None
         import json
@@ -91,6 +97,9 @@ class SiteEntity:
             rss_url=getattr(orm_obj, "RSSURL", None),
             sign_url=getattr(orm_obj, "SIGNURL", None),
             cookie=getattr(orm_obj, "COOKIE", None),
+            api_key=getattr(orm_obj, "API_KEY", None),
+            bearer_token=getattr(orm_obj, "BEARER_TOKEN", None),
+            headers=getattr(orm_obj, "HEADERS", None),
             note=note,
             rss_uses=getattr(orm_obj, "INCLUDE", None),
         )
@@ -104,6 +113,9 @@ class SiteEntity:
             "rssurl": self.rss_url,
             "signurl": self.sign_url,
             "cookie": self.cookie,
+            "api_key": self.api_key,
+            "bearer_token": self.bearer_token,
+            "headers": self.headers,
             "note": self.note,
             "rss_uses": self.rss_uses,
         }

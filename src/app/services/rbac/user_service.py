@@ -6,7 +6,7 @@ import log
 
 from app.core.exceptions import ResourceAlreadyExistsError, ResourceNotFoundError
 from app.db.models.rbac import RBACUser
-from app.utils.security import generate_password_hash
+from app.infrastructure.security import generate_password_hash
 
 
 class RBACUserService:

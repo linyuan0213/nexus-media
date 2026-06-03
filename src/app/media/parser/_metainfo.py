@@ -5,29 +5,14 @@ import regex as re
 
 import log
 from app.core.constants import RMT_MEDIAEXT
-from app.helper import WordsHelper
+from app.domain.mediatypes import MediaType
+from app.domain.word_processor import get_words_info, process_title
 from app.media.parser._anime import parse_anime_title
 from app.media.parser._video import parse_video_title
-from app.utils.types import MediaType
 
 
 def meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None = None) -> Any:
-    """
-    媒体信息工厂函数，根据名称自动识别类型（动漫/影视）
-
-    纯本地正则解析，不调用外部 LLM。
-    LLM Agent 识别在 MediaService.identify() / identify_batch() 中使用。
-
-    Args:
-        title: 标题、种子名、文件名
-        subtitle: 副标题、描述
-        mtype: 指定识别类型，为空则自动识别
-
-    Returns:
-        MediaInfo 实例
-    """
     org_title = title
-    # 预处理：移除网址与常见垃圾串，避免干扰解析
     if title:
         cleaned = re.sub(
             r"(?i)\b(?:www\s+\w+|\w+\.(?:com|net|org|tv|cc|me|io)\b|pthdtv|qqhdtv|剧集网发布)\b",
@@ -39,9 +24,10 @@ def meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None =
         if cleaned != title:
             title = cleaned
 
-    rev_title, msg, used_info = WordsHelper().process(title)
+    words = get_words_info()
+    rev_title, msg, used_info = process_title(words, title)
     if subtitle:
-        subtitle, _, _ = WordsHelper().process(subtitle)
+        subtitle, _, _ = process_title(words, subtitle)
 
     if msg:
         for msg_item in msg:
@@ -60,7 +46,6 @@ def meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None =
     media_info.replaced_words = used_info.get("replaced")
     media_info.offset_words = used_info.get("offset")
 
-    # 排除 FPS/Hz 参数被误判为集数（如 120FPS → E120）
     if media_info.begin_episode and org_title:
         if re.search(rf"{media_info.begin_episode}\s*(FPS|HZ)", org_title, re.IGNORECASE):
             media_info.begin_episode = None
@@ -71,10 +56,8 @@ def meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None =
 
 
 def _is_anime(rev_name: str, org_name: str) -> bool:
-    """判断名称是否属于动漫"""
     rev_name = re.sub(r"\[[0-9A-F]{8}]", "", rev_name, flags=re.IGNORECASE)
     org_name = re.sub(r"\[[0-9A-F]{8}]", "", org_name, flags=re.IGNORECASE)
-
     for name in (rev_name, org_name):
         if name and re.search(r"(?:SEX|HENTAI|AV\b|無码|R18|成人)", name, re.IGNORECASE):
             return False

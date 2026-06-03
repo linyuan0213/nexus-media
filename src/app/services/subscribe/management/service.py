@@ -14,7 +14,8 @@ from app.services.subscribe.management.finish_service import SubscribeFinishServ
 from app.services.subscribe.management.query_service import SubscribeQueryService
 from app.services.subscribe.management.refresh_service import SubscribeRefreshService
 from app.services.subscribe.management.update_service import SubscribeUpdateService
-from app.utils.types import MediaType, SystemConfigKey
+from app.domain.mediatypes import MediaType
+from app.domain.enums import SystemConfigKey
 
 
 class SubscribeService:

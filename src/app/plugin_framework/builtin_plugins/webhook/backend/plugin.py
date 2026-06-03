@@ -3,8 +3,10 @@ Webhook Plugin v2
 事件发生时向第三方地址发送请求
 """
 
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.infrastructure.http.exceptions import HttpClientError
 from app.plugin_framework.context import PluginContext
-from app.utils import RequestUtils
 
 
 class WebhookPlugin:
@@ -34,15 +36,13 @@ class WebhookPlugin:
 
         try:
             if method == "post":
-                ret = RequestUtils(content_type="application/json").post_res(webhook_url, json=event_info)
+                HttpClient(config=HttpClientConfig(default_headers={"Content-Type": "application/json"})).post(
+                    webhook_url, json=event_info
+                )
             else:
-                ret = RequestUtils().get_res(webhook_url, params=event_info)
-
-            if ret:
-                self.ctx.info(f"Webhook发送成功：{webhook_url}")
-            elif ret is not None:
-                self.ctx.error(f"Webhook发送失败，状态码：{ret.status_code}，返回信息：{ret.text} {ret.reason}")  # type: ignore[union-attr]
-            else:
-                self.ctx.error("Webhook发送失败，未获取到返回信息")
+                HttpClient().get(webhook_url, params=event_info)
+            self.ctx.info(f"Webhook发送成功：{webhook_url}")
+        except HttpClientError as exc:
+            self.ctx.error(f"Webhook发送失败，状态码：{exc.status_code}，返回信息：{exc.response_text}")
         except Exception as e:
             self.ctx.error(f"Webhook发送异常：{e}")

@@ -5,7 +5,7 @@ from app.di import container
 from app.schemas.media import TransferHistoryPageDTO, UnknownListPageDTO
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.sync_service import SyncService
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class TransferHistoryService:

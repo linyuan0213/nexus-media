@@ -123,10 +123,10 @@ class WordsCacheWarmer(CacheWarmer):
         start_time = time.time()
         try:
             log.info("[CacheWarmer]开始预热识别词...")
-            words_helper = container.words_helper()
+            words_service = container.words_service()
 
-            if words_helper.words_info:
-                log.debug(f"[CacheWarmer]已加载 {len(words_helper.words_info)} 条识别词")
+            if words_service.words_info:
+                log.debug(f"[CacheWarmer]已加载 {len(words_service.words_info)} 条识别词")
 
             self._is_warmed = True
             self._duration = time.time() - start_time

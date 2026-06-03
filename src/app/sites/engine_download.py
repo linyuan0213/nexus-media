@@ -1,7 +1,8 @@
 """引擎下载链接解析 — 从 engine.py 拆分"""
 
-from app.sites.engine_tools import _call_html_endpoint
-from app.utils import RequestUtils
+from app.sites.engine_tools import _call_html_endpoint, _get_rate_limit_kwargs
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.utils.config_tools import get_proxies
 
 
@@ -16,26 +17,43 @@ def resolve_download_api(engine, url, site, user_config, tid):
     headers = engine._build_headers(site, user_config)
     headers.pop("Content-Type", None)
     proxy = get_proxies() if user_config.get("proxy") else None
-    if site.download.method == "POST":
-        res = RequestUtils(headers=headers, proxies=proxy, timeout=15).post_res(url=url, data=body)
-    else:
-        res = RequestUtils(headers=headers, proxies=proxy, timeout=15).get_res(url=url)
-    if res and res.status_code == 200:
+    proxy_url = proxy.get("http") if proxy else None
+    rate_limiter = getattr(engine, "site_limiter", None)
+    rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+    rl_kwargs = _get_rate_limit_kwargs(engine, site)
+    try:
+        client = HttpClient(
+            config=HttpClientConfig(proxy_url=proxy_url, timeout=15),
+            rate_limiter=rate_limiter_engine,
+        )
+        if site.download.method == "POST":
+            res = client.post(url=url, data=body, headers=headers, **rl_kwargs)
+        else:
+            res = client.get(url=url, headers=headers, **rl_kwargs)
         return res.json().get(site.download.response_key, "")
-    return None
+    except Exception:
+        return None
 
 
 def resolve_download_chained(engine, url, site, user_config, tid):
     headers = engine._build_headers(site, user_config)
     headers.pop("Content-Type", None)
     proxy = get_proxies() if user_config.get("proxy") else None
-    res = RequestUtils(headers=headers, proxies=proxy, timeout=15).get_res(url=url)
-    if res and res.status_code == 200:
+    proxy_url = proxy.get("http") if proxy else None
+    rate_limiter = getattr(engine, "site_limiter", None)
+    rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+    rl_kwargs = _get_rate_limit_kwargs(engine, site)
+    try:
+        res = HttpClient(
+            config=HttpClientConfig(proxy_url=proxy_url, timeout=15),
+            rate_limiter=rate_limiter_engine,
+        ).get(url=url, headers=headers, **rl_kwargs)
         token = res.json().get(site.download.response_key, "")
         if token and site.download.download_url and site.api:
             return site.download.download_url.format(base=site.api.base_url.rstrip("/"), token=token, tid=tid)
         return token
-    return None
+    except Exception:
+        return None
 
 
 def resolve_html_download(engine, page_url, site, user_config):
@@ -45,7 +63,7 @@ def resolve_html_download(engine, page_url, site, user_config):
         cfg["selectors"] = dl.selectors
     elif isinstance(dl, dict) and dl.get("selectors"):
         cfg["selectors"] = dl["selectors"]
-    result = _call_html_endpoint(engine, page_url, cfg, user_config)
+    result = _call_html_endpoint(engine, page_url, cfg, user_config, site=site)
     if result:
         return result.get("download") or result.get("enclosure")
     return None

@@ -20,7 +20,8 @@ from app.services.subscribe.management.calendar_service import SubscribeCalendar
 from app.services.subscribe.management.history_service import SubscribeHistoryService
 from app.services.subscribe.management.service import SubscribeService
 from app.utils.response import fail, success
-from app.utils.types import MediaType, SystemConfigKey
+from app.domain.mediatypes import MediaType
+from app.domain.enums import SystemConfigKey
 
 router = APIRouter()
 

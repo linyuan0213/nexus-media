@@ -10,7 +10,8 @@ from typing import Any
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.core.settings import settings
 from app.utils.config_tools import get_domain, get_proxies, get_tmdbapi_url, get_ua
-from app.utils.path_utils import get_category_path, get_script_path, get_temp_path, get_user_plugin_path
+from app.core.root_path import get_script_path
+from app.utils.path_utils import get_category_path, get_temp_path, get_user_plugin_path
 
 
 class ConfigService:

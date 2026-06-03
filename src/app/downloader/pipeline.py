@@ -16,14 +16,15 @@ import os
 from typing import Any
 
 import log
-from app.helper import ThreadHelper
+from app.infrastructure.thread import ThreadExecutor
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.events import Event
 from app.events.constants import DOWNLOAD_STARTED, DOWNLOAD_FAILED
 from app.sites import SiteConf, Sites, SiteSubtitle
 from app.sites.engine import SiteEngine
-from app.utils import StringUtils, Torrent
+from app.sites.torrent import Torrent
+from app.utils import StringUtils
 from app.di import container
 
 
@@ -385,9 +386,13 @@ class DownloadPipeline:
         )
 
         if page_url and subtitle_dir and site_info and site_info.get("subtitle"):
-            ThreadHelper().start_thread(
+            ThreadExecutor(name="subtitle").submit(
                 self._sitesubtitle.download,
-                (media_info, site_info.get("id"), site_info.get("cookie"), site_info.get("ua"), subtitle_dir),
+                media_info,
+                site_info.get("id"),
+                site_info.get("cookie"),
+                site_info.get("ua"),
+                subtitle_dir,
             )
 
         if in_from:

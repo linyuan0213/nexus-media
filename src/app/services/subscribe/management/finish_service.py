@@ -5,8 +5,8 @@ from typing import Any
 import log
 from app.events import Event
 from app.events.constants import SUBSCRIBE_FINISHED
-from app.utils.media_type_utils import MediaTypeMapper
-from app.utils.types import MediaType
+from app.domain.media_type_utils import MediaTypeMapper
+from app.domain.mediatypes import MediaType
 
 
 class SubscribeFinishService:

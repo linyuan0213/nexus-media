@@ -1,6 +1,8 @@
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
-from app.utils import ExceptionUtils, RequestUtils, StringUtils
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.utils import ExceptionUtils, StringUtils
 
 
 class Ntfy(_IMessageClient):
@@ -75,15 +77,10 @@ class Ntfy(_IMessageClient):
                 "priority": self._priority,
                 "tags": self._tags,
             }
-            res = RequestUtils(
-                headers={"Authorization": "Bearer " + self._token}, content_type="application/json"
-            ).post_res(self._server, json=sc_data)
-            if res and res.status_code == 200:
-                return True, "发送成功"
-            elif res is not None:
-                return False, f"错误码：{res.status_code}，错误原因：{res.reason}"  # type: ignore[union-attr]
-            else:
-                return False, "未获取到返回信息"
+            HttpClient(config=HttpClientConfig(default_headers={"Authorization": "Bearer " + self._token})).post(
+                self._server, json=sc_data
+            )
+            return True, "发送成功"
         except Exception as msg_e:
             ExceptionUtils.exception_traceback(msg_e)
             return False, str(msg_e)

@@ -1,8 +1,7 @@
-"""
-缓存事件系统
+"""缓存事件系统 — 与 EventBus 整合，支持监听缓存变更事件。
 
-与 EventBus 整合，支持监听缓存变更事件。
 保留本地高性能监听器 + 可选 EventBus 桥接。
+EventBus 通过 init_event_bridge() 注入，避免导入时触发 app.events 循环依赖。
 """
 
 import fnmatch
@@ -14,8 +13,7 @@ from enum import Enum, auto
 from typing import Any
 
 import log
-from app.di import container
-from app.events import Event
+from app.infrastructure.event import Event
 
 
 class CacheEventType(Enum):
@@ -84,7 +82,6 @@ class CacheEventManager:
         if not self._enabled:
             return
 
-        # 1. 本地高性能分发
         with self._lock:
             for listener in self._global_listeners:
                 try:
@@ -100,7 +97,6 @@ class CacheEventManager:
                 except Exception as e:
                     log.error(f"[CacheEventManager]监听器执行失败: {e}")
 
-        # 2. EventBus 桥接（异步，不阻塞缓存操作）
         if self._event_bus:
             try:
                 self._event_bus.publish(
@@ -119,13 +115,23 @@ class CacheEventManager:
         self._enabled = False
 
 
+_instance: CacheEventManager | None = None
+_lock = threading.Lock()
+
+
 def get_event_manager() -> CacheEventManager:
-    """获取缓存事件管理器实例（通过 DI 注入 EventBus）"""
-    try:
-        bus = container.event_bus()
-    except Exception:
-        bus = None
-    return CacheEventManager(event_bus=bus)
+    """获取缓存事件管理器实例."""
+    global _instance
+    if _instance is None:
+        with _lock:
+            if _instance is None:
+                _instance = CacheEventManager()
+    return _instance
+
+
+def init_event_bridge(event_bus) -> None:
+    """注入 EventBus 桥接（从 application 启动时调用）."""
+    get_event_manager()._event_bus = event_bus
 
 
 def on_cache_event(event_types: set[CacheEventType] | None = None, cache_name_pattern: str = "*"):

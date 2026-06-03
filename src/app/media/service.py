@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import log
 from app.core.settings import settings
-from app.helper.image_proxy_helper import ImageProxyHelper
+from app.infrastructure.image_proxy import ImageProxy
 from app.infrastructure.cache_system import cacheman
 from app.media.models import MediaInfo
 from app.media.parser.base import BaseParser
@@ -15,7 +15,8 @@ from app.media.parser.regex import RegexParser
 from app.storage.backends.base import StorageBackend
 from app.utils import EpisodeFormat, PathUtils, StringUtils
 from app.domain.validators.media_title import is_valid_media_title
-from app.utils.types import MatchMode, MediaType
+from app.domain.mediatypes import MediaType
+from app.domain.enums import MatchMode
 from app.di import container
 
 
@@ -211,10 +212,8 @@ class MediaService:
                 ) or info.year
                 info.overview = full_info.get("overview") or info.overview
                 info.vote_average = round(float(full_info.get("vote_average", 0)), 1) or info.vote_average
-                info.poster_path = ImageProxyHelper.get_tmdbimage_url(full_info.get("poster_path")) or info.poster_path
-                info.backdrop_path = (
-                    ImageProxyHelper.get_tmdbimage_url(full_info.get("backdrop_path")) or info.backdrop_path
-                )
+                info.poster_path = ImageProxy.get_tmdbimage_url(full_info.get("poster_path")) or info.poster_path
+                info.backdrop_path = ImageProxy.get_tmdbimage_url(full_info.get("backdrop_path")) or info.backdrop_path
                 # 根据 genre_ids 更新类型（动漫 vs 电视剧）
                 info.set_tmdb_info(full_info)
 

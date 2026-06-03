@@ -8,7 +8,7 @@ import psutil
 
 from app.utils.exception_utils import ExceptionUtils
 from app.utils.path_utils import PathUtils
-from app.utils.types import OsType
+from app.domain.enums import OsType
 
 
 class SystemUtils:

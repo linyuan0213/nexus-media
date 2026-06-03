@@ -3,7 +3,7 @@
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.infrastructure.distributed_lock.base import DistributedLock
-from app.utils.redis_store import RedisStore
+from app.infrastructure.redis import RedisStore
 
 
 class RedisDistributedLock(DistributedLock):

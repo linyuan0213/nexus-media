@@ -16,7 +16,8 @@ from app.storage.backends.base import StorageType
 from app.storage.config_models import LocalStorageConfig
 from app.utils import SystemUtils
 from app.utils.path_utils import get_category_path
-from app.utils.types import MediaType, OsType
+from app.domain.mediatypes import MediaType
+from app.domain.enums import OsType
 
 
 class MediaFileService:
@@ -246,9 +247,7 @@ class MediaFileService:
                     if hasattr(config, k):
                         setattr(config, k, v)
                 dst_backend = StorageBackendFactory.create(config)
-        container.thread_helper().start_thread(
-            container.scraper().folder_scraper, (path, None, "force_all", dst_backend)
-        )
+        container.thread_executor().submit(container.scraper().folder_scraper, path, None, "force_all", dst_backend)
         return "刮削任务已提交，正在后台运行。"
 
     def get_category_config(self, category_name: str) -> str:

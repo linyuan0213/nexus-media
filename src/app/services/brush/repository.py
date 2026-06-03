@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from app.db.repositories import BrushRepository
+from app.db.repositories.brush_repository import BrushRepository
 
 
 class BrushTaskRepository:

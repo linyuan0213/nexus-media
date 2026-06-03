@@ -25,7 +25,7 @@ from app.services.system.message import (
     MessageCommandHandler,
     MessageSenderService,
 )
-from app.utils.types import ProgressKey
+from app.domain.enums import ProgressKey
 
 
 class TestBackupRestoreService:
@@ -128,17 +128,16 @@ class TestNetTestService:
     """Test suite for NetTestService."""
 
     def test_test_success(self):
-        with patch("app.services.system.info.RequestUtils") as mock_req:
+        with patch("app.services.system.info.HttpClient") as mock_req:
             mock_res = MagicMock()
-            mock_res.ok = True
-            mock_req.return_value.get_res.return_value = mock_res
+            mock_req.return_value.get.return_value = mock_res
             svc = NetTestService()
             result = svc.test("example.com")
             assert result.success is True
 
     def test_test_failure(self):
-        with patch("app.services.system.info.RequestUtils") as mock_req:
-            mock_req.return_value.get_res.return_value = None
+        with patch("app.services.system.info.HttpClient") as mock_req:
+            mock_req.return_value.get.side_effect = Exception("connection failed")
             svc = NetTestService()
             result = svc.test("example.com")
             assert result.success is False

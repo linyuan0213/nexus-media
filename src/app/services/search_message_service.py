@@ -13,9 +13,11 @@ from app.core.settings import settings
 from app.media import MediaService, meta_info
 from app.message import Message
 from app.services.search_pagination import pagination_mgr
-from app.utils import StringUtils, Torrent
-from app.utils.types import MediaType, SearchType
-from app.utils.web_utils import WebUtils
+from app.sites.torrent import Torrent
+from app.utils import StringUtils
+from app.domain.mediatypes import MediaType
+from app.domain.enums import SearchType
+from app.services.web import WebUtils
 from app.di import container
 
 

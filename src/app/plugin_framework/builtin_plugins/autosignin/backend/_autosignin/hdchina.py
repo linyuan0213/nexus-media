@@ -3,8 +3,12 @@ from typing import cast
 
 from lxml import etree
 
+from app.infrastructure.http.auth import CookieAuth
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.utils import RequestUtils, StringUtils
+from app.sites.engine import SiteEngine
+from app.utils import StringUtils
 from app.utils.config_tools import get_proxies
 
 
@@ -38,6 +42,15 @@ class HDChina(_ISiteSigninHandler):
         site_cookie = site_info.get("cookie")
         ua = site_info.get("ua")
         proxy = get_proxies() if site_info.get("proxy") else None
+        engine = SiteEngine.get_instance()
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        site_id = site_info.get("id")
+        rl_kwargs = {}
+        if site_id and rate_limiter:
+            rate_config = rate_limiter.get_rate(str(site_id))
+            if rate_config:
+                rl_kwargs = {"rate_limit_key": f"site:{site_id}", "rate_limit_rate": rate_config[0]}
 
         # 尝试解决瓷器cookie每天签到后过期,只保留hdchina=部分
         cookie = ""
@@ -55,10 +68,15 @@ class HDChina(_ISiteSigninHandler):
 
         site_cookie = cookie
         # 获取页面html
-        html_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
-            url="https://hdchina.org/index.php"
-        )
-        if not html_res or html_res.status_code != 200:
+        proxy_url = proxy.get("http") if isinstance(proxy, dict) else proxy
+        try:
+            html_res = HttpClient(config=HttpClientConfig(proxy_url=proxy_url), rate_limiter=rate_limiter_engine).get(
+                url="https://hdchina.org/index.php",
+                headers={"User-Agent": ua} if ua else None,
+                cookies=CookieAuth._parse_cookies(site_cookie),
+                **rl_kwargs,
+            )
+        except Exception:
             self.error("签到失败，请检查站点连通性")
             return False, f"[{site}]签到失败，请检查站点连通性"
 
@@ -67,7 +85,7 @@ class HDChina(_ISiteSigninHandler):
             return False, f"[{site}]签到失败，cookie失效"
 
         # 获取新返回的cookie进行签到
-        site_cookie = ";".join([f"{k}={v}" for k, v in html_res.cookies.get_dict().items()])
+        site_cookie = ";".join([f"{k}={v}" for k, v in dict(html_res.cookies).items()])
 
         # 判断是否已签到
         html_res.encoding = "utf-8"
@@ -91,10 +109,15 @@ class HDChina(_ISiteSigninHandler):
 
         # 签到
         data = {"csrf": x_csrf}
-        sign_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).post_res(
-            url="https://hdchina.org/plugin_sign-in.php?cmd=signin", data=data
-        )
-        if not sign_res or sign_res.status_code != 200:
+        try:
+            sign_res = HttpClient(config=HttpClientConfig(proxy_url=proxy_url), rate_limiter=rate_limiter_engine).post(
+                url="https://hdchina.org/plugin_sign-in.php?cmd=signin",
+                data=data,
+                headers={"User-Agent": ua} if ua else None,
+                cookies=CookieAuth._parse_cookies(site_cookie),
+                **rl_kwargs,
+            )
+        except Exception:
             self.error("签到失败，签到接口请求失败")
             return False, f"[{site}]签到失败，签到接口请求失败"
 

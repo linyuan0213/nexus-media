@@ -18,7 +18,7 @@ from app.infrastructure.external.tmdbv3api import (
 )
 from app.utils import StringUtils
 from app.utils.config_tools import get_proxies, get_tmdbapi_url
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 from app.di import container
 
 
@@ -48,11 +48,9 @@ class TmdbClient:
         if isinstance(_api_key, str) and _api_key:
             self.tmdb = TMDb()
             self.tmdb.domain = get_tmdbapi_url()
-            self.tmdb.cache = True
             self.tmdb.api_key = _api_key
             self.tmdb.language = self._default_language
             self.tmdb.proxies = get_proxies()
-            self.tmdb.debug = False
             self.search = Search()
             self.movie = Movie()
             self.tv = TV()

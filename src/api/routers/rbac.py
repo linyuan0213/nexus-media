@@ -525,8 +525,8 @@ def update_menu(
             update_fields[field] = getattr(req, field)
 
     try:
-        message = svc.update_menu(req.id, **update_fields)
-        return success(data={"success": True, "message": message})
+        svc.update_menu(req.id, **update_fields)
+        return success(data={"success": True, "message": "更新成功"})
     except (ResourceAlreadyExistsError, ResourceNotFoundError) as e:
         return fail(success=False, message=e.message)
 
@@ -548,7 +548,7 @@ def update_menu_sort(
 
         if menu_id is not None and sort_order is not None:
             update_fields = {"sort_order": sort_order, "parent_id": parent_id}
-            ok2, _ = svc.update_menu(menu_id, **update_fields)
+            ok2 = svc.update_menu(menu_id, **update_fields)
             if ok2:
                 success_count += 1
 

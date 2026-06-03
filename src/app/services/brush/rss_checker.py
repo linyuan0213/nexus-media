@@ -7,7 +7,7 @@ import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.db.repositories.subscribe_repo_adapter import SubscribeMovieRepositoryAdapter, SubscribeTvRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
-from app.helper import RssHelper
+from app.services.rss_processor import RssHelper
 from app.media.factory import get_media_service
 from app.sites import SiteConf, Sites
 from app.utils import ExceptionUtils, JsonUtils

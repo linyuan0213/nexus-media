@@ -2,7 +2,8 @@ from urllib import parse
 
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
-from app.utils import ExceptionUtils, RequestUtils, StringUtils
+from app.infrastructure.http.client import HttpClient
+from app.utils import ExceptionUtils, StringUtils
 
 
 class Chanify(_IMessageClient):
@@ -54,13 +55,8 @@ class Chanify(_IMessageClient):
             params = parse.parse_qs(self._params or "")
             data = {key: value[0] for key, value in params.items()}
             data.update({"title": title, "text": text})
-            res = RequestUtils().post_res(sc_url, data=parse.urlencode(data).encode())
-            if res and res.status_code == 200:
-                return True, "发送成功"
-            elif res is not None:
-                return False, f"错误码：{res.status_code}，错误原因：{res.reason}"  # type: ignore[union-attr]
-            else:
-                return False, "未获取到返回信息"
+            HttpClient().post(sc_url, data=parse.urlencode(data).encode())
+            return True, "发送成功"
         except Exception as msg_e:
             ExceptionUtils.exception_traceback(msg_e)
             return False, str(msg_e)

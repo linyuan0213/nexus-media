@@ -6,7 +6,7 @@ import subprocess
 import log
 from app.core.exceptions import ResourceNotFoundError
 from app.di import container
-from app.helper.thread_helper import ThreadHelper
+from app.infrastructure.thread import ThreadExecutor
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.sync_engine import SyncEngine as Sync
 from initializer import (
@@ -30,13 +30,13 @@ class SchedulerService:
         self,
         downloader: Downloader | None = None,
         sync: Sync | None = None,
-        thread_helper: ThreadHelper | None = None,
+        thread_executor: ThreadExecutor | None = None,
         torrent_remover=None,
     ):
         self._downloader = downloader
         self._sync = sync
         self._torrent_remover = torrent_remover
-        self._thread_helper = thread_helper or container.thread_helper()
+        self._thread_executor = thread_executor or container.thread_executor()
         self._commands = None
 
     @property
@@ -59,7 +59,7 @@ class SchedulerService:
         command = self._command_map.get(item)
         if not command:
             raise ResourceNotFoundError("未知服务")
-        self._thread_helper.start_thread(command, ())
+        self._thread_executor.submit(command)
         return "服务已启动"
 
 

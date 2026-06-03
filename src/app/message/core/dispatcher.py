@@ -5,7 +5,7 @@ from typing import Any
 import log
 from app.infrastructure.queue import MessageQueueFactory
 from app.utils import StringUtils
-from app.utils.types import SearchType
+from app.domain.enums import SearchType
 
 
 class MessageDispatcher:

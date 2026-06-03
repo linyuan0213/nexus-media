@@ -3,7 +3,8 @@ from urllib.parse import urlencode
 
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
-from app.utils import ExceptionUtils, RequestUtils
+from app.infrastructure.http.client import HttpClient
+from app.utils import ExceptionUtils
 
 
 class PushPlus(_IMessageClient):
@@ -70,19 +71,14 @@ class PushPlus(_IMessageClient):
                 "timestamp": time.time_ns() + 60,
             }
             sc_url = f"http://www.pushplus.plus/send?{urlencode(values)}"
-            res = RequestUtils().get_res(sc_url)
-            if res and res.status_code == 200:
-                ret_json = res.json()
-                code = ret_json.get("code")
-                msg = ret_json.get("msg")
-                if code == 200:
-                    return True, msg
-                else:
-                    return False, msg
-            elif res is not None:
-                return False, f"错误码：{res.status_code}，错误原因：{res.reason}"
+            res = HttpClient().get(sc_url)
+            ret_json = res.json()
+            code = ret_json.get("code")
+            msg = ret_json.get("msg")
+            if code == 200:
+                return True, msg
             else:
-                return False, "未获取到返回信息"
+                return False, msg
         except Exception as msg_e:
             ExceptionUtils.exception_traceback(msg_e)
             return False, str(msg_e)

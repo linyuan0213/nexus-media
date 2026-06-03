@@ -1,21 +1,20 @@
 """
-WordsService - 自定义识别词业务层
-将 web/controllers/words.py 中的业务逻辑下沉到可独立测试的 Service。
+WordsService - 自定义识别词服务
+合并原 WordsHelper 的处理逻辑和数据库操作。
 """
 
 import base64
 import json
-import re
+import time
+
 
 from app.core.exceptions import ResourceAlreadyExistsError, ResourceNotFoundError, ValidationError
 from app.domain.entities.word import CustomWordEntity
-from app.helper import WordsHelper
+from app.domain.mediatypes import MediaType
+from app.domain.word_processor import process_title, set_words_info
+from app.infrastructure.cache_system import get_cache_manager
 from app.media import MediaCache
-from app.schemas.words import (
-    WordDTO,
-    WordGroupExportDTO,
-)
-from app.utils.types import MediaType
+from app.schemas.words import WordDTO, WordGroupExportDTO
 from app.di import container
 
 
@@ -27,26 +26,57 @@ class WordsService:
     - 导入导出编解码
     - 与 TMDB 媒体信息的联动查询
     - 集数偏移格式校验
+    - 标题处理（屏蔽、替换、集偏移）
     """
 
-    def __init__(self, words_helper: WordsHelper | None = None, media_cache: MediaCache | None = None):
-        self._words = words_helper or WordsHelper()
+    words_info: list = []
+    _cache_time: float = 0
+    _cache_ttl: float = 60
+
+    def __init__(self, media_cache: MediaCache | None = None):
         self._media_cache = media_cache or container.media_cache()
+        self._cache = get_cache_manager().get_or_create("words_process", cache_type="memory", maxsize=1000)
+        self._refresh()
+
+    def _refresh(self):
+        self.word_repo = container.custom_word_repo()
+        self.group_repo = container.custom_word_group_repo()
+        self._load_words_with_cache()
+
+    def _load_words_with_cache(self):
+        current_time = time.time()
+        if current_time - self._cache_time > self._cache_ttl or not self.words_info:
+            self.words_info = self.word_repo.get_custom_words(enabled=1)
+            set_words_info(self.words_info)
+            self._cache_time = current_time
+            self._cache.clear()
+
+    def clear_cache(self):
+        self._cache_time = 0
+        self._cache.clear()
+        self._refresh()
+
+    # ---------- 标题处理 ----------
+
+    def process(self, title):
+        cached_result = self._cache.get(title)
+        if cached_result is not None:
+            return cached_result
+        self._load_words_with_cache()
+        result = process_title(self.words_info, title)
+        self._cache.set(title, result)
+        return result
 
     # ---------- 词组操作 ----------
 
     def add_word_group(self, tmdb_id: int, tmdb_type: str) -> None:
-        """
-        根据 TMDB 信息添加自定义词组
-        失败时抛出具体异常
-        """
         if tmdb_type == "tv":
-            if self._words.is_custom_word_group_existed(tmdbid=tmdb_id, gtype=2):
+            if self.is_custom_word_group_existed(tmdbid=tmdb_id, gtype=2):
                 raise ResourceAlreadyExistsError("识别词组（TMDB ID）已存在")
             tmdb_info = self._media_cache.get_tmdb_info(mtype=MediaType.TV, tmdbid=tmdb_id)
             if not tmdb_info:
                 raise ResourceNotFoundError("添加失败，无法查询到TMDB信息")
-            self._words.insert_custom_word_groups(
+            self.insert_custom_word_groups(
                 title=tmdb_info.get("name"),
                 year=tmdb_info.get("first_air_date", "")[0:4],
                 gtype=2,
@@ -54,12 +84,12 @@ class WordsService:
                 season_count=tmdb_info.get("number_of_seasons"),
             )
         elif tmdb_type == "movie":
-            if self._words.is_custom_word_group_existed(tmdbid=tmdb_id, gtype=1):
+            if self.is_custom_word_group_existed(tmdbid=tmdb_id, gtype=1):
                 raise ResourceAlreadyExistsError("识别词组（TMDB ID）已存在")
             tmdb_info = self._media_cache.get_tmdb_info(mtype=MediaType.MOVIE, tmdbid=tmdb_id)
             if not tmdb_info:
                 raise ResourceNotFoundError("添加失败，无法查询到TMDB信息")
-            self._words.insert_custom_word_groups(
+            self.insert_custom_word_groups(
                 title=tmdb_info.get("title"),
                 year=tmdb_info.get("release_date", "")[0:4],
                 gtype=1,
@@ -70,17 +100,13 @@ class WordsService:
             raise ValidationError("无法识别媒体类型")
 
     def delete_word_group(self, gid: int) -> None:
-        """删除自定义词组"""
-        self._words.delete_custom_word_group(gid=gid)
+        self.group_repo.delete_custom_word_group(gid=gid)
+        self._refresh()
 
     # ---------- 词汇操作 ----------
 
     @staticmethod
     def _validate_offset(wtype: str, offset: str) -> str | None:
-        """
-        校验集数偏移格式（委托给领域实体）
-        :return: 错误信息，None 表示通过
-        """
         temp = CustomWordEntity(
             id=0,
             replaced=None,
@@ -97,48 +123,35 @@ class WordsService:
             note=None,
         )
         return temp.validate_offset()
-        if not re.findall(r"EP", offset):
-            return "偏移集数格式有误"
-        if re.findall(r"(?!-|\+|\*|/|[0-9]).", re.sub(r"EP", "", offset)):
-            return "偏移集数格式有误"
-        return None
 
     def add_or_edit_word(
         self,
-        wid: int,
-        gid: int,
-        group_type: str,
-        replaced: str,
-        replace: str,
-        front: str,
-        back: str,
-        offset: str,
-        whelp: str,
-        wtype: str,
-        season: int,
-        enabled: int,
-        regex: int,
+        wid,
+        gid,
+        group_type,
+        replaced,
+        replace,
+        front,
+        back,
+        offset,
+        whelp,
+        wtype,
+        season,
+        enabled,
+        regex,
     ) -> None:
-        """
-        添加或编辑自定义词
-        失败时抛出具体异常
-        """
         err = self._validate_offset(wtype, offset)
         if err:
             raise ValidationError(err)
-
         if wid:
-            self._words.delete_custom_word(wid=wid)
-
+            self.delete_custom_word(wid=wid)
         if group_type == "1":
             season = -2
-
         wtype_int = int(wtype)
-
-        if wtype_int == 1:  # 屏蔽
-            if self._words.is_custom_words_existed(replaced=replaced):
+        if wtype_int == 1:
+            if self.is_custom_words_existed(replaced=replaced):
                 raise ResourceAlreadyExistsError(f"识别词已存在（被替换词：{replaced}）")
-            self._words.insert_custom_word(
+            self.insert_custom_word(
                 replaced=replaced,
                 replace="",
                 front="",
@@ -151,10 +164,10 @@ class WordsService:
                 regex=regex,
                 whelp=whelp or "",
             )
-        elif wtype_int == 2:  # 替换
-            if self._words.is_custom_words_existed(replaced=replaced):
+        elif wtype_int == 2:
+            if self.is_custom_words_existed(replaced=replaced):
                 raise ResourceAlreadyExistsError(f"识别词已存在（被替换词：{replaced}）")
-            self._words.insert_custom_word(
+            self.insert_custom_word(
                 replaced=replaced,
                 replace=replace,
                 front="",
@@ -167,10 +180,10 @@ class WordsService:
                 regex=regex,
                 whelp=whelp or "",
             )
-        elif wtype_int == 4:  # 集偏移
-            if self._words.is_custom_words_existed(front=front, back=back):
+        elif wtype_int == 4:
+            if self.is_custom_words_existed(front=front, back=back):
                 raise ResourceAlreadyExistsError(f"识别词已存在（前后定位词：{front}@{back}）")
-            self._words.insert_custom_word(
+            self.insert_custom_word(
                 replaced="",
                 replace="",
                 front=front,
@@ -183,10 +196,10 @@ class WordsService:
                 regex=regex,
                 whelp=whelp or "",
             )
-        elif wtype_int == 3:  # 替换+集偏移
-            if self._words.is_custom_words_existed(replaced=replaced):
+        elif wtype_int == 3:
+            if self.is_custom_words_existed(replaced=replaced):
                 raise ResourceAlreadyExistsError(f"识别词已存在（被替换词：{replaced}）")
-            self._words.insert_custom_word(
+            self.insert_custom_word(
                 replaced=replaced,
                 replace=replace,
                 front=front,
@@ -201,34 +214,30 @@ class WordsService:
             )
 
     def delete_word(self, wid: int | None = None) -> None:
-        """删除自定义词，wid=None 时删除全部"""
-        self._words.delete_custom_word(wid=wid)
+        self.delete_custom_word(wid=wid)
 
     def delete_words_by_ids(self, ids_info: list[str]) -> None:
-        """根据 id 列表批量删除"""
         if not ids_info:
-            self._words.delete_custom_word()
+            self.delete_custom_word()
             return
         for id_info in ids_info:
             wid = id_info.split("_")[1] if "_" in str(id_info) else id_info
-            self._words.delete_custom_word(wid=wid)
+            self.delete_custom_word(wid=wid)
 
     def toggle_words(self, ids_info: list[str], flag: str) -> None:
-        """切换词启用状态"""
         flag_map = {"enable": 1, "disable": 0}
         enabled = flag_map.get(flag)
         if enabled is None:
             raise ValidationError(f"无效的状态标志: {flag}")
         if not ids_info:
-            self._words.check_custom_word(enabled=enabled)
+            self.check_custom_word(enabled=enabled)
         else:
             for id_info in ids_info:
                 wid = id_info.split("_")[1] if "_" in str(id_info) else id_info
-                self._words.check_custom_word(wid=wid, enabled=enabled)
+                self.check_custom_word(wid=wid, enabled=enabled)
 
     def get_word_by_id(self, wid: int) -> WordDTO | None:
-        """根据 ID 获取单个词"""
-        rows = self._words.get_custom_words(wid=wid)
+        rows = self.get_custom_words(wid=wid)
         if not rows:
             return None
         r = rows[0]
@@ -250,10 +259,6 @@ class WordsService:
     # ---------- 导入导出 ----------
 
     def analyse_import_code(self, import_code: str) -> tuple[list[WordGroupExportDTO], str]:
-        """
-        解析导入码
-        :return: (词组列表, 备注)
-        """
         raw = base64.b64decode(import_code.encode("utf-8")).decode("utf-8")
         parts = raw.split("@@@@@@")
         import_dict = json.loads(parts[0])
@@ -280,15 +285,10 @@ class WordsService:
         return groups, note
 
     def export_words(self, ids_info: str | None = None, note: str = "") -> tuple[str, str]:
-        """
-        导出词为 base64 编码字符串
-        :return: (编码字符串, 备注)
-        """
         group_ids = []
         word_ids = []
         group_infos = []
         word_infos = []
-
         if ids_info:
             id_pairs = ids_info.split("@")
             for id_pair in id_pairs:
@@ -298,21 +298,19 @@ class WordsService:
                     word_ids.append(parts[1])
             for gid in group_ids:
                 if gid != "-1":
-                    info = self._words.get_custom_word_groups(gid=gid)
+                    info = self.get_custom_word_groups(gid=gid)
                     if info:
                         group_infos.append(info[0])
             for wid in word_ids:
-                info = self._words.get_custom_words(wid=wid)
+                info = self.get_custom_words(wid=wid)
                 if info:
                     word_infos.append(info[0])
         else:
-            group_infos = self._words.get_custom_word_groups()
-            word_infos = self._words.get_custom_words()
-
+            group_infos = self.get_custom_word_groups()
+            word_infos = self.get_custom_words()
         export_dict = {}
         if not group_ids or "-1" in group_ids:
             export_dict["-1"] = {"id": -1, "title": "通用", "type": 1, "words": {}}
-
         for g in group_infos:
             export_dict[str(g.ID)] = {
                 "id": g.ID,
@@ -323,7 +321,6 @@ class WordsService:
                 "season_count": g.SEASON_COUNT,
                 "words": {},
             }
-
         for w in word_infos:
             export_dict.get(str(w.GROUP_ID), {}).setdefault("words", {})[str(w.ID)] = {
                 "id": w.ID,
@@ -337,23 +334,16 @@ class WordsService:
                 "regex": w.REGEX,
                 "help": w.HELP,
             }
-
         export_string = json.dumps(export_dict) + "@@@@@@" + str(note)
         encoded = base64.b64encode(export_string.encode("utf-8")).decode("utf-8")
         return encoded, note
 
     def import_words(self, import_code: str, ids_info: str) -> None:
-        """
-        导入自定义词
-        失败时抛出具体异常
-        """
         raw = base64.b64decode(import_code.encode("utf-8")).decode("utf-8")
         parts = raw.split("@@@@@@")
         import_dict = json.loads(parts[0])
-
         import_group_ids = [id_info.split("_")[0] for id_info in ids_info.split("@") if "_" in id_info]
         group_id_map = {}
-
         for import_group_id in import_group_ids:
             group_info = import_dict.get(import_group_id)
             if not group_info:
@@ -361,21 +351,22 @@ class WordsService:
             if int(group_info.get("id", 0)) == -1:
                 group_id_map["-1"] = -1
                 continue
-
             title = group_info.get("title")
             year = group_info.get("year")
             gtype = group_info.get("type")
             tmdbid = group_info.get("tmdbid")
             season_count = group_info.get("season_count")
-
-            if not self._words.is_custom_word_group_existed(tmdbid=tmdbid, gtype=gtype):
-                self._words.insert_custom_word_groups(
-                    title=title, year=year, gtype=gtype, tmdbid=tmdbid, season_count=season_count
+            if not self.is_custom_word_group_existed(tmdbid=tmdbid, gtype=gtype):
+                self.insert_custom_word_groups(
+                    title=title,
+                    year=year,
+                    gtype=gtype,
+                    tmdbid=tmdbid,
+                    season_count=season_count,
                 )
-            existing = self._words.get_custom_word_groups(tmdbid=tmdbid, gtype=gtype)
+            existing = self.get_custom_word_groups(tmdbid=tmdbid, gtype=gtype)
             if existing:
                 group_id_map[import_group_id] = existing[0].ID
-
         for id_info in ids_info.split("@"):
             if "_" not in id_info:
                 continue
@@ -383,7 +374,6 @@ class WordsService:
             word_data = import_dict.get(igid, {}).get("words", {}).get(iwid)
             if not word_data:
                 continue
-
             gid = group_id_map.get(igid)
             replaced = word_data.get("replaced")
             replace = word_data.get("replace")
@@ -394,15 +384,13 @@ class WordsService:
             wtype = int(word_data.get("type", 1))
             season = word_data.get("season")
             regex = word_data.get("regex")
-
             if wtype in (1, 2, 3):
-                if self._words.is_custom_words_existed(replaced=replaced):
+                if self.is_custom_words_existed(replaced=replaced):
                     raise ResourceAlreadyExistsError(f"识别词已存在（被替换词：{replaced}）")
             elif wtype == 4:
-                if self._words.is_custom_words_existed(front=front, back=back):
+                if self.is_custom_words_existed(front=front, back=back):
                     raise ResourceAlreadyExistsError(f"识别词已存在（前后定位词：{front}@{back}）")
-
-            self._words.insert_custom_word(
+            self.insert_custom_word(
                 replaced=replaced or "",
                 replace=replace or "",
                 front=front or "",
@@ -419,11 +407,8 @@ class WordsService:
     # ---------- 列表查询 ----------
 
     def get_all_word_groups(self) -> list[dict]:
-        """
-        获取所有词组（含词汇列表），直接返回前端需要的 dict 结构
-        """
         groups = []
-        words_info = self._words.get_custom_words(gid=-1)
+        words_info = self.get_custom_words(gid=-1)
         words = []
         for w in words_info:
             words.append(
@@ -443,18 +428,18 @@ class WordsService:
                 }
             )
         groups.append({"id": "-1", "name": "通用", "link": "", "type": "1", "seasons": "0", "words": words})
-
-        group_infos = self._words.get_custom_word_groups()
+        group_infos = self.get_custom_word_groups()
         for g in group_infos:
             gid = g.ID
             name = f"{g.TITLE} ({g.YEAR})"
             gtype = g.TYPE
-            if gtype == 1:
-                link = f"https://www.themoviedb.org/movie/{g.TMDBID}"
-            else:
-                link = f"https://www.themoviedb.org/tv/{g.TMDBID}"
+            link = (
+                f"https://www.themoviedb.org/movie/{g.TMDBID}"
+                if gtype == 1
+                else f"https://www.themoviedb.org/tv/{g.TMDBID}"
+            )
             words = []
-            words_info = self._words.get_custom_words(gid=gid)
+            words_info = self.get_custom_words(gid=gid)
             for w in words_info:
                 words.append(
                     {
@@ -473,7 +458,69 @@ class WordsService:
                     }
                 )
             groups.append(
-                {"id": gid, "name": name, "link": link, "type": g.TYPE, "seasons": g.SEASON_COUNT, "words": words}
+                {
+                    "id": gid,
+                    "name": name,
+                    "link": link,
+                    "type": g.TYPE,
+                    "seasons": g.SEASON_COUNT,
+                    "words": words,
+                }
             )
-
         return groups
+
+    # ---------- 原 WordsHelper CRUD ----------
+
+    def is_custom_words_existed(self, replaced=None, front=None, back=None):
+        return self.word_repo.is_custom_words_existed(replaced=replaced, front=front, back=back)
+
+    def insert_custom_word(
+        self, replaced, replace, front, back, offset, wtype, gid, season, enabled, regex, whelp, note=None
+    ):
+        ret = self.word_repo.insert_custom_word(
+            replaced=replaced,
+            replace=replace,
+            front=front,
+            back=back,
+            offset=offset,
+            wtype=wtype,
+            gid=gid,
+            season=season,
+            enabled=enabled,
+            regex=regex,
+            whelp=whelp,
+            note=note,
+        )
+        self._refresh()
+        return ret
+
+    def delete_custom_word(self, wid=None):
+        ret = self.word_repo.delete_custom_word(wid=wid)
+        self._refresh()
+        return ret
+
+    def get_custom_words(self, wid=None, gid=None, enabled=None):
+        return self.word_repo.get_custom_words(wid=wid, gid=gid, enabled=enabled)
+
+    def get_custom_word_groups(self, gid=None, tmdbid=None, gtype=None):
+        return self.group_repo.get_custom_word_groups(gid=gid, tmdbid=tmdbid, gtype=gtype)
+
+    def is_custom_word_group_existed(self, tmdbid=None, gtype=None):
+        return self.group_repo.is_custom_word_group_existed(tmdbid=tmdbid, gtype=gtype)
+
+    def insert_custom_word_groups(self, title, year, gtype, tmdbid, season_count, note=None):
+        ret = self.group_repo.insert_custom_word_groups(
+            title=title,
+            year=year,
+            gtype=gtype,
+            tmdbid=tmdbid,
+            season_count=season_count,
+            note=note,
+        )
+        self._refresh()
+        return ret
+
+    def check_custom_word(self, wid=None, enabled=None):
+        ret = self.word_repo.check_custom_word(wid=wid, enabled=enabled)
+        self._refresh()
+        return ret

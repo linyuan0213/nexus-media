@@ -6,7 +6,7 @@
 from typing import Any
 
 import log
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 from .adapters import MemoryCacheAdapter, RedisCacheAdapter
 from .base import CacheAdapter

@@ -1,6 +1,6 @@
 """
 FastAPI 图片代理路由
-兼容前端通过 ImageProxyHelper 生成的 /img/* 请求
+兼容前端通过 ImageProxy 生成的 /img/* 请求
 复用 app.helper.image_proxy_core 的下载/缓存逻辑
 """
 
@@ -14,7 +14,7 @@ from starlette.responses import FileResponse, RedirectResponse, Response
 import log
 from app.core.constants import TMDB_IMAGE_DOMAIN
 from app.core.exceptions import DomainError, ServiceError
-from app.helper.image_proxy_core import (
+from app.infrastructure.image_proxy import (
     MAX_CACHE_DAYS,
     SIZE_DIMENSIONS,
     SOURCE_DOMAINS,
@@ -22,7 +22,7 @@ from app.helper.image_proxy_core import (
     get_cache_path,
     resize_image,
 )
-from app.helper.image_proxy_helper import ImageProxyHelper
+from app.infrastructure.image_proxy import ImageProxy
 
 router = APIRouter()
 
@@ -128,7 +128,7 @@ def proxy_image_redirect(request: Request, url: str | None = None):
 
     # 外部图片 URL：转换为代理路径后重定向
     try:
-        proxy_url = ImageProxyHelper.get_proxy_image_url(url, use_proxy=True)
+        proxy_url = ImageProxy.get_proxy_image_url(url, use_proxy=True)
     except (ServiceError, DomainError):
         proxy_url = None
     except Exception:

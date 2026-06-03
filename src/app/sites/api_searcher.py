@@ -18,10 +18,12 @@ from urllib.parse import parse_qs, urlparse
 
 import log
 from app.sites.engine import SiteDefinition, SiteEngine
+from app.sites import engine_tools
 from app.sites.searchers import _TRANSFORMS
-from app.utils import RequestUtils
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.utils.config_tools import get_proxies
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class ApiSiteSearcher:
@@ -89,18 +91,25 @@ class ApiSiteSearcher:
         url = f"{base_url}/{path}"
         headers = self._engine._build_headers(self._site, self._user_config)
         proxy = get_proxies() if self._user_config.get("proxy") else None
-        if method == "POST":
-            res = RequestUtils(headers=headers, proxies=proxy, timeout=30).post_res(
-                url=url, data=json.dumps(body, separators=(",", ":"))
+        proxy_url = proxy.get("http") if proxy else None
+        rate_limiter = getattr(self._engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        rl_kwargs = engine_tools._get_rate_limit_kwargs(self._engine, self._site)
+        try:
+            client = HttpClient(
+                config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                rate_limiter=rate_limiter_engine,
             )
-        else:
-            params = dict(search_config.get("params") or {})
-            params = self._render_template(params, **template_vars)
-            res = RequestUtils(headers=headers, proxies=proxy, timeout=30).get_res(url=url, params=params)
-        if not res or res.status_code != 200:
-            log.warn(f"[ApiSiteSearcher]{self._site.name} 搜索失败: {res.status_code if res else '无响应'}, url={url}")
+            if method == "POST":
+                res = client.post(url=url, data=json.dumps(body, separators=(",", ":")), headers=headers, **rl_kwargs)
+            else:
+                params = dict(search_config.get("params") or {})
+                params = self._render_template(params, **template_vars)
+                res = client.get(url=url, params=params, headers=headers, **rl_kwargs)
+            resp_data = res.json()
+        except Exception:
+            log.warn(f"[ApiSiteSearcher]{self._site.name} 搜索失败, url={url}")
             return []
-        resp_data = res.json()
         result = self._parse_response(resp_data, search_config)
         log.warn(f"[ApiSiteSearcher]{self._site.name} 返回 {len(result)} 条结果, url={url}")
         if len(result) == 0:
@@ -122,6 +131,12 @@ class ApiSiteSearcher:
         apikey = self._user_config.get("api_key", "")
         if apikey:
             self._auth_tokens["apikey"] = apikey
+        cookie = self._user_config.get("cookie", "")
+        if cookie:
+            self._auth_tokens["cookie"] = cookie
+        bearer_token = self._user_config.get("bearer_token", "")
+        if bearer_token:
+            self._auth_tokens["bearer_token"] = bearer_token
         domain = (
             self._user_config.get("domain") or self._site.domain or (self._site.api.base_url if self._site.api else "")
         )

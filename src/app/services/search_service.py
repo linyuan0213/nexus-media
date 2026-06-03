@@ -10,7 +10,7 @@ SearchService - 搜索业务层
 - SearchService：Service 层包装
 """
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import as_completed
 from typing import Any
 
 import log
@@ -20,6 +20,7 @@ from app.di import container
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.domain.interfaces.search_repo import ISearchRepository
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
+from app.infrastructure.thread import ThreadExecutor
 from app.media import MediaService
 from app.message import Message
 from app.events import Event
@@ -27,7 +28,8 @@ from app.events.constants import SEARCH_START
 from app.schemas.search import SearchMediasResultDTO, SearchOneMediaResultDTO
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.utils.string_utils import StringUtils
-from app.utils.types import MediaType, ProgressKey, SearchType
+from app.domain.mediatypes import MediaType
+from app.domain.enums import ProgressKey, SearchType
 
 
 class SearchQueryBuilder:
@@ -115,7 +117,7 @@ class SearchExecutor:
         media_list = []
         all_task = []
 
-        with ThreadPoolExecutor(max_workers=optimal_workers, thread_name_prefix=self._thread_name_prefix) as executor:
+        with ThreadExecutor(max_workers=optimal_workers, name=self._thread_name_prefix) as executor:
             for search_name in search_names:
                 task = executor.submit(search_func, search_name, filter_args, media_info, in_from)
                 all_task.append(task)

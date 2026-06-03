@@ -14,10 +14,14 @@ from typing import cast
 import pytz
 from lxml import etree
 
-from app.helper import SiteHelper, SubmoduleHelper
-from app.helper.cloudflare_helper import under_challenge
+from app.utils.submodule_loader import SubmoduleLoader
+from app.infrastructure.cloudflare import under_challenge
 from app.plugin_framework.context import PluginContext
-from app.utils import ExceptionUtils, JsonUtils, RequestUtils, StringUtils
+from app.infrastructure.http.client import HttpClient, HttpClientError
+from app.infrastructure.http.config import HttpClientConfig
+from app.sites.engine import SiteEngine
+from app.sites.utils import is_logged_in
+from app.utils import ExceptionUtils, JsonUtils, StringUtils
 from app.utils.config_tools import get_proxies
 from app.di import container
 
@@ -63,7 +67,7 @@ class AutoGenRssPlugin:
             return
 
         # 加载模块
-        self._site_schema = SubmoduleHelper.import_submodules(
+        self._site_schema = SubmoduleLoader.import_submodules(
             "app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss",
             filter_func=lambda _, obj: hasattr(obj, "match"),
         )
@@ -176,41 +180,43 @@ class AutoGenRssPlugin:
                     "search": "",
                     "search_mode": "1",
                 }
-                headers.update({"User-Agent": ua})
-                res = RequestUtils(
-                    cookies=site_cookie,
-                    headers=headers,
-                    referer=site_url,
-                    proxies=get_proxies() if site_info.get("proxy") else None,
-                ).post_res(url=rss_url, data=data)
-
-                if res and res.status_code in [200, 500, 403]:
-                    if not SiteHelper.is_logged_in(res.text):
-                        if under_challenge(res.text):
-                            msg = "站点被Cloudflare防护，请开启浏览器仿真"
-                        elif res.status_code == 200:
-                            msg = "Cookie已失效"
-                        else:
-                            msg = f"状态码：{res.status_code}"
-                        self.ctx.warn(f"{site} 生成RSS失败，{msg}")
-                        return f"[{site}]生成RSS失败，{msg}！"
-                    else:
-                        if re.search(r"完成两步验证", res.text, re.IGNORECASE):
-                            self.ctx.warn(f"{site} 生成RSS失败，需要两步验证")
-                            return f"[{site}]生成RSS失败，需要两步验证"
-
-                        gen_rss_url = self._parse_rss_link(res.text)
-                        self.ctx.debug(f"生成的rss: {gen_rss_url}")
-                        if gen_rss_url:
-                            self._site_repo.update_site_rssurl(site_info.get("id"), gen_rss_url)
-                            self.ctx.info(f"{site} 生成RSS成功")
-                            return f"[{site}]生成RSS成功"
-                elif res is not None:
-                    self.ctx.warn(f"{site} 生成RSS失败，状态码：{res.status_code}")  # type: ignore[union-attr]
-                    return f"[{site}]生成RSS失败，状态码：{res.status_code}！"  # type: ignore[union-attr]
-                else:
+                headers.update({"User-Agent": ua, "Referer": site_url})
+                proxy = get_proxies() if site_info.get("proxy") else None
+                proxy_url = proxy.get("http") if proxy else None
+                engine = SiteEngine.get_instance()
+                rate_limiter = getattr(engine, "site_limiter", None)
+                rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+                try:
+                    res = HttpClient(
+                        config=HttpClientConfig(proxy_url=proxy_url),
+                        rate_limiter=rate_limiter_engine,
+                    ).post(url=rss_url, data=data, headers=headers, cookies=site_cookie)
+                    text = res.text
+                except HttpClientError as exc:
+                    if exc.status_code in [500, 403]:
+                        self.ctx.warn(f"{site} 生成RSS失败，状态码：{exc.status_code}")
+                        return f"[{site}]生成RSS失败，状态码：{exc.status_code}！"
                     self.ctx.warn(f"{site} 生成RSS失败，无法打开网站")
                     return f"[{site}]生成RSS失败，无法打开网站！"
+
+                if not is_logged_in(text):
+                    if under_challenge(text):
+                        msg = "站点被Cloudflare防护，请开启浏览器仿真"
+                    else:
+                        msg = "Cookie已失效"
+                    self.ctx.warn(f"{site} 生成RSS失败，{msg}")
+                    return f"[{site}]生成RSS失败，{msg}！"
+                else:
+                    if re.search(r"完成两步验证", text, re.IGNORECASE):
+                        self.ctx.warn(f"{site} 生成RSS失败，需要两步验证")
+                        return f"[{site}]生成RSS失败，需要两步验证"
+
+                    gen_rss_url = self._parse_rss_link(text)
+                    self.ctx.debug(f"生成的rss: {gen_rss_url}")
+                    if gen_rss_url:
+                        self._site_repo.update_site_rssurl(site_info.get("id"), gen_rss_url)
+                        self.ctx.info(f"{site} 生成RSS成功")
+                        return f"[{site}]生成RSS成功"
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             self.ctx.warn(f"{site} 生成RSS失败：{e!s}")

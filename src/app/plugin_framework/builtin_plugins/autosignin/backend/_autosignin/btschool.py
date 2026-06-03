@@ -1,41 +1,26 @@
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.utils import RequestUtils, StringUtils
+from app.infrastructure.http.auth import CookieAuth
+from app.infrastructure.http.client import HttpClient, HttpClientError
+from app.infrastructure.http.config import HttpClientConfig
+from app.utils import StringUtils
 from app.utils.config_tools import get_proxies
 from app.di import container
 
 
 class BTSchool(_ISiteSigninHandler):
-    """
-    学校签到
-    """
-
-    # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "pt.btschool.club"
-
-    # 已签到
     _sign_text = "每日签到"
 
     @classmethod
     def match(cls, url):
-        """
-        根据站点Url判断是否匹配当前站点签到类，大部分情况使用默认实现即可
-        :param url: 站点Url
-        :return: 是否匹配，如匹配则会调用该类的signin方法
-        """
         return bool(StringUtils.url_equal(url, cls.site_url))
 
     def signin(self, site_info: dict):
-        """
-        执行签到操作
-        :param site_info: 站点信息，含有站点Url、站点Cookie、UA等信息
-        :return: 签到结果信息
-        """
         site = site_info.get("name")
         site_cookie = site_info.get("cookie")
         ua = site_info.get("ua")
         proxy = get_proxies() if site_info.get("proxy") else None
 
-        # 首页
         chrome = container.drissionpage_helper()
         if site_info.get("chrome") and chrome.get_status():
             self.info(f"{site} 开始仿真签到")
@@ -47,16 +32,11 @@ class BTSchool(_ISiteSigninHandler):
                 proxy=proxy,
                 site=site,
             )
-            # 仿真访问失败
             if msg or not html_text:
                 return False, msg
-
-            # 已签到
             if self._sign_text not in html_text:
                 self.info("今日已签到")
                 return True, f"[{site}]今日已签到"
-
-            # 仿真签到
             msg, html_text = self.__chrome_visit(
                 chrome=chrome,
                 url="https://pt.btschool.club/index.php?action=addbonus",
@@ -67,50 +47,58 @@ class BTSchool(_ISiteSigninHandler):
             )
             if msg or not html_text:
                 return False, msg
-
-            # 签到成功
             if self._sign_text not in html_text:
                 self.info("签到成功")
                 return True, f"[{site}]签到成功"
         else:
             self.info(f"{site} 开始签到")
-            html_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
-                url="https://pt.btschool.club"
-            )
-            if not html_res or html_res.status_code != 200:
+            try:
+                html_res = HttpClient(
+                    config=HttpClientConfig(proxy_url=proxy.get("http") if proxy else None),
+                ).get(
+                    url="https://pt.btschool.club",
+                    headers={"User-Agent": ua} if ua else None,
+                    auth=CookieAuth(site_cookie) if site_cookie else None,
+                )
+            except HttpClientError:
                 self.error("签到失败，请检查站点连通性")
                 return False, f"[{site}]签到失败，请检查站点连通性"
 
+            if html_res.status_code != 200:
+                self.error("签到失败，请检查站点连通性")
+                return False, f"[{site}]签到失败，请检查站点连通性"
             if "login.php" in html_res.text:
                 self.error("签到失败，cookie失效")
                 return False, f"[{site}]签到失败，cookie失效"
-
-            # 已签到
             if self._sign_text not in html_res.text:
                 self.info("今日已签到")
                 return True, f"[{site}]今日已签到"
 
-            sign_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
-                url="https://pt.btschool.club/index.php?action=addbonus"
-            )
-            if not sign_res or sign_res.status_code != 200:
+            try:
+                sign_res = HttpClient(
+                    config=HttpClientConfig(proxy_url=proxy.get("http") if proxy else None),
+                ).get(
+                    url="https://pt.btschool.club/index.php?action=addbonus",
+                    headers={"User-Agent": ua} if ua else None,
+                    auth=CookieAuth(site_cookie) if site_cookie else None,
+                )
+            except HttpClientError:
                 self.error("签到失败，签到接口请求失败")
                 return False, f"[{site}]签到失败，签到接口请求失败"
 
-            # 签到成功
+            if sign_res.status_code != 200:
+                self.error("签到失败，签到接口请求失败")
+                return False, f"[{site}]签到失败，签到接口请求失败"
             if self._sign_text not in sign_res.text:
                 self.info("签到成功")
                 return True, f"[{site}]签到成功"
 
     def __chrome_visit(self, chrome, url, ua, site_cookie, proxy, site):
         html_text = chrome.get_page_html(url=url, cookies=site_cookie)
-
         if not html_text:
             self.warn(f"{site} 获取站点源码失败")
             return f"[{site}]仿真签到失败，获取站点源码失败！", None
         if "魔力值" not in html_text:
             self.error("签到失败，站点无法访问")
             return f"[{site}]仿真签到失败，站点无法访问", None
-
-        # 站点访问正常，返回html
         return None, html_text

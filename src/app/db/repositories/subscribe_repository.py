@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from app.db.transaction import auto_commit
 from app.db.models import SubscribeHistory, SubscribeMovies, SubscribeTorrents, SubscribeTvEpisodes, SubscribeTvs
 from app.db.repositories.base_repository import BaseRepository
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 if TYPE_CHECKING:
     from app.media.models import MediaInfo

@@ -6,8 +6,8 @@ from app.mediaserver import MediaServer
 from app.schemas.media import MediaSearchResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import StringUtils
-from app.utils.media_utils import check_media_exists
-from app.utils.types import MediaType
+from app.domain.media_utils import check_media_exists
+from app.domain.mediatypes import MediaType
 from app.di import container
 
 
@@ -106,9 +106,9 @@ class SearchResultService:
                     )
                 poster_url = item.POSTER
                 try:
-                    from app.helper.image_proxy_helper import ImageProxyHelper
+                    from app.infrastructure.image_proxy import ImageProxy
 
-                    poster_url = ImageProxyHelper.get_proxy_image_url(item.POSTER, use_proxy=True)
+                    poster_url = ImageProxy.get_proxy_image_url(item.POSTER, use_proxy=True)
                 except Exception:
                     pass
                 search_results_dict[title_string] = {

@@ -11,7 +11,7 @@ DownloadStrategies - 批量下载策略
 """
 
 import log
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class MovieDownloadStrategy:

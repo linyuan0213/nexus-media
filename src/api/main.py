@@ -44,12 +44,12 @@ from app.di import container
 from app.downloader.client import init_clients as init_downloaders
 from app.indexer.client import init_clients as init_indexers
 from app.mediaserver.client import init_clients as init_mediaservers
-from app.message.client import init_clients as init_message_clients
+from app.message.client.manager import init_clients as init_message_clients
 from app.schemas.common import HealthCheckResponse, HealthServiceStatus
 from app.services.site_config_updater import SiteConfigUpdater, update_site_config_at_startup
 from app.sites.engine import SiteEngine
-from app.utils.redis_store import RedisStore
-from app.utils.security import get_secret_key
+from app.infrastructure.redis import RedisStore
+from app.infrastructure.security import get_secret_key
 
 # 读取安全密钥（与 Flask 共用 secret_key）
 _secret_key = get_secret_key()

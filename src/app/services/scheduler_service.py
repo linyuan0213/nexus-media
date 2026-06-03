@@ -148,7 +148,7 @@ class SchedulerService:
             finally:
                 lock.release()
 
-        container.thread_helper().start_thread(_wrapper, ())
+        container.thread_executor().submit(_wrapper)
         return RunSchedulerJobResponse(code=0, msg="任务已触发")
 
     def update_job(self, req: UpdateSchedulerJobRequest) -> UpdateSchedulerJobResponse:

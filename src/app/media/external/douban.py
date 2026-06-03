@@ -7,9 +7,11 @@ import zhconv
 
 import log
 from app.infrastructure.external.doubanapi import DoubanApi, DoubanWeb
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.media.parser._metainfo import meta_info
-from app.utils import ExceptionUtils, RequestUtils, StringUtils
-from app.utils.types import MediaType
+from app.utils import ExceptionUtils, StringUtils
+from app.domain.mediatypes import MediaType
 
 lock = Lock()
 
@@ -23,16 +25,14 @@ class DouBan:
         self.cookie = None
         self.message = None
         try:
-            res = RequestUtils(timeout=5).get_res("https://www.douban.com/")
-            if res:
-                self.cookie = StringUtils.str_from_cookiejar(res.cookies)
+            res = HttpClient(config=HttpClientConfig(timeout=5)).get("https://www.douban.com/", raise_for_status=False)
+            self.cookie = StringUtils.str_from_cookiejar(res.cookies)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             log.warn(f"[Douban]获取cookie失败：{format(err)}")
         try:
-            res = RequestUtils(timeout=5).get_res("https://www.douban.com/")
-            if res:
-                self.cookie = StringUtils.str_from_cookiejar(res.cookies)
+            res = HttpClient(config=HttpClientConfig(timeout=5)).get("https://www.douban.com/", raise_for_status=False)
+            self.cookie = StringUtils.str_from_cookiejar(res.cookies)
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             log.warn(f"[Douban]获取cookie失败：{format(err)}")
@@ -49,9 +49,14 @@ class DouBan:
             time = round(random.uniform(1, 5), 1)
             log.info(f"[Douban]随机休眠：{time} 秒")
             sleep(time)
-        if mtype == MediaType.MOVIE:
+        if mtype is not None:
+            mtype_normalized = MediaType.from_string(str(mtype)) if not isinstance(mtype, MediaType) else mtype
+        else:
+            mtype_normalized = None
+
+        if mtype_normalized == MediaType.MOVIE:
             douban_info = self.doubanapi.movie_detail(doubanid)
-        elif mtype:
+        elif mtype_normalized == MediaType.TV:
             douban_info = self.doubanapi.tv_detail(doubanid)
         else:
             douban_info = self.doubanapi.movie_detail(doubanid)

@@ -3,10 +3,11 @@ from datetime import datetime
 
 import log
 from app.di import container
-from app.helper import SiteHelper
 from app.services.site_rate_limiter import SiteRateLimiterService
 from app.sites.engine import SiteEngine
-from app.utils import JsonUtils, RequestUtils, StringUtils
+from app.sites.utils import is_logged_in
+from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
+from app.utils import JsonUtils, StringUtils
 from app.utils.config_tools import get_proxies, get_ua
 
 
@@ -61,10 +62,9 @@ class Sites:
             uses = []
             if site_uses:
                 rss_enable = bool("D" in site_uses and site_rssurl)
-                brush_enable = bool("S" in site_uses and site_rssurl and (site_cookie or site_headers))
-                statistic_enable = bool(
-                    "T" in site_uses and (site_rssurl or site_signurl) and (site_cookie or site_headers)
-                )
+                has_auth = bool(site_cookie or site_headers or site.API_KEY or site.BEARER_TOKEN)
+                brush_enable = bool("S" in site_uses and site_rssurl and has_auth)
+                statistic_enable = bool("T" in site_uses and (site_rssurl or site_signurl) and has_auth)
                 uses.append("D") if rss_enable else None
                 uses.append("S") if brush_enable else None
                 uses.append("T") if statistic_enable else None
@@ -96,6 +96,9 @@ class Sites:
                 "rssurl": site_rssurl,
                 "signurl": site_signurl,
                 "cookie": site_cookie,
+                "api_key": site.API_KEY,
+                "bearer_token": site.BEARER_TOKEN,
+                "headers": site.HEADERS or site_note.get("headers"),
                 "rule": site_note.get("rule"),
                 "download_setting": site_note.get("download_setting"),
                 "rss_enable": rss_enable,
@@ -103,7 +106,6 @@ class Sites:
                 "statistic_enable": statistic_enable,
                 "uses": uses,
                 "ua": site_note.get("ua") or get_ua(),
-                "headers": site_note.get("headers"),
                 "parse": site_note.get("parse") == "Y",
                 "unread_msg_notify": site_note.get("message") == "Y",
                 "chrome": site_note.get("chrome") == "Y",
@@ -131,6 +133,8 @@ class Sites:
         for site in self._sites:
             site_note = self.__get_site_note_items(site.NOTE)
             self._site_limiter.register_site(str(site.ID), site_note)
+        # 将限流服务注入 SiteEngine，供 engine_tools / engine.py 使用
+        SiteEngine.get_instance().site_limiter = self._site_limiter
 
     def init_favicons(self):
         """
@@ -307,7 +311,17 @@ class Sites:
 
         if is_public:
             start_time = datetime.now()
-            res = RequestUtils(proxies=get_proxies() if proxy else None).get_res(url=site_url)
+            proxy_url = get_proxies().get("http") if proxy and get_proxies() else None
+            rate_config = self._site_limiter.get_rate(str(site_id))
+            client = HttpClient(
+                config=HttpClientConfig(proxy_url=proxy_url),
+                rate_limiter=self._site_limiter.engine,
+            )
+            req_kwargs = {"url": site_url}
+            if rate_config:
+                req_kwargs["rate_limit_key"] = f"site:{site_id}"
+                req_kwargs["rate_limit_rate"] = rate_config[0]
+            res = client.get(**req_kwargs)
             seconds = round((datetime.now() - start_time).total_seconds(), 3)
             if res and res.status_code == 200:
                 return True, "连接成功", seconds
@@ -315,8 +329,8 @@ class Sites:
                 return False, f"连接失败，状态码：{res.status_code}", seconds
             return False, "无法打开网站", seconds
 
-        if not site_cookie and not headers:
-            return False, "未配置站点Cookie或headers", 0
+        if not site_cookie and not headers and not site_info.get("api_key") and not site_info.get("bearer_token"):
+            return False, "未配置站点认证信息", 0
 
         if JsonUtils.is_valid_json(headers):
             headers = json.loads(headers or "{}")
@@ -329,6 +343,8 @@ class Sites:
         if site_def:
             user_config = {
                 "cookie": site_cookie,
+                "api_key": site_info.get("api_key", ""),
+                "bearer_token": site_info.get("bearer_token", ""),
                 "ua": ua,
                 "headers": headers,
                 "proxy": proxy,
@@ -343,17 +359,25 @@ class Sites:
             seconds = round((datetime.now() - start_time).total_seconds(), 3)
             if not html_text:
                 return False, "获取站点源码失败", 0
-            if SiteHelper.is_logged_in(html_text):
+            if is_logged_in(html_text):
                 return True, "连接成功", seconds
             return False, "Cookie失效", seconds
 
         start_time = datetime.now()
-        res = RequestUtils(cookies=site_cookie, headers=headers, proxies=get_proxies() if proxy else None).get_res(
-            url=site_url
+        proxy_url = get_proxies().get("http") if proxy and get_proxies() else None
+        rate_config = self._site_limiter.get_rate(str(site_id))
+        client = HttpClient(
+            config=HttpClientConfig(proxy_url=proxy_url),
+            rate_limiter=self._site_limiter.engine,
         )
+        req_kwargs = {"url": site_url, "headers": headers, "auth": CookieAuth(site_cookie)}
+        if rate_config:
+            req_kwargs["rate_limit_key"] = f"site:{site_id}"
+            req_kwargs["rate_limit_rate"] = rate_config[0]
+        res = client.get(**req_kwargs)
         seconds = round((datetime.now() - start_time).total_seconds(), 3)
         if res and res.status_code == 200:
-            if not SiteHelper.is_logged_in(res.text):
+            if not is_logged_in(res.text):
                 return False, "Cookie失效", seconds
             return True, "连接成功", seconds
         elif res is not None:
@@ -382,19 +406,53 @@ class Sites:
                     return None
         return int(val) * multiplier
 
-    def add_site(self, name, site_pri, rssurl=None, signurl=None, cookie=None, note=None, rss_uses=None):
+    def add_site(
+        self,
+        name,
+        site_pri,
+        rssurl=None,
+        signurl=None,
+        cookie=None,
+        api_key=None,
+        bearer_token=None,
+        headers=None,
+        note=None,
+        rss_uses=None,
+    ):
         """
         添加站点
         """
         if self.site_repo is None:
             return None
         ret = self.site_repo.insert_config_site(
-            name=name, site_pri=site_pri, rssurl=rssurl, signurl=signurl, cookie=cookie, note=note, rss_uses=rss_uses
+            name=name,
+            site_pri=site_pri,
+            rssurl=rssurl,
+            signurl=signurl,
+            cookie=cookie,
+            api_key=api_key,
+            bearer_token=bearer_token,
+            headers=headers,
+            note=note,
+            rss_uses=rss_uses,
         )
         self._refresh()
         return ret
 
-    def update_site(self, tid, name, site_pri, rssurl, signurl, cookie, note, rss_uses):
+    def update_site(
+        self,
+        tid,
+        name,
+        site_pri,
+        rssurl,
+        signurl,
+        cookie,
+        api_key=None,
+        bearer_token=None,
+        headers=None,
+        note=None,
+        rss_uses=None,
+    ):
         """
         更新站点
         """
@@ -407,6 +465,9 @@ class Sites:
             rssurl=rssurl,
             signurl=signurl,
             cookie=cookie,
+            api_key=api_key,
+            bearer_token=bearer_token,
+            headers=headers,
             note=note,
             rss_uses=rss_uses,
         )

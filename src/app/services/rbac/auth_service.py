@@ -1,7 +1,7 @@
 """RBAC auth service - 用户认证."""
 
 from app.core.settings import settings
-from app.utils.security import check_password_hash, generate_password_hash
+from app.infrastructure.security import check_password_hash, generate_password_hash
 
 
 class RBACAuthService:

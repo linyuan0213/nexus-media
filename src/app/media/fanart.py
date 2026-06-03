@@ -1,8 +1,11 @@
 from app.core.constants import FANART_MOVIE_API_URL, FANART_TV_API_URL
 from app.infrastructure.cache_system import lru_cache_with_ttl
-from app.utils import ExceptionUtils, RequestUtils
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.infrastructure.http.exceptions import HttpClientError
+from app.utils import ExceptionUtils
 from app.utils.config_tools import get_proxies
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class Fanart:
@@ -33,7 +36,7 @@ class Fanart:
             return
         try:
             ret = self.__request_fanart(media_type=media_type, queryid=queryid)
-            if ret and ret.status_code == 200:
+            if ret:
                 if media_type == MediaType.MOVIE:
                     for image_type in self._movie_image_types:
                         images = ret.json().get(image_type)
@@ -68,9 +71,10 @@ class Fanart:
             image_url = FANART_MOVIE_API_URL % queryid
         else:
             image_url = FANART_TV_API_URL % queryid
+        proxy_url = cls._proxies.get("http") if cls._proxies else None
         try:
-            return RequestUtils(proxies=cls._proxies, timeout=5).get_res(image_url)
-        except Exception as err:
+            return HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=5)).get(image_url)
+        except HttpClientError as err:
             ExceptionUtils.exception_traceback(err)
         return None
 

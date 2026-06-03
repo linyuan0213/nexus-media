@@ -4,7 +4,7 @@ from app.mediaserver import MediaServer
 from app.schemas.media import LibrarySpaceDTO
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.utils import SystemUtils
-from app.utils.types import SystemConfigKey
+from app.domain.enums import SystemConfigKey
 
 
 class MediaLibraryService:
@@ -31,7 +31,7 @@ class MediaLibraryService:
         """开始媒体库同步"""
         TokenCache.delete("index")
         container.system_config().set(key=SystemConfigKey.SyncLibrary, value=librarys)
-        container.thread_helper().start_thread(self._media_server.sync_mediaserver, ())
+        container.thread_executor().submit(self._media_server.sync_mediaserver)
 
     def get_media_count(self) -> dict | None:
         """获取媒体库统计"""

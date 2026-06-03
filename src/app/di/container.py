@@ -56,12 +56,12 @@ class Container(containers.DeclarativeContainer):
     media_recognizer: Provider[Any] = _s("app.agent.agents.media_recognizer.MediaRecognizer")
 
     # --- Helpers ---
-    thread_helper: Provider["ThreadHelper"] = _s("app.helper.thread_helper.ThreadHelper")
-    progress_helper: Provider["ProgressHelper"] = _s("app.helper.progress_helper.ProgressHelper")
-    words_helper: Provider["WordsHelper"] = _s("app.helper.words_helper.WordsHelper")
-    rss_helper: Provider["RssHelper"] = _s("app.helper.rss_helper.RssHelper")
-    drissionpage_helper: Provider["DrissionPageHelper"] = _s("app.helper.drissionpage_helper.DrissionPageHelper")
-    indexer_helper: Provider["IndexerHelper"] = _s("app.helper.indexer_helper.IndexerHelper")
+    thread_executor: Provider["ThreadExecutor"] = _s("app.infrastructure.thread.ThreadExecutor")
+    progress_helper: Provider["ProgressTracker"] = _s("app.infrastructure.progress.ProgressTracker")
+    words_service: Provider["WordsService"] = _s("app.services.words_service.WordsService")
+    rss_helper: Provider["RssHelper"] = _s("app.services.rss_processor.RssHelper")
+    drissionpage_helper: Provider["ChromeClient"] = _s("app.infrastructure.chrome.ChromeClient")
+    indexer_helper: Provider["IndexerHelper"] = _s("app.indexer.configuration.IndexerHelper")
 
     # --- Media & Metadata ---
     media_service: Provider["MediaService"] = _s("app.media.service.MediaService")
@@ -257,6 +257,10 @@ class Container(containers.DeclarativeContainer):
         "app.infrastructure.cache_system.warmer.TMDBTrendingWarmer"
     )
 
+    # --- HTTP Clients ---
+    http_client: Provider["HttpClient"] = _s("app.infrastructure.http.client.HttpClient")
+    async_http_client: Provider["AsyncHttpClient"] = _s("app.infrastructure.http.async_client.AsyncHttpClient")
+
     # --- Event Bus ---
     event_bus: Provider["EventBus"] = _s("app.events.factory.create_event_bus")
     rate_limit_engine: Provider["RateLimitEngine"] = _s("app.infrastructure.rate_limiter.RateLimitEngine")
@@ -301,13 +305,15 @@ if TYPE_CHECKING:
     )
     from app.downloader.client_factory import DownloadClientFactory
     from app.events.bus import EventBus
+    from app.infrastructure.http.async_client import AsyncHttpClient
+    from app.infrastructure.http.client import HttpClient
     from app.infrastructure.rate_limiter import RateLimitEngine
-    from app.helper.drissionpage_helper import DrissionPageHelper
-    from app.helper.indexer_helper import IndexerHelper
-    from app.helper.progress_helper import ProgressHelper
-    from app.helper.rss_helper import RssHelper
-    from app.helper.thread_helper import ThreadHelper
-    from app.helper.words_helper import WordsHelper
+    from app.infrastructure.chrome import ChromeClient
+    from app.indexer.configuration import IndexerHelper
+    from app.infrastructure.progress import ProgressTracker
+    from app.services.rss_processor import RssHelper
+    from app.infrastructure.thread import ThreadExecutor
+    from app.services.words_service import WordsService
     from app.indexer.core.filter_engine import IndexerFilterEngine
     from app.indexer.core.pipeline import SearchPipeline
     from app.indexer.indexer import Indexer
@@ -366,7 +372,6 @@ if TYPE_CHECKING:
     from app.services.transfer_engine import TransferEngine
     from app.services.transfer_pipeline import TransferPipeline
     from app.services.rss_automation.userrss_service import UserRssService
-    from app.services.words_service import WordsService
     from app.sites.site_userinfo import SiteUserInfo
     from app.sites.siteconf import SiteConf
     from app.sites.sites import Sites

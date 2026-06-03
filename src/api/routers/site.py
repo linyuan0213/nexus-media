@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from api.deps import get_site_service, require_any_permission, require_permission
 from app.core.exceptions import DomainError, ServiceError  # noqa: F401
-from app.helper import ThreadHelper
+from app.infrastructure.thread import ThreadExecutor
 from app.schemas.common import CommonResponse
 from app.services.site_service import SiteService
 from app.utils.response import fail, success
@@ -45,6 +45,9 @@ class SiteUpdateRequest(BaseModel):
     site_rssurl: str | None = None
     site_signurl: str | None = None
     site_cookie: str | None = None
+    site_api_key: str | None = None
+    site_bearer_token: str | None = None
+    site_headers: str | None = None
     site_note: str | None = None
     site_include: str | None = None
 
@@ -188,7 +191,7 @@ def refresh_site_statistics(
     user: str = Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
-    ThreadHelper().start_thread(svc.refresh_site_data_now, (req.sites,))
+    ThreadExecutor(name="site_refresh").submit(svc.refresh_site_data_now, req.sites)
     return success(data={"message": "站点数据刷新已启动，请稍候"})
 
 

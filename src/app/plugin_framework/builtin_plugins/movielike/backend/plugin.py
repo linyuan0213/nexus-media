@@ -9,7 +9,7 @@ from app.plugin_framework.context import PluginContext
 from app.plugin_framework.hook_system import HookSystem
 from app.utils import SystemUtils
 from app.utils.config_tools import update_favtype
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 from app.di import container
 
 

@@ -14,8 +14,9 @@ from urllib.parse import quote
 
 import log
 from app.indexer.schema import IndexerConfigSchema
-from app.utils import DomUtils, ExceptionUtils, RequestUtils, StringUtils
-from app.utils.types import ProgressKey, SearchType
+from app.infrastructure.http import HttpClient
+from app.utils import DomUtils, ExceptionUtils, StringUtils
+from app.domain.enums import ProgressKey, SearchType
 from app.di import container
 
 
@@ -116,7 +117,7 @@ class _IIndexClient(metaclass=ABCMeta):
         if not url:
             return []
         try:
-            ret = RequestUtils().get_res(url)
+            ret = HttpClient().get(url)
             if not ret:
                 return []
             xml_doc = xml.dom.minidom.parseString(ret.text)

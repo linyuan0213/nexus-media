@@ -14,7 +14,7 @@ from app.schemas.common import CommonResponse
 from app.services.words_service import WordsService
 from app.utils import ExceptionUtils
 from app.utils.response import fail, success
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 router = APIRouter()
 

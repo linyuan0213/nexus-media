@@ -1,7 +1,11 @@
 import base64
 
-from app.helper import OcrHelper
-from app.utils import RequestUtils, StringUtils
+from app.infrastructure.ocr import OcrRecognizer
+from app.infrastructure.http.auth import CookieAuth
+from app.infrastructure.http.client import HttpClient
+from app.sites import engine_tools
+from app.sites.engine import SiteEngine
+from app.utils import StringUtils
 from app.di import container
 
 
@@ -10,7 +14,7 @@ class SiteCookie:
         self.progress = progress or container.progress_helper()
         self.sites = sites or container.sites()
         self.siteconf = siteconf or container.site_conf()
-        self.ocrhelper = ocrhelper or OcrHelper()
+        self.ocrhelper = ocrhelper or OcrRecognizer()
         self.captcha_code = {}
 
     def set_code(self, code, value):
@@ -52,7 +56,13 @@ class SiteCookie:
         """
         if not image_url:
             return ""
-        ret = RequestUtils(headers=chrome.get_ua(), cookies=chrome.get_cookies()).get_res(image_url)
-        if ret:
-            return base64.b64encode(ret.content).decode()
-        return ""
+        engine = SiteEngine.get_instance()
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        site_def = engine.get_by_url(image_url)
+        rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, site_def)
+        client = HttpClient(rate_limiter=rate_limiter_engine)
+        ret = client.get(
+            image_url, headers={"User-Agent": chrome.get_ua()}, auth=CookieAuth(chrome.get_cookies()), **rl_kwargs
+        )
+        return base64.b64encode(ret.content).decode()

@@ -18,7 +18,8 @@ from app.core.settings import settings
 from app.di import container
 from app.events import Event
 from app.events.constants import MEDIA_EPISODE_TRANSFERRED, MEDIA_TRANSFER_FINISHED, SUBTITLE_DOWNLOAD, TRANSFER_FAIL
-from app.helper import ProgressHelper, ThreadHelper
+from app.infrastructure.progress import ProgressTracker
+from app.infrastructure.thread import ThreadExecutor
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media import Category, MediaService, Scraper
 from app.message import Message
@@ -29,7 +30,8 @@ from app.services.transfer.history_manager import TransferHistoryManager
 from app.services.transfer.path_resolver import TransferPathResolver
 from app.services.transfer_engine import TransferEngine
 from app.utils import ExceptionUtils, PathUtils, StringUtils
-from app.utils.types import MediaType, ProgressKey, SyncType
+from app.domain.mediatypes import MediaType
+from app.domain.enums import ProgressKey, SyncType
 
 
 class FileTransferService:
@@ -41,9 +43,9 @@ class FileTransferService:
         message: Message | None = None,
         category: Category | None = None,
         scraper: Scraper | None = None,
-        threadhelper: ThreadHelper | None = None,
+        thread_executor: ThreadExecutor | None = None,
         history_manager: TransferHistoryManager | None = None,
-        progress: ProgressHelper | None = None,
+        progress: ProgressTracker | None = None,
         event_bus=None,
         engine: TransferEngine | None = None,
         path_resolver: TransferPathResolver | None = None,
@@ -54,7 +56,7 @@ class FileTransferService:
         self.message = message or container.message()
         self.category = category or container.category()
         self.scraper = scraper or container.scraper()
-        self.threadhelper = threadhelper or container.thread_helper()
+        self._thread_executor = thread_executor or container.thread_executor()
         self.progress = progress or container.progress_helper()
         self._event_bus = event_bus or container.event_bus()
         self._engine = engine or container.transfer_engine()

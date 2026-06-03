@@ -9,7 +9,7 @@ from app.domain.entities.rss import (
     SubscribeMovieEntity,
     SubscribeTvEntity,
 )
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class SubscribeMovieRepositoryAdapter:

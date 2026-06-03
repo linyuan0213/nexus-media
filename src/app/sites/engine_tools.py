@@ -5,38 +5,51 @@ import os
 import re
 from typing import Any
 
+import httpx
 from lxml import etree
 
-from app.utils import RequestUtils
+from app.infrastructure.http.auth import BearerAuth, CookieAuth
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.utils.config_tools import get_proxies
 
 
-def _build_headers(engine: Any, site: Any, user_config: dict) -> dict:
+def _build_auth(engine: Any, site: Any, user_config: dict) -> tuple[dict, httpx.Auth | None]:
+    """构建全局认证（每个请求通用），返回 (headers, auth)。
+
+    认证信息同时写入 headers（向后兼容）并返回 auth 对象（供 httpx 使用）。
+    """
     headers = user_config.get("headers", {}) or {}
     if isinstance(headers, str):
         try:
             headers = json.loads(headers)
         except Exception:
             headers = {}
+    auth = None
     auth_type = site.api.auth.get("type", "") if site.api else ""
 
     if auth_type == "api_key":
         hdr = site.api.auth.get("header_name", "x-api-key")
-        if hdr not in headers or not headers.get(hdr):
-            key = user_config.get("cookie", "") or user_config.get("api_key", "")
-            if key:
-                headers[hdr] = key
+        key = user_config.get("api_key", "")
+        # 向后兼容：旧配置可能把 api_key 放在 cookie 字段
+        if not key:
+            key = user_config.get("cookie", "")
+        if key:
+            headers[hdr] = key
     elif auth_type == "bearer":
-        if "Authorization" not in headers or not headers.get("Authorization"):
-            token = user_config.get("cookie", "") or user_config.get("api_key", "")
-            if token and not token.startswith("Bearer "):
-                token = f"Bearer {token}"
-            if token:
-                headers["Authorization"] = token
+        token = user_config.get("bearer_token", "")
+        # 向后兼容：旧配置可能把 bearer token 放在 cookie/api_key 字段
+        if not token:
+            token = user_config.get("api_key", "") or user_config.get("cookie", "")
+        if token and not token.startswith("Bearer "):
+            token = f"Bearer {token}"
+        if token:
+            headers["Authorization"] = token
+            auth = BearerAuth(token)
     elif auth_type == "cookie":
         cookie = user_config.get("cookie", "")
         if cookie:
-            headers["Cookie"] = cookie
+            auth = CookieAuth(cookie)
     elif auth_type == "csrf":
         hdr = site.api.auth.get("header_name", "X-CSRF-TOKEN")
         token = engine._resolve_auth_token(site, user_config, "csrf")
@@ -45,6 +58,23 @@ def _build_headers(engine: Any, site: Any, user_config: dict) -> dict:
 
     headers["Content-Type"] = headers.get("Content-Type", "application/json;charset=utf-8")
     headers["User-Agent"] = user_config.get("ua", "")
+    return headers, auth
+
+
+def _get_rate_limit_kwargs(engine: Any, site: Any) -> dict:
+    """获取限流参数（供 HttpClient 使用）."""
+    site_limiter = getattr(engine, "site_limiter", None)
+    if not site_limiter or not site or not getattr(site, "id", None):
+        return {}
+    rate_config = site_limiter.get_rate(str(site.id))
+    if not rate_config:
+        return {}
+    return {"rate_limit_key": f"site:{site.id}", "rate_limit_rate": rate_config[0]}
+
+
+def _build_headers(engine: Any, site: Any, user_config: dict) -> dict:
+    """向后兼容：返回仅包含 headers 的字典（无 auth 对象）。"""
+    headers, _auth = _build_auth(engine, site, user_config)
     return headers
 
 
@@ -65,41 +95,53 @@ def _call_endpoint(
 
     headers = engine._build_headers(site, user_config)
     proxy = get_proxies() if user_config.get("proxy") else None
+    proxy_url = proxy.get("http") if proxy else None
+
+    rate_limiter = getattr(engine, "site_limiter", None)
+    rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+    rl_kwargs = _get_rate_limit_kwargs(engine, site)
 
     if download:
         headers.pop("Content-Type", None)
-        res = RequestUtils(headers=headers, proxies=proxy, timeout=30).get_res(url=url)
-        if res and res.status_code == 200 and download_dir:
-            fname = os.path.join(download_dir, f"{credential}.zip") if credential else "subtitle.zip"
-            with open(fname, "wb") as f:
-                f.write(res.content)
-            return True
-        return False
-
-    if method == "POST":
-        b = cfg.get("body") or {}
-        body = {}
-        for k, v in b.items():
-            if isinstance(v, str):
-                body[k] = v.format(**template_vars)
-            elif isinstance(v, dict):
-                body[k] = {sk: sv.format(**template_vars) if isinstance(sv, str) else sv for sk, sv in v.items()}
-            else:
-                body[k] = v
-        post_data = json.dumps(body, separators=(",", ":")) if body else None
-        res = RequestUtils(headers=headers, proxies=proxy, timeout=15).post_res(url=url, data=post_data)
-    else:
-        params = cfg.get("params")
-        if params:
-            params = {k: v.format(**template_vars) if isinstance(v, str) else v for k, v in params.items()}
-        res = RequestUtils(headers=headers, proxies=proxy, timeout=15).get_res(url=url, params=params)
-
-    if res and res.status_code == 200:
         try:
-            return res.json()
+            res = HttpClient(
+                config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                rate_limiter=rate_limiter_engine,
+            ).get(url=url, headers=headers, **rl_kwargs)
+            if download_dir:
+                fname = os.path.join(download_dir, f"{credential}.zip") if credential else "subtitle.zip"
+                with open(fname, "wb") as f:
+                    f.write(res.content)
+                return True
+            return False
         except Exception:
-            return None
-    return None
+            return False
+
+    client = HttpClient(
+        config=HttpClientConfig(proxy_url=proxy_url, timeout=15),
+        rate_limiter=rate_limiter_engine,
+    )
+    try:
+        if method == "POST":
+            b = cfg.get("body") or {}
+            body = {}
+            for k, v in b.items():
+                if isinstance(v, str):
+                    body[k] = v.format(**template_vars)
+                elif isinstance(v, dict):
+                    body[k] = {sk: sv.format(**template_vars) if isinstance(sv, str) else sv for sk, sv in v.items()}
+                else:
+                    body[k] = v
+            post_data = json.dumps(body, separators=(",", ":")) if body else None
+            res = client.post(url=url, data=post_data, headers=headers, **rl_kwargs)
+        else:
+            params = cfg.get("params")
+            if params:
+                params = {k: v.format(**template_vars) if isinstance(v, str) else v for k, v in params.items()}
+            res = client.get(url=url, params=params, headers=headers, **rl_kwargs)
+        return res.json()
+    except Exception:
+        return None
 
 
 def _resolve_auth_token(engine: Any, site: Any, user_config: dict, token_type: str) -> str | None:
@@ -125,10 +167,16 @@ def _fetch_csrf_token(engine: Any, site: Any, user_config: dict) -> str | None:
     cookie = user_config.get("cookie", "")
     ua = user_config.get("ua", "")
     proxy = get_proxies() if user_config.get("proxy") else None
-    res = RequestUtils(
-        headers={"User-Agent": ua}, cookies=cookie if cookie else None, proxies=proxy, timeout=15
-    ).get_res(url=csrf_url)
-    if not res or res.status_code != 200:
+    proxy_url = proxy.get("http") if proxy else None
+    rate_limiter = getattr(engine, "site_limiter", None)
+    rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+    rl_kwargs = _get_rate_limit_kwargs(engine, site)
+    try:
+        res = HttpClient(
+            config=HttpClientConfig(proxy_url=proxy_url, timeout=15),
+            rate_limiter=rate_limiter_engine,
+        ).get(url=csrf_url, headers={"User-Agent": ua}, auth=CookieAuth(cookie) if cookie else None, **rl_kwargs)
+    except Exception:
         return None
     selector = auth.get("csrf_selector", "")
     selector_type = auth.get("csrf_selector_type", "regex")
@@ -157,19 +205,20 @@ def _fetch_passkey(engine: Any, site: Any, user_config: dict) -> str | None:
     headers.pop("Content-Type", None)
     cookie = user_config.get("cookie", "")
     proxy = get_proxies() if user_config.get("proxy") else None
-    if method.upper() == "GET":
-        res = RequestUtils(headers=headers, cookies=cookie if cookie else None, proxies=proxy, timeout=15).get_res(
-            url=url
+    proxy_url = proxy.get("http") if proxy else None
+    rate_limiter = getattr(engine, "site_limiter", None)
+    rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+    rl_kwargs = _get_rate_limit_kwargs(engine, site)
+    try:
+        client = HttpClient(
+            config=HttpClientConfig(proxy_url=proxy_url, timeout=15),
+            rate_limiter=rate_limiter_engine,
         )
-    else:
-        res = RequestUtils(headers=headers, cookies=cookie if cookie else None, proxies=proxy, timeout=15).post_res(
-            url=url
-        )
-    if res and res.status_code == 200:
-        try:
-            data = res.json()
-        except Exception:
-            return None
+        if method.upper() == "GET":
+            res = client.get(url=url, headers=headers, auth=CookieAuth(cookie) if cookie else None, **rl_kwargs)
+        else:
+            res = client.post(url=url, headers=headers, auth=CookieAuth(cookie) if cookie else None, **rl_kwargs)
+        data = res.json()
         keys = response_key.split(".")
         val = data
         for k in keys:
@@ -177,10 +226,11 @@ def _fetch_passkey(engine: Any, site: Any, user_config: dict) -> str | None:
             if val is None:
                 break
         return val
-    return None
+    except Exception:
+        return None
 
 
-def _call_html_endpoint(engine: Any, url: str, html_cfg: dict, user_config: dict) -> dict | None:
+def _call_html_endpoint(engine: Any, url: str, html_cfg: dict, user_config: dict, site: Any = None) -> dict | None:
     method = html_cfg.get("method", "GET").upper()
     path = html_cfg.get("path", "")
     params = html_cfg.get("params") or {}
@@ -195,17 +245,26 @@ def _call_html_endpoint(engine: Any, url: str, html_cfg: dict, user_config: dict
     ua = user_config.get("ua", "")
     headers = {"User-Agent": ua} if ua else {}
     proxy = get_proxies() if user_config.get("proxy") else None
+    proxy_url = proxy.get("http") if proxy else None
 
-    if method == "POST":
-        res = RequestUtils(headers=headers, cookies=cookie if cookie else None, proxies=proxy, timeout=15).post_res(
-            url=req_url, data=body
-        )
-    else:
-        res = RequestUtils(headers=headers, cookies=cookie if cookie else None, proxies=proxy, timeout=15).get_res(
-            url=req_url, params=params
-        )
+    rate_limiter = getattr(engine, "site_limiter", None)
+    rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+    rl_kwargs = _get_rate_limit_kwargs(engine, site)
 
-    if not res or res.status_code != 200:
+    try:
+        client = HttpClient(
+            config=HttpClientConfig(proxy_url=proxy_url, timeout=15),
+            rate_limiter=rate_limiter_engine,
+        )
+        if method == "POST":
+            res = client.post(
+                url=req_url, data=body, headers=headers, auth=CookieAuth(cookie) if cookie else None, **rl_kwargs
+            )
+        else:
+            res = client.get(
+                url=req_url, params=params, headers=headers, auth=CookieAuth(cookie) if cookie else None, **rl_kwargs
+            )
+    except Exception:
         return None
 
     html_doc: Any = etree.HTML(res.text)

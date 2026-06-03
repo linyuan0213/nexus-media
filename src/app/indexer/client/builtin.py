@@ -12,14 +12,14 @@ from threading import Lock
 
 import log
 from app.core.settings import settings
-from app.helper import IndexerConf
+from app.indexer.configuration import IndexerConf
 from app.indexer.client._base import _IIndexClient
 from app.indexer.schema import IndexerConfigSchema
 from app.sites.engine import SiteEngine
 from app.sites.searcher_factory import create_searcher
 from app.utils import StringUtils
 from app.utils.config_tools import get_ua
-from app.utils.types import ProgressKey, SearchType, SystemConfigKey
+from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
 from app.di import container
 
 _STATS_LOCK = Lock()

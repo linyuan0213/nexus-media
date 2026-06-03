@@ -127,8 +127,9 @@ class RBACService:
             menu_name, menu_code, parent_id, path, icon, component, sort_order, menu_level, permission_code, **kwargs
         )
 
-    def update_menu(self, menu_id: int, **kwargs) -> None:
-        return self._menu.update_menu(menu_id, **kwargs)
+    def update_menu(self, menu_id: int, **kwargs) -> bool:
+        self._menu.update_menu(menu_id, **kwargs)
+        return True
 
     def delete_menu(self, menu_id: int) -> None:
         return self._menu.delete_menu(menu_id)

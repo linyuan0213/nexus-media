@@ -8,7 +8,7 @@ import time
 
 from app.media import MediaService
 from app.plugin_framework.context import PluginContext
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 from app.di import container
 
 

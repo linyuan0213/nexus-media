@@ -29,11 +29,6 @@ def get_inner_config_path():
     return os.path.join(get_root_path(), "config")
 
 
-def get_script_path():
-    """SQL 数据初始化脚本目录"""
-    return str(get_project_root() / "src" / "app" / "db" / "data")
-
-
 def get_user_plugin_path():
     """用户插件目录"""
     return os.path.join(get_config_path(), "plugins")

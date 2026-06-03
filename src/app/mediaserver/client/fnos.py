@@ -6,7 +6,7 @@ from app.mediaserver.client._base import _IMediaClient
 from app.mediaserver.client.fnos_api import FnOSClient
 from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
 from app.utils import ExceptionUtils
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class FnOS(_IMediaClient):

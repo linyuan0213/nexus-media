@@ -12,7 +12,7 @@ from app.schemas.system import SendMessageResultDTO
 from app.services.sync_service import SyncService
 from app.services.system.lifecycle import SystemLifecycleService
 from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
-from app.utils.types import SearchType
+from app.domain.enums import SearchType
 
 
 class MessageClientService:
@@ -154,7 +154,8 @@ class MessageCommandHandler:
 
         command = self._command_map.get(msg)
         if command:
-            container.thread_helper().start_thread(command.get("func"), ())
+            if func := command.get("func"):
+                container.thread_executor().submit(func)
             container.message().send_channel_msg(
                 channel=in_from, title="正在运行 {} ...".format(command.get("desc")), user_id=user_id or ""
             )
@@ -168,7 +169,7 @@ class MessageCommandHandler:
         if plugin_cmd:
             func = plugin_cmd.get("func")
             if func:
-                container.thread_helper().start_thread(func, (msg, in_from, user_id, user_name))
+                container.thread_executor().submit(func, msg, in_from, user_id, user_name)
             container.message().send_channel_msg(
                 channel=in_from, title="正在运行 {} ...".format(plugin_cmd.get("desc")), user_id=user_id or ""
             )
@@ -176,7 +177,7 @@ class MessageCommandHandler:
 
         TokenCache.delete("search")
         if self._search_handler:
-            container.thread_helper().start_thread(self._search_handler.handle, (msg, in_from, user_id, user_name))
+            container.thread_executor().submit(self._search_handler.handle, msg, in_from, user_id, user_name)
 
     @staticmethod
     def _truncate_rsshistory():

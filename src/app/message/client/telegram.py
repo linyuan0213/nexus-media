@@ -7,11 +7,13 @@ import requests
 
 import log
 from app.core.settings import settings
-from app.helper.thread_helper import ThreadHelper
+from app.infrastructure.thread import ThreadExecutor
 from app.message import Message
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
-from app.utils import ExceptionUtils, RequestUtils
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.utils import ExceptionUtils
 from app.utils.config_tools import get_domain, get_proxies
 from app.di import container
 
@@ -153,28 +155,30 @@ class Telegram(_IMessageClient):
             if cid and cid not in seen:
                 seen.add(cid)
                 unique_chat_ids.append(cid)
+        proxy_url = proxies.get("http") if proxies else None
         for chat_id in unique_chat_ids:
-            req = RequestUtils(proxies=proxies)
-            if image:
-                url = f"https://api.telegram.org/bot{self.token}/sendPhoto"
-                res = req.post_res(
-                    url,
-                    data={"chat_id": chat_id, "photo": image, "caption": caption, "parse_mode": "Markdown"},
-                )
-            else:
-                url = f"https://api.telegram.org/bot{self.token}/sendMessage"
-                res = req.post_res(
-                    url,
-                    data={"chat_id": chat_id, "text": caption, "parse_mode": "Markdown"},
-                )
-            ok, msg = self._parse_response(res)
-            if not ok:
-                return ok, msg
+            try:
+                req = HttpClient(config=HttpClientConfig(proxy_url=proxy_url))
+                if image:
+                    url = f"https://api.telegram.org/bot{self.token}/sendPhoto"
+                    res = req.post(
+                        url,
+                        data={"chat_id": chat_id, "photo": image, "caption": caption, "parse_mode": "Markdown"},
+                    )
+                else:
+                    url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+                    res = req.post(
+                        url,
+                        data={"chat_id": chat_id, "text": caption, "parse_mode": "Markdown"},
+                    )
+                ok, msg = self._parse_response(res)
+                if not ok:
+                    return ok, msg
+            except Exception as e:
+                return False, str(e)
         return True, ""
 
     def _parse_response(self, res):
-        if not res or res.status_code != 200:
-            return False, "网络请求失败"
         try:
             data = res.json()
             if data.get("ok"):
@@ -204,21 +208,24 @@ class Telegram(_IMessageClient):
     def _start_polling(self):
         if not self.token or not self._enabled:
             return
-        ThreadHelper().start_thread(self._polling_loop, ())
+        ThreadExecutor(name="telegram_poll").submit(self._polling_loop)
 
     def _polling_loop(self):
         offset = 0
         while self._enabled:
             try:
                 proxies = self._get_proxies()
+                proxy_url = proxies.get("http") if proxies else None
                 url = f"https://api.telegram.org/bot{self.token}/getUpdates?offset={offset}&limit=10"
-                res = RequestUtils(proxies=proxies, timeout=30).get_res(url)
-                if res and res.status_code == 200:
+                try:
+                    res = HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=30)).get(url)
                     data = res.json()
                     if data.get("ok"):
                         for update in data.get("result", []):
                             offset = update.get("update_id", offset) + 1
                             self._process_update(update)
+                except Exception as e:
+                    log.error(f"[Telegram]轮询异常: {e}")
                 time.sleep(2)
             except Exception as e:
                 log.error(f"[Telegram]轮询异常: {e}")
@@ -281,24 +288,30 @@ class Telegram(_IMessageClient):
                 self._del_webhook()
             values = {"url": self._webhook_url, "allowed_updates": ["message"]}
             url = f"https://api.telegram.org/bot{self.token}/setWebhook?" + urlencode(values)
-            res = RequestUtils(proxies=get_proxies()).get_res(url)
-            if res and res.json().get("ok"):
-                _webhook_set = True
-                log.info(f"[Telegram]Webhook 设置成功：{self._webhook_url}")
+            try:
+                proxies = get_proxies()
+                proxy_url = proxies.get("http") if proxies else None
+                res = HttpClient(config=HttpClientConfig(proxy_url=proxy_url)).get(url)
+                if res.json().get("ok"):
+                    _webhook_set = True
+                    log.info(f"[Telegram]Webhook 设置成功：{self._webhook_url}")
+            except Exception:
+                pass
 
     def _get_webhook_status(self):
         url = f"https://api.telegram.org/bot{self.token}/getWebhookInfo"
         try:
-            res = RequestUtils(proxies=get_proxies()).get_res(url)
-            if res and res.status_code == 200:
-                data = res.json()
-                if data.get("ok"):
-                    info = data.get("result", {})
-                    if info.get("url") == self._webhook_url:
-                        return 1
-                    elif info.get("url"):
-                        return 2
-                    return 0
+            proxies = get_proxies()
+            proxy_url = proxies.get("http") if proxies else None
+            res = HttpClient(config=HttpClientConfig(proxy_url=proxy_url)).get(url)
+            data = res.json()
+            if data.get("ok"):
+                info = data.get("result", {})
+                if info.get("url") == self._webhook_url:
+                    return 1
+                elif info.get("url"):
+                    return 2
+                return 0
         except Exception:
             pass
         return 0
@@ -306,8 +319,9 @@ class Telegram(_IMessageClient):
     def _del_webhook(self):
         url = f"https://api.telegram.org/bot{self.token}/deleteWebhook"
         try:
-            res = RequestUtils(proxies=get_proxies()).get_res(url)
-            if res and res.status_code == 200:
-                log.info("[Telegram]Webhook 已删除")
+            proxies = get_proxies()
+            proxy_url = proxies.get("http") if proxies else None
+            HttpClient(config=HttpClientConfig(proxy_url=proxy_url)).get(url)
+            log.info("[Telegram]Webhook 已删除")
         except Exception:
             pass

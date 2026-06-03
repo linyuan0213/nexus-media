@@ -5,10 +5,9 @@ from datetime import datetime
 from random import choice
 from urllib import parse
 
-import requests
-
 from app.infrastructure.cache_system import lru_cache_with_ttl
-from app.utils import RequestUtils
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 
 
 class DoubanApi:
@@ -132,10 +131,15 @@ class DoubanApi:
     _api_secret_key = "bf7dddc7c9cfe6f7"
     _api_key = "0dad551ec0f84ed02907ff5c42e8ec70"
     _base_url = "https://frodo.douban.com/api/v2"
-    _session = requests.Session()
 
     def __init__(self):
         pass
+
+    @classmethod
+    def _get_client(cls) -> HttpClient:
+        if not hasattr(cls, "_client"):
+            cls._client = HttpClient(config=HttpClientConfig(timeout=10))
+        return cls._client
 
     @classmethod
     def __sign(cls, url: str, ts: int, method="GET") -> str:
@@ -156,13 +160,19 @@ class DoubanApi:
 
         ts = int(params.pop("_ts", int(datetime.strftime(datetime.now(), "%Y%m%d"))))
         params.update(
-            {"os_rom": "android", "apiKey": cls._api_key, "_ts": str(ts), "_sig": cls.__sign(url=req_url, ts=ts)}
+            {
+                "os_rom": "android",
+                "apiKey": cls._api_key,
+                "_ts": str(ts),
+                "_sig": cls.__sign(url=req_url, ts=ts),
+            }
         )
 
         headers = {"User-Agent": choice(cls._user_agents)}
-        resp = RequestUtils(headers=headers, session=cls._session).get_res(url=req_url, params=params)
-
-        return resp.json() if resp else {}
+        resp = cls._get_client().get(url=req_url, params=params, headers=headers, raise_for_status=False)
+        if resp.status_code != 200:
+            raise Exception(f"豆瓣API返回错误，状态码：{resp.status_code}")
+        return resp.json()
 
     def search(self, keyword, start=0, count=20, ts=datetime.strftime(datetime.now(), "%Y%m%d")):
         return self.__invoke(self._urls["search"], q=keyword, start=start, count=count, _ts=ts)

@@ -7,15 +7,15 @@ import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
 from app.di import container
-from app.helper.image_proxy_helper import ImageProxyHelper
+from app.infrastructure.image_proxy import ImageProxy
 from app.media import MediaService, meta_info
 from app.mediaserver import MediaServer
 from app.schemas.media import MediaInfoResultDTO, SeasonEpisodesResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import StringUtils
-from app.utils.media_utils import check_media_exists
-from app.utils.types import MediaType
-from app.utils.web_utils import WebUtils
+from app.domain.media_utils import check_media_exists
+from app.domain.mediatypes import MediaType
+from app.services.web import WebUtils
 
 
 class MediaInfoService:
@@ -144,7 +144,7 @@ class MediaInfoService:
                 )
 
         if poster_path:
-            poster_path = ImageProxyHelper.get_proxy_image_url(
+            poster_path = ImageProxy.get_proxy_image_url(
                 poster_path, use_proxy=settings.get("app").get("enable_image_proxy", True)
             )
 
@@ -198,7 +198,7 @@ class MediaInfoService:
 
     def name_test(self, name, subtitle) -> dict:
         """名称识别测试"""
-        from app.utils.web_utils import mediainfo_dict
+        from app.services.web import mediainfo_dict
 
         media_info = self._media.get_media_info(title=name, subtitle=subtitle)
         if not media_info:
@@ -213,7 +213,7 @@ class MediaInfoService:
             d = media.to_dict()
             for img_key in ["image", "poster", "backdrop"]:
                 if d.get(img_key):
-                    d[img_key] = ImageProxyHelper.get_proxy_image_url(d[img_key], use_proxy=True)
+                    d[img_key] = ImageProxy.get_proxy_image_url(d[img_key], use_proxy=True)
             results.append(d)
         return results
 
@@ -251,7 +251,7 @@ class MediaInfoService:
             if not tmdb_info:
                 return None
             poster_path = (
-                ImageProxyHelper.get_tmdbimage_url(tmdb_info.get("poster_path")) if tmdb_info.get("poster_path") else ""
+                ImageProxy.get_tmdbimage_url(tmdb_info.get("poster_path")) if tmdb_info.get("poster_path") else ""
             )
             title = tmdb_info.get("title")
             vote_average = tmdb_info.get("vote_average")
@@ -306,11 +306,11 @@ class MediaInfoService:
             if not tmdb_info.get("poster_path"):
                 tv_tmdb_info = self._media.get_tmdb_info(mtype=MediaType.TV, tmdbid=tid)
                 if tv_tmdb_info:
-                    poster_path = ImageProxyHelper.get_tmdbimage_url(tv_tmdb_info.get("poster_path"))
+                    poster_path = ImageProxy.get_tmdbimage_url(tv_tmdb_info.get("poster_path"))
                 else:
                     poster_path = ""
             else:
-                poster_path = ImageProxyHelper.get_tmdbimage_url(tmdb_info.get("poster_path"))
+                poster_path = ImageProxy.get_tmdbimage_url(tmdb_info.get("poster_path"))
             year = air_date[0:4] if air_date else ""
             events = []
             episodes = tmdb_info.get("episodes") or []
@@ -366,7 +366,7 @@ class MediaInfoService:
                     season.update({"state": False})
         poster_image = media_info.get_poster_image()
         if poster_image:
-            poster_image = ImageProxyHelper.get_proxy_image_url(
+            poster_image = ImageProxy.get_proxy_image_url(
                 poster_image, use_proxy=settings.get("app").get("enable_image_proxy", True)
             )
         return {

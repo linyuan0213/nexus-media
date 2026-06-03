@@ -7,7 +7,8 @@ from app.downloader.client._pyaria2 import PyAria2
 from app.downloader.schema import ConfigField, DownloaderConfigSchema
 from app.downloader.strategy import RemoveStrategy
 from app.schemas.download import Torrent, TorrentStatus
-from app.utils import ExceptionUtils, RequestUtils
+from app.infrastructure.http.client import HttpClient
+from app.utils import ExceptionUtils
 
 
 class Aria2(_IDownloadClient):
@@ -124,8 +125,8 @@ class Aria2(_IDownloadClient):
             if isinstance(content, str):
                 if re.match("^https*://", content):
                     try:
-                        p = RequestUtils().get_res(url=content, allow_redirects=False)
-                        if p and p.headers.get("Location"):
+                        p = HttpClient().get(content, follow_redirects=False)
+                        if p.headers.get("Location"):
                             content = p.headers.get("Location") or ""
                     except (InfrastructureError, NetworkError):
                         raise

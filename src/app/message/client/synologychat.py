@@ -5,10 +5,12 @@ from urllib.parse import quote
 
 import log
 from app.core.settings import settings
-from app.helper.thread_helper import ThreadHelper
+from app.infrastructure.thread import ThreadExecutor
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
-from app.utils import ExceptionUtils, RequestUtils, StringUtils
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.utils import ExceptionUtils, StringUtils
 from app.di import container
 
 lock = Lock()
@@ -65,7 +67,9 @@ class SynologyChat(_IMessageClient):
         self._domain = None
         self._webhook_url = None
         self._token = None
-        self._req = RequestUtils(content_type="application/x-www-form-urlencoded")
+        self._req = HttpClient(
+            config=HttpClientConfig(default_headers={"Content-Type": "application/x-www-form-urlencoded"})
+        )
         super().__init__(config)
 
     def read_config(self):
@@ -84,18 +88,19 @@ class SynologyChat(_IMessageClient):
             _web_port = settings.get("app").web_port
             _api_key = container.apikey_service().get_or_create_system_key("MessageWebhook")
             ds_url = f"http://127.0.0.1:{_web_port}/synologychat?apikey={_api_key}"
-            ThreadHelper().start_thread(self._start_polling, (ds_url,))
+            ThreadExecutor(name="synology_poll").submit(self._start_polling, ds_url)
 
     def _start_polling(self, ds_url):
         log.info("SynologyChat消息接收服务启动")
         while True:
             try:
-                res = self._req.get_res(url=self._webhook_url)
-                if res and res.status_code == 200:
-                    data = res.json()
-                    if data and "post_id" in data:
-                        log.debug(f"[SynologyChat]接收到消息: {data}")
-                        ThreadHelper().start_thread(self._process_message, (data, ds_url))
+                if not self._webhook_url:
+                    break
+                res = self._req.get(url=self._webhook_url)
+                data = res.json()
+                if data and "post_id" in data:
+                    log.debug(f"[SynologyChat]接收到消息: {data}")
+                    ThreadExecutor(name="synology_msg").submit(self._process_message, data, ds_url)
                 import time
 
                 time.sleep(2)
@@ -196,16 +201,19 @@ class SynologyChat(_IMessageClient):
         req_url = (
             f"{self._domain}/webapi/entry.cgi?api=SYNO.Chat.External&method=user_list&version=2&token={self._token}"
         )
-        ret = self._req.get_res(url=req_url)
-        if ret and ret.status_code == 200:
+        try:
+            ret = self._req.get(url=req_url)
             users = ret.json().get("data", {}).get("users", []) or []
             return [user.get("user_id") for user in users]
-        return []
+        except Exception:
+            return []
 
     def __send_request(self, payload_data):
         payload = f"payload={json.dumps(payload_data)}"
-        ret = self._req.post_res(url=self._webhook_url, data=payload)
-        if ret and ret.status_code == 200:
+        if not self._webhook_url:
+            return False, "未配置webhook"
+        try:
+            ret = self._req.post(url=self._webhook_url, data=payload)
             result = ret.json()
             if result:
                 errno = result.get("error", {}).get("code")
@@ -214,6 +222,5 @@ class SynologyChat(_IMessageClient):
                     return True, ""
                 return False, f"{errno}-{errmsg}"
             return False, f"{ret.text}"
-        elif ret is not None:
-            return False, f"错误码：{ret.status_code}，错误原因：{ret.reason}"  # type: ignore[union-attr]
-        return False, "未获取到返回信息"
+        except Exception:
+            return False, "未获取到返回信息"

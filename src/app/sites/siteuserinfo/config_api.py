@@ -10,7 +10,9 @@ import time
 
 import log
 from app.sites.engine import SiteDefinition, SiteEngine
-from app.utils import RequestUtils
+from app.sites import engine_tools
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.utils.config_tools import get_proxies
 
 
@@ -216,26 +218,30 @@ class ConfigApiUserInfo:
             },
         )
 
-        if method == "POST":
-            data = json.dumps(body or {}, separators=(",", ":"))
-            if not body or (isinstance(body, dict) and not body):
-                data = None
-                headers.pop("Content-Type", None)
-            headers.setdefault("Referer", base)
-            headers.setdefault("Origin", base)
-            res = RequestUtils(headers=headers, proxies=self._proxies, timeout=30).post_res(url=url, data=data)
-            log.warn(f"[ConfigApiUserInfo]{self.site_name} seeding POST status={res.status_code if res else 'None'}")
-        else:
-            params = dict(endpoint_cfg.get("params") or {})
-            params = {k: v.format(page="1") if isinstance(v, str) else v for k, v in params.items()} if params else None
-            res = RequestUtils(headers=headers, proxies=self._proxies, timeout=30).get_res(url=url, params=params)
-        if res and res.status_code == 200:
-            try:
-                return res.json()
-            except Exception:
-                log.warn(f"[ConfigApiUserInfo]{self.site_name} JSON decode fail, text={res.text[:200]}")
-                return None
-        log.warn(f"[ConfigApiUserInfo]{self.site_name} API call fail, status={res.status_code if res else 'None'}")
+        proxy_url = self._proxies.get("http") if self._proxies else None
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._def)
+        client = HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=30), rate_limiter=rate_limiter_engine)
+        try:
+            if method == "POST":
+                data = json.dumps(body or {}, separators=(",", ":"))
+                if not body or (isinstance(body, dict) and not body):
+                    data = None
+                    headers.pop("Content-Type", None)
+                headers.setdefault("Referer", base)
+                headers.setdefault("Origin", base)
+                res = client.post(url=url, data=data, headers=headers, **rl_kwargs)
+            else:
+                params = dict(endpoint_cfg.get("params") or {})
+                params = (
+                    {k: v.format(page="1") if isinstance(v, str) else v for k, v in params.items()} if params else None
+                )
+                res = client.get(url=url, params=params, headers=headers, **rl_kwargs)
+            return res.json()
+        except Exception:
+            log.warn(f"[ConfigApiUserInfo]{self.site_name} API call fail")
+            return None
 
     def _render_body(self, body, **kwargs):
         if not body:

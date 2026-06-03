@@ -4,9 +4,12 @@ from typing import cast
 
 from lxml import etree
 
-from app.helper import OcrHelper
+from app.infrastructure.ocr import OcrRecognizer
+from app.infrastructure.http.auth import CookieAuth
+from app.infrastructure.http.client import HttpClient, HttpClientError
+from app.infrastructure.http.config import HttpClientConfig
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.utils import RequestUtils, StringUtils
+from app.utils import StringUtils
 from app.utils.config_tools import get_proxies
 
 
@@ -42,8 +45,18 @@ class Opencd(_ISiteSigninHandler):
         proxy = get_proxies() if site_info.get("proxy") else None
 
         # 判断今日是否已签到
-        index_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(url="https://www.open.cd")
-        if not index_res or index_res.status_code != 200:
+        try:
+            index_res = HttpClient(config=HttpClientConfig(proxy_url=proxy.get("http") if proxy else None)).get(
+                url="https://www.open.cd",
+                headers={"User-Agent": ua} if ua else None,
+                auth=CookieAuth(site_cookie) if site_cookie else None,
+                raise_for_status=False,
+            )
+        except HttpClientError:
+            self.error("签到失败，请检查站点连通性")
+            return False, f"[{site}]签到失败，请检查站点连通性"
+
+        if index_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
             return False, f"[{site}]签到失败，请检查站点连通性"
 
@@ -56,10 +69,18 @@ class Opencd(_ISiteSigninHandler):
             return True, f"[{site}]今日已签到"
 
         # 获取签到参数
-        sign_param_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
-            url="https://www.open.cd/plugin_sign-in.php"
-        )
-        if not sign_param_res or sign_param_res.status_code != 200:
+        try:
+            sign_param_res = HttpClient(config=HttpClientConfig(proxy_url=proxy.get("http") if proxy else None)).get(
+                url="https://www.open.cd/plugin_sign-in.php",
+                headers={"User-Agent": ua} if ua else None,
+                auth=CookieAuth(site_cookie) if site_cookie else None,
+                raise_for_status=False,
+            )
+        except HttpClientError:
+            self.error("签到失败，请检查站点连通性")
+            return False, f"[{site}]签到失败，请检查站点连通性"
+
+        if sign_param_res.status_code != 200:
             self.error("签到失败，请检查站点连通性")
             return False, f"[{site}]签到失败，请检查站点连通性"
 
@@ -85,7 +106,7 @@ class Opencd(_ISiteSigninHandler):
         # 识别几次
         while times <= 3:
             # ocr二维码识别
-            ocr_result = OcrHelper().get_captcha_text(image_url=img_get_url, cookie=site_cookie, ua=ua)
+            ocr_result = OcrRecognizer().get_captcha_text(image_url=img_get_url, cookie=site_cookie, ua=ua)
             self.debug(f"ocr识别{site}验证码 {ocr_result}")
             if ocr_result and len(ocr_result) == 6:
                 self.info(f"ocr识别{site}验证码成功 {ocr_result}")
@@ -98,10 +119,19 @@ class Opencd(_ISiteSigninHandler):
             # 组装请求参数
             data = {"imagehash": img_hash, "imagestring": ocr_result}
             # 访问签到链接
-            sign_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).post_res(
-                url="https://www.open.cd/plugin_sign-in.php?cmd=signin", data=data
-            )
-            if sign_res and sign_res.status_code == 200:
+            try:
+                sign_res = HttpClient(config=HttpClientConfig(proxy_url=proxy.get("http") if proxy else None)).post(
+                    url="https://www.open.cd/plugin_sign-in.php?cmd=signin",
+                    data=data,
+                    headers={"User-Agent": ua} if ua else None,
+                    auth=CookieAuth(site_cookie) if site_cookie else None,
+                    raise_for_status=False,
+                )
+            except HttpClientError:
+                self.error("签到失败，请检查站点连通性")
+                return False, f"[{site}]签到失败，请检查站点连通性"
+
+            if sign_res.status_code == 200:
                 self.debug(f"sign_res返回 {sign_res.text}")
                 # sign_res.text = '{"state":"success","signindays":"0","integral":"10"}'
                 sign_dict = json.loads(sign_res.text)

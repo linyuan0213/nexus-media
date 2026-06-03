@@ -12,7 +12,7 @@ from app.core.exceptions import (
     RepositoryError,
     ServiceError,
 )
-from app.db.repositories import SubscribeRepository
+from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.db.repositories.subscribe_repo_adapter import (
     SubscribeMovieRepositoryAdapter,
     SubscribeTvEpisodeRepositoryAdapter,
@@ -30,8 +30,9 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.services.search_service import Searcher
 from app.services.subscribe.coordinator import DownloadCoordinator
-from app.utils import Torrent
-from app.utils.types import MediaType, SearchType
+from app.sites.torrent import Torrent
+from app.domain.mediatypes import MediaType
+from app.domain.enums import SearchType
 
 
 class BaseSearchStrategy:

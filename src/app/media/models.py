@@ -5,10 +5,10 @@ import regex as re
 from pydantic import BaseModel, Field
 
 from app.core.constants import ANIME_GENREIDS, DEFAULT_TMDB_IMAGE
-from app.helper.image_proxy_helper import ImageProxyHelper
+from app.infrastructure.image_proxy import ImageProxy
 from app.di import container
 from app.utils import StringUtils
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class MediaInfo(BaseModel):
@@ -460,11 +460,9 @@ class MediaInfo(BaseModel):
             if self.release_date:
                 self.year = self.release_date[0:4]
             self.category = category_handler.get_movie_category(info)
-            self.poster_path = (
-                ImageProxyHelper.get_tmdbimage_url(info.get("poster_path")) if info.get("poster_path") else ""
-            )
+            self.poster_path = ImageProxy.get_tmdbimage_url(info.get("poster_path")) if info.get("poster_path") else ""
             self.backdrop_path = (
-                ImageProxyHelper.get_tmdbimage_url(info.get("backdrop_path")) if info.get("backdrop_path") else ""
+                ImageProxy.get_tmdbimage_url(info.get("backdrop_path")) if info.get("backdrop_path") else ""
             )
         else:
             self.title = info.get("name")
@@ -482,12 +480,10 @@ class MediaInfo(BaseModel):
             else:
                 self.category = category_handler.get_anime_category(info)
             self.poster_path = (
-                ImageProxyHelper.get_tmdbimage_url(info.get("poster_path"), size="medium")
-                if info.get("poster_path")
-                else ""
+                ImageProxy.get_tmdbimage_url(info.get("poster_path"), size="medium") if info.get("poster_path") else ""
             )
             self.backdrop_path = (
-                ImageProxyHelper.get_tmdbimage_url(info.get("backdrop_path"), size="large")
+                ImageProxy.get_tmdbimage_url(info.get("backdrop_path"), size="large")
                 if info.get("backdrop_path")
                 else ""
             )

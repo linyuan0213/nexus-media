@@ -13,7 +13,7 @@ from pwdlib.hashers.argon2 import Argon2Hasher
 from app.core.exceptions import RepositoryError, ServiceError
 from app.schemas.auth import TokenPair, UserContext
 from app.di import container
-from app.utils.security import get_secret_key
+from app.infrastructure.security import get_secret_key
 
 # 密码加密上下文（Argon2）
 pwd_context = PasswordHash([Argon2Hasher()])

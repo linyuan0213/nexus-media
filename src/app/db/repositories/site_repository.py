@@ -42,6 +42,9 @@ class SiteRepository(BaseRepository):
         rssurl: str | None = None,
         signurl: str | None = None,
         cookie: str | None = None,
+        api_key: str | None = None,
+        bearer_token: str | None = None,
+        headers: str | None = None,
         note: str | None = None,
         rss_uses: str | None = None,
     ) -> None:
@@ -52,7 +55,16 @@ class SiteRepository(BaseRepository):
             return
         self._db.insert(
             CONFIGSITE(
-                NAME=name, PRI=site_pri, RSSURL=rssurl, SIGNURL=signurl, COOKIE=cookie, NOTE=note, INCLUDE=rss_uses
+                NAME=name,
+                PRI=site_pri,
+                RSSURL=rssurl,
+                SIGNURL=signurl,
+                COOKIE=cookie,
+                API_KEY=api_key,
+                BEARER_TOKEN=bearer_token,
+                HEADERS=headers,
+                NOTE=note,
+                INCLUDE=rss_uses,
             )
         )
 
@@ -74,8 +86,11 @@ class SiteRepository(BaseRepository):
         rssurl: str,
         signurl: str,
         cookie: str,
-        note: str,
-        rss_uses: str,
+        api_key: str | None = None,
+        bearer_token: str | None = None,
+        headers: str | None = None,
+        note: str | None = None,
+        rss_uses: str | None = None,
     ) -> None:
         """
         更新站点信息
@@ -89,6 +104,9 @@ class SiteRepository(BaseRepository):
                 "RSSURL": rssurl,
                 "SIGNURL": signurl,
                 "COOKIE": cookie,
+                "API_KEY": api_key,
+                "BEARER_TOKEN": bearer_token,
+                "HEADERS": headers,
                 "NOTE": note,
                 "INCLUDE": rss_uses,
             }

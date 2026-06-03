@@ -16,7 +16,7 @@ import log
 from app.indexer.core.batch_identifier import BatchIdentifier
 from app.indexer.core.models import FilterStats, PipelineResult
 from app.indexer.core.result_filter import ResultFilter
-from app.utils.types import ProgressKey, SearchType
+from app.domain.enums import ProgressKey, SearchType
 from app.di import container
 
 

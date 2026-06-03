@@ -14,12 +14,12 @@ from datetime import datetime, timedelta
 import pytz
 from pyquery import PyQuery
 
-from app.helper.cookiecloud_helper import CookiecloudHelper
+from app.infrastructure.cache_system.cookiecloud_adapter import CookiecloudAdapter
 from app.infrastructure.cache_system import get_cache_manager
 from app.di import container
 from app.plugin_framework.context import PluginContext
 from app.plugin_framework.hook_system import HookSystem
-from app.utils import RequestUtils
+from app.infrastructure.http.client import HttpClient
 from app.utils.config_tools import get_ua
 
 
@@ -180,7 +180,7 @@ class WeworkIPChangePlugin:
         if use_cookiecloud:
             HookSystem().emit("site.cookie_sync", {})
             time.sleep(10)
-            cookie = CookiecloudHelper().get_cookie("qq.com")
+            cookie = CookiecloudAdapter().get_cookie("qq.com")
 
         if use_chrome:
             if not self._get_cookie_by_chrome():
@@ -256,13 +256,12 @@ class WeworkIPChangePlugin:
 
     def _get_current_dynamic_ip(self):
         try:
-            response = RequestUtils().get_res(url=self._ip_url)
-            if response and response.status_code == 200:
-                pattern = r"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
-                ip_str = response.text.strip()
-                if re.match(pattern, ip_str):
-                    self.ctx.debug(f"动态公网IP: {ip_str}")
-                    return ip_str
+            response = HttpClient().get(url=self._ip_url)
+            pattern = r"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+            ip_str = response.text.strip()
+            if re.match(pattern, ip_str):
+                self.ctx.debug(f"动态公网IP: {ip_str}")
+                return ip_str
         except Exception as e:
             self.ctx.error(f"获取动态IP失败: {e}")
         return None
@@ -288,17 +287,16 @@ class WeworkIPChangePlugin:
             "bind_mini_program": "false",
         }
         try:
-            response = RequestUtils(headers=headers).get_res(url=url, params=params)
-            if response and response.status_code == 200:
-                app_json = response.json()
-                try:
-                    ip_list = app_json.get("data", {}).get("white_ip_list", {}).get("ip") or []
-                except Exception:
-                    if app_json.get("result", {}).get("errCode"):
-                        self.ctx.debug("获取当前可信任IP失败")
-                    return []
-                self.ctx.debug(f"当前可信IP: {ip_list}")
-                return ip_list
+            response = HttpClient().get(url=url, params=params, headers=headers)
+            app_json = response.json()
+            try:
+                ip_list = app_json.get("data", {}).get("white_ip_list", {}).get("ip") or []
+            except Exception:
+                if app_json.get("result", {}).get("errCode"):
+                    self.ctx.debug("获取当前可信任IP失败")
+                return []
+            self.ctx.debug(f"当前可信IP: {ip_list}")
+            return ip_list
         except Exception as e:
             self.ctx.error(f"获取可信IP列表失败: {e}")
         return []
@@ -325,17 +323,16 @@ class WeworkIPChangePlugin:
         url = "https://work.weixin.qq.com/wework_admin/apps/saveIpConfig"
 
         try:
-            response = RequestUtils(headers=headers).post_res(url=url, params=params, data=data)
-            if response and response.status_code == 200:
-                json_data = response.json()
-                try:
-                    if json_data.get("data"):
-                        self.ctx.debug("更新可信IP成功")
-                        return True
-                except Exception:
-                    if json_data.get("result", {}).get("errCode"):
-                        self.ctx.debug("更新可信IP失败")
-                    return False
+            response = HttpClient().post(url=url, params=params, data=data, headers=headers)
+            json_data = response.json()
+            try:
+                if json_data.get("data"):
+                    self.ctx.debug("更新可信IP成功")
+                    return True
+            except Exception:
+                if json_data.get("result", {}).get("errCode"):
+                    self.ctx.debug("更新可信IP失败")
+                return False
         except Exception as e:
             self.ctx.error(f"设置可信IP列表失败: {e}")
         return False

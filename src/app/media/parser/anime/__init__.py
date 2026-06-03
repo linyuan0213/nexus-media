@@ -23,7 +23,7 @@ from app.media.parser.anime.season_episode_parser import (
     parse_year,
 )
 from app.utils import ExceptionUtils
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 def parse_anime_title(title, subtitle=None, fileflag=False) -> MediaInfo:

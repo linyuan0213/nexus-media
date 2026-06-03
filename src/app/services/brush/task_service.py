@@ -6,7 +6,7 @@ import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.db.repositories.brush_repo_adapter import BrushTaskRepositoryAdapter
 from app.di import container
-from app.helper import RssHelper
+from app.services.rss_processor import RssHelper
 from app.message import Message
 from app.services.brush.helpers import BrushTaskHelper
 from app.services.brush.rss_checker import BrushRssChecker

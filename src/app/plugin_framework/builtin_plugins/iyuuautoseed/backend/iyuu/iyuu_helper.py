@@ -3,7 +3,9 @@ import json
 import logging
 import time
 
-from app.utils import RequestUtils
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.sites.engine import SiteEngine
 
 _logger = logging.getLogger(__name__)
 
@@ -20,22 +22,29 @@ class IyuuHelper:
         """
         向IYUUApi发送请求
         """
-        headers = {"token": self._token}
+        headers = {"token": self._token, "Accept": "application/json"}
+        engine = SiteEngine.get_instance()
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         # 开始请求
-        if method == "get":
-            ret = RequestUtils(accept_type="application/json", headers=headers).get_res(f"{url}", params=params)
-        else:
-            ret = RequestUtils(accept_type="application/json", headers=headers).post_res(f"{url}", data=params)
-        if ret:
-            result = ret.json()
+        try:
+            if method == "get":
+                res = HttpClient(
+                    config=HttpClientConfig(default_headers=headers),
+                    rate_limiter=rate_limiter_engine,
+                ).get(f"{url}", params=params)
+            else:
+                res = HttpClient(
+                    config=HttpClientConfig(default_headers=headers),
+                    rate_limiter=rate_limiter_engine,
+                ).post(f"{url}", data=params)
+            result = res.json()
             if result.get("code") == 0:
                 return result.get("data"), ""
             else:
                 return None, f"请求IYUU失败，状态码：{result.get('code')}，返回信息：{result.get('msg')}"
-        elif ret is not None:
-            return None, f"请求IYUU失败，状态码：{ret.status_code}，错误原因：{ret.reason}"  # type: ignore[union-attr]
-        else:
-            return None, "请求IYUU失败，未获取到返回信息"
+        except Exception as exc:
+            return None, f"请求IYUU失败：{exc}"
 
     def get_torrent_url(self, sid):
         if not sid:

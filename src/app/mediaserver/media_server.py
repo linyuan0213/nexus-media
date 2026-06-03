@@ -9,14 +9,15 @@ from app.core.system_config import SystemConfig
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.db.repositories.media_sync_repo_adapter import MediaSyncRepositoryAdapter
 from app.di import container
-from app.helper import ProgressHelper
+from app.infrastructure.progress import ProgressTracker
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.queue import MessageQueueFactory
 from app.media import MediaService
 from app.mediaserver.registry import get_all_clients
 from app.message import Message
 from app.utils import ExceptionUtils
-from app.utils.types import MediaType, ProgressKey, SystemConfigKey
+from app.domain.mediatypes import MediaType
+from app.domain.enums import ProgressKey, SystemConfigKey
 
 lock = threading.Lock()
 server_lock = threading.Lock()
@@ -26,7 +27,7 @@ class MediaServer:
     _server_type: str | None = None
     _server = None
     mediadb: MediaSyncRepositoryAdapter | None = None
-    progress: ProgressHelper | None = None
+    progress: ProgressTracker | None = None
     message: Message | None = None
     media: MediaService | None = None
     systemconfig: SystemConfig | None = None

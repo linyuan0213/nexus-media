@@ -52,6 +52,9 @@ class SiteRepositoryAdapter(ISiteRepository):
             rssurl=entity.rss_url or "",
             signurl=entity.sign_url or "",
             cookie=entity.cookie or "",
+            api_key=entity.api_key or "",
+            bearer_token=entity.bearer_token or "",
+            headers=entity.headers or "",
             note=json.dumps(entity.note) if entity.note else "",
             rss_uses=entity.rss_uses or "",
         )
@@ -67,6 +70,9 @@ class SiteRepositoryAdapter(ISiteRepository):
             rssurl=entity.rss_url or "",
             signurl=entity.sign_url or "",
             cookie=entity.cookie or "",
+            api_key=entity.api_key or "",
+            bearer_token=entity.bearer_token or "",
+            headers=entity.headers or "",
             note=json.dumps(entity.note) if entity.note else "",
             rss_uses=entity.rss_uses or "",
         )
@@ -107,11 +113,23 @@ class SiteRepositoryAdapter(ISiteRepository):
         rssurl: str | None = None,
         signurl: str | None = None,
         cookie: str | None = None,
+        api_key: str | None = None,
+        bearer_token: str | None = None,
+        headers: str | None = None,
         note: str | None = None,
         rss_uses: str | None = None,
     ) -> None:
         return self._repo.insert_config_site(
-            name=name, site_pri=site_pri, rssurl=rssurl, signurl=signurl, cookie=cookie, note=note, rss_uses=rss_uses
+            name=name,
+            site_pri=site_pri,
+            rssurl=rssurl,
+            signurl=signurl,
+            cookie=cookie,
+            api_key=api_key,
+            bearer_token=bearer_token,
+            headers=headers,
+            note=note,
+            rss_uses=rss_uses,
         )
 
     def update_config_site(
@@ -122,8 +140,11 @@ class SiteRepositoryAdapter(ISiteRepository):
         rssurl: str,
         signurl: str,
         cookie: str,
-        note: str,
-        rss_uses: str,
+        api_key: str | None = None,
+        bearer_token: str | None = None,
+        headers: str | None = None,
+        note: str | None = None,
+        rss_uses: str | None = None,
     ) -> None:
         return self._repo.update_config_site(
             tid=tid,
@@ -132,6 +153,9 @@ class SiteRepositoryAdapter(ISiteRepository):
             rssurl=rssurl,
             signurl=signurl,
             cookie=cookie,
+            api_key=api_key,
+            bearer_token=bearer_token,
+            headers=headers,
             note=note,
             rss_uses=rss_uses,
         )
@@ -199,6 +223,9 @@ class SiteRepositoryImpl(BaseRepository):
                     RSSURL=entity.rss_url,
                     SIGNURL=entity.sign_url,
                     COOKIE=entity.cookie,
+                    API_KEY=entity.api_key,
+                    BEARER_TOKEN=entity.bearer_token,
+                    HEADERS=entity.headers,
                     NOTE=json.dumps(entity.note) if entity.note else None,
                     INCLUDE=entity.rss_uses,
                 )
@@ -219,6 +246,9 @@ class SiteRepositoryImpl(BaseRepository):
                     "RSSURL": entity.rss_url,
                     "SIGNURL": entity.sign_url,
                     "COOKIE": entity.cookie,
+                    "API_KEY": entity.api_key,
+                    "BEARER_TOKEN": entity.bearer_token,
+                    "HEADERS": entity.headers,
                     "NOTE": json.dumps(entity.note) if entity.note else None,
                     "INCLUDE": entity.rss_uses,
                 }

@@ -31,7 +31,7 @@ from app.core.constants import (
     EPISODE_MAPPER_SEASON_GAP_FORCE_DAYS,
 )
 from app.media.lookup.tmdb_lookup import TmdbLookup
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class EpisodeMapper:

@@ -3,7 +3,7 @@ import re
 import requests
 
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.utils import RequestUtils, StringUtils
+from app.utils import StringUtils
 from app.utils.config_tools import get_proxies
 
 
@@ -43,24 +43,32 @@ class FreeFarm(_ISiteSigninHandler):
 
         url = "https://pt.0ff.cc/attendance.php"
         # 签到
-        sign_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy, session=self._session).get_res(url=url)
-        if not sign_res or sign_res.status_code != 200:
+        self._session.headers.update({"User-Agent": str(ua) if ua else ""})
+        if proxy:
+            self._session.proxies.update({"http": proxy.get("http"), "https": proxy.get("https")})
+        if site_cookie and isinstance(site_cookie, dict):
+            self._session.cookies.update(site_cookie)
+        try:
+            sign_res = self._session.get(url=url)
+            sign_res.raise_for_status()
+            text = sign_res.text
+        except Exception:
             self.error("签到失败，请检查站点连通性")
             return False, f"[{site}]签到失败，请检查站点连通性"
 
-        if "login.php" in sign_res.text:
+        if "login.php" in text:
             self.error("签到失败，cookie失效")
             return False, f"[{site}]签到失败，cookie失效"
 
-        sign_status = self.sign_in_result(html_res=sign_res.text, regexs=self._succeed_regex)
+        sign_status = self.sign_in_result(html_res=text, regexs=self._succeed_regex)
         if sign_status:
             self.info("签到成功")
             return True, f"[{site}]签到成功"
         else:
             pattern = r'src="([^"]*slide_check[^"]*\.js)"'
-            match = re.search(pattern, sign_res.text)
+            match = re.search(pattern, text)
             if not match:
-                self.error(f"签到失败，签到接口返回 {sign_res.text}")
+                self.error(f"签到失败，签到接口返回 {text}")
                 return False, f"[{site}]签到失败"
             slide_url = f"https://pt.0ff.cc{match.group(1)}"
 
@@ -85,5 +93,5 @@ class FreeFarm(_ISiteSigninHandler):
                 self.info("签到成功")
                 return True, f"[{site}]签到成功"
 
-        self.error(f"签到失败，签到接口返回 {sign_res.text}")
+        self.error(f"签到失败，签到接口返回 {text}")
         return False, f"[{site}]签到失败"

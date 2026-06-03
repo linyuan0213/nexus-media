@@ -16,7 +16,7 @@ import json
 
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import TorrentStatus
-from app.utils import Torrent
+from app.sites.torrent import Torrent
 from app.utils.path_utils import get_temp_path
 from app.di import container
 

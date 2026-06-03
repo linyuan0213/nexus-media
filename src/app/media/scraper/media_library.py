@@ -4,7 +4,7 @@ import os
 
 from app.core.constants import RMT_MEDIAEXT
 from app.storage.backends.base import StorageBackend
-from app.utils import NfoReader
+from app.media.parser.nfo_reader import NfoReader
 
 
 class MediaLibrary:

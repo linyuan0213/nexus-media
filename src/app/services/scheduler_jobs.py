@@ -11,12 +11,12 @@ from app.core.constants import (
 from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
 from app.di import container
-from app.helper.temp_cleanup_helper import TempCleanupHelper
+from app.infrastructure.temp import TempCleanup
 
 
 def _refresh_site_data_now_threaded():
     """站点数据刷新 — 在独立线程中执行，避免阻塞调度器"""
-    container.thread_helper().start_thread(container.site_userinfo().refresh_site_data_now, ())
+    container.thread_executor().submit(container.site_userinfo().refresh_site_data_now)
 
 
 def _parse_interval(value, min_val=0, default=0):
@@ -124,9 +124,9 @@ def load_default_jobs(scheduler):
 
     # 定时清理临时文件（每6小时执行一次）
     scheduler.register_interval(
-        job_id="TempCleanupHelper.do_cleanup",
+        job_id="TempCleanup.do_cleanup",
         name="定时清理临时文件",
-        func=TempCleanupHelper.do_cleanup,
+        func=TempCleanup.do_cleanup,
         seconds=6 * 3600,
         next_run_time=datetime.datetime.now(),
         jobstore=_jobstore,

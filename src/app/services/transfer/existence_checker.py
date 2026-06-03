@@ -4,7 +4,7 @@ import os
 
 from app.core.constants import RMT_FAVTYPE, RMT_MEDIAEXT
 from app.utils import PathUtils
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class MediaExistenceChecker:

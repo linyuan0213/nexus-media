@@ -8,7 +8,7 @@ from app.core.settings import settings
 from app.core.system_config import SystemConfig
 from app.db.repositories.base_repository import BaseRepository
 from app.di import container
-from app.helper import SubmoduleHelper
+from app.utils.submodule_loader import SubmoduleLoader
 from app.infrastructure.cache_system import TokenCache
 from app.mediaserver import MediaServer
 from app.schemas.system import (
@@ -18,8 +18,8 @@ from app.schemas.system import (
 )
 from app.services.indexer_service import IndexerService
 from app.utils import ExceptionUtils
-from app.utils.types import SystemConfigKey
-from app.utils.web_utils import set_config_value
+from app.domain.enums import SystemConfigKey
+from app.services.web import set_config_value
 
 
 class IndexerConfigService:
@@ -63,7 +63,7 @@ class IndexerConfigService:
         # 测试连接
         if test and name != "builtin":
             try:
-                schemas = SubmoduleHelper.import_submodules(
+                schemas = SubmoduleLoader.import_submodules(
                     "app.indexer.client", filter_func=lambda _, obj: hasattr(obj, "client_id")
                 )
                 for schema in schemas:
@@ -140,7 +140,7 @@ class MediaServerConfigService:
         # 测试连接
         if test:
             try:
-                schemas = SubmoduleHelper.import_submodules(
+                schemas = SubmoduleLoader.import_submodules(
                     "app.mediaserver.client", filter_func=lambda _, obj: hasattr(obj, "client_id")
                 )
                 for schema in schemas:

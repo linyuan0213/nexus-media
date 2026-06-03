@@ -13,8 +13,9 @@ from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
 from app.media import MediaService
 from app.utils import StringUtils
-from app.utils.types import MediaType, ProgressKey, SearchType
-from app.utils.web_utils import WebUtils
+from app.domain.mediatypes import MediaType
+from app.domain.enums import ProgressKey, SearchType
+from app.services.web import WebUtils
 from app.di import container
 
 # 媒体识别结果缓存，避免重复识别

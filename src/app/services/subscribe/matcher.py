@@ -5,7 +5,7 @@ import re
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
 from app.di import container
 from app.indexer.core.filter_engine import IndexerFilterEngine
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class SubscribeMatcher:

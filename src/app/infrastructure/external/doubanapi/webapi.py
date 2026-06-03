@@ -1,16 +1,16 @@
 import datetime
 from typing import Any
 
-import requests
 from lxml import etree
 
 from app.infrastructure.cache_system import lru_cache_with_ttl
-from app.utils import ExceptionUtils, RequestUtils
+from app.infrastructure.http.auth import CookieAuth
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.utils import ExceptionUtils
 
 
 class DoubanWeb:
-    _session = requests.Session()
-
     _movie_base = "https://movie.douban.com"
     _rss_base = "https://www.douban.com"
     _search_base = "https://search.douban.com"
@@ -138,26 +138,32 @@ class DoubanWeb:
         pass
 
     @classmethod
+    def _get_client(cls) -> HttpClient:
+        if not hasattr(cls, "_client"):
+            cls._client = HttpClient(config=HttpClientConfig(timeout=cls._timout))
+        return cls._client
+
+    @classmethod
     def __invoke_web(cls, url, cookie, *kwargs):
         req_url = cls._weburls.get(url)
         if not req_url:
             return None
-        return RequestUtils(cookies=cookie, session=cls._session, timeout=cls._timout).get(url=req_url % kwargs)
+        return cls._get_client().get(url=req_url % kwargs, auth=CookieAuth(cookie)).text
 
     @classmethod
     def __invoke_json(cls, url, *kwargs):
         req_url = cls._jsonurls.get(url)
         if not req_url:
             return None
-        req = RequestUtils(session=cls._session, timeout=cls._timout).get_res(url=req_url % kwargs)
-        return req.json() if req else None
+        req = cls._get_client().get(url=req_url % kwargs)
+        return req.json()
 
     @classmethod
     def __invoke_rss(cls, url, *kwargs):
         req_url = cls._weburls.get(url)
         if not req_url:
             return None
-        return RequestUtils(timeout=cls._timout).get(url=req_url % kwargs)
+        return cls._get_client().get(url=req_url % kwargs).text
 
     @staticmethod
     def __get_json(json):

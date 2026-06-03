@@ -1,0 +1,46 @@
+"""HTTP 客户端统一异常体系."""
+
+import httpx
+
+
+class HttpClientError(Exception):
+    """HTTP 客户端统一异常基类."""
+
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+        response_text: str | None = None,
+    ):
+        super().__init__(message)
+        self.status_code = status_code
+        self.response_text = response_text
+
+    @classmethod
+    def from_httpx(cls, exc: httpx.HTTPError) -> "HttpClientError":
+        """从 httpx 异常转换."""
+        status_code = None
+        response_text = None
+        if isinstance(exc, httpx.HTTPStatusError):
+            status_code = exc.response.status_code
+            try:
+                response_text = exc.response.text[:500]
+            except Exception:
+                pass
+        return cls(
+            message=str(exc),
+            status_code=status_code,
+            response_text=response_text,
+        )
+
+
+class HttpTimeoutError(HttpClientError):
+    """请求超时."""
+
+
+class HttpConnectionError(HttpClientError):
+    """连接失败."""
+
+
+class HttpAuthError(HttpClientError):
+    """认证失败（401/403）."""

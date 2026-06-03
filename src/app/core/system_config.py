@@ -2,7 +2,7 @@ import json
 
 import log
 from app.db.repositories.system_dict_repo_adapter import SystemDictRepositoryAdapter
-from app.utils.types import SystemConfigKey
+from app.domain.enums import SystemConfigKey
 
 
 class SystemConfig:

@@ -1,6 +1,6 @@
 import zhconv
 
-from app.helper.image_proxy_helper import ImageProxyHelper
+from app.infrastructure.image_proxy import ImageProxy
 from app.media.lookup.tmdb_client import TmdbClient
 from app.utils import StringUtils
 
@@ -67,7 +67,7 @@ class TmdbPerson:
                 name = info.get("name")
             tmdbid = info.get("id")
             image = (
-                ImageProxyHelper.get_tmdbimage_url(info.get("profile_path"), prefix="h632")
+                ImageProxy.get_tmdbimage_url(info.get("profile_path"), prefix="h632")
                 if info.get("profile_path")
                 else ""
             )

@@ -12,12 +12,14 @@ from threading import Event
 
 import pytz
 
-from app.helper import RssHelper
+from app.services.rss_processor import RssHelper
 from app.media import MediaService
 from app.plugin_framework.context import PluginContext
-from app.utils import DomUtils, RequestUtils
-from app.utils.types import MediaType, SearchType
-from app.utils.web_utils import WebUtils
+from app.infrastructure.http import HttpClient
+from app.utils import DomUtils
+from app.domain.mediatypes import MediaType
+from app.domain.enums import SearchType
+from app.services.web import WebUtils
 from app.di import container
 
 
@@ -222,10 +224,10 @@ class DoubanRankPlugin:
     @staticmethod
     def _get_rss_info(addr):
         try:
-            ret = RequestUtils().get_res(addr)
+            ret = HttpClient().get(addr)
             if not ret:
                 return []
-            ret.encoding = ret.apparent_encoding
+
             ret_xml = ret.text
             ret_array = []
             dom_tree = xml.dom.minidom.parseString(ret_xml)

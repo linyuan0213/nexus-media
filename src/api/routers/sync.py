@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from api.deps import (
     get_filetransfer_service,
     get_sync_service,
-    get_thread_helper,
+    get_thread_executor,
     require_any_permission,
     require_permission,
 )
@@ -377,9 +377,9 @@ def run_directory_sync(
     req: RunDirectorySyncRequest,
     user: str = Depends(require_permission("setting:update")),
     svc: SyncService = Depends(get_sync_service),
-    thread_helper=Depends(get_thread_helper),
+    thread_executor=Depends(get_thread_executor),
 ):
-    thread_helper.start_thread(svc.transfer_sync, (req.sid,))
+    thread_executor.submit(svc.transfer_sync, req.sid)
     return success(msg="执行成功")
 
 

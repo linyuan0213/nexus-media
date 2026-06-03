@@ -1,5 +1,5 @@
 import log
-from app.helper.image_proxy_helper import ImageProxyHelper
+from app.infrastructure.image_proxy import ImageProxy
 from app.media.lookup.base import BaseLookup, LookupResult
 from app.media.lookup.tmdb_detail import TmdbDetail
 from app.media.lookup.tmdb_discover import TmdbDiscover
@@ -7,8 +7,8 @@ from app.media.lookup.tmdb_person import TmdbPerson
 from app.media.lookup.tmdb_search import TmdbSearch
 from app.media.lookup.tmdb_season import TmdbSeason
 from app.utils import StringUtils
-from app.utils.media_type_utils import MediaTypeMapper
-from app.utils.types import MediaType
+from app.domain.media_type_utils import MediaTypeMapper
+from app.domain.mediatypes import MediaType
 from app.di import container
 
 
@@ -183,8 +183,8 @@ class TmdbLookup(BaseLookup):
             media_type=info.get("media_type"),
             year=info.get("release_date", "")[:4] if info.get("release_date") else info.get("first_air_date", "")[:4],
             overview=info.get("overview"),
-            poster_path=ImageProxyHelper.get_tmdbimage_url(info.get("poster_path")),
-            backdrop_path=ImageProxyHelper.get_tmdbimage_url(info.get("backdrop_path")),
+            poster_path=ImageProxy.get_tmdbimage_url(info.get("poster_path")),
+            backdrop_path=ImageProxy.get_tmdbimage_url(info.get("backdrop_path")),
             vote_average=round(float(info.get("vote_average", 0)), 1),
             genres=info.get("genres", []),
             external_ids=external_ids,
@@ -417,7 +417,7 @@ class TmdbLookup(BaseLookup):
             if episode:
                 still_path = episode.get("still_path")
                 if still_path:
-                    return ImageProxyHelper.get_tmdbimage_url(still_path, prefix="original" if orginal else "w500")
+                    return ImageProxy.get_tmdbimage_url(still_path, prefix="original" if orginal else "w500")
         except Exception as e:
             print(str(e))
         return ""
@@ -525,7 +525,7 @@ class TmdbLookup(BaseLookup):
                 "name": crew.get("name"),
                 "original_name": crew.get("original_name"),
                 "popularity": crew.get("popularity"),
-                "image": ImageProxyHelper.get_tmdbimage_url(crew.get("profile_path"), prefix="h632"),
+                "image": ImageProxy.get_tmdbimage_url(crew.get("profile_path"), prefix="h632"),
                 "credit_id": crew.get("credit_id"),
                 "department": crew.get("department"),
                 "job": crew.get("job"),
@@ -544,7 +544,7 @@ class TmdbLookup(BaseLookup):
                 "name": cast.get("name"),
                 "original_name": cast.get("original_name"),
                 "popularity": cast.get("popularity"),
-                "image": ImageProxyHelper.get_tmdbimage_url(cast.get("profile_path"), prefix="h632"),
+                "image": ImageProxy.get_tmdbimage_url(cast.get("profile_path"), prefix="h632"),
                 "cast_id": cast.get("cast_id"),
                 "role": cast.get("character"),
                 "credit_id": cast.get("credit_id"),
@@ -562,7 +562,7 @@ class TmdbLookup(BaseLookup):
         for info in infos:
             tmdbid = info.get("id")
             vote = round(float(info.get("vote_average")), 1) if info.get("vote_average") else 0
-            image = ImageProxyHelper.get_tmdbimage_url(info.get("poster_path"))
+            image = ImageProxy.get_tmdbimage_url(info.get("poster_path"))
             overview = info.get("overview")
             if mtype:
                 media_type = mtype.value

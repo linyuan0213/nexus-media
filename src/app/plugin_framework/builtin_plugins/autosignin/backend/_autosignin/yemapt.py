@@ -1,5 +1,8 @@
+from app.infrastructure.http.client import HttpClient, HttpClientError
+from app.infrastructure.http.config import HttpClientConfig
+from app.infrastructure.http.auth import CookieAuth
 from app.plugin_framework.builtin_plugins.autosignin.backend._autosignin._base import _ISiteSigninHandler
-from app.utils import RequestUtils, StringUtils
+from app.utils import StringUtils
 from app.utils.config_tools import get_proxies
 from app.di import container
 
@@ -70,9 +73,17 @@ class YemaPT(_ISiteSigninHandler):
 
         else:
             self.info(f"{site} 开始签到")
-            html_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
-                url="https://www.yemapt.org/api/consumer/checkIn"
-            )
+            try:
+                html_res = HttpClient(config=HttpClientConfig(proxy_url=proxy.get("http") if proxy else None)).get(
+                    url="https://www.yemapt.org/api/consumer/checkIn",
+                    headers={"User-Agent": ua} if ua else None,
+                    auth=CookieAuth(site_cookie) if site_cookie else None,
+                    raise_for_status=False,
+                )
+            except HttpClientError:
+                self.error("签到失败，请检查站点连通性")
+                return False, f"[{site}]签到失败，请检查站点连通性"
+
             if not html_res or html_res.status_code != 200:
                 self.error("签到失败，请检查站点连通性")
                 return False, f"[{site}]签到失败，请检查站点连通性"
@@ -86,9 +97,17 @@ class YemaPT(_ISiteSigninHandler):
                 self.info("今日已签到")
                 return True, f"[{site}]今日已签到"
 
-            sign_res = RequestUtils(cookies=site_cookie, headers=ua, proxies=proxy).get_res(
-                url="https://www.yemapt.org/api/consumer/checkIn"
-            )
+            try:
+                sign_res = HttpClient(config=HttpClientConfig(proxy_url=proxy.get("http") if proxy else None)).get(
+                    url="https://www.yemapt.org/api/consumer/checkIn",
+                    headers={"User-Agent": ua} if ua else None,
+                    auth=CookieAuth(site_cookie) if site_cookie else None,
+                    raise_for_status=False,
+                )
+            except HttpClientError:
+                self.error("签到失败，签到接口请求失败")
+                return False, f"[{site}]签到失败，签到接口请求失败"
+
             if not sign_res or sign_res.status_code != 200:
                 self.error("签到失败，签到接口请求失败")
                 return False, f"[{site}]签到失败，签到接口请求失败"

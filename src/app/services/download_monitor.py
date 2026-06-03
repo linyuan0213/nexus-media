@@ -1,7 +1,7 @@
 """下载监控服务 — 高频轮询检测下载完成，触发事件驱动转移."""
 
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import as_completed
 
 import log
 from app.core.constants import PT_TAG
@@ -9,6 +9,7 @@ from app.di import container
 from app.downloader.client_factory import DownloadClientFactory
 from app.events import Event
 from app.events.constants import DOWNLOAD_COMPLETED
+from app.infrastructure.thread import ThreadExecutor
 
 
 class DownloadMonitor:
@@ -29,16 +30,16 @@ class DownloadMonitor:
         self._max_workers = max_workers
         self._event_bus = container.event_bus()
         self._processed_ids: set[str] = set()
-        self._executor: ThreadPoolExecutor | None = None
+        self._executor: ThreadExecutor | None = None
         self._running = False
 
     def start(self) -> None:
         """启动监控线程池."""
         self.stop()
         self._running = True
-        self._executor = ThreadPoolExecutor(
+        self._executor = ThreadExecutor(
             max_workers=self._max_workers,
-            thread_name_prefix="DownloadMonitor",
+            name="DownloadMonitor",
         )
         # 预热：记录当前所有已完成任务
         self._warmup()
@@ -52,7 +53,7 @@ class DownloadMonitor:
             return
         self._running = False
         if self._executor:
-            self._executor.shutdown(wait=False, cancel_futures=True)
+            self._executor.shutdown(wait=False)
             self._executor = None
         log.info("[DownloadMonitor]下载完成监控已停止")
 

@@ -6,15 +6,14 @@ from multiprocessing.dummy import Pool as ThreadPool
 from threading import Lock
 from typing import Any
 
-import requests
-
 import log
 from app.db.models import SITEUSERINFOSTATS as _S
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.message import Message
 from app.sites.engine import SiteEngine
-from app.utils import ExceptionUtils, JsonUtils, RequestUtils, StringUtils
+from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
+from app.utils import ExceptionUtils, JsonUtils, StringUtils
 from app.utils.config_tools import get_proxies
 from app.di import container
 
@@ -50,7 +49,6 @@ class SiteUserInfo:
             return None
         if site_headers is None:
             return None
-        session = requests.Session()
         log.debug(f"[Sites]站点 {site_name} url={url}")
 
         if self.sites is None:
@@ -73,7 +71,6 @@ class SiteUserInfo:
                 ua=ua or "",
                 emulate=emulate or False,
                 proxy=proxy,
-                session=session,
             ) or _log_error(site_name)
 
         html_text = None
@@ -85,17 +82,21 @@ class SiteUserInfo:
                 return None
         else:
             proxies = get_proxies() if proxy else None
-            res = RequestUtils(cookies=site_cookie, session=session, headers=site_headers, proxies=proxies).get_res(
-                url=url
+            proxy_url = proxies.get("http") if proxies else None
+            rate_limiter = getattr(engine, "site_limiter", None)
+            rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+            rl_kwargs = {}
+            if rate_limiter and site_id:
+                rate_config = rate_limiter.get_rate(str(site_id))
+                if rate_config:
+                    rl_kwargs = {"rate_limit_key": f"site:{site_id}", "rate_limit_rate": rate_config[0]}
+            client = HttpClient(
+                config=HttpClientConfig(proxy_url=proxy_url),
+                rate_limiter=rate_limiter_engine,
             )
-            if res and res.status_code == 200:
-                if "charset=utf-8" in res.text or "charset=UTF-8" in res.text:
-                    res.encoding = "UTF-8"
-                else:
-                    res.encoding = res.apparent_encoding
+            res = client.get(url=url, headers=site_headers, auth=CookieAuth(site_cookie), **rl_kwargs)
+            if res.status_code == 200:
                 html_text = res.text
-            elif res is not None:
-                html_text = None
             else:
                 log.error(f"[Sites]站点 {site_name} 无法访问：{url}")
                 return None
@@ -109,7 +110,6 @@ class SiteUserInfo:
             ua=ua or "",
             emulate=emulate or False,
             proxy=proxy,
-            session=session,
         ) or _log_error(site_name)
 
     def __refresh_site_data(self, site_info):
@@ -443,9 +443,15 @@ class SiteUserInfo:
     @staticmethod
     def _fetch_favicon_from_url(site_user_info, url):
         try:
-            res = RequestUtils(timeout=10).get_res(url=url)
-            if res:
-                site_user_info.site_favicon = base64.b64encode(res.content).decode()
+            engine = SiteEngine.get_instance()
+            rate_limiter = getattr(engine, "site_limiter", None)
+            rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+            client = HttpClient(
+                config=HttpClientConfig(timeout=10),
+                rate_limiter=rate_limiter_engine,
+            )
+            res = client.get(url=url)
+            site_user_info.site_favicon = base64.b64encode(res.content).decode()
         except Exception:
             pass
 

@@ -21,9 +21,9 @@ from app.services.indexer_service import IndexerService
 from app.services.search_service import Searcher
 from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
 from app.sites import Sites
-from app.utils import Torrent
-from app.utils.temp_manager import temp_manager
-from app.utils.types import SearchType
+from app.sites.torrent import Torrent
+from app.infrastructure.temp import temp_manager
+from app.domain.enums import SearchType
 
 
 class DownloadService:

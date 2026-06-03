@@ -2,8 +2,10 @@ import json
 
 from app.core.constants import MT_URL
 from app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss._base import _ISiteRssGenHandler
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.sites.engine import SiteEngine
 from app.utils.config_tools import get_proxies
-from app.utils.http_utils import RequestUtils
 from app.di import container
 
 
@@ -12,24 +14,13 @@ class Mteam(_ISiteRssGenHandler):
     m-team
     """
 
-    # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = "m-team"
 
     @classmethod
     def match(cls, url):
-        """
-        根据站点Url判断是否匹配当前站点签到类，大部分情况使用默认实现即可
-        :param url: 站点Url
-        :return: 是否匹配，如匹配则会调用该类的gen_rss方法
-        """
         return cls.site_url in url
 
     def gen_rss(self, site_info: dict):
-        """
-        执行RSS生成
-        :param site_info: 站点信息，含有站点Url、站点Cookie、UA等信息
-        :return: 签到结果信息
-        """
         site = site_info.get("name")
         ua = site_info.get("ua")
         headers = json.loads(site_info.get("headers") or "{}")
@@ -41,13 +32,21 @@ class Mteam(_ISiteRssGenHandler):
         data = {"labels": 0, "tkeys": ["ttitle", "tcat", "tsmalldescr", "tsize"], "pageSize": 50}
         data = json.dumps(data, separators=(",", ":"))
 
-        res = RequestUtils(headers=headers, proxies=proxy).post_res(url=rss_url, data=data)
-        if not res or res.status_code != 200:
+        proxy_url = proxy.get("http") if proxy else None
+        engine = SiteEngine.get_instance()
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        try:
+            res = HttpClient(
+                config=HttpClientConfig(proxy_url=proxy_url),
+                rate_limiter=rate_limiter_engine,
+            ).post(url=rss_url, data=data, headers=headers)
+            json_data = res.json()
+        except Exception:
             self.error("生成RSS失败，请检查站点连通性")
             return False, f"[{site}]生成RSS失败"
 
         rss_link = ""
-        json_data = res.json()
         if json_data.get("message") == "SUCCESS":
             rss_link = json_data.get("data").get("dlUrl")
             self.debug(f"生成的rss: {rss_link}")

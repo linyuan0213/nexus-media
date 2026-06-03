@@ -22,3 +22,8 @@ def get_project_root() -> Path:
             _root = parent
             return _root
     raise RuntimeError("Cannot determine project root")
+
+
+def get_script_path() -> str:
+    """SQL 数据初始化脚本目录"""
+    return str(get_project_root() / "src" / "app" / "db" / "data")

@@ -1,26 +1,24 @@
-"""
-LogBuffer 延迟加载代理，避免顶层导入导致循环引用。
-"""
+"""LogBuffer 代理，线程安全延迟访问."""
 
 from collections.abc import Iterator
 from typing import Any
 
+from log._buffer import LogBuffer
+
 __all__ = ["LogBufferProxy", "get_log_buffer", "LOG_BUFFER"]
 
-_log_buffer = None
+_log_buffer: LogBuffer | None = None
 
 
-def get_log_buffer():
+def get_log_buffer() -> LogBuffer:
     global _log_buffer
     if _log_buffer is None:
-        from app.utils.log_buffer import LogBuffer
-
         _log_buffer = LogBuffer(maxlen=200)
     return _log_buffer
 
 
 class LogBufferProxy:
-    """延迟加载 LogBuffer 的代理对象。"""
+    """日志缓冲区的线程安全代理."""
 
     def append(self, level: str, text: str) -> int:
         return get_log_buffer().append(level, text)

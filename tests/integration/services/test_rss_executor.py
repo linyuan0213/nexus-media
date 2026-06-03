@@ -35,9 +35,9 @@ class TestParseUserrssResult:
         assert result == []
         service.get_userrss_parser.assert_called_once_with(1)
 
-    @patch("app.services.rss_automation.executor.RequestUtils")
+    @patch("app.services.rss_automation.executor.HttpClient")
     @patch("app.services.rss_automation.executor.RssParserEngine.parse_items")
-    def test_successful_parse(self, mock_parse_items, mock_request_utils):
+    def test_successful_parse(self, mock_parse_items, mock_http_client):
         """Successful RSS fetch and parse."""
         service = MagicMock()
         service.get_userrss_parser.return_value = {
@@ -49,7 +49,7 @@ class TestParseUserrssResult:
 
         mock_response = MagicMock()
         mock_response.text = "<xml>test</xml>"
-        mock_request_utils.return_value.get_res.return_value = mock_response
+        mock_http_client.return_value.get.return_value = mock_response
         mock_parse_items.return_value = [{"title": "Test Item"}]
 
         taskinfo = {
@@ -63,11 +63,11 @@ class TestParseUserrssResult:
 
         assert len(result) == 1
         assert result[0]["title"] == "Test Item"
-        mock_request_utils.return_value.get_res.assert_called_once()
+        mock_http_client.return_value.get.assert_called_once()
         mock_parse_items.assert_called_once()
 
-    @patch("app.services.rss_automation.executor.RequestUtils")
-    def test_request_failure_returns_empty(self, mock_request_utils):
+    @patch("app.services.rss_automation.executor.HttpClient")
+    def test_request_failure_returns_empty(self, mock_http_client):
         """Failed HTTP request should return empty result."""
         service = MagicMock()
         service.get_userrss_parser.return_value = {
@@ -76,7 +76,7 @@ class TestParseUserrssResult:
             "format": '{"list": "//item"}',
             "params": None,
         }
-        mock_request_utils.return_value.get_res.return_value = None
+        mock_http_client.return_value.get.side_effect = Exception("connection failed")
 
         taskinfo = {
             "name": "test_task",

@@ -13,7 +13,7 @@ import zipfile
 
 import log
 from app.core.settings import settings
-from app.db.repositories import PluginFrameworkRepository
+from app.db.repositories.plugin_framework_repository import PluginFrameworkRepository
 from app.domain.entities.plugin import PluginConfigEntity, PluginManifestEntity
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.plugin_framework.context import PluginContext

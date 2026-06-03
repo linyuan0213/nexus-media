@@ -18,7 +18,7 @@ from app.services.config_service import ConfigService
 from app.services.subscribe.management.calendar_service import SubscribeCalendarService
 from app.services.subscribe.management.history_service import SubscribeHistoryService
 from app.services.subscribe.management.service import SubscribeService
-from app.utils.security import generate_access_token, identify
+from app.infrastructure.security import generate_access_token, identify
 
 # OAuth2 / Bearer 方案
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -546,10 +546,10 @@ def get_drissionpage_helper():
     return container.drissionpage_helper()
 
 
-def get_thread_helper():
+def get_thread_executor():
     """获取线程助手实例"""
 
-    return container.thread_helper()
+    return container.thread_executor()
 
 
 def get_media_config_service():

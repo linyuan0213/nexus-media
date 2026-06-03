@@ -1,7 +1,7 @@
 from app.di import container
 from app.infrastructure.cache_system import get_cache_manager
 from app.media.parser._metainfo import meta_info
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class TmdbBlacklistService:

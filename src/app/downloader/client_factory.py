@@ -23,7 +23,7 @@ from app.di import container
 from app.downloader.client._base import _IDownloadClient
 from app.downloader.registry import get_all_clients
 from app.utils import ExceptionUtils, NumberUtils, StringUtils, SystemUtils
-from app.utils.types import SystemConfigKey
+from app.domain.enums import SystemConfigKey
 
 client_lock = Lock()
 

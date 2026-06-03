@@ -25,7 +25,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.downloader.registry import get_all_clients
-from app.helper.thread_helper import ThreadHelper
+from app.infrastructure.thread import ThreadExecutor
 from app.schemas.auth import UserContext
 from app.schemas.common import CommonResponse
 from app.services.download_service import DownloadService
@@ -284,7 +284,7 @@ def download(
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
 
-    ThreadHelper().start_thread(_do_download, ())
+    ThreadExecutor(name="download").submit(_do_download)
     return success(msg="下载任务已提交")
 
 
@@ -315,7 +315,7 @@ def download_link(
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
 
-    ThreadHelper().start_thread(_do_download, ())
+    ThreadExecutor(name="download").submit(_do_download)
     return success(msg="下载任务已提交")
 
 
@@ -363,7 +363,7 @@ def download_torrent(
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
 
-    ThreadHelper().start_thread(_do_download, ())
+    ThreadExecutor(name="download").submit(_do_download)
     return success(msg="下载任务已提交")
 
 

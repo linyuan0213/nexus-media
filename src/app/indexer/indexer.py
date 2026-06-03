@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import log
 from app.indexer.registry import get_all_clients, get_client_class
 from app.utils import ExceptionUtils, StringUtils
-from app.utils.types import ProgressKey, SearchType, SystemConfigKey
+from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
 from app.di import container
 
 

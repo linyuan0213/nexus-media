@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 @dataclass

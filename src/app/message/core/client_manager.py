@@ -4,7 +4,7 @@ from typing import Any, cast
 
 import log
 from app.db.repositories.config_repo_adapter import MessageClientRepositoryAdapter
-from app.helper.thread_helper import ThreadHelper
+from app.infrastructure.thread import ThreadExecutor
 from app.message.client_registry import ClientRegistry
 from app.message.registry import get_client_class
 
@@ -103,7 +103,7 @@ class ClientManager:
         }
         client_instance = client_entry["client"]
         if hasattr(client_instance, "setup"):
-            ThreadHelper().start_thread(client_instance.setup, ())
+            ThreadExecutor(name="msg_setup").submit(client_instance.setup)
         self._active_clients.append(client_entry)
         if client_config.INTERACTIVE:
             self._active_interactive_clients[client_entry["search_type"]] = client_entry

@@ -17,7 +17,7 @@ from app.storage.backends.base import StorageConfig, StorageType
 from app.storage.backends.local import LocalStorageBackend
 from app.storage.config_models import LocalStorageConfig
 from app.utils import ExceptionUtils, PathUtils
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 from app.di import container
 
 

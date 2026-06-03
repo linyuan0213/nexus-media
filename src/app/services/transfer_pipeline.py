@@ -13,7 +13,7 @@ from app.services.filetransfer_service import FileTransferService
 from app.storage.backends.base import StorageBackend, StorageType
 from app.storage.config_models import LocalStorageConfig
 from app.storage.factory import StorageBackendFactory
-from app.utils.types import SyncType
+from app.domain.enums import SyncType
 from app.di import container
 
 

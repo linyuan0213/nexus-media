@@ -4,7 +4,7 @@ import log
 from app.db.transaction import transaction_scope
 from app.media import meta_info
 from app.services.subscribe.management.utils import gen_rss_note
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class SubscribeRefreshService:

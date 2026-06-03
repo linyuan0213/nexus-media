@@ -14,14 +14,15 @@ import log
 from app.core.module_config import ModuleConf
 from app.core.system_config import SystemConfig
 from app.di import container
-from app.helper import FfmpegHelper
-from app.helper.image_proxy_helper import ImageProxyHelper
+from app.infrastructure.ffmpeg import FfmpegProcessor
+from app.infrastructure.image_proxy import ImageProxy
 from app.media.external import DouBan
 from app.media.factory import get_media_service
 from app.media.parser._metainfo import meta_info
 from app.utils import ExceptionUtils
-from app.utils.temp_manager import temp_manager
-from app.utils.types import MediaType, SystemConfigKey
+from app.infrastructure.temp import temp_manager
+from app.domain.mediatypes import MediaType
+from app.domain.enums import SystemConfigKey
 
 from .chinese_credits import ChineseCredits
 from .image_downloader import ImageDownloader
@@ -221,9 +222,7 @@ class Scraper:
                 )
                 if seasoninfo:
                     self._downloader.download(
-                        ImageProxyHelper.get_tmdbimage_url(
-                            seasoninfo.get("poster_path"), prefix="original", use_proxy=False
-                        ),
+                        ImageProxy.get_tmdbimage_url(seasoninfo.get("poster_path"), prefix="original", use_proxy=False),
                         tv_root,
                         season_poster,
                         force_pic,
@@ -264,7 +263,7 @@ class Scraper:
                 elif scraper_tv_pic.get("episode_thumb_ffmpeg"):
                     video_path = os.path.join(dir_path, file_name + file_ext)
                     log.info(f"[Scraper]正在生成缩略图：{video_path} ...")
-                    FfmpegHelper().get_thumb_image_from_video(video_path=video_path, image_path=episode_thumb)
+                    FfmpegProcessor().get_thumb_image_from_video(video_path=video_path, image_path=episode_thumb)
                     log.info(f"[Scraper]缩略图生成完成：{episode_thumb}")
 
     def _fetch_douban(self, media, scraper_nfo):

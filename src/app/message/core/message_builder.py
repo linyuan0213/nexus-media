@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Any
 
 from app.utils import StringUtils
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class MessageBuilder:
@@ -427,7 +427,7 @@ class MessageBuilder:
         if event_info.get("device_name"):
             message_texts.append(f"设备：{event_info.get('client')} {event_info.get('device_name')}")
         if event_info.get("ip"):
-            from app.utils.web_utils import WebUtils
+            from app.services.web import WebUtils
 
             message_texts.append(f"位置：{event_info.get('ip')} {WebUtils.get_location(event_info.get('ip'))}")
         if event_info.get("percentage"):

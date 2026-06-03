@@ -2,17 +2,41 @@ import json
 import os
 import re
 import shutil
+from datetime import datetime
 from typing import cast
 
 from lxml import etree
 
 import log
 from app.core.constants import MT_URL, RMT_SUBEXT
-from app.helper import SiteHelper
+from app.sites import engine_tools
 from app.sites.engine import SiteEngine
-from app.utils import ExceptionUtils, PathUtils, RequestUtils, StringUtils
-from app.utils.temp_manager import temp_manager
+from app.infrastructure.http.auth import CookieAuth
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.utils import ExceptionUtils, PathUtils, StringUtils, SystemUtils
+from app.infrastructure.temp import temp_manager
 from app.di import container
+
+
+def _get_url_subtitle_name(disposition, url):
+    fname = re.findall(r"filename=\"?(.+)\"?", disposition or "")
+    if fname:
+        fname = str(fname[0].encode("ISO-8859-1").decode()).split(";")[0].strip()
+        if fname.endswith('"'):
+            fname = fname[:-1]
+    elif url and os.path.splitext(url)[-1] in (RMT_SUBEXT + [".zip"]):
+        fname = url.split("/")[-1]
+    else:
+        fname = str(datetime.now())
+    return fname
+
+
+def _transfer_subtitle(source, target):
+    new_sub_file = f"{os.path.splitext(target)[0]}{os.path.splitext(source)[-1]}"
+    if os.path.exists(new_sub_file):
+        return 1
+    return SystemUtils.copy(source, new_sub_file)
 
 
 class SiteSubtitle:
@@ -44,87 +68,88 @@ class SiteSubtitle:
 
         engine = SiteEngine.get_instance()
         site_def = engine.get_by_url(media_info.page_url)
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, site_def)
         if site_def and site_def.subtitle:
             engine.resolve_subtitle(media_info.page_url, "", download_dir)
             return
 
         # 读取网站代码
-        request = RequestUtils(cookies=cookie, headers=ua)
-        res = request.get_res(media_info.page_url)
-        if res and res.status_code == 200:
-            if not res.text:
-                log.warn(f"[Sites]读取页面代码失败：{media_info.page_url}")
-                return
+        try:
+            headers = {"User-Agent": ua} if ua else {}
+            res = HttpClient(
+                rate_limiter=rate_limiter_engine,
+            ).get(media_info.page_url, headers=headers, auth=CookieAuth(cookie), **rl_kwargs)
             html = etree.HTML(res.text)
-            sublink_list = []
-            for xpath in self.siteconf.get_subtitle_conf() if self.siteconf else []:
-                sublinks = cast(list, html.xpath(xpath))
-                if sublinks:
-                    for sublink in sublinks:
-                        if not sublink:
-                            continue
-                        if not sublink.startswith("http"):
-                            base_url = StringUtils.get_base_url(media_info.page_url)
-                            if sublink.startswith("/"):
-                                sublink = f"{base_url}{sublink}"
-                            else:
-                                sublink = f"{base_url}/{sublink}"
-                        sublink_list.append(sublink)
-            # 下载所有字幕文件
-            for sublink in sublink_list:
-                log.info(f"[Sites]找到字幕下载链接：{sublink}，开始下载...")
-                # 下载
-                ret = request.get_res(sublink)
-                if ret and ret.status_code == 200:
-                    # 创建目录
-                    if not os.path.exists(download_dir):
-                        os.makedirs(download_dir)
-                    # 保存ZIP
-                    file_name = SiteHelper.get_url_subtitle_name(ret.headers.get("content-disposition"), sublink)
-                    if not file_name:
-                        log.warn(f"[Sites]链接不是字幕文件：{sublink}")
+        except Exception:
+            log.warn(f"[Sites]读取页面代码失败：{media_info.page_url}")
+            return
+
+        sublink_list = []
+        for xpath in self.siteconf.get_subtitle_conf() if self.siteconf else []:
+            sublinks = cast(list, html.xpath(xpath))
+            if sublinks:
+                for sublink in sublinks:
+                    if not sublink:
                         continue
-                    if file_name.lower().endswith(".zip"):
-                        # ZIP包
-                        zip_file = os.path.join(self._save_tmp_path or "", file_name)
-                        # 解压路径
-                        zip_path = os.path.splitext(zip_file)[0]
-                        with open(zip_file, "wb") as f:
-                            f.write(ret.content)
-                        # 解压文件
-                        shutil.unpack_archive(zip_file, zip_path, format="zip")
-                        # 遍历转移文件
-                        for sub_file in PathUtils.get_dir_files(in_path=zip_path, exts=RMT_SUBEXT):
-                            target_sub_file = os.path.join(
-                                download_dir, os.path.splitext(os.path.basename(sub_file))[0]
-                            )
-                            log.info(f"[Sites]转移字幕 {sub_file} 到 {target_sub_file}")
-                            SiteHelper.transfer_subtitle(sub_file, target_sub_file)
-                        # 删除临时文件
-                        try:
-                            shutil.rmtree(zip_path)
-                            os.remove(zip_file)
-                        except Exception as err:
-                            ExceptionUtils.exception_traceback(err)
-                    else:
-                        sub_file = os.path.join(self._save_tmp_path or "", file_name)
-                        # 保存
-                        with open(sub_file, "wb") as f:
-                            f.write(ret.content)
+                    if not sublink.startswith("http"):
+                        base_url = StringUtils.get_base_url(media_info.page_url)
+                        if sublink.startswith("/"):
+                            sublink = f"{base_url}{sublink}"
+                        else:
+                            sublink = f"{base_url}/{sublink}"
+                    sublink_list.append(sublink)
+        # 下载所有字幕文件
+        for sublink in sublink_list:
+            log.info(f"[Sites]找到字幕下载链接：{sublink}，开始下载...")
+            try:
+                ret = HttpClient(
+                    rate_limiter=rate_limiter_engine,
+                ).get(sublink, **rl_kwargs)
+                # 创建目录
+                if not os.path.exists(download_dir):
+                    os.makedirs(download_dir)
+                # 保存ZIP
+                file_name = _get_url_subtitle_name(ret.headers.get("content-disposition"), sublink)
+                if not file_name:
+                    log.warn(f"[Sites]链接不是字幕文件：{sublink}")
+                    continue
+                if file_name.lower().endswith(".zip"):
+                    # ZIP包
+                    zip_file = os.path.join(self._save_tmp_path or "", file_name)
+                    # 解压路径
+                    zip_path = os.path.splitext(zip_file)[0]
+                    with open(zip_file, "wb") as f:
+                        f.write(ret.content)
+                    # 解压文件
+                    shutil.unpack_archive(zip_file, zip_path, format="zip")
+                    # 遍历转移文件
+                    for sub_file in PathUtils.get_dir_files(in_path=zip_path, exts=RMT_SUBEXT):
                         target_sub_file = os.path.join(download_dir, os.path.splitext(os.path.basename(sub_file))[0])
                         log.info(f"[Sites]转移字幕 {sub_file} 到 {target_sub_file}")
-                        SiteHelper.transfer_subtitle(sub_file, target_sub_file)
+                        _transfer_subtitle(sub_file, target_sub_file)
+                    # 删除临时文件
+                    try:
+                        shutil.rmtree(zip_path)
+                        os.remove(zip_file)
+                    except Exception as err:
+                        ExceptionUtils.exception_traceback(err)
                 else:
-                    log.error(f"[Sites]下载字幕文件失败：{sublink}")
-                    continue
-            if sublink_list:
-                log.info(f"[Sites]{media_info.page_url} 页面字幕下载完成")
-            else:
-                log.warn(f"[Sites]{media_info.page_url} 页面未找到字幕下载链接")
-        elif res is not None:
-            log.warn(f"[Sites]连接 {media_info.page_url} 失败，状态码：{res.status_code}")
+                    sub_file = os.path.join(self._save_tmp_path or "", file_name)
+                    # 保存
+                    with open(sub_file, "wb") as f:
+                        f.write(ret.content)
+                    target_sub_file = os.path.join(download_dir, os.path.splitext(os.path.basename(sub_file))[0])
+                    log.info(f"[Sites]转移字幕 {sub_file} 到 {target_sub_file}")
+                    _transfer_subtitle(sub_file, target_sub_file)
+            except Exception:
+                log.error(f"[Sites]下载字幕文件失败：{sublink}")
+                continue
+        if sublink_list:
+            log.info(f"[Sites]{media_info.page_url} 页面字幕下载完成")
         else:
-            log.warn(f"[Sites]无法打开链接：{media_info.page_url}")
+            log.warn(f"[Sites]{media_info.page_url} 页面未找到字幕下载链接")
 
     def _download_mteam_subtitle(self, media_info, site_id, cookie, ua, download_dir):
         """
@@ -184,14 +209,15 @@ class SiteSubtitle:
 
         # 获取字幕列表
         subtitle_list_url = f"{MT_URL}/api/subtitle/list"
-        request = RequestUtils(headers=headers, cookies=cookie)
-        res = request.post_res(url=subtitle_list_url, data=json.dumps({"id": torrent_id}))
-
-        if not res or res.status_code != 200:
-            log.warn(f"[Sites]获取 m-team 字幕列表失败，状态码：{res.status_code if res else '无响应'}")
-            return
-
+        engine = SiteEngine.get_instance()
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        client = HttpClient(
+            config=HttpClientConfig(default_headers=headers),
+            rate_limiter=rate_limiter_engine,
+        )
         try:
+            res = client.post(url=subtitle_list_url, data=json.dumps({"id": torrent_id}))
             data = res.json()
             if data.get("code") != "0" or data.get("message") != "SUCCESS":
                 log.warn(f"[Sites]m-team 字幕列表返回错误：{data.get('message')}")
@@ -220,12 +246,7 @@ class SiteSubtitle:
 
                 # 获取下载凭证
                 genlink_url = f"{MT_URL}/api/subtitle/genlink"
-                genlink_res = request.post_res(url=genlink_url, data=json.dumps({"id": subtitle_id}))
-
-                if not genlink_res or genlink_res.status_code != 200:
-                    log.warn(f"[Sites]获取字幕 {subtitle_id} 下载链接失败")
-                    continue
-
+                genlink_res = client.post(url=genlink_url, data=json.dumps({"id": subtitle_id}))
                 genlink_data = genlink_res.json()
                 if genlink_data.get("code") != "0":
                     log.warn(f"[Sites]字幕 {subtitle_id} 下载链接返回错误：{genlink_data.get('message')}")
@@ -238,16 +259,12 @@ class SiteSubtitle:
 
                 # 下载字幕文件
                 download_url = f"{MT_URL}/api/subtitle/dlV2?credential={credential}"
-                download_res = request.get_res(url=download_url)
-
-                if not download_res or download_res.status_code != 200:
-                    log.warn(f"[Sites]下载字幕 {subtitle_id} 失败")
-                    continue
+                download_res = client.get(url=download_url)
 
                 # 保存字幕文件
                 file_name = f"{subtitle_name}.{subtitle_ext}"
                 # 清理文件名中的非法字符
-                file_name = re.sub(r'[<>:"/\\|?*]', "_", file_name)
+                file_name = re.sub(r'[<>"/\\|?*]', "_", file_name)
                 sub_file = os.path.join(self._save_tmp_path or "", file_name)
 
                 with open(sub_file, "wb") as f:
@@ -256,7 +273,7 @@ class SiteSubtitle:
                 # 转移字幕文件
                 target_sub_file = os.path.join(download_dir, os.path.splitext(file_name)[0])
                 log.info(f"[Sites]转移字幕 {sub_file} 到 {target_sub_file}")
-                SiteHelper.transfer_subtitle(sub_file, target_sub_file)
+                _transfer_subtitle(sub_file, target_sub_file)
 
                 # 删除临时文件
                 try:

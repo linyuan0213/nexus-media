@@ -1,11 +1,9 @@
 import urllib.parse
 from datetime import datetime
 
-import requests
-
 from app.infrastructure.cache_system import lru_cache_with_ttl
-from app.utils import RequestUtils
-from app.utils.types import MediaType
+from app.infrastructure.http.client import HttpClient
+from app.domain.mediatypes import MediaType
 
 
 class Bangumi:
@@ -18,7 +16,6 @@ class Bangumi:
         "detail": "v0/subjects/%s",
     }
     _base_url = "https://api.bgm.tv/"
-    _req = RequestUtils(session=requests.Session())
     _page_num = 30
 
     def __init__(self):
@@ -31,8 +28,8 @@ class Bangumi:
         params = {}
         if kwargs:
             params.update(kwargs)
-        resp = cls._req.get_res(url=req_url, params=params)
-        return resp.json() if resp else None
+        resp = HttpClient().get(url=req_url, params=params)
+        return resp.json()
 
     def calendar(self):
         """

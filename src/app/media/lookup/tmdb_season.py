@@ -1,4 +1,4 @@
-from app.helper.image_proxy_helper import ImageProxyHelper
+from app.infrastructure.image_proxy import ImageProxy
 from app.media.lookup.tmdb_client import TmdbClient
 from app.media.lookup.tmdb_detail import TmdbDetail
 
@@ -24,7 +24,7 @@ class TmdbSeason:
                     "id": info.get("id"),
                     "name": info.get("name"),
                     "overview": info.get("overview"),
-                    "poster_path": ImageProxyHelper.get_tmdbimage_url(info.get("poster_path"))
+                    "poster_path": ImageProxy.get_tmdbimage_url(info.get("poster_path"))
                     if info.get("poster_path")
                     else "",
                     "season_number": info.get("season_number"),
@@ -57,7 +57,7 @@ class TmdbSeason:
                     "runtime": info.get("runtime"),
                     "season_number": info.get("season_number"),
                     "show_id": info.get("show_id"),
-                    "still_path": ImageProxyHelper.get_tmdbimage_url(info.get("still_path"))
+                    "still_path": ImageProxy.get_tmdbimage_url(info.get("still_path"))
                     if info.get("still_path")
                     else "",
                     "vote_average": info.get("vote_average"),

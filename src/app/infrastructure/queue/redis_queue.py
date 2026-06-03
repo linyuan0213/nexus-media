@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import log
 from app.infrastructure.queue.base import MessageQueue
-from app.utils.redis_store import RedisStore
+from app.infrastructure.redis import RedisStore
 
 STREAM_KEY = "nexus_media:message_queue"
 CONSUMER_GROUP = "message_consumers"

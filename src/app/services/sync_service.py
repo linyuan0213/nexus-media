@@ -15,7 +15,7 @@ from app.core.settings import settings
 from app.di import container
 from app.domain.entities.sync import SyncPathEntity
 from app.domain.entities.transfer import TransferUnknownEntity
-from app.helper.thread_helper import ThreadHelper
+from app.infrastructure.thread import ThreadExecutor
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media import MediaCache
 from app.schemas.sync import (
@@ -29,8 +29,9 @@ from app.storage import StorageBackendFactory
 from app.storage.backends.base import StorageType
 from app.storage.config_models import LocalStorageConfig
 from app.utils import EpisodeFormat, ExceptionUtils, StringUtils
-from app.utils.types import MediaType, OsType, SyncType
-from app.utils.web_utils import set_config_directory
+from app.domain.mediatypes import MediaType
+from app.domain.enums import OsType, SyncType
+from app.services.web import set_config_directory
 
 
 class SyncService:
@@ -46,12 +47,12 @@ class SyncService:
         sync: Sync | None = None,
         filetransfer: FileTransfer | None = None,
         media_cache: MediaCache | None = None,
-        threadhelper: ThreadHelper | None = None,
+        thread_executor: ThreadExecutor | None = None,
     ):
         self._sync = sync or container.sync_engine()
         self._filetransfer = filetransfer or container.filetransfer_service()
         self._media_cache = media_cache or container.media_cache()
-        self._threadhelper = threadhelper or container.thread_helper()
+        self._thread_executor = thread_executor or container.thread_executor()
 
     # ---------- 同步目录校验 ----------
 
@@ -211,24 +212,22 @@ class SyncService:
         dst_backend = self._resolve_dst_backend_by_dest(outpath or "")
 
         # 提交后台线程执行转移，避免 API 超时
-        self._threadhelper.start_thread(
+        self._thread_executor.submit(
             self._filetransfer.transfer_media,
-            (
-                SyncType.MAN,
-                inpath,
-                syncmod,
-                None,
-                outpath,
-                None,
-                tmdb_info,
-                media_type,
-                season,
-                episode,
-                min_filesize,
-                True,
-                False,
-                dst_backend,
-            ),
+            SyncType.MAN,
+            inpath,
+            syncmod,
+            None,
+            outpath,
+            None,
+            tmdb_info,
+            media_type,
+            season,
+            episode,
+            min_filesize,
+            True,
+            False,
+            dst_backend,
         )
 
         return ManualTransferResultDTO(success=True, message="转移任务已提交，正在后台执行")
@@ -316,7 +315,7 @@ class SyncService:
             finally:
                 lock.release()
 
-        self._threadhelper.start_thread(_do_re_identify, ())
+        self._thread_executor.submit(_do_re_identify)
         return ReIdentifyResultDTO(success=True, message="重新识别任务已提交，正在后台执行")
 
     # ---------- 查询 ----------

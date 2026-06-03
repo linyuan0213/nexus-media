@@ -1,13 +1,5 @@
-"""
-事件类型定义
-"""
+"""事件类型定义 — 从基础设施层重导出."""
 
-from dataclasses import dataclass, field
-from typing import Any
+from app.infrastructure.event import Event
 
-
-@dataclass(frozen=True)
-class Event:
-    event_type: str
-    payload: Any
-    metadata: dict[str, Any] = field(default_factory=dict)
+__all__ = ["Event"]

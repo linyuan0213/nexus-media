@@ -9,9 +9,11 @@ import re
 from collections import defaultdict
 
 from app.infrastructure.cache_system import get_cache_manager
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.infrastructure.http.exceptions import HttpClientError
 from app.plugin_framework.context import PluginContext
 from app.sites.engine import SiteEngine
-from app.utils import RequestUtils
 from app.di import container
 
 
@@ -117,11 +119,11 @@ class CookieCloudPlugin:
         if server.endswith("/"):
             server = server[:-1]
 
-        req = RequestUtils(content_type="application/json")
         req_url = f"{server}/get/{key}"
-        ret = req.post_res(url=req_url, json={"password": password})
-
-        if ret and ret.status_code == 200:
+        try:
+            ret = HttpClient(config=HttpClientConfig(default_headers={"Content-Type": "application/json"})).post(
+                url=req_url, json={"password": password}
+            )
             result = ret.json()
             content = {}
             if not result:
@@ -131,9 +133,10 @@ class CookieCloudPlugin:
             if result.get("local_storage_data"):
                 content["local_storage_data"] = result.get("local_storage_data")
             return content, "", True
-        elif ret:
-            return {}, f"同步 CookieCloud 失败，错误码：{ret.status_code}", False
-        else:
+        except HttpClientError as exc:
+            return {}, f"同步 CookieCloud 失败，错误码：{exc.status_code}", False
+        except Exception:
+            return {}, "CookieCloud 请求失败，请检查服务器地址、用户 KEY 及加密密码是否正确", False
             return {}, "CookieCloud 请求失败，请检查服务器地址、用户 KEY 及加密密码是否正确", False
 
     def _cookie_sync(self):
