@@ -48,4 +48,5 @@ static/avatars/*
 *.egg-info/
 
 # Environment
-.envconfig/granian.pid
+.env
+config/*.pid
