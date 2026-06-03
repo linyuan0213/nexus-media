@@ -225,7 +225,11 @@ class Telegram(_IMessageClient):
                             offset = update.get("update_id", offset) + 1
                             self._process_update(update)
                 except Exception as e:
-                    log.error(f"[Telegram]轮询异常: {e}")
+                    err_msg = str(e)
+                    if "409" in err_msg:
+                        log.debug(f"[Telegram]轮询跳过（多实例冲突）: {err_msg}")
+                    else:
+                        log.error(f"[Telegram]轮询异常: {err_msg}")
                 time.sleep(2)
             except Exception as e:
                 log.error(f"[Telegram]轮询异常: {e}")
