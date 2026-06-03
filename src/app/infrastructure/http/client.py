@@ -7,6 +7,7 @@ import httpx
 from app.infrastructure.http.cache import HttpCacheConfig
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.http.exceptions import HttpClientError
+from app.infrastructure.http.middleware import HttpMiddleware
 from app.infrastructure.http.retry import HttpRetryConfig
 from app.infrastructure.rate_limiter import RateLimitEngine
 
@@ -24,11 +25,13 @@ class HttpClient:
         retry_config: HttpRetryConfig | None = None,
         rate_limiter: RateLimitEngine | None = None,
         cache: HttpCacheConfig | None = None,
+        middlewares: list[HttpMiddleware] | None = None,
     ):
         self._config = config or HttpClientConfig()
         self._retry = (retry_config or HttpRetryConfig()).build_retrying()
         self._rate_limiter = rate_limiter
         self._cache = cache
+        self._middlewares = middlewares or []
         self._client = self._build_client()
 
     def _build_client(self) -> httpx.Client:
@@ -37,13 +40,18 @@ class HttpClient:
             max_keepalive_connections=self._config.max_keepalive,
         )
         transport = httpx.HTTPTransport(limits=limits, retries=0)
+        timeout = httpx.Timeout(
+            self._config.timeout,
+            connect=self._config.connect_timeout,
+        )
         return httpx.Client(
             transport=transport,
-            timeout=self._config.timeout,
+            timeout=timeout,
             follow_redirects=self._config.follow_redirects,
             verify=self._config.verify_ssl,
             proxy=self._config.proxy_url,
             auth=self._config.auth,
+            headers=self._config.default_headers,
         )
 
     def request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
@@ -75,10 +83,22 @@ class HttpClient:
                 response.raise_for_status()
             return response
 
+        # 请求中间件链路
+        if self._middlewares:
+            tmp_request = httpx.Request(
+                method, url, **{k: v for k, v in kwargs.items() if k in ("headers", "params", "cookies")}
+            )
+            for mw in self._middlewares:
+                tmp_request = mw.process_request(tmp_request)
+
         try:
             result = self._retry(_do_request)
         except httpx.HTTPError as e:
             raise HttpClientError.from_httpx(e) from e
+
+        # 响应中间件链路
+        for mw in self._middlewares:
+            result = mw.process_response(result)
 
         if self._cache and not cache_bypass:
             if self._cache.is_cacheable(method, result):

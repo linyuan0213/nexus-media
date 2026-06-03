@@ -15,6 +15,7 @@ from app.infrastructure.http.exceptions import (
     HttpConnectionError,
     HttpTimeoutError,
 )
+from app.infrastructure.http.middleware import HttpMiddleware, LoggingMiddleware
 from app.infrastructure.http.retry import HttpRetryConfig
 
 __all__ = [
@@ -28,6 +29,8 @@ __all__ = [
     "HttpClientConfig",
     "HttpClientError",
     "HttpConnectionError",
+    "HttpMiddleware",
     "HttpRetryConfig",
     "HttpTimeoutError",
+    "LoggingMiddleware",
 ]

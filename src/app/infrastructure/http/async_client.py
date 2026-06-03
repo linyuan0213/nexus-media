@@ -1,5 +1,6 @@
 """异步 HTTP 客户端 Facade."""
 
+import threading
 from typing import Any
 
 import httpx
@@ -7,6 +8,7 @@ import httpx
 from app.infrastructure.http.cache import HttpCacheConfig
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.http.exceptions import HttpClientError
+from app.infrastructure.http.middleware import HttpMiddleware
 from app.infrastructure.http.retry import HttpRetryConfig
 from app.infrastructure.rate_limiter import RateLimitEngine
 
@@ -24,30 +26,40 @@ class AsyncHttpClient:
         retry_config: HttpRetryConfig | None = None,
         rate_limiter: RateLimitEngine | None = None,
         cache: HttpCacheConfig | None = None,
+        middlewares: list[HttpMiddleware] | None = None,
     ):
         self._config = config or HttpClientConfig()
         self._retry = (retry_config or HttpRetryConfig()).build_async_retrying()
         self._rate_limiter = rate_limiter
         self._cache = cache
+        self._middlewares = middlewares or []
         self._client: httpx.AsyncClient | None = None
+        self._lock = threading.Lock()
 
     async def _get_client(self) -> httpx.AsyncClient:
-        """延迟初始化 AsyncClient."""
+        """延迟初始化 AsyncClient（线程安全）."""
         if self._client is None:
-            limits = httpx.Limits(
-                max_connections=self._config.max_connections,
-                max_keepalive_connections=self._config.max_keepalive,
-            )
-            transport = httpx.AsyncHTTPTransport(limits=limits, retries=0)
-            self._client = httpx.AsyncClient(
-                transport=transport,
-                timeout=self._config.timeout,
-                follow_redirects=self._config.follow_redirects,
-                verify=self._config.verify_ssl,
-                http2=self._config.enable_http2,
-                proxy=self._config.proxy_url,
-                auth=self._config.auth,
-            )
+            with self._lock:
+                if self._client is None:
+                    limits = httpx.Limits(
+                        max_connections=self._config.max_connections,
+                        max_keepalive_connections=self._config.max_keepalive,
+                    )
+                    transport = httpx.AsyncHTTPTransport(limits=limits, retries=0)
+                    timeout = httpx.Timeout(
+                        self._config.timeout,
+                        connect=self._config.connect_timeout,
+                    )
+                    self._client = httpx.AsyncClient(
+                        transport=transport,
+                        timeout=timeout,
+                        follow_redirects=self._config.follow_redirects,
+                        verify=self._config.verify_ssl,
+                        http2=self._config.enable_http2,
+                        proxy=self._config.proxy_url,
+                        auth=self._config.auth,
+                        headers=self._config.default_headers,
+                    )
         return self._client
 
     async def request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
@@ -81,10 +93,20 @@ class AsyncHttpClient:
                 response.raise_for_status()
             return response
 
+        if self._middlewares:
+            tmp_request = httpx.Request(
+                method, url, **{k: v for k, v in kwargs.items() if k in ("headers", "params", "cookies")}
+            )
+            for mw in self._middlewares:
+                tmp_request = mw.process_request(tmp_request)
+
         try:
             result = await self._retry(_do_request)
         except httpx.HTTPError as e:
             raise HttpClientError.from_httpx(e) from e
+
+        for mw in self._middlewares:
+            result = mw.process_response(result)
 
         if self._cache and not cache_bypass:
             if self._cache.is_cacheable(method, result):
