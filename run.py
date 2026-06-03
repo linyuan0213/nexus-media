@@ -60,8 +60,13 @@ def main():
         **ssl_kwargs,
     )
 
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        signal.signal(sig, lambda s, f: server.shutdown())
+    def _handle_signal(signum, frame):
+        log.console("正在关闭...")
+        server.shutdown()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, _handle_signal)
+    signal.signal(signal.SIGTERM, _handle_signal)
 
     server.serve()
 
