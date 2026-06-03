@@ -7,6 +7,7 @@
     python run.py -w 4               # 指定 worker 数
 """  # noqa: EXE001
 
+import signal
 import sys
 from pathlib import Path
 
@@ -58,6 +59,10 @@ def main():
         pid_file=Path(settings.config_path or ".") / "granian.pid",
         **ssl_kwargs,
     )
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, lambda s, f: server.shutdown())
+
     server.serve()
 
 
