@@ -1,10 +1,10 @@
 #!/bin/sh
-# 停止 gunicorn
+# 停止 Granian 服务器
 
-PIDFILE="${1:-./config/gunicorn.pid}"
+PIDFILE="${1:-./config/granian.pid}"
 
 if [ ! -f "$PIDFILE" ]; then
-    PIDFILE="/config/gunicorn.pid"
+    PIDFILE="/config/granian.pid"
 fi
 
 if [ ! -f "$PIDFILE" ]; then
@@ -14,7 +14,7 @@ fi
 
 for pid in $(cat "$PIDFILE"); do
     if kill -0 "$pid" 2>/dev/null; then
-        echo "发送 TERM 信号到 gunicorn 进程 $pid ..."
+        echo "发送 TERM 信号到 Granian 进程 $pid ..."
         kill -TERM "$pid"
     else
         echo "进程 $pid 不存在"
