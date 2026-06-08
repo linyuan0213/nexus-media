@@ -21,7 +21,7 @@ from app.mediaserver import MediaServer
 from app.message import Message
 from app.events import Event
 from app.events.constants import DOWNLOAD_STARTED, DOWNLOAD_FAILED
-from app.sites import SiteConf, Sites, SiteSubtitle
+from app.sites import SiteConf, SiteSubtitle
 from app.sites.engine import SiteEngine
 from app.sites.torrent import Torrent
 from app.utils import StringUtils
@@ -45,7 +45,7 @@ class DownloadPipeline:
         message: Message | None = None,
         mediaserver: MediaServer | None = None,
         filetransfer=None,
-        sites: Sites | None = None,
+        sites=None,
         siteconf: SiteConf | None = None,
         sitesubtitle: SiteSubtitle | None = None,
         event_bus=None,
@@ -54,7 +54,7 @@ class DownloadPipeline:
         self._message = message or Message()
         self._mediaserver = mediaserver or container.media_server()
         self._filetransfer = filetransfer
-        self._sites = sites or container.sites()
+        self._sites = sites or container.site_cache()
         self._siteconf = siteconf or container.site_conf()
         self._sitesubtitle = sitesubtitle or SiteSubtitle()
         self._event_bus = event_bus or container.event_bus()

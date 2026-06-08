@@ -44,7 +44,7 @@ class SubscribeService:
         self._message = message or container.message()
         self._media = media_service or container.media_service()
         self._downloader = downloader or container.downloader_core()
-        self._sites = sites or container.sites()
+        self._sites = sites or container.site_cache()
         self._douban = douban or container.douban()
         self._indexer_service = indexer_service or container.indexer_service()
         self._filter = filter_service or container.filter_service()

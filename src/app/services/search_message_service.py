@@ -151,7 +151,7 @@ class MessageSearchService:
 
     def _download_from_url(self, url: str, in_from: SearchType, user_id: str, user_name: str | None = None):
         """从 URL 下载种子"""
-        site_info: dict = container.sites().get_sites(siteurl=url)  # type: ignore[assignment]
+        site_info: dict = container.site_cache().get_sites(siteurl=url)  # type: ignore[assignment]
         filepath, content, retmsg = Torrent().save_torrent_file(
             url=url, cookie=site_info.get("cookie"), ua=site_info.get("ua"), proxy=site_info.get("proxy") or False
         )
@@ -193,7 +193,7 @@ class MessageSearchService:
             content,
             [
                 {"id": site.get("name"), "name": site.get("name")}
-                for site in container.sites().get_sites(rss=True, public=True)
+                for site in container.site_cache().get_sites(rss=True, public=True)
             ],
         )
 

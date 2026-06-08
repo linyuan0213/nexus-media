@@ -36,7 +36,10 @@ class JobRegistry:
             try:
                 return func(*args, **kwargs)
             finally:
-                lock.release()
+                try:
+                    lock.release()
+                except Exception as e:
+                    log.error(f"[Scheduler]任务 {job_id} 释放锁异常: {e}")
                 remove_session()
 
         return wrapped

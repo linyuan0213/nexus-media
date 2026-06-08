@@ -85,7 +85,9 @@ class Container(containers.DeclarativeContainer):
     plugin_sandbox: Provider["PluginSandbox"] = _s("app.plugin_framework.sandbox.PluginSandbox")
 
     # --- Sites & Indexer ---
-    sites: Provider["Sites"] = _s("app.sites.sites.Sites")
+    site_cache: Provider["SiteCache"] = _s("app.sites.site_cache.SiteCache")
+    site_resolver: Provider["SiteResolver"] = _s("app.sites.site_resolver.SiteResolver")
+    site_favicon_service: Provider["SiteFaviconService"] = _s("app.sites.site_favicon_service.SiteFaviconService")
     site_userinfo: Provider["SiteUserInfo"] = _s("app.sites.site_userinfo.SiteUserInfo")
     site_conf: Provider["SiteConf"] = _s("app.sites.siteconf.SiteConf")
     site_repository: Provider["SiteRepository"] = _s("app.db.repositories.site_repository.SiteRepository")
@@ -372,6 +374,8 @@ if TYPE_CHECKING:
     from app.services.transfer_engine import TransferEngine
     from app.services.transfer_pipeline import TransferPipeline
     from app.services.rss_automation.userrss_service import UserRssService
+    from app.sites.site_cache import SiteCache
+    from app.sites.site_favicon_service import SiteFaviconService
+    from app.sites.site_resolver import SiteResolver
     from app.sites.site_userinfo import SiteUserInfo
     from app.sites.siteconf import SiteConf
-    from app.sites.sites import Sites

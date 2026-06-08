@@ -140,7 +140,10 @@ def _call_endpoint(
                 params = {k: v.format(**template_vars) if isinstance(v, str) else v for k, v in params.items()}
             res = client.get(url=url, params=params, headers=headers, **rl_kwargs)
         return res.json()
-    except Exception:
+    except Exception as e:
+        import log
+
+        log.error(f"[_call_endpoint]请求异常 {url}: {e}")
         return None
 
 

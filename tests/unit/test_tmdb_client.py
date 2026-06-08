@@ -1,7 +1,7 @@
 """测试 TMDB 客户端工具函数 — 多语言名称匹配"""
 
 from app.media.lookup.tmdb_client import compare_tmdb_names, get_tmdb_chinese_title
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class TestCompareTmdbNames:

@@ -1,7 +1,7 @@
 """下载策略单元测试"""
 
 from app.services.download_strategies import EpisodeStrategy, MovieDownloadStrategy, SeasonPackStrategy
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class MockMediaItem:

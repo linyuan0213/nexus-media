@@ -1,3 +1,9 @@
+"""Fanart API 图片获取模块.
+
+修复前：单例 _images 缓存导致查询不同媒体时返回错误图片。
+修复后：以 (media_type, queryid) 为 key 的缓存字典，每个媒体独立缓存。
+"""
+
 from app.core.constants import FANART_MOVIE_API_URL, FANART_TV_API_URL
 from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.infrastructure.http.client import HttpClient
@@ -23,46 +29,56 @@ class Fanart:
         "hdclearart",
     ]
     _season_types = ["seasonposter", "seasonthumb", "seasonbanner"]
-    _images = {}
 
     def __init__(self):
-        self._refresh()
+        self._images: dict[str, dict] = {}
 
-    def _refresh(self):
-        self._images = {}
+    def _cache_key(self, media_type, queryid) -> str:
+        return f"{media_type.value if hasattr(media_type, 'value') else media_type}_{queryid}"
 
-    def __get_fanart_images(self, media_type, queryid):
+    def _get_images(self, media_type, queryid) -> dict:
+        """获取指定媒体的图片缓存，不存在时请求 API."""
+        key = self._cache_key(media_type, queryid)
+        if key not in self._images:
+            self._images[key] = self._fetch_fanart_images(media_type, queryid)
+        return self._images.get(key, {})
+
+    def _fetch_fanart_images(self, media_type, queryid) -> dict:
         if not media_type or not queryid:
-            return
+            return {}
+        images: dict = {}
         try:
             ret = self.__request_fanart(media_type=media_type, queryid=queryid)
-            if ret:
-                if media_type == MediaType.MOVIE:
-                    for image_type in self._movie_image_types:
-                        images = ret.json().get(image_type)
-                        if isinstance(images, list):
-                            self._images[image_type] = images[0].get("url") if isinstance(images[0], dict) else ""
+            if not ret:
+                return images
+            data = ret.json()
+            if media_type == MediaType.MOVIE:
+                for image_type in self._movie_image_types:
+                    items = data.get(image_type)
+                    if isinstance(items, list) and items:
+                        images[image_type] = items[0].get("url") if isinstance(items[0], dict) else ""
+                    else:
+                        images[image_type] = ""
+            else:
+                for image_type in self._tv_image_types:
+                    items = data.get(image_type)
+                    if isinstance(items, list):
+                        if image_type in self._season_types:
+                            images[image_type] = {}
+                            for item in items:
+                                season = item.get("season")
+                                if season is not None and season not in images[image_type]:
+                                    images[image_type][season] = item.get("url")
                         else:
-                            self._images[image_type] = ""
-                else:
-                    for image_type in self._tv_image_types:
-                        images = ret.json().get(image_type)
-                        if isinstance(images, list):
-                            if image_type in self._season_types:
-                                if not self._images.get(image_type):
-                                    self._images[image_type] = {}
-                                for image in images:
-                                    if image.get("season") not in self._images[image_type]:
-                                        self._images[image_type][image.get("season")] = image.get("url")
-                            else:
-                                self._images[image_type] = images[0].get("url") if isinstance(images[0], dict) else ""
+                            images[image_type] = items[0].get("url") if isinstance(items[0], dict) else ""
+                    else:
+                        if image_type in self._season_types:
+                            images[image_type] = {}
                         else:
-                            if image_type in self._season_types:
-                                self._images[image_type] = {}
-                            else:
-                                self._images[image_type] = ""
-        except Exception as e2:
-            ExceptionUtils.exception_traceback(e2)
+                            images[image_type] = ""
+        except Exception:
+            ExceptionUtils.exception_traceback(Exception())
+        return images
 
     @classmethod
     @lru_cache_with_ttl(maxsize=256, ttl=3600)
@@ -79,141 +95,75 @@ class Fanart:
         return None
 
     def get_backdrop(self, media_type, queryid, default=""):
-        """
-        获取横幅背景图
-        """
         if not media_type or not queryid:
-            return ""
-        if not self._images:
-            self.__get_fanart_images(media_type=media_type, queryid=queryid)
-        if media_type == MediaType.MOVIE:
-            return self._images.get("moviethumb", default)
-        else:
-            return self._images.get("tvthumb", default)
+            return default
+        images = self._get_images(media_type, queryid)
+        key = "moviethumb" if media_type == MediaType.MOVIE else "tvthumb"
+        return images.get(key, default)
 
     def get_poster(self, media_type, queryid, default=None):
-        """
-        获取海报
-        """
         if not media_type or not queryid:
-            return None
-        if not self._images:
-            self.__get_fanart_images(media_type=media_type, queryid=queryid)
-        if media_type == MediaType.MOVIE:
-            return self._images.get("movieposter", default)
-        else:
-            return self._images.get("tvposter", default)
+            return default
+        images = self._get_images(media_type, queryid)
+        key = "movieposter" if media_type == MediaType.MOVIE else "tvposter"
+        return images.get(key, default)
 
     def get_background(self, media_type, queryid, default=None):
-        """
-        获取海报
-        """
         if not media_type or not queryid:
-            return None
-        if not self._images:
-            self.__get_fanart_images(media_type=media_type, queryid=queryid)
-        if media_type == MediaType.MOVIE:
-            return self._images.get("moviebackground", default)
-        else:
-            return self._images.get("showbackground", default)
+            return default
+        images = self._get_images(media_type, queryid)
+        key = "moviebackground" if media_type == MediaType.MOVIE else "showbackground"
+        return images.get(key, default)
 
     def get_banner(self, media_type, queryid, default=None):
-        """
-        获取海报
-        """
         if not media_type or not queryid:
-            return None
-        if not self._images:
-            self.__get_fanart_images(media_type=media_type, queryid=queryid)
-        if media_type == MediaType.MOVIE:
-            return self._images.get("moviebanner", default)
-        else:
-            return self._images.get("tvbanner", default)
+            return default
+        images = self._get_images(media_type, queryid)
+        key = "moviebanner" if media_type == MediaType.MOVIE else "tvbanner"
+        return images.get(key, default)
 
     def get_disc(self, media_type, queryid, default=None):
-        """
-        获取光盘封面
-        """
         if not media_type or not queryid:
-            return None
-        if not self._images:
-            self.__get_fanart_images(media_type=media_type, queryid=queryid)
-        if media_type == MediaType.MOVIE:
-            return self._images.get("moviedisc", default)
-        else:
-            return None
+            return default
+        if media_type != MediaType.MOVIE:
+            return default
+        images = self._get_images(media_type, queryid)
+        return images.get("moviedisc", default)
 
     def get_logo(self, media_type, queryid, default=None):
-        """
-        获取海报
-        """
         if not media_type or not queryid:
-            return None
-        if not self._images:
-            self.__get_fanart_images(media_type=media_type, queryid=queryid)
-        if media_type == MediaType.MOVIE:
-            return self._images.get("hdmovielogo", default)
-        else:
-            return self._images.get("hdtvlogo", default)
+            return default
+        images = self._get_images(media_type, queryid)
+        key = "hdmovielogo" if media_type == MediaType.MOVIE else "hdtvlogo"
+        return images.get(key, default)
 
     def get_thumb(self, media_type, queryid, default=None):
-        """
-        获取缩略图
-        """
         if not media_type or not queryid:
-            return None
-        if not self._images:
-            self.__get_fanart_images(media_type=media_type, queryid=queryid)
-        if media_type == MediaType.MOVIE:
-            return self._images.get("moviethumb", default)
-        else:
-            return self._images.get("tvthumb", default)
+            return default
+        images = self._get_images(media_type, queryid)
+        key = "moviethumb" if media_type == MediaType.MOVIE else "tvthumb"
+        return images.get(key, default)
 
     def get_clearart(self, media_type, queryid, default=None):
-        """
-        获取clearart
-        """
-        if not media_type or not queryid:
-            return None
-        if not self._images:
-            self.__get_fanart_images(media_type=media_type, queryid=queryid)
-        if media_type == MediaType.TV:
-            return self._images.get("hdclearart", default)
-        else:
-            return None
+        if not media_type or not queryid or media_type != MediaType.TV:
+            return default
+        images = self._get_images(media_type, queryid)
+        return images.get("hdclearart", default)
 
     def get_seasonposter(self, media_type, queryid, season, default=None):
-        """
-        获取seasonposter
-        """
-        if not media_type or not queryid:
-            return None
-        if not self._images:
-            self.__get_fanart_images(media_type=media_type, queryid=queryid)
-        if media_type != MediaType.TV:
-            return None
-        return self._images.get("seasonposter", {}).get(season, "") or default
+        if not media_type or not queryid or media_type != MediaType.TV:
+            return default
+        images = self._get_images(media_type, queryid)
+        return images.get("seasonposter", {}).get(season, "") or default
 
     def get_seasonthumb(self, media_type, queryid, season, default=None):
-        """
-        获取seasonposter
-        """
-        if not media_type or not queryid:
-            return None
-        if not self._images:
-            self.__get_fanart_images(media_type=media_type, queryid=queryid)
-        if media_type != MediaType.TV:
-            return None
-        return self._images.get("seasonthumb", {}).get(season, "") or default
+        if not media_type or not queryid or media_type != MediaType.TV:
+            return default
+        images = self._get_images(media_type, queryid)
+        return images.get("seasonthumb", {}).get(season, "") or default
 
     def get_seasonbanner(self, media_type, queryid, season, default=None):
-        """
-        获取seasonbanner
-        """
-        if not media_type or not queryid:
-            return None
-        if not self._images:
-            self.__get_fanart_images(media_type=media_type, queryid=queryid)
-        if media_type != MediaType.TV:
-            return None
-        return self._images.get("seasonbanner", {}).get(season, "") or default
+        if not media_type or not queryid or media_type != MediaType.TV:
+            return default
+        images = self._get_images(media_type, queryid)
+        return images.get("seasonbanner", {}).get(season, "") or default

@@ -385,7 +385,9 @@ class SiteEngine:
             start = time.time()
             result = engine_tools._call_endpoint(self, test_cfg, site, user_config, {})
             latency = int((time.time() - start) * 1000)
-            return (True, "连接成功", latency) if result is not None else (False, "连接失败", latency)
+            if result is not None:
+                return True, "连接成功", latency
+            return False, "连接失败", latency
         if site.html:
             return engine_connection.test_html_connection(self, site, user_config)
         return False, "未配置 API 或 HTML 端点", 0

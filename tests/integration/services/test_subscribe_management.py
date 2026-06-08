@@ -8,7 +8,7 @@ from app.services.subscribe.management.refresh_service import SubscribeRefreshSe
 from app.services.subscribe.management.service import SubscribeService
 from app.services.subscribe.management.update_service import SubscribeUpdateService
 from app.events.bus import EventBus
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class TestSubscribeFinishService:

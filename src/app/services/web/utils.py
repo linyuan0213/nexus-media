@@ -3,13 +3,13 @@ from typing import Any
 import cn2an
 
 from app.di import container
-from app.media import meta_info
+from app.domain.mediatypes import MediaType
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.infrastructure.security import generate_password_hash
+from app.media import meta_info
 from app.utils import ExceptionUtils, IpUtils, StringUtils
 from app.utils.config_tools import get_proxies
-from app.infrastructure.security import generate_password_hash
-from app.domain.mediatypes import MediaType
 from version import APP_VERSION
 
 

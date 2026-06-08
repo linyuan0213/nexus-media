@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.services.download_core import DownloadCore
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class MockMediaItem:

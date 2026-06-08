@@ -29,7 +29,10 @@ def test_html_connection(engine, site, user_config):
             config=HttpClientConfig(proxy_url=proxy_url, timeout=15, auth=CookieAuth(cookie) if cookie else None),
             rate_limiter=rate_limiter_engine,
         ).get(url=domain, headers=headers, **rl_kwargs)
-    except Exception:
+    except Exception as e:
+        import log
+
+        log.error(f"[test_html_connection]请求异常 {domain}: {e}")
         return False, "无法打开网站", latency
     if not is_logged_in(res.text):
         return False, "Cookie失效", latency

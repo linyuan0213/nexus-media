@@ -28,7 +28,7 @@ class IYUUAutoSeedPlugin:
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
         self._downloader = container.downloader_core()
-        self._sites = container.sites()
+        self._sites = container.site_cache()
         self._event = Event()
         self.iyuuhelper = None
         self._recheck_torrents = {}

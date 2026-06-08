@@ -19,7 +19,7 @@ class WebResponse:
 
     @staticmethod
     def fail(code: int = 1, msg: str = "", **kwargs) -> dict[str, Any]:
-        result = {"code": code, "msg": msg}
+        result = {"code": code, "message": msg}
         result.update(kwargs)
         return result
 

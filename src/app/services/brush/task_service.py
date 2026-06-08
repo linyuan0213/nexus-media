@@ -13,7 +13,7 @@ from app.services.brush.rss_checker import BrushRssChecker
 from app.services.brush.scheduler import BrushTaskScheduler
 from app.services.brush.torrent_lifecycle import BrushTorrentLifecycle
 from app.services.downloader_core import DownloaderCore as Downloader
-from app.sites import SiteConf, Sites
+from app.sites import SiteConf
 from app.utils import StringUtils
 
 
@@ -29,7 +29,7 @@ class BrushTaskService:
         scheduler: BrushTaskScheduler | None = None,
         downloader: Downloader | None = None,
         message: Message | None = None,
-        sites: Sites | None = None,
+        sites=None,
         siteconf: SiteConf | None = None,
         rsshelper: RssHelper | None = None,
     ):
@@ -37,7 +37,7 @@ class BrushTaskService:
         self._scheduler = scheduler or BrushTaskScheduler()
         self._downloader: Any = downloader or container.downloader_core()
         self._message: Message = message or Message()
-        self._sites = sites or container.sites()
+        self._sites = sites or container.site_cache()
         self._siteconf = siteconf or container.site_conf()
         self._rsshelper = rsshelper or RssHelper()
         self._filter = container.filter_service()

@@ -8,7 +8,7 @@ from app.services.subscribe.management.query_service import SubscribeQueryServic
 from app.services.subscribe.management.utils import gen_rss_note, parse_rss_desc
 from app.services.subscribe.matcher import SubscribeMatcher
 from app.services.subscribe.monitor import SubscriptionMonitor
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class TestSubscribeUtils:
@@ -77,7 +77,7 @@ class TestSubscribeQueryService:
         movie_repo = MagicMock()
         movie_repo.delete.return_value = True
         svc = SubscribeQueryService(movie_repo, MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
-        from app.utils.types import MediaType
+        from app.domain.mediatypes import MediaType
 
         svc.delete_subscribe(MediaType.MOVIE, rssid=1)
         movie_repo.delete.assert_called_once_with(title=None, year=None, rssid=1, tmdbid=None)
@@ -86,7 +86,7 @@ class TestSubscribeQueryService:
         tv_repo = MagicMock()
         tv_repo.delete.return_value = True
         svc = SubscribeQueryService(MagicMock(), tv_repo, MagicMock(), MagicMock(), MagicMock(), MagicMock())
-        from app.utils.types import MediaType
+        from app.domain.mediatypes import MediaType
 
         svc.delete_subscribe(MediaType.TV, rssid=1)
         tv_repo.delete.assert_called_once_with(title=None, season=None, rssid=1, tmdbid=None)
@@ -95,7 +95,7 @@ class TestSubscribeQueryService:
         movie_repo = MagicMock()
         movie_repo.get_id.return_value = 42
         svc = SubscribeQueryService(movie_repo, MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
-        from app.utils.types import MediaType
+        from app.domain.mediatypes import MediaType
 
         result = svc.get_subscribe_id(MediaType.MOVIE, "Test")
         assert result == 42
@@ -104,7 +104,7 @@ class TestSubscribeQueryService:
         tv_repo = MagicMock()
         tv_repo.get_id.return_value = 42
         svc = SubscribeQueryService(MagicMock(), tv_repo, MagicMock(), MagicMock(), MagicMock(), MagicMock())
-        from app.utils.types import MediaType
+        from app.domain.mediatypes import MediaType
 
         result = svc.get_subscribe_id(MediaType.TV, "Test")
         assert result == 42
@@ -251,7 +251,7 @@ class TestSubscribeMatcher:
         filter_engine = MagicMock()
         filter_engine.check_torrent_filter.return_value = (True, 1, "ok")
         matcher._filter = filter_engine
-        with patch("app.services.subscribe.matcher.container.sites") as mock_sites:
+        with patch("app.services.subscribe.matcher.container.site_cache") as mock_sites:
             mock_sites.return_value.check_ratelimit.return_value = True
             flag, msgs, info = matcher.match(media, rss_movies, {}, 1, None, None, True, None, None, None)
             assert flag is False
@@ -265,7 +265,7 @@ class TestSubscribeMatcher:
         filter_engine.check_torrent_filter.return_value = (True, 1, "ok")
         matcher._filter = filter_engine
         with (
-            patch("app.services.subscribe.matcher.container.sites") as mock_sites,
+            patch("app.services.subscribe.matcher.container.site_cache") as mock_sites,
             patch("app.services.subscribe.matcher.container.site_conf") as mock_siteconf,
         ):
             mock_sites.return_value.check_ratelimit.return_value = False
@@ -412,20 +412,20 @@ class TestSubscriptionMonitorTrigger:
         monitor = SubscriptionMonitor()
         with (
             patch("app.services.subscribe.monitor.SubscribeSearchEngine") as mock_engine,
-            patch("app.services.subscribe.monitor.container.thread_helper") as mock_thread,
+            patch("app.services.subscribe.monitor.container.thread_executor") as mock_thread,
             patch("app.services.subscribe.monitor.container.subscribe_service"),
         ):
             mock_engine.return_value.subscribe_search_movie = MagicMock()
             monitor.refresh_subscription("MOV", "1")
-            mock_thread.return_value.start_thread.assert_called_once()
+            mock_thread.return_value.submit.assert_called_once()
 
     def test_refresh_subscription_tv(self):
         monitor = SubscriptionMonitor()
         with (
             patch("app.services.subscribe.monitor.SubscribeSearchEngine") as mock_engine,
-            patch("app.services.subscribe.monitor.container.thread_helper") as mock_thread,
+            patch("app.services.subscribe.monitor.container.thread_executor") as mock_thread,
             patch("app.services.subscribe.monitor.container.subscribe_service"),
         ):
             mock_engine.return_value.subscribe_search_tv = MagicMock()
             monitor.refresh_subscription("TV", "1")
-            mock_thread.return_value.start_thread.assert_called_once()
+            mock_thread.return_value.submit.assert_called_once()
