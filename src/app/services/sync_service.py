@@ -424,7 +424,7 @@ class SyncService:
             "Downloader": ("app.services.downloader_core", "DownloaderCore"),
             "MediaServer": ("app.mediaserver", "MediaServer"),
             "Indexer": ("app.indexer", "Indexer"),
-            "Sites": ("app.sites", "Sites"),
+            "SiteCache": ("app.sites.site_cache", "SiteCache"),
             "Sync": ("app.sync", "Sync"),
             "BrushTask": ("app.brushtask", "BrushTask"),
             "RssChecker": ("app.services.rss_automation.task_service", "RssTaskService"),

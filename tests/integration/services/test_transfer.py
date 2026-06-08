@@ -11,7 +11,8 @@ from app.services.transfer.existence_checker import MediaExistenceChecker
 from app.services.transfer.filetransfer_service import FileTransferService
 from app.services.transfer.history_manager import TransferHistoryManager
 from app.services.transfer.path_resolver import TransferPathResolver
-from app.utils.types import MediaType, ProgressKey, SyncType
+from app.domain.mediatypes import MediaType
+from app.domain.enums import ProgressKey, SyncType
 
 
 class TestTransferPathResolver:
@@ -324,7 +325,7 @@ class TestFileTransferService:
                 message=MagicMock(),
                 category=MagicMock(),
                 scraper=MagicMock(),
-                threadhelper=MagicMock(),
+                thread_executor=MagicMock(),
                 progress=MagicMock(),
                 event_bus=MagicMock(),
                 engine=mock_engine,

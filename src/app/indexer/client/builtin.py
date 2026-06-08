@@ -50,7 +50,7 @@ class BuiltinIndexer(_IIndexClient):
         self._refresh()
 
     def _refresh(self):
-        self.sites = container.sites()
+        self.sites = container.site_cache()
         self.progress = container.progress_helper()
         self.download_repo = container.download_repo()
         self._show_more_sites = settings.get("laboratory").get("show_more_sites")
@@ -94,7 +94,7 @@ class BuiltinIndexer(_IIndexClient):
                 )
         self._indexer_helper.set_indexers(engine_sites)
 
-        for site in container.sites().get_sites(public=True):
+        for site in container.site_cache().get_sites(public=True):
             url = site.get("signurl") or site.get("rssurl")
             cookie = site.get("cookie")
             headers = site.get("headers")
@@ -116,7 +116,7 @@ class BuiltinIndexer(_IIndexClient):
                 rule=site.get("rule"),
                 pri=site.get("pri"),
                 public=is_public,
-                proxy=site.get("proxy"),
+                proxy=bool(site.get("proxy")),
                 render=render,
             )
             if indexer:

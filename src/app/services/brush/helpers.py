@@ -12,7 +12,7 @@ from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.di import container
 from app.media import meta_info
 from app.message import Message
-from app.sites import SiteConf, Sites
+from app.sites import SiteConf
 from app.sites.engine import SiteEngine, get_tid_by_url
 from app.utils import JsonUtils, StringUtils
 
@@ -27,13 +27,13 @@ class BrushTaskHelper:
         self,
         repo,
         downloader,
-        sites: Sites | None = None,
+        sites=None,
         siteconf: SiteConf | None = None,
         message: Message | None = None,
     ):
         self._repo: Any = repo
         self._downloader: Any = downloader
-        self._sites = sites or container.sites()
+        self._sites = sites or container.site_cache()
         self._siteconf = siteconf or container.site_conf()
         self._message: Message = message or Message()
 

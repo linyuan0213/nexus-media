@@ -2,12 +2,11 @@
 """Nexus Media 启动入口 — Granian 异步服务器
 
 用法:
-    python run.py                    # 生产模式（单 worker）
+    python run.py                    # 生产模式
     python run.py --dev              # 开发模式（热重载）
     python run.py -w 4               # 指定 worker 数
 """  # noqa: EXE001
 
-import signal
 import sys
 from pathlib import Path
 
@@ -37,7 +36,6 @@ def main():
     app_conf = settings.get("app") or {}
     host = app_conf.get("web_host", "::").replace("[", "").replace("]", "")
     port = int(app_conf.get("web_port", 3000))
-
     log.console(f"监听地址：{host}:{port}")
 
     ssl_kwargs = {}
@@ -58,17 +56,14 @@ def main():
         log_level=LogLevels.info if dev else LogLevels.warning,
         log_access=dev,
         pid_file=Path(settings.config_path or ".") / "granian.pid",
+        workers_kill_timeout=5,
         **ssl_kwargs,
     )
 
-    def _handle_signal(signum, frame):
-        log.console("正在关闭...")
-        server.shutdown()
-        sys.exit(0)
+    def _on_shutdown():
+        log.console("服务器已关闭")
 
-    signal.signal(signal.SIGINT, _handle_signal)
-    signal.signal(signal.SIGTERM, _handle_signal)
-
+    server.on_shutdown(_on_shutdown)
     server.serve()
 
 

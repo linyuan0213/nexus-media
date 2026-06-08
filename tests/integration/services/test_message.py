@@ -11,7 +11,8 @@ from app.message.core.dispatcher import MessageDispatcher
 from app.message.core.message_builder import MessageBuilder
 from app.message.core.template_engine import TemplateEngine
 from app.message.message import Message
-from app.utils.types import MediaType, SearchType
+from app.domain.mediatypes import MediaType
+from app.domain.enums import SearchType
 
 
 class TestTemplateEngine:

@@ -53,7 +53,10 @@ class auto_commit:
                             self.db.session.close()
                         except Exception:
                             pass
-                        self.db.remove()
+                        try:
+                            self.db.remove()
+                        except Exception:
+                            pass
             return False
 
         return persist

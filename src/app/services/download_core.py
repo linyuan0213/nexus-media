@@ -29,7 +29,7 @@ from app.mediaserver import MediaServer
 from app.message import Message
 from app.schemas.download import Torrent as TorrentInfo
 from app.services.filetransfer_service import FileTransferService as FileTransfer
-from app.sites import SiteConf, Sites, SiteSubtitle
+from app.sites import SiteConf, SiteSubtitle
 from app.sites.engine import SiteEngine
 from app.services.download_strategies import EpisodeStrategy, MovieDownloadStrategy, SeasonPackStrategy
 from app.utils import ExceptionUtils
@@ -49,7 +49,7 @@ class DownloadCore:
         message: Message | None = None,
         mediaserver: MediaServer | None = None,
         filetransfer: FileTransfer | None = None,
-        sites: Sites | None = None,
+        sites=None,
         siteconf: SiteConf | None = None,
         sitesubtitle: SiteSubtitle | None = None,
         event_bus=None,
@@ -61,7 +61,7 @@ class DownloadCore:
         self._message = message or Message()
         self._mediaserver = mediaserver or container.media_server()
         self._filetransfer = filetransfer or container.filetransfer_service()
-        self._sites = sites or container.sites()
+        self._sites = sites or container.site_cache()
         self._siteconf = siteconf or container.site_conf()
         self._sitesubtitle = sitesubtitle or SiteSubtitle()
         self._event_bus = event_bus or container.event_bus()
@@ -509,7 +509,7 @@ class DownloadCore:
 
     @staticmethod
     def get_download_url(page_url):
-        site_info: Any = container.sites().get_sites(siteurl=page_url) or {}
+        site_info: Any = container.site_cache().get_sites(siteurl=page_url) or {}
         return SiteEngine.get_instance().resolve_download_url(
             page_url=page_url,
             user_config={

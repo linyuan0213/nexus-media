@@ -9,13 +9,13 @@ from typing import Any
 import log
 from app.db.models import SITEUSERINFOSTATS as _S
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
+from app.di import container
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
+from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
 from app.message import Message
 from app.sites.engine import SiteEngine
-from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
 from app.utils import ExceptionUtils, JsonUtils, StringUtils
 from app.utils.config_tools import get_proxies
-from app.di import container
 
 lock = Lock()
 
@@ -36,7 +36,7 @@ class SiteUserInfo:
         self._refresh()
 
     def _refresh(self):
-        self.sites = container.sites()
+        self.sites = container.site_cache()
         self.site_repo = SiteRepositoryAdapter(container.site_repository())
         self.message = Message()
         # 站点上一次更新时间
@@ -323,7 +323,7 @@ class SiteUserInfo:
         self.site_repo.update_site_seed_info(site_user_infos)
         log.debug(f"[Sites]update_site_seed_info 耗时 {time.time() - t0:.2f}s")
         t0 = time.time()
-        self.sites.init_favicons()
+        container.site_favicon_service().refresh()
         log.debug(f"[Sites]init_favicons 耗时 {time.time() - t0:.2f}s")
 
     def get_pt_site_statistics_history(self, days=7, end_day=None):

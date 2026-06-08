@@ -98,7 +98,7 @@ class AutoGenRssPlugin:
         if isinstance(rss_sites, str):
             rss_sites = [s for s in rss_sites.split("\n") if s]
 
-        rss_sites = copy.deepcopy(container.sites().get_sites(siteids=rss_sites))
+        rss_sites = copy.deepcopy(container.site_cache().get_sites(siteids=rss_sites))
         if not rss_sites:
             self.ctx.info("没有需要生成的站点，停止运行")
             return

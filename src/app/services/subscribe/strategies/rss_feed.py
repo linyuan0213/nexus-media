@@ -42,7 +42,7 @@ class RssFeedStrategy:
         coordinator=None,
     ):
         self.media = media or container.media_service()
-        self.sites = sites or container.sites()
+        self.sites = sites or container.site_cache()
         self.siteconf = siteconf or container.site_conf()
         self.downloader = downloader or container.downloader_core()
         self.download_repo = download_repo or container.download_history_repo()
@@ -135,7 +135,7 @@ class RssFeedStrategy:
                 log.info(f"[RssFeedStrategy] {site_name} 未配置 rssurl，跳过...")
                 continue
             site_id = site_info.get("id")
-            site_order = 100 - int(site_info.get("pri")) if site_info.get("pri") else 0
+            site_order = 100 - int(site_info.get("pri") or 0)
 
             log.info(f"[RssFeedStrategy] 正在处理：{site_name}")
             rss_articles = self.rsshelper.parse_rssxml(url=rss_url)

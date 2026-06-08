@@ -15,6 +15,7 @@ from app.infrastructure.http.exceptions import HttpClientError
 from app.plugin_framework.context import PluginContext
 from app.sites.engine import SiteEngine
 from app.di import container
+from app.domain.entities.site import SiteEntity
 
 
 class CookieCloudPlugin:
@@ -24,7 +25,9 @@ class CookieCloudPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self.sites = container.sites()
+        self.sites = container.site_cache()
+        self._site_resolver = container.site_resolver()
+        self._site_repo = container.site_repo_adapter()
         self._index_helper = container.indexer_helper()
         self._cache = get_cache_manager().get_or_create("plugin_cookiecloud", cache_type="redis")
 
@@ -226,21 +229,26 @@ class CookieCloudPlugin:
         for domain_url, cookie_str in domain_cookies.items():
             site_info = self.sites.get_sites_by_suffix(domain_url)
             if site_info:
-                success, _, _ = self.sites.test_connection(site_id=site_info.get("id"))
+                sid = int(site_info.get("id") or 0)
+                success, _, _ = self._site_resolver.test_connection(site_id=sid)
                 if not success:
-                    self.sites.update_site_cookie(siteid=site_info.get("id"), cookie=cookie_str)
+                    self._site_repo.update_cookie_ua(sid, cookie=cookie_str)
+                    self.sites.refresh()
                     update_count += 1
             else:
                 indexer_info = self._index_helper.get_indexer_info(domain_url)
                 if indexer_info:
                     site_pri = self.sites.get_max_site_pri() + 1
-                    self.sites.add_site(
-                        name=indexer_info.get("name"),
-                        site_pri=site_pri,
-                        signurl=indexer_info.get("domain"),
-                        cookie=cookie_str,
-                        rss_uses="T",
+                    self._site_repo.insert(
+                        SiteEntity(
+                            name=indexer_info.get("name"),
+                            pri=site_pri,
+                            sign_url=indexer_info.get("domain"),
+                            cookie=cookie_str,
+                            rss_uses="T",
+                        )
                     )
+                    self.sites.refresh()
                     add_count += 1
 
         return update_count, add_count

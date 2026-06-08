@@ -1,0 +1,91 @@
+[
+  {
+    "site_url": "rousi.pro",
+    "method": "post",
+    "path": "",
+    "data": null,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "auth_type": "bearer",
+    "auth_source": {
+      "type": "header",
+      "name": "x-sign-token",
+      "strip_prefix": "Bearer "
+    },
+    "success_markers": [],
+    "already_markers": [
+      "已签到"
+    ],
+    "cookie_check": true,
+    "response_type": "json",
+    "json_success_path": "code",
+    "json_success_value": 0
+  },
+  {
+    "site_url": "hdarea.club",
+    "method": "post",
+    "path": "",
+    "data": {
+      "action": "sign_in"
+    },
+    "headers": null,
+    "auth_type": "cookie_parsed",
+    "auth_source": null,
+    "success_markers": [
+      "此次签到您获得"
+    ],
+    "already_markers": [
+      "请不要重复签到哦"
+    ],
+    "cookie_check": true,
+    "response_type": "html",
+    "json_success_path": "",
+    "json_success_value": null
+  },
+  {
+    "site_url": "yemapt.org",
+    "method": "get",
+    "path": "",
+    "data": null,
+    "headers": null,
+    "auth_type": "cookie_raw",
+    "auth_source": null,
+    "success_markers": [],
+    "already_markers": [],
+    "cookie_check": true,
+    "response_type": "html",
+    "json_success_path": "",
+    "json_success_value": null
+  },
+  {
+    "site_url": "zhuque.io",
+    "method": "get",
+    "path": "",
+    "data": null,
+    "headers": null,
+    "auth_type": "cookie_raw",
+    "auth_source": null,
+    "success_markers": [],
+    "already_markers": [],
+    "cookie_check": true,
+    "response_type": "html",
+    "json_success_path": "",
+    "json_success_value": null
+  },
+  {
+    "site_url": "btschool.club",
+    "method": "get",
+    "path": "",
+    "data": null,
+    "headers": null,
+    "auth_type": "cookie_raw",
+    "auth_source": null,
+    "success_markers": [],
+    "already_markers": [],
+    "cookie_check": true,
+    "response_type": "html",
+    "json_success_path": "",
+    "json_success_value": null
+  }
+]

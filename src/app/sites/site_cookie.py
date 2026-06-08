@@ -12,7 +12,7 @@ from app.di import container
 class SiteCookie:
     def __init__(self, progress=None, sites=None, siteconf=None, ocrhelper=None):
         self.progress = progress or container.progress_helper()
-        self.sites = sites or container.sites()
+        self.sites = sites or container.site_cache()
         self.siteconf = siteconf or container.site_conf()
         self.ocrhelper = ocrhelper or OcrRecognizer()
         self.captcha_code = {}

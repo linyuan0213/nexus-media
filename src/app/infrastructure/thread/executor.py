@@ -116,7 +116,7 @@ class ThreadExecutor:
         """关闭线程池.
 
         :param wait: 是否等待所有任务完成
-        :param timeout: 等待超时秒数（仅 wait=True 时生效）
+        :param timeout: 等待超时秒数（wait=True 时默认 3 秒，防止进程阻塞）
         """
         self._shutdown = True
         if self._pool is None:
@@ -124,12 +124,18 @@ class ThreadExecutor:
         import log
 
         log.info(f"[ThreadExecutor]关闭线程池: {self._name} (active={self.active_count})")
-        if wait and timeout is not None:
-            deadline = time.time() + timeout
+        if wait:
+            deadline = time.time() + (timeout if timeout is not None else 3.0)
             while self.active_count > 0 and time.time() < deadline:
                 time.sleep(0.1)
-            log.info(f"[ThreadExecutor]线程池关闭完成: {self._name} (remaining={self.active_count})")
-        self._pool.shutdown(wait=wait, cancel_futures=not wait)
+            remaining = self.active_count
+            if remaining > 0:
+                log.info(f"[ThreadExecutor]线程池关闭超时: {self._name} (remaining={remaining})")
+                self._pool.shutdown(wait=False, cancel_futures=True)
+            else:
+                self._pool.shutdown(wait=False)
+        else:
+            self._pool.shutdown(wait=False, cancel_futures=True)
         self._pool = None
 
     def __enter__(self):

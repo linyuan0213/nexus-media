@@ -46,7 +46,7 @@ class SiteSubtitle:
 
     def __init__(self):
         self.siteconf = container.site_conf()
-        self.sites = container.sites()
+        self.sites = container.site_cache()
         self._save_tmp_path = temp_manager.get_temp_path()
 
     def download(self, media_info, site_id, cookie, ua, download_dir):

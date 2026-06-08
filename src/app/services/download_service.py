@@ -20,7 +20,7 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
 from app.services.search_service import Searcher
 from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
-from app.sites import Sites
+
 from app.sites.torrent import Torrent
 from app.infrastructure.temp import temp_manager
 from app.domain.enums import SearchType
@@ -41,14 +41,14 @@ class DownloadService:
         downloader: Downloader | None = None,
         searcher: Searcher | None = None,
         media_service: MediaService | None = None,
-        sites: Sites | None = None,
+        sites=None,
         indexer_service: IndexerService | None = None,
         torrent_remover: TorrentRemover | None = None,
     ):
         self._downloader = downloader or container.downloader_core()
         self._searcher = searcher or container.searcher()
         self._media = media_service or container.media_service()
-        self._sites = sites or container.sites()
+        self._sites = sites or container.site_cache()
         self._indexer_service = indexer_service or container.indexer_service()
         self._torrent_remover = torrent_remover or container.torrentremover_service()
 

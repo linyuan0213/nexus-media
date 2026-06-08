@@ -17,7 +17,8 @@ from app.schemas.site import (
     SiteUpdateResultDTO,
 )
 from app.services.indexer_service import IndexerService
-from app.sites import SiteConf, SiteCookie, Sites
+from app.sites import SiteConf, SiteCookie
+from app.sites.site_cache import SiteCache
 from app.sites.site_userinfo import SiteUserInfo
 from app.utils import StringUtils
 from app.di import container
@@ -28,7 +29,7 @@ class SiteService:
 
     def __init__(
         self,
-        sites: Sites | None = None,
+        sites: SiteCache | None = None,
         site_user_info: SiteUserInfo | None = None,
         site_conf: SiteConf | None = None,
         site_cookie: SiteCookie | None = None,
@@ -37,7 +38,7 @@ class SiteService:
         site_repo: SiteRepository | None = None,
         site_entity_repo: ISiteRepository | None = None,
     ):
-        self._sites = sites or container.sites()
+        self._sites = sites or container.site_cache()
         self._site_user_info = site_user_info or SiteUserInfo()
         self._site_conf = site_conf or container.site_conf()
         self._site_cookie = site_cookie or SiteCookie()
@@ -139,18 +140,21 @@ class SiteService:
                 self._site_entity_repo.update(entity)
                 if name != existing.name and existing.name:
                     self._site_user_info.update_site_name(name, existing.name)
+                self._sites.refresh()
                 return SiteUpdateResultDTO(code=0)
             except Exception:
                 return SiteUpdateResultDTO(code=500)
         else:
             try:
                 self._site_entity_repo.insert(entity)
+                self._sites.refresh()
                 return SiteUpdateResultDTO(code=0)
             except Exception:
                 return SiteUpdateResultDTO(code=500)
 
     def update_site_cookie_ua(self, siteid: int | str, cookie: str, ua: str) -> None:
         self._site_entity_repo.update_cookie_ua(int(siteid), cookie, ua)
+        self._sites.refresh()
 
     # ------------------------------------------------------------------
     # 统计
@@ -212,13 +216,13 @@ class SiteService:
     # Favicon
     # ------------------------------------------------------------------
     def get_site_favicon(self, name: str | None = None) -> Any:
-        return self._sites.get_site_favicon(site_name=name)
+        return container.site_favicon_service().get_favicon(site_name=name)
 
     # ------------------------------------------------------------------
     # 连通性测试
     # ------------------------------------------------------------------
     def test_site(self, site_id: int | str) -> SiteTestResultDTO:
-        flag, msg, times = self._sites.test_connection(site_id)
+        flag, msg, times = container.site_resolver().test_connection(site_id)
         return SiteTestResultDTO(flag=flag, msg=msg, times=times, code=0 if flag else -1)
 
     # ------------------------------------------------------------------

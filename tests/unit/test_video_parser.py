@@ -2,7 +2,7 @@
 
 from app.media.parser.video import parse_video_title
 from app.media.parser._release_groups import ReleaseGroupsMatcher
-from app.utils.types import MediaType
+from app.domain.mediatypes import MediaType
 
 
 class TestVideoParserFix:

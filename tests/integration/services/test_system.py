@@ -186,11 +186,11 @@ class TestSchedulerService:
         with patch("app.services.system.lifecycle.container"):
             downloader = MagicMock()
             sync = MagicMock()
-            thread_helper = MagicMock()
-            svc = SchedulerService(downloader, sync, thread_helper)
+            thread_executor = MagicMock()
+            svc = SchedulerService(downloader, sync, thread_executor)
             msg = svc.start_service("pttransfer")
             assert msg == "服务已启动"
-            thread_helper.start_thread.assert_called_once()
+            thread_executor.submit.assert_called_once()
 
     def test_start_service_unknown(self):
         from app.core.exceptions import ResourceNotFoundError
@@ -198,8 +198,8 @@ class TestSchedulerService:
         with patch("app.services.system.lifecycle.container"):
             downloader = MagicMock()
             sync = MagicMock()
-            thread_helper = MagicMock()
-            svc = SchedulerService(downloader, sync, thread_helper)
+            thread_executor = MagicMock()
+            svc = SchedulerService(downloader, sync, thread_executor)
             with pytest.raises(ResourceNotFoundError):
                 svc.start_service("unknown")
 

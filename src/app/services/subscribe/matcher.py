@@ -125,7 +125,7 @@ class SubscribeMatcher:
 
         # 站点 Free 检测
         if site_parse:
-            sites = container.sites()
+            sites = container.site_cache()
             siteconf = container.site_conf()
             if sites.check_ratelimit(site_id):
                 match_msg.append("触发站点流控")

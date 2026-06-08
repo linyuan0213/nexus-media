@@ -265,7 +265,15 @@ def remove_session():
     """移除当前线程的 session（应在请求/任务结束时调用）"""
     scoped = get_scoped_session()
     if scoped:
-        scoped.remove()
+        try:
+            scoped().close()
+        except Exception:
+            pass
+        finally:
+            try:
+                scoped.remove()
+            except Exception:
+                pass
 
 
 def get_db_session():

@@ -48,11 +48,11 @@ class SchedulerCore:
         "plugin": MemoryJobStore(),
     }
 
-    # 默认执行器配置
-    DEFAULT_EXECUTORS = {"default": ThreadPoolExecutor(50)}
+    # 默认执行器配置（线程数与连接池匹配，防止线程过多耗尽连接）
+    DEFAULT_EXECUTORS = {"default": ThreadPoolExecutor(20)}
 
     # 默认任务默认配置
-    DEFAULT_JOB_DEFAULTS = {"coalesce": True, "max_instances": 100, "misfire_grace_time": 300}
+    DEFAULT_JOB_DEFAULTS = {"coalesce": True, "max_instances": 1, "misfire_grace_time": 300}
 
     # 最大重试次数
     MAX_RETRY_COUNT = 3

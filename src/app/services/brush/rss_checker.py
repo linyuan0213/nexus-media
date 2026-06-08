@@ -9,7 +9,8 @@ from app.db.repositories.subscribe_repo_adapter import SubscribeMovieRepositoryA
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.services.rss_processor import RssHelper
 from app.media.factory import get_media_service
-from app.sites import SiteConf, Sites
+from app.di import container
+from app.sites import SiteConf
 from app.utils import ExceptionUtils, JsonUtils
 
 
@@ -23,13 +24,13 @@ class BrushRssChecker:
         self,
         helper,
         rsshelper: RssHelper | None = None,
-        sites: Sites | None = None,
+        sites=None,
         siteconf: SiteConf | None = None,
         torrents_cache: set | None = None,
     ):
         self._helper = helper
         self._rsshelper = rsshelper or RssHelper()
-        self._sites = sites or Sites()
+        self._sites = sites or container.site_cache()
         self._siteconf = siteconf or SiteConf()
         self._torrents_cache = torrents_cache or set()
 
