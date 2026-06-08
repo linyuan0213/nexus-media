@@ -1,32 +1,37 @@
 # Nexus Media 后端 Dockerfile
 # 纯后端构建，前端由独立服务提供
 
-FROM python:3.11-alpine3.19 AS builder
+FROM python:3.14-slim-trixie AS builder
 
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # 编译依赖
-RUN apk add --no-cache \
-    gcc musl-dev libffi-dev libxml2-dev libxslt-dev openssl-dev postgresql-dev \
-    && rm -rf /var/cache/apk/*
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    gcc libffi-dev libxml2-dev libxslt1-dev libssl-dev libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+WORKDIR /nexus-media
 COPY pyproject.toml uv.lock ./
+COPY src ./src
 COPY third_party ./third_party
+COPY alembic ./alembic
+COPY alembic.ini run.py start-prod.sh start-dev.sh restart-server.sh stop-server.sh ./
 
 RUN uv venv .venv \
-    && uv sync --frozen --no-cache
+    && uv sync --frozen --no-cache --no-editable --no-install-project
 
 # ==================== 运行时 ====================
-FROM python:3.11-alpine3.19
+FROM python:3.14-slim-trixie
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-RUN apk add --no-cache \
-    nginx curl bash sudo su-exec shadow tzdata wget xz \
-    libxml2 libxslt libffi openssl postgresql-libs \
-    && rm -rf /var/cache/apk/* /tmp/*
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    nginx curl bash sudo tzdata wget xz-utils netcat-openbsd \
+    libxml2 libxslt1.1 libffi8 libssl3 libpq5 \
+    && rm -rf /var/lib/apt/lists/* /tmp/*
 
 ARG S6_OVERLAY_VERSION=3.2.3.0
 RUN S6_ARCH=$(case "$(uname -m)" in x86_64) echo "x86_64";; aarch64) echo "aarch64";; esac) \
@@ -53,15 +58,15 @@ ENV S6_SERVICES_GRACETIME=30000 \
     NEXUS_PORT=3000 \
     WORKDIR="/nexus-media"
 
-RUN addgroup -S nexus -g 911 \
-    && adduser -S nexus -G nexus -h ${HOME} -s /bin/bash -u 911 \
+RUN groupadd -r -g 911 nexus \
+    && useradd -r -g nexus -d ${HOME} -s /bin/bash -u 911 nexus \
     && mkdir -p ${WORKDIR} ${HOME} /config/logs \
     && echo "nexus ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 WORKDIR ${WORKDIR}
 
 COPY --chown=nexus:nexus . ${WORKDIR}/
-COPY --from=builder --chown=nexus:nexus /app/.venv ${WORKDIR}/.venv
+COPY --from=builder --chown=nexus:nexus /nexus-media/.venv ${WORKDIR}/.venv
 
 RUN chmod +x \
     ${WORKDIR}/start-prod.sh \
@@ -70,7 +75,7 @@ RUN chmod +x \
     ${WORKDIR}/stop-server.sh
 
 HEALTHCHECK --interval=30s --timeout=30s --retries=3 \
-    CMD wget -qO- http://localhost:80/health || exit 1
+    CMD wget -qO- http://localhost:8080/health || exit 1
 
 EXPOSE 3000
 VOLUME ["/config"]

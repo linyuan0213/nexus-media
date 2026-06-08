@@ -87,9 +87,9 @@ class AppConfig(BaseModel):
 class MediaConfig(BaseModel):
     """媒体库配置（路径字段已迁移到数据库 CONFIGMEDIA 表）"""
 
-    mediasync_interval: str = "8"
+    mediasync_interval: int = 8
     category: str = "default-category"
-    min_filesize: str = "150"
+    min_filesize: int = 150
     filesize_cover: bool = True
     movie_name_format: str = "{title} ({year})/{title}-{part} ({year}) - {videoFormat}"
     tv_name_format: str = "{title} ({year})/Season {season}/{title}-{part} - {season_episode} - 第{episode}集"
@@ -108,8 +108,8 @@ class PtConfig(BaseModel):
 
     search_auto: bool = False
     search_no_result_rss: bool = False
-    pt_check_interval: str = "3600"
-    search_rss_interval: str = "6"
+    pt_check_interval: int = 3600
+    search_rss_interval: int = 6
     download_order: str = "seeder"
     ptrefresh_date_cron: str = "22:36"
 
@@ -117,9 +117,9 @@ class PtConfig(BaseModel):
 class SubscribeConfig(BaseModel):
     """订阅监控调度配置（ADR-007 统一配置）"""
 
-    queue_interval: str = "300"
-    rss_interval: str = "1800"
-    search_interval: str = "6"
+    queue_interval: int = 300
+    rss_interval: int = 1800
+    search_interval: int = 6
 
 
 class SecurityConfig(BaseModel):

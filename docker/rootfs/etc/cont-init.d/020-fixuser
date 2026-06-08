@@ -10,7 +10,8 @@ function __fixuser {
     usermod -o -u "$PUID" nexus
 
     # 创建目录、权限设置
-    chown -R nexus:nexus "${WORKDIR}" "${HOME}" /config /etc/hosts
+    # WORKDIR 在构建时已用 --chown=nexus:nexus COPY，此处只处理运行时挂载卷和特殊文件
+    chown -R nexus:nexus "${HOME}" /config /etc/hosts 2>/dev/null || true
 
 }
 

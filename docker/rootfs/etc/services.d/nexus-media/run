@@ -3,10 +3,10 @@
 
 umask ${UMASK}
 
-cd ${WORKDIR}
+# 先执行 migration（子 shell 中切换目录，保持当前 CWD 给 s6-notifyoncheck）
+bash -c "cd ${WORKDIR} && .venv/bin/alembic upgrade head"
 
-.venv/bin/alembic upgrade head
-
+# s6-notifyoncheck 需要在服务目录执行才能读取 notification-fd
 exec \
     s6-notifyoncheck -d -n 300 -w 1000 -c "nc -z localhost ${NEXUS_PORT}" \
-    s6-setuidgid nexus sh ./start-prod.sh
+    s6-setuidgid nexus bash -c 'cd "${WORKDIR}" && exec sh ./start-prod.sh'

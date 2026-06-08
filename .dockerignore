@@ -29,14 +29,18 @@ tests/
 !README.md
 
 # Docker
-docker/
+docker/*
+!docker/rootfs/
 docker-compose*
 .dockerignore
 Dockerfile*
 
-# 数据（运行时挂载卷）
+# 数据（运行时挂载卷 / 用户数据）
 data/
-config/
+config/logs/
+config/plugins/
+config/plugins_data/
+config/temp/
 logs/
 *.db
 *.sqlite
