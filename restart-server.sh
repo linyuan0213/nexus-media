@@ -1,13 +1,16 @@
 #!/bin/sh
 # 优雅重启 Granian（SIGUSR1 信号）
 
-if [ -z "$NEXUS_MEDIA_CONFIG" ]; then
-    echo "错误：NEXUS_MEDIA_CONFIG 环境变量未设置"
-    exit 1
+pidfile="${1:-/config/logs/granian.pid}"
+
+if [ ! -f "$pidfile" ]; then
+    pidfile="./config/logs/granian.pid"
 fi
 
-pid_dir=$(dirname "$NEXUS_MEDIA_CONFIG")
-pidfile="${pid_dir}/granian.pid"
+if [ ! -f "$pidfile" ]; then
+    # 兼容旧路径
+    pidfile="/config/granian.pid"
+fi
 
 if [ ! -f "$pidfile" ]; then
     echo "未找到 PID 文件: $pidfile"

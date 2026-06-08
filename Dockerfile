@@ -55,7 +55,7 @@ ENV S6_SERVICES_GRACETIME=30000 \
 
 RUN addgroup -S nexus -g 911 \
     && adduser -S nexus -G nexus -h ${HOME} -s /bin/bash -u 911 \
-    && mkdir -p ${WORKDIR} ${HOME} \
+    && mkdir -p ${WORKDIR} ${HOME} /config/logs \
     && echo "nexus ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 WORKDIR ${WORKDIR}
@@ -70,7 +70,7 @@ RUN chmod +x \
     ${WORKDIR}/stop-server.sh
 
 HEALTHCHECK --interval=30s --timeout=30s --retries=3 \
-    CMD wget -qO- http://localhost:3000/health || exit 1
+    CMD wget -qO- http://localhost:80/health || exit 1
 
 EXPOSE 3000
 VOLUME ["/config"]
