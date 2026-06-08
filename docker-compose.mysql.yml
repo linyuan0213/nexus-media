@@ -25,7 +25,8 @@ services:
       - 3000:80
     volumes:
       - ./config:/config
-      - /你的媒体目录:/你想设置的容器内能见到的目录
+      # 替换为你的实际媒体目录，例如：
+      # - /mnt/media:/media
     environment:
       - PUID=0
       - PGID=0
