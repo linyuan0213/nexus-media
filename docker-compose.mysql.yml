@@ -10,7 +10,8 @@ services:
       - DB_USERNAME=nexus_media
       - DB_PASSWORD=nexus_media_password
       - DB_NAME=nexus_media
-    command: .venv/bin/alembic upgrade head
+    entrypoint: ["/nexus-media/.venv/bin/alembic"]
+    command: ["upgrade", "head"]
     restart: "no"
     container_name: nexus-media-migration
     networks:
@@ -32,6 +33,8 @@ services:
       - PGID=0
       - UMASK=000
       - NEXUS_PORT=3000
+      - SKIP_MIGRATION=true
+      - REDIS__HOST=nexus-media-redis
       # MySQL 数据库配置
       - DB_TYPE=mysql
       - DB_HOST=mysql
@@ -45,7 +48,7 @@ services:
     networks:
       - nexus-media-network
     healthcheck:
-      test: "wget -qO- http://localhost/health || exit 1"
+      test: "wget -qO- http://localhost:8080/health || exit 1"
       interval: 30s
       timeout: 30s
       retries: 3

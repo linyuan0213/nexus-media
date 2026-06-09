@@ -141,10 +141,6 @@ KEYWORD_BLACKLIST = [
     "德意",
 ]
 
-# redis 配置
-REDIS_HOST = "127.0.0.1"
-REDIS_PORT = "6379"
-
 # M-Team base url
 MT_URL = "https://api.m-team.io"
 

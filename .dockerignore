@@ -40,6 +40,7 @@ data/
 config/logs/
 config/plugins/
 config/plugins_data/
+config/redis_data/
 config/temp/
 logs/
 *.db

@@ -7,7 +7,10 @@ from redis import StrictRedis
 from redis.exceptions import RedisError
 
 import log
-from app.core.constants import REDIS_HOST, REDIS_PORT
+from app.core.settings import settings
+
+
+redis_cfg = settings.redis
 
 
 class RedisStore:
@@ -27,7 +30,12 @@ class RedisStore:
         if self._client is None:
             try:
                 self._client = StrictRedis(
-                    host=REDIS_HOST, port=int(REDIS_PORT), db=0, socket_connect_timeout=5, socket_timeout=10
+                    host=redis_cfg.host,
+                    port=redis_cfg.port,
+                    password=redis_cfg.password or None,
+                    db=redis_cfg.db,
+                    socket_connect_timeout=5,
+                    socket_timeout=10,
                 )
                 self._client.ping()
                 self._available = True

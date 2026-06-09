@@ -33,6 +33,10 @@ htmlcov/
 /config/site_manage/*.dat
 /config/*.db
 /config/*.db-journal
+/config/*.db-shm
+/config/*.db-wal
+/config/redis_data/
+/config/temp/*.torrent
 /config/plugins/
 /tests/*.db
 

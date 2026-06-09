@@ -170,6 +170,15 @@ class DatabaseConfig(BaseModel):
     database: str = "nas_tools"
 
 
+class RedisConfig(BaseModel):
+    """Redis 缓存配置"""
+
+    host: str = "127.0.0.1"
+    port: int = 6379
+    password: str = ""
+    db: int = 0
+
+
 class LogConfig(BaseModel):
     """日志配置"""
 
@@ -248,6 +257,7 @@ class AppSettings(BaseSettings):
     laboratory: LaboratoryConfig = Field(default_factory=LaboratoryConfig)
     agent: AgentConfig = Field(default_factory=AgentConfig, validate_default=True)
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    redis: RedisConfig = Field(default_factory=RedisConfig)
 
     @field_validator("agent", mode="before")
     @classmethod

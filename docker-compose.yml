@@ -14,7 +14,8 @@ services:
     image: linyuan0213/nexus-media:latest
     volumes:
       - ./config:/config
-    command: .venv/bin/alembic upgrade head
+    entrypoint: ["/nexus-media/.venv/bin/alembic"]
+    command: ["upgrade", "head"]
     restart: "no"
     container_name: nexus-media-migration
     networks:
@@ -33,6 +34,7 @@ services:
       - PGID=0
       - UMASK=000
       - SKIP_MIGRATION=true
+      - REDIS__HOST=nexus-media-redis
     restart: always
     hostname: nexus-media
     container_name: nexus-media
