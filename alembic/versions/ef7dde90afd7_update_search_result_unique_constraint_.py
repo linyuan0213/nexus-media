@@ -6,6 +6,7 @@ Create Date: 2026-05-31 12:58:00.000000
 
 """
 
+import sqlalchemy as sa
 from alembic import op
 
 revision = "ef7dde90afd7"
@@ -15,17 +16,17 @@ depends_on = None
 
 
 def upgrade():
-    # 创建唯一索引 (PAGEURL(191), SITE, SEARCH_SESSION_ID)
-    # 使用前缀索引避免超过 MySQL InnoDB utf8mb4 的 3072 字节限制：
-    # PAGEURL(191*4=764) + SITE(255*4=1020) + SEARCH_SESSION_ID(64*4=256) = 2040 bytes
-    op.create_index(
-        "uq_search_pageurl_site_session",
-        "SEARCH_RESULT_INFO",
-        ["PAGEURL", "SITE", "SEARCH_SESSION_ID"],
-        unique=True,
-        mysql_length={"PAGEURL": 191},
+    # 创建唯一索引 (PAGEURL, SITE, SEARCH_SESSION_ID)
+    # SQLite 使用 IF NOT EXISTS 避免与模型 create_all 重复创建冲突
+    conn = op.get_bind()
+    conn.execute(
+        sa.text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_search_pageurl_site_session "
+            "ON SEARCH_RESULT_INFO (PAGEURL, SITE, SEARCH_SESSION_ID)"
+        )
     )
 
 
 def downgrade():
-    op.drop_index("uq_search_pageurl_site_session", table_name="SEARCH_RESULT_INFO")
+    conn = op.get_bind()
+    conn.execute(sa.text("DROP INDEX IF EXISTS uq_search_pageurl_site_session"))

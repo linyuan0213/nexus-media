@@ -2,7 +2,7 @@ services:
   frontend:
     image: linyuan0213/nexus-media-web:latest
     ports:
-      - 3000:8080
+      - 8080:8080
     restart: always
     container_name: nexus-media-web
     networks:
@@ -23,7 +23,7 @@ services:
   backend:
     image: linyuan0213/nexus-media:latest
     ports:
-      - 3001:8080
+      - 3000:8080
     volumes:
       - ./config:/config
       # 替换为你的实际媒体目录，例如：
@@ -32,14 +32,14 @@ services:
       - PUID=0
       - PGID=0
       - UMASK=000
-      - NEXUS_PORT=3000
+      - SKIP_MIGRATION=true
     restart: always
     hostname: nexus-media
     container_name: nexus-media
     networks:
       - nexus-media-network
     healthcheck:
-      test: "wget -qO- http://localhost:3000/health || exit 1"
+      test: "wget -qO- http://localhost:8080/health || exit 1"
       interval: 30s
       timeout: 30s
       retries: 3

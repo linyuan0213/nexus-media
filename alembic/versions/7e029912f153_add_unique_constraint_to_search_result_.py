@@ -24,21 +24,30 @@ def upgrade() -> None:
         batch_op.alter_column("PAGEURL", type_=sa.String(512), existing_type=sa.Text)
 
     # 2. Deduplicate: keep the row with lowest ID for each (PAGEURL, SITE) pair
+    # SQLite compatible syntax (MySQL uses DELETE t1 FROM... which SQLite doesn't support)
     conn.execute(
         sa.text("""
-        DELETE t1 FROM SEARCH_RESULT_INFO t1
-        INNER JOIN SEARCH_RESULT_INFO t2
-        ON t1.PAGEURL = t2.PAGEURL AND t1.SITE = t2.SITE
-        WHERE t1.ID > t2.ID
+        DELETE FROM SEARCH_RESULT_INFO
+        WHERE rowid IN (
+            SELECT t1.rowid FROM SEARCH_RESULT_INFO t1
+            INNER JOIN SEARCH_RESULT_INFO t2
+            ON t1.PAGEURL = t2.PAGEURL AND t1.SITE = t2.SITE
+            WHERE t1.ID > t2.ID
+        )
     """)
     )
 
-    # 3. Add unique constraint
-    with op.batch_alter_table("SEARCH_RESULT_INFO", schema=None) as batch_op:
-        batch_op.create_unique_constraint("uq_search_pageurl_site", ["PAGEURL", "SITE"])
+    # 3. Add unique index (SQLite does not support ALTER/ADD CONSTRAINT via batch)
+    conn.execute(
+        sa.text("""
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_search_pageurl_site
+        ON SEARCH_RESULT_INFO (PAGEURL, SITE)
+    """)
+    )
 
 
 def downgrade() -> None:
+    conn = op.get_bind()
+    conn.execute(sa.text("DROP INDEX IF EXISTS uq_search_pageurl_site"))
     with op.batch_alter_table("SEARCH_RESULT_INFO", schema=None) as batch_op:
-        batch_op.drop_constraint("uq_search_pageurl_site", type_="unique")
         batch_op.alter_column("PAGEURL", type_=sa.Text, existing_type=sa.String(512))

@@ -20,6 +20,8 @@ def _column_exists(table_name: str, column_name: str) -> bool:
     """检查列是否存在（兼容 SQLite / MySQL / PostgreSQL）"""
     bind = op.get_bind()
     inspector = inspect(bind)
+    if not inspector.has_table(table_name):
+        return False
     columns = [c["name"] for c in inspector.get_columns(table_name)]
     return column_name in columns
 

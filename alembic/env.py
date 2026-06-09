@@ -1,6 +1,8 @@
 from logging.config import fileConfig
 
+import sqlalchemy as sa
 from alembic import context
+from alembic.script import ScriptDirectory
 from app.db.database_factory import DatabaseFactory
 from app.db.models import Base
 
@@ -85,6 +87,22 @@ def run_migrations_online() -> None:
             compare_type=False,  # 不比较列类型，避免历史遗留类型差异产生垃圾迁移
             compare_server_default=False,  # 不比较默认值
         )
+
+        # 检查是否为新数据库（无 alembic_version 表）
+        # 新库直接通过模型创建最新 schema，跳过历史迁移，避免旧迁移与当前模型冲突
+        inspector = sa.inspect(connection)
+        is_fresh_db = not inspector.has_table("alembic_version")
+        if is_fresh_db:
+            target_metadata.create_all(connection)
+            # Stamp 当前 revision 为最新，避免下次再跑迁移
+            script = ScriptDirectory.from_config(config)
+            head_rev = script.get_current_head()
+            connection.execute(
+                sa.text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL, PRIMARY KEY (version_num))")
+            )
+            connection.execute(sa.text("INSERT INTO alembic_version (version_num) VALUES (:rev)"), {"rev": head_rev})
+            connection.commit()
+            return
 
         with context.begin_transaction():
             context.run_migrations()

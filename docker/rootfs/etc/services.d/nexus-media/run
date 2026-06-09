@@ -3,8 +3,10 @@
 
 umask ${UMASK}
 
-# 先执行 migration（子 shell 中切换目录，保持当前 CWD 给 s6-notifyoncheck）
-bash -c "cd ${WORKDIR} && .venv/bin/alembic upgrade head"
+# 先执行 migration（单独运行容器时生效；compose 中由 migration 服务负责，backend 设 SKIP_MIGRATION=true 跳过）
+if [ "${SKIP_MIGRATION:-false}" != "true" ]; then
+    bash -c "cd ${WORKDIR} && .venv/bin/alembic upgrade head"
+fi
 
 # s6-notifyoncheck 需要在服务目录执行才能读取 notification-fd
 exec \

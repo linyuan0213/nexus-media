@@ -21,6 +21,8 @@ def has_column(table_name, column_name):
     """检查表是否已存在指定列"""
     conn = op.get_bind()
     inspector = sa.inspect(conn)
+    if not inspector.has_table(table_name):
+        return False
     columns = [col["name"] for col in inspector.get_columns(table_name)]
     return column_name in columns
 
