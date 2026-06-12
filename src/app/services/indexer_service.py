@@ -10,9 +10,10 @@ IndexerService - 索引器业务服务层
 
 from typing import Any
 
-from app.domain.interfaces.download_repo import IIndexerStatisticsRepository
+from app.db.repositories.download_repo_adapter import IndexerStatisticsRepositoryAdapter
 from app.indexer import Indexer
 from app.indexer.client import BuiltinIndexer
+from app.indexer.configuration import IndexerHelper
 from app.schemas.download import IndexerStatisticsDTO
 from app.schemas.indexer import (
     IndexerClientInfoDTO,
@@ -20,8 +21,8 @@ from app.schemas.indexer import (
     IndexerResourcesResultDTO,
     UserIndexerDTO,
 )
-from app.utils import StringUtils
-from app.di import container
+from app.sites.engine import SiteEngine
+from app.sites.site_cache import SiteCache
 
 
 class IndexerService:
@@ -32,17 +33,23 @@ class IndexerService:
 
     def __init__(
         self,
-        indexer: Indexer | None = None,
-        string_utils=None,
-        indexer_statistics_repo: IIndexerStatisticsRepository | None = None,
+        indexer: Indexer,
+        indexer_helper: IndexerHelper,
+        site_cache: SiteCache,
+        site_engine: SiteEngine,
+        indexer_statistics_repo: IndexerStatisticsRepositoryAdapter,
+        string_utils: Any,
     ):
-        self._indexer = indexer or container.indexer()
-        self._string_utils = string_utils or StringUtils
-        # 如果没有注入Repository，使用适配器创建默认实例
-        if indexer_statistics_repo is None:
-            self._indexer_statistics_repo = container.indexer_statistics_repo()
-        else:
-            self._indexer_statistics_repo = indexer_statistics_repo
+        self._indexer = indexer
+        self._indexer_helper = indexer_helper
+        self._site_cache = site_cache
+        self._site_engine = site_engine
+        self._string_utils = string_utils
+        self._indexer_statistics_repo = indexer_statistics_repo
+
+    @property
+    def indexer(self) -> Indexer:
+        return self._indexer
 
     # ------------------------------------------------------------------
     # 站点管理
@@ -74,14 +81,17 @@ class IndexerService:
     # 内置索引器（兼容旧调用）
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def get_builtin_indexers(check: bool = True, indexer_id: str | None = None) -> Any:
+    def get_builtin_indexers(self, check: bool = True, indexer_id: str | None = None) -> Any:
         """
         获取内置索引器的索引站点
         :param check: 是否过滤用户选中
         :param indexer_id: 指定站点ID
         """
-        return BuiltinIndexer().get_indexers(check=check, indexer_id=indexer_id)
+        return BuiltinIndexer(
+            indexer_helper=self._indexer_helper,
+            site_cache=self._site_cache,
+            site_engine=self._site_engine,
+        ).get_indexers(check=check, indexer_id=indexer_id)
 
     # ------------------------------------------------------------------
     # 资源列表

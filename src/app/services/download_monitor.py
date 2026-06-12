@@ -5,9 +5,8 @@ from concurrent.futures import as_completed
 
 import log
 from app.core.constants import PT_TAG
-from app.di import container
 from app.downloader.client_factory import DownloadClientFactory
-from app.events import Event
+from app.events import Event, EventBus
 from app.events.constants import DOWNLOAD_COMPLETED
 from app.infrastructure.thread import ThreadExecutor
 
@@ -17,18 +16,21 @@ class DownloadMonitor:
 
     高频轮询（默认 30 秒）下载器状态，检测新完成的任务并发布 download.completed 事件，
     驱动 FileTransferService 实时转移。配合低频 pttransfer（30 分钟）兜底。
+
+    由 lifespan 创建并注册到 registry，lifespan 中统一关闭。
     """
 
     def __init__(
         self,
-        client_factory: DownloadClientFactory | None = None,
+        client_factory: DownloadClientFactory,
+        event_bus: EventBus,
         interval: int = 30,
         max_workers: int = 4,
     ):
-        self._client_factory = client_factory or container.download_client_factory()
+        self._client_factory = client_factory
         self._interval = interval
         self._max_workers = max_workers
-        self._event_bus = container.event_bus()
+        self._event_bus = event_bus
         self._processed_ids: set[str] = set()
         self._executor: ThreadExecutor | None = None
         self._running = False

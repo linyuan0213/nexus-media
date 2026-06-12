@@ -12,14 +12,13 @@ from app.domain.entities.download import (
     IndexerStatisticsEntity,
 )
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
-from app.di import container
 
 
 class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
     """下载历史仓储适配器"""
 
     def __init__(self, repo: DownloadRepository | None = None):
-        self._repo = repo or container.download_repo()
+        self._repo = repo or DownloadRepository()
 
     def is_exists(self, enclosure: str, downloader: str, download_id: str) -> bool:
         return self._repo.is_exists_download_history(enclosure, downloader, download_id)
@@ -102,7 +101,7 @@ class DownloadSettingRepositoryAdapter:
     """下载设置仓储适配器"""
 
     def __init__(self, repo: DownloadRepository | None = None):
-        self._repo = repo or container.download_repo()
+        self._repo = repo or DownloadRepository()
 
     def delete(self, sid: int) -> None:
         self._repo.delete_download_setting(sid)
@@ -177,7 +176,7 @@ class IndexerStatisticsRepositoryAdapter:
     """索引器统计仓储适配器"""
 
     def __init__(self, repo: DownloadRepository | None = None):
-        self._repo = repo or container.download_repo()
+        self._repo = repo or DownloadRepository()
 
     def insert(self, indexer: str, itype: str, seconds: float, result: str) -> None:
         self._repo.insert_indexer_statistics(indexer, itype, int(seconds), result)

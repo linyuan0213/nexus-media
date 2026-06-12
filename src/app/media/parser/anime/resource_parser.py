@@ -4,8 +4,8 @@
 
 import re
 
+from app.media.parser._customization import CustomizationMatcher
 from app.media.parser._release_groups import ReleaseGroupsMatcher
-from app.di import container
 
 
 def parse_resource_pix(info, anitopy_info):
@@ -29,9 +29,10 @@ def parse_team(info, original_title, anitopy_info_origin):
     )
 
 
-def parse_customization(info, original_title):
+def parse_customization(info, original_title, customization_matcher: CustomizationMatcher | None = None):
     """解析自定义占位符"""
-    info.customization = container.customization_matcher().match(title=original_title) or None
+    matcher = customization_matcher or CustomizationMatcher()
+    info.customization = matcher.match(title=original_title) or None
 
 
 def parse_encode(info, anitopy_info):

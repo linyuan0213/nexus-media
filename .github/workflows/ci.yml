@@ -60,8 +60,8 @@ jobs:
         run: uv sync --dev
       - name: Prepare config
         run: |
-          mkdir -p config
-          cat > config/config.yaml <<'EOF'
+          mkdir -p data
+          cat > data/config.yaml <<'EOF'
           app:
             web_host: '0.0.0.0'
             web_port: 3000

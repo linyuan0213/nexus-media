@@ -17,7 +17,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import log
-from app.sites.engine import SiteDefinition, SiteEngine
+from app.sites.engine import SiteDefinition
 from app.sites import engine_tools
 from app.sites.searchers import _TRANSFORMS
 from app.infrastructure.http.client import HttpClient
@@ -31,10 +31,10 @@ class ApiSiteSearcher:
     API 站点搜索器
     """
 
-    def __init__(self, site_def: SiteDefinition, user_config: dict | None = None):
+    def __init__(self, site_def: SiteDefinition, site_engine, user_config: dict | None = None):
         self._site = site_def
         self._user_config = user_config or {}
-        self._engine = SiteEngine.get_instance()
+        self._engine = site_engine
         self._auth_tokens: dict[str, str] = {}
         self._resolve_auth_tokens()
 

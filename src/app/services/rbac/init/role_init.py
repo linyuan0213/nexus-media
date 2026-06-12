@@ -1,16 +1,22 @@
 """RBAC 角色初始化."""
 
 import log
-from app.di import container
 
 from app.services.rbac.init.constants import DEFAULT_ROLES
+from app.db.repositories.rbac_repo_adapter import RBACPermissionRepositoryAdapter
+from app.db.repositories.rbac_repo_adapter import RBACMenuRepositoryAdapter
+from app.db.repositories.rbac_repo_adapter import RBACRoleRepositoryAdapter
 
 
-def init_rbac_roles():
+def init_rbac_roles(
+    role_repo=None,
+    permission_repo=None,
+    menu_repo=None,
+):
     """初始化角色数据"""
-    role_repo = container.rbac_role_repo()
-    permission_repo = container.rbac_permission_repo()
-    menu_repo = container.rbac_menu_repo()
+    role_repo = role_repo or RBACRoleRepositoryAdapter()
+    permission_repo = permission_repo or RBACPermissionRepositoryAdapter()
+    menu_repo = menu_repo or RBACMenuRepositoryAdapter()
     created_count = 0
 
     for role_data in DEFAULT_ROLES:

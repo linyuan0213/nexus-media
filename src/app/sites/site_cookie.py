@@ -1,19 +1,27 @@
 import base64
 
-from app.infrastructure.ocr import OcrRecognizer
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
+from app.infrastructure.ocr import OcrRecognizer
 from app.sites import engine_tools
 from app.sites.engine import SiteEngine
+from app.sites.site_cache import SiteCache
 from app.utils import StringUtils
-from app.di import container
 
 
 class SiteCookie:
-    def __init__(self, progress=None, sites=None, siteconf=None, ocrhelper=None):
-        self.progress = progress or container.progress_helper()
-        self.sites = sites or container.site_cache()
-        self.siteconf = siteconf or container.site_conf()
+    def __init__(
+        self,
+        sites: SiteCache,
+        site_engine: SiteEngine,
+        progress=None,
+        siteconf=None,
+        ocrhelper: OcrRecognizer | None = None,
+    ):
+        self.progress = progress
+        self._site_engine = site_engine
+        self.sites = sites
+        self.siteconf = siteconf
         self.ocrhelper = ocrhelper or OcrRecognizer()
         self.captcha_code = {}
 
@@ -49,14 +57,13 @@ class SiteCookie:
             imageurl = imageurl[1:]
         return f"{StringUtils.get_base_url(siteurl)}/{imageurl}"
 
-    @staticmethod
-    def get_captcha_base64(chrome, image_url):
+    def get_captcha_base64(self, chrome, image_url):
         """
         根据图片地址，使用浏览器获取验证码图片base64编码
         """
         if not image_url:
             return ""
-        engine = SiteEngine.get_instance()
+        engine = self._site_engine
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         site_def = engine.get_by_url(image_url)

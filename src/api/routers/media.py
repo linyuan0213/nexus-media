@@ -126,7 +126,7 @@ class TvCalendarRequest(BaseModel):
 
 
 class GetCategoryConfigRequest(BaseModel):
-    category_name: str
+    pass
 
 
 class GetDownloadedRequest(BaseModel):
@@ -160,7 +160,7 @@ class SearchMediaInfosRequest(BaseModel):
 
 
 class UpdateCategoryConfigRequest(BaseModel):
-    config: str | None = None
+    config: list | None = None
 
 
 class DirListRequest(BaseModel):
@@ -377,9 +377,9 @@ def get_category_config(
     svc: MediaFileService = Depends(get_media_file_service),
 ):
     try:
-        result = svc.get_category_config(category_name=req.category_name)
+        result = svc.get_category_config()
         return success(data=result)
-    except (ValidationError, ResourceNotFoundError, ServiceError, DomainError) as e:
+    except (ResourceNotFoundError, ServiceError, DomainError) as e:
         return fail(msg=e.message)
 
 
@@ -632,7 +632,7 @@ def update_category_config(
     current_user=Depends(require_permission("library:manage")),
     svc: MediaFileService = Depends(get_media_file_service),
 ):
-    msg = svc.update_category_config(text=req.config or "")
+    msg = svc.update_category_config(items=req.config or [])
     return success(msg=msg)
 
 

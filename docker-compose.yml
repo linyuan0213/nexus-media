@@ -56,7 +56,7 @@ services:
     image: redis:7-alpine
     container_name: nexus-media-redis
     volumes:
-      - ./config/redis_data:/data
+      - ./data/redis_data:/data
       - ./config/redis.conf:/usr/local/etc/redis/redis.conf
     command: redis-server /usr/local/etc/redis/redis.conf
     restart: always

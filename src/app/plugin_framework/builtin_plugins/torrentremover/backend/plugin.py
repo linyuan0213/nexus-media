@@ -8,15 +8,15 @@ import os
 import json
 
 from app.plugin_framework.context import PluginContext
-from app.di import container
+from app.services.downloader_core import DownloaderCore
 
 
 class TorrentRemoverPlugin:
     """下载任务联动删除插件"""
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(self, ctx: PluginContext, downloader: DownloaderCore):
         self.ctx = ctx
-        self._downloader = container.downloader_core()
+        self._downloader = downloader
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -41,7 +41,7 @@ class TorrentRemoverPlugin:
         media_title = event_info.get("media_info", {}).get("title")
         source_file = os.path.join(source_path, source_filename)
 
-        downloadinfos = container.downloader_core().get_download_history_by_title(title=media_title)
+        downloadinfos = self._downloader.get_download_history_by_title(title=media_title)
         for info in downloadinfos:
             if not info.DOWNLOADER or not info.DOWNLOAD_ID:
                 continue

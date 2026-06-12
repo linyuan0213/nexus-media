@@ -7,7 +7,7 @@ class _IMessageClient(metaclass=ABCMeta):
     schema: str | None = None
     config_schema: MessageConfigSchema | None = None
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, apikey_service=None):
         self._config = config
         self.read_config()
 

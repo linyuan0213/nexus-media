@@ -1,6 +1,7 @@
 import log
 from app.infrastructure.image_proxy import ImageProxy
 from app.media.lookup.base import BaseLookup, LookupResult
+from app.media.lookup.tmdb_client import TmdbClient
 from app.media.lookup.tmdb_detail import TmdbDetail
 from app.media.lookup.tmdb_discover import TmdbDiscover
 from app.media.lookup.tmdb_person import TmdbPerson
@@ -9,14 +10,13 @@ from app.media.lookup.tmdb_season import TmdbSeason
 from app.utils import StringUtils
 from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
-from app.di import container
 
 
 class TmdbLookup(BaseLookup):
     """TMDB 查询器 — 组合所有子模块"""
 
     def __init__(self):
-        self.client = container.tmdb_client()
+        self.client = TmdbClient()
         self.search = TmdbSearch(self.client)
         self.detail = TmdbDetail(self.client)
         self.season = TmdbSeason(self.client)

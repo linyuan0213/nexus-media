@@ -7,9 +7,8 @@ import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.db.repositories.subscribe_repo_adapter import SubscribeMovieRepositoryAdapter, SubscribeTvRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
+from app.media import MediaService
 from app.services.rss_processor import RssHelper
-from app.media.factory import get_media_service
-from app.di import container
 from app.sites import SiteConf
 from app.utils import ExceptionUtils, JsonUtils
 
@@ -23,15 +22,17 @@ class BrushRssChecker:
     def __init__(
         self,
         helper,
-        rsshelper: RssHelper | None = None,
-        sites=None,
-        siteconf: SiteConf | None = None,
+        media_service: MediaService,
+        sites,
+        rsshelper: RssHelper,
+        siteconf: SiteConf,
         torrents_cache: set | None = None,
     ):
         self._helper = helper
-        self._rsshelper = rsshelper or RssHelper()
-        self._sites = sites or container.site_cache()
-        self._siteconf = siteconf or SiteConf()
+        self._media_service = media_service
+        self._rsshelper = rsshelper
+        self._sites = sites
+        self._siteconf = siteconf
         self._torrents_cache = torrents_cache or set()
 
     @staticmethod
@@ -161,7 +162,7 @@ class BrushRssChecker:
                 for t in SubscribeTvRepositoryAdapter().get_all(state="R")
             }
 
-        media_service = get_media_service()
+        media_service = self._media_service
 
         for res in rss_result:
             try:

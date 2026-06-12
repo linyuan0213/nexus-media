@@ -5,13 +5,12 @@ from collections import defaultdict
 from collections.abc import Callable
 from typing import Any
 
-from app.di import container
 from app.events.bus import EventBus
 
 _pending_handlers: dict[str, list[Callable[[Any], None]]] = defaultdict(list)
 
 
-def on_event(event_type: str) -> Callable:
+def on_event(event_type: str, event_bus: EventBus | None = None) -> Callable:
     """将函数注册为指定事件类型的处理器.
 
     定义时直接注册到 EventBus；若 EventBus 尚未就绪则暂存到 pending，
@@ -19,9 +18,9 @@ def on_event(event_type: str) -> Callable:
     """
 
     def decorator(func: Callable[[Any], None]) -> Callable[[Any], None]:
-        try:
-            container.event_bus().subscribe(event_type, func)
-        except Exception:
+        if event_bus is not None:
+            event_bus.subscribe(event_type, func)
+        else:
             _pending_handlers[event_type].append(func)
         return func
 

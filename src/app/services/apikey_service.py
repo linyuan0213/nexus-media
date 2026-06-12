@@ -12,26 +12,14 @@ from typing import Any
 import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.utils import ExceptionUtils
-from app.di import container
 
 
 class APIKeyService:
     """API Key 管理服务"""
 
-    _instance = None
-
-    def __new__(cls, *_args, **_kwargs):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
-
-    def __init__(self):
-        if self._initialized:
-            return
-        self._key_repo = container.apikey_repo()
-        self._log_repo = container.apikey_log_repo()
-        self._initialized = True
+    def __init__(self, key_repo: Any, log_repo: Any):
+        self._key_repo = key_repo
+        self._log_repo = log_repo
 
     @staticmethod
     def _generate_raw_key() -> str:

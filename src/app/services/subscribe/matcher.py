@@ -2,10 +2,12 @@
 
 import re
 
-from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
-from app.di import container
 from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.domain.mediatypes import MediaType
+from app.db.repositories.config_repo_adapter import FilterRuleRepositoryAdapter
+from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter
+from app.sites.site_cache import SiteCache
+from app.sites.siteconf import SiteConf
 
 
 class SubscribeMatcher:
@@ -17,8 +19,10 @@ class SubscribeMatcher:
     3. 匹配成功后应用过滤规则（质量/分辨率/制作组/包含排除等）
     """
 
-    def __init__(self, filter_engine=None):
+    def __init__(self, site_conf: SiteConf | None = None, filter_engine=None, site_cache: SiteCache | None = None):
         self._filter = filter_engine or IndexerFilterEngine()
+        self._site_cache = site_cache or SiteCache()
+        self._site_conf = site_conf or SiteConf(site_engine=None)
 
     def match(
         self,
@@ -125,13 +129,11 @@ class SubscribeMatcher:
 
         # 站点 Free 检测
         if site_parse:
-            sites = container.site_cache()
-            siteconf = container.site_conf()
-            if sites.check_ratelimit(site_id):
+            if self._site_cache.check_ratelimit(site_id):
                 match_msg.append("触发站点流控")
                 return False, match_msg, match_rss_info
 
-            torrent_attr = siteconf.check_torrent_attr(
+            torrent_attr = self._site_conf.check_torrent_attr(
                 torrent_url=media_info.page_url, cookie=site_cookie, ua=site_ua, headers=site_headers, proxy=site_proxy
             )
             if torrent_attr.get("2xfree"):

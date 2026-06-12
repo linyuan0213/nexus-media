@@ -138,3 +138,26 @@ class CONFIGMEDIA(Base):
     ANIME_BACKEND: Mapped[str | None] = mapped_column(Text, nullable=True)
     UNKNOWN_BACKEND: Mapped[str | None] = mapped_column(Text, nullable=True)
     NOTE: Mapped[str] = mapped_column(Text)
+
+
+class CONFIGCATEGORY(Base):
+    """二级分类配置表"""
+
+    __tablename__ = "CONFIG_CATEGORY"
+
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    MEDIA_TYPE: Mapped[str] = mapped_column(String(50), index=True)
+    NAME: Mapped[str] = mapped_column(String(255))
+    SORT_ORDER: Mapped[int] = mapped_column(Integer, default=0)
+    IS_DEFAULT: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class CONFIGCATEGORYRULE(Base):
+    """二级分类规则表"""
+
+    __tablename__ = "CONFIG_CATEGORY_RULE"
+
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    CATEGORY_ID: Mapped[int] = mapped_column(Integer, index=True)
+    FIELD: Mapped[str] = mapped_column(String(100))
+    VALUE: Mapped[str] = mapped_column(Text)

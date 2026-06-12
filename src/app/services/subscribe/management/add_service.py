@@ -8,7 +8,7 @@ from app.media import meta_info
 from app.services.subscribe.management.utils import gen_rss_note
 from app.domain.mediatypes import MediaType
 from app.domain.enums import SubscribeType, SystemConfigKey
-from app.services.web import WebUtils
+from app.services.web.utils import get_mediainfo_from_id
 
 
 class SubscribeAddService:
@@ -127,7 +127,7 @@ class SubscribeAddService:
 
         if not fuzzy_match:
             if mediaid:
-                media_info = WebUtils.get_mediainfo_from_id(mtype=mtype, mediaid=mediaid)
+                media_info = get_mediainfo_from_id(mtype=mtype, mediaid=mediaid)
                 if not season and media_info:
                     season = media_info.begin_season
             else:

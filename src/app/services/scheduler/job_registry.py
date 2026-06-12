@@ -166,7 +166,6 @@ class JobRegistry:
             是否成功
         """
         if not self._core._scheduler:
-            log.warn("remove_all_jobs: 调度器未启动")
             return False
 
         try:

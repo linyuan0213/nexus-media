@@ -2,16 +2,12 @@
 
 import json
 
-from app.di import container
 from app.events import Event
 from app.events.constants import MESSAGE_INCOMING
 from app.infrastructure.cache_system import TokenCache
 from app.message import Message
 from app.message.commands import COMMANDS
 from app.schemas.system import SendMessageResultDTO
-from app.services.sync_service import SyncService
-from app.services.system.lifecycle import SystemLifecycleService
-from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
 from app.domain.enums import SearchType
 
 
@@ -22,7 +18,7 @@ class MessageClientService:
     """
 
     def __init__(self, message: Message | None = None):
-        self._message = message or container.message()
+        self._message = message or Message()
 
     def delete_client(self, cid: int) -> bool:
         """删除消息客户端"""
@@ -83,7 +79,7 @@ class MessageSenderService:
     """
 
     def __init__(self, message: Message | None = None):
-        self._message = message or container.message()
+        self._message = message or Message()
 
     def send_custom_message(self, clients: list, title: str, text: str, image: str = "") -> SendMessageResultDTO:
         if not clients:
@@ -109,13 +105,27 @@ class MessageCommandHandler:
         sync_svc=None,
         filetransfer=None,
         event_bus=None,
+        thread_executor=None,
+        message=None,
+        subscription_monitor=None,
+        rss_helper=None,
+        subscribe_service=None,
+        site_userinfo=None,
+        sync_service=None,
     ):
         self._search_handler = search_handler
         self._torrent_remover = torrent_remover
         self._downloader = downloader
         self._sync_svc = sync_svc
         self._filetransfer = filetransfer
-        self._event_bus = event_bus or container.event_bus()
+        self._event_bus = event_bus
+        self._thread_executor = thread_executor
+        self._message = message
+        self._subscription_monitor = subscription_monitor
+        self._rss_helper = rss_helper
+        self._subscribe_service = subscribe_service
+        self._site_userinfo = site_userinfo
+        self._sync_service = sync_service
         self._commands = None
 
     @property
@@ -123,20 +133,25 @@ class MessageCommandHandler:
         if self._commands is None:
             self._commands = {
                 "/ptr": {
-                    "func": (self._torrent_remover or TorrentRemover()).auto_remove_torrents,
+                    "func": (self._torrent_remover.auto_remove_torrents if self._torrent_remover else lambda: None),
                     "desc": COMMANDS["/ptr"],
                 },
-                "/ptt": {"func": (self._downloader or container.downloader_core()).transfer, "desc": COMMANDS["/ptt"]},
-                "/rst": {"func": (self._sync_svc or container.sync_service()).transfer_sync, "desc": COMMANDS["/rst"]},
-                "/sub": {"func": container.subscription_monitor().run, "desc": COMMANDS.get("/sub", "订阅监控")},
-                "/tbl": {
-                    "func": (self._filetransfer or container.filetransfer_service()).truncate_transfer_blacklist,
-                    "desc": COMMANDS["/tbl"],
+                "/ptt": {
+                    "func": self._downloader.transfer if self._downloader else lambda: None,
+                    "desc": COMMANDS["/ptt"],
                 },
-                "/trh": {"func": self._truncate_rsshistory, "desc": COMMANDS["/trh"]},
-                "/utf": {"func": self._unidentification, "desc": COMMANDS["/utf"]},
-                "/udt": {"func": SystemLifecycleService.restart_server, "desc": COMMANDS["/udt"]},
-                "/sta": {"func": self._user_statistics, "desc": COMMANDS["/sta"]},
+                "/rst": {
+                    "func": self._sync_svc.transfer_sync if self._sync_svc else lambda: None,
+                    "desc": COMMANDS["/rst"],
+                },
+                "/sub": {
+                    "func": self._subscription_monitor.run if self._subscription_monitor else lambda: None,
+                    "desc": COMMANDS.get("/sub", "订阅监控"),
+                },
+                "/tbl": {
+                    "func": self._filetransfer.truncate_transfer_blacklist if self._filetransfer else lambda: None,
+                    "desc": COMMANDS.get("/tbl", "清理转移黑名单"),
+                },
             }
         return self._commands
 
@@ -145,61 +160,67 @@ class MessageCommandHandler:
         if not msg:
             return
 
-        self._event_bus.publish(
-            Event(
-                event_type=MESSAGE_INCOMING,
-                payload={"channel": in_from.value, "user_id": user_id, "user_name": user_name, "message": msg},
+        if self._event_bus:
+            self._event_bus.publish(
+                Event(
+                    event_type=MESSAGE_INCOMING,
+                    payload={"channel": in_from.value, "user_id": user_id, "user_name": user_name, "message": msg},
+                )
             )
-        )
 
         command = self._command_map.get(msg)
         if command:
             if func := command.get("func"):
-                container.thread_executor().submit(func)
-            container.message().send_channel_msg(
-                channel=in_from, title="正在运行 {} ...".format(command.get("desc")), user_id=user_id or ""
-            )
+                if self._thread_executor:
+                    self._thread_executor.submit(func)
+            if self._message:
+                self._message.send_channel_msg(
+                    channel=in_from, title="正在运行 {} ...".format(command.get("desc")), user_id=user_id or ""
+                )
             return
 
         # 插件命令
-        plugin_commands = container.message().get_plugin_commands()
-        msg_list = msg.split(" ")
-        cmd_key = msg_list[0]
-        plugin_cmd = plugin_commands.get(cmd_key)
-        if plugin_cmd:
-            func = plugin_cmd.get("func")
-            if func:
-                container.thread_executor().submit(func, msg, in_from, user_id, user_name)
-            container.message().send_channel_msg(
-                channel=in_from, title="正在运行 {} ...".format(plugin_cmd.get("desc")), user_id=user_id or ""
-            )
-            return
+        if self._message:
+            plugin_commands = self._message.get_plugin_commands()
+            msg_list = msg.split(" ")
+            cmd_key = msg_list[0]
+            plugin_cmd = plugin_commands.get(cmd_key)
+            if plugin_cmd:
+                func = plugin_cmd.get("func")
+                if func and self._thread_executor:
+                    self._thread_executor.submit(func, msg, in_from, user_id, user_name)
+                self._message.send_channel_msg(
+                    channel=in_from, title="正在运行 {} ...".format(plugin_cmd.get("desc")), user_id=user_id or ""
+                )
+                return
 
         TokenCache.delete("search")
-        if self._search_handler:
-            container.thread_executor().submit(self._search_handler.handle, msg, in_from, user_id, user_name)
+        if self._search_handler and self._thread_executor:
+            self._thread_executor.submit(self._search_handler.handle, msg, in_from, user_id, user_name)
 
-    @staticmethod
-    def _truncate_rsshistory():
-        container.rss_helper().truncate_rss_history()
-        container.subscribe_service().truncate_rss_episodes()
+    def _truncate_rsshistory(self):
+        if self._rss_helper:
+            self._rss_helper.truncate_rss_history()
+        if self._subscribe_service:
+            self._subscribe_service.truncate_rss_episodes()
 
-    @staticmethod
-    def _user_statistics():
+    def _user_statistics(self):
         TokenCache.delete("statistics")
-        container.site_userinfo().refresh_site_data_now()
+        if self._site_userinfo:
+            self._site_userinfo.refresh_site_data_now()
 
-    @staticmethod
-    def _unidentification():
+    def _unidentification(self):
         from typing import cast
 
         item_ids = []
-        records = container.filetransfer_service().get_transfer_unknown_paths()
+        if not self._filetransfer:
+            return
+        records = self._filetransfer.get_transfer_unknown_paths()
         if not records:
             return
         for rec in records:
             if not cast(str, rec.PATH):
                 continue
             item_ids.append(rec.ID)
-        if len(item_ids) > 0:
-            SyncService().re_identify_items(flag="unidentification", ids=item_ids)
+        if len(item_ids) > 0 and self._sync_service:
+            self._sync_service.re_identify_items(flag="unidentification", ids=item_ids)

@@ -9,7 +9,9 @@ from app.core.exceptions import (
     ServiceError,
     ValidationError,
 )
+from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.events import Event
+from app.events.bus import EventBus
 from app.events.constants import LIBRARY_FILE_DELETED, MEDIA_SOURCE_DELETED
 from app.media import meta_info
 from app.storage import StorageBackendFactory
@@ -18,18 +20,26 @@ from app.storage.backends.local import LocalStorageBackend
 from app.storage.config_models import LocalStorageConfig
 from app.utils import ExceptionUtils, PathUtils
 from app.domain.mediatypes import MediaType
-from app.di import container
 
 
 class TransferCleanupService:
     """负责删除历史记录、媒体文件及关联目录清理."""
 
-    def __init__(self, history_manager, path_resolver, media_service=None, message=None, event_bus=None):
+    def __init__(
+        self,
+        history_manager,
+        path_resolver,
+        media_service,
+        message,
+        event_bus: EventBus,
+        storage_backend_repo: StorageBackendRepositoryAdapter | None = None,
+    ):
         self._history = history_manager
         self._path_resolver = path_resolver
         self._media = media_service
+        self._storage_backend_repo = storage_backend_repo or StorageBackendRepositoryAdapter()
         self._message = message
-        self._event_bus = event_bus or container.event_bus()
+        self._event_bus = event_bus
 
     def delete_media_file(self, filedir, filename, backend_id="local") -> None:
         """删除媒体文件（统一使用存储后端接口），失败时抛出异常."""
@@ -59,8 +69,7 @@ class TransferCleanupService:
         """根据 ID 解析存储后端（本地返回 LocalStorageBackend 实例）."""
         if not backend_id or backend_id == "local":
             return LocalStorageBackend(StorageConfig(id="local", name="local", type=StorageType.LOCAL))
-        repo = container.storage_backend_repo()
-        entity = repo.get_by_id(int(backend_id))
+        entity = self._storage_backend_repo.get_by_id(int(backend_id))
         if not entity:
             return None
         info = StorageBackendFactory.get_config_info(entity.type)

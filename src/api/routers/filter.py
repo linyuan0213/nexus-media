@@ -6,7 +6,7 @@ Filter Router — FastAPI 迁移
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_config_service, require_any_permission
+from api.deps import get_config_service, get_filter_service, require_any_permission
 from app.core.exceptions import (
     DomainError,
     ResourceNotFoundError,
@@ -92,11 +92,12 @@ class ShareFilterGroupRequest(BaseModel):
 def add_filtergroup(
     req: AddFilterGroupRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    filter_service: Filter = Depends(get_filter_service),
 ):
     name = req.name
     if not name:
         return fail(code=-1)
-    Filter().add_group(name, req.default or "N")
+    filter_service.add_group(name, req.default or "N")
     return success()
 
 
@@ -104,6 +105,7 @@ def add_filtergroup(
 def add_filterrule(
     req: AddFilterRuleRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    filter_service: Filter = Depends(get_filter_service),
 ):
     item = {
         "group": req.group_id,
@@ -114,7 +116,7 @@ def add_filterrule(
         "size": req.rule_sizelimit,
         "free": req.rule_free,
     }
-    Filter().add_filter_rule(ruleid=req.rule_id, item=item)
+    filter_service.add_filter_rule(ruleid=req.rule_id, item=item)
     return success()
 
 
@@ -122,8 +124,9 @@ def add_filterrule(
 def del_filtergroup(
     req: IdRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    filter_service: Filter = Depends(get_filter_service),
 ):
-    Filter().delete_filtergroup(req.id)
+    filter_service.delete_filtergroup(req.id)
     return success()
 
 
@@ -131,8 +134,9 @@ def del_filtergroup(
 def del_filterrule(
     req: IdRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    filter_service: Filter = Depends(get_filter_service),
 ):
-    Filter().delete_filterrule(req.id)
+    filter_service.delete_filterrule(req.id)
     return success()
 
 
@@ -140,8 +144,9 @@ def del_filterrule(
 def filterrule_detail(
     req: FilterRuleDetailRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    filter_service: Filter = Depends(get_filter_service),
 ):
-    ruleinfo = Filter().get_rule_detail(groupid=req.groupid, ruleid=req.ruleid)
+    ruleinfo = filter_service.get_rule_detail(groupid=req.groupid, ruleid=req.ruleid)
     return success(data=ruleinfo)
 
 
@@ -149,9 +154,10 @@ def filterrule_detail(
 def import_filtergroup(
     req: ImportFilterGroupRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    filter_service: Filter = Depends(get_filter_service),
 ):
     try:
-        Filter().import_filter_group(req.content or "")
+        filter_service.import_filter_group(req.content or "")
         return success()
     except (ValidationError, ResourceNotFoundError) as e:
         return fail(msg=e.message)
@@ -163,8 +169,9 @@ def import_filtergroup(
 def restore_filtergroup(
     req: RestoreFilterGroupRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    filter_service: Filter = Depends(get_filter_service),
 ):
-    Filter().restore_filter_group(groupids=req.groupids or [], init_rulegroups=req.init_rulegroups or [])
+    filter_service.restore_filter_group(groupids=req.groupids or [], init_rulegroups=req.init_rulegroups or [])
     return success()
 
 
@@ -172,11 +179,12 @@ def restore_filtergroup(
 def rule_test(
     req: RuleTestRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    filter_service: Filter = Depends(get_filter_service),
 ):
     title = req.title
     if not title:
         return fail(code=-1)
-    match_flag, text, order = Filter().test_rule(
+    match_flag, text, order = filter_service.test_rule(
         title=title, subtitle=req.subtitle, size=req.size, rulegroup=req.rulegroup
     )
     return success(data={"flag": match_flag, "text": text, "order": order})
@@ -186,11 +194,12 @@ def rule_test(
 def set_default_filtergroup(
     req: SetDefaultFilterGroupRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    filter_service: Filter = Depends(get_filter_service),
 ):
     groupid = req.id
     if not groupid:
         return fail(code=-1)
-    Filter().set_default_filtergroup(groupid)
+    filter_service.set_default_filtergroup(groupid)
     return success()
 
 
@@ -198,9 +207,10 @@ def set_default_filtergroup(
 def share_filtergroup(
     req: ShareFilterGroupRequest,
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    filter_service: Filter = Depends(get_filter_service),
 ):
     try:
-        json_string = Filter().share_filter_group(req.id)
+        json_string = filter_service.share_filter_group(req.id)
         return success(data=json_string)
     except (ValidationError, ResourceNotFoundError) as e:
         return fail(msg=e.message)
@@ -212,6 +222,7 @@ def share_filtergroup(
 def get_filterrules(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
+    filter_service: Filter = Depends(get_filter_service),
 ):
-    rule_groups, _init_rule_groups = Filter().get_filterrules(_get_script_path())
+    rule_groups, _init_rule_groups = filter_service.get_filterrules(_get_script_path())
     return success(data=rule_groups)

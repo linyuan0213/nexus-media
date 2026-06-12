@@ -3,17 +3,15 @@
 """
 
 from app.sites.api_searcher import ApiSiteSearcher
-from app.sites.engine import SiteEngine
 from app.sites.html_searcher import HtmlSiteSearcher
 
 
-def create_searcher(url: str, user_config: dict | None = None):
-    engine = SiteEngine.get_instance()
-    site = engine.get_by_url(url)
+def create_searcher(url: str, site_engine, user_config: dict | None = None):
+    site = site_engine.get_by_url(url)
     if not site:
         return None
     if site.api:
-        return ApiSiteSearcher(site, user_config)
+        return ApiSiteSearcher(site, site_engine=site_engine, user_config=user_config)
     if site.html:
-        return HtmlSiteSearcher(site, user_config)
+        return HtmlSiteSearcher(site, site_engine=site_engine, user_config=user_config)
     return None

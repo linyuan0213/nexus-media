@@ -44,11 +44,9 @@ class TestRegisterModules:
         # Simulate a module with @on_event by directly registering
         from app.events import on_event
 
-        with patch("app.events.decorators.container.event_bus", side_effect=RuntimeError("not ready")):
-
-            @on_event("register.test")
-            def _test_handler(event):
-                pass
+        @on_event("register.test")
+        def _test_handler(event):
+            pass
 
         subscribers = get_subscribers()
         assert len(subscribers) == 1

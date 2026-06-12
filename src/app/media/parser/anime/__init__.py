@@ -8,6 +8,7 @@ import re
 import anitopy  # type: ignore
 
 from app.media.models import MediaInfo
+from app.media.parser._customization import CustomizationMatcher
 from app.media.parser.anime.name_parser import clean_name, extract_name, parse_name
 from app.media.parser.anime.prepare import extract_japanese_title, prepare_title
 from app.media.parser.anime.resource_parser import (
@@ -26,7 +27,12 @@ from app.utils import ExceptionUtils
 from app.domain.mediatypes import MediaType
 
 
-def parse_anime_title(title, subtitle=None, fileflag=False) -> MediaInfo:
+def parse_anime_title(
+    title,
+    subtitle=None,
+    fileflag=False,
+    customization_matcher: CustomizationMatcher | None = None,
+) -> MediaInfo:
     """解析动漫文件名，返回 MediaInfo"""
     info = MediaInfo()
     if not title:
@@ -50,7 +56,7 @@ def parse_anime_title(title, subtitle=None, fileflag=False) -> MediaInfo:
             parse_type(info, anitopy_info)
             parse_resource_pix(info, anitopy_info)
             parse_team(info, original_title, anitopy_info_origin)
-            parse_customization(info, original_title)
+            parse_customization(info, original_title, customization_matcher)
             parse_encode(info, anitopy_info)
             # 提取资源来源（WEB-DL / BluRay / HDTV 等）
             source_match = re.search(

@@ -1,5 +1,5 @@
 """app.di — 依赖注入模块."""
 
-from .container import container
+from .registry import registry
 
-__all__ = ["container"]
+__all__ = ["registry"]

@@ -78,8 +78,8 @@
           "key": "bk_path",
           "type": "input",
           "label": "本地备份路径",
-          "default": "/config/backup_file",
-          "placeholder": "/config/backup_file",
+          "default": "/data/backup_file",
+          "placeholder": "/data/backup_file",
           "help": "本地备份路径（仅当存储类型为本地时有效）"
         },
         {

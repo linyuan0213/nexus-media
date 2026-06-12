@@ -6,12 +6,12 @@ API Key 管理路由
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from api.deps import get_current_user
+from api.deps import get_apikey_service, get_current_user
 from app.core.exceptions import ServiceError
 from app.schemas.auth import UserContext
 from app.schemas.common import CommonResponse
+from app.services.apikey_service import APIKeyService
 from app.utils.response import success
-from app.di import container
 
 router = APIRouter()
 
@@ -83,10 +83,10 @@ class CreateAPIKeyResponse(BaseModel):
 async def create_api_key(
     req: CreateAPIKeyRequest,
     user: UserContext = Depends(get_current_user),
+    service: APIKeyService = Depends(get_apikey_service),
 ):
     """创建新的 API Key"""
     try:
-        service = container.apikey_service()
         result = service.create_key(
             name=req.name,
             expires_days=req.expires_days,
@@ -103,9 +103,9 @@ async def list_api_keys(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     user: UserContext = Depends(get_current_user),
+    service: APIKeyService = Depends(get_apikey_service),
 ):
     """获取 API Key 列表"""
-    service = container.apikey_service()
     result = service.list_keys(page=page, page_size=page_size)
     return success(data=result)
 
@@ -115,9 +115,9 @@ async def update_api_key(
     key_id: int,
     req: UpdateAPIKeyRequest,
     user: UserContext = Depends(get_current_user),
+    service: APIKeyService = Depends(get_apikey_service),
 ):
     """更新 API Key"""
-    service = container.apikey_service()
     ok = service.update_key(
         key_id=key_id,
         name=req.name,
@@ -133,9 +133,9 @@ async def update_api_key(
 async def delete_api_key(
     key_id: int,
     user: UserContext = Depends(get_current_user),
+    service: APIKeyService = Depends(get_apikey_service),
 ):
     """删除 API Key"""
-    service = container.apikey_service()
     ok = service.delete_key(key_id)
     if not ok:
         raise HTTPException(status_code=404, detail="API Key 不存在")
@@ -148,9 +148,9 @@ async def list_api_key_logs(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     user: UserContext = Depends(get_current_user),
+    service: APIKeyService = Depends(get_apikey_service),
 ):
     """获取指定 API Key 的使用记录"""
-    service = container.apikey_service()
     result = service.list_logs(api_key_id=key_id, page=page, page_size=page_size)
     return success(data=result)
 
@@ -160,9 +160,9 @@ async def list_all_logs(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     user: UserContext = Depends(get_current_user),
+    service: APIKeyService = Depends(get_apikey_service),
 ):
     """获取所有 API Key 的使用记录"""
-    service = container.apikey_service()
     result = service.list_logs(page=page, page_size=page_size)
     return success(data=result)
 
@@ -170,8 +170,8 @@ async def list_all_logs(
 @router.get("/stats", response_model=CommonResponse, summary="获取 API Key 统计信息")
 async def get_api_key_stats(
     user: UserContext = Depends(get_current_user),
+    service: APIKeyService = Depends(get_apikey_service),
 ):
     """获取 API Key 统计信息"""
-    service = container.apikey_service()
     result = service.get_stats()
     return success(data=result)

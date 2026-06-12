@@ -8,14 +8,13 @@ from typing import Any
 import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
-from app.di import container
+from app.events.bus import EventBus
 from app.events.constants import RSS_AUTO_SUBSCRIBE_REQUESTED
 from app.events.types import Event
 from app.media import meta_info
 from app.services.rss_automation.parser import RssParserEngine
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
-from app.sites.engine import SiteEngine
 from app.utils import ExceptionUtils
 from app.utils.config_tools import get_proxies
 from app.domain.media_type_utils import MediaTypeMapper
@@ -23,7 +22,7 @@ from app.domain.mediatypes import MediaType
 from app.domain.enums import SearchType
 
 
-def _check_task_rss(service, taskid: int | None) -> None:
+def _check_task_rss(service, taskid: int | None, event_bus: EventBus | None = None) -> None:
     """处理自定义RSS任务，由定时服务调用."""
     if not taskid:
         return
@@ -182,9 +181,9 @@ def _check_task_rss(service, taskid: int | None) -> None:
                         media.get_title_string(), ret_msg or "请检查下载任务是否已存在"
                     )
                 )
-    if rss_subscribe_torrents:
+    if event_bus and rss_subscribe_torrents:
         for media in rss_subscribe_torrents:
-            container.event_bus().publish(
+            event_bus.publish(
                 Event(
                     event_type=RSS_AUTO_SUBSCRIBE_REQUESTED,
                     payload={
@@ -257,7 +256,9 @@ def _parse_userrss_result(service, taskinfo: dict[str, Any]) -> list[dict[str, A
             rss_url = f"{rss_url}?{param_url}" if rss_url.find("?") == -1 else f"{rss_url}&{param_url}"
         proxies = get_proxies() if taskinfo.get("proxy") else None
         proxy_url = proxies.get("http") if proxies else None
-        engine = SiteEngine.get_instance()
+        from app.sites.engine import SiteEngine
+
+        engine = SiteEngine()
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         try:

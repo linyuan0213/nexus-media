@@ -7,7 +7,6 @@ import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.db.repositories.config_repo_adapter import UserRssConfigRepositoryAdapter
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
-from app.di import container
 from app.services.rss_processor import RssHelper
 from app.media import MediaService
 from app.message import Message
@@ -19,6 +18,7 @@ from app.services.rss_automation.articles import (
     _get_rss_articles,
     _test_rss_articles,
 )
+from app.events.bus import EventBus
 from app.services.rss_automation.executor import _check_task_rss
 from app.services.search_service import Searcher
 
@@ -35,6 +35,7 @@ class RssTaskService:
     config_repo: UserRssConfigRepositoryAdapter
     rss_repo: SubscribeHistoryRepositoryAdapter
     rsshelper: RssHelper
+    event_bus: EventBus | None
 
     _jobstore = "rsscheck"
     _rss_tasks: list[dict[str, Any]] = []
@@ -43,23 +44,27 @@ class RssTaskService:
 
     def __init__(
         self,
-        config_repo: Any | None = None,
-        rss_repo: Any | None = None,
-        rsshelper: Any | None = None,
-        message: Any | None = None,
-        searcher: Any | None = None,
-        filter_: Any | None = None,
-        media: Any | None = None,
-        downloader: Any | None = None,
+        config_repo: Any,
+        rss_repo: Any,
+        rsshelper: Any,
+        message: Any,
+        searcher: Any,
+        filter_: Any,
+        media: Any,
+        downloader: Any,
+        scheduler_core: Any,
+        event_bus: EventBus | None = None,
     ):
-        self.config_repo = config_repo or UserRssConfigRepositoryAdapter()
-        self.rss_repo = rss_repo or SubscribeHistoryRepositoryAdapter()
-        self.rsshelper = rsshelper or container.rss_helper()
-        self.message = message or container.message()
-        self.searcher = searcher or container.searcher()
-        self.filter = filter_ or container.filter_service()
-        self.media = media or container.media_service()
-        self.downloader = downloader or container.downloader_core()
+        self.config_repo = config_repo
+        self.rss_repo = rss_repo
+        self.rsshelper = rsshelper
+        self.message = message
+        self.searcher = searcher
+        self.filter = filter_
+        self.media = media
+        self.downloader = downloader
+        self._scheduler_core = scheduler_core
+        self.event_bus = event_bus
 
     def _refresh(self) -> None:
         # 移除现有任务
@@ -161,7 +166,7 @@ class RssTaskService:
                 if cron.isdigit():
                     # 分钟
                     rss_flag = True
-                    container.scheduler_core().start_job(
+                    self._scheduler_core.start_job(
                         {
                             "func": self.check_task_rss,
                             "name": f"自定义订阅任务 {task.get('name')}",
@@ -175,7 +180,7 @@ class RssTaskService:
                 elif cron.count(" ") == 4:
                     # cron表达式
                     try:
-                        container.scheduler_core().start_job(
+                        self._scheduler_core.start_job(
                             {
                                 "func": self.check_task_rss,
                                 "name": f"自定义订阅任务 {task.get('name')}",
@@ -192,7 +197,7 @@ class RssTaskService:
                     except Exception as e:
                         log.info("{} 自定义订阅cron表达式 配置格式错误：{} {}".format(task.get("name"), cron, str(e)))
         if rss_flag:
-            container.scheduler_core().print_jobs(jobstore=self._jobstore)
+            self._scheduler_core.print_jobs(jobstore=self._jobstore)
             log.info("自定义订阅服务启动")
 
     def get_rsstask_info(self, taskid: int | str | None = None) -> Any:
@@ -229,7 +234,7 @@ class RssTaskService:
     def stop_service(self) -> None:
         """停止服务"""
         try:
-            container.scheduler_core().remove_all_jobs(jobstore=self._jobstore)
+            self._scheduler_core.remove_all_jobs(jobstore=self._jobstore)
         except (ServiceError, RepositoryError):
             raise
         except Exception as e:
@@ -282,7 +287,7 @@ class RssTaskService:
 
     def check_task_rss(self, taskid: int | None) -> None:
         """处理自定义RSS任务，由定时服务调用"""
-        return _check_task_rss(self, taskid)
+        return _check_task_rss(self, taskid, event_bus=self.event_bus)
 
     def get_rss_articles(self, taskid: int | None) -> Any:
         """查看自定义RSS报文"""

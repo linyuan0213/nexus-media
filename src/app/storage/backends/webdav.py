@@ -1,12 +1,14 @@
-"""WebDAV 存储后端（基于 requests 自实现）。"""
+"""WebDAV 存储后端（基于 httpx 自实现）。"""
 
 from collections.abc import Iterator
 from email.utils import parsedate_to_datetime
 from typing import BinaryIO
 from xml.etree import ElementTree as ET
 
-import requests
+import httpx
 
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.storage.backends.base import FileInfo, StorageBackend, StorageConfig
 
 
@@ -16,19 +18,20 @@ class WebDAVStorageBackend(StorageBackend):
     def __init__(self, config: StorageConfig) -> None:
         super().__init__(config)
         self._url = getattr(config, "url", "").rstrip("/")
-        self._session = requests.Session()
-        self._session.auth = (
-            getattr(config, "username", ""),
-            getattr(config, "password", ""),
+        self._client = HttpClient(
+            config=HttpClientConfig(
+                verify_ssl=getattr(config, "ssl_verify", True),
+                auth=httpx.BasicAuth(
+                    getattr(config, "username", ""),
+                    getattr(config, "password", ""),
+                ),
+                default_headers={"Depth": "1"},
+            )
         )
-        self._session.verify = getattr(config, "ssl_verify", True)
-        self._session.headers["Depth"] = "1"
 
     def _req(self, method: str, path: str, **kwargs):
         url = self._url + "/" + path.lstrip("/")
-        resp = self._session.request(method, url, timeout=30, **kwargs)
-        resp.raise_for_status()
-        return resp
+        return self._client.request(method, url, **kwargs)
 
     def exists(self, path: str) -> bool:
         try:
@@ -76,11 +79,10 @@ class WebDAVStorageBackend(StorageBackend):
         return FileInfo(path=path, size=size, mtime=mtime, is_dir=is_dir)
 
     def read_stream(self, path: str) -> BinaryIO:
-        resp = self._req("GET", path, stream=True)
-        return resp.raw  # type: ignore[return-value]
+        return self._client.stream("GET", self._url + "/" + path.lstrip("/"))
 
     def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
-        self._req("PUT", path, data=stream)
+        self._req("PUT", path, content=stream)
 
     def mkdir(self, path: str, parents: bool = True) -> None:
         try:

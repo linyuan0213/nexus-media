@@ -9,19 +9,23 @@ import shutil
 import zipfile
 
 import log
+
 from app.core.settings import settings
+from app.db.repositories.plugin_framework_repository import PluginFrameworkRepository
 from app.domain.entities.plugin import PluginConfigEntity, PluginManifestEntity
 from app.plugin_framework.dependency_manager import PluginDependencyManager
 from app.schemas.plugin import PluginManifest, PluginState
-from app.di import container
 
 
 class PluginRegistry:
-    """插件注册表单例"""
+    """插件注册表单例.
 
-    def __init__(self):
-        self._repo = container.plugin_framework_repo()
-        self._plugins_dir = os.path.join(settings.config_path, "plugins")
+    由 lifespan 创建并注册到 registry。
+    """
+
+    def __init__(self, repo: PluginFrameworkRepository | None = None):
+        self._repo = repo or PluginFrameworkRepository()
+        self._plugins_dir = os.path.join(settings.data_path, "plugins")
         if not os.path.exists(self._plugins_dir):
             os.makedirs(self._plugins_dir)
         self._builtin_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "builtin_plugins")

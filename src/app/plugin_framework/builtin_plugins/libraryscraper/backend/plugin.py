@@ -10,7 +10,7 @@ from threading import Event
 import pytz
 
 from app.plugin_framework.context import PluginContext
-from app.di import container
+from app.media.scraper import Scraper
 
 
 class LibraryScraperPlugin:
@@ -18,7 +18,7 @@ class LibraryScraperPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
-        self._scraper = container.scraper()
+        self._scraper = Scraper(media_service=ctx.media_service)
         self._event = Event()
 
     def _get_config(self):

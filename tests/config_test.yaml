@@ -45,15 +45,6 @@ pt:
   download_order: seeder
   ptrefresh_date_cron: 22:36
 security:
-  media_server_webhook_allow_ip:
-    ipv4: 0.0.0.0/0
-    ipv6: ::/0
-  telegram_webhook_allow_ip:
-    ipv4: 0.0.0.0/0
-    ipv6: ::/0
-  synology_webhook_allow_ip:
-    ipv4: 0.0.0.0/0
-    ipv6: ::/0
   jwt_secret: jJ-d9kDmnLWd9IczbUInmGZWOqgsGu8t8dJ5zxlWS0o
 laboratory:
   search_keyword: false

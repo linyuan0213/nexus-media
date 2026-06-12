@@ -3,11 +3,10 @@
 """
 
 import time
-from typing import Any, ClassVar
 
 import log
-from app.di import container
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
+from app.infrastructure.thread import ThreadExecutor
 from app.schemas.scheduler import (
     DeleteSchedulerJobRequest,
     DeleteSchedulerJobResponse,
@@ -29,16 +28,16 @@ from app.services.scheduler_core import SchedulerCore
 class SchedulerService:
     """调度器业务服务"""
 
-    _UNSET: ClassVar[Any] = object()
-
-    def __init__(self, scheduler: SchedulerCore | None = _UNSET):
-        self._scheduler = scheduler
+    def __init__(
+        self,
+        scheduler_core: SchedulerCore,
+        thread_executor: ThreadExecutor | None = None,
+    ):
+        self._scheduler_core = scheduler_core
+        self._thread_executor = thread_executor or ThreadExecutor()
 
     def _get_scheduler(self) -> SchedulerCore | None:
-        if self._scheduler is not self._UNSET:
-            return self._scheduler
-        core = container.scheduler_core()
-        return core if core.is_running else None
+        return self._scheduler_core if self._scheduler_core.is_running else None
 
     def delete_job(self, req: DeleteSchedulerJobRequest) -> DeleteSchedulerJobResponse:
         svc = self._get_scheduler()
@@ -148,7 +147,7 @@ class SchedulerService:
             finally:
                 lock.release()
 
-        container.thread_executor().submit(_wrapper)
+        self._thread_executor.submit(_wrapper)
         return RunSchedulerJobResponse(code=0, msg="任务已触发")
 
     def update_job(self, req: UpdateSchedulerJobRequest) -> UpdateSchedulerJobResponse:

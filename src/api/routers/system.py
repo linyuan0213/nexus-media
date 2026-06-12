@@ -13,9 +13,11 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 import log
+from app.di.registry import registry
 from api.deps import (
     _extract_user_ctx_from_session,
     get_backup_restore_service,
+    get_config_reloader,
     get_config_service,
     get_config_update_service,
     get_indexer_config_service,
@@ -27,6 +29,7 @@ from api.deps import (
     get_progress_service,
     get_system_config_service,
     get_system_info_service,
+    get_system_lifecycle_service,
     get_system_scheduler_service,
     get_user_manage_service,
     get_web_search_service,
@@ -49,7 +52,10 @@ from app.schemas.common import CommonResponse
 from app.services.auth_service import AuthService
 from app.services.indexer_service import IndexerService
 from app.services.log_streaming_service import LogStreamingService
+from app.core.system_config import SystemConfig
+from app.services.config_reloader import ConfigReloader
 from app.services.site_config_updater import SiteConfigUpdater
+from app.services.system.lifecycle import SystemLifecycleService
 from app.services.system_service import (
     MessageClientService,
     MessageSenderService,
@@ -67,7 +73,7 @@ from app.utils.system_utils import SystemUtils
 from app.infrastructure.temp import temp_manager
 from app.domain.enums import SystemConfigKey
 from log import LOG_BUFFER
-from app.di import container
+from app.di.types import RegistryKey
 
 router = APIRouter()
 
@@ -324,8 +330,9 @@ def reset_db_version(
 def restart(
     req: EmptyRequest = EmptyRequest(),
     current_user: UserContext = Depends(require_permission("setting:update")),
+    svc: SystemLifecycleService = Depends(get_system_lifecycle_service),
 ):
-    restart_server()
+    restart_server(system_lifecycle_service=svc)
     return success()
 
 
@@ -376,15 +383,15 @@ def restory_backup(
 def get_indexers(
     current_user: UserContext = Depends(require_permission("setting:update")),
     idx_svc: IndexerService = Depends(get_indexer_service),
+    cfg: SystemConfig = Depends(get_system_config_service),
 ):
     """获取索引器配置信息（外部索引器配置、内置站点列表、当前配置）"""
     indexers = idx_svc.get_builtin_indexers(check=False)
     private_count = len([item.id for item in indexers if not item.public])
     public_count = len([item.id for item in indexers if item.public])
-    _cfg = container.system_config()
-    indexer_sites = _cfg.get(SystemConfigKey.UserIndexerSites) or []
-    search_indexer = _cfg.get(SystemConfigKey.SearchIndexer) or "builtin"
-    indexer_config = _cfg.get(SystemConfigKey.IndexerConfig) or {}
+    indexer_sites = cfg.get(SystemConfigKey.UserIndexerSites) or []
+    search_indexer = cfg.get(SystemConfigKey.SearchIndexer) or "builtin"
+    indexer_config = cfg.get(SystemConfigKey.IndexerConfig) or {}
     return success(
         data={
             "indexers": indexers,
@@ -815,7 +822,7 @@ def update_site_config(
         result = SiteConfigUpdater().update(force=force)
         if result["success"]:
             return success(result)
-        return fail(msg=result["message"])
+        return fail(msg=result[RegistryKey.MESSAGE.value])
     except (ServiceError, DomainError) as e:
         return fail(msg=e.message)
     except Exception as e:
@@ -826,10 +833,11 @@ def update_site_config(
 @router.post("/config/reload", response_model=CommonResponse, summary="手动触发配置重载")
 def reload_config(
     current_user: UserContext = Depends(require_permission("setting:update")),
+    reloader: ConfigReloader = Depends(get_config_reloader),
 ):
     """手动触发全量配置重载（通过 ConfigReloader 按优先级 reset 各 provider）"""
     try:
-        result = container.config_reloader().reload(container)
+        result = reloader.reload(registry)
         if result["failed"]:
             return fail(msg=f"配置重载部分失败: {result['failed']}")
         return success(data={"version": result["version"], "steps": result["results"]})

@@ -10,15 +10,18 @@ from api.deps import (
     get_subscribe_calendar_service,
     get_subscribe_history_service,
     get_subscribe_service,
+    get_subscription_monitor,
+    get_system_config_service,
     require_any_permission,
     require_permission,
 )
-from app.di import container
 from app.media import meta_info
 from app.schemas.common import CommonResponse
 from app.services.subscribe.management.calendar_service import SubscribeCalendarService
 from app.services.subscribe.management.history_service import SubscribeHistoryService
 from app.services.subscribe.management.service import SubscribeService
+from app.services.subscribe.monitor import SubscriptionMonitor
+from app.core.system_config import SystemConfig
 from app.utils.response import fail, success
 from app.domain.mediatypes import MediaType
 from app.domain.enums import SystemConfigKey
@@ -271,8 +274,9 @@ def re_rss_history(
 def refresh_rss(
     req: RefreshRssRequest,
     user: str = Depends(require_permission("subscription:manage")),
+    monitor: SubscriptionMonitor = Depends(get_subscription_monitor),
 ):
-    container.subscription_monitor().refresh_subscription(mtype=req.type or "", rssid=req.rssid or "")
+    monitor.refresh_subscription(mtype=req.type or "", rssid=req.rssid or "")
     return success(data=req.page)
 
 
@@ -358,15 +362,16 @@ def get_default_rss_setting(
 def save_default_rss_setting(
     req: DefaultSubscribeSettingSaveRequest,
     user: str = Depends(require_permission("subscription:manage")),
+    cfg: SystemConfig = Depends(get_system_config_service),
 ):
     mtype = req.mtype
     data = req.model_dump()
     data.pop("mtype", None)
     parsed = MediaType.from_string(mtype or "")
     if parsed == MediaType.TV:
-        container.system_config().set(key=SystemConfigKey.DefaultSubscribeSettingTV, value=data)
+        cfg.set(key=SystemConfigKey.DefaultSubscribeSettingTV, value=data)
     elif parsed == MediaType.MOVIE:
-        container.system_config().set(key=SystemConfigKey.DefaultSubscribeSettingMOV, value=data)
+        cfg.set(key=SystemConfigKey.DefaultSubscribeSettingMOV, value=data)
     return success()
 
 

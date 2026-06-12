@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 from typing import Any
 
 import log
+from app.db.repositories.site_repository import SiteRepository
 from app.utils import StringUtils
 
 
@@ -13,6 +14,10 @@ class _ISiteRssGenHandler(metaclass=ABCMeta):
 
     # 匹配的站点Url，每一个实现类都需要设置为自己的站点Url
     site_url = ""
+
+    def __init__(self, site_repo=None, site_engine=None):
+        self._site_repo = site_repo or SiteRepository()
+        self._site_engine = site_engine
 
     @classmethod
     @abstractmethod

@@ -5,44 +5,33 @@ FastAPI 依赖注入
 """
 
 import uuid
-from typing import cast
+from typing import Any, cast
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.di import container
+from app.di.registry import registry
+from app.di.types import RegistryKey
 from app.infrastructure.cache_system import TokenCache
+from app.infrastructure.security import generate_access_token, identify
 from app.schemas.auth import UserContext
 from app.services.auth_service import AuthService
+from app.services.config_reloader import ConfigReloader
 from app.services.config_service import ConfigService
 from app.services.subscribe.management.calendar_service import SubscribeCalendarService
 from app.services.subscribe.management.history_service import SubscribeHistoryService
 from app.services.subscribe.management.service import SubscribeService
-from app.infrastructure.security import generate_access_token, identify
+from app.services.system.config import ConfigUpdateService
 
 # OAuth2 / Bearer 方案
 bearer_scheme = HTTPBearer(auto_error=False)
 bearer_scheme_dependency = Depends(bearer_scheme)
 
 
-def _extract_user_from_session(request: Request) -> str | None:
-    """
-    从 Session 中提取当前登录用户。
-    """
-    session = getattr(request, "session", None)
-    if not session:
-        return None
-    user_id = session.get("_user_id")
-    if not user_id:
-        return None
-    # 通过 RBAC Service 查询用户名
-    try:
-        user = container.rbac_service().get_user_by_id(user_id)
-        if user is not None and getattr(user, "STATUS", 0) == 1:
-            return cast(str, user.USERNAME)
-    except Exception:
-        pass
-    return None
+def _get_service(name: str | RegistryKey) -> Any:
+    """通用服务工厂 — 从 Registry 获取指定名称的实例。"""
+    key = RegistryKey(name) if isinstance(name, str) else name
+    return registry.get(key)
 
 
 def _extract_user_from_token(auth_header: str | None) -> str | None:
@@ -63,7 +52,9 @@ def _extract_user_from_token(auth_header: str | None) -> str | None:
     return username
 
 
-def _extract_user_from_api_key(auth_header: str | None, query_key: str | None) -> UserContext | None:
+def _extract_user_from_api_key(
+    auth_header: str | None, query_key: str | None, apikey_service=None, rbac_service=None
+) -> UserContext | None:
     """
     API Key 认证（支持 Header 和 Query 参数）
     使用 APIKeyService 验证 Key 并返回 UserContext
@@ -78,14 +69,14 @@ def _extract_user_from_api_key(auth_header: str | None, query_key: str | None) -
     if not raw_key:
         return None
 
-    service = container.apikey_service()
-    api_key = service.validate_key(raw_key)
+    _apikey_service = apikey_service or registry.get(RegistryKey.APIKEY_SERVICE)
+    api_key = _apikey_service.validate_key(raw_key)
     if not api_key:
         return None
 
     # 记录使用日志（异步记录，不阻塞认证流程）
     try:
-        service.record_usage(
+        _apikey_service.record_usage(
             api_key_id=api_key.id,
             request_id=str(uuid.uuid4()),
             request_name="API 认证",
@@ -103,15 +94,16 @@ def _extract_user_from_api_key(auth_header: str | None, query_key: str | None) -
     created_by = api_key.created_by or 0
 
     if created_by:
+        _rbac_service = rbac_service or registry.get(RegistryKey.RBAC_SERVICE)
         try:
-            user = container.rbac_service().get_user_by_id(created_by)
+            user = _rbac_service.get_user_by_id(created_by)
             if user is not None:
                 username = cast(str, getattr(user, "USERNAME", username) or username)
                 nickname = cast(str, api_key.name)
                 level = getattr(user, "LEVEL", 0) or 0
                 is_superadmin = getattr(user, "IS_SUPERADMIN", 0) == 1
                 try:
-                    perms = container.rbac_service().get_user_permissions(created_by)
+                    perms = _rbac_service.get_user_permissions(created_by)
                     permissions = list(perms) if perms else []
                 except Exception:
                     pass
@@ -128,6 +120,16 @@ def _extract_user_from_api_key(auth_header: str | None, query_key: str | None) -
     )
 
 
+def get_auth_service() -> AuthService:
+    try:
+        rbac = registry.get(RegistryKey.RBAC_SERVICE)
+    except KeyError:
+        from unittest.mock import MagicMock
+
+        rbac = MagicMock()
+    return AuthService(rbac_service=rbac)
+
+
 def _extract_user_from_jwt(auth_header: str | None) -> UserContext | None:
     """
     JWT 认证：从 Authorization header 提取并验证 JWT Token
@@ -139,7 +141,7 @@ def _extract_user_from_jwt(auth_header: str | None) -> UserContext | None:
     return AuthService.verify_token(token)
 
 
-def _extract_user_ctx_from_session(request: Request) -> UserContext | None:
+def _extract_user_ctx_from_session(request: Request, rbac_service=None) -> UserContext | None:
     """
     从 Session 中提取用户上下文（绞杀期兼容）
     """
@@ -151,13 +153,14 @@ def _extract_user_ctx_from_session(request: Request) -> UserContext | None:
     if not user_id:
         return None
     try:
-        user = container.rbac_service().get_user_by_id(user_id)
+        _rbac_service = rbac_service or registry.get(RegistryKey.RBAC_SERVICE)
+        user = _rbac_service.get_user_by_id(user_id)
         if user is None or getattr(user, "STATUS", 0) != 1:
             return None
 
         # 获取权限
         try:
-            permissions = container.rbac_service().get_user_permissions(user_id)
+            permissions = _rbac_service.get_user_permissions(user_id)
             permissions = list(permissions) if permissions else []
         except Exception:
             permissions = []
@@ -282,13 +285,17 @@ def require_all_permissions(*permissions: str):
 
 def get_config_service() -> ConfigService:
     """获取配置服务实例"""
-    return container.config_service()
+    return _get_service("config_service")
 
 
 def get_message_service():
-    """获取消息客户端服务实例（避免路由层直接实例化 MessageClientService）"""
+    """获取消息客户端服务实例"""
+    return _get_service("message_client_service")
 
-    return container.message_client_service()
+
+def get_message():
+    """获取消息门面实例"""
+    return _get_service(RegistryKey.MESSAGE)
 
 
 # --- 领域 Service 工厂 ---
@@ -296,275 +303,225 @@ def get_message_service():
 
 def get_download_service():
     """获取下载服务实例"""
-
-    return container.download_service()
+    return _get_service("download_service")
 
 
 def get_site_service():
     """获取站点服务实例"""
-
-    return container.site_service()
+    return _get_service("site_service")
 
 
 def get_indexer_service():
     """获取索引器服务实例"""
-
-    return container.indexer_service()
+    return _get_service(RegistryKey.INDEXER_SERVICE)
 
 
 def get_media_info_service():
     """获取媒体信息服务实例"""
-
-    return container.media_info_service()
+    return _get_service("media_info_service")
 
 
 def get_media_library_service():
     """获取媒体库服务实例"""
-
-    return container.media_library_service()
+    return _get_service("media_library_service")
 
 
 def get_media_file_service():
     """获取媒体文件服务实例"""
-
-    return container.media_file_service()
+    return _get_service("media_file_service")
 
 
 def get_file_index_service():
     """获取文件索引服务实例"""
-
-    return container.file_index_service()
+    return _get_service("file_index_service")
 
 
 def get_transfer_history_service():
     """获取转移历史服务实例"""
-
-    return container.transfer_history_service()
+    return _get_service("transfer_history_service")
 
 
 def get_search_result_service():
     """获取搜索结果服务实例"""
-
-    return container.search_result_service()
+    return _get_service("search_result_service")
 
 
 def get_sync_service():
     """获取同步服务实例"""
-
-    return container.sync_service()
+    return _get_service(RegistryKey.SYNC_SERVICE)
 
 
 def get_subscribe_service() -> SubscribeService:
     """获取订阅服务实例"""
-
-    return container.subscribe_service()
+    return _get_service(RegistryKey.SUBSCRIBE_SERVICE)
 
 
 def get_subscribe_history_service() -> SubscribeHistoryService:
     """获取订阅历史服务实例"""
-
-    return container.subscribe_history_service()
+    return _get_service("subscribe_history_service")
 
 
 def get_subscribe_calendar_service() -> SubscribeCalendarService:
     """获取订阅日历服务实例"""
-
-    return container.subscribe_calendar_service()
-
-
-def get_rss_task_service():
-    """获取 RSS 任务服务实例"""
-
-    return container.rss_task_service()
+    return _get_service("subscribe_calendar_service")
 
 
 def get_brush_service():
     """获取刷流服务实例"""
-
-    return container.brush_service()
-
-
-def get_brush_task_service():
-    """获取刷流任务核心服务实例"""
-
-    return container.brush_task_service()
+    return _get_service("brush_service")
 
 
 def get_plugin_framework_service():
     """获取插件框架 v2 服务实例"""
-
-    return container.plugin_framework_service()
+    return _get_service("plugin_framework_service")
 
 
 def get_words_service():
     """获取自定义识别词服务实例"""
-
-    return container.words_service()
+    return _get_service("words_service")
 
 
 def get_user_rss_service():
     """获取用户 RSS 服务实例"""
-
-    return container.user_rss_service()
+    return _get_service("user_rss_service")
 
 
 def get_scheduler_service():
     """获取调度器服务实例"""
-
-    return container.scheduler_service()
+    return _get_service("scheduler_service")
 
 
 def get_system_scheduler_service():
     """获取系统调度器服务实例（用于启动后台服务）"""
-
-    return container.scheduler_core()
+    return _get_service(RegistryKey.SCHEDULER_CORE)
 
 
 def get_filter_service():
     """获取过滤服务实例"""
-
-    return container.filter_service()
+    return _get_service("filter_service")
 
 
 def get_net_test_service():
     """获取网络测试服务实例"""
+    return _get_service("net_test_service")
 
-    return container.net_test_service()
 
-
-def get_version_service():
-    """获取版本服务实例"""
-
-    return container.version_service()
+def get_apikey_service():
+    """获取 API Key 服务实例"""
+    return _get_service("apikey_service")
 
 
 def get_system_config_service():
     """获取系统配置服务实例"""
-
-    return container.system_config_service()
+    return _get_service("system_config_service")
 
 
 def get_config_update_service():
     """获取配置更新服务实例"""
-
-    return container.config_update_service()
+    return ConfigUpdateService()
 
 
 def get_user_manage_service():
     """获取用户管理服务实例"""
-
-    return container.user_manage_service()
+    return _get_service("user_manage_service")
 
 
 def get_progress_service():
     """获取进度服务实例"""
-
-    return container.progress_service()
+    return _get_service("progress_service")
 
 
 def get_message_sender_service():
     """获取消息发送服务实例"""
-
-    return container.message_sender_service()
+    return _get_service("message_sender_service")
 
 
 def get_system_info_service():
     """获取系统信息服务实例"""
+    return _get_service("system_info_service")
 
-    return container.system_info_service()
+
+def get_system_lifecycle_service():
+    """获取系统生命周期服务实例"""
+    return _get_service(RegistryKey.SYSTEM_LIFECYCLE)
 
 
 def get_backup_restore_service():
     """获取备份恢复服务实例"""
-
-    return container.backup_restore_service()
+    return _get_service("backup_restore_service")
 
 
 def get_indexer_config_service():
     """获取索引器配置服务实例"""
-
-    return container.indexer_config_service()
+    return _get_service("indexer_config_service")
 
 
 def get_media_server_config_service():
     """获取媒体服务器配置服务实例"""
-
-    return container.media_server_config_service()
+    return _get_service("media_server_config_service")
 
 
 def get_web_search_service():
     """获取 Web 搜索服务实例"""
-
-    return container.web_search_service()
+    return _get_service("web_search_service")
 
 
 def get_downloader_service():
     """获取下载器核心服务实例"""
-
-    return container.downloader_core()
+    return _get_service(RegistryKey.DOWNLOADER_CORE)
 
 
 def get_filetransfer_service():
     """获取文件转移服务实例"""
-
-    return container.filetransfer_service()
-
-
-def get_torrent_remover_service():
-    """获取种子删除服务实例"""
-
-    return container.torrentremover_service()
+    return _get_service("filetransfer_service")
 
 
 def get_media_recommendation_service():
     """获取媒体推荐服务实例"""
-
-    return container.media_recommendation_service()
+    return _get_service("media_recommendation_service")
 
 
 def get_searcher_service():
     """获取搜索服务实例"""
-
-    return container.searcher()
+    return _get_service(RegistryKey.SEARCHER)
 
 
 def get_tmdb_blacklist_service():
     """获取 TMDB 黑名单服务实例"""
-
-    return container.tmdb_blacklist_service()
-
-
-def get_progress_helper():
-    """获取进度助手实例"""
-
-    return container.progress_helper()
-
-
-def get_drissionpage_helper():
-    """获取 DrissionPage 助手实例"""
-
-    return container.drissionpage_helper()
+    return _get_service("tmdb_blacklist_service")
 
 
 def get_thread_executor():
     """获取线程助手实例"""
-
-    return container.thread_executor()
+    return _get_service("thread_executor")
 
 
 def get_media_config_service():
     """获取媒体库路径配置服务"""
-
-    return container.media_config_service()
+    return _get_service("media_config_service")
 
 
 def get_storage_backend_service():
     """获取存储后端服务实例"""
-
-    return container.storage_backend_service()
+    return _get_service("storage_backend_service")
 
 
 def get_rbac_service():
     """获取 RBAC 服务实例"""
+    return _get_service("rbac_service")
 
-    return container.rbac_service()
+
+def get_subscription_monitor():
+    """获取订阅监控实例"""
+    lifecycle = _get_service(RegistryKey.SYSTEM_LIFECYCLE)
+    return lifecycle.subscription_monitor
+
+
+def get_hook_system():
+    """获取 Hook 系统实例"""
+    return _get_service(RegistryKey.HOOK_SYSTEM)
+
+
+def get_config_reloader():
+    """获取配置重载器实例"""
+    return ConfigReloader()

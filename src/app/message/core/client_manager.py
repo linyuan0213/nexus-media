@@ -7,6 +7,7 @@ from app.db.repositories.config_repo_adapter import MessageClientRepositoryAdapt
 from app.infrastructure.thread import ThreadExecutor
 from app.message.client_registry import ClientRegistry
 from app.message.registry import get_client_class
+from app.services.apikey_service import APIKeyService
 
 
 def parse_client_config(client_config) -> dict:
@@ -56,8 +57,9 @@ def parse_client_config(client_config) -> dict:
 class ClientManager:
     """负责消息客户端的加载、刷新、移除和查询."""
 
-    def __init__(self, config_repo=None):
+    def __init__(self, apikey_service: APIKeyService | None = None, config_repo=None):
         self.config_repo = config_repo or MessageClientRepositoryAdapter()
+        self._apikey_service = apikey_service
         self._active_clients: list = []
         self._active_interactive_clients: dict = {}
         self._client_configs: dict = {}
@@ -99,7 +101,9 @@ class ClientManager:
             "templates": config["templates"],
             "search_type": self._get_search_type(client_config.TYPE),
             "max_length": self._get_max_length(client_config.TYPE),
-            "client": ClientRegistry.build(ctype=client_config.TYPE, conf=config["config"]),
+            "client": ClientRegistry.build(
+                ctype=client_config.TYPE, conf=config["config"], apikey_service=self._apikey_service
+            ),
         }
         client_instance = client_entry["client"]
         if hasattr(client_instance, "setup"):
@@ -226,7 +230,7 @@ class ClientManager:
         """测试消息设置状态."""
         if not config or not ctype:
             return False
-        built_client = ClientRegistry.build(ctype=ctype, conf=config)
+        built_client = ClientRegistry.build(ctype=ctype, conf=config, apikey_service=self._apikey_service)
         if not built_client:
             return False
         state, ret_msg = built_client.send_msg(

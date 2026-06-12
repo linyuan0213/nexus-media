@@ -6,22 +6,26 @@
 
 from typing import Any
 
-from app.message.core.client_manager import ClientManager
 from app.message.core.command_manager import CommandManager
 from app.message.core.dispatcher import MessageDispatcher
 from app.message.core.message_builder import MessageBuilder
 from app.message.core.template_engine import TemplateEngine
+from app.message.message_center import MessageCenter
 from app.utils.config_tools import get_domain
-from app.di import container
+from app.message.core.client_manager import ClientManager
+from app.services.apikey_service import APIKeyService
 
 
 class Message:
-    """消息业务 Facade，兼容原有 Singleton 行为."""
+    """消息业务 Facade，兼容原有 Singleton 行为.
 
-    def __init__(self):
+    由 lifespan 创建并注册到 registry，lifespan 中统一关闭。
+    """
+
+    def __init__(self, apikey_service: APIKeyService | None = None, message_center: MessageCenter | None = None):
         self._domain = get_domain() or ""
-        self.messagecenter = container.message_center()
-        self._client_manager = ClientManager()
+        self.messagecenter = message_center or MessageCenter()
+        self._client_manager = ClientManager(apikey_service=apikey_service)
         self._command_manager = CommandManager(self._client_manager)
         self._template_engine = TemplateEngine()
         self._dispatcher = MessageDispatcher(self._client_manager, self.messagecenter, self._domain)

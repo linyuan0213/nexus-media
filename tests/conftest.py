@@ -48,3 +48,12 @@ def mock_config(monkeypatch):
             return val if val != {} else default
 
     return _MockConfig()
+
+
+@pytest.fixture(scope="function", autouse=True)
+def _clear_registry():
+    """每个测试函数结束后清空 Registry，避免状态污染。"""
+    from app.di.registry import registry
+
+    yield
+    registry.clear()

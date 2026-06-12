@@ -12,7 +12,8 @@ import difflib
 import re
 
 import log
-from app.di import container
+from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
+from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.indexer.core.batch_identifier import BatchIdentifier
 from app.indexer.core.models import FilterStats, SearchCandidate
 from app.infrastructure.cache_system import get_cache_manager
@@ -29,11 +30,17 @@ class ResultFilter:
     规则数据通过 FilterGroupRepositoryAdapter / FilterRuleRepositoryAdapter 从仓库层获取。
     """
 
-    def __init__(self, media=None):
-        self._engine = container.indexer_filter_engine()
-        self._media = media or container.media_service()
-        self._group_repo = container.filter_group_repo()
-        self._rule_repo = container.filter_rule_repo()
+    def __init__(
+        self,
+        media,
+        indexer_filter_engine: IndexerFilterEngine | None = None,
+        filter_group_repo: FilterGroupRepositoryAdapter | None = None,
+        filter_rule_repo: FilterRuleRepositoryAdapter | None = None,
+    ):
+        self._engine = indexer_filter_engine or IndexerFilterEngine()
+        self._media = media
+        self._group_repo = filter_group_repo or FilterGroupRepositoryAdapter()
+        self._rule_repo = filter_rule_repo or FilterRuleRepositoryAdapter()
         self._rule_cache = {}
 
     def _get_rules(self, rulegroup_id=None):

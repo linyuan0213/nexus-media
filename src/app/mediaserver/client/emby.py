@@ -6,9 +6,9 @@ import log
 from app.core.exceptions import InfrastructureError, MediaServerError, NetworkError
 from app.mediaserver.client._base import _IMediaClient
 from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
-from app.infrastructure.http import HttpClient
 from app.utils import ExceptionUtils, IpUtils, SystemUtils
 from app.domain.mediatypes import MediaType
+from app.infrastructure.http.client import HttpClient
 
 
 class Emby(_IMediaClient):

@@ -12,15 +12,19 @@ from threading import Lock
 
 import log
 from app.core.settings import settings
-from app.indexer.configuration import IndexerConf
+from app.core.system_config import SystemConfig
+from app.db.repositories.download_repository import DownloadRepository
+from app.indexer.configuration import IndexerConf, IndexerHelper
 from app.indexer.client._base import _IIndexClient
 from app.indexer.schema import IndexerConfigSchema
+from app.infrastructure.chrome import ChromeClient
+from app.infrastructure.progress import ProgressTracker
 from app.sites.engine import SiteEngine
 from app.sites.searcher_factory import create_searcher
+from app.sites.site_cache import SiteCache
 from app.utils import StringUtils
 from app.utils.config_tools import get_ua
 from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
-from app.di import container
 
 _STATS_LOCK = Lock()
 
@@ -44,15 +48,26 @@ class BuiltinIndexer(_IIndexClient):
     _client_config = {}
     _show_more_sites = False
 
-    def __init__(self, config=None, indexer_helper=None):
+    def __init__(
+        self,
+        config=None,
+        *,
+        indexer_helper: IndexerHelper,
+        site_cache: SiteCache,
+        site_engine: SiteEngine,
+        progress_helper: ProgressTracker | None = None,
+        download_repo: DownloadRepository | None = None,
+        system_config: SystemConfig | None = None,
+        drissionpage_helper: ChromeClient | None = None,
+    ):
         self._client_config = config or {}
-        self._indexer_helper = indexer_helper or container.indexer_helper()
-        self._refresh()
-
-    def _refresh(self):
-        self.sites = container.site_cache()
-        self.progress = container.progress_helper()
-        self.download_repo = container.download_repo()
+        self._indexer_helper = indexer_helper
+        self._site_cache = site_cache
+        self._progress = progress_helper or ProgressTracker()
+        self._download_repo = download_repo or DownloadRepository()
+        self._system_config = system_config or SystemConfig()
+        self._drissionpage_helper = drissionpage_helper or ChromeClient()
+        self._site_engine = site_engine
         self._show_more_sites = settings.get("laboratory").get("show_more_sites")
 
     @classmethod
@@ -71,13 +86,13 @@ class BuiltinIndexer(_IIndexClient):
     def get_indexers(self, check=True, indexer_id=None, public=True):
         """获取当前索引器的索引站点"""
         ret_indexers = []
-        indexer_sites = container.system_config().get(SystemConfigKey.UserIndexerSites) or []
+        indexer_sites = self._system_config.get(SystemConfigKey.UserIndexerSites) or []
         _indexer_domains = []
 
-        chrome_ok = container.drissionpage_helper().get_status()
+        chrome_ok = self._drissionpage_helper.get_status()
 
         engine_sites = []
-        for s in SiteEngine.get_instance().all_sites():
+        for s in self._site_engine.all_sites():
             if s.html:
                 engine_sites.append(
                     {
@@ -94,7 +109,7 @@ class BuiltinIndexer(_IIndexClient):
                 )
         self._indexer_helper.set_indexers(engine_sites)
 
-        for site in container.site_cache().get_sites(public=True):
+        for site in self._site_cache.get_sites(public=True):
             url = site.get("signurl") or site.get("rssurl")
             cookie = site.get("cookie")
             headers = site.get("headers")
@@ -157,8 +172,8 @@ class BuiltinIndexer(_IIndexClient):
             return []
 
         # 站点流控
-        if self.sites.check_ratelimit(indexer.siteid):
-            self.progress.update(ptype=progress_key, text=f"{indexer.name} 触发站点流控，跳过 ...")
+        if self._site_cache.check_ratelimit(indexer.siteid):
+            self._progress.update(ptype=progress_key, text=f"{indexer.name} 触发站点流控，跳过 ...")
             return []
 
         if filter_args is None:
@@ -193,17 +208,17 @@ class BuiltinIndexer(_IIndexClient):
 
         # 索引统计
         with _STATS_LOCK:
-            self.download_repo.insert_indexer_statistics(
+            self._download_repo.insert_indexer_statistics(
                 indexer=indexer.name, itype=self.client_id, seconds=seconds, result="N" if error_flag else "Y"
             )
 
         if len(result_array) == 0:
             log.warn(f"[{self.client_name}]{indexer.name} 关键词 {key_word} 未搜索到数据")
-            self.progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
+            self._progress.update(ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 未搜索到数据")
             return []
         else:
             log.warn(f"[{self.client_name}]{indexer.name} 关键词 {key_word} 返回数据：{len(result_array)}")
-            self.progress.update(
+            self._progress.update(
                 ptype=progress_key, text=f"{indexer.name} 关键词 {key_word} 返回 {len(result_array)} 条数据"
             )
 
@@ -233,7 +248,7 @@ class BuiltinIndexer(_IIndexClient):
 
         seconds = round((datetime.datetime.now() - start_time).seconds, 1)
         with _STATS_LOCK:
-            self.download_repo.insert_indexer_statistics(
+            self._download_repo.insert_indexer_statistics(
                 indexer=indexer.name,  # type: ignore[union-attr]
                 itype=self.client_id,
                 seconds=seconds,
@@ -242,12 +257,12 @@ class BuiltinIndexer(_IIndexClient):
         return result_array
 
     def __search_via_engine(self, search_word, indexer, mtype=None, page=0):
-        engine = SiteEngine.get_instance()
+        engine = self._site_engine
         site_def = engine.get_by_id(str(indexer.id)) or engine.get_by_url(indexer.domain or "")
         if not site_def or not (site_def.api or site_def.html):
             return True, []
         user_config = self._build_user_config(indexer)
-        searcher = create_searcher(indexer.domain, user_config)
+        searcher = create_searcher(indexer.domain, site_engine=self._site_engine, user_config=user_config)
         if not searcher:
             return True, []
         result_array = searcher.search(keyword=search_word, page=page, mtype=mtype)

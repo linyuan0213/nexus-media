@@ -3,19 +3,16 @@ import time
 from threading import Lock
 from urllib.parse import urlencode
 
-import requests
-
 import log
 from app.core.settings import settings
-from app.infrastructure.thread import ThreadExecutor
-from app.message import Message
-from app.message.client._base import _IMessageClient
-from app.message.schema import ConfigField, MessageConfigSchema
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.infrastructure.thread import ThreadExecutor
+from app.message.client._base import _IMessageClient
+from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils
 from app.utils.config_tools import get_domain, get_proxies
-from app.di import container
+from app.message import Message
 
 _webhook_lock = Lock()
 _webhook_set = False
@@ -87,7 +84,7 @@ class Telegram(_IMessageClient):
     )
     _setup_done = set()
 
-    def __init__(self, config):
+    def __init__(self, config, apikey_service):
         self.token = None
         self.chat_id = None
         self.webhook = False
@@ -99,6 +96,7 @@ class Telegram(_IMessageClient):
         self._api_key = None
         self._enabled = True
         self._proxy_event = None
+        self._apikey_service = apikey_service
         super().__init__(config)
 
     def read_config(self):
@@ -110,7 +108,7 @@ class Telegram(_IMessageClient):
         self._admin_ids = cfg.get("admin_ids") or []
         self._user_ids = cfg.get("user_ids") or []
         self._domain = get_domain()
-        self._api_key = container.apikey_service().get_or_create_system_key("MessageWebhook")
+        self._api_key = self._apikey_service.get_or_create_system_key("MessageWebhook")
         admin_ids = cfg.get("admin_ids")
         if admin_ids and not isinstance(admin_ids, list):
             self._admin_ids = [admin_ids]
@@ -246,7 +244,7 @@ class Telegram(_IMessageClient):
             return
         ds_url = f"http://127.0.0.1:{settings.get('app').get('web_port')}/telegram?apikey={self._api_key}"
         with contextlib.suppress(Exception):
-            requests.post(ds_url, json=update, timeout=5)
+            HttpClient(config=HttpClientConfig(timeout=5)).post(ds_url, data=update)
 
     def _set_commands(self):
         if not self.token:
@@ -258,12 +256,12 @@ class Telegram(_IMessageClient):
             log.info(f"[Telegram]正在设置菜单，共 {len(cmds)} 个命令: {list(commands.keys())}")
             data = {"commands": cmds, "scope": {"type": "default"}}
             headers = {"content-type": "application/json"}
-            res = requests.post(
+            proxies = get_proxies()
+            proxy_url = proxies.get("http") if proxies else None
+            res = HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=10)).post(
                 f"https://api.telegram.org/bot{self.token}/setMyCommands",
-                json=data,
+                data=data,
                 headers=headers,
-                proxies=get_proxies(),
-                timeout=10,
             )
             if res and res.json().get("ok"):
                 log.info(f"[Telegram]命令菜单已设置，共 {len(cmds)} 个")

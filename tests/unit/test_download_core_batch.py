@@ -61,7 +61,21 @@ class TestBatchDownloadFlow:
             mock_pipeline = MagicMock()
             mock_pipeline_cls.return_value = mock_pipeline
 
-            core = DownloadCore(client_factory=mock_factory)
+            core = DownloadCore(
+                client_factory=mock_factory,
+                message=MagicMock(),
+                mediaserver=MagicMock(),
+                filetransfer=MagicMock(),
+                sites=MagicMock(),
+                siteconf=MagicMock(),
+                sitesubtitle=MagicMock(),
+                event_bus=MagicMock(),
+                download_repo=MagicMock(),
+                download_setting_repo=MagicMock(),
+                systemconfig=MagicMock(),
+                downloader_repo=MagicMock(),
+                site_engine=MagicMock(),
+            )
             core._pipeline = mock_pipeline
             yield core, mock_pipeline
 

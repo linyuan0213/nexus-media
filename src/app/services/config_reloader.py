@@ -1,4 +1,4 @@
-"""ConfigReloader — 集中式配置热重载协调器（DI provider reset 模式）.
+"""ConfigReloader — 集中式配置热重载协调器（Registry reset 模式）.
 
 职责：
 1. 维护 provider 重载优先级列表
@@ -8,17 +8,17 @@
 
 用法：
     # 注册 provider（字符串名）和优先级
-    container.config_reloader().register("category", priority=0)
-    container.config_reloader().register("sites", priority=1)
-    container.config_reloader().register("downloader_core", priority=10)
+    config_reloader.register("category", priority=0)
+    config_reloader.register("sites", priority=1)
 
     # 触发重载
-    container.config_reloader().reload()
+    config_reloader.reload(registry)
 """
 
 from dataclasses import dataclass, field
 
 import log
+from app.di.types import RegistryKey
 
 
 @dataclass(order=True)
@@ -30,7 +30,10 @@ class _ReloadStep:
 
 
 class ConfigReloader:
-    """集中式配置热重载协调器."""
+    """集中式配置热重载协调器.
+
+    由 lifespan 创建并注册到 registry。
+    """
 
     # 标准优先级分组（数值越小越早执行）
     PRIORITY_SETTINGS = 0  # AppSettings / SystemConfig
@@ -57,39 +60,40 @@ class ConfigReloader:
         self.register("site_conf", self.PRIORITY_INFRA)
         self.register("site_userinfo", self.PRIORITY_INFRA)
         # 核心服务
-        self.register("downloader_core", self.PRIORITY_CORE)
-        self.register("media_server", self.PRIORITY_CORE)
-        self.register("message", self.PRIORITY_CORE)
+        self.register(RegistryKey.DOWNLOADER_CORE, self.PRIORITY_CORE)
+        self.register(RegistryKey.MEDIA_SERVER, self.PRIORITY_CORE)
+        self.register(RegistryKey.MESSAGE, self.PRIORITY_CORE)
         # 业务服务
-        self.register("filetransfer_service", self.PRIORITY_SERVICE)
-        self.register("searcher", self.PRIORITY_SERVICE)
-        self.register("brush_task_service", self.PRIORITY_SERVICE)
-        self.register("rss_task_service", self.PRIORITY_SERVICE)
-        self.register("indexer_service", self.PRIORITY_INDEXER)
+        self.register(RegistryKey.FILETRANSFER_SERVICE, self.PRIORITY_SERVICE)
+        self.register(RegistryKey.SEARCHER, self.PRIORITY_SERVICE)
+        self.register(RegistryKey.BRUSH_TASK_SERVICE, self.PRIORITY_SERVICE)
+        self.register(RegistryKey.RSS_TASK_SERVICE, self.PRIORITY_SERVICE)
+        self.register(RegistryKey.INDEXER_SERVICE, self.PRIORITY_INDEXER)
         # 辅助
-        self.register("words_service", self.PRIORITY_AUX)
-        self.register("fanart", self.PRIORITY_AUX)
+        self.register(RegistryKey.WORDS_SERVICE, self.PRIORITY_AUX)
 
-    def register(self, provider_name: str, priority: int = 100) -> None:
+    def register(self, provider_name: str | RegistryKey, priority: int = 100) -> None:
         """
         注册一个 DI provider，配置变更时 reset + 重新实例化.
 
         :param provider_name: container 上的 provider 属性名，如 "category"
         :param priority: 优先级，数值越小越早执行
         """
-        self._steps = [s for s in self._steps if s.name != provider_name]
-        self._steps.append(_ReloadStep(priority, provider_name))
+        name = provider_name.value if isinstance(provider_name, RegistryKey) else provider_name
+        self._steps = [s for s in self._steps if s.name != name]
+        self._steps.append(_ReloadStep(priority, name))
         self._steps.sort()
 
-    def unregister(self, provider_name: str) -> None:
+    def unregister(self, provider_name: str | RegistryKey) -> None:
         """注销一个 provider."""
-        self._steps = [s for s in self._steps if s.name != provider_name]
+        name = provider_name.value if isinstance(provider_name, RegistryKey) else provider_name
+        self._steps = [s for s in self._steps if s.name != name]
 
-    def reload(self, container) -> dict:
+    def reload(self, registry=None) -> dict:
         """
         执行完整配置重载：按优先级 reset 并重载各 provider.
 
-        :param container: DI 容器实例
+        :param registry: 注册表实例（可选，测试用）
         :return: {"version": int, "results": {name: bool}, "failed": [name]}
         """
         self._version += 1
@@ -99,8 +103,15 @@ class ConfigReloader:
         failed: list[str] = []
 
         for step in self._steps:
+            # 只处理 Registry 中注册的键（跳过旧容器字符串名）
             try:
-                provider = getattr(container, step.name, None)
+                key = RegistryKey(step.name)
+            except ValueError:
+                log.debug(f"[ConfigReloader][{step.priority}] {step.name} 不是 Registry 键，跳过")
+                continue
+
+            try:
+                provider = registry.get(key) if registry else None
                 if provider is None:
                     log.warn(f"[ConfigReloader][{step.priority}] {step.name} 未找到对应 provider，跳过")
                     continue

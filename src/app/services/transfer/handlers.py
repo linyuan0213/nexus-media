@@ -1,9 +1,10 @@
 """转移领域事件处理器."""
 
 import log
-from app.di import container
 from app.domain.entities.transfer_task import SourceType, TransferTask
+from app.downloader.client_factory import DownloadClientFactory
 from app.events import Event, on_event
+from app.events.bus import EventBus
 from app.events.constants import DOWNLOAD_COMPLETED, MEDIA_TRANSFER_FINISHED, SUBTITLE_DOWNLOAD, TRANSFER_FAIL
 from app.events.payloads import (
     DownloadCompletedPayload,
@@ -11,6 +12,7 @@ from app.events.payloads import (
     SubtitleDownloadPayload,
     TransferFailPayload,
 )
+from app.services.transfer_pipeline import TransferPipeline
 
 
 @on_event(MEDIA_TRANSFER_FINISHED)
@@ -34,12 +36,15 @@ def handle_transfer_fail(event: Event) -> None:
     log.warn(f"[Event]转移失败: {payload.path} 原因: {payload.reason}")
 
 
-@on_event(DOWNLOAD_COMPLETED)
-def handle_download_completed(event: Event) -> None:
+def handle_download_completed(
+    event: Event,
+    download_client_factory: DownloadClientFactory | None = None,
+    transfer_pipeline: TransferPipeline | None = None,
+) -> None:
     """下载完成事件处理器 — 触发文件转移."""
     payload = DownloadCompletedPayload(**event.payload)
     try:
-        client_factory = container.download_client_factory()
+        client_factory = download_client_factory or DownloadClientFactory()
         downloader_conf = client_factory.get_downloader_conf(payload.downloader_id)
         if not downloader_conf:
             log.warn(f"[Event]下载器配置不存在: {payload.downloader_id}")
@@ -63,7 +68,8 @@ def handle_download_completed(event: Event) -> None:
                 if client:
                     client.set_torrents_status(ids=payload.task_id, tags=payload.tags)
 
-        pipeline = container.transfer_pipeline()
+        if transfer_pipeline is None:
+            raise RuntimeError("transfer_pipeline is required")
         task = TransferTask(
             source_type=SourceType.DOWNLOADER,
             source_id=name,
@@ -71,10 +77,26 @@ def handle_download_completed(event: Event) -> None:
             operation=operation,
             post_process=_post_process,
         )
-        success, message = pipeline.process(task)
+        success, message = transfer_pipeline.process(task)
         if success:
             log.info(f"[Event]下载完成转移成功: {payload.path}")
         else:
             log.warn(f"[Event]下载完成转移失败: {payload.path} — {message}")
     except Exception as e:
         log.error(f"[Event]处理下载完成事件失败: {e!s}")
+
+
+def register_download_completed_handler(
+    event_bus: EventBus,
+    transfer_pipeline: TransferPipeline,
+    download_client_factory: DownloadClientFactory | None = None,
+) -> None:
+    """注册下载完成事件处理器，外部显式注入依赖。"""
+    event_bus.subscribe(
+        DOWNLOAD_COMPLETED,
+        lambda event: handle_download_completed(
+            event,
+            download_client_factory=download_client_factory,
+            transfer_pipeline=transfer_pipeline,
+        ),
+    )

@@ -5,22 +5,27 @@ MovieLike Plugin v2
 
 import os
 
+from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
+from app.domain.mediatypes import MediaType
+from app.mediaserver.media_server import MediaServer
 from app.plugin_framework.context import PluginContext
-from app.plugin_framework.hook_system import HookSystem
+from app.services.transfer.filetransfer_service import FileTransferService
 from app.utils import SystemUtils
 from app.utils.config_tools import update_favtype
-from app.domain.mediatypes import MediaType
-from app.di import container
 
 
 class MovieLikePlugin:
     """电影精选插件"""
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(
+        self,
+        ctx: PluginContext,
+        mediaserver: MediaServer,
+        filetransfer: FileTransferService,
+    ):
         self.ctx = ctx
-        self._mediaserver = container.media_server()
-        self._filetransfer = container.filetransfer_service()
-        self._category = container.category()
+        self._mediaserver = mediaserver
+        self._filetransfer = filetransfer
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -84,7 +89,9 @@ class MovieLikePlugin:
         movie_type = os.path.basename(os.path.dirname(movie_dir))
         if movie_type == dir_name:
             return
-        if movie_type not in self._category.movie_categorys:
+        adapter = CategoryConfigRepositoryAdapter()
+        movie_names = {e.name for e in adapter.get_all() if e.media_type == "movie"}
+        if movie_type not in movie_names:
             return
 
         movie_name = os.path.basename(movie_dir)
@@ -101,6 +108,6 @@ class MovieLikePlugin:
             if ret != 0:
                 self.ctx.error(f"{retmsg}")
             else:
-                HookSystem().emit("media.library_synced", {"dest": new_path, "media_info": {}})
+                self.ctx.emit("media.library_synced", {"dest": new_path, "media_info": {}})
         else:
             self.ctx.warn(f"{org_path} 目录不存在")

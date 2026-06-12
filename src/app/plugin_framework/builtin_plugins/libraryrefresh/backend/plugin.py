@@ -4,17 +4,17 @@ LibraryRefresh Plugin v2
 """
 
 from datetime import datetime, timedelta
+from typing import Any
 
 from app.plugin_framework.context import PluginContext
-from app.di import container
 
 
 class LibraryRefreshPlugin:
     """刷新媒体库插件"""
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(self, ctx: PluginContext, mediaserver: Any):
         self.ctx = ctx
-        self._mediaserver = container.media_server()
+        self._mediaserver = mediaserver
 
     def _get_config(self):
         return self.ctx.get_config() or {}

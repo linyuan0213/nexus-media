@@ -5,22 +5,71 @@ Plugin Sandbox - 插件沙箱运行环境
 
 import importlib
 import importlib.util
+import inspect
 import os
 import sys
 from typing import Any
 
 import log
-from app.message import Message
+
 from app.plugin_framework.context import PluginContext
-from app.di import container
+from app.plugin_framework.registry import PluginRegistry
+from app.message import Message
 
 
 class PluginSandbox:
-    """插件沙箱，管理插件后端模块的加载和运行"""
+    """插件沙箱，管理插件后端模块的加载和运行.
 
-    def __init__(self):
+    由 lifespan 创建并注册到 registry。
+    """
+
+    def __init__(
+        self,
+        plugin_registry: PluginRegistry,
+        message: Message,
+        scheduler_core: Any,
+        hook_system: Any,
+        site_engine: Any,
+        media_service: Any,
+        plugin_log_repo: Any | None = None,
+        site_cache: Any | None = None,
+        downloader_core: Any | None = None,
+        media_server: Any | None = None,
+        subscribe_service: Any | None = None,
+        searcher: Any | None = None,
+        sync_engine: Any | None = None,
+        site_resolver: Any | None = None,
+        indexer_helper: Any | None = None,
+        agent_service: Any | None = None,
+        filetransfer_service: Any | None = None,
+    ):
         self._instances: dict[str, Any] = {}
-        self._registry = container.plugin_registry()
+        self._registry = plugin_registry
+        self._message = message
+        self._scheduler_core = scheduler_core
+        self._hook_system = hook_system
+        self._site_engine = site_engine
+        self._media_service = media_service
+        self._plugin_log_repo = plugin_log_repo
+        self._site_cache = site_cache
+        self._downloader_core = downloader_core
+        self._media_server = media_server
+        self._subscribe_service = subscribe_service
+        self._searcher = searcher
+        self._sync_engine = sync_engine
+        self._site_resolver = site_resolver
+        self._indexer_helper = indexer_helper
+        self._agent_service = agent_service
+        self._filetransfer_service = filetransfer_service
+
+    @staticmethod
+    def _filter_kwargs(plugin_class: Any, deps: dict[str, Any]) -> dict[str, Any]:
+        """根据插件类构造函数的参数名过滤依赖。"""
+        try:
+            params = inspect.signature(plugin_class.__init__).parameters
+        except Exception:
+            return {}
+        return {k: v for k, v in deps.items() if k in params}
 
     def _get_module_path(self, plugin_id: str) -> str | None:
         """根据插件 entry 计算 module_path"""
@@ -116,8 +165,30 @@ class PluginSandbox:
                 return False
 
             # 创建上下文
-            ctx = PluginContext(plugin_id, plugin_name=manifest.name)
-            instance = plugin_class(ctx)
+            ctx = PluginContext(
+                plugin_id,
+                plugin_name=manifest.name,
+                plugin_log_repo=self._plugin_log_repo,
+                message=self._message,
+                scheduler_core=self._scheduler_core,
+                hook_system=self._hook_system,
+                site_engine=self._site_engine,
+                media_service=self._media_service,
+            )
+            deps = {
+                "sites": self._site_cache,
+                "site_resolver": self._site_resolver,
+                "index_helper": self._indexer_helper,
+                "mediaserver": self._media_server,
+                "downloader": self._downloader_core,
+                "searcher": self._searcher,
+                "subscribe": self._subscribe_service,
+                "site_cache": self._site_cache,
+                "agent_service": self._agent_service,
+                "sync": self._sync_engine,
+                "filetransfer": self._filetransfer_service,
+            }
+            instance = plugin_class(ctx, **self._filter_kwargs(plugin_class, deps))
 
             self._instances[plugin_id] = instance
 
@@ -146,7 +217,7 @@ class PluginSandbox:
             self._cleanup_modules(plugin_id)
 
             # 自动注销该插件的所有消息命令
-            Message().clear_plugin_commands(plugin_id)
+            self._message.clear_plugin_commands(plugin_id)
 
             log.info(f"[Sandbox] 插件卸载: {plugin_id}")
 
@@ -197,7 +268,7 @@ class PluginSandbox:
             except Exception as e:
                 log.error(f"[Sandbox] 插件 {plugin_id} 处理 hook {event} 失败: {e}")
 
-    def get_instance(self, plugin_id: str) -> Any | None:
+    def get_plugin_instance(self, plugin_id: str) -> Any | None:
         """获取插件实例"""
         return self._instances.get(plugin_id)
 

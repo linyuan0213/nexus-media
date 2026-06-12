@@ -11,7 +11,7 @@ from app.core.exceptions import DomainError, RepositoryError, ServiceError  # no
 from app.core.settings import settings
 from app.utils.config_tools import get_domain, get_proxies, get_tmdbapi_url, get_ua
 from app.core.root_path import get_script_path
-from app.utils.path_utils import get_category_path, get_temp_path, get_user_plugin_path
+from app.utils.path_utils import get_temp_path, get_user_plugin_path
 
 
 class ConfigService:
@@ -84,12 +84,6 @@ class ConfigService:
         """获取 TMDB API URL"""
 
         return get_tmdbapi_url()
-
-    @property
-    def category_path(self) -> str | None:
-        """获取分类配置文件路径"""
-
-        return get_category_path()
 
     # ------------------------------------------------------------------
     # 写入接口

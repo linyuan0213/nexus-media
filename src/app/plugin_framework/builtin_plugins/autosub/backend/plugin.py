@@ -17,7 +17,6 @@ import psutil
 import srt
 from lxml import etree
 
-from app.agent.agents.chat_agent import ChatAgent
 from app.core.constants import RMT_MEDIAEXT
 from app.infrastructure.ffmpeg import FfmpegProcessor
 from app.plugin_framework.context import PluginContext
@@ -27,8 +26,9 @@ from app.utils import SystemUtils
 class AutoSubPlugin:
     """AI字幕自动生成插件"""
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(self, ctx: PluginContext, agent_service):
         self.ctx = ctx
+        self._agent_service = agent_service
         self._running = False
         self._end_token: list[str] = [".", "!", "?", "。", "！", "？", '。"', '！"', '？"', '."', '!"', '?"']
         self._noisy_token = [("(", ")"), ("[", "]"), ("{", "}"), ("[", "]"), ("♪", "♪"), ("♫", "♫"), ("♪♪", "♪♪")]
@@ -548,12 +548,12 @@ class AutoSubPlugin:
         return merged_subtitle
 
     def _do_translate_with_retry(self, text, retry=3):
-        result = ChatAgent().translate_to_zh(text)
+        result = self._agent_service.chat_agent.translate_to_zh(text)
         for i in range(retry):
             if result and result != text:
                 break
             self.ctx.warn(f"翻译失败，重试第{i + 1}次")
-            result = ChatAgent().translate_to_zh(text)
+            result = self._agent_service.chat_agent.translate_to_zh(text)
 
         if not result or result == text:
             return None

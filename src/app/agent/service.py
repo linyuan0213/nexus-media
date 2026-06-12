@@ -4,6 +4,9 @@ import json
 from typing import Any
 
 import log
+from app.agent.agents.chat_agent import ChatAgent
+from app.agent.agents.media_recognizer import MediaRecognizer
+from app.agent.agents.search_intent import SearchIntentAgent
 from app.agent.config import get_provider
 from app.agent.providers.base import ProviderConfig
 from app.agent.providers.gemini import GeminiProvider
@@ -16,21 +19,47 @@ from app.infrastructure.cache_system import lru_cache_with_ttl
 class AgentService:
     """LLM Agent 服务门面 — 管理提供商连接、缓存、重试"""
 
-    _instance = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._init()
-        return cls._instance
-
-    def _init(self):
+    def __init__(self, tool_executor: Any | None = None):
+        self._tool_executor = tool_executor
+        self._media_recognizer: MediaRecognizer | None = None
+        self._search_intent_agent: SearchIntentAgent | None = None
+        self._chat_agent: ChatAgent | None = None
         self._provider: Any | None = None
         self._config: ProviderConfig | None = None
         self._enabled = False
         self._refresh_config()
 
-    def _refresh_config(self):
+    def set_tool_executor(self, tool_executor: Any) -> None:
+        """注入工具执行器（解决与 Service 层的循环依赖）。"""
+        self._tool_executor = tool_executor
+
+    @property
+    def media_recognizer(self) -> MediaRecognizer:
+        if self._media_recognizer is None:
+            self._media_recognizer = MediaRecognizer(svc=self)
+        return self._media_recognizer
+
+    @property
+    def search_intent_agent(self) -> SearchIntentAgent:
+        if self._search_intent_agent is None:
+            self._search_intent_agent = SearchIntentAgent(svc=self)
+        return self._search_intent_agent
+
+    @property
+    def chat_agent(self) -> ChatAgent:
+        if self._chat_agent is None:
+            self._chat_agent = ChatAgent(svc=self, tool_executor=self._tool_executor)
+        return self._chat_agent
+
+    @property
+    def ready(self) -> bool:
+        return self._enabled and self._provider is not None
+
+    @property
+    def provider_name(self) -> str:
+        return self._config.name if self._config else ""
+
+    def _refresh_config(self) -> None:
         """刷新配置（支持热重载）"""
         cfg = settings.get("agent") or {}
         self._enabled = bool(cfg.get("enabled"))
@@ -55,14 +84,6 @@ class AgentService:
         if config.name == "gemini":
             return GeminiProvider(config)
         return OpenAIProvider(config)
-
-    @property
-    def ready(self) -> bool:
-        return self._enabled and self._provider is not None
-
-    @property
-    def provider_name(self) -> str:
-        return self._config.name if self._config else ""
 
     def chat(
         self,

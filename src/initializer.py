@@ -3,13 +3,27 @@ import os
 import log
 from app.core.settings import settings
 from app.db.repositories.subscribe_repository import SubscribeRepository
-from app.di import container
+from app.di.registry import registry
+from app.di.types import RegistryKey
 from app.events import auto_register, register_modules
 from app.events.config import EVENT_HANDLER_MODULES
 from app.infrastructure.cache_system.events import init_event_bridge
+from app.services.category_init import CategoryInitializer
 from app.services.rbac_init import init_admin_user
 from app.services.rbac_init import init_rbac_system as rbac_init
 from app.utils import ExceptionUtils
+from app.db.repositories.download_repo_adapter import IndexerStatisticsRepositoryAdapter
+from app.events.bridge import PluginBridge
+from app.events.bus import EventBus
+
+
+def init_default_categories():
+    """初始化默认分类配置（从 YAML 模板导入数据库）"""
+    try:
+        CategoryInitializer().run()
+    except Exception as e:
+        log.error(f"[Initialize]默认分类配置初始化失败: {e!s}")
+        ExceptionUtils.exception_traceback(e)
 
 
 def check_config():
@@ -70,12 +84,12 @@ def check_config():
         log.error("[Config]配置文件格式错误，找不到app配置项！")
 
 
-def update_config():
+def update_config(indexer_statistics_repo=None):
     """
     升级配置文件
     """
     _config = settings.get()
-    _dbhelper = container.indexer_statistics_repo()
+    _dbhelper = indexer_statistics_repo or IndexerStatisticsRepositoryAdapter()
     overwrite_config = False
 
     # security.api_key 已废弃：
@@ -155,13 +169,21 @@ def check_redis():
         log.info(f"Redis 未启用，使用内存缓存: {e}")
 
 
-def init_message_webhook_apikey():
+def init_message_webhook_apikey(apikey_service=None):
     """
     初始化消息通知 Webhook 的系统级 API Key
     在 API_KEYS 表中创建/获取名为 MessageWebhook 的系统 key
     """
     try:
-        container.apikey_service().get_or_create_system_key("MessageWebhook")
+        if apikey_service is None:
+            from app.services.apikey_service import APIKeyService
+            from app.db.repositories.apikey_repo_adapter import APIKeyRepositoryAdapter, APIKeyLogRepositoryAdapter
+
+            apikey_service = APIKeyService(
+                key_repo=APIKeyRepositoryAdapter(),
+                log_repo=APIKeyLogRepositoryAdapter(),
+            )
+        apikey_service.get_or_create_system_key("MessageWebhook")
         log.info("[Initialize]消息 Webhook API Key 已就绪")
     except Exception as e:
         log.error(f"[Initialize]消息 Webhook API Key 初始化失败：{e!s}")
@@ -181,13 +203,18 @@ def update_rss_state():
         ExceptionUtils.exception_traceback(e)
 
 
-def init_event_handlers():
+def init_event_handlers(event_bus=None):
     """
     初始化事件处理器：显式导入 handler 模块触发 @on_event 注册
     """
     try:
         register_modules(EVENT_HANDLER_MODULES)
-        bus = container.event_bus()
+        from app.events.registry import EventHandlerRegistry
+
+        bus = event_bus or EventBus(
+            registry=EventHandlerRegistry(),
+            bridge=PluginBridge(hook_system=registry.get(RegistryKey.HOOK_SYSTEM)),
+        )
         auto_register(bus)
         init_event_bridge(bus)
         log.info("[Initialize]事件处理器已注册")

@@ -1,15 +1,19 @@
 #!/bin/sh
 # 优雅重启 Granian（SIGUSR1 信号）
 
-pidfile="${1:-/config/logs/granian.pid}"
+pidfile="${1:-/data/granian.pid}"
 
 if [ ! -f "$pidfile" ]; then
-    pidfile="./config/logs/granian.pid"
+    pidfile="./data/granian.pid"
 fi
 
 if [ ! -f "$pidfile" ]; then
     # 兼容旧路径
-    pidfile="/config/granian.pid"
+    pidfile="./config/logs/granian.pid"
+fi
+
+if [ ! -f "$pidfile" ]; then
+    pidfile="/config/logs/granian.pid"
 fi
 
 if [ ! -f "$pidfile" ]; then

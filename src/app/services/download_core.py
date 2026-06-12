@@ -19,23 +19,27 @@ from app.core.constants import PT_TAG, RMT_MEDIAEXT
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.system_config import SystemConfig
 from app.db.repositories.download_repo_adapter import (
+    DownloadHistoryRepositoryAdapter,
     DownloadSettingRepositoryAdapter,
 )
+from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
 from app.downloader.client_factory import DownloadClientFactory
 from app.downloader.pipeline import DownloadPipeline
 from app.downloader.strategy import RemoveStrategy
+from app.events.bus import EventBus
+from app.events.registry import EventHandlerRegistry  # noqa: F401
 from app.media import meta_info
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.schemas.download import Torrent as TorrentInfo
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.sites import SiteConf, SiteSubtitle
-from app.sites.engine import SiteEngine
 from app.services.download_strategies import EpisodeStrategy, MovieDownloadStrategy, SeasonPackStrategy
-from app.utils import ExceptionUtils
 from app.sites.torrent import Torrent
 from app.domain.mediatypes import MediaType
-from app.di import container
+from app.sites.engine import SiteEngine
+from app.sites.site_cache import SiteCache
+from app.utils import ExceptionUtils
 
 
 class DownloadCore:
@@ -45,29 +49,33 @@ class DownloadCore:
 
     def __init__(
         self,
-        client_factory: DownloadClientFactory | None = None,
-        message: Message | None = None,
-        mediaserver: MediaServer | None = None,
-        filetransfer: FileTransfer | None = None,
-        sites=None,
-        siteconf: SiteConf | None = None,
-        sitesubtitle: SiteSubtitle | None = None,
-        event_bus=None,
-        download_repo: Any = None,
-        download_setting_repo=None,
-        systemconfig: SystemConfig | None = None,
+        client_factory: DownloadClientFactory,
+        message: Message,
+        mediaserver: MediaServer,
+        filetransfer: FileTransfer,
+        sites: SiteCache,
+        siteconf: SiteConf,
+        sitesubtitle: SiteSubtitle,
+        event_bus: EventBus,
+        download_repo: DownloadHistoryRepositoryAdapter,
+        download_setting_repo: DownloadSettingRepositoryAdapter,
+        systemconfig: SystemConfig,
+        downloader_repo: DownloaderRepositoryAdapter,
+        site_engine: SiteEngine,
     ):
-        self._client_factory = client_factory or DownloadClientFactory()
-        self._message = message or Message()
-        self._mediaserver = mediaserver or container.media_server()
-        self._filetransfer = filetransfer or container.filetransfer_service()
-        self._sites = sites or container.site_cache()
-        self._siteconf = siteconf or container.site_conf()
-        self._sitesubtitle = sitesubtitle or SiteSubtitle()
-        self._event_bus = event_bus or container.event_bus()
-        self._download_repo = download_repo or container.download_history_repo()
-        self._download_setting_repo = download_setting_repo or DownloadSettingRepositoryAdapter()
-        self._systemconfig = systemconfig or SystemConfig
+        self._client_factory = client_factory
+        self._message = message
+        self._mediaserver = mediaserver
+        self._filetransfer = filetransfer
+        self._sites = sites
+        self._siteconf = siteconf
+        self._sitesubtitle = sitesubtitle
+        self._event_bus = event_bus
+        self._download_repo = download_repo
+        self._download_setting_repo = download_setting_repo
+        self._systemconfig = systemconfig
+        self._downloader_repo = downloader_repo
+        self._site_engine = site_engine
         self._pipeline = DownloadPipeline(
             client_factory=self._client_factory,
             message=self._message,
@@ -77,6 +85,8 @@ class DownloadCore:
             siteconf=self._siteconf,
             sitesubtitle=self._sitesubtitle,
             event_bus=self._event_bus,
+            download_history_repo=self._download_repo,
+            site_engine=self._site_engine,
         )
 
     # ---------- 媒体存在性检查 ----------
@@ -167,7 +177,7 @@ class DownloadCore:
         download_items = MovieDownloadStrategy.download_movies(
             download_list=download_list,
             download_callback=_download_callback,
-            get_download_url_callback=DownloadCore.get_download_url,
+            get_download_url_callback=self.get_download_url,
         )
 
         # 2. 电视剧整季匹配
@@ -177,7 +187,7 @@ class DownloadCore:
                 download_list=download_list,
                 need_seasons=need_seasons,
                 need_tvs=need_tvs,
-                get_download_url_callback=DownloadCore.get_download_url,
+                get_download_url_callback=self.get_download_url,
                 download_callback=_download_callback,
                 get_torrent_episodes_callback=self.get_torrent_episodes,
             )
@@ -187,7 +197,7 @@ class DownloadCore:
             download_items, need_tvs = EpisodeStrategy.download_episodes(
                 download_list=download_list,
                 need_tvs=need_tvs,
-                get_download_url_callback=DownloadCore.get_download_url,
+                get_download_url_callback=self.get_download_url,
                 download_callback=_download_callback,
                 get_torrent_episodes_callback=self.get_torrent_episodes,
                 _set_files_status_callback=self.set_files_status,
@@ -202,7 +212,7 @@ class DownloadCore:
             download_items, need_tvs = EpisodeStrategy.download_from_season_pack(
                 download_list=download_list,
                 need_tvs=need_tvs,
-                get_download_url_callback=DownloadCore.get_download_url,
+                get_download_url_callback=self.get_download_url,
                 download_callback=_download_callback,
                 get_torrent_episodes_callback=self.get_torrent_episodes,
                 set_files_status_callback=self.set_files_status,
@@ -407,7 +417,8 @@ class DownloadCore:
             log.error("[Downloader]url 链接为空")
             return [], None
         site_info: Any = self._sites.get_sites(siteurl=url) or {}
-        file_path, _, _, files, retmsg = Torrent().get_torrent_info(
+        torrent = Torrent(site_engine=self._site_engine)
+        file_path, _, _, files, retmsg = torrent.get_torrent_info(
             url=url,
             cookie=site_info.get("cookie"),
             ua=site_info.get("ua"),
@@ -445,7 +456,7 @@ class DownloadCore:
     def update_downloader(
         self, did, name, enabled, dtype, transfer, only_nexus_media, match_path, rmt_mode, config, download_dir
     ):
-        ret = container.downloader_repo().update_downloader(
+        ret = self._downloader_repo.update_downloader(
             did=did,
             name=name,
             enabled=enabled,
@@ -461,12 +472,12 @@ class DownloadCore:
         return ret
 
     def delete_downloader(self, did):
-        ret = container.downloader_repo().delete_downloader(did=did)
+        ret = self._downloader_repo.delete_downloader(did=did)
         self._client_factory._refresh()
         return ret
 
     def check_downloader(self, did=None, transfer=None, only_nexus_media=None, enabled=None, match_path=None):
-        ret = container.downloader_repo().check_downloader(
+        ret = self._downloader_repo.check_downloader(
             did=did, transfer=transfer, only_nexus_media=only_nexus_media, enabled=enabled, match_path=match_path
         )
         self._client_factory._refresh()
@@ -507,10 +518,9 @@ class DownloadCore:
 
     # ---------- 静态工具 ----------
 
-    @staticmethod
-    def get_download_url(page_url):
-        site_info: Any = container.site_cache().get_sites(siteurl=page_url) or {}
-        return SiteEngine.get_instance().resolve_download_url(
+    def get_download_url(self, page_url):
+        site_info: Any = self._sites.get_sites(siteurl=page_url) or {}
+        return self._site_engine.resolve_download_url(
             page_url=page_url,
             user_config={
                 "cookie": site_info.get("cookie", ""),

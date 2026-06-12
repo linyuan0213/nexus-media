@@ -24,11 +24,13 @@ class TestDownloadMonitor:
 
     @pytest.fixture
     def monitor(self, mock_factory, mock_bus):
-        with patch("app.services.download_monitor.container") as mock_container:
-            mock_container.download_client_factory.return_value = mock_factory
-            mock_container.event_bus.return_value = mock_bus
-            m = DownloadMonitor(interval=1, max_workers=2)
-            return m, mock_factory, mock_bus
+        m = DownloadMonitor(
+            client_factory=mock_factory,
+            event_bus=mock_bus,
+            interval=1,
+            max_workers=2,
+        )
+        return m, mock_factory, mock_bus
 
     def test_init(self, monitor):
         m, factory, bus = monitor

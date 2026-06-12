@@ -6,6 +6,7 @@ from ollama import Client
 
 import log
 from app.agent.providers.base import BaseProvider, ProviderConfig
+from app.di.types import RegistryKey
 
 
 class OllamaProvider(BaseProvider):
@@ -31,7 +32,7 @@ class OllamaProvider(BaseProvider):
             messages=msgs,
             options={"temperature": temperature},
         )
-        return resp["message"]["content"]
+        return resp[RegistryKey.MESSAGE.value]["content"]
 
     def is_available(self) -> bool:
         try:

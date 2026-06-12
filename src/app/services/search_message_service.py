@@ -7,27 +7,48 @@ import os
 import re
 
 import log
-from app.agent.agents.chat_agent import ChatAgent
+from app.agent.service import AgentService
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
-from app.media import MediaService, meta_info
+from app.domain.enums import SearchType
+from app.domain.mediatypes import MediaType
+from app.media import meta_info
+from app.media.service import MediaService
 from app.message import Message
+from app.services.downloader_core import DownloaderCore
+from app.services.indexer_service import IndexerService
 from app.services.search_pagination import pagination_mgr
+from app.services.search_service import Searcher
+from app.services.subscribe_service import SubscribeService
+from app.services.web.utils import search_media_infos
+from app.sites.engine import SiteEngine
+from app.sites.site_cache import SiteCache
 from app.sites.torrent import Torrent
 from app.utils import StringUtils
-from app.domain.mediatypes import MediaType
-from app.domain.enums import SearchType
-from app.services.web import WebUtils
-from app.di import container
 
 
 class MessageSearchService:
     """消息中心搜索服务"""
 
-    def __init__(self):
-        self._downloader = container.downloader_core()
-        self._searcher = container.searcher()
-        self._indexer = container.indexer_service()
+    def __init__(
+        self,
+        downloader: DownloaderCore,
+        searcher: Searcher,
+        indexer: IndexerService,
+        site_cache: SiteCache,
+        site_engine: SiteEngine,
+        subscribe_service: SubscribeService,
+        media_service: MediaService,
+        agent_service: AgentService,
+    ):
+        self._downloader = downloader
+        self._searcher = searcher
+        self._indexer = indexer
+        self._site_cache = site_cache
+        self._site_engine = site_engine
+        self._subscribe_service = subscribe_service
+        self._media_service = media_service
+        self._agent_service = agent_service
 
     def handle(self, input_str: str, in_from: SearchType, user_id: str, user_name: str | None = None):
         """处理消息中心输入"""
@@ -101,9 +122,9 @@ class MessageSearchService:
 
         tmdb_info = None
         if item.TMDBID:
-            tmdb_info = MediaService().get_tmdb_info(mtype=mtype, tmdbid=item.TMDBID)
+            tmdb_info = self._media_service.get_tmdb_info(mtype=mtype, tmdbid=item.TMDBID)
         else:
-            tmdb_info = MediaService().get_media_info(title=f"{title} {year or ''}".strip(), mtype=mtype)
+            tmdb_info = self._media_service.get_media_info(title=f"{title} {year or ''}".strip(), mtype=mtype)
 
         media_info = meta_info(title=f"{title} {year}".strip(), mtype=mtype)
         media_info.set_tmdb_info(tmdb_info)
@@ -138,12 +159,11 @@ class MessageSearchService:
             content = re.sub(r"(搜索|下载)[:：\s]*", "", input_str)
             self._search_media(in_from, content, user_id, user_name, "SEARCH")
 
-    @staticmethod
-    def _parse_intent(input_str: str) -> str:
+    def _parse_intent(self, input_str: str) -> str:
         """解析用户意图"""
         if input_str.startswith(("http", "magnet")):
             return "DOWNLOAD"
-        if ChatAgent().ready:
+        if self._agent_service.chat_agent.ready:
             return "ASK"
         if input_str.startswith("订阅"):
             return "SUBSCRIBE"
@@ -151,8 +171,8 @@ class MessageSearchService:
 
     def _download_from_url(self, url: str, in_from: SearchType, user_id: str, user_name: str | None = None):
         """从 URL 下载种子"""
-        site_info: dict = container.site_cache().get_sites(siteurl=url)  # type: ignore[assignment]
-        filepath, content, retmsg = Torrent().save_torrent_file(
+        site_info: dict = self._site_cache.get_sites(siteurl=url)  # type: ignore[assignment]
+        filepath, content, retmsg = Torrent(site_engine=self._site_engine).save_torrent_file(
             url=url, cookie=site_info.get("cookie"), ua=site_info.get("ua"), proxy=site_info.get("proxy") or False
         )
         if (not content or not filepath) and retmsg:
@@ -160,7 +180,7 @@ class MessageSearchService:
             return
 
         filename = os.path.basename(filepath)
-        meta_info = MediaService().get_media_info(title=filename)
+        meta_info = self._media_service.get_media_info(title=filename)
         if not meta_info:
             Message().send_channel_msg(channel=in_from, title="无法识别种子文件名！", user_id=user_id)
             return
@@ -171,7 +191,7 @@ class MessageSearchService:
     def _chat(self, question: str, in_from: SearchType, user_id: str):
         """AI 对话（支持工具调用）"""
         try:
-            answer = ChatAgent().chat_with_tools(question=question, session_id=str(user_id))
+            answer = self._agent_service.chat_agent.chat_with_tools(question=question, session_id=str(user_id))
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
@@ -193,7 +213,7 @@ class MessageSearchService:
             content,
             [
                 {"id": site.get("name"), "name": site.get("name")}
-                for site in container.site_cache().get_sites(rss=True, public=True)
+                for site in self._site_cache.get_sites(rss=True, public=True)
             ],
         )
 
@@ -216,7 +236,7 @@ class MessageSearchService:
             Message().send_channel_msg(channel=in_from, title="无法识别搜索内容！", user_id=user_id)
             return
 
-        medias = WebUtils.search_media_infos(keyword=content)
+        medias = search_media_infos(keyword=content)
         if not medias:
             Message().send_channel_msg(channel=in_from, title=f"{content} 查询不到媒体信息！", user_id=user_id)
             return
@@ -237,7 +257,7 @@ class MessageSearchService:
             else:
                 if media_info.douban_id:
                     title = media_info.get_title_string()
-                    media_info = MediaService().get_media_info(
+                    media_info = self._media_service.get_media_info(
                         title=f"{media_info.title} {media_info.year}", mtype=media_info.type, strict=True
                     )
                     if not media_info or not media_info.tmdb_info:
@@ -310,11 +330,10 @@ class MessageSearchService:
         pagination_mgr.set_search_results(user_id, search_results, media_info.title)
         pagination_mgr.send_page_message(in_from, user_id)
 
-    @staticmethod
-    def _add_rss(in_from, media_info, user_id=None, state="D", user_name=None):
+    def _add_rss(self, in_from, media_info, user_id=None, state="D", user_name=None):
         """添加订阅"""
         mediaid = f"DB:{media_info.douban_id}" if media_info.douban_id else media_info.tmdb_id
-        code, msg, media_info = container.subscribe_service().add_rss_subscribe(
+        code, msg, media_info = self._subscribe_service.add_rss_subscribe(
             mtype=media_info.type,
             name=media_info.title,
             year=media_info.year,

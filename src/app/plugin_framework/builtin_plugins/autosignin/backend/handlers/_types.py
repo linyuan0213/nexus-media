@@ -21,6 +21,10 @@ class BakatestQaHandler(SiteSigninHandler):
     _success_regex = ["\\d+点魔力值"]
     _name: str = ""
 
+    def __init__(self, plugin_ctx, rate_limiter=None, agent_service=None):
+        super().__init__(plugin_ctx, rate_limiter)
+        self._agent_service = agent_service
+
     @property
     def _answer_file(self) -> str:
         answer_path = os.path.join(get_temp_path(), "signin")
@@ -75,7 +79,7 @@ class BakatestQaHandler(SiteSigninHandler):
         ai_question = self._build_ai_question(question_str, answers)
         self._plugin_ctx.debug(f"组装AI问题 {ai_question}")
 
-        answer = QuestionAnswerAgent().answer(ai_question)
+        answer = QuestionAnswerAgent(svc=self._agent_service).answer(ai_question)
         self._plugin_ctx.debug(f"AI返回结果 {answer}")
 
         if answer:

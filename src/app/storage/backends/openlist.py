@@ -5,8 +5,8 @@ import posixpath
 from collections.abc import Iterator
 from typing import BinaryIO
 
-import requests
-
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.storage.backends.base import FileInfo, StorageBackend, StorageConfig
 
 
@@ -24,31 +24,32 @@ class OpenListStorageBackend(StorageBackend):
         self._username = getattr(config, "username", "")
         self._password = getattr(config, "password", "")
         self._write_enabled = getattr(config, "write_enabled", False)
-        self._session = requests.Session()
+        self._http = HttpClient(HttpClientConfig(timeout=30.0, connect_timeout=10.0))
         if not self._token and self._username and self._password:
             self._login()
-        if self._token:
-            self._session.headers["Authorization"] = self._token
 
     def _login(self) -> None:
         """通过 username/password 获取 JWT token。"""
         url = f"{self._base}/api/auth/login"
-        resp = self._session.post(
+        resp = self._http.post(
             url,
             json={"username": self._username, "password": self._password},
             timeout=30,
         )
-        resp.raise_for_status()
         data = resp.json()
         if data.get("code") != 200:
             raise RuntimeError(data.get("message", "login failed"))
         self._token = data["data"]["token"]
-        self._session.headers["Authorization"] = self._token
+
+    def _auth_headers(self) -> dict[str, str]:
+        if self._token:
+            return {"Authorization": self._token}
+        return {}
 
     def _api(self, endpoint: str, method: str = "POST", **kwargs):
         url = f"{self._base}/api/fs/{endpoint.lstrip('/')}"
-        resp = self._session.request(method, url, timeout=30, **kwargs)
-        resp.raise_for_status()
+        headers = {**self._auth_headers(), **kwargs.pop("headers", {})}
+        resp = self._http.request(method, url, timeout=30, headers=headers, **kwargs)
         data = resp.json()
         if data.get("code") != 200:
             raise RuntimeError(data.get("message", "unknown error"))
@@ -110,9 +111,7 @@ class OpenListStorageBackend(StorageBackend):
         raw_url = data.get("raw_url") or data.get("url")
         if not raw_url:
             raise RuntimeError("无法获取文件下载地址")
-        resp = self._session.get(raw_url, stream=True, timeout=60)
-        resp.raise_for_status()
-        return resp.raw  # type: ignore[return-value]
+        return self._http.stream("GET", raw_url, timeout=60)
 
     def _get_stream_size(self, stream: BinaryIO) -> int:
         """尝试获取流的大小。"""
@@ -133,8 +132,8 @@ class OpenListStorageBackend(StorageBackend):
         actual_size = size or self._get_stream_size(stream)
         if actual_size > 0:
             headers["Content-Length"] = str(actual_size)
-        resp = self._session.put(url, headers=headers, data=stream, timeout=300)
-        resp.raise_for_status()
+        headers = {**self._auth_headers(), **headers}
+        resp = self._http.put(url, headers=headers, content=stream, timeout=300)
         data = resp.json()
         if data.get("code") != 200:
             raise RuntimeError(data.get("message", "upload failed"))

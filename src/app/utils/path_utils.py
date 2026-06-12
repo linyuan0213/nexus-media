@@ -14,6 +14,11 @@ def get_config_path():
     return settings.config_path
 
 
+def get_data_path():
+    """运行时数据目录路径"""
+    return settings.data_path
+
+
 def get_root_path():
     """项目根目录"""
     return str(get_project_root())
@@ -21,7 +26,7 @@ def get_root_path():
 
 def get_temp_path():
     """临时文件目录"""
-    return os.path.join(get_config_path(), "temp")
+    return os.path.join(get_data_path(), "temp")
 
 
 def get_inner_config_path():
@@ -31,15 +36,7 @@ def get_inner_config_path():
 
 def get_user_plugin_path():
     """用户插件目录"""
-    return os.path.join(get_config_path(), "plugins")
-
-
-def get_category_path():
-    """分类配置文件路径"""
-    category = settings.get("media").get("category")
-    if category:
-        return os.path.join(get_config_path(), f"{category}.yaml")
-    return None
+    return os.path.join(get_data_path(), "plugins")
 
 
 class PathUtils:

@@ -10,8 +10,8 @@ from app.db.repositories.config_repo_adapter import MediaConfigRepositoryAdapter
 class MediaConfigService:
     """媒体库路径配置服务"""
 
-    def __init__(self, repo: MediaConfigRepositoryAdapter | None = None):
-        self._repo = repo or MediaConfigRepositoryAdapter()
+    def __init__(self, repo: MediaConfigRepositoryAdapter):
+        self._repo = repo
         self._yaml_fallback = settings.get("media") or {}
 
     @staticmethod

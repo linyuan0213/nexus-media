@@ -5,10 +5,11 @@ import re
 from typing import Any
 
 import bencodepy
-import requests
 
 import log
 from app.core.exceptions import InfrastructureError, NetworkError
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 
 
 class PyThunder:
@@ -23,7 +24,7 @@ class PyThunder:
         port: integer, 迅雷端口，默认是 2345
         """
         self.base_url = f"http://{host}:{port}"
-        self.session = requests.Session()
+        self._client = HttpClient(config=HttpClientConfig(verify_ssl=False, timeout=30))
         self.token = token
         self.headers = {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -35,7 +36,7 @@ class PyThunder:
     def get_pan_token(self):
         """获取PAN token"""
         url = f"{self.base_url}/webman/3rdparty/pan-xunlei-com/index.cgi/"
-        response = self.session.get(url, headers=self.headers, verify=False)
+        response = self._client.get(url, headers=self.headers)
 
         # 从响应文本中提取 token
         pattern = r'function uiauth\(value\)\{ return "([^"]+)" \}'
@@ -60,7 +61,7 @@ class PyThunder:
         params = {"pan_auth": self.get_pan_token(), "device_space": ""}
         data = {}
         data = json.dumps(data, separators=(",", ":"))
-        response = self.session.post(url, headers=self.headers, params=params, data=data, verify=False)
+        response = self._client.post(url, headers=self.headers, params=params, data=data)
         if response.status_code == 200:
             response_data = response.json()
             # 从 target 字段提取 device_id
@@ -110,7 +111,7 @@ class PyThunder:
 
         data = {"page_size": 2000, "urls": download_urls}
         data = json.dumps(data, separators=(",", ":"))
-        response = self.session.post(url, headers=self.headers, params=params, data=data, verify=False)
+        response = self._client.post(url, headers=self.headers, params=params, data=data)
 
         if not extract_info:
             return response.json()
@@ -253,7 +254,7 @@ class PyThunder:
             "filters": json.dumps(filters, separators=(",", ":")),
         }
 
-        response = self.session.get(url, headers=self.headers, params=params, verify=False)
+        response = self._client.get(url, headers=self.headers, params=params)
 
         if response.status_code == 200:
             result = response.json()
@@ -346,7 +347,7 @@ class PyThunder:
         }
         data_json = json.dumps(data, separators=(",", ":"))
 
-        response = self.session.post(url, headers=self.headers, data=data_json, verify=False)
+        response = self._client.post(url, headers=self.headers, data=data_json)
 
         if response.status_code == 200:
             result = response.json()
@@ -533,7 +534,7 @@ class PyThunder:
         log.info(f"文件索引: {sub_file_index}")
         log.info(f"保存路径: {destination_path}")
 
-        response = self.session.post(url, headers=self.headers, data=data_json, verify=False)
+        response = self._client.post(url, headers=self.headers, data=data_json)
 
         if response.status_code == 200:
             result = response.json()
@@ -607,7 +608,7 @@ class PyThunder:
             "device_space": "",
         }
 
-        response = self.session.get(url, headers=self.headers, params=params, verify=False)
+        response = self._client.get(url, headers=self.headers, params=params)
 
         if response.status_code == 200:
             result = response.json()
@@ -690,7 +691,7 @@ class PyThunder:
 
         params = {"pan_auth": pan_token, "device_space": ""}
 
-        response = self.session.patch(url, headers=self.headers, params=params, data=data_json, verify=False)
+        response = self._client.patch(url, headers=self.headers, params=params, data=data_json)
 
         if response.status_code == 200:
             result = response.json()
@@ -772,7 +773,7 @@ class PyThunder:
             params = {"space": f"device_id#{device_id}", "task_ids": task_id, "pan_auth": pan_token, "device_space": ""}
 
             # DELETE 请求，空数据体
-            response = self.session.delete(url, headers=self.headers, params=params, verify=False)
+            response = self._client.delete(url, headers=self.headers, params=params)
 
             if response.status_code == 200:
                 result = response.json()

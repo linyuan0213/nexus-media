@@ -5,10 +5,13 @@
 """
 
 import os
-from typing import BinaryIO, Iterator
+from collections.abc import Iterator
+from typing import BinaryIO
 
-import requests
+import httpx
 
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.storage.backends.base import FileInfo, StorageBackend, StorageConfig
 
 
@@ -27,18 +30,18 @@ class RcloneStorageBackend(StorageBackend):
         super().__init__(config)
         self._rc_url = (getattr(config, "rc_url", "") or "http://localhost:5572").rstrip("/")
         self._remote = getattr(config, "remote_name", "NEXUS_MEDIA")
-        self._session = requests.Session()
         username = getattr(config, "rc_user", "")
         password = getattr(config, "rc_pass", "")
-        if username:
-            self._session.auth = (username, password)
+        auth = httpx.BasicAuth(username, password) if username else None
+        http_config = HttpClientConfig(auth=auth)
+        self._client = HttpClient(config=http_config)
 
     def _fs_path(self, path: str) -> str:
         return f"{self._remote}:{path.lstrip('/')}"
 
     def _call(self, endpoint: str, payload: dict) -> dict:
         url = f"{self._rc_url}/{endpoint}"
-        resp = self._session.post(url, json=payload)
+        resp = self._client.post(url, json=payload)
         resp.raise_for_status()
         return resp.json()
 
@@ -117,7 +120,7 @@ class RcloneStorageBackend(StorageBackend):
     def health_check(self) -> tuple[bool, str]:
         try:
             url = f"{self._rc_url}/core/stats"
-            resp = self._session.post(url)
+            resp = self._client.post(url)
             resp.raise_for_status()
             return True, "连接成功"
         except Exception as e:

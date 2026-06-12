@@ -6,11 +6,11 @@ from threading import Lock
 
 import log
 from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_SUBEXT
-from app.db.repositories.transfer_repo_adapter import TransferBlacklistRepositoryAdapter
 from app.media import meta_info
 from app.storage import LocalStorageBackend, StorageConfig, cross_copy, cross_move
 from app.storage.backends.base import StorageBackend, StorageType
 from app.utils import PathUtils
+from app.db.repositories.transfer_repo_adapter import TransferBlacklistRepositoryAdapter
 
 _lock = Lock()
 

@@ -147,13 +147,13 @@ class TestWebSearchService:
     """Test suite for WebSearchService."""
 
     def test_search_empty(self):
-        svc = WebSearchService()
+        svc = WebSearchService(search_fn=MagicMock())
         result = svc.search("")
         assert result.code == 0
 
     def test_search_with_results(self):
         search_fn = MagicMock(return_value=(0, "ok"))
-        svc = WebSearchService(search_fn)
+        svc = WebSearchService(search_fn=search_fn)
         result = svc.search("test")
         assert result.code == 0
         assert result.msg == "ok"
@@ -183,32 +183,39 @@ class TestSchedulerService:
     """Test suite for SchedulerService."""
 
     def test_start_service_known(self):
-        with patch("app.services.system.lifecycle.container"):
-            downloader = MagicMock()
-            sync = MagicMock()
-            thread_executor = MagicMock()
-            svc = SchedulerService(downloader, sync, thread_executor)
-            msg = svc.start_service("pttransfer")
-            assert msg == "服务已启动"
-            thread_executor.submit.assert_called_once()
+        downloader = MagicMock()
+        sync = MagicMock()
+        thread_executor = MagicMock()
+        svc = SchedulerService(downloader, sync, thread_executor)
+        msg = svc.start_service("pttransfer")
+        assert msg == "服务已启动"
+        thread_executor.submit.assert_called_once()
 
     def test_start_service_unknown(self):
         from app.core.exceptions import ResourceNotFoundError
 
-        with patch("app.services.system.lifecycle.container"):
-            downloader = MagicMock()
-            sync = MagicMock()
-            thread_executor = MagicMock()
-            svc = SchedulerService(downloader, sync, thread_executor)
-            with pytest.raises(ResourceNotFoundError):
-                svc.start_service("unknown")
+        downloader = MagicMock()
+        sync = MagicMock()
+        thread_executor = MagicMock()
+        svc = SchedulerService(downloader, sync, thread_executor)
+        with pytest.raises(ResourceNotFoundError):
+            svc.start_service("unknown")
 
 
 class TestSystemLifecycleService:
     """Test suite for SystemLifecycleService."""
 
     def test_init(self):
-        svc = SystemLifecycleService()
+        svc = SystemLifecycleService(
+            scheduler_core=MagicMock(),
+            download_monitor=MagicMock(),
+            sync=MagicMock(),
+            brush_task_service=None,
+            rss_checker=None,
+            torrent_remover=None,
+            downloader=None,
+            file_index_service=None,
+        )
         assert svc._scheduler is not None
 
 
@@ -276,23 +283,21 @@ class TestMessageCommandHandler:
     """Test suite for MessageCommandHandler."""
 
     def test_handle_message_job_empty(self):
-        with patch("app.services.system.message.container"):
-            handler = MessageCommandHandler(MagicMock())
-            result = handler.handle_message_job("")
-            assert result is None
+        handler = MessageCommandHandler(MagicMock())
+        result = handler.handle_message_job("")
+        assert result is None
 
     def test_commands_dict(self):
-        with patch("app.services.system.message.container"):
-            handler = MessageCommandHandler(
-                MagicMock(),
-                torrent_remover=MagicMock(),
-                downloader=MagicMock(),
-                sync_svc=MagicMock(),
-                filetransfer=MagicMock(),
-            )
-            assert "/ptr" in handler._command_map
-            assert "/ptt" in handler._command_map
-            assert "/sub" in handler._command_map
+        handler = MessageCommandHandler(
+            MagicMock(),
+            torrent_remover=MagicMock(),
+            downloader=MagicMock(),
+            sync_svc=MagicMock(),
+            filetransfer=MagicMock(),
+        )
+        assert "/ptr" in handler._command_map
+        assert "/ptt" in handler._command_map
+        assert "/sub" in handler._command_map
 
 
 class TestUtilityFunctions:

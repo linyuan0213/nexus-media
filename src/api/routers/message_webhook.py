@@ -5,15 +5,19 @@
 
 import asyncio
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 import log
+from api.deps import get_apikey_service
+from app.db.session import remove_session
+from app.di.registry import registry
+from app.di.types import RegistryKey
 from app.infrastructure.security import SecurityChecker
-from app.message import Message
+from app.services.apikey_service import APIKeyService
 from app.services.search_message_service import MessageSearchService
 from app.services.system_service import MessageCommandHandler
 from app.domain.enums import SearchType
-from app.di import container
+from app.message import Message
 
 router = APIRouter()
 
@@ -43,13 +47,12 @@ def _ensure_message_initialized():
         _MESSAGE_INITIALIZED = True
 
 
-def _verify_apikey(request: Request):
+def _verify_apikey(request: Request, service: APIKeyService):
     """验证 API Key（使用数据库管理的 API Key）"""
     api_key = request.query_params.get("apikey") or request.query_params.get("api_key")
     if not api_key:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing API Key")
 
-    service = container.apikey_service()
     key = service.validate_key(api_key)
     if not key:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API Key")
@@ -100,51 +103,75 @@ def _get_text_from_update(update: dict, channel: SearchType) -> str:
 
 def _handle_webhook(update: dict, channel: SearchType):
     """统一处理各平台 webhook"""
-    _ensure_message_initialized()
+    try:
+        _ensure_message_initialized()
 
-    user_id = _get_user_id_from_update(update, channel)
-    text = _get_text_from_update(update, channel)
-    if not text:
+        user_id = _get_user_id_from_update(update, channel)
+        text = _get_text_from_update(update, channel)
+        if not text:
+            return {"ok": True}
+
+        log.info(f"[Webhook]{channel.value} 收到消息: user={user_id}, text={text[:60]}...")
+
+        search_handler = MessageSearchService(
+            downloader=registry.get(RegistryKey.DOWNLOADER_CORE),
+            searcher=registry.get(RegistryKey.SEARCHER),
+            indexer=registry.get(RegistryKey.INDEXER_SERVICE),
+            site_cache=registry.get(RegistryKey.SITE_CACHE),
+            site_engine=registry.get(RegistryKey.SITE_ENGINE),
+            subscribe_service=registry.get(RegistryKey.SUBSCRIBE_SERVICE),
+            media_service=registry.get(RegistryKey.MEDIA_SERVICE),
+            agent_service=registry.get(RegistryKey.AGENT_SERVICE),
+        )
+        handler = MessageCommandHandler(search_handler=search_handler)
+        handler.handle_message_job(msg=text, in_from=channel, user_id=user_id)
         return {"ok": True}
-
-    log.info(f"[Webhook]{channel.value} 收到消息: user={user_id}, text={text[:60]}...")
-
-    search_handler = MessageSearchService()
-    handler = MessageCommandHandler(search_handler=search_handler)
-    handler.handle_message_job(msg=text, in_from=channel, user_id=user_id)
-    return {"ok": True}
+    finally:
+        remove_session()
 
 
 @router.post("/telegram", summary="Telegram Bot Webhook")
-async def telegram_webhook(request: Request):
+async def telegram_webhook(
+    request: Request,
+    service: APIKeyService = Depends(get_apikey_service),
+):
     """Telegram Bot Webhook"""
-    _verify_apikey(request)
+    _verify_apikey(request, service)
     _verify_webhook_ip(SearchType.TG, request)
     data = await request.json()
     return await asyncio.to_thread(_handle_webhook, data, SearchType.TG)
 
 
 @router.post("/wechat", summary="微信 Webhook")
-async def wechat_webhook(request: Request):
+async def wechat_webhook(
+    request: Request,
+    service: APIKeyService = Depends(get_apikey_service),
+):
     """WeChat 企业微信/公众号 Webhook"""
-    _verify_apikey(request)
+    _verify_apikey(request, service)
     data = await request.json()
     return await asyncio.to_thread(_handle_webhook, data, SearchType.WX)
 
 
 @router.post("/synologychat", summary="Synology Chat Webhook")
-async def synologychat_webhook(request: Request):
+async def synologychat_webhook(
+    request: Request,
+    service: APIKeyService = Depends(get_apikey_service),
+):
     """Synology Chat Webhook"""
-    _verify_apikey(request)
+    _verify_apikey(request, service)
     _verify_webhook_ip(SearchType.SYNOLOGY, request)
     data = await request.json()
     return await asyncio.to_thread(_handle_webhook, data, SearchType.SYNOLOGY)
 
 
 @router.post("/slack", summary="Slack Webhook")
-async def slack_webhook(request: Request):
+async def slack_webhook(
+    request: Request,
+    service: APIKeyService = Depends(get_apikey_service),
+):
     """Slack Event/Webhook"""
-    _verify_apikey(request)
+    _verify_apikey(request, service)
     _verify_webhook_ip(SearchType.SLACK, request)
     data = await request.json()
     if data.get("type") == "url_verification":

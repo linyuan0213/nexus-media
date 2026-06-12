@@ -8,19 +8,20 @@
   - ChineseCredits    — 豆瓣演职人员中文名匹配
 """
 
+import json
 import os
 
 import log
 from app.core.module_config import ModuleConf
 from app.core.system_config import SystemConfig
-from app.di import container
 from app.infrastructure.ffmpeg import FfmpegProcessor
 from app.infrastructure.image_proxy import ImageProxy
-from app.media.external import DouBan
-from app.media.factory import get_media_service
-from app.media.parser._metainfo import meta_info
-from app.utils import ExceptionUtils
 from app.infrastructure.temp import temp_manager
+from app.media.external.douban import DouBan
+from app.media.fanart import Fanart
+from app.media.parser._metainfo import meta_info
+from app.media.service import MediaService
+from app.utils import ExceptionUtils
 from app.domain.mediatypes import MediaType
 from app.domain.enums import SystemConfigKey
 
@@ -33,9 +34,16 @@ from .nfo_generator import NfoGenerator
 class Scraper:
     """媒体元数据刮削器 — 生成 NFO 文件、下载图片"""
 
-    def __init__(self):
-        self.media = get_media_service()
-        self.douban = container.douban()
+    def __init__(
+        self,
+        media_service: MediaService,
+        douban: DouBan | None = None,
+        system_config: SystemConfig | None = None,
+    ):
+        self.media = media_service
+        self.douban = douban or DouBan()
+        self.fanart = Fanart()
+        self._system_config = system_config or SystemConfig()
         self._scraper_flag = False
         self._scraper_nfo = {}
         self._scraper_pic = {}
@@ -50,8 +58,13 @@ class Scraper:
         from app.core.settings import settings
 
         self._scraper_flag = settings.get("media").get("nfo_poster")
-        scraper_conf = container.system_config().get(SystemConfigKey.UserScraperConf)
-        if scraper_conf:
+        scraper_conf = self._system_config.get(SystemConfigKey.UserScraperConf)
+        if isinstance(scraper_conf, str):
+            try:
+                scraper_conf = json.loads(scraper_conf)
+            except Exception:
+                scraper_conf = None
+        if isinstance(scraper_conf, dict):
             self._scraper_nfo = scraper_conf.get("scraper_nfo") or {}
             self._scraper_pic = scraper_conf.get("scraper_pic") or {}
 
@@ -211,7 +224,7 @@ class Scraper:
         # season poster
         if scraper_tv_pic.get("season_poster"):
             season_poster = "season{}-poster".format(media.get_season_seq().rjust(2, "0"))
-            seasonposter = media.fanart.get_seasonposter(
+            seasonposter = self.fanart.get_seasonposter(
                 media_type=media.type, queryid=media.tvdb_id, season=media.get_season_seq()
             )
             if seasonposter:
@@ -230,7 +243,7 @@ class Scraper:
 
         # season banner
         if scraper_tv_pic.get("season_banner"):
-            seasonbanner = media.fanart.get_seasonbanner(
+            seasonbanner = self.fanart.get_seasonbanner(
                 media_type=media.type, queryid=media.tvdb_id, season=media.get_season_seq()
             )
             if seasonbanner:
@@ -240,7 +253,7 @@ class Scraper:
 
         # season thumb
         if scraper_tv_pic.get("season_thumb"):
-            seasonthumb = media.fanart.get_seasonthumb(
+            seasonthumb = self.fanart.get_seasonthumb(
                 media_type=media.type, queryid=media.tvdb_id, season=media.get_season_seq()
             )
             if seasonthumb:
@@ -293,7 +306,7 @@ class Scraper:
                 self._downloader.download(backdrop, dir_path, "fanart", force_pic)
         for pic_type in ["background", "logo", "disc", "banner", "thumb"]:
             if scraper_pic.get(pic_type):
-                getter = getattr(media.fanart, f"get_{pic_type}", None)
+                getter = getattr(self.fanart, f"get_{pic_type}", None)
                 if getter:
                     url = getter(media_type=media.type, queryid=media.tmdb_id)
                     if url:
@@ -311,7 +324,7 @@ class Scraper:
                 self._downloader.download(backdrop, tv_root, "fanart", force_pic)
         for pic_type in ["background", "logo", "disc", "banner", "thumb"]:
             if scraper_pic.get(pic_type):
-                getter = getattr(media.fanart, f"get_{pic_type}", None)
+                getter = getattr(self.fanart, f"get_{pic_type}", None)
                 if getter:
                     url = getter(media_type=media.type, queryid=media.tvdb_id)
                     if url:

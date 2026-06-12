@@ -9,11 +9,14 @@ from typing import Any
 import log
 from app.db.models import SITEUSERINFOSTATS as _S
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
-from app.di import container
+from app.db.repositories.site_repository import SiteRepository
+from app.infrastructure.chrome import ChromeClient
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
 from app.message import Message
 from app.sites.engine import SiteEngine
+from app.sites.site_cache import SiteCache
+from app.sites.site_favicon_service import SiteFaviconService
 from app.utils import ExceptionUtils, JsonUtils, StringUtils
 from app.utils.config_tools import get_proxies
 
@@ -32,13 +35,27 @@ class SiteUserInfo:
     _last_update_time = None
     _sites_data = {}
 
-    def __init__(self):
+    def __init__(
+        self,
+        site_cache: SiteCache,
+        site_repository: SiteRepository,
+        site_favicon_service: SiteFaviconService,
+        site_engine: SiteEngine,
+        message: Message | None = None,
+        drissionpage_helper: ChromeClient | None = None,
+    ):
+        self._site_cache = site_cache
+        self._site_repository = site_repository
+        self._site_favicon_service = site_favicon_service
+        self._site_engine = site_engine
+        self._drissionpage_helper = drissionpage_helper or ChromeClient()
+        self._message = message or Message()
         self._refresh()
 
     def _refresh(self):
-        self.sites = container.site_cache()
-        self.site_repo = SiteRepositoryAdapter(container.site_repository())
-        self.message = Message()
+        self.sites = self._site_cache
+        self.site_repo = SiteRepositoryAdapter(self._site_repository)
+        self.message = self._message
         # 站点上一次更新时间
         self._last_update_time = None
         # 站点数据
@@ -58,7 +75,7 @@ class SiteUserInfo:
 
         site_headers.update({"User-Agent": ua, "referer": url})
 
-        engine = SiteEngine.get_instance()
+        engine = self._site_engine
         site_def = engine.get_by_url(url)
 
         if site_def and site_def.user_info and site_def.user_info.get("profile"):
@@ -75,7 +92,7 @@ class SiteUserInfo:
 
         html_text = None
         if emulate:
-            chrome = container.drissionpage_helper()
+            chrome = self._drissionpage_helper
             html_text = chrome.get_page_html(url=url, cookies=site_cookie)
             if not html_text:
                 log.error(f"[Sites]{site_name} 跳转站点失败")
@@ -151,7 +168,7 @@ class SiteUserInfo:
                 log.debug(f"[Sites]站点 {site_name} 解析完成")
 
                 if not site_user_info.site_favicon:
-                    site_def = SiteEngine.get_instance().get_by_url(site_url)
+                    site_def = self._site_engine.get_by_url(site_url)
                     if site_def and site_def.favicon:
                         self._fetch_favicon_from_url(site_user_info, site_def.favicon)
 
@@ -231,7 +248,7 @@ class SiteUserInfo:
         # 增量数据
         inc_uploads = 0
         inc_downloads = 0
-        _, _, site, upload, download = SiteUserInfo().get_pt_site_statistics_history(2)
+        _, _, site, upload, download = self.get_pt_site_statistics_history(2)
 
         # 按照上传降序排序
         data_list = list(zip(site, upload, download, strict=False))
@@ -323,7 +340,7 @@ class SiteUserInfo:
         self.site_repo.update_site_seed_info(site_user_infos)
         log.debug(f"[Sites]update_site_seed_info 耗时 {time.time() - t0:.2f}s")
         t0 = time.time()
-        container.site_favicon_service().refresh()
+        self._site_favicon_service.refresh()
         log.debug(f"[Sites]init_favicons 耗时 {time.time() - t0:.2f}s")
 
     def get_pt_site_statistics_history(self, days=7, end_day=None):
@@ -440,10 +457,9 @@ class SiteUserInfo:
             return min(dates).strftime("%Y-%m-%d")
         return ""
 
-    @staticmethod
-    def _fetch_favicon_from_url(site_user_info, url):
+    def _fetch_favicon_from_url(self, site_user_info, url):
         try:
-            engine = SiteEngine.get_instance()
+            engine = self._site_engine
             rate_limiter = getattr(engine, "site_limiter", None)
             rate_limiter_engine = rate_limiter.engine if rate_limiter else None
             client = HttpClient(

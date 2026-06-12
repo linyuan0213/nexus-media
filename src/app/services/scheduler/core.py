@@ -35,7 +35,7 @@ class SchedulerCore:
     """调度器核心服务
 
     提供任务调度、执行监控、失败重试、统计收集等功能。
-    使用单例模式确保全局只有一个调度器实例。
+    由 lifespan 创建并注册到 registry，lifespan 中统一关闭。
     """
 
     # 默认 jobstore 配置
@@ -85,8 +85,13 @@ class SchedulerCore:
         """检查调度器是否正在运行"""
         return self._running and self._scheduler is not None
 
-    def start_service(self, load_defaults: bool = False) -> bool:
-        """启动调度器服务"""
+    def start_service(self, load_defaults: bool = False, **deps) -> bool:
+        """启动调度器服务
+
+        :param deps: 当 load_defaults=True 时，需传入
+            thread_executor, site_userinfo, subscription_monitor,
+            media_server, sync_engine, subscribe_service
+        """
         if self._scheduler and self._running:
             log.warn("调度器服务已经在运行中")
             return True
@@ -117,7 +122,7 @@ class SchedulerCore:
             if load_defaults:
                 from app.services.scheduler_jobs import load_default_jobs
 
-                load_default_jobs(self)
+                load_default_jobs(self, **deps)
 
             log.info("调度器服务已启动")
             return True

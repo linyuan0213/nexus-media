@@ -1,6 +1,6 @@
-from app.media.external import Bangumi
 from app.media.lookup.base import BaseLookup, LookupResult
 from app.domain.mediatypes import MediaType
+from app.media.external.bangumi import Bangumi
 
 
 class BangumiLookup(BaseLookup):

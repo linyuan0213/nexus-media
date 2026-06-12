@@ -124,14 +124,16 @@ class Rtorrent(_IDownloadClient):
                     )
                     if parsed.port:
                         netloc += f":{parsed.port}"
-                    url = urllib.parse.urlunparse((
-                        parsed.scheme,
-                        netloc,
-                        parsed.path,
-                        parsed.params,
-                        parsed.query,
-                        parsed.fragment,
-                    ))
+                    url = urllib.parse.urlunparse(
+                        (
+                            parsed.scheme,
+                            netloc,
+                            parsed.path,
+                            parsed.params,
+                            parsed.query,
+                            parsed.fragment,
+                        )
+                    )
                     self._client = ServerProxy(url)
                 else:
                     self._client = ServerProxy(self.host)

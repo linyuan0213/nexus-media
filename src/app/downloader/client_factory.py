@@ -18,12 +18,12 @@ import log
 from app.core.constants import PT_TAG
 from app.core.settings import settings
 from app.core.system_config import SystemConfig as SystemConfigClass
-from app.db.repositories.download_repo_adapter import DownloadSettingRepositoryAdapter
-from app.di import container
 from app.downloader.client._base import _IDownloadClient
 from app.downloader.registry import get_all_clients
 from app.utils import ExceptionUtils, NumberUtils, StringUtils, SystemUtils
 from app.domain.enums import SystemConfigKey
+from app.db.repositories.download_repo_adapter import DownloadSettingRepositoryAdapter
+from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
 
 client_lock = Lock()
 
@@ -37,9 +37,9 @@ class DownloadClientFactory:
 
     def __init__(self, config_repo=None, download_repo=None, systemconfig: SystemConfigClass | None = None):
         # 注入领域仓库适配器，不允许注入旧的 ConfigRepository/DownloadRepository
-        self._config_repo = config_repo or container.downloader_repo()
+        self._config_repo = config_repo or DownloaderRepositoryAdapter()
         self._download_repo = download_repo or DownloadSettingRepositoryAdapter()
-        self._systemconfig = systemconfig or container.system_config()
+        self._systemconfig = systemconfig or SystemConfigClass()
 
         # 客户端实例缓存 {downloader_id: client_instance}
         self._clients = {}

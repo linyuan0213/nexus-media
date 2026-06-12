@@ -6,12 +6,12 @@ JWT 认证路由
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from api.deps import get_current_user
+from api.deps import get_auth_service, get_current_user, get_rbac_service
 from app.core.settings import AppSettings
-from app.di import container
 from app.schemas.auth import LoginResponse, UserContext
 from app.schemas.common import CommonResponse
 from app.services.auth_service import AuthService
+from app.services.rbac_service import RBACService
 
 _settings = AppSettings()
 
@@ -19,12 +19,16 @@ router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(
+    response: Response,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    auth_service: AuthService = Depends(get_auth_service),
+):
     """
     用户登录，返回 JWT Token 对。
     Refresh Token 通过 HttpOnly Cookie 返回。
     """
-    user_ctx = AuthService.authenticate(form_data.username, form_data.password)
+    user_ctx = auth_service.authenticate(form_data.username, form_data.password)
     if not user_ctx:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误", headers={"WWW-Authenticate": "Bearer"}
@@ -46,7 +50,11 @@ async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depen
 
 
 @router.post("/refresh", response_model=LoginResponse)
-async def refresh_token(request: Request, response: Response):
+async def refresh_token(
+    request: Request,
+    response: Response,
+    auth_service: AuthService = Depends(get_auth_service),
+):
     """
     使用 Refresh Token 换取新的 Token 对（Token 轮换机制）。
     """
@@ -54,7 +62,7 @@ async def refresh_token(request: Request, response: Response):
     if not refresh_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供 Refresh Token")
 
-    tokens = AuthService.refresh_access_token(refresh_token)
+    tokens = auth_service.refresh_access_token(refresh_token)
     if not tokens:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh Token 无效或已过期")
 
@@ -81,7 +89,10 @@ async def logout(response: Response, user: UserContext = Depends(get_current_use
 
 
 @router.get("/me", response_model=CommonResponse, summary="获取当前用户信息")
-async def get_current_user_info(user: UserContext = Depends(get_current_user)):
+async def get_current_user_info(
+    user: UserContext = Depends(get_current_user),
+    rbac_service: RBACService = Depends(get_rbac_service),
+):
     """
     获取当前登录用户信息。
     兼容测试中的字符串 override（绞杀期过渡）。
@@ -99,8 +110,8 @@ async def get_current_user_info(user: UserContext = Depends(get_current_user)):
                 "roles": [],
             },
         }
-    roles = container.rbac_service().get_user_roles(user.user_id)
-    user_detail = container.rbac_service().get_user_by_id(user.user_id)
+    roles = rbac_service.get_user_roles(user.user_id)
+    user_detail = rbac_service.get_user_by_id(user.user_id)
     avatar = user_detail.AVATAR if user_detail else None
     email = user_detail.EMAIL if user_detail else None
     return {

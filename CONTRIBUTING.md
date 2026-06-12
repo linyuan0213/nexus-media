@@ -39,7 +39,7 @@
 ## 本地开发
 
 1. 安装依赖：`uv sync --dev`
-2. 配置 `config/config.yaml`（最小配置见 `docs/development.md`）
+2. 配置 `data/config.yaml`（最小配置见 `docs/development.md`）
 3. 启动：`uv run python run.py`
 4. 运行测试：`uv run pytest tests/ -v`
 

@@ -1,13 +1,8 @@
 """Subscribe service - 订阅业务 Facade."""
 
+from typing import Any
+
 import log
-from app.db.repositories.subscribe_repo_adapter import (
-    SubscribeHistoryRepositoryAdapter,
-    SubscribeMovieRepositoryAdapter,
-    SubscribeTvEpisodeRepositoryAdapter,
-    SubscribeTvRepositoryAdapter,
-)
-from app.di import container
 from app.domain.entities.rss import SubscribeState
 from app.services.subscribe.management.add_service import SubscribeAddService
 from app.services.subscribe.management.finish_service import SubscribeFinishService
@@ -23,33 +18,33 @@ class SubscribeService:
 
     def __init__(
         self,
-        movie_repo=None,
-        tv_repo=None,
-        tv_episode_repo=None,
-        history_repo=None,
-        message=None,
-        media_service=None,
-        downloader=None,
-        sites=None,
-        douban=None,
-        indexer_service=None,
-        filter_service=None,
-        event_bus=None,
-        system_config=None,
+        movie_repo: Any,
+        tv_repo: Any,
+        tv_episode_repo: Any,
+        history_repo: Any,
+        message: Any,
+        media_service: Any,
+        downloader: Any,
+        sites: Any,
+        douban: Any,
+        indexer_service: Any,
+        filter_service: Any,
+        event_bus: Any,
+        system_config: Any,
     ):
-        self._movie_repo = movie_repo or SubscribeMovieRepositoryAdapter()
-        self._tv_repo = tv_repo or SubscribeTvRepositoryAdapter()
-        self._tv_episode_repo = tv_episode_repo or SubscribeTvEpisodeRepositoryAdapter()
-        self._history_repo = history_repo or SubscribeHistoryRepositoryAdapter()
-        self._message = message or container.message()
-        self._media = media_service or container.media_service()
-        self._downloader = downloader or container.downloader_core()
-        self._sites = sites or container.site_cache()
-        self._douban = douban or container.douban()
-        self._indexer_service = indexer_service or container.indexer_service()
-        self._filter = filter_service or container.filter_service()
-        self._event_bus = event_bus or container.event_bus()
-        self._system_config = system_config or container.system_config()
+        self._movie_repo = movie_repo
+        self._tv_repo = tv_repo
+        self._tv_episode_repo = tv_episode_repo
+        self._history_repo = history_repo
+        self._message = message
+        self._media = media_service
+        self._downloader = downloader
+        self._sites = sites
+        self._douban = douban
+        self._indexer_service = indexer_service
+        self._filter = filter_service
+        self._event_bus = event_bus
+        self._system_config = system_config
 
         self._update_svc = SubscribeUpdateService(
             self._movie_repo, self._tv_repo, self._media, self._message, self._event_bus, self._system_config

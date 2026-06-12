@@ -18,7 +18,6 @@ from app.db.repositories.subscribe_repo_adapter import (
     SubscribeTvEpisodeRepositoryAdapter,
     SubscribeTvRepositoryAdapter,
 )
-from app.di import container
 from app.domain.interfaces.rss_repo import (
     ISubscribeMovieRepository,
     ISubscribeTvEpisodeRepository,
@@ -44,17 +43,17 @@ class BaseSearchStrategy:
 
     def __init__(
         self,
-        service: Any | None = None,
+        service: Any,
+        searcher: Searcher,
+        media_service: MediaService,
+        media_cache: MediaCache,
+        downloader: Downloader,
+        filter_service: Filter,
+        message: Message,
         rss_repo: SubscribeRepository | None = None,
         movie_repo: ISubscribeMovieRepository | None = None,
         tv_repo: ISubscribeTvRepository | None = None,
         tv_episode_repo: ISubscribeTvEpisodeRepository | None = None,
-        searcher: Searcher | None = None,
-        media_service: MediaService | None = None,
-        media_cache: MediaCache | None = None,
-        downloader: Downloader | None = None,
-        filter_service: Filter | None = None,
-        message: Message | None = None,
         coordinator: DownloadCoordinator | None = None,
     ):
         self._service = service
@@ -68,13 +67,18 @@ class BaseSearchStrategy:
         self._movie_repo = movie_repo
         self._tv_repo = tv_repo
         self._tv_episode_repo = tv_episode_repo
-        self._searcher = searcher or container.searcher()
+
+        self._searcher = searcher
         self._coordinator = coordinator
-        self._media_service = media_service or container.media_service()
-        self._media_cache = media_cache or container.media_cache()
-        self._downloader = downloader or container.downloader_core()
-        self._filter = filter_service or container.filter_service()
-        self._message = message or container.message()
+        self._media_service = media_service
+        self._media_cache = media_cache
+        self._downloader = downloader
+        self._filter = filter_service
+        self._message = message
+
+    def set_coordinator(self, coordinator: DownloadCoordinator | None) -> None:
+        """设置下载协调器（用于 SubscriptionMonitor 注入）."""
+        self._coordinator = coordinator
 
     def _search_movies(self, state: str = "D", rssid: int | None = None) -> None:
         if rssid:

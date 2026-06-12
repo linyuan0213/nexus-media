@@ -6,7 +6,6 @@ from urllib.parse import quote
 from app.core.settings import settings
 from app.mediaserver.schema import MediaServerConfigSchema
 from app.utils.config_tools import get_domain
-from app.di import container
 
 
 class _IMediaClient(metaclass=ABCMeta):
@@ -15,12 +14,12 @@ class _IMediaClient(metaclass=ABCMeta):
     client_name = ""
     config_schema: MediaServerConfigSchema | None = None
 
-    @classmethod
-    def get_db_config(cls, name):
+    def get_db_config(self, name, repo=None):
         """从数据库获取配置，兼容旧配置文件"""
+        from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 
-        repo = container.media_server_repo()
-        item = repo.get_media_server_by_name(name)
+        _repo = repo or MediaServerRepositoryAdapter()
+        item = _repo.get_media_server_by_name(name)
         if item and str(item.CONFIG):
             try:
                 return json.loads(str(item.CONFIG))

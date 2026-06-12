@@ -5,7 +5,6 @@ import time
 
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
-from app.sites.engine import SiteEngine
 
 _logger = logging.getLogger(__name__)
 
@@ -14,17 +13,17 @@ class IyuuHelper:
     _version = "2.0.0"
     _api_base = "http://2025.iyuu.cn%s"
 
-    def __init__(self, token):
+    def __init__(self, token, site_engine=None):
         self._token = token
         self._sites = {}
+        self._site_engine = site_engine
 
     def __request_iyuu(self, url, method="get", params=None):
         """
         向IYUUApi发送请求
         """
         headers = {"token": self._token, "Accept": "application/json"}
-        engine = SiteEngine.get_instance()
-        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter = getattr(self._site_engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         # 开始请求
         try:

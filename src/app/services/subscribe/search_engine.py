@@ -4,8 +4,6 @@
 此类保留对外兼容的方法签名，但底层调用策略类实现.
 """
 
-from typing import Any
-
 from app.services.subscribe.strategies.indexer_search import IndexerSearchStrategy
 from app.services.subscribe.strategies.queue_search import QueueSearchStrategy
 
@@ -22,22 +20,16 @@ class SubscribeSearchEngine:
 
     def __init__(
         self,
-        service: Any | None = None,
-        indexer_strategy: IndexerSearchStrategy | None = None,
-        queue_strategy: QueueSearchStrategy | None = None,
+        indexer_strategy: IndexerSearchStrategy,
+        queue_strategy: QueueSearchStrategy,
     ):
-        self._service = service
         self._indexer_strategy = indexer_strategy
         self._queue_strategy = queue_strategy
 
     def _get_indexer(self) -> IndexerSearchStrategy:
-        if self._indexer_strategy is None:
-            self._indexer_strategy = IndexerSearchStrategy(service=self._service)
         return self._indexer_strategy
 
     def _get_queue(self) -> QueueSearchStrategy:
-        if self._queue_strategy is None:
-            self._queue_strategy = QueueSearchStrategy(service=self._service)
         return self._queue_strategy
 
     def subscribe_search_all(self) -> None:

@@ -1,16 +1,23 @@
 """Subscribe history service — 订阅历史记录管理."""
 
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
-from app.di import container
 from app.domain.mediatypes import MediaType
+from app.services.rss_processor import RssHelper
+from app.services.subscribe_service import SubscribeService
 
 
 class SubscribeHistoryService:
     """订阅历史服务 — 历史查询、删除、重做、清空."""
 
-    def __init__(self, history_repo=None, subscribe=None):
-        self._history_repo = history_repo or SubscribeHistoryRepositoryAdapter()
-        self._subscribe = subscribe or container.subscribe_service()
+    def __init__(
+        self,
+        history_repo: SubscribeHistoryRepositoryAdapter,
+        subscribe: SubscribeService,
+        rss_helper: RssHelper,
+    ):
+        self._history_repo = history_repo
+        self._subscribe = subscribe
+        self._rss_helper = rss_helper
 
     def get_history(self, mtype: str) -> list[dict]:
         """获取订阅历史记录."""
@@ -44,5 +51,5 @@ class SubscribeHistoryService:
 
     def truncate(self) -> None:
         """清空订阅历史记录."""
-        container.rss_helper().truncate_rss_history()
+        self._rss_helper.truncate_rss_history()
         self._subscribe.truncate_rss_episodes()

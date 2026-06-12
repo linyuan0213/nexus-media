@@ -6,7 +6,6 @@ import cn2an
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
-from app.di import container
 from app.infrastructure.image_proxy import ImageProxy
 from app.media import MediaService, meta_info
 from app.mediaserver import MediaServer
@@ -15,7 +14,7 @@ from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import StringUtils
 from app.domain.media_utils import check_media_exists
 from app.domain.mediatypes import MediaType
-from app.services.web import WebUtils
+from app.services.web.utils import get_mediainfo_from_id, search_media_infos
 
 
 class MediaInfoService:
@@ -26,13 +25,15 @@ class MediaInfoService:
 
     def __init__(
         self,
-        media_service: MediaService | None = None,
-        subscribe: Subscribe | None = None,
-        media_server: MediaServer | None = None,
+        media_service: MediaService,
+        subscribe: Subscribe,
+        media_server: MediaServer,
+        douban,
     ):
-        self._media = media_service or container.media_service()
-        self._subscribe = subscribe or container.subscribe_service()
-        self._media_server = media_server or container.media_server()
+        self._media = media_service
+        self._subscribe = subscribe
+        self._media_server = media_server
+        self._douban = douban
 
     def get_season_episodes(self, tmdbid, title, year, season) -> SeasonEpisodesResultDTO:
         """查询 TMDB 剧集情况并检查媒体服务器存在状态"""
@@ -61,7 +62,7 @@ class MediaInfoService:
         else:
             title_season = None
         if not str(tmdbid).isdigit():
-            media_info = WebUtils.get_mediainfo_from_id(mtype=MediaType.TV, mediaid=tmdbid)
+            media_info = get_mediainfo_from_id(mtype=MediaType.TV, mediaid=tmdbid)
             if not media_info or not media_info.tmdb_info:
                 return []
             season_infos = self._media.get_tmdb_tv_seasons(media_info.tmdb_info)
@@ -112,7 +113,7 @@ class MediaInfoService:
 
         if not rssid_ok:
             if mediaid:
-                media = WebUtils.get_mediainfo_from_id(mtype=media_type, mediaid=mediaid)
+                media = get_mediainfo_from_id(mtype=media_type, mediaid=mediaid)
             else:
                 media = self._media.get_media_info(title=f"{title} {year}", mtype=media_type)
             if not media or not media.tmdb_info:
@@ -207,7 +208,7 @@ class MediaInfoService:
 
     def search_media_infos(self, keyword, source, page) -> list[dict]:
         """搜索媒体词条"""
-        medias = WebUtils.search_media_infos(keyword=keyword, source=source, page=page)
+        medias = search_media_infos(keyword=keyword, source=source, page=page)
         results = []
         for media in medias:
             d = media.to_dict()
@@ -221,7 +222,7 @@ class MediaInfoService:
         """查询电影上映日期"""
         if tid and tid.startswith("DB:"):
             doubanid = tid.replace("DB:", "")
-            douban_info = container.douban().get_douban_detail(doubanid=doubanid, mtype=MediaType.MOVIE)
+            douban_info = self._douban.get_douban_detail(doubanid=doubanid, mtype=MediaType.MOVIE)
             if not douban_info:
                 return None
             poster_path = douban_info.get("cover_url") or ""
@@ -273,7 +274,7 @@ class MediaInfoService:
         """查询电视剧上映日期"""
         if tid and tid.startswith("DB:"):
             doubanid = tid.replace("DB:", "")
-            douban_info = container.douban().get_douban_detail(doubanid=doubanid, mtype=MediaType.TV)
+            douban_info = self._douban.get_douban_detail(doubanid=doubanid, mtype=MediaType.TV)
             if not douban_info:
                 return None
             poster_path = douban_info.get("cover_url") or ""
@@ -336,7 +337,7 @@ class MediaInfoService:
     def get_media_detail(self, tmdbid, mtype_str) -> dict[str, Any] | None:
         """获取媒体详情"""
         mtype = MediaType.MOVIE if MediaType.from_string(mtype_str) == MediaType.MOVIE else MediaType.TV
-        media_info = WebUtils.get_mediainfo_from_id(mtype=mtype, mediaid=tmdbid)
+        media_info = get_mediainfo_from_id(mtype=mtype, mediaid=tmdbid)
         if not media_info or not media_info.tmdb_info:
             return None
         fav, rssid, item_url = check_media_exists(

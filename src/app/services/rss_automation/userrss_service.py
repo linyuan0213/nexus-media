@@ -14,8 +14,8 @@ from app.services.web import mediainfo_dict
 class UserRssService:
     """自定义RSS任务服务：封装参数转换与数据格式化"""
 
-    def __init__(self, rss_checker: RssChecker | None = None):
-        self._checker = rss_checker or RssChecker()
+    def __init__(self, rss_checker: RssChecker):
+        self._checker = rss_checker
 
     def check_tasks(self, taskids: list | None, flag: str) -> None:
         flag_dict = {"enable": True, "disable": False}

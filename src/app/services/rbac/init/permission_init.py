@@ -1,14 +1,15 @@
 """RBAC 权限初始化."""
 
 import log
-from app.di import container
-
 from app.services.rbac.init.constants import DEFAULT_PERMISSIONS
+from app.db.repositories.rbac_repo_adapter import RBACPermissionRepositoryAdapter
 
 
-def init_rbac_permissions():
+def init_rbac_permissions(
+    permission_repo=None,
+):
     """初始化权限数据"""
-    permission_repo = container.rbac_permission_repo()
+    permission_repo = permission_repo or RBACPermissionRepositoryAdapter()
     created_count = 0
 
     for perm_data in DEFAULT_PERMISSIONS:

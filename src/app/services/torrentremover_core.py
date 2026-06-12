@@ -7,18 +7,20 @@ import json
 
 import log
 from app.core.exceptions import ResourceNotFoundError, ValidationError
-from app.di import container
+from app.db.repositories.config_repo_adapter import TorrentRemoveTaskRepositoryAdapter
 from app.domain.entities.config import TorrentRemoveTaskEntity
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.message import Message
+from app.services.downloader_core import DownloaderCore
+from app.services.scheduler.core import SchedulerCore
 from app.utils import ExceptionUtils
 
 
 class TorrentRemoverRepository:
     """删种任务数据仓库"""
 
-    def __init__(self, config_repo=None):
-        self._config_repo = config_repo or container.torrent_remove_task_repo()
+    def __init__(self, config_repo: TorrentRemoveTaskRepositoryAdapter):
+        self._config_repo = config_repo
 
     def get_tasks(self):
         return self._config_repo.get_torrent_remove_tasks()
@@ -80,15 +82,15 @@ class TorrentRemoverService:
 
     def __init__(
         self,
-        repository: TorrentRemoverRepository | None = None,
-        downloader=None,
-        message: Message | None = None,
-        scheduler=None,
+        repository: TorrentRemoverRepository,
+        downloader: DownloaderCore,
+        message: Message,
+        scheduler: SchedulerCore,
     ):
-        self._repo = repository or TorrentRemoverRepository()
-        self._downloader = downloader or container.downloader_core()
-        self._message = message or container.message()
-        self._scheduler = scheduler or container.scheduler_core()
+        self._repo = repository
+        self._downloader = downloader
+        self._message = message
+        self._scheduler = scheduler
         self._tasks: dict[str, dict] = {}
 
     def start_service(self):

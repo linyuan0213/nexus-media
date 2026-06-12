@@ -5,7 +5,8 @@ import time
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
-import requests
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 
 
 class Singleton(type):
@@ -28,6 +29,7 @@ class FnOSClient(metaclass=Singleton):
         self._token = None
         self._token_expiry = None
         self.secret = "NDzZTVxnRKP8Z0jXg1VAMonaG8akvh"
+        self._http_client = HttpClient(config=HttpClientConfig(verify_ssl=False, timeout=30))
 
     def _generate_signature(self, request_data):
         """生成 API 请求签名"""
@@ -115,7 +117,7 @@ class FnOSClient(metaclass=Singleton):
         }
 
         data = json.dumps(request_data["data"], separators=(",", ":"))
-        response = requests.post(url, headers=headers, data=data, verify=False)
+        response = self._http_client.post(url, headers=headers, data=data)
         res_json = response.json()
         if res_json.get("code") == 0:
             self._token = res_json.get("data").get("token")
@@ -149,11 +151,11 @@ class FnOSClient(metaclass=Singleton):
             # GET请求将参数拼接到URL中
             if params:
                 url += "?" + urlencode(params)
-            response = requests.get(url, headers=headers, cookies=cookies, verify=False)
+            response = self._http_client.get(url, headers=headers, cookies=cookies)
         else:
             # 其他请求使用POST，数据放在请求体中
             data_str = json.dumps(data or {}, separators=(",", ":"))
-            response = requests.post(url, headers=headers, cookies=cookies, verify=False, data=data_str)
+            response = self._http_client.post(url, headers=headers, cookies=cookies, data=data_str)
         return response.json()
 
     def fetch_all_pages(

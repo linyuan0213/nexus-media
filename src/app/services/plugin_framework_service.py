@@ -14,24 +14,40 @@ import zipfile
 import log
 from app.core.settings import settings
 from app.db.repositories.plugin_framework_repository import PluginFrameworkRepository
+from app.db.repositories.rbac_repo_adapter import RBACMenuRepositoryAdapter, RBACRoleRepositoryAdapter
+from app.db.session import remove_session
 from app.domain.entities.plugin import PluginConfigEntity, PluginManifestEntity
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.plugin_framework.context import PluginContext
-from app.plugin_framework.hook_system import HookSystem
+from app.plugin_framework.registry import PluginRegistry
+from app.plugin_framework.sandbox import PluginSandbox
 from app.schemas.plugin import PluginManifest
-from app.di import container
 
 
 class PluginFrameworkService:
     """插件框架业务服务"""
 
-    def __init__(self, repo: PluginFrameworkRepository | None = None):
-        self._repo = repo or container.plugin_framework_repo()
-        self._menu_repo = container.rbac_menu_repo()
-        self._role_repo = container.rbac_role_repo()
-        self._plugins_dir = os.path.join(settings.config_path, "plugins")
+    def __init__(
+        self,
+        repo: PluginFrameworkRepository,
+        menu_repo: RBACMenuRepositoryAdapter,
+        role_repo: RBACRoleRepositoryAdapter,
+        plugin_registry: PluginRegistry,
+        plugin_sandbox: PluginSandbox,
+        hook_system=None,
+    ):
+        self._repo = repo
+        self._menu_repo = menu_repo
+        self._role_repo = role_repo
+        self._plugin_registry = plugin_registry
+        self._plugin_sandbox = plugin_sandbox
+        self._hook_system = hook_system
+        self._plugins_dir = os.path.join(settings.data_path, "plugins")
         if not os.path.exists(self._plugins_dir):
             os.makedirs(self._plugins_dir)
+
+    def _get_hook_system(self):
+        return self._hook_system or self._get_hook_system()
 
     def _get_plugin_parent_menu(self):
         """获取 Plugin 父菜单"""
@@ -141,7 +157,7 @@ class PluginFrameworkService:
         """列出所有已安装插件"""
         # 先扫描内置插件（热新增）
 
-        container.plugin_registry().scan()
+        self._plugin_registry.scan()
         orm_list = self._repo.get_all_manifests()
         plugins = []
         for orm_model in orm_list:
@@ -233,7 +249,7 @@ class PluginFrameworkService:
         """保存插件配置"""
         entity = PluginConfigEntity(plugin_id=plugin_id, config=config)
         self._repo.save_config(entity)
-        HookSystem().emit("plugin.config_changed", {"plugin_id": plugin_id, "config": config})
+        self._get_hook_system().emit("plugin.config_changed", {"plugin_id": plugin_id, "config": config})
 
     def install(self, zip_path: str) -> PluginManifest:
         """安装插件包（多实例部署时通过分布式锁保证只有一个实例执行安装）"""
@@ -355,7 +371,7 @@ class PluginFrameworkService:
                 raise RuntimeError("插件清单写入数据库失败")
             log.info(f"[PluginFrameworkService] 插件安装成功: {manifest.id}@{manifest.version}")
 
-        HookSystem().emit("plugin.install", {"plugin_id": manifest.id})
+        self._get_hook_system().emit("plugin.install", {"plugin_id": manifest.id})
         return manifest
 
     def uninstall(self, plugin_id: str) -> None:
@@ -389,11 +405,11 @@ class PluginFrameworkService:
             self._repo.set_manifest_installed(plugin_id, False)
             # 同步更新 Registry 缓存，避免扫描时覆盖数据库
 
-            state = container.plugin_registry().get_state(plugin_id)
+            state = self._plugin_registry.get_state(plugin_id)
             if state:
                 state.installed = False
                 state.enabled = False
-            HookSystem().emit("plugin.uninstall", {"plugin_id": plugin_id})
+            self._get_hook_system().emit("plugin.uninstall", {"plugin_id": plugin_id})
             log.info(f"[PluginFrameworkService] 内置插件软卸载: {plugin_id}")
             return
 
@@ -401,9 +417,9 @@ class PluginFrameworkService:
         if target_dir and os.path.exists(str(target_dir)):
             shutil.rmtree(str(target_dir))
 
-        sandbox = container.plugin_sandbox()
+        sandbox = self._plugin_sandbox
         sandbox.unload(plugin_id)
-        HookSystem().unregister_all(plugin_id)
+        self._get_hook_system().unregister_all(plugin_id)
 
         # 删除插件菜单
         self._remove_plugin_menus(plugin_id)
@@ -411,17 +427,17 @@ class PluginFrameworkService:
         self._repo.delete_manifest(plugin_id)
         self._repo.delete_config(plugin_id)
 
-        HookSystem().emit("plugin.uninstall", {"plugin_id": plugin_id})
+        self._get_hook_system().emit("plugin.uninstall", {"plugin_id": plugin_id})
         log.info(f"[PluginFrameworkService] 插件卸载成功: {plugin_id}")
 
     def _do_enable(self, plugin_id: str) -> None:
         """后台线程执行插件加载和初始化"""
         try:
             log.info(f"[PluginFrameworkService] 开始加载插件: {plugin_id}")
-            sandbox = container.plugin_sandbox()
+            sandbox = self._plugin_sandbox
             ok = sandbox.load(plugin_id)
             if ok:
-                HookSystem().emit("plugin.enable", {"plugin_id": plugin_id})
+                self._get_hook_system().emit("plugin.enable", {"plugin_id": plugin_id})
                 log.info(f"[PluginFrameworkService] 插件已启用: {plugin_id}")
             else:
                 log.error(f"[PluginFrameworkService] 插件加载返回失败: {plugin_id}")
@@ -445,7 +461,7 @@ class PluginFrameworkService:
 
         # 同步更新注册表缓存，否则后台线程加载时缓存仍为 False
 
-        state = container.plugin_registry().get_state(plugin_id)
+        state = self._plugin_registry.get_state(plugin_id)
         if state:
             state.enabled = True
             state.installed = True
@@ -456,7 +472,7 @@ class PluginFrameworkService:
         if not orm_model:
             raise ValueError(f"插件未安装: {plugin_id}")
 
-        sandbox = container.plugin_sandbox()
+        sandbox = self._plugin_sandbox
         sandbox.unload(plugin_id)
         self._repo.set_manifest_enabled(plugin_id, False)
 
@@ -465,11 +481,11 @@ class PluginFrameworkService:
 
         # 同步更新注册表缓存
 
-        state = container.plugin_registry().get_state(plugin_id)
+        state = self._plugin_registry.get_state(plugin_id)
         if state:
             state.enabled = False
 
-        HookSystem().emit("plugin.disable", {"plugin_id": plugin_id})
+        self._get_hook_system().emit("plugin.disable", {"plugin_id": plugin_id})
         log.info(f"[PluginFrameworkService] 插件已禁用: {plugin_id}")
 
     def get_logs(self, plugin_id: str, page: int = 1, page_size: int = 20) -> dict:
@@ -574,7 +590,13 @@ class PluginFrameworkService:
         if not hasattr(instance, "run"):
             raise ValueError(f"插件 {plugin_id} 未实现 run() 方法")
 
-        threading.Thread(target=instance.run, daemon=True).start()
+        def _run_plugin():
+            try:
+                instance.run()
+            finally:
+                remove_session()
+
+        threading.Thread(target=_run_plugin, daemon=True).start()
         log.info(f"[PluginFrameworkService] 插件 {plugin_id} 立即运行任务已启动")
 
     def reload_plugin(self, plugin_id: str) -> None:
@@ -583,6 +605,6 @@ class PluginFrameworkService:
         if not orm_model:
             raise ValueError(f"插件未安装: {plugin_id}")
 
-        sandbox = container.plugin_sandbox()
+        sandbox = self._plugin_sandbox
         if not sandbox.reload(plugin_id):
             raise RuntimeError(f"插件 {plugin_id} 热重载失败")

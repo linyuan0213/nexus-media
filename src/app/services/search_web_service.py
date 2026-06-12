@@ -8,15 +8,16 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 
 import log
-from app.agent import SearchIntentAgent
+from app.agent.agents.search_intent import SearchIntentAgent
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
-from app.media import MediaService
-from app.utils import StringUtils
-from app.domain.mediatypes import MediaType
 from app.domain.enums import ProgressKey, SearchType
-from app.services.web import WebUtils
-from app.di import container
+from app.domain.mediatypes import MediaType
+from app.infrastructure.progress import ProgressTracker
+from app.media.service import MediaService
+from app.services.search_service import Searcher
+from app.services.web.utils import get_mediainfo_from_id
+from app.utils import StringUtils
 
 # 媒体识别结果缓存，避免重复识别
 _MEDIA_IDENT_CACHE: dict = {}
@@ -33,7 +34,16 @@ def _web_search_executor(max_workers=8):
 
 
 def search_medias_for_web(
-    content, ident_flag=True, filters=None, tmdbid=None, media_type=None, session_id: str | None = None
+    content,
+    searcher: Searcher,
+    progress_helper: ProgressTracker,
+    media_service: MediaService,
+    intent_agent: SearchIntentAgent | None,
+    ident_flag=True,
+    filters=None,
+    tmdbid=None,
+    media_type=None,
+    session_id: str | None = None,
 ):
     """
     WEB资源搜索
@@ -47,10 +57,10 @@ def search_medias_for_web(
     mtype, key_word, season_num, episode_num, year, content = StringUtils.get_keyword_from_string(content)
 
     # Agent 意图解析（自然语言查询）
-    intent_agent = SearchIntentAgent()
-    if intent_agent.ready and key_word:
+    _intent_agent = intent_agent
+    if _intent_agent and _intent_agent.ready and key_word:
         try:
-            intent = intent_agent.parse(content or "")
+            intent = _intent_agent.parse(content or "")
             if intent and intent.is_specific:
                 if intent.keywords and len(intent.keywords) > len(key_word):
                     key_word = intent.keywords
@@ -81,9 +91,9 @@ def search_medias_for_web(
     if media_type:
         mtype = media_type
 
-    _searcher = container.searcher()
-    _process = container.progress_helper()
-    _media = MediaService()
+    _searcher = searcher
+    _process = progress_helper
+    _media = media_service
     _process.start(ProgressKey.Search)
 
     media_info = None
@@ -92,7 +102,7 @@ def search_medias_for_web(
 
     if ident_flag:
         if tmdbid:
-            media_info = WebUtils.get_mediainfo_from_id(mtype=mtype, mediaid=tmdbid)
+            media_info = get_mediainfo_from_id(mtype=mtype, mediaid=tmdbid)
         else:
             cache_key = hashlib.md5(f"{content}_{mtype}".encode(), usedforsecurity=False).hexdigest()
             if cache_key in _MEDIA_IDENT_CACHE:

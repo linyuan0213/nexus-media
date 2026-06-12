@@ -5,19 +5,24 @@ SpeedLimiter Plugin v2
 
 import contextlib
 import time
+from typing import Any
 
 from app.infrastructure.security import SecurityChecker
 from app.plugin_framework.context import PluginContext
-from app.di import container
 
 
 class SpeedLimiterPlugin:
     """下载器限速插件"""
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(
+        self,
+        ctx: PluginContext,
+        downloader: Any,
+        mediaserver: Any,
+    ):
         self.ctx = ctx
-        self._downloader = container.downloader_core()
-        self._mediaserver = container.media_server()
+        self._downloader = downloader
+        self._mediaserver = mediaserver
         self._playing_flag = False
         self._limit_enabled = False
         self._download_limit = 0

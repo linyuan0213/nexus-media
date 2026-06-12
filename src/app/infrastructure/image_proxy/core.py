@@ -11,13 +11,13 @@ import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
 
-import requests
 from PIL import Image
-from requests.adapters import HTTPAdapter
 
 import log
 from app.core.constants import TMDB_IMAGE_DOMAIN
 from app.core.root_path import get_project_root
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.utils.config_tools import get_proxies
 
 # 下载任务锁，防止重复下载同一个图片
@@ -38,21 +38,30 @@ SIZE_DIMENSIONS = {"w92": 92, "w154": 154, "w185": 185, "w342": 342, "w500": 500
 # 来源域名映射
 SOURCE_DOMAINS = {"tmdb": TMDB_IMAGE_DOMAIN, "douban": "img9.doubanio.com", "bgm": "lain.bgm.tv"}
 
-# 连接池 Session 管理
-_session_pool = {}
-_session_lock = threading.Lock()
+# 连接池 HttpClient 管理
+_client_pool = {}
+_client_lock = threading.Lock()
 
 
-def _get_session(domain):
-    """获取或创建带连接池的 Session"""
-    with _session_lock:
-        if domain not in _session_pool:
-            session = requests.Session()
-            adapter = HTTPAdapter(pool_connections=10, pool_maxsize=20, max_retries=3, pool_block=False)
-            session.mount("https://", adapter)
-            session.mount("http://", adapter)
-            _session_pool[domain] = session
-        return _session_pool[domain]
+def _get_client(domain):
+    """获取或创建带连接池的 HttpClient"""
+    with _client_lock:
+        if domain not in _client_pool:
+            try:
+                proxies = get_proxies() or None
+            except Exception:
+                proxies = None
+            proxy_url = proxies.get("http") if proxies else None
+            client = HttpClient(
+                config=HttpClientConfig(
+                    verify_ssl=False,
+                    follow_redirects=True,
+                    timeout=60,
+                    proxy_url=proxy_url,
+                )
+            )
+            _client_pool[domain] = client
+        return _client_pool[domain]
 
 
 def _get_cache_path(source, url_path, size=None):
@@ -125,20 +134,13 @@ def _download_image(url, timeout=10, referer=None):
         try:
             parsed = urllib.parse.urlparse(url)
             domain = parsed.netloc
-            session = _get_session(domain)
-
-            try:
-                proxies = get_proxies() or None
-            except Exception:
-                proxies = None
+            client = _get_client(domain)
 
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
             if referer:
                 headers["Referer"] = referer
 
-            response = session.get(
-                url, proxies=proxies, headers=headers, timeout=timeout, verify=False, allow_redirects=True
-            )
+            response = client.get(url, headers=headers, timeout=timeout, raise_for_status=False)
             response.raise_for_status()
             return response.content
         except Exception as e:

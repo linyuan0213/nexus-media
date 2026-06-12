@@ -1,10 +1,17 @@
 """RBAC 系统初始化入口."""
 
+from typing import Any
+
 import log
-from app.di import container
+from app.db.repositories.rbac_repo_adapter import RBACUserRepositoryAdapter
+from app.db.repositories.rbac_repo_adapter import RBACRoleRepositoryAdapter
 
 
-def init_rbac_system():
+def init_rbac_system(
+    permission_repo=None,
+    menu_repo=None,
+    role_repo=None,
+):
     """
     初始化RBAC系统
     创建默认的权限、菜单、角色
@@ -15,9 +22,9 @@ def init_rbac_system():
 
     try:
         log.info("[RBAC初始化]开始初始化RBAC系统...")
-        init_rbac_permissions()
-        init_rbac_menus()
-        init_rbac_roles()
+        init_rbac_permissions(permission_repo=permission_repo)
+        init_rbac_menus(menu_repo=menu_repo)
+        init_rbac_roles(role_repo=role_repo, permission_repo=permission_repo, menu_repo=menu_repo)
         log.info("[RBAC初始化]RBAC系统初始化完成")
         return True
     except Exception as e:
@@ -25,7 +32,12 @@ def init_rbac_system():
         return False
 
 
-def init_admin_user(admin_username: str, admin_password: str):
+def init_admin_user(
+    admin_username: str,
+    admin_password: str,
+    user_repo: Any = None,
+    role_repo: Any = None,
+):
     """
     初始化管理员用户
 
@@ -33,10 +45,9 @@ def init_admin_user(admin_username: str, admin_password: str):
         admin_username: 管理员用户名
         admin_password: 管理员密码
     """
+    user_repo = user_repo or RBACUserRepositoryAdapter()
+    role_repo = role_repo or RBACRoleRepositoryAdapter()
     try:
-        user_repo = container.rbac_user_repo()
-        role_repo = container.rbac_role_repo()
-
         existing = user_repo.get_user_by_username(admin_username)
         if existing:
             old_hash = existing.PASSWORD_HASH or ""

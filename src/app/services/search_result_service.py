@@ -1,14 +1,13 @@
 import json
 import re
 
+from app.domain.media_utils import check_media_exists
+from app.domain.mediatypes import MediaType
 from app.media.models import MediaInfo
-from app.mediaserver import MediaServer
+from app.mediaserver.media_server import MediaServer
 from app.schemas.media import MediaSearchResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import StringUtils
-from app.domain.media_utils import check_media_exists
-from app.domain.mediatypes import MediaType
-from app.di import container
 
 
 class SearchResultService:
@@ -16,9 +15,9 @@ class SearchResultService:
     搜索结果分组业务服务
     """
 
-    def __init__(self, media_server: MediaServer | None = None, subscribe: Subscribe | None = None):
-        self._media_server = media_server or container.media_server()
-        self._subscribe = subscribe or container.subscribe_service()
+    def __init__(self, media_server: MediaServer, subscribe: Subscribe):
+        self._media_server = media_server
+        self._subscribe = subscribe
 
     def group_search_results(self, search_results: list) -> MediaSearchResultDTO:
         """

@@ -5,10 +5,8 @@ from lxml import etree
 from app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss._base import _ISiteRssGenHandler
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
-from app.sites.engine import SiteEngine
 from app.utils.config_tools import get_proxies
 from app.utils.string_utils import StringUtils
-from app.di import container
 
 
 class TTG(_ISiteRssGenHandler):
@@ -88,7 +86,7 @@ class TTG(_ISiteRssGenHandler):
             "c111": "111",
         }
         proxy_url = proxy.get("http") if proxy else None
-        engine = SiteEngine.get_instance()
+        engine = self._site_engine
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         try:
@@ -111,7 +109,7 @@ class TTG(_ISiteRssGenHandler):
         self.debug(f"生成的rss: {rss_link}")
 
         if rss_link:
-            container.site_repository().update_site_rssurl(site_info.get("id"), rss_link)
+            self._site_repo.update_site_rssurl(site_info.get("id"), rss_link)
             self.info("生成RSS成功")
             return True, f"[{site}]生成RSS成功"
         else:

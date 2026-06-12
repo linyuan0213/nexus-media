@@ -17,15 +17,10 @@ from typing import Any
 
 import log
 from app.infrastructure.thread import ThreadExecutor
-from app.mediaserver import MediaServer
-from app.message import Message
 from app.events import Event
 from app.events.constants import DOWNLOAD_STARTED, DOWNLOAD_FAILED
-from app.sites import SiteConf, SiteSubtitle
-from app.sites.engine import SiteEngine
 from app.sites.torrent import Torrent
 from app.utils import StringUtils
-from app.di import container
 
 
 class DownloadPipeline:
@@ -41,23 +36,27 @@ class DownloadPipeline:
 
     def __init__(
         self,
-        client_factory=None,
-        message: Message | None = None,
-        mediaserver: MediaServer | None = None,
-        filetransfer=None,
-        sites=None,
-        siteconf: SiteConf | None = None,
-        sitesubtitle: SiteSubtitle | None = None,
-        event_bus=None,
+        client_factory,
+        message,
+        mediaserver,
+        filetransfer,
+        sites,
+        siteconf,
+        sitesubtitle,
+        event_bus,
+        download_history_repo,
+        site_engine,
     ):
         self._client_factory = client_factory
-        self._message = message or Message()
-        self._mediaserver = mediaserver or container.media_server()
+        self._message = message
+        self._mediaserver = mediaserver
         self._filetransfer = filetransfer
-        self._sites = sites or container.site_cache()
-        self._siteconf = siteconf or container.site_conf()
-        self._sitesubtitle = sitesubtitle or SiteSubtitle()
-        self._event_bus = event_bus or container.event_bus()
+        self._sites = sites
+        self._siteconf = siteconf
+        self._sitesubtitle = sitesubtitle
+        self._event_bus = event_bus
+        self._download_history_repo = download_history_repo
+        self._site_engine = site_engine
 
     def execute(
         self,
@@ -190,7 +189,7 @@ class DownloadPipeline:
 
         if not media_info.enclosure and file_path:
             with contextlib.suppress(Exception):
-                Torrent().delete_torrent_file(file_path)
+                Torrent(self._site_engine).delete_torrent_file(file_path)
 
         return downloader_id, download_id, ""
 
@@ -206,13 +205,13 @@ class DownloadPipeline:
         content = None
 
         if torrent_file:
-            content, dl_files_folder, dl_files, retmsg = Torrent().read_torrent_content(torrent_file)
+            content, dl_files_folder, dl_files, retmsg = Torrent(self._site_engine).read_torrent_content(torrent_file)
             file_path = torrent_file
         else:
             url = media_info.enclosure
             if media_info.page_url and not media_info.enclosure:
                 site_info = self._sites.get_sites(siteurl=media_info.page_url)
-                url = SiteEngine.get_instance().resolve_download_url(
+                url = self._site_engine.resolve_download_url(
                     page_url=media_info.page_url,
                     user_config={
                         "cookie": site_info.get("cookie", ""),
@@ -228,7 +227,7 @@ class DownloadPipeline:
             else:
                 site_info = self._sites.get_sites(siteurl=url)
                 cookie = site_info.get("cookie")
-                site_def = SiteEngine.get_instance().get_by_url(url)
+                site_def = self._site_engine.get_by_url(url)
                 if site_def and site_def.api and site_def.api.auth.get("type") == "api_key":
                     cookie = None
                 headers = site_info.get("headers")
@@ -241,7 +240,7 @@ class DownloadPipeline:
                         headers=headers,
                         proxy=proxy if proxy is not None else site_info.get("proxy") or False,
                     )
-                file_path, content, dl_files_folder, dl_files, retmsg = Torrent().get_torrent_info(
+                file_path, content, dl_files_folder, dl_files, retmsg = Torrent(self._site_engine).get_torrent_info(
                     url=url,
                     cookie=cookie,
                     ua=site_info.get("ua"),
@@ -381,7 +380,7 @@ class DownloadPipeline:
                 self._fail(media_info, in_from, "请检查下载任务保存目录是否正确")
                 return
 
-        container.download_history_repo().insert_download_history(
+        self._download_history_repo.insert_download_history(
             media_info=media_info, downloader=downloader_id, download_id=download_id, save_dir=save_dir or ""
         )
 

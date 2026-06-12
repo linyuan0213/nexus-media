@@ -3,30 +3,29 @@ TorrentTransfer Plugin v2
 定期转移下载器中的做种任务到另一个下载器
 """
 
+import json
 import os.path
 from copy import deepcopy
 from datetime import datetime, timedelta
 from threading import Event
+from typing import Any
 
 import pytz
 from bencode import bdecode, bencode
 
 from app.media import meta_info
-import json
-
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import TorrentStatus
 from app.sites.torrent import Torrent
 from app.utils.path_utils import get_temp_path
-from app.di import container
 
 
 class TorrentTransferPlugin:
     """自动转移做种插件"""
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(self, ctx: PluginContext, downloader: Any):
         self.ctx = ctx
-        self._downloader = container.downloader_core()
+        self._downloader = downloader
         self._event = Event()
         self._recheck_torrents = {}
         self._is_recheck_running = False
@@ -205,7 +204,7 @@ class TorrentTransferPlugin:
 
             # 如果是QB检查是否有Tracker，没有的话补充解析
             if downloader_type == "qbittorrent":
-                content, _, _, retmsg = Torrent().read_torrent_content(torrent_file)
+                content, _, _, retmsg = Torrent(site_engine=self.ctx.site_engine).read_torrent_content(torrent_file)
                 if not content:
                     self.ctx.error(f"读取种子文件失败：{retmsg}")
                     fail += 1

@@ -4,7 +4,6 @@ from pydantic import BaseModel
 
 import log
 from app.agent.prompts.search import SEARCH_INTENT_PROMPT
-from app.di import container
 
 
 class SearchIntent(BaseModel):
@@ -24,8 +23,9 @@ class SearchIntent(BaseModel):
 class SearchIntentAgent:
     """搜索意图理解 Agent"""
 
-    def __init__(self):
-        self._svc = container.agent_service()
+    def __init__(self, svc):
+
+        self._svc = svc
 
     @property
     def ready(self) -> bool:

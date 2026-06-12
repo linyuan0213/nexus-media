@@ -7,8 +7,7 @@ from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
 from app.core.system_config import SystemConfig
 from app.db.repositories.base_repository import BaseRepository
-from app.di import container
-from app.utils.submodule_loader import SubmoduleLoader
+from app.indexer.indexer import Indexer
 from app.infrastructure.cache_system import TokenCache
 from app.mediaserver import MediaServer
 from app.schemas.system import (
@@ -17,9 +16,10 @@ from app.schemas.system import (
     MediaServerConfigResultDTO,
 )
 from app.services.indexer_service import IndexerService
+from app.services.web.utils import set_config_value
 from app.utils import ExceptionUtils
+from app.utils.submodule_loader import SubmoduleLoader
 from app.domain.enums import SystemConfigKey
-from app.services.web import set_config_value
 
 
 class IndexerConfigService:
@@ -28,9 +28,10 @@ class IndexerConfigService:
     负责保存索引器配置、兼容旧配置迁移、测试连接
     """
 
-    def __init__(self, system_config: SystemConfig | None = None, indexer_service: IndexerService | None = None):
-        self._system_config = system_config or container.system_config()
-        self._indexer_service = indexer_service or container.indexer_service()
+    def __init__(self, indexer_service: IndexerService, indexer: Indexer, system_config: SystemConfig | None = None):
+        self._system_config = system_config or SystemConfig()
+        self._indexer_service = indexer_service
+        self._indexer = indexer
 
     def save_config(self, data: dict) -> IndexerConfigResultDTO:
         """保存索引器配置"""
@@ -59,7 +60,7 @@ class IndexerConfigService:
             if sites is not None:
                 self._system_config.set(SystemConfigKey.UserIndexerSites, sites)
         # 刷新 Indexer 单例配置
-        container.indexer()._refresh()
+        self._indexer._refresh()
         # 测试连接
         if test and name != "builtin":
             try:
@@ -88,9 +89,11 @@ class MediaServerConfigService:
     负责保存媒体服务器配置、测试连接
     """
 
-    def __init__(self, config_repo=None, media_server: MediaServer | None = None):
-        self._config_repo = config_repo or container.media_server_repo()
-        self._media_server = media_server or container.media_server()
+    def __init__(self, media_server: MediaServer, config_repo=None):
+        from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
+
+        self._config_repo = config_repo or MediaServerRepositoryAdapter()
+        self._media_server = media_server
 
     def get_media_servers_info(self) -> dict:
         """获取媒体服务器配置信息（包含服务器列表、默认服务器名称）"""
@@ -135,7 +138,7 @@ class MediaServerConfigService:
         if is_default:
             self._config_repo.set_default_media_server(name)
         # 刷新 MediaServer 单例配置
-        container.media_server()._refresh()
+        self._media_server._refresh()
         TokenCache.delete("index")
         # 测试连接
         if test:
@@ -165,7 +168,7 @@ class SystemConfigService:
     """
 
     def __init__(self, system_config: SystemConfig | None = None):
-        self._system_config = system_config or container.system_config()
+        self._system_config = system_config or SystemConfig()
 
     def set_config(self, key: str, value) -> bool:
         """设置系统配置项"""

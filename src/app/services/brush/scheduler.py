@@ -4,7 +4,6 @@ import contextlib
 from typing import Any
 
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
-from app.di import container
 from app.services.scheduler_core import SchedulerCore
 
 
@@ -16,8 +15,8 @@ class BrushTaskScheduler:
 
     _jobstore = "brushtask"
 
-    def __init__(self, scheduler: SchedulerCore | None = None):
-        self._scheduler = scheduler or container.scheduler_core()
+    def __init__(self, scheduler: SchedulerCore):
+        self._scheduler = scheduler
 
     def start_job(self, func: Any, name: str, args: tuple, job_id: str, trigger_type: str, trigger_args: dict) -> None:
         self._scheduler.start_job(

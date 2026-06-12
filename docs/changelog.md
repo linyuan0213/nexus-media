@@ -1,5 +1,60 @@
 # 版本历史
 
+## v4.0.0 (2026-06-09)
+
+**4.0.0 是 Nas-Tools 的全新重构版本，涵盖后端架构、前端框架、部署运行和代码质量的全面升级。**
+
+### 架构重构
+- 项目重命名为 **Nexus Media**，全面替换旧品牌标识
+- 项目结构标准化为 `src/` layout，统一 `get_project_root()` 消除硬编码路径
+- 架构分层重构：消除 `helper/` 层、解除循环依赖、基础设施统一归位
+- 全面重构 DI 容器，引入 `ConfigReloader` 集中热重载，消灭 `NEXUS_MEDIA_CONFIG` 硬性依赖
+- 统一 Repository 适配层，移除 `MediaDb` 直接数据库操作，拆分 `engine/session/transaction` 模块
+- 拆分超大服务文件：`filetransfer_service.py` / `message.py` / `scheduler_core.py` / `rss_service.py`
+- 消息通知、下载器、索引器、媒体服务器模块重构为插件化扩展架构
+- 缓存事件系统整合到 EventBus，移除旧 `task_queue/reliable_message_queue`
+- 移除 10+ 个类的 `SingletonMeta`（`Rss` / `IyuuHelper` / `CookiecloudHelper` / `IndexerHelper` / 豆瓣相关类等）
+
+### 新增功能
+- 自动签到插件重构为**声明式配置架构**：删除 21 个旧站点硬编码实现，支持“自定义 handler > 声明式配置 > 通用匹配”三层分发
+- 站点模块迁移到 **SiteCache / SiteResolver / SiteFaviconService** 领域架构，写操作后缓存自动刷新
+- 新增 **分布式锁** 实现，覆盖 RSS 下载、插件安装/卸载、站点刷新、订阅搜索、删种、媒体库同步、转移等场景
+- 引入 `tenacity` 替换手写重试，实现 API **速率限制器**
+- 图片代理与缓存优化，支持 TMDB / 豆瓣 / Bangumi / 媒体库内网图片
+- HTTP 客户端重构：中间件集成、配置修复、异步线程安全
+- 日志支持 **JSON 结构化输出**，兼容 ELK；gunicorn access log 每日轮转 + 自动清理
+- 服务器由 uvicorn/gunicorn 迁移至 **Granian**，统一 `run.py` 入口
+- 新增 ADR-007 ~ ADR-013 架构决策记录
+
+### 前端升级
+- 前端框架升级至 **vben v5.7.0**（应用版本同步至 **4.0.0**）
+- vue-router 生产环境改为 **history** 模式
+- 前端目录 `views/rss/` 统一迁移为 `views/subscription/`，与后端路由对齐
+- 前端 Nginx 增加 `/api/`、`/img`、`/docs`、`/openapi.json`、`/ws` 反向代理
+- 修复设置按钮点击无反应、头像更新不生效、153 处 TypeScript 类型错误
+
+### 部署与运行
+- Docker 镜像升级至 **`python:3.14-slim-trixie`**，弃用 Alpine
+- nginx 内部端口改为 **8080**，healthcheck 检查 nginx 而非直连 Granian
+- docker-compose 增加独立 **migration** 服务，backend 设 `SKIP_MIGRATION=true`，避免 alembic 并发冲突
+- 修复 SQLite 下历史迁移脚本的 `no such table`、`ALTER CONSTRAINT` 等兼容性问题
+- 新增 `.dockerignore` 和运行时目录排除，缩减镜像体积
+- 修复 nginx `merge_slashes` 导致 `/img` 代理 URL 双斜杠丢失
+
+### 配置与连接
+- 迁移配置到 **pydantic-settings**，建立分层异常体系，完善 OpenAPI 文档
+- 新增 `RedisConfig` 配置模型，支持环境变量 `REDIS__HOST` / `REDIS__PORT` / `REDIS__PASSWORD` / `REDIS__DB`
+- 修复 `settings.py` 中数值配置字段类型（`str` → `int`）导致的 pydantic 校验错误
+- 新增 `.env.example` 环境变量模板，重写以对齐 pydantic-settings 字段
+
+### 代码质量
+- 新增 CI 质量门禁、pre-commit hooks、justfile 任务运行器
+- 全部非测试文件完成**空安全加固**，消除 111 处 null access
+- 全部 `reportArgumentType` 清零，227 处类型窄化
+- 95 处 `reportIncompatibleMethodOverride` 基类/子类签名对齐
+- 重构测试体系，删除不可用旧测试，新建 41 个可运行测试
+- 使用 `just` 替代 Makefile，统一 `uv run` 工作流
+
 ## v3.7.0 (2025-04-01)
 
 ### 新增功能

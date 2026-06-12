@@ -5,19 +5,22 @@ DoubanSync Plugin v2
 
 import contextlib
 import json
-import traceback
 import random
+import traceback
 from datetime import datetime
 from threading import Lock
 from time import sleep
 from typing import Any
 
-from app.media import meta_info
-from app.plugin_framework.context import PluginContext
-from app.domain.mediatypes import MediaType
 from app.domain.enums import SearchType
-from app.services.web import WebUtils
-from app.di import container
+from app.domain.mediatypes import MediaType
+from app.media import meta_info
+from app.media.external.douban import DouBan
+from app.plugin_framework.context import PluginContext
+from app.services.downloader_core import DownloaderCore
+from app.services.search_service import Searcher
+from app.services.subscribe_service import SubscribeService
+from app.services.web.utils import get_mediainfo_from_id
 
 _lock = Lock()
 
@@ -25,12 +28,19 @@ _lock = Lock()
 class DoubanSyncPlugin:
     """豆瓣同步插件"""
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(
+        self,
+        ctx: PluginContext,
+        searcher: Searcher,
+        downloader: DownloaderCore,
+        subscribe: SubscribeService,
+        douban: DouBan | None = None,
+    ):
         self.ctx = ctx
-        self._douban = container.douban()
-        self._searcher = container.searcher()
-        self._downloader = container.downloader_core()
-        self._subscribe = container.subscribe_service()
+        self._douban = douban or DouBan()
+        self._searcher = searcher
+        self._downloader = downloader
+        self._subscribe = subscribe
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -76,8 +86,7 @@ class DoubanSyncPlugin:
             )
         elif sync_type == "1" and rss_interval and int(rss_interval) > 0:
             sec = int(rss_interval)
-            if sec < 300:
-                sec = 300
+            sec = max(sec, 300)
             self.ctx.info(f"豆瓣近期动态同步服务启动，周期：{sec} 秒")
             self.ctx.schedule_interval(
                 "sync_rss",
@@ -193,9 +202,8 @@ class DoubanSyncPlugin:
                 if not date:
                     continue
                 mark_date = datetime.strptime(date, "%Y-%m-%d")
-                if days and int(days) > 0:
-                    if (datetime.now() - mark_date).days >= int(days):
-                        continue
+                if days and int(days) > 0 and (datetime.now() - mark_date).days >= int(days):
+                    continue
                 doubanid = item.get("id")
                 if str(doubanid).isdigit():
                     self.ctx.info(f"解析到媒体：{doubanid}")
@@ -249,7 +257,7 @@ class DoubanSyncPlugin:
 
     def _auto_search_media(self, media_info, auto_rss):
         try:
-            mediainfo = WebUtils.get_mediainfo_from_id(
+            mediainfo = get_mediainfo_from_id(
                 mtype=media_info.type,
                 mediaid=f"DB:{media_info.douban_id}",
                 wait=True,

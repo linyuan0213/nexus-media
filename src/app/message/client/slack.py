@@ -1,17 +1,18 @@
 import re
 from threading import Lock
 
-import requests
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.errors import SlackApiError
 
 import log
 from app.core.settings import settings
+from app.di.types import RegistryKey
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils
-from app.di import container
 
 lock = Lock()
 
@@ -68,7 +69,7 @@ class Slack(_IMessageClient):
         ],
     )
 
-    def __init__(self, config):
+    def __init__(self, config, apikey_service):
         self._config = settings
         self._interactive = False
         self._ds_url = None
@@ -77,6 +78,7 @@ class Slack(_IMessageClient):
         self._client = None
         self._bot_token = None
         self._app_token = None
+        self._apikey_service = apikey_service
         super().__init__(config)
 
     def read_config(self):
@@ -88,7 +90,7 @@ class Slack(_IMessageClient):
 
     def setup(self):
         _web_port = settings.get("app").web_port
-        _api_key = container.apikey_service().get_or_create_system_key("MessageWebhook")
+        _api_key = self._apikey_service.get_or_create_system_key("MessageWebhook")
         self._ds_url = f"http://127.0.0.1:{_web_port}/slack?apikey={_api_key}"
         if not self._bot_token:
             return
@@ -99,27 +101,27 @@ class Slack(_IMessageClient):
             return
         self._client = slack_app.client
 
-        @slack_app.event("message")
+        @slack_app.event(RegistryKey.MESSAGE.value)
         def slack_message(message):
-            local_res = requests.post(self._ds_url or "", json=message, timeout=10)
+            local_res = HttpClient(config=HttpClientConfig(timeout=10)).post(self._ds_url or "", data=message)
             log.debug(f"[Slack]message processed: {local_res.text}")
 
         @slack_app.action(re.compile(r"actionId-\d+"))
         def slack_action(ack, body):
             ack()
-            local_res = requests.post(self._ds_url or "", json=body, timeout=60)
+            local_res = HttpClient(config=HttpClientConfig(timeout=60)).post(self._ds_url or "", data=body)
             log.debug(f"[Slack]action processed: {local_res.text}")
 
         @slack_app.event("app_mention")
         def slack_mention(say, body):
             say(f"收到，请稍等... <@{body.get('event', {}).get('user')}>")
-            local_res = requests.post(self._ds_url or "", json=body, timeout=10)
+            local_res = HttpClient(config=HttpClientConfig(timeout=10)).post(self._ds_url or "", data=body)
             log.debug(f"[Slack]mention processed: {local_res.text}")
 
         @slack_app.shortcut(re.compile(r"/*"))
         def slack_shortcut(ack, body):
             ack()
-            local_res = requests.post(self._ds_url or "", json=body, timeout=10)
+            local_res = HttpClient(config=HttpClientConfig(timeout=10)).post(self._ds_url or "", data=body)
             log.debug(f"[Slack]shortcut processed: {local_res.text}")
 
         if self._interactive and self._app_token:

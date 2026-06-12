@@ -1,7 +1,6 @@
 from math import floor
 
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
-from app.di import container
 from app.schemas.media import TransferHistoryPageDTO, UnknownListPageDTO
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.sync_service import SyncService
@@ -13,9 +12,13 @@ class TransferHistoryService:
     转移历史业务服务
     """
 
-    def __init__(self, filetransfer: FileTransfer | None = None, sync_service: SyncService | None = None):
-        self._filetransfer = filetransfer or container.filetransfer_service()
-        self._sync_service = sync_service or container.sync_service()
+    def __init__(
+        self,
+        filetransfer: FileTransfer,
+        sync_service: SyncService,
+    ):
+        self._filetransfer = filetransfer
+        self._sync_service = sync_service
 
     def get_transfer_history_page(self, search_str, page, page_num) -> TransferHistoryPageDTO:
         """分页查询转移历史"""

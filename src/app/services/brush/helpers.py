@@ -9,11 +9,11 @@ from urllib.parse import urlsplit
 
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
-from app.di import container
 from app.media import meta_info
 from app.message import Message
 from app.sites import SiteConf
 from app.sites.engine import SiteEngine, get_tid_by_url
+from app.sites.site_cache import SiteCache
 from app.utils import JsonUtils, StringUtils
 
 
@@ -27,15 +27,17 @@ class BrushTaskHelper:
         self,
         repo,
         downloader,
-        sites=None,
-        siteconf: SiteConf | None = None,
-        message: Message | None = None,
+        sites: "SiteCache",
+        siteconf: SiteConf,
+        message: Message,
+        site_engine: SiteEngine,
     ):
         self._repo: Any = repo
         self._downloader: Any = downloader
-        self._sites = sites or container.site_cache()
-        self._siteconf = siteconf or container.site_conf()
-        self._message: Message = message or Message()
+        self._sites = sites
+        self._siteconf = siteconf
+        self._message: Message = message
+        self._site_engine = site_engine
 
     @staticmethod
     def parse_json_rule(val, default=None):
@@ -99,15 +101,18 @@ class BrushTaskHelper:
             log.warn("[Brush]时间段格式错误，应为 'HH:MM-HH:MM'")
             return False
 
+    def _get_site_engine(self):
+        return self._site_engine
+
     def is_torrent_handled(self, enclosure: str | None) -> bool:
         if not enclosure:
             return False
-        engine = SiteEngine.get_instance()
+        engine = self._get_site_engine()
         if engine.is_tid_based_dedup(enclosure):
-            tid = get_tid_by_url(enclosure)
+            tid = get_tid_by_url(enclosure, site_engine=engine)
             domain = engine.normalize_domain(enclosure)
             all_torrents = self._repo.get_brushtask_torrents_by_domain(domain)
-            return any(get_tid_by_url(t.ENCLOSURE) == tid for t in all_torrents)
+            return any(get_tid_by_url(t.ENCLOSURE, site_engine=engine) == tid for t in all_torrents)
         return self._repo.get_brushtask_torrent_by_enclosure(enclosure) is not None
 
     def get_torrent_attr(self, site_info: dict, enclosure: str):
@@ -125,8 +130,9 @@ class BrushTaskHelper:
         split_url = urlsplit(site_info.get("rssurl"))
         site_base_url = f"{split_url.scheme}://{split_url.netloc}"
 
-        tid = get_tid_by_url(enclosure)
-        torrent_url = f"{site_base_url}{SiteEngine.get_instance().resolve_detail_url(enclosure, tid or '')}"
+        engine = self._get_site_engine()
+        tid = get_tid_by_url(enclosure, site_engine=engine)
+        torrent_url = f"{site_base_url}{engine.resolve_detail_url(enclosure, tid or '')}"
 
         torrent_attr = self._siteconf.check_torrent_attr(
             torrent_url=torrent_url, cookie=site_cookie, ua=ua, headers=headers, proxy=bool(site_proxy)

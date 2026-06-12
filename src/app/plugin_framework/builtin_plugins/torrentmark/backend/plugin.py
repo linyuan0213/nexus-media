@@ -6,20 +6,19 @@ TorrentMark Plugin v2
 import os
 from datetime import datetime
 from threading import Event
+from typing import Any
 
 import pytz
-
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import Torrent
-from app.di import container
 
 
 class TorrentMarkPlugin:
     """种子标记插件"""
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(self, ctx: PluginContext, downloader: Any):
         self.ctx = ctx
-        self._downloader = container.downloader_core()
+        self._downloader = downloader
         self._event = Event()
 
     def _get_config(self):
