@@ -7,7 +7,6 @@ import json
 
 from sqlalchemy import Integer, cast
 
-from app.db.transaction import auto_commit
 from app.db.models import CONFIGSITE, SITEFAVICON, SITESTATISTICSHISTORY, SITEUSERINFOSTATS
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.site_repository import SiteRepository
@@ -199,23 +198,23 @@ class SiteRepositoryImpl(BaseRepository):
     """
 
     def get_by_id(self, site_id: int) -> SiteEntity | None:
-        orm = self._db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).first()
-        return SiteEntity.from_orm(orm) if orm else None
+        with self.session() as db:
+            orm = db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).first()
+            return SiteEntity.from_orm(orm) if orm else None
 
     def list_all(self) -> list[SiteEntity]:
-
-        orm_list = self._db.query(CONFIGSITE).order_by(cast(CONFIGSITE.PRI, Integer).asc()).all()
-        return [SiteEntity.from_orm(orm) for orm in orm_list]
+        with self.session() as db:
+            orm_list = db.query(CONFIGSITE).order_by(cast(CONFIGSITE.PRI, Integer).asc()).all()
+            return [SiteEntity.from_orm(orm) for orm in orm_list]
 
     def list_by_name(self, name: str) -> list[SiteEntity]:
-        orm_list = self._db.query(CONFIGSITE).filter(name == CONFIGSITE.NAME).all()
-        return [SiteEntity.from_orm(orm) for orm in orm_list]
+        with self.session() as db:
+            orm_list = db.query(CONFIGSITE).filter(name == CONFIGSITE.NAME).all()
+            return [SiteEntity.from_orm(orm) for orm in orm_list]
 
     def insert(self, entity: SiteEntity) -> None:
-
-        @auto_commit(self._db)
-        def _do_insert():
-            self._db.insert(
+        with self.session() as db:
+            db.add(
                 CONFIGSITE(
                     NAME=entity.name,
                     PRI=entity.pri,
@@ -230,15 +229,12 @@ class SiteRepositoryImpl(BaseRepository):
                 )
             )
 
-        _do_insert()
-
     def update(self, entity: SiteEntity) -> None:
         if not entity.id:
             raise ValueError("Entity ID is required")
 
-        @auto_commit(self._db)
-        def _do_update():
-            self._db.query(CONFIGSITE).filter(int(entity.id) == CONFIGSITE.ID).update(
+        with self.session() as db:
+            db.query(CONFIGSITE).filter(int(entity.id) == CONFIGSITE.ID).update(
                 {
                     "NAME": entity.name,
                     "PRI": entity.pri,
@@ -253,21 +249,13 @@ class SiteRepositoryImpl(BaseRepository):
                 }
             )
 
-        _do_update()
-
     def delete(self, site_id: int) -> None:
-
-        @auto_commit(self._db)
-        def _do_delete():
-            self._db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).delete()
-
-        _do_delete()
+        with self.session() as db:
+            db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).delete()
 
     def update_cookie_ua(self, site_id: int, cookie: str, ua: str | None = None) -> None:
-
-        @auto_commit(self._db)
-        def _do_update():
-            rec = self._db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).first()
+        with self.session() as db:
+            rec = db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).first()
             if rec:
                 note = {}
                 if rec.NOTE:
@@ -277,8 +265,6 @@ class SiteRepositoryImpl(BaseRepository):
                         note = {}
                 if ua:
                     note["ua"] = ua
-                self._db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).update(
+                db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).update(
                     {"COOKIE": cookie, "NOTE": json.dumps(note)}
                 )
-
-        _do_update()

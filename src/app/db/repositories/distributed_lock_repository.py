@@ -20,7 +20,7 @@ class DistributedLockRepository(BaseRepository):
         now = int(time.time())
         expires = now + ttl_seconds
 
-        with self.transactional() as session:
+        with self.session() as db:
             # 先尝试抢占已过期锁
             stmt = (
                 update(DISTRIBUTEDLOCK)
@@ -30,28 +30,31 @@ class DistributedLockRepository(BaseRepository):
                 )
                 .values(TOKEN=token, INSTANCE=instance, EXPIRES_AT=expires)
             )
-            result = session.execute(stmt)
+            result = db.execute(stmt)
             if result.rowcount > 0:
+                db.commit()
                 return True
 
             # 尝试插入新锁
             try:
-                session.add(DISTRIBUTEDLOCK(LOCK_KEY=lock_key, TOKEN=token, INSTANCE=instance, EXPIRES_AT=expires))
-                session.flush()
+                db.add(DISTRIBUTEDLOCK(LOCK_KEY=lock_key, TOKEN=token, INSTANCE=instance, EXPIRES_AT=expires))
+                db.flush()
+                db.commit()
                 return True
             except Exception:
-                session.rollback()
+                db.rollback()
                 return False
 
     def release(self, lock_key: str, token: str) -> bool:
         """释放锁（只有持有者才能释放）."""
         try:
-            with self.transactional() as session:
+            with self.session() as db:
                 stmt = delete(DISTRIBUTEDLOCK).where(
                     DISTRIBUTEDLOCK.LOCK_KEY == lock_key,
                     DISTRIBUTEDLOCK.TOKEN == token,
                 )
-                result = session.execute(stmt)
+                result = db.execute(stmt)
+                db.commit()
                 return result.rowcount > 0
         except Exception as e:
             log.error(f"[DbLock]释放锁异常: {lock_key}, {e}")
@@ -60,7 +63,7 @@ class DistributedLockRepository(BaseRepository):
     def extend(self, lock_key: str, token: str, additional_seconds: int) -> bool:
         """延长锁过期时间."""
         try:
-            with self.transactional() as session:
+            with self.session() as db:
                 stmt = (
                     update(DISTRIBUTEDLOCK)
                     .where(
@@ -69,7 +72,8 @@ class DistributedLockRepository(BaseRepository):
                     )
                     .values(EXPIRES_AT=DISTRIBUTEDLOCK.EXPIRES_AT + additional_seconds)
                 )
-                result = session.execute(stmt)
+                result = db.execute(stmt)
+                db.commit()
                 return result.rowcount > 0
         except Exception as e:
             log.error(f"[DbLock]延长锁异常: {lock_key}, {e}")
@@ -77,4 +81,5 @@ class DistributedLockRepository(BaseRepository):
 
     def get_by_key(self, lock_key: str) -> DISTRIBUTEDLOCK | None:
         """根据锁键获取记录."""
-        return self._db.query(DISTRIBUTEDLOCK).filter(DISTRIBUTEDLOCK.LOCK_KEY == lock_key).first()
+        with self.session() as db:
+            return db.query(DISTRIBUTEDLOCK).filter(DISTRIBUTEDLOCK.LOCK_KEY == lock_key).first()

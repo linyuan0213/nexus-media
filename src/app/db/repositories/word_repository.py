@@ -3,7 +3,6 @@ Word Repository
 Handles custom words and word groups related database operations.
 """
 
-from app.db.transaction import auto_commit
 from app.db.models import CUSTOMWORDGROUPS, CUSTOMWORDS
 from app.db.repositories.base_repository import BaseRepository
 
@@ -16,7 +15,6 @@ class WordRepository(BaseRepository):
 
     # ==================== Custom Words ====================
 
-    @auto_commit(BaseRepository._db)
     def insert_custom_word(
         self, replaced, replace, front, back, offset, wtype, gid, season, enabled, regex, whelp, note=None
     ):
@@ -37,24 +35,26 @@ class WordRepository(BaseRepository):
             whelp: 帮助信息
             note: 备注
         """
-        self._db.insert(
-            CUSTOMWORDS(
-                REPLACED=replaced,
-                REPLACE=replace,
-                FRONT=front,
-                BACK=back,
-                OFFSET=offset,
-                TYPE=int(wtype),
-                GROUP_ID=int(gid),
-                SEASON=int(season),
-                ENABLED=int(enabled),
-                REGEX=int(regex),
-                HELP=whelp,
-                NOTE=note,
+        with self.session() as db:
+            db.add(
+                CUSTOMWORDS(
+                    REPLACED=replaced,
+                    REPLACE=replace,
+                    FRONT=front,
+                    BACK=back,
+                    OFFSET=offset,
+                    TYPE=int(wtype),
+                    GROUP_ID=int(gid),
+                    SEASON=int(season),
+                    ENABLED=int(enabled),
+                    REGEX=int(regex),
+                    HELP=whelp,
+                    NOTE=note,
+                )
             )
-        )
+            db.commit()
+            return True
 
-    @auto_commit(BaseRepository._db)
     def delete_custom_word(self, wid=None):
         """
         删除自定义识别词
@@ -62,11 +62,13 @@ class WordRepository(BaseRepository):
         Args:
             wid: 词ID，None则删除所有
         """
-        if not wid:
-            self._db.query(CUSTOMWORDS).delete()
-        self._db.query(CUSTOMWORDS).filter(int(wid or 0) == CUSTOMWORDS.ID).delete()
+        with self.session() as db:
+            if not wid:
+                db.query(CUSTOMWORDS).delete()
+            db.query(CUSTOMWORDS).filter(int(wid or 0) == CUSTOMWORDS.ID).delete()
+            db.commit()
+            return True
 
-    @auto_commit(BaseRepository._db)
     def check_custom_word(self, wid=None, enabled=None):
         """
         设置自定义识别词状态
@@ -76,11 +78,14 @@ class WordRepository(BaseRepository):
             enabled: 是否启用
         """
         if enabled is None:
-            return
-        if wid:
-            self._db.query(CUSTOMWORDS).filter(int(wid) == CUSTOMWORDS.ID).update({"ENABLED": int(enabled)})
-        else:
-            self._db.query(CUSTOMWORDS).update({"ENABLED": int(enabled)})
+            return True
+        with self.session() as db:
+            if wid:
+                db.query(CUSTOMWORDS).filter(int(wid) == CUSTOMWORDS.ID).update({"ENABLED": int(enabled)})
+            else:
+                db.query(CUSTOMWORDS).update({"ENABLED": int(enabled)})
+            db.commit()
+            return True
 
     def get_custom_words(self, wid=None, gid=None, enabled=None):
         """
@@ -94,29 +99,34 @@ class WordRepository(BaseRepository):
         Returns:
             自定义识别词列表
         """
-        if wid:
-            return self._db.query(CUSTOMWORDS).filter(int(wid) == CUSTOMWORDS.ID).all()
-        elif gid:
+        with self.session() as db:
+            if wid:
+                return db.query(CUSTOMWORDS).filter(int(wid) == CUSTOMWORDS.ID).all()
+            elif gid:
+                return (
+                    db.query(CUSTOMWORDS)
+                    .filter(int(gid) == CUSTOMWORDS.GROUP_ID)
+                    .order_by(CUSTOMWORDS.ENABLED.desc(), CUSTOMWORDS.TYPE, CUSTOMWORDS.REGEX, CUSTOMWORDS.ID)
+                    .all()
+                )
+            elif enabled is not None:
+                return (
+                    db.query(CUSTOMWORDS)
+                    .filter(int(enabled) == CUSTOMWORDS.ENABLED)
+                    .order_by(CUSTOMWORDS.GROUP_ID, CUSTOMWORDS.TYPE, CUSTOMWORDS.REGEX, CUSTOMWORDS.ID)
+                    .all()
+                )
             return (
-                self._db.query(CUSTOMWORDS)
-                .filter(int(gid) == CUSTOMWORDS.GROUP_ID)
-                .order_by(CUSTOMWORDS.ENABLED.desc(), CUSTOMWORDS.TYPE, CUSTOMWORDS.REGEX, CUSTOMWORDS.ID)
+                db.query(CUSTOMWORDS)
+                .order_by(
+                    CUSTOMWORDS.GROUP_ID,
+                    CUSTOMWORDS.ENABLED.desc(),
+                    CUSTOMWORDS.TYPE,
+                    CUSTOMWORDS.REGEX,
+                    CUSTOMWORDS.ID,
+                )
                 .all()
             )
-        elif enabled is not None:
-            return (
-                self._db.query(CUSTOMWORDS)
-                .filter(int(enabled) == CUSTOMWORDS.ENABLED)
-                .order_by(CUSTOMWORDS.GROUP_ID, CUSTOMWORDS.TYPE, CUSTOMWORDS.REGEX, CUSTOMWORDS.ID)
-                .all()
-            )
-        return (
-            self._db.query(CUSTOMWORDS)
-            .order_by(
-                CUSTOMWORDS.GROUP_ID, CUSTOMWORDS.ENABLED.desc(), CUSTOMWORDS.TYPE, CUSTOMWORDS.REGEX, CUSTOMWORDS.ID
-            )
-            .all()
-        )
 
     def is_custom_words_existed(self, replaced=None, front=None, back=None):
         """
@@ -130,17 +140,17 @@ class WordRepository(BaseRepository):
         Returns:
             是否存在
         """
-        if replaced:
-            count = self._db.query(CUSTOMWORDS).filter(replaced == CUSTOMWORDS.REPLACED).count()
-        elif front and back:
-            count = self._db.query(CUSTOMWORDS).filter(front == CUSTOMWORDS.FRONT, back == CUSTOMWORDS.BACK).count()
-        else:
-            return False
-        return count > 0
+        with self.session() as db:
+            if replaced:
+                count = db.query(CUSTOMWORDS).filter(replaced == CUSTOMWORDS.REPLACED).count()
+            elif front and back:
+                count = db.query(CUSTOMWORDS).filter(front == CUSTOMWORDS.FRONT, back == CUSTOMWORDS.BACK).count()
+            else:
+                return False
+            return count > 0
 
     # ==================== Custom Word Groups ====================
 
-    @auto_commit(BaseRepository._db)
     def insert_custom_word_groups(self, title, year, gtype, tmdbid, season_count, note=None):
         """
         增加自定义识别词组
@@ -153,13 +163,20 @@ class WordRepository(BaseRepository):
             season_count: 季数
             note: 备注
         """
-        self._db.insert(
-            CUSTOMWORDGROUPS(
-                TITLE=title, YEAR=year, TYPE=int(gtype), TMDBID=int(tmdbid), SEASON_COUNT=int(season_count), NOTE=note
+        with self.session() as db:
+            db.add(
+                CUSTOMWORDGROUPS(
+                    TITLE=title,
+                    YEAR=year,
+                    TYPE=int(gtype),
+                    TMDBID=int(tmdbid),
+                    SEASON_COUNT=int(season_count),
+                    NOTE=note,
+                )
             )
-        )
+            db.commit()
+            return True
 
-    @auto_commit(BaseRepository._db)
     def delete_custom_word_group(self, gid):
         """
         删除自定义识别词组
@@ -168,9 +185,12 @@ class WordRepository(BaseRepository):
             gid: 组ID
         """
         if not gid:
-            return
-        self._db.query(CUSTOMWORDS).filter(int(gid) == CUSTOMWORDS.GROUP_ID).delete()
-        self._db.query(CUSTOMWORDGROUPS).filter(int(gid) == CUSTOMWORDGROUPS.ID).delete()
+            return True
+        with self.session() as db:
+            db.query(CUSTOMWORDS).filter(int(gid) == CUSTOMWORDS.GROUP_ID).delete()
+            db.query(CUSTOMWORDGROUPS).filter(int(gid) == CUSTOMWORDGROUPS.ID).delete()
+            db.commit()
+            return True
 
     def get_custom_word_groups(self, gid=None, tmdbid=None, gtype=None):
         """
@@ -184,17 +204,18 @@ class WordRepository(BaseRepository):
         Returns:
             自定义识别词组列表
         """
-        if gid:
-            return self._db.query(CUSTOMWORDGROUPS).filter(int(gid) == CUSTOMWORDGROUPS.ID).all()
-        if tmdbid and gtype:
-            return (
-                self._db.query(CUSTOMWORDGROUPS)
-                .filter(int(tmdbid) == CUSTOMWORDGROUPS.TMDBID, int(gtype) == CUSTOMWORDGROUPS.TYPE)
-                .all()
-            )
-        if tmdbid:
-            return self._db.query(CUSTOMWORDGROUPS).filter(int(tmdbid) == CUSTOMWORDGROUPS.TMDBID).all()
-        return self._db.query(CUSTOMWORDGROUPS).all()
+        with self.session() as db:
+            if gid:
+                return db.query(CUSTOMWORDGROUPS).filter(int(gid) == CUSTOMWORDGROUPS.ID).all()
+            if tmdbid and gtype:
+                return (
+                    db.query(CUSTOMWORDGROUPS)
+                    .filter(int(tmdbid) == CUSTOMWORDGROUPS.TMDBID, int(gtype) == CUSTOMWORDGROUPS.TYPE)
+                    .all()
+                )
+            if tmdbid:
+                return db.query(CUSTOMWORDGROUPS).filter(int(tmdbid) == CUSTOMWORDGROUPS.TMDBID).all()
+            return db.query(CUSTOMWORDGROUPS).all()
 
     def is_custom_word_group_existed(self, tmdbid=None, gtype=None):
         """
@@ -209,9 +230,10 @@ class WordRepository(BaseRepository):
         """
         if not gtype or not tmdbid:
             return False
-        count = (
-            self._db.query(CUSTOMWORDGROUPS)
-            .filter(int(tmdbid) == CUSTOMWORDGROUPS.TMDBID, int(gtype) == CUSTOMWORDGROUPS.TYPE)
-            .count()
-        )
-        return count > 0
+        with self.session() as db:
+            count = (
+                db.query(CUSTOMWORDGROUPS)
+                .filter(int(tmdbid) == CUSTOMWORDGROUPS.TMDBID, int(gtype) == CUSTOMWORDGROUPS.TYPE)
+                .count()
+            )
+            return count > 0

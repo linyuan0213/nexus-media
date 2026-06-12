@@ -9,7 +9,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 import log
 from api.deps import get_apikey_service
-from app.db.session import remove_session
 from app.di.registry import registry
 from app.di.types import RegistryKey
 from app.infrastructure.security import SecurityChecker
@@ -103,31 +102,28 @@ def _get_text_from_update(update: dict, channel: SearchType) -> str:
 
 def _handle_webhook(update: dict, channel: SearchType):
     """统一处理各平台 webhook"""
-    try:
-        _ensure_message_initialized()
+    _ensure_message_initialized()
 
-        user_id = _get_user_id_from_update(update, channel)
-        text = _get_text_from_update(update, channel)
-        if not text:
-            return {"ok": True}
-
-        log.info(f"[Webhook]{channel.value} 收到消息: user={user_id}, text={text[:60]}...")
-
-        search_handler = MessageSearchService(
-            downloader=registry.get(RegistryKey.DOWNLOADER_CORE),
-            searcher=registry.get(RegistryKey.SEARCHER),
-            indexer=registry.get(RegistryKey.INDEXER_SERVICE),
-            site_cache=registry.get(RegistryKey.SITE_CACHE),
-            site_engine=registry.get(RegistryKey.SITE_ENGINE),
-            subscribe_service=registry.get(RegistryKey.SUBSCRIBE_SERVICE),
-            media_service=registry.get(RegistryKey.MEDIA_SERVICE),
-            agent_service=registry.get(RegistryKey.AGENT_SERVICE),
-        )
-        handler = MessageCommandHandler(search_handler=search_handler)
-        handler.handle_message_job(msg=text, in_from=channel, user_id=user_id)
+    user_id = _get_user_id_from_update(update, channel)
+    text = _get_text_from_update(update, channel)
+    if not text:
         return {"ok": True}
-    finally:
-        remove_session()
+
+    log.info(f"[Webhook]{channel.value} 收到消息: user={user_id}, text={text[:60]}...")
+
+    search_handler = MessageSearchService(
+        downloader=registry.get(RegistryKey.DOWNLOADER_CORE),
+        searcher=registry.get(RegistryKey.SEARCHER),
+        indexer=registry.get(RegistryKey.INDEXER_SERVICE),
+        site_cache=registry.get(RegistryKey.SITE_CACHE),
+        site_engine=registry.get(RegistryKey.SITE_ENGINE),
+        subscribe_service=registry.get(RegistryKey.SUBSCRIBE_SERVICE),
+        media_service=registry.get(RegistryKey.MEDIA_SERVICE),
+        agent_service=registry.get(RegistryKey.AGENT_SERVICE),
+    )
+    handler = MessageCommandHandler(search_handler=search_handler)
+    handler.handle_message_job(msg=text, in_from=channel, user_id=user_id)
+    return {"ok": True}
 
 
 @router.post("/telegram", summary="Telegram Bot Webhook")

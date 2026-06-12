@@ -11,7 +11,6 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 
 import log
-from app.db.session import remove_session
 from app.infrastructure.queue.base import MessageQueue
 from app.infrastructure.redis import RedisStore
 
@@ -163,8 +162,6 @@ class RedisMessageQueue(MessageQueue):
         except Exception as e:
             log.error(f"[RedisMessageQueue]消息处理失败: {e}")
             # 不 ACK，保留在 Pending 列表中自动重试
-        finally:
-            remove_session()
 
     @property
     def _started(self):

@@ -4,6 +4,7 @@
 """
 
 from enum import Enum
+
 from app.db.models import TRANSFERUNKNOWN
 from app.db.repositories.transfer_repository import TransferRepository
 from app.domain.entities.transfer import (

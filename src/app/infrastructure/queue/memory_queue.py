@@ -11,7 +11,6 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 
 import log
-from app.db.session import remove_session
 from app.infrastructure.queue.base import MessageQueue
 
 
@@ -89,5 +88,3 @@ class MemoryMessageQueue(MessageQueue):
             log.info(f"[MemoryMessageQueue]任务执行成功: {name}")
         except Exception as e:
             log.error(f"[MemoryMessageQueue]任务 {name} 失败: {e}")
-        finally:
-            remove_session()

@@ -5,7 +5,6 @@ Handles plugin history and TMDB blacklist related database operations.
 
 import time
 
-from app.db.transaction import auto_commit
 from app.db.models import PLUGINHISTORY, TMDBBLACKLIST
 from app.db.repositories.base_repository import BaseRepository
 
@@ -18,7 +17,6 @@ class PluginRepository(BaseRepository):
 
     # ==================== Plugin History ====================
 
-    @auto_commit(BaseRepository._db)
     def insert_plugin_history(self, plugin_id, key, value):
         """
         新增插件运行记录
@@ -28,14 +26,15 @@ class PluginRepository(BaseRepository):
             key: 键
             value: 值
         """
-        self._db.insert(
-            PLUGINHISTORY(
-                PLUGIN_ID=plugin_id,
-                KEY=key,
-                VALUE=value,
-                DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+        with self.session() as db:
+            db.add(
+                PLUGINHISTORY(
+                    PLUGIN_ID=plugin_id,
+                    KEY=key,
+                    VALUE=value,
+                    DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+                )
             )
-        )
 
     def get_plugin_history(self, plugin_id, key):
         """
@@ -50,16 +49,15 @@ class PluginRepository(BaseRepository):
         """
         if not plugin_id:
             return None
-        if key:
-            return (
-                self._db.query(PLUGINHISTORY)
-                .filter(plugin_id == PLUGINHISTORY.PLUGIN_ID, key == PLUGINHISTORY.KEY)
-                .first()
-            )
-        else:
-            return self._db.query(PLUGINHISTORY).filter(plugin_id == PLUGINHISTORY.PLUGIN_ID).all()
+        with self.session() as db:
+            if key:
+                return (
+                    db.query(PLUGINHISTORY)
+                    .filter(plugin_id == PLUGINHISTORY.PLUGIN_ID, key == PLUGINHISTORY.KEY)
+                    .first()
+                )
+            return db.query(PLUGINHISTORY).filter(plugin_id == PLUGINHISTORY.PLUGIN_ID).all()
 
-    @auto_commit(BaseRepository._db)
     def update_plugin_history(self, plugin_id, key, value):
         """
         更新插件运行记录
@@ -69,11 +67,11 @@ class PluginRepository(BaseRepository):
             key: 键
             value: 值
         """
-        self._db.query(PLUGINHISTORY).filter(plugin_id == PLUGINHISTORY.PLUGIN_ID, key == PLUGINHISTORY.KEY).update(
-            {"VALUE": value}
-        )
+        with self.session() as db:
+            db.query(PLUGINHISTORY).filter(plugin_id == PLUGINHISTORY.PLUGIN_ID, key == PLUGINHISTORY.KEY).update(
+                {"VALUE": value}
+            )
 
-    @auto_commit(BaseRepository._db)
     def delete_plugin_history(self, plugin_id, key):
         """
         删除插件运行记录
@@ -82,7 +80,8 @@ class PluginRepository(BaseRepository):
             plugin_id: 插件ID
             key: 键
         """
-        self._db.query(PLUGINHISTORY).filter(plugin_id == PLUGINHISTORY.PLUGIN_ID, key == PLUGINHISTORY.KEY).delete()
+        with self.session() as db:
+            db.query(PLUGINHISTORY).filter(plugin_id == PLUGINHISTORY.PLUGIN_ID, key == PLUGINHISTORY.KEY).delete()
 
     # ==================== TMDB Blacklist ====================
 
@@ -99,15 +98,16 @@ class PluginRepository(BaseRepository):
         """
         if not tmdb_id:
             return False
-        if media_type:
-            count = (
-                self._db.query(TMDBBLACKLIST)
-                .filter(str(tmdb_id) == TMDBBLACKLIST.TMDB_ID, media_type == TMDBBLACKLIST.MEDIA_TYPE)
-                .count()
-            )
-        else:
-            count = self._db.query(TMDBBLACKLIST).filter(str(tmdb_id) == TMDBBLACKLIST.TMDB_ID).count()
-        return count > 0
+        with self.session() as db:
+            if media_type:
+                count = (
+                    db.query(TMDBBLACKLIST)
+                    .filter(str(tmdb_id) == TMDBBLACKLIST.TMDB_ID, media_type == TMDBBLACKLIST.MEDIA_TYPE)
+                    .count()
+                )
+            else:
+                count = db.query(TMDBBLACKLIST).filter(str(tmdb_id) == TMDBBLACKLIST.TMDB_ID).count()
+            return count > 0
 
     def get_tmdb_blacklist(self):
         """
@@ -116,9 +116,9 @@ class PluginRepository(BaseRepository):
         Returns:
             黑名单记录列表
         """
-        return self._db.query(TMDBBLACKLIST).all()
+        with self.session() as db:
+            return db.query(TMDBBLACKLIST).all()
 
-    @auto_commit(BaseRepository._db)
     def insert_tmdb_blacklist(
         self, tmdb_id, title=None, year=None, media_type=None, poster_path=None, backdrop_path=None, note=None
     ):
@@ -134,22 +134,27 @@ class PluginRepository(BaseRepository):
             backdrop_path: 背景图路径
             note: 备注
         """
-        if not tmdb_id or self.is_tmdb_blacklisted(tmdb_id, media_type):
+        if not tmdb_id:
             return
+        with self.session() as db:
+            query = db.query(TMDBBLACKLIST).filter(str(tmdb_id) == TMDBBLACKLIST.TMDB_ID)
+            if media_type:
+                query = query.filter(media_type == TMDBBLACKLIST.MEDIA_TYPE)
+            if query.first():
+                return
 
-        self._db.insert(
-            TMDBBLACKLIST(
-                TMDB_ID=str(tmdb_id),
-                TITLE=title,
-                YEAR=year,
-                MEDIA_TYPE=media_type,
-                POSTER_PATH=poster_path,
-                BACKDROP_PATH=backdrop_path,
-                NOTE=note,
+            db.add(
+                TMDBBLACKLIST(
+                    TMDB_ID=str(tmdb_id),
+                    TITLE=title,
+                    YEAR=year,
+                    MEDIA_TYPE=media_type,
+                    POSTER_PATH=poster_path,
+                    BACKDROP_PATH=backdrop_path,
+                    NOTE=note,
+                )
             )
-        )
 
-    @auto_commit(BaseRepository._db)
     def delete_tmdb_blacklist(self, tmdb_id, media_type=None):
         """
         从TMDB黑名单删除
@@ -160,16 +165,17 @@ class PluginRepository(BaseRepository):
         """
         if not tmdb_id:
             return
-        if media_type:
-            self._db.query(TMDBBLACKLIST).filter(
-                str(tmdb_id) == TMDBBLACKLIST.TMDB_ID, media_type == TMDBBLACKLIST.MEDIA_TYPE
-            ).delete()
-        else:
-            self._db.query(TMDBBLACKLIST).filter(str(tmdb_id) == TMDBBLACKLIST.TMDB_ID).delete()
+        with self.session() as db:
+            if media_type:
+                db.query(TMDBBLACKLIST).filter(
+                    str(tmdb_id) == TMDBBLACKLIST.TMDB_ID, media_type == TMDBBLACKLIST.MEDIA_TYPE
+                ).delete()
+            else:
+                db.query(TMDBBLACKLIST).filter(str(tmdb_id) == TMDBBLACKLIST.TMDB_ID).delete()
 
-    @auto_commit(BaseRepository._db)
     def clear_tmdb_blacklist(self):
         """
         清空所有TMDB黑名单记录
         """
-        self._db.query(TMDBBLACKLIST).delete()
+        with self.session() as db:
+            db.query(TMDBBLACKLIST).delete()

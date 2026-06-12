@@ -1,11 +1,11 @@
 """
 Base Repository Class
-提供通用的数据库操作和工具方法，所有 Repository 继承此类
+提供显式 session 生命周期管理的通用数据库操作工具方法
 
-改进：
-- _db 改为 SessionManager 实例，提供 session_scope() 上下文管理器
-- 保持 query/insert/commit/delete/flush/rollback/execute 兼容方法
-- 新增 transactional() 上下文管理器供新代码使用
+设计原则：
+- 禁止使用隐式 scoped_session 长期持有连接
+- 每个 Repository 方法通过 self.session() 显式获取和释放 session
+- 多步骤事务通过 with self.session() as db 在同一 session 内完成
 """
 
 from contextlib import contextmanager
@@ -17,42 +17,40 @@ class BaseRepository:
     """
     基础仓储类
 
-    所有 Repository 通过 self._db / self.db 访问 SessionManager 方法：
-    - query(*entities)     → 创建查询
-    - insert(data)         → 插入对象（不自动 commit）
-    - delete(obj)          → 删除对象（不自动 commit）
-    - commit()             → 提交事务
-    - rollback()           → 回滚事务
-    - flush()              → 刷写 session
-    - execute(sql)         → 执行 SQL
-    - bulk_insert(...)     → 批量插入 ORM 对象
-    - bulk_insert_mappings(...) → 批量插入字典映射
-    - session_scope()      → 事务上下文管理器（推荐新代码使用）
+    所有 Repository 通过 self.session() 获取 Session 对象：
+    - with self.session() as db:
+          db.query(...)
+          db.add(...)
+          db.commit()
+
+    工具方法（与 session 无关）：
+    - _paginate(query, page, rownum)
+    - _build_like_pattern(search)
+    - exists(query)
+    - count(query)
     """
 
-    # 通过 Database 单例统一获取 SessionManager，避免独立实例和导入时副作用
-    _db = Database().session_manager
+    # 通过 Database 单例统一获取 SessionManager，禁止直接持有 session
+    _session_manager = Database().session_manager
 
     def __init__(self):
         pass
 
-    @property
-    def db(self):
-        """推荐访问方式"""
-        return self._db
+    @contextmanager
+    def session(self):
+        """获取一个自动提交/回滚/关闭的 session 上下文。"""
+        with self._session_manager.session_scope() as session:
+            yield session
 
     @contextmanager
-    def transactional(self):
-        """
-        事务上下文管理器（推荐新代码使用）
-
-        使用示例：
-            with self.transactional() as session:
-                session.add(obj)
-                # 自动 commit，异常自动 rollback
-        """
-        with self._db.session_scope() as session:
+    def readonly(self):
+        """只读 session 上下文（不自动提交）。"""
+        session = self._session_manager.session()
+        try:
             yield session
+        finally:
+            session.close()
+            self._session_manager.remove()
 
     def _paginate(self, query, page: int, rownum: int):
         """
@@ -85,8 +83,10 @@ class BaseRepository:
 
     def exists(self, query) -> bool:
         """检查查询结果是否存在"""
-        return query.first() is not None
+        with self.session() as db:
+            return query.with_session(db).first() is not None
 
     def count(self, query) -> int:
         """获取查询结果数量"""
-        return query.count()
+        with self.session() as db:
+            return query.with_session(db).count()

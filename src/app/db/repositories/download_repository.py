@@ -9,7 +9,6 @@ from typing import Any
 
 from sqlalchemy import and_, case, func
 
-from app.db.transaction import auto_commit
 from app.db.models import DOWNLOADHISTORY, DOWNLOADSETTING, INDEXERSTATISTICS
 from app.db.repositories.base_repository import BaseRepository
 
@@ -26,15 +25,16 @@ class DownloadRepository(BaseRepository):
         """
         查询下载历史是否存在
         """
-        if enclosure:
-            count = self._db.query(DOWNLOADHISTORY).filter(enclosure == DOWNLOADHISTORY.ENCLOSURE).count()
-        else:
-            count = (
-                self._db.query(DOWNLOADHISTORY)
-                .filter(downloader == DOWNLOADHISTORY.DOWNLOADER, download_id == DOWNLOADHISTORY.DOWNLOAD_ID)
-                .count()
-            )
-        return count > 0
+        with self.session() as db:
+            if enclosure:
+                count = db.query(DOWNLOADHISTORY).filter(enclosure == DOWNLOADHISTORY.ENCLOSURE).count()
+            else:
+                count = (
+                    db.query(DOWNLOADHISTORY)
+                    .filter(downloader == DOWNLOADHISTORY.DOWNLOADER, download_id == DOWNLOADHISTORY.DOWNLOAD_ID)
+                    .count()
+                )
+            return count > 0
 
     def is_exists_download_history_by_tmdb(self, tmdb_id: int | None, season_episode: str | None) -> bool:
         """
@@ -43,14 +43,14 @@ class DownloadRepository(BaseRepository):
         if not tmdb_id:
             return False
 
-        query = self._db.query(DOWNLOADHISTORY).filter(tmdb_id == DOWNLOADHISTORY.TMDBID)
+        with self.session() as db:
+            query = db.query(DOWNLOADHISTORY).filter(tmdb_id == DOWNLOADHISTORY.TMDBID)
 
-        if season_episode:
-            query = query.filter(season_episode == DOWNLOADHISTORY.SE)
+            if season_episode:
+                query = query.filter(season_episode == DOWNLOADHISTORY.SE)
 
-        return query.count() > 0
+            return query.count() > 0
 
-    @auto_commit(BaseRepository._db)
     def insert_download_history(self, media_info: Any, downloader: str, download_id: str, save_dir: str) -> None:
         """
         新增下载历史
@@ -74,54 +74,55 @@ class DownloadRepository(BaseRepository):
             enclosure = enclosure[:4000]
         media_info.enclosure = enclosure
 
-        if self.is_exists_download_history(enclosure=enclosure, downloader=downloader, download_id=download_id):
-            self._db.query(DOWNLOADHISTORY).filter(
-                media_info.enclosure == DOWNLOADHISTORY.ENCLOSURE,
-                downloader == DOWNLOADHISTORY.DOWNLOADER,
-                download_id == DOWNLOADHISTORY.DOWNLOAD_ID,
-            ).update(
-                {
-                    "TITLE": media_info.title,
-                    "YEAR": media_info.year or "",
-                    "TYPE": media_info.type.value if media_info.type else "",
-                    "TMDBID": media_info.tmdb_id or "",
-                    "VOTE": media_info.vote_average or "",
-                    "POSTER": media_info.get_poster_image() or "",
-                    "OVERVIEW": media_info.overview or "",
-                    "TORRENT": media_info.org_string,
-                    "ENCLOSURE": media_info.enclosure,
-                    "DESC": media_info.description or "",
-                    "SITE": media_info.site or "",
-                    "DOWNLOADER": downloader,
-                    "DOWNLOAD_ID": download_id,
-                    "SAVE_PATH": save_dir,
-                    "SE": media_info.get_season_episode_string() or "",
-                    "STATE": "downloading",
-                    "DATE": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
-                }
-            )
-        else:
-            self._db.insert(
-                DOWNLOADHISTORY(
-                    TITLE=media_info.title,
-                    YEAR=media_info.year or "",
-                    TYPE=media_info.type.value if media_info.type else "",
-                    TMDBID=media_info.tmdb_id or "",
-                    VOTE=media_info.vote_average or "",
-                    POSTER=media_info.get_poster_image() or "",
-                    OVERVIEW=media_info.overview or "",
-                    TORRENT=media_info.org_string,
-                    ENCLOSURE=media_info.enclosure,
-                    DESC=media_info.description or "",
-                    DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
-                    SITE=media_info.site or "",
-                    DOWNLOADER=downloader,
-                    DOWNLOAD_ID=download_id,
-                    SAVE_PATH=save_dir,
-                    SE=media_info.get_season_episode_string() or "",
-                    STATE="downloading",
+        with self.session() as db:
+            if self.is_exists_download_history(enclosure=enclosure, downloader=downloader, download_id=download_id):
+                db.query(DOWNLOADHISTORY).filter(
+                    media_info.enclosure == DOWNLOADHISTORY.ENCLOSURE,
+                    downloader == DOWNLOADHISTORY.DOWNLOADER,
+                    download_id == DOWNLOADHISTORY.DOWNLOAD_ID,
+                ).update(
+                    {
+                        "TITLE": media_info.title,
+                        "YEAR": media_info.year or "",
+                        "TYPE": media_info.type.value if media_info.type else "",
+                        "TMDBID": media_info.tmdb_id or "",
+                        "VOTE": media_info.vote_average or "",
+                        "POSTER": media_info.get_poster_image() or "",
+                        "OVERVIEW": media_info.overview or "",
+                        "TORRENT": media_info.org_string,
+                        "ENCLOSURE": media_info.enclosure,
+                        "DESC": media_info.description or "",
+                        "SITE": media_info.site or "",
+                        "DOWNLOADER": downloader,
+                        "DOWNLOAD_ID": download_id,
+                        "SAVE_PATH": save_dir,
+                        "SE": media_info.get_season_episode_string() or "",
+                        "STATE": "downloading",
+                        "DATE": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+                    }
                 )
-            )
+            else:
+                db.add(
+                    DOWNLOADHISTORY(
+                        TITLE=media_info.title,
+                        YEAR=media_info.year or "",
+                        TYPE=media_info.type.value if media_info.type else "",
+                        TMDBID=media_info.tmdb_id or "",
+                        VOTE=media_info.vote_average or "",
+                        POSTER=media_info.get_poster_image() or "",
+                        OVERVIEW=media_info.overview or "",
+                        TORRENT=media_info.org_string,
+                        ENCLOSURE=media_info.enclosure,
+                        DESC=media_info.description or "",
+                        DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+                        SITE=media_info.site or "",
+                        DOWNLOADER=downloader,
+                        DOWNLOAD_ID=download_id,
+                        SAVE_PATH=save_dir,
+                        SE=media_info.get_season_episode_string() or "",
+                        STATE="downloading",
+                    )
+                )
 
     def get_download_history(
         self, date: str | None = None, hid: int | None = None, num: int = 30, page: int = 1
@@ -130,73 +131,78 @@ class DownloadRepository(BaseRepository):
         查询下载历史
         修复：使用标准 GROUP BY 语法兼容 MySQL/PostgreSQL
         """
-        if hid:
-            return self._db.query(DOWNLOADHISTORY).filter(int(hid) == DOWNLOADHISTORY.ID).all()
+        with self.session() as db:
+            if hid:
+                return db.query(DOWNLOADHISTORY).filter(int(hid) == DOWNLOADHISTORY.ID).all()
 
-        # 使用子查询获取每个 TITLE 的最大日期
-        sub_query = (
-            self._db.query(DOWNLOADHISTORY.TITLE, func.max(DOWNLOADHISTORY.DATE).label("max_date"))
-            .group_by(DOWNLOADHISTORY.TITLE)
-            .subquery()
-        )
+            # 使用子查询获取每个 TITLE 的最大日期
+            sub_query = (
+                db.query(DOWNLOADHISTORY.TITLE, func.max(DOWNLOADHISTORY.DATE).label("max_date"))
+                .group_by(DOWNLOADHISTORY.TITLE)
+                .subquery()
+            )
 
-        if date:
-            return (
-                self._db.query(DOWNLOADHISTORY)
-                .filter(date < DOWNLOADHISTORY.DATE)
-                .join(
-                    sub_query,
-                    and_(sub_query.c.TITLE == DOWNLOADHISTORY.TITLE, sub_query.c.max_date == DOWNLOADHISTORY.DATE),
+            if date:
+                return (
+                    db.query(DOWNLOADHISTORY)
+                    .filter(date < DOWNLOADHISTORY.DATE)
+                    .join(
+                        sub_query,
+                        and_(sub_query.c.TITLE == DOWNLOADHISTORY.TITLE, sub_query.c.max_date == DOWNLOADHISTORY.DATE),
+                    )
+                    .order_by(DOWNLOADHISTORY.DATE.desc())
+                    .all()
                 )
-                .order_by(DOWNLOADHISTORY.DATE.desc())
-                .all()
-            )
-        else:
-            offset = (int(page) - 1) * int(num)
-            return (
-                self._db.query(DOWNLOADHISTORY)
-                .join(
-                    sub_query,
-                    and_(sub_query.c.TITLE == DOWNLOADHISTORY.TITLE, sub_query.c.max_date == DOWNLOADHISTORY.DATE),
+            else:
+                offset = (int(page) - 1) * int(num)
+                return (
+                    db.query(DOWNLOADHISTORY)
+                    .join(
+                        sub_query,
+                        and_(sub_query.c.TITLE == DOWNLOADHISTORY.TITLE, sub_query.c.max_date == DOWNLOADHISTORY.DATE),
+                    )
+                    .order_by(DOWNLOADHISTORY.DATE.desc())
+                    .limit(num)
+                    .offset(offset)
+                    .all()
                 )
-                .order_by(DOWNLOADHISTORY.DATE.desc())
-                .limit(num)
-                .offset(offset)
-                .all()
-            )
 
     def get_download_history_by_title(self, title: str) -> list[DOWNLOADHISTORY]:
-        return self._db.query(DOWNLOADHISTORY).filter(title == DOWNLOADHISTORY.TITLE).all()
+        with self.session() as db:
+            return db.query(DOWNLOADHISTORY).filter(title == DOWNLOADHISTORY.TITLE).all()
 
     def get_download_history_by_path(self, path: str) -> DOWNLOADHISTORY | None:
-        return (
-            self._db.query(DOWNLOADHISTORY)
-            .filter(os.path.normpath(path) == DOWNLOADHISTORY.SAVE_PATH)
-            .order_by(DOWNLOADHISTORY.DATE.desc())
-            .first()
-        )
+        with self.session() as db:
+            return (
+                db.query(DOWNLOADHISTORY)
+                .filter(os.path.normpath(path) == DOWNLOADHISTORY.SAVE_PATH)
+                .order_by(DOWNLOADHISTORY.DATE.desc())
+                .first()
+            )
 
     def get_download_history_by_downloader(self, downloader: str, download_id: str) -> DOWNLOADHISTORY | None:
         """
         根据下载器查找下载历史
         """
-        return (
-            self._db.query(DOWNLOADHISTORY)
-            .filter(downloader == DOWNLOADHISTORY.DOWNLOADER, download_id == DOWNLOADHISTORY.DOWNLOAD_ID)
-            .order_by(DOWNLOADHISTORY.DATE.desc())
-            .first()
-        )
+        with self.session() as db:
+            return (
+                db.query(DOWNLOADHISTORY)
+                .filter(downloader == DOWNLOADHISTORY.DOWNLOADER, download_id == DOWNLOADHISTORY.DOWNLOAD_ID)
+                .order_by(DOWNLOADHISTORY.DATE.desc())
+                .first()
+            )
 
     def get_download_history_by_id(self, download_id: str) -> DOWNLOADHISTORY | None:
         """
         仅根据下载ID查找最新的下载历史记录
         """
-        return (
-            self._db.query(DOWNLOADHISTORY)
-            .filter(download_id == DOWNLOADHISTORY.DOWNLOAD_ID)
-            .order_by(DOWNLOADHISTORY.DATE.desc())
-            .first()
-        )
+        with self.session() as db:
+            return (
+                db.query(DOWNLOADHISTORY)
+                .filter(download_id == DOWNLOADHISTORY.DOWNLOAD_ID)
+                .order_by(DOWNLOADHISTORY.DATE.desc())
+                .first()
+            )
 
     def get_active_downloads(self, days: int = 30, limit: int = 500) -> list[DOWNLOADHISTORY]:
         """
@@ -207,28 +213,28 @@ class DownloadRepository(BaseRepository):
         from datetime import datetime, timedelta
 
         cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
-        return (
-            self._db.query(DOWNLOADHISTORY)
-            .filter(
-                DOWNLOADHISTORY.STATE.in_(["downloading", "completed"]),
-                DOWNLOADHISTORY.DATE >= cutoff,
+        with self.session() as db:
+            return (
+                db.query(DOWNLOADHISTORY)
+                .filter(
+                    DOWNLOADHISTORY.STATE.in_(["downloading", "completed"]),
+                    DOWNLOADHISTORY.DATE >= cutoff,
+                )
+                .order_by(DOWNLOADHISTORY.DATE.desc())
+                .limit(limit)
+                .all()
             )
-            .order_by(DOWNLOADHISTORY.DATE.desc())
-            .limit(limit)
-            .all()
-        )
 
-    @auto_commit(BaseRepository._db)
     def update_download_state(self, downloader: str, download_id: str, state: str) -> None:
         """
         更新下载任务状态
         """
-        self._db.query(DOWNLOADHISTORY).filter(
-            downloader == DOWNLOADHISTORY.DOWNLOADER,
-            download_id == DOWNLOADHISTORY.DOWNLOAD_ID,
-        ).update({"STATE": state})
+        with self.session() as db:
+            db.query(DOWNLOADHISTORY).filter(
+                downloader == DOWNLOADHISTORY.DOWNLOADER,
+                download_id == DOWNLOADHISTORY.DOWNLOAD_ID,
+            ).update({"STATE": state})
 
-    @auto_commit(BaseRepository._db)
     def batch_update_download_state(self, items: list[tuple[str, str, str]]) -> None:
         """
         批量更新下载任务状态
@@ -242,34 +248,35 @@ class DownloadRepository(BaseRepository):
         for downloader, download_id, state in items:
             states_map.setdefault(state, []).append((downloader, download_id))
 
-        for state, id_pairs in states_map.items():
-            downloaders = [d for d, _ in id_pairs]
-            download_ids = [i for _, i in id_pairs]
-            self._db.query(DOWNLOADHISTORY).filter(
-                DOWNLOADHISTORY.DOWNLOADER.in_(downloaders),
-                DOWNLOADHISTORY.DOWNLOAD_ID.in_(download_ids),
-            ).update({"STATE": state}, synchronize_session=False)
+        with self.session() as db:
+            for state, id_pairs in states_map.items():
+                downloaders = [d for d, _ in id_pairs]
+                download_ids = [i for _, i in id_pairs]
+                db.query(DOWNLOADHISTORY).filter(
+                    DOWNLOADHISTORY.DOWNLOADER.in_(downloaders),
+                    DOWNLOADHISTORY.DOWNLOAD_ID.in_(download_ids),
+                ).update({"STATE": state}, synchronize_session=False)
 
     # ==================== Download Settings ====================
 
-    @auto_commit(BaseRepository._db)
     def delete_download_setting(self, sid: int | None) -> None:
         """
         删除下载设置
         """
         if not sid:
             return
-        self._db.query(DOWNLOADSETTING).filter(int(sid) == DOWNLOADSETTING.ID).delete()
+        with self.session() as db:
+            db.query(DOWNLOADSETTING).filter(int(sid) == DOWNLOADSETTING.ID).delete()
 
     def get_download_setting(self, sid: int | None = None) -> list[DOWNLOADSETTING]:
         """
         查询下载设置
         """
-        if sid:
-            return self._db.query(DOWNLOADSETTING).filter(int(sid) == DOWNLOADSETTING.ID).all()
-        return self._db.query(DOWNLOADSETTING).all()
+        with self.session() as db:
+            if sid:
+                return db.query(DOWNLOADSETTING).filter(int(sid) == DOWNLOADSETTING.ID).all()
+            return db.query(DOWNLOADSETTING).all()
 
-    @auto_commit(BaseRepository._db)
     def update_download_setting(
         self,
         sid: int | None,
@@ -286,72 +293,74 @@ class DownloadRepository(BaseRepository):
         """
         设置下载设置
         """
-        if sid:
-            self._db.query(DOWNLOADSETTING).filter(int(sid) == DOWNLOADSETTING.ID).update(
-                {
-                    "NAME": name,
-                    "CATEGORY": category,
-                    "TAGS": tags,
-                    "IS_PAUSED": int(is_paused),
-                    "UPLOAD_LIMIT": int(float(upload_limit)),
-                    "DOWNLOAD_LIMIT": int(float(download_limit)),
-                    "RATIO_LIMIT": int(round(float(ratio_limit), 2) * 100),
-                    "SEEDING_TIME_LIMIT": int(float(seeding_time_limit)),
-                    "DOWNLOADER": downloader,
-                }
-            )
-        else:
-            self._db.insert(
-                DOWNLOADSETTING(
-                    NAME=name,
-                    CATEGORY=category,
-                    TAGS=tags,
-                    IS_PAUSED=int(is_paused),
-                    UPLOAD_LIMIT=int(float(upload_limit)),
-                    DOWNLOAD_LIMIT=int(float(download_limit)),
-                    RATIO_LIMIT=int(round(float(ratio_limit), 2) * 100),
-                    SEEDING_TIME_LIMIT=int(float(seeding_time_limit)),
-                    DOWNLOADER=downloader,
+        with self.session() as db:
+            if sid:
+                db.query(DOWNLOADSETTING).filter(int(sid) == DOWNLOADSETTING.ID).update(
+                    {
+                        "NAME": name,
+                        "CATEGORY": category,
+                        "TAGS": tags,
+                        "IS_PAUSED": int(is_paused),
+                        "UPLOAD_LIMIT": int(float(upload_limit)),
+                        "DOWNLOAD_LIMIT": int(float(download_limit)),
+                        "RATIO_LIMIT": int(round(float(ratio_limit), 2) * 100),
+                        "SEEDING_TIME_LIMIT": int(float(seeding_time_limit)),
+                        "DOWNLOADER": downloader,
+                    }
                 )
-            )
+            else:
+                db.add(
+                    DOWNLOADSETTING(
+                        NAME=name,
+                        CATEGORY=category,
+                        TAGS=tags,
+                        IS_PAUSED=int(is_paused),
+                        UPLOAD_LIMIT=int(float(upload_limit)),
+                        DOWNLOAD_LIMIT=int(float(download_limit)),
+                        RATIO_LIMIT=int(round(float(ratio_limit), 2) * 100),
+                        SEEDING_TIME_LIMIT=int(float(seeding_time_limit)),
+                        DOWNLOADER=downloader,
+                    )
+                )
 
     # ==================== Indexer Statistics ====================
 
-    @auto_commit(BaseRepository._db)
     def insert_indexer_statistics(self, indexer: str, itype: str, seconds: int, result: str) -> None:
         """
         插入索引器统计
         """
-        self._db.insert(
-            INDEXERSTATISTICS(
-                INDEXER=indexer,
-                TYPE=itype,
-                SECONDS=seconds,
-                RESULT=result,
-                DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+        with self.session() as db:
+            db.add(
+                INDEXERSTATISTICS(
+                    INDEXER=indexer,
+                    TYPE=itype,
+                    SECONDS=seconds,
+                    RESULT=result,
+                    DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+                )
             )
-        )
 
-    @auto_commit(BaseRepository._db)
     def delete_all_indexer_statistics(self) -> None:
         """
         删除所有搜索的记录
         """
-        self._db.query(INDEXERSTATISTICS).delete()
+        with self.session() as db:
+            db.query(INDEXERSTATISTICS).delete()
 
     def get_indexer_statistics(self, client_id: str) -> list[tuple]:
         """
         查询索引器统计
         """
-        return (
-            self._db.query(
-                INDEXERSTATISTICS.INDEXER,
-                func.count(INDEXERSTATISTICS.ID).label("TOTAL"),
-                func.sum(case((INDEXERSTATISTICS.RESULT == "N", 1), else_=0)).label("FAIL"),
-                func.sum(case((INDEXERSTATISTICS.RESULT == "Y", 1), else_=0)).label("SUCCESS"),
-                func.avg(INDEXERSTATISTICS.SECONDS).label("AVG"),
+        with self.session() as db:
+            return (
+                db.query(
+                    INDEXERSTATISTICS.INDEXER,
+                    func.count(INDEXERSTATISTICS.ID).label("TOTAL"),
+                    func.sum(case((INDEXERSTATISTICS.RESULT == "N", 1), else_=0)).label("FAIL"),
+                    func.sum(case((INDEXERSTATISTICS.RESULT == "Y", 1), else_=0)).label("SUCCESS"),
+                    func.avg(INDEXERSTATISTICS.SECONDS).label("AVG"),
+                )
+                .filter(client_id == INDEXERSTATISTICS.TYPE)
+                .group_by(INDEXERSTATISTICS.INDEXER)
+                .all()
             )
-            .filter(client_id == INDEXERSTATISTICS.TYPE)
-            .group_by(INDEXERSTATISTICS.INDEXER)
-            .all()
-        )
