@@ -172,8 +172,16 @@ class SystemConfigService:
     def __init__(self, system_config: SystemConfig | None = None):
         self._system_config = system_config or SystemConfig()
 
-    def set_config(self, key: str, value) -> bool:
+    def get(self, key=None):
+        """获取系统配置项"""
+        return self._system_config.get(key)
+
+    def set(self, key: str, value) -> None:
         """设置系统配置项"""
+        self._system_config.set(key=key, value=value)
+
+    def set_config(self, key: str, value) -> bool:
+        """设置系统配置项（兼容旧接口）"""
         if not key or not value:
             return False
         self._system_config.set(key=key, value=value)
