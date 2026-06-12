@@ -2,7 +2,6 @@
 
 特性：
 - 可配置线程数
-- 自动清理数据库 session（每个线程结束后调用 remove_session）
 - 支持 submit / map / shutdown
 - 优雅关闭（等待完成 + 超时强制关闭）
 - 统计信息（活跃任务 / 已完成 / 队列大小）
@@ -19,7 +18,6 @@ import time
 from collections.abc import Callable, Iterator
 from concurrent.futures import Future, ThreadPoolExecutor
 
-from app.db.session import remove_session
 from app.utils.exception_utils import ExceptionUtils
 
 
@@ -96,7 +94,6 @@ class ThreadExecutor:
                 log.warn(f"[ThreadExecutor:{self._name}] 任务异常: {func.__name__}")
                 ExceptionUtils.exception_traceback(Exception())
             finally:
-                remove_session()
                 with self._lock:
                     self._completed += 1
 
@@ -126,7 +123,6 @@ class ThreadExecutor:
                 ExceptionUtils.exception_traceback(Exception())
                 return None
             finally:
-                remove_session()
                 with self._lock:
                     self._completed += 1
 
