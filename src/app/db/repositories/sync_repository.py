@@ -3,7 +3,6 @@ Sync Repository
 Handles directory sync related database operations.
 """
 
-from app.db.transaction import auto_commit
 from app.db.models import CONFIGSYNCPATHS
 from app.db.repositories.base_repository import BaseRepository
 
@@ -14,7 +13,6 @@ class SyncRepository(BaseRepository):
     处理目录同步配置的数据库操作
     """
 
-    @auto_commit(BaseRepository._db)
     def insert_config_sync_path(
         self,
         source,
@@ -45,23 +43,24 @@ class SyncRepository(BaseRepository):
             src_backend: 源后端
             dst_backend: 目标后端
         """
-        return self._db.insert(
-            CONFIGSYNCPATHS(
-                SOURCE=source,
-                DEST=dest,
-                UNKNOWN=unknown,
-                MODE=mode,
-                OPERATION=operation or mode,
-                SRC_BACKEND=src_backend or "local",
-                DST_BACKEND=dst_backend or "local",
-                COMPATIBILITY=int(compatibility),
-                RENAME=int(rename),
-                ENABLED=int(enabled),
-                NOTE=note,
+        with self.session() as db:
+            db.add(
+                CONFIGSYNCPATHS(
+                    SOURCE=source,
+                    DEST=dest,
+                    UNKNOWN=unknown,
+                    MODE=mode,
+                    OPERATION=operation or mode,
+                    SRC_BACKEND=src_backend or "local",
+                    DST_BACKEND=dst_backend or "local",
+                    COMPATIBILITY=int(compatibility),
+                    RENAME=int(rename),
+                    ENABLED=int(enabled),
+                    NOTE=note,
+                )
             )
-        )
+            db.commit()
 
-    @auto_commit(BaseRepository._db)
     def delete_config_sync_path(self, sid):
         """
         删除目录同步
@@ -71,7 +70,9 @@ class SyncRepository(BaseRepository):
         """
         if not sid:
             return
-        self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).delete()
+        with self.session() as db:
+            db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).delete()
+            db.commit()
 
     def get_config_sync_paths(self, sid=None):
         """
@@ -83,11 +84,11 @@ class SyncRepository(BaseRepository):
         Returns:
             同步配置列表
         """
-        if sid:
-            return self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).all()
-        return self._db.query(CONFIGSYNCPATHS).order_by(CONFIGSYNCPATHS.SOURCE).all()
+        with self.session() as db:
+            if sid:
+                return db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).all()
+            return db.query(CONFIGSYNCPATHS).order_by(CONFIGSYNCPATHS.SOURCE).all()
 
-    @auto_commit(BaseRepository._db)
     def check_config_sync_paths(self, sid=None, compatibility=None, rename=None, enabled=None):
         """
         设置目录同步状态
@@ -98,11 +99,13 @@ class SyncRepository(BaseRepository):
             rename: 是否重命名
             enabled: 是否启用
         """
-        if sid and rename is not None:
-            self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update({"RENAME": int(rename)})
-        elif sid and enabled is not None:
-            self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update({"ENABLED": int(enabled)})
-        elif sid and compatibility is not None:
-            self._db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update(
-                {"COMPATIBILITY": int(compatibility)}
-            )
+        with self.session() as db:
+            if sid and rename is not None:
+                db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update({"RENAME": int(rename)})
+            elif sid and enabled is not None:
+                db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update({"ENABLED": int(enabled)})
+            elif sid and compatibility is not None:
+                db.query(CONFIGSYNCPATHS).filter(int(sid) == CONFIGSYNCPATHS.ID).update(
+                    {"COMPATIBILITY": int(compatibility)}
+                )
+            db.commit()

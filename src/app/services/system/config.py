@@ -3,6 +3,8 @@
 import json
 from typing import cast
 
+from sqlalchemy import text
+
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
 from app.core.system_config import SystemConfig
@@ -179,7 +181,8 @@ class SystemConfigService:
 
     def reset_db_version(self) -> None:
         """重置数据库 alembic_version 表（用于版本回滚后重建）"""
-        BaseRepository._db.execute("DROP TABLE IF EXISTS alembic_version")
+        with BaseRepository().session() as db:
+            db.execute(text("DROP TABLE IF EXISTS alembic_version"))
 
 
 class ConfigUpdateService:

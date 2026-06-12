@@ -15,7 +15,6 @@ import log
 from app.core.settings import settings
 from app.db.repositories.plugin_framework_repository import PluginFrameworkRepository
 from app.db.repositories.rbac_repo_adapter import RBACMenuRepositoryAdapter, RBACRoleRepositoryAdapter
-from app.db.session import remove_session
 from app.domain.entities.plugin import PluginConfigEntity, PluginManifestEntity
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.plugin_framework.context import PluginContext
@@ -590,13 +589,7 @@ class PluginFrameworkService:
         if not hasattr(instance, "run"):
             raise ValueError(f"插件 {plugin_id} 未实现 run() 方法")
 
-        def _run_plugin():
-            try:
-                instance.run()
-            finally:
-                remove_session()
-
-        threading.Thread(target=_run_plugin, daemon=True).start()
+        threading.Thread(target=instance.run, daemon=True).start()
         log.info(f"[PluginFrameworkService] 插件 {plugin_id} 立即运行任务已启动")
 
     def reload_plugin(self, plugin_id: str) -> None:

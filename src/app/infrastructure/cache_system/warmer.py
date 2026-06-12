@@ -11,7 +11,6 @@ from typing import Any
 
 import log
 from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
-from app.db.session import remove_session
 
 from .cache_manager import CacheManager
 
@@ -284,14 +283,11 @@ class CacheWarmerManager:
     def _run_warmer(self, warmer: CacheWarmer):
         """运行单个预热器"""
         try:
-            try:
-                result = warmer.warm()
-                self._results[warmer.name] = result
-            except Exception as e:
-                log.error(f"[CacheWarmerManager]预热器 {warmer.name} 执行异常: {e}")
-                self._results[warmer.name] = False
-        finally:
-            remove_session()
+            result = warmer.warm()
+            self._results[warmer.name] = result
+        except Exception as e:
+            log.error(f"[CacheWarmerManager]预热器 {warmer.name} 执行异常: {e}")
+            self._results[warmer.name] = False
 
     def warm(self, name: str) -> bool:
         """

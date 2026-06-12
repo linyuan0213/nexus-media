@@ -985,3 +985,7 @@ class MessageCenter:
 - `APIKeyService` 提前到基础设施层创建并注入 `Message`/`ClientManager`/`ClientRegistry`。
 - 全部校验通过：`uv run ruff check .`、`uv run pyright src/ tests/`、`uv run pytest tests/ -q`（731 passed）。
 - 精简 Registry：移除了 `FANART`、`INDEXER_HELPER`、`TRANSFER_ENGINE`、`TRANSFER_PIPELINE`、`WEB_UTILS`、`TOOL_EXECUTOR` 等非必要顶级注册项，改为在 factories 中直接注入。
+- 根治数据库连接池泄漏：所有 Repository 改为显式 `with self.session() as db:` 上下文，每个方法结束自动关闭/归还连接；后台线程不再需要手动 `remove_session()`。
+- 彻底移除 `SessionManager` 的旧兼容 API（`query/insert/delete/execute/bulk_insert/bulk_insert_mappings` 等）、`auto_commit` 装饰器、`MainDb` 别名与 `get_db_session()`。
+- 调度器关闭顺序修复：`SystemLifecycleService.stop_service()` 内部已包含 `download_monitor.stop()`，避免 `lifespan` 中重复调用。
+- 全局 401 异常处理：`/api/*` 路径返回 JSON 401，页面路由才重定向到登录页。

@@ -1,6 +1,11 @@
 """
 Session 管理器
-提供 scoped_session 生命周期管理和兼容 API
+提供显式 session 生命周期管理
+
+设计原则：
+- 禁止隐式长期持有数据库连接
+- 所有数据库操作必须通过 session_scope() / transaction_scope() 显式上下文
+- 不再提供旧 MainDb 兼容 API（query/insert/delete/execute 等）
 """
 
 import os
@@ -21,14 +26,14 @@ class SessionManager:
     Session 管理器
 
     职责：
-    1. 管理 scoped_session 生命周期（线程本地存储）
-    2. 提供 session_scope() 上下文管理器确保自动提交/回滚/关闭
-    3. 兼容旧 MainDb API（query/insert/commit/delete/flush/execute）
-    4. 提供 bulk_insert / bulk_insert_mappings 批量操作
-    5. 支持显式事务控制（transaction_scope）
+    1. 提供 session_scope() 上下文管理器，确保 session 自动提交/回滚/关闭
+    2. 提供 transaction_scope() 显式事务上下文（供 Service 层组合多 Repository 操作）
+    3. 提供 session() / remove() 给需要手动控制生命周期的场景
+    4. 提供数据库初始化方法
 
-    线程安全：scoped_session 保证同一线程内返回同一个 session 实例
-    Session 清理：请求结束后必须调用 remove() 清理线程本地存储
+    注意：
+    - 不再提供 query/insert/delete/execute 等隐式 session API
+    - Repository 层应通过 self.session() 显式获取 session
     """
 
     _tx_local = threading.local()
@@ -55,37 +60,20 @@ class SessionManager:
         """当前线程是否处于显式事务中"""
         return self._tx_depth > 0
 
-    @contextmanager
-    def transaction_scope(self):
-        """
-        显式事务上下文管理器（支持嵌套）
-        """
-        self._tx_depth += 1
-        depth = self._tx_depth
-        try:
-            yield
-            if depth == 1:
-                self.commit()
-        except Exception:
-            if depth == 1:
-                self.rollback()
-            raise
-        finally:
-            self._tx_depth = depth - 1
-
     @property
     def engine(self):
         return self._engine
 
     @property
     def session(self):
-        """获取当前线程的 session（scoped_session）"""
+        """获取当前线程的 session（scoped_session）。调用方必须负责 close/remove。"""
         return self._session()
 
     @contextmanager
     def session_scope(self):
         """
-        事务范围的 session 上下文管理器
+        事务范围的 session 上下文管理器。
+        自动 commit/rollback/close/remove，确保连接及时归还连接池。
         """
         sess = self._session()
         try:
@@ -99,72 +87,27 @@ class SessionManager:
             if self._scoped:
                 self._scoped.remove()
 
+    @contextmanager
+    def transaction_scope(self):
+        """
+        显式事务上下文管理器（支持嵌套）。
+        供 Service 层组合多个 Repository 操作，保证原子性。
+        """
+        self._tx_depth += 1
+        depth = self._tx_depth
+        with self.session_scope() as session:
+            try:
+                yield session
+            finally:
+                self._tx_depth = depth - 1
+
     def remove(self):
-        """移除当前线程的 session（应在请求结束时调用）"""
+        """移除当前线程的 session（应在请求/任务结束时调用）"""
         if self._scoped:
             self._scoped.remove()
 
     # -------------------------------------------------------------------------
-    # 兼容旧 MainDb API
-    # -------------------------------------------------------------------------
-
-    def query(self, *entities):
-        """创建查询（返回 Query 对象，不自动 commit）"""
-        return self._session().query(*entities)
-
-    def insert(self, data):
-        """插入对象（单条或列表，不自动 commit）"""
-        if isinstance(data, list):
-            self._session().add_all(data)
-        else:
-            self._session().add(data)
-
-    def delete(self, obj):
-        """删除对象（不自动 commit）"""
-        self._session().delete(obj)
-
-    def commit(self):
-        """提交当前线程事务"""
-        self._session().commit()
-
-    def rollback(self):
-        """回滚当前线程事务"""
-        self._session().rollback()
-
-    def flush(self):
-        """刷写当前线程 session"""
-        self._session().flush()
-
-    def execute(self, sql):
-        """执行 SQL（保持旧拼写兼容，内部使用 SQL 适配器）"""
-        adapted = get_sql_adapter().adapt_sql(sql)
-        if adapted and adapted.strip():
-            self._session().execute(text(adapted))
-
-    def bulk_insert(self, objects, batch_size=1000):
-        """批量插入 ORM 对象"""
-        if not objects:
-            return
-        sess = self._session()
-        for i in range(0, len(objects), batch_size):
-            batch = objects[i : i + batch_size]
-            sess.bulk_save_objects(batch)
-            sess.flush()
-        sess.commit()
-
-    def bulk_insert_mappings(self, model, mappings, batch_size=1000):
-        """批量插入字典映射（比 ORM 对象插入更快）"""
-        if not mappings:
-            return
-        sess = self._session()
-        for i in range(0, len(mappings), batch_size):
-            batch = mappings[i : i + batch_size]
-            sess.bulk_insert_mappings(model, batch)
-            sess.flush()
-        sess.commit()
-
-    # -------------------------------------------------------------------------
-    # 数据库初始化
+    # 数据库初始化（仍使用 scoped_session，但在独立方法内立即释放）
     # -------------------------------------------------------------------------
 
     def create_all(self):
@@ -175,8 +118,8 @@ class SessionManager:
     def init_db_version(self):
         """初始化数据库版本（清理 alembic_version）"""
         try:
-            self.execute("delete from alembic_version where 1")
-            self.commit()
+            with self.session_scope() as db:
+                db.execute(text("delete from alembic_version where 1"))
         except Exception as err:
             print(str(err))
 
@@ -196,8 +139,8 @@ class SessionManager:
                         try:
                             adapted = get_sql_adapter().adapt_sql(sql)
                             if adapted and adapted.strip():
-                                self.execute(adapted)
-                                self.commit()
+                                with self.session_scope() as db:
+                                    db.execute(text(adapted))
                         except Exception as err:
                             print(str(err))
                 init_files.append(os.path.basename(sql_file))
@@ -247,10 +190,6 @@ class Database:
         self._session_mgr.init_data()
 
 
-# 向后兼容别名
-MainDb = SessionManager
-
-
 # ---------------------------------------------------------------------------
 # 模块级快捷函数
 # ---------------------------------------------------------------------------
@@ -262,7 +201,7 @@ def get_session_manager() -> SessionManager:
 
 
 def remove_session():
-    """移除当前线程的 session（应在请求/任务结束时调用）"""
+    """移除当前线程的 session（给通用线程池兜底清理用）"""
     scoped = get_scoped_session()
     if scoped:
         try:
@@ -274,10 +213,3 @@ def remove_session():
                 scoped.remove()
             except Exception:
                 pass
-
-
-def get_db_session():
-    """获取当前线程的数据库 session"""
-    scoped = get_scoped_session()
-    assert scoped is not None
-    return scoped()
