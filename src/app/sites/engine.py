@@ -414,6 +414,7 @@ class SiteEngine:
                 url,
                 site_name,
                 site_cookie,
+                self,
                 html_text=html_text,
                 site_headers=site_headers,
                 ua=ua,
