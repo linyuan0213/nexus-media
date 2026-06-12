@@ -3,7 +3,7 @@ Session 管理器
 提供显式 session 生命周期管理
 
 设计原则：
-- 禁止隐式长期持有数据库连接
+- 禁止使用 scoped_session 长期持有数据库连接
 - 所有数据库操作必须通过 session_scope() / transaction_scope() 显式上下文
 - 不再提供旧 MainDb 兼容 API（query/insert/delete/execute 等）
 """
@@ -16,7 +16,7 @@ from sqlalchemy import text
 
 from app.core.root_path import get_project_root
 from app.core.settings import settings
-from app.db.engine import _init_engine, get_engine, get_scoped_session
+from app.db.engine import get_engine, get_session_factory
 from app.db.sql_adapter import get_sql_adapter
 from app.db.models import Base
 
@@ -34,31 +34,12 @@ class SessionManager:
     注意：
     - 不再提供 query/insert/delete/execute 等隐式 session API
     - Repository 层应通过 self.session() 显式获取 session
+    - 不基于 scoped_session，每次 session_scope() 都会创建新的 Session
     """
 
-    _tx_local = threading.local()
-
     def __init__(self):
-        _init_engine()
         self._engine = get_engine()
-        self._scoped = get_scoped_session()
-
-    def _session(self):
-        assert self._scoped is not None
-        return self._scoped()
-
-    @property
-    def _tx_depth(self) -> int:
-        return getattr(self._tx_local, "depth", 0)
-
-    @_tx_depth.setter
-    def _tx_depth(self, value: int):
-        self._tx_local.depth = value
-
-    @property
-    def in_transaction(self) -> bool:
-        """当前线程是否处于显式事务中"""
-        return self._tx_depth > 0
+        self._factory = get_session_factory()
 
     @property
     def engine(self):
@@ -66,16 +47,16 @@ class SessionManager:
 
     @property
     def session(self):
-        """获取当前线程的 session（scoped_session）。调用方必须负责 close/remove。"""
-        return self._session()
+        """创建一个新的 Session。调用方必须负责 close。"""
+        return self._factory()
 
     @contextmanager
     def session_scope(self):
         """
         事务范围的 session 上下文管理器。
-        自动 commit/rollback/close/remove，确保连接及时归还连接池。
+        自动 commit/rollback/close，确保连接及时归还连接池。
         """
-        sess = self._session()
+        sess = self._factory()
         try:
             yield sess
             sess.commit()
@@ -84,30 +65,25 @@ class SessionManager:
             raise
         finally:
             sess.close()
-            if self._scoped:
-                self._scoped.remove()
 
     @contextmanager
     def transaction_scope(self):
         """
-        显式事务上下文管理器（支持嵌套）。
+        显式事务上下文管理器。
         供 Service 层组合多个 Repository 操作，保证原子性。
         """
-        self._tx_depth += 1
-        depth = self._tx_depth
         with self.session_scope() as session:
-            try:
-                yield session
-            finally:
-                self._tx_depth = depth - 1
+            yield session
 
     def remove(self):
-        """移除当前线程的 session（应在请求/任务结束时调用）"""
-        if self._scoped:
-            self._scoped.remove()
+        """
+        兼容旧代码的 remove()。
+        由于不再使用 scoped_session，此方法目前为空操作。
+        """
+        pass
 
     # -------------------------------------------------------------------------
-    # 数据库初始化（仍使用 scoped_session，但在独立方法内立即释放）
+    # 数据库初始化
     # -------------------------------------------------------------------------
 
     def create_all(self):
@@ -201,15 +177,13 @@ def get_session_manager() -> SessionManager:
 
 
 def remove_session():
-    """移除当前线程的 session（给通用线程池兜底清理用）"""
-    scoped = get_scoped_session()
-    if scoped:
-        try:
-            scoped().close()
-        except Exception:
-            pass
-        finally:
-            try:
-                scoped.remove()
-            except Exception:
-                pass
+    """
+    兼容旧代码的 remove_session()。
+    由于不再使用 scoped_session，此方法目前为空操作，保留给未清理干净的调用点。
+    """
+    pass
+
+
+def new_session():
+    """创建一个全新的 Session（调用方必须负责 close）"""
+    return get_session_factory()()

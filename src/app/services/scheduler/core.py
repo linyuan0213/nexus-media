@@ -1,6 +1,5 @@
 """SchedulerCore - 调度器核心服务."""
 
-import contextlib
 import datetime
 import os
 import threading
@@ -20,7 +19,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 import log
 from app.core.exceptions import RepositoryError, ServiceError
-from app.db.session import remove_session
 from app.services.scheduler.cron_parser import CronParser
 from app.services.scheduler.event_handler import EventHandler
 from app.services.scheduler.job_registry import JobRegistry
@@ -151,8 +149,6 @@ class SchedulerCore:
             self._scheduler.remove_all_jobs()
             self._scheduler.shutdown(wait=True)
             self._cleanup()
-            with contextlib.suppress(Exception):
-                remove_session()
 
             log.info("调度器服务已停止")
             return True

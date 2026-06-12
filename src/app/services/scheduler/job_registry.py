@@ -8,7 +8,6 @@ from apscheduler.jobstores.base import JobLookupError
 
 import log
 from app.core.exceptions import RepositoryError, ServiceError
-from app.db.session import remove_session
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.services.scheduler.models import TaskConfig
 from app.utils import ExceptionUtils
@@ -22,7 +21,7 @@ class JobRegistry:
 
     @staticmethod
     def _wrap_with_lock(func, job_id: str, lock_ttl: int = 300):
-        """包装任务函数，执行前获取分布式锁，执行后清理数据库 session."""
+        """包装任务函数，执行前获取分布式锁，执行后释放锁。"""
         if func is None:
             return func
 
@@ -40,7 +39,6 @@ class JobRegistry:
                     lock.release()
                 except Exception as e:
                     log.error(f"[Scheduler]任务 {job_id} 释放锁异常: {e}")
-                remove_session()
 
         return wrapped
 

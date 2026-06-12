@@ -40,13 +40,12 @@ from app.core.root_path import get_project_root
 from app.core.settings import settings
 from app.db import init_db
 from app.db.engine import get_engine
-from app.db.session import remove_session
 from app.di.factories import build_all, init_site_config, _register_post_db_services
 from app.di.registry import registry
 from app.di.types import RegistryKey
 from app.downloader.client import init_clients as init_downloaders
 from app.indexer.client import init_clients as init_indexers
-from app.infrastructure.rate_limiter import RateLimitMiddleware
+from app.infrastructure.rate_limiter.middleware import RateLimitMiddleware
 from app.infrastructure.redis import RedisStore
 from app.infrastructure.security import get_secret_key
 from app.infrastructure.thread import ThreadExecutor
@@ -158,15 +157,11 @@ app.add_middleware(
 app.add_middleware(RateLimitMiddleware, rate="60/m")
 
 
-# Session 清理中间件：每个请求结束后清理 scoped_session
+# Session 清理中间件：每个请求结束后作为兜底清理（Repository 已显式管理 session）
 @app.middleware("http")
 async def db_session_cleanup(request: Request, call_next):
-    """请求结束后清理数据库 session，防止 scoped_session 泄漏"""
-    try:
-        response = await call_next(request)
-        return response
-    finally:
-        remove_session()
+    """请求结束后作为兜底清理数据库连接"""
+    return await call_next(request)
 
 
 # 注册 Router（按领域逐步增加）

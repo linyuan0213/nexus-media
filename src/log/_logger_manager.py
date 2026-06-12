@@ -1,5 +1,5 @@
 """
-Logger 单例管理与 loguru 配置。
+Logger 管理器与 loguru 配置。
 """
 
 import logging
