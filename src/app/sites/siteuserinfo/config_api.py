@@ -9,7 +9,7 @@ import json
 import time
 
 import log
-from app.sites.engine import SiteDefinition, SiteEngine
+from app.sites.engine import SiteDefinition
 from app.sites import engine_tools
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
@@ -32,6 +32,7 @@ class ConfigApiUserInfo:
         site_name,
         url,
         site_cookie,
+        site_engine,
         site_headers=None,
         ua="",
         emulate=False,
@@ -50,6 +51,7 @@ class ConfigApiUserInfo:
         self._session = session
         self._json_data = json_data
         self._proxies = get_proxies() if proxy else None
+        self._site_engine = site_engine
 
         self.username = None
         self.userid = None
@@ -207,8 +209,8 @@ class ConfigApiUserInfo:
         path = endpoint_cfg.get("path", "").lstrip("/")
         url = f"{base.rstrip('/')}/{path}" if path else base.rstrip("/")
         log.warn(f"[ConfigApiUserInfo]{self.site_name} _api_call url={url}")
-        engine = SiteEngine.get_instance()
-        headers = engine._build_headers(
+        engine = self._site_engine
+        headers, auth = engine._build_auth(
             self._def,
             {
                 "cookie": self._cookie,
@@ -231,13 +233,13 @@ class ConfigApiUserInfo:
                     headers.pop("Content-Type", None)
                 headers.setdefault("Referer", base)
                 headers.setdefault("Origin", base)
-                res = client.post(url=url, data=data, headers=headers, **rl_kwargs)
+                res = client.post(url=url, data=data, headers=headers, auth=auth, **rl_kwargs)
             else:
                 params = dict(endpoint_cfg.get("params") or {})
                 params = (
                     {k: v.format(page="1") if isinstance(v, str) else v for k, v in params.items()} if params else None
                 )
-                res = client.get(url=url, params=params, headers=headers, **rl_kwargs)
+                res = client.get(url=url, params=params, headers=headers, auth=auth, **rl_kwargs)
             return res.json()
         except Exception:
             log.warn(f"[ConfigApiUserInfo]{self.site_name} API call fail")
@@ -309,9 +311,18 @@ class ConfigApiUserInfo:
 
 
 def _api_factory(
-    url, site_name, site_cookie, html_text=None, site_headers=None, ua="", emulate=False, proxy=False, session=None
+    url,
+    site_name,
+    site_cookie,
+    site_engine,
+    html_text=None,
+    site_headers=None,
+    ua="",
+    emulate=False,
+    proxy=False,
+    session=None,
 ):
-    engine = SiteEngine.get_instance()
+    engine = site_engine
     site_def, resp = engine.prefetch_user_profile(
         url,
         site_cookie,
@@ -327,6 +338,7 @@ def _api_factory(
         site_name,
         url,
         site_cookie,
+        site_engine=engine,
         site_headers=site_headers,
         ua=ua,
         proxy=proxy,
@@ -336,7 +348,8 @@ def _api_factory(
 
 
 def _register_factory():
-    SiteEngine.get_instance().register_user_info_factory(_api_factory)
+    # 注册工厂函数由 lifespan 调用
+    pass
 
 
 _register_factory()

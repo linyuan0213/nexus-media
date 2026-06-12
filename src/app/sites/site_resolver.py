@@ -7,7 +7,7 @@
 import json
 from datetime import datetime
 
-from app.di import container
+from app.infrastructure.chrome import ChromeClient
 from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
@@ -19,8 +19,15 @@ from app.utils.config_tools import get_proxies, get_ua
 class SiteResolver:
     """站点业务解析器 — 连通性测试等."""
 
-    def __init__(self, cache: SiteCache | None = None):
-        self._cache = cache or container.site_cache()
+    def __init__(
+        self,
+        cache: SiteCache,
+        site_engine: SiteEngine,
+        drissionpage_helper: ChromeClient | None = None,
+    ):
+        self._cache = cache
+        self._site_engine = site_engine
+        self._drissionpage_helper = drissionpage_helper or ChromeClient()
 
     def test_connection(self, site_id: int | str) -> tuple[bool, str, float]:
         """测试站点连通性.
@@ -69,7 +76,7 @@ class SiteResolver:
         headers.update({"User-Agent": ua})
 
         # 优先使用引擎统一测试
-        site_def = SiteEngine.get_instance().get_by_url(site_url)
+        site_def = self._site_engine.get_by_url(site_url)
         if site_def:
             user_config = {
                 "cookie": site_cookie,
@@ -79,13 +86,12 @@ class SiteResolver:
                 "headers": headers,
                 "proxy": proxy,
             }
-            return SiteEngine.get_instance().test_connection(site_url, user_config)
+            return self._site_engine.test_connection(site_url, user_config)
 
         # 兜底：HTML 站点
         if chrome:
-            chrome_inst = container.drissionpage_helper()
             start_time = datetime.now()
-            html_text = chrome_inst.get_page_html(url=site_url, cookies=site_cookie)
+            html_text = self._drissionpage_helper.get_page_html(url=site_url, cookies=site_cookie)
             seconds = round((datetime.now() - start_time).total_seconds(), 3)
             if not html_text:
                 return False, "获取站点源码失败", 0.0

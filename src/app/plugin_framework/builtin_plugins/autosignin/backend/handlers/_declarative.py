@@ -75,7 +75,7 @@ class DeclarativeSigninHandler(SiteSigninHandler):
         else:
             token, need_sync = resolver.resolve(self._config.auth_source)
             if need_sync:
-                CredentialResolver.sync_local_storage()
+                CredentialResolver.sync_local_storage(self._plugin_ctx.hook_system)
                 token = resolver.resolve_after_sync(self._config.auth_source)
 
         return self._wrap_auth(ctx, token)

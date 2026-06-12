@@ -1,6 +1,7 @@
 """同步 HTTP 客户端 Facade."""
 
-from typing import Any
+import io
+from typing import Any, BinaryIO
 
 import httpx
 
@@ -17,6 +18,8 @@ class HttpClient:
 
     封装 httpx.Client，内置 tenacity 重试、RateLimitEngine 限流、HttpCacheConfig 缓存。
     所有同步 HTTP 调用（站点签到、下载器 API、媒体服务器）使用此类。
+
+    由 factories / lifespan 创建并管理生命周期。
     """
 
     def __init__(
@@ -100,11 +103,10 @@ class HttpClient:
         for mw in self._middlewares:
             result = mw.process_response(result)
 
-        if self._cache and not cache_bypass:
-            if self._cache.is_cacheable(method, result):
-                ttl = cache_ttl if cache_ttl is not None else self._cache.default_ttl
-                cache_key = self._build_cache_key(method, url, kwargs)
-                self._cache.set(cache_key, result, ttl=ttl)
+        if self._cache and not cache_bypass and self._cache.is_cacheable(method, result):
+            ttl = cache_ttl if cache_ttl is not None else self._cache.default_ttl
+            cache_key = self._build_cache_key(method, url, kwargs)
+            self._cache.set(cache_key, result, ttl=ttl)
 
         return result
 
@@ -128,8 +130,16 @@ class HttpClient:
     def put(self, url: str, **kwargs: Any) -> httpx.Response:
         return self.request("PUT", url, **kwargs)
 
+    def patch(self, url: str, **kwargs: Any) -> httpx.Response:
+        return self.request("PATCH", url, **kwargs)
+
     def delete(self, url: str, **kwargs: Any) -> httpx.Response:
         return self.request("DELETE", url, **kwargs)
+
+    def stream(self, method: str, url: str, **kwargs: Any) -> BinaryIO:
+        """流式请求，返回可读的二进制流（支持 iter_bytes）。"""
+        resp = self.request(method, url, **kwargs)
+        return StreamResponse(resp)
 
     def close(self) -> None:
         self._client.close()
@@ -139,3 +149,30 @@ class HttpClient:
 
     def __exit__(self, *args):
         self.close()
+
+
+class StreamResponse(io.BytesIO):
+    """将 httpx.Response 的 iter_bytes() 包装为 BinaryIO。"""
+
+    def __init__(self, response: httpx.Response) -> None:
+        super().__init__(b"")
+        self._response = response
+        self._iterator = response.iter_bytes()
+        self._buffer = b""
+
+    def read(self, size: int | None = -1) -> bytes:
+        if size is None or size == -1:
+            return b"".join(self._iterator)
+        while len(self._buffer) < size:
+            try:
+                chunk = next(self._iterator)
+                self._buffer += chunk
+            except StopIteration:
+                break
+        result = self._buffer[:size]
+        self._buffer = self._buffer[size:]
+        return result
+
+    def close(self) -> None:
+        self._response.close()
+        super().close()

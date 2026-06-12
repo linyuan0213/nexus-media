@@ -5,17 +5,14 @@ from app.core.exceptions import (
     RepositoryError,
     ResourceNotFoundError,
     ServiceError,
-    ValidationError,
 )
-from app.core.settings import settings
-from app.di import container
 from app.events import Event
 from app.events.constants import SUBTITLE_DOWNLOAD
 from app.storage import StorageBackendFactory
 from app.storage.backends.base import StorageType
 from app.storage.config_models import LocalStorageConfig
 from app.utils import SystemUtils
-from app.utils.path_utils import get_category_path
+from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
 from app.domain.mediatypes import MediaType
 from app.domain.enums import OsType
 
@@ -25,15 +22,25 @@ class MediaFileService:
     媒体文件操作业务服务
     """
 
-    def __init__(self, event_bus=None):
-        self._event_bus = event_bus or container.event_bus()
+    def __init__(
+        self,
+        event_bus,
+        storage_backend_repo,
+        media_service,
+        thread_executor,
+        scraper,
+    ):
+        self._event_bus = event_bus
+        self._storage_backend_repo = storage_backend_repo
+        self._media_service = media_service
+        self._thread_executor = thread_executor
+        self._scraper = scraper
 
     def get_dir_list(self, in_dir: str, backend_id: str = "") -> list:
         """获取目录列表，支持本地和远程存储后端，失败时抛出异常"""
         result = []
         if backend_id and backend_id != "local":
-            repo = container.storage_backend_repo()
-            entity = repo.get_by_id(int(backend_id))
+            entity = self._storage_backend_repo.get_by_id(int(backend_id))
             if not entity:
                 raise ResourceNotFoundError(f"未找到存储后端: {backend_id}")
             info = StorageBackendFactory.get_config_info(entity.type)
@@ -211,11 +218,11 @@ class MediaFileService:
 
     def download_subtitle(self, path: str, name: str) -> None:
         """下载字幕，失败时抛出异常"""
-        media = container.media_service().get_media_info(title=name)
+        media = self._media_service.get_media_info(title=name)
         if not media or not media.tmdb_info:
             raise ResourceNotFoundError(f"{name} 无法从TMDB查询到媒体信息")
         if not media.imdb_id:
-            media.set_tmdb_info(container.media_service().get_tmdb_info(mtype=media.type, tmdbid=media.tmdb_id))
+            media.set_tmdb_info(self._media_service.get_tmdb_info(mtype=media.type, tmdbid=media.tmdb_id))
         self._event_bus.publish(
             Event(
                 event_type=SUBTITLE_DOWNLOAD,
@@ -234,8 +241,7 @@ class MediaFileService:
             return "请指定刮削路径"
         dst_backend = None
         if backend_id and backend_id != "local":
-            repo = container.storage_backend_repo()
-            entity = repo.get_by_id(int(backend_id))
+            entity = self._storage_backend_repo.get_by_id(int(backend_id))
             if entity:
                 info = StorageBackendFactory.get_config_info(entity.type)
                 if info:
@@ -247,25 +253,24 @@ class MediaFileService:
                     if hasattr(config, k):
                         setattr(config, k, v)
                 dst_backend = StorageBackendFactory.create(config)
-        container.thread_executor().submit(container.scraper().folder_scraper, path, None, "force_all", dst_backend)
+        self._thread_executor.submit(self._scraper.folder_scraper, path, None, "force_all", dst_backend)
         return "刮削任务已提交，正在后台运行。"
 
-    def get_category_config(self, category_name: str) -> str:
-        """获取二级分类配置，失败时抛出异常"""
-        if not category_name:
-            raise ValidationError("请输入二级分类策略名称")
-        if category_name == "config":
-            raise ValidationError("非法二级分类策略名称")
-        category_path = os.path.join(settings.config_path, f"{category_name}.yaml")
-        if not os.path.exists(category_path):
-            raise ResourceNotFoundError("请保存生成配置文件")
-        with open(category_path, encoding="utf-8") as f:
-            return f.read()
+    def get_category_config(self) -> list[dict]:
+        """获取二级分类配置（数据库）"""
+        repo = CategoryConfigRepositoryAdapter()
+        return [ent.to_dict() for ent in repo.get_all()]
 
-    def update_category_config(self, text: str) -> str:
-        """保存二级分类配置"""
-        category_path = get_category_path()
-        if category_path:
-            with open(category_path, "w", encoding="utf-8") as f:
-                f.write(text)
+    def update_category_config(self, items: list[dict]) -> str:
+        """保存二级分类配置（数据库）"""
+        repo = CategoryConfigRepositoryAdapter()
+        repo.clear_all()
+        for item in items:
+            repo.save(
+                media_type=item.get("media_type", ""),
+                name=item.get("name", ""),
+                sort_order=item.get("sort_order", 0),
+                is_default=int(item.get("is_default", 0)),
+                rules=item.get("rules", {}),
+            )
         return "保存成功"

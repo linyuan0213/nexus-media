@@ -1,15 +1,19 @@
 #!/bin/sh
 # 停止 Granian 服务器
 
-PIDFILE="${1:-/config/logs/granian.pid}"
+PIDFILE="${1:-/data/granian.pid}"
 
 if [ ! -f "$PIDFILE" ]; then
-    PIDFILE="./config/logs/granian.pid"
+    PIDFILE="./data/granian.pid"
 fi
 
 if [ ! -f "$PIDFILE" ]; then
     # 兼容旧路径
-    PIDFILE="/config/granian.pid"
+    PIDFILE="./config/logs/granian.pid"
+fi
+
+if [ ! -f "$PIDFILE" ]; then
+    PIDFILE="/config/logs/granian.pid"
 fi
 
 if [ ! -f "$PIDFILE" ]; then

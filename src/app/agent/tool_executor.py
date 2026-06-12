@@ -10,19 +10,173 @@
 """
 
 import json as _json
+from unittest.mock import MagicMock
 
 import log
 from app.agent.tools.base import ToolResult
-from app.di import container
+from app.domain.enums import SearchType
+from app.domain.mediatypes import MediaType
 from app.media.models import MediaInfo
+from app.media.service import MediaService
 from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
 from app.schemas.scheduler import PauseSchedulerJobRequest, ResumeSchedulerJobRequest, RunSchedulerJobRequest
-from app.domain.mediatypes import MediaType
-from app.domain.enums import SearchType
+from app.services.brush_service import BrushService
+from app.services.downloader_core import DownloaderCore
+from app.services.indexer_service import IndexerService
+from app.services.rss_automation.task_service import RssTaskService
+from app.services.search_service import Searcher
+from app.services.site_service import SiteService
+from app.services.subscribe.monitor import SubscriptionMonitor
+from app.services.subscribe_service import SubscribeService
+from app.services.sync_service import SyncService
+from app.services.system.lifecycle import SystemLifecycleService
+from app.services.torrentremover_core import TorrentRemoverService
 
 
 class ToolExecutor:
     """工具执行器 — 桥接 Agent Tools 与业务 Service"""
+
+    def __init__(
+        self,
+        message,
+        thread_executor,
+        scheduler_core,
+        event_bus,
+        download_monitor,
+        filetransfer_service,
+        rss_helper,
+        search_intent_agent,
+        site_userinfo,
+        scheduler_service,
+        message_client_service,
+        sync_service: SyncService | None = None,
+        subscription_monitor: SubscriptionMonitor | None = None,
+        torrentremover_service: TorrentRemoverService | None = None,
+        subscribe_service: SubscribeService | None = None,
+        system_lifecycle_service: SystemLifecycleService | None = None,
+        brush_service: BrushService | None = None,
+        site_service: SiteService | None = None,
+        rss_task_service: RssTaskService | None = None,
+        media_service: MediaService | None = None,
+        indexer_service: IndexerService | None = None,
+        downloader_core: DownloaderCore | None = None,
+        searcher: Searcher | None = None,
+    ):
+        _mock = MagicMock()
+        _msg = message
+        _thread = thread_executor
+        _scheduler = scheduler_core
+        _event_bus = event_bus
+        _download_monitor = download_monitor
+
+        self._filetransfer_service = filetransfer_service
+        self._sync_service = sync_service or SyncService(
+            sync=_mock,
+            filetransfer=_mock,
+            media_cache=_mock,
+            thread_executor=_thread,
+            storage_backend_repo=_mock,
+        )
+        self._subscription_monitor = subscription_monitor or SubscriptionMonitor(
+            subscribe_service=_mock,
+            thread_executor=_thread,
+            queue_strategy=_mock,
+            rss_strategy=_mock,
+            indexer_strategy=_mock,
+            coordinator=_mock,
+        )
+        self._torrentremover_service = torrentremover_service or TorrentRemoverService(
+            repository=_mock,
+            downloader=_mock,
+            message=_msg,
+            scheduler=_scheduler,
+        )
+        self._rss_helper = rss_helper
+        self._subscribe_service = subscribe_service or SubscribeService(
+            movie_repo=_mock,
+            tv_repo=_mock,
+            tv_episode_repo=_mock,
+            history_repo=_mock,
+            message=_msg,
+            media_service=_mock,
+            downloader=_mock,
+            sites=_mock,
+            douban=_mock,
+            indexer_service=_mock,
+            filter_service=_mock,
+            event_bus=_event_bus,
+            system_config=_mock,
+        )
+        self._system_lifecycle_service = system_lifecycle_service or SystemLifecycleService(
+            scheduler_core=_scheduler,
+            download_monitor=_download_monitor,
+            sync=_mock,
+            brush_task_service=None,
+            rss_checker=None,
+            torrent_remover=None,
+            downloader=None,
+            file_index_service=None,
+        )
+        self._scheduler_service = scheduler_service
+        self._brush_service = brush_service or BrushService(
+            brush_task=_mock,
+            rule_repo=_mock,
+        )
+        self._site_service = site_service or SiteService(
+            sites=_mock,
+            site_user_info=_mock,
+            site_conf=_mock,
+            indexer_service=_mock,
+            site_repo=_mock,
+            site_favicon_service=_mock,
+            site_resolver=_mock,
+            site_cookie=_mock,
+            string_utils=_mock,
+            site_entity_repo=_mock,
+        )
+        self._site_userinfo = site_userinfo
+        self._rss_task_service = rss_task_service or RssTaskService(
+            config_repo=_mock,
+            rss_repo=_mock,
+            rsshelper=_mock,
+            message=_msg,
+            searcher=_mock,
+            filter_=_mock,
+            media=_mock,
+            downloader=_mock,
+            scheduler_core=_scheduler,
+        )
+        self._message = _msg
+        self._message_client_service = message_client_service
+        self._search_intent_agent = search_intent_agent
+        self._media_service = media_service or MediaService(
+            tmdb_lookup=_mock,
+            llm_parser=_mock,
+        )
+        self._indexer_service = indexer_service or IndexerService(
+            indexer=_mock,
+            indexer_helper=_mock,
+            site_cache=_mock,
+            site_engine=_mock,
+            indexer_statistics_repo=_mock,
+            string_utils=_mock,
+        )
+        self._downloader_core = downloader_core or DownloaderCore(
+            client_factory=_mock,
+            transfer_coordinator=_mock,
+            transfer_pipeline=_mock,
+            download_core=_mock,
+        )
+        self._searcher = searcher or Searcher(
+            download_repo=_mock,
+            search_repo=_mock,
+            downloader=_mock,
+            media_service=_mock,
+            message=_msg,
+            progress_helper=_mock,
+            indexer_service=_mock,
+            event_bus=_event_bus,
+        )
 
     def execute(self, tool_name: str, **kwargs) -> ToolResult:
         """执行指定工具"""
@@ -50,34 +204,34 @@ class ToolExecutor:
         if action.startswith("rss_"):
             return self._handle_rss(action, target)
         if action == "transfer_run":
-            container.filetransfer_service().transfer_manually("", "", "link")
+            self._filetransfer_service.transfer_manually("", "", "link")
             return ToolResult(success=True, data="文件转移任务已触发")
         if action == "sync_run":
-            container.sync_service().transfer_sync()
+            self._sync_service.transfer_sync()
             return ToolResult(success=True, data="目录同步任务已触发")
         if action == "subscribe_search_all":
-            container.subscription_monitor().run()
+            self._subscription_monitor.run()
             return ToolResult(success=True, data="订阅监控任务已触发")
         if action == "auto_remove_torrents":
-            container.torrentremover_service().auto_remove_torrents()
+            self._torrentremover_service.auto_remove_torrents()
             return ToolResult(success=True, data="自动删种任务已触发")
         if action == "truncate_transfer_blacklist":
-            container.filetransfer_service().truncate_transfer_blacklist()
+            self._filetransfer_service.truncate_transfer_blacklist()
             return ToolResult(success=True, data="转移黑名单已清理")
         if action == "truncate_rss_history":
-            container.rss_helper().truncate_rss_history()
-            container.subscribe_service().truncate_rss_episodes()
+            self._rss_helper.truncate_rss_history()
+            self._subscribe_service.truncate_rss_episodes()
             return ToolResult(success=True, data="RSS历史已清理")
         if action == "re_identify":
-            container.sync_service().re_identify_items(flag="unidentification", ids=[])
+            self._sync_service.re_identify_items(flag="unidentification", ids=[])
             return ToolResult(success=True, data="未识别项重新识别已触发")
         if action == "restart_server":
-            container.system_lifecycle_service().restart_server()
+            self._system_lifecycle_service.restart_server()
             return ToolResult(success=True, data="服务器重启指令已发送")
         return ToolResult(success=False, error=f"未知命令: {action}")
 
     def _handle_scheduler(self, action: str, target: str) -> ToolResult:
-        svc = container.scheduler_service()
+        svc = self._scheduler_service
         if action == "scheduler_list":
             resp = svc.get_jobs()
             jobs = resp.data if resp.code == 0 else []
@@ -101,7 +255,7 @@ class ToolExecutor:
         return ToolResult(success=False, error=f"未知调度命令: {action}")
 
     def _handle_brush(self, action: str, target: str) -> ToolResult:
-        svc = container.brush_service()
+        svc = self._brush_service
         if action == "brush_list":
             tasks = svc.get_tasks()
             return ToolResult(
@@ -122,19 +276,19 @@ class ToolExecutor:
 
     def _handle_site(self, action: str, target: str) -> ToolResult:
         if action == "site_list":
-            svc = container.site_service()
+            svc = self._site_service
             sites = svc.get_sites()
             return ToolResult(success=True, data={"sites": [{"id": s.id, "name": s.name} for s in sites]})
         if action == "site_refresh":
             if target:
-                container.site_userinfo().refresh_site_data_now(specify_sites=[target])
+                self._site_userinfo.refresh_site_data_now(specify_sites=[target])
                 return ToolResult(success=True, data=f"站点 {target} 数据已刷新")
-            container.site_userinfo().refresh_site_data_now()
+            self._site_userinfo.refresh_site_data_now()
             return ToolResult(success=True, data="所有站点数据已刷新")
         return ToolResult(success=False, error=f"未知站点命令: {action}")
 
     def _handle_rss(self, action: str, target: str) -> ToolResult:
-        svc = container.rss_task_service()
+        svc = self._rss_task_service
         if action == "rss_list":
             tasks = svc.get_rsstask_info()
             return ToolResult(success=True, data={"tasks": [{"id": t.get("id"), "name": t.get("name")} for t in tasks]})
@@ -164,7 +318,7 @@ class ToolExecutor:
                 return ToolResult(success=False, error=f"未知消息类型: {msg_type}")
             custom = None
             if client_id:
-                clients = container.message().get_message_client_info()
+                clients = self._message.get_message_client_info()
                 for c in clients:
                     if c.get("id") == client_id:
                         custom = c.get("templates", {}).get(msg_type)
@@ -174,13 +328,13 @@ class ToolExecutor:
         if action == "update":
             if not msg_type or not title or not text:
                 return ToolResult(success=False, error="update 需要 msg_type, title, text 参数")
-            clients = container.message().get_message_client_info()
+            clients = self._message.get_message_client_info()
             target = next((c for c in clients if (client_id == 0 or c.get("id") == client_id)), None)
             if not target:
                 return ToolResult(success=False, error="未找到目标客户端")
             templates = target.get("templates", {}) or {}
             templates[msg_type] = {"title": title, "text": text}
-            container.message_client_service().upsert_client(
+            self._message_client_service.upsert_client(
                 name=target.get("name"),
                 cid=target.get("id"),
                 ctype=target.get("type"),
@@ -201,12 +355,12 @@ class ToolExecutor:
     def _media_search(
         self, query: str, media_type: str = "", year: int = 0, season: int = 0, episode: int = 0, limit: int = 10, **_
     ) -> ToolResult:
-        intent_agent = container.search_intent_agent()
+        intent_agent = self._search_intent_agent
         intent = intent_agent.parse(query) if intent_agent.ready else None
         keywords = intent.keywords if intent else query
 
-        media = container.media_service()
-        indexer = container.indexer_service()
+        media = self._media_service
+        indexer = self._indexer_service
         media_info = media.get_media_info(title=keywords)
         if not media_info or not media_info.title:
             return ToolResult(success=False, error=f"无法识别媒体: {keywords}")
@@ -341,7 +495,7 @@ class ToolExecutor:
     ) -> ToolResult:
         # 模式1：直接下载（有 enclosure 链接）
         if enclosure:
-            media_info = container.media_service().get_media_info(title=title)
+            media_info = self._media_service.get_media_info(title=title)
             if not media_info:
                 # 识别失败时，用原始资源名创建最小 MediaInfo，确保下载和通知能正常进行
                 media_info = MediaInfo()
@@ -354,14 +508,14 @@ class ToolExecutor:
                 media_info.begin_season = season
             if episode:
                 media_info.begin_episode = episode
-            container.downloader_core().download(media_info=media_info)
+            self._downloader_core.download(media_info=media_info)
             return ToolResult(success=True, data=f"已开始下载: {media_info.title}")
 
         # 模式2：搜索后下载
         if not title:
             return ToolResult(success=False, error="需要提供 title 或 enclosure")
 
-        media_info = container.media_service().get_media_info(title=title)
+        media_info = self._media_service.get_media_info(title=title)
         if not media_info or not media_info.title:
             return ToolResult(success=False, error=f"无法识别媒体: {title}")
         # 保存原始查询标题，用于下载历史记录
@@ -371,7 +525,7 @@ class ToolExecutor:
             type_map = {"movie": MediaType.MOVIE, "tv": MediaType.TV, "anime": MediaType.ANIME}
             media_info.type = type_map.get(media_type, media_info.type)
 
-        searcher = container.searcher()
+        searcher = self._searcher
         search_result, no_exists, search_count, download_count = searcher.search_one_media(
             media_info=media_info, in_from=SearchType.API, no_exists={}
         )
@@ -389,7 +543,7 @@ class ToolExecutor:
     def _media_subscribe(
         self, title: str, media_type: str, year: int = 0, season: int = 0, tmdbid: str = "", **_
     ) -> ToolResult:
-        media_info = container.media_service().get_media_info(title=title)
+        media_info = self._media_service.get_media_info(title=title)
         if not media_info or not media_info.title:
             return ToolResult(success=False, error=f"无法识别媒体: {title}")
 
@@ -403,7 +557,7 @@ class ToolExecutor:
         else:
             mediaid = None
 
-        code, msg, media_info = container.subscribe_service().add_rss_subscribe(
+        code, msg, media_info = self._subscribe_service.add_rss_subscribe(
             mtype=media_info.type,
             name=media_info.title,
             year=media_info.year,
@@ -415,15 +569,3 @@ class ToolExecutor:
         if code == 0:
             return ToolResult(success=True, data=f"已添加订阅: {media_info.get_title_string()}")
         return ToolResult(success=False, error=f"添加订阅失败: {msg}")
-
-
-# 全局执行器实例
-_default_executor: ToolExecutor | None = None
-
-
-def get_tool_executor() -> ToolExecutor:
-    """获取默认工具执行器"""
-    global _default_executor
-    if _default_executor is None:
-        _default_executor = ToolExecutor()
-    return _default_executor

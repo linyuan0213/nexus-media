@@ -2,6 +2,7 @@ import difflib
 
 import zhconv
 
+from app.db.repositories.plugin_repo_adapter import TmdbBlacklistRepositoryAdapter
 from app.core.settings import settings
 from app.infrastructure.cache_system import TMDBCache, get_cache_manager
 from app.infrastructure.external.tmdbv3api import (
@@ -19,13 +20,12 @@ from app.infrastructure.external.tmdbv3api import (
 from app.utils import StringUtils
 from app.utils.config_tools import get_proxies, get_tmdbapi_url
 from app.domain.mediatypes import MediaType
-from app.di import container
 
 
 class TmdbClient:
     """TMDB API 客户端封装"""
 
-    def __init__(self):
+    def __init__(self, tmdb_blacklist_repo: TmdbBlacklistRepositoryAdapter | None = None):
         self.tmdb = None
         self.search = None
         self.movie = None
@@ -37,6 +37,7 @@ class TmdbClient:
         self.discover = None
         self.genre = None
         self._default_language = "zh"
+        self._tmdb_blacklist_repo = tmdb_blacklist_repo or TmdbBlacklistRepositoryAdapter()
         self._init_config()
 
     def _init_config(self):
@@ -61,7 +62,7 @@ class TmdbClient:
             self.discover = Discover()
             self.genre = Genre()
         self.redis_cache = TMDBCache(get_cache_manager().get("tmdb"))
-        self.blacklist = container.tmdb_blacklist_repo()
+        self.blacklist = self._tmdb_blacklist_repo
         self._blacklist_cache = get_cache_manager().get_or_create("tmdb_blacklist", "memory", maxsize=1, ttl=300)
 
     def get_blacklist(self):

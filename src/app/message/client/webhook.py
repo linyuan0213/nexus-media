@@ -1,9 +1,10 @@
 import json
 from threading import Lock
 
-import requests
 from jinja2 import BaseLoader, Environment
 
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils
@@ -83,7 +84,7 @@ class Webhook(_IMessageClient):
         ],
     )
 
-    def __init__(self, config):
+    def __init__(self, config, apikey_service=None):
         self._domain = None
         self._url = None
         self._method = None
@@ -91,7 +92,7 @@ class Webhook(_IMessageClient):
         self._json_tpl = None
         self._json_list_tpl = None
         self._token = None
-        super().__init__(config)
+        super().__init__(config, apikey_service)
 
     def read_config(self):
         if self._config:
@@ -218,22 +219,20 @@ class Webhook(_IMessageClient):
         :param query_params: 查询参数
         :param json_data: JSON 字符串（POST/PUT 等请求），None 表示 GET 请求
         """
-        # GET 请求不发送 body
-        if json_data is None:
-            response = requests.request(
-                self._method or "GET", self._url or "", params=query_params, headers=self.header
-            )
-        else:
-            # POST/PUT 等请求发送 JSON body
-            response = requests.request(
-                self._method or "POST", self._url or "", params=query_params, data=json_data, headers=self.header
-            )
-        if not response:
-            return False, "未获取到返回信息"
-        if 200 <= response.status_code <= 299:
-            return True, ""
-        else:
+        client = HttpClient(config=HttpClientConfig(timeout=30))
+        method = self._method or "GET" if json_data is None else self._method or "POST"
+        try:
+            if json_data is None:
+                response = client.request(method, self._url or "", params=query_params, headers=self.header)
+            else:
+                response = client.request(
+                    method, self._url or "", params=query_params, data=json_data, headers=self.header
+                )
+            if 200 <= response.status_code <= 299:
+                return True, ""
             return False, f"请求失败：{response.status_code}"
+        except Exception as e:
+            return False, f"请求异常：{str(e)}"
 
     @property
     def header(self):

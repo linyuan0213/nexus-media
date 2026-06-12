@@ -92,9 +92,9 @@ class AutoBackupPlugin:
         # 确定本地备份路径
         if storage_type == "local":
             if SystemUtils.is_docker():
-                bk_path = os.path.join(settings.config_path, "backup_file")
+                bk_path = os.path.join(settings.data_path, "backup_file")
             else:
-                bk_path = bk_path_cfg or os.path.join(settings.config_path, "backup_file")
+                bk_path = bk_path_cfg or os.path.join(settings.data_path, "backup_file")
         else:
             bk_path = os.path.join(get_temp_path(), "backup_temp")
             os.makedirs(bk_path, exist_ok=True)

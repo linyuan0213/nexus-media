@@ -18,7 +18,7 @@ uv sync --dev
 
 ### 2. 配置文件
 
-创建 `config/config.yaml`，最小配置：
+创建 `data/config.yaml`，最小配置：
 
 ```yaml
 app:

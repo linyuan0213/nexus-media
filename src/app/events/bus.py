@@ -16,21 +16,28 @@ class EventBus:
     - 同步执行：关键事件（如转移完成后的后续操作）
     - 异步队列：非关键事件（如通知、日志），通过 MessageQueue 投递
     - 所有事件都会转发到 PluginBridge（HookSystem）
+
+    由 lifespan / factories 创建并注册到 registry。
     """
 
     def __init__(
         self,
         registry: EventHandlerRegistry,
+        bridge: PluginBridge,
         message_queue: MessageQueue | None = None,
         middleware: list[Middleware] | None = None,
         async_event_types: set[str] | None = None,
-        bridge: PluginBridge | None = None,
     ):
         self._registry = registry
         self._queue = message_queue
         self._middleware = middleware or []
         self._async_types = async_event_types or set()
-        self._bridge = bridge or PluginBridge()
+        self._bridge = bridge
+
+    def shutdown(self) -> None:
+        """关闭事件总线，停止所有异步任务"""
+        if self._queue:
+            self._queue.stop()
 
     def publish(self, event: Event) -> None:
         handlers = self._registry.get_handlers(event.event_type)

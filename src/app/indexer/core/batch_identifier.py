@@ -1,6 +1,7 @@
 import log
-from app.di import container
+
 from app.infrastructure.cache_system import get_cache_manager
+from app.infrastructure.progress import ProgressTracker
 from app.domain.enums import ProgressKey
 
 
@@ -12,9 +13,13 @@ class BatchIdentifier:
     不直接修改候选对象，仅填充缓存供后续 match_filter 阶段读取。
     """
 
-    def __init__(self, media_service=None, progress=None):
-        self.media = media_service or container.media_service()
-        self.progress = progress or container.progress_helper()
+    def __init__(
+        self,
+        media_service,
+        progress: ProgressTracker | None = None,
+    ):
+        self.media = media_service
+        self.progress = progress or ProgressTracker()
         self._media_ident_cache = get_cache_manager().get_or_create("media_ident", "memory", maxsize=2000, ttl=3600)
 
     @staticmethod

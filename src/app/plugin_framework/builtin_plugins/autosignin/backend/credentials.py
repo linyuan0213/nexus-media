@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from app.infrastructure.cache_system.cookiecloud_adapter import CookiecloudAdapter
-from app.plugin_framework.hook_system import HookSystem
 
 
 class CredentialSource(ABC):
@@ -68,8 +67,8 @@ class CredentialResolver:
         return self._build_source(auth_source).extract(self.site_info)
 
     @staticmethod
-    def sync_local_storage():
-        HookSystem().emit("site.local_storage_sync", {})
+    def sync_local_storage(hook_system):
+        hook_system.emit("site.local_storage_sync", {})
         import time
 
         time.sleep(10)

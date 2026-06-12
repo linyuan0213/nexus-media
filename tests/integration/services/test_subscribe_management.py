@@ -5,10 +5,32 @@ from unittest.mock import MagicMock, patch
 from app.services.subscribe.management.add_service import SubscribeAddService
 from app.services.subscribe.management.finish_service import SubscribeFinishService
 from app.services.subscribe.management.refresh_service import SubscribeRefreshService
-from app.services.subscribe.management.service import SubscribeService
 from app.services.subscribe.management.update_service import SubscribeUpdateService
 from app.events.bus import EventBus
 from app.domain.mediatypes import MediaType
+
+
+def _make_subscribe_service(**kwargs):
+    """Helper to create SubscribeService with all required mocks."""
+    defaults = {
+        "movie_repo": MagicMock(),
+        "tv_repo": MagicMock(),
+        "tv_episode_repo": MagicMock(),
+        "history_repo": MagicMock(),
+        "message": MagicMock(),
+        "media_service": MagicMock(),
+        "downloader": MagicMock(),
+        "sites": MagicMock(),
+        "douban": MagicMock(),
+        "indexer_service": MagicMock(),
+        "filter_service": MagicMock(),
+        "event_bus": MagicMock(),
+        "system_config": MagicMock(),
+    }
+    defaults.update(kwargs)
+    from app.services.subscribe.management.service import SubscribeService as _SubscribeService
+
+    return _SubscribeService(**defaults)
 
 
 class TestSubscribeFinishService:
@@ -306,7 +328,7 @@ class TestSubscribeService:
     def test_default_settings(self):
         system_config = MagicMock()
         system_config.get.return_value = {"restype": "BluRay"}
-        svc = SubscribeService(system_config=system_config)
+        svc = _make_subscribe_service(system_config=system_config)
         assert svc.default_subscribe_setting_tv == {"restype": "BluRay"}
         assert svc.default_subscribe_setting_mov == {"restype": "BluRay"}
 
@@ -314,7 +336,7 @@ class TestSubscribeService:
         movie_repo = MagicMock()
         entity = MagicMock()
         movie_repo.get_all.return_value = [entity]
-        svc = SubscribeService(movie_repo=movie_repo)
+        svc = _make_subscribe_service(movie_repo=movie_repo)
         svc.update_rss_state(MediaType.MOVIE, 1, "R")
         entity.mark_running.assert_called_once()
         movie_repo.update.assert_called_once()
@@ -323,14 +345,14 @@ class TestSubscribeService:
         tv_repo = MagicMock()
         entity = MagicMock()
         tv_repo.get_all.return_value = [entity]
-        svc = SubscribeService(tv_repo=tv_repo)
+        svc = _make_subscribe_service(tv_repo=tv_repo)
         svc.update_rss_state(MediaType.TV, 1, "C")
         entity.mark_completed.assert_called_once()
 
     def test_update_rss_state_no_entity(self):
         movie_repo = MagicMock()
         movie_repo.get_all.return_value = []
-        svc = SubscribeService(movie_repo=movie_repo)
+        svc = _make_subscribe_service(movie_repo=movie_repo)
         result = svc.update_rss_state(MediaType.MOVIE, 1, "R")
         assert result is None
 
@@ -341,7 +363,7 @@ class TestSubscribeService:
         media = MagicMock()
         media.res_order = 10
         media.filter_rule = "1"
-        svc = SubscribeService(movie_repo=movie_repo, filter_service=filter_service)
+        svc = _make_subscribe_service(movie_repo=movie_repo, filter_service=filter_service)
         with patch.object(svc, "finish_rss_subscribe") as mock_finish:
             result = svc.update_subscribe_over_edition(MediaType.MOVIE, 1, media)
             assert result is True
@@ -354,7 +376,7 @@ class TestSubscribeService:
         media = MagicMock()
         media.res_order = 5
         media.filter_rule = "1"
-        svc = SubscribeService(movie_repo=movie_repo, filter_service=filter_service)
+        svc = _make_subscribe_service(movie_repo=movie_repo, filter_service=filter_service)
         with patch.object(svc, "update_rss_state") as mock_update:
             result = svc.update_subscribe_over_edition(MediaType.MOVIE, 1, media)
             assert result is False
@@ -363,19 +385,19 @@ class TestSubscribeService:
     def test_check_subscribe_over_edition_no_pre(self):
         movie_repo = MagicMock()
         movie_repo.get_filter_order.return_value = None
-        svc = SubscribeService(movie_repo=movie_repo)
+        svc = _make_subscribe_service(movie_repo=movie_repo)
         assert svc.check_subscribe_over_edition(MediaType.MOVIE, 1, 5) is True
 
     def test_check_subscribe_over_edition_higher(self):
         movie_repo = MagicMock()
         movie_repo.get_filter_order.return_value = 5
-        svc = SubscribeService(movie_repo=movie_repo)
+        svc = _make_subscribe_service(movie_repo=movie_repo)
         assert svc.check_subscribe_over_edition(MediaType.MOVIE, 1, 10) is True
 
     def test_check_subscribe_over_edition_lower(self):
         movie_repo = MagicMock()
         movie_repo.get_filter_order.return_value = 10
-        svc = SubscribeService(movie_repo=movie_repo)
+        svc = _make_subscribe_service(movie_repo=movie_repo)
         assert svc.check_subscribe_over_edition(MediaType.MOVIE, 1, 5) is False
 
     def test_update_subscribe_tv_lack(self):
@@ -384,7 +406,7 @@ class TestSubscribeService:
         media_info.get_season_seq.return_value = "1"
         media_info.get_title_string.return_value = "Test"
         media_info.get_season_string.return_value = "S01"
-        svc = SubscribeService(tv_repo=tv_repo)
+        svc = _make_subscribe_service(tv_repo=tv_repo)
         svc.update_subscribe_tv_lack(1, media_info, [{"season": 1, "episodes": [1, 2]}])
         tv_repo.update_state.assert_called_once()
         tv_repo.update_lack.assert_called_once()
@@ -392,22 +414,23 @@ class TestSubscribeService:
     def test_update_subscribe_tv_lack_no_seasoninfo(self):
         tv_repo = MagicMock()
         media_info = MagicMock()
-        svc = SubscribeService(tv_repo=tv_repo)
+        svc = _make_subscribe_service(tv_repo=tv_repo)
         svc.update_subscribe_tv_lack(1, media_info, None)
         tv_repo.update_lack.assert_not_called()
 
     def test_truncate_rss_episodes(self):
         tv_episode_repo = MagicMock()
-        svc = SubscribeService(tv_episode_repo=tv_episode_repo)
+        svc = _make_subscribe_service(tv_episode_repo=tv_episode_repo)
         svc.truncate_rss_episodes()
         tv_episode_repo.delete_all.assert_called_once()
 
     def test_event_handler_registration(self):
         """测试 @on_event 装饰器是否正确注册到 EventBus."""
+        from app.events.bridge import PluginBridge
         from app.events.registry import EventHandlerRegistry
 
         registry = EventHandlerRegistry()
-        bus = EventBus(registry=registry)
+        bus = EventBus(registry=registry, bridge=PluginBridge(hook_system=MagicMock()))
         # 手动注册一个测试 handler，验证机制正常
         bus.subscribe("test.event", lambda e: None)
         assert len(registry.get_handlers("test.event")) == 1

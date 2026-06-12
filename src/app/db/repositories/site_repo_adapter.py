@@ -13,7 +13,6 @@ from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.site_repository import SiteRepository
 from app.domain.entities.site import SiteEntity
 from app.domain.interfaces.site_repo import ISiteRepository
-from app.di import container
 
 
 class SiteRepositoryAdapter(ISiteRepository):
@@ -23,7 +22,7 @@ class SiteRepositoryAdapter(ISiteRepository):
     """
 
     def __init__(self, repo: SiteRepository | None = None):
-        self._repo = repo or container.site_repository()
+        self._repo = repo or SiteRepository()
 
     def get_by_id(self, site_id: int) -> SiteEntity | None:
         """根据ID获取站点"""

@@ -6,17 +6,15 @@ import pytz
 import log
 from app.core.constants import (
     RSS_REFRESH_TMDB_INTERVAL,
-    SYNC_TRANSFER_INTERVAL,
 )
 from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
-from app.di import container
 from app.infrastructure.temp import TempCleanup
 
 
-def _refresh_site_data_now_threaded():
+def _refresh_site_data_now_threaded(thread_executor, site_userinfo):
     """站点数据刷新 — 在独立线程中执行，避免阻塞调度器"""
-    container.thread_executor().submit(container.site_userinfo().refresh_site_data_now)
+    thread_executor.submit(site_userinfo.refresh_site_data_now)
 
 
 def _parse_interval(value, min_val=0, default=0):
@@ -34,7 +32,16 @@ def _parse_interval(value, min_val=0, default=0):
         return default
 
 
-def load_default_jobs(scheduler):
+def load_default_jobs(
+    scheduler,
+    *,
+    thread_executor,
+    site_userinfo,
+    subscription_monitor,
+    media_server,
+    sync_engine,
+    subscribe_service,
+):
     """
     加载系统默认定时任务
     :param scheduler: SchedulerCore 实例
@@ -54,7 +61,7 @@ def load_default_jobs(scheduler):
             tz = pytz.timezone(os.environ.get("TZ") or "UTC")
             scheduler.register_smart_cron(
                 job_id="SiteUserInfo.refresh_site_data_now",
-                func=_refresh_site_data_now_threaded,
+                func=lambda: _refresh_site_data_now_threaded(thread_executor, site_userinfo),
                 name="站点数据统计",
                 func_desc="站点数据统计",
                 cron=str(ptrefresh_date_cron),
@@ -73,7 +80,7 @@ def load_default_jobs(scheduler):
         scheduler.register_interval(
             job_id="SubscriptionMonitor.run",
             name="订阅监控",
-            func=container.subscription_monitor().run,
+            func=subscription_monitor.run,
             seconds=subscribe_interval,
             jobstore=_jobstore,
         )
@@ -98,18 +105,26 @@ def load_default_jobs(scheduler):
                 scheduler.register_interval(
                     job_id="MediaServer.sync_mediaserver",
                     name="媒体库同步",
-                    func=container.media_server().sync_mediaserver,
+                    func=media_server.sync_mediaserver,
                     hours=mediasync_interval,
                     jobstore=_jobstore,
                 )
                 log.info("媒体库同步服务启动")
 
     # 定时把队列中的监控文件转移走
+    _sync_transfer_interval = (settings.get("media") or {}).get("sync_transfer_interval", 60)
+    if isinstance(_sync_transfer_interval, str):
+        try:
+            _sync_transfer_interval = int(_sync_transfer_interval)
+        except ValueError:
+            _sync_transfer_interval = 60
+    if _sync_transfer_interval < 10:
+        _sync_transfer_interval = 10
     scheduler.register_interval(
         job_id="Sync.transfer_mon_files",
         name="目录同步监控",
-        func=container.sync_engine().transfer_mon_files,
-        seconds=SYNC_TRANSFER_INTERVAL,
+        func=sync_engine.transfer_mon_files,
+        seconds=_sync_transfer_interval,
         jobstore=_jobstore,
     )
 
@@ -117,7 +132,7 @@ def load_default_jobs(scheduler):
     scheduler.register_interval(
         job_id="Subscribe.refresh_rss_metainfo",
         name="豆瓣RSS转TMDB",
-        func=container.subscribe_service().refresh_rss_metainfo,
+        func=subscribe_service.refresh_rss_metainfo,
         hours=RSS_REFRESH_TMDB_INTERVAL,
         jobstore=_jobstore,
     )

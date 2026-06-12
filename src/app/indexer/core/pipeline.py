@@ -17,7 +17,7 @@ from app.indexer.core.batch_identifier import BatchIdentifier
 from app.indexer.core.models import FilterStats, PipelineResult
 from app.indexer.core.result_filter import ResultFilter
 from app.domain.enums import ProgressKey, SearchType
-from app.di import container
+from app.infrastructure.progress import ProgressTracker
 
 
 class SearchPipeline:
@@ -25,10 +25,16 @@ class SearchPipeline:
     搜索流水线编排器
     """
 
-    def __init__(self, result_filter=None, batch_identifier=None, progress=None):
-        self.result_filter = result_filter or ResultFilter()
-        self.batch_identifier = batch_identifier or BatchIdentifier()
-        self.progress = progress or container.progress_helper()
+    def __init__(
+        self,
+        media_service,
+        result_filter: ResultFilter | None = None,
+        batch_identifier: BatchIdentifier | None = None,
+        progress: ProgressTracker | None = None,
+    ):
+        self.result_filter = result_filter or ResultFilter(media=media_service)
+        self.batch_identifier = batch_identifier or BatchIdentifier(media_service=media_service)
+        self.progress = progress or ProgressTracker()
 
     def process(
         self,

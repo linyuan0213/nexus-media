@@ -3,17 +3,36 @@ Hook System - 全局事件钩子系统
 插件通过注册钩子来响应系统事件
 """
 
+from typing import TYPE_CHECKING
+
 import log
-from app.di import container
+
+from app.db.repositories.plugin_framework_repository import PluginFrameworkRepository
+
+if TYPE_CHECKING:
+    from app.plugin_framework.sandbox import PluginSandbox
 
 
 class HookSystem:
-    """全局事件钩子系统——插件可自由注册任意事件，无白名单限制"""
+    """全局事件钩子系统——插件可自由注册任意事件，无白名单限制.
 
-    def __init__(self):
-        self._repo = container.plugin_framework_repo()
+    由 lifespan 创建并注册到 registry。
+    """
+
+    def __init__(
+        self,
+        plugin_sandbox: "PluginSandbox | None" = None,
+        repo: PluginFrameworkRepository | None = None,
+    ):
+
+        self._plugin_sandbox = plugin_sandbox
+        self._repo = repo or PluginFrameworkRepository()
         self._handlers: dict[str, list[dict]] = {}
         self._load_from_db()
+
+    def set_plugin_sandbox(self, plugin_sandbox: "PluginSandbox") -> None:
+        """设置插件沙箱引用，用于处理循环依赖。"""
+        self._plugin_sandbox = plugin_sandbox
 
     def _load_from_db(self):
         """从数据库加载钩子订阅"""
@@ -67,14 +86,17 @@ class HookSystem:
         if not handlers:
             return
 
+        if self._plugin_sandbox is None:
+            log.warn(f"[HookSystem] 插件沙箱尚未就绪，跳过事件: {event}")
+            return
+
         log.debug(f"[HookSystem] 触发事件: {event}, 订阅数: {len(handlers)}")
         for h in handlers:
             plugin_id = h.get("plugin_id")
             if not plugin_id:
                 continue
             try:
-                sandbox = container.plugin_sandbox()
-                sandbox.call_hook(str(plugin_id), event, data or {})
+                self._plugin_sandbox.call_hook(str(plugin_id), event, data or {})
             except Exception as e:
                 log.error(f"[HookSystem] 插件 {plugin_id} 处理事件 {event} 失败: {e}")
 

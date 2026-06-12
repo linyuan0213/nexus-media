@@ -1,13 +1,13 @@
+from app.agent.agents.media_recognizer import MediaRecognizer
 from app.media.parser.base import BaseParser, ParserResult
 from app.domain.mediatypes import MediaType
-from app.di import container
 
 
 class LLMParser(BaseParser):
     """基于 LLM 的解析器 — 包装 MediaRecognizer"""
 
-    def __init__(self):
-        self._recognizer = container.media_recognizer()
+    def __init__(self, recognizer: MediaRecognizer):
+        self._recognizer = recognizer
 
     @property
     def ready(self) -> bool:

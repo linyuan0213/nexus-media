@@ -15,13 +15,14 @@ import log
 from app.core.constants import RMT_MEDIAEXT, RMT_MIN_FILESIZE
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
-from app.di import container
+from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.events import Event
+from app.events.bus import EventBus
 from app.events.constants import MEDIA_EPISODE_TRANSFERRED, MEDIA_TRANSFER_FINISHED, SUBTITLE_DOWNLOAD, TRANSFER_FAIL
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.progress import ProgressTracker
 from app.infrastructure.thread import ThreadExecutor
-from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
-from app.media import Category, MediaService, Scraper
+from app.media import MediaService, Scraper
 from app.message import Message
 from app.schemas.media import TransferMediaDTO
 from app.services.transfer.cleanup_service import TransferCleanupService
@@ -39,40 +40,37 @@ class FileTransferService:
 
     def __init__(
         self,
-        media_service: MediaService | None = None,
-        message: Message | None = None,
-        category: Category | None = None,
-        scraper: Scraper | None = None,
-        thread_executor: ThreadExecutor | None = None,
-        history_manager: TransferHistoryManager | None = None,
-        progress: ProgressTracker | None = None,
-        event_bus=None,
-        engine: TransferEngine | None = None,
-        path_resolver: TransferPathResolver | None = None,
-        existence_checker: MediaExistenceChecker | None = None,
-        cleanup_service: TransferCleanupService | None = None,
+        media_service: MediaService,
+        message: Message,
+        scraper: Scraper,
+        thread_executor: ThreadExecutor,
+        history_manager: TransferHistoryManager,
+        progress: ProgressTracker,
+        event_bus: EventBus,
+        engine: TransferEngine,
+        sync_path_repo: SyncPathRepositoryAdapter,
+        path_resolver: TransferPathResolver,
+        existence_checker: MediaExistenceChecker,
+        cleanup_service: TransferCleanupService,
     ):
-        self.media = media_service or container.media_service()
-        self.message = message or container.message()
-        self.category = category or container.category()
-        self.scraper = scraper or container.scraper()
-        self._thread_executor = thread_executor or container.thread_executor()
-        self.progress = progress or container.progress_helper()
-        self._event_bus = event_bus or container.event_bus()
-        self._engine = engine or container.transfer_engine()
+        self.media = media_service
+        self.message = message
+        self.scraper = scraper
+        self._thread_executor = thread_executor
+        self.progress = progress
+        self._event_bus = event_bus
+        self._engine = engine
         self._default_operation: str = "copy"
         self._min_filesize = RMT_MIN_FILESIZE
         self._filesize_cover = False
         self._ignored_paths: re.Pattern[str] | None = None
         self._ignored_files: re.Pattern[str] | None = None
-        self._sync_repo = container.sync_path_repo()
+        self._sync_repo = sync_path_repo
 
-        self._path_resolver = path_resolver or TransferPathResolver.from_settings(self.category)
-        self._existence = existence_checker or MediaExistenceChecker(self._path_resolver)
-        self._history = history_manager or TransferHistoryManager()
-        self._cleanup = cleanup_service or TransferCleanupService(
-            self._history, self._path_resolver, self.media, self.message, self._event_bus
-        )
+        self._path_resolver = path_resolver
+        self._existence = existence_checker
+        self._history = history_manager
+        self._cleanup = cleanup_service
 
         # 从配置读取媒体处理参数
         media = settings.get("media")

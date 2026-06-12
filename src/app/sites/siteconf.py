@@ -1,7 +1,5 @@
 """站点配置 — 委托 engine 的 JSON 定义，不再依赖 sites.dat"""
 
-from app.sites.engine import SiteEngine
-
 
 class SiteConf:
     _SITE_CHECKIN_XPATH = [
@@ -41,8 +39,12 @@ class SiteConf:
         "twostep": ['//input[@name="two_step_code"]', '//input[@name="2fa_secret"]'],
     }
 
-    def __init__(self):
+    def __init__(self, site_engine):
         self._refresh()
+        self._site_engine = site_engine
+
+    def _get_site_engine(self):
+        return self._site_engine
 
     def _refresh(self):
         pass
@@ -57,7 +59,7 @@ class SiteConf:
         return self._SITE_LOGIN_XPATH
 
     def get_grap_conf(self, url=None):
-        site_def = SiteEngine.get_instance().get_by_url(url) if url else None
+        site_def = self._get_site_engine().get_by_url(url) if url else None
         if site_def and site_def.html and site_def.html.conf:
             return site_def.html.conf
         if site_def and site_def.torrent_attr:
@@ -74,6 +76,6 @@ class SiteConf:
         return {}
 
     def check_torrent_attr(self, torrent_url, cookie, ua=None, headers=None, proxy=False):
-        return SiteEngine.get_instance().resolve_torrent_attr(
+        return self._get_site_engine().resolve_torrent_attr(
             torrent_url=torrent_url, cookie=cookie, ua=ua, headers=headers, proxy=proxy
         )

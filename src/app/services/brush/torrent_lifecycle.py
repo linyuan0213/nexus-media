@@ -7,8 +7,8 @@ import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.message import Message
-from app.di import container
 from app.schemas.download import TorrentStatus
+from app.sites.site_cache import SiteCache
 from app.utils import ExceptionUtils, StringUtils
 
 
@@ -18,12 +18,12 @@ class BrushTorrentLifecycle:
     职责：删种、停种规则执行与消息通知。
     """
 
-    def __init__(self, helper, repo, downloader, sites=None, message=None):
+    def __init__(self, helper, repo, downloader, sites: SiteCache, message: Message):
         self._helper = helper
         self._repo: Any = repo
         self._downloader: Any = downloader
-        self._sites = sites or container.site_cache()
-        self._message: Message = message or Message()
+        self._sites = sites
+        self._message = message
 
     def remove_task_torrents(self, taskid: int | None, taskinfo: dict) -> None:
         try:

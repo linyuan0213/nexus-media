@@ -41,17 +41,3 @@ class MessageQueueFactory:
         cls._instance = mem_queue
         log.info("[MessageQueueFactory]使用内存消息队列（Redis 不可用）")
         return cls._instance
-
-    @classmethod
-    def get_instance(cls) -> MessageQueue:
-        """获取当前队列实例"""
-        if cls._instance is None:
-            return cls.create()
-        return cls._instance
-
-    @classmethod
-    def reset(cls) -> None:
-        """重置工厂（主要用于测试）"""
-        if cls._instance:
-            cls._instance.stop()
-            cls._instance = None

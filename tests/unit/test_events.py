@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 
 from app.events import Event, EventBus, EventHandlerRegistry, on_event
+from app.events.bridge import PluginBridge
 from app.events.middleware import ErrorHandlingMiddleware, MiddlewareChain
 
 
@@ -94,7 +95,7 @@ class TestEventBus:
         handler = MagicMock()
         registry.subscribe("test.event", handler)
 
-        bus = EventBus(registry=registry)
+        bus = EventBus(registry=registry, bridge=PluginBridge(hook_system=MagicMock()))
         event = Event(event_type="test.event", payload={"key": "value"})
         bus.publish(event)
 
@@ -105,7 +106,7 @@ class TestEventBus:
 
     def test_publish_no_handlers(self):
         registry = EventHandlerRegistry()
-        bus = EventBus(registry=registry)
+        bus = EventBus(registry=registry, bridge=PluginBridge(hook_system=MagicMock()))
         event = Event(event_type="no.handlers", payload=None)
         bus.publish(event)  # should not raise
 
@@ -115,6 +116,7 @@ class TestEventBus:
 
         bus = EventBus(
             registry=registry,
+            bridge=PluginBridge(hook_system=MagicMock()),
             message_queue=mock_queue,
             async_event_types={"async.event"},
         )
@@ -131,6 +133,7 @@ class TestEventBus:
 
         bus = EventBus(
             registry=registry,
+            bridge=PluginBridge(hook_system=MagicMock()),
             message_queue=mock_queue,
             async_event_types={"async.event"},
         )
@@ -143,17 +146,13 @@ class TestEventBus:
 
 class TestOnEventDecorator:
     def test_on_event_registration(self):
-        from unittest.mock import patch
-
         from app.events.decorators import clear_subscribers, get_subscribers
 
         clear_subscribers()
 
-        with patch("app.events.decorators.container.event_bus", side_effect=RuntimeError("not ready")):
-
-            @on_event("test.event")
-            def my_handler(event):
-                pass
+        @on_event("test.event")
+        def my_handler(event):
+            pass
 
         subscribers = get_subscribers()
         assert len(subscribers) == 1
@@ -163,20 +162,16 @@ class TestOnEventDecorator:
         clear_subscribers()
 
     def test_auto_register(self):
-        from unittest.mock import patch
-
         from app.events.decorators import auto_register, clear_subscribers
 
         clear_subscribers()
 
-        with patch("app.events.decorators.container.event_bus", side_effect=RuntimeError("not ready")):
-
-            @on_event("auto.test")
-            def auto_handler(event):
-                pass
+        @on_event("auto.test")
+        def auto_handler(event):
+            pass
 
         registry = EventHandlerRegistry()
-        bus = EventBus(registry=registry)
+        bus = EventBus(registry=registry, bridge=PluginBridge(hook_system=MagicMock()))
         auto_register(bus)
 
         handlers = registry.get_handlers("auto.test")

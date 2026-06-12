@@ -14,9 +14,8 @@
 
 from .batch import BatchProcessor
 from .cache import MediaCache
-from .category import Category
 from .external import Bangumi, DouBan
-from .factory import get_media_cache, get_media_service
+from .factory import get_media_cache
 from .lookup import (
     BangumiLookup,
     BaseLookup,
@@ -53,7 +52,6 @@ __all__ = [
     "TmdbLookup",
     "DoubanLookup",
     "BangumiLookup",
-    "Category",
     "DouBan",
     "Bangumi",
     "Scraper",

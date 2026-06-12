@@ -10,7 +10,8 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import log
-from app.di import container
+from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
+from app.db.session import remove_session
 
 from .cache_manager import CacheManager
 
@@ -63,10 +64,16 @@ class ConfigCacheWarmer(CacheWarmer):
                 log.debug("[CacheWarmer]已缓存 app 配置")
 
             try:
-                category = container.category()
-                if category._categorys:
+                adapter = CategoryConfigRepositoryAdapter()
+                entities = adapter.get_all()
+                if entities:
+                    data: dict[str, dict[str, dict[str, str]]] = {"movie": {}, "tv": {}, "anime": {}}
+                    for ent in entities:
+                        mt = ent.media_type
+                        if mt in data:
+                            data[mt][ent.name] = ent.rules if not ent.is_default else {}
                     cache = cache_manager.get_or_create("category_load", "memory")
-                    cache.set("categories", category._categorys, ttl=60)
+                    cache.set("categories", data, ttl=60)
                     log.debug("[CacheWarmer]已缓存分类配置")
             except Exception as e:
                 log.warn(f"[CacheWarmer]分类配置预热失败: {e}")
@@ -85,15 +92,18 @@ class ConfigCacheWarmer(CacheWarmer):
 class SiteCacheWarmer(CacheWarmer):
     """站点数据缓存预热器"""
 
-    def __init__(self):
+    def __init__(self, site_repo=None):
         super().__init__("site", priority=1)
+        from app.db.repositories.site_repository import SiteRepository
+
+        self._site_repo = site_repo or SiteRepository()
 
     def warm(self) -> bool:
         start_time = time.time()
         try:
             log.info("[CacheWarmer]开始预热站点数据...")
 
-            db = container.site_repository()
+            db = self._site_repo
 
             sites = db.get_config_site()
             if sites:
@@ -116,14 +126,15 @@ class SiteCacheWarmer(CacheWarmer):
 class WordsCacheWarmer(CacheWarmer):
     """识别词缓存预热器"""
 
-    def __init__(self):
+    def __init__(self, words_service):
         super().__init__("words", priority=2)
+        self._words_service = words_service
 
     def warm(self) -> bool:
         start_time = time.time()
         try:
             log.info("[CacheWarmer]开始预热识别词...")
-            words_service = container.words_service()
+            words_service = self._words_service
 
             if words_service.words_info:
                 log.debug(f"[CacheWarmer]已加载 {len(words_service.words_info)} 条识别词")
@@ -142,16 +153,15 @@ class WordsCacheWarmer(CacheWarmer):
 class TMDBTrendingWarmer(CacheWarmer):
     """TMDB热门数据预热器"""
 
-    def __init__(self):
+    def __init__(self, media_service):
         super().__init__("tmdb_trending", priority=3)
+        self._media_service = media_service
 
     def warm(self) -> bool:
         start_time = time.time()
         try:
             log.info("[CacheWarmer]开始预热TMDB热门数据...")
-            from app.media import MediaService
-
-            media = MediaService()
+            media = self._media_service
             if not getattr(media, "tmdb", None):
                 log.warn("[CacheWarmer]TMDB未配置，跳过预热")
                 self._is_warmed = True
@@ -179,34 +189,39 @@ class TMDBTrendingWarmer(CacheWarmer):
 class CacheWarmerManager:
     """缓存预热管理器"""
 
-    _instance = None
-    _lock = threading.Lock()
-
-    def __new__(cls):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-                    cls._instance._initialized = False
-        return cls._instance
-
-    def __init__(self):
-        if self._initialized:
-            return
-
+    def __init__(
+        self,
+        warmers: list[CacheWarmer] | None = None,
+        config_cache_warmer: CacheWarmer | None = None,
+        site_cache_warmer: CacheWarmer | None = None,
+        words_cache_warmer: CacheWarmer | None = None,
+        tmdb_trending_warmer: CacheWarmer | None = None,
+    ):
         self._warmers: dict[str, CacheWarmer] = {}
         self._is_running = False
         self._results: dict[str, bool] = {}
-        self._initialized = True
 
-        self._register_default_warmers()
+        self._config_cache_warmer = config_cache_warmer or ConfigCacheWarmer()
+        self._site_cache_warmer = site_cache_warmer or SiteCacheWarmer()
+        self._words_cache_warmer = words_cache_warmer
+        self._tmdb_trending_warmer = tmdb_trending_warmer
+        self._register_default_warmers(warmers)
 
-    def _register_default_warmers(self):
+    def _register_default_warmers(self, warmers: list[CacheWarmer] | None = None):
         """注册默认的预热器"""
-        self.register(container.config_cache_warmer())
-        self.register(container.site_cache_warmer())
-        self.register(container.words_cache_warmer())
-        self.register(container.tmdb_trending_warmer())
+        if warmers:
+            for warmer in warmers:
+                self.register(warmer)
+            return
+        default_warmers = [
+            self._config_cache_warmer,
+            self._site_cache_warmer,
+            self._words_cache_warmer,
+            self._tmdb_trending_warmer,
+        ]
+        for warmer in default_warmers:
+            if warmer:
+                self.register(warmer)
 
     def register(self, warmer: CacheWarmer) -> "CacheWarmerManager":
         """注册预热器"""
@@ -269,11 +284,14 @@ class CacheWarmerManager:
     def _run_warmer(self, warmer: CacheWarmer):
         """运行单个预热器"""
         try:
-            result = warmer.warm()
-            self._results[warmer.name] = result
-        except Exception as e:
-            log.error(f"[CacheWarmerManager]预热器 {warmer.name} 执行异常: {e}")
-            self._results[warmer.name] = False
+            try:
+                result = warmer.warm()
+                self._results[warmer.name] = result
+            except Exception as e:
+                log.error(f"[CacheWarmerManager]预热器 {warmer.name} 执行异常: {e}")
+                self._results[warmer.name] = False
+        finally:
+            remove_session()
 
     def warm(self, name: str) -> bool:
         """
@@ -311,33 +329,3 @@ class CacheWarmerManager:
             warmer._duration = 0.0
         self._results = {}
         log.info("[CacheWarmerManager]已重置所有预热器状态")
-
-
-# 全局预热管理器实例
-def get_warmer_manager() -> CacheWarmerManager:
-    """获取全局缓存预热管理器"""
-    return CacheWarmerManager()
-
-
-def warm_cache_on_startup(async_mode: bool = False):
-    """
-    系统启动时执行缓存预热
-
-    Args:
-        async_mode: 是否异步执行预热
-    """
-    log.info("=" * 60)
-    log.info("开始缓存预热...")
-    log.info("=" * 60)
-
-    manager = get_warmer_manager()
-    results = manager.warm_all(async_mode=async_mode)
-
-    # 输出详细结果
-    for name, success in results.items():
-        status = "✓" if success else "✗"
-        log.info(f"  {status} {name}")
-
-    log.info("=" * 60)
-
-    return results

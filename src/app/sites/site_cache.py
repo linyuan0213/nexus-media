@@ -6,11 +6,11 @@
 刷新机制：SiteService 写操作后调用 refresh() 重建缓存。
 """
 
-from app.di import container
 from app.domain.interfaces.site_repo import ISiteRepository
-from app.sites.engine import SiteEngine
 from app.utils import StringUtils
 from app.utils.config_tools import get_ua
+from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
+from app.sites.engine import SiteEngine
 
 
 class SiteCache:
@@ -18,10 +18,12 @@ class SiteCache:
 
     构建与旧 Sites.get_sites() 返回格式一致的 dict 索引，
     供所有调用方零成本迁移。
+
+    由 lifespan 创建并注册到 registry，lifespan 中统一刷新。
     """
 
     def __init__(self, repo: ISiteRepository | None = None):
-        self._repo = repo or container.site_repo_adapter()
+        self._repo = repo or SiteRepositoryAdapter()
         self._site_by_ids: dict[int, dict] = {}
         self._site_by_urls: dict[str, dict] = {}
         self._rss_sites: list[dict] = []
@@ -92,7 +94,7 @@ class SiteCache:
         # strict_url 和 api_key_header
         strict_url = ""
         api_key_header = None
-        site_def = SiteEngine.get_instance().get_by_url(str(site_signurl or site_rssurl or ""))
+        site_def = SiteEngine().get_by_url(str(site_signurl or site_rssurl or ""))
         if site_def and site_def.api and site_def.api.auth:
             api_key_header = site_def.api.auth.get("header_name")
             strict_url = site_def.api.base_url
@@ -153,7 +155,7 @@ class SiteCache:
         if siteid:
             return self._site_by_ids.get(int(siteid)) or {}
         if siteurl:
-            site_def = SiteEngine.get_instance().get_by_url(siteurl)
+            site_def = SiteEngine().get_by_url(siteurl)
             if site_def and site_def.api:
                 siteurl = site_def.api.base_url
             domain = StringUtils.get_url_domain(siteurl)

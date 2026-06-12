@@ -2,7 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-from app.di import container
 from app.services.rss_automation.task_service import RssTaskService
 
 
@@ -17,6 +16,7 @@ def _make_service(**kwargs):
         "filter_": MagicMock(),
         "media": MagicMock(),
         "downloader": MagicMock(),
+        "scheduler_core": MagicMock(),
     }
     defaults.update(kwargs)
     return RssTaskService(**defaults)
@@ -39,6 +39,7 @@ class TestRssTaskService:
                 filter_=MagicMock(),
                 media=MagicMock(),
                 downloader=MagicMock(),
+                scheduler_core=MagicMock(),
             )
             assert service.config_repo is mock_repo_instance
 
@@ -131,21 +132,13 @@ class TestRssTaskService:
 
     def test_stop_service(self):
         """stop_service should remove all jobs from scheduler."""
-        from dependency_injector import providers
-
-        service = _make_service()
         mock_scheduler = MagicMock()
-        container.scheduler_core.override(providers.Singleton(lambda: mock_scheduler))
-        try:
-            service.stop_service()
-            mock_scheduler.remove_all_jobs.assert_called_once_with(jobstore="rsscheck")
-        finally:
-            container.scheduler_core.reset_override()
+        service = _make_service(scheduler_core=mock_scheduler)
+        service.stop_service()
+        mock_scheduler.remove_all_jobs.assert_called_once_with(jobstore="rsscheck")
 
     def test_init_config_reads_parsers(self):
         """init_config should read parsers from config_repo."""
-        container.rss_task_service.reset()
-
         parser_mock = MagicMock()
         parser_mock.ID = 1
         parser_mock.NAME = "TestParser"

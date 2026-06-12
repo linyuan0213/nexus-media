@@ -3,7 +3,6 @@ from typing import Any, cast
 
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.db.repositories.site_repository import SiteRepository
-from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.domain.entities.site import SiteEntity
 from app.domain.interfaces.site_repo import ISiteRepository
 from app.schemas.site import (
@@ -20,8 +19,8 @@ from app.services.indexer_service import IndexerService
 from app.sites import SiteConf, SiteCookie
 from app.sites.site_cache import SiteCache
 from app.sites.site_userinfo import SiteUserInfo
-from app.utils import StringUtils
-from app.di import container
+from app.sites.site_favicon_service import SiteFaviconService
+from app.sites.site_resolver import SiteResolver
 
 
 class SiteService:
@@ -29,23 +28,32 @@ class SiteService:
 
     def __init__(
         self,
-        sites: SiteCache | None = None,
-        site_user_info: SiteUserInfo | None = None,
-        site_conf: SiteConf | None = None,
-        site_cookie: SiteCookie | None = None,
-        indexer_service: IndexerService | None = None,
-        string_utils=None,
-        site_repo: SiteRepository | None = None,
-        site_entity_repo: ISiteRepository | None = None,
+        sites: SiteCache,
+        site_user_info: SiteUserInfo,
+        site_conf: SiteConf,
+        indexer_service: IndexerService,
+        site_repo: SiteRepository,
+        site_favicon_service: SiteFaviconService,
+        site_resolver: SiteResolver,
+        site_cookie: SiteCookie,
+        string_utils: Any,
+        site_entity_repo: ISiteRepository,
     ):
-        self._sites = sites or container.site_cache()
-        self._site_user_info = site_user_info or SiteUserInfo()
-        self._site_conf = site_conf or container.site_conf()
-        self._site_cookie = site_cookie or SiteCookie()
-        self._indexer_service = indexer_service or IndexerService()
-        self._string_utils = string_utils or StringUtils
-        self._site_repo = site_repo or container.site_repository()
-        self._site_entity_repo = site_entity_repo or SiteRepositoryAdapter(self._site_repo)
+        self._sites = sites
+        self._site_user_info = site_user_info
+        self._site_conf = site_conf
+        self._site_cookie = site_cookie
+        self._indexer_service = indexer_service
+        self._string_utils = string_utils
+        self._site_repo = site_repo
+        self._site_entity_repo = site_entity_repo
+        self._site_favicon_service = site_favicon_service
+        self._site_resolver = site_resolver
+
+    @property
+    def site_user_info(self) -> SiteUserInfo:
+        """返回站点用户信息组件。"""
+        return self._site_user_info
 
     # ------------------------------------------------------------------
     # 站点属性
@@ -216,13 +224,13 @@ class SiteService:
     # Favicon
     # ------------------------------------------------------------------
     def get_site_favicon(self, name: str | None = None) -> Any:
-        return container.site_favicon_service().get_favicon(site_name=name)
+        return self._site_favicon_service.get_favicon(site_name=name)
 
     # ------------------------------------------------------------------
     # 连通性测试
     # ------------------------------------------------------------------
     def test_site(self, site_id: int | str) -> SiteTestResultDTO:
-        flag, msg, times = container.site_resolver().test_connection(site_id)
+        flag, msg, times = self._site_resolver.test_connection(site_id)
         return SiteTestResultDTO(flag=flag, msg=msg, times=times, code=0 if flag else -1)
 
     # ------------------------------------------------------------------

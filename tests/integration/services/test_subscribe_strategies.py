@@ -94,43 +94,53 @@ class TestSubscribeSearchEngine:
 
     def test_subscribe_search_all(self):
         indexer = MagicMock()
-        engine = SubscribeSearchEngine(indexer_strategy=indexer)
+        queue = MagicMock()
+        engine = SubscribeSearchEngine(indexer_strategy=indexer, queue_strategy=queue)
         engine.subscribe_search_all()
         indexer.run.assert_called_once()
+        queue.run.assert_not_called()
 
     def test_subscribe_search_state_r(self):
         indexer = MagicMock()
-        engine = SubscribeSearchEngine(indexer_strategy=indexer)
+        queue = MagicMock()
+        engine = SubscribeSearchEngine(indexer_strategy=indexer, queue_strategy=queue)
         engine.subscribe_search(state="R")
         indexer.run.assert_called_once()
+        queue.run.assert_not_called()
 
     def test_subscribe_search_state_d(self):
+        indexer = MagicMock()
         queue = MagicMock()
-        engine = SubscribeSearchEngine(queue_strategy=queue)
+        engine = SubscribeSearchEngine(indexer_strategy=indexer, queue_strategy=queue)
         engine.subscribe_search(state="D")
         queue.run.assert_called_once()
+        indexer.run.assert_not_called()
 
     def test_subscribe_search_movie_state_r(self):
         indexer = MagicMock()
-        engine = SubscribeSearchEngine(indexer_strategy=indexer)
+        queue = MagicMock()
+        engine = SubscribeSearchEngine(indexer_strategy=indexer, queue_strategy=queue)
         engine.subscribe_search_movie(rssid=1, state="R")
         indexer._search_movies.assert_called_once_with(state="R", rssid=1)
 
     def test_subscribe_search_movie_state_d(self):
+        indexer = MagicMock()
         queue = MagicMock()
-        engine = SubscribeSearchEngine(queue_strategy=queue)
+        engine = SubscribeSearchEngine(indexer_strategy=indexer, queue_strategy=queue)
         engine.subscribe_search_movie(rssid=1, state="D")
         queue._search_movies.assert_called_once_with(state="D", rssid=1)
 
     def test_subscribe_search_tv_state_r(self):
         indexer = MagicMock()
-        engine = SubscribeSearchEngine(indexer_strategy=indexer)
+        queue = MagicMock()
+        engine = SubscribeSearchEngine(indexer_strategy=indexer, queue_strategy=queue)
         engine.subscribe_search_tv(rssid=1, state="R")
         indexer._search_tvs.assert_called_once_with(state="R", rssid=1)
 
     def test_subscribe_search_tv_state_d(self):
+        indexer = MagicMock()
         queue = MagicMock()
-        engine = SubscribeSearchEngine(queue_strategy=queue)
+        engine = SubscribeSearchEngine(indexer_strategy=indexer, queue_strategy=queue)
         engine.subscribe_search_tv(rssid=1, state="D")
         queue._search_tvs.assert_called_once_with(state="D", rssid=1)
 
@@ -144,7 +154,17 @@ class TestIndexerSearchStrategy:
             lock.acquire.return_value = True
             mock_lm.return_value.create_lock.return_value = lock
             svc = MagicMock()
-            strategy = IndexerSearchStrategy(service=svc, movie_repo=MagicMock(), tv_repo=MagicMock())
+            strategy = IndexerSearchStrategy(
+                service=svc,
+                searcher=MagicMock(),
+                media_service=MagicMock(),
+                media_cache=MagicMock(),
+                downloader=MagicMock(),
+                filter_service=MagicMock(),
+                message=MagicMock(),
+                movie_repo=MagicMock(),
+                tv_repo=MagicMock(),
+            )
             strategy._search_movies = MagicMock()
             strategy._search_tvs = MagicMock()
             strategy.run()
@@ -156,7 +176,17 @@ class TestIndexerSearchStrategy:
             lock = MagicMock()
             lock.acquire.return_value = False
             mock_lm.return_value.create_lock.return_value = lock
-            strategy = IndexerSearchStrategy(service=MagicMock(), movie_repo=MagicMock(), tv_repo=MagicMock())
+            strategy = IndexerSearchStrategy(
+                service=MagicMock(),
+                searcher=MagicMock(),
+                media_service=MagicMock(),
+                media_cache=MagicMock(),
+                downloader=MagicMock(),
+                filter_service=MagicMock(),
+                message=MagicMock(),
+                movie_repo=MagicMock(),
+                tv_repo=MagicMock(),
+            )
             strategy._search_movies = MagicMock()
             strategy.run()
             strategy._search_movies.assert_not_called()
@@ -170,7 +200,17 @@ class TestQueueSearchStrategy:
             lock = MagicMock()
             lock.acquire.return_value = True
             mock_lm.return_value.create_lock.return_value = lock
-            strategy = QueueSearchStrategy(service=MagicMock(), movie_repo=MagicMock(), tv_repo=MagicMock())
+            strategy = QueueSearchStrategy(
+                service=MagicMock(),
+                searcher=MagicMock(),
+                media_service=MagicMock(),
+                media_cache=MagicMock(),
+                downloader=MagicMock(),
+                filter_service=MagicMock(),
+                message=MagicMock(),
+                movie_repo=MagicMock(),
+                tv_repo=MagicMock(),
+            )
             strategy._search_movies = MagicMock()
             strategy._search_tvs = MagicMock()
             strategy.run()
@@ -182,7 +222,17 @@ class TestQueueSearchStrategy:
             lock = MagicMock()
             lock.acquire.return_value = False
             mock_lm.return_value.create_lock.return_value = lock
-            strategy = QueueSearchStrategy(service=MagicMock(), movie_repo=MagicMock(), tv_repo=MagicMock())
+            strategy = QueueSearchStrategy(
+                service=MagicMock(),
+                searcher=MagicMock(),
+                media_service=MagicMock(),
+                media_cache=MagicMock(),
+                downloader=MagicMock(),
+                filter_service=MagicMock(),
+                message=MagicMock(),
+                movie_repo=MagicMock(),
+                tv_repo=MagicMock(),
+            )
             strategy._search_movies = MagicMock()
             strategy.run()
             strategy._search_movies.assert_not_called()

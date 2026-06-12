@@ -4,7 +4,6 @@
 """
 
 from app.db.repositories.site_repository import SiteRepository
-from app.di import container
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 
@@ -12,11 +11,20 @@ from app.sites.site_cache import SiteCache
 class SiteFaviconService:
     """站点图标服务."""
 
-    def __init__(self, repo: SiteRepository | None = None, cache: SiteCache | None = None):
-        self._repo = repo or container.site_repository()
-        self._cache = cache or container.site_cache()
+    def __init__(
+        self,
+        cache: SiteCache,
+        site_engine: SiteEngine,
+        repo: SiteRepository | None = None,
+    ):
+        self._repo = repo or SiteRepository()
+        self._site_engine = site_engine
+        self._cache = cache
         self._favicons: dict[str, str] = {}
         self._refresh()
+
+    def _get_site_engine(self):
+        return self._site_engine
 
     def _refresh(self) -> None:
         """从数据库加载图标缓存（过滤空值）."""
@@ -41,7 +49,7 @@ class SiteFaviconService:
             if url:
                 return url
         # 3. 从 SiteEngine 回退
-        for site_def in SiteEngine.get_instance().all_sites():
+        for site_def in self._site_engine.all_sites():
             if site_def.name == site_name and site_def.favicon:
                 return site_def.favicon
         return None
@@ -55,16 +63,15 @@ class SiteFaviconService:
                 url = self._fallback_url(site)
                 if url:
                     result[name] = url
-        for site_def in SiteEngine.get_instance().all_sites():
+        for site_def in self._site_engine.all_sites():
             if site_def.favicon and site_def.name not in result:
                 result[site_def.name] = site_def.favicon
         return result
 
-    @staticmethod
-    def _fallback_url(site: dict) -> str | None:
+    def _fallback_url(self, site: dict) -> str | None:
         """图标回退 URL."""
         url = site.get("strict_url") or site.get("signurl") or site.get("rssurl") or ""
-        site_def = SiteEngine.get_instance().get_by_url(url)
+        site_def = self._get_site_engine().get_by_url(url)
         if site_def and site_def.favicon:
             return site_def.favicon
         domain = url.replace("https://", "").replace("http://", "").split("/")[0]

@@ -2,21 +2,23 @@ import re
 
 from lxml import etree
 
-from app.di import container
 from app.sites.utils import is_logged_in
 from app.utils import ExceptionUtils, StringUtils
+from app.infrastructure.chrome import ChromeClient
+from app.sites.siteconf import SiteConf
 
 
 class ChromeSigninSimulator:
-    def __init__(self):
-        self._siteconf = container.site_conf()
+    def __init__(self, site_conf=None, drissionpage_helper=None, site_engine=None):
+        self._siteconf = site_conf or SiteConf(site_engine)
+        self._drissionpage_helper = drissionpage_helper or ChromeClient()
 
     def signin(self, site_info: dict, plugin_ctx) -> str:
         site = site_info.get("name")
         site_url = site_info.get("signurl")
         site_cookie = site_info.get("cookie")
 
-        chrome = container.drissionpage_helper()
+        chrome = self._drissionpage_helper
         if not site_url or not (chrome and chrome.get_status()):
             return ""
 

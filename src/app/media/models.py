@@ -4,9 +4,10 @@ import cn2an
 import regex as re
 from pydantic import BaseModel, Field
 
-from app.core.constants import ANIME_GENREIDS, DEFAULT_TMDB_IMAGE
+from app.core.constants import ANIME_GENREIDS
+from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
 from app.infrastructure.image_proxy import ImageProxy
-from app.di import container
+from app.media.category_matcher import get_category
 from app.utils import StringUtils
 from app.domain.mediatypes import MediaType
 
@@ -422,7 +423,14 @@ class MediaInfo(BaseModel):
     def set_tmdb_info(self, info):
         if not info:
             return
-        category_handler = container.category()
+        adapter = CategoryConfigRepositoryAdapter()
+        entities = adapter.get_all()
+        rule_map: dict[str, dict[str, dict[str, str]]] = {"movie": {}, "tv": {}, "anime": {}}
+        for ent in entities:
+            mt = ent.media_type
+            if mt in rule_map:
+                rule_map[mt][ent.name] = ent.rules if not ent.is_default else {}
+
         media_type = info.get("media_type")
         if media_type == MediaType.TV:
             genre_ids = info.get("genre_ids", [])
@@ -459,7 +467,7 @@ class MediaInfo(BaseModel):
             self.cn_name = info.get("title")
             if self.release_date:
                 self.year = self.release_date[0:4]
-            self.category = category_handler.get_movie_category(info)
+            self.category = get_category(rule_map.get("movie"), info)
             self.poster_path = ImageProxy.get_tmdbimage_url(info.get("poster_path")) if info.get("poster_path") else ""
             self.backdrop_path = (
                 ImageProxy.get_tmdbimage_url(info.get("backdrop_path")) if info.get("backdrop_path") else ""
@@ -476,9 +484,9 @@ class MediaInfo(BaseModel):
             if self.release_date:
                 self.year = self.release_date[0:4]
             if self.type == MediaType.TV:
-                self.category = category_handler.get_tv_category(info)
+                self.category = get_category(rule_map.get("tv"), info)
             else:
-                self.category = category_handler.get_anime_category(info)
+                self.category = get_category(rule_map.get("anime"), info)
             self.poster_path = (
                 ImageProxy.get_tmdbimage_url(info.get("poster_path"), size="medium") if info.get("poster_path") else ""
             )
@@ -504,51 +512,20 @@ class MediaInfo(BaseModel):
             return f"https://movie.douban.com/subject/{self.douban_id}"
         return ""
 
-    @property
-    def fanart(self):
-        return container.fanart()
-
     def get_backdrop_image(self, default=True, original=False):
-        if self.fanart_backdrop:
-            return self.fanart_backdrop
-        fanart = container.fanart()
-        self.fanart_backdrop = fanart.get_backdrop(
-            media_type=self.type, queryid=self.tmdb_id if self.type == MediaType.MOVIE else self.tvdb_id
-        )
-        if self.fanart_backdrop:
-            return self.fanart_backdrop
-        if self.backdrop_path:
-            if original:
-                return self.backdrop_path.replace("/w500", "/original")
-            return self.backdrop_path
-        return DEFAULT_TMDB_IMAGE if default else ""
+        from app.media.image_resolver import MediaImageResolver
+
+        return MediaImageResolver.get_backdrop_image(self, default=default, original=original)
 
     def get_message_image(self):
-        if self.fanart_backdrop:
-            return self.fanart_backdrop
-        fanart = container.fanart()
-        self.fanart_backdrop = fanart.get_backdrop(
-            media_type=self.type, queryid=self.tmdb_id if self.type == MediaType.MOVIE else self.tvdb_id
-        )
-        if self.fanart_backdrop:
-            return self.fanart_backdrop
-        if self.backdrop_path:
-            return self.backdrop_path
-        if self.poster_path:
-            return self.poster_path
-        return DEFAULT_TMDB_IMAGE
+        from app.media.image_resolver import MediaImageResolver
+
+        return MediaImageResolver.get_message_image(self)
 
     def get_poster_image(self, original=False):
-        if self.poster_path:
-            if original:
-                return self.poster_path.replace("/w500", "/original")
-            return self.poster_path
-        if not self.fanart_poster:
-            fanart = container.fanart()
-            self.fanart_poster = fanart.get_poster(
-                media_type=self.type, queryid=self.tmdb_id if self.type == MediaType.MOVIE else self.tvdb_id
-            )
-        return self.fanart_poster or ""
+        from app.media.image_resolver import MediaImageResolver
+
+        return MediaImageResolver.get_poster_image(self, original=original)
 
     def to_dict(self) -> dict:
         return {

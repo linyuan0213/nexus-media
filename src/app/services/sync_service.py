@@ -12,7 +12,6 @@ from urllib.parse import unquote
 from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_MEDIAEXT, RMT_SUBEXT
 from app.core.exceptions import DomainError, RepositoryError, ServiceError, ValidationError
 from app.core.settings import settings
-from app.di import container
 from app.domain.entities.sync import SyncPathEntity
 from app.domain.entities.transfer import TransferUnknownEntity
 from app.infrastructure.thread import ThreadExecutor
@@ -32,6 +31,7 @@ from app.utils import EpisodeFormat, ExceptionUtils, StringUtils
 from app.domain.mediatypes import MediaType
 from app.domain.enums import OsType, SyncType
 from app.services.web import set_config_directory
+from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 
 
 class SyncService:
@@ -44,15 +44,17 @@ class SyncService:
 
     def __init__(
         self,
-        sync: Sync | None = None,
-        filetransfer: FileTransfer | None = None,
-        media_cache: MediaCache | None = None,
-        thread_executor: ThreadExecutor | None = None,
+        sync: Sync,
+        filetransfer: FileTransfer,
+        media_cache: MediaCache,
+        thread_executor: ThreadExecutor,
+        storage_backend_repo: StorageBackendRepositoryAdapter,
     ):
-        self._sync = sync or container.sync_engine()
-        self._filetransfer = filetransfer or container.filetransfer_service()
-        self._media_cache = media_cache or container.media_cache()
-        self._thread_executor = thread_executor or container.thread_executor()
+        self._sync = sync
+        self._filetransfer = filetransfer
+        self._media_cache = media_cache
+        self._thread_executor = thread_executor
+        self._storage_backend_repo = storage_backend_repo
 
     # ---------- 同步目录校验 ----------
 
@@ -238,7 +240,7 @@ class SyncService:
         if dst_backend_id == "local":
             return None
         try:
-            entity = container.storage_backend_repo().get_by_id(int(dst_backend_id))
+            entity = self._storage_backend_repo.get_by_id(int(dst_backend_id))
             if not entity:
                 return None
             info = StorageBackendFactory.get_config_info(entity.type)

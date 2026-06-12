@@ -2,12 +2,20 @@
 
 import datetime
 import platform
+from functools import partial
 
 import psutil
 
+from app.agent.agents.search_intent import SearchIntentAgent
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
-from app.di import container
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
+from app.domain.enums import ProgressKey
+from app.domain.mediatypes import MediaType
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.infrastructure.progress import ProgressTracker
+from app.media.service import MediaService
+from app.message import Message
 from app.message.commands import COMMANDS
 from app.schemas.system import (
     NetTestResultDTO,
@@ -17,13 +25,11 @@ from app.schemas.system import (
     VersionInfoDTO,
     WebSearchResultDTO,
 )
+from app.services.rbac.service import RBACService
+from app.services.search_service import Searcher
 from app.services.search_web_service import search_medias_for_web
-from app.infrastructure.http.client import HttpClient
-from app.infrastructure.http.config import HttpClientConfig
-from app.utils.config_tools import get_proxies
-from app.domain.mediatypes import MediaType
-from app.domain.enums import ProgressKey
 from app.services.web import WebUtils
+from app.utils.config_tools import get_proxies
 from version import APP_VERSION
 
 
@@ -132,8 +138,27 @@ class WebSearchService:
     WEB资源搜索业务服务
     """
 
-    def __init__(self, search_fn=None):
-        self._search_fn = search_fn or search_medias_for_web
+    def __init__(
+        self,
+        searcher: Searcher | None = None,
+        progress_helper: ProgressTracker | None = None,
+        media_service: MediaService | None = None,
+        intent_agent: SearchIntentAgent | None = None,
+        search_fn=None,
+    ):
+        if search_fn is not None:
+            self._search_fn = search_fn
+        else:
+            assert searcher is not None, "searcher is required"
+            assert progress_helper is not None, "progress_helper is required"
+            assert media_service is not None, "media_service is required"
+            self._search_fn = partial(
+                search_medias_for_web,
+                searcher=searcher,
+                progress_helper=progress_helper,
+                media_service=media_service,
+                intent_agent=intent_agent,
+            )
 
     def search(
         self,
@@ -169,7 +194,7 @@ class ProgressService:
     """
 
     def __init__(self, progress_helper=None):
-        self._progress = progress_helper or container.progress_helper()
+        self._progress = progress_helper or ProgressTracker()
 
     def get_progress(self, ptype: str) -> ProgressResultDTO:
         detail = self._progress.get_process(ProgressKey(ptype))
@@ -183,12 +208,10 @@ class UserManageService:
     用户管理业务服务
     """
 
-    def __init__(self, rbac_svc=None):
+    def __init__(self, rbac_svc: RBACService):
         self._rbac = rbac_svc
 
     def _get_rbac(self):
-        if self._rbac is None:
-            self._rbac = container.rbac_service()
         return self._rbac
 
     def add_user(self, name: str, password: str, pris=None) -> UserManageResultDTO:
@@ -218,8 +241,9 @@ def get_rmt_modes():
     ]
 
 
-def get_system_message(lst_time):
-    messages = container.message().messagecenter.get_system_messages(lst_time=lst_time)
+def get_system_message(lst_time, message=None):
+    _message = message or Message()
+    messages = _message.messagecenter.get_system_messages(lst_time=lst_time)
     if messages:
         lst_time = messages[0].get("time")
     return {"code": 0, "message": messages, "lst_time": lst_time}

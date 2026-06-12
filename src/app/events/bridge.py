@@ -5,15 +5,17 @@
 
 import log
 from app.events.types import Event
-from app.plugin_framework.hook_system import HookSystem
 
 
 class PluginBridge:
     """将事件桥接到 HookSystem"""
 
+    def __init__(self, hook_system):
+        self._hook_system = hook_system
+
     def forward(self, event: Event) -> None:
         payload = getattr(event.payload, "__dict__", event.payload) if event.payload else {}
         try:
-            HookSystem().emit(event.event_type, payload)
+            self._hook_system.emit(event.event_type, payload)
         except Exception as e:
             log.debug(f"[PluginBridge] HookSystem 转发失败 {event.event_type}: {e}")

@@ -1,13 +1,18 @@
 """RBAC Service Facade."""
 
+from typing import Any
+
 from app.db.repositories.rbac_repo_adapter import RBACLogRepositoryAdapter
-from app.di import container
 from app.services.rbac.auth_service import RBACAuthService
 from app.services.rbac.check_service import RBACCheckService
 from app.services.rbac.menu_service import RBACMenuService
 from app.services.rbac.permission_service import RBACPermissionService
 from app.services.rbac.role_service import RBACRoleService
 from app.services.rbac.user_service import RBACUserService
+from app.db.repositories.rbac_repo_adapter import RBACPermissionRepositoryAdapter
+from app.db.repositories.rbac_repo_adapter import RBACMenuRepositoryAdapter
+from app.db.repositories.rbac_repo_adapter import RBACUserRepositoryAdapter
+from app.db.repositories.rbac_repo_adapter import RBACRoleRepositoryAdapter
 
 
 class RBACService:
@@ -16,11 +21,18 @@ class RBACService:
     提供用户管理、角色管理、权限管理、菜单管理等业务功能
     """
 
-    def __init__(self, user_repo=None, role_repo=None, permission_repo=None, menu_repo=None, log_repo=None):
-        self.user_repo = user_repo or container.rbac_user_repo()
-        self.role_repo = role_repo or container.rbac_role_repo()
-        self.permission_repo = permission_repo or container.rbac_permission_repo()
-        self.menu_repo = menu_repo or container.rbac_menu_repo()
+    def __init__(
+        self,
+        user_repo: Any = None,
+        role_repo: Any = None,
+        permission_repo: Any = None,
+        menu_repo: Any = None,
+        log_repo: RBACLogRepositoryAdapter | None = None,
+    ):
+        self.user_repo = user_repo or RBACUserRepositoryAdapter()
+        self.role_repo = role_repo or RBACRoleRepositoryAdapter()
+        self.permission_repo = permission_repo or RBACPermissionRepositoryAdapter()
+        self.menu_repo = menu_repo or RBACMenuRepositoryAdapter()
         self.log_repo = log_repo or RBACLogRepositoryAdapter()
 
         self._auth = RBACAuthService(self.user_repo, self.log_repo)

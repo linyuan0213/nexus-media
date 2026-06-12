@@ -8,22 +8,26 @@ from app.core.settings import settings
 from app.core.system_config import SystemConfig
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.db.repositories.media_sync_repo_adapter import MediaSyncRepositoryAdapter
-from app.di import container
-from app.infrastructure.progress import ProgressTracker
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
-from app.infrastructure.queue import MessageQueueFactory
+from app.infrastructure.progress import ProgressTracker
+from app.infrastructure.queue.base import MessageQueue
 from app.media import MediaService
 from app.mediaserver.registry import get_all_clients
 from app.message import Message
 from app.utils import ExceptionUtils
-from app.domain.mediatypes import MediaType
 from app.domain.enums import ProgressKey, SystemConfigKey
+from app.domain.mediatypes import MediaType
 
 lock = threading.Lock()
 server_lock = threading.Lock()
 
 
 class MediaServer:
+    """媒体服务器管理器.
+
+    由 factories / lifespan 创建并注册到 registry。
+    """
+
     _server_type: str | None = None
     _server = None
     mediadb: MediaSyncRepositoryAdapter | None = None
@@ -32,14 +36,25 @@ class MediaServer:
     media: MediaService | None = None
     systemconfig: SystemConfig | None = None
     config_repo: MediaServerRepositoryAdapter | None = None
+    _message_queue: MessageQueue
 
-    def __init__(self):
-        self.mediadb = container.media_sync_repo()
-        self.message = container.message()
-        self.progress = container.progress_helper()
-        self.media = container.media_service()
-        self.systemconfig = container.system_config()
-        self.config_repo = container.media_server_repo()
+    def __init__(
+        self,
+        media_service: MediaService,
+        message: Message,
+        message_queue: MessageQueue,
+        media_sync_repo: MediaSyncRepositoryAdapter | None = None,
+        progress_helper: ProgressTracker | None = None,
+        system_config: SystemConfig | None = None,
+        media_server_repo: MediaServerRepositoryAdapter | None = None,
+    ):
+        self.mediadb = media_sync_repo or MediaSyncRepositoryAdapter()
+        self.message = message
+        self.progress = progress_helper or ProgressTracker()
+        self.media = media_service
+        self.systemconfig = system_config or SystemConfig()
+        self.config_repo = media_server_repo or MediaServerRepositoryAdapter()
+        self._message_queue = message_queue
         self._server_type = None
         self._server = None
 
@@ -62,7 +77,7 @@ class MediaServer:
         with server_lock:
             if self._server_type is None:
                 if self.config_repo is None:
-                    self.config_repo = container.media_server_repo()
+                    return None
                 default_server = self.config_repo.get_default_media_server()
                 if default_server:
                     self._server_type = cast(str, default_server.NAME)
@@ -429,9 +444,7 @@ class MediaServer:
             return
 
         try:
-            MessageQueueFactory.get_instance().submit(
-                self._process_webhook, event_info, channel, name="mediaserver_webhook"
-            )
+            self._message_queue.submit(self._process_webhook, event_info, channel, name="mediaserver_webhook")
         finally:
             lock.release()
 

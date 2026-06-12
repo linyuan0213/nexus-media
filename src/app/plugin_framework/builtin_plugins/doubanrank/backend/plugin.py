@@ -12,26 +12,31 @@ from threading import Event
 
 import pytz
 
-from app.services.rss_processor import RssHelper
-from app.media import MediaService
-from app.plugin_framework.context import PluginContext
-from app.infrastructure.http import HttpClient
-from app.utils import DomUtils
-from app.domain.mediatypes import MediaType
 from app.domain.enums import SearchType
-from app.services.web import WebUtils
-from app.di import container
+from app.domain.mediatypes import MediaType
+from app.mediaserver.media_server import MediaServer
+from app.plugin_framework.context import PluginContext
+from app.services.subscribe_service import SubscribeService
+from app.utils import DomUtils
+from app.services.web.utils import get_mediainfo_from_id
+from app.infrastructure.http.client import HttpClient
+from app.services.rss_processor import RssHelper
 
 
 class DoubanRankPlugin:
     """豆瓣榜单订阅插件"""
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(
+        self,
+        ctx: PluginContext,
+        mediaserver: MediaServer,
+        subscribe: SubscribeService,
+    ):
         self.ctx = ctx
-        self._mediaserver = container.media_server()
-        self._subscribe = container.subscribe_service()
-        self._rsshelper = RssHelper()
-        self._media = MediaService()
+        self._mediaserver = mediaserver
+        self._subscribe = subscribe
+        self._rsshelper = RssHelper(site_engine=ctx.site_engine)
+        self._media = self.ctx.media_service
         self._event = Event()
         self._douban_address = {
             "movie-ustop": "https://rsshub.app/douban/movie/ustop",
@@ -167,7 +172,7 @@ class DoubanRankPlugin:
                         continue
 
                     if douban_id:
-                        media_info = WebUtils.get_mediainfo_from_id(mtype=mtype, mediaid=f"DB:{douban_id}", wait=True)
+                        media_info = get_mediainfo_from_id(mtype=mtype, mediaid=f"DB:{douban_id}", wait=True)
                     else:
                         media_info = self._media.get_media_info(title=title, mtype=mtype)
 

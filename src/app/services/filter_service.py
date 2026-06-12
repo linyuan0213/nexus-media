@@ -225,10 +225,15 @@ class FilterService:
     负责规则数据加载与规则匹配调度
     """
 
-    def __init__(self, filter_group_repo=None, filter_rule_repo=None, rg_matcher: ReleaseGroupsMatcher | None = None):
-        self._filter_group_repo = filter_group_repo or FilterGroupRepositoryAdapter()
-        self._filter_rule_repo = filter_rule_repo or FilterRuleRepositoryAdapter()
-        self._rg_matcher = rg_matcher or ReleaseGroupsMatcher()
+    def __init__(
+        self,
+        filter_group_repo: FilterGroupRepositoryAdapter,
+        filter_rule_repo: FilterRuleRepositoryAdapter,
+        rg_matcher: ReleaseGroupsMatcher,
+    ):
+        self._filter_group_repo = filter_group_repo
+        self._filter_rule_repo = filter_rule_repo
+        self._rg_matcher = rg_matcher
         self._groups = []
         self._rules = []
         self.reload()

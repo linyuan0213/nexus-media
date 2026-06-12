@@ -9,7 +9,6 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base impor
     SiteSigninContext,
     SiteSigninHandler,
 )
-from app.plugin_framework.hook_system import HookSystem
 
 
 class Rousi(SiteSigninHandler):
@@ -51,7 +50,7 @@ class Rousi(SiteSigninHandler):
         signurl = ctx.site_url
         ua = ctx.ua
 
-        HookSystem().emit("site.local_storage_sync", {})
+        self._plugin_ctx.emit("site.local_storage_sync", {})
         time.sleep(10)
 
         token = self._get_sign_token(ctx.raw)

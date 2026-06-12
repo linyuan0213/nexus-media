@@ -5,10 +5,9 @@
 import json
 
 import log
-from app.agent.tool_executor import get_tool_executor
 from app.agent.tools import ToolRegistry
 from app.infrastructure.cache_system import OpenAISessionCache
-from app.di import container
+
 
 _TOOL_PROMPT = """你是一个智能助手，可以帮助用户管理 NAS 媒体库系统。
 
@@ -23,7 +22,7 @@ _TOOL_PROMPT = """你是一个智能助手，可以帮助用户管理 NAS 媒体
 
 回复规则：
 1. 如果用户请求需要用工具完成，请只返回 JSON 格式（不要其他文字）
-2. 如果不需要工具（闲聊、问候、简单问答），请直接回复文字
+2. 如果不需要工具（闲聊、问候、简单回答），请直接回复文字
 3. 工具调用后，我会把结果返回给你，你再生成最终回复
 """
 
@@ -35,8 +34,9 @@ class ChatAgent:
     # 超过后裁剪最早的消息，避免超出模型最大 token 限制
     MAX_HISTORY_MESSAGES = 20
 
-    def __init__(self):
-        self._svc = container.agent_service()
+    def __init__(self, svc, tool_executor):
+        self._svc = svc
+        self._tool_executor = tool_executor
 
     @property
     def ready(self) -> bool:
@@ -110,9 +110,8 @@ class ChatAgent:
 
         # 3. 执行工具（通过 ToolExecutor，避免 Tools 层跨层依赖 Service）
         log.info(f"[ChatAgent]调用工具: {tool_call.get('tool')}, 参数: {tool_call.get('parameters')}")
-        executor = get_tool_executor()
         try:
-            result = executor.execute(tool_call["tool"], **tool_call["parameters"])
+            result = self._tool_executor.execute(tool_call["tool"], **tool_call["parameters"])
         except Exception as e:
             log.error(f"[ChatAgent]工具执行异常: {e}")
             return f"工具执行出错: {e}"

@@ -11,29 +11,36 @@ import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import log
+from app.core.system_config import SystemConfig
+from app.db.repositories.download_repository import DownloadRepository
+from app.indexer.core.pipeline import SearchPipeline
 from app.indexer.registry import get_all_clients, get_client_class
+from app.infrastructure.progress import ProgressTracker
 from app.utils import ExceptionUtils, StringUtils
 from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
-from app.di import container
 
 
 class Indexer:
-    """
-    索引器管理单例
+    """索引器管理.
 
     搜索流程：
     1. 获取所有可用站点
     2. 并发搜索每个站点，收集原始结果（dict 列表）
     3. 将所有原始结果传入 SearchPipeline，统一批量识别和过滤
     4. 返回最终结果（meta_info 列表）
-
-    客户端延迟加载：首次需要客户端时才从注册表构建，避免模块导入时注册表为空。
     """
 
-    def __init__(self):
-        self.progress = container.progress_helper()
-        self.download_repo = container.download_repo()
-        self._pipeline = container.search_pipeline()
+    def __init__(
+        self,
+        search_pipeline: SearchPipeline,
+        progress_helper: ProgressTracker | None = None,
+        download_repo: DownloadRepository | None = None,
+        system_config: SystemConfig | None = None,
+    ):
+        self.progress = progress_helper or ProgressTracker()
+        self.download_repo = download_repo or DownloadRepository()
+        self._pipeline = search_pipeline
+        self._system_config = system_config or SystemConfig()
         self._client = None
         self._client_type = None
 
@@ -41,7 +48,7 @@ class Indexer:
         """延迟加载当前配置的索引器客户端"""
         if self._client is not None:
             return
-        indexer = container.system_config().get(SystemConfigKey.SearchIndexer) or "builtin"
+        indexer = self._system_config.get(SystemConfigKey.SearchIndexer) or "builtin"
         self._client = self.__get_client(indexer)
         self._client_type = self._client.get_type() if self._client else None
 

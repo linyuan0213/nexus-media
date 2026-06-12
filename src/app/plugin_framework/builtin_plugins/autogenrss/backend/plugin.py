@@ -14,26 +14,37 @@ from typing import cast
 import pytz
 from lxml import etree
 
-from app.utils.submodule_loader import SubmoduleLoader
+from app.db.repositories.site_repository import SiteRepository
+from app.infrastructure.chrome import ChromeClient
 from app.infrastructure.cloudflare import under_challenge
-from app.plugin_framework.context import PluginContext
 from app.infrastructure.http.client import HttpClient, HttpClientError
 from app.infrastructure.http.config import HttpClientConfig
-from app.sites.engine import SiteEngine
+from app.plugin_framework.context import PluginContext
+from app.sites.site_cache import SiteCache
+from app.sites.siteconf import SiteConf
 from app.sites.utils import is_logged_in
 from app.utils import ExceptionUtils, JsonUtils, StringUtils
 from app.utils.config_tools import get_proxies
-from app.di import container
+from app.utils.submodule_loader import SubmoduleLoader
 
 
 class AutoGenRssPlugin:
     """RSS自动生成插件"""
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(
+        self,
+        ctx: PluginContext,
+        site_cache: SiteCache,
+        site_repo: SiteRepository | None = None,
+        siteconf: SiteConf | None = None,
+        drissionpage_helper: ChromeClient | None = None,
+    ):
         self.ctx = ctx
         self._site_schema = []
-        self._site_repo = container.site_repository()
-        self._siteconf = container.site_conf()
+        self._site_repo = site_repo or SiteRepository()
+        self._siteconf = siteconf or SiteConf(self.ctx.site_engine)
+        self._site_cache = site_cache
+        self._drissionpage_helper = drissionpage_helper or ChromeClient()
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -98,7 +109,7 @@ class AutoGenRssPlugin:
         if isinstance(rss_sites, str):
             rss_sites = [s for s in rss_sites.split("\n") if s]
 
-        rss_sites = copy.deepcopy(container.site_cache().get_sites(siteids=rss_sites))
+        rss_sites = copy.deepcopy(self._site_cache.get_sites(siteids=rss_sites))
         if not rss_sites:
             self.ctx.info("没有需要生成的站点，停止运行")
             return
@@ -138,7 +149,9 @@ class AutoGenRssPlugin:
         site_module = self._build_class(site_info.get("signurl"))
         if site_module and hasattr(site_module, "gen_rss"):
             try:
-                status, msg = site_module().gen_rss(site_info)
+                status, msg = site_module(site_repo=self._site_repo, site_engine=self.ctx.site_engine).gen_rss(
+                    site_info
+                )
                 return msg
             except Exception as e:
                 return f"[{site_info.get('name')}]生成RSS失败：{e!s}"
@@ -164,7 +177,7 @@ class AutoGenRssPlugin:
 
             home_url = StringUtils.get_base_url(site_url)
             rss_url = f"{home_url}/getrss.php"
-            chrome = container.drissionpage_helper()
+            chrome = self._drissionpage_helper
             if site_info.get("chrome") and chrome.get_status():
                 self.ctx.info(f"开始生成RSS站点（Chrome）：{site}")
                 # TODO: Chrome仿真实现
@@ -183,7 +196,7 @@ class AutoGenRssPlugin:
                 headers.update({"User-Agent": ua, "Referer": site_url})
                 proxy = get_proxies() if site_info.get("proxy") else None
                 proxy_url = proxy.get("http") if proxy else None
-                engine = SiteEngine.get_instance()
+                engine = self.ctx.site_engine
                 rate_limiter = getattr(engine, "site_limiter", None)
                 rate_limiter_engine = rate_limiter.engine if rate_limiter else None
                 try:

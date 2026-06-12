@@ -223,8 +223,8 @@ app/db/repositories/
 - **MySQL**：`mysql+pymysql://...`
 - **PostgreSQL**：`postgresql+psycopg2://...`
 
-配置优先级：**环境变量** > `.env` > `config/config.yaml`（可选）。
-`NEXUS_MEDIA_CONFIG` 已降级为可选，未设置时自动发现 `./config/config.yaml` 或 `/config/config.yaml`。
+配置优先级：**环境变量** > `.env` > `data/config.yaml`（可选）。
+`NEXUS_MEDIA_CONFIG` 已降级为可选，未设置时自动发现 `./data/config.yaml` 或 `/data/config.yaml`。
 首次启动时自动从模板 `config/config.yaml.example` 创建配置文件。
 
 `DatabaseDialect` 类处理跨数据库 SQL 差异（日期函数、LIMIT、字符串连接、随机函数等）。

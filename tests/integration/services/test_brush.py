@@ -107,18 +107,18 @@ class TestBrushTaskHelper:
         assert BrushTaskHelper.is_in_time_range("invalid") is False
 
     def test_is_torrent_handled_empty_enclosure(self):
-        helper = BrushTaskHelper(MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
+        helper = BrushTaskHelper(MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
         assert helper.is_torrent_handled(None) is False
         assert helper.is_torrent_handled("") is False
 
     def test_is_allow_new_torrent_empty_task(self):
-        helper = BrushTaskHelper(MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
+        helper = BrushTaskHelper(MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
         assert helper.is_allow_new_torrent(None, 0) is False
 
     def test_is_allow_new_torrent_seed_size_exceeded(self):
         repo = MagicMock()
         repo.get_brushtask_totalsize.return_value = 10 * 1024**3
-        helper = BrushTaskHelper(repo, MagicMock(), MagicMock(), MagicMock(), MagicMock())
+        helper = BrushTaskHelper(repo, MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
         taskinfo = {"id": 1, "name": "test", "seed_size": 5, "downloader": 1, "downloader_name": "qbit"}
         assert helper.is_allow_new_torrent(taskinfo, 0) is False
 
@@ -127,22 +127,22 @@ class TestBrushTaskHelper:
         repo.get_brushtask_totalsize.return_value = 0
         downloader = MagicMock()
         downloader.get_downloading_torrents.return_value = [1, 2, 3]
-        helper = BrushTaskHelper(repo, downloader, MagicMock(), MagicMock(), MagicMock())
+        helper = BrushTaskHelper(repo, downloader, MagicMock(), MagicMock(), MagicMock(), MagicMock())
         taskinfo = {"id": 1, "name": "test", "seed_size": 100, "downloader": 1, "downloader_name": "qbit"}
         assert helper.is_allow_new_torrent(taskinfo, 2) is False
 
     def test_get_downloading_count(self):
         downloader = MagicMock()
         downloader.get_downloading_torrents.return_value = [1, 2]
-        helper = BrushTaskHelper(MagicMock(), downloader, MagicMock(), MagicMock(), MagicMock())
+        helper = BrushTaskHelper(MagicMock(), downloader, MagicMock(), MagicMock(), MagicMock(), MagicMock())
         assert helper.get_downloading_count(1) == 2
 
     def test_get_downloading_count_none(self):
         downloader = MagicMock()
         downloader.get_downloading_torrents.return_value = None
-        helper = BrushTaskHelper(MagicMock(), downloader, MagicMock(), MagicMock(), MagicMock())
+        helper = BrushTaskHelper(MagicMock(), downloader, MagicMock(), MagicMock(), MagicMock(), MagicMock())
         assert helper.get_downloading_count(1) == 0
 
     def test_download_torrent_no_enclosure(self):
-        helper = BrushTaskHelper(MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
+        helper = BrushTaskHelper(MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
         assert helper.download_torrent({}, {}, {}, "title", None, 0, "") is False

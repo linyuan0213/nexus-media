@@ -6,8 +6,9 @@ from typing import Any
 
 from app.core.constants import DEFAULT_MOVIE_FORMAT, DEFAULT_TV_FORMAT
 from app.core.settings import settings
-from app.di import container
-from app.media import Category
+from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
+from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
+from app.services.media_config_service import MediaConfigService
 from app.storage import StorageBackendFactory
 from app.storage.backends.base import StorageConfig, StorageType
 from app.storage.backends.local import LocalStorageBackend
@@ -37,6 +38,7 @@ class TransferPathResolver:
         tv_dir_rmt_format: str = "",
         tv_season_rmt_format: str = "",
         tv_file_rmt_format: str = "",
+        storage_backend_repo: StorageBackendRepositoryAdapter | None = None,
     ):
         self._movie_path = movie_path or []
         self._tv_path = tv_path or []
@@ -55,13 +57,21 @@ class TransferPathResolver:
         self._tv_season_rmt_format = tv_season_rmt_format
         self._tv_file_rmt_format = tv_file_rmt_format
         self._backend_cache: dict[str, Any] = {}
+        self._storage_backend_repo = storage_backend_repo or StorageBackendRepositoryAdapter()
 
     @classmethod
-    def from_settings(cls, category: Category | None = None) -> "TransferPathResolver":
+    def from_settings(
+        cls,
+        media_config_service: MediaConfigService,
+        storage_backend_repo: StorageBackendRepositoryAdapter | None = None,
+    ) -> "TransferPathResolver":
         """从全局配置构造解析器."""
-        category = category or container.category()
-        assert category is not None
-        media_cfg = container.media_config_service().get_config()
+        adapter = CategoryConfigRepositoryAdapter()
+        entities = adapter.get_all()
+        movie_flag = any(e.media_type == "movie" for e in entities)
+        tv_flag = any(e.media_type == "tv" for e in entities)
+        anime_flag = any(e.media_type == "anime" for e in entities)
+        media_cfg = media_config_service.get_config()
         media = settings.get("media")
 
         movie_path = media_cfg.get("movie_path") or []
@@ -106,14 +116,15 @@ class TransferPathResolver:
             tv_backend=tv_backend,
             anime_backend=anime_backend,
             unknown_backend=media_cfg.get("unknown_backend") or [],
-            movie_category_flag=category.movie_category_flag,
-            tv_category_flag=category.tv_category_flag,
-            anime_category_flag=category.anime_category_flag,
+            movie_category_flag=movie_flag,
+            tv_category_flag=tv_flag,
+            anime_category_flag=anime_flag,
             movie_dir_rmt_format=movie_dir_rmt_format,
             movie_file_rmt_format=movie_file_rmt_format,
             tv_dir_rmt_format=tv_dir_rmt_format,
             tv_season_rmt_format=tv_season_rmt_format,
             tv_file_rmt_format=tv_file_rmt_format,
+            storage_backend_repo=storage_backend_repo or StorageBackendRepositoryAdapter(),
         )
 
     # ---------- 目标路径属性 ----------
@@ -227,7 +238,7 @@ class TransferPathResolver:
             backend_id = self._get_backend_for_path(dist_path, self._anime_path, self._anime_backend)
         if backend_id == "local":
             return None
-        entity = container.storage_backend_repo().get_by_id(int(backend_id))
+        entity = self._storage_backend_repo.get_by_id(int(backend_id))
         if not entity:
             return None
         info = StorageBackendFactory.get_config_info(entity.type)
@@ -248,8 +259,7 @@ class TransferPathResolver:
         cached = self._backend_cache.get(backend_id)
         if cached is not None:
             return cached
-        repo = container.storage_backend_repo()
-        entity = repo.get_by_id(int(backend_id))
+        entity = self._storage_backend_repo.get_by_id(int(backend_id))
         if not entity:
             return None
         info = StorageBackendFactory.get_config_info(entity.type)

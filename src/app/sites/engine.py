@@ -12,7 +12,7 @@ import re
 import time
 import traceback
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 from lxml import etree
@@ -531,21 +531,12 @@ class SiteEngine:
         cache_key = f"{site_id}:{token_type}"
         return self._auth_cache.get(cache_key)
 
-    _engine_instance: Optional["SiteEngine"] = None
 
-    @classmethod
-    def get_instance(cls, definitions_dir: str | None = None) -> "SiteEngine":
-        if cls._engine_instance is None:
-            cls._engine_instance = cls(definitions_dir)
-            cls._engine_instance._register_user_info_factories()
-        return cls._engine_instance
-
-
-def get_tid_by_url(url: str) -> str | None:
+def get_tid_by_url(url: str, site_engine: SiteEngine) -> str | None:
     """从下载链接提取种子 ID"""
     if not url:
         return None
-    site_def = SiteEngine.get_instance().get_by_url(url)
+    site_def = site_engine.get_by_url(url)
     if site_def and site_def.download and site_def.download.type in ("api", "api_chained"):
         tid = re.findall(r"\d+", url)
         return tid[-1] if tid else None

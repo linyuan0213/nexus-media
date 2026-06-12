@@ -5,7 +5,7 @@ FastAPI 主应用
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,6 +15,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 import log
 import version
+from api.deps import get_message
 from api.routers import (
     apikey,
     auth,
@@ -40,17 +41,20 @@ from app.core.settings import settings
 from app.db import init_db
 from app.db.engine import get_engine
 from app.db.session import remove_session
-from app.di import container
+from app.di.factories import build_all, init_site_config, _register_post_db_services
+from app.di.registry import registry
+from app.di.types import RegistryKey
 from app.downloader.client import init_clients as init_downloaders
 from app.indexer.client import init_clients as init_indexers
 from app.infrastructure.rate_limiter import RateLimitMiddleware
 from app.infrastructure.redis import RedisStore
 from app.infrastructure.security import get_secret_key
+from app.infrastructure.thread import ThreadExecutor
 from app.mediaserver.client import init_clients as init_mediaservers
 from app.message.client.manager import init_clients as init_message_clients
+from app.message.message import Message
 from app.schemas.common import HealthCheckResponse, HealthServiceStatus
-from app.services.site_config_updater import SiteConfigUpdater, update_site_config_at_startup
-from app.sites.engine import SiteEngine
+from app.services.system.lifecycle import SystemLifecycleService
 
 # 读取安全密钥（与 Flask 共用 secret_key）
 _secret_key = get_secret_key()
@@ -59,43 +63,55 @@ _secret_key = get_secret_key()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理：启动后台服务"""
+    # 1. 创建所有对象（按拓扑顺序）
+    build_all()
+
+    # 2. 初始化数据库表结构
     log.info("[FastAPI]初始化数据库表结构...")
     init_db()
-    log.info("[FastAPI]初始化站点配置...")
-    try:
-        updater = SiteConfigUpdater()
-        updater.ensure_local_sites(SiteEngine._BUILTIN_DEFINITIONS_DIR)
-        update_site_config_at_startup()
-    except Exception as e:
-        log.warn(f"[FastAPI]站点配置初始化失败: {e!s}")
+
+    # 3. 注册需要在数据库初始化后构造的服务
+    _register_post_db_services()
+
+    # 4. 初始化站点配置
+    init_site_config()
+
     log.info("[FastAPI]启动后台服务...")
-    container.system_lifecycle_service().start_service()
+    system_lifecycle: SystemLifecycleService = registry.get(RegistryKey.SYSTEM_LIFECYCLE)
+    system_lifecycle.start_service()
+
+    # 5. 注册内置客户端与插件
     log.info("[FastAPI]后台服务启动完成")
-    # 注册内置索引器
     init_indexers()
     log.info("[FastAPI]索引器注册完成")
-    # 注册内置下载器
     init_downloaders()
     log.info("[FastAPI]下载器注册完成")
-    # 注册内置媒体服务器
     init_mediaservers()
     log.info("[FastAPI]媒体服务器注册完成")
-    # 注册内置消息客户端
     init_message_clients()
     log.info("[FastAPI]消息客户端注册完成")
-    # 加载插件（在消息菜单刷新之前，确保插件命令能显示）
-    container.plugin_sandbox().load_all()
+
+    message: Message = registry.get(RegistryKey.MESSAGE)
+    plugin_sandbox = registry.get(RegistryKey.PLUGIN_SANDBOX)
+
+    plugin_sandbox.load_all()
     log.info("[FastAPI]插件加载完成")
-    # 预初始化消息客户端（避免 webhook 首次调用时客户端尚未就绪）
-    _ = container.message().active_clients
+    _ = message.active_clients
     log.info("[FastAPI]消息客户端初始化完成")
-    # 系统启动完成后统一刷新菜单（确保包含插件命令）
-    container.message().refresh_menus()
+    message.refresh_menus()
     log.info("[FastAPI]消息菜单刷新完成")
+
     yield
+
+    # 6. 反向关闭
     log.info("[FastAPI]关闭后台服务...")
-    container.system_lifecycle_service().stop_service()
+    system_lifecycle.stop_service()
     log.info("[FastAPI]后台服务已关闭")
+
+    ThreadExecutor.shutdown_all()
+
+    # 7. 清空注册表
+    registry.clear()
 
 
 app = FastAPI(
@@ -180,7 +196,7 @@ app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
 
 @app.get("/health", response_model=HealthCheckResponse, summary="健康检查")
-def health_check():
+def health_check(message: Message = Depends(get_message)):
     """健康检查：验证数据库、Redis 及关键外部服务的可用性"""
     result = HealthCheckResponse(status="ok", version=version.APP_VERSION)
 
@@ -210,10 +226,14 @@ def health_check():
 
     # 关键外部服务：消息客户端
     try:
-        msg_clients = container.message().active_clients
-        result.services["message"] = HealthServiceStatus(status="ok", detail=f"已配置 {len(msg_clients)} 个消息客户端")
+        msg_clients = message.active_clients
+        result.services[RegistryKey.MESSAGE.value] = HealthServiceStatus(
+            status="ok", detail=f"已配置 {len(msg_clients)} 个消息客户端"
+        )
     except Exception as e:
-        result.services["message"] = HealthServiceStatus(status="error", detail=f"消息客户端检查失败: {e!s}")
+        result.services[RegistryKey.MESSAGE.value] = HealthServiceStatus(
+            status="error", detail=f"消息客户端检查失败: {e!s}"
+        )
 
     return result
 
@@ -223,16 +243,15 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     """
     全局 HTTP 异常处理器
     当页面路由返回 401 时，自动重定向到登录页（兼容浏览器行为）
+    API 路由返回 JSON 格式错误
     """
     if exc.status_code == 401:
-        accept = request.headers.get("accept", "")
-        # 仅当浏览器页面请求（text/html）时自动跳转登录页
-        # API 请求（application/json 或 */*）保持 401 JSON 响应
-        if "text/html" in accept:
-            return RedirectResponse(url="/", status_code=302)
-    # 其他情况返回默认 JSON 响应
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail},
-        headers=dict(exc.headers) if exc.headers else None,
-    )
+        path = request.url.path
+        # API 路由返回 JSON 401，页面路由重定向到登录页
+        if path.startswith("/api/"):
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"code": -1, "message": "认证失败，请重新登录"},
+            )
+        return RedirectResponse(url="/")
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})

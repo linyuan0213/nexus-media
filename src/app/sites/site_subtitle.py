@@ -10,13 +10,11 @@ from lxml import etree
 import log
 from app.core.constants import MT_URL, RMT_SUBEXT
 from app.sites import engine_tools
-from app.sites.engine import SiteEngine
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.utils import ExceptionUtils, PathUtils, StringUtils, SystemUtils
 from app.infrastructure.temp import temp_manager
-from app.di import container
 
 
 def _get_url_subtitle_name(disposition, url):
@@ -44,9 +42,10 @@ class SiteSubtitle:
     sites = None
     _save_tmp_path = None
 
-    def __init__(self):
-        self.siteconf = container.site_conf()
-        self.sites = container.site_cache()
+    def __init__(self, siteconf, sites, site_engine):
+        self.siteconf = siteconf
+        self._site_engine = site_engine
+        self.sites = sites
         self._save_tmp_path = temp_manager.get_temp_path()
 
     def download(self, media_info, site_id, cookie, ua, download_dir):
@@ -66,7 +65,7 @@ class SiteSubtitle:
         if self.sites and self.sites.check_ratelimit(site_id):
             return
 
-        engine = SiteEngine.get_instance()
+        engine = self._site_engine
         site_def = engine.get_by_url(media_info.page_url)
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
@@ -209,7 +208,7 @@ class SiteSubtitle:
 
         # 获取字幕列表
         subtitle_list_url = f"{MT_URL}/api/subtitle/list"
-        engine = SiteEngine.get_instance()
+        engine = self._site_engine
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         client = HttpClient(

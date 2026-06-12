@@ -68,7 +68,7 @@
           "type": "input",
           "label": "种子文件路径",
           "default": "",
-          "placeholder": "/config/qBittorrent/BT_backup",
+          "placeholder": "/data/qBittorrent/BT_backup",
           "help": "源下载器保存种子文件的路径，QB一般为BT_backup，TR一般为torrents"
         },
         {

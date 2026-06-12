@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.domain.mediatypes import MediaType
-from app.di import container
 
 
 @dataclass
@@ -21,7 +20,7 @@ class MediaInfoRepository:
     """媒体信息仓储 — 从数据库查已识别的媒体记录"""
 
     def __init__(self, download_repo: DownloadHistoryRepositoryAdapter | None = None):
-        self._download_repo = download_repo or container.download_history_repo()
+        self._download_repo = download_repo or DownloadHistoryRepositoryAdapter()
 
     def get_by_download_path(self, path: str) -> MediaRecord | None:
         """根据下载路径查下载历史"""

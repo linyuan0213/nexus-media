@@ -1,4 +1,3 @@
-from app.di import container
 from app.infrastructure.cache_system import TokenCache
 from app.mediaserver import MediaServer
 from app.schemas.media import LibrarySpaceDTO
@@ -12,9 +11,19 @@ class MediaLibraryService:
     媒体库业务服务
     """
 
-    def __init__(self, media_server: MediaServer | None = None, filetransfer: FileTransfer | None = None):
-        self._media_server = media_server or container.media_server()
-        self._filetransfer = filetransfer or container.filetransfer_service()
+    def __init__(
+        self,
+        media_server: MediaServer,
+        filetransfer: FileTransfer,
+        system_config,
+        thread_executor,
+        media_config_service,
+    ):
+        self._media_server = media_server
+        self._filetransfer = filetransfer
+        self._system_config = system_config
+        self._thread_executor = thread_executor
+        self._media_config_service = media_config_service
 
     def get_sync_state(self) -> str:
         """获取同步状态文本"""
@@ -30,8 +39,8 @@ class MediaLibraryService:
     def start_sync(self, librarys: list):
         """开始媒体库同步"""
         TokenCache.delete("index")
-        container.system_config().set(key=SystemConfigKey.SyncLibrary, value=librarys)
-        container.thread_executor().submit(self._media_server.sync_mediaserver)
+        self._system_config.set(key=SystemConfigKey.SyncLibrary, value=librarys)
+        self._thread_executor.submit(self._media_server.sync_mediaserver)
 
     def get_media_count(self) -> dict | None:
         """获取媒体库统计"""
@@ -65,7 +74,7 @@ class MediaLibraryService:
 
     def get_space_info(self) -> LibrarySpaceDTO:
         """获取媒体库存储空间"""
-        media_cfg = container.media_config_service().get_config()
+        media_cfg = self._media_config_service.get_config()
         movie_paths = media_cfg.get("movie_path") or []
         tv_paths = media_cfg.get("tv_path") or []
         anime_paths = media_cfg.get("anime_path") or []

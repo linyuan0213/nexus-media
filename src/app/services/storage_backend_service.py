@@ -1,14 +1,13 @@
 """Storage backend service - 存储后端配置业务层."""
 
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
-from app.di import container
 
 
 class StorageBackendService:
     """存储后端配置业务服务"""
 
-    def __init__(self, repo: StorageBackendRepositoryAdapter | None = None):
-        self._repo = repo or container.storage_backend_repo()
+    def __init__(self, repo: StorageBackendRepositoryAdapter):
+        self._repo = repo
 
     def list_backends(self) -> list[dict]:
         """获取所有存储后端列表"""

@@ -3,16 +3,16 @@ Customization Plugin v2
 添加自定义占位符识别正则
 """
 
+from app.media.parser._customization import CustomizationMatcher
 from app.plugin_framework.context import PluginContext
-from app.di import container
 
 
 class CustomizationPlugin:
     """自定义占位符插件"""
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(self, ctx: PluginContext, customization_matcher=None):
         self.ctx = ctx
-        self._matcher = container.customization_matcher()
+        self._matcher = customization_matcher or CustomizationMatcher()
 
     def _get_config(self):
         return self.ctx.get_config() or {}

@@ -19,7 +19,6 @@ from app.downloader.client_factory import DownloadClientFactory
 from app.services.download_core import DownloadCore
 from app.services.transfer_coordinator import TransferCoordinator
 from app.services.transfer_pipeline import TransferPipeline
-from app.di import container
 
 _downloader_locks: dict[str, Lock] = {}
 
@@ -42,15 +41,17 @@ class DownloaderCore:
 
     def __init__(
         self,
-        client_factory: DownloadClientFactory | None = None,
-        download_core: DownloadCore | None = None,
-        transfer_coordinator: TransferCoordinator | None = None,
-        transfer_pipeline: TransferPipeline | None = None,
+        client_factory: DownloadClientFactory,
+        transfer_coordinator: TransferCoordinator,
+        transfer_pipeline: TransferPipeline,
+        download_core: DownloadCore,
+        download_history_repo=None,
     ):
-        self._client_factory = client_factory or DownloadClientFactory()
-        self._download_core = download_core or DownloadCore(client_factory=self._client_factory)
-        self._pipeline = transfer_pipeline or TransferPipeline()
-        self._transfer_coordinator = transfer_coordinator or TransferCoordinator()
+        self._client_factory = client_factory
+        self._pipeline = transfer_pipeline
+        self._transfer_coordinator = transfer_coordinator
+        self._download_core = download_core
+        self._download_history_repo = download_history_repo
 
     # ---------- 生命周期（由外部 SystemLifecycleService 控制） ----------
 
@@ -209,10 +210,10 @@ class DownloaderCore:
 
     def _resolve_downloader_id(self, download_id: str | None) -> str | None:
         """根据任务 ID 从下载历史记录中解析对应的下载器 ID"""
-        if not download_id:
+        if not download_id or not self._download_history_repo:
             return None
         try:
-            history = container.download_history_repo().get_by_id(download_id)
+            history = self._download_history_repo.get_by_id(download_id)
             if history:
                 return history.DOWNLOADER
         except Exception as e:
@@ -296,9 +297,8 @@ class DownloaderCore:
     def get_torrent_episodes(self, url, page_url=None):
         return self._download_core.get_torrent_episodes(url=url, page_url=page_url)
 
-    @staticmethod
-    def get_download_url(page_url):
-        return DownloadCore.get_download_url(page_url)
+    def get_download_url(self, page_url):
+        return self._download_core.get_download_url(page_url)
 
     # ---------- 历史记录 ----------
 

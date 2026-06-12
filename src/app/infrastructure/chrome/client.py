@@ -4,11 +4,10 @@ import time
 import uuid
 from typing import Any
 
-import requests
-from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_fixed
-
 import log
 from app.core.settings import settings
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 
 
 def generate_tab_id() -> str:
@@ -38,7 +37,7 @@ class ChromeClient:
             return self._status_cache
 
         try:
-            response = requests.get(f"{self.url}/status", timeout=2)
+            response = HttpClient(config=HttpClientConfig(timeout=2)).get(f"{self.url}/status")
             self._status_cache = response.status_code == 200
             self._status_cache_time = now
             return self._status_cache
@@ -48,25 +47,10 @@ class ChromeClient:
             self._status_cache_time = now
             return False
 
-    def _request_with_retry(
-        self, method: str, url: str, retries: int = 2, delay: int = 1, **kwargs: Any
-    ) -> requests.Response:
-        """通用的网络请求重试逻辑"""
-
-        def _log_retry(retry_state):
-            exc = retry_state.outcome.exception()
-            log.debug(f"请求失败(重试 {retry_state.attempt_number}): {exc}")
-
-        for attempt in Retrying(
-            stop=stop_after_attempt(retries),
-            wait=wait_fixed(delay),
-            retry=retry_if_exception_type(requests.exceptions.RequestException),
-            before_sleep=_log_retry,
-            reraise=True,
-        ):
-            with attempt:
-                return requests.request(method, url, **kwargs)
-        raise RuntimeError(f"所有重试失败，失败请求 {url}")
+    def _request(self, method: str, url: str, **kwargs: Any):
+        """发送 HTTP 请求（HttpClient 内置重试）"""
+        timeout = kwargs.pop("timeout", 30)
+        return HttpClient(config=HttpClientConfig(timeout=timeout)).request(method, url, **kwargs)
 
     def get_page_html(
         self,
@@ -134,9 +118,7 @@ class ChromeClient:
                 click_data = json.dumps({"tab_name": tab_id, "selector": click_xpath}, separators=(",", ":"))
 
                 try:
-                    self._request_with_retry(
-                        method="POST", url=click_url, headers=headers, data=click_data, timeout=timeout
-                    )
+                    self._request(method="POST", url=click_url, headers=headers, data=click_data, timeout=timeout)
                     # 点击后等待页面更新 - 使用专门的点击后等待时间
                     log.info(f"点击完成，等待 {actual_click_delay} 秒让页面加载")
                     time.sleep(actual_click_delay)
@@ -193,7 +175,7 @@ class ChromeClient:
     def _fetch_html(self, url: str, timeout: int) -> str:
         """获取HTML内容并返回JSON字符串"""
         try:
-            response = self._request_with_retry(method="GET", url=url, timeout=timeout)
+            response = self._request(method="GET", url=url, timeout=timeout)
             return response.text
         except Exception as e:
             log.error(f"_fetch_html 失败: {str(e)}")
@@ -245,7 +227,7 @@ class ChromeClient:
         # 打开新标签
         tabs_url = f"{self.url}/tabs"
         try:
-            response = self._request_with_retry(
+            response = self._request(
                 method="POST",
                 url=tabs_url,
                 headers=headers,
@@ -268,7 +250,7 @@ class ChromeClient:
             return ""
 
         try:
-            response = self._request_with_retry(method="GET", url=f"{self.url}/tabs/{tab_id}/cookie", timeout=timeout)
+            response = self._request(method="GET", url=f"{self.url}/tabs/{tab_id}/cookie", timeout=timeout)
 
             cookie_dict = response.json()
             content = cookie_dict.get("cookie")
@@ -285,14 +267,14 @@ class ChromeClient:
 
         close_url = f"{self.url}/tabs/{tab_id}"
         try:
-            self._request_with_retry(method="DELETE", url=close_url)
+            self._request(method="DELETE", url=close_url)
         except Exception as e:
             log.error(f"关闭标签页异常: {str(e)}")
 
     def _refresh_tab(self, tab_id: str):
         """刷新标签页"""
         try:
-            response = self._request_with_retry(method="GET", url=f"{self.url}/tabs/{tab_id}/refresh")
+            response = self._request(method="GET", url=f"{self.url}/tabs/{tab_id}/refresh")
 
             status_dict = response.json()
             status = status_dict.get("code")
@@ -312,9 +294,7 @@ class ChromeClient:
             {"tab_name": tab_id, "selector": selector, "input_str": input_str}, separators=(",", ":")
         )
         try:
-            response = self._request_with_retry(
-                method="POST", url=click_url, headers=headers, data=click_data, timeout=timeout
-            )
+            response = self._request(method="POST", url=click_url, headers=headers, data=click_data, timeout=timeout)
             if response.json().get("code") == 0:
                 return True
         except Exception as e:
@@ -330,6 +310,6 @@ class ChromeClient:
 
         close_url = f"{self.url}/tabs/"
         try:
-            self._request_with_retry(method="DELETE", url=close_url)
+            self._request(method="DELETE", url=close_url)
         except Exception as e:
             log.error(f"关闭标签页异常: {str(e)}")

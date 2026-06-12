@@ -6,10 +6,9 @@ Emby删除媒体后同步删除历史记录或源文件
 import os
 import time
 
-from app.media import MediaService
 from app.plugin_framework.context import PluginContext
 from app.domain.mediatypes import MediaType
-from app.di import container
+from app.services.transfer.filetransfer_service import FileTransferService
 
 
 class MediaSyncDelPlugin:
@@ -26,9 +25,9 @@ class MediaSyncDelPlugin:
     DEFAULT_SAME_MEDIA_THRESHOLD = 3
     DEFAULT_COOLDOWN = 1800
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(self, ctx: PluginContext, filetransfer: FileTransferService):
         self.ctx = ctx
-        self._filetransfer = container.filetransfer_service()
+        self._filetransfer = filetransfer
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -231,17 +230,15 @@ class MediaSyncDelPlugin:
                 return
 
         self.ctx.info(f"获取到删除媒体数量 {len(logids)}")
-        container.filetransfer_service().delete_history(
-            logids=logids, flag="del_source" if config.get("del_source") else ""
-        )
+        self._filetransfer.delete_history(logids=logids, flag="del_source" if config.get("del_source") else "")
 
         if config.get("send_notify"):
             if media_type == "Episode":
-                image_url = MediaService().get_episode_images(
+                image_url = self.ctx.media_service.get_episode_images(
                     tv_id=tmdb_id, season_id=season_num, episode_id=episode_num, orginal=True
                 )
             else:
-                image_url = MediaService().get_tmdb_backdrop(
+                image_url = self.ctx.media_service.get_tmdb_backdrop(
                     mtype=MediaType.MOVIE if media_type == "Movie" else MediaType.TV, tmdbid=tmdb_id
                 )
             self.ctx.notify(

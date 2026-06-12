@@ -7,9 +7,9 @@ import json
 import os
 from datetime import datetime, timedelta
 from threading import Event
+from typing import Any
 
 import pytz
-
 from app.core.constants import MT_URL
 from app.plugin_framework.builtin_plugins.iyuuautoseed.backend.iyuu.iyuu_helper import IyuuHelper
 from app.plugin_framework.context import PluginContext
@@ -17,18 +17,21 @@ from app.schemas.download import Torrent
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
-from app.sites.engine import SiteEngine
 from app.utils.config_tools import get_proxies
-from app.di import container
 
 
 class IYUUAutoSeedPlugin:
     """IYUU自动辅种插件"""
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(
+        self,
+        ctx: PluginContext,
+        downloader: Any,
+        sites: Any,
+    ):
         self.ctx = ctx
-        self._downloader = container.downloader_core()
-        self._sites = container.site_cache()
+        self._downloader = downloader
+        self._sites = sites
         self._event = Event()
         self.iyuuhelper = None
         self._recheck_torrents = {}
@@ -84,7 +87,7 @@ class IYUUAutoSeedPlugin:
             self.ctx.warn("未配置IYUU Token")
             return
 
-        self.iyuuhelper = IyuuHelper(token=token)
+        self.iyuuhelper = IyuuHelper(token=token, site_engine=self.ctx.site_engine)
 
         if cron:
             self.ctx.info(f"辅种服务启动，周期：{cron}")
@@ -306,7 +309,7 @@ class IYUUAutoSeedPlugin:
         torrent_url = download_page.replace("{}", str(seed.get("torrent_id")))
         proxies = get_proxies() if site_info.get("proxy") else None
         proxy_url = proxies.get("http") if proxies else None
-        engine = SiteEngine.get_instance()
+        engine = self.ctx.site_engine
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         try:

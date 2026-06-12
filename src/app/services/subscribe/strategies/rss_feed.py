@@ -12,14 +12,21 @@ from app.core.exceptions import (
     RepositoryError,
     ServiceError,
 )
+from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
-from app.di import container
-from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
-from app.services.subscribe.matcher import SubscribeMatcher
-from app.sites.torrent import Torrent
-from app.utils import ExceptionUtils, JsonUtils
 from app.domain.mediatypes import MediaType
 from app.domain.enums import SearchType
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
+from app.message import Message
+from app.services.downloader_core import DownloaderCore
+from app.media.service import MediaService
+from app.services.rss_processor import RssHelper
+from app.services.subscribe.management.service import SubscribeService
+from app.services.subscribe.matcher import SubscribeMatcher
+from app.sites.site_cache import SiteCache
+from app.sites.siteconf import SiteConf
+from app.sites.torrent import Torrent
+from app.utils import ExceptionUtils, JsonUtils
 
 lock = Lock()
 
@@ -29,28 +36,32 @@ class RssFeedStrategy:
 
     def __init__(
         self,
-        media=None,
-        downloader=None,
-        sites=None,
-        siteconf=None,
-        download_repo=None,
-        rss_repo=None,
-        rsshelper=None,
-        subscribe=None,
-        matcher=None,
-        message=None,
+        media: MediaService,
+        downloader: DownloaderCore,
+        sites: SiteCache,
+        siteconf: SiteConf,
+        download_repo: DownloadHistoryRepositoryAdapter,
+        rss_repo: SubscribeHistoryRepositoryAdapter,
+        rsshelper: RssHelper,
+        subscribe: SubscribeService | None,
+        matcher: SubscribeMatcher,
+        message: Message,
         coordinator=None,
     ):
-        self.media = media or container.media_service()
-        self.sites = sites or container.site_cache()
-        self.siteconf = siteconf or container.site_conf()
-        self.downloader = downloader or container.downloader_core()
-        self.download_repo = download_repo or container.download_history_repo()
-        self.rss_repo = rss_repo or SubscribeHistoryRepositoryAdapter()
-        self.rsshelper = rsshelper or container.rss_helper()
-        self.subscribe = subscribe or container.subscribe_service()
-        self.matcher = matcher or SubscribeMatcher()
-        self.message = message or container.message()
+        self.media = media
+        self.sites = sites
+        self.siteconf = siteconf
+        self.downloader = downloader
+        self.download_repo = download_repo
+        self.rss_repo = rss_repo
+        self.rsshelper = rsshelper
+        self.subscribe = subscribe
+        self.matcher = matcher
+        self.message = message
+        self._coordinator = coordinator
+
+    def set_coordinator(self, coordinator) -> None:
+        """设置下载协调器（用于 SubscriptionMonitor 注入）."""
         self._coordinator = coordinator
 
     def run(self) -> None:
@@ -400,7 +411,7 @@ class RssFeedStrategy:
             try:
                 episodes, file_path = self.downloader.get_torrent_episodes(media.enclosure, media.page_url)
                 if file_path:
-                    Torrent().delete_torrent_file(file_path)
+                    Torrent.delete_torrent_file(file_path)
                 if episodes:
                     media.total_episodes = len(episodes)
                     media.begin_episode = min(episodes)

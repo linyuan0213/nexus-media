@@ -1,15 +1,22 @@
 """Subscribe calendar service — 订阅日历事件聚合."""
 
-from app.di import container
+from app.services.media_info_service import MediaInfoService
+from app.services.rss_automation.task_service import RssTaskService
+from app.services.subscribe.management.service import SubscribeService
 
 
 class SubscribeCalendarService:
     """订阅日历服务 — 聚合电影/电视剧的日历事件."""
 
-    def __init__(self, media_info_service=None, subscribe=None, rss_task_service=None):
-        self._media_info_service = media_info_service or container.media_info_service()
-        self._subscribe = subscribe or container.subscribe_service()
-        self._rss_task_service = rss_task_service or container.rss_task_service()
+    def __init__(
+        self,
+        media_info_service: MediaInfoService,
+        subscribe: SubscribeService,
+        rss_task_service: RssTaskService,
+    ):
+        self._media_info_service = media_info_service
+        self._subscribe = subscribe
+        self._rss_task_service = rss_task_service
 
     def get_movie_items(self) -> list[dict]:
         """获取电影订阅项目列表."""

@@ -4,16 +4,17 @@ from typing import Any
 
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
-from app.db.repositories.brush_repo_adapter import BrushTaskRepositoryAdapter
-from app.di import container
-from app.services.rss_processor import RssHelper
+from app.media import MediaService
 from app.message import Message
+from app.services.rss_processor import RssHelper
 from app.services.brush.helpers import BrushTaskHelper
 from app.services.brush.rss_checker import BrushRssChecker
 from app.services.brush.scheduler import BrushTaskScheduler
 from app.services.brush.torrent_lifecycle import BrushTorrentLifecycle
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.sites import SiteConf
+from app.sites.engine import SiteEngine
+from app.sites.site_cache import SiteCache
 from app.utils import StringUtils
 
 
@@ -25,22 +26,29 @@ class BrushTaskService:
 
     def __init__(
         self,
-        repository: Any | None = None,
-        scheduler: BrushTaskScheduler | None = None,
-        downloader: Downloader | None = None,
-        message: Message | None = None,
-        sites=None,
-        siteconf: SiteConf | None = None,
-        rsshelper: RssHelper | None = None,
+        repository: Any,
+        scheduler: BrushTaskScheduler,
+        downloader: Downloader,
+        message: Message,
+        sites: SiteCache,
+        siteconf: SiteConf,
+        site_engine: SiteEngine,
+        rsshelper: RssHelper,
+        filter_service: Any,
+        brush_rule_repo: Any,
+        media_service: MediaService,
     ):
-        self._repo: Any = repository or BrushTaskRepositoryAdapter()
-        self._scheduler = scheduler or BrushTaskScheduler()
-        self._downloader: Any = downloader or container.downloader_core()
-        self._message: Message = message or Message()
-        self._sites = sites or container.site_cache()
-        self._siteconf = siteconf or container.site_conf()
-        self._rsshelper = rsshelper or RssHelper()
-        self._filter = container.filter_service()
+        self._repo: Any = repository
+        self._scheduler = scheduler
+        self._downloader: Any = downloader
+        self._message: Message = message
+        self._sites = sites
+        self._siteconf = siteconf
+        self._site_engine = site_engine
+        self._rsshelper = rsshelper
+        self._filter = filter_service
+        self._brush_rule_repo = brush_rule_repo
+        self._media_service = media_service
         self._brush_tasks: dict = {}
         self._torrents_cache: set = set()
 
@@ -50,11 +58,13 @@ class BrushTaskService:
             sites=self._sites,
             siteconf=self._siteconf,
             message=self._message,
+            site_engine=self._site_engine,
         )
         self._rss_checker = BrushRssChecker(
             helper=self._helper,
-            rsshelper=self._rsshelper,
+            media_service=self._media_service,
             sites=self._sites,
+            rsshelper=self._rsshelper,
             siteconf=self._siteconf,
             torrents_cache=self._torrents_cache,
         )
@@ -167,8 +177,7 @@ class BrushTaskService:
         rule_id = getattr(task, "RULE_ID", None)
         if rule_id:
             try:
-                adapter = container.brush_rule_repo()
-                entity = adapter.get_by_id(int(rule_id))
+                entity = self._brush_rule_repo.get_by_id(int(rule_id))
                 if entity:
                     rss_rule = self._helper.parse_json_rule(entity.rss_rule, rss_rule)
                     remove_rule = self._helper.parse_json_rule(entity.remove_rule, remove_rule)

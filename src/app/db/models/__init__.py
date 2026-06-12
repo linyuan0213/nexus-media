@@ -23,6 +23,8 @@ from app.db.models.brush import (
 from app.db.models.config import (
     CONFIGFILTERGROUP,
     CONFIGFILTERRULES,
+    CONFIGCATEGORY,
+    CONFIGCATEGORYRULE,
     CONFIGMEDIA,
     CONFIGRSSPARSER,
     CONFIGSITE,
@@ -146,6 +148,8 @@ __all__ = [
     "CONFIGUSERRSS",
     "MEDIASERVER",
     "CONFIGMEDIA",
+    "CONFIGCATEGORY",
+    "CONFIGCATEGORYRULE",
     "STORAGEBACKEND",
     # 识别词
     "CUSTOMWORDS",

@@ -24,10 +24,30 @@ from app.utils.exception_utils import ExceptionUtils
 
 
 class ThreadExecutor:
-    """线程池执行器."""
+    """线程池执行器.
+
+    自托管单例：通过 named() 获取命名实例，shutdown_all() 统一关闭。
+    """
 
     _instances: dict[str, "ThreadExecutor"] = {}
     _lock = threading.Lock()
+
+    @classmethod
+    def shutdown_all(cls) -> None:
+        """关闭所有命名线程池（lifespan 清理用）."""
+        for executor in list(cls._instances.values()):
+            executor.shutdown(wait=False)
+        cls._instances.clear()
+
+    @classmethod
+    def reset_instance(cls, name: str | None = None) -> None:
+        """测试时重置指定或全部实例."""
+        if name:
+            if name in cls._instances:
+                cls._instances[name].shutdown(wait=False)
+                cls._instances.pop(name, None)
+        else:
+            cls.shutdown_all()
 
     def __init__(self, max_workers: int = 50, name: str = "default"):
         self._name = name

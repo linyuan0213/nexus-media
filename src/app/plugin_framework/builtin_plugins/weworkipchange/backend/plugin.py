@@ -10,25 +10,28 @@ import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from typing import Any
 
 import pytz
-from pyquery import PyQuery
-
 from app.infrastructure.cache_system.cookiecloud_adapter import CookiecloudAdapter
 from app.infrastructure.cache_system import get_cache_manager
-from app.di import container
 from app.plugin_framework.context import PluginContext
-from app.plugin_framework.hook_system import HookSystem
-from app.infrastructure.http.client import HttpClient
 from app.utils.config_tools import get_ua
+from pyquery import PyQuery
+from app.infrastructure.chrome import ChromeClient
+from app.infrastructure.http.client import HttpClient
 
 
 class WeworkIPChangePlugin:
     """企业微信可信任IP更新插件"""
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(
+        self,
+        ctx: PluginContext,
+        drissionpage_helper: Any = None,
+    ):
         self.ctx = ctx
-        self._drissonpage_helper = None
+        self._drissonpage_helper = drissionpage_helper or ChromeClient()
         self._cache = None
         self._tab_id = ""
         self._ip_url = "https://4.ipw.cn"
@@ -38,10 +41,9 @@ class WeworkIPChangePlugin:
 
     def on_enable(self):
         self.ctx.info("企业微信可信IP更新插件已启用")
-        self._drissonpage_helper = container.drissionpage_helper()
         self._cache = get_cache_manager().get_or_create("wework_ipchange", cache_type="redis", fallback_maxsize=10)
         self._init_chrome_tab()
-        HookSystem().register("wework.login", self.ctx.plugin_id)
+        self.ctx.hook_system.register("wework.login", self.ctx.plugin_id)
         self._start_service()
 
     def on_disable(self):
@@ -178,7 +180,7 @@ class WeworkIPChangePlugin:
             return
 
         if use_cookiecloud:
-            HookSystem().emit("site.cookie_sync", {})
+            self.ctx.emit("site.cookie_sync", {})
             time.sleep(10)
             cookie = CookiecloudAdapter().get_cookie("qq.com")
 

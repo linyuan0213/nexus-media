@@ -1,23 +1,26 @@
 import time
 
-from app.di import container
 from app.infrastructure.cache_system.cookiecloud_adapter import CookiecloudAdapter
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base import (
     SigninResult,
     SiteSigninContext,
     SiteSigninHandler,
 )
-from app.plugin_framework.hook_system import HookSystem
 from app.utils.config_tools import get_ua
+from app.infrastructure.chrome import ChromeClient
 
 
 class MTeam(SiteSigninHandler):
     site_url = "kp.m-team.cc"
 
+    def __init__(self, plugin_ctx, rate_limiter=None, drissionpage_helper=None):
+        super().__init__(plugin_ctx, rate_limiter)
+        self._drissionpage_helper = drissionpage_helper or ChromeClient()
+
     def signin(self, ctx: SiteSigninContext) -> SigninResult:
         site = ctx.site
 
-        HookSystem().emit("site.local_storage_sync", {})
+        self._plugin_ctx.emit("site.local_storage_sync", {})
         time.sleep(10)
         local_storage = CookiecloudAdapter().get_local_storage("m-team.io")
 
@@ -30,7 +33,7 @@ class MTeam(SiteSigninHandler):
             return SigninResult.fail(site, "persist:user获取失败或为空")
 
         self._plugin_ctx.info(f"{site} 开始仿真登录")
-        chrome = container.drissionpage_helper()
+        chrome = self._drissionpage_helper
         if ctx.is_chrome and chrome.get_status():
             self._plugin_ctx.info(f"{site} 开始仿真登录")
             html_text = chrome.get_page_html(

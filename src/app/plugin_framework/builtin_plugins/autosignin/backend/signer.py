@@ -2,18 +2,19 @@ import copy
 import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
-from app.di import container
-from app.message import Message
+
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base import SiteSigninContext
 from app.plugin_framework.builtin_plugins.autosignin.backend.registry import HandlerRegistry
 from app.plugin_framework.builtin_plugins.autosignin.backend.simulator import ChromeSigninSimulator
+from app.message import Message
 
 
 class SigninEngine:
-    def __init__(self, ctx, registry: HandlerRegistry, simulator: ChromeSigninSimulator):
+    def __init__(self, ctx, registry: HandlerRegistry, simulator: ChromeSigninSimulator, site_cache=None):
         self.ctx = ctx
         self._registry = registry
         self._simulator = simulator
+        self._site_cache = site_cache
 
     def run(self, config: dict, get_history, update_history, delete_history):
         sign_sites_cfg = config.get("sign_sites", [])
@@ -45,7 +46,7 @@ class SigninEngine:
                 return
 
         emulate_set = set(emulate_sites).intersection(set(sign_sites))
-        sign_sites = copy.deepcopy(container.site_cache().get_sites(siteids=sign_sites))
+        sign_sites = copy.deepcopy(self._site_cache.get_sites(siteids=sign_sites))  # type: ignore
         if not sign_sites:
             self.ctx.info("没有可签到站点，停止运行")
             return
@@ -112,7 +113,7 @@ class SigninEngine:
         fz_sign_msg: list = []
         failed_msg: list = []
 
-        sites_map = {site.get("name"): site.get("id") for site in container.site_cache().get_site_dict()}
+        sites_map = {site.get("name"): site.get("id") for site in self._site_cache.get_site_dict()}  # type: ignore
         for s in status:
             if not s:
                 continue
@@ -143,7 +144,7 @@ class SigninEngine:
 
         self.ctx.debug(f"下次签到重试站点 {retry_sites}")
 
-        id_to_name = {str(site.get("id")): site.get("name") for site in container.site_cache().get_site_dict()}
+        id_to_name = {str(site.get("id")): site.get("name") for site in self._site_cache.get_site_dict()}  # type: ignore
         today_history = get_history(key=today_str) or {}
         today_history.update({"sign": sign_sites_cfg, "retry": retry_sites, "names": id_to_name})
         update_history(today_str, today_history)

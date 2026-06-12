@@ -1,13 +1,20 @@
-from app.di import container
+from typing import Any
+
+from app.db.repositories.plugin_repo_adapter import TmdbBlacklistRepositoryAdapter
+from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system import get_cache_manager
 from app.media.parser._metainfo import meta_info
-from app.domain.mediatypes import MediaType
+from app.media.service import MediaService
 
 
 class TmdbBlacklistService:
-    def __init__(self):
-        self._db = container.tmdb_blacklist_repo()
-        self._media = container.media_service()
+    def __init__(
+        self,
+        media_service: MediaService,
+        tmdb_blacklist_repo: Any = None,
+    ):
+        self._db = tmdb_blacklist_repo or TmdbBlacklistRepositoryAdapter()
+        self._media = media_service
         self._cache = get_cache_manager().get_or_create("tmdb_blacklist", "memory", maxsize=1, ttl=300)
 
     def is_blacklisted(self, tmdb_id, media_type=None):

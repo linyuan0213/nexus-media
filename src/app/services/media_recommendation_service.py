@@ -1,11 +1,10 @@
-from app.di import container
 from app.infrastructure.image_proxy import ImageProxy
 from app.media import Bangumi, DouBan, MediaService
 from app.mediaserver import MediaServer
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.domain.media_utils import check_media_exists
 from app.domain.mediatypes import MediaType
-from app.services.web import WebUtils
+from app.services.web.utils import search_media_infos
 
 
 class MediaRecommendationService:
@@ -15,17 +14,21 @@ class MediaRecommendationService:
 
     def __init__(
         self,
-        media_service: MediaService | None = None,
-        douban: DouBan | None = None,
-        bangumi: Bangumi | None = None,
-        media_server: MediaServer | None = None,
-        subscribe: Subscribe | None = None,
+        media_service: MediaService,
+        douban: DouBan,
+        bangumi: Bangumi,
+        media_server: MediaServer,
+        subscribe: Subscribe,
+        media_info_service,
+        downloader_core,
     ):
-        self._media = media_service or container.media_service()
-        self._douban = douban or container.douban()
-        self._bangumi = bangumi or Bangumi()
-        self._media_server = media_server or container.media_server()
-        self._subscribe = subscribe or container.subscribe_service()
+        self._media = media_service
+        self._douban = douban
+        self._bangumi = bangumi
+        self._media_server = media_server
+        self._subscribe = subscribe
+        self._media_info_service = media_info_service
+        self._downloader_core = downloader_core
 
     def get_recommend_items(self, data: dict) -> list[dict]:
         """
@@ -70,14 +73,13 @@ class MediaRecommendationService:
                 tmdb_id = data.get("tmdbid")
 
                 res_list = (
-                    container.media_info_service().get_media_similar(tmdbid=tmdb_id, mtype_str=type_, page=current_page)
-                    or []
+                    self._media_info_service.get_media_similar(tmdbid=tmdb_id, mtype_str=type_, page=current_page) or []
                 )
             elif subtype == "more":
                 tmdb_id = data.get("tmdbid")
 
                 res_list = (
-                    container.media_info_service().get_media_recommendations(
+                    self._media_info_service.get_media_recommendations(
                         tmdbid=tmdb_id, mtype_str=type_, page=current_page
                     )
                     or []
@@ -86,7 +88,7 @@ class MediaRecommendationService:
                 person_id = data.get("personid")
 
                 res_list = (
-                    container.media_info_service().get_person_medias(
+                    self._media_info_service.get_person_medias(
                         personid=person_id, mtype_str=None if type_ == "ALL" else type_, page=current_page
                     )
                     or []
@@ -94,10 +96,10 @@ class MediaRecommendationService:
         elif type_ == "SEARCH":
             keyword = data.get("keyword")
             source = data.get("source")
-            medias = WebUtils.search_media_infos(keyword=keyword, source=source, page=current_page)
+            medias = search_media_infos(keyword=keyword, source=source, page=current_page)
             res_list = [media.to_dict() for media in medias]
         elif type_ == "DOWNLOADED":
-            items = container.downloader_core().get_download_history(page=current_page)
+            items = self._downloader_core.get_download_history(page=current_page)
             res_list = self._convert_downloaded(items)
         elif type_ == "TRENDING":
             res_list = self._media.get_tmdb_trending_all_week(page=current_page)

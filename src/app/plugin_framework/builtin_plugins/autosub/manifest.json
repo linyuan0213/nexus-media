@@ -55,7 +55,7 @@
           "type": "input",
           "label": "whisper.cpp路径",
           "default": "",
-          "placeholder": "/config/plugin/autosub/main",
+          "placeholder": "/data/plugin/autosub/main",
           "help": "whisper.cpp主程序路径"
         },
         {
@@ -63,7 +63,7 @@
           "type": "input",
           "label": "whisper.cpp模型路径",
           "default": "",
-          "placeholder": "/config/plugin/autosub/models/ggml-base.en.bin",
+          "placeholder": "/data/plugin/autosub/models/ggml-base.en.bin",
           "help": "whisper.cpp模型路径"
         },
         {
@@ -98,7 +98,7 @@
           "type": "input",
           "label": "模型保存路径",
           "default": "",
-          "placeholder": "/config/plugin/autosub/faster-whisper/models",
+          "placeholder": "/data/plugin/autosub/faster-whisper/models",
           "help": "faster-whisper模型保存路径"
         },
         {

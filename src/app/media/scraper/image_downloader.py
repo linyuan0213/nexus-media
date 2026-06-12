@@ -3,13 +3,12 @@
 import io
 import os
 
-from requests.exceptions import RequestException
-
 import log
+from app.infrastructure.http import HttpClientError
 from app.storage.backends.base import StorageBackend
-from app.infrastructure.http import HttpClient
 from app.utils import ExceptionUtils
 from app.utils.commons import retry
+from app.infrastructure.http.client import HttpClient
 
 
 class ImageDownloader:
@@ -22,7 +21,7 @@ class ImageDownloader:
     def set_dst_backend(self, dst_backend: StorageBackend | None):
         self._dst_backend = dst_backend
 
-    @retry(RequestException, logger=log)
+    @retry(HttpClientError, logger=log)
     def download(self, url, out_path, itype="", force=False):
         """下载图片并保存"""
         if not url or not out_path:
@@ -45,8 +44,8 @@ class ImageDownloader:
                 log.info(f"[Scraper]{itype}图片已保存：{image_path}")
             else:
                 log.info(f"[Scraper]{itype}图片下载失败，请检查网络连通性")
-        except RequestException as ex:
-            raise RequestException from ex
+        except HttpClientError as ex:
+            raise HttpClientError(str(ex)) from ex
         except Exception as err:
             log.error(f"[Scraper]下载{itype}图片失败：{image_path}，错误：{err}")
             ExceptionUtils.exception_traceback(err)

@@ -12,7 +12,7 @@ from apscheduler.events import (
     JobExecutionEvent,
 )
 
-from app.di import container
+from app.di.registry import registry
 from app.services.scheduler.core import SchedulerCore
 from app.services.scheduler.event_handler import EventHandler
 from app.services.scheduler.models import JobStats, JobStatus, TaskConfig
@@ -20,12 +20,17 @@ from app.services.scheduler.models import JobStats, JobStatus, TaskConfig
 
 def clear_scheduler_state():
     """Helper to clear SchedulerCore state between tests."""
-    container.scheduler_core.reset()
+    try:
+        registry.clear()
+    except RuntimeError:
+        pass
 
 
 def clear_scheduler_singleton():
     """Helper to clear SchedulerCore singleton between tests."""
-    container.scheduler_core.reset()
+    from app.di.registry import registry
+
+    registry.clear()
 
 
 class TestJobStatus:
@@ -147,10 +152,10 @@ class TestSchedulerCoreLifecycle:
     def teardown_method(self):
         # Ensure scheduler is stopped after each test
         try:
-            core = container.scheduler_core()
+            core = SchedulerCore()
             if core._scheduler and core._scheduler.running:
                 core._scheduler.shutdown(wait=False)
-        except KeyError:
+        except (KeyError, RuntimeError):
             pass
         clear_scheduler_state()
 
@@ -207,10 +212,10 @@ class TestSchedulerCoreJobRegistry:
 
     def teardown_method(self):
         try:
-            core = container.scheduler_core()
+            core = SchedulerCore()
             if core._scheduler and core._scheduler.running:
                 core._scheduler.shutdown(wait=False)
-        except KeyError:
+        except (KeyError, RuntimeError):
             pass
         clear_scheduler_state()
 
@@ -318,10 +323,10 @@ class TestEventHandler:
 
     def teardown_method(self):
         try:
-            core = container.scheduler_core()
+            core = SchedulerCore()
             if core._scheduler and core._scheduler.running:
                 core._scheduler.shutdown(wait=False)
-        except KeyError:
+        except (KeyError, RuntimeError):
             pass
         clear_scheduler_state()
 
@@ -405,10 +410,10 @@ class TestRetryManager:
 
     def teardown_method(self):
         try:
-            core = container.scheduler_core()
+            core = SchedulerCore()
             if core._scheduler and core._scheduler.running:
                 core._scheduler.shutdown(wait=False)
-        except KeyError:
+        except (KeyError, RuntimeError):
             pass
         clear_scheduler_state()
 
@@ -459,10 +464,10 @@ class TestStatsCollector:
 
     def teardown_method(self):
         try:
-            core = container.scheduler_core()
+            core = SchedulerCore()
             if core._scheduler and core._scheduler.running:
                 core._scheduler.shutdown(wait=False)
-        except KeyError:
+        except (KeyError, RuntimeError):
             pass
         clear_scheduler_state()
 
@@ -524,10 +529,10 @@ class TestSchedulerCoreIntegration:
 
     def teardown_method(self):
         try:
-            core = container.scheduler_core()
+            core = SchedulerCore()
             if core._scheduler and core._scheduler.running:
                 core._scheduler.shutdown(wait=False)
-        except KeyError:
+        except (KeyError, RuntimeError):
             pass
         clear_scheduler_state()
 

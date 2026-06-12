@@ -8,8 +8,7 @@ from typing import Any
 
 import log
 from app.core.exceptions import DomainError, ServiceError
-
-from app.di import container
+from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.media import MediaService
 from app.media.models import MediaInfo
 from app.schemas.download import (
@@ -20,7 +19,8 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
 from app.services.search_service import Searcher
 from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
-
+from app.sites.engine import SiteEngine
+from app.sites.site_cache import SiteCache
 from app.sites.torrent import Torrent
 from app.infrastructure.temp import temp_manager
 from app.domain.enums import SearchType
@@ -38,19 +38,23 @@ class DownloadService:
 
     def __init__(
         self,
-        downloader: Downloader | None = None,
-        searcher: Searcher | None = None,
-        media_service: MediaService | None = None,
-        sites=None,
-        indexer_service: IndexerService | None = None,
-        torrent_remover: TorrentRemover | None = None,
+        downloader: Downloader,
+        searcher: Searcher,
+        media_service: MediaService,
+        sites: SiteCache,
+        site_engine: SiteEngine,
+        indexer_service: IndexerService,
+        torrent_remover: TorrentRemover,
+        download_history_repo: DownloadHistoryRepositoryAdapter,
     ):
-        self._downloader = downloader or container.downloader_core()
-        self._searcher = searcher or container.searcher()
-        self._media = media_service or container.media_service()
-        self._sites = sites or container.site_cache()
-        self._indexer_service = indexer_service or container.indexer_service()
-        self._torrent_remover = torrent_remover or container.torrentremover_service()
+        self._downloader = downloader
+        self._searcher = searcher
+        self._media = media_service
+        self._sites = sites
+        self._site_engine = site_engine
+        self._indexer_service = indexer_service
+        self._torrent_remover = torrent_remover
+        self._download_history_repo = download_history_repo
 
     # ---------- 下载编排 ----------
 
@@ -218,7 +222,8 @@ class DownloadService:
                 if not isinstance(site_info, dict):
                     site_info = {}
                 if not url.startswith("magnet:"):
-                    file_path, _, _, _, retmsg = Torrent().get_torrent_info(
+                    torrent = Torrent(site_engine=self._site_engine)
+                    file_path, _, _, _, retmsg = torrent.get_torrent_info(
                         url=url,
                         cookie=site_info.get("cookie"),
                         ua=site_info.get("ua"),
@@ -283,8 +288,7 @@ class DownloadService:
         获取正在下载的任务列表，并拼装媒体信息（标题、海报）
         从数据库读取任务列表，按需从下载器获取实时进度
         """
-        repo = container.download_history_repo()
-        active_tasks = repo.get_active_downloads()
+        active_tasks = self._download_history_repo.get_active_downloads()
         if not active_tasks:
             return []
 
@@ -367,7 +371,7 @@ class DownloadService:
         # 批量标记还在下载中的任务
         if active_ids:
             try:
-                repo.batch_update_state([(did, tid, "downloading") for did, tid in active_ids])
+                self._download_history_repo.batch_update_state([(did, tid, "downloading") for did, tid in active_ids])
             except (DomainError, ServiceError):
                 raise
             except Exception as e:
@@ -376,7 +380,7 @@ class DownloadService:
         # 批量标记已完成任务
         if completed_ids:
             try:
-                repo.batch_update_state([(did, tid, "completed") for did, tid in completed_ids])
+                self._download_history_repo.batch_update_state([(did, tid, "completed") for did, tid in completed_ids])
             except (DomainError, ServiceError):
                 raise
             except Exception as e:

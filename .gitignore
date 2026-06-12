@@ -25,7 +25,13 @@ htmlcov/
 # Cloudflare speedtest tool
 /cloudflarespeedtest/**
 
-# Runtime generated files
+# Runtime generated files — data/
+/data/
+
+# Runtime generated files — data/
+/data/
+
+# Runtime generated files — config/ (兼容旧数据目录)
 /static/
 /config/logs/
 /config/config.yaml
@@ -36,6 +42,8 @@ htmlcov/
 /config/*.db-shm
 /config/*.db-wal
 /config/redis_data/
+/config/plugins_data/
+/config/temp/
 /config/temp/*.torrent
 /config/plugins/
 /tests/*.db

@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.di import container
 from app.services.transfer.cleanup_service import TransferCleanupService
 from app.services.transfer.existence_checker import MediaExistenceChecker
 from app.services.transfer.filetransfer_service import FileTransferService
@@ -249,7 +248,13 @@ class TestTransferCleanupService:
     def test_delete_media_file_local(self):
         history = MagicMock()
         resolver = MagicMock()
-        cleanup = TransferCleanupService(history, resolver)
+        cleanup = TransferCleanupService(
+            history,
+            resolver,
+            media_service=MagicMock(),
+            message=MagicMock(),
+            event_bus=MagicMock(),
+        )
 
         backend = MagicMock()
         backend.exists.return_value = True
@@ -264,7 +269,13 @@ class TestTransferCleanupService:
 
         history = MagicMock()
         resolver = MagicMock()
-        cleanup = TransferCleanupService(history, resolver)
+        cleanup = TransferCleanupService(
+            history,
+            resolver,
+            media_service=MagicMock(),
+            message=MagicMock(),
+            event_bus=MagicMock(),
+        )
 
         backend = MagicMock()
         backend.exists.return_value = False
@@ -283,7 +294,13 @@ class TestTransferCleanupService:
         history.get_transfer_info_by_id.return_value = transinfo
 
         resolver = MagicMock()
-        cleanup = TransferCleanupService(history, resolver)
+        cleanup = TransferCleanupService(
+            history,
+            resolver,
+            media_service=MagicMock(),
+            message=MagicMock(),
+            event_bus=MagicMock(),
+        )
 
         with patch.object(cleanup, "delete_media_file") as mock_delete:
             mock_delete.return_value = (True, "deleted")
@@ -304,7 +321,6 @@ class TestFileTransferService:
             patch("app.services.transfer.filetransfer_service.MediaExistenceChecker"),
             patch("app.services.transfer.filetransfer_service.TransferHistoryManager") as mock_hist_cls,
             patch("app.services.transfer.filetransfer_service.TransferCleanupService") as mock_cln_cls,
-            patch.object(container, "sync_path_repo", return_value=MagicMock()),
             patch("app.services.transfer.filetransfer_service.settings") as mock_settings,
         ):
             mock_settings.get.return_value = {}
@@ -323,15 +339,16 @@ class TestFileTransferService:
             service = FileTransferService(
                 media_service=MagicMock(),
                 message=MagicMock(),
-                category=MagicMock(),
                 scraper=MagicMock(),
                 thread_executor=MagicMock(),
+                history_manager=mock_history,
                 progress=MagicMock(),
                 event_bus=MagicMock(),
                 engine=mock_engine,
                 path_resolver=mock_resolver,
                 existence_checker=MagicMock(),
                 cleanup_service=mock_cleanup,
+                sync_path_repo=MagicMock(),
             )
             service._path_resolver = mock_resolver
             service._history = mock_history

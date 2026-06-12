@@ -19,8 +19,9 @@ from urllib.parse import urljoin
 
 from lxml import etree
 
+import log
 from app.sites import engine_tools
-from app.sites.engine import SiteEngine
+from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.sites.siteuserinfo import discuz, gazelle, nexus_php, small_horse, unit3d
@@ -45,6 +46,7 @@ class ConfigHtmlUserInfo:
         site_name: str,
         url: str,
         site_cookie: str,
+        site_engine: Any,
         site_headers: dict | None = None,
         ua: str = "",
         emulate: bool = False,
@@ -64,6 +66,7 @@ class ConfigHtmlUserInfo:
         self._proxies: Any = get_proxies() if proxy else None
         self._index_html: str = json_data or ""
         self._base_url_str: str = self.site_url.rstrip("/") if self.site_url else ""
+        self._site_engine: Any = site_engine
 
         self.username: str | None = None
         self.userid: str | None = None
@@ -248,7 +251,7 @@ class ConfigHtmlUserInfo:
         self.seeding_info = json.dumps(info)
 
     def _parse_seeding_api(self, sc: dict) -> None:
-        engine = SiteEngine.get_instance()
+        engine = self._site_engine
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._def)
@@ -335,12 +338,13 @@ class ConfigHtmlUserInfo:
                     "Sec-Fetch-Site": "same-origin",
                 }
             )
+        headers.pop("referer", None)
         if referer:
             headers["Referer"] = referer
-        elif "Referer" not in headers and "referer" not in headers:
+        elif "Referer" not in headers:
             headers.setdefault("Referer", self._base_url_str)
         proxy_url = self._proxies.get("http") if self._proxies else None
-        engine = SiteEngine.get_instance()
+        engine = self._site_engine
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._def)
@@ -348,9 +352,15 @@ class ConfigHtmlUserInfo:
             res = HttpClient(
                 config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
                 rate_limiter=rate_limiter_engine,
-            ).get(url=url, headers=headers, cookies=self._cookie if self._cookie else None, **rl_kwargs)
+            ).get(
+                url=url,
+                headers=headers,
+                auth=CookieAuth(self._cookie) if self._cookie else None,
+                **rl_kwargs,
+            )
             return res.text
-        except Exception:
+        except Exception as exc:
+            log.debug(f"[_fetch_html]{self.site_name} 请求失败: {url} ({exc})")
             return None
 
 
@@ -358,6 +368,7 @@ def _html_config_factory(
     url: str,
     site_name: str,
     site_cookie: str,
+    site_engine,
     html_text: str | None = None,
     site_headers: dict | None = None,
     ua: str = "",
@@ -365,7 +376,7 @@ def _html_config_factory(
     proxy: bool = False,
     session: Any = None,
 ) -> ConfigHtmlUserInfo | None:
-    engine = SiteEngine.get_instance()
+    engine = site_engine
     site_def = engine.get_by_url(url)
     if not site_def:
         return None
@@ -374,6 +385,7 @@ def _html_config_factory(
         site_name,
         url,
         site_cookie,
+        site_engine=engine,
         site_headers=site_headers,
         ua=ua,
         emulate=emulate,
@@ -383,4 +395,4 @@ def _html_config_factory(
     )
 
 
-SiteEngine.get_instance().register_user_info_factory(_html_config_factory)
+# 注册工厂函数由 lifespan 调用

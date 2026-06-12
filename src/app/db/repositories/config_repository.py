@@ -11,6 +11,8 @@ from sqlalchemy import Integer, cast
 
 from app.db.transaction import auto_commit
 from app.db.models import (
+    CONFIGCATEGORY,
+    CONFIGCATEGORYRULE,
     CONFIGFILTERGROUP,
     CONFIGFILTERRULES,
     CONFIGMEDIA,
@@ -840,3 +842,48 @@ class ConfigRepository(BaseRepository):
                 UNKNOWN_BACKEND=unknown_backend,
             )
             self._db.insert(config)
+
+    # ==================== Category Config ====================
+
+    def get_category_configs(self) -> list[CONFIGCATEGORY]:
+        return self._db.query(CONFIGCATEGORY).order_by(CONFIGCATEGORY.SORT_ORDER).all()
+
+    def get_category_rules(self) -> list[CONFIGCATEGORYRULE]:
+        return self._db.query(CONFIGCATEGORYRULE).all()
+
+    @auto_commit(BaseRepository._db)
+    def save_category_config(
+        self, media_type: str, name: str, sort_order: int, is_default: int, rules: dict[str, str]
+    ) -> int:
+        existing = (
+            self._db.query(CONFIGCATEGORY)
+            .filter(
+                CONFIGCATEGORY.MEDIA_TYPE == media_type,
+                CONFIGCATEGORY.NAME == name,
+            )
+            .first()
+        )
+        if existing:
+            existing.SORT_ORDER = sort_order
+            existing.IS_DEFAULT = is_default
+            cid = existing.ID
+        else:
+            cat = CONFIGCATEGORY(MEDIA_TYPE=media_type, NAME=name, SORT_ORDER=sort_order, IS_DEFAULT=is_default)
+            self._db.insert(cat)
+            self._db.flush()
+            cid = cat.ID
+
+        self._db.query(CONFIGCATEGORYRULE).filter(CONFIGCATEGORYRULE.CATEGORY_ID == cid).delete()
+        for field, value in rules.items():
+            self._db.insert(CONFIGCATEGORYRULE(CATEGORY_ID=cid, FIELD=field, VALUE=value))
+        return int(cid)
+
+    @auto_commit(BaseRepository._db)
+    def delete_category_config(self, cid: int) -> None:
+        self._db.query(CONFIGCATEGORYRULE).filter(CONFIGCATEGORYRULE.CATEGORY_ID == cid).delete()
+        self._db.query(CONFIGCATEGORY).filter(CONFIGCATEGORY.ID == cid).delete()
+
+    @auto_commit(BaseRepository._db)
+    def clear_category_configs(self) -> None:
+        self._db.query(CONFIGCATEGORYRULE).delete()
+        self._db.query(CONFIGCATEGORY).delete()

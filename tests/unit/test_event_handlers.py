@@ -55,21 +55,17 @@ class TestTransferHandlers:
         }
         mock_factory.get_client.return_value = mock_client
 
-        with patch("app.services.transfer.handlers.container") as mock_container:
-            mock_container.download_client_factory.return_value = mock_factory
-            mock_container.transfer_pipeline.return_value = mock_pipeline
-
-            event = Event(
-                event_type=DOWNLOAD_COMPLETED,
-                payload={
-                    "downloader_id": "qb1",
-                    "task_id": "task1",
-                    "path": "/dl/movie.mkv",
-                    "tags": ["NEXUS_MEDIA"],
-                    "name": "movie",
-                },
-            )
-            handle_download_completed(event)
+        event = Event(
+            event_type=DOWNLOAD_COMPLETED,
+            payload={
+                "downloader_id": "qb1",
+                "task_id": "task1",
+                "path": "/dl/movie.mkv",
+                "tags": ["NEXUS_MEDIA"],
+                "name": "movie",
+            },
+        )
+        handle_download_completed(event, download_client_factory=mock_factory, transfer_pipeline=mock_pipeline)
 
         mock_pipeline.process.assert_called_once()
 
@@ -79,18 +75,15 @@ class TestTransferHandlers:
         mock_factory = MagicMock()
         mock_factory.get_downloader_conf.return_value = None
 
-        with patch("app.services.transfer.handlers.container") as mock_container:
-            mock_container.download_client_factory.return_value = mock_factory
-
-            event = Event(
-                event_type=DOWNLOAD_COMPLETED,
-                payload={
-                    "downloader_id": "qb1",
-                    "task_id": "task1",
-                    "path": "/dl/movie.mkv",
-                },
-            )
-            handle_download_completed(event)
+        event = Event(
+            event_type=DOWNLOAD_COMPLETED,
+            payload={
+                "downloader_id": "qb1",
+                "task_id": "task1",
+                "path": "/dl/movie.mkv",
+            },
+        )
+        handle_download_completed(event, download_client_factory=mock_factory)
 
 
 class TestSubscribeHandlers:

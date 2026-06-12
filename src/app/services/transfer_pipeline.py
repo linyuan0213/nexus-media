@@ -5,16 +5,16 @@ from typing import Any
 
 import log
 from app.core.exceptions import ValidationError
+from app.core.settings import settings
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import TransferBlacklistRepositoryAdapter
 from app.domain.entities.transfer_task import SourceType, TransferTask
+from app.domain.enums import SyncType
 from app.media.scraper import Scraper
 from app.services.filetransfer_service import FileTransferService
 from app.storage.backends.base import StorageBackend, StorageType
 from app.storage.config_models import LocalStorageConfig
 from app.storage.factory import StorageBackendFactory
-from app.domain.enums import SyncType
-from app.di import container
 
 
 class TransferPipeline:
@@ -34,15 +34,15 @@ class TransferPipeline:
 
     def __init__(
         self,
-        filetransfer: FileTransferService | None = None,
-        scraper: Scraper | None = None,
-        blacklist_repo: TransferBlacklistRepositoryAdapter | None = None,
-        backend_repo: StorageBackendRepositoryAdapter | None = None,
+        filetransfer: FileTransferService,
+        scraper: Scraper,
+        blacklist_repo: TransferBlacklistRepositoryAdapter,
+        backend_repo: StorageBackendRepositoryAdapter,
     ):
-        self._filetransfer = filetransfer or FileTransferService()
-        self._scraper = scraper or container.scraper()
-        self._blacklist = blacklist_repo or TransferBlacklistRepositoryAdapter()
-        self._backend_repo = backend_repo or container.storage_backend_repo()
+        self._filetransfer = filetransfer
+        self._scraper = scraper
+        self._blacklist = blacklist_repo
+        self._backend_repo = backend_repo
 
     def process(self, task: TransferTask) -> tuple[bool, str]:
         """
@@ -145,8 +145,6 @@ class TransferPipeline:
         """检查路径是否属于媒体库。"""
         if not path:
             return False
-        from app.core.settings import settings
-
         media = settings.get("media")
         if not media:
             return False

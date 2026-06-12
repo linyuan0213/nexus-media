@@ -4,17 +4,17 @@ SyncTimer Plugin v2
 """
 
 import contextlib
+from typing import Any
 
 from app.plugin_framework.context import PluginContext
-from app.di import container
 
 
 class SyncTimerPlugin:
     """定时目录同步插件"""
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(self, ctx: PluginContext, sync: Any):
         self.ctx = ctx
-        self._sync = container.sync_engine()
+        self._sync = sync
 
     def _get_config(self):
         return self.ctx.get_config() or {}

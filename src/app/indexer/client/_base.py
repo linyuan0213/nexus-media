@@ -14,10 +14,9 @@ from urllib.parse import quote
 
 import log
 from app.indexer.schema import IndexerConfigSchema
-from app.infrastructure.http import HttpClient
 from app.utils import DomUtils, ExceptionUtils, StringUtils
 from app.domain.enums import ProgressKey, SearchType
-from app.di import container
+from app.infrastructure.http.client import HttpClient
 
 
 class _IIndexClient(metaclass=ABCMeta):
@@ -43,8 +42,8 @@ class _IIndexClient(metaclass=ABCMeta):
     host = ""
     progress = None
 
-    def __init__(self):
-        self.progress = container.progress_helper()
+    def __init__(self, progress=None):
+        self.progress = progress
 
     @classmethod
     @abstractmethod

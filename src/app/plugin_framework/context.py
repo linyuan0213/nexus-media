@@ -9,23 +9,39 @@ import os
 from typing import Any
 
 import log
+
 from app.core.settings import settings
 from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter
-from app.di import container
 from app.domain.entities.plugin import PluginConfigEntity
+from app.db.repositories.plugin_framework_repo_adapter import PluginLogRepositoryAdapter
 
 
 class PluginContext:
     """插件上下文，每个插件实例拥有独立的上下文"""
 
-    def __init__(self, plugin_id: str, plugin_name: str = ""):
+    def __init__(
+        self,
+        plugin_id: str,
+        plugin_name: str = "",
+        plugin_log_repo: Any = None,
+        message: Any = None,
+        scheduler_core: Any = None,
+        hook_system: Any = None,
+        site_engine: Any = None,
+        media_service: Any = None,
+    ):
         self._plugin_id = plugin_id
         self._plugin_name = plugin_name or plugin_id
-        self._data_dir = os.path.join(settings.config_path, "plugins_data", plugin_id)
+        self._data_dir = os.path.join(settings.data_path, "plugins_data", plugin_id)
         if not os.path.exists(self._data_dir):
             os.makedirs(self._data_dir)
         self._config_repo = PluginConfigRepositoryAdapter()
-        self._log_repo = container.plugin_log_repo()
+        self._log_repo = plugin_log_repo or PluginLogRepositoryAdapter()
+        self._message = message
+        self._scheduler = scheduler_core
+        self._hook_system = hook_system
+        self._site_engine = site_engine
+        self._media_service = media_service
 
     @property
     def plugin_id(self) -> str:
@@ -110,11 +126,11 @@ class PluginContext:
 
     def notify(self, title: str, text: str | None = None, image: str | None = None) -> None:
         """发送消息通知"""
-        container.message().send_plugin_message(title=title, text=text, image=image)
+        self._message.send_plugin_message(title=title, text=text, image=image)
 
     def schedule_cron(self, job_id: str, func, cron: str, **kwargs) -> bool:
         """注册 cron 定时任务，返回是否成功"""
-        job = container.scheduler_core().register_smart_cron(
+        job = self._scheduler.register_smart_cron(
             job_id=f"plugin_{self._plugin_id}_{job_id}",
             func=func,
             name=self._plugin_name,
@@ -130,7 +146,7 @@ class PluginContext:
 
     def schedule_interval(self, job_id: str, func, **kwargs) -> bool:
         """注册 interval 定时任务，返回是否成功"""
-        job = container.scheduler_core().register_interval(
+        job = self._scheduler.register_interval(
             job_id=f"plugin_{self._plugin_id}_{job_id}", func=func, name=self._plugin_name, jobstore="plugin", **kwargs
         )
         if job:
@@ -141,7 +157,7 @@ class PluginContext:
 
     def schedule_date(self, job_id: str, func, run_date) -> bool:
         """注册一次性日期任务，返回是否成功"""
-        job = container.scheduler_core().register_date(
+        job = self._scheduler.register_date(
             job_id=f"plugin_{self._plugin_id}_{job_id}",
             func=func,
             run_date=run_date,
@@ -156,11 +172,26 @@ class PluginContext:
 
     def remove_schedule(self, job_id: str) -> None:
         """移除定时任务"""
-        container.scheduler_core().remove_job(job_id=f"plugin_{self._plugin_id}_{job_id}", jobstore="plugin")
+        self._scheduler.remove_job(job_id=f"plugin_{self._plugin_id}_{job_id}", jobstore="plugin")
+
+    @property
+    def site_engine(self) -> Any:
+        """获取站点引擎"""
+        return self._site_engine
+
+    @property
+    def media_service(self) -> Any:
+        """获取媒体服务"""
+        return self._media_service
+
+    @property
+    def hook_system(self) -> Any:
+        """获取钩子系统"""
+        return self._hook_system
 
     def get_schedules(self):
         """获取当前插件的所有定时任务"""
-        sched = container.scheduler_core()
+        sched = self._scheduler
         if not sched:
             return []
         prefix = f"plugin_{self._plugin_id}_"
@@ -169,18 +200,18 @@ class PluginContext:
     def emit(self, event: str, data: dict | None = None) -> None:
         """触发全局事件"""
 
-        container.hook_system().emit(event, data or {})
+        self._hook_system.emit(event, data or {})
 
     # ---------- 消息命令注册（委托给 Message） ----------
 
     def register_message_command(self, cmd: str, desc: str, func) -> None:
         """注册消息命令，用户发送该命令时触发 func"""
-        container.message().register_command(cmd=cmd, desc=desc, func=func, plugin_id=self._plugin_id)
+        self._message.register_command(cmd=cmd, desc=desc, func=func, plugin_id=self._plugin_id)
 
     def unregister_message_command(self, cmd: str) -> None:
         """注销消息命令"""
-        container.message().unregister_command(cmd)
+        self._message.unregister_command(cmd)
 
     def unregister_all_message_commands(self) -> None:
         """注销该插件的所有消息命令"""
-        container.message().clear_plugin_commands(self._plugin_id)
+        self._message.clear_plugin_commands(self._plugin_id)

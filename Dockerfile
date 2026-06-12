@@ -50,7 +50,7 @@ ENV S6_SERVICES_GRACETIME=30000 \
     TERM="xterm" \
     LANG="C.UTF-8" \
     TZ="Asia/Shanghai" \
-    NEXUS_MEDIA_CONFIG="/config/config.yaml" \
+    NEXUS_MEDIA_CONFIG="/data/config.yaml" \
     PS1="\u@\h:\w \$ " \
     PUID=0 \
     PGID=0 \
@@ -60,7 +60,7 @@ ENV S6_SERVICES_GRACETIME=30000 \
 
 RUN groupadd -r -g 911 nexus \
     && useradd -r -g nexus -d ${HOME} -s /bin/bash -u 911 nexus \
-    && mkdir -p ${WORKDIR} ${HOME} /config/logs \
+    && mkdir -p ${WORKDIR} ${HOME} /data/logs \
     && echo "nexus ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 WORKDIR ${WORKDIR}

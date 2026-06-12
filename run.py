@@ -7,6 +7,7 @@
     python run.py -w 4               # 指定 worker 数
 """  # noqa: EXE001
 
+import os
 import sys
 from pathlib import Path
 
@@ -44,6 +45,9 @@ def main():
         ssl_kwargs["ssl_key"] = ssl_key
         log.console("SSL 已启用")
 
+    # 确保 PID 文件目录存在
+    os.makedirs(Path(settings.data_path), exist_ok=True)
+
     server = Granian(
         "api.main:app",
         address=host,
@@ -68,7 +72,7 @@ def main():
         log_enabled=True,
         log_level=LogLevels.info if dev else LogLevels.warning,
         log_access=dev,
-        pid_file=Path(settings.config_path or ".") / "logs" / "granian.pid",
+        pid_file=Path(settings.data_path or ".") / "granian.pid",
         workers_kill_timeout=5,
         **ssl_kwargs,
     )

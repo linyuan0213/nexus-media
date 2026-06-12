@@ -93,7 +93,7 @@ def _call_endpoint(
     base = site.api.base_url.rstrip("/") if site.api else ""
     url = f"{base}{'/' if not path.startswith('/') else ''}{path}"
 
-    headers = engine._build_headers(site, user_config)
+    headers, auth = engine._build_auth(site, user_config)
     proxy = get_proxies() if user_config.get("proxy") else None
     proxy_url = proxy.get("http") if proxy else None
 
@@ -107,7 +107,7 @@ def _call_endpoint(
             res = HttpClient(
                 config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
                 rate_limiter=rate_limiter_engine,
-            ).get(url=url, headers=headers, **rl_kwargs)
+            ).get(url=url, headers=headers, auth=auth, **rl_kwargs)
             if download_dir:
                 fname = os.path.join(download_dir, f"{credential}.zip") if credential else "subtitle.zip"
                 with open(fname, "wb") as f:
@@ -133,12 +133,12 @@ def _call_endpoint(
                 else:
                     body[k] = v
             post_data = json.dumps(body, separators=(",", ":")) if body else None
-            res = client.post(url=url, data=post_data, headers=headers, **rl_kwargs)
+            res = client.post(url=url, data=post_data, headers=headers, auth=auth, **rl_kwargs)
         else:
             params = cfg.get("params")
             if params:
                 params = {k: v.format(**template_vars) if isinstance(v, str) else v for k, v in params.items()}
-            res = client.get(url=url, params=params, headers=headers, **rl_kwargs)
+            res = client.get(url=url, params=params, headers=headers, auth=auth, **rl_kwargs)
         return res.json()
     except Exception as e:
         import log

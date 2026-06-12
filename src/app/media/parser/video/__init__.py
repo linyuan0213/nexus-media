@@ -18,10 +18,11 @@ from app.media.parser.video.season_episode_parser import init_episode, init_seas
 from app.utils import StringUtils
 from app.utils.tokens import Tokens
 from app.domain.mediatypes import MediaType
-from app.di import container
 
 
-def parse_video_title(title, subtitle=None, fileflag=False) -> MediaInfo:
+def parse_video_title(
+    title, subtitle=None, fileflag=False, customization_matcher: CustomizationMatcher | None = None
+) -> MediaInfo:
     """解析影视文件名，返回 MediaInfo"""
     info = MediaInfo()
     if not title:
@@ -132,7 +133,8 @@ def parse_video_title(title, subtitle=None, fileflag=False) -> MediaInfo:
 
     # 制作组/字幕组
     info.resource_team = ReleaseGroupsMatcher().match(title=original_title) or None
-    info.customization = container.customization_matcher().match(title=original_title) or None
+    matcher = customization_matcher or CustomizationMatcher()
+    info.customization = matcher.match(title=original_title) or None
     return info
 
 

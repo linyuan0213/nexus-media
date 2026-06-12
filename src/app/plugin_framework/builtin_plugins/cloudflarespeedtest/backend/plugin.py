@@ -14,7 +14,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytz
-import requests
 
 from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter
 from app.domain.entities.plugin import PluginConfigEntity
@@ -311,9 +310,9 @@ class CloudflareSpeedTestPlugin:
     def _os_install(self, cf_path, download_url, cf_file_name, release_version, archive_type):
         if not Path(f"{cf_path}/{cf_file_name}").exists():
             proxies = get_proxies()
-            proxy_dict = proxies if proxies and proxies.get("https") else None
+            proxy_url = proxies.get("https") if proxies and proxies.get("https") else None
             try:
-                response = requests.get(download_url, proxies=proxy_dict)
+                response = HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=30)).get(download_url)
                 response.raise_for_status()
                 with open(f"{cf_path}/{cf_file_name}", "wb") as f:
                     f.write(response.content)

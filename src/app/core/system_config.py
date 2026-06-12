@@ -1,4 +1,5 @@
 import json
+import threading
 
 import log
 from app.db.repositories.system_dict_repo_adapter import SystemDictRepositoryAdapter
@@ -6,17 +7,29 @@ from app.domain.enums import SystemConfigKey
 
 
 class SystemConfig:
-    """系统配置单例"""
+    """系统配置单例 — 首次实例化时从数据库加载，后续复用缓存."""
 
     _type = "SystemConfig"
+    _instance: "SystemConfig | None" = None
+    _lock = threading.Lock()
+
+    def __new__(cls) -> "SystemConfig":
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
 
     def __init__(self):
+        if self._initialized:
+            return
         self._repo = SystemDictRepositoryAdapter()
-        self.systemconfig = {}
+        self.systemconfig: dict = {}
         self._load_config()
+        self._initialized = True
 
     def _load_config(self):
-        """缓存系统设置"""
         rows = self._repo.list_by_type(self._type)
         for row in rows:
             if not row or not row.value:

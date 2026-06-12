@@ -5,13 +5,12 @@ from urllib.parse import quote
 
 import log
 from app.core.settings import settings
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.thread import ThreadExecutor
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
-from app.infrastructure.http.client import HttpClient
-from app.infrastructure.http.config import HttpClientConfig
 from app.utils import ExceptionUtils, StringUtils
-from app.di import container
 
 lock = Lock()
 
@@ -61,7 +60,7 @@ class SynologyChat(_IMessageClient):
     )
     _setup_done = set()
 
-    def __init__(self, config):
+    def __init__(self, config, apikey_service):
         self._config = settings
         self._interactive = False
         self._domain = None
@@ -70,6 +69,7 @@ class SynologyChat(_IMessageClient):
         self._req = HttpClient(
             config=HttpClientConfig(default_headers={"Content-Type": "application/x-www-form-urlencoded"})
         )
+        self._apikey_service = apikey_service
         super().__init__(config)
 
     def read_config(self):
@@ -86,7 +86,7 @@ class SynologyChat(_IMessageClient):
                 return
             SynologyChat._setup_done.add(self._token)
             _web_port = settings.get("app").web_port
-            _api_key = container.apikey_service().get_or_create_system_key("MessageWebhook")
+            _api_key = self._apikey_service.get_or_create_system_key("MessageWebhook")
             ds_url = f"http://127.0.0.1:{_web_port}/synologychat?apikey={_api_key}"
             ThreadExecutor(name="synology_poll").submit(self._start_polling, ds_url)
 

@@ -2,23 +2,25 @@ import re
 import xml.dom.minidom
 from urllib.parse import urlsplit
 
+import log
+
+from app.db.repositories.subscribe_torrent_repo_adapter import SubscribeTorrentRepositoryAdapter
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.services.rss_automation.rsstitle_utils import RssTitleUtils
 from app.sites.engine import SiteEngine
 from app.utils import DomUtils, ExceptionUtils, StringUtils
-from app.services.rss_automation.rsstitle_utils import RssTitleUtils
 from app.utils.config_tools import get_proxies, get_ua
-from app.di import container
 
 
 class RssHelper:
     """RSS 解析助手"""
 
-    def __init__(self):
-        self._repo = container.rss_torrent_repo()
+    def __init__(self, site_engine: SiteEngine, repo: SubscribeTorrentRepositoryAdapter | None = None):
+        self._repo = repo or SubscribeTorrentRepositoryAdapter()
+        self._site_engine = site_engine
 
-    @staticmethod
-    def parse_rssxml(url, proxy=False):
+    def parse_rssxml(self, url, proxy=False):
         """
         解析RSS订阅URL，获取RSS中的种子信息
         :param url: RSS地址
@@ -41,8 +43,7 @@ class RssHelper:
             }
             proxies = get_proxies() if proxy else None
             proxy_url = proxies.get("http") if proxies else None
-            engine = SiteEngine.get_instance()
-            rate_limiter = getattr(engine, "site_limiter", None)
+            rate_limiter = getattr(self._site_engine, "site_limiter", None)
             rate_limiter_engine = rate_limiter.engine if rate_limiter else None
             ret = HttpClient(
                 config=HttpClientConfig(proxy_url=proxy_url, default_headers=headers),
@@ -53,6 +54,18 @@ class RssHelper:
             return []
         if ret:
             ret_xml = ret.text
+            # 检查返回内容是否为 RSS/XML
+            xml_start = ret_xml.strip()[:100].lower()
+            if not ret_xml or not (
+                xml_start.startswith("<?xml")
+                or xml_start.startswith("<rss")
+                or xml_start.startswith("<feed")
+                or xml_start.startswith("<channel")
+            ):
+                log.warn(f"RSS 返回非 XML 内容 ({url[:80]}...): {ret_xml[:500]}")
+                return []
+            # 清理非法 XML 字符（控制字符）
+            ret_xml = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", ret_xml)
             try:
                 # 解析XML
                 dom_tree = xml.dom.minidom.parseString(ret_xml)

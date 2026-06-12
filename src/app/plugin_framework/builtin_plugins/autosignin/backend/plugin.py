@@ -2,22 +2,31 @@ import json
 from datetime import datetime
 from typing import Any
 
-from app.message import Message
+from app.infrastructure.rate_limiter import RateLimitEngine
 from app.plugin_framework.builtin_plugins.autosignin.backend.registry import HandlerRegistry
 from app.plugin_framework.builtin_plugins.autosignin.backend.signer import SigninEngine
 from app.plugin_framework.builtin_plugins.autosignin.backend.simulator import ChromeSigninSimulator
 from app.plugin_framework.builtin_plugins.autosignin.backend.site_config_store import SiteConfigStore
 from app.plugin_framework.context import PluginContext
-from app.di import container
+from app.message import Message
 
 
 class AutoSignInPlugin:
-    def __init__(self, ctx: PluginContext):
+    def __init__(
+        self,
+        ctx: PluginContext,
+        site_cache: Any,
+        agent_service: Any | None = None,
+        rate_limit_engine: RateLimitEngine | None = None,
+    ):
         self.ctx = ctx
         self._config_store = SiteConfigStore(ctx)
-        self._simulator = ChromeSigninSimulator()
+        self._simulator = ChromeSigninSimulator(site_engine=self.ctx.site_engine)
         self._registry: Any = None
         self._engine: Any = None
+        self._rate_limit_engine = rate_limit_engine or RateLimitEngine()
+        self._site_cache = site_cache
+        self._agent_service = agent_service
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -26,9 +35,9 @@ class AutoSignInPlugin:
         self.ctx.info("站点自动签到插件已启用")
         self._config_store.save_defaults()
         site_configs = self._config_store.load()
-        self._registry = HandlerRegistry(self.ctx, container.rate_limit_engine(), site_configs)
+        self._registry = HandlerRegistry(self.ctx, self._rate_limit_engine, site_configs, self._agent_service)
         self._registry.load()
-        self._engine = SigninEngine(self.ctx, self._registry, self._simulator)
+        self._engine = SigninEngine(self.ctx, self._registry, self._simulator, site_cache=self._site_cache)
         self._start_service()
         self.ctx.register_message_command(cmd="/signin", desc="站点签到", func=self._handle_signin_command)
 

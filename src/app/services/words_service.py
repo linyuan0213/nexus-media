@@ -6,7 +6,7 @@ WordsService - 自定义识别词服务
 import base64
 import json
 import time
-
+from typing import Any
 
 from app.core.exceptions import ResourceAlreadyExistsError, ResourceNotFoundError, ValidationError
 from app.domain.entities.word import CustomWordEntity
@@ -15,7 +15,6 @@ from app.domain.word_processor import process_title, set_words_info
 from app.infrastructure.cache_system import get_cache_manager
 from app.media import MediaCache
 from app.schemas.words import WordDTO, WordGroupExportDTO
-from app.di import container
 
 
 class WordsService:
@@ -33,14 +32,21 @@ class WordsService:
     _cache_time: float = 0
     _cache_ttl: float = 60
 
-    def __init__(self, media_cache: MediaCache | None = None):
-        self._media_cache = media_cache or container.media_cache()
+    def __init__(
+        self,
+        media_cache: MediaCache,
+        word_repo: Any,
+        group_repo: Any,
+    ):
+        self._media_cache = media_cache
         self._cache = get_cache_manager().get_or_create("words_process", cache_type="memory", maxsize=1000)
+        self._word_repo = word_repo
+        self._group_repo = group_repo
+        self.word_repo = word_repo
+        self.group_repo = group_repo
         self._refresh()
 
     def _refresh(self):
-        self.word_repo = container.custom_word_repo()
-        self.group_repo = container.custom_word_group_repo()
         self._load_words_with_cache()
 
     def _load_words_with_cache(self):

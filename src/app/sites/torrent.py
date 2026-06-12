@@ -7,7 +7,6 @@ from bencode import bdecode
 
 import log
 from app.sites import engine_tools
-from app.sites.engine import SiteEngine
 from app.utils.string_utils import StringUtils
 from app.utils.config_tools import get_proxies
 from app.infrastructure.http.auth import CookieAuth
@@ -21,8 +20,9 @@ from app.domain.mediatypes import MediaType
 class Torrent:
     _torrent_temp_path = None
 
-    def __init__(self):
+    def __init__(self, site_engine):
         self._torrent_temp_path = temp_manager.get_temp_path()
+        self._site_engine = site_engine
 
     @staticmethod
     def delete_torrent_file(file_path):
@@ -74,7 +74,7 @@ class Torrent:
         if referer:
             headers["Referer"] = referer
 
-        engine = SiteEngine.get_instance()
+        engine = self._site_engine
         site_def = engine.get_by_url(url)
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None

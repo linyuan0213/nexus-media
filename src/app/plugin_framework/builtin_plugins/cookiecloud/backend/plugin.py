@@ -7,15 +7,15 @@ import contextlib
 import json
 import re
 from collections import defaultdict
+from typing import Any
 
 from app.infrastructure.cache_system import get_cache_manager
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.http.exceptions import HttpClientError
 from app.plugin_framework.context import PluginContext
-from app.sites.engine import SiteEngine
-from app.di import container
 from app.domain.entities.site import SiteEntity
+from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 
 
 class CookieCloudPlugin:
@@ -23,12 +23,19 @@ class CookieCloudPlugin:
 
     _ignore_cookies = ["CookieAutoDeleteBrowsingDataCleanup"]
 
-    def __init__(self, ctx: PluginContext):
+    def __init__(
+        self,
+        ctx: PluginContext,
+        sites: Any,
+        site_resolver: Any,
+        index_helper: Any,
+        site_repo: Any = None,
+    ):
         self.ctx = ctx
-        self.sites = container.site_cache()
-        self._site_resolver = container.site_resolver()
-        self._site_repo = container.site_repo_adapter()
-        self._index_helper = container.indexer_helper()
+        self.sites = sites
+        self._site_resolver = site_resolver
+        self._site_repo = site_repo or SiteRepositoryAdapter()
+        self._index_helper = index_helper
         self._cache = get_cache_manager().get_or_create("plugin_cookiecloud", cache_type="redis")
 
     def _get_config(self):
@@ -198,7 +205,7 @@ class CookieCloudPlugin:
                 continue
 
             domain_url = ".".join(domain)
-            domain_url = SiteEngine.get_instance().normalize_domain(domain_url) or domain_url
+            domain_url = self.ctx.site_engine.normalize_domain(domain_url) or domain_url
 
             cloudflare_cookie = True
             for content in content_list:
@@ -277,7 +284,7 @@ class CookieCloudPlugin:
                     domain_parts = site.split(".")[-2:]
                     domain_key = tuple(domain_parts)
                     domain_url = ".".join(domain_key)
-                    domain_url = SiteEngine.get_instance().normalize_domain(domain_url) or domain_url
+                    domain_url = self.ctx.site_engine.normalize_domain(domain_url) or domain_url
 
                     self._cache.set(f"local_storage:{domain_url}", json.dumps(storage))
 

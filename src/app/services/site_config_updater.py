@@ -11,11 +11,11 @@ import tempfile
 import zipfile
 from typing import Any
 
-import requests
-
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.utils.config_tools import get_proxies
 
 
@@ -52,9 +52,10 @@ class SiteConfigUpdater:
     def _fetch_remote_info(self, proxies: dict | None = None) -> dict[str, Any] | None:
         try:
             headers = {"Accept": "application/vnd.github.v3+json"}
-            resp = requests.get(self._RELEASE_API_URL, headers=headers, timeout=15, proxies=proxies)
-            resp.raise_for_status()
-            return resp.json()
+            proxy_url = proxies.get("http") if proxies else None
+            with HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=15)) as client:
+                resp = client.get(self._RELEASE_API_URL, headers=headers)
+                return resp.json()
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
@@ -74,11 +75,12 @@ class SiteConfigUpdater:
     @staticmethod
     def _download_file(url: str, dest: str, proxies: dict | None = None) -> bool:
         try:
-            resp = requests.get(url, timeout=60, stream=True, proxies=proxies)
-            resp.raise_for_status()
-            with open(dest, "wb") as f:
-                for chunk in resp.iter_content(chunk_size=8192):
-                    f.write(chunk)
+            proxy_url = proxies.get("http") if proxies else None
+            with HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=60)) as client:
+                resp = client.get(url)
+                with open(dest, "wb") as f:
+                    for chunk in resp.iter_bytes(chunk_size=8192):
+                        f.write(chunk)
             return True
         except (ServiceError, RepositoryError, DomainError):
             raise

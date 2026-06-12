@@ -31,7 +31,7 @@ class BackupRestoreService:
         if not filename:
             return BackupRestoreResultDTO(success=False, message="文件不存在")
 
-        config_path = settings.config_path
+        data_path = settings.data_path
         file_path = temp_manager.get_temp_path(filename)
         temp_dir = None
 
@@ -40,11 +40,11 @@ class BackupRestoreService:
             temp_dir = tempfile.mkdtemp(prefix="restore_")
             shutil.unpack_archive(file_path, temp_dir, format="zip")
 
-            # 2. 恢复配置文件
-            for cfg_name in ["config.yaml", "default-category.yaml"]:
+            # 2. 恢复运行时配置文件
+            for cfg_name in ["config.yaml"]:
                 src = os.path.join(temp_dir, cfg_name)
                 if os.path.exists(src):
-                    shutil.copy(src, config_path)
+                    shutil.copy(src, data_path)
 
             # 3. 判断备份中的数据库格式与当前数据库类型
             json_backup = os.path.join(temp_dir, "user_db_export.json")
@@ -84,20 +84,20 @@ def backup(full_backup=False, bk_path=None):
     @param bk_path     自定义备份路径
     """
     try:
-        config_path = Path(settings.config_path)
+        data_path = Path(settings.data_path)
         backup_file = f"bk_{time.strftime('%Y%m%d%H%M%S')}"
         if bk_path:
             backup_path = Path(bk_path) / backup_file
         else:
-            backup_path = config_path / "backup_file" / backup_file
+            backup_path = data_path / "backup_file" / backup_file
         backup_path.mkdir(parents=True)
-        shutil.copy(f"{config_path}/config.yaml", backup_path)
-        shutil.copy(f"{config_path}/default-category.yaml", backup_path)
+        shutil.copy(f"{data_path}/config.yaml", backup_path)
+        shutil.copy(f"{data_path}/default-category.yaml", backup_path)
 
         db_type = DatabaseFactory._get_config_db_type()
         engine = DatabaseFactory.create_engine()
         if db_type == DatabaseFactory.SQLITE:
-            shutil.copy(f"{config_path}/user.db", backup_path)
+            shutil.copy(f"{data_path}/user.db", backup_path)
         export_to_file(engine, str(backup_path / "user_db_export.json"))
         engine.dispose()
 

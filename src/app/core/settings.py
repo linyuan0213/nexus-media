@@ -39,24 +39,24 @@ def _load_dotenv(path: str | None = None) -> bool:
 
 
 def _resolve_config_path() -> str:
-    """解析配置文件路径，按优先级：环境变量 > ./config/config.yaml > /config/config.yaml > 有效默认值。"""
+    """解析运行时配置文件路径，按优先级：环境变量 > data/config.yaml > 有效默认值（从 config/ 模板复制）。"""
     candidate = os.environ.get("NEXUS_MEDIA_CONFIG", "")
     if candidate and os.path.exists(candidate):
         return candidate
     if candidate:
         os.makedirs(os.path.dirname(candidate), exist_ok=True)
 
-    search = candidate or "config/config.yaml"
-    if os.path.exists(search):
-        return os.path.abspath(search)
+    # 默认运行时配置路径：data/config.yaml（与静态模板分离）
+    data_config = str(_PROJECT_ROOT / "data" / "config.yaml")
+    if os.path.exists(data_config):
+        return os.path.abspath(data_config)
 
-    alt = os.environ.get("NEXUS_MEDIA_CONFIG", "") or "config/config.yaml"
-    os.makedirs(os.path.dirname(alt) or ".", exist_ok=True)
+    os.makedirs(os.path.dirname(data_config), exist_ok=True)
     template = str(_PROJECT_ROOT / "config" / "config.yaml.example")
     if os.path.exists(template):
-        shutil.copy(template, alt)
-        print(f"[Config]已从模板创建配置文件：{alt}")
-    return os.path.abspath(alt)
+        shutil.copy(template, data_config)
+        print(f"[Config]已从模板创建配置文件：{data_config}")
+    return os.path.abspath(data_config)
 
 
 class AppConfig(BaseModel):
@@ -88,6 +88,7 @@ class MediaConfig(BaseModel):
     """媒体库配置（路径字段已迁移到数据库 CONFIGMEDIA 表）"""
 
     mediasync_interval: int = 8
+    sync_transfer_interval: int = 60
     category: str = "default-category"
     min_filesize: int = 150
     filesize_cover: bool = True
@@ -247,6 +248,7 @@ class AppSettings(BaseSettings):
     )
 
     nexus_media_config: str = ""
+    nexus_media_data: str = ""
     tz: str = "Asia/Shanghai"
 
     app: AppConfig = Field(default_factory=AppConfig)
@@ -340,6 +342,17 @@ class AppSettings(BaseSettings):
             path = _resolve_config_path()
         dirname = os.path.dirname(path)
         return dirname or "."
+
+    @property
+    def data_path(self) -> str:
+        path = self.nexus_media_data or os.environ.get("NEXUS_MEDIA_DATA", "")
+        if path:
+            abs_path = os.path.abspath(path)
+            os.makedirs(abs_path, exist_ok=True)
+            return abs_path
+        data_dir = str(_PROJECT_ROOT / "data")
+        os.makedirs(data_dir, exist_ok=True)
+        return data_dir
 
 
 def _init_config_file() -> str:

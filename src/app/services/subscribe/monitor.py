@@ -7,13 +7,14 @@ import pytz
 import log
 from app.core.exceptions import DownloadError, IndexerError, MediaError, NetworkError, RepositoryError, ServiceError
 from app.core.settings import settings
-from app.di import container
+from app.domain.mediatypes import MediaType
+from app.infrastructure.thread import ThreadExecutor
 from app.services.subscribe.coordinator import DownloadCoordinator
 from app.services.subscribe.search_engine import SubscribeSearchEngine
 from app.services.subscribe.strategies.indexer_search import IndexerSearchStrategy
-from app.domain.mediatypes import MediaType
 from app.services.subscribe.strategies.queue_search import QueueSearchStrategy
 from app.services.subscribe.strategies.rss_feed import RssFeedStrategy
+from app.services.subscribe_service import SubscribeService
 
 
 class SubscriptionMonitor:
@@ -32,33 +33,23 @@ class SubscriptionMonitor:
 
     def __init__(
         self,
-        queue_strategy: QueueSearchStrategy | None = None,
-        rss_strategy: RssFeedStrategy | None = None,
-        indexer_strategy: IndexerSearchStrategy | None = None,
+        subscribe_service: SubscribeService,
+        thread_executor: ThreadExecutor,
+        queue_strategy: QueueSearchStrategy,
+        rss_strategy: RssFeedStrategy,
+        indexer_strategy: IndexerSearchStrategy,
         coordinator: DownloadCoordinator | None = None,
     ):
-        self._coordinator = coordinator or DownloadCoordinator()
-        self._queue_strategy = queue_strategy or QueueSearchStrategy(
-            service=container.subscribe_service(),
-            movie_repo=container.subscribe_service()._movie_repo,
-            tv_repo=container.subscribe_service()._tv_repo,
-            tv_episode_repo=container.subscribe_service()._tv_episode_repo,
-            coordinator=self._coordinator,
-        )
-        self._rss_strategy = rss_strategy or RssFeedStrategy(
-            subscribe=container.subscribe_service(),
-            coordinator=self._coordinator,
-        )
-        self._indexer_strategy = indexer_strategy or IndexerSearchStrategy(
-            service=container.subscribe_service(),
-            movie_repo=container.subscribe_service()._movie_repo,
-            tv_repo=container.subscribe_service()._tv_repo,
-            tv_episode_repo=container.subscribe_service()._tv_episode_repo,
-            coordinator=self._coordinator,
-        )
+        self._coordinator = coordinator
+        self._subscribe = subscribe_service
+        self._thread_executor = thread_executor
+        self._queue_strategy = queue_strategy
+        self._rss_strategy = rss_strategy
+        self._indexer_strategy = indexer_strategy
         self._last_queue_run: datetime.datetime | None = None
         self._last_rss_run: datetime.datetime | None = None
         self._last_search_run: datetime.datetime | None = None
+        self._bind_coordinator()
 
     def run(self) -> None:
         """统一入口，由定时服务调用.
@@ -100,6 +91,17 @@ class SubscriptionMonitor:
         log.info("[SubscriptionMonitor] 开始主动搜索...")
         self._indexer_strategy.run()
         self._last_search_run = datetime.datetime.now(pytz.timezone(settings.tz))
+
+    def _bind_coordinator(self) -> None:
+        """将下载协调器绑定到各个搜索策略上."""
+        if self._coordinator is None:
+            return
+        if hasattr(self._queue_strategy, "set_coordinator"):
+            self._queue_strategy.set_coordinator(self._coordinator)
+        if hasattr(self._indexer_strategy, "set_coordinator"):
+            self._indexer_strategy.set_coordinator(self._coordinator)
+        if hasattr(self._rss_strategy, "set_coordinator"):
+            self._rss_strategy.set_coordinator(self._coordinator)
 
     def _should_run_queue(self) -> bool:
         """队列搜索：按 subscribe.queue_interval（秒）周期执行."""
@@ -163,9 +165,12 @@ class SubscriptionMonitor:
         self.run()
 
     def refresh_subscription(self, mtype: str, rssid: str) -> None:
-        """后台刷新单个订阅搜索."""
-        engine = SubscribeSearchEngine(service=container.subscribe_service())
+        """后台刷新单个订阅搜索。"""
+        engine = SubscribeSearchEngine(
+            indexer_strategy=self._indexer_strategy,
+            queue_strategy=self._queue_strategy,
+        )
         if MediaType.from_string(mtype) == MediaType.MOVIE:
-            container.thread_executor().submit(engine.subscribe_search_movie, rssid)
+            self._thread_executor.submit(engine.subscribe_search_movie, rssid)
         else:
-            container.thread_executor().submit(engine.subscribe_search_tv, rssid)
+            self._thread_executor.submit(engine.subscribe_search_tv, rssid)

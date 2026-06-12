@@ -9,7 +9,7 @@ from app.core.exceptions import (
     ServiceError,
     ValidationError,
 )
-from app.di import container
+from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
 from app.schemas.common import CommonResponse
 from app.services.words_service import WordsService
 from app.utils import ExceptionUtils
@@ -289,14 +289,12 @@ def get_categories(
     req: GetCategoriesRequest,
     current_user: str = Depends(require_any_permission("setting:view", "setting:update")),
 ):
-    _category = container.category()
+    adapter = CategoryConfigRepositoryAdapter()
+    entities = adapter.get_all()
     parsed = MediaType.from_string(req.type)
-    if parsed == MediaType.MOVIE:
-        categories = _category.movie_categorys
-    elif parsed == MediaType.TV:
-        categories = _category.tv_categorys
-    else:
-        categories = _category.anime_categorys
+    media_type_map = {MediaType.MOVIE: "movie", MediaType.TV: "tv", MediaType.ANIME: "anime"}
+    target = media_type_map.get(parsed, "")
+    categories = [e.name for e in entities if e.media_type == target]
     return success(
         data={
             "category": list(categories),

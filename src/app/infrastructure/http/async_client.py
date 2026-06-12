@@ -18,6 +18,8 @@ class AsyncHttpClient:
 
     封装 httpx.AsyncClient，支持 HTTP/2，内置 tenacity 异步重试、RateLimitEngine 限流、HttpCacheConfig 缓存。
     用于高并发场景：并发站点搜索、RSS 订阅轮询、批量媒体元数据获取。
+
+    由 factories / lifespan 创建并管理生命周期。
     """
 
     def __init__(

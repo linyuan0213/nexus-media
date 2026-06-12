@@ -1,9 +1,9 @@
+from app.core.system_config import SystemConfig
 from app.indexer.configuration import IndexerConf
 from app.indexer.client._base import _IIndexClient
 from app.indexer.schema import ConfigField, IndexerConfigSchema
-from app.infrastructure.http.client import HttpClient
 from app.utils import ExceptionUtils
-from app.di import container
+from app.infrastructure.http.client import HttpClient
 
 
 class Prowlarr(_IIndexClient):
@@ -36,14 +36,15 @@ class Prowlarr(_IIndexClient):
         ],
     )
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, system_config: SystemConfig | None = None):
         super().__init__()
         if config:
             self._client_config = config
         else:
             from app.domain.enums import SystemConfigKey
 
-            indexer_config = container.system_config().get(SystemConfigKey.IndexerConfig) or {}
+            _system_config = system_config or SystemConfig()
+            indexer_config = _system_config.get(SystemConfigKey.IndexerConfig) or {}
             self._client_config = indexer_config.get("prowlarr") or {}
         self._refresh()
 

@@ -5,15 +5,15 @@ JWT 认证服务
 
 import uuid
 from datetime import datetime, timedelta
+from typing import Any
 
 import jwt
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 
 from app.core.exceptions import RepositoryError, ServiceError
-from app.schemas.auth import TokenPair, UserContext
-from app.di import container
 from app.infrastructure.security import get_secret_key
+from app.schemas.auth import TokenPair, UserContext
 
 # 密码加密上下文（Argon2）
 pwd_context = PasswordHash([Argon2Hasher()])
@@ -30,6 +30,9 @@ class AuthService:
     认证服务：处理 JWT Token 的签发、验证、刷新
     """
 
+    def __init__(self, rbac_service: Any):
+        self._rbac_service = rbac_service
+
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:
         """验证密码"""
@@ -40,12 +43,11 @@ class AuthService:
         """加密密码"""
         return pwd_context.hash(password)
 
-    @staticmethod
-    def authenticate(username: str, password: str) -> UserContext | None:
+    def authenticate(self, username: str, password: str) -> UserContext | None:
         """
         验证用户名密码，返回用户上下文
         """
-        success, result = container.rbac_service().authenticate_user(username, password)
+        success, result = self._rbac_service.authenticate_user(username, password)
         if not success:
             return None
 
@@ -53,7 +55,7 @@ class AuthService:
 
         # 获取用户权限
         try:
-            permissions = container.rbac_service().get_user_permissions(user.ID)
+            permissions = self._rbac_service.get_user_permissions(user.ID)
             permissions = list(permissions) if permissions else []
         except (ServiceError, RepositoryError):
             permissions = []
@@ -107,8 +109,7 @@ class AuthService:
             access_token=access_token, refresh_token=refresh_token, expires_in=_ACCESS_TOKEN_EXPIRE_MINUTES * 60
         )
 
-    @staticmethod
-    def refresh_access_token(refresh_token: str) -> TokenPair | None:
+    def refresh_access_token(self, refresh_token: str) -> TokenPair | None:
         """
         使用 Refresh Token 换取新的 Token 对
         """
@@ -122,13 +123,13 @@ class AuthService:
                 return None
 
             # 重新获取用户信息
-            user = container.rbac_service().get_user_by_id(user_id)
+            user = self._rbac_service.get_user_by_id(user_id)
             if not user:
                 return None
 
             # 构建用户上下文
             try:
-                permissions = container.rbac_service().get_user_permissions(user_id)
+                permissions = self._rbac_service.get_user_permissions(user_id)
                 permissions = list(permissions) if permissions else []
             except (ServiceError, RepositoryError):
                 permissions = []

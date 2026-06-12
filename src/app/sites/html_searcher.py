@@ -18,7 +18,7 @@ from lxml import etree
 
 import log
 from app.sites.api_searcher import ApiSiteSearcher
-from app.sites.engine import SiteDefinition, SiteEngine
+from app.sites.engine import SiteDefinition
 from app.sites import engine_tools
 from app.sites.searchers import _TRANSFORMS, _css_to_xpath, _resolve_jinja
 from app.infrastructure.http.auth import CookieAuth
@@ -34,9 +34,10 @@ class HtmlSiteSearcher:
     HTML 站点搜索器
     """
 
-    def __init__(self, site_def: SiteDefinition, user_config: dict | None = None):
+    def __init__(self, site_def: SiteDefinition, site_engine, user_config: dict | None = None):
         self._site = site_def
         self._user_config = user_config or {}
+        self._site_engine = site_engine
 
     def search(self, keyword: str = "", page: int = 0, mtype: MediaType | None = None) -> list[dict[str, Any]]:
         if not self._site.html:
@@ -128,7 +129,7 @@ class HtmlSiteSearcher:
             headers["User-Agent"] = ua
         proxies = get_proxies() if self._user_config.get("proxy") else None
         proxy_url = proxies.get("http") if proxies else None
-        engine = SiteEngine.get_instance()
+        engine = self._site_engine
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._site)

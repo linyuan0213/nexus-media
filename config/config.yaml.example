@@ -88,6 +88,8 @@ media:
   category: default-category
   # 【媒体库数据同步周期】：定时同步媒体服务器数据到本地，单位小时
   mediasync_interval: 12
+  # 【目录同步监控间隔】：定时检查并转移目录同步队列中的文件，单位秒。本地文件系统建议60秒，远程/网盘建议300秒以上
+  sync_transfer_interval: 60
   # 【转移到媒体库的最小文件大小】：避免预告片/MV等影响识别，单位M
   min_filesize: 150
   # 【文件名转移忽略词】：文件名包含忽略词，忽略转移
@@ -144,26 +146,13 @@ openai:
   # 【openai api model】：自定义openai模型
   api_model:
 # 【配置安全】
+# security.api_key / check_apikey / webhook_allow_ip 已废弃：
+# - Webhook 验证改用数据库管理的 API Key（APIKeyService）
+# - JWT 签名改用 get_secret_key()（从 security.jwt_secret 或 app.web_secret_key 获取）
 security:
-  # 【媒体服务器webhook允许ip范围】：即只有如下范围的IP才允许调用webhook
-  media_server_webhook_allow_ip:
-    ipv4: 0.0.0.0/0
-    ipv6: ::/0
-  # 【Telegram webhook允许ip范围】：即只有如下范围的IP才允许调用webhook
-  telegram_webhook_allow_ip:
-    ipv4: 127.0.0.1
-    ipv6: ::/0
-  # 【Synology Chat webhook允许ip范围】：即只有如下范围的IP才允许调用webhook
-  synology_webhook_allow_ip:
-    ipv4: 127.0.0.1
-    ipv6: ::/0
-  # 【API认证密钥】：用于Jellyseerr、Overseerr中Authorization认证以及非客户端类的API调用
-  api_key:
-  # 【是否验证apikey】：开启时需要在回调地址中传递api密钥进行验证，以增强安全性
-  check_apikey: false
+  jwt_secret: CU72Fq6Qfz0zBUz1iZigbhCa8JYFugVgd5gKXZhedfg
 
 # 【实验室】
-  jwt_secret: CU72Fq6Qfz0zBUz1iZigbhCa8JYFugVgd5gKXZhedfg
 laboratory:
   # 【识别增强】关键字猜想
   search_keyword: false

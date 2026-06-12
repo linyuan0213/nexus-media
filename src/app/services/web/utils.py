@@ -2,18 +2,29 @@ from typing import Any
 
 import cn2an
 
-from app.di import container
 from app.domain.mediatypes import MediaType
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.security import generate_password_hash
 from app.media import meta_info
+from app.media.external.bangumi import Bangumi
+from app.media.external.douban import DouBan
+from app.media.service import MediaService
 from app.utils import ExceptionUtils, IpUtils, StringUtils
 from app.utils.config_tools import get_proxies
 from version import APP_VERSION
 
 
 class WebUtils:
+    def __init__(self, media_service: MediaService, douban: DouBan | None = None, bangumi: Bangumi | None = None):
+        self._douban = douban or DouBan()
+        self._media_service = media_service
+        self._bangumi = bangumi or Bangumi()
+
+        global _default_web_utils
+        if _default_web_utils is None:
+            _default_web_utils = self
+
     @staticmethod
     def get_location(ip):
         """
@@ -66,8 +77,7 @@ class WebUtils:
             ExceptionUtils.exception_traceback(e)
         return None, None, False
 
-    @staticmethod
-    def get_mediainfo_from_id(mtype, mediaid, wait=False):
+    def get_mediainfo_from_id(self, mtype, mediaid, wait=False):
         """
         根据TMDB/豆瓣/BANGUMI获取媒体信息
         """
@@ -77,7 +87,7 @@ class WebUtils:
         if str(mediaid).startswith("DB:"):
             # 豆瓣
             doubanid = mediaid[3:]
-            info = container.douban().get_douban_detail(doubanid=doubanid, mtype=mtype, wait=wait)
+            info = self._douban.get_douban_detail(doubanid=doubanid, mtype=mtype, wait=wait)
             if not info:
                 return None
             title = info.get("title")
@@ -90,11 +100,11 @@ class WebUtils:
                 mtype = MediaType.TV if info.get("episodes_count") else MediaType.MOVIE
             media_info = None
             if original_title:
-                media_info = container.media_service().get_media_info(
+                media_info = self._media_service.get_media_info(
                     title=f"{original_title} {year}", mtype=mtype, append_to_response="all"
                 )
             if not media_info or not media_info.tmdb_info:
-                media_info = container.media_service().get_media_info(
+                media_info = self._media_service.get_media_info(
                     title=f"{title} {year}", mtype=mtype, append_to_response="all"
                 )
             # TMDB匹配失败时，使用豆瓣信息构造基础媒体信息，避免退化为不识别模式
@@ -117,17 +127,17 @@ class WebUtils:
         elif str(mediaid).startswith("BG:"):
             # BANGUMI
             bangumiid = str(mediaid)[3:]
-            info = container.bangumi().detail(bid=bangumiid)
+            info = self._bangumi.detail(bid=bangumiid)
             if not info:
                 return None
             title = info.get("name")
             title_cn = info.get("name_cn")
             year = info.get("date")[:4] if info.get("date") else ""
-            media_info = container.media_service().get_media_info(
+            media_info = self._media_service.get_media_info(
                 title=f"{title} {year}", mtype=MediaType.TV, append_to_response="all"
             )
             if not media_info or not media_info.tmdb_info:
-                media_info = container.media_service().get_media_info(
+                media_info = self._media_service.get_media_info(
                     title=f"{title_cn} {year}", mtype=MediaType.TV, append_to_response="all"
                 )
             # 检查是否成功匹配到TMDB信息
@@ -135,7 +145,7 @@ class WebUtils:
                 return None
         else:
             # TMDB
-            info = container.media_service().get_tmdb_info(tmdbid=mediaid, mtype=mtype, append_to_response="all")
+            info = self._media_service.get_tmdb_info(tmdbid=mediaid, mtype=mtype, append_to_response="all")
             if not info:
                 return None
             media_info = meta_info(title=info.get("title") if mtype == MediaType.MOVIE else info.get("name"))
@@ -143,8 +153,7 @@ class WebUtils:
 
         return media_info
 
-    @staticmethod
-    def search_media_infos(keyword, source=None, page=1):
+    def search_media_infos(self, keyword, source=None, page=1):
         """
         搜索TMDB或豆瓣词条
         :param: keyword 关键字
@@ -161,9 +170,7 @@ class WebUtils:
 
         def _search_tmdb():
             mi = meta_info(title=content)
-            tmdbinfos = container.media_service().get_tmdb_infos(
-                title=mi.get_name(), year=mi.year, mtype=mtype, page=page
-            )
+            tmdbinfos = self._media_service.get_tmdb_infos(title=mi.get_name(), year=mi.year, mtype=mtype, page=page)
             results = []
             for tmdbinfo in tmdbinfos:
                 tmp_info = meta_info(title=keyword)
@@ -178,7 +185,7 @@ class WebUtils:
             return results
 
         def _search_douban():
-            return container.douban().search_douban_medias(
+            return self._douban.search_douban_medias(
                 keyword=key_word, mtype=mtype, season=season_num, episode=episode_num, page=page
             )
 
@@ -347,3 +354,22 @@ def set_config_directory(cfg, oper, cfg_key, cfg_value, update_value=None):
                 cfg[keys[0]] = {}
                 cfg[keys[0]][keys[1]] = cfg_value.replace("\\", "/")
     return cfg
+
+
+# 默认实例（向后兼容）
+_default_web_utils: WebUtils | None = None
+
+
+def _get_default_web_utils() -> WebUtils:
+    if _default_web_utils is None:
+        raise RuntimeError("WebUtils default instance is not initialized")
+    return _default_web_utils
+
+
+# 向后兼容的模块级函数
+def get_mediainfo_from_id(mtype, mediaid, wait=False):
+    return _get_default_web_utils().get_mediainfo_from_id(mtype, mediaid, wait)
+
+
+def search_media_infos(keyword, source=None, page=1):
+    return _get_default_web_utils().search_media_infos(keyword, source, page)
