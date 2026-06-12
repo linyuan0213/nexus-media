@@ -160,6 +160,11 @@ def _build_infrastructure() -> PluginSandbox:
     message = Message(apikey_service=apikey_service)
     site_cache = SiteCache()
     site_engine = SiteEngine()
+    from app.sites.siteuserinfo.config_api import _api_factory
+    from app.sites.siteuserinfo.config_html import _html_config_factory
+
+    site_engine.register_user_info_factory(_api_factory)
+    site_engine.register_user_info_factory(_html_config_factory)
     message_queue = MessageQueueFactory.create()
     hook_system = HookSystem(plugin_sandbox=None)  # 临时占位，后续替换
 
@@ -322,8 +327,15 @@ def _build_services() -> None:
 
     search_pipeline = SearchPipeline(media_service=media_service)
 
+    indexer = Indexer(
+        search_pipeline=search_pipeline,
+        indexer_helper=IndexerHelper(),
+        site_cache=site_cache,
+        site_engine=site_engine,
+    )
+
     indexer_service = IndexerService(
-        indexer=Indexer(search_pipeline=search_pipeline),
+        indexer=indexer,
         indexer_helper=IndexerHelper(),
         site_cache=site_cache,
         site_engine=site_engine,

@@ -13,11 +13,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import log
 from app.core.system_config import SystemConfig
 from app.db.repositories.download_repository import DownloadRepository
+from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
+from app.indexer.configuration import IndexerHelper
 from app.indexer.core.pipeline import SearchPipeline
 from app.indexer.registry import get_all_clients, get_client_class
 from app.infrastructure.progress import ProgressTracker
+from app.sites.engine import SiteEngine
+from app.sites.site_cache import SiteCache
 from app.utils import ExceptionUtils, StringUtils
-from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
 
 
 class Indexer:
@@ -33,6 +36,9 @@ class Indexer:
     def __init__(
         self,
         search_pipeline: SearchPipeline,
+        indexer_helper: IndexerHelper,
+        site_cache: SiteCache,
+        site_engine: SiteEngine,
         progress_helper: ProgressTracker | None = None,
         download_repo: DownloadRepository | None = None,
         system_config: SystemConfig | None = None,
@@ -41,6 +47,9 @@ class Indexer:
         self.download_repo = download_repo or DownloadRepository()
         self._pipeline = search_pipeline
         self._system_config = system_config or SystemConfig()
+        self._indexer_helper = indexer_helper
+        self._site_cache = site_cache
+        self._site_engine = site_engine
         self._client = None
         self._client_type = None
 
@@ -57,7 +66,14 @@ class Indexer:
         for cls in get_all_clients():
             try:
                 if cls.match(ctype_str):
-                    return cls(conf)
+                    if ctype_str == "builtin":
+                        return cls(
+                            conf,
+                            indexer_helper=self._indexer_helper,
+                            site_cache=self._site_cache,
+                            site_engine=self._site_engine,
+                        )
+                    return cls(conf, system_config=self._system_config)
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
         return None
@@ -101,17 +117,24 @@ class Indexer:
     def get_user_indexer_names(self):
         return [indexer.name for indexer in self.get_indexers(check=True)]
 
-    @staticmethod
-    def get_builtin_indexers(check=True, indexer_id=None):
+    def get_builtin_indexers(self, check=True, indexer_id=None):
         cls = get_client_class("builtin")
         if cls:
-            return cls().get_indexers(check=check, indexer_id=indexer_id)
+            return cls(
+                indexer_helper=self._indexer_helper,
+                site_cache=self._site_cache,
+                site_engine=self._site_engine,
+            ).get_indexers(check=check, indexer_id=indexer_id)
         return []
 
     def list_resources(self, index_id, page=0, keyword=None):
         cls = get_client_class("builtin")
         if cls:
-            return cls().list(index_id=index_id, page=page, keyword=keyword)
+            return cls(
+                indexer_helper=self._indexer_helper,
+                site_cache=self._site_cache,
+                site_engine=self._site_engine,
+            ).list(index_id=index_id, page=page, keyword=keyword)
         return []
 
     def search_by_keyword(self, key_word, filter_args: dict, match_media=None, in_from: SearchType | None = None):
