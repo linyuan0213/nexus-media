@@ -745,22 +745,22 @@ class FileTransferService:
         if not s_path:
             return
         if not os.path.exists(s_path):
-            print(f"[Rmt]源目录不存在：{s_path}")
+            log.warn(f"[Rmt]源目录不存在：{s_path}")
             return
 
         lock_key = f"filetransfer:manual:{hashlib.md5(s_path.encode(), usedforsecurity=False).hexdigest()}"
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=3600)
         acquired = lock.acquire()
         if not acquired:
-            print(f"[Rmt]源目录正在转移中：{s_path}")
+            log.warn(f"[Rmt]源目录正在转移中：{s_path}")
             return
 
         try:
             if t_path and not os.path.exists(t_path):
-                print(f"[Rmt]目的目录不存在：{t_path}")
+                log.warn(f"[Rmt]目的目录不存在：{t_path}")
                 return
-            print(f"[Rmt]转移模式为：{operation}")
-            print(f"[Rmt]正在转移以下目录中的全量文件：{s_path}")
+            log.info(f"[Rmt]转移模式为：{operation}")
+            log.info(f"[Rmt]正在转移以下目录中的全量文件：{s_path}")
             for path in PathUtils.get_dir_level1_medias(s_path, RMT_MEDIAEXT):
                 if PathUtils.is_invalid_path(path):
                     continue
@@ -768,7 +768,7 @@ class FileTransferService:
                     in_from=SyncType.MAN, in_path=path, target_dir=t_path, operation=operation
                 )
                 if not ret:
-                    print(f"[Rmt]{path} 处理失败：{ret_msg}")
+                    log.error(f"[Rmt]{path} 处理失败：{ret_msg}")
         finally:
             lock.release()
 

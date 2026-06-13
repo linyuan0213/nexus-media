@@ -106,7 +106,7 @@ class RssTaskService:
                 except (ServiceError, RepositoryError):
                     raise
                 except Exception as e:
-                    print(str(e))
+                    log.warn(f"[RssTaskService]解析任务备注失败: {e}")
                     note = {}
             save_path = note.get("save_path") or ""
             recognization = note.get("recognization") or "Y"
@@ -118,7 +118,7 @@ class RssTaskService:
             except (ServiceError, RepositoryError):
                 raise
             except Exception as e:
-                print(str(e))
+                log.warn(f"[RssTaskService]解析任务地址失败: {e}")
                 addresses = [task.ADDRESS]
             try:
                 parsers = json.loads(str(task.PARSER))
@@ -127,7 +127,7 @@ class RssTaskService:
             except (ServiceError, RepositoryError):
                 raise
             except Exception as e:
-                print(str(e))
+                log.warn(f"[RssTaskService]解析任务解析器失败: {e}")
                 parsers = [task.PARSER]
             state = task.STATE in ["Y", "1", True]
             self._rss_tasks.append(
@@ -242,7 +242,7 @@ class RssTaskService:
         except (ServiceError, RepositoryError):
             raise
         except Exception as e:
-            print(str(e))
+            log.warn(f"[RssTaskService]停止服务失败: {e}")
 
     def is_article_processed(self, task_type: str, title: str, year: str | None, enclosure: str | None) -> bool:
         """检查报文是否已处理"""

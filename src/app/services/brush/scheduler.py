@@ -3,6 +3,7 @@
 import contextlib
 from typing import Any
 
+import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.services.scheduler_core import SchedulerCore
 
@@ -41,4 +42,4 @@ class BrushTaskScheduler:
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            print(str(e))
+            log.error(f"[BrushTaskScheduler]移除所有任务失败: {e}")

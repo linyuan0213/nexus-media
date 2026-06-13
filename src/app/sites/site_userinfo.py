@@ -452,7 +452,7 @@ class SiteUserInfo:
                 try:
                     dates.append(datetime.strptime(s.get("join_at"), "%Y-%m-%d %H:%M:%S"))
                 except Exception as err:
-                    print(str(err))
+                    log.warn(f"[SiteUserInfo]解析加入时间失败: {err}")
         if dates:
             return min(dates).strftime("%Y-%m-%d")
         return ""

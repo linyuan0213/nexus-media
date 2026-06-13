@@ -142,7 +142,7 @@ class Torrent:
             try:
                 bdecode(req.content)
             except Exception as err:
-                print(str(err))
+                log.warn(f"[Torrent]种子数据解析失败：{err}，链接：{url}")
                 return None, None, "种子数据有误，请确认链接是否正确"
         # 读取种子文件名
         file_name = self.__get_url_torrent_filename(req, url)

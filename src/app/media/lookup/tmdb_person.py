@@ -1,3 +1,4 @@
+import log
 from app.infrastructure.image_proxy import ImageProxy
 from app.media.lookup.tmdb_client import TmdbClient
 from app.utils import StringUtils
@@ -16,7 +17,7 @@ class TmdbPerson:
         try:
             return self._dict_persons(self.client.search.people({"query": name}))
         except Exception as err:
-            print(str(err))
+            log.warn(f"[TmdbPerson]搜索失败: {err}")
             return []
 
     def get_chinese_name(self, person_id=None, person_info=None):
@@ -33,7 +34,7 @@ class TmdbPerson:
                 return ""
             aka_names = person_info.get("also_known_as", []) or []
         except Exception as err:
-            print(str(err))
+            log.warn(f"[TmdbPerson]获取人员详情失败: {err}")
             return ""
         for aka_name in aka_names:
             if StringUtils.is_chinese(aka_name):
@@ -52,7 +53,7 @@ class TmdbPerson:
         try:
             return self.client.person.details(person_id).get("also_known_as", []) or []
         except Exception as err:
-            print(str(err))
+            log.warn(f"[TmdbPerson]获取 aka 名称失败: {err}")
             return []
 
     def _dict_persons(self, infos, chinese=True):
