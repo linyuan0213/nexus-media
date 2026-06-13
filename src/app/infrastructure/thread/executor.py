@@ -18,6 +18,7 @@ import time
 from collections.abc import Callable, Iterator
 from concurrent.futures import Future, ThreadPoolExecutor
 
+import log
 from app.utils.exception_utils import ExceptionUtils
 
 
@@ -59,8 +60,6 @@ class ThreadExecutor:
     @property
     def pool(self) -> ThreadPoolExecutor:
         if self._pool is None:
-            import log
-
             self._pool = ThreadPoolExecutor(
                 max_workers=self._max_workers,
                 thread_name_prefix=f"nexus-{self._name}",
@@ -137,8 +136,6 @@ class ThreadExecutor:
         self._shutdown = True
         if self._pool is None:
             return
-        import log
-
         log.info(f"[ThreadExecutor]关闭线程池: {self._name} (active={self.active_count})")
         if wait:
             deadline = time.time() + (timeout if timeout is not None else 3.0)

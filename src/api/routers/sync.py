@@ -8,6 +8,7 @@ import os.path
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+import log
 from api.deps import (
     get_filetransfer_service,
     get_sync_service,
@@ -211,8 +212,6 @@ def delete_files(
     user: str = Depends(require_permission("setting:update")),
     ft: FileTransfer = Depends(get_filetransfer_service),
 ):
-    import log
-
     files = req.files
     if files:
         for file in files:
@@ -251,7 +250,7 @@ def get_sub_path(
         return fail(code=-1, message=e.message)
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
-        return fail(code=-1, message=f"加载路径失败: {str(e)}")
+        return fail(code=-1, message=f"加载路径失败: {e!s}")
     return success(data={"count": len(r), "items": r})
 
 

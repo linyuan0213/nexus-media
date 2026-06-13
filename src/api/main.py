@@ -40,9 +40,8 @@ from app.core.root_path import get_project_root
 from app.core.settings import settings
 from app.db import init_db
 from app.db.engine import get_engine
+from app.di.builders.context_builder import build_app_context
 from app.di.factories import build_all, init_site_config, _register_post_db_services
-from app.di.registry import registry
-from app.di.types import RegistryKey
 from app.downloader.client import init_clients as init_downloaders
 from app.indexer.client import init_clients as init_indexers
 from app.infrastructure.rate_limiter.middleware import RateLimitMiddleware
@@ -63,7 +62,9 @@ _secret_key = get_secret_key()
 async def lifespan(app: FastAPI):
     """应用生命周期管理：启动后台服务"""
     # 1. 创建所有对象（按拓扑顺序）
+    app_context = build_app_context()
     build_all()
+    app.state.context = app_context
 
     # 2. 初始化数据库表结构
     log.info("[FastAPI]初始化数据库表结构...")
@@ -76,7 +77,7 @@ async def lifespan(app: FastAPI):
     init_site_config()
 
     log.info("[FastAPI]启动后台服务...")
-    system_lifecycle: SystemLifecycleService = registry.get(RegistryKey.SYSTEM_LIFECYCLE)
+    system_lifecycle: SystemLifecycleService = app_context.system_lifecycle
     system_lifecycle.start_service()
 
     # 5. 注册内置客户端与插件
@@ -90,8 +91,8 @@ async def lifespan(app: FastAPI):
     init_message_clients()
     log.info("[FastAPI]消息客户端注册完成")
 
-    message: Message = registry.get(RegistryKey.MESSAGE)
-    plugin_sandbox = registry.get(RegistryKey.PLUGIN_SANDBOX)
+    message: Message = app_context.message
+    plugin_sandbox = app_context.plugin_sandbox
 
     plugin_sandbox.load_all()
     log.info("[FastAPI]插件加载完成")
@@ -109,7 +110,9 @@ async def lifespan(app: FastAPI):
 
     ThreadExecutor.shutdown_all()
 
-    # 7. 清空注册表
+    # 7. 清空注册表（兼容旧 Registry 用户）
+    from app.di.registry import registry
+
     registry.clear()
 
 
@@ -222,13 +225,9 @@ def health_check(message: Message = Depends(get_message)):
     # 关键外部服务：消息客户端
     try:
         msg_clients = message.active_clients
-        result.services[RegistryKey.MESSAGE.value] = HealthServiceStatus(
-            status="ok", detail=f"已配置 {len(msg_clients)} 个消息客户端"
-        )
+        result.services["message"] = HealthServiceStatus(status="ok", detail=f"已配置 {len(msg_clients)} 个消息客户端")
     except Exception as e:
-        result.services[RegistryKey.MESSAGE.value] = HealthServiceStatus(
-            status="error", detail=f"消息客户端检查失败: {e!s}"
-        )
+        result.services["message"] = HealthServiceStatus(status="error", detail=f"消息客户端检查失败: {e!s}")
 
     return result
 
