@@ -121,12 +121,7 @@ def _extract_user_from_api_key(
 
 
 def get_auth_service() -> AuthService:
-    try:
-        rbac = registry.get(RegistryKey.RBAC_SERVICE)
-    except KeyError:
-        from unittest.mock import MagicMock
-
-        rbac = MagicMock()
+    rbac = registry.get(RegistryKey.RBAC_SERVICE)
     return AuthService(rbac_service=rbac)
 
 
