@@ -369,7 +369,7 @@ class RedisStore:
         if client is None:
             return []
         try:
-            result = client.xclaim(stream, group, consumer, min_idle_time, ids)
+            result = client.xclaim(stream, group, consumer, min_idle_time, list(ids))
             return result if isinstance(result, list) else []
         except RedisError as e:
             log.debug(f"RedisStore xclaim 失败 {stream}: {e}")
