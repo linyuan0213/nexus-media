@@ -69,5 +69,8 @@ class TestDatabaseFactory:
         engine = DatabaseFactory.create_engine(db_type="sqlite", db_path=":memory:")
         from sqlalchemy import inspect
 
-        inspector = inspect(engine)
-        assert inspector.get_table_names() == []
+        try:
+            inspector = inspect(engine)
+            assert inspector.get_table_names() == []
+        finally:
+            engine.dispose()
