@@ -33,9 +33,9 @@ class TestToSimplified:
         ("input_text", "expected"),
         [
             ("臺灣", "台湾"),
-            ("軟體", "软体"),
-            ("作業系統", "作业系统"),
-            ("資料庫", "资料库"),
+            ("軟體", "软件"),
+            ("作業系統", "操作系统"),
+            ("資料庫", "数据库"),
         ],
     )
     def test_common_conversions(self, input_text, expected):
