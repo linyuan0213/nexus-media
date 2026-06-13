@@ -23,7 +23,7 @@ dependencies = [
     "cryptography>=49.0.0",
     "dateparser>=1.2.0",
     "filelock>=3.16.1",
-    "httpx[socks]>=0.28.1",
+    "httpx[socks,http2]>=0.28.1",
     "jinja2>=3.1.5",
     "jsonpath>=0.82.2",
     "loguru>=0.7.3",
@@ -73,6 +73,8 @@ dependencies = [
     "python-jose[cryptography]>=3.5.0",
     "ruff>=0.15.17",
     "fast-bencode>=1.1.7",
+    "uvloop>=0.22.1",
+    "orjson>=3.11.9",
 ]
 
 [dependency-groups]

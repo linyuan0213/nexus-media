@@ -1,5 +1,8 @@
 import json
 from enum import Enum
+from typing import Any
+
+import orjson
 
 import log
 
@@ -32,9 +35,9 @@ class JsonUtils:
         try:
             if not text:
                 return False
-            json.loads(text)
+            orjson.loads(text)
             return True
-        except json.JSONDecodeError:
+        except orjson.JSONDecodeError:
             return False
 
     @staticmethod
@@ -71,13 +74,47 @@ class JsonUtils:
     def get_json_object(json_str, field):
         try:
             # 解析 JSON 字符串
-            json_data = json.loads(json_str)
+            json_data = orjson.loads(json_str)
             # 提取指定字段的值
             field_value = JsonUtils.get_nested_value(json_data, field)
             return field_value
-        except json.JSONDecodeError as e:
+        except orjson.JSONDecodeError as e:
             log.warn(f"[JsonUtils]JSON 解析错误: {e}")
             return None
         except Exception as e:
             log.warn(f"[JsonUtils]提取字段失败: {e}")
             return None
+
+    @staticmethod
+    def dumps(
+        obj: Any,
+        *,
+        ensure_ascii: bool = False,
+        indent: bool = False,
+        default=None,
+        sort_keys: bool = False,
+    ) -> str:
+        """使用 orjson 序列化 JSON；需要缩进或自定义 encoder 时回退到标准库 json."""
+        if indent or default is not None:
+            return json.dumps(
+                obj,
+                ensure_ascii=ensure_ascii,
+                indent=2 if indent else None,
+                default=default,
+                sort_keys=sort_keys,
+            )
+
+        option = orjson.OPT_NON_STR_KEYS
+        if not ensure_ascii:
+            option |= orjson.OPT_SERIALIZE_NUMPY
+        if sort_keys:
+            option |= orjson.OPT_SORT_KEYS
+
+        return orjson.dumps(obj, option=option).decode("utf-8")
+
+    @staticmethod
+    def loads(s: str | bytes) -> Any:
+        """使用 orjson 反序列化 JSON."""
+        if isinstance(s, str):
+            s = s.encode("utf-8")
+        return orjson.loads(s)

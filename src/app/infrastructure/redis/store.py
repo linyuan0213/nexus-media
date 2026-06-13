@@ -1,11 +1,11 @@
 """Redis 存储 — 连接管理与键值/哈希/列表/有序集合/Stream 操作."""
 
-import json
 import threading
 from typing import Any
 
 import log
 from app.core.settings import settings
+from app.utils.json_utils import JsonUtils
 from redis import StrictRedis
 from redis.exceptions import RedisError
 
@@ -82,7 +82,7 @@ class RedisStore:
             return
         try:
             if isinstance(value, (dict, list)):
-                value = json.dumps(value)
+                value = JsonUtils.dumps(value)
             client.hset(name, key, value)
         except RedisError as e:
             log.debug(f"RedisStore hset 失败 {name}/{key}: {e}")
@@ -128,7 +128,7 @@ class RedisStore:
         if client is None:
             return
         try:
-            client.lpush(name, *[json.dumps(v) if isinstance(v, (dict, list)) else v for v in values])
+            client.lpush(name, *[JsonUtils.dumps(v) if isinstance(v, (dict, list)) else v for v in values])
         except RedisError as e:
             log.debug(f"RedisStore lpush 失败 {name}: {e}")
 
@@ -149,7 +149,7 @@ class RedisStore:
         if client is None:
             return
         try:
-            client.rpush(name, *[json.dumps(v) if isinstance(v, (dict, list)) else v for v in values])
+            client.rpush(name, *[JsonUtils.dumps(v) if isinstance(v, (dict, list)) else v for v in values])
         except RedisError as e:
             log.debug(f"RedisStore rpush 失败 {name}: {e}")
 
@@ -304,7 +304,9 @@ class RedisStore:
         if client is None:
             return None
         try:
-            result = client.xadd(stream, fields, maxlen=max_len, approximate=True)
+            # 将 dict 值统一转为字符串，符合 redis-py 要求
+            payload = {str(k): JsonUtils.dumps(v) if isinstance(v, (dict, list)) else str(v) for k, v in fields.items()}
+            result = client.xadd(stream, payload, maxlen=max_len, approximate=True)  # type: ignore[arg-type]
             return str(result) if result is not None and not isinstance(result, list) else None
         except RedisError as e:
             log.debug(f"RedisStore xadd 失败 {stream}: {e}")
