@@ -318,7 +318,6 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
 
     tmdb_blacklist_service = TmdbBlacklistService(media_service=media_service)
 
-    media_config_service_2 = MediaConfigService(repo=MediaConfigRepositoryAdapter())
     media_server_config_service = MediaServerConfigService(
         config_repo=MediaServerRepositoryAdapter(),
         media_server=media_server,
@@ -335,7 +334,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         filetransfer=filetransfer_service,
         system_config=SystemConfig(),
         thread_executor=thread_executor,
-        media_config_service=media_config_service_2,
+        media_config_service=media_config_service,
     )
     media_recommendation_service = MediaRecommendationService(
         media_service=media_service,
@@ -442,7 +441,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         site_resolver=site_resolver,
         site_favicon_service=site_favicon_service,
         media_info_service=media_info_service,
-        media_config_service=media_config_service_2,
+        media_config_service=media_config_service,
         media_file_service=media_file_service,
         media_library_service=media_library_service,
         media_recommendation_service=media_recommendation_service,
