@@ -3,7 +3,6 @@ IYUUAutoSeed Plugin v2
 基于IYUU官方Api实现自动辅种
 """
 
-import json
 import os
 from datetime import datetime, timedelta
 from threading import Event
@@ -20,6 +19,7 @@ from app.plugin_framework.builtin_plugins.iyuuautoseed.backend.iyuu.iyuu_helper 
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import Torrent
 from app.utils.config_tools import get_proxies
+from app.utils.json_utils import JsonUtils
 
 
 class IYUUAutoSeedPlugin:
@@ -118,13 +118,13 @@ class IYUUAutoSeedPlugin:
         content = self.ctx.read_data("cache.json")
         if content:
             try:
-                return json.loads(content)
+                return JsonUtils.loads(content)
             except Exception as e:  # noqa: BLE001
                 log.debug(f"[plugin]忽略异常: {e}")
         return {"error_caches": [], "success_caches": [], "permanent_error_caches": []}
 
     def _save_cache(self, data):
-        self.ctx.write_data("cache.json", json.dumps(data, ensure_ascii=False, indent=2))
+        self.ctx.write_data("cache.json", JsonUtils.dumps(data, ensure_ascii=False, indent=2))
 
     def _do_seed(self):
         config = self._get_config()
@@ -348,7 +348,7 @@ class IYUUAutoSeedPlugin:
         try:
             content = self.ctx.read_data("seed_history.json")
             if content:
-                history = json.loads(content)
+                history = JsonUtils.loads(content)
             else:
                 history = {}
 
@@ -363,6 +363,6 @@ class IYUUAutoSeedPlugin:
                 seed_history.append({"downloader": downloader_id, "torrents": list(set(success_torrents))})
 
             history[current_hash] = seed_history
-            self.ctx.write_data("seed_history.json", json.dumps(history, ensure_ascii=False, indent=2))
+            self.ctx.write_data("seed_history.json", JsonUtils.dumps(history, ensure_ascii=False, indent=2))
         except Exception as e:
             self.ctx.error(f"保存辅种历史失败: {e}")

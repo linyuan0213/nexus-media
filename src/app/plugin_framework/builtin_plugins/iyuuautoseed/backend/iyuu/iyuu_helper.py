@@ -1,10 +1,10 @@
 import hashlib
-import json
 import logging
 import time
 
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.utils.json_utils import JsonUtils
 
 _logger = logging.getLogger(__name__)
 
@@ -116,14 +116,14 @@ class IyuuHelper:
         result, msg = self.__request_iyuu(
             url=self._api_base % "/reseed/sites/reportExisting",
             method="post",
-            params=json.dumps({"sid_list": site_ids}),
+            params=JsonUtils.dumps({"sid_list": site_ids}),
         )
         if not result:
             return result, msg
         sid_sha1 = result.get("sid_sha1")
 
         info_hashs.sort()
-        json_data = json.dumps(info_hashs, separators=(",", ":"), ensure_ascii=False)
+        json_data = JsonUtils.dumps(info_hashs, separators=(",", ":"), ensure_ascii=False)
         sha1 = self.get_sha1(json_data)
         result, msg = self.__request_iyuu(
             url=self._api_base % "/reseed/index/index",

@@ -1,4 +1,3 @@
-import json
 import re
 
 import log
@@ -9,6 +8,7 @@ from app.mediaserver.media_server import MediaServer
 from app.schemas.media import MediaSearchResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe
 from app.utils import StringUtils
+from app.utils.json_utils import JsonUtils
 
 
 class SearchResultService:
@@ -156,7 +156,7 @@ class SearchResultService:
         """解析资源类型"""
         if res_type_str:
             try:
-                res_mix = json.loads(res_type_str)
+                res_mix = JsonUtils.loads(res_type_str)
             except Exception:
                 return "", "", "", ""
             return (

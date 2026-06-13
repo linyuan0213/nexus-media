@@ -14,6 +14,7 @@ from app.db.repositories.plugin_framework_repository import PluginFrameworkRepos
 from app.domain.entities.plugin import PluginConfigEntity, PluginManifestEntity
 from app.plugin_framework.dependency_manager import PluginDependencyManager
 from app.schemas.plugin import PluginManifest, PluginState
+from app.utils.json_utils import JsonUtils
 
 
 class PluginRegistry:
@@ -42,7 +43,7 @@ class PluginRegistry:
                     entity = PluginManifestEntity.from_orm(orm_model)
                     if not entity:
                         continue
-                    manifest = PluginManifest.from_dict(json.loads(entity.manifest_json or "{}"))
+                    manifest = PluginManifest.from_dict(JsonUtils.loads(entity.manifest_json or "{}"))
                     self._manifest_cache[manifest.id] = manifest
                     self._state_cache[manifest.id] = PluginState(
                         id=manifest.id,
@@ -196,7 +197,7 @@ class PluginRegistry:
             tags=manifest.tags,
             icon=manifest.icon,
             color=manifest.color,
-            manifest_json=json.dumps(manifest.to_dict(), ensure_ascii=False),
+            manifest_json=JsonUtils.dumps(manifest.to_dict(), ensure_ascii=False),
             enabled=enabled,
             installed=installed,
             path=path,
@@ -249,7 +250,7 @@ class PluginRegistry:
                             tags=manifest.tags,
                             icon=manifest.icon,
                             color=manifest.color,
-                            manifest_json=json.dumps(manifest.to_dict(), ensure_ascii=False),
+                            manifest_json=JsonUtils.dumps(manifest.to_dict(), ensure_ascii=False),
                             enabled=existing_enabled,
                             installed=existing_installed,
                             path=plugin_dir,

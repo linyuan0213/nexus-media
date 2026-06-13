@@ -22,6 +22,7 @@ from app.schemas.system import (
 from app.services.indexer_service import IndexerService
 from app.services.web.utils import set_config_value
 from app.utils import ExceptionUtils
+from app.utils.json_utils import JsonUtils
 from app.utils.submodule_loader import SubmoduleLoader
 
 
@@ -104,7 +105,7 @@ class MediaServerConfigService:
         server_dict = {}
         for item in servers:
             try:
-                cfg = json.loads(str(item.CONFIG)) if str(item.CONFIG or "") else {}
+                cfg = JsonUtils.loads(str(item.CONFIG)) if str(item.CONFIG or "") else {}
             except json.JSONDecodeError:
                 cfg = {}
             server_dict[item.NAME] = {
@@ -134,7 +135,11 @@ class MediaServerConfigService:
         item = self._config_repo.get_media_server_by_name(name)
         sid = cast(int, item.ID) if item else None
         self._config_repo.update_media_server(
-            sid=int(sid) if sid else None, name=name, enabled=enabled, config=json.dumps(config), is_default=is_default
+            sid=int(sid) if sid else None,
+            name=name,
+            enabled=enabled,
+            config=JsonUtils.dumps(config),
+            is_default=is_default,
         )
         # 如果有设置默认，需要清理其他默认并同步 ENABLED
         if is_default:

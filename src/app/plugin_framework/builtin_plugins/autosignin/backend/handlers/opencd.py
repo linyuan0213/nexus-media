@@ -1,4 +1,3 @@
-import json
 import time
 from typing import cast
 
@@ -13,6 +12,7 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base impor
     SiteSigninHandler,
 )
 from app.utils import StringUtils
+from app.utils.json_utils import JsonUtils
 
 
 class Opencd(SiteSigninHandler):
@@ -95,7 +95,7 @@ class Opencd(SiteSigninHandler):
 
             if sign_res.status_code == 200:
                 self._plugin_ctx.debug(f"sign_res返回 {sign_res.text}")
-                sign_dict = json.loads(sign_res.text)
+                sign_dict = JsonUtils.loads(sign_res.text)
                 if sign_dict["state"]:
                     return SigninResult.success(site)
                 return SigninResult.fail(site, f"签到接口返回 {sign_dict}")

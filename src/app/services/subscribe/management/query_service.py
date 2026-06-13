@@ -1,10 +1,10 @@
 """Subscribe query service - 订阅查询与删除."""
 
-import json
 from typing import Any
 
 from app.domain.mediatypes import MediaType
 from app.services.subscribe.management.utils import parse_rss_desc
+from app.utils.json_utils import JsonUtils
 
 
 class SubscribeQueryService:
@@ -28,8 +28,8 @@ class SubscribeQueryService:
             desc = rss_movie.DESC
             note = rss_movie.NOTE
             tmdbid = rss_movie.TMDBID
-            rss_sites = json.loads(rss_movie.RSS_SITES) if rss_movie.RSS_SITES else []
-            search_sites = json.loads(rss_movie.SEARCH_SITES) if rss_movie.SEARCH_SITES else []
+            rss_sites = JsonUtils.loads(rss_movie.RSS_SITES) if rss_movie.RSS_SITES else []
+            search_sites = JsonUtils.loads(rss_movie.SEARCH_SITES) if rss_movie.SEARCH_SITES else []
             over_edition = rss_movie.OVER_EDITION == 1
             filter_restype = rss_movie.FILTER_RESTYPE
             filter_pix = rss_movie.FILTER_PIX
@@ -96,8 +96,8 @@ class SubscribeQueryService:
             desc = rss_tv.DESC
             note = rss_tv.NOTE
             tmdbid = rss_tv.TMDBID
-            rss_sites = json.loads(rss_tv.RSS_SITES) if rss_tv.RSS_SITES else []
-            search_sites = json.loads(rss_tv.SEARCH_SITES) if rss_tv.SEARCH_SITES else []
+            rss_sites = JsonUtils.loads(rss_tv.RSS_SITES) if rss_tv.RSS_SITES else []
+            search_sites = JsonUtils.loads(rss_tv.SEARCH_SITES) if rss_tv.SEARCH_SITES else []
             over_edition = rss_tv.OVER_EDITION == 1
             filter_restype = rss_tv.FILTER_RESTYPE
             filter_pix = rss_tv.FILTER_PIX

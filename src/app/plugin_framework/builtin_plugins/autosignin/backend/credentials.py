@@ -1,11 +1,11 @@
 """签到凭据解析器 — 支持 headers / LocalStorage / 数据库字段等多来源提取。"""
 
-import json
 import time
 from abc import ABC, abstractmethod
 from typing import Optional
 
 from app.infrastructure.cache_system.cookiecloud_adapter import CookiecloudAdapter
+from app.utils.json_utils import JsonUtils
 
 
 class CredentialSource(ABC):
@@ -22,7 +22,7 @@ class HeaderSource(CredentialSource):
         headers = site_info.get("headers")
         if isinstance(headers, str):
             try:
-                headers = json.loads(headers)
+                headers = JsonUtils.loads(headers)
             except Exception:
                 return None
         if not isinstance(headers, dict):

@@ -1,10 +1,9 @@
-import json
-
 from app.core.constants import MT_URL
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss._base import _ISiteRssGenHandler
 from app.utils.config_tools import get_proxies
+from app.utils.json_utils import JsonUtils
 
 
 class Mteam(_ISiteRssGenHandler):
@@ -21,14 +20,14 @@ class Mteam(_ISiteRssGenHandler):
     def gen_rss(self, site_info: dict):
         site = site_info.get("name")
         ua = site_info.get("ua")
-        headers = json.loads(site_info.get("headers") or "{}")
+        headers = JsonUtils.loads(site_info.get("headers") or "{}")
         headers.update({"contentType": "application/json;charset=UTF-8", "User-Agent": ua})
 
         proxy = get_proxies() if site_info.get("proxy") else None
 
         rss_url = f"{MT_URL}/api/rss/genlink"
         data = {"labels": 0, "tkeys": ["ttitle", "tcat", "tsmalldescr", "tsize"], "pageSize": 50}
-        data = json.dumps(data, separators=(",", ":"))
+        data = JsonUtils.dumps(data, separators=(",", ":"))
 
         proxy_url = proxy.get("http") if proxy else None
         engine = self._site_engine

@@ -1,4 +1,3 @@
-import json
 import time
 
 from app.infrastructure.cache_system.cookiecloud_adapter import CookiecloudAdapter
@@ -9,6 +8,7 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base impor
     SiteSigninContext,
     SiteSigninHandler,
 )
+from app.utils.json_utils import JsonUtils
 
 
 class Rousi(SiteSigninHandler):
@@ -25,7 +25,7 @@ class Rousi(SiteSigninHandler):
         if headers:
             if isinstance(headers, str):
                 try:
-                    headers = json.loads(headers)
+                    headers = JsonUtils.loads(headers)
                 except Exception:
                     headers = None
 
@@ -83,7 +83,7 @@ class Rousi(SiteSigninHandler):
             return SigninResult.fail(site, "获取签到接口响应失败")
 
         try:
-            res_json = json.loads(res_text)
+            res_json = JsonUtils.loads(res_text)
         except Exception as e:
             return SigninResult.fail(site, f"解析响应JSON失败: {str(e)}")
 

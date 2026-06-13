@@ -51,7 +51,7 @@ class BrushTaskHelper:
         if not val or val in ("''", '""', "'", '"'):
             return default
         try:
-            return json.loads(val)
+            return JsonUtils.loads(val)
         except (ServiceError, RepositoryError, DomainError):
             raise
         except (json.JSONDecodeError, ValueError, TypeError):
@@ -59,19 +59,19 @@ class BrushTaskHelper:
         if (val.startswith("'") and val.endswith("'")) or (val.startswith('"') and val.endswith('"')):
             inner = val[1:-1]
             try:
-                return json.loads(inner)
+                return JsonUtils.loads(inner)
             except (ServiceError, RepositoryError, DomainError):
                 raise
             except (json.JSONDecodeError, ValueError, TypeError):
                 log.debug(f"[Brush]json.loads 解析失败: {inner}")
             try:
-                return json.loads(ast.literal_eval(inner))
+                return JsonUtils.loads(ast.literal_eval(inner))
             except (ServiceError, RepositoryError, DomainError):
                 raise
             except (json.JSONDecodeError, ValueError, TypeError):
                 log.debug(f"[Brush]json.loads 解析失败: {inner}")
         try:
-            return json.loads(ast.literal_eval(val))
+            return JsonUtils.loads(ast.literal_eval(val))
         except (ServiceError, RepositoryError, DomainError):
             raise
         except (json.JSONDecodeError, ValueError, TypeError):
@@ -122,7 +122,7 @@ class BrushTaskHelper:
         ua = site_info.get("ua")
         headers = site_info.get("headers")
         if JsonUtils.is_valid_json(headers):
-            headers = json.loads(str(headers))
+            headers = JsonUtils.loads(str(headers))
         else:
             headers = {}
         headers.update({"User-Agent": ua})

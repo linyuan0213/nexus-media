@@ -4,7 +4,6 @@ WordsService - 自定义识别词服务
 """
 
 import base64
-import json
 import time
 from typing import Any
 
@@ -15,6 +14,7 @@ from app.domain.word_processor import process_title, set_words_info
 from app.infrastructure.cache_system import get_cache_manager
 from app.media import MediaCache
 from app.schemas.words import WordDTO, WordGroupExportDTO
+from app.utils.json_utils import JsonUtils
 
 
 class WordsService:
@@ -267,7 +267,7 @@ class WordsService:
     def analyse_import_code(self, import_code: str) -> tuple[list[WordGroupExportDTO], str]:
         raw = base64.b64decode(import_code.encode("utf-8")).decode("utf-8")
         parts = raw.split("@@@@@@")
-        import_dict = json.loads(parts[0])
+        import_dict = JsonUtils.loads(parts[0])
         note = parts[1] if len(parts) > 1 else ""
         groups = []
         for group in import_dict.values():
@@ -340,14 +340,14 @@ class WordsService:
                 "regex": w.REGEX,
                 "help": w.HELP,
             }
-        export_string = json.dumps(export_dict) + "@@@@@@" + str(note)
+        export_string = JsonUtils.dumps(export_dict) + "@@@@@@" + str(note)
         encoded = base64.b64encode(export_string.encode("utf-8")).decode("utf-8")
         return encoded, note
 
     def import_words(self, import_code: str, ids_info: str) -> None:
         raw = base64.b64decode(import_code.encode("utf-8")).decode("utf-8")
         parts = raw.split("@@@@@@")
-        import_dict = json.loads(parts[0])
+        import_dict = JsonUtils.loads(parts[0])
         import_group_ids = [id_info.split("_")[0] for id_info in ids_info.split("@") if "_" in id_info]
         group_id_map = {}
         for import_group_id in import_group_ids:

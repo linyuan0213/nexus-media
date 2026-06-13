@@ -1,6 +1,5 @@
 import base64
 import contextlib
-import json
 import os
 import re
 
@@ -11,6 +10,7 @@ from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter
 from app.domain.mediatypes import MediaType
 from app.media import ReleaseGroupsMatcher, meta_info
 from app.utils import StringUtils
+from app.utils.json_utils import JsonUtils
 
 
 class FilterRuleEngine:
@@ -411,7 +411,7 @@ class FilterService:
         """导入规则组（Base64编码的JSON字符串），失败时抛出异常"""
         try:
             json_str = base64.b64decode(str(content).encode("utf-8")).decode("utf-8")
-            json_obj = json.loads(json_str)
+            json_obj = JsonUtils.loads(json_str)
         except Exception as err:
             raise ValidationError(f"数据格式不正确，{err}") from err
 
@@ -496,7 +496,7 @@ class FilterService:
                 }
             )
         rule_json = {"name": group_info[0].GROUP_NAME, "rules": rules}
-        return base64.b64encode(json.dumps(rule_json).encode("utf-8")).decode("utf-8")
+        return base64.b64encode(JsonUtils.dumps(rule_json).encode("utf-8")).decode("utf-8")
 
     def test_rule(
         self, title: str, subtitle: str | None, size: str | None, rulegroup: str | None

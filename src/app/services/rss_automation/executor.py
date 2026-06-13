@@ -1,6 +1,5 @@
 """RSS 任务执行核心（模块级函数）."""
 
-import json
 import time
 import traceback
 from typing import Any
@@ -21,6 +20,7 @@ from app.media import meta_info
 from app.services.rss_automation.parser import RssParserEngine
 from app.utils import ExceptionUtils
 from app.utils.config_tools import get_proxies
+from app.utils.json_utils import JsonUtils
 
 
 def _check_task_rss(service, taskid: int | None, event_bus: EventBus | None = None) -> None:
@@ -238,7 +238,7 @@ def _parse_userrss_result(service, taskinfo: dict[str, Any]) -> list[dict[str, A
             log.error(f"[RssTaskService]任务 {task_name} 配置解析器 {parser_name} 格式不正确")
             continue
         try:
-            json.loads(rss_parser.get("format"))
+            JsonUtils.loads(rss_parser.get("format"))
         except (ServiceError, RepositoryError):
             raise
         except Exception as e:

@@ -7,6 +7,7 @@ import json
 import threading
 
 from app.infrastructure.rate_limiter import RateLimitEngine
+from app.utils.json_utils import JsonUtils
 
 
 class SiteRateLimiterService:
@@ -27,7 +28,7 @@ class SiteRateLimiterService:
         note = site_note if isinstance(site_note, dict) else {}
         if isinstance(site_note, str):
             try:
-                note = json.loads(site_note)
+                note = JsonUtils.loads(site_note)
             except json.JSONDecodeError:
                 note = {}
 

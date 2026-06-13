@@ -3,7 +3,6 @@ DoubanRank Plugin v2
 监控豆瓣热门榜单，自动添加订阅
 """
 
-import json
 import os
 import re
 from datetime import datetime, timedelta
@@ -22,6 +21,7 @@ from app.services.rss_processor import RssHelper
 from app.services.subscribe_service import SubscribeService
 from app.services.web.utils import get_mediainfo_from_id
 from app.utils import DomUtils
+from app.utils.json_utils import JsonUtils
 
 
 class DoubanRankPlugin:
@@ -104,13 +104,13 @@ class DoubanRankPlugin:
         content = self.ctx.read_data("history.json")
         if content:
             try:
-                return json.loads(content)
+                return JsonUtils.loads(content)
             except Exception as e:  # noqa: BLE001
                 log.debug(f"[plugin]忽略异常: {e}")
         return {}
 
     def _save_history(self, data):
-        self.ctx.write_data("history.json", json.dumps(data, ensure_ascii=False, indent=2))
+        self.ctx.write_data("history.json", JsonUtils.dumps(data, ensure_ascii=False, indent=2))
 
     def _update_history(self, media, state):
         if not media:

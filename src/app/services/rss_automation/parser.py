@@ -1,6 +1,5 @@
 """RSS 解析引擎."""
 
-import json
 from typing import Any
 
 import jsonpath
@@ -8,6 +7,7 @@ from lxml import etree
 from lxml.etree import _Element
 
 from app.core.exceptions import RepositoryError, ServiceError
+from app.utils.json_utils import JsonUtils
 
 
 class RssParserEngine:
@@ -23,7 +23,7 @@ class RssParserEngine:
         :return: 解析后的条目列表
         """
         parser_type = rss_parser.get("type")
-        parser_format = json.loads(rss_parser.get("format") or "{}")
+        parser_format = JsonUtils.loads(rss_parser.get("format") or "{}")
         rss_result: list[dict[str, Any]] = []
 
         if parser_type == "XML":
@@ -58,7 +58,7 @@ class RssParserEngine:
 
         elif parser_type == "JSON":
             try:
-                result_json = json.loads(rss_text)
+                result_json = JsonUtils.loads(rss_text)
             except (ServiceError, RepositoryError) as e:
                 raise ValueError(f"JSON解析失败: {e!s}") from e
             except Exception as err:

@@ -1,4 +1,3 @@
-import json
 from typing import Any, cast
 
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
@@ -21,6 +20,7 @@ from app.sites.site_cache import SiteCache
 from app.sites.site_favicon_service import SiteFaviconService
 from app.sites.site_resolver import SiteResolver
 from app.sites.site_userinfo import SiteUserInfo
+from app.utils.json_utils import JsonUtils
 
 
 class SiteService:
@@ -118,7 +118,7 @@ class SiteService:
         note = data.get("site_note")
         if isinstance(note, str):
             try:
-                note = json.loads(note)
+                note = JsonUtils.loads(note)
             except Exception:
                 note = {}
         rss_uses = data.get("site_include")

@@ -1,6 +1,5 @@
 """RSS 任务服务 Facade."""
 
-import json
 from typing import Any, cast
 
 import log
@@ -22,6 +21,7 @@ from app.services.rss_automation.executor import _check_task_rss
 from app.services.rss_processor import RssHelper
 from app.services.search_service import Searcher
 from app.sites.engine import SiteEngine
+from app.utils.json_utils import JsonUtils
 
 
 class RssTaskService:
@@ -102,7 +102,7 @@ class RssTaskService:
             task_note = str(task.NOTE or "")
             if task_note:
                 try:
-                    note = json.loads(task_note)
+                    note = JsonUtils.loads(task_note)
                 except (ServiceError, RepositoryError):
                     raise
                 except Exception as e:
@@ -112,7 +112,7 @@ class RssTaskService:
             recognization = note.get("recognization") or "Y"
             proxy = note.get("proxy") in ["Y", "1", True]
             try:
-                addresses = json.loads(str(task.ADDRESS))
+                addresses = JsonUtils.loads(str(task.ADDRESS))
                 if not isinstance(addresses, list):
                     addresses = [addresses]
             except (ServiceError, RepositoryError):
@@ -121,7 +121,7 @@ class RssTaskService:
                 log.warn(f"[RssTaskService]解析任务地址失败: {e}")
                 addresses = [task.ADDRESS]
             try:
-                parsers = json.loads(str(task.PARSER))
+                parsers = JsonUtils.loads(str(task.PARSER))
                 if not isinstance(parsers, list):
                     parsers = [task.PARSER]
             except (ServiceError, RepositoryError):
@@ -151,10 +151,10 @@ class RssTaskService:
                     "download_setting": task.DOWNLOAD_SETTING or "",
                     "recognization": task.RECOGNIZATION or recognization,
                     "over_edition": task.OVER_EDITION or 0,
-                    "sites": json.loads(str(task.SITES or ""))
+                    "sites": JsonUtils.loads(str(task.SITES or ""))
                     if str(task.SITES or "")
                     else {"rss_sites": [], "search_sites": []},
-                    "filter_args": json.loads(str(task.FILTER_ARGS or ""))
+                    "filter_args": JsonUtils.loads(str(task.FILTER_ARGS or ""))
                     if str(task.FILTER_ARGS or "")
                     else {"restype": "", "pix": "", "team": ""},
                 }
@@ -230,7 +230,7 @@ class RssTaskService:
         mediainfos_all = []
         for taskinfo in taskinfos:
             mediainfos_raw = str(taskinfo.MEDIAINFOS or "")
-            mediainfos = json.loads(mediainfos_raw) if mediainfos_raw else []
+            mediainfos = JsonUtils.loads(mediainfos_raw) if mediainfos_raw else []
             if mediainfos:
                 mediainfos_all += mediainfos
         return mediainfos_all

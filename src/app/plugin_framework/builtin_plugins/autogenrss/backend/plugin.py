@@ -4,7 +4,6 @@ RSS自动生成
 """
 
 import copy
-import json
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -172,7 +171,7 @@ class AutoGenRssPlugin:
                 self.ctx.warn(f"未配置 {site!s} 的Cookie或请求头，无法获取到RSS")
                 return ""
             if JsonUtils.is_valid_json(headers):
-                headers = json.loads(headers)
+                headers = JsonUtils.loads(headers)
             else:
                 headers = {}
 

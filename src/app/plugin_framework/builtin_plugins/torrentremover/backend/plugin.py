@@ -3,11 +3,11 @@ TorrentRemover Plugin v2
 历史记录中源文件被删除时，同步删除下载器中的下载任务
 """
 
-import json
 import os
 
 from app.plugin_framework.context import PluginContext
 from app.services.downloader_core import DownloaderCore
+from app.utils.json_utils import JsonUtils
 
 
 class TorrentRemoverPlugin:
@@ -55,7 +55,7 @@ class TorrentRemoverPlugin:
         transfer_history = self.ctx.read_data("torrenttransfer_history.json")
         if transfer_history:
             try:
-                history_data = json.loads(transfer_history)
+                history_data = JsonUtils.loads(transfer_history)
                 transfer_record = history_data.get(history_key)
             except Exception:
                 transfer_record = None

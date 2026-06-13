@@ -4,7 +4,6 @@ DoubanSync Plugin v2
 """
 
 import contextlib
-import json
 import traceback
 from datetime import datetime
 from threading import Lock
@@ -19,6 +18,7 @@ from app.services.downloader_core import DownloaderCore
 from app.services.search_service import Searcher
 from app.services.subscribe_service import SubscribeService
 from app.services.web.utils import get_mediainfo_from_id
+from app.utils.json_utils import JsonUtils
 
 _lock = Lock()
 
@@ -337,13 +337,13 @@ class DoubanSyncPlugin:
         content = self.ctx.read_data("history.json")
         if content:
             try:
-                return json.loads(content)
+                return JsonUtils.loads(content)
             except Exception:
                 self.ctx.warn("history.json 解析失败，将重新创建")
         return {}
 
     def _save_history(self, data: dict) -> None:
-        self.ctx.write_data("history.json", json.dumps(data, ensure_ascii=False, indent=2))
+        self.ctx.write_data("history.json", JsonUtils.dumps(data, ensure_ascii=False, indent=2))
 
     def _update_history(self, media, state: str) -> None:
         self.ctx.info(f"_update_history 开始执行: douban_id={media.douban_id}, state={state}")

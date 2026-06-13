@@ -1,9 +1,8 @@
-import json
-
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss._base import _ISiteRssGenHandler
 from app.utils.config_tools import get_proxies
+from app.utils.json_utils import JsonUtils
 from app.utils.string_utils import StringUtils
 
 
@@ -27,7 +26,7 @@ class YemaPT(_ISiteRssGenHandler):
 
         rss_url = "https://www.yemapt.org/api/rss/generateRssUrl"
         data = {"categoryIdList": [], "withShortDesc": True, "withSize": True, "showPromotion": False, "pageSize": 50}
-        data = json.dumps(data, separators=(",", ":"))
+        data = JsonUtils.dumps(data, separators=(",", ":"))
 
         proxy_url = proxy.get("http") if proxy else None
         engine = self._site_engine

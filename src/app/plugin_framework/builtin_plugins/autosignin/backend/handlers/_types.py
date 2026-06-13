@@ -13,6 +13,7 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base impor
     SiteSigninContext,
     SiteSigninHandler,
 )
+from app.utils.json_utils import JsonUtils
 from app.utils.path_utils import get_temp_path
 
 
@@ -102,7 +103,7 @@ class BakatestQaHandler(SiteSigninHandler):
     def _lookup_local_answer(self, question_str: str, answers: list) -> list:
         try:
             with open(self._answer_file) as f:
-                existing_answers = json.loads(f.read())
+                existing_answers = JsonUtils.loads(f.read())
             question_answer = existing_answers.get(question_str)
             if not question_answer:
                 return []
@@ -160,12 +161,12 @@ class BakatestQaHandler(SiteSigninHandler):
         existing_answers: dict = {}
         try:
             with open(self._answer_file) as f:
-                existing_answers = json.loads(f.read())
+                existing_answers = JsonUtils.loads(f.read())
         except (FileNotFoundError, OSError):
             pass
         try:
             existing_answers[question] = answer
             with open(self._answer_file, "w") as f:
-                f.write(json.dumps(existing_answers, indent=4))
+                f.write(JsonUtils.dumps(existing_answers, indent=4))
         except (FileNotFoundError, OSError):
             pass

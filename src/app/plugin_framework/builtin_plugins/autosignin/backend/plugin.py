@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 from typing import Any
 
@@ -9,6 +8,7 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.signer import Signi
 from app.plugin_framework.builtin_plugins.autosignin.backend.simulator import ChromeSigninSimulator
 from app.plugin_framework.builtin_plugins.autosignin.backend.site_config_store import SiteConfigStore
 from app.plugin_framework.context import PluginContext
+from app.utils.json_utils import JsonUtils
 
 
 class AutoSignInPlugin:
@@ -100,13 +100,13 @@ class AutoSignInPlugin:
         content = self.ctx.read_data("signin_history.json")
         if content:
             try:
-                return json.loads(content)
+                return JsonUtils.loads(content)
             except Exception as e:  # noqa: BLE001
                 log.debug(f"[plugin]忽略异常: {e}")
         return {}
 
     def _save_history(self, data):
-        self.ctx.write_data("signin_history.json", json.dumps(data, ensure_ascii=False, indent=2))
+        self.ctx.write_data("signin_history.json", JsonUtils.dumps(data, ensure_ascii=False, indent=2))
 
     def _get_history(self, key=None):
         data = self._load_history()

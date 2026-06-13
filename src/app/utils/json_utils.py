@@ -90,18 +90,20 @@ class JsonUtils:
         obj: Any,
         *,
         ensure_ascii: bool = False,
-        indent: bool = False,
+        indent: bool | int = False,
         default=None,
         sort_keys: bool = False,
+        separators: tuple[str, str] | None = None,
     ) -> str:
-        """使用 orjson 序列化 JSON；需要缩进或自定义 encoder 时回退到标准库 json."""
-        if indent or default is not None:
+        """使用 orjson 序列化 JSON；需要缩进、自定义 encoder 或 separators 时回退到标准库 json."""
+        if indent or default is not None or separators is not None:
             return json.dumps(
                 obj,
                 ensure_ascii=ensure_ascii,
-                indent=2 if indent else None,
+                indent=indent if isinstance(indent, int) else (2 if indent else None),
                 default=default,
                 sort_keys=sort_keys,
+                separators=separators,
             )
 
         option = orjson.OPT_NON_STR_KEYS

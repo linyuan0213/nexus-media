@@ -5,6 +5,7 @@ import json
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.core.settings import settings
 from app.db.repositories.config_repo_adapter import MediaConfigRepositoryAdapter
+from app.utils.json_utils import JsonUtils
 
 
 class MediaConfigService:
@@ -22,7 +23,7 @@ class MediaConfigService:
             return val
         if isinstance(val, str):
             try:
-                parsed = json.loads(val)
+                parsed = JsonUtils.loads(val)
                 return parsed if isinstance(parsed, list) else [parsed]
             except (json.JSONDecodeError, TypeError):
                 return []
@@ -36,7 +37,7 @@ class MediaConfigService:
             return val
         if isinstance(val, str):
             try:
-                parsed = json.loads(val)
+                parsed = JsonUtils.loads(val)
                 return parsed if isinstance(parsed, list) else []
             except (json.JSONDecodeError, TypeError):
                 return []
@@ -113,13 +114,13 @@ class MediaConfigService:
     ) -> bool:
         """一次性保存整个配置"""
         self._repo.set_media_config(
-            movie_path=json.dumps(movie_path) if movie_path else "",
-            tv_path=json.dumps(tv_path) if tv_path else "",
-            anime_path=json.dumps(anime_path) if anime_path else "",
-            unknown_path=json.dumps(unknown_path) if unknown_path else "",
-            movie_backend=json.dumps(movie_backend) if movie_backend else "",
-            tv_backend=json.dumps(tv_backend) if tv_backend else "",
-            anime_backend=json.dumps(anime_backend) if anime_backend else "",
-            unknown_backend=json.dumps(unknown_backend) if unknown_backend else "",
+            movie_path=JsonUtils.dumps(movie_path) if movie_path else "",
+            tv_path=JsonUtils.dumps(tv_path) if tv_path else "",
+            anime_path=JsonUtils.dumps(anime_path) if anime_path else "",
+            unknown_path=JsonUtils.dumps(unknown_path) if unknown_path else "",
+            movie_backend=JsonUtils.dumps(movie_backend) if movie_backend else "",
+            tv_backend=JsonUtils.dumps(tv_backend) if tv_backend else "",
+            anime_backend=JsonUtils.dumps(anime_backend) if anime_backend else "",
+            unknown_backend=JsonUtils.dumps(unknown_backend) if unknown_backend else "",
         )
         return True

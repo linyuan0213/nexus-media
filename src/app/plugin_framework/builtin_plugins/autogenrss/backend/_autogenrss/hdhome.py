@@ -1,4 +1,3 @@
-import json
 from typing import cast
 
 from lxml import etree
@@ -34,7 +33,7 @@ class HDHome(_ISiteRssGenHandler):
             self.warn(f"未配置 {site!s} 的Cookie或请求头，无法获取到RSS")
             return ""
         if JsonUtils.is_valid_json(headers):
-            headers = json.loads(headers or "{}")
+            headers = JsonUtils.loads(headers or "{}")
         else:
             headers = {}
 

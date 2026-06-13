@@ -3,7 +3,6 @@ TorrentTransfer Plugin v2
 定期转移下载器中的做种任务到另一个下载器
 """
 
-import json
 import os.path
 from copy import deepcopy
 from datetime import datetime, timedelta
@@ -18,6 +17,7 @@ from app.media import meta_info
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import TorrentStatus
 from app.sites.torrent import Torrent
+from app.utils.json_utils import JsonUtils
 from app.utils.path_utils import get_temp_path
 
 
@@ -340,7 +340,7 @@ class TorrentTransferPlugin:
         content = self.ctx.read_data("history.json")
         if content:
             try:
-                return json.loads(content)
+                return JsonUtils.loads(content)
             except Exception as e:  # noqa: BLE001
                 log.debug(f"[plugin]忽略异常: {e}")
         return {}
@@ -349,4 +349,4 @@ class TorrentTransferPlugin:
 
         data = self._load_history()
         data[key] = value
-        self.ctx.write_data("history.json", json.dumps(data, ensure_ascii=False, indent=2))
+        self.ctx.write_data("history.json", JsonUtils.dumps(data, ensure_ascii=False, indent=2))

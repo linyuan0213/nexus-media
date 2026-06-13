@@ -4,7 +4,6 @@ CookieCloud Plugin v2
 """
 
 import contextlib
-import json
 import re
 from collections import defaultdict
 from typing import Any
@@ -16,6 +15,7 @@ from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.http.exceptions import HttpClientError
 from app.plugin_framework.context import PluginContext
+from app.utils.json_utils import JsonUtils
 
 
 class CookieCloudPlugin:
@@ -286,7 +286,7 @@ class CookieCloudPlugin:
                     domain_url = ".".join(domain_key)
                     domain_url = self.ctx.site_engine.normalize_domain(domain_url) or domain_url
 
-                    self._cache.set(f"local_storage:{domain_url}", json.dumps(storage))
+                    self._cache.set(f"local_storage:{domain_url}", JsonUtils.dumps(storage))
 
         self.ctx.info("LocalStorage 同步 Redis 成功")
 

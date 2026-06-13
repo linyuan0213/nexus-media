@@ -1,6 +1,5 @@
 """Brush RSS checker - RSS 刷流选种逻辑."""
 
-import json
 from typing import Any
 
 import log
@@ -78,7 +77,7 @@ class BrushRssChecker:
         ua = taskinfo.get("ua")
         headers = taskinfo.get("headers")
         if headers and JsonUtils.is_valid_json(headers):
-            headers = json.loads(headers)
+            headers = JsonUtils.loads(headers)
         else:
             headers = {}
         headers.update({"User-Agent": ua})

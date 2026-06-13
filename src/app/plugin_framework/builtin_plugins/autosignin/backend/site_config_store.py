@@ -1,8 +1,7 @@
 """站点声明式配置存储 — 默认配置 + 用户自定义覆盖。"""
 
-import json
-
 from app.plugin_framework.context import PluginContext
+from app.utils.json_utils import JsonUtils
 
 from .handlers._declarative import DeclarativeSiteConfig
 
@@ -54,7 +53,7 @@ class SiteConfigStore:
         if not content:
             return list(_DEFAULT_SITES)
         try:
-            raw = json.loads(content)
+            raw = JsonUtils.loads(content)
             return [DeclarativeSiteConfig(**item) for item in raw]
         except Exception:
             self._ctx.warn(f"读取 {self._FILENAME} 失败，使用默认配置")
@@ -64,4 +63,4 @@ class SiteConfigStore:
         if self._ctx.read_data(self._FILENAME):
             return
         data = [cfg.__dict__ for cfg in _DEFAULT_SITES]
-        self._ctx.write_data(self._FILENAME, json.dumps(data, ensure_ascii=False, indent=2))
+        self._ctx.write_data(self._FILENAME, JsonUtils.dumps(data, ensure_ascii=False, indent=2))

@@ -1,4 +1,3 @@
-import json
 import time
 
 import log
@@ -10,6 +9,7 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base impor
     SiteSigninHandler,
 )
 from app.utils import StringUtils
+from app.utils.json_utils import JsonUtils
 
 
 class HDSky(SiteSigninHandler):
@@ -51,7 +51,7 @@ class HDSky(SiteSigninHandler):
                     headers=image_headers,
                     cookies=CookieAuth._parse_cookies(cookie),
                 )
-                image_json = json.loads(image_res.text)
+                image_json = JsonUtils.loads(image_res.text)
                 if image_json["success"]:
                     img_hash = image_json["code"]
                     break
@@ -90,7 +90,7 @@ class HDSky(SiteSigninHandler):
                 headers=image_headers,
                 cookies=CookieAuth._parse_cookies(cookie),
             )
-            res_json = json.loads(res.text)
+            res_json = JsonUtils.loads(res.text)
             if res_json["success"]:
                 return SigninResult.success(site)
             elif str(res_json["message"]) == "date_unmatch":

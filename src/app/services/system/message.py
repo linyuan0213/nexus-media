@@ -11,6 +11,7 @@ from app.infrastructure.cache_system import TokenCache
 from app.message import Message
 from app.message.commands import COMMANDS
 from app.schemas.system import SendMessageResultDTO
+from app.utils.json_utils import JsonUtils
 
 
 class MessageClientService:
@@ -53,7 +54,7 @@ class MessageClientService:
         parsed_switches = switches
         if isinstance(switches, str):
             try:
-                parsed_switches = json.loads(switches)
+                parsed_switches = JsonUtils.loads(switches)
                 if not isinstance(parsed_switches, list):
                     parsed_switches = []
             except json.JSONDecodeError:

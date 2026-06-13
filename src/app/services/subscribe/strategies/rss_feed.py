@@ -1,6 +1,5 @@
 """RSS Feed 轮询策略 — 从站点 RSS Feed 收集资源并匹配订阅."""
 
-import json
 from threading import Lock
 
 import log
@@ -257,7 +256,7 @@ class RssFeedStrategy:
                     site_parse=item["site_parse"],
                     site_ua=item["site_ua"],
                     site_headers=JsonUtils.is_valid_json(item["site_headers"])
-                    and json.loads(item["site_headers"])
+                    and JsonUtils.loads(item["site_headers"])
                     or {},
                     site_proxy=item["site_proxy"],
                 )

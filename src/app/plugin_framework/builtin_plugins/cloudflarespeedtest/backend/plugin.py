@@ -3,7 +3,6 @@ CloudflareSpeedTest Plugin v2
 测试 Cloudflare CDN 延迟和速度，自动优选IP
 """
 
-import json
 import os
 import platform
 import shutil
@@ -23,6 +22,7 @@ from app.infrastructure.http.config import HttpClientConfig
 from app.plugin_framework.context import PluginContext
 from app.utils import IpUtils, SystemUtils
 from app.utils.config_tools import get_proxies
+from app.utils.json_utils import JsonUtils
 
 
 def _safe_extractall(tar, path):
@@ -224,7 +224,7 @@ class CloudflareSpeedTestPlugin:
             repo = PluginConfigRepositoryAdapter()
             entity = repo.get("customhosts")
             if entity and entity.config:
-                config = entity.config if isinstance(entity.config, dict) else json.loads(entity.config)
+                config = entity.config if isinstance(entity.config, dict) else JsonUtils.loads(entity.config)
                 return config
         except Exception as e:
             self.ctx.error(f"获取CustomHosts配置失败: {e}")

@@ -3,8 +3,6 @@ TorrentRemover 重构核心
 拆分为 Repository + ActionEngine + Service，移除 SingletonMeta。
 """
 
-import json
-
 import log
 from app.core.exceptions import ResourceNotFoundError, ValidationError
 from app.db.repositories.config_repo_adapter import TorrentRemoveTaskRepositoryAdapter
@@ -14,6 +12,7 @@ from app.message import Message
 from app.services.downloader_core import DownloaderCore
 from app.services.scheduler.core import SchedulerCore
 from app.utils import ExceptionUtils
+from app.utils.json_utils import JsonUtils
 
 
 class TorrentRemoverRepository:
@@ -122,7 +121,7 @@ class TorrentRemoverService:
                 "only_nexus_media": task.ONLY_NEXUS_MEDIA,
                 "samedata": task.SAMEDATA,
                 "action": task.ACTION,
-                "config": json.loads(str(config)) if str(config) else {},
+                "config": JsonUtils.loads(str(config)) if str(config) else {},
                 "interval": task.INTERVAL,
                 "enabled": task.ENABLED,
             }

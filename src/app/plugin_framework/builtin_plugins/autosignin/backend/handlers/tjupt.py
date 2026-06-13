@@ -1,4 +1,3 @@
-import json
 import os
 import re
 import time
@@ -21,6 +20,7 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base impor
 )
 from app.utils import StringUtils
 from app.utils.chinese_utils import to_simplified
+from app.utils.json_utils import JsonUtils
 from app.utils.path_utils import get_temp_path
 
 
@@ -98,7 +98,7 @@ class Tjupt(SiteSigninHandler):
         existing_answers = {}
         try:
             with open(self._answer_file) as f:
-                existing_answers = json.loads(f.read())
+                existing_answers = JsonUtils.loads(f.read())
             captcha_answer = existing_answers.get(captcha_img_hash)
             if captcha_answer and captcha_img_hash:
                 for value, answer in answers:
@@ -121,7 +121,7 @@ class Tjupt(SiteSigninHandler):
                     self._plugin_ctx.debug(f"签到选项 {answer} 未查询到豆瓣数据")
                     continue
 
-                db_answers = json.loads(db_res.text)
+                db_answers = JsonUtils.loads(db_res.text)
                 if not isinstance(db_answers, list):
                     db_answers = [db_answers]
                 if len(db_answers) == 0:
@@ -227,7 +227,7 @@ class Tjupt(SiteSigninHandler):
         try:
             existing_answers[captcha_img_hash] = answer
             with open(self._answer_file, "w") as f:
-                f.write(json.dumps(existing_answers, indent=4))
+                f.write(JsonUtils.dumps(existing_answers, indent=4))
         except (FileNotFoundError, OSError):
             pass
 
