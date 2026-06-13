@@ -13,14 +13,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
-# 在非 Windows 平台使用 uvloop 替代默认 asyncio 事件循环，提升并发性能
-if sys.platform != "win32":
-    import uvloop
-
-    uvloop.install()
-
 from granian import Granian
-from granian.constants import Interfaces
+from granian.constants import Interfaces, Loops
 from granian.log import LogLevels
 
 import log
@@ -59,6 +53,7 @@ def main():
         address=host,
         port=port,
         interface=Interfaces.ASGI,
+        loop=Loops.auto,
         workers=workers,
         reload=dev,
         reload_ignore_dirs=[
