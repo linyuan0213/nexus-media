@@ -103,7 +103,6 @@ dev = [
 [tool.ruff]
 target-version = "py311"
 line-length = 120
-
 exclude = [
     "third_party",
     ".git",
@@ -113,6 +112,18 @@ exclude = [
     "build",
     "dist",
 ]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # Pyflakes
+    "I",  # isort
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "log"]
+known-third-party = []
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

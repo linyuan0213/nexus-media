@@ -17,11 +17,11 @@ import os
 from typing import Any
 from urllib.parse import quote_plus
 
-import log
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy import create_engine as sa_create_engine
 from sqlalchemy.pool import QueuePool
 
+import log
 from app.core.settings import settings
 
 # 环境变量名称映射

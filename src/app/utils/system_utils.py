@@ -4,9 +4,9 @@ import platform
 import shutil
 import subprocess
 
-import log
 import psutil
 
+import log
 from app.domain.enums import OsType
 from app.utils.exception_utils import ExceptionUtils
 from app.utils.path_utils import PathUtils

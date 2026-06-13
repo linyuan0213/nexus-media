@@ -12,9 +12,9 @@ import os
 import threading
 from contextlib import contextmanager
 
-import log
 from sqlalchemy import text
 
+import log
 from app.core.root_path import get_project_root
 from app.core.settings import settings
 from app.db.engine import get_engine, get_session_factory
