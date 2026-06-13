@@ -582,20 +582,11 @@ def build_app_context():
     return AppContext(...)
 ```
 
-### Q3: 为什么不用 `lagom` / `injector` 等第三方 DI 库？
-
-**A**: Python 生态没有大厂背书的编译期 DI 框架。引入第三方库会带来：
-- 隐藏约定和反射魔法
-- 框架锁定风险
-- 新成员学习成本
-
-不可变 `AppContext` + Builder 是更透明、更符合大厂实践的方案。
-
-### Q4: 插件如何获取单例？
+### Q3: 插件如何获取单例？
 
 **A**: 插件通过 `PluginContext` 接收受限能力，由 `PluginSandbox` 从 `AppContext` 注入。插件代码不接触 `AppContext`。
 
-### Q5: 如果某个 Service 只在特定路由中使用，需要全局创建吗？
+### Q4: 如果某个 Service 只在特定路由中使用，需要全局创建吗？
 
 **A**: 轻量级 Service 可以在 Builder 中创建；真正按需的可以在路由中直接构造。`AppContext` 只持有全局单例和重量级服务。
 
