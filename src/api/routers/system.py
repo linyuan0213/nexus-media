@@ -72,7 +72,6 @@ from app.utils.system_utils import SystemUtils
 from app.infrastructure.temp import temp_manager
 from app.domain.enums import SystemConfigKey
 from log import LOG_BUFFER
-from app.di.types import RegistryKey
 
 router = APIRouter()
 
@@ -821,7 +820,7 @@ def update_site_config(
         result = SiteConfigUpdater().update(force=force)
         if result["success"]:
             return success(result)
-        return fail(msg=result[RegistryKey.MESSAGE.value])
+        return fail(msg=result.get("message", ""))
     except (ServiceError, DomainError) as e:
         return fail(msg=e.message)
     except Exception as e:

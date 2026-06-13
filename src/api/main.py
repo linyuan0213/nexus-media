@@ -41,7 +41,6 @@ from app.core.settings import settings
 from app.db import init_db
 from app.db.engine import get_engine
 from app.di.builders.context_builder import build_app_context
-from app.di.factories import build_all, init_site_config, _register_post_db_services
 from app.downloader.client import init_clients as init_downloaders
 from app.indexer.client import init_clients as init_indexers
 from app.infrastructure.rate_limiter.middleware import RateLimitMiddleware
@@ -63,24 +62,17 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理：启动后台服务"""
     # 1. 创建所有对象（按拓扑顺序）
     app_context = build_app_context()
-    build_all()
     app.state.context = app_context
 
     # 2. 初始化数据库表结构
     log.info("[FastAPI]初始化数据库表结构...")
     init_db()
 
-    # 3. 注册需要在数据库初始化后构造的服务
-    _register_post_db_services()
-
-    # 4. 初始化站点配置
-    init_site_config()
-
     log.info("[FastAPI]启动后台服务...")
     system_lifecycle: SystemLifecycleService = app_context.system_lifecycle
     system_lifecycle.start_service()
 
-    # 5. 注册内置客户端与插件
+    # 3. 注册内置客户端与插件
     log.info("[FastAPI]后台服务启动完成")
     init_indexers()
     log.info("[FastAPI]索引器注册完成")
@@ -103,17 +95,12 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # 6. 反向关闭
+    # 4. 反向关闭
     log.info("[FastAPI]关闭后台服务...")
     system_lifecycle.stop_service()
     log.info("[FastAPI]后台服务已关闭")
 
     ThreadExecutor.shutdown_all()
-
-    # 7. 清空注册表（兼容旧 Registry 用户）
-    from app.di.registry import registry
-
-    registry.clear()
 
 
 app = FastAPI(

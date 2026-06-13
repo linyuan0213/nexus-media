@@ -3,8 +3,6 @@ import os
 import log
 from app.core.settings import settings
 from app.db.repositories.subscribe_repository import SubscribeRepository
-from app.di.registry import registry
-from app.di.types import RegistryKey
 from app.events import auto_register, register_modules
 from app.events.config import EVENT_HANDLER_MODULES
 from app.infrastructure.cache_system.events import init_event_bridge
@@ -203,17 +201,18 @@ def update_rss_state():
         ExceptionUtils.exception_traceback(e)
 
 
-def init_event_handlers(event_bus=None):
+def init_event_handlers(event_bus=None, hook_system=None):
     """
     初始化事件处理器：显式导入 handler 模块触发 @on_event 注册
     """
     try:
         register_modules(EVENT_HANDLER_MODULES)
         from app.events.registry import EventHandlerRegistry
+        from app.plugin_framework.hook_system import HookSystem
 
         bus = event_bus or EventBus(
             registry=EventHandlerRegistry(),
-            bridge=PluginBridge(hook_system=registry.get(RegistryKey.HOOK_SYSTEM)),
+            bridge=PluginBridge(hook_system=hook_system or HookSystem()),
         )
         auto_register(bus)
         init_event_bridge(bus)

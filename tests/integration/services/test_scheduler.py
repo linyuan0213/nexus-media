@@ -12,7 +12,6 @@ from apscheduler.events import (
     JobExecutionEvent,
 )
 
-from app.di.registry import registry
 from app.services.scheduler.core import SchedulerCore
 from app.services.scheduler.event_handler import EventHandler
 from app.services.scheduler.models import JobStats, JobStatus, TaskConfig
@@ -20,17 +19,12 @@ from app.services.scheduler.models import JobStats, JobStatus, TaskConfig
 
 def clear_scheduler_state():
     """Helper to clear SchedulerCore state between tests."""
-    try:
-        registry.clear()
-    except RuntimeError:
-        pass
+    pass
 
 
 def clear_scheduler_singleton():
     """Helper to clear SchedulerCore singleton between tests."""
-    from app.di.registry import registry
-
-    registry.clear()
+    pass
 
 
 class TestJobStatus:

@@ -52,8 +52,10 @@ def mock_config(monkeypatch):
 
 @pytest.fixture(scope="function", autouse=True)
 def _clear_registry():
-    """每个测试函数结束后清空 Registry，避免状态污染。"""
-    from app.di.registry import registry
-
+    """每个测试函数结束后清理全局状态，避免状态污染。"""
     yield
-    registry.clear()
+    from app.message.message import Message
+
+    instances = getattr(Message, "_instances", None)
+    if instances is not None:
+        instances.clear()

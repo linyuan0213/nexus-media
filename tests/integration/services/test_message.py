@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.di.registry import registry
 from app.message.core.client_manager import ClientManager, parse_client_config
 from app.message.core.command_manager import CommandManager
 from app.message.core.dispatcher import MessageDispatcher
@@ -259,7 +258,6 @@ class TestMessageFacade:
     @pytest.fixture
     def msg(self):
         """Provide a Message instance with mocked internals."""
-        registry.clear()
         with (
             patch("app.message.message.get_domain", return_value="http://test"),
             patch("app.message.message.MessageCenter"),
