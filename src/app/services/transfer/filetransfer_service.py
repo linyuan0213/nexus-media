@@ -6,10 +6,8 @@
 
 import hashlib
 import os
-import random
 import re
 import shutil
-from time import sleep
 
 import log
 from app.core.constants import RMT_MEDIAEXT, RMT_MIN_FILESIZE
@@ -186,10 +184,7 @@ class FileTransferService:
         ignored_paths = self._ignored_paths
         if ignored_paths:
             try:
-                for file in file_list[:]:
-                    if re.findall(ignored_paths, os.path.dirname(file)):
-                        log.info(f"[Rmt]{file} 文件路径含转移忽略词，已忽略转移")
-                        file_list.remove(file)
+                file_list = [f for f in file_list if not re.findall(ignored_paths, os.path.dirname(f))]
                 if not file_list:
                     return [], "排除文件路径转移忽略词后，没有新文件需要处理"
             except Exception as err:
@@ -199,10 +194,7 @@ class FileTransferService:
         ignored_files = self._ignored_files
         if ignored_files:
             try:
-                for file in file_list[:]:
-                    if re.findall(ignored_files, os.path.basename(file)):
-                        log.info(f"[Rmt]{file} 文件名包含转移忽略词，已忽略转移")
-                        file_list.remove(file)
+                file_list = [f for f in file_list if not re.findall(ignored_files, os.path.basename(f))]
                 if not file_list:
                     return [], "排除文件名转移忽略词后，没有新文件需要处理"
             except Exception as err:
@@ -523,51 +515,17 @@ class FileTransferService:
                     dst_backend=dst_backend,
                 )
 
+                self._publish_subtitle_download(media, ret_file_path, file_ext, bool(bluray_disk_dir))
+                self._publish_transfer_finished(in_path, file_item, out_path, dist_path, media)
+                # TV/动漫单集转移完成事件（驱动订阅进度更新）
+                if media.type in (MediaType.TV, MediaType.ANIME) and media.get_episode_list():
+                    self._publish_episode_transferred(media)
+
                 self.progress.update(
                     ptype=ProgressKey.FileTransfer,
                     value=round(total_count / len(medias) * 100),
                     text=f"{file_name} 转移完成",
                 )
-                if operation == "move":
-                    sleep(round(random.uniform(0, 1), 1))
-
-                self._event_bus.publish(
-                    Event(
-                        event_type=SUBTITLE_DOWNLOAD,
-                        payload=SubtitleDownloadPayload(
-                            media_info=media.to_dict(),
-                            file=ret_file_path,
-                            file_ext=file_ext,
-                            bluray=bool(bluray_disk_dir),
-                        ),
-                    )
-                )
-                self._event_bus.publish(
-                    Event(
-                        event_type=MEDIA_TRANSFER_FINISHED,
-                        payload=MediaTransferFinishedPayload(
-                            in_path=in_path,
-                            file=file_item,
-                            target_path=out_path,
-                            dest=dist_path,
-                            media_info=media.to_dict(),
-                        ),
-                    )
-                )
-                # TV/动漫单集转移完成事件（驱动订阅进度更新）
-                if media.type in (MediaType.TV, MediaType.ANIME) and media.get_episode_list():
-                    self._event_bus.publish(
-                        Event(
-                            event_type=MEDIA_EPISODE_TRANSFERRED,
-                            payload=MediaEpisodeTransferredPayload(
-                                tmdb_id=media.tmdb_id,
-                                title=media.title,
-                                season=media.get_season_seq(),
-                                episodes=media.get_episode_list(),
-                                total_episodes=media.total_episodes,
-                            ),
-                        )
-                    )
 
             except (ServiceError, RepositoryError, DomainError):
                 raise
@@ -589,6 +547,50 @@ class FileTransferService:
             "error_message": error_message,
             "exist_filenum": total_exist_filenum,
         }
+
+    def _publish_subtitle_download(self, media, ret_file_path, file_ext, bluray):
+        self._thread_executor.submit(
+            self._event_bus.publish,
+            Event(
+                event_type=SUBTITLE_DOWNLOAD,
+                payload=SubtitleDownloadPayload(
+                    media_info=media.to_dict(),
+                    file=ret_file_path,
+                    file_ext=file_ext,
+                    bluray=bluray,
+                ),
+            ),
+        )
+
+    def _publish_transfer_finished(self, in_path, file_item, out_path, dist_path, media):
+        self._thread_executor.submit(
+            self._event_bus.publish,
+            Event(
+                event_type=MEDIA_TRANSFER_FINISHED,
+                payload=MediaTransferFinishedPayload(
+                    in_path=in_path,
+                    file=file_item,
+                    target_path=out_path,
+                    dest=dist_path,
+                    media_info=media.to_dict(),
+                ),
+            ),
+        )
+
+    def _publish_episode_transferred(self, media):
+        self._thread_executor.submit(
+            self._event_bus.publish,
+            Event(
+                event_type=MEDIA_EPISODE_TRANSFERRED,
+                payload=MediaEpisodeTransferredPayload(
+                    tmdb_id=media.tmdb_id,
+                    title=media.title,
+                    season=media.get_season_seq(),
+                    episodes=media.get_episode_list(),
+                    total_episodes=media.total_episodes,
+                ),
+            ),
+        )
 
     def _handle_unrecognized_file(
         self, file_item, reg_path, in_path, unknown_dir, operation, target_dir, udf_flag, alert_messages
