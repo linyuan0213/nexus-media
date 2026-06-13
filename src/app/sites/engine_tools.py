@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 import httpx
+import log
 from lxml import etree
 
 from app.infrastructure.http.auth import BearerAuth, CookieAuth
@@ -141,8 +142,6 @@ def _call_endpoint(
             res = client.get(url=url, params=params, headers=headers, auth=auth, **rl_kwargs)
         return res.json()
     except Exception as e:
-        import log
-
         log.error(f"[_call_endpoint]请求异常 {url}: {e}")
         return None
 

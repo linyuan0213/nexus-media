@@ -3,6 +3,8 @@ import threading
 import time
 from collections.abc import Iterator
 
+import log
+
 
 class LogStreamingService:
     """
@@ -21,8 +23,6 @@ class LogStreamingService:
 
     def _get_buffer(self):
         if self._buffer is None:
-            import log
-
             self._buffer = log.LOG_BUFFER
         return self._buffer
 
