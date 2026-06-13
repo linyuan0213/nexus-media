@@ -2,7 +2,7 @@
 
 职责：
 1. 维护 provider 重载优先级列表
-2. 配置变更时按优先级 reset + 重新实例化各 provider
+2. 配置变更时按优先级 reset 各 provider
 3. 失败隔离：单个 provider 重置失败不影响其他
 4. 可观测：每一步都记录日志
 
@@ -12,10 +12,12 @@
     config_reloader.register("sites", priority=1)
 
     # 触发重载
-    config_reloader.reload(registry)
+    config_reloader.reload()
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 import log
 from app.di.types import RegistryKey
@@ -45,9 +47,10 @@ class ConfigReloader:
     PRIORITY_PLUGIN = 50  # PluginFramework
     PRIORITY_AUX = 100  # ProgressTracker, ThreadExecutor, WordsHelper
 
-    def __init__(self):
+    def __init__(self, provider_resolver: Callable[[RegistryKey], Any] | None = None):
         self._steps: list[_ReloadStep] = []
         self._version = 0
+        self._provider_resolver = provider_resolver
         self._register_defaults()
 
     def _register_defaults(self) -> None:
@@ -89,11 +92,10 @@ class ConfigReloader:
         name = provider_name.value if isinstance(provider_name, RegistryKey) else provider_name
         self._steps = [s for s in self._steps if s.name != name]
 
-    def reload(self, registry=None) -> dict:
+    def reload(self) -> dict:
         """
-        执行完整配置重载：按优先级 reset 并重载各 provider.
+        执行完整配置重载：按优先级 reset 各 provider.
 
-        :param registry: 注册表实例（可选，测试用）
         :return: {"version": int, "results": {name: bool}, "failed": [name]}
         """
         self._version += 1
@@ -101,6 +103,10 @@ class ConfigReloader:
 
         results: dict[str, bool] = {}
         failed: list[str] = []
+
+        if self._provider_resolver is None:
+            log.warn("[ConfigReloader]未配置 provider_resolver，跳过重载")
+            return {"version": self._version, "results": results, "failed": failed}
 
         for step in self._steps:
             # 只处理 Registry 中注册的键（跳过旧容器字符串名）
@@ -111,15 +117,13 @@ class ConfigReloader:
                 continue
 
             try:
-                provider = registry.get(key) if registry else None
+                provider = self._provider_resolver(key)
                 if provider is None:
                     log.warn(f"[ConfigReloader][{step.priority}] {step.name} 未找到对应 provider，跳过")
                     continue
 
                 log.debug(f"[ConfigReloader][{step.priority}] reset {step.name} ...")
                 provider.reset()
-                log.debug(f"[ConfigReloader][{step.priority}] re-instantiate {step.name} ...")
-                provider()
                 results[step.name] = True
                 log.debug(f"[ConfigReloader][{step.priority}] {step.name} OK")
             except Exception as e:

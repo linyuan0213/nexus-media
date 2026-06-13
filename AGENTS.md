@@ -41,7 +41,7 @@ backend/
 - **入口**: `run.py` → `src/api/main.py` (FastAPI 应用 + lifespan)
 - **初始化**: `src/initializer.py` 初始化调度器、RBAC、RSS 状态
 - **数据库迁移**: 由 Docker entrypoint 或 compose migration 服务执行 `alembic upgrade head`，不再在代码中运行
-- **DI**: `src/app/di/container.py` (dependency-injector)
+- **DI**: `src/app/di/registry.py` + `src/app/di/factories.py`（显式工厂注册表，已移除 dependency-injector）
 - **缓存**: `src/app/infrastructure/cache_system/` (Redis + 内存适配器、装饰器、事件总线)
 - **插件**: `src/app/plugin_framework/builtin_plugins/` — 内置 + 可安装
 - **权限**: `src/app/db/models/rbac.py` 中的自定义 RBAC 系统

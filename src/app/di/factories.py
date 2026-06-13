@@ -158,13 +158,13 @@ def _build_infrastructure() -> PluginSandbox:
     )
     registry.set(RegistryKey.APIKEY_SERVICE, apikey_service)
     message = Message(apikey_service=apikey_service)
-    site_cache = SiteCache()
     site_engine = SiteEngine()
     from app.sites.siteuserinfo.config_api import _api_factory
     from app.sites.siteuserinfo.config_html import _html_config_factory
 
     site_engine.register_user_info_factory(_api_factory)
     site_engine.register_user_info_factory(_html_config_factory)
+    site_cache = SiteCache(site_engine=site_engine)
     message_queue = MessageQueueFactory.create()
     hook_system = HookSystem(plugin_sandbox=None)  # 临时占位，后续替换
 
@@ -411,6 +411,7 @@ def _build_services() -> None:
         media=media_service,
         downloader=downloader_core,
         scheduler_core=registry.get(RegistryKey.SCHEDULER_CORE),
+        site_engine=site_engine,
         event_bus=event_bus,
     )
     registry.set(RegistryKey.RSS_TASK_SERVICE, rss_task_service)
@@ -647,7 +648,7 @@ def _build_coordinators() -> None:
     download_repo = DownloadHistoryRepositoryAdapter()
     rss_repo = SubscribeHistoryRepositoryAdapter()
     media_cache = MediaCache()
-    matcher = SubscribeMatcher(site_conf=siteconf)
+    matcher = SubscribeMatcher(site_conf=siteconf, site_cache=site_cache)
     queue_strategy = QueueSearchStrategy(
         service=subscribe_service,
         searcher=searcher,

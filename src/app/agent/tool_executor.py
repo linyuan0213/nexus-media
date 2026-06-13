@@ -145,6 +145,7 @@ class ToolExecutor:
             media=_mock,
             downloader=_mock,
             scheduler_core=_scheduler,
+            site_engine=_mock,
         )
         self._message = _msg
         self._message_client_service = message_client_service

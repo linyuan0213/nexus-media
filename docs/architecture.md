@@ -104,12 +104,18 @@ api/routers/
 
 ### 依赖注入模式
 
-路由层通过 `dependency-injector` 容器（`src/app/di/container.py`）
-绑定与惰性注入依赖，路由函数中通过 `Depends(get_service_factory)` 或直接调用 `container.xxx_service()` 获取 Service 实例。
+路由层通过显式工厂注册表（`src/app/di/registry.py` + `src/app/di/factories.py`）
+组装依赖。路由函数中通过 `Depends(get_service_factory)` 从 Registry 获取 Service 实例。
 
 ```python
-from app.di import container
+from app.di.registry import registry
+from app.di.types import RegistryKey
+
+service = registry.get(RegistryKey.SOME_SERVICE)
 ```
+
+只允许在 `src/api/deps.py`、`src/api/main.py`、`src/api/routers/message_webhook.py`、
+`src/api/routers/system.py`、`src/app/di/factories.py` 和 `src/initializer.py` 中调用 `registry.get()`。
 
 ### 与旧 Flask 控制器的关系
 

@@ -524,4 +524,4 @@ def get_hook_system():
 
 def get_config_reloader():
     """获取配置重载器实例"""
-    return ConfigReloader()
+    return ConfigReloader(provider_resolver=registry.get)

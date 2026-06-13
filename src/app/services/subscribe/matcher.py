@@ -21,7 +21,7 @@ class SubscribeMatcher:
 
     def __init__(self, site_conf: SiteConf | None = None, filter_engine=None, site_cache: SiteCache | None = None):
         self._filter = filter_engine or IndexerFilterEngine()
-        self._site_cache = site_cache or SiteCache()
+        self._site_cache = site_cache
         self._site_conf = site_conf or SiteConf(site_engine=None)
 
     def match(
@@ -128,7 +128,7 @@ class SubscribeMatcher:
             return False, match_msg, match_rss_info
 
         # 站点 Free 检测
-        if site_parse:
+        if site_parse and self._site_cache:
             if self._site_cache.check_ratelimit(site_id):
                 match_msg.append("触发站点流控")
                 return False, match_msg, match_rss_info
