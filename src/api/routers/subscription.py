@@ -173,6 +173,35 @@ def _build_update_kwargs(req: AddRssMediaRequest) -> dict:
     }
 
 
+def _invoke_for_seasons(
+    season,
+    kwargs: dict,
+    invoke,
+    total_ep=None,
+    current_ep=None,
+):
+    """按季列表或单季调用 subscribe 方法，返回 (code, msg, media_info)."""
+    code = 0
+    msg = ""
+    media_info = None
+    if isinstance(season, list):
+        for sea in season:
+            kwargs["season"] = sea
+            kwargs.pop("total_ep", None)
+            kwargs.pop("current_ep", None)
+            code, msg, media_info = invoke(**kwargs)
+            if code != 0:
+                break
+    else:
+        kwargs["season"] = season
+        if total_ep is not None:
+            kwargs["total_ep"] = total_ep
+        if current_ep is not None:
+            kwargs["current_ep"] = current_ep
+        code, msg, media_info = invoke(**kwargs)
+    return code, msg, media_info
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -185,23 +214,7 @@ def add_rss_media(
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
     kwargs = _build_add_kwargs(req)
-    code = 0
-    msg = ""
-    media_info = None
-    season = req.season
-    if isinstance(season, list):
-        for sea in season:
-            kwargs["season"] = sea
-            kwargs.pop("total_ep", None)
-            kwargs.pop("current_ep", None)
-            code, msg, media_info = svc.add_rss_subscribe(**kwargs)
-            if code != 0:
-                break
-    else:
-        kwargs["season"] = season
-        kwargs["total_ep"] = req.total_ep
-        kwargs["current_ep"] = req.current_ep
-        code, msg, media_info = svc.add_rss_subscribe(**kwargs)
+    code, msg, media_info = _invoke_for_seasons(req.season, kwargs, svc.add_rss_subscribe)
 
     rssid = None
     if media_info:
@@ -224,26 +237,12 @@ def update_rss_media(
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
     kwargs = _build_update_kwargs(req)
-    code = 0
-    msg = ""
-    media_info = None
-    season = req.season
     if not req.rssid:
         return fail(code=-1, msg="缺少订阅ID", page=req.page, name=req.name, rssid=None)
 
-    if isinstance(season, list):
-        for sea in season:
-            kwargs["season"] = sea
-            kwargs.pop("total_ep", None)
-            kwargs.pop("current_ep", None)
-            code, msg, media_info = svc.update_rss_subscribe(**kwargs)
-            if code != 0:
-                break
-    else:
-        kwargs["season"] = season
-        kwargs["total_ep"] = req.total_ep
-        kwargs["current_ep"] = req.current_ep
-        code, msg, media_info = svc.update_rss_subscribe(**kwargs)
+    code, msg, media_info = _invoke_for_seasons(
+        req.season, kwargs, svc.update_rss_subscribe, req.total_ep, req.current_ep
+    )
 
     if code == 0:
         return success(data={"page": req.page, "name": req.name, "rssid": req.rssid})
@@ -323,22 +322,14 @@ def rss_detail(
     parsed = MediaType.from_string(req.rsstype or "")
     if parsed == MediaType.MOVIE:
         rssdetail = svc.get_subscribe_movies(rid=int(req.rssid) if req.rssid else None)
-        if not rssdetail:
-            return fail()
-        detail = list(rssdetail.values())[0]
-        detail["type"] = MediaType.MOVIE.value
-    elif parsed == MediaType.ANIME:
-        rssdetail = svc.get_subscribe_tvs(rid=int(req.rssid) if req.rssid else None)
-        if not rssdetail:
-            return fail()
-        detail = list(rssdetail.values())[0]
-        detail["type"] = MediaType.ANIME.value
+        mtype_value = MediaType.MOVIE.value
     else:
         rssdetail = svc.get_subscribe_tvs(rid=int(req.rssid) if req.rssid else None)
-        if not rssdetail:
-            return fail()
-        detail = list(rssdetail.values())[0]
-        detail["type"] = MediaType.TV.value
+        mtype_value = MediaType.ANIME.value if parsed == MediaType.ANIME else MediaType.TV.value
+    if not rssdetail:
+        return fail()
+    detail = list(rssdetail.values())[0]
+    detail["type"] = mtype_value
     return success(data=detail)
 
 

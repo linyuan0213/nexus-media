@@ -92,6 +92,12 @@ class TestSyncRouter:
         mock_filetransfer_service.delete_transfer_unknown.return_value = 0
         resp = client.post("/api/v1/sync/unknown/delete", json={"id": 1})
         assert resp.status_code == 200
+        assert resp.json()["code"] == 0
+
+    def test_del_unknown_path_single_failed(self, client, mock_filetransfer_service):
+        mock_filetransfer_service.delete_transfer_unknown.return_value = 1
+        resp = client.post("/api/v1/sync/unknown/delete", json={"id": 1})
+        assert resp.status_code == 200
         assert resp.json()["code"] == 1
 
     def test_delete_files(self, client, mock_filetransfer_service):
