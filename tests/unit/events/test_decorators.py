@@ -19,7 +19,7 @@ class TestOnEvent:
         def handler(event):
             pass
 
-        bus.subscribe.assert_called_once_with("test.event", handler)
+        bus.subscribe.assert_called_once_with("test.event", handler, priority=100)
         assert event_decorators.get_subscribers() == []
 
     def test_on_event_without_event_bus(self):
@@ -30,7 +30,7 @@ class TestOnEvent:
         subs = event_decorators.get_subscribers()
         assert len(subs) == 1
         assert subs[0][0] == "test.event"
-        assert subs[0][1] == [handler]
+        assert subs[0][1] == [(100, handler)]
 
     def test_auto_register(self):
         from app.events.bus import EventBus
@@ -42,7 +42,7 @@ class TestOnEvent:
             pass
 
         event_decorators.auto_register(bus)
-        bus.subscribe.assert_called_once_with("test.event", handler)
+        bus.subscribe.assert_called_once_with("test.event", handler, priority=100)
         assert event_decorators.get_subscribers() == []
 
     def test_auto_register_invalid_bus(self):
