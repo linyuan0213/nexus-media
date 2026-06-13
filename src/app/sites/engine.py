@@ -17,13 +17,12 @@ from urllib.parse import urlparse
 
 from lxml import etree
 
-from app.core.root_path import get_project_root
-
 import log
-from app.sites import engine_connection, engine_download, engine_tools, engine_user_info
+from app.core.root_path import get_project_root
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.sites import engine_connection, engine_download, engine_tools, engine_user_info
 from app.utils import JsonUtils
 from app.utils.config_tools import get_proxies
 

@@ -6,9 +6,9 @@ import subprocess
 
 import psutil
 
+from app.domain.enums import OsType
 from app.utils.exception_utils import ExceptionUtils
 from app.utils.path_utils import PathUtils
-from app.domain.enums import OsType
 
 
 class SystemUtils:

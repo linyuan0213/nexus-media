@@ -2,10 +2,10 @@ import re
 
 from lxml import etree
 
-from app.sites.utils import is_logged_in
-from app.utils import ExceptionUtils, StringUtils
 from app.infrastructure.chrome import ChromeClient
 from app.sites.siteconf import SiteConf
+from app.sites.utils import is_logged_in
+from app.utils import ExceptionUtils, StringUtils
 
 
 class ChromeSigninSimulator:

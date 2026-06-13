@@ -6,10 +6,10 @@ from pydantic import BaseModel, Field
 
 from app.core.constants import ANIME_GENREIDS
 from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
+from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
 from app.media.category_matcher import get_category
 from app.utils import StringUtils
-from app.domain.mediatypes import MediaType
 
 
 class MediaInfo(BaseModel):

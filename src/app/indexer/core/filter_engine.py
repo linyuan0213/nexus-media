@@ -9,9 +9,9 @@ import re
 
 import log
 from app.core.module_config import ModuleConf
+from app.domain.mediatypes import MediaType
 from app.media import ReleaseGroupsMatcher
 from app.utils import StringUtils
-from app.domain.mediatypes import MediaType
 
 
 class IndexerFilterEngine:

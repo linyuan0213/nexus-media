@@ -3,13 +3,13 @@
 import json
 from typing import cast
 
+from app.domain.enums import SearchType
 from app.events import Event
 from app.events.constants import MESSAGE_INCOMING
 from app.infrastructure.cache_system import TokenCache
 from app.message import Message
 from app.message.commands import COMMANDS
 from app.schemas.system import SendMessageResultDTO
-from app.domain.enums import SearchType
 
 
 class MessageClientService:

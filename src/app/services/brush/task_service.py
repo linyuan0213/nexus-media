@@ -6,12 +6,12 @@ import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.media import MediaService
 from app.message import Message
-from app.services.rss_processor import RssHelper
 from app.services.brush.helpers import BrushTaskHelper
 from app.services.brush.rss_checker import BrushRssChecker
 from app.services.brush.scheduler import BrushTaskScheduler
 from app.services.brush.torrent_lifecycle import BrushTorrentLifecycle
 from app.services.downloader_core import DownloaderCore as Downloader
+from app.services.rss_processor import RssHelper
 from app.sites import SiteConf
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache

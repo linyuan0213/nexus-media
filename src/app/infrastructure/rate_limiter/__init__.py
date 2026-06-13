@@ -7,7 +7,7 @@ from app.infrastructure.rate_limiter.backends import (
     RateLimiter,
     RedisTokenBucketBackend,
 )
-from app.infrastructure.rate_limiter.decorators import rate_limited, rate_limit
+from app.infrastructure.rate_limiter.decorators import rate_limit, rate_limited
 from app.infrastructure.rate_limiter.dependency import RateLimitDependency
 from app.infrastructure.rate_limiter.middleware import RateLimitMiddleware
 from app.infrastructure.rate_limiter.monitor import RateLimitMonitor

@@ -16,9 +16,9 @@ import os
 from typing import Any
 
 import log
-from app.infrastructure.thread import ThreadExecutor
 from app.events import Event
-from app.events.constants import DOWNLOAD_STARTED, DOWNLOAD_FAILED
+from app.events.constants import DOWNLOAD_FAILED, DOWNLOAD_STARTED
+from app.infrastructure.thread import ThreadExecutor
 from app.sites.torrent import Torrent
 from app.utils import StringUtils
 

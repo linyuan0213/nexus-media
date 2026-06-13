@@ -1,8 +1,9 @@
 from logging.config import fileConfig
 
 import sqlalchemy as sa
-from alembic import context
 from alembic.script import ScriptDirectory
+
+from alembic import context
 from app.db.database_factory import DatabaseFactory
 from app.db.models import Base
 

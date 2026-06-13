@@ -8,9 +8,9 @@ import log
 from app.core.exceptions import ResourceNotFoundError, ValidationError
 from app.core.module_config import ModuleConf
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
+from app.domain.mediatypes import MediaType
 from app.media import ReleaseGroupsMatcher, meta_info
 from app.utils import StringUtils
-from app.domain.mediatypes import MediaType
 
 
 class FilterRuleEngine:

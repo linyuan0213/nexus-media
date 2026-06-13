@@ -7,7 +7,6 @@
 """
 
 import log
-
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.domain.interfaces.site_repo import ISiteRepository
 from app.services.site_rate_limiter import SiteRateLimiterService

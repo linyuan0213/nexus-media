@@ -48,12 +48,6 @@ from app.db.models import (
     MESSAGECLIENT,
     # 插件
     PLUGINHISTORY,
-    # RSS
-    SubscribeHistory,
-    SubscribeMovies,
-    SubscribeTorrents,
-    SubscribeTvEpisodes,
-    SubscribeTvs,
     # 搜索
     SEARCHRESULTINFO,
     # 刷流
@@ -78,6 +72,12 @@ from app.db.models import (
     # 基础
     Base,
     BaseMedia,
+    # RSS
+    SubscribeHistory,
+    SubscribeMovies,
+    SubscribeTorrents,
+    SubscribeTvEpisodes,
+    SubscribeTvs,
 )
 
 # 保持向后兼容的 __all__ 定义

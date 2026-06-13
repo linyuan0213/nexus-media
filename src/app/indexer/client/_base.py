@@ -13,10 +13,10 @@ from typing import Any
 from urllib.parse import quote
 
 import log
-from app.indexer.schema import IndexerConfigSchema
-from app.utils import DomUtils, ExceptionUtils, StringUtils
 from app.domain.enums import ProgressKey, SearchType
+from app.indexer.schema import IndexerConfigSchema
 from app.infrastructure.http.client import HttpClient
+from app.utils import DomUtils, ExceptionUtils, StringUtils
 
 
 class _IIndexClient(metaclass=ABCMeta):

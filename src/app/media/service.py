@@ -5,19 +5,19 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import log
 from app.core.settings import settings
-from app.infrastructure.image_proxy import ImageProxy
+from app.domain.enums import MatchMode
+from app.domain.mediatypes import MediaType
+from app.domain.validators.media_title import is_valid_media_title
 from app.infrastructure.cache_system import cacheman
+from app.infrastructure.image_proxy import ImageProxy
+from app.media.lookup.tmdb_lookup import TmdbLookup
 from app.media.models import MediaInfo
 from app.media.parser.base import BaseParser
 from app.media.parser.episode_mapper import EpisodeMapper
 from app.media.parser.llm import LLMParser
 from app.media.parser.regex import RegexParser
-from app.media.lookup.tmdb_lookup import TmdbLookup
 from app.storage.backends.base import StorageBackend
 from app.utils import EpisodeFormat, PathUtils, StringUtils
-from app.domain.validators.media_title import is_valid_media_title
-from app.domain.mediatypes import MediaType
-from app.domain.enums import MatchMode
 
 
 class MediaService:

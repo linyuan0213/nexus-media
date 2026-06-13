@@ -13,10 +13,10 @@
 import datetime
 
 import log
+from app.domain.enums import ProgressKey, SearchType
 from app.indexer.core.batch_identifier import BatchIdentifier
 from app.indexer.core.models import FilterStats, PipelineResult
 from app.indexer.core.result_filter import ResultFilter
-from app.domain.enums import ProgressKey, SearchType
 from app.infrastructure.progress import ProgressTracker
 
 

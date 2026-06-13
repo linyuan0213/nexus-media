@@ -17,16 +17,16 @@ from urllib.parse import quote
 from lxml import etree
 
 import log
-from app.sites.api_searcher import ApiSiteSearcher
-from app.sites.engine import SiteDefinition
-from app.sites import engine_tools
-from app.sites.searchers import _TRANSFORMS, _css_to_xpath, _resolve_jinja
+from app.domain.media_type_utils import MediaTypeMapper
+from app.domain.mediatypes import MediaType
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.sites import engine_tools
+from app.sites.api_searcher import ApiSiteSearcher
+from app.sites.engine import SiteDefinition
+from app.sites.searchers import _TRANSFORMS, _css_to_xpath, _resolve_jinja
 from app.utils.config_tools import get_proxies
-from app.domain.media_type_utils import MediaTypeMapper
-from app.domain.mediatypes import MediaType
 
 
 class HtmlSiteSearcher:

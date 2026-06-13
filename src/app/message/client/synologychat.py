@@ -4,8 +4,9 @@ from threading import Lock
 from typing import Any
 from urllib.parse import quote
 
-import log
 import requests
+
+import log
 from app.core.settings import settings
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig

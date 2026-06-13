@@ -14,8 +14,9 @@ import log
 from app.core.settings import settings
 from app.core.system_config import SystemConfig
 from app.db.repositories.download_repository import DownloadRepository
-from app.indexer.configuration import IndexerConf, IndexerHelper
+from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
 from app.indexer.client._base import _IIndexClient
+from app.indexer.configuration import IndexerConf, IndexerHelper
 from app.indexer.schema import IndexerConfigSchema
 from app.infrastructure.chrome import ChromeClient
 from app.infrastructure.progress import ProgressTracker
@@ -24,7 +25,6 @@ from app.sites.searcher_factory import create_searcher
 from app.sites.site_cache import SiteCache
 from app.utils import StringUtils
 from app.utils.config_tools import get_ua
-from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
 
 _STATS_LOCK = Lock()
 

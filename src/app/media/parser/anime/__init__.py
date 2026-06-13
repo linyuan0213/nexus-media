@@ -7,6 +7,7 @@ import re
 
 import anitopy  # type: ignore
 
+from app.domain.mediatypes import MediaType
 from app.media.models import MediaInfo
 from app.media.parser._customization import CustomizationMatcher
 from app.media.parser.anime.name_parser import clean_name, extract_name, parse_name
@@ -24,7 +25,6 @@ from app.media.parser.anime.season_episode_parser import (
     parse_year,
 )
 from app.utils import ExceptionUtils
-from app.domain.mediatypes import MediaType
 
 
 def parse_anime_title(

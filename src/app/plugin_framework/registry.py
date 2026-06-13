@@ -9,7 +9,6 @@ import shutil
 import zipfile
 
 import log
-
 from app.core.settings import settings
 from app.db.repositories.plugin_framework_repository import PluginFrameworkRepository
 from app.domain.entities.plugin import PluginConfigEntity, PluginManifestEntity

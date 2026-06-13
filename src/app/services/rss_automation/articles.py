@@ -5,10 +5,10 @@ from typing import Any
 
 import log
 from app.core.exceptions import RepositoryError, ServiceError
+from app.domain.enums import SearchType
+from app.domain.mediatypes import MediaType
 from app.services.rss_automation.executor import _parse_userrss_result
 from app.utils import ExceptionUtils, StringUtils
-from app.domain.mediatypes import MediaType
-from app.domain.enums import SearchType
 
 
 def _get_rss_articles(service, taskid: int | None) -> Any:

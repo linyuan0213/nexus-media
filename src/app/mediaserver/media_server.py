@@ -8,6 +8,8 @@ from app.core.settings import settings
 from app.core.system_config import SystemConfig
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.db.repositories.media_sync_repo_adapter import MediaSyncRepositoryAdapter
+from app.domain.enums import ProgressKey, SystemConfigKey
+from app.domain.mediatypes import MediaType
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.progress import ProgressTracker
 from app.infrastructure.queue.base import MessageQueue
@@ -15,8 +17,6 @@ from app.media import MediaService
 from app.mediaserver.registry import get_all_clients
 from app.message import Message
 from app.utils import ExceptionUtils
-from app.domain.enums import ProgressKey, SystemConfigKey
-from app.domain.mediatypes import MediaType
 
 lock = threading.Lock()
 server_lock = threading.Lock()

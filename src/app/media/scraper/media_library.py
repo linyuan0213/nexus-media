@@ -6,8 +6,8 @@ from io import BytesIO
 from lxml import etree
 
 from app.core.constants import RMT_MEDIAEXT
-from app.storage.backends.base import StorageBackend
 from app.media.parser.nfo_reader import NfoReader
+from app.storage.backends.base import StorageBackend
 
 
 class MediaLibrary:

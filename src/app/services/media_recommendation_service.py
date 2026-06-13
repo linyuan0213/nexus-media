@@ -1,9 +1,9 @@
+from app.domain.media_utils import check_media_exists
+from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
 from app.media import Bangumi, DouBan, MediaService
 from app.mediaserver import MediaServer
 from app.services.subscribe_service import SubscribeService as Subscribe
-from app.domain.media_utils import check_media_exists
-from app.domain.mediatypes import MediaType
 from app.services.web.utils import search_media_infos
 
 

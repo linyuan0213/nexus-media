@@ -1,8 +1,8 @@
 """引擎下载链接解析 — 从 engine.py 拆分"""
 
-from app.sites.engine_tools import _call_html_endpoint, _get_rate_limit_kwargs
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.sites.engine_tools import _call_html_endpoint, _get_rate_limit_kwargs
 from app.utils.config_tools import get_proxies
 
 

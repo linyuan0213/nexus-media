@@ -1,9 +1,9 @@
 from app.core.system_config import SystemConfig
-from app.indexer.configuration import IndexerConf
 from app.indexer.client._base import _IIndexClient
+from app.indexer.configuration import IndexerConf
 from app.indexer.schema import ConfigField, IndexerConfigSchema
-from app.utils import ExceptionUtils
 from app.infrastructure.http.client import HttpClient
+from app.utils import ExceptionUtils
 
 
 class Jackett(_IIndexClient):

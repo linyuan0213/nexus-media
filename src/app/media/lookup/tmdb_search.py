@@ -5,13 +5,13 @@ from lxml import etree
 
 import log
 from app.core.exceptions import TMDBError
+from app.domain.mediatypes import MediaType
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
-from app.media.lookup.tmdb_client import TmdbClient, compare_tmdb_names
 from app.infrastructure.tmdb import get_rate_limiter
+from app.media.lookup.tmdb_client import TmdbClient, compare_tmdb_names
 from app.media.lookup.tmdb_detail import TmdbDetail
 from app.utils import StringUtils
-from app.domain.mediatypes import MediaType
 
 
 class TmdbSearch:

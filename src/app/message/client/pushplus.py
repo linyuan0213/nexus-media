@@ -1,10 +1,10 @@
 import time
 from urllib.parse import urlencode
 
+from app.infrastructure.http.client import HttpClient
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils
-from app.infrastructure.http.client import HttpClient
 
 
 class PushPlus(_IMessageClient):

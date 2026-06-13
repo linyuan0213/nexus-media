@@ -1,6 +1,6 @@
+from app.domain.mediatypes import MediaType
 from app.media.parser._video import parse_video_title
 from app.media.parser.base import BaseParser, ParserResult
-from app.domain.mediatypes import MediaType
 
 
 class TokenAdapter(BaseParser):

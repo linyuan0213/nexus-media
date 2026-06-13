@@ -10,12 +10,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 import log
 from api.deps import get_apikey_service, get_app_context
 from app.di.context import AppContext
+from app.domain.enums import SearchType
 from app.infrastructure.security import SecurityChecker
+from app.message import Message
 from app.services.apikey_service import APIKeyService
 from app.services.search_message_service import MessageSearchService
 from app.services.system_service import MessageCommandHandler
-from app.domain.enums import SearchType
-from app.message import Message
 
 router = APIRouter()
 

@@ -6,9 +6,9 @@ import re
 from typing import Any
 
 import httpx
-import log
 from lxml import etree
 
+import log
 from app.infrastructure.http.auth import BearerAuth, CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig

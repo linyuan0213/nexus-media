@@ -25,7 +25,6 @@ from app.storage.config_models import LocalStorageConfig
 from app.storage.factory import StorageBackendFactory
 from app.utils import PathUtils
 
-
 _synced_lock = threading.Lock()
 _observer_lock = threading.Lock()
 

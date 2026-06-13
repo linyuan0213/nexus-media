@@ -1,4 +1,6 @@
 import log
+from app.domain.media_type_utils import MediaTypeMapper
+from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
 from app.media.lookup.base import BaseLookup, LookupResult
 from app.media.lookup.tmdb_client import TmdbClient
@@ -8,8 +10,6 @@ from app.media.lookup.tmdb_person import TmdbPerson
 from app.media.lookup.tmdb_search import TmdbSearch
 from app.media.lookup.tmdb_season import TmdbSeason
 from app.utils import StringUtils
-from app.domain.media_type_utils import MediaTypeMapper
-from app.domain.mediatypes import MediaType
 
 
 class TmdbLookup(BaseLookup):

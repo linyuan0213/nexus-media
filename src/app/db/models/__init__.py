@@ -21,10 +21,10 @@ from app.db.models.brush import (
 
 # 配置相关模型
 from app.db.models.config import (
-    CONFIGFILTERGROUP,
-    CONFIGFILTERRULES,
     CONFIGCATEGORY,
     CONFIGCATEGORYRULE,
+    CONFIGFILTERGROUP,
+    CONFIGFILTERRULES,
     CONFIGMEDIA,
     CONFIGRSSPARSER,
     CONFIGSITE,
@@ -84,15 +84,6 @@ from app.db.models.rbac import (
     RBACUserLoginLog,
 )
 
-# RSS相关模型
-from app.db.models.subscribe import (
-    SubscribeHistory,
-    SubscribeMovies,
-    SubscribeTorrents,
-    SubscribeTvEpisodes,
-    SubscribeTvs,
-)
-
 # 搜索结果模型
 from app.db.models.search import (
     SEARCHRESULTINFO,
@@ -109,6 +100,15 @@ from app.db.models.site import (
 # 存储后端模型
 from app.db.models.storage_backend import (
     STORAGEBACKEND,
+)
+
+# RSS相关模型
+from app.db.models.subscribe import (
+    SubscribeHistory,
+    SubscribeMovies,
+    SubscribeTorrents,
+    SubscribeTvEpisodes,
+    SubscribeTvs,
 )
 
 # 同步历史模型

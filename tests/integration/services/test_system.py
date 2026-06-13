@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.domain.enums import ProgressKey
 from app.services.system.backup import BackupRestoreService
 from app.services.system.config import (
     ConfigUpdateService,
@@ -25,7 +26,6 @@ from app.services.system.message import (
     MessageCommandHandler,
     MessageSenderService,
 )
-from app.domain.enums import ProgressKey
 
 
 class TestBackupRestoreService:

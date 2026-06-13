@@ -2,13 +2,13 @@
 
 from unittest.mock import MagicMock, patch
 
+from app.domain.mediatypes import MediaType
 from app.services.subscribe.management.calendar_service import SubscribeCalendarService
 from app.services.subscribe.management.history_service import SubscribeHistoryService
 from app.services.subscribe.management.query_service import SubscribeQueryService
 from app.services.subscribe.management.utils import gen_rss_note, parse_rss_desc
 from app.services.subscribe.matcher import SubscribeMatcher
 from app.services.subscribe.monitor import SubscriptionMonitor
-from app.domain.mediatypes import MediaType
 
 
 class TestSubscribeUtils:

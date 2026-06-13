@@ -7,7 +7,7 @@ import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.db.repositories.config_repo_adapter import UserRssConfigRepositoryAdapter
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
-from app.services.rss_processor import RssHelper
+from app.events.bus import EventBus
 from app.media import MediaService
 from app.message import Message
 from app.services.downloader_core import DownloaderCore as Downloader
@@ -18,8 +18,8 @@ from app.services.rss_automation.articles import (
     _get_rss_articles,
     _test_rss_articles,
 )
-from app.events.bus import EventBus
 from app.services.rss_automation.executor import _check_task_rss
+from app.services.rss_processor import RssHelper
 from app.services.search_service import Searcher
 from app.sites.engine import SiteEngine
 

@@ -7,6 +7,7 @@ import os
 import re
 
 from app.core.constants import RMT_MEDIAEXT
+from app.domain.mediatypes import MediaType
 from app.media.models import MediaInfo
 from app.media.parser._customization import CustomizationMatcher
 from app.media.parser._release_groups import ReleaseGroupsMatcher
@@ -17,7 +18,6 @@ from app.media.parser.video.resource_parser import init_part, init_resource_pix,
 from app.media.parser.video.season_episode_parser import init_episode, init_season, init_year
 from app.utils import StringUtils
 from app.utils.tokens import Tokens
-from app.domain.mediatypes import MediaType
 
 
 def parse_video_title(

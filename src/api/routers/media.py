@@ -26,6 +26,7 @@ from app.core.exceptions import (
     ServiceError,
     ValidationError,
 )
+from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system import TokenCache
 from app.schemas.common import CommonResponse
 from app.services.downloader_core import DownloaderCore as Downloader
@@ -41,7 +42,6 @@ from app.services.media_service import (
 )
 from app.services.search_service import Searcher
 from app.utils.response import fail, success
-from app.domain.mediatypes import MediaType
 
 router = APIRouter()
 

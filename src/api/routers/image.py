@@ -18,11 +18,11 @@ from app.infrastructure.image_proxy import (
     MAX_CACHE_DAYS,
     SIZE_DIMENSIONS,
     SOURCE_DOMAINS,
+    ImageProxy,
     download_image,
     get_cache_path,
     resize_image,
 )
-from app.infrastructure.image_proxy import ImageProxy
 
 router = APIRouter()
 

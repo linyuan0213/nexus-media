@@ -11,7 +11,6 @@ from sqlalchemy import Engine
 from app.db.database_factory import DatabaseFactory
 from app.db.engine import get_engine
 
-
 # =============================================================================
 # SQL 适配器（延迟初始化避免循环导入）
 # =============================================================================

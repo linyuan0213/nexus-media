@@ -16,8 +16,10 @@ from typing import Any
 import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
+from app.domain.enums import ProgressKey, SearchType
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.domain.interfaces.search_repo import ISearchRepository
+from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.bus import EventBus
 from app.events.constants import SEARCH_START
@@ -30,8 +32,6 @@ from app.schemas.search import SearchMediasResultDTO, SearchOneMediaResultDTO
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
 from app.utils.string_utils import StringUtils
-from app.domain.mediatypes import MediaType
-from app.domain.enums import ProgressKey, SearchType
 
 
 class SearchQueryBuilder:

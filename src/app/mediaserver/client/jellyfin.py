@@ -3,11 +3,11 @@ from urllib.parse import quote
 
 import log
 from app.core.exceptions import InfrastructureError, MediaServerError
+from app.domain.mediatypes import MediaType
+from app.infrastructure.http.client import HttpClient
 from app.mediaserver.client._base import _IMediaClient
 from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
 from app.utils import ExceptionUtils, IpUtils, SystemUtils
-from app.domain.mediatypes import MediaType
-from app.infrastructure.http.client import HttpClient
 
 
 class Jellyfin(_IMediaClient):

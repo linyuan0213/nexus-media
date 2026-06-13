@@ -2,7 +2,6 @@
 
 from unittest.mock import MagicMock
 
-
 from app.events import Event, EventBus, EventHandlerRegistry, on_event
 from app.events.bridge import PluginBridge
 from app.events.middleware import ErrorHandlingMiddleware, MiddlewareChain

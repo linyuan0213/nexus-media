@@ -1,9 +1,9 @@
+from app.domain.enums import SystemConfigKey
 from app.infrastructure.cache_system import TokenCache
 from app.mediaserver import MediaServer
 from app.schemas.media import LibrarySpaceDTO
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.utils import SystemUtils
-from app.domain.enums import SystemConfigKey
 
 
 class MediaLibraryService:

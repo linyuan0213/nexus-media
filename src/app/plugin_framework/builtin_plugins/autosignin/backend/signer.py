@@ -3,10 +3,10 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
+from app.message import Message
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base import SiteSigninContext
 from app.plugin_framework.builtin_plugins.autosignin.backend.registry import HandlerRegistry
 from app.plugin_framework.builtin_plugins.autosignin.backend.simulator import ChromeSigninSimulator
-from app.message import Message
 
 
 class SigninEngine:

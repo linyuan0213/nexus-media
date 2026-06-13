@@ -1,6 +1,6 @@
+from app.domain.mediatypes import MediaType
 from app.infrastructure.external.doubanapi.apiv2 import DoubanApi
 from app.media.lookup.base import BaseLookup, LookupResult
-from app.domain.mediatypes import MediaType
 
 
 class DoubanLookup(BaseLookup):

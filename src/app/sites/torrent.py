@@ -6,15 +6,15 @@ from urllib.parse import unquote
 from bencode import bdecode
 
 import log
-from app.sites import engine_tools
-from app.utils.string_utils import StringUtils
-from app.utils.config_tools import get_proxies
+from app.domain.mediatypes import MediaType
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.http.exceptions import HttpClientError
 from app.infrastructure.temp import temp_manager
-from app.domain.mediatypes import MediaType
+from app.sites import engine_tools
+from app.utils.config_tools import get_proxies
+from app.utils.string_utils import StringUtils
 
 
 class Torrent:

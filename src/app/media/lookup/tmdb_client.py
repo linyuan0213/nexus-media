@@ -1,7 +1,8 @@
 import difflib
 
-from app.db.repositories.plugin_repo_adapter import TmdbBlacklistRepositoryAdapter
 from app.core.settings import settings
+from app.db.repositories.plugin_repo_adapter import TmdbBlacklistRepositoryAdapter
+from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system import TMDBCache, get_cache_manager
 from app.infrastructure.external.tmdbv3api import (
     TV,
@@ -18,7 +19,6 @@ from app.infrastructure.external.tmdbv3api import (
 from app.utils import StringUtils
 from app.utils.chinese_utils import to_simplified
 from app.utils.config_tools import get_proxies, get_tmdbapi_url
-from app.domain.mediatypes import MediaType
 
 
 class TmdbClient:

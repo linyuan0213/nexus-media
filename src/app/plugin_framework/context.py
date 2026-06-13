@@ -9,11 +9,9 @@ import os
 from typing import Any
 
 import log
-
 from app.core.settings import settings
-from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter
+from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter, PluginLogRepositoryAdapter
 from app.domain.entities.plugin import PluginConfigEntity
-from app.db.repositories.plugin_framework_repo_adapter import PluginLogRepositoryAdapter
 
 
 class PluginContext:

@@ -1,10 +1,10 @@
 import random
 
 import log
-from app.infrastructure.image_proxy import ImageProxy
-from app.media.lookup.tmdb_client import TmdbClient
 from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
+from app.infrastructure.image_proxy import ImageProxy
+from app.media.lookup.tmdb_client import TmdbClient
 
 
 class TmdbDiscover:

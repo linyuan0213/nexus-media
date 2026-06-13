@@ -1,10 +1,10 @@
 import json
-import log
 import re
 from abc import ABCMeta, abstractmethod
 from typing import Any
 from urllib.parse import quote
 
+import log
 from app.core.settings import settings
 from app.mediaserver.schema import MediaServerConfigSchema
 from app.utils.config_tools import get_domain

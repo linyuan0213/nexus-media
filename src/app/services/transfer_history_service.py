@@ -1,10 +1,10 @@
 from math import floor
 
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
+from app.domain.mediatypes import MediaType
 from app.schemas.media import TransferHistoryPageDTO, UnknownListPageDTO
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.sync_service import SyncService
-from app.domain.mediatypes import MediaType
 
 
 class TransferHistoryService:

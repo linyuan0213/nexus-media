@@ -8,18 +8,18 @@ from typing import Any
 import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
+from app.domain.enums import SearchType
+from app.domain.media_type_utils import MediaTypeMapper
+from app.domain.mediatypes import MediaType
 from app.events.bus import EventBus
 from app.events.constants import RSS_AUTO_SUBSCRIBE_REQUESTED
 from app.events.types import Event
-from app.media import meta_info
-from app.services.rss_automation.parser import RssParserEngine
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.media import meta_info
+from app.services.rss_automation.parser import RssParserEngine
 from app.utils import ExceptionUtils
 from app.utils.config_tools import get_proxies
-from app.domain.media_type_utils import MediaTypeMapper
-from app.domain.mediatypes import MediaType
-from app.domain.enums import SearchType
 
 
 def _check_task_rss(service, taskid: int | None, event_bus: EventBus | None = None) -> None:

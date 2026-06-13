@@ -3,7 +3,6 @@ import xml.dom.minidom
 from urllib.parse import urlsplit
 
 import log
-
 from app.db.repositories.subscribe_torrent_repo_adapter import SubscribeTorrentRepositoryAdapter
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig

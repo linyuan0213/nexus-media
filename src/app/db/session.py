@@ -17,8 +17,8 @@ from sqlalchemy import text
 from app.core.root_path import get_project_root
 from app.core.settings import settings
 from app.db.engine import get_engine, get_session_factory
-from app.db.sql_adapter import get_sql_adapter
 from app.db.models import Base
+from app.db.sql_adapter import get_sql_adapter
 
 
 class SessionManager:

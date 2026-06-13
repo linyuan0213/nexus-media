@@ -5,10 +5,10 @@ import os
 
 import log
 from app.infrastructure.http import HttpClientError
+from app.infrastructure.http.client import HttpClient
 from app.storage.backends.base import StorageBackend
 from app.utils import ExceptionUtils
 from app.utils.commons import retry
-from app.infrastructure.http.client import HttpClient
 
 
 class ImageDownloader:

@@ -3,13 +3,13 @@ from datetime import datetime
 from threading import Lock
 
 import log
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.message import Message
 from app.message.client._base import _IMessageClient
 from app.message.commands import WECHAT_MENU, WECHAT_PLUGIN_GROUP
 from app.message.schema import ConfigField, MessageConfigSchema
-from app.infrastructure.http.client import HttpClient
-from app.infrastructure.http.config import HttpClientConfig
 from app.utils import ExceptionUtils
-from app.message import Message
 
 _menu_lock = Lock()
 

@@ -6,7 +6,6 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 
 import log
-
 from app.events.types import Event
 
 

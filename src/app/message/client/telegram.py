@@ -8,11 +8,11 @@ from app.core.settings import settings
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.thread import ThreadExecutor
+from app.message import Message
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils
 from app.utils.config_tools import get_domain, get_proxies
-from app.message import Message
 
 _webhook_lock = Lock()
 _webhook_set = False

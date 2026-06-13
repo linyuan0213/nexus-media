@@ -10,13 +10,14 @@ from threading import Event
 from typing import Any
 
 import pytz
+
 from app.core.constants import MT_URL
-from app.plugin_framework.builtin_plugins.iyuuautoseed.backend.iyuu.iyuu_helper import IyuuHelper
-from app.plugin_framework.context import PluginContext
-from app.schemas.download import Torrent
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.plugin_framework.builtin_plugins.iyuuautoseed.backend.iyuu.iyuu_helper import IyuuHelper
+from app.plugin_framework.context import PluginContext
+from app.schemas.download import Torrent
 from app.utils.config_tools import get_proxies
 
 

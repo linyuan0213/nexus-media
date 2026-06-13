@@ -6,7 +6,6 @@ from typing import Any, Callable
 
 from app.infrastructure.rate_limiter.backends import RateLimitEngine
 
-
 _default_rate_limit_engine: RateLimitEngine | None = None
 
 

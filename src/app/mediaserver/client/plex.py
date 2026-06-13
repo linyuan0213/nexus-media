@@ -9,10 +9,10 @@ from plexapi.server import PlexServer
 
 import log
 from app.core.exceptions import InfrastructureError, MediaServerError, NetworkError
+from app.domain.mediatypes import MediaType
 from app.mediaserver.client._base import _IMediaClient
 from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
 from app.utils import ExceptionUtils
-from app.domain.mediatypes import MediaType
 
 
 class Plex(_IMediaClient):

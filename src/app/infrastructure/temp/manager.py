@@ -7,9 +7,8 @@ from contextlib import contextmanager, suppress
 from datetime import datetime
 
 import log
-from app.utils.path_utils import get_temp_path
-
 from app.utils.exception_utils import ExceptionUtils
+from app.utils.path_utils import get_temp_path
 
 
 class TempManager:

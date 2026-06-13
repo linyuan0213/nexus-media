@@ -2,12 +2,12 @@
 
 from typing import Any, cast
 
+from app.domain.enums import SubscribeType
+from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.constants import SUBSCRIBE_ADD
 from app.media import meta_info
 from app.services.subscribe.management.utils import gen_rss_note
-from app.domain.mediatypes import MediaType
-from app.domain.enums import SubscribeType
 from app.services.web.utils import get_mediainfo_from_id
 
 

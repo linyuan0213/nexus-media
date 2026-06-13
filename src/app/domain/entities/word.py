@@ -3,9 +3,9 @@
 对应 CUSTOM_WORDS / CUSTOM_WORD_GROUPS 表
 """
 
+import re
 from dataclasses import dataclass, fields
 from enum import Enum
-import re
 from typing import Any, Optional
 
 from app.domain.mediatypes import MediaType

@@ -4,8 +4,8 @@
 
 import re
 
-from app.media.parser.video.constants import _episode_re, _season_re
 from app.domain.mediatypes import MediaType
+from app.media.parser.video.constants import _episode_re, _season_re
 
 
 def init_year(info, token):

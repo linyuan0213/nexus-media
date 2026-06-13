@@ -2,11 +2,11 @@ from functools import lru_cache
 
 import log
 from app.core.exceptions import InfrastructureError, MediaServerError, NetworkError
+from app.domain.mediatypes import MediaType
 from app.mediaserver.client._base import _IMediaClient
 from app.mediaserver.client.fnos_api import FnOSClient
 from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
 from app.utils import ExceptionUtils
-from app.domain.mediatypes import MediaType
 
 
 class FnOS(_IMediaClient):

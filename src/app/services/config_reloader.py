@@ -21,7 +21,6 @@ from typing import Any
 
 import log
 
-
 _RELOAD_TARGETS: dict[str, str] = {
     "downloader_core": "downloader_core",
     "media_server": "media_server",

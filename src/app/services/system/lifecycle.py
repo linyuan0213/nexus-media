@@ -7,14 +7,14 @@ import log
 from app.core.exceptions import ResourceNotFoundError
 from app.infrastructure.thread import ThreadExecutor
 from app.services.brush.task_service import BrushTaskService
+from app.services.download_monitor import DownloadMonitor
 from app.services.downloader_core import DownloaderCore
 from app.services.downloader_core import DownloaderCore as Downloader
-from app.services.download_monitor import DownloadMonitor
 from app.services.file_index_service import FileIndexService
 from app.services.rss_automation.task_service import RssTaskService
 from app.services.scheduler.core import SchedulerCore
-from app.services.sync_engine import SyncEngine as Sync
 from app.services.subscribe.monitor import SubscriptionMonitor
+from app.services.sync_engine import SyncEngine as Sync
 from app.services.torrentremover_core import TorrentRemoverService
 from initializer import (
     check_config,

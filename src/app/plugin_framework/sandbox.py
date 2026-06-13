@@ -11,10 +11,9 @@ import sys
 from typing import Any
 
 import log
-
+from app.message import Message
 from app.plugin_framework.context import PluginContext
 from app.plugin_framework.registry import PluginRegistry
-from app.message import Message
 
 
 class PluginSandbox:

@@ -1,8 +1,8 @@
 import log
-from app.infrastructure.image_proxy import ImageProxy
-from app.media.lookup.tmdb_client import TmdbClient, get_genre_ids_from_detail, update_tmdbinfo_cn_title
-from app.infrastructure.request_deduper import get_deduper
 from app.domain.mediatypes import MediaType
+from app.infrastructure.image_proxy import ImageProxy
+from app.infrastructure.request_deduper import get_deduper
+from app.media.lookup.tmdb_client import TmdbClient, get_genre_ids_from_detail, update_tmdbinfo_cn_title
 
 
 class TmdbDetail:

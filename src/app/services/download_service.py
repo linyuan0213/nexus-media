@@ -9,6 +9,8 @@ from typing import Any
 import log
 from app.core.exceptions import DomainError, ServiceError
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
+from app.domain.enums import SearchType
+from app.infrastructure.temp import temp_manager
 from app.media import MediaService
 from app.media.models import MediaInfo
 from app.schemas.download import (
@@ -22,8 +24,6 @@ from app.services.torrentremover_core import TorrentRemoverService as TorrentRem
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 from app.sites.torrent import Torrent
-from app.infrastructure.temp import temp_manager
-from app.domain.enums import SearchType
 
 
 class DownloadService:

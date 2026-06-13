@@ -4,14 +4,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.domain.enums import SearchType
+from app.domain.mediatypes import MediaType
 from app.message.core.client_manager import ClientManager, parse_client_config
 from app.message.core.command_manager import CommandManager
 from app.message.core.dispatcher import MessageDispatcher
 from app.message.core.message_builder import MessageBuilder
 from app.message.core.template_engine import TemplateEngine
 from app.message.message import Message
-from app.domain.mediatypes import MediaType
-from app.domain.enums import SearchType
 
 
 class TestTemplateEngine:

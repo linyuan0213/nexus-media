@@ -2,7 +2,6 @@
 
 import opencc
 
-
 _to_simplified = opencc.OpenCC("tw2sp")
 
 

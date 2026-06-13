@@ -2,12 +2,12 @@
 
 from unittest.mock import MagicMock, patch
 
+from app.domain.mediatypes import MediaType
+from app.events.bus import EventBus
 from app.services.subscribe.management.add_service import SubscribeAddService
 from app.services.subscribe.management.finish_service import SubscribeFinishService
 from app.services.subscribe.management.refresh_service import SubscribeRefreshService
 from app.services.subscribe.management.update_service import SubscribeUpdateService
-from app.events.bus import EventBus
-from app.domain.mediatypes import MediaType
 
 
 def _make_subscribe_service(**kwargs):

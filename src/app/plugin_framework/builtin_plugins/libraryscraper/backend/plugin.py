@@ -9,8 +9,8 @@ from threading import Event
 
 import pytz
 
-from app.plugin_framework.context import PluginContext
 from app.media.scraper import Scraper
+from app.plugin_framework.context import PluginContext
 
 
 class LibraryScraperPlugin:

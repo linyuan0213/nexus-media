@@ -1,11 +1,12 @@
 """RBAC 角色初始化."""
 
 import log
-
+from app.db.repositories.rbac_repo_adapter import (
+    RBACMenuRepositoryAdapter,
+    RBACPermissionRepositoryAdapter,
+    RBACRoleRepositoryAdapter,
+)
 from app.services.rbac.init.constants import DEFAULT_ROLES
-from app.db.repositories.rbac_repo_adapter import RBACPermissionRepositoryAdapter
-from app.db.repositories.rbac_repo_adapter import RBACMenuRepositoryAdapter
-from app.db.repositories.rbac_repo_adapter import RBACRoleRepositoryAdapter
 
 
 def init_rbac_roles(

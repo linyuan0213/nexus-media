@@ -6,14 +6,14 @@
 
 from typing import Any
 
+from app.message.core.client_manager import ClientManager
 from app.message.core.command_manager import CommandManager
 from app.message.core.dispatcher import MessageDispatcher
 from app.message.core.message_builder import MessageBuilder
 from app.message.core.template_engine import TemplateEngine
 from app.message.message_center import MessageCenter
-from app.utils.config_tools import get_domain
-from app.message.core.client_manager import ClientManager
 from app.services.apikey_service import APIKeyService
+from app.utils.config_tools import get_domain
 
 
 class Message:

@@ -5,8 +5,8 @@ import time
 from enum import Enum
 from typing import Any
 
-from app.utils import StringUtils
 from app.domain.mediatypes import MediaType
+from app.utils import StringUtils
 
 
 class MessageBuilder:

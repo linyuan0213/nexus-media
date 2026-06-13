@@ -27,9 +27,10 @@ class WeatherWidgetPlugin:
 
     def fetch_weather(self, city: str = "Beijing") -> dict:
         """获取天气数据（演示依赖使用）"""
-        import requests
-        import pytz
         from datetime import datetime
+
+        import pytz
+        import requests
 
         api_key = self.ctx.get_config("api_key", "")
         if not api_key:

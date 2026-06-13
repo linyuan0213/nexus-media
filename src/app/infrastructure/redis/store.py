@@ -1,14 +1,13 @@
 """Redis 存储 — 连接管理与键值/哈希/列表/有序集合/Stream 操作."""
 
 import json
+import threading
 from typing import Any
-
-from redis import StrictRedis
-from redis.exceptions import RedisError
 
 import log
 from app.core.settings import settings
-
+from redis import StrictRedis
+from redis.exceptions import RedisError
 
 redis_cfg = settings.redis
 
@@ -17,37 +16,39 @@ class RedisStore:
     def __init__(self):
         self._client: StrictRedis | None = None
         self._available = False
+        self._lock = threading.RLock()
 
     def _ensure_connection(self) -> StrictRedis | None:
-        if self._available and self._client is not None:
-            try:
-                self._client.ping()
-                return self._client
-            except RedisError:
-                self._available = False
-                self._client = None
+        with self._lock:
+            if self._available and self._client is not None:
+                try:
+                    self._client.ping()
+                    return self._client
+                except RedisError:
+                    self._available = False
+                    self._client = None
 
-        if self._client is None:
-            try:
-                self._client = StrictRedis(
-                    host=redis_cfg.host,
-                    port=redis_cfg.port,
-                    password=redis_cfg.password or None,
-                    db=redis_cfg.db,
-                    socket_connect_timeout=5,
-                    socket_timeout=10,
-                )
-                self._client.ping()
-                self._available = True
-                log.debug("RedisStore 连接成功")
-                return self._client
-            except RedisError as e:
-                self._client = None
-                self._available = False
-                log.debug(f"RedisStore 连接失败: {e}")
-                return None
+            if self._client is None:
+                try:
+                    self._client = StrictRedis(
+                        host=redis_cfg.host,
+                        port=redis_cfg.port,
+                        password=redis_cfg.password or None,
+                        db=redis_cfg.db,
+                        socket_connect_timeout=5,
+                        socket_timeout=10,
+                    )
+                    self._client.ping()
+                    self._available = True
+                    log.debug("RedisStore 连接成功")
+                    return self._client
+                except RedisError as e:
+                    self._client = None
+                    self._available = False
+                    log.debug(f"RedisStore 连接失败: {e}")
+                    return None
 
-        return self._client
+            return self._client
 
     def is_available(self) -> bool:
         """检查 Redis 是否可用"""

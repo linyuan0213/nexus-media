@@ -8,7 +8,10 @@ import httpx
 import pytest
 
 from app.infrastructure.http import (
+    ApiKeyAuth,
     AsyncHttpClient,
+    BearerAuth,
+    CookieAuth,
     HttpCacheConfig,
     HttpClient,
     HttpClientConfig,
@@ -16,12 +19,8 @@ from app.infrastructure.http import (
     HttpMiddleware,
     HttpRetryConfig,
     LoggingMiddleware,
-    CookieAuth,
-    BearerAuth,
-    ApiKeyAuth,
 )
 from app.infrastructure.rate_limiter import MemoryTokenBucketBackend, RateLimitEngine
-
 
 # ==================== HttpClient 基础测试 ====================
 

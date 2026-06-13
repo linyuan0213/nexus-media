@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from app.events.bus import EventBus
@@ -16,8 +16,8 @@ if TYPE_CHECKING:
     from app.plugin_framework.registry import PluginRegistry
     from app.plugin_framework.sandbox import PluginSandbox
     from app.services.apikey_service import APIKeyService
-    from app.services.downloader_core import DownloaderCore
     from app.services.download_monitor import DownloadMonitor
+    from app.services.downloader_core import DownloaderCore
     from app.services.file_index_service import FileIndexService
     from app.services.filter_service import FilterService
     from app.services.indexer_service import IndexerService

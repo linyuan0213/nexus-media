@@ -18,9 +18,9 @@ from app.schemas.site import (
 from app.services.indexer_service import IndexerService
 from app.sites import SiteConf, SiteCookie
 from app.sites.site_cache import SiteCache
-from app.sites.site_userinfo import SiteUserInfo
 from app.sites.site_favicon_service import SiteFaviconService
 from app.sites.site_resolver import SiteResolver
+from app.sites.site_userinfo import SiteUserInfo
 
 
 class SiteService:

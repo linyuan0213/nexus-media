@@ -7,8 +7,9 @@ Create Date: 2026-05-31 11:43:45.360587
 """
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy import Column
+
+from alembic import op
 
 revision = "cdf1444102e6"
 down_revision = "7e029912f153"

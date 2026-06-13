@@ -2,17 +2,19 @@
 
 from typing import Any
 
-from app.db.repositories.rbac_repo_adapter import RBACLogRepositoryAdapter
+from app.db.repositories.rbac_repo_adapter import (
+    RBACLogRepositoryAdapter,
+    RBACMenuRepositoryAdapter,
+    RBACPermissionRepositoryAdapter,
+    RBACRoleRepositoryAdapter,
+    RBACUserRepositoryAdapter,
+)
 from app.services.rbac.auth_service import RBACAuthService
 from app.services.rbac.check_service import RBACCheckService
 from app.services.rbac.menu_service import RBACMenuService
 from app.services.rbac.permission_service import RBACPermissionService
 from app.services.rbac.role_service import RBACRoleService
 from app.services.rbac.user_service import RBACUserService
-from app.db.repositories.rbac_repo_adapter import RBACPermissionRepositoryAdapter
-from app.db.repositories.rbac_repo_adapter import RBACMenuRepositoryAdapter
-from app.db.repositories.rbac_repo_adapter import RBACUserRepositoryAdapter
-from app.db.repositories.rbac_repo_adapter import RBACRoleRepositoryAdapter
 
 
 class RBACService:

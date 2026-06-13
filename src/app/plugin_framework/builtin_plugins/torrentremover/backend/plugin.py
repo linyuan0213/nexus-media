@@ -3,9 +3,8 @@ TorrentRemover Plugin v2
 历史记录中源文件被删除时，同步删除下载器中的下载任务
 """
 
-import os
-
 import json
+import os
 
 from app.plugin_framework.context import PluginContext
 from app.services.downloader_core import DownloaderCore

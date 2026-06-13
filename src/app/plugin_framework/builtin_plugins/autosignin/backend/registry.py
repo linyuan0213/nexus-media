@@ -1,13 +1,12 @@
 import inspect
 from typing import Any, Callable
 
-from app.utils.submodule_loader import SubmoduleLoader
 from app.utils import StringUtils
+from app.utils.submodule_loader import SubmoduleLoader
 
-from .handlers.base import SiteSigninHandler
 from .handlers._declarative import DeclarativeSigninHandler
 from .handlers._generic import GenericSigninHandler
-
+from .handlers.base import SiteSigninHandler
 
 HandlerFactory = Callable[[], SiteSigninHandler]
 

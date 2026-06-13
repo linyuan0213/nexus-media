@@ -1,13 +1,13 @@
 import time
 
 from app.infrastructure.cache_system.cookiecloud_adapter import CookiecloudAdapter
+from app.infrastructure.chrome import ChromeClient
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base import (
     SigninResult,
     SiteSigninContext,
     SiteSigninHandler,
 )
 from app.utils.config_tools import get_ua
-from app.infrastructure.chrome import ChromeClient
 
 
 class MTeam(SiteSigninHandler):

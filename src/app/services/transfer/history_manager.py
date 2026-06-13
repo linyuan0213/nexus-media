@@ -2,7 +2,9 @@
 
 import os
 
+from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import (
+    TransferBlacklistRepositoryAdapter,
     TransferHistoryRepositoryAdapter,
     TransferUnknownRepositoryAdapter,
 )
@@ -13,8 +15,6 @@ from app.domain.interfaces.transfer_repo import (
     ITransferUnknownRepository,
 )
 from app.schemas.media import TransferMediaDTO
-from app.db.repositories.transfer_repo_adapter import TransferBlacklistRepositoryAdapter
-from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 
 
 class TransferHistoryManager:

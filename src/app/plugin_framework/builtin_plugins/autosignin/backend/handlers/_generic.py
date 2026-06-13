@@ -6,7 +6,6 @@ from app.infrastructure.http.auth import CookieAuth
 
 from .base import SigninResult, SiteSigninContext, SiteSigninHandler
 
-
 DEFAULT_SUCCESS_MARKERS = [
     "签到成功",
     "此次签到您获得",

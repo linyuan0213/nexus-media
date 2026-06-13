@@ -6,7 +6,6 @@ from app.plugin_framework.context import PluginContext
 
 from .handlers._declarative import DeclarativeSiteConfig
 
-
 _DEFAULT_SITES: list[DeclarativeSiteConfig] = [
     DeclarativeSiteConfig(
         site_url="rousi.pro",

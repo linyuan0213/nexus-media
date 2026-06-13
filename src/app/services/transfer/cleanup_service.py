@@ -10,6 +10,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
+from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.bus import EventBus
 from app.events.constants import LIBRARY_FILE_DELETED, MEDIA_SOURCE_DELETED
@@ -19,7 +20,6 @@ from app.storage.backends.base import StorageConfig, StorageType
 from app.storage.backends.local import LocalStorageBackend
 from app.storage.config_models import LocalStorageConfig
 from app.utils import ExceptionUtils, PathUtils
-from app.domain.mediatypes import MediaType
 
 
 class TransferCleanupService:

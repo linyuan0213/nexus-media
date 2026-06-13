@@ -2,10 +2,9 @@
 
 import re
 
-from app.indexer.core.filter_engine import IndexerFilterEngine
+from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
 from app.domain.mediatypes import MediaType
-from app.db.repositories.config_repo_adapter import FilterRuleRepositoryAdapter
-from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter
+from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.sites.site_cache import SiteCache
 from app.sites.siteconf import SiteConf
 

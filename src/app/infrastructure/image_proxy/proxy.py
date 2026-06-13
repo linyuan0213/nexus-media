@@ -2,7 +2,6 @@ import re
 import urllib.parse
 
 import log
-
 from app.core.constants import TMDB_IMAGE_DOMAIN, TMDB_IMAGE_SIZE
 
 

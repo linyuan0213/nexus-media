@@ -13,13 +13,13 @@ import re
 
 import log
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
-from app.indexer.core.filter_engine import IndexerFilterEngine
+from app.domain.mediatypes import MediaType
 from app.indexer.core.batch_identifier import BatchIdentifier
+from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.indexer.core.models import FilterStats, SearchCandidate
 from app.infrastructure.cache_system import get_cache_manager
 from app.media import meta_info
 from app.utils import StringUtils
-from app.domain.mediatypes import MediaType
 
 
 class ResultFilter:

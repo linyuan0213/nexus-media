@@ -19,9 +19,9 @@ import dateutil
 import pytz
 
 import log
-from app.utils import ExceptionUtils, StringUtils
-from app.domain.mediatypes import MediaType
 from app.domain.enums import BrushDeleteType, BrushStopType
+from app.domain.mediatypes import MediaType
+from app.utils import ExceptionUtils, StringUtils
 
 
 class BrushRuleEngine:

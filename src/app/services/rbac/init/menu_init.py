@@ -9,9 +9,8 @@
 from typing import Any
 
 import log
-
-from app.services.rbac.init.constants import DEFAULT_MENUS
 from app.db.repositories.rbac_repo_adapter import RBACMenuRepositoryAdapter
+from app.services.rbac.init.constants import DEFAULT_MENUS
 
 
 def init_rbac_menus(menu_repo: Any = None):

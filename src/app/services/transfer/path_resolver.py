@@ -8,13 +8,13 @@ from app.core.constants import DEFAULT_MOVIE_FORMAT, DEFAULT_TV_FORMAT
 from app.core.settings import settings
 from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
+from app.domain.mediatypes import MediaType
 from app.services.media_config_service import MediaConfigService
 from app.storage import StorageBackendFactory
 from app.storage.backends.base import StorageConfig, StorageType
 from app.storage.backends.local import LocalStorageBackend
 from app.storage.config_models import LocalStorageConfig
 from app.utils import NumberUtils, PathUtils, StringUtils, SystemUtils
-from app.domain.mediatypes import MediaType
 
 
 class TransferPathResolver:

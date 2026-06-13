@@ -7,8 +7,9 @@ Create Date: 2026-05-05
 """
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy import Boolean, Column
+
+from alembic import op
 
 revision = "add_installed_col"
 down_revision = "8b7846a02c03"

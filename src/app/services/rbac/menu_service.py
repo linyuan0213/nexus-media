@@ -3,7 +3,6 @@
 from typing import Any
 
 import log
-
 from app.core.exceptions import ResourceAlreadyExistsError, ResourceNotFoundError
 
 

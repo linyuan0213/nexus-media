@@ -18,12 +18,12 @@ import log
 from app.core.constants import PT_TAG
 from app.core.settings import settings
 from app.core.system_config import SystemConfig as SystemConfigClass
+from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
+from app.db.repositories.download_repo_adapter import DownloadSettingRepositoryAdapter
+from app.domain.enums import SystemConfigKey
 from app.downloader.client._base import _IDownloadClient
 from app.downloader.registry import get_all_clients
 from app.utils import ExceptionUtils, NumberUtils, StringUtils, SystemUtils
-from app.domain.enums import SystemConfigKey
-from app.db.repositories.download_repo_adapter import DownloadSettingRepositoryAdapter
-from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
 
 client_lock = Lock()
 

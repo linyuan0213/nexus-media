@@ -3,7 +3,6 @@
 from typing import cast
 
 import log
-
 from app.core.exceptions import ResourceAlreadyExistsError, ResourceNotFoundError
 from app.db.models.rbac import RBACRole
 

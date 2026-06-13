@@ -1,7 +1,7 @@
 import anitopy  # type: ignore
 
-from app.media.parser.base import BaseParser, ParserResult
 from app.domain.mediatypes import MediaType
+from app.media.parser.base import BaseParser, ParserResult
 
 
 class AnitopyAdapter(BaseParser):

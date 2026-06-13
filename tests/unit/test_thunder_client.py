@@ -2,9 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
-
-from app.downloader.client.thunder import Thunder
 from app.domain.mediatypes import MediaType
+from app.downloader.client.thunder import Thunder
 
 
 class MockMediaInfo:

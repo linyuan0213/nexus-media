@@ -6,9 +6,9 @@ from app.downloader.client._base import _IDownloadClient
 from app.downloader.client._pyaria2 import PyAria2
 from app.downloader.schema import ConfigField, DownloaderConfigSchema
 from app.downloader.strategy import RemoveStrategy
+from app.infrastructure.http.client import HttpClient
 from app.schemas.download import Torrent, TorrentStatus
 from app.utils import ExceptionUtils
-from app.infrastructure.http.client import HttpClient
 
 
 class Aria2(_IDownloadClient):

@@ -1,8 +1,8 @@
 import urllib.parse
 from datetime import datetime
 
-from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.domain.mediatypes import MediaType
+from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.infrastructure.http.client import HttpClient
 
 

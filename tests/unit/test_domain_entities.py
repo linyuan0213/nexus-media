@@ -1,10 +1,10 @@
 """领域实体单元测试."""
 
-from app.domain.entities.sync import SyncPathEntity
-from app.domain.entities.word import CustomWordEntity
-from app.domain.entities.transfer import TransferHistoryEntity
-from app.domain.entities.download import DownloadHistoryEntity
 from app.domain.entities.config import TorrentRemoveTaskEntity
+from app.domain.entities.download import DownloadHistoryEntity
+from app.domain.entities.sync import SyncPathEntity
+from app.domain.entities.transfer import TransferHistoryEntity
+from app.domain.entities.word import CustomWordEntity
 
 
 class TestSyncPathEntity:

@@ -5,8 +5,8 @@
 
 from typing import Any
 
-from app.utils import StringUtils
 from app.message import Message
+from app.utils import StringUtils
 
 
 class SearchPaginationManager:

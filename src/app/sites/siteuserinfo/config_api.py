@@ -9,10 +9,10 @@ import json
 import time
 
 import log
-from app.sites.engine import SiteDefinition
-from app.sites import engine_tools
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.sites import engine_tools
+from app.sites.engine import SiteDefinition
 from app.utils.config_tools import get_proxies
 
 

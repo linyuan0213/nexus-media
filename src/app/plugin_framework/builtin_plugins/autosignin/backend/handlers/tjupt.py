@@ -9,18 +9,18 @@ from bs4 import BeautifulSoup
 from lxml import etree
 from PIL import Image
 
+from app.infrastructure.chrome import ChromeClient
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient, HttpClientError
 from app.infrastructure.http.config import HttpClientConfig
-from app.utils.chinese_utils import to_simplified
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base import (
     SigninResult,
     SiteSigninContext,
     SiteSigninHandler,
 )
 from app.utils import StringUtils
+from app.utils.chinese_utils import to_simplified
 from app.utils.path_utils import get_temp_path
-from app.infrastructure.chrome import ChromeClient
 
 
 class Tjupt(SiteSigninHandler):

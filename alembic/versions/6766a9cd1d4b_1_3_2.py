@@ -10,8 +10,9 @@ import ast
 import json
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy import Column, Integer, Sequence, String, Text
+
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "6766a9cd1d4b"

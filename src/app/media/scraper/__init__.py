@@ -14,6 +14,8 @@ import os
 import log
 from app.core.module_config import ModuleConf
 from app.core.system_config import SystemConfig
+from app.domain.enums import SystemConfigKey
+from app.domain.mediatypes import MediaType
 from app.infrastructure.ffmpeg import FfmpegProcessor
 from app.infrastructure.image_proxy import ImageProxy
 from app.infrastructure.temp import temp_manager
@@ -22,8 +24,6 @@ from app.media.fanart import Fanart
 from app.media.parser._metainfo import meta_info
 from app.media.service import MediaService
 from app.utils import ExceptionUtils
-from app.domain.mediatypes import MediaType
-from app.domain.enums import SystemConfigKey
 
 from .chinese_credits import ChineseCredits
 from .image_downloader import ImageDownloader

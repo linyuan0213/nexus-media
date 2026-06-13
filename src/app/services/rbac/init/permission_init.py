@@ -1,8 +1,8 @@
 """RBAC 权限初始化."""
 
 import log
-from app.services.rbac.init.constants import DEFAULT_PERMISSIONS
 from app.db.repositories.rbac_repo_adapter import RBACPermissionRepositoryAdapter
+from app.services.rbac.init.constants import DEFAULT_PERMISSIONS
 
 
 def init_rbac_permissions(

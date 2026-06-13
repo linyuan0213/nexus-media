@@ -5,13 +5,13 @@
 """
 
 from app.core.constants import FANART_MOVIE_API_URL, FANART_TV_API_URL
+from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.http.exceptions import HttpClientError
 from app.utils import ExceptionUtils
 from app.utils.config_tools import get_proxies
-from app.domain.mediatypes import MediaType
 
 
 class Fanart:

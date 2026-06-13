@@ -2,17 +2,17 @@ import os
 
 import log
 from app.core.settings import settings
+from app.db.repositories.download_repo_adapter import IndexerStatisticsRepositoryAdapter
 from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.events import auto_register, register_modules
+from app.events.bridge import PluginBridge
+from app.events.bus import EventBus
 from app.events.config import EVENT_HANDLER_MODULES
 from app.infrastructure.cache_system.events import init_event_bridge
 from app.services.category_init import CategoryInitializer
 from app.services.rbac_init import init_admin_user
 from app.services.rbac_init import init_rbac_system as rbac_init
 from app.utils import ExceptionUtils
-from app.db.repositories.download_repo_adapter import IndexerStatisticsRepositoryAdapter
-from app.events.bridge import PluginBridge
-from app.events.bus import EventBus
 
 
 def init_default_categories():
@@ -174,8 +174,8 @@ def init_message_webhook_apikey(apikey_service=None):
     """
     try:
         if apikey_service is None:
+            from app.db.repositories.apikey_repo_adapter import APIKeyLogRepositoryAdapter, APIKeyRepositoryAdapter
             from app.services.apikey_service import APIKeyService
-            from app.db.repositories.apikey_repo_adapter import APIKeyRepositoryAdapter, APIKeyLogRepositoryAdapter
 
             apikey_service = APIKeyService(
                 key_repo=APIKeyRepositoryAdapter(),

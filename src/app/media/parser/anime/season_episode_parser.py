@@ -2,8 +2,8 @@
 动漫标题解析 — 季、集、年份解析
 """
 
-from app.utils import ExceptionUtils
 from app.domain.mediatypes import MediaType
+from app.utils import ExceptionUtils
 
 
 def parse_year(info, anitopy_info):

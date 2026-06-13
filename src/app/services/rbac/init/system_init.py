@@ -3,8 +3,7 @@
 from typing import Any
 
 import log
-from app.db.repositories.rbac_repo_adapter import RBACUserRepositoryAdapter
-from app.db.repositories.rbac_repo_adapter import RBACRoleRepositoryAdapter
+from app.db.repositories.rbac_repo_adapter import RBACRoleRepositoryAdapter, RBACUserRepositoryAdapter
 
 
 def init_rbac_system(
@@ -16,8 +15,8 @@ def init_rbac_system(
     初始化RBAC系统
     创建默认的权限、菜单、角色
     """
-    from app.services.rbac.init.permission_init import init_rbac_permissions
     from app.services.rbac.init.menu_init import init_rbac_menus
+    from app.services.rbac.init.permission_init import init_rbac_permissions
     from app.services.rbac.init.role_init import init_rbac_roles
 
     try:

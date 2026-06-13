@@ -1,9 +1,9 @@
 from urllib.parse import quote_plus
 
+from app.infrastructure.http.client import HttpClient
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils, StringUtils
-from app.infrastructure.http.client import HttpClient
 
 
 class Bark(_IMessageClient):

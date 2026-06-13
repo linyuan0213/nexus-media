@@ -31,10 +31,10 @@ from .rbac_repository import (
     RBACRoleRepository,
     RBACUserRepository,
 )
-from .subscribe_repository import SubscribeRepository
-from .subscribe_torrent_repo_adapter import SubscribeTorrentRepositoryAdapter
 from .search_repository import SearchRepository
 from .site_repository import SiteRepository
+from .subscribe_repository import SubscribeRepository
+from .subscribe_torrent_repo_adapter import SubscribeTorrentRepositoryAdapter
 from .sync_repository import SyncRepository
 from .system_dict_repo_adapter import SystemDictRepositoryAdapter
 from .system_dict_repository import SystemDictRepository

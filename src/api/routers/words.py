@@ -10,11 +10,11 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
+from app.domain.mediatypes import MediaType
 from app.schemas.common import CommonResponse
 from app.services.words_service import WordsService
 from app.utils import ExceptionUtils
 from app.utils.response import fail, success
-from app.domain.mediatypes import MediaType
 
 router = APIRouter()
 

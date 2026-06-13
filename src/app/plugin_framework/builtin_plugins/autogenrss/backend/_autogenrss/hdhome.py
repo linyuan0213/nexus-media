@@ -3,9 +3,9 @@ from typing import cast
 
 from lxml import etree
 
-from app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss._base import _ISiteRssGenHandler
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss._base import _ISiteRssGenHandler
 from app.utils.config_tools import get_proxies
 from app.utils.json_utils import JsonUtils
 from app.utils.string_utils import StringUtils

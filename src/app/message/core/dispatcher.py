@@ -3,9 +3,9 @@
 from typing import Any
 
 import log
+from app.domain.enums import SearchType
 from app.infrastructure.queue import MessageQueueFactory
 from app.utils import StringUtils
-from app.domain.enums import SearchType
 
 
 class MessageDispatcher:

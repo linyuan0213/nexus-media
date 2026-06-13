@@ -14,12 +14,12 @@ from app.core.exceptions import (
 )
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
-from app.domain.mediatypes import MediaType
 from app.domain.enums import SearchType
+from app.domain.mediatypes import MediaType
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
+from app.media.service import MediaService
 from app.message import Message
 from app.services.downloader_core import DownloaderCore
-from app.media.service import MediaService
 from app.services.rss_processor import RssHelper
 from app.services.subscribe.management.service import SubscribeService
 from app.services.subscribe.matcher import SubscribeMatcher

@@ -1,8 +1,8 @@
 """测试电视剧识别改进"""
 
-from app.media.parser.video import parse_video_title
-from app.media.parser._release_groups import ReleaseGroupsMatcher
 from app.domain.mediatypes import MediaType
+from app.media.parser._release_groups import ReleaseGroupsMatcher
+from app.media.parser.video import parse_video_title
 
 
 class TestVideoParserFix:

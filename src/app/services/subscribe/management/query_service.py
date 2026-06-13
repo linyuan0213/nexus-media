@@ -3,8 +3,8 @@
 import json
 from typing import Any
 
-from app.services.subscribe.management.utils import parse_rss_desc
 from app.domain.mediatypes import MediaType
+from app.services.subscribe.management.utils import parse_rss_desc
 
 
 class SubscribeQueryService:

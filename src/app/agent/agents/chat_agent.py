@@ -8,7 +8,6 @@ import log
 from app.agent.tools import ToolRegistry
 from app.infrastructure.cache_system import OpenAISessionCache
 
-
 _TOOL_PROMPT = """你是一个智能助手，可以帮助用户管理 NAS 媒体库系统。
 
 你可以使用以下工具来完成用户的请求。如果需要用工具，请按以下格式回复：

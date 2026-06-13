@@ -3,12 +3,12 @@ from datetime import datetime
 from typing import Any
 
 from app.infrastructure.rate_limiter import RateLimitEngine
+from app.message import Message
 from app.plugin_framework.builtin_plugins.autosignin.backend.registry import HandlerRegistry
 from app.plugin_framework.builtin_plugins.autosignin.backend.signer import SigninEngine
 from app.plugin_framework.builtin_plugins.autosignin.backend.simulator import ChromeSigninSimulator
 from app.plugin_framework.builtin_plugins.autosignin.backend.site_config_store import SiteConfigStore
 from app.plugin_framework.context import PluginContext
-from app.message import Message
 
 
 class AutoSignInPlugin:

@@ -9,6 +9,7 @@ from threading import Event
 from typing import Any
 
 import pytz
+
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import Torrent
 
