@@ -4,13 +4,13 @@ from threading import Lock
 from time import sleep
 
 import log
+from app.domain.mediatypes import MediaType
 from app.infrastructure.external.doubanapi import DoubanApi, DoubanWeb
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.media.parser._metainfo import meta_info
 from app.utils import ExceptionUtils, StringUtils
 from app.utils.chinese_utils import to_simplified
-from app.domain.mediatypes import MediaType
 
 lock = Lock()
 
@@ -258,7 +258,6 @@ class DouBan:
             # 标题
             title = web_info.get("title")
             if title:
-                title = title
                 metainfo = meta_info(title=title)
                 if metainfo.cn_name:
                     title = metainfo.cn_name
@@ -456,9 +455,8 @@ class DouBan:
 
             # 简介
             overview = info.get("card_subtitle") or ""
-            if not year and overview:
-                if overview.split("/")[0].strip().isdigit():
-                    year = overview.split("/")[0].strip()
+            if not year and overview and overview.split("/")[0].strip().isdigit():
+                year = overview.split("/")[0].strip()
 
             # 高清海报
             if poster_path:
