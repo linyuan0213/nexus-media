@@ -1,6 +1,7 @@
 """签到凭据解析器 — 支持 headers / LocalStorage / 数据库字段等多来源提取。"""
 
 import json
+import time
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -69,8 +70,6 @@ class CredentialResolver:
     @staticmethod
     def sync_local_storage(hook_system):
         hook_system.emit("site.local_storage_sync", {})
-        import time
-
         time.sleep(10)
 
     def _build_source(self, cfg: dict) -> CredentialSource:

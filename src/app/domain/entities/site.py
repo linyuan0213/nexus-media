@@ -3,6 +3,7 @@
 映射 ORM 模型为纯数据结构，与 SQLAlchemy 解耦。
 """
 
+import json
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -69,8 +70,6 @@ class SiteEntity:
             raw = self.note.get("headers")
         if not raw:
             return None
-        import json
-
         try:
             return json.loads(raw) if isinstance(raw, str) else dict(raw)
         except Exception:
@@ -81,8 +80,6 @@ class SiteEntity:
         """从 ORM 对象转换（兼容 CONFIGSITE 模型）"""
         if orm_obj is None:
             return cls()
-        import json
-
         note_raw = getattr(orm_obj, "NOTE", None)
         note = {}
         if note_raw:

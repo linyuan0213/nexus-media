@@ -1,6 +1,7 @@
 """MessageBuilder - 业务消息构建与发送."""
 
 import re
+import time
 from enum import Enum
 from typing import Any
 
@@ -435,8 +436,6 @@ class MessageBuilder:
             message_texts.append(f"进度：{percentage}%")
         if event_info.get("overview"):
             message_texts.append(f"剧情：{event_info.get('overview')}")
-        import time
-
         message_texts.append(f"时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}")
         if not image_url:
             image_url = _webhook_images.get(channel)

@@ -5,6 +5,7 @@
 
 from dataclasses import dataclass, fields
 from enum import Enum
+import re
 from typing import Any, Optional
 
 from app.domain.mediatypes import MediaType
@@ -129,8 +130,6 @@ class CustomWordEntity:
             return "偏移集数格式有误"
         if "EP" not in self.offset:
             return "偏移集数格式有误"
-        import re
-
         cleaned = re.sub(r"EP", "", self.offset)
         if re.search(r"[^-+*/0-9]", cleaned):
             return "偏移集数格式有误"
