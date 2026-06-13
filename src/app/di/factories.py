@@ -237,13 +237,10 @@ def _build_business_facades(plugin_sandbox: PluginSandbox) -> None:
 
 def _build_services() -> None:
     """创建 Layer 4 业务 Service。"""
-    agent_service = registry.get(RegistryKey.AGENT_SERVICE)
-    download_monitor = registry.get(RegistryKey.DOWNLOAD_MONITOR)
     event_bus = registry.get(RegistryKey.EVENT_BUS)
     media_server = registry.get(RegistryKey.MEDIA_SERVER)
     media_service = registry.get(RegistryKey.MEDIA_SERVICE)
     message = registry.get(RegistryKey.MESSAGE)
-    scheduler_core = registry.get(RegistryKey.SCHEDULER_CORE)
     site_cache = registry.get(RegistryKey.SITE_CACHE)
     site_engine = registry.get(RegistryKey.SITE_ENGINE)
     thread_executor = registry.get(RegistryKey.THREAD_EXECUTOR)
@@ -603,23 +600,6 @@ def _build_services() -> None:
         ),
     )
 
-    # 创建 ToolExecutor 并注入 AgentService（解决循环依赖）
-    agent_service = registry.get(RegistryKey.AGENT_SERVICE)
-    tool_executor = ToolExecutor(
-        message=message,
-        thread_executor=thread_executor,
-        scheduler_core=scheduler_core,
-        event_bus=event_bus,
-        download_monitor=download_monitor,
-        filetransfer_service=filetransfer_service,
-        rss_helper=RssHelper(site_engine=site_engine),
-        search_intent_agent=agent_service.search_intent_agent,
-        site_userinfo=site_userinfo,
-        scheduler_service=registry.get(RegistryKey.SCHEDULER_SERVICE),
-        message_client_service=registry.get(RegistryKey.MESSAGE_CLIENT_SERVICE),
-    )
-    agent_service.set_tool_executor(tool_executor)
-
 
 def _build_coordinators() -> None:
     """创建 Layer 5 协调器。"""
@@ -706,6 +686,39 @@ def _build_coordinators() -> None:
         apikey_service=apikey_service,
     )
     registry.set(RegistryKey.SYSTEM_LIFECYCLE, system_lifecycle)
+
+    site_service = registry.get(RegistryKey.SITE_SERVICE)
+    indexer_service = registry.get(RegistryKey.INDEXER_SERVICE)
+    brush_service = registry.get(RegistryKey.BRUSH_SERVICE)
+
+    # 创建 ToolExecutor 并注入 AgentService（解决循环依赖）
+    agent_service = registry.get(RegistryKey.AGENT_SERVICE)
+    tool_executor = ToolExecutor(
+        message=message,
+        thread_executor=thread_executor,
+        scheduler_core=scheduler_core,
+        event_bus=registry.get(RegistryKey.EVENT_BUS),
+        download_monitor=download_monitor,
+        filetransfer_service=registry.get(RegistryKey.FILETRANSFER_SERVICE),
+        rss_helper=RssHelper(site_engine=site_engine),
+        search_intent_agent=agent_service.search_intent_agent,
+        site_userinfo=site_userinfo,
+        scheduler_service=registry.get(RegistryKey.SCHEDULER_SERVICE),
+        message_client_service=registry.get(RegistryKey.MESSAGE_CLIENT_SERVICE),
+        sync_service=sync_engine,
+        subscription_monitor=subscription_monitor,
+        torrentremover_service=torrent_remover,
+        subscribe_service=subscribe_service,
+        system_lifecycle_service=system_lifecycle,
+        brush_service=brush_service,
+        site_service=site_service,
+        rss_task_service=rss_task_service,
+        media_service=media_service,
+        indexer_service=indexer_service,
+        downloader_core=downloader_core,
+        searcher=searcher,
+    )
+    agent_service.set_tool_executor(tool_executor)
 
 
 def _register_post_db_services() -> None:

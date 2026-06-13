@@ -10,7 +10,6 @@
 """
 
 import json as _json
-from unittest.mock import MagicMock
 
 import log
 from app.agent.tools.base import ToolResult
@@ -49,135 +48,42 @@ class ToolExecutor:
         site_userinfo,
         scheduler_service,
         message_client_service,
-        sync_service: SyncService | None = None,
-        subscription_monitor: SubscriptionMonitor | None = None,
-        torrentremover_service: TorrentRemoverService | None = None,
-        subscribe_service: SubscribeService | None = None,
-        system_lifecycle_service: SystemLifecycleService | None = None,
-        brush_service: BrushService | None = None,
-        site_service: SiteService | None = None,
-        rss_task_service: RssTaskService | None = None,
-        media_service: MediaService | None = None,
-        indexer_service: IndexerService | None = None,
-        downloader_core: DownloaderCore | None = None,
-        searcher: Searcher | None = None,
+        sync_service: SyncService,
+        subscription_monitor: SubscriptionMonitor,
+        torrentremover_service: TorrentRemoverService,
+        subscribe_service: SubscribeService,
+        system_lifecycle_service: SystemLifecycleService,
+        brush_service: BrushService,
+        site_service: SiteService,
+        rss_task_service: RssTaskService,
+        media_service: MediaService,
+        indexer_service: IndexerService,
+        downloader_core: DownloaderCore,
+        searcher: Searcher,
     ):
-        _mock = MagicMock()
-        _msg = message
-        _thread = thread_executor
-        _scheduler = scheduler_core
-        _event_bus = event_bus
-        _download_monitor = download_monitor
-
+        self._message = message
+        self._thread_executor = thread_executor
+        self._scheduler_core = scheduler_core
+        self._event_bus = event_bus
+        self._download_monitor = download_monitor
         self._filetransfer_service = filetransfer_service
-        self._sync_service = sync_service or SyncService(
-            sync=_mock,
-            filetransfer=_mock,
-            media_cache=_mock,
-            thread_executor=_thread,
-            storage_backend_repo=_mock,
-        )
-        self._subscription_monitor = subscription_monitor or SubscriptionMonitor(
-            subscribe_service=_mock,
-            thread_executor=_thread,
-            queue_strategy=_mock,
-            rss_strategy=_mock,
-            indexer_strategy=_mock,
-            coordinator=_mock,
-        )
-        self._torrentremover_service = torrentremover_service or TorrentRemoverService(
-            repository=_mock,
-            downloader=_mock,
-            message=_msg,
-            scheduler=_scheduler,
-        )
         self._rss_helper = rss_helper
-        self._subscribe_service = subscribe_service or SubscribeService(
-            movie_repo=_mock,
-            tv_repo=_mock,
-            tv_episode_repo=_mock,
-            history_repo=_mock,
-            message=_msg,
-            media_service=_mock,
-            downloader=_mock,
-            sites=_mock,
-            douban=_mock,
-            indexer_service=_mock,
-            filter_service=_mock,
-            event_bus=_event_bus,
-            system_config=_mock,
-        )
-        self._system_lifecycle_service = system_lifecycle_service or SystemLifecycleService(
-            scheduler_core=_scheduler,
-            download_monitor=_download_monitor,
-            sync=_mock,
-            brush_task_service=None,
-            rss_checker=None,
-            torrent_remover=None,
-            downloader=None,
-            file_index_service=None,
-        )
-        self._scheduler_service = scheduler_service
-        self._brush_service = brush_service or BrushService(
-            brush_task=_mock,
-            rule_repo=_mock,
-        )
-        self._site_service = site_service or SiteService(
-            sites=_mock,
-            site_user_info=_mock,
-            site_conf=_mock,
-            indexer_service=_mock,
-            site_repo=_mock,
-            site_favicon_service=_mock,
-            site_resolver=_mock,
-            site_cookie=_mock,
-            string_utils=_mock,
-            site_entity_repo=_mock,
-        )
-        self._site_userinfo = site_userinfo
-        self._rss_task_service = rss_task_service or RssTaskService(
-            config_repo=_mock,
-            rss_repo=_mock,
-            rsshelper=_mock,
-            message=_msg,
-            searcher=_mock,
-            filter_=_mock,
-            media=_mock,
-            downloader=_mock,
-            scheduler_core=_scheduler,
-            site_engine=_mock,
-        )
-        self._message = _msg
-        self._message_client_service = message_client_service
         self._search_intent_agent = search_intent_agent
-        self._media_service = media_service or MediaService(
-            tmdb_lookup=_mock,
-            llm_parser=_mock,
-        )
-        self._indexer_service = indexer_service or IndexerService(
-            indexer=_mock,
-            indexer_helper=_mock,
-            site_cache=_mock,
-            site_engine=_mock,
-            indexer_statistics_repo=_mock,
-            string_utils=_mock,
-        )
-        self._downloader_core = downloader_core or DownloaderCore(
-            client_factory=_mock,
-            transfer_coordinator=_mock,
-            transfer_pipeline=_mock,
-            download_core=_mock,
-        )
-        self._searcher = searcher or Searcher(
-            download_repo=_mock,
-            search_repo=_mock,
-            downloader=_mock,
-            media_service=_mock,
-            message=_msg,
-            progress_helper=_mock,
-            indexer_service=_mock,
-            event_bus=_event_bus,
-        )
+        self._site_userinfo = site_userinfo
+        self._scheduler_service = scheduler_service
+        self._message_client_service = message_client_service
+        self._sync_service = sync_service
+        self._subscription_monitor = subscription_monitor
+        self._torrentremover_service = torrentremover_service
+        self._subscribe_service = subscribe_service
+        self._system_lifecycle_service = system_lifecycle_service
+        self._brush_service = brush_service
+        self._site_service = site_service
+        self._rss_task_service = rss_task_service
+        self._media_service = media_service
+        self._indexer_service = indexer_service
+        self._downloader_core = downloader_core
+        self._searcher = searcher
 
     def execute(self, tool_name: str, **kwargs) -> ToolResult:
         """执行指定工具"""
