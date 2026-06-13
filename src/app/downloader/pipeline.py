@@ -18,6 +18,7 @@ from typing import Any
 import log
 from app.events import Event
 from app.events.constants import DOWNLOAD_FAILED, DOWNLOAD_STARTED
+from app.events.payloads import DownloadFailedPayload, DownloadStartedPayload
 from app.infrastructure.thread import ThreadExecutor
 from app.sites.torrent import Torrent
 from app.utils import StringUtils
@@ -87,15 +88,15 @@ class DownloadPipeline:
         self._event_bus.publish(
             Event(
                 event_type=DOWNLOAD_STARTED,
-                payload={
-                    "media_info": media_info.to_dict(),
-                    "is_paused": is_paused,
-                    "tag": tag,
-                    "download_dir": download_dir,
-                    "download_setting": download_setting,
-                    "downloader_id": downloader_id,
-                    "torrent_file": torrent_file,
-                },
+                payload=DownloadStartedPayload(
+                    media_info=media_info.to_dict(),
+                    is_paused=is_paused,
+                    tag=tag,
+                    download_dir=download_dir,
+                    download_setting=download_setting,
+                    downloader_id=downloader_id,
+                    torrent_file=torrent_file,
+                ),
             )
         )
 
@@ -408,7 +409,10 @@ class DownloadPipeline:
 
     def _fail(self, media_info, in_from, reason):
         self._event_bus.publish(
-            Event(event_type=DOWNLOAD_FAILED, payload={"media_info": media_info.to_dict(), "reason": reason})
+            Event(
+                event_type=DOWNLOAD_FAILED,
+                payload=DownloadFailedPayload(media_info=media_info.to_dict(), reason=reason),
+            )
         )
         if in_from:
             self._message.send_download_fail_message(media_info, f"添加下载任务失败：{reason}")

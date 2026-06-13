@@ -21,6 +21,12 @@ from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.bus import EventBus
 from app.events.constants import MEDIA_EPISODE_TRANSFERRED, MEDIA_TRANSFER_FINISHED, SUBTITLE_DOWNLOAD, TRANSFER_FAIL
+from app.events.payloads import (
+    MediaEpisodeTransferredPayload,
+    MediaTransferFinishedPayload,
+    SubtitleDownloadPayload,
+    TransferFailPayload,
+)
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.progress import ProgressTracker
 from app.infrastructure.thread import ThreadExecutor
@@ -528,24 +534,24 @@ class FileTransferService:
                 self._event_bus.publish(
                     Event(
                         event_type=SUBTITLE_DOWNLOAD,
-                        payload={
-                            "media_info": media.to_dict(),
-                            "file": ret_file_path,
-                            "file_ext": file_ext,
-                            "bluray": bool(bluray_disk_dir),
-                        },
+                        payload=SubtitleDownloadPayload(
+                            media_info=media.to_dict(),
+                            file=ret_file_path,
+                            file_ext=file_ext,
+                            bluray=bool(bluray_disk_dir),
+                        ),
                     )
                 )
                 self._event_bus.publish(
                     Event(
                         event_type=MEDIA_TRANSFER_FINISHED,
-                        payload={
-                            "in_path": in_path,
-                            "file": file_item,
-                            "target_path": out_path,
-                            "dest": dist_path,
-                            "media_info": media.to_dict(),
-                        },
+                        payload=MediaTransferFinishedPayload(
+                            in_path=in_path,
+                            file=file_item,
+                            target_path=out_path,
+                            dest=dist_path,
+                            media_info=media.to_dict(),
+                        ),
                     )
                 )
                 # TV/动漫单集转移完成事件（驱动订阅进度更新）
@@ -553,13 +559,13 @@ class FileTransferService:
                     self._event_bus.publish(
                         Event(
                             event_type=MEDIA_EPISODE_TRANSFERRED,
-                            payload={
-                                "tmdb_id": media.tmdb_id,
-                                "title": media.title,
-                                "season": media.get_season_seq(),
-                                "episodes": media.get_episode_list(),
-                                "total_episodes": media.total_episodes,
-                            },
+                            payload=MediaEpisodeTransferredPayload(
+                                tmdb_id=media.tmdb_id,
+                                title=media.title,
+                                season=media.get_season_seq(),
+                                episodes=media.get_episode_list(),
+                                total_episodes=media.total_episodes,
+                            ),
                         )
                     )
 
@@ -724,7 +730,10 @@ class FileTransferService:
         if alert_count > 0:
             reason = "、".join(alert_messages)
             self._event_bus.publish(
-                Event(event_type=TRANSFER_FAIL, payload={"path": in_path, "count": alert_count, "reason": reason})
+                Event(
+                    event_type=TRANSFER_FAIL,
+                    payload=TransferFailPayload(path=in_path, count=alert_count, reason=reason),
+                )
             )
             self.message.send_transfer_fail_message(in_path, alert_count, reason)
         elif failed_count == 0:

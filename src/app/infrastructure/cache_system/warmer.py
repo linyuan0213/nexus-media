@@ -11,6 +11,7 @@ from typing import Any
 
 import log
 from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
+from app.db.repositories.site_repository import SiteRepository
 
 from .cache_manager import CacheManager
 
@@ -93,8 +94,6 @@ class SiteCacheWarmer(CacheWarmer):
 
     def __init__(self, site_repo=None):
         super().__init__("site", priority=1)
-        from app.db.repositories.site_repository import SiteRepository
-
         self._site_repo = site_repo or SiteRepository()
 
     def warm(self) -> bool:

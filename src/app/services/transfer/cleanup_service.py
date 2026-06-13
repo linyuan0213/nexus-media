@@ -14,6 +14,7 @@ from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.bus import EventBus
 from app.events.constants import LIBRARY_FILE_DELETED, MEDIA_SOURCE_DELETED
+from app.events.payloads import LibraryFileDeletedPayload, MediaSourceDeletedPayload
 from app.media import meta_info
 from app.storage import StorageBackendFactory
 from app.storage.backends.base import StorageConfig, StorageType
@@ -160,7 +161,9 @@ class TransferCleanupService:
                     self._event_bus.publish(
                         Event(
                             event_type=MEDIA_SOURCE_DELETED,
-                            payload={"media_info": media_info_dict, "path": source_path, "filename": source_filename},
+                            payload=MediaSourceDeletedPayload(
+                                media_info=media_info_dict, path=source_path, filename=source_filename
+                            ),
                         )
                     )
                 except (ServiceError, ResourceNotFoundError, ValidationError) as e:
@@ -172,7 +175,9 @@ class TransferCleanupService:
                         self._event_bus.publish(
                             Event(
                                 event_type=LIBRARY_FILE_DELETED,
-                                payload={"media_info": media_info_dict, "path": dest_path, "filename": dest_filename},
+                                payload=LibraryFileDeletedPayload(
+                                    media_info=media_info_dict, path=dest_path, filename=dest_filename
+                                ),
                             )
                         )
                     except (ServiceError, ResourceNotFoundError, ValidationError) as e:
@@ -199,7 +204,9 @@ class TransferCleanupService:
                                 self._event_bus.publish(
                                     Event(
                                         event_type=LIBRARY_FILE_DELETED,
-                                        payload={"media_info": media_info_dict, "path": dest_path},
+                                        payload=LibraryFileDeletedPayload(
+                                            media_info=media_info_dict, path=dest_path, filename=""
+                                        ),
                                     )
                                 )
                             except Exception as e:
@@ -210,7 +217,9 @@ class TransferCleanupService:
                                 self._event_bus.publish(
                                     Event(
                                         event_type=LIBRARY_FILE_DELETED,
-                                        payload={"media_info": media_info_dict, "path": dest_path},
+                                        payload=LibraryFileDeletedPayload(
+                                            media_info=media_info_dict, path=dest_path, filename=""
+                                        ),
                                     )
                                 )
                             except Exception as e:

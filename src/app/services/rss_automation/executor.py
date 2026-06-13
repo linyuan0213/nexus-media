@@ -13,6 +13,7 @@ from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
 from app.events.bus import EventBus
 from app.events.constants import RSS_AUTO_SUBSCRIBE_REQUESTED
+from app.events.payloads import RssAutoSubscribeRequestedPayload
 from app.events.types import Event
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
@@ -187,22 +188,22 @@ def _check_task_rss(service, taskid: int | None, event_bus: EventBus | None = No
             event_bus.publish(
                 Event(
                     event_type=RSS_AUTO_SUBSCRIBE_REQUESTED,
-                    payload={
-                        "mtype": media.type,
-                        "name": media.get_name(),
-                        "year": media.year,
-                        "channel": "manual",
-                        "season": media.begin_season,
-                        "rss_sites": taskinfo.get("sites", {}).get("rss_sites"),
-                        "search_sites": taskinfo.get("sites", {}).get("search_sites"),
-                        "over_edition": bool(taskinfo.get("over_edition")),
-                        "filter_restype": taskinfo.get("filter_args", {}).get("restype"),
-                        "filter_pix": taskinfo.get("filter_args", {}).get("pix"),
-                        "filter_team": taskinfo.get("filter_args", {}).get("team"),
-                        "filter_rule": taskinfo.get("filter"),
-                        "save_path": taskinfo.get("save_path"),
-                        "download_setting": taskinfo.get("download_setting"),
-                    },
+                    payload=RssAutoSubscribeRequestedPayload(
+                        mtype=media.type,
+                        name=media.get_name(),
+                        year=media.year,
+                        channel="manual",
+                        season=media.begin_season,
+                        rss_sites=taskinfo.get("sites", {}).get("rss_sites"),
+                        search_sites=taskinfo.get("sites", {}).get("search_sites"),
+                        over_edition=bool(taskinfo.get("over_edition")),
+                        filter_restype=taskinfo.get("filter_args", {}).get("restype"),
+                        filter_pix=taskinfo.get("filter_args", {}).get("pix"),
+                        filter_team=taskinfo.get("filter_args", {}).get("team"),
+                        filter_rule=taskinfo.get("filter"),
+                        save_path=taskinfo.get("save_path"),
+                        download_setting=taskinfo.get("download_setting"),
+                    ),
                 )
             )
             log.info(f"[RssTaskService]{media.get_name()} 已发送订阅请求事件")

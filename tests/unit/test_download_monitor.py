@@ -77,7 +77,7 @@ class TestDownloadMonitor:
         event = bus.publish.call_args[0][0]
         assert isinstance(event, Event)
         assert event.event_type == DOWNLOAD_COMPLETED
-        assert event.payload["task_id"] == "task1"
+        assert event.payload.task_id == "task1"
         assert "qb1:task1" in m._processed_ids
 
     def test_check_downloader_duplicate_task(self, monitor):

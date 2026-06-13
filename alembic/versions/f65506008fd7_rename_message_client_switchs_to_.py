@@ -6,6 +6,7 @@ Create Date: 2026-06-13 05:56:13.101011
 
 """
 
+import sqlalchemy as sa
 from sqlalchemy import inspect
 
 from alembic import op
@@ -26,10 +27,18 @@ def _column_exists(table: str, column: str) -> bool:
 def upgrade() -> None:
     if _column_exists("MESSAGE_CLIENT", "SWITCHS") and not _column_exists("MESSAGE_CLIENT", "SWITCHES"):
         with op.batch_alter_table("MESSAGE_CLIENT", schema=None) as batch_op:
-            batch_op.alter_column("SWITCHS", new_column_name="SWITCHES")
+            batch_op.alter_column(
+                "SWITCHS",
+                new_column_name="SWITCHES",
+                existing_type=sa.Text,
+            )
 
 
 def downgrade() -> None:
     if _column_exists("MESSAGE_CLIENT", "SWITCHES") and not _column_exists("MESSAGE_CLIENT", "SWITCHS"):
         with op.batch_alter_table("MESSAGE_CLIENT", schema=None) as batch_op:
-            batch_op.alter_column("SWITCHES", new_column_name="SWITCHS")
+            batch_op.alter_column(
+                "SWITCHES",
+                new_column_name="SWITCHS",
+                existing_type=sa.Text,
+            )

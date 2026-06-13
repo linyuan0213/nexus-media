@@ -6,6 +6,7 @@ from urllib.parse import quote
 
 import log
 from app.core.settings import settings
+from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.mediaserver.schema import MediaServerConfigSchema
 from app.utils.config_tools import get_domain
 
@@ -18,8 +19,6 @@ class _IMediaClient(metaclass=ABCMeta):
 
     def get_db_config(self, name, repo=None):
         """从数据库获取配置，兼容旧配置文件"""
-        from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
-
         _repo = repo or MediaServerRepositoryAdapter()
         item = _repo.get_media_server_by_name(name)
         if item and str(item.CONFIG):

@@ -23,6 +23,7 @@ from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.bus import EventBus
 from app.events.constants import SEARCH_START
+from app.events.payloads import SearchStartPayload
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.progress import ProgressTracker
 from app.infrastructure.thread import ThreadExecutor
@@ -281,12 +282,12 @@ class Searcher:
         self._event_bus.publish(
             Event(
                 event_type=SEARCH_START,
-                payload={
-                    "key_word": key_word,
-                    "media_info": match_media.to_dict() if match_media else None,
-                    "filter_args": filter_args,
-                    "search_type": in_from.value if in_from else None,
-                },
+                payload=SearchStartPayload(
+                    key_word=key_word,
+                    media_info=match_media.to_dict() if match_media else None,
+                    filter_args=filter_args,
+                    search_type=in_from.value if in_from else None,
+                ),
             )
         )
         return self.indexer_service.search_by_keyword(

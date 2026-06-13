@@ -6,6 +6,7 @@ from app.domain.enums import SubscribeType, SystemConfigKey
 from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.constants import SUBSCRIBE_ADD
+from app.events.payloads import SubscribeAddPayload
 from app.media import meta_info
 from app.services.subscribe.management.utils import gen_rss_note
 from app.services.web.utils import get_mediainfo_from_id
@@ -255,23 +256,23 @@ class SubscribeAddService:
             self._event_bus.publish(
                 Event(
                     event_type=SUBSCRIBE_ADD,
-                    payload={
-                        "media": media_info.to_dict(),
-                        "rssid": rssid,
-                        "rss_sites": rss_sites,
-                        "search_sites": search_sites,
-                        "over_edition": over_edition,
-                        "filter_restype": filter_restype,
-                        "filter_pix": filter_pix,
-                        "filter_team": filter_team,
-                        "filter_rule": filter_rule,
-                        "save_path": save_path,
-                        "download_setting": download_setting,
-                        "total_ep": total_ep,
-                        "current_ep": current_ep,
-                        "fuzzy_match": fuzzy_match,
-                        "keyword": keyword,
-                    },
+                    payload=SubscribeAddPayload(
+                        media=media_info.to_dict(),
+                        rssid=rssid,
+                        rss_sites=rss_sites,
+                        search_sites=search_sites,
+                        over_edition=over_edition,
+                        filter_restype=filter_restype,
+                        filter_pix=filter_pix,
+                        filter_team=filter_team,
+                        filter_rule=filter_rule,
+                        save_path=save_path,
+                        download_setting=download_setting,
+                        total_ep=total_ep,
+                        current_ep=current_ep,
+                        fuzzy_match=fuzzy_match,
+                        keyword=keyword,
+                    ),
                 ),
             )
             if in_from:

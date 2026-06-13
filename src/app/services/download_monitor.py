@@ -8,6 +8,7 @@ from app.core.constants import PT_TAG
 from app.downloader.client_factory import DownloadClientFactory
 from app.events import Event, EventBus
 from app.events.constants import DOWNLOAD_COMPLETED
+from app.events.payloads import DownloadCompletedPayload
 from app.infrastructure.thread import ThreadExecutor
 
 
@@ -140,13 +141,13 @@ class DownloadMonitor:
         self._event_bus.publish(
             Event(
                 event_type=DOWNLOAD_COMPLETED,
-                payload={
-                    "downloader_id": downloader_id,
-                    "task_id": task_id,
-                    "path": task_path,
-                    "tags": task.get("tags"),
-                    "name": task.get("name"),
-                },
+                payload=DownloadCompletedPayload(
+                    downloader_id=downloader_id,
+                    task_id=task_id,
+                    path=task_path,
+                    tags=task.get("tags"),
+                    name=task.get("name"),
+                ),
             )
         )
         log.info(f"[DownloadMonitor]检测到下载完成: {task_id} @ {task_path}")

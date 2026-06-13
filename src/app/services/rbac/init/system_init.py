@@ -4,6 +4,10 @@ from typing import Any
 
 import log
 from app.db.repositories.rbac_repo_adapter import RBACRoleRepositoryAdapter, RBACUserRepositoryAdapter
+from app.infrastructure.security import generate_password_hash
+from app.services.rbac.init.menu_init import init_rbac_menus
+from app.services.rbac.init.permission_init import init_rbac_permissions
+from app.services.rbac.init.role_init import init_rbac_roles
 
 
 def init_rbac_system(
@@ -15,10 +19,6 @@ def init_rbac_system(
     初始化RBAC系统
     创建默认的权限、菜单、角色
     """
-    from app.services.rbac.init.menu_init import init_rbac_menus
-    from app.services.rbac.init.permission_init import init_rbac_permissions
-    from app.services.rbac.init.role_init import init_rbac_roles
-
     try:
         log.info("[RBAC初始化]开始初始化RBAC系统...")
         init_rbac_permissions(permission_repo=permission_repo)
@@ -51,16 +51,12 @@ def init_admin_user(
         if existing:
             old_hash = existing.PASSWORD_HASH or ""
             if old_hash.startswith(("pbkdf2:", "scrypt:")) or not old_hash:
-                from app.infrastructure.security import generate_password_hash
-
                 new_hash = generate_password_hash(admin_password)
                 user_repo.update_user(existing.ID, password_hash=new_hash)
                 log.info(f"[RBAC初始化]管理员用户 {admin_username} 密码已从旧格式迁移到 Argon2")
             else:
                 log.info(f"[RBAC初始化]管理员用户 {admin_username} 已存在")
             return True
-
-        from app.infrastructure.security import generate_password_hash
 
         password_hash = generate_password_hash(admin_password)
 

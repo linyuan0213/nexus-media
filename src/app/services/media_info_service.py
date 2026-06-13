@@ -13,6 +13,7 @@ from app.media import MediaService, meta_info
 from app.mediaserver import MediaServer
 from app.schemas.media import MediaInfoResultDTO, SeasonEpisodesResultDTO
 from app.services.subscribe_service import SubscribeService as Subscribe
+from app.services.web import mediainfo_dict
 from app.services.web.utils import get_mediainfo_from_id, search_media_infos
 from app.utils import StringUtils
 
@@ -199,8 +200,6 @@ class MediaInfoService:
 
     def name_test(self, name, subtitle) -> dict:
         """名称识别测试"""
-        from app.services.web import mediainfo_dict
-
         media_info = self._media.get_media_info(title=name, subtitle=subtitle)
         if not media_info:
             return {"name": "无法识别"}

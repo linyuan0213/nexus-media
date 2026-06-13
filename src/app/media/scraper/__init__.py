@@ -13,6 +13,7 @@ import os
 
 import log
 from app.core.module_config import ModuleConf
+from app.core.settings import settings
 from app.core.system_config import SystemConfig
 from app.domain.enums import SystemConfigKey
 from app.domain.mediatypes import MediaType
@@ -55,8 +56,6 @@ class Scraper:
         self._credits = ChineseCredits(self.media)
 
     def _init_config(self):
-        from app.core.settings import settings
-
         self._scraper_flag = settings.get("media").get("nfo_poster")
         scraper_conf = self._system_config.get(SystemConfigKey.UserScraperConf)
         if isinstance(scraper_conf, str):

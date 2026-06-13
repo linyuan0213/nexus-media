@@ -9,6 +9,7 @@ from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAd
 from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
 from app.media.category_matcher import get_category
+from app.media.image_resolver import MediaImageResolver
 from app.utils import StringUtils
 
 
@@ -513,18 +514,12 @@ class MediaInfo(BaseModel):
         return ""
 
     def get_backdrop_image(self, default=True, original=False):
-        from app.media.image_resolver import MediaImageResolver
-
         return MediaImageResolver.get_backdrop_image(self, default=default, original=original)
 
     def get_message_image(self):
-        from app.media.image_resolver import MediaImageResolver
-
         return MediaImageResolver.get_message_image(self)
 
     def get_poster_image(self, original=False):
-        from app.media.image_resolver import MediaImageResolver
-
         return MediaImageResolver.get_poster_image(self, original=original)
 
     def to_dict(self) -> dict:

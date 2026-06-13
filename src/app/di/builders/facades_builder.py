@@ -2,11 +2,13 @@
 
 from app.agent.service import AgentService
 from app.di.models import BusinessFacades, InfrastructureObjects
+from app.downloader.client_factory import DownloadClientFactory
 from app.media.lookup.tmdb_client import TmdbClient
 from app.media.lookup.tmdb_lookup import TmdbLookup
 from app.media.parser.llm import LLMParser
 from app.media.service import MediaService
 from app.mediaserver.media_server import MediaServer
+from app.services.download_monitor import DownloadMonitor
 
 
 def build_business_facades(infra: InfrastructureObjects) -> BusinessFacades:
@@ -30,9 +32,6 @@ def build_business_facades(infra: InfrastructureObjects) -> BusinessFacades:
         message=infra.message,
         message_queue=infra.message_queue,
     )
-
-    from app.downloader.client_factory import DownloadClientFactory
-    from app.services.download_monitor import DownloadMonitor
 
     download_monitor = DownloadMonitor(
         client_factory=DownloadClientFactory(),

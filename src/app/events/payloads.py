@@ -12,10 +12,10 @@ from typing import Any
 class MediaTransferFinishedPayload:
     """媒体转移完成事件负载"""
 
-    in_path: str
-    file: str
-    target_path: str
-    dest: str
+    in_path: str | None
+    file: str | None
+    target_path: str | None
+    dest: str | None
     media_info: dict[str, Any]
 
 
@@ -58,7 +58,7 @@ class DownloadStartedPayload:
     """下载开始事件负载"""
 
     media_info: dict[str, Any]
-    is_paused: bool
+    is_paused: bool | None
     tag: str | None
     download_dir: str | None
     download_setting: int | None
@@ -103,10 +103,10 @@ class SubscribeAddPayload:
     """订阅添加事件负载"""
 
     media: dict[str, Any]
-    rssid: int | str
-    rss_sites: list[str] | None = None
-    search_sites: list[str] | None = None
-    over_edition: bool = False
+    rssid: int | str | None
+    rss_sites: list[str] | str | None = None
+    search_sites: list[str] | str | None = None
+    over_edition: bool | int = False
     filter_restype: str | None = None
     filter_pix: str | None = None
     filter_team: str | None = None
@@ -115,7 +115,7 @@ class SubscribeAddPayload:
     download_setting: int | None = None
     total_ep: int | None = None
     current_ep: int | None = None
-    fuzzy_match: bool = False
+    fuzzy_match: bool | int = False
     keyword: str | None = None
 
 
@@ -164,8 +164,8 @@ class SubtitleDownloadPayload:
     """字幕下载事件负载"""
 
     media_info: dict[str, Any]
-    file: str
-    file_ext: str
+    file: str | None
+    file_ext: str | None
     bluray: bool = False
 
 

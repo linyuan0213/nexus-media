@@ -7,6 +7,7 @@ from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.constants import SUBSCRIBE_FINISHED
+from app.events.payloads import SubscribeFinishedPayload
 
 
 class SubscribeFinishService:
@@ -58,7 +59,9 @@ class SubscribeFinishService:
             delete_subscribe_fn(mtype=MediaType.TV, rssid=rssid)
 
         self._event_bus.publish(
-            Event(event_type=SUBSCRIBE_FINISHED, payload={"media_info": media.to_dict(), "rssid": rssid})
+            Event(
+                event_type=SUBSCRIBE_FINISHED, payload=SubscribeFinishedPayload(media_info=media.to_dict(), rssid=rssid)
+            )
         )
         log.info(
             f"[Subscribe]{media.type.value} {media.get_title_string()} "

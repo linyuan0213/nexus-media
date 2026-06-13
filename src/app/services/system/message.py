@@ -6,6 +6,7 @@ from typing import cast
 from app.domain.enums import SearchType
 from app.events import Event
 from app.events.constants import MESSAGE_INCOMING
+from app.events.payloads import MessageIncomingPayload
 from app.infrastructure.cache_system import TokenCache
 from app.message import Message
 from app.message.commands import COMMANDS
@@ -165,7 +166,9 @@ class MessageCommandHandler:
             self._event_bus.publish(
                 Event(
                     event_type=MESSAGE_INCOMING,
-                    payload={"channel": in_from.value, "user_id": user_id, "user_name": user_name, "message": msg},
+                    payload=MessageIncomingPayload(
+                        channel=in_from.value, user_id=user_id, user_name=user_name, message=msg
+                    ),
                 )
             )
 

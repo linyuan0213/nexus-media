@@ -12,6 +12,7 @@ from app.domain.enums import OsType
 from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.constants import SUBTITLE_DOWNLOAD
+from app.events.payloads import SubtitleDownloadPayload
 from app.storage import StorageBackendFactory
 from app.storage.backends.base import StorageType
 from app.storage.config_models import LocalStorageConfig
@@ -227,12 +228,12 @@ class MediaFileService:
         self._event_bus.publish(
             Event(
                 event_type=SUBTITLE_DOWNLOAD,
-                payload={
-                    "media_info": media.to_dict(),
-                    "file": os.path.splitext(path)[0],
-                    "file_ext": os.path.splitext(name)[-1],
-                    "bluray": False,
-                },
+                payload=SubtitleDownloadPayload(
+                    media_info=media.to_dict(),
+                    file=os.path.splitext(path)[0],
+                    file_ext=os.path.splitext(name)[-1],
+                    bluray=False,
+                ),
             )
         )
 

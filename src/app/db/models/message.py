@@ -16,7 +16,7 @@ class MESSAGECLIENT(Base):
     NAME: Mapped[str] = mapped_column(String(255))
     TYPE: Mapped[str] = mapped_column(String(255))
     CONFIG: Mapped[str] = mapped_column(Text)
-    SWITCHES: Mapped[str] = mapped_column(String(255))
+    SWITCHES: Mapped[str] = mapped_column(Text)
     INTERACTIVE: Mapped[int] = mapped_column(Integer)
     ENABLED: Mapped[int] = mapped_column(Integer)
     NOTE: Mapped[str] = mapped_column(Text)
