@@ -1,0 +1,207 @@
+"""SyncService 单元测试."""
+
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from app.core.exceptions import ValidationError
+from app.domain.mediatypes import MediaType
+from app.services.sync_service import SyncService
+
+
+@pytest.fixture
+def service():
+    sync = MagicMock()
+    filetransfer = MagicMock()
+    media_cache = MagicMock()
+    thread_executor = MagicMock()
+    storage_repo = MagicMock()
+    return SyncService(sync, filetransfer, media_cache, thread_executor, storage_repo)
+
+
+class TestSyncServiceValidate:
+    def test_validate_sync_path_root_source(self, service):
+        with pytest.raises(ValidationError):
+            service._validate_sync_path("/", "/dst", "copy")
+
+    def test_validate_sync_path_subpath(self, service):
+        with pytest.raises(ValidationError):
+            service._validate_sync_path("/src", "/src/sub", "copy")
+
+    def test_validate_sync_path_invalid_mode(self, service):
+        with pytest.raises(ValidationError):
+            service._validate_sync_path("/src", "/dst", "invalid")
+
+    def test_validate_sync_path_ok(self, service):
+        service._validate_sync_path("/src", "/dst", "copy")
+
+
+class TestSyncServiceAddOrEdit:
+    def test_add_new_path(self, service):
+        service.add_or_edit_sync_path(
+            sid=0,
+            source="/src",
+            dest="/dst",
+            unknown="",
+            mode="copy",
+        )
+        service._sync.insert_sync_path.assert_called_once()
+
+    def test_edit_existing_path(self, service):
+        service.add_or_edit_sync_path(
+            sid=1,
+            source="/src",
+            dest="/dst",
+            unknown="",
+            mode="copy",
+        )
+        service._sync.delete_sync_path.assert_called_once_with(1)
+        service._sync.insert_sync_path.assert_called_once()
+
+    def test_check_sync_path_compatibility(self, service):
+        service.check_sync_path(1, "compatibility", True)
+        service._sync.check_sync_paths.assert_called_once_with(sid=1, compatibility=True)
+
+    def test_check_sync_path_invalid_flag(self, service):
+        with pytest.raises(ValidationError):
+            service.check_sync_path(1, "unknown", True)
+
+
+class TestSyncServiceTransfer:
+    @patch("os.path.exists", return_value=False)
+    def test_manual_transfer_path_not_exists(self, mock_exists, service):
+        result = service.manual_transfer("/nonexistent", "copy")
+        assert not result.success
+
+    @patch("os.path.exists", return_value=True)
+    @patch("os.path.normpath", side_effect=lambda x: x)
+    def test_manual_transfer_submit(self, mock_norm, mock_exists, service):
+        service._media_cache.get_tmdb_info.return_value = {"title": "Test"}
+        service._filetransfer.get_sync_backend_by_dest.return_value = "local"
+        result = service.manual_transfer(
+            "/src/movie.mkv",
+            "copy",
+            outpath="/dst",
+            media_type=MediaType.MOVIE,
+            tmdbid=123,
+        )
+        assert result.success
+        service._thread_executor.submit.assert_called_once()
+
+    @patch("os.path.exists", return_value=True)
+    @patch("os.path.normpath", side_effect=lambda x: x)
+    def test_manual_transfer_no_tmdb(self, mock_norm, mock_exists, service):
+        service._media_cache.get_tmdb_info.return_value = None
+        result = service.manual_transfer("/src/movie.mkv", "copy", tmdbid=123)
+        assert not result.success
+
+    def test_build_media_type(self):
+        assert SyncService.build_media_type("movie") == MediaType.MOVIE
+        assert SyncService.build_media_type("tv") == MediaType.TV
+        assert SyncService.build_media_type("unknown") == MediaType.UNKNOWN
+
+
+class TestSyncServiceReIdentify:
+    def _patch_lock_manager(self, acquired: bool):
+        lock = MagicMock()
+        lock.acquire.return_value = acquired
+        manager = MagicMock()
+        manager.create_lock.return_value = lock
+        return patch("app.services.sync_service.get_lock_manager", return_value=manager)
+
+    def test_re_identify_already_running(self, service):
+        with self._patch_lock_manager(False):
+            result = service.re_identify_items("unidentification", [1])
+        assert not result.success
+
+    def test_re_identify_submit(self, service):
+        with self._patch_lock_manager(True):
+            result = service.re_identify_items("unidentification", [1])
+        assert result.success
+        service._thread_executor.submit.assert_called_once()
+
+
+class TestSyncServiceQueries:
+    def test_get_sync_paths_by_sid(self, service):
+        service.get_sync_paths(sid="1")
+        service._sync.get_sync_path_conf.assert_called_once_with("1")
+
+    def test_get_sync_paths_all(self, service):
+        service.get_sync_paths()
+        service._sync.get_all_sync_path_conf.assert_called_once()
+
+    def test_transfer_sync(self, service):
+        service.transfer_sync(sid="1")
+        service._sync.transfer_sync.assert_called_once_with(sid="1")
+
+    def test_get_sub_path_root(self, service):
+        with (
+            patch("os.listdir", return_value=["dir1", "file1.mkv"]),
+            patch("os.path.isdir", side_effect=lambda x: x.endswith("dir1")),
+            patch("os.path.getsize", return_value=1024),
+            patch("os.path.exists", return_value=True),
+        ):
+            result = service.get_sub_path("/", ft="ALL")
+        assert len(result) == 2
+
+
+class TestSyncServiceStatic:
+    @patch("shutil.move")
+    def test_rename_file_success(self, mock_move):
+        result = SyncService.rename_file("/a/old.mkv", "new.mkv")
+        assert result.success
+
+    @patch("shutil.move", side_effect=OSError("fail"))
+    def test_rename_file_failure(self, mock_move):
+        result = SyncService.rename_file("/a/old.mkv", "new.mkv")
+        assert not result.success
+
+    def test_rename_file_empty(self):
+        assert SyncService.rename_file("", "").success
+
+    def test_exec_test_command_invalid_format(self):
+        assert SyncService.exec_test_command("bad") is None
+
+    def test_exec_test_command_unknown_object(self):
+        assert SyncService.exec_test_command("Unknown().foo()") is None
+
+    @patch("importlib.import_module")
+    def test_exec_test_command_known_object(self, mock_import):
+        obj = MagicMock()
+        obj.test_method.return_value = True
+        cls = MagicMock(return_value=obj)
+        mock_import.return_value.Config = cls
+        result = SyncService.exec_test_command("Config().test_method()")
+        assert result is True
+
+    def test_test_connection_empty(self):
+        result = SyncService.test_connection("")
+        assert result.success
+
+    @patch("app.services.sync_service.SyncService.exec_test_command", return_value=True)
+    def test_test_connection_single(self, mock_exec):
+        result = SyncService.test_connection("Config().test_method()")
+        assert result.success
+
+    @patch("importlib.import_module")
+    def test_test_connection_pipe(self, mock_import):
+        obj = MagicMock()
+        obj.get_status.return_value = True
+        cls = MagicMock(return_value=obj)
+        module = MagicMock()
+        module.MyClass = cls
+        mock_import.return_value = module
+        result = SyncService.test_connection("mymodule|MyClass")
+        assert result.success
+
+    def test_update_directory(self, monkeypatch):
+        mock_settings = MagicMock()
+        mock_settings.get.return_value = {"key": "old"}
+        monkeypatch.setattr("app.services.sync_service.settings", mock_settings)
+        monkeypatch.setattr(
+            "app.services.sync_service.set_config_directory",
+            lambda cfg, oper, key, value, replace_value: {"key": value},
+        )
+        result = SyncService.update_directory("add", "key", "/path")
+        assert result.success
+        mock_settings.save.assert_called_once_with({"key": "/path"})
