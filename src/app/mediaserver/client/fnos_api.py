@@ -5,6 +5,7 @@ import time
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
+import log
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 
@@ -223,7 +224,7 @@ class FnOSClient(metaclass=Singleton):
                 except Exception as e:
                     retries += 1
                     if retries > max_retries:
-                        print(f"重试{max_retries}次后失败: {str(e)}")
+                        log.error(f"[FnosApi]重试{max_retries}次后失败: {e}")
                         return all_items
                     time.sleep(delay)
 
@@ -369,18 +370,18 @@ if __name__ == "__main__":
             "page_size": 5,
         },
     )
-    print("单页响应:", response)
+    log.info(f"单页响应: {response}")
 
     # 示例2: 获取所有分页数据
     try:
-        print("开始获取所有数据...")
+        log.info("开始获取所有数据...")
         items = client.fetch_all_pages()
-        print(f"成功获取 {len(items)} 条数据")
+        log.info(f"成功获取 {len(items)} 条数据")
 
         # 保存到JSON文件
         with open("all_items.json", "w", encoding="utf-8") as f:
             json.dump(items, f, ensure_ascii=False, indent=2)
-        print("结果已保存到 all_items.json")
+        log.info("结果已保存到 all_items.json")
 
     except Exception as e:
-        print(f"发生错误: {str(e)}")
+        log.error(f"发生错误: {e}")

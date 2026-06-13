@@ -17,6 +17,7 @@ import os
 from typing import Any
 from urllib.parse import quote_plus
 
+import log
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy import create_engine as sa_create_engine
 from sqlalchemy.pool import QueuePool
@@ -159,7 +160,7 @@ class DatabaseFactory:
 
         except Exception as e:
             # 记录错误但不抛出，让后续连接尝试决定最终成败
-            print(f"[DatabaseFactory]自动创建数据库 {database} 失败: {str(e)}")
+            log.warn(f"[DatabaseFactory]自动创建数据库 {database} 失败: {e}")
 
     @staticmethod
     def create_engine(db_type: str | None = None, db_path: str | None = None, **kwargs) -> Engine:

@@ -1,3 +1,6 @@
+import log
+
+
 class NumberUtils:
     @staticmethod
     def max_ele(a, b):
@@ -45,5 +48,5 @@ class NumberUtils:
                 result = f"{byte_num} B"
             return result
         except Exception as e:
-            print(e.args)
+            log.warn(f"[NumberUtils]格式化字节失败: {e.args}")
             return byte_num

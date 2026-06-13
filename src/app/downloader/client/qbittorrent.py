@@ -100,7 +100,7 @@ class Qbittorrent(_IDownloadClient):
                 qbt.auth_log_in()
                 self.ver = qbt.app_version()
             except qbittorrentapi.LoginFailed as e:
-                print(str(e))
+                log.error(f"[{self.client_name}]{self.name} 登录失败：{e}")
             return qbt
         except (InfrastructureError, NetworkError):
             raise

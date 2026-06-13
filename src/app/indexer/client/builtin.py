@@ -202,7 +202,7 @@ class BuiltinIndexer(_IIndexClient):
             error_flag, result_array = self.__search_via_engine(search_word=search_word, indexer=indexer, mtype=mtype)
         except Exception as err:
             error_flag = True
-            print(str(err))
+            log.warn(f"[{self.client_name}]{indexer.name} 搜索失败: {err}")
 
         seconds = round((datetime.datetime.now() - start_time).seconds, 1)
 

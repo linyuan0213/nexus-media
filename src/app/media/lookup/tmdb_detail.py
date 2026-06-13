@@ -58,7 +58,7 @@ class TmdbDetail:
                 log.info(f"[Meta]{tmdbid} 查询结果：{info.get('title')}")
             return info or {}
         except Exception as e:
-            print(str(e))
+            log.warn(f"[TmdbDetail]查询电影详情失败: {e}")
             return None
 
     def _get_tv_detail(self, tmdbid, append_to_response=None):
@@ -71,7 +71,7 @@ class TmdbDetail:
                 log.info(f"[Meta]{tmdbid} 查询结果：{info.get('name')}")
             return info or {}
         except Exception as e:
-            print(str(e))
+            log.warn(f"[TmdbDetail]查询电视剧详情失败: {e}")
             return None
 
     def get_season_detail(self, tmdbid, season: int):
@@ -89,7 +89,7 @@ class TmdbDetail:
                 self.client.redis_cache.set_season_info(tmdbid, season, result)
             return result
         except Exception as e:
-            print(str(e))
+            log.warn(f"[TmdbDetail]查询季详情失败: {e}")
             return {}
 
     def get_backdrops(self, tmdbinfo, original=True):

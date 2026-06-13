@@ -20,7 +20,7 @@ class TmdbDiscover:
             movies = self.client.movie.similar(movie_id=tmdbid, page=page) or []
             return self._dict_infos(movies, MediaType.MOVIE)
         except Exception as e:
-            print(str(e))
+            log.warn(f"[TmdbDiscover]获取相似电影失败: {e}")
             return []
 
     def get_movie_recommendations(self, tmdbid, page=1):
@@ -30,7 +30,7 @@ class TmdbDiscover:
             movies = self.client.movie.recommendations(movie_id=tmdbid, page=page) or []
             return self._dict_infos(movies, MediaType.MOVIE)
         except Exception as e:
-            print(str(e))
+            log.warn(f"[TmdbDiscover]获取电影推荐失败: {e}")
             return []
 
     def get_tv_similar(self, tmdbid, page=1):
@@ -40,7 +40,7 @@ class TmdbDiscover:
             tvs = self.client.tv.similar(tv_id=tmdbid, page=page) or []
             return self._dict_infos(tvs, MediaType.TV)
         except Exception as e:
-            print(str(e))
+            log.warn(f"[TmdbDiscover]获取相似电视剧失败: {e}")
             return []
 
     def get_tv_recommendations(self, tmdbid, page=1):
@@ -50,7 +50,7 @@ class TmdbDiscover:
             tvs = self.client.tv.recommendations(tv_id=tmdbid, page=page) or []
             return self._dict_infos(tvs, MediaType.TV)
         except Exception as e:
-            print(str(e))
+            log.warn(f"[TmdbDiscover]获取电视剧推荐失败: {e}")
             return []
 
     def discover(self, mtype, params=None, page=1):
@@ -64,7 +64,7 @@ class TmdbDiscover:
                 tvs = self.client.discover.discover_tv_shows(params=params, page=page)
                 return self._dict_infos(infos=tvs, mtype=mtype, poster_filter=True)
         except Exception as e:
-            print(str(e))
+            log.warn(f"[TmdbDiscover]发现内容失败: {e}")
         return []
 
     def get_tmdb_hot_movies(self, page):
@@ -155,7 +155,7 @@ class TmdbDiscover:
                 img_link = f"https://www.themoviedb.org/movie/{media.get('id')}" if media.get("id") else ""
                 return img_url, img_title, img_link
         except Exception as err:
-            print(str(err))
+            log.warn(f"[TmdbDiscover]获取随机背景失败: {err}")
         return "", "", ""
 
     @staticmethod

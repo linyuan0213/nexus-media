@@ -687,7 +687,7 @@ class Emby(_IMediaClient):
                 except (InfrastructureError, NetworkError, MediaServerError):
                     raise
                 except Exception as err:  # type: ignore[unreachable]
-                    print(str(err))
+                    log.warn(f"[Emby]计算公共路径失败: {err}")
                     continue
             if max_equal_path_id:
                 return max_equal_path_id if equal_path_num == 1 else folder.get("Id")

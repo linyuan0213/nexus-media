@@ -1,6 +1,7 @@
 import json
 import subprocess
 
+import log
 from app.utils import SystemUtils
 
 
@@ -79,7 +80,7 @@ class FfmpegProcessor:
             if result.returncode == 0:
                 return json.loads(result.stdout.decode("utf-8"))
         except Exception as e:
-            print(e)
+            log.warn(f"[FfmpegProcessor]获取视频元数据失败: {e}")
         return None
 
     @staticmethod

@@ -4,6 +4,7 @@ import platform
 import shutil
 import subprocess
 
+import log
 import psutil
 
 from app.domain.enums import OsType
@@ -70,7 +71,7 @@ class SystemUtils:
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True)  # nosec B602
             return result.stdout.strip()
         except Exception as err:
-            print(str(err))
+            log.warn(f"[SystemUtils]执行命令失败: {err}")
             return ""
 
     @staticmethod

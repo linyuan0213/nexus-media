@@ -2,6 +2,8 @@ import ipaddress
 import socket
 from urllib.parse import urlparse
 
+import log
+
 
 class IpUtils:
     @staticmethod
@@ -76,5 +78,5 @@ class IpUtils:
         try:
             return ipaddress.ip_address(ip_str.strip()).is_private
         except Exception as e:
-            print(e)
+            log.warn(f"[IpUtils]判断内网 IP 失败: {e}")
             return False

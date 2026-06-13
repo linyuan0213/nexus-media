@@ -139,7 +139,7 @@ class Slack(_IMessageClient):
             try:
                 self._service.close()
             except Exception as err:
-                print(str(err))
+                log.warn(f"Slack消息接收服务停止失败: {err}")
             log.info("Slack消息接收服务已停止")
 
     def send_msg(self, title, text="", image="", url="", user_id="") -> tuple[bool, str]:
@@ -239,5 +239,5 @@ class Slack(_IMessageClient):
                     if channel.get("name") == self._channel:
                         return channel.get("id")
         except SlackApiError as e:
-            print(f"Slack Error: {e}")
+            log.error(f"Slack Error: {e}")
         return ""

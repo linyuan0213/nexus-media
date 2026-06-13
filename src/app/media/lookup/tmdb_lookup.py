@@ -262,7 +262,7 @@ class TmdbLookup(BaseLookup):
                 elif result.get("tv_results"):
                     return result["tv_results"][0].get("id")
         except Exception as err:
-            print(str(err))
+            log.warn(f"[TmdbLookup]通过 IMDb ID 查找失败: {err}")
         return None
 
     def get_random_discover_backdrop(self):
@@ -328,7 +328,7 @@ class TmdbLookup(BaseLookup):
                     return []
                 return self._dict_media_casts(self.client.tv.credits(tmdbid).get("cast"))
         except Exception as err:
-            print(str(err))
+            log.warn(f"[TmdbLookup]获取演员信息失败: {err}")
         return []
 
     def get_tmdb_genres_names(self, tmdbinfo):
@@ -347,7 +347,7 @@ class TmdbLookup(BaseLookup):
             else:
                 return self.client.genre.tv_list()
         except Exception as err:
-            print(str(err))
+            log.warn(f"[TmdbLookup]获取类型列表失败: {err}")
         return []
 
     def get_tmdb_production_company_names(self, tmdbinfo):
@@ -419,7 +419,7 @@ class TmdbLookup(BaseLookup):
                 if still_path:
                     return ImageProxy.get_tmdbimage_url(still_path, prefix="original" if orginal else "w500")
         except Exception as e:
-            print(str(e))
+            log.warn(f"[TmdbLookup]获取剧集图片失败: {e}")
         return ""
 
     def get_tmdb_factinfo(self, media_info):
@@ -476,7 +476,7 @@ class TmdbLookup(BaseLookup):
         try:
             return self.client.discover.discover_movies_pages(params=params)
         except Exception as e:
-            print(str(e))
+            log.warn(f"[TmdbLookup]获取发现电影页数失败: {e}")
         return 0
 
     def get_person_medias(self, personid, mtype=None, page=1):
@@ -493,7 +493,7 @@ class TmdbLookup(BaseLookup):
                 medias = self.client.person.combined_credits(person_id=personid) or []
                 return self._dict_tmdbinfos(medias)
         except Exception as err:
-            print(str(err))
+            log.warn(f"[TmdbLookup]获取人员作品失败: {err}")
         return []
 
     @staticmethod

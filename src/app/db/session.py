@@ -12,6 +12,7 @@ import os
 import threading
 from contextlib import contextmanager
 
+import log
 from sqlalchemy import text
 
 from app.core.root_path import get_project_root
@@ -97,7 +98,7 @@ class SessionManager:
             with self.session_scope() as db:
                 db.execute(text("delete from alembic_version where 1"))
         except Exception as err:
-            print(str(err))
+            log.warn(f"[SessionManager]初始化数据库版本失败: {err}")
 
     def init_data(self):
         """读取 SQL 脚本初始化数据"""
@@ -118,7 +119,7 @@ class SessionManager:
                                 with self.session_scope() as db:
                                     db.execute(text(adapted))
                         except Exception as err:
-                            print(str(err))
+                            log.warn(f"[SessionManager]执行初始化 SQL 失败: {err}")
                 init_files.append(os.path.basename(sql_file))
         if config_flag:
             config["app"]["init_files"] = init_files

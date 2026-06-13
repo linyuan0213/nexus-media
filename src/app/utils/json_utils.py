@@ -1,6 +1,8 @@
 import json
 from enum import Enum
 
+import log
+
 
 class JsonUtils:
     @staticmethod
@@ -17,7 +19,7 @@ class JsonUtils:
             try:
                 return o.__dict__
             except Exception as err:
-                print(str(err))
+                log.warn(f"[JsonUtils]对象序列化失败: {err}")
                 return str(o)
 
         return json.loads(json.dumps(obj, default=lambda o: _try(o)))
@@ -74,8 +76,8 @@ class JsonUtils:
             field_value = JsonUtils.get_nested_value(json_data, field)
             return field_value
         except json.JSONDecodeError as e:
-            print("JSON 解析错误:", e)
+            log.warn(f"[JsonUtils]JSON 解析错误: {e}")
             return None
         except Exception as e:
-            print("发生错误:", e)
+            log.warn(f"[JsonUtils]提取字段失败: {e}")
             return None
