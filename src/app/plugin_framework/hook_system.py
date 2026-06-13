@@ -3,6 +3,7 @@ Hook System - 全局事件钩子系统
 插件通过注册钩子来响应系统事件
 """
 
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import log
@@ -15,18 +16,21 @@ if TYPE_CHECKING:
 class HookSystem:
     """全局事件钩子系统——插件可自由注册任意事件，无白名单限制.
 
-    由 lifespan 通过 AppContext 创建并注入依赖。
+    由 lifespan 通过 AppContext 创建并管理生命周期。
+    emit 默认同步执行；可通过 executor 参数启用线程池异步投递。
     """
 
     def __init__(
         self,
         plugin_sandbox: "PluginSandbox | None" = None,
         repo: PluginFrameworkRepository | None = None,
+        executor: ThreadPoolExecutor | None = None,
     ):
 
         self._plugin_sandbox = plugin_sandbox
         self._repo = repo or PluginFrameworkRepository()
         self._handlers: dict[str, set[str]] = {}
+        self._executor = executor
         self._load_from_db()
 
     def set_plugin_sandbox(self, plugin_sandbox: "PluginSandbox") -> None:
@@ -78,11 +82,11 @@ class HookSystem:
             log.error(f"[HookSystem] 删除插件钩子订阅失败: {e}")
 
     def emit(self, event: str, data: dict | None = None) -> None:
-        """触发事件"""
-        if event not in self._handlers:
-            return
+        """触发事件.
 
-        handlers = self._handlers.get(event, set())
+        有 executor 时异步投递到线程池，无则同步串行调用。
+        """
+        handlers = self._handlers.get(event)
         if not handlers:
             return
 
@@ -94,10 +98,18 @@ class HookSystem:
         for plugin_id in handlers:
             if not plugin_id:
                 continue
-            try:
-                self._plugin_sandbox.call_hook(str(plugin_id), event, data or {})
-            except Exception as e:
-                log.error(f"[HookSystem] 插件 {plugin_id} 处理事件 {event} 失败: {e}")
+            if self._executor is not None:
+                self._executor.submit(self._call_hook, plugin_id, event, data or {})
+            else:
+                self._call_hook(plugin_id, event, data or {})
+
+    def _call_hook(self, plugin_id: str, event: str, data: dict) -> None:
+        if self._plugin_sandbox is None:
+            return
+        try:
+            self._plugin_sandbox.call_hook(str(plugin_id), event, data)
+        except Exception as e:
+            log.error(f"[HookSystem] 插件 {plugin_id} 处理事件 {event} 失败: {e}")
 
     @property
     def EVENTS(self) -> list[str]:

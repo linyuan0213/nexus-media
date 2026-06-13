@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import time
 
 import log
 from app.core.exceptions import ResourceNotFoundError
@@ -9,7 +10,6 @@ from app.infrastructure.thread import ThreadExecutor
 from app.services.brush.task_service import BrushTaskService
 from app.services.download_monitor import DownloadMonitor
 from app.services.downloader_core import DownloaderCore
-from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.file_index_service import FileIndexService
 from app.services.rss_automation.task_service import RssTaskService
 from app.services.scheduler.core import SchedulerCore
@@ -36,7 +36,7 @@ class SchedulerService:
 
     def __init__(
         self,
-        downloader: Downloader | None = None,
+        downloader: DownloaderCore | None = None,
         sync: Sync | None = None,
         thread_executor: ThreadExecutor | None = None,
         torrent_remover: TorrentRemoverService | None = None,
@@ -173,20 +173,29 @@ class SystemLifecycleService:
     def restart_service(self) -> None:
         """重启所有后台服务"""
         self.stop_service()
+        time.sleep(1)
         self.start_service()
 
     def restart_server(self) -> None:
         """停止进程并重启服务器"""
         self.stop_service()
         script_path = os.path.join(os.getcwd(), "restart-server.sh")
-        os.chmod(script_path, 0o700)
+        if not os.path.isfile(script_path):
+            log.error(f"[Lifecycle]重启脚本不存在: {script_path}")
+            return
+        try:
+            os.chmod(script_path, 0o700)
+        except OSError as e:
+            log.error(f"[Lifecycle]无法设置重启脚本权限: {e}")
+            return
         res = subprocess.run(  # nosec
-            ["bash", script_path], cwd=os.getcwd()
+            ["bash", script_path], cwd=os.getcwd(), capture_output=True
         )
         if res.returncode == 0:
             log.info("Nexus Media 重启成功...")
         else:
-            log.info(f"Nexus Media 重启失败: {res.stderr.decode()}")
+            stderr = res.stderr.decode(errors="replace") if res.stderr else "未知错误"
+            log.error(f"Nexus Media 重启失败: {stderr}")
 
 
 def start_service(system_lifecycle_service: SystemLifecycleService) -> None:
