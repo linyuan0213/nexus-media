@@ -8,9 +8,8 @@ import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 import log
-from api.deps import get_apikey_service
-from app.di.registry import registry
-from app.di.types import RegistryKey
+from api.deps import get_apikey_service, get_app_context
+from app.di.context import AppContext
 from app.infrastructure.security import SecurityChecker
 from app.services.apikey_service import APIKeyService
 from app.services.search_message_service import MessageSearchService
@@ -100,7 +99,7 @@ def _get_text_from_update(update: dict, channel: SearchType) -> str:
     return ""
 
 
-def _handle_webhook(update: dict, channel: SearchType):
+def _handle_webhook(update: dict, channel: SearchType, app_context: AppContext):
     """统一处理各平台 webhook"""
     _ensure_message_initialized()
 
@@ -112,14 +111,14 @@ def _handle_webhook(update: dict, channel: SearchType):
     log.info(f"[Webhook]{channel.value} 收到消息: user={user_id}, text={text[:60]}...")
 
     search_handler = MessageSearchService(
-        downloader=registry.get(RegistryKey.DOWNLOADER_CORE),
-        searcher=registry.get(RegistryKey.SEARCHER),
-        indexer=registry.get(RegistryKey.INDEXER_SERVICE),
-        site_cache=registry.get(RegistryKey.SITE_CACHE),
-        site_engine=registry.get(RegistryKey.SITE_ENGINE),
-        subscribe_service=registry.get(RegistryKey.SUBSCRIBE_SERVICE),
-        media_service=registry.get(RegistryKey.MEDIA_SERVICE),
-        agent_service=registry.get(RegistryKey.AGENT_SERVICE),
+        downloader=app_context.downloader_core,
+        searcher=app_context.searcher,
+        indexer=app_context.indexer_service,
+        site_cache=app_context.site_cache,
+        site_engine=app_context.site_engine,
+        subscribe_service=app_context.subscribe_service,
+        media_service=app_context.media_service,
+        agent_service=app_context.agent_service,
     )
     handler = MessageCommandHandler(search_handler=search_handler)
     handler.handle_message_job(msg=text, in_from=channel, user_id=user_id)
@@ -130,41 +129,45 @@ def _handle_webhook(update: dict, channel: SearchType):
 async def telegram_webhook(
     request: Request,
     service: APIKeyService = Depends(get_apikey_service),
+    app_context: AppContext = Depends(get_app_context),
 ):
     """Telegram Bot Webhook"""
     _verify_apikey(request, service)
     _verify_webhook_ip(SearchType.TG, request)
     data = await request.json()
-    return await asyncio.to_thread(_handle_webhook, data, SearchType.TG)
+    return await asyncio.to_thread(_handle_webhook, data, SearchType.TG, app_context)
 
 
 @router.post("/wechat", summary="微信 Webhook")
 async def wechat_webhook(
     request: Request,
     service: APIKeyService = Depends(get_apikey_service),
+    app_context: AppContext = Depends(get_app_context),
 ):
     """WeChat 企业微信/公众号 Webhook"""
     _verify_apikey(request, service)
     data = await request.json()
-    return await asyncio.to_thread(_handle_webhook, data, SearchType.WX)
+    return await asyncio.to_thread(_handle_webhook, data, SearchType.WX, app_context)
 
 
 @router.post("/synologychat", summary="Synology Chat Webhook")
 async def synologychat_webhook(
     request: Request,
     service: APIKeyService = Depends(get_apikey_service),
+    app_context: AppContext = Depends(get_app_context),
 ):
     """Synology Chat Webhook"""
     _verify_apikey(request, service)
     _verify_webhook_ip(SearchType.SYNOLOGY, request)
     data = await request.json()
-    return await asyncio.to_thread(_handle_webhook, data, SearchType.SYNOLOGY)
+    return await asyncio.to_thread(_handle_webhook, data, SearchType.SYNOLOGY, app_context)
 
 
 @router.post("/slack", summary="Slack Webhook")
 async def slack_webhook(
     request: Request,
     service: APIKeyService = Depends(get_apikey_service),
+    app_context: AppContext = Depends(get_app_context),
 ):
     """Slack Event/Webhook"""
     _verify_apikey(request, service)
@@ -172,4 +175,4 @@ async def slack_webhook(
     data = await request.json()
     if data.get("type") == "url_verification":
         return {"challenge": data.get("challenge")}
-    return await asyncio.to_thread(_handle_webhook, data, SearchType.SLACK)
+    return await asyncio.to_thread(_handle_webhook, data, SearchType.SLACK, app_context)

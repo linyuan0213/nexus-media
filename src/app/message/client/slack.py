@@ -7,7 +7,6 @@ from slack_sdk.errors import SlackApiError
 
 import log
 from app.core.settings import settings
-from app.di.types import RegistryKey
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.message.client._base import _IMessageClient
@@ -101,7 +100,7 @@ class Slack(_IMessageClient):
             return
         self._client = slack_app.client
 
-        @slack_app.event(RegistryKey.MESSAGE.value)
+        @slack_app.event("message")
         def slack_message(message):
             local_res = HttpClient(config=HttpClientConfig(timeout=10)).post(self._ds_url or "", data=message)
             log.debug(f"[Slack]message processed: {local_res.text}")

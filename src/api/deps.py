@@ -11,11 +11,10 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.di.context import AppContext
-from app.di.registry import registry
-from app.di.types import RegistryKey
 from app.infrastructure.cache_system import TokenCache
 from app.infrastructure.security import generate_access_token, identify
 from app.schemas.auth import UserContext
+from app.services.apikey_service import APIKeyService
 from app.services.auth_service import AuthService
 from app.services.config_reloader import ConfigReloader
 from app.services.config_service import ConfigService
@@ -34,21 +33,11 @@ def get_app_context(request: Request) -> AppContext:
     return request.app.state.context
 
 
-def _get_service(name: str | RegistryKey) -> Any:
-    """通用服务工厂 — 从 AppContext 获取指定名称的实例（兼容旧 RegistryKey）."""
-    key = name.value if isinstance(name, RegistryKey) else name
-
-    def _resolver(ctx: AppContext = Depends(get_app_context)) -> Any:
-        return getattr(ctx, key, None)
-
-    return _resolver
-
-
 def _extract_user_from_api_key(
     auth_header: str | None,
     query_key: str | None,
-    apikey_service=None,
-    rbac_service=None,
+    apikey_service: APIKeyService,
+    rbac_service,
 ) -> UserContext | None:
     """
     API Key 认证（支持 Header 和 Query 参数）
@@ -64,16 +53,13 @@ def _extract_user_from_api_key(
     if not raw_key:
         return None
 
-    _apikey_service = apikey_service
-    if _apikey_service is None:
-        return None
-    api_key = _apikey_service.validate_key(raw_key)
+    api_key = apikey_service.validate_key(raw_key)
     if not api_key:
         return None
 
     # 记录使用日志（异步记录，不阻塞认证流程）
     try:
-        _apikey_service.record_usage(
+        apikey_service.record_usage(
             api_key_id=api_key.id,
             request_id=str(uuid.uuid4()),
             request_name="API 认证",
@@ -91,18 +77,15 @@ def _extract_user_from_api_key(
     created_by = api_key.created_by or 0
 
     if created_by:
-        _rbac_service = rbac_service
-        if _rbac_service is None:
-            return None
         try:
-            user = _rbac_service.get_user_by_id(created_by)
+            user = rbac_service.get_user_by_id(created_by)
             if user is not None:
                 username = cast(str, getattr(user, "USERNAME", username) or username)
                 nickname = cast(str, api_key.name)
                 level = getattr(user, "LEVEL", 0) or 0
                 is_superadmin = getattr(user, "IS_SUPERADMIN", 0) == 1
                 try:
-                    perms = _rbac_service.get_user_permissions(created_by)
+                    perms = rbac_service.get_user_permissions(created_by)
                     permissions = list(perms) if perms else []
                 except Exception:
                     pass
@@ -519,18 +502,17 @@ def get_transfer_history_service(app_context: AppContext = Depends(get_app_conte
     return app_context.transfer_history_service
 
 
-def get_config_reloader():
+def get_config_reloader(app_context: AppContext = Depends(get_app_context)):
     """获取配置重载器实例"""
-    return ConfigReloader(provider_resolver=registry.get)
+    return ConfigReloader(provider_resolver=app_context.config_service.get)
 
 
 # --- 兼容旧 Registry 获取方式（逐步废弃）---
 
 
-def _get_legacy_service(name: str | RegistryKey) -> Any:
-    """通用服务工厂 — 从 Registry 获取指定名称的实例（仅兼容旧调用）。"""
-    key = RegistryKey(name) if isinstance(name, str) else name
-    return registry.get(key)
+def _get_legacy_service(name: str) -> Any:
+    """通用服务工厂 — 已废弃，仅保留签名兼容。"""
+    raise RuntimeError(f"Registry 已移除，请改用 AppContext.{name}")
 
 
 def _extract_user_from_token(auth_header: str | None) -> str | None:
