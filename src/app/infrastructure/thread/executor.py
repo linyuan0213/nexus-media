@@ -87,11 +87,9 @@ class ThreadExecutor:
         def _wrapper(*w_args, **w_kwargs):
             try:
                 return func(*w_args, **w_kwargs)
-            except Exception:
-                import log
-
+            except Exception as e:
                 log.warn(f"[ThreadExecutor:{self._name}] 任务异常: {func.__name__}")
-                ExceptionUtils.exception_traceback(Exception())
+                ExceptionUtils.exception_traceback(e)
             finally:
                 with self._lock:
                     self._completed += 1
@@ -115,11 +113,9 @@ class ThreadExecutor:
         def _wrapper(item):
             try:
                 return func(item)
-            except Exception:
-                import log
-
+            except Exception as e:
                 log.warn(f"[ThreadExecutor:{self._name}] map 任务异常: {func.__name__}")
-                ExceptionUtils.exception_traceback(Exception())
+                ExceptionUtils.exception_traceback(e)
                 return None
             finally:
                 with self._lock:
