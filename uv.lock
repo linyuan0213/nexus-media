@@ -443,15 +443,6 @@ filecache = [
 ]
 
 [[package]]
-name = "cacheout"
-version = "0.16.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d1/60/ed4c4b27b2131a0b2cc461789be2cf06866644ca462cb34a5d8fca114c15/cacheout-0.16.0.tar.gz", hash = "sha256:ee264897cbaa089ae5f406da11952697d99fa7f3583cfab69fe8a00ff8e1952d", size = 42050, upload-time = "2023-12-22T17:44:33.29Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/72/14/a89bb55107b8a9b586c8878f47d0b7750c3688c209f05f915e70de74880d/cacheout-0.16.0-py3-none-any.whl", hash = "sha256:1a52d9aa8b1e9720d8453b061348f15795578231f9ec4ad376fec49e717d0ed8", size = 21837, upload-time = "2023-12-22T17:44:31.556Z" },
-]
-
-[[package]]
 name = "cachetools"
 version = "7.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1358,12 +1349,6 @@ wheels = [
 ]
 
 [[package]]
-name = "func-timeout"
-version = "4.3.5"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b3/0d/bf0567477f7281d9a3926c582bfef21bff7498fc0ffd3e9de21811896a0b/func_timeout-4.3.5.tar.gz", hash = "sha256:74cd3c428ec94f4edfba81f9b2f14904846d5ffccc27c92433b8b5939b5575dd", size = 44264, upload-time = "2019-08-19T21:32:07.43Z" }
-
-[[package]]
 name = "genai-prices"
 version = "0.0.66"
 source = { registry = "https://pypi.org/simple" }
@@ -1780,29 +1765,6 @@ wheels = [
 ]
 
 [[package]]
-name = "humanize"
-version = "4.15.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ba/66/a3921783d54be8a6870ac4ccffcd15c4dc0dd7fcce51c6d63b8c63935276/humanize-4.15.0.tar.gz", hash = "sha256:1dd098483eb1c7ee8e32eb2e99ad1910baefa4b75c3aff3a82f4d78688993b10", size = 83599, upload-time = "2025-12-20T20:16:13.19Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c5/7b/bca5613a0c3b542420cf92bd5e5fb8ebd5435ce1011a091f66bb7693285e/humanize-4.15.0-py3-none-any.whl", hash = "sha256:b1186eb9f5a9749cd9cb8565aee77919dd7c8d076161cf44d70e59e3301e1769", size = 132203, upload-time = "2025-12-20T20:16:11.67Z" },
-]
-
-[[package]]
-name = "icalendar"
-version = "7.1.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "python-dateutil" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
-    { name = "tzdata" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ac/e2/13c732a8da65961a249f9d745d2da5e06fc34a6c2ff24b13138bdedbf5f9/icalendar-7.1.2.tar.gz", hash = "sha256:ebc43ebeb357be98984b573d975118008dee3410d8df28b054ef2943cf3e367e", size = 471132, upload-time = "2026-05-22T10:42:29.729Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7d/a0/2929543a1dfe2667e1ce08f2d6af59480d1467c0ee38acb94637965b3de3/icalendar-7.1.2-py3-none-any.whl", hash = "sha256:01c76243c76c549f58bb51510a8f0a4edb7c539726adda1356dfd0dc04fb7a53", size = 474031, upload-time = "2026-05-22T10:42:28.308Z" },
-]
-
-[[package]]
 name = "identify"
 version = "2.6.19"
 source = { registry = "https://pypi.org/simple" }
@@ -1846,15 +1808,6 @@ name = "iso639"
 version = "0.1.4"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d5/23/6aecf85ed735ff017af073d1da764b8f24822f8ec17798fc83816d166826/iso639-0.1.4.tar.gz", hash = "sha256:88b70cf6c64ee9c2c2972292818c8beb32db9ea6f4de1f8471a9b081a3d92e98", size = 11042, upload-time = "2016-06-08T09:09:27.562Z" }
-
-[[package]]
-name = "itsdangerous"
-version = "2.2.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/9c/cb/8ac0172223afbccb63986cc25049b154ecfb5e85932587206f42317be31d/itsdangerous-2.2.0.tar.gz", hash = "sha256:e0050c0b7da1eea53ffaf149c0cfbb5c6e2e2b69c4bef22c81fa6eb73e5f6173", size = 54410, upload-time = "2024-04-16T21:28:15.614Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/04/96/92447566d16df59b2a776c0fb82dbc4d9e07cd95062562af01e408583fc4/itsdangerous-2.2.0-py3-none-any.whl", hash = "sha256:c6242fc49e35958c8b15141343aa660db5fc54d4f13a1db01a3f5891b98700ef", size = 16234, upload-time = "2024-04-16T21:28:14.499Z" },
-]
 
 [[package]]
 name = "jaraco-classes"
@@ -2627,8 +2580,6 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "bencodepy" },
     { name = "boto3" },
-    { name = "cacheout" },
-    { name = "cachetools" },
     { name = "cn2an" },
     { name = "cryptography" },
     { name = "dateparser" },
@@ -2636,14 +2587,10 @@ dependencies = [
     { name = "fast-bencode" },
     { name = "fastapi" },
     { name = "filelock" },
-    { name = "func-timeout" },
     { name = "google-genai" },
     { name = "granian" },
     { name = "httpx", extra = ["socks"] },
-    { name = "humanize" },
-    { name = "icalendar" },
     { name = "iso639" },
-    { name = "itsdangerous" },
     { name = "jinja2" },
     { name = "jsonpath" },
     { name = "loguru" },
@@ -2663,7 +2610,6 @@ dependencies = [
     { name = "pymysql" },
     { name = "pypushdeer" },
     { name = "pyquery" },
-    { name = "pyrsistent" },
     { name = "python-dateutil" },
     { name = "python-hosts" },
     { name = "python-jose", extra = ["cryptography"] },
@@ -2709,8 +2655,6 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.15.0" },
     { name = "bencodepy", specifier = ">=0.9.5" },
     { name = "boto3", specifier = ">=1.43.29" },
-    { name = "cacheout", specifier = ">=0.16.0" },
-    { name = "cachetools", specifier = ">=5.5.0" },
     { name = "cn2an", specifier = ">=0.5.23" },
     { name = "cryptography", specifier = ">=49.0.0" },
     { name = "dateparser", specifier = ">=1.2.0" },
@@ -2718,14 +2662,10 @@ requires-dist = [
     { name = "fast-bencode", specifier = ">=1.1.7" },
     { name = "fastapi", specifier = ">=0.136.0" },
     { name = "filelock", specifier = ">=3.16.1" },
-    { name = "func-timeout", specifier = ">=4.3.5" },
     { name = "google-genai", specifier = ">=2.8.0" },
     { name = "granian", specifier = ">=2.7.6" },
     { name = "httpx", extras = ["socks"], specifier = ">=0.28.1" },
-    { name = "humanize", specifier = ">=4.11.0" },
-    { name = "icalendar", specifier = ">=6.1.0" },
     { name = "iso639", specifier = ">=0.1.4" },
-    { name = "itsdangerous", specifier = ">=2.2.0" },
     { name = "jinja2", specifier = ">=3.1.5" },
     { name = "jsonpath", specifier = ">=0.82.2" },
     { name = "loguru", specifier = ">=0.7.3" },
@@ -2745,7 +2685,6 @@ requires-dist = [
     { name = "pymysql", specifier = ">=1.1.1" },
     { name = "pypushdeer", specifier = ">=0.0.3" },
     { name = "pyquery", specifier = ">=2.0.1" },
-    { name = "pyrsistent", specifier = ">=0.20.0" },
     { name = "python-dateutil", specifier = ">=2.9.0.post0" },
     { name = "python-hosts", specifier = ">=1.0.7" },
     { name = "python-jose", extras = ["cryptography"], specifier = ">=3.5.0" },
@@ -3878,27 +3817,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/10/53/e4d8ea1391bd4355231be6f91bf239479aa0014260ed3fb5526eeb12a1f2/pyright-1.1.410.tar.gz", hash = "sha256:07a073b8ba6749826773c1269773efa11b93440d9a6aa60419d9a3172d6dc488", size = 4062013, upload-time = "2026-06-01T17:35:48.894Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d7/33/288b5868fa00846dacf249633719d747893e54aebd196b9968ac1878a5d3/pyright-1.1.410-py3-none-any.whl", hash = "sha256:5e961bed37cacf96b3f7cd7b1da39b350a9239aa2e69138d0e88f728cfaf296c", size = 6082448, upload-time = "2026-06-01T17:35:46.387Z" },
-]
-
-[[package]]
-name = "pyrsistent"
-version = "0.20.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ce/3a/5031723c09068e9c8c2f0bc25c3a9245f2b1d1aea8396c787a408f2b95ca/pyrsistent-0.20.0.tar.gz", hash = "sha256:4c48f78f62ab596c679086084d0dd13254ae4f3d6c72a83ffdf5ebdef8f265a4", size = 103642, upload-time = "2023-10-25T21:06:56.342Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/63/7544dc7d0953294882a5c587fb1b10a26e0c23d9b92281a14c2514bac1f7/pyrsistent-0.20.0-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:0f3b1bcaa1f0629c978b355a7c37acd58907390149b7311b5db1b37648eb6958", size = 83481, upload-time = "2023-10-25T21:06:15.238Z" },
-    { url = "https://files.pythonhosted.org/packages/ae/a0/49249bc14d71b1bf2ffe89703acfa86f2017c25cfdabcaea532b8c8a5810/pyrsistent-0.20.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:5cdd7ef1ea7a491ae70d826b6cc64868de09a1d5ff9ef8d574250d0940e275b8", size = 120222, upload-time = "2023-10-25T21:06:17.144Z" },
-    { url = "https://files.pythonhosted.org/packages/a1/94/9808e8c9271424120289b9028a657da336ad7e43da0647f62e4f6011d19b/pyrsistent-0.20.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cae40a9e3ce178415040a0383f00e8d68b569e97f31928a3a8ad37e3fde6df6a", size = 120002, upload-time = "2023-10-25T21:06:18.727Z" },
-    { url = "https://files.pythonhosted.org/packages/3f/f6/9ecfb78b2fc8e2540546db0fe19df1fae0f56664a5958c21ff8861b0f8da/pyrsistent-0.20.0-cp311-cp311-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:6288b3fa6622ad8a91e6eb759cfc48ff3089e7c17fb1d4c59a919769314af224", size = 116850, upload-time = "2023-10-25T21:06:20.424Z" },
-    { url = "https://files.pythonhosted.org/packages/83/c8/e6d28bc27a0719f8eaae660357df9757d6e9ca9be2691595721de9e8adfc/pyrsistent-0.20.0-cp311-cp311-win32.whl", hash = "sha256:7d29c23bdf6e5438c755b941cef867ec2a4a172ceb9f50553b6ed70d50dfd656", size = 60775, upload-time = "2023-10-25T21:06:21.815Z" },
-    { url = "https://files.pythonhosted.org/packages/98/87/c6ef52ff30388f357922d08de012abdd3dc61e09311d88967bdae23ab657/pyrsistent-0.20.0-cp311-cp311-win_amd64.whl", hash = "sha256:59a89bccd615551391f3237e00006a26bcf98a4d18623a19909a2c48b8e986ee", size = 63306, upload-time = "2023-10-25T21:06:22.874Z" },
-    { url = "https://files.pythonhosted.org/packages/15/ee/ff2ed52032ac1ce2e7ba19e79bd5b05d152ebfb77956cf08fcd6e8d760ea/pyrsistent-0.20.0-cp312-cp312-macosx_10_9_universal2.whl", hash = "sha256:09848306523a3aba463c4b49493a760e7a6ca52e4826aa100ee99d8d39b7ad1e", size = 83537, upload-time = "2023-10-25T21:06:24.17Z" },
-    { url = "https://files.pythonhosted.org/packages/80/f1/338d0050b24c3132bcfc79b68c3a5f54bce3d213ecef74d37e988b971d8a/pyrsistent-0.20.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a14798c3005ec892bbada26485c2eea3b54109cb2533713e355c806891f63c5e", size = 122615, upload-time = "2023-10-25T21:06:25.815Z" },
-    { url = "https://files.pythonhosted.org/packages/07/3a/e56d6431b713518094fae6ff833a04a6f49ad0fbe25fb7c0dc7408e19d20/pyrsistent-0.20.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b14decb628fac50db5e02ee5a35a9c0772d20277824cfe845c8a8b717c15daa3", size = 122335, upload-time = "2023-10-25T21:06:28.631Z" },
-    { url = "https://files.pythonhosted.org/packages/4a/bb/5f40a4d5e985a43b43f607250e766cdec28904682c3505eb0bd343a4b7db/pyrsistent-0.20.0-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:2e2c116cc804d9b09ce9814d17df5edf1df0c624aba3b43bc1ad90411487036d", size = 118510, upload-time = "2023-10-25T21:06:30.718Z" },
-    { url = "https://files.pythonhosted.org/packages/1c/13/e6a22f40f5800af116c02c28e29f15c06aa41cb2036f6a64ab124647f28b/pyrsistent-0.20.0-cp312-cp312-win32.whl", hash = "sha256:e78d0c7c1e99a4a45c99143900ea0546025e41bb59ebc10182e947cf1ece9174", size = 60865, upload-time = "2023-10-25T21:06:32.742Z" },
-    { url = "https://files.pythonhosted.org/packages/75/ef/2fa3b55023ec07c22682c957808f9a41836da4cd006b5f55ec76bf0fbfa6/pyrsistent-0.20.0-cp312-cp312-win_amd64.whl", hash = "sha256:4021a7f963d88ccd15b523787d18ed5e5269ce57aa4037146a2377ff607ae87d", size = 63239, upload-time = "2023-10-25T21:06:34.035Z" },
-    { url = "https://files.pythonhosted.org/packages/23/88/0acd180010aaed4987c85700b7cc17f9505f3edb4e5873e4dc67f613e338/pyrsistent-0.20.0-py3-none-any.whl", hash = "sha256:c55acc4733aad6560a7f5f818466631f07efc001fd023f34a6c203f8b6df0f0b", size = 58106, upload-time = "2023-10-25T21:06:54.387Z" },
 ]
 
 [[package]]
