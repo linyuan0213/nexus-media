@@ -1,6 +1,7 @@
 """Message services - 消息客户端、发送与命令处理."""
 
 import json
+from typing import cast
 
 from app.events import Event
 from app.events.constants import MESSAGE_INCOMING
@@ -210,8 +211,6 @@ class MessageCommandHandler:
             self._site_userinfo.refresh_site_data_now()
 
     def _unidentification(self):
-        from typing import cast
-
         item_ids = []
         if not self._filetransfer:
             return

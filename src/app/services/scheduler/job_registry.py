@@ -1,7 +1,7 @@
 """任务注册与管理组件."""
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 from apscheduler.job import Job
 from apscheduler.jobstores.base import JobLookupError
@@ -98,8 +98,6 @@ class JobRegistry:
             task_config.validate()
 
             # 包装函数添加分布式锁
-            from typing import cast
-
             original_func = task_config.func
             task_config.func = cast(Callable, self._wrap_with_lock(original_func, task_config.job_id))
 

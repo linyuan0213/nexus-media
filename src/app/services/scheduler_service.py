@@ -4,6 +4,9 @@
 
 import time
 
+from apscheduler.triggers.date import DateTrigger
+from dateutil import parser as date_parser
+
 import log
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.thread import ThreadExecutor
@@ -180,9 +183,6 @@ class SchedulerService:
                     req.id, trigger="cron", minute=minute, hour=hour, day=day, month=month, day_of_week=day_of_week
                 )
             elif req.trigger == "date":
-                from apscheduler.triggers.date import DateTrigger
-                from dateutil import parser as date_parser
-
                 if not req.run_date:
                     return UpdateSchedulerJobResponse(code=1, msg="date 触发器缺少执行时间")
                 run_date = date_parser.parse(req.run_date)
