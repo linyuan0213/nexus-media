@@ -1,9 +1,11 @@
 import json
+import time
 from threading import Lock
 from typing import Any
 from urllib.parse import quote
 
 import log
+import requests
 from app.core.settings import settings
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
@@ -101,20 +103,14 @@ class SynologyChat(_IMessageClient):
                 if data and "post_id" in data:
                     log.debug(f"[SynologyChat]接收到消息: {data}")
                     ThreadExecutor(name="synology_msg").submit(self._process_message, data, ds_url)
-                import time
-
                 time.sleep(2)
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
                 log.error(f"[SynologyChat]消息接收错误: {e}")
-                import time
-
                 time.sleep(5)
 
     def _process_message(self, data, ds_url):
         try:
-            import requests
-
             requests.post(ds_url, json=data, timeout=10)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
