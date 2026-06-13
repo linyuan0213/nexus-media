@@ -1,5 +1,4 @@
 import hashlib
-import json
 import os
 import re
 from typing import Any
@@ -10,6 +9,7 @@ import log
 from app.core.exceptions import InfrastructureError, NetworkError
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.utils.json_utils import JsonUtils
 
 
 class PyThunder:
@@ -66,7 +66,7 @@ class PyThunder:
         url = f"{self.base_url}/webman/3rdparty/pan-xunlei-com/index.cgi/device/info/watch"
         params = {"pan_auth": self.get_pan_token(), "device_space": ""}
         data = {}
-        data = json.dumps(data, separators=(",", ":"))
+        data = JsonUtils.dumps(data, separators=(",", ":"))
         response = self._client.post(url, headers=self.headers, params=params, data=data)
         if response.status_code == 200:
             response_data = response.json()
@@ -116,7 +116,7 @@ class PyThunder:
         params = {"pan_auth": pan_token, "device_space": ""}
 
         data = {"page_size": 2000, "urls": download_urls}
-        data = json.dumps(data, separators=(",", ":"))
+        data = JsonUtils.dumps(data, separators=(",", ":"))
         response = self._client.post(url, headers=self.headers, params=params, data=data)
 
         if not extract_info:
@@ -257,7 +257,7 @@ class PyThunder:
             "device_space": "",
             "limit": "200",
             "parent_id": folder_id or "",
-            "filters": json.dumps(filters, separators=(",", ":")),
+            "filters": JsonUtils.dumps(filters, separators=(",", ":")),
         }
 
         response = self._client.get(url, headers=self.headers, params=params)
@@ -351,7 +351,7 @@ class PyThunder:
             "space": f"device_id#{device_id}",
             "kind": "drive#folder",
         }
-        data_json = json.dumps(data, separators=(",", ":"))
+        data_json = JsonUtils.dumps(data, separators=(",", ":"))
 
         response = self._client.post(url, headers=self.headers, data=data_json)
 
@@ -532,7 +532,7 @@ class PyThunder:
             },
         }
 
-        data_json = json.dumps(data, separators=(",", ":"))
+        data_json = JsonUtils.dumps(data, separators=(",", ":"))
 
         log.info(f"开始下载任务: {task_name}")
         log.info(f"下载文件数: {download_count}")
@@ -603,7 +603,7 @@ class PyThunder:
 
         # 构建 filters 参数
         filters = {"phase": {"in": phase_filter}, "type": {"in": "user#download-url,user#download"}}
-        filters_json = json.dumps(filters, separators=(",", ":"))
+        filters_json = JsonUtils.dumps(filters, separators=(",", ":"))
 
         params = {
             "space": f"device_id#{device_id}",
@@ -690,10 +690,10 @@ class PyThunder:
             "space": f"device_id#{device_id}",
             "type": "user#download-url",
             "id": task_id,
-            "set_params": {"spec": json.dumps({"phase": phase})},
+            "set_params": {"spec": JsonUtils.dumps({"phase": phase})},
         }
 
-        data_json = json.dumps(data, separators=(",", ":"))
+        data_json = JsonUtils.dumps(data, separators=(",", ":"))
 
         params = {"pan_auth": pan_token, "device_space": ""}
 

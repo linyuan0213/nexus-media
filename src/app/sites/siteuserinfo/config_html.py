@@ -12,7 +12,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from typing import Any
 from urllib.parse import urljoin
@@ -27,6 +26,7 @@ from app.sites import engine_tools
 from app.sites.siteuserinfo import discuz, gazelle, nexus_php, small_horse, unit3d
 from app.utils import StringUtils
 from app.utils.config_tools import get_proxies
+from app.utils.json_utils import JsonUtils
 
 _ARCH_PARSERS = [
     (gazelle.is_gazelle, gazelle.parse),
@@ -248,7 +248,7 @@ class ConfigHtmlUserInfo:
                 break
             pn += 1
         self.seeding_size = total
-        self.seeding_info = json.dumps(info)
+        self.seeding_info = JsonUtils.dumps(info)
 
     def _parse_seeding_api(self, sc: dict) -> None:
         engine = self._site_engine
@@ -267,7 +267,7 @@ class ConfigHtmlUserInfo:
                 rate_limiter=rate_limiter_engine,
             ).post(
                 url=url,
-                data=json.dumps(body),
+                data=JsonUtils.dumps(body),
                 headers=headers,
                 cookies=self._cookie if self._cookie else None,
                 **rl_kwargs,
@@ -277,7 +277,7 @@ class ConfigHtmlUserInfo:
         if not res:
             return
         try:
-            data = json.loads(res) if isinstance(res, str) else res
+            data = JsonUtils.loads(res) if isinstance(res, str) else res
         except Exception:
             return
         total_size = 0
@@ -298,7 +298,7 @@ class ConfigHtmlUserInfo:
             total_size += size
             info.append([seeders, size])
         self.seeding_size = total_size
-        self.seeding_info = json.dumps(info)
+        self.seeding_info = JsonUtils.dumps(info)
 
     @staticmethod
     def _get_nested(obj: Any, keys: list) -> Any:

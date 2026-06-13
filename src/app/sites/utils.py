@@ -1,7 +1,5 @@
 """站点通用工具."""
 
-import json
-
 from lxml import etree
 
 from app.utils import JsonUtils
@@ -10,7 +8,7 @@ from app.utils import JsonUtils
 def is_logged_in(html_text: str) -> bool:
     """判断站点是否已经登录."""
     if JsonUtils.is_valid_json(html_text):
-        json_data = json.loads(html_text)
+        json_data = JsonUtils.loads(html_text)
         message = json_data.get("message")
         success = json_data.get("success")
         error_message = json_data.get("errorMessage")

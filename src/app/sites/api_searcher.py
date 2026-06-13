@@ -11,7 +11,6 @@ API 站点搜索器
 - 模板变量：{keyword} {page} {page_1}
 """
 
-import json
 import re
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -24,6 +23,7 @@ from app.sites import engine_tools
 from app.sites.engine import SiteDefinition
 from app.sites.searchers import _TRANSFORMS
 from app.utils.config_tools import get_proxies
+from app.utils.json_utils import JsonUtils
 
 
 class ApiSiteSearcher:
@@ -101,7 +101,12 @@ class ApiSiteSearcher:
                 rate_limiter=rate_limiter_engine,
             )
             if method == "POST":
-                res = client.post(url=url, data=json.dumps(body, separators=(",", ":")), headers=headers, **rl_kwargs)
+                res = client.post(
+                    url=url,
+                    data=JsonUtils.dumps(body, separators=(",", ":")),
+                    headers=headers,
+                    **rl_kwargs,
+                )
             else:
                 params = dict(search_config.get("params") or {})
                 params = self._render_template(params, **template_vars)

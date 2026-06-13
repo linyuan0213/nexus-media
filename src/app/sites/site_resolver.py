@@ -4,7 +4,6 @@
 从 SiteCache 获取配置，委托 SiteEngine 执行。
 """
 
-import json
 from datetime import datetime
 
 from app.infrastructure.chrome import ChromeClient
@@ -70,7 +69,7 @@ class SiteResolver:
             return False, "未配置站点认证信息", 0.0
 
         if JsonUtils.is_valid_json(headers):
-            headers = json.loads(headers or "{}")
+            headers = JsonUtils.loads(headers or "{}")
         else:
             headers = {}
         headers.update({"User-Agent": ua})

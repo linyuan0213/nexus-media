@@ -1,4 +1,3 @@
-import json
 import re
 from abc import ABCMeta, abstractmethod
 from typing import Any
@@ -9,6 +8,7 @@ from app.core.settings import settings
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.mediaserver.schema import MediaServerConfigSchema
 from app.utils.config_tools import get_domain
+from app.utils.json_utils import JsonUtils
 
 
 class _IMediaClient(metaclass=ABCMeta):
@@ -23,7 +23,7 @@ class _IMediaClient(metaclass=ABCMeta):
         item = _repo.get_media_server_by_name(name)
         if item and str(item.CONFIG):
             try:
-                return json.loads(str(item.CONFIG))
+                return JsonUtils.loads(str(item.CONFIG))
             except Exception as e:  # noqa: BLE001
                 log.debug(f"[_base]忽略异常: {e}")
         return settings.get(name)

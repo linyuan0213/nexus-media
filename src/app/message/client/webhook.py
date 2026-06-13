@@ -8,6 +8,7 @@ from app.infrastructure.http.config import HttpClientConfig
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils
+from app.utils.json_utils import JsonUtils
 
 lock = Lock()
 
@@ -24,7 +25,7 @@ class JsonTemplateEnvironment(Environment):
     @staticmethod
     def _tojson(value):
         """将值转为 JSON 字符串，确保中文正常显示"""
-        return json.dumps(value, ensure_ascii=False)
+        return JsonUtils.dumps(value, ensure_ascii=False)
 
 
 class Webhook(_IMessageClient):
@@ -126,7 +127,7 @@ class Webhook(_IMessageClient):
         if not json_str:
             return None
         try:
-            return json.loads(json_str)
+            return JsonUtils.loads(json_str)
         except json.JSONDecodeError as e:
             raise ValueError(f"{attr_name} Json解析失败：{json_str}") from e
 
@@ -180,7 +181,7 @@ class Webhook(_IMessageClient):
                 return self.__send_request(query_params, rendered_tpl)
             else:
                 # 不使用模板：直接序列化 variables
-                return self.__send_request(query_params, json.dumps(variables, ensure_ascii=False))
+                return self.__send_request(query_params, JsonUtils.dumps(variables, ensure_ascii=False))
 
         except Exception as msg_e:
             ExceptionUtils.exception_traceback(msg_e)
@@ -225,7 +226,7 @@ class Webhook(_IMessageClient):
                 return self.__send_request(query_params, rendered_tpl)
             else:
                 # 不使用模板：直接序列化 variables
-                return self.__send_request(query_params, json.dumps(variables, ensure_ascii=False))
+                return self.__send_request(query_params, JsonUtils.dumps(variables, ensure_ascii=False))
         except Exception as msg_e:
             ExceptionUtils.exception_traceback(msg_e)
             return False, str(msg_e)

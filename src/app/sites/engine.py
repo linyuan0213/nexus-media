@@ -6,7 +6,6 @@
 """
 
 import importlib
-import json
 import os
 import re
 import time
@@ -197,7 +196,7 @@ class SiteEngine:
             fpath = os.path.join(directory, fname)
             try:
                 with open(fpath, encoding="utf-8") as f:
-                    data = json.load(f)
+                    data = JsonUtils.load(f)
                 site_def = SiteDefinition.from_dict(data)
                 self._sites[site_def.id] = site_def
                 log.debug(f"[SiteEngine]加载站点定义: {site_def.name} ({site_def.id})")

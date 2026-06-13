@@ -115,8 +115,39 @@ class JsonUtils:
         return orjson.dumps(obj, option=option).decode("utf-8")
 
     @staticmethod
+    def dump(
+        obj: Any,
+        file,
+        *,
+        ensure_ascii: bool = False,
+        indent: bool | int = False,
+        default=None,
+        sort_keys: bool = False,
+        separators: tuple[str, str] | None = None,
+    ) -> None:
+        """将 JSON 写入文件对象；需要缩进、自定义 encoder 或 separators 时回退到标准库 json."""
+        if indent or default is not None or separators is not None:
+            json.dump(
+                obj,
+                file,
+                ensure_ascii=ensure_ascii,
+                indent=indent if isinstance(indent, int) else (2 if indent else None),
+                default=default,
+                sort_keys=sort_keys,
+                separators=separators,
+            )
+            return
+
+        file.write(JsonUtils.dumps(obj, ensure_ascii=ensure_ascii, sort_keys=sort_keys))
+
+    @staticmethod
     def loads(s: str | bytes) -> Any:
         """使用 orjson 反序列化 JSON."""
         if isinstance(s, str):
             s = s.encode("utf-8")
         return orjson.loads(s)
+
+    @staticmethod
+    def load(file) -> Any:
+        """从文件对象读取 JSON."""
+        return JsonUtils.loads(file.read())

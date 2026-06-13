@@ -1,6 +1,5 @@
 """引擎内部工具 — 从 engine.py 拆分"""
 
-import json
 import os
 import re
 from typing import Any
@@ -13,6 +12,7 @@ from app.infrastructure.http.auth import BearerAuth, CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.utils.config_tools import get_proxies
+from app.utils.json_utils import JsonUtils
 
 
 def _build_auth(engine: Any, site: Any, user_config: dict) -> tuple[dict, httpx.Auth | None]:
@@ -23,7 +23,7 @@ def _build_auth(engine: Any, site: Any, user_config: dict) -> tuple[dict, httpx.
     headers = user_config.get("headers", {}) or {}
     if isinstance(headers, str):
         try:
-            headers = json.loads(headers)
+            headers = JsonUtils.loads(headers)
         except Exception:
             headers = {}
     auth = None
@@ -133,7 +133,7 @@ def _call_endpoint(
                     body[k] = {sk: sv.format(**template_vars) if isinstance(sv, str) else sv for sk, sv in v.items()}
                 else:
                     body[k] = v
-            post_data = json.dumps(body, separators=(",", ":")) if body else None
+            post_data = JsonUtils.dumps(body, separators=(",", ":")) if body else None
             res = client.post(url=url, data=post_data, headers=headers, auth=auth, **rl_kwargs)
         else:
             params = cfg.get("params")

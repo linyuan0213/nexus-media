@@ -1,4 +1,3 @@
-import json
 import time
 from threading import Lock
 from typing import Any
@@ -12,6 +11,7 @@ from app.infrastructure.thread import ThreadExecutor
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils, StringUtils
+from app.utils.json_utils import JsonUtils
 
 lock = Lock()
 
@@ -210,7 +210,7 @@ class SynologyChat(_IMessageClient):
             return []
 
     def __send_request(self, payload_data):
-        payload = f"payload={json.dumps(payload_data)}"
+        payload = f"payload={JsonUtils.dumps(payload_data)}"
         if not self._webhook_url:
             return False, "未配置webhook"
         try:
