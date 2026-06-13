@@ -13,7 +13,9 @@ from sqlalchemy.orm import sessionmaker
 @pytest.fixture(scope="session")
 def engine():
     """提供内存 SQLite 引擎"""
-    return create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    yield engine
+    engine.dispose()
 
 
 @pytest.fixture(scope="function")
