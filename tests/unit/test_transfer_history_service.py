@@ -71,9 +71,9 @@ class TestTransferHistoryService:
         ]
         result = service.get_transfer_statistics(days=7)
         assert result["Labels"] == ["2024-01-01", "2024-01-02"]
-        assert result["MovieNums"] == [5, 0, 0]
-        assert result["TvNums"] == [0, 3, 0]
-        assert result["AnimeNums"] == [0, 0, 2]
+        assert result["MovieNums"] == [5, 0]
+        assert result["TvNums"] == [3, 0]
+        assert result["AnimeNums"] == [0, 2]
 
     def test_get_transfer_statistics_skips_empty(self, service, mock_filetransfer):
         mock_filetransfer.get_transfer_statistics.return_value = [
