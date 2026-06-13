@@ -1,4 +1,6 @@
 import json
+import log
+import re
 from abc import ABCMeta, abstractmethod
 from typing import Any
 from urllib.parse import quote
@@ -177,8 +179,6 @@ class _IMediaClient(metaclass=ABCMeta):
                 # 处理 TMDB 图片
                 if "image.tmdb.org" in url:
                     # 提取路径部分
-                    import re
-
                     match = re.search(r"/t/p/(\w+)(/.+)", url)
                     if match:
                         size = match.group(1)
@@ -192,9 +192,7 @@ class _IMediaClient(metaclass=ABCMeta):
 
                 # 处理豆瓣图片
                 if "doubanio.com" in url or "douban.com" in url:
-                    import urllib.parse
-
-                    encoded_path = urllib.parse.quote(url, safe="")
+                    encoded_path = quote(url, safe="")
                     proxy_url = f"/img/douban/{encoded_path}"
                     if remote:
                         domain = get_domain()
@@ -204,9 +202,7 @@ class _IMediaClient(metaclass=ABCMeta):
 
                 # 处理 Bangumi 图片
                 if "lain.bgm.tv" in url:
-                    import urllib.parse
-
-                    encoded_path = urllib.parse.quote(url, safe="")
+                    encoded_path = quote(url, safe="")
                     proxy_url = f"/img/bgm/{encoded_path}"
                     if remote:
                         domain = get_domain()
@@ -215,9 +211,7 @@ class _IMediaClient(metaclass=ABCMeta):
                     return proxy_url
 
                 # 处理媒体库等其他图片，统一走本地文件缓存代理
-                import urllib.parse
-
-                encoded_path = urllib.parse.quote(url, safe="")
+                encoded_path = quote(url, safe="")
                 proxy_url = f"/img/library/{encoded_path}"
                 if remote:
                     domain = get_domain()
@@ -225,8 +219,6 @@ class _IMediaClient(metaclass=ABCMeta):
                         return f"{domain}{proxy_url}"
                 return proxy_url
         except Exception as e:
-            import log
-
             log.error(f"[get_nt_image_url]处理图片代理失败: {str(e)}")
 
         # 默认使用旧的 Redis 缓存代理

@@ -1,6 +1,8 @@
 import re
 import urllib.parse
 
+import log
+
 from app.core.constants import TMDB_IMAGE_DOMAIN, TMDB_IMAGE_SIZE
 
 
@@ -110,8 +112,6 @@ class ImageProxy:
                 return f"/img/library/{encoded_path}"
 
         except Exception as e:
-            import log
-
             log.error(f"[get_proxy_image_url]处理图片代理失败: {str(e)}")
 
         return url

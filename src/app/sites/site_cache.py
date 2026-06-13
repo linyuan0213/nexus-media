@@ -6,6 +6,8 @@
 刷新机制：SiteService 写操作后调用 refresh() 重建缓存。
 """
 
+import log
+
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.domain.interfaces.site_repo import ISiteRepository
 from app.services.site_rate_limiter import SiteRateLimiterService
@@ -228,7 +230,5 @@ class SiteCache:
         limiter = SiteRateLimiterService()
         state = limiter.check(str(site_id), timeout=0)
         if state:
-            import log
-
             log.warn(f"[SiteCache]站点 {self._site_by_ids.get(int(site_id), {}).get('name')} 触发流控")
         return state
