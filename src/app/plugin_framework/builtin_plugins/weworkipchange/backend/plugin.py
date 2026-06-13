@@ -15,6 +15,7 @@ from typing import Any
 import pytz
 from pyquery import PyQuery
 
+import log
 from app.infrastructure.cache_system import get_cache_manager
 from app.infrastructure.cache_system.cookiecloud_adapter import CookiecloudAdapter
 from app.infrastructure.chrome import ChromeClient
@@ -105,8 +106,8 @@ class WeworkIPChangePlugin:
         try:
             self.ctx.remove_schedule("change_ip")
             self.ctx.remove_schedule("change_ip_once")
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[plugin]忽略异常: {e}")
 
     def login_by_code(self, data=None) -> bool:
         if not self._drissonpage_helper:

@@ -25,8 +25,8 @@ class _IMediaClient(metaclass=ABCMeta):
         if item and str(item.CONFIG):
             try:
                 return json.loads(str(item.CONFIG))
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[_base]忽略异常: {e}")
         return settings.get(name)
 
     @classmethod

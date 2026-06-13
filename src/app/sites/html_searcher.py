@@ -404,8 +404,8 @@ class HtmlSiteSearcher:
                                 for rm_el in els[0].xpath(remove_sel):
                                     if rm_el.text:
                                         els[0].text = (els[0].text or "").replace(rm_el.text, "")
-                            except Exception:
-                                pass
+                            except Exception as e:  # noqa: BLE001
+                                log.debug(f"[html_searcher]忽略异常: {e}")
                         val = "".join(e for e in els[0].xpath(".//text()") if e).strip()
                         if not val:
                             val = (els[0].text or "").strip()
@@ -457,8 +457,8 @@ class HtmlSiteSearcher:
                     if element.xpath(attr_xpath):
                         val = mapped_val
                         break
-                except Exception:
-                    pass
+                except Exception as e:  # noqa: BLE001
+                    log.debug(f"[html_searcher]忽略异常: {e}")
                 try:
                     if css_class.startswith("img."):
                         cls = css_class[4:]
@@ -466,8 +466,8 @@ class HtmlSiteSearcher:
                         if found:
                             val = mapped_val
                             break
-                except Exception:
-                    pass
+                except Exception as e:  # noqa: BLE001
+                    log.debug(f"[html_searcher]忽略异常: {e}")
 
         filters = fcfg.get("filters", [])
         if filters and val is not None:

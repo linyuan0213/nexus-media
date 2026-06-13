@@ -68,7 +68,7 @@ class Slack(_IMessageClient):
         ],
     )
 
-    def __init__(self, config, apikey_service):
+    def __init__(self, config, apikey_service, message=None):
         self._config = settings
         self._interactive = False
         self._ds_url = None
@@ -78,7 +78,7 @@ class Slack(_IMessageClient):
         self._bot_token = None
         self._app_token = None
         self._apikey_service = apikey_service
-        super().__init__(config)
+        super().__init__(config, apikey_service, message=message)
 
     def read_config(self):
         raw: dict = self._config  # type: ignore[assignment]
@@ -191,9 +191,18 @@ class Slack(_IMessageClient):
                 blocks.append({"type": "divider"})
                 idx = i + 1
                 if media.get_star_string():
-                    text = f"{idx}. *<{media.get_detail_url()}|{media.get_title_string()}>*\n{media.get_type_string()}\n{media.get_star_string()}\n{media.get_overview_string(50)}"
+                    text = (
+                        f"{idx}. *<{media.get_detail_url()}|{media.get_title_string()}>*\n"
+                        f"{media.get_type_string()}\n"
+                        f"{media.get_star_string()}\n"
+                        f"{media.get_overview_string(50)}"
+                    )
                 else:
-                    text = f"{idx}. *<{media.get_detail_url()}|{media.get_title_string()}>*\n{media.get_type_string()}\n{media.get_overview_string(50)}"
+                    text = (
+                        f"{idx}. *<{media.get_detail_url()}|{media.get_title_string()}>*\n"
+                        f"{media.get_type_string()}\n"
+                        f"{media.get_overview_string(50)}"
+                    )
                 if media.get_poster_image():
                     blocks.append(
                         {

@@ -85,7 +85,8 @@ class ResultFilter:
 
         self._rule_cache[cache_key] = (rulegroup_info, filters)
         log.info(
-            f"[ResultFilter]加载规则组: {rulegroup_info.get('name')} (ID={rulegroup_info.get('id')}), 规则数: {len(filters)}"
+            f"[ResultFilter]加载规则组: {rulegroup_info.get('name')} "
+            f"(ID={rulegroup_info.get('id')}), 规则数: {len(filters)}"
         )
         return rulegroup_info, filters
 
@@ -326,7 +327,8 @@ class ResultFilter:
 
             qnm_result = self.quick_name_match(mi, match_media)
             log.info(
-                f"[ResultFilter]{torrent_name} quick_name_match: {qnm_result}, meta_name={mi.get_name()}, match_name={match_media.get_name()}"
+                f"[ResultFilter]{torrent_name} quick_name_match: {qnm_result}, "
+                f"meta_name={mi.get_name()}, match_name={match_media.get_name()}"
             )
             if qnm_result:
                 log.info(f"[ResultFilter]{torrent_name} 快速名称匹配成功，跳过TMDB查询")
@@ -387,7 +389,9 @@ class ResultFilter:
             if cand.skip_tmdb:
                 media_info = cand.media_info
                 log.info(
-                    f"[ResultFilter]{torrent_name} skip_tmdb=True, merged_media_info: tmdb_id={media_info.tmdb_id}, type={media_info.type}, season={media_info.begin_season}, episode={media_info.begin_episode}"
+                    f"[ResultFilter]{torrent_name} skip_tmdb=True, merged_media_info: "
+                    f"tmdb_id={media_info.tmdb_id}, type={media_info.type}, "
+                    f"season={media_info.begin_season}, episode={media_info.begin_episode}"
                 )
             elif not cache_key:
                 log.warn(f"[ResultFilter]{torrent_name} 无法构建缓存键")
@@ -397,7 +401,8 @@ class ResultFilter:
                 media_info = media_ident_cache.get(cache_key)
                 if media_info is not None:
                     log.info(
-                        f"[ResultFilter]{torrent_name} 从缓存获取: {cache_key}, tmdb_id={media_info.tmdb_id}, tmdb_info={media_info.tmdb_info is not None}"
+                        f"[ResultFilter]{torrent_name} 从缓存获取: {cache_key}, "
+                        f"tmdb_id={media_info.tmdb_id}, tmdb_info={media_info.tmdb_info is not None}"
                     )
                 else:
                     media_info = None
@@ -414,12 +419,15 @@ class ResultFilter:
                         and self.quick_name_match(meta_info, match_media)
                     ):
                         log.info(
-                            f"[ResultFilter]{torrent_name} ({cache_key}) 未匹配到TMDB，回退使用搜索媒体信息: {match_media.get_name()}"
+                            f"[ResultFilter]{torrent_name} ({cache_key}) 未匹配到TMDB，"
+                            f"回退使用搜索媒体信息: {match_media.get_name()}"
                         )
                         media_info = self._media.merge_media_info(media_info, match_media)
                     else:
+                        qnm = self.quick_name_match(meta_info, match_media) if match_media else False
                         log.info(
-                            f"[ResultFilter]{torrent_name} ({cache_key}) 识别为 {media_info.get_name()} 未匹配到媒体信息, quick_name_match={self.quick_name_match(meta_info, match_media) if match_media else False}"
+                            f"[ResultFilter]{torrent_name} ({cache_key}) 识别为 {media_info.get_name()} "
+                            f"未匹配到媒体信息, quick_name_match={qnm}"
                         )
                         stats.index_match_fail += 1
                         continue
@@ -478,9 +486,14 @@ class ResultFilter:
                 media_type_str = media_info.type.value if media_info.type else "Unknown"
                 log.info(
                     f"[ResultFilter]{display_name} 识别为 {media_type_str}/"
-                    f"{media_info.get_title_string()}/{media_info.get_season_episode_string()} 不匹配季/集/年份 "
-                    f"(filter_season={filter_args.get('season')}, filter_episode={filter_args.get('episode')}, filter_year={filter_args.get('year')}, "
-                    f"media_season={media_info.get_season_list()}, media_episode={media_info.get_episode_list()}, media_year={media_info.year})"
+                    f"{media_info.get_title_string()}/{media_info.get_season_episode_string()} "
+                    f"不匹配季/集/年份 ("
+                    f"filter_season={filter_args.get('season')}, "
+                    f"filter_episode={filter_args.get('episode')}, "
+                    f"filter_year={filter_args.get('year')}, "
+                    f"media_season={media_info.get_season_list()}, "
+                    f"media_episode={media_info.get_episode_list()}, "
+                    f"media_year={media_info.year})"
                 )
                 stats.index_match_fail += 1
                 continue

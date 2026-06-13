@@ -5,6 +5,7 @@ from io import BytesIO
 
 from lxml import etree
 
+import log
 from app.core.constants import RMT_MEDIAEXT
 from app.media.parser.nfo_reader import NfoReader
 from app.storage.backends.base import StorageBackend
@@ -40,7 +41,7 @@ class MediaLibrary:
         # 优先用 stat 判断；stat 失败但 exists 成功时按扩展名推断
         try:
             info = backend.stat(in_path)
-        except Exception:
+        except Exception:  # noqa: BLE001
             info = None
         if info is not None:
             if not info.is_dir:
@@ -58,8 +59,8 @@ class MediaLibrary:
                     yield from MediaLibrary._get_library_files_remote(cur_path, exclude_path, backend)
                 elif os.path.splitext(cur_path)[-1].lower() in RMT_MEDIAEXT:
                     yield cur_path
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[MediaLibrary]遍历远程目录失败 {in_path}: {e}")
 
     @staticmethod
     def get_tmdbid_from_nfo(file_path):
@@ -73,8 +74,10 @@ class MediaLibrary:
                 tmdbid = reader.get_element_value(xpath)
                 if tmdbid:
                     return tmdbid
-            except Exception:
+            except etree.XMLSyntaxError:
                 pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[MediaLibrary]解析 NFO xpath 失败 {xpath}: {e}")
         return None
 
     @staticmethod
@@ -93,8 +96,10 @@ class MediaLibrary:
                     elem = root.find(xp)
                     if elem is not None and elem.text:
                         return elem.text.strip()
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                except etree.XMLSyntaxError:
+                    break
+                except Exception as e:  # noqa: BLE001
+                    log.debug(f"[MediaLibrary]解析 NFO xpath 失败 {xp}: {e}")
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[MediaLibrary]读取远程 NFO 失败 {file_path}: {e}")
         return None

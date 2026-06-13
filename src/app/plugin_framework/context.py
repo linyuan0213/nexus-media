@@ -61,7 +61,7 @@ class PluginContext:
 
         try:
             config = entity.config if isinstance(entity.config, dict) else json.loads(entity.config or "{}")
-        except Exception:
+        except (json.JSONDecodeError, TypeError):
             return default if key else {}
 
         if key is None:

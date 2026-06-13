@@ -11,6 +11,7 @@ from typing import Any
 
 import pytz
 
+import log
 from app.core.constants import MT_URL
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
@@ -109,8 +110,8 @@ class IYUUAutoSeedPlugin:
             self.ctx.remove_schedule("seed")
             self.ctx.remove_schedule("seed_once")
             self.ctx.remove_schedule("check_recheck")
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[plugin]忽略异常: {e}")
         self._event.clear()
 
     def _load_cache(self):
@@ -118,8 +119,8 @@ class IYUUAutoSeedPlugin:
         if content:
             try:
                 return json.loads(content)
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[plugin]忽略异常: {e}")
         return {"error_caches": [], "success_caches": [], "permanent_error_caches": []}
 
     def _save_cache(self, data):

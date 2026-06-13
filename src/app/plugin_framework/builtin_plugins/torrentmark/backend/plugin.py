@@ -10,6 +10,7 @@ from typing import Any
 
 import pytz
 
+import log
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import Torrent
 
@@ -69,8 +70,8 @@ class TorrentMarkPlugin:
         try:
             self.ctx.remove_schedule("mark")
             self.ctx.remove_schedule("mark_once")
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[plugin]忽略异常: {e}")
         self._event.clear()
 
     def _do_mark(self):

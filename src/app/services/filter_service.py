@@ -351,13 +351,16 @@ class FilterService:
             return match_flag, order_seq, match_msg
 
         # 过滤过滤规则，-1表示不使用过滤规则，空则使用默认过滤规则
+        size_str = StringUtils.str_filesize(meta_info.size)
+        factor_str = meta_info.get_volume_factor_string()
+        org = meta_info.org_string
         if filter_args.get("rule"):
             match_flag, order_seq, rule_name = self.check_rules(meta_info, filter_args.get("rule"))
-            match_msg = f"{meta_info.org_string} 大小：{StringUtils.str_filesize(meta_info.size)} 促销：{meta_info.get_volume_factor_string()} 不符合订阅/站点过滤规则 {rule_name} 要求"
+            match_msg = f"{org} 大小：{size_str} 促销：{factor_str} 不符合订阅/站点过滤规则 {rule_name} 要求"
             return match_flag, order_seq, match_msg
         else:
             match_flag, order_seq, rule_name = self.check_rules(meta_info)
-            match_msg = f"{meta_info.org_string} 大小：{StringUtils.str_filesize(meta_info.size)} 促销：{meta_info.get_volume_factor_string()} 不符合默认过滤规则 {rule_name} 要求"
+            match_msg = f"{org} 大小：{size_str} 促销：{factor_str} 不符合默认过滤规则 {rule_name} 要求"
             return match_flag, order_seq, match_msg
 
     # ------------------- 规则管理 -------------------

@@ -63,7 +63,7 @@ class FfmpegProcessor:
                 audio_path,
             ]
 
-        ret = subprocess.run(command).returncode
+        ret = subprocess.run(command).returncode  # nosec B603
         return ret == 0
 
     @staticmethod
@@ -76,7 +76,7 @@ class FfmpegProcessor:
 
         try:
             command = ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", video_path]
-            result = subprocess.run(command, capture_output=True)
+            result = subprocess.run(command, capture_output=True)  # nosec B603
             if result.returncode == 0:
                 return json.loads(result.stdout.decode("utf-8"))
         except Exception as e:
@@ -106,5 +106,5 @@ class FfmpegProcessor:
             ]
         else:
             command = ["ffmpeg", "-hide_banner", "-loglevel", "warning", "-y", "-i", video_path, subtitle_path]
-        ret = subprocess.run(command).returncode
+        ret = subprocess.run(command).returncode  # nosec B603
         return ret == 0

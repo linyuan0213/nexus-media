@@ -221,7 +221,8 @@ class BaseSearchStrategy:
                     if exist_flag:
                         if not library_no_exists or not library_no_exists.get(media_info.tmdb_id):
                             log.info(
-                                f"[Subscribe]{MediaType.TV.display_name} {media_info.get_title_string()} 订阅剧集已全部存在"
+                                f"[Subscribe]{MediaType.TV.display_name} "
+                                f"{media_info.get_title_string()} 订阅剧集已全部存在"
                             )
                             if self._service:
                                 self._service.finish_rss_subscribe(rssid=rss_info.get("id"), media=media_info)
@@ -230,9 +231,8 @@ class BaseSearchStrategy:
                         target=rss_no_exists, source=library_no_exists, title=media_info.tmdb_id
                     )
                     if rss_no_exists.get(media_info.tmdb_id):
-                        log.info(
-                            f"[Subscribe]{media_info.get_title_string()} 订阅缺失季集：{rss_no_exists.get(media_info.tmdb_id)}"
-                        )
+                        missing = rss_no_exists.get(media_info.tmdb_id)
+                        log.info(f"[Subscribe]{media_info.get_title_string()} 订阅缺失季集：{missing}")
                 else:
                     media_info.over_edition = over_edition
                     if rssid is not None:

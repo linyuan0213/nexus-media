@@ -102,17 +102,17 @@ class TestRedisTokenBucketBackend:
 
 class TestRateLimitEngine:
     def test_acquire_token_bucket(self):
-        engine = RateLimitEngine(algorithm="token_bucket")
+        engine = RateLimitEngine(backend=MemoryTokenBucketBackend(), algorithm="token_bucket")
         for _ in range(5):
             assert engine.acquire("key", rate="5/m", burst=5, timeout=0)
         assert not engine.acquire("key", rate="5/m", burst=5, timeout=0)
 
     def test_try_acquire(self):
-        engine = RateLimitEngine()
+        engine = RateLimitEngine(backend=MemoryTokenBucketBackend())
         assert engine.try_acquire("key", rate="10/m")
 
     def test_get_status(self):
-        engine = RateLimitEngine()
+        engine = RateLimitEngine(backend=MemoryTokenBucketBackend())
         engine.acquire("key1", rate="10/m", timeout=0)
         status = engine.get_status("key1")
         assert "tokens" in status or "count" in status

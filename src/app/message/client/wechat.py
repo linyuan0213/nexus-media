@@ -5,7 +5,6 @@ from threading import Lock
 import log
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
-from app.message import Message
 from app.message.client._base import _IMessageClient
 from app.message.commands import WECHAT_MENU, WECHAT_PLUGIN_GROUP
 from app.message.schema import ConfigField, MessageConfigSchema
@@ -73,7 +72,10 @@ class WeChat(_IMessageClient):
                 id="adminUser",
                 required=False,
                 title="AdminUser",
-                tooltip="需要交互功能时才需要填写，可执行交互菜单命令的用户名，为空则不限制，多个;号分割。可在企业微信后台查看成员的Account ID",
+                tooltip=(
+                    "需要交互功能时才需要填写，可执行交互菜单命令的用户名，"
+                    "为空则不限制，多个;号分割。可在企业微信后台查看成员的Account ID"
+                ),
                 type="text",
                 placeholder="可执行交互菜单的用户名",
             ),
@@ -86,7 +88,7 @@ class WeChat(_IMessageClient):
     _proxy_url = ""
     _menu_done = set()
 
-    def __init__(self, config, apikey_service=None):
+    def __init__(self, config, apikey_service=None, message=None):
         self.corpid = None
         self.corpsecret = None
         self.agent_id = None
@@ -95,7 +97,8 @@ class WeChat(_IMessageClient):
         self._access_token = None
         self._expires_in = None
         self._token_time = None
-        super().__init__(config, apikey_service)
+        self._message = message
+        super().__init__(config, apikey_service, message=message)
 
     def read_config(self):
         cfg = self._config or {}
@@ -232,8 +235,9 @@ class WeChat(_IMessageClient):
                 log.error("[WeChat]无法获取access_token，菜单创建跳过")
                 return
             try:
-                commands = Message().get_commands()
-                plugin_cmds = Message().get_plugin_commands()
+                message = self._message
+                commands = message.get_commands() if message else {}
+                plugin_cmds = message.get_plugin_commands() if message else {}
                 buttons = []
                 for group in WECHAT_MENU:
                     subs = []

@@ -72,7 +72,7 @@ class _SyslogHandlerFactory:
                 exc_info=None,
             )
             self.handler.emit(record)
-        except Exception:
+        except Exception:  # noqa: S110  # nosec B110
             # 日志发送失败时不应影响主流程
             pass
 

@@ -365,7 +365,11 @@ class Emby(_IMediaClient):
         """
         if not self._host or not self._apikey:
             return None
-        req_url = f"{self._host}emby/Items?IncludeItemTypes=Series&Fields=ProductionYear&StartIndex=0&Recursive=true&SearchTerm={name}&Limit=10&IncludeSearchTypes=false&api_key={self._apikey}"
+        req_url = (
+            f"{self._host}emby/Items?IncludeItemTypes=Series&Fields=ProductionYear"
+            f"&StartIndex=0&Recursive=true&SearchTerm={name}&Limit=10"
+            f"&IncludeSearchTypes=false&api_key={self._apikey}"
+        )
         try:
             res = HttpClient().get(req_url)
             if res:
@@ -394,7 +398,11 @@ class Emby(_IMediaClient):
         """
         if not self._host or not self._apikey:
             return None
-        req_url = f"{self._host}emby/Items?IncludeItemTypes=Movie&Fields=ProductionYear&StartIndex=0&Recursive=true&SearchTerm={title}&Limit=10&IncludeSearchTypes=false&api_key={self._apikey}"
+        req_url = (
+            f"{self._host}emby/Items?IncludeItemTypes=Movie&Fields=ProductionYear"
+            f"&StartIndex=0&Recursive=true&SearchTerm={title}&Limit=10"
+            f"&IncludeSearchTypes=false&api_key={self._apikey}"
+        )
         try:
             res = HttpClient().get(req_url)
             if res:
@@ -898,7 +906,10 @@ class Emby(_IMediaClient):
                         if item.get("ParentIndexNumber") == 1:
                             title = f"{item.get('SeriesName')} 第{item.get('IndexNumber')}集"
                         else:
-                            title = f"{item.get('SeriesName')} 第{item.get('ParentIndexNumber')}季第{item.get('IndexNumber')}集"
+                            title = (
+                                f"{item.get('SeriesName')} 第{item.get('ParentIndexNumber')}季"
+                                f"第{item.get('IndexNumber')}集"
+                            )
                     if item_type == MediaType.MOVIE.value:
                         if item.get("ImageTags"):
                             image = self.__get_thumb_url(

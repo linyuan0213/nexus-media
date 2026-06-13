@@ -153,7 +153,8 @@ class Scraper:
         self._dst_backend = dst_backend
         self._downloader.set_dst_backend(dst_backend)
         log.info(
-            f"[Scraper]开始生成刮削文件：dir={dir_path}, file={file_name}, type={media.type}, backend={dst_backend is not None}"
+            f"[Scraper]开始生成刮削文件：dir={dir_path}, file={file_name}, "
+            f"type={media.type}, backend={dst_backend is not None}"
         )
 
         try:

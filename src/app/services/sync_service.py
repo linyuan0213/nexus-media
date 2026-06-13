@@ -9,6 +9,7 @@ import re
 import shutil
 from urllib.parse import unquote
 
+import log
 from app.core.constants import RMT_AUDIO_TRACK_EXT, RMT_MEDIAEXT, RMT_SUBEXT
 from app.core.exceptions import DomainError, RepositoryError, ServiceError, ValidationError
 from app.core.settings import settings
@@ -255,8 +256,8 @@ class SyncService:
             return StorageBackendFactory.create(config)
         except (ServiceError, RepositoryError, DomainError):
             raise
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[sync_service]忽略异常: {e}")
         return None
 
     # ---------- 重新识别 ----------
@@ -445,8 +446,8 @@ class SyncService:
                 return getattr(obj, method_name)()
         except (ServiceError, RepositoryError, DomainError):
             raise
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[sync_service]忽略异常: {e}")
         return None
 
     @classmethod

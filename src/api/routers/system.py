@@ -94,7 +94,7 @@ class MessageClientRequest(BaseModel):
     checked: bool | None = None
     name: str | None = None
     config: str | None = None
-    switchs: str | None = None
+    switches: str | None = None
     interactive: int | None = None
     enabled: int | None = None
     templates: str | None = None
@@ -252,17 +252,17 @@ def get_message_client(
     svc: MessageClientService = Depends(get_message_service),
 ):
     data = svc.get_client(cid=req.cid)
-    # 热修复：确保 switchs 始终是列表（兼容旧脏数据）
+    # 确保 switches 始终是列表（兼容旧脏数据）
     all_switch_keys = set(MESSAGE_SWITCHES.keys())
     if isinstance(data, dict):
         for client in data.values():
-            switchs = client.get("switchs")
-            if isinstance(switchs, str):
-                client["switchs"] = [
-                    s.strip() for s in switchs.split(",") if s.strip() and s.strip() in all_switch_keys
+            switches = client.get("switches")
+            if isinstance(switches, str):
+                client["switches"] = [
+                    s.strip() for s in switches.split(",") if s.strip() and s.strip() in all_switch_keys
                 ]
-            elif not isinstance(switchs, list):
-                client["switchs"] = []
+            elif not isinstance(switches, list):
+                client["switches"] = []
     return success(data=data)
 
 
@@ -270,7 +270,7 @@ def get_message_client(
 def get_message_client_config(
     current_user: UserContext = Depends(require_permission("setting:update")),
 ):
-    """获取消息通知配置模板（channels + switchs），field.id 统一为 config key"""
+    """获取消息通知配置模板（channels + switches），field.id 统一为 config key"""
     clients = {}
     for cls in get_all_clients():
         if not hasattr(cls, "schema") or not cls.schema:
@@ -281,11 +281,11 @@ def get_message_client_config(
             else {"name": cls.schema, "config": {}}
         )
         clients[cls.schema] = schema_dict
-    switchs = dict(MESSAGE_SWITCHES)
+    switches = dict(MESSAGE_SWITCHES)
     return success(
         data={
             "channels": clients,
-            "switchs": switchs,
+            "switches": switches,
         }
     )
 
@@ -633,7 +633,7 @@ def update_message_client(
         cid=req.cid or 0,
         ctype=req.type or "",
         config=req.config or "",
-        switchs=req.switchs or "",
+        switches=req.switches or "",
         interactive=req.interactive or 0,
         enabled=req.enabled or 0,
         templates=req.templates or "",

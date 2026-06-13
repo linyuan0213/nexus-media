@@ -97,7 +97,7 @@ class SessionManager:
         try:
             with self.session_scope() as db:
                 db.execute(text("delete from alembic_version where 1"))
-        except Exception as err:
+        except (OSError, ValueError) as err:
             log.warn(f"[SessionManager]初始化数据库版本失败: {err}")
 
     def init_data(self):
@@ -118,7 +118,7 @@ class SessionManager:
                             if adapted and adapted.strip():
                                 with self.session_scope() as db:
                                     db.execute(text(adapted))
-                        except Exception as err:
+                        except (OSError, ValueError) as err:
                             log.warn(f"[SessionManager]执行初始化 SQL 失败: {err}")
                 init_files.append(os.path.basename(sql_file))
         if config_flag:

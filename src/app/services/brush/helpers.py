@@ -54,28 +54,28 @@ class BrushTaskHelper:
             return json.loads(val)
         except (ServiceError, RepositoryError, DomainError):
             raise
-        except Exception:
-            pass
+        except (json.JSONDecodeError, ValueError, TypeError):
+            log.debug(f"[Brush]json.loads 解析失败: {val}")
         if (val.startswith("'") and val.endswith("'")) or (val.startswith('"') and val.endswith('"')):
             inner = val[1:-1]
             try:
                 return json.loads(inner)
             except (ServiceError, RepositoryError, DomainError):
                 raise
-            except Exception:
-                pass
+            except (json.JSONDecodeError, ValueError, TypeError):
+                log.debug(f"[Brush]json.loads 解析失败: {inner}")
             try:
                 return json.loads(ast.literal_eval(inner))
             except (ServiceError, RepositoryError, DomainError):
                 raise
-            except Exception:
-                pass
+            except (json.JSONDecodeError, ValueError, TypeError):
+                log.debug(f"[Brush]json.loads 解析失败: {inner}")
         try:
             return json.loads(ast.literal_eval(val))
         except (ServiceError, RepositoryError, DomainError):
             raise
-        except Exception:
-            pass
+        except (json.JSONDecodeError, ValueError, TypeError):
+            log.debug(f"[Brush]json.loads 解析失败: {val}")
         return default
 
     @staticmethod
@@ -160,7 +160,8 @@ class BrushTaskHelper:
         if seed_size:
             if float(seed_size) * 1024**3 <= int(total_size):
                 log.warn(
-                    f"[Brush]刷流任务 {task_name} 当前保种体积 {round(int(total_size) / 1024 / 1024 / 1024, 1)}GB，不再新增下载"
+                    f"[Brush]刷流任务 {task_name} 当前保种体积 "
+                    f"{round(int(total_size) / 1024 / 1024 / 1024, 1)}GB，不再新增下载"
                 )
                 return False
 

@@ -159,7 +159,8 @@ class TorrentRemoverService:
         return self._tasks
 
     def auto_remove_torrents(self, taskids=None):
-        lock_key = f"torrentremover:execute:{','.join(str(t) for t in taskids) if isinstance(taskids, list) else (taskids or 'all')}"
+        taskid_str = ",".join(str(t) for t in taskids) if isinstance(taskids, list) else (taskids or "all")
+        lock_key = f"torrentremover:execute:{taskid_str}"
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=600)
         acquired = lock.acquire()
         if not acquired:

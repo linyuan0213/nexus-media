@@ -87,13 +87,13 @@ def _check_task_rss(service, taskid: int | None, event_bus: EventBus | None = No
                         if exist_flag:
                             if not no_exists or not no_exists.get(media_info.tmdb_id):
                                 log.info(
-                                    f"[RssTaskService]电视剧 {media_info.get_title_string()} {media_info.get_season_episode_string()} 已存在"
+                                    f"[RssTaskService]电视剧 {media_info.get_title_string()} "
+                                    f"{media_info.get_season_episode_string()} 已存在"
                                 )
                             continue
                         if no_exists.get(media_info.tmdb_id):
-                            log.info(
-                                f"[RssTaskService]{media_info.get_title_string()} 缺失季集：{no_exists.get(media_info.tmdb_id)}"
-                            )
+                            missing = no_exists.get(media_info.tmdb_id)
+                            log.info(f"[RssTaskService]{media_info.get_title_string()} 缺失季集：{missing}")
                 media_info.set_torrent_info(
                     size=size, page_url=page_url, site=taskinfo.get("name"), enclosure=enclosure
                 )
@@ -112,7 +112,8 @@ def _check_task_rss(service, taskid: int | None, event_bus: EventBus | None = No
                     media_info.set_torrent_info(res_order=res_order)
                     if taskinfo.get("recognization") == "Y":
                         log.info(
-                            f"[RssTaskService]{title} 识别为 {media_info.get_title_string()} {media_info.get_season_episode_string()} 匹配成功"
+                            f"[RssTaskService]{title} 识别为 {media_info.get_title_string()} "
+                            f"{media_info.get_season_episode_string()} 匹配成功"
                         )
                         if not media_info.tmdb_info:
                             media_info.set_tmdb_info(

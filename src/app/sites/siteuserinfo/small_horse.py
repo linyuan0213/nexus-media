@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from lxml import etree
 
+import log
 from app.utils import StringUtils
 
 if TYPE_CHECKING:
@@ -47,5 +48,5 @@ def parse(ins: ConfigHtmlUserInfo) -> None:
             ins.leeching = StringUtils.str_int(
                 (tmps[4].xpath("li")[6].xpath("text()")[0]).split(":")[1].replace("[", "")  # type: ignore[reportArgumentType]
             )
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[small_horse]忽略异常: {e}")

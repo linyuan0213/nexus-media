@@ -156,7 +156,7 @@ class SystemUtils:
         try:
             src = os.path.normpath(src)
             dest = dest.replace("\\", "/")
-            retcode = subprocess.run(
+            retcode = subprocess.run(  # nosec
                 ["rclone", "moveto", src, f"NEXUS_MEDIA:{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
             ).returncode
             return retcode, ""
@@ -172,7 +172,7 @@ class SystemUtils:
         try:
             src = os.path.normpath(src)
             dest = dest.replace("\\", "/")
-            retcode = subprocess.run(
+            retcode = subprocess.run(  # nosec
                 ["rclone", "copyto", src, f"NEXUS_MEDIA:{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
             ).returncode
             return retcode, ""
@@ -190,7 +190,7 @@ class SystemUtils:
             dest = dest.replace("\\", "/")
             if dest.startswith("/"):
                 dest = dest[1:]
-            retcode = subprocess.run(
+            retcode = subprocess.run(  # nosec
                 ["mc", "mv", "--recursive", src, f"NEXUS_MEDIA/{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
             ).returncode
             return retcode, ""
@@ -208,7 +208,7 @@ class SystemUtils:
             dest = dest.replace("\\", "/")
             if dest.startswith("/"):
                 dest = dest[1:]
-            retcode = subprocess.run(
+            retcode = subprocess.run(  # nosec
                 ["mc", "cp", "--recursive", src, f"NEXUS_MEDIA/{dest}"], startupinfo=SystemUtils.__get_hidden_shell()
             ).returncode
             return retcode, ""
@@ -234,7 +234,7 @@ class SystemUtils:
         """
         ret_files = []
         if os.name == "nt":
-            ret = subprocess.run(
+            ret = subprocess.run(  # nosec
                 ["fsutil", "hardlink", "list", file], startupinfo=self.__get_hidden_shell(), stdout=subprocess.PIPE
             )
             if ret.returncode != 0:
@@ -256,7 +256,9 @@ class SystemUtils:
             inode = os.stat(file).st_ino
             if not fdir:
                 fdir = os.path.dirname(file)
-            stdout = subprocess.run(["find", fdir, "-inum", str(inode)], stdout=subprocess.PIPE).stdout
+            stdout = subprocess.run(  # nosec
+                ["find", fdir, "-inum", str(inode)], stdout=subprocess.PIPE
+            ).stdout
             if stdout:
                 link_files = stdout.decode("utf-8").split("\n")
                 for link_file in link_files:

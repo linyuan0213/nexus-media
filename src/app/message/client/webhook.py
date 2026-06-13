@@ -69,7 +69,11 @@ class Webhook(_IMessageClient):
                 id="json_tpl",
                 required=False,
                 title="单条消息模板",
-                tooltip="Jinja2 JSON模板，用于单条消息。可用变量：title, text, image, url, user_id。字符串变量默认会进行 tojson 过滤以保证生成的JSON格式正确，如需使用原始字符串请使用 |safe 过滤器",
+                tooltip=(
+                    "Jinja2 JSON模板，用于单条消息。可用变量：title, text, image, url, user_id。"
+                    "字符串变量默认会进行 tojson 过滤以保证生成的JSON格式正确，"
+                    "如需使用原始字符串请使用 |safe 过滤器"
+                ),
                 type="textarea",
                 placeholder='{\n  "title": "{{ title }}",\n  "text": "{{ text }}"\n}',
             ),
@@ -77,14 +81,27 @@ class Webhook(_IMessageClient):
                 id="json_list_tpl",
                 required=False,
                 title="列表消息模板",
-                tooltip="Jinja2 JSON模板，用于列表消息。可用变量：title, user_id, medias。字符串变量默认会进行 tojson 过滤",
+                tooltip=(
+                    "Jinja2 JSON模板，用于列表消息。可用变量：title, user_id, medias。字符串变量默认会进行 tojson 过滤"
+                ),
                 type="textarea",
-                placeholder='{\n  "title": "{{ title }}",\n  "items": [\n    {% for media in medias %}\n    {\n      "title": "{{ media.title }}"\n    }{% if not loop.last %},{% endif %}\n    {% endfor %}\n  ]\n}',
+                placeholder=(
+                    "{\n"
+                    '  "title": "{{ title }}",\n'
+                    '  "items": [\n'
+                    "    {% for media in medias %}\n"
+                    "    {\n"
+                    '      "title": "{{ media.title }}"\n'
+                    "    }{% if not loop.last %},{% endif %}\n"
+                    "    {% endfor %}\n"
+                    "  ]\n"
+                    "}"
+                ),
             ),
         ],
     )
 
-    def __init__(self, config, apikey_service=None):
+    def __init__(self, config, apikey_service=None, message=None):
         self._domain = None
         self._url = None
         self._method = None
@@ -92,7 +109,7 @@ class Webhook(_IMessageClient):
         self._json_tpl = None
         self._json_list_tpl = None
         self._token = None
-        super().__init__(config, apikey_service)
+        super().__init__(config, apikey_service, message=message)
 
     def read_config(self):
         if self._config:

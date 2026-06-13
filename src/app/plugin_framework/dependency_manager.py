@@ -56,7 +56,7 @@ class PluginDependencyManager:
         # 3. 使用 uv pip install 安装缺失依赖
         cmd = ["uv", "pip", "install", "--python", ".venv/bin/python"] + missing
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603
                 cmd,
                 capture_output=True,
                 text=True,

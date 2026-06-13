@@ -3,10 +3,11 @@
 from collections.abc import Iterator
 from email.utils import parsedate_to_datetime
 from typing import BinaryIO
-from xml.etree import ElementTree as ET
 
+import defusedxml.ElementTree as ET  # type: ignore[import-untyped]
 import httpx
 
+import log
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.storage.backends.base import FileInfo, StorageBackend, StorageConfig
@@ -95,8 +96,8 @@ class WebDAVStorageBackend(StorageBackend):
                 sub = "/" + "/".join(parts[:i])
                 try:
                     self._req("MKCOL", sub)
-                except Exception:
-                    pass
+                except Exception as e:  # noqa: BLE001
+                    log.debug(f"[WebDAVStorageBackend]创建目录失败 {sub}: {e}")
 
     def remove(self, path: str, recursive: bool = False) -> None:
         if recursive:

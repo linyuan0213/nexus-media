@@ -53,7 +53,7 @@ class FnOSClient(metaclass=Singleton):
             data_str = json.dumps(request_data.get("data", {}), separators=(",", ":"))
 
         # 4. 计算数据 MD5
-        data_md5 = hashlib.md5(data_str.encode("utf-8")).hexdigest()
+        data_md5 = hashlib.md5(data_str.encode("utf-8"), usedforsecurity=False).hexdigest()
 
         # 5. 生成随机数 (6位数字)
         nonce = str(random.randint(100000, 999999))
@@ -63,7 +63,7 @@ class FnOSClient(metaclass=Singleton):
 
         # 7. 构建签名字符串并计算签名
         sign_str = "_".join([self.secret, path, nonce, timestamp, data_md5, self.auth_key])
-        sign = hashlib.md5(sign_str.encode("utf-8")).hexdigest()
+        sign = hashlib.md5(sign_str.encode("utf-8"), usedforsecurity=False).hexdigest()
 
         # 8. 构造返回结果
         return {"nonce": nonce, "timestamp": timestamp, "sign": sign}
@@ -113,7 +113,10 @@ class FnOSClient(metaclass=Singleton):
 
         headers = {
             "Accept": "application/json, text/plain, */*",
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+            ),
             "authx": signature_str,
         }
 
@@ -143,7 +146,10 @@ class FnOSClient(metaclass=Singleton):
         headers = {
             "Accept": "application/json, text/plain, */*",
             "Authorization": token,
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+            ),
             "authx": signature_str,
         }
 
@@ -352,10 +358,10 @@ if __name__ == "__main__":
     # 初始化客户端
     client = FnOSClient(
         base_url="http://192.168.50.248:5666/",
-        username="xxx",
-        password="xxx",
+        username="xxx",  # nosec B106
+        password="xxx",  # nosec B106
         app_name="trimemedia-web",
-        auth_key="16CCEB3D-AB42-077D-36A1-F355324E4237",
+        auth_key="16CCEB3D-AB42-077D-36A1-F355324E4237",  # nosec B105
     )
 
     # 示例1: 单页请求

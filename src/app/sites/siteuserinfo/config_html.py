@@ -242,8 +242,8 @@ class ConfigHtmlUserInfo:
                     total += size
                     cnt += 1
                     info.append([seeders, size])
-                except Exception:
-                    pass
+                except Exception as e:  # noqa: BLE001
+                    log.debug(f"[config_html]忽略异常: {e}")
             if cnt == 0 or not has_pagination:
                 break
             pn += 1

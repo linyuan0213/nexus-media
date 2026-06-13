@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 
 import pytz
 
+import log
 from app.plugin_framework.context import PluginContext
 
 
@@ -66,20 +67,21 @@ class AutoRestartPlugin:
         try:
             self.ctx.remove_schedule("restart")
             self.ctx.remove_schedule("restart_once")
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[plugin]忽略异常: {e}")
 
     def _do_restart(self):
         config = self._get_config()
         delay = int(config.get("delay", 0))
         notify = config.get("notify", False)
 
-        self.ctx.info(f"当前时间 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))} 开始重启流程")
+        now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+        self.ctx.info(f"当前时间 {now} 开始重启流程")
 
         if notify:
             self.ctx.notify(
                 title="[系统重启通知]",
-                text=f"Nexus Media将在 {delay} 秒后重启\n时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}",
+                text=f"Nexus Media将在 {delay} 秒后重启\n时间：{now}",
             )
 
         if delay > 0:
@@ -92,9 +94,9 @@ class AutoRestartPlugin:
             self.ctx.info(f"当前进程ID: {pid}")
             os.kill(pid, signal.SIGTERM)
         except Exception as e:
-            self.ctx.error(f"重启失败：{str(e)}")
+            self.ctx.error(f"重启失败：{e}")
             if notify:
                 self.ctx.notify(
                     title="[系统重启失败]",
-                    text=f"Nexus Media重启失败：{str(e)}\n时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}",
+                    text=f"Nexus Media重启失败：{e}\n时间：{now}",
                 )

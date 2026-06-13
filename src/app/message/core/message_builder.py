@@ -56,7 +56,7 @@ class MessageBuilder:
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=msg_title, content=msg_text)
         for client in self._client_manager.active_clients:
-            if "download_start" in client.get("switchs"):
+            if "download_start" in (client.get("switches") or ""):
                 size_str = StringUtils.str_filesize(can_item.size) if can_item.size else ""
                 description_clean = ""
                 if can_item.description:
@@ -122,7 +122,7 @@ class MessageBuilder:
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=msg_title, content=msg_str)
         for client in self._client_manager.active_clients:
-            if "transfer_finished" in client.get("switchs"):
+            if "transfer_finished" in (client.get("switches") or ""):
                 variables = {
                     "media_info": media_info,
                     "in_from": in_from,
@@ -147,7 +147,10 @@ class MessageBuilder:
             if item_info.total_episodes == 1:
                 msg_title = f"{item_info.get_title_string()} {item_info.get_season_episode_string()} 已入库"
             else:
-                msg_title = f"{item_info.get_title_string()} {item_info.get_season_string()} 共{item_info.total_episodes}集 已入库"
+                msg_title = (
+                    f"{item_info.get_title_string()} {item_info.get_season_string()} "
+                    f"共{item_info.total_episodes}集 已入库"
+                )
             if item_info.vote_average:
                 msg_str = f"{item_info.get_vote_string()}，类型：{item_info.type.display_name}"
             else:
@@ -161,7 +164,7 @@ class MessageBuilder:
             if self._messagecenter:
                 self._messagecenter.insert_system_message(title=msg_title, content=msg_str)
             for client in self._client_manager.active_clients:
-                if "transfer_finished" in client.get("switchs"):
+                if "transfer_finished" in (client.get("switches") or ""):
                     variables = {
                         "media_info": item_info,
                         "in_from": in_from,
@@ -189,7 +192,7 @@ class MessageBuilder:
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=title, content=text)
         for client in self._client_manager.active_clients:
-            if "download_fail" in client.get("switchs"):
+            if "download_fail" in (client.get("switches") or ""):
                 variables = {"item": item, "error_msg": error_msg}
                 self._dispatcher.sendmsg(
                     client=client,
@@ -215,7 +218,7 @@ class MessageBuilder:
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=msg_title, content=msg_str)
         for client in self._client_manager.active_clients:
-            if "rss_added" in client.get("switchs"):
+            if "rss_added" in (client.get("switches") or ""):
                 variables = {"media_info": media_info, "in_from": in_from}
                 self._dispatcher.sendmsg(
                     client=client,
@@ -241,7 +244,7 @@ class MessageBuilder:
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=msg_title, content=msg_str)
         for client in self._client_manager.active_clients:
-            if "rss_finished" in client.get("switchs"):
+            if "rss_finished" in (client.get("switches") or ""):
                 variables = {
                     "media_info": media_info,
                     "over_edition": media_info.over_edition if hasattr(media_info, "over_edition") else False,
@@ -265,7 +268,7 @@ class MessageBuilder:
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=title, content=text)
         for client in self._client_manager.active_clients:
-            if "site_signin" in client.get("switchs"):
+            if "site_signin" in (client.get("switches") or ""):
                 variables = {"msgs": msgs}
                 self._dispatcher.sendmsg(
                     client=client,
@@ -284,7 +287,7 @@ class MessageBuilder:
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=title, content=text)
         for client in self._client_manager.active_clients:
-            if "site_message" in client.get("switchs"):
+            if "site_message" in (client.get("switches") or ""):
                 variables = {"title": title, "text": text}
                 self._dispatcher.sendmsg(
                     client=client,
@@ -303,7 +306,7 @@ class MessageBuilder:
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=title, content=text)
         for client in self._client_manager.active_clients:
-            if "transfer_fail" in client.get("switchs"):
+            if "transfer_fail" in (client.get("switches") or ""):
                 variables = {"path": path, "count": count, "text": text}
                 self._dispatcher.sendmsg(
                     client=client,
@@ -321,7 +324,7 @@ class MessageBuilder:
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=title, content=text)
         for client in self._client_manager.active_clients:
-            if "auto_remove_torrents" in client.get("switchs"):
+            if "auto_remove_torrents" in (client.get("switches") or ""):
                 variables = {"title": title, "text": text}
                 self._dispatcher.sendmsg(
                     client=client,
@@ -339,7 +342,7 @@ class MessageBuilder:
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=title, content=text)
         for client in self._client_manager.active_clients:
-            if "brushtask_remove" in client.get("switchs"):
+            if "brushtask_remove" in (client.get("switches") or ""):
                 variables = {"title": title, "text": text}
                 self._dispatcher.sendmsg(
                     client=client,
@@ -357,7 +360,7 @@ class MessageBuilder:
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=title, content=text)
         for client in self._client_manager.active_clients:
-            if "brushtask_added" in client.get("switchs"):
+            if "brushtask_added" in (client.get("switches") or ""):
                 variables = {"title": title, "text": text}
                 self._dispatcher.sendmsg(
                     client=client,
@@ -375,7 +378,7 @@ class MessageBuilder:
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=title, content=text)
         for client in self._client_manager.active_clients:
-            if "brushtask_pause" in client.get("switchs"):
+            if "brushtask_pause" in (client.get("switches") or ""):
                 variables = {"title": title, "text": text}
                 self._dispatcher.sendmsg(
                     client=client,
@@ -412,16 +415,15 @@ class MessageBuilder:
             return
         item_type = event_info.get("item_type") or ""
         parsed = MediaType.from_string(item_type)
+        action = _webhook_actions.get(event_info.get("event") or "<unknown>")
         if parsed in (MediaType.TV, MediaType.ANIME) or item_type == "show":
-            message_title = f"{_webhook_actions.get(event_info.get('event') or '<unknown>')}{MediaType.TV.display_name} {event_info.get('item_name')}"
+            message_title = f"{action}{MediaType.TV.display_name} {event_info.get('item_name')}"
         elif parsed == MediaType.MOVIE:
-            message_title = f"{_webhook_actions.get(event_info.get('event') or '<unknown>')}{MediaType.MOVIE.display_name} {event_info.get('item_name')}"
+            message_title = f"{action}{MediaType.MOVIE.display_name} {event_info.get('item_name')}"
         elif event_info.get("item_type") == "AUD":
-            message_title = (
-                f"{_webhook_actions.get(event_info.get('event') or '<unknown>')}有声书 {event_info.get('item_name')}"
-            )
+            message_title = f"{action}有声书 {event_info.get('item_name')}"
         else:
-            message_title = f"{_webhook_actions.get(event_info.get('event') or '<unknown>')}"
+            message_title = f"{action}"
         message_texts = []
         if event_info.get("user_name"):
             message_texts.append(f"用户：{event_info.get('user_name')}")
@@ -444,7 +446,7 @@ class MessageBuilder:
             self._messagecenter.insert_system_message(title=message_title, content=message_content)
         url = event_info.get("play_url") or ""
         for client in self._client_manager.active_clients:
-            if "mediaserver_message" in client.get("switchs"):
+            if "mediaserver_message" in (client.get("switches") or ""):
                 variables = {
                     "event_info": event_info,
                     "channel": channel,
@@ -472,7 +474,7 @@ class MessageBuilder:
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=title, content=text)
         for client in self._client_manager.active_clients:
-            if "custom_message" in client.get("switchs"):
+            if "custom_message" in (client.get("switches") or ""):
                 variables = {"title": title, "text": text, "url": url, "image": image}
                 self._dispatcher.sendmsg(
                     client=client,
@@ -513,7 +515,7 @@ class MessageBuilder:
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=title, content=text)
         for client in self._client_manager.active_clients:
-            if "ptrefresh_date_message" in client.get("switchs"):
+            if "ptrefresh_date_message" in (client.get("switches") or ""):
                 variables = {"msgs": msgs, "title": title, "text": text}
                 self._dispatcher.sendmsg(
                     client=client,

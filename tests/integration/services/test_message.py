@@ -66,14 +66,14 @@ class TestClientManager:
         config.TYPE = "telegram"
         config.CONFIG = '{"token": "abc"}'
         config.TEMPLATES = ""
-        config.SWITCHS = '["download_start"]'
+        config.SWITCHES = '["download_start"]'
         config.INTERACTIVE = True
         config.ENABLED = True
         result = parse_client_config(config)
         assert result["id"] == 1
         assert result["name"] == "test"
         assert result["config"]["token"] == "abc"
-        assert "download_start" in result["switchs"]
+        assert "download_start" in result["switches"]
 
     def test_parse_client_config_invalid_json(self):
         config = MagicMock()
@@ -82,7 +82,7 @@ class TestClientManager:
         config.TYPE = "telegram"
         config.CONFIG = "not-json"
         config.TEMPLATES = ""
-        config.SWITCHS = ""
+        config.SWITCHES = ""
         config.INTERACTIVE = False
         config.ENABLED = True
         result = parse_client_config(config)
@@ -107,7 +107,7 @@ class TestClientManager:
         mock_repo.insert_message_client.return_value = 42
         manager = ClientManager(config_repo=mock_repo)
         result = manager.insert_message_client(
-            name="tg", ctype="telegram", config="{}", switchs=[], interactive=True, enabled=True
+            name="tg", ctype="telegram", config="{}", switches=[], interactive=True, enabled=True
         )
         assert result is True
         mock_repo.insert_message_client.assert_called_once()
@@ -208,7 +208,7 @@ class TestMessageBuilder:
 
     def test_send_site_signin_message(self):
         client_mgr = MagicMock()
-        client = {"id": 1, "name": "tg", "switchs": ["site_signin"]}
+        client = {"id": 1, "name": "tg", "switches": ["site_signin"]}
         client_mgr.active_clients = [client]
         dispatcher = MagicMock()
         msg_center = MagicMock()
@@ -273,7 +273,7 @@ class TestMessageFacade:
             mock_disp.return_value = mock_disp_instance
             mock_builder_instance = MagicMock()
             mock_builder.return_value = mock_builder_instance
-            m = Message()
+            m = Message(apikey_service=MagicMock())
             m._client_manager = mock_cm_instance
             m._dispatcher = mock_disp_instance
             m._builder = mock_builder_instance

@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytz
 
+import log
 from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter
 from app.domain.entities.plugin import PluginConfigEntity
 from app.infrastructure.http.client import HttpClient
@@ -25,10 +26,27 @@ from app.utils.config_tools import get_proxies
 
 
 def _safe_extractall(tar, path):
+    base = os.path.realpath(path)
+    safe_members = []
     for member in tar.getmembers():
-        if os.path.isabs(member.name) or ".." in member.name:
+        target = os.path.realpath(os.path.join(base, member.name))
+        if not target.startswith(base + os.sep):
             continue
-        tar.extract(member, path)
+        safe_members.append(member)
+    # Python 3.11 不支持 filter 参数；已通过 members 过滤危险路径
+    tar.extractall(path, members=safe_members)  # nosec B202
+
+
+def _safe_zip_extractall(zip_ref, path):
+    base = os.path.realpath(path)
+    safe_members = []
+    for member in zip_ref.namelist():
+        target = os.path.realpath(os.path.join(base, member))
+        if not target.startswith(base + os.sep):
+            continue
+        safe_members.append(member)
+    # Python 3.11 不支持 filter 参数；已通过 namelist 过滤危险路径
+    zip_ref.extractall(path, members=safe_members)  # nosec B202
 
 
 class CloudflareSpeedTestPlugin:
@@ -84,8 +102,8 @@ class CloudflareSpeedTestPlugin:
         try:
             self.ctx.remove_schedule("speedtest")
             self.ctx.remove_schedule("speedtest_once")
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[plugin]忽略异常: {e}")
 
     def _do_speedtest(self):
         config = self._get_config()
@@ -140,7 +158,7 @@ class CloudflareSpeedTestPlugin:
             cf_command.extend(["-f", cf_ipv6])
 
         try:
-            subprocess.run(cf_command, cwd=cf_path, check=True)
+            subprocess.run(cf_command, cwd=cf_path, check=True)  # nosec B603
         except subprocess.CalledProcessError as e:
             self.ctx.error(f"CloudflareSpeedTest执行失败: {e}")
             return
@@ -325,10 +343,10 @@ class CloudflareSpeedTestPlugin:
                 archive_path = f"{cf_path}/{cf_file_name}"
                 if archive_type == "zip":
                     with zipfile.ZipFile(archive_path, "r") as zip_ref:
-                        zip_ref.extractall(cf_path)
+                        _safe_zip_extractall(zip_ref, cf_path)  # nosec B202
                 elif archive_type == "tar":
                     with tarfile.open(archive_path, "r:gz") as tar_ref:
-                        _safe_extractall(tar_ref, cf_path)
+                        _safe_extractall(tar_ref, cf_path)  # nosec B202
 
                 Path(f"{cf_path}/{self._binary_name}").chmod(0o755)
                 Path(f"{cf_path}/{cf_file_name}").unlink()

@@ -227,13 +227,14 @@ class MediaService:
                 en_title = self._lookup.get_tmdb_en_title(info)
                 if en_title and en_title != info.title and en_title != info.original_title:
                     info.en_name = en_title
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[service]忽略异常: {e}")
 
         # 7. 集数映射（动漫合并季 / 绝对集号）
         if self._episode_mapping_enabled and info.type != MediaType.MOVIE and info.tmdb_id and info.begin_episode:
             log.info(
-                f"[EpisodeMapper]尝试映射: {info.get_name()} S{info.begin_season}E{info.begin_episode} (tmdb_id={info.tmdb_id})"
+                f"[EpisodeMapper]尝试映射: {info.get_name()} "
+                f"S{info.begin_season}E{info.begin_episode} (tmdb_id={info.tmdb_id})"
             )
             mapped = self._episode_mapper.map_auto(int(info.tmdb_id), info.begin_season, info.begin_episode)
             if mapped:
@@ -313,7 +314,11 @@ class MediaService:
                 log.debug(f"[MediaService]批量识别标题质量不合格，跳过: {titles[idx]} -> {search_name}")
                 parsed_list[idx] = None
                 continue
-            key = f"{parsed.title_en or parsed.title_cn or ''}:{parsed.year or ''}:{parsed.type.value if parsed.type else ''}"
+            key = (
+                f"{parsed.title_en or parsed.title_cn or ''}:"
+                f"{parsed.year or ''}:"
+                f"{parsed.type.value if parsed.type else ''}"
+            )
             if key not in unique_keys:
                 unique_keys[key] = parsed
                 key_to_indices[key] = []
@@ -343,7 +348,11 @@ class MediaService:
             parsed = parsed_list[idx]
             info = MediaInfo.from_parser(parsed) if parsed else MediaInfo()
             if parsed:
-                key = f"{parsed.title_en or parsed.title_cn or ''}:{parsed.year or ''}:{parsed.type.value if parsed.type else ''}"
+                key = (
+                    f"{parsed.title_en or parsed.title_cn or ''}:"
+                    f"{parsed.year or ''}:"
+                    f"{parsed.type.value if parsed.type else ''}"
+                )
                 looked_up = lookup_results.get(key)
                 if looked_up:
                     info.tmdb_id = looked_up.tmdb_id
@@ -527,7 +536,11 @@ class MediaService:
         for _, parsed in enumerate(parsed_list):
             if not parsed:
                 continue
-            key = f"{parsed.title_en or parsed.title_cn or ''}:{parsed.year or ''}:{parsed.type.value if parsed.type else ''}"
+            key = (
+                f"{parsed.title_en or parsed.title_cn or '':}"
+                f"{parsed.year or ''}:"
+                f"{parsed.type.value if parsed.type else ''}"
+            )
             if key not in unique_keys:
                 unique_keys[key] = parsed
 
@@ -553,7 +566,11 @@ class MediaService:
             parsed = parsed_list[idx]
             info = MediaInfo.from_parser(parsed) if parsed else MediaInfo()
             if parsed:
-                key = f"{parsed.title_en or parsed.title_cn or ''}:{parsed.year or ''}:{parsed.type.value if parsed.type else ''}"
+                key = (
+                    f"{parsed.title_en or parsed.title_cn or ''}:"
+                    f"{parsed.year or ''}:"
+                    f"{parsed.type.value if parsed.type else ''}"
+                )
                 looked_up = lookup_results.get(key)
                 if looked_up:
                     info.tmdb_id = looked_up.tmdb_id

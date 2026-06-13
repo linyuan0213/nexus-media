@@ -78,7 +78,8 @@ def _test_rss_articles(service, taskid: int | None, title: str) -> tuple[Any, bo
         log.info(f"[RssTaskService]{match_msg}")
     else:
         log.info(
-            f"[RssTaskService]{title} 识别为 {media_info.get_title_string()} {media_info.get_season_episode_string()} 匹配成功"
+            f"[RssTaskService]{title} 识别为 {media_info.get_title_string()} "
+            f"{media_info.get_season_episode_string()} 匹配成功"
         )
     media_info.set_torrent_info(res_order=res_order)
     no_exists = {}
@@ -95,7 +96,8 @@ def _test_rss_articles(service, taskid: int | None, title: str) -> tuple[Any, bo
             if exist_flag:
                 if not no_exists or not no_exists.get(media_info.tmdb_id):
                     log.info(
-                        f"[RssTaskService]电视剧 {media_info.get_title_string()} {media_info.get_season_episode_string()} 已存在"
+                        f"[RssTaskService]电视剧 {media_info.get_title_string()} "
+                        f"{media_info.get_season_episode_string()} 已存在"
                     )
             if no_exists.get(media_info.tmdb_id):
                 log.info(

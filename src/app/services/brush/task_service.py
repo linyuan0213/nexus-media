@@ -184,8 +184,8 @@ class BrushTaskService:
                     stop_rule = self._helper.parse_json_rule(entity.stop_rule, stop_rule)
             except (ServiceError, RepositoryError, DomainError):
                 raise
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[task_service]忽略异常: {e}")
         return rss_rule, remove_rule, stop_rule
 
     def _build_task_dict(self, task) -> dict:

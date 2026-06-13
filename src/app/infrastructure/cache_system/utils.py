@@ -7,6 +7,8 @@ import pickle
 from collections.abc import Callable
 from typing import Any
 
+import log
+
 
 class CacheKeyBuilder:
     """缓存键构建器"""
@@ -49,20 +51,22 @@ def serialize_value(value: Any) -> bytes:
 
 def deserialize_value(data: bytes) -> Any:
     """反序列化值"""
-    return pickle.loads(data)
+    return pickle.loads(data)  # nosec B301
 
 
 def safe_serialize(value: Any) -> bytes | None:
     """安全序列化（失败返回None）"""
     try:
         return pickle.dumps(value)
-    except Exception:
+    except Exception as e:  # noqa: BLE001
+        log.debug(f"[Cache]序列化失败: {e}")
         return None
 
 
 def safe_deserialize(data: bytes) -> Any | None:
     """安全反序列化（失败返回None）"""
     try:
-        return pickle.loads(data)
-    except Exception:
+        return pickle.loads(data)  # nosec B301
+    except Exception as e:  # noqa: BLE001
+        log.debug(f"[Cache]反序列化失败: {e}")
         return None

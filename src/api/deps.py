@@ -10,6 +10,7 @@ from typing import Any, cast
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+import log
 from app.di.context import AppContext
 from app.infrastructure.cache_system import TokenCache
 from app.infrastructure.security import generate_access_token, identify
@@ -65,8 +66,8 @@ def _extract_user_from_api_key(
             request_name="API 认证",
             status=1,
         )
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001
+        log.debug(f"[deps]忽略异常: {e}")
 
     # 查询创建用户的权限，API Key 继承创建者权限
     permissions = []
@@ -87,10 +88,10 @@ def _extract_user_from_api_key(
                 try:
                     perms = rbac_service.get_user_permissions(created_by)
                     permissions = list(perms) if perms else []
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                except Exception as e:  # noqa: BLE001
+                    log.debug(f"[deps]忽略异常: {e}")
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[deps]忽略异常: {e}")
 
     return UserContext(
         user_id=created_by,

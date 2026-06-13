@@ -246,7 +246,7 @@ class ToolExecutor:
                 cid=target.get("id"),
                 ctype=target.get("type"),
                 config=_json.dumps(target.get("config", {})),
-                switchs=target.get("switchs", []),
+                switches=target.get("switches", []),
                 interactive=1 if target.get("interactive") else 0,
                 enabled=1 if target.get("enabled") else 0,
                 templates=_json.dumps(templates),

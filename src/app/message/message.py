@@ -19,10 +19,10 @@ from app.utils.config_tools import get_domain
 class Message:
     """消息业务 Facade，由 lifespan 通过 AppContext 创建并管理生命周期。"""
 
-    def __init__(self, apikey_service: APIKeyService | None = None, message_center: MessageCenter | None = None):
+    def __init__(self, apikey_service: APIKeyService, message_center: MessageCenter | None = None):
         self._domain = get_domain() or ""
         self.messagecenter = message_center or MessageCenter()
-        self._client_manager = ClientManager(apikey_service=apikey_service)
+        self._client_manager = ClientManager(apikey_service=apikey_service, message=self)
         self._command_manager = CommandManager(self._client_manager)
         self._template_engine = TemplateEngine()
         self._dispatcher = MessageDispatcher(self._client_manager, self.messagecenter, self._domain)
@@ -66,14 +66,14 @@ class Message:
         name: str,
         ctype: Any,
         config: str,
-        switchs: list,
+        switches: list,
         interactive: Any,
         enabled: Any,
         note: str = "",
         templates: Any = None,
     ) -> bool:
         return self._client_manager.insert_message_client(
-            name, ctype, config, switchs, interactive, enabled, note, templates
+            name, ctype, config, switches, interactive, enabled, note, templates
         )
 
     def reload_by_type(self, ctype: str) -> None:

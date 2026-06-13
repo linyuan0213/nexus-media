@@ -5,7 +5,7 @@ import time
 from typing import Any, cast
 
 import qbittorrentapi
-from bencode import bdecode
+from bencode import bdecode, bencode
 
 import log
 from app.core.exceptions import InfrastructureError, NetworkError
@@ -329,9 +329,7 @@ class Qbittorrent(_IDownloadClient):
                 torrent = bdecode(content)
                 if torrent and torrent.get("info"):
                     info = torrent.get("info")
-                    import bencode
-
-                    info_encoded = bencode.bencode(info)
+                    info_encoded = bencode(info)
                     return hashlib.sha1(info_encoded, usedforsecurity=False).hexdigest().lower()
             except (InfrastructureError, NetworkError):
                 raise
@@ -377,7 +375,8 @@ class Qbittorrent(_IDownloadClient):
                                 break
                             else:
                                 log.warn(
-                                    f"[{self.client_name}]{self.name} 种子 {torrent_id} 标签 {tag} 移除失败，重试 {retry + 1}/3"
+                                    f"[{self.client_name}]{self.name} 种子 {torrent_id} "
+                                    f"标签 {tag} 移除失败，重试 {retry + 1}/3"
                                 )
                         else:
                             log.warn(f"[{self.client_name}]{self.name} 无法获取种子 {torrent_id} 信息验证标签移除")

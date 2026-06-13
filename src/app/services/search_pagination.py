@@ -14,7 +14,8 @@ class SearchPaginationManager:
 
     _PAGE_SIZE = 8
 
-    def __init__(self):
+    def __init__(self, message: Message):
+        self._message = message
         self._cache: dict[str, dict] = {}
         self._media_cache: dict[str, list] = {}
         self._media_type: dict[str, str] = {}
@@ -115,7 +116,7 @@ class SearchPaginationManager:
         """发送分页结果消息"""
         result = self._get_current_page(user_id)
         if not result:
-            Message().send_channel_msg(channel=channel, title="没有可用的搜索结果分页", user_id=user_id)
+            self._message.send_channel_msg(channel=channel, title="没有可用的搜索结果分页", user_id=user_id)
             return
 
         items = result["items"]
@@ -137,8 +138,8 @@ class SearchPaginationManager:
             msg_title += "\n输入 n 查看下一页，p 查看上一页"
         msg_title += f"\n输入 1-{size} 选择下载对应资源"
 
-        Message().send_channel_msg(channel=channel, title=msg_title, text="\n".join(lines), user_id=user_id)
+        self._message.send_channel_msg(channel=channel, title=msg_title, text="\n".join(lines), user_id=user_id)
 
 
-# 全局分页管理器实例
-pagination_mgr = SearchPaginationManager()
+# 兼容旧代码的全局分页管理器占位，使用前必须通过 DI 注入 message 实例化
+pagination_mgr = SearchPaginationManager

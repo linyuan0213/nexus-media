@@ -8,9 +8,9 @@ class NumberUtils:
         返回非空最大值
         """
         if not a:
-            return b
+            return int(b) if b else 0
         if not b:
-            return a
+            return int(a)
         return max(int(a), int(b))
 
     @staticmethod

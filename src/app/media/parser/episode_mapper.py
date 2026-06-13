@@ -83,7 +83,8 @@ class EpisodeMapper:
             # 推断季分界
             # 策略：
             #   1. 间隔 > EPISODE_MAPPER_SEASON_GAP_FORCE_DAYS (180天) → 强制分季
-            #   2. 间隔 > EPISODE_MAPPER_SEASON_GAP_DAYS (90天) 且当前 block 已 >= EPISODE_MAPPER_MIN_BLOCK_LENGTH → 分季
+            #   2. 间隔 > EPISODE_MAPPER_SEASON_GAP_DAYS (90天) 且当前 block 已 >=
+            #      EPISODE_MAPPER_MIN_BLOCK_LENGTH → 分季
             #   3. 否则 → 不分季（视为季内分割放送）
             blocks = []
             cur_season = 1
@@ -267,10 +268,9 @@ class EpisodeMapper:
                 end = total + count
                 total += count
                 if start <= absolute_episode <= end:
-                    log.info(
-                        f"[EpisodeMapper]TMDB:{tmdb_id} 绝对E{absolute_episode} → S{sn:02d}E{absolute_episode - start + 1:02d}"
-                    )
-                    return sn, absolute_episode - start + 1
+                    mapped = absolute_episode - start + 1
+                    log.info(f"[EpisodeMapper]TMDB:{tmdb_id} 绝对E{absolute_episode} → S{sn:02d}E{mapped:02d}")
+                    return sn, mapped
 
             log.warn(f"[EpisodeMapper]绝对集号 {absolute_episode} 超出范围 (1-{total})")
             return None

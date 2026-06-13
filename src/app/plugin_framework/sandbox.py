@@ -3,6 +3,7 @@ Plugin Sandbox - 插件沙箱运行环境
 动态加载插件后端模块，提供隔离的运行上下文
 """
 
+import contextlib
 import importlib
 import importlib.util
 import inspect
@@ -11,6 +12,7 @@ import sys
 from typing import Any
 
 import log
+from app.core.exceptions import PluginError
 from app.message import Message
 from app.plugin_framework.context import PluginContext
 from app.plugin_framework.registry import PluginRegistry
@@ -66,7 +68,7 @@ class PluginSandbox:
         """根据插件类构造函数的参数名过滤依赖。"""
         try:
             params = inspect.signature(plugin_class.__init__).parameters
-        except Exception:
+        except (TypeError, ValueError):
             return {}
         return {k: v for k, v in deps.items() if k in params}
 
@@ -198,7 +200,10 @@ class PluginSandbox:
             log.info(f"[Sandbox] 插件加载成功: {plugin_id}")
             return True
 
-        except Exception as e:
+        except PluginError as e:
+            log.error(f"[Sandbox] 插件加载失败 {plugin_id}: {e}")
+            return False
+        except Exception as e:  # noqa: BLE001
             log.error(f"[Sandbox] 插件加载失败 {plugin_id}: {e}")
             return False
 
@@ -209,7 +214,7 @@ class PluginSandbox:
             try:
                 if hasattr(instance, "on_disable"):
                     instance.on_disable()
-            except Exception as e:
+            except PluginError as e:
                 log.error(f"[Sandbox] 插件禁用失败 {plugin_id}: {e}")
 
             self._instances.pop(plugin_id, None)
@@ -264,7 +269,7 @@ class PluginSandbox:
         if hasattr(instance, "on_hook"):
             try:
                 instance.on_hook(event, data)
-            except Exception as e:
+            except PluginError as e:
                 log.error(f"[Sandbox] 插件 {plugin_id} 处理 hook {event} 失败: {e}")
 
     def get_plugin_instance(self, plugin_id: str) -> Any | None:
@@ -272,7 +277,9 @@ class PluginSandbox:
         return self._instances.get(plugin_id)
 
     def load_all(self) -> None:
-        """加载所有已启用的插件"""
-        for plugin_id, state in self._registry._state_cache.items():
-            if state.enabled:
-                self.load(plugin_id)
+        """加载所有已启用的插件，批量注册消息命令并统一刷新菜单。"""
+        command_manager = getattr(self._message, "_command_manager", None)
+        with command_manager.suppress_refresh() if command_manager else contextlib.nullcontext():
+            for plugin_id, state in self._registry._state_cache.items():
+                if state.enabled:
+                    self.load(plugin_id)

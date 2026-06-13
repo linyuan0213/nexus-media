@@ -180,7 +180,9 @@ class SystemLifecycleService:
         self.stop_service()
         script_path = os.path.join(os.getcwd(), "restart-server.sh")
         os.chmod(script_path, 0o700)
-        res = subprocess.run(["bash", script_path], cwd=os.getcwd())
+        res = subprocess.run(  # nosec
+            ["bash", script_path], cwd=os.getcwd()
+        )
         if res.returncode == 0:
             log.info("Nexus Media 重启成功...")
         else:

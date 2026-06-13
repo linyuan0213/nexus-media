@@ -1,5 +1,6 @@
 import os
 
+import log
 from app.core.exceptions import (
     DomainError,
     RepositoryError,
@@ -193,8 +194,8 @@ class MediaFileService:
                             sync_dest_paths.append(dst_item)
         except (ServiceError, RepositoryError, DomainError):
             raise
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[media_file_service]忽略异常: {e}")
         sync_source_paths = _dedupe(sync_source_paths, seen_src)
         sync_dest_paths = _dedupe(sync_dest_paths, seen_dst)
 

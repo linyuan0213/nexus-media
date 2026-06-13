@@ -1,5 +1,6 @@
 """识别词处理器 — 纯领域逻辑，无外部服务依赖."""
 
+import ast
 import re
 
 import cn2an
@@ -130,7 +131,7 @@ def _episode_offset(title: str, front: str, back: str, offset: str) -> tuple[str
         for episode_num_str in episode_nums_str:
             episode_num_int = int(cn2an.cn2an(episode_num_str, "smart"))
             offset_caculate = offset.replace("EP", str(episode_num_int))
-            episode_num_offset_int = int(eval(offset_caculate))
+            episode_num_offset_int = int(ast.literal_eval(offset_caculate))
             if episode_num_int > episode_num_offset_int:
                 offset_order_flag = True
             elif episode_num_int < episode_num_offset_int:

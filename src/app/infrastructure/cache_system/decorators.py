@@ -128,8 +128,8 @@ def cached_with_lock(
                 found, result = get_cache_value(cache, cache_key)
                 if found:
                     return result
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[decorators]忽略异常: {e}")
 
             # 加锁后再次检查（防止并发穿透）
             with lock:
@@ -137,8 +137,8 @@ def cached_with_lock(
                     found, result = get_cache_value(cache, cache_key)
                     if found:
                         return result
-                except Exception:
-                    pass
+                except Exception as e:  # noqa: BLE001
+                    log.debug(f"[decorators]忽略异常: {e}")
 
                 # 执行函数
                 result = func(*args, **kwargs)

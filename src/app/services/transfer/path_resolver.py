@@ -4,6 +4,7 @@ import os
 import re
 from typing import Any
 
+import log
 from app.core.constants import DEFAULT_MOVIE_FORMAT, DEFAULT_TV_FORMAT
 from app.core.settings import settings
 from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
@@ -199,7 +200,8 @@ class TransferPathResolver:
                     if path_len > max_path_len:
                         max_path_len = path_len
                         max_return_path = dest_path
-                except Exception:
+                except Exception as e:  # noqa: BLE001
+                    log.debug(f"[PathResolver]commonpath 计算失败: {e}")
                     continue
             if max_return_path:
                 return max_return_path

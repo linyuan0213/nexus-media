@@ -223,7 +223,11 @@ class Indexer:
         )
         self.progress.update(
             ptype=progress_key,
-            text=f"搜索关键词 {key_word} 所有站点完成，有效资源数：{len(pipeline_result.results)}，总耗时 {(end_time - start_time).seconds} 秒",
+            text=(
+                f"搜索关键词 {key_word} 所有站点完成，"
+                f"有效资源数：{len(pipeline_result.results)}，"
+                f"总耗时 {(end_time - start_time).seconds} 秒"
+            ),
         )
 
         return pipeline_result.results

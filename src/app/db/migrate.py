@@ -74,14 +74,12 @@ def _quote_identifier(engine: Engine, name: str) -> str:
 def get_table_data(engine: Engine, table_name: str, limit: int | None = None) -> list[dict[str, Any]]:
     """读取指定表的所有数据"""
     with engine.connect() as conn:
-        # 使用 text() 构造查询
-        sql = f"SELECT * FROM {_quote_identifier(engine, table_name)}"
-        if limit is not None:
-            # 简单的 LIMIT 处理
-            if DatabaseFactory.is_mysql(engine):
-                sql += f" LIMIT {int(limit)}"
-            else:
-                sql += f" LIMIT {int(limit)}"
+        # 使用 text() 构造查询，表名通过方言引号处理，limit 转为整数
+        safe_limit = int(limit) if limit is not None else None
+        quoted = _quote_identifier(engine, table_name)
+        sql = f"SELECT * FROM {quoted}"  # nosec B608
+        if safe_limit is not None:
+            sql += f" LIMIT {safe_limit}"  # nosec B608
         result = conn.execute(text(sql))
         columns = result.keys()
         rows = []
@@ -207,7 +205,8 @@ def import_database(
                     if not rows:
                         continue
                     try:
-                        conn.execute(text(f"DELETE FROM {_quote_identifier(engine, table_name)}"))
+                        quoted_table = _quote_identifier(engine, table_name)
+                        conn.execute(text(f"DELETE FROM {quoted_table}"))  # nosec B608
                     except Exception as e:
                         ExceptionUtils.exception_traceback(e)
 

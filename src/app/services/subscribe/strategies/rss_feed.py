@@ -308,9 +308,8 @@ class RssFeedStrategy:
                                 target=rss_no_exists, source=library_no_exists, title=media_info.tmdb_id
                             )
                             if rss_no_exists.get(media_info.tmdb_id):
-                                log.info(
-                                    f"[RssFeedStrategy] {media_info.get_title_string()} 订阅缺失季集：{rss_no_exists.get(media_info.tmdb_id)}"
-                                )
+                                missing = rss_no_exists.get(media_info.tmdb_id)
+                                log.info(f"[RssFeedStrategy] {media_info.get_title_string()} 订阅缺失季集：{missing}")
                         if exist_flag:
                             continue
                     else:

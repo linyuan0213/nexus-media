@@ -39,6 +39,9 @@ class SystemInfoService:
     获取系统版本、运行时长、Python版本等基本信息
     """
 
+    def __init__(self, message: Message | None = None):
+        self._message = message
+
     @staticmethod
     def _format_uptime(seconds: float) -> str:
         """格式化运行时长"""
@@ -240,13 +243,13 @@ def get_rmt_modes():
         {"value": "softlink", "name": "软链接"},
     ]
 
-
-def get_system_message(lst_time, message=None):
-    _message = message or Message()
-    messages = _message.messagecenter.get_system_messages(lst_time=lst_time)
-    if messages:
-        lst_time = messages[0].get("time")
-    return {"code": 0, "message": messages, "lst_time": lst_time}
+    def get_system_message(self, lst_time):
+        if self._message is None:
+            return {"code": 0, "message": [], "lst_time": lst_time}
+        messages = self._message.messagecenter.get_system_messages(lst_time=lst_time)
+        if messages:
+            lst_time = messages[0].get("time")
+        return {"code": 0, "message": messages, "lst_time": lst_time}
 
 
 def parse_brush_rule_string(rules):

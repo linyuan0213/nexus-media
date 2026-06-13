@@ -212,10 +212,17 @@ class TV(TMDb):
         """
         Get the images that belong to a movie.
         Querying images with a language parameter will filter the results.
-        If you want to include a fallback language (especially useful for backdrops) you can use the include_image_language parameter.
-        This should be a comma seperated value like so: include_image_language=en,null.
+        If you want to include a fallback language (especially useful for
+        backdrops) you can use the include_image_language parameter.
+        This should be a comma seperated value like so:
+        include_image_language=en,null.
         :param tv_id:
         :param include_image_language:
         :return:
         """
-        return AsObj(**self._call(self._urls["images"] % tv_id, "include_image_language=" + include_image_language))
+        return AsObj(
+            **self._call(
+                self._urls["images"] % tv_id,
+                "include_image_language=" + include_image_language,
+            )
+        )

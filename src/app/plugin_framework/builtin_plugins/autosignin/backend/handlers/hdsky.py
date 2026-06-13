@@ -1,6 +1,7 @@
 import json
 import time
 
+import log
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.ocr import OcrRecognizer
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base import (
@@ -57,8 +58,8 @@ class HDSky(SiteSigninHandler):
                 res_times += 1
                 self._plugin_ctx.debug(f"获取{site}验证码失败，重试次数 {res_times}")
                 time.sleep(1)
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[hdsky]忽略异常: {e}")
 
         if not img_hash:
             return SigninResult.fail(site, "未获取到验证码")
@@ -96,7 +97,7 @@ class HDSky(SiteSigninHandler):
                 return SigninResult.already(site)
             elif str(res_json["message"]) == "invalid_imagehash":
                 return SigninResult.fail(site, "验证码错误")
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[hdsky]忽略异常: {e}")
 
         return SigninResult.fail(site, "未获取到验证码")

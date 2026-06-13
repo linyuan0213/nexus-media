@@ -14,6 +14,7 @@ from typing import cast
 import pytz
 from lxml import etree
 
+import log
 from app.db.repositories.site_repository import SiteRepository
 from app.infrastructure.chrome import ChromeClient
 from app.infrastructure.cloudflare import under_challenge
@@ -98,8 +99,8 @@ class AutoGenRssPlugin:
         try:
             self.ctx.remove_schedule("gen_rss")
             self.ctx.remove_schedule("gen_rss_once")
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[plugin]忽略异常: {e}")
 
     def _do_gen_rss(self):
         config = self._get_config()

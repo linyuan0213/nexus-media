@@ -8,7 +8,6 @@ from app.core.settings import settings
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.thread import ThreadExecutor
-from app.message import Message
 from app.message.client._base import _IMessageClient
 from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils
@@ -59,7 +58,14 @@ class Telegram(_IMessageClient):
                 id="webhook",
                 required=False,
                 title="Webhook",
-                tooltip="Telegram机器人消息有两种模式：Webhook或消息轮循；开启后将使用Webhook方式，需要在基础设置中正确配置好外网访问地址，同时受Telegram官方限制，外网访问地址需要设置为以下端口之一：443, 80, 88, 8443，且需要有公网认证的可信SSL证书；关闭后将使用消息轮循方式，使用该方式需要在基础设置->安全处将Telegram ipv4源地址设置为127.0.0.1，如同时使用了内置的SSL证书功能，消息轮循方式可能无法正常使用",
+                tooltip=(
+                    "Telegram机器人消息有两种模式：Webhook或消息轮循；开启后将使用Webhook方式，"
+                    "需要在基础设置中正确配置好外网访问地址，同时受Telegram官方限制，"
+                    "外网访问地址需要设置为以下端口之一：443, 80, 88, 8443，"
+                    "且需要有公网认证的可信SSL证书；关闭后将使用消息轮循方式，"
+                    "使用该方式需要在基础设置->安全处将Telegram ipv4源地址设置为127.0.0.1，"
+                    "如同时使用了内置的SSL证书功能，消息轮循方式可能无法正常使用"
+                ),
                 type="switch",
             ),
             ConfigField(
@@ -84,7 +90,7 @@ class Telegram(_IMessageClient):
     )
     _setup_done = set()
 
-    def __init__(self, config, apikey_service):
+    def __init__(self, config, apikey_service, message=None):
         self.token = None
         self.chat_id = None
         self.webhook = False
@@ -97,7 +103,8 @@ class Telegram(_IMessageClient):
         self._enabled = True
         self._proxy_event = None
         self._apikey_service = apikey_service
-        super().__init__(config)
+        self._message = message
+        super().__init__(config, apikey_service, message=message)
 
     def read_config(self):
         cfg = self._config or {}
@@ -251,7 +258,7 @@ class Telegram(_IMessageClient):
             log.warn("[Telegram]跳过设置菜单：token 为空")
             return
         try:
-            commands = Message().get_commands()
+            commands = self._message.get_commands() if self._message else {}
             cmds = [{"command": k[1:], "description": v} for k, v in commands.items()]
             log.info(f"[Telegram]正在设置菜单，共 {len(cmds)} 个命令: {list(commands.keys())}")
             data = {"commands": cmds, "scope": {"type": "default"}}
@@ -297,8 +304,8 @@ class Telegram(_IMessageClient):
                 if res.json().get("ok"):
                     _webhook_set = True
                     log.info(f"[Telegram]Webhook 设置成功：{self._webhook_url}")
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[telegram]忽略异常: {e}")
 
     def _get_webhook_status(self):
         url = f"https://api.telegram.org/bot{self.token}/getWebhookInfo"
@@ -314,8 +321,8 @@ class Telegram(_IMessageClient):
                 elif info.get("url"):
                     return 2
                 return 0
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[telegram]忽略异常: {e}")
         return 0
 
     def _del_webhook(self):
@@ -325,5 +332,5 @@ class Telegram(_IMessageClient):
             proxy_url = proxies.get("http") if proxies else None
             HttpClient(config=HttpClientConfig(proxy_url=proxy_url)).get(url)
             log.info("[Telegram]Webhook 已删除")
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[telegram]忽略异常: {e}")

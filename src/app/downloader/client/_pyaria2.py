@@ -1,4 +1,9 @@
-import xmlrpc.client
+import xmlrpc.client  # nosec B411
+
+import defusedxml.xmlrpc  # type: ignore[import-untyped]
+
+# 缓解 XML-RPC 解析外部 XML 的安全漏洞
+defusedxml.xmlrpc.monkey_patch()
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 6800
@@ -244,7 +249,9 @@ class PyAria2:
         addUris: list, URIs to be added
         position: integer, where URIs are inserted, after URIs have been removed
 
-        return: This method returns a list which contains 2 integers. The first integer is the number of URIs deleted. The second integer is the number of URIs added.
+        return: This method returns a list which contains 2 integers.
+        The first integer is the number of URIs deleted.
+        The second integer is the number of URIs added.
         """
         return self.server.aria2.changeUri(self._secret, gid, fileIndex, delUris, addUris, position)
 

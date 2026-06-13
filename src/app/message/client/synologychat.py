@@ -4,8 +4,6 @@ from threading import Lock
 from typing import Any
 from urllib.parse import quote
 
-import requests
-
 import log
 from app.core.settings import settings
 from app.infrastructure.http.client import HttpClient
@@ -63,7 +61,7 @@ class SynologyChat(_IMessageClient):
     )
     _setup_done = set()
 
-    def __init__(self, config, apikey_service):
+    def __init__(self, config, apikey_service, message=None):
         self._config = settings
         self._interactive = False
         self._domain = None
@@ -73,7 +71,7 @@ class SynologyChat(_IMessageClient):
             config=HttpClientConfig(default_headers={"Content-Type": "application/x-www-form-urlencoded"})
         )
         self._apikey_service = apikey_service
-        super().__init__(config)
+        super().__init__(config, apikey_service, message=message)
 
     def read_config(self):
         cfg: Any = self._config or {}
@@ -112,7 +110,7 @@ class SynologyChat(_IMessageClient):
 
     def _process_message(self, data, ds_url):
         try:
-            requests.post(ds_url, json=data, timeout=10)
+            self._req.post(url=ds_url, json=data, timeout=10)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
 
@@ -172,9 +170,15 @@ class SynologyChat(_IMessageClient):
                 if not image:
                     image = media.get_message_image()
                 if media.get_vote_string():
-                    caption = f"{caption}\n{index}. <{media.get_detail_url()}|{media.get_title_string()}>\n{media.get_type_string()}，{media.get_vote_string()}"
+                    caption = (
+                        f"{caption}\n{index}. <{media.get_detail_url()}|{media.get_title_string()}>\n"
+                        f"{media.get_type_string()}，{media.get_vote_string()}"
+                    )
                 else:
-                    caption = f"{caption}\n{index}. <{media.get_detail_url()}|{media.get_title_string()}>\n{media.get_type_string()}"
+                    caption = (
+                        f"{caption}\n{index}. <{media.get_detail_url()}|{media.get_title_string()}>\n"
+                        f"{media.get_type_string()}"
+                    )
                 index += 1
             if user_id:
                 user_ids = [int(user_id)]

@@ -286,6 +286,6 @@ class BuiltinIndexer(_IIndexClient):
                 auth_val = (h or {}).get("Authorization") or (h or {}).get("authorization") or ""
                 if auth_val.startswith("Bearer "):
                     user_config["api_key"] = auth_val[len("Bearer ") :]
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[BuiltinIndexer]解析 headers 失败: {e}")
         return user_config

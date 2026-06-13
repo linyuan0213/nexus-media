@@ -1,6 +1,7 @@
 import urllib.parse
 from datetime import datetime
 
+import log
 from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.infrastructure.http.client import HttpClient
@@ -69,8 +70,8 @@ class Bangumi:
 
                 if settings.get("app").get("enable_image_proxy", True):
                     image = f"/img/bgm/{urllib.parse.quote(image, safe='')}"
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[bangumi]忽略异常: {e}")
         summary = item.get("summary")
         return {
             "id": f"BG:{bid}",

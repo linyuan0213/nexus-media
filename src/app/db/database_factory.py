@@ -151,14 +151,17 @@ class DatabaseFactory:
 
                 with engine.connect() as conn:
                     # 检查数据库是否存在
-                    result = conn.execute(text(f"SELECT 1 FROM pg_database WHERE datname = '{database}'"))
+                    result = conn.execute(
+                        text("SELECT 1 FROM pg_database WHERE datname = :database"),
+                        {"database": database},
+                    )
                     if not result.fetchone():
                         # 创建数据库
                         conn.execute(text(f"CREATE DATABASE {database}"))
 
                 engine.dispose()
 
-        except Exception as e:
+        except (OSError, ValueError) as e:
             # 记录错误但不抛出，让后续连接尝试决定最终成败
             log.warn(f"[DatabaseFactory]自动创建数据库 {database} 失败: {e}")
 
@@ -290,7 +293,7 @@ class DatabaseFactory:
             db_config = config.get("database", {})
             db_type = db_config.get("type", "sqlite")
             return db_type.lower()
-        except Exception:
+        except (AttributeError, KeyError, TypeError):
             return DatabaseFactory.SQLITE
 
     @staticmethod
@@ -306,7 +309,7 @@ class DatabaseFactory:
             config = settings.get()
             db_config = config.get("database", {})
             return db_config.get(key, default)
-        except Exception:
+        except (AttributeError, KeyError, TypeError):
             return default
 
     @staticmethod

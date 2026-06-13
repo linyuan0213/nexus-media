@@ -1,5 +1,6 @@
 """CommandManager - 消息命令注册与管理."""
 
+from contextlib import contextmanager
 from typing import Any
 
 import log
@@ -12,13 +13,31 @@ class CommandManager:
     def __init__(self, client_manager=None):
         self._client_manager = client_manager
         self._plugin_commands: dict = {}
+        self._refresh_suppressed = False
+        self._dirty = False
+
+    @contextmanager
+    def suppress_refresh(self):
+        """批量注册命令时抑制实时刷新，退出后统一刷新一次。"""
+        old = self._refresh_suppressed
+        self._refresh_suppressed = True
+        try:
+            yield self
+        finally:
+            self._refresh_suppressed = old
+            if self._dirty:
+                self._refresh_client_menus()
+                self._dirty = False
 
     def register_command(self, cmd: str, desc: str, func: Any, plugin_id: str = "") -> None:
         if not cmd.startswith("/"):
             cmd = "/" + cmd
         self._plugin_commands[cmd] = {"plugin_id": plugin_id, "desc": desc, "func": func}
         log.info(f"[Message]命令注册: {cmd} ({desc})")
-        self._refresh_client_menus()
+        if self._refresh_suppressed:
+            self._dirty = True
+        else:
+            self._refresh_client_menus()
 
     def unregister_command(self, cmd: str) -> None:
         if not cmd.startswith("/"):
@@ -26,7 +45,10 @@ class CommandManager:
         if cmd in self._plugin_commands:
             del self._plugin_commands[cmd]
             log.info(f"[Message]命令注销: {cmd}")
-            self._refresh_client_menus()
+            if self._refresh_suppressed:
+                self._dirty = True
+            else:
+                self._refresh_client_menus()
 
     def clear_plugin_commands(self, plugin_id: str) -> None:
         to_remove = [cmd for cmd, info in self._plugin_commands.items() if info.get("plugin_id") == plugin_id]
@@ -34,7 +56,10 @@ class CommandManager:
             del self._plugin_commands[cmd]
         if to_remove:
             log.info(f"[Message]插件 {plugin_id} 命令已清除: {to_remove}")
-            self._refresh_client_menus()
+            if self._refresh_suppressed:
+                self._dirty = True
+            else:
+                self._refresh_client_menus()
 
     def get_commands(self) -> dict:
         all_cmds = dict(COMMANDS)

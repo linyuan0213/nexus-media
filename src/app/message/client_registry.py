@@ -1,6 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 from app.message.registry import get_all_clients, get_client_class
 from app.message.registry import register as _register
 from app.services.apikey_service import APIKeyService
+
+if TYPE_CHECKING:
+    pass
 
 
 class ClientRegistry:
@@ -9,10 +16,16 @@ class ClientRegistry:
         _register(client_cls)
 
     @classmethod
-    def build(cls, ctype, conf, apikey_service: APIKeyService | None = None):
+    def build(
+        cls,
+        ctype,
+        conf,
+        apikey_service: APIKeyService | None = None,
+        message: Any | None = None,
+    ):
         client_cls = get_client_class(ctype)
         if client_cls:
-            return client_cls(conf, apikey_service)
+            return client_cls(conf, apikey_service, message=message)
         return None
 
     @classmethod

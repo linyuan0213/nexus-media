@@ -28,25 +28,25 @@ def parse_client_config(client_config) -> dict:
             templates = json.loads(client_config.TEMPLATES)
         except json.JSONDecodeError:
             log.error(f"[Message]客户端 {client_config.NAME} 的模板配置不是有效的 JSON: {client_config.TEMPLATES}")
-    switchs = []
-    if client_config.SWITCHS:
+    switches = []
+    if client_config.SWITCHES:
         try:
-            parsed = json.loads(client_config.SWITCHS)
+            parsed = json.loads(client_config.SWITCHES)
             if isinstance(parsed, list):
-                switchs = parsed
+                switches = parsed
             elif isinstance(parsed, str):
                 all_keys = set(MESSAGE_SWITCHES.keys())
-                switchs = [s.strip() for s in parsed.split(",") if s.strip() and s.strip() in all_keys]
+                switches = [s.strip() for s in parsed.split(",") if s.strip() and s.strip() in all_keys]
         except json.JSONDecodeError:
-            raw = str(client_config.SWITCHS)
+            raw = str(client_config.SWITCHES)
             all_keys = set(MESSAGE_SWITCHES.keys())
-            switchs = [s.strip() for s in raw.split(",") if s.strip() and s.strip() in all_keys]
+            switches = [s.strip() for s in raw.split(",") if s.strip() and s.strip() in all_keys]
     return {
         "id": client_config.ID,
         "name": client_config.NAME,
         "type": client_config.TYPE,
         "config": config,
-        "switchs": switchs,
+        "switches": switches,
         "interactive": client_config.INTERACTIVE,
         "enabled": client_config.ENABLED,
         "templates": templates,
@@ -56,9 +56,10 @@ def parse_client_config(client_config) -> dict:
 class ClientManager:
     """负责消息客户端的加载、刷新、移除和查询."""
 
-    def __init__(self, apikey_service: APIKeyService | None = None, config_repo=None):
+    def __init__(self, apikey_service: APIKeyService | None = None, config_repo=None, message=None):
         self.config_repo = config_repo or MessageClientRepositoryAdapter()
         self._apikey_service = apikey_service
+        self._message = message
         self._active_clients: list = []
         self._active_interactive_clients: dict = {}
         self._client_configs: dict = {}
@@ -94,14 +95,17 @@ class ClientManager:
             "name": client_config.NAME,
             "type": client_config.TYPE,
             "config": config["config"],
-            "switchs": config["switchs"],
+            "switches": config["switches"],
             "interactive": client_config.INTERACTIVE,
             "enabled": client_config.ENABLED,
             "templates": config["templates"],
             "search_type": self._get_search_type(client_config.TYPE),
             "max_length": self._get_max_length(client_config.TYPE),
             "client": ClientRegistry.build(
-                ctype=client_config.TYPE, conf=config["config"], apikey_service=self._apikey_service
+                ctype=client_config.TYPE,
+                conf=config["config"],
+                apikey_service=self._apikey_service,
+                message=self._message,
             ),
         }
         client_instance = client_entry["client"]
@@ -194,7 +198,7 @@ class ClientManager:
         name: str,
         ctype: Any,
         config: str,
-        switchs: list,
+        switches: list,
         interactive: Any,
         enabled: Any,
         note: str = "",
@@ -207,7 +211,7 @@ class ClientManager:
             name=name,
             ctype=ctype,
             config=config,
-            switchs=switchs,
+            switches=switches,
             interactive=interactive,
             enabled=enabled,
             note=note,
@@ -229,7 +233,9 @@ class ClientManager:
         """测试消息设置状态."""
         if not config or not ctype:
             return False
-        built_client = ClientRegistry.build(ctype=ctype, conf=config, apikey_service=self._apikey_service)
+        built_client = ClientRegistry.build(
+            ctype=ctype, conf=config, apikey_service=self._apikey_service, message=self._message
+        )
         if not built_client:
             return False
         state, ret_msg = built_client.send_msg(

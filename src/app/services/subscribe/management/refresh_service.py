@@ -33,7 +33,8 @@ class SubscribeRefreshService:
             media_info = self.__get_media_info(tmdbid=tmdbid, name=name, year=year, mtype=MediaType.MOVIE, cache=True)
             if media_info and media_info.tmdb_id and media_info.title != name:
                 log.info(
-                    f"[Subscribe]检测到TMDB信息变化，更新{MediaType.MOVIE.display_name}订阅 {name} 为 {media_info.title}"
+                    f"[Subscribe]检测到TMDB信息变化，"
+                    f"更新{MediaType.MOVIE.display_name}订阅 {name} 为 {media_info.title}"
                 )
                 self._movie_repo.update_tmdb(
                     rid=rssid,
@@ -70,7 +71,8 @@ class SubscribeRefreshService:
                 if total_episode and (name != media_info.title or total != total_episode):
                     lack_episode = total_episode - (total - lack)
                     log.info(
-                        f"[Subscribe]检测到TMDB信息变化，更新{MediaType.TV.display_name}订阅 {name} 为 {media_info.title}，"
+                        f"[Subscribe]检测到TMDB信息变化，"
+                        f"更新{MediaType.TV.display_name}订阅 {name} 为 {media_info.title}，"
                         f"总集数为：{total_episode}"
                     )
                     # TV 订阅需同时更新 tv_repo + tv_episode_repo，使用事务保证原子性

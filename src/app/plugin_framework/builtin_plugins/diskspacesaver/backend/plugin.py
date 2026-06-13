@@ -65,7 +65,7 @@ class DiskSpaceSaverPlugin:
 
     @staticmethod
     def _get_sha1(file_path, buffer_size=128 * 1024, fast=False):
-        h = hashlib.sha1()
+        h = hashlib.sha1(usedforsecurity=False)
         buffer = bytearray(buffer_size)
         buffer_view = memoryview(buffer)
         with open(file_path, "rb", buffering=0) as f:

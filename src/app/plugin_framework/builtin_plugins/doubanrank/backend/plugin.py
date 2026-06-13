@@ -6,12 +6,13 @@ DoubanRank Plugin v2
 import json
 import os
 import re
-import xml.dom.minidom
 from datetime import datetime, timedelta
 from threading import Event
 
+import defusedxml.minidom  # type: ignore[import-untyped]
 import pytz
 
+import log
 from app.domain.enums import SearchType
 from app.domain.mediatypes import MediaType
 from app.infrastructure.http.client import HttpClient
@@ -95,8 +96,8 @@ class DoubanRankPlugin:
         try:
             self.ctx.remove_schedule("refresh")
             self.ctx.remove_schedule("refresh_once")
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[plugin]忽略异常: {e}")
         self._event.clear()
 
     def _load_history(self):
@@ -104,8 +105,8 @@ class DoubanRankPlugin:
         if content:
             try:
                 return json.loads(content)
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[plugin]忽略异常: {e}")
         return {}
 
     def _save_history(self, data):
@@ -235,7 +236,7 @@ class DoubanRankPlugin:
 
             ret_xml = ret.text
             ret_array = []
-            dom_tree = xml.dom.minidom.parseString(ret_xml)
+            dom_tree = defusedxml.minidom.parseString(ret_xml)
             root_node = dom_tree.documentElement
             if not root_node:
                 return ret_array
@@ -252,8 +253,10 @@ class DoubanRankPlugin:
                     if doubanid and not str(doubanid).isdigit():
                         continue
                     ret_array.append({"title": title, "link": link, "doubanid": doubanid})
-                except Exception:
+                except Exception as e:  # noqa: BLE001
+                    log.debug(f"[DoubanRank]解析 RSS 条目失败: {e}")
                     continue
             return ret_array
-        except Exception:
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[DoubanRank]解析 RSS 失败: {e}")
             return []

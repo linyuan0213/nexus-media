@@ -24,7 +24,8 @@ class MovieDownloadStrategy:
         """
         下载所有电影
         :param download_list: 候选资源列表
-        :param download_callback: 实际下载函数，签名为 (item, torrent_file, tag, is_paused) -> (downloader_id, download_id, msg)
+        :param download_callback: 实际下载函数，签名为
+        (item, torrent_file, tag, is_paused) -> (downloader_id, download_id, msg)
         :param get_download_url_callback: 获取下载链接函数，签名为 (page_url) -> url
         :return: 已下载项目列表
         """
@@ -162,7 +163,8 @@ class EpisodeStrategy:
         :param get_download_url_callback: 获取下载链接函数
         :param download_callback: 实际下载函数
         :param get_torrent_episodes_callback: 解析种子集数函数
-        :param set_files_status_callback: 设置文件下载状态函数，签名为 (tid, need_episodes, downloader_id) -> selected_episodes
+        :param set_files_status_callback: 设置文件下载状态函数，签名为
+        (tid, need_episodes, downloader_id) -> selected_episodes
         :param start_torrents_callback: 开始任务函数，签名为 (ids, downloader_id)
         :param return_items: 已下载项目列表（会追加）
         :return: (更新后的 return_items, 更新后的 need_tvs)

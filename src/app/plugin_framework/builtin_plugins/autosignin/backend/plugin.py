@@ -2,8 +2,8 @@ import json
 from datetime import datetime
 from typing import Any
 
+import log
 from app.infrastructure.rate_limiter import RateLimitEngine
-from app.message import Message
 from app.plugin_framework.builtin_plugins.autosignin.backend.registry import HandlerRegistry
 from app.plugin_framework.builtin_plugins.autosignin.backend.signer import SigninEngine
 from app.plugin_framework.builtin_plugins.autosignin.backend.simulator import ChromeSigninSimulator
@@ -49,7 +49,7 @@ class AutoSignInPlugin:
     def _handle_signin_command(self, msg, in_from, user_id, user_name):
         self.ctx.info(f"收到签到命令: user={user_name}, msg={msg}")
         self.run()
-        Message().send_channel_msg(
+        self.ctx._message.send_channel_msg(
             channel=in_from, title="站点签到", text="签到任务已触发，请稍后查看签到结果", user_id=user_id
         )
 
@@ -93,16 +93,16 @@ class AutoSignInPlugin:
         try:
             self.ctx.remove_schedule("signin")
             self.ctx.remove_schedule("signin_once")
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[plugin]忽略异常: {e}")
 
     def _load_history(self):
         content = self.ctx.read_data("signin_history.json")
         if content:
             try:
                 return json.loads(content)
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[plugin]忽略异常: {e}")
         return {}
 
     def _save_history(self, data):

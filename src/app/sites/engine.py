@@ -305,8 +305,8 @@ class SiteEngine:
                         ret["peer_count"] = str(val) if val else ""
                     else:
                         ret["peer_count"] = int(val) if val else 0
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[engine]忽略异常: {e}")
             return ret
 
         if site.html and site.html.conf:

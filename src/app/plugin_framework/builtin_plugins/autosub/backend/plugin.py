@@ -22,6 +22,12 @@ from app.infrastructure.ffmpeg import FfmpegProcessor
 from app.plugin_framework.context import PluginContext
 from app.utils import SystemUtils
 
+try:
+    from faster_whisper import WhisperModel, download_model  # type: ignore[import-untyped]
+except ImportError:
+    WhisperModel = None  # type: ignore[misc,assignment]
+    download_model = None  # type: ignore[misc,assignment]
+
 
 class AutoSubPlugin:
     """AI字幕自动生成插件"""
@@ -140,15 +146,7 @@ class AutoSubPlugin:
                 self.ctx.warn("扩展参数包含异常字符，不进行处理")
                 return False
         elif asr_engine == "faster-whisper":
-            if not faster_whisper_model_path or not faster_whisper_model:
-                self.ctx.warn("配置信息不完整，不进行处理")
-                return False
-            if not os.path.exists(faster_whisper_model_path):
-                self.ctx.warn("faster-whisper模型文件夹不存在，不进行处理")
-                return False
-            try:
-                import faster_whisper  # noqa: F401  # type: ignore[import-untyped]
-            except ImportError:
+            if WhisperModel is None or download_model is None:
                 self.ctx.warn("faster-whisper 未安装，不进行处理")
                 return False
         else:
@@ -256,7 +254,7 @@ class AutoSubPlugin:
         if asr_engine == "whisper.cpp":
             command = [whisper_main] + additional_args.split()
             command += ["-l", lang, "-m", whisper_model, "-osrt", "-of", audio_file, audio_file]
-            ret = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            ret = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)  # nosec B603
             if ret.returncode == 0:
                 if lang == "auto":
                     output = ret.stdout.decode("utf-8") if ret.stdout else ""
@@ -267,9 +265,10 @@ class AutoSubPlugin:
                         lang = "en"
                 return True, lang
         elif asr_engine == "faster-whisper":
+            if WhisperModel is None or download_model is None:
+                self.ctx.warn("faster-whisper 未安装，不进行处理")
+                return False, None
             try:
-                from faster_whisper import WhisperModel, download_model  # type: ignore[import-untyped]
-
                 cache_dir = os.path.join(faster_whisper_model_path, "cache")
                 if not os.path.exists(cache_dir):
                     os.mkdir(cache_dir)
@@ -589,7 +588,8 @@ class AutoSubPlugin:
             translated = result.split("\n")
             if len(translated) != len(batch):
                 self.ctx.info(
-                    f"翻译结果数量不匹配，翻译结果数量：{len(translated)}, 需要翻译数量：{len(batch)}, 退化为单条翻译 ..."
+                    f"翻译结果数量不匹配，翻译结果数量：{len(translated)}, "
+                    f"需要翻译数量：{len(batch)}, 退化为单条翻译 ..."
                 )
                 for _, item in enumerate(batch):
                     result = self._do_translate_with_retry(item.content)

@@ -4,6 +4,7 @@ import urllib.parse
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
+import log
 from api.deps import (
     get_downloader_service,
     get_file_index_service,
@@ -461,8 +462,8 @@ def get_library_home(
         if result:
             media_counts = result
             server_success = True
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001
+        log.debug(f"[MediaLibrary]获取媒体数量失败: {e}")
 
     activity = []
     with contextlib.suppress(Exception):
@@ -477,8 +478,8 @@ def get_library_home(
             "UsedSpace": space_info.used_space,
             "TotalSpace": space_info.total_space,
         }
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001
+        log.debug(f"[MediaLibrary]获取空间信息失败: {e}")
 
     libraries = []
     with contextlib.suppress(Exception):

@@ -15,7 +15,7 @@ from tenacity import (
 import log
 
 
-def retry(exception_to_check, tries=3, delay=3, backoff=2, logger=None):
+def retry(exception_to_check, tries: int = 3, delay: int | float = 3, backoff: int | float = 2, logger=None):
     """
     兼容旧 API 的重试装饰器，内部使用 tenacity。
 

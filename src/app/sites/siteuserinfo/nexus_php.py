@@ -9,6 +9,7 @@ from urllib.parse import urljoin
 
 from lxml import etree
 
+import log
 from app.utils import StringUtils
 
 if TYPE_CHECKING:
@@ -205,8 +206,8 @@ def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: Any, html_text: str) -> No
                 ins.seeding_size += size
                 ins.seeding += 1
                 info.append([seeders, size])
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[nexus_php]忽略异常: {e}")
         ins.seeding_info = json.dumps(info)
         return
     table_prefix = '//table[@class="torrents"]' if doc.xpath('//table[@class="torrents"]') else ""

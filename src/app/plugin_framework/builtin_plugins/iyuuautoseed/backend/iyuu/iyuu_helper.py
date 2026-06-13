@@ -140,7 +140,7 @@ class IyuuHelper:
 
     @staticmethod
     def get_sha1(json_str) -> str:
-        return hashlib.sha1(json_str.encode("utf-8")).hexdigest()
+        return hashlib.sha1(json_str.encode("utf-8"), usedforsecurity=False).hexdigest()
 
     def get_auth_sites(self):
         """

@@ -48,7 +48,10 @@ class Ourbits(_ISiteRssGenHandler):
         if not rss_link:
             data = {"cat": "", "media": "", "btn_add": "创建RSS"}
             headers = {
-                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept": (
+                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,"
+                    "image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+                ),
                 "accept-language": "zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7",
                 "content-type": "application/x-www-form-urlencoded",
                 "origin": "https://star-space.net",

@@ -16,7 +16,7 @@ class MessageClientEntity:
     name: str
     type: str
     config: str
-    switchs: str
+    switches: str
     interactive: bool
     enabled: bool
     note: str | None
@@ -31,7 +31,7 @@ class MessageClientEntity:
             name=orm_model.NAME or "",
             type=orm_model.TYPE or "",
             config=orm_model.CONFIG or "",
-            switchs=orm_model.SWITCHS or "",
+            switches=orm_model.SWITCHES or "",
             interactive=bool(orm_model.INTERACTIVE),
             enabled=bool(orm_model.ENABLED),
             note=orm_model.NOTE,
@@ -54,7 +54,7 @@ class MessageClientEntity:
             "name": self.name,
             "type": self.type,
             "config": self.config,
-            "switchs": self.switchs,
+            "switches": self.switches,
             "interactive": self.interactive,
             "enabled": self.enabled,
             "note": self.note,

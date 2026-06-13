@@ -239,8 +239,8 @@ class RedisCacheAdapter(CacheAdapter):
             try:
                 if self._redis.is_available():
                     return True
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[adapters]忽略异常: {e}")
             self._redis = None
         # 尝试重连
         self._init_redis()
@@ -253,8 +253,9 @@ class RedisCacheAdapter(CacheAdapter):
                 data = self._redis.get(key)
                 if data is not None:
                     try:
-                        value = pickle.loads(data)
-                    except Exception:
+                        value = pickle.loads(data)  # nosec B301
+                    except Exception as e:  # noqa: BLE001
+                        log.debug(f"[Cache]反序列化失败 {key}: {e}")
                         value = data
                     with self._lock:
                         self._stats["hits"] += 1
@@ -333,8 +334,8 @@ class RedisCacheAdapter(CacheAdapter):
         if self._ensure_connection() and self._redis is not None:
             try:
                 return self._redis.exists(key)
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[adapters]忽略异常: {e}")
         return self._fallback.exists(key)
 
     def clear(self) -> bool:
@@ -370,8 +371,8 @@ class RedisCacheAdapter(CacheAdapter):
         if self._ensure_connection() and self._redis is not None:
             try:
                 return self._redis.ttl(key)
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[adapters]忽略异常: {e}")
         return self._fallback.ttl(key)
 
     def expire(self, key: str, seconds: int) -> bool:

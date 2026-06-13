@@ -17,7 +17,7 @@ from app.media.service import MediaService
 from app.message import Message
 from app.services.downloader_core import DownloaderCore
 from app.services.indexer_service import IndexerService
-from app.services.search_pagination import pagination_mgr
+from app.services.search_pagination import SearchPaginationManager
 from app.services.search_service import Searcher
 from app.services.subscribe_service import SubscribeService
 from app.services.web.utils import search_media_infos
@@ -40,6 +40,7 @@ class MessageSearchService:
         subscribe_service: SubscribeService,
         media_service: MediaService,
         agent_service: AgentService,
+        message: Message,
     ):
         self._downloader = downloader
         self._searcher = searcher
@@ -49,6 +50,8 @@ class MessageSearchService:
         self._subscribe_service = subscribe_service
         self._media_service = media_service
         self._agent_service = agent_service
+        self._message = message
+        self._pagination = SearchPaginationManager(message=message)
 
     def handle(self, input_str: str, in_from: SearchType, user_id: str, user_name: str | None = None):
         """处理消息中心输入"""
@@ -71,33 +74,33 @@ class MessageSearchService:
 
     def _handle_pagination(self, direction: str, in_from: SearchType, user_id: str):
         """处理分页导航"""
-        if not pagination_mgr.has_page(user_id):
-            Message().send_channel_msg(channel=in_from, title="没有可用的搜索结果分页", user_id=user_id)
+        if not self._pagination.has_page(user_id):
+            self._message.send_channel_msg(channel=in_from, title="没有可用的搜索结果分页", user_id=user_id)
             return
 
-        result = pagination_mgr.navigate(user_id, direction)
+        result = self._pagination.navigate(user_id, direction)
         if result and "error" in result:
-            Message().send_channel_msg(channel=in_from, title=result["error"], user_id=user_id)
+            self._message.send_channel_msg(channel=in_from, title=result["error"], user_id=user_id)
             return
 
-        pagination_mgr.send_page_message(in_from, user_id)
+        self._pagination.send_page_message(in_from, user_id)
 
     def _handle_selection(self, choose: int, in_from: SearchType, user_id: str, user_name: str | None = None):
         """处理数字选择"""
         # 优先从分页缓存选择
-        if pagination_mgr.has_page(user_id):
+        if self._pagination.has_page(user_id):
             self._select_from_pagination(choose, in_from, user_id, user_name)
             return
 
         # 从媒体缓存选择
-        media_list = pagination_mgr.get_media_cache(user_id)
+        media_list = self._pagination.get_media_cache(user_id)
         if not media_list or choose < 1 or choose > len(media_list):
-            Message().send_channel_msg(channel=in_from, title="输入有误！", user_id=user_id)
+            self._message.send_channel_msg(channel=in_from, title="输入有误！", user_id=user_id)
             log.warn(f"[Web]错误的输入值：{choose}")
             return
 
         media_info = media_list[choose - 1]
-        media_type = pagination_mgr.get_media_type(user_id)
+        media_type = self._pagination.get_media_type(user_id)
 
         if media_type == "SUBSCRIBE":
             self._add_rss(in_from, media_info, user_id=user_id, user_name=user_name)
@@ -106,13 +109,13 @@ class MessageSearchService:
 
     def _select_from_pagination(self, choose: int, in_from: SearchType, user_id: str, user_name: str | None = None):
         """从分页结果中选择下载"""
-        item = pagination_mgr.select_item(user_id, choose)
+        item = self._pagination.select_item(user_id, choose)
         if not item:
-            Message().send_channel_msg(channel=in_from, title="输入有误！", user_id=user_id)
+            self._message.send_channel_msg(channel=in_from, title="输入有误！", user_id=user_id)
             return
 
         if not item.ENCLOSURE:
-            Message().send_channel_msg(channel=in_from, title="选中的资源没有种子链接，无法下载", user_id=user_id)
+            self._message.send_channel_msg(channel=in_from, title="选中的资源没有种子链接，无法下载", user_id=user_id)
             return
 
         title = item.TITLE or item.TORRENT_NAME or "未知标题"
@@ -130,8 +133,8 @@ class MessageSearchService:
         media_info.set_tmdb_info(tmdb_info)
 
         if not media_info or not media_info.tmdb_info:
-            Message().send_channel_msg(channel=in_from, title=f"无法识别媒体信息: {title}", user_id=user_id)
-            pagination_mgr.clear_media_cache(user_id)
+            self._message.send_channel_msg(channel=in_from, title=f"无法识别媒体信息: {title}", user_id=user_id)
+            self._pagination.clear_media_cache(user_id)
             return
 
         media_info.enclosure = item.ENCLOSURE
@@ -141,7 +144,7 @@ class MessageSearchService:
         media_info.org_string = item.TORRENT_NAME or title
 
         self._downloader.download(media_info=media_info, in_from=in_from, user_name=user_name)
-        pagination_mgr.clear_media_cache(user_id)
+        self._pagination.clear_media_cache(user_id)
 
     def _handle_text(self, input_str: str, in_from: SearchType, user_id: str, user_name: str | None = None):
         """处理文本输入"""
@@ -176,13 +179,13 @@ class MessageSearchService:
             url=url, cookie=site_info.get("cookie"), ua=site_info.get("ua"), proxy=site_info.get("proxy") or False
         )
         if (not content or not filepath) and retmsg:
-            Message().send_channel_msg(channel=in_from, title=retmsg, user_id=user_id)
+            self._message.send_channel_msg(channel=in_from, title=retmsg, user_id=user_id)
             return
 
         filename = os.path.basename(filepath)
         meta_info = self._media_service.get_media_info(title=filename)
         if not meta_info:
-            Message().send_channel_msg(channel=in_from, title="无法识别种子文件名！", user_id=user_id)
+            self._message.send_channel_msg(channel=in_from, title="无法识别种子文件名！", user_id=user_id)
             return
 
         meta_info.set_torrent_info(enclosure=url)
@@ -199,7 +202,7 @@ class MessageSearchService:
             answer = "AI出错了，请检查LLM配置，如需搜索电影/电视剧，请发送 搜索或下载 + 名称"
         if not answer:
             answer = "AI出错了，请检查LLM配置，如需搜索电影/电视剧，请发送 搜索或下载 + 名称"
-        Message().send_channel_msg(channel=in_from, title="", text=str(answer).strip(), user_id=user_id)
+        self._message.send_channel_msg(channel=in_from, title="", text=str(answer).strip(), user_id=user_id)
 
     def _search_media(
         self, in_from: SearchType, content: str, user_id: str, user_name: str | None = None, mtype: str = "SEARCH"
@@ -233,12 +236,12 @@ class MessageSearchService:
 
         log.info(f"[Web]正在识别 {content} 的媒体信息...")
         if not content:
-            Message().send_channel_msg(channel=in_from, title="无法识别搜索内容！", user_id=user_id)
+            self._message.send_channel_msg(channel=in_from, title="无法识别搜索内容！", user_id=user_id)
             return
 
         medias = search_media_infos(keyword=content)
         if not medias:
-            Message().send_channel_msg(channel=in_from, title=f"{content} 查询不到媒体信息！", user_id=user_id)
+            self._message.send_channel_msg(channel=in_from, title=f"{content} 查询不到媒体信息！", user_id=user_id)
             return
 
         media_list = []
@@ -248,7 +251,7 @@ class MessageSearchService:
             media_info.set_download_info(download_setting=download_setting)
             media_list.append(media_info)
 
-        pagination_mgr.set_media_cache(user_id, media_list, mtype)
+        self._pagination.set_media_cache(user_id, media_list, mtype)
 
         if len(media_list) == 1:
             media_info = media_list[0]
@@ -261,11 +264,11 @@ class MessageSearchService:
                         title=f"{media_info.title} {media_info.year}", mtype=media_info.type, strict=True
                     )
                     if not media_info or not media_info.tmdb_info:
-                        Message().send_channel_msg(
+                        self._message.send_channel_msg(
                             channel=in_from, title=f"{title} 从TMDB查询不到媒体信息！", user_id=user_id
                         )
                         return
-                Message().send_channel_msg(
+                self._message.send_channel_msg(
                     channel=in_from,
                     title=media_info.get_title_vote_string(),
                     text=media_info.get_overview_string(),
@@ -275,7 +278,7 @@ class MessageSearchService:
                 )
                 self._search_and_download(in_from, media_info, user_id, user_name)
         else:
-            Message().send_channel_list_msg(
+            self._message.send_channel_list_msg(
                 channel=in_from,
                 title=f"共找到{len(media_list)}条相关信息，请回复对应序号",
                 medias=media_list,
@@ -286,11 +289,11 @@ class MessageSearchService:
         """搜索并下载媒体"""
         exist_flag, no_exists, messages = self._downloader.check_exists_medias(meta_info=media_info)
         if messages:
-            Message().send_channel_msg(channel=in_from, title="\n".join(messages), user_id=user_id)
+            self._message.send_channel_msg(channel=in_from, title="\n".join(messages), user_id=user_id)
         if exist_flag:
             return
 
-        Message().send_channel_msg(channel=in_from, title=f"开始搜索 {media_info.title} ...", user_id=user_id)
+        self._message.send_channel_msg(channel=in_from, title=f"开始搜索 {media_info.title} ...", user_id=user_id)
         search_result, no_exists, search_count, download_count = self._searcher.search_one_media(
             media_info=media_info,
             in_from=in_from,
@@ -300,7 +303,9 @@ class MessageSearchService:
         )
 
         if not search_count:
-            Message().send_channel_msg(channel=in_from, title=f"{media_info.title} 未搜索到任何资源", user_id=user_id)
+            self._message.send_channel_msg(
+                channel=in_from, title=f"{media_info.title} 未搜索到任何资源", user_id=user_id
+            )
             return
 
         if download_count is None:
@@ -309,7 +314,7 @@ class MessageSearchService:
             return
 
         if download_count == 0:
-            Message().send_channel_msg(
+            self._message.send_channel_msg(
                 channel=in_from,
                 title=f"{media_info.title} 共搜索到{search_count}个结果，但没有下载到任何资源",
                 user_id=user_id,
@@ -322,13 +327,13 @@ class MessageSearchService:
         """进入搜索结果分页选择模式"""
         search_results = self._searcher.get_search_results()
         if not search_results:
-            Message().send_channel_msg(
+            self._message.send_channel_msg(
                 channel=in_from, title=f"{media_info.title} 共搜索到结果，但无法获取结果列表", user_id=user_id
             )
             return
 
-        pagination_mgr.set_search_results(user_id, search_results, media_info.title)
-        pagination_mgr.send_page_message(in_from, user_id)
+        self._pagination.set_search_results(user_id, search_results, media_info.title)
+        self._pagination.send_page_message(in_from, user_id)
 
     def _add_rss(self, in_from, media_info, user_id=None, state="D", user_name=None):
         """添加订阅"""
@@ -350,8 +355,8 @@ class MessageSearchService:
         if code == 0:
             log.info(f"[Web]{media_info.type.value} {media_info.get_title_string()} 已添加订阅")
         else:
-            if in_from in Message().get_search_types():
+            if in_from in self._message.get_search_types():
                 log.info(f"[Web]{media_info.title} 添加订阅失败：{msg}")
-                Message().send_channel_msg(
+                self._message.send_channel_msg(
                     channel=in_from, title=f"{media_info.title} 添加订阅失败：{msg}", user_id=str(user_id or "")
                 )

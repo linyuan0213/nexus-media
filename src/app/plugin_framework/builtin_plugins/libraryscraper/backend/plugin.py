@@ -9,6 +9,7 @@ from threading import Event
 
 import pytz
 
+import log
 from app.media.scraper import Scraper
 from app.plugin_framework.context import PluginContext
 
@@ -74,8 +75,8 @@ class LibraryScraperPlugin:
         try:
             self.ctx.remove_schedule("scrape")
             self.ctx.remove_schedule("scrape_once")
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[plugin]忽略异常: {e}")
         self._event.clear()
 
     def _do_scrape(self):

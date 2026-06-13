@@ -112,7 +112,10 @@ class SearchPipeline:
         self.progress.update(
             ptype=progress_key,
             value=95,
-            text=f"共 {len(all_results)} 条，过滤 {total_stats.index_rule_fail}，不匹配 {total_stats.index_match_fail}，有效 {total_stats.index_sucess}",
+            text=(
+                f"共 {len(all_results)} 条，过滤 {total_stats.index_rule_fail}，"
+                f"不匹配 {total_stats.index_match_fail}，有效 {total_stats.index_sucess}"
+            ),
         )
 
         return PipelineResult(results=all_matched, stats=total_stats, elapsed_seconds=elapsed)

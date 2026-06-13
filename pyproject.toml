@@ -85,6 +85,7 @@ dependencies = [
     "granian>=2.7.5",
     "scalar-fastapi>=1.8.2",
     "opencc-python-reimplemented>=0.1.7",
+    "defusedxml>=0.7.1",
 ]
 
 [dependency-groups]
@@ -118,6 +119,15 @@ select = [
     "E",  # pycodestyle errors
     "F",  # Pyflakes
     "I",  # isort
+    "S110",  # try-except-pass (do not silently swallow exceptions)
+]
+ignore = [
+    "S101",  # assert
+    "S311",  # pseudo-random generators
+    "S404",  # subprocess
+    "S603",  # subprocess-without-shell-equals-true
+    "S607",  # start-process-with-partial-path
+    "S608",  # hardcoded-sql-expression
 ]
 
 [tool.ruff.lint.isort]
@@ -125,27 +135,23 @@ known-first-party = ["app", "log"]
 known-third-party = []
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-asyncio_mode = "auto"
-filterwarnings = [
-    "ignore::DeprecationWarning",
-]
-
-[tool.uv.sources]
-anitopy = { path = "third_party/anitopy", editable = true }
-
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["ARG", "S"]
 "src/api/routers/**" = ["B008"]
+"src/api/deps.py" = ["B008"]
+"alembic/**" = ["S"]
 "src/app/infrastructure/external/doubanapi/**" = ["B008"]
+"src/app/infrastructure/external/tmdbv3api/**" = ["B008", "S"]
+"src/app/media/doubanapi/**" = ["S"]
+"src/app/media/tmdbv3api/**" = ["S"]
+"third_party/**" = ["S"]
 "**/__init__.py" = ["F401"]
 "**/_autosignin/52pt.py" = ["N999"]
 "**/_pyaria2.py" = ["N802", "N803"]
 
 [tool.bandit]
 exclude_dirs = ["tests", "third_party", ".venv", ".git", "scripts", "alembic"]
-skips = ["B101", "B311", "B404"]
+skips = ["B101", "B105", "B311", "B403", "B404"]
 targets = ["src"]
 
 [tool.safety]

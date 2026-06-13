@@ -31,7 +31,7 @@ class IMessageClientRepository(Protocol):
         name: str,
         ctype: str,
         config: str,
-        switchs: list,
+        switches: list,
         interactive: int,
         enabled: int,
         note: str = "",

@@ -86,8 +86,8 @@ class SMBStorageBackend(StorageBackend):
         if isdir(rp):
             try:
                 rmdir(rp)
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[smb]忽略异常: {e}")
         try:
             with open_file(rp, mode="wb") as f:
                 shutil.copyfileobj(stream, f)

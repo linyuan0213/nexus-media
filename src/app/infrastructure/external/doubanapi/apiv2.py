@@ -123,10 +123,22 @@ class DoubanApi:
     }
 
     _user_agents = [
-        "api-client/1 com.douban.frodo/7.22.0.beta9(231) Android/23 product/Mate 40 vendor/HUAWEI model/Mate 40 brand/HUAWEI  rom/android  network/wifi  platform/AndroidPad"
-        "api-client/1 com.douban.frodo/7.18.0(230) Android/22 product/MI 9 vendor/Xiaomi model/MI 9 brand/Android  rom/miui6  network/wifi  platform/mobile nd/1",
-        "api-client/1 com.douban.frodo/7.1.0(205) Android/29 product/perseus vendor/Xiaomi model/Mi MIX 3  rom/miui6  network/wifi  platform/mobile nd/1",
-        "api-client/1 com.douban.frodo/7.3.0(207) Android/22 product/MI 9 vendor/Xiaomi model/MI 9 brand/Android  rom/miui6  network/wifi platform/mobile nd/1",
+        (
+            "api-client/1 com.douban.frodo/7.22.0.beta9(231) Android/23 product/Mate 40 vendor/HUAWEI "
+            "model/Mate 40 brand/HUAWEI  rom/android  network/wifi  platform/AndroidPad"
+        ),
+        (
+            "api-client/1 com.douban.frodo/7.18.0(230) Android/22 product/MI 9 vendor/Xiaomi model/MI 9 "
+            "brand/Android  rom/miui6  network/wifi  platform/mobile nd/1"
+        ),
+        (
+            "api-client/1 com.douban.frodo/7.1.0(205) Android/29 product/perseus vendor/Xiaomi "
+            "model/Mi MIX 3  rom/miui6  network/wifi  platform/mobile nd/1"
+        ),
+        (
+            "api-client/1 com.douban.frodo/7.3.0(207) Android/22 product/MI 9 vendor/Xiaomi model/MI 9 "
+            "brand/Android  rom/miui6  network/wifi platform/mobile nd/1"
+        ),
     ]
     _api_secret_key = "bf7dddc7c9cfe6f7"
     _api_key = "0dad551ec0f84ed02907ff5c42e8ec70"
@@ -283,7 +295,15 @@ class DoubanApi:
             "header_bg_image": "",
             "doulist_type": "",
             "done_count": 0,
-            "desc": "谢谢大家的关注和点赞，不过我更希望大家能在留言板上补充遗漏。\r\n看腻了豆瓣的评分排序，不如试试评价人数排序。评价人数并不代表作品的优劣，但是它起码说明了作品的存在感。这不一定是选电影最好的方法，却一定是选电影风险最小的方法。\r\n欢迎关注我关于读书的两个豆列： \r\n豆瓣评价人数超过一万的外文书籍 \r\nhttp:\\/\\/www.douban.com\\/doulist\\/37912871\\/ \r\n豆瓣评价人数超过一万的中文书籍\r\nhttp:\\/\\/www.douban.com\\/doulist\\/36708212\\/",
+            "desc": (
+                "谢谢大家的关注和点赞，不过我更希望大家能在留言板上补充遗漏。\r\n"
+                "看腻了豆瓣的评分排序，不如试试评价人数排序。评价人数并不代表作品的优劣，但是它起码说明了作品的存在感。这不一定是选电影最好的方法，却一定是选电影风险最小的方法。\r\n"
+                "欢迎关注我关于读书的两个豆列： \r\n"
+                "豆瓣评价人数超过一万的外文书籍 \r\n"
+                "http:\\/\\/www.douban.com\\/doulist\\/37912871\\/ \r\n"
+                "豆瓣评价人数超过一万的中文书籍\r\n"
+                "http:\\/\\/www.douban.com\\/doulist\\/3670"
+            ),
             "items_count": 1453,
             "wechat_timeline_share": "url",
             "url": "https:\\/\\/www.douban.com\\/doulist\\/13712178\\/",
@@ -319,7 +339,10 @@ class DoubanApi:
                 "url": "https:\/\/movie.douban.com\/subject\/1292052\/",
                 "target_id": "1292052",
                 "uri": "douban:\/\/douban.com\/movie\/1292052",
-                "cover_url": "https:\/\/qnmob3.doubanio.com\/view\/photo\/m_ratio_poster\/public\/p480747492.jpg?imageView2\/2\/q\/80\/w\/300\/h\/300\/format\/jpg",
+                "cover_url": (
+                    "https:\/\/qnmob3.doubanio.com\/view\/photo\/m_ratio_poster\/public\/p480747492.jpg"
+                    "?imageView2\/2\/q\/80\/w\/300\/h\/300\/format\/jpg"
+                ),
                 "create_time": "2014-10-05 10:41:51",
                 "type": "movie",
                 "id": "19877287"
@@ -336,7 +359,10 @@ class DoubanApi:
                 "url": "https:\/\/movie.douban.com\/subject\/1295644\/",
                 "target_id": "1295644",
                 "uri": "douban:\/\/douban.com\/movie\/1295644",
-                "cover_url": "https:\/\/qnmob3.doubanio.com\/view\/photo\/m_ratio_poster\/public\/p511118051.jpg?imageView2\/2\/q\/80\/w\/300\/h\/300\/format\/jpg",
+                "cover_url": (
+                    "https:\/\/qnmob3.doubanio.com\/view\/photo\/m_ratio_poster\/public\/p511118051.jpg"
+                    "?imageView2\/2\/q\/80\/w\/300\/h\/300\/format\/jpg"
+                ),
                 "create_time": "2014-10-05 10:42:34",
                 "type": "movie",
                 "id": "19877286"
@@ -353,7 +379,10 @@ class DoubanApi:
                 "url": "https:\/\/movie.douban.com\/subject\/1291561\/",
                 "target_id": "1291561",
                 "uri": "douban:\/\/douban.com\/movie\/1291561",
-                "cover_url": "https:\/\/qnmob3.doubanio.com\/view\/photo\/m_ratio_poster\/public\/p2557573348.jpg?imageView2\/2\/q\/80\/w\/300\/h\/300\/format\/jpg",
+                "cover_url": (
+                    "https:\/\/qnmob3.doubanio.com\/view\/photo\/m_ratio_poster\/public\/p2557573348.jpg"
+                    "?imageView2\/2\/q\/80\/w\/300\/h\/300\/format\/jpg"
+                ),
                 "create_time": "2014-10-05 10:47:12",
                 "type": "movie",
                 "id": "19877280"

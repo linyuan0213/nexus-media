@@ -268,8 +268,8 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
     )
 
     config_service = ConfigService()
-    message_sender_service = MessageSenderService()
-    system_info_service = SystemInfoService()
+    message_sender_service = MessageSenderService(message=message)
+    system_info_service = SystemInfoService(message=message)
     net_test_service = NetTestService()
     progress_service = ProgressService()
     web_search_service = WebSearchService(
@@ -382,6 +382,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         site_repository=SiteRepository(),
         site_favicon_service=site_favicon_service,
         site_engine=site_engine,
+        message=message,
     )
     site_resolver = SiteResolver(cache=site_cache, site_engine=site_engine)
     site_service = SiteService(

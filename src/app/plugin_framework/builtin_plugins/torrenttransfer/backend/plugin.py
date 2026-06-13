@@ -13,6 +13,7 @@ from typing import Any
 import pytz
 from bencode import bdecode, bencode
 
+import log
 from app.media import meta_info
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import TorrentStatus
@@ -83,8 +84,8 @@ class TorrentTransferPlugin:
             self.ctx.remove_schedule("transfer")
             self.ctx.remove_schedule("transfer_once")
             self.ctx.remove_schedule("check_recheck")
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[plugin]忽略异常: {e}")
         self._event.clear()
 
     def _get_state(self):
@@ -331,8 +332,8 @@ class TorrentTransferPlugin:
             to_root = os.path.normpath(to_root).replace("\\", "/")
             if save_path.startswith(from_root):
                 return save_path.replace(from_root, to_root, 1)
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[plugin]忽略异常: {e}")
         return None
 
     def _load_history(self):
@@ -340,8 +341,8 @@ class TorrentTransferPlugin:
         if content:
             try:
                 return json.loads(content)
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[plugin]忽略异常: {e}")
         return {}
 
     def _save_history(self, key, value):

@@ -2,6 +2,7 @@
 
 import os
 
+import log
 from app.core.constants import RMT_FAVTYPE, RMT_MEDIAEXT
 from app.domain.mediatypes import MediaType
 from app.utils import PathUtils
@@ -42,8 +43,8 @@ class MediaExistenceChecker:
                     if ext not in exts:
                         continue
                 files.append(finfo.path)
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[existence_checker]忽略异常: {e}")
         return files
 
     def is_media_exists(self, media_dest, media, dst_backend=None):

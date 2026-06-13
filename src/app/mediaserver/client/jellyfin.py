@@ -287,7 +287,10 @@ class Jellyfin(_IMediaClient):
         """
         if not self._host or not self._apikey or not self._user:
             return None
-        req_url = f"{self._host}Users/{self._user}/Items?api_key={self._apikey}&searchTerm={name}&IncludeItemTypes=Series&Limit=10&Recursive=true"
+        req_url = (
+            f"{self._host}Users/{self._user}/Items?api_key={self._apikey}"
+            f"&searchTerm={name}&IncludeItemTypes=Series&Limit=10&Recursive=true"
+        )
         try:
             res = HttpClient().get(req_url)
             if res:
@@ -315,7 +318,10 @@ class Jellyfin(_IMediaClient):
         """
         if not self._host or not self._apikey or not self._user:
             return None
-        req_url = f"{self._host}Users/{self._user}/Items?api_key={self._apikey}&searchTerm={title}&IncludeItemTypes=Movie&Limit=10&Recursive=true"
+        req_url = (
+            f"{self._host}Users/{self._user}/Items?api_key={self._apikey}"
+            f"&searchTerm={title}&IncludeItemTypes=Movie&Limit=10&Recursive=true"
+        )
         try:
             res = HttpClient().get(req_url)
             if res:
@@ -366,7 +372,10 @@ class Jellyfin(_IMediaClient):
                 return []
         if not season:
             season = ""
-        req_url = f"{self._host}Shows/{item_id}/Episodes?season={season}&&userId={self._user}&isMissing=false&api_key={self._apikey}"
+        req_url = (
+            f"{self._host}Shows/{item_id}/Episodes?season={season}"
+            f"&&userId={self._user}&isMissing=false&api_key={self._apikey}"
+        )
         try:
             res_json = HttpClient().get(req_url)
             if res_json:
@@ -421,7 +430,10 @@ class Jellyfin(_IMediaClient):
         if not self._host or not self._apikey or not self._user:
             return None
         # 查询所有剧集
-        req_url = f"{self._host}Shows/{item_id}/Episodes?season={season_id}&&userId={self._user}&isMissing=false&api_key={self._apikey}"
+        req_url = (
+            f"{self._host}Shows/{item_id}/Episodes?season={season_id}"
+            f"&&userId={self._user}&isMissing=false&api_key={self._apikey}"
+        )
         try:
             res_json = HttpClient().get(req_url)
             if res_json:
@@ -751,7 +763,10 @@ class Jellyfin(_IMediaClient):
                         if item.get("ParentIndexNumber") == 1:
                             title = f"{item.get('SeriesName')} 第{item.get('IndexNumber')}集"
                         else:
-                            title = f"{item.get('SeriesName')} 第{item.get('ParentIndexNumber')}季第{item.get('IndexNumber')}集"
+                            title = (
+                                f"{item.get('SeriesName')} 第{item.get('ParentIndexNumber')}季"
+                                f"第{item.get('IndexNumber')}集"
+                            )
                     ret_resume.append(
                         {
                             "id": item.get("Id"),

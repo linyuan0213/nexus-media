@@ -10,6 +10,8 @@ import uuid
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 
+import redis
+
 import log
 from app.infrastructure.queue.base import MessageQueue
 from app.infrastructure.redis import RedisStore
@@ -40,8 +42,6 @@ class RedisMessageQueue(MessageQueue):
     def _init_stream(self):
         """初始化 Stream 和消费者组"""
         try:
-            import redis
-
             client = self._redis._client
             if client:
                 try:

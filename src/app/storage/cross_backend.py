@@ -2,6 +2,7 @@
 
 from typing import BinaryIO
 
+import log
 from app.storage.backends.base import StorageBackend
 
 
@@ -23,8 +24,8 @@ def cross_copy(
         if src_backend.can_fast_cross_copy(dst_backend):
             src_backend.cross_copy_to(src_path, dst_backend, dst_path)
             return
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001
+        log.debug(f"[cross_backend]忽略异常: {e}")
 
     stream: BinaryIO = src_backend.read_stream(src_path)
     try:

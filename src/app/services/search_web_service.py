@@ -120,9 +120,8 @@ def search_medias_for_web(
                 media_info.begin_episode = int(episode_num)
 
         if media_info and media_info.tmdb_info:
-            log.info(
-                f"[Web]从TMDB中匹配到{media_info.type.value if media_info.type else ''}：{media_info.get_title_string()}"
-            )
+            media_type = media_info.type.value if media_info.type else ""
+            log.info(f"[Web]从TMDB中匹配到{media_type}：{media_info.get_title_string()}")
             search_season = media_info.get_season_list() if media_info.begin_season is not None else None
             search_episode = media_info.get_episode_list()
             if search_episode and not search_season:

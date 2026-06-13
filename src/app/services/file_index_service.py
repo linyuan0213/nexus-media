@@ -133,8 +133,8 @@ class FileIndexService:
                     )
                     if src:
                         roots.append(os.path.normpath(src).replace("\\", "/"))
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[file_index_service]忽略异常: {e}")
 
         # 去重
         seen: set[str] = set()

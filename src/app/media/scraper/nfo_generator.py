@@ -2,9 +2,14 @@
 
 import os
 import time
-from xml.dom import minidom
+
+import defusedxml.minidom  # type: ignore[import-untyped]
 
 from app.utils import DomUtils
+
+
+def _create_document():
+    return defusedxml.minidom.getDOMImplementation().createDocument(None, "root", None)  # type: ignore[attr-defined]
 
 
 class NfoGenerator:
@@ -15,7 +20,7 @@ class NfoGenerator:
 
     def gen_movie_nfo(self, tmdbinfo, directors, actors, scraper_nfo, out_path, file_name):
         """生成电影 NFO 文件"""
-        doc = minidom.Document()
+        doc = _create_document()
         root = DomUtils.add_node(doc, doc, "movie")
         doc = self._gen_common_nfo(tmdbinfo, directors, actors, doc, root, scraper_nfo)
         if scraper_nfo.get("basic"):
@@ -29,7 +34,7 @@ class NfoGenerator:
 
     def gen_tv_nfo(self, tmdbinfo, directors, actors, scraper_nfo, out_path):
         """生成电视剧 NFO 文件"""
-        doc = minidom.Document()
+        doc = _create_document()
         root = DomUtils.add_node(doc, doc, "tvshow")
         doc = self._gen_common_nfo(tmdbinfo, directors, actors, doc, root, scraper_nfo)
         if scraper_nfo.get("basic"):
@@ -45,7 +50,7 @@ class NfoGenerator:
 
     def gen_season_nfo(self, seasoninfo, season, out_path):
         """生成季 NFO 文件"""
-        doc = minidom.Document()
+        doc = _create_document()
         root = DomUtils.add_node(doc, doc, "season")
         DomUtils.add_node(doc, root, "dateadded", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())))
         xplot = DomUtils.add_node(doc, root, "plot")
@@ -67,7 +72,7 @@ class NfoGenerator:
                 episode_detail = ep_info
         if not episode_detail:
             return
-        doc = minidom.Document()
+        doc = _create_document()
         root = DomUtils.add_node(doc, doc, "episodedetails")
         if scraper_nfo.get("episode_basic"):
             DomUtils.add_node(doc, root, "dateadded", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())))

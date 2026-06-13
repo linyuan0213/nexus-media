@@ -16,7 +16,6 @@ from app.services.system.info import (
     WebSearchService,
     get_commands,
     get_rmt_modes,
-    get_system_message,
     parse_brush_rule_string,
 )
 from app.services.system.lifecycle import (
@@ -53,10 +52,5 @@ __all__ = [
     "backup",
     "get_commands",
     "get_rmt_modes",
-    "get_system_message",
     "parse_brush_rule_string",
-    "restart_server",
-    "restart_service",
-    "start_service",
-    "stop_service",
 ]

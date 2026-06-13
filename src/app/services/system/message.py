@@ -18,8 +18,8 @@ class MessageClientService:
     负责消息客户端的增删改查、交互状态管理、连接测试
     """
 
-    def __init__(self, message: Message | None = None):
-        self._message = message or Message()
+    def __init__(self, message: Message):
+        self._message = message
 
     def delete_client(self, cid: int) -> bool:
         """删除消息客户端"""
@@ -46,19 +46,19 @@ class MessageClientService:
         return self._message.get_status(ctype=ctype, config=config)
 
     def upsert_client(
-        self, name: str, cid: int, ctype: str, config: str, switchs, interactive: int, enabled: int, templates: str
+        self, name: str, cid: int, ctype: str, config: str, switches, interactive: int, enabled: int, templates: str
     ) -> None:
         """添加或更新消息客户端"""
-        parsed_switchs = switchs
-        if isinstance(switchs, str):
+        parsed_switches = switches
+        if isinstance(switches, str):
             try:
-                parsed_switchs = json.loads(switchs)
-                if not isinstance(parsed_switchs, list):
-                    parsed_switchs = []
+                parsed_switches = json.loads(switches)
+                if not isinstance(parsed_switches, list):
+                    parsed_switches = []
             except json.JSONDecodeError:
-                parsed_switchs = [s.strip() for s in switchs.split(",") if s.strip()]
-        if not isinstance(parsed_switchs, list):
-            parsed_switchs = []
+                parsed_switches = [s.strip() for s in switches.split(",") if s.strip()]
+        if not isinstance(parsed_switches, list):
+            parsed_switches = []
         if cid:
             self._message.delete_message_client(cid=cid)
         if int(interactive) == 1:
@@ -67,7 +67,7 @@ class MessageClientService:
             name=name,
             ctype=ctype,
             config=config,
-            switchs=parsed_switchs,
+            switches=parsed_switches,
             interactive=interactive,
             enabled=enabled,
             templates=templates,
@@ -79,8 +79,8 @@ class MessageSenderService:
     消息发送业务服务
     """
 
-    def __init__(self, message: Message | None = None):
-        self._message = message or Message()
+    def __init__(self, message: Message):
+        self._message = message
 
     def send_custom_message(self, clients: list, title: str, text: str, image: str = "") -> SendMessageResultDTO:
         if not clients:

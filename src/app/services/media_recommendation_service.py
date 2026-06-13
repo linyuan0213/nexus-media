@@ -1,3 +1,4 @@
+import log
 from app.domain.media_utils import check_media_exists
 from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
@@ -129,8 +130,8 @@ class MediaRecommendationService:
             for res in res_list:
                 if res.get("image"):
                     res["image"] = ImageProxy.get_proxy_image_url(res["image"], use_proxy=True)
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[media_recommendation_service]忽略异常: {e}")
 
         return res_list
 

@@ -53,7 +53,10 @@ class Plex(_IMediaClient):
                 required=False,
                 title="X-Plex-Token",
                 type="text",
-                tooltip="Plex网页Url中的X-Plex-Token，通过浏览器F12->网络从请求URL中获取，如填写将优先使用；Token与服务器名称、用户名及密码 二选一，推荐使用Token，连接速度更快",
+                tooltip=(
+                    "Plex网页Url中的X-Plex-Token，通过浏览器F12->网络从请求URL中获取，"
+                    "如填写将优先使用；Token与服务器名称、用户名及密码 二选一，推荐使用Token，连接速度更快"
+                ),
             ),
             ConfigField(
                 id="play_host",

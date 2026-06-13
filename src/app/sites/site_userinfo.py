@@ -49,7 +49,7 @@ class SiteUserInfo:
         self._site_favicon_service = site_favicon_service
         self._site_engine = site_engine
         self._drissionpage_helper = drissionpage_helper or ChromeClient()
-        self._message = message or Message()
+        self._message = message
         self._refresh()
 
     def _refresh(self):
@@ -468,8 +468,8 @@ class SiteUserInfo:
             )
             res = client.get(url=url)
             site_user_info.site_favicon = base64.b64encode(res.content).decode()
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[site_userinfo]忽略异常: {e}")
 
     @staticmethod
     def __format_filesize(size_bytes):

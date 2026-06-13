@@ -8,7 +8,7 @@ import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 import log
-from api.deps import get_apikey_service, get_app_context
+from api.deps import get_apikey_service, get_app_context, get_message
 from app.di.context import AppContext
 from app.domain.enums import SearchType
 from app.infrastructure.security import SecurityChecker
@@ -20,10 +20,9 @@ from app.services.system_service import MessageCommandHandler
 router = APIRouter()
 
 
-def _verify_webhook_ip(channel: SearchType, request: Request) -> None:
+def _verify_webhook_ip(channel: SearchType, request: Request, message: Message) -> None:
     """从对应消息客户端配置读取 IP 白名单并进行校验。"""
-    msg = Message()
-    entry = msg.active_interactive_clients.get(channel)
+    entry = message.active_interactive_clients.get(channel)
     if entry and entry.get("client"):
         allow_ips = entry["client"].get_webhook_allow_ip()
     else:
@@ -37,11 +36,11 @@ def _verify_webhook_ip(channel: SearchType, request: Request) -> None:
 _MESSAGE_INITIALIZED = False
 
 
-def _ensure_message_initialized():
+def _ensure_message_initialized(message: Message):
     """确保消息客户端已初始化（懒加载触发）"""
     global _MESSAGE_INITIALIZED
     if not _MESSAGE_INITIALIZED:
-        _ = Message().active_clients
+        _ = message.active_clients
         _MESSAGE_INITIALIZED = True
 
 
@@ -99,9 +98,9 @@ def _get_text_from_update(update: dict, channel: SearchType) -> str:
     return ""
 
 
-def _handle_webhook(update: dict, channel: SearchType, app_context: AppContext):
+def _handle_webhook(update: dict, channel: SearchType, app_context: AppContext, message: Message):
     """统一处理各平台 webhook"""
-    _ensure_message_initialized()
+    _ensure_message_initialized(message)
 
     user_id = _get_user_id_from_update(update, channel)
     text = _get_text_from_update(update, channel)
@@ -119,8 +118,9 @@ def _handle_webhook(update: dict, channel: SearchType, app_context: AppContext):
         subscribe_service=app_context.subscribe_service,
         media_service=app_context.media_service,
         agent_service=app_context.agent_service,
+        message=message,
     )
-    handler = MessageCommandHandler(search_handler=search_handler)
+    handler = MessageCommandHandler(search_handler=search_handler, message=message)
     handler.handle_message_job(msg=text, in_from=channel, user_id=user_id)
     return {"ok": True}
 
@@ -130,12 +130,13 @@ async def telegram_webhook(
     request: Request,
     service: APIKeyService = Depends(get_apikey_service),
     app_context: AppContext = Depends(get_app_context),
+    message: Message = Depends(get_message),
 ):
     """Telegram Bot Webhook"""
     _verify_apikey(request, service)
-    _verify_webhook_ip(SearchType.TG, request)
+    _verify_webhook_ip(SearchType.TG, request, message)
     data = await request.json()
-    return await asyncio.to_thread(_handle_webhook, data, SearchType.TG, app_context)
+    return await asyncio.to_thread(_handle_webhook, data, SearchType.TG, app_context, message)
 
 
 @router.post("/wechat", summary="微信 Webhook")
@@ -143,11 +144,12 @@ async def wechat_webhook(
     request: Request,
     service: APIKeyService = Depends(get_apikey_service),
     app_context: AppContext = Depends(get_app_context),
+    message: Message = Depends(get_message),
 ):
     """WeChat 企业微信/公众号 Webhook"""
     _verify_apikey(request, service)
     data = await request.json()
-    return await asyncio.to_thread(_handle_webhook, data, SearchType.WX, app_context)
+    return await asyncio.to_thread(_handle_webhook, data, SearchType.WX, app_context, message)
 
 
 @router.post("/synologychat", summary="Synology Chat Webhook")
@@ -155,12 +157,13 @@ async def synologychat_webhook(
     request: Request,
     service: APIKeyService = Depends(get_apikey_service),
     app_context: AppContext = Depends(get_app_context),
+    message: Message = Depends(get_message),
 ):
     """Synology Chat Webhook"""
     _verify_apikey(request, service)
-    _verify_webhook_ip(SearchType.SYNOLOGY, request)
+    _verify_webhook_ip(SearchType.SYNOLOGY, request, message)
     data = await request.json()
-    return await asyncio.to_thread(_handle_webhook, data, SearchType.SYNOLOGY, app_context)
+    return await asyncio.to_thread(_handle_webhook, data, SearchType.SYNOLOGY, app_context, message)
 
 
 @router.post("/slack", summary="Slack Webhook")
@@ -168,11 +171,12 @@ async def slack_webhook(
     request: Request,
     service: APIKeyService = Depends(get_apikey_service),
     app_context: AppContext = Depends(get_app_context),
+    message: Message = Depends(get_message),
 ):
     """Slack Event/Webhook"""
     _verify_apikey(request, service)
-    _verify_webhook_ip(SearchType.SLACK, request)
+    _verify_webhook_ip(SearchType.SLACK, request, message)
     data = await request.json()
     if data.get("type") == "url_verification":
         return {"challenge": data.get("challenge")}
-    return await asyncio.to_thread(_handle_webhook, data, SearchType.SLACK, app_context)
+    return await asyncio.to_thread(_handle_webhook, data, SearchType.SLACK, app_context, message)

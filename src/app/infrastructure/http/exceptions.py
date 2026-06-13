@@ -2,6 +2,8 @@
 
 import httpx
 
+import log
+
 
 class HttpClientError(Exception):
     """HTTP 客户端统一异常基类."""
@@ -25,8 +27,8 @@ class HttpClientError(Exception):
             status_code = exc.response.status_code
             try:
                 response_text = exc.response.text[:500]
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[exceptions]忽略异常: {e}")
         return cls(
             message=str(exc),
             status_code=status_code,

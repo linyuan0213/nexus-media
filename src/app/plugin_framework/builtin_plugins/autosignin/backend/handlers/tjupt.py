@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from lxml import etree
 from PIL import Image
 
+import log
 from app.infrastructure.chrome import ChromeClient
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient, HttpClientError
@@ -83,8 +84,8 @@ class Tjupt(SiteSigninHandler):
                     captcha_img = Image.open(BytesIO(captcha_res.content))
                     captcha_img_hash = self._tohash(captcha_img)
                     self._plugin_ctx.debug(f"签到验证码图片hash {captcha_img_hash}")
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[tjupt]忽略异常: {e}")
 
         values = cast(list, html.xpath("//input[@name='answer']/@value"))
         options = cast(list, html.xpath("//input[@name='answer']/following-sibling::text()"))

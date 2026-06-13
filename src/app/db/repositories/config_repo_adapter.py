@@ -60,13 +60,13 @@ class MessageClientRepositoryAdapter(IMessageClientRepository):
         name: str,
         ctype: str,
         config: str,
-        switchs: list,
+        switches: list,
         interactive: int,
         enabled: int,
         note: str = "",
         templates: str | None = None,
     ) -> None:
-        self._repo.insert_message_client(name, ctype, config, switchs, interactive, enabled, note, templates)
+        self._repo.insert_message_client(name, ctype, config, switches, interactive, enabled, note, templates)
 
     def delete(self, cid: int) -> None:
         self._repo.delete_message_client(cid)
@@ -83,13 +83,13 @@ class MessageClientRepositoryAdapter(IMessageClientRepository):
         name: str,
         ctype: str,
         config: str,
-        switchs: list,
+        switches: list,
         interactive: int,
         enabled: int,
         note: str = "",
         templates: str | None = None,
     ) -> int:
-        return self._repo.insert_message_client(name, ctype, config, switchs, interactive, enabled, note, templates)
+        return self._repo.insert_message_client(name, ctype, config, switches, interactive, enabled, note, templates)
 
     def check_message_client(
         self,

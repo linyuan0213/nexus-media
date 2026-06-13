@@ -1,6 +1,7 @@
 import re
-import xml.dom.minidom
 from urllib.parse import urlsplit
+
+import defusedxml.minidom  # type: ignore[import-untyped]
 
 import log
 from app.db.repositories.subscribe_torrent_repo_adapter import SubscribeTorrentRepositoryAdapter
@@ -37,7 +38,10 @@ class RssHelper:
         site_domain = StringUtils.get_url_domain(url)
         try:
             headers = {
-                "Accept": "application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept": (
+                    "application/xml;q=0.9,image/avif,image/webp,image/apng,"
+                    "*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+                ),
                 "User-Agent": get_ua(),
             }
             proxies = get_proxies() if proxy else None
@@ -67,7 +71,7 @@ class RssHelper:
             ret_xml = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", ret_xml)
             try:
                 # 解析XML
-                dom_tree = xml.dom.minidom.parseString(ret_xml)
+                dom_tree = defusedxml.minidom.parseString(ret_xml)
                 root_node = dom_tree.documentElement
                 if not root_node:
                     return []
@@ -130,7 +134,8 @@ class RssHelper:
                         ExceptionUtils.exception_traceback(e1)
                         continue
             except Exception as e2:
-                # RSS过期 观众RSS 链接已过期，您需要获得一个新的！  pthome RSS Link has expired, You need to get a new one!
+                # RSS过期 观众RSS 链接已过期，您需要获得一个新的！
+                # pthome RSS Link has expired, You need to get a new one!
                 if ret_xml in _rss_expired_msg:
                     return None
                 ExceptionUtils.exception_traceback(e2)

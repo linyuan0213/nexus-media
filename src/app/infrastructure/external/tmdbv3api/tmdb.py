@@ -112,7 +112,10 @@ class TMDb:
         if self.api_key is None or self.api_key == "":
             raise TMDbError("No API key found.")
 
-        url = f"{self.domain}{action}?api_key={self.api_key}&include_adult=false&{append_to_response}&language={self.language}"
+        url = (
+            f"{self.domain}{action}?api_key={self.api_key}"
+            f"&include_adult=false&{append_to_response}&language={self.language}"
+        )
 
         client = self._get_client()
         req = client.request(

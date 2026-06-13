@@ -122,7 +122,8 @@ class SubscribeMatcher:
         # ---------- 匹配成功，应用过滤规则 ----------
         if not match_flag:
             match_msg.append(
-                f"{media_info.org_string} 识别为 {media_info.get_title_string()} {media_info.get_season_episode_string()} 不在订阅范围"
+                f"{media_info.org_string} 识别为 {media_info.get_title_string()} "
+                f"{media_info.get_season_episode_string()} 不在订阅范围"
             )
             return False, match_msg, match_rss_info
 
@@ -208,7 +209,8 @@ class SubscribeMatcher:
             return False, match_msg, match_rss_info
 
         match_msg.append(
-            f"{media_info.org_string} 识别为 {media_info.get_title_string()} {media_info.get_season_episode_string()} 匹配订阅成功"
+            f"{media_info.org_string} 识别为 {media_info.get_title_string()} "
+            f"{media_info.get_season_episode_string()} 匹配订阅成功"
         )
         match_msg.append(f"种子描述：{media_info.subtitle}")
         match_rss_info.update(

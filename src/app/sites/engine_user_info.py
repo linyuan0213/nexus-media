@@ -55,7 +55,7 @@ def prefetch_user_profile(engine, url, site_cookie, site_headers=None, ua="", pr
         if "data" in parsed and isinstance(parsed["data"], dict):
             log.warn(f"[prefetch]{site_def.name} data keys={list(parsed['data'].keys())[:10]}")
         return site_def, parsed
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001
+        log.debug(f"[engine_user_info]忽略异常: {e}")
     log.warn(f"[prefetch]{site_def.name if site_def else '?'} FAIL")
     return site_def, None

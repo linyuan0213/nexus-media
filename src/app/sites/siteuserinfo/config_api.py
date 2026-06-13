@@ -105,7 +105,9 @@ class ConfigApiUserInfo:
                 setattr(self, field_name, val)
 
         log.warn(
-            f"[ConfigApiUserInfo]{self.site_name} profile: upload={self.upload} download={self.download} seeding={self.seeding} bonus={self.bonus} username={self.username}"
+            f"[ConfigApiUserInfo]{self.site_name} profile: "
+            f"upload={self.upload} download={self.download} seeding={self.seeding} "
+            f"bonus={self.bonus} username={self.username}"
         )
 
         if self.upload and self.download:

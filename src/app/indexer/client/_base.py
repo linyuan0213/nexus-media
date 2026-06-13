@@ -7,10 +7,11 @@
 """
 
 import datetime
-import xml.dom.minidom
 from abc import ABCMeta, abstractmethod
 from typing import Any
 from urllib.parse import quote
+
+import defusedxml.minidom  # type: ignore[import-untyped]
 
 import log
 from app.domain.enums import ProgressKey, SearchType
@@ -119,7 +120,7 @@ class _IIndexClient(metaclass=ABCMeta):
             ret = HttpClient().get(url)
             if not ret:
                 return []
-            xml_doc = xml.dom.minidom.parseString(ret.text)
+            xml_doc = defusedxml.minidom.parseString(ret.text)
             items = xml_doc.getElementsByTagName("item")
             for item in items:
                 try:

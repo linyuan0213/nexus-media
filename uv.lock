@@ -187,7 +187,8 @@ wheels = [
 [[package]]
 name = "anitopy"
 version = "2.2.0rc2"
-source = { editable = "third_party/anitopy" }
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/b1/dbf762b160ed597ce5e5e55288cbf9085a422a75bfd4adbb91ea113b2eee/anitopy-2.2.0rc2.tar.gz", hash = "sha256:c3dbb44cb310472e58c1c21c7da2067d5710c2bff951c9b09ea09553c5cb4439", size = 20901, upload-time = "2022-12-03T19:51:26.593Z" }
 
 [[package]]
 name = "annotated-doc"
@@ -2783,6 +2784,7 @@ dependencies = [
     { name = "cn2an" },
     { name = "cryptography" },
     { name = "dateparser" },
+    { name = "defusedxml" },
     { name = "fast-bencode" },
     { name = "fastapi" },
     { name = "feapder" },
@@ -2857,7 +2859,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.14.0" },
-    { name = "anitopy", editable = "third_party/anitopy" },
+    { name = "anitopy" },
     { name = "apscheduler", specifier = ">=3.11.0" },
     { name = "backcall", specifier = ">=0.2.0" },
     { name = "backports-shutil-get-terminal-size", specifier = ">=1.0.0" },
@@ -2870,6 +2872,7 @@ requires-dist = [
     { name = "cn2an", specifier = ">=0.5.23" },
     { name = "cryptography", specifier = ">=44.0.0" },
     { name = "dateparser", specifier = ">=1.2.0" },
+    { name = "defusedxml", specifier = ">=0.7.1" },
     { name = "fast-bencode", specifier = ">=1.1.7" },
     { name = "fastapi", specifier = ">=0.136.0" },
     { name = "feapder", specifier = ">=1.9.1" },
