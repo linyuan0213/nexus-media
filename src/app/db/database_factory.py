@@ -17,7 +17,7 @@ import os
 from typing import Any
 from urllib.parse import quote_plus
 
-from sqlalchemy import Engine, create_engine, text
+from sqlalchemy import Engine, create_engine, create_engine as sa_create_engine, text
 from sqlalchemy.pool import QueuePool
 
 from app.core.settings import settings
@@ -123,8 +123,6 @@ class DatabaseFactory:
                 password = DatabaseFactory._get_config_value("password", "")
 
                 # 连接到 MySQL 服务器（不指定数据库）
-                from sqlalchemy import create_engine as sa_create_engine
-
                 server_url = f"mysql+pymysql://{quote_plus(str(username))}:{quote_plus(str(password))}@{host}:{port}"
                 engine = sa_create_engine(server_url)
 
@@ -146,8 +144,6 @@ class DatabaseFactory:
                 password = DatabaseFactory._get_config_value("password", "")
 
                 # 连接到 PostgreSQL 服务器（使用 postgres 数据库）
-                from sqlalchemy import create_engine as sa_create_engine
-
                 server_url = f"postgresql+psycopg2://{quote_plus(str(username))}:{quote_plus(str(password))}@{host}:{port}/postgres"
                 engine = sa_create_engine(server_url, isolation_level="AUTOCOMMIT")
 

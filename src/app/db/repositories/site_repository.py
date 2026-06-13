@@ -4,6 +4,7 @@ Handles site configuration and statistics related database operations.
 """
 
 import contextlib
+import datetime
 import json
 import time
 
@@ -456,8 +457,6 @@ class SiteRepository(BaseRepository):
         """
         查询近期上传下载量
         """
-        import datetime
-
         if strict_urls is None:
             strict_urls = []
         end = datetime.datetime.now()
@@ -552,8 +551,6 @@ class SiteRepository(BaseRepository):
         """
         查询各站点每日上传量（按站点、按天分组，返回增量）
         """
-        import datetime
-
         if strict_urls is None:
             strict_urls = []
         end = datetime.datetime.now()

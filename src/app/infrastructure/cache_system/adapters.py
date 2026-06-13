@@ -3,6 +3,7 @@
 支持内存缓存和Redis缓存
 """
 
+import fnmatch
 import pickle
 import threading
 from collections import OrderedDict
@@ -149,8 +150,6 @@ class MemoryCacheAdapter(CacheAdapter):
 
     def keys(self, pattern: str = "*") -> list[str]:
         """获取匹配模式的键列表"""
-        import fnmatch
-
         with self._lock:
             # 清理过期条目
             expired_keys = [k for k, e in self._cache.items() if e.is_expired()]

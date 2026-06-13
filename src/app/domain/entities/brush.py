@@ -2,6 +2,7 @@
 刷流领域实体
 """
 
+import json
 from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Any, Optional
@@ -55,8 +56,6 @@ class BrushRuleEntity:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        import json
-
         def _parse(val: str) -> dict[str, Any]:
             if not val:
                 return {}

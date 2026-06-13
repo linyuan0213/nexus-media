@@ -4,6 +4,7 @@
 """
 
 import contextlib
+import json
 from dataclasses import dataclass, field, fields
 from typing import Any, Optional
 
@@ -117,8 +118,6 @@ class PluginManifestEntity:
     def from_orm(cls, orm_model) -> Optional["PluginManifestEntity"]:
         if orm_model is None:
             return None
-        import json
-
         tags = []
         with contextlib.suppress(Exception):
             tags = json.loads(orm_model.TAGS or "[]")
@@ -168,8 +167,6 @@ class PluginConfigEntity:
     def from_orm(cls, orm_model) -> Optional["PluginConfigEntity"]:
         if orm_model is None:
             return None
-        import json
-
         cfg = {}
         with contextlib.suppress(Exception):
             cfg = json.loads(orm_model.CONFIG or "{}")

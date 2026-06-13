@@ -1,6 +1,9 @@
 """刮削器 — 媒体库文件遍历与 NFO 信息读取"""
 
 import os
+from io import BytesIO
+
+from lxml import etree
 
 from app.core.constants import RMT_MEDIAEXT
 from app.storage.backends.base import StorageBackend
@@ -83,10 +86,6 @@ class MediaLibrary:
             stream = backend.read_stream(file_path)
             content = stream.read()
             stream.close()
-            from io import BytesIO
-
-            from lxml import etree
-
             root = etree.parse(BytesIO(content)).getroot()
             xpaths = ["uniqueid[@type='Tmdb']", "uniqueid[@type='tmdb']", "uniqueid[@type='TMDB']", "tmdbid"]
             for xp in xpaths:

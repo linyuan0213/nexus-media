@@ -5,6 +5,7 @@ Handles download history, settings and indexer statistics related database opera
 
 import os.path
 import time
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import and_, case, func
@@ -210,8 +211,6 @@ class DownloadRepository(BaseRepository):
         兼容迁移后 STATE 被设为 completed 但任务实际还在下载的情况，
         由上层根据下载器实时进度判断真实状态并回写。
         """
-        from datetime import datetime, timedelta
-
         cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
         with self.session() as db:
             return (
