@@ -3,6 +3,7 @@
 from app.agent.tool_executor import ToolExecutor
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
+from app.di.models import BusinessFacades, CoordinatorObjects, InfrastructureObjects, ServiceObjects
 from app.media import MediaCache
 from app.services.rss_processor import RssHelper
 from app.services.subscribe.coordinator import DownloadCoordinator
@@ -13,8 +14,6 @@ from app.services.subscribe.strategies.queue_search import QueueSearchStrategy
 from app.services.subscribe.strategies.rss_feed import RssFeedStrategy
 from app.services.system.lifecycle import SystemLifecycleService
 from app.sites import SiteConf
-
-from app.di.models import BusinessFacades, CoordinatorObjects, InfrastructureObjects, ServiceObjects
 
 
 def build_coordinators(

@@ -1,7 +1,6 @@
 """上下文 Builder — 组装完整 AppContext。"""
 
 import log
-
 from app.di.builders.coordinators_builder import build_coordinators
 from app.di.builders.facades_builder import build_business_facades
 from app.di.builders.infrastructure_builder import build_infrastructure

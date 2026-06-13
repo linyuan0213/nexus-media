@@ -1,6 +1,7 @@
 """业务 Service Builder — 创建 Layer 4 对象。"""
 
 from app import utils as string_utils_module
+from app.core.system_config import SystemConfig
 from app.db.repositories.brush_repo_adapter import BrushRuleRepositoryAdapter, BrushTaskRepositoryAdapter
 from app.db.repositories.config_repo_adapter import (
     DownloaderRepositoryAdapter,
@@ -30,7 +31,8 @@ from app.db.repositories.subscribe_repo_adapter import (
 )
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import TransferBlacklistRepositoryAdapter
-from app.db.repositories.word_repo_adapter import CustomWordRepositoryAdapter, CustomWordGroupRepositoryAdapter
+from app.db.repositories.word_repo_adapter import CustomWordGroupRepositoryAdapter, CustomWordRepositoryAdapter
+from app.di.models import BusinessFacades, InfrastructureObjects, ServiceObjects
 from app.downloader.client_factory import DownloadClientFactory
 from app.indexer.configuration import IndexerHelper
 from app.indexer.core.pipeline import SearchPipeline
@@ -46,8 +48,8 @@ from app.services.brush.task_service import BrushTaskService
 from app.services.brush_service import BrushService
 from app.services.config_service import ConfigService
 from app.services.download_core import DownloadCore
-from app.services.downloader_core import DownloaderCore
 from app.services.download_service import DownloadService
+from app.services.downloader_core import DownloaderCore
 from app.services.file_index_service import FileIndexService
 from app.services.filter_service import FilterService
 from app.services.indexer_service import IndexerService
@@ -99,9 +101,6 @@ from app.sites.site_cookie import SiteCookie
 from app.sites.site_favicon_service import SiteFaviconService
 from app.sites.site_resolver import SiteResolver
 from app.sites.site_userinfo import SiteUserInfo
-from app.core.system_config import SystemConfig
-
-from app.di.models import BusinessFacades, InfrastructureObjects, ServiceObjects
 
 
 def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> ServiceObjects:

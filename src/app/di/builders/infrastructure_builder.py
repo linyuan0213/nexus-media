@@ -1,9 +1,9 @@
 """基础设施 Builder — 创建 Layer 1 对象。"""
 
 import log
-
 from app.db.repositories.apikey_repo_adapter import APIKeyLogRepositoryAdapter, APIKeyRepositoryAdapter
 from app.db.repositories.plugin_framework_repo_adapter import PluginLogRepositoryAdapter
+from app.di.models import InfrastructureObjects
 from app.events.bridge import PluginBridge
 from app.events.bus import EventBus
 from app.events.registry import EventHandlerRegistry
@@ -19,8 +19,6 @@ from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 from app.sites.siteuserinfo.config_api import _api_factory
 from app.sites.siteuserinfo.config_html import _html_config_factory
-
-from app.di.models import InfrastructureObjects
 
 
 def build_infrastructure() -> InfrastructureObjects:
