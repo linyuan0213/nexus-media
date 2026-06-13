@@ -1,7 +1,5 @@
 import difflib
 
-import zhconv
-
 from app.db.repositories.plugin_repo_adapter import TmdbBlacklistRepositoryAdapter
 from app.core.settings import settings
 from app.infrastructure.cache_system import TMDBCache, get_cache_manager
@@ -18,6 +16,7 @@ from app.infrastructure.external.tmdbv3api import (
     Trending,
 )
 from app.utils import StringUtils
+from app.utils.chinese_utils import to_simplified
 from app.utils.config_tools import get_proxies, get_tmdbapi_url
 from app.domain.mediatypes import MediaType
 
@@ -92,7 +91,7 @@ def compare_tmdb_names(file_name, tmdb_names):
         tmdb_names = [tmdb_names]
     _fn = StringUtils.handler_special_chars(str(file_name))
     file_name = _fn.upper() if isinstance(_fn, str) else str(file_name).upper()
-    file_name_simplified = zhconv.convert(file_name, "zh-hans").upper()
+    file_name_simplified = to_simplified(file_name).upper()
     for tmdb_name in tmdb_names:
         _tn = StringUtils.handler_special_chars(str(tmdb_name))
         tmdb_name = _tn.strip().upper() if isinstance(_tn, str) else str(tmdb_name).strip().upper()
@@ -129,7 +128,7 @@ def get_tmdb_chinese_title(tmdbinfo):
         if not title or not StringUtils.is_chinese(title):
             continue
         if iso_3166_1 in ("CN", "SG"):
-            simplified = zhconv.convert(title, "zh-hans")
+            simplified = to_simplified(title)
             if simplified == title:
                 zh_cn = title
                 break
@@ -138,7 +137,7 @@ def get_tmdb_chinese_title(tmdbinfo):
     if zh_cn:
         return zh_cn
     if zh_tw:
-        return zhconv.convert(zh_tw, "zh-hans")
+        return to_simplified(zh_tw)
     return tmdbinfo.get("title") if tmdbinfo.get("media_type") == MediaType.MOVIE else tmdbinfo.get("name")
 
 

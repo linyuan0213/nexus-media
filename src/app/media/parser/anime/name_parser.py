@@ -5,10 +5,10 @@
 import re
 
 import anitopy  # type: ignore
-import zhconv
 
 from app.media.parser.anime.constants import _ANIME_NO_WORDS, _NAME_NOSTRING_RE
 from app.utils import StringUtils
+from app.utils.chinese_utils import to_simplified
 
 
 def extract_name(info, anitopy_info, title):
@@ -62,7 +62,7 @@ def clean_name(info):
         _, info.cn_name, _, _, _, _ = StringUtils.get_keyword_from_string(info.cn_name)
         if info.cn_name:
             info.cn_name = re.sub(rf"{_NAME_NOSTRING_RE}", "", info.cn_name, flags=re.IGNORECASE).strip()
-            info.cn_name = zhconv.convert(info.cn_name, "zh-hans")
+            info.cn_name = to_simplified(info.cn_name)
     if info.en_name:
         info.en_name = re.sub(rf"{_NAME_NOSTRING_RE}", "", info.en_name, flags=re.IGNORECASE).strip().title()
         info._name = StringUtils.str_title(info.en_name)

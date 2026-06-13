@@ -5,7 +5,6 @@ import time
 from io import BytesIO
 from typing import cast
 
-import zhconv
 from bs4 import BeautifulSoup
 from lxml import etree
 from PIL import Image
@@ -13,6 +12,7 @@ from PIL import Image
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient, HttpClientError
 from app.infrastructure.http.config import HttpClientConfig
+from app.utils.chinese_utils import to_simplified
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base import (
     SigninResult,
     SiteSigninContext,
@@ -163,9 +163,7 @@ class Tjupt(SiteSigninHandler):
             self._plugin_ctx.info("Google识图失败，未获取到识图结果")
         else:
             res_count = len(search_results)
-            search_results_text = "@".join(
-                [zhconv.convert(result.text, "zh-hans") for result in search_results if result.text]
-            )
+            search_results_text = "@".join([to_simplified(result.text) for result in search_results if result.text])
             count_results = []
             count_flag = False
             for value, answer in answers:

@@ -2802,6 +2802,7 @@ dependencies = [
     { name = "lxml" },
     { name = "ollama" },
     { name = "openai" },
+    { name = "opencc-python-reimplemented" },
     { name = "parse" },
     { name = "pickleshare" },
     { name = "pillow" },
@@ -2838,7 +2839,6 @@ dependencies = [
     { name = "webdav4" },
     { name = "websockets" },
     { name = "wheel" },
-    { name = "zhconv" },
 ]
 
 [package.dev-dependencies]
@@ -2889,6 +2889,7 @@ requires-dist = [
     { name = "lxml", specifier = ">=5.3.0" },
     { name = "ollama", specifier = ">=0.6.2" },
     { name = "openai", specifier = ">=1.59.3" },
+    { name = "opencc-python-reimplemented", specifier = ">=0.1.7" },
     { name = "parse", specifier = ">=1.20.2" },
     { name = "pickleshare", specifier = ">=0.7.5" },
     { name = "pillow", specifier = ">=11.1.0" },
@@ -2925,7 +2926,6 @@ requires-dist = [
     { name = "webdav4", specifier = ">=0.10.0" },
     { name = "websockets", specifier = ">=14.1" },
     { name = "wheel", specifier = ">=0.45.1" },
-    { name = "zhconv", specifier = ">=1.4.3" },
 ]
 
 [package.metadata.requires-dev]
@@ -3004,6 +3004,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/02/2e/58d83848dd1a79cb92ed8e63f6ba901ca282c5f09d04af9423ec26c56fd7/openapi_pydantic-0.5.1.tar.gz", hash = "sha256:ff6835af6bde7a459fb93eb93bb92b8749b754fc6e51b2f1590a19dc3005ee0d", size = 60892, upload-time = "2025-01-08T19:29:27.083Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/12/cf/03675d8bd8ecbf4445504d8071adab19f5f993676795708e36402ab38263/openapi_pydantic-0.5.1-py3-none-any.whl", hash = "sha256:a3a09ef4586f5bd760a8df7f43028b60cafb6d9f61de2acba9574766255ab146", size = 96381, upload-time = "2025-01-08T19:29:25.275Z" },
+]
+
+[[package]]
+name = "opencc-python-reimplemented"
+version = "0.1.7"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/6d/c6f37eed651dd6b752e50f80a93396cdaa42a6acc6ce05ad7452303ea511/opencc-python-reimplemented-0.1.7.tar.gz", hash = "sha256:4f777ea3461a25257a7b876112cfa90bb6acabc6dfb843bf4d11266e43579dee", size = 482566, upload-time = "2023-02-11T03:58:42.25Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/30/6b/055b7806f320cc8f2cdf23c5f70221c0dc1683fca9ffaf76dfc2ad4b91b6/opencc_python_reimplemented-0.1.7-py2.py3-none-any.whl", hash = "sha256:41b3b92943c7bed291f448e9c7fad4b577c8c2eae30fcfe5a74edf8818493aa6", size = 481813, upload-time = "2023-02-11T03:58:39.66Z" },
 ]
 
 [[package]]
@@ -5718,12 +5727,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/65/a4/ba80dccd3593ff1f01051a818694d07b58cb8232677ee9a22a5a1f93a9fc/yarl-1.24.2-cp314-cp314t-win_arm64.whl", hash = "sha256:e434a45ce2e7a947f951fc5a8944c8cc080b7e59f9c50ae80fd39107cf88126d", size = 91219, upload-time = "2026-05-19T21:31:01.934Z" },
     { url = "https://files.pythonhosted.org/packages/fd/4d/4b880086bd0d3e034d25647be1d830afc3e3f610e98c4ab3490af6b1b6d5/yarl-1.24.2-py3-none-any.whl", hash = "sha256:2783d9226db8797636cd6896e4de81feed252d1db72265686c9558d97a4d94b9", size = 53576, upload-time = "2026-05-19T21:31:03.909Z" },
 ]
-
-[[package]]
-name = "zhconv"
-version = "1.4.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/25/47/c8ae2d5d4025e253211ff3d8c163f457db1da94976cb582337a5ab76cb87/zhconv-1.4.3.tar.gz", hash = "sha256:ad42d9057ca0605f8e41d62b67ca797f879f58193ee6840562c51459b2698c45", size = 211571, upload-time = "2021-10-31T05:59:44.096Z" }
 
 [[package]]
 name = "zipp"
