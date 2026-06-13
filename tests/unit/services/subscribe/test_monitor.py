@@ -1,5 +1,6 @@
 """SubscriptionMonitor 单元测试."""
 
+from concurrent.futures import Future
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -7,9 +8,22 @@ import pytest
 from app.services.subscribe.monitor import SubscriptionMonitor
 
 
+def _submit_wrapper():
+    def _submit(func, *args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception:
+            pass
+        future = Future()
+        future.set_result(None)
+        return future
+
+    return _submit
+
+
 @pytest.fixture
 def monitor():
-    return SubscriptionMonitor(
+    m = SubscriptionMonitor(
         subscribe_service=MagicMock(),
         thread_executor=MagicMock(),
         queue_strategy=MagicMock(),
@@ -17,6 +31,8 @@ def monitor():
         indexer_strategy=MagicMock(),
         coordinator=MagicMock(),
     )
+    m._thread_executor.submit.side_effect = _submit_wrapper()  # type: ignore[attr-defined]
+    return m
 
 
 class TestSubscriptionMonitor:

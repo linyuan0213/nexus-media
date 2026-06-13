@@ -1,6 +1,7 @@
 """订阅监控器 — 统一调度器，聚合 RSS 轮询、主动搜索、队列搜索三种策略."""
 
 import datetime
+from concurrent.futures import wait
 
 import pytz
 
@@ -55,43 +56,43 @@ class SubscriptionMonitor:
     def run(self) -> None:
         """统一入口，由定时服务调用.
 
-        执行顺序：
-        1. 队列搜索（按 queue_interval 间隔）
-        2. RSS 轮询（按 rss_interval 间隔）
-        3. 主动搜索（按 search_interval 间隔）
+        三种策略在满足各自周期时通过线程池并发执行，缩短整体耗时；
+        各自更新 _last_*_run 时间戳。
         """
+        tasks = []
+        if self._should_run_queue():
+            tasks.append(self._thread_executor.submit(self._run_queue_search))
+        if self._should_run_rss():
+            tasks.append(self._thread_executor.submit(self._run_rss_feed))
+        if self._should_run_search():
+            tasks.append(self._thread_executor.submit(self._run_indexer_search))
+
+        if tasks:
+            wait(tasks)
+
+    def _run_queue_search(self) -> None:
         try:
-            if self._should_run_queue():
-                self._run_queue_search()
+            log.info("[SubscriptionMonitor] 开始队列搜索...")
+            self._queue_strategy.run()
+            self._last_queue_run = datetime.datetime.now(self._tz)
         except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as e:
             log.error(f"[SubscriptionMonitor] 队列搜索失败: {e}")
 
+    def _run_rss_feed(self) -> None:
         try:
-            if self._should_run_rss():
-                self._run_rss_feed()
+            log.info("[SubscriptionMonitor] 开始 RSS 轮询...")
+            self._rss_strategy.run()
+            self._last_rss_run = datetime.datetime.now(self._tz)
         except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as e:
             log.error(f"[SubscriptionMonitor] RSS 轮询失败: {e}")
 
+    def _run_indexer_search(self) -> None:
         try:
-            if self._should_run_search():
-                self._run_indexer_search()
+            log.info("[SubscriptionMonitor] 开始主动搜索...")
+            self._indexer_strategy.run()
+            self._last_search_run = datetime.datetime.now(self._tz)
         except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as e:
             log.error(f"[SubscriptionMonitor] 主动搜索失败: {e}")
-
-    def _run_queue_search(self) -> None:
-        log.info("[SubscriptionMonitor] 开始队列搜索...")
-        self._queue_strategy.run()
-        self._last_queue_run = datetime.datetime.now(self._tz)
-
-    def _run_rss_feed(self) -> None:
-        log.info("[SubscriptionMonitor] 开始 RSS 轮询...")
-        self._rss_strategy.run()
-        self._last_rss_run = datetime.datetime.now(self._tz)
-
-    def _run_indexer_search(self) -> None:
-        log.info("[SubscriptionMonitor] 开始主动搜索...")
-        self._indexer_strategy.run()
-        self._last_search_run = datetime.datetime.now(self._tz)
 
     def _bind_coordinator(self) -> None:
         """将下载协调器绑定到各个搜索策略上."""

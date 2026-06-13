@@ -35,6 +35,8 @@ from app.services.torrentremover_core import TorrentRemoverService
 class ToolExecutor:
     """工具执行器 — 桥接 Agent Tools 与业务 Service"""
 
+    _MEDIA_TYPE_MAP = {"movie": MediaType.MOVIE, "tv": MediaType.TV, "anime": MediaType.ANIME}
+
     def __init__(
         self,
         message,
@@ -335,23 +337,7 @@ class ToolExecutor:
             filtered = [r for r in filtered if r.get("seeders", 0) >= min_seeders]
 
         if max_size_gb > 0:
-
-            def _parse_size_gb(s):
-                if not s:
-                    return 0
-                s = s.upper().replace(",", "")
-                try:
-                    if "TB" in s:
-                        return float(s.replace("TB", "").strip()) * 1024
-                    if "GB" in s:
-                        return float(s.replace("GB", "").strip())
-                    if "MB" in s:
-                        return float(s.replace("MB", "").strip()) / 1024
-                except ValueError:
-                    pass
-                return float("inf")
-
-            filtered = [r for r in filtered if _parse_size_gb(r.get("size", "")) <= max_size_gb]
+            filtered = [r for r in filtered if self._parse_size_gb(r.get("size", "")) <= max_size_gb]
 
         if sites:
             filtered = [r for r in filtered if r.get("site", "") in sites]
@@ -429,8 +415,7 @@ class ToolExecutor:
         media_info.org_string = title
 
         if media_type:
-            type_map = {"movie": MediaType.MOVIE, "tv": MediaType.TV, "anime": MediaType.ANIME}
-            media_info.type = type_map.get(media_type, media_info.type)
+            media_info.type = self._MEDIA_TYPE_MAP.get(media_type, media_info.type)
 
         searcher = self._searcher
         search_result, no_exists, search_count, download_count = searcher.search_one_media(
@@ -455,8 +440,7 @@ class ToolExecutor:
             return ToolResult(success=False, error=f"无法识别媒体: {title}")
 
         if media_type:
-            type_map = {"movie": MediaType.MOVIE, "tv": MediaType.TV, "anime": MediaType.ANIME}
-            media_info.type = type_map.get(media_type, media_info.type)
+            media_info.type = self._MEDIA_TYPE_MAP.get(media_type, media_info.type)
 
         mediaid = tmdbid or media_info.tmdb_id
         if mediaid:
@@ -476,3 +460,19 @@ class ToolExecutor:
         if code == 0:
             return ToolResult(success=True, data=f"已添加订阅: {media_info.get_title_string()}")
         return ToolResult(success=False, error=f"添加订阅失败: {msg}")
+
+    @staticmethod
+    def _parse_size_gb(s: str) -> float:
+        if not s:
+            return 0
+        s = s.upper().replace(",", "")
+        try:
+            if "TB" in s:
+                return float(s.replace("TB", "").strip()) * 1024
+            if "GB" in s:
+                return float(s.replace("GB", "").strip())
+            if "MB" in s:
+                return float(s.replace("MB", "").strip()) / 1024
+        except ValueError:
+            pass
+        return float("inf")
