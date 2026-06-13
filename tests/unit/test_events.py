@@ -156,7 +156,7 @@ class TestOnEventDecorator:
         subscribers = get_subscribers()
         assert len(subscribers) == 1
         assert subscribers[0][0] == "test.event"
-        assert my_handler in subscribers[0][1]
+        assert any(handler is my_handler for _, handler in subscribers[0][1])
 
         clear_subscribers()
 

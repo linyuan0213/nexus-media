@@ -78,6 +78,7 @@ class SyncEngine:
         self._monitor_ids: list[str] = []
         self._observers: list = []
         self._synced_files: set[str] = set()
+        self._synced_files_max_size = 10000
         self._reload()
 
     def init(self) -> None:
@@ -174,6 +175,8 @@ class SyncEngine:
             if event_path in self._synced_files:
                 return
             self._synced_files.add(event_path)
+            if len(self._synced_files) > self._synced_files_max_size:
+                self._synced_files.pop()
 
         try:
             cfg = self._find_config(event_path)
