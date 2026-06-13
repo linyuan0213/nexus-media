@@ -14,11 +14,11 @@ from pydantic import BaseModel
 
 import log
 from api.deps import (
-    _extract_user_ctx_from_session,
     get_backup_restore_service,
     get_config_reloader,
     get_config_service,
     get_config_update_service,
+    get_current_user,
     get_indexer_config_service,
     get_indexer_service,
     get_media_server_config_service,
@@ -767,12 +767,9 @@ def stream_logging(
     """实时日志 EventSource 响应
     兼容 EventSource 无法携带自定义 Header 的限制，支持从 query param 传入 token。
     """
-    # 认证：优先 query param token，其次 session
     user_ctx = None
     if token:
         user_ctx = AuthService.verify_token(token)
-    if not user_ctx:
-        user_ctx = _extract_user_ctx_from_session(request, app_context=request.app.state.context)
     if not user_ctx:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -805,14 +802,11 @@ def get_site_config_version():
 
 @router.post("/site-config/update", response_model=CommonResponse, summary="手动更新站点配置")
 def update_site_config(
-    request: Request,
+    user: UserContext = Depends(get_current_user),
     payload: EmptyRequest | None = None,
 ):
     """手动触发站点配置更新"""
-    user_ctx = _extract_user_ctx_from_session(request, app_context=request.app.state.context)
-    if not user_ctx:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录")
-    if not user_ctx.is_superadmin:
+    if not user.is_superadmin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
 
     try:

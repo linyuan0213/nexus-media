@@ -11,7 +11,6 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from scalar_fastapi import get_scalar_api_reference
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.middleware.sessions import SessionMiddleware
 
 import log
 import version
@@ -45,16 +44,12 @@ from app.downloader.client import init_clients as init_downloaders
 from app.indexer.client import init_clients as init_indexers
 from app.infrastructure.rate_limiter.middleware import RateLimitMiddleware
 from app.infrastructure.redis import RedisStore
-from app.infrastructure.security import get_secret_key
 from app.infrastructure.thread import ThreadExecutor
 from app.mediaserver.client import init_clients as init_mediaservers
 from app.message.client.manager import init_clients as init_message_clients
 from app.message.message import Message
 from app.schemas.common import HealthCheckResponse, HealthServiceStatus
 from app.services.system.lifecycle import SystemLifecycleService
-
-# 读取安全密钥（与 Flask 共用 secret_key）
-_secret_key = get_secret_key()
 
 
 @asynccontextmanager
@@ -124,14 +119,6 @@ if _debug:
             title=app.title,
         )
 
-
-# SessionMiddleware：兼容现有 Flask Session（Redis）
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=_secret_key,
-    session_cookie="session",
-    max_age=2592000,  # 30 天，与 Flask 保持一致
-)
 
 # CORS
 app.add_middleware(

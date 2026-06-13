@@ -108,55 +108,13 @@ def get_auth_service(app_context: AppContext = Depends(get_app_context)) -> Auth
     return AuthService(rbac_service=app_context.rbac_service)
 
 
-def _extract_user_ctx_from_session(
-    request: Request,
-    app_context: AppContext,
-) -> UserContext | None:
-    """
-    从 Session 中提取用户上下文（绞杀期兼容）
-    """
-    session = getattr(request, "session", None)
-    if not session:
-        return None
-    # 兼容新旧 session 键名
-    user_id = session.get("user_id") or session.get("_user_id")
-    if not user_id:
-        return None
-    _rbac_service = app_context.rbac_service
-    try:
-        user = _rbac_service.get_user_by_id(user_id)
-        if user is None or getattr(user, "STATUS", 0) != 1:
-            return None
-
-        # 获取权限
-        try:
-            permissions = _rbac_service.get_user_permissions(user_id)
-            permissions = list(permissions) if permissions else []
-        except Exception:
-            permissions = []
-
-        level = getattr(user, "LEVEL", 0) or 0
-        is_superadmin = getattr(user, "IS_SUPERADMIN", 0) == 1
-
-        return UserContext(
-            user_id=user_id,
-            username=getattr(user, "USERNAME", ""),
-            nickname=getattr(user, "NICKNAME", None) or None,
-            level=level,
-            permissions=permissions,
-            is_superadmin=is_superadmin,
-        )
-    except Exception:
-        return None
-
-
 def get_current_user(
     request: Request,
     app_context: AppContext = Depends(get_app_context),
     credentials: HTTPAuthorizationCredentials | None = bearer_scheme_dependency,
 ) -> UserContext:
     """
-    统一认证依赖：优先 JWT，兼容 Session、旧 Token(Bearer)、API Key。
+    统一认证依赖：优先 JWT，兼容旧 Token(Bearer)、API Key。
     返回 UserContext；认证失败时抛出 401。
     """
     auth_header: str | None = credentials.credentials if credentials else None
@@ -166,17 +124,12 @@ def get_current_user(
     if user_ctx:
         return user_ctx
 
-    # 2) Session 认证（Web 前端，绞杀期兼容）
-    user_ctx = _extract_user_ctx_from_session(request, app_context)
-    if user_ctx:
-        return user_ctx
-
-    # 3) 旧 Token 认证（APIv1 兼容）
+    # 2) 旧 Token 认证（APIv1 兼容）
     username = _extract_user_from_token(auth_header)
     if username:
         return UserContext(user_id=0, username=username, level=0, permissions=[], is_superadmin=False)
 
-    # 4) API Key 认证
+    # 3) API Key 认证
     query_key = request.query_params.get("apikey")
     user_ctx = _extract_user_from_api_key(
         auth_header,
