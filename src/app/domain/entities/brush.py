@@ -2,10 +2,11 @@
 刷流领域实体
 """
 
-import json
 from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Any, Optional
+
+from app.utils.json_utils import JsonUtils
 
 
 class BrushTaskState(Enum):
@@ -60,7 +61,7 @@ class BrushRuleEntity:
             if not val:
                 return {}
             try:
-                return json.loads(val) if isinstance(val, str) else val
+                return JsonUtils.loads(val) if isinstance(val, str) else val
             except Exception:
                 return {}
 

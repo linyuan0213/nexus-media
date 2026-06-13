@@ -1,8 +1,8 @@
-import json
 import subprocess
 
 import log
 from app.utils import SystemUtils
+from app.utils.json_utils import JsonUtils
 
 
 class FfmpegProcessor:
@@ -78,7 +78,7 @@ class FfmpegProcessor:
             command = ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", video_path]
             result = subprocess.run(command, capture_output=True)  # nosec B603
             if result.returncode == 0:
-                return json.loads(result.stdout.decode("utf-8"))
+                return JsonUtils.loads(result.stdout.decode("utf-8"))
         except Exception as e:
             log.warn(f"[FfmpegProcessor]获取视频元数据失败: {e}")
         return None

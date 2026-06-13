@@ -2,9 +2,10 @@
 存储后端领域实体
 """
 
-import json
 from dataclasses import dataclass
 from typing import Any, Optional
+
+from app.utils.json_utils import JsonUtils
 
 
 @dataclass
@@ -44,7 +45,7 @@ class StorageBackendEntity:
             id=orm_model.ID,
             name=orm_model.NAME or "",
             type=orm_model.TYPE or "",
-            config=json.loads(orm_model.CONFIG or "{}"),
+            config=JsonUtils.loads(orm_model.CONFIG or "{}"),
             enabled=bool(orm_model.ENABLED),
         )
 

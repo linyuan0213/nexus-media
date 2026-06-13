@@ -8,6 +8,7 @@ import log
 from app.core.settings import settings
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.utils.json_utils import JsonUtils
 
 
 def generate_tab_id() -> str:
@@ -115,7 +116,7 @@ class ChromeClient:
             # 处理点击事件
             if click_xpath:
                 click_url = f"{self.url}/tabs/click/"
-                click_data = json.dumps({"tab_name": tab_id, "selector": click_xpath}, separators=(",", ":"))
+                click_data = JsonUtils.dumps({"tab_name": tab_id, "selector": click_xpath}, separators=(",", ":"))
 
                 try:
                     self._request(method="POST", url=click_url, headers=headers, data=click_data, timeout=timeout)
@@ -130,7 +131,7 @@ class ChromeClient:
                     return ""
 
             # 解析HTML内容
-            html_dict = json.loads(res_json)
+            html_dict = JsonUtils.loads(res_json)
             content = html_dict.get("html", "")
 
             # 标记操作完成，避免超时线程强制关闭
@@ -168,7 +169,7 @@ class ChromeClient:
             self.close_tab(tab_id)
             return ""
 
-        html_dict = json.loads(res_json)
+        html_dict = JsonUtils.loads(res_json)
         content = html_dict.get("html")
         return content
 
@@ -184,7 +185,7 @@ class ChromeClient:
     def _parse_html_response(self, response_text: str) -> str:
         """解析HTML响应，提取HTML内容"""
         try:
-            html_dict = json.loads(response_text)
+            html_dict = JsonUtils.loads(response_text)
             return html_dict.get("html", "")
         except json.JSONDecodeError as e:
             log.error(f"解析HTML响应失败: {str(e)}")
@@ -231,7 +232,7 @@ class ChromeClient:
                 method="POST",
                 url=tabs_url,
                 headers=headers,
-                data=json.dumps(open_tab_data, separators=(",", ":")),
+                data=JsonUtils.dumps(open_tab_data, separators=(",", ":")),
                 timeout=timeout,
             )
             if response.status_code not in (200, 400):
@@ -290,7 +291,7 @@ class ChromeClient:
 
         headers = {"Content-Type": "application/json"}
         click_url = f"{self.url}/tabs/input/"
-        click_data = json.dumps(
+        click_data = JsonUtils.dumps(
             {"tab_name": tab_id, "selector": selector, "input_str": input_str}, separators=(",", ":")
         )
         try:

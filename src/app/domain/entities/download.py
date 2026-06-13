@@ -3,12 +3,12 @@
 定义Downloader、DownloadHistory、DownloadSetting的领域模型
 """
 
-import json
 import re
 from dataclasses import dataclass
 from typing import Any, Optional
 
 from app.domain.mediatypes import MediaType
+from app.utils.json_utils import JsonUtils
 
 
 @dataclass
@@ -50,7 +50,7 @@ class DownloaderEntity:
     def parsed_config(self) -> dict[str, Any]:
         """解析JSON配置"""
         try:
-            return json.loads(self.config) if self.config else {}
+            return JsonUtils.loads(self.config) if self.config else {}
         except Exception:
             return {}
 

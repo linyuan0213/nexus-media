@@ -1,6 +1,5 @@
 """LLM Agent Service — 统一入口门面"""
 
-import json
 from typing import Any
 
 import log
@@ -14,6 +13,7 @@ from app.agent.providers.ollama import OllamaProvider
 from app.agent.providers.openai import OpenAIProvider
 from app.core.settings import settings
 from app.infrastructure.cache_system import lru_cache_with_ttl
+from app.utils.json_utils import JsonUtils
 
 
 class AgentService:
@@ -134,7 +134,7 @@ class AgentService:
         )
         content = self._provider.chat(messages, prompt, temperature)
         try:
-            data = json.loads(content)
+            data = JsonUtils.loads(content)
             if response_model:
                 result = response_model.model_validate(data)
                 log.info(f"[AgentService]structured_chat 解析成功: {response_model.__name__}")

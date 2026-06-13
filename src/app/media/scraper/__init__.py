@@ -25,6 +25,7 @@ from app.media.fanart import Fanart
 from app.media.parser._metainfo import meta_info
 from app.media.service import MediaService
 from app.utils import ExceptionUtils
+from app.utils.json_utils import JsonUtils
 
 from .chinese_credits import ChineseCredits
 from .image_downloader import ImageDownloader
@@ -60,7 +61,7 @@ class Scraper:
         scraper_conf = self._system_config.get(SystemConfigKey.UserScraperConf)
         if isinstance(scraper_conf, str):
             try:
-                scraper_conf = json.loads(scraper_conf)
+                scraper_conf = JsonUtils.loads(scraper_conf)
             except Exception:
                 scraper_conf = None
         if isinstance(scraper_conf, dict):

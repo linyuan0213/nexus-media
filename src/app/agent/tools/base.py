@@ -7,9 +7,10 @@ Agent 工具层 — 仅定义工具 Schema 与参数校验
 - 实际执行业务逻辑由上层 ToolExecutor 完成
 """
 
-import json
 from abc import ABC, abstractmethod
 from typing import Any
+
+from app.utils.json_utils import JsonUtils
 
 
 class ToolResult:
@@ -28,7 +29,7 @@ class ToolResult:
             return f"执行失败: {self.error}"
         if isinstance(self.data, str):
             return self.data
-        return json.dumps(self.data, ensure_ascii=False, default=str)
+        return JsonUtils.dumps(self.data, ensure_ascii=False, default=str)
 
 
 class BaseTool(ABC):

@@ -3,9 +3,10 @@
 映射 ORM 模型为纯数据结构，与 SQLAlchemy 解耦。
 """
 
-import json
 from dataclasses import dataclass, field
 from typing import Any
+
+from app.utils.json_utils import JsonUtils
 
 
 @dataclass
@@ -71,7 +72,7 @@ class SiteEntity:
         if not raw:
             return None
         try:
-            return json.loads(raw) if isinstance(raw, str) else dict(raw)
+            return JsonUtils.loads(raw) if isinstance(raw, str) else dict(raw)
         except Exception:
             return None
 
@@ -84,7 +85,7 @@ class SiteEntity:
         note = {}
         if note_raw:
             try:
-                note = json.loads(note_raw) if isinstance(note_raw, str) else dict(note_raw)
+                note = JsonUtils.loads(note_raw) if isinstance(note_raw, str) else dict(note_raw)
             except Exception:
                 note = {}
         return cls(

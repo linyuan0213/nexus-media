@@ -3,9 +3,10 @@
 包含消息客户端、下载器、过滤规则、媒体服务器等配置实体
 """
 
-import json
 from dataclasses import dataclass, fields
 from typing import Any, Optional
+
+from app.utils.json_utils import JsonUtils
 
 
 @dataclass
@@ -281,7 +282,7 @@ class TorrentRemoveTaskEntity:
     def parsed_config(self) -> dict[str, Any]:
         """解析 JSON 配置字符串为字典"""
         try:
-            return json.loads(self.config) if self.config else {}
+            return JsonUtils.loads(self.config) if self.config else {}
         except Exception:
             return {}
 

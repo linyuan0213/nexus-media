@@ -4,9 +4,10 @@
 """
 
 import contextlib
-import json
 from dataclasses import dataclass, field, fields
 from typing import Any, Optional
+
+from app.utils.json_utils import JsonUtils
 
 
 @dataclass
@@ -120,7 +121,7 @@ class PluginManifestEntity:
             return None
         tags = []
         with contextlib.suppress(Exception):
-            tags = json.loads(orm_model.TAGS or "[]")
+            tags = JsonUtils.loads(orm_model.TAGS or "[]")
         return cls(
             id=orm_model.ID or "",
             name=orm_model.NAME or "",
@@ -169,7 +170,7 @@ class PluginConfigEntity:
             return None
         cfg = {}
         with contextlib.suppress(Exception):
-            cfg = json.loads(orm_model.CONFIG or "{}")
+            cfg = JsonUtils.loads(orm_model.CONFIG or "{}")
         return cls(
             plugin_id=orm_model.PLUGIN_ID or "",
             config=cfg,

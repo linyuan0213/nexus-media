@@ -7,7 +7,6 @@
 
 import copy
 import datetime
-import json as _json
 from threading import Lock
 
 import log
@@ -25,6 +24,7 @@ from app.sites.searcher_factory import create_searcher
 from app.sites.site_cache import SiteCache
 from app.utils import StringUtils
 from app.utils.config_tools import get_ua
+from app.utils.json_utils import JsonUtils
 
 _STATS_LOCK = Lock()
 
@@ -282,7 +282,7 @@ class BuiltinIndexer(_IIndexClient):
         }
         if indexer.headers:
             try:
-                h = _json.loads(indexer.headers) if isinstance(indexer.headers, str) else indexer.headers
+                h = JsonUtils.loads(indexer.headers) if isinstance(indexer.headers, str) else indexer.headers
                 auth_val = (h or {}).get("Authorization") or (h or {}).get("authorization") or ""
                 if auth_val.startswith("Bearer "):
                     user_config["api_key"] = auth_val[len("Bearer ") :]

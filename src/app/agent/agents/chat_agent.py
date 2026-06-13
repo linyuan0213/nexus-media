@@ -7,6 +7,7 @@ import json
 import log
 from app.agent.tools import ToolRegistry
 from app.infrastructure.cache_system import OpenAISessionCache
+from app.utils.json_utils import JsonUtils
 
 _TOOL_PROMPT = """你是一个智能助手，可以帮助用户管理 NAS 媒体库系统。
 
@@ -75,7 +76,7 @@ class ChatAgent:
         history = OpenAISessionCache.get(session_id) or []
 
         # 1. 第一轮：LLM 决定是否需要工具
-        tools_desc = json.dumps(ToolRegistry.list_tools(), ensure_ascii=False, indent=2)
+        tools_desc = JsonUtils.dumps(ToolRegistry.list_tools(), ensure_ascii=False, indent=2)
         prompt = _TOOL_PROMPT.replace("{tools}", tools_desc)
 
         messages = [{"role": "system", "content": prompt}]
@@ -208,7 +209,7 @@ class ChatAgent:
                 text = text[start:end].strip()
 
         try:
-            data = json.loads(text)
+            data = JsonUtils.loads(text)
             if isinstance(data, dict) and "tool" in data and "parameters" in data:
                 return data
         except json.JSONDecodeError:

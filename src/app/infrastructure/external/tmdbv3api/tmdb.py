@@ -1,12 +1,12 @@
 """TMDb API 核心 — 基于 HttpClient 重写."""
 
-import json
 import os
 
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.http.retry import HttpRetryConfig
 from app.infrastructure.tmdb import get_rate_limiter
+from app.utils.json_utils import JsonUtils
 
 from .as_obj import AsObj
 from .exceptions import TMDbError
@@ -16,7 +16,7 @@ def _parse_proxies(proxies: str | dict | None) -> str | None:
     """解析代理配置，返回 proxy_url 字符串."""
     if not proxies:
         return None
-    parsed = json.loads(proxies) if isinstance(proxies, str) else proxies
+    parsed = JsonUtils.loads(proxies) if isinstance(proxies, str) else proxies
     return parsed.get("http") if isinstance(parsed, dict) else None
 
 
