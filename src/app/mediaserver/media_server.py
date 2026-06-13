@@ -1,5 +1,4 @@
 import hashlib
-import json
 import threading
 from typing import cast
 
@@ -17,6 +16,7 @@ from app.media import MediaService
 from app.mediaserver.registry import get_all_clients
 from app.message import Message
 from app.utils import ExceptionUtils
+from app.utils.json_utils import JsonUtils
 
 lock = threading.Lock()
 server_lock = threading.Lock()
@@ -347,7 +347,7 @@ class MediaServer:
             season = 1
         if season:
             # 匹配剧集是否存在
-            seasoninfos = json.loads(media.JSON or "[]")
+            seasoninfos = JsonUtils.loads(media.JSON or "[]")
             for seasoninfo in seasoninfos:
                 if seasoninfo.get("season_num") == int(season) and (
                     not episode or seasoninfo.get("episode_num") == int(episode)

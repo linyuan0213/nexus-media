@@ -5,7 +5,6 @@
 通过 site JSON 中的 user_info 配置驱动数据提取。
 """
 
-import json
 import time
 
 import log
@@ -14,6 +13,7 @@ from app.infrastructure.http.config import HttpClientConfig
 from app.sites import engine_tools
 from app.sites.engine import SiteDefinition
 from app.utils.config_tools import get_proxies
+from app.utils.json_utils import JsonUtils
 
 
 class ConfigApiUserInfo:
@@ -176,7 +176,7 @@ class ConfigApiUserInfo:
             time.sleep(2)
 
         self.seeding_size = total_size
-        self.seeding_info = json.dumps(seeding_info)
+        self.seeding_info = JsonUtils.dumps(seeding_info)
 
     def _parse_messages(self, cfg):
         msg_cfg = cfg.get("messages")
@@ -229,7 +229,7 @@ class ConfigApiUserInfo:
         client = HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=30), rate_limiter=rate_limiter_engine)
         try:
             if method == "POST":
-                data = json.dumps(body or {}, separators=(",", ":"))
+                data = JsonUtils.dumps(body or {}, separators=(",", ":"))
                 if not body or (isinstance(body, dict) and not body):
                     data = None
                     headers.pop("Content-Type", None)

@@ -1,5 +1,4 @@
 import base64
-import json
 import time
 from datetime import datetime
 from multiprocessing.dummy import Pool as ThreadPool
@@ -144,7 +143,7 @@ class SiteUserInfo:
         ua = site_info.get("ua")
         headers = site_info.get("headers")
         if JsonUtils.is_valid_json(headers):
-            headers = json.loads(headers)
+            headers = JsonUtils.loads(headers)
         else:
             headers = {}
         unread_msg_notify = site_info.get("unread_msg_notify")
@@ -436,7 +435,7 @@ class SiteUserInfo:
         if not seeding_info:
             return site_seeding_info
 
-        site_seeding_info["seeding_info"] = json.loads(seeding_info[0])
+        site_seeding_info["seeding_info"] = JsonUtils.loads(seeding_info[0])
         return site_seeding_info
 
     def get_pt_site_min_join_date(self, sites=None):

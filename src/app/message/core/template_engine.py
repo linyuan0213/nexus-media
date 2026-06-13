@@ -9,6 +9,7 @@ from jinja2 import BaseLoader, Environment
 import log
 from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
 from app.utils import ExceptionUtils, StringUtils
+from app.utils.json_utils import JsonUtils
 
 
 def _filesize_filter(value):
@@ -99,7 +100,7 @@ class TemplateEngine:
 
         if isinstance(templates, str):
             try:
-                templates = json.loads(templates)
+                templates = JsonUtils.loads(templates)
                 log.debug(f"[Message]客户端 {client_name} 模板配置已解析为字典")
             except json.JSONDecodeError as e:
                 log.error(f"[Message]客户端 {client_name} 模板配置 JSON 解析失败: {e}")

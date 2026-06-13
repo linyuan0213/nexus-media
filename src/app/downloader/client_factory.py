@@ -10,7 +10,6 @@ DownloadClientFactory - 下载器客户端工厂
 移除 SingletonMeta，改为普通类 + 依赖注入。
 """
 
-import json
 import os
 from threading import Lock
 
@@ -24,6 +23,7 @@ from app.domain.enums import SystemConfigKey
 from app.downloader.client._base import _IDownloadClient
 from app.downloader.registry import get_all_clients
 from app.utils import ExceptionUtils, NumberUtils, StringUtils, SystemUtils
+from app.utils.json_utils import JsonUtils
 
 client_lock = Lock()
 
@@ -93,7 +93,7 @@ class DownloadClientFactory:
                 else:
                     log.info(f"[Downloader]下载器：{name} 不进行监控：下载器未启用")
 
-            config = json.loads(str(downloader_conf.CONFIG))
+            config = JsonUtils.loads(str(downloader_conf.CONFIG))
             dtype = downloader_conf.TYPE
             self._downloader_confs[str(did)] = {
                 "id": did,
@@ -106,7 +106,7 @@ class DownloadClientFactory:
                 "rmt_mode": rmt_mode,
                 "rmt_mode_name": rmt_mode_name,
                 "config": config,
-                "download_dir": json.loads(str(downloader_conf.DOWNLOAD_DIR)),
+                "download_dir": JsonUtils.loads(str(downloader_conf.DOWNLOAD_DIR)),
             }
 
         # 下载顺序

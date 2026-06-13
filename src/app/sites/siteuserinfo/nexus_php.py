@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
@@ -11,6 +10,7 @@ from lxml import etree
 
 import log
 from app.utils import StringUtils
+from app.utils.json_utils import JsonUtils
 
 if TYPE_CHECKING:
     from app.sites.siteuserinfo.config_html import ConfigHtmlUserInfo
@@ -186,7 +186,7 @@ def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: Any, html_text: str) -> No
         rows = doc.cssselect(list_sel)
         if not rows:
             rows = doc.xpath(list_sel)
-        info = json.loads(ins.seeding_info) if ins.seeding_info and ins.seeding_info != "[]" else []
+        info = JsonUtils.loads(ins.seeding_info) if ins.seeding_info and ins.seeding_info != "[]" else []
         size_sel = sc.get("size_selector", "td:nth-child(4)")
         seeders_sel = sc.get("seeders_selector", "td:nth-child(5)")
         for row in rows:
@@ -208,7 +208,7 @@ def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: Any, html_text: str) -> No
                 info.append([seeders, size])
             except Exception as e:  # noqa: BLE001
                 log.debug(f"[nexus_php]忽略异常: {e}")
-        ins.seeding_info = json.dumps(info)
+        ins.seeding_info = JsonUtils.dumps(info)
         return
     table_prefix = '//table[@class="torrents"]' if doc.xpath('//table[@class="torrents"]') else ""
     size_texts = doc.xpath(f"{table_prefix}//tr[position()>1]/td[4]")
@@ -217,14 +217,14 @@ def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: Any, html_text: str) -> No
         seeders_texts = doc.xpath(f"{table_prefix}//tr[position()>1]/td[5]//text()")
     if not isinstance(size_texts, list):
         return
-    info = json.loads(ins.seeding_info) if ins.seeding_info and ins.seeding_info != "[]" else []
+    info = JsonUtils.loads(ins.seeding_info) if ins.seeding_info and ins.seeding_info != "[]" else []
     for i, sz in enumerate(size_texts):
         size = StringUtils.num_filesize(str(sz.xpath("string(.)")).strip())
         sd = StringUtils.str_int(seeders_texts[i]) if isinstance(seeders_texts, list) and i < len(seeders_texts) else 0
         ins.seeding_size += size
         ins.seeding += 1
         info.append([sd, size])
-    ins.seeding_info = json.dumps(info)
+    ins.seeding_info = JsonUtils.dumps(info)
 
 
 def _next_page_url(ins: ConfigHtmlUserInfo, doc: Any) -> str | None:

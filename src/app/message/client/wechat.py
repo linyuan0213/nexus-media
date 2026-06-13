@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 from threading import Lock
 
@@ -9,6 +8,7 @@ from app.message.client._base import _IMessageClient
 from app.message.commands import WECHAT_MENU, WECHAT_PLUGIN_GROUP
 from app.message.schema import ConfigField, MessageConfigSchema
 from app.utils import ExceptionUtils
+from app.utils.json_utils import JsonUtils
 
 _menu_lock = Lock()
 
@@ -256,8 +256,8 @@ class WeChat(_IMessageClient):
                         buttons.append({"name": group["name"], "sub_button": subs})
                 if not buttons:
                     return
-                log.info(f"[WeChat]正在创建菜单：{json.dumps(buttons, ensure_ascii=False)}")
-                data = json.dumps({"button": buttons}, ensure_ascii=False).encode("utf-8")
+                log.info(f"[WeChat]正在创建菜单：{JsonUtils.dumps(buttons, ensure_ascii=False)}")
+                data = JsonUtils.dumps({"button": buttons}, ensure_ascii=False).encode("utf-8")
                 headers = {"content-type": "application/json"}
                 menu_url = self._menu_url % (token, self.agent_id)
                 log.info(f"[WeChat]菜单请求URL: {menu_url}")
@@ -282,7 +282,7 @@ class WeChat(_IMessageClient):
     def _post_request(self, url, req_json):
         headers = {"content-type": "application/json"}
         try:
-            data = json.dumps(req_json, ensure_ascii=False).encode("utf-8")
+            data = JsonUtils.dumps(req_json, ensure_ascii=False).encode("utf-8")
             log.debug("[WeChat]POST {}".format(url.split("?")[0]) if "?" in url else url)
             res = HttpClient(config=HttpClientConfig(default_headers=headers)).post(url, data=data)
             body = res.json()

@@ -1,5 +1,4 @@
 import hashlib
-import json
 import random
 import time
 from typing import Any
@@ -8,6 +7,7 @@ from urllib.parse import parse_qs, urlencode, urlparse
 import log
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.utils.json_utils import JsonUtils
 
 
 class Singleton(type):
@@ -50,7 +50,7 @@ class FnOSClient(metaclass=Singleton):
                 params.update(query_params)
             data_str = "&".join([f"{k}={v}" for k, v in params.items()]) if params else ""
         else:  # 非 GET 请求
-            data_str = json.dumps(request_data.get("data", {}), separators=(",", ":"))
+            data_str = JsonUtils.dumps(request_data.get("data", {}), separators=(",", ":"))
 
         # 4. 计算数据 MD5
         data_md5 = hashlib.md5(data_str.encode("utf-8"), usedforsecurity=False).hexdigest()
@@ -120,7 +120,7 @@ class FnOSClient(metaclass=Singleton):
             "authx": signature_str,
         }
 
-        data = json.dumps(request_data["data"], separators=(",", ":"))
+        data = JsonUtils.dumps(request_data["data"], separators=(",", ":"))
         response = self._http_client.post(url, headers=headers, data=data)
         res_json = response.json()
         if res_json.get("code") == 0:
@@ -161,7 +161,7 @@ class FnOSClient(metaclass=Singleton):
             response = self._http_client.get(url, headers=headers, cookies=cookies)
         else:
             # 其他请求使用POST，数据放在请求体中
-            data_str = json.dumps(data or {}, separators=(",", ":"))
+            data_str = JsonUtils.dumps(data or {}, separators=(",", ":"))
             response = self._http_client.post(url, headers=headers, cookies=cookies, data=data_str)
         return response.json()
 
@@ -386,7 +386,7 @@ if __name__ == "__main__":
 
         # 保存到JSON文件
         with open("all_items.json", "w", encoding="utf-8") as f:
-            json.dump(items, f, ensure_ascii=False, indent=2)
+            JsonUtils.dump(items, f, ensure_ascii=False, indent=2)
         log.info("结果已保存到 all_items.json")
 
     except Exception as e:

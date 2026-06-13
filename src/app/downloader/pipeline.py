@@ -11,7 +11,6 @@
 """
 
 import contextlib
-import json
 import os
 from typing import Any
 
@@ -22,6 +21,7 @@ from app.events.payloads import DownloadFailedPayload, DownloadStartedPayload
 from app.infrastructure.thread import ThreadExecutor
 from app.sites.torrent import Torrent
 from app.utils import StringUtils
+from app.utils.json_utils import JsonUtils
 
 
 class DownloadPipeline:
@@ -232,7 +232,7 @@ class DownloadPipeline:
                 if site_def and site_def.api and site_def.api.auth.get("type") == "api_key":
                     cookie = None
                 headers = site_info.get("headers")
-                headers = json.loads(headers) if headers else {}
+                headers = JsonUtils.loads(headers) if headers else {}
                 if media_info.page_url and site_info.get("id"):
                     torrent_attr = self._siteconf.check_torrent_attr(
                         torrent_url=media_info.page_url,

@@ -1,13 +1,12 @@
 """引擎用户信息 — 从 engine.py 拆分"""
 
-import json
-
 import log
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.sites.engine_tools import _get_rate_limit_kwargs
 from app.utils.config_tools import get_proxies
+from app.utils.json_utils import JsonUtils
 
 
 def prefetch_user_profile(engine, url, site_cookie, site_headers=None, ua="", proxy=False, session=None):
@@ -42,7 +41,7 @@ def prefetch_user_profile(engine, url, site_cookie, site_headers=None, ua="", pr
         )
         if method == "POST":
             body = profile_cfg.get("body") or {}
-            post_data = json.dumps(body)
+            post_data = JsonUtils.dumps(body)
             if not body or (isinstance(body, dict) and not body):
                 post_data = None
                 headers.pop("Content-Type", None)

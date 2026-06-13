@@ -1,4 +1,3 @@
-import json
 import os
 import re
 import shutil
@@ -15,6 +14,7 @@ from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.temp import temp_manager
 from app.sites import engine_tools
 from app.utils import ExceptionUtils, PathUtils, StringUtils, SystemUtils
+from app.utils.json_utils import JsonUtils
 
 
 def _get_url_subtitle_name(disposition, url):
@@ -170,7 +170,7 @@ class SiteSubtitle:
         headers = site_info.get("headers")
         if headers and isinstance(headers, str):
             try:
-                headers = json.loads(headers)
+                headers = JsonUtils.loads(headers)
             except Exception:
                 headers = {}
         elif not headers:
@@ -216,7 +216,7 @@ class SiteSubtitle:
             rate_limiter=rate_limiter_engine,
         )
         try:
-            res = client.post(url=subtitle_list_url, data=json.dumps({"id": torrent_id}))
+            res = client.post(url=subtitle_list_url, data=JsonUtils.dumps({"id": torrent_id}))
             data = res.json()
             if data.get("code") != "0" or data.get("message") != "SUCCESS":
                 log.warn(f"[Sites]m-team 字幕列表返回错误：{data.get('message')}")
@@ -245,7 +245,7 @@ class SiteSubtitle:
 
                 # 获取下载凭证
                 genlink_url = f"{MT_URL}/api/subtitle/genlink"
-                genlink_res = client.post(url=genlink_url, data=json.dumps({"id": subtitle_id}))
+                genlink_res = client.post(url=genlink_url, data=JsonUtils.dumps({"id": subtitle_id}))
                 genlink_data = genlink_res.json()
                 if genlink_data.get("code") != "0":
                     log.warn(f"[Sites]字幕 {subtitle_id} 下载链接返回错误：{genlink_data.get('message')}")
