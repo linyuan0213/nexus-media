@@ -182,23 +182,23 @@ class TestDbDistributedLock:
 class TestLockManager:
     """Test suite for LockManager."""
 
-    def test_create_lock_redis_available(self):
-        mock_store = MagicMock()
-        mock_store.is_available.return_value = True
-
-        manager = LockManager(mock_store)
-        lock = manager.create_lock("test", 60)
-
-        assert isinstance(lock, RedisDistributedLock)
-
     def test_create_lock_redis_unavailable(self):
         mock_store = MagicMock()
-        mock_store.is_available.return_value = False
+        mock_store.ping.return_value = False
 
         manager = LockManager(mock_store)
         lock = manager.create_lock("test", 60)
 
         assert isinstance(lock, DbDistributedLock)
+
+    def test_create_lock_redis_available(self):
+        mock_store = MagicMock()
+        mock_store.ping.return_value = True
+
+        manager = LockManager(mock_store)
+        lock = manager.create_lock("test", 60)
+
+        assert isinstance(lock, RedisDistributedLock)
 
     def test_is_redis_available(self):
         mock_store = MagicMock()

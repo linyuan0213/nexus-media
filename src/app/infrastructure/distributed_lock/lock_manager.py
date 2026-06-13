@@ -30,7 +30,7 @@ class LockManager:
         :param ttl_seconds: 锁超时时间（秒）
         :return: DistributedLock 实例
         """
-        if self._redis_store.is_available():
+        if self._redis_store.ping():
             return RedisDistributedLock(lock_key, ttl_seconds, self._redis_store)
         return DbDistributedLock(lock_key, ttl_seconds)
 
