@@ -34,7 +34,7 @@ class SchedulerCore:
     """调度器核心服务
 
     提供任务调度、执行监控、失败重试、统计收集等功能。
-    由 lifespan 创建并注册到 registry，lifespan 中统一关闭。
+    由 lifespan 通过 AppContext 创建并管理生命周期。
     """
 
     # 默认 jobstore 配置

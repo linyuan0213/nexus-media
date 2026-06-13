@@ -17,7 +17,7 @@ class EventBus:
     - 异步队列：非关键事件（如通知、日志），通过 MessageQueue 投递
     - 所有事件都会转发到 PluginBridge（HookSystem）
 
-    由 lifespan / factories 创建并注册到 registry。
+    由 lifespan 通过 AppContext 创建并管理生命周期。
     """
 
     def __init__(

@@ -18,9 +18,9 @@ from app.schemas.plugin import PluginManifest, PluginState
 
 
 class PluginRegistry:
-    """插件注册表单例.
+    """插件注册表.
 
-    由 lifespan 创建并注册到 registry。
+    由 lifespan 通过 AppContext 创建并管理生命周期。
     """
 
     def __init__(self, repo: PluginFrameworkRepository | None = None):

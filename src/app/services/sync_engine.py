@@ -60,7 +60,7 @@ class SyncPathConfig:
 class SyncEngine:
     """目录同步引擎.
 
-    由 lifespan 创建并注册到 registry，lifespan 中统一关闭。
+    由 lifespan 通过 AppContext 创建并管理生命周期。
     """
 
     def __init__(

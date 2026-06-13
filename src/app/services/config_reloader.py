@@ -46,7 +46,7 @@ class _ReloadStep:
 class ConfigReloader:
     """集中式配置热重载协调器.
 
-    由 lifespan 创建并注册到 registry。
+    由 lifespan 通过 AppContext 创建并注入依赖。
     """
 
     # 标准优先级分组（数值越小越早执行）

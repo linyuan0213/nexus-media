@@ -20,7 +20,7 @@ from app.message import Message
 class PluginSandbox:
     """插件沙箱，管理插件后端模块的加载和运行.
 
-    由 lifespan 创建并注册到 registry。
+    由 lifespan 通过 AppContext 创建并管理生命周期。
     """
 
     def __init__(

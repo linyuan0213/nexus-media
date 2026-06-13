@@ -17,10 +17,7 @@ from app.services.apikey_service import APIKeyService
 
 
 class Message:
-    """消息业务 Facade，兼容原有 Singleton 行为.
-
-    由 lifespan 创建并注册到 registry，lifespan 中统一关闭。
-    """
+    """消息业务 Facade，由 lifespan 通过 AppContext 创建并管理生命周期。"""
 
     def __init__(self, apikey_service: APIKeyService | None = None, message_center: MessageCenter | None = None):
         self._domain = get_domain() or ""

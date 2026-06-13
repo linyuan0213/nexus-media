@@ -17,7 +17,7 @@ class DownloadMonitor:
     高频轮询（默认 30 秒）下载器状态，检测新完成的任务并发布 download.completed 事件，
     驱动 FileTransferService 实时转移。配合低频 pttransfer（30 分钟）兜底。
 
-    由 lifespan 创建并注册到 registry，lifespan 中统一关闭。
+    由 lifespan 通过 AppContext 创建并管理生命周期。
     """
 
     def __init__(

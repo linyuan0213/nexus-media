@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class HookSystem:
     """全局事件钩子系统——插件可自由注册任意事件，无白名单限制.
 
-    由 lifespan 创建并注册到 registry。
+    由 lifespan 通过 AppContext 创建并注入依赖。
     """
 
     def __init__(

@@ -20,7 +20,7 @@ class SiteCache:
     构建与旧 Sites.get_sites() 返回格式一致的 dict 索引，
     供所有调用方零成本迁移。
 
-    由 lifespan 创建并注册到 registry，lifespan 中统一刷新。
+    由 lifespan 通过 AppContext 创建并管理生命周期。
     """
 
     def __init__(self, repo: ISiteRepository | None = None, site_engine: SiteEngine | None = None):

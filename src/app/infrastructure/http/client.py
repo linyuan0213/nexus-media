@@ -19,7 +19,7 @@ class HttpClient:
     封装 httpx.Client，内置 tenacity 重试、RateLimitEngine 限流、HttpCacheConfig 缓存。
     所有同步 HTTP 调用（站点签到、下载器 API、媒体服务器）使用此类。
 
-    由 factories / lifespan 创建并管理生命周期。
+    按需实例化，由调用方管理生命周期。
     """
 
     def __init__(

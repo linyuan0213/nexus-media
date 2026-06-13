@@ -25,7 +25,7 @@ server_lock = threading.Lock()
 class MediaServer:
     """媒体服务器管理器.
 
-    由 factories / lifespan 创建并注册到 registry。
+    由 lifespan 通过 AppContext 创建并管理生命周期。
     """
 
     _server_type: str | None = None
