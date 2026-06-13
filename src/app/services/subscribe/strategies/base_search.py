@@ -297,14 +297,14 @@ class BaseSearchStrategy:
 
     def _get_media_info(self, tmdbid, name, year, mtype, cache=True):
         if tmdbid and not str(tmdbid).startswith("DB:"):
-            media_info = meta_info(title="%s %s".strip() % (name, year))
+            media_info = meta_info(title=("%s %s" % (name, year)).strip())
             tmdb_info = self._media_cache.get_tmdb_info(mtype=mtype, tmdbid=tmdbid)
             media_info.set_tmdb_info(tmdb_info)
             if not (hasattr(media_info, "get_poster_image") and media_info.get_poster_image()):
                 log.debug(f"[BaseSearchStrategy] 缓存缺少海报，重新识别: {name} ({year})")
-                identified = self._media_service.identify(title=f"{name} {year}", mtype=mtype)
+                identified = self._media_service.identify(title=f"{name} {year}".strip(), mtype=mtype)
                 if identified and hasattr(identified, "get_poster_image") and identified.get_poster_image():
                     media_info = identified
         else:
-            media_info = self._media_service.identify(title=f"{name} {year}", mtype=mtype)
+            media_info = self._media_service.identify(title=f"{name} {year}".strip(), mtype=mtype)
         return media_info

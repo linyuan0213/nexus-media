@@ -16,7 +16,7 @@ from app.core.settings import settings
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.domain.entities.sync import SyncPathEntity
 from app.domain.entities.transfer import TransferUnknownEntity
-from app.domain.enums import OsType, SyncType
+from app.domain.enums import SyncType
 from app.domain.mediatypes import MediaType
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.thread import ThreadExecutor
@@ -344,11 +344,7 @@ class SyncService:
         """
         r = []
         if not directory or directory == "/":
-            if os.name == "nt" or (hasattr(OsType, "WINDOWS") and False):
-                # 简化处理，只处理 Linux 场景（项目主要运行在 Linux）
-                dirs = [os.path.join("/", f) for f in os.listdir("/")]
-            else:
-                dirs = [os.path.join("/", f) for f in os.listdir("/")]
+            dirs = [os.path.join("/", f) for f in os.listdir("/")]
         else:
             d = os.path.normpath(unquote(directory))
             if not os.path.isdir(d):
@@ -368,18 +364,14 @@ class SyncService:
                     )
             else:
                 ext = os.path.splitext(ff)[-1][1:]
-                flag = False
-                if (
+                ext_lower = f".{str(ext).lower()}"
+                flag = (
                     "ONLYFILE" in ft
                     or "ALL" in ft
-                    or "MEDIAFILE" in ft
-                    and f".{str(ext).lower()}" in RMT_MEDIAEXT
-                    or "SUBFILE" in ft
-                    and f".{str(ext).lower()}" in RMT_SUBEXT
-                    or "AUDIOTRACKFILE" in ft
-                    and f".{str(ext).lower()}" in RMT_AUDIO_TRACK_EXT
-                ):
-                    flag = True
+                    or ("MEDIAFILE" in ft and ext_lower in RMT_MEDIAEXT)
+                    or ("SUBFILE" in ft and ext_lower in RMT_SUBEXT)
+                    or ("AUDIOTRACKFILE" in ft and ext_lower in RMT_AUDIO_TRACK_EXT)
+                )
                 if flag:
                     r.append(
                         {
@@ -414,7 +406,10 @@ class SyncService:
     @staticmethod
     def exec_test_command(cmd: str):
         """
-        执行安全映射内的测试命令，返回调用结果或 None
+        执行安全映射内的测试命令，返回调用结果或 None。
+
+        注意：此为遗留的反射式测试入口，仅保留少量仍可实例化的核心模块，
+        新增模块测试请使用专用 Service/Client 的 test_connection 方法。
         """
         m = re.match(r"^(\w+)\(\)\.(\w+)\(\)$", cmd.strip())
         if not m:
@@ -422,16 +417,11 @@ class SyncService:
         obj_name, method_name = m.groups()
         safe_mapping = {
             "Config": ("config", "Config"),
-            "Message": ("app.message", "Message"),
-            "MessageCenter": ("app.message", "MessageCenter"),
+            "MessageCenter": ("app.message.message_center", "MessageCenter"),
             "Downloader": ("app.services.downloader_core", "DownloaderCore"),
             "MediaServer": ("app.mediaserver", "MediaServer"),
-            "Indexer": ("app.indexer", "Indexer"),
             "SiteCache": ("app.sites.site_cache", "SiteCache"),
-            "Sync": ("app.sync", "Sync"),
-            "BrushTask": ("app.brushtask", "BrushTask"),
             "RssChecker": ("app.services.rss_automation.task_service", "RssTaskService"),
-            "TorrentRemover": ("app.torrentremover", "TorrentRemover"),
             "SubscriptionMonitor": ("app.services.subscribe.monitor", "SubscriptionMonitor"),
             "SchedulerCore": ("app.services.scheduler_core", "SchedulerCore"),
             "Scraper": ("app.media", "Scraper"),

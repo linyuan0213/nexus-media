@@ -96,9 +96,11 @@ class SubscribeRefreshService:
     def __get_media_info(self, tmdbid, name, year, mtype, cache=True):
         """综合返回媒体信息"""
         if tmdbid and not str(tmdbid).startswith("DB:"):
-            media_info = meta_info(title="%s %s".strip() % (name, year))
+            media_info = meta_info(title=("%s %s" % (name, year)).strip())
             tmdb_info = self._media.get_tmdb_info(mtype=mtype, tmdbid=tmdbid)
             media_info.set_tmdb_info(tmdb_info)
         else:
-            media_info = self._media.get_media_info(title=f"{name} {year}", mtype=mtype, strict=True, cache=cache)
+            media_info = self._media.get_media_info(
+                title=f"{name} {year}".strip(), mtype=mtype, strict=True, cache=cache
+            )
         return media_info
