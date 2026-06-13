@@ -203,6 +203,8 @@ def del_unknown_path(
         return success()
     else:
         retcode = ft.delete_transfer_unknown(tid)
+        if retcode == 0:
+            return success()
         return fail(code=retcode or 1)
 
 

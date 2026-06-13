@@ -245,6 +245,8 @@ def update_rss_media(
         kwargs["current_ep"] = req.current_ep
         code, msg, media_info = svc.update_rss_subscribe(**kwargs)
 
+    if code == 0:
+        return success(data={"page": req.page, "name": req.name, "rssid": req.rssid})
     return fail(code=code, msg=msg, page=req.page, name=req.name, rssid=req.rssid)
 
 

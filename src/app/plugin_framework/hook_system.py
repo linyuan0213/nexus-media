@@ -26,7 +26,7 @@ class HookSystem:
 
         self._plugin_sandbox = plugin_sandbox
         self._repo = repo or PluginFrameworkRepository()
-        self._handlers: dict[str, list[dict]] = {}
+        self._handlers: dict[str, set[str]] = {}
         self._load_from_db()
 
     def set_plugin_sandbox(self, plugin_sandbox: "PluginSandbox") -> None:
@@ -41,27 +41,28 @@ class HookSystem:
                 event = getattr(r, "EVENT", None)
                 plugin_id = getattr(r, "PLUGIN_ID", None)
                 if event and plugin_id:
-                    self._handlers.setdefault(event, [])
-                    if plugin_id not in [h["plugin_id"] for h in self._handlers[event]]:
-                        self._handlers[event].append({"plugin_id": plugin_id})
+                    self._handlers.setdefault(event, set())
+                    self._handlers[event].add(plugin_id)
         except Exception as e:
             log.warn(f"[HookSystem] 加载钩子订阅失败（可能表尚未创建）: {e}")
 
     def register(self, event: str, plugin_id: str) -> None:
         """注册钩子订阅——允许任意事件名"""
-        self._handlers.setdefault(event, [])
-        if plugin_id not in [h["plugin_id"] for h in self._handlers[event]]:
-            self._handlers[event].append({"plugin_id": plugin_id})
-            try:
-                self._repo.insert_hook(plugin_id, event)
-            except Exception as e:
-                log.error(f"[HookSystem] 持久化钩子订阅失败: {e}")
-            log.info(f"[HookSystem] 插件 {plugin_id} 注册事件: {event}")
+        self._handlers.setdefault(event, set())
+        if plugin_id in self._handlers[event]:
+            return
+        self._handlers[event].add(plugin_id)
+        try:
+            self._repo.insert_hook(plugin_id, event)
+        except Exception as e:
+            log.error(f"[HookSystem] 持久化钩子订阅失败: {e}")
+        log.info(f"[HookSystem] 插件 {plugin_id} 注册事件: {event}")
 
     def unregister(self, event: str, plugin_id: str) -> None:
         """取消钩子订阅"""
-        if event in self._handlers:
-            self._handlers[event] = [h for h in self._handlers[event] if h.get("plugin_id") != plugin_id]
+        handlers = self._handlers.get(event)
+        if handlers:
+            handlers.discard(plugin_id)
         try:
             self._repo.delete_hook(plugin_id, event)
         except Exception as e:
@@ -69,8 +70,8 @@ class HookSystem:
 
     def unregister_all(self, plugin_id: str) -> None:
         """取消插件的所有钩子订阅"""
-        for event in list(self._handlers.keys()):
-            self._handlers[event] = [h for h in self._handlers[event] if h.get("plugin_id") != plugin_id]
+        for handlers in self._handlers.values():
+            handlers.discard(plugin_id)
         try:
             self._repo.delete_hooks_by_plugin(plugin_id)
         except Exception as e:
@@ -81,7 +82,7 @@ class HookSystem:
         if event not in self._handlers:
             return
 
-        handlers = self._handlers.get(event, [])
+        handlers = self._handlers.get(event, set())
         if not handlers:
             return
 
@@ -90,8 +91,7 @@ class HookSystem:
             return
 
         log.debug(f"[HookSystem] 触发事件: {event}, 订阅数: {len(handlers)}")
-        for h in handlers:
-            plugin_id = h.get("plugin_id")
+        for plugin_id in handlers:
             if not plugin_id:
                 continue
             try:
@@ -108,13 +108,13 @@ class HookSystem:
         """列出钩子订阅"""
         result = []
         for event, handlers in self._handlers.items():
-            for h in handlers:
-                if plugin_id and h.get("plugin_id") != plugin_id:
+            for pid in handlers:
+                if plugin_id and pid != plugin_id:
                     continue
                 result.append(
                     {
                         "event": event,
-                        "plugin_id": h.get("plugin_id"),
+                        "plugin_id": pid,
                     }
                 )
         return result

@@ -3,6 +3,7 @@
 按 event_type + priority 分组管理 handlers
 """
 
+import bisect
 from collections import defaultdict
 from collections.abc import Callable
 
@@ -18,8 +19,10 @@ class EventHandlerRegistry:
     def subscribe(self, event_type: str, handler: Callable[[Event], None], priority: int = 100) -> None:
         """订阅事件，priority 越小越先执行"""
         handlers = self._handlers[event_type]
-        handlers.append((priority, handler))
-        handlers.sort(key=lambda x: x[0])
+        item = (priority, handler)
+        priorities = [p for p, _ in handlers]
+        idx = bisect.bisect_right(priorities, priority)
+        handlers.insert(idx, item)
 
     def get_handlers(self, event_type: str) -> list[Callable[[Event], None]]:
         """获取指定事件类型的所有 handlers（已按 priority 排序）"""

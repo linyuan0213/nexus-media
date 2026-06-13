@@ -77,7 +77,7 @@ class SyncEngine:
         self._configs: dict[str, SyncPathConfig] = {}
         self._monitor_ids: list[str] = []
         self._observers: list = []
-        self._synced_files: list[str] = []
+        self._synced_files: set[str] = set()
         self._reload()
 
     def init(self) -> None:
@@ -173,7 +173,7 @@ class SyncEngine:
         with _synced_lock:
             if event_path in self._synced_files:
                 return
-            self._synced_files.append(event_path)
+            self._synced_files.add(event_path)
 
         try:
             cfg = self._find_config(event_path)
@@ -193,6 +193,9 @@ class SyncEngine:
             raise
         except Exception as e:
             log.error(f"[Sync]处理失败：{e}\n{traceback.format_exc()}")
+        finally:
+            with _synced_lock:
+                self._synced_files.discard(event_path)
 
     def _find_config(self, event_path: str):
         for sid in self._monitor_ids:
@@ -270,7 +273,7 @@ class SyncEngine:
                         self._do_transfer(p, cfg)
         finally:
             with _synced_lock:
-                self._synced_files = []
+                self._synced_files.clear()
             lock.release()
 
     def transfer_mon_files(self) -> None:
