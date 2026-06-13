@@ -33,7 +33,6 @@ def build_coordinators(
     sync_engine = services.sync_engine
     thread_executor = infra.thread_executor
     torrent_remover = services.torrent_remover_service
-    apikey_service = infra.apikey_service
     searcher = services.searcher
     media_service = facades.media_service
     filter_service = services.filter_service
@@ -102,7 +101,7 @@ def build_coordinators(
         subscribe_service=subscribe_service,
         media_server=media_server,
         thread_executor=thread_executor,
-        apikey_service=apikey_service,
+        hook_system=infra.hook_system,
     )
 
     # 创建 ToolExecutor 并注入 AgentService（解决循环依赖）

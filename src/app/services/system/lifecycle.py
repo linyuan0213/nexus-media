@@ -96,6 +96,7 @@ class SystemLifecycleService:
         media_server=None,
         thread_executor=None,
         apikey_service=None,
+        hook_system=None,
     ):
         self._scheduler = scheduler_core
         self._sync = sync
@@ -111,6 +112,7 @@ class SystemLifecycleService:
         self._media_server = media_server
         self._thread_executor = thread_executor
         self._apikey_service = apikey_service
+        self._hook_system = hook_system
 
     @property
     def subscription_monitor(self) -> SubscriptionMonitor | None:
@@ -125,7 +127,7 @@ class SystemLifecycleService:
         update_rss_state()
         init_default_categories()
         init_rbac_system()
-        init_event_handlers()
+        init_event_handlers(hook_system=self._hook_system)
         init_message_webhook_apikey(apikey_service=self._apikey_service)
         # 1. 先启动调度器，确保所有后台服务的定时任务可以正常注册
         self._scheduler.start_service(
