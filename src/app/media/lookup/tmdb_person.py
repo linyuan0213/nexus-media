@@ -1,8 +1,7 @@
-import zhconv
-
 from app.infrastructure.image_proxy import ImageProxy
 from app.media.lookup.tmdb_client import TmdbClient
 from app.utils import StringUtils
+from app.utils.chinese_utils import to_simplified
 
 
 class TmdbPerson:
@@ -43,7 +42,7 @@ class TmdbPerson:
             name = alter_names[0]
         elif len(alter_names) > 1:
             for alter_name in alter_names:
-                if alter_name == zhconv.convert(alter_name, "zh-hans"):
+                if alter_name == to_simplified(alter_name):
                     name = alter_name
         return name
 

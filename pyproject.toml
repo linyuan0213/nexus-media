@@ -55,7 +55,6 @@ dependencies = [
     "urllib3>=2.3.0",
     "watchdog>=6.0.0",
     "websockets>=14.1",
-    "zhconv>=1.4.3",
     "setuptools>=75.7.0",
     "wheel>=0.45.1",
     "fast-bencode>=1.1.7",
@@ -85,6 +84,7 @@ dependencies = [
     "tenacity>=9.1.4",
     "granian>=2.7.5",
     "scalar-fastapi>=1.8.2",
+    "opencc-python-reimplemented>=0.1.7",
 ]
 
 [dependency-groups]
