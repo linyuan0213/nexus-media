@@ -3,7 +3,6 @@ Brush Repository
 Handles brush task and torrent related database operations.
 """
 
-import json
 import time
 from typing import Any
 
@@ -11,6 +10,7 @@ from sqlalchemy import Integer, cast, func
 
 from app.db.models import CONFIGSITE, SITEBRUSHRULE, SITEBRUSHTASK, SITEBRUSHTORRENTS
 from app.db.repositories.base_repository import BaseRepository
+from app.utils.json_utils import JsonUtils
 
 
 class BrushRepository(BaseRepository):
@@ -30,9 +30,9 @@ class BrushRepository(BaseRepository):
                         NAME=item.get("name"),
                         SITE=item.get("site"),
                         FREELEECH=item.get("free"),
-                        RSS_RULE=json.dumps(item.get("rss_rule"), ensure_ascii=False),
-                        REMOVE_RULE=json.dumps(item.get("remove_rule"), ensure_ascii=False),
-                        STOP_RULE=json.dumps(item.get("stop_rule"), ensure_ascii=False),
+                        RSS_RULE=JsonUtils.dumps(item.get("rss_rule"), ensure_ascii=False),
+                        REMOVE_RULE=JsonUtils.dumps(item.get("remove_rule"), ensure_ascii=False),
+                        STOP_RULE=JsonUtils.dumps(item.get("stop_rule"), ensure_ascii=False),
                         RULE_ID=item.get("rule_id"),
                         SEED_SIZE=item.get("seed_size"),
                         TIME_RANGE=item.get("time_range"),
@@ -57,9 +57,9 @@ class BrushRepository(BaseRepository):
                         "NAME": item.get("name"),
                         "SITE": item.get("site"),
                         "FREELEECH": item.get("free"),
-                        "RSS_RULE": json.dumps(item.get("rss_rule"), ensure_ascii=False),
-                        "REMOVE_RULE": json.dumps(item.get("remove_rule"), ensure_ascii=False),
-                        "STOP_RULE": json.dumps(item.get("stop_rule"), ensure_ascii=False),
+                        "RSS_RULE": JsonUtils.dumps(item.get("rss_rule"), ensure_ascii=False),
+                        "REMOVE_RULE": JsonUtils.dumps(item.get("remove_rule"), ensure_ascii=False),
+                        "STOP_RULE": JsonUtils.dumps(item.get("stop_rule"), ensure_ascii=False),
                         "RULE_ID": item.get("rule_id"),
                         "SEED_SIZE": item.get("seed_size"),
                         "TIME_RANGE": item.get("time_range"),

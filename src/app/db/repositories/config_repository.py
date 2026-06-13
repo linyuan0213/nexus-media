@@ -4,7 +4,6 @@ Handles configuration related database operations.
 Includes: Message Client, Torrent Remove Task, Downloader, User RSS, Filter Rules
 """
 
-import json
 import time
 
 from sqlalchemy import Integer, cast
@@ -24,6 +23,7 @@ from app.db.models import (
     USERRSSTASKHISTORY,
 )
 from app.db.repositories.base_repository import BaseRepository
+from app.utils.json_utils import JsonUtils
 
 
 class ConfigRepository(BaseRepository):
@@ -67,11 +67,11 @@ class ConfigRepository(BaseRepository):
             NAME=name,
             TYPE=ctype,
             CONFIG=config,
-            SWITCHES=json.dumps(switches),
+            SWITCHES=JsonUtils.dumps(switches),
             INTERACTIVE=int(interactive),
             ENABLED=int(enabled),
             NOTE=note,
-            TEMPLATES=json.dumps(templates) if templates else None,
+            TEMPLATES=JsonUtils.dumps(templates) if templates else None,
         )
         with self.session() as db:
             db.add(client)
@@ -169,7 +169,7 @@ class ConfigRepository(BaseRepository):
                     SAMEDATA=int(samedata),
                     ONLY_NEXUS_MEDIA=int(only_nexus_media),
                     DOWNLOADER=downloader,
-                    CONFIG=json.dumps(config),
+                    CONFIG=JsonUtils.dumps(config),
                     NOTE=note,
                 )
             )
@@ -348,8 +348,8 @@ class ConfigRepository(BaseRepository):
                 db.query(CONFIGUSERRSS).filter(int(item.get("id") or 0) == CONFIGUSERRSS.ID).update(
                     {
                         "NAME": item.get("name"),
-                        "ADDRESS": json.dumps(item.get("address")),
-                        "PARSER": json.dumps(item.get("parser")),
+                        "ADDRESS": JsonUtils.dumps(item.get("address")),
+                        "PARSER": JsonUtils.dumps(item.get("parser")),
                         "INTERVAL": item.get("interval"),
                         "USES": item.get("uses"),
                         "INCLUDE": item.get("include"),
@@ -363,17 +363,17 @@ class ConfigRepository(BaseRepository):
                         "OVER_EDITION": int(item.get("over_edition") or 0)
                         if str(item.get("over_edition") or "").isdigit()
                         else 0,
-                        "SITES": json.dumps(item.get("sites")),
-                        "FILTER_ARGS": json.dumps(item.get("filter_args")),
-                        "NOTE": json.dumps(item.get("note")),
+                        "SITES": JsonUtils.dumps(item.get("sites")),
+                        "FILTER_ARGS": JsonUtils.dumps(item.get("filter_args")),
+                        "NOTE": JsonUtils.dumps(item.get("note")),
                     }
                 )
             else:
                 db.add(
                     CONFIGUSERRSS(
                         NAME=item.get("name"),
-                        ADDRESS=json.dumps(item.get("address")),
-                        PARSER=json.dumps(item.get("parser")),
+                        ADDRESS=JsonUtils.dumps(item.get("address")),
+                        PARSER=JsonUtils.dumps(item.get("parser")),
                         INTERVAL=item.get("interval"),
                         USES=item.get("uses"),
                         INCLUDE=item.get("include"),
@@ -385,9 +385,9 @@ class ConfigRepository(BaseRepository):
                         DOWNLOAD_SETTING=item.get("download_setting"),
                         RECOGNIZATION=item.get("recognization"),
                         OVER_EDITION=item.get("over_edition"),
-                        SITES=json.dumps(item.get("sites")),
-                        FILTER_ARGS=json.dumps(item.get("filter_args")),
-                        NOTE=json.dumps(item.get("note")),
+                        SITES=JsonUtils.dumps(item.get("sites")),
+                        FILTER_ARGS=JsonUtils.dumps(item.get("filter_args")),
+                        NOTE=JsonUtils.dumps(item.get("note")),
                         PROCESS_COUNT="0",
                     )
                 )
@@ -423,7 +423,7 @@ class ConfigRepository(BaseRepository):
             if not taskinfo:
                 return
 
-            mediainfos = json.loads(taskinfo[0].MEDIAINFOS) if taskinfo[0].MEDIAINFOS else []
+            mediainfos = JsonUtils.loads(taskinfo[0].MEDIAINFOS) if taskinfo[0].MEDIAINFOS else []
             tmdbid = str(mediainfo.tmdb_id)  # type: ignore[union-attr]
             season = int(mediainfo.get_season_seq())  # type: ignore[union-attr]
 
@@ -435,7 +435,9 @@ class ConfigRepository(BaseRepository):
                 {"id": tmdbid, "rssid": "", "season": season, "name": getattr(mediainfo, "title", "") or ""}
             )
 
-            db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).update({"MEDIAINFOS": json.dumps(mediainfos)})
+            db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).update(
+                {"MEDIAINFOS": JsonUtils.dumps(mediainfos)}
+            )
 
     def insert_userrss_task_history(self, task_id: int, title: str, downloader: str) -> None:
         """

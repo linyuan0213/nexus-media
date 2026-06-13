@@ -3,7 +3,6 @@
 将旧版 ConfigRepository 适配为新领域接口
 """
 
-import json
 from typing import Any
 
 from app.db.models import (
@@ -35,6 +34,7 @@ from app.domain.interfaces.config_repo import (
     IMessageClientRepository,
     ITorrentRemoveTaskRepository,
 )
+from app.utils.json_utils import JsonUtils
 
 
 class MessageClientRepositoryAdapter(IMessageClientRepository):
@@ -343,7 +343,7 @@ class TorrentRemoveTaskRepositoryAdapter(ITorrentRemoveTaskRepository):
         return TorrentRemoveTaskEntity.from_orm(rows[0])
 
     def insert(self, name: str, downloader: str, config: str, enabled: int = 1) -> None:
-        cfg = json.loads(config) if isinstance(config, str) else config
+        cfg = JsonUtils.loads(config) if isinstance(config, str) else config
         self._repo.insert_torrent_remove_task(
             name=name,
             action=0,
@@ -439,19 +439,19 @@ class MediaConfigRepositoryAdapter:
         col = col_map[path_type]
         backend_col = backend_col_map[path_type]
         current = getattr(cfg, col, "") if cfg else ""
-        paths = json.loads(current) if current else []
+        paths = JsonUtils.loads(current) if current else []
         if not isinstance(paths, list):
             paths = [paths]
         if path not in paths:
             paths.append(path)
-            self._repo._update_media_config_col(col, json.dumps(paths))
+            self._repo._update_media_config_col(col, JsonUtils.dumps(paths))
             # 同步添加后端
             backend_current = getattr(cfg, backend_col, "") if cfg else ""
-            backends = json.loads(backend_current) if backend_current else []
+            backends = JsonUtils.loads(backend_current) if backend_current else []
             if not isinstance(backends, list):
                 backends = []
             backends.append(backend or "local")
-            self._repo._update_media_config_col(backend_col, json.dumps(backends))
+            self._repo._update_media_config_col(backend_col, JsonUtils.dumps(backends))
 
     def remove_path(self, path_type: str, path: str) -> None:
         """从指定类型移除路径"""
@@ -474,21 +474,21 @@ class MediaConfigRepositoryAdapter:
         col = col_map[path_type]
         backend_col = backend_col_map[path_type]
         current = getattr(cfg, col, "") if cfg else ""
-        paths = json.loads(current) if current else []
+        paths = JsonUtils.loads(current) if current else []
         if not isinstance(paths, list):
             paths = [paths]
         if path in paths:
             idx = paths.index(path)
             paths.pop(idx)
-            self._repo._update_media_config_col(col, json.dumps(paths))
+            self._repo._update_media_config_col(col, JsonUtils.dumps(paths))
             # 同步移除后端
             backend_current = getattr(cfg, backend_col, "") if cfg else ""
-            backends = json.loads(backend_current) if backend_current else []
+            backends = JsonUtils.loads(backend_current) if backend_current else []
             if not isinstance(backends, list):
                 backends = []
             if idx < len(backends):
                 backends.pop(idx)
-            self._repo._update_media_config_col(backend_col, json.dumps(backends))
+            self._repo._update_media_config_col(backend_col, JsonUtils.dumps(backends))
 
     def update_path(self, path_type: str, old_path: str, new_path: str, backend: str = "") -> None:
         """更新指定类型的路径"""
@@ -511,22 +511,22 @@ class MediaConfigRepositoryAdapter:
         col = col_map[path_type]
         backend_col = backend_col_map[path_type]
         current = getattr(cfg, col, "") if cfg else ""
-        paths = json.loads(current) if current else []
+        paths = JsonUtils.loads(current) if current else []
         if not isinstance(paths, list):
             paths = [paths]
         if old_path in paths:
             idx = paths.index(old_path)
             paths[idx] = new_path
-            self._repo._update_media_config_col(col, json.dumps(paths))
+            self._repo._update_media_config_col(col, JsonUtils.dumps(paths))
             # 同步更新后端
             backend_current = getattr(cfg, backend_col, "") if cfg else ""
-            backends = json.loads(backend_current) if backend_current else []
+            backends = JsonUtils.loads(backend_current) if backend_current else []
             if not isinstance(backends, list):
                 backends = []
             while len(backends) < len(paths):
                 backends.append("local")
             backends[idx] = backend or "local"
-            self._repo._update_media_config_col(backend_col, json.dumps(backends))
+            self._repo._update_media_config_col(backend_col, JsonUtils.dumps(backends))
 
     def set_media_config(
         self,

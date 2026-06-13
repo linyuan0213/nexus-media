@@ -12,6 +12,7 @@ import log
 from app.core.settings import settings
 from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter, PluginLogRepositoryAdapter
 from app.domain.entities.plugin import PluginConfigEntity
+from app.utils.json_utils import JsonUtils
 
 
 class PluginContext:
@@ -60,7 +61,7 @@ class PluginContext:
             return default if key else {}
 
         try:
-            config = entity.config if isinstance(entity.config, dict) else json.loads(entity.config or "{}")
+            config = entity.config if isinstance(entity.config, dict) else JsonUtils.loads(entity.config or "{}")
         except (json.JSONDecodeError, TypeError):
             return default if key else {}
 

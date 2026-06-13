@@ -3,8 +3,6 @@ Site Repository 适配器
 实现 ISiteRepository 接口，将 SQLAlchemy ORM 操作转换为领域实体。
 """
 
-import json
-
 from sqlalchemy import Integer, cast
 
 from app.db.models import CONFIGSITE, SITEFAVICON, SITESTATISTICSHISTORY, SITEUSERINFOSTATS
@@ -12,6 +10,7 @@ from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.site_repository import SiteRepository
 from app.domain.entities.site import SiteEntity
 from app.domain.interfaces.site_repo import ISiteRepository
+from app.utils.json_utils import JsonUtils
 
 
 class SiteRepositoryAdapter(ISiteRepository):
@@ -53,7 +52,7 @@ class SiteRepositoryAdapter(ISiteRepository):
             api_key=entity.api_key or "",
             bearer_token=entity.bearer_token or "",
             headers=entity.headers or "",
-            note=json.dumps(entity.note) if entity.note else "",
+            note=JsonUtils.dumps(entity.note) if entity.note else "",
             rss_uses=entity.rss_uses or "",
         )
 
@@ -71,7 +70,7 @@ class SiteRepositoryAdapter(ISiteRepository):
             api_key=entity.api_key or "",
             bearer_token=entity.bearer_token or "",
             headers=entity.headers or "",
-            note=json.dumps(entity.note) if entity.note else "",
+            note=JsonUtils.dumps(entity.note) if entity.note else "",
             rss_uses=entity.rss_uses or "",
         )
 
@@ -224,7 +223,7 @@ class SiteRepositoryImpl(BaseRepository):
                     API_KEY=entity.api_key,
                     BEARER_TOKEN=entity.bearer_token,
                     HEADERS=entity.headers,
-                    NOTE=json.dumps(entity.note) if entity.note else None,
+                    NOTE=JsonUtils.dumps(entity.note) if entity.note else None,
                     INCLUDE=entity.rss_uses,
                 )
             )
@@ -244,7 +243,7 @@ class SiteRepositoryImpl(BaseRepository):
                     "API_KEY": entity.api_key,
                     "BEARER_TOKEN": entity.bearer_token,
                     "HEADERS": entity.headers,
-                    "NOTE": json.dumps(entity.note) if entity.note else None,
+                    "NOTE": JsonUtils.dumps(entity.note) if entity.note else None,
                     "INCLUDE": entity.rss_uses,
                 }
             )
@@ -260,11 +259,11 @@ class SiteRepositoryImpl(BaseRepository):
                 note = {}
                 if rec.NOTE:
                     try:
-                        note = json.loads(rec.NOTE)
+                        note = JsonUtils.loads(rec.NOTE)
                     except Exception:
                         note = {}
                 if ua:
                     note["ua"] = ua
                 db.query(CONFIGSITE).filter(int(site_id) == CONFIGSITE.ID).update(
-                    {"COOKIE": cookie, "NOTE": json.dumps(note)}
+                    {"COOKIE": cookie, "NOTE": JsonUtils.dumps(note)}
                 )

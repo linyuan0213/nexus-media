@@ -10,6 +10,7 @@ from app.message.client_registry import ClientRegistry
 from app.message.registry import get_client_class
 from app.message.switches import MESSAGE_SWITCHES
 from app.services.apikey_service import APIKeyService
+from app.utils.json_utils import JsonUtils
 
 
 def parse_client_config(client_config) -> dict:
@@ -18,20 +19,20 @@ def parse_client_config(client_config) -> dict:
     config = {}
     if client_config.CONFIG:
         try:
-            config = json.loads(client_config.CONFIG)
+            config = JsonUtils.loads(client_config.CONFIG)
         except json.JSONDecodeError:
             log.error(f"[Message]客户端 {client_config.NAME} 的 CONFIG 不是有效 JSON: {client_config.CONFIG}")
     config.update({"interactive": client_config.INTERACTIVE})
     templates = {}
     if client_config.TEMPLATES:
         try:
-            templates = json.loads(client_config.TEMPLATES)
+            templates = JsonUtils.loads(client_config.TEMPLATES)
         except json.JSONDecodeError:
             log.error(f"[Message]客户端 {client_config.NAME} 的模板配置不是有效的 JSON: {client_config.TEMPLATES}")
     switches = []
     if client_config.SWITCHES:
         try:
-            parsed = json.loads(client_config.SWITCHES)
+            parsed = JsonUtils.loads(client_config.SWITCHES)
             if isinstance(parsed, list):
                 switches = parsed
             elif isinstance(parsed, str):

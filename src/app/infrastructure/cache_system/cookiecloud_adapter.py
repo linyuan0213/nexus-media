@@ -1,8 +1,8 @@
-import json
 import re
 from typing import Any
 
 from app.infrastructure.cache_system.manager import get_cache_manager
+from app.utils.json_utils import JsonUtils
 
 
 class CookiecloudAdapter:
@@ -22,7 +22,7 @@ class CookiecloudAdapter:
         if storage:
             if isinstance(storage, bytes):
                 storage = storage.decode("utf-8")
-            data = json.loads(storage)
+            data = JsonUtils.loads(storage)
             # 修复反斜杠转义问题，保留单个反斜杠，修复双反斜杠
             return self._fix_backslash_escapes(data)
         return {}
