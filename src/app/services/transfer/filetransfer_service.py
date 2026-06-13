@@ -16,6 +16,8 @@ from app.core.constants import RMT_MEDIAEXT, RMT_MIN_FILESIZE
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
+from app.domain.enums import ProgressKey, SyncType
+from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.bus import EventBus
 from app.events.constants import MEDIA_EPISODE_TRANSFERRED, MEDIA_TRANSFER_FINISHED, SUBTITLE_DOWNLOAD, TRANSFER_FAIL
@@ -23,6 +25,7 @@ from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.progress import ProgressTracker
 from app.infrastructure.thread import ThreadExecutor
 from app.media import MediaService, Scraper
+from app.media import meta_info as meta_info_fn
 from app.message import Message
 from app.schemas.media import TransferMediaDTO
 from app.services.transfer.cleanup_service import TransferCleanupService
@@ -31,8 +34,6 @@ from app.services.transfer.history_manager import TransferHistoryManager
 from app.services.transfer.path_resolver import TransferPathResolver
 from app.services.transfer_engine import TransferEngine
 from app.utils import ExceptionUtils, PathUtils, StringUtils
-from app.domain.mediatypes import MediaType
-from app.domain.enums import ProgressKey, SyncType
 
 
 class FileTransferService:
@@ -101,8 +102,6 @@ class FileTransferService:
         return self._path_resolver.get_dest_path_by_info(dest, meta_info, self.media)
 
     def get_no_exists_medias(self, meta_info, season=None, total_num=None):
-        from app.media import meta_info as meta_info_fn
-
         return self._existence.get_no_exists_medias(meta_info, meta_info_fn, season, total_num)
 
     def get_best_target_path(self, mtype, in_path=None, size=0):

@@ -9,6 +9,8 @@ from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
 from app.core.system_config import SystemConfig
 from app.db.repositories.base_repository import BaseRepository
+from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
+from app.domain.enums import SystemConfigKey
 from app.indexer.indexer import Indexer
 from app.infrastructure.cache_system import TokenCache
 from app.mediaserver import MediaServer
@@ -21,7 +23,6 @@ from app.services.indexer_service import IndexerService
 from app.services.web.utils import set_config_value
 from app.utils import ExceptionUtils
 from app.utils.submodule_loader import SubmoduleLoader
-from app.domain.enums import SystemConfigKey
 
 
 class IndexerConfigService:
@@ -92,7 +93,6 @@ class MediaServerConfigService:
     """
 
     def __init__(self, media_server: MediaServer, config_repo=None):
-        from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 
         self._config_repo = config_repo or MediaServerRepositoryAdapter()
         self._media_server = media_server

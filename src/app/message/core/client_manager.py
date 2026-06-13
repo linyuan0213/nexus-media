@@ -1,5 +1,6 @@
 """ClientManager - 消息客户端生命周期管理."""
 
+import json
 from typing import Any, cast
 
 import log
@@ -7,14 +8,12 @@ from app.db.repositories.config_repo_adapter import MessageClientRepositoryAdapt
 from app.infrastructure.thread import ThreadExecutor
 from app.message.client_registry import ClientRegistry
 from app.message.registry import get_client_class
+from app.message.switches import MESSAGE_SWITCHES
 from app.services.apikey_service import APIKeyService
 
 
 def parse_client_config(client_config) -> dict:
     """解析数据库中的客户端配置为结构化字典."""
-    import json
-
-    from app.message.switches import MESSAGE_SWITCHES
 
     config = {}
     if client_config.CONFIG:

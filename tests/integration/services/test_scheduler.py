@@ -1,7 +1,7 @@
 """Tests for app.services.scheduler package."""
 
 import time
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from apscheduler.events import (
@@ -198,9 +198,17 @@ class TestSchedulerCoreLifecycle:
 
     def test_start_service_with_load_defaults(self):
         core = SchedulerCore()
-        with patch("app.services.scheduler_jobs.load_default_jobs") as mock_load:
-            core.start_service(load_defaults=True)
-            mock_load.assert_called_once_with(core)
+        deps = {
+            "thread_executor": MagicMock(),
+            "site_userinfo": MagicMock(),
+            "subscription_monitor": MagicMock(),
+            "media_server": MagicMock(),
+            "sync_engine": MagicMock(),
+            "subscribe_service": MagicMock(),
+        }
+        with patch("app.services.scheduler.core.load_default_jobs") as mock_load:
+            core.start_service(load_defaults=True, **deps)
+            mock_load.assert_called_once_with(core, **deps)
         core.stop_service()
 
 

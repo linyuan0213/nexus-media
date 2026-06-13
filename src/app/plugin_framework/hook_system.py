@@ -6,7 +6,6 @@ Hook System - 全局事件钩子系统
 from typing import TYPE_CHECKING
 
 import log
-
 from app.db.repositories.plugin_framework_repository import PluginFrameworkRepository
 
 if TYPE_CHECKING:

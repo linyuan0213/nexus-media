@@ -10,6 +10,7 @@ from typing import Any, cast
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.di.context import AppContext
 from app.di.registry import registry
 from app.di.types import RegistryKey
 from app.infrastructure.cache_system import TokenCache
@@ -28,32 +29,26 @@ bearer_scheme = HTTPBearer(auto_error=False)
 bearer_scheme_dependency = Depends(bearer_scheme)
 
 
+def get_app_context(request: Request) -> AppContext:
+    """获取应用上下文 — 路由层访问对象图的唯一入口."""
+    return request.app.state.context
+
+
 def _get_service(name: str | RegistryKey) -> Any:
-    """通用服务工厂 — 从 Registry 获取指定名称的实例。"""
-    key = RegistryKey(name) if isinstance(name, str) else name
-    return registry.get(key)
+    """通用服务工厂 — 从 AppContext 获取指定名称的实例（兼容旧 RegistryKey）."""
+    key = name.value if isinstance(name, RegistryKey) else name
 
+    def _resolver(ctx: AppContext = Depends(get_app_context)) -> Any:
+        return getattr(ctx, key, None)
 
-def _extract_user_from_token(auth_header: str | None) -> str | None:
-    """
-    Token 认证（APIv1 ClientResource / Bearer）
-    """
-    if not auth_header:
-        return None
-    latest_token = TokenCache.get(auth_header)
-    if not latest_token:
-        return None
-    flag, username = identify(latest_token)
-    if not username:
-        return None
-    if not flag:
-        # Token 过期但合法，自动续期
-        TokenCache.set(auth_header, generate_access_token(username))
-    return username
+    return _resolver
 
 
 def _extract_user_from_api_key(
-    auth_header: str | None, query_key: str | None, apikey_service=None, rbac_service=None
+    auth_header: str | None,
+    query_key: str | None,
+    apikey_service=None,
+    rbac_service=None,
 ) -> UserContext | None:
     """
     API Key 认证（支持 Header 和 Query 参数）
@@ -69,7 +64,9 @@ def _extract_user_from_api_key(
     if not raw_key:
         return None
 
-    _apikey_service = apikey_service or registry.get(RegistryKey.APIKEY_SERVICE)
+    _apikey_service = apikey_service
+    if _apikey_service is None:
+        return None
     api_key = _apikey_service.validate_key(raw_key)
     if not api_key:
         return None
@@ -94,7 +91,9 @@ def _extract_user_from_api_key(
     created_by = api_key.created_by or 0
 
     if created_by:
-        _rbac_service = rbac_service or registry.get(RegistryKey.RBAC_SERVICE)
+        _rbac_service = rbac_service
+        if _rbac_service is None:
+            return None
         try:
             user = _rbac_service.get_user_by_id(created_by)
             if user is not None:
@@ -120,23 +119,15 @@ def _extract_user_from_api_key(
     )
 
 
-def get_auth_service() -> AuthService:
-    rbac = registry.get(RegistryKey.RBAC_SERVICE)
-    return AuthService(rbac_service=rbac)
+def get_auth_service(app_context: AppContext = Depends(get_app_context)) -> AuthService:
+    """获取认证服务实例"""
+    return AuthService(rbac_service=app_context.rbac_service)
 
 
-def _extract_user_from_jwt(auth_header: str | None) -> UserContext | None:
-    """
-    JWT 认证：从 Authorization header 提取并验证 JWT Token
-    """
-    if not auth_header:
-        return None
-    # 支持 "Bearer xxx" 或直接 "xxx"
-    token = auth_header.split()[-1] if " " in auth_header else auth_header
-    return AuthService.verify_token(token)
-
-
-def _extract_user_ctx_from_session(request: Request, rbac_service=None) -> UserContext | None:
+def _extract_user_ctx_from_session(
+    request: Request,
+    app_context: AppContext,
+) -> UserContext | None:
     """
     从 Session 中提取用户上下文（绞杀期兼容）
     """
@@ -147,8 +138,8 @@ def _extract_user_ctx_from_session(request: Request, rbac_service=None) -> UserC
     user_id = session.get("user_id") or session.get("_user_id")
     if not user_id:
         return None
+    _rbac_service = app_context.rbac_service
     try:
-        _rbac_service = rbac_service or registry.get(RegistryKey.RBAC_SERVICE)
         user = _rbac_service.get_user_by_id(user_id)
         if user is None or getattr(user, "STATUS", 0) != 1:
             return None
@@ -177,6 +168,7 @@ def _extract_user_ctx_from_session(request: Request, rbac_service=None) -> UserC
 
 def get_current_user(
     request: Request,
+    app_context: AppContext = Depends(get_app_context),
     credentials: HTTPAuthorizationCredentials | None = bearer_scheme_dependency,
 ) -> UserContext:
     """
@@ -191,7 +183,7 @@ def get_current_user(
         return user_ctx
 
     # 2) Session 认证（Web 前端，绞杀期兼容）
-    user_ctx = _extract_user_ctx_from_session(request)
+    user_ctx = _extract_user_ctx_from_session(request, app_context)
     if user_ctx:
         return user_ctx
 
@@ -202,7 +194,12 @@ def get_current_user(
 
     # 4) API Key 认证
     query_key = request.query_params.get("apikey")
-    user_ctx = _extract_user_from_api_key(auth_header, query_key)
+    user_ctx = _extract_user_from_api_key(
+        auth_header,
+        query_key,
+        apikey_service=app_context.apikey_service,
+        rbac_service=app_context.rbac_service,
+    )
     if user_ctx:
         return user_ctx
 
@@ -215,13 +212,14 @@ def get_current_user(
 
 def get_current_user_optional(
     request: Request,
+    app_context: AppContext = Depends(get_app_context),
     credentials: HTTPAuthorizationCredentials | None = bearer_scheme_dependency,
 ) -> UserContext | None:
     """
     可选认证：未登录返回 None，不抛异常。
     """
     try:
-        return get_current_user(request, credentials)
+        return get_current_user(request, app_context, credentials)
     except HTTPException:
         return None
 
@@ -278,137 +276,107 @@ def require_all_permissions(*permissions: str):
     return checker
 
 
-def get_config_service() -> ConfigService:
+def get_config_service(app_context: AppContext = Depends(get_app_context)) -> ConfigService:
     """获取配置服务实例"""
-    return _get_service("config_service")
+    return app_context.config_service
 
 
-def get_message_service():
+def get_message_service(app_context: AppContext = Depends(get_app_context)):
     """获取消息客户端服务实例"""
-    return _get_service("message_client_service")
+    return app_context.message_client_service
 
 
-def get_message():
+def get_message(app_context: AppContext = Depends(get_app_context)):
     """获取消息门面实例"""
-    return _get_service(RegistryKey.MESSAGE)
+    return app_context.message
 
 
 # --- 领域 Service 工厂 ---
 
 
-def get_download_service():
+def get_download_service(app_context: AppContext = Depends(get_app_context)):
     """获取下载服务实例"""
-    return _get_service("download_service")
+    return app_context.download_service
 
 
-def get_site_service():
+def get_site_service(app_context: AppContext = Depends(get_app_context)):
     """获取站点服务实例"""
-    return _get_service("site_service")
+    return app_context.site_service
 
 
-def get_indexer_service():
+def get_indexer_service(app_context: AppContext = Depends(get_app_context)):
     """获取索引器服务实例"""
-    return _get_service(RegistryKey.INDEXER_SERVICE)
+    return app_context.indexer_service
 
 
-def get_media_info_service():
+def get_media_info_service(app_context: AppContext = Depends(get_app_context)):
     """获取媒体信息服务实例"""
-    return _get_service("media_info_service")
+    return app_context.media_info_service
 
 
-def get_media_library_service():
-    """获取媒体库服务实例"""
-    return _get_service("media_library_service")
+def get_media_service(app_context: AppContext = Depends(get_app_context)):
+    """获取媒体服务实例"""
+    return app_context.media_service
 
 
-def get_media_file_service():
-    """获取媒体文件服务实例"""
-    return _get_service("media_file_service")
-
-
-def get_file_index_service():
-    """获取文件索引服务实例"""
-    return _get_service("file_index_service")
-
-
-def get_transfer_history_service():
-    """获取转移历史服务实例"""
-    return _get_service("transfer_history_service")
-
-
-def get_search_result_service():
-    """获取搜索结果服务实例"""
-    return _get_service("search_result_service")
-
-
-def get_sync_service():
-    """获取同步服务实例"""
-    return _get_service(RegistryKey.SYNC_SERVICE)
-
-
-def get_subscribe_service() -> SubscribeService:
+def get_subscribe_service(app_context: AppContext = Depends(get_app_context)) -> SubscribeService:
     """获取订阅服务实例"""
-    return _get_service(RegistryKey.SUBSCRIBE_SERVICE)
+    return app_context.subscribe_service
 
 
-def get_subscribe_history_service() -> SubscribeHistoryService:
+def get_sync_service(app_context: AppContext = Depends(get_app_context)):
+    """获取同步服务实例"""
+    return app_context.sync_service
+
+
+def get_subscribe_history_service(app_context: AppContext = Depends(get_app_context)) -> SubscribeHistoryService:
     """获取订阅历史服务实例"""
-    return _get_service("subscribe_history_service")
+    return app_context.subscribe_history_service
 
 
-def get_subscribe_calendar_service() -> SubscribeCalendarService:
+def get_subscribe_calendar_service(app_context: AppContext = Depends(get_app_context)) -> SubscribeCalendarService:
     """获取订阅日历服务实例"""
-    return _get_service("subscribe_calendar_service")
+    return app_context.subscribe_calendar_service
 
 
-def get_brush_service():
-    """获取刷流服务实例"""
-    return _get_service("brush_service")
-
-
-def get_plugin_framework_service():
-    """获取插件框架 v2 服务实例"""
-    return _get_service("plugin_framework_service")
-
-
-def get_words_service():
+def get_words_service(app_context: AppContext = Depends(get_app_context)):
     """获取自定义识别词服务实例"""
-    return _get_service("words_service")
+    return app_context.words_service
 
 
-def get_user_rss_service():
+def get_user_rss_service(app_context: AppContext = Depends(get_app_context)):
     """获取用户 RSS 服务实例"""
-    return _get_service("user_rss_service")
+    return app_context.user_rss_service
 
 
-def get_scheduler_service():
+def get_scheduler_service(app_context: AppContext = Depends(get_app_context)):
     """获取调度器服务实例"""
-    return _get_service("scheduler_service")
+    return app_context.scheduler_service
 
 
-def get_system_scheduler_service():
+def get_system_scheduler_service(app_context: AppContext = Depends(get_app_context)):
     """获取系统调度器服务实例（用于启动后台服务）"""
-    return _get_service(RegistryKey.SCHEDULER_CORE)
+    return app_context.scheduler_core
 
 
-def get_filter_service():
+def get_filter_service(app_context: AppContext = Depends(get_app_context)):
     """获取过滤服务实例"""
-    return _get_service("filter_service")
+    return app_context.filter_service
 
 
-def get_net_test_service():
+def get_net_test_service(app_context: AppContext = Depends(get_app_context)):
     """获取网络测试服务实例"""
-    return _get_service("net_test_service")
+    return app_context.net_test_service
 
 
-def get_apikey_service():
+def get_apikey_service(app_context: AppContext = Depends(get_app_context)):
     """获取 API Key 服务实例"""
-    return _get_service("apikey_service")
+    return app_context.apikey_service
 
 
-def get_system_config_service():
+def get_system_config_service(app_context: AppContext = Depends(get_app_context)):
     """获取系统配置服务实例"""
-    return _get_service("system_config_service")
+    return app_context.system_config_service
 
 
 def get_config_update_service():
@@ -416,107 +384,179 @@ def get_config_update_service():
     return ConfigUpdateService()
 
 
-def get_user_manage_service():
+def get_user_manage_service(app_context: AppContext = Depends(get_app_context)):
     """获取用户管理服务实例"""
-    return _get_service("user_manage_service")
+    return app_context.user_manage_service
 
 
-def get_progress_service():
+def get_progress_service(app_context: AppContext = Depends(get_app_context)):
     """获取进度服务实例"""
-    return _get_service("progress_service")
+    return app_context.progress_service
 
 
-def get_message_sender_service():
+def get_message_sender_service(app_context: AppContext = Depends(get_app_context)):
     """获取消息发送服务实例"""
-    return _get_service("message_sender_service")
+    return app_context.message_sender_service
 
 
-def get_system_info_service():
+def get_system_info_service(app_context: AppContext = Depends(get_app_context)):
     """获取系统信息服务实例"""
-    return _get_service("system_info_service")
+    return app_context.system_info_service
 
 
-def get_system_lifecycle_service():
+def get_system_lifecycle_service(app_context: AppContext = Depends(get_app_context)):
     """获取系统生命周期服务实例"""
-    return _get_service(RegistryKey.SYSTEM_LIFECYCLE)
+    return app_context.system_lifecycle
 
 
-def get_backup_restore_service():
+def get_backup_restore_service(app_context: AppContext = Depends(get_app_context)):
     """获取备份恢复服务实例"""
-    return _get_service("backup_restore_service")
+    return app_context.backup_restore_service
 
 
-def get_indexer_config_service():
+def get_indexer_config_service(app_context: AppContext = Depends(get_app_context)):
     """获取索引器配置服务实例"""
-    return _get_service("indexer_config_service")
+    return app_context.indexer_config_service
 
 
-def get_media_server_config_service():
+def get_media_server_config_service(app_context: AppContext = Depends(get_app_context)):
     """获取媒体服务器配置服务实例"""
-    return _get_service("media_server_config_service")
+    return app_context.media_server_config_service
 
 
-def get_web_search_service():
+def get_web_search_service(app_context: AppContext = Depends(get_app_context)):
     """获取 Web 搜索服务实例"""
-    return _get_service("web_search_service")
+    return app_context.web_search_service
 
 
-def get_downloader_service():
+def get_downloader_service(app_context: AppContext = Depends(get_app_context)):
     """获取下载器核心服务实例"""
-    return _get_service(RegistryKey.DOWNLOADER_CORE)
+    return app_context.downloader_core
 
 
-def get_filetransfer_service():
+def get_filetransfer_service(app_context: AppContext = Depends(get_app_context)):
     """获取文件转移服务实例"""
-    return _get_service("filetransfer_service")
+    return app_context.filetransfer_service
 
 
-def get_media_recommendation_service():
+def get_media_recommendation_service(app_context: AppContext = Depends(get_app_context)):
     """获取媒体推荐服务实例"""
-    return _get_service("media_recommendation_service")
+    return app_context.media_recommendation_service
 
 
-def get_searcher_service():
+def get_searcher_service(app_context: AppContext = Depends(get_app_context)):
     """获取搜索服务实例"""
-    return _get_service(RegistryKey.SEARCHER)
+    return app_context.searcher
 
 
-def get_tmdb_blacklist_service():
+def get_tmdb_blacklist_service(app_context: AppContext = Depends(get_app_context)):
     """获取 TMDB 黑名单服务实例"""
-    return _get_service("tmdb_blacklist_service")
+    return app_context.tmdb_blacklist_service
 
 
-def get_thread_executor():
+def get_thread_executor(app_context: AppContext = Depends(get_app_context)):
     """获取线程助手实例"""
-    return _get_service("thread_executor")
+    return app_context.thread_executor
 
 
-def get_media_config_service():
+def get_media_config_service(app_context: AppContext = Depends(get_app_context)):
     """获取媒体库路径配置服务"""
-    return _get_service("media_config_service")
+    return app_context.media_config_service
 
 
-def get_storage_backend_service():
+def get_storage_backend_service(app_context: AppContext = Depends(get_app_context)):
     """获取存储后端服务实例"""
-    return _get_service("storage_backend_service")
+    return app_context.storage_backend_service
 
 
-def get_rbac_service():
+def get_rbac_service(app_context: AppContext = Depends(get_app_context)):
     """获取 RBAC 服务实例"""
-    return _get_service("rbac_service")
+    return app_context.rbac_service
 
 
-def get_subscription_monitor():
+def get_subscription_monitor(app_context: AppContext = Depends(get_app_context)):
     """获取订阅监控实例"""
-    lifecycle = _get_service(RegistryKey.SYSTEM_LIFECYCLE)
-    return lifecycle.subscription_monitor
+    return app_context.subscription_monitor
 
 
-def get_hook_system():
+def get_hook_system(app_context: AppContext = Depends(get_app_context)):
     """获取 Hook 系统实例"""
-    return _get_service(RegistryKey.HOOK_SYSTEM)
+    return app_context.hook_system
+
+
+def get_plugin_framework_service(app_context: AppContext = Depends(get_app_context)):
+    """获取插件框架服务实例"""
+    return app_context.plugin_framework_service
+
+
+def get_brush_service(app_context: AppContext = Depends(get_app_context)):
+    """获取刷流服务实例"""
+    return app_context.brush_service
+
+
+def get_file_index_service(app_context: AppContext = Depends(get_app_context)):
+    """获取文件索引服务实例"""
+    return app_context.file_index_service
+
+
+def get_media_file_service(app_context: AppContext = Depends(get_app_context)):
+    """获取媒体文件服务实例"""
+    return app_context.media_file_service
+
+
+def get_media_library_service(app_context: AppContext = Depends(get_app_context)):
+    """获取媒体库服务实例"""
+    return app_context.media_library_service
+
+
+def get_search_result_service(app_context: AppContext = Depends(get_app_context)):
+    """获取搜索结果服务实例"""
+    return app_context.search_result_service
+
+
+def get_transfer_history_service(app_context: AppContext = Depends(get_app_context)):
+    """获取转移历史服务实例"""
+    return app_context.transfer_history_service
 
 
 def get_config_reloader():
     """获取配置重载器实例"""
     return ConfigReloader(provider_resolver=registry.get)
+
+
+# --- 兼容旧 Registry 获取方式（逐步废弃）---
+
+
+def _get_legacy_service(name: str | RegistryKey) -> Any:
+    """通用服务工厂 — 从 Registry 获取指定名称的实例（仅兼容旧调用）。"""
+    key = RegistryKey(name) if isinstance(name, str) else name
+    return registry.get(key)
+
+
+def _extract_user_from_token(auth_header: str | None) -> str | None:
+    """
+    Token 认证（APIv1 ClientResource / Bearer）
+    """
+    if not auth_header:
+        return None
+    latest_token = TokenCache.get(auth_header)
+    if not latest_token:
+        return None
+    flag, username = identify(latest_token)
+    if not username:
+        return None
+    if not flag:
+        # Token 过期但合法，自动续期
+        TokenCache.set(auth_header, generate_access_token(username))
+    return username
+
+
+def _extract_user_from_jwt(auth_header: str | None) -> UserContext | None:
+    """
+    JWT 认证：从 Authorization header 提取并验证 JWT Token
+    """
+    if not auth_header:
+        return None
+    # 支持 "Bearer xxx" 或直接 "xxx"
+    token = auth_header.split()[-1] if " " in auth_header else auth_header
+    return AuthService.verify_token(token)

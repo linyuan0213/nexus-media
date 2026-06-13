@@ -6,11 +6,12 @@
 刷新机制：SiteService 写操作后调用 refresh() 重建缓存。
 """
 
+from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.domain.interfaces.site_repo import ISiteRepository
+from app.services.site_rate_limiter import SiteRateLimiterService
+from app.sites.engine import SiteEngine
 from app.utils import StringUtils
 from app.utils.config_tools import get_ua
-from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
-from app.sites.engine import SiteEngine
 
 
 class SiteCache:
@@ -224,8 +225,6 @@ class SiteCache:
 
     def check_ratelimit(self, site_id: int | str) -> bool:
         """检查站点是否触发流控."""
-        from app.services.site_rate_limiter import SiteRateLimiterService
-
         limiter = SiteRateLimiterService()
         state = limiter.check(str(site_id), timeout=0)
         if state:

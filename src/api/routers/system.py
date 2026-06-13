@@ -773,7 +773,7 @@ def stream_logging(
     if token:
         user_ctx = AuthService.verify_token(token)
     if not user_ctx:
-        user_ctx = _extract_user_ctx_from_session(request)
+        user_ctx = _extract_user_ctx_from_session(request, app_context=request.app.state.context)
     if not user_ctx:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -810,7 +810,7 @@ def update_site_config(
     payload: EmptyRequest | None = None,
 ):
     """手动触发站点配置更新"""
-    user_ctx = _extract_user_ctx_from_session(request)
+    user_ctx = _extract_user_ctx_from_session(request, app_context=request.app.state.context)
     if not user_ctx:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录")
     if not user_ctx.is_superadmin:

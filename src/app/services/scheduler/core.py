@@ -26,6 +26,7 @@ from app.services.scheduler.models import JobStats, TaskConfig
 from app.services.scheduler.retry_manager import RetryManager
 from app.services.scheduler.stats_collector import StatsCollector
 from app.services.scheduler.trigger_factory import TriggerFactory
+from app.services.scheduler_jobs import load_default_jobs
 from app.utils import ExceptionUtils
 
 
@@ -118,8 +119,6 @@ class SchedulerCore:
             self._running = True
 
             if load_defaults:
-                from app.services.scheduler_jobs import load_default_jobs
-
                 load_default_jobs(self, **deps)
 
             log.info("调度器服务已启动")
