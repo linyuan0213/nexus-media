@@ -1,4 +1,5 @@
 from collections import Counter
+from typing import cast
 
 from PIL import Image
 
@@ -11,9 +12,9 @@ class ImageUtils:
         # 缩小图片尺寸以加快计算速度
         img = img.resize((100, 100), resample=Image.Resampling.BILINEAR)
         # 获取所有像素颜色值
-        pixels = img.getdata()
+        pixels = cast(list[tuple[int, int, int]], list(img.get_flattened_data()))
         # 统计每种颜色在像素中出现的频率
-        pixel_count = Counter(pixels)  # type: ignore[reportArgumentType]
+        pixel_count = Counter(pixels)
         # 找到出现频率最高的颜色，作为主题色
         dominant_color = pixel_count.most_common(1)[0][0]
         # 将主题色转换为16进制表示
