@@ -4,6 +4,7 @@ import threading
 import log
 from app.db.repositories.system_dict_repo_adapter import SystemDictRepositoryAdapter
 from app.domain.enums import SystemConfigKey
+from app.utils.json_utils import JsonUtils
 
 
 class SystemConfig:
@@ -36,7 +37,7 @@ class SystemConfig:
                 continue
             if self._is_obj(row.value):
                 try:
-                    self.systemconfig[row.key] = json.loads(row.value)
+                    self.systemconfig[row.key] = JsonUtils.loads(row.value)
                 except json.JSONDecodeError:
                     log.warn(f"配置项 {row.key} 的 JSON 格式损坏，跳过")
                     continue
@@ -56,7 +57,11 @@ class SystemConfig:
         self.systemconfig[key] = value
 
         db_value = (
-            json.dumps(value) if self._is_obj(value) and value is not None else str(value) if value is not None else ""
+            JsonUtils.dumps(value)
+            if self._is_obj(value) and value is not None
+            else str(value)
+            if value is not None
+            else ""
         )
         self._repo.set(self._type, key, db_value)
 

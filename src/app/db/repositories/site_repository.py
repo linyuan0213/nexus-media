@@ -5,13 +5,13 @@ Handles site configuration and statistics related database operations.
 
 import contextlib
 import datetime
-import json
 import time
 
 from sqlalchemy import Integer, cast, func
 
 from app.db.models import CONFIGSITE, SITEFAVICON, SITESTATISTICSHISTORY, SITEUSERINFOSTATS, SITEUSERSEEDINGINFO
 from app.db.repositories.base_repository import BaseRepository
+from app.utils.json_utils import JsonUtils
 
 
 class SiteRepository(BaseRepository):
@@ -132,12 +132,14 @@ class SiteRepository(BaseRepository):
         with self.session() as db:
             rec = db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).first()
             if rec.NOTE:
-                note = json.loads(rec.NOTE)
+                note = JsonUtils.loads(rec.NOTE)
                 if ua:
                     note["ua"] = ua
             else:
                 note = {}
-            db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).update({"COOKIE": cookie, "NOTE": json.dumps(note)})
+            db.query(CONFIGSITE).filter(int(tid) == CONFIGSITE.ID).update(
+                {"COOKIE": cookie, "NOTE": JsonUtils.dumps(note)}
+            )
 
     def update_site_rssurl(self, tid: int | None, rssurl: str) -> None:
         """

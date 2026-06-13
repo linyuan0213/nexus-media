@@ -1,12 +1,12 @@
 """声明式配置处理器 — 支持 method / auth_type / auth_source / markers 精确控制。"""
 
-import json
 import re
 from dataclasses import dataclass, field
 from typing import Any
 
 from app.infrastructure.http.auth import BearerAuth, CookieAuth
 from app.utils import StringUtils
+from app.utils.json_utils import JsonUtils
 
 from ..credentials import CredentialResolver
 from .base import SigninResult, SiteSigninContext, SiteSigninHandler
@@ -130,7 +130,7 @@ class DeclarativeSigninHandler(SiteSigninHandler):
 
     def _check_json_response(self, res, ctx: SiteSigninContext) -> SigninResult:
         try:
-            data = json.loads(res.text)
+            data = JsonUtils.loads(res.text)
         except Exception:
             return SigninResult.fail(ctx.site, "解析 JSON 响应失败")
 

@@ -3,11 +3,11 @@
 处理媒体库同步相关的数据库操作
 """
 
-import json
 import time
 
 from app.db.models import MEDIASYNCITEMS, MEDIASYNCSTATISTIC
 from app.db.repositories.base_repository import BaseRepository
+from app.utils.json_utils import JsonUtils
 
 
 class MediaSyncRepository(BaseRepository):
@@ -40,7 +40,7 @@ class MediaSyncRepository(BaseRepository):
                 TMDBID=iteminfo.get("tmdbid"),
                 IMDBID=iteminfo.get("imdbid"),
                 PATH=iteminfo.get("path"),
-                JSON=json.dumps(seasoninfo) if seasoninfo else None,
+                JSON=JsonUtils.dumps(seasoninfo) if seasoninfo else None,
             )
             db.add(new_item)
             db.commit()

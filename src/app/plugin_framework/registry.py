@@ -3,7 +3,6 @@ Plugin Registry - 插件注册表
 管理插件的扫描、安装、卸载、启用/禁用
 """
 
-import json
 import os
 import shutil
 import zipfile
@@ -91,7 +90,7 @@ class PluginRegistry:
             raise ValueError("插件包缺少 manifest.json")
 
         with open(manifest_path, encoding="utf-8") as f:
-            manifest_data = json.load(f)
+            manifest_data = JsonUtils.load(f)
 
         manifest = PluginManifest.from_dict(manifest_data)
         if not manifest.id or not manifest.name:
@@ -214,7 +213,7 @@ class PluginRegistry:
                 continue
             try:
                 with open(manifest_path, encoding="utf-8") as f:
-                    manifest_data = json.load(f)
+                    manifest_data = JsonUtils.load(f)
                 manifest = PluginManifest.from_dict(manifest_data)
                 if not manifest.id or not manifest.name:
                     continue

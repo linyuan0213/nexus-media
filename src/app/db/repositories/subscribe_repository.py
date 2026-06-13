@@ -5,13 +5,13 @@ Handles RSS movies, TV shows, episodes and history related database operations.
 
 from __future__ import annotations
 
-import json
 import time
 from typing import TYPE_CHECKING
 
 from app.db.models import SubscribeHistory, SubscribeMovies, SubscribeTorrents, SubscribeTvEpisodes, SubscribeTvs
 from app.db.repositories.base_repository import BaseRepository
 from app.domain.mediatypes import MediaType
+from app.utils.json_utils import JsonUtils
 
 if TYPE_CHECKING:
     from app.media.models import MediaInfo
@@ -204,8 +204,8 @@ class SubscribeRepository(BaseRepository):
                     YEAR=media_info.year,
                     TMDBID=media_info.tmdb_id,
                     IMAGE=media_info.get_message_image(),
-                    RSS_SITES=json.dumps(rss_sites),
-                    SEARCH_SITES=json.dumps(search_sites),
+                    RSS_SITES=JsonUtils.dumps(rss_sites),
+                    SEARCH_SITES=JsonUtils.dumps(search_sites),
                     OVER_EDITION=over_edition,
                     FILTER_RESTYPE=filter_restype,
                     FILTER_PIX=filter_pix,
@@ -257,7 +257,7 @@ class SubscribeRepository(BaseRepository):
             col = field_map.get(k)
             if col is not None:
                 if k in ("rss_sites", "search_sites") and isinstance(v, list):
-                    update_fields[col] = json.dumps(v)
+                    update_fields[col] = JsonUtils.dumps(v)
                 else:
                     update_fields[col] = v
         if not update_fields:
@@ -487,8 +487,8 @@ class SubscribeRepository(BaseRepository):
                     SEASON=season_str,
                     TMDBID=media_info.tmdb_id,
                     IMAGE=media_info.get_message_image(),
-                    RSS_SITES=json.dumps(rss_sites),
-                    SEARCH_SITES=json.dumps(search_sites),
+                    RSS_SITES=JsonUtils.dumps(rss_sites),
+                    SEARCH_SITES=JsonUtils.dumps(search_sites),
                     OVER_EDITION=over_edition,
                     FILTER_RESTYPE=filter_restype,
                     FILTER_PIX=filter_pix,
@@ -549,7 +549,7 @@ class SubscribeRepository(BaseRepository):
             col = field_map.get(k)
             if col is not None:
                 if k in ("rss_sites", "search_sites") and isinstance(v, list):
-                    update_fields[col] = json.dumps(v)
+                    update_fields[col] = JsonUtils.dumps(v)
                 else:
                     update_fields[col] = v
         if not update_fields:
