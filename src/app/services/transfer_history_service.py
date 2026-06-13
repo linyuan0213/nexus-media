@@ -54,18 +54,22 @@ class TransferHistoryService:
         for statistic in self._filetransfer.get_transfer_statistics(days) or []:
             if not statistic[2]:
                 continue
-            if statistic[1] not in labels:
-                labels.append(statistic[1])
             parsed = MediaType.from_string(statistic[0])
             if parsed == MediaType.MOVIE:
+                if statistic[1] not in labels:
+                    labels.append(statistic[1])
                 movie_nums.append(statistic[2])
                 tv_nums.append(0)
                 anime_nums.append(0)
             elif parsed == MediaType.TV:
+                if statistic[1] not in labels:
+                    labels.append(statistic[1])
                 tv_nums.append(statistic[2])
                 movie_nums.append(0)
                 anime_nums.append(0)
             elif parsed == MediaType.ANIME:
+                if statistic[1] not in labels:
+                    labels.append(statistic[1])
                 anime_nums.append(statistic[2])
                 movie_nums.append(0)
                 tv_nums.append(0)

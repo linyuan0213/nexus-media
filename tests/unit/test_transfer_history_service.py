@@ -1,0 +1,129 @@
+"""TransferHistoryService 单元测试."""
+
+from unittest.mock import MagicMock
+
+import pytest
+
+from app.services.transfer_history_service import TransferHistoryService
+
+
+class _HistoryMock:
+    def as_dict(self):
+        return {
+            "ID": 1,
+            "MODE": "link",
+            "SOURCE_PATH": "/src",
+            "SOURCE_FILENAME": "movie.mkv",
+            "DEST": "/dst",
+        }
+
+
+class _UnknownMock:
+    ID: int = 10
+    PATH: str | None = "C:\\unknown\\file.mkv"
+    DEST: str = "C:\\dst"
+    MODE: str = "copy"
+
+
+@pytest.fixture
+def mock_filetransfer():
+    return MagicMock()
+
+
+@pytest.fixture
+def mock_sync_service():
+    return MagicMock()
+
+
+@pytest.fixture
+def service(mock_filetransfer, mock_sync_service):
+    return TransferHistoryService(
+        filetransfer=mock_filetransfer,
+        sync_service=mock_sync_service,
+    )
+
+
+class TestTransferHistoryService:
+    def test_get_transfer_history_page_defaults(self, service, mock_filetransfer):
+        mock_filetransfer.get_transfer_history.return_value = None
+        result = service.get_transfer_history_page("", None, None)
+        assert result.total == 0
+        assert result.result == []
+        assert result.page_num == 30
+        assert result.current_page == 1
+        assert result.total_page == 1
+
+    def test_get_transfer_history_page_with_data(self, service, mock_filetransfer):
+        mock_filetransfer.get_transfer_history.return_value = (65, [_HistoryMock()])
+        result = service.get_transfer_history_page("", 2, 20)
+        assert result.total == 65
+        assert result.current_page == 2
+        assert result.page_num == 20
+        assert result.total_page == 4
+        assert result.result[0]["SYNC_MODE"] == "link"
+        assert result.result[0]["RMT_MODE"] == "link"
+
+    def test_get_transfer_statistics(self, service, mock_filetransfer):
+        mock_filetransfer.get_transfer_statistics.return_value = [
+            ("movie", "2024-01-01", 5),
+            ("tv", "2024-01-01", 3),
+            ("anime", "2024-01-02", 2),
+        ]
+        result = service.get_transfer_statistics(days=7)
+        assert result["Labels"] == ["2024-01-01", "2024-01-02"]
+        assert result["MovieNums"] == [5, 0, 0]
+        assert result["TvNums"] == [0, 3, 0]
+        assert result["AnimeNums"] == [0, 0, 2]
+
+    def test_get_transfer_statistics_skips_empty(self, service, mock_filetransfer):
+        mock_filetransfer.get_transfer_statistics.return_value = [
+            ("movie", "2024-01-01", 0),
+            ("unknown", "2024-01-01", 1),
+        ]
+        result = service.get_transfer_statistics()
+        assert result["Labels"] == []
+        assert result["MovieNums"] == []
+        assert result["TvNums"] == []
+        assert result["AnimeNums"] == []
+
+    def test_get_unknown_list(self, service, mock_filetransfer):
+        mock_filetransfer.get_transfer_unknown_paths.return_value = [_UnknownMock()]
+        mock_filetransfer.get_sync_backend_by_dest.return_value = "smb"
+        result = service.get_unknown_list()
+        assert len(result) == 1
+        assert result[0]["path"] == "C:/unknown/file.mkv"
+        assert result[0]["to"] == "C:/dst"
+        assert result[0]["dst_backend"] == "smb"
+
+    def test_get_unknown_list_skips_empty_path(self, service, mock_filetransfer):
+        empty = _UnknownMock()
+        empty.PATH = None
+        mock_filetransfer.get_transfer_unknown_paths.return_value = [empty]
+        result = service.get_unknown_list()
+        assert result == []
+
+    def test_get_unknown_list_by_page(self, service, mock_filetransfer):
+        mock_filetransfer.get_transfer_unknown_paths_by_page.return_value = (1, [_UnknownMock()])
+        mock_filetransfer.get_sync_backend_by_dest.return_value = "local"
+        result = service.get_unknown_list_by_page("", 1, 10)
+        assert result.total == 1
+        assert result.items[0]["path"] == "C:/unknown/file.mkv"
+
+    def test_re_identify_unknown(self, service, mock_filetransfer, mock_sync_service):
+        rec = _UnknownMock()
+        rec.PATH = "/some/path.mkv"
+        mock_filetransfer.get_transfer_unknown_paths.return_value = [rec]
+        count = service.re_identify_unknown()
+        assert count == 1
+        mock_sync_service.re_identify_items.assert_called_once_with(flag="unidentification", ids=[10])
+
+    def test_re_identify_unknown_empty(self, service, mock_filetransfer, mock_sync_service):
+        mock_filetransfer.get_transfer_unknown_paths.return_value = []
+        count = service.re_identify_unknown()
+        assert count == 0
+        mock_sync_service.re_identify_items.assert_not_called()
+
+    def test_clear_history(self, service, mock_filetransfer):
+        service.clear_history()
+        mock_filetransfer.delete_transfer.assert_called_once()
+        mock_filetransfer.truncate_transfer_blacklist.assert_called_once()

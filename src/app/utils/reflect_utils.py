@@ -30,23 +30,27 @@ class ReflectUtils:
     @staticmethod
     def get_class_by_name(lib_path, class_name):
         if not lib_path or not class_name:
-            return
-        package = importlib.import_module(lib_path)
-        return getattr(package, class_name)
+            return None
+        try:
+            package = importlib.import_module(lib_path)
+            return getattr(package, class_name)
+        except (AttributeError, ImportError):
+            return None
 
     @staticmethod
     def get_func_by_str(lib_path, func_str):
-        if not str:
-            return
+        if not func_str:
+            return None
         func = None
-        if len(func_str.split(".")) == 2:
+        if "." in func_str:
             class_name = func_str.split(".")[0]
             func_name = func_str.split(".")[1]
             cls = ReflectUtils.get_class_by_name(lib_path, class_name)
             if not cls:
-                return
-            func = getattr(cls(), func_name)
+                return None
+            func = getattr(cls(), func_name, None)
         else:
-            func = ReflectUtils.get_class_by_name(lib_path, func_str)
+            package = importlib.import_module(lib_path)
+            func = getattr(package, func_str, None)
 
         return func
