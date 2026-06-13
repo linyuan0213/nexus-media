@@ -92,7 +92,7 @@ def build_coordinators(
         scheduler_core=scheduler_core,
         download_monitor=download_monitor,
         sync=sync_engine,
-        brush_task_service=None,
+        brush_task_service=services.brush_task_service,
         rss_checker=rss_task_service,
         torrent_remover=torrent_remover,
         downloader=downloader_core,
