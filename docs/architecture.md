@@ -104,18 +104,21 @@ api/routers/
 
 ### 依赖注入模式
 
-路由层通过显式工厂注册表（`src/app/di/registry.py` + `src/app/di/factories.py`）
-组装依赖。路由函数中通过 `Depends(get_service_factory)` 从 Registry 获取 Service 实例。
+路由层通过不可变应用上下文（`src/app/di/context.py`）获取依赖。
+对象图由分模块 Builder（`src/app/di/builders/`）按拓扑顺序组装，
+lifespan 将 `AppContext` 挂载到 `app.state.context`。
 
 ```python
-from app.di.registry import registry
-from app.di.types import RegistryKey
+from api.deps import get_app_context
+from app.di.context import AppContext
 
-service = registry.get(RegistryKey.SOME_SERVICE)
+@router.get("/")
+def list_items(app_context: AppContext = Depends(get_app_context)):
+    return app_context.some_service.do_work()
 ```
 
-只允许在 `src/api/deps.py`、`src/api/main.py`、`src/api/routers/message_webhook.py`、
-`src/api/routers/system.py`、`src/app/di/factories.py` 和 `src/initializer.py` 中调用 `registry.get()`。
+`AppContext` 是运行时对象图的唯一持有者，替代了早期的手写 Registry。
+Service 内部禁止访问全局上下文，所有依赖必须通过构造函数显式注入。
 
 ### 与旧 Flask 控制器的关系
 
