@@ -3,13 +3,12 @@ Search Repository
 Handles search result related database operations.
 """
 
-import json
-
 from sqlalchemy import and_, or_
 
 from app.db.models import SEARCHRESULTINFO
 from app.db.repositories.base_repository import BaseRepository
 from app.domain.mediatypes import MediaType
+from app.utils.json_utils import JsonUtils
 
 
 class SearchRepository(BaseRepository):
@@ -79,7 +78,7 @@ class SearchRepository(BaseRepository):
                     "POSTER": media_item.get_poster_image(),
                     "TMDBID": media_item.tmdb_id,
                     "OVERVIEW": media_item.overview,
-                    "RES_TYPE": json.dumps(
+                    "RES_TYPE": JsonUtils.dumps(
                         {
                             "respix": media_item.resource_pix,
                             "restype": media_item.resource_type,

@@ -4,7 +4,6 @@ Plugin Framework Service
 """
 
 import importlib.util
-import json
 import os
 import shutil
 import sys
@@ -21,6 +20,7 @@ from app.plugin_framework.context import PluginContext
 from app.plugin_framework.registry import PluginRegistry
 from app.plugin_framework.sandbox import PluginSandbox
 from app.schemas.plugin import PluginManifest
+from app.utils.json_utils import JsonUtils
 
 
 class PluginFrameworkService:
@@ -161,7 +161,7 @@ class PluginFrameworkService:
         plugins = []
         for orm_model in orm_list:
             try:
-                manifest = PluginManifest.from_dict(json.loads(str(orm_model.MANIFEST_JSON or "{}")))
+                manifest = PluginManifest.from_dict(JsonUtils.loads(str(orm_model.MANIFEST_JSON or "{}")))
                 plugins.append(
                     {
                         "id": manifest.id,
@@ -210,14 +210,14 @@ class PluginFrameworkService:
         orm_model = self._repo.get_manifest_by_id(plugin_id)
         if not orm_model:
             return None
-        return PluginManifest.from_dict(json.loads(str(orm_model.MANIFEST_JSON or "{}")))
+        return PluginManifest.from_dict(JsonUtils.loads(str(orm_model.MANIFEST_JSON or "{}")))
 
     def get_config(self, plugin_id: str) -> dict:
         """获取插件配置"""
         orm_model = self._repo.get_config(plugin_id)
         if orm_model and str(orm_model.CONFIG or ""):
             try:
-                return json.loads(str(orm_model.CONFIG))
+                return JsonUtils.loads(str(orm_model.CONFIG))
             except Exception as e:  # noqa: BLE001
                 log.debug(f"[plugin_framework_service]忽略异常: {e}")
         return {}
@@ -293,7 +293,7 @@ class PluginFrameworkService:
             raise ValueError("插件包缺少 manifest.json")
 
         with open(manifest_path, encoding="utf-8") as f:
-            manifest_data = json.load(f)
+            manifest_data = JsonUtils.load(f)
 
         manifest = PluginManifest.from_dict(manifest_data)
         if not manifest.id or not manifest.name:
@@ -315,7 +315,7 @@ class PluginFrameworkService:
 
         # 检查是否已存在同名插件
         existing = self._repo.get_manifest_by_id(manifest.id)
-        new_manifest_json = json.dumps(manifest.to_dict(), ensure_ascii=False)
+        new_manifest_json = JsonUtils.dumps(manifest.to_dict(), ensure_ascii=False)
 
         if existing:
             existing_manifest_json = str(existing.MANIFEST_JSON or "{}")
@@ -361,7 +361,7 @@ class PluginFrameworkService:
                 tags=manifest.tags,
                 icon=manifest.icon,
                 color=manifest.color,
-                manifest_json=json.dumps(manifest.to_dict(), ensure_ascii=False),
+                manifest_json=JsonUtils.dumps(manifest.to_dict(), ensure_ascii=False),
                 enabled=False,
                 path=target_dir,
             )
@@ -550,7 +550,7 @@ class PluginFrameworkService:
         if not orm_model:
             raise ValueError(f"插件未安装: {plugin_id}")
 
-        manifest = PluginManifest.from_dict(json.loads(str(orm_model.MANIFEST_JSON or "{}")))
+        manifest = PluginManifest.from_dict(JsonUtils.loads(str(orm_model.MANIFEST_JSON or "{}")))
         entry = manifest.backend.entry
         if not entry:
             raise ValueError(f"插件未声明后端入口: {plugin_id}")

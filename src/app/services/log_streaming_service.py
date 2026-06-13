@@ -1,9 +1,9 @@
-import json
 import threading
 import time
 from collections.abc import Iterator
 
 import log
+from app.utils.json_utils import JsonUtils
 
 
 class LogStreamingService:
@@ -54,5 +54,5 @@ class LogStreamingService:
                 self._source_map[key] = next_counter
 
             if logs:
-                yield f"data: {json.dumps(logs)}\n\n"
+                yield f"data: {JsonUtils.dumps(logs)}\n\n"
             time.sleep(self._sleep_interval)

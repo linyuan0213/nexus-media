@@ -5,10 +5,10 @@ DiskSpaceSaver Plugin v2
 
 import datetime
 import hashlib
-import json
 import os
 
 from app.plugin_framework.context import PluginContext
+from app.utils.json_utils import JsonUtils
 
 
 class DiskSpaceSaverPlugin:
@@ -171,10 +171,10 @@ class DiskSpaceSaverPlugin:
     def _load_last_result(last_result_path):
         if os.path.exists(last_result_path):
             with open(last_result_path) as f:
-                return json.load(f)
+                return JsonUtils.load(f)
         return {"file_info": [], "inode_info": []}
 
     @staticmethod
     def _save_last_result(last_result_path, last_result):
         with open(last_result_path, "w") as f:
-            json.dump(last_result, f)
+            JsonUtils.dump(last_result, f)

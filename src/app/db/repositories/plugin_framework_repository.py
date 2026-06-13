@@ -3,14 +3,13 @@ Plugin Framework v2 Repository
 处理插件框架v2的数据库操作：清单、配置、日志
 """
 
-import json
-
 from app.db.models import PLUGINCONFIG, PLUGINHOOKS, PLUGINLOGS, PLUGINMANIFEST
 from app.db.repositories.base_repository import BaseRepository
 from app.domain.entities.plugin import (
     PluginConfigEntity,
     PluginManifestEntity,
 )
+from app.utils.json_utils import JsonUtils
 
 
 class PluginFrameworkRepository(BaseRepository):
@@ -48,7 +47,7 @@ class PluginFrameworkRepository(BaseRepository):
                     AUTHOR=entity.author,
                     DESCRIPTION=entity.description,
                     CATEGORY=entity.category,
-                    TAGS=json.dumps(entity.tags, ensure_ascii=False),
+                    TAGS=JsonUtils.dumps(entity.tags, ensure_ascii=False),
                     ICON=entity.icon,
                     COLOR=entity.color,
                     MANIFEST_JSON=entity.manifest_json,
@@ -68,7 +67,7 @@ class PluginFrameworkRepository(BaseRepository):
                 "AUTHOR": entity.author,
                 "DESCRIPTION": entity.description,
                 "CATEGORY": entity.category,
-                "TAGS": json.dumps(entity.tags, ensure_ascii=False),
+                "TAGS": JsonUtils.dumps(entity.tags, ensure_ascii=False),
                 "ICON": entity.icon,
                 "COLOR": entity.color,
                 "MANIFEST_JSON": entity.manifest_json,
@@ -110,12 +109,12 @@ class PluginFrameworkRepository(BaseRepository):
         with self.session() as db:
             existing = db.query(PLUGINCONFIG).filter(entity.plugin_id == PLUGINCONFIG.PLUGIN_ID).first()
             if existing:
-                existing.CONFIG = json.dumps(entity.config, ensure_ascii=False)
+                existing.CONFIG = JsonUtils.dumps(entity.config, ensure_ascii=False)
             else:
                 db.add(
                     PLUGINCONFIG(
                         PLUGIN_ID=entity.plugin_id,
-                        CONFIG=json.dumps(entity.config, ensure_ascii=False),
+                        CONFIG=JsonUtils.dumps(entity.config, ensure_ascii=False),
                     )
                 )
             return True

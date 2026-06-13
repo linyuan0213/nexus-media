@@ -1,10 +1,10 @@
 """Message template handler — 消息模板类工具."""
 
-import json as _json
 from typing import Any
 
 from app.agent.tools.base import ToolResult
 from app.message.templates import DEFAULT_MESSAGE_TEMPLATES
+from app.utils.json_utils import JsonUtils
 
 
 def message_template(
@@ -48,11 +48,11 @@ def message_template(
             name=target.get("name"),
             cid=target.get("id"),
             ctype=target.get("type"),
-            config=_json.dumps(target.get("config", {})),
+            config=JsonUtils.dumps(target.get("config", {})),
             switches=target.get("switches", []),
             interactive=1 if target.get("interactive") else 0,
             enabled=1 if target.get("enabled") else 0,
-            templates=_json.dumps(templates),
+            templates=JsonUtils.dumps(templates),
         )
         return ToolResult(success=True, data=f"模板 {msg_type} 已更新")
 

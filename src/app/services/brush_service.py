@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
@@ -10,6 +9,7 @@ from app.schemas.brush import (
     BrushTorrentListDTO,
 )
 from app.services.brush.task_service import BrushTaskService
+from app.utils.json_utils import JsonUtils
 
 _RSS_RULE_FIELDS = {
     "free": "brushtask_free",
@@ -143,18 +143,20 @@ class BrushService:
     def add_rule(self, data: dict) -> int:
         return self._rule_repo.insert(
             name=data.get("name", ""),
-            rss_rule=json.dumps(data.get("rss_rule", {}), ensure_ascii=False),
-            remove_rule=json.dumps(data.get("remove_rule", {}), ensure_ascii=False),
-            stop_rule=json.dumps(data.get("stop_rule", {}), ensure_ascii=False),
+            rss_rule=JsonUtils.dumps(data.get("rss_rule", {}), ensure_ascii=False),
+            remove_rule=JsonUtils.dumps(data.get("remove_rule", {}), ensure_ascii=False),
+            stop_rule=JsonUtils.dumps(data.get("stop_rule", {}), ensure_ascii=False),
         )
 
     def update_rule(self, rule_id: int, data: dict) -> None:
         self._rule_repo.update(
             rule_id=rule_id,
             name=data.get("name"),
-            rss_rule=json.dumps(data.get("rss_rule", {}), ensure_ascii=False) if "rss_rule" in data else None,
-            remove_rule=json.dumps(data.get("remove_rule", {}), ensure_ascii=False) if "remove_rule" in data else None,
-            stop_rule=json.dumps(data.get("stop_rule", {}), ensure_ascii=False) if "stop_rule" in data else None,
+            rss_rule=JsonUtils.dumps(data.get("rss_rule", {}), ensure_ascii=False) if "rss_rule" in data else None,
+            remove_rule=JsonUtils.dumps(data.get("remove_rule", {}), ensure_ascii=False)
+            if "remove_rule" in data
+            else None,
+            stop_rule=JsonUtils.dumps(data.get("stop_rule", {}), ensure_ascii=False) if "stop_rule" in data else None,
         )
 
     def delete_rule(self, rule_id: int) -> None:
