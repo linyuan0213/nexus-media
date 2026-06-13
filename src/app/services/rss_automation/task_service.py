@@ -21,6 +21,7 @@ from app.services.rss_automation.articles import (
 from app.events.bus import EventBus
 from app.services.rss_automation.executor import _check_task_rss
 from app.services.search_service import Searcher
+from app.sites.engine import SiteEngine
 
 
 class RssTaskService:
@@ -36,6 +37,7 @@ class RssTaskService:
     rss_repo: SubscribeHistoryRepositoryAdapter
     rsshelper: RssHelper
     event_bus: EventBus | None
+    site_engine: SiteEngine
 
     _jobstore = "rsscheck"
     _rss_tasks: list[dict[str, Any]] = []
@@ -53,6 +55,7 @@ class RssTaskService:
         media: Any,
         downloader: Any,
         scheduler_core: Any,
+        site_engine: SiteEngine,
         event_bus: EventBus | None = None,
     ):
         self.config_repo = config_repo
@@ -64,6 +67,7 @@ class RssTaskService:
         self.media = media
         self.downloader = downloader
         self._scheduler_core = scheduler_core
+        self.site_engine = site_engine
         self.event_bus = event_bus
 
     def _refresh(self) -> None:

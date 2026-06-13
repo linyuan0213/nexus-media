@@ -13,7 +13,6 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 import log
-from app.di.registry import registry
 from api.deps import (
     _extract_user_ctx_from_session,
     get_backup_restore_service,
@@ -837,7 +836,7 @@ def reload_config(
 ):
     """手动触发全量配置重载（通过 ConfigReloader 按优先级 reset 各 provider）"""
     try:
-        result = reloader.reload(registry)
+        result = reloader.reload()
         if result["failed"]:
             return fail(msg=f"配置重载部分失败: {result['failed']}")
         return success(data={"version": result["version"], "steps": result["results"]})

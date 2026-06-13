@@ -17,6 +17,7 @@ def _make_service(**kwargs):
         "media": MagicMock(),
         "downloader": MagicMock(),
         "scheduler_core": MagicMock(),
+        "site_engine": MagicMock(),
     }
     defaults.update(kwargs)
     return RssTaskService(**defaults)
@@ -40,6 +41,7 @@ class TestRssTaskService:
                 media=MagicMock(),
                 downloader=MagicMock(),
                 scheduler_core=MagicMock(),
+                site_engine=MagicMock(),
             )
             assert service.config_repo is mock_repo_instance
 

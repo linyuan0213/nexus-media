@@ -22,8 +22,9 @@ class SiteCache:
     由 lifespan 创建并注册到 registry，lifespan 中统一刷新。
     """
 
-    def __init__(self, repo: ISiteRepository | None = None):
+    def __init__(self, repo: ISiteRepository | None = None, site_engine: SiteEngine | None = None):
         self._repo = repo or SiteRepositoryAdapter()
+        self._site_engine = site_engine or SiteEngine()
         self._site_by_ids: dict[int, dict] = {}
         self._site_by_urls: dict[str, dict] = {}
         self._rss_sites: list[dict] = []
@@ -66,8 +67,7 @@ class SiteCache:
         """外部触发缓存重建（SiteService 写操作后调用）."""
         self._refresh()
 
-    @staticmethod
-    def _build_site_info(entity) -> dict:
+    def _build_site_info(self, entity) -> dict:
         """将 SiteEntity 转换为与旧 Sites 兼容的 dict 格式."""
         note = entity.note or {}
         site_rssurl = entity.rss_url
@@ -94,7 +94,7 @@ class SiteCache:
         # strict_url 和 api_key_header
         strict_url = ""
         api_key_header = None
-        site_def = SiteEngine().get_by_url(str(site_signurl or site_rssurl or ""))
+        site_def = self._site_engine.get_by_url(str(site_signurl or site_rssurl or ""))
         if site_def and site_def.api and site_def.api.auth:
             api_key_header = site_def.api.auth.get("header_name")
             strict_url = site_def.api.base_url
@@ -155,7 +155,7 @@ class SiteCache:
         if siteid:
             return self._site_by_ids.get(int(siteid)) or {}
         if siteurl:
-            site_def = SiteEngine().get_by_url(siteurl)
+            site_def = self._site_engine.get_by_url(siteurl)
             if site_def and site_def.api:
                 siteurl = site_def.api.base_url
             domain = StringUtils.get_url_domain(siteurl)

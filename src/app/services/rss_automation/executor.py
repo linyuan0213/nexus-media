@@ -222,6 +222,7 @@ def _parse_userrss_result(service, taskinfo: dict[str, Any]) -> list[dict[str, A
     rss_parsers = taskinfo.get("parser") or []
     count = min(len(rss_urls), len(rss_parsers))
     rss_result = []
+    engine = service.site_engine
     for i in range(count):
         rss_url = rss_urls[i]
         if not rss_url:
@@ -256,9 +257,6 @@ def _parse_userrss_result(service, taskinfo: dict[str, Any]) -> list[dict[str, A
             rss_url = f"{rss_url}?{param_url}" if rss_url.find("?") == -1 else f"{rss_url}&{param_url}"
         proxies = get_proxies() if taskinfo.get("proxy") else None
         proxy_url = proxies.get("http") if proxies else None
-        from app.sites.engine import SiteEngine
-
-        engine = SiteEngine()
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         try:
