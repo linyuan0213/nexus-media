@@ -1,5 +1,28 @@
 # 版本历史
 
+## Unreleased / v4.1.0-dev (2026-06-14)
+
+### 性能优化
+- **数据库查询性能**: 消除 `site_repository` / `transfer_repository` N+1 查询；为 `SUBSCRIBE_MOVIES` / `SUBSCRIBE_TVS` / `CONFIG_USER_RSS` / `SITE_BRUSH_TORRENTS` / `TRANSFER_HISTORY` / `TRANSFER_UNKNOWN` 添加索引；`subscribe_repository` 用单次 `first()` 替代 `.all()` + 循环
+- **HTTP 客户端连接池复用**: `HttpClient` / `AsyncHttpClient` 按配置复用底层 `httpx.Client` / `httpx.AsyncClient`，相同代理/头/超时/认证/SSL 配置共享连接池
+- **缓存系统**: `RedisStore.hgetall` 改为单次 `hgetall`；`MemoryCacheAdapter` 仅在存在监听器时触发 `CacheEvent`，避免高频空转
+- **消息队列**: `MessageQueueFactory` 单例实现线程安全，避免重复创建队列
+- **下载完成监控**: `DownloadMonitor` 改为增量检查，后续轮询只拉取新增任务；qBittorrent 使用 `sync/maindata` 增量接口获取 completed 任务，减少数据传输与 per-torrent API 调用
+- **图片代理**: 下载逻辑全面异步化，使用 `AsyncHttpClient` 连接池与 `asyncio.gather` 并发下载，替代 `ThreadPoolExecutor`
+- **JSON 序列化**: 高频路径统一使用 `JsonUtils`（`orjson` 为主，stdlib 为 fallback）
+
+### 问题修复
+- **EventBus 注册**: 修复 DI 容器创建的 `EventBus` 与 `@on_event` handler 注册脱节的问题；`SystemLifecycleService` 现在从 DI 接收真实 `EventBus`
+- **认证**: 移除 `SessionMiddleware` 与 session 认证兼容层，API 统一使用 JWT/Token 认证
+- **消息通知图片**: 添加诊断日志定位图片丢失问题；修复 `_get_script_path` 依赖注入错误
+
+### 依赖与质量
+- 升级 `redis` / `cryptography` / `pydantic-ai` / `granian` / `python-multipart` / `openai` / `google-genai` / `boto3` / `beautifulsoup4` / `qbittorrent-api` / `ruff` 等依赖
+- 引入 `orjson` / `uvloop`；启用 `httpx` HTTP/2
+- 新增 Alembic 迁移 `e9d9eaed8d5c` 补充查询索引
+- 安全扫描: `just bandit` / `just safety` 均通过
+- 测试: 1124 个测试通过，覆盖率 `36%`
+
 ## v4.0.0 (2026-06-09)
 
 **4.0.0 是 Nas-Tools 的全新重构版本，涵盖后端架构、前端框架、部署运行和代码质量的全面升级。**

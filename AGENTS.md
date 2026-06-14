@@ -39,9 +39,10 @@ backend/
 
 ## 架构
 - **入口**: `run.py` → `src/api/main.py` (FastAPI 应用 + lifespan)
-- **初始化**: `src/initializer.py` 初始化调度器、RBAC、RSS 状态
+- **初始化**: `src/initializer.py` 初始化调度器、RBAC、RSS 状态；`init_event_handlers()` 在传入 DI EventBus 时只做缓存事件桥接
 - **数据库迁移**: 由 Docker entrypoint 或 compose migration 服务执行 `alembic upgrade head`，不再在代码中运行
-- **DI**: `src/app/di/registry.py` + `src/app/di/factories.py`（显式工厂注册表，已移除 dependency-injector）
+- **DI**: `src/app/di/registry.py` + `src/app/di/factories.py`（显式工厂注册表，已移除 dependency-injector）；`build_infrastructure()` 创建 EventBus 后显式调用 `register_modules()` + `auto_register()` 注册所有 `@on_event` handler
+- **HTTP 客户端**: `HttpClient` / `AsyncHttpClient` 按配置复用底层 `httpx.Client` / `httpx.AsyncClient` 连接池，进程退出时由 `HttpClient.close_all()` / `AsyncHttpClient.close_all()` 统一释放
 - **缓存**: `src/app/infrastructure/cache_system/` (Redis + 内存适配器、装饰器、事件总线)
 - **插件**: `src/app/plugin_framework/builtin_plugins/` — 内置 + 可安装
 - **权限**: `src/app/db/models/rbac.py` 中的自定义 RBAC 系统
