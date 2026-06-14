@@ -47,7 +47,7 @@ class TestCrossBackend:
 
         cross_copy(src_backend, str(src), dst_backend, str(dst))
 
-        dst_backend.write_stream.assert_called_once_with(str(dst), stream_mock)
+        dst_backend.write_stream.assert_called_once_with(str(dst), stream_mock, chunk_size=8 * 1024 * 1024)
         stream_mock.close.assert_called_once()
 
 

@@ -50,12 +50,13 @@ class LocalStorageBackend(StorageBackend):
     def read_stream(self, path: str) -> BinaryIO:
         return open(self._resolve(path), "rb")
 
-    def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
+    def write_stream(self, path: str, stream: BinaryIO, size: int = 0, chunk_size: int = 0) -> None:
         rp = self._resolve(path)
         os.makedirs(os.path.dirname(rp), exist_ok=True)
-        # 使用 1MB 缓冲区，避免大文件拷贝时频繁小 IO
+        # 使用 chunk_size 或默认 1MB 缓冲区，避免大文件拷贝时频繁小 IO
+        length = chunk_size if chunk_size > 0 else 1024 * 1024
         with open(rp, "wb") as f:
-            shutil.copyfileobj(stream, f, length=1024 * 1024)
+            shutil.copyfileobj(stream, f, length=length)
 
     def mkdir(self, path: str, parents: bool = True) -> None:
         rp = self._resolve(path)

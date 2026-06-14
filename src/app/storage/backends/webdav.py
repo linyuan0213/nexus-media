@@ -82,7 +82,8 @@ class WebDAVStorageBackend(StorageBackend):
     def read_stream(self, path: str) -> BinaryIO:
         return self._client.stream("GET", self._url + "/" + path.lstrip("/"))
 
-    def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
+    def write_stream(self, path: str, stream: BinaryIO, size: int = 0, chunk_size: int = 0) -> None:
+        # httpx content 接受文件对象，会按内部缓冲区流式上传；chunk_size 预留用于后续细粒度控制
         self._req("PUT", path, content=stream)
 
     def mkdir(self, path: str, parents: bool = True) -> None:

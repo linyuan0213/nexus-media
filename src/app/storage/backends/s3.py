@@ -80,7 +80,8 @@ class S3StorageBackend(StorageBackend):
         resp = self._client.get_object(Bucket=self._bucket, Key=self._key(path))
         return resp["Body"]
 
-    def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
+    def write_stream(self, path: str, stream: BinaryIO, size: int = 0, chunk_size: int = 0) -> None:
+        # boto3 upload_fileobj 内部自动分块；chunk_size 未设置时交给 boto3 默认处理
         self._client.upload_fileobj(stream, self._bucket, self._key(path))
 
     def mkdir(self, path: str, parents: bool = True) -> None:

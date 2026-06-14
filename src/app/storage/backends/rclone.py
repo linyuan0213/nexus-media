@@ -83,7 +83,7 @@ class RcloneStorageBackend(StorageBackend):
     def read_stream(self, path: str) -> BinaryIO:
         raise NotImplementedError("Rclone 后端暂不支持流式读取，请使用 write_stream 上传")
 
-    def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
+    def write_stream(self, path: str, stream: BinaryIO, size: int = 0, chunk_size: int = 0) -> None:
         raise NotImplementedError("Rclone 后端暂不支持流式写入")
 
     def mkdir(self, path: str, parents: bool = True) -> None:
