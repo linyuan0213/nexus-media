@@ -355,7 +355,12 @@ def get_plugin_asset(
 
     if not os.path.exists(target) or not os.path.isfile(target):
         if relative_path.endswith("index.umd.js"):
-            return Response(content="", media_type="application/javascript")
+            # 返回空 UMD 占位，注册空全局变量，避免 loader 报未注册
+            empty_umd = f"""(function(global){{
+  global["__PLUGIN_{plugin_id}__"] = {{}};
+}})(typeof globalThis !== "undefined" ? globalThis : window);
+"""
+            return Response(content=empty_umd, media_type="application/javascript")
         return fail(msg="文件不存在")
 
     return FileResponse(target)

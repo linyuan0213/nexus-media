@@ -9,7 +9,7 @@ from api.routers import plugin_framework as plugin_router
 
 
 class TestPluginAsset:
-    def test_get_plugin_asset_missing_frontend_returns_empty_js(self):
+    def test_get_plugin_asset_missing_frontend_returns_empty_umd(self):
         svc = MagicMock()
         svc.get_plugin_path.return_value = "/tmp/plugins/doubansync"
         with patch("api.routers.plugin_framework.os.path.exists", return_value=False):
@@ -19,7 +19,8 @@ class TestPluginAsset:
         assert isinstance(resp, Response)
         assert resp.status_code == 200
         assert resp.media_type == "application/javascript"
-        assert resp.body == b""
+        assert b"__PLUGIN_doubansync__" in resp.body
+        assert b"{}" in resp.body
 
     def test_get_plugin_asset_missing_other_returns_fail(self):
         svc = MagicMock()
