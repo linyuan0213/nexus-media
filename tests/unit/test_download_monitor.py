@@ -125,23 +125,104 @@ class TestDownloadMonitor:
                 m.stop()
                 assert m._running is False
 
-    def test_check_multiple_downloaders(self, monitor):
-        """测试逐个检查多个下载器."""
+    def test_check_downloader_initial_full_scan(self, monitor):
+        """首次检查应全量拉取并建立快照."""
         m, factory, bus = monitor
 
-        def mock_client_for_did(did):
-            client = MagicMock()
-            client.get_transfer_task.return_value = [
-                {"id": f"task_{did}", "path": f"/dl/{did}.mkv", "tags": [], "name": did}
-            ]
-            return client
-
-        factory.get_client.side_effect = mock_client_for_did
-        factory.get_downloader_conf.return_value = {"name": "Test"}
+        mock_client = MagicMock()
+        mock_client.get_transfer_task.return_value = [
+            {"id": "task1", "path": "/dl/movie.mkv", "tags": ["NEXUS_MEDIA"], "name": "movie"}
+        ]
+        factory.get_client.return_value = mock_client
+        factory.get_downloader_conf.return_value = {"name": "QB", "only_nexus_media": True}
 
         m._check_downloader("qb1")
-        m._check_downloader("tr1")
 
-        assert bus.publish.call_count == 2
-        assert "qb1:task_qb1" in m._processed_ids
-        assert "tr1:task_tr1" in m._processed_ids
+        assert m._last_snapshot["qb1"] == {"task1"}
+        bus.publish.assert_called_once()
+        assert mock_client.get_transfer_task.call_args_list == [
+            (({"tag": "NEXUS_MEDIA", "match_path": None}),),
+        ]
+
+    def test_check_downloader_incremental_only_new_tasks(self, monitor):
+        """后续检查只拉取新增任务."""
+        m, factory, bus = monitor
+        m._last_snapshot["qb1"] = {"task1"}
+
+        mock_client = MagicMock()
+        mock_client.get_transfer_task.side_effect = [
+            # 第一次返回全部候选 id
+            [
+                {"id": "task1", "path": "/dl/movie.mkv", "tags": ["NEXUS_MEDIA"]},
+                {"id": "task2", "path": "/dl/new.mkv", "tags": ["NEXUS_MEDIA"]},
+            ],
+            # 第二次只返回新增任务详情
+            [{"id": "task2", "path": "/dl/new.mkv", "tags": ["NEXUS_MEDIA"]}],
+        ]
+        factory.get_client.return_value = mock_client
+        factory.get_downloader_conf.return_value = {"name": "QB", "only_nexus_media": True}
+
+        m._check_downloader("qb1")
+
+        assert m._last_snapshot["qb1"] == {"task1", "task2"}
+        assert bus.publish.call_count == 1
+        event = bus.publish.call_args[0][0]
+        assert event.payload.task_id == "task2"
+        assert mock_client.get_transfer_task.call_count == 2
+        assert mock_client.get_transfer_task.call_args == (
+            (),
+            {"tag": "NEXUS_MEDIA", "match_path": None, "ids": ["task2"]},
+        )
+
+    def test_check_downloader_no_new_tasks(self, monitor):
+        """无新增任务时不发布事件."""
+        m, factory, bus = monitor
+        m._last_snapshot["qb1"] = {"task1"}
+
+        mock_client = MagicMock()
+        mock_client.get_transfer_task.return_value = [
+            {"id": "task1", "path": "/dl/movie.mkv", "tags": ["NEXUS_MEDIA"]},
+        ]
+        factory.get_client.return_value = mock_client
+        factory.get_downloader_conf.return_value = {"name": "QB", "only_nexus_media": True}
+
+        m._check_downloader("qb1")
+
+        assert m._last_snapshot["qb1"] == {"task1"}
+        bus.publish.assert_not_called()
+        mock_client.get_transfer_task.assert_called_once_with(tag="NEXUS_MEDIA", match_path=None)
+
+    def test_emit_new_tasks_filters_processed(self, monitor):
+        """_emit_new_tasks 不会重复发布已处理任务."""
+        m, _, bus = monitor
+        m._processed_ids.add("qb1:task1")
+
+        m._emit_new_tasks(
+            "qb1",
+            [
+                {"id": "task1", "path": "/dl/old.mkv"},
+                {"id": "task2", "path": "/dl/new.mkv"},
+            ],
+        )
+
+        assert bus.publish.call_count == 1
+        event = bus.publish.call_args[0][0]
+        assert event.payload.task_id == "task2"
+        assert "qb1:task2" in m._processed_ids
+
+    def test_emit_new_tasks_skips_empty_path_or_id(self, monitor):
+        """_emit_new_tasks 跳过空 id 或空 path 的任务."""
+        m, _, bus = monitor
+
+        m._emit_new_tasks(
+            "qb1",
+            [
+                {"id": "", "path": "/dl/a.mkv"},
+                {"id": "task2", "path": ""},
+                {"id": "task3", "path": "/dl/c.mkv"},
+            ],
+        )
+
+        assert bus.publish.call_count == 1
+        event = bus.publish.call_args[0][0]
+        assert event.payload.task_id == "task3"

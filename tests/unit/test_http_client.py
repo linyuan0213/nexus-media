@@ -365,6 +365,65 @@ async def test_async_http_client_raise_for_status_false(mock_async_status_error)
     await client.close()
 
 
+# ==================== 连接池复用测试 ====================
+
+
+def test_http_client_connection_pool_reuse(mock_httpx_client):
+    """相同配置的 HttpClient 应复用底层 httpx.Client."""
+    config = HttpClientConfig(timeout=10.0)
+    client1 = HttpClient(config=config)
+    client2 = HttpClient(config=config)
+    assert client1._client is client2._client
+    client1.close()
+    client2.close()
+
+
+def test_http_client_connection_pool_release(mock_httpx_client):
+    """最后一个引用释放后才真正关闭底层 client."""
+    config = HttpClientConfig(timeout=10.0)
+    client1 = HttpClient(config=config)
+    client2 = HttpClient(config=config)
+    underlying = client1._client
+    client1.close()
+    # 仍有一个引用，底层 client 未被关闭
+    assert underlying is client2._client
+    client2.close()
+
+
+def test_http_client_different_config_different_pool(mock_httpx_client):
+    """不同配置应创建不同底层 client."""
+    config1 = HttpClientConfig(timeout=10.0)
+    config2 = HttpClientConfig(timeout=20.0)
+    client1 = HttpClient(config=config1)
+    client2 = HttpClient(config=config2)
+    assert client1._client is not client2._client
+    client1.close()
+    client2.close()
+
+
+@pytest.mark.asyncio
+async def test_async_http_client_connection_pool_reuse(mock_async_client):
+    """相同配置的 AsyncHttpClient 应复用底层 httpx.AsyncClient."""
+    config = HttpClientConfig(timeout=10.0, enable_http2=False)
+    client1 = AsyncHttpClient(config=config)
+    client2 = AsyncHttpClient(config=config)
+    assert client1._client is client2._client
+    await client1.close()
+    await client2.close()
+
+
+@pytest.mark.asyncio
+async def test_async_http_client_connection_pool_release(mock_async_client):
+    """AsyncHttpClient 引用计数归零后才关闭底层 client."""
+    config = HttpClientConfig(timeout=10.0, enable_http2=False)
+    client1 = AsyncHttpClient(config=config)
+    client2 = AsyncHttpClient(config=config)
+    underlying = client1._client
+    await client1.close()
+    assert underlying is client2._client
+    await client2.close()
+
+
 # ==================== fixtures ====================
 
 
