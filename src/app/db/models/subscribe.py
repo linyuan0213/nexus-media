@@ -37,9 +37,9 @@ class SubscribeMovies(Base):
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     NAME: Mapped[str] = mapped_column(String(255), index=True)
-    YEAR: Mapped[str] = mapped_column(String(255))
+    YEAR: Mapped[str] = mapped_column(String(255), index=True)
     KEYWORD: Mapped[str] = mapped_column(String(255))
-    TMDBID: Mapped[str] = mapped_column(String(255))
+    TMDBID: Mapped[str] = mapped_column(String(255), index=True)
     IMAGE: Mapped[str] = mapped_column(String(255))
     RSS_SITES: Mapped[str] = mapped_column(String(255))
     SEARCH_SITES: Mapped[str] = mapped_column(String(255))
@@ -54,7 +54,7 @@ class SubscribeMovies(Base):
     SAVE_PATH: Mapped[str] = mapped_column(String(255))
     DOWNLOAD_SETTING: Mapped[int] = mapped_column(Integer, nullable=True)
     FUZZY_MATCH: Mapped[int] = mapped_column(Integer)
-    STATE: Mapped[str] = mapped_column(String(255))
+    STATE: Mapped[str] = mapped_column(String(255), index=True)
     DESC: Mapped[str] = mapped_column(String(255))
     NOTE: Mapped[str] = mapped_column(Text)
 
@@ -81,10 +81,10 @@ class SubscribeTvs(Base):
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     NAME: Mapped[str] = mapped_column(String(255), index=True)
-    YEAR: Mapped[str] = mapped_column(String(255))
+    YEAR: Mapped[str] = mapped_column(String(255), index=True)
     KEYWORD: Mapped[str] = mapped_column(String(255))
     SEASON: Mapped[str] = mapped_column(String(255))
-    TMDBID: Mapped[str] = mapped_column(String(255))
+    TMDBID: Mapped[str] = mapped_column(String(255), index=True)
     IMAGE: Mapped[str] = mapped_column(String(255))
     RSS_SITES: Mapped[str] = mapped_column(String(255))
     SEARCH_SITES: Mapped[str] = mapped_column(String(255))
@@ -103,7 +103,7 @@ class SubscribeTvs(Base):
     CURRENT_EP: Mapped[int] = mapped_column(Integer)
     TOTAL: Mapped[int] = mapped_column(Integer)
     LACK: Mapped[int] = mapped_column(Integer)
-    STATE: Mapped[str] = mapped_column(String(255))
+    STATE: Mapped[str] = mapped_column(String(255), index=True)
     DESC: Mapped[str] = mapped_column(String(255))
     NOTE: Mapped[str] = mapped_column(Text)
 

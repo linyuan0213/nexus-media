@@ -172,59 +172,50 @@ class SiteRepository(BaseRepository):
         site_user_infos = list(seen.values())
         update_at = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
 
-        with self.session() as db:
-            for site_user_info in site_user_infos:
-                site = site_user_info.site_name
-                username = site_user_info.username
-                user_level = site_user_info.user_level
-                join_at = site_user_info.join_at
-                upload = site_user_info.upload
-                download = site_user_info.download
-                ratio = site_user_info.ratio
-                seeding = site_user_info.seeding
-                seeding_size = site_user_info.seeding_size
-                leeching = site_user_info.leeching
-                bonus = site_user_info.bonus
-                url = site_user_info.site_url
-                msg_unread = site_user_info.message_unread
+        if not site_user_infos:
+            return
 
-                if not self.is_exists_site_user_statistics(url):
+        urls = [info.site_url for info in site_user_infos]
+        with self.session() as db:
+            existing_rows = {
+                row.URL: row for row in db.query(SITEUSERINFOSTATS).filter(SITEUSERINFOSTATS.URL.in_(urls)).all()
+            }
+
+            for info in site_user_infos:
+                row = existing_rows.get(info.site_url)
+                if row is None:
                     db.add(
                         SITEUSERINFOSTATS(
-                            SITE=site,
-                            USERNAME=username,
-                            USER_LEVEL=user_level,
-                            JOIN_AT=join_at,
+                            SITE=info.site_name,
+                            USERNAME=info.username,
+                            USER_LEVEL=info.user_level,
+                            JOIN_AT=info.join_at,
                             UPDATE_AT=update_at,
-                            UPLOAD=upload,
-                            DOWNLOAD=download,
-                            RATIO=ratio,
-                            SEEDING=seeding,
-                            LEECHING=leeching,
-                            SEEDING_SIZE=seeding_size,
-                            BONUS=bonus,
-                            URL=url,
-                            MSG_UNREAD=msg_unread,
+                            UPLOAD=info.upload,
+                            DOWNLOAD=info.download,
+                            RATIO=info.ratio,
+                            SEEDING=info.seeding,
+                            LEECHING=info.leeching,
+                            SEEDING_SIZE=info.seeding_size,
+                            BONUS=info.bonus,
+                            URL=info.site_url,
+                            MSG_UNREAD=info.message_unread,
                         )
                     )
                 else:
-                    db.query(SITEUSERINFOSTATS).filter(url == SITEUSERINFOSTATS.URL).update(
-                        {
-                            "SITE": site,
-                            "USERNAME": username,
-                            "USER_LEVEL": user_level,
-                            "JOIN_AT": join_at,
-                            "UPDATE_AT": update_at,
-                            "UPLOAD": upload,
-                            "DOWNLOAD": download,
-                            "RATIO": ratio,
-                            "SEEDING": seeding,
-                            "LEECHING": leeching,
-                            "SEEDING_SIZE": seeding_size,
-                            "BONUS": bonus,
-                            "MSG_UNREAD": msg_unread,
-                        }
-                    )
+                    row.SITE = info.site_name
+                    row.USERNAME = info.username
+                    row.USER_LEVEL = info.user_level
+                    row.JOIN_AT = info.join_at
+                    row.UPDATE_AT = update_at
+                    row.UPLOAD = info.upload
+                    row.DOWNLOAD = info.download
+                    row.RATIO = info.ratio
+                    row.SEEDING = info.seeding
+                    row.LEECHING = info.leeching
+                    row.SEEDING_SIZE = info.seeding_size
+                    row.BONUS = info.bonus
+                    row.MSG_UNREAD = info.message_unread
 
     def is_exists_site_user_statistics(self, url: str) -> bool:
         """

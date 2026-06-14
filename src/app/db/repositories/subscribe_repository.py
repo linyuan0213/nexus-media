@@ -58,22 +58,47 @@ class SubscribeRepository(BaseRepository):
                 ret = db.query(SubscribeMovies.ID).filter(str(tmdbid) == SubscribeMovies.TMDBID).first()
                 if ret:
                     return ret[0]
-            if not year:
-                items = db.query(SubscribeMovies).filter(title == SubscribeMovies.NAME).all()
-            else:
-                items = (
-                    db.query(SubscribeMovies)
-                    .filter(title == SubscribeMovies.NAME, str(year) == SubscribeMovies.YEAR)
-                    .all()
-                )
-            if items:
-                if tmdbid:
-                    for item in items:
-                        if not item.TMDBID or str(tmdbid) == item.TMDBID:
-                            return item.ID
-                else:
-                    return items[0].ID
+            query = db.query(SubscribeMovies.ID).filter(title == SubscribeMovies.NAME)
+            if year:
+                query = query.filter(str(year) == SubscribeMovies.YEAR)
+            ret = query.first()
+            return ret[0] if ret else None
+
+    def get_rss_tv_id(
+        self, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None
+    ) -> int | str | None:
+        """
+        获取订阅电视剧ID
+        """
+        if not title:
             return None
+        with self.session() as db:
+            if tmdbid:
+                query = db.query(SubscribeTvs.ID).filter(str(tmdbid) == SubscribeTvs.TMDBID)
+                if season:
+                    query = query.filter(str(season) == SubscribeTvs.SEASON)
+                ret = query.first()
+                if ret:
+                    return ret[0]
+            query = db.query(SubscribeTvs.ID).filter(title == SubscribeTvs.NAME)
+            if season:
+                query = query.filter(str(season) == SubscribeTvs.SEASON)
+            if year:
+                query = query.filter(str(year) == SubscribeTvs.YEAR)
+            ret = query.first()
+            return ret[0] if ret else None
+
+    def get_subscribe_id(self, mtype, title, year, tmdbid) -> int | None:
+        """
+        查询订阅ID
+        """
+        if not title:
+            return None
+        if mtype == MediaType.MOVIE:
+            result = self.get_rss_movie_id(title, year, tmdbid)
+        else:
+            result = self.get_rss_tv_id(title, year, tmdbid)
+        return int(result) if isinstance(result, (int, str)) and str(result).isdigit() else None
 
     def get_rss_movie_sites(self, rssid: int | None) -> str:
         """
@@ -312,51 +337,6 @@ class SubscribeRepository(BaseRepository):
             if not state:
                 return db.query(SubscribeTvs).all()
             return db.query(SubscribeTvs).filter(state == SubscribeTvs.STATE).all()
-
-    def get_rss_tv_id(
-        self, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None
-    ) -> int | None:
-        """
-        获取订阅电视剧ID
-        """
-        if not title:
-            return None
-        with self.session() as db:
-            if tmdbid:
-                if season:
-                    ret = (
-                        db.query(SubscribeTvs.ID)
-                        .filter(tmdbid == SubscribeTvs.TMDBID, season == SubscribeTvs.SEASON)
-                        .first()
-                    )
-                else:
-                    ret = db.query(SubscribeTvs.ID).filter(tmdbid == SubscribeTvs.TMDBID).first()
-                if ret:
-                    return ret[0]
-            if season and year:
-                items = (
-                    db.query(SubscribeTvs)
-                    .filter(
-                        title == SubscribeTvs.NAME, str(season) == SubscribeTvs.SEASON, str(year) == SubscribeTvs.YEAR
-                    )
-                    .all()
-                )
-            elif season and not year:
-                items = (
-                    db.query(SubscribeTvs).filter(title == SubscribeTvs.NAME, str(season) == SubscribeTvs.SEASON).all()
-                )
-            elif not season and year:
-                items = db.query(SubscribeTvs).filter(title == SubscribeTvs.NAME, str(year) == SubscribeTvs.YEAR).all()
-            else:
-                items = db.query(SubscribeTvs).filter(title == SubscribeTvs.NAME).all()
-            if items:
-                if tmdbid:
-                    for item in items:
-                        if not item.TMDBID or str(tmdbid) == item.TMDBID:
-                            return item.ID
-                else:
-                    return items[0].ID
-            return None
 
     def get_rss_tv_sites(self, rssid: int | None) -> SubscribeTvs | str:
         """

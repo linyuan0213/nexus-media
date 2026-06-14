@@ -198,12 +198,12 @@ class TransferRepository(BaseRepository):
         path = os.path.dirname(source_full_path)
         filename = os.path.basename(source_full_path)
         with self.session() as db:
-            ret = (
-                db.query(TRANSFERHISTORY)
+            return (
+                db.query(TRANSFERHISTORY.ID)
                 .filter(path == TRANSFERHISTORY.SOURCE_PATH, filename == TRANSFERHISTORY.SOURCE_FILENAME)
-                .count()
+                .first()
+                is not None
             )
-        return ret > 0
 
     def delete_transfer_log_by_id(self, logid: int) -> None:
         """
@@ -290,14 +290,22 @@ class TransferRepository(BaseRepository):
         with self.session() as db:
             db.query(TRANSFERUNKNOWN).filter(os.path.normpath(path) == TRANSFERUNKNOWN.PATH).update({"STATE": "Y"})
 
+    def delete_transfer_unknowns(self, tids: list[int]) -> None:
+        """
+        批量删除未识别记录
+        """
+        if not tids:
+            return
+        with self.session() as db:
+            db.query(TRANSFERUNKNOWN).filter(TRANSFERUNKNOWN.ID.in_(tids)).delete()
+
     def delete_transfer_unknown(self, tid: int | None) -> None:
         """
         删除未识别记录
         """
         if not tid:
             return
-        with self.session() as db:
-            db.query(TRANSFERUNKNOWN).filter(int(tid) == TRANSFERUNKNOWN.ID).delete()
+        self.delete_transfer_unknowns([tid])
 
     def get_transfer_unknown_by_id(self, tid: int | None) -> TRANSFERUNKNOWN | None:
         return self.get_unknown_info_by_id(tid)
@@ -340,24 +348,21 @@ class TransferRepository(BaseRepository):
         if not path:
             return False
         unknowns = self.get_transfer_unknown_by_path(path)
-        if unknowns:
-            is_all_proceed = True
-            for unknown in unknowns:
-                if str(unknown.STATE or "") == "N":
-                    is_all_proceed = False
-                    break
-            if is_all_proceed:
-                is_transfer_history_exists = self.is_transfer_history_exists_by_source_full_path(path)
-                if is_transfer_history_exists:
-                    return False
-                else:
-                    for unknown in unknowns:
-                        self.delete_transfer_unknown(int(str(unknown.ID)))
-                    return True
-            else:
-                return True
-        else:
+        if not unknowns:
             return True
+
+        has_unprocessed = any(str(unknown.STATE or "") == "N" for unknown in unknowns)
+        if has_unprocessed:
+            return True
+
+        if self.is_transfer_history_exists_by_source_full_path(path):
+            return False
+
+        # 批量删除已处理的无用未识别记录
+        tids = [int(str(unknown.ID)) for unknown in unknowns if unknown.ID is not None]
+        if tids:
+            self.delete_transfer_unknowns(tids)
+        return True
 
     def insert_transfer_unknown(self, path: str, dest: str, rmt_mode: str) -> None:
         """
@@ -430,12 +435,12 @@ class TransferRepository(BaseRepository):
         if not path:
             return False
         with self.session() as db:
-            count = (
-                db.query(SYNCHISTORY)
+            return (
+                db.query(SYNCHISTORY.ID)
                 .filter(os.path.normpath(path) == SYNCHISTORY.PATH, os.path.normpath(dest) == SYNCHISTORY.DEST)
-                .count()
+                .first()
+                is not None
             )
-        return count > 0
 
     def insert_sync_history(self, path: str, src: str, dest: str) -> None:
         """

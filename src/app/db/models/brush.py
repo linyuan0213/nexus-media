@@ -5,7 +5,7 @@
 
 from typing import Any
 
-from sqlalchemy import BigInteger, ForeignKey, Integer, Sequence, String, Text
+from sqlalchemy import BigInteger, ForeignKey, Index, Integer, Sequence, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -52,9 +52,13 @@ class SITEBRUSHTASK(Base):
 
 class SITEBRUSHTORRENTS(Base):
     __tablename__ = "SITE_BRUSH_TORRENTS"
+    __table_args__ = (
+        Index("INDX_SITE_BRUSH_TORRENTS_ENCLOSURE", "ENCLOSURE"),
+        Index("INDX_SITE_BRUSH_TORRENTS_TASK_ID", "TASK_ID"),
+    )
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
-    TASK_ID: Mapped[str] = mapped_column(String(255), index=True)
+    TASK_ID: Mapped[str] = mapped_column(String(255))
     TORRENT_NAME: Mapped[str] = mapped_column(String(255))
     TORRENT_SIZE: Mapped[str] = mapped_column(Text)
     ENCLOSURE: Mapped[str] = mapped_column(String(8192))

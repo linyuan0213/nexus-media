@@ -6,7 +6,7 @@ Handles brush task and torrent related database operations.
 import time
 from typing import Any
 
-from sqlalchemy import Integer, cast, func
+from sqlalchemy import Integer, and_, case, cast, func, or_
 
 from app.db.models import CONFIGSITE, SITEBRUSHRULE, SITEBRUSHTASK, SITEBRUSHTORRENTS
 from app.db.repositories.base_repository import BaseRepository
@@ -279,10 +279,17 @@ class BrushRepository(BaseRepository):
         if not ids:
             return
         with self.session() as db:
-            for _id in ids:
-                db.query(SITEBRUSHTORRENTS).filter(
-                    _id[1] == SITEBRUSHTORRENTS.TASK_ID, _id[2] == SITEBRUSHTORRENTS.DOWNLOAD_ID
-                ).update({"TORRENT_SIZE": _id[0], "DOWNLOAD_ID": "0"})
+            conditions = [
+                and_(SITEBRUSHTORRENTS.TASK_ID == task_id, SITEBRUSHTORRENTS.DOWNLOAD_ID == download_id)
+                for _, task_id, download_id in ids
+            ]
+            case_stmt = case(
+                *[(cond, torrent_size) for (_, torrent_size), cond in zip(ids, conditions)],
+                else_=SITEBRUSHTORRENTS.TORRENT_SIZE,
+            )
+            db.query(SITEBRUSHTORRENTS).filter(or_(*conditions)).update(
+                {"TORRENT_SIZE": case_stmt, "DOWNLOAD_ID": "0"}, synchronize_session=False
+            )
 
     def delete_brushtask_torrent(self, brush_id: int | None, download_id: str | None) -> None:
         """

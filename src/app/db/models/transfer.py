@@ -5,7 +5,7 @@
 
 from typing import Any
 
-from sqlalchemy import Integer, Sequence, String
+from sqlalchemy import Index, Integer, Sequence, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -20,12 +20,16 @@ class TRANSFERBLACKLIST(Base):
 
 class TRANSFERHISTORY(Base):
     __tablename__ = "TRANSFER_HISTORY"
+    __table_args__ = (
+        Index("INDX_TRANSFER_HISTORY_SOURCE", "SOURCE_PATH", "SOURCE_FILENAME"),
+        Index("INDX_TRANSFER_HISTORY_TMDBID", "TMDBID"),
+    )
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     MODE: Mapped[str] = mapped_column(String(255))
     TYPE: Mapped[str] = mapped_column(String(255))
     CATEGORY: Mapped[str] = mapped_column(String(255))
-    TMDBID: Mapped[int] = mapped_column(Integer)
+    TMDBID: Mapped[int] = mapped_column(Integer, index=True)
     TITLE: Mapped[str] = mapped_column(String(255), index=True)
     YEAR: Mapped[str] = mapped_column(String(255))
     SEASON_EPISODE: Mapped[str] = mapped_column(String(255))
@@ -44,6 +48,7 @@ class TRANSFERHISTORY(Base):
 
 class TRANSFERUNKNOWN(Base):
     __tablename__ = "TRANSFER_UNKNOWN"
+    __table_args__ = (Index("INDX_TRANSFER_UNKNOWN_PATH_STATE", "PATH", "STATE"),)
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     PATH: Mapped[str] = mapped_column(String(512), index=True)

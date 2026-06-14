@@ -8,7 +8,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import and_, case, func
+from sqlalchemy import and_, case, func, tuple_
 
 from app.db.models import DOWNLOADHISTORY, DOWNLOADSETTING, INDEXERSTATISTICS
 from app.db.repositories.base_repository import BaseRepository
@@ -28,14 +28,13 @@ class DownloadRepository(BaseRepository):
         """
         with self.session() as db:
             if enclosure:
-                count = db.query(DOWNLOADHISTORY).filter(enclosure == DOWNLOADHISTORY.ENCLOSURE).count()
-            else:
-                count = (
-                    db.query(DOWNLOADHISTORY)
-                    .filter(downloader == DOWNLOADHISTORY.DOWNLOADER, download_id == DOWNLOADHISTORY.DOWNLOAD_ID)
-                    .count()
-                )
-            return count > 0
+                return db.query(DOWNLOADHISTORY.ID).filter(enclosure == DOWNLOADHISTORY.ENCLOSURE).first() is not None
+            return (
+                db.query(DOWNLOADHISTORY.ID)
+                .filter(downloader == DOWNLOADHISTORY.DOWNLOADER, download_id == DOWNLOADHISTORY.DOWNLOAD_ID)
+                .first()
+                is not None
+            )
 
     def is_exists_download_history_by_tmdb(self, tmdb_id: int | None, season_episode: str | None) -> bool:
         """
@@ -45,12 +44,12 @@ class DownloadRepository(BaseRepository):
             return False
 
         with self.session() as db:
-            query = db.query(DOWNLOADHISTORY).filter(tmdb_id == DOWNLOADHISTORY.TMDBID)
+            query = db.query(DOWNLOADHISTORY.ID).filter(tmdb_id == DOWNLOADHISTORY.TMDBID)
 
             if season_episode:
                 query = query.filter(season_episode == DOWNLOADHISTORY.SE)
 
-            return query.count() > 0
+            return query.first() is not None
 
     def insert_download_history(self, media_info: Any, downloader: str, download_id: str, save_dir: str) -> None:
         """
@@ -249,11 +248,8 @@ class DownloadRepository(BaseRepository):
 
         with self.session() as db:
             for state, id_pairs in states_map.items():
-                downloaders = [d for d, _ in id_pairs]
-                download_ids = [i for _, i in id_pairs]
                 db.query(DOWNLOADHISTORY).filter(
-                    DOWNLOADHISTORY.DOWNLOADER.in_(downloaders),
-                    DOWNLOADHISTORY.DOWNLOAD_ID.in_(download_ids),
+                    tuple_(DOWNLOADHISTORY.DOWNLOADER, DOWNLOADHISTORY.DOWNLOAD_ID).in_(id_pairs)
                 ).update({"STATE": state}, synchronize_session=False)
 
     # ==================== Download Settings ====================

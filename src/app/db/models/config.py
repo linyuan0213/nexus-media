@@ -101,7 +101,7 @@ class CONFIGUSERRSS(Base):
     FILTER: Mapped[str] = mapped_column(String(255))
     UPDATE_TIME: Mapped[str] = mapped_column(String(255))
     PROCESS_COUNT: Mapped[str] = mapped_column(String(255))
-    STATE: Mapped[str] = mapped_column(String(255))
+    STATE: Mapped[str] = mapped_column(String(255), index=True)
     SAVE_PATH: Mapped[str] = mapped_column(String(255))
     DOWNLOAD_SETTING: Mapped[int] = mapped_column(Integer, nullable=True)
     RECOGNIZATION: Mapped[str] = mapped_column(String(255))
