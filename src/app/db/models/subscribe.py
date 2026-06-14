@@ -37,7 +37,7 @@ class SubscribeMovies(Base):
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     NAME: Mapped[str] = mapped_column(String(255), index=True)
-    YEAR: Mapped[str] = mapped_column(String(255), index=True)
+    YEAR: Mapped[str] = mapped_column(String(255))
     KEYWORD: Mapped[str] = mapped_column(String(255))
     TMDBID: Mapped[str] = mapped_column(String(255), index=True)
     IMAGE: Mapped[str] = mapped_column(String(255))
@@ -81,7 +81,7 @@ class SubscribeTvs(Base):
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     NAME: Mapped[str] = mapped_column(String(255), index=True)
-    YEAR: Mapped[str] = mapped_column(String(255), index=True)
+    YEAR: Mapped[str] = mapped_column(String(255))
     KEYWORD: Mapped[str] = mapped_column(String(255))
     SEASON: Mapped[str] = mapped_column(String(255))
     TMDBID: Mapped[str] = mapped_column(String(255), index=True)
