@@ -20,9 +20,9 @@ from app.utils.response import fail, success
 router = APIRouter()
 
 
-def _get_script_path():
+def _get_script_path(config_service=Depends(get_config_service)):
     """获取脚本路径（兼容层）"""
-    return get_config_service().get_script_path()
+    return config_service.get_script_path()
 
 
 # ---------------------------------------------------------------------------
