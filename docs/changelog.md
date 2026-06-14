@@ -21,7 +21,7 @@
 - 引入 `orjson` / `uvloop`；启用 `httpx` HTTP/2
 - 新增 Alembic 迁移 `e9d9eaed8d5c` 补充查询索引
 - 安全扫描: `just bandit` / `just safety` 均通过
-- 测试: 1183 个测试通过，覆盖率 `36%`；新增业务缓存 TTL 单元测试
+- 测试: 1185 个测试通过，覆盖率 `36%`；新增 Python 3.14 兼容性测试
 
 ## v4.0.0 (2026-06-09)
 
