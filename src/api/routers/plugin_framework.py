@@ -22,7 +22,6 @@ from app.services.plugin_framework_service import PluginFrameworkService
 from app.utils.response import fail, success
 
 router = APIRouter()
-assets_router = APIRouter()
 
 
 # ---------------------------------------------------------------------------
@@ -327,7 +326,7 @@ def delete_plugin_data(
         return fail(msg=f"删除失败: {e!s}")
 
 
-@assets_router.get("/plugins/{plugin_id}/assets/{file_path:path}")
+@router.get("/plugins/{plugin_id}/assets/{file_path:path}")
 def get_plugin_asset(
     plugin_id: str,
     file_path: str,
