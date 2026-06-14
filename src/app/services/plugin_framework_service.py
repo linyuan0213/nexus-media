@@ -524,11 +524,15 @@ class PluginFrameworkService:
             return f.read()
 
     def get_plugin_path(self, plugin_id: str) -> str | None:
-        """获取插件目录路径"""
+        """获取插件目录路径.
+
+        优先使用数据库中记录的安装路径；若该路径已不存在，
+        回退到 PluginRegistry 的实时路径解析，避免数据目录变更后插件丢失。
+        """
         orm_model = self._repo.get_manifest_by_id(plugin_id)
-        if not orm_model:
-            return None
-        return str(orm_model.PATH)
+        if orm_model and orm_model.PATH and os.path.exists(orm_model.PATH):
+            return str(orm_model.PATH)
+        return self._plugin_registry.get_plugin_path(plugin_id)
 
     def run_plugin(self, plugin_id: str) -> None:
         """立即运行插件（临时加载并调用 run 方法）"""

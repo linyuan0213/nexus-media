@@ -36,11 +36,30 @@ class SiteRateLimiterService:
         rate_str = note.get("rate_limit")
         burst = note.get("rate_burst")
 
+        if rate_str:
+            rate_str = str(rate_str)
+        if burst is not None:
+            burst = int(burst)
+
         if not rate_str:
             # 兼容旧配置格式
             limit_interval = note.get("limit_interval")
             limit_count = note.get("limit_count")
             limit_seconds = note.get("limit_seconds")
+
+            # 站点配置可能以字符串形式存储，统一转换为数值
+            try:
+                limit_interval = int(limit_interval) if limit_interval is not None else None
+            except (ValueError, TypeError):
+                limit_interval = None
+            try:
+                limit_count = int(limit_count) if limit_count is not None else None
+            except (ValueError, TypeError):
+                limit_count = None
+            try:
+                limit_seconds = int(limit_seconds) if limit_seconds is not None else None
+            except (ValueError, TypeError):
+                limit_seconds = None
 
             if limit_interval and limit_count:
                 # 转换为 rate 格式
@@ -66,6 +85,8 @@ class SiteRateLimiterService:
                 burst = int(count)
             except (ValueError, IndexError):
                 burst = 10
+
+        burst = int(burst)
 
         with self._lock:
             self._site_rates[site_id] = (rate_str, burst)
