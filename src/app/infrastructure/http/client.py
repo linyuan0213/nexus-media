@@ -1,6 +1,9 @@
 """同步 HTTP 客户端 Facade."""
 
+import contextlib
 import io
+import threading
+from collections.abc import Callable
 from typing import Any, BinaryIO
 
 import httpx
@@ -13,11 +16,67 @@ from app.infrastructure.http.retry import HttpRetryConfig
 from app.infrastructure.rate_limiter import RateLimitEngine
 
 
+class _ClientPool:
+    """按 HttpClientConfig 复用底层 httpx.Client，减少连接池创建开销."""
+
+    def __init__(self):
+        self._lock = threading.RLock()
+        self._clients: dict[tuple, tuple[httpx.Client, int]] = {}
+
+    def _make_key(self, config: HttpClientConfig) -> tuple:
+        headers = tuple(sorted((config.default_headers or {}).items()))
+        auth_key = type(config.auth).__name__ if config.auth is not None else ""
+        return (
+            config.proxy_url,
+            headers,
+            auth_key,
+            config.verify_ssl,
+            config.follow_redirects,
+            config.timeout,
+            config.connect_timeout,
+            config.max_connections,
+            config.max_keepalive,
+        )
+
+    def acquire(self, config: HttpClientConfig, builder: Callable[[], httpx.Client]) -> httpx.Client:
+        key = self._make_key(config)
+        with self._lock:
+            client, count = self._clients.get(key, (None, 0))
+            if client is None:
+                client = builder()
+            self._clients[key] = (client, count + 1)
+            return client
+
+    def release(self, config: HttpClientConfig) -> None:
+        key = self._make_key(config)
+        with self._lock:
+            client, count = self._clients.get(key, (None, 0))
+            if client is None:
+                return
+            count -= 1
+            if count <= 0:
+                with contextlib.suppress(Exception):
+                    client.close()
+                self._clients.pop(key, None)
+            else:
+                self._clients[key] = (client, count)
+
+    def close_all(self) -> None:
+        with self._lock:
+            for client, _ in self._clients.values():
+                with contextlib.suppress(Exception):
+                    client.close()
+            self._clients.clear()
+
+
+_pool = _ClientPool()
+
+
 class HttpClient:
     """同步 HTTP 客户端 Facade.
 
     封装 httpx.Client，内置 tenacity 重试、RateLimitEngine 限流、HttpCacheConfig 缓存。
-    所有同步 HTTP 调用（站点签到、下载器 API、媒体服务器）使用此类。
+    相同配置的底层 Client 会被复用，避免每次请求创建/销毁连接池。
 
     按需实例化，由调用方管理生命周期。
     """
@@ -35,7 +94,8 @@ class HttpClient:
         self._rate_limiter = rate_limiter
         self._cache = cache
         self._middlewares = middlewares or []
-        self._client = self._build_client()
+        self._client = _pool.acquire(self._config, self._build_client)
+        self._closed = False
 
     def _build_client(self) -> httpx.Client:
         limits = httpx.Limits(
@@ -142,13 +202,21 @@ class HttpClient:
         return StreamResponse(resp)
 
     def close(self) -> None:
-        self._client.close()
+        if self._closed:
+            return
+        self._closed = True
+        _pool.release(self._config)
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
         self.close()
+
+    @staticmethod
+    def close_all() -> None:
+        """关闭所有复用的底层 Client（用于进程退出清理）."""
+        _pool.close_all()
 
 
 class StreamResponse(io.BytesIO):
