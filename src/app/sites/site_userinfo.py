@@ -1,7 +1,7 @@
 import base64
 import time
+from concurrent.futures import as_completed
 from datetime import datetime
-from multiprocessing.dummy import Pool as ThreadPool
 from threading import Lock
 from typing import Any
 
@@ -10,13 +10,14 @@ from app.db.models import SITEUSERINFOSTATS as _S
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.db.repositories.site_repository import SiteRepository
 from app.infrastructure.chrome import ChromeClient
-from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
+from app.infrastructure.rate_limiter import MemoryTokenBucketBackend, RateLimitEngine
+from app.infrastructure.thread import ThreadExecutor
 from app.message import Message
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 from app.sites.site_favicon_service import SiteFaviconService
-from app.utils import ExceptionUtils, JsonUtils, StringUtils
+from app.utils import ExceptionUtils, JsonUtils
 from app.utils.config_tools import get_proxies
 
 lock = Lock()
@@ -31,6 +32,8 @@ class SiteUserInfo:
     message = None
 
     _MAX_CONCURRENCY = 10
+    _SITE_REFRESH_RATE = "1/s"
+    _SITE_REFRESH_BURST = 1
     _last_update_time = None
     _sites_data = {}
 
@@ -42,6 +45,8 @@ class SiteUserInfo:
         site_engine: SiteEngine,
         message: Message | None = None,
         drissionpage_helper: ChromeClient | None = None,
+        thread_executor: ThreadExecutor | None = None,
+        rate_limiter: RateLimitEngine | None = None,
     ):
         self._site_cache = site_cache
         self._site_repository = site_repository
@@ -49,6 +54,10 @@ class SiteUserInfo:
         self._site_engine = site_engine
         self._drissionpage_helper = drissionpage_helper or ChromeClient()
         self._message = message
+        self._thread_executor = thread_executor or ThreadExecutor(
+            max_workers=self._MAX_CONCURRENCY, name="site_refresh"
+        )
+        self._rate_limiter = rate_limiter or RateLimitEngine(backend=MemoryTokenBucketBackend())
         self._refresh()
 
     def _refresh(self):
@@ -59,6 +68,98 @@ class SiteUserInfo:
         self._last_update_time = None
         # 站点数据
         self._sites_data = {}
+
+    def _refresh_site_data_with_limit(self, site_info: dict) -> Any:
+        """带站点级限流的单个站点刷新包装."""
+        site_name = site_info.get("name") or "unknown"
+        site_id = site_info.get("id")
+        acquired = self._rate_limiter.acquire(
+            key=f"site_refresh:{site_id or site_name}",
+            rate=self._SITE_REFRESH_RATE,
+            burst=self._SITE_REFRESH_BURST,
+            timeout=0,
+        )
+        if not acquired:
+            log.warn(f"[Sites]站点 {site_name} 刷新被限流跳过")
+            return None
+        return self._refresh_site_data(site_info)
+
+    def _refresh_site_data(self, site_info: dict) -> Any:
+        """
+        更新单个site 数据信息
+        :param site_info:
+        :return:
+        """
+        site_id = site_info.get("id")
+        site_name = site_info.get("name")
+        site_url = site_info.get("strict_url")
+        if not site_url:
+            return
+        site_cookie = site_info.get("cookie")
+        ua = site_info.get("ua")
+        headers = site_info.get("headers") or ""
+        if JsonUtils.is_valid_json(headers):
+            headers = JsonUtils.loads(headers)
+        else:
+            headers = {}
+        unread_msg_notify = site_info.get("unread_msg_notify")
+        chrome = bool(site_info.get("chrome"))
+        proxy = bool(site_info.get("proxy"))
+        try:
+            site_user_info = self.build(
+                url=site_url,
+                site_id=site_id,
+                site_name=site_name,
+                site_cookie=site_cookie,
+                ua=ua,
+                site_headers=headers,
+                emulate=chrome,
+                proxy=proxy,
+            )
+            if site_user_info:
+                log.debug(f"[Sites]站点 {site_name} 开始以 {site_user_info.site_schema()} 模型解析")
+                # 开始解析
+                site_user_info.parse()
+                log.debug(f"[Sites]站点 {site_name} 解析完成")
+
+                if not site_user_info.site_favicon:
+                    site_def = self._site_engine.get_by_url(site_url)
+                    if site_def and site_def.favicon:
+                        self._fetch_favicon_from_url(site_user_info, site_def.favicon)
+
+                # 获取不到数据时，仅返回错误信息，不做历史数据更新
+                if site_user_info.err_msg:
+                    self._sites_data.update({site_name: {"err_msg": site_user_info.err_msg}})
+                    return
+
+                # 发送通知，存在未读消息
+                self._notify_unread_msg(site_name, site_user_info, unread_msg_notify)
+
+                self._sites_data.update(
+                    {
+                        site_name: {
+                            "upload": site_user_info.upload,
+                            "username": site_user_info.username,
+                            "user_level": site_user_info.user_level,
+                            "join_at": site_user_info.join_at,
+                            "download": site_user_info.download,
+                            "ratio": site_user_info.ratio,
+                            "seeding": site_user_info.seeding,
+                            "seeding_size": site_user_info.seeding_size,
+                            "leeching": site_user_info.leeching,
+                            "bonus": site_user_info.bonus,
+                            "url": site_url,
+                            "err_msg": site_user_info.err_msg,
+                            "message_unread": site_user_info.message_unread,
+                        }
+                    }
+                )
+
+                return site_user_info
+
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
+            log.error(f"[Sites]站点 {site_name} 获取流量数据失败：{e!s}")
 
     def build(self, url, site_id, site_name, site_cookie=None, site_headers=None, ua=None, emulate=None, proxy=False):
         if not site_cookie and not site_headers:
@@ -107,7 +208,7 @@ class SiteUserInfo:
                 if rate_config:
                     rl_kwargs = {"rate_limit_key": f"site:{site_id}", "rate_limit_rate": rate_config[0]}
             client = HttpClient(
-                config=HttpClientConfig(proxy_url=proxy_url),
+                config=HttpClientConfig(timeout=10, proxy_url=proxy_url),
                 rate_limiter=rate_limiter_engine,
             )
             res = client.get(url=url, headers=site_headers, auth=CookieAuth(site_cookie), **rl_kwargs)
@@ -128,84 +229,7 @@ class SiteUserInfo:
             proxy=proxy,
         ) or _log_error(site_name)
 
-    def __refresh_site_data(self, site_info):
-        """
-        更新单个site 数据信息
-        :param site_info:
-        :return:
-        """
-        site_id = site_info.get("id")
-        site_name = site_info.get("name")
-        site_url = site_info.get("strict_url")
-        if not site_url:
-            return
-        site_cookie = site_info.get("cookie")
-        ua = site_info.get("ua")
-        headers = site_info.get("headers")
-        if JsonUtils.is_valid_json(headers):
-            headers = JsonUtils.loads(headers)
-        else:
-            headers = {}
-        unread_msg_notify = site_info.get("unread_msg_notify")
-        chrome = site_info.get("chrome")
-        proxy = site_info.get("proxy")
-        try:
-            site_user_info = self.build(
-                url=site_url,
-                site_id=site_id,
-                site_name=site_name,
-                site_cookie=site_cookie,
-                ua=ua,
-                site_headers=headers,
-                emulate=chrome,
-                proxy=proxy,
-            )
-            if site_user_info:
-                log.debug(f"[Sites]站点 {site_name} 开始以 {site_user_info.site_schema()} 模型解析")
-                # 开始解析
-                site_user_info.parse()
-                log.debug(f"[Sites]站点 {site_name} 解析完成")
-
-                if not site_user_info.site_favicon:
-                    site_def = self._site_engine.get_by_url(site_url)
-                    if site_def and site_def.favicon:
-                        self._fetch_favicon_from_url(site_user_info, site_def.favicon)
-
-                # 获取不到数据时，仅返回错误信息，不做历史数据更新
-                if site_user_info.err_msg:
-                    self._sites_data.update({site_name: {"err_msg": site_user_info.err_msg}})
-                    return
-
-                # 发送通知，存在未读消息
-                self.__notify_unread_msg(site_name, site_user_info, unread_msg_notify)
-
-                self._sites_data.update(
-                    {
-                        site_name: {
-                            "upload": site_user_info.upload,
-                            "username": site_user_info.username,
-                            "user_level": site_user_info.user_level,
-                            "join_at": site_user_info.join_at,
-                            "download": site_user_info.download,
-                            "ratio": site_user_info.ratio,
-                            "seeding": site_user_info.seeding,
-                            "seeding_size": site_user_info.seeding_size,
-                            "leeching": site_user_info.leeching,
-                            "bonus": site_user_info.bonus,
-                            "url": site_url,
-                            "err_msg": site_user_info.err_msg,
-                            "message_unread": site_user_info.message_unread,
-                        }
-                    }
-                )
-
-                return site_user_info
-
-        except Exception as e:
-            ExceptionUtils.exception_traceback(e)
-            log.error(f"[Sites]站点 {site_name} 获取流量数据失败：{e!s}")
-
-    def __notify_unread_msg(self, site_name, site_user_info, unread_msg_notify):
+    def _notify_unread_msg(self, site_name, site_user_info, unread_msg_notify):
         if self.message is None:
             return
         if site_user_info.message_unread <= 0:
@@ -226,59 +250,6 @@ class SiteUserInfo:
                 title=f"站点 {site_user_info.site_name} 收到 {site_user_info.message_unread} 条新消息，请登陆查看"
             )
 
-    def refresh_site_data_now(self, specify_sites=None):
-        """
-        强制刷新站点数据
-        :param specify_sites: 指定站点名称列表，None 表示全部
-        """
-        lock_key = f"site:refresh:{','.join(specify_sites) if specify_sites else 'all'}"
-        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=600)
-        acquired = lock.acquire()
-        if not acquired:
-            log.info("[Sites]站点数据刷新正在执行，跳过")
-            return
-        try:
-            self.__refresh_all_site_data(force=True, specify_sites=specify_sites)
-        finally:
-            lock.release()
-        # 刷完发送消息
-        string_list = []
-
-        # 增量数据
-        inc_uploads = 0
-        inc_downloads = 0
-        _, _, site, upload, download = self.get_pt_site_statistics_history(2)
-
-        # 按照上传降序排序
-        data_list = list(zip(site, upload, download, strict=False))
-        data_list = sorted(data_list, key=lambda x: x[1], reverse=True)
-
-        for data in data_list:
-            site = data[0]
-            upload = int(data[1])
-            download = int(data[2])
-            if upload > 0 or download > 0:
-                inc_uploads += int(upload)
-                inc_downloads += int(download)
-                string_list.append(
-                    f"[{site}]\n"
-                    f"上传量：{StringUtils.str_filesize(upload)}\n"
-                    f"下载量：{StringUtils.str_filesize(download)}\n"
-                    f"\n————————————"
-                )
-
-        if inc_downloads or inc_uploads:
-            if self.message is None:
-                return
-            self.message.send_user_statistics_message(string_list)
-
-    def get_site_data(self, specify_sites=None, force=False):
-        """
-        获取站点上传下载量
-        """
-        self.__refresh_all_site_data(force=force, specify_sites=specify_sites)
-        return self._sites_data
-
     def __refresh_all_site_data(self, force=False, specify_sites=None):
         """
         多线程刷新站点下载上传量，默认间隔6小时
@@ -288,11 +259,18 @@ class SiteUserInfo:
         """
         if self.sites is None:
             return
-        if not self.sites.get_sites():
-            return
 
         if specify_sites and not isinstance(specify_sites, list):
             specify_sites = [specify_sites]
+
+        # 锁只保护竞争条件检查和 _last_update_time 写入
+        with lock:
+            if not force and not specify_sites and self._last_update_time:
+                return
+            self._last_update_time = datetime.now()
+
+        if not self.sites.get_sites():
+            return
 
         # 没有指定站点，默认使用全部站点
         if not specify_sites:
@@ -319,10 +297,20 @@ class SiteUserInfo:
                 return
             self._last_update_time = datetime.now()
 
-        # ThreadPool 移出锁外 —— 不阻塞其他线程
-        with ThreadPool(min(len(refresh_sites), self._MAX_CONCURRENCY)) as p:
-            site_user_infos = p.map(self.__refresh_site_data, refresh_sites)
-            site_user_infos = [info for info in site_user_infos if info]
+        # 使用 ThreadExecutor + 站点级限流并发刷新
+        futures = []
+        for site in refresh_sites:
+            futures.append(self._thread_executor.submit(self._refresh_site_data_with_limit, site))
+
+        site_user_infos = []
+        for future in as_completed(futures):
+            try:
+                result = future.result()
+                if result:
+                    site_user_infos.append(result)
+            except Exception as e:
+                log.warn("[Sites]站点刷新任务异常")
+                ExceptionUtils.exception_traceback(e)
 
         # 结果处理也在锁外
         log.debug(f"[Sites]开始写入数据库，共 {len(site_user_infos)} 个站点")

@@ -383,6 +383,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         site_favicon_service=site_favicon_service,
         site_engine=site_engine,
         message=message,
+        thread_executor=thread_executor,
     )
     site_resolver = SiteResolver(cache=site_cache, site_engine=site_engine)
     site_service = SiteService(
