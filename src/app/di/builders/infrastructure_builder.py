@@ -4,8 +4,12 @@ import log
 from app.db.repositories.apikey_repo_adapter import APIKeyLogRepositoryAdapter, APIKeyRepositoryAdapter
 from app.db.repositories.plugin_framework_repo_adapter import PluginLogRepositoryAdapter
 from app.di.models import InfrastructureObjects
+from app.events import register_modules
 from app.events.bridge import PluginBridge
 from app.events.bus import EventBus
+from app.events.config import EVENT_HANDLER_MODULES
+from app.events.decorators import auto_register
+from app.events.middleware import ErrorHandlingMiddleware, LoggingMiddleware
 from app.events.registry import EventHandlerRegistry
 from app.infrastructure.queue.factory import MessageQueueFactory
 from app.infrastructure.thread import ThreadExecutor
@@ -55,7 +59,13 @@ def build_infrastructure() -> InfrastructureObjects:
         registry=EventHandlerRegistry(),
         bridge=PluginBridge(hook_system=hook_system),
         message_queue=message_queue,
+        middleware=[
+            LoggingMiddleware(),
+            ErrorHandlingMiddleware(),
+        ],
     )
+    register_modules(EVENT_HANDLER_MODULES)
+    auto_register(event_bus)
 
     log.info("[DI]基础设施层构建完成")
     return InfrastructureObjects(

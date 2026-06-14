@@ -102,6 +102,7 @@ def build_coordinators(
         media_server=media_server,
         thread_executor=thread_executor,
         hook_system=infra.hook_system,
+        event_bus=infra.event_bus,
     )
 
     # 创建 ToolExecutor 并注入 AgentService（解决循环依赖）

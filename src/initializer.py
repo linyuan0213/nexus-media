@@ -8,7 +8,9 @@ from app.events import auto_register, register_modules
 from app.events.bridge import PluginBridge
 from app.events.bus import EventBus
 from app.events.config import EVENT_HANDLER_MODULES
+from app.events.registry import EventHandlerRegistry
 from app.infrastructure.cache_system.events import init_event_bridge
+from app.plugin_framework.hook_system import HookSystem
 from app.services.category_init import CategoryInitializer
 from app.services.rbac_init import init_admin_user
 from app.services.rbac_init import init_rbac_system as rbac_init
@@ -206,16 +208,16 @@ def init_event_handlers(event_bus=None, hook_system=None):
     初始化事件处理器：显式导入 handler 模块触发 @on_event 注册
     """
     try:
-        register_modules(EVENT_HANDLER_MODULES)
-        from app.events.registry import EventHandlerRegistry
-        from app.plugin_framework.hook_system import HookSystem
-
-        bus = event_bus or EventBus(
-            registry=EventHandlerRegistry(),
-            bridge=PluginBridge(hook_system=hook_system or HookSystem()),
-        )
-        auto_register(bus)
-        init_event_bridge(bus)
+        if event_bus is None:
+            register_modules(EVENT_HANDLER_MODULES)
+            bus = EventBus(
+                registry=EventHandlerRegistry(),
+                bridge=PluginBridge(hook_system=hook_system or HookSystem()),
+            )
+            auto_register(bus)
+            init_event_bridge(bus)
+        else:
+            init_event_bridge(event_bus)
         log.info("[Initialize]事件处理器已注册")
     except Exception as e:
         log.error(f"[Initialize]事件处理器注册失败：{e!s}")
