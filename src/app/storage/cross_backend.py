@@ -18,7 +18,10 @@ def cross_copy(
 
     策略（按优先级）：
     1. 服务端 COPY：dst_backend 支持从 src_backend 快速复制
-    2. 流式传输：src.read_stream → dst.write_stream（分块）
+    2. 流式传输：src.read_stream → dst.write_stream
+
+    chunk_size 保留为接口参数，供未来后端实现细粒度分块控制；
+    本地后端已通过 write_stream 使用 1MB 缓冲区，避免大文件小 IO。
     """
     try:
         if src_backend.can_fast_cross_copy(dst_backend):

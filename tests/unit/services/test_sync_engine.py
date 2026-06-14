@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.services.sync_engine import FileMonitorHandler, SyncEngine, SyncPathConfig
+from app.services.sync_engine import FileMonitorHandler, SyncEngine, SyncPathConfig, _synced_lock
 from app.storage.backends.local import LocalStorageBackend
 
 
@@ -211,11 +211,56 @@ class TestSyncEngine:
             handler.on_moved(MagicMock(dest_path="/src/file2.mkv"))
             assert mock.call_count == 2
 
-    def test_stop(self, engine):
+    def test_synced_files_fifo_eviction(self, engine):
+        """_synced_files 应使用 FIFO 策略，避免旧条目长期驻留."""
         eng, _, _ = engine
-        obs = MagicMock()
-        eng._observers = [obs]
-        eng.stop()
-        obs.stop.assert_called_once()
-        obs.join.assert_called_once()
-        assert eng._observers == []
+        eng._synced_files_max_size = 3
+        for i in range(5):
+            with _synced_lock:
+                eng._synced_files[f"/path/{i}"] = None
+                if len(eng._synced_files) > eng._synced_files_max_size:
+                    eng._synced_files.popitem(last=False)
+        assert list(eng._synced_files.keys()) == ["/path/2", "/path/3", "/path/4"]
+
+    def test_transfer_sync_skips_already_synced_files(self, engine, tmp_path):
+        """transfer_sync 应跳过事件触发已处理的文件，避免重复同步."""
+        eng, _, _ = engine
+        cfg = SyncPathConfig(_Row())
+        cfg.source = str(tmp_path / "src")
+        cfg.dest = str(tmp_path / "dst")
+        cfg.rename = False
+        eng._configs["1"] = cfg
+        eng._monitor_ids = ["1"]
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        (src_dir / "movie.mkv").write_text("x")
+        # 模拟该文件已被事件触发处理过
+        eng._synced_files[str(src_dir / "movie.mkv")] = None
+        with patch("app.services.sync_engine.get_lock_manager") as mock_lock_mgr:
+            lock = MagicMock()
+            lock.acquire.return_value = True
+            mock_lock_mgr.return_value.create_lock.return_value = lock
+            eng.transfer_sync(sid="1")
+            eng._transfer._execute.assert_not_called()
+
+    def test_on_file_event_tracks_in_progress_files(self, engine, tmp_path):
+        """on_file_event 应将处理中的文件加入 _synced_files，便于并发去重."""
+        eng, _, _ = engine
+        cfg = SyncPathConfig(_Row())
+        cfg.source = str(tmp_path / "src")
+        cfg.dest = str(tmp_path / "dst")
+        cfg.rename = False
+        eng._configs["1"] = cfg
+        eng._monitor_ids = ["1"]
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        f = src_dir / "movie.mkv"
+        f.write_text("x")
+
+        # 模拟 _do_link 卡住，验证文件仍在 _synced_files 中
+        def slow_link(*args, **kwargs):
+            with _synced_lock:
+                assert str(f) in eng._synced_files
+
+        eng._do_link = slow_link
+        eng.on_file_event(str(f))

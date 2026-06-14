@@ -53,8 +53,9 @@ class LocalStorageBackend(StorageBackend):
     def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
         rp = self._resolve(path)
         os.makedirs(os.path.dirname(rp), exist_ok=True)
+        # 使用 1MB 缓冲区，避免大文件拷贝时频繁小 IO
         with open(rp, "wb") as f:
-            shutil.copyfileobj(stream, f)
+            shutil.copyfileobj(stream, f, length=1024 * 1024)
 
     def mkdir(self, path: str, parents: bool = True) -> None:
         rp = self._resolve(path)

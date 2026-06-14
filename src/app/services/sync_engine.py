@@ -3,6 +3,7 @@
 import os
 import threading
 import traceback
+from collections import OrderedDict
 from typing import Any
 
 from watchdog.events import FileSystemEventHandler
@@ -77,7 +78,8 @@ class SyncEngine:
         self._configs: dict[str, SyncPathConfig] = {}
         self._monitor_ids: list[str] = []
         self._observers: list = []
-        self._synced_files: set[str] = set()
+        # 使用 OrderedDict 实现 FIFO 去重集合，避免旧条目长期驻留
+        self._synced_files: OrderedDict[str, None] = OrderedDict()
         self._synced_files_max_size = 10000
         self._reload()
 
@@ -174,9 +176,9 @@ class SyncEngine:
         with _synced_lock:
             if event_path in self._synced_files:
                 return
-            self._synced_files.add(event_path)
+            self._synced_files[event_path] = None
             if len(self._synced_files) > self._synced_files_max_size:
-                self._synced_files.pop()
+                self._synced_files.popitem(last=False)
 
         try:
             cfg = self._find_config(event_path)
@@ -198,7 +200,7 @@ class SyncEngine:
             log.error(f"[Sync]处理失败：{e}\n{traceback.format_exc()}")
         finally:
             with _synced_lock:
-                self._synced_files.discard(event_path)
+                self._synced_files.pop(event_path, None)
 
     def _find_config(self, event_path: str):
         for sid in self._monitor_ids:
@@ -268,11 +270,18 @@ class SyncEngine:
                     continue
                 if not cfg.rename:
                     for f in PathUtils.get_dir_files(cfg.source):
+                        # 跳过本轮已经由事件触发处理过的文件，避免重复同步
+                        with _synced_lock:
+                            if f in self._synced_files:
+                                continue
                         self._do_link(f, cfg)
                 else:
                     for p in PathUtils.get_dir_level1_medias(cfg.source, RMT_MEDIAEXT):
                         if PathUtils.is_invalid_path(p):
                             continue
+                        with _synced_lock:
+                            if p in self._synced_files:
+                                continue
                         self._do_transfer(p, cfg)
         finally:
             with _synced_lock:
