@@ -57,6 +57,9 @@ class TransferHistoryManager:
     def delete_transfer_log_by_id(self, logid):
         return self.transfer_repo.delete_transfer_log_by_id(logid=logid)
 
+    def delete_transfer_logs(self, logids: list[int]) -> None:
+        return self.transfer_repo.delete_transfer_logs(logids=logids)
+
     def delete_transfer(self):
         return self.transfer_repo.delete_transfer()
 
@@ -67,6 +70,9 @@ class TransferHistoryManager:
 
     def delete_transfer_unknown(self, tid):
         return self.transfer_repo.delete_transfer_unknown(tid=tid)
+
+    def delete_transfer_unknowns(self, tids: list[int]) -> None:
+        return self.transfer_repo.delete_transfer_unknowns(tids=tids)
 
     def get_unknown_info_by_id(self, tid):
         return self.transfer_repo.get_unknown_info_by_id(tid=tid)

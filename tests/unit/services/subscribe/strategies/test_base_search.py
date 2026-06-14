@@ -35,7 +35,7 @@ class _MediaInfo:
 
 @pytest.fixture
 def strategy():
-    return BaseSearchStrategy(
+    s = BaseSearchStrategy(
         service=MagicMock(),
         searcher=MagicMock(),
         media_service=MagicMock(),
@@ -44,6 +44,8 @@ def strategy():
         filter_service=MagicMock(),
         message=MagicMock(),
     )
+    s._ident_cache.clear()
+    return s
 
 
 class TestBaseSearchStrategy:
@@ -129,6 +131,32 @@ class TestBaseSearchStrategy:
         strategy._media_service.identify.return_value = media
         result = strategy._get_media_info(None, "Name", "2024", MediaType.MOVIE)
         assert result is media
+        # 第二次调用应走缓存，identify 只调用一次
+        result2 = strategy._get_media_info(None, "Name", "2024", MediaType.MOVIE)
+        assert result2 is media
+        strategy._media_service.identify.assert_called_once()
+
+    def test_get_media_info_with_tmdbid_caches(self, strategy):
+        media = _MediaInfo()
+        strategy._media_cache.get_tmdb_info.return_value = {"id": 123}
+        with patch("app.services.subscribe.strategies.base_search.meta_info") as mock_meta:
+            mock_meta.return_value = media
+            result = strategy._get_media_info(123, "Name", "2024", MediaType.MOVIE)
+            assert result.tmdb_id == media.tmdb_id
+            strategy._media_cache.get_tmdb_info.assert_called_once()
+            result2 = strategy._get_media_info(123, "Name", "2024", MediaType.MOVIE)
+            assert result2.tmdb_id == media.tmdb_id
+
+    def test_get_media_info_different_keys_not_shared(self, strategy):
+        media1 = _MediaInfo()
+        media2 = _MediaInfo()
+        media2.tmdb_id = 456
+        strategy._media_service.identify.side_effect = [media1, media2]
+        r1 = strategy._get_media_info(None, "Name1", "2024", MediaType.MOVIE)
+        r2 = strategy._get_media_info(None, "Name2", "2024", MediaType.MOVIE)
+        assert r1 is media1
+        assert r2 is media2
+        assert strategy._media_service.identify.call_count == 2
 
     def test_get_media_info_douban_prefix(self, strategy):
         media = _MediaInfo()

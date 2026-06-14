@@ -291,6 +291,7 @@ class TestTransferCleanupService:
         transinfo.SOURCE_FILENAME = "file.mkv"
         transinfo.DEST_PATH = None
         transinfo.DEST_FILENAME = None
+        transinfo.ID = 1
         history.get_transfer_info_by_id.return_value = transinfo
 
         resolver = MagicMock()
@@ -306,7 +307,7 @@ class TestTransferCleanupService:
             mock_delete.return_value = (True, "deleted")
             cleanup.delete_history([1], flag="del_source")
 
-        history.delete_transfer_log_by_id.assert_called_once_with(1)
+        history.delete_transfer_logs.assert_called_once_with([1])
         mock_delete.assert_called_once_with("/src", "file.mkv")
 
 

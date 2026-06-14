@@ -11,6 +11,7 @@ from typing import Any
 
 from app.domain.enums import SearchType
 from app.domain.mediatypes import MediaType
+from app.infrastructure.cache_system import get_cache_manager
 from app.media import meta_info
 from app.media.external.douban import DouBan
 from app.plugin_framework.context import PluginContext
@@ -33,12 +34,20 @@ class DoubanSyncPlugin:
         downloader: DownloaderCore,
         subscribe: SubscribeService,
         douban: DouBan | None = None,
+        cache_ttl: int = 1800,
+        fetch_backoff_seconds: int = 300,
     ):
         self.ctx = ctx
         self._douban = douban or DouBan()
         self._searcher = searcher
         self._downloader = downloader
         self._subscribe = subscribe
+        self._cache = get_cache_manager().get_or_create(
+            f"doubansync:{ctx.plugin_id}", cache_type="memory", maxsize=200, ttl=cache_ttl
+        )
+        self._cache_ttl = cache_ttl
+        self._fetch_backoff = fetch_backoff_seconds
+        self._failed_users: set[str] = set()
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -129,10 +138,14 @@ class DoubanSyncPlugin:
         for user in user_list:
             if not user:
                 continue
+            if user in self._failed_users:
+                self.ctx.warn(f"用户 {user} 近期请求失败，本次跳过")
+                continue
 
-            userinfo = self._douban.get_user_info(userid=user)
+            userinfo = self._cache_get_user_info(user)
             if not userinfo:
                 self.ctx.warn(f"用户名获取失败，请检查豆瓣ID {user} 是否正确")
+                self._failed_users.add(user)
                 continue
 
             user_name = userinfo.get("name", "")
@@ -151,6 +164,19 @@ class DoubanSyncPlugin:
 
         self.ctx.info("豆瓣数据同步完成")
 
+    def _cache_key(self, prefix: str, key: str) -> str:
+        return f"{prefix}:{key}"
+
+    def _cache_get_user_info(self, user: str) -> Any | None:
+        cache_key = self._cache_key("userinfo", user)
+        userinfo = self._cache.get(cache_key)
+        if userinfo is not None:
+            return userinfo
+        userinfo = self._douban.get_user_info(userid=user)
+        if userinfo:
+            self._cache.set(cache_key, userinfo, ttl=self._cache_ttl)
+        return userinfo
+
     def _sync_full_user(self, user, user_name, type_list, days, douban_ids):
         perpage = 15
         for mtype in type_list:
@@ -162,7 +188,12 @@ class DoubanSyncPlugin:
                 page = int(start / perpage + 1)
                 self.ctx.debug(f"开始解析第 {page} 页数据...")
                 try:
-                    items = self._douban.get_douban_wish(dtype=mtype, userid=user, start=start, wait=True)
+                    cache_key = self._cache_key("wish", f"{user}:{mtype}:{start}")
+                    items = self._cache.get(cache_key)
+                    if items is None:
+                        items = self._douban.get_douban_wish(dtype=mtype, userid=user, start=start, wait=True)
+                        if items is not None:
+                            self._cache.set(cache_key, items, ttl=self._cache_ttl)
                     if not items:
                         self.ctx.warn(f"第 {page} 页未获取到数据")
                         break
@@ -193,7 +224,14 @@ class DoubanSyncPlugin:
                     break
 
     def _sync_rss_user(self, user, user_name, type_list, days, douban_ids):
-        all_items = self._douban.get_latest_douban_interests(dtype="all", userid=user, wait=True)
+        cache_key = self._cache_key("rss", user)
+        all_items = self._cache.get(cache_key)
+        if all_items is None:
+            all_items = self._douban.get_latest_douban_interests(dtype="all", userid=user, wait=True)
+            if all_items is not None:
+                self._cache.set(cache_key, all_items, ttl=self._cache_ttl)
+        if not all_items:
+            return
         for mtype in type_list:
             items = [x for x in all_items if x.get("type") == mtype]
             for item in items:
@@ -210,12 +248,17 @@ class DoubanSyncPlugin:
                         douban_ids[doubanid] = {"user_name": user_name}
 
     def _process_douban_media(self, doubanid, info, auto_search, auto_rss, history_data):
-        douban_info = self._douban.get_douban_detail(doubanid=doubanid, wait=True)
-        if not douban_info:
-            douban_info = self._douban.get_media_detail_from_web(doubanid)
+        cache_key = self._cache_key("detail", str(doubanid))
+        douban_info = self._cache.get(cache_key)
+        if douban_info is None:
+            douban_info = self._douban.get_douban_detail(doubanid=doubanid, wait=True)
             if not douban_info:
-                self.ctx.warn(f"{doubanid} 无权限访问，需要配置豆瓣Cookie")
-                return
+                douban_info = self._douban.get_media_detail_from_web(doubanid)
+            if douban_info:
+                self._cache.set(cache_key, douban_info, ttl=self._cache_ttl)
+        if not douban_info:
+            self.ctx.warn(f"{doubanid} 无权限访问，需要配置豆瓣Cookie")
+            return
 
         media_type = MediaType.TV if douban_info.get("episodes_count") else MediaType.MOVIE
         mi = meta_info(title="{} {}".format(douban_info.get("title"), douban_info.get("year") or ""))

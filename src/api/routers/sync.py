@@ -196,10 +196,9 @@ def del_unknown_path(
 ):
     tid = req.id
     if isinstance(tid, list):
-        for t in tid:
-            if not t:
-                continue
-            ft.delete_transfer_unknown(t)
+        valid_tids = [t for t in tid if t]
+        if valid_tids:
+            ft.delete_transfer_unknowns(valid_tids)
         return success()
     else:
         retcode = ft.delete_transfer_unknown(tid)

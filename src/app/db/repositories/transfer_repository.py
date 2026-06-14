@@ -212,6 +212,15 @@ class TransferRepository(BaseRepository):
         with self.session() as db:
             db.query(TRANSFERHISTORY).filter(int(logid) == TRANSFERHISTORY.ID).delete()
 
+    def delete_transfer_logs(self, logids: list[int]) -> None:
+        """
+        批量删除识别记录
+        """
+        if not logids:
+            return
+        with self.session() as db:
+            db.query(TRANSFERHISTORY).filter(TRANSFERHISTORY.ID.in_(logids)).delete()
+
     def delete_transfer(self) -> None:
         """
         删除所有识别记录

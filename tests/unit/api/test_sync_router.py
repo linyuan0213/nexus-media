@@ -45,6 +45,7 @@ def mock_sync_service():
 def mock_filetransfer_service():
     ft = MagicMock()
     ft.delete_transfer_unknown.return_value = 0
+    ft.delete_transfer_unknowns.return_value = None
     ft.delete_media_file.return_value = None
     ft.delete_history.return_value = None
     ft.update_transfer_unknown_state.return_value = None
@@ -86,7 +87,7 @@ class TestSyncRouter:
         resp = client.post("/api/v1/sync/unknown/delete", json={"id": [1, 2, 3]})
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
-        assert mock_filetransfer_service.delete_transfer_unknown.call_count == 3
+        mock_filetransfer_service.delete_transfer_unknowns.assert_called_once_with([1, 2, 3])
 
     def test_del_unknown_path_single(self, client, mock_filetransfer_service):
         mock_filetransfer_service.delete_transfer_unknown.return_value = 0

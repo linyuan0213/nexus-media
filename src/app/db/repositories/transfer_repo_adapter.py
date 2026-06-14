@@ -84,6 +84,9 @@ class TransferHistoryRepositoryAdapter:
     def delete_transfer_log_by_id(self, logid: int) -> None:
         self._repo.delete_transfer_log_by_id(logid)
 
+    def delete_transfer_logs(self, logids: list[int]) -> None:
+        self._repo.delete_transfer_logs(logids)
+
     # 兼容旧Repository方法名
     def delete_transfer(self) -> None:
         self._repo.delete_transfer()
@@ -94,6 +97,9 @@ class TransferHistoryRepositoryAdapter:
 
     def delete_transfer_unknown(self, tid: int | None) -> None:
         self._repo.delete_transfer_unknown(tid)
+
+    def delete_transfer_unknowns(self, tids: list[int]) -> None:
+        self._repo.delete_transfer_unknowns(tids)
 
     def get_unknown_info_by_id(self, tid: int | None) -> TransferUnknownEntity | None:
         row = self._repo.get_unknown_info_by_id(tid)

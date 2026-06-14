@@ -135,11 +135,20 @@ class TransferCleanupService:
 
     def delete_history(self, logids, flag=None):
         """删除识别记录及文件."""
+        if not logids:
+            return
+
+        # 批量预加载所有转移信息，减少数据库往返
+        transinfos = []
         for logid in logids:
             transinfo = self._history.get_transfer_info_by_id(logid)
-            if not transinfo:
-                continue
-            self._history.delete_transfer_log_by_id(logid)
+            if transinfo:
+                transinfos.append(transinfo)
+
+        # 批量删除数据库记录
+        self._history.delete_transfer_logs([t.ID for t in transinfos if hasattr(t, "ID")])
+
+        for transinfo in transinfos:
             source_path = transinfo.SOURCE_PATH
             source_filename = transinfo.SOURCE_FILENAME
             media_info_dict = {

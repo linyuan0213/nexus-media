@@ -25,6 +25,7 @@ from app.domain.interfaces.rss_repo import (
     ISubscribeTvRepository,
 )
 from app.domain.mediatypes import MediaType
+from app.infrastructure.cache_system import get_cache_manager
 from app.media import MediaCache, MediaService, meta_info
 from app.message import Message
 from app.services.downloader_core import DownloaderCore as Downloader
@@ -75,6 +76,9 @@ class BaseSearchStrategy:
         self._downloader = downloader
         self._filter = filter_service
         self._message = message
+        self._ident_cache = get_cache_manager().get_or_create(
+            "subscribe_ident", cache_type="memory", maxsize=1000, ttl=3600
+        )
 
     def set_coordinator(self, coordinator: DownloadCoordinator | None) -> None:
         """设置下载协调器（用于 SubscriptionMonitor 注入）."""
@@ -296,6 +300,12 @@ class BaseSearchStrategy:
                     self._coordinator.release(media_info)
 
     def _get_media_info(self, tmdbid, name, year, mtype, cache=True):
+        """综合返回媒体信息；对空 tmdbid 的 name/year/mtype 组合做进程内缓存."""
+        key = f"ident:{mtype}:{name or ''}:{year or ''}:{tmdbid or ''}"
+        cached = self._ident_cache.get(key)
+        if cached is not None:
+            return cached
+
         if tmdbid and not str(tmdbid).startswith("DB:"):
             media_info = meta_info(title=("%s %s" % (name, year)).strip())
             tmdb_info = self._media_cache.get_tmdb_info(mtype=mtype, tmdbid=tmdbid)
@@ -307,4 +317,7 @@ class BaseSearchStrategy:
                     media_info = identified
         else:
             media_info = self._media_service.identify(title=f"{name} {year}".strip(), mtype=mtype)
+
+        if media_info is not None:
+            self._ident_cache.set(key, media_info)
         return media_info

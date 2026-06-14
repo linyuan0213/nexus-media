@@ -135,11 +135,17 @@ class FileTransferService:
     def delete_transfer_log_by_id(self, logid):
         return self._history.delete_transfer_log_by_id(logid)
 
+    def delete_transfer_logs(self, logids: list[int]) -> None:
+        return self._history.delete_transfer_logs(logids)
+
     def delete_transfer(self):
         return self._history.delete_transfer()
 
     def delete_transfer_unknown(self, tid):
         return self._history.delete_transfer_unknown(tid)
+
+    def delete_transfer_unknowns(self, tids: list[int]) -> None:
+        return self._history.delete_transfer_unknowns(tids)
 
     def get_unknown_info_by_id(self, tid):
         return self._history.get_unknown_info_by_id(tid)
