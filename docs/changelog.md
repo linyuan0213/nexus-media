@@ -21,7 +21,7 @@
 - 引入 `orjson` / `uvloop`；启用 `httpx` HTTP/2
 - 新增 Alembic 迁移 `e9d9eaed8d5c` 补充查询索引
 - 安全扫描: `just bandit` / `just safety` 均通过
-- 测试: 1124 个测试通过，覆盖率 `36%`
+- 测试: 1143 个测试通过，覆盖率 `36%`；新增 HttpClient/AsyncHttpClient、DownloadMonitor、image_proxy、infrastructure_builder 单元测试
 
 ## v4.0.0 (2026-06-09)
 
