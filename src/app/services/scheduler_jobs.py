@@ -9,6 +9,7 @@ from app.core.constants import (
 )
 from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
+from app.infrastructure.image_proxy import clean_old_cache
 from app.infrastructure.temp import TempCleanup
 
 
@@ -146,3 +147,14 @@ def load_default_jobs(
         next_run_time=datetime.datetime.now(),
         jobstore=_jobstore,
     )
+
+    # 定时清理过期图片缓存（每天执行一次）
+    scheduler.register_interval(
+        job_id="ImageProxy.clean_old_cache",
+        name="清理过期图片缓存",
+        func=clean_old_cache,
+        hours=24,
+        next_run_time=datetime.datetime.now(),
+        jobstore=_jobstore,
+    )
+    log.info("图片缓存清理任务已注册")
