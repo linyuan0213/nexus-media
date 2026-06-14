@@ -4,6 +4,7 @@ import asyncio
 import os
 import subprocess
 import time
+from concurrent.futures import wait
 
 import log
 from app.core.exceptions import ResourceNotFoundError
@@ -29,6 +30,22 @@ from initializer import (
     update_config,
     update_rss_state,
 )
+
+
+def _start_service_or_log(service_name: str, start_func):
+    try:
+        start_func()
+        log.info(f"[Lifecycle]{service_name} 启动完成")
+    except Exception as e:
+        log.error(f"[Lifecycle]{service_name} 启动失败: {e}")
+
+
+def _stop_service_or_log(service_name: str, stop_func):
+    try:
+        stop_func()
+        log.info(f"[Lifecycle]{service_name} 停止完成")
+    except Exception as e:
+        log.error(f"[Lifecycle]{service_name} 停止失败: {e}")
 
 
 class SchedulerService:
@@ -97,7 +114,7 @@ class SystemLifecycleService:
         site_userinfo=None,
         subscribe_service=None,
         media_server=None,
-        thread_executor=None,
+        thread_executor: ThreadExecutor | None = None,
         apikey_service=None,
         hook_system=None,
         event_bus=None,
@@ -144,36 +161,59 @@ class SystemLifecycleService:
             sync_engine=self._sync,
             subscribe_service=self._subscribe_service,
         )
-        # 2. 启动各业务服务（此时调度器已运行，init_config 里的 stop/start_job 可正常执行）
-        if self._file_index:
-            self._file_index.start()
-        self._sync.init()
-        if self._brush:
-            self._brush.start_service()
-        if self._rss_checker:
-            self._rss_checker._refresh()
-        if self._torrent_remover:
-            self._torrent_remover.start_service()
+        # 2. 并行启动各业务服务（此时调度器已运行，init_config 里的 stop/start_job 可正常执行）
+        startup_tasks = [
+            ("file_index", self._file_index.start) if self._file_index else None,
+            ("sync", self._sync.init),
+            ("brush", self._brush.start_service) if self._brush else None,
+            ("rss_checker", self._rss_checker._refresh) if self._rss_checker else None,
+            ("torrent_remover", self._torrent_remover.start_service) if self._torrent_remover else None,
+        ]
+        futures = []
+        if self._thread_executor:
+            for item in startup_tasks:
+                if item is None:
+                    continue
+                name, func = item
+                futures.append(self._thread_executor.submit(_start_service_or_log, name, func))
+            if futures:
+                wait(futures)
+        else:
+            for item in startup_tasks:
+                if item is None:
+                    continue
+                name, func = item
+                _start_service_or_log(name, func)
         # 4. 启动下载完成实时监控（事件驱动转移）
         self._download_monitor.start()
 
     def stop_service(self) -> None:
         """停止所有后台服务"""
         self._scheduler.stop_service()
-        if self._download_monitor:
-            self._download_monitor.stop()
-        if self._sync:
-            self._sync.stop()
-        if self._brush:
-            self._brush.stop_service()
-        if self._rss_checker:
-            self._rss_checker.stop_service()
-        if self._torrent_remover:
-            self._torrent_remover.stop_service()
-        if self._downloader:
-            self._downloader.stop_service()
-        if self._file_index:
-            self._file_index.stop()
+        stop_tasks = [
+            ("download_monitor", self._download_monitor.stop) if self._download_monitor else None,
+            ("sync", self._sync.stop) if self._sync else None,
+            ("brush", self._brush.stop_service) if self._brush else None,
+            ("rss_checker", self._rss_checker.stop_service) if self._rss_checker else None,
+            ("torrent_remover", self._torrent_remover.stop_service) if self._torrent_remover else None,
+            ("downloader", self._downloader.stop_service) if self._downloader else None,
+            ("file_index", self._file_index.stop) if self._file_index else None,
+        ]
+        futures = []
+        if self._thread_executor:
+            for item in stop_tasks:
+                if item is None:
+                    continue
+                name, func = item
+                futures.append(self._thread_executor.submit(_stop_service_or_log, name, func))
+            if futures:
+                wait(futures)
+        else:
+            for item in stop_tasks:
+                if item is None:
+                    continue
+                name, func = item
+                _stop_service_or_log(name, func)
         HttpClient.close_all()
         try:
             asyncio.get_running_loop()

@@ -2,12 +2,19 @@
 
 from typing import Any
 
+import log
 from app.agent.tools.base import ToolResult
 from app.domain.enums import SearchType
 from app.domain.mediatypes import MediaType
+from app.infrastructure.cache_system import get_cache_manager
 from app.media.models import MediaInfo
 
 _MEDIA_TYPE_MAP = {"movie": MediaType.MOVIE, "tv": MediaType.TV, "anime": MediaType.ANIME}
+_search_cache = get_cache_manager().get_or_create("agent_media_search", cache_type="memory", maxsize=200, ttl=60)
+
+
+def _search_cache_key(query: str, media_type: str, year: int, season: int, episode: int) -> str:
+    return f"{query}:{media_type}:{year}:{season}:{episode}"
 
 
 def media_search(
@@ -20,6 +27,12 @@ def media_search(
     limit: int = 10,
     **_,
 ) -> ToolResult:
+    cache_key = _search_cache_key(query, media_type, year, season, episode)
+    cached = _search_cache.get(cache_key)
+    if cached is not None:
+        log.debug(f"[media_search] 命中缓存: {query}")
+        return ToolResult(success=True, data=cached)
+
     intent_agent = deps["search_intent_agent"]
     intent = intent_agent.parse(query) if intent_agent.ready else None
     keywords = intent.keywords if intent else query
@@ -61,16 +74,15 @@ def media_search(
                 "enclosure": getattr(r, "enclosure", ""),
             }
         )
-    return ToolResult(
-        success=True,
-        data={
-            "query": query,
-            "keywords": keywords,
-            "media_title": media_info.title,
-            "results_count": len(results),
-            "results": formatted,
-        },
-    )
+    data = {
+        "query": query,
+        "keywords": keywords,
+        "media_title": media_info.title,
+        "results_count": len(results),
+        "results": formatted,
+    }
+    _search_cache.set(cache_key, data)
+    return ToolResult(success=True, data=data)
 
 
 def _parse_size_gb(s: str) -> float:
