@@ -17,7 +17,7 @@ from app.message import Message
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 from app.sites.site_favicon_service import SiteFaviconService
-from app.utils import ExceptionUtils, JsonUtils
+from app.utils import ExceptionUtils, JsonUtils, StringUtils
 from app.utils.config_tools import get_proxies
 
 lock = Lock()
@@ -249,6 +249,61 @@ class SiteUserInfo:
             self.message.send_site_message(
                 title=f"站点 {site_user_info.site_name} 收到 {site_user_info.message_unread} 条新消息，请登陆查看"
             )
+
+    def refresh_site_data_now(self, specify_sites=None):
+        """
+        强制刷新站点数据
+        :param specify_sites: 指定站点名称列表，None 表示全部
+        """
+        lock_key = f"site:refresh:{','.join(specify_sites) if specify_sites else 'all'}"
+        from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
+
+        refresh_lock = get_lock_manager().create_lock(lock_key, ttl_seconds=600)
+        acquired = refresh_lock.acquire()
+        if not acquired:
+            log.info("[Sites]站点数据刷新正在执行，跳过")
+            return
+        try:
+            self.__refresh_all_site_data(force=True, specify_sites=specify_sites)
+        finally:
+            refresh_lock.release()
+        # 刷完发送消息
+        string_list = []
+
+        # 增量数据
+        inc_uploads = 0
+        inc_downloads = 0
+        _, _, site, upload, download = self.get_pt_site_statistics_history(2)
+        if upload and download:
+            inc_uploads = int(upload[0][0]) - int(upload[0][1])
+            inc_downloads = int(download[0][0]) - int(download[0][1])
+        for k, v in self._sites_data.items():
+            if v.get("err_msg"):
+                string_list.append(f"【{k}】{v.get('err_msg')}")
+            else:
+                string_list.append(
+                    f"【{k}】{v.get('username')} {v.get('user_level')}，"
+                    f"上传量：{StringUtils.str_filesize(v.get('upload') or 0)}，"
+                    f"下载量：{StringUtils.str_filesize(v.get('download') or 0)}，"
+                    f"魔力：{v.get('bonus') or 0}，"
+                    f"做种数：{v.get('seeding') or 0}"
+                )
+        if string_list and self.message:
+            self.message.send_site_message(
+                title=f"站点数据刷新完成，总上传量 {StringUtils.str_filesize(inc_uploads)}，"
+                f"总下载量 {StringUtils.str_filesize(inc_downloads)}",
+                text="\n".join(string_list),
+            )
+
+    def refresh_site_data(self, force=False, specify_sites=None) -> dict:
+        """
+        刷新站点数据，返回站点数据字典
+        :param force: 是否强制刷新
+        :param specify_sites: 指定站点名称列表
+        :return: 站点数据字典
+        """
+        self.__refresh_all_site_data(force=force, specify_sites=specify_sites)
+        return self._sites_data
 
     def __refresh_all_site_data(self, force=False, specify_sites=None):
         """
