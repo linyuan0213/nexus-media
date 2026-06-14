@@ -174,6 +174,7 @@ class SiteEngine:
 
     def __init__(self, definitions_dir: str | None = None):
         self._sites: dict[str, SiteDefinition] = {}
+        self._domain_index: dict[str, SiteDefinition] = {}
         self._auth_cache: dict[str, str] = {}
         self._user_info_factories = []
         self.site_limiter: Any = None
@@ -199,21 +200,40 @@ class SiteEngine:
                     data = JsonUtils.load(f)
                 site_def = SiteDefinition.from_dict(data)
                 self._sites[site_def.id] = site_def
+                self._index_site(site_def)
                 log.debug(f"[SiteEngine]加载站点定义: {site_def.name} ({site_def.id})")
             except Exception:
                 log.warn(f"[SiteEngine]加载站点定义失败: {fname}\n{traceback.format_exc()}")
 
+    def _index_site(self, site_def: SiteDefinition) -> None:
+        """将站点定义加入 domain 索引."""
+        if site_def.domain:
+            self._domain_index[site_def.domain.lower()] = site_def
+            for alias in site_def.domain_aliases:
+                self._domain_index[alias.lower()] = site_def
+
     def register(self, site_def: SiteDefinition):
         self._sites[site_def.id] = site_def
+        self._index_site(site_def)
 
     def get_by_id(self, site_id: str) -> SiteDefinition | None:
         return self._sites.get(site_id)
 
     def get_by_url(self, url: str) -> SiteDefinition | None:
+        if not url:
+            return None
+        parsed = urlparse(url.lower())
+        if parsed.netloc:
+            site = self._domain_index.get(parsed.netloc)
+            if site:
+                return site
         for site in self._sites.values():
             if site.match_url(url):
                 return site
         return None
+
+    def get_by_domain(self, domain: str) -> SiteDefinition | None:
+        return self._domain_index.get(domain.lower()) if domain else None
 
     def all_sites(self) -> list[SiteDefinition]:
         return list(self._sites.values())

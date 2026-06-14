@@ -19,6 +19,7 @@ from app.plugin_framework.registry import PluginRegistry
 from app.plugin_framework.sandbox import PluginSandbox
 from app.services.apikey_service import APIKeyService
 from app.services.scheduler.core import SchedulerCore
+from app.services.site_rate_limiter import SiteRateLimiterService
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 from app.sites.siteuserinfo.config_api import _api_factory
@@ -40,7 +41,9 @@ def build_infrastructure() -> InfrastructureObjects:
     site_engine.register_user_info_factory(_api_factory)
     site_engine.register_user_info_factory(_html_config_factory)
 
-    site_cache = SiteCache(site_engine=site_engine)
+    site_rate_limiter = SiteRateLimiterService()
+    site_cache = SiteCache(site_engine=site_engine, rate_limiter=site_rate_limiter)
+    site_engine.site_limiter = site_rate_limiter
     message_queue = MessageQueueFactory.create()
     hook_system = HookSystem(plugin_sandbox=None)
 

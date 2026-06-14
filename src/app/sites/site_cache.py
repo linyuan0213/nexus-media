@@ -24,9 +24,15 @@ class SiteCache:
     由 lifespan 通过 AppContext 创建并管理生命周期。
     """
 
-    def __init__(self, repo: ISiteRepository | None = None, site_engine: SiteEngine | None = None):
+    def __init__(
+        self,
+        repo: ISiteRepository | None = None,
+        site_engine: SiteEngine | None = None,
+        rate_limiter: SiteRateLimiterService | None = None,
+    ):
         self._repo = repo or SiteRepositoryAdapter()
         self._site_engine = site_engine or SiteEngine()
+        self._rate_limiter = rate_limiter or SiteRateLimiterService()
         self._site_by_ids: dict[int, dict] = {}
         self._site_by_urls: dict[str, dict] = {}
         self._rss_sites: list[dict] = []
@@ -112,7 +118,7 @@ class SiteCache:
         if note.get("public") == "N":
             is_public = False
 
-        return {
+        site_info = {
             "id": entity.id,
             "name": entity.name,
             "pri": entity.pri or 0,
@@ -142,6 +148,11 @@ class SiteCache:
             "tag": entity.name if note.get("tag") == "Y" else "",
             "public": is_public,
         }
+
+        # 注册到限流服务
+        self._rate_limiter.register_site(str(entity.id), note)
+
+        return site_info
 
     def get_sites(
         self,
@@ -226,8 +237,7 @@ class SiteCache:
 
     def check_ratelimit(self, site_id: int | str) -> bool:
         """检查站点是否触发流控."""
-        limiter = SiteRateLimiterService()
-        state = limiter.check(str(site_id), timeout=0)
+        state = self._rate_limiter.check(str(site_id), timeout=0)
         if state:
             log.warn(f"[SiteCache]站点 {self._site_by_ids.get(int(site_id), {}).get('name')} 触发流控")
         return state
