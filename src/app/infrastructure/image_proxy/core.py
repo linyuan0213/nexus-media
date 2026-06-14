@@ -3,12 +3,11 @@
 供 Flask 蓝图和 FastAPI 路由共用。
 """
 
+import asyncio
 import hashlib
 import os
-import threading
 import time
 import urllib.parse
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
 
 from PIL import Image
@@ -16,13 +15,13 @@ from PIL import Image
 import log
 from app.core.constants import TMDB_IMAGE_DOMAIN
 from app.core.root_path import get_project_root
-from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.async_client import AsyncHttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.utils.config_tools import get_proxies
 
 # 下载任务锁，防止重复下载同一个图片
 _download_locks = {}
-_download_locks_lock = threading.Lock()
+_download_locks_lock = asyncio.Lock()
 
 # 缓存目录（与 Flask 侧保持一致）
 CACHE_DIR = os.path.join(get_project_root(), "static", "img_cache")
@@ -38,21 +37,21 @@ SIZE_DIMENSIONS = {"w92": 92, "w154": 154, "w185": 185, "w342": 342, "w500": 500
 # 来源域名映射
 SOURCE_DOMAINS = {"tmdb": TMDB_IMAGE_DOMAIN, "douban": "img9.doubanio.com", "bgm": "lain.bgm.tv"}
 
-# 连接池 HttpClient 管理
+# 连接池 AsyncHttpClient 管理
 _client_pool = {}
-_client_lock = threading.Lock()
+_client_lock = asyncio.Lock()
 
 
-def _get_client(domain):
-    """获取或创建带连接池的 HttpClient"""
-    with _client_lock:
+async def _get_client(domain):
+    """获取或创建异步 HttpClient"""
+    async with _client_lock:
         if domain not in _client_pool:
             try:
                 proxies = get_proxies() or None
             except Exception:
                 proxies = None
             proxy_url = proxies.get("http") if proxies else None
-            client = HttpClient(
+            client = AsyncHttpClient(
                 config=HttpClientConfig(
                     verify_ssl=False,
                     follow_redirects=True,
@@ -117,54 +116,64 @@ def _clean_old_cache():
         log.error(f"[ImageProxy]清理缓存失败: {e!s}")
 
 
-def _download_image(url, timeout=10, referer=None):
+async def _download_image(url, timeout=10, referer=None):
     """
-    下载图片 - 使用连接池和并发控制
+    异步下载图片
     """
     cache_key = hashlib.md5(url.encode(), usedforsecurity=False).hexdigest()
 
-    with _download_locks_lock:
+    async with _download_locks_lock:
         if cache_key in _download_locks:
             lock = _download_locks[cache_key]
         else:
-            lock = threading.Lock()
+            lock = asyncio.Lock()
             _download_locks[cache_key] = lock
 
-    with lock:
+    async with lock:
         try:
             parsed = urllib.parse.urlparse(url)
             domain = parsed.netloc
-            client = _get_client(domain)
+            client = await _get_client(domain)
 
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
             if referer:
                 headers["Referer"] = referer
 
-            response = client.get(url, headers=headers, timeout=timeout, raise_for_status=False)
+            response = await client.get(url, headers=headers, timeout=timeout, raise_for_status=False)
             response.raise_for_status()
             return response.content
         except Exception as e:
             log.error(f"[ImageProxy]下载图片失败 {url}: {e!s}")
             return None
         finally:
-            with _download_locks_lock:
+            async with _download_locks_lock:
                 _download_locks.pop(cache_key, None)
 
 
-def download_images_concurrently(urls, referer=None, max_workers=10):
-    """并发下载多张图片"""
+async def download_images_concurrently(urls, referer=None, max_workers=10):
+    """并发异步下载多张图片"""
+    semaphore = asyncio.Semaphore(max_workers)
+
+    async def download_single(url):
+        async with semaphore:
+            return url, await _download_image(url, referer=referer)
+
+    tasks = [asyncio.create_task(download_single(url)) for url in urls]
     results = {}
-
-    def download_single(url):
-        return url, _download_image(url, referer=referer)
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(download_single, url): url for url in urls}
-        for future in as_completed(futures):
-            url, data = future.result()
-            results[url] = data
-
+    for coro in asyncio.as_completed(tasks):
+        url, data = await coro
+        results[url] = data
     return results
+
+
+async def download_image(url, timeout=10, referer=None):
+    """外部 API：异步下载图片"""
+    return await _download_image(url, timeout=timeout, referer=referer)
+
+
+def get_cache_path(source, url_path, size=None):
+    """外部 API：获取缓存路径"""
+    return _get_cache_path(source, url_path, size)
 
 
 def _resize_image(image_data, target_size):
@@ -186,21 +195,16 @@ def _resize_image(image_data, target_size):
         return image_data
 
 
-def get_cache_path(source, url_path, size=None):
-    """外部 API：获取缓存路径"""
-    return _get_cache_path(source, url_path, size)
-
-
-def download_image(url, timeout=10, referer=None):
-    """外部 API：下载图片"""
-    return _download_image(url, timeout=timeout, referer=referer)
-
-
 def resize_image(image_data, target_size):
     """外部 API：调整图片尺寸"""
     return _resize_image(image_data, target_size)
 
 
+async def clean_old_cache_async():
+    """外部 API：异步清理过期缓存"""
+    _clean_old_cache()
+
+
 def clean_old_cache():
-    """外部 API：清理过期缓存"""
+    """外部 API：清理过期缓存（同步兼容）"""
     _clean_old_cache()

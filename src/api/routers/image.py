@@ -27,7 +27,7 @@ from app.infrastructure.image_proxy import (
 router = APIRouter()
 
 
-def _serve_image(cache_path: str, image_url: str, size: str | None = None, referer: str | None = None):
+async def _serve_image(cache_path: str, image_url: str, size: str | None = None, referer: str | None = None):
     """FastAPI 版本的缓存检查/下载/返回图片"""
     # 检查缓存（30 天过期），空缓存直接删除重下
     if os.path.exists(cache_path):
@@ -43,7 +43,7 @@ def _serve_image(cache_path: str, image_url: str, size: str | None = None, refer
             log.error(f"[ImageProxy]读取缓存失败: {str(e)}")
 
     # 下载图片
-    image_data = download_image(image_url, referer=referer)
+    image_data = await download_image(image_url, referer=referer)
     if not image_data or len(image_data) < 100:
         log.error(f"[ImageProxy]下载内容为空或过小: {image_url}")
         raise HTTPException(status_code=404, detail="获取图片失败")
@@ -66,17 +66,17 @@ def _serve_image(cache_path: str, image_url: str, size: str | None = None, refer
 
 
 @router.get("/tmdb/{size}/{img_path:path}", summary="代理 TMDB 图片")
-def proxy_tmdb_image(size: str, img_path: str):
+async def proxy_tmdb_image(size: str, img_path: str):
     """代理 TMDB 图片"""
     if size not in SIZE_DIMENSIONS:
         size = "w500"
     cache_path = get_cache_path("tmdb", img_path, size)
     original_url = f"https://{TMDB_IMAGE_DOMAIN}/t/p/original/{img_path}"
-    return _serve_image(cache_path, original_url, size)
+    return await _serve_image(cache_path, original_url, size)
 
 
 @router.get("/douban/{img_path:path}", summary="代理豆瓣图片")
-def proxy_douban_image(img_path: str):
+async def proxy_douban_image(img_path: str):
     """代理豆瓣图片"""
     decoded_path = urllib.parse.unquote(img_path)
     cache_path = get_cache_path("douban", decoded_path)
@@ -84,11 +84,11 @@ def proxy_douban_image(img_path: str):
         image_url = decoded_path
     else:
         image_url = f"https://{SOURCE_DOMAINS['douban']}/{decoded_path}"
-    return _serve_image(cache_path, image_url, referer="https://movie.douban.com")
+    return await _serve_image(cache_path, image_url, referer="https://movie.douban.com")
 
 
 @router.get("/bgm/{img_path:path}", summary="代理 Bangumi 图片")
-def proxy_bgm_image(img_path: str):
+async def proxy_bgm_image(img_path: str):
     """代理 Bangumi 图片"""
     decoded_path = urllib.parse.unquote(img_path)
     cache_path = get_cache_path("bgm", decoded_path)
@@ -96,11 +96,11 @@ def proxy_bgm_image(img_path: str):
         image_url = decoded_path
     else:
         image_url = f"https://{SOURCE_DOMAINS['bgm']}/{decoded_path}"
-    return _serve_image(cache_path, image_url)
+    return await _serve_image(cache_path, image_url)
 
 
 @router.get("/library/{img_url:path}", summary="代理媒体库图片")
-def proxy_library_image(request: Request, img_url: str):
+async def proxy_library_image(request: Request, img_url: str):
     """代理媒体库内网图片"""
     decoded_url = urllib.parse.unquote(img_url)
     # 重新附加查询参数（如 Plex 的 X-Plex-Token）
@@ -109,7 +109,7 @@ def proxy_library_image(request: Request, img_url: str):
         query_string = str(request.query_params)
         decoded_url += separator + query_string
     cache_path = get_cache_path("library", decoded_url)
-    return _serve_image(cache_path, decoded_url)
+    return await _serve_image(cache_path, decoded_url)
 
 
 @router.get("", summary="图片代理重定向")
