@@ -1,9 +1,12 @@
 """Google Gemini 提供商"""
 
+import warnings
 from typing import Any
 
-from google import genai  # type: ignore  # noqa: PGH003
-from google.genai import types
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", DeprecationWarning)
+    from google import genai  # type: ignore  # noqa: PGH003
+    from google.genai import types
 
 import log
 from app.agent.providers.base import BaseProvider, ProviderConfig

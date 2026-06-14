@@ -2,8 +2,9 @@
 RSS 种子领域实体
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -20,7 +21,7 @@ class SubscribeTorrentEntity:
     episode: str | None
 
     @classmethod
-    def from_orm(cls, orm_model) -> Optional["SubscribeTorrentEntity"]:
+    def from_orm(cls, orm_model) -> SubscribeTorrentEntity | None:
         if orm_model is None:
             return None
         return cls(

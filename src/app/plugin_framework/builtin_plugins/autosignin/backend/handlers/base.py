@@ -1,7 +1,6 @@
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional
 
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
@@ -15,13 +14,13 @@ class SiteSigninContext:
 
     site: str
     site_url: str
-    cookie: Optional[str]
-    api_key: Optional[str]
-    bearer_token: Optional[str]
-    ua: Optional[str]
-    proxy_url: Optional[str]
-    api_key_header: Optional[str] = None
-    headers: Optional[dict] = None
+    cookie: str | None
+    api_key: str | None
+    bearer_token: str | None
+    ua: str | None
+    proxy_url: str | None
+    api_key_header: str | None = None
+    headers: dict | None = None
     is_chrome: bool = False
     raw: dict = field(default_factory=dict)
 
@@ -97,7 +96,7 @@ class SiteSigninHandler(ABC):
         html_text = re.sub(r"#\d+", "", re.sub(r"\d+px", "", html_res))
         return any(re.search(str(regex), html_text) for regex in regexs)
 
-    def _check_cookie(self, html_text: str, site: str) -> Optional[SigninResult]:
+    def _check_cookie(self, html_text: str, site: str) -> SigninResult | None:
         if "login.php" in html_text:
             return SigninResult.fail(site, SigninResult.COOKIE_EXPIRED)
         return None
