@@ -6,6 +6,7 @@ import time
 
 import log
 from app.core.exceptions import ResourceNotFoundError
+from app.infrastructure.http.client import HttpClient
 from app.infrastructure.thread import ThreadExecutor
 from app.services.brush.task_service import BrushTaskService
 from app.services.download_monitor import DownloadMonitor
@@ -171,6 +172,7 @@ class SystemLifecycleService:
             self._downloader.stop_service()
         if self._file_index:
             self._file_index.stop()
+        HttpClient.close_all()
 
     def restart_service(self) -> None:
         """重启所有后台服务"""
