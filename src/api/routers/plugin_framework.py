@@ -334,13 +334,19 @@ def get_plugin_asset(
 ):
     """获取插件前端资源文件（UMD 组件等）.
 
+    URL 中的 /assets/ 前缀映射到插件根目录；
     若插件未提供前端资源，返回空 JS 占位，避免前端 loader 报 404.
     """
     plugin_path = svc.get_plugin_path(plugin_id)
     if not plugin_path:
         return fail(msg="插件未找到")
 
-    target = os.path.join(plugin_path, file_path)
+    # /assets/ 是虚拟前缀，实际文件位于插件根目录下
+    relative_path = file_path
+    if relative_path.startswith("assets/"):
+        relative_path = relative_path[len("assets/") :]
+
+    target = os.path.join(plugin_path, relative_path)
     real_plugin_path = os.path.realpath(plugin_path)
     real_target = os.path.realpath(target)
 
@@ -348,7 +354,7 @@ def get_plugin_asset(
         return fail(msg="非法路径")
 
     if not os.path.exists(target) or not os.path.isfile(target):
-        if file_path.endswith("index.umd.js"):
+        if relative_path.endswith("index.umd.js"):
             return Response(content="", media_type="application/javascript")
         return fail(msg="文件不存在")
 
