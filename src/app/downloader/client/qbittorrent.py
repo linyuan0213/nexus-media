@@ -52,9 +52,22 @@ class Qbittorrent(_IDownloadClient):
     password = None
     download_dir = []
     name = "测试"
+    _sync_rid: int = 0
+    _sync_torrents: dict[str, dict] = {}
+    _completed_states = {
+        "uploading",
+        "stalledUP",
+        "queuedUP",
+        "pausedUP",
+        "stoppedUP",
+        "forcedUP",
+        "checkingUP",
+    }
 
     def __init__(self, config: dict):
         self._client_config = config
+        self._sync_rid = 0
+        self._sync_torrents = {}
         self.init_config()
         self.connect()
         self.init_torrent_management()
@@ -189,6 +202,9 @@ class Qbittorrent(_IDownloadClient):
         if not self.qbc:
             return [], True
         try:
+            if ids is None and status == "completed":
+                return self._get_torrents_sync(status=status, tag=tag)
+
             status_filter = cast(Any, status) if isinstance(status, str) else None
             torrents = self.qbc.torrents_info(torrent_hashes=ids, status_filter=status_filter)
             torrent_list: list[Torrent] = []
@@ -219,6 +235,91 @@ class Qbittorrent(_IDownloadClient):
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
             return [], True
+
+    def _get_torrents_sync(
+        self,
+        status: list[TorrentStatus] | str | None = None,
+        tag: str | list[str] | None = None,
+    ) -> tuple[list[Torrent], bool]:
+        """使用 qBittorrent sync/maindata 增量接口获取已完成任务，减少数据传输。"""
+        if not self.qbc:
+            return [], True
+        try:
+            sync_data: Any = self.qbc.sync_maindata(rid=self._sync_rid)
+            self._sync_rid = int(sync_data.get("rid") or self._sync_rid)
+
+            if sync_data.get("full_update"):
+                self._sync_torrents = {}
+
+            torrents_data: dict[str, Any] = sync_data.get("torrents") or {}
+            for t_hash, t_data in torrents_data.items():
+                self._sync_torrents[t_hash] = t_data
+            for removed in sync_data.get("torrents_removed") or []:
+                self._sync_torrents.pop(str(removed), None)
+
+            tags_set = set(tag) if isinstance(tag, list) else {tag} if tag else None
+            torrent_list: list[Torrent] = []
+            for t_hash, t_data in self._sync_torrents.items():
+                state = str(t_data.get("state") or "")
+                if state not in self._completed_states:
+                    continue
+                if tags_set:
+                    labels = {s.strip() for s in (t_data.get("tags") or "").split(",")}
+                    if not tags_set.intersection(labels):
+                        continue
+                torrent_list.append(self._torrent_from_sync(t_hash, t_data))
+            return torrent_list or [], False
+        except (InfrastructureError, NetworkError):
+            raise
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+            # 回退到全量接口
+            self._sync_rid = 0
+            self._sync_torrents = {}
+            return self._fallback_get_torrents(status=status, tag=tag)
+
+    def _fallback_get_torrents(
+        self,
+        status: list[TorrentStatus] | str | None = None,
+        tag: str | list[str] | None = None,
+    ) -> tuple[list[Torrent], bool]:
+        """sync/maindata 失败时回退到 torrents_info 全量接口。"""
+        if not self.qbc:
+            return [], True
+        status_filter = cast(Any, status) if isinstance(status, str) else None
+        torrents = self.qbc.torrents_info(status_filter=status_filter)
+        torrent_list: list[Torrent] = []
+        for torrent in torrents:
+            torrent_list.append(self.torrent_properties(torrent=torrent))
+        if tag:
+            results: list[Torrent] = []
+            if not isinstance(tag, list):
+                tag = [tag]
+            for torrent in torrent_list:
+                include_flag = True
+                for t in tag:
+                    if t and t not in torrent.labels:
+                        include_flag = False
+                        break
+                if include_flag:
+                    results.append(torrent)
+            return results or [], False
+        return torrent_list or [], False
+
+    def _torrent_from_sync(self, t_hash: str, t_data: dict) -> Torrent:
+        """从 sync/maindata 数据构造 Torrent（仅填充必要字段，避免额外 API 调用）."""
+        torrent_obj = Torrent()
+        torrent_obj.id = t_hash
+        torrent_obj.name = t_data.get("name")
+        torrent_obj.size = int(t_data.get("total_size") or 0)
+        torrent_obj.status = self._map_status(str(t_data.get("state") or ""))
+        torrent_obj.labels = [s.strip() for s in (t_data.get("tags") or "").split(",") if s.strip()]
+        torrent_obj.content_path = t_data.get("content_path")
+        torrent_obj.save_path = t_data.get("save_path")
+        torrent_obj.progress = float(t_data.get("progress") or 0)
+        torrent_obj.download_speed = int(t_data.get("dlspeed") or 0)
+        torrent_obj.upload_speed = int(t_data.get("upspeed") or 0)
+        return torrent_obj
 
     def get_completed_torrents(
         self, ids: list[str] | str | None = None, tag: str | list[str] | None = None

@@ -89,9 +89,11 @@ class _IDownloadClient(metaclass=ABCMeta):
     def set_torrents_tag(self, ids: list[str] | str | None = None, tags: str | list[str] | None = None) -> bool:
         """设置种子标签"""
 
-    def get_transfer_task(self, tag: str | None = None, match_path: bool | None = None) -> list[dict]:
+    def get_transfer_task(
+        self, tag: str | None = None, match_path: bool | None = None, ids: list[str] | None = None
+    ) -> list[dict]:
         """获取需要转移的种子列表。子类可覆盖 _get_content_subpath 来自定义路径计算。"""
-        torrents = self.get_completed_torrents() or []
+        torrents = self.get_completed_torrents(ids=ids) or []
         trans_tasks = []
         for torrent in torrents:
             labels = torrent.labels or []

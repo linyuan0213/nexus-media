@@ -35,6 +35,7 @@ class DownloadMonitor:
         self._processed_ids: set[str] = set()
         self._executor: ThreadExecutor | None = None
         self._running = False
+        self._last_snapshot: dict[str, set[str]] = {}
 
     def start(self) -> None:
         """启动监控线程池."""
@@ -103,7 +104,7 @@ class DownloadMonitor:
                 log.error(f"[DownloadMonitor]检查下载器 {did} 异常: {e!s}")
 
     def _check_downloader(self, did: str) -> None:
-        """检查单个下载器的新完成任务."""
+        """检查单个下载器的新完成任务（增量检查）."""
         client = self._client_factory.get_client(did)
         if not client:
             return
@@ -114,13 +115,32 @@ class DownloadMonitor:
 
         only_nexus_media = downloader_conf.get("only_nexus_media")
         match_path = downloader_conf.get("match_path")
+        tag = PT_TAG if only_nexus_media else None
 
-        trans_tasks = client.get_transfer_task(tag=PT_TAG if only_nexus_media else None, match_path=match_path)
-        if not trans_tasks:
+        previous_ids = self._last_snapshot.get(did, set())
+        if not previous_ids:
+            # 首次全量拉取并建立快照
+            trans_tasks = client.get_transfer_task(tag=tag, match_path=match_path)
+            self._last_snapshot[did] = {str(task.get("id")) for task in trans_tasks if task.get("id")}
+            self._emit_new_tasks(did, trans_tasks)
             return
 
+        # 后续只拉取增量任务：先获取全部候选 id 列表，再针对新增 id 调用详情接口
+        all_tasks = client.get_transfer_task(tag=tag, match_path=match_path)
+        current_ids = {str(task.get("id")) for task in all_tasks if task.get("id")}
+        new_ids = current_ids - previous_ids
+        self._last_snapshot[did] = current_ids
+
+        if not new_ids:
+            return
+
+        new_tasks = client.get_transfer_task(tag=tag, match_path=match_path, ids=list(new_ids))
+        self._emit_new_tasks(did, new_tasks)
+
+    def _emit_new_tasks(self, did: str, trans_tasks: list[dict]) -> None:
+        """发布新增下载完成任务事件."""
         for task in trans_tasks:
-            task_id = task.get("id")
+            task_id = str(task.get("id")) if task.get("id") else ""
             task_path = task.get("path") or ""
             if not task_id or not task_path:
                 continue
