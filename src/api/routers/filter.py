@@ -223,6 +223,7 @@ def get_filterrules(
     req: EmptyRequest = EmptyRequest(),
     user: str = Depends(require_any_permission("setting:view", "setting:update")),
     filter_service: Filter = Depends(get_filter_service),
+    script_path: str = Depends(_get_script_path),
 ):
-    rule_groups, _init_rule_groups = filter_service.get_filterrules(_get_script_path())
+    rule_groups, _init_rule_groups = filter_service.get_filterrules(script_path)
     return success(data=rule_groups)
