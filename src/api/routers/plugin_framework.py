@@ -8,7 +8,7 @@ import os
 import tempfile
 import threading
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Response, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -332,7 +332,10 @@ def get_plugin_asset(
     file_path: str,
     svc: PluginFrameworkService = Depends(get_plugin_framework_service),
 ):
-    """获取插件前端资源文件（UMD 组件等）"""
+    """获取插件前端资源文件（UMD 组件等）.
+
+    若插件未提供前端资源，返回空 JS 占位，避免前端 loader 报 404.
+    """
     plugin_path = svc.get_plugin_path(plugin_id)
     if not plugin_path:
         return fail(msg="插件未找到")
@@ -345,6 +348,8 @@ def get_plugin_asset(
         return fail(msg="非法路径")
 
     if not os.path.exists(target) or not os.path.isfile(target):
+        if file_path.endswith("index.umd.js"):
+            return Response(content="", media_type="application/javascript")
         return fail(msg="文件不存在")
 
     return FileResponse(target)
