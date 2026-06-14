@@ -45,6 +45,8 @@ class MessageDispatcher:
                     url = f"{self._domain}?next={url}"
             else:
                 url = ""
+            if image and image.startswith("/"):
+                image = f"{self._domain}{image}"
         else:
             url = ""
         max_length = client.get("max_length")
