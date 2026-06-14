@@ -2,6 +2,7 @@ from math import floor
 
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.domain.mediatypes import MediaType
+from app.infrastructure.cache_system import get_cache_manager
 from app.schemas.media import TransferHistoryPageDTO, UnknownListPageDTO
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.sync_service import SyncService
@@ -16,18 +17,30 @@ class TransferHistoryService:
         self,
         filetransfer: FileTransfer,
         sync_service: SyncService,
+        cache_ttl: int = 30,
     ):
         self._filetransfer = filetransfer
         self._sync_service = sync_service
+        self._cache = get_cache_manager().get_or_create(
+            "transfer_history_service", cache_type="memory", maxsize=100
+        )
+        self._cache_ttl = cache_ttl
+
+    def _cache_key(self, prefix: str, *parts) -> str:
+        return f"{prefix}:{':'.join(str(p) for p in parts)}"
 
     def get_transfer_history_page(self, search_str, page, page_num) -> TransferHistoryPageDTO:
-        """分页查询转移历史"""
+        """分页查询转移历史（带缓存）"""
         if not page_num:
             page_num = 30
         if not page:
             page = 1
         else:
             page = int(page)
+        cache_key = self._cache_key("history", search_str or "", page, page_num)
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
         result = self._filetransfer.get_transfer_history(search_str, page, page_num)
         if result is None:
             total_count, historys = 0, []
@@ -41,12 +54,18 @@ class TransferHistoryService:
             history.update({"SYNC_MODE": sync_mode, "RMT_MODE": rmt_mode})
             historys_list.append(history)
         total_page = floor(total_count / page_num) + 1
-        return TransferHistoryPageDTO(
+        dto = TransferHistoryPageDTO(
             total=total_count, result=historys_list, total_page=total_page, page_num=page_num, current_page=page
         )
+        self._cache.set(cache_key, dto, ttl=self._cache_ttl)
+        return dto
 
     def get_transfer_statistics(self, days=90) -> dict:
-        """获取转移统计"""
+        """获取转移统计（带缓存）"""
+        cache_key = self._cache_key("stats", days)
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
         data = {}
         for statistic in self._filetransfer.get_transfer_statistics(days) or []:
             if not statistic[2]:
@@ -63,12 +82,14 @@ class TransferHistoryService:
             elif parsed == MediaType.ANIME:
                 entry["anime"] = statistic[2]
         labels = list(data.keys())
-        return {
+        result = {
             "Labels": labels,
             "MovieNums": [data[label]["movie"] for label in labels],
             "TvNums": [data[label]["tv"] for label in labels],
             "AnimeNums": [data[label]["anime"] for label in labels],
         }
+        self._cache.set(cache_key, result, ttl=self._cache_ttl)
+        return result
 
     def _convert_unknown_record(self, rec) -> dict | None:
         """将未识别记录转换为前端需要的字典结构."""
@@ -89,22 +110,31 @@ class TransferHistoryService:
         }
 
     def get_unknown_list(self) -> list[dict]:
-        """获取未识别记录列表"""
+        """获取未识别记录列表（带缓存）"""
+        cache_key = self._cache_key("unknown_list")
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
         items = []
         for rec in self._filetransfer.get_transfer_unknown_paths() or []:
             item = self._convert_unknown_record(rec)
             if item:
                 items.append(item)
+        self._cache.set(cache_key, items, ttl=self._cache_ttl)
         return items
 
     def get_unknown_list_by_page(self, search_str, page, page_num) -> UnknownListPageDTO:
-        """分页查询未识别记录"""
+        """分页查询未识别记录（带缓存）"""
         if not page_num:
             page_num = 30
         if not page:
             page = 1
         else:
             page = int(page)
+        cache_key = self._cache_key("unknown_page", search_str or "", page, page_num)
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
         result2 = self._filetransfer.get_transfer_unknown_paths_by_page(search_str, page, page_num)
         if result2 is None:
             total_count, records = 0, []
@@ -116,9 +146,11 @@ class TransferHistoryService:
             if item:
                 items.append(item)
         total_page = floor(total_count / page_num) + 1
-        return UnknownListPageDTO(
+        dto = UnknownListPageDTO(
             total=total_count, items=items, total_page=total_page, page_num=page_num, current_page=page
         )
+        self._cache.set(cache_key, dto, ttl=self._cache_ttl)
+        return dto
 
     def re_identify_unknown(self) -> int:
         """重新识别所有未识别记录"""
@@ -131,3 +163,4 @@ class TransferHistoryService:
         """清空识别记录"""
         self._filetransfer.delete_transfer()
         self._filetransfer.truncate_transfer_blacklist()
+        self._cache.clear()

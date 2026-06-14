@@ -8,6 +8,10 @@ import hashlib
 import os
 import re
 import shutil
+from collections import defaultdict
+from collections.abc import Callable
+from concurrent.futures import Future, wait
+from typing import Any
 
 import log
 from app.core.constants import RMT_MEDIAEXT, RMT_MIN_FILESIZE
@@ -368,6 +372,105 @@ class FileTransferService:
             media_type = parsed_type
             return self.media.get_tmdb_info(mtype=media_type, tmdbid=download_info.TMDBID), media_type
         return None, None
+
+    def _transfer_files(
+        self,
+        medias,
+        in_from,
+        in_path,
+        operation,
+        target_dir,
+        unknown_dir,
+        bluray_disk_dir,
+        episode,
+        udf_flag,
+        dst_backend,
+    ):
+        """按目标目录分组并发转移，同一目录内串行避免重命名冲突."""
+        if bluray_disk_dir or len(medias) <= 1 or self._thread_executor is None:
+            return self._transfer_files_loop(
+                medias,
+                in_from,
+                in_path,
+                operation,
+                target_dir,
+                unknown_dir,
+                bluray_disk_dir,
+                episode,
+                udf_flag,
+                dst_backend,
+            )
+
+        groups = defaultdict(dict)
+        for file_item, media in medias.items():
+            dist_path = target_dir or self._path_resolver.get_best_target_path(
+                mtype=media.type, in_path=in_path, size=getattr(media, "size", 0)
+            )
+            if not dist_path:
+                dist_path = ""
+            groups[dist_path][file_item] = media
+
+        def _transfer_group(group_medias: dict) -> dict:
+            return self._transfer_files_loop(
+                group_medias,
+                in_from,
+                in_path,
+                operation,
+                target_dir,
+                unknown_dir,
+                bluray_disk_dir,
+                episode,
+                udf_flag,
+                dst_backend,
+            )
+
+        results = self._run_parallel(list(groups.values()), _transfer_group)
+        return self._merge_transfer_results([r for r in results if r is not None])
+
+    def _merge_transfer_results(self, results: list[dict]) -> dict:
+        """合并多组文件转移结果."""
+        merged = {
+            "total_count": 0,
+            "failed_count": 0,
+            "alert_count": 0,
+            "alert_messages": [],
+            "message_medias": {},
+            "success_flag": True,
+            "error_message": "",
+            "exist_filenum": 0,
+        }
+        seen_messages = set()
+        for result in results:
+            merged["total_count"] += result.get("total_count", 0)
+            merged["failed_count"] += result.get("failed_count", 0)
+            merged["alert_count"] += result.get("alert_count", 0)
+            for msg in result.get("alert_messages", []):
+                if msg not in seen_messages:
+                    seen_messages.add(msg)
+                    merged["alert_messages"].append(msg)
+            merged["message_medias"].update(result.get("message_medias", {}))
+            merged["exist_filenum"] += result.get("exist_filenum", 0)
+            if not result.get("success_flag", True):
+                merged["success_flag"] = False
+            if not merged["error_message"] and result.get("error_message"):
+                merged["error_message"] = result.get("error_message")
+        return merged
+
+    def _run_parallel(self, items: list, func: Callable[[Any], Any]) -> list[Any]:
+        """对无依赖任务使用线程池并发执行；失败隔离，返回结果列表."""
+        if not items or self._thread_executor is None:
+            return [func(item) for item in items]
+
+        def _wrapper(item):
+            try:
+                return func(item)
+            except Exception as err:
+                ExceptionUtils.exception_traceback(err)
+                return None
+
+        futures: list[Future] = [self._thread_executor.submit(_wrapper, item) for item in items]
+        wait(futures)
+        return [f.result() for f in futures]
 
     def _transfer_files_loop(
         self,
@@ -772,14 +875,20 @@ class FileTransferService:
                 return
             log.info(f"[Rmt]转移模式为：{operation}")
             log.info(f"[Rmt]正在转移以下目录中的全量文件：{s_path}")
-            for path in PathUtils.get_dir_level1_medias(s_path, RMT_MEDIAEXT):
-                if PathUtils.is_invalid_path(path):
-                    continue
+            paths = [
+                path
+                for path in PathUtils.get_dir_level1_medias(s_path, RMT_MEDIAEXT)
+                if not PathUtils.is_invalid_path(path)
+            ]
+
+            def _transfer_one(path: str) -> None:
                 ret, ret_msg = self.transfer_media(
                     in_from=SyncType.MAN, in_path=path, target_dir=t_path, operation=operation
                 )
                 if not ret:
                     log.error(f"[Rmt]{path} 处理失败：{ret_msg}")
+
+            self._run_parallel(paths, _transfer_one)
         finally:
             lock.release()
 

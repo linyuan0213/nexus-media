@@ -5,6 +5,7 @@ import defusedxml.minidom  # type: ignore[import-untyped]
 
 import log
 from app.db.repositories.subscribe_torrent_repo_adapter import SubscribeTorrentRepositoryAdapter
+from app.infrastructure.cache_system import get_cache_manager
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.services.rss_automation.rsstitle_utils import RssTitleUtils
@@ -16,9 +17,21 @@ from app.utils.config_tools import get_proxies, get_ua
 class RssHelper:
     """RSS 解析助手"""
 
-    def __init__(self, site_engine: SiteEngine, repo: SubscribeTorrentRepositoryAdapter | None = None):
+    def __init__(
+        self,
+        site_engine: SiteEngine,
+        repo: SubscribeTorrentRepositoryAdapter | None = None,
+        cache_ttl: int = 60,
+    ):
         self._repo = repo or SubscribeTorrentRepositoryAdapter()
         self._site_engine = site_engine
+        self._cache = get_cache_manager().get_or_create(
+            "rss_processor", cache_type="memory", maxsize=200, ttl=cache_ttl
+        )
+        self._cache_ttl = cache_ttl
+
+    def _cache_key(self, url: str, proxy: bool) -> str:
+        return f"rss:{url}:proxy={proxy}"
 
     def parse_rssxml(self, url, proxy=False):
         """
@@ -32,9 +45,14 @@ class RssHelper:
         _rss_expired_msg = ["RSS 链接已过期, 您需要获得一个新的!", "RSS Link has expired, You need to get a new one!"]
 
         # 开始处理
-        ret_array = []
         if not url:
             return []
+        cache_key = self._cache_key(url, proxy)
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        ret_array = []
         site_domain = StringUtils.get_url_domain(url)
         try:
             headers = {
@@ -139,6 +157,7 @@ class RssHelper:
                 if ret_xml in _rss_expired_msg:
                     return None
                 ExceptionUtils.exception_traceback(e2)
+        self._cache.set(cache_key, ret_array, ttl=self._cache_ttl)
         return ret_array
 
     def insert_rss_torrents(self, media_info):
