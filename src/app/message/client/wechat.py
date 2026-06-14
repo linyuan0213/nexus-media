@@ -153,6 +153,7 @@ class WeChat(_IMessageClient):
         token = self._get_access_token()
         if not token:
             return False, "参数未配置或配置不正确"
+        log.info(f"[WeChat]send_msg image={image}, url={url}")
         if image:
             return self._send_image(token, title, text, image, url, user_id)
         return self._send_text(token, title, text, url, user_id)

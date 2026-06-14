@@ -5,6 +5,7 @@ import time
 from enum import Enum
 from typing import Any
 
+import log
 from app.domain.mediatypes import MediaType
 from app.utils import StringUtils
 
@@ -22,6 +23,8 @@ class MessageBuilder:
         msg_title = f"{can_item.get_title_ep_string()} 开始下载"
         msg_text = f"{can_item.get_star_string()}"
         msg_text = f"{msg_text}\n来自：{in_from.value}"
+        message_image = can_item.get_message_image() if hasattr(can_item, "get_message_image") else ""
+        log.debug(f"[MessageBuilder]下载消息图片: {message_image}")
         if download_setting_name:
             msg_text = f"{msg_text}\n下载设置：{download_setting_name}"
         if downloader_name:
@@ -98,7 +101,7 @@ class MessageBuilder:
                     client=client,
                     title=msg_title,
                     text=msg_text,
-                    image=can_item.get_message_image(),
+                    image=message_image,
                     url="downloading",
                     msg_type="download_start",
                     variables=variables,
