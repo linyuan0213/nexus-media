@@ -1,11 +1,13 @@
 """Lifecycle services - 调度器与系统生命周期管理."""
 
+import asyncio
 import os
 import subprocess
 import time
 
 import log
 from app.core.exceptions import ResourceNotFoundError
+from app.infrastructure.http.async_client import AsyncHttpClient
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.thread import ThreadExecutor
 from app.services.brush.task_service import BrushTaskService
@@ -173,6 +175,11 @@ class SystemLifecycleService:
         if self._file_index:
             self._file_index.stop()
         HttpClient.close_all()
+        try:
+            asyncio.get_running_loop()
+            asyncio.create_task(AsyncHttpClient.close_all())
+        except RuntimeError:
+            asyncio.run(AsyncHttpClient.close_all())
 
     def restart_service(self) -> None:
         """重启所有后台服务"""
