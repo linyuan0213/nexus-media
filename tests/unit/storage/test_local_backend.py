@@ -54,7 +54,7 @@ class TestStorageBase:
             def read_stream(self, path: str):
                 return BytesIO(b"")
 
-            def write_stream(self, path: str, stream, size: int = 0) -> None:
+            def write_stream(self, path: str, stream, size: int = 0, chunk_size: int = 0) -> None:
                 return None
 
             def copy(self, src: str, dst: str) -> None:

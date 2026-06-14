@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.db.repositories.brush_repo_adapter import BrushRuleRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
@@ -119,6 +120,10 @@ class BrushService:
         if not acquired:
             return
         try:
+            taskinfo = self._brush.get_brushtask_info(taskid)
+            if not taskinfo or taskinfo.get("state") not in ["Y", "S"]:
+                log.info(f"[Brush]任务 {taskid} 未启用，跳过")
+                return
             self._brush.check_task_rss(taskid)
         finally:
             lock.release()

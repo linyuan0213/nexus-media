@@ -171,12 +171,19 @@ class BrushRssChecker:
                 size = res.get("size")
                 pubdate = res.get("pubdate")
 
+                if not enclosure:
+                    continue
+
                 if enclosure not in self._torrents_cache:
                     if len(self._torrents_cache) >= 10000:
                         self._torrents_cache = set(list(self._torrents_cache)[5000:])
                     self._torrents_cache.add(enclosure)
                 else:
                     log.debug(f"[Brush]{torrent_name} 已处理过")
+                    continue
+
+                if self._helper.is_torrent_handled(enclosure=enclosure):
+                    log.info(f"[Brush]{torrent_name} 已在刷流任务中")
                     continue
 
                 torrent_attr = self._check_torrent_attr_if_needed(
@@ -205,9 +212,6 @@ class BrushRssChecker:
                 ):
                     continue
                 if not self._helper.is_allow_new_torrent(taskinfo=taskinfo, dlcount=max_dlcount, torrent_size=size):
-                    continue
-                if self._helper.is_torrent_handled(enclosure=enclosure):
-                    log.info(f"[Brush]{torrent_name} 已在刷流任务中")
                     continue
 
                 if self._helper.download_torrent(

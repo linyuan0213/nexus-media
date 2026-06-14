@@ -108,15 +108,27 @@ class TestSubscribeRefreshService:
             assert result is mi
             mi.set_tmdb_info.assert_called_once_with({"id": 789})
 
-    def test_get_media_info_without_tmdbid(self, service):
-        media = _MediaInfo(None, "Search")
+    def test_refresh_rss_metainfo_cached_reuses_media_info(self, service):
+        """refresh_rss_metainfo_cached 对相同 name/year/mtype 只请求一次媒体信息."""
+        media = _MediaInfo(123, "Different", "2024", "overview")
+        call_count = [0]
+
+        def get_media_info(*args, **kwargs):
+            call_count[0] += 1
+            return media
+
+        service._media.get_media_info = get_media_info
         with patch("app.services.subscribe.management.refresh_service.meta_info") as mock_meta:
-            mock_meta.return_value = media
-            service._media.get_media_info.return_value = media
-            result = service._SubscribeRefreshService__get_media_info(
-                tmdbid=None, name="Search", year="2024", mtype="movie"
+            mock_meta.return_value = MediaInfo()
+            service._media.get_tmdb_info.return_value = {}
+            service.refresh_rss_metainfo_cached(
+                get_subscribe_movies_fn=lambda state: {
+                    "1": {"id": "1", "name": "Same Movie", "year": "2024"},
+                    "2": {"id": "2", "name": "Same Movie", "year": "2024"},
+                },
+                get_subscribe_tvs_fn=lambda state: {},
             )
-            assert result is media
-            service._media.get_media_info.assert_called_once_with(
-                title="Search 2024", mtype="movie", strict=True, cache=True
-            )
+        # 两个电影订阅 name/year 相同，媒体服务应只被调用一次
+        assert call_count[0] == 1
+        # 同一缓存对象被用于两个订阅，因此更新两次
+        assert service._movie_repo.update_tmdb.call_count == 2

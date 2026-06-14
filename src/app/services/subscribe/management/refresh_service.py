@@ -104,3 +104,22 @@ class SubscribeRefreshService:
                 title=f"{name} {year}".strip(), mtype=mtype, strict=True, cache=cache
             )
         return media_info
+
+    def refresh_rss_metainfo_cached(self, get_subscribe_movies_fn, get_subscribe_tvs_fn) -> None:
+        """带缓存的刷新入口：同一次调度中避免重复请求同一 tmdbid/name/year 组合."""
+        self.__cache = {}
+        self.__orig_get_media_info = self.__get_media_info
+        self.__get_media_info = self.__get_media_info_cached
+        try:
+            self.refresh_rss_metainfo(get_subscribe_movies_fn, get_subscribe_tvs_fn)
+        finally:
+            self.__get_media_info = self.__orig_get_media_info
+            del self.__orig_get_media_info
+            self.__cache.clear()
+
+    def __get_media_info_cached(self, tmdbid, name, year, mtype, cache=True):
+        """内部缓存版本，供 refresh_rss_metainfo_cached 使用."""
+        key = (str(tmdbid) if tmdbid else "", name, year, str(mtype))
+        if key not in self.__cache:
+            self.__cache[key] = self.__orig_get_media_info(tmdbid, name, year, mtype, cache)
+        return self.__cache[key]
