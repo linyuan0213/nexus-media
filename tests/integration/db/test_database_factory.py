@@ -1,6 +1,7 @@
 """数据库工厂单元测试"""
 
 import pytest
+from sqlalchemy import text
 
 from app.db.database_factory import DatabaseFactory
 
@@ -72,5 +73,37 @@ class TestDatabaseFactory:
         try:
             inspector = inspect(engine)
             assert inspector.get_table_names() == []
+        finally:
+            engine.dispose()
+
+    def test_sqlite_pragmas_applied(self, tmp_path):
+        db_path = tmp_path / "test_pragmas.db"
+        engine = DatabaseFactory.create_engine(db_type="sqlite", db_path=str(db_path))
+        try:
+            with engine.connect() as conn:
+                journal_mode = conn.execute(text("PRAGMA journal_mode;")).scalar()
+                assert journal_mode and journal_mode.lower() == "wal"
+                assert conn.execute(text("PRAGMA synchronous;")).scalar() == 1
+                assert conn.execute(text("PRAGMA busy_timeout;")).scalar() == 30000
+                assert conn.execute(text("PRAGMA wal_autocheckpoint;")).scalar() == 1000
+        finally:
+            engine.dispose()
+
+    def test_sqlite_memory_uses_static_pool(self):
+        engine = DatabaseFactory.create_engine(db_type="sqlite", db_path=":memory:")
+        try:
+            from sqlalchemy.pool import StaticPool
+
+            assert isinstance(engine.pool, StaticPool)
+        finally:
+            engine.dispose()
+
+    def test_sqlite_file_uses_null_pool(self, tmp_path):
+        db_path = tmp_path / "test_null_pool.db"
+        engine = DatabaseFactory.create_engine(db_type="sqlite", db_path=str(db_path))
+        try:
+            from sqlalchemy.pool import NullPool
+
+            assert isinstance(engine.pool, NullPool)
         finally:
             engine.dispose()

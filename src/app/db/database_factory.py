@@ -17,9 +17,9 @@ import os
 from typing import Any
 from urllib.parse import quote_plus
 
-from sqlalchemy import Engine, create_engine, text
+from sqlalchemy import Engine, create_engine, event, text
 from sqlalchemy import create_engine as sa_create_engine
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.pool import NullPool, QueuePool, StaticPool
 
 import log
 from app.core.settings import settings
@@ -201,14 +201,15 @@ class DatabaseFactory:
         }
 
         if db_type == DatabaseFactory.SQLITE:
-            # SQLite 特定配置
-            engine_kwargs["poolclass"] = kwargs.get("poolclass", QueuePool)
-            engine_kwargs["pool_size"] = kwargs.get("pool_size", 50)
-            engine_kwargs["max_overflow"] = kwargs.get("max_overflow", 100)
-            engine_kwargs["pool_timeout"] = kwargs.get("pool_timeout", 60)
-            engine_kwargs["pool_recycle"] = kwargs.get("pool_recycle", 3600)
-            engine_kwargs["pool_pre_ping"] = kwargs.get("pool_pre_ping", True)
-            engine_kwargs["connect_args"] = {"timeout": 30}
+            # SQLite 文件库使用 NullPool，每个请求后关闭连接，配合 busy_timeout 让 SQLite 自身排队
+            # :memory: 库使用 StaticPool 保证所有操作在同一连接内
+            is_memory = db_path == ":memory:"
+            if is_memory:
+                engine_kwargs["poolclass"] = kwargs.get("poolclass", StaticPool)
+                engine_kwargs["connect_args"] = {"check_same_thread": False}
+            else:
+                engine_kwargs["poolclass"] = kwargs.get("poolclass", NullPool)
+                engine_kwargs["connect_args"] = {"timeout": 30}
         else:
             # MySQL/PostgreSQL 连接池配置
             engine_kwargs["poolclass"] = QueuePool
@@ -226,6 +227,20 @@ class DatabaseFactory:
         return engine
 
     @staticmethod
+    def _setup_sqlite_pragmas(engine: Engine) -> None:
+        """为 SQLite 引擎注册 connect 事件监听器，确保每个连接都执行性能/并发 PRAGMA."""
+
+        @event.listens_for(engine, "connect")
+        def _set_pragmas(dbapi_conn, _):
+            dbapi_conn.execute("PRAGMA journal_mode=WAL;")
+            dbapi_conn.execute("PRAGMA synchronous=NORMAL;")
+            dbapi_conn.execute("PRAGMA cache_size=-64000;")
+            dbapi_conn.execute("PRAGMA temp_store=MEMORY;")
+            dbapi_conn.execute("PRAGMA mmap_size=268435456;")
+            dbapi_conn.execute("PRAGMA busy_timeout=30000;")
+            dbapi_conn.execute("PRAGMA wal_autocheckpoint=1000;")
+
+    @staticmethod
     def _init_database(engine: Engine, db_type: str):
         """
         执行数据库特定的初始化设置
@@ -234,13 +249,10 @@ class DatabaseFactory:
         :param db_type: 数据库类型
         """
         if db_type == DatabaseFactory.SQLITE:
-            # SQLite WAL 模式和性能优化
+            DatabaseFactory._setup_sqlite_pragmas(engine)
+            # 立即对当前连接执行一次 PRAGMA，保证 create_engine 后立即可用
             with engine.connect() as conn:
-                conn.execute(text("PRAGMA journal_mode=WAL;"))
-                conn.execute(text("PRAGMA synchronous=NORMAL;"))
-                conn.execute(text("PRAGMA cache_size=-64000;"))  # 64MB缓存
-                conn.execute(text("PRAGMA temp_store=MEMORY;"))
-                conn.execute(text("PRAGMA mmap_size=268435456;"))  # 256MB内存映射
+                conn.execute(text("SELECT 1"))
 
     @staticmethod
     def is_sqlite(engine: Engine) -> bool:
