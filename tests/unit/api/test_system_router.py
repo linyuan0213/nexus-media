@@ -1,0 +1,75 @@
+"""System API Router 单元测试."""
+
+from unittest.mock import MagicMock, patch
+
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from api.deps import get_current_user
+from api.routers import system as system_router
+from app.schemas.auth import UserContext
+
+
+@pytest.fixture
+def client():
+    app = FastAPI()
+    app.include_router(system_router.router, prefix="/api/v1/system")
+    admin_ctx = UserContext(
+        user_id=1,
+        username="admin",
+        level=0,
+        permissions=["log:view"],
+        is_superadmin=True,
+    )
+    app.dependency_overrides[get_current_user] = lambda: admin_ctx
+    with TestClient(app) as c:
+        yield c
+
+
+class TestSystemRouter:
+    def test_stream_logging_missing_token(self, client):
+        """缺少 token 时返回 401."""
+        resp = client.get("/api/v1/system/stream-logging")
+        assert resp.status_code == 401
+
+    def test_stream_logging_invalid_token(self, client):
+        """无效 token 时返回 401."""
+        with patch("app.services.auth_service.AuthService.verify_token", return_value=None):
+            resp = client.get("/api/v1/system/stream-logging?token=invalid")
+        assert resp.status_code == 401
+
+    def test_stream_logging_forbidden(self, client):
+        """非超管且无 log:view 权限时返回 403."""
+        user_ctx = UserContext(
+            user_id=2,
+            username="user",
+            level=0,
+            permissions=[],
+            is_superadmin=False,
+        )
+        with patch("app.services.auth_service.AuthService.verify_token", return_value=user_ctx):
+            resp = client.get("/api/v1/system/stream-logging?token=valid")
+        assert resp.status_code == 403
+
+    def test_stream_logging_success(self, client):
+        """有效超管 token 可建立日志流."""
+        admin_ctx = UserContext(
+            user_id=1,
+            username="admin",
+            level=0,
+            permissions=["log:view"],
+            is_superadmin=True,
+        )
+        stream_mock = MagicMock()
+        stream_mock.__iter__ = MagicMock(return_value=iter([b"data: log\n\n"]))
+
+        with patch("app.services.auth_service.AuthService.verify_token", return_value=admin_ctx):
+            with patch("api.routers.system.LogStreamingService") as mock_service_cls:
+                mock_service = MagicMock()
+                mock_service.stream.return_value = stream_mock
+                mock_service_cls.return_value = mock_service
+                resp = client.get("/api/v1/system/stream-logging?token=valid")
+
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == "text/event-stream; charset=utf-8"

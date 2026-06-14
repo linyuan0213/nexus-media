@@ -114,6 +114,8 @@ class TestSubscriptionRouter:
     def test_update_rss_media(self, client, mock_subscribe_service):
         resp = client.post("/api/v1/subscription/update", json={"rssid": "1", "name": "Test", "type": "movie"})
         assert resp.status_code == 200
+        assert resp.json()["code"] == 0
+        assert resp.json()["data"]["rssid"] == "1"
         mock_subscribe_service.update_rss_subscribe.assert_called_once()
 
     def test_delete_rss_history(self, client, mock_history_service):

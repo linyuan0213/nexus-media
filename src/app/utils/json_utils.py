@@ -97,10 +97,11 @@ class JsonUtils:
     ) -> str:
         """使用 orjson 序列化 JSON；需要缩进、自定义 encoder 或 separators 时回退到标准库 json."""
         if indent or default is not None or separators is not None:
+            indent_value = 2 if indent is True else (None if indent is False else indent)
             return json.dumps(
                 obj,
                 ensure_ascii=ensure_ascii,
-                indent=indent if isinstance(indent, int) else (2 if indent else None),
+                indent=indent_value,
                 default=default,
                 sort_keys=sort_keys,
                 separators=separators,
@@ -127,11 +128,12 @@ class JsonUtils:
     ) -> None:
         """将 JSON 写入文件对象；需要缩进、自定义 encoder 或 separators 时回退到标准库 json."""
         if indent or default is not None or separators is not None:
+            indent_value = 2 if indent is True else (None if indent is False else indent)
             json.dump(
                 obj,
                 file,
                 ensure_ascii=ensure_ascii,
-                indent=indent if isinstance(indent, int) else (2 if indent else None),
+                indent=indent_value,
                 default=default,
                 sort_keys=sort_keys,
                 separators=separators,

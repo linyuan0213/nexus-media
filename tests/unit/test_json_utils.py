@@ -64,3 +64,54 @@ class TestJsonUtils:
 
     def test_get_json_object_invalid(self):
         assert JsonUtils.get_json_object("not json", "a") is None
+
+    def test_dumps_basic(self):
+        assert JsonUtils.dumps({"a": 1}) == '{"a":1}'
+
+    def test_dumps_ensure_ascii(self):
+        # orjson 没有 ensure_ascii 选项，始终保留 unicode
+        result = JsonUtils.dumps({"key": "中文"}, ensure_ascii=True)
+        assert result == '{"key":"中文"}'
+
+    def test_dumps_no_ensure_ascii(self):
+        result = JsonUtils.dumps({"key": "中文"}, ensure_ascii=False)
+        assert result == '{"key":"中文"}'
+
+    def test_dumps_indent_fallback_to_stdlib(self):
+        result = JsonUtils.dumps({"a": 1}, indent=True)
+        assert result == '{\n  "a": 1\n}'
+
+    def test_dumps_custom_default_fallback_to_stdlib(self):
+        result = JsonUtils.dumps({"dt": "2024-01-01"}, default=lambda o: str(o))
+        assert '"2024-01-01"' in result
+
+    def test_dumps_sort_keys(self):
+        assert JsonUtils.dumps({"b": 1, "a": 2}, sort_keys=True) == '{"a":2,"b":1}'
+
+    def test_dump_to_file(self):
+        import io
+
+        buffer = io.StringIO()
+        JsonUtils.dump({"a": 1}, buffer)
+        buffer.seek(0)
+        assert buffer.read() == '{"a":1}'
+
+    def test_dump_to_file_with_indent(self):
+        import io
+
+        buffer = io.StringIO()
+        JsonUtils.dump({"a": 1}, buffer, indent=True)
+        buffer.seek(0)
+        assert buffer.read() == '{\n  "a": 1\n}'
+
+    def test_loads_str(self):
+        assert JsonUtils.loads('{"a":1}') == {"a": 1}
+
+    def test_loads_bytes(self):
+        assert JsonUtils.loads(b'{"a":1}') == {"a": 1}
+
+    def test_load_from_file(self):
+        import io
+
+        buffer = io.BytesIO(b'{"a":1}')
+        assert JsonUtils.load(buffer) == {"a": 1}
