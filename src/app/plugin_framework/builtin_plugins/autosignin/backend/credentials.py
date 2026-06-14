@@ -2,7 +2,6 @@
 
 import time
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from app.infrastructure.cache_system.cookiecloud_adapter import CookiecloudAdapter
 from app.utils.json_utils import JsonUtils
@@ -10,7 +9,7 @@ from app.utils.json_utils import JsonUtils
 
 class CredentialSource(ABC):
     @abstractmethod
-    def extract(self, site_info: dict) -> Optional[str]: ...
+    def extract(self, site_info: dict) -> str | None: ...
 
 
 class HeaderSource(CredentialSource):
@@ -18,7 +17,7 @@ class HeaderSource(CredentialSource):
         self.name = name.lower()
         self.strip_prefix = strip_prefix
 
-    def extract(self, site_info: dict) -> Optional[str]:
+    def extract(self, site_info: dict) -> str | None:
         headers = site_info.get("headers")
         if isinstance(headers, str):
             try:
@@ -40,7 +39,7 @@ class LocalStorageSource(CredentialSource):
         self.domain = domain
         self.key = key
 
-    def extract(self, site_info: dict) -> Optional[str]:
+    def extract(self, site_info: dict) -> str | None:
         local_storage = CookiecloudAdapter().get_local_storage(self.domain)
         if local_storage:
             return local_storage.get(self.key)
@@ -53,7 +52,7 @@ class CredentialResolver:
     def __init__(self, site_info: dict):
         self.site_info = site_info
 
-    def resolve(self, auth_source: dict | None) -> tuple[Optional[str], bool]:
+    def resolve(self, auth_source: dict | None) -> tuple[str | None, bool]:
         """返回 (token_value, need_sync)。"""
         if auth_source is None:
             return None, False
@@ -62,7 +61,7 @@ class CredentialResolver:
             return None, True
         return source.extract(self.site_info), False
 
-    def resolve_after_sync(self, auth_source: dict | None) -> Optional[str]:
+    def resolve_after_sync(self, auth_source: dict | None) -> str | None:
         if auth_source is None:
             return None
         return self._build_source(auth_source).extract(self.site_info)

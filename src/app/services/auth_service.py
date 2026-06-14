@@ -4,7 +4,7 @@ JWT 认证服务
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import jwt
@@ -77,7 +77,7 @@ class AuthService:
         """
         创建 Access + Refresh Token 对
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # Access Token
         access_payload = {

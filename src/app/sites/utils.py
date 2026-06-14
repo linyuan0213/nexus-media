@@ -17,7 +17,7 @@ def is_logged_in(html_text: str) -> bool:
         return True
 
     html = etree.HTML(html_text)
-    if not html:
+    if html is None:
         return False
     if html.xpath("//input[@type='password']"):
         return False

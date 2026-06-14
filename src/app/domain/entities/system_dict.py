@@ -2,8 +2,9 @@
 系统字典领域实体
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -17,7 +18,7 @@ class SystemDictEntity:
     note: str | None
 
     @classmethod
-    def from_orm(cls, orm_model) -> Optional["SystemDictEntity"]:
+    def from_orm(cls, orm_model) -> SystemDictEntity | None:
         if orm_model is None:
             return None
         return cls(
