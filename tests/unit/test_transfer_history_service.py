@@ -37,10 +37,13 @@ def mock_sync_service():
 
 @pytest.fixture
 def service(mock_filetransfer, mock_sync_service):
-    return TransferHistoryService(
+    svc = TransferHistoryService(
         filetransfer=mock_filetransfer,
         sync_service=mock_sync_service,
+        cache_ttl=30,
     )
+    svc._cache.clear()
+    return svc
 
 
 class TestTransferHistoryService:
@@ -127,3 +130,45 @@ class TestTransferHistoryService:
         service.clear_history()
         mock_filetransfer.delete_transfer.assert_called_once()
         mock_filetransfer.truncate_transfer_blacklist.assert_called_once()
+
+
+class TestTransferHistoryServiceCache:
+    def test_get_transfer_history_page_uses_cache(self, service, mock_filetransfer):
+        mock_filetransfer.get_transfer_history.return_value = (65, [_HistoryMock()])
+        first = service.get_transfer_history_page("", 2, 20)
+        second = service.get_transfer_history_page("", 2, 20)
+        assert first == second
+        mock_filetransfer.get_transfer_history.assert_called_once()
+
+    def test_get_transfer_statistics_uses_cache(self, service, mock_filetransfer):
+        mock_filetransfer.get_transfer_statistics.return_value = [("movie", "2024-01-01", 5)]
+        first = service.get_transfer_statistics(days=7)
+        second = service.get_transfer_statistics(days=7)
+        assert first == second
+        mock_filetransfer.get_transfer_statistics.assert_called_once()
+
+    def test_get_unknown_list_uses_cache(self, service, mock_filetransfer):
+        mock_filetransfer.get_transfer_unknown_paths.return_value = [_UnknownMock()]
+        mock_filetransfer.get_sync_backend_by_dest.return_value = "local"
+        first = service.get_unknown_list()
+        second = service.get_unknown_list()
+        assert first == second
+        mock_filetransfer.get_transfer_unknown_paths.assert_called_once()
+
+    def test_get_unknown_list_by_page_uses_cache(self, service, mock_filetransfer):
+        mock_filetransfer.get_transfer_unknown_paths_by_page.return_value = (1, [_UnknownMock()])
+        mock_filetransfer.get_sync_backend_by_dest.return_value = "local"
+        first = service.get_unknown_list_by_page("", 1, 10)
+        second = service.get_unknown_list_by_page("", 1, 10)
+        assert first == second
+        mock_filetransfer.get_transfer_unknown_paths_by_page.assert_called_once()
+
+    def test_clear_history_clears_cache(self, service, mock_filetransfer):
+        mock_filetransfer.get_transfer_unknown_paths.return_value = [_UnknownMock()]
+        mock_filetransfer.get_sync_backend_by_dest.return_value = "local"
+        service.get_unknown_list()
+        service.clear_history()
+        mock_filetransfer.get_transfer_unknown_paths.return_value = []
+        result = service.get_unknown_list()
+        assert result == []
+        assert mock_filetransfer.get_transfer_unknown_paths.call_count == 2
