@@ -3,6 +3,7 @@
 复用 app.infrastructure.queue 作为异步投递后端
 """
 
+import log
 from app.events.bridge import PluginBridge
 from app.events.middleware import Middleware, MiddlewareChain
 from app.events.registry import EventHandlerRegistry
@@ -49,7 +50,11 @@ class EventBus:
 
                 def _run_handlers(e: Event) -> None:
                     for h in handlers:
-                        h(e)
+                        try:
+                            h(e)
+                        except Exception as handler_err:
+                            # 单个 handler 失败不影响其他 handler
+                            log.error(f"[EventBus] Handler {h.__name__} 处理 {event.event_type} 失败: {handler_err}")
 
                 chain = MiddlewareChain(self._middleware, _run_handlers)
                 chain.execute(event)

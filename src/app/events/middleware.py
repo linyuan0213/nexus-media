@@ -26,7 +26,7 @@ class LoggingMiddleware(Middleware):
 
 
 class ErrorHandlingMiddleware(Middleware):
-    """错误处理中间件：单个 Handler 失败不影响其他 Handler"""
+    """错误处理中间件：捕获中间件链/Handler 异常并记录"""
 
     def process(self, event: Event, next_handler: Callable[[], None]) -> None:
         try:

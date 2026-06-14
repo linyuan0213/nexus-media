@@ -109,10 +109,42 @@ class TestEventBus:
         event = Event(event_type="no.handlers", payload=None)
         bus.publish(event)  # should not raise
 
-    def test_publish_async_uses_queue(self):
+    def test_publish_handler_exception_isolated(self):
+        """单个 handler 异常不影响其他 handler 执行."""
         registry = EventHandlerRegistry()
-        mock_queue = MagicMock()
+        good_results = []
 
+        def bad_handler(event):
+            raise ValueError("handler error")
+
+        def good_handler(event):
+            good_results.append(1)
+
+        registry.subscribe("test.event", bad_handler)
+        registry.subscribe("test.event", good_handler)
+
+        bus = EventBus(registry=registry, bridge=PluginBridge(hook_system=MagicMock()))
+        event = Event(event_type="test.event", payload=None)
+        bus.publish(event)
+
+        assert len(good_results) == 1
+
+    def test_publish_async_uses_queue_and_isolates_exceptions(self):
+        """异步事件使用队列投递，单个 handler 失败不影响队列任务."""
+        registry = EventHandlerRegistry()
+        calls = []
+
+        def failing_handler(event):
+            calls.append("fail")
+            raise RuntimeError("async error")
+
+        def ok_handler(event):
+            calls.append("ok")
+
+        registry.subscribe("async.event", failing_handler)
+        registry.subscribe("async.event", ok_handler)
+
+        mock_queue = MagicMock()
         bus = EventBus(
             registry=registry,
             bridge=PluginBridge(hook_system=MagicMock()),
@@ -123,6 +155,10 @@ class TestEventBus:
         bus.publish(event)
 
         mock_queue.submit.assert_called_once()
+        # 提交的任务中两个 handler 都应被调用，异常被捕获
+        submitted_func = mock_queue.submit.call_args[0][0]
+        submitted_func()
+        assert sorted(calls) == ["fail", "ok"]
 
     def test_publish_sync_not_async(self):
         registry = EventHandlerRegistry()

@@ -88,6 +88,42 @@ class TestHookSystem:
         system.emit("e1")
         sandbox.call_hook.assert_called_once()
 
+    def test_emit_sync_multiple_hooks_exception_isolated(self, system):
+        """同步 emit 时单个 hook 异常不影响后续 hook."""
+        sandbox = MagicMock()
+
+        def call_hook_side_effect(pid, event, data):
+            if pid == "p1":
+                raise RuntimeError("p1 failed")
+            return None
+
+        sandbox.call_hook.side_effect = call_hook_side_effect
+        system.set_plugin_sandbox(sandbox)
+        system.register("e1", "p1")
+        system.register("e1", "p2")
+        system.emit("e1", {"k": "v"})
+        assert sandbox.call_hook.call_count == 2
+        sandbox.call_hook.assert_any_call("p1", "e1", {"k": "v"})
+        sandbox.call_hook.assert_any_call("p2", "e1", {"k": "v"})
+
+    def test_emit_async_with_executor(self, system):
+        """有 executor 时异步投递到线程池."""
+        from concurrent.futures import ThreadPoolExecutor
+
+        calls = []
+        sandbox = MagicMock()
+
+        def call_hook(pid, event, data):
+            calls.append(pid)
+
+        sandbox.call_hook.side_effect = call_hook
+        system.set_plugin_sandbox(sandbox)
+        system.register("e1", "p1")
+        system._executor = ThreadPoolExecutor(max_workers=1)
+        system.emit("e1", {"k": "v"})
+        system._executor.shutdown(wait=True)
+        assert calls == ["p1"]
+
     def test_list_subscriptions_filter(self, system):
         system.register("e1", "p1")
         system.register("e2", "p2")

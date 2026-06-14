@@ -85,6 +85,7 @@ class HookSystem:
         """触发事件.
 
         有 executor 时异步投递到线程池，无则同步串行调用。
+        同步模式下每个 hook 独立捕获异常，避免单个插件失败阻塞后续插件。
         """
         handlers = self._handlers.get(event)
         if not handlers:
