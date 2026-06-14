@@ -146,7 +146,10 @@ class TestSyncEngine:
         eng.on_file_event(str(f))
         eng._pipeline.process.assert_called_once()
 
-    def test_transfer_sync_with_sid(self, engine, tmp_path):
+    def test_transfer_sync_parallel(self, engine, tmp_path):
+        """transfer_sync 应使用线程池并发处理多个文件."""
+        from concurrent.futures import Future
+
         eng, _, _ = engine
         cfg = SyncPathConfig(_Row())
         cfg.source = str(tmp_path / "src")
@@ -156,13 +159,56 @@ class TestSyncEngine:
         eng._monitor_ids = ["1"]
         src_dir = tmp_path / "src"
         src_dir.mkdir()
-        (src_dir / "movie.mkv").write_text("x")
+        for name in ("a.mkv", "b.mkv", "c.mkv"):
+            (src_dir / name).write_text("x")
+
+        submitted = []
+
+        def fake_submit(func, *args, **kwargs):
+            submitted.append(args)
+            future = Future()
+            try:
+                result = func(*args, **kwargs)
+            except Exception as e:
+                future.set_exception(e)
+            else:
+                future.set_result(result)
+            return future
+
+        mock_executor = MagicMock()
+        mock_executor.submit.side_effect = fake_submit
+        eng._thread_executor = mock_executor
+        eng._sync_workers = 4
+
         with patch("app.services.sync_engine.get_lock_manager") as mock_lock_mgr:
             lock = MagicMock()
             lock.acquire.return_value = True
             mock_lock_mgr.return_value.create_lock.return_value = lock
             eng.transfer_sync(sid="1")
-            eng._transfer._execute.assert_called_once()
+
+        assert len(submitted) == 3
+        eng._transfer._execute.assert_called()
+
+    def test_backend_cache_reused(self, engine):
+        """非 local 后端实例应被缓存复用."""
+        eng, _, backend_repo = engine
+        entity = MagicMock()
+        entity.id = 2
+        entity.name = "smb"
+        entity.type = "smb"
+        entity.enabled = True
+        entity.config = {"server": "nas.local"}
+        backend_repo.get_by_id.return_value = entity
+
+        with patch.object(eng, "_build_storage_config", return_value=MagicMock()):
+            with patch("app.services.sync_engine.StorageBackendFactory.create") as mock_create:
+                backend = MagicMock()
+                backend.name = "smb"
+                mock_create.return_value = backend
+                b1 = eng._resolve_backend("2")
+                b2 = eng._resolve_backend("2")
+                assert b1 is b2
+                backend_repo.get_by_id.assert_called_once()
 
     def test_transfer_sync_lock_not_acquired(self, engine):
         with patch("app.services.sync_engine.get_lock_manager") as mock_lock_mgr:

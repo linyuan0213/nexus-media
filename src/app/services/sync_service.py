@@ -7,6 +7,9 @@ import importlib
 import os
 import re
 import shutil
+from collections.abc import Callable
+from concurrent.futures import Future, wait
+from typing import Any
 from urllib.parse import unquote
 
 import log
@@ -267,7 +270,7 @@ class SyncService:
         批量重新识别（unidentification / history）
         :param flag: "unidentification" 或 "history"
         :param ids: ID 列表
-        提交后台线程执行，避免 API 超时
+        提交后台线程执行，避免 API 超时；ID 级并发，单个失败不影响其他。
         """
         lock_key = f"sync:re_identify:{flag}"
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=1800)
@@ -275,46 +278,55 @@ class SyncService:
         if not acquired:
             return ReIdentifyResultDTO(success=False, message="重新识别任务正在执行中")
 
+        def _do_one(wid):
+            try:
+                if flag == "unidentification":
+                    unknowninfo = self._filetransfer.get_unknown_info_by_id(wid)
+                    if not unknowninfo:
+                        return
+                    path = unknowninfo.path
+                    dest_dir = str(unknowninfo.dest or "")
+                    operation = unknowninfo.mode or ""
+                elif flag == "history":
+                    transinfo = self._filetransfer.get_transfer_info_by_id(wid)
+                    if not transinfo:
+                        return
+                    path = os.path.join(str(transinfo.source_path or ""), str(transinfo.source_filename or ""))
+                    dest_dir = str(transinfo.dest or "")
+                    operation = transinfo.mode or ""
+                else:
+                    return
+
+                if not dest_dir:
+                    dest_dir = ""
+                if not path:
+                    return
+
+                dst_backend = self._resolve_dst_backend_by_dest(dest_dir)
+                succ_flag, msg = self._filetransfer.transfer_media(
+                    in_from=SyncType.MAN,
+                    operation=operation,
+                    in_path=path,
+                    target_dir=dest_dir,
+                    dst_backend=dst_backend,
+                )
+                if succ_flag and flag == "unidentification":
+                    self._filetransfer.update_transfer_unknown_state(path)
+            except (ServiceError, RepositoryError, DomainError):
+                raise
+            except Exception as err:
+                ExceptionUtils.exception_traceback(err)
+
         def _do_re_identify():
             try:
-                for wid in ids:
-                    try:
-                        if flag == "unidentification":
-                            unknowninfo = self._filetransfer.get_unknown_info_by_id(wid)
-                            if not unknowninfo:
-                                continue
-                            path = unknowninfo.path
-                            dest_dir = str(unknowninfo.dest or "")
-                            operation = unknowninfo.mode or ""
-                        elif flag == "history":
-                            transinfo = self._filetransfer.get_transfer_info_by_id(wid)
-                            if not transinfo:
-                                continue
-                            path = os.path.join(str(transinfo.source_path or ""), str(transinfo.source_filename or ""))
-                            dest_dir = str(transinfo.dest or "")
-                            operation = transinfo.mode or ""
-                        else:
-                            continue
+                if self._thread_executor is None:
+                    for wid in ids:
+                        _do_one(wid)
+                else:
+                    futures = [self._thread_executor.submit(_do_one, wid) for wid in ids]
+                    from concurrent.futures import wait
 
-                        if not dest_dir:
-                            dest_dir = ""
-                        if not path:
-                            continue
-
-                        dst_backend = self._resolve_dst_backend_by_dest(dest_dir)
-                        succ_flag, msg = self._filetransfer.transfer_media(
-                            in_from=SyncType.MAN,
-                            operation=operation,
-                            in_path=path,
-                            target_dir=dest_dir,
-                            dst_backend=dst_backend,
-                        )
-                        if succ_flag and flag == "unidentification":
-                            self._filetransfer.update_transfer_unknown_state(path)
-                    except (ServiceError, RepositoryError, DomainError):
-                        raise
-                    except Exception as err:
-                        ExceptionUtils.exception_traceback(err)
+                    wait(futures)
             finally:
                 lock.release()
 
@@ -340,7 +352,7 @@ class SyncService:
 
     def get_sub_path(self, directory: str, ft: str = "ALL") -> list[dict]:
         """
-        查询下级子目录/文件
+        查询下级子目录/文件（文件大小通过线程池并发获取）
         """
         r = []
         if not directory or directory == "/":
@@ -351,39 +363,58 @@ class SyncService:
                 d = os.path.dirname(d)
             dirs = [os.path.join(d, f) for f in os.listdir(d)]
         dirs.sort()
-        for ff in dirs:
+
+        def _build_item(ff: str) -> dict | None:
             if os.path.isdir(ff):
                 if "ONLYDIR" in ft or "ALL" in ft:
-                    r.append(
-                        {
-                            "path": ff.replace("\\", "/"),
-                            "name": os.path.basename(ff),
-                            "type": "dir",
-                            "rel": os.path.dirname(ff).replace("\\", "/"),
-                        }
-                    )
-            else:
-                ext = os.path.splitext(ff)[-1][1:]
-                ext_lower = f".{str(ext).lower()}"
-                flag = (
-                    "ONLYFILE" in ft
-                    or "ALL" in ft
-                    or ("MEDIAFILE" in ft and ext_lower in RMT_MEDIAEXT)
-                    or ("SUBFILE" in ft and ext_lower in RMT_SUBEXT)
-                    or ("AUDIOTRACKFILE" in ft and ext_lower in RMT_AUDIO_TRACK_EXT)
-                )
-                if flag:
-                    r.append(
-                        {
-                            "path": ff.replace("\\", "/"),
-                            "name": os.path.basename(ff),
-                            "type": "file",
-                            "rel": os.path.dirname(ff).replace("\\", "/"),
-                            "ext": ext,
-                            "size": StringUtils.str_filesize(os.path.getsize(ff)),
-                        }
-                    )
+                    return {
+                        "path": ff.replace("\\", "/"),
+                        "name": os.path.basename(ff),
+                        "type": "dir",
+                        "rel": os.path.dirname(ff).replace("\\", "/"),
+                    }
+                return None
+            ext = os.path.splitext(ff)[-1][1:]
+            ext_lower = f".{str(ext).lower()}"
+            flag = (
+                "ONLYFILE" in ft
+                or "ALL" in ft
+                or ("MEDIAFILE" in ft and ext_lower in RMT_MEDIAEXT)
+                or ("SUBFILE" in ft and ext_lower in RMT_SUBEXT)
+                or ("AUDIOTRACKFILE" in ft and ext_lower in RMT_AUDIO_TRACK_EXT)
+            )
+            if not flag:
+                return None
+            return {
+                "path": ff.replace("\\", "/"),
+                "name": os.path.basename(ff),
+                "type": "file",
+                "rel": os.path.dirname(ff).replace("\\", "/"),
+                "ext": ext,
+                "size": StringUtils.str_filesize(os.path.getsize(ff)),
+            }
+
+        results = self._run_parallel(dirs, _build_item)
+        for item in results:
+            if item is not None:
+                r.append(item)
         return r
+
+    def _run_parallel(self, items: list, func: Callable[[Any], Any]) -> list[Any]:
+        """对无依赖任务使用线程池并发执行；失败隔离，返回结果列表."""
+        if not items or self._thread_executor is None:
+            return [func(item) for item in items]
+
+        def _wrapper(item):
+            try:
+                return func(item)
+            except Exception as err:
+                ExceptionUtils.exception_traceback(err)
+                return None
+
+        futures: list[Future] = [self._thread_executor.submit(_wrapper, item) for item in items]
+        wait(futures)
+        return [f.result() for f in futures]
 
     # ---------- 文件重命名 ----------
 

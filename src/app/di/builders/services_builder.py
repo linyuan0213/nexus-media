@@ -234,6 +234,8 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         transfer_pipeline=transfer_pipeline,
         sync_path_repo=SyncPathRepositoryAdapter(),
         storage_backend_repo=StorageBackendRepositoryAdapter(),
+        thread_executor=thread_executor,
+        sync_workers=4,
     )
 
     sync_service = SyncService(

@@ -109,16 +109,72 @@ class TestSyncServiceReIdentify:
         manager.create_lock.return_value = lock
         return patch("app.services.sync_service.get_lock_manager", return_value=manager)
 
-    def test_re_identify_already_running(self, service):
-        with self._patch_lock_manager(False):
-            result = service.re_identify_items("unidentification", [1])
-        assert not result.success
+    def test_re_identify_concurrent(self, service):
+        from concurrent.futures import Future
+
+        called = []
+
+        def fake_submit(func, *args, **kwargs):
+            called.append(args)
+            future = Future()
+            try:
+                result = func(*args, **kwargs)
+            except Exception as e:
+                future.set_exception(e)
+            else:
+                future.set_result(result)
+            return future
+
+        service._thread_executor.submit.side_effect = fake_submit
+        service._filetransfer.get_unknown_info_by_id.return_value = MagicMock(
+            path="/src/movie.mkv", dest="/dst", mode="copy"
+        )
+        service._filetransfer.transfer_media.return_value = (True, "ok")
+
+        with self._patch_lock_manager(True):
+            result = service.re_identify_items("unidentification", [1, 2])
+        assert result.success
+        # 外层任务 + 内层并发任务都走同一 executor
+        assert len(called) == 3  # _do_re_identify + 2 x _do_one
+
+    def test_get_sub_path_concurrent(self, service):
+        from concurrent.futures import Future
+
+        called = []
+
+        def fake_submit(func, *args, **kwargs):
+            called.append(args)
+            future = Future()
+            try:
+                result = func(*args, **kwargs)
+            except Exception as e:
+                future.set_exception(e)
+            else:
+                future.set_result(result)
+            return future
+
+        service._thread_executor.submit.side_effect = fake_submit
+        with (
+            patch("os.listdir", return_value=["dir1", "file1.mkv"]),
+            patch("os.path.isdir", side_effect=lambda x: x.endswith("dir1")),
+            patch("os.path.getsize", return_value=1024),
+            patch("os.path.exists", return_value=True),
+            patch("app.services.sync_service.StringUtils.str_filesize", return_value="1KB"),
+        ):
+            result = service.get_sub_path("/", ft="ALL")
+        assert len(result) == 2
+        assert len(called) == 2  # 两个条目并发处理
 
     def test_re_identify_submit(self, service):
         with self._patch_lock_manager(True):
             result = service.re_identify_items("unidentification", [1])
         assert result.success
         service._thread_executor.submit.assert_called_once()
+
+    def test_re_identify_already_running(self, service):
+        with self._patch_lock_manager(False):
+            result = service.re_identify_items("unidentification", [1])
+        assert not result.success
 
 
 class TestSyncServiceQueries:
@@ -135,11 +191,25 @@ class TestSyncServiceQueries:
         service._sync.transfer_sync.assert_called_once_with(sid="1")
 
     def test_get_sub_path_root(self, service):
+        from concurrent.futures import Future
+
+        def fake_submit(func, *args, **kwargs):
+            future = Future()
+            try:
+                result = func(*args, **kwargs)
+            except Exception as e:
+                future.set_exception(e)
+            else:
+                future.set_result(result)
+            return future
+
+        service._thread_executor.submit.side_effect = fake_submit
         with (
             patch("os.listdir", return_value=["dir1", "file1.mkv"]),
             patch("os.path.isdir", side_effect=lambda x: x.endswith("dir1")),
             patch("os.path.getsize", return_value=1024),
             patch("os.path.exists", return_value=True),
+            patch("app.services.sync_service.StringUtils.str_filesize", return_value="1KB"),
         ):
             result = service.get_sub_path("/", ft="ALL")
         assert len(result) == 2

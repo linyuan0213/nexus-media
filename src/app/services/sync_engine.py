@@ -4,6 +4,8 @@ import os
 import threading
 import traceback
 from collections import OrderedDict
+from collections.abc import Callable
+from concurrent.futures import wait
 from typing import Any
 
 from watchdog.events import FileSystemEventHandler
@@ -18,9 +20,10 @@ from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import TransferHistoryRepositoryAdapter
 from app.domain.entities.transfer_task import SourceType, TransferTask
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
+from app.infrastructure.thread import ThreadExecutor
 from app.services.transfer_engine import TransferEngine
 from app.services.transfer_pipeline import TransferPipeline
-from app.storage.backends.base import StorageConfig, StorageType
+from app.storage.backends.base import StorageBackend, StorageConfig, StorageType
 from app.storage.backends.local import LocalStorageBackend
 from app.storage.config_models import LocalStorageConfig
 from app.storage.factory import StorageBackendFactory
@@ -69,18 +72,23 @@ class SyncEngine:
         transfer_pipeline: TransferPipeline,
         sync_path_repo: SyncPathRepositoryAdapter,
         storage_backend_repo: StorageBackendRepositoryAdapter,
+        thread_executor: ThreadExecutor | None = None,
+        sync_workers: int = 4,
     ):
         self._transfer = transfer_engine
         self._pipeline = transfer_pipeline
         self._sync_repo = sync_path_repo
         self._history_repo = TransferHistoryRepositoryAdapter()
         self._backend_repo = storage_backend_repo
+        self._thread_executor = thread_executor
+        self._sync_workers = sync_workers
         self._configs: dict[str, SyncPathConfig] = {}
         self._monitor_ids: list[str] = []
         self._observers: list = []
         # 使用 OrderedDict 实现 FIFO 去重集合，避免旧条目长期驻留
         self._synced_files: OrderedDict[str, None] = OrderedDict()
         self._synced_files_max_size = 10000
+        self._backend_cache: dict[str, StorageBackend] = {}
         self._reload()
 
     def init(self) -> None:
@@ -90,11 +98,15 @@ class SyncEngine:
     def _resolve_backend(self, backend_id: str):
         if backend_id == "local":
             return LocalStorageBackend(StorageConfig(id="local", name="local", type=StorageType.LOCAL))
+        if backend_id in self._backend_cache:
+            return self._backend_cache[backend_id]
         entity = self._backend_repo.get_by_id(int(backend_id))
         if not entity:
             raise ValueError(f"未找到存储后端: {backend_id}")
         config = self._build_storage_config(entity)
-        return StorageBackendFactory.create(config)
+        backend = StorageBackendFactory.create(config)
+        self._backend_cache[backend_id] = backend
+        return backend
 
     def _build_storage_config(self, entity):
         info = StorageBackendFactory.get_config_info(entity.type)
@@ -268,25 +280,100 @@ class SyncEngine:
                 cfg = self.get_sync_path_conf(sid)
                 if not cfg:
                     continue
+                try:
+                    src_backend = self._resolve_backend(cfg.src_backend_id)
+                    dst_backend = self._resolve_backend(cfg.dst_backend_id)
+                except (ServiceError, RepositoryError, DomainError):
+                    raise
+                except Exception as e:
+                    log.error(f"[Sync]解析后端失败: {e}")
+                    continue
                 if not cfg.rename:
-                    for f in PathUtils.get_dir_files(cfg.source):
-                        # 跳过本轮已经由事件触发处理过的文件，避免重复同步
-                        with _synced_lock:
-                            if f in self._synced_files:
-                                continue
-                        self._do_link(f, cfg)
+                    self._batch_link(cfg, src_backend, dst_backend)
                 else:
-                    for p in PathUtils.get_dir_level1_medias(cfg.source, RMT_MEDIAEXT):
-                        if PathUtils.is_invalid_path(p):
-                            continue
-                        with _synced_lock:
-                            if p in self._synced_files:
-                                continue
-                        self._do_transfer(p, cfg)
+                    self._batch_transfer(cfg, src_backend)
         finally:
             with _synced_lock:
                 self._synced_files.clear()
             lock.release()
+
+    def _batch_link(self, cfg: SyncPathConfig, src_backend: StorageBackend, dst_backend: StorageBackend) -> None:
+        files = PathUtils.get_dir_files(cfg.source)
+        if not files:
+            return
+        pending = self._filter_pending(files)
+        if not pending:
+            return
+
+        def _link_one(path: str) -> None:
+            if self._history_repo.is_sync_in_history(path, cfg.dest):
+                return
+            try:
+                self._do_link_with_backend(path, cfg, src_backend, dst_backend)
+            except (ServiceError, RepositoryError, DomainError):
+                raise
+            except Exception as e:
+                log.error(f"[Sync]{path} 同步失败：{e}")
+
+        self._run_parallel(pending, _link_one)
+
+    def _batch_transfer(self, cfg: SyncPathConfig, src_backend: StorageBackend) -> None:
+        paths = PathUtils.get_dir_level1_medias(cfg.source, RMT_MEDIAEXT)
+        if not paths:
+            return
+        pending = [p for p in paths if not PathUtils.is_invalid_path(p)]
+        pending = self._filter_pending(pending)
+        if not pending:
+            return
+
+        def _transfer_one(path: str) -> None:
+            try:
+                self._do_transfer(path, cfg)
+            except (ServiceError, RepositoryError, DomainError):
+                raise
+            except Exception as e:
+                log.error(f"[Sync]{path} 转移异常：{e}")
+
+        self._run_parallel(pending, _transfer_one)
+
+    def _filter_pending(self, paths: list[str]) -> list[str]:
+        """批量过滤已由事件触发处理过的路径，减少加锁次数."""
+        with _synced_lock:
+            synced = set(self._synced_files.keys())
+        return [p for p in paths if p not in synced]
+
+    def _run_parallel(self, items: list[str], func: Callable[[str], None]) -> None:
+        """使用线程池并发执行文件级任务，失败隔离."""
+        if self._thread_executor is None or len(items) <= 1:
+            for item in items:
+                try:
+                    func(item)
+                except (ServiceError, RepositoryError, DomainError):
+                    raise
+                except Exception as e:
+                    log.error(f"[Sync]处理 {item} 失败：{e}")
+            return
+
+        futures = []
+        for item in items:
+            futures.append(self._thread_executor.submit(func, item))
+        wait(futures)
+
+    def _do_link_with_backend(
+        self, event_path: str, cfg: SyncPathConfig, src_backend: StorageBackend, dst_backend: StorageBackend
+    ) -> None:
+        rel = os.path.relpath(event_path, cfg.source)
+        dst = os.path.join(cfg.dest, rel)
+        try:
+            dst_backend_to_use = dst_backend if cfg.dst_backend_id != "local" else None
+            self._transfer._execute(event_path, dst, cfg.operation, dst_backend_to_use)
+            self._history_repo.insert_sync_history(event_path, cfg.source, cfg.dest)
+            self._transfer._blacklist.insert(event_path)
+            log.info(f"[Sync]{event_path} 同步完成")
+        except (ServiceError, RepositoryError, DomainError):
+            raise
+        except Exception as e:
+            log.error(f"[Sync]{event_path} 同步失败：{e}")
 
     def transfer_mon_files(self) -> None:
         self.transfer_sync()
