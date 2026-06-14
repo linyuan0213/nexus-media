@@ -184,33 +184,24 @@ def init_event_handlers():
 ### DI 容器集成
 
 ```python
-# app/di/container.py
-def event_bus(self) -> EventBus:
-    from app.events import EventBus, EventHandlerRegistry
-    from app.events.middleware import LoggingMiddleware, ErrorHandlingMiddleware
-    from app.events.bridge import PluginBridge
-    from app.infrastructure.queue.factory import MessageQueueFactory
-
-    registry = EventHandlerRegistry()
-    queue = MessageQueueFactory.create(max_workers=4)
-
-    bus = EventBus(
-        registry=registry,
-        message_queue=queue,
+# app/di/builders/infrastructure_builder.py
+def build_infrastructure() -> InfrastructureObjects:
+    ...
+    event_bus = EventBus(
+        registry=EventHandlerRegistry(),
+        bridge=PluginBridge(hook_system=hook_system),
+        message_queue=message_queue,
         middleware=[
             LoggingMiddleware(),
             ErrorHandlingMiddleware(),
         ],
-        async_event_types={
-            "media.transfer_finished",
-            "media.episode_transferred",
-            "subscribe.finished",
-            "message.incoming",
-        },
-        bridge=PluginBridge(),
     )
-    return bus
+    register_modules(EVENT_HANDLER_MODULES)
+    auto_register(event_bus)
+    ...
 ```
+
+注意：`async_event_types` 当前未配置，所有事件默认同步执行。如需将通知类事件改为异步投递，可在创建 EventBus 时传入 `async_event_types` 集合。
 
 ### 调用方改造示例
 
@@ -266,7 +257,8 @@ event_bus.publish(Event(
 
 - **新建 `app/events/` 包**：types, bus, registry, middleware, decorators, bridge
 - **删除旧代码**：EventManager, EventType, event_compat.py
-- **DI Container**：已集成 EventBus
+- **DI Container**：`app/di/builders/infrastructure_builder.py` 创建 EventBus，注册 middleware，并显式调用 `register_modules()` + `auto_register()` 注册所有 `@on_event` handler
+- **生命周期集成**：`SystemLifecycleService` 从 DI 接收真实 EventBus 实例，`init_event_handlers()` 只做缓存事件桥接 (`init_event_bridge`)
 
 ### Phase 2：发布端迁移（已完成）
 
@@ -309,6 +301,7 @@ event_bus.publish(Event(
 4. **消除手动 `event_bus.subscribe()` 调用**：
    - 删除 `SubscribeService._register_event_handlers()` 和 `_handle_rss_auto_subscribe()`
    - RSS_AUTO_SUBSCRIBE_REQUESTED 处理逻辑迁移到 `subscribe/handlers.py`
+   - 例外：`transfer/handlers.py` 的 `handle_download_completed` 需要注入 `TransferPipeline`，保留 `register_download_completed_handler()` 显式注册，由 `services_builder` 在创建 pipeline 后调用
 
 ### Phase 4：下载完成事件驱动转移（已完成）
 

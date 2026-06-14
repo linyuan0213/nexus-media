@@ -343,7 +343,6 @@ class MediaService:
                         lookup_results[key] = None
 
         # 4. 组装: 将结果映射回原始列表
-        use_proxy = ImageProxy.get_image_proxy_enabled(settings.get("app"))
         results = [MediaInfo() for _ in items]
         for idx, item in enumerate(items):
             parsed = parsed_list[idx]
@@ -362,8 +361,8 @@ class MediaService:
                     info.year = looked_up.year
                     info.overview = looked_up.overview
                     info.vote_average = looked_up.vote_average
-                    info.poster_path = ImageProxy.get_proxy_image_url(looked_up.poster_path, use_proxy=use_proxy)
-                    info.backdrop_path = ImageProxy.get_proxy_image_url(looked_up.backdrop_path, use_proxy=use_proxy)
+                    info.poster_path = looked_up.poster_path
+                    info.backdrop_path = looked_up.backdrop_path
                     info.tmdb_info = {
                         "id": looked_up.tmdb_id,
                         "title": looked_up.title,
@@ -372,8 +371,8 @@ class MediaService:
                         "year": looked_up.year,
                         "overview": looked_up.overview,
                         "vote_average": looked_up.vote_average,
-                        "poster_path": info.poster_path,
-                        "backdrop_path": info.backdrop_path,
+                        "poster_path": looked_up.poster_path,
+                        "backdrop_path": looked_up.backdrop_path,
                         "genres": looked_up.genres,
                         "external_ids": looked_up.external_ids,
                     }
