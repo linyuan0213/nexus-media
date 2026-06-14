@@ -1,5 +1,7 @@
 """订阅监控器 — 统一调度器，聚合 RSS 轮询、主动搜索、队列搜索三种策略."""
 
+from __future__ import annotations
+
 import datetime
 from concurrent.futures import wait
 
@@ -51,6 +53,8 @@ class SubscriptionMonitor:
         self._last_rss_run: datetime.datetime | None = None
         self._last_search_run: datetime.datetime | None = None
         self._tz = pytz.timezone(settings.tz)
+        # 任务级去重：防止多个周期同时提交同一策略
+        self._running_tasks: dict[str, bool] = {}
         self._bind_coordinator()
 
     def run(self) -> None:
@@ -58,13 +62,17 @@ class SubscriptionMonitor:
 
         三种策略在满足各自周期时通过线程池并发执行，缩短整体耗时；
         各自更新 _last_*_run 时间戳。
+        新增任务级去重，防止同一策略在上一次未结束时又被提交。
         """
         tasks = []
-        if self._should_run_queue():
+        if self._should_run_queue() and not self._running_tasks.get("queue"):
+            self._running_tasks["queue"] = True
             tasks.append(self._thread_executor.submit(self._run_queue_search))
-        if self._should_run_rss():
+        if self._should_run_rss() and not self._running_tasks.get("rss"):
+            self._running_tasks["rss"] = True
             tasks.append(self._thread_executor.submit(self._run_rss_feed))
-        if self._should_run_search():
+        if self._should_run_search() and not self._running_tasks.get("search"):
+            self._running_tasks["search"] = True
             tasks.append(self._thread_executor.submit(self._run_indexer_search))
 
         if tasks:
@@ -77,6 +85,8 @@ class SubscriptionMonitor:
             self._last_queue_run = datetime.datetime.now(self._tz)
         except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as e:
             log.error(f"[SubscriptionMonitor] 队列搜索失败: {e}")
+        finally:
+            self._running_tasks["queue"] = False
 
     def _run_rss_feed(self) -> None:
         try:
@@ -85,6 +95,8 @@ class SubscriptionMonitor:
             self._last_rss_run = datetime.datetime.now(self._tz)
         except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as e:
             log.error(f"[SubscriptionMonitor] RSS 轮询失败: {e}")
+        finally:
+            self._running_tasks["rss"] = False
 
     def _run_indexer_search(self) -> None:
         try:
@@ -93,6 +105,8 @@ class SubscriptionMonitor:
             self._last_search_run = datetime.datetime.now(self._tz)
         except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as e:
             log.error(f"[SubscriptionMonitor] 主动搜索失败: {e}")
+        finally:
+            self._running_tasks["search"] = False
 
     def _bind_coordinator(self) -> None:
         """将下载协调器绑定到各个搜索策略上."""

@@ -54,7 +54,25 @@ class TestSubscriptionMonitor:
         monitor._rss_strategy.run.assert_not_called()
         monitor._indexer_strategy.run.assert_not_called()
 
-    def test_run_strategy_exception(self, monitor):
+    def test_run_deduplicates_inflight_tasks(self, monitor):
+        """同一策略上次未结束时，本次不应重复提交."""
+        monitor._running_tasks["queue"] = True
+        with patch.object(monitor, "_should_run_queue", return_value=True):
+            with patch.object(monitor, "_should_run_rss", return_value=False):
+                with patch.object(monitor, "_should_run_search", return_value=False):
+                    monitor.run()
+        monitor._queue_strategy.run.assert_not_called()
+
+    def test_run_resets_running_flag_after_completion(self, monitor):
+        """策略执行完毕后应重置 _running_tasks 标志."""
+        with patch.object(monitor, "_should_run_queue", return_value=True):
+            with patch.object(monitor, "_should_run_rss", return_value=False):
+                with patch.object(monitor, "_should_run_search", return_value=False):
+                    monitor.run()
+        assert monitor._running_tasks["queue"] is False
+
+    def test_run_resets_running_flag_on_exception(self, monitor):
+        """策略执行异常后也应重置 _running_tasks 标志."""
         from app.core.exceptions import ServiceError
 
         monitor._queue_strategy.run.side_effect = ServiceError("queue error")
@@ -62,7 +80,7 @@ class TestSubscriptionMonitor:
             with patch.object(monitor, "_should_run_rss", return_value=False):
                 with patch.object(monitor, "_should_run_search", return_value=False):
                     monitor.run()
-        monitor._rss_strategy.run.assert_not_called()
+        assert monitor._running_tasks["queue"] is False
 
     def test_bind_coordinator(self, monitor):
         assert monitor._queue_strategy.set_coordinator.called
