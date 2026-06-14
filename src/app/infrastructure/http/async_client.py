@@ -1,6 +1,8 @@
 """异步 HTTP 客户端 Facade."""
 
+import contextlib
 import threading
+from collections.abc import Callable
 from typing import Any
 
 import httpx
@@ -13,11 +15,75 @@ from app.infrastructure.http.retry import HttpRetryConfig
 from app.infrastructure.rate_limiter import RateLimitEngine
 
 
+class _AsyncClientPool:
+    """按 HttpClientConfig 复用底层 httpx.AsyncClient，减少连接池创建开销."""
+
+    def __init__(self):
+        self._lock = threading.RLock()
+        self._clients: dict[tuple, tuple[httpx.AsyncClient, int]] = {}
+
+    def _make_key(self, config: HttpClientConfig) -> tuple:
+        headers = tuple(sorted((config.default_headers or {}).items()))
+        auth_key = type(config.auth).__name__ if config.auth is not None else ""
+        return (
+            config.proxy_url,
+            headers,
+            auth_key,
+            config.verify_ssl,
+            config.follow_redirects,
+            config.timeout,
+            config.connect_timeout,
+            config.max_connections,
+            config.max_keepalive,
+            config.enable_http2,
+        )
+
+    def acquire(self, config: HttpClientConfig, builder: Callable[[], httpx.AsyncClient]) -> httpx.AsyncClient:
+        key = self._make_key(config)
+        with self._lock:
+            client, count = self._clients.get(key, (None, 0))
+            if client is None:
+                client = builder()
+            self._clients[key] = (client, count + 1)
+            return client
+
+    def release(self, config: HttpClientConfig) -> None:
+        key = self._make_key(config)
+        with self._lock:
+            client, count = self._clients.get(key, (None, 0))
+            if client is None:
+                return
+            count -= 1
+            if count <= 0:
+                with contextlib.suppress(Exception):
+                    import asyncio
+
+                    try:
+                        asyncio.get_running_loop()
+                        asyncio.create_task(client.aclose())
+                    except RuntimeError:
+                        asyncio.run(client.aclose())
+                self._clients.pop(key, None)
+            else:
+                self._clients[key] = (client, count)
+
+    async def close_all(self) -> None:
+        with self._lock:
+            clients = [client for client, _ in self._clients.values()]
+            self._clients.clear()
+        for client in clients:
+            with contextlib.suppress(Exception):
+                await client.aclose()
+
+
+_pool = _AsyncClientPool()
+
+
 class AsyncHttpClient:
     """异步 HTTP 客户端 Facade.
 
     封装 httpx.AsyncClient，支持 HTTP/2，内置 tenacity 异步重试、RateLimitEngine 限流、HttpCacheConfig 缓存。
-    用于高并发场景：并发站点搜索、RSS 订阅轮询、批量媒体元数据获取。
+    相同配置的底层 AsyncClient 会被复用，避免每次请求创建/销毁连接池。
 
     按需实例化，由调用方管理生命周期。
     """
@@ -35,34 +101,29 @@ class AsyncHttpClient:
         self._rate_limiter = rate_limiter
         self._cache = cache
         self._middlewares = middlewares or []
-        self._client: httpx.AsyncClient | None = None
-        self._lock = threading.Lock()
+        self._client = _pool.acquire(self._config, self._build_client)
+        self._closed = False
 
-    async def _get_client(self) -> httpx.AsyncClient:
-        """延迟初始化 AsyncClient（线程安全）."""
-        if self._client is None:
-            with self._lock:
-                if self._client is None:
-                    limits = httpx.Limits(
-                        max_connections=self._config.max_connections,
-                        max_keepalive_connections=self._config.max_keepalive,
-                    )
-                    transport = httpx.AsyncHTTPTransport(limits=limits, retries=0)
-                    timeout = httpx.Timeout(
-                        self._config.timeout,
-                        connect=self._config.connect_timeout,
-                    )
-                    self._client = httpx.AsyncClient(
-                        transport=transport,
-                        timeout=timeout,
-                        follow_redirects=self._config.follow_redirects,
-                        verify=self._config.verify_ssl,
-                        http2=self._config.enable_http2,
-                        proxy=self._config.proxy_url,
-                        auth=self._config.auth,
-                        headers=self._config.default_headers,
-                    )
-        return self._client
+    def _build_client(self) -> httpx.AsyncClient:
+        limits = httpx.Limits(
+            max_connections=self._config.max_connections,
+            max_keepalive_connections=self._config.max_keepalive,
+        )
+        transport = httpx.AsyncHTTPTransport(limits=limits, retries=0)
+        timeout = httpx.Timeout(
+            self._config.timeout,
+            connect=self._config.connect_timeout,
+        )
+        return httpx.AsyncClient(
+            transport=transport,
+            timeout=timeout,
+            follow_redirects=self._config.follow_redirects,
+            verify=self._config.verify_ssl,
+            http2=self._config.enable_http2,
+            proxy=self._config.proxy_url,
+            auth=self._config.auth,
+            headers=self._config.default_headers,
+        )
 
     async def request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
         """执行异步 HTTP 请求，tenacity 自动重试 + 异常转换."""
@@ -87,10 +148,8 @@ class AsyncHttpClient:
             if cached is not None:
                 return cached
 
-        client = await self._get_client()
-
         async def _do_request() -> httpx.Response:
-            response = await client.request(method, url, **kwargs)
+            response = await self._client.request(method, url, **kwargs)
             if raise_on_error:
                 response.raise_for_status()
             return response
@@ -142,11 +201,18 @@ class AsyncHttpClient:
         return await self.request("DELETE", url, **kwargs)
 
     async def close(self) -> None:
-        if self._client:
-            await self._client.aclose()
+        if self._closed:
+            return
+        self._closed = True
+        _pool.release(self._config)
 
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, *args):
         await self.close()
+
+    @staticmethod
+    async def close_all() -> None:
+        """关闭所有复用的底层 AsyncClient（用于进程退出清理）."""
+        await _pool.close_all()
