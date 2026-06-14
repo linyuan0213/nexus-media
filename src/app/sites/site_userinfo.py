@@ -274,26 +274,29 @@ class SiteUserInfo:
         inc_uploads = 0
         inc_downloads = 0
         _, _, site, upload, download = self.get_pt_site_statistics_history(2)
-        if upload and download:
-            inc_uploads = int(upload[0][0]) - int(upload[0][1])
-            inc_downloads = int(download[0][0]) - int(download[0][1])
-        for k, v in self._sites_data.items():
-            if v.get("err_msg"):
-                string_list.append(f"【{k}】{v.get('err_msg')}")
-            else:
+
+        # 按照上传降序排序
+        data_list = list(zip(site, upload, download, strict=False))
+        data_list = sorted(data_list, key=lambda x: x[1], reverse=True)
+
+        for data in data_list:
+            site = data[0]
+            upload = int(data[1])
+            download = int(data[2])
+            if upload > 0 or download > 0:
+                inc_uploads += int(upload)
+                inc_downloads += int(download)
                 string_list.append(
-                    f"【{k}】{v.get('username')} {v.get('user_level')}，"
-                    f"上传量：{StringUtils.str_filesize(v.get('upload') or 0)}，"
-                    f"下载量：{StringUtils.str_filesize(v.get('download') or 0)}，"
-                    f"魔力：{v.get('bonus') or 0}，"
-                    f"做种数：{v.get('seeding') or 0}"
+                    f"[{site}]\n"
+                    f"上传量：{StringUtils.str_filesize(upload)}\n"
+                    f"下载量：{StringUtils.str_filesize(download)}\n"
+                    f"\n————————————"
                 )
-        if string_list and self.message:
-            self.message.send_site_message(
-                title=f"站点数据刷新完成，总上传量 {StringUtils.str_filesize(inc_uploads)}，"
-                f"总下载量 {StringUtils.str_filesize(inc_downloads)}",
-                text="\n".join(string_list),
-            )
+
+        if inc_downloads or inc_uploads:
+            if self.message is None:
+                return
+            self.message.send_user_statistics_message(string_list)
 
     def refresh_site_data(self, force=False, specify_sites=None) -> dict:
         """
