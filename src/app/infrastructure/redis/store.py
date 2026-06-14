@@ -114,10 +114,18 @@ class RedisStore:
         if client is None:
             return {}
         try:
-            raw_keys = client.hkeys(name)
-            if not isinstance(raw_keys, list):
+            data = client.hgetall(name)
+            if not isinstance(data, dict):
                 return {}
-            return {k.decode("utf-8"): self.hget(name, k.decode("utf-8")) for k in raw_keys if isinstance(k, bytes)}
+            result = {}
+            for k, v in data.items():
+                key = k.decode("utf-8") if isinstance(k, bytes) else str(k)
+                value = v.decode("utf-8") if isinstance(v, bytes) else v
+                try:
+                    result[key] = JsonUtils.loads(value)
+                except Exception:
+                    result[key] = value
+            return result
         except RedisError as e:
             log.debug(f"RedisStore hgetall 失败 {name}: {e}")
             return {}
