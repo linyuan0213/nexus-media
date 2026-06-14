@@ -66,9 +66,8 @@ class PathUtils:
                     # 检查文件大小
                     if filesize and os.path.getsize(cur_path) < filesize:
                         continue
-                    # 命中
-                    if cur_path not in ret_list:
-                        ret_list.append(cur_path)
+                    # 命中（os.walk 不会重复，无需去重检查）
+                    ret_list.append(cur_path)
         else:
             # 检查路径是否合法
             if PathUtils.is_invalid_path(in_path):
