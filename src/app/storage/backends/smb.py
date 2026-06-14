@@ -79,7 +79,7 @@ class SMBStorageBackend(StorageBackend):
     def read_stream(self, path: str) -> BinaryIO:
         return open_file(self._path(path), mode="rb")
 
-    def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
+    def write_stream(self, path: str, stream: BinaryIO, size: int = 0, chunk_size: int = 0) -> None:
         rp = self._path(path)
         self._ensure_dir(self._dir(rp))
         # 如果目标路径已存在且是目录（之前失败遗留），强制删除
@@ -88,15 +88,16 @@ class SMBStorageBackend(StorageBackend):
                 rmdir(rp)
             except Exception as e:  # noqa: BLE001
                 log.debug(f"[smb]忽略异常: {e}")
+        length = chunk_size if chunk_size > 0 else 1024 * 1024
         try:
             with open_file(rp, mode="wb") as f:
-                shutil.copyfileobj(stream, f)
+                shutil.copyfileobj(stream, f, length=length)
         except Exception as e:
             if "Is a directory" in str(e) or getattr(e, "errno", None) == 21:
                 log.warn(f"SMB 目标路径 {rp} 是目录，强制删除后重试写入")
                 rmtree(rp)
                 with open_file(rp, mode="wb") as f:
-                    shutil.copyfileobj(stream, f)
+                    shutil.copyfileobj(stream, f, length=length)
             else:
                 raise
 

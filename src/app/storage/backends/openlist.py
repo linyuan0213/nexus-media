@@ -124,7 +124,7 @@ class OpenListStorageBackend(StorageBackend):
         except Exception:
             return 0
 
-    def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
+    def write_stream(self, path: str, stream: BinaryIO, size: int = 0, chunk_size: int = 0) -> None:
         if not self._write_enabled:
             raise NotImplementedError("OpenList 后端未启用写入")
         url = f"{self._base}/api/fs/put"

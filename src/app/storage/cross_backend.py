@@ -1,7 +1,5 @@
 """跨后端复制引擎。"""
 
-from typing import BinaryIO
-
 import log
 from app.storage.backends.base import StorageBackend
 
@@ -20,8 +18,8 @@ def cross_copy(
     1. 服务端 COPY：dst_backend 支持从 src_backend 快速复制
     2. 流式传输：src.read_stream → dst.write_stream
 
-    chunk_size 保留为接口参数，供未来后端实现细粒度分块控制；
-    本地后端已通过 write_stream 使用 1MB 缓冲区，避免大文件小 IO。
+    chunk_size 透传给 dst_backend.write_stream，后端按自身能力使用；
+    本地后端使用 chunk_size 控制 shutil.copyfileobj 的缓冲区，避免大文件小 IO。
     """
     try:
         if src_backend.can_fast_cross_copy(dst_backend):
@@ -30,9 +28,9 @@ def cross_copy(
     except Exception as e:  # noqa: BLE001
         log.debug(f"[cross_backend]忽略异常: {e}")
 
-    stream: BinaryIO = src_backend.read_stream(src_path)
+    stream = src_backend.read_stream(src_path)
     try:
-        dst_backend.write_stream(dst_path, stream)
+        dst_backend.write_stream(dst_path, stream, chunk_size=chunk_size)
     finally:
         stream.close()
 

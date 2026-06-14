@@ -84,8 +84,8 @@ class StorageBackend(ABC):
         """获取读取流，调用方负责 close。"""
 
     @abstractmethod
-    def write_stream(self, path: str, stream: BinaryIO, size: int = 0) -> None:
-        """从流写入，自动创建父目录。"""
+    def write_stream(self, path: str, stream: BinaryIO, size: int = 0, chunk_size: int = 0) -> None:
+        """从流写入，自动创建父目录。chunk_size 为 0 时由后端自行决定分块大小。"""
 
     # ---------- 同后端操作 ----------
 
