@@ -1,6 +1,13 @@
 # 版本历史
 
-## Unreleased / v4.1.0-dev (2026-06-14)
+## v4.1.0 (2026-06-15)
+
+### 部署优化
+- **Docker Compose 三模式部署**：支持基础模式（前端+后端+Redis+MySQL/PostgreSQL）、完整模式（+OCR+Chrome）、仅前后端模式（SQLite）
+- **默认基础 MySQL 模式**：执行 `docker compose up -d` 即可启动
+- **统一数据库环境变量**：Docker 与代码统一使用 `DATABASE__*` 格式读取配置
+- **Redis 默认命令启动**：移除对 `./config/redis.conf` 文件挂载的依赖
+- 数据库升级到 MySQL 8.4 / PostgreSQL 17-alpine
 
 ### 性能优化
 - **数据库查询性能**: 消除 `site_repository` / `transfer_repository` N+1 查询；为 `SUBSCRIBE_MOVIES` / `SUBSCRIBE_TVS` / `CONFIG_USER_RSS` / `SITE_BRUSH_TORRENTS` / `TRANSFER_HISTORY` / `TRANSFER_UNKNOWN` 添加索引；`subscribe_repository` 用单次 `first()` 替代 `.all()` + 循环
