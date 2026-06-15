@@ -137,14 +137,11 @@ def update_config(indexer_statistics_repo=None):
     except Exception as e:
         ExceptionUtils.exception_traceback(e)
 
-    # TMDB代理服务开关迁移
+    # TMDB代理服务开关迁移（已废弃，不再硬编码代理域名）
     try:
         _lab_cfg = _config.get("laboratory", {})
-        tmdb_proxy = _lab_cfg.get("tmdb_proxy")
-        if tmdb_proxy:
-            _config.setdefault("app", {})
-            _config["app"]["tmdb_domain"] = "tmdb.nexus-media.cn"
-            _config["laboratory"].pop("tmdb_proxy")
+        if _lab_cfg.get("tmdb_proxy"):
+            _config["laboratory"].pop("tmdb_proxy", None)
             overwrite_config = True
     except Exception as e:
         ExceptionUtils.exception_traceback(e)

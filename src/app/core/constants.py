@@ -86,7 +86,7 @@ FANART_TV_API_URL = "https://webservice.fanart.tv/v3/tv/%s?api_key=d2d31f9ecabea
 DEFAULT_TMDB_IMAGE = "https://s3.bmp.ovh/imgs/2022/07/10/77ef9500c851935b.webp"
 
 # TMDB域名地址
-TMDB_API_DOMAINS = ["api.themoviedb.org", "api.tmdb.org", "tmdb.nexus-media.cn", "tmdb.nexus-media.workers.dev"]
+TMDB_API_DOMAINS = ["api.themoviedb.org", "api.tmdb.org"]
 TMDB_IMAGE_DOMAIN = "image.tmdb.org"
 
 # TMDB图片尺寸配置
