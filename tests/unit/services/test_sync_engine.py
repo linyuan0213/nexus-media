@@ -29,12 +29,16 @@ def engine(tmp_path):
     sync_repo = MagicMock()
     sync_repo.get_config_sync_paths.return_value = []
     backend_repo = MagicMock()
-    eng = SyncEngine(
-        transfer_engine=transfer_engine,
-        transfer_pipeline=pipeline,
-        sync_path_repo=sync_repo,
-        storage_backend_repo=backend_repo,
-    )
+    with patch("app.services.sync_engine.TransferHistoryRepositoryAdapter") as mock_history_cls:
+        mock_history = MagicMock()
+        mock_history.is_sync_in_history.return_value = False
+        mock_history_cls.return_value = mock_history
+        eng = SyncEngine(
+            transfer_engine=transfer_engine,
+            transfer_pipeline=pipeline,
+            sync_path_repo=sync_repo,
+            storage_backend_repo=backend_repo,
+        )
     return eng, sync_repo, backend_repo
 
 

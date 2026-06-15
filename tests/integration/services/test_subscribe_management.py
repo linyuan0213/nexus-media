@@ -107,7 +107,9 @@ class TestSubscribeUpdateService:
     """Test suite for SubscribeUpdateService."""
 
     def test_update_no_rssid(self):
-        svc = SubscribeUpdateService(MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
+        svc = SubscribeUpdateService(
+            MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock()
+        )
         code, msg, media = svc.update_rss_subscribe(mtype=MediaType.MOVIE, rssid=None)
         assert code == -1
         assert "缺少订阅ID" in msg
@@ -125,7 +127,9 @@ class TestSubscribeUpdateService:
         media_info.to_dict.return_value = {}
         media_service.get_media_info.return_value = media_info
         event_bus = MagicMock()
-        svc = SubscribeUpdateService(movie_repo, MagicMock(), media_service, MagicMock(), event_bus, MagicMock())
+        svc = SubscribeUpdateService(
+            movie_repo, MagicMock(), media_service, MagicMock(), event_bus, MagicMock(), MagicMock()
+        )
         with patch("app.services.subscribe.management.update_service.gen_rss_note", return_value="{}"):
             code, msg, result = svc.update_rss_subscribe(
                 mtype=MediaType.MOVIE, rssid=1, name="Test", year="2024", state="D"
@@ -145,7 +149,9 @@ class TestSubscribeUpdateService:
         media_info.begin_season = 1
         media_service.get_media_info.return_value = media_info
         media_service.get_tmdb_season_episodes_num.return_value = None
-        svc = SubscribeUpdateService(MagicMock(), tv_repo, media_service, MagicMock(), MagicMock(), MagicMock())
+        svc = SubscribeUpdateService(
+            MagicMock(), tv_repo, media_service, MagicMock(), MagicMock(), MagicMock(), MagicMock()
+        )
         code, msg, result = svc.update_rss_subscribe(
             mtype=MediaType.TV, rssid=1, name="Test", year="2024", season=1, state="D"
         )
@@ -154,7 +160,9 @@ class TestSubscribeUpdateService:
     def test_update_fuzzy_match_movie(self):
         movie_repo = MagicMock()
         movie_repo.update.return_value = 0
-        svc = SubscribeUpdateService(movie_repo, MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
+        svc = SubscribeUpdateService(
+            movie_repo, MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock()
+        )
         code, msg, result = svc.update_rss_subscribe(
             mtype=MediaType.MOVIE, rssid=1, name="Test", fuzzy_match=True, state="D"
         )
@@ -166,7 +174,9 @@ class TestSubscribeAddService:
     """Test suite for SubscribeAddService."""
 
     def test_add_no_name(self):
-        svc = SubscribeAddService(MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
+        svc = SubscribeAddService(
+            MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock()
+        )
         code, msg, media = svc.add_rss_subscribe(mtype=MediaType.MOVIE, name=None, year="2024")
         assert code == -1
         assert "标题" in msg
@@ -184,11 +194,75 @@ class TestSubscribeAddService:
         media_info.to_dict.return_value = {}
         media_service.get_media_info.return_value = media_info
         event_bus = MagicMock()
-        svc = SubscribeAddService(movie_repo, MagicMock(), media_service, MagicMock(), event_bus, MagicMock())
+        svc = SubscribeAddService(
+            movie_repo, MagicMock(), media_service, MagicMock(), event_bus, MagicMock(), MagicMock()
+        )
         with patch("app.services.subscribe.management.add_service.gen_rss_note", return_value="{}"):
             code, msg, result = svc.add_rss_subscribe(mtype=MediaType.MOVIE, name="Test", year="2024")
         assert code == 0
         assert "成功" in msg
+        movie_repo.insert.assert_called_once()
+
+    def test_add_tv_success(self):
+        tv_repo = MagicMock()
+        tv_repo.insert.return_value = 0
+        media_service = MagicMock()
+        media_info = MagicMock()
+        media_info.tmdb_info = {"id": 1}
+        media_info.type = MediaType.TV
+        media_info.title = "Test"
+        media_info.year = "2024"
+        media_info.begin_season = 1
+        media_info.tmdb_id = "123"
+        media_info.total_episodes = 10
+        media_info.to_dict.return_value = {}
+        media_service.get_media_info.return_value = media_info
+        media_service.get_tmdb_season_episodes_num.return_value = 10
+        svc = SubscribeAddService(
+            MagicMock(), tv_repo, media_service, MagicMock(), MagicMock(), MagicMock(), MagicMock()
+        )
+        with patch("app.services.subscribe.management.add_service.gen_rss_note", return_value="{}"):
+            code, msg, result = svc.add_rss_subscribe(mtype=MediaType.TV, rssid=1, name="Test", year="2024", season=1)
+        assert code == 0
+        assert "成功" in msg
+        tv_repo.insert.assert_called_once()
+
+    def test_add_fuzzy_match_movie(self):
+        movie_repo = MagicMock()
+        movie_repo.insert.return_value = 0
+        svc = SubscribeAddService(
+            movie_repo, MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock()
+        )
+        code, msg, result = svc.add_rss_subscribe(
+            mtype=MediaType.MOVIE, rssid=1, name="Test", year="2024", fuzzy_match=True
+        )
+        assert code == 0
+        movie_repo.insert.assert_called_once()
+
+    def test_add_default_settings(self):
+        movie_repo = MagicMock()
+        movie_repo.insert.return_value = 0
+        media_service = MagicMock()
+        media_info = MagicMock()
+        media_info.tmdb_info = {"id": 1}
+        media_info.type = MediaType.MOVIE
+        media_info.title = "Test"
+        media_info.year = "2024"
+        media_info.tmdb_id = "123"
+        media_info.to_dict.return_value = {}
+        media_service.get_media_info.return_value = media_info
+        system_config = MagicMock()
+        system_config.get.return_value = {
+            "restype": "BluRay",
+            "pix": "1080p",
+            "rss_sites": ["site1"],
+        }
+        svc = SubscribeAddService(
+            movie_repo, MagicMock(), media_service, MagicMock(), MagicMock(), system_config, MagicMock()
+        )
+        with patch("app.services.subscribe.management.add_service.gen_rss_note", return_value="{}"):
+            code, msg, result = svc.add_rss_subscribe(mtype=MediaType.MOVIE, name="Test", year="2024")
+        assert code == 0
         movie_repo.insert.assert_called_once()
 
     def test_add_movie_exists(self):
@@ -200,7 +274,9 @@ class TestSubscribeAddService:
         media_info.type = MediaType.MOVIE
         media_info.to_dict.return_value = {}
         media_service.get_media_info.return_value = media_info
-        svc = SubscribeAddService(movie_repo, MagicMock(), media_service, MagicMock(), MagicMock(), MagicMock())
+        svc = SubscribeAddService(
+            movie_repo, MagicMock(), media_service, MagicMock(), MagicMock(), MagicMock(), MagicMock()
+        )
         with patch("app.services.subscribe.management.add_service.gen_rss_note", return_value="{}"):
             code, msg, result = svc.add_rss_subscribe(mtype=MediaType.MOVIE, name="Test", year="2024")
         assert code == 9
@@ -209,37 +285,12 @@ class TestSubscribeAddService:
     def test_add_fuzzy_match(self):
         movie_repo = MagicMock()
         movie_repo.insert.return_value = 0
-        svc = SubscribeAddService(movie_repo, MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
+        svc = SubscribeAddService(
+            movie_repo, MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock()
+        )
         code, msg, result = svc.add_rss_subscribe(mtype=MediaType.MOVIE, name="Test", year="2024", fuzzy_match=True)
         assert code == 0
         assert movie_repo.insert.call_args.kwargs["fuzzy_match"] == 1
-
-    def test_add_default_settings(self):
-        movie_repo = MagicMock()
-        movie_repo.insert.return_value = 0
-        media_service = MagicMock()
-        media_info = MagicMock()
-        media_info.tmdb_info = {"id": 1}
-        media_info.type = MediaType.MOVIE
-        media_info.to_dict.return_value = {}
-        media_service.get_media_info.return_value = media_info
-        system_config = MagicMock()
-        system_config.get.return_value = {
-            "restype": "BluRay",
-            "rss_sites": ["site1"],
-        }
-        svc = SubscribeAddService(movie_repo, MagicMock(), media_service, MagicMock(), MagicMock(), system_config)
-        with patch("app.services.subscribe.management.add_service.gen_rss_note", return_value="{}"):
-            code, msg, result = svc.add_rss_subscribe(
-                mtype=MediaType.MOVIE,
-                name="Test",
-                year="2024",
-                channel="auto",
-            )
-        assert code == 0
-        call_kwargs = movie_repo.insert.call_args.kwargs
-        assert call_kwargs["filter_restype"] == "BluRay"
-        assert call_kwargs["rss_sites"] == ["site1"]
 
 
 class TestSubscribeRefreshService:

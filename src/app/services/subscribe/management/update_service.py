@@ -1,5 +1,6 @@
 """Subscribe update service - 更新订阅."""
 
+from dataclasses import asdict
 from typing import Any, cast
 
 from app.domain.enums import SubscribeType
@@ -9,7 +10,7 @@ from app.events.constants import SUBSCRIBE_ADD
 from app.events.payloads import SubscribeAddPayload
 from app.media import meta_info
 from app.services.subscribe.management.utils import gen_rss_note
-from app.services.web.utils import get_mediainfo_from_id
+from app.services.web.utils import WebUtils
 
 
 class SubscribeUpdateService:
@@ -23,6 +24,7 @@ class SubscribeUpdateService:
         message,
         event_bus,
         system_config,
+        web_utils: WebUtils,
     ):
         self._movie_repo = movie_repo
         self._tv_repo = tv_repo
@@ -30,6 +32,7 @@ class SubscribeUpdateService:
         self._message = message
         self._event_bus = event_bus
         self._system_config = system_config
+        self._web_utils = web_utils
 
     def update_rss_subscribe(
         self,
@@ -80,7 +83,7 @@ class SubscribeUpdateService:
         media_info = None
         if not fuzzy_match:
             if mediaid:
-                media_info = get_mediainfo_from_id(mtype=mtype, mediaid=mediaid)
+                media_info = self._web_utils.get_mediainfo_from_id(mtype=mtype, mediaid=mediaid)
                 if not season and media_info:
                     season = media_info.begin_season
             else:
@@ -229,24 +232,26 @@ class SubscribeUpdateService:
             self._event_bus.publish(
                 Event(
                     event_type=SUBSCRIBE_ADD,
-                    payload=SubscribeAddPayload(
-                        media=media_info.to_dict() if media_info else {},
-                        rssid=rssid,
-                        rss_sites=rss_sites,
-                        search_sites=search_sites,
-                        over_edition=over_edition,
-                        filter_restype=filter_restype,
-                        filter_pix=filter_pix,
-                        filter_team=filter_team,
-                        filter_rule=filter_rule,
-                        save_path=save_path,
-                        download_setting=download_setting,
-                        total_ep=total_ep,
-                        current_ep=current_ep,
-                        fuzzy_match=fuzzy_match,
-                        keyword=keyword,
+                    payload=asdict(
+                        SubscribeAddPayload(
+                            media=media_info.to_dict() if media_info else {},
+                            rssid=rssid,
+                            rss_sites=rss_sites,
+                            search_sites=search_sites,
+                            over_edition=over_edition,
+                            filter_restype=filter_restype,
+                            filter_pix=filter_pix,
+                            filter_team=filter_team,
+                            filter_rule=filter_rule,
+                            save_path=save_path,
+                            download_setting=download_setting,
+                            total_ep=total_ep,
+                            current_ep=current_ep,
+                            fuzzy_match=fuzzy_match,
+                            keyword=keyword,
+                        )
                     ),
-                )
+                ),
             )
             if in_from and media_info:
                 media_info.user_name = user_name

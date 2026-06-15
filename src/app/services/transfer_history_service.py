@@ -21,9 +21,7 @@ class TransferHistoryService:
     ):
         self._filetransfer = filetransfer
         self._sync_service = sync_service
-        self._cache = get_cache_manager().get_or_create(
-            "transfer_history_service", cache_type="memory", maxsize=100
-        )
+        self._cache = get_cache_manager().get_or_create("transfer_history_service", cache_type="memory", maxsize=100)
         self._cache_ttl = cache_ttl
 
     def _cache_key(self, prefix: str, *parts) -> str:
@@ -49,8 +47,9 @@ class TransferHistoryService:
         historys_list = []
         for history in historys:
             history = history.as_dict()
-            sync_mode = history.get("MODE")
+            sync_mode = history.get("mode")
             rmt_mode = sync_mode or ""
+            history = {k.upper(): v for k, v in history.items()}
             history.update({"SYNC_MODE": sync_mode, "RMT_MODE": rmt_mode})
             historys_list.append(history)
         total_page = floor(total_count / page_num) + 1

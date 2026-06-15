@@ -175,7 +175,8 @@ class TestSubscriptionRouter:
         mock_subscribe_service.default_subscribe_setting_mov = None
         resp = client.post("/api/v1/subscription/default_setting", json={"mtype": "tv"})
         assert resp.status_code == 200
-        assert resp.json()["code"] == 1
+        assert resp.json()["code"] == 0
+        assert resp.json()["data"] == {}
 
     def test_save_default_rss_setting(self, client, mock_system_config):
         resp = client.post(

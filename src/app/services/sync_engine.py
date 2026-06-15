@@ -59,6 +59,20 @@ class SyncPathConfig:
         self.compatibility = bool(row.COMPATIBILITY)
         self.enabled = bool(row.ENABLED)
 
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "source": self.source,
+            "dest": self.dest,
+            "unknown": self.unknown,
+            "operation": self.operation,
+            "src_backend_id": self.src_backend_id,
+            "dst_backend_id": self.dst_backend_id,
+            "rename": self.rename,
+            "compatibility": self.compatibility,
+            "enabled": self.enabled,
+        }
+
 
 class SyncEngine:
     """目录同步引擎.

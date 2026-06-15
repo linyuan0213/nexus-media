@@ -360,7 +360,7 @@ class ConfigHtmlUserInfo:
             )
             return res.text
         except Exception as exc:
-            log.debug(f"[_fetch_html]{self.site_name} 请求失败: {url} ({exc})")
+            log.debug(f"_fetch_html {self.site_name} 请求失败: {url} ({exc})")
             return None
 
 

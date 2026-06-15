@@ -337,8 +337,9 @@ class SyncService:
 
     def get_sync_paths(self, sid: str | None = None):
         if sid is not None:
-            return self._sync.get_sync_path_conf(sid)
-        return self._sync.get_all_sync_path_conf()
+            cfg = self._sync.get_sync_path_conf(sid)
+            return cfg.to_dict() if cfg else None
+        return {k: v.to_dict() for k, v in self._sync.get_all_sync_path_conf().items()}
 
     def transfer_sync(self, sid: str | None = None):
         """触发指定同步目录的同步转移"""

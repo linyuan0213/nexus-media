@@ -6,11 +6,13 @@ import log
 from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SystemConfigKey
 from app.domain.mediatypes import MediaType
+from app.media.external.bangumi import Bangumi
 from app.services.subscribe.management.add_service import SubscribeAddService
 from app.services.subscribe.management.finish_service import SubscribeFinishService
 from app.services.subscribe.management.query_service import SubscribeQueryService
 from app.services.subscribe.management.refresh_service import SubscribeRefreshService
 from app.services.subscribe.management.update_service import SubscribeUpdateService
+from app.services.web.utils import WebUtils
 
 
 class SubscribeService:
@@ -46,11 +48,25 @@ class SubscribeService:
         self._event_bus = event_bus
         self._system_config = system_config
 
+        self._web_utils = WebUtils(media_service=media_service, douban=douban, bangumi=Bangumi())
+
         self._update_svc = SubscribeUpdateService(
-            self._movie_repo, self._tv_repo, self._media, self._message, self._event_bus, self._system_config
+            self._movie_repo,
+            self._tv_repo,
+            self._media,
+            self._message,
+            self._event_bus,
+            self._system_config,
+            self._web_utils,
         )
         self._add_svc = SubscribeAddService(
-            self._movie_repo, self._tv_repo, self._media, self._message, self._event_bus, self._system_config
+            self._movie_repo,
+            self._tv_repo,
+            self._media,
+            self._message,
+            self._event_bus,
+            self._system_config,
+            self._web_utils,
         )
         self._finish_svc = SubscribeFinishService(
             self._movie_repo, self._tv_repo, self._history_repo, self._message, self._event_bus

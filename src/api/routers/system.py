@@ -765,10 +765,14 @@ def stream_logging(
     token: str | None = Query(""),
 ):
     """实时日志 EventSource 响应
-    兼容 EventSource 无法携带自定义 Header 的限制，支持从 query param 传入 token。
+    兼容 EventSource 无法携带自定义 Header 的限制，支持从 query param 传入 token，
+    同时也支持 Authorization header。
     """
     user_ctx = None
-    if token:
+    auth_header = request.headers.get("authorization", "")
+    if auth_header and auth_header.startswith("Bearer "):
+        user_ctx = AuthService.verify_token(auth_header[7:])
+    if not user_ctx and token:
         user_ctx = AuthService.verify_token(token)
     if not user_ctx:
         raise HTTPException(

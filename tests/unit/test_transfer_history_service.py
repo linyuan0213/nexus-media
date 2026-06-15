@@ -10,11 +10,11 @@ from app.services.transfer_history_service import TransferHistoryService
 class _HistoryMock:
     def as_dict(self):
         return {
-            "ID": 1,
-            "MODE": "link",
-            "SOURCE_PATH": "/src",
-            "SOURCE_FILENAME": "movie.mkv",
-            "DEST": "/dst",
+            "id": 1,
+            "mode": "link",
+            "source_path": "/src",
+            "source_filename": "movie.mkv",
+            "dest": "/dst",
         }
 
 

@@ -237,6 +237,10 @@ class BaseSearchStrategy:
                     if rss_no_exists.get(media_info.tmdb_id):
                         missing = rss_no_exists.get(media_info.tmdb_id)
                         log.info(f"[Subscribe]{media_info.get_title_string()} 订阅缺失季集：{missing}")
+                        if self._service:
+                            self._service.update_subscribe_tv_lack(
+                                rssid=rssid, media_info=media_info, seasoninfo=missing
+                            )
                 else:
                     media_info.over_edition = over_edition
                     if rssid is not None:

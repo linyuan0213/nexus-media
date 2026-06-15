@@ -3,10 +3,12 @@ Subscription Router — FastAPI 迁移
 对应原 web/controllers/rss.py，调用 subscribe/ 领域服务
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel
 
 from api.deps import (
+    get_apikey_service,
+    get_current_user,
     get_subscribe_calendar_service,
     get_subscribe_history_service,
     get_subscribe_service,
@@ -19,7 +21,9 @@ from app.core.system_config import SystemConfig
 from app.domain.enums import SystemConfigKey
 from app.domain.mediatypes import MediaType
 from app.media import meta_info
+from app.schemas.auth import UserContext
 from app.schemas.common import CommonResponse
+from app.services.apikey_service import APIKeyService
 from app.services.subscribe.management.calendar_service import SubscribeCalendarService
 from app.services.subscribe.management.history_service import SubscribeHistoryService
 from app.services.subscribe.management.service import SubscribeService
@@ -348,7 +352,7 @@ def get_default_rss_setting(
         setting = {}
     if setting:
         return success(data=setting)
-    return fail()
+    return success(data={})
 
 
 @router.post("/default_setting/save", response_model=CommonResponse, summary="保存默认 RSS 设置")
@@ -376,6 +380,38 @@ def get_ical_events(
 ):
     events = svc.get_events()
     return success(data=events)
+
+
+@router.post("/calendar/ical/download", summary="下载订阅日历 ICS 文件")
+def download_ical(
+    user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
+    svc: SubscribeCalendarService = Depends(get_subscribe_calendar_service),
+):
+    ics = svc.generate_ics()
+    return success(data=ics)
+
+
+@router.get("/calendar/ical/webcal", summary="Webcal 订阅订阅日历")
+def webcal_ical(
+    request: Request,
+    user: UserContext = Depends(get_current_user),
+    svc: SubscribeCalendarService = Depends(get_subscribe_calendar_service),
+):
+    ics = svc.generate_ics()
+    return Response(
+        content=ics,
+        media_type="text/calendar; charset=utf-8",
+    )
+
+
+@router.get("/calendar/webcal_url", response_model=CommonResponse, summary="获取订阅日历 Webcal URL")
+def get_webcal_url(
+    request: Request,
+    user: UserContext = Depends(get_current_user),
+    apikey_service: APIKeyService = Depends(get_apikey_service),
+):
+    token = apikey_service.get_or_create_system_key("CalendarSubscription")
+    return success(data={"token": token})
 
 
 @router.post("/movie/items", response_model=CommonResponse, summary="获取电影 RSS 订阅项")
