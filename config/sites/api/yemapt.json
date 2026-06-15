@@ -209,5 +209,5 @@
     "response_key": "data",
     "download_url": "{base}/api/torrent/download1?token={token}"
   },
-  "favicon": "https://static-ui.yemapt.org/dac13f14/icons/icons8-mustang-32.png"
+  "favicon": "https://static-ui.yemapt.org/ebc82850/icons/icons8-mustang-32.png"
 }
