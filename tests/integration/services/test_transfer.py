@@ -1,6 +1,7 @@
 """Tests for app.services.transfer package."""
 
 import re
+import uuid
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -525,6 +526,7 @@ class TestFileTransferService:
         assert "不存在" in msg
 
     def test_transfer_media_no_files(self, mock_service):
+        unique_path = f"/empty/no-files-{uuid.uuid4().hex}"
         with (
             patch("os.path.exists", return_value=True),
             patch("os.path.isdir", return_value=True),
@@ -532,7 +534,7 @@ class TestFileTransferService:
             patch("app.services.transfer.filetransfer_service.PathUtils.get_bluray_dir", return_value=None),
             patch("app.services.transfer.filetransfer_service.PathUtils.get_dir_files", return_value=[]),
         ):
-            status, msg = mock_service.transfer_media(SyncType.MAN, "/empty")
+            status, msg = mock_service.transfer_media(SyncType.MAN, unique_path)
         assert status is False  # bluray_disk_dir is None, empty file_list returns failure
         assert "未找到" in msg
 
