@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import log
+from app.core.settings import settings
 
 _RELOAD_TARGETS: dict[str, str] = {
     "downloader_core": "downloader_core",
@@ -66,7 +67,7 @@ class ConfigReloader:
 
     def _register_defaults(self) -> None:
         """注册所有需要热重载的 provider（按优先级分组）."""
-        # 基础配置（最优先）
+        # 基础配置（最优先）- 直接 reload settings
         self.register("system_config", self.PRIORITY_SETTINGS)
         self.register("category", self.PRIORITY_CATEGORY)
         # 核心基础设施
@@ -118,6 +119,18 @@ class ConfigReloader:
             return {"version": self._version, "results": results, "failed": failed}
 
         for step in self._steps:
+            # system_config 直接 reload AppSettings
+            if step.name == "system_config":
+                try:
+                    settings.reload()
+                    results[step.name] = True
+                    log.debug(f"[ConfigReloader][{step.priority}] settings.reload() OK")
+                except Exception as e:
+                    results[step.name] = False
+                    failed.append(step.name)
+                    log.error(f"[ConfigReloader][{step.priority}] settings.reload() 失败: {e}")
+                continue
+
             # 只处理 AppContext 中存在的属性名
             if step.name not in _RELOAD_TARGETS:
                 log.debug(f"[ConfigReloader][{step.priority}] {step.name} 不是可重载目标，跳过")
