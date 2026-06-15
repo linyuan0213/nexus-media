@@ -168,6 +168,7 @@ class AsyncHttpClient:
             err = HttpClientError.from_httpx(e)
             if isinstance(err, HttpSSLError):
                 log.warn(f"[AsyncHttpClient]SSL/TLS 请求失败: {method} {url} - {err}")
+                raise err
             raise err from e
 
         for mw in self._middlewares:

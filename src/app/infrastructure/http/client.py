@@ -161,6 +161,7 @@ class HttpClient:
             err = HttpClientError.from_httpx(e)
             if isinstance(err, HttpSSLError):
                 log.warn(f"[HttpClient]SSL/TLS 请求失败: {method} {url} - {err}")
+                raise err
             raise err from e
 
         # 响应中间件链路
