@@ -10,8 +10,6 @@ import uuid
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 
-import redis
-
 import log
 from app.infrastructure.queue.base import MessageQueue
 from app.infrastructure.redis import RedisStore
@@ -42,13 +40,7 @@ class RedisMessageQueue(MessageQueue):
     def _init_stream(self):
         """初始化 Stream 和消费者组"""
         try:
-            client = self._redis._client
-            if client:
-                try:
-                    client.xgroup_create(STREAM_KEY, CONSUMER_GROUP, id="0", mkstream=True)
-                except redis.ResponseError as e:
-                    if "already exists" not in str(e):
-                        raise
+            self._redis.xgroup_create(STREAM_KEY, CONSUMER_GROUP)
         except Exception as e:
             log.error(f"[RedisMessageQueue]初始化 Stream 失败: {e}")
             self._available = False
@@ -126,6 +118,7 @@ class RedisMessageQueue(MessageQueue):
         consumer_id = f"consumer_{uuid.uuid4().hex[:8]}"
         while not self._shutdown:
             try:
+                self._redis.xgroup_create(STREAM_KEY, CONSUMER_GROUP)
                 messages = self._redis.xreadgroup(CONSUMER_GROUP, consumer_id, {STREAM_KEY: ">"}, count=1, block=3000)
                 if not messages:
                     continue

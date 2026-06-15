@@ -1,18 +1,10 @@
-"""ConfigReloader — 集中式配置热重载协调器（Registry reset 模式）.
+"""ConfigReloader — 集中式配置热重载协调器.
 
 职责：
-1. 维护 provider 重载优先级列表
-2. 配置变更时按优先级 reset 各 provider
-3. 失败隔离：单个 provider 重置失败不影响其他
+1. 维护需要重建的 provider 列表及工厂函数
+2. 配置变更时调用工厂重建 provider 并替换到 AppContext
+3. 失败隔离：单个 provider 重建失败不影响其他
 4. 可观测：每一步都记录日志
-
-用法：
-    # 注册 provider（字符串名）和优先级
-    config_reloader.register("category", priority=0)
-    config_reloader.register("sites", priority=1)
-
-    # 触发重载
-    config_reloader.reload()
 """
 
 from collections.abc import Callable
@@ -21,20 +13,8 @@ from typing import Any
 
 import log
 from app.core.settings import settings
-
-_RELOAD_TARGETS: dict[str, str] = {
-    "media_service": "media_service",
-    "tmdb_client": "tmdb_client",
-    "downloader_core": "downloader_core",
-    "media_server": "media_server",
-    "message": "message",
-    "filetransfer_service": "filetransfer_service",
-    "searcher": "searcher",
-    "brush_task_service": "brush_task_service",
-    "rss_task_service": "rss_task_service",
-    "indexer_service": "indexer_service",
-    "words_service": "words_service",
-}
+from app.di.context import AppContext
+from app.media.lookup.tmdb_client import TmdbClient
 
 
 @dataclass(order=True)
@@ -43,113 +23,53 @@ class _ReloadStep:
 
     priority: int
     name: str = field(compare=False)
+    factory: Callable[[], Any] | None = field(default=None, compare=False)
 
 
 class ConfigReloader:
-    """集中式配置热重载协调器.
+    """集中式配置热重载协调器."""
 
-    由 lifespan 通过 AppContext 创建并注入依赖。
-    """
+    PRIORITY_SETTINGS = 0
+    PRIORITY_INFRA = 10
 
-    # 标准优先级分组（数值越小越早执行）
-    PRIORITY_SETTINGS = 0  # AppSettings / SystemConfig
-    PRIORITY_CATEGORY = 5  # Category 策略文件
-    PRIORITY_INFRA = 10  # Sites, SiteConf, SiteUserInfo
-    PRIORITY_CORE = 20  # DownloaderCore, MediaServer, Message
-    PRIORITY_SERVICE = 30  # FileTransfer, SearchService, BrushCore
-    PRIORITY_INDEXER = 40  # Indexer 及客户端
-    PRIORITY_PLUGIN = 50  # PluginFramework
-    PRIORITY_AUX = 100  # ProgressTracker, ThreadExecutor, WordsHelper
-
-    def __init__(self, provider_resolver: Callable[[str], Any] | None = None):
+    def __init__(self, context: AppContext):
+        self._context = context
         self._steps: list[_ReloadStep] = []
         self._version = 0
-        self._provider_resolver = provider_resolver
         self._register_defaults()
 
     def _register_defaults(self) -> None:
-        """注册所有需要热重载的 provider（按优先级分组）."""
-        # 基础配置（最优先）- 直接 reload settings
+        """注册需要重建的 provider 及工厂函数."""
         self.register("system_config", self.PRIORITY_SETTINGS)
-        self.register("category", self.PRIORITY_CATEGORY)
-        # 核心基础设施
-        self.register("tmdb_client", self.PRIORITY_INFRA)
-        self.register("media_service", self.PRIORITY_INFRA)
-        self.register("sites", self.PRIORITY_INFRA)
-        self.register("site_conf", self.PRIORITY_INFRA)
-        self.register("site_userinfo", self.PRIORITY_INFRA)
-        # 核心服务
-        self.register("downloader_core", self.PRIORITY_CORE)
-        self.register("media_server", self.PRIORITY_CORE)
-        self.register("message", self.PRIORITY_CORE)
-        # 业务服务
-        self.register("filetransfer_service", self.PRIORITY_SERVICE)
-        self.register("searcher", self.PRIORITY_SERVICE)
-        self.register("brush_task_service", self.PRIORITY_SERVICE)
-        self.register("rss_task_service", self.PRIORITY_SERVICE)
-        self.register("indexer_service", self.PRIORITY_INDEXER)
-        # 辅助
-        self.register("words_service", self.PRIORITY_AUX)
+        self.register("tmdb_client", self.PRIORITY_INFRA, factory=lambda: TmdbClient())
 
-    def register(self, provider_name: str, priority: int = 100) -> None:
-        """
-        注册一个 DI provider，配置变更时 reset + 重新实例化.
-
-        :param provider_name: AppContext 上的 provider 属性名，如 "category"
-        :param priority: 优先级，数值越小越早执行
-        """
+    def register(self, provider_name: str, priority: int = 100, factory: Callable[[], Any] | None = None) -> None:
         self._steps = [s for s in self._steps if s.name != provider_name]
-        self._steps.append(_ReloadStep(priority, provider_name))
+        self._steps.append(_ReloadStep(priority, provider_name, factory))
         self._steps.sort()
 
-    def unregister(self, provider_name: str) -> None:
-        """注销一个 provider."""
-        self._steps = [s for s in self._steps if s.name != provider_name]
-
     def reload(self) -> dict:
-        """
-        执行完整配置重载：按优先级 reset 各 provider.
-
-        :return: {"version": int, "results": {name: bool}, "failed": [name]}
-        """
+        """执行配置重载：settings.reload() + 重建注册的 provider."""
         self._version += 1
         log.info(f"[ConfigReloader]开始配置重载，版本 v{self._version}")
 
         results: dict[str, bool] = {}
         failed: list[str] = []
 
-        if self._provider_resolver is None:
-            log.warn("[ConfigReloader]未配置 provider_resolver，跳过重载")
-            return {"version": self._version, "results": results, "failed": failed}
-
         for step in self._steps:
-            # system_config 直接 reload AppSettings
-            if step.name == "system_config":
-                try:
+            try:
+                if step.name == "system_config":
                     settings.reload()
                     results[step.name] = True
-                    log.debug(f"[ConfigReloader][{step.priority}] settings.reload() OK")
-                except Exception as e:
-                    results[step.name] = False
-                    failed.append(step.name)
-                    log.error(f"[ConfigReloader][{step.priority}] settings.reload() 失败: {e}")
-                continue
-
-            # 只处理 AppContext 中存在的属性名
-            if step.name not in _RELOAD_TARGETS:
-                log.debug(f"[ConfigReloader][{step.priority}] {step.name} 不是可重载目标，跳过")
-                continue
-
-            try:
-                provider = self._provider_resolver(step.name)
-                if provider is None:
-                    log.warn(f"[ConfigReloader][{step.priority}] {step.name} 未找到对应 provider，跳过")
                     continue
 
-                log.debug(f"[ConfigReloader][{step.priority}] reset {step.name} ...")
-                provider.reset()
+                if step.factory is None:
+                    continue
+
+                new_instance = step.factory()
+                object.__setattr__(self._context, step.name, new_instance)
                 results[step.name] = True
-                log.debug(f"[ConfigReloader][{step.priority}] {step.name} OK")
+                log.debug(f"[ConfigReloader][{step.priority}] {step.name} 重建成功")
             except Exception as e:
                 results[step.name] = False
                 failed.append(step.name)
@@ -164,10 +84,8 @@ class ConfigReloader:
 
     @property
     def version(self) -> int:
-        """当前配置版本号."""
         return self._version
 
     @property
     def steps(self) -> list[str]:
-        """已注册的 provider 名称列表（按执行顺序）."""
         return [s.name for s in self._steps]

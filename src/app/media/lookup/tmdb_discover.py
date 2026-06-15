@@ -98,7 +98,11 @@ class TmdbDiscover:
             return cached
         if not self.client.movie:
             return []
-        result = self._dict_infos(self.client.movie.now_playing(page), MediaType.MOVIE)
+        try:
+            result = self._dict_infos(self.client.movie.now_playing(page), MediaType.MOVIE)
+        except Exception as e:
+            log.warn(f"[TmdbDiscover]获取最新电影失败: {e}")
+            return []
         if result:
             self.client.redis_cache.set_trending("movie", "now_playing", page, result)
         return result
@@ -110,7 +114,11 @@ class TmdbDiscover:
             return cached
         if not self.client.tv:
             return []
-        result = self._dict_infos(self.client.tv.on_the_air(page), MediaType.TV)
+        try:
+            result = self._dict_infos(self.client.tv.on_the_air(page), MediaType.TV)
+        except Exception as e:
+            log.warn(f"[TmdbDiscover]获取最新电视剧失败: {e}")
+            return []
         if result:
             self.client.redis_cache.set_trending("tv", "on_the_air", page, result)
         return result

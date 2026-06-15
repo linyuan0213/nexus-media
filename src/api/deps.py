@@ -458,7 +458,7 @@ def get_transfer_history_service(app_context: AppContext = Depends(get_app_conte
 
 def get_config_reloader(app_context: AppContext = Depends(get_app_context)):
     """获取配置重载器实例"""
-    return ConfigReloader(provider_resolver=app_context.config_service.get)
+    return ConfigReloader(context=app_context)
 
 
 # --- 兼容旧 Registry 获取方式（逐步废弃）---

@@ -583,8 +583,11 @@ def update_config(
     req: UpdateConfigRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
     svc=Depends(get_config_update_service),
+    reloader: ConfigReloader = Depends(get_config_reloader),
 ):
     result = svc.update_config(req.data)
+    if result.success and not result.test_mode:
+        reloader.reload()
     if result.success:
         return success()
     return fail()

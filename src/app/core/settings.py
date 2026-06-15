@@ -366,8 +366,10 @@ def _apply_env_database_config(settings: AppSettings) -> None:
     if not env_db_keys:
         return
     env_db = settings.database.model_dump()
+    full = settings.get()
+    full["database"] = env_db
     try:
-        settings.save({"database": env_db})
+        settings.save(full)
         print("[Config]已从环境变量更新数据库配置到配置文件")
     except Exception as e:
         print(f"[Config]保存数据库配置到文件失败：{e!s}")

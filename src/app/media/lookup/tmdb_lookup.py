@@ -15,8 +15,8 @@ from app.utils import StringUtils
 class TmdbLookup(BaseLookup):
     """TMDB 查询器 — 组合所有子模块"""
 
-    def __init__(self):
-        self.client = TmdbClient()
+    def __init__(self, client: TmdbClient | None = None):
+        self.client = client or TmdbClient()
         self.search = TmdbSearch(self.client)
         self.detail = TmdbDetail(self.client)
         self.season = TmdbSeason(self.client)

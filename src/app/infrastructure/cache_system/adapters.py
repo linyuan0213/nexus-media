@@ -353,7 +353,7 @@ class RedisCacheAdapter(CacheAdapter):
         """清空所有缓存"""
         if self._ensure_connection() and self._redis is not None:
             try:
-                keys = self._redis.keys("cache:*")
+                keys = self._redis.keys("*")
                 if keys:
                     self._redis.delete(*keys)
             except Exception as e:

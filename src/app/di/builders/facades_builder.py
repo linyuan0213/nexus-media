@@ -20,7 +20,7 @@ def build_business_facades(infra: InfrastructureObjects) -> BusinessFacades:
     search_intent_agent = agent_service.search_intent_agent
 
     media_service = MediaService(
-        tmdb_lookup=TmdbLookup(),
+        tmdb_lookup=TmdbLookup(client=tmdb_client),
         llm_parser=LLMParser(recognizer=media_recognizer),
     )
 

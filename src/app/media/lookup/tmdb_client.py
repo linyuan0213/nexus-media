@@ -40,8 +40,9 @@ class TmdbClient:
         self._init_config()
 
     def reset(self) -> None:
-        """重置配置（热重载时由 ConfigReloader 调用）"""
+        """重置配置并清除缓存（热重载时由 ConfigReloader 调用）"""
         self._init_config()
+        self.redis_cache.clear()
 
     def _init_config(self):
         app = settings.get("app")
