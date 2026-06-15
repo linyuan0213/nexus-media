@@ -27,7 +27,9 @@ class HttpRetryConfig:
         return Retrying(
             stop=stop_after_attempt(self.max_attempts),
             wait=wait_exponential(multiplier=self.min_wait, exp_base=self.exp_base, max=self.max_wait),
-            retry=retry_if_exception_type((httpx.ConnectError, httpx.TimeoutException)),
+            retry=retry_if_exception_type(
+                (httpx.ConnectError, httpx.TimeoutException, httpx.ReadError, httpx.WriteError)
+            ),
             reraise=True,
             **kwargs,
         )
@@ -37,7 +39,9 @@ class HttpRetryConfig:
         return AsyncRetrying(
             stop=stop_after_attempt(self.max_attempts),
             wait=wait_exponential(multiplier=self.min_wait, exp_base=self.exp_base, max=self.max_wait),
-            retry=retry_if_exception_type((httpx.ConnectError, httpx.TimeoutException)),
+            retry=retry_if_exception_type(
+                (httpx.ConnectError, httpx.TimeoutException, httpx.ReadError, httpx.WriteError)
+            ),
             reraise=True,
             **kwargs,
         )

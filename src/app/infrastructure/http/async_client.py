@@ -7,9 +7,10 @@ from typing import Any
 
 import httpx
 
+import log
 from app.infrastructure.http.cache import HttpCacheConfig
 from app.infrastructure.http.config import HttpClientConfig
-from app.infrastructure.http.exceptions import HttpClientError
+from app.infrastructure.http.exceptions import HttpClientError, HttpSSLError
 from app.infrastructure.http.middleware import HttpMiddleware
 from app.infrastructure.http.retry import HttpRetryConfig
 from app.infrastructure.rate_limiter import RateLimitEngine
@@ -164,7 +165,10 @@ class AsyncHttpClient:
         try:
             result = await self._retry(_do_request)
         except httpx.HTTPError as e:
-            raise HttpClientError.from_httpx(e) from e
+            err = HttpClientError.from_httpx(e)
+            if isinstance(err, HttpSSLError):
+                log.warn(f"[AsyncHttpClient]SSL/TLS 请求失败: {method} {url} - {err}")
+            raise err from e
 
         for mw in self._middlewares:
             result = mw.process_response(result)

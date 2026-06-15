@@ -255,7 +255,9 @@ class RateLimitEngine:
             if self._sliding_window_backend is None:
                 self._sliding_window_backend = MemorySlidingWindowBackend()
             return self._sliding_window_backend.acquire(key, rate_per_sec, burst, tokens, timeout)
-        return self._backend.acquire(key, rate_per_sec * 1000, burst, tokens, timeout)
+        # Redis 脚本将 rate 视为毫秒速率，内存后端使用秒速率
+        backend_rate = rate_per_sec * 1000 if isinstance(self._backend, RedisTokenBucketBackend) else rate_per_sec
+        return self._backend.acquire(key, backend_rate, burst, tokens, timeout)
 
     def try_acquire(self, key: str, rate: str = "10/m", tokens: int = 1) -> bool:
         """不等待，立即返回."""

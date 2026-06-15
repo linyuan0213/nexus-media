@@ -13,6 +13,7 @@ from app.infrastructure.http.exceptions import (
     HttpAuthError,
     HttpClientError,
     HttpConnectionError,
+    HttpSSLError,
     HttpTimeoutError,
 )
 from app.infrastructure.http.middleware import HttpMiddleware, LoggingMiddleware
@@ -31,6 +32,7 @@ __all__ = [
     "HttpConnectionError",
     "HttpMiddleware",
     "HttpRetryConfig",
+    "HttpSSLError",
     "HttpTimeoutError",
     "LoggingMiddleware",
 ]
