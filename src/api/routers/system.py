@@ -385,14 +385,15 @@ def get_indexers(
 ):
     """获取索引器配置信息（外部索引器配置、内置站点列表、当前配置）"""
     indexers = idx_svc.get_builtin_indexers(check=False)
-    private_count = len([item.id for item in indexers if not item.public])
-    public_count = len([item.id for item in indexers if item.public])
+    indexer_list = [vars(item) for item in indexers]
+    private_count = len([item for item in indexer_list if not item.get("public")])
+    public_count = len([item for item in indexer_list if item.get("public")])
     indexer_sites = cfg.get(SystemConfigKey.UserIndexerSites) or []
     search_indexer = cfg.get(SystemConfigKey.SearchIndexer) or "builtin"
     indexer_config = cfg.get(SystemConfigKey.IndexerConfig) or {}
     return success(
         data={
-            "indexers": indexers,
+            "indexers": indexer_list,
             "private_count": private_count,
             "public_count": public_count,
             "indexer_conf": {
