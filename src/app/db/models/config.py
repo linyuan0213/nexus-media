@@ -129,15 +129,15 @@ class CONFIGMEDIA(Base):
     __tablename__ = "CONFIG_MEDIA"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
-    MOVIE_PATH: Mapped[str] = mapped_column(Text)
-    TV_PATH: Mapped[str] = mapped_column(Text)
-    ANIME_PATH: Mapped[str] = mapped_column(Text)
-    UNKNOWN_PATH: Mapped[str] = mapped_column(Text)
+    MOVIE_PATH: Mapped[str] = mapped_column(Text, default="")
+    TV_PATH: Mapped[str] = mapped_column(Text, default="")
+    ANIME_PATH: Mapped[str] = mapped_column(Text, default="")
+    UNKNOWN_PATH: Mapped[str] = mapped_column(Text, default="")
     MOVIE_BACKEND: Mapped[str | None] = mapped_column(Text, nullable=True)
     TV_BACKEND: Mapped[str | None] = mapped_column(Text, nullable=True)
     ANIME_BACKEND: Mapped[str | None] = mapped_column(Text, nullable=True)
     UNKNOWN_BACKEND: Mapped[str | None] = mapped_column(Text, nullable=True)
-    NOTE: Mapped[str] = mapped_column(Text)
+    NOTE: Mapped[str] = mapped_column(Text, default="")
 
 
 class CONFIGCATEGORY(Base):

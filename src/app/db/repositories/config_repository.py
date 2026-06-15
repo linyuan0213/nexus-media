@@ -838,24 +838,24 @@ class ConfigRepository(BaseRepository):
         with self.session() as db:
             existing = db.query(CONFIGMEDIA).first()
             if existing:
-                existing.MOVIE_PATH = movie_path
-                existing.TV_PATH = tv_path
-                existing.ANIME_PATH = anime_path
-                existing.UNKNOWN_PATH = unknown_path
-                existing.MOVIE_BACKEND = movie_backend or existing.MOVIE_BACKEND
-                existing.TV_BACKEND = tv_backend or existing.TV_BACKEND
-                existing.ANIME_BACKEND = anime_backend or existing.ANIME_BACKEND
-                existing.UNKNOWN_BACKEND = unknown_backend or existing.UNKNOWN_BACKEND
+                existing.MOVIE_PATH = movie_path or ""
+                existing.TV_PATH = tv_path or ""
+                existing.ANIME_PATH = anime_path or ""
+                existing.UNKNOWN_PATH = unknown_path or ""
+                existing.MOVIE_BACKEND = movie_backend or existing.MOVIE_BACKEND or ""
+                existing.TV_BACKEND = tv_backend or existing.TV_BACKEND or ""
+                existing.ANIME_BACKEND = anime_backend or existing.ANIME_BACKEND or ""
+                existing.UNKNOWN_BACKEND = unknown_backend or existing.UNKNOWN_BACKEND or ""
             else:
                 config = CONFIGMEDIA(
-                    MOVIE_PATH=movie_path,
-                    TV_PATH=tv_path,
-                    ANIME_PATH=anime_path,
-                    UNKNOWN_PATH=unknown_path,
-                    MOVIE_BACKEND=movie_backend,
-                    TV_BACKEND=tv_backend,
-                    ANIME_BACKEND=anime_backend,
-                    UNKNOWN_BACKEND=unknown_backend,
+                    MOVIE_PATH=movie_path or "",
+                    TV_PATH=tv_path or "",
+                    ANIME_PATH=anime_path or "",
+                    UNKNOWN_PATH=unknown_path or "",
+                    MOVIE_BACKEND=movie_backend or "",
+                    TV_BACKEND=tv_backend or "",
+                    ANIME_BACKEND=anime_backend or "",
+                    UNKNOWN_BACKEND=unknown_backend or "",
                 )
                 db.add(config)
 
