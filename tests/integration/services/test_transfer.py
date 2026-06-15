@@ -324,8 +324,16 @@ class TestFileTransferService:
             patch("app.services.transfer.filetransfer_service.TransferHistoryManager") as mock_hist_cls,
             patch("app.services.transfer.filetransfer_service.TransferCleanupService") as mock_cln_cls,
             patch("app.services.transfer.filetransfer_service.settings") as mock_settings,
+            patch("app.services.transfer.filetransfer_service.get_lock_manager") as mock_get_lm,
         ):
             mock_settings.get.return_value = {}
+
+            mock_lock = MagicMock()
+            mock_lock.acquire.return_value = True
+            mock_lock.__enter__.return_value = mock_lock
+            mock_lock.__exit__.return_value = False
+            mock_get_lm.return_value.create_lock.return_value = mock_lock
+
             mock_resolver = MagicMock()
             mock_resolver.unknown_path = []
             mock_res_cls.from_settings.return_value = mock_resolver
