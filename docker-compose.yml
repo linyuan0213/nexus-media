@@ -35,6 +35,7 @@ x-env-backend-common: &env-backend-common
   PUID: "0"
   PGID: "0"
   UMASK: "000"
+  NEXUS_MEDIA_DATA: /data
 
 x-env-db-common: &env-db-common
   <<: *env-backend-common

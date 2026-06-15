@@ -27,6 +27,8 @@ class Logger:
         handlers = build_handlers(module)
         logger.configure(handlers=handlers)  # type: ignore[reportArgumentType]
         logging.basicConfig(handlers=[InterceptHandler()], level=0)
+        # 屏蔽 redis-py 8.x 的 MAINT_NOTIFICATIONS 兼容性告警
+        logging.getLogger("redis").setLevel(logging.WARNING)
         self._log = logger
 
     @property

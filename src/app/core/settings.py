@@ -153,7 +153,7 @@ class AgentProviderConfig(BaseModel):
 class AgentConfig(BaseModel):
     """Agent 配置"""
 
-    enabled: bool = True
+    enabled: bool = False
     default_provider: str = ""
     media_recognizer_enabled: bool = False
     batch_size: int = 100
