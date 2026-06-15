@@ -185,7 +185,7 @@ class LogConfig(BaseModel):
 
     type: str = "file"
     level: str = "debug"
-    server: str = ""
+    format: str = "text"
     path: str = ""
 
 

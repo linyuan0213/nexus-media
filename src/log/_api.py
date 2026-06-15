@@ -20,23 +20,23 @@ def _caller_depth() -> int:
 
 
 def debug(text: str, module: str | None = None) -> None:
-    LOG_BUFFER.append("DEBUG", text)
-    get_logger_instance(module or "root").log.opt(depth=_caller_depth()).debug(text)
+    """记录 DEBUG 级别日志."""
+    get_logger_instance(module or "nexus-media").log.opt(depth=_caller_depth()).debug(text)
 
 
 def info(text: str, module: str | None = None) -> None:
-    LOG_BUFFER.append("INFO", text)
-    get_logger_instance(module or "root").log.opt(depth=_caller_depth()).info(text)
+    """记录 INFO 级别日志."""
+    get_logger_instance(module or "nexus-media").log.opt(depth=_caller_depth()).info(text)
 
 
 def error(text: str, module: str | None = None) -> None:
-    LOG_BUFFER.append("ERROR", text)
-    get_logger_instance(module or "root").log.opt(depth=_caller_depth()).error(text)
+    """记录 ERROR 级别日志."""
+    get_logger_instance(module or "nexus-media").log.opt(depth=_caller_depth()).error(text)
 
 
 def warn(text: str, module: str | None = None) -> None:
-    LOG_BUFFER.append("WARN", text)
-    get_logger_instance(module or "root").log.opt(depth=_caller_depth()).warning(text)
+    """记录 WARNING 级别日志."""
+    get_logger_instance(module or "nexus-media").log.opt(depth=_caller_depth()).warning(text)
 
 
 def console(text: str) -> None:

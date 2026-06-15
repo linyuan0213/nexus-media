@@ -56,15 +56,12 @@ database:
   password:
   database: nexus_media
 log:
-  # 【日志记录类型】：server、file、console
+  # 【日志记录类型】：file、console
   # 如果是使用Docker安装建议设置为console，通过Docker管理器查看日志
-  # 如果是使用群晖套件建议配置为 server，可将日志输出到群晖的日志中心便于查看
   # 其它情况可以设置为file，将日志写入文件
   type: console
-  # 【日志文件的路径】：type为file时生效
+  # 【日志文件的路径】：type为file时生效，不配置则默认写入 data/logs
   path:
-  # 【群晖日志中心IP和端口】：type为SERVER时生效。端口一般是514，只需要改动IP为群晖的IP，示例：127.0.0.1:514
-  server: 127.0.0.1:514
   # 【日志级别】：info、debug、error
   level: info
 

@@ -1,10 +1,6 @@
-"""
-日志配置读取与 handlers 构建。
-"""
+"""日志配置读取与 handlers 构建。"""
 
 import json
-import logging
-import logging.handlers
 import os
 import sys
 from typing import Any, TextIO
@@ -52,31 +48,6 @@ def _is_json_enabled(log_cfg: dict[str, Any]) -> bool:
     return _JSON_FORMAT or log_cfg.get("format") == "json"
 
 
-class _SyslogHandlerFactory:
-    """为 server 类型日志提供基于标准库 SysLogHandler 的可调用 sink。"""
-
-    def __init__(self, ip: str, port: int = 514):
-        self.handler = logging.handlers.SysLogHandler(address=(ip, port))
-        formatter = logging.Formatter("%(message)s")
-        self.handler.setFormatter(formatter)
-
-    def __call__(self, message: str) -> None:
-        try:
-            record = logging.LogRecord(
-                name="loguru",
-                level=logging.INFO,
-                pathname="",
-                lineno=0,
-                msg=message.rstrip(),
-                args=(),
-                exc_info=None,
-            )
-            self.handler.emit(record)
-        except Exception:  # noqa: S110  # nosec B110
-            # 日志发送失败时不应影响主流程
-            pass
-
-
 def build_handlers(module: str) -> list[dict[str, Any]]:
     """根据全局 Config 生成 loguru handlers 配置。"""
     log_cfg = settings.get("log") or {}
@@ -84,20 +55,11 @@ def build_handlers(module: str) -> list[dict[str, Any]]:
     use_json = _is_json_enabled(log_cfg)
     handlers: list[dict[str, Any]] = []
 
-    if logtype == "server":
-        logserver = (log_cfg.get("server") or "").split(":")
-        if logserver and logserver[0]:
-            logip = logserver[0]
-            logport = int(logserver[1] or "514") if len(logserver) > 1 else 514
-            handlers.append(
-                {
-                    "sink": _SyslogHandlerFactory(logip, logport),
-                    "format": _HUMAN_FORMAT,
-                    "colorize": False,
-                }
-            )
-    elif logtype == "file":
-        logpath = os.environ.get("NEXUS_MEDIA_LOG") or log_cfg.get("path") or ""
+    if logtype == "file":
+        logpath = log_cfg.get("path") or ""
+        if not logpath:
+            logpath = os.path.join(settings.data_path, "logs")
+            os.makedirs(logpath, exist_ok=True)
         if logpath:
             if not os.path.exists(logpath):
                 os.makedirs(logpath)
