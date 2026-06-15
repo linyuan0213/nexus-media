@@ -56,7 +56,7 @@ class SyncRepository(BaseRepository):
                     COMPATIBILITY=int(compatibility),
                     RENAME=int(rename),
                     ENABLED=int(enabled),
-                    NOTE=note,
+                    NOTE=note or "",
                 )
             )
             db.commit()

@@ -15,7 +15,7 @@ class CONFIGFILTERGROUP(Base):
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     GROUP_NAME: Mapped[str] = mapped_column(String(255))
     IS_DEFAULT: Mapped[str] = mapped_column(String(255))
-    NOTE: Mapped[str] = mapped_column(Text)
+    NOTE: Mapped[str] = mapped_column(Text, default="")
 
 
 class CONFIGFILTERRULES(Base):
@@ -28,7 +28,7 @@ class CONFIGFILTERRULES(Base):
     INCLUDE: Mapped[str] = mapped_column(Text)
     EXCLUDE: Mapped[str] = mapped_column(Text)
     SIZE_LIMIT: Mapped[str] = mapped_column(String(255))
-    NOTE: Mapped[str] = mapped_column(Text)
+    NOTE: Mapped[str] = mapped_column(Text, default="")
 
 
 class CONFIGRSSPARSER(Base):
@@ -39,7 +39,7 @@ class CONFIGRSSPARSER(Base):
     TYPE: Mapped[str] = mapped_column(String(255))
     FORMAT: Mapped[str] = mapped_column(String(255))
     PARAMS: Mapped[str] = mapped_column(Text)
-    NOTE: Mapped[str] = mapped_column(Text)
+    NOTE: Mapped[str] = mapped_column(Text, default="")
     SYSDEF: Mapped[str] = mapped_column(String(255))
 
 
@@ -58,7 +58,7 @@ class CONFIGSITE(Base):
     INCLUDE: Mapped[str] = mapped_column(Text)
     EXCLUDE: Mapped[str] = mapped_column(Text)
     SIZE: Mapped[int] = mapped_column(BigInteger)
-    NOTE: Mapped[str] = mapped_column(Text)
+    NOTE: Mapped[str] = mapped_column(Text, default="")
 
 
 class CONFIGSYNCPATHS(Base):
@@ -75,7 +75,7 @@ class CONFIGSYNCPATHS(Base):
     COMPATIBILITY: Mapped[int] = mapped_column(Integer)
     RENAME: Mapped[int] = mapped_column(Integer)
     ENABLED: Mapped[int] = mapped_column(Integer)
-    NOTE: Mapped[str] = mapped_column(Text)
+    NOTE: Mapped[str] = mapped_column(Text, default="")
 
 
 class CONFIGUSERS(Base):
@@ -109,7 +109,7 @@ class CONFIGUSERRSS(Base):
     SITES: Mapped[str] = mapped_column(String(255))
     FILTER_ARGS: Mapped[str] = mapped_column(String(255))
     MEDIAINFOS: Mapped[str] = mapped_column(String(255))
-    NOTE: Mapped[str] = mapped_column(Text)
+    NOTE: Mapped[str] = mapped_column(Text, default="")
 
 
 class MEDIASERVER(Base):
@@ -120,7 +120,7 @@ class MEDIASERVER(Base):
     ENABLED: Mapped[int] = mapped_column(Integer)
     CONFIG: Mapped[str] = mapped_column(Text)
     IS_DEFAULT: Mapped[int] = mapped_column(Integer)
-    NOTE: Mapped[str] = mapped_column(Text)
+    NOTE: Mapped[str] = mapped_column(Text, default="")
 
 
 class CONFIGMEDIA(Base):
