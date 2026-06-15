@@ -8,16 +8,7 @@ if [ ! -f "$PIDFILE" ]; then
 fi
 
 if [ ! -f "$PIDFILE" ]; then
-    # 兼容旧路径
-    PIDFILE="./config/logs/granian.pid"
-fi
-
-if [ ! -f "$PIDFILE" ]; then
-    PIDFILE="/config/logs/granian.pid"
-fi
-
-if [ ! -f "$PIDFILE" ]; then
-    echo "未找到 PID 文件：$PIDFILE"
+    echo "未找到 PID 文件: $PIDFILE"
     exit 1
 fi
 

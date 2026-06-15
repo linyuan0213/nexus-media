@@ -36,16 +36,10 @@ def check_config():
         logtype = _log_cfg.get("type")
         if logtype:
             log.info(f"日志输出类型为：{logtype}")
-        if logtype == "server":
-            logserver = _log_cfg.get("server")
-            if not logserver:
-                log.warn("[Config]日志中心地址未配置，无法正常输出日志")
-            else:
-                log.info(f"日志将上送到服务器：{logserver}")
-        elif logtype == "file":
+        if logtype == "file":
             logpath = _log_cfg.get("path")
             if not logpath:
-                log.warn("[Config]日志文件路径未配置，无法正常输出日志")
+                log.warn("[Config]日志文件路径未配置，将使用默认路径")
             else:
                 log.info(f"日志将写入文件：{logpath}")
     else:
@@ -105,7 +99,7 @@ def update_config(indexer_statistics_repo=None):
     try:
         app_config = _config.get("app", {})
         # 定义：{旧键: 新键}
-        log_mapping = {"logtype": "type", "loglevel": "level", "logserver": "server", "logpath": "path"}
+        log_mapping = {"logtype": "type", "loglevel": "level", "logpath": "path"}
 
         # 初始化 log 节点（如果不存在）
         if "log" not in _config:
@@ -120,6 +114,14 @@ def update_config(indexer_statistics_repo=None):
                 app_config.pop(old_key)
                 migrated = True
                 log.info(f"[Config]日志配置已迁移：app.{old_key} -> log.{new_key}，并已移除旧配置。")
+
+        # 日志路径迁移：config/logs -> data/logs
+        _log_path = _config.get("log", {}).get("path") or ""
+        if isinstance(_log_path, str) and "config/logs" in _log_path.replace("\\", "/"):
+            _new_path = _log_path.replace("config/logs", "data/logs")
+            _config["log"]["path"] = _new_path
+            migrated = True
+            log.info(f"[Config]日志路径已迁移：{_log_path} -> {_new_path}")
 
         if migrated:
             overwrite_config = True

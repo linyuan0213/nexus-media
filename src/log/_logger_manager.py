@@ -36,7 +36,7 @@ class Logger:
     @classmethod
     def get_instance(cls, module: str) -> "Logger":
         if not module:
-            module = "run"
+            module = "nexus-media"
         instance = _instances.get(module)
         if instance is not None:
             return instance
