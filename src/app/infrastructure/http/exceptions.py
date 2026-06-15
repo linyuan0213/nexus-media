@@ -29,8 +29,14 @@ class HttpClientError(Exception):
                 response_text = exc.response.text[:500]
             except Exception as e:  # noqa: BLE001
                 log.debug(f"[exceptions]忽略异常: {e}")
+
+        original = str(exc)
+        message = original
+        if "UNEXPECTED_EOF_WHILE_READING" in original or "EOF occurred in violation of protocol" in original:
+            message = "SSL/TLS 握手被服务端异常关闭，请检查站点网络或证书配置"
+            return HttpSSLError(message, status_code=status_code, response_text=response_text)
         return cls(
-            message=str(exc),
+            message=message,
             status_code=status_code,
             response_text=response_text,
         )
@@ -42,6 +48,10 @@ class HttpTimeoutError(HttpClientError):
 
 class HttpConnectionError(HttpClientError):
     """连接失败."""
+
+
+class HttpSSLError(HttpClientError):
+    """SSL/TLS 握手失败."""
 
 
 class HttpAuthError(HttpClientError):

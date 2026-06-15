@@ -4,6 +4,11 @@
   "domain": "https://pterclub.net",
   "encoding": "UTF-8",
   "public": false,
+  "user_info": {
+    "seeding": {
+      "page": "getusertorrentlist.php?do_ajax=1&userid={userid}&type=seeding"
+    }
+  },
   "html": {
     "search": {
       "paths": [

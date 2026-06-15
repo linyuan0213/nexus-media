@@ -82,10 +82,10 @@ class TransferHistoryService:
                 entry["anime"] = statistic[2]
         labels = list(data.keys())
         result = {
-            "Labels": labels,
-            "MovieNums": [data[label]["movie"] for label in labels],
-            "TvNums": [data[label]["tv"] for label in labels],
-            "AnimeNums": [data[label]["anime"] for label in labels],
+            "labels": labels,
+            "movie_nums": [data[label]["movie"] for label in labels],
+            "tv_nums": [data[label]["tv"] for label in labels],
+            "anime_nums": [data[label]["anime"] for label in labels],
         }
         self._cache.set(cache_key, result, ttl=self._cache_ttl)
         return result

@@ -495,19 +495,20 @@ def get_library_home(
 
     return success(
         data={
-            "ServerSucess": server_success,
-            "MediaCount": {
-                "MovieCount": media_counts.get("Movie", 0),
-                "SeriesCount": media_counts.get("Series", 0),
-                "SongCount": media_counts.get("Music", 0),
-                "EpisodeCount": media_counts.get("Episodes", 0),
+            "server_success": server_success,
+            "media_counts": {
+                "Movie": media_counts.get("Movie", 0),
+                "Series": media_counts.get("Series", 0),
+                "Music": media_counts.get("Music", 0),
+                "Episodes": media_counts.get("Episodes", 0),
+                "User": media_counts.get("User", 0),
             },
-            "UserCount": media_counts.get("User", 0),
-            "Activitys": activity,
-            "LibrarySpaces": library_spaces,
-            "Librarys": libraries,
-            "Resumes": resumes,
-            "Latests": latests,
+            "user_count": media_counts.get("User", 0),
+            "activitys": activity,
+            "library_spaces": library_spaces,
+            "librarys": libraries,
+            "resumes": resumes,
+            "latests": latests,
         }
     )
 

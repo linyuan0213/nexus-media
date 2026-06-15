@@ -73,10 +73,10 @@ class TestTransferHistoryService:
             ("anime", "2024-01-02", 2),
         ]
         result = service.get_transfer_statistics(days=7)
-        assert result["Labels"] == ["2024-01-01", "2024-01-02"]
-        assert result["MovieNums"] == [5, 0]
-        assert result["TvNums"] == [3, 0]
-        assert result["AnimeNums"] == [0, 2]
+        assert result["labels"] == ["2024-01-01", "2024-01-02"]
+        assert result["movie_nums"] == [5, 0]
+        assert result["tv_nums"] == [3, 0]
+        assert result["anime_nums"] == [0, 2]
 
     def test_get_transfer_statistics_skips_empty(self, service, mock_filetransfer):
         mock_filetransfer.get_transfer_statistics.return_value = [
@@ -84,10 +84,10 @@ class TestTransferHistoryService:
             ("unknown", "2024-01-01", 1),
         ]
         result = service.get_transfer_statistics()
-        assert result["Labels"] == []
-        assert result["MovieNums"] == []
-        assert result["TvNums"] == []
-        assert result["AnimeNums"] == []
+        assert result["labels"] == []
+        assert result["movie_nums"] == []
+        assert result["tv_nums"] == []
+        assert result["anime_nums"] == []
 
     def test_get_unknown_list(self, service, mock_filetransfer):
         mock_filetransfer.get_transfer_unknown_paths.return_value = [_UnknownMock()]
