@@ -3,14 +3,14 @@
 支持 SQLite、MySQL、PostgreSQL 三种数据库
 支持从配置文件或环境变量读取配置
 
-环境变量优先级高于配置文件：
-- DB_TYPE: 数据库类型 (sqlite/mysql/postgresql)
-- DB_HOST: 数据库主机
-- DB_PORT: 数据库端口
-- DB_USERNAME: 用户名
-- DB_PASSWORD: 密码
-- DB_NAME: 数据库名
-- DB_SQLITE_PATH: SQLite 数据库文件路径
+环境变量优先级高于配置文件，使用 DATABASE__ 前缀对应 settings.database 节点：
+- DATABASE__TYPE: 数据库类型 (sqlite/mysql/postgresql)
+- DATABASE__HOST: 数据库主机
+- DATABASE__PORT: 数据库端口
+- DATABASE__USERNAME: 用户名
+- DATABASE__PASSWORD: 密码
+- DATABASE__DATABASE: 数据库名
+- DATABASE__SQLITE_PATH: SQLite 数据库文件路径
 """
 
 import os
@@ -26,13 +26,13 @@ from app.core.settings import settings
 
 # 环境变量名称映射
 ENV_VAR_MAP = {
-    "type": "DB_TYPE",
-    "host": "DB_HOST",
-    "port": "DB_PORT",
-    "username": "DB_USERNAME",
-    "password": "DB_PASSWORD",
-    "database": "DB_NAME",
-    "sqlite_path": "DB_SQLITE_PATH",
+    "type": "DATABASE__TYPE",
+    "host": "DATABASE__HOST",
+    "port": "DATABASE__PORT",
+    "username": "DATABASE__USERNAME",
+    "password": "DATABASE__PASSWORD",
+    "database": "DATABASE__DATABASE",
+    "sqlite_path": "DATABASE__SQLITE_PATH",
 }
 
 

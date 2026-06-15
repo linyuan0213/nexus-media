@@ -362,25 +362,12 @@ def _init_config_file() -> str:
 
 
 def _apply_env_database_config(settings: AppSettings) -> None:
-    env_db: dict[str, Any] = {}
-    if os.environ.get("DB_TYPE"):
-        env_db["type"] = os.environ["DB_TYPE"]
-    if os.environ.get("DB_HOST"):
-        env_db["host"] = os.environ["DB_HOST"]
-    if os.environ.get("DB_PORT"):
-        env_db["port"] = os.environ["DB_PORT"]
-    if os.environ.get("DB_USERNAME"):
-        env_db["username"] = os.environ["DB_USERNAME"]
-    if os.environ.get("DB_PASSWORD"):
-        env_db["password"] = os.environ["DB_PASSWORD"]
-    if os.environ.get("DB_NAME"):
-        env_db["database"] = os.environ["DB_NAME"]
-    if not env_db:
+    env_db_keys = [k for k in os.environ if k.upper().startswith("DATABASE__")]
+    if not env_db_keys:
         return
-    current = settings.database.model_dump()
-    current.update(env_db)
+    env_db = settings.database.model_dump()
     try:
-        settings.save({"database": current})
+        settings.save({"database": env_db})
         print("[Config]已从环境变量更新数据库配置到配置文件")
     except Exception as e:
         print(f"[Config]保存数据库配置到文件失败：{e!s}")
