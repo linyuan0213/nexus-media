@@ -15,7 +15,6 @@ RUN apt-get update \
 WORKDIR /nexus-media
 COPY pyproject.toml uv.lock ./
 COPY src ./src
-COPY third_party ./third_party
 COPY alembic ./alembic
 COPY alembic.ini run.py start-prod.sh start-dev.sh restart-server.sh stop-server.sh ./
 
