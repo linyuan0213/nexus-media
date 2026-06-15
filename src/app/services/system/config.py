@@ -215,4 +215,5 @@ class ConfigUpdateService:
         if not config_test:
             cfg.pop("test", None)
             settings.save(cfg)
+            settings.reload()
         return ConfigUpdateResultDTO(success=True, test_mode=config_test)
