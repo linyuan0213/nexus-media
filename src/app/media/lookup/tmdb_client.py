@@ -39,6 +39,10 @@ class TmdbClient:
         self._tmdb_blacklist_repo = tmdb_blacklist_repo or TmdbBlacklistRepositoryAdapter()
         self._init_config()
 
+    def reset(self) -> None:
+        """重置配置（热重载时由 ConfigReloader 调用）"""
+        self._init_config()
+
     def _init_config(self):
         app = settings.get("app")
         media = settings.get("media")

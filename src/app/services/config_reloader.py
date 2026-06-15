@@ -23,6 +23,8 @@ import log
 from app.core.settings import settings
 
 _RELOAD_TARGETS: dict[str, str] = {
+    "media_service": "media_service",
+    "tmdb_client": "tmdb_client",
     "downloader_core": "downloader_core",
     "media_server": "media_server",
     "message": "message",
@@ -71,6 +73,8 @@ class ConfigReloader:
         self.register("system_config", self.PRIORITY_SETTINGS)
         self.register("category", self.PRIORITY_CATEGORY)
         # 核心基础设施
+        self.register("tmdb_client", self.PRIORITY_INFRA)
+        self.register("media_service", self.PRIORITY_INFRA)
         self.register("sites", self.PRIORITY_INFRA)
         self.register("site_conf", self.PRIORITY_INFRA)
         self.register("site_userinfo", self.PRIORITY_INFRA)
