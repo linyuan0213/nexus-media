@@ -24,12 +24,11 @@ def upgrade() -> None:
         batch_op.alter_column("PAGEURL", type_=sa.String(512), existing_type=sa.Text)
 
     # 2. Deduplicate: keep the row with lowest ID for each (PAGEURL, SITE) pair
-    # SQLite compatible syntax (MySQL uses DELETE t1 FROM... which SQLite doesn't support)
     conn.execute(
         sa.text("""
         DELETE FROM SEARCH_RESULT_INFO
-        WHERE rowid IN (
-            SELECT t1.rowid FROM SEARCH_RESULT_INFO t1
+        WHERE ID IN (
+            SELECT t1.ID FROM SEARCH_RESULT_INFO t1
             INNER JOIN SEARCH_RESULT_INFO t2
             ON t1.PAGEURL = t2.PAGEURL AND t1.SITE = t2.SITE
             WHERE t1.ID > t2.ID
