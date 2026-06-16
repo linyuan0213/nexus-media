@@ -1,7 +1,9 @@
 import os
 
 import log
+from app.core.root_path import get_script_path
 from app.core.settings import settings
+from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter
 from app.db.repositories.download_repo_adapter import IndexerStatisticsRepositoryAdapter
 from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.events import auto_register, register_modules
@@ -15,6 +17,27 @@ from app.services.category_init import CategoryInitializer
 from app.services.rbac_init import init_admin_user
 from app.services.rbac_init import init_rbac_system as rbac_init
 from app.utils import ExceptionUtils
+
+
+def init_default_filters():
+    """首次启动时从 init_filter.sql 导入默认过滤规则"""
+    sql_file = os.path.join(get_script_path(), "init_filter.sql")
+    if not os.path.exists(sql_file):
+        return
+    try:
+        repo = FilterGroupRepositoryAdapter()
+        groups = repo.get_config_filter_group()
+        if groups:
+            return
+        with open(sql_file, encoding="utf-8") as f:
+            for stmt in f.read().split(";\n"):
+                stmt = stmt.strip()
+                if stmt and "INSERT" in stmt.upper():
+                    repo._repo.execute(stmt)
+        log.info("[Initialize]默认过滤规则初始化完成")
+    except Exception as e:
+        log.error(f"[Initialize]默认过滤规则初始化失败: {e!s}")
+        ExceptionUtils.exception_traceback(e)
 
 
 def init_default_categories():

@@ -24,6 +24,7 @@ from initializer import (
     check_config,
     check_redis,
     init_default_categories,
+    init_default_filters,
     init_event_handlers,
     init_message_webhook_apikey,
     init_rbac_system,
@@ -148,6 +149,7 @@ class SystemLifecycleService:
         check_redis()
         update_rss_state()
         init_default_categories()
+        init_default_filters()
         init_rbac_system()
         init_event_handlers(event_bus=self._event_bus, hook_system=self._hook_system)
         init_message_webhook_apikey(apikey_service=self._apikey_service)
