@@ -90,9 +90,22 @@ class BrushTorrentLifecycle:
             )
 
             if remove_torrent_ids:
-                log.info(f"[Brush]任务 {task_name} 删除不存在的下载任务：{remove_torrent_ids}")
-                for rid in remove_torrent_ids:
-                    self._repo.delete_brushtask_torrent(taskid or 0, rid)
+                confirmed_absent = []
+                for rid in list(remove_torrent_ids):
+                    try:
+                        existing = self._downloader.get_torrents(downloader_id, [rid])
+                        if existing:
+                            log.debug(f"[Brush]任务 {task_name} 种子 {rid} 处于边缘状态，保留记录")
+                        else:
+                            confirmed_absent.append(rid)
+                    except Exception:
+                        log.debug(f"[Brush]任务 {task_name} 查询种子 {rid} 失败，本轮跳过")
+                        remove_torrent_ids.discard(rid)
+                remove_torrent_ids = set(confirmed_absent)
+                if remove_torrent_ids:
+                    log.info(f"[Brush]任务 {task_name} 删除不存在的下载任务：{remove_torrent_ids}")
+                    for rid in remove_torrent_ids:
+                        self._repo.delete_brushtask_torrent(taskid or 0, rid)
 
             if delete_ids:
                 self._downloader.delete_torrents(downloader_id, delete_ids, delete_file=True)
