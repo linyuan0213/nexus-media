@@ -316,7 +316,7 @@ class DownloaderCore:
     def update_downloader(
         self, did, name, enabled, dtype, transfer, only_nexus_media, match_path, rmt_mode, config, download_dir
     ):
-        return self._download_core.update_downloader(
+        ret = self._download_core.update_downloader(
             did=did,
             name=name,
             enabled=enabled,
@@ -328,6 +328,8 @@ class DownloaderCore:
             config=config,
             download_dir=download_dir,
         )
+        self._client_factory._refresh()
+        return ret
 
     def delete_downloader(self, did):
         return self._download_core.delete_downloader(did=did)
