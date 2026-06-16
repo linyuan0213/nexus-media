@@ -119,9 +119,10 @@ class BrushTorrentLifecycle:
                         if torrent.id in delete_ids:
                             delete_ids.remove(torrent.id)
 
-                if delete_ids:
+                if update_torrents:
+                    update_torrents = [t for t in update_torrents if t[2] not in delete_ids]
+                if update_torrents:
                     self._repo.update_brushtask_torrent_state(update_torrents)
-                    log.info(f"[Brush]任务 {task_name} 共删除 {len(delete_ids)} 个刷流下载任务")
                 else:
                     log.info(f"[Brush]任务 {task_name} 本次检查未删除下载任务")
 

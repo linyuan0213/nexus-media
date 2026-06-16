@@ -241,11 +241,35 @@ class BrushTaskService:
         if brushtask_id:
             self._reload_single_task(brushtask_id)
         else:
-            self.start_service()
+            brushtasks = self._repo.get_brushtasks()
+            new_task_name = item.get("name")
+            for task in brushtasks or []:
+                if task.NAME == new_task_name:
+                    task_dict = self._build_task_dict(task)
+                    self._brush_tasks[str(task.ID)] = task_dict
+                    cron = str(task.INTEVAL).strip()
+                    if task.STATE in ["Y", "S"] and cron and (cron.isdigit() or cron.count(" ") == 4):
+                        self._start_task_jobs(task_dict, cron)
+                    break
         return ret
 
     def delete_brushtask(self, brushtask_id: int | None) -> Any:
         self._stop_task_jobs(brushtask_id)
+        task = self._brush_tasks.get(str(brushtask_id))
+        if not task:
+            task_rows = self._repo.get_brushtasks(brush_id=brushtask_id)
+            if task_rows:
+                row = task_rows[0] if isinstance(task_rows, (list, tuple)) else task_rows
+                task = self._build_task_dict(row)
+        downloader_id = task.get("downloader") if task else None
+        if downloader_id:
+            torrents = self._repo.get_brushtask_torrents(brushtask_id, active=False)
+            delete_ids = [t.DOWNLOAD_ID for t in torrents if t.DOWNLOAD_ID and t.DOWNLOAD_ID != "0"]
+            if delete_ids:
+                try:
+                    self._downloader.delete_torrents(downloader_id=downloader_id, ids=delete_ids, delete_file=True)
+                except Exception as e:
+                    log.warn(f"[BrushTask]删除任务 {brushtask_id} 的下载器种子失败: {e}")
         ret = self._repo.delete_brushtask(brushtask_id or 0)
         self._brush_tasks.pop(str(brushtask_id), None)
         return ret

@@ -1,5 +1,6 @@
 """Brush RSS checker - RSS 刷流选种逻辑."""
 
+import threading
 from typing import Any
 
 import log
@@ -33,6 +34,7 @@ class BrushRssChecker:
         self._sites = sites
         self._siteconf = siteconf
         self._torrents_cache = torrents_cache or set()
+        self._cache_lock = threading.Lock()
 
     @staticmethod
     def _rss_rule_needs_torrent_attr(rss_rule: dict) -> bool:
@@ -109,21 +111,6 @@ class BrushRssChecker:
 
         log.info(f"[Brush]开始站点 {site_name} 的刷流任务：{task_name}...")
         if not self._helper.is_allow_new_torrent(taskinfo=taskinfo, dlcount=rss_rule.get("dlcount")):
-            log.error(f"[Brush]站点 {site_name} 未开启刷流功能，无法刷流！")
-            return
-        if not rss_url:
-            log.error(f"[Brush]站点 {site_name} 未配置RSS订阅地址，无法刷流！")
-            return
-        if rss_free and (not cookie and not taskinfo.get("headers")):
-            log.warn(f"[Brush]站点 {site_name} 未配置Cookie或请求头，无法开启促销刷流")
-            return
-
-        if not self._helper._downloader.get_downloader_conf(downloader_id):
-            log.error(f"[Brush]任务 {task_name} 下载器不存在，无法刷流！")
-            return
-
-        log.info(f"[Brush]开始站点 {site_name} 的刷流任务：{task_name}...")
-        if not self._helper.is_allow_new_torrent(taskinfo=taskinfo, dlcount=rss_rule.get("dlcount")):
             return
 
         rss_result = self._rsshelper.parse_rssxml(url=rss_url, proxy=bool(site_proxy))
@@ -174,13 +161,14 @@ class BrushRssChecker:
                 if not enclosure:
                     continue
 
-                if enclosure not in self._torrents_cache:
-                    if len(self._torrents_cache) >= 10000:
-                        self._torrents_cache = set(list(self._torrents_cache)[5000:])
-                    self._torrents_cache.add(enclosure)
-                else:
-                    log.debug(f"[Brush]{torrent_name} 已处理过")
-                    continue
+                with self._cache_lock:
+                    if enclosure not in self._torrents_cache:
+                        if len(self._torrents_cache) >= 10000:
+                            self._torrents_cache = set(list(self._torrents_cache)[5000:])
+                        self._torrents_cache.add(enclosure)
+                    else:
+                        log.debug(f"[Brush]{torrent_name} 已处理过")
+                        continue
 
                 if self._helper.is_torrent_handled(enclosure=enclosure):
                     log.info(f"[Brush]{torrent_name} 已在刷流任务中")
