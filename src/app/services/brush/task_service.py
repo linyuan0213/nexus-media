@@ -159,15 +159,16 @@ class BrushTaskService:
     def _reload_single_task(self, task_id):
         task_rows = self._repo.get_brushtasks(brush_id=task_id)
         if not task_rows:
-            self._brush_tasks.pop(str(task_id), None)
             self._stop_task_jobs(task_id)
+            self._brush_tasks.pop(str(task_id), None)
             return
         task = task_rows[0] if isinstance(task_rows, (list, tuple)) else task_rows
-        self._brush_tasks[str(task.ID)] = self._build_task_dict(task)
+        task_dict = self._build_task_dict(task)
         self._stop_task_jobs(task.ID)
+        self._brush_tasks[str(task.ID)] = task_dict
         cron = str(task.INTEVAL).strip()
         if task.STATE in ["Y", "S"] and cron and (cron.isdigit() or cron.count(" ") == 4):
-            self._start_task_jobs(self._brush_tasks[str(task.ID)], cron)
+            self._start_task_jobs(task_dict, cron)
 
     def _load_rules_from_template(self, task) -> tuple[dict, dict, dict]:
         """加载任务规则：优先从规则模板读取，否则使用任务自身规则。"""
