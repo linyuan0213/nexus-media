@@ -19,6 +19,10 @@
 ### 测试修复
 - 测试配置改用临时文件 + SQLite，不再依赖外部 MySQL 服务器
 
+### 其他修复
+- `get_secret_key` 保存后 `reload` 确保同次运行不生成多个密钥
+- `_brush_tasks` 先停旧 job 再 pop，消除竞态窗口
+
 ### 依赖
 - `python-jose` 替换为 `PyJWT[crypto]`，消除 `ecdsa` 安全告警
 
