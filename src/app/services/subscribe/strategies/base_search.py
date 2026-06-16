@@ -101,37 +101,37 @@ class BaseSearchStrategy:
             over_edition = rss_info.get("over_edition")
             keyword = rss_info.get("keyword")
 
+            media_info = self._get_media_info(tmdbid, name, year, MediaType.MOVIE)
+            if not media_info or not media_info.tmdb_info:
+                log.warn(f"[Subscribe]{MediaType.MOVIE.display_name} {name} TMDB 识别失败，标记为错误状态")
+                self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="E")
+                continue
+            media_info.set_download_info(
+                download_setting=rss_info.get("download_setting"), save_path=rss_info.get("save_path")
+            )
+            media_info.keyword = keyword
+            if not over_edition:
+                exist_flag, no_exists, _ = self._downloader.check_exists_medias(meta_info=media_info)
+                if exist_flag:
+                    log.info(f"[Subscribe]{MediaType.MOVIE.display_name} {media_info.get_title_string()} 已存在")
+                    if self._service:
+                        self._service.finish_rss_subscribe(rssid=rssid, media=media_info)
+                    continue
+            else:
+                no_exists = {}
+                media_info.over_edition = over_edition
+                if rssid is not None:
+                    media_info.res_order = self._movie_repo.get_filter_order(rssid=rssid)
+
+            if self._coordinator and not self._coordinator.try_acquire(media_info):
+                log.info(f"[Subscribe]{MediaType.MOVIE.display_name} {name} 已被其他策略处理，跳过")
+                self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="R")
+                continue
+
             self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="S")
             media_info = None
 
             try:
-                media_info = self._get_media_info(tmdbid, name, year, MediaType.MOVIE)
-                if not media_info or not media_info.tmdb_info:
-                    log.warn(f"[Subscribe]{MediaType.MOVIE.display_name} {name} TMDB 识别失败，标记为错误状态")
-                    self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="E")
-                    continue
-                media_info.set_download_info(
-                    download_setting=rss_info.get("download_setting"), save_path=rss_info.get("save_path")
-                )
-                media_info.keyword = keyword
-                if not over_edition:
-                    exist_flag, no_exists, _ = self._downloader.check_exists_medias(meta_info=media_info)
-                    if exist_flag:
-                        log.info(f"[Subscribe]{MediaType.MOVIE.display_name} {media_info.get_title_string()} 已存在")
-                        if self._service:
-                            self._service.finish_rss_subscribe(rssid=rssid, media=media_info)
-                        continue
-                else:
-                    no_exists = {}
-                    media_info.over_edition = over_edition
-                    if rssid is not None:
-                        media_info.res_order = self._movie_repo.get_filter_order(rssid=rssid)
-
-                if self._coordinator and not self._coordinator.try_acquire(media_info):
-                    log.info(f"[Subscribe]{MediaType.MOVIE.display_name} {name} 已被其他策略处理，跳过")
-                    self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="R")
-                    continue
-
                 filter_dict = {
                     "restype": rss_info.get("filter_restype"),
                     "pix": rss_info.get("filter_pix"),
@@ -186,7 +186,6 @@ class BaseSearchStrategy:
             over_edition = rss_info.get("over_edition")
             keyword = rss_info.get("keyword")
 
-            self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="S")
             media_info = None
 
             try:
@@ -251,6 +250,7 @@ class BaseSearchStrategy:
                     self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="R")
                     continue
 
+                self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="S")
                 filter_dict = {
                     "restype": rss_info.get("filter_restype"),
                     "pix": rss_info.get("filter_pix"),

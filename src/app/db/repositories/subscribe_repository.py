@@ -307,6 +307,15 @@ class SubscribeRepository(BaseRepository):
             return
         with self.session() as db:
             if rssid:
+                movie = db.query(SubscribeMovies).filter(int(rssid) == SubscribeMovies.ID).first()
+                if movie:
+                    title_filter = movie.NAME if movie.NAME else ""
+                    year_filter = str(movie.YEAR) if movie.YEAR else ""
+                    if title_filter:
+                        db.query(SubscribeTorrents).filter(
+                            SubscribeTorrents.TITLE == title_filter,
+                            SubscribeTorrents.YEAR == year_filter,
+                        ).delete()
                 db.query(SubscribeMovies).filter(int(rssid) == SubscribeMovies.ID).delete()
             else:
                 if tmdbid:
@@ -622,7 +631,17 @@ class SubscribeRepository(BaseRepository):
                         else:
                             rssid = items[0].ID
             if rssid:
-                # 内联 delete_rss_tv_episodes，确保与 TV 删除在同一事务
+                tv = db.query(SubscribeTvs).filter(int(rssid) == SubscribeTvs.ID).first()
+                if tv:
+                    title_filter = tv.NAME if tv.NAME else ""
+                    year_filter = str(tv.YEAR) if tv.YEAR else ""
+                    season_filter = str(tv.SEASON) if tv.SEASON else ""
+                    if title_filter:
+                        db.query(SubscribeTorrents).filter(
+                            SubscribeTorrents.TITLE == title_filter,
+                            SubscribeTorrents.YEAR == year_filter,
+                            SubscribeTorrents.SEASON == season_filter,
+                        ).delete()
                 db.query(SubscribeTvEpisodes).filter(int(rssid) == SubscribeTvEpisodes.RSSID).delete()
                 db.query(SubscribeTvs).filter(int(rssid) == SubscribeTvs.ID).delete()
 
