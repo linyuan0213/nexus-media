@@ -4,6 +4,7 @@ FastAPI 主应用
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,7 +36,6 @@ from api.routers import (
     system,
     words,
 )
-from app.core.root_path import get_project_root
 from app.core.settings import settings
 from app.db import init_db
 from app.db.engine import get_engine
@@ -163,7 +163,7 @@ app.include_router(apikey.router, prefix="/api/apikey", tags=["apikey"])
 app.include_router(message_webhook.router, tags=["message-webhook"])
 
 # 挂载静态文件
-_static_dir = str(get_project_root() / "static")
+_static_dir = str(Path(settings.data_path) / "static")
 app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
 
