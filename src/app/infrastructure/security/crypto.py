@@ -46,6 +46,7 @@ def get_secret_key() -> str:
         new_cfg["security"] = {}
     new_cfg["security"]["jwt_secret"] = secret
     settings.save(new_cfg)
+    settings.reload()
     return secret
 
 
