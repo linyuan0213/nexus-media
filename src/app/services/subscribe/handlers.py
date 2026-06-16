@@ -5,6 +5,7 @@
 
 import log
 from app.db.repositories.subscribe_repo_adapter import SubscribeTvRepositoryAdapter
+from app.domain.entities.rss import SubscribeState
 from app.events import Event, on_event
 from app.events.constants import (
     MEDIA_EPISODE_TRANSFERRED,
@@ -94,10 +95,10 @@ def handle_media_episode_transferred(event: Event) -> None:
 
         if lack_episodes:
             log.info(f"[Subscribe]更新电视剧 {payload.title} S{payload.season} 缺失集数为 {len(lack_episodes)}")
-            tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="R")
+            tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state=SubscribeState.RUNNING.value)
             tv_repo.update_lack(title=None, year=None, season=None, rssid=rssid, lack_episodes=lack_episodes)
         else:
             log.info(f"[Subscribe]电视剧 {payload.title} S{payload.season} 全部集数已下载完成")
-            tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="C")
+            tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state=SubscribeState.COMPLETED.value)
     except Exception as e:
         log.error(f"[Event]更新订阅进度失败：{e!s}")

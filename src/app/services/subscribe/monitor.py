@@ -24,9 +24,9 @@ class SubscriptionMonitor:
     """订阅监控器：统一调度器.
 
     职责：
-    1. 按 queue_interval 周期执行队列搜索（高频）— 处理 state="D" 的订阅
-    2. 按 rss_interval 周期执行 RSS 轮询（中频）— 处理 state="R" 的订阅
-    3. 按 search_interval 周期执行主动搜索（低频）— 处理 state="R" 的订阅
+    1. 按 queue_interval 周期执行队列搜索（高频）— 处理 state=SubscribeState.PENDING.value 的订阅
+    2. 按 rss_interval 周期执行 RSS 轮询（中频）— 处理 state=SubscribeState.RUNNING.value 的订阅
+    3. 按 search_interval 周期执行主动搜索（低频）— 处理 state=SubscribeState.RUNNING.value 的订阅
 
     调度配置统一为：
     - subscribe.queue_interval — 队列搜索间隔（秒）

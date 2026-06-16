@@ -1,6 +1,7 @@
 """队列搜索策略 — 处理 state='D' 的待处理订阅."""
 
 import log
+from app.domain.entities.rss import SubscribeState
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.services.subscribe.strategies.base_search import BaseSearchStrategy
 
@@ -20,7 +21,7 @@ class QueueSearchStrategy(BaseSearchStrategy):
             log.info("[QueueSearchStrategy] 队列搜索正在执行，跳过")
             return
         try:
-            self._search_movies(state="D")
-            self._search_tvs(state="D")
+            self._search_movies(state=SubscribeState.PENDING.value)
+            self._search_tvs(state=SubscribeState.PENDING.value)
         finally:
             dist_lock.release()

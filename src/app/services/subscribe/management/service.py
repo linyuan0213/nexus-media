@@ -165,7 +165,7 @@ class SubscribeService:
             self.finish_rss_subscribe(rssid=rssid, media=media)
             return True
         else:
-            self.update_rss_state(rtype=rtype, rssid=rssid, state="R")
+            self.update_rss_state(rtype=rtype, rssid=rssid, state=SubscribeState.RUNNING.value)
         return False
 
     def check_subscribe_over_edition(self, rtype, rssid, res_order):
@@ -178,7 +178,7 @@ class SubscribeService:
         return int(pre_res_order) < int(res_order or 0)
 
     def update_subscribe_tv_lack(self, rssid, media_info, seasoninfo):
-        self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="R")
+        self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state=SubscribeState.RUNNING.value)
         if not seasoninfo:
             return
         for info in seasoninfo:

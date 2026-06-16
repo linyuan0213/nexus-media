@@ -8,6 +8,7 @@ from typing import Protocol
 from app.domain.entities.rss import (
     SubscribeHistoryEntity,
     SubscribeMovieEntity,
+    SubscribeState,
     SubscribeTvEntity,
 )
 
@@ -50,7 +51,7 @@ class ISubscribeMovieRepository(Protocol):
     def insert(
         self,
         media_info,
-        state="D",
+        state=SubscribeState.PENDING.value,
         rss_sites=None,
         search_sites=None,
         over_edition=0,
@@ -138,7 +139,7 @@ class ISubscribeTvRepository(Protocol):
         media_info,
         total,
         lack=0,
-        state="D",
+        state=SubscribeState.PENDING.value,
         rss_sites=None,
         search_sites=None,
         over_edition=0,

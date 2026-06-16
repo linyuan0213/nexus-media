@@ -3,6 +3,7 @@
 from dataclasses import asdict
 from typing import Any, cast
 
+from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SubscribeType
 from app.domain.mediatypes import MediaType
 from app.events import Event
@@ -57,7 +58,7 @@ class SubscribeUpdateService:
         download_setting: int | str | None = None,
         total_ep: int | None = None,
         current_ep: int | None = None,
-        state: str = "D",
+        state: str = SubscribeState.PENDING.value,
         in_from: str | None = None,
         user_name: str | None = None,
         image: str | None = None,

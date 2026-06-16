@@ -7,6 +7,7 @@ from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.domain.entities.rss import (
     SubscribeHistoryEntity,
     SubscribeMovieEntity,
+    SubscribeState,
     SubscribeTvEntity,
 )
 from app.domain.mediatypes import MediaType
@@ -40,7 +41,13 @@ class SubscribeMovieRepositoryAdapter:
         self._repo.update_rss_movie_state(title, year, rssid, state)
 
     # 兼容旧Repository方法名
-    def update_subscribe_movie_state(self, title=None, year=None, rssid=None, state="R") -> None:
+    def update_subscribe_movie_state(
+        self,
+        title=None,
+        year=None,
+        rssid=None,
+        state=SubscribeState.RUNNING.value,
+    ) -> None:
         self.update_state(title, year, rssid, state)
 
     def update(self, rssid: int, **kwargs) -> int:
@@ -66,7 +73,7 @@ class SubscribeMovieRepositoryAdapter:
     def insert(
         self,
         media_info,
-        state="D",
+        state=SubscribeState.PENDING.value,
         rss_sites=None,
         search_sites=None,
         over_edition=0,
@@ -138,7 +145,14 @@ class SubscribeTvRepositoryAdapter:
         self._repo.update_rss_tv_state(title, year, season, rssid, state)
 
     # 兼容旧Repository方法名
-    def update_subscribe_tv_state(self, title=None, year=None, season=None, rssid=None, state="R") -> None:
+    def update_subscribe_tv_state(
+        self,
+        title=None,
+        year=None,
+        season=None,
+        rssid=None,
+        state=SubscribeState.RUNNING.value,
+    ) -> None:
         self.update_state(title, year, season, rssid, state)
 
     def update_lack(
@@ -172,7 +186,7 @@ class SubscribeTvRepositoryAdapter:
         media_info,
         total,
         lack=0,
-        state="D",
+        state=SubscribeState.PENDING.value,
         rss_sites=None,
         search_sites=None,
         over_edition=0,

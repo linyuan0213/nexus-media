@@ -1,6 +1,7 @@
 """索引器搜索策略 — 处理 state='R' 的运行中订阅."""
 
 import log
+from app.domain.entities.rss import SubscribeState
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.services.subscribe.strategies.base_search import BaseSearchStrategy
 
@@ -20,7 +21,7 @@ class IndexerSearchStrategy(BaseSearchStrategy):
             log.info("[IndexerSearchStrategy] 主动搜索正在执行，跳过")
             return
         try:
-            self._search_movies(state="R")
-            self._search_tvs(state="R")
+            self._search_movies(state=SubscribeState.RUNNING.value)
+            self._search_tvs(state=SubscribeState.RUNNING.value)
         finally:
             dist_lock.release()

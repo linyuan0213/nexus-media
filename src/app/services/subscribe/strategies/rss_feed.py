@@ -11,6 +11,7 @@ from app.core.exceptions import (
 )
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
+from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SearchType
 from app.domain.mediatypes import MediaType
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
@@ -82,7 +83,7 @@ class RssFeedStrategy:
 
         log.info("[RssFeedStrategy] 开始 RSS 订阅轮询...")
 
-        rss_movies = self.subscribe.get_subscribe_movies(state="R")
+        rss_movies = self.subscribe.get_subscribe_movies(state=SubscribeState.RUNNING.value)
         if not rss_movies:
             log.warn(f"[RssFeedStrategy] 没有正在订阅的{MediaType.MOVIE.display_name}")
         else:
@@ -93,7 +94,7 @@ class RssFeedStrategy:
                 )
             )
 
-        rss_tvs = self.subscribe.get_subscribe_tvs(state="R")
+        rss_tvs = self.subscribe.get_subscribe_tvs(state=SubscribeState.RUNNING.value)
         if not rss_tvs:
             log.warn(f"[RssFeedStrategy] 没有正在订阅的{MediaType.TV.display_name}")
         else:

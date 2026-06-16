@@ -18,6 +18,7 @@ from app.db.repositories.subscribe_repo_adapter import (
     SubscribeTvRepositoryAdapter,
 )
 from app.db.repositories.subscribe_repository import SubscribeRepository
+from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SearchType
 from app.domain.interfaces.rss_repo import (
     ISubscribeMovieRepository,
@@ -84,7 +85,7 @@ class BaseSearchStrategy:
         """设置下载协调器（用于 SubscriptionMonitor 注入）."""
         self._coordinator = coordinator
 
-    def _search_movies(self, state: str = "D", rssid: int | None = None) -> None:
+    def _search_movies(self, state: str = SubscribeState.PENDING.value, rssid: int | None = None) -> None:
         if rssid:
             rss_movies = self._service.get_subscribe_movies(rid=rssid) if self._service else {}
         else:
@@ -104,7 +105,7 @@ class BaseSearchStrategy:
             media_info = self._get_media_info(tmdbid, name, year, MediaType.MOVIE)
             if not media_info or not media_info.tmdb_info:
                 log.warn(f"[Subscribe]{MediaType.MOVIE.display_name} {name} TMDB 识别失败，标记为错误状态")
-                self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="E")
+                self._movie_repo.update_state(title=None, year=None, rssid=rssid, state=SubscribeState.ERROR.value)
                 continue
             media_info.set_download_info(
                 download_setting=rss_info.get("download_setting"), save_path=rss_info.get("save_path")
@@ -125,10 +126,10 @@ class BaseSearchStrategy:
 
             if self._coordinator and not self._coordinator.try_acquire(media_info):
                 log.info(f"[Subscribe]{MediaType.MOVIE.display_name} {name} 已被其他策略处理，跳过")
-                self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="R")
+                self._movie_repo.update_state(title=None, year=None, rssid=rssid, state=SubscribeState.RUNNING.value)
                 continue
 
-            self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="S")
+            self._movie_repo.update_state(title=None, year=None, rssid=rssid, state=SubscribeState.SEARCHING.value)
             media_info = None
 
             try:
@@ -158,9 +159,11 @@ class BaseSearchStrategy:
                         if self._service:
                             self._service.finish_rss_subscribe(rssid=rssid, media=media_info)
                 else:
-                    self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="R")
+                    self._movie_repo.update_state(
+                        title=None, year=None, rssid=rssid, state=SubscribeState.RUNNING.value
+                    )
             except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as err:
-                self._movie_repo.update_state(title=None, year=None, rssid=rssid, state="R")
+                self._movie_repo.update_state(title=None, year=None, rssid=rssid, state=SubscribeState.RUNNING.value)
                 log.error(f"[Subscribe]{MediaType.MOVIE.display_name} {name} 订阅搜索失败：{err!s}")
                 log.debug(f"异常详细信息: {traceback.format_exc()}")
                 continue
@@ -168,7 +171,7 @@ class BaseSearchStrategy:
                 if self._coordinator and media_info is not None:
                     self._coordinator.release(media_info)
 
-    def _search_tvs(self, state: str = "D", rssid: int | None = None) -> None:
+    def _search_tvs(self, state: str = SubscribeState.PENDING.value, rssid: int | None = None) -> None:
         if rssid:
             rss_tvs = self._service.get_subscribe_tvs(rid=rssid) if self._service else {}
         else:
@@ -192,7 +195,9 @@ class BaseSearchStrategy:
                 media_info = self._get_media_info(tmdbid, name, year, MediaType.TV)
                 if not media_info or not media_info.tmdb_info:
                     log.warn(f"[Subscribe]{MediaType.TV.display_name} {name} TMDB 识别失败，标记为错误状态")
-                    self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="E")
+                    self._tv_repo.update_state(
+                        title=None, year=None, season=None, rssid=rssid, state=SubscribeState.ERROR.value
+                    )
                     continue
                 media_info.set_download_info(
                     download_setting=rss_info.get("download_setting"), save_path=rss_info.get("save_path")
@@ -247,10 +252,14 @@ class BaseSearchStrategy:
 
                 if self._coordinator and not self._coordinator.try_acquire(media_info):
                     log.info(f"[Subscribe]{MediaType.TV.display_name} {name} 已被其他策略处理，跳过")
-                    self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="R")
+                    self._tv_repo.update_state(
+                        title=None, year=None, season=None, rssid=rssid, state=SubscribeState.RUNNING.value
+                    )
                     continue
 
-                self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="S")
+                self._tv_repo.update_state(
+                    title=None, year=None, season=None, rssid=rssid, state=SubscribeState.SEARCHING.value
+                )
                 filter_dict = {
                     "restype": rss_info.get("filter_restype"),
                     "pix": rss_info.get("filter_pix"),
@@ -274,7 +283,9 @@ class BaseSearchStrategy:
                                 rtype=media_info.type, rssid=rssid, media=search_result
                             )
                     else:
-                        self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="R")
+                        self._tv_repo.update_state(
+                            title=None, year=None, season=None, rssid=rssid, state=SubscribeState.RUNNING.value
+                        )
                 elif not no_exists or not no_exists.get(media_info.tmdb_id):
                     if self._service:
                         self._service.finish_rss_subscribe(rssid=rssid, media=media_info)
@@ -297,7 +308,9 @@ class BaseSearchStrategy:
             except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as err:
                 log.error(f"[Subscribe]{MediaType.TV.display_name} {name} 订阅搜索失败：{err!s}")
                 log.debug(f"异常详细信息: {traceback.format_exc()}")
-                self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state="R")
+                self._tv_repo.update_state(
+                    title=None, year=None, season=None, rssid=rssid, state=SubscribeState.RUNNING.value
+                )
                 continue
             finally:
                 if self._coordinator and media_info is not None:

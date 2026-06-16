@@ -2,6 +2,7 @@
 
 import log
 from app.db.transaction import transaction_scope
+from app.domain.entities.rss import SubscribeState
 from app.domain.mediatypes import MediaType
 from app.media import meta_info
 from app.services.subscribe.management.utils import gen_rss_note
@@ -19,7 +20,7 @@ class SubscribeRefreshService:
     def refresh_rss_metainfo(self, get_subscribe_movies_fn, get_subscribe_tvs_fn) -> None:
         """定时将豆瓣订阅转换为TMDB的订阅，并更新订阅的TMDB信息"""
         log.info("[Subscribe]开始刷新订阅TMDB信息...")
-        rss_movies = get_subscribe_movies_fn(state="R")
+        rss_movies = get_subscribe_movies_fn(state=SubscribeState.RUNNING.value)
         for _rid, rss_info in rss_movies.items():
             if rss_info.get("fuzzy_match"):
                 continue
@@ -46,7 +47,7 @@ class SubscribeRefreshService:
                     note=gen_rss_note(media_info),
                 )
 
-        rss_tvs = get_subscribe_tvs_fn(state="R")
+        rss_tvs = get_subscribe_tvs_fn(state=SubscribeState.RUNNING.value)
         for rss_info in rss_tvs.values():
             if rss_info.get("fuzzy_match"):
                 continue

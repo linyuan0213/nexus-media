@@ -3,6 +3,7 @@
 from dataclasses import asdict
 from typing import Any, cast
 
+from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SubscribeType, SystemConfigKey
 from app.domain.mediatypes import MediaType
 from app.events import Event
@@ -65,7 +66,7 @@ class SubscribeAddService:
         download_setting: int | str | None = None,
         total_ep: int | None = None,
         current_ep: int | None = None,
-        state: str = "D",
+        state: str = SubscribeState.PENDING.value,
         rssid: int | None = None,
         in_from: str | None = None,
         user_name: str | None = None,
@@ -219,7 +220,7 @@ class SubscribeAddService:
             if mtype == MediaType.MOVIE:
                 code = self._movie_repo.insert(
                     media_info=media_info,
-                    state="R",
+                    state=SubscribeState.RUNNING.value,
                     rss_sites=rss_sites,
                     search_sites=search_sites,
                     over_edition=over_edition,
@@ -239,7 +240,7 @@ class SubscribeAddService:
                     media_info=media_info,
                     total=0,
                     lack=0,
-                    state="R",
+                    state=SubscribeState.RUNNING.value,
                     rss_sites=rss_sites,
                     search_sites=search_sites,
                     over_edition=over_edition,

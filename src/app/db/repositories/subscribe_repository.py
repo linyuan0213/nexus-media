@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.db.models import SubscribeHistory, SubscribeMovies, SubscribeTorrents, SubscribeTvEpisodes, SubscribeTvs
 from app.db.repositories.base_repository import BaseRepository
+from app.domain.entities.rss import SubscribeState
 from app.domain.mediatypes import MediaType
 from app.utils.json_utils import JsonUtils
 
@@ -31,10 +32,12 @@ class SubscribeRepository(BaseRepository):
         将 STATE='S' 的订阅重置为 STATE='D'，由 SubscriptionMonitor 重新启动队列搜索
         """
         with self.session() as db:
-            db.query(SubscribeMovies).filter(SubscribeMovies.STATE == "S").update(
-                {"STATE": "D"}, synchronize_session=False
+            db.query(SubscribeMovies).filter(SubscribeMovies.STATE == SubscribeState.SEARCHING.value).update(
+                {"STATE": SubscribeState.PENDING.value}, synchronize_session=False
             )
-            db.query(SubscribeTvs).filter(SubscribeTvs.STATE == "S").update({"STATE": "D"}, synchronize_session=False)
+            db.query(SubscribeTvs).filter(SubscribeTvs.STATE == SubscribeState.SEARCHING.value).update(
+                {"STATE": SubscribeState.PENDING.value}, synchronize_session=False
+            )
 
     # ==================== RSS Movies ====================
 
@@ -184,7 +187,7 @@ class SubscribeRepository(BaseRepository):
     def insert_rss_movie(
         self,
         media_info: MediaInfo,
-        state: str = "D",
+        state: str = SubscribeState.PENDING.value,
         rss_sites: list | None = None,
         search_sites: list | None = None,
         over_edition: int = 0,
@@ -325,7 +328,11 @@ class SubscribeRepository(BaseRepository):
                 ).delete()
 
     def update_rss_movie_state(
-        self, title: str | None = None, year: str | None = None, rssid: int | None = None, state: str = "R"
+        self,
+        title: str | None = None,
+        year: str | None = None,
+        rssid: int | None = None,
+        state: str = SubscribeState.RUNNING.value,
     ) -> None:
         """
         更新电影订阅状态
@@ -418,7 +425,7 @@ class SubscribeRepository(BaseRepository):
         media_info: MediaInfo,
         total: int,
         lack: int = 0,
-        state: str = "D",
+        state: str = SubscribeState.PENDING.value,
         rss_sites: list | None = None,
         search_sites: list | None = None,
         over_edition: int = 0,
@@ -651,7 +658,7 @@ class SubscribeRepository(BaseRepository):
         year: str | None = None,
         season: str | None = None,
         rssid: int | None = None,
-        state: str = "R",
+        state: str = SubscribeState.RUNNING.value,
     ) -> None:
         """
         更新电视剧订阅状态
@@ -723,7 +730,14 @@ class SubscribeRepository(BaseRepository):
         """
         with self.session() as db:
             active_ids = {
-                row[0] for row in db.query(SubscribeTvs.ID).filter(SubscribeTvs.STATE.in_(["R", "D", "S"])).all()
+                row[0]
+                for row in db.query(SubscribeTvs.ID)
+                .filter(
+                    SubscribeTvs.STATE.in_(
+                        [SubscribeState.RUNNING.value, SubscribeState.PENDING.value, SubscribeState.SEARCHING.value]
+                    )
+                )
+                .all()
             }
             query = db.query(SubscribeTvEpisodes)
             if active_ids:
