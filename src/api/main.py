@@ -3,6 +3,7 @@ FastAPI 主应用
 与 Flask 应用并行存在，按领域逐步迁移 Router。
 """
 
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -164,6 +165,7 @@ app.include_router(message_webhook.router, tags=["message-webhook"])
 
 # 挂载静态文件
 _static_dir = str(Path(settings.data_path) / "static")
+os.makedirs(_static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
 
