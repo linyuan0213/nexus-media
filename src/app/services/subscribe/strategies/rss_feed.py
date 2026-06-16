@@ -1,7 +1,5 @@
 """RSS Feed 轮询策略 — 从站点 RSS Feed 收集资源并匹配订阅."""
 
-from threading import Lock
-
 import log
 from app.core.exceptions import (
     DownloadError,
@@ -26,8 +24,6 @@ from app.sites.site_cache import SiteCache
 from app.sites.siteconf import SiteConf
 from app.sites.torrent import Torrent
 from app.utils import ExceptionUtils, JsonUtils
-
-lock = Lock()
 
 
 class RssFeedStrategy:
@@ -84,8 +80,7 @@ class RssFeedStrategy:
         if not rss_sites_info:
             return
 
-        with lock:
-            log.info("[RssFeedStrategy] 开始 RSS 订阅轮询...")
+        log.info("[RssFeedStrategy] 开始 RSS 订阅轮询...")
 
         rss_movies = self.subscribe.get_subscribe_movies(state="R")
         if not rss_movies:

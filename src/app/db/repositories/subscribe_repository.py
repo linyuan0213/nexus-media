@@ -8,6 +8,8 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING
 
+from sqlalchemy.exc import IntegrityError
+
 from app.db.models import SubscribeHistory, SubscribeMovies, SubscribeTorrents, SubscribeTvEpisodes, SubscribeTvs
 from app.db.repositories.base_repository import BaseRepository
 from app.domain.mediatypes import MediaType
@@ -223,30 +225,34 @@ class SubscribeRepository(BaseRepository):
             if count > 0:
                 return 9
 
-            db.add(
-                SubscribeMovies(
-                    NAME=media_info.title,
-                    YEAR=media_info.year,
-                    TMDBID=media_info.tmdb_id,
-                    IMAGE=media_info.get_message_image(),
-                    RSS_SITES=JsonUtils.dumps(rss_sites),
-                    SEARCH_SITES=JsonUtils.dumps(search_sites),
-                    OVER_EDITION=over_edition,
-                    FILTER_RESTYPE=filter_restype,
-                    FILTER_PIX=filter_pix,
-                    FILTER_RULE=filter_rule,
-                    FILTER_TEAM=filter_team,
-                    FILTER_INCLUDE=filter_include,
-                    FILTER_EXCLUDE=filter_exclude,
-                    SAVE_PATH=save_path,
-                    DOWNLOAD_SETTING=download_setting,
-                    FUZZY_MATCH=fuzzy_match,
-                    STATE=state,
-                    DESC=desc,
-                    NOTE=note,
-                    KEYWORD=keyword,
+            try:
+                db.add(
+                    SubscribeMovies(
+                        NAME=media_info.title,
+                        YEAR=media_info.year,
+                        TMDBID=media_info.tmdb_id,
+                        IMAGE=media_info.get_message_image(),
+                        RSS_SITES=JsonUtils.dumps(rss_sites),
+                        SEARCH_SITES=JsonUtils.dumps(search_sites),
+                        OVER_EDITION=over_edition,
+                        FILTER_RESTYPE=filter_restype,
+                        FILTER_PIX=filter_pix,
+                        FILTER_RULE=filter_rule,
+                        FILTER_TEAM=filter_team,
+                        FILTER_INCLUDE=filter_include,
+                        FILTER_EXCLUDE=filter_exclude,
+                        SAVE_PATH=save_path,
+                        DOWNLOAD_SETTING=download_setting,
+                        FUZZY_MATCH=fuzzy_match,
+                        STATE=state,
+                        DESC=desc,
+                        NOTE=note,
+                        KEYWORD=keyword,
+                    )
                 )
-            )
+                db.flush()
+            except IntegrityError:
+                return 9
         return 0
 
     def update_rss_movie(self, rssid: int, **kwargs: str | int | list | None) -> int:
@@ -460,35 +466,39 @@ class SubscribeRepository(BaseRepository):
                 if count > 0:
                     return 9
 
-            db.add(
-                SubscribeTvs(
-                    NAME=media_info.title,
-                    YEAR=media_info.year,
-                    SEASON=season_str,
-                    TMDBID=media_info.tmdb_id,
-                    IMAGE=media_info.get_message_image(),
-                    RSS_SITES=JsonUtils.dumps(rss_sites),
-                    SEARCH_SITES=JsonUtils.dumps(search_sites),
-                    OVER_EDITION=over_edition,
-                    FILTER_RESTYPE=filter_restype,
-                    FILTER_PIX=filter_pix,
-                    FILTER_RULE=filter_rule,
-                    FILTER_TEAM=filter_team,
-                    FILTER_INCLUDE=filter_include,
-                    FILTER_EXCLUDE=filter_exclude,
-                    SAVE_PATH=save_path,
-                    DOWNLOAD_SETTING=download_setting,
-                    FUZZY_MATCH=fuzzy_match,
-                    TOTAL_EP=total_ep,
-                    CURRENT_EP=current_ep,
-                    TOTAL=total,
-                    LACK=lack,
-                    STATE=state,
-                    DESC=desc,
-                    NOTE=note,
-                    KEYWORD=keyword,
+            try:
+                db.add(
+                    SubscribeTvs(
+                        NAME=media_info.title,
+                        YEAR=media_info.year,
+                        SEASON=season_str,
+                        TMDBID=media_info.tmdb_id,
+                        IMAGE=media_info.get_message_image(),
+                        RSS_SITES=JsonUtils.dumps(rss_sites),
+                        SEARCH_SITES=JsonUtils.dumps(search_sites),
+                        OVER_EDITION=over_edition,
+                        FILTER_RESTYPE=filter_restype,
+                        FILTER_PIX=filter_pix,
+                        FILTER_RULE=filter_rule,
+                        FILTER_TEAM=filter_team,
+                        FILTER_INCLUDE=filter_include,
+                        FILTER_EXCLUDE=filter_exclude,
+                        SAVE_PATH=save_path,
+                        DOWNLOAD_SETTING=download_setting,
+                        FUZZY_MATCH=fuzzy_match,
+                        TOTAL_EP=total_ep,
+                        CURRENT_EP=current_ep,
+                        TOTAL=total,
+                        LACK=lack,
+                        STATE=state,
+                        DESC=desc,
+                        NOTE=note,
+                        KEYWORD=keyword,
+                    )
                 )
-            )
+                db.flush()
+            except IntegrityError:
+                return 9
         return 0
 
     def update_rss_tv(self, rssid: int, **kwargs: str | int | list | None) -> int:
