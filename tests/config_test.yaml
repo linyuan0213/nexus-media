@@ -1,30 +1,28 @@
+nexus_media_data: ''
 app:
-  web_host: 0.0.0.0
+  web_host: '::'
   web_port: 3000
-  login_user: admin
+  login_user: linyuan
   login_password: password
   ssl_cert: ''
   ssl_key: ''
-  rmt_tmdbkey: test_tmdb_key
+  rmt_tmdbkey: df0654483fce43af8d2cb0c3235c5db0
   rmt_match_mode: normal
-  proxies:
-    https:
-    http:
-  domain: ''
+  proxies: {}
+  domain: https://nas-tool.xcreal.cc
   user_agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36
     (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
   init_files: []
   tmdb_domain: api.themoviedb.org
-  wallpaper: bing
   debug: true
-  releases_update_only: false
   tmdb_image_url: ''
   enable_image_proxy: 1
   cookie_secure: false
 media:
-  mediasync_interval: '8'
+  mediasync_interval: 8
+  sync_transfer_interval: 60
   category: default-category
-  min_filesize: '150'
+  min_filesize: 150
   filesize_cover: true
   movie_name_format: '{title} ({year})/{title}-{part} ({year}) - {videoFormat}'
   tv_name_format: '{title} ({year})/Season {season}/{title}-{part} - {season_episode}
@@ -40,36 +38,45 @@ media:
 pt:
   search_auto: false
   search_no_result_rss: false
-  pt_check_interval: '3600'
-  search_rss_interval: '6'
+  pt_check_interval: 3600
+  search_rss_interval: 6
   download_order: seeder
   ptrefresh_date_cron: 22:36
+subscribe:
+  queue_interval: 300
+  rss_interval: 1800
+  search_interval: 6
 security:
-  jwt_secret: jJ-d9kDmnLWd9IczbUInmGZWOqgsGu8t8dJ5zxlWS0o
+  jwt_secret: 8IMH8MQMuUmrJw7fJEI5_SVxhAMNUM0u0VjJIC-FmTg
 laboratory:
   search_keyword: false
   tmdb_cache_expire: true
   use_douban_titles: true
   search_en_title: true
   show_more_sites: true
-  ocr_server_host: ''
+  ocr_server_host: http://192.168.50.180:9300
   search_multi_language: true
-  chrome_server_host: ''
+  chrome_server_host: http://192.168.50.154:9850
 agent:
-  enabled: true
+  enabled: false
   default_provider: ''
   media_recognizer_enabled: false
   batch_size: 100
   providers: {}
 database:
-  type: sqlite
-  host: localhost
-  port: 0
-  username: ''
-  password: ''
+  type: mysql
+  host: 192.168.50.154
+  port: 3306
+  username: root
+  password: test1234**
   database: nas_tools
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password: ''
+  db: 0
 log:
   type: file
   level: debug
-  server: ''
-  path: ''
+  format: text
+  path: ./data/logs

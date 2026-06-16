@@ -690,10 +690,16 @@ class SubscribeRepository(BaseRepository):
 
     def truncate_rss_episodes(self) -> None:
         """
-        清空RSS历史记录
+        清空 RSS 剧集记录（仅清理已完成/失效的订阅关联记录，保护活跃订阅进度）
         """
         with self.session() as db:
-            db.query(SubscribeTvEpisodes).delete()
+            active_ids = {
+                row[0] for row in db.query(SubscribeTvs.ID).filter(SubscribeTvs.STATE.in_(["R", "D", "S"])).all()
+            }
+            query = db.query(SubscribeTvEpisodes)
+            if active_ids:
+                query = query.filter(~SubscribeTvEpisodes.RSSID.in_(active_ids))
+            query.delete(synchronize_session=False)
 
     # ==================== RSS History ====================
 

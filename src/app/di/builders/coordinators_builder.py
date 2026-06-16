@@ -7,6 +7,7 @@ from app.di.models import BusinessFacades, CoordinatorObjects, InfrastructureObj
 from app.media import MediaCache
 from app.services.rss_processor import RssHelper
 from app.services.subscribe.coordinator import DownloadCoordinator
+from app.services.subscribe.handlers import build_rss_auto_subscribe_handler
 from app.services.subscribe.matcher import SubscribeMatcher
 from app.services.subscribe.monitor import SubscriptionMonitor
 from app.services.subscribe.strategies.indexer_search import IndexerSearchStrategy
@@ -132,6 +133,9 @@ def build_coordinators(
         searcher=searcher,
     )
     facades.agent_service.set_tool_executor(tool_executor)
+
+    # 注册 RSS 自动订阅事件处理器
+    build_rss_auto_subscribe_handler(subscribe_service)
 
     return CoordinatorObjects(
         subscription_monitor=subscription_monitor,
