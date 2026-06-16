@@ -94,11 +94,11 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          format: markdown
+          format: html
           message: |
-            🚀 **Nexus Media ${{ steps.extract.outputs.tag }} 已发布**
+            <b>Nexus Media ${{ steps.extract.outputs.tag }} 已发布</b>
 
-            ${{ steps.extract.outputs.notes }}
+            <pre>${{ steps.extract.outputs.notes }}</pre>
 
-            📦 Docker: `docker pull linyuan0213/nexus-media:${{ steps.extract.outputs.version }}`
-            🔗 [查看 Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.extract.outputs.tag }})
+            📦 Docker: <code>docker pull linyuan0213/nexus-media:${{ steps.extract.outputs.version }}</code>
+            🔗 <a href="https://github.com/${{ github.repository }}/releases/tag/${{ steps.extract.outputs.tag }}">查看 Release</a>
