@@ -1,13 +1,16 @@
 """测试全局配置与 Fixtures"""
 
 import os
+import tempfile
 
-# 必须在导入任何项目模块之前设置
-os.environ["NEXUS_MEDIA_CONFIG"] = os.path.join(os.path.dirname(__file__), "config_test.yaml")
+# 必须在导入任何项目模块之前设置 — 使用临时文件避免污染仓库
+_test_config = os.path.join(tempfile.gettempdir(), "nexus_media_test_config.yaml")
+os.environ["NEXUS_MEDIA_CONFIG"] = _test_config
+os.environ["DATABASE__TYPE"] = "sqlite"
 
-import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import pytest  # noqa: E402
+from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 
 @pytest.fixture(scope="session")
