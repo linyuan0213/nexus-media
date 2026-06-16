@@ -1,5 +1,16 @@
 # 版本历史
 
+## v4.1.1 (2026-06-16)
+
+### 部署修复
+- **ConfigReloader 重构**：改为工厂模式重建实例，而非 reset()，tmdb_client 热重载时清除 Redis 缓存
+- **settings.save 合并**：修复保存时只保留 database 节点导致其他配置（TMDB key 等）丢失
+- **配置保存触发重载**：/config/update 自动调用 ConfigReloader.reload()
+- **NOGROUP 根治**：RedisMessageQueue dispatch 循环幂等创建消费组
+- **static 目录持久化**：跟随 NEXUS_MEDIA_DATA 落到 /data/static
+- **过滤规则初始化**：首次启动从 init_filter.sql 导入默认规则，INSERT OR IGNORE 防覆盖
+- **TMDB 异常降级**：get_tmdb_new_movies/tvs 捕获异常返回 []，不抛 500
+
 ## v4.1.0 (2026-06-15)
 
 ### 部署优化
