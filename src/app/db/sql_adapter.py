@@ -84,7 +84,7 @@ class SQLAdapter:
         """
         # 匹配 INSERT OR IGNORE INTO table (columns) VALUES (...)
         pattern = r"^INSERT\s+OR\s+IGNORE\s+INTO\s+(.+)$"
-        match = re.match(pattern, sql, re.IGNORECASE)
+        match = re.match(pattern, sql, re.IGNORECASE | re.DOTALL)
 
         if not match:
             return sql
