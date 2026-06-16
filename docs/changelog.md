@@ -1,5 +1,27 @@
 # 版本历史
 
+## v4.1.2 (2026-06-16)
+
+### 刷流修复
+- 缓存线程安全：`_torrents_cache` 加 `threading.Lock` 防止并发下载重复种子
+- 删种前用 `get_torrents` 确认种子离开下载器，避免边缘状态误删记录导致孤儿
+- 删种失败不再标记为已删除
+- 新任务不触发全量 `start_service()`，缓存在 `delete_brushtask` 未命中时回退查 DB
+
+### 订阅修复
+- RSS 自动订阅事件处理器已注册到 DI，功能恢复可用
+- 删除订阅时同步清理 `SubscribeTorrents` 种子记录，重新订阅可正常下载
+- `truncate_rss_episodes` 只清除非活跃订阅的剧集进度
+- TOCTOU 并发防重复插入订阅
+- 状态字符串统一替换为 `SubscribeState` 枚举
+- 状态设为 SEARCHING 移到协调锁之后，消除异常窗口
+
+### 测试修复
+- 测试配置改用临时文件 + SQLite，不再依赖外部 MySQL 服务器
+
+### 依赖
+- `python-jose` 替换为 `PyJWT[crypto]`，消除 `ecdsa` 安全告警
+
 ## v4.1.1 (2026-06-16)
 
 ### 部署修复
