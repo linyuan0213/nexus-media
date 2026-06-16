@@ -14,7 +14,7 @@ from PIL import Image
 
 import log
 from app.core.constants import TMDB_IMAGE_DOMAIN
-from app.core.root_path import get_project_root
+from app.core.settings import settings
 from app.infrastructure.http.async_client import AsyncHttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.utils.config_tools import get_proxies
@@ -24,7 +24,7 @@ _download_locks = {}
 _download_locks_lock = asyncio.Lock()
 
 # 缓存目录（与 Flask 侧保持一致）
-CACHE_DIR = os.path.join(get_project_root(), "static", "img_cache")
+CACHE_DIR = os.path.join(settings.data_path, "static", "img_cache")
 MAX_CACHE_SIZE = 1024 * 1024 * 1024  # 1GB 最大缓存
 MAX_CACHE_DAYS = 30  # 缓存30天
 

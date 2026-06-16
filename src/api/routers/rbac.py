@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from api.deps import get_current_user, get_rbac_service, require_any_permission, require_permission
 from app.core.exceptions import ResourceAlreadyExistsError, ResourceNotFoundError
-from app.core.root_path import get_project_root
+from app.core.settings import settings
 from app.schemas.auth import UserContext
 from app.schemas.common import CommonResponse
 from app.utils.response import fail, success
@@ -284,7 +284,7 @@ async def upload_avatar(
 
     try:
         # 头像保存目录
-        avatar_dir = get_project_root() / "static" / "avatars"
+        avatar_dir = Path(settings.data_path) / "static" / "avatars"
         avatar_dir.mkdir(parents=True, exist_ok=True)
 
         # 生成文件名
@@ -313,7 +313,7 @@ async def upload_avatar(
 @router.get("/avatars/{filename}", summary="获取头像")
 async def get_avatar(filename: str):
     """获取用户头像文件"""
-    avatar_dir = get_project_root() / "static" / "avatars"
+    avatar_dir = Path(settings.data_path) / "static" / "avatars"
     file_path = avatar_dir / filename
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="头像不存在")
