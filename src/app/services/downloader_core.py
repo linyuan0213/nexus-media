@@ -332,15 +332,21 @@ class DownloaderCore:
         return ret
 
     def delete_downloader(self, did):
-        return self._download_core.delete_downloader(did=did)
+        ret = self._download_core.delete_downloader(did=did)
+        self._client_factory._refresh()
+        return ret
 
     def check_downloader(self, did=None, transfer=None, only_nexus_media=None, enabled=None, match_path=None):
-        return self._download_core.check_downloader(
+        ret = self._download_core.check_downloader(
             did=did, transfer=transfer, only_nexus_media=only_nexus_media, enabled=enabled, match_path=match_path
         )
+        self._client_factory._refresh()
+        return ret
 
     def delete_download_setting(self, sid):
-        return self._download_core.delete_download_setting(sid=sid)
+        ret = self._download_core.delete_download_setting(sid=sid)
+        self._client_factory._refresh()
+        return ret
 
     def update_download_setting(
         self,
@@ -355,7 +361,7 @@ class DownloaderCore:
         seeding_time_limit,
         downloader,
     ):
-        return self._download_core.update_download_setting(
+        ret = self._download_core.update_download_setting(
             sid=sid,
             name=name,
             category=category,
@@ -367,3 +373,5 @@ class DownloaderCore:
             seeding_time_limit=seeding_time_limit,
             downloader=downloader,
         )
+        self._client_factory._refresh()
+        return ret
