@@ -95,8 +95,6 @@ async def get_current_user_info(
 ):
     """
     获取当前登录用户信息。
-    兼容测试中的字符串 override（绞杀期过渡）。
-    返回统一格式 { code: 0, data: {...} } 以适配前端拦截器。
     """
     if isinstance(user, str):
         return {

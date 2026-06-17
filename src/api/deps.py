@@ -1,8 +1,4 @@
-"""
-FastAPI 依赖注入
-提供当前用户、认证、配置等通用依赖。
-支持 JWT + Session 双轨认证（绞杀期）。
-"""
+"""FastAPI 依赖注入."""
 
 import uuid
 from typing import Any, cast

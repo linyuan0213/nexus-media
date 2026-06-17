@@ -1,7 +1,4 @@
-"""
-FastAPI 主应用
-与 Flask 应用并行存在，按领域逐步迁移 Router。
-"""
+"""FastAPI 主应用."""
 
 import os
 from contextlib import asynccontextmanager
