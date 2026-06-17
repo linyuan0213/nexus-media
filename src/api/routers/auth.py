@@ -15,7 +15,7 @@ from app.services.rbac_service import RBACService
 
 _settings = AppSettings()
 
-router = APIRouter(prefix="/api/auth", tags=["authentication"])
+router = APIRouter()
 
 
 @router.post("/login", response_model=LoginResponse)

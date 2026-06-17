@@ -154,7 +154,7 @@ app.include_router(rss_automation.router, prefix="/api/rss-automation", tags=["r
 app.include_router(words.router, prefix="/api/words", tags=["words"])
 app.include_router(media.router, prefix="/api/media", tags=["media"])
 app.include_router(rbac.router, prefix="/api/rbac", tags=["rbac"])
-app.include_router(auth.router, tags=["authentication"])
+app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 app.include_router(image.router, prefix="/img", tags=["image"])
 app.include_router(apikey.router, prefix="/api/apikey", tags=["apikey"])
 # 消息客户端 webhook（不需要 /api 前缀）
