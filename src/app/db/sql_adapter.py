@@ -92,7 +92,7 @@ class SQLAdapter:
         rest = match.group(1)
 
         if self.is_mysql:
-            return f"INSERT IGNORE INTO {rest}"
+            return f"INSERT IGNORE INTO {rest.replace(chr(34), '`')}"
         elif self.is_postgresql:
             # PostgreSQL 需要使用 ON CONFLICT DO NOTHING
             # 简单处理：直接返回 INSERT INTO，依赖唯一约束

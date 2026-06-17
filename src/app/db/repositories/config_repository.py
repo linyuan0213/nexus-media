@@ -788,8 +788,10 @@ class ConfigRepository(BaseRepository):
         Returns:
             执行结果
         """
+        from sqlalchemy import text
+
         with self.session() as db:
-            return db.execute(sql)
+            return db.execute(text(sql))
 
     def drop_table(self, table_name: str) -> object:
         """
