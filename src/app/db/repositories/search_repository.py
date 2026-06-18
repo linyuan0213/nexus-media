@@ -96,7 +96,7 @@ class SearchRepository(BaseRepository):
                     else 0,
                     "SITE": media_item.site,
                     "SITE_ORDER": media_item.site_order,
-                    "PAGEURL": media_item.page_url,
+                    "PAGEURL": media_item.page_url or (enclosure[:200] if enclosure else ""),
                     "OTHERINFO": media_item.resource_team,
                     "UPLOAD_VOLUME_FACTOR": media_item.upload_volume_factor,
                     "DOWNLOAD_VOLUME_FACTOR": media_item.download_volume_factor,
@@ -108,7 +108,7 @@ class SearchRepository(BaseRepository):
                     mapping["SEARCH_SESSION_ID"] = session_id
                 mappings.append(mapping)
 
-            # 按唯一约束 (PAGEURL, SITE, SEARCH_SESSION_ID) 去重，保留最后出现的
+            # 按 DB 唯一约束 (PAGEURL, SITE, SEARCH_SESSION_ID) 去重
             deduped = {}
             for m in mappings:
                 key = (m["PAGEURL"], m["SITE"], m.get("SEARCH_SESSION_ID"))
