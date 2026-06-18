@@ -19,9 +19,19 @@
 ### 测试修复
 - 测试配置改用临时文件 + SQLite，不再依赖外部 MySQL 服务器
 
+### 数据库兼容性
+- 14 处 String=Integer 类型比较加 cast 适配 PostgreSQL
+- MySQL ENCLOSURE 索引加前缀长度，避免 VARCHAR(8192) 超限
+- `ConfigRepository.execute` 适配 SQLAlchemy 2.0 `text()`
+- `drop_table` SQL 注入修复
+- SQL 适配器 MySQL 双引号转反引号
+
 ### 其他修复
 - `get_secret_key` 保存后 `reload` 确保同次运行不生成多个密钥
 - `_brush_tasks` 先停旧 job 再 pop，消除竞态窗口
+- auth router 清除重复标签，prefix 统一到 `include_router`
+- 清理绞杀式迁移相关注释
+- 后端 nginx 加兜底路由代理 `/docs` 等非 API 路径
 
 ### 依赖
 - `python-jose` 替换为 `PyJWT[crypto]`，消除 `ecdsa` 安全告警
