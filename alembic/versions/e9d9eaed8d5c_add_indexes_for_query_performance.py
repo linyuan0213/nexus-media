@@ -26,7 +26,7 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f("ix_CONFIG_USER_RSS_STATE"), ["STATE"], unique=False)
 
     with op.batch_alter_table("SITE_BRUSH_TORRENTS", schema=None) as batch_op:
-        batch_op.create_index("INDX_SITE_BRUSH_TORRENTS_ENCLOSURE", ["ENCLOSURE"], unique=False)
+        batch_op.create_index("INDX_SITE_BRUSH_TORRENTS_ENCLOSURE", ["ENCLOSURE"], unique=False, mysql_length=255)
         batch_op.create_index("INDX_SITE_BRUSH_TORRENTS_TASK_ID", ["TASK_ID"], unique=False)
 
     with op.batch_alter_table("SUBSCRIBE_MOVIES", schema=None) as batch_op:

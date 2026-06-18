@@ -53,7 +53,7 @@ class SITEBRUSHTASK(Base):
 class SITEBRUSHTORRENTS(Base):
     __tablename__ = "SITE_BRUSH_TORRENTS"
     __table_args__ = (
-        Index("INDX_SITE_BRUSH_TORRENTS_ENCLOSURE", "ENCLOSURE"),
+        Index("INDX_SITE_BRUSH_TORRENTS_ENCLOSURE", "ENCLOSURE", mysql_length=255),
         Index("INDX_SITE_BRUSH_TORRENTS_TASK_ID", "TASK_ID"),
     )
 
