@@ -93,7 +93,7 @@ class BrushRepository(BaseRepository):
             else:
                 return (
                     db.query(SITEBRUSHTASK)
-                    .join(CONFIGSITE, SITEBRUSHTASK.SITE == CONFIGSITE.ID)
+                    .join(CONFIGSITE, cast(SITEBRUSHTASK.SITE, Integer) == CONFIGSITE.ID)
                     .order_by(cast(CONFIGSITE.PRI, Integer).asc())
                     .all()
                 )
