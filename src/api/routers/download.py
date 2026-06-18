@@ -5,8 +5,10 @@ Download Router — FastAPI 迁移
 
 import json
 import os
+import queue
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from api.deps import (
@@ -28,12 +30,14 @@ from app.downloader.registry import get_all_clients
 from app.infrastructure.thread import ThreadExecutor
 from app.schemas.auth import UserContext
 from app.schemas.common import CommonResponse
+from app.services.download_event_queue import download_event_queue
 from app.services.download_service import DownloadService
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.indexer_service import IndexerService
 from app.services.site_service import SiteService
 from app.utils import ExceptionUtils, SystemUtils
+from app.utils.json_utils import JsonUtils
 from app.utils.response import fail, success
 
 router = APIRouter()
@@ -478,7 +482,7 @@ def get_indexers(
     user: str = Depends(require_any_permission("download:view", "download:manage")),
     svc: IndexerService = Depends(get_indexer_service),
 ):
-    indexers = svc.get_user_indexers()
+    indexers = svc.get_builtin_user_indexers()
     return success(data=[{"id": i.id, "name": i.name} for i in indexers])
 
 
@@ -675,3 +679,19 @@ def truncate_blacklist(
 ):
     svc.truncate_transfer_blacklist()
     return success()
+
+
+def _event_stream_generator(q):
+    while True:
+        try:
+            item = q.get(timeout=1)
+            yield f"event: {item['event']}\ndata: {JsonUtils.dumps(item['data'])}\n\n"
+        except queue.Empty:
+            yield ": keepalive\n\n"
+
+
+@router.get("/events", summary="下载事件实时推送 (SSE)")
+def download_events(
+    user: UserContext = Depends(require_any_permission("download:view", "download:manage")),
+):
+    return StreamingResponse(_event_stream_generator(download_event_queue), media_type="text/event-stream")

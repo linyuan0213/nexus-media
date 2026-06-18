@@ -85,21 +85,6 @@ class DownloadPipeline:
             return None, None, "client_factory not set"
         title = media_info.org_string or media_info.get_title_string() or media_info.title or "未知"
 
-        self._event_bus.publish(
-            Event(
-                event_type=DOWNLOAD_STARTED,
-                payload=DownloadStartedPayload(
-                    media_info=media_info.to_dict(),
-                    is_paused=is_paused,
-                    tag=tag,
-                    download_dir=download_dir,
-                    download_setting=download_setting,
-                    downloader_id=downloader_id,
-                    torrent_file=torrent_file,
-                ),
-            )
-        )
-
         # ---------- 阶段1：获取种子内容 ----------
         fetch = self._stage_fetch(media_info=media_info, torrent_file=torrent_file, proxy=proxy)
         if not fetch:
@@ -167,6 +152,22 @@ class DownloadPipeline:
         )
         if not download_id:
             return downloader_id, None, f"下载器 {downloader_name} 添加下载任务失败"
+
+        self._event_bus.publish(
+            Event(
+                event_type=DOWNLOAD_STARTED,
+                payload=DownloadStartedPayload(
+                    media_info=media_info.to_dict(),
+                    is_paused=is_paused,
+                    tag=tag,
+                    download_dir=download_dir,
+                    download_setting=download_setting,
+                    downloader_id=downloader_id,
+                    torrent_file=torrent_file,
+                    download_id=download_id,
+                ),
+            )
+        )
 
         if downloader.client_id == "qbittorrent" and download_id == "EXISTS":
             return downloader_id, None, ""

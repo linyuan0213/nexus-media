@@ -1,5 +1,6 @@
 from typing import Any, cast
 
+import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.db.repositories.site_repository import SiteRepository
 from app.domain.entities.site import SiteEntity
@@ -150,15 +151,17 @@ class SiteService:
                     self._site_user_info.update_site_name(name, existing.name)
                 self._sites.refresh()
                 return SiteUpdateResultDTO(code=0)
-            except Exception:
-                return SiteUpdateResultDTO(code=500)
+            except Exception as e:
+                log.error(f"[SiteService]更新站点失败: {e}")
+                return SiteUpdateResultDTO(code=500, msg=str(e))
         else:
             try:
                 self._site_entity_repo.insert(entity)
                 self._sites.refresh()
                 return SiteUpdateResultDTO(code=0)
-            except Exception:
-                return SiteUpdateResultDTO(code=500)
+            except Exception as e:
+                log.error(f"[SiteService]新增站点失败: {e}")
+                return SiteUpdateResultDTO(code=500, msg=str(e))
 
     def update_site_cookie_ua(self, siteid: int | str, cookie: str, ua: str) -> None:
         self._site_entity_repo.update_cookie_ua(int(siteid), cookie, ua)

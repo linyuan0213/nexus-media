@@ -93,6 +93,10 @@ class IndexerService:
             site_engine=self._site_engine,
         ).get_indexers(check=check, indexer_id=indexer_id)
 
+    def get_builtin_user_indexers(self) -> list[UserIndexerDTO]:
+        builtin = self._indexer.get_builtin_indexers(check=True)
+        return [UserIndexerDTO(id=i.id, name=i.name) for i in builtin]
+
     # ------------------------------------------------------------------
     # 资源列表
     # ------------------------------------------------------------------

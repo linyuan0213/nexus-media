@@ -64,6 +64,7 @@ class DownloadStartedPayload:
     download_setting: int | None
     downloader_id: str | None
     torrent_file: str | None
+    download_id: str | None = None
 
 
 @dataclass(frozen=True)

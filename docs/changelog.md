@@ -1,5 +1,24 @@
 # 版本历史
 
+## v4.1.3 (2026-06-18)
+
+### 下载事件 SSE 推送
+- `DownloadStartedPayload` 增加 `download_id` 字段
+- `DOWNLOAD_STARTED` 事件从流水线入口移至 `_stage_add` 成功后发布，避免 fetch/resolve 失败时误报
+- 新增 `download_event_queue` 模块级 `queue.Queue` 作为事件通道
+- handler 推送 `download.started` / `download.failed` / `download.completed` 事件到队列
+- 新增 `GET /api/download/events` SSE 端点，权限 `download:view`
+
+### 站点资源内置索引器
+- `/api/download/indexers` 始终返回内置索引器站点列表，不受索引器切换影响
+- `IndexerService` 新增 `get_builtin_user_indexers()` 方法
+
+### 修复 MySQL NOT NULL 兼容性
+- `CONFIG_SITE.EXCLUDE`、`SIZE` 添加 ORM 默认值，修复新增站点 500
+- `SITE_USER_INFO_STATS.JOIN_AT`、`EXT_INFO` 等列添加 ORM 默认值，修复统计更新 500
+- `site_service.update_site` 异常分支添加 `log.error` 和 `msg`，不再吞掉错误信息
+- `site_repository.update_site_user_statistics` 中 `JOIN_AT=None` 时写入空字符串
+
 ## v4.1.2 (2026-06-16)
 
 ### 刷流修复

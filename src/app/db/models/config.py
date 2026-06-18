@@ -55,9 +55,9 @@ class CONFIGSITE(Base):
     API_KEY: Mapped[str | None] = mapped_column(Text, nullable=True)
     BEARER_TOKEN: Mapped[str | None] = mapped_column(Text, nullable=True)
     HEADERS: Mapped[str | None] = mapped_column(Text, nullable=True)
-    INCLUDE: Mapped[str] = mapped_column(Text)
-    EXCLUDE: Mapped[str] = mapped_column(Text)
-    SIZE: Mapped[int] = mapped_column(BigInteger)
+    INCLUDE: Mapped[str] = mapped_column(Text, default="")
+    EXCLUDE: Mapped[str] = mapped_column(Text, default="")
+    SIZE: Mapped[int] = mapped_column(BigInteger, default=0)
     NOTE: Mapped[str] = mapped_column(Text, default="")
 
 

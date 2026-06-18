@@ -189,7 +189,7 @@ class SiteRepository(BaseRepository):
                             SITE=info.site_name,
                             USERNAME=info.username,
                             USER_LEVEL=info.user_level,
-                            JOIN_AT=info.join_at,
+                            JOIN_AT=info.join_at or "",
                             UPDATE_AT=update_at,
                             UPLOAD=info.upload,
                             DOWNLOAD=info.download,
@@ -206,7 +206,7 @@ class SiteRepository(BaseRepository):
                     row.SITE = info.site_name
                     row.USERNAME = info.username
                     row.USER_LEVEL = info.user_level
-                    row.JOIN_AT = info.join_at
+                    row.JOIN_AT = info.join_at or ""
                     row.UPDATE_AT = update_at
                     row.UPLOAD = info.upload
                     row.DOWNLOAD = info.download
