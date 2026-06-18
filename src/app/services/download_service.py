@@ -80,11 +80,23 @@ class DownloadService:
         fail_messages = []
         for res in results:
             enclosure = self._resolve_download_url(res.PAGEURL, res.ENCLOSURE)
-            media = self._media.get_media_info(title=res.TORRENT_NAME, subtitle=res.DESCRIPTION)
+            media = self._media.get_media_info(
+                title=res.TITLE or res.TORRENT_NAME,
+                subtitle=res.DESCRIPTION,
+            )
             if not media:
-                # 识别失败时，用原始种子名创建最小 MediaInfo
+                # 识别失败时，用搜索记录已有的数据创建最小 MediaInfo
                 media = MediaInfo()
-                media.title = res.TORRENT_NAME
+                media.title = res.TITLE or res.TORRENT_NAME
+                if res.TMDBID:
+                    media.tmdb_id = res.TMDBID
+                if res.POSTER:
+                    media.poster_path = res.POSTER
+            else:
+                if res.TMDBID and not media.tmdb_id:
+                    media.tmdb_id = res.TMDBID
+                if res.POSTER and not media.poster_path:
+                    media.poster_path = res.POSTER
             # 保存站点原始种子名，用于下载历史记录和后续识别
             media.org_string = res.TORRENT_NAME
             media.set_torrent_info(
