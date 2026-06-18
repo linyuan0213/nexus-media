@@ -6,7 +6,7 @@ Includes: Message Client, Torrent Remove Task, Downloader, User RSS, Filter Rule
 
 import time
 
-from sqlalchemy import Integer, cast
+from sqlalchemy import Integer, cast, text
 
 from app.db.models import (
     CONFIGCATEGORY,
@@ -788,8 +788,6 @@ class ConfigRepository(BaseRepository):
         Returns:
             执行结果
         """
-        from sqlalchemy import text
-
         with self.session() as db:
             return db.execute(text(sql))
 
@@ -803,8 +801,11 @@ class ConfigRepository(BaseRepository):
         Returns:
             执行结果
         """
+        # 验证表名只含字母数字下划线，防注入
+        if not table_name.replace("_", "").isalnum():
+            raise ValueError(f"Invalid table name: {table_name}")
         with self.session() as db:
-            return db.execute(f"""DROP TABLE IF EXISTS {table_name}""")
+            return db.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
 
     # ==================== Media Config ====================
 
