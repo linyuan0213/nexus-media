@@ -102,7 +102,7 @@ class Jackett(_IIndexClient):
                     datas={
                         "id": v["id"],
                         "name": v["name"],
-                        "domain": f"{self.host}api/v2.0/indexers/{v['id']}/results/torznab/",
+                        "domain": f"{self.host}api/v2.0/indexers/{v['id']}/results/torznab/api",
                     },
                     public=v["type"] == "public",
                     builtin=False,
