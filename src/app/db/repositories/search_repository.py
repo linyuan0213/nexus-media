@@ -115,7 +115,7 @@ class SearchRepository(BaseRepository):
                 deduped[key] = m
             mappings = list(deduped.values())
 
-            db.bulk_insert_mappings(SEARCHRESULTINFO, mappings, batch_size=500)
+            db.bulk_insert_mappings(SEARCHRESULTINFO, mappings)
             db.commit()
 
     def get_search_result_by_id(self, dl_id):

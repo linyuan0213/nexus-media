@@ -4,10 +4,10 @@ from app.domain.enums import ProgressKey
 
 
 class ProgressTracker:
-    _process_detail = {}
+    _process_detail: dict = {}
 
     def __init__(self):
-        self._process_detail = {}
+        pass
 
     def __reset(self, ptype=ProgressKey.Search):
         if isinstance(ptype, Enum):

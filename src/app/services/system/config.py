@@ -52,6 +52,8 @@ class IndexerConfigService:
         for key, value in data.items():
             if key.startswith(name + "."):
                 config[key.split(".", 1)[1]] = value
+            elif key not in ("type", "test"):
+                config[key] = value
         if config:
             existing[name] = config
         if existing:
