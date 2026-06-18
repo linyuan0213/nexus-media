@@ -81,7 +81,7 @@ class BrushRepository(BaseRepository):
         """
         with self.session() as db:
             db.query(SITEBRUSHTASK).filter(int(brush_id) == SITEBRUSHTASK.ID).delete()
-            db.query(SITEBRUSHTORRENTS).filter(brush_id == SITEBRUSHTORRENTS.TASK_ID).delete()
+            db.query(SITEBRUSHTORRENTS).filter(cast(SITEBRUSHTORRENTS.TASK_ID, Integer) == brush_id).delete()
 
     def get_brushtasks(self, brush_id: int | None = None) -> SITEBRUSHTASK | None | list[SITEBRUSHTASK]:
         """
@@ -108,7 +108,7 @@ class BrushRepository(BaseRepository):
             ret = (
                 db.query(func.sum(cast(SITEBRUSHTORRENTS.TORRENT_SIZE, Integer)))
                 .filter(
-                    brush_id == SITEBRUSHTORRENTS.TASK_ID,
+                    cast(SITEBRUSHTORRENTS.TASK_ID, Integer) == brush_id,
                     SITEBRUSHTORRENTS.DOWNLOAD_ID != "0",
                     SITEBRUSHTORRENTS.TORRENT_SIZE != "",
                     SITEBRUSHTORRENTS.TORRENT_SIZE.isnot(None),
@@ -152,7 +152,7 @@ class BrushRepository(BaseRepository):
         with self.session() as db:
             return (
                 db.query(SITEBRUSHTORRENTS.TORRENT_SIZE)
-                .filter(brush_id == SITEBRUSHTORRENTS.TASK_ID, SITEBRUSHTORRENTS.DOWNLOAD_ID == "0")
+                .filter(cast(SITEBRUSHTORRENTS.TASK_ID, Integer) == brush_id, SITEBRUSHTORRENTS.DOWNLOAD_ID == "0")
                 .all()
             )
 
@@ -225,13 +225,15 @@ class BrushRepository(BaseRepository):
             if active:
                 return (
                     db.query(SITEBRUSHTORRENTS)
-                    .filter(int(brush_id) == SITEBRUSHTORRENTS.TASK_ID, SITEBRUSHTORRENTS.DOWNLOAD_ID != "0")
+                    .filter(
+                        cast(SITEBRUSHTORRENTS.TASK_ID, Integer) == int(brush_id), SITEBRUSHTORRENTS.DOWNLOAD_ID != "0"
+                    )
                     .all()
                 )
             else:
                 return (
                     db.query(SITEBRUSHTORRENTS)
-                    .filter(int(brush_id) == SITEBRUSHTORRENTS.TASK_ID)
+                    .filter(cast(SITEBRUSHTORRENTS.TASK_ID, Integer) == int(brush_id))
                     .order_by(SITEBRUSHTORRENTS.LST_MOD_DATE.desc())
                     .all()
                 )
@@ -264,7 +266,7 @@ class BrushRepository(BaseRepository):
             count = (
                 db.query(SITEBRUSHTORRENTS)
                 .filter(
-                    brush_id == SITEBRUSHTORRENTS.TASK_ID,
+                    cast(SITEBRUSHTORRENTS.TASK_ID, Integer) == brush_id,
                     title == SITEBRUSHTORRENTS.TORRENT_NAME,
                     enclosure == SITEBRUSHTORRENTS.ENCLOSURE,
                 )
@@ -280,7 +282,7 @@ class BrushRepository(BaseRepository):
             return
         with self.session() as db:
             conditions = [
-                and_(SITEBRUSHTORRENTS.TASK_ID == task_id, SITEBRUSHTORRENTS.DOWNLOAD_ID == download_id)
+                and_(cast(SITEBRUSHTORRENTS.TASK_ID, Integer) == task_id, SITEBRUSHTORRENTS.DOWNLOAD_ID == download_id)
                 for _, task_id, download_id in ids
             ]
             case_stmt = case(
@@ -299,7 +301,7 @@ class BrushRepository(BaseRepository):
             return
         with self.session() as db:
             db.query(SITEBRUSHTORRENTS).filter(
-                brush_id == SITEBRUSHTORRENTS.TASK_ID, download_id == SITEBRUSHTORRENTS.DOWNLOAD_ID
+                cast(SITEBRUSHTORRENTS.TASK_ID, Integer) == brush_id, download_id == SITEBRUSHTORRENTS.DOWNLOAD_ID
             ).delete()
 
     # ---------- 刷流规则模板 ----------

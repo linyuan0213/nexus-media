@@ -8,6 +8,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING
 
+from sqlalchemy import Integer, cast
 from sqlalchemy.exc import IntegrityError
 
 from app.db.models import SubscribeHistory, SubscribeMovies, SubscribeTorrents, SubscribeTvEpisodes, SubscribeTvs
@@ -586,8 +587,11 @@ class SubscribeRepository(BaseRepository):
         with self.session() as db:
             if rssid:
                 # 内联 update_rss_tv_episodes，确保与 LACK 更新在同一事务
-                if db.query(SubscribeTvEpisodes).filter(int(rssid) == SubscribeTvEpisodes.RSSID).count() > 0:
-                    db.query(SubscribeTvEpisodes).filter(int(rssid) == SubscribeTvEpisodes.RSSID).update(
+                if (
+                    db.query(SubscribeTvEpisodes).filter(cast(SubscribeTvEpisodes.RSSID, Integer) == int(rssid)).count()
+                    > 0
+                ):
+                    db.query(SubscribeTvEpisodes).filter(cast(SubscribeTvEpisodes.RSSID, Integer) == int(rssid)).update(
                         {"EPISODES": ",".join(episodes)}
                     )
                 else:
@@ -649,7 +653,7 @@ class SubscribeRepository(BaseRepository):
                             SubscribeTorrents.YEAR == year_filter,
                             SubscribeTorrents.SEASON == season_filter,
                         ).delete()
-                db.query(SubscribeTvEpisodes).filter(int(rssid) == SubscribeTvEpisodes.RSSID).delete()
+                db.query(SubscribeTvEpisodes).filter(cast(SubscribeTvEpisodes.RSSID, Integer) == int(rssid)).delete()
                 db.query(SubscribeTvs).filter(int(rssid) == SubscribeTvs.ID).delete()
 
     def update_rss_tv_state(
@@ -682,7 +686,7 @@ class SubscribeRepository(BaseRepository):
         if not rid:
             return False
         with self.session() as db:
-            count = db.query(SubscribeTvEpisodes).filter(int(rid) == SubscribeTvEpisodes.RSSID).count()
+            count = db.query(SubscribeTvEpisodes).filter(cast(SubscribeTvEpisodes.RSSID, Integer) == int(rid)).count()
             return count > 0
 
     def update_rss_tv_episodes(self, rid: int | None, episodes: list | None) -> None:
@@ -696,8 +700,8 @@ class SubscribeRepository(BaseRepository):
         else:
             episodes = [str(epi) for epi in episodes]
         with self.session() as db:
-            if db.query(SubscribeTvEpisodes).filter(int(rid) == SubscribeTvEpisodes.RSSID).count() > 0:
-                db.query(SubscribeTvEpisodes).filter(int(rid) == SubscribeTvEpisodes.RSSID).update(
+            if db.query(SubscribeTvEpisodes).filter(cast(SubscribeTvEpisodes.RSSID, Integer) == int(rid)).count() > 0:
+                db.query(SubscribeTvEpisodes).filter(cast(SubscribeTvEpisodes.RSSID, Integer) == int(rid)).update(
                     {"EPISODES": ",".join(episodes)}
                 )
             else:
@@ -710,7 +714,7 @@ class SubscribeRepository(BaseRepository):
         if not rid:
             return []
         with self.session() as db:
-            ret = db.query(SubscribeTvEpisodes.EPISODES).filter(rid == SubscribeTvEpisodes.RSSID).first()
+            ret = db.query(SubscribeTvEpisodes.EPISODES).filter(cast(SubscribeTvEpisodes.RSSID, Integer) == rid).first()
             if ret:
                 return [int(epi) for epi in str(ret[0]).split(",")]
             return None
@@ -722,7 +726,7 @@ class SubscribeRepository(BaseRepository):
         if not rid:
             return
         with self.session() as db:
-            db.query(SubscribeTvEpisodes).filter(int(rid) == SubscribeTvEpisodes.RSSID).delete()
+            db.query(SubscribeTvEpisodes).filter(cast(SubscribeTvEpisodes.RSSID, Integer) == int(rid)).delete()
 
     def truncate_rss_episodes(self) -> None:
         """
@@ -741,7 +745,7 @@ class SubscribeRepository(BaseRepository):
             }
             query = db.query(SubscribeTvEpisodes)
             if active_ids:
-                query = query.filter(~SubscribeTvEpisodes.RSSID.in_(active_ids))
+                query = query.filter(~cast(SubscribeTvEpisodes.RSSID, Integer).in_(active_ids))
             query.delete(synchronize_session=False)
 
     # ==================== RSS History ====================
@@ -769,7 +773,7 @@ class SubscribeRepository(BaseRepository):
         if not rssid:
             return False
         with self.session() as db:
-            count = db.query(SubscribeHistory).filter(rssid == SubscribeHistory.RSSID).count()
+            count = db.query(SubscribeHistory).filter(cast(SubscribeHistory.RSSID, Integer) == rssid).count()
             return count > 0
 
     def check_rss_history(self, type_str: str, name: str, year: str, season: str) -> bool:
@@ -806,7 +810,7 @@ class SubscribeRepository(BaseRepository):
         登记RSS历史
         """
         with self.session() as db:
-            if db.query(SubscribeHistory).filter(rssid == SubscribeHistory.RSSID).count() > 0:
+            if db.query(SubscribeHistory).filter(cast(SubscribeHistory.RSSID, Integer) == rssid).count() > 0:
                 return
             db.add(
                 SubscribeHistory(

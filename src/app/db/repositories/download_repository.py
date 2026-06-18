@@ -8,7 +8,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import and_, case, func, tuple_
+from sqlalchemy import Integer, and_, case, cast, func, tuple_
 
 from app.db.models import DOWNLOADHISTORY, DOWNLOADSETTING, INDEXERSTATISTICS
 from app.db.repositories.base_repository import BaseRepository
@@ -44,7 +44,7 @@ class DownloadRepository(BaseRepository):
             return False
 
         with self.session() as db:
-            query = db.query(DOWNLOADHISTORY.ID).filter(tmdb_id == DOWNLOADHISTORY.TMDBID)
+            query = db.query(DOWNLOADHISTORY.ID).filter(cast(DOWNLOADHISTORY.TMDBID, Integer) == tmdb_id)
 
             if season_episode:
                 query = query.filter(season_episode == DOWNLOADHISTORY.SE)
