@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+import log
 from api.deps import (
     get_download_service,
     get_downloader_service,
@@ -682,6 +683,7 @@ def truncate_blacklist(
 
 
 def _event_stream_generator(q):
+    log.info("[SSE]客户端已连接下载事件流")
     while True:
         try:
             item = q.get(timeout=1)
