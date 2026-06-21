@@ -20,4 +20,4 @@ class MESSAGECLIENT(Base):
     INTERACTIVE: Mapped[int] = mapped_column(Integer)
     ENABLED: Mapped[int] = mapped_column(Integer)
     NOTE: Mapped[str] = mapped_column(Text)
-    TEMPLATES: Mapped[str] = mapped_column(String(255))
+    TEMPLATES: Mapped[str] = mapped_column(Text)

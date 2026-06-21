@@ -117,10 +117,9 @@ class NetTestService:
         if target == "qyapi.weixin.qq.com":
             target = target + "/cgi-bin/message/send"
         target = "https://" + target
-        start_time = datetime.datetime.now()
         proxies = get_proxies()
         proxy_url = proxies.get("http") if proxies else None
-        seconds = int((datetime.datetime.now() - start_time).microseconds / 1000)
+        start_time = datetime.datetime.now()
         try:
             if (
                 target.find("themoviedb") != -1
@@ -131,9 +130,11 @@ class NetTestService:
                 HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=5)).get(target)
             else:
                 HttpClient(config=HttpClientConfig(timeout=5)).get(target)
-            return NetTestResultDTO(success=True, time_ms=seconds)
+            success = True
         except Exception:
-            return NetTestResultDTO(success=False, time_ms=seconds)
+            success = False
+        elapsed_ms = int((datetime.datetime.now() - start_time).total_seconds() * 1000)
+        return NetTestResultDTO(success=success, time_ms=elapsed_ms)
 
 
 class WebSearchService:

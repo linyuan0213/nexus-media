@@ -134,6 +134,7 @@ class TestNetTestService:
             svc = NetTestService()
             result = svc.test("example.com")
             assert result.success is True
+            assert result.time_ms >= 0
 
     def test_test_failure(self):
         with patch("app.services.system.info.HttpClient") as mock_req:
@@ -141,6 +142,7 @@ class TestNetTestService:
             svc = NetTestService()
             result = svc.test("example.com")
             assert result.success is False
+            assert result.time_ms >= 0
 
 
 class TestWebSearchService:

@@ -43,11 +43,18 @@ class FnOS(_IMediaClient):
                 placeholder="http://127.0.0.1:8003",
             ),
             ConfigField(
-                id="api_key",
+                id="username",
                 required=True,
-                title="Api Key",
+                title="用户名",
                 type="text",
-                tooltip="在FnOS设置中获取API密钥",
+                tooltip="FnOS 媒体库登录用户名",
+            ),
+            ConfigField(
+                id="password",
+                required=True,
+                title="密码",
+                type="password",
+                tooltip="FnOS 媒体库登录密码",
             ),
             ConfigField(
                 id="play_host",

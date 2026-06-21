@@ -1,5 +1,16 @@
 # 版本历史
 
+## v4.1.4 (2026-06-21)
+
+### 修复
+- 网络连通性测试耗时为 0：`NetTestService` 改为在 HTTP 请求完成后计算耗时，并改用 `total_seconds()` 避免超过 1 秒时数值错误
+- 消息客户端模板保存失败：`MESSAGE_CLIENT.TEMPLATES` 列从 `VARCHAR(255)` 改为 `TEXT`，兼容长 JSON 模板
+- FnOS 媒体服务器配置项错误：配置表单从错误的 `Api Key` 改为正确的 `用户名 / 密码`，并添加迁移将已有 `api_key` 值迁移到 `username`
+
+### 数据库迁移
+- `89c719931b5f`：`MESSAGE_CLIENT.TEMPLATES` 列类型调整为 `TEXT`
+- `1ee439ce9b6d`：FnOS 媒体服务器配置 `api_key` 迁移为 `username`
+
 ## v4.1.3 (2026-06-18)
 
 ### 下载事件 SSE 推送
