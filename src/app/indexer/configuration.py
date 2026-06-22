@@ -45,6 +45,7 @@ class IndexerHelper:
         language=None,
         pri=None,
         api_key=None,
+        bearer_token=None,
     ):
         if not url:
             return None
@@ -66,6 +67,7 @@ class IndexerHelper:
                     language=language,
                     pri=pri,
                     api_key=api_key,
+                    bearer_token=bearer_token,
                 )
         return None
 
@@ -88,6 +90,7 @@ class IndexerConf:
         language=None,
         pri=None,
         api_key=None,
+        bearer_token=None,
     ):
         if not datas:
             return
@@ -112,3 +115,4 @@ class IndexerConf:
         self.language = language if language else datas.get("language")
         self.pri = pri if pri else 0
         self.api_key = api_key
+        self.bearer_token = bearer_token
