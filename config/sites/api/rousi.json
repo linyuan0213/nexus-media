@@ -23,28 +23,51 @@
           "keyword": "{keyword}"
         },
         "mode_mapping": {
-          "MOVIE": {"category": "movie"},
-          "TV": {"category": "tv"}
+          "MOVIE": {
+            "category": "movie"
+          },
+          "TV": {
+            "category": "tv"
+          }
         },
         "response": {
           "items_key": "data.torrents",
           "item_mapping": {
-            "title": {"source": "title"},
-            "description": {"source": "subtitle"},
-            "size": {"source": "size"},
-            "seeders": {"source": "seeders"},
-            "leechers": {"source": "leechers"},
-            "grabs": {"source": "downloads"},
-            "pubdate": {"source": "created_at", "transform": "utc_to_local"},
+            "title": {
+              "source": "title"
+            },
+            "description": {
+              "source": "subtitle"
+            },
+            "size": {
+              "source": "size"
+            },
+            "seeders": {
+              "source": "seeders"
+            },
+            "leechers": {
+              "source": "leechers"
+            },
+            "grabs": {
+              "source": "downloads"
+            },
+            "pubdate": {
+              "source": "created_at",
+              "transform": "utc_to_local"
+            },
             "downloadvolumefactor": {
               "type": "mapping",
               "source": "promotion.down_multiplier",
-              "map": {"0.0": 0.0}
+              "map": {
+                "0.0": 0.0
+              }
             },
             "uploadvolumefactor": {
               "type": "mapping",
               "source": "promotion.up_multiplier",
-              "map": {"2.0": 2.0}
+              "map": {
+                "2.0": 2.0
+              }
             },
             "enclosure": {
               "type": "template",
@@ -58,7 +81,9 @@
             "page_url": {
               "type": "template",
               "value": "/torrent/{uuid}",
-              "fields": {"uuid": "uuid"}
+              "fields": {
+                "uuid": "uuid"
+              }
             }
           }
         }
@@ -70,7 +95,10 @@
       "test_connection": {
         "method": "GET",
         "path": "/api/v1/torrents",
-        "params": {"page": 1, "page_size": 1}
+        "params": {
+          "page": 1,
+          "page_size": 1
+        }
       },
       "user_info": {
         "method": "GET",
@@ -85,17 +113,46 @@
       "path": "/api/v1/profile?include_fields[user]=seeding_leeching_data",
       "response": {
         "field_mapping": {
-          "username": {"source": "data.username"},
-          "userid": {"source": "data.id"},
-          "upload": {"source": "data.uploaded", "type": "int"},
-          "download": {"source": "data.downloaded", "type": "int"},
-          "bonus": {"source": "data.karma", "type": "float"},
-          "user_level": {"source": "data.level_text"},
-          "join_at": {"source": "data.registered_at"},
-          "seeding": {"source": "data.seeding_leeching_data.seeding_count", "type": "int"},
-          "leeching": {"source": "data.seeding_leeching_data.leeching_count", "type": "int"},
-          "seeding_size": {"source": "data.seeding_leeching_data.seeding_size", "type": "int"},
-          "leeching_size": {"source": "data.seeding_leeching_data.leeching_size", "type": "int"}
+          "username": {
+            "source": "data.username"
+          },
+          "userid": {
+            "source": "data.id"
+          },
+          "upload": {
+            "source": "data.uploaded",
+            "type": "int"
+          },
+          "download": {
+            "source": "data.downloaded",
+            "type": "int"
+          },
+          "bonus": {
+            "source": "data.karma",
+            "type": "float"
+          },
+          "user_level": {
+            "source": "data.level_text"
+          },
+          "join_at": {
+            "source": "data.registered_at"
+          },
+          "seeding": {
+            "source": "data.seeding_leeching_data.seeding_count",
+            "type": "int"
+          },
+          "leeching": {
+            "source": "data.seeding_leeching_data.leeching_count",
+            "type": "int"
+          },
+          "seeding_size": {
+            "source": "data.seeding_leeching_data.seeding_size",
+            "type": "int"
+          },
+          "leeching_size": {
+            "source": "data.seeding_leeching_data.leeching_size",
+            "type": "int"
+          }
         }
       }
     }
@@ -108,5 +165,6 @@
       "free_value": "0.0",
       "peer_count_key": "data.seeders"
     }
-  }
+  },
+  "favicon": "https://rousi.pro/favicon.ico"
 }

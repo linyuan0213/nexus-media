@@ -2,7 +2,11 @@
   "id": "mteam",
   "name": "M-Team",
   "domain": "api.m-team.io",
-  "domain_aliases": ["kp.m-team.cc", "xp.m-team.cc", "ob.m-team.cc"],
+  "domain_aliases": [
+    "kp.m-team.cc",
+    "xp.m-team.cc",
+    "ob.m-team.cc"
+  ],
   "tid_pattern": "\\d+",
   "detail_page_url": "/detail/{tid}",
   "encoding": "UTF-8",
@@ -29,28 +33,55 @@
         "mode_mapping": {
           "MOVIE": "movie",
           "TV": "tvshow",
-          "ANIME": {"mode": "normal", "categories": [405]}
+          "ANIME": {
+            "mode": "normal",
+            "categories": [
+              405
+            ]
+          }
         },
         "response": {
           "total_key": "data.total",
           "items_key": "data.data",
           "item_mapping": {
-            "title": {"source": "name"},
-            "details": {"source": "smallDescr"},
+            "title": {
+              "source": "name"
+            },
+            "details": {
+              "source": "smallDescr"
+            },
             "download": {
               "type": "api",
               "method": "POST",
               "path": "/api/torrent/genDlToken",
-              "body": {"id": "{id}"},
+              "body": {
+                "id": "{id}"
+              },
               "response_key": "data"
             },
-            "size": {"source": "size"},
-            "seeders": {"source": "status.seeders"},
-            "leechers": {"source": "status.leechers"},
-            "grabs": {"source": "status.leechers"},
+            "size": {
+              "source": "size"
+            },
+            "seeders": {
+              "source": "status.seeders"
+            },
+            "leechers": {
+              "source": "status.leechers"
+            },
+            "grabs": {
+              "source": "status.leechers"
+            },
             "imdbid": {
               "source": "imdb",
-              "filters": [{"name": "regex", "args": ["tt\\d+", 0]}]
+              "filters": [
+                {
+                  "name": "regex",
+                  "args": [
+                    "tt\\d+",
+                    0
+                  ]
+                }
+              ]
             },
             "uploadvolumefactor": {
               "type": "mapping",
@@ -81,16 +112,22 @@
             "page_url": {
               "type": "template",
               "value": "{domain}/detail/{tid}",
-              "fields": {"tid": "id"}
+              "fields": {
+                "tid": "id"
+              }
             },
-            "date_elapsed": {"source": "status.liveDate"}
+            "date_elapsed": {
+              "source": "status.liveDate"
+            }
           }
         }
       },
       "detail": {
         "method": "POST",
         "path": "/api/torrent/detail",
-        "body": {"id": "{tid}"}
+        "body": {
+          "id": "{tid}"
+        }
       },
       "test_connection": {
         "method": "POST",
@@ -108,13 +145,17 @@
     "type": "api",
     "method": "POST",
     "path": "/api/torrent/genDlToken",
-    "body": {"id": "{tid}"},
+    "body": {
+      "id": "{tid}"
+    },
     "response_key": "data"
   },
   "torrent_attr": {
     "method": "POST",
     "path": "/api/torrent/detail",
-    "body": {"id": "{tid}"},
+    "body": {
+      "id": "{tid}"
+    },
     "response": {
       "free_key": "data.status.discount",
       "free_value": "FREE",
@@ -127,19 +168,27 @@
     "list": {
       "method": "GET",
       "path": "/api/subtitle/list",
-      "params": {"torrentId": "{tid}"},
+      "params": {
+        "torrentId": "{tid}"
+      },
       "response_key": "data"
     },
     "genlink": {
       "method": "GET",
       "path": "/api/subtitle/genlink",
-      "params": {"torrentId": "{tid}", "subtitleId": "{subtitle_id}"},
+      "params": {
+        "torrentId": "{tid}",
+        "subtitleId": "{subtitle_id}"
+      },
       "response_key": "data"
     },
     "download": {
       "method": "GET",
       "path": "/api/subtitle/dlV2",
-      "params": {"torrentId": "{tid}", "subtitleId": "{subtitle_id}"}
+      "params": {
+        "torrentId": "{tid}",
+        "subtitleId": "{subtitle_id}"
+      }
     }
   },
   "user_info": {
@@ -150,35 +199,76 @@
       "body": {},
       "response": {
         "field_mapping": {
-          "username": {"source": "data.username"},
-          "userid": {"source": "data.id"},
-          "upload": {"source": "data.memberCount.uploaded", "type": "int"},
-          "download": {"source": "data.memberCount.downloaded", "type": "int"},
-          "bonus": {"source": "data.memberCount.bonus", "type": "float"},
-          "seeding": {"source": "data.seedTorrentCount", "type": "int"},
-          "leeching": {"source": "data.leechTorrentCount", "type": "int"},
+          "username": {
+            "source": "data.username"
+          },
+          "userid": {
+            "source": "data.id"
+          },
+          "upload": {
+            "source": "data.memberCount.uploaded",
+            "type": "int"
+          },
+          "download": {
+            "source": "data.memberCount.downloaded",
+            "type": "int"
+          },
+          "bonus": {
+            "source": "data.memberCount.bonus",
+            "type": "float"
+          },
+          "seeding": {
+            "source": "data.seedTorrentCount",
+            "type": "int"
+          },
+          "leeching": {
+            "source": "data.leechTorrentCount",
+            "type": "int"
+          },
           "user_level": {
             "source": "data.role",
             "transform": "map_value",
             "map": {
-              "1": "Peasant", "2": "User", "3": "PowerUser",
-              "4": "EliteUser", "5": "CrazyUser", "6": "InsaneUser",
-              "7": "VeteranUser", "8": "ExtremeUser", "9": "UltimateUser",
-              "10": "NexusMaster", "11": "Star", "12": "VIP",
-              "13": "Uploader", "14": "Retiree", "15": "Moderator",
+              "1": "Peasant",
+              "2": "User",
+              "3": "PowerUser",
+              "4": "EliteUser",
+              "5": "CrazyUser",
+              "6": "InsaneUser",
+              "7": "VeteranUser",
+              "8": "ExtremeUser",
+              "9": "UltimateUser",
+              "10": "NexusMaster",
+              "11": "Star",
+              "12": "VIP",
+              "13": "Uploader",
+              "14": "Retiree",
+              "15": "Moderator",
               "16": "Administrator"
             }
           },
-          "join_at": {"source": "data.createdDate"},
-          "message_unread": {"source": "data.unreadAdmin", "type": "int"},
-          "site_favicon": {"source": "data.favicon"}
+          "join_at": {
+            "source": "data.createdDate"
+          },
+          "message_unread": {
+            "source": "data.unreadAdmin",
+            "type": "int"
+          },
+          "site_favicon": {
+            "source": "data.favicon"
+          }
         }
       }
     },
     "seeding": {
       "method": "POST",
       "path": "/api/member/getUserTorrentList",
-      "body": {"userid": "{userid}", "pageNumber": "{page}", "pageSize": 100, "type": "SEEDING"},
+      "body": {
+        "userid": "{userid}",
+        "pageNumber": "{page}",
+        "pageSize": 100,
+        "type": "SEEDING"
+      },
       "pagination": {
         "type": "page_param",
         "page_key": "pageNumber",
@@ -190,5 +280,6 @@
         "size_field": "torrent.size"
       }
     }
-  }
+  },
+  "favicon": "https://static.m-team.cc/favicon.ico"
 }
