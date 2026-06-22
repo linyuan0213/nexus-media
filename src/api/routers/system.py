@@ -557,11 +557,11 @@ def get_all_config(
     """获取所有系统配置（扁平化，供基础设置页面使用）"""
     cfg = svc.get_config() or {}
     flat = _flatten_config(cfg)
-    # 代理特殊处理：显示 http 代理地址
+    # 代理特殊处理：http:// 去掉 scheme 展示，其他（https/socks5）保留
     proxies = cfg.get("app", {}).get("proxies", {})
     http_proxy = proxies.get("http") if isinstance(proxies, dict) else None
     if http_proxy:
-        flat["app.proxies"] = http_proxy.replace("http://", "")
+        flat["app.proxies"] = http_proxy.removeprefix("http://")
     return success(data=flat)
 
 
