@@ -143,6 +143,7 @@ class BuiltinIndexer(_IIndexClient):
                 ua=site.get("ua"),
                 headers=site.get("headers"),
                 api_key=site.get("api_key"),
+                bearer_token=site.get("bearer_token"),
                 name=site.get("name"),
                 rule=site.get("rule"),
                 pri=site.get("pri"),
@@ -296,8 +297,9 @@ class BuiltinIndexer(_IIndexClient):
             "headers": getattr(indexer, "headers", {}) or {},
             "domain": getattr(indexer, "domain", "") or "",
             "api_key": getattr(indexer, "api_key", "") or "",
+            "bearer_token": getattr(indexer, "bearer_token", "") or "",
         }
-        if indexer.headers:
+        if indexer.headers and not user_config.get("api_key") and not user_config.get("bearer_token"):
             try:
                 h = JsonUtils.loads(indexer.headers) if isinstance(indexer.headers, str) else indexer.headers
                 auth_val = (h or {}).get("Authorization") or (h or {}).get("authorization") or ""
