@@ -2,7 +2,9 @@
   "id": "tnode",
   "name": "Zhuque",
   "domain": "zhuque.in",
-  "domain_aliases": ["zhuque.in"],
+  "domain_aliases": [
+    "zhuque.in"
+  ],
   "tid_pattern": "\\d+",
   "detail_page_url": "/torrent/info/{tid}",
   "encoding": "UTF-8",
@@ -29,7 +31,12 @@
           "sorter": "id",
           "order": "desc",
           "tags": [],
-          "category": [501, 502, 503, 504],
+          "category": [
+            501,
+            502,
+            503,
+            504
+          ],
           "medium": [],
           "videoCoding": [],
           "audioCoding": [],
@@ -39,25 +46,51 @@
         "response": {
           "items_key": "data.torrents",
           "item_mapping": {
-            "title": {"source": "title"},
-            "description": {"source": "subtitle"},
-            "size": {"source": "size"},
-            "seeders": {"source": "seeding"},
-            "leechers": {"source": "leeching"},
-            "grabs": {"source": "complete"},
-            "pubdate": {"source": "upload_time", "transform": "timestamp_to_date"},
-            "downloadvolumefactor": {"source": "downloadRate"},
-            "uploadvolumefactor": {"source": "uploadRate"},
-            "imdbid": {"source": "imdb"},
+            "title": {
+              "source": "title"
+            },
+            "description": {
+              "source": "subtitle"
+            },
+            "size": {
+              "source": "size"
+            },
+            "seeders": {
+              "source": "seeding"
+            },
+            "leechers": {
+              "source": "leeching"
+            },
+            "grabs": {
+              "source": "complete"
+            },
+            "pubdate": {
+              "source": "upload_time",
+              "transform": "timestamp_to_date"
+            },
+            "downloadvolumefactor": {
+              "source": "downloadRate"
+            },
+            "uploadvolumefactor": {
+              "source": "uploadRate"
+            },
+            "imdbid": {
+              "source": "imdb"
+            },
             "enclosure": {
               "type": "template",
               "value": "{domain}/api/torrent/download/{tid}",
-              "fields": {"domain": "domain", "tid": "id"}
+              "fields": {
+                "domain": "domain",
+                "tid": "id"
+              }
             },
             "page_url": {
               "type": "template",
               "value": "/torrent/info/{tid}",
-              "fields": {"tid": "id"}
+              "fields": {
+                "tid": "id"
+              }
             }
           }
         }
@@ -79,17 +112,47 @@
       "path": "/api/user/getMainInfo",
       "response": {
         "field_mapping": {
-          "username": {"source": "data.username"},
-          "userid": {"source": "data.id"},
-          "upload": {"source": "data.upload", "type": "int"},
-          "download": {"source": "data.download", "type": "int"},
-          "seeding": {"source": "data.seeding", "type": "int"},
-          "seeding_size": {"source": "data.seedSize", "type": "int"},
-          "leeching": {"source": "data.leeching", "type": "int"},
-          "bonus": {"source": "data.bonus", "type": "float"},
-          "user_level": {"source": "data.class.name"},
-          "join_at": {"source": "data.regTime", "transform": "timestamp_to_date"},
-          "message_unread": {"source": "data.unreadAdmin", "type": "int"}
+          "username": {
+            "source": "data.username"
+          },
+          "userid": {
+            "source": "data.id"
+          },
+          "upload": {
+            "source": "data.upload",
+            "type": "int"
+          },
+          "download": {
+            "source": "data.download",
+            "type": "int"
+          },
+          "seeding": {
+            "source": "data.seeding",
+            "type": "int"
+          },
+          "seeding_size": {
+            "source": "data.seedSize",
+            "type": "int"
+          },
+          "leeching": {
+            "source": "data.leeching",
+            "type": "int"
+          },
+          "bonus": {
+            "source": "data.bonus",
+            "type": "float"
+          },
+          "user_level": {
+            "source": "data.class.name"
+          },
+          "join_at": {
+            "source": "data.regTime",
+            "transform": "timestamp_to_date"
+          },
+          "message_unread": {
+            "source": "data.unreadAdmin",
+            "type": "int"
+          }
         }
       }
     }
@@ -101,5 +164,6 @@
       "free_key": "data.discount",
       "free_value": "FREE"
     }
-  }
+  },
+  "favicon": "https://zhuque.in/assets/images/512.png"
 }
