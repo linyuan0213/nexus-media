@@ -11,6 +11,7 @@ from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.domain.enums import ProgressKey
 from app.domain.mediatypes import MediaType
+from app.infrastructure.external.doubanapi import DoubanApi
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.progress import ProgressTracker
@@ -112,24 +113,27 @@ class NetTestService:
 
     def test(self, target: str) -> NetTestResultDTO:
         """测试指定目标的网络连通性"""
-        if target == "image.tmdb.org":
-            target = target + "/t/p/w500/wwemzKWzjKYJFfCeiB57q3r4Bcm.png"
-        if target == "qyapi.weixin.qq.com":
-            target = target + "/cgi-bin/message/send"
-        target = "https://" + target
         proxies = get_proxies()
         proxy_url = proxies.get("http") if proxies else None
         start_time = datetime.datetime.now()
         try:
-            if (
-                target.find("themoviedb") != -1
-                or target.find("telegram") != -1
-                or target.find("fanart") != -1
-                or target.find("tmdb") != -1
-            ):
-                HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=5)).get(target)
+            if target == "frodo.douban.com":
+                DoubanApi().movie_showing(count=1)
             else:
-                HttpClient(config=HttpClientConfig(timeout=5)).get(target)
+                if target == "image.tmdb.org":
+                    target = target + "/t/p/w500/wwemzKWzjKYJFfCeiB57q3r4Bcm.png"
+                if target == "qyapi.weixin.qq.com":
+                    target = target + "/cgi-bin/message/send"
+                target = "https://" + target
+                if (
+                    target.find("themoviedb") != -1
+                    or target.find("telegram") != -1
+                    or target.find("fanart") != -1
+                    or target.find("tmdb") != -1
+                ):
+                    HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=5)).get(target)
+                else:
+                    HttpClient(config=HttpClientConfig(timeout=5)).get(target)
             success = True
         except Exception:
             success = False
