@@ -90,7 +90,7 @@ class DownloadRepository(BaseRepository):
                         "POSTER": media_info.get_poster_image() or "",
                         "OVERVIEW": media_info.overview or "",
                         "TORRENT": media_info.org_string,
-                        "ENCLOSURE": media_info.enclosure,
+                        "ENCLOSURE": media_info.enclosure or "",
                         "DESC": media_info.description or "",
                         "SITE": media_info.site or "",
                         "DOWNLOADER": downloader,
@@ -112,7 +112,7 @@ class DownloadRepository(BaseRepository):
                         POSTER=media_info.get_poster_image() or "",
                         OVERVIEW=media_info.overview or "",
                         TORRENT=media_info.org_string,
-                        ENCLOSURE=media_info.enclosure,
+                        ENCLOSURE=media_info.enclosure or "",
                         DESC=media_info.description or "",
                         DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
                         SITE=media_info.site or "",
@@ -212,12 +212,22 @@ class DownloadRepository(BaseRepository):
         """
         cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
         with self.session() as db:
-            return (
-                db.query(DOWNLOADHISTORY)
+            sub = (
+                db.query(
+                    DOWNLOADHISTORY.DOWNLOADER,
+                    DOWNLOADHISTORY.DOWNLOAD_ID,
+                    func.max(DOWNLOADHISTORY.ID).label("max_id"),
+                )
                 .filter(
                     DOWNLOADHISTORY.STATE.in_(["downloading", "completed"]),
                     DOWNLOADHISTORY.DATE >= cutoff,
                 )
+                .group_by(DOWNLOADHISTORY.DOWNLOADER, DOWNLOADHISTORY.DOWNLOAD_ID)
+                .subquery()
+            )
+            return (
+                db.query(DOWNLOADHISTORY)
+                .join(sub, DOWNLOADHISTORY.ID == sub.c.max_id)
                 .order_by(DOWNLOADHISTORY.DATE.desc())
                 .limit(limit)
                 .all()
