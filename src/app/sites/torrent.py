@@ -210,15 +210,22 @@ class Torrent:
         if not req:
             return ""
         disposition = req.headers.get("content-disposition") or ""
-        file_name = re.findall(r"filename=\"?(.+)\"?", disposition)
-        if file_name:
-            file_name = unquote(str(file_name[0].encode("ISO-8859-1").decode()).split(";")[0].strip())
+        # 优先 RFC 5987: filename*=UTF-8''...
+        rfc5987 = re.findall(r"filename\*=UTF-8''(.+)", disposition)
+        if rfc5987:
+            file_name = unquote(rfc5987[0].split(";")[0].strip())
             if file_name.endswith('"'):
                 file_name = file_name[:-1]
-        elif url and url.endswith(".torrent"):
-            file_name = unquote(url.split("/")[-1])
         else:
-            file_name = str(datetime.datetime.now())
+            file_name = re.findall(r'filename="?([^"]+)"?', disposition)
+            if file_name:
+                file_name = unquote(str(file_name[0]).split(";")[0].strip())
+                if file_name.endswith('"'):
+                    file_name = file_name[:-1]
+            elif url and url.endswith(".torrent"):
+                file_name = unquote(url.split("/")[-1])
+            else:
+                file_name = str(datetime.datetime.now())
 
         file_name = file_name.replace("/", "-")
         return file_name
