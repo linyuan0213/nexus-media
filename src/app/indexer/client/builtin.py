@@ -142,6 +142,7 @@ class BuiltinIndexer(_IIndexClient):
                 cookie=cookie,
                 ua=site.get("ua"),
                 headers=site.get("headers"),
+                api_key=site.get("api_key"),
                 name=site.get("name"),
                 rule=site.get("rule"),
                 pri=site.get("pri"),
@@ -294,6 +295,7 @@ class BuiltinIndexer(_IIndexClient):
             "proxy": getattr(indexer, "proxy", False),
             "headers": getattr(indexer, "headers", {}) or {},
             "domain": getattr(indexer, "domain", "") or "",
+            "api_key": getattr(indexer, "api_key", "") or "",
         }
         if indexer.headers:
             try:

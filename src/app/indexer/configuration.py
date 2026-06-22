@@ -44,6 +44,7 @@ class IndexerHelper:
         render=None,
         language=None,
         pri=None,
+        api_key=None,
     ):
         if not url:
             return None
@@ -64,6 +65,7 @@ class IndexerHelper:
                     builtin=True,
                     language=language,
                     pri=pri,
+                    api_key=api_key,
                 )
         return None
 
@@ -85,6 +87,7 @@ class IndexerConf:
         builtin=True,
         language=None,
         pri=None,
+        api_key=None,
     ):
         if not datas:
             return
@@ -108,3 +111,4 @@ class IndexerConf:
         self.proxy = proxy if proxy is not None else datas.get("proxy")
         self.language = language if language else datas.get("language")
         self.pri = pri if pri else 0
+        self.api_key = api_key
