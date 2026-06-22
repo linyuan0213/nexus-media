@@ -88,6 +88,7 @@ class DownloadPipeline:
         # ---------- 阶段1：获取种子内容 ----------
         fetch = self._stage_fetch(media_info=media_info, torrent_file=torrent_file, proxy=proxy)
         if not fetch:
+            self._fail(media_info, in_from, "下载链接为空")
             return None, None, "下载链接为空"
         content, file_path, dl_files_folder, dl_files, retmsg, site_info, torrent_attr = fetch
 
@@ -151,7 +152,9 @@ class DownloadPipeline:
             file_names=file_names,
         )
         if not download_id:
-            return downloader_id, None, f"下载器 {downloader_name} 添加下载任务失败"
+            msg = f"下载器 {downloader_name} 添加下载任务失败"
+            self._fail(media_info, in_from, msg)
+            return downloader_id, None, msg
 
         self._event_bus.publish(
             Event(
