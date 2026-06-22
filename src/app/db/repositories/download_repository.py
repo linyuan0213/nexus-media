@@ -24,11 +24,9 @@ class DownloadRepository(BaseRepository):
 
     def is_exists_download_history(self, enclosure: str | None, downloader: str, download_id: str) -> bool:
         """
-        查询下载历史是否存在
+        查询下载历史是否存在，按 downloader + download_id 唯一键判断。
         """
         with self.session() as db:
-            if enclosure:
-                return db.query(DOWNLOADHISTORY.ID).filter(enclosure == DOWNLOADHISTORY.ENCLOSURE).first() is not None
             return (
                 db.query(DOWNLOADHISTORY.ID)
                 .filter(downloader == DOWNLOADHISTORY.DOWNLOADER, download_id == DOWNLOADHISTORY.DOWNLOAD_ID)
@@ -77,7 +75,6 @@ class DownloadRepository(BaseRepository):
         with self.session() as db:
             if self.is_exists_download_history(enclosure=enclosure, downloader=downloader, download_id=download_id):
                 db.query(DOWNLOADHISTORY).filter(
-                    media_info.enclosure == DOWNLOADHISTORY.ENCLOSURE,
                     downloader == DOWNLOADHISTORY.DOWNLOADER,
                     download_id == DOWNLOADHISTORY.DOWNLOAD_ID,
                 ).update(
