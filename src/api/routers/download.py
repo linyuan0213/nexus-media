@@ -28,6 +28,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.downloader.registry import get_all_clients
+from app.events.constants import DOWNLOAD_FAILED
 from app.infrastructure.thread import ThreadExecutor
 from app.schemas.auth import UserContext
 from app.schemas.common import CommonResponse
@@ -365,6 +366,11 @@ def download_torrent(
             )
             if not result.success:
                 log.warn(f"[Download]下载失败: {result.message}")
+                download_event_queue.put(
+                    {"event": DOWNLOAD_FAILED, "data": {"title": req.title, "reason": result.message}}
+                )
+            else:
+                log.info(f"[Download]下载成功: {req.title or req.urls}")
         except (ServiceError, DomainError) as e:
             ExceptionUtils.exception_traceback(e)
         except Exception as e:
