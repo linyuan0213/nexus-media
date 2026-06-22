@@ -11,11 +11,21 @@ class IndexerHelper:
     def get_all_indexers(self):
         return self._indexers
 
+    def _match_domain(self, indexer, url):
+        if not indexer.get("domain"):
+            return False
+        if StringUtils.url_equal(indexer.get("domain"), url):
+            return True
+        for alias in indexer.get("domain_aliases") or []:
+            if StringUtils.url_equal(alias, url):
+                return True
+        return False
+
     def get_indexer_info(self, url, public=False):
         for idx in self._indexers:
             if not public and idx.get("public"):
                 continue
-            if StringUtils.url_equal(idx.get("domain"), url):
+            if self._match_domain(idx, url):
                 return idx
         return None
 
@@ -38,9 +48,7 @@ class IndexerHelper:
         if not url:
             return None
         for idx in self._indexers:
-            if not idx.get("domain"):
-                continue
-            if StringUtils.url_equal(idx.get("domain"), url):
+            if self._match_domain(idx, url):
                 return IndexerConf(
                     datas=idx,
                     siteid=siteid,

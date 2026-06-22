@@ -7,6 +7,7 @@
 - 豆瓣网络连通性测试改为调用真实豆瓣 API，避免直接访问根路径被误报异常
 - 修复媒体服务器配置更新时 `NOTE` 为 `null` 导致 MySQL `IntegrityError` 的问题
 - 内置索引器识别 API Key / Bearer Token 认证的站点（如 M-Team），不再因缺少 cookie/headers 被过滤
+- 内置索引器匹配站点 `domain_aliases`，修复 M-Team 等使用别名域名配置的站点不显示的问题
 
 ## v4.1.4 (2026-06-21)
 
