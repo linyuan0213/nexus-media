@@ -130,6 +130,8 @@ class MediaServerConfigService:
         for key, value in data.items():
             if key.startswith(name + "."):
                 config[key.split(".", 1)[1]] = value
+            elif key not in ("type", "test"):
+                config[key] = value
         if not config:
             return MediaServerConfigResultDTO(success=False, code=-1, msg="配置为空")
         enabled = 1 if config.get("enabled") else 0
