@@ -254,6 +254,7 @@ class DownloadService:
                         media_info.title = identify_title
                     media_info.org_string = title or os.path.basename(file_path)
                     media_info.site = "WEB"
+                    media_info.enclosure = url
                 else:
                     # magnet 链接：用前端传入的 title/description 识别
                     identify_title = title or url
