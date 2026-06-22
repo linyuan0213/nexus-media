@@ -220,6 +220,8 @@ class DownloadPipeline:
                         "ua": site_info.get("ua", ""),
                         "headers": site_info.get("headers", {}),
                         "proxy": site_info.get("proxy"),
+                        "api_key": site_info.get("api_key", ""),
+                        "bearer_token": site_info.get("bearer_token", ""),
                     },
                 )
             if not url:
