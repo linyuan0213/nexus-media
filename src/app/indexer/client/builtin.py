@@ -117,7 +117,10 @@ class BuiltinIndexer(_IIndexClient):
 
             if not url:
                 continue
-            if not is_public and not cookie and not headers:
+            has_auth = (
+                cookie or headers or site.get("api_key") or site.get("bearer_token") or site.get("api_key_header")
+            )
+            if not is_public and not has_auth:
                 continue
 
             render = False if not chrome_ok else site.get("chrome")
