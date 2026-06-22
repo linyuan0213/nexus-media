@@ -349,7 +349,7 @@ def download_torrent(
     # 后台线程执行下载（避免网络 IO 阻塞 API 响应）
     def _do_download():
         try:
-            svc.download_from_torrent_files_or_urls(
+            result = svc.download_from_torrent_files_or_urls(
                 files=req.files or [],
                 urls=req.urls or [],
                 dl_dir=req.dl_dir or "",
@@ -363,6 +363,8 @@ def download_torrent(
                 site=req.site or "",
                 size=req.size,
             )
+            if not result.success:
+                log.warn(f"[Download]下载失败: {result.message}")
         except (ServiceError, DomainError) as e:
             ExceptionUtils.exception_traceback(e)
         except Exception as e:
