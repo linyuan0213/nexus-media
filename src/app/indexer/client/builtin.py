@@ -99,11 +99,23 @@ class BuiltinIndexer(_IIndexClient):
                         "id": s.id,
                         "name": s.name,
                         "domain": s.domain,
+                        "domain_aliases": getattr(s, "domain_aliases", []),
                         "public": s.public,
                         "search": s.html.search,
                         "torrents": s.html.torrents,
                         "category": s.html.category,
                         "browse": s.html.browse,
+                        "language": s.language,
+                    }
+                )
+            elif s.api:
+                engine_sites.append(
+                    {
+                        "id": s.id,
+                        "name": s.name,
+                        "domain": s.domain,
+                        "domain_aliases": getattr(s, "domain_aliases", []),
+                        "public": s.public,
                         "language": s.language,
                     }
                 )
