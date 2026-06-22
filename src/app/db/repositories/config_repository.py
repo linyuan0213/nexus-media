@@ -736,11 +736,19 @@ class ConfigRepository(BaseRepository):
                             "ENABLED": int(enabled),
                             "CONFIG": config,
                             "IS_DEFAULT": int(is_default),
-                            "NOTE": note,
+                            "NOTE": note or "",
                         }
                     )
                     return
-            db.add(MEDIASERVER(NAME=name, ENABLED=int(enabled), CONFIG=config, IS_DEFAULT=int(is_default), NOTE=note))
+            db.add(
+                MEDIASERVER(
+                    NAME=name,
+                    ENABLED=int(enabled),
+                    CONFIG=config,
+                    IS_DEFAULT=int(is_default),
+                    NOTE=note or "",
+                )
+            )
 
     def delete_media_server(self, sid: int | None) -> None:
         """
