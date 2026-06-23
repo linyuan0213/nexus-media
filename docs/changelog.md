@@ -17,6 +17,7 @@
 - 种子文件名优先取 `filename*=` 头，避免中文 ISO-8859-1 编码报错
 - torrent URL 下载时设置 `media_info.enclosure`，避免 `ENCLOSURE` 为 null 报错
 - 下载任务列表按 `downloader+download_id` 去重，不再显示重复记录
+- 站点维护功能开关支持独立 `rss_enable/brush_enable/statistic_enable` 布尔字段
 
 ## v4.1.4 (2026-06-21)
 

@@ -122,7 +122,21 @@ class SiteService:
                 note = JsonUtils.loads(note)
             except Exception:
                 note = {}
-        rss_uses = data.get("site_include")
+        rss_enable = data.get("rss_enable")
+        brush_enable = data.get("brush_enable")
+        statistic_enable = data.get("statistic_enable")
+        if any(v is not None for v in (rss_enable, brush_enable, statistic_enable)):
+            uses = []
+            has_auth = bool(cookie or headers or api_key or bearer_token)
+            if rss_enable and rssurl:
+                uses.append("D")
+            if brush_enable and rssurl and has_auth:
+                uses.append("S")
+            if statistic_enable and (rssurl or signurl) and has_auth:
+                uses.append("T")
+            rss_uses = "".join(uses)
+        else:
+            rss_uses = data.get("site_include")
 
         if self._is_site_duplicate(name, tid):
             return SiteUpdateResultDTO(code=400, msg="站点名称重复")
