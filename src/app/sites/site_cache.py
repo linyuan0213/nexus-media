@@ -83,12 +83,13 @@ class SiteCache:
         site_cookie = entity.cookie
         site_uses = entity.rss_uses or ""
         site_headers = note.get("headers")
+        effective_headers = entity.headers or site_headers
 
         # 功能开关计算
         uses = []
         if site_uses:
             rss_enable = bool("D" in site_uses and site_rssurl)
-            has_auth = bool(site_cookie or site_headers or entity.api_key or entity.bearer_token)
+            has_auth = bool(site_cookie or effective_headers or entity.api_key or entity.bearer_token)
             brush_enable = bool("S" in site_uses and site_rssurl and has_auth)
             statistic_enable = bool("T" in site_uses and (site_rssurl or site_signurl) and has_auth)
             uses.append("D") if rss_enable else None

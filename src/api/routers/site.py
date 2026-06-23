@@ -50,6 +50,9 @@ class SiteUpdateRequest(BaseModel):
     site_headers: str | None = None
     site_note: str | None = None
     site_include: str | None = None
+    rss_enable: bool | None = None
+    brush_enable: bool | None = None
+    statistic_enable: bool | None = None
 
 
 class SiteCookieUaRequest(BaseModel):
