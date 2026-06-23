@@ -12,6 +12,8 @@ _RE_4K = re.compile(r"\[4[Kk]]", re.IGNORECASE)
 _RE_KANA_TITLE = re.compile(r"[\u3040-\u309f\u30a0-\u30ff]+")
 _RE_JP_EN_SUFFIX = re.compile(r"\s*[/／]\s*[^\[\]]+$")
 _RE_BRACKET_GROUP = re.compile(r"^\[[^\]]+]$")
+_RE_AUDIO_BITRATE = re.compile(r"\b\d{2,4}(\.\d+)?\s*(kHz|kbps|bit|bits)\b", re.IGNORECASE)
+_RE_AUDIO_FORMAT = re.compile(r"\b(FLAC|ALAC|APE|WAV|AIFF|DSD|DTS|MP3|AAC|OGG|WMA|M4A|Opus)\b", re.IGNORECASE)
 
 
 def prepare_title(title):
@@ -24,6 +26,9 @@ def prepare_title(title):
     title = _RE_FILESIZE.sub("", title)
     title = _RE_TV_NUMBER.sub(r"[\1", title)
     title = _RE_4K.sub("2160p", title)
+    # 去掉音频格式标记，避免 96kHz 的 96 被当成集数
+    title = _RE_AUDIO_BITRATE.sub("", title)
+    title = _RE_AUDIO_FORMAT.sub("", title)
 
     names = title.split("]")
     if len(names) > 1 and title.find("- ") == -1:
