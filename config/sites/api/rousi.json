@@ -110,7 +110,10 @@
     "type": "api",
     "profile": {
       "method": "GET",
-      "path": "/api/v1/profile?include_fields[user]=seeding_leeching_data",
+      "path": "/api/v1/profile",
+      "params": {
+        "include_fields[user]": "seeding_leeching_data"
+      },
       "response": {
         "field_mapping": {
           "username": {

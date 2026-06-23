@@ -1,5 +1,22 @@
 # 版本历史
 
+## v4.1.7 (2026-06-23)
+
+### 修复
+- API 站点数据刷新无响应：`api_key`/`bearer_token` 贯穿整个用户信息获取调用链，修复 M-Team/Rousi/TNode 等 API 站点的站点数据刷新静默返回 0 条的问题
+- Bearer Token 认证重复前缀：`_build_auth` 中 BearerAuth 构造时剥离已添加的 `Bearer ` 前缀，修复 Rousi 等 Bearer 认证站点返回 401
+- Rousi 站点配置：`user_info.profile` 端点 query 参数从 URL path 移到 `params` 对象，修复方括号被 URL 编码后服务器不识别的问题
+- `DOWNLOADER.DOWNLOAD_DIR` 列 `VARCHAR(255)` 过短导致下载器配置保存报错，改为 `TEXT`
+- `SITE_STATISTICS_HISTORY` 和 `SITE_USER_INFO_STATS` 中无默认值列添加 `server_default`，修复 `bulk_insert_mappings` 遇 `None` 值时 MySQL NOT NULL 约束报错
+- 刷流任务状态变更统一使用 `BrushTaskState` 枚举，修复 `Y/N/S` 魔法字符串不一致
+- 文件转移路径解析 `get_format_dict`/`get_movie_dest_path`/`get_tv_dest_path` 的 `media_service` 参数改为可选，修复无媒体服务时路径格式化报错
+- 进度跟踪器 `finish()` 方法补充设置 value=100 和完成文本
+
+### 数据库迁移
+- `d5e6f7a8b9c0`：`DOWNLOADER.DOWNLOAD_DIR` 列类型调整为 `TEXT`
+- `e6f7a8b9c0d1`：`SITE_STATISTICS_HISTORY.USER_LEVEL` 和 `SITE_USER_INFO_STATS.USER_LEVEL` 添加默认值 `''`
+- `f6f7a8b9c0d1`：`SITE_USER_INFO_STATS` 和 `SITE_STATISTICS_HISTORY` 中无默认值的数值/字符串列批量添加 `server_default`
+
 ## v4.1.6 (2026-06-23)
 
 ### 修复

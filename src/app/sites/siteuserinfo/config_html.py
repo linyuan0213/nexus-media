@@ -53,6 +53,8 @@ class ConfigHtmlUserInfo:
         proxy: bool = False,
         session: Any = None,
         json_data: str | None = None,
+        api_key: str | None = None,
+        bearer_token: str | None = None,
     ) -> None:
         self.site_name: str = site_name
         self.site_url: str = url
@@ -62,11 +64,13 @@ class ConfigHtmlUserInfo:
         self._ua: str = ua
         self._emulate: bool = emulate
         self._proxy: bool = proxy
-        self._session: Any = session
         self._proxies: Any = get_proxies() if proxy else None
+        self._session: Any = session
         self._index_html: str = json_data or ""
         self._base_url_str: str = self.site_url.rstrip("/") if self.site_url else ""
         self._site_engine: Any = site_engine
+        self._api_key: str | None = api_key
+        self._bearer_token: str | None = bearer_token
 
         self.username: str | None = None
         self.userid: str | None = None
@@ -375,6 +379,8 @@ def _html_config_factory(
     emulate: bool = False,
     proxy: bool = False,
     session: Any = None,
+    api_key: str | None = None,
+    bearer_token: str | None = None,
 ) -> ConfigHtmlUserInfo | None:
     engine = site_engine
     site_def = engine.get_by_url(url)
@@ -392,6 +398,8 @@ def _html_config_factory(
         proxy=proxy,
         session=session,
         json_data=html_text,
+        api_key=api_key,
+        bearer_token=bearer_token,
     )
 
 
