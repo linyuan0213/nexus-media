@@ -71,11 +71,11 @@
             },
             "enclosure": {
               "type": "template",
-              "value": "{base}/api/torrent/{uuid}/download/{apikey}",
+              "value": "{base}/api/torrent/{uuid}/download/{bearer_token}",
               "fields": {
                 "base": "base_url",
                 "uuid": "uuid",
-                "apikey": "apikey"
+                "bearer_token": "bearer_token"
               }
             },
             "page_url": {
