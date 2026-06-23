@@ -148,7 +148,7 @@ class ApiSiteSearcher:
         if domain:
             self._auth_tokens["domain"] = domain.rstrip("/")
             self._auth_tokens["base_url"] = (
-                self._user_config.get("domain") or self._site.api.base_url or domain
+                self._site.api.base_url or self._user_config.get("domain") or domain
             ).rstrip("/")
 
     def _render_template(self, template, **kwargs) -> dict:
