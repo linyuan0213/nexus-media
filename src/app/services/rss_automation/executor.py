@@ -7,7 +7,7 @@ from typing import Any
 import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
-from app.domain.enums import SearchType
+from app.domain.enums import SearchType, UserRssTaskUseType
 from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
 from app.events.bus import EventBus
@@ -64,7 +64,7 @@ def _check_task_rss(service, taskid: int | None, event_bus: EventBus | None = No
                 log.info(f"[RssTaskService]{title} 已处理过")
                 continue
 
-            if task_type == "D":
+            if task_type == UserRssTaskUseType.DOWNLOAD.value:
                 media_info = meta_info(title=meta_name, mtype=mediatype)
                 if taskinfo.get("recognization") == "Y":
                     media_info = service.media.get_media_info(title=meta_name, mtype=mediatype)
@@ -130,7 +130,7 @@ def _check_task_rss(service, taskid: int | None, event_bus: EventBus | None = No
                 if media_info not in rss_download_torrents:
                     rss_download_torrents.append(media_info)
                     res_num = res_num + 1
-            elif task_type == "R":
+            elif task_type == UserRssTaskUseType.SUBSCRIBE.value:
                 media_info = meta_info(title=meta_name, mtype=mediatype)
                 filter_args = {"include": taskinfo.get("include"), "exclude": taskinfo.get("exclude"), "rule": -1}
                 match_flag, _, match_msg = service.filter.check_torrent_filter(

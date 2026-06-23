@@ -4,6 +4,7 @@ import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.db.repositories.site_repository import SiteRepository
 from app.domain.entities.site import SiteEntity
+from app.domain.enums import SiteUseType
 from app.domain.interfaces.site_repo import ISiteRepository
 from app.schemas.site import (
     SiteActivityDTO,
@@ -83,16 +84,17 @@ class SiteService:
     def get_site(self, tid: str | None) -> SiteDetailDTO:
         if not tid:
             return SiteDetailDTO(site=[])
-        entity = self._site_entity_repo.get_by_id(int(tid))
-        if not entity:
+        site_info = self._sites.get_sites(siteid=tid)
+        if not site_info or isinstance(site_info, list):
             return SiteDetailDTO(site=[])
         site_free = site_2xfree = site_hr = False
-        if entity.sign_url:
-            attr = self._site_conf.get_grap_conf(entity.sign_url)
+        signurl = site_info.get("signurl")
+        if signurl:
+            attr = self._site_conf.get_grap_conf(signurl)
             site_free = bool(attr.get("FREE"))
             site_2xfree = bool(attr.get("2XFREE"))
             site_hr = bool(attr.get("HR"))
-        return SiteDetailDTO(site=entity.to_dict(), site_free=site_free, site_2xfree=site_2xfree, site_hr=site_hr)
+        return SiteDetailDTO(site=site_info, site_free=site_free, site_2xfree=site_2xfree, site_hr=site_hr)
 
     def get_sites(self, rss: bool = False, brush: bool = False, statistic: bool = False, basic: bool = False) -> Any:
         if basic:
@@ -122,21 +124,41 @@ class SiteService:
                 note = JsonUtils.loads(note)
             except Exception:
                 note = {}
+        note = note or {}
+
         rss_enable = data.get("rss_enable")
         brush_enable = data.get("brush_enable")
         statistic_enable = data.get("statistic_enable")
         if any(v is not None for v in (rss_enable, brush_enable, statistic_enable)):
-            uses = []
+            # 基于现有 rss_uses 增量更新，只修改传入的开关，未传入的保持原样
+            existing = self._site_entity_repo.get_by_id(int(tid)) if tid else None
+            uses = list(existing.rss_uses or "") if existing else []
             has_auth = bool(cookie or headers or api_key or bearer_token)
-            if rss_enable and rssurl:
-                uses.append("D")
-            if brush_enable and rssurl and has_auth:
-                uses.append("S")
-            if statistic_enable and (rssurl or signurl) and has_auth:
-                uses.append("T")
+            if rss_enable is not None:
+                uses = [u for u in uses if u != SiteUseType.RSS.value]
+                if rss_enable and rssurl:
+                    uses.append(SiteUseType.RSS.value)
+            if brush_enable is not None:
+                uses = [u for u in uses if u != SiteUseType.BRUSH.value]
+                if brush_enable and rssurl and has_auth:
+                    uses.append(SiteUseType.BRUSH.value)
+            if statistic_enable is not None:
+                uses = [u for u in uses if u != SiteUseType.STATISTIC.value]
+                if statistic_enable and (rssurl or signurl) and has_auth:
+                    uses.append(SiteUseType.STATISTIC.value)
             rss_uses = "".join(uses)
         else:
             rss_uses = data.get("site_include")
+
+        # 将 note 中的功能开关统一规范化为布尔值
+        switch_keys = ("parse", "message", "chrome", "proxy", "subtitle", "tag", "public")
+        for key in switch_keys:
+            if key in note:
+                value = note[key]
+                if isinstance(value, str):
+                    note[key] = value.strip().lower() in ("y", "yes", "true", "1")
+                else:
+                    note[key] = bool(value)
 
         if self._is_site_duplicate(name, tid):
             return SiteUpdateResultDTO(code=400, msg="站点名称重复")

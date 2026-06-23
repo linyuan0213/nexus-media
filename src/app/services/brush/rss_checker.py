@@ -7,6 +7,7 @@ import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.db.repositories.subscribe_repo_adapter import SubscribeMovieRepositoryAdapter, SubscribeTvRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
+from app.domain.entities.brush import BrushTaskState
 from app.media import MediaService
 from app.services.rss_processor import RssHelper
 from app.sites import SiteConf
@@ -83,7 +84,7 @@ class BrushRssChecker:
         else:
             headers = {}
         headers.update({"User-Agent": ua})
-        if taskinfo.get("state") != "Y":
+        if taskinfo.get("state") != BrushTaskState.RUNNING.value:
             log.info(f"[Brush]刷流任务 {task_name} 已停止下载新种！")
             return
 

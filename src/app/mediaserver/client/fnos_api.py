@@ -210,13 +210,13 @@ class FnOSClient(metaclass=Singleton):
                     if response.get("code") != 0:
                         raise ValueError(f"API错误: {response.get('msg')}")
 
-                    data = response.get("data", {})
-                    items = data.get("list", [])
+                    resp_data = response.get("data", {})
+                    items = resp_data.get("list", [])
                     all_items.extend(items)
 
                     # 第一次请求时获取总数量
                     if total_items is None:
-                        total_items = data.get("total", 0)
+                        total_items = resp_data.get("total", 0)
                         if total_items == 0:  # 如果没有数据，直接返回
                             return all_items
 

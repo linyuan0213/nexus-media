@@ -10,6 +10,7 @@ from typing import Any
 
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.domain.entities.site import SiteEntity
+from app.domain.enums import SiteUseType
 from app.infrastructure.cache_system import get_cache_manager
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
@@ -252,7 +253,7 @@ class CookieCloudPlugin:
                             pri=site_pri,
                             sign_url=indexer_info.get("domain"),
                             cookie=cookie_str,
-                            rss_uses="T",
+                            rss_uses=SiteUseType.STATISTIC.value,
                         )
                     )
                     self.sites.refresh()

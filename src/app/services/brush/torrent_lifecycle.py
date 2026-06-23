@@ -6,6 +6,7 @@ from typing import Any
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
+from app.domain.enums import SwitchState
 from app.message import Message
 from app.schemas.download import TorrentStatus
 from app.sites.site_cache import SiteCache
@@ -241,7 +242,7 @@ class BrushTorrentLifecycle:
             log.warn(f"[Brush]任务 {task_name} 获取正在下载种子失败")
             return
 
-        stopfree_enabled = stop_rule and stop_rule.get("stopfree") == "Y"
+        stopfree_enabled = stop_rule and stop_rule.get("stopfree") == SwitchState.ON.value
         for torrent in torrents:
             torrent_id = torrent.id
             torrent_name = torrent.name

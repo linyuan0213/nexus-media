@@ -8,6 +8,7 @@
 
 import log
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
+from app.domain.enums import SiteUseType
 from app.domain.interfaces.site_repo import ISiteRepository
 from app.services.site_rate_limiter import SiteRateLimiterService
 from app.sites.engine import SiteEngine
@@ -88,13 +89,15 @@ class SiteCache:
         # 功能开关计算
         uses = []
         if site_uses:
-            rss_enable = bool("D" in site_uses and site_rssurl)
+            rss_enable = bool(SiteUseType.RSS.value in site_uses and site_rssurl)
             has_auth = bool(site_cookie or effective_headers or entity.api_key or entity.bearer_token)
-            brush_enable = bool("S" in site_uses and site_rssurl and has_auth)
-            statistic_enable = bool("T" in site_uses and (site_rssurl or site_signurl) and has_auth)
-            uses.append("D") if rss_enable else None
-            uses.append("S") if brush_enable else None
-            uses.append("T") if statistic_enable else None
+            brush_enable = bool(SiteUseType.BRUSH.value in site_uses and site_rssurl and has_auth)
+            statistic_enable = bool(
+                SiteUseType.STATISTIC.value in site_uses and (site_rssurl or site_signurl) and has_auth
+            )
+            uses.append(SiteUseType.RSS.value) if rss_enable else None
+            uses.append(SiteUseType.BRUSH.value) if brush_enable else None
+            uses.append(SiteUseType.STATISTIC.value) if statistic_enable else None
         else:
             rss_enable = False
             brush_enable = False
@@ -111,13 +114,11 @@ class SiteCache:
             strict_url = StringUtils.get_base_url(site_signurl or site_rssurl)
 
         # 公开站点判断
-        is_public = False
-        if not site_signurl and not site_cookie:
-            is_public = True
-        if note.get("public") == "Y":
-            is_public = True
-        if note.get("public") == "N":
-            is_public = False
+        public_note = note.get("public")
+        if public_note is not None:
+            is_public = bool(public_note)
+        else:
+            is_public = not site_signurl and not site_cookie
 
         site_info = {
             "id": entity.id,
@@ -137,16 +138,16 @@ class SiteCache:
             "statistic_enable": statistic_enable,
             "uses": uses,
             "ua": note.get("ua") or get_ua(),
-            "parse": note.get("parse") == "Y",
-            "unread_msg_notify": note.get("message") == "Y",
-            "chrome": note.get("chrome") == "Y",
-            "proxy": note.get("proxy") == "Y",
-            "subtitle": note.get("subtitle") == "Y",
+            "parse": bool(note.get("parse")),
+            "unread_msg_notify": bool(note.get("message")),
+            "chrome": bool(note.get("chrome")),
+            "proxy": bool(note.get("proxy")),
+            "subtitle": bool(note.get("subtitle")),
             "limit_interval": note.get("limit_interval"),
             "limit_count": note.get("limit_count"),
             "limit_seconds": note.get("limit_seconds"),
             "strict_url": strict_url,
-            "tag": entity.name if note.get("tag") == "Y" else "",
+            "tag": entity.name if note.get("tag") else "",
             "public": is_public,
         }
 

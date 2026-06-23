@@ -1,5 +1,29 @@
 # 版本历史
 
+## v4.1.6 (2026-06-23)
+
+### 修复
+- 媒体类型识别统一使用 `MediaType.from_string`，支持 `Movie/Series/show/TV` 等别名
+- fnOS 媒体库同步：`get_items` 在 API 按库过滤返回空时回退到全量获取后本地过滤，修复同步无数据
+- fnOS 客户端：修复 `fetch_all_pages` 中响应数据覆盖请求 payload 的变量遮蔽问题
+- 功能开关统一为布尔值：站点 note 中的 `parse/proxy/chrome/subtitle/tag/message/public` 读取写入均使用布尔值
+- 修复部分更新 `rss_enable/brush_enable/statistic_enable` 时清除未传入开关的问题，改为增量更新
+- 修复 `/sites/detail` 接口返回原始实体数据而非缓存计算后状态的问题
+
+### 重构
+- 新增 `SiteUseType` 枚举（RSS=D, BRUSH=S, STATISTIC=T），替代 `D/S/T` 魔法字符串
+- 新增 `SwitchState` 枚举（ON=Y, OFF=N），替代 `Y/N` 魔法字符串
+- 新增 `UserRssTaskUseType` 枚举（DOWNLOAD=D, SUBSCRIBE=R, SEARCH=S）
+- 刷流任务状态统一使用已有的 `BrushTaskState` 枚举（RUNNING=Y, STOPPED=S, DISABLED=N）
+- 删除 `SiteEntity` 中未使用的 dead code 属性
+- Alembic 迁移：将 `CONFIG_SITE.NOTE` 中旧 `Y/N` 字符串开关转换为布尔值
+
+### 前端
+- 站点编辑页：note 开关直接发送布尔值，不再转 `Y/N` 字符串
+- 站点类型选择器改用 `NSwitch`，form.public 改为布尔值
+- 删除 `parseNoteBool` 兼容函数
+- 修复 `NNotificationProvider` 的 extraneous non-props attributes 警告
+
 ## v4.1.5 (2026-06-22)
 
 ### 修复

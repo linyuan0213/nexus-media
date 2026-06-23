@@ -16,10 +16,14 @@ class MediaType(Enum):
     @classmethod
     def from_string(cls, value: str) -> "MediaType":
         normalized = str(value).strip().lower()
-        for member in cls:
-            if member.value == normalized:
-                return member
-        return cls.UNKNOWN
+        aliases = {
+            "movie": cls.MOVIE,
+            "tv": cls.TV,
+            "series": cls.TV,
+            "show": cls.TV,
+            "anime": cls.ANIME,
+        }
+        return aliases.get(normalized, cls.UNKNOWN)
 
     def __str__(self) -> str:
         return self.value
