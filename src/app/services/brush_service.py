@@ -4,6 +4,8 @@ import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.db.repositories.brush_repo_adapter import BrushRuleRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
+from app.domain.entities.brush import BrushTaskState
+from app.domain.enums import SwitchState
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.schemas.brush import (
     BrushTaskDTO,
@@ -65,7 +67,10 @@ class BrushService:
         else:
             rss_rule = {k: data.get(v) for k, v in _RSS_RULE_FIELDS.items()}
             remove_rule = {k: data.get(v) for k, v in _REMOVE_RULE_FIELDS.items()}
-            stop_rule = {k: ("Y" if data.get(v) else "N") for k, v in _STOP_RULE_FIELDS.items()}
+            stop_rule = {
+                k: (SwitchState.ON.value if data.get(v) else SwitchState.OFF.value)
+                for k, v in _STOP_RULE_FIELDS.items()
+            }
 
         brushtask_totalsize = data.get("brushtask_totalsize")
         try:
@@ -76,7 +81,7 @@ class BrushService:
         return {
             "name": data.get("brushtask_name"),
             "site": data.get("brushtask_site"),
-            "free": data.get("brushtask_free"),
+            "free": data.get("brushtask_free") or "",
             "rssurl": data.get("brushtask_rssurl"),
             "interval": data.get("brushtask_interval"),
             "downloader": data.get("brushtask_downloader"),
@@ -84,13 +89,13 @@ class BrushService:
             "time_range": data.get("brushtask_time_range"),
             "label": data.get("brushtask_label"),
             "savepath": data.get("brushtask_savepath"),
-            "transfer": "Y" if data.get("brushtask_transfer") else "N",
+            "transfer": SwitchState.ON.value if data.get("brushtask_transfer") else SwitchState.OFF.value,
             "state": data.get("brushtask_state"),
             "rss_rule": rss_rule,
             "remove_rule": remove_rule,
             "stop_rule": stop_rule,
             "rule_id": rule_id,
-            "sendmessage": "Y" if data.get("brushtask_sendmessage") else "N",
+            "sendmessage": SwitchState.ON.value if data.get("brushtask_sendmessage") else SwitchState.OFF.value,
         }
 
     def add_or_update_task(self, data: dict) -> None:
@@ -121,7 +126,10 @@ class BrushService:
             return
         try:
             taskinfo = self._brush.get_brushtask_info(taskid)
-            if not taskinfo or taskinfo.get("state") not in ["Y", "S"]:
+            if not taskinfo or taskinfo.get("state") not in {
+                BrushTaskState.RUNNING.value,
+                BrushTaskState.STOPPED.value,
+            }:
                 log.info(f"[Brush]任务 {taskid} 未启用，跳过")
                 return
             self._brush.check_task_rss(taskid)

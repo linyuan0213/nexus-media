@@ -215,7 +215,7 @@ class DownloadService:
                     media_info.upload_volume_factor = upload_volume_factor
                 if download_volume_factor is not None:
                     media_info.download_volume_factor = download_volume_factor
-                self._downloader.download(
+                _, _, errmsg = self._downloader.download(
                     media_info=media_info,
                     download_dir=dl_dir,
                     download_setting=dl_setting,
@@ -223,6 +223,10 @@ class DownloadService:
                     in_from=SearchType.WEB,
                     user_name=user_name,
                 )
+                if errmsg:
+                    log.warn(f"[Download]推送下载器失败(文件): {errmsg}")
+                else:
+                    log.info(f"[Download]已推送到下载器(文件): {file_name}")
 
             # 处理 URL 链接
             if urls and not isinstance(urls, list):
@@ -250,6 +254,7 @@ class DownloadService:
                         media_info.title = identify_title
                     media_info.org_string = title or os.path.basename(file_path)
                     media_info.site = "WEB"
+                    media_info.enclosure = url
                 else:
                     # magnet 链接：用前端传入的 title/description 识别
                     identify_title = title or url
@@ -271,7 +276,7 @@ class DownloadService:
                 if download_volume_factor is not None:
                     media_info.download_volume_factor = download_volume_factor
 
-                self._downloader.download(
+                _, _, errmsg = self._downloader.download(
                     media_info=media_info,
                     download_dir=dl_dir,
                     download_setting=dl_setting,
@@ -279,6 +284,10 @@ class DownloadService:
                     in_from=SearchType.WEB,
                     user_name=user_name,
                 )
+                if errmsg:
+                    log.warn(f"[Download]推送下载器失败: {errmsg}")
+                else:
+                    log.info(f"[Download]已推送到下载器: {title or url}")
         finally:
             # 清理上传的临时文件
             for tmp_file in uploaded_files:

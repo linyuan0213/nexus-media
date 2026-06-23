@@ -296,9 +296,10 @@ class MediaServer:
                     # 更新进度
                     seasoninfo = []
                     total_count += 1
-                    if item.get("type") in ["Movie", "movie"]:
+                    item_type = MediaType.from_string(item.get("type") or "")
+                    if item_type == MediaType.MOVIE:
                         movie_count += 1
-                    elif item.get("type") in ["Series", "show"]:
+                    elif item_type == MediaType.TV:
                         tv_count += 1
                         # 查询剧集信息
                         seasoninfo = self.get_tv_episodes(item.get("id"))

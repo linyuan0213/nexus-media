@@ -46,7 +46,8 @@ def _build_auth(engine: Any, site: Any, user_config: dict) -> tuple[dict, httpx.
             token = f"Bearer {token}"
         if token:
             headers["Authorization"] = token
-            auth = BearerAuth(token)
+            raw_token = token.removeprefix("Bearer ")
+            auth = BearerAuth(raw_token)
     elif auth_type == "cookie":
         cookie = user_config.get("cookie", "")
         if cookie:

@@ -426,6 +426,8 @@ class SiteEngine:
         emulate=False,
         proxy=False,
         session=None,
+        api_key=None,
+        bearer_token=None,
     ):
         for factory in self._user_info_factories:
             result = factory(
@@ -439,14 +441,26 @@ class SiteEngine:
                 emulate=emulate,
                 proxy=proxy,
                 session=session,
+                api_key=api_key,
+                bearer_token=bearer_token,
             )
             if result:
                 return result
         return None
 
-    def prefetch_user_profile(self, url, site_cookie, site_headers=None, ua="", proxy=False, session=None):
+    def prefetch_user_profile(
+        self, url, site_cookie, site_headers=None, ua="", proxy=False, session=None, api_key=None, bearer_token=None
+    ):
         return engine_user_info.prefetch_user_profile(
-            self, url, site_cookie, site_headers=site_headers, ua=ua, proxy=proxy, session=session
+            self,
+            url,
+            site_cookie,
+            site_headers=site_headers,
+            ua=ua,
+            proxy=proxy,
+            session=session,
+            api_key=api_key,
+            bearer_token=bearer_token,
         )
 
     # ---- 字幕 ----

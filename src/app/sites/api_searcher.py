@@ -148,7 +148,7 @@ class ApiSiteSearcher:
         if domain:
             self._auth_tokens["domain"] = domain.rstrip("/")
             self._auth_tokens["base_url"] = (
-                self._user_config.get("domain") or self._site.api.base_url or domain
+                self._site.api.base_url or self._user_config.get("domain") or domain
             ).rstrip("/")
 
     def _render_template(self, template, **kwargs) -> dict:
@@ -251,7 +251,8 @@ class ApiSiteSearcher:
                 template = config.get("value", "")
                 field_vals = dict(self._auth_tokens) if hasattr(self, "_auth_tokens") else {}
                 for fk, fsource in (config.get("fields") or {}).items():
-                    field_vals[fk] = str(self._get_nested(item, fsource.split(".")) or "")
+                    val = field_vals.get(fsource) or self._get_nested(item, fsource.split("."))
+                    field_vals[fk] = str(val or "")
                 try:
                     return template.format(**field_vals)
                 except KeyError:

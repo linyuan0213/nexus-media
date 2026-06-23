@@ -19,7 +19,7 @@ import dateutil
 import pytz
 
 import log
-from app.domain.enums import BrushDeleteType, BrushStopType
+from app.domain.enums import BrushDeleteType, BrushStopType, SwitchState
 from app.domain.mediatypes import MediaType
 from app.utils import ExceptionUtils, StringUtils
 
@@ -107,7 +107,7 @@ class BrushRuleEngine:
             for rule, check_func in rule_checks.items():
                 rule_value = rss_rule.get(rule)
                 log.debug(f"检查字段: {rule}, 规则值: {rule_value}")
-                if rule_value in ("#", "N", None, ""):
+                if rule_value in ("#", SwitchState.OFF.value, None, ""):
                     log.debug(f"规则 {rule} 被设置为忽略，跳过检查")
                     continue
                 if not check_func(rule_value):
@@ -149,7 +149,7 @@ class BrushRuleEngine:
         rule_value: str,
     ) -> bool:
         """排除已订阅的媒体 — 纯逻辑，数据由调用方提供"""
-        if rule_value == "N":
+        if rule_value == SwitchState.OFF.value:
             return False
         if not media_info:
             return False
@@ -256,7 +256,7 @@ class BrushRuleEngine:
 
         for rule, (delete_type, check_func) in rule_checks.items():
             rule_value = remove_rule.get(rule)
-            if rule_value in ("#", "N", None, ""):
+            if rule_value in ("#", SwitchState.OFF.value, None, ""):
                 continue
 
             value = values.get(rule)
@@ -310,7 +310,7 @@ class BrushRuleEngine:
 
         for rule, (stop_type, check_func) in rule_checks.items():
             rule_value = stop_rule.get(rule)
-            if rule_value in ("#", "N", None, ""):
+            if rule_value in ("#", SwitchState.OFF.value, None, ""):
                 continue
 
             value = values.get(rule)
@@ -363,7 +363,7 @@ class BrushRuleEngine:
 
         rule_htmls: list[str] = []
 
-        if rules.get("exclude_subscribe") == "Y":
+        if rules.get("exclude_subscribe") == SwitchState.ON.value:
             rule_htmls.append(cls._badge("排除订阅: 开", "text-green", "排除订阅"))
         elif rules.get("exclude_subscribe"):
             rule_htmls.append(cls._badge("排除订阅: 关", "text-green", "排除订阅"))
@@ -419,7 +419,7 @@ class BrushRuleEngine:
 
         for key, title in [("freestatus", "Free 到期"), ("stopfree", "Free 到期")]:
             val = rules.get(key)
-            if val == "Y":
+            if val == SwitchState.ON.value:
                 rule_htmls.append(cls._badge(f"{title}: 开", "text-green", title))
             elif val:
                 rule_htmls.append(cls._badge(f"{title}: 关", "text-green", title))

@@ -25,7 +25,7 @@ class SEARCHRESULTINFO(Base):
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     TORRENT_NAME: Mapped[str] = mapped_column(String(255))
-    ENCLOSURE: Mapped[str] = mapped_column(String(8192))
+    ENCLOSURE: Mapped[str] = mapped_column(String(8192), default="", server_default="")
     DESCRIPTION: Mapped[str] = mapped_column(Text, default="")
     TYPE: Mapped[str] = mapped_column(String(255))
     TITLE: Mapped[str] = mapped_column(String(255))

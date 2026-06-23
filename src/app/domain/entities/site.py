@@ -26,39 +26,6 @@ class SiteEntity:
     rss_uses: str | None = None
 
     @property
-    def is_brush_enabled(self) -> bool:
-        """站点是否开启刷流功能"""
-        return bool(self.note.get("brush_enable"))
-
-    @property
-    def is_proxy_enabled(self) -> bool:
-        """站点是否使用代理"""
-        return bool(self.note.get("proxy"))
-
-    @property
-    def is_signin_enabled(self) -> bool:
-        """站点是否开启签到"""
-        return bool(self.note.get("signin_enable"))
-
-    @property
-    def is_search_enabled(self) -> bool:
-        """站点是否开启搜索"""
-        return bool(self.note.get("search_enable"))
-
-    @property
-    def is_rss_enabled(self) -> bool:
-        """站点是否配置RSS"""
-        return bool(self.rss_url)
-
-    @property
-    def is_active(self) -> bool:
-        """站点是否可用（有认证信息且至少启用一项功能）"""
-        has_auth = bool(self.cookie or self.api_key or self.bearer_token)
-        return has_auth and (
-            self.is_brush_enabled or self.is_signin_enabled or self.is_search_enabled or self.is_rss_enabled
-        )
-
-    @property
     def ua(self) -> str | None:
         """获取站点UA"""
         return self.note.get("ua") or None

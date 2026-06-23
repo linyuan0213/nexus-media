@@ -279,12 +279,12 @@ class TransferPathResolver:
 
     # ---------- 格式化 ----------
 
-    def get_format_dict(self, media, media_service) -> dict:
+    def get_format_dict(self, media, media_service=None) -> dict:
         """根据媒体信息，返回 Format 字典."""
         if not media:
             return {}
-        episode_title = media_service.get_episode_title(media)
-        en_title = media_service.get_tmdb_en_title(media)
+        episode_title = media_service.get_episode_title(media) if media_service else ""
+        en_title = media_service.get_tmdb_en_title(media) if media_service else ""
         media_format_dict = {
             "title": StringUtils.clear_file_name(media.title),
             "en_title": StringUtils.clear_file_name(en_title),
@@ -313,14 +313,14 @@ class TransferPathResolver:
                 media_format_dict[i] = "\t"
         return media_format_dict
 
-    def get_movie_dest_path(self, media_info, media_service):
+    def get_movie_dest_path(self, media_info, media_service=None):
         """计算电影文件路径."""
         format_dict = self.get_format_dict(media_info, media_service)
         dir_name = re.sub(r"[-_\s.]*\t", "", self._movie_dir_rmt_format.format(**format_dict))
         file_name = re.sub(r"[-_\s.]*\t", "", self._movie_file_rmt_format.format(**format_dict))
         return dir_name, file_name
 
-    def get_tv_dest_path(self, media_info, media_service):
+    def get_tv_dest_path(self, media_info, media_service=None):
         """计算电视剧文件路径."""
         format_dict = self.get_format_dict(media_info, media_service)
         dir_name = re.sub(r"[-_\s.]*\t", "", self._tv_dir_rmt_format.format(**format_dict))
