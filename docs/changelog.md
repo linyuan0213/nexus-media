@@ -9,6 +9,14 @@
 - 内置索引器识别 API Key / Bearer Token 认证的站点（如 M-Team），不再因缺少 cookie/headers 被过滤
 - 内置索引器匹配站点 `domain_aliases`，修复 M-Team 等使用别名域名配置的站点不显示的问题
 - 内置索引器收集 API 站点定义，修复 API 认证站点（如 M-Team）被排除的问题
+- IndexerConf 传递 `api_key`/`bearer_token` 到 API 搜索器，修复 M-Team 搜索 401
+- 下载链接解析和下载流水线传递 `api_key`/`bearer_token`，修复 API 站点下载认证
+- 代理配置支持 http / https / socks5 三种协议
+- 下载流水线失败时补上 SSE 事件推送，种子下载失败时直接推送 SSE
+- 下载历史存在判断改用 `downloader+download_id` 唯一键，修复任务列表重复和重复插入
+- 种子文件名优先取 `filename*=` 头，避免中文 ISO-8859-1 编码报错
+- torrent URL 下载时设置 `media_info.enclosure`，避免 `ENCLOSURE` 为 null 报错
+- 下载任务列表按 `downloader+download_id` 去重，不再显示重复记录
 
 ## v4.1.4 (2026-06-21)
 
